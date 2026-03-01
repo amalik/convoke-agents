@@ -257,7 +257,7 @@ Every agent below contributed to the design, implementation, testing, or documen
 
 <div align="center">
 
-**Innovation Vortex Pattern** — *Discover what has to be disovered, deliver what has to be delivered*
+**Innovation Vortex Pattern** — *Discover what has to be discovered, deliver what has to be delivered*
 
 [Get Started](#quick-start) | [Agents](docs/agents.md) | [Docs](#documentation) | [Roadmap](#roadmap)
 
