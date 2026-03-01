@@ -123,4 +123,7 @@ Based on what you just completed, here are your evidence-driven options:
 | User needs unclear | user-interview | Isla 🔍 | Validate persona assumptions with actual users |
 | Multiple user segments | empathy-map | Isla 🔍 | Build deeper understanding of each segment |
 
+> **Note:** These are evidence-based recommendations. You can navigate to any Vortex agent
+> at any time based on your judgment.
+
 **Or run Max's [VN] Vortex Navigation** for a full gap analysis across all streams.
