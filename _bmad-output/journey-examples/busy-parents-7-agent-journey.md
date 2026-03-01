@@ -10,15 +10,15 @@
 
 The Vortex pattern connects 7 specialized agents in a discovery-to-decision chain. Each agent has a distinct role:
 
-1. **Emma** contextualizes the problem space by creating a lean persona
-2. **Isla** conducts empathy research grounded in that context, producing HC1 empathy artifacts
-3. **Mila** converges research findings into a structured problem definition (HC2)
-4. **Liam** engineers testable hypotheses from the problem definition (HC3)
-5. **Wade** designs and runs experiments to validate the riskiest assumptions (HC4)
-6. **Noah** interprets production signals from graduated experiments (HC5)
-7. **Max** synthesizes all evidence into strategic decisions and routes the Vortex forward
+1. **Emma 🎯** contextualizes the problem space by creating a lean persona
+2. **Isla 🔍** conducts empathy research grounded in that context, producing HC1 empathy artifacts
+3. **Mila 🔬** converges research findings into a structured problem definition (HC2)
+4. **Liam 💡** engineers testable hypotheses from the problem definition (HC3)
+5. **Wade 🧪** designs and runs experiments to validate the riskiest assumptions (HC4)
+6. **Noah 📡** interprets production signals from graduated experiments (HC5)
+7. **Max 🧭** synthesizes all evidence into strategic decisions and routes the Vortex forward
 
-Each handoff between agents follows a schema-defined contract (HC1 through HC5), ensuring the receiving agent gets exactly the structured data it needs. Emma's output is the exception — her lean persona uses a different format and provides contextual grounding rather than a formal HC handoff.
+Each handoff between agents follows a schema-defined contract (HC1 through HC5), ensuring the receiving agent gets exactly the structured data it needs. Emma is the exception — her lean persona precedes the HC chain and provides contextual grounding rather than a formal handoff.
 
 ---
 
@@ -28,10 +28,9 @@ Each handoff between agents follows a schema-defined contract (HC1 through HC5),
 
 Emma is the Contextualization Expert — she helps teams frame their problem space before diving into research. Her lean-persona workflow walks through jobs-to-be-done analysis, current-state pain points, forces and anxieties, and validation planning. The output is a lean persona: a structured hypothesis about who you're building for and what they need, designed to be validated (not assumed).
 
-Emma's artifact doesn't use the HC contract format because she operates at the entry point of the Vortex. Her lean persona provides contextual grounding that Isla draws from when conducting empathy research.
-
 ### Captured Artifact: Lean Persona — Busy Parents
 
+```yaml
 ---
 title: "Lean Persona: Busy Parents"
 date: 2026-03-01
@@ -40,6 +39,7 @@ type: lean-persona
 status: HYPOTHESIS
 version: 1.0
 ---
+```
 
 #### Lean Persona: Busy Parents
 
@@ -215,7 +215,7 @@ version: 1.0
 
 Emma's lean persona establishes the "busy parents" problem space: who they are, what job they're trying to do, and what assumptions need validation. This context grounds everything that follows.
 
-Isla picks up from here — not through a formal HC contract handoff, but by using Emma's lean persona as contextual input for empathy research. Isla will conduct user discovery to validate (or invalidate) Emma's hypothesized pain points with real user evidence.
+Isla picks up from here — not through a formal HC contract handoff, but by using Emma's lean persona as contextual input for her empathy research.
 
 > **Handoff: Contextual Input — Emma 🎯 → Isla 🔍**
 >
@@ -234,7 +234,7 @@ Isla picks up from here — not through a formal HC contract handoff, but by usi
 
 *For readers starting here: Isla 🔍 (Discovery & Empathy Expert) is the second agent in the Vortex chain (BMAD's 7-agent product discovery pipeline). She receives contextual input from Emma 🎯 (Contextualization Expert), who creates a lean persona — a structured hypothesis about the target user segment's jobs-to-be-done, pain points, and assumptions. Isla conducts independent empirical research (in-home observations, interviews, diary studies) to validate or challenge Emma's hypotheses. Her output is an HC1 empathy artifact containing synthesized insights, themes, pain points, and desired gains grounded in real user evidence.*
 
-Isla receives Emma's lean persona as domain context. She uses it to focus her user discovery research: the jobs-to-be-done frame, the hypothesized pain points, and the problem contexts guide her research questions. But Isla's job is to go beyond hypotheses — she observes real users, captures real quotes, and surfaces insights that Emma couldn't know from contextual framing alone.
+Isla receives Emma's lean persona as domain context. She uses it to focus her user discovery research — the jobs-to-be-done frame, the hypothesized pain points, and the problem contexts guide her research questions. But Isla's job is to go beyond hypotheses — she observes real users, captures real quotes, and surfaces insights that contextual framing alone couldn't reveal.
 
 ### Captured Artifact: HC1 Empathy Artifacts
 
@@ -349,7 +349,7 @@ Discovery research into weeknight dinner challenges for busy dual-income parents
 
 ### What Happens Next
 
-Isla's HC1 empathy artifacts now travel to Mila via the HC1 contract. Mila's job is to converge these research findings — the insights, pain points, themes, and evidence — into a single, structured problem definition (HC2) that Liam can engineer hypotheses from. The raw richness of Isla's discovery gets distilled into actionable problem framing.
+Isla's HC1 empathy artifacts now travel to Mila via the HC1 contract. The raw richness of Isla's discovery is distilled into actionable problem framing.
 
 > **Handoff: HC1 Contract — Isla 🔍 → Mila 🔬**
 >
@@ -372,7 +372,7 @@ Isla's HC1 empathy artifacts now travel to Mila via the HC1 contract. Mila's job
 
 *For readers starting here: Mila 🔬 (Research Convergence Specialist) is the third agent in the Vortex chain (BMAD's 7-agent product discovery pipeline). She receives an HC1 empathy artifact from Isla 🔍 (Discovery & Empathy Expert), who conducted user research — in-home observations, interviews, and diary studies with 20 participants. HC1 artifacts contain synthesized insights, key themes, pain points, and desired gains grounded in empirical evidence. Mila's job is to converge this research into a single, structured problem definition (HC2) that the next agent can engineer hypotheses from.*
 
-Mila receives Isla's HC1 empathy artifacts containing 20 participants' worth of research data: 3 synthesized insights, 4 key themes, 5 prioritized pain points, and an empathy map. Her job is to converge this into a structured problem definition — identifying the primary JTBD, ranking pains and gains with evidence counts, and surfacing the assumptions that need testing.
+Mila receives Isla's HC1 empathy artifacts — 20 participants' worth of research data across 3 synthesized insights, 4 key themes, 5 prioritized pain points, and an empathy map. Her job is to converge this into a structured problem definition.
 
 ### Captured Artifact: HC2 Problem Definition
 
@@ -463,7 +463,7 @@ Three research methods (observation, interviews, diary studies) converge on the 
 
 ### What Happens Next
 
-Mila's HC2 problem definition travels to Liam via the HC2 contract. Liam takes this structured problem framing — the JTBD, ranked pains, evidence-backed assumptions — and engineers testable hypotheses. His job is to turn "we think we understand the problem" into "here are the specific bets we can make and test."
+Mila's HC2 problem definition travels to Liam via the HC2 contract. Liam turns "we think we understand the problem" into "here are the specific bets we can make and test."
 
 > **Handoff: HC2 Contract — Mila 🔬 → Liam 💡**
 >
@@ -485,7 +485,7 @@ Mila's HC2 problem definition travels to Liam via the HC2 contract. Liam takes t
 
 *For readers starting here: Liam 💡 (Hypothesis Engineer) is the fourth agent in the Vortex chain (BMAD's 7-agent product discovery pipeline). He receives an HC2 problem definition from Mila 🔬 (Research Convergence Specialist), who converged empirical research into a structured problem framing — a converged problem statement, jobs-to-be-done (JTBD), ranked pains and gains with evidence counts, and assumptions with validation status. Liam's job is to engineer testable hypotheses with 4-field contracts (expected outcome, target behavior change, rationale, riskiest assumption) and an assumption risk map that prioritizes what to test first.*
 
-Liam receives Mila's HC2 problem definition: a converged problem statement grounded in 52 evidence points from 20 participants, a primary JTBD, 5 ranked pains, and 4 assumptions with validation status. His job is to transform this evidence base into investment-grade hypotheses — each with a 4-field contract (expected outcome, target behavior change, rationale, riskiest assumption) and an assumption risk map that prioritizes what to test first.
+Liam receives Mila's HC2 problem definition: a converged problem statement grounded in evidence from 20 participants, a primary JTBD, 5 ranked pains, and 4 assumptions with validation status. His job is to transform this evidence base into investment-grade hypotheses, each with a 4-field contract (expected outcome, target behavior change, rationale, riskiest assumption), and an assumption risk map that prioritizes what to test first.
 
 ### Captured Artifact: HC3 Hypothesis Contract
 
@@ -594,7 +594,7 @@ created: 2026-03-01
 
 ### What Happens Next
 
-Liam's HC3 hypothesis contract travels to Wade via the HC3 contract. Wade takes these 3 hypotheses — with their 4-field contracts, assumption risk map, and recommended testing order — and designs the fastest, cheapest experiments to validate or invalidate the riskiest assumptions. His job is to get evidence, not build product.
+Liam's HC3 hypothesis contract travels to Wade via the HC3 contract. Wade designs the fastest, cheapest experiments to validate or invalidate the riskiest assumptions. His job is to get evidence, not to build product.
 
 > **Handoff: HC3 Contract — Liam 💡 → Wade 🧪**
 >
@@ -615,7 +615,7 @@ Liam's HC3 hypothesis contract travels to Wade via the HC3 contract. Wade takes 
 
 *For readers starting here: Wade 🧪 (Lean Experiments Specialist) is the fifth agent in the Vortex chain (BMAD's 7-agent product discovery pipeline). He receives an HC3 hypothesis contract from Liam 💡 (Hypothesis Engineer), who engineered testable hypotheses from a structured problem definition. HC3 artifacts contain hypothesis contracts in a 4-field format (expected outcome, target behavior change, rationale, riskiest assumption), an assumption risk map prioritized by lethality and uncertainty, and a recommended testing order. Wade's job is to design and run the leanest possible experiment — a concierge test (a manual, human-powered simulation of the product experience), prototype, or MVP — to validate or invalidate the riskiest assumptions with real evidence.*
 
-Wade receives Liam's HC3 hypothesis contract: 3 investment-grade hypotheses targeting decision fatigue (H1), guilt (H2), and coordination overhead (H3), along with a 7-assumption risk map and 5-priority testing order. His job is to design and run the experiment for the highest-priority assumption (A1: trust in automated suggestions) using the leanest possible method.
+Wade receives Liam's HC3 hypothesis contract: 3 investment-grade hypotheses targeting decision fatigue (H1), guilt (H2), and coordination overhead (H3), along with a 7-assumption risk map and 5-priority testing order. He designs and runs the experiment for the highest-priority assumption (A1: trust in automated suggestions) using the leanest possible method.
 
 ### Captured Artifact: HC4 Experiment Context
 
@@ -720,7 +720,7 @@ created: 2026-03-01
 
 ### What Happens Next
 
-Wade's HC4 experiment context travels to Noah via the HC4 contract. Noah monitors the production deployment of the dinner suggestion system and interprets signals: Is the action rate holding at scale? Are users engaging at the expected timing? Are there anomalies that the experiment didn't predict? Noah produces intelligence — not strategy — that Max uses to make decisions.
+Wade's HC4 experiment context travels to Noah via the HC4 contract. Noah interprets production signals: Is the action rate holding at scale? Are users engaging at the expected time? Are there anomalies that the experiment didn't predict?
 
 > **Handoff: HC4 Contract — Wade 🧪 → Noah 📡**
 >
@@ -742,7 +742,7 @@ Wade's HC4 experiment context travels to Noah via the HC4 contract. Noah monitor
 
 *For readers starting here: Noah 📡 (Production Intelligence Specialist) is the sixth agent in the Vortex chain (BMAD's 7-agent product discovery pipeline). He receives an HC4 experiment context from Wade 🧪 (Lean Experiments Specialist), who designed and ran a lean experiment to validate the riskiest assumptions. HC4 artifacts contain the experiment summary, hypothesis tested, method, success criteria with actual results, and production readiness thresholds. A "graduated" experiment has met its success criteria and moved to production. Noah's job is to interpret production signals — comparing actual user behavior at scale against the experiment's predictions — and produce intelligence (not strategy) for the final agent.*
 
-Noah receives Wade's HC4 experiment context: the graduated concierge test showing 78-83% action rate, 4:00 PM timing validation, and defined production monitoring thresholds. His job is to interpret production signals through the lens of the experiment — connecting what's happening at scale to what was predicted from the lean experiment.
+Noah receives Wade's HC4 experiment context: the graduated concierge test showing 78-83% action rate, 4:00 PM timing validation, and defined production monitoring thresholds. He interprets production signals through the lens of the experiment — connecting what's happening at scale to what was predicted.
 
 ### Captured Artifact: HC5 Signal Report
 
@@ -825,7 +825,7 @@ created: 2026-03-01
 
 ### What Happens Next
 
-Noah's HC5 signal report travels to Max via the HC5 contract. Max takes this intelligence — the positive action rate, the timing anomaly, the discovery recommendation — and makes strategic decisions. Should the system shift to adaptive timing? Should Isla investigate the 3:15 PM behavior? Should the team proceed to test H2 (guilt circuit breaker) or focus on optimizing H1 first? Max synthesizes evidence into action.
+Noah's HC5 signal report travels to Max via the HC5 contract. Should the system shift to adaptive timing? Should Isla investigate the 3:15 PM behavior? Should the team test H2 (guilt circuit breaker) or focus on optimizing H1 first? Max synthesizes the evidence into action.
 
 > **Handoff: HC5 Contract — Noah 📡 → Max 🧭**
 >
@@ -846,7 +846,7 @@ Noah's HC5 signal report travels to Max via the HC5 contract. Max takes this int
 
 *For readers starting here: Max 🧭 (Learning & Decision Expert) is the seventh and final agent in the Vortex chain (BMAD's 7-agent product discovery pipeline). He receives an HC5 signal report from Noah 📡 (Production Intelligence Specialist), who monitored production behavior after a graduated experiment and interpreted signals against experiment predictions. HC5 artifacts are intelligence-only — they contain signal descriptions, trend analysis, anomaly detection, and data quality assessments, but explicitly exclude strategic recommendations. Max's job is to synthesize all accumulated evidence into strategic decisions (patch, pivot, or persevere) and route the Vortex forward by directing specific agents to take action.*
 
-Max receives Noah's HC5 signal report: the dinner suggestion feature is performing at 76% action rate (within range), but users are engaging 45-60 minutes earlier than designed, suggesting the intervention window should shift from 4:00 PM to ~3:30 PM. Noah recommends routing to Isla for qualitative investigation of the timing shift.
+Max receives Noah's HC5 signal report: the dinner suggestion feature is performing at 76% action rate (within range), but users are engaging 45-60 minutes earlier than designed. Noah recommends routing to Isla for qualitative investigation of the timing shift.
 
 ### Captured Artifact: Learning Card
 
@@ -915,19 +915,15 @@ Based on the evidence, Max routes the Vortex forward on three paths:
 | Willingness to pay validation | HC7 (decision-driven) | Wade 🧪 via Liam 💡 | Design and run a pricing experiment (landing page smoke test) |
 | Adaptive timing implementation | HC6 (decision-driven) | Emma 🎯 | Recontextualize the product scope to include adaptive timing as core feature |
 
-### The Vortex Continues
+### What Happens Next
 
 Max's learning card doesn't end the journey — it accelerates it. The Vortex is designed to be iterative: evidence loops back through the system, each cycle narrowing uncertainty and strengthening confidence in the product direction.
-
-In this journey, the Vortex moved from a hypothesis about "busy parents who struggle with dinner decisions" through contextual framing, empathy research, problem convergence, hypothesis engineering, experimentation, production monitoring, and strategic decision-making. Each agent consumed the previous agent's structured output and produced something the next agent needed.
-
-The result: a validated product mechanism (decision elimination via single suggestion at adaptive timing), three clear next actions, and zero wasted effort on unvalidated features. That's the Vortex pattern at work.
 
 ---
 
 ## Conclusion
 
-This journey demonstrated how 7 specialized agents collaborate through structured handoff contracts to move from a vague product idea ("help busy parents with dinner") to a validated product mechanism with production evidence and strategic routing decisions — all grounded in real user research and experimental data.
+This journey demonstrated how seven specialized agents collaborate through structured handoff contracts to move from a vague product idea ("help busy parents with dinner") to a validated product mechanism with production evidence and strategic routing decisions. Every step was grounded in real user research and experimental data.
 
 **The chain in review:**
 
@@ -945,4 +941,4 @@ Each handoff preserved context, accumulated evidence, and narrowed uncertainty. 
 
 ---
 
-> **About this document:** Every artifact above was captured from a real agent run using the BMAD-Enhanced Vortex pattern on the "busy parents" domain. Agent names, workflow names, and artifact structures match the canonical registry at `scripts/update/lib/agent-registry.js` and the handoff contract schemas at `_bmad/bme/_vortex/contracts/`. Handoff annotations at each transition point reference the specific HC contract and list the fields consumed by the receiving agent. Each agent section includes a context declaration enabling non-linear reading. For editorial quality verification, see Story 4.3.
+> **About this document:** Every artifact above was captured from a real agent run using the BMAD-Enhanced Vortex pattern on the "busy parents" domain. Agent names, workflow names, and artifact structures match the canonical registry and handoff contract schemas in this repository. Handoff annotations at each transition point reference the specific HC contract and list the fields the receiving agent consumes. Each agent section includes a context declaration that enables non-linear reading. Editorial quality verified through structural review, prose review, and 5-dimension editorial checklist (Story 4.3).
