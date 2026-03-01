@@ -1,6 +1,6 @@
 # Story 4.3: Journey Quality Verification & Editorial Review
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -18,34 +18,34 @@ So that the journey reads as a coherent narrative with professional prose qualit
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Run editorial-review-structure on the journey document (AC: #1, #3)
-  - [ ] 1.1 Read the full journey document (`_bmad-output/journey-examples/busy-parents-7-agent-journey.md`)
-  - [ ] 1.2 Execute `/bmad-editorial-review-structure` with content=journey document, purpose="7-agent product discovery journey example demonstrating BMAD's Vortex pattern", target_audience="new BMAD users and evaluators", reader_type="humans"
-  - [ ] 1.3 Review structural recommendations — apply CUT/MERGE/MOVE/CONDENSE changes that improve narrative flow without removing artifact content, annotations, or context declarations
-  - [ ] 1.4 Document which structural recommendations were accepted/rejected and why
+- [x] Task 1: Run editorial-review-structure on the journey document (AC: #1, #3)
+  - [x] 1.1 Read the full journey document (`_bmad-output/journey-examples/busy-parents-7-agent-journey.md`)
+  - [x] 1.2 Execute `/bmad-editorial-review-structure` with content=journey document, purpose="7-agent product discovery journey example demonstrating BMAD's Vortex pattern", target_audience="new BMAD users and evaluators", reader_type="humans"
+  - [x] 1.3 Review structural recommendations — apply CUT/MERGE/MOVE/CONDENSE changes that improve narrative flow without removing artifact content, annotations, or context declarations
+  - [x] 1.4 Document which structural recommendations were accepted/rejected and why
 
-- [ ] Task 2: Run editorial-review-prose on the journey document (AC: #2)
-  - [ ] 2.1 Execute `/bmad-editorial-review-prose` with content=journey document, reader_type="humans"
-  - [ ] 2.2 Review the 3-column findings table (Original Text | Revised Text | Changes)
-  - [ ] 2.3 Apply all prose fixes that improve clarity without altering artifact data, percentages, evidence counts, or YAML frontmatter
+- [x] Task 2: Run editorial-review-prose on the journey document (AC: #2)
+  - [x] 2.1 Execute `/bmad-editorial-review-prose` with content=journey document, reader_type="humans"
+  - [x] 2.2 Review the 3-column findings table (Original Text | Revised Text | Changes)
+  - [x] 2.3 Apply all prose fixes that improve clarity without altering artifact data, percentages, evidence counts, or YAML frontmatter
 
-- [ ] Task 3: Apply editorial checklist — 5 dimensions (AC: #1)
-  - [ ] 3.1 **Narrative flow**: Read sequentially from Introduction through all 7 agent sections — verify each section's "What Happens Next" creates a natural bridge to the next agent; verify the Introduction sets up the full journey; verify the Conclusion reflects back on the complete chain
-  - [ ] 3.2 **Self-contained sections**: For each of the 6 context declarations (Isla through Max), verify: (a) the previous agent is identified by name, icon, and role; (b) the input artifact type is explained; (c) key terms are defined; (d) a reader entering here encounters no undefined terms
-  - [ ] 3.3 **Handoff annotation completeness**: For each of the 6 handoff annotations, verify: (a) the contract name is correct (contextual input for Emma→Isla, HC1-HC5 for the rest); (b) consumed fields match the actual artifact content in `_bmad-output/vortex-artifacts/`; (c) schema reference path is correct; (d) the annotation adds value without disrupting narrative flow
-  - [ ] 3.4 **Terminology consistency**: Grep the journey for all agent names, workflow names, and contract references — verify zero synonyms, abbreviations, or informal variants; all must match registry exactly (Emma 🎯, Isla 🔍, Mila 🔬, Liam 💡, Wade 🧪, Noah 📡, Max 🧭; HC1-HC5; lean-persona, user-discovery, research-convergence, hypothesis-engineering, mvp, signal-interpretation, learning-card)
-  - [ ] 3.5 **Prose quality**: Verify no grammatical errors, no awkward transitions, no passive voice overuse, no jargon without definition, no sentences over 40 words that could be split
+- [x] Task 3: Apply editorial checklist — 5 dimensions (AC: #1)
+  - [x] 3.1 **Narrative flow**: Read sequentially from Introduction through all 7 agent sections — verify each section's "What Happens Next" creates a natural bridge to the next agent; verify the Introduction sets up the full journey; verify the Conclusion reflects back on the complete chain
+  - [x] 3.2 **Self-contained sections**: For each of the 6 context declarations (Isla through Max), verify: (a) the previous agent is identified by name, icon, and role; (b) the input artifact type is explained; (c) key terms are defined; (d) a reader entering here encounters no undefined terms
+  - [x] 3.3 **Handoff annotation completeness**: For each of the 6 handoff annotations, verify: (a) the contract name is correct (contextual input for Emma→Isla, HC1-HC5 for the rest); (b) consumed fields match the actual artifact content in `_bmad-output/vortex-artifacts/`; (c) schema reference path is correct; (d) the annotation adds value without disrupting narrative flow
+  - [x] 3.4 **Terminology consistency**: Grep the journey for all agent names, workflow names, and contract references — verify zero synonyms, abbreviations, or informal variants; all must match registry exactly (Emma 🎯, Isla 🔍, Mila 🔬, Liam 💡, Wade 🧪, Noah 📡, Max 🧭; HC1-HC5; lean-persona, user-discovery, research-convergence, hypothesis-engineering, mvp, signal-interpretation, learning-card)
+  - [x] 3.5 **Prose quality**: Verify no grammatical errors, no awkward transitions, no passive voice overuse, no jargon without definition, no sentences over 40 words that could be split
 
-- [ ] Task 4: Fix all identified editorial issues (AC: #4)
-  - [ ] 4.1 Apply fixes from Task 1 structural review (if any accepted)
-  - [ ] 4.2 Apply fixes from Task 2 prose review
-  - [ ] 4.3 Apply fixes from Task 3 editorial checklist
-  - [ ] 4.4 Re-read the full document after all fixes to verify coherence was maintained
+- [x] Task 4: Fix all identified editorial issues (AC: #4)
+  - [x] 4.1 Apply fixes from Task 1 structural review (if any accepted)
+  - [x] 4.2 Apply fixes from Task 2 prose review
+  - [x] 4.3 Apply fixes from Task 3 editorial checklist
+  - [x] 4.4 Re-read the full document after all fixes to verify coherence was maintained
 
-- [ ] Task 5: Verify README-readiness (AC: #5)
-  - [ ] 5.1 Verify the journey document has a clear title, introduction, and conclusion that work standalone when linked from a README
-  - [ ] 5.2 Verify the document path (`_bmad-output/journey-examples/busy-parents-7-agent-journey.md`) is stable and suitable for external linking
-  - [ ] 5.3 Verify the document opens with enough context that a reader arriving from a README link can understand what they're reading without prior BMAD knowledge
+- [x] Task 5: Verify README-readiness (AC: #5)
+  - [x] 5.1 Verify the journey document has a clear title, introduction, and conclusion that work standalone when linked from a README
+  - [x] 5.2 Verify the document path (`_bmad-output/journey-examples/busy-parents-7-agent-journey.md`) is stable and suitable for external linking
+  - [x] 5.3 Verify the document opens with enough context that a reader arriving from a README link can understand what they're reading without prior BMAD knowledge
 
 ## Dev Notes
 
@@ -146,10 +146,31 @@ Story 4.3 completes Epic 4. The polished journey document becomes linkable conte
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+- Structural review produced 13 recommendations (5 CONDENSE, 3 PRESERVE, 2 QUESTION, 1 MOVE). Accepted: CONDENSE on Emma's second paragraph (#2), "What Happens Next" transitions (#3), agent intro narratives (#1), "Vortex Continues" (#9), intro closing (#8). Preserved: all artifacts, annotations, context declarations per constraints. Deferred: footer move (#11) and Emma validation plan note (#12) as low priority.
+- Prose review produced 11 actionable findings — all applied. Fixes: colon→em dash, passive voice ("gets distilled"→"is distilled"), parallel infinitive ("not build"→"not to build"), preposition ("at adaptive timing"→"with adaptive timing"), number spelling ("7"→"seven"), active voice in footer, article/pronoun refinements.
+- Editorial checklist: 4/5 dimensions PASS on first check. Terminology consistency failed on one violation: agent icons missing from "How This Journey Works" numbered list (lines 13-19). Fixed by adding icons to all 7 entries.
 
 ### Completion Notes List
 
+- Structural review: reduced ~950-1,100 words of redundant prose while preserving all artifacts, annotations, and context declarations
+- Prose review: applied 11 minor fixes (grammar, voice, prepositions, parallel construction, number convention)
+- Editorial checklist 5 dimensions: narrative flow PASS, self-contained sections PASS, handoff annotation completeness PASS (all 6 annotations verified against vortex-artifacts), terminology consistency PASS (after icon fix), prose quality PASS
+- Fixed terminology violation: added agent icons to introductory numbered list for NFR10 compliance
+- Updated footer from "see Story 4.3" forward reference to "Editorial quality verified through structural review, prose review, and 5-dimension editorial checklist (Story 4.3)"
+- README-readiness verified: title, intro blockquote, and "How This Journey Works" provide sufficient context for a reader arriving via README link
+
 ### Change Log
 
+- 2026-03-01: Structural condensation — removed redundant Emma paragraph, condensed 7 "What Happens Next" transitions, condensed 6 agent intro narratives, condensed "Vortex Continues" section
+- 2026-03-01: Prose fixes — 11 corrections (grammar, voice, prepositions, parallel construction, number convention, active voice)
+- 2026-03-01: Terminology fix — added agent icons to introductory numbered list (NFR10)
+- 2026-03-01: Updated footer to reflect completed editorial verification
+- 2026-03-01: Code review fixes — 5 issues (split 45-word conclusion sentence, renamed "The Vortex Continues" → "What Happens Next" for parallel structure, replaced unverifiable "52 evidence points" with descriptive language, wrapped Emma's YAML in code fence, simplified footer internal paths)
+
 ### File List
+
+- `_bmad-output/journey-examples/busy-parents-7-agent-journey.md` (modified — structural condensation, prose fixes, terminology fix, footer update, code review fixes)
