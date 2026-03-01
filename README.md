@@ -10,7 +10,7 @@
        E N H A N C E D
 </pre>
 
-**BMAD Method enhanced by domain-specialized agents**
+**Validate your product ideas before writing a single line of code**
 
 [![Version](https://img.shields.io/badge/version-1.6.4-blue)](https://github.com/amalik/BMAD-Enhanced)
 [![Agents](https://img.shields.io/badge/agents-7-brightgreen)](docs/agents.md)
@@ -19,38 +19,38 @@
 
 </div>
 
-BMAD-Enhanced extends the [BMAD Method](https://github.com/bmadhub/bmad) with domain-specialized agents. First batch of agents covers the [Innovation Vortex](https://unfix.com/innovation-vortex) pattern from [unFIX model](https://unfix.com/) by [Jurgen Appelo](https://jurgenappelo.com/). Seven specialized agents will guide teams through full product discovery validation before building anything.
+Most teams skip validation and build on assumptions. BMAD-Enhanced guides you through seven discovery streams — from understanding your users to testing your riskiest assumptions — so you can make evidence-based decisions before committing to code. Each stream builds on the previous one's findings, and when gaps appear, the system routes you back to fill them.
 
 ```
-                    VORTEX PATTERN — 7 Streams · 7 Agents
+                         7 Streams · 7 Agents
 
-  ┌──────────┐  HC1  ┌──────────┐  HC2  ┌──────────┐  HC3  ┌──────────┐
-  │  Isla 🔍  │─────▶│  Mila 🔬  │─────▶│  Liam 💡  │─────▶│  Wade 🧪  │
+  ┌──────────┐       ┌──────────┐       ┌──────────┐       ┌──────────┐
+  │  Isla 🔍  │──────▶│  Mila 🔬  │──────▶│  Liam 💡  │──────▶│  Wade 🧪  │
   │ Empathize│       │Synthesize│       │Hypothesiz│       │Externaliz│
   └──────────┘       └──────────┘       └──────────┘       └──────────┘
-       ▲                  ▲                                       │
-       │                 HC6                                    HC4
-       │                  │                                       ▼
-  ┌──────────┐  HC8  ┌──────────┐  HC5  ┌──────────┐              │
-  │  Emma 🎯  │◀─────│  Max  🧭  │◀─────│  Noah 📡  │◀────────────┘
+       ▲                                                         │
+       │                                                         │
+       │                                                         ▼
+  ┌──────────┐       ┌──────────┐       ┌──────────┐              │
+  │  Emma 🎯  │◀──────│  Max  🧭  │◀──────│  Noah 📡  │◀────────────┘
   │Contextual│       │Systematiz│       │ Sensitize│
   └──────────┘       └──────────┘       └──────────┘
        │                  │                  │
        └──────────────────┴──────────────────┘
-              HC7 · HC9 · HC10 ▶ Isla 🔍
+                    ◀ back to any stream
 ```
+
+Each stream builds on the previous one's output. Based on what you learn, the system guides you back to fill any remaining gaps — you don't have to follow a fixed path.
 
 | Agent | Stream | What they do |
 |-------|--------|-------------|
-| **Emma** 🎯 | Contextualize | Frame the right problem — lean personas, product vision, scope decisions |
+| **Emma** 🎯 | Contextualize | Frame the right problem — personas, product vision, scope |
 | **Isla** 🔍 | Empathize | Understand users — empathy maps, interviews, discovery research |
-| **Mila** 🔬 | Synthesize | Converge research into problem definitions — JTBD, pains & gains analysis |
-| **Liam** 💡 | Hypothesize | Engineer testable hypotheses — assumption mapping, experiment design |
-| **Wade** 🧪 | Externalize | Test assumptions — MVPs, experiments, proof-of-concept/value |
-| **Noah** 📡 | Sensitize | Interpret production signals — behavior analysis, monitoring |
-| **Max** 🧭 | Systematize | Capture learnings — learning cards, pivot/persevere decisions, stream navigation |
-
-Every workflow ends with a **Vortex Compass** — evidence-driven routing that creates non-linear loops across all streams. Ten handoff contracts (HC1-HC10) ensure structured information flows between agents.
+| **Mila** 🔬 | Synthesize | Converge research into clear problem definitions |
+| **Liam** 💡 | Hypothesize | Turn problems into testable hypotheses and experiments |
+| **Wade** 🧪 | Externalize | Test assumptions with MVPs, experiments, and prototypes |
+| **Noah** 📡 | Sensitize | Interpret production signals and user behavior |
+| **Max** 🧭 | Systematize | Capture learnings and decide: pivot, patch, or persevere |
 
 ---
 
@@ -121,6 +121,12 @@ See [UPDATE-GUIDE.md](UPDATE-GUIDE.md) for migration paths and troubleshooting.
 
 ---
 
+<!-- STORY-5.4: Output Previews Section -->
+
+<!-- STORY-5.4: Journey Example Link -->
+
+---
+
 ## Using the Agents
 
 Each agent can be used independently or as part of the full Vortex flow:
@@ -133,7 +139,7 @@ Each agent can be used independently or as part of the full Vortex flow:
 6. **Noah (Sensitize)** — Start here when experiments have graduated to production
 7. **Max (Systematize)** — Start here when you have results and need to decide next steps
 
-Max's **Vortex Navigation** workflow helps identify which stream needs attention based on evidence gaps — you don't have to follow a linear path. Every workflow ends with a **Vortex Compass** that routes you to the right next agent based on what you learned.
+Max's **Vortex Navigation** workflow helps identify which stream needs attention based on evidence gaps — you don't have to follow a linear path. Every workflow ends with a **Vortex Compass** that routes you to the right next agent based on what you learned. Ten handoff contracts (HC1-HC10) ensure structured information flows between agents, so each agent gets exactly the data it needs from the previous one.
 
 For detailed workflow descriptions and usage examples, see the [Agent Guide](docs/agents.md) and the individual user guides:
 
