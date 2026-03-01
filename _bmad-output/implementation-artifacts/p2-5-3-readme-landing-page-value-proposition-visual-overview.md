@@ -1,6 +1,6 @@
 # Story 5.3: README Landing Page — Value Proposition & Visual Overview
 
-Status: review
+Status: done
 
 ## Story
 
@@ -203,11 +203,19 @@ Claude Opus 4.6
 - NFR10 validated: all 7 agent names, emojis, streams, and IDs match registry exactly; no stale references; badges correct (7 agents, 22 workflows, v1.6.4)
 - Full test suite: 997 tests, 0 failures (2 todo from story 5.1)
 - No code changes — README.md content only (26 insertions, 20 deletions)
+- **[Code Review]** 6 issues found (1 HIGH, 3 MEDIUM, 2 LOW), all fixed:
+  - HIGH: Stream names truncated in visual (Hypothesiz, Externaliz, Contextual, Systematiz) — widened boxes to 13-char inner width for full NFR10-compliant names
+  - MEDIUM: Double `---` separator from Story 5.4 insertion points — removed redundant separator
+  - MEDIUM: Redundant content between value proposition and visual caption — rewrote caption with non-overlapping content
+  - MEDIUM: Visual diagram lacked entry point indicator — added "▶ Start at Emma · back to any stream" label
+  - LOW: HC1-HC5 parenthetical in Quick Start file tree — simplified to "Artifact contract schemas"
+  - LOW: Section ordering deviation (Updating between Quick Start and 5.4 points) — documented here as intentional preservation
 
 ### Change Log
 
 - 2026-03-01: Design spike + README landing page implementation — value proposition, simplified visual, restructured sections, Story 5.4 insertion points
+- 2026-03-01: Code review fixes — wider diagram boxes (full stream names), entry point label, non-redundant caption, single separator, HC ID cleanup (16 insertions, 18 deletions)
 
 ### File List
 
-- `README.md` (MODIFIED) — 26 insertions, 20 deletions: new tagline, value proposition, simplified visual, benefit-oriented agent table, Story 5.4 insertion points, HC details relocated to "Using the Agents"
+- `README.md` (MODIFIED) — cumulative: 42 insertions, 38 deletions. New tagline, value proposition, full-width visual with entry point, benefit-oriented agent table, Story 5.4 insertion points, HC details relocated to "Using the Agents"
