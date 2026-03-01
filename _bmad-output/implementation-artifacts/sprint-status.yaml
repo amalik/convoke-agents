@@ -116,7 +116,7 @@ development_status:
   p2-4-1-create-7-agent-journey-example-with-real-artifacts: done
   p2-4-2-add-handoff-annotations-self-contained-sections: done
   p2-4-3-journey-quality-verification-editorial-review: done
-  p2-epic-4-retrospective: optional
+  p2-epic-4-retrospective: done
 
   # Epic 5 (Phase 2): CLI Reliability, Discovery Experience & User Feedback
   p2-epic-5: backlog
