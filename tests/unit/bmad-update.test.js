@@ -2,12 +2,12 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs-extra');
-const os = require('os');
 const yaml = require('js-yaml');
 const { spawn } = require('node:child_process');
 
 const { assessUpdate } = require('../../scripts/update/bmad-update');
 const {
+  createTempDir,
   createValidInstallation,
   createInstallation,
   runScript,
@@ -62,7 +62,7 @@ describe('assessUpdate', () => {
   });
 
   it('returns fresh for empty directory', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-assess-'));
+    const tmpDir = await createTempDir('bmad-assess-');
     try {
       const result = assessUpdate(tmpDir);
       assert.equal(result.action, 'fresh');
@@ -73,7 +73,7 @@ describe('assessUpdate', () => {
   });
 
   it('returns broken for partial installation', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-assess-'));
+    const tmpDir = await createTempDir('bmad-assess-');
     try {
       // Create _bmad dir with vortex but no config
       await fs.ensureDir(path.join(tmpDir, '_bmad/bme/_vortex'));
@@ -88,7 +88,7 @@ describe('assessUpdate', () => {
   });
 
   it('returns up-to-date when versions match', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-assess-'));
+    const tmpDir = await createTempDir('bmad-assess-');
     try {
       await createValidInstallation(tmpDir);
 
@@ -108,7 +108,7 @@ describe('assessUpdate', () => {
   });
 
   it('returns downgrade when installed > package', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-assess-'));
+    const tmpDir = await createTempDir('bmad-assess-');
     try {
       await createValidInstallation(tmpDir);
 
@@ -126,7 +126,7 @@ describe('assessUpdate', () => {
   });
 
   it('returns upgrade with migrations for v1.4.x', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-assess-'));
+    const tmpDir = await createTempDir('bmad-assess-');
     try {
       await createValidInstallation(tmpDir);
 
@@ -147,7 +147,7 @@ describe('assessUpdate', () => {
   });
 
   it('returns upgrade with breaking changes for v1.0.x', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-assess-'));
+    const tmpDir = await createTempDir('bmad-assess-');
     try {
       await createValidInstallation(tmpDir);
 
@@ -168,7 +168,7 @@ describe('assessUpdate', () => {
   // ─── Edge Cases (AC #4) ──────────────────────────────────
 
   it('returns no-version when config has no version field', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-assess-'));
+    const tmpDir = await createTempDir('bmad-assess-');
     try {
       await createValidInstallation(tmpDir);
       const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
@@ -188,7 +188,7 @@ describe('assessUpdate', () => {
   });
 
   it('returns no-migrations when version has no applicable migrations', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-assess-'));
+    const tmpDir = await createTempDir('bmad-assess-');
     try {
       await createValidInstallation(tmpDir);
       const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
@@ -206,7 +206,7 @@ describe('assessUpdate', () => {
   });
 
   it('handles malformed config.yaml gracefully', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-assess-'));
+    const tmpDir = await createTempDir('bmad-assess-');
     try {
       await createValidInstallation(tmpDir);
       const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
@@ -214,16 +214,20 @@ describe('assessUpdate', () => {
       fs.writeFileSync(configPath, ': invalid: yaml: {{{{', 'utf8');
 
       const result = assessUpdate(tmpDir);
-      // getCurrentVersion falls back to guessVersionFromFileStructure
-      // which returns null for a modern installation → no-version
-      assert.ok(result.action, 'should return an action despite malformed config');
+      // With malformed YAML, detectInstallationScenario may return 'corrupted' (→ broken)
+      // or getCurrentVersion fallback via guessVersionFromFileStructure (→ upgrade)
+      const validActions = ['upgrade', 'broken', 'no-version'];
+      assert.ok(
+        validActions.includes(result.action),
+        `malformed config should result in ${validActions.join('/')}, got: ${result.action}`
+      );
     } finally {
       await fs.remove(tmpDir);
     }
   });
 
   it('handles empty config.yaml', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-assess-'));
+    const tmpDir = await createTempDir('bmad-assess-');
     try {
       await createValidInstallation(tmpDir);
       const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
@@ -241,7 +245,7 @@ describe('assessUpdate', () => {
   });
 
   it('returns upgrade without duplicate migrations for v1.0.x', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-assess-'));
+    const tmpDir = await createTempDir('bmad-assess-');
     try {
       await createValidInstallation(tmpDir);
       const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
@@ -269,7 +273,7 @@ describe('bmad-update CLI (main)', () => {
   // ─── Scenario Tests ──────────────────────────────────
 
   it('exits 1 with error for no-project scenario', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
       assert.equal(exitCode, 1);
@@ -280,7 +284,7 @@ describe('bmad-update CLI (main)', () => {
   });
 
   it('exits 0 with install suggestion for fresh installation', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       // Create _bmad dir only (no _vortex) so findProjectRoot finds it
       await fs.ensureDir(path.join(tmpDir, '_bmad'));
@@ -294,7 +298,7 @@ describe('bmad-update CLI (main)', () => {
   });
 
   it('exits 1 for broken installation', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       // Create partial installation: _vortex exists but no config
       await fs.ensureDir(path.join(tmpDir, '_bmad/bme/_vortex'));
@@ -311,7 +315,7 @@ describe('bmad-update CLI (main)', () => {
   });
 
   it('exits 0 for no-version scenario', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createValidInstallation(tmpDir);
       const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
@@ -331,7 +335,7 @@ describe('bmad-update CLI (main)', () => {
   });
 
   it('exits 0 for up-to-date installation', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createValidInstallation(tmpDir);
       const pkg = require('../../package.json');
@@ -349,7 +353,7 @@ describe('bmad-update CLI (main)', () => {
   });
 
   it('exits 1 for downgrade scenario', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createValidInstallation(tmpDir);
       const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
@@ -366,7 +370,7 @@ describe('bmad-update CLI (main)', () => {
   });
 
   it('exits 0 for no-migrations scenario', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createValidInstallation(tmpDir);
       const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
@@ -386,7 +390,7 @@ describe('bmad-update CLI (main)', () => {
   // ─── CLI Flag Tests ──────────────────────────────────
 
   it('previews migrations with --dry-run and exits 0', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createInstallation(tmpDir, '1.4.1');
 
@@ -400,13 +404,13 @@ describe('bmad-update CLI (main)', () => {
   });
 
   it('skips confirmation with --yes flag', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createInstallation(tmpDir, '1.4.1');
 
       const { exitCode, stdout } = await runScript(SCRIPT_PATH, ['--yes'], { cwd: tmpDir });
-      // Migration should run without prompting
-      assert.ok(exitCode === 0 || exitCode === 1, `expected 0 or 1, got ${exitCode}`);
+      // Migration should run without prompting and complete successfully
+      assert.equal(exitCode, 0, 'migration with --yes should complete successfully');
       assert.ok(stdout.includes('Migration Plan'), 'should show migration plan');
     } finally {
       await fs.remove(tmpDir);
@@ -414,7 +418,7 @@ describe('bmad-update CLI (main)', () => {
   });
 
   it('accepts -y shorthand for --yes', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createInstallation(tmpDir, '1.4.1');
 
@@ -427,7 +431,7 @@ describe('bmad-update CLI (main)', () => {
   });
 
   it('shows verbose output with --verbose flag', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createInstallation(tmpDir, '1.4.1');
 
@@ -442,7 +446,7 @@ describe('bmad-update CLI (main)', () => {
   });
 
   it('accepts -v shorthand for --verbose', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createInstallation(tmpDir, '1.4.1');
 
@@ -458,7 +462,7 @@ describe('bmad-update CLI (main)', () => {
   // ─── Confirmation Tests ──────────────────────────────
 
   it('exits 0 when user rejects migration with n', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createInstallation(tmpDir, '1.4.1');
 
@@ -473,15 +477,15 @@ describe('bmad-update CLI (main)', () => {
   });
 
   it('runs migration when user confirms with y', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createInstallation(tmpDir, '1.4.1');
 
       const { exitCode, stdout } = await runScriptWithInput(
         SCRIPT_PATH, [], 'y\n', { cwd: tmpDir }
       );
-      // Migration should run (may succeed or fail depending on state)
-      assert.ok(exitCode === 0 || exitCode === 1, `expected 0 or 1, got ${exitCode}`);
+      // Migration confirmed with 'y' should complete successfully
+      assert.equal(exitCode, 0, 'confirmed migration should complete successfully');
       assert.ok(stdout.includes('Migration Plan'), 'should show migration plan before confirm');
     } finally {
       await fs.remove(tmpDir);
@@ -491,7 +495,7 @@ describe('bmad-update CLI (main)', () => {
   // ─── Breaking Changes Display ──────────────────────────
 
   it('displays breaking changes warning for v1.0.x upgrade', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createInstallation(tmpDir, '1.0.5');
 
@@ -504,10 +508,30 @@ describe('bmad-update CLI (main)', () => {
     }
   });
 
+  // ─── Partial Failure Recovery (AC #4 edge case) ─────
+
+  it('handles partial migration failure with error exit', async () => {
+    const tmpDir = await createTempDir('bmad-cli-');
+    try {
+      await createInstallation(tmpDir, '1.4.1');
+
+      // Replace agents directory with a file to cause refreshInstallation failure
+      // This simulates a partial failure: migration starts but filesystem state is corrupted
+      const agentsDir = path.join(tmpDir, '_bmad/bme/_vortex/agents');
+      await fs.remove(agentsDir);
+      await fs.writeFile(agentsDir, 'not-a-directory', 'utf8');
+
+      const { exitCode } = await runScript(SCRIPT_PATH, ['--yes'], { cwd: tmpDir });
+      assert.equal(exitCode, 1, 'should exit 1 when migration fails mid-execution');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
   // ─── Manifest Merge Preservation (AC #3) ────────────
 
   it('updates config version and agents after upgrade with --yes', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createInstallation(tmpDir, '1.4.1');
 
@@ -525,8 +549,15 @@ describe('bmad-update CLI (main)', () => {
     }
   });
 
+  // AC #3 / NFR15 — user-added agent and ordering preservation
+  // Known limitation: refreshInstallation overwrites config.yaml rather than merging.
+  // User-added custom agents and TEA agents are NOT preserved during upgrade.
+  // These document the expected behavior gap — needs config-merger integration.
+  it.todo('preserves user-added custom agents after upgrade (blocked: refreshInstallation overwrites config — needs config-merger integration)');
+  it.todo('maintains agent ordering after merge (blocked: same config overwrite issue)');
+
   it('does not duplicate core agents after upgrade', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createInstallation(tmpDir, '1.4.1');
 
@@ -550,7 +581,7 @@ describe('bmad-update CLI (main)', () => {
   // ─── Cross-Platform Path Handling (AC #5) ──────────
 
   it('finds project root from nested subdirectory', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       await createValidInstallation(tmpDir);
       const pkg = require('../../package.json');
@@ -572,10 +603,69 @@ describe('bmad-update CLI (main)', () => {
     }
   });
 
+  // ─── Cross-Platform Path Handling — process.platform mocking (AC #5) ──
+
+  it('assessUpdate works with mocked process.platform win32', async () => {
+    const tmpDir = await createTempDir('bmad-plat-');
+    const originalPlatformDesc = Object.getOwnPropertyDescriptor(process, 'platform');
+    try {
+      await createValidInstallation(tmpDir);
+      const pkg = require('../../package.json');
+      const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
+      const config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+      config.version = pkg.version;
+      fs.writeFileSync(configPath, yaml.dump(config), 'utf8');
+
+      Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+      const result = assessUpdate(tmpDir);
+      assert.equal(result.action, 'up-to-date', 'should work with mocked win32 platform');
+    } finally {
+      Object.defineProperty(process, 'platform', originalPlatformDesc);
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('assessUpdate works with mocked process.platform darwin', async () => {
+    const tmpDir = await createTempDir('bmad-plat-');
+    const originalPlatformDesc = Object.getOwnPropertyDescriptor(process, 'platform');
+    try {
+      await createValidInstallation(tmpDir);
+      const pkg = require('../../package.json');
+      const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
+      const config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+      config.version = pkg.version;
+      fs.writeFileSync(configPath, yaml.dump(config), 'utf8');
+
+      Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
+      const result = assessUpdate(tmpDir);
+      assert.equal(result.action, 'up-to-date', 'should work with mocked darwin platform');
+    } finally {
+      Object.defineProperty(process, 'platform', originalPlatformDesc);
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('source code uses path module for cross-platform path handling', () => {
+    const utilsSource = fs.readFileSync(
+      path.join(PACKAGE_ROOT, 'scripts/update/lib/utils.js'), 'utf8'
+    );
+    // Verify findProjectRoot uses path module functions (cross-platform by design)
+    assert.ok(utilsSource.includes('path.join('), 'utils.js should use path.join');
+    assert.ok(utilsSource.includes('path.dirname('), 'utils.js should use path.dirname');
+    assert.ok(utilsSource.includes('path.parse('), 'utils.js should use path.parse');
+
+    // Verify bmad-update.js imports utils for path operations
+    const updateSource = fs.readFileSync(SCRIPT_PATH, 'utf8');
+    assert.ok(
+      updateSource.includes("require('./lib/utils')"),
+      'bmad-update.js should import utils for path operations'
+    );
+  });
+
   // ─── Banner & Output ──────────────────────────────────
 
   it('shows header banner on every invocation', async () => {
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-cli-'));
+    const tmpDir = await createTempDir('bmad-cli-');
     try {
       const { stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
       assert.ok(stdout.includes('BMAD-Enhanced Update Manager'), 'should display header banner');
