@@ -119,8 +119,8 @@ development_status:
   p2-epic-4-retrospective: done
 
   # Epic 5 (Phase 2): CLI Reliability, Discovery Experience & User Feedback
-  p2-epic-5: backlog
-  p2-5-1-bmad-update-js-automated-tests-at-85-coverage: backlog
+  p2-epic-5: in-progress
+  p2-5-1-bmad-update-js-automated-tests-at-85-coverage: review
   p2-5-2-bmad-version-js-automated-tests-at-85-coverage: backlog
   p2-5-3-readme-landing-page-value-proposition-visual-overview: backlog
   p2-5-4-readme-landing-page-output-previews-journey-link: backlog
