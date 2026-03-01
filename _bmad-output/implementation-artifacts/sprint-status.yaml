@@ -114,8 +114,8 @@ development_status:
   # Epic 4 (Phase 2): Journey Example & Editorial Quality
   p2-epic-4: in-progress
   p2-4-1-create-7-agent-journey-example-with-real-artifacts: done
-  p2-4-2-add-handoff-annotations-self-contained-sections: in-progress
-  p2-4-3-journey-quality-verification-editorial-review: backlog
+  p2-4-2-add-handoff-annotations-self-contained-sections: done
+  p2-4-3-journey-quality-verification-editorial-review: in-progress
   p2-epic-4-retrospective: optional
 
   # Epic 5 (Phase 2): CLI Reliability, Discovery Experience & User Feedback
