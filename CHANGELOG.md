@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.0] - 2026-03-02
+
+### Added
+
+- **Docs Audit Tool** (`npm run docs:audit`) — Programmatic documentation quality checker with 5 check types:
+  - Stale numeric references (detects outdated agent/workflow counts)
+  - Broken internal links
+  - Incomplete agent listing tables (with relationship table detection)
+  - Internal naming convention leaks (`_vortex` in user-facing prose)
+  - Forward-compatibility checks
+- **P0 Content Correctness Test Suite** — 12 test files covering activation, voice consistency, content correctness, handoff contracts, and workflow structure for all 7 agents
+- **18 production-quality workflow step files** for Wade's three remaining workflows:
+  - `lean-experiment/steps/` — step-01-hypothesis through step-06-decide
+  - `proof-of-concept/steps/` — step-01-risk through step-06-document
+  - `proof-of-value/steps/` — step-01-value-hypothesis through step-06-document
+- **7 comprehensive user guides** — Created/expanded guides for all 7 agents in `_bmad/bme/_vortex/guides/`
+- **"Your First 15 Minutes" walkthrough** in README — 6-step guided onboarding from config to first artifact
+- **Activation model explanation** in README — explains what agent files are and how Claude adopts personas
+- **Config personalization step** in README Quick Start and installer output
+- **`bmad-update` test suite** — 615+ lines covering upgrade flows, config merging, version detection
+- **`bmad-version` test suite** — 377 lines covering version display, migration history, update detection
+- **`docs-audit` test suite** — 539 lines covering all 5 check functions
+- **7-agent journey example** — Complete busy-parents walkthrough demonstrating all 7 agents and handoff contracts
+- **Structured feedback mechanism** — GitHub issue template for agent/workflow feedback
+
+### Changed
+
+- **CRITICAL: Fixed npm package bloat** — Package reduced from 1618 files / 9.7 MB to 242 files / 1.1 MB. The `files` field in `package.json` was too broad (`"_bmad/"`, `"_bmad-output/"`), shipping internal backups, migration logs, sprint artifacts, and all BMAD modules (bmm, cis, core, tea). Now precisely targets `"_bmad/bme/_vortex/"` only.
+- **Config merger smart-merge** — `mergeConfig()` now preserves user-added agents and workflows during updates. Canonical entries maintain registry order; user-added entries are deduplicated and appended.
+- **User guide invocation methods reordered** — Direct File Reading is now Method 1 (Recommended) in all 7 guides; Slash Command is Method 2 (BMAD Environments Only)
+- **README overhaul** — Value proposition, visual Vortex diagram, agent output previews, Claude Code/Claude.ai activation instructions
+- **Installer output** — Now shows numbered "Next Steps" including config personalization
+- **Journey example condensed** — 944 to 888 lines, tightened transition sections
+- **docs/agents.md** — Updated agent count references, handoff contract documentation
+- **docs/faq.md** — Expanded with workflow and agent questions
+- **INSTALLATION.md** — Updated installation instructions
+- **UPDATE-GUIDE.md** — Added user-agent preservation documentation
+
+### Fixed
+
+- Config merger overwrote user-added agents on upgrade (now preserved via smart-merge)
+- Incomplete agent table detection false positives on relationship/contract-flow tables
+- Internal naming leak check false positives on markdown link targets and backtick-wrapped paths
+- `_vortex` appearing unescaped in 7 user guide Credits sections
+- Separator and header rows incorrectly counted in agent table completeness check
+- README "Type `LP`" instruction meaningless to new users (now "Select **Lean Persona** from the menu")
+- Redundant config personalization step in "Your First 15 Minutes"
+
+### Technical Details
+
+- **Tests:** 309 pass, 0 fail, 0 todo (unit + integration + P0)
+- **Package:** 242 files, 1.1 MB unpacked (was 1618 files, 9.7 MB)
+- **Docs audit:** `npm run docs:audit --json` returns `[]` (zero findings)
+- **All 22 workflows** now have production-quality step content (no placeholders)
+
+---
+
 ## [1.6.0] - 2026-02-26
 
 ### Added
