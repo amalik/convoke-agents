@@ -22,11 +22,14 @@
                       │
 ┌─────────────────────────────────────────────────┐
 │        BMAD-Enhanced (Extension Package)        │
-│  - Domain-specialized agents                    │
-│  - Emma (empathy-mapper)                        │
-│  - Wade (wireframe-designer)                    │
-│  - Sage (quality-gatekeeper) - planned         │
-│  - Stan (standards-auditor) - planned           │
+│  - 7 domain-specialized Vortex agents           │
+│  - Emma (contextualization-expert)              │
+│  - Isla (discovery-empathy-expert)              │
+│  - Mila (research-convergence-specialist)       │
+│  - Liam (hypothesis-engineer)                   │
+│  - Wade (lean-experiments-specialist)            │
+│  - Noah (production-intelligence-specialist)    │
+│  - Max (learning-decision-expert)               │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -70,13 +73,11 @@ your-project/
 your-project/
 └── _bmad/
     ├── bme/
-    │   └── _designos/
-    │       ├── agents/
-    │       │   ├── empathy-mapper.md
-    │       │   └── wireframe-designer.md
-    │       ├── workflows/
-    │       │   ├── empathy-map/
-    │       │   └── wireframe/
+    │   └── _vortex/
+    │       ├── agents/           # 7 agent definitions
+    │       ├── workflows/        # 22 workflows
+    │       ├── contracts/        # HC1-HC5 handoff contracts
+    │       ├── guides/           # 7 user guides
     │       └── config.yaml
     └── _config/
         └── agent-manifest.csv (updated)
@@ -125,11 +126,11 @@ BMAD-Enhanced installers check:
    cd bmad && git pull && npm install
 
    # Test BMAD-Enhanced agents
-   cat _bmad/bme/_designos/agents/empathy-mapper.md
+   cat _bmad/bme/_vortex/agents/contextualization-expert.md
    # Verify Emma still works
 
-   cat _bmad/bme/_designos/agents/wireframe-designer.md
-   # Verify Wade still works
+   # Run diagnostics to check all 7 agents
+   npx bmad-doctor
    ```
 
 2. **If agents break:**
@@ -148,13 +149,14 @@ BMAD-Enhanced installers check:
 
 | BMAD-Enhanced Version | Compatible BMAD Method Versions | Notes |
 |----------------------|--------------------------------|-------|
-| 1.0.4-alpha          | 1.x (assumed)                  | Current release - Fixed installation docs to use @alpha tag |
-| 1.0.3-alpha          | 1.x (assumed)                  | Unpublished - npx bin commands |
-| 1.0.2-alpha          | 1.x (assumed)                  | Fixed user guides inclusion |
-| 1.0.1-alpha          | 1.x (assumed)                  | Fixed Wade workflow file naming |
-| 1.0.0-alpha          | 1.x (assumed)                  | Initial release |
+| 1.6.4                | 1.x (optional — works standalone) | Current release — 7 agents, 22 workflows, Compass routing |
+| 1.6.0                | 1.x (optional — works standalone) | Added Mila, Liam, Noah; HC contracts; Compass routing |
+| 1.5.x                | 1.x (optional — works standalone) | Added Isla and Max, test hardening |
+| 1.4.x                | 1.x (optional — works standalone) | Architecture refactor, registry-driven |
+| 1.3.x                | 1.x (assumed)                  | Migration system |
+| 1.0.x-alpha          | 1.x (assumed)                  | Initial release (Emma and Wade only) |
 
-**To be updated as versions are released and tested.**
+**Updated as versions are released and tested.**
 
 ---
 
@@ -178,10 +180,10 @@ BMAD-Enhanced installers check:
 
 **Example:** BMAD changes XML agent format to YAML
 
-**Impact:** Emma and Wade agent files become incompatible
+**Impact:** All 7 Vortex agent files become incompatible
 
 **Solution:**
-1. Convert Emma and Wade to new format
+1. Convert all agent definitions to new format
 2. Update workflow files if format changes
 3. Update templates if needed
 4. Release BMAD-Enhanced v2.0.0 (major version bump)
@@ -222,7 +224,7 @@ BMAD-Enhanced follows semver:
 - Incompatible with previous BMAD Method versions
 
 **Minor version bump (e.g., 1.0 → 1.1):**
-- New agent added (Quinn, Stan)
+- New agent or workflow added
 - New features added to existing agents
 - Optional BMAD Method version requirement changes
 
@@ -240,12 +242,12 @@ BMAD-Enhanced follows semver:
 When new BMAD Method version releases:
 
 - [ ] Install new BMAD Method version
-- [ ] Run `npx bmad-install-agents`
+- [ ] Run `npx bmad-install-vortex-agents`
 - [ ] Verify all files copied correctly
-- [ ] Activate Emma: `cat _bmad/bme/_designos/agents/empathy-mapper.md`
-- [ ] Test Emma workflow: Type `EM` and complete all 5 steps
-- [ ] Activate Wade: `cat _bmad/bme/_designos/agents/wireframe-designer.md`
-- [ ] Test Wade workflow: Type `WM` and complete all 6 steps
+- [ ] Activate Emma: `cat _bmad/bme/_vortex/agents/contextualization-expert.md`
+- [ ] Test Emma workflow: Type `LP` (Lean Persona) and complete all steps
+- [ ] Activate Mila (or another recent agent): `cat _bmad/bme/_vortex/agents/research-convergence-specialist.md`
+- [ ] Run `npx bmad-doctor` to verify all 7 agents and 22 workflows
 - [ ] Verify artifacts generated correctly
 - [ ] Check for errors or warnings
 - [ ] Update compatibility matrix if successful
@@ -392,6 +394,6 @@ function checkBMADMethodVersion() {
 
 ---
 
-**Version:** 1.0.4-alpha
-**Last Updated:** 2026-02-16
+**Version:** 1.6.4
+**Last Updated:** 2026-03-02
 **Status:** Living Document (update as needed)
