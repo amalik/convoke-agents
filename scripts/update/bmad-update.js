@@ -130,9 +130,13 @@ async function main() {
       console.log(`  Current version: ${assessment.currentVersion}`);
       console.log(`  Package version: ${assessment.targetVersion}`);
       console.log('');
-      console.log(chalk.yellow('Downgrades are not officially supported.'));
+      console.log(chalk.gray('This usually means npx is serving a cached older package.'));
+      console.log(chalk.gray('Run: ') + chalk.cyan('npx -p bmad-enhanced@latest bmad-update'));
       console.log('');
-      console.log('If you want to downgrade, please:');
+      console.log(chalk.gray('If the issue persists, clear the cache and reinstall:'));
+      console.log(chalk.cyan('  npm cache clean --force && npm install bmad-enhanced@latest'));
+      console.log('');
+      console.log(chalk.yellow('If you intentionally want to downgrade:'));
       console.log('  1. Backup your installation');
       console.log('  2. Uninstall current version');
       console.log('  3. Install desired version');
