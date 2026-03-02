@@ -39,35 +39,30 @@ MVP specifications, lean experiment designs with Build-Measure-Learn structure, 
 
 ## How to Invoke Wade
 
-### Method 1: Slash Command (Preferred)
+### Method 1: Direct Agent File Reading (Recommended)
 
-If you're in a BMAD environment that supports slash commands:
+Read Wade's agent file to activate him. This works in any environment:
 
-```
-/bmad-agent-bme-lean-experiments-specialist
-```
-
-**If you see "Unknown skill":**
-This means slash commands aren't available in your environment. Use Method 2 instead.
-
----
-
-### Method 2: Direct Agent File Reading (Always Works)
-
-In any environment (including Claude Code), you can invoke Wade by reading his agent file:
-
-1. Navigate to your BMAD project root
-2. Read the file: `_bmad/bme/_vortex/agents/lean-experiments-specialist.md`
-3. Wade will activate and greet you
-
-**Example (Claude Code):**
+**Claude Code:**
 ```
 Read the file at _bmad/bme/_vortex/agents/lean-experiments-specialist.md
 ```
 
-**Example (Terminal):**
+**Terminal:**
 ```bash
 cat _bmad/bme/_vortex/agents/lean-experiments-specialist.md
+```
+
+**Claude.ai:** Copy the contents of `_bmad/bme/_vortex/agents/lean-experiments-specialist.md` and paste into the chat.
+
+---
+
+### Method 2: Slash Command (BMAD Environments Only)
+
+If your environment supports BMAD slash commands:
+
+```
+/bmad-agent-bme-lean-experiments-specialist
 ```
 
 ---
@@ -241,7 +236,7 @@ Failure is only valuable if you learn from it. Document what you learned, why ex
 
 **Agent:** Wade (lean-experiments-specialist)
 **Module:** BMAD Enhanced (bme)
-**Submodule:** Vortex Pattern (_vortex)
+**Submodule:** Vortex Pattern (`_vortex`)
 **Stream:** Externalize (Stream 5)
 **Version:** 1.6.4
 
