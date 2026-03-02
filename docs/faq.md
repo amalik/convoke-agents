@@ -122,7 +122,7 @@ Handoff failures typically mean the upstream agent's output is missing fields th
 
 **To diagnose:**
 
-1. **Check the journey example** at `_bmad-output/journey-example/` — it shows what well-formed artifacts look like at every handoff point, serving as an implicit format reference *(coming in Phase 2, Epic 4)*
+1. **Check the journey example** at `_bmad-output/journey-examples/` — it shows what well-formed artifacts look like at every handoff point, serving as an implicit format reference
 2. **Check the handoff contract schemas** in `_bmad/bme/_vortex/contracts/` — the 5 artifact contracts (HC1-HC5) each have a schema file (e.g., `hc1-empathy-artifacts.md`) defining which fields the agent produces and the downstream agent consumes
 3. **Check the receiving agent's first workflow step** — it documents what input fields it expects and how it uses them
 
