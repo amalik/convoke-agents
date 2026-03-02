@@ -10,7 +10,11 @@ const { AGENT_IDS, WORKFLOW_NAMES } = require('./agent-registry');
  */
 
 /**
- * Merge current config with new template while preserving user preferences
+ * Merge current config with new template while preserving user preferences.
+ * Agents and workflows use smart-merge: canonical entries in registry order
+ * first, then any user-added entries (not in AGENT_IDS/WORKFLOW_NAMES)
+ * appended and deduplicated.
+ *
  * @param {string} currentConfigPath - Path to current config.yaml
  * @param {string} newVersion - New version to set
  * @param {object} updates - Updates to apply (agents, workflows, etc.)
@@ -50,13 +54,22 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}) {
   // Update version (system field)
   merged.version = newVersion;
 
-  // Apply updates
+  // Smart-merge agents: canonical agents in order, then unique user-added agents appended.
+  // Core agents are always restored to canonical order. User-added agents (not in AGENT_IDS)
+  // are preserved and deduplicated. Deliberately removed core agents are restored on upgrade.
   if (updates.agents) {
-    merged.agents = updates.agents;
+    const userAgents = Array.isArray(current.agents)
+      ? [...new Set(current.agents.filter(a => !AGENT_IDS.includes(a)))]
+      : [];
+    merged.agents = [...updates.agents, ...userAgents];
   }
 
+  // Smart-merge workflows: canonical workflows in order, then unique user-added appended
   if (updates.workflows) {
-    merged.workflows = updates.workflows;
+    const userWorkflows = Array.isArray(current.workflows)
+      ? [...new Set(current.workflows.filter(w => !WORKFLOW_NAMES.includes(w)))]
+      : [];
+    merged.workflows = [...updates.workflows, ...userWorkflows];
   }
 
   // Preserve user preferences
