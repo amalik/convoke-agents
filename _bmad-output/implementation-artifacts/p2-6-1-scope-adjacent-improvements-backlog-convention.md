@@ -1,6 +1,6 @@
 # Story 6.1: Scope-Adjacent Improvements Backlog Convention
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -17,31 +17,31 @@ so that good ideas are preserved without interrupting current deliverable progre
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create backlog convention file (AC: #1, #2, #3)
-  - [ ] 1.1 Create `_bmad-output/scope-adjacent-backlog.md` with a clear title, purpose statement, and usage instructions explaining when and why to add entries — scope-adjacent means improvements discovered during Phase 2 that fall outside current story scope; the only exception is if the improvement is a prerequisite for completing a Phase 2 deliverable (pulled into current story instead)
-  - [ ] 1.2 Document the entry convention format with these 4 required fields per AC#2:
+- [x] Task 1: Create backlog convention file (AC: #1, #2, #3)
+  - [x] 1.1 Create `_bmad-output/scope-adjacent-backlog.md` with a clear title, purpose statement, and usage instructions explaining when and why to add entries — scope-adjacent means improvements discovered during Phase 2 that fall outside current story scope; the only exception is if the improvement is a prerequisite for completing a Phase 2 deliverable (pulled into current story instead)
+  - [x] 1.2 Document the entry convention format with these 4 required fields per AC#2:
     - **Discovery context:** Which story/epic triggered the discovery (e.g., "Epic 3, Story 3.2 — hypothesis-engineering workflow")
     - **Description:** What the improvement is and why it matters
     - **Estimated impact:** How significant the improvement would be (High/Medium/Low with brief rationale)
     - **Suggested priority:** When it should be addressed (e.g., "Phase 2.5", "Phase 3", "Nice-to-have")
-  - [ ] 1.3 Add a concrete example entry demonstrating the convention format so maintainers can follow the pattern without ambiguity — use a realistic improvement discovered during Phase 2 work (not a placeholder)
-  - [ ] 1.4 Keep the convention section under 20 lines — this is intentionally lightweight (FR32), not a project management framework. A maintainer should understand the format in under 60 seconds
-  - [ ] 1.5 Add a brief "When NOT to use this backlog" section clarifying the exception: if the improvement is a prerequisite for completing a Phase 2 deliverable, it gets pulled into the current story/epic instead of deferred
+  - [x] 1.3 Add a concrete example entry demonstrating the convention format so maintainers can follow the pattern without ambiguity — use a realistic improvement discovered during Phase 2 work (not a placeholder)
+  - [x] 1.4 Keep the convention section under 20 lines — this is intentionally lightweight (FR32), not a project management framework. A maintainer should understand the format in under 60 seconds
+  - [x] 1.5 Add a brief "When NOT to use this backlog" section clarifying the exception: if the improvement is a prerequisite for completing a Phase 2 deliverable, it gets pulled into the current story/epic instead of deferred
 
-- [ ] Task 2: Seed backlog with improvements discovered during Phase 2 Epics 1-5 (AC: #4)
-  - [ ] 2.1 Review all Phase 2 retrospectives (`p2-epic-1-retro` through `p2-epic-5-retro`) for scope-adjacent improvements that were noted but deferred — look for "Technical Debt", "Known Issues", "Deferred Items", and "Lessons Learned" sections
-  - [ ] 2.2 Review code review findings from Phase 2 stories that suggested improvements beyond the story's scope — especially recurring patterns flagged across multiple stories
-  - [ ] 2.3 Review the PRD's risk mitigation section for examples of scope-adjacent improvements mentioned (e.g., "docs that need rewriting not just fixing, agent interfaces that should change for testability")
-  - [ ] 2.4 Add each discovered improvement as a properly formatted entry using the convention from Task 1 — minimum 3 entries to demonstrate the backlog is a living document, not an empty template. **NFR11 discipline:** Each newly written entry must use PM-friendly language with zero implementation jargon — same sustained effort that Stories 5.3-5.5 applied to all content
-  - [ ] 2.5 Verify each entry's discovery context references actual stories/epics (filesystem-verify against implementation-artifacts/)
+- [x] Task 2: Seed backlog with improvements discovered during Phase 2 Epics 1-5 (AC: #4)
+  - [x] 2.1 Review all Phase 2 retrospectives (`p2-epic-1-retro` through `p2-epic-5-retro`) for scope-adjacent improvements that were noted but deferred — look for "Technical Debt", "Known Issues", "Deferred Items", and "Lessons Learned" sections
+  - [x] 2.2 Review code review findings from Phase 2 stories that suggested improvements beyond the story's scope — especially recurring patterns flagged across multiple stories
+  - [x] 2.3 Review the PRD's risk mitigation section for examples of scope-adjacent improvements mentioned (e.g., "docs that need rewriting not just fixing, agent interfaces that should change for testability")
+  - [x] 2.4 Add each discovered improvement as a properly formatted entry using the convention from Task 1 — minimum 3 entries to demonstrate the backlog is a living document, not an empty template. **NFR11 discipline:** Each newly written entry must use PM-friendly language with zero implementation jargon — same sustained effort that Stories 5.3-5.5 applied to all content
+  - [x] 2.5 Verify each entry's discovery context references actual stories/epics (filesystem-verify against implementation-artifacts/)
 
-- [ ] Task 3: Validate NFR compliance and final review (AC: #1-#4)
-  - [ ] 3.1 **NFR7** — Verify no new entries in package.json dependencies or devDependencies. This story creates only markdown files
-  - [ ] 3.2 **NFR10** — Verify all agent/workflow names referenced in backlog entries match the registry exactly (agent-registry.js source of truth)
-  - [ ] 3.3 **NFR11** — Read the backlog file as a non-technical PM: Is the convention clear? Can someone add an entry without developer knowledge?
-  - [ ] 3.4 **FR32** — Verify: (a) markdown file exists with convention, (b) entries capture all 4 required fields, (c) lightweight format (not a tracking system), (d) file accumulates entries across epics
-  - [ ] 3.5 Run the full test suite — `npm test`. This story adds no JavaScript, so expect 0 regressions (293 pass, 0 fail, 2 todo baseline)
-  - [ ] 3.6 Verify backlog file is well-formed markdown (no syntax errors, proper heading hierarchy, consistent formatting)
+- [x] Task 3: Validate NFR compliance and final review (AC: #1-#4)
+  - [x] 3.1 **NFR7** — Verify no new entries in package.json dependencies or devDependencies. This story creates only markdown files
+  - [x] 3.2 **NFR10** — Verify all agent/workflow names referenced in backlog entries match the registry exactly (agent-registry.js source of truth)
+  - [x] 3.3 **NFR11** — Read the backlog file as a non-technical PM: Is the convention clear? Can someone add an entry without developer knowledge?
+  - [x] 3.4 **FR32** — Verify: (a) markdown file exists with convention, (b) entries capture all 4 required fields, (c) lightweight format (not a tracking system), (d) file accumulates entries across epics
+  - [x] 3.5 Run the full test suite — `npm test`. This story adds no JavaScript, so expect 0 regressions (293 pass, 0 fail, 2 todo baseline)
+  - [x] 3.6 Verify backlog file is well-formed markdown (no syntax errors, proper heading hierarchy, consistent formatting)
 
 ## Dev Notes
 
@@ -113,7 +113,7 @@ The format should be scannable — a maintainer should be able to read the full 
 
 ### Parallel Preparation (from Epic 5 Retrospective — MUST NOT BE OVERLOOKED)
 
-- **ACTION REQUIRED during Story 6.1:** Smoke test `scripts/audit/docs-audit.js` against the current documentation set. Run `node scripts/audit/docs-audit.js` and verify it completes without errors. This tool hasn't been exercised since Story 1.4 (Pass 1 checkpoint) and the docs landscape has changed significantly across Epics 1-5. If the tool is broken, Story 6.2 cannot start. This is independent of Story 6.1 implementation but must happen in parallel — do not defer to Story 6.2.
+- **ACTION REQUIRED during Story 6.1:** Smoke test `scripts/docs-audit.js` against the current documentation set. Run `node scripts/docs-audit.js` and verify it completes without errors. This tool hasn't been exercised since Story 1.4 (Pass 1 checkpoint) and the docs landscape has changed significantly across Epics 1-5. If the tool is broken, Story 6.2 cannot start. This is independent of Story 6.1 implementation but must happen in parallel — do not defer to Story 6.2.
 
 ### Project Structure Notes
 
@@ -149,12 +149,25 @@ The format should be scannable — a maintainer should be able to read the full 
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Task 1: Created `_bmad-output/scope-adjacent-backlog.md` with title, purpose statement, usage instructions, "When NOT to use" section, and convention format (4 required fields). Convention section is 8 lines (well under 20-line limit). Follows feedback-template.md pattern: brief instructions at top, clear fields, scannable format.
+- Task 2: Seeded 4 entries from Phase 2 Epics 1, 2, 4, and 5 by reviewing all 5 retrospective files and PRD risk mitigation section. Entries cover: audit tool semantic patterns (Epic 1), Wade stub workflow completion (Epic 2), journey example narrative overlap (Epic 4), user-agent preservation gap (Epic 5). All entries verified against registry (NFR10) and written in PM-friendly language (NFR11).
+- Task 3: All NFR/FR validations passed. Test suite: 293 pass, 0 fail, 2 todo (zero regressions). No package.json changes (NFR7). Agent/workflow names match registry exactly (NFR10). PM-readable convention confirmed (NFR11). FR32 fully satisfied.
+- Parallel preparation: Smoke tested `scripts/docs-audit.js` — runs successfully with zero findings. Note: story Dev Notes referenced path as `scripts/audit/docs-audit.js` but actual path is `scripts/docs-audit.js`. Tool is functional for Story 6.2.
+
 ### Change Log
 
+- 2026-03-02: Created `_bmad-output/scope-adjacent-backlog.md` — lightweight markdown backlog convention with 4 seeded entries from Phase 2 Epics 1-5
+- 2026-03-02: Updated sprint-status.yaml — p2-6-1 status transitions (ready-for-dev → in-progress → review)
+- 2026-03-02: Code review fixes — M1: corrected docs-audit.js path in Dev Notes (`scripts/audit/docs-audit.js` → `scripts/docs-audit.js`); L1: replaced "handoff annotations" → "transition notes", "configuration merge" → "settings update process" (NFR11); L2: added "Phase 2" prefix to all 4 entry discovery contexts
+
 ### File List
+
+- `_bmad-output/scope-adjacent-backlog.md` (NEW)
+- `_bmad-output/implementation-artifacts/p2-6-1-scope-adjacent-improvements-backlog-convention.md` (MODIFIED)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (MODIFIED)
