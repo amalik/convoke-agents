@@ -113,11 +113,11 @@ BMAD-Enhanced/
 ### Areas of Contribution
 
 **Agents and Workflows:**
-- New domain-specialized agents for the remaining Vortex streams (Synthesize, Hypothesize, Sensitize)
-- Workflow improvements and template enhancements
+- Workflow improvements and template enhancements for all 7 agents
+- New workflow variants and specialized templates
 
 **Testing:**
-- P0 test suites for Isla and Max
+- P0 test suites for Isla, Mila, Liam, Noah, and Max
 - Edge case and performance testing
 - Expanding coverage for known gaps (see [Testing](testing.md#known-coverage-gaps))
 
