@@ -550,11 +550,54 @@ describe('bmad-update CLI (main)', () => {
   });
 
   // AC #3 / NFR15 — user-added agent and ordering preservation
-  // Known limitation: refreshInstallation overwrites config.yaml rather than merging.
-  // User-added custom agents and TEA agents are NOT preserved during upgrade.
-  // These document the expected behavior gap — needs config-merger integration.
-  it.todo('preserves user-added custom agents after upgrade (blocked: refreshInstallation overwrites config — needs config-merger integration)');
-  it.todo('maintains agent ordering after merge (blocked: same config overwrite issue)');
+  it('preserves user-added custom agents after upgrade', async () => {
+    const tmpDir = await createTempDir('bmad-cli-');
+    try {
+      await createInstallation(tmpDir, '1.4.1');
+
+      // Inject custom user agents into config
+      const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
+      const config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+      config.agents.push('my-custom-agent', 'tea-test-architect');
+      fs.writeFileSync(configPath, yaml.dump(config), 'utf8');
+
+      await runScript(SCRIPT_PATH, ['--yes'], { cwd: tmpDir });
+
+      const updatedConfig = yaml.load(fs.readFileSync(configPath, 'utf8'));
+      assert.ok(updatedConfig.agents.includes('my-custom-agent'), 'should preserve user-added agent');
+      assert.ok(updatedConfig.agents.includes('tea-test-architect'), 'should preserve TEA agent');
+      assert.ok(updatedConfig.agents.length >= 9, 'should have core + user agents');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('maintains agent ordering after merge', async () => {
+    const tmpDir = await createTempDir('bmad-cli-');
+    try {
+      await createInstallation(tmpDir, '1.4.1');
+
+      // Inject custom agent into config
+      const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
+      const config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+      config.agents.push('user-custom-agent');
+      fs.writeFileSync(configPath, yaml.dump(config), 'utf8');
+
+      await runScript(SCRIPT_PATH, ['--yes'], { cwd: tmpDir });
+
+      const updatedConfig = yaml.load(fs.readFileSync(configPath, 'utf8'));
+      const { AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
+
+      // Core agents appear first in canonical order
+      for (let i = 0; i < AGENT_IDS.length; i++) {
+        assert.equal(updatedConfig.agents[i], AGENT_IDS[i], `core agent ${AGENT_IDS[i]} should be at index ${i}`);
+      }
+      // User agent appended after core agents
+      assert.equal(updatedConfig.agents[AGENT_IDS.length], 'user-custom-agent', 'user agent should be appended after core agents');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
 
   it('does not duplicate core agents after upgrade', async () => {
     const tmpDir = await createTempDir('bmad-cli-');
