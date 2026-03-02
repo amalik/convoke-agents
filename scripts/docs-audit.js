@@ -23,6 +23,13 @@ const USER_FACING_DOCS = [
   'INSTALLATION.md',
   'CHANGELOG.md',
   'BMAD-METHOD-COMPATIBILITY.md',
+  '_bmad/bme/_vortex/guides/EMMA-USER-GUIDE.md',
+  '_bmad/bme/_vortex/guides/ISLA-USER-GUIDE.md',
+  '_bmad/bme/_vortex/guides/MILA-USER-GUIDE.md',
+  '_bmad/bme/_vortex/guides/LIAM-USER-GUIDE.md',
+  '_bmad/bme/_vortex/guides/WADE-USER-GUIDE.md',
+  '_bmad/bme/_vortex/guides/NOAH-USER-GUIDE.md',
+  '_bmad/bme/_vortex/guides/MAX-USER-GUIDE.md',
 ];
 
 /** Written number words to digit mapping for stale reference detection. */
