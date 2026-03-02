@@ -62,8 +62,11 @@ your-project/
 │   │       ├── agents/
 │   │       │   ├── contextualization-expert.md      # Emma
 │   │       │   ├── discovery-empathy-expert.md       # Isla
-│   │       │   ├── lean-experiments-specialist.md    # Wade
-│   │       │   └── learning-decision-expert.md       # Max
+│   │       │   ├── research-convergence-specialist.md # Mila
+│   │       │   ├── hypothesis-engineer.md             # Liam
+│   │       │   ├── lean-experiments-specialist.md     # Wade
+│   │       │   ├── production-intelligence-specialist.md # Noah
+│   │       │   └── learning-decision-expert.md        # Max
 │   │       ├── workflows/
 │   │       │   ├── lean-persona/                     # Emma workflows
 │   │       │   ├── product-vision/
@@ -71,10 +74,19 @@ your-project/
 │   │       │   ├── empathy-map/                      # Isla workflows
 │   │       │   ├── user-interview/
 │   │       │   ├── user-discovery/
+│   │       │   ├── research-convergence/             # Mila workflows
+│   │       │   ├── pivot-resynthesis/
+│   │       │   ├── pattern-mapping/
+│   │       │   ├── hypothesis-engineering/           # Liam workflows
+│   │       │   ├── assumption-mapping/
+│   │       │   ├── experiment-design/
 │   │       │   ├── mvp/                              # Wade workflows
 │   │       │   ├── lean-experiment/
 │   │       │   ├── proof-of-concept/
 │   │       │   ├── proof-of-value/
+│   │       │   ├── signal-interpretation/            # Noah workflows
+│   │       │   ├── behavior-analysis/
+│   │       │   ├── production-monitoring/
 │   │       │   ├── learning-card/                    # Max workflows
 │   │       │   ├── pivot-patch-persevere/
 │   │       │   └── vortex-navigation/
@@ -85,7 +97,10 @@ your-project/
     └── vortex-artifacts/
         ├── EMMA-USER-GUIDE.md
         ├── ISLA-USER-GUIDE.md
+        ├── MILA-USER-GUIDE.md
+        ├── LIAM-USER-GUIDE.md
         ├── WADE-USER-GUIDE.md
+        ├── NOAH-USER-GUIDE.md
         ├── MAX-USER-GUIDE.md
         └── (your generated artifacts)
 ```
