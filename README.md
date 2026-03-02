@@ -238,6 +238,8 @@ We welcome contributions in these areas:
 - **Documentation** — Tutorials, translations, video walkthroughs
 - **Integration** — IDE plugins, third-party tools
 
+**Have feedback?** Found a quality issue, want a missing capability, or have a general comment about an agent? Open an issue and select the **Agent/Workflow Feedback** template — takes under 30 seconds.
+
 See the [Development Guide](docs/development.md) for architecture details and agent development patterns.
 
 ---
