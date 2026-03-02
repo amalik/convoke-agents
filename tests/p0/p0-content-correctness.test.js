@@ -221,12 +221,13 @@ describe('Compass Table Format & Routing Validity', () => {
         );
       });
 
-      // 4.2: 2-3 data rows
-      it('compass table has 2-3 data rows', () => {
+      // 4.2: 2-8 data rows (complex workflows like proof-of-concept/proof-of-value
+      // legitimately have more exit paths than simpler workflows)
+      it('compass table has 2-8 data rows', () => {
         assert.ok(parsed, `${wf.name}: no valid compass table found`);
         assert.ok(
-          parsed.rows.length >= 2 && parsed.rows.length <= 3,
-          `${wf.name} (${wf.agentName}): compass table should have 2-3 rows, found ${parsed.rows.length}`
+          parsed.rows.length >= 2 && parsed.rows.length <= 8,
+          `${wf.name} (${wf.agentName}): compass table should have 2-8 rows, found ${parsed.rows.length}`
         );
       });
 
