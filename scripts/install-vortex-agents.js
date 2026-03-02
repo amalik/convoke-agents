@@ -169,11 +169,14 @@ function printSuccess() {
     console.log(`  ${GREEN}✓${RESET} ${agent.name} (${agent.id}) - ${agent.title} ${agent.icon}`);
   }
   console.log('');
-  console.log(`${BOLD}Quick Start:${RESET}`);
+  console.log(`${BOLD}Next Steps:${RESET}`);
   console.log('');
-  console.log('  Activate an agent by reading their file:');
+  console.log(`  ${YELLOW}1.${RESET} Personalize your config:`);
+  console.log(`     Edit ${CYAN}_bmad/bme/_vortex/config.yaml${RESET} and replace ${YELLOW}{user}${RESET} with your name`);
+  console.log('');
+  console.log(`  ${YELLOW}2.${RESET} Activate an agent by reading their file:`);
   for (const agent of AGENTS) {
-    console.log(`  ${CYAN}cat _bmad/bme/_vortex/agents/${agent.id}.md${RESET}  (${agent.name})`);
+    console.log(`     ${CYAN}cat _bmad/bme/_vortex/agents/${agent.id}.md${RESET}  (${agent.name})`);
   }
   console.log('');
 }
