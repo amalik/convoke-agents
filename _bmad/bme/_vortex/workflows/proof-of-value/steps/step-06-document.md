@@ -113,7 +113,7 @@ Based on what you just completed, here are your evidence-driven options:
 | Value hypothesis confirmed, WTP validated, business case is strong | mvp | Wade | Business value is proven — design and build the minimum viable product (HC4 feeds MVP workflow) |
 | Value confirmed but need production signal monitoring set up | production-monitoring | Noah | Set up monitoring for production metrics identified in HC4 Section 8 |
 | Value confirmed — capture the learning for stakeholder communication | learning-card | Max | Package the proof-of-value evidence as a learning card for decision-makers |
-| Value partially confirmed — pricing needs refinement | proof-of-value (re-run) | Wade | Re-run Steps 3-5 with adjusted pricing hypothesis |
+| Value partially confirmed — pricing needs refinement | proof-of-value | Wade | Re-run Steps 3-5 with adjusted pricing hypothesis |
 | Value unclear — need deeper understanding of customer segment | user-interview | Isla | Uncover why willingness-to-pay was weaker than expected (HC9 routing) |
 | Value rejected — need to understand whether to pivot, patch, or kill | pivot-patch-persevere | Max | Make a structured decision about the value proposition's future |
 | Value rejected — problem definition may be wrong | research-convergence | Mila | Re-examine the underlying problem; the pain may not be what you thought |
