@@ -137,7 +137,8 @@ describe('mergeConfig', () => {
     assert.equal(merged.version, '1.4.0');
     assert.equal(merged.user_name, 'Alice');
     assert.equal(merged.communication_language, 'fr');
-    assert.deepEqual(merged.agents, ['emma', 'wade']);
+    // User-added agents (not in AGENT_IDS) are preserved after canonical ones
+    assert.deepEqual(merged.agents, ['emma', 'wade', 'old-agent']);
   });
 });
 
