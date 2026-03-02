@@ -285,6 +285,123 @@ function checkDocsCoverage(allDocsContent) {
   return findings;
 }
 
+/**
+ * Check for incomplete agent lists in markdown tables.
+ * If a table mentions 3+ agents but is missing some, flag it.
+ *
+ * @param {string} content - File content
+ * @param {string} filePath - Relative file path (for reporting)
+ * @returns {Array<object>} findings
+ */
+function checkIncompleteAgentTables(content, filePath) {
+  const findings = [];
+  const lines = content.split('\n');
+  const agentNames = AGENTS.map(a => a.name.toLowerCase());
+
+  // Only flag tables that appear to be agent-listing tables (one agent
+  // per row) but are missing some agents. Skip relationship tables where
+  // multiple agents appear per row (contract-flow, comparison tables).
+  const minForFlag = agentNames.length - 2; // e.g., 5 out of 7
+
+  // Find contiguous blocks of table rows (lines starting with |)
+  let tableStart = -1;
+  for (let i = 0; i <= lines.length; i++) {
+    const isTableRow = i < lines.length && /^\s*\|/.test(lines[i]);
+
+    if (isTableRow && tableStart === -1) {
+      tableStart = i;
+    } else if (!isTableRow && tableStart !== -1) {
+      const tableRows = lines.slice(tableStart, i);
+      const tableText = tableRows.join('\n').toLowerCase();
+      const found = agentNames.filter(name => {
+        const re = new RegExp('\\b' + name + '\\b');
+        return re.test(tableText);
+      });
+      const missing = agentNames.filter(name => {
+        const re = new RegExp('\\b' + name + '\\b');
+        return !re.test(tableText);
+      });
+
+      if (found.length >= minForFlag && missing.length > 0) {
+        // Skip relationship tables: if most data rows contain 2+ agent
+        // names, this is a flow/contract table, not an agent listing.
+        // Exclude separator rows (|---|) and the header row (first non-separator).
+        const nonSeparator = tableRows.filter(r => !/^[\s|:-]+$/.test(r));
+        const dataRows = nonSeparator.slice(1); // skip header row
+        let multiAgentRows = 0;
+        for (const row of dataRows) {
+          const rowLower = row.toLowerCase();
+          const agentsInRow = agentNames.filter(name => {
+            const re = new RegExp('\\b' + name + '\\b');
+            return re.test(rowLower);
+          });
+          if (agentsInRow.length >= 2) multiAgentRows++;
+        }
+        if (multiAgentRows > dataRows.length / 2) {
+          tableStart = -1;
+          continue;
+        }
+
+        const missingNames = missing.map(n => n.charAt(0).toUpperCase() + n.slice(1));
+        findings.push({
+          file: filePath,
+          line: tableStart + 1,
+          category: 'incomplete-agent-table',
+          current: `table lists ${found.length}/${agentNames.length} agents`,
+          expected: `missing: ${missingNames.join(', ')}`,
+        });
+      }
+      tableStart = -1;
+    }
+  }
+
+  return findings;
+}
+
+/**
+ * Check for internal naming conventions leaking into user-facing prose.
+ * Detects `_vortex` outside backtick-wrapped text and code blocks.
+ *
+ * Scope note: Only `_vortex` is checked. `bme` almost exclusively appears
+ * inside backtick-wrapped paths and would produce false positives. `HC\d`
+ * (HC1-HC10) are intentional user-facing contract names used throughout
+ * docs/agents.md and the user guides — not internal leaks.
+ *
+ * @param {string} content - File content
+ * @param {string} filePath - Relative file path (for reporting)
+ * @returns {Array<object>} findings
+ */
+function checkInternalNamingLeaks(content, filePath) {
+  const findings = [];
+  const lines = content.split('\n');
+  let inCodeBlock = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNum = i + 1;
+
+    if (/^```/.test(line.trim())) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock) continue;
+
+    // Strip inline backtick-wrapped text and markdown link targets before checking
+    const prose = line.replace(/`[^`]+`/g, '').replace(/\[[^\]]*\]\([^)]+\)/g, '');
+
+    if (/\b_vortex\b/.test(prose)) {
+      findings.push({
+        file: filePath, line: lineNum,
+        category: 'internal-naming-leak',
+        current: '_vortex in prose',
+        expected: 'use "Vortex" or wrap in backticks as a path',
+      });
+    }
+  }
+
+  return findings;
+}
+
 // --- Report Functions (Task 6) ---
 
 /**
@@ -381,6 +498,8 @@ async function runAudit(opts = {}) {
     }
     allFindings.push(...checkBrokenLinks(content, relPath, projectRoot));
     allFindings.push(...checkBrokenPaths(content, relPath, projectRoot));
+    allFindings.push(...checkIncompleteAgentTables(content, relPath));
+    allFindings.push(...checkInternalNamingLeaks(content, relPath));
   }
 
   // Coverage check across all docs combined
@@ -421,6 +540,8 @@ module.exports = {
   checkBrokenLinks,
   checkBrokenPaths,
   checkDocsCoverage,
+  checkIncompleteAgentTables,
+  checkInternalNamingLeaks,
   formatReport,
   runAudit,
 };
