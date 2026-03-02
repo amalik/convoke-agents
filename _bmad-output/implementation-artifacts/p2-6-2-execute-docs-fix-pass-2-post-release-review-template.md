@@ -1,6 +1,6 @@
 # Story 6.2: Execute Docs Fix Pass 2 & Post-Release Review Template
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -20,44 +20,44 @@ so that documentation regressions introduced by Epics 1-5 are caught before rele
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Execute automated docs audit — Pass 2 (AC: #1, #2)
-  - [ ] 1.1 Run `node scripts/docs-audit.js --json` and save output to compare against Pass 1 baseline (Pass 1 baseline: zero findings — see inter-pass checkpoint)
-  - [ ] 1.2 Run `node scripts/docs-audit.js` (human-readable) and review all findings by category: stale-reference, broken-link, broken-path, missing-coverage
-  - [ ] 1.3 Compare Pass 2 results against Pass 1 baseline — any new finding is a regression introduced by Epics 2-5 content changes
-  - [ ] 1.4 Document Pass 2 results: total findings, breakdown by category, which files affected, which epics introduced regressions
+- [x] Task 1: Execute automated docs audit — Pass 2 (AC: #1, #2)
+  - [x] 1.1 Run `node scripts/docs-audit.js --json` and save output to compare against Pass 1 baseline (Pass 1 baseline: zero findings — see inter-pass checkpoint)
+  - [x] 1.2 Run `node scripts/docs-audit.js` (human-readable) and review all findings by category: stale-reference, broken-link, broken-path, missing-coverage
+  - [x] 1.3 Compare Pass 2 results against Pass 1 baseline — any new finding is a regression introduced by Epics 2-5 content changes
+  - [x] 1.4 Document Pass 2 results: total findings, breakdown by category, which files affected, which epics introduced regressions
 
-- [ ] Task 2: Execute manual review checks beyond tool coverage (AC: #2, #3, #5)
-  - [ ] 2.1 Search all 9 user-facing docs for "four" or "4" referencing agents (should be 7) — the tool catches digit patterns but may miss contextual references like "all four together"
-  - [ ] 2.2 Search for "thirteen" or "13" referencing workflows (should be 22) — same contextual gap
-  - [ ] 2.3 Verify all agent enumeration lists and tables are complete (should list all 7 agents) — tool checks for mention presence but not list completeness
-  - [ ] 2.4 Verify Wave 3 agent references use present/past tense, not future tense (Mila, Liam, Noah are complete, not planned)
-  - [ ] 2.5 **Journey example freshness check (AC#5):** Verify `_bmad-output/journey-examples/` content matches current agent behavior — agent outputs referenced in the journey should reflect finalized personas and workflows, not draft versions; transition notes should reference finalized (not draft) contract schemas in `_bmad/bme/_vortex/contracts/`
-  - [ ] 2.6 **Terminology consistency (AC#3, NFR10):** Verify agent names, workflow names, and stream names across all docs match the registry exactly — cross-check against `agent-registry.js` (7 agents, 22 workflows)
+- [x] Task 2: Execute manual review checks beyond tool coverage (AC: #2, #3, #5)
+  - [x] 2.1 Search all 9 user-facing docs for "four" or "4" referencing agents (should be 7) — the tool catches digit patterns but may miss contextual references like "all four together"
+  - [x] 2.2 Search for "thirteen" or "13" referencing workflows (should be 22) — same contextual gap
+  - [x] 2.3 Verify all agent enumeration lists and tables are complete (should list all 7 agents) — tool checks for mention presence but not list completeness
+  - [x] 2.4 Verify Wave 3 agent references use present/past tense, not future tense (Mila, Liam, Noah are complete, not planned)
+  - [x] 2.5 **Journey example freshness check (AC#5):** Verify `_bmad-output/journey-examples/` content matches current agent behavior — agent outputs referenced in the journey should reflect finalized personas and workflows, not draft versions; transition notes should reference finalized (not draft) contract schemas in `_bmad/bme/_vortex/contracts/`
+  - [x] 2.6 **Terminology consistency (AC#3, NFR10):** Verify agent names, workflow names, and stream names across all docs match the registry exactly — cross-check against `agent-registry.js` (7 agents, 22 workflows)
 
-- [ ] Task 3: Fix all findings from Tasks 1-2 (AC: #2, #3, #4)
-  - [ ] 3.1 Fix all automated audit findings (stale references, broken links, broken paths, missing coverage) — goal: zero findings on re-run
-  - [ ] 3.2 Fix all manual review findings (contextual stale references, incomplete lists, tense issues)
-  - [ ] 3.3 Fix any journey example freshness issues discovered in Task 2.5
-  - [ ] 3.4 Re-run `node scripts/docs-audit.js` after fixes — must produce zero findings
-  - [ ] 3.5 Re-run manual review checklist after fixes — must produce zero findings
+- [x] Task 3: Fix all findings from Tasks 1-2 (AC: #2, #3, #4)
+  - [x] 3.1 Fix all automated audit findings (stale references, broken links, broken paths, missing coverage) — goal: zero findings on re-run
+  - [x] 3.2 Fix all manual review findings (contextual stale references, incomplete lists, tense issues)
+  - [x] 3.3 Fix any journey example freshness issues discovered in Task 2.5
+  - [x] 3.4 Re-run `node scripts/docs-audit.js` after fixes — must produce zero findings
+  - [x] 3.5 Re-run manual review checklist after fixes — must produce zero findings
 
-- [ ] Task 4: Create post-release review template (AC: #6, #7, FR33)
-  - [ ] 4.1 Create `_bmad-output/post-release-review-template.md` — a structured checklist template for conducting post-release reviews
-  - [ ] 4.2 Template must include a section for comparing reported issues against existing test coverage — for each issue, document: the issue, which test(s) should have caught it, why the gap exists, and what test to add
-  - [ ] 4.3 Template must include a section for identifying validation gaps — issues that tests should have caught but didn't, categorized by test type (unit, integration, content, CI)
-  - [ ] 4.4 Template must produce actionable items for strengthening test coverage in future phases — each gap should map to a concrete test improvement
-  - [ ] 4.5 Keep the template lightweight and PM-accessible (NFR11) — follow the `feedback-template.md` and `scope-adjacent-backlog.md` patterns from Stories 5.5 and 6.1
-  - [ ] 4.6 Add a concrete example entry demonstrating how to use the template — use a realistic scenario from Phase 2 (not a placeholder)
+- [x] Task 4: Create post-release review template (AC: #6, #7, FR33)
+  - [x] 4.1 Create `_bmad-output/post-release-review-template.md` — a structured checklist template for conducting post-release reviews
+  - [x] 4.2 Template must include a section for comparing reported issues against existing test coverage — for each issue, document: the issue, which test(s) should have caught it, why the gap exists, and what test to add
+  - [x] 4.3 Template must include a section for identifying validation gaps — issues that tests should have caught but didn't, categorized by test type (unit, integration, content, CI)
+  - [x] 4.4 Template must produce actionable items for strengthening test coverage in future phases — each gap should map to a concrete test improvement
+  - [x] 4.5 Keep the template lightweight and PM-accessible (NFR11) — follow the `feedback-template.md` and `scope-adjacent-backlog.md` patterns from Stories 5.5 and 6.1
+  - [x] 4.6 Add a concrete example entry demonstrating how to use the template — use a realistic scenario from Phase 2 (not a placeholder)
 
-- [ ] Task 5: Validate NFR compliance and final review (AC: #1-#7)
-  - [ ] 5.1 **NFR7** — Verify no new entries in package.json dependencies or devDependencies. This story creates only markdown files and fixes existing markdown
-  - [ ] 5.2 **NFR10** — Verify all agent/workflow names in fixed docs and new template match the registry exactly
-  - [ ] 5.3 **NFR11** — Read the post-release review template as a non-technical PM: Is the checklist clear? Can someone conduct a review without developer knowledge?
-  - [ ] 5.4 **NFR18** — Verify all internal links validate successfully after fixes
-  - [ ] 5.5 **FR33** — Verify: (a) post-release review template exists, (b) template compares issues against test coverage, (c) template identifies validation gaps, (d) template produces actionable items
-  - [ ] 5.6 Run the full test suite — `npm test`. This story modifies no JavaScript, so expect 0 regressions (293 pass, 0 fail, 2 todo baseline)
-  - [ ] 5.7 **NFR6** — Verify `node scripts/docs-audit.js` requires zero manual configuration — a single command with no arguments produces the full report
-  - [ ] 5.8 Final `node scripts/docs-audit.js` — must produce zero findings (clean audit)
+- [x] Task 5: Validate NFR compliance and final review (AC: #1-#7)
+  - [x] 5.1 **NFR7** — Verify no new entries in package.json dependencies or devDependencies. This story creates only markdown files and fixes existing markdown
+  - [x] 5.2 **NFR10** — Verify all agent/workflow names in fixed docs and new template match the registry exactly
+  - [x] 5.3 **NFR11** — Read the post-release review template as a non-technical PM: Is the checklist clear? Can someone conduct a review without developer knowledge?
+  - [x] 5.4 **NFR18** — Verify all internal links validate successfully after fixes
+  - [x] 5.5 **FR33** — Verify: (a) post-release review template exists, (b) template compares issues against test coverage, (c) template identifies validation gaps, (d) template produces actionable items
+  - [x] 5.6 Run the full test suite — `npm test`. This story modifies no JavaScript, so expect 0 regressions (293 pass, 0 fail, 2 todo baseline)
+  - [x] 5.7 **NFR6** — Verify `node scripts/docs-audit.js` requires zero manual configuration — a single command with no arguments produces the full report
+  - [x] 5.8 Final `node scripts/docs-audit.js` — must produce zero findings (clean audit)
 
 ## Dev Notes
 
@@ -186,12 +186,41 @@ The template should follow the lightweight convention pattern established by:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Task 1 complete: Pass 2 automated audit — JSON output `[]`, human-readable "zero findings". Pass 1 baseline was zero; Pass 2 is zero. No regressions from Epics 2-5 content changes detected by automated tooling.
+- Task 2 complete: Manual review found 27 findings across 5 files. Check 2.1: 0 actionable (historical CHANGELOG). Check 2.2: 0 actionable (historical CHANGELOG). Check 2.3: 7 incomplete agent lists (INSTALLATION.md x3, BMAD-METHOD-COMPATIBILITY.md x3, testing.md x1). Check 2.4: 3 tense drift (development.md x2, BMAD-METHOD-COMPATIBILITY.md x1). Check 2.5: 3 HC contract mismatches in journey routing table. Check 2.6: 14 terminology mismatches (BMAD-METHOD-COMPATIBILITY.md x9, INSTALLATION.md x3, development.md x1, CHANGELOG.md x1). Most affected file: BMAD-METHOD-COMPATIBILITY.md (frozen at v1.0.4-alpha era).
+- Task 3 complete: All findings fixed. BMAD-METHOD-COMPATIBILITY.md updated from v1.0.4-alpha to v1.6.4 (architecture diagram, directory tree, testing instructions, compatibility matrix, version references — all 9 terminology issues + 3 incomplete lists + 1 tense drift). INSTALLATION.md directory trees expanded to show all 7 agents, 22 workflows, 7 user guides. docs/development.md contribution guidance updated (removed stale stream references, added all 5 missing agents to test contribution list). docs/testing.md added Mila/Liam/Noah sections, removed "planned" language. CHANGELOG.md footer path corrected. Journey example HC6/HC7/HC8 routing contracts fixed to match canonical definitions in compass-routing-reference.md. Post-fix audit: zero findings.
+- Task 4 complete: Created `_bmad-output/post-release-review-template.md`. Template has 6 sections: Release Information, Reported Issues (table with severity + coverage status + gap analysis per issue), Validation Gap Analysis (categorized by test type: unit, integration, content, CI), Actionable Improvements (concrete test-to-add per gap), Review Outcome, and a Phase 2 example entry using the real BMAD-METHOD-COMPATIBILITY.md staleness finding. Follows lightweight pattern from feedback-template.md and scope-adjacent-backlog.md. PM-accessible language throughout.
+- Task 5 complete: All NFR validations passed. NFR7: no package.json changes. NFR10: all terminology matches registry. NFR11: template is PM-accessible. NFR18: zero broken links (audit JSON `[]`). FR33: template exists with all 4 required components. NFR6: zero-config audit confirmed. Test suite: 293 pass, 0 fail, 2 todo (baseline match). Final audit: zero findings.
+
 ### Change Log
 
+- Pass 2 docs audit executed: 0 automated findings, 27 manual findings across 5 files, all fixed
+- BMAD-METHOD-COMPATIBILITY.md updated from v1.0.4-alpha era to v1.6.4 (comprehensive rewrite of stale content)
+- INSTALLATION.md directory trees expanded for all 7 agents, 22 workflows, 7 user guides
+- docs/development.md contribution guidance corrected (stale stream references, incomplete test list)
+- docs/testing.md added Mila/Liam/Noah sections, removed "planned" language for Isla/Max
+- CHANGELOG.md footer path corrected (design-artifacts -> _vortex/guides)
+- Journey example HC routing contracts corrected (HC7 for Isla evidence gap, HC8 for Emma recontextualization, organic routing for Wade)
+- Created post-release review template (_bmad-output/post-release-review-template.md) per FR33
+- [Code Review Fix M1] Removed confusing "Wade - P0 Suite above" duplicate stub from docs/testing.md
+- [Code Review Fix M2] Added P0 content-only test mention to Max section in docs/testing.md for consistency with Mila/Liam/Noah
+- [Code Review Fix M3] Removed "via Liam" from journey routing table — Wade receives organic routing directly, not through Liam
+- [Code Review Fix L1] Expanded "CI pipeline gaps" to "CI pipeline (automated checks) gaps" in post-release review template for NFR11 clarity
+
 ### File List
+
+- _bmad-output/post-release-review-template.md (NEW)
+- _bmad-output/implementation-artifacts/p2-6-2-execute-docs-fix-pass-2-post-release-review-template.md (MODIFIED)
+- _bmad-output/implementation-artifacts/sprint-status.yaml (MODIFIED)
+- _bmad-output/journey-examples/busy-parents-7-agent-journey.md (MODIFIED)
+- BMAD-METHOD-COMPATIBILITY.md (MODIFIED)
+- INSTALLATION.md (MODIFIED)
+- CHANGELOG.md (MODIFIED)
+- docs/development.md (MODIFIED)
+- docs/testing.md (MODIFIED)
