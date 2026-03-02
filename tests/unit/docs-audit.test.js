@@ -9,6 +9,8 @@ const {
   checkBrokenLinks,
   checkBrokenPaths,
   checkDocsCoverage,
+  checkIncompleteAgentTables,
+  checkInternalNamingLeaks,
   formatReport,
   runAudit,
   USER_FACING_DOCS,
@@ -280,6 +282,148 @@ describe('checkDocsCoverage', () => {
     const findings = checkDocsCoverage([content]);
     const maxFinding = findings.filter(f => f.current.includes('Max'));
     assert.equal(maxFinding.length, 1);
+  });
+});
+
+// === checkIncompleteAgentTables ===
+
+describe('checkIncompleteAgentTables', () => {
+  it('flags a listing table missing agents', () => {
+    // Build a table with one agent per row, but omit one
+    const names = AGENTS.map(a => a.name);
+    const included = names.slice(0, -1); // drop last agent
+    const rows = included.map(n => `| ${n} | description |`);
+    const content = [
+      '| Agent | Description |',
+      '|-------|-------------|',
+      ...rows,
+    ].join('\n');
+    const findings = checkIncompleteAgentTables(content, 'test.md');
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].category, 'incomplete-agent-table');
+    assert.ok(findings[0].expected.includes(names[names.length - 1]));
+  });
+
+  it('skips relationship tables with multiple agents per row', () => {
+    // Contract-flow style: "Isla → Mila", "Mila → Liam", etc.
+    const content = [
+      '| Contract | Flow |',
+      '|----------|------|',
+      '| HC1 | Isla → Mila |',
+      '| HC2 | Mila → Liam |',
+      '| HC3 | Liam → Wade |',
+      '| HC4 | Wade → Noah |',
+      '| HC5 | Noah → Max |',
+    ].join('\n');
+    const findings = checkIncompleteAgentTables(content, 'test.md');
+    assert.equal(findings.length, 0);
+  });
+
+  it('does not flag tables with fewer than threshold agents', () => {
+    const content = [
+      '| Agent | Role |',
+      '|-------|------|',
+      '| Emma | Contextualize |',
+      '| Isla | Empathize |',
+      '| Mila | Synthesize |',
+    ].join('\n');
+    const findings = checkIncompleteAgentTables(content, 'test.md');
+    assert.equal(findings.length, 0);
+  });
+
+  it('does not flag complete agent tables', () => {
+    const rows = AGENTS.map(a => `| ${a.name} | ${a.id} |`);
+    const content = [
+      '| Agent | ID |',
+      '|-------|----|',
+      ...rows,
+    ].join('\n');
+    const findings = checkIncompleteAgentTables(content, 'test.md');
+    assert.equal(findings.length, 0);
+  });
+
+  it('returns empty array for content with no tables', () => {
+    const content = 'No tables here, just prose about agents.';
+    const findings = checkIncompleteAgentTables(content, 'test.md');
+    assert.equal(findings.length, 0);
+  });
+
+  it('flags at exact threshold (agentCount - 2 agents present)', () => {
+    // Build a table with exactly minForFlag agents (threshold boundary)
+    const names = AGENTS.map(a => a.name);
+    const threshold = names.length - 2; // e.g., 5 out of 7
+    const included = names.slice(0, threshold);
+    const rows = included.map(n => `| ${n} | description |`);
+    const content = [
+      '| Agent | Description |',
+      '|-------|-------------|',
+      ...rows,
+    ].join('\n');
+    const findings = checkIncompleteAgentTables(content, 'test.md');
+    assert.equal(findings.length, 1, `table with ${threshold}/${names.length} agents should trigger`);
+  });
+
+  it('does not flag just below threshold', () => {
+    // Build a table with one fewer than threshold
+    const names = AGENTS.map(a => a.name);
+    const belowThreshold = names.length - 3; // e.g., 4 out of 7
+    const included = names.slice(0, belowThreshold);
+    const rows = included.map(n => `| ${n} | description |`);
+    const content = [
+      '| Agent | Description |',
+      '|-------|-------------|',
+      ...rows,
+    ].join('\n');
+    const findings = checkIncompleteAgentTables(content, 'test.md');
+    assert.equal(findings.length, 0, `table with ${belowThreshold}/${names.length} agents should not trigger`);
+  });
+});
+
+// === checkInternalNamingLeaks ===
+
+describe('checkInternalNamingLeaks', () => {
+  it('detects _vortex in prose', () => {
+    const content = 'The _vortex pattern enables agent routing.';
+    const findings = checkInternalNamingLeaks(content, 'test.md');
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].category, 'internal-naming-leak');
+    assert.equal(findings[0].line, 1);
+  });
+
+  it('skips _vortex inside backticks', () => {
+    const content = 'The path is `_bmad/bme/_vortex/agents/`.';
+    const findings = checkInternalNamingLeaks(content, 'test.md');
+    assert.equal(findings.length, 0);
+  });
+
+  it('skips _vortex inside code blocks', () => {
+    const content = '```\n_vortex/agents/emma.md\n```';
+    const findings = checkInternalNamingLeaks(content, 'test.md');
+    assert.equal(findings.length, 0);
+  });
+
+  it('skips _vortex inside markdown link targets', () => {
+    const content = 'See [Emma Guide](_bmad/bme/_vortex/guides/EMMA-USER-GUIDE.md).';
+    const findings = checkInternalNamingLeaks(content, 'test.md');
+    assert.equal(findings.length, 0);
+  });
+
+  it('reports correct line number', () => {
+    const content = 'Line 1\nLine 2\nThe _vortex system\nLine 4';
+    const findings = checkInternalNamingLeaks(content, 'test.md');
+    assert.equal(findings[0].line, 3);
+  });
+
+  it('detects multiple leaks across lines', () => {
+    const content = 'The _vortex system\nAlso the _vortex pattern';
+    const findings = checkInternalNamingLeaks(content, 'test.md');
+    assert.equal(findings.length, 2);
+  });
+
+  it('returns empty array for clean content', () => {
+    const content = 'The Vortex pattern enables agent routing.';
+    const findings = checkInternalNamingLeaks(content, 'test.md');
+    assert.equal(findings.length, 0);
   });
 });
 
