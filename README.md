@@ -12,7 +12,7 @@
 
 **Validate your product ideas before writing a single line of code**
 
-[![Version](https://img.shields.io/badge/version-1.6.4-blue)](https://github.com/amalik/BMAD-Enhanced)
+[![Version](https://img.shields.io/badge/version-1.7.0-blue)](https://github.com/amalik/BMAD-Enhanced)
 [![Agents](https://img.shields.io/badge/agents-7-brightgreen)](docs/agents.md)
 [![Workflows](https://img.shields.io/badge/workflows-22-success)](docs/agents.md)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -245,6 +245,7 @@ BMAD-Enhanced works standalone or as an extension — no BMAD Method installatio
 
 - **v1.1.0–v1.5.x** — Waves 1-2: Foundation (Emma, Isla, Wade, Max — agent definitions, workflows, update system, CI/CD)
 - **v1.6.x** — Wave 3: Complete 7-stream Vortex (added Mila, Liam, Noah — 7 agents, 22 workflows, handoff contracts, Compass routing)
+- **v1.7.0** — Wave 4: Quality & onboarding (P0 test suite, docs audit tool, all 22 workflows production-ready, README overhaul, package size fix)
 - **v2.0.0+** — Multi-agent collaboration, cross-agent workflows, analytics
 
 ---
