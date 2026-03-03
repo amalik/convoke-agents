@@ -1,6 +1,6 @@
 {
   "name": "bmad-enhanced",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Vortex Pattern - Contextualize, Empathize, Synthesize, Hypothesize, Externalize, Sensitize, and Systematize streams for Lean Startup validation",
   "main": "index.js",
   "files": [
