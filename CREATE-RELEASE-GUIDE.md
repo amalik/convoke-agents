@@ -3,12 +3,12 @@
 ## Option 1: Using GitHub Web Interface (Recommended)
 
 1. **Go to the releases page:**
-   https://github.com/amalik/BMAD-Enhanced/releases/new
+   https://github.com/amalik/convoke/releases/new
 
 2. **Fill in the form:**
    - **Tag version:** `v1.0.2-alpha`
    - **Target:** `main`
-   - **Release title:** `BMAD-Enhanced v1.0.2-alpha - Bug Fixes`
+   - **Release title:** `Convoke v1.0.2-alpha - Bug Fixes`
    - **Description:** Copy the contents from `RELEASE-NOTES-v1.0.2-alpha.md`
    - **Check:** ✅ "This is a pre-release"
 
@@ -24,7 +24,7 @@ gh auth login
 Then create the release:
 ```bash
 gh release create v1.0.2-alpha \
-  --title "BMAD-Enhanced v1.0.2-alpha - Bug Fixes" \
+  --title "Convoke v1.0.2-alpha - Bug Fixes" \
   --notes-file RELEASE-NOTES-v1.0.2-alpha.md \
   --prerelease \
   --target main
@@ -60,4 +60,4 @@ Once the release is created:
 ## Quick Link
 
 After creating the release, it will be available at:
-https://github.com/amalik/BMAD-Enhanced/releases/tag/v1.0.2-alpha
+https://github.com/amalik/convoke/releases/tag/v1.0.2-alpha
