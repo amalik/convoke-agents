@@ -1,6 +1,6 @@
 # Story 4.2: Publish Deprecation Version of bmad-enhanced
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -33,18 +33,18 @@ So that I know how to migrate without losing my data.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create deprecation branch from pre-rename tag (AC: #4)
-  - [ ] 1.1: Run `git checkout -b deprecation v1.7.0`
-  - [ ] 1.2: Verify branch is at pre-rename state: `package.json` name is `bmad-enhanced`
+- [x] Task 1: Create deprecation branch from pre-rename tag (AC: #4)
+  - [x] 1.1: Run `git checkout -b deprecation v1.7.0`
+  - [x] 1.2: Verify branch is at pre-rename state: `package.json` name is `bmad-enhanced`
 
-- [ ] Task 2: Modify package.json on deprecation branch (AC: #1)
-  - [ ] 2.1: Bump version to `1.8.0` (latest published is `1.7.1` on npm; branching from `v1.7.0` tag which has `1.7.0`)
-  - [ ] 2.2: Add `"deprecated": "This package has been renamed to convoke-agents. Run: npm install convoke-agents"` field
-  - [ ] 2.3: Verify: `cat package.json | grep -e '"version"' -e '"deprecated"'`
+- [x] Task 2: Modify package.json on deprecation branch (AC: #1)
+  - [x] 2.1: Bump version to `1.8.0` (latest published is `1.7.1` on npm; branching from `v1.7.0` tag which has `1.7.0`)
+  - [x] 2.2: Add `"deprecated": "This package has been renamed to convoke-agents. Run: npm install convoke-agents"` field
+  - [x] 2.3: Verify: `cat package.json | grep -e '"version"' -e '"deprecated"'`
 
-- [ ] Task 3: Add deprecation banner to postinstall.js (AC: #2)
-  - [ ] 3.1: Add a deprecation banner block at the TOP of the `main()` function in `scripts/postinstall.js`
-  - [ ] 3.2: Banner content:
+- [x] Task 3: Add deprecation banner to postinstall.js (AC: #2)
+  - [x] 3.1: Add a deprecation banner block at the TOP of the `main()` function in `scripts/postinstall.js`
+  - [x] 3.2: Banner content:
     ```
     ╔══════════════════════════════════════════════════════════════╗
     ║                                                              ║
@@ -60,24 +60,24 @@ So that I know how to migrate without losing my data.
     ║                                                              ║
     ╚══════════════════════════════════════════════════════════════╝
     ```
-  - [ ] 3.3: Banner should use ANSI yellow/bold for visibility
-  - [ ] 3.4: Test locally: `node scripts/postinstall.js` displays the banner
+  - [x] 3.3: Banner should use ANSI yellow/bold for visibility
+  - [x] 3.4: Test locally: `node scripts/postinstall.js` displays the banner
 
-- [ ] Task 4: Commit and publish from deprecation branch (AC: #1, #2)
-  - [ ] 4.1: `git add package.json scripts/postinstall.js`
-  - [ ] 4.2: `git commit -m "Deprecation notice: bmad-enhanced renamed to convoke-agents"`
-  - [ ] 4.3: Run `npm publish` from the deprecation branch (requires npm auth/OTP)
-  - [ ] 4.4: Verify: `npm view bmad-enhanced@1.8.0 version` returns `1.8.0`
+- [x] Task 4: Commit and publish from deprecation branch (AC: #1, #2)
+  - [x] 4.1: `git add package.json scripts/postinstall.js`
+  - [x] 4.2: `git commit -m "Deprecation notice: bmad-enhanced renamed to convoke-agents"`
+  - [x] 4.3: Run `npm publish` from the deprecation branch (requires npm auth/OTP)
+  - [x] 4.4: Verify: `npm view bmad-enhanced@1.8.0 version` returns `1.8.0`
 
-- [ ] Task 5: Execute npm deprecate command (AC: #3)
-  - [ ] 5.1: Run `npm deprecate bmad-enhanced "Renamed to convoke-agents. Run: npm install convoke-agents"`
-  - [ ] 5.2: Verify: `npm info bmad-enhanced` shows deprecation message
-  - [ ] 5.3: Verify: `npm view bmad-enhanced deprecated` returns the deprecation string
+- [x] Task 5: Execute npm deprecate command (AC: #3)
+  - [x] 5.1: Run `npm deprecate bmad-enhanced "Renamed to convoke-agents. Run: npm install convoke-agents"`
+  - [x] 5.2: Verify: `npm info bmad-enhanced` shows deprecation message
+  - [x] 5.3: Verify: `npm view bmad-enhanced deprecated` returns the deprecation string
 
-- [ ] Task 6: Return to main branch (AC: #4)
-  - [ ] 6.1: `git checkout main`
-  - [ ] 6.2: Verify: `package.json` name is `convoke-agents` (main branch state unchanged)
-  - [ ] 6.3: The deprecation branch can be kept for reference or deleted later
+- [x] Task 6: Return to main branch (AC: #4)
+  - [x] 6.1: `git checkout main`
+  - [x] 6.2: Verify: `package.json` name is `convoke-agents` (main branch state unchanged)
+  - [x] 6.3: The deprecation branch can be kept for reference or deleted later
 
 ## Dev Notes
 
@@ -132,10 +132,21 @@ Publishing `bmad-enhanced@1.8.0` and running `npm deprecate` both require npm au
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Created `deprecation` branch from `v1.7.0` tag
+- Bumped version to `1.8.0`, added `deprecated` field in package.json
+- Added ANSI yellow/bold deprecation banner to postinstall.js
+- Committed as `a990f8a` on deprecation branch
+- Published `bmad-enhanced@1.8.0` to npm — verified live
+- Ran `npm deprecate bmad-enhanced` — verified deprecation message on all versions
+- Returned to `main` — confirmed `convoke-agents@2.0.0` identity preserved
+
 ### File List
+
+- `package.json` (on deprecation branch) — version 1.8.0, deprecated field added
+- `scripts/postinstall.js` (on deprecation branch) — deprecation banner added
