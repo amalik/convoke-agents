@@ -139,7 +139,7 @@ development_status:
   # ============================================================
 
   # Epic 1 (Phase 3): Core Identity & Test Migration
-  p3-epic-1: in-progress
+  p3-epic-1: done
   p3-1-1-rename-package-identity-cli-commands: done
   p3-1-2-rename-script-files-update-internal-strings: done
   p3-1-3-update-entry-point-installer-scripts: done
@@ -147,19 +147,19 @@ development_status:
   p3-1-5-create-v2-migration-entry: done
   p3-1-6-migrate-all-test-files: done
   p3-1-7-add-migration-path-integration-test: done
-  p3-epic-1-retrospective: optional
+  p3-epic-1-retrospective: done
 
   # Epic 2 (Phase 3): Documentation & Shipped Content
-  p3-epic-2: backlog
-  p3-2-1-overhaul-readme: backlog
-  p3-2-2-update-primary-documentation-files: backlog
-  p3-2-3-update-secondary-docs-user-guides-shipped-content: backlog
-  p3-epic-2-retrospective: optional
+  p3-epic-2: done
+  p3-2-1-overhaul-readme: done
+  p3-2-2-update-primary-documentation-files: done
+  p3-2-3-update-secondary-docs-user-guides-shipped-content: done
+  p3-epic-2-retrospective: done
 
   # Epic 3 (Phase 3): Platform, Historical Docs & Miscellaneous
-  p3-epic-3: backlog
-  p3-3-1-update-github-ci-configuration: backlog
-  p3-3-2-update-miscellaneous-top-level-files: backlog
+  p3-epic-3: in-progress
+  p3-3-1-update-github-ci-configuration: done
+  p3-3-2-update-miscellaneous-top-level-files: in-progress
   p3-3-3-update-historical-documentation-bmad-output: backlog
   p3-epic-3-retrospective: optional
 
