@@ -1,12 +1,12 @@
 # FAQ
 
-Common questions about BMAD-Enhanced and the Vortex Pattern.
+Common questions about Convoke and the Vortex Pattern.
 
 ---
 
 ### How is this different from BMAD core agents?
 
-**BMAD-Enhanced handles pre-implementation validation. BMAD Core handles implementation.**
+**Convoke handles pre-implementation validation. BMAD Core handles implementation.**
 
 | Phase | Agents | Question answered |
 |-------|--------|------------------|
@@ -100,7 +100,7 @@ Each includes templates, step files, and validation.
 
 **Use BMB (BMAD Module Builder) — not manual file editing.**
 
-BMAD-Enhanced includes three builder agents specifically for extending the system:
+Convoke includes three builder agents specifically for extending the system:
 
 | Builder | Slash Command | What it creates |
 |---------|---------------|-----------------|
