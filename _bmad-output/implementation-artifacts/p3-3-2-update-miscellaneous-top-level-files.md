@@ -1,6 +1,6 @@
 # Story 3.2: Update Miscellaneous Top-Level Files
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -63,29 +63,29 @@ So that no stale product name references exist outside of `_bmad-output/`.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Update release notes files (AC: #1, #4, #5)
-  - [ ] 1.1: `RELEASE-NOTES-v1.0.3-alpha.md` — replace all stale refs (~29)
-  - [ ] 1.2: `release-notes-v1.1.1.md` — replace all stale refs (~11)
-  - [ ] 1.3: `release-notes-v1.1.2.md` — replace all stale refs (~14)
-  - [ ] 1.4: `release-notes-v1.6.0.md` — replace all stale refs (3)
-  - [ ] 1.5: Grep verify all 4 files — zero stale refs
+- [x] Task 1: Update release notes files (AC: #1, #4, #5)
+  - [x] 1.1: `RELEASE-NOTES-v1.0.3-alpha.md` — replace all stale refs (~29)
+  - [x] 1.2: `release-notes-v1.1.1.md` — replace all stale refs (~11)
+  - [x] 1.3: `release-notes-v1.1.2.md` — replace all stale refs (~14)
+  - [x] 1.4: `release-notes-v1.6.0.md` — replace all stale refs (3)
+  - [x] 1.5: Grep verify all 4 files — zero stale refs
 
-- [ ] Task 2: Update release/guide files (AC: #2, #6)
-  - [ ] 2.1: `CREATE-v1.0.3-RELEASE.md` — replace all stale refs (~26)
-  - [ ] 2.2: `CREATE-RELEASE-GUIDE.md` — replace all stale refs (~4)
-  - [ ] 2.3: Grep verify both files — zero stale refs
+- [x] Task 2: Update release/guide files (AC: #2, #6)
+  - [x] 2.1: `CREATE-v1.0.3-RELEASE.md` — replace all stale refs (~26)
+  - [x] 2.2: `CREATE-RELEASE-GUIDE.md` — replace all stale refs (~4)
+  - [x] 2.3: Grep verify both files — zero stale refs
 
-- [ ] Task 3: Update remaining misc files (AC: #3, #7, #8, #9)
-  - [ ] 3.1: `TEST-PLAN-REAL-INSTALL.md` — replace all stale refs (~23)
-  - [ ] 3.2: `create-github-release.sh` — replace all stale refs (~3), verify URL is lowercase
-  - [ ] 3.3: `CLEANUP-SUMMARY.md` — replace all stale refs (~4)
-  - [ ] 3.4: `WARP.md` — replace all stale refs (3)
-  - [ ] 3.5: Grep verify all 4 files — zero stale refs
+- [x] Task 3: Update remaining misc files (AC: #3, #7, #8, #9)
+  - [x] 3.1: `TEST-PLAN-REAL-INSTALL.md` — replace all stale refs (~23)
+  - [x] 3.2: `create-github-release.sh` — replace all stale refs (~3), verify URL is lowercase
+  - [x] 3.3: `CLEANUP-SUMMARY.md` — replace all stale refs (~4)
+  - [x] 3.4: `WARP.md` — replace all stale refs (3)
+  - [x] 3.5: Grep verify all 4 files — zero stale refs
 
-- [ ] Task 4: Cross-file verification (AC: #10)
-  - [ ] 4.1: Grep all top-level `*.md` and `*.sh` for `bmad-enhanced`/`BMAD-Enhanced`/`BMAD Enhanced` — zero matches (excluding CHANGELOG.md "was" column and package.json keywords)
-  - [ ] 4.2: Grep for old CLI commands (`bmad-update`, `bmad-version`, `bmad-migrate`, `bmad-doctor`, `bmad-install`) in same scope — zero matches (excluding CHANGELOG.md "was" column)
-  - [ ] 4.3: Run `npm test` — all pass
+- [x] Task 4: Cross-file verification (AC: #10)
+  - [x] 4.1: Grep all top-level `*.md` and `*.sh` for `bmad-enhanced`/`BMAD-Enhanced`/`BMAD Enhanced` — zero matches (excluding CHANGELOG.md "was" column and package.json keywords)
+  - [x] 4.2: Grep for old CLI commands (`bmad-update`, `bmad-version`, `bmad-migrate`, `bmad-doctor`, `bmad-install`) in same scope — zero matches (excluding CHANGELOG.md "was" column)
+  - [x] 4.3: Run `npm test` — all pass
 
 ## Dev Notes
 
@@ -196,10 +196,32 @@ After any `replace_all`, specifically audit:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+None — all tasks completed without errors.
+
 ### Completion Notes List
 
+- All 10 files updated via single sed pipeline with 12 ordered replacement patterns (URLs first, then longest CLI commands first, then product names, then shorter CLI commands).
+- `bmad-install-emma` and `bmad-install-wade` (deprecated v1.0.x individual agent installers, 14 refs across 4 files) were also replaced to `convoke-install-emma`/`convoke-install-wade` — not in original story mapping but required for Task 4.2 verification to pass (`bmad-install` pattern).
+- No `BMAD Enhanced` (space-separated variant) found in any target file — no per-instance review needed.
+- Post-replace URL audit: all GitHub URLs use lowercase `convoke` — zero case issues.
+- No "was" / comparison contexts found in target files — CHANGELOG.md exclusion was the only concern and it's out of scope.
+- Verification: all 10 files return zero stale refs. Cross-file grep of all top-level `*.md` and `*.sh` returns zero matches (excluding CHANGELOG.md). `npm test` — 315/315 pass.
+
 ### File List
+
+- `RELEASE-NOTES-v1.0.3-alpha.md` (bulk replacement)
+- `release-notes-v1.1.1.md` (bulk replacement)
+- `release-notes-v1.1.2.md` (bulk replacement)
+- `release-notes-v1.6.0.md` (bulk replacement)
+- `CREATE-v1.0.3-RELEASE.md` (bulk replacement)
+- `CREATE-RELEASE-GUIDE.md` (bulk replacement)
+- `TEST-PLAN-REAL-INSTALL.md` (bulk replacement)
+- `create-github-release.sh` (bulk replacement)
+- `CLEANUP-SUMMARY.md` (bulk replacement)
+- `WARP.md` (bulk replacement)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (status updated)
+- `_bmad-output/implementation-artifacts/p3-3-2-update-miscellaneous-top-level-files.md` (story file updated)
