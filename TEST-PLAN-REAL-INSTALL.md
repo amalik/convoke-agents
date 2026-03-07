@@ -1,4 +1,4 @@
-# BMAD-Enhanced Real Installation Test Plan
+# Convoke Real Installation Test Plan
 
 **Date:** 2026-02-15
 **Version:** 1.0.3-alpha
@@ -9,7 +9,7 @@
 ## Test Objectives
 
 1. Verify BMAD Method installation works
-2. Verify BMAD-Enhanced npm package installs correctly
+2. Verify Convoke npm package installs correctly
 3. Verify npx commands work as documented
 4. Verify agents are functional after installation
 5. Identify any issues in the real-world installation flow
@@ -18,7 +18,7 @@
 
 ## Test Environment
 
-**Location:** `/tmp/bmad-enhanced-test-repo`
+**Location:** `/tmp/convoke-test-repo`
 **Setup:** Fresh directory, no existing BMAD installation
 **Requirements:**
 - Node.js 14+
@@ -33,8 +33,8 @@
 
 ```bash
 # Step 1.1: Create fresh directory
-mkdir -p /tmp/bmad-enhanced-test-repo
-cd /tmp/bmad-enhanced-test-repo
+mkdir -p /tmp/convoke-test-repo
+cd /tmp/convoke-test-repo
 
 # Step 1.2: Initialize git (optional but realistic)
 git init
@@ -72,19 +72,19 @@ ls -la _bmad/_config/
 
 ---
 
-### Phase 3: Install BMAD-Enhanced Package
+### Phase 3: Install Convoke Package
 
 ```bash
-# Step 3.1: Install bmad-enhanced from npm
-npm install bmad-enhanced@alpha
+# Step 3.1: Install convoke from npm
+npm install convoke@alpha
 
 # Step 3.2: Verify package installation
-ls -la node_modules/bmad-enhanced/
-npm list bmad-enhanced
+ls -la node_modules/convoke/
+npm list convoke
 ```
 
 **Expected Result:**
-- bmad-enhanced@1.0.3-alpha installed in node_modules
+- convoke@1.0.3-alpha installed in node_modules
 - Package appears in npm list
 
 **Success Criteria:**
@@ -99,8 +99,8 @@ npm list bmad-enhanced
 #### Test 4.1: Install All Agents
 
 ```bash
-# Step 4.1.1: Run npx bmad-install-agents
-npx bmad-install-agents
+# Step 4.1.1: Run npx convoke-install
+npx convoke-install
 
 # Step 4.1.2: Verify agents installed
 ls -la _bmad/bme/_designos/agents/
@@ -223,11 +223,11 @@ cd /tmp/bmad-test-emma-only
 # Step 6.1.2: Install BMAD Method
 npx bmad-method@alpha install
 
-# Step 6.1.3: Install BMAD-Enhanced
-npm install bmad-enhanced@alpha
+# Step 6.1.3: Install Convoke
+npm install convoke@alpha
 
 # Step 6.1.4: Install Emma only
-npx bmad-install-emma
+npx convoke-install-emma
 
 # Step 6.1.5: Verify only Emma installed
 ls -la _bmad/bme/_designos/agents/
@@ -255,11 +255,11 @@ cd /tmp/bmad-test-wade-only
 # Step 6.2.2: Install BMAD Method
 npx bmad-method@alpha install
 
-# Step 6.2.3: Install BMAD-Enhanced
-npm install bmad-enhanced@alpha
+# Step 6.2.3: Install Convoke
+npm install convoke@alpha
 
 # Step 6.2.4: Install Wade only
-npx bmad-install-wade
+npx convoke-install-wade
 
 # Step 6.2.5: Verify only Wade installed
 ls -la _bmad/bme/_designos/agents/
@@ -288,11 +288,11 @@ ls -la _bmad/bme/_designos/agents/
 mkdir -p /tmp/bmad-test-no-prereq
 cd /tmp/bmad-test-no-prereq
 
-# Step 7.1.2: Install BMAD-Enhanced
-npm install bmad-enhanced@alpha
+# Step 7.1.2: Install Convoke
+npm install convoke@alpha
 
 # Step 7.1.3: Try to install agents (should fail)
-npx bmad-install-agents
+npx convoke-install
 ```
 
 **Expected Result:**
@@ -347,7 +347,7 @@ npx bmad-install-agents
 
 ```bash
 # Remove test directories
-rm -rf /tmp/bmad-enhanced-test-repo
+rm -rf /tmp/convoke-test-repo
 rm -rf /tmp/bmad-test-emma-only
 rm -rf /tmp/bmad-test-wade-only
 rm -rf /tmp/bmad-test-no-prereq
