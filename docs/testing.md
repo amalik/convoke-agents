@@ -1,6 +1,6 @@
 # Testing
 
-Overview of the BMAD-Enhanced automated test suite, CI pipeline, and agent validation results.
+Overview of the Convoke automated test suite, CI pipeline, and agent validation results.
 
 ---
 
@@ -30,9 +30,9 @@ Zero-dependency test runner using `node:test`.
 |-------|-------|---------------|
 | fresh-install | 9 | `refreshInstallation` end-to-end (all 7 agents) |
 | upgrade | 22 | v1.0.x, v1.3.x, v1.4.x upgrade paths to v1.5.0 |
-| cli-entry-points | 8 | `index.js`, `bmad-version`, `bmad-update`, `bmad-doctor` |
+| cli-entry-points | 8 | `index.js`, `convoke-version`, `convoke-update`, `convoke-doctor` |
 | installer-e2e | 7 | `install-vortex-agents` CLI end-to-end, idempotency |
-| bmad-doctor | 7 | Negative paths: no project, missing config, invalid YAML, missing agents, stale lock, version mismatch |
+| convoke-doctor | 7 | Negative paths: no project, missing config, invalid YAML, missing agents, stale lock, version mismatch |
 
 ### Running Tests
 
@@ -123,8 +123,8 @@ Same infrastructure validation as Isla. Content correctness validated by P0 cont
 
 | Module | Coverage | Notes |
 |--------|----------|-------|
-| `bmad-update.js` | 29% | CLI orchestration — low ROI for unit testing |
-| `bmad-version.js` | 56% | CLI branch coverage |
+| `convoke-update.js` | 29% | CLI orchestration — low ROI for unit testing |
+| `convoke-version.js` | 56% | CLI branch coverage |
 | `1.0.x-to-1.3.0.js` | 37% | Legacy migration apply logic |
 
 ---
