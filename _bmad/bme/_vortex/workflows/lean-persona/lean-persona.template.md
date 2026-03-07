@@ -158,6 +158,6 @@ version: 1.0
 
 ---
 
-**Created with:** BMAD-Enhanced v1.2.0 - Vortex Pattern (Contextualize Stream)
+**Created with:** Convoke v2.0.0 - Vortex Pattern (Contextualize Stream)
 **Agent:** Emma (Contextualization Expert)
 **Workflow:** lean-persona
