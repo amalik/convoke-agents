@@ -165,7 +165,8 @@ development_status:
 
   # Epic 4 (Phase 3): Verification & Release
   p3-epic-4: in-progress
-  p3-4-1-reserve-npm-package-name: ready-for-dev
+  p3-4-0-update-npm-package-name-repo-url-to-convoke-agents: ready-for-dev
+  p3-4-1-reserve-npm-package-name: backlog
   p3-4-2-publish-deprecation-version-bmad-enhanced: backlog
   p3-4-3-final-verification-publish: backlog
   p3-epic-4-retrospective: optional
