@@ -33,8 +33,8 @@ Created `_bmad-output/project-documentation/` and moved:
 
 ### 4. Removed Build Artifacts ✅
 Deleted:
-- bmad-enhanced-1.0.0-alpha.tgz
-- bmad-enhanced-1.0.2-alpha.tgz
+- convoke-1.0.0-alpha.tgz
+- convoke-1.0.2-alpha.tgz
 
 ---
 
@@ -91,8 +91,8 @@ _bmad-output/
 - No outdated `npm run` commands ✅
 
 **Links:**
-- GitHub repository: github.com/amalik/BMAD-Enhanced ✅
-- npm package: npmjs.com/package/bmad-enhanced ✅
+- GitHub repository: github.com/amalik/convoke ✅
+- npm package: npmjs.com/package/convoke ✅
 - BMAD Method references correct ✅
 
 ---
