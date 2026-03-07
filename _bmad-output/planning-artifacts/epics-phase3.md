@@ -472,42 +472,68 @@ grep -r "bmad-install\|bmad-update\|bmad-version\|bmad-migrate\|bmad-doctor" . \
 
 npm name reservation, deprecation of old package, comprehensive verification, and coordinated publish sequence.
 
+**Course correction (2026-03-07):** npm package name changed from `convoke` to `convoke-agents` because `convoke` was already taken on npm. GitHub repo also renamed to `convoke-agents` for consistency. See `sprint-change-proposal-2026-03-07.md` for full analysis.
+
+### Story 4.0: Update npm Package Name & Repo URL to convoke-agents
+
+As a maintainer,
+I want the npm package name and GitHub repo URL updated from `convoke` to `convoke-agents` throughout the codebase,
+So that the package can be published to npm under an available name.
+
+**Acceptance Criteria:**
+
+**Given** `convoke` is already taken on npm
+**When** all package name and repo URL references are updated
+**Then** `package.json` name is `convoke-agents`
+**And** `package-lock.json` is regenerated
+**And** all `npm install convoke` commands become `npm install convoke-agents`
+**And** all `npmjs.com/package/convoke` URLs become `npmjs.com/package/convoke-agents`
+**And** all `npx -p convoke@` become `npx -p convoke-agents@`
+**And** all `github.com/amalik/convoke` URLs become `github.com/amalik/convoke-agents`
+**And** `docs-audit.js` stale-ref pattern is updated
+**And** all `_bmad-output/` historical docs are updated with same patterns
+**And** display name "Convoke" is NOT affected
+**And** CLI commands `convoke-*` are NOT affected
+**And** `npm test` passes, `docs-audit` returns zero findings
+
+**Files:** package.json, package-lock.json, ~50 docs/code files, ~67 `_bmad-output/` files
+
 ### Story 4.1: Reserve npm Package Name
 
 As a maintainer,
-I want the `convoke` package name reserved on npm before any public deprecation notice,
+I want the `convoke-agents` package name reserved on npm before any public deprecation notice,
 So that users who see the deprecation can actually find the new package.
 
 **Acceptance Criteria:**
 
-**Given** the `convoke` name is available on npm
+**Given** the `convoke-agents` name is available on npm
 **When** a placeholder package is published
-**Then** `convoke@0.0.1` exists on npm with a "Coming soon" README
-**And** this is done BEFORE any deprecation notice on `convoke`
+**Then** `convoke-agents@0.0.1` exists on npm with a "Coming soon" README
+**And** this is done BEFORE any deprecation notice on `bmad-enhanced`
 
 **Files:** Temporary placeholder package (not in main repo)
 
-### Story 4.2: Publish Deprecation Version of convoke
+### Story 4.2: Publish Deprecation Version of bmad-enhanced
 
-As a user on convoke@1.7.x,
-I want to receive a clear deprecation notice pointing me to the new `convoke` package,
+As a user on bmad-enhanced@1.7.x,
+I want to receive a clear deprecation notice pointing me to the new `convoke-agents` package,
 So that I know how to migrate without losing my data.
 
 **Acceptance Criteria:**
 
-**Given** `convoke@0.0.1` exists on npm
-**When** `convoke@1.8.0` is published
-**Then** the package.json includes a `"deprecated"` field pointing to `convoke`
+**Given** `convoke-agents@0.0.1` exists on npm
+**When** `bmad-enhanced@1.8.0` is published
+**Then** the package.json includes a `"deprecated"` field pointing to `convoke-agents`
 **And** the postinstall script displays a prominent banner with migration instructions
 **And** the banner assures users that `_bmad/` and `_bmad-output/` data is preserved
-**And** `npm deprecate convoke "Renamed to convoke. Run: npm install convoke"` is executed
+**And** `npm deprecate bmad-enhanced "Renamed to convoke-agents. Run: npm install convoke-agents"` is executed
 
 **Branch workflow (critical):** The deprecation must be published from the PRE-RENAME codebase, not from main (which has the Convoke rename):
 1. Create a `deprecation` branch from the v1.7.1 tag (pre-rename state)
 2. On that branch: add `"deprecated"` field to package.json, add deprecation banner to postinstall.js, bump version to 1.8.0
-3. Publish `convoke@1.8.0` from the `deprecation` branch
-4. Run `npm deprecate convoke "Renamed to convoke. Run: npm install convoke"`
-5. Return to main branch (which has the Convoke rename) for `convoke@2.0.0` publish
+3. Publish `bmad-enhanced@1.8.0` from the `deprecation` branch
+4. Run `npm deprecate bmad-enhanced "Renamed to convoke-agents. Run: npm install convoke-agents"`
+5. Return to main branch (which has the Convoke rename) for `convoke-agents@2.0.0` publish
 
 **Files:** `package.json`, `scripts/postinstall.js` (on `deprecation` branch only)
 
@@ -515,11 +541,11 @@ So that I know how to migrate without losing my data.
 
 As a maintainer,
 I want comprehensive verification that the rename is complete before publishing,
-So that `convoke@2.0.0` ships with zero stale references and a passing test suite.
+So that `convoke-agents@2.0.0` ships with zero stale references and a passing test suite.
 
 **Acceptance Criteria:**
 
-**Given** all Epics 1-3 are complete
+**Given** all Epics 1-3 are complete and Story 4.0 is done
 **When** final verification is run
 **Then** `npm run lint` passes
 **And** `npm test` passes (all unit tests)
@@ -529,17 +555,17 @@ So that `convoke@2.0.0` ships with zero stale references and a passing test suit
 **And** `npm run docs:audit` returns zero findings
 **And** comprehensive grep audit returns zero stale references
 **And** `node index.js` displays Convoke branding
-**And** `npm pack --dry-run` shows package name `convoke`
-**And** GitHub repo is renamed to `convoke` (manual via Settings)
+**And** `npm pack --dry-run` shows package name `convoke-agents`
+**And** GitHub repo is renamed to `convoke-agents` (manual via Settings)
 **And** `v2.0.0` tag is pushed to trigger CI publish
 **And** GitHub release is created with migration notes
 
 **Publish sequence:**
-1. Reserve `convoke@0.0.1` (Story 4.1)
-2. Publish `convoke@1.8.0` deprecation (Story 4.2)
-3. `npm deprecate convoke`
-4. Rename GitHub repo → `convoke`
-5. Tag `v2.0.0`, push to trigger CI publish of `convoke@2.0.0`
+1. Reserve `convoke-agents@0.0.1` (Story 4.1)
+2. Publish `bmad-enhanced@1.8.0` deprecation (Story 4.2)
+3. `npm deprecate bmad-enhanced`
+4. Rename GitHub repo → `convoke-agents`
+5. Tag `v2.0.0`, push to trigger CI publish of `convoke-agents@2.0.0`
 6. Create GitHub release with migration notes
 
 ---
@@ -563,9 +589,9 @@ After each epic:
 
 After all epics:
 - Full grep audit for stale references → 0 results
-- `npm pack --dry-run` → package name `convoke`, ~242 files, ~1.1 MB
+- `npm pack --dry-run` → package name `convoke-agents`, ~242 files, ~1.1 MB
 - Fresh install test in temp directory
-- Upgrade test from convoke@1.7.1
+- Upgrade test from bmad-enhanced@1.7.1
 
 ## Process Commitments
 
