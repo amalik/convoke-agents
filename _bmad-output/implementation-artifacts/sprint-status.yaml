@@ -159,7 +159,7 @@ development_status:
   # Epic 3 (Phase 3): Platform, Historical Docs & Miscellaneous
   p3-epic-3: in-progress
   p3-3-1-update-github-ci-configuration: done
-  p3-3-2-update-miscellaneous-top-level-files: in-progress
+  p3-3-2-update-miscellaneous-top-level-files: review
   p3-3-3-update-historical-documentation-bmad-output: backlog
   p3-epic-3-retrospective: optional
 
