@@ -167,6 +167,6 @@ development_status:
   p3-epic-4: in-progress
   p3-4-0-update-npm-package-name-repo-url-to-convoke-agents: done
   p3-4-1-reserve-npm-package-name: done
-  p3-4-2-publish-deprecation-version-bmad-enhanced: ready-for-dev
-  p3-4-3-final-verification-publish: backlog
+  p3-4-2-publish-deprecation-version-bmad-enhanced: done
+  p3-4-3-final-verification-publish: in-progress
   p3-epic-4-retrospective: optional
