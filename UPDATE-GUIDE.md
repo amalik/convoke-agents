@@ -1,6 +1,6 @@
 # Update Guide
 
-How to update your BMAD-Enhanced installation to the latest version.
+How to update your Convoke installation to the latest version.
 
 ---
 
@@ -8,13 +8,13 @@ How to update your BMAD-Enhanced installation to the latest version.
 
 ```bash
 # Update the package
-npm install bmad-enhanced@latest
+npm install convoke@latest
 
 # Preview changes (dry run)
-npx bmad-update --dry-run
+npx convoke-update --dry-run
 
 # Apply the update
-npx bmad-update
+npx convoke-update
 ```
 
 Your data is backed up automatically before any changes.
@@ -23,7 +23,7 @@ Your data is backed up automatically before any changes.
 
 ## Update Commands
 
-### `npx bmad-update`
+### `npx convoke-update`
 
 Main update command — applies migrations and refreshes your installation.
 
@@ -34,25 +34,25 @@ Main update command — applies migrations and refreshes your installation.
 | `--verbose` or `-v` | Show detailed output |
 
 ```bash
-npx bmad-update --dry-run     # Preview
-npx bmad-update               # Apply with confirmation
-npx bmad-update --yes         # Apply without confirmation
+npx convoke-update --dry-run     # Preview
+npx convoke-update               # Apply with confirmation
+npx convoke-update --yes         # Apply without confirmation
 ```
 
-### `npx bmad-version`
+### `npx convoke-version`
 
 Show current version, latest available version, and migration history.
 
 ```bash
-npx bmad-version
+npx convoke-version
 ```
 
-### `npx bmad-doctor`
+### `npx convoke-doctor`
 
 Run diagnostics on your installation. Checks project root, config validity, agent files, workflows, output directory permissions, migration lock status, and version consistency — with actionable fix suggestions.
 
 ```bash
-npx bmad-doctor
+npx convoke-doctor
 ```
 
 ---
@@ -66,7 +66,7 @@ npx bmad-doctor
 What happens:
 - Isla (Discovery & Empathy Expert) and Max (Learning & Decision Expert) agents added
 - 6 new workflows installed (empathy-map resurrected for Isla)
-- Installer updated to `bmad-install-vortex-agents`
+- Installer updated to `convoke-install-vortex`
 - Legacy installers (`install-emma`, `install-wade`) show deprecation warnings
 
 ### From v1.3.x to v1.5.x
@@ -92,9 +92,9 @@ What happens:
 - 7 agents installed (Emma, Isla, Mila, Liam, Wade, Noah, Max)
 
 ```bash
-npm install bmad-enhanced@latest
-npx bmad-update --dry-run  # Preview
-npx bmad-update            # Apply
+npm install convoke@latest
+npx convoke-update --dry-run  # Preview
+npx convoke-update            # Apply
 ```
 
 ---
@@ -141,7 +141,7 @@ Artifacts created with earlier agents (Emma, Isla, Wade, Max) were not designed 
 
 ### What Is Managed by the Update System
 
-These change between versions but are handled automatically by `npx bmad-update`:
+These change between versions but are handled automatically by `npx convoke-update`:
 
 - **Agent definition files** — Persona, menu, and instruction content in `_bmad/bme/_vortex/agents/`
 - **Workflow step files** — Step content, templates, and validation in `_bmad/bme/_vortex/workflows/`
@@ -160,10 +160,10 @@ A previous migration may have crashed. Remove the lock file:
 
 ```bash
 rm _bmad-output/.migration-lock
-npx bmad-update
+npx convoke-update
 ```
 
-Or run `npx bmad-doctor` to diagnose — it detects stale locks.
+Or run `npx convoke-doctor` to diagnose — it detects stale locks.
 
 ### Update fails and won't rollback
 
@@ -181,20 +181,20 @@ cp -r _bmad-output/.backups/{backup-dir}/workflows _bmad/bme/_vortex/
 
 ### "Already up to date" but version is outdated
 
-npx caches package binaries. If you installed at an older version, `npx bmad-update` may keep running the cached script instead of the latest. Force-fetch the latest:
+npx caches package binaries. If you installed at an older version, `npx convoke-update` may keep running the cached script instead of the latest. Force-fetch the latest:
 
 ```bash
-npx -p bmad-enhanced@latest bmad-update
+npx -p convoke@latest convoke-update
 ```
 
-This tells npx to download `bmad-enhanced@latest` first, then run the `bmad-update` bin from it.
+This tells npx to download `convoke@latest` first, then run the `convoke-update` bin from it.
 
 ### "Installation appears corrupted"
 
 Reinstall from scratch (preserves user data):
 
 ```bash
-npx bmad-install-vortex-agents
+npx convoke-install-vortex
 ```
 
 ### Check migration logs
@@ -210,10 +210,10 @@ cat _bmad-output/.logs/migration-*.log | tail -100
 
 If you encounter issues:
 
-1. Run `npx bmad-doctor` for diagnostics
+1. Run `npx convoke-doctor` for diagnostics
 2. Check migration logs in `_bmad-output/.logs/`
 3. Restore from backup in `_bmad-output/.backups/`
-4. [Report an issue](https://github.com/amalik/BMAD-Enhanced/issues) — include your version (`npx bmad-version`) and error message
+4. [Report an issue](https://github.com/amalik/convoke/issues) — include your version (`npx convoke-version`) and error message
 
 ---
 
