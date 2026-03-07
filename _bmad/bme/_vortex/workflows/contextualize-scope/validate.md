@@ -26,5 +26,5 @@ This validation workflow will be available alongside the contextualize-scope wor
 ## Questions?
 
 For questions or to request early access:
-- GitHub Issues: https://github.com/amalik/BMAD-Enhanced/issues
+- GitHub Issues: https://github.com/amalik/convoke/issues
 - Tag with: `workflow:contextualize-scope` and `v1.2.0`
