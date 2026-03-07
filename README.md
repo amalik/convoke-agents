@@ -10,16 +10,23 @@
        Agent teams for complex systems
 </pre>
 
-**Validate your product ideas before writing a single line of code — 7 discovery agents guide you from insight to evidence**
-
 [![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/amalik/convoke-agents)
-[![Agents](https://img.shields.io/badge/agents-7-brightgreen)](docs/agents.md)
-[![Workflows](https://img.shields.io/badge/workflows-22-success)](docs/agents.md)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 </div>
 
-Most teams skip validation and build on assumptions. Convoke guides you through seven discovery streams — from understanding your users to testing your riskiest assumptions — so you can make evidence-based decisions before committing to code. Each stream builds on the previous one's findings, and when gaps appear, the system routes you back to fill them.
+Convoke organizes AI agents into domain-specialized teams. Each team brings deep expertise to a specific discipline — product discovery, implementation, operations, or whatever your domain requires. **Vortex**, the product discovery team, is the first. You can install teams independently or combine them.
+
+---
+
+## Vortex — Product Discovery Team
+
+**7 agents guide you from insight to evidence and back again — a continuous discovery loop, not a one-shot checklist**
+
+[![Agents](https://img.shields.io/badge/agents-7-brightgreen)](docs/agents.md)
+[![Workflows](https://img.shields.io/badge/workflows-22-success)](docs/agents.md)
+
+Most teams skip validation and build on assumptions. Vortex guides you through seven discovery streams — from understanding your users to interpreting production signals — so you can make evidence-based decisions before, during, and after you build. Each stream builds on the previous one's findings, and when gaps appear, the system routes you back to fill them.
 
 ```
                          7 Streams · 7 Agents
@@ -40,7 +47,7 @@ Most teams skip validation and build on assumptions. Convoke guides you through 
           ▶ Start at Emma · back to any stream
 ```
 
-Each agent above runs one of these streams. You don't follow a fixed path — the system guides you to whichever stream needs attention based on what you've learned so far.
+*Suggested flow. Each workflow ends with a Compass routing to whichever stream needs attention — you can start or return to any agent.*
 
 | Agent | Stream | What they do |
 |-------|--------|-------------|
@@ -49,35 +56,78 @@ Each agent above runs one of these streams. You don't follow a fixed path — th
 | **Mila** 🔬 | Synthesize | Converge research into clear problem definitions |
 | **Liam** 💡 | Hypothesize | Turn problems into testable hypotheses and experiments |
 | **Wade** 🧪 | Externalize | Test assumptions with MVPs, experiments, and prototypes |
-| **Noah** 📡 | Sensitize | Interpret production signals and user behavior |
+| **Noah** 📡 | Sensitize | Interpret production signals, user behavior, and engagement patterns |
 | **Max** 🧭 | Systematize | Capture learnings and decide: pivot, patch, or persevere |
+
+### What Agents Produce
+
+Here's a sample of real output from a busy parents meal planning project — each excerpt is from the [full 7-agent journey example](_bmad-output/journey-examples/busy-parents-7-agent-journey.md).
+
+#### Emma 🎯 Contextualize
+
+Emma frames the right problem. Here's the Job-to-be-Done she produced:
+
+> **Job-to-be-Done:** Eliminate the daily 5:30 PM dinner decision so I can feed my family well without the mental load of planning, shopping, and deciding under time pressure.
+>
+> **Riskiest Assumptions:**
+> 1. Decision fatigue — not cooking skill or ingredient access — is the primary barrier to weeknight dinner success
+> 2. Parents would trust and act on an externally-provided dinner suggestion rather than needing to choose themselves
+> 3. "Good enough" nutrition is an acceptable standard — parents aren't seeking perfection, they're seeking relief from guilt
+
+#### Liam 💡 Hypothesize
+
+Liam turns problems into testable ideas. Here's one of three hypotheses he produced:
+
+> **Hypothesis 1: The Pre-Commute Decision Eliminator**
+>
+> We believe that busy parents will act on a single dinner suggestion delivered at 4:00 PM within 3 minutes because the decision burden — not cooking — is their primary barrier, and an earlier intervention catches them before the anxiety spiral begins.
+>
+> **Riskiest Assumption:** Parents will trust and act on an automated suggestion without second-guessing. Research shows they want "someone to tell me what to make" — but "someone" may need to be a trusted person, not an algorithm.
+
+#### Max 🧭 Systematize
+
+Max captures what you learned and decides what to do next:
+
+> **Recommendation: PATCH** (iterate on timing, don't pivot direction)
+>
+> The core hypothesis is validated. The product direction (decision elimination via single suggestion) is correct. The timing mechanism needs refinement — shift from fixed 4:00 PM delivery to adaptive delivery based on each user's observed engagement pattern.
+>
+> **Three Actions:**
+> 1. **Implement adaptive timing** — shift the push notification to match each user's observed engagement window. Engineering effort: 1-2 sprints.
+> 2. **Route to Isla for timing investigation** — qualitative research on why users engage at 3:15 PM. Is it anxiety relief, logistical planning, or habit?
+> 3. **Test willingness to pay immediately** — the mechanism works, but we have no commercial validation. Run a landing page test with pricing before further product investment.
+
+Want to see the complete walkthrough of all 7 agents applied to the example above?
+
+**[See the full 7-agent journey example →](_bmad-output/journey-examples/busy-parents-7-agent-journey.md)**
 
 ---
 
-## Quick Start
+### Quick Start
 
-### Prerequisites
+#### Prerequisites
 
 - Node.js 18+ or Bun
 - Git
 - Claude Code or Claude.ai
 
-### Install
+#### Install
 
 ```bash
 npm install convoke-agents && npx convoke-install-vortex
 ```
 
-All 7 agents with 22 workflows are installed and ready to use.
+All 7 agents with 22 workflows are installed and ready to use. Something not working? Run `npx convoke-doctor` or check the [FAQ](docs/faq.md).
 
-### Personalize
+#### Personalize
 
 Open `_bmad/bme/_vortex/config.yaml` and replace `{user}` with your name. Agents use this to personalize their interactions.
 
-### Activate an Agent
+#### Activate an Agent
+
+**Claude Code / Terminal**
 
 ```bash
-# Read an agent file to activate it
 cat _bmad/bme/_vortex/agents/contextualization-expert.md          # Emma  🎯
 cat _bmad/bme/_vortex/agents/discovery-empathy-expert.md          # Isla  🔍
 cat _bmad/bme/_vortex/agents/research-convergence-specialist.md   # Mila  🔬
@@ -87,14 +137,13 @@ cat _bmad/bme/_vortex/agents/production-intelligence-specialist.md # Noah  📡
 cat _bmad/bme/_vortex/agents/learning-decision-expert.md          # Max   🧭
 ```
 
-**How activation works:** Each agent is a markdown file containing a full persona, menu system, and workflow instructions. When Claude reads the file, it adopts that agent's expertise and presents you with an interactive menu.
+**Claude.ai**
 
-- **Claude Code / Terminal:** Use the `cat` commands above
-- **Claude.ai:** Copy the contents of any agent file and paste into the chat
+Open any agent file from `_bmad/bme/_vortex/agents/` and paste its contents into your conversation.
 
-Pick a workflow from the menu and follow the guided steps.
+**How activation works:** Each agent is a markdown file containing a full persona, menu system, and workflow instructions. When Claude reads the file, it adopts that agent's expertise and presents you with an interactive menu. Pick a workflow from the menu and follow the guided steps.
 
-### Your First 15 Minutes
+#### Your First 15 Minutes
 
 1. **Personalize** — If you haven't already, edit `_bmad/bme/_vortex/config.yaml` and replace `{user}` with your name
 2. **Activate Emma** — `cat _bmad/bme/_vortex/agents/contextualization-expert.md`
@@ -105,7 +154,7 @@ Pick a workflow from the menu and follow the guided steps.
 
 Each workflow ends with a Compass routing suggestion. You don't need to follow a linear path — the system guides you to whichever stream needs attention.
 
-### What Gets Installed
+#### What Gets Installed
 
 ```
 your-project/
@@ -121,7 +170,7 @@ your-project/
 
 ---
 
-## Updating
+### Updating
 
 ```bash
 npx convoke-version              # Check current version
@@ -139,51 +188,7 @@ Your data in `_bmad-output/` is never touched. Automatic backups are created bef
 
 See [UPDATE-GUIDE.md](UPDATE-GUIDE.md) for migration paths and troubleshooting.
 
-## What Agents Produce
-
-Here's a sample of real output from a busy parents meal planning project — each excerpt is from the [full 7-agent journey example](_bmad-output/journey-examples/busy-parents-7-agent-journey.md).
-
-### Emma 🎯 Contextualize
-
-Emma frames the right problem. Here's the Job-to-be-Done she produced:
-
-> **Job-to-be-Done:** Eliminate the daily 5:30 PM dinner decision so I can feed my family well without the mental load of planning, shopping, and deciding under time pressure.
->
-> **Riskiest Assumptions:**
-> 1. Decision fatigue — not cooking skill or ingredient access — is the primary barrier to weeknight dinner success
-> 2. Parents would trust and act on an externally-provided dinner suggestion rather than needing to choose themselves
-> 3. "Good enough" nutrition is an acceptable standard — parents aren't seeking perfection, they're seeking relief from guilt
-
-### Liam 💡 Hypothesize
-
-Liam turns problems into testable ideas. Here's one of three hypotheses he produced:
-
-> **Hypothesis 1: The Pre-Commute Decision Eliminator**
->
-> We believe that busy parents will act on a single dinner suggestion delivered at 4:00 PM within 3 minutes because the decision burden — not cooking — is their primary barrier, and an earlier intervention catches them before the anxiety spiral begins.
->
-> **Riskiest Assumption:** Parents will trust and act on an automated suggestion without second-guessing. Research shows they want "someone to tell me what to make" — but "someone" may need to be a trusted person, not an algorithm.
-
-### Max 🧭 Systematize
-
-Max captures what you learned and decides what to do next:
-
-> **Recommendation: PATCH** (iterate on timing, don't pivot direction)
->
-> The core hypothesis is validated. The product direction (decision elimination via single suggestion) is correct. The timing mechanism needs refinement — shift from fixed 4:00 PM delivery to adaptive delivery based on each user's observed engagement pattern.
->
-> **Three Actions:**
-> 1. **Implement adaptive timing** — shift the push notification to match each user's observed engagement window. Engineering effort: 1-2 sprints.
-> 2. **Route to Isla for timing investigation** — qualitative research on why users engage at 3:15 PM. Is it anxiety relief, logistical planning, or habit?
-> 3. **Test willingness to pay immediately** — the mechanism works, but we have no commercial validation. Run a landing page test with pricing before further product investment.
-
-Want to see the complete walkthrough of all 7 agents applied to the example above?
-
-**📖 [See the full 7-agent journey example →](_bmad-output/journey-examples/busy-parents-7-agent-journey.md)**
-
----
-
-## Using the Agents
+### Using the Agents
 
 Each agent can be used independently or as part of the full Vortex flow:
 
@@ -195,7 +200,7 @@ Each agent can be used independently or as part of the full Vortex flow:
 6. **Noah (Sensitize)** — Start here when experiments have graduated to production
 7. **Max (Systematize)** — Start here when you have results and need to decide next steps
 
-Max's **Vortex Navigation** workflow helps identify which stream needs attention based on evidence gaps — you don't have to follow a linear path. Every workflow ends with a **Vortex Compass** that routes you to the right next agent based on what you learned. Ten handoff contracts (HC1-HC10) ensure structured information flows between agents, so each agent gets exactly the data it needs from the previous one.
+Max's **Vortex Navigation** workflow helps identify which stream needs attention based on evidence gaps — you don't have to follow a linear path. Every workflow ends with a **Vortex Compass** that routes you to the right next agent based on what you learned. Ten handoff contracts (HC1-HC10) ensure structured information flows between agents — see the [contracts directory](_bmad/bme/_vortex/contracts/) for details.
 
 For detailed workflow descriptions and usage examples, see the [Agent Guide](docs/agents.md) and the individual user guides:
 
@@ -211,17 +216,16 @@ For detailed workflow descriptions and usage examples, see the [Agent Guide](doc
 
 ## How It Fits with BMAD Core
 
-Convoke handles **pre-implementation validation**. BMAD Core handles **implementation**.
+Convoke handles **discovery and validation**. BMAD Core handles **implementation**.
 
 ```
-Convoke (Vortex)                                BMAD Core
-┌──────────────────────────────────────┐       ┌──────────────────────┐
-│ Isla → Mila → Liam → Wade → Noah    │ ───>  │ PM → Architect → Dev │
-│   ↑                          ↓       │       │ "Let's build it"     │
-│   └──── Max ◀── Noah    Max ↻        │       └──────────────────────┘
-│ Emma provides context at any point   │
-│ "Should we build this?"             │
-└──────────────────────────────────────┘
+Convoke Teams                              BMAD Core
+┌──────────────────────────────┐          ┌──────────────────────┐
+│ Vortex (Product Discovery)   │ ──────>  │ PM → Architect → Dev │
+│   "Should we build this?"    │          │ "Let's build it"     │
+│                              │ <──────  │                      │
+│ [Future teams]               │  signals │                      │
+└──────────────────────────────┘          └──────────────────────┘
 ```
 
 Convoke works standalone or as an extension — no BMAD Method installation required.
@@ -247,7 +251,7 @@ Convoke works standalone or as an extension — no BMAD Method installation requ
 - **v1.6.x** — Wave 3: Complete 7-stream Vortex (added Mila, Liam, Noah — 7 agents, 22 workflows, handoff contracts, Compass routing)
 - **v1.7.0** — Wave 4: Quality & onboarding (P0 test suite, docs audit tool, all 22 workflows production-ready, README overhaul, package size fix)
 - **v2.0.0** — Product renamed to Convoke. CLI commands renamed to `convoke-*`. Package: `npm install convoke-agents`
-- **Next** — Multi-agent collaboration, cross-agent workflows, analytics
+- **Next** — Additional domain-specialized teams, multi-agent collaboration, cross-team workflows
 
 ---
 
