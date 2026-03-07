@@ -2,7 +2,7 @@
 
 **Agent:** Liam (hypothesis-engineer)
 **Version:** 1.6.0
-**Module:** BMAD Enhanced (bme) - Vortex Pattern
+**Module:** Convoke (bme) - Vortex Pattern
 **Last Updated:** 2026-02-25
 
 ---
@@ -215,14 +215,14 @@ Select **[CH] Chat** to discuss:
 
 **How to fix:**
 1. Check if `_bmad/bme/_vortex/config.yaml` exists
-2. If missing: `npx bmad-install-vortex-agents`
+2. If missing: `npx convoke-install-vortex`
 
 ### Error: "Workflow Error: Cannot load hypothesis engineering workflow"
 
 **How to fix:**
 1. Check workflow files exist in `_bmad/bme/_vortex/workflows/`
-2. Run `npx bmad-doctor` to diagnose
-3. If missing: `npx bmad-install-vortex-agents`
+2. Run `npx convoke-doctor` to diagnose
+3. If missing: `npx convoke-install-vortex`
 
 ---
 
@@ -245,7 +245,7 @@ This is the fundamental test. If there's no result that would make you say "we w
 ## Credits
 
 **Agent:** Liam (hypothesis-engineer)
-**Module:** BMAD Enhanced (bme)
+**Module:** Convoke (bme)
 **Submodule:** Vortex Pattern (`_vortex`)
 **Stream:** Hypothesize (Stream 4)
 **Version:** 1.6.0
