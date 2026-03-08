@@ -18,7 +18,7 @@ This document breaks down the top 5 RICE-scored initiatives from the Convoke ini
 - FR2: Fix the 7-stream Vortex diagram layout — box widths, arrow alignment, and spacing between the two rows need to render correctly in both GitHub and terminal views (D7)
 - FR3: Add a problem-framing sentence above the Vortex diagram: "Most teams skip validation and build on assumptions. Vortex fixes that." or equivalent approved copy (D5)
 - FR4: Surface the 22 Vortex workflow names in an accessible location — either a collapsed `<details>` block in README or a dedicated docs page (D1)
-- FR5: Update all `npx convoke-*` console output messages in `postinstall.js` to use the `npx -p convoke-agents convoke-*` pattern so users don't get "package not found" errors (U5)
+- FR5: Update all `npx convoke-*` console output messages across all JS script files to use the `npx -p convoke-agents convoke-*` pattern so users don't get "package not found" errors (U5) — 37 occurrences across 7 files: `postinstall.js`, `index.js`, `convoke-doctor.js`, `convoke-update.js`, `convoke-version.js`, `convoke-migrate.js`, `migration-runner.js`
 
 ### NonFunctional Requirements
 
@@ -27,7 +27,7 @@ This document breaks down the top 5 RICE-scored initiatives from the Convoke ini
 
 ### Additional Requirements
 
-- `postinstall.js` lines 43, 76, 79, 97 contain the npx patterns to fix — these are console.log messages, not executable calls
+- 37 `npx convoke-*` occurrences across 7 JS files need the `-p convoke-agents` prefix — all are display strings (console.log, JSDoc, fix-suggestion objects), not executable calls. Markdown files (~150 occurrences) are out of scope.
 - `migration-runner.js` currently has no history check before `executeMigration()` — the check needs to happen between steps [1] (get migrations) and [4] (execute deltas)
 - The 22 workflows (excluding `_deprecated`): assumption-mapping, behavior-analysis, contextualize-scope, empathy-map, experiment-design, hypothesis-engineering, lean-experiment, lean-persona, learning-card, mvp, pattern-mapping, pivot-patch-persevere, pivot-resynthesis, product-vision, production-monitoring, proof-of-concept, proof-of-value, research-convergence, signal-interpretation, user-discovery, user-interview, vortex-navigation
 
@@ -47,7 +47,7 @@ This document breaks down the top 5 RICE-scored initiatives from the Convoke ini
 
 ### Epic 1: Quick Wins
 Ship in minutes — no design decisions needed, pure execution. Two tiny changes that can be merged immediately.
-**Stories:** 1.1 (D5 problem-framing sentence), 1.2 (U5 npx command fix)
+**Stories:** 1.1 (D5 problem-framing sentence), 1.2 (U5 npx command fix — all 37 occurrences across 7 JS files)
 **FRs covered:** FR3, FR5
 
 ### Epic 2: README Visual Polish
@@ -86,22 +86,19 @@ So that I understand the pain Vortex solves before seeing the agent map.
 **And** the sentence communicates the core problem (teams skipping validation / building on assumptions)
 **And** the existing problem-framing sentence is extracted from the paragraph and presented as a standalone bold line immediately before the diagram code block
 
-### Story 1.2: Fix npx Command Pattern in postinstall.js
+### Story 1.2: Fix npx Command Pattern in All Script Files
 
-As a **Convoke user running npm install**,
-I want the postinstall output to show correct `npx -p convoke-agents convoke-*` commands,
+As a **Convoke user copying CLI commands from terminal output**,
+I want all `npx convoke-*` commands displayed by scripts to use the correct `npx -p convoke-agents convoke-*` pattern,
 So that I can copy-paste them without getting "package not found" errors.
 
 **Acceptance Criteria:**
 
-**Given** `scripts/postinstall.js` contains console output with `npx convoke-*` patterns
-**When** the postinstall script runs after `npm install convoke-agents`
-**Then** all 4 npx references (lines 43, 76, 79, 97) use the `npx -p convoke-agents convoke-*` pattern:
-  - Line 43: `npx -p convoke-agents convoke-install`
-  - Line 76: `npx -p convoke-agents convoke-update --dry-run`
-  - Line 79: `npx -p convoke-agents convoke-update`
-  - Line 97: `npx -p convoke-agents convoke-install`
-**And** no `npx convoke-*` patterns remain without the `-p convoke-agents` prefix
+**Given** 37 occurrences of `npx convoke-*` exist across 7 JS files (`postinstall.js`, `index.js`, `convoke-doctor.js`, `convoke-update.js`, `convoke-version.js`, `convoke-migrate.js`, `migration-runner.js`)
+**When** any of these scripts run and display npx commands to the user
+**Then** all occurrences use the `npx -p convoke-agents convoke-*` pattern
+**And** `grep -r "npx convoke-" --include="*.js" . | grep -v "npx -p convoke-agents"` returns zero results (excluding node_modules)
+**And** existing test suites still pass
 
 ## Epic 2: README Visual Polish
 
