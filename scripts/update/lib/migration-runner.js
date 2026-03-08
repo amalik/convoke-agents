@@ -108,14 +108,8 @@ async function runMigrations(fromVersion, options = {}) {
     console.log(chalk.green('✓ Installation refreshed'));
     console.log('');
 
-    // 6. Update migration history in config.yaml
-    console.log(chalk.cyan('[4/5] Updating configuration...'));
-    await updateMigrationHistory(projectRoot, fromVersion, toVersion, results);
-    console.log(chalk.green('✓ Migration history updated'));
-    console.log('');
-
-    // 7. Validate installation
-    console.log(chalk.cyan('[5/5] Validating installation...'));
+    // 6. Validate installation (before writing history, so rollback stays clean)
+    console.log(chalk.cyan('[4/5] Validating installation...'));
     const validationResult = await validator.validateInstallation(backupMetadata, projectRoot);
 
     validationResult.checks.forEach(check => {
@@ -138,6 +132,12 @@ async function runMigrations(fromVersion, options = {}) {
     }
 
     console.log(chalk.green('✓ Installation validated'));
+    console.log('');
+
+    // 7. Update migration history in config.yaml (after validation succeeds)
+    console.log(chalk.cyan('[5/5] Updating configuration...'));
+    await updateMigrationHistory(projectRoot, fromVersion, toVersion, results);
+    console.log(chalk.green('✓ Migration history updated'));
     console.log('');
 
     // 8. Cleanup old backups
