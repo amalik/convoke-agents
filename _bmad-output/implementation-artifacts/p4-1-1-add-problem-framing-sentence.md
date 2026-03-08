@@ -1,6 +1,6 @@
 # Story 1.1: Add Problem-Framing Sentence Above Vortex Diagram
 
-Status: in-progress
+Status: done
 
 ## Story
 
