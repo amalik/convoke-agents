@@ -40,7 +40,7 @@ async function main() {
       const agentNames = AGENTS.map(a => a.name).join(' + ');
       console.log('To install agents into your project, run:');
       console.log('');
-      console.log(`  ${CYAN}npx convoke-install${RESET}  - Install all agents (${agentNames})`);
+      console.log(`  ${CYAN}npx -p convoke-agents convoke-install${RESET}  - Install all agents (${agentNames})`);
       console.log('');
       return;
     }
@@ -73,10 +73,10 @@ async function main() {
       }
 
       console.log('To preview changes without applying:');
-      console.log(`  ${CYAN}npx convoke-update --dry-run${RESET}`);
+      console.log(`  ${CYAN}npx -p convoke-agents convoke-update --dry-run${RESET}`);
       console.log('');
       console.log('To apply the update:');
-      console.log(`  ${CYAN}npx convoke-update${RESET}`);
+      console.log(`  ${CYAN}npx -p convoke-agents convoke-update${RESET}`);
       console.log('');
       console.log(`${BOLD}Your data will be backed up automatically before any changes.${RESET}`);
       console.log('');
@@ -94,7 +94,7 @@ async function main() {
     const agentNames = AGENTS.map(a => a.name).join(' + ');
     console.log('To install agents into your project, run:');
     console.log('');
-    console.log(`  ${CYAN}npx convoke-install${RESET}  - Install all agents (${agentNames})`);
+    console.log(`  ${CYAN}npx -p convoke-agents convoke-install${RESET}  - Install all agents (${agentNames})`);
     console.log('');
   }
 }
