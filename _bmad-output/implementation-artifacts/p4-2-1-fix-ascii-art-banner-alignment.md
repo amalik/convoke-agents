@@ -42,6 +42,8 @@ so that the project looks polished and professional at first glance.
 - The banner is inside `<div align="center"><pre>...</pre></div>` — the `<pre>` tag preserves whitespace, and `align="center"` centers the block on GitHub
 - Do NOT reference line numbers — other stories in this epic also modify README.md and may shift lines. Use content anchors instead.
 - Unicode box-drawing characters (█, ╗, ║, ╔, ═, ╚, ╝) each occupy 1 column in monospace fonts — alignment depends on correct space counts between them
+- **Leading space variance may be intentional:** The "C" letter naturally curves inward at top and bottom — rows 1 and 6 have 2 leading spaces, rows 2-5 have 1. This is standard figlet output, NOT necessarily an error. Verify whether the figlet letter shapes are correct first; only adjust if columns are genuinely misaligned across different letters (e.g., "C" column misaligned with "O" column), not within a single letter's natural shape.
+- **Right-edge alignment matters too:** Inside `<div align="center"><pre>`, GitHub centers the entire block. If lines have different total display widths, the block may appear ragged. Check that all 6 banner lines have consistent total display width (pad with trailing spaces if needed).
 
 ### Current State (verified 2026-03-08)
 
