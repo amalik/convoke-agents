@@ -7,7 +7,7 @@
  ██║     ██║   ██║██║╚██╗██║╚██╗ ██╔╝██║   ██║██╔═██╗ ██╔══╝
  ╚██████╗╚██████╔╝██║ ╚████║ ╚████╔╝ ╚██████╔╝██║  ██╗███████╗
   ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝  ╚═══╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝
-       Agent teams for complex systems
+                Agent teams for complex systems
 </pre>
 
 [![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/amalik/convoke-agents)
