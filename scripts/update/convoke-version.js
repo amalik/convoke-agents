@@ -25,7 +25,7 @@ async function main() {
     console.log(chalk.yellow('Status:           Not in a Convoke project'));
     console.log(`Package version:  ${chalk.cyan(targetVersion)}`);
     console.log('');
-    console.log('Run: ' + chalk.cyan('npx convoke-install'));
+    console.log('Run: ' + chalk.cyan('npx -p convoke-agents convoke-install'));
     console.log('');
     return;
   }
@@ -38,7 +38,7 @@ async function main() {
     console.log(chalk.yellow('Status:           Not installed'));
     console.log(`Package version:  ${chalk.cyan(targetVersion)}`);
     console.log('');
-    console.log('Run: ' + chalk.cyan('npx convoke-install'));
+    console.log('Run: ' + chalk.cyan('npx -p convoke-agents convoke-install'));
     console.log('');
     return;
   }
@@ -50,7 +50,7 @@ async function main() {
     console.log('');
     console.log(chalk.yellow('This indicates an installation error.'));
     console.log('');
-    console.log('Try running: ' + chalk.cyan('npx convoke-install'));
+    console.log('Try running: ' + chalk.cyan('npx -p convoke-agents convoke-install'));
     console.log('');
     console.log('If the problem persists, check the installation logs.');
     console.log('');
@@ -64,7 +64,7 @@ async function main() {
     console.log('');
     console.log(chalk.yellow('Some required files are missing.'));
     console.log('');
-    console.log('Run: ' + chalk.cyan('npx convoke-install') + ' to reinstall');
+    console.log('Run: ' + chalk.cyan('npx -p convoke-agents convoke-install') + ' to reinstall');
     console.log('');
     return;
   }
