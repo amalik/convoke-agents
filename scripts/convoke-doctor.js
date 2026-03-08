@@ -48,6 +48,9 @@ async function main() {
   // 7. Version consistency
   checks.push(checkVersionConsistency(projectRoot));
 
+  // 8. Workflow step structure
+  checks.push(checkWorkflowStepStructure(projectRoot));
+
   printResults(checks);
 
   const failed = checks.filter(c => !c.passed);
@@ -286,6 +289,37 @@ function checkVersionConsistency(projectRoot) {
   } catch (_err) {
     return { name: 'Version consistency', passed: true, info: 'Could not read config version' };
   }
+}
+
+function checkWorkflowStepStructure(projectRoot) {
+  const workflowsDir = path.join(projectRoot, '_bmad/bme/_vortex/workflows');
+
+  if (!fs.existsSync(workflowsDir)) {
+    return { name: 'Workflow step structure', passed: true, info: 'No workflows directory' };
+  }
+
+  const issues = [];
+
+  for (const wf of WORKFLOW_NAMES) {
+    const stepsDir = path.join(workflowsDir, wf, 'steps');
+    if (!fs.existsSync(stepsDir)) continue;
+
+    const files = fs.readdirSync(stepsDir).filter(f => f.endsWith('.md'));
+    if (files.length < 4 || files.length > 6) {
+      issues.push(`${wf}: ${files.length} step files (expected 4-6)`);
+    }
+  }
+
+  if (issues.length > 0) {
+    return {
+      name: 'Workflow step structure',
+      passed: false,
+      error: issues.join('; '),
+      fix: 'Run: npx -p convoke-agents convoke-install-vortex to reinstall clean workflow files'
+    };
+  }
+
+  return { name: 'Workflow step structure', passed: true, info: 'All workflows have valid step counts' };
 }
 
 function printResults(checks) {
