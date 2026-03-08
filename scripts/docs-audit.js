@@ -22,7 +22,7 @@ const USER_FACING_DOCS = [
   'UPDATE-GUIDE.md',
   'INSTALLATION.md',
   'CHANGELOG.md',
-  'BMAD-METHOD-COMPATIBILITY.md',
+  'docs/BMAD-METHOD-COMPATIBILITY.md',
   '_bmad/bme/_vortex/guides/EMMA-USER-GUIDE.md',
   '_bmad/bme/_vortex/guides/ISLA-USER-GUIDE.md',
   '_bmad/bme/_vortex/guides/MILA-USER-GUIDE.md',
