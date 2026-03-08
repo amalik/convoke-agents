@@ -1,6 +1,6 @@
 # Story 2.2: Fix Vortex 7-Stream Diagram Layout
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -20,24 +20,24 @@ so that I can understand the agent loop at a glance.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Analyze current diagram alignment issues (AC: #1, #2, #3, #4)
-  - [ ] 1.1: In `README.md`, locate the Vortex diagram inside the fenced code block (``` ... ```) between the Vortex description paragraph and the "Suggested flow" note
-  - [ ] 1.2: Measure box widths — verify all 7 boxes have equal character width (currently `┌─────────────┐` = 15 chars wide each)
-  - [ ] 1.3: Check horizontal arrow alignment — verify `──▶` and `◀──` connect at box midpoints
-  - [ ] 1.4: Check vertical arrow path — verify `▲`, `│`, `▼` characters align vertically
-  - [ ] 1.5: Check the feedback loop arrow from Wade (top-right) to Noah (bottom-right) renders cleanly
-  - [ ] 1.6: Check bottom connector line (`└─────────────────┴─────────────────┘`) spans correctly under the 3 bottom boxes
-- [ ] Task 2: Fix any alignment issues found (AC: #1, #2, #3, #4)
-  - [ ] 2.1: Fix box widths if inconsistent
-  - [ ] 2.2: Fix arrow alignment if off-center
-  - [ ] 2.3: Fix vertical path if broken
-  - [ ] 2.4: Ensure spacing between boxes is consistent (currently 3 spaces between boxes)
-- [ ] Task 3: Verify row balance (AC: #4, #5)
-  - [ ] 3.1: Verify 4-box top row and 3-box bottom row are visually balanced
-  - [ ] 3.2: Verify "▶ Start at Emma · back to any stream" label is centered beneath the diagram
+- [x] Task 1: Analyze current diagram alignment issues (AC: #1, #2, #3, #4)
+  - [x] 1.1: In `README.md`, locate the Vortex diagram inside the fenced code block (``` ... ```) between the Vortex description paragraph and the "Suggested flow" note
+  - [x] 1.2: Measure box widths — verified all 7 boxes are 15 chars wide each
+  - [x] 1.3: Check horizontal arrow alignment — verified `──▶` at positions 19,37,55 and `◀──` at 17,35,53 (consistent 18-char spacing)
+  - [x] 1.4: Check vertical arrow path — found 1-char misalignment: right-side pipe at position 64 on bottom row vs position 65 on lines above
+  - [x] 1.5: Check the feedback loop arrow — ┘ at position 64 misaligned with vertical pipe at position 65
+  - [x] 1.6: Check bottom connector line — └ at 9 (Emma center), ┴ at 27 (Max center), ┘ at 45 (Noah center) — all correct
+- [x] Task 2: Fix alignment issues found (AC: #1, #2, #3, #4)
+  - [x] 2.1: Box widths verified consistent (15 chars each) — no fix needed
+  - [x] 2.2: Horizontal arrows verified aligned — no fix needed
+  - [x] 2.3: Fixed vertical path: added 1 space on bottom-row box line and 1 dash on feedback arrow to align pipe at position 65
+  - [x] 2.4: Box spacing verified consistent (3 spaces between boxes) — no fix needed
+- [x] Task 3: Verify row balance (AC: #4, #5)
+  - [x] 3.1: Verified 4-box top row and 3-box bottom row are visually balanced
+  - [x] 3.2: Verified label centered — label center at position 28 vs bottom row center at 27.5
 - [ ] Task 4: Visual verification (AC: #6, #7)
   - [ ] 4.1: Verify rendering on GitHub by pushing and checking the rendered preview
-  - [ ] 4.2: Verify rendering with `cat README.md` in terminal (80-column width)
+  - [x] 4.2: Verified rendering with `cat README.md` in terminal
 
 ## Dev Notes
 
@@ -101,8 +101,18 @@ Story 1.1 modified README.md (Vortex paragraph section). Key learnings:
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- **Task 1 (Analysis):** Comprehensive measurement of all diagram elements. Found 1 real issue: right-side feedback loop pipe was at char position 64 on bottom row lines but position 65 on lines above (1-char misalignment). All other elements verified correct: 7 boxes at 15 chars each, horizontal arrows at consistent 18-char intervals, bottom connector at correct box centers (9, 27, 45), label properly centered.
+- **Task 2 (Fix):** Added 1 space before the │ on the bottom-row box line and 1 additional ─ in the feedback arrow `◀───────────┘` (11 dashes, was 10) to align the right-side vertical path at position 65 across all lines.
+- **Task 3 (Row balance):** Top row (4 boxes) and bottom row (3 boxes + feedback pipe) visually balanced. Label "▶ Start at Emma · back to any stream" centered at position 28 vs bottom row center 27.5.
+- **Task 4 (Visual verification):** Terminal rendering verified. GitHub verification pending push. Emoji width variance is a known acceptable limitation per dev notes.
+- No tests needed — pure README.md text edit
+
 ### File List
+
+- `README.md` (modified — fixed 1-char right-side pipe misalignment on bottom row of Vortex diagram)
