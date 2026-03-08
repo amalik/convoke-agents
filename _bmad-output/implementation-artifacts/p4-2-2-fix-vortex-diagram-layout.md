@@ -1,6 +1,6 @@
 # Story 2.2: Fix Vortex 7-Stream Diagram Layout
 
-Status: in-progress
+Status: done
 
 ## Story
 
@@ -35,8 +35,8 @@ so that I can understand the agent loop at a glance.
 - [x] Task 3: Verify row balance (AC: #4, #5)
   - [x] 3.1: Verified 4-box top row and 3-box bottom row are visually balanced
   - [x] 3.2: Verified label centered — label center at position 28 vs bottom row center at 27.5
-- [ ] Task 4: Visual verification (AC: #6, #7)
-  - [ ] 4.1: Verify rendering on GitHub by pushing and checking the rendered preview
+- [x] Task 4: Visual verification (AC: #6, #7)
+  - [x] 4.1: Verify rendering on GitHub by pushing and checking the rendered preview
   - [x] 4.2: Verified rendering with `cat README.md` in terminal
 
 ## Dev Notes
@@ -110,7 +110,7 @@ Claude Opus 4.6
 - **Task 1 (Analysis):** Comprehensive measurement of all diagram elements. Found 1 real issue: right-side feedback loop pipe was at char position 64 on bottom row lines but position 65 on lines above (1-char misalignment). All other elements verified correct: 7 boxes at 15 chars each, horizontal arrows at consistent 18-char intervals, bottom connector at correct box centers (9, 27, 45), label properly centered.
 - **Task 2 (Fix):** Added 1 space before the │ on the bottom-row box line and 1 additional ─ in the feedback arrow `◀───────────┘` (11 dashes, was 10) to align the right-side vertical path at position 65 across all lines.
 - **Task 3 (Row balance):** Top row (4 boxes) and bottom row (3 boxes + feedback pipe) visually balanced. Label "▶ Start at Emma · back to any stream" centered at position 28 vs bottom row center 27.5.
-- **Task 4 (Visual verification):** Terminal rendering verified. GitHub verification pending push. Emoji width variance is a known acceptable limitation per dev notes.
+- **Task 4 (Visual verification):** Terminal rendering verified with `cat`. GitHub rendering verified after push. Emoji width variance is a known acceptable limitation per dev notes.
 - No tests needed — pure README.md text edit
 
 ### File List
