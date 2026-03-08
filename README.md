@@ -114,10 +114,10 @@ Want to see the complete walkthrough of all 7 agents applied to the example abov
 #### Install
 
 ```bash
-npm install convoke-agents && npx convoke-install-vortex
+npm install convoke-agents && npx -p convoke-agents convoke-install-vortex
 ```
 
-All 7 agents with 22 workflows are installed and ready to use. Something not working? Run `npx convoke-doctor` or check the [FAQ](docs/faq.md).
+All 7 agents with 22 workflows are installed and ready to use. Something not working? Run `npx -p convoke-agents convoke-doctor` or check the [FAQ](docs/faq.md).
 
 #### Personalize
 
@@ -173,17 +173,17 @@ your-project/
 ### Updating
 
 ```bash
-npx convoke-version              # Check current version
-npx convoke-update --dry-run     # Preview changes
-npx convoke-update               # Apply update (auto-backup)
-npx convoke-doctor               # Diagnose issues
+npx -p convoke-agents convoke-version          # Check current version
+npx -p convoke-agents convoke-update --dry-run  # Preview changes
+npx -p convoke-agents convoke-update            # Apply update (auto-backup)
+npx -p convoke-agents convoke-doctor            # Diagnose issues
 ```
 
 Your data in `_bmad-output/` is never touched. Automatic backups are created before every update.
 
 > **Tip:** If `npx convoke-update` reports "Already up to date" but you know a newer version exists, npx may be serving a cached copy. Force the latest with:
 > ```bash
-> npx -p convoke-agents@latest convoke-update
+> npx -p convoke-agents@latest convoke-update --yes
 > ```
 
 See [UPDATE-GUIDE.md](UPDATE-GUIDE.md) for migration paths and troubleshooting.
