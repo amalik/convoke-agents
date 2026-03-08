@@ -27,7 +27,7 @@
 | D7 | **Fix ASCII art banner and Vortex stream diagram** — README banner has misaligned characters and the 7-stream Vortex diagram has layout/spacing issues. Both are the first visual impression for new users | Product owner | 9 | 1 | 90% | 1 | 8.1 | Move the needle | Backlog |
 | D5 | **Problem-framing sentence in README** — Add a one-liner above the diagram: "Most teams skip validation and build on assumptions. Vortex fixes that." | Multi-agent review (Emma) | 9 | 3 | 90% | 1 | 8.1 | Move the needle | Backlog |
 | D1 | **Workflow list in README or docs** — Surface the 22 workflow names somewhere accessible (collapsed `<details>` block or dedicated page) | Vortex review (Wade), adjusted (Mila) | 7 | 1 | 80% | 1 | 5.6 | Move the needle | Backlog |
-| D4 | **Video walkthrough or tutorial** — Screencast of a first-time user going through Emma's Lean Persona workflow | Contributing section, adjusted (Maya, Carson) | 5 | 2 | 70% | 3 | 2.3 | Move the needle | Backlog |
+| D4 | **Video walkthrough or tutorial** — Screencast of a first-time user going through Emma's Lean Persona workflow | Contributing section, adjusted (Maya, Carson) | 5 | 2 | 40% | 4 | 0.7 | Move the needle | Backlog |
 | D2 | **Add output examples for more agents** — Isla (empathy map), Wade (experiment card), or Noah (signal report) in README | Vortex review (Liam, Wade) | 6 | 1 | 70% | 2 | 2.1 | Move the needle | Backlog |
 | D6 | **Reduce narrative overlap in journey example** — Trim ~950-1,100 words of overlap between narrative paragraphs and transition notes in the 7-agent journey | Scope-adjacent backlog (P2 E4) | 4 | 0.5 | 80% | 1 | 1.6 | Keep the lights on | Backlog |
 | D3 | **BMAD Core return arrow in diagram** — Show feedback loop from production back to Convoke in the README diagram | Vortex review (Noah) | 4 | 0.25 | 90% | 1 | 0.9 | Keep the lights on | Backlog |
@@ -137,19 +137,19 @@ Remaining update system items not in Hardening: load-time validation, version de
 | 7 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
 | 8 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
 | 9 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
-| 10 | D4 | Video walkthrough or tutorial | 2.3 | Move the needle | Documentation |
-| 11 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
-| 12 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
-| 13 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
-| 14 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
-| 15 | P1 | Second domain-specialized team | 1.2 | Move the needle | Platform |
-| 16 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
-| 17 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
-| 18 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
-| 19 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
-| 20 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
-| 21 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
-| 22 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
+| 10 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
+| 11 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
+| 12 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
+| 13 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
+| 14 | P1 | Second domain-specialized team | 1.2 | Move the needle | Platform |
+| 15 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
+| 16 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
+| 17 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
+| 18 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
+| 19 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
+| 20 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
+| 21 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
+| 22 | D4 | Video walkthrough or tutorial | 0.7 | Move the needle | Documentation |
 | 23 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
 | 24 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
 | 25 | P2 | Multi-team collaboration workflows | 0.4 | Move the needle | Platform |
