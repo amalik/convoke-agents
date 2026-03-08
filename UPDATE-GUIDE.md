@@ -11,10 +11,10 @@ How to update your Convoke installation to the latest version.
 npm install convoke-agents@latest
 
 # Preview changes (dry run)
-npx convoke-update --dry-run
+npx -p convoke-agents convoke-update --dry-run
 
 # Apply the update
-npx convoke-update
+npx -p convoke-agents convoke-update
 ```
 
 Your data is backed up automatically before any changes.
@@ -23,7 +23,7 @@ Your data is backed up automatically before any changes.
 
 ## Update Commands
 
-### `npx convoke-update`
+### `convoke-update`
 
 Main update command — applies migrations and refreshes your installation.
 
@@ -34,26 +34,28 @@ Main update command — applies migrations and refreshes your installation.
 | `--verbose` or `-v` | Show detailed output |
 
 ```bash
-npx convoke-update --dry-run     # Preview
-npx convoke-update               # Apply with confirmation
-npx convoke-update --yes         # Apply without confirmation
+npx -p convoke-agents convoke-update --dry-run     # Preview
+npx -p convoke-agents convoke-update               # Apply with confirmation
+npx -p convoke-agents convoke-update --yes          # Apply without confirmation
 ```
 
-### `npx convoke-version`
+### `convoke-version`
 
 Show current version, latest available version, and migration history.
 
 ```bash
-npx convoke-version
+npx -p convoke-agents convoke-version
 ```
 
-### `npx convoke-doctor`
+### `convoke-doctor`
 
 Run diagnostics on your installation. Checks project root, config validity, agent files, workflows, output directory permissions, migration lock status, and version consistency — with actionable fix suggestions.
 
 ```bash
-npx convoke-doctor
+npx -p convoke-agents convoke-doctor
 ```
+
+> **Why `-p convoke-agents`?** The CLI commands (`convoke-update`, `convoke-doctor`, etc.) are binaries inside the `convoke-agents` package. Without `-p convoke-agents`, npx tries to find a standalone package with that name, which doesn't exist.
 
 ---
 
@@ -93,8 +95,8 @@ What happens:
 
 ```bash
 npm install convoke-agents@latest
-npx convoke-update --dry-run  # Preview
-npx convoke-update            # Apply
+npx -p convoke-agents convoke-update --dry-run  # Preview
+npx -p convoke-agents convoke-update            # Apply
 ```
 
 ---
@@ -141,7 +143,7 @@ Artifacts created with earlier agents (Emma, Isla, Wade, Max) were not designed 
 
 ### What Is Managed by the Update System
 
-These change between versions but are handled automatically by `npx convoke-update`:
+These change between versions but are handled automatically by `convoke-update`:
 
 - **Agent definition files** — Persona, menu, and instruction content in `_bmad/bme/_vortex/agents/`
 - **Workflow step files** — Step content, templates, and validation in `_bmad/bme/_vortex/workflows/`
@@ -160,10 +162,10 @@ A previous migration may have crashed. Remove the lock file:
 
 ```bash
 rm _bmad-output/.migration-lock
-npx convoke-update
+npx -p convoke-agents convoke-update
 ```
 
-Or run `npx convoke-doctor` to diagnose — it detects stale locks.
+Or run `npx -p convoke-agents convoke-doctor` to diagnose — it detects stale locks.
 
 ### Update fails and won't rollback
 
@@ -181,7 +183,7 @@ cp -r _bmad-output/.backups/{backup-dir}/workflows _bmad/bme/_vortex/
 
 ### "Already up to date" but version is outdated
 
-npx caches package binaries. If you installed at an older version, `npx convoke-update` may keep running the cached script instead of the latest. Force-fetch the latest:
+npx caches package binaries. If you installed at an older version, `convoke-update` may keep running the cached script instead of the latest. Force-fetch the latest:
 
 ```bash
 npx -p convoke-agents@latest convoke-update
@@ -194,7 +196,7 @@ This tells npx to download `convoke-agents@latest` first, then run the `convoke-
 Reinstall from scratch (preserves user data):
 
 ```bash
-npx convoke-install-vortex
+npx -p convoke-agents convoke-install-vortex
 ```
 
 ### Check migration logs
@@ -210,10 +212,10 @@ cat _bmad-output/.logs/migration-*.log | tail -100
 
 If you encounter issues:
 
-1. Run `npx convoke-doctor` for diagnostics
+1. Run `npx -p convoke-agents convoke-doctor` for diagnostics
 2. Check migration logs in `_bmad-output/.logs/`
 3. Restore from backup in `_bmad-output/.backups/`
-4. [Report an issue](https://github.com/amalik/convoke-agents/issues) — include your version (`npx convoke-version`) and error message
+4. [Report an issue](https://github.com/amalik/convoke-agents/issues) — include your version (`npx -p convoke-agents convoke-version`) and error message
 
 ---
 
