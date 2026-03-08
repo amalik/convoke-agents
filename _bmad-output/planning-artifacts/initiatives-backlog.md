@@ -27,7 +27,6 @@
 | D7 | **Fix ASCII art banner and Vortex stream diagram** — README banner has misaligned characters and the 7-stream Vortex diagram has layout/spacing issues. Both are the first visual impression for new users | Product owner | 9 | 1 | 90% | 1 | 8.1 | Move the needle | Backlog |
 | D5 | **Problem-framing sentence in README** — Add a one-liner above the diagram: "Most teams skip validation and build on assumptions. Vortex fixes that." | Multi-agent review (Emma) | 9 | 3 | 90% | 1 | 8.1 | Move the needle | Backlog |
 | D1 | **Workflow list in README or docs** — Surface the 22 workflow names somewhere accessible (collapsed `<details>` block or dedicated page) | Vortex review (Wade), adjusted (Mila) | 7 | 1 | 80% | 1 | 5.6 | Move the needle | Backlog |
-| D4 | **Video walkthrough or tutorial** — Screencast of a first-time user going through Emma's Lean Persona workflow | Contributing section, adjusted (Maya, Carson) | 5 | 2 | 40% | 4 | 0.7 | Move the needle | Backlog |
 | D2 | **Add output examples for more agents** — Isla (empathy map), Wade (experiment card), or Noah (signal report) in README | Vortex review (Liam, Wade) | 6 | 1 | 70% | 2 | 2.1 | Move the needle | Backlog |
 | D6 | **Reduce narrative overlap in journey example** — Trim ~950-1,100 words of overlap between narrative paragraphs and transition notes in the 7-agent journey | Scope-adjacent backlog (P2 E4) | 4 | 0.5 | 80% | 1 | 1.6 | Keep the lights on | Backlog |
 | D3 | **BMAD Core return arrow in diagram** — Show feedback loop from production back to Convoke in the README diagram | Vortex review (Noah) | 4 | 0.25 | 90% | 1 | 0.9 | Keep the lights on | Backlog |
@@ -41,7 +40,6 @@
 | U4 | **Test upgrade-path step file cleanup** — Integration test simulating real upgrade with renamed step files | Murat review (M2) | 3 | 1 | 90% | 2 | 1.4 | Keep the lights on | Backlog |
 | U2 | **Validate migration modules at load time** — Fail fast if a migration module lacks `apply()` instead of crashing at execution | Murat review | 2 | 0.5 | 80% | 1 | 0.8 | Keep the lights on | Backlog |
 | U3 | **Robust version detection fallback** — Improve `guessVersionFromFileStructure()` with more markers (agent files, config presence) | Winston review (W3) | 3 | 0.5 | 60% | 2 | 0.5 | Keep the lights on | Backlog |
-| ~~U6~~ | ~~**Preserve user-customized agents on update**~~ — ~~Resolved: `mergeConfig()` smart-merges user agents since v1.4.0, with unit test coverage~~ | Scope-adjacent backlog (P2 E5) | — | — | — | — | — | — | Done |
 
 ### Testing & CI
 
@@ -71,7 +69,6 @@
 | A3 | **Add `agentic` and `team-of-teams` npm keywords** — Discoverability improvement deferred since Phase 3 Epic 1 | Phase 3 tech debt | 3 | 0.25 | 100% | 1 | 0.8 | Keep the lights on | Backlog |
 | A4 | **Fix temp dir prefix inconsistency** — Internal `bmad-` vs `convoke-` prefix in temporary directories | Phase 3 tech debt | 1 | 0.25 | 100% | 1 | 0.3 | Keep the lights on | Backlog |
 | A2 | **Create `.agent.yaml` source files for Vortex agents** — Enable standard BMAD authoring pipeline (validate/edit via Agent Builder) | BMB review (B1) | 2 | 0.5 | 60% | 4 | 0.2 | Keep the lights on | Backlog |
-| ~~A5~~ | ~~**Complete Wade's placeholder workflow steps**~~ — ~~Resolved: all 3 workflows have full content since v1.5.x~~ | Scope-adjacent backlog (P2 E2) | — | — | — | — | — | — | Done |
 
 ### Platform & Product Vision
 
@@ -94,6 +91,7 @@ These initiatives are promising but need discovery work before scoring. Not yet 
 | P1-disc | **User discovery for second team** — Research which domain-specialized team would deliver the most value after Vortex. Candidates: Data Science/AI Engineering, Ethics & Legal Compliance, Standard Authority | Multi-agent review (Isla), product owner | Interview current users or survey target audience |
 | P5 | **Convoke website** — Public website for Convoke: positioning, documentation, team showcase, getting started guide, and community | Product owner | Define scope (landing page vs. full docs site), hosting, and content strategy |
 | P6 | **Tool-enabled agents** — Allow select agents to use external tools (MCP servers, CLI commands, file operations) beyond pure conversation. Evaluate which agents benefit from tool access and what guardrails are needed | Product owner | Identify candidate agents, define tool access model, assess security/trust implications |
+| D4 | **Video walkthrough or tutorial** — Screencast of a first-time user going through Emma's Lean Persona workflow. Format, hosting, and maintenance strategy all undefined | Contributing section, adjusted (Maya, Carson) | Define format (video vs. interactive), hosting platform, and update strategy |
 
 ---
 
@@ -101,8 +99,8 @@ These initiatives are promising but need discovery work before scoring. Not yet 
 
 Initiatives that should be bundled together for efficient delivery:
 
-### Epic: "First Impression" (D7 + D5 + D1 + D2 + D4 + S1)
-Improve the first-time user experience from README visuals to first workflow completion. D7 and D5 are quick wins; D1 and D2 add depth; D4 and S1 are higher-effort anchors.
+### Epic: "First Impression" (D7 + D5 + D1 + D2 + S1)
+Improve the first-time user experience from README visuals to first workflow completion. D7 and D5 are quick wins; D1 and D2 add depth; S1 is the higher-effort anchor.
 
 ### Epic: "Update System Hardening" (U1 + U4 + T3 + T4)
 Harden the migration and update system with idempotency checks and integration tests.
@@ -149,15 +147,14 @@ Remaining update system items not in Hardening: load-time validation, version de
 | 19 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
 | 20 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
 | 21 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
-| 22 | D4 | Video walkthrough or tutorial | 0.7 | Move the needle | Documentation |
-| 23 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
-| 24 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
-| 25 | P2 | Multi-team collaboration workflows | 0.4 | Move the needle | Platform |
-| 26 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
-| 27 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
-| 28 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
-| 29 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
-| 30 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
+| 22 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
+| 23 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
+| 24 | P2 | Multi-team collaboration workflows | 0.4 | Move the needle | Platform |
+| 25 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
+| 26 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
+| 27 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
+| 28 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
+| 29 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
 
 ---
 
@@ -174,6 +171,8 @@ These items were identified and resolved during the 2026-03-08 review session:
 | README platform positioning | README framed Convoke as Vortex-only, not as multi-team platform | Restructured README with platform intro and Vortex section |
 | README content ordering | "What Agents Produce" buried below Quick Start | Moved above Quick Start |
 | Activation instructions unclear for Claude.ai | Claude.ai path was a buried sub-bullet | Split into separate Claude Code and Claude.ai subsections |
+| U6: Preserve user-customized agents on update | Users who add custom agents lose them on update | Already resolved: `mergeConfig()` smart-merges user agents since v1.4.0, with unit test coverage |
+| A5: Complete Wade's placeholder workflow steps | Three experimentation workflows had incomplete steps | Already resolved: all 3 workflows have full content since v1.5.x |
 
 ---
 
