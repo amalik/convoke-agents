@@ -48,16 +48,30 @@ async function runMigrations(fromVersion, options = {}) {
     return { success: true, migrations: [], skipped: true };
   }
 
-  console.log(chalk.cyan(`Found ${migrations.length} migration(s) to apply:`));
-  migrations.forEach((m, i) => {
-    const icon = m.breaking ? chalk.red('⚠') : chalk.green('✓');
-    console.log(`  ${i + 1}. ${icon} ${m.name} - ${m.description}`);
+  // Filter out already-applied migrations using history in config.yaml
+  const configPath = path.join(projectRoot, '_bmad/bme/_vortex/config.yaml');
+  const unappliedMigrations = migrations.filter(m => {
+    if (registry.hasMigrationBeenApplied(m.name, configPath)) {
+      console.log(chalk.yellow(`Skipping already-applied: ${m.name}`));
+      return false;
+    }
+    return true;
   });
+
+  if (unappliedMigrations.length === 0) {
+    console.log(chalk.yellow('No new migrations to apply'));
+  } else {
+    console.log(chalk.cyan(`Found ${unappliedMigrations.length} migration(s) to apply:`));
+    unappliedMigrations.forEach((m, i) => {
+      const icon = m.breaking ? chalk.red('⚠') : chalk.green('✓');
+      console.log(`  ${i + 1}. ${icon} ${m.name} - ${m.description}`);
+    });
+  }
   console.log('');
 
   // If dry run, just preview
   if (dryRun) {
-    return await previewMigrations(migrations);
+    return await previewMigrations(unappliedMigrations);
   }
 
   // 2. Acquire migration lock
@@ -75,9 +89,9 @@ async function runMigrations(fromVersion, options = {}) {
 
     // 4. Execute migration deltas sequentially
     console.log(chalk.cyan('[2/5] Running migration deltas...'));
-    for (let i = 0; i < migrations.length; i++) {
-      const migration = migrations[i];
-      console.log(chalk.cyan(`\nMigration ${i + 1}/${migrations.length}: ${migration.name}`));
+    for (let i = 0; i < unappliedMigrations.length; i++) {
+      const migration = unappliedMigrations[i];
+      console.log(chalk.cyan(`\nMigration ${i + 1}/${unappliedMigrations.length}: ${migration.name}`));
 
       try {
         const changes = await executeMigration(migration, projectRoot, { verbose });
@@ -136,8 +150,13 @@ async function runMigrations(fromVersion, options = {}) {
 
     // 7. Update migration history in config.yaml (after validation succeeds)
     console.log(chalk.cyan('[5/5] Updating configuration...'));
-    await updateMigrationHistory(projectRoot, fromVersion, toVersion, results);
-    console.log(chalk.green('✓ Migration history updated'));
+    const hasDeltas = results.some(r => r.name !== 'refresh-installation');
+    if (hasDeltas) {
+      await updateMigrationHistory(projectRoot, fromVersion, toVersion, results);
+      console.log(chalk.green('✓ Migration history updated'));
+    } else {
+      console.log(chalk.green('✓ No new deltas to record'));
+    }
     console.log('');
 
     // 8. Cleanup old backups
