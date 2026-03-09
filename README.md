@@ -51,6 +51,34 @@ Vortex guides you through seven discovery streams — from understanding your us
 
 *Suggested flow. Each workflow ends with a Compass routing to whichever stream needs attention — you can start or return to any agent.*
 
+<details>
+<summary>22 Vortex Workflows</summary>
+
+- Assumption Mapping
+- Behavior Analysis
+- Contextualize Scope
+- Empathy Map
+- Experiment Design
+- Hypothesis Engineering
+- Lean Experiment
+- Lean Persona
+- Learning Card
+- MVP
+- Pattern Mapping
+- Pivot Patch Persevere
+- Pivot Resynthesis
+- Product Vision
+- Production Monitoring
+- Proof of Concept
+- Proof of Value
+- Research Convergence
+- Signal Interpretation
+- User Discovery
+- User Interview
+- Vortex Navigation
+
+</details>
+
 | Agent | Stream | What they do |
 |-------|--------|-------------|
 | **Emma** 🎯 | Contextualize | Frame the right problem — personas, product vision, scope |
