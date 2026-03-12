@@ -155,7 +155,19 @@ Open `_bmad/bme/_vortex/config.yaml` and replace `{user}` with your name. Agents
 
 #### Activate an Agent
 
-**Claude Code / Terminal**
+**Claude Code (slash commands)**
+
+```
+/bmad-agent-bme-contextualization-expert          # Emma  🎯
+/bmad-agent-bme-discovery-empathy-expert          # Isla  🔍
+/bmad-agent-bme-research-convergence-specialist   # Mila  🔬
+/bmad-agent-bme-hypothesis-engineer               # Liam  💡
+/bmad-agent-bme-lean-experiments-specialist        # Wade  🧪
+/bmad-agent-bme-production-intelligence-specialist # Noah  📡
+/bmad-agent-bme-learning-decision-expert           # Max   🧭
+```
+
+**Claude Code (terminal) / Other AI assistants**
 
 ```bash
 cat _bmad/bme/_vortex/agents/contextualization-expert.md          # Emma  🎯
