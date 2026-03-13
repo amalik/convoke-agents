@@ -50,9 +50,9 @@
 
 | # | Initiative | Source | R | I | C | E | Score | Track | Status |
 |---|-----------|--------|---|---|---|---|-------|-------|--------|
+| S3 | **Install BME slash commands with Vortex** — Add 7 `.claude/commands/bmad-agent-bme-*.md` files to `convoke-install-vortex` so Claude Code users get `/bmad-agent-bme-*` slash commands automatically | Product owner | 8 | 1 | 100% | 1 | 8.0 | Move the needle | Backlog |
 | I2 | **`gh auth` for CI release creation** — Automate GitHub release notes on tag push | CI/CD | 6 | 1 | 80% | 2 | 2.4 | Keep the lights on | Backlog |
 | I1 | **NPM_TOKEN secret for CI publish** — Enable automated `npm publish` on tag push via GitHub Actions | CI/CD, adjusted (Victor) | 8 | 2 | 90% | 8 | 1.8 | Keep the lights on | Backlog |
-| S3 | **Install BME slash commands with Vortex** — Add 7 `.claude/commands/bmad-agent-bme-*.md` files to `convoke-install-vortex` so Claude Code users get `/bmad-agent-bme-*` slash commands automatically | Product owner | 8 | 1 | 100% | 1 | 8.0 | Move the needle | Backlog |
 | S1 | **Interactive installer with project-type questions** — Ask user questions during install to customize initial config (e.g., B2B/B2C, team size) | Multi-agent review (Sally) | 5 | 2 | 50% | 5 | 1.0 | Move the needle | Backlog |
 | S2 | **Simplified entry point** — Single "Start Discovery" command that activates Emma with a guided first-run experience | Multi-agent review (Sally) | 7 | 1 | 40% | 4 | 0.7 | Move the needle | Backlog |
 | I3 | **CSV parser library for manifest** — Replace regex-based CSV parsing in `refresh-installation.js` with proper parser | Murat review | 2 | 0.25 | 70% | 1 | 0.4 | Keep the lights on | Backlog |
