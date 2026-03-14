@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-08
 **Method:** RICE (Reach, Impact, Confidence, Effort)
-**Last Updated:** 2026-03-09
+**Last Updated:** 2026-03-14
 
 ---
 
@@ -50,7 +50,6 @@
 
 | # | Initiative | Source | R | I | C | E | Score | Track | Status |
 |---|-----------|--------|---|---|---|---|-------|-------|--------|
-| S3 | **Install BME slash commands with Vortex** — Add 7 `.claude/commands/bmad-agent-bme-*.md` files to `convoke-install-vortex` so Claude Code users get `/bmad-agent-bme-*` slash commands automatically | Product owner | 8 | 1 | 100% | 1 | 8.0 | Move the needle | Backlog |
 | I2 | **`gh auth` for CI release creation** — Automate GitHub release notes on tag push | CI/CD | 6 | 1 | 80% | 2 | 2.4 | Keep the lights on | Backlog |
 | I1 | **NPM_TOKEN secret for CI publish** — Enable automated `npm publish` on tag push via GitHub Actions | CI/CD, adjusted (Victor) | 8 | 2 | 90% | 8 | 1.8 | Keep the lights on | Backlog |
 | S1 | **Interactive installer with project-type questions** — Ask user questions during install to customize initial config (e.g., B2B/B2C, team size) | Multi-agent review (Sally) | 5 | 2 | 50% | 5 | 1.0 | Move the needle | Backlog |
@@ -122,35 +121,40 @@ Remaining update system items not in Hardening: load-time validation, version de
 
 | Rank | # | Initiative | Score | Track | Category |
 |------|---|-----------|-------|-------|----------|
-| 1 | S3 | Install BME slash commands with Vortex | 8.0 | Move the needle | Infrastructure |
-| 2 | P4 | Enhance module | 2.8 | Move the needle | Platform |
-| 3 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
-| 4 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
-| 5 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
-| 6 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
-| 7 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
-| 8 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
-| 9 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
-| 10 | P1 | Second domain-specialized team | 1.2 | Move the needle | Platform |
-| 11 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
-| 12 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
-| 13 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
-| 14 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
-| 15 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
-| 16 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
-| 17 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
-| 18 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
-| 19 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
-| 20 | P2 | Multi-team collaboration workflows | 0.4 | Move the needle | Platform |
-| 21 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
-| 22 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
-| 23 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
-| 24 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
-| 25 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
+| 1 | P4 | Enhance module | 2.8 | Move the needle | Platform |
+| 2 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
+| 3 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
+| 4 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
+| 5 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
+| 6 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
+| 7 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
+| 8 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
+| 9 | P1 | Second domain-specialized team | 1.2 | Move the needle | Platform |
+| 10 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
+| 11 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
+| 12 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
+| 13 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
+| 14 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
+| 15 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
+| 16 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
+| 17 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
+| 18 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
+| 19 | P2 | Multi-team collaboration workflows | 0.4 | Move the needle | Platform |
+| 20 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
+| 21 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
+| 22 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
+| 23 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
+| 24 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
 
 ---
 
 ## Completed
+
+### 2026-03-14
+
+| # | Initiative | Score | Category |
+|---|-----------|-------|----------|
+| S3 | **Install BME slash commands with Vortex** | 8.0 | Infrastructure |
 
 ### v2.0.1 (2026-03-09)
 
@@ -182,6 +186,7 @@ Remaining update system items not in Hardening: load-time validation, version de
 
 | Date | Change |
 |------|--------|
+| 2026-03-14 | Completed S3 (Install BME slash commands with Vortex). Moved to Completed section. 24 active items remain. |
 | 2026-03-12 | Added S3 (Install BME slash commands with Vortex, score 8.0). Now rank #1. 25 active items. |
 | 2026-03-10 | Restructured: moved all completed items out of active tables into separate "Completed" section. Renumbered prioritized view (24 active items). |
 | 2026-03-09 | Marked 5 initiatives Done (v2.0.1): D7, D5, D1, U5, U1. Shipped in Phase 4 sprint (3 epics, 6 stories). 24 scored items remain. |
