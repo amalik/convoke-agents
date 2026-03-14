@@ -112,31 +112,96 @@ async function refreshInstallation(projectRoot, options = {}) {
     return `"${String(value).replace(/"/g, '""')}"`;
   }
 
-  const header = '"agent_id","name","title","icon","role","identity","communication_style","expertise","submodule","path"';
-
-  // Read existing non-bme rows to preserve them
-  let preservedRows = [];
-  if (fs.existsSync(manifestPath)) {
-    const existing = (await fs.readFile(manifestPath, 'utf8')).trim().split('\n');
-    // Skip header, keep rows where submodule is NOT bme
-    preservedRows = existing.slice(1).filter(row => {
-      // submodule is the 9th field (index 8) in the CSV
-      const fields = row.match(/"([^"]*(?:""[^"]*)*)"/g);
-      if (!fields || fields.length < 9) return true; // keep unrecognised rows
-      const submodule = fields[8].replace(/^"|"$/g, '');
-      return submodule !== 'bme';
-    });
+  function parseCSVRow(row) {
+    const fields = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < row.length; i++) {
+      const ch = row[i];
+      if (inQuotes) {
+        if (ch === '"' && row[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else if (ch === '"') {
+          inQuotes = false;
+        } else {
+          current += ch;
+        }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        fields.push(current);
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    fields.push(current);
+    return fields;
   }
 
-  // Build fresh bme rows from registry
-  const bmeRows = AGENTS.map(a => {
-    const p = a.persona;
-    return [
-      a.id, a.name, a.title, a.icon,
-      p.role, p.identity, p.communication_style, p.expertise,
-      'bme', `_bmad/bme/_vortex/agents/${a.id}.md`,
-    ].map(csvEscape).join(',');
-  });
+  const V610_HEADER = 'name,displayName,title,icon,capabilities,role,identity,communicationStyle,principles,module,path,canonicalId';
+  // Detect schema from existing manifest or default to v6.1.0
+  let header;
+  let isV610 = true;
+  let preservedRows = [];
+
+  if (fs.existsSync(manifestPath)) {
+    const existing = (await fs.readFile(manifestPath, 'utf8')).trim().split('\n');
+    header = existing[0];
+    isV610 = header.startsWith('name,') || header.includes('canonicalId');
+
+    // Filter out bme rows, preserve everything else
+    preservedRows = existing.slice(1).filter(row => {
+      if (!row.trim()) return false;
+      if (isV610) {
+        // v6.1.0: module is column 10 (index 9) — handle quoted CSV fields
+        const parsed = parseCSVRow(row);
+        if (!parsed || parsed.length < 10) return true;
+        return parsed[9] !== 'bme';
+      } else {
+        // Legacy: submodule is column 9 (index 8) — quoted CSV
+        const fields = row.match(/"([^"]*(?:""[^"]*)*)"/g);
+        if (!fields || fields.length < 9) return true;
+        const submodule = fields[8].replace(/^"|"$/g, '');
+        return submodule !== 'bme';
+      }
+    });
+  } else {
+    header = V610_HEADER;
+    isV610 = true;
+  }
+
+  // Build fresh bme rows matching the detected schema
+  let bmeRows;
+  if (isV610) {
+    bmeRows = AGENTS.map(a => {
+      const p = a.persona;
+      return [
+        csvEscape(a.name),           // name
+        csvEscape(''),               // displayName
+        csvEscape(a.title),          // title
+        csvEscape(a.icon),           // icon
+        csvEscape(''),               // capabilities
+        csvEscape(p.role),           // role
+        csvEscape(p.identity),       // identity
+        csvEscape(p.communication_style), // communicationStyle
+        csvEscape(p.expertise),      // principles
+        csvEscape('bme'),            // module
+        csvEscape(`_bmad/bme/_vortex/agents/${a.id}.md`), // path
+        csvEscape(`bmad-agent-bme-${a.id}`), // canonicalId
+      ].join(',');
+    });
+  } else {
+    bmeRows = AGENTS.map(a => {
+      const p = a.persona;
+      return [
+        a.id, a.name, a.title, a.icon,
+        p.role, p.identity, p.communication_style, p.expertise,
+        'bme', `_bmad/bme/_vortex/agents/${a.id}.md`,
+      ].map(csvEscape).join(',');
+    });
+  }
 
   const allRows = [...preservedRows, ...bmeRows].join('\n') + '\n';
   await fs.writeFile(manifestPath, header + '\n' + allRows, 'utf8');
@@ -171,26 +236,38 @@ async function refreshInstallation(projectRoot, options = {}) {
     if (verbose) console.log('    Skipped guide copy (dev environment)');
   }
 
-  // 6. Generate .claude/commands/ slash command files for each agent
-  const commandsTarget = path.join(projectRoot, '.claude', 'commands');
-  await fs.ensureDir(commandsTarget);
+  // 6. Clean up legacy .claude/commands/ and generate .claude/skills/ for each agent
+  const commandsDir = path.join(projectRoot, '.claude', 'commands');
+  if (fs.existsSync(commandsDir)) {
+    const legacyCommands = (await fs.readdir(commandsDir)).filter(f => f.startsWith('bmad-agent-bme-'));
+    for (const file of legacyCommands) {
+      await fs.remove(path.join(commandsDir, file));
+      changes.push(`Removed legacy command: ${file}`);
+      if (verbose) console.log(`    Removed legacy command: ${file}`);
+    }
+  }
 
-  // Remove deprecated command files (agents no longer in registry)
-  const currentCommandFiles = new Set(AGENTS.map(a => `bmad-agent-bme-${a.id}.md`));
-  const existingCommands = (await fs.readdir(commandsTarget)).filter(f => f.startsWith('bmad-agent-bme-'));
-  for (const file of existingCommands) {
-    if (!currentCommandFiles.has(file)) {
-      await fs.remove(path.join(commandsTarget, file));
-      changes.push(`Removed deprecated command: ${file}`);
-      if (verbose) console.log(`    Removed deprecated command: ${file}`);
+  const skillsDir = path.join(projectRoot, '.claude', 'skills');
+
+  // Remove stale skill directories (agents no longer in registry)
+  const currentSkillDirs = new Set(AGENTS.map(a => `bmad-agent-bme-${a.id}`));
+  if (fs.existsSync(skillsDir)) {
+    const existingSkills = (await fs.readdir(skillsDir)).filter(d => d.startsWith('bmad-agent-bme-'));
+    for (const dir of existingSkills) {
+      if (!currentSkillDirs.has(dir)) {
+        await fs.remove(path.join(skillsDir, dir));
+        changes.push(`Removed stale skill: ${dir}`);
+        if (verbose) console.log(`    Removed stale skill: ${dir}`);
+      }
     }
   }
 
   for (const agent of AGENTS) {
-    const filename = `bmad-agent-bme-${agent.id}.md`;
+    const skillDir = path.join(skillsDir, `bmad-agent-bme-${agent.id}`);
+    await fs.ensureDir(skillDir);
     const content = `---
-name: '${agent.id}'
-description: '${agent.id} agent'
+name: bmad-agent-bme-${agent.id}
+description: ${agent.id} agent
 ---
 
 You must fully embody this agent's persona and follow all activation instructions exactly as specified. NEVER break character until given an exit command.
@@ -204,9 +281,51 @@ You must fully embody this agent's persona and follow all activation instruction
 6. WAIT for user input before proceeding
 </agent-activation>
 `;
-    await fs.writeFile(path.join(commandsTarget, filename), content, 'utf8');
-    changes.push(`Refreshed command: ${filename}`);
-    if (verbose) console.log(`    Refreshed command: ${filename}`);
+    await fs.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf8');
+    changes.push(`Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
+    if (verbose) console.log(`    Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
+  }
+
+  // 7. Generate agent customize files (only if they don't already exist)
+  const customizeDir = path.join(projectRoot, '_bmad', '_config', 'agents');
+  await fs.ensureDir(customizeDir);
+
+  const CUSTOMIZE_TEMPLATE = `# Agent Customization
+# Customize any section below - all are optional
+
+# Override agent name
+agent:
+  metadata:
+    name: ""
+
+# Replace entire persona (not merged)
+persona:
+  role: ""
+  identity: ""
+  communication_style: ""
+  principles: []
+
+# Add custom critical actions (appended after standard config loading)
+critical_actions: []
+
+# Add persistent memories for the agent
+memories: []
+
+# Add custom menu items (appended to base menu)
+menu: []
+
+# Add custom prompts (for action="#id" handlers)
+prompts: []
+`;
+
+  for (const agent of AGENTS) {
+    const filename = `bme-${agent.name.toLowerCase()}.customize.yaml`;
+    const filePath = path.join(customizeDir, filename);
+    if (!fs.existsSync(filePath)) {
+      await fs.writeFile(filePath, CUSTOMIZE_TEMPLATE, 'utf8');
+      changes.push(`Created customize file: ${filename}`);
+      if (verbose) console.log(`    Created customize file: ${filename}`);
+    }
   }
 
   return changes;
