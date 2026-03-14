@@ -54,7 +54,7 @@
 | I1 | **NPM_TOKEN secret for CI publish** — Enable automated `npm publish` on tag push via GitHub Actions | CI/CD, adjusted (Victor) | 8 | 2 | 90% | 8 | 1.8 | Keep the lights on | Backlog |
 | S1 | **Interactive installer with project-type questions** — Ask user questions during install to customize initial config (e.g., B2B/B2C, team size) | Multi-agent review (Sally) | 5 | 2 | 50% | 5 | 1.0 | Move the needle | Backlog |
 | S2 | **Simplified entry point** — Single "Start Discovery" command that activates Emma with a guided first-run experience | Multi-agent review (Sally) | 7 | 1 | 40% | 4 | 0.7 | Move the needle | Backlog |
-| S4 | **Migrate to skills format** — Convert `.claude/commands/bmad-agent-bme-*.md` flat files to `.claude/skills/<name>/SKILL.md` directory-per-skill structure to align with BMAD Method v6.1.0 architecture. Also clean up legacy command files on update. | BMAD v6.1.0 compatibility review | 10 | 2 | 90% | 3 | 6.0 | Move the needle | Backlog |
+| S4 | **Migrate to skills format & native module compliance** — Phase 1 of native module convergence: (1) Convert `.claude/commands/` to `.claude/skills/<name>/SKILL.md` (activation is broken since BMAD v6.1.0 update), (2) Refactor agent manifest to full v6.1.0 12-column schema, (3) Create `src/module.yaml` per external module spec, (4) Generate `bme-*.customize.yaml` agent files, (5) Delete redundant `createAgentManifest()`, (6) Update docs. 10 tasks, 16 ACs. | BMAD v6.1.0 compatibility review + adversarial review + party mode session | 10 | 2 | 90% | 5 | 3.6 | Move the needle | Ready |
 | I3 | **CSV parser library for manifest** — Replace regex-based CSV parsing in `refresh-installation.js` with proper parser | Murat review | 2 | 0.25 | 70% | 1 | 0.4 | Keep the lights on | Backlog |
 
 ### Agent Quality & Consistency
@@ -122,7 +122,7 @@ Remaining update system items not in Hardening: load-time validation, version de
 
 | Rank | # | Initiative | Score | Track | Category |
 |------|---|-----------|-------|-------|----------|
-| 1 | S4 | Migrate to skills format | 6.0 | Move the needle | Infrastructure |
+| 1 | S4 | Migrate to skills format & native module compliance | 3.6 | Move the needle | Infrastructure |
 | 2 | P4 | Enhance module | 2.8 | Move the needle | Platform |
 | 3 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
 | 4 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
@@ -188,6 +188,7 @@ Remaining update system items not in Hardening: load-time validation, version de
 
 | Date | Change |
 |------|--------|
+| 2026-03-14 | Updated S4 scope after adversarial review (12 findings) and party mode architecture session. Expanded from 8→10 tasks, 13→16 ACs. Added: manifest schema refactor, `createAgentManifest()` deletion, version bump, doc updates. Effort 3→5, score 6.0→3.6. Status: Ready (story file created). Still rank #1. |
 | 2026-03-14 | Added S4 (Migrate to skills format, score 6.0). BMAD Method v6.1.0 moved from `.claude/commands/` to `.claude/skills/` directory-per-skill structure. Now rank #1. 25 active items. |
 | 2026-03-14 | Completed S3 (Install BME slash commands with Vortex). Moved to Completed section. 24 active items remain. |
 | 2026-03-12 | Added S3 (Install BME slash commands with Vortex, score 8.0). Now rank #1. 25 active items. |
