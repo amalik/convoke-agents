@@ -166,8 +166,8 @@ Workflows use **step-file architecture**:
 
 ### Claude Code Integration
 
-Commands in `.claude/commands/` directory:
-- Naming: `bmad-{module}-{workflow}.md`
+Skills in `.claude/skills/` directory:
+- Naming: `bmad-{module}-{workflow}/SKILL.md`
 - Pattern: Load full workflow from `_bmad/{module}/workflows/{workflow}/workflow.md`
 - Critical: Must read entire workflow contents and follow directions exactly
 
