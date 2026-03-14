@@ -1,0 +1,6 @@
+code: bme
+name: "Convoke: Vortex Discovery Framework"
+header: "Convoke — Vortex Discovery Framework"
+subheader: "7 AI agents for product discovery based on the Shiftup Innovation Vortex"
+description: "Domain-specialized agent teams for structured product discovery: Contextualize, Empathize, Synthesize, Hypothesize, Externalize, Sensitize, Systematize"
+default_selected: false
