@@ -304,13 +304,13 @@ await networkRecorder.setup(context, {
   playback: {
     urlMapping: {
       hostMapping: {
-        'localhost:3000': 'admin.seondev.space',
-        'admin-staging.seon.io': 'admin.seondev.space',
-        'admin.seon.io': 'admin.seondev.space',
+        'localhost:3000': 'admin.example.com',
+        'admin-staging.example.com': 'admin.example.com',
+        'admin.example.com': 'admin.example.com',
       },
       patterns: [
-        { match: /admin-\d+\.seondev\.space/, replace: 'admin.seondev.space' },
-        { match: /admin-staging-pr-\w+-\d\.seon\.io/, replace: 'admin.seondev.space' },
+        { match: /admin-\d+\.example\.com/, replace: 'admin.example.com' },
+        { match: /admin-staging-pr-\w+-\d\.example\.com/, replace: 'admin.example.com' },
       ],
     },
   },

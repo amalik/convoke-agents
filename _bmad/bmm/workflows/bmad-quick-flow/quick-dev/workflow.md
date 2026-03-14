@@ -1,6 +1,6 @@
 ---
 name: quick-dev
-description: 'Flexible development - execute tech-specs OR direct instructions with optional planning.'
+description: 'Implement a Quick Tech Spec for small changes or features. Use when the user provides a quick tech spec and says "implement this quick spec" or "proceed with implementation of [quick tech spec]"'
 ---
 
 # Quick Dev Workflow
@@ -28,7 +28,7 @@ This uses **step-file architecture** for focused execution:
 Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
 - `user_name`, `communication_language`, `user_skill_level`
-- `output_folder`, `planning_artifacts`,  `implementation_artifacts`
+- `planning_artifacts`, `implementation_artifacts`
 - `date` as system-generated current datetime
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
 
@@ -40,11 +40,11 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 ### Related Workflows
 
 - `quick_spec_workflow` = `{project-root}/_bmad/bmm/workflows/bmad-quick-flow/quick-spec/workflow.md`
-- `party_mode_exec` = `{project-root}/_bmad/core/workflows/party-mode/workflow.md`
-- `advanced_elicitation` = `{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml`
+- `party_mode_exec` = `{project-root}/_bmad/core/workflows/bmad-party-mode/workflow.md`
+- `advanced_elicitation` = `{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.md`
 
 ---
 
 ## EXECUTION
 
-Read fully and follow: `steps/step-01-mode-detection.md` to begin the workflow.
+Read fully and follow: `{project-root}/_bmad/bmm/workflows/bmad-quick-flow/quick-dev/steps/step-01-mode-detection.md` to begin the workflow.

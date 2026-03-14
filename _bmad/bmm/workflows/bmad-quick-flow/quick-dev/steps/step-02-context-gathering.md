@@ -2,8 +2,6 @@
 name: 'step-02-context-gathering'
 description: 'Quick context gathering for direct mode - identify files, patterns, dependencies'
 
-workflow_path: '{project-root}/_bmad/bmm/workflows/bmad-quick-flow/quick-dev'
-thisStepFile: './step-02-context-gathering.md'
 nextStepFile: './step-03-execute.md'
 ---
 
@@ -99,7 +97,7 @@ Ready to execute? (y/n/adjust)
 
 **CRITICAL:** When user confirms ready, explicitly state:
 
-- **y:** "**NEXT:** Read fully and follow: `step-03-execute.md`"
+- **y:** "**NEXT:** Read fully and follow: `{project-root}/_bmad/bmm/workflows/bmad-quick-flow/quick-dev/steps/step-03-execute.md`"
 - **n/adjust:** Continue gathering context, then re-present plan
 
 ---

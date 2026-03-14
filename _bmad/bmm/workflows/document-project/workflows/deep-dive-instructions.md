@@ -3,7 +3,6 @@
 <workflow>
 
 <critical>This workflow performs exhaustive deep-dive documentation of specific areas</critical>
-<critical>Called by: ../document-project/instructions.md router</critical>
 <critical>Handles: deep_dive mode only</critical>
 
 <step n="13" goal="Deep-dive documentation of specific area" if="workflow_mode == deep_dive">
@@ -194,7 +193,7 @@ This will read EVERY file in this area. Proceed? [y/n]
 
 <action>Load complete deep-dive template from: {installed_path}/templates/deep-dive-template.md</action>
 <action>Fill template with all collected data from steps 13b-13d</action>
-<action>Write filled template to: {output_folder}/deep-dive-{{sanitized_target_name}}.md</action>
+<action>Write filled template to: {project_knowledge}/deep-dive-{{sanitized_target_name}}.md</action>
 <action>Validate deep-dive document completeness</action>
 
 <template-output>deep_dive_documentation</template-output>
@@ -241,7 +240,7 @@ Detailed exhaustive analysis of specific areas:
 
 ## Deep-Dive Documentation Complete! ✓
 
-**Generated:** {output_folder}/deep-dive-{{target_name}}.md
+**Generated:** {project_knowledge}/deep-dive-{{target_name}}.md
 **Files Analyzed:** {{file_count}}
 **Lines of Code Scanned:** {{total_loc}}
 **Time Taken:** ~{{duration}}
@@ -255,7 +254,7 @@ Detailed exhaustive analysis of specific areas:
 - Related code and reuse opportunities
 - Implementation guidance
 
-**Index Updated:** {output_folder}/index.md now includes link to this deep-dive
+**Index Updated:** {project_knowledge}/index.md now includes link to this deep-dive
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 </action>
@@ -278,7 +277,7 @@ Your choice [1/2]:
 
 All deep-dive documentation complete!
 
-**Master Index:** {output_folder}/index.md
+**Master Index:** {project_knowledge}/index.md
 **Deep-Dives Generated:** {{deep_dive_count}}
 
 These comprehensive docs are now ready for:

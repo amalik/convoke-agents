@@ -398,4 +398,4 @@ When deciding whether to create a fixture, follow these rules:
 - **1 use** → Keep inline (avoid premature abstraction)
 - **Complex logic** → Factory function pattern (dynamic data generation)
 
-_Source: Murat Testing Philosophy (lines 74-122), SEON production patterns, Playwright fixture docs._
+_Source: Murat Testing Philosophy (lines 74-122), enterprise production patterns, Playwright fixture docs._

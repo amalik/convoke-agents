@@ -727,4 +727,4 @@ jobs:
 - [ ] Projects defined for cross-browser/device testing (if needed)
 - [ ] CI uploads artifacts on failure with 30-day retention
 
-_Source: Playwright book repo, SEON configuration example, Murat testing philosophy (lines 216-271)._
+_Source: Playwright book repo, enterprise configuration example, Murat testing philosophy (lines 216-271)._

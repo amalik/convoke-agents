@@ -3,7 +3,6 @@
 <workflow>
 
 <critical>This workflow performs complete project documentation (Steps 1-12)</critical>
-<critical>Called by: document-project/instructions.md router</critical>
 <critical>Handles: initial_scan and full_rescan modes</critical>
 
 <step n="0.5" goal="Load documentation requirements data for fresh starts (not needed for resume)" if="resume_mode == false">
@@ -43,7 +42,7 @@ This workflow uses a single comprehensive CSV file to intelligently document you
 </step>
 
 <step n="0.6" goal="Check for existing documentation and determine workflow mode">
-<action>Check if {output_folder}/index.md exists</action>
+<action>Check if {project_knowledge}/index.md exists</action>
 
 <check if="index.md exists">
   <action>Read existing index.md to extract metadata (date, project structure, parts count)</action>
@@ -127,7 +126,7 @@ Your choice [1/2/3] (default: 1):
     <action>Display: "Using Exhaustive Scan (reading all source files)"</action>
   </action>
 
-<action>Initialize state file: {output_folder}/project-scan-report.json</action>
+<action>Initialize state file: {project_knowledge}/project-scan-report.json</action>
 <critical>Every time you touch the state file, record: step id, human-readable summary (what you actually did), precise timestamp, and any outputs written. Vague phrases are unacceptable.</critical>
 <action>Write initial state:
 {
@@ -136,7 +135,7 @@ Your choice [1/2/3] (default: 1):
 "mode": "{{workflow_mode}}",
 "scan_level": "{{scan_level}}",
 "project_root": "{{project_root_path}}",
-"output_folder": "{{output_folder}}",
+"project_knowledge": "{{project_knowledge}}",
 "completed_steps": [],
 "current_step": "step_1",
 "findings": {},
@@ -325,7 +324,7 @@ findings.batches_completed: [
   </check>
 
 <action>Build API contracts catalog</action>
-<action>IMMEDIATELY write to: {output_folder}/api-contracts-{part_id}.md</action>
+<action>IMMEDIATELY write to: {project_knowledge}/api-contracts-{part_id}.md</action>
 <action>Validate document has all required sections</action>
 <action>Update state file with output generated</action>
 <action>PURGE detailed API data, keep only: "{{api_count}} endpoints documented"</action>
@@ -346,7 +345,7 @@ findings.batches_completed: [
   </check>
 
 <action>Build database schema documentation</action>
-<action>IMMEDIATELY write to: {output_folder}/data-models-{part_id}.md</action>
+<action>IMMEDIATELY write to: {project_knowledge}/data-models-{part_id}.md</action>
 <action>Validate document completeness</action>
 <action>Update state file with output generated</action>
 <action>PURGE detailed schema data, keep only: "{{table_count}} tables documented"</action>
@@ -805,7 +804,7 @@ When a document SHOULD be generated but wasn't (due to quick scan, missing data,
 
 <step n="11" goal="Validate and review generated documentation" if="workflow_mode != deep_dive">
 <action>Show summary of all generated files:
-Generated in {{output_folder}}/:
+Generated in {{project_knowledge}}/:
 {{file_list_with_sizes}}
 </action>
 
@@ -823,7 +822,7 @@ Generated in {{output_folder}}/:
 3. Extract document metadata from each match for user selection
    </critical>
 
-<action>Read {output_folder}/index.md</action>
+<action>Read {project_knowledge}/index.md</action>
 
 <action>Scan for incomplete documentation markers:
 Step 1: Search for exact pattern "_(To be generated)_" (case-sensitive)
@@ -1065,9 +1064,9 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
 
 ## Project Documentation Complete! ✓
 
-**Location:** {{output_folder}}/
+**Location:** {{project_knowledge}}/
 
-**Master Index:** {{output_folder}}/index.md
+**Master Index:** {{project_knowledge}}/index.md
 👆 This is your primary entry point for AI-assisted development
 
 **Generated Documentation:**
@@ -1076,9 +1075,9 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
 **Next Steps:**
 
 1. Review the index.md to familiarize yourself with the documentation structure
-2. When creating a brownfield PRD, point the PRD workflow to: {{output_folder}}/index.md
-3. For UI-only features: Reference {{output_folder}}/architecture-{{ui_part_id}}.md
-4. For API-only features: Reference {{output_folder}}/architecture-{{api_part_id}}.md
+2. When creating a brownfield PRD, point the PRD workflow to: {{project_knowledge}}/index.md
+3. For UI-only features: Reference {{project_knowledge}}/architecture-{{ui_part_id}}.md
+4. For API-only features: Reference {{project_knowledge}}/architecture-{{api_part_id}}.md
 5. For full-stack features: Reference both part architectures + integration-architecture.md
 
 **Verification Recap:**
@@ -1101,6 +1100,6 @@ When ready to plan new features, run the PRD workflow and provide this index as 
 - Write final state file
   </action>
 
-<action>Display: "State file saved: {{output_folder}}/project-scan-report.json"</action>
+<action>Display: "State file saved: {{project_knowledge}}/project-scan-report.json"</action>
 
 </workflow>

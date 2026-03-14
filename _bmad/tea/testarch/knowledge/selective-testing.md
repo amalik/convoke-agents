@@ -728,5 +728,5 @@ Before implementing selective testing, verify:
 - Related fragments: `ci-burn-in.md`, `test-priorities-matrix.md`, `test-quality.md`
 - Selection tools: Playwright --grep, Cypress @cypress/grep, git diff
 
-_Source: 32+ selective testing strategies blog, Murat testing philosophy, SEON CI optimization_
+_Source: 32+ selective testing strategies blog, Murat testing philosophy, enterprise CI optimization_
 ```

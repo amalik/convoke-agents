@@ -54,7 +54,7 @@ This folder contains the Test Architect (TEA) workflows converted to step-file a
 ## References
 
 - Step-file architecture: `docs/explanation/step-file-architecture.md`
-- Subprocess patterns: `docs/explanation/subprocess-architecture.md`
+- Subagent patterns: `docs/explanation/subagent-architecture.md`
 
 ## TEA Workflows
 
@@ -70,5 +70,5 @@ This folder contains the Test Architect (TEA) workflows converted to step-file a
 ## Notes
 
 - `workflow.md` is the canonical entrypoint. `instructions.md` is a short summary for quick context.
-- Output files typically use `{output_folder}` or `{project-root}` variables.
+- Output files typically use `{test_artifacts}` or `{project-root}` variables.
 - If a workflow produces multiple artifacts (e.g., system-level vs epic-level), the step file will specify which templates and output paths to use.

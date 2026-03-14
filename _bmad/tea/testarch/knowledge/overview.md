@@ -15,7 +15,7 @@ Writing Playwright utilities from scratch for every project leads to:
 
 `@seontechnologies/playwright-utils` provides:
 
-- **Production-tested utilities**: Used at SEON Technologies in production
+- **Production-tested**: Used in enterprise production environments
 - **Functional-first design**: Core logic as pure functions, fixtures for convenience
 - **Composable fixtures**: Use `mergeTests` to combine utilities
 - **TypeScript support**: Full type safety with generic types
@@ -38,17 +38,17 @@ npm install -D @seontechnologies/playwright-utils
 
 ### Core Testing Utilities
 
-| Utility                    | Purpose                                            | Test Context       |
-| -------------------------- | -------------------------------------------------- | ------------------ |
-| **api-request**            | Typed HTTP client with schema validation and retry | **API/Backend**    |
-| **recurse**                | Polling for async operations, background jobs      | **API/Backend**    |
-| **auth-session**           | Token persistence, multi-user, service-to-service  | **API/Backend/UI** |
-| **log**                    | Playwright report-integrated logging               | **API/Backend/UI** |
-| **file-utils**             | CSV/XLSX/PDF/ZIP reading & validation              | **API/Backend/UI** |
-| **burn-in**                | Smart test selection with git diff                 | **CI/CD**          |
-| **network-recorder**       | HAR record/playback for offline testing            | UI only            |
-| **intercept-network-call** | Network spy/stub with auto JSON parsing            | UI only            |
-| **network-error-monitor**  | Automatic HTTP 4xx/5xx detection                   | UI only            |
+| Utility                    | Purpose                                                                       | Test Context       |
+| -------------------------- | ----------------------------------------------------------------------------- | ------------------ |
+| **api-request**            | Typed HTTP client with schema validation, retry, and operation-based overload | **API/Backend**    |
+| **recurse**                | Polling for async operations, background jobs                                 | **API/Backend**    |
+| **auth-session**           | Token persistence, multi-user, service-to-service                             | **API/Backend/UI** |
+| **log**                    | Playwright report-integrated logging                                          | **API/Backend/UI** |
+| **file-utils**             | CSV/XLSX/PDF/ZIP reading & validation                                         | **API/Backend/UI** |
+| **burn-in**                | Smart test selection with git diff                                            | **CI/CD**          |
+| **network-recorder**       | HAR record/playback for offline testing                                       | UI only            |
+| **intercept-network-call** | Network spy/stub with auto JSON parsing                                       | UI only            |
+| **network-error-monitor**  | Automatic HTTP 4xx/5xx detection                                              | UI only            |
 
 **Note**: 6 of 9 utilities work without a browser. Only 3 are UI-specific (network-recorder, intercept-network-call, network-error-monitor).
 
