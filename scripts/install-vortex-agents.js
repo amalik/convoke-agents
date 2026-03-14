@@ -132,6 +132,7 @@ function verifyInstallation(projectRoot) {
 
   const checks = [
     ...AGENTS.map(a => ({ path: `_bmad/bme/_vortex/agents/${a.id}.md`, name: `${a.name} agent file` })),
+    ...AGENTS.map(a => ({ path: `.claude/commands/bmad-agent-bme-${a.id}.md`, name: `${a.name} slash command` })),
     { path: '_bmad/bme/_vortex/config.yaml', name: 'Configuration file' },
   ];
 
@@ -174,10 +175,13 @@ function printSuccess() {
   console.log(`  ${YELLOW}1.${RESET} Personalize your config:`);
   console.log(`     Edit ${CYAN}_bmad/bme/_vortex/config.yaml${RESET} and replace ${YELLOW}{user}${RESET} with your name`);
   console.log('');
-  console.log(`  ${YELLOW}2.${RESET} Activate an agent by reading their file:`);
+  console.log(`  ${YELLOW}2.${RESET} Activate an agent with a slash command (Claude Code):`);
   for (const agent of AGENTS) {
-    console.log(`     ${CYAN}cat _bmad/bme/_vortex/agents/${agent.id}.md${RESET}  (${agent.name})`);
+    console.log(`     ${CYAN}/bmad-agent-bme-${agent.id}${RESET}  (${agent.name})`);
   }
+  console.log('');
+  console.log(`  ${YELLOW}3.${RESET} Or read the agent file directly:`);
+  console.log(`     ${CYAN}cat _bmad/bme/_vortex/agents/{agent-id}.md${RESET}`);
   console.log('');
 }
 
