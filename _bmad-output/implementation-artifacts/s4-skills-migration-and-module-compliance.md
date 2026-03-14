@@ -1,6 +1,6 @@
 # Story S4: Migrate to BMAD v6.1.0 Skills Format & External Module Compliance
 
-Status: review
+Status: done
 
 > **Phase 1 of Native Module Convergence** — This story makes Vortex artifacts indistinguishable from a native BMAD module while keeping Convoke's own installer. Future stories: S5 (multi-team architecture when Team 2 arrives), S6 (BMAD external module registration via `external-official-modules.yaml`).
 
