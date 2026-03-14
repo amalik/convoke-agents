@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - 2026-03-14
+
+### Changed
+
+- **Agent activation migrated from commands to skills** — `.claude/commands/bmad-agent-bme-*.md` replaced by `.claude/skills/bmad-agent-bme-{id}/SKILL.md` (BMAD v6.1.0 format)
+- **Agent manifest uses v6.1.0 12-column schema** — BME agents now populate all fields including `canonicalId`, `module`, `communicationStyle`, `capabilities`
+- **Removed redundant `createAgentManifest()`** from installer — `refreshInstallation()` is now the single code path for manifest generation
+
+### Added
+
+- **`src/module.yaml`** — External module spec definition for future BMAD registration
+- **Agent customize files** — `_bmad/_config/agents/bme-{name}.customize.yaml` generated on install (never overwritten)
+- **Legacy command cleanup** — Automatically removes `.claude/commands/bmad-agent-bme-*` files from prior installs
+
+### Removed
+
+- **`_bmad/bme/_config/module.yaml`** — Stale legacy file with deprecated agent references deleted
+
+---
+
 ## [2.0.0] - 2026-03-07
 
 ### Changed
