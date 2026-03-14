@@ -58,9 +58,9 @@ cat _bmad/bme/_vortex/agents/production-intelligence-specialist.md
 
 ---
 
-### Method 2: Slash Command (BMAD Environments Only)
+### Method 2: Skill Activation (BMAD Environments Only)
 
-If your environment supports BMAD slash commands:
+If your environment supports BMAD skills:
 
 ```
 /bmad-agent-bme-production-intelligence-specialist
