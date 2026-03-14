@@ -2,6 +2,8 @@
 
 Status: ready-for-dev
 
+> **Phase 1 of Native Module Convergence** — This story makes Vortex artifacts indistinguishable from a native BMAD module while keeping Convoke's own installer. Future stories: S5 (multi-team architecture when Team 2 arrives), S6 (BMAD external module registration via `external-official-modules.yaml`).
+
 ## Story
 
 As a Convoke user with BMAD Method v6.1.0,
@@ -24,10 +26,13 @@ so that Convoke agents are discoverable and activatable alongside native BMAD ag
 ### Track 2 — External Module Spec Compliance
 
 9. **AC9: `src/module.yaml` created** — File follows the BMAD external module spec schema (fields: `code`, `name`, `header`, `subheader`, `description`, `default_selected`)
-10. **AC10: Agent manifest canonicalIds populated** — All 7 BME agents in `_bmad/_config/agent-manifest.csv` have `canonicalId` field set (pattern: `bmad-agent-bme-{id}`)
-11. **AC11: Legacy `_bmad/bme/_config/module.yaml` cleaned up** — Stale file either deleted or replaced with a pointer to `src/module.yaml`
+10. **AC10: Agent manifest uses full v6.1.0 schema** — All 7 BME agents in `_bmad/_config/agent-manifest.csv` use the 12-column v6.1.0 format with ALL fields populated: `name`, `displayName`, `title`, `icon`, `capabilities`, `role`, `identity`, `communicationStyle`, `principles`, `module`, `path`, `canonicalId`
+11. **AC11: Legacy `_bmad/bme/_config/module.yaml` cleaned up** — Stale file deleted
 12. **AC12: `package.json` files field updated** — `src/module.yaml` included in npm distribution
 13. **AC13: Agent customize files generated** — Running `convoke-install-vortex` creates 7 `_bmad/_config/agents/bme-{agent-name}.customize.yaml` files (e.g., `bme-emma.customize.yaml`) matching the BMAD pattern, with persona/memories/menu/prompts sections
+14. **AC14: Version bumped to v2.2.0** — `package.json` version updated to reflect the breaking activation change (commands → skills)
+15. **AC15: Redundant `createAgentManifest()` removed** — The duplicate manifest creation function in `install-vortex-agents.js` is deleted; `refreshInstallation()` section 4 is the single code path for manifest generation
+16. **AC16: Documentation updated** — README.md and `docs/WARP.md` reference `.claude/skills/` instead of `.claude/commands/`
 
 ## Tasks / Subtasks
 
@@ -35,22 +40,22 @@ so that Convoke agents are discoverable and activatable alongside native BMAD ag
 
 - [ ] Task 1: Update `refreshInstallation()` section 6 to generate skills (AC: 1, 2, 4, 5)
   - [ ] 1.1 Change target from `.claude/commands/` to `.claude/skills/bmad-agent-bme-{id}/SKILL.md` — create parent directory per agent with `fs.ensureDir()`
-  - [ ] 1.2 SKILL.md content: same frontmatter + activation block pattern as S3, but `name` field uses `bmad-agent-bme-{id}` (matches BMAD native pattern like `bmad-agent-cis-brainstorming-coach`)
-  - [ ] 1.3 Update stale cleanup: scan `.claude/skills/` for directories matching `bmad-agent-bme-*` not in current AGENTS, remove them
+  - [ ] 1.2 SKILL.md content: same activation block pattern as S3, but `name` field uses `bmad-agent-bme-{id}` with no quotes (matches BMAD native pattern like `bmad-agent-cis-brainstorming-coach`)
+  - [ ] 1.3 Update stale cleanup: guard with `fs.existsSync()` before scanning `.claude/skills/`, then scan for directories matching `bmad-agent-bme-*` not in current AGENTS, remove them
   - [ ] 1.4 Update changes array entries: `Refreshed skill: bmad-agent-bme-{id}/SKILL.md`
 
 - [ ] Task 2: Add legacy `.claude/commands/` cleanup (AC: 3)
-  - [ ] 2.1 In section 6, before generating skills, scan `.claude/commands/` for files matching `bmad-agent-bme-*.md` and remove them
+  - [ ] 2.1 In section 6, before generating skills, guard with `fs.existsSync()` before scanning `.claude/commands/`, then scan for files matching `bmad-agent-bme-*.md` and remove them
   - [ ] 2.2 Log each removal: `Removed legacy command: bmad-agent-bme-{id}.md`
-  - [ ] 2.3 Only remove `bmad-agent-bme-*` files — never touch other modules' command files (though BMAD 6.1.0 removed them all, future-proof)
+  - [ ] 2.3 Only remove `bmad-agent-bme-*` files — never touch other modules' files
 
 - [ ] Task 3: Update installer verification and output (AC: 6, 7)
   - [ ] 3.1 Update `verifyInstallation()` in `install-vortex-agents.js`: check `.claude/skills/bmad-agent-bme-${a.id}/SKILL.md` instead of `.claude/commands/bmad-agent-bme-${a.id}.md`
-  - [ ] 3.2 Update `printSuccess()`: change step 2 text from "Activate an agent with a slash command" to reflect skills format; the activation command is still `/bmad-agent-bme-{id}` — skills are invoked the same way
+  - [ ] 3.2 Update `printSuccess()`: change step 2 text from "Activate an agent with a slash command" to "Activate an agent (skill)"; the activation command is still `/bmad-agent-bme-{id}` — skills are invoked the same way
 
 - [ ] Task 4: Update tests (AC: 8)
   - [ ] 4.1 Update "creates all 7 command files" → "creates all 7 skill files" — check `.claude/skills/bmad-agent-bme-{id}/SKILL.md` paths
-  - [ ] 4.2 Update "command files have correct frontmatter" → check `name: 'bmad-agent-bme-{id}'` in SKILL.md
+  - [ ] 4.2 Update "command files have correct frontmatter" → check `name: bmad-agent-bme-{id}` (no quotes) in SKILL.md
   - [ ] 4.3 Update "command files reference correct agent path" → same check, new path
   - [ ] 4.4 Update "is idempotent" → same logic, new paths
   - [ ] 4.5 Add test: "removes legacy command files during migration" — create `.claude/commands/bmad-agent-bme-contextualization-expert.md`, run refresh, verify it's gone and skill exists
@@ -71,10 +76,28 @@ so that Convoke agents are discoverable and activatable alongside native BMAD ag
   - [ ] 5.2 No config variables needed initially — Convoke's config is simple (user_name, communication_language, output_folder) and already seeded by BMAD installer
   - [ ] 5.3 Add `"src/"` to `package.json` `files` array
 
-- [ ] Task 6: Populate agent manifest `canonicalId` (AC: 10)
-  - [ ] 6.1 Update the manifest generation in `refreshInstallation()` section 4 — add `canonicalId` column with value `bmad-agent-bme-{id}` for each agent
-  - [ ] 6.2 Read existing agent-manifest.csv header to detect schema version — if it already has `canonicalId` column (BMAD 6.1.0 format), use it; if old format, this is the fresh install path which uses the old header anyway
-  - [ ] 6.3 Important: `refreshInstallation()` only replaces BME rows, preserving other modules' rows — so canonicalId must be added only to BME rows without breaking the CSV structure
+- [ ] Task 6: Refactor agent manifest to full v6.1.0 schema (AC: 10, 15)
+  - [ ] 6.1 Delete `createAgentManifest()` from `install-vortex-agents.js` — it's redundant with `refreshInstallation()` section 4 and writes the old 10-column schema that would clobber BMAD 6.1.0's 12-column manifest. Renumber installer steps accordingly.
+  - [ ] 6.2 Refactor `refreshInstallation()` section 4: detect existing CSV header by reading first line. If manifest exists, use the on-disk header. If no manifest exists (fresh install), default to the v6.1.0 header: `name,displayName,title,icon,capabilities,role,identity,communicationStyle,principles,module,path,canonicalId`
+  - [ ] 6.3 Write BME rows matching the detected/default schema. Column mapping from `agent-registry.js`:
+
+    | v6.1.0 Column | Source |
+    |---------------|--------|
+    | `name` | `agent.name` (e.g., `Emma`) |
+    | `displayName` | `""` (leave empty, title is separate) |
+    | `title` | `agent.title` |
+    | `icon` | `agent.icon` |
+    | `capabilities` | `""` (not tracked yet) |
+    | `role` | `agent.persona.role` |
+    | `identity` | `agent.persona.identity` |
+    | `communicationStyle` | `agent.persona.communication_style` |
+    | `principles` | `agent.persona.expertise` |
+    | `module` | `"bme"` |
+    | `path` | `_bmad/bme/_vortex/agents/${agent.id}.md` |
+    | `canonicalId` | `bmad-agent-bme-${agent.id}` |
+
+  - [ ] 6.4 Preserved non-BME rows: filter by `module` column (not `submodule`) when v6.1.0 header detected. Fall back to `submodule` field (index 8) for old-format manifests for backward compatibility.
+  - [ ] 6.5 Update tests: verify manifest rows have 12 columns, verify `canonicalId` and `module` fields are populated
 
 - [ ] Task 7: Clean up legacy module definition (AC: 11)
   - [ ] 7.1 Delete `_bmad/bme/_config/module.yaml` — it references deprecated agents (empathy-mapper, wireframe-designer, quality-gatekeeper, standards-auditor) and old package names (@bmad/bme-*), and uses a non-standard schema
@@ -85,20 +108,34 @@ so that Convoke agents are discoverable and activatable alongside native BMAD ag
   - [ ] 8.2 Template content must match the BMAD pattern exactly — see `_bmad/_config/agents/bmm-pm.customize.yaml` for reference: `agent.metadata.name`, `persona` (role, identity, communication_style, principles), `critical_actions`, `memories`, `menu`, `prompts` sections all empty/defaults
   - [ ] 8.3 Only create if file does NOT exist — unlike skills/agents, customize files are user-editable and must NOT be overwritten on re-install (user may have added memories, menu items, etc.)
   - [ ] 8.4 Push to changes array: `Created customize file: bme-{name}.customize.yaml` (only when newly created)
-  - [ ] 8.5 Add test: verify 7 customize files created on fresh install, verify they are NOT overwritten on second run if content differs
+  - [ ] 8.5 `isSameRoot` guard: always run (customize files go to `_bmad/_config/agents/` which is project-scoped, same as skills going to `.claude/`)
+  - [ ] 8.6 Add tests: verify 7 customize files created on fresh install; verify existing customize files with modified content are NOT overwritten on second run (separate test case)
+
+- [ ] Task 9: Bump version (AC: 14)
+  - [ ] 9.1 Update `package.json` version from `2.1.0` to `2.2.0`
+  - [ ] 9.2 No formal migration delta needed in `scripts/update/migrations/registry.js` — `refreshInstallation()` handles the commands→skills transition and legacy cleanup. The version bump ensures `convoke-update` detects the new version.
+  - [ ] 9.3 Add `## [2.2.0]` entry to `CHANGELOG.md` documenting: commands→skills migration, `src/module.yaml` creation, agent customize files, legacy cleanup, `createAgentManifest()` removal
+
+- [ ] Task 10: Update documentation (AC: 16)
+  - [ ] 10.1 Update `README.md`: change "Claude Code (slash commands)" heading and references from `.claude/commands/` to `.claude/skills/`; keep the `/bmad-agent-bme-{id}` activation commands (they still work, just backed by skills now)
+  - [ ] 10.2 Update `docs/WARP.md`: change "Commands in `.claude/commands/` directory" to reference `.claude/skills/` pattern
+  - [ ] 10.3 Update `INSTALLATION.md` if it references command files (check first)
+  - [ ] 10.4 Update all 7 user guides in `_bmad/bme/_vortex/guides/`: change "BMAD slash commands" to "BMAD skills" in the Method 2 section heading and description text. Keep the `/bmad-agent-bme-{id}` activation command unchanged (skills are invoked the same way). These are shipped files (`package.json` `files` array includes `_bmad/bme/_vortex/`).
 
 ## Dev Notes
 
 ### Architecture Compliance
 
+- **Native module convergence**: Vortex artifacts must be indistinguishable from a native BMAD module. Same manifest schema, same skill format, same customize files.
 - **Single source of truth**: Continue using `AGENTS` array from `agent-registry.js` — do NOT hardcode agent IDs
-- **Pattern**: Follow the existing refresh-installation section 6 pattern, just change the target paths
-- **`isSameRoot` guard**: Skills generation always runs regardless of `isSameRoot` (`.claude/` is gitignored)
+- **Single code path for manifest**: `refreshInstallation()` section 4 is the ONLY place that writes agent-manifest.csv. `createAgentManifest()` in the installer is deleted.
+- **`isSameRoot` guard**: Skills (section 6) and customize files (section 7) always run regardless of `isSameRoot` — both target directories that are project-scoped, not dev-environment-specific
 - **No `process.cwd()`**: Use the `projectRoot` parameter
+- **No migration delta**: `refreshInstallation()` already handles the transition (legacy cleanup + new skills generation). The v2.2.0 version bump ensures `convoke-update` detects the change.
 
 ### SKILL.md Template (BMAD v6.1.0 format)
 
-Each generated file must match this exact pattern (identical to native BMAD agent skills):
+Each generated file must match this exact pattern (identical to native BMAD agent skills — **no quotes** on frontmatter values):
 
 ```markdown
 ---
@@ -118,7 +155,7 @@ You must fully embody this agent's persona and follow all activation instruction
 </agent-activation>
 ```
 
-Note the `name` field change from S3: was `'{agent-id}'` (e.g., `contextualization-expert`), now `bmad-agent-bme-{agent-id}` (e.g., `bmad-agent-bme-contextualization-expert`) — matches BMAD native pattern.
+Note the `name` field change from S3: was `'{agent-id}'` (with quotes, e.g., `'contextualization-expert'`), now `bmad-agent-bme-{agent-id}` (no quotes, e.g., `bmad-agent-bme-contextualization-expert`) — matches BMAD native pattern.
 
 ### Directory Structure Change
 
@@ -134,22 +171,42 @@ Note the `name` field change from S3: was `'{agent-id}'` (e.g., `contextualizati
 
 Each agent gets its own directory under `.claude/skills/`.
 
-### Agent Manifest CSV Schema (v6.1.0)
+### Agent Manifest CSV — Schema Detection Logic
 
-The BMAD 6.1.0 update changed `agent-manifest.csv` schema. Current header:
+The BMAD 6.1.0 update changed `agent-manifest.csv` to a 12-column schema. Section 4 must handle both:
+
+**v6.1.0 header (default for fresh installs):**
 ```
 name,displayName,title,icon,capabilities,role,identity,communicationStyle,principles,module,path,canonicalId
 ```
 
-Old header used by `install-vortex-agents.js`:
+**Pre-6.1.0 header (legacy Convoke-only installs):**
 ```
 "agent_id","name","title","icon","role","identity","communication_style","expertise","submodule","path"
 ```
 
-**Important**: `refreshInstallation()` section 4 regenerates only BME rows while preserving other modules' rows. The section must now:
-- Read the existing header to determine the schema
-- Write BME rows matching that schema
-- The `createAgentManifest()` in `install-vortex-agents.js` uses the old schema — this function only runs during fresh install (not update). Consider whether it needs updating or if `refreshInstallation()` section 4 handles it.
+**Detection logic:**
+1. If `agent-manifest.csv` exists → read first line as header, use it
+2. If no manifest exists → use v6.1.0 header as default
+3. Filter preserved rows by `module` column (v6.1.0) or `submodule` column (legacy), value `bme`
+4. Write BME rows matching the detected header's column count and order
+
+### Agent Registry → v6.1.0 Manifest Column Mapping
+
+| v6.1.0 Column | agent-registry.js Source | Notes |
+|---------------|--------------------------|-------|
+| `name` | `agent.name` | First name: Emma, Isla, etc. |
+| `displayName` | `""` | Empty — BMAD uses this for overrides |
+| `title` | `agent.title` | e.g., "Contextualization Expert" |
+| `icon` | `agent.icon` | Emoji |
+| `capabilities` | `""` | Not tracked in registry yet |
+| `role` | `agent.persona.role` | |
+| `identity` | `agent.persona.identity` | |
+| `communicationStyle` | `agent.persona.communication_style` | Note: camelCase in CSV, snake_case in registry |
+| `principles` | `agent.persona.expertise` | Closest semantic match |
+| `module` | `"bme"` | Hardcoded |
+| `path` | `_bmad/bme/_vortex/agents/${agent.id}.md` | |
+| `canonicalId` | `bmad-agent-bme-${agent.id}` | |
 
 ### External Module Spec Reference
 
@@ -203,11 +260,15 @@ Filename pattern: `bme-{lowercase-first-name}.customize.yaml` (e.g., `bme-emma.c
 
 **Critical**: These files must NOT be overwritten on re-install — they are user-editable. Use `fs.existsSync()` check before writing.
 
-### What NOT to Touch
+### Deferred to Future Stories
 
-- **Workflow manifests**: Do NOT register Vortex workflows in `workflow-manifest.csv` in this story — that manifest is managed by the BMAD installer, not Convoke. Adding entries would be overwritten on next BMAD update.
-- **Skill manifests**: Do NOT add `bmad-skill-manifest.yaml` to Vortex workflows — same reason; these are managed by the BMAD installer.
-- **`manifest.yaml`**: Do NOT add BME to `_bmad/_config/manifest.yaml` — that file tracks BMAD-installed modules. Convoke installs via npm, not the BMAD installer.
+These items are architecturally correct but not needed until Convoke has multiple teams or seeks BMAD org registration:
+
+- **Workflow manifests** (`workflow-manifest.csv`): Vortex workflows not registered — deferred to S5/S6 when Convoke becomes a registered external module
+- **Skill manifests** (`bmad-skill-manifest.yaml` per workflow): Not generated — deferred to S5/S6, these are BMAD-installer-managed for registered modules
+- **Installation manifest** (`manifest.yaml`): BME not listed — deferred to S6, this tracks BMAD-installer-managed modules
+- **Multi-team architecture**: Convoke as module collection with per-team install commands — deferred to S5 when Team 2 arrives
+- **BMAD external module registration**: Entry in `external-official-modules.yaml` — deferred to S6
 
 ### File Paths
 
@@ -219,26 +280,31 @@ Filename pattern: `bme-{lowercase-first-name}.customize.yaml` (e.g., `bme-emma.c
 - **Tests**: `tests/integration/fresh-install.test.js`
 - **New file**: `src/module.yaml`
 - **Delete**: `_bmad/bme/_config/module.yaml`
+- **Delete function**: `createAgentManifest()` in `scripts/install-vortex-agents.js`
 - **Customize files target**: `{projectRoot}/_bmad/_config/agents/bme-{agent-name}.customize.yaml`
 - **Customize file reference**: `_bmad/_config/agents/bmm-pm.customize.yaml`
+- **Docs to update**: `README.md`, `docs/WARP.md`, `INSTALLATION.md` (check), 7 user guides in `_bmad/bme/_vortex/guides/`
 
 ### Key Constraints
 
 - Do NOT add skill files to `package.json` `files` field — they are generated locally, not shipped
 - Do NOT modify `.gitignore` — `.claude/` is already ignored
 - The 7 agents and 21 workflows are defined in `agent-registry.js` — iterate over AGENTS, don't hardcode
-- The agent manifest section 4 must handle both old-format (fresh Convoke install without BMAD) and new-format (BMAD 6.1.0 present) CSV schemas gracefully
+- Frontmatter values in SKILL.md use NO quotes (match BMAD native: `name: bmad-analyst`, not `name: 'bmad-analyst'`)
 
 ### References
 
-- [Source: scripts/update/lib/refresh-installation.js] — section 6 to modify (lines 174-210)
+- [Source: scripts/update/lib/refresh-installation.js] — section 4 (manifest, lines 107-144) and section 6 (commands→skills, lines 174-210) to modify
 - [Source: scripts/update/lib/agent-registry.js] — AGENTS, WORKFLOWS constants
-- [Source: scripts/install-vortex-agents.js] — verifyInstallation (line 130), printSuccess (line 159), createAgentManifest (line 101)
+- [Source: scripts/install-vortex-agents.js] — `createAgentManifest()` to delete (line 101), `verifyInstallation()` (line 130), `printSuccess()` (line 159)
 - [Source: tests/integration/fresh-install.test.js] — 4 command tests to update (lines 81-136)
 - [Source: .claude/skills/bmad-agent-cis-brainstorming-coach/SKILL.md] — reference BMAD native skill pattern
 - [Source: .claude/skills/bmad-master/SKILL.md] — reference BMAD native skill pattern
-- [Source: _bmad/_config/agent-manifest.csv] — current v6.1.0 schema with canonicalId column
+- [Source: _bmad/_config/agent-manifest.csv] — current v6.1.0 12-column schema
+- [Source: _bmad/_config/agents/bmm-pm.customize.yaml] — reference customize file pattern
 - [Source: _bmad/_config/skill-manifest.csv] — 24 registered skills (0 from bme)
+- [Source: README.md] — line 158: "Claude Code (slash commands)" to update
+- [Source: docs/WARP.md] — line 169: ".claude/commands/" reference to update
 - [Source: _bmad-output/implementation-artifacts/s3-install-bme-slash-commands.md] — predecessor story
 - [Source: _bmad-output/planning-artifacts/initiatives-backlog.md#S4] — initiative definition
 
