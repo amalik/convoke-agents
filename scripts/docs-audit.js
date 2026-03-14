@@ -522,13 +522,13 @@ async function runAudit(opts = {}) {
     const content = fs.readFileSync(absPath, 'utf8');
     allDocsContent.push(content);
 
-    // Skip stale-reference checks for CHANGELOG — historical entries
-    // (e.g., "Added 4 agents" in v1.0) are accurate for their time period
+    // Skip stale-reference and broken-path checks for CHANGELOG — historical entries
+    // reference files that may have been deleted or renamed in past versions
     if (relPath !== 'CHANGELOG.md') {
       allFindings.push(...checkStaleReferences(content, relPath));
+      allFindings.push(...checkBrokenPaths(content, relPath, projectRoot));
     }
     allFindings.push(...checkBrokenLinks(content, relPath, projectRoot));
-    allFindings.push(...checkBrokenPaths(content, relPath, projectRoot));
     allFindings.push(...checkIncompleteAgentTables(content, relPath));
     allFindings.push(...checkInternalNamingLeaks(content, relPath));
     allFindings.push(...checkStaleBrandReferences(content, relPath));
