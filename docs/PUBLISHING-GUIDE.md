@@ -1,8 +1,10 @@
 # Convoke Publishing Guide
 
+> **ARCHIVED** — This document reflects the v1.0.0-alpha publishing workflow and contains outdated commands (e.g., `npx convoke-install`, legacy installer names). Retained for historical context. For current installation and update commands, see [README.md](../README.md) and [INSTALLATION.md](../INSTALLATION.md).
+
 **Date:** 2026-02-15
 **Version:** 1.0.0-alpha
-**Status:** Ready to publish
+**Status:** Archived
 
 ---
 
