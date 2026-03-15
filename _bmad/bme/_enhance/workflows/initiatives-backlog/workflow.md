@@ -46,7 +46,44 @@ Bootstraps a new RICE-scored backlog from scratch through guided interactive gat
 
 Load config from `{project-root}/_bmad/bme/_enhance/config.yaml`
 
-<!-- Mode dispatch: Story 1.3 will replace this section with the T/R/C menu and dispatch logic -->
-<!-- For now, this is a placeholder entry point. The mode management shell (tri-modal menu, -->
-<!-- "coming soon" placeholders, exit handling, and return-to-menu after mode completion) -->
-<!-- will be authored as part of Story 1.3: Mode Management Shell. -->
+## MODE SELECTION
+
+Display the following menu to the user:
+
+---
+
+**Initiatives Backlog — Select a Mode:**
+
+- **[T] Triage** — Ingest review findings into scored backlog items
+- **[R] Review** — Rescore existing backlog items to keep priorities calibrated
+- **[C] Create** — Bootstrap a new RICE-scored backlog from scratch
+- **[X] Exit** — Return to John PM agent menu
+
+---
+
+**ALWAYS halt and wait for user input after presenting the menu.**
+
+### Menu Handling Logic:
+
+- **IF T:** Load, read the entire file, and execute `{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/steps-t/step-t-01-ingest.md`
+- **IF R:** Display "**Coming soon** — Review mode will be available in a future update." then redisplay the Mode Selection menu above
+- **IF C:** Display "**Coming soon** — Create mode will be available in a future update." then redisplay the Mode Selection menu above
+- **IF X:** Display "Exiting Initiatives Backlog workflow." and end the workflow — return control to the John PM agent menu
+- **IF any other input:** Display "Unknown option. Please select **T**, **R**, **C**, or **X**." then redisplay the Mode Selection menu above
+
+### EXECUTION RULES:
+
+- ALWAYS halt and wait for user input after presenting the menu
+- Do NOT auto-select a mode — the user must explicitly choose (ADR-3)
+- Modes run independently — do NOT switch modes mid-execution (ADR-4)
+- After R or C (coming soon), redisplay this menu immediately
+- After X, end the workflow completely
+
+---
+
+<!-- RETURN-TO-MENU CONVENTION (for step file authors):
+     When the final step of any mode completes (e.g., step-t-04-update.md for Triage),
+     it must instruct the LLM to re-load this entire workflow file:
+     {project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/workflow.md
+     This re-presents the INITIALIZATION section and Mode Selection menu,
+     allowing the user to run another mode or exit (FR28). -->
