@@ -1,0 +1,9 @@
+# Extension descriptor for John PM agent
+# v1: Documentation-only — describes the patch-based menu item added by the installer
+# v3: Will be read dynamically by agents via <extensions> tag (future BMAD Method proposal)
+
+target_agent: bmm/pm
+menu_items:
+  - cmd: "IB or fuzzy match on initiatives-backlog"
+    exec: "{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/workflow.md"
+    label: "[IB] 📦 Initiatives Backlog (Convoke Enhance)"
