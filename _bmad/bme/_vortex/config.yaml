@@ -33,7 +33,7 @@ workflows:
   - learning-card
   - pivot-patch-persevere
   - vortex-navigation
-version: 2.3.0
+version: 2.3.1
 user_name: '{user}'
 communication_language: en
 party_mode_enabled: true
