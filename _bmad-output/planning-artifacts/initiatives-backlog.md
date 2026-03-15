@@ -70,7 +70,7 @@
 
 | # | Initiative | Source | R | I | C | E | Score | Track | Status |
 |---|-----------|--------|---|---|---|---|-------|-------|--------|
-| P4 | **Enhance module** — New BME section (`_bmad/bme/_enhance/`) that adds workflows and menu items to existing BMAD agents (BMM, CIS, BMB, TEA, Core). First enhancement: RICE initiatives backlog workflow for John PM. Positions Convoke as both "new teams" and "BMAD made better." [Architecture](P4-enhance-module-architecture.md) | Product owner | 8 | 3 | 70% | 6 | 2.8 | Move the needle | Backlog |
+| P4 | **Enhance module** — New BME section (`_bmad/bme/_enhance/`) that adds workflows and menu items to existing BMAD agents (BMM, CIS, BMB, TEA, Core). First enhancement: RICE initiatives backlog workflow for John PM. Positions Convoke as both "new teams" and "BMAD made better." [Architecture](P4-enhance-module-architecture.md) · [Epics](epics-p4-enhance-module.md) | Product owner | 8 | 3 | 70% | 6 | 2.8 | Move the needle | In Planning |
 | P1 | **Second domain-specialized team** — Design and build the next Convoke team beyond Vortex. Requires user discovery to identify which team to build. | Product vision, adjusted (Isla) | 8 | 3 | 50% | 10 | 1.2 | Move the needle | Backlog |
 | P3 | **Team installer architecture** — Generalize `convoke-install-vortex` to `convoke-install <team-name>` for multi-team support | Platform architecture | 6 | 1 | 80% | 4 | 1.2 | Move the needle | Backlog |
 | P2 | **Multi-team collaboration workflows** — Cross-team handoffs and routing between Vortex and future teams | Product vision, README roadmap | 5 | 2 | 30% | 8 | 0.4 | Move the needle | Blocked (needs P1) |
@@ -189,6 +189,7 @@ Remaining update system items not in Hardening: load-time validation, version de
 
 | Date | Change |
 |------|--------|
+| 2026-03-15 | P4 (Enhance module) advanced to In Planning. PRD complete (49 FRs, 9 NFRs), architecture aligned, pre-implementation spike validated (`<item exec="...">` confirmed), epics created (3 epics, 9 stories, 100% FR/NFR coverage). Implementation-ready. |
 | 2026-03-14 | Completed S4 (Migrate to skills format & native module compliance). Published as v2.2.0 on npm. Moved to Completed section. 24 active items remain. P4 (Enhance module) is now rank #1. |
 | 2026-03-14 | Updated S4 scope after adversarial review (12 findings) and party mode architecture session. Expanded from 8→10 tasks, 13→16 ACs. Added: manifest schema refactor, `createAgentManifest()` deletion, version bump, doc updates. Effort 3→5, score 6.0→3.6. Status: Ready (story file created). Still rank #1. |
 | 2026-03-14 | Added S4 (Migrate to skills format, score 6.0). BMAD Method v6.1.0 moved from `.claude/commands/` to `.claude/skills/` directory-per-skill structure. Now rank #1. 25 active items. |
