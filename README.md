@@ -15,7 +15,9 @@
 
 </div>
 
-Convoke organizes AI agents into domain-specialized teams. Each team brings deep expertise to a specific discipline — product discovery, implementation, operations, or whatever your domain requires. **Vortex**, the product discovery team, is the first. You can install teams independently or combine them.
+Convoke extends AI agents with two types of installable modules: **Teams** bring new agents for a domain, **Skills** add new capabilities to existing agents. Both are top-level modules — install them independently or combine them.
+
+**Vortex** is the first team (product discovery, 7 agents). **Enhance** is the first skill (RICE backlog management for the PM agent). More of each are coming.
 
 ---
 
@@ -200,14 +202,20 @@ Each workflow ends with a Compass routing suggestion. You don't need to follow a
 
 ```
 your-project/
-├── _bmad/bme/_vortex/
-│   ├── agents/           # 7 agent definition files
-│   ├── workflows/        # 22 workflows
-│   ├── contracts/        # Artifact contract schemas
-│   ├── guides/           # User guides (all 7 agents)
-│   └── config.yaml       # Configuration
+├── _bmad/bme/
+│   ├── _vortex/              # Team: Product Discovery
+│   │   ├── agents/           # 7 agent definition files
+│   │   ├── workflows/        # 22 workflows
+│   │   ├── contracts/        # Artifact contract schemas
+│   │   ├── guides/           # User guides (all 7 agents)
+│   │   └── config.yaml       # Configuration
+│   └── _enhance/             # Skill: Agent Capability Upgrades
+│       ├── workflows/        # Skill workflows (initiatives-backlog)
+│       ├── extensions/       # Agent menu patch descriptors
+│       ├── guides/           # Module author guide
+│       └── config.yaml       # Configuration
 └── _bmad-output/
-    └── vortex-artifacts/  # Generated artifacts
+    └── vortex-artifacts/     # Generated artifacts
 ```
 
 ---
@@ -256,21 +264,87 @@ For detailed workflow descriptions and usage examples, see the [Agent Guide](doc
 
 ---
 
+## Enhance — Agent Skills
+
+**Add new capabilities to existing agents without modifying them**
+
+[![Workflows](https://img.shields.io/badge/workflows-1-success)](_bmad/bme/_enhance/guides/ENHANCE-GUIDE.md)
+[![Modes](https://img.shields.io/badge/modes-3-blue)](_bmad/bme/_enhance/workflows/initiatives-backlog/workflow.md)
+
+Skills are the other half of Convoke's extensibility. While Teams bring new agents, Skills give existing agents new workflows — installed via menu patching, not agent modification.
+
+### Initiatives Backlog (PM Agent)
+
+The first Enhance skill adds RICE-scored backlog management to the PM agent. Three modes cover the full lifecycle:
+
+```
+                    Initiatives Backlog
+
+  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
+  │  [T] Triage │   │  [R] Review │   │  [C] Create │
+  │  Ingest new │   │   Rescore   │   │  Bootstrap   │
+  │  findings   │   │  existing   │   │  from scratch│
+  └──────┬──────┘   └──────┬──────┘   └──────┬──────┘
+         │                 │                 │
+         ▼                 ▼                 ▼
+  ┌──────────────────────────────────────────────────┐
+  │          initiatives-backlog.md                   │
+  │   RICE-scored · Categorized · Change-tracked     │
+  └──────────────────────────────────────────────────┘
+```
+
+| Mode | What it does |
+|------|-------------|
+| **Triage** | Ingest review findings, extract actionable items, propose RICE scores with two-gate validation, append to existing backlog |
+| **Review** | Walk through items one at a time, rescore where priorities have shifted, regenerate prioritized view |
+| **Create** | Gather initiatives interactively, batch-score with RICE, generate a complete backlog from scratch |
+
+#### Activate
+
+The Enhance skill appears in the PM agent's menu after installation:
+
+```
+[IB] Initiatives Backlog (Convoke Enhance)
+```
+
+Select it from the PM agent menu, or activate directly:
+
+**Claude Code (skills)**
+```
+/bmad-enhance-initiatives-backlog
+```
+
+**Claude Code (terminal) / Other AI assistants**
+```bash
+cat _bmad/bme/_enhance/workflows/initiatives-backlog/workflow.md
+```
+
+### Building Your Own Skills
+
+The [Enhance Guide](_bmad/bme/_enhance/guides/ENHANCE-GUIDE.md) documents the complete pattern for creating new skills: directory structure, step file architecture, agent menu patching, config registration, and verification integration. It uses the initiatives-backlog skill as the canonical example throughout.
+
+Max 2-3 skills per agent to prevent menu bloat and maintain agent focus.
+
+---
+
 ## How It Fits with BMAD Core
 
 Convoke handles **discovery and validation**. BMAD Core handles **implementation**.
 
 ```
-Convoke Teams                              BMAD Core
+Convoke Modules                            BMAD Core
 ┌──────────────────────────────┐          ┌──────────────────────┐
-│ Vortex (Product Discovery)   │ ──────>  │ PM → Architect → Dev │
-│   "Should we build this?"    │          │ "Let's build it"     │
+│ Teams                        │          │                      │
+│   Vortex (Product Discovery) │ ──────>  │ PM → Architect → Dev │
+│   [Future teams]             │          │ "Let's build it"     │
 │                              │ <──────  │                      │
-│ [Future teams]               │  signals │                      │
+│ Skills                       │  signals │                      │
+│   Enhance (Agent Upgrades)   │ ──────>  │                      │
+│   [Future skills]            │          │                      │
 └──────────────────────────────┘          └──────────────────────┘
 ```
 
-Convoke works standalone or as an extension — no BMAD Method installation required.
+Teams and Skills are peer module types — both installable, both independent. Convoke works standalone or as an extension — no BMAD Method installation required.
 
 ---
 
@@ -293,7 +367,8 @@ Convoke works standalone or as an extension — no BMAD Method installation requ
 - **v1.6.x** — Wave 3: Complete 7-stream Vortex (added Mila, Liam, Noah — 7 agents, 22 workflows, handoff contracts, Compass routing)
 - **v1.7.0** — Wave 4: Quality & onboarding (P0 test suite, docs audit tool, all 22 workflows production-ready, README overhaul, package size fix)
 - **v2.0.0** — Product renamed to Convoke. CLI commands renamed to `convoke-*`. Package: `npm install convoke-agents`
-- **Next** — Additional domain-specialized teams, multi-agent collaboration, cross-team workflows
+- **v2.x** — Enhance module: Skills architecture, RICE initiatives-backlog skill (Triage/Review/Create modes), module author pattern guide
+- **Next** — Additional teams, additional skills, multi-agent collaboration, cross-module workflows
 
 ---
 
