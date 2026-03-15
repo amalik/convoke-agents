@@ -78,3 +78,5 @@ name,description,module,path,canonicalId
 "scope-improvement","Create a focused scenario for a specific product improvement","wds","_bmad/wds/workflows/8-product-evolution/workflow-scope.md",""
 "acceptance-test","Test the implementation against the specification","wds","_bmad/wds/workflows/8-product-evolution/workflow-test.md",""
 "product-evolution","Brownfield improvements — the full WDS pipeline in miniature for existing products","wds","_bmad/wds/workflows/8-product-evolution/workflow.md",""
+
+"initiatives-backlog","Manage RICE initiatives backlog — triage review findings, rescore existing items, or bootstrap new backlogs.","bme","_bmad/bme/_enhance/workflows/initiatives-backlog/workflow.md","bmad-enhance-initiatives-backlog"
