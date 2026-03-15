@@ -66,7 +66,7 @@ Display the following menu to the user:
 ### Menu Handling Logic:
 
 - **IF T:** Load, read the entire file, and execute `{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/steps-t/step-t-01-ingest.md`
-- **IF R:** Display "**Coming soon** — Review mode will be available in a future update." then redisplay the Mode Selection menu above
+- **IF R:** Load, read the entire file, and execute `{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/steps-r/step-r-01-load.md`
 - **IF C:** Display "**Coming soon** — Create mode will be available in a future update." then redisplay the Mode Selection menu above
 - **IF X:** Display "Exiting Initiatives Backlog workflow." and end the workflow — return control to the John PM agent menu
 - **IF any other input:** Display "Unknown option. Please select **T**, **R**, **C**, or **X**." then redisplay the Mode Selection menu above
@@ -76,7 +76,7 @@ Display the following menu to the user:
 - ALWAYS halt and wait for user input after presenting the menu
 - Do NOT auto-select a mode — the user must explicitly choose (ADR-3)
 - Modes run independently — do NOT switch modes mid-execution (ADR-4)
-- After R or C (coming soon), redisplay this menu immediately
+- After C (coming soon), redisplay this menu immediately
 - After X, end the workflow completely
 
 ---
