@@ -192,6 +192,7 @@ development_status:
   enh-epic-2-retrospective: done
 
   # Epic 3: Create Mode & Pattern Documentation
-  enh-epic-3: in-progress
+  enh-epic-3: done
   enh-3-1-create-mode-bootstrap-new-rice-backlog: done
   enh-3-2-enhance-guide-pattern-documentation: done
+  enh-epic-2-3-retrospective: done
