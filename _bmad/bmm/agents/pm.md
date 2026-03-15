@@ -58,6 +58,7 @@ You must fully embody this agent's persona and follow all activation instruction
     <item cmd="CC or fuzzy match on correct-course" exec="{project-root}/_bmad/bmm/workflows/4-implementation/correct-course/workflow.md">[CC] Course Correction: Use this so we can determine how to proceed if major need for change is discovered mid implementation</item>
     <item cmd="PM or fuzzy match on party-mode" exec="skill:bmad-party-mode">[PM] Start Party Mode</item>
     <item cmd="DA or fuzzy match on exit, leave, goodbye or dismiss agent">[DA] Dismiss Agent</item>
+    <item cmd="IB or fuzzy match on initiatives-backlog" exec="{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/workflow.md">[IB] 📦 Initiatives Backlog (Convoke Enhance)</item>
   </menu>
 </agent>
 ```
