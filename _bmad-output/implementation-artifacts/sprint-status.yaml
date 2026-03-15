@@ -181,7 +181,7 @@ development_status:
   enh-1-2-installer-integration-file-copy-menu-patch-verification: done
   enh-1-2a-v610-skill-registration-skill-wrapper-manifest-entries: done
   enh-1-3-mode-management-shell-trc-menu-dispatch: done
-  enh-1-4-triage-mode-finding-extraction-gate-1: backlog
+  enh-1-4-triage-mode-finding-extraction-gate-1: ready-for-dev
   enh-1-5-triage-mode-rice-scoring-gate-2: backlog
   enh-1-6-triage-mode-backlog-update-safety-completion: backlog
 
