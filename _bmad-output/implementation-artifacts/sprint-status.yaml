@@ -187,8 +187,8 @@ development_status:
   enh-epic-1-retrospective: done
 
   # Epic 2: Review Mode — Rescore Existing Backlog Items
-  enh-epic-2: backlog
-  enh-2-1-review-mode-backlog-walkthrough-rescoring: backlog
+  enh-epic-2: in-progress
+  enh-2-1-review-mode-backlog-walkthrough-rescoring: ready-for-dev
 
   # Epic 3: Create Mode & Pattern Documentation
   enh-epic-3: backlog
