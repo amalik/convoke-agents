@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-08
 **Method:** RICE (Reach, Impact, Confidence, Effort)
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-03-16
 
 ---
 
@@ -50,11 +50,10 @@
 
 | # | Initiative | Source | R | I | C | E | Score | Track | Status |
 |---|-----------|--------|---|---|---|---|-------|-------|--------|
-| I2 | **`gh auth` for CI release creation** — Automate GitHub release notes on tag push | CI/CD | 6 | 1 | 80% | 2 | 2.4 | Keep the lights on | Backlog |
+| I2 | **`gh auth` for CI release creation** — Automate GitHub release notes on tag push. Confirmed blocker: `gh auth login` not configured locally (hit during v2.4.0 release, manual workaround used). | CI/CD | 6 | 1 | 80% | 2 | 2.4 | Keep the lights on | Backlog |
 | I1 | **NPM_TOKEN secret for CI publish** — Enable automated `npm publish` on tag push via GitHub Actions | CI/CD, adjusted (Victor) | 8 | 2 | 90% | 8 | 1.8 | Keep the lights on | Backlog |
-| S1 | **Interactive installer with project-type questions** — Ask user questions during install to customize initial config (e.g., B2B/B2C, team size) | Multi-agent review (Sally) | 5 | 2 | 50% | 5 | 1.0 | Move the needle | Backlog |
-| S2 | **Simplified entry point** — Single "Start Discovery" command that activates Emma with a guided first-run experience | Multi-agent review (Sally) | 7 | 1 | 40% | 4 | 0.7 | Move the needle | Backlog |
-| S4 | **Migrate to skills format & native module compliance** — Phase 1 of native module convergence: (1) Convert `.claude/commands/` to `.claude/skills/<name>/SKILL.md` (activation is broken since BMAD v6.1.0 update), (2) Refactor agent manifest to full v6.1.0 12-column schema, (3) Create `src/module.yaml` per external module spec, (4) Generate `bme-*.customize.yaml` agent files, (5) Delete redundant `createAgentManifest()`, (6) Update docs. 10 tasks, 16 ACs. | BMAD v6.1.0 compatibility review + adversarial review + party mode session | 10 | 2 | 90% | 5 | 3.6 | Move the needle | Done |
+| S1 | **Interactive installer with project-type questions** — Ask user questions during install to customize initial config (e.g., B2B/B2C, team size). Note: must account for Skills installation alongside Teams — Enhance module added a second installable module type (v2.4.0). | Multi-agent review (Sally) | 5 | 2 | 50% | 5 | 1.0 | Move the needle | Backlog |
+| S2 | **Simplified entry point** — Single "Start Discovery" command that activates Emma with a guided first-run experience. Note: Enhance skill activation UX (keyword in chat) provides a reference pattern for low-friction entry points. | Multi-agent review (Sally) | 7 | 1 | 40% | 4 | 0.7 | Move the needle | Backlog |
 | I3 | **CSV parser library for manifest** — Replace regex-based CSV parsing in `refresh-installation.js` with proper parser | Murat review | 2 | 0.25 | 70% | 1 | 0.4 | Keep the lights on | Backlog |
 
 ### Agent Quality & Consistency
@@ -70,10 +69,9 @@
 
 | # | Initiative | Source | R | I | C | E | Score | Track | Status |
 |---|-----------|--------|---|---|---|---|-------|-------|--------|
-| P4 | **Enhance module** — New BME section (`_bmad/bme/_enhance/`) that adds workflows and menu items to existing BMAD agents (BMM, CIS, BMB, TEA, Core). First enhancement: RICE initiatives backlog workflow for John PM. Positions Convoke as both "new teams" and "BMAD made better." [Architecture](P4-enhance-module-architecture.md) · [Epics](epics-p4-enhance-module.md) | Product owner | 8 | 3 | 70% | 6 | 2.8 | Move the needle | In Planning |
-| P1 | **Second domain-specialized team** — Design and build the next Convoke team beyond Vortex. Requires user discovery to identify which team to build. | Product vision, adjusted (Isla) | 8 | 3 | 50% | 10 | 1.2 | Move the needle | Backlog |
-| P3 | **Team installer architecture** — Generalize `convoke-install-vortex` to `convoke-install <team-name>` for multi-team support | Platform architecture | 6 | 1 | 80% | 4 | 1.2 | Move the needle | Backlog |
-| P2 | **Multi-team collaboration workflows** — Cross-team handoffs and routing between Vortex and future teams | Product vision, README roadmap | 5 | 2 | 30% | 8 | 0.4 | Move the needle | Blocked (needs P1) |
+| P1 | **Second domain-specialized team** — Design and build the next Convoke team beyond Vortex. Requires user discovery to identify which team to build. Note: Skills (Enhance module) now offer a parallel growth path — new capabilities via Skills may be higher ROI than a full new team. | Product vision, adjusted (Isla) | 8 | 3 | 50% | 10 | 1.2 | Move the needle | Backlog |
+| P3 | **Team installer architecture** — Generalize `convoke-install-vortex` to `convoke-install <module-name>` for multi-module support. Note: Enhance module proves the extensibility pattern — installer already handles Skills alongside Teams (v2.4.0). | Platform architecture | 6 | 1 | 80% | 4 | 1.2 | Move the needle | Backlog |
+| P2 | **Multi-module collaboration workflows** — Cross-module handoffs and routing between Teams (Vortex) and Skills (Enhance). Scope expanded: not just cross-team, but cross-module (e.g., Enhance backlog feeding Vortex discovery). | Product vision, README roadmap | 5 | 2 | 30% | 8 | 0.4 | Move the needle | Blocked (needs P1) |
 
 ---
 
@@ -108,8 +106,8 @@ Automate the publish and release flow. I1 (NPM_TOKEN) is the prerequisite; I2 (g
 ### Epic: "Test Debt Cleanup" (T1 + T2 + T5)
 Batch low-priority coverage gaps in existing CLI scripts. All low-score housekeeping that benefits from a single focused pass.
 
-### Epic: "Platform Foundation" (P3 + P4 → P1 → P2)
-The multi-team future. P3 (installer architecture) and P4 (Enhance module) are independent prerequisites; P1 (second team) follows; P2 (cross-team workflows) depends on P1.
+### Epic: "Platform Foundation" (P3 → P1 → P2)
+The multi-module future. P4 (Enhance module) is done (v2.4.0) — proved the Skills extensibility pattern. P3 (installer architecture) generalizes for multi-module support; P1 (second team) follows; P2 (cross-module workflows) depends on P1.
 
 ### Epic: "Agent Compliance Sweep" (A1 + A2 + A3 + A4)
 Four small agent quality items that can be swept in a single pass: validate menus, source files, npm keywords, temp dir prefix.
@@ -123,34 +121,39 @@ Remaining update system items not in Hardening: load-time validation, version de
 
 | Rank | # | Initiative | Score | Track | Category |
 |------|---|-----------|-------|-------|----------|
-| 1 | P4 | Enhance module | 2.8 | Move the needle | Platform |
-| 2 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
-| 3 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
-| 4 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
-| 5 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
-| 6 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
-| 7 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
-| 8 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
-| 9 | P1 | Second domain-specialized team | 1.2 | Move the needle | Platform |
-| 10 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
-| 11 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
-| 12 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
-| 13 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
-| 14 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
-| 15 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
-| 16 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
-| 17 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
-| 18 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
-| 19 | P2 | Multi-team collaboration workflows | 0.4 | Move the needle | Platform |
-| 20 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
-| 21 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
-| 22 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
-| 23 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
-| 24 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
+| 1 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
+| 2 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
+| 3 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
+| 4 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
+| 5 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
+| 6 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
+| 7 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
+| 8 | P1 | Second domain-specialized team | 1.2 | Move the needle | Platform |
+| 9 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
+| 10 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
+| 11 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
+| 12 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
+| 13 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
+| 14 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
+| 15 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
+| 16 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
+| 17 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
+| 18 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Platform |
+| 19 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
+| 20 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
+| 21 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
+| 22 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
+| 23 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
 
 ---
 
 ## Completed
+
+### 2026-03-16
+
+| # | Initiative | Score | Category |
+|---|-----------|-------|----------|
+| P4 | **Enhance module** — Shipped as v2.4.0. New BME section with RICE initiatives backlog skill (3 modes). | 2.8 | Platform |
 
 ### 2026-03-14
 
@@ -189,6 +192,7 @@ Remaining update system items not in Hardening: load-time validation, version de
 
 | Date | Change |
 |------|--------|
+| 2026-03-16 | Triage: landscape review after Enhance module (v2.4.0) and BMAD v6.1.0. Merged 7 observations into existing items: P4 moved to Completed, P1/P3/P2/S1/S2/I2 descriptions updated with post-Enhance context. Removed S4 from active (already completed 2026-03-14). Epic groupings updated (Platform Foundation: P4 done). 23 active items remain. |
 | 2026-03-15 | P4 (Enhance module) advanced to In Planning. PRD complete (49 FRs, 9 NFRs), architecture aligned, pre-implementation spike validated (`<item exec="...">` confirmed), epics created (3 epics, 9 stories, 100% FR/NFR coverage). Implementation-ready. |
 | 2026-03-14 | Completed S4 (Migrate to skills format & native module compliance). Published as v2.2.0 on npm. Moved to Completed section. 24 active items remain. P4 (Enhance module) is now rank #1. |
 | 2026-03-14 | Updated S4 scope after adversarial review (12 findings) and party mode architecture session. Expanded from 8→10 tasks, 13→16 ACs. Added: manifest schema refactor, `createAgentManifest()` deletion, version bump, doc updates. Effort 3→5, score 6.0→3.6. Status: Ready (story file created). Still rank #1. |
