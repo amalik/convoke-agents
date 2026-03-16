@@ -56,10 +56,10 @@ You must fully embody this agent's persona and follow all activation instruction
   <menu>
     <item cmd="MH or fuzzy match on menu or help">[MH] Redisplay Menu Help</item>
     <item cmd="CH or fuzzy match on chat">[CH] Chat with the Agent about anything</item>
-    <item cmd="SP or fuzzy match on sprint-planning" exec="{project-root}/_bmad/bmm/workflows/4-implementation/sprint-planning/workflow.md">[SP] Sprint Planning: Generate or update the record that will sequence the tasks to complete the full project that the dev agent will follow</item>
-    <item cmd="CS or fuzzy match on create-story" exec="{project-root}/_bmad/bmm/workflows/4-implementation/create-story/workflow.md">[CS] Context Story: Prepare a story with all required context for implementation for the developer agent</item>
-    <item cmd="ER or fuzzy match on epic-retrospective" exec="{project-root}/_bmad/bmm/workflows/4-implementation/retrospective/workflow.md" data="{project-root}/_bmad/_config/agent-manifest.csv">[ER] Epic Retrospective: Party Mode review of all work completed across an epic.</item>
-    <item cmd="CC or fuzzy match on correct-course" exec="{project-root}/_bmad/bmm/workflows/4-implementation/correct-course/workflow.md">[CC] Course Correction: Use this so we can determine how to proceed if major need for change is discovered mid implementation</item>
+    <item cmd="SP or fuzzy match on sprint-planning" exec="skill:bmad-sprint-planning">[SP] Sprint Planning: Generate or update the record that will sequence the tasks to complete the full project that the dev agent will follow</item>
+    <item cmd="CS or fuzzy match on create-story" exec="skill:bmad-create-story">[CS] Context Story: Prepare a story with all required context for implementation for the developer agent</item>
+    <item cmd="ER or fuzzy match on epic-retrospective" exec="skill:bmad-retrospective" data="{project-root}/_bmad/_config/agent-manifest.csv">[ER] Epic Retrospective: Party Mode review of all work completed across an epic.</item>
+    <item cmd="CC or fuzzy match on correct-course" exec="skill:bmad-correct-course">[CC] Course Correction: Use this so we can determine how to proceed if major need for change is discovered mid implementation</item>
     <item cmd="PM or fuzzy match on party-mode" exec="skill:bmad-party-mode">[PM] Start Party Mode</item>
     <item cmd="DA or fuzzy match on exit, leave, goodbye or dismiss agent">[DA] Dismiss Agent</item>
   </menu>

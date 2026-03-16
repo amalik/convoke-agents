@@ -50,15 +50,14 @@ You must fully embody this agent's persona and follow all activation instruction
   <menu>
     <item cmd="MH or fuzzy match on menu or help">[MH] Redisplay Menu Help</item>
     <item cmd="CH or fuzzy match on chat">[CH] Chat with the Agent about anything</item>
-    <item cmd="CP or fuzzy match on create-prd" exec="{project-root}/_bmad/bmm/workflows/2-plan-workflows/create-prd/workflow-create-prd.md">[CP] Create PRD: Expert led facilitation to produce your Product Requirements Document</item>
-    <item cmd="VP or fuzzy match on validate-prd" exec="{project-root}/_bmad/bmm/workflows/2-plan-workflows/create-prd/workflow-validate-prd.md">[VP] Validate PRD: Validate a Product Requirements Document is comprehensive, lean, well organized and cohesive</item>
-    <item cmd="EP or fuzzy match on edit-prd" exec="{project-root}/_bmad/bmm/workflows/2-plan-workflows/create-prd/workflow-edit-prd.md">[EP] Edit PRD: Update an existing Product Requirements Document</item>
-    <item cmd="CE or fuzzy match on epics-stories" exec="{project-root}/_bmad/bmm/workflows/3-solutioning/create-epics-and-stories/workflow.md">[CE] Create Epics and Stories: Create the Epics and Stories Listing, these are the specs that will drive development</item>
-    <item cmd="IR or fuzzy match on implementation-readiness" exec="{project-root}/_bmad/bmm/workflows/3-solutioning/check-implementation-readiness/workflow.md">[IR] Implementation Readiness: Ensure the PRD, UX, and Architecture and Epics and Stories List are all aligned</item>
-    <item cmd="CC or fuzzy match on correct-course" exec="{project-root}/_bmad/bmm/workflows/4-implementation/correct-course/workflow.md">[CC] Course Correction: Use this so we can determine how to proceed if major need for change is discovered mid implementation</item>
+    <item cmd="CP or fuzzy match on create-prd" exec="skill:bmad-create-prd">[CP] Create PRD: Expert led facilitation to produce your Product Requirements Document</item>
+    <item cmd="VP or fuzzy match on validate-prd" exec="skill:bmad-validate-prd">[VP] Validate PRD: Validate a Product Requirements Document is comprehensive, lean, well organized and cohesive</item>
+    <item cmd="EP or fuzzy match on edit-prd" exec="skill:bmad-edit-prd">[EP] Edit PRD: Update an existing Product Requirements Document</item>
+    <item cmd="CE or fuzzy match on epics-stories" exec="skill:bmad-create-epics-and-stories">[CE] Create Epics and Stories: Create the Epics and Stories Listing, these are the specs that will drive development</item>
+    <item cmd="IR or fuzzy match on implementation-readiness" exec="skill:bmad-check-implementation-readiness">[IR] Implementation Readiness: Ensure the PRD, UX, and Architecture and Epics and Stories List are all aligned</item>
+    <item cmd="CC or fuzzy match on correct-course" exec="skill:bmad-correct-course">[CC] Course Correction: Use this so we can determine how to proceed if major need for change is discovered mid implementation</item>
     <item cmd="PM or fuzzy match on party-mode" exec="skill:bmad-party-mode">[PM] Start Party Mode</item>
     <item cmd="DA or fuzzy match on exit, leave, goodbye or dismiss agent">[DA] Dismiss Agent</item>
-    <item cmd="IB or fuzzy match on initiatives-backlog" exec="{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/workflow.md">[IB] 📦 Initiatives Backlog (Convoke Enhance)</item>
   </menu>
 </agent>
 ```

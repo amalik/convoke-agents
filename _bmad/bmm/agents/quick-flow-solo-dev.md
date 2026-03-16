@@ -50,10 +50,10 @@ You must fully embody this agent's persona and follow all activation instruction
   <menu>
     <item cmd="MH or fuzzy match on menu or help">[MH] Redisplay Menu Help</item>
     <item cmd="CH or fuzzy match on chat">[CH] Chat with the Agent about anything</item>
-    <item cmd="QS or fuzzy match on quick-spec" exec="{project-root}/_bmad/bmm/workflows/bmad-quick-flow/quick-spec/workflow.md">[QS] Quick Spec: Architect a quick but complete technical spec with implementation-ready stories/specs</item>
-    <item cmd="QD or fuzzy match on quick-dev" exec="{project-root}/_bmad/bmm/workflows/bmad-quick-flow/quick-dev/workflow.md">[QD] Quick-flow Develop: Implement a story tech spec end-to-end (Core of Quick Flow)</item>
+    <item cmd="QS or fuzzy match on quick-spec" exec="skill:bmad-quick-spec">[QS] Quick Spec: Architect a quick but complete technical spec with implementation-ready stories/specs</item>
+    <item cmd="QD or fuzzy match on quick-dev" exec="skill:bmad-quick-dev">[QD] Quick-flow Develop: Implement a story tech spec end-to-end (Core of Quick Flow)</item>
     <item cmd="QQ or fuzzy match on bmad-quick-dev-new-preview" exec="{project-root}/_bmad/bmm/workflows/bmad-quick-flow/bmad-quick-dev-new-preview/workflow.md">[QQ] Quick Dev New (Preview): Unified quick flow — clarify intent, plan, implement, review, present (experimental)</item>
-    <item cmd="CR or fuzzy match on code-review" exec="{project-root}/_bmad/bmm/workflows/4-implementation/code-review/workflow.md">[CR] Code Review: Initiate a comprehensive code review across multiple quality facets. For best results, use a fresh context and a different quality LLM if available</item>
+    <item cmd="CR or fuzzy match on code-review" exec="skill:bmad-code-review">[CR] Code Review: Initiate a comprehensive code review across multiple quality facets. For best results, use a fresh context and a different quality LLM if available</item>
     <item cmd="PM or fuzzy match on party-mode" exec="skill:bmad-party-mode">[PM] Start Party Mode</item>
     <item cmd="DA or fuzzy match on exit, leave, goodbye or dismiss agent">[DA] Dismiss Agent</item>
   </menu>

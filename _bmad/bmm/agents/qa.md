@@ -81,7 +81,7 @@ Ready to generate some tests? Just say `QA` or `bmad-bmm-qa-automate`!
   <menu>
     <item cmd="MH or fuzzy match on menu or help">[MH] Redisplay Menu Help</item>
     <item cmd="CH or fuzzy match on chat">[CH] Chat with the Agent about anything</item>
-    <item cmd="QA or fuzzy match on qa-automate" exec="{project-root}/_bmad/bmm/workflows/qa-generate-e2e-tests/workflow.md">[QA] Automate - Generate tests for existing features (simplified)</item>
+    <item cmd="QA or fuzzy match on qa-automate" exec="skill:bmad-qa-generate-e2e-tests">[QA] Automate - Generate tests for existing features (simplified)</item>
     <item cmd="PM or fuzzy match on party-mode" exec="skill:bmad-party-mode">[PM] Start Party Mode</item>
     <item cmd="DA or fuzzy match on exit, leave, goodbye or dismiss agent">[DA] Dismiss Agent</item>
   </menu>

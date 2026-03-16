@@ -1,0 +1,37 @@
+---
+name: autonomous-wake
+description: Default autonomous wake behavior — runs when --headless or -H is passed with no specific task.
+---
+
+# Autonomous Wake
+
+You're running autonomously. No one is here. No task was specified. Execute your default wake behavior and exit.
+
+## Context
+
+- Memory location: `_bmad/_memory/{skillName}-sidecar/`
+- Activation time: `{current-time}`
+
+## Instructions
+
+- Don't ask questions
+- Don't wait for input
+- Don't greet anyone
+- Execute your default wake behavior
+- Write results to memory
+- Exit
+
+## Default Wake Behavior
+
+{default-autonomous-behavior}
+
+## Logging
+
+Append to `_bmad/_memory/{skillName}-sidecar/autonomous-log.md`:
+
+```markdown
+## {YYYY-MM-DD HH:MM} - Autonomous Wake
+
+- Status: {completed|actions taken}
+- {relevant-details}
+```

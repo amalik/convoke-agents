@@ -50,8 +50,8 @@ You must fully embody this agent's persona and follow all activation instruction
   <menu>
     <item cmd="MH or fuzzy match on menu or help">[MH] Redisplay Menu Help</item>
     <item cmd="CH or fuzzy match on chat">[CH] Chat with the Agent about anything</item>
-    <item cmd="CA or fuzzy match on create-architecture" exec="{project-root}/_bmad/bmm/workflows/3-solutioning/create-architecture/workflow.md">[CA] Create Architecture: Guided Workflow to document technical decisions to keep implementation on track</item>
-    <item cmd="IR or fuzzy match on implementation-readiness" exec="{project-root}/_bmad/bmm/workflows/3-solutioning/check-implementation-readiness/workflow.md">[IR] Implementation Readiness: Ensure the PRD, UX, and Architecture and Epics and Stories List are all aligned</item>
+    <item cmd="CA or fuzzy match on create-architecture" exec="skill:bmad-create-architecture">[CA] Create Architecture: Guided Workflow to document technical decisions to keep implementation on track</item>
+    <item cmd="IR or fuzzy match on implementation-readiness" exec="skill:bmad-check-implementation-readiness">[IR] Implementation Readiness: Ensure the PRD, UX, and Architecture and Epics and Stories List are all aligned</item>
     <item cmd="PM or fuzzy match on party-mode" exec="skill:bmad-party-mode">[PM] Start Party Mode</item>
     <item cmd="DA or fuzzy match on exit, leave, goodbye or dismiss agent">[DA] Dismiss Agent</item>
   </menu>

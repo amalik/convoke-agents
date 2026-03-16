@@ -50,7 +50,7 @@ You must fully embody this agent's persona and follow all activation instruction
   <menu>
     <item cmd="MH or fuzzy match on menu or help">[MH] Redisplay Menu Help</item>
     <item cmd="CH or fuzzy match on chat">[CH] Chat with the Agent about anything</item>
-    <item cmd="CU or fuzzy match on ux-design" exec="{project-root}/_bmad/bmm/workflows/2-plan-workflows/create-ux-design/workflow.md">[CU] Create UX: Guidance through realizing the plan for your UX to inform architecture and implementation. Provides more details than what was discovered in the PRD</item>
+    <item cmd="CU or fuzzy match on ux-design" exec="skill:bmad-create-ux-design">[CU] Create UX: Guidance through realizing the plan for your UX to inform architecture and implementation. Provides more details than what was discovered in the PRD</item>
     <item cmd="PM or fuzzy match on party-mode" exec="skill:bmad-party-mode">[PM] Start Party Mode</item>
     <item cmd="DA or fuzzy match on exit, leave, goodbye or dismiss agent">[DA] Dismiss Agent</item>
   </menu>

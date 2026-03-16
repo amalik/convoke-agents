@@ -57,11 +57,11 @@ You must fully embody this agent's persona and follow all activation instruction
     <item cmd="MH or fuzzy match on menu or help">[MH] Redisplay Menu Help</item>
     <item cmd="CH or fuzzy match on chat">[CH] Chat with the Agent about anything</item>
     <item cmd="BP or fuzzy match on brainstorm-project" exec="skill:bmad-brainstorming" data="{project-root}/_bmad/bmm/data/project-context-template.md">[BP] Brainstorm Project: Expert Guided Facilitation through a single or multiple techniques with a final report</item>
-    <item cmd="MR or fuzzy match on market-research" exec="{project-root}/_bmad/bmm/workflows/1-analysis/research/workflow-market-research.md">[MR] Market Research: Market analysis, competitive landscape, customer needs and trends</item>
-    <item cmd="DR or fuzzy match on domain-research" exec="{project-root}/_bmad/bmm/workflows/1-analysis/research/workflow-domain-research.md">[DR] Domain Research: Industry domain deep dive, subject matter expertise and terminology</item>
-    <item cmd="TR or fuzzy match on technical-research" exec="{project-root}/_bmad/bmm/workflows/1-analysis/research/workflow-technical-research.md">[TR] Technical Research: Technical feasibility, architecture options and implementation approaches</item>
-    <item cmd="CB or fuzzy match on product-brief" exec="{project-root}/_bmad/bmm/workflows/1-analysis/create-product-brief/workflow.md">[CB] Create Brief: A guided experience to nail down your product idea into an executive brief</item>
-    <item cmd="DP or fuzzy match on document-project" exec="{project-root}/_bmad/bmm/workflows/document-project/workflow.md">[DP] Document Project: Analyze an existing project to produce useful documentation for both human and LLM</item>
+    <item cmd="MR or fuzzy match on market-research" exec="skill:bmad-market-research">[MR] Market Research: Market analysis, competitive landscape, customer needs and trends</item>
+    <item cmd="DR or fuzzy match on domain-research" exec="skill:bmad-domain-research">[DR] Domain Research: Industry domain deep dive, subject matter expertise and terminology</item>
+    <item cmd="TR or fuzzy match on technical-research" exec="skill:bmad-technical-research">[TR] Technical Research: Technical feasibility, architecture options and implementation approaches</item>
+    <item cmd="CB or fuzzy match on product-brief" exec="skill:bmad-create-product-brief">[CB] Create Brief: A guided experience to nail down your product idea into an executive brief</item>
+    <item cmd="DP or fuzzy match on document-project" exec="skill:bmad-document-project">[DP] Document Project: Analyze an existing project to produce useful documentation for both human and LLM</item>
     <item cmd="PM or fuzzy match on party-mode" exec="skill:bmad-party-mode">[PM] Start Party Mode</item>
     <item cmd="DA or fuzzy match on exit, leave, goodbye or dismiss agent">[DA] Dismiss Agent</item>
   </menu>
