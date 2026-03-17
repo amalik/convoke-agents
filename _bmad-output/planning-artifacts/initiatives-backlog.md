@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-08
 **Method:** RICE (Reach, Impact, Confidence, Effort)
-**Last Updated:** 2026-03-16
+**Last Updated:** 2026-03-17
 
 ---
 
@@ -70,9 +70,11 @@
 
 | # | Initiative | Source | R | I | C | E | Score | Track | Status |
 |---|-----------|--------|---|---|---|---|-------|-------|--------|
-| P1 | **Second domain-specialized team** — Design and build the next Convoke team beyond Vortex. Requires user discovery to identify which team to build. Note: Skills (Enhance module) now offer a parallel growth path — new capabilities via Skills may be higher ROI than a full new team. | Product vision, adjusted (Isla) | 8 | 3 | 50% | 10 | 1.2 | Move the needle | Backlog |
+| P1 | **Second domain-specialized team (Gyre)** — Operational readiness team for industrialization, operations, and scaling. 7-stream Vortex pattern maps to: contextualize product → empathize with ops/users → synthesize risk areas → hypothesize readiness criteria → test in staging → monitor in prod → systematize runbooks. Completes the Vortex → BMM → Gyre product lifecycle pipeline. Note: Skills (Enhance module) now offer a parallel growth path — new capabilities via Skills may be higher ROI than a full new team. | Product vision, adjusted (Isla). Merged: party-mode team exploration, 2026-03-17 | 8 | 3 | 50% | 10 | 1.2 | Move the needle | Backlog |
 | P3 | **Team installer architecture** — Generalize `convoke-install-vortex` to `convoke-install <module-name>` for multi-module support. Note: Enhance module proves the extensibility pattern (v2.4.0). v6.2.0 introduced `bmad-skill-manifest.yaml` for skill package discovery — installer should understand this convention. | Platform architecture | 6 | 1 | 80% | 4 | 1.2 | Move the needle | Backlog |
 | P2 | **Multi-module collaboration workflows** — Cross-module handoffs and routing between Teams (Vortex) and Skills (Enhance). Scope expanded: not just cross-team, but cross-module (e.g., Enhance backlog feeding Vortex discovery). | Product vision, README roadmap | 5 | 2 | 30% | 8 | 0.4 | Move the needle | Blocked (needs P1) |
+| P7 | **ML/AI Engineering team exploration** — Discovery spike to determine team-vs-skill question for ML/AI domain. Map ML lifecycle (problem → data exploration → experiment → validate → deploy → monitor) against Vortex streams and BMM workflow. Options: new team (3-4 dedicated agents) vs Enhance-style skill modules for existing agents. Added from party-mode team exploration, 2026-03-17 | Party-mode review (Victor, Winston, user) | 6 | 2 | 30% | 3 | 1.2 | Move the needle | Backlog |
+| P8 | **Governance & Support skill set** — Transversal advisory skills (compliance, coaching, change management, organizational health) that augment existing agents. "Review and advise" pattern — not a team but cross-cutting capability. Skills for PM (compliance), SM (coaching), Architect (change management). Reframe of Ethics & Legal into broader scope. Added from party-mode team exploration, 2026-03-17 | Party-mode review (Emma, Victor, user) | 5 | 1 | 30% | 3 | 0.5 | Move the needle | Backlog |
 
 ---
 
@@ -83,7 +85,7 @@ These initiatives are promising but need discovery work before scoring. Not yet 
 | # | Initiative | Source | Next Step |
 |---|-----------|--------|-----------|
 | N1 | **Usage telemetry (opt-in)** — Track which workflows are used, completion rates, and drop-off points to inform backlog priorities | Multi-agent review (Noah) | Define what to track and privacy model |
-| P1-disc | **User discovery for second team** — Research which domain-specialized team would deliver the most value after Vortex. Candidates: Data Science/AI Engineering, Ethics & Legal Compliance, Standard Authority | Multi-agent review (Isla), product owner | Interview current users or survey target audience |
+| P1-disc | **User discovery for Gyre team** — Validate operational readiness as highest-value second team. Experiment: interview 5 teams on discovery-to-production gap, categorize pain into Standard Authority sub-domains. Complement with best practices literature (SRE golden signals, DORA metrics, Google/Netflix readiness checklists). Top 2-3 pain areas become Gyre's scope. | Multi-agent review (Isla), product owner. Merged: party-mode team exploration, 2026-03-17 | 5-team interview experiment + best practices literature review |
 | P5 | **Convoke website** — Public website for Convoke: positioning, documentation, team showcase, getting started guide, and community | Product owner | Define scope (landing page vs. full docs site), hosting, and content strategy |
 | P6 | **Tool-enabled agents** — Allow select agents to use external tools (MCP servers, CLI commands, file operations) beyond pure conversation. Evaluate which agents benefit from tool access and what guardrails are needed | Product owner | Identify candidate agents, define tool access model, assess security/trust implications |
 | H4 | **Validate "strategic conversation" hypothesis** — Do RICE scoring questions prompt genuine reflection or rubber-stamping? Measure whether users modify their initial instinct on at least 1 score per triage session (modification = engagement). Source: P4 PRD Innovation Hypothesis H4 | P4 PRD (Innovation Hypotheses) | Run 3+ triage sessions, track per-session score modification rate |
@@ -130,22 +132,24 @@ Remaining update system items not in Hardening: load-time validation, version de
 | 6 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
 | 7 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
 | 8 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
-| 9 | P1 | Second domain-specialized team | 1.2 | Move the needle | Platform |
+| 9 | P1 | Second domain-specialized team (Gyre) | 1.2 | Move the needle | Platform |
 | 10 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
-| 11 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
-| 12 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
-| 13 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
-| 14 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
-| 15 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
-| 16 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
-| 17 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
-| 18 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
-| 19 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Platform |
-| 20 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
-| 21 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
-| 22 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
-| 23 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
-| 24 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
+| 11 | P7 | ML/AI Engineering team exploration | 1.2 | Move the needle | Platform |
+| 12 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
+| 13 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
+| 14 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
+| 15 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
+| 16 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
+| 17 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
+| 18 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
+| 19 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
+| 20 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
+| 21 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Platform |
+| 22 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
+| 23 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
+| 24 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
+| 25 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
+| 26 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
 
 ---
 
@@ -194,6 +198,7 @@ Remaining update system items not in Hardening: load-time validation, version de
 
 | Date | Change |
 |------|--------|
+| 2026-03-17 | Triage: Added P7 (ML/AI Engineering team exploration, score 1.2), P8 (Governance & Support skill set, score 0.5). Merged Gyre team details into P1 + P1-disc (operational readiness scope, 5-interview experiment, best practices). Party-mode team exploration with Vortex + CIS teams. 26 active items. |
 | 2026-03-16 | Triage: Added I4 (BMAD v6.2.0 convention alignment, score 1.8). Party-mode team review confirmed zero broken Enhance references, identified 3 convention gaps. 24 active items. |
 | 2026-03-16 | Triage: landscape review after Enhance module (v2.4.0) and BMAD v6.1.0. Merged 7 observations into existing items: P4 moved to Completed, P1/P3/P2/S1/S2/I2 descriptions updated with post-Enhance context. Removed S4 from active (already completed 2026-03-14). Epic groupings updated (Platform Foundation: P4 done). 23 active items remain. |
 | 2026-03-15 | P4 (Enhance module) advanced to In Planning. PRD complete (49 FRs, 9 NFRs), architecture aligned, pre-implementation spike validated (`<item exec="...">` confirmed), epics created (3 epics, 9 stories, 100% FR/NFR coverage). Implementation-ready. |
