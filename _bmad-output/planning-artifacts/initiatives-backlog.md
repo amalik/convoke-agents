@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-08
 **Method:** RICE (Reach, Impact, Confidence, Effort)
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-03-19
 
 ---
 
@@ -70,7 +70,7 @@
 
 | # | Initiative | Source | R | I | C | E | Score | Track | Status |
 |---|-----------|--------|---|---|---|---|-------|-------|--------|
-| P1 | **Second domain-specialized team (Gyre)** — Operational readiness team for industrialization, operations, and scaling. 7-stream Vortex pattern maps to: contextualize product → empathize with ops/users → synthesize risk areas → hypothesize readiness criteria → test in staging → monitor in prod → systematize runbooks. Completes the Vortex → BMM → Gyre product lifecycle pipeline. Note: Skills (Enhance module) now offer a parallel growth path — new capabilities via Skills may be higher ROI than a full new team. | Product vision, adjusted (Isla). Merged: party-mode team exploration, 2026-03-17 | 8 | 3 | 50% | 10 | 1.2 | Move the needle | Backlog |
+| P1 | **Gyre team — Operational Readiness** — Second Convoke team for production readiness discovery. Domain research validated (2026-03-19): $4.5B SRE market at 14.2% CAGR, 98% of leaders report readiness failures, zero competitors in agent-guided discovery. Phase 1: 3 agents (Observability Readiness, Deployment Readiness, Compliance Readiness). Completes the Vortex → BMM → Gyre product lifecycle pipeline. Complementary to IDPs (Cortex, Backstage) — Gyre discovers criteria, IDPs enforce. Research: `_bmad-output/planning-artifacts/research/domain-operational-readiness-research-2026-03-19.md` | Product vision, adjusted (Isla). Domain research validated, 2026-03-19 | 8 | 3 | 70% | 10 | 1.7 | Move the needle | Backlog |
 | P3 | **Team installer architecture** — Generalize `convoke-install-vortex` to `convoke-install <module-name>` for multi-module support. Note: Enhance module proves the extensibility pattern (v2.4.0). v6.2.0 introduced `bmad-skill-manifest.yaml` for skill package discovery — installer should understand this convention. | Platform architecture | 6 | 1 | 80% | 4 | 1.2 | Move the needle | Backlog |
 | P2 | **Multi-module collaboration workflows** — Cross-module handoffs and routing between Teams (Vortex) and Skills (Enhance). Scope expanded: not just cross-team, but cross-module (e.g., Enhance backlog feeding Vortex discovery). | Product vision, README roadmap | 5 | 2 | 30% | 8 | 0.4 | Move the needle | Blocked (needs P1) |
 | P7 | **ML/AI Engineering team exploration** — Discovery spike to determine team-vs-skill question for ML/AI domain. Map ML lifecycle (problem → data exploration → experiment → validate → deploy → monitor) against Vortex streams and BMM workflow. Options: new team (3-4 dedicated agents) vs Enhance-style skill modules for existing agents. Added from party-mode team exploration, 2026-03-17 | Party-mode review (Victor, Winston, user) | 6 | 2 | 30% | 3 | 1.2 | Move the needle | Backlog |
@@ -85,7 +85,7 @@ These initiatives are promising but need discovery work before scoring. Not yet 
 | # | Initiative | Source | Next Step |
 |---|-----------|--------|-----------|
 | N1 | **Usage telemetry (opt-in)** — Track which workflows are used, completion rates, and drop-off points to inform backlog priorities | Multi-agent review (Noah) | Define what to track and privacy model |
-| P1-disc | **User discovery for Gyre team** — Validate operational readiness as highest-value second team. Experiment: interview 5 teams on discovery-to-production gap, categorize pain into Standard Authority sub-domains. Complement with best practices literature (SRE golden signals, DORA metrics, Google/Netflix readiness checklists). Top 2-3 pain areas become Gyre's scope. | Multi-agent review (Isla), product owner. Merged: party-mode team exploration, 2026-03-17 | 5-team interview experiment + best practices literature review |
+| P1-disc | **User discovery for Gyre team** — Domain research complete (2026-03-19), validated operational readiness as highest-value domain. Remaining: Wade's experiment — interview 5 teams on discovery-to-production gap. Ask: "What was the hardest part?" Categorize against 3 Phase 1 domains (observability, deployment, compliance). Also: study Google PRR process, AWS ORR checklist, and DORA research in detail to extract the specific questions that become Gyre agent knowledge base. | Multi-agent review (Isla), product owner. Domain research: 2026-03-19 | Wade's 5-team interview + Google PRR/AWS ORR deep-dive |
 | P5 | **Convoke website** — Public website for Convoke: positioning, documentation, team showcase, getting started guide, and community | Product owner | Define scope (landing page vs. full docs site), hosting, and content strategy |
 | P6 | **Tool-enabled agents** — Allow select agents to use external tools (MCP servers, CLI commands, file operations) beyond pure conversation. Evaluate which agents benefit from tool access and what guardrails are needed | Product owner | Identify candidate agents, define tool access model, assess security/trust implications |
 | H4 | **Validate "strategic conversation" hypothesis** — Do RICE scoring questions prompt genuine reflection or rubber-stamping? Measure whether users modify their initial instinct on at least 1 score per triage session (modification = engagement). Source: P4 PRD Innovation Hypothesis H4 | P4 PRD (Innovation Hypotheses) | Run 3+ triage sessions, track per-session score modification rate |
@@ -130,9 +130,9 @@ Remaining update system items not in Hardening: load-time validation, version de
 | 4 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
 | 5 | I4 | BMAD v6.2.0 convention alignment | 1.8 | Keep the lights on | Infrastructure |
 | 6 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
-| 7 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
-| 8 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
-| 9 | P1 | Second domain-specialized team (Gyre) | 1.2 | Move the needle | Platform |
+| 7 | P1 | Gyre team — Operational Readiness | 1.7 | Move the needle | Platform |
+| 8 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
+| 9 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
 | 10 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
 | 11 | P7 | ML/AI Engineering team exploration | 1.2 | Move the needle | Platform |
 | 12 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
@@ -198,6 +198,7 @@ Remaining update system items not in Hardening: load-time validation, version de
 
 | Date | Change |
 |------|--------|
+| 2026-03-19 | Review: P1 updated with domain research findings — renamed to "Gyre team — Operational Readiness", confidence 50%→70%, score 1.2→1.7. P1-disc sharpened with validated 3-domain scope (observability, deployment, compliance). Prioritized view re-ranked. Research document: `domain-operational-readiness-research-2026-03-19.md`. 26 active items. |
 | 2026-03-17 | Triage: Added P7 (ML/AI Engineering team exploration, score 1.2), P8 (Governance & Support skill set, score 0.5). Merged Gyre team details into P1 + P1-disc (operational readiness scope, 5-interview experiment, best practices). Party-mode team exploration with Vortex + CIS teams. 26 active items. |
 | 2026-03-16 | Triage: Added I4 (BMAD v6.2.0 convention alignment, score 1.8). Party-mode team review confirmed zero broken Enhance references, identified 3 convention gaps. 24 active items. |
 | 2026-03-16 | Triage: landscape review after Enhance module (v2.4.0) and BMAD v6.1.0. Merged 7 observations into existing items: P4 moved to Completed, P1/P3/P2/S1/S2/I2 descriptions updated with post-Enhance context. Removed S4 from active (already completed 2026-03-14). Epic groupings updated (Platform Foundation: P4 done). 23 active items remain. |
