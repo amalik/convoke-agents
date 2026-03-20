@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success]
+stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success, step-04-journeys]
 inputDocuments:
   - _bmad-output/planning-artifacts/product-brief-gyre-2026-03-19.md
   - _bmad-output/planning-artifacts/research/domain-operational-readiness-research-2026-03-19.md
