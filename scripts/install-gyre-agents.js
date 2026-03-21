@@ -119,7 +119,7 @@ function printSuccess() {
 
 async function main() {
   try {
-    const projectRoot = findProjectRoot() || process.cwd();
+    const projectRoot = findProjectRoot();
 
     printBanner();
     checkPrerequisites(projectRoot);
