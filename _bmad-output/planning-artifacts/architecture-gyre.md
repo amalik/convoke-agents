@@ -8,1113 +8,805 @@ inputDocuments:
   - _bmad-output/planning-artifacts/product-brief-gyre-2026-03-19.md
   - _bmad-output/planning-artifacts/research/domain-operational-readiness-research-2026-03-19.md
   - _bmad-output/vortex-artifacts/lean-experiment-gyre-discovery-interviews-2026-03-20.md
-  - _bmad-output/planning-artifacts/implementation-readiness-report-2026-03-20.md
-editHistory:
-  - date: '2026-03-21'
-    changes: "Added Convoke Ecosystem Integration section: workspace infrastructure, module registry extension, convoke-install-gyre installer, version management, project root detection, config bridge (deferred), terminology distinction. Driven by Vortex-Gyre consistency analysis."
 workflowType: 'architecture'
 project_name: 'Gyre'
 user_name: 'Amalik'
-date: '2026-03-20'
+date: '2026-03-21'
+editHistory:
+  - date: '2026-03-21'
+    changes: "Full rewrite: Gyre redesigned as Convoke team module following Vortex patterns. Replaces CLI-tool architecture (Commander, provider abstraction, exit codes, streaming renderer) with conversational persona agents, handoff contracts, step-file workflows, and compass routing. 4 agents, 4 contracts, 7 workflows."
 ---
 
-# Architecture Decision Document
+# Architecture Decision Document — Gyre (Convoke Team)
 
-_This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together._
+_Gyre is a Convoke team module — conversational persona agents running inside Claude Code, following the same patterns as Vortex. This document replaces the prior CLI-tool architecture._
 
 ## Project Context Analysis
 
 ### Requirements Overview
 
-**Functional Requirements (57)** across 7 capability areas:
-- Stack Detection & Classification (8 FRs) — file system analysis, guard question, CLI override
-- Contextual Model Generation (7 FRs) — LLM-generated capabilities manifest with web search, standards, descriptions
-- Absence Detection & Analysis (7 FRs) — two domain agents, source/confidence tagging, cross-domain compounds
-- Review, Amendment & Feedback (7 FRs) — editor-based review, model subtraction, feedback persistence
-- Output & Presentation (9 FRs) — streaming, severity summary, novelty ratio, paste-friendly, JSON
-- Run Lifecycle & Delta Analysis (10 FRs) — mode detection, history, delta, monorepo, deferred review
-- Installation, Configuration & Resilience (7 FRs) — npm, provider config, fail-fast, partial recovery
+**Functional Requirements (57)** across 7 capability areas — domain logic survives from the PRD; delivery mechanism changes from CLI to conversational agents:
 
-**Non-Functional Requirements (22)** across 5 categories:
-- Performance (5): time-to-first-finding <2min, total <10min, guard <1s, re-run ≤50%, startup <3s
-- Security & Privacy (4): API key storage, privacy architecture (code never sent to LLM), LLM input boundary, artifact safety
-- Reliability (4): deterministic generation, graceful API failure, file system safety, run exclusivity
-- Integration (4): ≥2 LLM providers, Node.js ≥20, OS compatibility, JSON schema stability
-- Quality Gates (5): phase independence, model accuracy ≥70% gate, guard coverage ≥95%, web search freshness, compound confidence threshold
+- Stack Detection & Classification (8 FRs) — agents use Claude Code tools (Glob, Grep, Read) to analyze filesystem
+- Contextual Model Generation (7 FRs) — agent generates `.gyre/capabilities.yaml` using LLM reasoning + web search
+- Absence Detection & Analysis (7 FRs) — two domain workflows (observability, deployment), source/confidence tagging, cross-domain compounds
+- Review, Amendment & Feedback (7 FRs) — conversational walkthrough replaces `$EDITOR`; agent guides review
+- Output & Presentation (9 FRs) — conversational output replaces CLI streaming; severity summary, novelty ratio presented in dialogue
+- Run Lifecycle & Delta Analysis (10 FRs) — mode detection, history, delta; conversational prompts replace CLI flags
+- Installation, Configuration & Resilience (7 FRs) — `convoke-install-gyre` replaces `npm install -g gyre`; no provider config needed (agent IS the LLM)
+
+**Non-Functional Requirements (22)** across 5 categories — most survive with delivery-mechanism adaptations:
+
+- Performance (5): time-to-first-finding <2min, total <10min, guard <1s — measured in conversation flow, not CLI
+- Security & Privacy (4): privacy boundary enforced by contract schemas (what data crosses agent boundaries), not code tiers
+- Reliability (4): model caching via `.gyre/` artifacts, graceful degradation in conversation
+- Integration (4): Convoke ecosystem (not standalone npm), Node.js ≥20 for installer scripts only
+- Quality Gates (5): model accuracy ≥70% gate, guard coverage, compound confidence threshold — unchanged
+
+**What dies from CLI architecture:**
+
+| Removed | Reason |
+|---------|--------|
+| Commander CLI framework | No CLI — agents are conversational |
+| Provider abstraction (NFR14) | Agent IS the LLM; no multi-provider config |
+| Exit codes (0-5) | No process exit — conversation continues |
+| `--format json` output (FR36, FR54) | Findings are conversational; artifacts are YAML files |
+| Streaming CLI renderer (FR32) | Claude Code handles output natively |
+| `--guard` CLI flags (FR7) | Guard questions are conversational |
+| `$EDITOR` review mode (FR24) | Review is conversational walkthrough |
+| `npm install -g gyre` (FR44) | Installed via `convoke-install-gyre` |
+| `gyre setup` (FR46) | No provider config needed |
+| `packages/gyre/` npm package | Module lives at `_bmad/bme/_gyre/` |
+| npm workspaces | Single package, markdown modules |
+| Tiered StackProfile as code (AR5) | Privacy boundary is a contract schema rule |
+| `lib/providers/`, `lib/output/`, `lib/setup/` | No JavaScript application code |
+| Concurrency control / rate limits | Single conversation, sequential agent handoffs |
+
+**What survives (domain logic):**
+
+| Preserved | How it maps |
+|-----------|-------------|
+| Stack detection from filesystem (FR1-FR8) | Scout agent uses Glob/Grep/Read tools |
+| Contextual model generation (FR9-FR15) | Atlas agent generates capabilities.yaml |
+| Absence detection (FR16-FR23) | Lens agent compares manifest vs filesystem |
+| Cross-domain correlation (FR22a/b) | Lens workflow step for compound findings |
+| Review & amendment (FR24-FR30) | Coach agent conversational walkthrough |
+| Guard questions (FR6-FR8) | Scout asks conversationally |
+| `.gyre/` artifact structure | Unchanged — capabilities.yaml, feedback.yaml, findings.yaml |
+| Finding shape (8 fields) | Unchanged — severity, source, confidence, domain, etc. |
+| Delta analysis (FR38-FR41) | Delta-report workflow |
+| NFR19 accuracy gate | Accuracy-validation workflow |
+| Privacy boundary concept | Contract schema rule: "GC1 must not contain file contents, paths, or secrets" |
+| Mode detection (crisis/anticipation) | Workflow checks for existing `.gyre/` directory |
 
 ### Architectural Drivers
 
-The following requirements most significantly shape the architecture:
+The following decisions most significantly shape the Convoke team architecture:
 
-1. **Tiered privacy boundary via StackProfile IR (NFR7, NFR8, DC5)** — Static analysis produces a `StackProfile` intermediate representation with two tiers. **Tier 1** (coarse classification: "Go/Kubernetes/AWS", guard answer) crosses the LLM boundary for model generation. **Tier 2** (detailed detection: specific versions, config patterns, dependency lists) stays local for static analysis only. LLM-facing modules receive Tier 1 only — the shape of the data is the enforcement mechanism. A contract test validates the tier boundary: "Tier 1 must not contain file contents, file paths, version numbers, dependency counts, or secrets."
+**AD1: Conversational agents replace CLI pipeline**
 
-   **Privacy-accuracy decision tree:** The pre-pilot privacy validation measures model accuracy under Tier 1 only vs Tier 1+2. If delta <5%, ship with Tier 1 (privacy validated). If 5-15%, evaluate **Tier 1.5** — include technology *categories* (e.g., "message queue present," "cache layer detected") without specific versions or counts. If >15%, escalate to product decision (privacy vs accuracy trade-off requires stakeholder input). This decision tree must be documented and agreed before the experiment runs.
+The CLI architecture had a linear pipeline: `detect → guard → generate → analyze → correlate → render`. As a Convoke team, this becomes a sequence of agent handoffs connected by contracts. Each agent is a markdown persona file with an XML activation protocol. The "pipeline" is a workflow that routes between agents via compass tables.
 
-2. **Hybrid orchestrator with streaming and provisional status (NFR18, FR32, NFR1)** — Analysis phases run sequentially under an orchestrator: detect → guard → generate → analyze → correlate. Each phase emits events as it works (enabling streaming output). Each phase produces a checkpoint, enabling phase re-entry for guard correction (FR8) and retry after partial failure (FR56).
+**Why this works:** Claude Code already provides the runtime (LLM reasoning), the tools (filesystem access via Glob/Grep/Read), and the output (conversational rendering). There is no application code to write — only agent definitions, workflow step-files, and contracts.
 
-   **Streaming with provisional/confirmed status:** Findings stream as produced with `status: provisional`. On agent completion, status upgrades to `confirmed`. On agent failure, findings are marked `status: unverified` with a warning: "Agent failed — findings above may be incomplete, re-run recommended." This replaces per-agent atomicity, which contradicts streaming. In JSON output, status is explicit. In CLI, it's invisible unless failure occurs.
+**AD2: Privacy boundary via contract schema, not code tiers**
 
-   **Four failure modes:**
-   - (1) Model generation fails → save nothing, retry from scratch
-   - (2) One agent fails → display other agent's confirmed findings, skip correlation, warn about failed agent
-   - (3) Correlation fails → display all agent findings without compounds
-   - (4) LLM returns garbage (sanity check fails) → display findings with `analysis_suspect` warning banner
+The CLI architecture enforced privacy through a tiered StackProfile intermediate representation (Tier 1 = coarse metadata → LLM, Tier 2 = detailed → local only). As a Convoke team, the agent IS the LLM — there is no "local only" code path.
 
-3. **Sequential agent execution with parallel as opt-in (NFR14, FR16, FR17)** — Each domain agent (Observability, Deployment) is a self-contained module with its own LLM prompt. **Default: sequential execution** — avoids rate limit conflicts, simplifies output ordering, simplifies testing. Parallel execution is architecturally supported (agents are independent) but opt-in. The provider abstraction layer manages concurrency control and sits beneath all agent modules. Adding new agents in v2 requires adding a module, not modifying the pipeline.
+**New approach:** The privacy boundary is a contract validation rule on GC1 (Stack Profile). The contract schema declares: "GC1 must contain stack classification, guard answers, and detected technology categories. It must NOT contain file contents, file paths, version numbers, dependency counts, or secrets." The agent instructions in Scout's persona explicitly state what to extract and what to exclude. Since the agent reads files using Claude Code tools, it has full filesystem access — but the contract constrains what it passes downstream and what it writes to artifacts.
 
-4. **Cached model with explicit regeneration (NFR10, FR11, NFR21)** — LLM temperature=0 provides semantic stability but not bitwise determinism. The architecture guarantees reproducibility via **artifact caching**: the generated `capabilities.yaml` is the stable artifact. Re-runs load the cached model — no LLM call, no web search. Regeneration (triggered explicitly or when StackProfile Tier 1 hash changes) gets fresh web search results. Web search results are captured at generation time and embedded in the model's provenance metadata. This separates currency (generation-time concern) from reproducibility (run-time guarantee). Re-run time ≤50% of first-run (NFR4) because model generation is skipped entirely.
+**Practical privacy guarantee:** `.gyre/capabilities.yaml` and `.gyre/findings.yaml` are committed to VCS. The contract rule ensures these artifacts contain only structured metadata (technology categories, capability descriptions, finding descriptions) — never source code, file contents, or secrets.
 
-5. **Two-tier persistence with clear VCS boundary and monorepo scan scope** — `.gyre/` contains two categories:
-   - **Committed artifacts** (team knowledge): `capabilities.yaml`, `feedback.yaml` — persist across clones, team-owned
-   - **Ephemeral state** (machine-local): `findings.yaml` (current run), `history.yaml` (delta computation), `cache/`, `.lock` — gitignored, regenerated each run
+**AD3: No provider abstraction needed**
 
-   No database, no server. YAML files for all persistence.
+The CLI architecture required supporting ≥2 LLM providers (Anthropic + OpenAI) with a provider abstraction layer. As a Convoke team, the agent runs inside Claude Code — the LLM is Claude. There is no provider selection, no API key configuration, no concurrency control. This eliminates an entire architectural layer.
 
-   **Monorepo scan scope (FR51):** One `.gyre/` per service root. When the user specifies a service directory, static analysis scans that directory for service code *plus* walks up to find shared infrastructure directories (`terraform/`, `k8s/`, `.github/workflows/` at repo root). The StackProfile includes both service-local and shared-infra signals, tagged by source. Findings from shared infra are tagged `[SHARED]` so the user understands they affect multiple services.
+**AD4: Filesystem analysis via Claude Code tools**
 
-6. **Cross-domain correlation: LLM-proposed, rule-validated (FR22a, FR22b)** — The correlator uses LLM reasoning to discover compound patterns across domains ("no rollback telemetry + no deployment markers = blind rollbacks"). A structural validator enforces: every compound finding must reference exactly 2 existing findings from different domains. Compound confidence derives from component confidences. Correlation only runs when all agents succeed — it degrades gracefully (omitted, not partial) on agent failure.
+The CLI architecture had custom Node.js code for static analysis (file detection, pattern matching, dependency parsing). As a Convoke team, agents use Claude Code's built-in tools:
+
+| Tool | Purpose |
+|------|---------|
+| Glob | Find files by pattern (e.g., `**/Dockerfile`, `**/package.json`) |
+| Grep | Search file contents (e.g., `opentelemetry`, `prometheus`) |
+| Read | Read config files, manifests, IaC templates |
+| Bash | Run commands (e.g., `npm ls`, `go list`) when file analysis is insufficient |
+
+This eliminates all custom detection code. The agent's prompt defines what to look for; the tools provide access.
+
+**AD5: Workflow step-files as the orchestration mechanism**
+
+The CLI architecture used a JavaScript orchestrator with phase checkpoints. As a Convoke team, orchestration happens through workflow step-files — the same pattern Vortex uses. Each workflow has 4-6 steps. Each step file contains instructions the agent follows. The final step of each workflow includes a compass routing table.
+
+**AD6: Handoff contracts as the integration mechanism**
+
+The CLI architecture passed data between phases via in-memory objects (StackProfile, CapabilitiesManifest, FindingsReport). As a Convoke team, data passes between agents via handoff contracts — YAML-frontmatter markdown files written to `.gyre/`. Each contract declares its schema, source agent, target agent, and validation rules.
 
 ### Technical Constraints & Dependencies
 
-- **Runtime:** Node.js ≥20, npm distribution
-- **External dependency:** LLM API (Anthropic + OpenAI minimum); web search API (generation-time only)
-- **File system:** Read project files (read-only), write only to `.gyre/`
-- **No server/daemon:** CLI tool, runs on invocation, exits when complete
-- **No database:** YAML files for all persistence
-- **Convoke ecosystem:** npm package, consistent with existing distribution
-- **Rate limits:** Provider abstraction manages concurrency; sequential agent execution by default
+- **Runtime:** Claude Code (the agents run as Claude conversations)
+- **Module location:** `_bmad/bme/_gyre/`
+- **Installation:** `convoke-install-gyre` script (copies markdown files, same pattern as Vortex)
+- **File system:** Agents use Claude Code tools (Glob, Grep, Read, Bash) — read project files, write only to `.gyre/`
+- **No server/daemon:** Conversational — runs when user activates an agent
+- **No database:** YAML files for all persistence (`.gyre/` directory)
+- **No application code:** Agents, workflows, and contracts are all markdown
+- **Convoke ecosystem:** Registered in `agent-registry.js`, validated by `convoke-doctor`
 
 ### Cross-Cutting Concerns
 
-1. **Privacy enforcement via tiered StackProfile** — Tier 1 (coarse) → LLM, Tier 2 (detailed) → local only. Contract-testable at the boundary. Pre-pilot accuracy test validates the tier split with explicit decision tree for results.
-2. **Error handling with four failure modes** — Model failure (retry from scratch), agent failure (graceful degradation with provisional/unverified status), correlation failure (omit compounds), LLM garbage (sanity validator triggers `analysis_suspect` warning). Each maps to exit code + user guidance.
-3. **Finding sanity validator** — Pipeline middleware between agent output and renderer. Heuristic checks: >80% capabilities flagged missing is suspicious, uniform confidence is suspicious, findings referencing capabilities not in manifest is a bug. Pure function: `findings[] + manifest → validated_findings[] | SanityWarning`. No LLM dependency.
-4. **Streaming & progressive output** — Pipeline phases emit events; CLI renderer subscribes. Sequential agent execution means clean output ordering. Findings stream with provisional status, upgraded on agent success.
-5. **`.gyre/` state management** — Lock file, directory creation, monorepo detection with ancestor infrastructure scanning, VCS guidance, two-tier committed/ephemeral split
-6. **LLM provider abstraction** — Shared interface with concurrency control, auto model selection, temperature management
-7. **Agent extensibility** — Independent agent modules with self-contained prompts; new domains added without pipeline modification
-8. **Model caching & regeneration** — Cached manifest is the reproducibility guarantee. StackProfile Tier 1 hash triggers regeneration. Web search freshness is generation-time only.
+1. **Privacy enforcement via contract schema** — GC1 (Stack Profile) declares what metadata is permitted. Agent instructions reinforce boundaries. Committed artifacts (capabilities.yaml, findings.yaml) must not contain source code or secrets. Validation: grep committed artifacts for path-like strings, code snippets, or known secret patterns.
 
-## Starter Template & Technical Foundations
+2. **Error handling in conversation** — Agent failures are conversational, not exit codes. If Scout cannot detect a stack, it tells the user and offers manual classification. If Lens encounters an unexpected file structure, it reports what it found and asks for guidance. Graceful degradation is natural in conversation.
 
-### Primary Technology Domain
+3. **Finding consistency** — Finding shape is standardized across all Gyre agents via the GC3 contract schema. Every finding has: id, domain, severity, source, confidence, description, capability_ref, evidence_summary. Cross-domain compounds add: related_findings[], combined_impact.
 
-CLI tool with AI agent orchestration — npm-distributed Node.js package within the Convoke ecosystem.
+4. **`.gyre/` state management** — Created by full-analysis workflow on first run. Contains:
+   - `capabilities.yaml` (committed — team-owned model)
+   - `feedback.yaml` (committed — measurement infrastructure)
+   - `findings.yaml` (gitignored — current run output)
+   - `history.yaml` (gitignored — delta computation)
 
-### Technical Preferences
+5. **Model caching & regeneration** — The generated `capabilities.yaml` IS the cache. Re-runs load it directly. Regeneration is triggered conversationally ("regenerate the model" or when Scout detects stack changes).
 
-**Consistency decision:** Gyre follows Convoke's existing technical choices. JavaScript (CommonJS), not TypeScript — JSDoc type annotations where type clarity aids the privacy boundary and pipeline data flow. TypeScript reconsidered only if team grows beyond 3-4 developers or if privacy boundary violations become a recurring issue.
+6. **Agent extensibility** — New domain agents (e.g., Security Readiness) are added by creating a new agent markdown file, a new workflow, and updating the compass routing tables. No code changes.
 
-### Starter Template Decision: No Starter — Scaffold From Existing Patterns
+## Module Structure
 
-**Rationale:** Gyre is a new team module within an established codebase, not a greenfield project. The existing Convoke patterns (hand-rolled CLI, `node:test`, Chalk, js-yaml, fs-extra) are proven and understood. A starter template would impose patterns that conflict with the established codebase.
-
-### Packaging & Distribution Strategy
-
-**Dual install path:**
-- **Primary (Convoke users):** `convoke-install-gyre` — same pattern as `convoke-install-vortex`. Checks if `gyre` is installed, installs if not, registers in Convoke module manifest.
-- **Secondary (standalone users):** `npm install -g gyre` or `npx gyre analyze .` — works without Convoke. CLI outputs "Gyre — a Convoke team module" branding.
-
-**Monorepo structure:** `packages/gyre/` with its own `package.json` for development. Published as standalone `gyre` npm package. Root `convoke-agents` package does not bundle LLM SDKs — Vortex-only users are unaffected.
-
-**npm workspaces:** Root `package.json` adds `"workspaces": ["packages/*"]` for local development. Workspace topology is a development concern; published packages have independent dependency trees.
-
-### Technology Stack (Aligned with Convoke)
-
-**Language & Runtime:**
-- JavaScript (CommonJS) — consistent with all existing Convoke scripts
-- Node.js ≥20 (NFR15, updated per Core Decisions — Node 18 EOL + Commander v14 requirement)
-- JSDoc type annotations for pipeline data structures (StackProfile tiers, Finding, Manifest, context objects)
-- Privacy boundary enforcement via contract test, not type system
-
-**CLI Framework: Commander** (ADR-6, Comparative Analysis: 8.35/10)
-- Subcommand pattern (`gyre analyze`, `gyre init`, `gyre diff`, `gyre setup`) justifies a library over hand-rolled `process.argv`
-- Scored highest against hand-rolled (6.20), yargs (7.70), and oclif (7.05) on weighted criteria
-- Scope: argument parsing and subcommand routing only. Isolated to `gyre.js` entry point. Replaceable.
-- Testable via `program.parseAsync(['node', 'gyre', 'analyze', '.', '--format', 'json'])`
-- **readline** (Node.js built-in) for interactive prompts (guard question, amendment, feedback)
-- **Chalk v4** for styled CLI output — **restricted to `output/` directory via ESLint rule**. Pipeline modules return data objects, never styled strings. `--format json` sets `chalk.level = 0` as safety net.
-
-**Testing:**
-- `node:test` — Node.js built-in test runner (consistent with existing tests)
-- **C8** for coverage
-- **Dependency injection mandate:** All LLM-touching modules accept injected dependencies. `node:test` on Node 18 lacks `mock.module()` — DI via tiered context objects solves this.
-- Test structure: `__tests__/` co-located per module within `packages/gyre/`; package-root `__tests__/contracts/` and `__tests__/integration/` for cross-module tests. Convoke-level tests (`tests/integration/gyre/`) may be added for `convoke-install-gyre` integration.
-
-**Configuration & Data:**
-- **js-yaml** for `.gyre/capabilities.yaml`, `feedback.yaml`, `config.yaml`
-- **File size guard:** Check file size before YAML parsing (1MB cap) — prevents expansion attacks on manually edited files
-- **fs-extra** for file system operations within `.gyre/`
-
-**LLM Integration (ADR-9):**
-- **@anthropic-ai/sdk** + **openai** — both as direct dependencies of `packages/gyre/package.json`
-- Isolated from root Convoke package — Vortex-only users don't download LLM SDKs
-- Provider abstraction layer wrapping both SDKs behind a common interface
-- Consistent with FR46 one-action onboarding (no separate SDK install step)
-
-**Linting:**
-- Existing ESLint v10 flat config extended to cover `packages/gyre/`
-- **New rule:** Restricted import of `chalk` outside `packages/gyre/lib/output/` directory
-- **Existing rule:** `process.cwd()` restricted — use `findProjectRoot()` or accept parameter
-
-### Dependency Injection: Tiered Context Objects
-
-Pipeline modules receive context objects whose *shape* enforces both testability and the privacy boundary:
-
-```javascript
-// Phases 1-2: Stack detection & guard (no LLM access)
-const detectionCtx = {
-  fs,           // file system access for scanning
-  gyreDir,      // .gyre/ directory path
-  options,      // parsed CLI arguments
-  events        // event emitter for streaming
-}
-
-// Phases 3-5: Model generation, agents, correlation (no raw file access)
-const analysisCtx = {
-  provider,           // LLM provider (injected, mockable)
-  stackProfileTier1,  // coarse classification only
-  manifest,           // generated/cached capabilities
-  events,             // event emitter for streaming
-  options             // parsed CLI arguments
-}
-```
-
-The orchestrator is the only module that sees both contexts. Detection phases cannot access the LLM provider. Analysis phases cannot access the raw file system. Tests create whichever context tier they need with stubs.
-
-### Project Structure (Early Sketch)
-
-> **Note:** This is the initial sketch from step 3. **The canonical, complete project tree is in the "Project Structure & Boundaries" section below.** Refer to that section for the authoritative file inventory.
+### Directory Layout
 
 ```
-packages/gyre/
-├── package.json                 # Standalone deps (commander, LLM SDKs, chalk, js-yaml, fs-extra)
-├── gyre.js                      # CLI entry point (bin entry) — commander setup
-├── lib/
-│   ├── pipeline/
-│   │   ├── orchestrator.js      # Phase sequencing, checkpoints, context creation
-│   │   ├── stack-detector.js    # FR1-FR5: file system analysis → StackProfile
-│   │   ├── guard.js             # FR6-FR8: architecture intent question
-│   │   ├── model-generator.js   # FR9-FR15: LLM model generation
-│   │   ├── correlator.js        # FR22a-b: cross-domain compound findings
-│   │   └── sanity-validator.js  # Finding sanity checks (garbage detection)
-│   ├── agents/
-│   │   ├── observability.js     # FR16: observability readiness agent
-│   │   └── deployment.js        # FR17: deployment readiness agent
-│   ├── providers/
-│   │   ├── provider.js          # Abstract provider interface
-│   │   ├── anthropic.js         # Anthropic SDK wrapper
-│   │   └── openai.js            # OpenAI SDK wrapper
-│   ├── state/
-│   │   ├── gyre-dir.js          # .gyre/ directory management, lock file, monorepo detection
-│   │   ├── manifest.js          # capabilities.yaml read/write/amend
-│   │   ├── findings.js          # findings persistence, delta computation, history
-│   │   └── feedback.js          # feedback.yaml management
-│   ├── output/
-│   │   ├── renderer.js          # CLI streaming renderer (ONLY module that imports Chalk)
-│   │   ├── json-formatter.js    # --format json output
-│   │   └── summary.js           # Severity-first summary, novelty ratio
-│   └── types.js                 # JSDoc @typedef for StackProfile tiers, Finding, Manifest, context objects
-├── data/
-│   └── guard-options.yaml       # Guard question options & mappings
+_bmad/bme/_gyre/
+├── config.yaml                          # Module configuration
+├── README.md                            # Module documentation
+├── compass-routing-reference.md         # Complete routing tables
+├── agents/
+│   ├── stack-detective.md               # Scout 🔎
+│   ├── model-curator.md                 # Atlas 📐
+│   ├── readiness-analyst.md             # Lens 🔬
+│   └── review-coach.md                  # Coach 🏋️
+├── workflows/
+│   ├── full-analysis/
+│   │   ├── workflow.md                  # Orchestrator workflow
+│   │   ├── steps/
+│   │   │   ├── step-01-initialize.md
+│   │   │   ├── step-02-detect-stack.md
+│   │   │   ├── step-03-generate-model.md
+│   │   │   ├── step-04-analyze-gaps.md
+│   │   │   └── step-05-review-findings.md
+│   │   └── templates/
+│   │       ├── capabilities.template.yaml
+│   │       ├── findings.template.yaml
+│   │       └── feedback.template.yaml
+│   ├── stack-detection/
+│   │   ├── workflow.md
+│   │   └── steps/
+│   │       ├── step-01-scan-filesystem.md
+│   │       ├── step-02-classify-stack.md
+│   │       └── step-03-guard-questions.md
+│   ├── model-generation/
+│   │   ├── workflow.md
+│   │   └── steps/
+│   │       ├── step-01-load-profile.md
+│   │       ├── step-02-generate-capabilities.md
+│   │       ├── step-03-web-enrichment.md
+│   │       └── step-04-write-manifest.md
+│   ├── model-review/
+│   │   ├── workflow.md
+│   │   └── steps/
+│   │       ├── step-01-present-model.md
+│   │       ├── step-02-walkthrough.md
+│   │       └── step-03-apply-amendments.md
+│   ├── gap-analysis/
+│   │   ├── workflow.md
+│   │   └── steps/
+│   │       ├── step-01-load-manifest.md
+│   │       ├── step-02-observability-analysis.md
+│   │       ├── step-03-deployment-analysis.md
+│   │       ├── step-04-cross-domain-correlation.md
+│   │       └── step-05-present-findings.md
+│   ├── delta-report/
+│   │   ├── workflow.md
+│   │   └── steps/
+│   │       ├── step-01-load-history.md
+│   │       ├── step-02-compute-delta.md
+│   │       └── step-03-present-delta.md
+│   └── accuracy-validation/
+│       ├── workflow.md
+│       └── steps/
+│           ├── step-01-select-repos.md
+│           ├── step-02-run-validation.md
+│           └── step-03-score-results.md
+└── contracts/
+    ├── gc1-stack-profile.md
+    ├── gc2-capabilities-manifest.md
+    ├── gc3-findings-report.md
+    └── gc4-feedback-loop.md
 ```
 
-This structure maps directly to the pipeline phases and architectural drivers. Each directory corresponds to a cross-cutting concern or pipeline phase. Adding a new agent (v2: Compliance) means adding a file in `agents/`.
-
-## Core Architectural Decisions
-
-### Decision Priority Analysis
-
-**Critical Decisions (Block Implementation):**
-- Node.js minimum version & Commander compatibility
-- LLM provider abstraction interface
-- Error handling & exit code strategy
-- Configuration resolution order
-
-**Important Decisions (Shape Architecture):**
-- Prompt architecture & iteration strategy
-- Event/streaming system design
-- Web search integration strategy
-
-**Deferred Decisions (Post-MVP):**
-- Specific web search API vendor (Tavily, Brave, Serper — chosen at implementation time)
-- Parallel agent execution optimization
-- CI/CD integration mode configuration
-
-### Runtime & CLI Framework
-
-| Decision | Choice | Version | Rationale |
-|----------|--------|---------|-----------|
-| Node.js minimum | ≥20, target 22 | 20 LTS / 22 LTS | Node 18 EOL April 2025. Node 22 is active LTS until April 2027. CI tests on both 20 and 22. |
-| CLI framework | Commander | 14.0.3 | Subcommand pattern (`gyre analyze`, `gyre init`, `gyre diff`, `gyre setup`) justifies a library. Scored 8.35/10 in comparative analysis vs hand-rolled (6.20), yargs (7.70), oclif (7.05). Requires Node ≥20. |
-
-**Note:** PRD NFR15 specifies Node ≥18. This decision updates the minimum to ≥20 based on Node 18 EOL status and Commander v14 compatibility. The PRD should be updated to reflect this.
-
-### LLM Provider Abstraction
-
-**Two-method interface:** `generate()` for complete responses, `stream()` for chunked responses. Both accept `PromptPayload` — the provider translates to its own message format internally.
-
-```javascript
-/**
- * @typedef {Object} PromptPayload
- * @property {string} system - System prompt (role, instructions, constraints)
- * @property {string} user - User message (dynamic data: StackProfile, manifest, findings)
- */
-
-/**
- * @typedef {Object} LLMProvider
- * @property {(payload: PromptPayload, opts: GenerateOpts) => Promise<string>} generate
- * @property {(payload: PromptPayload, opts: StreamOpts) => AsyncIterable<string>} stream
- */
-
-/**
- * @typedef {Object} GenerateOpts
- * @property {number} temperature - Always 0 for Gyre (deterministic)
- * @property {number} maxTokens
- */
-```
-
-**Usage mapping:**
-
-| Operation | Method | Why |
-|-----------|--------|-----|
-| Model generation (FR9) | `generate()` | Needs complete output to write `capabilities.yaml` |
-| Agent analysis (FR16, FR17) | `stream()` | Findings stream as produced — agent parses chunks, yields structured findings |
-| Cross-domain correlation (FR22a) | `generate()` | Needs all input findings first, produces complete compound findings |
-
-**Provider implementations:**
-- `providers/anthropic.js` — wraps `@anthropic-ai/sdk` v0.80.x. Maps `PromptPayload.system` to Anthropic's top-level `system` parameter.
-- `providers/openai.js` — wraps `openai` SDK. Maps `PromptPayload.system` to `{ role: 'system', content }` in messages array.
-- Both implement the same `LLMProvider` interface
-- Provider selected via config: `provider.type: anthropic | openai`
-- Auto model selection (`provider.model: auto`) picks best available model per provider
-
-**Stream timeout protection:** Provider layer wraps all `stream()` responses in a per-chunk timeout (30s default). If no chunk arrives within the timeout, throws `StreamTimeoutError`. Agents are unaware of timeout logic — they iterate the stream normally. A stalled stream triggers FM2 graceful degradation (agent failure, partial results).
-
-### Prompt Architecture
-
-**Prompt builder functions** — testable pure functions that construct `PromptPayload` objects from structured inputs. No template engine.
-
-```
-lib/prompts/
-├── model-generation.js    # buildModelGenerationPrompt(tier1, guard, webResults?)
-├── observability-agent.js # buildObservabilityPrompt(tier1, manifest)
-├── deployment-agent.js    # buildDeploymentPrompt(tier1, manifest)
-└── correlation.js         # buildCorrelationPrompt(allFindings)
-```
-
-**Design principles:**
-- Each builder returns `PromptPayload { system, user }` — system sets role/instructions, user provides dynamic data
-- Conditionals are native JS (guard answer changes prompt structure, web search results included when available)
-- Testable: assert prompt contains expected sections for given inputs
-- The AI/prompt engineer iterates these functions directly — no template indirection
-- Prompt builder functions accept Tier 1 StackProfile only — privacy boundary enforced by function signature
-
-### Web Search Integration
-
-**Optional enhancement** — model generation works from agent knowledge + guard answer alone. Web search improves model richness when configured.
+### config.yaml
 
 ```yaml
-# .gyre/config.yaml — optional section
-search:
-  type: tavily  # or brave, serper — vendor chosen at implementation time
-  api_key: ${GYRE_SEARCH_KEY}
+submodule_name: _gyre
+description: Gyre Pattern - Production readiness discovery through stack analysis, contextual model generation, and absence detection
+module: bme
+output_folder: '{project-root}/_bmad-output/gyre-artifacts'
+agents:
+  - stack-detective
+  - model-curator
+  - readiness-analyst
+  - review-coach
+workflows:
+  - full-analysis
+  - stack-detection
+  - model-generation
+  - model-review
+  - gap-analysis
+  - delta-report
+  - accuracy-validation
+version: 1.0.0
+user_name: '{user}'
+communication_language: en
+party_mode_enabled: true
+core_module: bme
 ```
 
-**Integration flow:**
-1. If `search` configured: query search API with stack classification + domain terms
-2. Search results passed to `buildModelGenerationPrompt()` as optional parameter
-3. Results embedded in cached model's provenance metadata (NFR21: fresh per generation)
-4. If `search` not configured: model generation proceeds without web results — no error, no warning
+## Agent Definitions
 
-**Rationale:** FR46 requires one-action first-run setup. A second API key (search) would violate this. Agent knowledge + guard answer provide a baseline model. Web search is additive.
+### Agent 1: Scout 🔎 (stack-detective)
 
-**Search provider interface:**
+**Role:** Detects the project's technology stack by analyzing filesystem artifacts. Asks guard questions to confirm architecture intent. Produces the Stack Profile (GC1).
 
-```javascript
-/**
- * @typedef {Object} SearchProvider
- * @property {(query: string) => Promise<SearchResult[]>} search
- */
+**Persona:** Methodical investigator. Reads manifests, configs, and IaC files. Never guesses — reports what it finds with evidence. Asks targeted guard questions derived from what it detected.
 
-/**
- * @typedef {Object} SearchResult
- * @property {string} title
- * @property {string} summary
- * @property {string} url
- * @property {string} date
- */
+**Tools used:** Glob (find files), Grep (search contents), Read (read configs), Bash (run package managers)
+
+**Detection targets:**
+- Primary language/framework (package.json, go.mod, requirements.txt, Cargo.toml, pom.xml)
+- Container orchestration (Dockerfile, docker-compose.yaml, k8s manifests, ECS task defs)
+- CI/CD platform (.github/workflows/, .gitlab-ci.yml, Jenkinsfile)
+- Observability tooling (OpenTelemetry, Prometheus, Datadog configs in deps + configs)
+- Cloud provider (terraform/, cloudformation/, pulumi/, provider configs)
+- Communication protocol (gRPC protos, REST controllers, message queue configs)
+
+**Guard questions:** Derived from detection (not a fixed list), covering:
+- Deployment model (container-based / serverless / bare-metal) — if ambiguous from detection
+- Communication protocol (HTTP/REST / gRPC / message queue) — if multiple detected
+- Architecture intent for ambiguous signals
+
+Limit: ≤3 questions. If detection is unambiguous, skip guard entirely.
+
+**Output:** GC1 (Stack Profile) written to `.gyre/stack-profile.yaml`
+
+**Menu items:**
+1. Detect Stack — `workflow: stack-detection`
+2. Full Analysis — `workflow: full-analysis`
+
+### Agent 2: Atlas 📐 (model-curator)
+
+**Role:** Generates the capabilities manifest — a contextual model of what production capabilities *should* exist for this specific stack. Uses LLM reasoning, industry standards (DORA, OpenTelemetry, Google PRR), and web search for current best practices.
+
+**Persona:** Knowledgeable curator who balances industry standards with practical relevance. Explains why each capability matters. Transparent about confidence levels — distinguishes well-known patterns from emerging practices.
+
+**Tools used:** Read (load GC1 stack profile), Write (write capabilities.yaml), WebSearch (current best practices)
+
+**Generation process:**
+1. Load GC1 (Stack Profile) — stack classification + guard answers
+2. Generate capabilities using: agent knowledge of standards + stack-specific reasoning + web search
+3. Each capability includes: id, category, name, description (1-3 sentences), source (standard/practice/reasoning), relevance (why this matters for this stack)
+4. Adjust model based on guard question answers (e.g., gRPC vs HTTP health checks)
+5. Surface limited-coverage warning if <20 capabilities generated
+
+**Model ownership:** The generated manifest is team-owned. Amendments from Coach (GC4) are respected on regeneration. Removed capabilities stay removed. Added capabilities persist.
+
+**Output:** GC2 (Capabilities Manifest) written to `.gyre/capabilities.yaml`
+
+**Menu items:**
+1. Generate Model — `workflow: model-generation`
+2. Regenerate Model — `workflow: model-generation` (forces fresh generation)
+3. Full Analysis — `workflow: full-analysis`
+
+### Agent 3: Lens 🔬 (readiness-analyst)
+
+**Role:** Compares the capabilities manifest against what actually exists in the project. Identifies absences — what's missing, not just what's misconfigured. Runs two domain analyses (Observability Readiness, Deployment Readiness) and cross-domain correlation.
+
+**Persona:** Thorough analyst who finds gaps methodically. Source-tags every finding (static analysis vs contextual model). Assigns confidence levels honestly. Connects dots across domains for compound findings. Never inflates severity — a nice-to-have stays a nice-to-have.
+
+**Tools used:** Glob (find evidence files), Grep (search for implementation evidence), Read (read configs for capability evidence), Bash (check installed packages)
+
+**Analysis process:**
+1. Load GC2 (Capabilities Manifest)
+2. For each capability: search filesystem for evidence of implementation
+3. Evidence types: present (found), absent (no evidence), partial (config exists but incomplete)
+4. Tag findings: source (static-analysis / contextual-model), confidence (high/medium/low), severity (blocker/recommended/nice-to-have)
+5. Run cross-domain correlation: identify compound patterns where absences in different domains amplify each other
+6. Validate compounds: each must reference exactly 2 findings from different domains
+
+**Finding shape (standardized via GC3):**
+
+```yaml
+- id: OBS-001
+  domain: observability
+  severity: blocker
+  source: static-analysis
+  confidence: high
+  capability_ref: health-check-liveness
+  description: "No health check liveness probes detected"
+  evidence_summary: "No /healthz or /livez endpoints found; no Kubernetes livenessProbe in deployment manifests"
 ```
 
-### Event System: Async Generators
+**Compound finding shape:**
 
-**Agents as async generators** — each agent `yield`s findings as discovered. Orchestrator iterates and pipes to renderer.
-
-```javascript
-// Agent signature
-async function* runObservabilityAgent(analysisCtx) {
-  const payload = buildObservabilityPrompt(analysisCtx.stackProfileTier1, analysisCtx.manifest)
-  const promptStream = analysisCtx.provider.stream(payload, { temperature: 0 })
-  for await (const chunk of promptStream) {
-    const finding = parseFinding(chunk)
-    if (finding) {
-      yield { type: 'finding', status: 'provisional', domain: 'observability', ...finding }
-    }
-  }
-  yield { type: 'agent_complete', domain: 'observability' }
-}
-
-// Orchestrator consumption
-async function runAnalysis(analysisCtx, renderer) {
-  try {
-    for await (const event of runObservabilityAgent(analysisCtx)) {
-      renderer.display(event)
-    }
-    renderer.confirmDomain('observability')
-  } catch (err) {
-    // FM2: agent failure — graceful degradation
-    renderer.agentFailed('observability', err)
-  }
-
-  try {
-    for await (const event of runDeploymentAgent(analysisCtx)) {
-      renderer.display(event)
-    }
-    renderer.confirmDomain('deployment')
-  } catch (err) {
-    renderer.agentFailed('deployment', err)
-  }
-}
+```yaml
+- id: COMPOUND-001
+  domain: cross-domain
+  severity: recommended
+  source: contextual-model
+  confidence: medium
+  capability_ref: [deploy-event-markers, rollback-telemetry]
+  description: "Missing deployment markers + missing rollback telemetry = blind rollbacks"
+  evidence_summary: "No deployment event emission in observability stack; no rollback trigger mechanism in deployment pipeline"
+  related_findings: [OBS-003, DEP-004]
+  combined_impact: "Rollback decisions are blind — cannot correlate errors with specific deployments"
 ```
 
-**Why async generators over EventEmitter:**
-- One producer, one consumer — no pub/sub complexity
-- Natural backpressure — renderer processes at its own pace
-- Testable — iterate generator in tests, collect results into array
-- Composable — orchestrator chains generators sequentially
-- Error propagation via standard try/catch, not `'error'` events
+**Output:** GC3 (Findings Report) written to `.gyre/findings.yaml`
 
-### Error Handling & Exit Codes
+**Menu items:**
+1. Analyze Gaps — `workflow: gap-analysis`
+2. Full Analysis — `workflow: full-analysis`
+3. Delta Report — `workflow: delta-report`
 
-**Two-layer error reporting:** simple exit codes for CLI (Sana), granular JSON status for scripting (Ravi).
+### Agent 4: Coach 🏋️ (review-coach)
 
-**CLI Exit Codes (PRD-compatible):**
+**Role:** Guides the user through reviewing findings and amending the capabilities manifest. Captures feedback on missed gaps. Ensures the model becomes team-owned through review.
 
-| Code | Meaning | When |
-|------|---------|------|
-| 0 | Analysis complete, no blockers | Clean run or partial results with no blockers |
-| 1 | Analysis complete, blockers found | Blockers found (even with partial results or sanity warning) |
-| 2 | Stack detection failure | Cannot determine project stack |
-| 3 | API/provider failure | LLM unreachable, auth failure, timeout (10s per NFR11) |
-| 4 | Analysis error | Unrecoverable: model generation failed, both agents failed |
+**Persona:** Patient guide who respects the user's expertise. Presents findings clearly — severity-first summary, then walkthrough. For model review, presents each capability one at a time with keep/remove/edit options. Explains why feedback matters for model improvement. Never pushes — lets the user decide what's relevant.
 
-**JSON Status Field (FR54 — granular):**
+**Tools used:** Read (load findings, load manifest), Write (write amended manifest, write feedback), Edit (modify capabilities.yaml)
 
-| Status | Meaning | Exit Code |
-|--------|---------|-----------|
-| `clean` | Full analysis, no blockers | 0 |
-| `blockers_found` | Full analysis, blockers present | 1 |
-| `detection_failure` | Stack detection failed | 2 |
-| `provider_failure` | LLM API unreachable or auth failure | 3 |
-| `partial_results` | One agent succeeded, one failed | 0 or 1 |
-| `correlation_skipped` | Both agents OK, correlation failed | 0 or 1 |
-| `analysis_suspect` | Sanity validator flagged results | 0 or 1 |
-| `analysis_error` | Unrecoverable failure | 4 |
+**Review process:**
+1. Load GC3 (Findings Report)
+2. Present severity-first summary: "X blockers, Y recommended, Z nice-to-have"
+3. Present novelty ratio: "X of Y findings are contextual — gaps a static linter would miss"
+4. Walk through findings by severity (blockers first)
+5. For each compound finding: show reasoning chain
+6. Ask: "Would you like to review your capabilities manifest?"
+   - If yes: walkthrough mode — present each capability with keep/remove/edit
+   - If later: set deferred flag, remind on next run
+7. Feedback prompt: "Did Gyre miss anything you know about?"
+   - Persist to `.gyre/feedback.yaml` with timestamp
+   - Explain: "Commit feedback.yaml to share improvements with your team"
 
-**Failure mode → user experience mapping:**
+**Amendment persistence:** Amendments are written directly to `.gyre/capabilities.yaml`. On regeneration, Atlas respects amendments via GC4 (Feedback Loop).
 
-| Failure Mode | CLI Behavior | Exit Code | JSON Status |
-|-------------|-------------|-----------|-------------|
-| FM1: Model generation fails | "Model generation failed. Re-run to retry." No findings. | 4 | `analysis_error` |
-| FM2: One agent fails | Other agent's findings shown. Warning. Correlation skipped. | 0/1 | `partial_results` |
-| FM3: Correlation fails | All agent findings shown. No compound findings. | 0/1 | `correlation_skipped` |
-| FM4: Sanity check fails | Findings shown with warning banner. | 0/1 | `analysis_suspect` |
+**Output:** GC4 (Feedback Loop) — amendments + feedback written to `.gyre/`
 
-### Configuration Resolution
+**Menu items:**
+1. Review Findings — `workflow: model-review` (loads most recent findings)
+2. Review Model — `workflow: model-review` (capabilities walkthrough only)
+3. Full Analysis — `workflow: full-analysis`
 
-**Precedence:** CLI flags > environment variables > `.gyre/config.yaml` > built-in defaults
+### Agent Display Reference
 
-| Setting | CLI Flag | Env Var | Config File | Default |
-|---------|----------|---------|-------------|---------|
-| LLM provider type | — | `GYRE_PROVIDER` | `provider.type` | — (no default, triggers setup) |
-| API key | — | `GYRE_API_KEY` | `provider.api_key` (env ref only) | — (required) |
-| Model selection | — | — | `provider.model` | `auto` |
-| Guard override | `--guard <type>` | — | — | interactive prompt |
-| Output format | `--format <type>` | — | `output.format` | `human` |
-| Verbosity | `--verbose` / `--quiet` | — | `output.verbosity` | `normal` |
-| Search API key | — | `GYRE_SEARCH_KEY` | `search.api_key` | — (optional) |
-| Analysis domains | — | — | `analysis.domains` | `[observability, deployment]` |
+| Agent | Icon | ID | Stream |
+|-------|------|----|--------|
+| Scout | 🔎 | stack-detective | Detect |
+| Atlas | 📐 | model-curator | Model |
+| Lens | 🔬 | readiness-analyst | Analyze |
+| Coach | 🏋️ | review-coach | Review |
 
-**No default provider.** If no config exists and no env var is set, `gyre analyze .` automatically triggers the inline setup wizard — the user picks their provider and sets the API key. First run always works. Both Anthropic and OpenAI users get equal treatment.
+## Contract Definitions
 
-**Security rules (NFR6):**
-- API keys never written as raw values in `.gyre/config.yaml` — only env var references (`${GYRE_API_KEY}`)
-- Config file created by `gyre setup` wizard with file permissions 600
-- Keys never logged, never in `.gyre/` committed artifacts
+### GC1: Stack Profile (Scout → Atlas)
 
-**`gyre setup` / inline setup flow:**
-1. "Which AI provider? (anthropic/openai)" → writes `provider.type`
-2. "Set your API key: `export GYRE_API_KEY=your-key-here`" → does NOT store key
-3. Creates `.gyre/config.yaml` with provider type and default settings
-4. One action for the user: set the env var
-
-### Implementation Sequence & Checkpoints
-
-**Checkpoint 1: Model Generation Demo (Steps 1-6)**
-Validates model accuracy against synthetic ground truth rubric (pre-pilot gate ≥70%). Unblocks prompt engineer iteration. Demoable: `gyre analyze .` → detects stack → asks guard → generates `capabilities.yaml`.
-
-1. Provider abstraction (`providers/`) — foundation for all LLM operations
-2. Configuration resolution (`state/config.js`, `state/gyre-dir.js`) + inline setup wizard (`setup/wizard.js`)
-3. Prompt builders (`prompts/`) — model generation prompt first
-4. Stack detector + guard (`pipeline/stack-detector.js`, `pipeline/guard.js`)
-5. Model generator (`pipeline/model-generator.js`)
-6. Orchestrator wiring for checkpoint 1 (`pipeline/orchestrator.js`)
-
-**Checkpoint 2: Full Analysis Pipeline (Steps 7-11)**
-Validates agent analysis, cross-domain correlation, output rendering, and review workflow. Demoable: complete `gyre analyze .` with findings.
-
-7. Finding parser (`agents/finding-parser.js`) + agents (`agents/observability.js`, `agents/deployment.js`) + sanity validator
-8. Correlator (`pipeline/correlator.js`)
-9. Renderer + output (`output/renderer.js`, `output/json-formatter.js`, `output/summary.js`)
-10. Review workflow (`pipeline/review.js`) + feedback persistence (`state/feedback.js`)
-11. Delta analysis (`state/findings.js`) + mode indicator (FR37)
-
-**Cross-Component Dependencies:**
-- Provider abstraction → used by model generator, both agents, correlator
-- Tiered context objects → created by orchestrator, consumed by all pipeline phases
-- PromptPayload → produced by prompt builders, consumed by provider
-- Async generator pattern → implemented by agents, consumed by orchestrator
-- Error/exit code strategy → implemented by orchestrator, consumed by CLI entry point
-- Config resolution → consumed by CLI entry point to create provider and context
-
-## Implementation Patterns & Consistency Rules
-
-### Naming Patterns
-
-**File Naming:**
-- All source files: `kebab-case.js` (e.g., `stack-detector.js`, `model-generator.js`, `json-formatter.js`)
-- Test files: `kebab-case.test.js` co-located in `__tests__/` directory per module folder
-- Data files: `kebab-case.yaml` (e.g., `guard-options.yaml`)
-
-**Code Naming:**
-- Functions: `camelCase` — `buildModelGenerationPrompt()`, `parseFinding()`, `runObservabilityAgent()`
-- Constants: `UPPER_SNAKE_CASE` — `EXIT_CODES`, `DEFAULT_TIMEOUT`, `FINDING_DELIMITER`
-- Classes: `PascalCase` — `GyreError`, `ProviderError`, `DetectionError`
-- JSDoc typedefs: `PascalCase` — `StackProfile`, `PromptPayload`, `Finding`, `LLMProvider`
-
-**YAML Field Naming:**
-- All YAML artifacts (`.gyre/capabilities.yaml`, `.gyre/config.yaml`, `.gyre/feedback.yaml`): `snake_case` keys
-- Consistent with npm/Node.js ecosystem YAML conventions
-
-### Structure Patterns
-
-**Test Location:**
-- Tests live in `__tests__/` directories within each module folder
-- Example: `lib/pipeline/__tests__/orchestrator.test.js`, `lib/providers/__tests__/anthropic.test.js`
-- Test fixtures in `__tests__/fixtures/` when needed
-
-**Module Exports:**
-- Each file exports a single primary function or a small cohesive set of related functions
-- No barrel files (`index.js` re-exports) — import directly from the source file
-- Example: `const { buildModelGenerationPrompt } = require('./prompts/model-generation')`
-
-### Data Format Patterns
-
-**Finding Shape (Minimum Viable — 8 Required Fields):**
-
-```javascript
-/**
- * @typedef {Object} Finding
- * @property {'finding'} type - Event type discriminator
- * @property {'provisional' | 'confirmed' | 'unverified'} status - Lifecycle status
- * @property {string} domain - 'observability' | 'deployment' | 'cross-domain'
- * @property {string} capability - Which capability from the manifest this finding relates to
- * @property {'critical' | 'high' | 'medium' | 'low'} severity - FR21
- * @property {'high' | 'medium' | 'low'} confidence - FR20
- * @property {'static' | 'contextual' | 'cross-domain'} source - FR19
- * @property {string} description - Human-readable explanation (FR13)
- */
+```yaml
+---
+contract: GC1
+type: artifact
+source_agent: scout
+source_workflow: stack-detection
+target_agents: [atlas, lens]
+created: YYYY-MM-DD
+---
 ```
 
-A finding is **yieldable** only when all 8 fields are present. The parser accumulates LLM output until it can construct this complete shape. No partial yields — ever.
+**Schema:**
 
-**Agent Event Types:**
-
-```javascript
-// Discriminated union on `type` field
-{ type: 'finding', status: 'provisional', domain, capability, severity, confidence, source, description }
-{ type: 'agent_complete', domain }
+```yaml
+stack_profile:
+  primary_language: string        # e.g., "Go", "Node.js", "Python"
+  primary_framework: string       # e.g., "Express", "Gin", "FastAPI"
+  secondary_stacks: string[]      # e.g., ["Python sidecar"]
+  container_orchestration: string  # e.g., "Kubernetes", "ECS", "none"
+  ci_cd_platform: string          # e.g., "GitHub Actions", "GitLab CI"
+  observability_tooling: string[] # e.g., ["OpenTelemetry", "Prometheus"]
+  cloud_provider: string          # e.g., "AWS", "GCP", "Azure"
+  communication_protocol: string  # e.g., "HTTP/REST", "gRPC", "message-queue"
+  guard_answers:                  # only populated if guard questions were asked
+    deployment_model: string      # "container-based" | "serverless" | "bare-metal"
+    protocol: string              # confirmed protocol
+    custom: object                # any additional guard answers
+  detection_confidence: string    # "high" | "medium" | "low"
+  detection_summary: string       # human-readable summary of what was found
 ```
 
-**YAML Artifact Schemas:**
-- `capabilities.yaml`: `{ version, generated_at, stack_profile_hash, capabilities: [{ id, domain, name, description }] }`
-- `findings.yaml`: `{ version, runs: [{ timestamp, mode, findings: [Finding] }] }`
-- `feedback.yaml`: `{ entries: [{ timestamp, finding_id?, comment }] }`
-- `config.yaml`: `{ provider: { type, model, api_key }, search?: { type, api_key }, output?: { format, verbosity } }`
+**Privacy rule:** GC1 must contain technology categories and classifications only. It must NOT contain: file contents, file paths, version numbers, dependency counts, dependency names, or secrets. This is the privacy boundary — everything downstream of GC1 works with category-level metadata.
 
-### Communication Patterns: Async Generator Protocol
+**Downstream consumption:**
+- Atlas uses GC1 to generate contextually relevant capabilities
+- Lens uses GC1 for domain-specific analysis targeting (which directories to search, what patterns to match)
 
-**Finding Parsing Contract:**
+### GC2: Capabilities Manifest (Atlas → Lens)
 
-LLM prompts instruct the model to emit findings as `---FINDING---` delimited blocks. Each block contains a complete JSON finding object. The parser accumulates chunks until a delimiter is detected, then parses the accumulated buffer as a single finding.
-
-```javascript
-// Parser pattern — all agents use this
-async function* parseFindings(stream, domain) {
-  let buffer = ''
-  for await (const chunk of stream) {
-    buffer += chunk
-    while (buffer.includes('---FINDING---')) {
-      const [block, rest] = buffer.split('---FINDING---', 2)
-      const finding = tryParseFinding(block.trim(), domain)
-      if (finding) {
-        yield { type: 'finding', status: 'provisional', ...finding }
-      }
-      buffer = rest || ''
-    }
-  }
-  // Handle final block after stream ends
-  const finding = tryParseFinding(buffer.trim(), domain)
-  if (finding) {
-    yield { type: 'finding', status: 'provisional', ...finding }
-  }
-  yield { type: 'agent_complete', domain }
-}
+```yaml
+---
+contract: GC2
+type: artifact
+source_agent: atlas
+source_workflow: model-generation
+target_agents: [lens, coach]
+created: YYYY-MM-DD
+---
 ```
 
-**Status Lifecycle:**
-1. Agent yields `status: 'provisional'` — finding is structurally complete but agent is still running
-2. Orchestrator upgrades to `status: 'confirmed'` after `agent_complete` event
-3. On agent failure (catch block), all provisional findings from that agent become `status: 'unverified'`
+**Schema:** (written to `.gyre/capabilities.yaml`)
 
-**Backpressure:** Async generators provide natural backpressure — the renderer processes at its own pace. No buffering, no queue overflow.
-
-### Process Patterns
-
-**Error Classes:**
-
-```javascript
-class GyreError extends Error {
-  constructor(message, code, { recoverable = false, retryGuidance = '' } = {}) {
-    super(message)
-    this.name = this.constructor.name
-    this.code = code
-    this.recoverable = recoverable
-    this.retryGuidance = retryGuidance
-  }
-}
-
-class DetectionError extends GyreError { constructor(msg, opts) { super(msg, 2, opts) } }
-class ProviderError extends GyreError { constructor(msg, opts) { super(msg, 3, opts) } }
-class AnalysisError extends GyreError { constructor(msg, opts) { super(msg, 4, opts) } }
-class StreamTimeoutError extends ProviderError {
-  constructor(elapsed) { super(`No chunk received in ${elapsed}ms`, { recoverable: true, retryGuidance: 'Re-run to retry' }) }
-}
+```yaml
+gyre_manifest:
+  version: string                 # manifest schema version
+  generated_at: ISO-8601          # generation timestamp
+  stack_summary: string           # one-line stack description
+  capability_count: integer
+  limited_coverage: boolean       # true if <20 capabilities
+  capabilities:
+    - id: string                  # e.g., "health-check-liveness"
+      category: string            # e.g., "observability", "deployment"
+      name: string                # human-readable name
+      description: string         # 1-3 sentences: what it is + why it matters
+      source: string              # "standard" | "practice" | "reasoning"
+      relevance: string           # why this matters for THIS stack
+      amended: boolean            # true if user-modified
+      removed: boolean            # true if user removed (excluded from analysis)
+  provenance:
+    standards_referenced: string[]  # e.g., ["DORA", "OpenTelemetry", "Google PRR"]
+    web_search_performed: boolean
+    web_search_date: ISO-8601
 ```
 
-**File System Safety:**
-- All writes go to `.gyre/` directory only — never write outside it
-- Use `path.resolve()` + assert prefix match before any write
-- Atomic writes via write-to-temp + rename pattern for YAML artifacts (prevents corruption on crash)
+**Downstream consumption:**
+- Lens loads the manifest and compares each capability against filesystem evidence
+- Coach presents capabilities for review and amendment
 
-**Lock File Pattern (NFR13 — Run Exclusivity):**
+### GC3: Findings Report (Lens → Coach)
 
-```javascript
-// Orchestrator start
-const lockPath = path.join(gyreDir, '.lock')
-// Check for stale lock: read PID, check if process alive via process.kill(pid, 0)
-// If stale: remove and proceed with warning
-// If active: exit with "Another gyre process is running (PID: X)"
-// Create lock with current PID
-// In finally block: always remove lock
+```yaml
+---
+contract: GC3
+type: artifact
+source_agent: lens
+source_workflow: gap-analysis
+target_agents: [coach]
+created: YYYY-MM-DD
+---
 ```
 
-**Config Parsing:**
-- `config.yaml` parsed once at CLI entry point
-- Environment variable references (`${GYRE_API_KEY}`) resolved during parsing
-- Merged with CLI flags and env vars per precedence order
-- Result is a frozen config object passed to orchestrator — no re-reading config mid-run
+**Schema:** (written to `.gyre/findings.yaml`)
 
-**Context Object Immutability:**
-- Orchestrator creates `detectionCtx` and `analysisCtx` as frozen objects: `Object.freeze(detectionCtx)`
-- Shallow freeze is sufficient — context objects are flat by design (no nested mutable objects)
-- Mutation attempts fail loudly in strict mode
-
-### Enforcement Rules
-
-Each rule is tagged with its verification method:
-
-| # | Rule | Verification | Anti-Pattern |
-|---|------|-------------|--------------|
-| 1 | **Privacy boundary**: Prompt builders accept Tier 1 StackProfile only | `contract-test` | Passing file paths, version strings, or dependency lists to prompt builders |
-| 2 | **Context immutability**: Context objects frozen at creation | `contract-test` | Agent mutating `analysisCtx.options` or adding properties |
-| 3 | **No cross-layer imports**: Agents never import from `providers/`, providers never import from `pipeline/` | `lint` | `require('../providers/anthropic')` inside an agent file |
-| 4 | **PromptPayload shape**: Every prompt builder returns `{ system: string, user: string }` | `contract-test` | Returning raw strings, adding `messages` array, including `model` in payload |
-| 5 | **Exit code mapping**: Each failure mode maps to exactly one exit code | `unit-test` | Returning exit 0 when both agents failed, or exit 4 for a single agent failure |
-| 6 | **Finding shape**: Agents yield only structurally complete findings (8 required fields) | `unit-test` | Yielding a finding without `confidence` or `source` field |
-| 7 | **File system boundary**: State modules write only inside `.gyre/` | `contract-test` | Writing temp files to project root, creating files in `node_modules/` |
-| 8 | **Config precedence**: CLI flags > env vars > config file > defaults | `integration-test` | Config file value overriding an explicit CLI flag |
-
-**Pattern Violation Process:**
-- Rules 1, 2, 4, 7 enforced by contract tests — violations break CI
-- Rule 3 enforced by eslint import boundary rule — violations break lint
-- Rules 5, 6 enforced by unit tests — violations break test suite
-- Rule 8 enforced by integration test — violations break integration suite
-
-## Project Structure & Boundaries
-
-### Complete Project Directory Structure
-
-```
-packages/gyre/
-├── package.json                        # Standalone npm package, bin: { gyre: './gyre.js' }
-├── gyre.js                             # CLI entry point — Commander setup, config resolution, orchestrator invocation
-├── LICENSE
-├── .eslintrc.js                        # Import boundary rules (enforcement rule #3)
-├── lib/
-│   ├── types.js                        # Cross-module JSDoc @typedefs ONLY (Finding, StackProfile, PromptPayload, LLMProvider, contexts)
-│   │                                   # Rule: if >1 module references a type → types.js. If only 1 → stays local.
-│   ├── pipeline/
-│   │   ├── orchestrator.js             # Phase sequencing, context creation, freeze, lock file, exit code mapping
-│   │   ├── stack-detector.js           # File system analysis → StackProfile (Tier 1 + Tier 2)
-│   │   ├── guard.js                    # Interactive guard question, --guard flag override, reclassification
-│   │   ├── model-generator.js          # LLM call → capabilities.yaml, cache check via Tier 1 hash
-│   │   ├── review.js                   # Interactive review workflow: editor launch, diff computation, subtraction
-│   │   ├── correlator.js              # Cross-domain compound finding generation
-│   │   └── sanity-validator.js         # Heuristic checks on findings (>80% missing, uniform confidence, orphans)
-│   │   └── __tests__/
-│   │       ├── orchestrator.test.js
-│   │       ├── stack-detector.test.js
-│   │       ├── guard.test.js
-│   │       ├── model-generator.test.js
-│   │       ├── review.test.js
-│   │       ├── correlator.test.js
-│   │       └── sanity-validator.test.js
-│   ├── agents/
-│   │   ├── observability.js            # Async generator — yields findings for observability domain
-│   │   ├── deployment.js               # Async generator — yields findings for deployment domain
-│   │   ├── finding-parser.js           # Shared delimiter-based chunk accumulator (parseFindings)
-│   │   └── __tests__/
-│   │       ├── observability.test.js
-│   │       ├── deployment.test.js
-│   │       └── finding-parser.test.js
-│   ├── providers/
-│   │   ├── provider.js                 # Provider factory: createProvider(config) → LLMProvider
-│   │   ├── anthropic.js                # Anthropic SDK wrapper, stream timeout
-│   │   ├── openai.js                   # OpenAI SDK wrapper, stream timeout
-│   │   └── __tests__/
-│   │       ├── provider.test.js
-│   │       ├── anthropic.test.js
-│   │       └── openai.test.js
-│   ├── prompts/
-│   │   ├── model-generation.js         # buildModelGenerationPrompt(tier1, guard, webResults?)
-│   │   ├── observability-agent.js      # buildObservabilityPrompt(tier1, manifest)
-│   │   ├── deployment-agent.js         # buildDeploymentPrompt(tier1, manifest)
-│   │   ├── correlation.js              # buildCorrelationPrompt(allFindings)
-│   │   └── __tests__/
-│   │       ├── model-generation.test.js
-│   │       ├── observability-agent.test.js
-│   │       ├── deployment-agent.test.js
-│   │       └── correlation.test.js
-│   ├── state/
-│   │   ├── gyre-dir.js                 # .gyre/ creation, lock file (PID-based), path safety assertions
-│   │   ├── manifest.js                 # capabilities.yaml CRUD, Tier 1 hash comparison, amend persistence
-│   │   ├── findings.js                 # findings.yaml persistence, delta computation, history
-│   │   ├── feedback.js                 # feedback.yaml management
-│   │   ├── config.js                   # Config parsing, env var resolution, precedence merge, freeze
-│   │   └── __tests__/
-│   │       ├── gyre-dir.test.js
-│   │       ├── manifest.test.js
-│   │       ├── findings.test.js
-│   │       ├── feedback.test.js
-│   │       └── config.test.js
-│   ├── output/
-│   │   ├── renderer.js                 # CLI streaming renderer (ONLY module that imports chalk)
-│   │   ├── json-formatter.js           # --format json output
-│   │   ├── summary.js                  # Severity-first summary, novelty ratio, RICE rationale
-│   │   └── __tests__/
-│   │       ├── renderer.test.js
-│   │       ├── json-formatter.test.js
-│   │       └── summary.test.js
-│   └── setup/
-│       ├── wizard.js                   # Inline setup wizard (provider selection, env var guidance)
-│       └── __tests__/
-│           └── wizard.test.js
-├── data/
-│   └── guard-options.yaml              # Guard question options & stack archetype mappings
-└── __tests__/
-    ├── integration/
-    │   ├── config-precedence.test.js   # Enforcement rule #8
-    │   └── full-pipeline.test.js       # End-to-end with mock provider
-    ├── contracts/
-    │   ├── privacy-boundary.test.js    # Enforcement rule #1: no Tier 2 in prompts
-    │   ├── context-immutability.test.js # Enforcement rule #2: frozen contexts
-    │   ├── prompt-shape.test.js        # Enforcement rule #4: PromptPayload shape
-    │   └── fs-boundary.test.js         # Enforcement rule #7: writes only in .gyre/
-    └── fixtures/
-        ├── stacks/                     # Minimal synthetic stubs — only files needed to trigger detection paths
-        │   ├── node-express-aws/       # Each fixture has a comment header explaining what it tests
-        │   ├── go-kubernetes-gcp/
-        │   └── python-django-azure/
-        └── manifests/                  # Sample capabilities.yaml for agent tests
+```yaml
+gyre_findings:
+  version: string
+  analyzed_at: ISO-8601
+  mode: string                    # "crisis" | "anticipation"
+  stack_summary: string
+  summary:
+    blockers: integer
+    recommended: integer
+    nice_to_have: integer
+    total: integer
+    novelty_ratio: string         # e.g., "8 of 12 contextual"
+  findings:
+    - id: string                  # e.g., "OBS-001"
+      domain: string              # "observability" | "deployment"
+      severity: string            # "blocker" | "recommended" | "nice-to-have"
+      source: string              # "static-analysis" | "contextual-model"
+      confidence: string          # "high" | "medium" | "low"
+      capability_ref: string      # references GC2 capability ID
+      description: string
+      evidence_summary: string
+      severity_rationale: string  # why this severity level
+  compound_findings:
+    - id: string                  # e.g., "COMPOUND-001"
+      domain: "cross-domain"
+      severity: string
+      source: "contextual-model"
+      confidence: string          # lower of the two component confidences
+      capability_ref: string[]    # references 2 GC2 capability IDs
+      description: string
+      evidence_summary: string
+      related_findings: string[]  # references 2 finding IDs from different domains
+      combined_impact: string     # reasoning chain
+  sanity_check:
+    passed: boolean
+    warnings: string[]            # e.g., ">80% capabilities flagged missing"
 ```
 
-### Architectural Boundaries
+**Validation rules:**
+- Every finding must reference a valid capability_ref from GC2
+- Every compound must reference exactly 2 findings from different domains
+- Compound confidence = lower of component confidences
+- Compounds suppressed when either component has confidence "low"
 
-**Privacy Boundary (Tier 1 / Tier 2):**
+### GC4: Feedback Loop (Coach → Atlas)
 
-| Layer | Receives Tier 1 | Receives Tier 2 | Rationale |
-|-------|-----------------|-----------------|-----------|
-| `pipeline/stack-detector.js` | Produces both | Produces both | Detection creates both tiers from fs |
-| `pipeline/guard.js` | Yes | No | Guard modifies Tier 1 classification only |
-| `pipeline/model-generator.js` | Yes | No | LLM-facing — privacy boundary |
-| `pipeline/review.js` | Display only | No | Shows manifest content for user review |
-| `prompts/*` | Yes | No | All prompt builders accept Tier 1 only |
-| `providers/*` | Receives PromptPayload | No | Never sees StackProfile directly |
-| `agents/*` | Yes (via analysisCtx) | No | LLM-facing — privacy boundary |
-| `pipeline/correlator.js` | Yes (via analysisCtx) | No | LLM-facing — privacy boundary |
-| `pipeline/sanity-validator.js` | No | No | Operates on findings only |
-| `output/*` | Display only | No | Renderer shows Tier 1 in summary |
-
-**Module Import Boundary:**
-
-```
-gyre.js ──→ lib/state/config.js ──→ lib/providers/provider.js
-         ──→ lib/pipeline/orchestrator.js
-         ──→ lib/setup/wizard.js (conditional: no config)
-
-orchestrator.js ──→ lib/pipeline/* (all pipeline modules)
-                ──→ lib/agents/* (all agents)
-                ──→ lib/output/* (renderer)
-
-agents/* ──→ lib/prompts/* (own domain prompt builder)
-         ──→ lib/agents/finding-parser.js (shared parser)
-         ✗ NEVER → lib/providers/* (receives provider via context)
-         ✗ NEVER → lib/state/* (no direct file system access)
-
-prompts/* ──→ lib/types.js (JSDoc only)
-           ✗ NEVER → anything else (pure functions)
-
-providers/* ──→ external SDKs only (@anthropic-ai/sdk, openai)
-             ✗ NEVER → lib/* (isolated layer)
-
-output/* ──→ chalk (renderer only)
-          ✗ NEVER → lib/providers/* or lib/agents/*
-
-pipeline/review.js ──→ lib/state/manifest.js (persistence)
-                    ──→ lib/state/feedback.js (persistence)
-                    ✗ NEVER → lib/providers/* (no LLM in review)
+```yaml
+---
+contract: GC4
+type: feedback
+source_agent: coach
+source_workflow: model-review
+target_agents: [atlas]
+created: YYYY-MM-DD
+---
 ```
 
-### FR-to-File Mapping
+**Schema:** (persisted across `.gyre/capabilities.yaml` amendments + `.gyre/feedback.yaml`)
 
-**Capability Area 1: Stack Detection & Classification (FR1-FR8)**
+**Amendments** are written directly to `capabilities.yaml`:
+- Removed capabilities: `removed: true` flag
+- Modified capabilities: updated description/category
+- Added capabilities: new entries with `amended: true`
 
-| FR | File | Notes |
-|----|------|-------|
-| FR1-FR5 | `pipeline/stack-detector.js` | File system analysis → StackProfile |
-| FR6 | `pipeline/guard.js` | Interactive guard question |
-| FR7 | `gyre.js` + `pipeline/guard.js` | `--guard` CLI flag passed through |
-| FR8 | `pipeline/guard.js` + `pipeline/model-generator.js` | Reclassification triggers Tier 1 hash change → regeneration |
+**Feedback** written to `.gyre/feedback.yaml`:
 
-**Capability Area 2: Contextual Model Generation (FR9-FR15)**
-
-| FR | File | Notes |
-|----|------|-------|
-| FR9 | `pipeline/model-generator.js` + `prompts/model-generation.js` | LLM generation, not template |
-| FR10-FR11 | `prompts/model-generation.js` | Standards/search embedded in prompt |
-| FR12 | `prompts/model-generation.js` | Guard answer modifies prompt structure |
-| FR13-FR15 | `pipeline/model-generator.js` | Validation of generated model |
-
-**Capability Area 3: Absence Detection & Analysis (FR16-FR22)**
-
-| FR | File | Notes |
-|----|------|-------|
-| FR16 | `agents/observability.js` | Async generator agent |
-| FR17 | `agents/deployment.js` | Async generator agent |
-| FR18-FR21 | `agents/finding-parser.js` | Finding shape enforces source, confidence, severity |
-| FR22a-b | `pipeline/correlator.js` + `prompts/correlation.js` | Cross-domain reasoning |
-
-**Capability Area 4: Review, Amendment & Feedback (FR24-FR30)**
-
-| FR | File | Notes |
-|----|------|-------|
-| FR24-FR26 | `pipeline/review.js` | Editor launch, diff computation, subtraction workflow |
-| FR27 | `state/manifest.js` | YAML persistence for amendments |
-| FR28-FR30 | `pipeline/review.js` + `state/feedback.js` | Feedback prompt in review flow, persistence in state |
-
-**Capability Area 5: Output & Presentation (FR31-FR36, FR49-FR50)**
-
-| FR | File | Notes |
-|----|------|-------|
-| FR31-FR35 | `output/renderer.js` + `output/summary.js` | CLI streaming output |
-| FR36 | `output/json-formatter.js` | JSON output mode |
-| FR37 | `output/renderer.js` | Mode indicator display (crisis/anticipation) at start of output |
-| FR49-FR50 | `output/renderer.js` | Paste-friendly, RICE rationale |
-
-**Capability Area 6: Run Lifecycle & Delta Analysis (FR38-FR43, FR52-FR55)**
-
-| FR | File | Notes |
-|----|------|-------|
-| FR38-FR41 | `state/findings.js` + `pipeline/orchestrator.js` | Mode, history, delta |
-| FR42 | `state/gyre-dir.js` | `.gyre/` creation |
-| FR43, FR52-FR53, FR55 | `pipeline/orchestrator.js` | Manifest review, warnings, reminders |
-| FR51 | `pipeline/stack-detector.js` | Monorepo service boundary |
-
-**Capability Area 7: Installation, Configuration & Resilience (FR44-FR48, FR54, FR56-FR57)**
-
-| FR | File | Notes |
-|----|------|-------|
-| FR44 | `package.json` | npm bin entry |
-| FR45-FR46 | `state/config.js` + `setup/wizard.js` | Config + inline setup |
-| FR47-FR48 | `providers/provider.js` | Fail fast, auto model |
-| FR54 | `output/json-formatter.js` | Status field |
-| FR56-FR57 | `pipeline/orchestrator.js` | Partial save, complete-or-nothing |
-
-### Data Flow
-
+```yaml
+gyre_feedback:
+  entries:
+    - timestamp: ISO-8601
+      reporter: string            # from config user_name
+      type: string                # "missed-gap" | "false-positive" | "suggestion"
+      description: string         # free-text from user
+      domain: string              # if applicable
 ```
-User runs: gyre analyze .
-         │
-         ▼
-    ┌─────────┐     config.yaml
-    │ gyre.js │────→ env vars    ──→ frozen config object
-    └────┬────┘     CLI flags
-         │         (no config? → setup/wizard.js)
-         ▼
-    ┌──────────────┐
-    │ orchestrator  │──→ creates detectionCtx (fs, gyreDir, options) ← frozen
-    └──────┬───────┘
-           │
-     ┌─────▼──────┐
-     │ stack-      │──→ StackProfile { tier1: coarse, tier2: detailed }
-     │ detector    │
-     └─────┬──────┘
-           │
-     ┌─────▼──────┐
-     │ guard       │──→ modified tier1 (if user corrects classification)
-     └─────┬──────┘
-           │
-     ┌─────▼──────┐                    ┌──────────────┐
-     │ model-      │──→ generate() ──→ │ LLM provider │
-     │ generator   │←── capabilities ←─┘              │
-     └─────┬──────┘
-           │  writes capabilities.yaml via state/manifest.js
-           │
-           │  creates analysisCtx (provider, tier1, manifest, options) ← frozen
-           ▼
-     ┌────────────┐     ┌────────────┐
-     │ observ.    │     │ deploy.    │     Sequential, each streams findings
-     │ agent      │     │ agent      │
-     └─────┬──────┘     └─────┬──────┘
-           │                   │
-           └───────┬───────────┘
-                   ▼
-           ┌──────────────┐
-           │ correlator   │──→ compound findings (generate(), not stream)
-           └──────┬───────┘
-                  │
-           ┌──────▼───────┐
-           │ sanity       │──→ warnings if results look suspicious
-           │ validator    │
-           └──────┬───────┘
-                  │
-           ┌──────▼───────┐
-           │ renderer /   │──→ CLI output or JSON
-           │ formatter    │
-           └──────┬───────┘
-                  │
-           ┌──────▼───────┐
-           │ review.js    │──→ optional: editor launch, amendments, feedback
-           └──────────────┘     (writes via state/manifest.js, state/feedback.js)
+
+**Downstream consumption:**
+- Atlas reads amendments when regenerating — respects removed/added capabilities
+- Atlas reads feedback when regenerating — incorporates missed gaps into model
+
+## Workflow Architecture
+
+### Workflow 1: full-analysis (Orchestrator)
+
+**Owner:** Any Gyre agent (typically Scout initiates)
+**Steps:** 5
+**Purpose:** Orchestrates the complete analysis pipeline: detect → generate → analyze → review
+
+| Step | File | Agent | Action |
+|------|------|-------|--------|
+| 1 | step-01-initialize.md | Scout | Check for existing `.gyre/`, detect mode (crisis/anticipation), create `.gyre/` if needed |
+| 2 | step-02-detect-stack.md | Scout | Run stack detection, ask guard questions, write GC1 |
+| 3 | step-03-generate-model.md | Atlas | Load GC1, generate capabilities, write GC2 (skip if cached model exists in anticipation mode) |
+| 4 | step-04-analyze-gaps.md | Lens | Load GC2, run observability + deployment analysis, cross-domain correlation, write GC3 |
+| 5 | step-05-review-findings.md | Coach | Load GC3, present findings, guide review, capture feedback, write GC4 |
+
+**Mode detection logic:**
+- `.gyre/` does not exist → crisis mode (first run)
+- `.gyre/capabilities.yaml` exists → anticipation mode (re-run); load cached model, skip generation
+- User says "regenerate" → regeneration mode; fresh model generation even with existing cache
+
+**Step 5 ends with compass routing table.**
+
+### Workflow 2: stack-detection (Scout)
+
+**Owner:** Scout 🔎
+**Steps:** 3
+**Purpose:** Standalone stack detection — can be run independently for stack classification only
+
+| Step | File | Action |
+|------|------|--------|
+| 1 | step-01-scan-filesystem.md | Glob for manifests, Dockerfiles, CI configs, IaC templates; Grep for framework imports, provider configs |
+| 2 | step-02-classify-stack.md | Synthesize detections into stack classification; identify ambiguities |
+| 3 | step-03-guard-questions.md | Ask guard questions for ambiguous detections (≤3); write GC1 |
+
+### Workflow 3: model-generation (Atlas)
+
+**Owner:** Atlas 📐
+**Steps:** 4
+**Purpose:** Generate the capabilities manifest from the stack profile
+
+| Step | File | Action |
+|------|------|--------|
+| 1 | step-01-load-profile.md | Load GC1, check for existing amendments (GC4) |
+| 2 | step-02-generate-capabilities.md | Generate capabilities using LLM reasoning + standards knowledge |
+| 3 | step-03-web-enrichment.md | WebSearch for current best practices; incorporate into model |
+| 4 | step-04-write-manifest.md | Write capabilities.yaml (GC2), surface limited-coverage warning if <20 |
+
+### Workflow 4: model-review (Coach)
+
+**Owner:** Coach 🏋️
+**Steps:** 3
+**Purpose:** Guide user through reviewing and amending the capabilities manifest
+
+| Step | File | Action |
+|------|------|--------|
+| 1 | step-01-present-model.md | Display capability count, stack summary, categories |
+| 2 | step-02-walkthrough.md | Present each capability one at a time: keep/remove/edit |
+| 3 | step-03-apply-amendments.md | Write amendments to capabilities.yaml, write GC4 |
+
+### Workflow 5: gap-analysis (Lens)
+
+**Owner:** Lens 🔬
+**Steps:** 5
+**Purpose:** Run absence detection across two domains + cross-domain correlation
+
+| Step | File | Action |
+|------|------|--------|
+| 1 | step-01-load-manifest.md | Load GC2 (capabilities.yaml) |
+| 2 | step-02-observability-analysis.md | For each observability capability: search filesystem for evidence |
+| 3 | step-03-deployment-analysis.md | For each deployment capability: search filesystem for evidence |
+| 4 | step-04-cross-domain-correlation.md | Identify compound patterns across domains |
+| 5 | step-05-present-findings.md | Present severity-first summary, write GC3 |
+
+### Workflow 6: delta-report (Lens)
+
+**Owner:** Lens 🔬
+**Steps:** 3
+**Purpose:** Compare current findings against previous run
+
+| Step | File | Action |
+|------|------|--------|
+| 1 | step-01-load-history.md | Load `.gyre/history.yaml` and current `.gyre/findings.yaml` |
+| 2 | step-02-compute-delta.md | Compute: new findings, carried-forward, resolved |
+| 3 | step-03-present-delta.md | Present delta summary with [NEW], [CARRIED], resolved list |
+
+### Workflow 7: accuracy-validation (Atlas + Lens)
+
+**Owner:** Atlas 📐
+**Steps:** 3
+**Purpose:** Pre-pilot validation of model accuracy against synthetic ground truth
+
+| Step | File | Action |
+|------|------|--------|
+| 1 | step-01-select-repos.md | Select ≥3 synthetic ground truth repos (different stack archetypes) |
+| 2 | step-02-run-validation.md | Run stack-detection + model-generation on each repo |
+| 3 | step-03-score-results.md | Score each capability as relevant/partially-relevant/irrelevant; compute accuracy |
+
+## Compass Routing
+
+### Gyre Compass Table (used in final steps of each workflow)
+
+```markdown
+## Gyre Compass
+
+Based on what you just completed, here are your options:
+
+| If you want to... | Consider next... | Agent | Why |
+|---|---|---|---|
+| Detect or re-detect your stack | stack-detection | Scout 🔎 | New project or stack has changed |
+| Generate or regenerate the model | model-generation | Atlas 📐 | First run or want fresh model |
+| Review your capabilities manifest | model-review | Coach 🏋️ | Customize the model to your stack |
+| Run gap analysis | gap-analysis | Lens 🔬 | Find what's missing |
+| See what changed since last run | delta-report | Lens 🔬 | Track progress over time |
+| Run the full pipeline | full-analysis | Scout 🔎 | Complete end-to-end analysis |
+| Validate model accuracy | accuracy-validation | Atlas 📐 | Pre-pilot quality gate |
+
+> **Note:** These are recommendations. You can run any Gyre workflow at any time.
 ```
+
+### Inter-Module Routing (Gyre ↔ Vortex)
+
+Gyre findings can feed into Vortex product discovery:
+
+| If Gyre finds... | Consider in Vortex... | Agent | Why |
+|---|---|---|---|
+| Critical readiness gaps blocking launch | product-vision or contextualize-scope | Emma 🎯 | Readiness gaps may redefine product scope |
+| Findings that challenge assumptions | hypothesis-engineering | Liam 💡 | Readiness findings are testable hypotheses |
+| Feedback suggesting missing capabilities | user-interview | Isla 🔍 | Validate missed gaps with users |
 
 ## Convoke Ecosystem Integration
 
-### Workspace Infrastructure
-
-Gyre introduces `packages/gyre/` — the first use of npm workspaces in Convoke. This requires root-level infrastructure changes before any Gyre code exists:
-
-1. Create `packages/` directory
-2. Add `"workspaces": ["packages/*"]` to root `package.json`
-3. Verify existing Convoke scripts (`convoke-install`, `convoke-update`, `convoke-doctor`) are unaffected by workspace addition
-
-**Risk:** npm workspaces change how `node_modules` resolves dependencies. Existing Convoke tests must pass after workspace addition — this is a zero-regression gate.
-
 ### Module Registry Extension
 
-Vortex uses `scripts/update/lib/agent-registry.js` as the single source of truth for all agents, workflows, and derived lists. Every consumer (validator, doctor, installer, refresh) reads from it.
-
-Gyre introduces a second module type. The registry should be extended with a **module concept**:
+`agent-registry.js` gains a `GYRE_AGENTS` array and `GYRE_WORKFLOWS` array following the exact pattern of `AGENTS` and `WORKFLOWS`:
 
 ```javascript
-// Extend agent-registry.js (or rename to module-registry.js)
-const MODULES = [
-  {
-    id: 'vortex',
-    type: 'discovery-framework',  // markdown agents + workflows
-    version: null,                // shares convoke-agents version
-    agents: AGENTS,               // existing Vortex agent array
-    workflows: WORKFLOWS          // existing Vortex workflow array
-  },
-  {
-    id: 'gyre',
-    type: 'cli-tool',             // JS package with own binary
-    package: 'packages/gyre',
-    version: null,                // read from packages/gyre/package.json
-    binary: 'gyre'
-  }
+const GYRE_AGENTS = [
+  'stack-detective',
+  'model-curator',
+  'readiness-analyst',
+  'review-coach',
+];
+
+const GYRE_WORKFLOWS = [
+  'full-analysis',
+  'stack-detection',
+  'model-generation',
+  'model-review',
+  'gap-analysis',
+  'delta-report',
+  'accuracy-validation',
 ];
 ```
 
-**Consumers that need updating:**
-- `convoke-doctor` — validate Gyre installation when present (not mandatory — Gyre is optional)
-- `validator.js` — add module-level validation (package exists, binary works)
-- `convoke-install` — offer Gyre installation alongside Vortex
+Derived lists (`GYRE_AGENT_FILES`, `GYRE_WORKFLOW_DIRS`) follow the same derivation pattern as Vortex.
 
-### Installer: `convoke-install-gyre`
+### Installer
 
-Follows the same pattern as `install-vortex-agents.js` but handles a JS package instead of markdown files:
+`scripts/install-gyre-agents.js` follows the same pattern as `scripts/install-vortex-agents.js`:
+- Copies `_bmad/bme/_gyre/` contents to the project
+- Registers agents in `agent-manifest.csv`
+- Creates `convoke-install-gyre` bin entry in `package.json`
 
-1. Check prerequisites (Node ≥20, npm available)
-2. Install `gyre` package globally or link from workspace
-3. Verify `gyre --version` works
-4. Register Gyre in module manifest
-5. Display success with "Next steps: run `gyre setup` to configure your LLM provider"
+### Validator Extension
 
-**Key difference from Vortex installer:** Vortex copies markdown files via `refreshInstallation()`. Gyre installs an npm package — different mechanism, same UX pattern (check → install → verify → register → guide).
+`convoke-doctor` gains Gyre-specific checks:
+- 4 agent files present in `_bmad/bme/_gyre/agents/`
+- 7 workflow directories present in `_bmad/bme/_gyre/workflows/`
+- `config.yaml` valid with required fields
+- `compass-routing-reference.md` present
+- 4 contract files present in `_bmad/bme/_gyre/contracts/`
 
 ### Version Management
 
-Gyre versions **independently** from `convoke-agents`:
+Gyre module version is declared in `_bmad/bme/_gyre/config.yaml` (not a separate package.json). The Convoke package version (`package.json`) covers all modules.
 
-| Package | Version | Source of Truth | Rationale |
-|---------|---------|-----------------|-----------|
-| `convoke-agents` | 2.x.x | Root `package.json` | Vortex + infrastructure versioning |
-| `gyre` | 0.x.x → 1.0.0 | `packages/gyre/package.json` | Independent product lifecycle; starts at 0.x during MVP |
+### refreshInstallation
 
-**Rules:**
-- Gyre reads its own version from `packages/gyre/package.json` — never from root
-- No hardcoded versions (consistent with existing Convoke rule)
-- Root `convoke-agents` version bumps do NOT require Gyre version bumps (independent)
-- `convoke-doctor` reports both versions: "Convoke v2.4.0, Gyre v0.1.0"
+`refresh-installation.js` gains a Gyre module section that copies all markdown files from the `_gyre/` source to the project, following the exact pattern used for Vortex.
 
-### Project Root Detection
+## Architecture Validation
 
-Vortex uses `findProjectRoot()` which walks up to find `_bmad/`. Gyre runs in the **user's project directory** — a fundamentally different runtime context.
+### Requirement Coverage
 
-| Tool | "Project root" means | Detection method |
-|------|---------------------|-----------------|
-| Convoke/Vortex | Convoke installation root (contains `_bmad/`) | Walk up from CWD looking for `_bmad/` |
-| Gyre | User's project root (contains `.git` or `.gyre/`) | Walk up from CWD looking for `.git`, `.gyre/`, or package manifest |
+| Requirement Area | Coverage | Mechanism |
+|-----------------|----------|-----------|
+| Stack Detection (FR1-FR8) | Full | Scout agent + Claude Code tools |
+| Model Generation (FR9-FR15) | Full | Atlas agent + WebSearch |
+| Absence Detection (FR16-FR23) | Full | Lens agent + Claude Code tools |
+| Review & Amendment (FR24-FR30) | Full | Coach agent conversational walkthrough |
+| Output & Presentation (FR31-FR37, FR49-FR50) | Adapted | Conversational output replaces CLI |
+| Run Lifecycle (FR38-FR43, FR51-FR53, FR55-FR57) | Adapted | Workflow step-files handle lifecycle |
+| Installation (FR44-FR48) | Replaced | `convoke-install-gyre` + no provider config |
+| Privacy (NFR7-NFR9) | Adapted | Contract schema rules replace code tiers |
+| Performance (NFR1-NFR5) | Adapted | Measured in conversation flow |
+| Reliability (NFR10-NFR13) | Adapted | Conversation-native error handling |
+| Quality Gates (NFR18-NFR22) | Full | Accuracy-validation workflow |
 
-**Rule:** Gyre does NOT use Convoke's `findProjectRoot()`. It implements its own root detection in `lib/state/gyre-dir.js` — looks for `.git` or `.gyre/` walking up from CWD. Falls back to CWD if neither found (single-directory analysis).
+### FRs Removed (CLI-specific, no longer applicable)
 
-### Configuration Bridge (Deferred to v2)
+| FR | Description | Why removed |
+|----|-------------|-------------|
+| FR7 | `--guard` CLI flags | Guard questions are conversational |
+| FR32 | Streaming findings display | Claude Code handles output |
+| FR36 | JSON output format | Findings are conversational + YAML artifacts |
+| FR44 | `npm install -g gyre` | Installed via `convoke-install-gyre` |
+| FR45 | AI provider config via env var | Agent IS the LLM |
+| FR46 | `gyre setup` command | No provider config needed |
+| FR47 | Fail-fast provider error | No external provider |
+| FR48 | Auto model selection | Agent IS the LLM |
+| FR54 | JSON status field | No JSON output |
+| FR57 | Complete-or-nothing persistence | Conversation handles partial results naturally |
 
-Vortex config (`_bmad/bme/_vortex/config.yaml`) and Gyre config (`.gyre/config.yaml`) are **separate and unaware of each other** in MVP. A Convoke user installing both gets two independent config files.
+### NFRs Adapted
 
-**Acceptable for MVP because:**
-- Vortex config contains persona/workflow preferences (user_name, communication_language)
-- Gyre config contains LLM provider credentials and analysis settings
-- No shared fields that would benefit from bridging in MVP
+| NFR | Original | Adapted |
+|-----|----------|---------|
+| NFR1 | CLI time-to-first-finding <2min | Conversation time-to-first-finding <2min (Scout + Atlas + Lens first finding) |
+| NFR5 | CLI startup <3s | Agent activation <3s (config load + greeting) |
+| NFR14 | ≥2 LLM providers | Removed — agent IS Claude |
+| NFR17 | JSON schema stability | Removed — no JSON output |
 
-**v2 consideration:** If Gyre adds user preferences (output language, verbosity defaults), consider reading from Vortex config as fallback.
+### Decisions Log
 
-### Terminology Distinction
-
-"Agent" means two different things in Convoke:
-
-| Context | "Agent" means | Architecture | Example |
-|---------|--------------|--------------|---------|
-| Vortex | Persona-driven markdown facilitator | XML activation protocol, menu system, step-file workflows | Isla (Discovery & Empathy Expert) |
-| Gyre | JavaScript async generator domain analyzer | `async function*`, yields findings, no persona | Observability Readiness agent |
-
-**Documentation rule:** In cross-module docs (README, user guides), always qualify: "Vortex agent" or "Gyre domain agent." Within Gyre-only docs, unqualified "agent" is fine.
-
-## Architecture Validation Results
-
-### Coherence Validation
-
-**Decision Compatibility:** All technology choices are compatible. Commander 14.0.3 requires Node ≥20 (confirmed). LLM SDKs (@anthropic-ai/sdk, openai), Chalk v4, js-yaml, and fs-extra all support Node ≥20. No version conflicts.
-
-**Pattern Consistency:** All naming conventions (kebab-case files, camelCase functions, PascalCase types, snake_case YAML) are internally consistent and align with Node.js ecosystem conventions. Test structure (`__tests__/` co-located) is consistent across all modules.
-
-**Structure Alignment:** Project structure directly maps to pipeline phases. Each enforcement rule has a corresponding test location. Import boundaries are enforceable via ESLint.
-
-**Issues Resolved During Validation:**
-
-| # | Issue | Resolution |
-|---|-------|------------|
-| 1 | Node.js ≥18 in 3 locations vs ≥20 in Core Decisions | Updated all 3 references (NFR listing, Technical Constraints, Starter Template) to ≥20 |
-| 2 | `pipeline/review.js` missing from checkpoint sequence | Added as Checkpoint 2 step 10 with `state/feedback.js` |
-| 3 | `state/config.js` missing from Checkpoint 1 step 2 | Added explicitly to step 2 |
-| 4 | `agents/finding-parser.js` missing from Checkpoint 2 step 7 | Added explicitly to step 7 |
-| 5 | FR23 gap in FR mapping | Confirmed PRD numbering skip (FR22b → FR24). FR23 does not exist. |
-| 6 | FR37 missing from FR mapping | Mapped to `output/renderer.js` — mode indicator display (crisis/anticipation) |
-| 7 | Test structure dual-location ambiguity | Clarified: `__tests__/` co-located in `packages/gyre/` for Gyre-internal tests; Convoke-level `tests/integration/gyre/` for `convoke-install-gyre` integration |
-| 8 | Starter template tree vs canonical tree confusion | Added "Early Sketch" label and superseded callout pointing to Project Structure & Boundaries |
-
-**Product Decision Flagged:** Bumping Node minimum from ≥18 to ≥20 drops support for Node 18-19 users. Architecture recommends this based on Node 18 EOL (April 2025) and Commander v14 requirement. This is a **product decision** that should be confirmed by PM before PRD NFR15 is updated.
-
-### Requirements Coverage
-
-**Functional Requirements:** All 57 FRs across 7 capability areas have explicit file mappings. FR23 confirmed as PRD numbering skip (does not exist). FR37 now mapped.
-
-**Non-Functional Requirements:** All 22 NFRs are architecturally addressed:
-- 6 as core architectural drivers (NFR1, NFR7, NFR8, NFR10, NFR13, NFR14, NFR18)
-- 8 via explicit implementation patterns (NFR6, NFR11, NFR12, NFR19-NFR22)
-- 8 via technology decisions (NFR2-NFR5, NFR9, NFR15-NFR17)
-
-### Architecture Completeness Checklist
-
-**Requirements Analysis**
-- [x] Project context analyzed (57 FRs, 22 NFRs, 5 user journeys)
-- [x] Scale and complexity assessed (CLI tool, 2 LLM providers, 2 domain agents)
-- [x] Technical constraints identified (Node ≥20, npm, no server, YAML persistence)
-- [x] Cross-cutting concerns mapped (8 concerns documented)
-
-**Architectural Decisions**
-- [x] Runtime & CLI framework decided with versions (Node ≥20, Commander 14.0.3)
-- [x] LLM provider abstraction interface defined with code (generate + stream)
-- [x] Prompt architecture specified with builder pattern (PromptPayload)
-- [x] Error handling with 4 failure modes and exit code mapping (0-4)
-- [x] Configuration resolution with precedence order (CLI > env > file > defaults)
-- [x] Event system via async generators (yield findings, natural backpressure)
-- [x] Web search as optional enhancement (no default, additive only)
-- [x] Implementation checkpoints (2) with 11-step sequence
-
-**Implementation Patterns**
-- [x] Naming conventions (file, code, YAML — all consistent)
-- [x] Structure patterns (test location, module exports, no barrel files)
-- [x] Data formats (Finding 8-field shape, YAML schemas, event types)
-- [x] Communication patterns (async generator protocol, finding parser, delimiter contract)
-- [x] Process patterns (error classes, fs safety, lock file, config, context freeze)
-- [x] Enforcement rules (8 rules with verification methods and anti-patterns)
-
-**Project Structure**
-- [x] Complete directory tree with every file annotated
-- [x] Privacy boundary table (Tier 1/Tier 2 per module)
-- [x] Module import boundary graph with NEVER rules
-- [x] FR-to-file mapping for all 7 capability areas (57 FRs, 0 gaps)
-- [x] Data flow diagram (full pipeline including review)
-
-### Architecture Readiness Assessment
-
-**Overall Status:** READY FOR IMPLEMENTATION
-
-**Confidence Level:** High — all decisions versioned, all patterns have code examples, all enforcement rules have test strategies, all FRs traced to files, all validation issues resolved.
-
-**Key Strengths:**
-- Privacy boundary enforced by data shape + contract tests (not just documentation)
-- Async generators provide natural streaming, backpressure, and error propagation
-- Tiered context objects enforce both testability and privacy in a single mechanism
-- 8 enforcement rules with explicit verification methods prevent agent drift
-- Dual install path preserves ecosystem cohesion without forcing Convoke dependency
-- Complete FR-to-file traceability with zero coverage gaps
-
-**PRD Update Needed (Product Decision):**
-- NFR15: Update Node.js minimum from ≥18 to ≥20 (Commander v14 + Node 18 EOL). Requires PM confirmation.
-
-**First Implementation Priority:**
-Checkpoint 1 (Model Generation Demo) — `providers/` → `state/config.js` + `state/gyre-dir.js` + `setup/wizard.js` → `prompts/model-generation.js` → `pipeline/stack-detector.js` + `pipeline/guard.js` → `pipeline/model-generator.js` → `pipeline/orchestrator.js`
+| Decision | Choice | Alternatives Considered | Rationale |
+|----------|--------|------------------------|-----------|
+| Module type | Convoke team (conversational agents) | CLI tool with code agents | User decision — Gyre works like Vortex, not like a standalone tool |
+| Number of agents | 4 (Scout, Atlas, Lens, Coach) | 2 (detect+generate, analyze+review), 6 (split by domain) | 4 maps cleanly to the pipeline phases; each agent has a clear persona and responsibility |
+| Contract count | 4 (GC1-GC4) | 10 (matching Vortex) | Gyre's pipeline is linear with one feedback loop; 4 contracts cover all handoffs |
+| Privacy mechanism | Contract schema rules | Code-enforced tiers | No "local code" path exists — agent IS the LLM; contract rules constrain what enters artifacts |
+| Workflow count | 7 | 4 (only major phases) | 7 allows standalone execution of each phase + orchestrator + delta + validation |
+| Guard question delivery | Conversational | CLI flags | Natural in conversation; no flags needed |
+| Review mechanism | Conversational walkthrough | $EDITOR, CLI interactive | Consistent with Convoke team pattern; more accessible than YAML editing |
+| Artifact format | YAML in `.gyre/` | JSON, database | Consistent with Vortex; VCS-friendly; no server needed |
+| Web search | Atlas uses WebSearch tool | Custom API integration | Claude Code provides WebSearch natively |
+| Model caching | capabilities.yaml IS the cache | Separate cache layer | Simple; the artifact is the cache; regeneration is explicit |
