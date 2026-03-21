@@ -144,7 +144,31 @@ Domain knowledge extraction for IT consultants conducting enterprise brownfield 
 
 ## Strategic Fit
 
-{strategic-fit-analysis}
+### 1. Vision Alignment ✅
+
+Forge fills the UNDERSTAND gap — the most critical missing piece between Vortex (DISCOVER) and BMAD (BUILD). Without Forge, consultants jump from "should we build this?" to "let's build it" without systematically capturing what the client organization already knows. Forge is not a nice-to-have extension — it's a missing lifecycle stage.
+
+### 2. Team Capabilities ✅
+
+- Agent design pattern: proven (7 Vortex agents, Gyre in development)
+- BMAD module structure: understood (installer, config, manifest)
+- Domain expertise: consultants do knowledge extraction every engagement — Forge formalizes what they already do informally
+- Handoff contract pattern: established (HC1-HC10 in Vortex, FG-HC1/HC2 already designed)
+- **Note:** Knowledge extraction workflows are inherently more conversational and less automatable than Gyre's static analysis — agent design will lean on guided facilitation rather than automated detection.
+
+### 3. Resource Requirements ✅
+
+- Phase A is 2 agents (Silo + Rune), not 5 — manageable scope
+- KORE spec draft exists as starting point
+- Forge↔Gyre handoff contracts already designed
+- Epic breakdown exists with 5 epics across ~5 sprints
+- No external dependencies (no APIs, no infrastructure, no client data)
+
+### 4. Market Timing ✅
+
+- Gyre in development → Forge ships alongside or just after, enabling integration multiplier from day one
+- Active engagements where Forge would be used immediately
+- Building now means battle-tested by the time Gyre ships, FG-HC1 integration validated on real data
 
 ---
 
