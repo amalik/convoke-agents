@@ -408,6 +408,8 @@ So that Gyre integrates cleanly with my existing Convoke setup.
 
 **Note (ADR-001):** The config-driven doctor refactor is a critical integration enabler. By deriving validation expectations from each module's `config.yaml` rather than hardcoded arrays, future modules (including Enhance-generated modules) can be validated without modifying doctor code. This is the shared integration gate for the staggered parallel build — see `adr-enhance-gyre-build-sequencing.md`.
 
+**Scope clarification (ADR-001 Red Team H3):** Config-driven doctor validates **file existence only** — declared agents, workflows, and config files are present in the correct paths. Module-specific **content validation** (contract YAML schema correctness, workflow step completeness, agent protocol compliance) is explicitly NOT in scope for this story. Content quality is each module's own workflow responsibility, not doctor's.
+
 ### Story 1.7: Compass Routing Reference & Full-Analysis Skeleton
 
 As a user completing any Gyre workflow,
