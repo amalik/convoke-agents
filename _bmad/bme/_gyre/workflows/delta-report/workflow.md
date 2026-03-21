@@ -4,17 +4,19 @@ agent: readiness-analyst
 title: Delta Report
 description: Compare current findings against previous run — track progress over time
 steps: 3
-status: stub
 implements: Epic 4 (Story 4.6)
 ---
 
-# Delta Report Workflow (Stub)
+# Delta Report Workflow
 
-> **This workflow will be implemented in Epic 4 — Review, Feedback & Delta.**
->
-> Compares current `.gyre/findings.yaml` against `.gyre/findings.previous.yaml` to show what changed: new findings, carried-forward findings, and resolved gaps.
+Compares current `.gyre/findings.yaml` against `.gyre/history.yaml` to show what changed: new findings, carried-forward findings, and resolved gaps.
 
-## Pipeline (when implemented)
+## Prerequisites
+
+- GC3 (Findings Report) at `.gyre/findings.yaml` — current analysis results
+- `.gyre/history.yaml` — previous findings (saved automatically after each delta report)
+
+## Pipeline
 
 | Step | File | Action |
 |------|------|--------|
@@ -22,15 +24,11 @@ implements: Epic 4 (Story 4.6)
 | 2 | step-02-compute-delta.md | Compute: new findings, carried-forward, resolved |
 | 3 | step-03-present-delta.md | Present delta with [NEW], [CARRIED], resolved list |
 
-## Stub Behavior
+## First Run Behavior
 
-```
-Delta Report is not yet implemented (Epic 4, Story 4.6).
+If no `.gyre/history.yaml` exists, this is the first delta-capable run. All current findings are tagged [NEW], and the current findings are saved as history for future comparison.
 
-To use delta reporting, you need:
-1. A previous findings report (.gyre/findings.previous.yaml)
-2. A current findings report (.gyre/findings.yaml)
+## Error Recovery
 
-Run gap-analysis first to generate your current findings,
-then this workflow will compare future runs against it.
-```
+- If `.gyre/findings.yaml` missing: inform user to run gap-analysis first
+- If `.gyre/history.yaml` missing: treat as first run — all findings are [NEW]
