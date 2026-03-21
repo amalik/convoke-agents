@@ -25,12 +25,20 @@ A **skill** is a workflow or prompt template added to an existing agent.
 - It doesn't produce artifacts that other agents need to consume through handoff contracts
 - It doesn't require its own persistent domain expertise or judgment model
 
-**Cost:** ~1 file (skill definition). No new persona, no new handoff contracts.
+**Cost:** ~1 workflow + step files + menu patch. No new persona, no new handoff contracts.
+
+**Implementation mechanism: Enhance module** (`_bmad/bme/_enhance/`). The Enhance module is the established Convoke pattern for adding capability upgrades to existing agents. Each Tier 1 skill is implemented as an Enhance workflow:
+- Workflow entry point (`workflow.md`) + step files (`steps-*/`) + templates
+- Menu item patched onto the target agent (`<item exec="...">`)
+- Registered in `_enhance/config.yaml`
+- Validated by `convoke-doctor` (6-point check)
+- See `_bmad/bme/_enhance/guides/ENHANCE-GUIDE.md` for the full pattern
 
 **Examples:**
-- Stakeholder communication templates → skill on Emma (Contextualization Expert)
-- Risk register generation → skill on an existing BMAD architect agent
-- Sprint retrospective facilitation → skill on Max (Learning & Decision Expert)
+- Stakeholder communication templates → Enhance workflow on Emma (Contextualization Expert)
+- Risk register generation → Enhance workflow on Winston (Architect)
+- Sprint retrospective facilitation → Enhance workflow on Max (Learning & Decision Expert)
+- Initiatives backlog management → *Already exists* as Enhance workflow on John (PM)
 
 ---
 
@@ -66,10 +74,18 @@ A **team** is a group of agents with their own multi-phase process model, handof
 
 **Cost:** Multiple agent definitions + process model + handoff contracts + artifact schemas + integration points with existing teams. Significant design and maintenance investment.
 
+**Implementation mechanism: Enhance framework** (`_bmad/bme/_enhance/` — BMB module, in development). The Enhance framework is a meta-tool that generates new Convoke team modules from templates. It extracts patterns from existing teams (Vortex, Gyre) and scaffolds new teams with: `config.yaml`, agent skeletons, workflow step-files, contract skeletons, registry entries, and installer integration. See `adr-enhance-gyre-build-sequencing.md` for the build sequence and guard rails.
+
+**Build sequence for new teams (per ADR-001):**
+1. Complete Vortex discovery (streams 1-7) to validate the problem space
+2. Use Enhance to scaffold the module structure
+3. Fill in agent personas, workflow content, and contract schemas
+4. Validate via `convoke-doctor`
+
 **Examples:**
-- Vortex (7 agents, 7-stream discovery process)
-- Gyre (4 domain agents, multi-phase readiness assessment)
-- Forge (5 agents, 5-phase knowledge extraction — validated demand)
+- Vortex (7 agents, 7-stream discovery process) — hand-crafted, reference module
+- Gyre (4 agents, multi-phase readiness assessment) — hand-crafted, reference module
+- Forge (5 agents, 5-phase knowledge extraction) — *will be scaffolded by Enhance* (Task 4, ADR-001)
 
 ---
 
