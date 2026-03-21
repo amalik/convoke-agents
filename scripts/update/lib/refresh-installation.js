@@ -5,7 +5,7 @@ const path = require('path');
 const yaml = require('js-yaml');
 const { getPackageVersion } = require('./utils');
 const configMerger = require('./config-merger');
-const { AGENTS, AGENT_FILES, AGENT_IDS, WORKFLOW_NAMES, USER_GUIDES } = require('./agent-registry');
+const { AGENTS, AGENT_FILES, AGENT_IDS, WORKFLOW_NAMES, USER_GUIDES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES } = require('./agent-registry');
 
 /**
  * Refresh Installation for Convoke
@@ -182,6 +182,90 @@ async function refreshInstallation(projectRoot, options = {}) {
     }
   }
 
+  // 2d. Gyre module — copy agents, workflows, contracts, config
+  const packageGyre = path.join(packageRoot, '_bmad', 'bme', '_gyre');
+  const targetGyre = path.join(projectRoot, '_bmad', 'bme', '_gyre');
+
+  if (fs.existsSync(packageGyre)) {
+    // Copy Gyre agents
+    const gyreAgentsSource = path.join(packageGyre, 'agents');
+    const gyreAgentsTarget = path.join(targetGyre, 'agents');
+    await fs.ensureDir(gyreAgentsTarget);
+
+    if (!isSameRoot) {
+      for (const file of GYRE_AGENT_FILES) {
+        const src = path.join(gyreAgentsSource, file);
+        if (fs.existsSync(src)) {
+          await fs.copy(src, path.join(gyreAgentsTarget, file), { overwrite: true });
+          changes.push(`Refreshed Gyre agent: ${file}`);
+          if (verbose) console.log(`    Refreshed Gyre agent: ${file}`);
+        }
+      }
+    } else {
+      changes.push('Skipped Gyre agent copy (dev environment)');
+      if (verbose) console.log('    Skipped Gyre agent copy (dev environment)');
+    }
+
+    // Copy Gyre workflows
+    const gyreWorkflowsSource = path.join(packageGyre, 'workflows');
+    const gyreWorkflowsTarget = path.join(targetGyre, 'workflows');
+    await fs.ensureDir(gyreWorkflowsTarget);
+
+    if (!isSameRoot) {
+      for (const wf of GYRE_WORKFLOW_NAMES) {
+        const src = path.join(gyreWorkflowsSource, wf);
+        const dest = path.join(gyreWorkflowsTarget, wf);
+        if (fs.existsSync(src)) {
+          if (fs.existsSync(dest)) {
+            await fs.remove(dest);
+          }
+          await fs.copy(src, dest, { overwrite: true });
+          changes.push(`Refreshed Gyre workflow: ${wf}`);
+          if (verbose) console.log(`    Refreshed Gyre workflow: ${wf}`);
+        }
+      }
+    } else {
+      changes.push('Skipped Gyre workflow copy (dev environment)');
+      if (verbose) console.log('    Skipped Gyre workflow copy (dev environment)');
+    }
+
+    // Copy Gyre contracts
+    const gyreContractsSource = path.join(packageGyre, 'contracts');
+    const gyreContractsTarget = path.join(targetGyre, 'contracts');
+    if (fs.existsSync(gyreContractsSource)) {
+      await fs.ensureDir(gyreContractsTarget);
+      if (!isSameRoot) {
+        await fs.copy(gyreContractsSource, gyreContractsTarget, { overwrite: true });
+        changes.push('Refreshed Gyre contracts');
+        if (verbose) console.log('    Refreshed Gyre contracts');
+      }
+    }
+
+    // Copy Gyre config.yaml
+    const gyreConfigSource = path.join(packageGyre, 'config.yaml');
+    const gyreConfigTarget = path.join(targetGyre, 'config.yaml');
+    if (!isSameRoot && fs.existsSync(gyreConfigSource)) {
+      // Merge Gyre config preserving user prefs, same as Vortex
+      const gyreUpdates = {
+        agents: GYRE_AGENT_IDS,
+        workflows: GYRE_WORKFLOW_NAMES
+      };
+      const gyreConfigMerged = await configMerger.mergeConfig(gyreConfigTarget, version, gyreUpdates);
+      await configMerger.writeConfig(gyreConfigTarget, gyreConfigMerged);
+      changes.push(`Updated Gyre config.yaml to v${version}`);
+      if (verbose) console.log(`    Updated Gyre config.yaml to v${version}`);
+    }
+
+    // Copy Gyre README
+    const gyreReadmeSource = path.join(packageGyre, 'README.md');
+    const gyreReadmeTarget = path.join(targetGyre, 'README.md');
+    if (!isSameRoot && fs.existsSync(gyreReadmeSource)) {
+      await fs.copy(gyreReadmeSource, gyreReadmeTarget, { overwrite: true });
+      changes.push('Refreshed Gyre README.md');
+      if (verbose) console.log('    Refreshed Gyre README.md');
+    }
+  }
+
   // 3. Update config.yaml (merge, preserving user prefs)
   const configPath = path.join(targetVortex, 'config.yaml');
   await fs.ensureDir(path.dirname(configPath));
@@ -264,35 +348,45 @@ async function refreshInstallation(projectRoot, options = {}) {
     isV610 = true;
   }
 
-  // Build fresh bme rows matching the detected schema
+  // Build fresh bme rows matching the detected schema (Vortex + Gyre agents)
+  function buildAgentRow610(a, submodule) {
+    const p = a.persona;
+    return [
+      csvEscape(a.name),           // name
+      csvEscape(''),               // displayName
+      csvEscape(a.title),          // title
+      csvEscape(a.icon),           // icon
+      csvEscape(''),               // capabilities
+      csvEscape(p.role),           // role
+      csvEscape(p.identity),       // identity
+      csvEscape(p.communication_style), // communicationStyle
+      csvEscape(p.expertise),      // principles
+      csvEscape('bme'),            // module
+      csvEscape(`_bmad/bme/${submodule}/agents/${a.id}.md`), // path
+      csvEscape(`bmad-agent-bme-${a.id}`), // canonicalId
+    ].join(',');
+  }
+
+  function buildAgentRowLegacy(a, submodule) {
+    const p = a.persona;
+    return [
+      a.id, a.name, a.title, a.icon,
+      p.role, p.identity, p.communication_style, p.expertise,
+      'bme', `_bmad/bme/${submodule}/agents/${a.id}.md`,
+    ].map(csvEscape).join(',');
+  }
+
   let bmeRows;
   if (isV610) {
-    bmeRows = AGENTS.map(a => {
-      const p = a.persona;
-      return [
-        csvEscape(a.name),           // name
-        csvEscape(''),               // displayName
-        csvEscape(a.title),          // title
-        csvEscape(a.icon),           // icon
-        csvEscape(''),               // capabilities
-        csvEscape(p.role),           // role
-        csvEscape(p.identity),       // identity
-        csvEscape(p.communication_style), // communicationStyle
-        csvEscape(p.expertise),      // principles
-        csvEscape('bme'),            // module
-        csvEscape(`_bmad/bme/_vortex/agents/${a.id}.md`), // path
-        csvEscape(`bmad-agent-bme-${a.id}`), // canonicalId
-      ].join(',');
-    });
+    bmeRows = [
+      ...AGENTS.map(a => buildAgentRow610(a, '_vortex')),
+      ...GYRE_AGENTS.map(a => buildAgentRow610(a, '_gyre')),
+    ];
   } else {
-    bmeRows = AGENTS.map(a => {
-      const p = a.persona;
-      return [
-        a.id, a.name, a.title, a.icon,
-        p.role, p.identity, p.communication_style, p.expertise,
-        'bme', `_bmad/bme/_vortex/agents/${a.id}.md`,
-      ].map(csvEscape).join(',');
-    });
+    bmeRows = [
+      ...AGENTS.map(a => buildAgentRowLegacy(a, '_vortex')),
+      ...GYRE_AGENTS.map(a => buildAgentRowLegacy(a, '_gyre')),
+    ];
   }
 
   const allRows = [...preservedRows, ...bmeRows].join('\n') + '\n';
@@ -342,7 +436,10 @@ async function refreshInstallation(projectRoot, options = {}) {
   const skillsDir = path.join(projectRoot, '.claude', 'skills');
 
   // Remove stale skill directories (agents no longer in registry)
-  const currentSkillDirs = new Set(AGENTS.map(a => `bmad-agent-bme-${a.id}`));
+  const currentSkillDirs = new Set([
+    ...AGENTS.map(a => `bmad-agent-bme-${a.id}`),
+    ...GYRE_AGENTS.map(a => `bmad-agent-bme-${a.id}`),
+  ]);
   if (fs.existsSync(skillsDir)) {
     const existingSkills = (await fs.readdir(skillsDir)).filter(d => d.startsWith('bmad-agent-bme-'));
     for (const dir of existingSkills) {
@@ -378,7 +475,32 @@ You must fully embody this agent's persona and follow all activation instruction
     if (verbose) console.log(`    Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
   }
 
-  // 6a. Copy Enhance workflow skill wrappers and register in manifests
+  // 6b. Generate .claude/skills/ for Gyre agents
+  for (const agent of GYRE_AGENTS) {
+    const skillDir = path.join(skillsDir, `bmad-agent-bme-${agent.id}`);
+    await fs.ensureDir(skillDir);
+    const content = `---
+name: bmad-agent-bme-${agent.id}
+description: ${agent.id} agent
+---
+
+You must fully embody this agent's persona and follow all activation instructions exactly as specified. NEVER break character until given an exit command.
+
+<agent-activation CRITICAL="TRUE">
+1. LOAD the FULL agent file from {project-root}/_bmad/bme/_gyre/agents/${agent.id}.md
+2. READ its entire contents - this contains the complete agent persona, menu, and instructions
+3. FOLLOW every step in the <activation> section precisely
+4. DISPLAY the welcome/greeting as instructed
+5. PRESENT the numbered menu
+6. WAIT for user input before proceeding
+</agent-activation>
+`;
+    await fs.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf8');
+    changes.push(`Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
+    if (verbose) console.log(`    Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
+  }
+
+  // 6c. Copy Enhance workflow skill wrappers and register in manifests
   if (enhanceConfig && !isSameRoot) {
     for (const workflow of enhanceConfig.workflows || []) {
       const canonicalId = `bmad-enhance-${workflow.name}`;
@@ -457,7 +579,7 @@ menu: []
 prompts: []
 `;
 
-  for (const agent of AGENTS) {
+  for (const agent of [...AGENTS, ...GYRE_AGENTS]) {
     const filename = `bme-${agent.name.toLowerCase()}.customize.yaml`;
     const filePath = path.join(customizeDir, filename);
     if (!fs.existsSync(filePath)) {
