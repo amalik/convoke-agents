@@ -9,7 +9,7 @@ const { findProjectRoot, getPackageVersion } = require('./update/lib/utils');
 /**
  * convoke-doctor — Diagnose common Convoke installation issues.
  *
- * Config-driven: discovers all modules by scanning _bmad/bme/*/config.yaml
+ * Config-driven: discovers all modules by scanning _bmad/bme/ config.yaml
  * and validates file existence dynamically per module.
  */
 
