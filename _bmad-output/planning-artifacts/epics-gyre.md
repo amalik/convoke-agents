@@ -373,7 +373,7 @@ So that each service gets its own contextual model.
 **And** system does NOT attempt implicit boundary detection (directory naming conventions)
 **And** each selected service gets its own `.gyre/` directory at its service root
 
-### Story 1.6: Ecosystem Integration — Installer, Registry, Doctor
+### Story 1.6: Ecosystem Integration — Installer, Registry, Config-Driven Doctor
 
 As a Convoke user,
 I want to install Gyre with `convoke-install-gyre` and have it validated by `convoke-doctor`,
@@ -392,13 +392,21 @@ So that Gyre integrates cleanly with my existing Convoke setup.
 **Then** it exports GYRE_AGENTS (4 agents) and GYRE_WORKFLOWS (7 workflows) arrays
 **And** derived lists (GYRE_AGENT_FILES, GYRE_WORKFLOW_DIRS) follow existing derivation pattern
 
-**Given** `convoke-doctor` is extended (AR11)
-**When** doctor runs with Gyre installed
-**Then** it validates: 4 agent files, 7 workflow directories, config.yaml, compass-routing-reference.md, 4 contract files
+**Given** `convoke-doctor` is refactored to be config-driven (AR11, ADR-001)
+**When** doctor runs with any module installed
+**Then** it discovers all modules by scanning `_bmad/bme/*/config.yaml`
+**And** for each module, reads `agents[]` and `workflows[]` from config.yaml
+**And** validates each declared agent file exists
+**And** validates each declared workflow directory exists
+**And** validates config.yaml conforms to the shared module schema
+**And** validates module-specific files (contracts, compass-routing-reference.md) declared in config
+**And** existing Vortex validation continues to pass unchanged
 
 **Given** `refreshInstallation` is extended (AR12)
 **When** refresh runs
 **Then** it copies all Gyre markdown files from source to project
+
+**Note (ADR-001):** The config-driven doctor refactor is a critical integration enabler. By deriving validation expectations from each module's `config.yaml` rather than hardcoded arrays, future modules (including Enhance-generated modules) can be validated without modifying doctor code. This is the shared integration gate for the staggered parallel build — see `adr-enhance-gyre-build-sequencing.md`.
 
 ### Story 1.7: Compass Routing Reference & Full-Analysis Skeleton
 
