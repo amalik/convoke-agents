@@ -2,6 +2,9 @@
 stepsCompleted: [1, 2, 3, 4]
 status: 'complete'
 completedAt: '2026-03-21'
+editHistory:
+  - date: '2026-03-21'
+    changes: "Vortex-Gyre consistency review: added AR20-AR25 (workspace infra, module registry, versioning, installer, root detection, terminology). Expanded Story 1.1 (workspace + installer + zero-regression gate), Story 1.4 (project root detection), Story 1.8 (module registry + doctor integration). Updated Epic 1 header and coverage maps."
 inputDocuments:
   - _bmad-output/planning-artifacts/prd-gyre.md
   - _bmad-output/planning-artifacts/architecture-gyre.md
@@ -130,6 +133,12 @@ Architecture-derived requirements that impact implementation:
 - AR17: File size guard (1MB cap) before YAML parsing
 - AR18: Atomic writes (write-to-temp + rename) for YAML artifacts
 - AR19: `types.js` for cross-module JSDoc typedefs only; module-private types stay local
+- AR20: npm workspaces infrastructure — add `"workspaces": ["packages/*"]` to root `package.json`, create `packages/` directory, verify existing Convoke scripts unaffected
+- AR21: Module registry — extend `agent-registry.js` with a `MODULES` concept so `convoke-doctor` and `convoke-install` can discover and validate Gyre alongside Vortex
+- AR22: Independent versioning — Gyre versions in `packages/gyre/package.json` (starts 0.x), independent from `convoke-agents` version
+- AR23: `convoke-install-gyre` installer — same UX pattern as `install-vortex-agents.js` (check → install → verify → register → guide), but installs npm package instead of copying markdown
+- AR24: Project root detection — Gyre uses its own root detection (walk up for `.git`/`.gyre/`), NOT Convoke's `findProjectRoot()` which looks for `_bmad/`
+- AR25: Terminology — "Vortex agent" (persona markdown) vs "Gyre domain agent" (JS async generator). Always qualify in cross-module docs.
 
 ### UX Design Requirements
 
@@ -250,6 +259,12 @@ N/A — Gyre is a CLI tool with no UI design document.
 | AR17 | E2 | File size guard (1MB) before YAML parsing |
 | AR18 | E2 | Atomic writes for YAML artifacts |
 | AR19 | E3 | types.js cross-module typedefs only |
+| AR20 | E1 | npm workspaces infrastructure (root package.json, packages/ dir) |
+| AR21 | E1 | Module registry extension (agent-registry.js MODULES concept) |
+| AR22 | E1 | Independent Gyre versioning (packages/gyre/package.json) |
+| AR23 | E1 | convoke-install-gyre installer script |
+| AR24 | E1 | Project root detection (gyre-dir.js, not findProjectRoot) |
+| AR25 | E1 | Terminology distinction in cross-module docs |
 
 ### Enforcement Rule Distribution
 
@@ -267,10 +282,10 @@ N/A — Gyre is a CLI tool with no UI design document.
 ## Epic List
 
 ### Epic 1: Install, Configure & Stack Discovery
-User can install Gyre, configure their AI provider, point it at their project (including monorepos), and see their technology stack correctly identified with guard question confirmation. Includes package scaffolding, CLI framework, error handling foundation, and `.gyre/` directory creation.
+User can install Gyre, configure their AI provider, point it at their project (including monorepos), and see their technology stack correctly identified with guard question confirmation. Includes workspace infrastructure, package scaffolding, CLI framework, error handling foundation, `.gyre/` directory creation, and Convoke ecosystem integration (installer, registry, doctor).
 
 **FRs covered:** FR1, FR1b, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR42, FR44, FR45, FR46, FR47, FR48, FR51 (16 FRs)
-**ARs:** AR1-AR5, AR9-AR10, AR12 (rules 7, 8)
+**ARs:** AR1-AR5, AR9-AR10, AR12 (rules 7, 8), AR20-AR25
 **NFRs enforced:** NFR3, NFR5, NFR6, NFR11, NFR12, NFR13, NFR15, NFR16, NFR20
 **Dedicated enforcement stories:** Contract test for fs-boundary (rule 7), integration test for config precedence (rule 8)
 **Risk:** Medium — mostly deterministic file system and CLI code
@@ -311,26 +326,44 @@ User can re-run Gyre and see what changed — new findings, carried forward, and
 
 ## Epic 1: Install, Configure & Stack Discovery
 
-**Goal:** A user can install Gyre, configure their LLM provider, run stack detection on their project, confirm intent via guard questions, and have a validated StackProfile ready for model generation — including monorepo boundaries.
+**Goal:** A user can install Gyre, configure their LLM provider, run stack detection on their project, confirm intent via guard questions, and have a validated StackProfile ready for model generation — including monorepo boundaries. Includes workspace infrastructure, Convoke ecosystem integration, and installer.
 
-### Story 1.1: Package Scaffolding & CLI Entry Point
+### Story 1.1: Workspace Infrastructure & Package Scaffolding
 
 As a developer,
 I want to install Gyre globally via `npm install -g gyre` and run `gyre` from my terminal,
 So that I can begin using the tool with no additional setup beyond installation.
 
-**Requirements:** FR44, AR1, AR2, AR3, AR4
+**Requirements:** FR44, AR1, AR2, AR3, AR4, AR20, AR22, AR23, AR25
 
 **Acceptance Criteria:**
 
-**Given** the package is published to npm
-**When** a user runs `npm install -g gyre`
-**Then** a `gyre` binary is available on their PATH
-**And** running `gyre --version` prints the current version from package.json
+**Given** the Convoke monorepo has no `packages/` directory
+**When** workspace infrastructure is created
+**Then** a `packages/` directory is created at the repo root
+**And** root `package.json` has `"workspaces": ["packages/*"]` added
+**And** all existing Convoke tests pass (zero-regression gate)
+**And** existing `convoke-install`, `convoke-update`, `convoke-doctor` commands still work
+
+**Given** the workspace infrastructure exists
+**When** `packages/gyre/` is scaffolded
+**Then** `packages/gyre/package.json` exists with its own `name: "gyre"`, `version: "0.1.0"`, `bin: { gyre: './gyre.js' }`, and `engines: { node: ">=20" }`
+**And** Gyre version is independent from root `convoke-agents` version (AR22)
+**And** a `gyre` binary is available after `npm link` or `npm install -g gyre`
+**And** running `gyre --version` prints the version from `packages/gyre/package.json`
 **And** running `gyre --help` prints usage information with all top-level commands
 **And** running `gyre` with no arguments prints help text and exits with code 0
 **And** the CLI uses Commander v14 with Node.js ≥20 as the minimum engine
-**And** the entry point follows the `src/cli/index.js` structure from the architecture
+
+**Given** the Convoke ecosystem dual install path (AR2)
+**When** `convoke-install-gyre` is implemented
+**Then** a `scripts/install-gyre.js` script follows the same UX pattern as `install-vortex-agents.js`: check prerequisites (Node ≥20) → install gyre package → verify `gyre --version` works → display success with next steps
+**And** the `convoke-install-gyre` bin entry is added to root `package.json`
+**And** `convoke-install` is updated to offer Gyre installation alongside Vortex
+
+**Given** cross-module documentation (AR25)
+**When** README or user-facing docs reference both modules
+**Then** "Vortex agent" and "Gyre domain agent" are used (never unqualified "agent" in cross-module context)
 
 ### Story 1.2: Configuration Resolution & Setup Wizard
 
@@ -381,19 +414,25 @@ So that I get a clear error message immediately if my API key is invalid or the 
 **And** the provider exposes exactly two methods: `generate()` and `stream()`
 **And** the provider implements a 30-second per-chunk timeout on streaming responses
 
-### Story 1.4: `.gyre/` Directory & Lock File Management
+### Story 1.4: `.gyre/` Directory, Lock File & Project Root Detection
 
 As a developer running Gyre,
 I want all Gyre artifacts stored in a `.gyre/` directory with a lock file preventing concurrent runs,
 So that my project stays organized and parallel runs cannot corrupt state.
 
-**Requirements:** FR42, NFR12, NFR13
+**Requirements:** FR42, NFR12, NFR13, AR24
 
 **Acceptance Criteria:**
 
+**Given** the user runs any Gyre command from a project directory
+**When** project root detection runs
+**Then** `gyre-dir.js` walks up from CWD looking for `.git` or `.gyre/` to determine project root (AR24)
+**And** this is Gyre's own root detection — it does NOT use Convoke's `findProjectRoot()` (which looks for `_bmad/`)
+**And** if neither `.git` nor `.gyre/` is found, CWD is used as project root (single-directory analysis)
+
 **Given** the user runs any Gyre command that writes artifacts
 **When** the command starts
-**Then** it creates `.gyre/` if it doesn't exist
+**Then** it creates `.gyre/` at the detected project root if it doesn't exist
 **And** it acquires a lock file at `.gyre/.lock` before proceeding
 **And** if a lock file already exists and the owning process is still running, the command exits with a clear "another Gyre process is running" message
 **And** if the lock file is stale (owning process no longer exists), it is reclaimed
@@ -482,13 +521,13 @@ So that the analysis covers my entire project accurately rather than treating it
 **When** detection runs
 **Then** monorepo detection completes with a single boundary (no user disruption)
 
-### Story 1.8: Enforcement Rules — FS Boundary & Config Precedence
+### Story 1.8: Enforcement Rules, Module Registry & Ecosystem Integration
 
 As a maintainer of the Gyre codebase,
-I want contract tests enforcing that detection-phase code never imports the LLM provider and that config resolution follows the precedence chain,
-So that the privacy boundary and configuration correctness are verified on every CI run.
+I want contract tests enforcing architectural boundaries, and Convoke's tooling aware of Gyre as a module,
+So that the privacy boundary, configuration correctness, and ecosystem cohesion are verified on every CI run.
 
-**Requirements:** AR12 (rules 7, 8)
+**Requirements:** AR12 (rules 7, 8), AR21, AR23
 
 **Acceptance Criteria:**
 
@@ -505,6 +544,13 @@ So that the privacy boundary and configuration correctness are verified on every
 **Given** any new module added to `src/detection/`
 **When** the contract test suite runs
 **Then** the new module is automatically included in the boundary check (glob-based, not hardcoded file list)
+
+**Given** the Convoke agent registry (`scripts/update/lib/agent-registry.js`) (AR21)
+**When** Gyre is installed
+**Then** a `MODULES` array is added to the registry listing both Vortex (type: discovery-framework) and Gyre (type: cli-tool, package: packages/gyre)
+**And** `convoke-doctor` reports Gyre installation status and version when Gyre is present
+**And** `convoke-doctor` does NOT fail if Gyre is absent (Gyre is optional)
+**And** existing Vortex AGENTS and WORKFLOWS arrays are unchanged — MODULES is additive
 
 ---
 
