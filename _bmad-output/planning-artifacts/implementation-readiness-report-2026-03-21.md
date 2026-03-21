@@ -166,8 +166,14 @@ documents:
 - AR17: File size guard (1MB) before YAML parsing
 - AR18: Atomic writes (write-to-temp + rename) for YAML artifacts
 - AR19: `types.js` for cross-module JSDoc typedefs only
+- AR20: npm workspaces infrastructure (root package.json `workspaces` field, `packages/` directory)
+- AR21: Module registry — extend agent-registry.js with MODULES concept for Gyre + Vortex
+- AR22: Independent versioning — Gyre versions in `packages/gyre/package.json` (starts 0.x)
+- AR23: `convoke-install-gyre` installer following Vortex installer UX pattern
+- AR24: Project root detection — Gyre walks to `.git`/`.gyre/`, not `_bmad/`
+- AR25: Terminology — "Vortex agent" vs "Gyre domain agent" in cross-module docs
 
-**Total ARs: 19**
+**Total ARs: 25**
 
 ### PRD Completeness Assessment
 
@@ -256,7 +262,7 @@ The PRD is **comprehensive and well-structured**:
 - FRs covered in epics: 59
 - Coverage percentage: **100%**
 - NFRs covered: 22/22 (100%)
-- ARs covered: 19/19 (100%)
+- ARs covered: 25/25 (100%)
 
 ### Notable Coverage Patterns
 
@@ -264,6 +270,9 @@ The PRD is **comprehensive and well-structured**:
 - **FR37 stub:** Mode indicator in E3 outputs "crisis" only; full crisis/anticipation detection in E5
 - **FR32 streaming resolved:** FR32/FR57 streaming-vs-persistence contradiction resolved — streaming CLI shows partial, persistence is complete-or-nothing
 - **All 8 enforcement rules** distributed across E1 (rules 7,8), E2 (rules 1,4), E3 (rules 2,3,5,6)
+- **Ecosystem integration (AR20-AR25)** consolidated in E1: workspace infra (Story 1.1), project root detection (Story 1.4), module registry + doctor (Story 1.8)
+- **Config bridge deferred to v2** — Vortex and Gyre configs remain independent in MVP (acceptable: no shared fields)
+- **Test architecture divergence acceptable** — Vortex validates markdown structure (P0 tests), Gyre validates code invariants (contract tests). Both use node:test.
 
 ## UX Alignment Assessment
 
@@ -313,14 +322,14 @@ None. UX absence is intentional and appropriate for this project type.
 
 | Story | Size Assessment | Issue? |
 |-------|----------------|--------|
-| 1.1 | Small — scaffolding + CLI entry | ✓ OK |
+| 1.1 | Medium — workspace infra + scaffolding + installer + CLI entry | ✓ OK (expanded to cover ecosystem integration) |
 | 1.2 | Medium — config resolution + wizard | ✓ OK |
 | 1.3 | Medium — provider abstraction + error handling | ✓ OK |
 | 1.4 | Small — directory + lock file | ✓ OK |
 | 1.5 | Medium — 5 detection targets | ✓ OK |
 | 1.6 | Medium — guard questions + CLI override | ✓ OK |
 | 1.7 | Small — monorepo boundary detection | ✓ OK |
-| 1.8 | Small — enforcement tests only | ✓ OK |
+| 1.8 | Medium — enforcement tests + module registry + doctor integration | ✓ OK (expanded for ecosystem) |
 | 2.1a | Medium — prompt builder + LLM call | ✓ OK (split from original 2.1) |
 | 2.1b | Small — serialization + atomic write | ✓ OK (split from original 2.1) |
 | 2.2 | Small — contract tests | ✓ OK |
@@ -426,7 +435,7 @@ None. All planning artifacts are complete, aligned, and pass quality validation.
 | Document Inventory | 4/4 documents complete, no duplicates, no conflicts |
 | FR Coverage | 59/59 (100%) — every functional requirement traced to a story |
 | NFR Coverage | 22/22 (100%) — every non-functional requirement mapped to an epic |
-| AR Coverage | 19/19 (100%) — every architecture requirement mapped to an epic |
+| AR Coverage | 25/25 (100%) — every architecture requirement mapped to an epic |
 | UX Alignment | N/A — CLI tool, intentionally no UX document |
 | Epic User Value | 5/5 epics deliver user value |
 | Epic Independence | No backward or circular dependencies |
