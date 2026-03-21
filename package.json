@@ -8,6 +8,7 @@
     "scripts/",
     "_bmad/bme/_vortex/",
     "_bmad/bme/_enhance/",
+    "_bmad/bme/_gyre/",
     "INSTALLATION.md",
     "UPDATE-GUIDE.md",
     "CHANGELOG.md",
@@ -17,6 +18,7 @@
   ],
   "bin": {
     "convoke-install-vortex": "scripts/install-vortex-agents.js",
+    "convoke-install-gyre": "scripts/install-gyre-agents.js",
     "convoke-install": "scripts/install-all-agents.js",
     "convoke-update": "scripts/update/convoke-update.js",
     "convoke-version": "scripts/update/convoke-version.js",
