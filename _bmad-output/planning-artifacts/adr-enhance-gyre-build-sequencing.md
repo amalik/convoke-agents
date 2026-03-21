@@ -77,11 +77,31 @@ Key constraints:
 
 **Option C: Staggered Parallel**
 
-### Execution Phases
+### Execution Phases (Refined via Tree of Thoughts — Variant C')
 
-1. **Phase 1 — Gyre E1 (sole focus):** Land all 7 stories of Epic 1 (Module Foundation & Stack Detection), including Story 1.6 (Ecosystem Integration) which establishes the second-module pattern
-2. **Phase 2 — Enhance design-ahead (during Gyre E1):** Enhance Steps 1-2 (Team Discovery, Agent Design) can be *designed* in parallel — no code merges, no ecosystem file conflicts
-3. **Phase 3 — Interleave (after Gyre E1 tagged):** Alternate between Gyre E2-E4 stories and Enhance build (Steps 3-6), batched at epic boundaries
+Four strategies were evaluated: Epic-Locked Alternation (A), Story-Cluster Interleave (B), Enhance-Front-Loaded (C), and Front-Loaded + Validation Pass (C'). C' scored highest (7.9/10) on the weighted matrix, optimizing for Enhance momentum, minimal context switches (3 total), and guard-rail compliance.
+
+| Phase | Focus | Scope | Key Output | Context Switch? |
+|-------|-------|-------|------------|:-:|
+| **1** | Gyre E1 | Stories 1.1-1.7 | Module foundation, Scout agent, config-driven doctor | — |
+| **2** | Enhance MVP | Steps 1-5 (draft) | Templates extracted from Vortex + E1, draft integration, dry-run dummy module | Yes (1) |
+| **3** | Gyre E2a | Stories 2.1-2.2 | Accuracy spike resolved, Atlas agent landed. **Decision gate:** if spike fails, see Spike Contingency below | Yes (2) |
+| **4** | Enhance Lock | Template validation pass (~1 day) | Templates locked against Scout + Atlas, doctor passes for dummy module. Validation driven by `enhance-notes.md` rationale checklist | Yes (3) |
+| **5** | Gyre E2b-E4 | Stories 2.3-4.7 | Full Gyre implementation complete | — |
+| **6** | Enhance Final | Step 6 (Validation) + dogfood exercise + polish | Enhance MVP shipped. Dogfood: scaffold throwaway module, fill in content, evaluate authoring experience. Refine templates before Vortex redesign | — |
+
+**Why C' over alternatives:**
+- **vs Epic-Locked (A):** Enhance gets a focused block instead of fragmented slivers between epics. Better momentum.
+- **vs Story-Cluster (B):** Avoids 6-7 context switches between heterogeneous work (domain logic vs meta-templating). Each block stays homogeneous.
+- **vs Front-Loaded (C):** Complies with template stability gate (2+ agents required for lock). C would lock against Scout alone.
+
+**Phase 2 dry-run artifact:** Enhance Phase 2 should produce a dummy module generated from draft templates. It won't pass doctor yet (no Atlas validation), but proves template machinery works end-to-end. De-risks Phase 4 from "validate + fix" to "validate + tweak."
+
+**Phase 2 template design rationale:** Phase 2 must also produce `_bmad-output/enhance-notes.md` documenting *why* each template section exists, which Vortex/Gyre pattern it extracts from, and what variation points are parameterized. This serves as the context bridge for Phase 4 validation — enabling mechanical checklist-based validation rather than creative re-derivation across Claude Code sessions.
+
+**Phase 3 spike contingency:** If Story 2.1 (Accuracy Spike) fails the ≥70% gate, Enhance templates remain valid — they are structural (module scaffolding patterns), not accuracy-dependent. Gyre E2-E4 enters redesign. Enhance Phase 4 template lock proceeds against Scout + whatever Atlas design exists, since templates target the XML activation protocol structure, not domain logic outcomes.
+
+**Phase 6 dogfood exercise:** Before declaring Enhance MVP shipped, scaffold a throwaway module using the templates, fill in domain-specific content manually, and evaluate the authoring experience. If the fill-in workflow is painful (wrong abstraction boundaries, too many/few placeholders), refine templates before proceeding to Vortex redesign (Task 3). The dogfood module is deleted afterward — it's a usability test, not a product.
 
 ### Guard Rails
 
@@ -92,8 +112,8 @@ Key constraints:
 - **Template stability gate:** Templates are DRAFT until validated against 2+ agent implementations from different epics (Scout + Atlas minimum). Design-ahead during E1 is fine; template *lock* requires E2 Story 2.2 (Atlas Agent) to land
 - **Dynamic validator requirement:** Gyre E1 Story 1.6 must ensure `convoke-doctor` derives expected agent/workflow counts from each module's `config.yaml` dynamically — not from hardcoded arrays. This eliminates ecosystem file collision risk during interleave
 - **No mid-story context switching:** Complete the current story fully (implementation + AC verification) before touching the other track. Cross-track insights captured in `_bmad-output/enhance-notes.md` scratchpad, not acted on immediately
-- **Enhance MVP time-box:** Enhance is scoped to the equivalent effort of one Gyre epic. MVP = generate `config.yaml` + agent skeleton + workflow skeleton + contract skeleton + registry entries. Sophistication (auto-compass-routing, smart validation) goes to initiatives backlog
-- **Task sequencing lock:** Enhance templates must be locked before Vortex redesign (Task 3) begins. Vortex redesign *consumes* Enhance templates for validation — it must not feed them. Sequence: Gyre E1 → Enhance MVP → Gyre E2-E4 ↔ Enhance refinement → Vortex redesign → Forge
+- **Enhance MVP time-box and tier:** Enhance is scoped to the equivalent effort of one Gyre epic. MVP is **Structural tier**: generated agents include the complete XML activation protocol structure (7 steps, persona definition, menu handlers, config loading, step-file references) with parameterized placeholders — not stubs (too shallow for Forge to use) and not LLM-generated content (too ambitious for MVP). Full MVP output: `config.yaml` + agent skeletons + workflow skeletons + contract skeletons + registry entries. Sophistication (auto-compass-routing, smart validation, generative content) goes to initiatives backlog
+- **Task sequencing lock:** Enhance templates must be locked before Vortex redesign (Task 3) begins. Vortex redesign *consumes* Enhance templates for validation — it must not feed them. Full sequence: Gyre E1 → Enhance Steps 1-5 draft → Gyre E2 Stories 2.1-2.2 → Enhance template lock → Gyre E2b-E4 → Enhance final → Vortex redesign → Forge
 
 ### Key Insight
 
@@ -194,6 +214,20 @@ Analysis conducted via Cross-Functional War Room method during Advanced Elicitat
 ### Story 1.6 Scope Change
 
 Story 1.6 in `epics-gyre.md` has been updated to include the config-driven doctor refactor. The doctor now discovers modules by scanning `_bmad/bme/*/config.yaml` and derives validation expectations dynamically. Estimated impact: +1 day to Story 1.6, but eliminates the two highest-risk integration conflicts (doctor and validator collision).
+
+---
+
+## Red Team / Blue Team: Adversarial Stress Test
+
+Five rounds of adversarial analysis. Red Team (Liam, Quinn) attacked the plan; Blue Team (Winston, Bob) defended. Final score: 38-38 (dead even) — plan is solid but all five rounds produced hardenings now integrated into execution phases and guard rails above.
+
+| Round | Attack Vector | Verdict | Hardening Applied |
+|-------|-------------|---------|-------------------|
+| 1 | **Accuracy Spike Black Hole** — Story 2.1 has unpredictable duration, could stall entire sequence | Blue defends — spike risk is pre-existing; Enhance templates are structural, not accuracy-dependent | Phase 3 spike contingency added to execution phases |
+| 2 | **Context Loss Across Sessions** — Claude Code cold starts lose template design reasoning | Red scores — artifacts capture *what* not *why* | Phase 2 must produce `enhance-notes.md` template design rationale as Phase 4 validation checklist |
+| 3 | **Doctor Refactor Underscoped** — config-driven doctor is bigger than +1 day | Blue scopes — file-existence validation only; content validation explicitly out of scope | Story 1.6 scope clarification added to epics |
+| 4 | **MVP Definition Ambiguous** — "agent skeleton" could mean stub, structural, or generative | Draw — resolved by formalizing Structural tier | Enhance MVP guard rail specifies Structural tier with complete XML activation protocol |
+| 5 | **Ergonomics Untested Until Forge** — template correctness ≠ authoring experience | Red wins — mechanical validation misses workflow usability | Phase 6 dogfood exercise: scaffold throwaway module, fill in content, evaluate experience |
 
 ---
 
