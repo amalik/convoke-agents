@@ -54,8 +54,9 @@ async function main() {
 
   // 3. Per-module checks
   for (const mod of modules) {
-    checks.push(checkModuleConfig(mod));
-    if (mod.config) {
+    const configCheck = checkModuleConfig(mod);
+    checks.push(configCheck);
+    if (configCheck.passed) {
       checks.push(checkModuleAgents(mod));
       checks.push(checkModuleWorkflows(mod));
     }
@@ -228,9 +229,10 @@ function checkModuleWorkflows(mod) {
     };
   }
 
-  const missing = workflowNames.filter(w =>
-    !fs.existsSync(path.join(workflowsDir, w, 'workflow.md'))
-  );
+  const missing = workflowNames.filter(w => {
+    const name = typeof w === 'object' ? w.name : w;
+    return !fs.existsSync(path.join(workflowsDir, name, 'workflow.md'));
+  });
 
   if (missing.length > 0) {
     return {
