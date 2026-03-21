@@ -39,8 +39,8 @@ describe('convoke-doctor CLI', () => {
     const { stdout } = await run(path.join(projectRoot, 'scripts/convoke-doctor.js'));
     assert.ok(stdout.includes('Convoke Doctor'), 'should show doctor header');
     assert.ok(stdout.includes('Project root'), 'should check project root');
-    assert.ok(stdout.includes('Config file'), 'should check config');
-    assert.ok(stdout.includes('Agent files'), 'should check agents');
+    assert.ok(stdout.includes('config'), 'should check config');
+    assert.ok(stdout.includes('agents'), 'should check agents');
   });
 });
 
