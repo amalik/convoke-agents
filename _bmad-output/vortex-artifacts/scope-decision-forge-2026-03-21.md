@@ -1,5 +1,5 @@
 ---
-title: "Scope Decision: {scope-name}"
+title: "Scope Decision: Forge — Domain Knowledge Extraction"
 date: 2026-03-21
 created-by: Amalik with Emma (contextualization-expert)
 type: scope-decision
@@ -7,15 +7,21 @@ status: DECIDED
 version: 1.0
 ---
 
-# Scope Decision: {scope-name}
+# Scope Decision: Forge — Domain Knowledge Extraction
 
 ## Decision Summary
 
-**Selected Problem Space:** {selected-scope}
+**Selected Problem Space:** Domain knowledge extraction for IT consultants conducting enterprise brownfield engagements (KORE Method)
 
-**Rationale:** {selection-rationale}
+**Rationale:** Scored 4.65/5 on weighted evaluation — highest of 7 opportunities. Forge addresses the most frequent, most time-consuming gap: consultants burn 40-80 hours per engagement on ad-hoc knowledge archaeology because tribal knowledge is trapped in people's heads and documentation is stale or missing. Strategic fit validated across all four dimensions (vision alignment, team capabilities, resource requirements, market timing). Direct integration with Gyre via FG-HC1/HC2/GF-HC1 handoff contracts creates a compounding value cycle.
 
-**De-scoped (Not Now):** {descoped-problems}
+**De-scoped (Not Now):**
+- **Sentinel** (incident lifecycle) — Evaluated through Capability Evaluation Framework: 1 agent in Gyre, not standalone team. No friction log demand.
+- **Ledger** (audit/compliance) — Hypothesis. Likely a module, not a team. Evaluate when regulated-industry engagements demand it.
+- **Pulse** (adoption/change) — Hypothesis. Evaluate when large transformations with end-user adoption risk demand it.
+- **Loom** (human-agent orchestration) — Hypothesis. Evaluate when multiple teams are active on same engagement.
+- **Conduit** (data migration) — Hypothesis. Evaluate when engagements involve significant data migration.
+- **Compass** (stakeholder alignment) — Hypothesis. Lowest score (2.15). Handled informally through consultant experience today.
 
 ---
 
@@ -174,7 +180,54 @@ Forge fills the UNDERSTAND gap — the most critical missing piece between Vorte
 
 ## Next Steps
 
-{next-steps}
+### Immediate: Continue Vortex Discovery (Streams 2-7)
+
+Contextualize stream complete. Next streams:
+1. **Empathize (Isla)** — Who are Forge's users? Build lean personas for consultants using Forge.
+2. **Synthesize (Mila)** — Converge empathy findings into prioritized problem definitions
+3. **Hypothesize (Liam)** — What are the riskiest assumptions? Build hypothesis contracts.
+4. **Externalize (Wade)** — Design experiments to validate Forge's core assumptions
+5. **Sensitize (Noah)** — What signals will tell us Forge is working?
+6. **Systematize (Max)** — Decision framework for Forge's pivot/patch/persevere gates
+
+### Build Sequence: ADR-001 Dependency Chain
+
+Forge is **Task 4** in the ADR-001 build sequence. It does not get hand-crafted — it gets scaffolded by the Enhance framework after the pattern is proven:
+
+```
+Task 1: Gyre E1 (module foundation + Scout) — proves second team module pattern
+Task 2: Enhance framework — extracts templates from Vortex + Gyre E1
+Task 3: Vortex redesign — retroactively aligns to Enhance-codified patterns
+Task 4: Forge — scaffolded by Enhance, domain content filled from Vortex discovery
+```
+
+**What Vortex discovery produces that Enhance consumes:**
+- Scope decision (this document) → informs `config.yaml` generation
+- Lean personas → inform agent persona design (Silo and Rune communication styles)
+- Hypothesis contracts → inform handoff contract design (FG-HC1/HC2/GF-HC1 already drafted)
+- Experiment results → validate the knowledge extraction workflow design
+
+**What Enhance scaffolds for Forge:**
+- Module structure (`_bmad/bme/_forge/`)
+- Agent skeletons (Silo, Rune — filled with domain content from discovery)
+- Workflow step-file skeletons (filled with excavation methodology from discovery)
+- Contract skeletons (FG-HC1/HC2/GF-HC1 — already designed, templates pre-filled)
+- Installer integration (`convoke-install-forge`)
+- Registry and manifest entries
+
+### Parallel Track: Friction Logs
+
+While the ADR-001 sequence executes (Gyre E1 → Enhance → Vortex redesign), consulting teams should be running friction logs on real engagements. By the time Forge is ready to scaffold, friction log data validates (or challenges) the Vortex discovery findings.
+
+## Vortex Compass
+
+| If you learned... | Consider next... | Agent | Why |
+|---|---|---|---|
+| Scope is defined, users unknown | **lean-persona** | Emma 🎯 | Understand who exists in this problem space |
+| Scope chosen, need user validation | **user-interview** | Isla 🔍 | Confirm real users care about this scope |
+| Ready to test assumptions | **mvp** | Wade 🧪 | Design the smallest test for your scope decision |
+
+**Recommended next:** Stream 2 — Empathize (Isla). Scope is defined. Users are "consultants" but we haven't built lean personas yet — who exactly are they, what are their jobs-to-be-done, what forces push and pull them?
 
 ---
 
