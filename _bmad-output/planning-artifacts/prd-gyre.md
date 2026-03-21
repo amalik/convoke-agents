@@ -16,6 +16,10 @@ classification:
   domain: "Production Readiness Discovery"
   complexity: "high — product novelty & trust, not regulatory"
   projectContext: "brownfield infrastructure, greenfield product"
+lastEdited: '2026-03-21'
+editHistory:
+  - date: '2026-03-21'
+    changes: "Post-validation edits: scope pivot acknowledgment, scoping section consolidation, J6 traceability, FR13/FR22a/FR47/FR48 measurability refinements"
 ---
 
 # Product Requirements Document - Gyre
@@ -187,6 +191,8 @@ Features are classified into three tiers based on their role in validating the p
 
 **Build sequence:** M → H (H1-H6 in order, H7 last) → Q. Cut order if constrained: Q3 → Q1 → Q2.
 
+**Scope note:** The Product Brief's artifact-generation vision — SLO definitions, observability-as-code, policy-as-code ("code, not counsel") — is deferred to v2. MVP validates the discovery hypothesis first; if teams act on findings, v2 adds generated remediation artifacts.
+
 ## User Journeys
 
 Journeys 1, 4, and 5 demonstrate Gyre's core discovery value — finding what teams didn't know was missing. Journeys 2 and 3 demonstrate the operational workflows that sustain and scale that value.
@@ -317,31 +323,54 @@ Finding 1 catches them off guard. They've been debugging mysterious message loss
 
 ---
 
+### Journey 6: The Unsupported Stack — Graceful Degradation
+
+**Opening Scene.** A platform team runs a Rust service on bare-metal infrastructure — no Kubernetes, no standard cloud provider, no off-the-shelf observability stack. They run `gyre analyze .` after Ravi sends the install link.
+
+**Rising Action.** Gyre detects the Rust toolchain and bare-metal deployment patterns. The contextual model generates 12 capabilities — well below the 20-capability threshold. A prominent warning appears:
+
+```
+⚠️  Limited coverage for this stack (12 capabilities generated).
+    Gyre's knowledge of Rust/bare-metal stacks is thin.
+    Your amendments are especially important — continue analysis? (y/abort)
+```
+
+The team continues. Findings are sparse — 1 recommended (no structured logging format), 2 nice-to-have — all from static analysis, none from the contextual model. The novelty ratio reads: "0 of 3 findings are contextual."
+
+**Climax.** The review-and-amend workflow becomes the primary value driver. The team opens `.gyre/capabilities.yaml`, sees the thin model, and adds 9 capabilities they know should exist — custom health check endpoints, bare-metal IPMI monitoring, manual failover runbook triggers. On re-run, Gyre finds 4 new gaps from their amendments. The model went from Gyre-generated to team-authored with Gyre as scaffold.
+
+**Resolution.** The feedback prompt captures: "Rust/bare-metal needs custom capability sets — the generated model was too generic but the amendment workflow saved it." The team's experience is "useful but thin" — not broken, not impressive, but honest. They'd use Gyre again after amendments, not before. This data point informs stack diversity limits and model improvement priorities.
+
+**Capabilities revealed:** limited-coverage warning, graceful degradation, amendment-as-primary-value, feedback for ecosystem improvement, honest product boundaries.
+
+---
+
 ### Journey Coverage Summary
 
-| Capability Area | J1 | J2 | J3 | J4 | J5 |
-|----------------|----|----|----|----|-----|
-| Stack detection & analysis | ✅ | | ✅ | ✅ | ✅ |
-| Contextual model generation | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Architecture intent guard | ✅ | | | ✅ | ✅ |
-| Cross-domain correlation | ✅ | ✅ | | | ✅ |
-| Review-and-amend workflow | ✅ | ✅ | | ✅ | ✅ |
-| Feedback prompt | ✅ | | | ✅ | ✅ |
-| Amendment persistence | | ✅ | | ✅ | |
-| Delta analysis | | ✅ | | | |
-| CLI output streaming | ✅ | ✅ | ✅ | | ✅ |
-| Severity-first summary | ✅ | ✅ | ✅ | | |
-| RICE scoring | ✅ | ✅ | ✅ | | |
-| Confidence tagging | ✅ | | | ✅ | ✅ |
-| Source tagging | ✅ | | | ✅ | ✅ |
-| `--format json --unstable` | | | ✅ | | ✅ |
-| Shareable output format | ✅ | | | | |
-| Findings-history persistence | | ✅ | | | |
-| Model subtraction logic | | | | ✅ | |
-| Crisis mode | ✅ | | | ✅ | ✅ |
-| Anticipation mode | | ✅ | | | |
+| Capability Area | J1 | J2 | J3 | J4 | J5 | J6 |
+|----------------|----|----|----|----|-----|-----|
+| Stack detection & analysis | ✅ | | ✅ | ✅ | ✅ | ✅ |
+| Contextual model generation | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Architecture intent guard | ✅ | | | ✅ | ✅ | |
+| Cross-domain correlation | ✅ | ✅ | | | ✅ | |
+| Review-and-amend workflow | ✅ | ✅ | | ✅ | ✅ | ✅ |
+| Feedback prompt | ✅ | | | ✅ | ✅ | ✅ |
+| Amendment persistence | | ✅ | | ✅ | | ✅ |
+| Delta analysis | | ✅ | | | | |
+| CLI output streaming | ✅ | ✅ | ✅ | | ✅ | ✅ |
+| Severity-first summary | ✅ | ✅ | ✅ | | | |
+| RICE scoring | ✅ | ✅ | ✅ | | | |
+| Confidence tagging | ✅ | | | ✅ | ✅ | |
+| Source tagging | ✅ | | | ✅ | ✅ | ✅ |
+| `--format json --unstable` | | | ✅ | | ✅ | |
+| Shareable output format | ✅ | | | | | |
+| Findings-history persistence | | ✅ | | | | |
+| Model subtraction logic | | | | ✅ | | |
+| Limited-coverage warning | | | | | | ✅ |
+| Crisis mode | ✅ | | | ✅ | ✅ | ✅ |
+| Anticipation mode | | ✅ | | | | |
 
-All MVP features (M + H + Q) appear in at least one journey. Journey 4 validates the accuracy ecosystem end-to-end. Journey 5 validates the delegation workflow's weakest link.
+All MVP features (M + H + Q) appear in at least one journey. Journey 4 validates the accuracy ecosystem end-to-end. Journey 5 validates the delegation workflow's weakest link. Journey 6 validates the graceful degradation path for thin-model stacks.
 
 ### Journey-to-Hypothesis Mapping
 
@@ -354,6 +383,7 @@ Each journey implicitly tests a behavioral hypothesis for pilot validation:
 | J3 | Delegation + JSON output enables portfolio visibility | Needs platform engineer in pilot |
 | J4 | Confidence tags + review-and-amend recovers trust after model errors | Yes — observe error recovery |
 | J5 | Non-champions find value despite zero buy-in when findings hit real pain | Yes — observe delegated runs |
+| J6 | Teams with unsupported stacks still find value through amendment-first workflow | Yes — include ≥1 niche stack in pilot |
 
 **Pilot recruitment note:** The "aha!" metric (≥4/5 pilot teams) requires 5+ distinct teams. Recruit a mix of Sana-types (team leads running directly) and Journey-5-types (delegated devs) to test both adoption paths.
 
@@ -642,39 +672,7 @@ Core question the MVP must answer: *"Can Gyre discover unknown unknowns accurate
 
 ### MVP Feature Set (Phase 1)
 
-**Updated M/H/Q Classification:**
-
-**M — Measurement Infrastructure (5 features, ship first):**
-
-| # | Feature | Purpose |
-|---|---------|---------|
-| M1 | Architecture intent guard question | Prevents category errors contaminating all downstream metrics |
-| M2 | Source tagging (static vs contextual) | Required to measure novel findings ratio |
-| M3 | Confidence tagging | Required to measure model accuracy |
-| M4 | Review-and-amend workflow | Provides ground truth for accuracy measurement |
-| M5 | Findings-history persistence | Infrastructure for delta analysis (H7) and accuracy improvement tracking |
-
-**H — Hypothesis-Testing (7 features, build after M):**
-
-| # | Feature | Hypothesis Tested | Build Order |
-|---|---------|-------------------|-------------|
-| H1 | Stack detection & analysis | Can Gyre accurately detect what a team has? | First |
-| H2 | Contextual model generation | Can Gyre generate what a team *should* have? | Second |
-| H3 | Observability Readiness agent | Can Gyre discover observability gaps? | Third |
-| H4 | Deployment Readiness agent | Can Gyre discover deployment gaps? | Fourth |
-| H5 | Cross-domain correlator | Do compound findings deliver "aha!" moments? | Fifth |
-| H6 | False negative feedback prompt | Can Gyre learn what it missed? | Sixth |
-| H7 | Delta analysis (anticipation mode) | Does Gyre have ongoing value, not just one-shot? | Last (depends on M5) |
-
-**Q — Product Quality (3 features, can ship v1.1):**
-
-| # | Feature | Cut Impact |
-|---|---------|-----------|
-| Q1 | RICE scoring & severity classification | Findings unordered — usable but less actionable |
-| Q2 | Severity-first leadership summary | Users must read full output |
-| Q3 | Crisis/anticipation mode labels | Cosmetic — mode indicator string only |
-
-**Build sequence:** M → H (H1-H6 in order, H7 last) → Q. Cut order if constrained: Q3 → Q1 → Q2.
+See **Product Scope > MVP Feature Classification** for the full M/H/Q tables (15 features), build sequence, and cut order.
 
 **Core journeys supported by MVP:** J1 (Sana crisis), J4 (trust recovery), J5 (reluctant dev) validate core hypothesis. J2 (re-run) requires H7. J3 (Ravi portfolio) requires longer observation.
 
@@ -759,6 +757,7 @@ Pricing and business model decisions are explicitly deferred until post-pilot. T
 ### Capability Area 1: Stack Detection & Classification
 
 - **FR1:** System can detect the primary technology stack of a project by analyzing file system artifacts (package manifests, config files, IaC templates)
+- **FR1b:** System can detect multiple technology stacks within a project, select the primary stack for model generation, and surface secondary stacks as a warning to the user (e.g., "Detected Go primary + Python sidecar — model generated for Go; Python components may have uncovered gaps")
 - **FR2:** System can detect container orchestration platform (Kubernetes, ECS, Docker Compose) from project files
 - **FR3:** System can detect CI/CD platform (GitHub Actions, GitLab CI, Jenkins) from project files
 - **FR4:** System can detect observability tooling (Datadog, Prometheus, OpenTelemetry) from config and dependency files
@@ -773,7 +772,7 @@ Pricing and business model decisions are explicitly deferred until post-pilot. T
 - **FR10:** System can incorporate industry standards (DORA, OpenTelemetry, Google PRR) into the generated model
 - **FR11:** System can incorporate current best practices via web search into the generated model
 - **FR12:** System can adjust the generated model based on the guard question classification
-- **FR13:** Each generated capability includes a human-readable description explaining what it is and why it matters
+- **FR13:** Each generated capability includes a plain-language description (1-3 sentences explaining what the capability is and why it matters)
 - **FR14:** System can generate ≥20 capabilities for supported stack archetypes
 - **FR15:** System can surface a limited-coverage warning when fewer than 20 capabilities are generated
 
@@ -785,7 +784,7 @@ Pricing and business model decisions are explicitly deferred until post-pilot. T
 - **FR19:** System can tag each finding with its source (static analysis vs contextual model)
 - **FR20:** System can tag each finding with a confidence level (high/medium/low)
 - **FR21:** System can classify each finding by severity (blocker/recommended/nice-to-have)
-- **FR22a:** System can reason about relationships between findings across different domains to identify compound gaps
+- **FR22a:** System can identify when findings in different domains share a causal or amplifying relationship (e.g., an absence in one domain increases the risk of an absence in another) to surface compound gaps
 - **FR22b:** System can express compound finding relationships as a text-based reasoning chain in CLI output
 - **FR23:** Static analysis produces a structured capability evidence report (capability ID, evidence type: present/absent/partial, detection method, no file contents) that serves as the sole input from local analysis to LLM reasoning
 
@@ -829,8 +828,8 @@ Pricing and business model decisions are explicitly deferred until post-pilot. T
 - **FR44:** User can install Gyre via npm (`npm install -g gyre` or `npx gyre analyze .`)
 - **FR45:** User can configure AI provider via environment variable or config file
 - **FR46:** User can complete first-run setup by performing exactly one action: either setting a single environment variable (`GYRE_API_KEY`) or running an interactive setup command (`gyre setup`) that configures the provider in one session
-- **FR47:** System can fail fast with clear error message when AI provider is unreachable
-- **FR48:** System can select the best available model automatically (`provider.model: auto`)
+- **FR47:** System can fail fast with an error message identifying the provider, failure type (timeout/auth/unreachable), and suggested resolution when AI provider is unreachable
+- **FR48:** System can select the most capable model supported by the configured provider, preferring models optimized for reasoning tasks (`provider.model: auto`)
 - **FR54:** In JSON output mode, the output includes a `status` field indicating analysis result (clean, blockers_found, detection_failure, provider_failure, analysis_error) matching CLI exit code semantics
 - **FR56:** If analysis fails after model generation completes, system saves the generated manifest and informs user that analysis can be retried without regenerating the model
 - **FR57:** System treats analysis as complete-or-nothing — partial agent results are not displayed or persisted. On failure, user receives clear error with retry guidance.
@@ -842,14 +841,14 @@ Pricing and business model decisions are explicitly deferred until post-pilot. T
 | M1: Guard question | FR6, FR7, FR8 | J1, J4, J5 | Architecture intent accuracy ≥90% | M | Integration |
 | M2: Source tagging | FR19 | J1, J4, J5 | Novel findings ≥30% | S | Unit |
 | M3: Confidence tagging | FR20 | J4, J5 | Model accuracy measurement | S | Unit |
-| M4: Review-and-amend | FR24, FR25, FR26, FR27 | J1, J2, J4, J5 | Adoption ≥60% | L | Integration + Pilot |
+| M4: Review-and-amend | FR24, FR25, FR26, FR27 | J1, J2, J4, J5, J6 | Adoption ≥60% | L | Integration + Pilot |
 | M5: Findings history | FR39 | J2 | Re-run rate ≥3/5 | M | Integration |
-| H1: Stack detection | FR1, FR2, FR3, FR4, FR5 | J1, J3, J4, J5 | Stack diversity ≥3 | L | Integration |
-| H2: Model generation | FR9, FR10, FR11, FR12, FR13, FR14, FR15 | J1, J2, J3, J4, J5 | First-run accuracy ≥70% | L | Human + Synthetic |
+| H1: Stack detection | FR1, FR1b, FR2, FR3, FR4, FR5 | J1, J3, J4, J5, J6 | Stack diversity ≥3 | L | Integration |
+| H2: Model generation | FR9, FR10, FR11, FR12, FR13, FR14, FR15 | J1, J2, J3, J4, J5, J6 | First-run accuracy ≥70% | L | Human + Synthetic |
 | H3: Observability agent | FR16, FR18 | J1 | Cross-domain hit rate ≥1 | L | Human + Pilot |
 | H4: Deployment agent | FR17, FR18 | J1 | Cross-domain hit rate ≥1 | L | Human + Pilot |
 | H5: Cross-domain correlator | FR22a, FR22b | J1, J5 | "Aha!" ≥4/5 teams | L | Pilot |
-| H6: Feedback prompt | FR28, FR29, FR30 | J1, J4, J5 | False neg detection ≥1/team | M | Integration + Pilot |
+| H6: Feedback prompt | FR28, FR29, FR30 | J1, J4, J5, J6 | False neg detection ≥1/team | M | Integration + Pilot |
 | H7: Delta analysis | FR38, FR40, FR41 | J2 | Re-run rate ≥3/5 | M | Integration |
 | Q1: RICE scoring | FR21, FR50 | J1, J2, J3 | Severity agreement ≥4/5 | M | Pilot |
 | Q2: Severity summary | FR33 | J1, J2, J3 | — | S | Unit |
