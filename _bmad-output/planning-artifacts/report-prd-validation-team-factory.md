@@ -18,7 +18,7 @@ overallStatus: PASS
 **PRD Being Validated:** _bmad-output/planning-artifacts/prd-team-factory.md (v1.1)
 **Original Validation Date:** 2026-03-22
 **Re-validation Date:** 2026-03-22
-**Re-validation Reason:** Post-edit verification — 9 edits applied (3 path fixes, 4 measurability improvements, 1 terminology note, 2 self-consistency fixes)
+**Re-validation Reason:** Post-edit verification — 11 edits applied (3 path fixes, 4 measurability improvements, 1 terminology note, 2 self-consistency fixes, 1 R6 phrasing alignment, 1 spec file example)
 
 ## Input Documents
 
@@ -235,9 +235,9 @@ None — FR18 now scores Measurable = 4 ("most-common pattern in existing teams,
 **Rating:** 5/5 — Excellent. Production-ready for downstream consumption.
 
 ### Top 3 Improvements (Remaining)
-1. Spec file schema could benefit from example YAML in appendix (architect convenience)
-2. R6 "Sensible defaults" in risk table still uses old phrasing — cosmetic only, FR18 is authoritative
-3. Upstream artifacts (vision, scope-decision) have internal path references using old naming — outside PRD scope
+1. Upstream artifacts (vision, scope-decision) have internal path references using old naming — outside PRD scope
+2. No remaining PRD-internal improvements identified
+3. —
 
 ### Summary
 **This PRD is:** An exemplary BMAD PRD refined through 13 creation steps, 6 elicitation rounds, 8 party mode sessions, full validation, edit workflow, and re-validation. Zero violations across all checks.
