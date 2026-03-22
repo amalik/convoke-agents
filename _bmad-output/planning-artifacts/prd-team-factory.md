@@ -60,6 +60,8 @@ The Team Factory is an internal tool that enables BMAD framework contributors to
 
 **Success criterion:** A framework contributor creates a valid, fully-wired team without assistance — zero post-creation fixes, validator passes on first run.
 
+**"Zero-assistance" defined:** No human help is needed to complete. The colleague still makes decisions, but the factory provides all context required to make them. Zero-assistance does not mean zero-judgment — it means zero-dependency on another person.
+
 **Key risks:** BMB template extraction (spike required), discoverability (systemic gap), shared file safety (modular registration in Phase 2).
 
 **Document scope:** This PRD is detailed because the factory touches 8 integration surfaces and requires zero post-creation fixes — the Architecture will be substantially simpler. 6 elicitation rounds and 8 party mode sessions surfaced root cause analysis that shaped the requirements.
@@ -129,9 +131,18 @@ Extending the BMAD framework with new teams, agents, or skills requires both arc
 
 **Framework contributor:** Understands BMAD concepts and can use agents, but cannot wire new components into the framework. The knowledge gap is mechanical, not conceptual — they understand the *what*, they don't know the *how* of wiring.
 
+**Population:** Currently 2-3 colleagues matching this profile, expected 5-7 within 6 months as BMAD adoption scales.
+
 **They know:** What teams and agents are, how to invoke agents, what config.yaml does, what output looks like.
 
 **They don't know:** How agent-registry.js connects agents to the system, how refresh-installation.js copies files, what validator.js checks, how contracts enforce handoffs, how config fields map to behavior, how module-help.csv drives discoverability, how activation XML structures initialization.
+
+| Assumes User Knows | Assumes User Does NOT Know |
+|---------------------|---------------------------|
+| Teams, agents, invocation | Registry wiring, refresh pipeline, validator rules |
+| config.yaml purpose | Config field → behavior mapping |
+| Agent output format | Contract enforcement, activation XML |
+| What modules are | module-help.csv, discoverability mechanism |
 
 ### Design Principles for Target Users
 
@@ -189,6 +200,14 @@ Extending the BMAD framework with new teams, agents, or skills requires both arc
 | Fallback (v1) | "The Add Skill workflow is coming in a future version. For now, here's the relevant section of the Architecture Reference that covers adding skills manually." Links to checklist. |
 
 **Outcome:** Not stranded. Has a clear path forward even though the workflow isn't built yet.
+
+### Journey → FR Coverage
+
+| Journey | FRs Exercised |
+|---------|--------------|
+| Journey 1 (Guided) | FR8 (forced decisions), FR12 (overlap detection), FR13 (contextual examples), FR17 (cascade), FR10 (BMB delegation), FR11 (integration wiring), FR20 (end-to-end validation) |
+| Journey 2 (Express) | FR21 (spec file input), FR19 (decision summary), FR10 (BMB delegation), FR20 (validation) |
+| Journey 3 (Wrong Entry) | FR14 (discoverable entry point), Step 0 routing |
 
 ---
 
@@ -274,17 +293,17 @@ These are not features to build — they are quality attributes that every FR mu
 | # | Category | Requirement | Priority |
 |---|----------|------------|----------|
 | NFR1 | Usability | User-facing complexity must feel Low — contributor completes team creation without consulting external documentation. Target: under 60 minutes for Independent, under 90 minutes for Sequential. Use plain language at decision points, not framework internals. | Must |
-| NFR2 | Usability | Progressive disclosure — early steps are simple, later steps introduce detail only as needed | Must |
+| NFR2 | Usability | Progressive disclosure — each step introduces ≤3 new concepts. Early steps are simple, later steps introduce detail only as needed. | Must |
 | NFR3 | Reliability | Factory output passes validation on first run — zero manual fixes required | Must |
 | NFR4 | Reliability | Idempotent — same decisions produce same output across runs | Must |
-| NFR5 | Maintainability | Architecture Reference is single source of truth — factory reads rules from it, doesn't hardcode. Reference sections cite source files for staleness detection. | Must |
+| NFR5 | Maintainability | Architecture Reference is single source of truth — factory reads rules at runtime, zero hardcoded values in workflow step files. Reference sections cite source files for staleness detection. | Must |
 | NFR6 | Maintainability | Factory delegates artifact generation to shared templates. Factory-authored code limited to integration wiring. No factory-authored agent files, workflow steps, or skill templates. | Must |
 | NFR7 | Compatibility | Output passes same validation rules and refresh pipeline as native teams | Must |
 | NFR8 | Compatibility | Works within existing Claude Code interaction model. Fully local — no external tooling or network dependencies. | Must |
 | NFR9 | Resumability | If interrupted, user resumes by loading team spec file. Resume presents decision summary and continues from last incomplete step. | Should |
-| NFR10 | Discoverability | Factory entry point exists in every surface where colleagues discover agents and skills | Must |
+| NFR10 | Discoverability | Factory entry point exists in: agent menu, module-help.csv, BMad Master "what's available?" response, README. Every discovery surface enumerated and wired. | Must |
 | NFR11 | Recoverability | When validation fails, errors are traceable to the specific factory decision or step that caused them | Must |
-| NFR12 | Safety | Factory operations safe to run with uncommitted changes — detect and warn about conflicts | Should |
+| NFR12 | Safety | Factory detects dirty working tree and warns before shared file writes. Safe to run with uncommitted changes — detect and warn about conflicts. | Should |
 | NFR13 | Safety | Factory modifications to shared files validated in isolation before being applied — no partial writes | Must |
 | NFR14 | Security | Factory-generated code uses safe templating — no raw string interpolation of user input into executable files | Must |
 | NFR15 | Safety | Factory validates new config fields don't collide with existing fields before writing | Must |
@@ -317,6 +336,9 @@ Step 1: ORIENT
   "What kind of team are you building?"
   Plain language → factory suggests composition pattern
   with explanation + examples. User confirms or overrides.
+  Scope check: if description implies many agents, surface
+  how similar problems were solved with fewer. Challenge
+  over-scoping before it cascades into Step 2.
         │ Decision: Composition pattern
 Step 2: SCOPE (iterative, per agent)
   For each agent: name, role, inputs, outputs, capabilities.
@@ -399,6 +421,8 @@ The spec file is the factory's central artifact — audit trail, resume state, e
 ---
 
 ## 10. Technical Architecture Overview
+
+> *This section provides technical constraints for the architect. It describes integration surface formats, not implementation choices.*
 
 ### Runtime Model
 
@@ -490,7 +514,7 @@ The factory is a **standard BMAD workflow** — step files loaded one at a time,
 |---|------|---|---|------------|
 | R9 | Composition patterns don't cover edge cases | L | M | Gather descriptions of undefined teams. Extend model if third pattern emerges. |
 | R10 | Reference becomes stale | L | L | Reference sections cite source files. Changes to framework files flag reference for update. |
-| R11 | Colleague can't complete without help | M | L | This IS the validation. First test reveals what's missing. |
+| R11 | Colleague can't complete without help | M | H | This IS the validation — and the North Star. First test reveals what's missing. Severity is High because zero-assistance is the product's reason for existing, not a nice-to-have. |
 
 ### Prerequisites (Gates)
 
@@ -561,7 +585,9 @@ Two consecutive colleague failures on the same step = step flagged for redesign.
 | D1 | Architecture Reference (Phase 1) | Phase 2 — factory reads rules from reference | Not started |
 | D2 | BMB template externalization | Phase 2 generation — shared templates | Not started |
 | D3 | validator.js | Phase 2 validation — may need pattern-aware extension | Exists |
-| D4-D6 | agent-registry.js, refresh-installation.js, config.yaml | Phase 2 wiring targets | Exist |
+| D4 | agent-registry.js | Phase 2 wiring — JS format, function-level insertion | Exists |
+| D5 | refresh-installation.js | Phase 2 wiring — file copy paths per module | Exists |
+| D6 | config.yaml | Phase 2 wiring — YAML field insertion, collision detection | Exists |
 | D7 | BMad Master capability discovery | Discoverability (parallel workstream) | Not started |
 | D8 | Gyre product brief | P2 validation target | Exists |
 | D9 | **Colleague availability** | M1.3, M2.1 observation, M3.3 tests | Not scheduled |
