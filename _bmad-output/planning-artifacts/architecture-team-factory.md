@@ -1,5 +1,8 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5, 6]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
+lastStep: 8
+status: 'complete'
+completedAt: '2026-03-22'
 inputDocuments:
   - _bmad-output/planning-artifacts/prd-team-factory.md
   - _bmad-output/vortex-artifacts/vision-team-factory-2026-03-21.md
@@ -819,3 +822,215 @@ Components that must be revised together if A5' or A6' are falsified:
 | Both | `spec-parser.js` (selects schema by pattern) | Update pattern enum |
 
 All coupled components are isolated in the factory module — no framework-level changes needed for hypothesis revision.
+
+---
+
+## Architecture Validation Results
+
+_Enhanced through Red Team vs Blue Team analysis (5 attacks, 4.5/5 Red score) and party mode session (Max/Mary/Murat)._
+
+### Coherence Validation ✅
+
+**Decision Compatibility:** All decision pairs verified — no contradictions. D-Q1→D-Q2→D-Q3→D-S2→D-TL form a coherent chain. D-Q6 (open) accommodated by either outcome.
+
+**Pattern Consistency:** Naming (single enforcement in schemas), error shapes (single type definition), return types (composable results), atomic writes (two-tier safety), stateless validation (Mode Parity by construction) — all consistent across sections.
+
+**Structure Alignment:** Every decision has a home in the project tree. Cross-cutting concerns mapped to specific locations. Hypothesis-coupled components isolated.
+
+### Requirements Coverage Validation
+
+**Functional Requirements: 24/26 covered + 2 deferred (Phase 3)**
+
+| Status | FRs | Notes |
+|--------|-----|-------|
+| Covered | FR1-FR24 | All have architectural support with specific component locations |
+| Deferred | FR25-FR26 | Phase 3 — Add Agent, Add Skill. Locations documented, step-00-route extensible. |
+
+**FR6 (Gyre bidirectional validation) — output defined:** Gyre Validation Report (`gyre-validation-report.md`) in `_bmad-output/planning-artifacts/`. Three sections: (1) check results — pass/fail per check ID, (2) **surprising findings** — edge cases, near-misses, model limitation signals, (3) A5'/A6' evidence conclusions. Manual analysis, structured output.
+
+**Non-Functional Requirements: 18/18 covered.** All NFR clusters have architectural support — usability, reliability, maintainability, compatibility, write safety, discoverability, recoverability, auditability, performance, security.
+
+### Collision Detection — Three Levels
+
+| Level | Detection | Implementation | Response |
+|-------|-----------|---------------|----------|
+| Level 1: Exact ID | Agent ID exists in `agent-manifest.csv` | JS — exact string match | **Block** |
+| Level 2: Name similarity | Similar names (e.g., `data-processor` vs `data-handler`) | JS — edit distance / prefix match | **Warning** |
+| Level 3: Capability overlap | Different names, overlapping responsibilities | LLM reasoning in Step 1 | **Advisory** |
+
+Clarifies LLM/JS boundary: Step 1 uses both JS (Level 1-2) and LLM (Level 3) for overlap detection.
+
+### Step-File-to-JS Invocation Pattern
+
+When a workflow step requires JS validation, it includes a fenced code block with the exact invocation command and expected result handling:
+```
+run: node lib/collision-detector.js --spec {spec_path}
+expect: result.errors.length === 0 → proceed
+        result.errors.some(e => e.severity === 'error') → block and display
+        result.errors.some(e => e.severity === 'warning') → display and ask
+```
+Step files are the bridge between LLM reasoning and JS execution — they must be explicit about which utilities to call, with what arguments, and how to interpret results.
+
+### Template Consumption — Two Paths
+
+| Path | Condition | Location | Risk |
+|------|-----------|----------|------|
+| **A (preferred)** | P1/P6 extraction succeeds | `_bmad/core/resources/templates/` | Zero drift |
+| **B (fallback)** | P1/P6 extraction infeasible | `_bmad/bme/_team-factory/templates/internal/` | Known drift — periodic sync required |
+
+Path B triggers a follow-up task to revisit extraction.
+
+### Visibility Checklist Template
+
+Every workflow step file must include this checklist:
+
+```
+## Visibility Checklist — Step {N}
+Colleague sees:
+  - [ ] (list visible decisions/prompts/previews — max 3 concepts)
+Runs silently:
+  - [ ] (list JS validations, file reads, collision checks)
+Concept count: {N}/3
+Approval prompt: "{what the colleague approves}"
+```
+
+Enforces ≤3 concept budget (NFR2) per step. Ensures consistency across step authors.
+
+### Phase 1 Exit Criteria — Minimum Viable Thresholds
+
+| Deliverable | Minimum Viable Threshold |
+|-------------|-------------------------|
+| Architecture Reference | All 8 property×pattern sections complete with ≥3 checks each |
+| P2b factory-consumability spike | Extraction succeeds for ≥6 of 8 sections without prose parsing |
+| P1/P6 template externalization | ≥3 of 4 template types successfully extracted |
+| D-Q6 investigation | Clear recommendation with evidence — no "inconclusive" |
+| P2 human consumability | Colleague articulates process for ≥2 of 3 scenarios without help |
+| P3 colleague test | Colleague finds factory entry point without being told where it is |
+
+Below threshold → iterate before Phase 2. Above threshold → proceed, document remaining gaps.
+
+### Phase 1 Evidence → Assumption Map
+
+All Phase 1 learnings route back to `adr-assumption-map-team-factory-2026-03-22.md`. Each "Test First" assumption gains an **Evidence** field:
+
+| Assumption | Phase 1 Evidence Source |
+|------------|----------------------|
+| A5' (four quality properties) | Architecture Reference + Gyre Validation Report |
+| A6' (composition patterns) | Architecture Reference + Gyre structural diff |
+| A4 (Gyre follows Vortex model) | Gyre Validation Report — check-by-check |
+| A12/A13 (BMB scaffolding/sub-workflow) | P1/P6 template externalization spike |
+| A19 (colleague reads reference without mentoring) | P2 human consumability test |
+| A22 (factory discoverable) | P3 colleague test |
+
+Status transitions: "Test First" → "Tested — [Validated | Partially Validated | Falsified]" with evidence citations.
+
+### Implementation Readiness Validation ✅
+
+| Criterion | Status |
+|-----------|:------:|
+| All critical decisions documented | ✅ |
+| Implementation patterns comprehensive | ✅ |
+| Consistency rules enforceable | ✅ |
+| Examples provided for major patterns | ✅ |
+| Project structure complete with FR mapping | ✅ |
+| Integration points specified | ✅ |
+| Component boundaries clear | ✅ |
+| Hypothesis isolation documented | ✅ |
+| Test organization by behavior cluster | ✅ |
+| Express Mode pipeline test defined | ✅ |
+
+### Gap Analysis
+
+**Critical Gaps: 0**
+
+**Important Gaps: 1 (down from 2)**
+- IG2: D-Q6 (fragment architecture) — resolved during Phase 1. Doesn't block Phase 1 work.
+- ~~IG1: Visibility mapping~~ — resolved via visibility checklist template.
+
+**Nice-to-Have Gaps: 3**
+- NG1: No CI/CD pipeline (internal tool — manual for v1)
+- NG2: No cross-spec reporting utility (post-Phase 2)
+- NG3: No performance benchmarks (architectural constraints sufficient for v1)
+
+### Architecture Completeness Checklist
+
+**✅ Requirements Analysis (Step 2)**
+- [x] Project context — 4 elicitation rounds, 3 party modes
+- [x] Scale/complexity — Phase 1 Low / Phase 2 Medium
+- [x] Constraints — C1-C8 closed
+- [x] Cross-cutting concerns — 9 concerns with activation phases + routing table
+
+**✅ Starter Evaluation (Step 3)**
+- [x] Technology domain — BMAD Workflow + JS (no starter template needed)
+- [x] Foundation decisions — module org, spec file flagged, testing, substitution
+
+**✅ Core Decisions (Step 4)**
+- [x] D-Q1 Reference format (Option B — markdown + YAML)
+- [x] D-Q2 Writer design (1 writer, 2 creators, 1 validator)
+- [x] D-Q3 Validation layering (4 layers + B-lite semantic)
+- [x] D-S2 Spec file architecture (per-pattern schemas, 3 modules)
+- [x] D-TL Template location (`core/resources/templates/`)
+- [x] D-Q6 Registry fragments (open — Phase 1 investigation)
+
+**✅ Implementation Patterns (Step 5)**
+- [x] Naming with machine-checkable regexes in schemas
+- [x] Structure with complete directory tree
+- [x] Format with type definitions
+- [x] Process with function signatures + idempotency
+- [x] Enforcement with governing principle + 5 rules
+- [x] Golden file testing with ≤50 line constraint
+
+**✅ Project Structure (Step 6)**
+- [x] Complete directory structure with FR mapping per file
+- [x] Module/bootstrap/write boundaries defined
+- [x] Module-level routing (step-00) for Phase 3 extensibility
+- [x] Test clusters by behavior + Express Mode scenario
+- [x] Hypothesis isolation map
+
+**✅ Validation (Step 7)**
+- [x] Coherence — all decisions compatible
+- [x] Coverage — 24/26 FRs + 18/18 NFRs
+- [x] Readiness — all criteria met
+- [x] Gaps — 0 critical, 1 important (non-blocking), 3 nice-to-have
+- [x] Collision detection levels defined
+- [x] Phase 1 exit thresholds defined
+- [x] Evidence routing to assumption map defined
+
+### Architecture Readiness Assessment
+
+**Overall Status:** READY FOR IMPLEMENTATION
+
+**Confidence Level:** High — contingent on P1/P6 prerequisite validation. If Path B fallback is needed, confidence drops to Medium due to maintenance burden.
+
+**Key Strengths:**
+1. **Hypothesis-resilient** — A5'/A6' falsification requires isolated component changes, not rebuilds
+2. **Phase-gated** — Phase 1 validates before Phase 2 builds; minimum viable thresholds prevent subjective "good enough"
+3. **Mode Parity by construction** — stateless validators guarantee Express/Guided equivalence
+4. **Single enforcement points** — schemas for naming, `factory-types.js` for shapes, governing principle for process
+5. **Learning loop closed** — Phase 1 evidence routes back to assumption map
+
+**Open Items (explicitly deferred, not gaps):**
+- D-Q6: Registry fragment architecture (Phase 1 investigation)
+- D-VB: Per-step visibility mapping (Phase 2 — template provided)
+- D-Q5: Cross-version behavior (post-v1)
+
+### Implementation Handoff
+
+**First Priority:** Phase 1 — Architecture Reference
+
+Sequence:
+1. Write Architecture Reference (Option B format) — 8 property×pattern sections
+2. Run Gyre bidirectional validation → Gyre Validation Report
+3. Execute P2b spike — factory-consumability test
+4. Execute P1/P6 — template externalization
+5. Investigate D-Q6 — registry fragments
+6. Run P2 — human consumability test with colleague
+7. Run P3 — colleague discovery test
+
+**AI Agent Guidelines:**
+- Follow all architectural decisions exactly as documented
+- Use implementation patterns consistently — schemas enforce, types define, governing principle governs
+- Respect boundaries — module, bootstrap, write, LLM/JS
+- Include visibility checklist in every workflow step file
+- Route Phase 1 evidence back to assumption map
+- Refer to this document for all architectural questions
