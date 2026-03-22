@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1]
+stepsCompleted: [1, 2]
 inputDocuments:
   - _bmad-output/planning-artifacts/prd-team-factory.md
   - _bmad-output/vortex-artifacts/vision-team-factory-2026-03-21.md
