@@ -211,3 +211,28 @@ _Initial archive: 2026-03-22, per ADR: adr-repo-organization-conventions-2026-03
 | phase-0-workflow-map.md | 2026-03-22 | Initial repo organization |
 | technical-deep-dive-analysis.md | 2026-03-22 | Initial repo organization |
 
+
+## Automated archive — 2026-03-22
+
+| File | Original Location | Archive Date | Reason |
+|------|-------------------|--------------|--------|
+| bmad-builder-analysis.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| critical-framework-correction.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| distribution-update-complete.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| document-alignment-analysis.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| emma-reference-implementation-complete.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| emma-testing-guide.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| flexible-distribution-update.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| generic-agent-integration-framework.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| git-commit-summary.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| pivot-summary-2026-02-07.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| project-status-update.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| readme-conflict-resolution.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| readme.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| roadmap-update-complete.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| wade-completion-status.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| wade-development-plan.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| feedback-template.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| post-release-review-template.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| rayas-journey-acceptance-test.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+| scope-adjacent-backlog.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |

@@ -16,7 +16,7 @@ All agents follow a standard pattern:
 - **Menu-driven interaction** — Numeric, text, and fuzzy command matching
 - **Artifact generation** — Template-based professional output
 
-See: [Agent Architecture Framework](../_bmad-output/GENERIC-AGENT-INTEGRATION-FRAMEWORK.md)
+See: [Agent Architecture Framework](../_bmad-output/_archive/exploratory/generic-agent-integration-framework.md)
 
 ### Update System (v1.4.0+)
 
@@ -77,7 +77,7 @@ Migrations live in `scripts/update/migrations/registry.js` (append-only).
 | Display name | First name | `name="Isla"` |
 | User guide | Uppercase first name | `ISLA-USER-GUIDE.md` |
 
-See: [Emma Reference Implementation](../_bmad-output/EMMA-REFERENCE-IMPLEMENTATION-COMPLETE.md)
+See: [Emma Reference Implementation](../_bmad-output/_archive/exploratory/emma-reference-implementation-complete.md)
 
 ---
 
