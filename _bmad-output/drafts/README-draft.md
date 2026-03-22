@@ -25,6 +25,7 @@ Each team is a self-contained group of conversational agents that guide you thro
 |--------|------|-------------|--------|
 | [Vortex](#vortex--product-discovery-team) | Team | Product discovery — 7 agents, 22 workflows | Available |
 | [Gyre](#gyre--operational-readiness-team) | Team | Operational readiness — 4 agents, 7 workflows | Coming soon |
+| [Forge](#forge--domain-knowledge-extraction-team) | Team | Domain knowledge extraction for brownfield projects | Coming soon |
 | [Enhance](#enhance--agent-skills) | Skill | Agent capability upgrades — RICE backlog management | Available |
 
 ---
@@ -231,6 +232,16 @@ Gyre produces a RICE-scored readiness backlog tailored to your actual stack — 
 
 ---
 
+## Forge — Domain Knowledge Extraction Team
+
+**Coming soon** — Forge captures and codifies domain knowledge from brownfield projects. When a consultant or engineer lands on an existing codebase, Forge's agents extract what the system actually does, map it against what documentation claims, and produce structured knowledge artifacts.
+
+Five agents work through two phases: **Silo** surveys the landscape and **Rune** excavates deep knowledge in Phase A, then **Aria** codifies findings, **Sage** validates accuracy, and **Warden** stewards knowledge freshness in later phases.
+
+Forge and Gyre share handoff contracts — Forge's knowledge artifacts feed Gyre's contextual models, and Gyre's readiness gaps queue Forge investigations.
+
+---
+
 ## Enhance — Agent Skills
 
 **Add new capabilities to existing agents without modifying them**
@@ -304,6 +315,7 @@ Convoke Modules                            BMAD Core
 │ Teams                        │          │                      │
 │   Vortex (Product Discovery) │ ──────>  │ PM → Architect → Dev │
 │   Gyre (Operational Readiness│ ──────>  │ "Let's build it"     │
+│   Forge (Knowledge Extraction│ ──────>  │                      │
 │   [Future teams]             │          │                      │
 │                              │ <──────  │                      │
 │ Skills                       │  signals │                      │
@@ -352,7 +364,8 @@ See [UPDATE-GUIDE.md](UPDATE-GUIDE.md) for migration paths and troubleshooting.
 
 **Exploring**
 
-- Additional teams (domain knowledge extraction, ML/AI engineering)
+- **Forge** — Domain knowledge extraction team for brownfield projects
+- Additional teams (ML/AI engineering)
 - Cross-module collaboration workflows
 - Governance and advisory skill sets
 
@@ -430,6 +443,13 @@ Every agent below contributed to the design, implementation, testing, or documen
 - Atlas 📐 Model Curator — Contextual capability model generation
 - Lens 🔬 Readiness Analyst — Cross-domain operational readiness analysis
 - Coach 🏋️ Review Coach — Findings review and readiness backlog curation
+
+**BME — Forge Agents** *(coming soon)*
+- Silo 🗄️ Survey — Landscape mapping and knowledge boundary detection
+- Rune 🔓 Excavate — Deep domain knowledge extraction
+- Aria 📝 Codify — Knowledge structuring and artifact generation
+- Sage ✅ Validate — Accuracy verification and cross-reference checking
+- Warden 🛡️ Steward — Knowledge freshness and drift monitoring
 
 **CIS — Creative & Innovation Strategies**
 - Carson 🧠 Brainstorming Coach — Creative ideation facilitation
