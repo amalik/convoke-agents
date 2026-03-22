@@ -6,7 +6,7 @@ inputDocuments:
   - _bmad-output/vortex-artifacts/scope-decision-team-factory-2026-03-21.md
   - _bmad-output/vortex-artifacts/assumption-map-team-factory-2026-03-22.md
   - _bmad-output/planning-artifacts/brief-gyre-2026-03-19.md
-validationStepsCompleted: [step-v-01-discovery, step-v-02-format-detection, step-v-03-density-validation, step-v-04-brief-coverage, step-v-05-measurability]
+validationStepsCompleted: [step-v-01-discovery, step-v-02-format-detection, step-v-03-density-validation, step-v-04-brief-coverage, step-v-05-measurability, step-v-06-traceability]
 validationStatus: IN_PROGRESS
 ---
 
