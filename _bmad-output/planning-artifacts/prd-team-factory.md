@@ -12,9 +12,11 @@ documentCounts:
   vortexArtifacts: 3
   projectDocs: 0
 classification:
-  projectType: "Developer Tool / Framework Extension"
+  projectType: "Internal Tooling — Guided Factory"
   domain: "AI Agent Framework Extensibility"
-  complexity: medium
+  implementationComplexity: medium
+  userFacingComplexity: must-feel-low
+  userMentalModel: "Team Builder / Create a new team"
   projectContext: brownfield
 ---
 
