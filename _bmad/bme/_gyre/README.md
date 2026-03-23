@@ -8,7 +8,7 @@ Technical inventory for the `_bmad/bme/_gyre` module — production readiness di
 |---|-------|----|------|------|------|
 | 1 | Scout | `stack-detective` | 🔎 | Stack Detection | `agents/stack-detective.md` |
 | 2 | Atlas | `model-curator` | 📐 | Model Generation | `agents/model-curator.md` |
-| 3 | Lens | `readiness-analyst` | 🔬 | Gap Analysis | `agents/readiness-analyst.md` |
+| 3 | Lens | `readiness-analyst` | 🔬 | Readiness Analysis | `agents/readiness-analyst.md` |
 | 4 | Coach | `review-coach` | 🏋️ | Review & Feedback | `agents/review-coach.md` |
 
 **Registry:** `scripts/update/lib/agent-registry.js` (single source of truth)
@@ -25,16 +25,16 @@ Technical inventory for the `_bmad/bme/_gyre` module — production readiness di
 |----------|-----------|
 | `model-generation` | `workflows/model-generation/` |
 
-### Lens — Gap Analysis (1 workflow)
+### Lens — Readiness Analysis (2 workflows)
 | Workflow | Directory |
 |----------|-----------|
 | `gap-analysis` | `workflows/gap-analysis/` |
+| `delta-report` | `workflows/delta-report/` |
 
-### Coach — Review (2 workflows)
+### Coach — Review (1 workflow)
 | Workflow | Directory |
 |----------|-----------|
 | `model-review` | `workflows/model-review/` |
-| `delta-report` | `workflows/delta-report/` |
 
 ### Orchestration (1 workflow)
 | Workflow | Directory |
@@ -51,8 +51,8 @@ Technical inventory for the `_bmad/bme/_gyre` module — production readiness di
 ### Artifact Contracts (GC1-GC3) — schema files in `contracts/`
 | Contract | Flow | Schema |
 |----------|------|--------|
-| GC1 | Scout → Atlas | `contracts/gc1-stack-profile.md` |
-| GC2 | Atlas → Lens | `contracts/gc2-capabilities-manifest.md` |
+| GC1 | Scout → Atlas, Lens | `contracts/gc1-stack-profile.md` |
+| GC2 | Atlas → Lens, Coach | `contracts/gc2-capabilities-manifest.md` |
 | GC3 | Lens → Coach | `contracts/gc3-findings-report.md` |
 
 ### Feedback Contract (GC4) — amendment loop
@@ -83,7 +83,7 @@ _bmad/bme/_gyre/
     ├── model-generation/                # Atlas
     ├── model-review/                    # Coach
     ├── gap-analysis/                    # Lens
-    ├── delta-report/                    # Coach
+    ├── delta-report/                    # Lens
     └── accuracy-validation/             # Atlas (spike/validation)
 ```
 
@@ -97,4 +97,4 @@ Gyre writes its artifacts to `_bmad-output/gyre-artifacts/`:
 | Capabilities Manifest | `.gyre/capabilities.yaml` | Atlas (GC2) |
 | Findings Report | `.gyre/findings.yaml` | Lens (GC3) |
 | Feedback Log | `.gyre/feedback.yaml` | Coach (GC4) |
-| Delta Report | `.gyre/delta-report.yaml` | Coach |
+| Delta Report | `.gyre/delta-report.yaml` | Lens |
