@@ -214,7 +214,7 @@ development_status:
   gyre-epic-1-retrospective: done
 
   # Epic 2: Atlas — Capabilities Model Generation
-  gyre-epic-2: backlog
+  gyre-epic-2: in-progress
   gyre-2-1-model-accuracy-spike-nfr19-gate: backlog
   gyre-2-2-atlas-agent-definition: backlog
   gyre-2-3-model-generation-workflow: backlog
