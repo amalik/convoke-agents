@@ -207,8 +207,8 @@ development_status:
   gyre-1-1-module-scaffolding-config: done
   gyre-1-2-scout-agent-definition: done
   gyre-1-3-stack-detection-workflow: done
-  gyre-1-4-gc1-stack-profile-contract: in-progress
-  gyre-1-5-monorepo-service-boundary-detection: backlog
+  gyre-1-4-gc1-stack-profile-contract: done
+  gyre-1-5-monorepo-service-boundary-detection: review
   gyre-1-6-ecosystem-integration-installer-registry-config-driven-doctor: backlog
   gyre-1-7-compass-routing-reference-full-analysis-skeleton: backlog
   gyre-epic-1-retrospective: optional
