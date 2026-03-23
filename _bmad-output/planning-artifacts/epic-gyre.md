@@ -168,6 +168,7 @@ N/A — Gyre is a conversational agent team with no UI design document.
 | FR49 | E3 | Copy-pasteable output |
 | FR50 | E3 | Severity rationale per finding |
 | FR56 | E3 | Save manifest on partial failure, inform of retry |
+| FR57 | E3 | Save partial findings on domain failure, label incomplete |
 | FR24 | E4 | Review manifest via conversational walkthrough |
 | FR25 | E4 | Amend manifest through conversation |
 | FR26 | E4 | Amendment persistence on subsequent runs |
@@ -190,6 +191,7 @@ N/A — Gyre is a conversational agent team with no UI design document.
 | NFR1 | E2 (intermediate), E3 (full) | Performance acceptance criteria in workflow step timing |
 | NFR2 | E3 | Total time AC |
 | NFR3 | E1 | Guard response time AC |
+| NFR4 | E4 | Re-run ≤50% of first-run time (Story 4.5 — model generation skipped in anticipation mode) |
 | NFR5 | E1 | Agent activation time AC |
 | NFR7 | E2 | Privacy boundary: contract schema validation |
 | NFR8 | E2 | Artifact content: GC1-GC3 schema rules |
@@ -249,9 +251,9 @@ User can have Atlas generate a capabilities manifest unique to their detected st
 
 Lens can analyze the project for gaps across two domains (observability + deployment), tag findings with source/confidence/severity, identify cross-domain compounds, and present a severity-first summary with novelty ratio. Includes the gap-analysis workflow and full-analysis orchestration.
 
-**FRs covered:** FR16, FR17, FR18, FR19, FR20, FR21, FR22a, FR22b, FR23, FR33, FR34, FR35, FR37, FR49, FR50, FR56 (16 FRs)
+**FRs covered:** FR16, FR17, FR18, FR19, FR20, FR21, FR22a, FR22b, FR23, FR33, FR34, FR35, FR37, FR49, FR50, FR56, FR57 (17 FRs)
 **ARs:** AR4 (GC3), AR5 (gap-analysis, full-analysis complete), AR6, AR7
-**NFRs enforced:** NFR1 (full), NFR2, NFR4, NFR11, NFR18, NFR22
+**NFRs enforced:** NFR1 (full), NFR2, NFR11, NFR18, NFR22
 **Risk:** Medium — prompt engineering for Lens analysis accuracy + compound correlation quality
 
 ### Epic 4: Review, Feedback & Delta
@@ -458,6 +460,8 @@ So that we have a go/no-go decision for the entire product.
 
 **BLOCKER:** If <70% accuracy, iterate Atlas prompts before proceeding to E3.
 
+**Implementation note:** Stories 2.1, 2.2, and 2.3 are iterative — the accuracy spike co-develops with Atlas's agent definition and generation workflow prompts. The spike validates what 2.2-2.3 produce; prompt iteration cycles across all three until the ≥70% gate passes.
+
 ### Story 2.2: Atlas Agent Definition
 
 As a user,
@@ -641,6 +645,7 @@ So that I can understand what's missing and decide what to act on.
 **When** Lens encounters a failure
 **Then** `.gyre/capabilities.yaml` is already saved (FR56)
 **And** Lens reports what it found and offers to retry the failed domain (NFR11)
+**And** successfully analyzed findings are saved to `.gyre/findings.yaml` with `complete: false` flag, and partial results are explicitly labeled as incomplete (FR57)
 
 ### Story 3.6: Full-Analysis Steps 4-5 Integration
 
