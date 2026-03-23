@@ -1,6 +1,6 @@
 # Story 3.6: Full-Analysis Steps 4-5 Integration
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -26,36 +26,36 @@ So that the complete pipeline works end-to-end.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Validate step-04-analyze-gaps.md (AC: #1)
-  - [ ] 1.1 Verify frontmatter: step=4, workflow=full-analysis, title=Analyze Gaps
-  - [ ] 1.2 Verify GC2 prerequisite: must have been written in step 3, STOP if missing
-  - [ ] 1.3 Verify gap-analysis workflow delegation: all 5 steps referenced in sequence (step-01 through step-05)
-  - [ ] 1.4 Verify time target: first finding <2 minutes from workflow start (NFR1)
-  - [ ] 1.5 Verify GC3 write: `.gyre/findings.yaml` on completion
-  - [ ] 1.6 Verify error recovery: GC2 safe, report partial, offer retry
-  - [ ] 1.7 Verify Load step directive to step-05-review-findings.md
+- [x] Task 1: Validate step-04-analyze-gaps.md (AC: #1)
+  - [x] 1.1 Verify frontmatter: step=4, workflow=full-analysis, title=Analyze Gaps — confirmed lines 2-4
+  - [x] 1.2 Verify GC2 prerequisite: must have been written in step 3, STOP if missing — confirmed line 13
+  - [x] 1.3 Verify gap-analysis workflow delegation: all 5 steps referenced in sequence (step-01 through step-05) — confirmed lines 21-25
+  - [x] 1.4 Verify time target: first finding <2 minutes from workflow start (NFR1) — confirmed line 15
+  - [x] 1.5 Verify GC3 write: `.gyre/findings.yaml` on completion — confirmed line 27
+  - [x] 1.6 Verify error recovery: GC2 safe (line 32), report partial (line 33), offer retry (line 34) — confirmed
+  - [x] 1.7 Verify Load step directive to step-05-review-findings.md — confirmed line 42
 
-- [ ] Task 2: Validate step-05-review-findings.md (AC: #2)
-  - [ ] 2.1 Verify frontmatter: step=5, workflow=full-analysis, title=Review Findings, implements=Epic 4
-  - [ ] 2.2 Verify GC3 prerequisite: must have been written in step 4, STOP if missing
-  - [ ] 2.3 Verify findings summary display: severity table (blockers/recommended/nice-to-have counts)
-  - [ ] 2.4 Verify existing feedback check: `.gyre/feedback.yaml` (FR53)
-  - [ ] 2.5 Verify review prompt (FR43, FR55): walk through now / later / skip
-  - [ ] 2.6 Verify "walk through" handler: executes model-review workflow steps inline (step-02, step-03, step-04)
-  - [ ] 2.7 Verify "later" handler: sets review_deferred=true, proceeds to feedback capture
-  - [ ] 2.8 Verify "skip" handler: proceeds directly to feedback capture
+- [x] Task 2: Validate step-05-review-findings.md (AC: #2)
+  - [x] 2.1 Verify frontmatter: step=5, workflow=full-analysis, title=Review Findings, implements=Epic 4 (Stories 4.5, 4.7) — confirmed lines 2-5
+  - [x] 2.2 Verify GC3 prerequisite: must have been written in step 4, STOP if missing — confirmed line 14
+  - [x] 2.3 Verify findings summary display: severity table (blockers/recommended/nice-to-have counts) — confirmed lines 39-50
+  - [x] 2.4 Verify existing feedback check: `.gyre/feedback.yaml` (FR53) — confirmed lines 52-58
+  - [x] 2.5 Verify review prompt (FR43, FR55): walk through now / later / skip — confirmed lines 60-73
+  - [x] 2.6 Verify "walk through" handler: executes model-review workflow steps inline (step-02, step-03, step-04) — confirmed lines 77-81
+  - [x] 2.7 Verify "later" handler: sets review_deferred=true, proceeds to feedback capture — confirmed lines 83-89
+  - [x] 2.8 Verify "skip" handler: proceeds directly to feedback capture — confirmed lines 91-93
 
-- [ ] Task 3: Validate Gyre Compass and completion (AC: #2)
-  - [ ] 3.1 Verify full-analysis complete section: lists all 4 GC artifacts (GC1-GC4)
-  - [ ] 3.2 Verify Gyre Compass routing table: 8 rows covering all workflows and agents
-  - [ ] 3.3 Verify cross-module recommendation: Vortex agents (Emma/Isla) for production readiness impact on discovery
+- [x] Task 3: Validate Gyre Compass and completion (AC: #2)
+  - [x] 3.1 Verify full-analysis complete section: lists all 4 GC artifacts (GC1 stack-profile, GC2 capabilities, GC3 findings, GC4 feedback) — confirmed lines 104-108
+  - [x] 3.2 Verify Gyre Compass routing table: 8 rows covering all workflows and agents — confirmed lines 116-125
+  - [x] 3.3 Verify cross-module recommendation: Vortex agents (Emma/Isla) for production readiness impact on discovery — confirmed line 125
 
-- [ ] Task 4: Validate step chain continuity
-  - [ ] 4.1 Verify step-04 Load directive points to step-05 (step 4 → step 5 handoff)
-  - [ ] 4.2 Verify workflow.md pipeline table lists step-04 (Lens) and step-05 (Coach) with correct agents
-  - [ ] 4.3 Verify both step files reference `workflow: full-analysis` in frontmatter
+- [x] Task 4: Validate step chain continuity
+  - [x] 4.1 Verify step-04 Load directive points to step-05 (step 4 → step 5 handoff) — confirmed line 42
+  - [x] 4.2 Verify workflow.md pipeline table lists step-04 (Lens 🔬) and step-05 (Coach 🏋️) with correct agents — confirmed workflow.md lines 20-21
+  - [x] 4.3 Verify both step files reference `workflow: full-analysis` in frontmatter — step-04 line 3, step-05 line 3 — confirmed
 
-- [ ] Task 5: Fix any discrepancies found in Tasks 1-4
+- [x] Task 5: Fix any discrepancies found in Tasks 1-4 — No discrepancies found
 
 ## Dev Notes
 
@@ -117,12 +117,29 @@ From Story 2.5 completion notes (same integration pattern):
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+None — no errors encountered.
+
 ### Completion Notes List
+
+- All 19 validation subtasks passed across 5 tasks and 3 files — zero discrepancies found
+- Task 1 (step-04-analyze-gaps, 43 lines): Frontmatter, GC2 prerequisite with STOP, gap-analysis delegation (5 steps in sequence), NFR1 time target (<2 min), GC3 write, error recovery (GC2 safe + retry), Load directive — all correct
+- Task 2 (step-05-review-findings, 129 lines): Frontmatter with Epic 4 implements tag, GC3 prerequisite with STOP, findings summary table, feedback check (FR53), review prompt with 3 options (FR43/FR55), walk-through/later/skip handlers with correct model-review workflow delegation — all correct
+- Task 3 (compass/completion): Full-analysis complete section lists all 4 GC artifacts, Gyre Compass routing table (8 rows, all workflows + agents), cross-module Vortex recommendation — all correct
+- Task 4 (step chain): step-04 → step-05 handoff confirmed, workflow.md pipeline table lists Lens and Coach correctly, both files reference workflow: full-analysis — all correct
+- Task 5 (fix): No discrepancies found — sixth consecutive clean validation in Epic 3, completing the epic
+- This is a validation-only story — no files were created or modified
+- Epic 3 complete: all 6 stories done (3.1 Lens agent, 3.2 gap-analysis workflow+steps 1-2, 3.3 step-03, 3.4 step-04, 3.5 GC3+step-05, 3.6 full-analysis integration)
 
 ### Change Log
 
+- 2026-03-23: Full validation of step-04-analyze-gaps.md (43 lines) and step-05-review-findings.md (129 lines) — all checks passed, no changes needed
+
 ### File List
+
+- `_bmad/bme/_gyre/workflows/full-analysis/steps/step-04-analyze-gaps.md` (validated, no changes)
+- `_bmad/bme/_gyre/workflows/full-analysis/steps/step-05-review-findings.md` (validated, no changes)
+- `_bmad/bme/_gyre/workflows/full-analysis/workflow.md` (validated for pipeline table, no changes)
