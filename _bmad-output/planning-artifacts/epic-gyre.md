@@ -17,6 +17,13 @@ inputDocuments:
 
 This document provides the complete epic and story breakdown for Gyre as a Convoke team module — conversational persona agents running inside Claude Code. All "implementation" is markdown (agent definitions, workflow step-files, contracts) plus integration scripts following existing Convoke patterns.
 
+> **Authoring vs Runtime Acceptance Criteria:** Gyre delivers markdown-only artifacts (agent definitions, workflow step-files, contracts, YAML schemas). Acceptance criteria throughout this document should be read in two layers:
+>
+> - **Authoring ACs** (what a dev agent delivers): Files exist, follow templates, contain required sections, pass structural validation, are registered correctly. These are verifiable at PR time.
+> - **Runtime ACs** (validated during pilot/QA): Detection accuracy, timing targets, model quality thresholds, conversational flow correctness. These require running the agents against real projects and are gated by NFR19 (≥70% accuracy across ≥3 archetypes).
+>
+> Stories use authoring-verifiable language ("file contains", "section includes", "registered in") for deliverable ACs and runtime-verifiable language ("system detects", "agent produces", "user sees") for behavioral ACs. Both layers must pass for a story to be considered complete.
+
 ## Requirements Inventory
 
 ### Functional Requirements
