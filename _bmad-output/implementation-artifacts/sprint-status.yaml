@@ -220,7 +220,7 @@ development_status:
   gyre-2-3-model-generation-workflow: done
   gyre-2-4-gc2-capabilities-manifest-contract: done
   gyre-2-5-full-analysis-steps-2-3-integration: done
-  gyre-epic-2-retrospective: optional
+  gyre-epic-2-retrospective: done
 
   # Epic 3: Lens — Readiness Analysis & Findings
   gyre-epic-3: backlog
