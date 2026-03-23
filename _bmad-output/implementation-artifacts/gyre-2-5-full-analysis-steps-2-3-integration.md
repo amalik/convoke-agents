@@ -1,6 +1,6 @@
 # Story 2.5: Full-Analysis Steps 2-3 Integration
 
-Status: review
+Status: done
 
 ## Story
 
