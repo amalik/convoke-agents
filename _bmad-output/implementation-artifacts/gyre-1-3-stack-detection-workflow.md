@@ -1,6 +1,6 @@
 # Story 1.3: Stack Detection Workflow
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -52,54 +52,54 @@ So that I can confirm or correct the classification before analysis.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Validate workflow.md entry point (AC: #2)
-  - [ ] 1.1 Verify frontmatter: `workflow: stack-detection`, `type: step-file`, `author: Scout (stack-detective)`, `version: 1.0.0`
-  - [ ] 1.2 Verify description matches purpose: detecting and classifying project technology stack
-  - [ ] 1.3 Verify step-file architecture explanation: JIT loading, sequential enforcement, state tracking
-  - [ ] 1.4 Verify Steps Overview lists all 3 steps with correct titles
-  - [ ] 1.5 Verify Output section references `.gyre/stack-profile.yaml` (GC1) with privacy boundary statement
-  - [ ] 1.6 Verify INITIALIZATION loads config from `{project-root}/_bmad/bme/_gyre/config.yaml`
-  - [ ] 1.7 Verify final line is `Load step: {project-root}/_bmad/bme/_gyre/workflows/stack-detection/steps/step-01-scan-filesystem.md`
+- [x] Task 1: Validate workflow.md entry point (AC: #2)
+  - [x] 1.1 Verify frontmatter: `workflow: stack-detection`, `type: step-file`, `author: Scout (stack-detective)`, `version: 1.0.0`
+  - [x] 1.2 Verify description matches purpose: detecting and classifying project technology stack
+  - [x] 1.3 Verify step-file architecture explanation: JIT loading, sequential enforcement, state tracking
+  - [x] 1.4 Verify Steps Overview lists all 3 steps with correct titles
+  - [x] 1.5 Verify Output section references `.gyre/stack-profile.yaml` (GC1) with privacy boundary statement
+  - [x] 1.6 Verify INITIALIZATION loads config from `{project-root}/_bmad/bme/_gyre/config.yaml`
+  - [x] 1.7 Verify final line is `Load step: {project-root}/_bmad/bme/_gyre/workflows/stack-detection/steps/step-01-scan-filesystem.md`
 
-- [ ] Task 2: Validate step-01-scan-filesystem.md (AC: #3)
-  - [ ] 2.1 Verify frontmatter: `step: 1`, `workflow: stack-detection`, `title: Scan Filesystem`
-  - [ ] 2.2 Verify mandatory execution rules: use Claude Code tools (not ask user), report with evidence, no file contents in profile, breadth-first
-  - [ ] 2.3 Verify scan category 1 — Package Manifests: Glob for 10+ manifest types, Read for framework identification
-  - [ ] 2.4 Verify scan category 2 — Container & Orchestration: Glob for Dockerfile, compose, k8s, ECS, fly.toml, render.yaml, Procfile
-  - [ ] 2.5 Verify scan category 3 — CI/CD Platform: Glob for GitHub Actions, GitLab CI, Jenkins, CircleCI, Azure, Bitbucket, Travis
-  - [ ] 2.6 Verify scan category 4 — Observability Tooling: Grep for otel/prometheus/datadog/newrelic/sentry/grafana/elk/structured-logging + Glob for config files
-  - [ ] 2.7 Verify scan category 5 — Cloud Provider: Glob for terraform/cloudformation/pulumi/serverless/cdk/firebase + Grep for SDK imports
-  - [ ] 2.8 Verify scan category 6 — Communication Protocol: Grep for gRPC/GraphQL/REST/AMQP/Kafka/Redis/WebSocket
-  - [ ] 2.9 Verify scan category 7 — Monorepo/Multi-Service Detection (FR1b, FR51): manifest + deployment config criteria, service root selection prompt, `.gyre/` at service root
-  - [ ] 2.10 Verify Findings Compilation section presents results table with Category/Detected/Evidence columns
-  - [ ] 2.11 Verify NEXT STEP has `Load step:` directive to `step-02-classify-stack.md`
+- [x] Task 2: Validate step-01-scan-filesystem.md (AC: #3)
+  - [x] 2.1 Verify frontmatter: `step: 1`, `workflow: stack-detection`, `title: Scan Filesystem`
+  - [x] 2.2 Verify mandatory execution rules: use Claude Code tools (not ask user), report with evidence, no file contents in profile, breadth-first
+  - [x] 2.3 Verify scan category 1 — Package Manifests: Glob for 10+ manifest types, Read for framework identification
+  - [x] 2.4 Verify scan category 2 — Container & Orchestration: Glob for Dockerfile, compose, k8s, ECS, fly.toml, render.yaml, Procfile
+  - [x] 2.5 Verify scan category 3 — CI/CD Platform: Glob for GitHub Actions, GitLab CI, Jenkins, CircleCI, Azure, Bitbucket, Travis
+  - [x] 2.6 Verify scan category 4 — Observability Tooling: Grep for otel/prometheus/datadog/newrelic/sentry/grafana/elk/structured-logging + Glob for config files
+  - [x] 2.7 Verify scan category 5 — Cloud Provider: Glob for terraform/cloudformation/pulumi/serverless/cdk/firebase + Grep for SDK imports
+  - [x] 2.8 Verify scan category 6 — Communication Protocol: Grep for gRPC/GraphQL/REST/AMQP/Kafka/Redis/WebSocket
+  - [x] 2.9 Verify scan category 7 — Monorepo/Multi-Service Detection (FR1b, FR51): manifest + deployment config criteria, service root selection prompt, `.gyre/` at service root
+  - [x] 2.10 Verify Findings Compilation section presents results table with Category/Detected/Evidence columns
+  - [x] 2.11 Verify NEXT STEP has `Load step:` directive to `step-02-classify-stack.md`
 
-- [ ] Task 3: Validate step-02-classify-stack.md (AC: #4)
-  - [ ] 3.1 Verify frontmatter: `step: 2`, `workflow: stack-detection`, `title: Classify Stack`
-  - [ ] 3.2 Verify mandatory execution rules: derived from Step 1 evidence, no new scans, honest ambiguity identification
-  - [ ] 3.3 Verify 10 archetype templates in table (Node.js Web Service, Node.js Frontend App, Go Microservice, Python Data Pipeline, Python Web Service, JVM Enterprise, Rust System Service, Ruby Web App, .NET Service, Multi-language)
-  - [ ] 3.4 Verify multi-stack detection section (FR1b): list service roots, do NOT use implicit boundary detection
-  - [ ] 3.5 Verify confidence assessment table: high/medium/low/none with criteria
-  - [ ] 3.6 Verify ambiguity identification section: deployment model, communication protocol, cloud provider, architecture intent examples
-  - [ ] 3.7 Verify classification output template with archetype + 7-category table + confidence + ambiguity count
-  - [ ] 3.8 Verify secondary stack warning format with path and description
-  - [ ] 3.9 Verify NEXT STEP has conditional logic: ambiguities → Load step-03, no ambiguities → skip guard questions
+- [x] Task 3: Validate step-02-classify-stack.md (AC: #4)
+  - [x] 3.1 Verify frontmatter: `step: 2`, `workflow: stack-detection`, `title: Classify Stack`
+  - [x] 3.2 Verify mandatory execution rules: derived from Step 1 evidence, no new scans, honest ambiguity identification
+  - [x] 3.3 Verify 10 archetype templates in table (Node.js Web Service, Node.js Frontend App, Go Microservice, Python Data Pipeline, Python Web Service, JVM Enterprise, Rust System Service, Ruby Web App, .NET Service, Multi-language)
+  - [x] 3.4 Verify multi-stack detection section (FR1b): list service roots, do NOT use implicit boundary detection
+  - [x] 3.5 Verify confidence assessment table: high/medium/low/none with criteria
+  - [x] 3.6 Verify ambiguity identification section: deployment model, communication protocol, cloud provider, architecture intent examples
+  - [x] 3.7 Verify classification output template with archetype + 7-category table + confidence + ambiguity count
+  - [x] 3.8 Verify secondary stack warning format with path and description
+  - [x] 3.9 Verify NEXT STEP has conditional logic: ambiguities → Load step-03, no ambiguities → skip guard questions
 
-- [ ] Task 4: Validate step-03-guard-questions.md (AC: #5)
-  - [ ] 4.1 Verify frontmatter: `step: 3`, `workflow: stack-detection`, `title: Guard Questions`
-  - [ ] 4.2 Verify mandatory execution rules: max 3 questions, skip if unambiguous, derived from detection, conversational answers (FR7), re-classify without re-scan (FR8), <1s processing (NFR3), ≥95% coverage (NFR20)
-  - [ ] 4.3 Verify question generation pattern: evidence + interpretation A + conflicting evidence + interpretation B + options (a/b/c)
-  - [ ] 4.4 Verify 3 common guard question templates: deployment model, communication protocol, cloud provider
-  - [ ] 4.5 Verify conversation flow: present all at once, accept any format, acknowledge and update, handle corrections
-  - [ ] 4.6 Verify correction handling section (FR8): accept, update, check cascade, re-present, NO re-scan
-  - [ ] 4.7 Verify final classification output template with Source column (detection / guard)
-  - [ ] 4.8 Verify completion section: compass routing table (Write Stack Profile / Chat / Menu)
+- [x] Task 4: Validate step-03-guard-questions.md (AC: #5)
+  - [x] 4.1 Verify frontmatter: `step: 3`, `workflow: stack-detection`, `title: Guard Questions`
+  - [x] 4.2 Verify mandatory execution rules: max 3 questions, skip if unambiguous, derived from detection, conversational answers (FR7), re-classify without re-scan (FR8), <1s processing (NFR3), ≥95% coverage (NFR20)
+  - [x] 4.3 Verify question generation pattern: evidence + interpretation A + conflicting evidence + interpretation B + options (a/b/c)
+  - [x] 4.4 Verify 3 common guard question templates: deployment model, communication protocol, cloud provider
+  - [x] 4.5 Verify conversation flow: present all at once, accept any format, acknowledge and update, handle corrections
+  - [x] 4.6 Verify correction handling section (FR8): accept, update, check cascade, re-present, NO re-scan
+  - [x] 4.7 Verify final classification output template with Source column (detection / guard)
+  - [x] 4.8 Verify completion section: compass routing table (Write Stack Profile / Chat / Menu)
 
-- [ ] Task 5: Validate Load step directive chain (AC: #1, #2, #3, #4, #5)
-  - [ ] 5.1 Verify workflow.md → step-01 → step-02 → step-03 chain is correct and paths use `{project-root}` prefix
-  - [ ] 5.2 Verify step-02 has conditional skip logic (no ambiguities → skip step-03)
+- [x] Task 5: Validate Load step directive chain (AC: #1, #2, #3, #4, #5)
+  - [x] 5.1 Verify workflow.md → step-01 → step-02 → step-03 chain is correct and paths use `{project-root}` prefix
+  - [x] 5.2 Verify step-02 has conditional skip logic (no ambiguities → skip step-03)
 
-- [ ] Task 6: Fix any discrepancies found in Tasks 1-5
+- [x] Task 6: Fix any discrepancies found in Tasks 1-5 — No discrepancies found
 
 ## Dev Notes
 
@@ -184,10 +184,31 @@ From Story 1.1 completion notes:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+None — no errors encountered.
+
 ### Completion Notes List
 
+- All 37 validation subtasks passed — zero discrepancies found
+- Pre-existing workflow files from 2026-03-21 scaffolding match all ACs exactly
+- No modifications to any workflow or step files were required (Task 6 confirmed clean)
+- workflow.md: correct frontmatter, step-file architecture, config loading, privacy boundary, Load step directive
+- step-01: all 7 scan categories present with correct tools (Glob/Grep/Read), monorepo detection with FR1b/FR51, findings compilation table
+- step-02: 10 archetypes, confidence levels, ambiguity identification, conditional skip logic for unambiguous cases
+- step-03: ≤3 guard questions, FR7/FR8/NFR3/NFR20 compliance, 3 templates, correction handling, compass routing
+- Load step chain validated: workflow.md → step-01 → step-02 → step-03 (conditional)
+- This is a validation-only story — no files were created or modified
+
+### Change Log
+
+- 2026-03-23: Validated existing workflow files — all checks passed, no changes needed
+
 ### File List
+
+- `_bmad/bme/_gyre/workflows/stack-detection/workflow.md` (validated, no changes)
+- `_bmad/bme/_gyre/workflows/stack-detection/steps/step-01-scan-filesystem.md` (validated, no changes)
+- `_bmad/bme/_gyre/workflows/stack-detection/steps/step-02-classify-stack.md` (validated, no changes)
+- `_bmad/bme/_gyre/workflows/stack-detection/steps/step-03-guard-questions.md` (validated, no changes)
