@@ -1,6 +1,6 @@
 # Story 2.1: Model Accuracy Spike (NFR19 Gate)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -40,52 +40,48 @@ So that we have a go/no-go decision for the entire Gyre product.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Validate accuracy-validation workflow files (AC: #2)
-  - [ ] 1.1 Verify workflow.md frontmatter: name=accuracy-validation, agent=model-curator, steps=3
-  - [ ] 1.2 Verify scoring methodology table: relevant (1.0), partially-relevant (0.5), irrelevant (0.0)
-  - [ ] 1.3 Verify gate criteria: ≥70% across ALL archetypes, not averaged
-  - [ ] 1.4 Verify step-01-select-repos.md: ≥3 archetypes, recommended set, synthetic profile option
-  - [ ] 1.5 Verify step-02-run-validation.md: independent processing, GC1 recording, GC2 recording
-  - [ ] 1.6 Verify step-03-score-results.md: scoring criteria, guidelines, output artifact, compass table
-  - [ ] 1.7 Verify Load step directives chain: workflow → step-01 → step-02 → step-03
+- [x] Task 1: Validate accuracy-validation workflow files (AC: #2)
+  - [x] 1.1 Verify workflow.md frontmatter: name=accuracy-validation, agent=model-curator, steps=3
+  - [x] 1.2 Verify scoring methodology table: relevant (1.0), partially-relevant (0.5), irrelevant (0.0)
+  - [x] 1.3 Verify gate criteria: ≥70% across ALL archetypes, not averaged
+  - [x] 1.4 Verify step-01-select-repos.md: ≥3 archetypes, recommended set, synthetic profile option
+  - [x] 1.5 Verify step-02-run-validation.md: independent processing, GC1 recording, GC2 recording
+  - [x] 1.6 Verify step-03-score-results.md: scoring criteria, guidelines, output artifact, compass table
+  - [x] 1.7 Verify Load step directives chain: workflow → step-01 → step-02 → step-03
 
-- [ ] Task 2: Prepare synthetic Stack Profiles (AC: #1)
-  - [ ] 2.1 Construct GC1-compliant profile for CNCF Go/K8s archetype (e.g., CoreDNS/Prometheus pattern)
-  - [ ] 2.2 Construct GC1-compliant profile for Node.js web service archetype (Express/Docker/GitHub Actions)
-  - [ ] 2.3 Construct GC1-compliant profile for Python data pipeline archetype (Airflow/FastAPI/Docker Compose)
-  - [ ] 2.4 Verify each profile follows gc1-stack-profile.md schema (all required fields present)
+- [x] Task 2: Prepare synthetic Stack Profiles (AC: #1)
+  - [x] 2.1 Construct GC1-compliant profile for CNCF Go/K8s archetype (Go/Gin/gRPC/K8s/Prometheus/OTel/AWS/GitHub Actions)
+  - [x] 2.2 Construct GC1-compliant profile for Node.js web service archetype (Express/Docker/OTel/AWS/GitHub Actions)
+  - [x] 2.3 Construct GC1-compliant profile for Python data pipeline archetype (FastAPI/Celery/Docker Compose/OTel/Prometheus/AWS/GitHub Actions)
+  - [x] 2.4 Verify each profile follows gc1-stack-profile.md schema (all required fields present)
 
-- [ ] Task 3: Run model generation for each archetype (AC: #1, #3)
-  - [ ] 3.1 Generate capabilities for Go/K8s archetype using Atlas prompts
-  - [ ] 3.2 Generate capabilities for Node.js archetype using Atlas prompts
-  - [ ] 3.3 Generate capabilities for Python pipeline archetype using Atlas prompts
-  - [ ] 3.4 Verify each manifest has ≥20 capabilities (FR14) — note limited_coverage if <20
-  - [ ] 3.5 Verify each capability has all required fields: id, category, name, description, source, relevance
-  - [ ] 3.6 Verify 4 categories covered: observability, deployment, reliability, security
-  - [ ] 3.7 Verify industry standards referenced: DORA, OpenTelemetry, Google PRR (FR10)
-  - [ ] 3.8 Note web search status: performed or skipped (NFR21)
+- [x] Task 3: Run model generation for each archetype (AC: #1, #3)
+  - [x] 3.1 Generate capabilities for Go/K8s archetype using Atlas prompts — 23 capabilities
+  - [x] 3.2 Generate capabilities for Node.js archetype using Atlas prompts — 24 capabilities
+  - [x] 3.3 Generate capabilities for Python pipeline archetype using Atlas prompts — 25 capabilities
+  - [x] 3.4 Verify each manifest has ≥20 capabilities (FR14) — all pass: 23, 24, 25
+  - [x] 3.5 Verify each capability has all required fields: id, category, name, description, source, relevance — all present
+  - [x] 3.6 Verify 4 categories covered: observability, deployment, reliability, security — all 4 present in all archetypes
+  - [x] 3.7 Verify industry standards referenced: DORA, OpenTelemetry, Google PRR (FR10) — all 3 referenced in all archetypes
+  - [x] 3.8 Note web search status: skipped (NFR21) — generation relied on LLM domain knowledge
 
-- [ ] Task 4: Score each archetype (AC: #1)
-  - [ ] 4.1 Score every Go/K8s capability: 1.0 / 0.5 / 0.0 with reasoning
-  - [ ] 4.2 Score every Node.js capability: 1.0 / 0.5 / 0.0 with reasoning
-  - [ ] 4.3 Score every Python pipeline capability: 1.0 / 0.5 / 0.0 with reasoning
-  - [ ] 4.4 Compute accuracy per archetype: sum_of_scores / total_capabilities
-  - [ ] 4.5 Document reasoning for all 0.0-scored capabilities
-  - [ ] 4.6 Apply gate: ALL archetypes must be ≥70% (not averaged)
+- [x] Task 4: Score each archetype (AC: #1)
+  - [x] 4.1 Score every Go/K8s capability: 23/23 scored 1.0 — all stack-specific with concrete library/tool references
+  - [x] 4.2 Score every Node.js capability: 23 scored 1.0, 1 scored 0.5 (environment-variable-configuration: too generic)
+  - [x] 4.3 Score every Python pipeline capability: 25/25 scored 1.0 — all stack-specific with Celery/FastAPI/Docker Compose context
+  - [x] 4.4 Compute accuracy: Go/K8s=100%, Node.js=97.9%, Python=100%
+  - [x] 4.5 Document reasoning for all 0.0-scored capabilities — none scored 0.0
+  - [x] 4.6 Apply gate: ALL archetypes ≥70% — PASS (lowest: 97.9%)
 
-- [ ] Task 5: Document results and gate decision (AC: #4)
-  - [ ] 5.1 Create `_bmad-output/gyre-artifacts/` directory if not exists
-  - [ ] 5.2 Write validation results to `_bmad-output/gyre-artifacts/accuracy-validation-[date].md`
-  - [ ] 5.3 Include: summary (PASS/FAIL), archetypes tested, accuracy range, gate threshold
-  - [ ] 5.4 Include: detailed scoring tables per archetype
-  - [ ] 5.5 Include: methodology notes (synthetic profiles, web search status)
-  - [ ] 5.6 If FAIL: include iteration guidance — prompt issues vs knowledge gaps, improvement recommendations
+- [x] Task 5: Document results and gate decision (AC: #4)
+  - [x] 5.1 Create `_bmad-output/gyre-artifacts/` directory
+  - [x] 5.2 Write validation results to `_bmad-output/gyre-artifacts/accuracy-validation-2026-03-23.md`
+  - [x] 5.3 Include: summary (PASS), 3 archetypes tested, 97.9%-100% range, ≥70% threshold
+  - [x] 5.4 Include: detailed scoring tables per archetype (72 capabilities scored)
+  - [x] 5.5 Include: methodology notes (synthetic profiles, web search skipped)
+  - [x] 5.6 N/A — result is PASS, no iteration guidance needed
 
-- [ ] Task 6: If FAIL — iterate Atlas prompts and re-validate
-  - [ ] 6.1 Analyze 0.0-scored capabilities: prompt issue or knowledge gap?
-  - [ ] 6.2 Analyze 0.5-scored capabilities: description quality improvable?
-  - [ ] 6.3 Adjust model-generation step-02 prompts based on findings
-  - [ ] 6.4 Re-run Tasks 3-5 until ≥70% across all archetypes
+- [x] Task 6: N/A — PASS on first attempt, no iteration needed
 
 ## Dev Notes
 
@@ -229,10 +225,38 @@ From Story 1.7 completion notes:
 
 ### Agent Model Used
 
+Claude Opus 4.6 (orchestration) + Claude Sonnet 4.6 (3 parallel capability generation agents)
+
 ### Debug Log References
+
+None — no errors encountered.
 
 ### Completion Notes List
 
+- Task 1 (workflow validation): All 7 subtasks passed — workflow.md frontmatter, scoring methodology, gate criteria, step-01/02/03 content, Load step directive chain all correct
+- Task 2 (synthetic profiles): 3 GC1-compliant Stack Profiles constructed — Go/Gin/gRPC/K8s, Node.js/Express/Docker, Python/FastAPI/Celery/Docker Compose — all with complete required fields
+- Task 3 (model generation): 72 total capabilities generated across 3 archetypes (23 + 24 + 25), all ≥20 (FR14 satisfied), all 4 categories covered, all 3 industry standards referenced (DORA, OTel, Google PRR)
+- Task 4 (scoring): Go/K8s 100% (23.0/23), Node.js 97.9% (23.5/24), Python 100% (25.0/25) — gate PASS on first attempt
+- Task 5 (documentation): Output artifact written to `_bmad-output/gyre-artifacts/accuracy-validation-2026-03-23.md` with full scoring tables, methodology notes, and PASS recommendation
+- Task 6 (iteration): N/A — PASS on first attempt, no iteration needed
+- Only sub-1.0 score across all 72 capabilities: Node.js `environment-variable-configuration` at 0.5 (12-factor principle too generic cross-language)
+- Zero 0.0-scored capabilities across all archetypes
+- Web search: skipped (NFR21 recorded)
+- NFR19 gate: PASS — 97.9% lowest accuracy, well above 70% threshold
+- This story is the first creative/iterative work in Gyre (unlike Epic 1's validation-only stories)
+- KILL SWITCH not triggered — proceed to Stories 2.2-2.5
+
 ### Change Log
 
+- 2026-03-23: Created `_bmad-output/gyre-artifacts/` directory
+- 2026-03-23: Created `_bmad-output/gyre-artifacts/accuracy-validation-2026-03-23.md` — full validation results with 72 capabilities scored across 3 archetypes
+
 ### File List
+
+- `_bmad-output/gyre-artifacts/accuracy-validation-2026-03-23.md` (created — validation results artifact)
+- `_bmad/bme/_gyre/workflows/accuracy-validation/workflow.md` (validated, no changes)
+- `_bmad/bme/_gyre/workflows/accuracy-validation/steps/step-01-select-repos.md` (validated, no changes)
+- `_bmad/bme/_gyre/workflows/accuracy-validation/steps/step-02-run-validation.md` (validated, no changes)
+- `_bmad/bme/_gyre/workflows/accuracy-validation/steps/step-03-score-results.md` (validated, no changes)
+- `_bmad/bme/_gyre/contracts/gc1-stack-profile.md` (read for schema reference, no changes)
+- `_bmad/bme/_gyre/contracts/gc2-capabilities-manifest.md` (read for schema reference, no changes)
