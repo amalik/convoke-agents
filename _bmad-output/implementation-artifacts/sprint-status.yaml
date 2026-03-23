@@ -229,7 +229,7 @@ development_status:
   gyre-3-3-deployment-readiness-analysis: done
   gyre-3-4-cross-domain-correlation: done
   gyre-3-5-gc3-findings-report-contract-presentation: done
-  gyre-3-6-full-analysis-steps-4-5-integration: backlog
+  gyre-3-6-full-analysis-steps-4-5-integration: ready-for-dev
   gyre-epic-3-retrospective: optional
 
   # Epic 4: Coach — Review, Feedback & Completion
