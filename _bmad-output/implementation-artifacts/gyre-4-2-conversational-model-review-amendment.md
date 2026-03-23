@@ -1,6 +1,6 @@
 # Story 4.2: Conversational Model Review & Amendment
 
-Status: review
+Status: done
 
 ## Story
 
