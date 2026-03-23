@@ -219,7 +219,7 @@ development_status:
   gyre-2-2-atlas-agent-definition: done
   gyre-2-3-model-generation-workflow: done
   gyre-2-4-gc2-capabilities-manifest-contract: done
-  gyre-2-5-full-analysis-steps-2-3-integration: backlog
+  gyre-2-5-full-analysis-steps-2-3-integration: review
   gyre-epic-2-retrospective: optional
 
   # Epic 3: Lens — Readiness Analysis & Findings
