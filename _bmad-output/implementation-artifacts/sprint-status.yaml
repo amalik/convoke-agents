@@ -235,7 +235,7 @@ development_status:
   # Epic 4: Coach — Review, Feedback & Completion
   gyre-epic-4: in-progress
   gyre-4-1-coach-agent-definition: done
-  gyre-4-2-conversational-model-review-amendment: backlog
+  gyre-4-2-conversational-model-review-amendment: in-progress
   gyre-4-3-gc4-feedback-loop-contract: backlog
   gyre-4-4-feedback-capture-display: backlog
   gyre-4-5-mode-detection-review-prompt-integration: backlog
