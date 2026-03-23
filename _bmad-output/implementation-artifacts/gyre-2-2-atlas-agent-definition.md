@@ -1,6 +1,6 @@
 # Story 2.2: Atlas Agent Definition
 
-Status: review
+Status: done
 
 ## Story
 
