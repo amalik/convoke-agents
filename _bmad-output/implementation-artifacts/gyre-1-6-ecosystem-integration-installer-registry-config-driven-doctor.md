@@ -1,6 +1,6 @@
 # Story 1.6: Ecosystem Integration — Installer, Registry, Config-Driven Doctor
 
-Status: review
+Status: done
 
 ## Story
 
