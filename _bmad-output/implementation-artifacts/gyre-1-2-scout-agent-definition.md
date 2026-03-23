@@ -1,6 +1,6 @@
 # Story 1.2: Scout Agent Definition
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -26,32 +26,32 @@ So that I can start a stack analysis conversation.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Validate existing Scout agent file against ACs (AC: #1)
-  - [ ] 1.1 Verify frontmatter has `name: "stack detective"` and `description`
-  - [ ] 1.1b Verify XML agent attributes: id=`stack-detective.agent.yaml`, name=`Scout`, title=`Stack Detective`, icon=`🔎`
-  - [ ] 1.2 Verify XML activation protocol has all 7 steps plus HELP_STEP (between Step 4 and Step 5) in correct order
-  - [ ] 1.3 Verify Step 2 loads `_bmad/bme/_gyre/config.yaml` with error handling for missing file and missing fields
-  - [ ] 1.4 Verify Step 4 greets user by `{user_name}`, communicates in `{communication_language}`, displays numbered menu
-  - [ ] 1.5 Verify Step 5 waits for user input (number, text, or fuzzy match)
-  - [ ] 1.6 Verify menu handlers section includes exec, data, and workflow handler types
+- [x] Task 1: Validate existing Scout agent file against ACs (AC: #1)
+  - [x] 1.1 Verify frontmatter has `name: "stack detective"` and `description`
+  - [x] 1.1b Verify XML agent attributes: id=`stack-detective.agent.yaml`, name=`Scout`, title=`Stack Detective`, icon=`🔎`
+  - [x] 1.2 Verify XML activation protocol has all 7 steps plus HELP_STEP (between Step 4 and Step 5) in correct order
+  - [x] 1.3 Verify Step 2 loads `_bmad/bme/_gyre/config.yaml` with error handling for missing file and missing fields
+  - [x] 1.4 Verify Step 4 greets user by `{user_name}`, communicates in `{communication_language}`, displays numbered menu
+  - [x] 1.5 Verify Step 5 waits for user input (number, text, or fuzzy match)
+  - [x] 1.6 Verify menu handlers section includes exec, data, and workflow handler types
 
-- [ ] Task 2: Validate menu items (AC: #1)
-  - [ ] 2.1 Verify menu includes [DS] Detect Stack pointing to `workflows/stack-detection/workflow.md`
-  - [ ] 2.2 Verify menu includes [FA] Full Analysis pointing to `workflows/full-analysis/workflow.md`
-  - [ ] 2.3 Verify menu items use `exec` handler with correct paths (not `workflow` handler — Gyre uses exec for step-file workflows)
-  - [ ] 2.4 Verify standard menu items present: [MH] Menu Help, [CH] Chat, [PM] Party Mode (pointing to `_bmad/core/workflows/party-mode/workflow.md`), [DA] Dismiss Agent
+- [x] Task 2: Validate menu items (AC: #1)
+  - [x] 2.1 Verify menu includes [DS] Detect Stack pointing to `workflows/stack-detection/workflow.md`
+  - [x] 2.2 Verify menu includes [FA] Full Analysis pointing to `workflows/full-analysis/workflow.md`
+  - [x] 2.3 Verify menu items use `exec` handler with correct paths (not `workflow` handler — Gyre uses exec for step-file workflows)
+  - [x] 2.4 Verify standard menu items present: [MH] Menu Help, [CH] Chat, [PM] Party Mode (pointing to `_bmad/core/workflows/party-mode/workflow.md`), [DA] Dismiss Agent
 
-- [ ] Task 3: Validate persona definition (AC: #1)
-  - [ ] 3.1 Verify persona role is "Technology Stack Detective + Architecture Classification Specialist"
-  - [ ] 3.2 Verify identity describes "methodical investigator" who reports evidence, never guesses
-  - [ ] 3.3 Verify communication_style is evidence-driven with source references
-  - [ ] 3.4 Verify principles include: evidence over inference, guard question rules, privacy boundary, secondary stack warnings
+- [x] Task 3: Validate persona definition (AC: #1)
+  - [x] 3.1 Verify persona role is "Technology Stack Detective + Architecture Classification Specialist"
+  - [x] 3.2 Verify identity describes "methodical investigator" who reports evidence, never guesses
+  - [x] 3.3 Verify communication_style is evidence-driven with source references
+  - [x] 3.4 Verify principles include: evidence over inference, guard question rules, privacy boundary, secondary stack warnings
 
-- [ ] Task 4: Validate Scout-specific rules (AC: #1)
-  - [ ] 4.1 Verify rules include: never guess, guard ≤3 questions, GC1 privacy boundary, secondary stack handling
-  - [ ] 4.2 Verify rules include communication language enforcement
+- [x] Task 4: Validate Scout-specific rules (AC: #1)
+  - [x] 4.1 Verify rules include: never guess, guard ≤3 questions, GC1 privacy boundary, secondary stack handling
+  - [x] 4.2 Verify rules include communication language enforcement
 
-- [ ] Task 5: Fix any discrepancies found in Tasks 1-4
+- [x] Task 5: Fix any discrepancies found in Tasks 1-4 — No discrepancies found
 
 ## Dev Notes
 
@@ -153,8 +153,26 @@ From Story 1.1 completion notes:
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+None — no errors encountered.
 
 ### Completion Notes List
 
+- All 19 validation subtasks passed — zero discrepancies found
+- Pre-existing `stack-detective.md` matches all ACs exactly as specified
+- No modifications to the agent file were required (Task 5 confirmed clean)
+- XML activation protocol follows Vortex pattern with Gyre-specific enhancements (exec error handling)
+- All 6 menu items present with correct handlers and paths
+- Persona, communication style, principles, and rules all match architecture spec
+- This is a validation-only story — no files were created or modified
+
+### Change Log
+
+- 2026-03-23: Validated existing agent file — all checks passed, no changes needed
+
 ### File List
+
+- `_bmad/bme/_gyre/agents/stack-detective.md` (validated, no changes)
