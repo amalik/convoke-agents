@@ -192,10 +192,28 @@ From Story 1.2 completion notes (Scout agent validation — same pattern):
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Debug Log References
+
+None — no errors encountered.
 
 ### Completion Notes List
 
+- All 24 validation subtasks passed across 6 tasks — zero discrepancies found
+- Task 1 (file structure): Frontmatter, XML agent attributes, activation protocol (7 steps + HELP_STEP), config loading with dual error handling, menu handlers (exec/data/workflow) — all correct
+- Task 2 (menu items): [GM] Generate Model, [AV] Accuracy Validation, [FA] Full Analysis + standard items (MH/CH/PM/DA) — all correct with correct exec paths
+- Task 2.5 (Regenerate Model evaluation): AC says separate menu item but architecture confirms regeneration is same workflow with forced-fresh — handled within model-generation workflow, [AV] added as Atlas-owned workflow — design improvement, no fix needed
+- Task 3 (persona): Role, identity ("knowledgeable curator"), communication_style (transparent), principles (5 items) — all correct
+- Task 4 (rules): GC1 prerequisite, NFR9 (no source code in GC2), GC4 amendment respect, ≥20 capabilities, communication language, confidence transparency — all 6 rules present
+- Task 5 (cross-reference): Identical XML activation protocol structure as Scout, agent-specific error messages reference "Atlas" correctly
+- Task 6 (fix): No discrepancies found — second consecutive clean validation of a Gyre agent file (Scout in 1.2, Atlas in 2.2)
+- This is a validation-only story — no files were created or modified
+
 ### Change Log
 
+- 2026-03-23: Full validation of model-curator.md (128 lines) — all checks passed, no changes needed
+
 ### File List
+
+- `_bmad/bme/_gyre/agents/model-curator.md` (validated, no changes)
