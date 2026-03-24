@@ -58,17 +58,17 @@ So that my team's agents and workflows are available system-wide without risking
   - [ ] 4.3 Update CHECKPOINT: add registry wiring status showing block prefix, export count, verification status.
   - [ ] 4.4 Update context variables: add `registry_block_prefix`, `registry_wiring_result`.
 
-- [ ] Task 5: Create Tests (AC: #1, #2, #3)
-  - [ ] 5.1 Create `tests/team-factory/registry-writer.test.js`.
-  - [ ] 5.2 Create `tests/team-factory/golden/golden-registry-block.js` — ≤50 lines, a reference module block for a minimal test team (2 agents, 2 workflows). Must match the Gyre block structure exactly. Use minimal persona text (1-2 words per field) to fit within 50 lines — the golden file tests structure, not content length.
-  - [ ] 5.3 Test: happy path — spec → module block inserted, require() passes, exports updated.
-  - [ ] 5.4 Test: idempotency — running twice returns `skipped` on second run.
-  - [ ] 5.5 Test: dirty-tree detection — simulated dirty file triggers warning.
-  - [ ] 5.6 Test: rollback on structural failure — corrupted write triggers rollback, .bak restored.
-  - [ ] 5.7 Test: prefix collision — existing module prefix is detected and blocked.
-  - [ ] 5.8 Test: additive-only — existing module blocks are preserved exactly.
-  - [ ] 5.9 Test: require() post-write validation — modified file is loadable by Node.
-  - [ ] 5.10 Test: special characters in persona fields — agent with single quotes and backslashes in persona text produces valid JS string literals.
+- [x] Task 5: Create Tests (AC: #1, #2, #3)
+  - [x] 5.1 Create `tests/team-factory/registry-writer.test.js`.
+  - [x] 5.2 Create `tests/team-factory/golden/golden-registry-block.js` — ≤50 lines, a reference module block for a minimal test team (2 agents, 2 workflows). Must match the Gyre block structure exactly. Use minimal persona text (1-2 words per field) to fit within 50 lines — the golden file tests structure, not content length.
+  - [x] 5.3 Test: happy path — spec → module block inserted, require() passes, exports updated.
+  - [x] 5.4 Test: idempotency — running twice returns `skipped` on second run.
+  - [x] 5.5 Test: dirty-tree detection — simulated dirty file triggers warning.
+  - [x] 5.6 Test: rollback on structural failure — corrupted write triggers rollback, .bak restored.
+  - [x] 5.7 Test: prefix collision — existing module prefix is detected and blocked.
+  - [x] 5.8 Test: additive-only — existing module blocks are preserved exactly.
+  - [x] 5.9 Test: require() post-write validation — modified file is loadable by Node.
+  - [x] 5.10 Test: special characters in persona fields — agent with single quotes and backslashes in persona text produces valid JS string literals.
 
 - [ ] Task 6: Update factory-types.js (AC: #1)
   - [ ] 6.1 Add `RegistryResult` typedef: `{ success, written[], skipped[], errors[], rollbackApplied }`.
