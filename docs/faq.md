@@ -1,19 +1,20 @@
 # FAQ
 
-Common questions about Convoke and the Vortex Pattern.
+Common questions about Convoke, Vortex, and Gyre.
 
 ---
 
 ### How is this different from BMAD core agents?
 
-**Convoke handles pre-implementation validation. BMAD Core handles implementation.**
+**Convoke handles discovery, validation, and readiness. BMAD Core handles implementation.**
 
 | Phase | Agents | Question answered |
 |-------|--------|------------------|
-| Pre-implementation (Vortex) | Emma, Isla, Mila, Liam, Wade, Noah, Max | "Should we build this?" |
+| Product discovery (Vortex) | Emma, Isla, Mila, Liam, Wade, Noah, Max | "Should we build this?" |
+| Production readiness (Gyre) | Scout, Atlas, Lens, Coach | "Are we ready to ship?" |
 | Implementation (BMAD Core) | PM, Architect, Dev, QA | "Let's build it right" |
 
-The handoff: Emma → Isla → Mila → Liam → Wade → Noah → Max → BMAD Core.
+Vortex validates *what* to build. Gyre validates *readiness* to ship. BMAD Core handles the building.
 
 ---
 
@@ -127,6 +128,53 @@ Handoff failures typically mean the upstream agent's output is missing fields th
 3. **Check the receiving agent's first workflow step** — it documents what input fields it expects and how it uses them
 
 **Common causes:** Running agents out of order, skipping intermediate agents, or using artifacts from a much older version as input to newer agents.
+
+---
+
+### What is Gyre?
+
+**Gyre is a production readiness team — 4 agents that assess whether your project is ready to ship.**
+
+Scout detects your tech stack, Atlas generates a capabilities model tailored to that stack, Lens finds what's missing, and Coach helps you review and refine. All artifacts go to `.gyre/` in your project root.
+
+---
+
+### What's the difference between Vortex and Gyre?
+
+| | Vortex | Gyre |
+|---|---|---|
+| **Question** | "Should we build this?" | "Are we ready to ship this?" |
+| **When** | Before and during development | Before production launch |
+| **Focus** | User insight, hypotheses, evidence | Stack analysis, capabilities, gaps |
+| **Agents** | 7 (discovery streams) | 4 (analysis pipeline) |
+| **Pattern** | Non-linear loop | Linear pipeline with feedback |
+
+They complement each other. Vortex validates the product direction. Gyre validates the production readiness of whatever you built.
+
+---
+
+### What is the `.gyre/` directory?
+
+Gyre creates a `.gyre/` directory in your project root to store analysis artifacts:
+
+- `stack-profile.yaml` — Classified tech stack (technology categories only)
+- `capabilities.yaml` — What "ready" looks like for your stack (20+ capabilities)
+- `findings.yaml` — What's missing (severity-tagged absences)
+- `feedback.yaml` — Your team's amendments and feedback
+
+**Privacy:** `.gyre/` files contain technology categories and structured metadata only — no file contents, paths, version numbers, or secrets. Safe to commit.
+
+---
+
+### Can I use Gyre standalone?
+
+Yes. Install Gyre independently with `npx -p convoke-agents convoke-install-gyre`. Gyre works without Vortex, BMAD Core, or any other module.
+
+---
+
+### Can I create my own team?
+
+Yes. Use the **Team Factory** (`/bmad-team-factory`) for a guided workflow that handles composition pattern selection, agent scope definition, contract design, artifact generation, and integration wiring. Output passes the same validation as native teams.
 
 ---
 
