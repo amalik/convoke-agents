@@ -12,8 +12,8 @@
 From previous steps:
 
 - `{baseline_commit}` - Git HEAD at workflow start (CRITICAL for diff)
-- `{execution_mode}` - "tech-spec" or "direct"
-- `{tech_spec_path}` - Tech-spec file (if Mode A)
+- `{execution_mode}` - "spec" or "direct"
+- `{spec_path}` - Spec file (if Mode A)
 
 ---
 
