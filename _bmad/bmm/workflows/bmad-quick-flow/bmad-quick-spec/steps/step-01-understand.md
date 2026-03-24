@@ -1,5 +1,5 @@
 ---
-wipFile: '{implementation_artifacts}/tech-spec-wip.md'
+wipFile: '{implementation_artifacts}/spec-wip.md'
 ---
 
 # Step 1: Analyze Requirement Delta
@@ -34,7 +34,7 @@ b) **IF WIP FILE EXISTS:**
 3. Present to user:
 
 ```
-Hey {user_name}! Found a tech-spec in progress:
+Hey {user_name}! Found a spec in progress:
 
 **{title}** - Step {lastStep} of 4 complete
 
@@ -54,7 +54,7 @@ a) **Menu Handling:**
     - `[1, 2]` → Read fully and follow: `./step-03-generate.md` (Step 3)
     - `[1, 2, 3]` → Read fully and follow: `./step-04-review.md` (Step 4)
 - **[N] Archive and start fresh:**
-  - Rename `{wipFile}` to `{implementation_artifacts}/tech-spec-{slug}-archived-{date}.md`
+  - Rename `{wipFile}` to `{implementation_artifacts}/spec-{slug}-archived-{date}.md`
 
 ### 1. Greet and Ask for Initial Request
 
@@ -119,9 +119,9 @@ b) **Ask the user to confirm the captured understanding before proceeding.**
 
 ### 5. Initialize WIP File
 
-a) **Create the tech-spec WIP file:**
+a) **Create the spec WIP file:**
 
-1. Copy template from `../tech-spec-template.md`
+1. Copy template from `../spec-template.md`
 2. Write to `{wipFile}`
 3. Update frontmatter with captured values:
    ```yaml
@@ -161,8 +161,8 @@ b) **HALT and wait for user selection.**
 
 #### Menu Handling Logic:
 
-- IF A: Invoke the `bmad-advanced-elicitation` skill with current tech-spec content, process enhanced insights, ask user "Accept improvements? (y/n)", if yes update WIP file then redisplay menu, if no keep original then redisplay menu
-- IF P: Invoke the `bmad-party-mode` skill with current tech-spec content, process collaborative insights, ask user "Accept changes? (y/n)", if yes update WIP file then redisplay menu, if no keep original then redisplay menu
+- IF A: Invoke the `bmad-advanced-elicitation` skill with current spec content, process enhanced insights, ask user "Accept improvements? (y/n)", if yes update WIP file then redisplay menu, if no keep original then redisplay menu
+- IF P: Invoke the `bmad-party-mode` skill with current spec content, process collaborative insights, ask user "Accept changes? (y/n)", if yes update WIP file then redisplay menu, if no keep original then redisplay menu
 - IF C: Verify `{wipFile}` has `stepsCompleted: [1]`, then read fully and follow: `./step-02-investigate.md`
 - IF Any other comments or queries: respond helpfully then redisplay menu
 
