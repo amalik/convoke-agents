@@ -81,7 +81,7 @@ If any fail, **HALT** and report the missing requirement.
 
 - Read the relevant project manifest (`pyproject.toml`, `pom.xml`, `go.mod`, `*.csproj`, `Gemfile`, `Cargo.toml`) to identify language, framework, and dependencies
 
-- Check for architecture docs (`architecture.md`, `tech-spec*.md`) if available
+- Check for architecture docs (`architecture.md`, `spec*.md`) if available
 - Note auth requirements and APIs (if documented)
 
 ---
