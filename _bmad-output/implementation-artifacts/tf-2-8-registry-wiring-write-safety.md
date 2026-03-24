@@ -27,7 +27,7 @@ So that my team's agents and workflows are available system-wide without risking
 ## Tasks / Subtasks
 
 - [ ] Task 1: Analyze agent-registry.js Structure (AC: #1)
-  - [ ] 1.1 Read `scripts/update/lib/agent-registry.js` and document the exact structure pattern: per-module const blocks (`AGENTS`, `WORKFLOWS`), derived lists (`AGENT_FILES`, `AGENT_IDS`, `WORKFLOW_NAMES`), `module.exports` additions. The Gyre module block (lines 136-213) is the reference pattern.
+  - [ ] 1.1 Read `scripts/update/lib/agent-registry.js` and verify the structure matches the Dev Notes reference. The Gyre module block (lines 136-199) is the reference pattern. `module.exports` (lines 201-214) is a separate shared section — not part of any module block. Note any discrepancies.
   - [ ] 1.2 Identify the insertion point: new module blocks go BEFORE `module.exports`. Derived lists go after the module's WORKFLOWS array. Exports are added to the existing `module.exports` object.
 
 - [ ] Task 2: Create registry-writer.js with Full Write Safety Protocol (AC: #1, #2, #3)
@@ -39,7 +39,7 @@ So that my team's agents and workflows are available system-wide without risking
     - Derived lists: `{PREFIX}_AGENT_FILES`, `{PREFIX}_AGENT_IDS`, `{PREFIX}_WORKFLOW_NAMES`
     - The `{PREFIX}` is the team name in SCREAMING_SNAKE_CASE (e.g., `GYRE` for `_gyre`)
   - [ ] 2.3 **Stage** — Build the exports additions: the new const names that must be appended to the `module.exports` object.
-  - [ ] 2.4 **Validate** — Parse the staged block as JS using `new Function()` or regex validation. Verify it's syntactically valid. Verify it's additive (contains no reassignment to existing variables). Verify the prefix doesn't collide with existing module prefixes (scan for `const {PREFIX}_AGENTS` in the file).
+  - [ ] 2.4 **Validate** — Validate the staged block using regex checks: verify balanced braces, verify const declarations use the correct prefix, verify no reassignment to existing variables. For full syntax validation, write the staged block to a temp file and run `node -e "require('{tempFile}')"` to confirm parseability. Verify the prefix doesn't collide with existing module prefixes (scan for `const {PREFIX}_AGENTS` in the file).
   - [ ] 2.5 **Check** — Dirty-tree detection: run `git diff --name-only -- <registryPath>` immediately before write. If the file has uncommitted changes, return a warning result `{ dirty: true, diff }` — do NOT write automatically. The step-04 PART will present this to the contributor for confirmation.
   - [ ] 2.6 **Apply** — Read current `agent-registry.js` content. Save a copy as `{registryPath}.bak`. Insert the new module block before `module.exports = {`. Insert the new export entries into the `module.exports` object (before the closing `};`). Write the modified content back.
   - [ ] 2.7 **Verify** — Re-read the written file. Run `node -e "require('${registryPath}')"` via `child_process.execSync`. If require() throws, the file is structurally broken → trigger rollback.
@@ -53,14 +53,14 @@ So that my team's agents and workflows are available system-wide without risking
   - [ ] 3.3 Create a `derivePrefix(teamNameKebab)` helper: strip leading `_`, convert to SCREAMING_SNAKE_CASE (e.g., `test-team` → `TEST_TEAM`).
 
 - [ ] Task 4: Update step-04-generate.md with Registry Wiring PART (AC: #1, #2)
-  - [ ] 4.1 Add PART 10a: REGISTRY WIRING between current PART 9 (activation validation) and PART 10 (generation summary). Current PART 10 becomes PART 11. Update all cross-references. Content: (a) Run dirty-tree check first — if dirty, present diff and ask contributor, (b) If clean (or confirmed), run `node _bmad/bme/_team-factory/lib/writers/registry-writer.js --spec-file {spec_file_path} --registry-path scripts/update/lib/agent-registry.js`, (c) Present result: block added, exports updated, require() verification status.
+  - [ ] 4.1 Add PART 10: REGISTRY WIRING between current PART 9 (activation validation) and current PART 10 (generation summary). Renumber current PART 10 to PART 11. Update all internal cross-references. CLI entry point must accept `--spec-file <path>` and `--registry-path <path>` arguments (default registry path: `scripts/update/lib/agent-registry.js` relative to project root). Content: (a) Run dirty-tree check first — if dirty, present diff and ask contributor, (b) If clean (or confirmed), run `node _bmad/bme/_team-factory/lib/writers/registry-writer.js --spec-file {spec_file_path} --registry-path scripts/update/lib/agent-registry.js`, (c) Present result: block added, exports updated, require() verification status.
   - [ ] 4.2 Update STEP VALIDATION table: add check for `agent-registry.js block added and require() passes`.
   - [ ] 4.3 Update CHECKPOINT: add registry wiring status showing block prefix, export count, verification status.
   - [ ] 4.4 Update context variables: add `registry_block_prefix`, `registry_wiring_result`.
 
 - [ ] Task 5: Create Tests (AC: #1, #2, #3)
   - [ ] 5.1 Create `tests/team-factory/registry-writer.test.js`.
-  - [ ] 5.2 Create `tests/team-factory/golden/golden-registry-block.js` — ≤50 lines, a reference module block for a minimal test team (2 agents, 2 workflows). Must match the Gyre block structure exactly.
+  - [ ] 5.2 Create `tests/team-factory/golden/golden-registry-block.js` — ≤50 lines, a reference module block for a minimal test team (2 agents, 2 workflows). Must match the Gyre block structure exactly. Use minimal persona text (1-2 words per field) to fit within 50 lines — the golden file tests structure, not content length.
   - [ ] 5.3 Test: happy path — spec → module block inserted, require() passes, exports updated.
   - [ ] 5.4 Test: idempotency — running twice returns `skipped` on second run.
   - [ ] 5.5 Test: dirty-tree detection — simulated dirty file triggers warning.
@@ -68,6 +68,7 @@ So that my team's agents and workflows are available system-wide without risking
   - [ ] 5.7 Test: prefix collision — existing module prefix is detected and blocked.
   - [ ] 5.8 Test: additive-only — existing module blocks are preserved exactly.
   - [ ] 5.9 Test: require() post-write validation — modified file is loadable by Node.
+  - [ ] 5.10 Test: special characters in persona fields — agent with single quotes and backslashes in persona text produces valid JS string literals.
 
 - [ ] Task 6: Update factory-types.js (AC: #1)
   - [ ] 6.1 Add `RegistryResult` typedef: `{ success, written[], skipped[], errors[], rollbackApplied }`.
