@@ -1,6 +1,6 @@
 # Story 2.3: Agent Scope Definition & Overlap Detection
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -28,45 +28,45 @@ So that my agents are properly scoped, correctly named, and don't silently dupli
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add Part 2 (Agent Scope Definition) to step-01-scope.md (AC: #1)
-  - [ ] 1.1 Add `## PART 3: AGENT SCOPE DEFINITION` section to `step-01-scope.md` after Part 2 (Decision Cascade). This is the "Part 2 of 2" referenced in the PURPOSE section. Note: the file's internal section numbering uses PART 1 (pattern selection), PART 2 (cascade), so the new agent scope section continues as PART 3 despite being "story Part 2."
-  - [ ] 1.2 Implement agent-by-agent definition flow: ask contributor for each agent's (a) role/purpose in one sentence, (b) proposed agent ID (kebab-case), (c) key capabilities. Collect agents iteratively — "Add another agent?" loop. Minimum 1 agent required.
-  - [ ] 1.3 For Sequential teams: require pipeline ordering. After all agents are defined, ask contributor to specify the pipeline sequence. Show Vortex example: `Contextualize → Empathize → Synthesize → Hypothesize → Externalize → Sensitize → Systematize`.
-  - [ ] 1.4 For Independent teams: confirm no ordering needed. Note that agents can run in any order.
-  - [ ] 1.5 Surface contextual examples at each decision point (TF-FR13). When defining agents: show Vortex agent examples (e.g., "Emma — Contextualization Expert — Strategic Framing + Problem-Product Space Navigator") and Gyre examples (e.g., "Scout — Stack Detective — Technology Stack Analysis Expert"). Reference the Architecture Reference for authoritative agent definitions.
+- [x] Task 1: Add Part 2 (Agent Scope Definition) to step-01-scope.md (AC: #1)
+  - [x] 1.1 Add `## PART 3: AGENT SCOPE DEFINITION` section to `step-01-scope.md` after Part 2 (Decision Cascade). This is the "Part 2 of 2" referenced in the PURPOSE section. Note: the file's internal section numbering uses PART 1 (pattern selection), PART 2 (cascade), so the new agent scope section continues as PART 3 despite being "story Part 2."
+  - [x] 1.2 Implement agent-by-agent definition flow: ask contributor for each agent's (a) role/purpose in one sentence, (b) proposed agent ID (kebab-case), (c) key capabilities. Collect agents iteratively — "Add another agent?" loop. Minimum 1 agent required.
+  - [x] 1.3 For Sequential teams: require pipeline ordering. After all agents are defined, ask contributor to specify the pipeline sequence. Show Vortex example: `Contextualize → Empathize → Synthesize → Hypothesize → Externalize → Sensitize → Systematize`.
+  - [x] 1.4 For Independent teams: confirm no ordering needed. Note that agents can run in any order.
+  - [x] 1.5 Surface contextual examples at each decision point (TF-FR13). When defining agents: show Vortex agent examples (e.g., "Emma — Contextualization Expert — Strategic Framing + Problem-Product Space Navigator") and Gyre examples (e.g., "Scout — Stack Detective — Technology Stack Analysis Expert"). Reference the Architecture Reference for authoritative agent definitions.
 
-- [ ] Task 2: Implement Naming Enforcement in step-01-scope.md (AC: #2)
-  - [ ] 2.1 After each agent ID is proposed, validate against the naming regex: `/^[a-z]+(-[a-z]+)*$/` (kebab-case, lowercase, role-based). Show the regex and a good/bad example. Good: `task-runner`, `data-processor`. Bad: `TaskRunner`, `data_processor`, `my-agent-1`.
-  - [ ] 2.2 If naming violation detected: flag immediately, show the correct format, and ask contributor to re-enter. Do NOT proceed past the agent until the name validates.
-  - [ ] 2.3 Validate agent file name derivation: agent file = `{agent_id}.md` (e.g., `task-runner.md`). Canonical skill ID = `bmad-agent-bme-{agent_id}` (e.g., `bmad-agent-bme-task-runner`). Show these derivations to the contributor for confirmation.
+- [x] Task 2: Implement Naming Enforcement in step-01-scope.md (AC: #2)
+  - [x] 2.1 After each agent ID is proposed, validate against the naming regex: `/^[a-z]+(-[a-z]+)*$/` (kebab-case, lowercase, role-based). Show the regex and a good/bad example. Good: `task-runner`, `data-processor`. Bad: `TaskRunner`, `data_processor`, `my-agent-1`.
+  - [x] 2.2 If naming violation detected: flag immediately, show the correct format, and ask contributor to re-enter. Do NOT proceed past the agent until the name validates.
+  - [x] 2.3 Validate agent file name derivation: agent file = `{agent_id}.md` (e.g., `task-runner.md`). Canonical skill ID = `bmad-agent-bme-{agent_id}` (e.g., `bmad-agent-bme-task-runner`). Show these derivations to the contributor for confirmation.
 
-- [ ] Task 3: Implement Overlap Detection in step-01-scope.md (AC: #3)
-  - [ ] 3.1 After all agents are defined and named, instruct the LLM to load `_bmad/_config/agent-manifest.csv` and check for overlaps at three levels:
+- [x] Task 3: Implement Overlap Detection in step-01-scope.md (AC: #3)
+  - [x] 3.1 After all agents are defined and named, instruct the LLM to load `_bmad/_config/agent-manifest.csv` and check for overlaps at three levels:
     - **Level 1 (Exact ID):** Check if any proposed agent ID exactly matches an existing `name` column value. If match → flag as **conflict** (strongly recommend different name).
     - **Level 2 (Name Similarity):** Check for similar names using prefix/substring matching (e.g., `data-processor` vs `data-handler`). If similar → flag as **warning** with the matching entry shown.
     - **Level 3 (Capability Overlap):** Use LLM reasoning to compare proposed agent role/capabilities against existing agent `role` and `capabilities` columns. If overlap → flag as **advisory** with the matching agent(s) shown.
-  - [ ] 3.2 Present overlap results in a clear table format showing: proposed agent, overlap level (conflict/warning/advisory), matching existing agent, and what overlaps.
-  - [ ] 3.3 For each overlap found: allow contributor to (a) rename their agent, (b) acknowledge and proceed (override), or (c) remove the agent from their team. Record acknowledgments in conversation context.
-  - [ ] 3.4 Include a "No overlaps found" confirmation message when all agents pass overlap detection cleanly.
+  - [x] 3.2 Present overlap results in a clear table format showing: proposed agent, overlap level (conflict/warning/advisory), matching existing agent, and what overlaps.
+  - [x] 3.3 For each overlap found: allow contributor to (a) rename their agent, (b) acknowledge and proceed (override), or (c) remove the agent from their team. Record acknowledgments in conversation context.
+  - [x] 3.4 Include a "No overlaps found" confirmation message when all agents pass overlap detection cleanly.
 
-- [ ] Task 4: Add Visibility Checklist and Update CHECKPOINT/NEXT (AC: #1, #2, #3)
-  - [ ] 4.1 Add a Visibility Checklist section for Part 2 per the architecture specification (D-VB). Colleague-visible: (1) agent inventory with roles and capabilities, (2) naming validation results, (3) overlap detection results. Silent: agent-manifest.csv loaded for overlap checks. Concept count: 3/3. Approval prompt: "Confirm your agent inventory."
-  - [ ] 4.2 Update the existing CHECKPOINT section: replace the Part-1-only checkpoint with a combined checkpoint that confirms both pattern selection AND agent inventory. Summary should show: pattern, agent count, agent list (id + role), any acknowledged overlaps.
-  - [ ] 4.3 Update the NEXT section: remove the Story 2.3 "not yet available" fallback. Replace with: "Proceed to Step 2: Connect" with a note that Step 2 is being implemented in Story 2.4 and is not yet available — point to Architecture Reference for manual guidance.
-  - [ ] 4.4 Update the PURPOSE section: remove the "Part 1 (Story 2.2) / Part 2 (Story 2.3)" split note. The step is now complete — both parts are implemented.
-  - [ ] 4.5 Record agent inventory in conversation context for downstream steps: `agents` array with each agent's `id`, `role`, `capabilities`, `pipeline_position` (Sequential only), `overlap_acknowledgments`.
+- [x] Task 4: Add Visibility Checklist and Update CHECKPOINT/NEXT (AC: #1, #2, #3)
+  - [x] 4.1 Add a Visibility Checklist section for Part 2 per the architecture specification (D-VB). Colleague-visible: (1) agent inventory with roles and capabilities, (2) naming validation results, (3) overlap detection results. Silent: agent-manifest.csv loaded for overlap checks. Concept count: 3/3. Approval prompt: "Confirm your agent inventory."
+  - [x] 4.2 Update the existing CHECKPOINT section: replace the Part-1-only checkpoint with a combined checkpoint that confirms both pattern selection AND agent inventory. Summary should show: pattern, agent count, agent list (id + role), any acknowledged overlaps.
+  - [x] 4.3 Update the NEXT section: remove the Story 2.3 "not yet available" fallback. Replace with: "Proceed to Step 2: Connect" with a note that Step 2 is being implemented in Story 2.4 and is not yet available — point to Architecture Reference for manual guidance.
+  - [x] 4.4 Update the PURPOSE section: remove the "Part 1 (Story 2.2) / Part 2 (Story 2.3)" split note. The step is now complete — both parts are implemented.
+  - [x] 4.5 Record agent inventory in conversation context for downstream steps: `agents` array with each agent's `id`, `role`, `capabilities`, `pipeline_position` (Sequential only), `overlap_acknowledgments`.
 
-- [ ] Task 5: Update workflow.md Status (AC: all)
-  - [ ] 5.1 Update workflow.md status line from "Steps 0–1 (Part 1) available" to "Steps 0–1 available."
+- [x] Task 5: Update workflow.md Status (AC: all)
+  - [x] 5.1 Update workflow.md status line from "Steps 0–1 (Part 1) available" to "Steps 0–1 available."
 
-- [ ] Task 6: Verification (AC: #1, #2, #3)
-  - [ ] 6.1 Verify step-01-scope.md follows the step-file structure: PURPOSE, RULES, content sections, CHECKPOINT, NEXT.
-  - [ ] 6.2 Verify naming regex matches the Architecture Reference specification: `/^[a-z]+(-[a-z]+)*$/`.
-  - [ ] 6.3 Verify overlap detection references `_bmad/_config/agent-manifest.csv` (not hardcoded agent lists).
-  - [ ] 6.4 Verify contextual examples reference Vortex and Gyre agents (FR13).
-  - [ ] 6.5 Verify concept count <= 3 in Part 2's visibility checklist.
-  - [ ] 6.6 Verify NEXT section no longer has "not yet available" for Story 2.3 — it now points to Step 2 with its own fallback.
-  - [ ] 6.7 Verify workflow.md status line is updated.
+- [x] Task 6: Verification (AC: #1, #2, #3)
+  - [x] 6.1 Verify step-01-scope.md follows the step-file structure: PURPOSE, RULES, content sections, CHECKPOINT, NEXT.
+  - [x] 6.2 Verify naming regex matches the Architecture Reference specification: `/^[a-z]+(-[a-z]+)*$/`.
+  - [x] 6.3 Verify overlap detection references `_bmad/_config/agent-manifest.csv` (not hardcoded agent lists).
+  - [x] 6.4 Verify contextual examples reference Vortex and Gyre agents (FR13).
+  - [x] 6.5 Verify concept count <= 3 in Part 2's visibility checklist.
+  - [x] 6.6 Verify NEXT section no longer has "not yet available" for Story 2.3 — it now points to Step 2 with its own fallback.
+  - [x] 6.7 Verify workflow.md status line is updated.
 
 ## Dev Notes
 
@@ -176,12 +176,24 @@ From Epic 1 retrospective:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+N/A
+
 ### Completion Notes List
+
+All 22 subtasks across 6 tasks completed. Added PART 3 (Agent Scope Definition) and PART 4 (Overlap Detection) to step-01-scope.md, completing Step 1. Implements agent-by-agent definition flow with iterative collection, naming enforcement via regex `/^[a-z]+(-[a-z]+)*$/` with valid/invalid examples and derived path display, three-level overlap detection against agent-manifest.csv (exact ID conflict, name similarity warning, capability overlap advisory), pipeline ordering for Sequential teams with Vortex example, contextual examples from Vortex and Gyre at decision points (FR13), and D-VB visibility checklist at 3/3 concept budget. Updated CHECKPOINT to combined summary covering pattern + agent inventory, NEXT to point to Step 2 with fallback, and PURPOSE to remove story split note. Updated workflow.md status line.
 
 ### Change Log
 
+| Change | File | Description |
+|--------|------|-------------|
+| MODIFY | `.claude/skills/bmad-team-factory/step-01-scope.md` | Added PART 3 (agent scope definition, naming enforcement) and PART 4 (overlap detection), updated PURPOSE, CHECKPOINT, NEXT, added Part 2 visibility checklist |
+| MODIFY | `.claude/skills/bmad-team-factory/workflow.md` | Updated status line to "Steps 0–1 available" |
+
 ### File List
+
+- `.claude/skills/bmad-team-factory/step-01-scope.md` (modified)
+- `.claude/skills/bmad-team-factory/workflow.md` (modified)
