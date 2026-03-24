@@ -253,7 +253,7 @@ development_status:
   tf-1-2-machine-consumable-team-validity-checklists: done
   tf-1-3-human-readable-context-extension-mechanism: done
   tf-1-4-bidirectional-gyre-validation: done
-  tf-1-5-vortex-cross-validation: ready-for-dev
+  tf-1-5-vortex-cross-validation: in-progress
   tf-epic-1-retrospective: done
 
   # Epic 2: Guided Workflow — Factory Discovery & Generation
