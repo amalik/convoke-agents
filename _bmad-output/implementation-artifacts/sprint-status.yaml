@@ -263,7 +263,7 @@ development_status:
   tf-2-3-agent-scope-definition-overlap-detection: done
   tf-2-4-contract-design-step-validation: done
   tf-2-5-decision-summary-spec-file-persistence: done
-  tf-2-6-bmb-delegation-artifact-generation: review
+  tf-2-6-bmb-delegation-artifact-generation: done
   tf-2-7-integration-wiring-config-csv-activation: backlog
   tf-2-8-registry-wiring-write-safety: backlog
   tf-2-9-end-to-end-validation-error-recovery: backlog
