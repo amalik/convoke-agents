@@ -64,7 +64,7 @@ Two composition patterns describe how teams are structured and how their agents 
 - Compass routing tables provide navigation across all workflows
 
 **Existing examples:**
-- **Vortex** (`_bmad/bme/_vortex/`) — 7 agents (Emma, Isla, Mila, Liam, Wade, Noah, Max) with 10 handoff contracts (HC1-HC10), 21 workflows, compass routing reference
+- **Vortex** (`_bmad/bme/_vortex/`) — 7 agents (Emma, Isla, Mila, Liam, Wade, Noah, Max) with 10 handoff contracts (HC1-HC10), 22 workflows, compass routing reference
 - **Gyre** (`_bmad/bme/_gyre/`) — 4 agents (Scout, Atlas, Lens, Coach) with 4 handoff contracts (GC1-GC4), 7 workflows, compass routing table
 
 ### Pattern Comparison
