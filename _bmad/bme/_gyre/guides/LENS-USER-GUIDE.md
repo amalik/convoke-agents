@@ -6,6 +6,8 @@
 - **Module:** Gyre Pattern (Production Readiness)
 - **Last Updated:** 2026-03-24
 
+---
+
 ## Quick Start
 
 **Who is Lens?** Lens is a thorough analyst who compares your capabilities manifest against what actually exists in your project. Lens detects *absences* — capabilities that should be present for your stack but aren't — and surfaces cross-domain patterns where gaps compound each other's risk.
@@ -27,6 +29,8 @@
 
 **What you'll get:** A Findings Report (`.gyre/findings.yaml`) with absence-based findings tagged by severity, confidence, and source — plus cross-domain compound findings that show how gaps amplify each other.
 
+---
+
 ## How to Invoke
 
 **Claude Code (skills) — recommended:**
@@ -45,6 +49,8 @@ cat _bmad/bme/_gyre/agents/readiness-analyst.md
 
 Open `_bmad/bme/_gyre/agents/readiness-analyst.md` and paste its contents into your conversation.
 
+---
+
 ## Menu Options
 
 | # | Code | Description |
@@ -58,6 +64,8 @@ Open `_bmad/bme/_gyre/agents/readiness-analyst.md` and paste its contents into y
 | 7 | **DA** | Dismiss Agent |
 
 Select by number, code, or fuzzy text match.
+
+---
 
 ## Workflows
 
@@ -111,12 +119,16 @@ On first run, all findings are tagged [NEW] and saved as the baseline for future
 
 Same as Scout's Full Analysis — runs the complete pipeline. Lens handles step 4 (gap analysis).
 
+---
+
 ## Philosophy
 
 - **Absences, not misconfigurations** — Lens looks for what's missing, not what's wrong with what exists. A missing health check is a finding; a misconfigured health check is not Gyre's scope.
 - **Evidence-based honesty** — Every finding shows its source and confidence level. Lens doesn't inflate severity to look thorough.
 - **Compound thinking** — Individual gaps are important, but gaps that amplify each other are critical. Lens surfaces these relationships explicitly.
 - **Progress, not perfection** — The delta report exists because production readiness is a journey. Tracking resolved findings is as important as finding new ones.
+
+---
 
 ## Chat with Lens
 
@@ -126,6 +138,8 @@ Use **[CH]** to discuss analysis topics:
 - "What evidence would you need to see to resolve this finding?"
 - "Can you explain the compound relationship between these two gaps?"
 - "My project is internal-only — should security findings still be blockers?"
+
+---
 
 ## Troubleshooting
 
@@ -145,12 +159,16 @@ This is expected on the first run. The current findings become the baseline. Run
 
 The findings depend on Atlas's capabilities model. If the model includes irrelevant capabilities, use Coach to remove them. Lens will exclude removed capabilities on re-analysis.
 
+---
+
 ## Tips
 
 - **Read the severity rationale.** Lens provides a brief explanation for every severity classification. If you disagree, Coach lets you adjust.
 - **Compound findings are your highest-value signal.** They reveal systemic gaps that individual findings miss. Pay attention to these.
 - **Run delta reports after sprints.** Tracking resolved findings over time gives leadership visibility into readiness progress.
 - **The novelty ratio tells you how much to trust.** A high contextual ratio means the model is doing more inference and less evidence-finding. Consider whether the model needs refining through Coach.
+
+---
 
 ## Credits
 
