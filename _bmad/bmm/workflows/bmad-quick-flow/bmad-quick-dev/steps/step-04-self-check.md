@@ -55,7 +55,7 @@ Verify code quality:
 
 ---
 
-## UPDATE TECH-SPEC (Mode A only)
+## UPDATE SPEC (Mode A only)
 
 If `{execution_mode}` is "spec":
 
