@@ -265,7 +265,7 @@ development_status:
   tf-2-5-decision-summary-spec-file-persistence: done
   tf-2-6-bmb-delegation-artifact-generation: done
   tf-2-7-integration-wiring-config-csv-activation: done
-  tf-2-8-registry-wiring-write-safety: ready-for-dev
+  tf-2-8-registry-wiring-write-safety: in-progress
   tf-2-9-end-to-end-validation-error-recovery: backlog
   tf-epic-2-retrospective: optional
 
