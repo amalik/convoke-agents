@@ -262,7 +262,7 @@ development_status:
   tf-2-2-composition-pattern-selection-decision-cascade: done
   tf-2-3-agent-scope-definition-overlap-detection: done
   tf-2-4-contract-design-step-validation: done
-  tf-2-5-decision-summary-spec-file-persistence: backlog
+  tf-2-5-decision-summary-spec-file-persistence: review
   tf-2-6-bmb-delegation-artifact-generation: backlog
   tf-2-7-integration-wiring-config-csv-activation: backlog
   tf-2-8-registry-wiring-write-safety: backlog
