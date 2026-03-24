@@ -6,6 +6,8 @@
 - **Module:** Gyre Pattern (Production Readiness)
 - **Last Updated:** 2026-03-24
 
+---
+
 ## Quick Start
 
 **Who is Coach?** Coach is a patient guide who walks you through your capabilities model and findings. Coach never pushes — it presents options and respects your expertise. Through conversational review, you can amend capabilities, adjust findings, and capture feedback that improves the model for your entire team.
@@ -27,6 +29,8 @@
 
 **What you'll get:** An amended capabilities manifest, reviewed findings, and feedback captured in `.gyre/feedback.yaml` — all persisted for future runs.
 
+---
+
 ## How to Invoke
 
 **Claude Code (skills) — recommended:**
@@ -45,6 +49,8 @@ cat _bmad/bme/_gyre/agents/review-coach.md
 
 Open `_bmad/bme/_gyre/agents/review-coach.md` and paste its contents into your conversation.
 
+---
+
 ## Menu Options
 
 | # | Code | Description |
@@ -59,11 +65,19 @@ Open `_bmad/bme/_gyre/agents/review-coach.md` and paste its contents into your c
 
 Select by number, code, or fuzzy text match.
 
+---
+
 ## Workflows
 
-### [RF] Review Findings / [RM] Review Model
+### [RF] Review Findings
 
-Both invoke the model-review workflow. Coach asks which mode you want, or you can do both in sequence.
+Walk through Lens's findings severity-first — blockers, then recommended, then nice-to-have. Amend capabilities and capture feedback.
+
+### [RM] Review Model
+
+Walk through Atlas's capabilities manifest — keep, remove, edit, or add capabilities to tailor the model to your project.
+
+Both RF and RM invoke the same model-review workflow. Coach asks which mode you want, or you can do both in sequence.
 
 - **Prerequisite:** `.gyre/capabilities.yaml` (GC2) required; `.gyre/findings.yaml` (GC3) required for findings review
 - **Output:** Amended capabilities.yaml + `.gyre/feedback.yaml` (GC4 contract)
@@ -96,12 +110,16 @@ Both invoke the model-review workflow. Coach asks which mode you want, or you ca
 
 Same as Scout's Full Analysis — runs the complete pipeline. Coach handles step 5 (review).
 
+---
+
 ## Philosophy
 
 - **Your expertise wins** — Coach presents information and options. It never argues that you should keep a capability you want to remove. You know your project better than any model.
 - **Non-destructive amendments** — Removals are flags, not deletions. Original values are preserved. Nothing is lost, and amendments can be reversed.
 - **Feedback compounds** — Every review makes the model better for the next person. Feedback persists across runs and across team members.
 - **Deferral is fine** — If you're not ready to review, Coach records a "review deferred" flag and reminds you on the next run. No pressure.
+
+---
 
 ## Chat with Coach
 
@@ -111,6 +129,8 @@ Use **[CH]** to discuss review topics:
 - "How do amendments affect future Gyre runs?"
 - "What happens to my feedback when Atlas regenerates the model?"
 - "Can my team members see and build on my amendments?"
+
+---
 
 ## Troubleshooting
 
@@ -130,12 +150,16 @@ Coach displays existing feedback at the start of each review. Check that `.gyre/
 
 You don't have to review everything in one session. Coach supports deferral — stop when you need to and resume later. Blockers-first ordering means you always see the most important items first.
 
+---
+
 ## Tips
 
 - **Review findings before the model.** Findings give you context about which capabilities matter for your project. Reviewing the model cold is harder.
 - **Commit `.gyre/feedback.yaml` to your repo.** This is how your team shares Gyre improvements. Feedback from one person's review benefits everyone.
 - **Use "missed-gap" feedback liberally.** If you know about a gap Gyre didn't catch, tell Coach. This is the primary mechanism for model improvement.
 - **Amendments persist through regeneration.** When Atlas rebuilds the model, your removals and edits are preserved. Don't worry about losing your customizations.
+
+---
 
 ## Credits
 
