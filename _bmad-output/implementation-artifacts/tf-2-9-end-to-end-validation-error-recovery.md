@@ -104,7 +104,7 @@ So that I can trust the team is correctly wired and immediately usable without m
 
 ### Key Architecture Decisions
 
-1. **Step 5 is JS Deterministic only — no LLM reasoning.** Per architecture mode parity table (line 768), the Validate step uses pure JS checks. Guaranteed identical behavior in Express and Guided modes.
+1. **Step 5 is JS Deterministic only — no LLM reasoning.** Per architecture mode parity table (line 768), the Validate step uses pure JS checks. Guaranteed identical behavior in Express and Guided modes. Note: the epic file refers to this as "Step 6" — that is stale numbering from an earlier plan. The architecture confirms this is Step 5 (`step-05-validate.md`). Follow the architecture.
 
 2. **Validator is NOT an extension of `scripts/update/lib/validator.js`.** The existing validator is hardcoded to Vortex paths (`_bmad/bme/_vortex/`). Do NOT modify it. Create a new `end-to-end-validator.js` in the factory lib that runs the *same categories* of checks (config, agents, workflows, manifest) against the new team's module path.
 
