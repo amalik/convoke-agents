@@ -1,6 +1,6 @@
 # Story 2.1: Factory Discoverability & Entry Points
 
-Status: review
+Status: done
 
 ## Story
 
