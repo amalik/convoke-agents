@@ -1,6 +1,6 @@
 # Story 2.9: End-to-End Validation & Error Recovery
 
-Status: review
+Status: done
 
 ## Story
 
