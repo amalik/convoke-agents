@@ -93,23 +93,26 @@ See: [Emma Reference Implementation](../_bmad-output/_archive/exploratory/emma-r
 
 ```
 Convoke/
-├── _bmad/bme/_vortex/
-│   ├── agents/              # Agent definition files (7)
-│   ├── workflows/           # 22 workflows, each with steps/ + template
-│   │   └── _deprecated/     # Old workflows preserved here
-│   └── config.yaml          # Submodule configuration
+├── _bmad/bme/
+│   ├── _vortex/             # Team: Product Discovery (7 agents, 22 workflows)
+│   ├── _gyre/               # Team: Production Readiness (4 agents, 7 workflows)
+│   └── _enhance/            # Skill: Agent Capability Upgrades
 ├── _bmad-output/
-│   └── vortex-artifacts/    # Generated artifacts + user guides
+│   ├── vortex-artifacts/    # Vortex generated artifacts
+│   └── gyre-artifacts/      # Gyre generated artifacts
 ├── scripts/
-│   ├── install/             # Installer scripts
+│   ├── install-vortex-agents.js
+│   ├── install-gyre-agents.js
+│   ├── install-all-agents.js
+│   ├── convoke-doctor.js
 │   └── update/
 │       ├── lib/             # Update system modules
 │       └── migrations/      # Migration registry + delta files
 ├── tests/
-│   ├── unit/                # 208 unit tests
-│   └── integration/         # 60 integration tests
+│   ├── unit/                # Unit tests
+│   └── integration/         # Integration tests
 ├── docs/                    # Documentation (you're here)
-├── package.json             # v2.0.0
+├── package.json             # convoke-agents
 ├── CHANGELOG.md             # Version history
 └── UPDATE-GUIDE.md          # Migration documentation
 ```
