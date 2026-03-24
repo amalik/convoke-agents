@@ -160,8 +160,8 @@ Most teams ship to production without knowing if they're actually ready — miss
   │   Detect    │   │   Model     │   │   Analyze   │   │   Review    │
   │   Stack     │   │   Capabil.  │   │   Gaps      │   │   Refine    │
   └─────────────┘   └──────▲──────┘   └─────────────┘   └──────┬──────┘
-                           │                                    │
-                           └────────────── GC4 ─────────────────┘
+                           │                                   │
+                           └────────────── GC4 ────────────────┘
                                        feedback
 ```
 
