@@ -13,7 +13,7 @@ From previous steps:
 
 - `{baseline_commit}` - Git HEAD at workflow start
 - `{execution_mode}` - "spec" or "direct"
-- `{spec_path}` - Tech-spec file (if Mode A)
+- `{spec_path}` - Spec file (if Mode A)
 - Findings table from step-05
 
 ---
@@ -131,7 +131,7 @@ User can:
 - User presented with resolution options
 - Chosen approach executed correctly
 - Fixes applied cleanly (if applicable)
-- Tech-spec updated with final status (Mode A)
+- Spec updated with final status (Mode A)
 - Completion summary provided
 - User understands what was implemented
 
