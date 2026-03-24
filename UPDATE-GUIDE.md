@@ -2,6 +2,10 @@
 
 How to update your Convoke installation to the latest version.
 
+- **Package:** `convoke-agents`
+- **Version:** 2.4.0
+- **Last Updated:** 2026-03-24
+
 ---
 
 ## Quick Update
@@ -61,37 +65,53 @@ npx -p convoke-agents convoke-doctor
 
 ## Migration Paths
 
-### From v1.4.x to v1.5.x
+### From v2.3.x to v2.4.0
 
 **Breaking changes:** None
 
 What happens:
-- Isla (Discovery & Empathy Expert) and Max (Learning & Decision Expert) agents added
-- 6 new workflows installed (empathy-map resurrected for Isla)
-- Installer updated to `convoke-install-vortex`
-- Legacy installers (`install-emma`, `install-wade`) show deprecation warnings
+- **Gyre team installed** — 4 new agents (Scout, Atlas, Lens, Coach), 7 workflows, 4 contract schemas (GC1-GC4), 4 user guides
+- **Team Factory** — guided workflow for creating new BMAD-compliant teams (`/bmad-team-factory`)
+- **Skill Validator** — new `validateSkill()` quality gate for factory-generated skills
+- Gyre skill wrappers added to `.claude/skills/`
+- Agent manifest updated with 4 new entries
 
-### From v1.3.x to v1.5.x
+If you previously had only Vortex installed, Gyre files are added alongside — nothing in `_bmad/bme/_vortex/` changes.
+
+### From v2.0.x to v2.4.0
 
 **Breaking changes:** None
 
 What happens:
-- Architecture refactor (internal — no user-facing changes)
-- Agent files and workflows refreshed
-- Isla + Max agents added with 6 new workflows
+- Enhance module added (Skills architecture, initiatives-backlog)
+- Gyre team added (4 agents, 7 workflows)
+- Agent activation migrated from `.claude/commands/` to `.claude/skills/` (v2.2.0)
+- Legacy command files automatically cleaned up
 
-### From v1.0.x to v1.6.x
+### From v1.7.x to v2.4.0
+
+**Breaking changes:**
+- Product renamed: `bmad-enhanced` → `convoke-agents` (npm package name)
+- CLI commands renamed: `bmad-*` → `convoke-*`
+
+What happens:
+- All CLI commands use `convoke-` prefix
+- `_bmad/` directory preserved (BMAD Method compatibility)
+- All 11 agents installed (7 Vortex + 4 Gyre)
+
+### From v1.0.x to v2.4.0
 
 **Breaking changes:**
 - Workflow renamed: `empathy-map` → `lean-persona` (for Emma)
 - Agent roles updated: `empathy-mapper` → `contextualization-expert`, `wireframe-designer` → `lean-experiments-specialist`
 - Module renamed: `_designos` → `_vortex`
+- Product renamed: `bmad-enhanced` → `convoke-agents`
+- CLI commands renamed: `bmad-*` → `convoke-*`
 
 What happens:
 - Old workflows preserved in `_bmad/bme/_vortex/workflows/_deprecated/`
-- All 22 Vortex workflows installed
-- Config structure updated (preferences preserved)
-- 7 agents installed (Emma, Isla, Mila, Liam, Wade, Noah, Max)
+- Full migration chain applied: file renames, config updates, new agents, new modules
+- All 11 agents + Enhance module installed
 
 ```bash
 npm install convoke-agents@latest
@@ -115,15 +135,19 @@ Every update creates a backup before making changes:
 ### What's Never Touched
 
 - All user-generated files in `_bmad-output/`
+- Gyre analysis artifacts in `.gyre/` (stack-profile, capabilities, findings, feedback)
 - User preferences (name, language settings)
 - Custom configuration values
+- Coach amendments and feedback in `.gyre/feedback.yaml`
 
 ### What Gets Updated
 
-- Agent definition files
+- Agent definition files (Vortex and Gyre)
 - Workflow files (steps, templates, validation)
-- Vortex config.yaml (with preference preservation — user-added agents and workflows are kept after core entries)
+- Config files (with preference preservation — user-added entries are kept)
 - User guides
+- Claude Code skill wrappers in `.claude/skills/`
+- Agent manifest in `_bmad/_config/`
 
 ---
 
@@ -131,24 +155,29 @@ Every update creates a backup before making changes:
 
 ### Your Artifacts Survive Updates
 
-All user-generated content in `_bmad-output/` (planning artifacts, implementation artifacts, vortex artifacts) works with updated agents **without regeneration**. When you update from v1.5.x to v1.6.x, your existing artifacts remain valid inputs to both original and new agents.
+All user-generated content works with updated agents **without regeneration**:
 
-Artifacts created with earlier agents (Emma, Isla, Wade, Max) were not designed specifically for the newer agents (Mila, Liam, Noah), but the handoff contracts are backward-compatible by design. A product vision created with v1.5.x works as input to Mila after updating to v1.6.x — the required fields are present.
+- **Vortex artifacts** in `_bmad-output/vortex-artifacts/` — personas, hypotheses, learning cards, etc.
+- **Gyre artifacts** in `.gyre/` — stack profiles, capabilities manifests, findings reports, feedback logs
+
+Handoff contracts (HC1-HC5 for Vortex, GC1-GC4 for Gyre) are backward-compatible by design. Artifacts created with older agent versions remain valid inputs after updating.
 
 ### What Is Backward-Compatible
 
-- **Artifact content** — Everything in `_bmad-output/` (planning artifacts, implementation artifacts, vortex artifacts)
-- **Handoff contract fields** — The fields agents produce and consume (HC1-HC5 schemas) are stable across versions
+- **Artifact content** — Everything in `_bmad-output/` and `.gyre/`
+- **Handoff contract fields** — The fields agents produce and consume are stable across versions
 - **Workflow outputs** — Templates and generated documents maintain their structure
+- **Coach amendments** — Model customizations in `.gyre/capabilities.yaml` and `.gyre/feedback.yaml` persist through updates and regeneration
 
 ### What Is Managed by the Update System
 
 These change between versions but are handled automatically by `convoke-update`:
 
-- **Agent definition files** — Persona, menu, and instruction content in `_bmad/bme/_vortex/agents/`
-- **Workflow step files** — Step content, templates, and validation in `_bmad/bme/_vortex/workflows/`
+- **Agent definition files** — Persona, menu, and instruction content in `_bmad/bme/_vortex/agents/` and `_bmad/bme/_gyre/agents/`
+- **Workflow step files** — Step content, templates, and validation
+- **Skill wrappers** — Claude Code skill files in `.claude/skills/`
 - **Internal file structure** — The layout of `_bmad/bme/` may change between versions
-- **User guides** — Updated guides are installed in `_bmad/bme/_vortex/guides/`
+- **User guides** — Updated guides are installed in each team's `guides/` directory
 
 You do not need to manually update these — the update system replaces them while preserving your preferences and artifacts.
 
@@ -196,7 +225,9 @@ This tells npx to download `convoke-agents@latest` first, then run the `convoke-
 Reinstall from scratch (preserves user data):
 
 ```bash
-npx -p convoke-agents convoke-install-vortex
+npx -p convoke-agents convoke-install          # Everything
+npx -p convoke-agents convoke-install-vortex   # Vortex only
+npx -p convoke-agents convoke-install-gyre     # Gyre only
 ```
 
 ### Check migration logs
