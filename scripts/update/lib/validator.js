@@ -468,6 +468,161 @@ async function validateEnhanceModule(projectRoot) {
   return check;
 }
 
+/**
+ * Validate a SKILL.md file has required frontmatter fields
+ * @param {string} skillMdPath - Absolute path to SKILL.md file
+ * @returns {Promise<object>} Validation result { valid, errors }
+ */
+async function validateSkillMd(skillMdPath) {
+  const errors = [];
+
+  if (!fs.existsSync(skillMdPath)) {
+    errors.push(`SKILL.md not found: ${skillMdPath}`);
+    return { valid: false, errors };
+  }
+
+  const content = fs.readFileSync(skillMdPath, 'utf8');
+
+  // Extract YAML frontmatter between --- delimiters
+  const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!fmMatch) {
+    errors.push('SKILL.md missing YAML frontmatter (--- delimiters)');
+    return { valid: false, errors };
+  }
+
+  let frontmatter;
+  try {
+    frontmatter = yaml.load(fmMatch[1]);
+  } catch (err) {
+    errors.push(`SKILL.md frontmatter parse error: ${err.message}`);
+    return { valid: false, errors };
+  }
+
+  if (!frontmatter || typeof frontmatter !== 'object') {
+    errors.push('SKILL.md frontmatter is empty or not an object');
+    return { valid: false, errors };
+  }
+
+  if (!frontmatter.name || typeof frontmatter.name !== 'string') {
+    errors.push('SKILL.md missing required field: name');
+  }
+
+  if (!frontmatter.description || typeof frontmatter.description !== 'string') {
+    errors.push('SKILL.md missing required field: description');
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Validate step files in a skill directory follow sequential numbering
+ * @param {string} skillDir - Absolute path to skill directory
+ * @returns {Promise<object>} Validation result { valid, errors }
+ */
+async function validateStepFiles(skillDir) {
+  const errors = [];
+
+  if (!fs.existsSync(skillDir)) {
+    errors.push(`Skill directory not found: ${skillDir}`);
+    return { valid: false, errors };
+  }
+
+  // Collect step files from skill dir and steps/ subdirectory
+  const stepFiles = [];
+  const entries = fs.readdirSync(skillDir);
+
+  for (const entry of entries) {
+    if (/^step-\d+-/.test(entry) && entry.endsWith('.md')) {
+      stepFiles.push(entry);
+    }
+  }
+
+  const stepsSubdir = path.join(skillDir, 'steps');
+  if (fs.existsSync(stepsSubdir)) {
+    const subEntries = fs.readdirSync(stepsSubdir);
+    for (const entry of subEntries) {
+      if (/^step-\d+-/.test(entry) && entry.endsWith('.md')) {
+        stepFiles.push(entry);
+      }
+    }
+  }
+
+  if (stepFiles.length === 0) {
+    // No step files is valid — some skills are single-file (agent-activation type)
+    return { valid: true, errors };
+  }
+
+  // Extract step numbers and check for sequential numbering
+  const stepNumbers = stepFiles
+    .map(f => {
+      const match = f.match(/^step-(\d+)-/);
+      return match ? parseInt(match[1], 10) : null;
+    })
+    .filter(n => n !== null)
+    .sort((a, b) => a - b);
+
+  // Remove duplicates (same step number in root and steps/)
+  const uniqueSteps = [...new Set(stepNumbers)];
+
+  // Check for gaps in sequence
+  for (let i = 0; i < uniqueSteps.length - 1; i++) {
+    if (uniqueSteps[i + 1] - uniqueSteps[i] > 1) {
+      errors.push(
+        `Step numbering gap: step-${String(uniqueSteps[i]).padStart(2, '0')} to step-${String(uniqueSteps[i + 1]).padStart(2, '0')} (missing step-${String(uniqueSteps[i] + 1).padStart(2, '0')})`
+      );
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Validate skill cohesion — workflow.md exists if step files exist
+ * @param {string} skillDir - Absolute path to skill directory
+ * @returns {Promise<object>} Validation result { valid, errors }
+ */
+async function validateSkillCohesion(skillDir) {
+  const errors = [];
+
+  if (!fs.existsSync(skillDir)) {
+    errors.push(`Skill directory not found: ${skillDir}`);
+    return { valid: false, errors };
+  }
+
+  const entries = fs.readdirSync(skillDir);
+  const hasStepFiles = entries.some(e => /^step-\d+-/.test(e) && e.endsWith('.md'));
+  const hasStepsSubdir = fs.existsSync(path.join(skillDir, 'steps'));
+  const hasWorkflow = entries.includes('workflow.md');
+
+  // If step files or steps/ subdirectory exist, workflow.md should too
+  if ((hasStepFiles || hasStepsSubdir) && !hasWorkflow) {
+    errors.push('Skill has step files but no workflow.md');
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Validate a complete skill package (SKILL.md + step files + cohesion)
+ * @param {string} skillDir - Absolute path to skill directory
+ * @returns {Promise<object>} Validation result { valid, errors }
+ */
+async function validateSkill(skillDir) {
+  const allErrors = [];
+
+  const skillMdPath = path.join(skillDir, 'SKILL.md');
+  const skillMdResult = await validateSkillMd(skillMdPath);
+  allErrors.push(...skillMdResult.errors);
+
+  const stepResult = await validateStepFiles(skillDir);
+  allErrors.push(...stepResult.errors);
+
+  const cohesionResult = await validateSkillCohesion(skillDir);
+  allErrors.push(...cohesionResult.errors);
+
+  return { valid: allErrors.length === 0, errors: allErrors };
+}
+
 module.exports = {
   validateInstallation,
   validateConfigStructure,
@@ -477,5 +632,9 @@ module.exports = {
   validateUserDataIntegrity,
   validateDeprecatedWorkflows,
   validateWorkflowStepStructure,
-  validateEnhanceModule
+  validateEnhanceModule,
+  validateSkillMd,
+  validateStepFiles,
+  validateSkillCohesion,
+  validateSkill
 };
