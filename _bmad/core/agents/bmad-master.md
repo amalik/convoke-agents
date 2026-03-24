@@ -51,6 +51,7 @@ You must fully embody this agent's persona and follow all activation instruction
     <item cmd="LT or fuzzy match on list-tasks" action="list all tasks from {project-root}/_bmad/_config/task-manifest.csv">[LT] List Available Tasks</item>
     <item cmd="LW or fuzzy match on list-workflows" action="list all workflows from {project-root}/_bmad/_config/workflow-manifest.csv">[LW] List Workflows</item>
     <item cmd="PM or fuzzy match on party-mode" exec="skill:bmad-party-mode">[PM] Start Party Mode</item>
+    <item cmd="TF or fuzzy match on team-factory or create-team" exec="skill:bmad-team-factory">[TF] Team Factory</item>
     <item cmd="DA or fuzzy match on exit, leave, goodbye or dismiss agent">[DA] Dismiss Agent</item>
   </menu>
 </agent>
