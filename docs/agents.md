@@ -381,22 +381,6 @@ You can trace any decision back to its evidence chain without using the agents d
 
 ---
 
-## All Artifacts
-
-All generated artifacts are saved to `_bmad-output/vortex-artifacts/`.
-
-Each agent also has a user guide:
-
-- [Emma User Guide](../_bmad/bme/_vortex/guides/EMMA-USER-GUIDE.md)
-- [Isla User Guide](../_bmad/bme/_vortex/guides/ISLA-USER-GUIDE.md)
-- [Mila User Guide](../_bmad/bme/_vortex/guides/MILA-USER-GUIDE.md)
-- [Liam User Guide](../_bmad/bme/_vortex/guides/LIAM-USER-GUIDE.md)
-- [Wade User Guide](../_bmad/bme/_vortex/guides/WADE-USER-GUIDE.md)
-- [Noah User Guide](../_bmad/bme/_vortex/guides/NOAH-USER-GUIDE.md)
-- [Max User Guide](../_bmad/bme/_vortex/guides/MAX-USER-GUIDE.md)
-
----
-
 ## Using Agents Independently
 
 Each agent works standalone — you don't need all seven:
@@ -410,8 +394,6 @@ Each agent works standalone — you don't need all seven:
 - **Just Max** for learning capture and decision-making
 
 Use all seven together for the complete Vortex flow, or any subset that fits your needs.
-
----
 
 ---
 
