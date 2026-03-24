@@ -10,7 +10,7 @@ code_patterns: []
 test_patterns: []
 ---
 
-# Tech-Spec: {title}
+# Spec: {title}
 
 **Created:** {date}
 
