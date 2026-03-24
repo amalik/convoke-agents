@@ -1,6 +1,6 @@
 # Story 2.6: BMB Delegation & Artifact Generation
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -23,50 +23,50 @@ So that agent files, workflow files, and contract files are generated from share
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create step-04-generate.md with BMB Delegation Flow (AC: #1)
-  - [ ] 1.1 Add PURPOSE section: Step 4 orchestrates artifact generation by delegating to BMB (Build-Measure-Build) with full team context. Factory owns sequencing and verification; BMB owns content generation.
-  - [ ] 1.2 Add RULES section: NFR6 (factory never authors agent/workflow/skill files), NFR14 (safe templating), NFR2 (≤3 concepts), NFR18 (sequential per-agent processing). Do NOT create JS modules. Do NOT create shared templates (P1/P6 prerequisite not yet met).
-  - [ ] 1.3 Add PART 1: SPEC FILE LOADING — Load the spec file from `spec_file_path` (from Step 3 context). Parse YAML. Verify `progress.review: complete` and `progress.generate: pending`. If spec file missing or invalid, halt with error.
-  - [ ] 1.4 Add PART 2: MODULE DIRECTORY SCAFFOLDING — Create the team module directory structure: `_bmad/bme/_{team-name-kebab}/` with subdirectories: `agents/`, `workflows/`, and `contracts/` (Sequential only). If directory exists, warn and ask contributor to confirm overwrite or abort.
-  - [ ] 1.5 Add PART 3: PER-AGENT GENERATION CYCLE — For each agent in the spec's `agents` array (sequential order by `pipeline_position` for Sequential, array order for Independent): (a) Present agent context to contributor, (b) Generate agent definition file using BMB delegation prompt with full context, (c) Generate agent workflow(s), (d) Verify generated files exist and contain required sections, (e) Update spec file `progress.generate` with per-agent status, (f) Confirm with contributor before proceeding to next agent.
-  - [ ] 1.6 Add PART 3A: BMB DELEGATION PROMPT TEMPLATE — Define the delegation prompt structure: team context (name, pattern, pipeline position), agent context (id, role, capabilities), existing team examples (Vortex agent structure, Gyre agent structure), required sections (activation XML, persona, capabilities, menu), safe templating variable whitelist.
-  - [ ] 1.7 Add PART 3B: AGENT FILE GENERATION — For each agent, generate: `agents/{agent-id}.md` (agent definition with activation XML, persona, capabilities, constraints, menu). Use existing Vortex/Gyre agents as structural reference. File must conform to BMAD agent schema.
-  - [ ] 1.8 Add PART 3C: WORKFLOW GENERATION — For each agent, generate workflow directory: `workflows/{workflow-name}/` with `SKILL.md` and `workflow.md`. Sequential teams: workflows reference pipeline position and handoff contracts. Independent teams: standalone workflows.
+- [x] Task 1: Create step-04-generate.md with BMB Delegation Flow (AC: #1)
+  - [x] 1.1 Add PURPOSE section: Step 4 orchestrates artifact generation by delegating to BMB (Build-Measure-Build) with full team context. Factory owns sequencing and verification; BMB owns content generation.
+  - [x] 1.2 Add RULES section: NFR6 (factory never authors agent/workflow/skill files), NFR14 (safe templating), NFR2 (≤3 concepts), NFR18 (sequential per-agent processing). Do NOT create JS modules. Do NOT create shared templates (P1/P6 prerequisite not yet met).
+  - [x] 1.3 Add PART 1: SPEC FILE LOADING — Load the spec file from `spec_file_path` (from Step 3 context). Parse YAML. Verify `progress.review: complete` and `progress.generate: pending`. If spec file missing or invalid, halt with error.
+  - [x] 1.4 Add PART 2: MODULE DIRECTORY SCAFFOLDING — Create the team module directory structure: `_bmad/bme/_{team-name-kebab}/` with subdirectories: `agents/`, `workflows/`, and `contracts/` (Sequential only). If directory exists, warn and ask contributor to confirm overwrite or abort.
+  - [x] 1.5 Add PART 3: PER-AGENT GENERATION CYCLE — For each agent in the spec's `agents` array (sequential order by `pipeline_position` for Sequential, array order for Independent): (a) Present agent context to contributor, (b) Generate agent definition file using BMB delegation prompt with full context, (c) Generate agent workflow(s), (d) Verify generated files exist and contain required sections, (e) Update spec file `progress.generate` with per-agent status, (f) Confirm with contributor before proceeding to next agent.
+  - [x] 1.6 Add PART 3A: BMB DELEGATION PROMPT TEMPLATE — Define the delegation prompt structure: team context (name, pattern, pipeline position), agent context (id, role, capabilities), existing team examples (Vortex agent structure, Gyre agent structure), required sections (activation XML, persona, capabilities, menu), safe templating variable whitelist.
+  - [x] 1.7 Add PART 3B: AGENT FILE GENERATION — For each agent, generate: `agents/{agent-id}.md` (agent definition with activation XML, persona, capabilities, constraints, menu). Use existing Vortex/Gyre agents as structural reference. File must conform to BMAD agent schema.
+  - [x] 1.8 Add PART 3C: WORKFLOW GENERATION — For each agent, generate workflow directory: `workflows/{workflow-name}/` with `SKILL.md` and `workflow.md`. Sequential teams: workflows reference pipeline position and handoff contracts. Independent teams: standalone workflows.
 
-- [ ] Task 2: Implement Contract File Generation for Sequential Teams (AC: #1)
-  - [ ] 2.1 Add PART 4: CONTRACT GENERATION (Sequential only) — For each contract in the spec's `contracts` array: generate contract file at `contracts/{file_name}` with frontmatter (contract id, source_agent, target_agents, artifact_title, key_sections) and content sections matching key_sections from spec.
-  - [ ] 2.2 Add contract chain verification — After all contracts generated, verify every adjacent pipeline pair has a contract file. Report gaps.
-  - [ ] 2.3 Handle feedback contracts — If `feedback_contracts` array is non-empty, generate feedback contract files following same pattern but with reverse-flow metadata.
+- [x] Task 2: Implement Contract File Generation for Sequential Teams (AC: #1)
+  - [x] 2.1 Add PART 4: CONTRACT GENERATION (Sequential only) — For each contract in the spec's `contracts` array: generate contract file at `contracts/{file_name}` with frontmatter (contract id, source_agent, target_agents, artifact_title, key_sections) and content sections matching key_sections from spec.
+  - [x] 2.2 Add contract chain verification — After all contracts generated, verify every adjacent pipeline pair has a contract file. Report gaps.
+  - [x] 2.3 Handle feedback contracts — If `feedback_contracts` array is non-empty, generate feedback contract files following same pattern but with reverse-flow metadata.
 
-- [ ] Task 3: Implement Compass Routing Reference for Sequential Teams (AC: #1)
-  - [ ] 3.1 Add PART 5: COMPASS ROUTING REFERENCE (Sequential only) — Generate `compass-routing-reference.md` documenting: pipeline flow, per-agent routing (what workflow to invoke, what contract to consume/produce, what's next in pipeline), cross-module routing placeholders.
-  - [ ] 3.2 Use Gyre's `compass-routing-reference.md` as structural template reference.
+- [x] Task 3: Implement Compass Routing Reference for Sequential Teams (AC: #1)
+  - [x] 3.1 Add PART 5: COMPASS ROUTING REFERENCE (Sequential only) — Generate `compass-routing-reference.md` documenting: pipeline flow, per-agent routing (what workflow to invoke, what contract to consume/produce, what's next in pipeline), cross-module routing placeholders.
+  - [x] 3.2 Use Gyre's `compass-routing-reference.md` as structural template reference.
 
-- [ ] Task 4: Implement Per-Agent Progress Tracking and Idempotency (AC: #1, #2)
-  - [ ] 4.1 Add per-agent progress tracking in spec file — Update `progress.generate` section with per-agent completion status after each agent cycle. Format: `generate: { agent-id-1: complete, agent-id-2: pending }`.
-  - [ ] 4.2 Add resume-from-agent logic — On resume, skip agents marked `complete` in spec file progress, continue from first `pending` agent.
-  - [ ] 4.3 Add idempotency guidance — Same spec file inputs must produce identical file content. No timestamps, random values, or session-specific data in generated artifacts. Date fields use spec file's `created` date.
+- [x] Task 4: Implement Per-Agent Progress Tracking and Idempotency (AC: #1, #2)
+  - [x] 4.1 Add per-agent progress tracking in spec file — Update `progress.generate` section with per-agent completion status after each agent cycle. Format: `generate: { agent-id-1: complete, agent-id-2: pending }`.
+  - [x] 4.2 Add resume-from-agent logic — On resume, skip agents marked `complete` in spec file progress, continue from first `pending` agent.
+  - [x] 4.3 Add idempotency guidance — Same spec file inputs must produce identical file content. No timestamps, random values, or session-specific data in generated artifacts. Date fields use spec file's `created` date.
 
-- [ ] Task 5: Add Visibility Checklist, Step Validation, Checkpoint, NEXT (AC: #1)
-  - [ ] 5.1 Add STEP VALIDATION — Validate: all agent files generated, all workflow directories created, all contracts generated (Sequential), compass routing reference generated (Sequential), spec file progress updated, file manifest recorded.
-  - [ ] 5.2 Add Visibility Checklist — 3/3 concept budget: (1) per-agent generation with review checkpoint, (2) generated file verification results, (3) generation progress summary. Silent: BMB delegation prompt construction, spec file progress updates, directory scaffolding.
-  - [ ] 5.3 Add CHECKPOINT confirming generation complete, listing all generated files, showing progress status, and asking contributor to proceed to Step 5 (Validate) or review specific agents.
-  - [ ] 5.4 Add NEXT pointing to Step 5 (Validate) with fallback note that Step 5 is being implemented in Story 2.9.
+- [x] Task 5: Add Visibility Checklist, Step Validation, Checkpoint, NEXT (AC: #1)
+  - [x] 5.1 Add STEP VALIDATION — Validate: all agent files generated, all workflow directories created, all contracts generated (Sequential), compass routing reference generated (Sequential), spec file progress updated, file manifest recorded.
+  - [x] 5.2 Add Visibility Checklist — 3/3 concept budget: (1) per-agent generation with review checkpoint, (2) generated file verification results, (3) generation progress summary. Silent: BMB delegation prompt construction, spec file progress updates, directory scaffolding.
+  - [x] 5.3 Add CHECKPOINT confirming generation complete, listing all generated files, showing progress status, and asking contributor to proceed to Step 5 (Validate) or review specific agents.
+  - [x] 5.4 Add NEXT pointing to Step 5 (Validate) with fallback note that Step 5 is being implemented in Story 2.9.
 
-- [ ] Task 6: Update workflow.md with Step 4 Routing (AC: #1)
-  - [ ] 6.1 Update status line: "Steps 0–4 available"
-  - [ ] 6.2 Add routing entry: "If returning from step-03-review.md (Step 3 confirmed), read fully and follow: `./step-04-generate.md` to proceed to Step 4 (Generate)."
-  - [ ] 6.3 Update fallback note: "Step 5 is being implemented in Story 2.9"
+- [x] Task 6: Update workflow.md with Step 4 Routing (AC: #1)
+  - [x] 6.1 Update status line: "Steps 0–4 available"
+  - [x] 6.2 Add routing entry: "If returning from step-03-review.md (Step 3 confirmed), read fully and follow: `./step-04-generate.md` to proceed to Step 4 (Generate)."
+  - [x] 6.3 Update fallback note: "Step 5 is being implemented in Story 2.9"
 
-- [ ] Task 7: Update step-03-review.md NEXT Section (AC: #1)
-  - [ ] 7.1 Remove the fallback note about Step 4 being implemented in Story 2.6
-  - [ ] 7.2 Clean NEXT to just: "Proceed to Step 4: Generate (BMB delegation and artifact generation)."
+- [x] Task 7: Update step-03-review.md NEXT Section (AC: #1)
+  - [x] 7.1 Remove the fallback note about Step 4 being implemented in Story 2.6
+  - [x] 7.2 Clean NEXT to just: "Proceed to Step 4: Generate (BMB delegation and artifact generation)."
 
-- [ ] Task 8: Verification
-  - [ ] 8.1 Verify step-04-generate.md follows step-file pattern: PURPOSE, RULES, content PARTs, STEP VALIDATION, Visibility Checklist, CHECKPOINT, NEXT
-  - [ ] 8.2 Verify workflow.md routing chain: step-00 → step-01 → step-02 → step-03 → step-04 is complete
-  - [ ] 8.3 Verify step-03-review.md NEXT no longer has fallback note
-  - [ ] 8.4 Verify no JS modules, no shared templates, no JSON schemas created (those are for later stories or P1/P6 prerequisite)
+- [x] Task 8: Verification
+  - [x] 8.1 Verify step-04-generate.md follows step-file pattern: PURPOSE, RULES, content PARTs, STEP VALIDATION, Visibility Checklist, CHECKPOINT, NEXT
+  - [x] 8.2 Verify workflow.md routing chain: step-00 → step-01 → step-02 → step-03 → step-04 is complete
+  - [x] 8.3 Verify step-03-review.md NEXT no longer has fallback note
+  - [x] 8.4 Verify no JS modules, no shared templates, no JSON schemas created (those are for later stories or P1/P6 prerequisite)
 
 ## Dev Notes
 
@@ -185,8 +185,26 @@ _bmad/bme/_gyre/
 
 ### Agent Model Used
 
+Claude Opus 4.6
+
 ### Completion Notes List
+
+- Created step-04-generate.md (~550 lines) as new Step 4 (Generate) file following established step-file pattern
+- Step 4 orchestrates BMB delegation for artifact generation: spec loading → directory scaffolding → per-agent generation cycle → contract generation (Sequential) → compass routing (Sequential) → file manifest
+- BMB delegation prompt templates defined with full context structure (team, agent, pipeline, structural references, safe templating whitelist)
+- Per-agent progress tracking in spec file enables resume from exact interrupted agent (NFR9)
+- Idempotency enforced: spec file `created` date used for all generated artifact dates, no session-specific data
+- Updated workflow.md: status to "Steps 0–4 available", added Step 4 routing entry, updated fallback note
+- Cleaned step-03-review.md NEXT section: removed Story 2.6 fallback note
 
 ### Change Log
 
+- CREATE `.claude/skills/bmad-team-factory/step-04-generate.md` — Step 4 Generate file with 6 PARTs: spec loading, directory scaffolding, per-agent generation cycle (3A-3F), contract generation, compass routing, generation summary
+- MODIFY `.claude/skills/bmad-team-factory/workflow.md` — Status "Steps 0–4 available", added step-03→step-04 routing, updated fallback to Story 2.9
+- MODIFY `.claude/skills/bmad-team-factory/step-03-review.md` — Removed NEXT fallback note about Story 2.6
+
 ### File List
+
+- `.claude/skills/bmad-team-factory/step-04-generate.md` (CREATE)
+- `.claude/skills/bmad-team-factory/workflow.md` (MODIFY)
+- `.claude/skills/bmad-team-factory/step-03-review.md` (MODIFY)
