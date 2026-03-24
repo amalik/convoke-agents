@@ -98,7 +98,7 @@ function formatAbortInstructions(entries) {
   if (created.length > 0) {
     lines.push('# Created files — remove:');
     for (const entry of created) {
-      lines.push(`rm ${entry.path}`);
+      lines.push(`rm "${entry.path}"`);
     }
     lines.push('');
   }
@@ -106,7 +106,7 @@ function formatAbortInstructions(entries) {
   if (modified.length > 0) {
     lines.push('# Modified files — revert:');
     for (const entry of modified) {
-      lines.push(`git checkout -- ${entry.path}`);
+      lines.push(`git checkout -- "${entry.path}"`);
     }
   }
 
