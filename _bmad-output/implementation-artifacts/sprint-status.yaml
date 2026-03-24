@@ -248,7 +248,7 @@ development_status:
   # ============================================================
 
   # Epic 1: Architecture Reference — Quality Properties & Validation
-  tf-epic-1: in-progress
+  tf-epic-1: done
   tf-1-1-quality-properties-composition-patterns: done
   tf-1-2-machine-consumable-team-validity-checklists: done
   tf-1-3-human-readable-context-extension-mechanism: done
