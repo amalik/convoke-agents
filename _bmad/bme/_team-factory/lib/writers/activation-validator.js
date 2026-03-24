@@ -139,7 +139,6 @@ if (require.main === module) {
       // Resolve agent files from glob or comma-separated list
       let agentFiles;
       if (agentGlob.includes('*')) {
-        const { glob } = require('path');
         // Use fs.readdir-based simple glob for *.md in a directory
         const dir = path.dirname(agentGlob);
         const entries = await fs.readdir(dir);
