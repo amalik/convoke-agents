@@ -1,6 +1,10 @@
 # Installation Guide
 
-Complete guide to installing Convoke Vortex agents into your project.
+Complete guide to installing Convoke agent teams into your project.
+
+- **Package:** `convoke-agents`
+- **Version:** 2.4.0
+- **Last Updated:** 2026-03-24
 
 ---
 
@@ -16,11 +20,25 @@ Convoke works **standalone** or as an extension to [BMAD Method](https://github.
 
 ## Quick Install
 
+**Everything (Vortex + Gyre + Enhance):**
+
+```bash
+npm install convoke-agents && npx -p convoke-agents convoke-install
+```
+
+All 11 agents (7 Vortex + 4 Gyre), the Enhance module, and all supporting files are installed and ready to use.
+
+**Vortex only** (product discovery):
+
 ```bash
 npm install convoke-agents && npx -p convoke-agents convoke-install-vortex
 ```
 
-All 7 Vortex agents (Emma, Isla, Mila, Liam, Wade, Noah, Max) with 22 workflows are installed and ready to use.
+**Gyre only** (production readiness):
+
+```bash
+npm install convoke-agents && npx -p convoke-agents convoke-install-gyre
+```
 
 ---
 
@@ -32,8 +50,12 @@ All 7 Vortex agents (Emma, Isla, Mila, Liam, Wade, Noah, Max) with 22 workflows 
 # Install into your project
 npm install convoke-agents
 
-# Install all Vortex agents and workflows
-npx -p convoke-agents convoke-install-vortex
+# Install everything
+npx -p convoke-agents convoke-install
+
+# Or install individual teams
+npx -p convoke-agents convoke-install-vortex   # Product Discovery (7 agents)
+npx -p convoke-agents convoke-install-gyre     # Production Readiness (4 agents)
 ```
 
 ### Option 2: Clone from Source (Contributors Only)
@@ -56,73 +78,51 @@ Agents are pre-installed in the repository for development. Note that this does 
 
 ```
 your-project/
-├── _bmad/
-│   ├── bme/
-│   │   └── _vortex/
-│   │       ├── agents/
-│   │       │   ├── contextualization-expert.md      # Emma
-│   │       │   ├── discovery-empathy-expert.md       # Isla
-│   │       │   ├── research-convergence-specialist.md # Mila
-│   │       │   ├── hypothesis-engineer.md             # Liam
-│   │       │   ├── lean-experiments-specialist.md     # Wade
-│   │       │   ├── production-intelligence-specialist.md # Noah
-│   │       │   └── learning-decision-expert.md        # Max
-│   │       ├── workflows/
-│   │       │   ├── lean-persona/                     # Emma workflows
-│   │       │   ├── product-vision/
-│   │       │   ├── contextualize-scope/
-│   │       │   ├── empathy-map/                      # Isla workflows
-│   │       │   ├── user-interview/
-│   │       │   ├── user-discovery/
-│   │       │   ├── research-convergence/             # Mila workflows
-│   │       │   ├── pivot-resynthesis/
-│   │       │   ├── pattern-mapping/
-│   │       │   ├── hypothesis-engineering/           # Liam workflows
-│   │       │   ├── assumption-mapping/
-│   │       │   ├── experiment-design/
-│   │       │   ├── mvp/                              # Wade workflows
-│   │       │   ├── lean-experiment/
-│   │       │   ├── proof-of-concept/
-│   │       │   ├── proof-of-value/
-│   │       │   ├── signal-interpretation/            # Noah workflows
-│   │       │   ├── behavior-analysis/
-│   │       │   ├── production-monitoring/
-│   │       │   ├── learning-card/                    # Max workflows
-│   │       │   ├── pivot-patch-persevere/
-│   │       │   └── vortex-navigation/
-│   │       └── config.yaml
-│   └── _config/
-│       └── agent-manifest.csv
+├── _bmad/bme/
+│   ├── _vortex/              # Team: Product Discovery
+│   │   ├── agents/           # 7 agent definition files
+│   │   ├── workflows/        # 22 workflows
+│   │   ├── contracts/        # Handoff contracts (HC1-HC5 artifact, HC6-HC10 routing)
+│   │   ├── guides/           # User guides (all 7 agents)
+│   │   └── config.yaml       # Configuration
+│   ├── _gyre/                # Team: Production Readiness
+│   │   ├── agents/           # 4 agent definition files
+│   │   ├── workflows/        # 7 workflows
+│   │   ├── contracts/        # Artifact contract schemas (GC1-GC4)
+│   │   ├── guides/           # User guides (all 4 agents)
+│   │   └── config.yaml       # Configuration
+│   └── _enhance/             # Skill: Agent Capability Upgrades
+│       ├── workflows/        # Skill workflows (initiatives-backlog)
+│       ├── extensions/       # Agent menu patch descriptors
+│       ├── guides/           # Module author guide
+│       └── config.yaml       # Configuration
+├── .claude/skills/           # Claude Code skill wrappers (auto-generated)
+├── _bmad/_config/
+│   └── agent-manifest.csv    # Agent registry
 └── _bmad-output/
-    └── vortex-artifacts/
-        ├── EMMA-USER-GUIDE.md
-        ├── ISLA-USER-GUIDE.md
-        ├── MILA-USER-GUIDE.md
-        ├── LIAM-USER-GUIDE.md
-        ├── WADE-USER-GUIDE.md
-        ├── NOAH-USER-GUIDE.md
-        ├── MAX-USER-GUIDE.md
-        └── (your generated artifacts)
+    ├── vortex-artifacts/     # Vortex generated artifacts
+    └── gyre-artifacts/       # Gyre generated artifacts
 ```
 
 ### Summary
 
-- **7 agent definitions** in `_bmad/bme/_vortex/agents/`
-- **22 workflows** (169 files) — each with steps, templates, and validation
-- **Configuration** in `_bmad/bme/_vortex/config.yaml`
-- **7 user guides** in `_bmad/bme/_vortex/guides/`
+| Module | Contents |
+|--------|----------|
+| **Vortex** | 7 agents, 22 workflows, 10 handoff contracts (HC1-HC5 artifact, HC6-HC10 routing), 7 user guides |
+| **Gyre** | 4 agents, 7 workflows, 4 contract schemas (GC1-GC4), 4 user guides |
+| **Enhance** | Skill workflows, menu patch descriptors, module author guide |
+| **Skills** | Claude Code skill wrappers in `.claude/skills/` for all 11 agents |
 
 ---
 
 ## Configuration
 
-The installer creates `_bmad/bme/_vortex/config.yaml`. The key fields you'll want to customize:
+Each team installer creates a `config.yaml` in its module directory. The key fields you'll want to customize:
 
 ```yaml
-# User-facing settings
+# _bmad/bme/_vortex/config.yaml (or _gyre/config.yaml)
 user_name: "{user}"                # Your name (used in agent greetings)
 communication_language: "en"       # Language for agent communication
-output_folder: "{project-root}/_bmad-output/vortex-artifacts"  # Where artifacts are saved
 ```
 
 The config also includes auto-generated fields (`submodule_name`, `module`, `version`, `agents`, `workflows`) that you typically don't need to edit — the installer and update system manage those.
@@ -131,32 +131,25 @@ The config also includes auto-generated fields (`submodule_name`, `module`, `ver
 
 ## Verification
 
-After installation, verify agents are working by activating one:
-
-```bash
-cat _bmad/bme/_vortex/agents/contextualization-expert.md    # Emma
-```
-
-**Expected result:** Emma should greet you by name and display a numbered menu like this:
-
-```
-Hey Amalik! I'm Emma — your Contextualization Expert...
-
-1. [MH] Redisplay Menu Help
-2. [CH] Chat with Emma
-3. [LP] Lean Persona
-4. [PV] Product Vision
-5. [CS] Contextualize Scope
-...
-```
-
-If the agent doesn't activate or you see raw markdown instead, run diagnostics:
+After installation, run diagnostics to confirm everything is in place:
 
 ```bash
 npx -p convoke-agents convoke-doctor
 ```
 
-This checks project root, config validity, agent files, workflows, output directory, and version consistency — with actionable fix suggestions for each issue.
+Doctor validates all installed modules: agent files, skill wrappers, config files, and manifest entries — with actionable fix suggestions for each issue.
+
+Then activate an agent to confirm it works:
+
+```bash
+# Vortex
+cat _bmad/bme/_vortex/agents/contextualization-expert.md    # Emma
+
+# Gyre
+cat _bmad/bme/_gyre/agents/stack-detective.md               # Scout
+```
+
+**Expected result:** The agent greets you by name and displays a numbered menu. If you see raw markdown instead, re-run `convoke-doctor` to diagnose.
 
 ---
 
@@ -180,8 +173,8 @@ npx -p convoke-agents convoke-install-vortex
 The installer preserves your custom settings and only adds missing entries. To force a clean installation:
 
 ```bash
-rm -rf _bmad/bme/_vortex/
-npx -p convoke-agents convoke-install-vortex
+rm -rf _bmad/bme/_vortex/    # or _gyre/ for Gyre
+npx -p convoke-agents convoke-install-vortex   # or convoke-install-gyre
 ```
 
 ### Installation succeeds but agents don't activate
@@ -189,41 +182,71 @@ npx -p convoke-agents convoke-install-vortex
 Check that files are in place:
 
 ```bash
-ls -la _bmad/bme/_vortex/agents/
-ls -la _bmad/bme/_vortex/workflows/
 npx -p convoke-agents convoke-doctor
+ls -la _bmad/bme/_vortex/agents/
+ls -la _bmad/bme/_gyre/agents/
 ```
+
+### Agent skill not appearing in Claude Code
+
+Skills are installed to `.claude/skills/bmad-agent-bme-{id}/SKILL.md`. Verify they exist:
+
+```bash
+ls .claude/skills/bmad-agent-bme-*/SKILL.md
+```
+
+If missing, re-run the installer — it regenerates skill wrappers on every run.
+
+---
+
+## BMAD Method Compatibility
+
+Convoke works standalone — no BMAD Method installation is required.
+
+If the BMAD Method is already installed in your project, the installer detects it automatically and logs confirmation. Both packages coexist in the `_bmad/` directory without conflict.
+
+See [BMAD-METHOD-COMPATIBILITY.md](docs/BMAD-METHOD-COMPATIBILITY.md) for the full compatibility matrix.
 
 ---
 
 ## Next Steps
 
-1. **Read the user guides** in `_bmad-output/vortex-artifacts/`
-2. **Activate an agent** — start with Emma for strategic framing or Isla for user research
-3. **Follow a workflow** — each agent presents a menu of guided workflows
+1. **Personalize** — edit the config.yaml for your chosen team and replace `{user}` with your name
+2. **Pick a starting point:**
+   - **Vortex:** Activate Emma → select **Lean Persona** from the menu → follow the guided steps
+   - **Gyre:** Activate Scout → select **Full Analysis** from the menu → walk through the pipeline
+3. **Find your artifacts** — outputs are saved in `_bmad-output/vortex-artifacts/` or `.gyre/`
 4. **Check updates** — run `npx -p convoke-agents convoke-version` periodically
 
-See the [Agent Guide](docs/agents.md) for detailed workflow descriptions and the recommended Vortex flow.
+See the [Agent Guide](docs/agents.md) for detailed workflow descriptions. User guides are available for all 11 agents in their respective `guides/` directories.
 
 ---
 
 ## Uninstallation
 
-Back up any artifacts you want to keep before removing:
+Convoke doesn't provide an uninstall command. To remove:
 
 ```bash
 # 1. Back up your generated artifacts first
-cp -r _bmad-output/vortex-artifacts/ ~/my-vortex-backup/
+cp -r _bmad-output/vortex-artifacts/ ~/my-backup/
+cp -r .gyre/ ~/my-backup/
 
-# 2. Remove agent files and workflows
+# 2. Remove agent files, workflows, and skills
 rm -rf _bmad/bme/_vortex/
+rm -rf _bmad/bme/_gyre/
+rm -rf _bmad/bme/_enhance/
+rm -rf .claude/skills/bmad-agent-bme-*/
+rm -rf .claude/skills/bmad-enhance-*/
 
-# 3. Remove generated artifacts (this deletes all your empathy maps, personas, etc.)
+# 3. Remove generated artifacts
 rm -rf _bmad-output/vortex-artifacts/
+rm -rf _bmad-output/gyre-artifacts/
 
 # 4. Uninstall npm package
 npm uninstall convoke-agents
 ```
+
+Your BMAD Method files (if any) remain untouched.
 
 ---
 
