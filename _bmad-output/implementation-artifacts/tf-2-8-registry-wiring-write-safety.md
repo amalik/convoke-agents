@@ -99,9 +99,19 @@ So that my team's agents and workflows are available system-wide without risking
 
 4. **Rollback via .bak file.** Before applying the write, save the original file as `.bak`. If post-write verification fails, restore from `.bak`. Simple, reliable, and avoids git operations during write.
 
-5. **Module block structure follows the Gyre pattern exactly.** The Gyre module block (lines 136-213 in agent-registry.js) is the reference implementation. New module blocks must follow the same structure: section comment → AGENTS array → WORKFLOWS array → derived lists → (later: exports). The Vortex block is the first module and uses slightly different conventions (no section comment, inline arrays) — follow Gyre, not Vortex.
+5. **Module block structure follows the Gyre pattern exactly.** The Gyre module block (lines 136-199 in agent-registry.js) is the reference implementation. `module.exports` (lines 201-214) is a separate shared section, not part of any module block. New module blocks must follow the same structure: section comment → AGENTS array → WORKFLOWS array → derived lists. The Vortex block is the first module and uses slightly different conventions (no section comment, inline arrays) — follow Gyre, not Vortex.
 
 6. **D-Q6 deferred — direct write, not fragments.** The architecture notes D-Q6 (fragment-based registration) as an open question. For this story, implement direct write to agent-registry.js as specified. If D-Q6 is resolved later, registry-writer.js is replaced by a simpler fragment-creator.
+
+7. **RegistryResult differs from CreatorResult intentionally.** Writers return `{ success, written[], skipped[], errors[], rollbackApplied }` per architecture enforcement rule 2. Creators (config-creator, csv-creator) return `{ success, filePath, errors[], collisions[] }`. This is the Writer vs Creator distinction from D-Q2 — do not unify the return shapes.
+
+8. **PART 6 gap is intentional.** Step-04-generate.md has no PART 6 (removed during Story 2.7 renumbering). The gap is intentional. Do NOT fill it.
+
+9. **String escaping for JS output.** All persona field values must have single quotes escaped (`\'`) when emitted into the JS module block. The existing Gyre and Vortex blocks use single-quoted strings consistently. See Gyre agents in agent-registry.js (lines 137-178) for real content length and escaping patterns. Persona fields are typically 1-3 sentences each.
+
+10. **Persona fields come from generated agent .md files, not from AgentSpec.** The `AgentSpec` typedef in factory-types.js has `id`, `role`, `capabilities`, `pipeline_position`, `overlap_acknowledgments` — it does NOT have `name`, `icon`, `identity`, `communication_style`, or `expertise`. These persona/display fields must be extracted from the BMB-generated agent .md files during Step 4, or derived/defaulted by the registry-writer. The `buildAgentEntry` helper must accept enriched agent data beyond what AgentSpec provides.
+
+11. **Path calculation from registry-writer.js.** The file lives at `_bmad/bme/_team-factory/lib/writers/registry-writer.js`. To reach `scripts/update/lib/agent-registry.js`, the path is `path.resolve(__dirname, '../../../../../scripts/update/lib/agent-registry.js')` (5 levels up to project root, then into scripts). Story 2.7 had a bug with wrong directory depth — verify this calculation.
 
 ### What NOT to Do
 
@@ -110,7 +120,7 @@ So that my team's agents and workflows are available system-wide without risking
 - Do NOT modify the Vortex or Gyre blocks in agent-registry.js — additive only
 - Do NOT use ES modules (`import`/`export`) — use CommonJS (`require`/`module.exports`)
 - Do NOT add new npm dependencies — `fs-extra`, `js-yaml`, `child_process` are all already available
-- Do NOT use `eval()` for JS validation — use `child_process.execSync` with `node -e "require(...)"` instead
+- Do NOT use `eval()` or `new Function()` for JS validation — use `child_process.execSync` with `node -e "require(...)"` instead
 - Do NOT modify config-creator.js, csv-creator.js, or activation-validator.js — those are Story 2.7 (done)
 
 ### Existing agent-registry.js Structure (Reference)
@@ -138,9 +148,18 @@ const GYRE_AGENT_IDS = GYRE_AGENTS.map(a => a.id);
 const GYRE_WORKFLOW_NAMES = GYRE_WORKFLOWS.map(w => w.name);
 
 module.exports = {
-  AGENTS, WORKFLOWS, AGENT_FILES, AGENT_IDS, WORKFLOW_NAMES, USER_GUIDES,
+  AGENTS,
+  WORKFLOWS,
+  AGENT_FILES,
+  AGENT_IDS,
+  WORKFLOW_NAMES,
+  USER_GUIDES,
   WAVE3_WORKFLOW_NAMES,
-  GYRE_AGENTS, GYRE_WORKFLOWS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES,
+  GYRE_AGENTS,
+  GYRE_WORKFLOWS,
+  GYRE_AGENT_FILES,
+  GYRE_AGENT_IDS,
+  GYRE_WORKFLOW_NAMES,
 };
 ```
 
@@ -164,8 +183,8 @@ module.exports = {
 
 ### Insertion Points
 
-- **Module block:** Insert BEFORE the `module.exports = {` line
-- **Export entries:** Insert BEFORE the closing `};` of `module.exports`
+- **Module block:** Insert AFTER the last existing module block (currently Gyre, ending at line 199) and BEFORE `module.exports = {` (line 201). Do NOT insert between Vortex derived lists (lines 125-134) and the Gyre block.
+- **Export entries:** Insert BEFORE the closing `};` of `module.exports`. Append one export name per line with a trailing comma, matching the existing one-per-line format.
 - **Pattern:** Use string manipulation (find `module.exports = {` marker), NOT AST parsing. The file structure is simple and predictable.
 
 ### Context Variables Consumed from Step 4 (Stories 2.6-2.7)
