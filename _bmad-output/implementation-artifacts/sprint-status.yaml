@@ -258,7 +258,7 @@ development_status:
 
   # Epic 2: Guided Workflow — Factory Discovery & Generation
   tf-epic-2: in-progress
-  tf-2-1-factory-discoverability-entry-points: ready-for-dev
+  tf-2-1-factory-discoverability-entry-points: in-progress
   tf-2-2-composition-pattern-selection-decision-cascade: backlog
   tf-2-3-agent-scope-definition-overlap-detection: backlog
   tf-2-4-contract-design-step-validation: backlog
