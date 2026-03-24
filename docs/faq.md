@@ -20,8 +20,9 @@ Vortex validates *what* to build. Gyre validates *readiness* to ship. BMAD Core 
 
 ### Can I use agents independently?
 
-Yes. Each agent works standalone:
+Yes. Every agent works standalone — from both teams:
 
+**Vortex:**
 - **Emma alone** — Strategic framing and problem space definition
 - **Isla alone** — User research and empathy mapping
 - **Mila alone** — Research convergence and pattern recognition
@@ -30,13 +31,19 @@ Yes. Each agent works standalone:
 - **Noah alone** — Production signal interpretation and behavior analysis
 - **Max alone** — Learning capture and decision-making
 
-Use all seven together for the complete Vortex flow.
+**Gyre:**
+- **Scout alone** — Technology stack detection and classification
+- **Atlas alone** — Capabilities model generation
+- **Lens alone** — Gap analysis and delta tracking
+- **Coach alone** — Model and findings review
+
+Use all seven Vortex agents for the complete discovery flow, or all four Gyre agents for the complete readiness pipeline.
 
 ---
 
 ### What's the recommended order?
 
-Follow the Vortex flow, but jump in wherever you are:
+**Vortex** — follow the discovery flow, but jump in wherever you are:
 
 1. **Emma** — Defining a new product or problem space
 2. **Isla** — Know the problem, need to understand users
@@ -47,6 +54,15 @@ Follow the Vortex flow, but jump in wherever you are:
 7. **Max** — Have experiment results, need to decide next steps
 
 Max's Vortex Navigation helps identify which stream needs attention based on evidence gaps.
+
+**Gyre** — follows a linear pipeline:
+
+1. **Scout** — Detect the tech stack
+2. **Atlas** — Generate capabilities model
+3. **Lens** — Analyze gaps
+4. **Coach** — Review and refine
+
+Or run Scout's **Full Analysis** to walk through all four in sequence.
 
 ---
 
@@ -83,8 +99,9 @@ These agents fill the gap between Isla's user research and Wade's experiment exe
 
 ### Are all workflows ready to use?
 
-Yes. All 22 workflows are fully implemented:
+Yes. All 29 workflows across both teams are fully implemented:
 
+**Vortex (22 workflows):**
 - **Emma:** lean-persona, product-vision, contextualize-scope
 - **Isla:** empathy-map, user-interview, user-discovery
 - **Mila:** research-convergence, pivot-resynthesis, pattern-mapping
@@ -93,7 +110,13 @@ Yes. All 22 workflows are fully implemented:
 - **Noah:** signal-interpretation, behavior-analysis, production-monitoring
 - **Max:** learning-card, pivot-patch-persevere, vortex-navigation
 
-Each includes templates, step files, and validation.
+**Gyre (7 workflows):**
+- **Scout:** stack-detection, full-analysis
+- **Atlas:** model-generation, accuracy-validation
+- **Lens:** gap-analysis, delta-report
+- **Coach:** model-review
+
+Each includes step files and validation.
 
 ---
 
