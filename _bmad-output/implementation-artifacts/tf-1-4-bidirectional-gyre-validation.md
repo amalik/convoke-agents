@@ -1,6 +1,6 @@
 # Story 1.4: Bidirectional Gyre Validation
 
-Status: review
+Status: done
 
 ## Story
 
