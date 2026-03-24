@@ -42,7 +42,9 @@ Migrations live in `scripts/update/migrations/registry.js` (append-only).
 
 ---
 
-## Building a New Agent
+## Building New Agents and Teams
+
+### Manual Agent Creation
 
 1. **Clone an existing agent as a template:**
 
@@ -67,6 +69,12 @@ Migrations live in `scripts/update/migrations/registry.js` (append-only).
    - Follow Emma's test plan structure (39 scenarios)
    - Execute P0 tests (18 critical scenarios minimum)
    - Target: 100% P0 pass rate
+
+### Team Factory (Recommended)
+
+Use `/bmad-team-factory` for a guided workflow that handles the full creation process — composition pattern selection, agent scope definition, contract design, artifact generation, and integration wiring. The factory produces output that passes the same validation as native teams (Vortex, Gyre).
+
+Three capabilities: **Create Team** (new team from scratch), **Add Agent** (extend existing team), **Add Skill** (new workflow for existing agent).
 
 ### Agent File Naming Conventions
 
