@@ -129,4 +129,37 @@
  * @property {ActivationResult[]} results
  */
 
+/**
+ * Registry writer result shape (Full Write Safety Protocol).
+ * Differs from CreatorResult intentionally — writers return written[]/skipped[] per architecture rule 2.
+ * @typedef {Object} RegistryResult
+ * @property {boolean} success
+ * @property {string[]} written - Const names added to module.exports
+ * @property {string[]} skipped - Reasons for skipping (e.g., 'block already exists')
+ * @property {string[]} errors
+ * @property {boolean} rollbackApplied - True if .bak was restored after verify failure
+ * @property {boolean} [dirty] - True if dirty-tree detection found uncommitted changes
+ * @property {string} [diff] - Git diff output when dirty
+ */
+
+/**
+ * Agent entry in agent-registry.js.
+ * @typedef {Object} RegistryAgentEntry
+ * @property {string} id
+ * @property {string} name - Display name (first name or derived)
+ * @property {string} icon - Unicode emoji character
+ * @property {string} title - Role-based title
+ * @property {string} stream - Team name kebab
+ * @property {RegistryPersona} persona
+ */
+
+/**
+ * Persona sub-object within a registry agent entry.
+ * @typedef {Object} RegistryPersona
+ * @property {string} role
+ * @property {string} identity
+ * @property {string} communication_style
+ * @property {string} expertise
+ */
+
 module.exports = {};
