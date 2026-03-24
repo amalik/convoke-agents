@@ -1,0 +1,68 @@
+# Test Team Spec File — Test Team
+# For unit testing only
+
+schema_version: "1.0"
+team_name: Test Team
+team_name_kebab: test-team
+composition_pattern: Sequential
+created: "2026-03-01"
+factory_version: "1.0"
+discovery_path: "unknown"
+
+decisions:
+  - step: route
+    decision: "Create Team"
+    default_accepted: true
+    rationale: "Factory entry confirmed"
+  - step: scope
+    decision: "Sequential — 2 agents"
+    default_accepted: true
+    rationale: "Default accepted"
+  - step: connect
+    decision: "1 contract, prefix TC"
+    default_accepted: true
+    rationale: "Contract design completed"
+
+agents:
+  - id: alpha-analyzer
+    role: "Analyzes data patterns"
+    capabilities:
+      - "data analysis"
+      - "pattern recognition"
+    pipeline_position: 1
+    overlap_acknowledgments: []
+  - id: beta-builder
+    role: "Builds software components"
+    capabilities:
+      - "component building"
+      - "code generation"
+    pipeline_position: 2
+    overlap_acknowledgments: []
+
+contracts:
+  - id: "TC1"
+    source_agent: alpha-analyzer
+    target_agents:
+      - beta-builder
+    artifact_title: "Analysis Report"
+    artifact_description: "Output from analysis phase"
+    key_sections:
+      - "findings"
+      - "recommendations"
+    file_name: "tc1-analysis-report.md"
+    input_artifacts: []
+    optional: false
+
+feedback_contracts: []
+
+integration:
+  output_directory: "{project-root}/_bmad-output/test-team-artifacts"
+  compass_routing: "required"
+  contract_prefix: "TC"
+
+progress:
+  route: complete
+  scope: complete
+  connect: complete
+  review: complete
+  generate: pending
