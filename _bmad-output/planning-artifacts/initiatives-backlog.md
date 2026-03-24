@@ -55,6 +55,7 @@
 | S1 | **Interactive installer with project-type questions** — Ask user questions during install to customize initial config (e.g., B2B/B2C, team size). Note: must account for Skills installation alongside Teams (v2.4.0). v6.2.0 skill packages add discovery via `bmad-skill-manifest.yaml` — installer question flow should include skill activation. | Multi-agent review (Sally) | 5 | 2 | 50% | 5 | 1.0 | Move the needle | Backlog |
 | S2 | **Simplified entry point** — Single "Start Discovery" command that activates Emma with a guided first-run experience. Note: Enhance skill activation UX (keyword in chat) provides a reference pattern for low-friction entry points. | Multi-agent review (Sally) | 7 | 1 | 40% | 4 | 0.7 | Move the needle | Backlog |
 | I3 | **CSV parser library for manifest** — Replace regex-based CSV parsing in `refresh-installation.js` with proper parser | Murat review | 2 | 0.25 | 70% | 1 | 0.4 | Keep the lights on | Backlog |
+| I6 | **Add `--verbose` flag to all CLI commands** — Currently only `convoke-update` supports `--verbose`. Missing from: `convoke-install`, `convoke-doctor`, `convoke-migrate`, `convoke-version`. Pattern already exists in refresh-installation.js. Improves troubleshooting when users hit install or diagnostic issues. | Gyre full analysis OBS-001, 2026-03-24 | 4 | 0.5 | 80% | 2 | 0.8 | Keep the lights on | Backlog |
 | I5 | **Workflow output naming enforcement** — Update artifact-producing workflows (PRD, architecture, epics, UX, readiness, Vortex, quick-spec, sprint) to follow `{category}-{descriptor}[-{context}][-{date}].md` convention at creation time. Incremental: apply when a workflow is touched for any reason. Archive script (`npm run archive --rename`) catches drift in the meantime. ADR Phase C. | ADR `adr-repo-organization-conventions-2026-03-22.md` | 8 | 0.5 | 90% | 3 | 1.2 | Keep the lights on | Backlog |
 | I4 | **BMAD v6.2.0 convention alignment** — Adopt native skill package markers (`bmad-skill-manifest.yaml`) in Enhance workflows, verify installer handles renamed `bmad-`-prefixed directories, study upstream step-file patterns. Stretch: evaluate inference-based skill validator for Enhance skills. Added from party-mode v6.2.0 review, 2026-03-16 | Party-mode review (John, Winston, Amelia, Murat, Liam) | 4 | 1 | 90% | 2 | 1.8 | Keep the lights on | Backlog |
 
@@ -158,17 +159,18 @@ Remaining update system items not in Hardening: load-time validation, version de
 | 19 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
 | 20 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
 | 21 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
-| 22 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
-| 23 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
-| 24 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
-| 25 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
-| 26 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
-| 27 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Platform |
-| 28 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
-| 29 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
-| 30 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
-| 31 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
-| 32 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
+| 22 | I6 | Add `--verbose` flag to all CLI commands | 0.8 | Keep the lights on | Infrastructure |
+| 23 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
+| 24 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
+| 25 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
+| 26 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
+| 27 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
+| 28 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Platform |
+| 29 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
+| 30 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
+| 31 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
+| 32 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
+| 33 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
 
 ---
 
