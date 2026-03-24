@@ -73,7 +73,7 @@ your-project/
     │   ├── _vortex/
     │   │   ├── agents/           # 7 agent definitions
     │   │   ├── workflows/        # 22 workflows
-    │   │   ├── contracts/        # HC1-HC10 handoff contracts
+    │   │   ├── contracts/        # Handoff contracts (HC1-HC5 artifact, HC6-HC10 routing)
     │   │   ├── guides/           # 7 user guides
     │   │   └── config.yaml
     │   ├── _gyre/
@@ -96,10 +96,12 @@ your-project/
 
 ### Current Version
 
-**Convoke v2.0.0**
+**Convoke v2.4.0**
 - Compatible with: BMAD Method v1.x (optional — works standalone)
 - Creates `_bmad/` directory automatically if missing
 - Optional detection: BMAD Method config (bmad.yaml in _bmad/_config/)
+- Teams: Vortex (7 agents), Gyre (4 agents)
+- Skills: Enhance (initiatives-backlog)
 
 ### Detection Logic
 
@@ -156,8 +158,8 @@ Convoke installers check:
 
 | Convoke Version | Compatible BMAD Method Versions | Notes |
 |----------------------|--------------------------------|-------|
-| 2.5.0                | 1.x (optional — works standalone) | Added Gyre team (4 agents), Team Factory, skill validator |
-| 2.4.0                | 1.x (optional — works standalone) | Enhance module, skills architecture |
+| 2.4.0                | 1.x (optional — works standalone) | Enhance module, Gyre team (4 agents), Team Factory, skill validator |
+| 2.3.x                | 1.x (optional — works standalone) | Enhance module, skills architecture |
 | 2.0.0                | 1.x (optional — works standalone) | Product renamed to Convoke, CLI commands: `convoke-*` |
 | 1.6.4                | 1.x (optional — works standalone) | 7 Vortex agents, 22 workflows, Compass routing |
 | 1.6.0                | 1.x (optional — works standalone) | Added Mila, Liam, Noah; HC contracts; Compass routing |
@@ -366,6 +368,6 @@ Convoke includes automated test coverage:
 
 ---
 
-**Version:** 2.5.0
+**Version:** 2.4.0
 **Last Updated:** 2026-03-24
 **Status:** Living Document (update as needed)
