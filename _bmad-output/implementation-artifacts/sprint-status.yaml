@@ -261,7 +261,7 @@ development_status:
   tf-2-1-factory-discoverability-entry-points: done
   tf-2-2-composition-pattern-selection-decision-cascade: done
   tf-2-3-agent-scope-definition-overlap-detection: done
-  tf-2-4-contract-design-step-validation: in-progress
+  tf-2-4-contract-design-step-validation: review
   tf-2-5-decision-summary-spec-file-persistence: backlog
   tf-2-6-bmb-delegation-artifact-generation: backlog
   tf-2-7-integration-wiring-config-csv-activation: backlog
