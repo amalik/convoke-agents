@@ -1,6 +1,6 @@
 # Story 2.7: Integration Wiring — Config, CSV & Activation
 
-Status: review
+Status: done
 
 ## Story
 
