@@ -316,7 +316,8 @@ async function validateSyntax(moduleBlock, prefix) {
  */
 function checkDirtyTree(registryPath) {
   try {
-    const diff = execSync(`git diff --name-only -- "${registryPath}"`, { timeout: 5000, stdio: 'pipe' }).toString().trim();
+    const cwd = path.dirname(registryPath);
+    const diff = execSync(`git diff --name-only -- "${registryPath}"`, { cwd, timeout: 5000, stdio: 'pipe' }).toString().trim();
     return { dirty: diff.length > 0, diff };
   } catch {
     // If git is not available or file is not in a repo, proceed
