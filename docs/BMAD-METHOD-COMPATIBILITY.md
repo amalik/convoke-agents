@@ -22,14 +22,15 @@
                       │
 ┌─────────────────────────────────────────────────┐
 │           Convoke (Extension Package)            │
-│  - 7 domain-specialized Vortex agents           │
-│  - Emma (contextualization-expert)              │
-│  - Isla (discovery-empathy-expert)              │
-│  - Mila (research-convergence-specialist)       │
-│  - Liam (hypothesis-engineer)                   │
-│  - Wade (lean-experiments-specialist)            │
-│  - Noah (production-intelligence-specialist)    │
-│  - Max (learning-decision-expert)               │
+│                                                  │
+│  Vortex — Product Discovery (7 agents)          │
+│  - Emma, Isla, Mila, Liam, Wade, Noah, Max      │
+│                                                  │
+│  Gyre — Production Readiness (4 agents)         │
+│  - Scout, Atlas, Lens, Coach                     │
+│                                                  │
+│  Enhance — Agent Skills                          │
+│  - Initiatives Backlog (PM agent)                │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -69,11 +70,21 @@ npx -p convoke-agents convoke-install-vortex
 your-project/
 └── _bmad/
     ├── bme/
-    │   └── _vortex/
-    │       ├── agents/           # 7 agent definitions
-    │       ├── workflows/        # 22 workflows
-    │       ├── contracts/        # HC1-HC5 handoff contracts
-    │       ├── guides/           # 7 user guides
+    │   ├── _vortex/
+    │   │   ├── agents/           # 7 agent definitions
+    │   │   ├── workflows/        # 22 workflows
+    │   │   ├── contracts/        # HC1-HC10 handoff contracts
+    │   │   ├── guides/           # 7 user guides
+    │   │   └── config.yaml
+    │   ├── _gyre/
+    │   │   ├── agents/           # 4 agent definitions
+    │   │   ├── workflows/        # 7 workflows
+    │   │   ├── contracts/        # GC1-GC4 handoff contracts
+    │   │   ├── guides/           # 4 user guides
+    │   │   └── config.yaml
+    │   └── _enhance/
+    │       ├── workflows/        # Skill workflows
+    │       ├── extensions/       # Agent menu patches
     │       └── config.yaml
     └── _config/
         └── agent-manifest.csv (updated)
@@ -145,7 +156,10 @@ Convoke installers check:
 
 | Convoke Version | Compatible BMAD Method Versions | Notes |
 |----------------------|--------------------------------|-------|
-| 1.6.4                | 1.x (optional — works standalone) | Current release — 7 agents, 22 workflows, Compass routing |
+| 2.5.0                | 1.x (optional — works standalone) | Added Gyre team (4 agents), Team Factory, skill validator |
+| 2.4.0                | 1.x (optional — works standalone) | Enhance module, skills architecture |
+| 2.0.0                | 1.x (optional — works standalone) | Product renamed to Convoke, CLI commands: `convoke-*` |
+| 1.6.4                | 1.x (optional — works standalone) | 7 Vortex agents, 22 workflows, Compass routing |
 | 1.6.0                | 1.x (optional — works standalone) | Added Mila, Liam, Noah; HC contracts; Compass routing |
 | 1.5.x                | 1.x (optional — works standalone) | Added Isla and Max, test hardening |
 | 1.4.x                | 1.x (optional — works standalone) | Architecture refactor, registry-driven |
@@ -352,6 +366,6 @@ Convoke includes automated test coverage:
 
 ---
 
-**Version:** 1.6.4
-**Last Updated:** 2026-03-02
+**Version:** 2.5.0
+**Last Updated:** 2026-03-24
 **Status:** Living Document (update as needed)
