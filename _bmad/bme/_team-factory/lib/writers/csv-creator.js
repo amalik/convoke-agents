@@ -126,7 +126,7 @@ function formatCsvRow(row) {
  * @returns {string}
  */
 function csvQuote(val) {
-  if (!val) return '';
+  if (val == null || val === '') return '';
   if (val.includes(',') || val.includes('"') || val.includes('\n')) {
     return `"${val.replace(/"/g, '""')}"`;
   }
@@ -175,7 +175,7 @@ if (require.main === module) {
     try {
       const specContent = await fs.readFile(specFilePath, 'utf8');
       const specData = yaml.load(specContent);
-      const bmeRoot = path.resolve(__dirname, '../../../');
+      const bmeRoot = path.resolve(__dirname, '../../../../');
       const outputPath = path.join(bmeRoot, `_${specData.team_name_kebab}`, 'module-help.csv');
       const result = await createCsv(specData, outputPath);
       console.log(JSON.stringify(result, null, 2));
