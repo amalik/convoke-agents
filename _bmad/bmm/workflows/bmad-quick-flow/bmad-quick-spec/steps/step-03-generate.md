@@ -1,5 +1,5 @@
 ---
-wipFile: '{implementation_artifacts}/tech-spec-wip.md'
+wipFile: '{implementation_artifacts}/spec-wip.md'
 ---
 
 # Step 3: Generate Implementation Plan
