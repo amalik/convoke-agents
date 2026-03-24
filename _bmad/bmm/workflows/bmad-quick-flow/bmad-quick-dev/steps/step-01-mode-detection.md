@@ -12,8 +12,8 @@
 These variables MUST be set in this step and available to all subsequent steps:
 
 - `{baseline_commit}` - Git HEAD at workflow start (or "NO_GIT" if not a git repo)
-- `{execution_mode}` - "tech-spec" or "direct"
-- `{tech_spec_path}` - Path to tech-spec file (if Mode A)
+- `{execution_mode}` - "spec" or "direct"
+- `{spec_path}` - Path to spec file (if Mode A)
 
 ---
 
@@ -39,12 +39,12 @@ Check if `{project_context}` exists (`**/project-context.md`). If found, load it
 
 Analyze the user's input to determine mode:
 
-**Mode A: Tech-Spec**
+**Mode A: Spec**
 
-- User provided a path to a tech-spec file (e.g., `quick-dev tech-spec-auth.md`)
+- User provided a path to a spec file (e.g., `quick-dev spec-auth.md`)
 - Load the spec, extract tasks/context/AC
-- Set `{execution_mode}` = "tech-spec"
-- Set `{tech_spec_path}` = provided path
+- Set `{execution_mode}` = "spec"
+- Set `{spec_path}` = provided path
 - **NEXT:** Read fully and follow: `./step-03-execute.md`
 
 **Mode B: Direct Instructions**
@@ -81,7 +81,7 @@ Use holistic judgment, not mechanical keyword matching.
 
 ### No Escalation (simple request)
 
-Display: "**Select:** [P] Plan first (tech-spec) [E] Execute directly"
+Display: "**Select:** [P] Plan first (spec) [E] Execute directly"
 
 #### Menu Handling Logic:
 
@@ -101,7 +101,7 @@ Present: "This looks like a focused feature with multiple components."
 
 Display:
 
-**[P] Plan first (tech-spec)** (recommended)
+**[P] Plan first (spec)** (recommended)
 **[W] Seems bigger than quick-dev** - Recommend the Full BMad Flow PRD Process
 **[E] Execute directly**
 
@@ -125,7 +125,7 @@ Present: "This sounds like platform/system work."
 Display:
 
 **[W] Start BMad Method** (recommended)
-**[P] Plan first (tech-spec)** (lighter planning)
+**[P] Plan first (spec)** (lighter planning)
 **[E] Execute directly** - feeling lucky
 
 #### Menu Handling Logic:
@@ -145,7 +145,7 @@ Display:
 
 **CRITICAL:** When this step completes, explicitly state which step to load:
 
-- Mode A (tech-spec): "**NEXT:** read fully and follow: `./step-03-execute.md`"
+- Mode A (spec): "**NEXT:** read fully and follow: `./step-03-execute.md`"
 - Mode B (direct, [E] selected): "**NEXT:** Read fully and follow: `./step-02-context-gathering.md`"
 - Escalation ([P] or [W]): "**EXITING Quick Dev.** Follow the directed workflow."
 
@@ -154,8 +154,8 @@ Display:
 ## SUCCESS METRICS
 
 - `{baseline_commit}` captured and stored
-- `{execution_mode}` determined ("tech-spec" or "direct")
-- `{tech_spec_path}` set if Mode A
+- `{execution_mode}` determined ("spec" or "direct")
+- `{spec_path}` set if Mode A
 - Project context loaded if exists
 - Escalation evaluated appropriately (Mode B)
 - Explicit NEXT directive provided
@@ -164,6 +164,6 @@ Display:
 
 - Proceeding without capturing baseline commit
 - Not setting execution_mode variable
-- Loading step-02 when Mode A (tech-spec provided)
+- Loading step-02 when Mode A (spec provided)
 - Attempting to "return" after escalation instead of EXIT
 - No explicit NEXT directive at step completion
