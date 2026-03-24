@@ -47,7 +47,7 @@ So that I can trust the team is correctly wired and immediately usable without m
     - Registry block: `registry_wiring_result.success === true` and `written` array has 5 entries
     - Activation blocks: `activation_validation_results.valid === true`
   - [ ] 1.5 **PART 4: NATIVE TEAM PARITY CHECK** — Run the existing `scripts/update/lib/validator.js` validation approach against the new team module. The existing validator checks: config structure, agent files, workflow files, manifest consistency. Adapt these checks for the new team's module path (not hardcoded to Vortex). This validates TF-NFR7 (same rules as native teams).
-  - [ ] 1.6 **PART 5: REGRESSION CHECK** — Verify existing teams still pass validation after registry modification. Run `node -e "require('scripts/update/lib/agent-registry.js')"` to confirm the registry loads without errors. Check that existing team exports (AGENTS, WORKFLOWS, GYRE_AGENTS, etc.) are still accessible.
+  - [ ] 1.6 **PART 5: REGRESSION CHECK** — Verify existing teams still pass validation after registry modification. Two checks: (a) Run `node -e "require('scripts/update/lib/agent-registry.js')"` to confirm the registry loads without errors and existing exports (AGENTS, WORKFLOWS, GYRE_AGENTS, etc.) are still accessible. (b) Run the existing `validateInstallation()` from `scripts/update/lib/validator.js` against the project root to confirm Vortex (the native team) still passes all its checks. Both must pass.
   - [ ] 1.7 **PART 6: VALIDATION REPORT** — Present results to the contributor. Format: table of check name + status (pass/fail) + detail. If all pass: congratulation message, team is ready to use. If any fail: show which checks failed with expected vs actual values per TF-NFR11.
   - [ ] 1.8 **PART 7: ABORT PATH** — If the contributor requests abort after seeing results (or if validation fails and they choose not to fix): present the file manifest with removal instructions. Format: list each created file with `rm` command. For modified files (agent-registry.js): note that manual revert is needed (use `git checkout -- <path>`). Do NOT auto-delete — present instructions only.
   - [ ] 1.9 **STEP VALIDATION** table — checklist the step must satisfy before marking complete.
@@ -119,6 +119,12 @@ So that I can trust the team is correctly wired and immediately usable without m
 7. **Error messages follow NFR11 format.** Every failed check must include: check name (what was checked), expected value (what should be), actual value (what was found). This is the `E2ECheck` shape: `{ name, passed, expected?, actual?, detail? }`.
 
 8. **manifest-tracker.js is a utility, not a writer.** It does not write any files. It builds an in-memory manifest from generation context and formats it for display. No write safety protocol needed.
+
+9. **Per-agent validation (D-Q3 Layer 2) already runs during Step 4.** The architecture defines four validation layers. Layer 2 (per-agent structural completeness) runs during generation via `activation-validator.js` (Story 2.7). Step 5 covers Layer 4 (end-to-end structural compliance + regression). Do NOT re-implement per-agent checks — consume `activation_validation_results` from Step 4 context.
+
+10. **Step 5 performs no writes — rollback means abort instructions.** AC #2 references "rollback to last validated state" (TF-FR24). Since Step 5 is validation-only (no file writes), rollback at this stage means presenting the abort path (Task 1.8). Write failure rollback for Steps 2-4 is handled by those steps' own write safety protocols (simple for creators, full for registry-writer).
+
+11. **Regression includes running existing `validateInstallation()` for Vortex.** The architecture (line 251, 629) says "run existing validator.js against all teams post-factory-run." Since `validateInstallation()` is hardcoded to Vortex, running it IS the regression check for the existing native team. The new team gets its own adapted checks via `end-to-end-validator.js`. Both must pass.
 
 ### What NOT to Do
 
