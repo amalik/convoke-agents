@@ -52,11 +52,11 @@ So that my team's agents and workflows are available system-wide without risking
   - [x] 3.2 Create a `buildWorkflowEntries(agentSpec, workflowNames)` helper that creates the `{ name, agent }` entries matching the WORKFLOWS array format.
   - [x] 3.3 Create a `derivePrefix(teamNameKebab)` helper: strip leading `_`, convert to SCREAMING_SNAKE_CASE (e.g., `test-team` → `TEST_TEAM`).
 
-- [ ] Task 4: Update step-04-generate.md with Registry Wiring PART (AC: #1, #2)
-  - [ ] 4.1 Add PART 10: REGISTRY WIRING between current PART 9 (activation validation) and current PART 10 (generation summary). Renumber current PART 10 to PART 11. Update all internal cross-references. CLI entry point must accept `--spec-file <path>` and `--registry-path <path>` arguments (default registry path: `scripts/update/lib/agent-registry.js` relative to project root). Content: (a) Run dirty-tree check first — if dirty, present diff and ask contributor, (b) If clean (or confirmed), run `node _bmad/bme/_team-factory/lib/writers/registry-writer.js --spec-file {spec_file_path} --registry-path scripts/update/lib/agent-registry.js`, (c) Present result: block added, exports updated, require() verification status.
-  - [ ] 4.2 Update STEP VALIDATION table: add check for `agent-registry.js block added and require() passes`.
-  - [ ] 4.3 Update CHECKPOINT: add registry wiring status showing block prefix, export count, verification status.
-  - [ ] 4.4 Update context variables: add `registry_block_prefix`, `registry_wiring_result`.
+- [x] Task 4: Update step-04-generate.md with Registry Wiring PART (AC: #1, #2)
+  - [x] 4.1 Add PART 10: REGISTRY WIRING between current PART 9 (activation validation) and current PART 10 (generation summary). Renumber current PART 10 to PART 11. Update all internal cross-references. CLI entry point must accept `--spec-file <path>` and `--registry-path <path>` arguments (default registry path: `scripts/update/lib/agent-registry.js` relative to project root). Content: (a) Run dirty-tree check first — if dirty, present diff and ask contributor, (b) If clean (or confirmed), run `node _bmad/bme/_team-factory/lib/writers/registry-writer.js --spec-file {spec_file_path} --registry-path scripts/update/lib/agent-registry.js`, (c) Present result: block added, exports updated, require() verification status.
+  - [x] 4.2 Update STEP VALIDATION table: add check for `agent-registry.js block added and require() passes`.
+  - [x] 4.3 Update CHECKPOINT: add registry wiring status showing block prefix, export count, verification status.
+  - [x] 4.4 Update context variables: add `registry_block_prefix`, `registry_wiring_result`.
 
 - [x] Task 5: Create Tests (AC: #1, #2, #3)
   - [x] 5.1 Create `tests/team-factory/registry-writer.test.js`.
