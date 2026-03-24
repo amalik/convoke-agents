@@ -1,0 +1,3 @@
+module,phase,name,code,sequence,workflow-file,command,required,agent,options,description,output-location,outputs,
+bme/_test-team,anytime,Data Analysis,DA,10,_bmad/bme/_test-team/workflows/data-analysis/workflow.md,bmad-test-team-data-analysis,false,alpha-analyzer,Create Mode,Analyzes data patterns,{project-root}/_bmad-output/test-team-artifacts,data-analysis,
+bme/_test-team,anytime,Component Building,CB,20,_bmad/bme/_test-team/workflows/component-building/workflow.md,bmad-test-team-component-building,false,beta-builder,Create Mode,Builds software components,{project-root}/_bmad-output/test-team-artifacts,component-building,
