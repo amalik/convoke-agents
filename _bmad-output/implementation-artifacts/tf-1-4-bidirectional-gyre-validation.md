@@ -18,7 +18,7 @@ So that I have confidence the four quality properties and two composition patter
 2. **Given** a hypothetical "build Gyre from scratch" scenario
    **When** a contributor follows only the Architecture Reference
    **Then** the reference provides sufficient information to recreate Gyre's directory structure, agent files, workflow layout, contract definitions, registration entries, and config (TF-FR6 — guides building)
-   **And** any gaps discovered during validation are documented as findings
+   **And** any gaps discovered during validation are addressed in the reference or documented as intentional design decisions
 
 3. **Given** the reference serves as hypothesis test for A5' (four quality properties) and A6' (two composition patterns)
    **When** Gyre validation reveals structural patterns that don't fit the four properties or two patterns
