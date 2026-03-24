@@ -1,0 +1,21 @@
+---
+contract: GC1
+type: artifact
+source_agent: scout
+source_workflow: stack-detection
+target_agents: [atlas, lens]
+input_artifacts: []
+created: 2026-03-24
+---
+
+stack_profile:
+  primary_language: "Node.js"
+  primary_framework: "none"
+  secondary_stacks: []
+  container_orchestration: "none"
+  ci_cd_platform: "GitHub Actions"
+  observability_tooling: []
+  cloud_provider: "none"
+  communication_protocol: "not applicable"
+  detection_confidence: "high"
+  detection_summary: "Node.js npm package (convoke-agents) providing CLI tools and agent definition files. Distributed via npm with GitHub Actions CI/CD (lint, multi-version test matrix, coverage, security audit, npm publish). No container, orchestration, observability, cloud, or communication protocol — this is a developer toolkit, not a deployed service."
