@@ -67,7 +67,7 @@ Load:
 
 - PRD (FRs + NFRs)
 - ADRs or architecture decisions
-- Architecture / tech-spec document
+- Architecture / spec document
 - Epics (for scope)
 
 Extract:
@@ -82,7 +82,7 @@ Load:
 
 - Epic and story docs with acceptance criteria
 - PRD (if available)
-- Architecture / tech-spec (if available)
+- Architecture / spec (if available)
 - Prior system-level test-design outputs (if available)
 
 Extract:
