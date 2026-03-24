@@ -30,27 +30,27 @@ So that my team's agents and workflows are available system-wide without risking
   - [x] 1.1 Read `scripts/update/lib/agent-registry.js` and verify the structure matches the Dev Notes reference. The Gyre module block (lines 136-199) is the reference pattern. `module.exports` (lines 201-214) is a separate shared section — not part of any module block. Note any discrepancies.
   - [x] 1.2 Identify the insertion point: new module blocks go BEFORE `module.exports`. Derived lists go after the module's WORKFLOWS array. Exports are added to the existing `module.exports` object.
 
-- [ ] Task 2: Create registry-writer.js with Full Write Safety Protocol (AC: #1, #2, #3)
-  - [ ] 2.1 Create `_bmad/bme/_team-factory/lib/writers/registry-writer.js`. Module exports: `writeRegistryBlock(specData, registryPath, options)` → returns `{ success, written[], skipped[], errors[], rollbackApplied }`.
-  - [ ] 2.2 **Stage** — Build the module block as a JS string in isolation. The block must contain:
+- [x] Task 2: Create registry-writer.js with Full Write Safety Protocol (AC: #1, #2, #3)
+  - [x] 2.1 Create `_bmad/bme/_team-factory/lib/writers/registry-writer.js`. Module exports: `writeRegistryBlock(specData, registryPath, options)` → returns `{ success, written[], skipped[], errors[], rollbackApplied }`.
+  - [x] 2.2 **Stage** — Build the module block as a JS string in isolation. The block must contain:
     - Section comment: `// ── {Team Name} Module ──` (matching Gyre's style)
     - `const {PREFIX}_AGENTS = [...]` array with full agent objects (id, name, icon, title, stream, persona with role/identity/communication_style/expertise)
     - `const {PREFIX}_WORKFLOWS = [...]` array with `{ name, agent }` entries
     - Derived lists: `{PREFIX}_AGENT_FILES`, `{PREFIX}_AGENT_IDS`, `{PREFIX}_WORKFLOW_NAMES`
     - The `{PREFIX}` is the team name in SCREAMING_SNAKE_CASE (e.g., `GYRE` for `_gyre`)
-  - [ ] 2.3 **Stage** — Build the exports additions: the new const names that must be appended to the `module.exports` object.
-  - [ ] 2.4 **Validate** — Validate the staged block using regex checks: verify balanced braces, verify const declarations use the correct prefix, verify no reassignment to existing variables. For full syntax validation, write the staged block to a temp file and run `node -e "require('{tempFile}')"` to confirm parseability. Verify the prefix doesn't collide with existing module prefixes (scan for `const {PREFIX}_AGENTS` in the file).
-  - [ ] 2.5 **Check** — Dirty-tree detection: run `git diff --name-only -- <registryPath>` immediately before write. If the file has uncommitted changes, return a warning result `{ dirty: true, diff }` — do NOT write automatically. The step-04 PART will present this to the contributor for confirmation.
-  - [ ] 2.6 **Apply** — Read current `agent-registry.js` content. Save a copy as `{registryPath}.bak`. Insert the new module block before `module.exports = {`. Insert the new export entries into the `module.exports` object (before the closing `};`). Write the modified content back.
-  - [ ] 2.7 **Verify** — Re-read the written file. Run `node -e "require('${registryPath}')"` via `child_process.execSync`. If require() throws, the file is structurally broken → trigger rollback.
-  - [ ] 2.8 **Rollback** — If verify fails: restore from `.bak` file. Delete `.bak`. Return `{ success: false, rollbackApplied: true, errors: [...] }`.
-  - [ ] 2.9 **Cleanup** — If verify succeeds: delete `.bak` file. Return success result.
-  - [ ] 2.10 **Idempotency** — Before staging, check if a block with the same prefix already exists. If it does and matches expected content, return `{ success: true, skipped: ['block already exists'] }`. If it exists but differs, return error (never silently overwrite).
+  - [x] 2.3 **Stage** — Build the exports additions: the new const names that must be appended to the `module.exports` object.
+  - [x] 2.4 **Validate** — Validate the staged block using regex checks: verify balanced braces, verify const declarations use the correct prefix, verify no reassignment to existing variables. For full syntax validation, write the staged block to a temp file and run `node -e "require('{tempFile}')"` to confirm parseability. Verify the prefix doesn't collide with existing module prefixes (scan for `const {PREFIX}_AGENTS` in the file).
+  - [x] 2.5 **Check** — Dirty-tree detection: run `git diff --name-only -- <registryPath>` immediately before write. If the file has uncommitted changes, return a warning result `{ dirty: true, diff }` — do NOT write automatically. The step-04 PART will present this to the contributor for confirmation.
+  - [x] 2.6 **Apply** — Read current `agent-registry.js` content. Save a copy as `{registryPath}.bak`. Insert the new module block before `module.exports = {`. Insert the new export entries into the `module.exports` object (before the closing `};`). Write the modified content back.
+  - [x] 2.7 **Verify** — Re-read the written file. Run `node -e "require('${registryPath}')"` via `child_process.execSync`. If require() throws, the file is structurally broken → trigger rollback.
+  - [x] 2.8 **Rollback** — If verify fails: restore from `.bak` file. Delete `.bak`. Return `{ success: false, rollbackApplied: true, errors: [...] }`.
+  - [x] 2.9 **Cleanup** — If verify succeeds: delete `.bak` file. Return success result.
+  - [x] 2.10 **Idempotency** — Before staging, check if a block with the same prefix already exists. If it does and matches expected content, return `{ success: true, skipped: ['block already exists'] }`. If it exists but differs, return error (never silently overwrite).
 
-- [ ] Task 3: Build Agent Object from Spec Data (AC: #1)
-  - [ ] 3.1 Create a `buildAgentEntry(agentSpec)` helper that transforms spec agent data into the registry agent object format. Map: `id` → `id`, derive `name` from agent spec (first name or id-based), `icon` from spec or default `'\u{2699}'` (gear), `title` from role, `stream` from team context, `persona` object with role/identity/communication_style/expertise from agent spec fields.
-  - [ ] 3.2 Create a `buildWorkflowEntries(agentSpec, workflowNames)` helper that creates the `{ name, agent }` entries matching the WORKFLOWS array format.
-  - [ ] 3.3 Create a `derivePrefix(teamNameKebab)` helper: strip leading `_`, convert to SCREAMING_SNAKE_CASE (e.g., `test-team` → `TEST_TEAM`).
+- [x] Task 3: Build Agent Object from Spec Data (AC: #1)
+  - [x] 3.1 Create a `buildAgentEntry(agentSpec)` helper that transforms spec agent data into the registry agent object format. Map: `id` → `id`, derive `name` from agent spec (first name or id-based), `icon` from spec or default `'\u{2699}'` (gear), `title` from role, `stream` from team context, `persona` object with role/identity/communication_style/expertise from agent spec fields.
+  - [x] 3.2 Create a `buildWorkflowEntries(agentSpec, workflowNames)` helper that creates the `{ name, agent }` entries matching the WORKFLOWS array format.
+  - [x] 3.3 Create a `derivePrefix(teamNameKebab)` helper: strip leading `_`, convert to SCREAMING_SNAKE_CASE (e.g., `test-team` → `TEST_TEAM`).
 
 - [ ] Task 4: Update step-04-generate.md with Registry Wiring PART (AC: #1, #2)
   - [ ] 4.1 Add PART 10: REGISTRY WIRING between current PART 9 (activation validation) and current PART 10 (generation summary). Renumber current PART 10 to PART 11. Update all internal cross-references. CLI entry point must accept `--spec-file <path>` and `--registry-path <path>` arguments (default registry path: `scripts/update/lib/agent-registry.js` relative to project root). Content: (a) Run dirty-tree check first — if dirty, present diff and ask contributor, (b) If clean (or confirmed), run `node _bmad/bme/_team-factory/lib/writers/registry-writer.js --spec-file {spec_file_path} --registry-path scripts/update/lib/agent-registry.js`, (c) Present result: block added, exports updated, require() verification status.
