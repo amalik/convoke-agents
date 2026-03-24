@@ -256,6 +256,21 @@ So that I can trust the reference is accurate and complete, not just theoretical
 **When** Gyre validation reveals structural patterns that don't fit the four properties or two patterns
 **Then** the finding is documented as evidence for or against the hypotheses — the reference is the formal test, not just a prerequisite
 
+### Story 1.5: Vortex Cross-Validation (Stretch)
+
+As a framework contributor,
+I want the Architecture Reference validated against Vortex — the more complex Sequential team,
+So that I can confirm the reference handles advanced Sequential patterns (multi-target contracts, feedback routing, 7-agent pipelines) and didn't lose Vortex-specific details during generalization.
+
+**Acceptance Criteria:**
+
+**Given** the completed Architecture Reference and Gyre validation report
+**When** the 29 Sequential checks are evaluated against the Vortex module at `_bmad/bme/_vortex/`
+**Then** a Vortex validation report documents pass/fail for each check with evidence
+**And** findings specific to complex Sequential patterns (HC6-HC10 feedback contracts, multi-target routing) are documented
+
+**Note:** This is a stretch/backlog story — not required for Phase 1 exit. The reference was derived from Vortex patterns, so this is a regression check, not an independent hypothesis test. Gyre validation (Story 1.4) is the formal A5'/A6' gate.
+
 ---
 
 ## Epic 2: Team Factory Guided Workflow
