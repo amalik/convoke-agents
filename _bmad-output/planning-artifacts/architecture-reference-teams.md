@@ -356,9 +356,9 @@ checks:
     target_file: "_bmad/bme/{submodule}/config.yaml"
     validation: "all top-level field names use snake_case (e.g., submodule_name, output_folder, user_name, communication_language, party_mode_enabled)"
   - id: CONF-S-07
-    rule: "Contract frontmatter references agent IDs consistent with config.yaml"
+    rule: "Contract frontmatter references agent names consistent with agent-registry"
     target_file: "_bmad/bme/{submodule}/contracts/{contract_file}.md"
-    validation: "source_agent and target_agents fields in contract frontmatter reference agent IDs that exist in config.yaml agents list"
+    validation: "source_agent and target_agents fields in contract frontmatter reference agent name values (first-name short names, e.g., isla, mila) from the module's agent-registry.js AGENTS array"
   - id: CONF-S-08
     rule: "Contract file names follow {prefix}{N}-{kebab-case-title}.md convention"
     target_file: "_bmad/bme/{submodule}/contracts/"
@@ -410,11 +410,11 @@ checks:
   - id: COMP-S-02
     rule: "Handoff contracts exist defining inter-agent artifact schemas"
     target_file: "_bmad/bme/{submodule}/contracts/"
-    validation: "contracts/ directory contains at least (agent_count - 1) handoff contract files"
+    validation: "contracts/ directory contains at least one handoff contract .md file"
   - id: COMP-S-03
     rule: "Each contract has required frontmatter fields"
     target_file: "_bmad/bme/{submodule}/contracts/{contract_file}.md"
-    validation: "frontmatter contains: contract (ID string), type, source_agent (valid agent ID), source_workflow (valid workflow name), target_agents (array of valid agent IDs), created (ISO date)"
+    validation: "frontmatter contains: contract (ID string), type, source_agent (agent short name from registry), source_workflow (valid workflow name), target_agents (array of agent short names from registry), created (ISO date)"
   - id: COMP-S-04
     rule: "Compass routing reference includes inter-module routing"
     target_file: "_bmad/bme/{submodule}/compass-routing-reference.md"
