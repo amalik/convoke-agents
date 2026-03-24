@@ -14,13 +14,13 @@
 From previous steps:
 
 - `{baseline_commit}` - Git HEAD at workflow start
-- `{execution_mode}` - "tech-spec" or "direct"
-- `{tech_spec_path}` - Tech-spec file (if Mode A)
+- `{execution_mode}` - "spec" or "direct"
+- `{spec_path}` - Spec file (if Mode A)
 - `{project_context}` - Project patterns (if exists)
 
 From context:
 
-- Mode A: Tasks and AC extracted from tech-spec
+- Mode A: Tasks and AC extracted from spec
 - Mode B: Tasks and AC from step-02 mental plan
 
 ---
