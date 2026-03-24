@@ -7,7 +7,8 @@ stepsCompleted: []
 tech_stack: [node, javascript]
 files_to_modify:
   - scripts/update/lib/validator.js
-  - scripts/update/lib/validator.test.js (new test cases)
+  - tests/unit/validator.test.js (new test cases)
+  - .claude/skills/bmad-team-factory/workflow.md (integration point)
 code_patterns: [validator pattern from existing validator.js]
 test_patterns: [unit tests mirroring existing validator.test.js structure]
 ---
@@ -86,7 +87,8 @@ The existing validator follows a consistent pattern:
 
 - [ ] `validateSkill()` returns `{ valid: false, errors: [...] }` for a SKILL.md missing `name` field
 - [ ] `validateSkill()` returns `{ valid: false, errors: [...] }` for step-file numbering gaps (e.g., step-01, step-03 with no step-02)
-- [ ] `validateSkill()` returns `{ valid: true, errors: [] }` for any existing `.claude/skills/bmad-agent-bme-*` directory
+- [ ] `validateSkill()` returns `{ valid: true, errors: [] }` for any existing `.claude/skills/bmad-agent-bme-*` directory (agent-activation type)
+- [ ] `validateSkill()` returns `{ valid: true, errors: [] }` for any existing `.claude/skills/bmad-quick-dev/` directory (workflow type)
 - [ ] `validateSkillCohesion()` catches orphaned step files not referenced in workflow.md
 - [ ] Team Factory workflow calls `validateSkill()` after generation and halts on failure
 - [ ] All new validator functions have unit tests with ≥90% branch coverage
