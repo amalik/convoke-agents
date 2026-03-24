@@ -57,7 +57,7 @@
 | I3 | **CSV parser library for manifest** — Replace regex-based CSV parsing in `refresh-installation.js` with proper parser | Murat review | 2 | 0.25 | 70% | 1 | 0.4 | Keep the lights on | Backlog |
 | I6 | **Add `--verbose` flag to all CLI commands** — Currently only `convoke-update` supports `--verbose`. Missing from: `convoke-install`, `convoke-doctor`, `convoke-migrate`, `convoke-version`. Pattern already exists in refresh-installation.js. Improves troubleshooting when users hit install or diagnostic issues. | Gyre full analysis OBS-001, 2026-03-24 | 4 | 0.5 | 80% | 2 | 0.8 | Keep the lights on | Backlog |
 | I5 | **Workflow output naming enforcement** — Update artifact-producing workflows (PRD, architecture, epics, UX, readiness, Vortex, quick-spec, sprint) to follow `{category}-{descriptor}[-{context}][-{date}].md` convention at creation time. Incremental: apply when a workflow is touched for any reason. Archive script (`npm run archive --rename`) catches drift in the meantime. ADR Phase C. | ADR `adr-repo-organization-conventions-2026-03-22.md` | 8 | 0.5 | 90% | 3 | 1.2 | Keep the lights on | Backlog |
-| I4 | **BMAD v6.2.1 convention alignment** — Updated from v6.2.0 scope. Three specced work items: **(a)** Skill validator for Team Factory pipeline — new `validateSkill()` in validator.js as factory quality gate, 7 tasks (`spec-skill-validator-team-factory.md`). **(b)** Rename `tech-spec` prefix to `spec` across 28 files in BMM + TEA modules, 9 tasks (`spec-tech-spec-to-spec-rename.md`). **(c)** Remove dead `default-party.csv` roster files (3 files), 5 tasks (`spec-party-roster-cleanup.md`). Original v6.2.0 items still applicable: adopt `bmad-skill-manifest.yaml` markers, verify `bmad-`-prefixed directories. | Party-mode review (John, Winston, Amelia, Murat, Liam). v6.2.1 analysis: Winston, 2026-03-24 | 6 | 1.5 | 90% | 4 | 2.0 | Keep the lights on | Specced |
+| I4 | **BMAD v6.2.1 convention alignment** — Updated from v6.2.0 scope. Three specced work items: **(a)** Skill validator for Team Factory pipeline — new `validateSkill()` in validator.js as factory quality gate, 7 tasks (`spec-skill-validator-team-factory.md`). **(b)** Rename `tech-spec` prefix to `spec` across 28 files in BMM + TEA modules, 9 tasks (`spec-tech-spec-to-spec-rename.md`). **(c)** Remove dead `default-party.csv` roster files (3 files), 5 tasks (`spec-party-roster-cleanup.md`). Original v6.2.0 items still applicable: adopt `bmad-skill-manifest.yaml` markers, verify `bmad-`-prefixed directories. | Party-mode review (John, Winston, Amelia, Murat, Liam). v6.2.1 analysis: Winston, 2026-03-24 | 6 | 1.5 | 90% | 4 | 2.0 | Keep the lights on | **Done** |
 
 ### Agent Quality & Consistency
 
@@ -150,7 +150,7 @@ Remaining update system items not in Hardening: load-time validation, version de
 | 9 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
 | 10 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
 | 11 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
-| 12 | I4 | BMAD v6.2.1 convention alignment (3 specs) | 2.0 | Keep the lights on | Infrastructure — Specced |
+| 12 | I4 | BMAD v6.2.1 convention alignment (3 specs) | 2.0 | Keep the lights on | **Done** |
 | 13 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
 | 14 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
 | 15 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
