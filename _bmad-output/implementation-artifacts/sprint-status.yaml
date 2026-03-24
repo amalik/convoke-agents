@@ -266,7 +266,7 @@ development_status:
   tf-2-6-bmb-delegation-artifact-generation: done
   tf-2-7-integration-wiring-config-csv-activation: done
   tf-2-8-registry-wiring-write-safety: done
-  tf-2-9-end-to-end-validation-error-recovery: in-progress
+  tf-2-9-end-to-end-validation-error-recovery: review
   tf-epic-2-retrospective: optional
 
   # Epic 3: Extensions — Add Agent & Add Skill
