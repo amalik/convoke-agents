@@ -1,6 +1,6 @@
 # Story 2.6: BMB Delegation & Artifact Generation
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
