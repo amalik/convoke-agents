@@ -1,5 +1,5 @@
 ---
-wipFile: '{implementation_artifacts}/tech-spec-wip.md'
+wipFile: '{implementation_artifacts}/spec-wip.md'
 ---
 
 # Step 4: Review & Finalize
@@ -27,7 +27,7 @@ wipFile: '{implementation_artifacts}/tech-spec-wip.md'
 
 **Present to user:**
 
-"Here's your complete tech-spec. Please review:"
+"Here's your complete spec. Please review:"
 
 [Display the complete spec content - all sections]
 
@@ -95,7 +95,7 @@ a) Update `{wipFile}` frontmatter:
 
 b) **Rename WIP file to final filename:**
    - Using the `slug` extracted in Section 1
-   - Rename `{wipFile}` → `{implementation_artifacts}/tech-spec-{slug}.md`
+   - Rename `{wipFile}` → `{implementation_artifacts}/spec-{slug}.md`
    - Store this as `finalFile` for use in menus below
 
 ### 4. Present Final Menu
@@ -103,7 +103,7 @@ b) **Rename WIP file to final filename:**
 a) **Display completion message and menu:**
 
 ```
-**Tech-Spec Complete!**
+**Spec Complete!**
 
 Saved to: {finalFile}
 
@@ -167,7 +167,7 @@ b) **HALT and wait for user selection.**
 
 **When user selects [D]:**
 
-"**All done!** Your tech-spec is ready at:
+"**All done!** Your spec is ready at:
 
 `{finalFile}`
 
@@ -184,7 +184,7 @@ Ship it!"
 ## REQUIRED OUTPUTS:
 
 - MUST update status to 'ready-for-dev'.
-- MUST rename file to `tech-spec-{slug}.md`.
+- MUST rename file to `spec-{slug}.md`.
 - MUST provide clear next-step guidance and recommend fresh context for dev.
 
 ## VERIFICATION CHECKLIST:
