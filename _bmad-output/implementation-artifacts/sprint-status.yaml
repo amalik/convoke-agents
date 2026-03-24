@@ -251,7 +251,7 @@ development_status:
   tf-epic-1: in-progress
   tf-1-1-quality-properties-composition-patterns: done
   tf-1-2-machine-consumable-team-validity-checklists: done
-  tf-1-3-human-readable-context-extension-mechanism: ready-for-dev
+  tf-1-3-human-readable-context-extension-mechanism: review
   tf-1-4-bidirectional-gyre-validation: backlog
   tf-epic-1-retrospective: optional
 
