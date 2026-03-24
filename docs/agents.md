@@ -413,4 +413,195 @@ Use all seven together for the complete Vortex flow, or any subset that fits you
 
 ---
 
+---
+
+# Gyre — Production Readiness (4 Agents)
+
+Gyre analyzes your project's production readiness by detecting the tech stack, generating a contextual capabilities model, finding gaps, and guiding you through review. All artifacts are written to `.gyre/` — privacy-first, containing technology categories only.
+
+```
+Scout 🔎 ──GC1──▶ Atlas 📐 ──GC2──▶ Lens 🔬 ──GC3──▶ Coach 🏋️
+                     ▲                                     │
+                     └──────────── GC4 (feedback) ─────────┘
+```
+
+---
+
+## Scout - Stack Detective
+
+**Role:** Detect | **Icon:** 🔎 | **File:** `_bmad/bme/_gyre/agents/stack-detective.md`
+
+Scout scans your project's filesystem to classify the technology stack — language/framework, containers, CI/CD, observability, cloud provider, and communication protocols. Evidence-based detection, not assumptions.
+
+### Workflows
+
+| Cmd | Workflow | Steps | What it produces |
+|-----|----------|-------|-----------------|
+| DS | **Stack Detection** | 3 | Stack Profile (`.gyre/stack-profile.yaml`) with classified technologies and detection confidence |
+| FA | **Full Analysis** | 5 | Complete end-to-end Gyre pipeline (detect → model → analyze → review) |
+
+### When to Use Scout
+
+- You're starting a Gyre analysis on a new project
+- You need a structured inventory of what technologies a project actually uses
+- You want to re-detect after significant infrastructure changes
+
+### Positioning
+
+**Scout vs Atlas:**
+- Scout detects — "What technologies does this project use?"
+- Atlas models — "What should production readiness look like for this stack?"
+
+Scout provides the facts that Atlas uses to generate a contextual model.
+
+---
+
+## Atlas - Model Curator
+
+**Role:** Model | **Icon:** 📐 | **File:** `_bmad/bme/_gyre/agents/model-curator.md`
+
+Atlas generates a capabilities manifest unique to your detected stack. Combines industry standards (DORA, OpenTelemetry, Google PRR), current best practices via web search, and guard question answers to define what "ready" means for your specific project.
+
+### Workflows
+
+| Cmd | Workflow | Steps | What it produces |
+|-----|----------|-------|-----------------|
+| GM | **Model Generation** | 4 | Capabilities Manifest (`.gyre/capabilities.yaml`) with 20+ capabilities across observability, deployment, reliability, security |
+| AV | **Accuracy Validation** | 3 | Accuracy report scoring model quality against test repos (≥70% gate across ≥3 archetypes) |
+| FA | **Full Analysis** | 5 | Complete Gyre pipeline |
+
+### When to Use Atlas
+
+- Scout has produced a Stack Profile and you need a capabilities model
+- You want to regenerate the model after refining it through Coach
+- You need to validate model accuracy before trusting gap analysis
+
+### Positioning
+
+**Atlas vs Lens:**
+- Atlas models — "Here's what production readiness looks like for your stack"
+- Lens analyzes — "Here's what's actually missing from your project"
+
+Atlas defines the standard; Lens measures against it.
+
+---
+
+## Lens - Readiness Analyst
+
+**Role:** Analyze | **Icon:** 🔬 | **File:** `_bmad/bme/_gyre/agents/readiness-analyst.md`
+
+Lens compares the capabilities manifest against what actually exists in your project. Detects absences (not misconfigurations), tags findings by severity and confidence, and surfaces cross-domain compound risks.
+
+### Workflows
+
+| Cmd | Workflow | Steps | What it produces |
+|-----|----------|-------|-----------------|
+| AG | **Gap Analysis** | 5 | Findings Report (`.gyre/findings.yaml`) — severity-prioritized absences with evidence |
+| DR | **Delta Report** | 3 | Change tracking between analysis runs ([NEW], [CARRIED], resolved) |
+| FA | **Full Analysis** | 5 | Complete Gyre pipeline |
+
+### When to Use Lens
+
+- Atlas has generated a capabilities model and you want to find gaps
+- You've made improvements and want to see what's resolved (delta report)
+- You need a severity-prioritized view of production readiness gaps
+
+### Positioning
+
+**Lens vs Coach:**
+- Lens analyzes — "Here are the facts about what's missing"
+- Coach reviews — "Let's walk through these together and decide what matters"
+
+Lens provides the evidence; Coach helps you interpret and act on it.
+
+---
+
+## Coach - Review Coach
+
+**Role:** Review | **Icon:** 🏋️ | **File:** `_bmad/bme/_gyre/agents/review-coach.md`
+
+Coach walks you through the capabilities model and findings conversationally. Amend capabilities (keep/remove/edit/add), capture missed-gap feedback, and track progress over time. Amendments persist and feed back to Atlas — the model improves with every review.
+
+### Workflows
+
+| Cmd | Workflow | Steps | What it produces |
+|-----|----------|-------|-----------------|
+| RF | **Review Findings** | 5 | Reviewed findings with amendments applied to capabilities.yaml |
+| RM | **Review Model** | 5 | Amended capabilities manifest + feedback log (`.gyre/feedback.yaml`) |
+| FA | **Full Analysis** | 5 | Complete Gyre pipeline |
+
+### When to Use Coach
+
+- Lens has produced findings and you want to review them with context
+- You want to customize the capabilities model for your project
+- You want to capture feedback about gaps Gyre missed
+
+### Positioning
+
+**Coach vs Scout:**
+- Coach refines — "Let's improve the model based on your expertise"
+- Scout re-detects — "Let me re-scan if the stack itself has changed"
+
+Coach improves the model within a known stack; Scout re-establishes the stack baseline.
+
+---
+
+## The Gyre Flow
+
+Gyre follows a **linear pipeline with one feedback loop**. Four handoff contracts (GC1-GC4) ensure structured data flows between agents.
+
+### Handoff Contracts
+
+| Contract | Flow | What gets passed |
+|----------|------|-----------------|
+| **GC1** | Scout 🔎 → Atlas 📐, Lens 🔬 | Stack Profile — classified technologies (categories only, no file contents) |
+| **GC2** | Atlas 📐 → Lens 🔬, Coach 🏋️ | Capabilities Manifest — 20+ capabilities with sources and descriptions |
+| **GC3** | Lens 🔬 → Coach 🏋️ | Findings Report — severity-tagged absences with evidence and confidence |
+| **GC4** | Coach 🏋️ → Atlas 📐 | Feedback Loop — amendments and missed-gap feedback that persist across regeneration |
+
+### Gyre Compass
+
+Each workflow's final step includes a **Gyre Compass** — routing guidance based on what you just learned:
+
+| If you want to... | Consider next... | Agent |
+|---|---|---|
+| Generate a capabilities model | Model Generation | Atlas 📐 |
+| Find what's missing | Gap Analysis | Lens 🔬 |
+| Review and refine | Model Review | Coach 🏋️ |
+| Re-detect after changes | Stack Detection | Scout 🔎 |
+| Track progress | Delta Report | Lens 🔬 |
+
+### Cross-Team Routing (Gyre → Vortex)
+
+When Gyre findings reveal deeper questions:
+
+| Finding | Route to | Why |
+|---------|----------|-----|
+| Critical readiness gaps challenging product scope | Emma 🎯 | Recontextualize the problem |
+| Findings that invalidate experiment assumptions | Liam 💡 | Re-engineer hypotheses |
+| Missing capabilities suggesting unknown user needs | Isla 🔍 | Investigate through empathy research |
+
+---
+
+## All User Guides
+
+### Vortex
+
+- [Emma User Guide](../_bmad/bme/_vortex/guides/EMMA-USER-GUIDE.md)
+- [Isla User Guide](../_bmad/bme/_vortex/guides/ISLA-USER-GUIDE.md)
+- [Mila User Guide](../_bmad/bme/_vortex/guides/MILA-USER-GUIDE.md)
+- [Liam User Guide](../_bmad/bme/_vortex/guides/LIAM-USER-GUIDE.md)
+- [Wade User Guide](../_bmad/bme/_vortex/guides/WADE-USER-GUIDE.md)
+- [Noah User Guide](../_bmad/bme/_vortex/guides/NOAH-USER-GUIDE.md)
+- [Max User Guide](../_bmad/bme/_vortex/guides/MAX-USER-GUIDE.md)
+
+### Gyre
+
+- [Scout User Guide](../_bmad/bme/_gyre/guides/SCOUT-USER-GUIDE.md)
+- [Atlas User Guide](../_bmad/bme/_gyre/guides/ATLAS-USER-GUIDE.md)
+- [Lens User Guide](../_bmad/bme/_gyre/guides/LENS-USER-GUIDE.md)
+- [Coach User Guide](../_bmad/bme/_gyre/guides/COACH-USER-GUIDE.md)
+
+---
+
 [Back to README](../README.md) | [Testing](testing.md) | [Development](development.md) | [FAQ](faq.md)
