@@ -118,14 +118,25 @@ describe('detectCollisions', () => {
     assert.equal(wfCollisions[0].value, 'shared-workflow');
   });
 
-  it('detects duplicate submodule_name', async () => {
+  it('detects duplicate submodule_name from a different directory', async () => {
+    // Create a second module directory whose config has the same submodule_name
+    // as our new team — simulates a renamed/moved module
+    const aliasDir = path.join(tmpDir, '_alias-mod');
+    await fs.ensureDir(aliasDir);
+    await fs.writeFile(path.join(aliasDir, 'config.yaml'), yaml.dump({
+      submodule_name: '_collision-team',
+      agents: ['other-agent'],
+      workflows: ['other-workflow']
+    }), 'utf8');
+
     const specData = {
-      team_name_kebab: 'existing-mod',
+      team_name_kebab: 'collision-team',
       agents: [{ id: 'safe-agent', capabilities: ['safe'] }]
     };
     const collisions = await detectCollisions(specData, tmpDir);
     const subCollisions = collisions.filter(c => c.field === 'submodule_name');
     assert.ok(subCollisions.length > 0);
+    assert.equal(subCollisions[0].existingModule, '_alias-mod');
   });
 
   it('returns empty array when no collisions', async () => {
