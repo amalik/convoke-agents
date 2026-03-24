@@ -84,7 +84,7 @@ The rename is mechanical but must be thorough — a partial rename would break g
 
 1. **Rename template files on disk** — not just references, the actual `tech-spec-template.md` files become `spec-template.md`
 2. **Variable rename `{tech_spec_path}` → `{spec_path}`** — consistency between file names and variable names
-3. **Discovery globs broaden** — `*spec*.md` is broader than `*tech-spec*.md` but matches upstream convention. If this causes false positives, tighten to `spec-*.md`
+3. **Discovery globs use prefix form** — `spec-*.md` not `*spec*.md`. The infix form would false-positive on unrelated files (e.g., `spec-skill-validator-team-factory.md` in `_bmad-output/`). Prefix form is tighter and sufficient
 4. **No backward-compatibility shims** — clean rename, no aliases
 
 ## Implementation Plan
@@ -92,14 +92,15 @@ The rename is mechanical but must be thorough — a partial rename would break g
 ### Tasks
 
 - [ ] **Task 1: Rename template files** — `tech-spec-template.md` → `spec-template.md` in quick-spec and quick-dev-new-preview
-- [ ] **Task 2: Update quick-spec workflow** — All 4 step files: WIP path, archive pattern, template reference, user-facing text
-- [ ] **Task 3: Update quick-dev workflow** — workflow.md state variable, 5 step files: mode detection, execution, self-check, review, resolve
-- [ ] **Task 4: Update quick-dev-new-preview** — workflow.md and any step references
-- [ ] **Task 5: Update correct-course** — Discovery glob pattern
-- [ ] **Task 6: Update TEA workflows** — 8 files across testarch-trace, test-design, NFR, framework, automate
-- [ ] **Task 7: Update files-manifest.csv** — Template file entries
-- [ ] **Task 8: Update WARP.md** — Documentation glob pattern and references
-- [ ] **Task 9: Verify zero remaining references** — `grep -r "tech.spec" _bmad/ docs/` returns empty
+- [ ] **Task 2: Update quick-spec workflow** — SKILL.md + workflow.md + all 4 step files: WIP path, archive pattern, template reference, user-facing text (7 occurrences in step-01 alone)
+- [ ] **Task 3: Update quick-dev workflow** — SKILL.md + workflow.md + all 6 step files: mode detection (12 hits), context-gathering, execution, self-check, review, resolve
+- [ ] **Task 4: Update quick-dev-new-preview** — workflow.md + step-01-clarify-and-route.md + step-02-plan.md
+- [ ] **Task 5: Update quick-flow-solo-dev agent** — `_bmad/bmm/agents/quick-flow-solo-dev.md` (2 references)
+- [ ] **Task 6: Update correct-course** — Discovery glob pattern (`*tech-spec*.md` → `spec-*.md`)
+- [ ] **Task 7: Update TEA workflows** — 8 files across testarch-trace, test-design, NFR, framework, automate
+- [ ] **Task 8: Update config CSVs** — `files-manifest.csv`, `skill-manifest.csv`, `agent-manifest.csv`, `bmad-help.csv`, `module-help.csv`
+- [ ] **Task 9: Update WARP.md** — Documentation glob pattern and references
+- [ ] **Task 10: Verify zero remaining references** — `grep -ri "tech.spec" _bmad/ docs/` returns zero results (excluding `_bmad-output/`)
 
 ### Acceptance Criteria
 
