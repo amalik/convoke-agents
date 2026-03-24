@@ -11,6 +11,7 @@
  * @property {string} schema_version
  * @property {string} team_name
  * @property {string} team_name_kebab
+ * @property {string} [description] - Optional team description for config.yaml
  * @property {string} composition_pattern - "Sequential" or "Independent"
  * @property {string} created - ISO date string
  * @property {string} factory_version
