@@ -1,6 +1,6 @@
 # Story 1.1: Quality Properties & Composition Patterns
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -25,13 +25,13 @@ So that I can make informed architectural decisions before building a new team.
 - [ ] Task 1: Create Architecture Reference file scaffold (AC: #1, #2)
   - [ ] 1.1 Create `_bmad-output/planning-artifacts/architecture-reference-teams.md` with frontmatter and top-level structure
   - [ ] 1.2 Add document introduction explaining purpose, triple-audience design (human, factory, validator), and format conventions
-  - [ ] 1.3 Structure document with 8 top-level sections: one per quality property × composition pattern (e.g., "Discoverable — Independent", "Discoverable — Sequential")
+  - [ ] 1.3 Structure document layout: Introduction → Composition Patterns (definitions) → Quality Properties (definitions) → 8 checklist sections (property × pattern stubs for Story 1.2)
 
 - [ ] Task 2: Define composition patterns section (AC: #1 — TF-FR4)
-  - [ ] 2.1 Write Independent pattern definition: description, when to use, how agents interact (standalone, no handoff contracts), example from existing teams (native teams: _enhance module)
-  - [ ] 2.2 Write Sequential pattern definition: description, when to use, how agents interact (pipeline with handoff contracts, shared artifacts), example from existing teams (Vortex: _vortex module, Gyre: _gyre module)
+  - [ ] 2.1 Write Independent pattern definition: description, when to use, how agents interact (standalone, no handoff contracts), note _enhance as closest existing example (skill module, not multi-agent — see dev notes caveat)
+  - [ ] 2.2 Write Sequential pattern definition: description, when to use, how agents interact (pipeline with handoff contracts, shared artifacts), examples from Vortex (_vortex, 7 agents) and Gyre (_gyre, 4 agents)
   - [ ] 2.3 Add comparison table showing key differences: contracts, orchestration, agent independence, typical use cases
-  - [ ] 2.4 Document how composition pattern choice cascades to eliminate irrelevant decisions (preview of TF-FR17)
+  - [ ] 2.4 Add a brief note that composition pattern choice affects which checklist items apply (foreshadows TF-FR17 cascade — one sentence, not detailed design)
 
 - [ ] Task 3: Define quality properties section (AC: #2 — TF-FR3)
   - [ ] 3.1 Write Discoverable property: what it means (team can be found through standard surfaces), why it matters (contributor can't use what they can't find), key surfaces (module-help.csv, agent menu, BMad Master, README)
@@ -39,14 +39,15 @@ So that I can make informed architectural decisions before building a new team.
   - [ ] 3.3 Write Configurable property: what it means (team adapts to project context via config), why it matters (portability across projects), key mechanisms (config.yaml, activation XML, naming conventions)
   - [ ] 3.4 Write Composable property: what it means (team agents work together and with other teams), why it matters (cross-team routing, contract-driven handoffs), key mechanisms (contracts, compass routing, inter-module references)
 
-- [ ] Task 4: Stub placeholder sections for Story 1.2 YAML checklists
-  - [ ] 4.1 Add stub headers for all 8 property × pattern checklist sections with placeholder notes for Story 1.2
-  - [ ] 4.2 Ensure section structure follows D-Q1 format: prose + fenced YAML block structure ready for Story 1.2 population
+- [ ] Task 4: Create 8 checklist section stubs for Story 1.2 (AC: #1, #2)
+  - [ ] 4.1 Add all 8 property × pattern section headers (e.g., "## Discoverable — Independent", "## Discoverable — Sequential", etc.)
+  - [ ] 4.2 Add placeholder note in each section indicating Story 1.2 will populate YAML checklists and Story 1.3 will add per-check "why" prose
+  - [ ] 4.3 Ensure each section is individually addressable for JIT loading (concern #4) — no shared content between sections
 
 - [ ] Task 5: Validate document structure and content
-  - [ ] 5.1 Verify composition patterns reference at least one real existing team each (Vortex/Gyre for Sequential, _enhance for Independent)
+  - [ ] 5.1 Verify composition patterns reference real existing modules: Vortex/Gyre for Sequential, _enhance (with caveat) for Independent
   - [ ] 5.2 Verify all four quality properties defined with clear explanations
-  - [ ] 5.3 Verify document structure supports JIT loading (sections individually addressable per concern #4)
+  - [ ] 5.3 Verify document has correct layout: intro → patterns → properties → 8 checklist stubs
   - [ ] 5.4 Verify no hardcoded factory rules — document is reference-only, rules come in Story 1.2 YAML blocks (TF-NFR5)
 
 ## Dev Notes
@@ -90,7 +91,9 @@ Two composition patterns:
 |------|--------|---------|--------|-----------|
 | Vortex | `_bmad/bme/_vortex/` | Sequential | 7 (Emma, Isla, Mila, Liam, Wade, Noah, Max) | HC1-HC10 |
 | Gyre | `_bmad/bme/_gyre/` | Sequential | 4 (Scout, Atlas, Lens, Coach) | GC1-GC4 |
-| Enhance | `_bmad/bme/_enhance/` | Independent | Standalone enhance agent | None |
+| Enhance | `_bmad/bme/_enhance/` | Independent (closest) | Skill module with modes (no `agents/` dir) | None |
+
+**_enhance caveat:** The _enhance module is a skill/workflow module with triage, review, and create modes — it has no `agents/` directory. It demonstrates the Independent module *structure* (standalone, no contracts) but lacks the agent file structure a true multi-agent Independent team would have. No pure Independent team currently exists in the codebase. The dev should note this when writing the Independent pattern definition.
 
 ### Integration Surfaces (TF-FR7 — documented in Story 1.2)
 
