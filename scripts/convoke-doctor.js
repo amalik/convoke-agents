@@ -147,28 +147,27 @@ function checkModuleConfig(mod) {
     };
   }
 
-  if (!Array.isArray(mod.config.agents) || mod.config.agents.length === 0) {
+  const hasAgents = Array.isArray(mod.config.agents) && mod.config.agents.length > 0;
+  const hasWorkflows = Array.isArray(mod.config.workflows) && mod.config.workflows.length > 0;
+
+  // A module must have at least agents or workflows
+  if (!hasAgents && !hasWorkflows) {
     return {
       name: label,
       passed: false,
-      error: 'config.yaml missing or empty agents section',
+      error: 'config.yaml missing both agents and workflows sections',
       fix: `Check ${mod.configPath}`
     };
   }
 
-  if (!Array.isArray(mod.config.workflows) || mod.config.workflows.length === 0) {
-    return {
-      name: label,
-      passed: false,
-      error: 'config.yaml missing or empty workflows section',
-      fix: `Check ${mod.configPath}`
-    };
-  }
+  const parts = [];
+  if (hasAgents) parts.push(`${mod.config.agents.length} agents`);
+  if (hasWorkflows) parts.push(`${mod.config.workflows.length} workflows`);
 
   return {
     name: label,
     passed: true,
-    info: `${mod.config.agents.length} agents, ${mod.config.workflows.length} workflows`
+    info: parts.join(', ')
   };
 }
 
