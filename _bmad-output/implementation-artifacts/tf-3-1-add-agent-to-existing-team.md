@@ -36,17 +36,17 @@ So that I can extend a team's capabilities without manually editing registry fil
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Add Agent step file (AC: #1)
-  - [ ] 1.1 Create `step-add-agent.md` micro-file in `.claude/skills/bmad-team-factory/`
-  - [ ] 1.2 PART 1: Team discovery — list available teams from `_bmad/bme/` module directories, load selected team's spec file
-  - [ ] 1.3 PART 2: Agent definition — collect new agent ID, role, capabilities, persona, pipeline position (Sequential only)
-  - [ ] 1.4 PART 3: Scope check — overlap detection against team agents AND full agent-manifest.csv (reuse step-01-scope.md overlap logic)
-  - [ ] 1.5 PART 4: Contract design (Sequential only) — identify which handoffs the new agent participates in
-  - [ ] 1.6 PART 5: BMB delegation — generate agent .md, workflow dir, contracts (same pattern as step-04-generate.md PART 3)
-  - [ ] 1.7 PART 6: Integration wiring — call JS modules for registry append, config append, CSV append
-  - [ ] 1.8 PART 7: Validation — call end-to-end validator, present results
-  - [ ] 1.9 PART 8: Manifest and abort path
-  - [ ] 1.10 Add STEP VALIDATION table, Visibility Checklist, CHECKPOINT, NEXT pointer
+- [x] Task 1: Create Add Agent step file (AC: #1)
+  - [x] 1.1 Create `step-add-agent.md` micro-file in `.claude/skills/bmad-team-factory/`
+  - [x] 1.2 PART 1: Team discovery — list available teams from `_bmad/bme/` module directories, load selected team's spec file
+  - [x] 1.3 PART 2: Agent definition — collect new agent ID, role, capabilities, persona, pipeline position (Sequential only)
+  - [x] 1.4 PART 3: Scope check — overlap detection against team agents AND full agent-manifest.csv (reuse step-01-scope.md overlap logic)
+  - [x] 1.5 PART 4: Contract design (Sequential only) — identify which handoffs the new agent participates in
+  - [x] 1.6 PART 5: BMB delegation — generate agent .md, workflow dir, contracts (same pattern as step-04-generate.md PART 3)
+  - [x] 1.7 PART 6: Integration wiring — call JS modules for registry append, config append, CSV append
+  - [x] 1.8 PART 7: Validation — call end-to-end validator, present results
+  - [x] 1.9 PART 8: Manifest and abort path
+  - [x] 1.10 Add STEP VALIDATION table, Visibility Checklist, CHECKPOINT, NEXT pointer
 
 - [x] Task 2: Create `registry-appender.js` — append agent to existing registry block (AC: #2)
   - [x] 2.1 Create `_bmad/bme/_team-factory/lib/writers/registry-appender.js`
@@ -85,13 +85,13 @@ So that I can extend a team's capabilities without manually editing registry fil
   - [x] 6.1 Ensure `buildManifest` handles extension context (3 modified files + new created files)
   - [x] 6.2 Verify `formatAbortInstructions` correctly generates `git checkout --` for modified team files and `rm` for new agent files
 
-- [ ] Task 7: Update workflow.md routing and write tests (AC: #1, #2, #3)
-  - [ ] 7.1 Add "Add Agent" route to workflow.md routing table
-  - [ ] 7.2 Write tests for registry-appender.js (happy path, duplicate detection, rollback, existing agents unchanged)
-  - [ ] 7.3 Write tests for config-appender.js (happy path, duplicate detection, atomic write, existing agents unchanged)
-  - [ ] 7.4 Write tests for csv-appender.js (happy path, duplicate workflow detection, header preservation)
-  - [ ] 7.5 Write/extend tests for extension validation checks
-  - [ ] 7.6 Update golden files if needed
+- [x] Task 7: Update workflow.md routing and write tests (AC: #1, #2, #3)
+  - [x] 7.1 Add "Add Agent" route to workflow.md routing table
+  - [x] 7.2 Write tests for registry-appender.js (happy path, duplicate detection, rollback, existing agents unchanged)
+  - [x] 7.3 Write tests for config-appender.js (happy path, duplicate detection, atomic write, existing agents unchanged)
+  - [x] 7.4 Write tests for csv-appender.js (happy path, duplicate workflow detection, header preservation)
+  - [x] 7.5 Write/extend tests for extension validation checks
+  - [x] 7.6 Update golden files if needed
 
 ## Dev Notes
 
