@@ -1,6 +1,6 @@
 # Story 3.2: Add Skill/Workflow to Existing Agent
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
