@@ -267,7 +267,7 @@ development_status:
   tf-2-7-integration-wiring-config-csv-activation: done
   tf-2-8-registry-wiring-write-safety: done
   tf-2-9-end-to-end-validation-error-recovery: done
-  tf-epic-2-retrospective: optional
+  tf-epic-2-retrospective: done
 
   # Epic 3: Extensions — Add Agent & Add Skill
   tf-epic-3: backlog
