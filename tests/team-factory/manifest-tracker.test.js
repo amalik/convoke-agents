@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs-extra');
 
-const { buildManifest, buildExtensionManifest, formatManifest, formatAbortInstructions } = require('../../_bmad/bme/_team-factory/lib/manifest-tracker');
+const { buildManifest, buildExtensionManifest, buildSkillExtensionManifest, formatManifest, formatAbortInstructions } = require('../../_bmad/bme/_team-factory/lib/manifest-tracker');
 
 const GOLDEN_PATH = path.join(__dirname, 'golden', 'golden-manifest.json');
 
