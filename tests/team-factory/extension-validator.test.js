@@ -340,10 +340,28 @@ async function buildSkillContext(tmpDir) {
   ];
   await fs.writeFile(csvPath, csvRows.join('\n') + '\n', 'utf8');
 
+  // Agent .md file with activation menu (modified — new item added)
+  const agentFilePath = path.join(moduleRoot, 'agents/alpha-analyzer.md');
+  await fs.ensureDir(path.join(moduleRoot, 'agents'));
+  const agentContent = `---
+name: alpha-analyzer
+---
+# Alpha Analyzer
+
+<activation>
+  <menu>
+    <item exec="_bmad/bme/_test-team/workflows/data-analysis/SKILL.md">Data Analysis</item>
+    <item exec="_bmad/bme/_test-team/workflows/new-analysis/SKILL.md">New Analysis</item>
+  </menu>
+</activation>
+`;
+  await fs.writeFile(agentFilePath, agentContent, 'utf8');
+
   return {
     module_root: moduleRoot,
     config_yaml_path: configPath,
     module_help_csv_path: csvPath,
+    agent_file_path: agentFilePath,
     new_workflow_name: 'new-analysis',
     agent_id: 'alpha-analyzer',
     existing_workflow_names: ['data-analysis'],
