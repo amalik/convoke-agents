@@ -160,3 +160,65 @@ describe('formatAbortInstructions', () => {
     assert.ok(instructions.includes('# Modified files'));
   });
 });
+
+// === buildExtensionManifest ===
+
+function buildExtensionContext() {
+  const moduleRoot = '_bmad/bme/_test-team';
+  return {
+    new_agent_id: 'gamma-guardian',
+    new_agent_files: [`${moduleRoot}/agents/gamma-guardian.md`],
+    new_workflow_dirs: [`${moduleRoot}/workflows/integrity-check`],
+    new_contract_files: [],
+    config_yaml_path: `${moduleRoot}/config.yaml`,
+    module_help_csv_path: `${moduleRoot}/module-help.csv`,
+  };
+}
+
+describe('buildExtensionManifest', () => {
+  it('returns correct entry count and operations', () => {
+    const manifest = buildExtensionManifest(buildExtensionContext());
+
+    // 1 agent + 1 workflow * 2 files + config (modified) + csv (modified) + registry (modified) = 6
+    assert.equal(manifest.length, 6);
+
+    const created = manifest.filter(e => e.operation === 'created');
+    const modified = manifest.filter(e => e.operation === 'modified');
+    assert.equal(created.length, 3); // agent + workflow.md + SKILL.md
+    assert.equal(modified.length, 3); // config + csv + registry
+  });
+
+  it('marks config, csv, and registry as modified', () => {
+    const manifest = buildExtensionManifest(buildExtensionContext());
+
+    const config = manifest.find(e => e.path.includes('config.yaml'));
+    assert.ok(config);
+    assert.equal(config.operation, 'modified');
+
+    const csv = manifest.find(e => e.path.includes('module-help.csv'));
+    assert.ok(csv);
+    assert.equal(csv.operation, 'modified');
+
+    const registry = manifest.find(e => e.path === 'scripts/update/lib/agent-registry.js');
+    assert.ok(registry);
+    assert.equal(registry.operation, 'modified');
+  });
+
+  it('uses new_agent_id as module name', () => {
+    const manifest = buildExtensionManifest(buildExtensionContext());
+    assert.ok(manifest.every(e => e.module === 'gamma-guardian'));
+  });
+
+  it('produces correct abort instructions — rm for new files, checkout for modified', () => {
+    const manifest = buildExtensionManifest(buildExtensionContext());
+    const instructions = formatAbortInstructions(manifest);
+
+    // New files get rm
+    assert.ok(instructions.includes('rm "_bmad/bme/_test-team/agents/gamma-guardian.md"'));
+
+    // Modified files get git checkout
+    assert.ok(instructions.includes('git checkout -- "_bmad/bme/_test-team/config.yaml"'));
+    assert.ok(instructions.includes('git checkout -- "_bmad/bme/_test-team/module-help.csv"'));
+    assert.ok(instructions.includes('git checkout -- "scripts/update/lib/agent-registry.js"'));
+  });
+});
