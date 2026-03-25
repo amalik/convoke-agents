@@ -476,12 +476,12 @@ describe('runAudit', () => {
   it('returns findings for docs with stale references', async () => {
     await fs.writeFile(
       path.join(tmpDir, 'README.md'),
-      'We ship 4 agents and 13 workflows.',
+      'We ship 5 agents and 13 workflows.',
       'utf8'
     );
     const findings = await runAudit({ projectRoot: tmpDir });
     const stale = findings.filter(f => f.category === 'stale-reference');
-    assert.ok(stale.length >= 2); // 4 agents + 13 workflows
+    assert.ok(stale.length >= 2); // 5 agents (invalid count) + 13 workflows (invalid count)
   });
 
   it('returns empty findings for clean docs', async () => {
