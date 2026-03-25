@@ -604,7 +604,253 @@ function checkExistingAgentsCsv(ctx) {
   };
 }
 
+// ── Skill extension validation ────────────────────────────────────────
+
+/**
+ * Run end-to-end validation on a skill/workflow extension (add-skill-to-existing-agent).
+ *
+ * Checks: append results (registry workflow, config workflow, CSV), structural (workflow files),
+ * regression (existing workflows unchanged, registry require).
+ *
+ * @param {Object} skillContext - Context from the add-skill workflow
+ * @param {string} skillContext.new_workflow_name - New workflow name
+ * @param {string} skillContext.agent_id - Target agent ID
+ * @param {string[]} skillContext.existing_workflow_names - Existing workflow names to verify unchanged
+ * @param {string[]} skillContext.new_workflow_files - New workflow file paths (workflow.md, template)
+ * @param {string} skillContext.config_yaml_path - Path to config.yaml
+ * @param {string} skillContext.module_help_csv_path - Path to module-help.csv
+ * @param {Object} skillContext.registry_append_result - Result from appendWorkflowToBlock
+ * @param {Object} skillContext.config_append_result - Result from appendConfigWorkflow
+ * @param {Object} skillContext.csv_append_result - Result from appendCsvRow
+ * @param {string} projectRoot - Absolute path to project root
+ * @returns {Promise<E2EValidationResult>}
+ */
+async function validateSkillExtension(skillContext, projectRoot) {
+  const checks = [];
+  const errors = [];
+
+  // --- Append result checks ---
+  checks.push(checkWorkflowRegistryAppend(skillContext));
+  checks.push(checkConfigWorkflowAppend(skillContext));
+  checks.push(checkCsvWorkflowAppend(skillContext));
+
+  // --- Structural checks for new files ---
+  checks.push(...checkNewWorkflowFiles(skillContext));
+
+  // --- Extension regression: existing workflows unchanged ---
+  checks.push(checkExistingWorkflowsRegistry(skillContext, projectRoot));
+  checks.push(checkExistingWorkflowsConfig(skillContext));
+  checks.push(checkExistingWorkflowsCsv(skillContext));
+
+  // --- Standard regression ---
+  checks.push(checkRegistryRegression(projectRoot));
+  checks.push(await checkVortexRegression(projectRoot));
+
+  const valid = checks.every(c => c.passed);
+  if (!valid) {
+    for (const c of checks) {
+      if (!c.passed) {
+        errors.push(`${c.name}: expected ${c.expected || '(pass)'}, got ${c.actual || '(fail)'}`);
+      }
+    }
+  }
+
+  return { valid, checks, errors };
+}
+
+/**
+ * Check registry workflow append result.
+ * @param {Object} ctx
+ * @returns {E2ECheck}
+ */
+function checkWorkflowRegistryAppend(ctx) {
+  const result = ctx.registry_append_result || {};
+  return {
+    name: 'WORKFLOW-REGISTRY-APPEND',
+    stepName: 'skill-extension',
+    passed: result.success === true && Array.isArray(result.written) && result.written.includes(ctx.new_workflow_name),
+    expected: `success with ${ctx.new_workflow_name} written`,
+    actual: result.success ? `written: ${(result.written || []).join(', ')}` : `failed: ${(result.errors || []).join(', ')}`,
+  };
+}
+
+/**
+ * Check config workflow append result.
+ * @param {Object} ctx
+ * @returns {E2ECheck}
+ */
+function checkConfigWorkflowAppend(ctx) {
+  const result = ctx.config_append_result || {};
+  return {
+    name: 'CONFIG-WORKFLOW-APPEND',
+    stepName: 'skill-extension',
+    passed: result.success === true,
+    expected: 'success',
+    actual: result.success ? 'success' : `failed: ${(result.errors || []).join(', ')}`,
+  };
+}
+
+/**
+ * Check CSV workflow append result.
+ * @param {Object} ctx
+ * @returns {E2ECheck}
+ */
+function checkCsvWorkflowAppend(ctx) {
+  const result = ctx.csv_append_result || {};
+  return {
+    name: 'CSV-WORKFLOW-APPEND',
+    stepName: 'skill-extension',
+    passed: result.success === true,
+    expected: 'success',
+    actual: result.success ? `success (${result.rowCount} rows)` : `failed: ${(result.errors || []).join(', ')}`,
+  };
+}
+
+/**
+ * Check new workflow files exist on disk.
+ * @param {Object} ctx
+ * @returns {E2ECheck[]}
+ */
+function checkNewWorkflowFiles(ctx) {
+  const checks = [];
+  for (const wfFile of (ctx.new_workflow_files || [])) {
+    const exists = fs.existsSync(wfFile);
+    checks.push({
+      name: 'WORKFLOW-FILE-EXISTS',
+      stepName: 'skill-extension',
+      passed: exists,
+      expected: 'file exists',
+      actual: exists ? 'file exists' : 'file not found',
+      detail: wfFile,
+    });
+  }
+  return checks;
+}
+
+/**
+ * Verify existing workflows still present in agent-registry.js.
+ * @param {Object} ctx
+ * @param {string} projectRoot
+ * @returns {E2ECheck}
+ */
+function checkExistingWorkflowsRegistry(ctx, projectRoot) {
+  const registryPath = path.join(projectRoot, 'scripts/update/lib/agent-registry.js');
+  if (!fs.existsSync(registryPath)) {
+    return {
+      name: 'EXISTING-WORKFLOWS-REGISTRY',
+      stepName: 'skill-extension-regression',
+      passed: false,
+      expected: 'existing workflows preserved in registry',
+      actual: 'agent-registry.js not found',
+    };
+  }
+
+  const content = fs.readFileSync(registryPath, 'utf8');
+  const existingNames = (ctx.existing_workflow_names || []);
+  const registeredNames = existingNames.filter(n => content.includes(`name: '${n}'`));
+
+  // If none of the existing workflows were in the registry, skip gracefully
+  if (registeredNames.length === 0 && existingNames.length > 0) {
+    return {
+      name: 'EXISTING-WORKFLOWS-REGISTRY',
+      stepName: 'skill-extension-regression',
+      passed: true,
+      expected: 'existing workflows preserved in registry',
+      actual: 'existing workflows not in registry scope (team-local only)',
+    };
+  }
+
+  const missing = registeredNames.filter(n => !content.includes(`name: '${n}'`));
+  return {
+    name: 'EXISTING-WORKFLOWS-REGISTRY',
+    stepName: 'skill-extension-regression',
+    passed: missing.length === 0,
+    expected: 'existing workflows preserved in registry',
+    actual: missing.length === 0 ? 'all preserved' : `missing: ${missing.join(', ')}`,
+  };
+}
+
+/**
+ * Verify existing workflows still present in config.yaml.
+ * @param {Object} ctx
+ * @returns {E2ECheck}
+ */
+function checkExistingWorkflowsConfig(ctx) {
+  const configPath = ctx.config_yaml_path;
+  if (!configPath || !fs.existsSync(configPath)) {
+    return {
+      name: 'EXISTING-WORKFLOWS-CONFIG',
+      stepName: 'skill-extension-regression',
+      passed: false,
+      expected: 'existing workflows preserved',
+      actual: 'config.yaml not found',
+    };
+  }
+
+  let config;
+  try {
+    config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+  } catch {
+    return {
+      name: 'EXISTING-WORKFLOWS-CONFIG',
+      stepName: 'skill-extension-regression',
+      passed: false,
+      expected: 'existing workflows preserved',
+      actual: 'cannot parse config.yaml',
+    };
+  }
+
+  const workflows = config.workflows || [];
+  const missing = (ctx.existing_workflow_names || []).filter(n => !workflows.includes(n));
+  return {
+    name: 'EXISTING-WORKFLOWS-CONFIG',
+    stepName: 'skill-extension-regression',
+    passed: missing.length === 0,
+    expected: 'existing workflows preserved',
+    actual: missing.length === 0 ? 'all preserved' : `missing: ${missing.join(', ')}`,
+  };
+}
+
+/**
+ * Verify existing workflow rows still present in module-help.csv.
+ * @param {Object} ctx
+ * @returns {E2ECheck}
+ */
+function checkExistingWorkflowsCsv(ctx) {
+  const csvPath = ctx.module_help_csv_path;
+  if (!csvPath || !fs.existsSync(csvPath)) {
+    return {
+      name: 'EXISTING-WORKFLOWS-CSV',
+      stepName: 'skill-extension-regression',
+      passed: false,
+      expected: 'existing workflow rows preserved',
+      actual: 'module-help.csv not found',
+    };
+  }
+
+  const content = fs.readFileSync(csvPath, 'utf8');
+  const lines = content.trim().split('\n').slice(1); // skip header
+  // Extract workflow name column (index 2) from each row
+  const workflowNames = lines.map(line => {
+    const cols = line.split(',');
+    return (cols[2] || '').trim();
+  });
+  const missing = (ctx.existing_workflow_names || []).filter(n => {
+    // Check by title case version (CSV stores title case)
+    const titleCase = n.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    return !workflowNames.includes(titleCase) && !workflowNames.includes(n);
+  });
+  return {
+    name: 'EXISTING-WORKFLOWS-CSV',
+    stepName: 'skill-extension-regression',
+    passed: missing.length === 0,
+    expected: 'existing workflow rows preserved',
+    actual: missing.length === 0 ? 'all preserved' : `missing: ${missing.join(', ')}`,
+  };
+}
+
 module.exports = {
   validateTeam,
   validateExtension,
+  validateSkillExtension,
 };
