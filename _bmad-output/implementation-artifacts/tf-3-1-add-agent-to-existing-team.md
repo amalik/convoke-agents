@@ -74,16 +74,16 @@ So that I can extend a team's capabilities without manually editing registry fil
   - [x] 4.4 Append new row (new agent's workflow entry), verify no duplicate workflow names
   - [x] 4.5 Write atomically (.tmp → validate header post-write → rename)
 
-- [ ] Task 5: Enhance end-to-end validator for extension operations (AC: #3)
-  - [ ] 5.1 Add `validateExtension(specData, extensionContext, projectRoot)` to `end-to-end-validator.js` (or create separate `extension-validator.js`)
-  - [ ] 5.2 New checks: AGENT-REGISTRY-APPEND, CONFIG-APPEND, CSV-APPEND
-  - [ ] 5.3 Regression checks: EXISTING-AGENTS-UNCHANGED (registry, config, CSV)
-  - [ ] 5.4 Include standard regression: REGISTRY-REGRESSION, VORTEX-REGRESSION
-  - [ ] 5.5 Maintain `{PROP}-{SEMANTIC-NAME}` check format and E2ECheck shape
+- [x] Task 5: Enhance end-to-end validator for extension operations (AC: #3)
+  - [x] 5.1 Add `validateExtension(specData, extensionContext, projectRoot)` to `end-to-end-validator.js` (or create separate `extension-validator.js`)
+  - [x] 5.2 New checks: AGENT-REGISTRY-APPEND, CONFIG-APPEND, CSV-APPEND
+  - [x] 5.3 Regression checks: EXISTING-AGENTS-UNCHANGED (registry, config, CSV)
+  - [x] 5.4 Include standard regression: REGISTRY-REGRESSION, VORTEX-REGRESSION
+  - [x] 5.5 Maintain `{PROP}-{SEMANTIC-NAME}` check format and E2ECheck shape
 
-- [ ] Task 6: Update manifest-tracker for extension operations (AC: #3)
-  - [ ] 6.1 Ensure `buildManifest` handles extension context (3 modified files + new created files)
-  - [ ] 6.2 Verify `formatAbortInstructions` correctly generates `git checkout --` for modified team files and `rm` for new agent files
+- [x] Task 6: Update manifest-tracker for extension operations (AC: #3)
+  - [x] 6.1 Ensure `buildManifest` handles extension context (3 modified files + new created files)
+  - [x] 6.2 Verify `formatAbortInstructions` correctly generates `git checkout --` for modified team files and `rm` for new agent files
 
 - [ ] Task 7: Update workflow.md routing and write tests (AC: #1, #2, #3)
   - [ ] 7.1 Add "Add Agent" route to workflow.md routing table
