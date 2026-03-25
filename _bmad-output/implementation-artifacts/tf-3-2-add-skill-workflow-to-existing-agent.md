@@ -327,10 +327,47 @@ Same pattern as Story 3.1:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6 (claude-opus-4-6)
 
 ### Debug Log References
 
+N/A — zero errors during implementation, all 136 tests passed on first run.
+
 ### Completion Notes List
 
+- All 6 tasks implemented across 2 conversation sessions (context compaction boundary between Tasks 2-6 and Task 1)
+- Tasks 2-6 extended existing modules with new functions — no new files created for JS code
+- Task 1 created `step-add-skill.md` following `step-add-agent.md` structure but simplified (7 PARTs vs 8, no scope check or contract design)
+- csv-appender.js reused as-is — already handles workflow-level rows from Story 3.1
+- Activation menu patching defined as LLM task in step file (not JS module) since XML is embedded in markdown
+- Route 3 enabled in step-00-route.md and workflow.md routing table updated with Step S
+
+### Change Log
+
+| File | Change |
+|------|--------|
+| `.claude/skills/bmad-team-factory/step-add-skill.md` | Created — 7-PART step file for Add Skill workflow |
+| `.claude/skills/bmad-team-factory/step-00-route.md` | Route 3 changed from "not yet available" to "available" |
+| `.claude/skills/bmad-team-factory/workflow.md` | Added Step S row and Route 3 routing instruction |
+| `_bmad/bme/_team-factory/lib/writers/config-appender.js` | Added `appendConfigWorkflow()` — Enhanced Simple safety |
+| `_bmad/bme/_team-factory/lib/writers/registry-appender.js` | Added `appendWorkflowToBlock()` — Full Write Safety |
+| `_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js` | Added `validateSkillExtension()` with 8 check functions |
+| `_bmad/bme/_team-factory/lib/manifest-tracker.js` | Added `buildSkillExtensionManifest()` |
+| `tests/team-factory/config-appender.test.js` | Added 4 test suites for `appendConfigWorkflow` |
+| `tests/team-factory/registry-appender.test.js` | Added 4 test suites for `appendWorkflowToBlock` |
+| `tests/team-factory/extension-validator.test.js` | Added 4 test suites for `validateSkillExtension` |
+| `tests/team-factory/manifest-tracker.test.js` | Added 4 tests for `buildSkillExtensionManifest` |
+
 ### File List
+
+- `.claude/skills/bmad-team-factory/step-add-skill.md` (created)
+- `.claude/skills/bmad-team-factory/step-00-route.md` (modified)
+- `.claude/skills/bmad-team-factory/workflow.md` (modified)
+- `_bmad/bme/_team-factory/lib/writers/config-appender.js` (modified)
+- `_bmad/bme/_team-factory/lib/writers/registry-appender.js` (modified)
+- `_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js` (modified)
+- `_bmad/bme/_team-factory/lib/manifest-tracker.js` (modified)
+- `tests/team-factory/config-appender.test.js` (modified)
+- `tests/team-factory/registry-appender.test.js` (modified)
+- `tests/team-factory/extension-validator.test.js` (modified)
+- `tests/team-factory/manifest-tracker.test.js` (modified)
