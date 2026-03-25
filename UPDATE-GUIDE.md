@@ -3,8 +3,8 @@
 How to update your Convoke installation to the latest version.
 
 - **Package:** `convoke-agents`
-- **Version:** 2.4.0
-- **Last Updated:** 2026-03-24
+- **Version:** 3.0.0
+- **Last Updated:** 2026-03-25
 
 ---
 
@@ -65,6 +65,15 @@ npx -p convoke-agents convoke-doctor
 
 ## Migration Paths
 
+### From v2.4.x to v3.0.0
+
+**Breaking changes:** Team Factory extension workflows (add-agent, add-skill) are new capabilities that change the module API surface.
+
+What happens:
+- **Team Factory extensions** — Add Agent and Add Skill workflows with appender modules (registry, config, CSV)
+- **Multi-team docs-audit** — Audit tool now validates against all registered teams (Vortex + Gyre), not just Vortex
+- **Extension validator** — New validation for factory-generated agent and skill extensions
+
 ### From v2.3.x to v2.4.0
 
 **Breaking changes:** None
@@ -78,7 +87,7 @@ What happens:
 
 If you previously had only Vortex installed, Gyre files are added alongside — nothing in `_bmad/bme/_vortex/` changes.
 
-### From v2.0.x to v2.4.0
+### From v2.0.x to v3.0.0
 
 **Breaking changes:** None
 
@@ -88,7 +97,7 @@ What happens:
 - Agent activation migrated from `.claude/commands/` to `.claude/skills/` (v2.2.0)
 - Legacy command files automatically cleaned up
 
-### From v1.7.x to v2.4.0
+### From v1.7.x to v3.0.0
 
 **Breaking changes:**
 - Product renamed: `bmad-enhanced` → `convoke-agents` (npm package name)
@@ -99,7 +108,7 @@ What happens:
 - `_bmad/` directory preserved (BMAD Method compatibility)
 - All 11 agents installed (7 Vortex + 4 Gyre)
 
-### From v1.0.x to v2.4.0
+### From v1.0.x to v3.0.0
 
 **Breaking changes:**
 - Workflow renamed: `empathy-map` → `lean-persona` (for Emma)
