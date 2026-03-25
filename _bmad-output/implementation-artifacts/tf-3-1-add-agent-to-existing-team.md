@@ -1,6 +1,6 @@
 # Story 3.1: Add Agent to Existing Team
 
-Status: review
+Status: done
 
 ## Story
 
