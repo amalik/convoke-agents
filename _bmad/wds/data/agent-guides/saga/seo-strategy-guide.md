@@ -383,8 +383,8 @@ Pattern: `example.com/{slug}` (SE), `example.com/en/{slug}` (EN), `example.com/d
 ## Related Resources
 
 - **Meta Content Guide:** `../freya/meta-content-guide.md` — Page-level meta content specification
-- **Content Language Template:** `../../templates/1-project-brief/content-language.template.md`
-- **Platform Requirements:** `../../templates/1-project-brief/platform-requirements.template.md`
+- **Content Language Template:** `../../templates/wds-1-project-brief/content-language.template.md`
+- **Platform Requirements:** `../../templates/wds-1-project-brief/platform-requirements.template.md`
 
 ---
 

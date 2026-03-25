@@ -18,7 +18,7 @@
 
 ```
 docs/
-├── 4-ux-design/              ← Scenarios & Interactive Prototypes
+├── wds-4-ux-design/              ← Scenarios & Interactive Prototypes
 │   └── scenarios/
 │       ├── 01-onboarding/
 │       │   ├── 00-Scenario.md
@@ -29,11 +29,11 @@ docs/
 │       │       └── interactive-demo.html
 │       └── 02-feature/
 │
-├── 7-design-system/          ← Component Library
+├── wds-7-design-system/          ← Component Library
 │   ├── tokens/               ← Colors, fonts, spacing
 │   └── components/           ← Reusable UI elements
 │
-└── 8-product-evolution/      ← Continuous Improvement
+└── wds-8-product-evolution/      ← Continuous Improvement
     └── kaizen-cycles/
 ```
 

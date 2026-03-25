@@ -106,7 +106,7 @@ Before finalizing any design:
 
 ## Related Resources
 
-- **Trigger Mapping:** `../../docs/method/phase-2-trigger-mapping-guide.md`
+- **Trigger Mapping:** `../../docs/method/phase-wds-2-trigger-mapping-guide.md`
 - **Customer Awareness:** `../../docs/models/customer-awareness-cycle.md`
 - **Golden Circle:** `../../docs/models/golden-circle.md`
 

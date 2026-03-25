@@ -76,7 +76,7 @@ If mode still unclear, ask the user to choose (A) or (B) and **halt** until they
 
 - PRD (functional + non-functional requirements)
 - ADR or architecture decision records
-- Architecture or spec document
+- Architecture or tech-spec document
 
 ### Epic-Level Mode Requires:
 

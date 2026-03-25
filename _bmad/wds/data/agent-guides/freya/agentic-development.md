@@ -119,7 +119,7 @@ During agentic development, use Puppeteer to verify measurable criteria after ea
 - **Agent handles:** Text content, colors, dimensions, touch targets, error states, visibility, state transitions
 - **Human handles:** Flow feel, visual hierarchy, user understanding, overall consistency
 
-**Full methodology:** `workflows/4-ux-design/agentic-development/guides/INLINE-TESTING-GUIDE.md`
+**Full methodology:** `workflows/wds-4-ux-design/agentic-development/guides/INLINE-TESTING-GUIDE.md`
 
 ---
 
@@ -215,8 +215,8 @@ For each Object ID:
 
 - **Design Log:** `{output_folder}/_progress/00-design-log.md`
 - **Agent Experiences:** `{output_folder}/_progress/agent-experiences/`
-- **Phase 4 UX Design:** `workflows/4-ux-design/workflow.md`
-- **Inline Testing Guide:** `workflows/5-agentic-development/guides/INLINE-TESTING-GUIDE.md`
+- **Phase 4 UX Design:** `workflows/wds-4-ux-design/workflow.md`
+- **Inline Testing Guide:** `workflows/wds-5-agentic-development/guides/INLINE-TESTING-GUIDE.md`
 
 ---
 

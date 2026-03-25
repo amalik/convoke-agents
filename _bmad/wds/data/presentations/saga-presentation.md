@@ -18,13 +18,13 @@
 
 ```
 docs/
-├── 1-project-brief/          ← Strategic Vision Hub
+├── wds-1-project-brief/          ← Strategic Vision Hub
 │   ├── 01-Product-Brief.md
 │   ├── 02-Competitive-Analysis.md
 │   ├── 03-Success-Metrics.md
 │   └── 04-Project-Scope.md
 │
-└── 2-trigger-mapping/        ← Journey Intelligence Center
+└── wds-2-trigger-mapping/        ← Journey Intelligence Center
     ├── 01-Business-Goals.md
     ├── 02-Target-Groups.md
     ├── 03-User-Personas.md

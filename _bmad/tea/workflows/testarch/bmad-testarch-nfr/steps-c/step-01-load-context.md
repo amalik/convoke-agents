@@ -88,7 +88,7 @@ From `{knowledgeIndex}` load:
 
 If available, read:
 
-- `spec.md` (primary NFRs)
+- `tech-spec.md` (primary NFRs)
 - `PRD.md` (product-level NFRs)
 - `story` or `test-design` docs (feature-level NFRs)
 

@@ -1,97 +1,61 @@
 ---
-name: bmad-{module-code-or-empty}-agent-{agent-name}
-description: {skill-description} # Format: [4-6 word summary]. [trigger: "User wants to talk to or ask {displayName}" or "{title}" or "{role}"]
+name: bmad-{module-code-or-empty}agent-{agent-name}
+description: {skill-description} # [4-6 word summary]. [trigger phrases]
 ---
 
 # {displayName}
 
 ## Overview
 
-{overview-template}
-
-{if-headless}
-## Activation Mode Detection
-
-**Check activation context immediately:**
-
-1. **Autonomous mode**: Skill invoked with `--headless` or `-H` flag or with task parameter
-   - Look for `--headless` in the activation context
-   - If `--headless:{task-name}` → run that specific autonomous task
-   - If just `--headless` → run default autonomous wake behavior
-   - Load and execute `headless-wake.md` with task context
-   - Do NOT load config, do NOT greet user, do NOT show menu
-   - Execute task, write results, exit silently
-
-2. **Interactive mode** (default): User invoked the skill directly
-   - Proceed to `## On Activation` section below
-
-**Example headless activation:**
-```bash
-# Autonomous - default wake
-/bmad-{agent-skill-name} --headless
-
-# Autonomous - specific task
-/bmad-{agent-skill-name} --headless:refine-memories
-```
-{/if-headless}
+{overview — concise: who this agent is, what it does, args/modes supported, and the outcome. This is the main help output for the skill — any user-facing help info goes here, not in a separate CLI Usage section.}
 
 ## Identity
+
 {Who is this agent? One clear sentence.}
 
 ## Communication Style
+
 {How does this agent communicate? Be specific with examples.}
 
 ## Principles
+
 - {Guiding principle 1}
 - {Guiding principle 2}
 - {Guiding principle 3}
 
-{if-sidecar}
-## Sidecar
-Memory location: `_bmad/_memory/{skillName}-sidecar/`
-
-Load `references/memory-system.md` for memory discipline and structure.
-{/if-sidecar}
-
 ## On Activation
 
-1. **Load config via bmad-init skill** — Store all returned vars for use:
-   - Use `{user_name}` from config for greeting
-   - Use `{communication_language}` from config for all communications
-   - Store any other config variables as `{var-name}` and use appropriately
+{if-module}
+Load available config from `{project-root}/_bmad/config.yaml` and `{project-root}/_bmad/config.user.yaml` (root level and `{module-code}` section). If config is missing, let the user know `{module-setup-skill}` can configure the module at any time. Resolve and apply throughout the session (defaults in parens):
+- `{user_name}` ({default}) — address the user by name
+- `{communication_language}` ({default}) — use for all communications
+- `{document_output_language}` ({default}) — use for generated document content
+- plus any module-specific output paths with their defaults
+{/if-module}
+{if-standalone}
+Load available config from `{project-root}/_bmad/config.yaml` and `{project-root}/_bmad/config.user.yaml` if present. Resolve and apply throughout the session (defaults in parens):
+- `{user_name}` ({default}) — address the user by name
+- `{communication_language}` ({default}) — use for all communications
+- `{document_output_language}` ({default}) — use for generated document content
+{/if-standalone}
 
-{if-autonomous}
-2. **If autonomous mode** — Load and run `autonomous-wake.md` (default wake behavior), or load the specified prompt and execute its autonomous section without interaction
+{if-sidecar}
+Load sidecar memory from `{project-root}/_bmad/memory/{skillName}-sidecar/index.md` — this is the single entry point to the memory system and tells the agent what else to load. Load `./references/memory-system.md` for memory discipline. If sidecar doesn't exist, load `./references/init.md` for first-run onboarding.
+{/if-sidecar}
 
-3. **If interactive mode** — Continue with steps below:
-{/if-autonomous}
-{if-no-autonomous}
-2. **Continue with steps below:**
-{/if-no-autonomous}
-   {if-sidecar}- **Check first-run** — If no `{skillName}-sidecar/` folder exists in `_bmad/_memory/`, load `init.md` for first-run setup
-   - **Load access boundaries** — Read `_bmad/_memory/{skillName}-sidecar/access-boundaries.md` to enforce read/write/deny zones (load before any file operations)
-   - **Load memory** — Read `_bmad/_memory/{skillName}-sidecar/index.md` for essential context and previous session{/if-sidecar}
-   - **Load manifest** — Read `bmad-manifest.json` to set `{capabilities}` list of actions the agent can perform (internal prompts and available skills)
-   - **Greet the user** — Welcome `{user_name}`, speaking in `{communication_language}` and applying your persona and principles throughout the session
-   {if-sidecar}- **Check for autonomous updates** — Briefly check if autonomous tasks ran since last session and summarize any changes{/if-sidecar}
-   - **Present menu from bmad-manifest.json** — Generate menu dynamically by reading all capabilities from bmad-manifest.json:
+{if-headless}
+If `--headless` or `-H` is passed, load `./references/autonomous-wake.md` and complete the task without interaction.
+{/if-headless}
 
-   ```
-   {if-sidecar}Last time we were working on X. Would you like to continue, or:{/if-sidecar}{if-no-sidecar}What would you like to do today?{/if-no-sidecar}
+{if-interactive}
+Greet the user. If memory provides natural context (active program, recent session, pending items), continue from there. Otherwise, offer to show available capabilities.
+{/if-interactive}
 
-   {if-sidecar}💾 **Tip:** You can ask me to save our progress to memory at any time.{/if-sidecar}
+## Capabilities
 
-   **Available capabilities:**
-   (For each capability in bmad-manifest.json capabilities array, display as:)
-   {number}. [{menu-code}] - {description} → {prompt}:{name} or {skill}:{name}
-   ```
+{Succinct routing table — each capability routes to a progressive disclosure file in ./references/:}
 
-   **Menu generation rules:**
-   - Read bmad-manifest.json and iterate through `capabilities` array
-   - For each capability: show sequential number, menu-code in brackets, description, and invocation type
-   - Type `prompt` → show `prompt:{name}`, type `skill` → show `skill:{name}`
-   - DO NOT hardcode menu examples — generate from actual manifest data
-
-**CRITICAL Handling:** When user selects a code/number, consult the bmad-manifest.json capability mapping:
-- **prompt:{name}** — Load and use the actual prompt from `{name}.md` — DO NOT invent the capability on the fly
-- **skill:{name}** — Invoke the skill by its exact registered name
+| Capability | Route |
+|------------|-------|
+| {Capability Name} | Load `./references/{capability}.md` |
+| Save Memory | Load `./references/save-memory.md` |

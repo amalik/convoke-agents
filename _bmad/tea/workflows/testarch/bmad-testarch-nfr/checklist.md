@@ -19,7 +19,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 
 ## Context Loading
 
-- [ ] Spec.md loaded successfully (if available)
+- [ ] Tech-spec.md loaded successfully (if available)
 - [ ] PRD.md loaded (if available)
 - [ ] Story file loaded (if applicable)
 - [ ] Relevant knowledge fragments loaded from `tea-index.csv`:
@@ -295,9 +295,9 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 
 ## Integration with BMad Artifacts
 
-### With spec.md
+### With tech-spec.md
 
-- [ ] Spec loaded for NFR requirements and thresholds
+- [ ] Tech spec loaded for NFR requirements and thresholds
 - [ ] Performance targets extracted
 - [ ] Security requirements extracted
 - [ ] Reliability SLAs extracted

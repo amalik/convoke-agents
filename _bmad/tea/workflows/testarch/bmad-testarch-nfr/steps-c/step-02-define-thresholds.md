@@ -57,7 +57,7 @@ Add any `custom_nfr_categories` if provided.
 
 For each category, extract thresholds from:
 
-- spec (primary)
+- tech-spec (primary)
 - PRD (secondary)
 - story or test-design (feature-specific)
 

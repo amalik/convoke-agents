@@ -63,7 +63,7 @@ If available:
 
 - Story file and acceptance criteria
 - Test design doc (priorities)
-- Spec / PRD
+- Tech spec / PRD
 
 Summarize what was found.
 

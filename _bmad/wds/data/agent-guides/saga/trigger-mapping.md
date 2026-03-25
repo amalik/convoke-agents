@@ -601,7 +601,7 @@ graph TD
     P1 --> DF4[- Frustrated by formatting]
 ```
 
-**See:** `../../workflows/2-trigger-mapping/mermaid-diagram/`
+**See:** `../../workflows/wds-2-trigger-mapping/mermaid-diagram/`
 
 ---
 
@@ -617,7 +617,7 @@ graph TD
 6. **Generate visual map** (Mermaid diagram)
 7. **Document findings** (structured markdown)
 
-**See:** `../../workflows/2-trigger-mapping/workshops/`
+**See:** `../../workflows/wds-2-trigger-mapping/workshops/`
 
 ---
 
@@ -640,9 +640,9 @@ graph TD
 
 ## Related Resources
 
-- **Phase 2 Workflow:** `../../workflows/2-trigger-mapping/`
+- **Phase 2 Workflow:** `../../workflows/wds-2-trigger-mapping/`
 - **Impact/Effect Mapping Model:** `../../docs/models/impact-effect-mapping.md`
-- **Trigger Mapping Guide:** `../../docs/method/phase-2-trigger-mapping-guide.md`
+- **Trigger Mapping Guide:** `../../docs/method/phase-wds-2-trigger-mapping-guide.md`
 - **Customer Awareness Cycle:** `../../docs/models/customer-awareness-cycle.md`
 - **Feature Impact Analysis:** Prioritization method based on Impact Mapping
 

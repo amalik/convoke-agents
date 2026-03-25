@@ -6,7 +6,7 @@
 
 - [ ] PRD exists with functional and non-functional requirements
 - [ ] ADR (Architecture Decision Record) exists
-- [ ] Architecture document available (architecture.md or spec)
+- [ ] Architecture document available (architecture.md or tech-spec)
 - [ ] Requirements are testable and unambiguous
 
 **Epic-Level Mode (Phase 4):**

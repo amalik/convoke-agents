@@ -10,7 +10,7 @@ After selection, run project analysis then start the chosen workflow.
 ### 1. Alignment & Signoff
 **When to use:** Before starting a project, when you need stakeholder buy-in.
 **What it does:** Creates a pitch/alignment document and secures commitment.
-**Output:** `docs/1-project-brief/pitch.md`
+**Output:** `docs/wds-1-project-brief/pitch.md`
 **Best for:** Agency work, team projects, anything needing approval before starting.
 
 ### 2. Product Brief

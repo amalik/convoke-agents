@@ -21,7 +21,6 @@ This is an **opinionated, advisory scan**. Findings are suggestions, not errors.
 
 Find and read:
 - `SKILL.md` — Identity, persona, principles, description
-- `bmad-manifest.json` — All capabilities with menu codes and descriptions
 - `*.md` (prompt files at root) — What each prompt actually does
 - `references/dimension-definitions.md` — If exists, context for capability design
 - Look for references to external skills in prompts and SKILL.md
@@ -67,7 +66,7 @@ Find and read:
 
 | Check | Why It Matters |
 |-------|----------------|
-| No overlapping capabilities in manifest | Confuses users, wastes tokens |
+| No overlapping capabilities | Confuses users, wastes tokens |
 - Prompts don't duplicate functionality | Pick ONE place for each behavior |
 | Similar capabilities aren't separated | Could be consolidated into stronger single capability |
 
@@ -114,33 +113,6 @@ Find and read:
 | Entry points are clear | User knows where to start |
 | Exit points provide value | User gets something useful, not just internal state |
 
-## Analysis Process
-
-1. **Build mental model** of the agent:
-   - Who is this agent? (persona, role, expertise)
-   - What is it FOR? (purpose, outcomes)
-   - What can it ACTUALLY do? (enumerate all capabilities)
-
-2. **Evaluate alignment**:
-   - Does the persona justify the capabilities?
-   - Are there capabilities that don't fit?
-   - Is the persona underserving the capabilities? (too modest)
-
-3. **Gap analysis**:
-   - For each core purpose, ask "can this agent actually do that?"
-   - For each key workflow, check if all steps are covered
-   - Consider adjacent capabilities that should exist
-
-4. **Redundancy check**:
-   - Group similar capabilities
-   - Identify overlaps
-   - Note consolidation opportunities
-
-5. **Creative synthesis**:
-   - What would make this agent MORE useful?
-   - What's the ONE thing missing that would have biggest impact?
-   - What's the ONE thing to remove that would clarify focus?
-
 ## Output Format
 
 Output your findings using the universal schema defined in `references/universal-scan-schema.md`.
@@ -159,7 +131,7 @@ Write JSON findings to: `{quality-report-dir}/agent-cohesion-temp.json`
   "agent_path": "{path}",
   "findings": [
     {
-      "file": "SKILL.md|bmad-manifest.json|{name}.md",
+      "file": "SKILL.md|{name}.md",
       "severity": "high|medium|low|suggestion|strength",
       "category": "gap|redundancy|misalignment|opportunity|strength",
       "title": "Brief description",
@@ -231,41 +203,11 @@ Merge all findings into the single `findings[]` array:
 
 ## Process
 
-1. Read SKILL.md to understand persona and intent
-2. Read bmad-manifest.json to enumerate all capabilities
-3. Read all prompts to understand what each actually does
-4. Read dimension-definitions.md if available for context
-5. Build mental model of the agent as a whole
-6. Evaluate cohesion across all 6 dimensions
-7. Generate findings with specific, actionable suggestions
-8. Identify strengths (positive feedback is valuable!)
-9. Write JSON to `{quality-report-dir}/agent-cohesion-temp.json`
-10. Return only the filename: `agent-cohesion-temp.json`
+Read all agent files. Evaluate cohesion across all 6 dimensions above. Write findings to `{quality-report-dir}/agent-cohesion-temp.json`. Return only the filename.
 
 ## Critical After Draft Output
 
-**Before finalizing, think one level deeper and verify completeness and quality:**
-
-### Scan Completeness
-- Did I read SKILL.md, bmad-manifest.json, and ALL prompts?
-- Did I build a complete mental model of the agent?
-- Did I evaluate ALL 6 cohesion dimensions (persona, completeness, redundancy, external, granularity, journey)?
-- Did I read dimension-definitions.md if it exists?
-
-### Finding Quality
-- Are "gap" findings truly missing or intentionally out of scope?
-- Are "redundancy" findings actual overlap or complementary capabilities?
-- Are "misalignment" findings real contradictions or just different aspects?
-- Are severity ratings appropriate (high only for glaring omissions)?
-- Did I include strengths (positive feedback is valuable)?
-
-### Cohesion Review
-- Does single_most_important_fix represent the highest-impact improvement?
-- Do findings tell a coherent story about this agent's cohesion?
-- Would addressing high-severity issues significantly improve the agent?
-- Are creative_suggestions actually valuable, not just nice-to-haves?
-
-Only after this verification, write final JSON and return filename.
+Before finalizing, verify completeness across all dimensions and that findings tell a coherent story.
 
 ## Key Principle
 

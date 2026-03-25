@@ -30,29 +30,30 @@ Which would you prefer?
 
 ## Config Reading and Integration
 
-Workflows MUST read config values using the `bmad-init` skill.
+Workflows read config values from `{project-root}/_bmad/config.yaml` and `config.user.yaml`. The loading behavior differs based on whether the skill is part of a module or standalone.
 
 ### Config Loading Pattern
 
-**Invoke the skill with parameters:**
+**Module-based skills** — load config with fallback and setup skill awareness:
 ```
-Use bmad-init skill:
-- module: {bmad-module-code}
-- vars: user_name:BMad,communication_language:English,document_output_language:English,output_folder:{project-root}/_bmad-output,{output-location-variable}:{default-output-path}
+Load config from {project-root}/_bmad/config.yaml ({module-code} section) and config.user.yaml.
+If config is missing:
+  - Inform the user that the module setup skill ({module-setup-skill}) is available for initial setup
+  - Continue with sensible fallback values for each variable
 ```
 
-The skill returns JSON with config values. Store in memory as `{var_name}` for use in prompts.
+**Standalone skills** — load config best-effort:
+```
+Load config from {project-root}/_bmad/config.yaml and config.user.yaml if available.
+If config is missing:
+  - Continue with fallback values — no mention of a setup skill
+```
+
+Store config values in memory as `{var_name}` for use in prompts.
 
 ### Required Core Variables
 
-**Every module workflow MUST load these core variables:**
-- `user_name:BMad`
-- `communication_language:English`
-- `output_folder:{project-root}/_bmad-output`
-
-**Conditionally include:**
-- `document_output_language:English` — ONLY if workflow creates documents (check capability `output-location` field)
-- Output location variable from capability `output-location` — ONLY if specified in metadata
+Load core config variables (user preferences, language, output locations) with sensible defaults. If the workflow creates documents, include document output language.
 
 **Example for BMB workflow (creates documents, has output var):**
 ```
@@ -71,12 +72,7 @@ vars: user_name:BMad,communication_language:English,output_folder:{project-root}
 
 ### Using Config Values in Prompts
 
-**Every prompt file MUST start with:**
-```markdown
-Language: {communication_language}
-Output Language: {document_output_language}  ← ONLY if workflow creates documents
-Output Location: {output-variable}           ← ONLY if capability output-location is defined
-```
+Each prompt file should establish communication language and relevant output settings at the top.
 
 **Use throughout prompts:**
 ```markdown
@@ -184,14 +180,8 @@ updated: "{timestamp}"
 ```
 
 **Stage 2+: Reload context if compacted**
-```markdown
-## Stage Start: Analysis
-1. Read {output_doc_path}
-2. Parse YAML front matter for `inputs` list
-3. Re-read each input file to restore context
-4. Verify status indicates previous stage complete
-5. Proceed with analysis, updating document in place
-```
+
+Each stage after the first should begin by reading the output document to recover context. If compacted, re-read input files listed in the YAML front matter.
 
 ```markdown
 ## Stage 1: Research
@@ -286,16 +276,7 @@ Write the polished version back to the same file.
 
 ### Compaction Recovery Pattern
 
-If context is compacted mid-workflow:
-```markdown
-## Recovery Check
-1. Read {output_doc_path}
-2. Parse YAML front matter:
-   - Check `status` for current stage
-   - Read `inputs` list to restore context
-3. Re-read all input files from `inputs`
-4. Resume from next stage based on status
-```
+Each stage after the first should begin by reading the output document to recover context. If compacted, re-read input files listed in the YAML front matter.
 
 ### When NOT to Use This Pattern
 
@@ -395,7 +376,7 @@ Before finalizing a BMad module workflow, verify:
 - [ ] **Document-as-cache**: Output doc has YAML front matter with `status` and `inputs` for recovery?
 - [ ] **Input tracking**: Does front matter list relative paths to all input files used?
 - [ ] **Final polish**: Does workflow include a subagent polish step at the end?
-- [ ] **Progressive disclosure**: Are stages in prompt files at root with clear progression conditions?
+- [ ] **Progressive disclosure**: Are stages in `./references/` with clear progression conditions?
 - [ ] **Metadata complete**: All bmad-* fields present and accurate?
 - [ ] **Recovery pattern**: Can the workflow resume by reading the output doc front matter?
 
@@ -425,7 +406,11 @@ description: Complex multi-stage workflow for my module. Use when user requests 
 
 ## Workflow Entry
 
-1. Use bmad-init skill (module: mm) — loads user_name, communication_language, document_output_language, output_folder, my_output_folder
+1. Load config from `{project-root}/_bmad/config.yaml` (`mymod` section) and `config.user.yaml`. If config is missing, inform that `bmad-mymodule-setup` is available for initial setup, then continue with fallbacks:
+   - `user_name` — fallback: omit
+   - `communication_language` — fallback: match the user's language
+   - `document_output_language` — fallback: match the user's language
+   - `my_output_folder` — fallback: `{project-root}/_bmad-output/mymodule`
 
 2. Ask user for output document path (or suggest {my_output_folder}/analysis-{timestamp}.md)
 

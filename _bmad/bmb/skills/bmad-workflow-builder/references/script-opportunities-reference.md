@@ -42,7 +42,7 @@ When you see these verbs or patterns in a workflow's requirements, think scripts
 | count | Metric script | "Count tokens per file" |
 | extract | Data extraction | "Extract all config variable references" |
 | convert / transform | Transformation script | "Convert stage definitions to graph" |
-| compare | Comparison script | "Compare prompt frontmatter vs manifest" |
+| compare | Comparison script | "Compare prompt frontmatter vs SKILL.md references" |
 | scan for | Pattern scanning | "Scan for orphaned template artifacts" |
 | check structure | File structure checker | "Check skill directory has required files" |
 | against schema | Schema validation | "Validate output against JSON schema" |
@@ -98,7 +98,6 @@ Each entry follows the format: What it does, Why it matters for workflows, What 
 **Checks:**
 - `name` exists and is kebab-case
 - `description` exists and follows "Use when..." pattern
-- `argument-hint` is present if the skill accepts arguments
 - No forbidden fields or reserved prefixes
 - Optional fields have valid values if present
 
@@ -127,20 +126,18 @@ Each entry follows the format: What it does, Why it matters for workflows, What 
 
 ### 3. Prompt Frontmatter Comparator
 
-**What:** Compare prompt file frontmatter against the skill's `bmad-skill-manifest.yaml`.
+**What:** Compare prompt file frontmatter against SKILL.md stage references.
 
-**Why:** Capability misalignment between prompts and the manifest causes routing failures — the skill advertises a capability it can't deliver, or has a prompt that's never reachable.
+**Why:** Misalignment between prompts and SKILL.md causes routing failures — the skill references a stage it can't deliver, or has a prompt that's never reachable.
 
 **Checks:**
 - Every prompt file at root has frontmatter with `name`, `description`, `menu-code`
-- Prompt `name` matches manifest capability name
-- `menu-code` matches manifest entry (case-insensitive)
-- Every manifest capability with `type: "prompt"` has a corresponding file
-- Flag orphaned prompts not listed in manifest
+- Every stage referenced in SKILL.md has a corresponding prompt file
+- Flag orphaned prompts not referenced in SKILL.md
 
 **Output:** JSON with mismatches, missing files, orphaned prompts.
 
-**Implementation:** Python, reads `bmad-skill-manifest.yaml` and all prompt `.md` files at skill root.
+**Implementation:** Python, reads SKILL.md and all prompt `.md` files at skill root.
 
 ---
 
@@ -168,13 +165,12 @@ Each entry follows the format: What it does, Why it matters for workflows, What 
 **Why:** Understand the skill's dependency surface. Catch references to skills that don't exist or have been renamed.
 
 **Checks:**
-- Parse `bmad-skill-manifest.yaml` for external skill references
 - Parse SKILL.md and prompts for skill invocation patterns (`invoke`, `load`, skill name references)
 - Build a dependency list with direction (this skill depends on X, Y depends on this skill)
 
 **Output:** JSON adjacency list or DOT format (GraphViz). Include whether each dependency is required or optional.
 
-**Implementation:** Python, JSON/YAML parsing with regex for invocation pattern detection.
+**Implementation:** Python with regex for invocation pattern detection.
 
 ---
 
@@ -206,7 +202,7 @@ Each entry follows the format: What it does, Why it matters for workflows, What 
 
 **Checks:**
 - Scan all `.md` files for `{variable_name}` patterns
-- Cross-reference against variables loaded by `bmad-init` or defined in config
+- Cross-reference against variables defined in `{project-root}/_bmad/config.yaml`
 - Distinguish template variables from literal text in code blocks
 - Flag undefined variables and unused loaded variables
 
@@ -293,7 +289,6 @@ Each entry follows the format: What it does, Why it matters for workflows, What 
 
 **Checks:**
 - Frontmatter changes
-- Capability additions/removals in manifest
 - New or removed prompt files
 - Token count changes per file
 - Stage flow changes (for workflows)

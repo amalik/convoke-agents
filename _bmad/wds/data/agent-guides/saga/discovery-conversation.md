@@ -255,8 +255,8 @@ When loading a new step, ALWAYS check what was captured in prior steps. The desi
 
 ## Related Resources
 
-- **Product Brief Workflow:** `../../workflows/1-project-brief/project-brief/`
-- **Alignment & Signoff:** `../../workflows/0-alignment-signoff/`
+- **Product Brief Workflow:** `../../workflows/wds-1-project-brief/project-brief/`
+- **Alignment & Signoff:** `../../workflows/wds-0-alignment-signoff/`
 - **Golden Circle Model:** `../../docs/models/golden-circle.md` (for discovery order: WHY → HOW → WHAT)
 
 ---

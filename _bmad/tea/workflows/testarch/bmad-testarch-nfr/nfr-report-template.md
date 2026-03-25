@@ -421,7 +421,7 @@ nfr_assessment:
 ## Related Artifacts
 
 - **Story File:** {STORY_FILE_PATH} (if applicable)
-- **Spec:** {SPEC_PATH} (if available)
+- **Tech Spec:** {TECH_SPEC_PATH} (if available)
 - **PRD:** {PRD_PATH} (if available)
 - **Test Design:** {TEST_DESIGN_PATH} (if available)
 - **Evidence Sources:**

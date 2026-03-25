@@ -254,7 +254,7 @@ Before marking a spec "complete":
 
 - **File Naming:** `../../workflows/00-system/FILE-NAMING-CONVENTIONS.md`
 - **Language Config:** `../../workflows/00-system/language-configuration-guide.md`
-- **Page Spec Template:** `../../workflows/4-ux-design/templates/page-specification.template.md`
+- **Page Spec Template:** `../../workflows/wds-4-ux-design/templates/page-specification.template.md`
 
 ---
 

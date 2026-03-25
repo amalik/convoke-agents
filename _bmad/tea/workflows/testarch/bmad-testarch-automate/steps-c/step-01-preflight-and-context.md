@@ -69,7 +69,7 @@ If missing: **HALT** with message "Run `framework` workflow first."
 
 ## 2. Determine Execution Mode
 
-- **BMad-Integrated** if story/spec/test-design artifacts are provided or found
+- **BMad-Integrated** if story/tech-spec/test-design artifacts are provided or found
 - **Standalone** if only source code is available
 - If unclear, ask the user which mode to use
 
@@ -80,7 +80,7 @@ If missing: **HALT** with message "Run `framework` workflow first."
 ### BMad-Integrated (if available)
 
 - Story with acceptance criteria
-- PRD and/or spec
+- PRD and/or tech spec
 - Test-design document (if exists)
 
 ### Standalone

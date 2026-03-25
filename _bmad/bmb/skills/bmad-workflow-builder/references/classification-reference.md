@@ -6,8 +6,8 @@ Classify the skill type based on user requirements. This table is for internal u
 
 | Type | Description | Structure | When to Use |
 |------|-------------|-----------|-------------|
-| **Simple Utility** | Input/output building block. Headless, composable, often has scripts. May opt out of bmad-init for true standalone use. | Single SKILL.md + scripts/ | Composable building block with clear input/output, single-purpose |
-| **Simple Workflow** | Multi-step process contained in a single SKILL.md. Uses bmad-init. Minimal or no prompt files. | SKILL.md + optional references/ | Multi-step process that fits in one file, no progressive disclosure needed |
+| **Simple Utility** | Input/output building block. Headless, composable, often has scripts. | Single SKILL.md + scripts/ | Composable building block with clear input/output, single-purpose |
+| **Simple Workflow** | Multi-step process contained in a single SKILL.md. Minimal or no prompt files. | SKILL.md + optional references/ | Multi-step process that fits in one file, no progressive disclosure needed |
 | **Complex Workflow** | Multi-stage with progressive disclosure, numbered prompt files at root, config integration. May support headless mode. | SKILL.md (routing) + prompt stages at root + references/ | Multiple stages, long-running process, progressive disclosure, routing logic |
 
 ## Decision Tree
@@ -33,7 +33,7 @@ Classify the skill type based on user requirements. This table is for internal u
 - Other skills/workflows call it
 - Deterministic or near-deterministic behavior
 - Could be a script but needs LLM judgment
-- Examples: JSON validator, manifest checker, format converter
+- Examples: JSON validator, schema checker, format converter
 
 ### Simple Workflow Signals
 - 3-8 numbered steps
@@ -55,7 +55,5 @@ Classify the skill type based on user requirements. This table is for internal u
 ## Module Context (Orthogonal)
 
 Module context is asked for ALL types:
-- **Module-based:** Part of a BMad module. Uses `bmad-{modulecode}-{skillname}` naming. Has bmad-manifest.json.
-- **Standalone:** Independent skill. Uses `bmad-{skillname}` naming.
-
-All workflows use `bmad-init` by default unless explicitly opted out (truly standalone utilities).
+- **Module-based:** Part of a BMad module. Uses `bmad-{modulecode}-{skillname}` naming. Config loading includes a fallback pattern — if config is missing, the skill informs the user that the module setup skill is available and continues with sensible defaults.
+- **Standalone:** Independent skill. Uses `bmad-{skillname}` naming. Config loading is best-effort — load if available, use defaults if not, no mention of a setup skill.

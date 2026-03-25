@@ -213,7 +213,7 @@ Extracted from the Trigger Map to provide strategic grounding:
 
 Generate complete Product Brief document using template.
 
-**See:** `{project-root}/_bmad/wds/templates/1-project-brief/project-brief.template.md`
+**See:** `{project-root}/_bmad/wds/templates/wds-1-project-brief/project-brief.template.md`
 
 ---
 
@@ -442,7 +442,7 @@ Before marking documentation "complete":
 
 ## Related Resources
 
-- **Product Brief Workflow:** `../../workflows/1-project-brief/project-brief/`
+- **Product Brief Workflow:** `../../workflows/wds-1-project-brief/project-brief/`
 - **File Naming Conventions:** `../../workflows/00-system/FILE-NAMING-CONVENTIONS.md`
 - **Project Outline Template:** Created during Phase 1 Step 1
 - **Documentation Standards:** `../../../bmm/data/documentation-standards.md`

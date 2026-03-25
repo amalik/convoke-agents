@@ -29,7 +29,7 @@ This checklist covers **two sequential phases**:
 - [ ] Acceptance criteria extracted correctly
 - [ ] Story ID identified (e.g., 1.3)
 - [ ] `test-design.md` loaded (if available)
-- [ ] `spec.md` loaded (if available)
+- [ ] `tech-spec.md` loaded (if available)
 - [ ] `PRD.md` loaded (if available)
 - [ ] Relevant knowledge fragments loaded from `tea-index.csv`
 

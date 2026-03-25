@@ -37,7 +37,7 @@ For each scanner file, extract not just `findings` arrays but ALL of these data 
 | Consolidation opportunities | agent-cohesion `assessments.cohesion_analysis.redundancy_level.consolidation_opportunities` | Consolidation Opportunities in Cohesion |
 | Creative suggestions | `findings[]` with severity="suggestion" (no separate creative_suggestions array) | Creative Suggestions in Cohesion section |
 | Craft & agent assessment | prompt-craft `assessments.skillmd_assessment` (incl. `persona_context`), `assessments.prompt_health`, `summary.assessment` | Prompt Craft section header + Executive Summary |
-| Structure metadata | structure `assessments.metadata` (has_memory, has_headless, manifest_valid, etc.) | Structure & Capabilities section header |
+| Structure metadata | structure `assessments.metadata` (has_memory, has_headless, etc.) | Structure & Capabilities section header |
 | User journeys | enhancement-opportunities `assessments.user_journeys[]` | User Journeys section |
 | Autonomous assessment | enhancement-opportunities `assessments.autonomous_assessment` | Autonomous Readiness section |
 | Skill understanding | enhancement-opportunities `assessments.skill_understanding` | Creative section header |
@@ -65,26 +65,7 @@ Fill the template section by section, following the `<!-- comment -->` guidance 
 
 ### Step 5: Verification Pass
 
-**This step is mandatory.** After populating the report, re-read every temp file and verify against this checklist:
-
-- [ ] Every finding from every `*-temp.json` findings[] array
-- [ ] Agent identity block (persona_summary, primary_purpose, capability_count)
-- [ ] All findings with severity="strength" from any scanner
-- [ ] All positive notes from prompt-craft (severity="note")
-- [ ] Cohesion analysis dimensional scores table (if present)
-- [ ] Consolidation opportunities from cohesion redundancy analysis
-- [ ] Craft assessment, skill type assessment, and persona context assessment
-- [ ] Structure metadata (sections_found, has_memory, has_headless, manifest_valid)
-- [ ] ALL user journeys with ALL friction_points and bright_spots per archetype
-- [ ] The autonomous_assessment block (all fields)
-- [ ] All findings with severity="suggestion" from cohesion scanners
-- [ ] All findings with severity ending in "-opportunity" from execution-efficiency
-- [ ] assessments.top_insights from enhancement-opportunities
-- [ ] Script inventory and token savings from script-opportunities
-- [ ] Skill understanding (purpose, primary_user, key_assumptions)
-- [ ] Prompt health summary from prompt-craft (if prompts exist)
-
-If any item was dropped, add it to the appropriate section before writing.
+Re-read all temp files and verify every finding appears in the report. If any item was dropped, add it to the appropriate section before writing.
 
 ### Step 6: Write and Return
 

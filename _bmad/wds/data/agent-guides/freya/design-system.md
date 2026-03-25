@@ -43,7 +43,7 @@
 3. Agent links to Figma via Component ID
 4. Specification references Figma source
 
-**See:** `../../workflows/6-asset-generation/workflow-figma.md`
+**See:** `../../workflows/wds-6-asset-generation/workflow-figma.md`
 
 ---
 
@@ -76,7 +76,7 @@
 - Is there a similar component?
 - Should we create new or use/extend existing?
 
-**See:** `../../workflows/7-design-system/design-system-router.md`
+**See:** `../../workflows/wds-7-design-system/design-system-router.md`
 
 ---
 
@@ -109,7 +109,7 @@
 
 **When similar component exists, run assessment:**
 
-**See:** `../../workflows/7-design-system/assessment/`
+**See:** `../../workflows/wds-7-design-system/assessment/`
 
 **7 Micro-Steps:**
 1. Scan existing components
@@ -190,7 +190,7 @@ organisms/
 
 ## Component Operations
 
-**See:** `../../workflows/7-design-system/operations/`
+**See:** `../../workflows/wds-7-design-system/operations/`
 
 ### 1. Initialize Design System
 **First component triggers auto-initialization**
@@ -323,8 +323,8 @@ Before marking a component "complete":
 
 ## Related Resources
 
-- **Phase 7 Workflow:** `../../workflows/7-design-system/`
-- **Figma Integration:** `../../workflows/6-asset-generation/workflow-figma.md`
+- **Phase 7 Workflow:** `../../workflows/wds-7-design-system/`
+- **Figma Integration:** `../../workflows/wds-6-asset-generation/workflow-figma.md`
 - **Shared Knowledge:** `../design-system/` (tokens, naming, states, validation, boundaries)
 
 ---

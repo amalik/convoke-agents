@@ -90,8 +90,8 @@ Choose: [W] Workshop | [S] Suggest | [D] Dream
 
 **Load these WDS learning materials:**
 ```
-docs/method/phase-2-trigger-mapping-guide.md
-docs/quick-start/02-trigger-mapping.md
+docs/method/phase-wds-2-trigger-mapping-guide.md
+docs/quick-start/0wds-2-trigger-mapping.md
 src/data/agent-guides/saga/trigger-mapping.md
 docs/models/impact-effect-mapping.md
 docs/method/dream-up-rubric-phase-2.md
@@ -157,9 +157,9 @@ docs/method/dream-up-rubric-phase-2.md
 
 **Load these WDS learning materials:**
 ```
-src/workflows/3-scenarios/data/quality-checklist.md
-src/workflows/3-scenarios/data/scenario-outline-template.md
-src/workflows/3-scenarios/data/validation-standards.md
+src/workflows/wds-3-scenarios/data/quality-checklist.md
+src/workflows/wds-3-scenarios/data/scenario-outline-template.md
+src/workflows/wds-3-scenarios/data/validation-standards.md
 ```
 
 **Learn and internalize:**

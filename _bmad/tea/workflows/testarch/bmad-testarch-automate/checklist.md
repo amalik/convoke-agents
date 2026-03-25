@@ -12,7 +12,7 @@ Before starting this workflow, verify:
 
 **Halt only if:** Framework scaffolding is completely missing (run `framework` workflow first)
 
-**Note:** BMad artifacts (story, spec, PRD) are OPTIONAL - workflow can run without them
+**Note:** BMad artifacts (story, tech-spec, PRD) are OPTIONAL - workflow can run without them
 **Note:** `automate` generates tests; it does not run `*atdd` or `*test-review`. If ATDD outputs exist, use them as input and avoid duplicate coverage.
 
 ---
@@ -30,7 +30,7 @@ Before starting this workflow, verify:
 
 - [ ] Story markdown loaded (if `{story_file}` provided)
 - [ ] Acceptance criteria extracted from story (if available)
-- [ ] Spec.md loaded (if `{use_spec}` true and file exists)
+- [ ] Tech-spec.md loaded (if `{use_tech_spec}` true and file exists)
 - [ ] Test-design.md loaded (if `{use_test_design}` true and file exists)
 - [ ] PRD.md loaded (if `{use_prd}` true and file exists)
 - [ ] **Note**: Absence of BMad artifacts does NOT halt workflow
@@ -503,7 +503,7 @@ All of the following must be true before marking this workflow as complete:
 
 ### Issue: BMad artifacts not found
 
-**Problem:** Story, spec, or PRD files not found when variables are set.
+**Problem:** Story, tech-spec, or PRD files not found when variables are set.
 
 **Resolution:**
 
@@ -596,7 +596,7 @@ All of the following must be true before marking this workflow as complete:
 
 ## Notes for TEA Agent
 
-- **automate is flexible:** Can work with or without BMad artifacts (story, spec, PRD are OPTIONAL)
+- **automate is flexible:** Can work with or without BMad artifacts (story, tech-spec, PRD are OPTIONAL)
 - **Standalone mode is powerful:** Analyze any codebase and generate tests independently
 - **Auto-discover mode:** Scan codebase for features needing tests when no targets specified
 - **Framework is the ONLY hard requirement:** HALT if framework config missing, otherwise proceed

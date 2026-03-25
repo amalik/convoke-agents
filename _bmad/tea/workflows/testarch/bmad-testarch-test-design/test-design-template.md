@@ -335,7 +335,7 @@ lastSaved: ''
 - PRD: {prd_link}
 - Epic: {epic_link}
 - Architecture: {arch_link}
-- Spec: {spec_link}
+- Tech Spec: {tech_spec_link}
 
 ---
 
