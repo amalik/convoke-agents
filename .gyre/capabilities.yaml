@@ -6,13 +6,14 @@ source_workflow: model-generation
 target_agents: [lens, coach]
 input_artifacts: [GC1]
 created: 2026-03-24
+updated: 2026-03-25
 ---
 
 gyre_manifest:
   version: "1.0"
   generated_at: "2026-03-24T00:00:00Z"
-  stack_summary: "Node.js npm package (convoke-agents) — CLI toolkit with agent definitions, distributed via npm, CI/CD via GitHub Actions"
-  capability_count: 21
+  stack_summary: "Node.js npm package (convoke-agents) — CLI toolkit with agent definitions, distributed via npm, CI/CD via GitHub Actions. Secondary Python stack (33% of codebase) powers builder/quality toolchain."
+  capability_count: 29
   limited_coverage: false
   capabilities:
     # === OBSERVABILITY (5) — reframed for CLI toolkit ===
@@ -205,6 +206,80 @@ gyre_manifest:
       description: "Postinstall scripts are minimal, local-only (no network calls, no elevated permissions), and fail gracefully. Users trust packages that don't do surprising things on install."
       source: "practice"
       relevance: "package.json has a postinstall script (node scripts/postinstall.js). This capability validates it's safe, fast, and transparent."
+      amended: false
+      removed: false
+
+    # === DUAL-LANGUAGE (3) — Python secondary stack ===
+    - id: "python-ci-testing"
+      category: "reliability"
+      name: "Python Script CI Test Execution"
+      description: "Python scripts (pytest/unittest) are executed in CI alongside Node.js tests. Prevents regressions in builder/quality toolchain scripts that only surface when run by agents."
+      source: "practice"
+      relevance: "46 Python files with local tests exist in BMB and Core modules, but CI (ci.yml) only runs Node.js tests. Python test failures are invisible to the CI pipeline."
+      amended: false
+      removed: false
+
+    - id: "python-linting"
+      category: "deployment"
+      name: "Python Code Linting"
+      description: "Python scripts are linted (ruff, flake8, or pylint) to enforce consistent style and catch common errors. Especially important in a dual-language project where Python may receive less review attention."
+      source: "practice"
+      relevance: "No Python linter configured. 46 Python files across BMB and Core modules have no automated style enforcement. JS has ESLint in CI — Python has nothing."
+      amended: false
+      removed: false
+
+    - id: "python-dependency-management"
+      category: "security"
+      name: "Python Dependency Declaration"
+      description: "Python dependencies are declared in requirements.txt or pyproject.toml with pinned versions. Ensures reproducible script execution across environments and enables vulnerability scanning."
+      source: "practice"
+      relevance: "No requirements.txt, pyproject.toml, or setup.py found. Python script dependencies are implicit — if a script imports a non-stdlib package, users discover the missing dependency at runtime."
+      amended: false
+      removed: false
+
+    # === AGENT FRAMEWORK (5) — domain-specific ===
+    - id: "agent-definition-integrity"
+      category: "reliability"
+      name: "Agent Definition File Integrity Validation"
+      description: "After install or update, agent markdown files are validated for required frontmatter fields (name, description), valid XML structure, and mandatory activation steps. Catches corrupted or incomplete agent definitions."
+      source: "reasoning"
+      relevance: "Agent .md files are the runtime payload — a malformed agent file means a broken user experience. convoke-doctor validates agent count but not content integrity."
+      amended: false
+      removed: false
+
+    - id: "contract-schema-compliance"
+      category: "reliability"
+      name: "Handoff Contract Schema Compliance"
+      description: "Artifact files produced by agents (GC1-GC4 for Gyre, HC1-HC10 for Vortex) conform to their contract schemas. Validates required fields, correct types, and inter-contract references."
+      source: "reasoning"
+      relevance: "Contracts are the inter-agent API. A malformed GC1 (Stack Profile) breaks Atlas, Lens, and Coach downstream. No runtime or CI validation currently exists."
+      amended: false
+      removed: false
+
+    - id: "manifest-sync"
+      category: "reliability"
+      name: "Cross-Module Manifest Consistency"
+      description: "agent-manifest.csv, config.yaml agent lists, and actual agent files in the filesystem stay in sync. Detects orphaned manifest entries, missing agents, or config/manifest drift."
+      source: "reasoning"
+      relevance: "agent-manifest.csv is the single source of truth for party mode and agent activation. refresh-installation.js regenerates it, but drift between manifest, config, and filesystem is possible after partial updates."
+      amended: false
+      removed: false
+
+    - id: "workflow-step-completeness"
+      category: "reliability"
+      name: "Workflow Step File Completeness"
+      description: "Each workflow's declared steps in workflow.md/workflow.yaml have corresponding step files on disk. Catches missing step files that cause runtime failures during agent workflow execution."
+      source: "reasoning"
+      relevance: "Workflows reference steps by path (e.g., steps/step-02-compute-delta.md). A missing step file causes a silent agent failure with no recovery path."
+      amended: false
+      removed: false
+
+    - id: "team-factory-output-validation"
+      category: "reliability"
+      name: "Team Factory Output Validation"
+      description: "Teams generated by the Team Factory pass convoke-doctor validation. Factory outputs (config.yaml, agent-manifest.csv, registry entries) are verified against the same standards as hand-crafted teams."
+      source: "reasoning"
+      relevance: "Team Factory auto-generates configs, CSVs, and registry entries. If factory output doesn't match the format that convoke-doctor and refresh-installation expect, the generated team is silently broken."
       amended: false
       removed: false
 
