@@ -354,6 +354,7 @@ async function validateExtension(extensionContext, projectRoot) {
   checks.push(...checkNewContractFiles(extensionContext));
 
   // --- Extension regression: existing agents unchanged ---
+  checks.push(checkExistingAgentsRegistry(extensionContext, projectRoot));
   checks.push(checkExistingAgentsConfig(extensionContext));
   checks.push(checkExistingAgentsCsv(extensionContext));
 
@@ -485,6 +486,35 @@ function checkNewContractFiles(ctx) {
 }
 
 /**
+ * Verify existing agents still present in agent-registry.js.
+ * @param {Object} ctx
+ * @param {string} projectRoot
+ * @returns {E2ECheck}
+ */
+function checkExistingAgentsRegistry(ctx, projectRoot) {
+  const registryPath = path.join(projectRoot, 'scripts/update/lib/agent-registry.js');
+  if (!fs.existsSync(registryPath)) {
+    return {
+      name: 'EXISTING-AGENTS-REGISTRY',
+      stepName: 'extension-regression',
+      passed: false,
+      expected: 'existing agents preserved in registry',
+      actual: 'agent-registry.js not found',
+    };
+  }
+
+  const content = fs.readFileSync(registryPath, 'utf8');
+  const missing = (ctx.existing_agent_ids || []).filter(id => !content.includes(`id: '${id}'`));
+  return {
+    name: 'EXISTING-AGENTS-REGISTRY',
+    stepName: 'extension-regression',
+    passed: missing.length === 0,
+    expected: 'existing agents preserved in registry',
+    actual: missing.length === 0 ? 'all preserved' : `missing: ${missing.join(', ')}`,
+  };
+}
+
+/**
  * Verify existing agents still present in config.yaml.
  * @param {Object} ctx
  * @returns {E2ECheck}
@@ -543,7 +573,13 @@ function checkExistingAgentsCsv(ctx) {
   }
 
   const content = fs.readFileSync(csvPath, 'utf8');
-  const missing = (ctx.existing_agent_ids || []).filter(id => !content.includes(id));
+  const lines = content.trim().split('\n').slice(1); // skip header
+  // Extract agent column (index 8) from each row
+  const agentIds = lines.map(line => {
+    const cols = line.split(',');
+    return cols[8] || '';
+  });
+  const missing = (ctx.existing_agent_ids || []).filter(id => !agentIds.includes(id));
   return {
     name: 'EXISTING-AGENTS-CSV',
     stepName: 'extension-regression',
