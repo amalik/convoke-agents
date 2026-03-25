@@ -7,7 +7,8 @@ const path = require('path');
 const chalk = require('chalk');
 const { findProjectRoot } = require('./update/lib/utils');
 const {
-  AGENTS, WORKFLOWS, WORKFLOW_NAMES
+  AGENTS, WORKFLOWS, WORKFLOW_NAMES,
+  GYRE_AGENTS, GYRE_WORKFLOWS,
 } = require('./update/lib/agent-registry');
 
 // --- Constants (Task 1.1, 1.2) ---
@@ -61,6 +62,18 @@ function checkStaleReferences(content, filePath) {
   const agentCount = AGENTS.length;
   const workflowCount = WORKFLOWS.length;
 
+  // Valid counts from all registered teams and their combined totals
+  const validAgentCounts = new Set([
+    AGENTS.length,                              // Vortex
+    GYRE_AGENTS.length,                         // Gyre
+    AGENTS.length + GYRE_AGENTS.length,         // Combined total
+  ]);
+  const validWorkflowCounts = new Set([
+    WORKFLOWS.length,                           // Vortex
+    GYRE_WORKFLOWS.length,                      // Gyre
+    WORKFLOWS.length + GYRE_WORKFLOWS.length,   // Combined total
+  ]);
+
   // Build regex for written-out numbers
   const wordKeys = Object.keys(WORD_TO_NUM).join('|');
 
@@ -86,7 +99,7 @@ function checkStaleReferences(content, filePath) {
     digitAgentRe.lastIndex = 0;
     while ((m = digitAgentRe.exec(line)) !== null) {
       const num = parseInt(m[1], 10);
-      if (num !== agentCount && num > 0 && num < 100) {
+      if (!validAgentCounts.has(num) && num > 0 && num < 100) {
         findings.push({
           file: filePath, line: lineNum,
           category: 'stale-reference',
@@ -99,7 +112,7 @@ function checkStaleReferences(content, filePath) {
     wordAgentRe.lastIndex = 0;
     while ((m = wordAgentRe.exec(line)) !== null) {
       const num = WORD_TO_NUM[m[1].toLowerCase()];
-      if (num !== undefined && num !== agentCount) {
+      if (num !== undefined && !validAgentCounts.has(num)) {
         findings.push({
           file: filePath, line: lineNum,
           category: 'stale-reference',
@@ -112,7 +125,7 @@ function checkStaleReferences(content, filePath) {
     digitWorkflowRe.lastIndex = 0;
     while ((m = digitWorkflowRe.exec(line)) !== null) {
       const num = parseInt(m[1], 10);
-      if (num !== workflowCount && num > 0 && num < 100) {
+      if (!validWorkflowCounts.has(num) && num > 0 && num < 100) {
         findings.push({
           file: filePath, line: lineNum,
           category: 'stale-reference',
@@ -125,7 +138,7 @@ function checkStaleReferences(content, filePath) {
     wordWorkflowRe.lastIndex = 0;
     while ((m = wordWorkflowRe.exec(line)) !== null) {
       const num = WORD_TO_NUM[m[1].toLowerCase()];
-      if (num !== undefined && num !== workflowCount) {
+      if (num !== undefined && !validWorkflowCounts.has(num)) {
         findings.push({
           file: filePath, line: lineNum,
           category: 'stale-reference',
@@ -418,6 +431,9 @@ function checkStaleBrandReferences(content, filePath) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const lineNum = i + 1;
+
+    // Skip lines that document the rename transition (e.g., "bmad-enhanced → convoke-agents")
+    if (/→|->/.test(line) && /convoke/i.test(line)) continue;
 
     staleRe.lastIndex = 0;
     let m;
