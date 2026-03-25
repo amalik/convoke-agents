@@ -186,6 +186,20 @@ function findArrayClose(content, startIdx) {
       continue;
     }
 
+    // Skip line comments
+    if (ch === '/' && content[i + 1] === '/') {
+      const eol = content.indexOf('\n', i);
+      i = eol === -1 ? content.length : eol;
+      continue;
+    }
+
+    // Skip block comments
+    if (ch === '/' && content[i + 1] === '*') {
+      const end = content.indexOf('*/', i + 2);
+      i = end === -1 ? content.length : end + 1;
+      continue;
+    }
+
     if (ch === "'" || ch === '"' || ch === '`') {
       inString = true;
       stringChar = ch;
