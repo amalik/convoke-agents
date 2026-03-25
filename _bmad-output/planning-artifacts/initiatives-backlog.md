@@ -70,7 +70,6 @@
 | I3 | **CSV parser library for manifest** — Replace regex-based CSV parsing in `refresh-installation.js` with proper parser | Murat review | 2 | 0.25 | 70% | 1 | 0.4 | Keep the lights on | Backlog |
 | I6 | **Add `--verbose` flag to all CLI commands** — Currently only `convoke-update` supports `--verbose`. Missing from: `convoke-install`, `convoke-doctor`, `convoke-migrate`, `convoke-version`. Pattern already exists in refresh-installation.js. Improves troubleshooting when users hit install or diagnostic issues. | Gyre full analysis OBS-001, 2026-03-24 | 4 | 0.5 | 80% | 2 | 0.8 | Keep the lights on | Backlog |
 | I5 | **Workflow output naming enforcement** — Update artifact-producing workflows (PRD, architecture, epics, UX, readiness, Vortex, quick-spec, sprint) to follow `{category}-{descriptor}[-{context}][-{date}].md` convention at creation time. Incremental: apply when a workflow is touched for any reason. Archive script (`npm run archive --rename`) catches drift in the meantime. ADR Phase C. | ADR `adr-repo-organization-conventions-2026-03-22.md` | 8 | 0.5 | 90% | 3 | 1.2 | Keep the lights on | Backlog |
-| I4 | **BMAD v6.2.1 convention alignment** — Updated from v6.2.0 scope. Three specced work items: **(a)** Skill validator for Team Factory pipeline — new `validateSkill()` in validator.js as factory quality gate, 7 tasks (`spec-skill-validator-team-factory.md`). **(b)** Rename `tech-spec` prefix to `spec` across 28 files in BMM + TEA modules, 9 tasks (`spec-tech-spec-to-spec-rename.md`). **(c)** Remove dead `default-party.csv` roster files (3 files), 5 tasks (`spec-party-roster-cleanup.md`). Original v6.2.0 items still applicable: adopt `bmad-skill-manifest.yaml` markers, verify `bmad-`-prefixed directories. | Party-mode review (John, Winston, Amelia, Murat, Liam). v6.2.1 analysis: Winston, 2026-03-24 | 6 | 1.5 | 90% | 4 | 2.0 | Keep the lights on | **Done** |
 
 ### Agent Quality & Consistency
 
@@ -85,13 +84,11 @@
 
 | # | Initiative | Source | R | I | C | E | Score | Track | Status |
 |---|-----------|--------|---|---|---|---|-------|-------|--------|
-| P1 | **Gyre team — Operational Readiness (Convoke team module)** — Redesigned 2026-03-21 as conversational persona agents (like Vortex), not CLI tool. 4 agents: Scout 🔎 (stack detective), Atlas 📐 (model curator), Lens 🔬 (readiness analyst), Coach 🏋️ (review coach). 4 contracts (GC1-GC4), 7 workflows, 4 epics, 24 stories. No application code — markdown agents + step-file workflows. Module at `_bmad/bme/_gyre/`. MVP: Observability + Deployment domain analysis with cross-domain correlation, generated contextual models, RICE-scored readiness backlog. Implementation readiness validated (2026-03-21): 43 active FRs, 17 active NFRs, 100% epic coverage, 1 minor FR57 labeling inconsistency. Story 1.6: config-driven doctor (file existence only). Forge integration via FG-HC1/HC2/GF-HC1 contracts. PRD, architecture, epics, and readiness report all complete. **Vortex discovery COMPLETE (all 7 streams, 2026-03-21).** 8 artifacts produced: scope decision, 3 lean personas (Engineering Lead, SRE/Platform Engineer, Compliance Officer), HC2 problem definition, HC3 hypothesis contract (3 hypotheses, 9 assumptions), HC4 3-phase pilot experiment (interviews → model accuracy → sprint integration), HC5 signal framework (14 signals, 6 anomaly patterns), HC6 decision framework (4 gates incl. kill switch). **Next milestone: Phase 1 interviews** — 5-team discovery (1 week), then Phase 2 model accuracy pilot (2 weeks, kill switch gate: V1 ≥70%). Key advantage: riskiest assumption (model accuracy) testable in days, not weeks. Discovery runs in parallel with E1 build. Research: `research/domain-operational-readiness-research-2026-03-19.md`. Brief: `product-brief-gyre-2026-03-19.md`. Discovery artifacts in `_bmad-output/vortex-artifacts/`. **Compliance v2 reference:** ArcKit (`tractorjuice/arc-kit`) has structured compliance templates (DPIA, NCSC Secure by Design, GDS Service Standard, SOBC) — study as structural exemplars when building Gyre's Compliance & Security domain. | Product vision. Domain research: 2026-03-19. Redesign + readiness: 2026-03-21. Vortex discovery: 2026-03-21 (complete). ArcKit ref: 2026-03-22 | 8 | 3 | 90% | 6 | 3.6 | Move the needle | **Done — All 4 epics complete (25 stories, 528+ subtasks, 0 discrepancies). Full pipeline validated 2026-03-24.** |
 | P3 | **Team installer architecture** — Generalize `convoke-install-vortex` to `convoke-install <module-name>` for multi-module support. Note: Enhance module proves the extensibility pattern (v2.4.0). v6.2.0 introduced `bmad-skill-manifest.yaml` for skill package discovery — installer should understand this convention. | Platform architecture | 6 | 1 | 80% | 4 | 1.2 | Move the needle | Backlog |
 | P2 | **Multi-module collaboration workflows** — Cross-module handoffs and routing between Teams (Vortex) and Skills (Enhance). Scope expanded: not just cross-team, but cross-module (e.g., Enhance backlog feeding Vortex discovery). | Product vision, README roadmap | 5 | 2 | 30% | 8 | 0.4 | Move the needle | Unblocked (P1 complete) |
 | P7 | **ML/AI Engineering team exploration** — Discovery spike to determine team-vs-skill question for ML/AI domain. Map ML lifecycle (problem → data exploration → experiment → validate → deploy → monitor) against Vortex streams and BMM workflow. Options: new team (3-4 dedicated agents) vs Enhance-style skill modules for existing agents. **Note (2026-03-21):** Should be evaluated through Capability Evaluation Framework (skill→agent→team) before committing form factor. Added from party-mode team exploration, 2026-03-17 | Party-mode review (Victor, Winston, user) | 6 | 2 | 30% | 3 | 1.2 | Move the needle | Backlog |
 | P8 | **Governance & Support skill set** — Transversal advisory skills (compliance, coaching, change management, organizational health) that augment existing agents. "Review and advise" pattern — not a team but cross-cutting capability. Skills for PM (compliance), SM (coaching), Architect (change management). Reframe of Ethics & Legal into broader scope. **Note (2026-03-21):** Evaluate through Capability Evaluation Framework before committing form factor. Added from party-mode team exploration, 2026-03-17 | Party-mode review (Emma, Victor, user) | 5 | 1 | 30% | 3 | 0.5 | Move the needle | Backlog |
 | P9 | **Forge team — Domain Knowledge Extraction (KORE)** — Third Convoke team for brownfield knowledge capture. Conversational persona agents (like Vortex and Gyre). **Scaffolded via Enhance framework (Task 4 in ADR-001 sequence).** Depends on: Enhance MVP shipped (Phase 6) + Vortex redesign (Task 3) complete. Vortex scope decision complete (scored 4.65/5). **Vortex discovery COMPLETE (all 7 streams, 2026-03-21).** 9 artifacts produced: scope decision, 2 lean personas (Landing Consultant, Knowledge Holder), HC2 problem definition, HC3 hypothesis contract (3 hypotheses, 11 assumptions), HC4 shadow engagement experiment (pre-registered), HC5 signal framework (15 signals, 6 anomaly patterns), HC6 decision framework (4 gates). **Next milestone: shadow engagement execution** — 6-week concierge+A/B experiment on first available brownfield engagement. Gate 1 decision criteria pre-registered. Phase A: Silo (Survey) + Rune (Excavate) targeting engagement weeks 1-4. Phase B: Aria (Codify). Phase C: Sage (Validate) + Warden (Steward). Forge↔Gyre handoff contracts designed (FG-HC1: TKAs→Gyre contextual model, FG-HC2: RCAs→Gyre compliance, GF-HC1: Gyre gaps→Forge queue). Epic breakdown: 5 epics, ~5 sprints for Phase A. Module at `_bmad/bme/_forge/`. Discovery artifacts in `_bmad-output/vortex-artifacts/`. Planning artifacts: `convoke-ecosystem-vision.md`, `epics-forge-phase-a.md`, `forge-gyre-handoff-contract.md`. **Rune input:** Vendor/platform decision excavation identified as high-value template category — "why we chose vendor X" is tribal knowledge that disappears first and hurts most. Reference: ArcKit (`tractorjuice/arc-kit`) has vendor profiling, scoring, and 3-year TCO analysis patterns. | Validated demand from consulting teams. Vortex discovery: 2026-03-21 (complete). ADR-001: Task 4. ArcKit ref: 2026-03-22 | 9 | 3 | 90% | 8 | 3.0 | Move the needle | Blocked (needs Enhance + Vortex redesign). Discovery complete — ready for shadow engagement |
-| P14 | **Team Factory — Guided Team Creation Workflow** — Factory workflow enabling framework contributors to create BMAD-compliant teams. 3 epics: Architecture Reference (quality properties, validity checklists, context extension, Gyre/Vortex cross-validation), Guided Workflow (9 stories: discovery → generation → integration), Extensions (add agent/skill to existing teams). 16 stories total. All 3 epics complete (2026-03-25). Module validated with Gyre bidirectional validation (tf-1-4). PRD, architecture, and epics all complete. 136 automated tests, 7 JS modules, 6 step files. | Scaling initiative. Planning: 2026-03-23 | 8 | 3 | 90% | 6 | 3.6 | Move the needle | **Done — All 3 epics complete (16 stories, 136 tests). Initiative closed 2026-03-25.** |
 | P12 | **Enhance framework — Team Module Generator (BMB)** — Meta-tool that generates new Convoke team modules from templates. BMB module with 6-step workflow: Team Discovery, Agent Design, Contract Design, Workflow Design, Integration, Validation. Extracts templates from Vortex + Gyre E1 (two proven reference modules). Task 2 in ADR-001 sequence (variant C'). **MVP = Structural tier**: complete XML activation protocol with parameterized placeholders (not stubs, not LLM-generated). Staggered parallel: Gyre E1 → Enhance Steps 1-5 draft (+ `enhance-notes.md` rationale + dry-run dummy module) → Gyre E2a → Enhance template lock → Gyre E2b-E4 → Enhance final (+ dogfood exercise). Guard rails: template stability gate (2+ agents), config-driven doctor (file existence only — Red Team H3), no mid-story switching, MVP time-box (1 Gyre epic equivalent). Spike contingency: if Gyre Story 2.1 accuracy gate fails, Enhance templates remain valid (structural, not accuracy-dependent). **Deferred to backlog:** auto-compass-routing, smart template validation, generative content (LLM-generated personas/principles). ADR: `adr-enhance-gyre-build-sequencing.md` | ADR-001 (variant C'). Product vision | 8 | 3 | 80% | 6 | 3.2 | Move the needle | **Unblocked — Gyre complete, ready to start** |
 | P13 | **Vortex redesign** — Retroactively align Vortex to Enhance-codified patterns. Vortex *consumes* Enhance templates for validation — it must not feed them. Task 3 in ADR-001 sequence. Depends on Enhance template lock (Phase 4). Task sequencing lock: templates must be locked before this begins. | ADR-001. Task 3 | 7 | 2 | 70% | 4 | 2.5 | Move the needle | Blocked (needs Enhance template lock — Phase 4) |
 | P10 | **Capability Evaluation Framework** — Decision tool for ecosystem growth: skill→agent→team tiers with bidirectional promotion/demotion triggers. Overlap analysis template (Gyre pattern). Sentinel evaluated as proof-of-concept (result: 1 agent in Gyre, not standalone team). **Tier 1 (Skill) maps to Enhance module pattern** — new capabilities at skill tier are implemented as Enhance workflows patched onto existing agents (see `ENHANCE-GUIDE.md`). Framework document complete. Operationalize: integrate into team review process, link to friction logs. Artifact: `capability-evaluation-framework.md` | Ecosystem strategy session, 2026-03-21 | 7 | 2 | 80% | 2 | 5.6 | Move the needle | Backlog |
@@ -162,45 +159,46 @@ Remaining update system items not in Hardening: load-time validation, version de
 | 2 | P10 | Capability Evaluation Framework | 5.6 | Move the needle | Platform |
 | 3 | P11 | Friction log capture for consulting teams | 5.6 | Move the needle | Platform |
 | 4 | **U7** | **Changelog surface during update** | **4.3** | **Move the needle** | **Update System** |
-| 5 | **P1** | **Gyre team — Operational Readiness (Convoke team module)** | **3.6** | **Move the needle** | **Done** |
-| 6 | **P14** | **Team Factory — Guided Team Creation Workflow** | **3.6** | **Move the needle** | **Done** |
-| 7 | P12 | Enhance framework — Team Module Generator (BMB) | 3.2 | Move the needle | Unblocked |
-| 8 | **U8** | **Respect user agent exclusions on update** | **3.2** | **Move the needle** | **Update System** |
-| 9 | P9 | Forge team — Domain Knowledge Extraction (KORE) | 3.0 | Move the needle | Blocked |
-| 10 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
-| 11 | P13 | Vortex redesign (align to Enhance patterns) | 2.5 | Move the needle | Platform |
-| 12 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
-| 13 | T7 | Add Python linting to CI pipeline | 2.4 | Keep the lights on | Testing |
-| 14 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
-| 15 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
-| 16 | I4 | BMAD v6.2.1 convention alignment (3 specs) | 2.0 | Keep the lights on | **Done** |
-| 17 | **U9** | **Module-aware refresh and validation** | **1.9** | **Move the needle** | **Update System** |
-| 18 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
-| 19 | T8 | Standardize Python PEP 723 dependency declarations | 1.6 | Keep the lights on | Testing |
-| 20 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
-| 21 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
-| 22 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
-| 23 | I5 | Workflow output naming enforcement | 1.2 | Keep the lights on | Infrastructure |
-| 24 | P7 | ML/AI Engineering team exploration | 1.2 | Move the needle | Platform |
-| 25 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
-| 26 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
+| 5 | P12 | Enhance framework — Team Module Generator (BMB) | 3.2 | Move the needle | Unblocked |
+| 6 | **U8** | **Respect user agent exclusions on update** | **3.2** | **Move the needle** | **Update System** |
+| 7 | P9 | Forge team — Domain Knowledge Extraction (KORE) | 3.0 | Move the needle | Blocked |
+| 8 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
+| 9 | P13 | Vortex redesign (align to Enhance patterns) | 2.5 | Move the needle | Platform |
+| 10 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
+| 11 | T7 | Add Python linting to CI pipeline | 2.4 | Keep the lights on | Testing |
+| 12 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
+| 13 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
+| 14 | **U9** | **Module-aware refresh and validation** | **1.9** | **Move the needle** | **Update System** |
+| 15 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
+| 16 | I7 | Team Factory CSV quoting hardening | 1.8 | Keep the lights on | Infrastructure |
+| 17 | T8 | Standardize Python PEP 723 dependency declarations | 1.6 | Keep the lights on | Testing |
+| 18 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
+| 19 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
+| 20 | I9 | Registry writer idempotency drift detection | 1.4 | Keep the lights on | Infrastructure |
+| 21 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
+| 22 | I5 | Workflow output naming enforcement | 1.2 | Keep the lights on | Infrastructure |
+| 23 | P7 | ML/AI Engineering team exploration | 1.2 | Move the needle | Platform |
+| 24 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
+| 25 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
+| 26 | I10 | Config appender YAML comment preservation | 0.9 | Keep the lights on | Infrastructure |
 | 27 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
 | 28 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
 | 29 | I6 | Add `--verbose` flag to all CLI commands | 0.8 | Keep the lights on | Infrastructure |
 | 30 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
 | 31 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
 | 32 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
-| 33 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
-| 34 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
-| 35 | I11 | Registry Fragment Architecture (D-Q6) | 0.5 | Keep the lights on | Infrastructure |
-| 36 | I13 | Team Factory Express Mode | 0.5 | Keep the lights on | Infrastructure |
-| 37 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Unblocked |
-| 38 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
-| 39 | I12 | Validator.js hardcoded to Vortex paths | 0.4 | Keep the lights on | Infrastructure |
-| 40 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
-| 41 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
-| 42 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
-| 43 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
+| 33 | I8 | Team Factory write verification — value correctness | 0.6 | Keep the lights on | Infrastructure |
+| 34 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
+| 35 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
+| 36 | I11 | Registry Fragment Architecture (D-Q6) | 0.5 | Keep the lights on | Infrastructure |
+| 37 | I13 | Team Factory Express Mode | 0.5 | Keep the lights on | Infrastructure |
+| 38 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Unblocked |
+| 39 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
+| 40 | I12 | Validator.js hardcoded to Vortex paths | 0.4 | Keep the lights on | Infrastructure |
+| 41 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
+| 42 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
+| 43 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
+| 44 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
 
 ---
 
@@ -211,6 +209,13 @@ Remaining update system items not in Hardening: load-time validation, version de
 | # | Initiative | Score | Category |
 |---|-----------|-------|----------|
 | P14 | **Team Factory — Guided Team Creation Workflow** — 3 epics, 16 stories, 136 tests. Create teams, add agents, add skills — all fully wired with validation. | 3.6 | Platform |
+| I4 | **BMAD v6.2.1 convention alignment** — 3 specced work items: skill validator for Team Factory pipeline, `tech-spec` → `spec` rename across 28 files, dead `default-party.csv` cleanup. | 2.0 | Infrastructure |
+
+### 2026-03-24
+
+| # | Initiative | Score | Category |
+|---|-----------|-------|----------|
+| P1 | **Gyre team — Operational Readiness (Convoke team module)** — 4 epics, 25 stories, 528+ subtasks. 4 agents (Scout, Atlas, Lens, Coach), 4 contracts, 7 workflows. Full pipeline validated. Vortex discovery complete (all 7 streams). | 3.6 | Platform |
 
 ### 2026-03-16
 
