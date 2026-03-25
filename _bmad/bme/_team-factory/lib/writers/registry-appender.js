@@ -225,8 +225,128 @@ function fail(errors) {
   return { success: false, written: [], skipped: [], errors, rollbackApplied: false };
 }
 
+/**
+ * Append a new workflow entry to an existing team's WORKFLOWS array in agent-registry.js.
+ * Uses Full Write Safety Protocol: stage → validate → check → apply → verify → rollback.
+ *
+ * @param {string} teamNameKebab - Existing team (e.g., "gyre")
+ * @param {string} workflowName - Workflow name (kebab-case, e.g., "data-analysis")
+ * @param {string} agentId - Agent ID this workflow belongs to (e.g., "stack-detective")
+ * @param {string} registryPath - Absolute path to agent-registry.js
+ * @param {Object} [options]
+ * @param {boolean} [options.skipDirtyCheck] - Skip git dirty-tree detection (for tests)
+ * @returns {Promise<RegistryResult>}
+ */
+async function appendWorkflowToBlock(teamNameKebab, workflowName, agentId, registryPath, options = {}) {
+  if (!teamNameKebab || !teamNameKebab.trim()) {
+    return fail(['teamNameKebab is required and must not be empty']);
+  }
+  if (!workflowName || !workflowName.trim()) {
+    return fail(['workflowName is required and must not be empty']);
+  }
+  if (!agentId || !agentId.trim()) {
+    return fail(['agentId is required and must not be empty']);
+  }
+
+  const prefix = derivePrefix(teamNameKebab);
+
+  // --- Read current content ---
+  let currentContent;
+  try {
+    currentContent = await fs.readFile(registryPath, 'utf8');
+  } catch (err) {
+    return fail([`Cannot read registry file: ${err.message}`]);
+  }
+
+  // --- 1. STAGE: Locate existing block and build new entry ---
+  const workflowsVarName = `${prefix}_WORKFLOWS`;
+  if (!currentContent.includes(`const ${workflowsVarName}`)) {
+    return fail([`Team block not found: const ${workflowsVarName} does not exist in registry`]);
+  }
+
+  // Check duplicate workflow entry
+  const nameLiteral = `name: '${escapeSingleQuotes(workflowName)}'`;
+  if (currentContent.includes(nameLiteral)) {
+    return { success: true, written: [], skipped: ['workflow already exists in block'], errors: [], rollbackApplied: false };
+  }
+
+  // --- 2. VALIDATE: Structural checks ---
+  const arrayStart = currentContent.indexOf(`const ${workflowsVarName} = [`);
+  if (arrayStart === -1) {
+    return fail([`Cannot parse ${workflowsVarName} array start`]);
+  }
+
+  const closingBracket = findArrayClose(currentContent, arrayStart);
+  if (closingBracket === -1) {
+    return fail([`Cannot find closing ]; for ${workflowsVarName}`]);
+  }
+
+  // --- 3. CHECK: Dirty-tree detection ---
+  if (!options.skipDirtyCheck) {
+    const dirtyResult = checkDirtyTree(registryPath);
+    if (dirtyResult.dirty) {
+      return { success: false, written: [], skipped: [], errors: [], rollbackApplied: false, dirty: true, diff: dirtyResult.diff };
+    }
+  }
+
+  // --- 4. APPLY: Insert new entry before closing ]; ---
+  const bakPath = `${registryPath}.bak`;
+  if (await fs.pathExists(bakPath)) {
+    return fail(['Stale .bak file exists — a previous run may have crashed. Remove it manually before retrying.']);
+  }
+
+  try {
+    await fs.writeFile(bakPath, currentContent, 'utf8');
+  } catch (err) {
+    return fail([`Failed to create backup: ${err.message}`]);
+  }
+
+  // Build workflow entry line
+  const entryLine = `  { name: '${escapeSingleQuotes(workflowName)}', agent: '${escapeSingleQuotes(agentId)}' },`;
+
+  const before = currentContent.slice(0, closingBracket);
+  const after = currentContent.slice(closingBracket);
+  const modified = before + entryLine + '\n' + after;
+
+  try {
+    await fs.writeFile(registryPath, modified, 'utf8');
+  } catch (err) {
+    await fs.writeFile(registryPath, currentContent, 'utf8');
+    await fs.remove(bakPath);
+    return { success: false, written: [], skipped: [], errors: [`Write failed: ${err.message}`], rollbackApplied: true };
+  }
+
+  // --- 5. VERIFY: Re-read + node require() ---
+  const verifyError = verifyRequire(registryPath);
+  if (verifyError) {
+    await fs.writeFile(registryPath, currentContent, 'utf8');
+    await fs.remove(bakPath);
+    return { success: false, written: [], skipped: [], errors: [verifyError], rollbackApplied: true };
+  }
+
+  // Verify new workflow appears in the file
+  const verifyContent = await fs.readFile(registryPath, 'utf8');
+  if (!verifyContent.includes(nameLiteral)) {
+    await fs.writeFile(registryPath, currentContent, 'utf8');
+    await fs.remove(bakPath);
+    return { success: false, written: [], skipped: [], errors: ['Post-write verification: new workflow entry not found'], rollbackApplied: true };
+  }
+
+  // --- Cleanup ---
+  await fs.remove(bakPath);
+
+  return {
+    success: true,
+    written: [workflowName],
+    skipped: [],
+    errors: [],
+    rollbackApplied: false,
+  };
+}
+
 module.exports = {
   appendAgentToBlock,
+  appendWorkflowToBlock,
   formatAgentEntry,
   findArrayClose,
 };
