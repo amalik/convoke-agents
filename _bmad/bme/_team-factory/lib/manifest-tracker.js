@@ -162,9 +162,53 @@ function buildExtensionManifest(extensionContext) {
   return entries;
 }
 
+/**
+ * Build a file manifest for a skill/workflow extension (add workflow to existing agent).
+ * New workflow files are "created"; agent .md, config, CSV, and registry are "modified".
+ *
+ * @param {Object} skillContext
+ * @param {string} skillContext.new_workflow_name - New workflow name (for module label)
+ * @param {string} skillContext.agent_id - Target agent ID
+ * @param {string[]} skillContext.new_workflow_files - New workflow file paths (workflow.md, template)
+ * @param {string} [skillContext.agent_file_path] - Agent .md file path (modified for menu)
+ * @param {string} skillContext.config_yaml_path - Path to config.yaml (modified)
+ * @param {string} skillContext.module_help_csv_path - Path to module-help.csv (modified)
+ * @returns {ManifestEntry[]}
+ */
+function buildSkillExtensionManifest(skillContext) {
+  const entries = [];
+  const moduleName = skillContext.new_workflow_name || 'unknown-workflow';
+
+  // New workflow files — created
+  for (const wfFile of (skillContext.new_workflow_files || [])) {
+    entries.push({ path: wfFile, operation: 'created', module: moduleName });
+  }
+
+  // Agent .md file — modified (menu item added)
+  if (skillContext.agent_file_path) {
+    entries.push({ path: skillContext.agent_file_path, operation: 'modified', module: moduleName });
+  }
+
+  // Config.yaml — modified (workflow appended)
+  if (skillContext.config_yaml_path) {
+    entries.push({ path: skillContext.config_yaml_path, operation: 'modified', module: moduleName });
+  }
+
+  // Module-help.csv — modified (row appended)
+  if (skillContext.module_help_csv_path) {
+    entries.push({ path: skillContext.module_help_csv_path, operation: 'modified', module: moduleName });
+  }
+
+  // agent-registry.js — modified (workflow appended to existing block)
+  entries.push({ path: 'scripts/update/lib/agent-registry.js', operation: 'modified', module: moduleName });
+
+  return entries;
+}
+
 module.exports = {
   buildManifest,
   buildExtensionManifest,
+  buildSkillExtensionManifest,
   formatManifest,
   formatAbortInstructions,
 };
