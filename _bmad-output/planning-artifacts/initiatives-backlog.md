@@ -32,6 +32,9 @@
 
 | # | Initiative | Source | R | I | C | E | Score | Track | Status |
 |---|-----------|--------|---|---|---|---|-------|-------|--------|
+| U7 | **Changelog surface during update** — `convoke-update` shows only migration names and breaking change flags. CHANGELOG.md exists but is never read by the CLI. Add structured `changelogSection` metadata to migration registry entries (added/changed/fixed arrays). Parse CHANGELOG.md on demand and display version-specific feature highlights before the user confirmation prompt. Users see value ("Gyre team added — 4 new agents") not just mechanics ("3 migrations to apply"). Reduces update anxiety and improves trust for big releases. | Winston adoption review, 2026-03-25 | 8 | 2 | 80% | 3 | 4.3 | Move the needle | Backlog |
+| U8 | **Respect user agent exclusions on update** — `config-merger.js` (line 57-65) explicitly restores any canonical agent the user deleted on every upgrade. No opt-out mechanism exists. Add `excluded_agents: []` field to config.yaml schema. Update `mergeConfig()` to filter excluded agents after canonical restoration. Update validator, refresh-installation (skip skill wrappers for excluded agents), and convoke-doctor (report exclusions). Users get permanent agent customization that survives updates. | Winston adoption review, 2026-03-25 | 6 | 2 | 80% | 3 | 3.2 | Move the needle | Backlog |
+| U9 | **Module-aware refresh and validation** — `refreshInstallation()` copies Vortex unconditionally, and copies Gyre/Enhance based on package directory existence (not project installation state). If package ships Gyre but user never installed it, files get copied anyway. Validator checks all Vortex agents unconditionally; Gyre has no dedicated validation. Create `_bmad/_config/modules-manifest.yaml` as explicit module registry (installed modules + version + enabled flag). Make refresh and validation conditional on manifest. Update installers to register modules. Add backward-compat migration to auto-generate manifest from filesystem state. | Winston adoption review, 2026-03-25 | 8 | 2 | 70% | 6 | 1.9 | Move the needle | Backlog |
 | U4 | **Test upgrade-path step file cleanup** — Integration test simulating real upgrade with renamed step files. Note: v6.2.0 renamed entire directories (`code-review/` → `bmad-code-review/`), not just step files — scope is broader than originally described. | Murat review (M2) | 3 | 1 | 90% | 2 | 1.4 | Keep the lights on | Backlog |
 | U2 | **Validate migration modules at load time** — Fail fast if a migration module lacks `apply()` instead of crashing at execution | Murat review | 2 | 0.5 | 80% | 1 | 0.8 | Keep the lights on | Backlog |
 | U3 | **Robust version detection fallback** — Improve `guessVersionFromFileStructure()` with more markers (agent files, config presence) | Winston review (W3) | 3 | 0.5 | 60% | 2 | 0.5 | Keep the lights on | Backlog |
@@ -122,6 +125,9 @@ Initiatives that should be bundled together for efficient delivery:
 ### Epic: "First Impression" (D7 + D5 + D1 + D2 + S1)
 Improve the first-time user experience from README visuals to first workflow completion. D7 and D5 are quick wins; D1 and D2 add depth; S1 is the higher-effort anchor.
 
+### Epic: "Update Experience for Adoption" (U7 + U8 + U9)
+Reduce update friction that hurts adoption on big releases. U7 (changelog surface, score 4.3) shows users what's new — highest leverage, lowest effort. U8 (agent exclusions, score 3.2) respects user customization across upgrades. U9 (module-aware refresh, score 1.9) scopes updates to installed modules only — highest effort but essential as module count grows. Sequencing: U7 first (standalone), then U8 (config schema change), then U9 (depends on U8 schema patterns).
+
 ### Epic: "Update System Hardening" (U1 + U4 + T3 + T4)
 Harden the migration and update system with idempotency checks and integration tests.
 
@@ -155,43 +161,46 @@ Remaining update system items not in Hardening: load-time validation, version de
 | 1 | **T6** | **Add Python test execution to CI pipeline** | **14.4** | **Keep the lights on** | **Testing** |
 | 2 | P10 | Capability Evaluation Framework | 5.6 | Move the needle | Platform |
 | 3 | P11 | Friction log capture for consulting teams | 5.6 | Move the needle | Platform |
-| 4 | **P1** | **Gyre team — Operational Readiness (Convoke team module)** | **3.6** | **Move the needle** | **Done** |
-| 5 | **P14** | **Team Factory — Guided Team Creation Workflow** | **3.6** | **Move the needle** | **Done** |
-| 6 | P12 | Enhance framework — Team Module Generator (BMB) | 3.2 | Move the needle | Unblocked |
-| 7 | P9 | Forge team — Domain Knowledge Extraction (KORE) | 3.0 | Move the needle | Blocked |
-| 8 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
-| 9 | P13 | Vortex redesign (align to Enhance patterns) | 2.5 | Move the needle | Platform |
-| 10 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
-| 11 | T7 | Add Python linting to CI pipeline | 2.4 | Keep the lights on | Testing |
-| 12 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
-| 13 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
-| 14 | I4 | BMAD v6.2.1 convention alignment (3 specs) | 2.0 | Keep the lights on | **Done** |
-| 15 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
-| 16 | T8 | Standardize Python PEP 723 dependency declarations | 1.6 | Keep the lights on | Testing |
-| 17 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
-| 18 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
-| 19 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
-| 20 | I5 | Workflow output naming enforcement | 1.2 | Keep the lights on | Infrastructure |
-| 21 | P7 | ML/AI Engineering team exploration | 1.2 | Move the needle | Platform |
-| 22 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
-| 23 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
-| 24 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
-| 25 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
-| 26 | I6 | Add `--verbose` flag to all CLI commands | 0.8 | Keep the lights on | Infrastructure |
-| 27 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
-| 28 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
-| 29 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
-| 30 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
-| 31 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
-| 32 | I11 | Registry Fragment Architecture (D-Q6) | 0.5 | Keep the lights on | Infrastructure |
-| 33 | I13 | Team Factory Express Mode | 0.5 | Keep the lights on | Infrastructure |
-| 34 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Unblocked |
-| 35 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
-| 36 | I12 | Validator.js hardcoded to Vortex paths | 0.4 | Keep the lights on | Infrastructure |
-| 37 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
-| 38 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
-| 39 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
-| 40 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
+| 4 | **U7** | **Changelog surface during update** | **4.3** | **Move the needle** | **Update System** |
+| 5 | **P1** | **Gyre team — Operational Readiness (Convoke team module)** | **3.6** | **Move the needle** | **Done** |
+| 6 | **P14** | **Team Factory — Guided Team Creation Workflow** | **3.6** | **Move the needle** | **Done** |
+| 7 | P12 | Enhance framework — Team Module Generator (BMB) | 3.2 | Move the needle | Unblocked |
+| 8 | **U8** | **Respect user agent exclusions on update** | **3.2** | **Move the needle** | **Update System** |
+| 9 | P9 | Forge team — Domain Knowledge Extraction (KORE) | 3.0 | Move the needle | Blocked |
+| 10 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
+| 11 | P13 | Vortex redesign (align to Enhance patterns) | 2.5 | Move the needle | Platform |
+| 12 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
+| 13 | T7 | Add Python linting to CI pipeline | 2.4 | Keep the lights on | Testing |
+| 14 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
+| 15 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
+| 16 | I4 | BMAD v6.2.1 convention alignment (3 specs) | 2.0 | Keep the lights on | **Done** |
+| 17 | **U9** | **Module-aware refresh and validation** | **1.9** | **Move the needle** | **Update System** |
+| 18 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
+| 19 | T8 | Standardize Python PEP 723 dependency declarations | 1.6 | Keep the lights on | Testing |
+| 20 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
+| 21 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
+| 22 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
+| 23 | I5 | Workflow output naming enforcement | 1.2 | Keep the lights on | Infrastructure |
+| 24 | P7 | ML/AI Engineering team exploration | 1.2 | Move the needle | Platform |
+| 25 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
+| 26 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
+| 27 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
+| 28 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
+| 29 | I6 | Add `--verbose` flag to all CLI commands | 0.8 | Keep the lights on | Infrastructure |
+| 30 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
+| 31 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
+| 32 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
+| 33 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
+| 34 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
+| 35 | I11 | Registry Fragment Architecture (D-Q6) | 0.5 | Keep the lights on | Infrastructure |
+| 36 | I13 | Team Factory Express Mode | 0.5 | Keep the lights on | Infrastructure |
+| 37 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Unblocked |
+| 38 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
+| 39 | I12 | Validator.js hardcoded to Vortex paths | 0.4 | Keep the lights on | Infrastructure |
+| 40 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
+| 41 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
+| 42 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
+| 43 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
 
 ---
 
@@ -246,6 +255,7 @@ Remaining update system items not in Hardening: load-time validation, version de
 
 | Date | Change |
 |------|--------|
+| 2026-03-25 | Winston adoption review: Added U7 (Changelog surface during update, score 4.3 — rank #4), U8 (Respect user agent exclusions, score 3.2 — rank #8), U9 (Module-aware refresh and validation, score 1.9 — rank #17). New epic grouping "Update Experience for Adoption" (U7+U8+U9). Sequencing: U7 first (standalone, highest leverage), U8 (config schema), U9 (highest effort, depends on U8 patterns). Source: user-reported update friction on big releases affecting adoption. 43 ranked items. |
 | 2026-03-25 | Gyre delta analysis: Added T6 (Python CI test execution, score 14.4 — **blocker**, now rank #1), T7 (Python linting, score 2.4), T8 (PEP 723 dep standardization, score 1.6). New epic grouping "Python CI Parity" (T6+T7+T8). Source: Gyre team expanded model from 21→29 capabilities, added dual-language and agent-framework domains. Stack profile updated: Python confirmed as secondary stack (46 files, 33% of codebase). DL-003 revised from recommended→nice-to-have after discovering PEP 723 inline metadata already in use. 40 ranked items. |
 | 2026-03-25 | tf-epic-3 retrospective: P14 (Team Factory) marked Done — all 3 epics complete (16 stories, 136 tests). Added I11 (Registry Fragment Architecture D-Q6, score 0.5), I12 (Validator.js Vortex hardcoding, score 0.4), I13 (Team Factory Express Mode, score 0.5) — all carried forward from tf-epic-1/2/3 retros. Prioritized view updated (37 items). Platform Foundation epic grouping updated. |
 | 2026-03-24 | I4 expanded from v6.2.0 to v6.2.1 scope (Winston analysis). Three specs drafted: (a) `spec-skill-validator-team-factory.md` — new `validateSkill()` quality gate for Team Factory, 7 tasks; (b) `spec-tech-spec-to-spec-rename.md` — rename tech-spec prefix to spec across 28 files in BMM/TEA, 9 tasks; (c) `spec-party-roster-cleanup.md` — remove 3 dead `default-party.csv` files, 5 tasks. RICE re-scored: R 4→6, I 1→1.5, E 2→4, score 1.8→2.0. Status: Backlog→Specced. |
