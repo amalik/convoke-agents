@@ -174,12 +174,15 @@ Remaining update system items not in Hardening: load-time validation, version de
 | 26 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
 | 27 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
 | 28 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
-| 29 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Unblocked |
-| 30 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
-| 31 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
-| 32 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
-| 33 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
-| 34 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
+| 29 | I11 | Registry Fragment Architecture (D-Q6) | 0.5 | Keep the lights on | Infrastructure |
+| 30 | I13 | Team Factory Express Mode | 0.5 | Keep the lights on | Infrastructure |
+| 31 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Unblocked |
+| 32 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
+| 33 | I12 | Validator.js hardcoded to Vortex paths | 0.4 | Keep the lights on | Infrastructure |
+| 34 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
+| 35 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
+| 36 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
+| 37 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
 
 ---
 
