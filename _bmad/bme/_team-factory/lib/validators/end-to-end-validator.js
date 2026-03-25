@@ -504,12 +504,10 @@ function checkExistingAgentsRegistry(ctx, projectRoot) {
   }
 
   const content = fs.readFileSync(registryPath, 'utf8');
-  // Only check agents that are actually present in the registry (team may be in a different context)
   const existingIds = (ctx.existing_agent_ids || []);
-  const registeredIds = existingIds.filter(id => content.includes(`id: '${id}'`));
 
-  // If none of the existing agents were in the registry to begin with, skip gracefully
-  if (registeredIds.length === 0 && existingIds.length > 0) {
+  // If none of the existing agents appear in the registry, they are team-local only — skip gracefully
+  if (existingIds.length > 0 && existingIds.every(id => !content.includes(`id: '${id}'`))) {
     return {
       name: 'EXISTING-AGENTS-REGISTRY',
       stepName: 'extension-regression',
@@ -519,7 +517,8 @@ function checkExistingAgentsRegistry(ctx, projectRoot) {
     };
   }
 
-  const missing = registeredIds.filter(id => !content.includes(`id: '${id}'`));
+  // Check each existing agent that IS in the registry — it must still be there
+  const missing = existingIds.filter(id => !content.includes(`id: '${id}'`));
   return {
     name: 'EXISTING-AGENTS-REGISTRY',
     stepName: 'extension-regression',
@@ -747,10 +746,9 @@ function checkExistingWorkflowsRegistry(ctx, projectRoot) {
 
   const content = fs.readFileSync(registryPath, 'utf8');
   const existingNames = (ctx.existing_workflow_names || []);
-  const registeredNames = existingNames.filter(n => content.includes(`name: '${n}'`));
 
-  // If none of the existing workflows were in the registry, skip gracefully
-  if (registeredNames.length === 0 && existingNames.length > 0) {
+  // If none of the existing workflows appear in the registry, they are team-local only — skip gracefully
+  if (existingNames.length > 0 && existingNames.every(n => !content.includes(`name: '${n}'`))) {
     return {
       name: 'EXISTING-WORKFLOWS-REGISTRY',
       stepName: 'skill-extension-regression',
@@ -760,7 +758,8 @@ function checkExistingWorkflowsRegistry(ctx, projectRoot) {
     };
   }
 
-  const missing = registeredNames.filter(n => !content.includes(`name: '${n}'`));
+  // Check each existing workflow that IS in the registry — it must still be there
+  const missing = existingNames.filter(n => !content.includes(`name: '${n}'`));
   return {
     name: 'EXISTING-WORKFLOWS-REGISTRY',
     stepName: 'skill-extension-regression',
