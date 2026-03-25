@@ -5,7 +5,7 @@ const fs = require('fs-extra');
 const os = require('os');
 const yaml = require('js-yaml');
 
-const { appendConfigAgent } = require('../../_bmad/bme/_team-factory/lib/writers/config-appender');
+const { appendConfigAgent, appendConfigWorkflow } = require('../../_bmad/bme/_team-factory/lib/writers/config-appender');
 
 function buildTestConfig() {
   return {
@@ -152,5 +152,81 @@ describe('appendConfigAgent — atomic write', () => {
     await appendConfigAgent('gamma-guardian', configPath);
 
     assert.equal(await fs.pathExists(configPath + '.tmp'), false);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// appendConfigWorkflow tests
+// ══════════════════════════════════════════════════════════════════════
+
+describe('appendConfigWorkflow — happy path', () => {
+  let tmpDir, configPath;
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-cfgwf-'));
+    configPath = path.join(tmpDir, 'config.yaml');
+    await fs.writeFile(configPath, yaml.dump(buildTestConfig()), 'utf8');
+  });
+
+  after(async () => { await fs.remove(tmpDir); });
+
+  it('appends new workflow to config workflows array', async () => {
+    const result = await appendConfigWorkflow('new-analysis', configPath);
+
+    assert.equal(result.success, true);
+    assert.deepEqual(result.errors, []);
+
+    const config = yaml.load(await fs.readFile(configPath, 'utf8'));
+    assert.ok(config.workflows.includes('new-analysis'));
+    assert.ok(config.workflows.includes('data-analysis'), 'existing workflows preserved');
+    assert.ok(config.workflows.includes('component-building'), 'existing workflows preserved');
+    assert.equal(config.workflows.length, 3);
+  });
+});
+
+describe('appendConfigWorkflow — idempotency', () => {
+  let tmpDir, configPath;
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-cfgwf-'));
+    configPath = path.join(tmpDir, 'config.yaml');
+    await fs.writeFile(configPath, yaml.dump(buildTestConfig()), 'utf8');
+  });
+
+  after(async () => { await fs.remove(tmpDir); });
+
+  it('skips when workflow already in config', async () => {
+    const result = await appendConfigWorkflow('data-analysis', configPath);
+
+    assert.equal(result.success, true);
+    assert.equal(result.skipped, 'workflow already in config');
+  });
+});
+
+describe('appendConfigWorkflow — missing workflows array', () => {
+  let tmpDir, configPath;
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-cfgwf-'));
+    configPath = path.join(tmpDir, 'config.yaml');
+    await fs.writeFile(configPath, yaml.dump({ submodule_name: '_test', agents: [] }), 'utf8');
+  });
+
+  after(async () => { await fs.remove(tmpDir); });
+
+  it('fails when workflows array is missing', async () => {
+    const result = await appendConfigWorkflow('new-analysis', configPath);
+
+    assert.equal(result.success, false);
+    assert.ok(result.errors[0].includes('missing workflows array'));
+  });
+});
+
+describe('appendConfigWorkflow — input validation', () => {
+  it('fails with empty workflow name', async () => {
+    const result = await appendConfigWorkflow('', '/fake/path');
+
+    assert.equal(result.success, false);
+    assert.ok(result.errors[0].includes('newWorkflowName is required'));
   });
 });
