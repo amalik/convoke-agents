@@ -172,26 +172,26 @@ Remaining update system items not in Hardening: load-time validation, version de
 | 18 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
 | 19 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
 | 20 | I5 | Workflow output naming enforcement | 1.2 | Keep the lights on | Infrastructure |
-| 18 | P7 | ML/AI Engineering team exploration | 1.2 | Move the needle | Platform |
-| 19 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
-| 20 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
-| 21 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
-| 22 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
-| 23 | I6 | Add `--verbose` flag to all CLI commands | 0.8 | Keep the lights on | Infrastructure |
-| 24 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
-| 25 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
-| 26 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
-| 27 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
-| 28 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
-| 29 | I11 | Registry Fragment Architecture (D-Q6) | 0.5 | Keep the lights on | Infrastructure |
-| 30 | I13 | Team Factory Express Mode | 0.5 | Keep the lights on | Infrastructure |
-| 31 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Unblocked |
-| 32 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
-| 33 | I12 | Validator.js hardcoded to Vortex paths | 0.4 | Keep the lights on | Infrastructure |
-| 34 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
-| 35 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
-| 36 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
-| 37 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
+| 21 | P7 | ML/AI Engineering team exploration | 1.2 | Move the needle | Platform |
+| 22 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
+| 23 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
+| 24 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
+| 25 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
+| 26 | I6 | Add `--verbose` flag to all CLI commands | 0.8 | Keep the lights on | Infrastructure |
+| 27 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
+| 28 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
+| 29 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
+| 30 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
+| 31 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
+| 32 | I11 | Registry Fragment Architecture (D-Q6) | 0.5 | Keep the lights on | Infrastructure |
+| 33 | I13 | Team Factory Express Mode | 0.5 | Keep the lights on | Infrastructure |
+| 34 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Unblocked |
+| 35 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
+| 36 | I12 | Validator.js hardcoded to Vortex paths | 0.4 | Keep the lights on | Infrastructure |
+| 37 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
+| 38 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
+| 39 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
+| 40 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
 
 ---
 
@@ -246,6 +246,7 @@ Remaining update system items not in Hardening: load-time validation, version de
 
 | Date | Change |
 |------|--------|
+| 2026-03-25 | Gyre delta analysis: Added T6 (Python CI test execution, score 14.4 — **blocker**, now rank #1), T7 (Python linting, score 2.4), T8 (PEP 723 dep standardization, score 1.6). New epic grouping "Python CI Parity" (T6+T7+T8). Source: Gyre team expanded model from 21→29 capabilities, added dual-language and agent-framework domains. Stack profile updated: Python confirmed as secondary stack (46 files, 33% of codebase). DL-003 revised from recommended→nice-to-have after discovering PEP 723 inline metadata already in use. 40 ranked items. |
 | 2026-03-25 | tf-epic-3 retrospective: P14 (Team Factory) marked Done — all 3 epics complete (16 stories, 136 tests). Added I11 (Registry Fragment Architecture D-Q6, score 0.5), I12 (Validator.js Vortex hardcoding, score 0.4), I13 (Team Factory Express Mode, score 0.5) — all carried forward from tf-epic-1/2/3 retros. Prioritized view updated (37 items). Platform Foundation epic grouping updated. |
 | 2026-03-24 | I4 expanded from v6.2.0 to v6.2.1 scope (Winston analysis). Three specs drafted: (a) `spec-skill-validator-team-factory.md` — new `validateSkill()` quality gate for Team Factory, 7 tasks; (b) `spec-tech-spec-to-spec-rename.md` — rename tech-spec prefix to spec across 28 files in BMM/TEA, 9 tasks; (c) `spec-party-roster-cleanup.md` — remove 3 dead `default-party.csv` files, 5 tasks. RICE re-scored: R 4→6, I 1→1.5, E 2→4, score 1.8→2.0. Status: Backlog→Specced. |
 | 2026-03-22 | ArcKit competitive analysis (Winston). Added 2 exploration candidates: W1 (Wardley Mapping as shared capability — cross-team strategic lens, evaluate via P10 Capability Evaluation Framework), W2 (Pre-write artifact validation hooks — infrastructure-level quality enforcement via Claude Code hooks). Added reference notes: P1 updated with ArcKit compliance template exemplars for Gyre v2 Compliance & Security domain, P9 updated with vendor/platform decision excavation as Rune template category. Source: `tractorjuice/arc-kit` (Enterprise Architecture Governance toolkit, MIT, 64 commands, 58 templates, 21 hooks). 32 scored items + 9 exploration candidates. |
