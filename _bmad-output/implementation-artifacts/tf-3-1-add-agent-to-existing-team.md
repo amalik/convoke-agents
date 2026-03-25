@@ -234,11 +234,45 @@ If registry write succeeds but config write fails:
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6
 
 ### Debug Log References
+N/A — all tests passed on first run
 
 ### Completion Notes List
+- All 3 appender modules follow the safety protocol tiers from the retro team agreement
+- `findArrayClose()` bracket-depth parser handles nested objects, strings with brackets, escaped characters
+- Extension validator reuses regression checks from team validator (REGISTRY-REGRESSION, VORTEX-REGRESSION)
+- `buildExtensionManifest` correctly marks config/csv/registry as "modified" (not "created")
+- Route 2 in step-00-route.md updated from "not yet available" to "available"
+- No golden files needed updating — extension tests use their own fixtures
 
 ### Change Log
+- Created `_bmad/bme/_team-factory/lib/writers/registry-appender.js` (219 lines)
+- Created `_bmad/bme/_team-factory/lib/writers/config-appender.js` (78 lines)
+- Created `_bmad/bme/_team-factory/lib/writers/csv-appender.js` (108 lines)
+- Created `tests/team-factory/registry-appender.test.js` (8 tests)
+- Created `tests/team-factory/config-appender.test.js` (7 tests)
+- Created `tests/team-factory/csv-appender.test.js` (7 tests)
+- Created `tests/team-factory/extension-validator.test.js` (8 tests)
+- Modified `_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js` — added `validateExtension()`
+- Modified `_bmad/bme/_team-factory/lib/manifest-tracker.js` — added `buildExtensionManifest()`
+- Modified `tests/team-factory/manifest-tracker.test.js` — added 4 extension manifest tests
+- Created `.claude/skills/bmad-team-factory/step-add-agent.md` (gitignored)
+- Modified `.claude/skills/bmad-team-factory/workflow.md` — added Step A route
+- Modified `.claude/skills/bmad-team-factory/step-00-route.md` — Route 2 now available
 
 ### File List
+- `_bmad/bme/_team-factory/lib/writers/registry-appender.js`
+- `_bmad/bme/_team-factory/lib/writers/config-appender.js`
+- `_bmad/bme/_team-factory/lib/writers/csv-appender.js`
+- `_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js`
+- `_bmad/bme/_team-factory/lib/manifest-tracker.js`
+- `tests/team-factory/registry-appender.test.js`
+- `tests/team-factory/config-appender.test.js`
+- `tests/team-factory/csv-appender.test.js`
+- `tests/team-factory/extension-validator.test.js`
+- `tests/team-factory/manifest-tracker.test.js`
+- `.claude/skills/bmad-team-factory/step-add-agent.md`
+- `.claude/skills/bmad-team-factory/workflow.md`
+- `.claude/skills/bmad-team-factory/step-00-route.md`
