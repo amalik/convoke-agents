@@ -113,8 +113,58 @@ function formatAbortInstructions(entries) {
   return lines.join('\n');
 }
 
+/**
+ * Build a file manifest for an extension operation (add agent to existing team).
+ * New agent/workflow/contract files are "created"; config, CSV, and registry are "modified".
+ *
+ * @param {Object} extensionContext
+ * @param {string} extensionContext.new_agent_id - New agent ID (for module label)
+ * @param {string[]} extensionContext.new_agent_files - New agent .md file paths
+ * @param {string[]} extensionContext.new_workflow_dirs - New workflow directory paths
+ * @param {string[]} [extensionContext.new_contract_files] - New contract file paths
+ * @param {string} extensionContext.config_yaml_path - Path to config.yaml (modified)
+ * @param {string} extensionContext.module_help_csv_path - Path to module-help.csv (modified)
+ * @returns {ManifestEntry[]}
+ */
+function buildExtensionManifest(extensionContext) {
+  const entries = [];
+  const moduleName = extensionContext.new_agent_id || 'unknown-agent';
+
+  // New agent files — created
+  for (const agentFile of (extensionContext.new_agent_files || [])) {
+    entries.push({ path: agentFile, operation: 'created', module: moduleName });
+  }
+
+  // New workflow directories — each gets workflow.md and SKILL.md
+  for (const wfDir of (extensionContext.new_workflow_dirs || [])) {
+    entries.push({ path: path.join(wfDir, 'workflow.md'), operation: 'created', module: moduleName });
+    entries.push({ path: path.join(wfDir, 'SKILL.md'), operation: 'created', module: moduleName });
+  }
+
+  // New contract files — created
+  for (const contractFile of (extensionContext.new_contract_files || [])) {
+    entries.push({ path: contractFile, operation: 'created', module: moduleName });
+  }
+
+  // Config.yaml — modified (agent appended)
+  if (extensionContext.config_yaml_path) {
+    entries.push({ path: extensionContext.config_yaml_path, operation: 'modified', module: moduleName });
+  }
+
+  // Module-help.csv — modified (row appended)
+  if (extensionContext.module_help_csv_path) {
+    entries.push({ path: extensionContext.module_help_csv_path, operation: 'modified', module: moduleName });
+  }
+
+  // agent-registry.js — modified (agent appended to existing block)
+  entries.push({ path: 'scripts/update/lib/agent-registry.js', operation: 'modified', module: moduleName });
+
+  return entries;
+}
+
 module.exports = {
   buildManifest,
+  buildExtensionManifest,
   formatManifest,
   formatAbortInstructions,
 };
