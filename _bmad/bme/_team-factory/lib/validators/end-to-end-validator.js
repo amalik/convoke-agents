@@ -317,6 +317,243 @@ async function checkVortexRegression(projectRoot) {
   }
 }
 
+// ── Extension validation ──────────────────────────────────────────────
+
+/**
+ * Run end-to-end validation on an agent extension (add-agent-to-existing-team).
+ *
+ * Checks: append results (registry, config, CSV), structural (new agent files,
+ * new workflow dirs), regression (existing agents unchanged, registry require).
+ *
+ * @param {Object} extensionContext - Context from the add-agent workflow
+ * @param {string} extensionContext.new_agent_id - New agent ID
+ * @param {string[]} extensionContext.existing_agent_ids - Existing agent IDs to verify unchanged
+ * @param {string[]} extensionContext.new_agent_files - New agent .md file paths
+ * @param {string[]} extensionContext.new_workflow_dirs - New workflow directory paths
+ * @param {string[]} [extensionContext.new_contract_files] - New contract file paths
+ * @param {string} extensionContext.config_yaml_path - Path to config.yaml
+ * @param {string} extensionContext.module_help_csv_path - Path to module-help.csv
+ * @param {Object} extensionContext.registry_append_result - Result from appendAgentToBlock
+ * @param {Object} extensionContext.config_append_result - Result from appendConfigAgent
+ * @param {Object} extensionContext.csv_append_result - Result from appendCsvRow
+ * @param {string} projectRoot - Absolute path to project root
+ * @returns {Promise<E2EValidationResult>}
+ */
+async function validateExtension(extensionContext, projectRoot) {
+  const checks = [];
+  const errors = [];
+
+  // --- Append result checks ---
+  checks.push(checkRegistryAppend(extensionContext));
+  checks.push(checkConfigAppend(extensionContext));
+  checks.push(checkCsvAppend(extensionContext));
+
+  // --- Structural checks for new files ---
+  checks.push(...checkNewAgentFiles(extensionContext));
+  checks.push(...checkNewWorkflowDirs(extensionContext));
+  checks.push(...checkNewContractFiles(extensionContext));
+
+  // --- Extension regression: existing agents unchanged ---
+  checks.push(checkExistingAgentsConfig(extensionContext));
+  checks.push(checkExistingAgentsCsv(extensionContext));
+
+  // --- Standard regression ---
+  checks.push(checkRegistryRegression(projectRoot));
+  checks.push(await checkVortexRegression(projectRoot));
+
+  const valid = checks.every(c => c.passed);
+  if (!valid) {
+    for (const c of checks) {
+      if (!c.passed) {
+        errors.push(`${c.name}: expected ${c.expected || '(pass)'}, got ${c.actual || '(fail)'}`);
+      }
+    }
+  }
+
+  return { valid, checks, errors };
+}
+
+/**
+ * Check registry append result.
+ * @param {Object} ctx
+ * @returns {E2ECheck}
+ */
+function checkRegistryAppend(ctx) {
+  const result = ctx.registry_append_result || {};
+  return {
+    name: 'AGENT-REGISTRY-APPEND',
+    stepName: 'extension',
+    passed: result.success === true && Array.isArray(result.written) && result.written.includes(ctx.new_agent_id),
+    expected: `success with ${ctx.new_agent_id} written`,
+    actual: result.success ? `written: ${(result.written || []).join(', ')}` : `failed: ${(result.errors || []).join(', ')}`,
+  };
+}
+
+/**
+ * Check config append result.
+ * @param {Object} ctx
+ * @returns {E2ECheck}
+ */
+function checkConfigAppend(ctx) {
+  const result = ctx.config_append_result || {};
+  return {
+    name: 'CONFIG-APPEND',
+    stepName: 'extension',
+    passed: result.success === true,
+    expected: 'success',
+    actual: result.success ? 'success' : `failed: ${(result.errors || []).join(', ')}`,
+  };
+}
+
+/**
+ * Check CSV append result.
+ * @param {Object} ctx
+ * @returns {E2ECheck}
+ */
+function checkCsvAppend(ctx) {
+  const result = ctx.csv_append_result || {};
+  return {
+    name: 'CSV-APPEND',
+    stepName: 'extension',
+    passed: result.success === true,
+    expected: 'success',
+    actual: result.success ? `success (${result.rowCount} rows)` : `failed: ${(result.errors || []).join(', ')}`,
+  };
+}
+
+/**
+ * Check new agent files exist.
+ * @param {Object} ctx
+ * @returns {E2ECheck[]}
+ */
+function checkNewAgentFiles(ctx) {
+  const checks = [];
+  for (const agentFile of (ctx.new_agent_files || [])) {
+    const exists = fs.existsSync(agentFile);
+    checks.push({
+      name: 'AGENT-FILE-EXISTS',
+      stepName: 'extension',
+      passed: exists,
+      expected: 'file exists',
+      actual: exists ? 'file exists' : 'file not found',
+      detail: agentFile,
+    });
+  }
+  return checks;
+}
+
+/**
+ * Check new workflow directories exist.
+ * @param {Object} ctx
+ * @returns {E2ECheck[]}
+ */
+function checkNewWorkflowDirs(ctx) {
+  const checks = [];
+  for (const wfDir of (ctx.new_workflow_dirs || [])) {
+    const exists = fs.existsSync(wfDir);
+    checks.push({
+      name: 'WORKFLOW-DIR-EXISTS',
+      stepName: 'extension',
+      passed: exists,
+      expected: 'directory exists',
+      actual: exists ? 'directory exists' : 'directory not found',
+      detail: wfDir,
+    });
+  }
+  return checks;
+}
+
+/**
+ * Check new contract files exist.
+ * @param {Object} ctx
+ * @returns {E2ECheck[]}
+ */
+function checkNewContractFiles(ctx) {
+  const checks = [];
+  for (const contractFile of (ctx.new_contract_files || [])) {
+    const exists = fs.existsSync(contractFile);
+    checks.push({
+      name: 'CONTRACT-FILE-EXISTS',
+      stepName: 'extension',
+      passed: exists,
+      expected: 'file exists',
+      actual: exists ? 'file exists' : 'file not found',
+      detail: contractFile,
+    });
+  }
+  return checks;
+}
+
+/**
+ * Verify existing agents still present in config.yaml.
+ * @param {Object} ctx
+ * @returns {E2ECheck}
+ */
+function checkExistingAgentsConfig(ctx) {
+  const configPath = ctx.config_yaml_path;
+  if (!configPath || !fs.existsSync(configPath)) {
+    return {
+      name: 'EXISTING-AGENTS-CONFIG',
+      stepName: 'extension-regression',
+      passed: false,
+      expected: 'existing agents preserved',
+      actual: 'config.yaml not found',
+    };
+  }
+
+  let config;
+  try {
+    config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+  } catch {
+    return {
+      name: 'EXISTING-AGENTS-CONFIG',
+      stepName: 'extension-regression',
+      passed: false,
+      expected: 'existing agents preserved',
+      actual: 'cannot parse config.yaml',
+    };
+  }
+
+  const agents = config.agents || [];
+  const missing = (ctx.existing_agent_ids || []).filter(id => !agents.includes(id));
+  return {
+    name: 'EXISTING-AGENTS-CONFIG',
+    stepName: 'extension-regression',
+    passed: missing.length === 0,
+    expected: 'existing agents preserved',
+    actual: missing.length === 0 ? 'all preserved' : `missing: ${missing.join(', ')}`,
+  };
+}
+
+/**
+ * Verify existing agents still present in module-help.csv.
+ * @param {Object} ctx
+ * @returns {E2ECheck}
+ */
+function checkExistingAgentsCsv(ctx) {
+  const csvPath = ctx.module_help_csv_path;
+  if (!csvPath || !fs.existsSync(csvPath)) {
+    return {
+      name: 'EXISTING-AGENTS-CSV',
+      stepName: 'extension-regression',
+      passed: false,
+      expected: 'existing agent rows preserved',
+      actual: 'module-help.csv not found',
+    };
+  }
+
+  const content = fs.readFileSync(csvPath, 'utf8');
+  const missing = (ctx.existing_agent_ids || []).filter(id => !content.includes(id));
+  return {
+    name: 'EXISTING-AGENTS-CSV',
+    stepName: 'extension-regression',
+    passed: missing.length === 0,
+    expected: 'existing agent rows preserved',
+    actual: missing.length === 0 ? 'all preserved' : `missing: ${missing.join(', ')}`,
+  };
+}
+
 module.exports = {
   validateTeam,
+  validateExtension,
 };
