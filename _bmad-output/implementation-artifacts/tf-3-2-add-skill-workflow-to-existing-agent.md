@@ -27,53 +27,53 @@ So that I can extend an agent's capabilities without manually editing multiple f
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Add Skill step file (AC: #1)
-  - [ ] 1.1 Create `step-add-skill.md` micro-file in `.claude/skills/bmad-team-factory/`
-  - [ ] 1.2 PART 1: Team & Agent Discovery — list available teams, load team config, list agents in team, select target agent
-  - [ ] 1.3 PART 2: Skill/Workflow Definition — collect workflow name (kebab-case), description, output location, template needs
-  - [ ] 1.4 PART 3: BMB Delegation — generate workflow directory structure (workflow.md, template, optional steps/)
-  - [ ] 1.5 PART 4: Integration Wiring — call JS modules for config workflow append, CSV row append, registry workflow append
-  - [ ] 1.6 PART 5: Activation Menu Patching — read agent .md file, locate `<menu>` section, insert new `<item>` before `</menu>` with workflow exec path and display name
-  - [ ] 1.7 PART 6: Validation — call end-to-end validator, present results
-  - [ ] 1.8 PART 7: Manifest and abort path
-  - [ ] 1.9 Add STEP VALIDATION table, Visibility Checklist, CHECKPOINT, NEXT pointer
+- [x] Task 1: Create Add Skill step file (AC: #1)
+  - [x] 1.1 Create `step-add-skill.md` micro-file in `.claude/skills/bmad-team-factory/`
+  - [x] 1.2 PART 1: Team & Agent Discovery — list available teams, load team config, list agents in team, select target agent
+  - [x] 1.3 PART 2: Skill/Workflow Definition — collect workflow name (kebab-case), description, output location, template needs
+  - [x] 1.4 PART 3: BMB Delegation — generate workflow directory structure (workflow.md, template, optional steps/)
+  - [x] 1.5 PART 4: Integration Wiring — call JS modules for config workflow append, CSV row append, registry workflow append
+  - [x] 1.6 PART 5: Activation Menu Patching — read agent .md file, locate `<menu>` section, insert new `<item>` before `</menu>` with workflow exec path and display name
+  - [x] 1.7 PART 6: Validation — call end-to-end validator, present results
+  - [x] 1.8 PART 7: Manifest and abort path
+  - [x] 1.9 Add STEP VALIDATION table, Visibility Checklist, CHECKPOINT, NEXT pointer
 
-- [ ] Task 2: Create `config-workflow-appender.js` — append workflow to existing config.yaml (AC: #2)
-  - [ ] 2.1 Add `appendConfigWorkflow(newWorkflowName, configPath, options)` to `config-appender.js` (extend existing module)
-  - [ ] 2.2 Read existing config.yaml, parse YAML, validate `workflows` array exists
-  - [ ] 2.3 Duplicate check: skip if workflow name already in array
-  - [ ] 2.4 Append new workflow name to `workflows` array
-  - [ ] 2.5 Write atomically (.tmp → validate YAML parse → rename)
-  - [ ] 2.6 Enhanced Simple safety protocol (same as `appendConfigAgent`)
-  - [ ] 2.7 Dirty-tree detection per-write with `skipDirtyCheck` option
+- [x] Task 2: Create `config-workflow-appender.js` — append workflow to existing config.yaml (AC: #2)
+  - [x] 2.1 Add `appendConfigWorkflow(newWorkflowName, configPath, options)` to `config-appender.js` (extend existing module)
+  - [x] 2.2 Read existing config.yaml, parse YAML, validate `workflows` array exists
+  - [x] 2.3 Duplicate check: skip if workflow name already in array
+  - [x] 2.4 Append new workflow name to `workflows` array
+  - [x] 2.5 Write atomically (.tmp → validate YAML parse → rename)
+  - [x] 2.6 Enhanced Simple safety protocol (same as `appendConfigAgent`)
+  - [x] 2.7 Dirty-tree detection per-write with `skipDirtyCheck` option
 
-- [ ] Task 3: Create `registry-workflow-appender.js` — append workflow entry to existing WORKFLOWS array (AC: #2)
-  - [ ] 3.1 Add `appendWorkflowToBlock(teamNameKebab, workflowName, agentId, registryPath, options)` to `registry-appender.js` (extend existing module)
-  - [ ] 3.2 Locate existing `const {PREFIX}_WORKFLOWS = [` array using `derivePrefix`
-  - [ ] 3.3 Duplicate check: skip if `{ name: 'workflowName', agent: 'agentId' }` already exists
-  - [ ] 3.4 Append new entry before closing `];` using `findArrayClose` (already exported)
-  - [ ] 3.5 Full Write Safety Protocol: backup → insert → `verifyRequire()` → rollback on failure
-  - [ ] 3.6 Dirty-tree detection per-write
+- [x] Task 3: Create `registry-workflow-appender.js` — append workflow entry to existing WORKFLOWS array (AC: #2)
+  - [x] 3.1 Add `appendWorkflowToBlock(teamNameKebab, workflowName, agentId, registryPath, options)` to `registry-appender.js` (extend existing module)
+  - [x] 3.2 Locate existing `const {PREFIX}_WORKFLOWS = [` array using `derivePrefix`
+  - [x] 3.3 Duplicate check: skip if `{ name: 'workflowName', agent: 'agentId' }` already exists
+  - [x] 3.4 Append new entry before closing `];` using `findArrayClose` (already exported)
+  - [x] 3.5 Full Write Safety Protocol: backup → insert → `verifyRequire()` → rollback on failure
+  - [x] 3.6 Dirty-tree detection per-write
 
-- [ ] Task 4: Extend end-to-end validator for skill extension (AC: #2)
-  - [ ] 4.1 Add `validateSkillExtension(specData, skillContext, projectRoot)` to `end-to-end-validator.js`
-  - [ ] 4.2 New checks: WORKFLOW-REGISTRY-APPEND, CONFIG-WORKFLOW-APPEND, CSV-WORKFLOW-APPEND, WORKFLOW-FILE-EXISTS
-  - [ ] 4.3 WORKFLOW-FILE-EXISTS check: verify generated workflow directory and workflow.md exist on disk after BMB delegation
-  - [ ] 4.4 Regression checks: EXISTING-WORKFLOWS-UNCHANGED (registry, config, CSV)
-  - [ ] 4.5 Maintain `{PROP}-{SEMANTIC-NAME}` check format and E2ECheck shape
+- [x] Task 4: Extend end-to-end validator for skill extension (AC: #2)
+  - [x] 4.1 Add `validateSkillExtension(specData, skillContext, projectRoot)` to `end-to-end-validator.js`
+  - [x] 4.2 New checks: WORKFLOW-REGISTRY-APPEND, CONFIG-WORKFLOW-APPEND, CSV-WORKFLOW-APPEND, WORKFLOW-FILE-EXISTS
+  - [x] 4.3 WORKFLOW-FILE-EXISTS check: verify generated workflow directory and workflow.md exist on disk after BMB delegation
+  - [x] 4.4 Regression checks: EXISTING-WORKFLOWS-UNCHANGED (registry, config, CSV)
+  - [x] 4.5 Maintain `{PROP}-{SEMANTIC-NAME}` check format and E2ECheck shape
 
-- [ ] Task 5: Update manifest-tracker for skill extension (AC: #2)
-  - [ ] 5.1 Add `buildSkillExtensionManifest(skillContext)` to `manifest-tracker.js`
-  - [ ] 5.2 Mark new workflow directory/files as "created", config/csv/registry as "modified"
-  - [ ] 5.3 Verify `formatAbortInstructions` correctly generates cleanup for workflow files
+- [x] Task 5: Update manifest-tracker for skill extension (AC: #2)
+  - [x] 5.1 Add `buildSkillExtensionManifest(skillContext)` to `manifest-tracker.js`
+  - [x] 5.2 Mark new workflow directory/files as "created", config/csv/registry as "modified"
+  - [x] 5.3 Verify `formatAbortInstructions` correctly generates cleanup for workflow files
 
-- [ ] Task 6: Update routing and write tests (AC: #1, #2)
-  - [ ] 6.1 Update Route 3 in `step-00-route.md` from "not yet available" to "available"
-  - [ ] 6.2 Add Step S route to `workflow.md` routing table
-  - [ ] 6.3 Write tests for `appendConfigWorkflow` (happy path, duplicate detection, atomic write, existing workflows unchanged)
-  - [ ] 6.4 Write tests for `appendWorkflowToBlock` (happy path, duplicate detection, rollback, existing workflows unchanged)
-  - [ ] 6.5 Write/extend tests for skill extension validation checks
-  - [ ] 6.6 Write/extend tests for skill extension manifest
+- [x] Task 6: Update routing and write tests (AC: #1, #2)
+  - [x] 6.1 Update Route 3 in `step-00-route.md` from "not yet available" to "available"
+  - [x] 6.2 Add Step S route to `workflow.md` routing table
+  - [x] 6.3 Write tests for `appendConfigWorkflow` (happy path, duplicate detection, atomic write, existing workflows unchanged)
+  - [x] 6.4 Write tests for `appendWorkflowToBlock` (happy path, duplicate detection, rollback, existing workflows unchanged)
+  - [x] 6.5 Write/extend tests for skill extension validation checks
+  - [x] 6.6 Write/extend tests for skill extension manifest
 
 ## Dev Notes
 
