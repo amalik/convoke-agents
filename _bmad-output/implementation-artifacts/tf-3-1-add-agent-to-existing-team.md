@@ -48,31 +48,31 @@ So that I can extend a team's capabilities without manually editing registry fil
   - [ ] 1.9 PART 8: Manifest and abort path
   - [ ] 1.10 Add STEP VALIDATION table, Visibility Checklist, CHECKPOINT, NEXT pointer
 
-- [ ] Task 2: Create `registry-appender.js` — append agent to existing registry block (AC: #2)
-  - [ ] 2.1 Create `_bmad/bme/_team-factory/lib/writers/registry-appender.js`
-  - [ ] 2.2 Implement `appendAgentToBlock(specData, newAgentData, registryPath, options)` with Full Write Safety Protocol
-  - [ ] 2.3 Stage: locate existing module block by prefix, parse AGENTS array, build new agent entry, rebuild derived lists
-  - [ ] 2.4 Validate: brace balance, no duplicate agent ID in module, syntax check via temp-file `require()`
-  - [ ] 2.5 Check: dirty-tree detection per-write (not per-workflow)
-  - [ ] 2.6 Apply: save .bak, insert new agent entry into existing AGENTS array, regenerate AGENT_FILES/AGENT_IDS/WORKFLOW_NAMES
-  - [ ] 2.7 Verify: re-read file, `require()` succeeds, existing exports still accessible
-  - [ ] 2.8 Rollback: restore from .bak on verify failure
-  - [ ] 2.9 Add JSDoc types to factory-types.js (reuse RegistryResult shape)
+- [x] Task 2: Create `registry-appender.js` — append agent to existing registry block (AC: #2)
+  - [x] 2.1 Create `_bmad/bme/_team-factory/lib/writers/registry-appender.js`
+  - [x] 2.2 Implement `appendAgentToBlock(specData, newAgentData, registryPath, options)` with Full Write Safety Protocol
+  - [x] 2.3 Stage: locate existing module block by prefix, parse AGENTS array, build new agent entry, rebuild derived lists
+  - [x] 2.4 Validate: brace balance, no duplicate agent ID in module, syntax check via temp-file `require()`
+  - [x] 2.5 Check: dirty-tree detection per-write (not per-workflow)
+  - [x] 2.6 Apply: save .bak, insert new agent entry into existing AGENTS array, regenerate AGENT_FILES/AGENT_IDS/WORKFLOW_NAMES
+  - [x] 2.7 Verify: re-read file, `require()` succeeds, existing exports still accessible
+  - [x] 2.8 Rollback: restore from .bak on verify failure
+  - [x] 2.9 Add JSDoc types to factory-types.js (reuse RegistryResult shape)
 
-- [ ] Task 3: Create `config-appender.js` — append agent to existing config.yaml (AC: #2)
-  - [ ] 3.1 Create `_bmad/bme/_team-factory/lib/writers/config-appender.js`
-  - [ ] 3.2 Implement `appendConfigAgent(newAgentId, configPath)` → CreatorResult
-  - [ ] 3.3 Read existing config.yaml, parse YAML, validate structure
-  - [ ] 3.4 Append new agent ID to `agents` array, verify no duplicates
-  - [ ] 3.5 Write atomically (.tmp → validate YAML parse → rename)
-  - [ ] 3.6 Verify: re-read, confirm new agent present, existing agents unchanged
+- [x] Task 3: Create `config-appender.js` — append agent to existing config.yaml (AC: #2)
+  - [x] 3.1 Create `_bmad/bme/_team-factory/lib/writers/config-appender.js`
+  - [x] 3.2 Implement `appendConfigAgent(newAgentId, configPath)` → CreatorResult
+  - [x] 3.3 Read existing config.yaml, parse YAML, validate structure
+  - [x] 3.4 Append new agent ID to `agents` array, verify no duplicates
+  - [x] 3.5 Write atomically (.tmp → validate YAML parse → rename)
+  - [x] 3.6 Verify: re-read, confirm new agent present, existing agents unchanged
 
-- [ ] Task 4: Create `csv-appender.js` — append row to existing module-help.csv (AC: #2)
-  - [ ] 4.1 Create `_bmad/bme/_team-factory/lib/writers/csv-appender.js`
-  - [ ] 4.2 Implement `appendCsvRow(newRowData, csvPath)` → CreatorResult
-  - [ ] 4.3 Read existing CSV, validate header matches `CSV_HEADER` constant
-  - [ ] 4.4 Append new row (new agent's workflow entry), verify no duplicate workflow names
-  - [ ] 4.5 Write atomically (.tmp → validate header post-write → rename)
+- [x] Task 4: Create `csv-appender.js` — append row to existing module-help.csv (AC: #2)
+  - [x] 4.1 Create `_bmad/bme/_team-factory/lib/writers/csv-appender.js`
+  - [x] 4.2 Implement `appendCsvRow(newRowData, csvPath)` → CreatorResult
+  - [x] 4.3 Read existing CSV, validate header matches `CSV_HEADER` constant
+  - [x] 4.4 Append new row (new agent's workflow entry), verify no duplicate workflow names
+  - [x] 4.5 Write atomically (.tmp → validate header post-write → rename)
 
 - [ ] Task 5: Enhance end-to-end validator for extension operations (AC: #3)
   - [ ] 5.1 Add `validateExtension(specData, extensionContext, projectRoot)` to `end-to-end-validator.js` (or create separate `extension-validator.js`)
