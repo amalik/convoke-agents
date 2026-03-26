@@ -15,7 +15,7 @@
 2. [Lifecycle Model & Gap Analysis](#2-lifecycle-model--gap-analysis)
 3. [New Perimeters: Theoretical Foundations](#3-new-perimeters-theoretical-foundations)
 4. [Knowledge Engineering: From Documentation to Knowledge Assets](#4-knowledge-engineering-from-documentation-to-knowledge-assets)
-5. [Domain Mesh Architecture: Specialized Disciplines as Composable Modules](#5-domain-mesh-architecture-specialized-disciplines-as-composable-modules)
+5. [Domain Mesh: A Reference Pattern for Specialized Disciplines](#5-domain-mesh-a-reference-pattern-for-specialized-disciplines)
 6. [Organizational Transformation Dimension](#6-organizational-transformation-dimension)
 7. [Synthesis: Towards a Full-Lifecycle Agentic Platform](#7-synthesis-towards-a-full-lifecycle-agentic-platform)
 
@@ -98,7 +98,7 @@ Mapping Convoke's current coverage against a full product/software lifecycle rev
 
 For each identified gap, the following sections present the theoretical frameworks that would underpin new Convoke modules. These are organized as potential future teams or skills.
 
-### 3.1 Strategy & Vision — "Compass" (proposed)
+### 3.1 Strategy & Vision Perimeter
 
 This perimeter sits upstream of Vortex. Where Emma frames problems, a Strategy module would frame the *space* in which problems are worth finding: market positioning, competitive dynamics, and business model coherence.
 
@@ -118,7 +118,7 @@ This perimeter sits upstream of Vortex. Where Emma frames problems, a Strategy m
 
 **Potential agents:** Strategic Analyst (competitive landscape), Business Model Architect (value proposition and model design), Wardley Mapper (situational awareness and evolution).
 
-### 3.2 Delivery & Release — "Launch" (proposed)
+### 3.2 Delivery & Release Perimeter
 
 This perimeter bridges Gyre's readiness assessment to actual production deployment. It covers release strategy, progressive delivery, and the mechanics of getting software safely to users.
 
@@ -136,7 +136,7 @@ This perimeter bridges Gyre's readiness assessment to actual production deployme
 
 **Potential agents:** Release Strategist (deployment patterns, risk assessment), Feature Flag Manager (progressive rollout, experimentation coupling), Rollback Analyst (failure detection, automated rollback criteria).
 
-### 3.3 Growth & Adoption — "Amplify" (proposed)
+### 3.3 Growth & Adoption Perimeter
 
 This perimeter covers the post-launch product lifecycle: how users discover, adopt, activate, and retain with the product. It connects back to Vortex's discovery insights and Noah's production signals.
 
@@ -156,7 +156,7 @@ This perimeter covers the post-launch product lifecycle: how users discover, ado
 
 **Potential agents:** Growth Analyst (funnel metrics, cohort analysis, North Star tracking), Onboarding Architect (activation flows, time-to-value optimization), Retention Strategist (churn analysis, engagement patterns, re-engagement campaigns).
 
-### 3.4 Operations & Resilience — "Sentinel" (proposed)
+### 3.4 Operations & Resilience Perimeter
 
 This perimeter extends Gyre's readiness assessment into actual operational practice: what happens when things go wrong, and how operational knowledge is captured and improved.
 
@@ -174,7 +174,7 @@ This perimeter extends Gyre's readiness assessment into actual operational pract
 
 **Potential agents:** Incident Commander (structured incident response, communication, escalation), Runbook Engineer (operational procedure design and automation), Resilience Analyst (chaos experiment design, failure mode analysis, postmortem facilitation).
 
-### 3.5 Security & Compliance — "Shield" (proposed)
+### 3.5 Security & Compliance Perimeter
 
 This perimeter elevates security from a Gyre assessment dimension to a proactive, lifecycle-spanning discipline with its own agents and workflows.
 
@@ -194,7 +194,7 @@ This perimeter elevates security from a Gyre assessment dimension to a proactive
 
 **Potential agents:** Threat Modeler (STRIDE analysis, attack surface mapping), Compliance Analyst (regulatory mapping, EU AI Act / NIST alignment), Supply Chain Auditor (SBOM generation, dependency vulnerability analysis).
 
-### 3.6 Documentation & Knowledge — "Archive" (proposed)
+### 3.6 Documentation Perimeter
 
 This perimeter addresses the systematic capture, organization, and evolution of knowledge across the entire lifecycle.
 
@@ -212,7 +212,7 @@ This perimeter addresses the systematic capture, organization, and evolution of 
 
 **Potential agents:** Documentation Strategist (Diátaxis-based documentation planning), Knowledge Curator (cross-lifecycle knowledge synthesis, ADR management), Learning Librarian (organizational learning capture, pattern identification).
 
-### 3.7 Sunset & Technical Debt — "Horizon" (proposed)
+### 3.7 Sunset & Technical Debt Perimeter
 
 This perimeter covers the end of the product lifecycle: managing technical debt, legacy modernization, and graceful sunset of features and products.
 
@@ -232,14 +232,14 @@ This perimeter covers the end of the product lifecycle: managing technical debt,
 
 ## 4. Knowledge Engineering: From Documentation to Knowledge Assets
 
-> Archive (Section 3.6) handles systematic documentation — capturing what is *explicitly written*.
+> The documentation perimeter (Section 3.6) handles systematic documentation — capturing what is *explicitly written*.
 > This section addresses a fundamentally different problem: **actively extracting, refining, and exposing knowledge** that is tacit, dispersed, or buried in codebases, documentation, and team expertise. This is especially critical in brownfield contexts where knowledge is the most valuable and the least accessible asset.
 
 ### 4.1 The Knowledge Problem in Product/Software Organizations
 
 Knowledge in organizations exists on a spectrum from fully explicit (API docs, ADRs) to deeply tacit (why a particular architectural decision was made, what edge cases a senior engineer knows intuitively, what the team learned from a failed experiment three years ago). The challenge is not documentation — it's **knowledge operationalization**: making organizational knowledge extractable, refinable, and consumable as assets by discovery teams, building teams, and agents alike.
 
-This is the theoretical foundation for a proposed **"Forge"** module — complementary to Archive, focused on active knowledge engineering.
+This is the theoretical foundation for a **knowledge engineering perimeter** — complementary to the documentation perimeter, focused on active knowledge extraction and operationalization.
 
 ### 4.2 Theoretical Foundations
 
@@ -247,7 +247,7 @@ This is the theoretical foundation for a proposed **"Forge"** module — complem
 
 - **The Tacit Dimension** — Polanyi, M. (1966). *The Tacit Dimension*. University of Chicago Press. "We can know more than we can tell." Establishes that much organizational knowledge cannot be articulated through documentation alone — it requires elicitation.
 
-- **SECI Model** — Nonaka, I. & Takeuchi, H. (1995). *The Knowledge-Creating Company*. Oxford University Press. Four modes of knowledge conversion: Socialization (tacit→tacit), Externalization (tacit→explicit), Combination (explicit→explicit), Internalization (explicit→tacit). **The Forge module operationalizes the Externalization phase at scale** — converting tacit team knowledge into explicit, consumable assets.
+- **SECI Model** — Nonaka, I. & Takeuchi, H. (1995). *The Knowledge-Creating Company*. Oxford University Press. Four modes of knowledge conversion: Socialization (tacit→tacit), Externalization (tacit→explicit), Combination (explicit→explicit), Internalization (explicit→tacit). **A knowledge engineering perimeter would operationalize the Externalization phase at scale** — converting tacit team knowledge into explicit, consumable assets.
 
 - **Knowledge Elicitation** — Cooke, N. J. (1994). "Varieties of Knowledge Elicitation Techniques." *International Journal of Human-Computer Studies*, 41(6), 801–849. Taxonomy of techniques for extracting expert knowledge: interviews, protocol analysis, card sorting, repertory grids. Foundation for structured agent-guided knowledge extraction.
 
@@ -267,7 +267,7 @@ This is the theoretical foundation for a proposed **"Forge"** module — complem
 
 - **Knowledge Assets** — Boisot, M. H. (1998). *Knowledge Assets: Securing Competitive Advantage in the Information Economy*. Oxford University Press. The I-Space model (Information-Space): knowledge moves through phases of codification and abstraction before diffusion. Provides the theoretical frame for treating knowledge as a managed, valuable asset.
 
-- **Working Knowledge** — Davenport, T. H. & Prusak, L. (1998). *Working Knowledge: How Organizations Manage What They Know*. Harvard Business School Press. Knowledge market metaphors: knowledge has buyers, sellers, brokers, and a price. Applicable to how Forge exposes knowledge assets for consumption by other modules.
+- **Working Knowledge** — Davenport, T. H. & Prusak, L. (1998). *Working Knowledge: How Organizations Manage What They Know*. Harvard Business School Press. Knowledge market metaphors: knowledge has buyers, sellers, brokers, and a price. Applicable to how a knowledge engineering perimeter would expose knowledge assets for consumption by other perimeters.
 
 **AI-augmented knowledge extraction (2024–2026):**
 
@@ -277,19 +277,19 @@ This is the theoretical foundation for a proposed **"Forge"** module — complem
 
 - **Semantic Code Search** — Vector-based code search enabling natural language queries against codebases. Tools like Sourcegraph Cody, GitHub Copilot Workspace, and Cursor demonstrate the pattern.
 
-### 4.3 The Forge Module (Proposed)
+### 4.3 Knowledge Engineering Perimeter (Proposed)
 
 **Purpose:** Actively extract, refine, and expose organizational knowledge as consumable assets — from codebases, existing documentation, and team expertise.
 
-**Distinction from Archive:** Archive *documents what is produced*. Forge *extracts what already exists but isn't accessible*.
+**Distinction from the documentation perimeter:** Documentation *captures what is produced*. Knowledge engineering *extracts what already exists but isn't accessible*.
 
 ```
-  KNOWLEDGE SOURCES                    FORGE                       KNOWLEDGE CONSUMERS
+  KNOWLEDGE SOURCES                  KNOWLEDGE ENG.                KNOWLEDGE CONSUMERS
   ┌──────────────────┐              ┌──────────┐               ┌──────────────────────┐
-  │ Codebases        │──extract──▶  │          │──expose──▶    │ Vortex (Discovery)   │
-  │ Existing docs    │──extract──▶  │  FORGE   │──expose──▶    │ BMM (Build)          │
-  │ Team expertise   │──elicit───▶  │          │──expose──▶    │ Gyre (Readiness)     │
-  │ Decision history │──mine─────▶  │  3 agents│──expose──▶    │ Any module / agent   │
+  │ Codebases        │──extract──▶  │          │──expose──▶    │ Discovery            │
+  │ Existing docs    │──extract──▶  │ Extract  │──expose──▶    │ Build                │
+  │ Team expertise   │──elicit───▶  │ Refine   │──expose──▶    │ Readiness            │
+  │ Decision history │──mine─────▶  │ Expose   │──expose──▶    │ Any perimeter/agent  │
   │ Incident reports │──extract──▶  │          │──expose──▶    │ Human teams          │
   └──────────────────┘              └──────────┘               └──────────────────────┘
                                      ▲  refine
@@ -300,24 +300,23 @@ This is the theoretical foundation for a proposed **"Forge"** module — complem
 
 **Potential agents:**
 
-- **Knowledge Miner** — Extracts knowledge from codebases (architecture recovery, dependency mapping, implicit patterns), existing documentation (contradiction detection, staleness analysis), and repository history (decision archaeology, evolution patterns). Draws on Mining Software Repositories (Kagdi et al.) and GraphRAG.
+- **A knowledge mining capability** — Extracting knowledge from codebases (architecture recovery, dependency mapping, implicit patterns), existing documentation (contradiction detection, staleness analysis), and repository history (decision archaeology, evolution patterns). Draws on Mining Software Repositories (Kagdi et al.) and GraphRAG.
 
-- **Knowledge Elicitor** — Structures guided conversations with team members to externalize tacit knowledge: architectural rationale, edge case expertise, tribal knowledge, unwritten rules. Draws on Cooke's elicitation techniques and Nonaka's Externalization phase.
+- **A knowledge elicitation capability** — Structuring guided conversations with team members to externalize tacit knowledge: architectural rationale, edge case expertise, tribal knowledge, unwritten rules. Draws on Cooke's elicitation techniques and Nonaka's Externalization phase.
 
-- **Knowledge Curator** — Refines raw extracted knowledge into structured, versioned knowledge assets. Maintains a knowledge graph with provenance. Detects knowledge decay and contradiction. Exposes assets through a consumable interface for other Convoke modules. Draws on Boisot's I-Space and Davenport & Prusak's knowledge market.
+- **A knowledge curation capability** — Refining raw extracted knowledge into structured, versioned knowledge assets. Maintaining a knowledge graph with provenance. Detecting knowledge decay and contradiction. Exposing assets through a consumable interface for other Convoke perimeters. Draws on Boisot's I-Space and Davenport & Prusak's knowledge market.
 
-**Brownfield specificity:** In brownfield projects, Forge is arguably the *first* module that should run — before discovery, before readiness assessment, before anything. The existing system's knowledge is the primary input to every other lifecycle activity.
+**Brownfield specificity:** In brownfield projects, knowledge engineering is arguably the *first* perimeter that should activate — before discovery, before readiness assessment, before anything. The existing system's knowledge is the primary input to every other lifecycle activity.
 
 ---
 
-## 5. Domain Mesh Architecture: Specialized Disciplines as Composable Modules
+## 5. Domain Mesh: A Reference Pattern for Specialized Disciplines
 
-> The lifecycle modules (Compass, Launch, Amplify, etc.) address *what* happens at each phase.
-> This section addresses a different axis: **specialized technical disciplines** (data science, ML engineering, agentic engineering, etc.) that cut across lifecycle phases, and the **architectural pattern** that governs how they interconnect.
+> **Scope clarification:** This section describes an **architectural reference pattern** — not a commitment to build mesh infrastructure within Convoke itself. The pattern is relevant to the *projects and organizations* that Convoke supports: when teams use Convoke to build products that involve data science, ML, agentic AI, or platform engineering, this pattern describes how those specialized disciplines could be organized. It also informs how future Convoke perimeters for these disciplines might be structured, but the pattern itself lives at the product/organization level, not at the Convoke tooling level.
 
 ### 5.1 The Problem: Monolithic vs. Decentralized Specialization
 
-As Convoke grows, two organizational forces collide. On one hand, lifecycle modules need domain-specific expertise (Vortex needs data analysis, Gyre needs ML model assessment, Launch needs ML deployment patterns). On the other hand, centralizing all data science or ML expertise in one module creates a bottleneck and violates the principle of domain ownership.
+Products and organizations that span multiple technical disciplines face a recurring tension. On one hand, lifecycle activities need domain-specific expertise (discovery needs data analysis, readiness assessment needs ML model evaluation, delivery needs ML deployment patterns). On the other hand, centralizing all data science or ML expertise in one team or one tool creates a bottleneck and violates the principle of domain ownership.
 
 This tension mirrors exactly the problem that Data Mesh, Service Mesh, and now Agentic Mesh patterns were designed to solve in their respective domains. The insight is: **specialized disciplines should be organized as decentralized, self-serve, federated capabilities** — not as centralized teams or monolithic modules.
 
@@ -355,12 +354,12 @@ This tension mirrors exactly the problem that Data Mesh, Service Mesh, and now A
 
 - **Cell-Based Architecture** — WSO2. (2024). Self-contained, independently deployable units of business functionality. Each cell encapsulates compute, data, and governance. Relevant to how domain modules could be self-contained yet composable.
 
-### 5.3 The Convoke Domain Mesh Pattern
+### 5.3 The Domain Mesh Pattern (Reference Architecture)
 
-Drawing from these foundations, the proposed architectural pattern for specialized disciplines in Convoke:
+Drawing from these foundations, here is the reference pattern for how specialized disciplines could interconnect — applicable to the products and organizations Convoke supports, and a potential inspiration for future Convoke perimeters:
 
 ```
-  CONVOKE DOMAIN MESH
+  DOMAIN MESH PATTERN
   ════════════════════
 
   ┌─────────────────────────────────────────────────────────────────────────┐
@@ -381,8 +380,8 @@ Drawing from these foundations, the proposed architectural pattern for specializ
        ▲              ▲              ▲              ▲              ▲
        │              │              │              │              │
   ┌────┴──────────────┴──────────────┴──────────────┴──────────────┴────┐
-  │              LIFECYCLE MODULES (consumers of domain capabilities)    │
-  │  Compass · Vortex · WDS/BMM · Gyre · Launch · Amplify · Sentinel   │
+  │              LIFECYCLE PERIMETERS (consumers of domain capabilities)  │
+  │  Strategy · Discovery · Design · Build · Readiness · Delivery · ... │
   └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -398,7 +397,7 @@ Drawing from these foundations, the proposed architectural pattern for specializ
 
 ### 5.4 Proposed Domain Modules
 
-**DataOps Domain — "Flux":**
+**A DataOps domain:**
 
 Specialized in data pipeline design, data quality, and data-as-a-product patterns.
 
@@ -408,7 +407,7 @@ Specialized in data pipeline design, data quality, and data-as-a-product pattern
 
 **Ports:** Data quality assessment, pipeline design, data catalog curation, data lineage tracking.
 
-**MLOps Domain — "Neuron":**
+**An MLOps domain:**
 
 Specialized in ML model lifecycle: training, evaluation, deployment, monitoring, and governance.
 
@@ -418,7 +417,7 @@ Specialized in ML model lifecycle: training, evaluation, deployment, monitoring,
 
 **Ports:** Model assessment, training pipeline design, model monitoring, bias/fairness audit.
 
-**AgentOps Domain — "Synapse":**
+**An AgentOps domain:**
 
 Specialized in AI agent lifecycle: design, testing, deployment, observability, and governance of agentic systems.
 
@@ -429,7 +428,7 @@ Specialized in AI agent lifecycle: design, testing, deployment, observability, a
 
 **Ports:** Agent assessment, agent testing, agent monitoring, agent governance.
 
-**PlatformOps Domain — "Base":**
+**A PlatformOps domain:**
 
 Specialized in internal developer platform, infrastructure-as-code, and developer experience.
 
@@ -453,17 +452,15 @@ Inspired by Cockburn's Ports & Adapters, each domain module exposes a standard s
 
 This means Gyre can call `MLOps.assess(codebase)` to get an ML readiness assessment, or Vortex can call `DataOps.advise("what data do we have on user behavior?")` to get data-informed discovery input — without either lifecycle module needing to understand ML or DataOps internals.
 
-### 5.6 Relationship to Existing Convoke Architecture
+### 5.6 Relationship to Convoke
 
-The Domain Mesh doesn't replace the lifecycle modules — it **orthogonalizes** them. The lifecycle axis (Compass → Vortex → Build → Gyre → Launch → ...) describes *when* things happen. The domain axis (DataOps, MLOps, AgentOps, ...) describes *what expertise* is needed. The mesh infrastructure ensures any lifecycle module can invoke any domain capability through standard ports.
-
-This also resolves a potential scaling problem: without the mesh, adding a new specialized discipline (say, FinOps or QuantumOps) would require modifying every lifecycle module. With the mesh, a new domain module registers its capabilities, and lifecycle modules discover and consume them automatically.
+The Domain Mesh pattern is not something Convoke needs to *build* — it's something Convoke should *understand and support*. When Convoke's lifecycle perimeters (discovery, readiness, delivery, etc.) encounter projects that span multiple technical disciplines, this pattern informs how those disciplines relate. It also suggests that if Convoke eventually adds perimeters for data engineering, ML, or agentic engineering, those perimeters should be designed as composable, port-based capabilities rather than monolithic modules — enabling extensibility without tight coupling.
 
 ---
 
 ## 6. Organizational Transformation Dimension
 
-### 4.1 Classical Change Management
+### 6.1 Classical Change Management
 
 Introducing new agentic capabilities across an organization follows patterns well-documented in change management literature.
 
@@ -483,7 +480,7 @@ Introducing new agentic capabilities across an organization follows patterns wel
 
 - **McKinsey 7-S Framework** — Peters, T. & Waterman, R. (1982). *In Search of Excellence*. Harper & Row. Seven interconnected elements: Structure, Strategy, Systems, Skills, Staff, Style, Shared Values. Ensures that adding new Convoke modules is accompanied by changes in all dimensions — not just technology.
 
-### 4.2 Organizational Design for an Agentic Era
+### 6.2 Organizational Design for an Agentic Era
 
 The introduction of AI agents fundamentally challenges existing organizational structures.
 
@@ -501,7 +498,7 @@ The introduction of AI agents fundamentally challenges existing organizational s
 
 - **Dynamic Capabilities** — Teece, D., Pisano, G. & Shuen, A. (1997). "Dynamic Capabilities and Strategic Management." *Strategic Management Journal*. A firm's ability to adapt, integrate, and reconfigure resources for changing environments. Provides the strategic frame for how organizations develop capacity to continuously evolve their agent deployment.
 
-### 4.3 Agentic Transformation: What Makes This Different
+### 6.3 Agentic Transformation: What Makes This Different
 
 The transformation driven by AI agents is qualitatively different from previous technology adoptions. Recent research (2024–2026) identifies specific patterns.
 
@@ -521,7 +518,7 @@ The transformation driven by AI agents is qualitatively different from previous 
 
 - **Co-Intelligence** — Mollick, E. (2024). *Co-Intelligence: Living and Working with AI*. Penguin Random House. Three structural pillars: AI in leadership, AI labs, democratize AI to the crowd. Practical framework for organizational leaders.
 
-### 4.4 Governance Frameworks
+### 6.4 Governance Frameworks
 
 As Convoke expands across the lifecycle, governance becomes essential — both for the agent system itself and for the decisions agents participate in.
 
@@ -541,7 +538,7 @@ As Convoke expands across the lifecycle, governance becomes essential — both f
 
 - **ISO/IEC 42001** — ISO/IEC. (2023). First international standard for AI management systems. Enables formal governance, audit, and certification of AI practices.
 
-### 4.5 Adoption & Diffusion
+### 6.5 Adoption & Diffusion
 
 Rolling out new Convoke modules across an organization follows adoption dynamics documented in diffusion research.
 
@@ -570,28 +567,27 @@ Combining the lifecycle gap analysis, knowledge engineering, and domain mesh arc
 
   STRATEGY        DISCOVERY       DESIGN        BUILD         READINESS      DELIVERY
   ┌──────────┐   ┌──────────┐   ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
-  │ COMPASS  │──▶│ VORTEX   │──▶│ WDS      │─▶│ BMM      │─▶│ GYRE     │─▶│ LAUNCH   │
-  │ Strategy │   │ Discovery│   │ Design   │  │ Build    │  │ Readiness│  │ Delivery │
-  │ 3 agents │   │ 7 agents │   │ BMM 1-3  │  │ TEA      │  │ 4 agents │  │ 3 agents │
+  │ Strategy │──▶│ VORTEX   │──▶│ WDS      │─▶│ BMM      │─▶│ GYRE     │─▶│ Delivery │
+  │ perimeter│   │ Discovery│   │ Design   │  │ Build    │  │ Readiness│  │ perimeter│
+  │          │   │ 7 agents │   │ BMM 1-3  │  │ TEA      │  │ 4 agents │  │          │
   └──────────┘   └──────────┘   └──────────┘  └──────────┘  └──────────┘  └──────────┘
        │                                                                        │
        │              GROWTH          OPERATIONS       SUNSET                   │
        │           ┌──────────┐     ┌──────────┐    ┌──────────┐               │
-       └──────────▶│ AMPLIFY  │◀───▶│ SENTINEL │───▶│ HORIZON  │◀──────────────┘
-                   │ Growth   │     │ Ops      │    │ Debt/EOL │
-                   │ 3 agents │     │ 3 agents │    │ 3 agents │
+       └──────────▶│ Growth   │◀───▶│Operations│───▶│ Sunset   │◀──────────────┘
+                   │ perimeter│     │ perimeter│    │ perimeter│
+                   │          │     │          │    │          │
                    └──────────┘     └──────────┘    └──────────┘
 
   ═══════════════════════════════════════════════════════════════════════════════
-  AXIS 2: DOMAIN MESH (what expertise is needed — via standard ports)
+  AXIS 2: DOMAIN MESH (reference pattern — what expertise is needed)
   ═══════════════════════════════════════════════════════════════════════════════
 
   ┌─────────────────────────────────────────────────────────────────────────────┐
-  │            MESH INFRASTRUCTURE (discovery · routing · governance)           │
+  │            MESH PATTERN (discovery · routing · governance)                  │
   ├───────────┬───────────┬───────────┬───────────┬─────────────────────────────┤
-  │  FLUX     │  NEURON   │  SYNAPSE  │  BASE     │  ... (extensible)          │
-  │  DataOps  │  MLOps    │  AgentOps │ PlatformOps│                           │
-  │  3 agents │  3 agents │  3 agents │  3 agents │                            │
+  │ DataOps   │  MLOps    │  AgentOps │ PlatformOps│  ... (extensible)         │
+  │ domain    │  domain   │  domain   │  domain   │                            │
   └───────────┴───────────┴───────────┴───────────┴─────────────────────────────┘
 
   ═══════════════════════════════════════════════════════════════════════════════
@@ -599,13 +595,13 @@ Combining the lifecycle gap analysis, knowledge engineering, and domain mesh arc
   ═══════════════════════════════════════════════════════════════════════════════
 
   ┌─────────────────────────────────────────────────────────────────────────────┐
-  │ FORGE — Active Knowledge Engineering (extract · refine · expose)           │
+  │ Knowledge Engineering — active extraction, refinement, exposition          │
   ├─────────────────────────────────────────────────────────────────────────────┤
-  │ SHIELD — Security & Compliance (3 agents)                                  │
+  │ Security & Compliance — proactive, lifecycle-spanning                      │
   ├─────────────────────────────────────────────────────────────────────────────┤
-  │ ARCHIVE — Systematic Documentation (3 agents)                              │
+  │ Systematic Documentation — Diátaxis-based, docs-as-code                   │
   ├─────────────────────────────────────────────────────────────────────────────┤
-  │ CATALYST — Governance, Change Management & Adoption (3 agents)             │
+  │ Governance, Change Management & Adoption — meta-perimeter                  │
   └─────────────────────────────────────────────────────────────────────────────┘
 
   EXISTING SUPPORT:
@@ -618,21 +614,21 @@ This expansion introduces a conceptual shift from a linear pipeline to a **three
 
 The **Lifecycle axis** (horizontal) describes *when* things happen — from strategy through sunset. Modules here are sequential or cyclical, connected by handoff contracts.
 
-The **Domain Mesh axis** (vertical) describes *what expertise* is needed — data, ML, agents, platform. Domain modules are consumed by lifecycle modules through standardized ports (assess, build, monitor, advise), following hexagonal architecture principles. New domains can be added without modifying lifecycle modules.
+The **Domain Mesh axis** (vertical) is a *reference pattern* describing *what expertise* is needed — data, ML, agents, platform. This pattern applies to the projects and organizations Convoke supports, and would inform the design of any future domain-specialized Convoke perimeters.
 
-The **Cross-cutting axis** spans the entire platform. Forge feeds knowledge into every module. Shield ensures security across all phases. Archive captures documentation everywhere. Catalyst governs the transformation itself.
+The **Cross-cutting axis** spans the entire platform. Knowledge engineering feeds understanding into every perimeter. Security ensures compliance across all phases. Documentation captures knowledge everywhere. Governance and change management governs the transformation itself.
 
-### 7.3 The "Catalyst" Module: A Unique Addition
+### 7.3 The Governance & Change Perimeter: A Unique Addition
 
-Among all proposed perimeters, one stands apart: **Catalyst** — a cross-cutting module specifically designed to govern and facilitate the organizational transformation that Convoke's own expansion creates. This is a meta-module: it helps organizations adopt the other modules.
+Among all proposed perimeters, one stands apart: a **governance, change management, and adoption perimeter** specifically designed to facilitate the organizational transformation that Convoke's own expansion creates. This is a meta-perimeter: it helps organizations adopt the other perimeters.
 
-**Proposed agents:**
+**Potential capabilities:**
 
-- **Change Architect** — Designs adoption strategies using Kotter, ADKAR, and diffusion theory. Maps organizational readiness. Creates phased rollout plans for new Convoke modules.
-- **Governance Designer** — Structures decision rights using Cynefin and DACI. Defines where agents operate autonomously vs. where human oversight is required. Maps compliance requirements (EU AI Act, ISO 42001).
-- **Adoption Catalyst** — Applies behavioral design (Fogg, Eyal, Thaler) to maximize module adoption. Monitors psychological safety indicators. Designs nudges and habit loops for agent-augmented workflows.
+- **Change architecture** — Designing adoption strategies using Kotter, ADKAR, and diffusion theory. Mapping organizational readiness. Creating phased rollout plans for new Convoke perimeters.
+- **Governance design** — Structuring decision rights using Cynefin and DACI. Defining where agents operate autonomously vs. where human oversight is required. Mapping compliance requirements (EU AI Act, ISO 42001).
+- **Adoption facilitation** — Applying behavioral design (Fogg, Eyal, Thaler) to maximize perimeter adoption. Monitoring psychological safety indicators. Designing nudges and habit loops for agent-augmented workflows.
 
-This module would draw on:
+This perimeter would draw on:
 - Change management (Kotter, Lewin, ADKAR, Bridges)
 - Organizational design (Team Topologies, unFIX, Conway's Law, Sociotechnical Systems)
 - Agentic transformation research (Mollick, McKinsey, Anthropic, Brynjolfsson)
@@ -644,26 +640,22 @@ This module would draw on:
 Not all modules need to be built simultaneously. A suggested sequencing based on value, dependency, and the three-axis architecture:
 
 **Wave 0 — Foundations (enable everything else):**
-- **Forge** (Knowledge Engineering) — In brownfield contexts, this runs *first*. Extracts the knowledge that every other module needs. In greenfield, it activates as soon as there's a codebase to mine.
-- **Mesh Infrastructure** — Define the port interface standard, capability registry, and routing layer. This enables domain modules to plug in without modifying lifecycle modules.
+- **Knowledge engineering perimeter** — In brownfield contexts, this activates *first*. Extracts the knowledge that every other perimeter needs. In greenfield, it activates as soon as there's a codebase to mine.
 
 **Wave 1 — Complete the core lifecycle loop:**
-- **Launch** (Delivery) — Bridges the Gyre-to-production gap
-- **Sentinel** (Operations) — Operationalizes Gyre's readiness findings
-- **Shield** (Security) — Elevates Gyre's security assessment to a proactive discipline
+- **Delivery perimeter** — Bridges the Gyre-to-production gap
+- **Operations perimeter** — Operationalizes Gyre's readiness findings
+- **Security perimeter** — Elevates Gyre's security assessment to a proactive discipline
 
-**Wave 2 — Extend lifecycle + first domain modules:**
-- **Compass** (Strategy) — Grounds discovery in strategic context
-- **Amplify** (Growth) — Closes the post-launch feedback loop
-- **Archive** (Documentation) — Prevents knowledge loss as modules multiply
-- **Synapse** (AgentOps) — Given Convoke is itself an agentic system, AgentOps is self-referentially essential
-- **Neuron** (MLOps) — Highest demand domain specialization
+**Wave 2 — Extend lifecycle coverage:**
+- **Strategy perimeter** — Grounds discovery in strategic context
+- **Growth perimeter** — Closes the post-launch feedback loop
+- **Documentation perimeter** — Prevents knowledge loss as perimeters multiply
 
 **Wave 3 — Complete the picture:**
-- **Horizon** (Sunset/Debt) — Full lifecycle closure
-- **Catalyst** (Change/Governance) — Meta-module for organizational adoption
-- **Flux** (DataOps) + **Base** (PlatformOps) — Additional domain modules
-- Further domain modules as needed (FinOps, QuantumOps, etc.) — plug into mesh infrastructure
+- **Sunset perimeter** — Full lifecycle closure
+- **Governance & change perimeter** — Meta-perimeter for organizational adoption
+- **Domain-specialized perimeters** (AgentOps, MLOps, DataOps, PlatformOps, etc.) — as demand dictates, informed by the domain mesh reference pattern
 
 ### 7.5 Open Questions for Further Exploration
 
@@ -687,4 +679,4 @@ Several theoretical and architectural questions merit deeper investigation:
 
 ---
 
-*This document serves as the theoretical foundation for Convoke's lifecycle expansion. Each proposed module should be specified using the Team Factory workflow, with agent designs grounded in the references cited here. Two dimensions deserve parallel development from Wave 0: Forge (knowledge engineering) and the Mesh Infrastructure — because without accessible knowledge and a scalable interconnection pattern, every subsequent module operates in the dark or at the cost of tight coupling. The organizational transformation dimension (Catalyst) should be developed in parallel — not as an afterthought — since the success of every other module depends on adoption.*
+*This document serves as the theoretical foundation for Convoke's lifecycle expansion. Each proposed perimeter should be specified using the Team Factory workflow when it matures from exploration to commitment, with agent designs grounded in the references cited here. Knowledge engineering deserves early attention (Wave 0) — without accessible knowledge, every subsequent perimeter operates in the dark. The governance and change management dimension should be developed in parallel — not as an afterthought — since the success of every other perimeter depends on adoption.*
