@@ -19,7 +19,18 @@
 8. [Observability & Monitoring](#8-observability--monitoring)
 9. [Organizational Learning & Decision Frameworks](#9-organizational-learning--decision-frameworks)
 10. [Prioritization & Backlog Management](#10-prioritization--backlog-management)
-11. [Prospective Research Directions](#11-prospective-research-directions)
+11. [Strategy & Competitive Analysis](#11-strategy--competitive-analysis)
+12. [Delivery & Release Management](#12-delivery--release-management)
+13. [Growth, Adoption & Product Analytics](#13-growth-adoption--product-analytics)
+14. [Operations & Resilience](#14-operations--resilience)
+15. [Security & Compliance](#15-security--compliance)
+16. [Active Knowledge Engineering](#16-active-knowledge-engineering)
+17. [Adaptive Systems, Entropy & Software Evolution](#17-adaptive-systems-entropy--software-evolution)
+18. [Domain Mesh Architecture & Composable Patterns](#18-domain-mesh-architecture--composable-patterns)
+19. [Systematic Documentation](#19-systematic-documentation)
+20. [Sunset & Technical Debt](#20-sunset--technical-debt)
+21. [Change Management & Organizational Transformation](#21-change-management--organizational-transformation)
+22. [Prospective Research Directions](#22-prospective-research-directions)
 
 ---
 
@@ -69,6 +80,18 @@
 - Chase, H. (2023–2025). "LangChain and LangGraph." https://blog.langchain.com/
   — Component abstraction (LangChain) and runtime orchestration (LangGraph). Reference architecture for agentic systems.
 
+- Yang, J., Jimenez, C. E., Wettig, A., et al. (2024). "SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering." *NeurIPS 2024*. arXiv:2405.15793.
+  — Demonstrates that agent-computer interface design dramatically affects LLM agent performance on software engineering tasks. Relevant to how Convoke shapes agent interaction surfaces.
+
+- Qian, C., et al. (2025). "ChatDev 2.0: Evolving Multi-Agent Collaboration for Software Development." *NeurIPS 2025*.
+  — Extends ChatDev with evolving orchestration patterns, agent memory, and cross-session learning. Supports non-linear agent coordination beyond fixed pipelines.
+
+- Multi-institutional. (2026). "The Orchestration of Multi-Agent Systems: A Systematic Survey." *arXiv* (January 2026).
+  — Comprehensive taxonomy of MAS orchestration patterns: centralized, decentralized, hybrid, and adaptive. Directly relevant to Convoke's gravity-driven routing as an alternative to pipeline orchestration.
+
+- Multi-institutional. (2026). "Agentic AI: Architectures, Taxonomies, and Emerging Frameworks." *arXiv* (January 2026).
+  — Proposes unified taxonomy for agentic AI system design: perception, reasoning, action, memory, and multi-agent coordination layers. Reference for Convoke's architectural classification.
+
 ---
 
 ## 2. Agent Reasoning & Communication Patterns
@@ -116,6 +139,12 @@
 
 - Anonymous/Multi-Institutional. (2025). "A Survey of Agent Interoperability Protocols: MCP, ACP, A2A, and ANP." *arXiv:2505.02279*.
   — Comparative analysis of emerging agent interoperability standards.
+
+- Cloud Security Alliance (CSA). (2024). *AI Agent Capability Framework*. https://cloudsecurityalliance.org/
+  — Structured maturity model for AI agent capabilities: perception, reasoning, planning, execution, collaboration. **Relevant to Convoke's asymmetric port maturity model (Levels 0–4) for domain perimeters.**
+
+- Multi-institutional. (2025). "TRiSM for Agentic AI: Trust, Risk, and Security Management in Agentic Systems." *arXiv* (2025).
+  — Applies Gartner's AI TRiSM framework specifically to agentic AI: model-level trust, agent-level risk, system-level security. Relevant to governance as a cross-cutting concern in Convoke.
 
 ---
 
@@ -485,7 +514,43 @@
 
 ---
 
-## 17. Domain Mesh Architecture & Composable Patterns
+## 17. Adaptive Systems, Entropy & Software Evolution
+
+**Project relevance:** Gravity model (non-linear lifecycle), entropy as cross-cutting force, asymmetric port maturity — the structural principles underlying Convoke's architecture.
+
+### Adaptive Cycles & Panarchy
+
+- Holling, C. S. (2001). "Understanding the Complexity of Economic, Ecological, and Social Systems." *Ecosystems*, 4(5), 390–405.
+  — Panarchy framework: systems cycle through exploitation → conservation → release → reorganization (r → K → Ω → α). **Primary theoretical grounding for Convoke's gravity model — perimeters gain and release priority through adaptive cycles rather than following a linear pipeline.**
+
+- Gunderson, L. H. & Holling, C. S. (Eds.). (2002). *Panarchy: Understanding Transformations in Human and Natural Systems*. Island Press. ISBN: 9781559638579
+  — Comprehensive treatment of adaptive cycles across scales, showing how systems at different levels influence each other. Informs how Convoke perimeters at different maturity levels interact.
+
+### Entropy in Multi-Agent & Software Systems
+
+- Lehman, M. M. (1980). "Programs, Life Cycles, and Laws of Software Evolution." *Proceedings of the IEEE*, 68(9), 1060–1076.
+  — Eight laws of software evolution, especially: continuing change (systems must adapt or become progressively less satisfactory) and increasing complexity (entropy grows unless actively managed). **Foundation for Convoke's entropy as cross-cutting force.**
+
+- Parunak, H. V. D. & Brueckner, S. (2001). "Entropy and Self-Organization in Multi-Agent Systems." *Proceedings of the Fifth International Conference on Autonomous Agents (AGENTS '01)*. ACM.
+  — Applies thermodynamic entropy measures to multi-agent coordination. Shows how agent interactions can increase or decrease system entropy depending on organizational structure.
+
+- De Holan, P. M. & Phillips, N. (2004). "Remembrance of Things Past? The Dynamics of Organizational Forgetting." *Management Science*, 50(11), 1603–1613.
+  — Organizations can lose knowledge through accidental forgetting (failure to retain) or intentional unlearning. **Informs Convoke's entropy detection — knowledge decay is not just code rot but organizational memory loss.**
+
+- Dumitru, A. (2025). "The Second Law of AI: How Entropy Shapes Agentic Systems." *arXiv* (2025).
+  — Argues that multi-agent AI systems inherently tend toward disorder without active entropy management: coordination decay, context drift, capability degradation. **Directly validates Convoke's entropy dimension — every perimeter needs a "sensitize" function.**
+
+- Storey, M. (2026). "How Generative and Agentic AI Shift Concern from Technical Debt to Cognitive Debt." https://margaretstorey.com/blog/2026/02/09/cognitive-debt/
+  — As AI generates more code, human understanding erodes. (Also listed in Section 16.) **Cognitive debt as a specific manifestation of entropy in AI-augmented development.**
+
+### Non-Pipeline Orchestration
+
+- Thelosen, T. & Gillson, G. (2024–ongoing). *Gravity AI: Event-Driven Intelligence Platform*. https://www.gravity.ai/
+  — Event-driven platform that routes work based on evidence signals rather than fixed pipeline stages. **Practitioner precedent for Convoke's gravity model — priority shifts based on what the system knows, not where it sits in a sequence.**
+
+---
+
+## 18. Domain Mesh Architecture & Composable Patterns
 
 **Project relevance:** Domain Mesh infrastructure — how specialized disciplines (DataOps, MLOps, AgentOps) interconnect as decentralized, composable modules.
 
@@ -534,6 +599,11 @@
 - Linux Foundation. (2025). *Agentic AI Foundation*. https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation
   — Open infrastructure for agentic AI in production: governance, interoperability, standards.
 
+### Agentic Data & Domain-Level Autonomy
+
+- Multi-institutional. (2026). "Data Agents: A Survey on Levels of Agentic Autonomy in Data Engineering." *arXiv* (2026).
+  — Proposes autonomy levels for AI agents in data domains (from tool-assisted to fully autonomous). **Relevant to Convoke's asymmetric port maturity model — domain modules graduate from advisory (Level 1) to autonomous (Level 3–4).**
+
 ### Composable & Federated Architectures
 
 - Gartner. (2024). "Composable Business and Technology."
@@ -544,7 +614,7 @@
 
 ---
 
-## 18. Systematic Documentation
+## 19. Systematic Documentation
 
 **Project relevance:** Proposed Archive module — systematic knowledge capture across the lifecycle.
 
@@ -559,7 +629,7 @@
 
 ---
 
-## 17. Sunset & Technical Debt
+## 20. Sunset & Technical Debt
 
 **Project relevance:** Proposed Horizon module — lifecycle end management.
 
@@ -577,7 +647,7 @@
 
 ---
 
-## 19. Change Management & Organizational Transformation
+## 21. Change Management & Organizational Transformation
 
 **Project relevance:** Proposed Catalyst module — governing and facilitating the transformation that Convoke's expansion creates.
 
@@ -680,7 +750,7 @@
 
 ---
 
-## 20. Prospective Research Directions
+## 22. Prospective Research Directions
 
 The following areas represent theoretical domains where Convoke could be further enriched. These are flagged for future exploration.
 
@@ -721,22 +791,31 @@ The following areas represent theoretical domains where Convoke could be further
 | **Gyre (Production Readiness)** | Forsgren et al. — *Accelerate* (2018), Beyer et al. — *Site Reliability Engineering* (2016), Humble & Farley — *Continuous Delivery* (2010) |
 | **Enhance (RICE Backlog)** | McBride — "RICE: Simple prioritization for product managers" (2016), Osterwalder et al. — *Value Proposition Design* (2014) |
 | **Team Factory** | Cagan — *Empowered* (2020), Weiss — *Multiagent Systems* (2013), CrewAI — "Framework for orchestrating role-playing AI agents" (2024) |
-| **BMAD Core Architecture** | Hong et al. — "MetaGPT" (2023), Wang et al. — "ChatDev" (2023), Wu et al. — "AutoGen" (2023) |
+| **BMAD Core Architecture** | Hong et al. — "MetaGPT" (2023), Wang et al. — "ChatDev" (2023), Wu et al. — "AutoGen" (2023), Qian et al. — "ChatDev 2.0" (2025) |
 | | |
-| **— PROPOSED MODULES —** | |
-| **Compass (Strategy)** | Porter — *Competitive Strategy* (1980), Lafley & Martin — *Playing to Win* (2013), Wardley — *Wardley Maps* (2018), Osterwalder — *Business Model Generation* (2010) |
-| **Launch (Delivery)** | Humble & Farley — *Continuous Delivery* (2010), Hodgson — *Feature Flag Best Practices* (2020), Forsgren et al. — *Accelerate* (2018) |
-| **Amplify (Growth)** | Bush — *Product-Led Growth* (2019), McClure — "Pirate Metrics AARRR" (2007), Ellis — "North Star Metric" (2013), Kohavi et al. — *Trustworthy Online Controlled Experiments* (2020) |
-| **Sentinel (Operations)** | Beyer et al. — *Site Reliability Engineering* (2016), Rosenthal et al. — *Chaos Engineering* (2020), PagerDuty — *Incident Response* (2015+) |
-| **Shield (Security)** | Shostack — *Threat Modeling* (2014), OWASP — *DevSecOps Guideline* (2021+), NIST — *SSDF SP 800-218* (2022), EU — *AI Act* (2024) |
-| **Archive (Documentation)** | Procida — *Diátaxis* (2017+), Gentle — *Docs Like Code* (2017), Nygard — "Architecture Decision Records" (2011) |
-| **Horizon (Sunset/Debt)** | Cunningham — "Technical Debt" (1992), Tornhill — *Software Design X-Rays* (2018), Fowler — "Strangler Fig Pattern" (2004) |
-| **Forge (Knowledge Engineering)** | Polanyi — *The Tacit Dimension* (1966), Nonaka & Takeuchi — *The Knowledge-Creating Company* (1995), Kagdi et al. — "Mining Software Repositories" (2007), Microsoft — *GraphRAG* (2024+), Storey — "Cognitive Debt" (2026) |
-| **Catalyst (Change/Governance)** | Kotter — *Leading Change* (1996), Skelton & Pais — *Team Topologies* (2019), Mollick — *Co-Intelligence* (2024), Snowden — "Cynefin Framework" (2007), Edmondson — "Psychological Safety" (1999+) |
+| **— STRUCTURAL PRINCIPLES —** | |
+| **Gravity Model (Non-Linear Lifecycle)** | Holling — "Panarchy / Adaptive Cycles" (2001), Gunderson & Holling — *Panarchy* (2002), Gravity AI — "Event-Driven Intelligence" (2024+), "Orchestration of MAS" (2026) |
+| **Entropy (Cross-Cutting Force)** | Lehman — "Laws of Software Evolution" (1980), Parunak & Brueckner — "Entropy and Self-Organization in MAS" (2001), De Holan & Phillips — "Organizational Forgetting" (2004), Dumitru — "Second Law of AI" (2025), Storey — "Cognitive Debt" (2026) |
+| **Asymmetric Port Maturity** | CSA — *AI Agent Capability Framework* (2024), Cockburn — *Hexagonal Architecture* (2005), "Data Agents: Levels of Autonomy" (2026) |
+| **Infrastructure vs. Practice Perimeters** | Skelton & Pais — *Team Topologies* (2019), Dehghani — *Data Mesh* (2022), Evans — *Domain-Driven Design* (2003) |
+| | |
+| **— PROPOSED PERIMETERS (PRACTICE) —** | |
+| **Strategy Perimeter** | Porter — *Competitive Strategy* (1980), Lafley & Martin — *Playing to Win* (2013), Wardley — *Wardley Maps* (2018), Osterwalder — *Business Model Generation* (2010) |
+| **Delivery Perimeter** | Humble & Farley — *Continuous Delivery* (2010), Hodgson — *Feature Flag Best Practices* (2020), Forsgren et al. — *Accelerate* (2018) |
+| **Growth Perimeter** | Bush — *Product-Led Growth* (2019), McClure — "Pirate Metrics AARRR" (2007), Ellis — "North Star Metric" (2013), Kohavi et al. — *Trustworthy Online Controlled Experiments* (2020) |
+| **Operations Perimeter** | Beyer et al. — *Site Reliability Engineering* (2016), Rosenthal et al. — *Chaos Engineering* (2020), PagerDuty — *Incident Response* (2015+) |
+| **Security Perimeter** | Shostack — *Threat Modeling* (2014), OWASP — *DevSecOps Guideline* (2021+), NIST — *SSDF SP 800-218* (2022), EU — *AI Act* (2024), "TRiSM for Agentic AI" (2025) |
+| **Sunset Perimeter** | Cunningham — "Technical Debt" (1992), Tornhill — *Software Design X-Rays* (2018), Fowler — "Strangler Fig Pattern" (2004) |
+| **Governance Perimeter** | Kotter — *Leading Change* (1996), Skelton & Pais — *Team Topologies* (2019), Mollick — *Co-Intelligence* (2024), Snowden — "Cynefin Framework" (2007), Edmondson — "Psychological Safety" (1999+) |
+| | |
+| **— PROPOSED PERIMETERS (INFRASTRUCTURE) —** | |
+| **Knowledge Engineering** | Polanyi — *The Tacit Dimension* (1966), Nonaka & Takeuchi — *The Knowledge-Creating Company* (1995), Kagdi et al. — "Mining Software Repositories" (2007), Microsoft — *GraphRAG* (2024+), Storey — "Cognitive Debt" (2026) |
+| **Documentation** | Procida — *Diátaxis* (2017+), Gentle — *Docs Like Code* (2017), Nygard — "Architecture Decision Records" (2011) |
+| **Entropy Management** | Lehman — "Laws of Software Evolution" (1980), Dumitru — "Second Law of AI" (2025), Parunak & Brueckner — "Entropy in MAS" (2001) |
+| **Mesh Infrastructure** | Dehghani — *Data Mesh* (2022), Cockburn — *Hexagonal Architecture* (2005), Evans — *Domain-Driven Design* (2003), Broda — "Agentic Mesh" (2025) |
 | | |
 | **— DOMAIN MESH MODULES —** | |
-| **Mesh Infrastructure** | Dehghani — *Data Mesh* (2022), Cockburn — *Hexagonal Architecture* (2005), Evans — *Domain-Driven Design* (2003), Broda — "Agentic Mesh" (2025) |
-| **Flux (DataOps)** | Dehghani — *Data Mesh* (2022), Huyen — *Designing Machine Learning Systems* (2022), DataKitchen — *DataOps Cookbook* (2020+) |
-| **Neuron (MLOps)** | Google Cloud — *MLOps Maturity Model* (2021+), Huyen — *AI Engineering* (2025), Sculley et al. — "Hidden Technical Debt in ML Systems" (2015) |
-| **Synapse (AgentOps)** | Anthropic — *MCP* (2024), Google — *A2A Protocol* (2024), Linux Foundation — *Agentic AI Foundation* (2025) |
-| **Base (PlatformOps)** | Skelton & Pais — *Team Topologies* (2019), Gartner — "Composable Architecture" (2024) |
+| **DataOps Domain** | Dehghani — *Data Mesh* (2022), Huyen — *Designing Machine Learning Systems* (2022), "Data Agents: Levels of Autonomy" (2026) |
+| **MLOps Domain** | Google Cloud — *MLOps Maturity Model* (2021+), Huyen — *AI Engineering* (2025), Sculley et al. — "Hidden Technical Debt in ML Systems" (2015) |
+| **AgentOps Domain** | Anthropic — *MCP* (2024), Google — *A2A Protocol* (2024), Linux Foundation — *Agentic AI Foundation* (2025), Yang et al. — "SWE-agent" (2024) |
+| **PlatformOps Domain** | Skelton & Pais — *Team Topologies* (2019), Gartner — "Composable Architecture" (2024) |
