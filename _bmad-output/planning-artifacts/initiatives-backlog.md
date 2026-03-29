@@ -60,6 +60,7 @@
 | I1 | **NPM_TOKEN secret for CI publish** — Enable automated `npm publish` on tag push via GitHub Actions | CI/CD, adjusted (Victor) | 8 | 2 | 90% | 8 | 1.8 | Keep the lights on | Backlog |
 | S1 | **Interactive installer with project-type questions** — Ask user questions during install to customize initial config (e.g., B2B/B2C, team size). Note: must account for Skills installation alongside Teams (v2.4.0). v6.2.0 skill packages add discovery via `bmad-skill-manifest.yaml` — installer question flow should include skill activation. | Multi-agent review (Sally) | 5 | 2 | 50% | 5 | 1.0 | Move the needle | Backlog |
 | S2 | **Simplified entry point** — Single "Start Discovery" command that activates Emma with a guided first-run experience. Note: Enhance skill activation UX (keyword in chat) provides a reference pattern for low-friction entry points. | Multi-agent review (Sally) | 7 | 1 | 40% | 4 | 0.7 | Move the needle | Backlog |
+| S3 | **One-command standalone install (`npx convoke-agents init`)** — Replace the current two-step flow (`npm install -g` + `convoke-install`) with a single `npx convoke-agents init` that handles everything: project detection, module selection (Vortex/Gyre/both), config prompts, file copy, skill generation, and validation. No global install required — lowest possible barrier for a single CTA. Internally reuses the existing 5-stage pipeline. Also merge `convoke-install-vortex` + `convoke-install-gyre` into a unified `convoke-install` with flags (`--vortex-only`, `--gyre-only`) for users who prefer global install. Subsumes S1 interactive questions into the `init` flow. See `docs/standalone-decoupling-strategy.md` for full architectural context (standalone install + BMAD decoupling phases). | Winston architecture session, 2026-03-29 | 9 | 2 | 80% | 4 | 3.6 | Move the needle | Backlog |
 | I7 | **Team Factory CSV quoting hardening** — `formatCsvRow` in `csv-creator.js` only quotes 2 of 13 columns. All columns should be quoted if they can contain commas or special characters. Same pattern exists in BMB/BMM CSVs. Applies to all CSV-producing modules. | Code review (tf-2-7) | 4 | 0.5 | 90% | 1 | 1.8 | Keep the lights on | Backlog |
 | I8 | **Team Factory write verification — value correctness** — Simple safety protocol checks key presence but not value correctness after write. `config-creator.js` verifies `submodule_name`, `agents`, `workflows` keys exist but not their values. `csv-creator.js` verifies header only. Full value verification would need round-trip comparison against in-memory object. | Code review (tf-2-7) | 3 | 0.5 | 80% | 2 | 0.6 | Keep the lights on | Backlog |
 | I9 | **Registry writer idempotency drift detection** — `registry-writer.js` Task 2.10 specifies "if existing block differs, return error" but implementation only checks prefix presence, not content match. A drift case (prefix exists, content changed) silently returns `skipped` instead of an error. Amend spec to either add content-hash comparison or clarify presence-only check is sufficient. | Code review (tf-2-8) | 3 | 0.5 | 90% | 1 | 1.4 | Keep the lights on | Backlog |
@@ -159,46 +160,47 @@ Remaining update system items not in Hardening: load-time validation, version de
 | 2 | P10 | Capability Evaluation Framework | 5.6 | Move the needle | Platform |
 | 3 | P11 | Friction log capture for consulting teams | 5.6 | Move the needle | Platform |
 | 4 | **U7** | **Changelog surface during update** | **4.3** | **Move the needle** | **Update System** |
-| 5 | P12 | Enhance framework — Team Module Generator (BMB) | 3.2 | Move the needle | Unblocked |
-| 6 | **U8** | **Respect user agent exclusions on update** | **3.2** | **Move the needle** | **Update System** |
-| 7 | P9 | Forge team — Domain Knowledge Extraction (KORE) | 3.0 | Move the needle | Blocked |
-| 8 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
-| 9 | P13 | Vortex redesign (align to Enhance patterns) | 2.5 | Move the needle | Platform |
-| 10 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
-| 11 | T7 | Add Python linting to CI pipeline | 2.4 | Keep the lights on | Testing |
-| 12 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
-| 13 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
-| 14 | **U9** | **Module-aware refresh and validation** | **1.9** | **Move the needle** | **Update System** |
-| 15 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
-| 16 | I7 | Team Factory CSV quoting hardening | 1.8 | Keep the lights on | Infrastructure |
-| 17 | T8 | Standardize Python PEP 723 dependency declarations | 1.6 | Keep the lights on | Testing |
-| 18 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
-| 19 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
-| 20 | I9 | Registry writer idempotency drift detection | 1.4 | Keep the lights on | Infrastructure |
-| 21 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
-| 22 | I5 | Workflow output naming enforcement | 1.2 | Keep the lights on | Infrastructure |
-| 23 | P7 | ML/AI Engineering team exploration | 1.2 | Move the needle | Platform |
-| 24 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
-| 25 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
-| 26 | I10 | Config appender YAML comment preservation | 0.9 | Keep the lights on | Infrastructure |
-| 27 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
-| 28 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
-| 29 | I6 | Add `--verbose` flag to all CLI commands | 0.8 | Keep the lights on | Infrastructure |
-| 30 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
-| 31 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
-| 32 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
-| 33 | I8 | Team Factory write verification — value correctness | 0.6 | Keep the lights on | Infrastructure |
-| 34 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
-| 35 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
-| 36 | I11 | Registry Fragment Architecture (D-Q6) | 0.5 | Keep the lights on | Infrastructure |
-| 37 | I13 | Team Factory Express Mode | 0.5 | Keep the lights on | Infrastructure |
-| 38 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Unblocked |
-| 39 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
-| 40 | I12 | Validator.js hardcoded to Vortex paths | 0.4 | Keep the lights on | Infrastructure |
-| 41 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
-| 42 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
-| 43 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
-| 44 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
+| 5 | **S3** | **One-command standalone install (`npx convoke-agents init`)** | **3.6** | **Move the needle** | **Infrastructure** |
+| 6 | P12 | Enhance framework — Team Module Generator (BMB) | 3.2 | Move the needle | Unblocked |
+| 7 | **U8** | **Respect user agent exclusions on update** | **3.2** | **Move the needle** | **Update System** |
+| 8 | P9 | Forge team — Domain Knowledge Extraction (KORE) | 3.0 | Move the needle | Blocked |
+| 9 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
+| 10 | P13 | Vortex redesign (align to Enhance patterns) | 2.5 | Move the needle | Platform |
+| 11 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
+| 12 | T7 | Add Python linting to CI pipeline | 2.4 | Keep the lights on | Testing |
+| 13 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
+| 14 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
+| 15 | **U9** | **Module-aware refresh and validation** | **1.9** | **Move the needle** | **Update System** |
+| 16 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
+| 17 | I7 | Team Factory CSV quoting hardening | 1.8 | Keep the lights on | Infrastructure |
+| 18 | T8 | Standardize Python PEP 723 dependency declarations | 1.6 | Keep the lights on | Testing |
+| 19 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
+| 20 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
+| 21 | I9 | Registry writer idempotency drift detection | 1.4 | Keep the lights on | Infrastructure |
+| 22 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
+| 23 | I5 | Workflow output naming enforcement | 1.2 | Keep the lights on | Infrastructure |
+| 24 | P7 | ML/AI Engineering team exploration | 1.2 | Move the needle | Platform |
+| 25 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
+| 26 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
+| 27 | I10 | Config appender YAML comment preservation | 0.9 | Keep the lights on | Infrastructure |
+| 28 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
+| 29 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
+| 30 | I6 | Add `--verbose` flag to all CLI commands | 0.8 | Keep the lights on | Infrastructure |
+| 31 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
+| 32 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
+| 33 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
+| 34 | I8 | Team Factory write verification — value correctness | 0.6 | Keep the lights on | Infrastructure |
+| 35 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
+| 36 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
+| 37 | I11 | Registry Fragment Architecture (D-Q6) | 0.5 | Keep the lights on | Infrastructure |
+| 38 | I13 | Team Factory Express Mode | 0.5 | Keep the lights on | Infrastructure |
+| 39 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Unblocked |
+| 40 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
+| 41 | I12 | Validator.js hardcoded to Vortex paths | 0.4 | Keep the lights on | Infrastructure |
+| 42 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
+| 43 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
+| 44 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
+| 45 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
 
 ---
 
