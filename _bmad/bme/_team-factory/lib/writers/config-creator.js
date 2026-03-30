@@ -3,6 +3,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('js-yaml');
+const { toKebab, deriveWorkflowName } = require('../utils/naming-utils');
 
 /** @typedef {import('../types/factory-types')} Types */
 
@@ -91,28 +92,12 @@ function buildConfigData(specData) {
 
 /**
  * Derive workflow names from spec data.
- * Uses workflow_names map if present, otherwise derives from first capability.
+ * Uses shared deriveWorkflowName() for per-agent logic, then deduplicates.
  * @param {Object} specData
  * @returns {string[]}
  */
 function deriveWorkflowNames(specData) {
-  const names = [];
-  for (const agent of (specData.agents || [])) {
-    if (specData.workflow_names && specData.workflow_names[agent.id]) {
-      names.push(specData.workflow_names[agent.id]);
-    } else if (agent.capabilities && agent.capabilities.length > 0) {
-      // First capability, kebab-case — if more than 4 words, use role instead
-      const cap = agent.capabilities[0];
-      const wordCount = cap.trim().split(/\s+/).length;
-      if (wordCount > 4 && agent.role) {
-        names.push(toKebab(agent.role));
-      } else {
-        names.push(toKebab(cap));
-      }
-    } else {
-      names.push(toKebab(agent.role || agent.id));
-    }
-  }
+  const names = (specData.agents || []).map(agent => deriveWorkflowName(agent, specData));
 
   // Check for intra-spec duplicate workflow names
   const seen = new Set();
@@ -188,19 +173,6 @@ async function detectCollisions(specData, bmeRoot) {
   }
 
   return collisions;
-}
-
-/**
- * Convert a string to kebab-case.
- * @param {string} str
- * @returns {string}
- */
-function toKebab(str) {
-  if (!str) return '';
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
 }
 
 // --- CLI entry point ---
