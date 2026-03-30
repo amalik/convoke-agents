@@ -3,6 +3,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const { execSync } = require('child_process');
+const { toKebab, deriveWorkflowName } = require('../utils/naming-utils');
 
 /** @typedef {import('../types/factory-types')} Types */
 
@@ -127,38 +128,16 @@ function derivePrefix(teamNameKebab) {
 }
 
 /**
- * Build workflow names from spec data using the same logic as config-creator.
+ * Build workflow names from spec data using shared deriveWorkflowName().
  * @param {Object} specData
  * @returns {Object} Map of agent_id → workflow_name
  */
 function buildWorkflowNames(specData) {
   const map = {};
   for (const agent of (specData.agents || [])) {
-    if (specData.workflow_names && specData.workflow_names[agent.id]) {
-      map[agent.id] = specData.workflow_names[agent.id];
-    } else if (agent.capabilities && agent.capabilities.length > 0) {
-      const cap = agent.capabilities[0];
-      const wordCount = cap.trim().split(/\s+/).length;
-      if (wordCount > 4 && agent.role) {
-        map[agent.id] = toKebab(agent.role);
-      } else {
-        map[agent.id] = toKebab(cap);
-      }
-    } else {
-      map[agent.id] = toKebab(agent.role || agent.id);
-    }
+    map[agent.id] = deriveWorkflowName(agent, specData);
   }
   return map;
-}
-
-/**
- * Convert a string to kebab-case.
- * @param {string} str
- * @returns {string}
- */
-function toKebab(str) {
-  if (!str) return '';
-  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
 /**
@@ -324,8 +303,10 @@ async function validateSyntax(moduleBlock, prefix) {
 function checkDirtyTree(registryPath) {
   try {
     const cwd = path.dirname(registryPath);
-    const diff = execSync(`git diff --name-only -- "${registryPath}"`, { cwd, timeout: 5000, stdio: 'pipe' }).toString().trim();
-    return { dirty: diff.length > 0, diff };
+    const unstaged = execSync(`git diff --name-only -- "${registryPath}"`, { cwd, timeout: 5000, stdio: 'pipe' }).toString().trim();
+    const staged = execSync(`git diff --cached --name-only -- "${registryPath}"`, { cwd, timeout: 5000, stdio: 'pipe' }).toString().trim();
+    const allDiffs = [unstaged, staged].filter(Boolean).join('\n');
+    return { dirty: allDiffs.length > 0, diff: allDiffs };
   } catch {
     // If git is not available or file is not in a repo, proceed
     return { dirty: false, diff: '' };
