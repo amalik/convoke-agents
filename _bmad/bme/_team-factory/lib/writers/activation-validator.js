@@ -91,16 +91,20 @@ async function validateSingleAgent(agentFile, moduleConfig) {
     errors.push(`Config file does not exist at ${configAbsPath}`);
   }
 
-  // Check 4: Module path reference — check module= attribute specifically
+  // Check 4: Module path reference — strict module= attribute match only
   const moduleAttrRegex = /module\s*=\s*"([^"]*)"/;
   const moduleAttrMatch = activationContent.match(moduleAttrRegex);
   const modulePathValid = moduleAttrMatch
     ? moduleAttrMatch[1] === moduleConfig.modulePath
-    : activationContent.includes(moduleConfig.modulePath);
+    : false;
   checks.push({
     check: 'Module path reference',
     passed: modulePathValid,
-    detail: modulePathValid ? undefined : `Expected module="${moduleConfig.modulePath}" but found module="${moduleAttrMatch ? moduleAttrMatch[1] : '(not found)'}" in activation block`
+    detail: modulePathValid
+      ? undefined
+      : moduleAttrMatch
+        ? `Expected module="${moduleConfig.modulePath}" but found module="${moduleAttrMatch[1]}" in activation block`
+        : `No module="..." attribute found in activation block`
   });
   if (!modulePathValid) {
     errors.push(`Module path "${moduleConfig.modulePath}" not referenced correctly in activation block`);
