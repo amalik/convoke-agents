@@ -1,0 +1,3 @@
+module,phase,name,code,sequence,workflow_file,command,required,agent,options,description,output_location,outputs
+_team-factory,solutioning,Create Team,CT,1,_bmad/bme/_team-factory/workflows/step-00-route.md,,optional,team-factory,,Create a new BMAD-compliant team through guided architectural discovery,_bmad-output/planning-artifacts,team-spec-{name}.yaml
+_team-factory,solutioning,Validate Team,VT,2,_bmad/bme/_team-factory/workflows/add-team/step-05-validate.md,,optional,team-factory,,Run end-to-end validation on an existing team module,_bmad-output/planning-artifacts,validation-report.md
