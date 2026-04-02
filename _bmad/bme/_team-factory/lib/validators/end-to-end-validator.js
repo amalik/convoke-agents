@@ -139,7 +139,7 @@ function checkCsv(ctx, specData) {
   const lines = content.trim().split('\n');
 
   // HEADER
-  const expectedHeader = 'module,phase,name,code,sequence,workflow_file,command,required,agent,options,description,output_location,outputs';
+  const expectedHeader = 'module,phase,name,code,sequence,workflow-file,command,required,agent,options,description,output-location,outputs,';
   const actualHeader = lines[0] || '';
   checks.push({
     name: 'CSV-HEADER',
