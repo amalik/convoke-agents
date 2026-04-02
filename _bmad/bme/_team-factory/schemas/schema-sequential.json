@@ -87,6 +87,15 @@
           "overlap_acknowledgments": {
             "type": "array",
             "items": { "type": "string" }
+          },
+          "persona": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string" },
+              "identity": { "type": "string" },
+              "communication_style": { "type": "string" },
+              "expertise": { "type": "string" }
+            }
           }
         },
         "additionalProperties": false
