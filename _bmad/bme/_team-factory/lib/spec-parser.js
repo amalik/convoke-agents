@@ -89,6 +89,21 @@ function validateAgainstSchema(doc, schema, pattern) {
     }
   }
 
+  // Type checks on key fields
+  if (doc.schema_version !== undefined && typeof doc.schema_version !== 'string') {
+    errors.push(`schema_version must be a string, got ${typeof doc.schema_version}`);
+  } else if (doc.schema_version && !/^\d+\.\d+$/.test(doc.schema_version)) {
+    errors.push(`schema_version "${doc.schema_version}" does not match pattern "N.N" (e.g., "1.0")`);
+  }
+
+  if (doc.composition_pattern !== undefined && doc.composition_pattern !== pattern) {
+    errors.push(`composition_pattern "${doc.composition_pattern}" does not match expected "${pattern}"`);
+  }
+
+  if (doc.team_name !== undefined && (typeof doc.team_name !== 'string' || doc.team_name.length === 0)) {
+    errors.push('team_name must be a non-empty string');
+  }
+
   // Validate naming patterns
   const KEBAB_RE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
   const AGENT_ID_RE = /^[a-z]+(-[a-z]+)*$/;
@@ -99,6 +114,9 @@ function validateAgainstSchema(doc, schema, pattern) {
 
   // Validate agents array
   if (Array.isArray(doc.agents)) {
+    if (doc.agents.length === 0) {
+      errors.push('agents array must contain at least one agent');
+    }
     for (let i = 0; i < doc.agents.length; i++) {
       const agent = doc.agents[i];
       if (!agent.id) {
@@ -148,7 +166,9 @@ function validateAgainstSchema(doc, schema, pattern) {
 
   // Validate integration block
   if (doc.integration) {
-    if (!doc.integration.output_directory) {
+    if (typeof doc.integration !== 'object' || Array.isArray(doc.integration)) {
+      errors.push('integration must be an object');
+    } else if (!doc.integration.output_directory) {
       errors.push('integration.output_directory is required');
     }
   }
@@ -158,12 +178,12 @@ function validateAgainstSchema(doc, schema, pattern) {
 
 /**
  * Parse a spec from a YAML string (for testing or in-memory use).
+ * Pattern is determined from the document's composition_pattern field.
  *
  * @param {string} yamlString - Raw YAML content
- * @param {string} pattern - Expected pattern for schema selection
  * @returns {Promise<{ valid: boolean, spec: TeamSpec|null, errors: string[] }>}
  */
-async function parseSpecFromString(yamlString, pattern) {
+async function parseSpecFromString(yamlString) {
   const tmpDir = await fs.mkdtemp(path.join(require('os').tmpdir(), 'bmad-tf-parse-'));
   const tmpFile = path.join(tmpDir, 'spec.yaml');
   try {
