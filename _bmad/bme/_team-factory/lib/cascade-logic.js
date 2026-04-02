@@ -114,7 +114,7 @@ const DECISION_CATALOGUE = [
  * and which are eliminated.
  *
  * @param {string} pattern - "Independent" or "Sequential"
- * @returns {{ decisions: CascadeDecision[], eliminated: CascadeDecision[] }}
+ * @returns {{ decisions: CascadeDecision[], eliminated: CascadeDecision[], error?: string }}
  */
 function getCascadeForPattern(pattern) {
   const validation = validatePattern(pattern);
