@@ -1,0 +1,86 @@
+# Team Spec Template — Express Mode Input
+# Fill in this template and pass to the factory for rapid team creation.
+# Fields marked REQUIRED must be provided. Optional fields can be removed.
+#
+# Usage: Save as team-spec-{your-team-name}.yaml in _bmad-output/planning-artifacts/
+# Then invoke the factory in Express Mode with this file as input.
+
+schema_version: "1.0"
+
+# REQUIRED: Human-readable team name
+team_name: ""
+
+# REQUIRED: Kebab-case team name (used for directory naming)
+# Must match: /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/
+team_name_kebab: ""
+
+# Optional: What does this team do?
+description: ""
+
+# REQUIRED: "Independent" or "Sequential"
+# Independent: Agents operate standalone, no contracts between them
+# Sequential: Agents form a pipeline with handoff contracts
+composition_pattern: ""
+
+# Auto-populated by factory
+created: ""
+factory_version: "1.0.0"
+
+# REQUIRED: At least one agent
+# Agent IDs must match: /^[a-z]+(-[a-z]+)*$/
+agents:
+  - id: ""
+    name: ""          # Display name (first name persona)
+    icon: ""          # Single emoji
+    role: ""          # REQUIRED: What this agent does
+    title: ""         # Formal title
+    capabilities:
+      - ""
+    # Sequential only — remove for Independent
+    # pipeline_position: 1
+    overlap_acknowledgments: []
+
+# Sequential only — remove entire section for Independent
+# At least one contract required for Sequential teams
+# contracts:
+#   - id: "HC1"
+#     source_agent: ""
+#     target_agents:
+#       - ""
+#     artifact_title: ""
+#     artifact_description: ""
+#     key_sections:
+#       - ""
+#     file_name: ""
+#     input_artifacts: []
+#     optional: false
+
+# Sequential only — optional feedback routing contracts
+# feedback_contracts: []
+
+# REQUIRED: Integration settings
+integration:
+  output_directory: "_bmad-output/{team-name}-artifacts"
+  # "optional" or "per-agent" for Independent
+  # "required" or "shared-reference" for Sequential
+  compass_routing: ""
+  # Sequential only — prefix for contract IDs (e.g., "HC", "GC")
+  # contract_prefix: ""
+
+# Auto-managed by factory — do not edit manually
+progress:
+  orient: "pending"
+  scope: "pending"
+  connect: "pending"
+  review: "pending"
+  generate: "pending"
+  validate: "pending"
+
+# Auto-populated by factory during guided mode
+decisions: []
+
+# Post-completion metrics (factory populates after run)
+metrics:
+  discovery_path: null
+  hardest_step: null
+  would_use_again: null
