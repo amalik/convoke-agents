@@ -1,0 +1,233 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Team Spec — Sequential Pattern",
+  "description": "Schema for Sequential composition pattern team specs. Agents form a pipeline with handoff contracts.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "team_name",
+    "team_name_kebab",
+    "composition_pattern",
+    "agents",
+    "contracts",
+    "integration"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Schema version (e.g., '1.0')"
+    },
+    "team_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable team name"
+    },
+    "team_name_kebab": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "description": "Kebab-case team name for directory naming"
+    },
+    "description": {
+      "type": "string",
+      "description": "What the team does"
+    },
+    "composition_pattern": {
+      "type": "string",
+      "enum": ["Sequential"],
+      "description": "Must be 'Sequential' for this schema"
+    },
+    "created": {
+      "type": "string",
+      "description": "ISO date string"
+    },
+    "factory_version": {
+      "type": "string",
+      "description": "Factory version that created this spec"
+    },
+    "agents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "role", "pipeline_position"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z]+(-[a-z]+)*$",
+            "description": "Agent ID in kebab-case"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name (first name persona)"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Single emoji"
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "description": "What this agent does"
+          },
+          "title": {
+            "type": "string",
+            "description": "Formal title"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "pipeline_position": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Position in the pipeline (1-based)"
+          },
+          "overlap_acknowledgments": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "contracts": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Handoff contracts between pipeline agents",
+      "items": {
+        "type": "object",
+        "required": ["id", "source_agent", "target_agents"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Contract ID (e.g., HC1, GC1)"
+          },
+          "source_agent": {
+            "type": "string",
+            "description": "Agent ID that produces the artifact"
+          },
+          "target_agents": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" },
+            "description": "Agent IDs that consume the artifact"
+          },
+          "artifact_title": {
+            "type": "string",
+            "description": "Human-readable artifact name"
+          },
+          "artifact_description": {
+            "type": "string",
+            "description": "What the artifact contains"
+          },
+          "key_sections": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Main sections of the artifact"
+          },
+          "file_name": {
+            "type": "string",
+            "description": "Output file name for the artifact"
+          },
+          "input_artifacts": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Contract IDs this artifact depends on"
+          },
+          "optional": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this contract is optional"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "feedback_contracts": {
+      "type": "array",
+      "description": "Optional feedback routing contracts (downstream → upstream)",
+      "items": {
+        "type": "object",
+        "required": ["id", "source_agent", "target_agents"],
+        "properties": {
+          "id": { "type": "string" },
+          "source_agent": { "type": "string" },
+          "target_agents": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          },
+          "artifact_title": { "type": "string" },
+          "artifact_description": { "type": "string" },
+          "key_sections": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "file_name": { "type": "string" },
+          "input_artifacts": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "optional": { "type": "boolean", "default": true }
+        },
+        "additionalProperties": false
+      }
+    },
+    "integration": {
+      "type": "object",
+      "required": ["output_directory", "contract_prefix"],
+      "properties": {
+        "output_directory": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Where output artifacts are saved"
+        },
+        "compass_routing": {
+          "type": "string",
+          "enum": ["required", "shared-reference"],
+          "description": "Compass routing mode (required for Sequential)"
+        },
+        "contract_prefix": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Z]+$",
+          "description": "Prefix for contract IDs (e.g., HC, GC, FG)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "progress": {
+      "type": "object",
+      "properties": {
+        "orient": { "type": "string" },
+        "scope": { "type": "string" },
+        "connect": { "type": "string" },
+        "review": { "type": "string" },
+        "generate": {},
+        "validate": { "type": "string" }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step": { "type": "string" },
+          "decision": { "type": "string" },
+          "default_accepted": { "type": "boolean" },
+          "rationale": { "type": "string" }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "discovery_path": {},
+        "hardest_step": {},
+        "would_use_again": {}
+      }
+    }
+  }
+}
