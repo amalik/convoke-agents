@@ -59,7 +59,7 @@ async function buildHappyContext(tmpDir) {
 
   // Create module-help.csv with correct header and row count
   const csvPath = path.join(moduleRoot, 'module-help.csv');
-  const csvHeader = 'module,phase,name,code,sequence,workflow_file,command,required,agent,options,description,output_location,outputs';
+  const csvHeader = 'module,phase,name,code,sequence,workflow-file,command,required,agent,options,description,output-location,outputs,';
   const csvRows = [
     csvHeader,
     'test-team,1,data-analysis,DA,1,workflow.md,run,yes,alpha-analyzer,,Analyze data,,',
