@@ -1,0 +1,13 @@
+submodule_name: _team-factory
+description: Team Factory - Guided creation of BMAD-compliant teams through architectural discovery and automated wiring
+module: bme
+output_folder: '{project-root}/_bmad-output/planning-artifacts'
+agents:
+  - team-factory
+workflows:
+  - add-team
+version: 1.0.0
+user_name: '{user}'
+communication_language: en
+party_mode_enabled: true
+core_module: bme
