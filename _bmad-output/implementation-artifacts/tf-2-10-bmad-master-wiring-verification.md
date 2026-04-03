@@ -1,6 +1,6 @@
 # Story 2.10: BMad Master Wiring Verification
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -39,22 +39,22 @@ This story closes the AC 2.1.1 partial gap identified during the April 2nd AC co
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Fix and verify BMad Master menu item (AC: #1, #2)
-  - [ ] Read `_bmad/core/agents/bmad-master.md` and confirm TF item exists
-  - [ ] Fix exec handler: change `exec="skill:bmad-team-factory"` to `exec="skill:bmad-agent-bme-team-factory"` to match the actual skill directory name
-  - [ ] Confirm cmd triggers include "team-factory", "create-team", "TF"
+- [x] Task 1: Fix and verify BMad Master menu item (AC: #1, #2)
+  - [x] Read `_bmad/core/agents/bmad-master.md` and confirm TF item exists
+  - [x] Fix exec handler: change `exec="skill:bmad-team-factory"` to `exec="skill:bmad-agent-bme-team-factory"` to match the actual skill directory name
+  - [x] Confirm cmd triggers include "team-factory", "create-team", "TF"
 
-- [ ] Task 2: Verify skill activation chain (AC: #2, #3)
-  - [ ] Confirm `.claude/skills/bmad-agent-bme-team-factory/SKILL.md` exists and points to correct agent file
-  - [ ] Confirm `_bmad/bme/_team-factory/agents/team-factory.md` loads config from correct path
-  - [ ] Confirm agent activation step 2 references `_bmad/bme/_team-factory/config.yaml`
+- [x] Task 2: Verify skill activation chain (AC: #2, #3)
+  - [x] Confirm `.claude/skills/bmad-agent-bme-team-factory/SKILL.md` exists and points to correct agent file
+  - [x] Confirm `_bmad/bme/_team-factory/agents/team-factory.md` loads config from correct path
+  - [x] Confirm agent activation step 2 references `_bmad/bme/_team-factory/config.yaml`
 
 - [ ] Task 3: Document all 4 surfaces (AC: #4)
-  - [ ] Agent menu: `team-factory.md` — CT, RS, EX, VT, AR, PM, DA items
-  - [ ] module-help.csv: 2 rows (Create Team, Validate Team)
-  - [ ] BMad Master: TF menu item with skill exec
-  - [ ] Skill entry: `.claude/skills/bmad-agent-bme-team-factory/SKILL.md`
-  - [ ] Update AC confrontation document to mark 2.1.1 as ✅ Met
+  - [x] Agent menu: `team-factory.md` — CT, RS, EX, VT, AR, PM, DA items
+  - [x] module-help.csv: 2 rows (Create Team, Validate Team)
+  - [x] BMad Master: TF menu item with skill exec
+  - [x] Skill entry: `.claude/skills/bmad-agent-bme-team-factory/SKILL.md`
+  - [x] Update AC confrontation document to mark 2.1.1 as ✅ Met
 
 ## Dev Notes
 
