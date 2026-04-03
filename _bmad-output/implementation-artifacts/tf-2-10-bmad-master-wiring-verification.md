@@ -74,6 +74,21 @@ This story closes the AC 2.1.1 partial gap identified during the April 2nd AC co
 
 ### Agent Model Used
 
+Claude Opus 4.6 (1M context)
+
 ### Completion Notes List
 
+- Fixed BMad Master exec handler: `skill:bmad-team-factory` → `skill:bmad-agent-bme-team-factory` at `_bmad/core/agents/bmad-master.md:54`
+- Verified complete activation chain: BMad Master → SKILL.md → team-factory.md → config.yaml
+- All 4 discovery surfaces confirmed: agent menu, module-help.csv, BMad Master, skill entry
+- Updated AC confrontation document: AC 2.1.1 upgraded from ⚠️ Partially met to ✅ Met
+- 156 tests pass, zero regressions
+
+### Change Log
+
+- 2026-04-03: Fixed exec handler naming mismatch, verified all 4 discovery surfaces, updated AC confrontation
+
 ### File List
+
+- `_bmad/core/agents/bmad-master.md` — Fixed exec handler (line 54)
+- `_bmad-output/implementation-artifacts/tf-2-workflow-layer-increment-2026-04-02.md` — Updated AC 2.1.1 verdict
