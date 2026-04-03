@@ -5,9 +5,15 @@ completedAt: '2026-03-23'
 editHistory:
   - date: '2026-03-23'
     changes: "Extracted from combined epics.md into dedicated per-initiative file. Epics 6-8 cover Team Factory across three phases: Architecture Reference, Guided Workflow, Extensions. 15 stories total. Pre-mortem fixes applied (Story 7.6/7.7/7.8 split from original oversized story)."
+  - date: '2026-04-02'
+    changes: "Epic 2 implementation completed. 28 new files: agent definition, 6 workflow steps, 6 JS modules, 2 JSON schemas, spec template, config, module-help.csv, skill entry. Code review (Blind Hunter + Edge Case Hunter) applied 11 fixes. Stories 2.1-2.9 assessed: 6 complete, 2 partial (BMB templates deferred to P12, B-lite semantic validation deferred to I13), 1 minor gap (README entry). Epic 3 not started."
 inputDocuments:
   - _bmad-output/planning-artifacts/prd-team-factory.md
   - _bmad-output/planning-artifacts/architecture-team-factory.md
+implementationStatus:
+  epic1: done
+  epic2: done-with-deferred
+  epic3: not-started
 ---
 
 # Team Factory - Epic Breakdown
@@ -468,6 +474,79 @@ So that I'm confident my team is correct on first run and I don't get stuck with
 **When** the contributor reviews the result
 **Then** zero manual fixes are required — the team is ready to use (TF-NFR3)
 **And** user-facing complexity felt Low — the contributor completed without consulting external documentation (TF-NFR1)
+
+---
+
+## Epic 2: Implementation Status (2026-04-02)
+
+### Files Delivered
+
+**JS Modules (6):**
+- `lib/cascade-logic.js` — Pattern-aware decision elimination (10 decisions, 2 patterns)
+- `lib/collision-detector.js` — L1 exact ID + L2 Levenshtein similarity detection
+- `lib/spec-parser.js` — YAML load + schema-driven validation
+- `lib/spec-writer.js` — Atomic write with round-trip verification
+- `lib/spec-differ.js` — Resume point detection + spec diffing
+
+**JSON Schemas (2):**
+- `schemas/schema-independent.json` — Independent pattern spec validation
+- `schemas/schema-sequential.json` — Sequential pattern spec validation
+
+**Workflow Steps (6):**
+- `workflows/step-00-route.md` — Intent routing (create/resume/express)
+- `workflows/add-team/step-01-scope.md` — Team identity, pattern, agents, overlap
+- `workflows/add-team/step-02-connect.md` — Contracts, output dir, routing, config
+- `workflows/add-team/step-03-review.md` — Decision summary, validation gate
+- `workflows/add-team/step-04-generate.md` — BMB delegation, wiring, safety protocol
+- `workflows/add-team/step-05-validate.md` — E2E validation, manifest, metrics
+
+**Agent & Config (4):**
+- `agents/team-factory.md` — Forge Master persona, activation XML, menu
+- `config.yaml` — Module configuration
+- `module-help.csv` — CLI discovery entries
+- `templates/team-spec-template.yaml` — Express Mode skeleton
+
+**Skill Entry:**
+- `.claude/skills/bmad-agent-bme-team-factory/SKILL.md`
+
+### Story Completion
+
+| Story | Status | Notes |
+|-------|--------|-------|
+| 2.1 Discoverability | Done (minor gap) | Agent menu, help CSV, skill entry shipped. README entry missing |
+| 2.2 Pattern & Cascade | Done | `cascade-logic.js` — full elimination logic |
+| 2.3 Scope & Overlap | Done | `collision-detector.js` — L1+L2, naming in spec-parser |
+| 2.4 Contracts & Validation | Done (partial) | step-02-connect.md ships. B-lite semantic validation deferred to I13 |
+| 2.5 Summary & Persistence | Done | spec-parser/writer/differ + schemas + template |
+| 2.6 BMB Delegation | Done (partial) | step-04-generate.md ships. Shared BMB templates (P1/P6) not externalized — depends on P12 (Enhance) |
+| 2.7 Config/CSV/Activation | Done | Pre-existing lib: config-creator, csv-creator, activation-validator |
+| 2.8 Registry Wiring | Done | Pre-existing lib: registry-writer with full Write Safety Protocol |
+| 2.9 E2E Validation | Done | Pre-existing lib: end-to-end-validator, manifest-tracker |
+
+### Code Review (2026-04-02)
+
+Review layers: Blind Hunter (adversarial, diff-only) + Edge Case Hunter (full project + architecture doc).
+11 patches applied, 6 deferred, 11 dismissed. Story: `story-team-factory-review-fixes.md` (done).
+
+Critical fixes: CSV header alignment, schema persona fields.
+High fixes: spec-parser validation strengthening, collision-detector error surfacing.
+Medium fixes: dead params removed, JSDoc gaps, round-trip expansion, object comparison, compass_routing standardization.
+
+### Deferred Items
+
+| Item | Deferred To | Reason |
+|------|-------------|--------|
+| BMB shared templates (`_bmad/core/resources/templates/`) | P12 (Enhance) | Templates are Enhance's deliverable, not factory's |
+| B-lite semantic validation (artifact type matching) | I13 (Express Mode) | Guided mode uses LLM reasoning; standalone check deferred |
+| README discoverability entry | Next touch | Minor — factory is discoverable via skill and agent menu |
+| Express Mode (skip-to-review from spec file) | I13 | Guided mode sufficient for current usage |
+
+### Validation
+
+- 156 existing tests pass (zero regressions)
+- M2 validation: Gyre spec round-trips through write→parse→resume→collision pipeline
+- Cascade correctly eliminates 5/10 decisions for Independent, keeps all 10 for Sequential
+- Collision detector catches existing Gyre module and agent IDs
 
 ---
 
