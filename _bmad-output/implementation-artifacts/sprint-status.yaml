@@ -268,7 +268,7 @@ development_status:
   tf-2-8-registry-wiring-write-safety: done
   tf-2-9-end-to-end-validation-error-recovery: done
   # Stories 2.10-2.11: AC confrontation gap closures (added 2026-04-03)
-  tf-2-10-bmad-master-wiring-verification: ready-for-dev
+  tf-2-10-bmad-master-wiring-verification: in-progress
   tf-2-11-end-to-end-pilot-run: ready-for-dev
   tf-epic-2-retrospective: done
 
