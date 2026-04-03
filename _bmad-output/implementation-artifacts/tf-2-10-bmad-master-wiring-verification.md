@@ -12,12 +12,12 @@ so that I can find the factory through conversational routing without knowing it
 
 This story closes the AC 2.1.1 partial gap identified during the April 2nd AC confrontation (`tf-2-workflow-layer-increment-2026-04-02.md`). The confrontation found that BMad Master wiring "could not be verified from the 28 shipped files alone."
 
-**Discovery during analysis:** BMad Master already has a TF menu item at line 54 of `_bmad/core/agents/bmad-master.md`:
+**Discovery during analysis:** BMad Master has a TF menu item at line 54 of `_bmad/core/agents/bmad-master.md`:
 ```
 <item cmd="TF or fuzzy match on team-factory or create-team" exec="skill:bmad-team-factory">[TF] Team Factory</item>
 ```
 
-This story verifies the wiring is complete and functional, and documents the verification.
+**Bug found during story review:** The exec handler references `skill:bmad-team-factory` but the actual skill directory is `bmad-agent-bme-team-factory`. This is a naming mismatch — the wiring is **broken**, not just unverified. This story fixes the mismatch and verifies the complete chain.
 
 ## Acceptance Criteria
 
@@ -39,9 +39,9 @@ This story verifies the wiring is complete and functional, and documents the ver
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Verify BMad Master menu item (AC: #1)
+- [ ] Task 1: Fix and verify BMad Master menu item (AC: #1, #2)
   - [ ] Read `_bmad/core/agents/bmad-master.md` and confirm TF item exists
-  - [ ] Confirm the `exec="skill:bmad-team-factory"` handler syntax is correct
+  - [ ] Fix exec handler: change `exec="skill:bmad-team-factory"` to `exec="skill:bmad-agent-bme-team-factory"` to match the actual skill directory name
   - [ ] Confirm cmd triggers include "team-factory", "create-team", "TF"
 
 - [ ] Task 2: Verify skill activation chain (AC: #2, #3)
@@ -58,9 +58,8 @@ This story verifies the wiring is complete and functional, and documents the ver
 
 ## Dev Notes
 
-- This is primarily a **verification story**, not an implementation story
-- BMad Master wiring already exists — discovered during story analysis
-- The gap was a verification gap, not a code gap
+- This is a **verification + fix story** — the exec handler has a naming mismatch
+- BMad Master menu item exists but references wrong skill name (`bmad-team-factory` vs `bmad-agent-bme-team-factory`)
 - The `.claude/skills/` directory is gitignored — skill entry is local only
 - If any wiring is broken, fix it; if all wiring works, document and close
 
