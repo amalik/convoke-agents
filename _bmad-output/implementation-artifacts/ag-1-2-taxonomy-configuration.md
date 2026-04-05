@@ -1,6 +1,6 @@
 # Story 1.2: Taxonomy Configuration
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -20,29 +20,31 @@ so that all governance tools share a single source of truth for naming.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `_bmad/_config/taxonomy.yaml` (AC: #1, #2, #3, #4)
-  - [ ] Create the file at `_bmad/_config/taxonomy.yaml`
-  - [ ] Add `initiatives.platform` array with exactly: vortex, gyre, bmm, forge, helm, enhance, loom, convoke
-  - [ ] Add `initiatives.user` as empty array `[]`
-  - [ ] Add `aliases` section with: `strategy-perimeter: helm`, `strategy: helm`, `team-factory: loom`
-  - [ ] Add `artifact_types` array with all ~20 types: prd, epic, arch, adr, persona, lean-persona, empathy-map, problem-def, hypothesis, experiment, signal, decision, scope, pre-reg, sprint, brief, vision, report, research, story, spec
-  - [ ] Add YAML comments documenting each section's purpose and rules (platform = read-only by Convoke releases, user = operator-managed, aliases = migration-only)
+- [x] Task 1: Create `_bmad/_config/taxonomy.yaml` (AC: #1, #2, #3, #4)
+  - [x] Create the file at `_bmad/_config/taxonomy.yaml`
+  - [x] Add `initiatives.platform` array with exactly: vortex, gyre, bmm, forge, helm, enhance, loom, convoke
+  - [x] Add `initiatives.user` as empty array `[]`
+  - [x] Add `aliases` section with: `strategy-perimeter: helm`, `strategy: helm`, `team-factory: loom`
+  - [x] Add `artifact_types` array with all 21 types
+  - [x] Add YAML comments documenting each section's purpose and rules
 
-- [ ] Task 2: Integration test — `readTaxonomy()` loads the real file (AC: #5)
-  - [ ] Create `tests/lib/taxonomy.test.js`
-  - [ ] Test that `readTaxonomy(projectRoot)` successfully loads and parses `_bmad/_config/taxonomy.yaml`
-  - [ ] Verify returned object has `initiatives.platform` with 8 entries
-  - [ ] Verify returned object has `initiatives.user` as empty array
-  - [ ] Verify returned object has `aliases` with 3 entries
-  - [ ] Verify returned object has `artifact_types` with ~20 entries
-  - [ ] Verify all initiative IDs pass the `/^[a-z][a-z0-9-]*$/` validation pattern
+- [x] Task 2: Integration test — `readTaxonomy()` loads the real file (AC: #5)
+  - [x] Create `tests/lib/taxonomy.test.js`
+  - [x] Test that `readTaxonomy(projectRoot)` successfully loads and parses `_bmad/_config/taxonomy.yaml`
+  - [x] Verify returned object has `initiatives.platform` with 8 entries
+  - [x] Verify returned object has `initiatives.user` as empty array
+  - [x] Verify returned object has `aliases` with 3 entries
+  - [x] Verify returned object has `artifact_types` with ≥20 entries
+  - [x] Verify all initiative IDs pass the `/^[a-z][a-z0-9-]*$/` validation pattern
 
-- [ ] Task 3: Validation tests — rejection cases (AC: #6, #7)
-  - [ ] Test that a taxonomy file with uppercase ID (e.g., `Helm`) throws with clear error
-  - [ ] Test that a taxonomy file with spaces (e.g., `my project`) throws with clear error
-  - [ ] Test that a taxonomy file with special characters (e.g., `helm@v2`) throws with clear error
-  - [ ] Test that a taxonomy file with duplicate IDs across platform and user sections throws with clear error
-  - [ ] Use temp directories for each test case — create `{tmpDir}/_bmad/_config/taxonomy.yaml` with invalid content and pass `tmpDir` as `projectRoot` to `readTaxonomy()`. Don't mock — use the real function with a fake project root.
+- [x] Task 3: Validation tests — rejection cases (AC: #6, #7)
+  - [x] Test uppercase ID rejection (`Helm`)
+  - [x] Test spaces rejection (`my project`)
+  - [x] Test special characters rejection (`helm@v2`)
+  - [x] Test duplicate IDs across platform/user sections
+  - [x] Test invalid artifact type rejection
+  - [x] Test missing file, malformed YAML, missing initiatives.platform, missing artifact_types
+  - [x] All rejection tests use temp directories with real `readTaxonomy()` — no mocks
 
 ## Dev Notes
 
@@ -119,8 +121,21 @@ tests/
 
 ### Agent Model Used
 
+Claude Opus 4.6 (1M context)
+
 ### Debug Log References
+
+- 15/15 taxonomy tests pass
+- 43/43 total lib tests pass (28 from story 1.1 + 15 new) — no regressions
 
 ### Completion Notes List
 
+- ✅ Created `_bmad/_config/taxonomy.yaml` with 8 platform initiatives, 21 artifact types, 3 aliases, YAML comments
+- ✅ 6 integration tests verify readTaxonomy() loads the real file correctly
+- ✅ 9 validation tests verify rejection of: uppercase, spaces, special chars, duplicates, invalid types, missing file, malformed YAML, missing required fields
+- ✅ All validation tests use temp directories with real readTaxonomy() — no mocks
+
 ### File List
+
+- `_bmad/_config/taxonomy.yaml` — NEW (taxonomy configuration)
+- `tests/lib/taxonomy.test.js` — NEW (15 tests: 6 integration + 9 validation)
