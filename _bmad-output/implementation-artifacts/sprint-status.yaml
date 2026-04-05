@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-23
-last_updated: 2026-04-05
+last_updated: 2026-04-05  # ag-2-2 created
 project: BMAD-Enhanced
 project_key: NOKEY
 tracking_system: file-system
@@ -295,7 +295,7 @@ development_status:
   # Epic 2: Migration Inference & Planning
   ag-epic-2: in-progress
   ag-2-1-initiative-inference-engine: done
-  ag-2-2-dry-run-manifest-generation: backlog
+  ag-2-2-dry-run-manifest-generation: ready-for-dev
   ag-2-3-migration-cli-scope-configuration: backlog
   ag-epic-2-retrospective: optional
 
