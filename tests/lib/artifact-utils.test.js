@@ -41,7 +41,7 @@ describe('parseFilename', () => {
     expect(result.isDated).toBe(false);
     expect(result.category).toBe(null);
     expect(result.hasValidCategory).toBe(false);
-    expect(result.matchesConvention).toBeFalsy(); // null or false — both mean "doesn't match"
+    expect(result.matchesConvention).toBe(false);
   });
 
   test('sprint-change-proposal-2026-03-07.md → dated, category sprint, valid', () => {
@@ -208,10 +208,10 @@ describe('ensureCleanTree', () => {
 
   test('throws on uncommitted tracked changes', () => {
     mockExecSync.mockImplementation((cmd) => {
-      if (cmd === 'git diff --quiet') {
+      if (cmd.startsWith('git diff --quiet')) {
         throw new Error('diff found');
       }
-      if (cmd === 'git diff --name-only') {
+      if (cmd.startsWith('git diff --name-only')) {
         return 'file-a.md\nfile-b.md';
       }
       return '';
@@ -222,11 +222,11 @@ describe('ensureCleanTree', () => {
 
   test('throws on staged changes', () => {
     mockExecSync.mockImplementation((cmd) => {
-      if (cmd === 'git diff --quiet') return '';
-      if (cmd === 'git diff --cached --quiet') {
+      if (cmd.startsWith('git diff --quiet')) return '';
+      if (cmd.startsWith('git diff --cached --quiet')) {
         throw new Error('staged found');
       }
-      if (cmd === 'git diff --cached --name-only') {
+      if (cmd.startsWith('git diff --cached --name-only')) {
         return 'staged-file.md';
       }
       return '';
