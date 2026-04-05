@@ -4,7 +4,10 @@ const {
   toLowerKebab,
   parseFrontmatter,
   injectFrontmatter,
-  scanArtifactDirs
+  scanArtifactDirs,
+  validateFrontmatterSchema,
+  buildSchemaFields,
+  VALID_STATUSES
 } = require('../../scripts/lib/artifact-utils');
 const path = require('path');
 const fs = require('fs-extra');
@@ -278,5 +281,151 @@ describe('scanArtifactDirs', () => {
   test('handles non-existent directories gracefully', async () => {
     const results = await scanArtifactDirs(tmpDir, ['nonexistent-dir']);
     expect(results).toHaveLength(0);
+  });
+});
+
+// --- validateFrontmatterSchema tests ---
+
+describe('validateFrontmatterSchema', () => {
+  // Minimal valid taxonomy for testing
+  const taxonomy = {
+    initiatives: {
+      platform: ['vortex', 'gyre', 'bmm', 'forge', 'helm', 'enhance', 'loom', 'convoke'],
+      user: []
+    },
+    artifact_types: ['prd', 'epic', 'arch', 'adr', 'persona', 'hypothesis', 'spec'],
+    aliases: {}
+  };
+
+  const validFields = {
+    initiative: 'helm',
+    artifact_type: 'prd',
+    created: '2026-04-05',
+    schema_version: 1
+  };
+
+  test('valid schema with all required fields passes', () => {
+    const result = validateFrontmatterSchema(validFields, taxonomy);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  test('valid schema with optional status passes', () => {
+    const result = validateFrontmatterSchema({ ...validFields, status: 'draft' }, taxonomy);
+    expect(result.valid).toBe(true);
+  });
+
+  test('all four valid status values pass', () => {
+    for (const status of VALID_STATUSES) {
+      const result = validateFrontmatterSchema({ ...validFields, status }, taxonomy);
+      expect(result.valid).toBe(true);
+    }
+  });
+
+  test('rejects missing initiative', () => {
+    const { initiative, ...fields } = validFields;
+    const result = validateFrontmatterSchema(fields, taxonomy);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(expect.stringMatching(/missing.*initiative/i));
+  });
+
+  test('rejects missing artifact_type', () => {
+    const { artifact_type, ...fields } = validFields;
+    const result = validateFrontmatterSchema(fields, taxonomy);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(expect.stringMatching(/missing.*artifact_type/i));
+  });
+
+  test('rejects missing schema_version', () => {
+    const { schema_version, ...fields } = validFields;
+    const result = validateFrontmatterSchema(fields, taxonomy);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(expect.stringMatching(/missing.*schema_version/i));
+  });
+
+  test('rejects missing created', () => {
+    const { created, ...fields } = validFields;
+    const result = validateFrontmatterSchema(fields, taxonomy);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(expect.stringMatching(/missing.*created/i));
+  });
+
+  test('rejects invalid status value', () => {
+    const result = validateFrontmatterSchema({ ...validFields, status: 'active-ish' }, taxonomy);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(expect.stringMatching(/invalid status/i));
+  });
+
+  test('rejects schema_version: 0', () => {
+    const result = validateFrontmatterSchema({ ...validFields, schema_version: 0 }, taxonomy);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(expect.stringMatching(/invalid schema_version/i));
+  });
+
+  test('rejects schema_version: "one" (non-integer)', () => {
+    const result = validateFrontmatterSchema({ ...validFields, schema_version: 'one' }, taxonomy);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(expect.stringMatching(/invalid schema_version/i));
+  });
+
+  test('rejects initiative not in taxonomy', () => {
+    const result = validateFrontmatterSchema({ ...validFields, initiative: 'nonexistent' }, taxonomy);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(expect.stringMatching(/initiative.*not found in taxonomy/i));
+  });
+
+  test('rejects artifact_type not in taxonomy', () => {
+    const result = validateFrontmatterSchema({ ...validFields, artifact_type: 'unknown-type' }, taxonomy);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(expect.stringMatching(/artifact type.*not found in taxonomy/i));
+  });
+
+  test('rejects invalid created date format', () => {
+    const result = validateFrontmatterSchema({ ...validFields, created: 'yesterday' }, taxonomy);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(expect.stringMatching(/invalid created date/i));
+  });
+
+  test('collects multiple errors at once', () => {
+    const result = validateFrontmatterSchema({ schema_version: 'bad' }, taxonomy);
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThanOrEqual(3); // missing initiative, artifact_type, created + invalid schema_version
+  });
+});
+
+// --- buildSchemaFields tests ---
+
+describe('buildSchemaFields', () => {
+  test('returns all required fields with correct types', () => {
+    const fields = buildSchemaFields('helm', 'prd');
+    expect(fields.initiative).toBe('helm');
+    expect(fields.artifact_type).toBe('prd');
+    expect(typeof fields.created).toBe('string');
+    expect(fields.schema_version).toBe(1);
+  });
+
+  test('schema_version is always 1', () => {
+    const fields = buildSchemaFields('gyre', 'epic');
+    expect(fields.schema_version).toBe(1);
+  });
+
+  test('created defaults to today in YYYY-MM-DD format', () => {
+    const fields = buildSchemaFields('helm', 'prd');
+    const today = new Date().toISOString().split('T')[0];
+    expect(fields.created).toBe(today);
+    expect(fields.created).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  test('status included only when provided in options', () => {
+    const withoutStatus = buildSchemaFields('helm', 'prd');
+    expect(withoutStatus.status).toBeUndefined();
+
+    const withStatus = buildSchemaFields('helm', 'prd', { status: 'draft' });
+    expect(withStatus.status).toBe('draft');
+  });
+
+  test('custom created date is respected when provided', () => {
+    const fields = buildSchemaFields('helm', 'prd', { created: '2025-01-01' });
+    expect(fields.created).toBe('2025-01-01');
   });
 });
