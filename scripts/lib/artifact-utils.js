@@ -10,7 +10,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('js-yaml');
 const matter = require('gray-matter');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 
 // --- Constants (extracted from archive.js) ---
 
@@ -343,7 +343,7 @@ const ARTIFACT_TYPE_ALIASES = {
  */
 function inferArtifactType(filename, taxonomy) {
   if (!filename || typeof filename !== 'string') {
-    return { type: null, hcPrefix: null, remainder: '', date: null };
+    return { type: null, hcPrefix: null, remainder: '', date: null, typeConfidence: 'low', typeSource: 'none' };
   }
   const lower = filename.toLowerCase();
   // Strip extension
@@ -368,7 +368,7 @@ function inferArtifactType(filename, taxonomy) {
     if (nameToMatch.startsWith(aliasKey + '-') || nameToMatch === aliasKey) {
       const canonicalType = ARTIFACT_TYPE_ALIASES[aliasKey];
       const remainder = nameToMatch === aliasKey ? '' : nameToMatch.slice(aliasKey.length + 1);
-      return { type: canonicalType, hcPrefix, remainder, date };
+      return { type: canonicalType, hcPrefix, remainder, date, typeConfidence: 'high', typeSource: 'alias' };
     }
   }
 
@@ -377,12 +377,12 @@ function inferArtifactType(filename, taxonomy) {
   for (const type of sortedTypes) {
     if (nameToMatch.startsWith(type + '-') || nameToMatch === type) {
       const remainder = nameToMatch === type ? '' : nameToMatch.slice(type.length + 1);
-      return { type, hcPrefix, remainder, date };
+      return { type, hcPrefix, remainder, date, typeConfidence: 'high', typeSource: 'prefix' };
     }
   }
 
   // No match
-  return { type: null, hcPrefix, remainder: nameToMatch, date };
+  return { type: null, hcPrefix, remainder: nameToMatch, date, typeConfidence: 'low', typeSource: 'none' };
 }
 
 /**
@@ -712,8 +712,8 @@ async function getContextClues(filePath, projectRoot) {
   let gitAuthor = null;
   let gitDate = null;
   try {
-    const raw = execSync(
-      `git log -1 --format="%an|%as" -- "${path.relative(projectRoot, filePath)}"`,
+    const raw = execFileSync(
+      'git', ['log', '-1', '--format=%an|%as', '--', path.relative(projectRoot, filePath)],
       { cwd: projectRoot, encoding: 'utf8', stdio: 'pipe' }
     ).trim();
     if (raw) {
@@ -767,31 +767,48 @@ async function buildManifestEntry(fileInfo, taxonomy, _projectRoot) {
   const { filename, dir, fullPath } = fileInfo;
   const oldPath = `${dir}/${filename}`;
 
-  let fileContent = '';
+  // Only process markdown files — YAML and other files are not migration targets
+  if (!filename.endsWith('.md')) {
+    return {
+      oldPath, newPath: null, initiative: null, artifactType: null,
+      confidence: 'low', source: 'non-markdown', action: 'SKIP',
+      dir, contextClues: null, crossReferences: null, candidates: [],
+      collisionWith: null, frontmatterInitiative: null, fileInitiative: null,
+      typeConfidence: 'low', typeSource: 'none'
+    };
+  }
+
+  let fileContent;
   try {
     fileContent = await fs.readFile(fullPath, 'utf8');
   } catch {
-    // Unreadable — treat as ungoverned
     return {
       oldPath, newPath: null, initiative: null, artifactType: null,
       confidence: 'low', source: 'unreadable', action: 'AMBIGUOUS',
       dir, contextClues: null, crossReferences: null, candidates: [],
-      collisionWith: null, frontmatterInitiative: null, fileInitiative: null
+      collisionWith: null, frontmatterInitiative: null, fileInitiative: null,
+      typeConfidence: 'low', typeSource: 'none'
     };
   }
 
-  const govState = getGovernanceState(filename, fileContent, taxonomy);
+  // Single inference pass — getGovernanceState uses inferArtifactType + inferInitiative internally.
+  // We call inferArtifactType once here to get typeConfidence/typeSource for manifest display.
   const typeResult = inferArtifactType(filename, taxonomy);
-  const initResult = typeResult.type
-    ? inferInitiative(typeResult.remainder, taxonomy)
-    : { initiative: null, confidence: 'low', source: 'no-type', candidates: [] };
+  const govState = getGovernanceState(filename, fileContent, taxonomy);
+
+  const initConfidence = govState.state === 'ambiguous' || govState.state === 'ungoverned' ? 'low' : 'high';
+  const initSource = govState.state === 'ungoverned' ? 'no-type'
+    : govState.state === 'ambiguous' ? 'unresolved'
+    : govState.fileInitiative ? 'inferred' : 'none';
 
   const base = {
     oldPath, dir,
     initiative: govState.fileInitiative,
     artifactType: typeResult.type,
-    confidence: initResult.confidence,
-    source: initResult.source,
+    confidence: initConfidence,
+    source: initSource,
+    typeConfidence: typeResult.typeConfidence,
+    typeSource: typeResult.typeSource,
     contextClues: null,
     crossReferences: null,
     candidates: govState.candidates || [],
@@ -800,24 +817,27 @@ async function buildManifestEntry(fileInfo, taxonomy, _projectRoot) {
     fileInitiative: govState.fileInitiative
   };
 
-  // Ungoverned: no type match at all
   if (govState.state === 'ungoverned') {
     return { ...base, newPath: null, action: 'AMBIGUOUS' };
   }
 
-  // Ambiguous: type OK but initiative unclear
   if (govState.state === 'ambiguous') {
-    return { ...base, newPath: null, action: 'AMBIGUOUS', candidates: initResult.candidates || [] };
+    return { ...base, newPath: null, action: 'AMBIGUOUS' };
   }
 
-  // Invalid-governed: filename/frontmatter conflict
   if (govState.state === 'invalid-governed') {
     return { ...base, newPath: null, action: 'CONFLICT' };
   }
 
   // Half-governed or fully-governed: type + initiative resolved
   // Compare current filename with governance target to determine action
-  const newFilename = generateNewFilename(filename, govState.fileInitiative, typeResult.type, taxonomy);
+  let newFilename;
+  try {
+    newFilename = generateNewFilename(filename, govState.fileInitiative, typeResult.type, taxonomy);
+  } catch {
+    // generateNewFilename failed — treat as ambiguous rather than aborting the entire manifest
+    return { ...base, newPath: null, action: 'AMBIGUOUS' };
+  }
   const newPath = `${dir}/${newFilename}`;
 
   if (govState.state === 'fully-governed') {
@@ -858,16 +878,13 @@ function detectCollisions(entries) {
     entries.filter(e => e.action === 'SKIP' || e.action === 'INJECT_ONLY').map(e => e.oldPath)
   );
 
-  for (const entry of entries) {
-    if (entry.action === 'RENAME' && entry.newPath && existingPaths.has(entry.newPath)) {
-      if (!targetMap.has(entry.newPath)) {
-        targetMap.set(entry.newPath, []);
+  for (const target of targetMap.keys()) {
+    if (existingPaths.has(target)) {
+      const sources = targetMap.get(target);
+      const sentinel = `(existing) ${target}`;
+      if (!sources.includes(sentinel)) {
+        sources.push(sentinel);
       }
-      if (!targetMap.get(entry.newPath).includes(entry.oldPath)) {
-        targetMap.get(entry.newPath).push(entry.oldPath);
-      }
-      // Add the existing file as a collision participant
-      targetMap.get(entry.newPath).push(`(existing) ${entry.newPath}`);
     }
   }
 
@@ -974,7 +991,7 @@ function formatManifest(manifest, options = {}) {
       case 'RENAME':
         lines.push(`${entry.oldPath} -> ${entry.newPath}`);
         lines.push(`  Initiative: ${entry.initiative} (confidence: ${entry.confidence}, source: ${entry.source})`);
-        lines.push(`  Type: ${entry.artifactType} (confidence: high, source: prefix match)`);
+        lines.push(`  Type: ${entry.artifactType} (confidence: ${entry.typeConfidence || 'high'}, source: ${entry.typeSource || 'prefix'})`);
         if (entry.collisionWith && entry.collisionWith.length > 0) {
           lines.push(`  [!] COLLISION: same target as ${entry.collisionWith.join(', ')}`);
         }
@@ -984,8 +1001,8 @@ function formatManifest(manifest, options = {}) {
         lines.push(`[!] ${entry.oldPath} -> CONFLICT (filename says ${entry.fileInitiative}, frontmatter says ${entry.frontmatterInitiative})`);
         lines.push('  ACTION REQUIRED: Resolve initiative conflict before migration');
         if (entry.contextClues) {
-          if (entry.contextClues.firstLines.length > 0) {
-            lines.push(`  First line: "${entry.contextClues.firstLines[0]}"`);
+          for (let i = 0; i < entry.contextClues.firstLines.length; i++) {
+            lines.push(`  Line ${i + 1}: "${entry.contextClues.firstLines[i]}"`);
           }
           if (entry.contextClues.gitAuthor) {
             lines.push(`  Git author: ${entry.contextClues.gitAuthor} (${entry.contextClues.gitDate})`);
@@ -999,8 +1016,8 @@ function formatManifest(manifest, options = {}) {
           : 'cannot infer type or initiative';
         lines.push(`[!] ${entry.oldPath} -> ??? (ambiguous -- ${typeLabel})`);
         if (entry.contextClues) {
-          if (entry.contextClues.firstLines.length > 0) {
-            lines.push(`  First line: "${entry.contextClues.firstLines[0]}"`);
+          for (let i = 0; i < entry.contextClues.firstLines.length; i++) {
+            lines.push(`  Line ${i + 1}: "${entry.contextClues.firstLines[i]}"`);
           }
           if (entry.contextClues.gitAuthor) {
             lines.push(`  Git author: ${entry.contextClues.gitAuthor} (${entry.contextClues.gitDate})`);
