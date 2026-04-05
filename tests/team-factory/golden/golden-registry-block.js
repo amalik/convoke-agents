@@ -28,6 +28,6 @@ const TEST_TEAM_WORKFLOWS = [
 ];
 
 // Derived lists for Test Team
-const TEST_TEAM_AGENT_FILES = TEST_TEAM_AGENTS.map(a => `${a.id}.md`);
-const TEST_TEAM_AGENT_IDS = TEST_TEAM_AGENTS.map(a => a.id);
-const TEST_TEAM_WORKFLOW_NAMES = TEST_TEAM_WORKFLOWS.map(w => w.name);
+const _TEST_TEAM_AGENT_FILES = TEST_TEAM_AGENTS.map(a => `${a.id}.md`);
+const _TEST_TEAM_AGENT_IDS = TEST_TEAM_AGENTS.map(a => a.id);
+const _TEST_TEAM_WORKFLOW_NAMES = TEST_TEAM_WORKFLOWS.map(w => w.name);
