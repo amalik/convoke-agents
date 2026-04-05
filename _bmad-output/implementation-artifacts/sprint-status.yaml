@@ -295,7 +295,7 @@ development_status:
   # Epic 2: Migration Inference & Planning
   ag-epic-2: in-progress
   ag-2-1-initiative-inference-engine: done
-  ag-2-2-dry-run-manifest-generation: review
+  ag-2-2-dry-run-manifest-generation: done
   ag-2-3-migration-cli-scope-configuration: backlog
   ag-epic-2-retrospective: optional
 
