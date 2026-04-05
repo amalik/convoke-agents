@@ -1,6 +1,6 @@
 # Story 2.1: Initiative Inference Engine
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -261,8 +261,33 @@ tests/
 
 ### Agent Model Used
 
+Claude Opus 4.6 (1M context)
+
 ### Debug Log References
+
+- 100/100 lib tests pass (62 existing + 38 new inference tests)
+- Archive regression: 71 warnings (expected — new fixture + story files)
+- 3 test failures during development, all resolved:
+  1. `hypothesis-contract` alias ordering — fixed by checking aliases before canonical types
+  2. `prd-validation-gyre` initiative from suffix — added suffix matching step to inferInitiative
+  3. `scope-decision-strategy-perimeter` qualifier extraction — rewrote generateNewFilename to handle both prefix and suffix initiative consumption
 
 ### Completion Notes List
 
+- ✅ Created 29 test fixture files in `tests/fixtures/artifact-samples/` representing all filename patterns
+- ✅ Updated `taxonomy.yaml` with 3 additional initiative aliases: `strategic`, `strategic-navigator`, `strategic-practitioner` → `helm`
+- ✅ Implemented `inferArtifactType(filename, taxonomy)` — greedy longest-prefix match with ARTIFACT_TYPE_ALIASES fallback. Aliases checked FIRST (longer, more specific) then canonical types.
+- ✅ Implemented `inferInitiative(remainder, taxonomy)` — 5-step lookup: exact → alias → progressive prefix → progressive suffix → first segment
+- ✅ Implemented `getGovernanceState(filename, fileContent, taxonomy)` — 4 states: fully-governed, half-governed, ungoverned, invalid-governed
+- ✅ Implemented `generateNewFilename(filename, initiative, artifactType, taxonomy)` — handles HC prefix as qualifier, prefix/suffix initiative consumption, date preservation
+- ✅ Defined `ARTIFACT_TYPE_ALIASES` constant: problem-definition→problem-def, pre-registration→pre-reg, architecture→arch, hypothesis-contract→hypothesis
+- ✅ 38 new tests: 15 inferArtifactType, 12 inferInitiative, 5 getGovernanceState, 7 generateNewFilename
+- ✅ Taxonomy test updated for 6 aliases (was 3)
+
 ### File List
+
+- `scripts/lib/artifact-utils.js` — MODIFIED (added 4 inference functions + ARTIFACT_TYPE_ALIASES + HC_PREFIX_PATTERN)
+- `_bmad/_config/taxonomy.yaml` — MODIFIED (added 3 initiative aliases)
+- `tests/lib/inference.test.js` — NEW (38 tests)
+- `tests/lib/taxonomy.test.js` — MODIFIED (updated alias count assertion)
+- `tests/fixtures/artifact-samples/` — NEW (29 fixture files)
