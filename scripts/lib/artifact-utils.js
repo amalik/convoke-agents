@@ -689,6 +689,348 @@ function buildSchemaFields(initiative, artifactType, options = {}) {
   return fields;
 }
 
+// --- Manifest Generation ---
+
+/**
+ * Get context clues for a file (first 3 lines + git author/date).
+ * Used in dry-run manifest for ambiguous/conflict files.
+ *
+ * @param {string} filePath - Absolute path to the file
+ * @param {string} projectRoot - Absolute path to project root
+ * @returns {Promise<{firstLines: string[], gitAuthor: string|null, gitDate: string|null}>}
+ */
+async function getContextClues(filePath, projectRoot) {
+  let firstLines = [];
+  try {
+    const content = await fs.readFile(filePath, 'utf8');
+    const lines = content.split('\n');
+    firstLines = lines.slice(0, 3).map(l => l.trimEnd());
+  } catch {
+    // File unreadable — return empty lines
+  }
+
+  let gitAuthor = null;
+  let gitDate = null;
+  try {
+    const raw = execSync(
+      `git log -1 --format="%an|%as" -- "${path.relative(projectRoot, filePath)}"`,
+      { cwd: projectRoot, encoding: 'utf8', stdio: 'pipe' }
+    ).trim();
+    if (raw) {
+      const parts = raw.split('|');
+      gitAuthor = parts[0] || null;
+      gitDate = parts[1] || null;
+    }
+  } catch {
+    // Not tracked in git or git unavailable
+  }
+
+  return { firstLines, gitAuthor, gitDate };
+}
+
+/**
+ * Find files that reference a target filename via markdown links or bare mentions.
+ * Only called when --verbose is set (reads every file in scope).
+ *
+ * @param {string} targetFilename - The filename to search for references to
+ * @param {Array<{filename: string, fullPath: string}>} scopeFiles - All files in scope
+ * @param {string} _projectRoot - Project root (unused, reserved for future)
+ * @returns {Promise<string[]>} List of filenames that reference the target
+ */
+async function getCrossReferences(targetFilename, scopeFiles, _projectRoot) {
+  const refs = [];
+  for (const file of scopeFiles) {
+    if (file.filename === targetFilename) continue;
+    if (!file.fullPath.endsWith('.md')) continue;
+    try {
+      const content = await fs.readFile(file.fullPath, 'utf8');
+      // Match: [text](targetFilename), [text](../dir/targetFilename), or bare targetFilename
+      if (content.includes(targetFilename)) {
+        refs.push(file.filename);
+      }
+    } catch {
+      // Skip unreadable files
+    }
+  }
+  return refs;
+}
+
+/**
+ * Build a single manifest entry for a file, classifying its action.
+ *
+ * @param {{filename: string, dir: string, fullPath: string}} fileInfo - File from scanArtifactDirs
+ * @param {import('./types').TaxonomyConfig} taxonomy - Taxonomy config
+ * @param {string} _projectRoot - Project root (reserved)
+ * @returns {Promise<import('./types').ManifestEntry>}
+ */
+async function buildManifestEntry(fileInfo, taxonomy, _projectRoot) {
+  const { filename, dir, fullPath } = fileInfo;
+  const oldPath = `${dir}/${filename}`;
+
+  let fileContent = '';
+  try {
+    fileContent = await fs.readFile(fullPath, 'utf8');
+  } catch {
+    // Unreadable — treat as ungoverned
+    return {
+      oldPath, newPath: null, initiative: null, artifactType: null,
+      confidence: 'low', source: 'unreadable', action: 'AMBIGUOUS',
+      dir, contextClues: null, crossReferences: null, candidates: [],
+      collisionWith: null, frontmatterInitiative: null, fileInitiative: null
+    };
+  }
+
+  const govState = getGovernanceState(filename, fileContent, taxonomy);
+  const typeResult = inferArtifactType(filename, taxonomy);
+  const initResult = typeResult.type
+    ? inferInitiative(typeResult.remainder, taxonomy)
+    : { initiative: null, confidence: 'low', source: 'no-type', candidates: [] };
+
+  const base = {
+    oldPath, dir,
+    initiative: govState.fileInitiative,
+    artifactType: typeResult.type,
+    confidence: initResult.confidence,
+    source: initResult.source,
+    contextClues: null,
+    crossReferences: null,
+    candidates: govState.candidates || [],
+    collisionWith: null,
+    frontmatterInitiative: govState.frontmatterInitiative,
+    fileInitiative: govState.fileInitiative
+  };
+
+  // Ungoverned: no type match at all
+  if (govState.state === 'ungoverned') {
+    return { ...base, newPath: null, action: 'AMBIGUOUS' };
+  }
+
+  // Ambiguous: type OK but initiative unclear
+  if (govState.state === 'ambiguous') {
+    return { ...base, newPath: null, action: 'AMBIGUOUS', candidates: initResult.candidates || [] };
+  }
+
+  // Invalid-governed: filename/frontmatter conflict
+  if (govState.state === 'invalid-governed') {
+    return { ...base, newPath: null, action: 'CONFLICT' };
+  }
+
+  // Half-governed or fully-governed: type + initiative resolved
+  // Compare current filename with governance target to determine action
+  const newFilename = generateNewFilename(filename, govState.fileInitiative, typeResult.type, taxonomy);
+  const newPath = `${dir}/${newFilename}`;
+
+  if (govState.state === 'fully-governed') {
+    if (filename === newFilename) {
+      return { ...base, newPath: null, action: 'SKIP' };
+    }
+    return { ...base, newPath, action: 'RENAME' };
+  }
+
+  // half-governed
+  if (filename === newFilename) {
+    return { ...base, newPath: null, action: 'INJECT_ONLY' };
+  }
+  return { ...base, newPath, action: 'RENAME' };
+}
+
+/**
+ * Detect target filename collisions in manifest entries.
+ *
+ * @param {import('./types').ManifestEntry[]} entries - All manifest entries
+ * @returns {Map<string, string[]>} Map of colliding newPath -> list of oldPaths
+ */
+function detectCollisions(entries) {
+  const targetMap = new Map();
+
+  // Collect all target filenames (from RENAME entries)
+  for (const entry of entries) {
+    if (entry.action === 'RENAME' && entry.newPath) {
+      if (!targetMap.has(entry.newPath)) {
+        targetMap.set(entry.newPath, []);
+      }
+      targetMap.get(entry.newPath).push(entry.oldPath);
+    }
+  }
+
+  // Also check if any target matches an existing file (SKIP/INJECT entries)
+  const existingPaths = new Set(
+    entries.filter(e => e.action === 'SKIP' || e.action === 'INJECT_ONLY').map(e => e.oldPath)
+  );
+
+  for (const entry of entries) {
+    if (entry.action === 'RENAME' && entry.newPath && existingPaths.has(entry.newPath)) {
+      if (!targetMap.has(entry.newPath)) {
+        targetMap.set(entry.newPath, []);
+      }
+      if (!targetMap.get(entry.newPath).includes(entry.oldPath)) {
+        targetMap.get(entry.newPath).push(entry.oldPath);
+      }
+      // Add the existing file as a collision participant
+      targetMap.get(entry.newPath).push(`(existing) ${entry.newPath}`);
+    }
+  }
+
+  // Filter to only actual collisions (more than 1 source)
+  const collisions = new Map();
+  for (const [target, sources] of targetMap) {
+    if (sources.length > 1) {
+      collisions.set(target, sources);
+    }
+  }
+
+  return collisions;
+}
+
+/**
+ * Generate the full dry-run manifest for all in-scope artifact directories.
+ *
+ * @param {string} projectRoot - Absolute path to project root
+ * @param {Object} [options={}]
+ * @param {string[]} [options.includeDirs=['planning-artifacts','vortex-artifacts','gyre-artifacts']]
+ * @param {string[]} [options.excludeDirs=['_archive']]
+ * @param {boolean} [options.verbose=false]
+ * @returns {Promise<import('./types').ManifestResult>}
+ */
+async function generateManifest(projectRoot, options = {}) {
+  const {
+    includeDirs = ['planning-artifacts', 'vortex-artifacts', 'gyre-artifacts'],
+    excludeDirs = ['_archive'],
+    verbose = false
+  } = options;
+
+  const taxonomy = readTaxonomy(projectRoot);
+  const scopeFiles = await scanArtifactDirs(projectRoot, includeDirs, excludeDirs);
+  const entries = [];
+
+  for (const fileInfo of scopeFiles) {
+    const entry = await buildManifestEntry(fileInfo, taxonomy, projectRoot);
+    entries.push(entry);
+  }
+
+  // Detect collisions and annotate entries
+  const collisions = detectCollisions(entries);
+  for (const [target, sources] of collisions) {
+    for (const entry of entries) {
+      if (entry.newPath === target && entry.action === 'RENAME') {
+        entry.collisionWith = sources.filter(s => s !== entry.oldPath);
+      }
+    }
+  }
+
+  // Gather context clues for AMBIGUOUS and CONFLICT entries
+  for (const entry of entries) {
+    if (entry.action === 'AMBIGUOUS' || entry.action === 'CONFLICT') {
+      const fullPath = path.join(projectRoot, '_bmad-output', entry.oldPath);
+      entry.contextClues = await getContextClues(fullPath, projectRoot);
+
+      if (verbose) {
+        entry.crossReferences = await getCrossReferences(
+          entry.oldPath.split('/').pop(),
+          scopeFiles,
+          projectRoot
+        );
+      }
+    }
+  }
+
+  // Build summary
+  const summary = { total: entries.length, skip: 0, rename: 0, inject: 0, conflict: 0, ambiguous: 0 };
+  for (const entry of entries) {
+    switch (entry.action) {
+      case 'SKIP': summary.skip++; break;
+      case 'RENAME': summary.rename++; break;
+      case 'INJECT_ONLY': summary.inject++; break;
+      case 'CONFLICT': summary.conflict++; break;
+      case 'AMBIGUOUS': summary.ambiguous++; break;
+    }
+  }
+
+  return { entries, collisions, summary };
+}
+
+/**
+ * Format the manifest as a human-readable text report.
+ *
+ * @param {import('./types').ManifestResult} manifest - Manifest from generateManifest()
+ * @param {Object} [options={}]
+ * @param {boolean} [options.verbose=false]
+ * @returns {string} Formatted manifest text
+ */
+function formatManifest(manifest, options = {}) {
+  const { verbose = false } = options;
+  const lines = [];
+
+  for (const entry of manifest.entries) {
+    switch (entry.action) {
+      case 'SKIP':
+        lines.push(`[SKIP] ${entry.oldPath} -- already governed`);
+        break;
+
+      case 'INJECT_ONLY':
+        lines.push(`[INJECT] ${entry.oldPath} -- frontmatter needed`);
+        break;
+
+      case 'RENAME':
+        lines.push(`${entry.oldPath} -> ${entry.newPath}`);
+        lines.push(`  Initiative: ${entry.initiative} (confidence: ${entry.confidence}, source: ${entry.source})`);
+        lines.push(`  Type: ${entry.artifactType} (confidence: high, source: prefix match)`);
+        if (entry.collisionWith && entry.collisionWith.length > 0) {
+          lines.push(`  [!] COLLISION: same target as ${entry.collisionWith.join(', ')}`);
+        }
+        break;
+
+      case 'CONFLICT':
+        lines.push(`[!] ${entry.oldPath} -> CONFLICT (filename says ${entry.fileInitiative}, frontmatter says ${entry.frontmatterInitiative})`);
+        lines.push('  ACTION REQUIRED: Resolve initiative conflict before migration');
+        if (entry.contextClues) {
+          if (entry.contextClues.firstLines.length > 0) {
+            lines.push(`  First line: "${entry.contextClues.firstLines[0]}"`);
+          }
+          if (entry.contextClues.gitAuthor) {
+            lines.push(`  Git author: ${entry.contextClues.gitAuthor} (${entry.contextClues.gitDate})`);
+          }
+        }
+        break;
+
+      case 'AMBIGUOUS': {
+        const typeLabel = entry.artifactType
+          ? `type: ${entry.artifactType}, initiative unknown`
+          : 'cannot infer type or initiative';
+        lines.push(`[!] ${entry.oldPath} -> ??? (ambiguous -- ${typeLabel})`);
+        if (entry.contextClues) {
+          if (entry.contextClues.firstLines.length > 0) {
+            lines.push(`  First line: "${entry.contextClues.firstLines[0]}"`);
+          }
+          if (entry.contextClues.gitAuthor) {
+            lines.push(`  Git author: ${entry.contextClues.gitAuthor} (${entry.contextClues.gitDate})`);
+          }
+          if (verbose && entry.crossReferences && entry.crossReferences.length > 0) {
+            lines.push(`  Referenced by: ${entry.crossReferences.join(', ')}`);
+          }
+        }
+        if (entry.candidates.length > 0) {
+          lines.push(`  Candidates: ${entry.candidates.join(', ')}`);
+        }
+        lines.push('  ACTION REQUIRED: Specify initiative for this file');
+        break;
+      }
+    }
+  }
+
+  // Summary footer
+  const s = manifest.summary;
+  lines.push('');
+  lines.push(`--- Manifest Summary ---`);
+  lines.push(`Total: ${s.total} | Rename: ${s.rename} | Skip: ${s.skip} | Inject: ${s.inject} | Conflict: ${s.conflict} | Ambiguous: ${s.ambiguous}`);
+
+  if (manifest.collisions.size > 0) {
+    lines.push(`[!] ${manifest.collisions.size} filename collision(s) detected -- resolve before executing`);
+  }
+
+  return lines.join('\n');
+}
+
 // --- Exports ---
 
 module.exports = {
@@ -719,5 +1061,12 @@ module.exports = {
   getGovernanceState,
   generateNewFilename,
   // Git
-  ensureCleanTree
+  ensureCleanTree,
+  // Manifest
+  getContextClues,
+  getCrossReferences,
+  buildManifestEntry,
+  detectCollisions,
+  generateManifest,
+  formatManifest
 };
