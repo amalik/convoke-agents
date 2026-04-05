@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success, step-04-journeys, step-05-domain, step-06-innovation, step-07-project-type]
+stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success, step-04-journeys, step-05-domain, step-06-innovation, step-07-project-type, step-08-scoping, step-09-functional, step-10-nonfunctional, step-11-polish, step-12-complete]
 inputDocuments:
   - _bmad-output/planning-artifacts/initiatives-backlog.md
   - docs/lifecycle-expansion-vision.md
@@ -30,7 +30,7 @@ As Convoke scales beyond single-initiative usage, operators lose coherence. Arti
 
 This PRD specifies two tightly coupled capabilities that address this gap:
 
-1. **Artifact Governance (I14)** — A naming convention (`{initiative}-{artifact-type}[-{qualifier}]-{date}.md`), frontmatter metadata schema, controlled initiative taxonomy (8 IDs: vortex, gyre, bmm, forge, helm, enhance, loom, convoke), and artifact type taxonomy (~20 types). Includes a migration skill that retroactively applies the convention to ~160+ existing artifacts across all output directories (`planning-artifacts/`, `vortex-artifacts/`, `gyre-artifacts/`, `implementation-artifacts/`) with dry-run manifest, frontmatter injection, and git rename mapping. **Supersedes and extends** the existing repo organization ADR (`adr-repo-organization-conventions-2026-03-22.md`), which defined `{category}-{descriptor}[-{context}][-{date}].md` — I14 elevates initiative as the primary sort dimension and adds frontmatter metadata as a machine-readable layer.
+1. **Artifact Governance (I14)** — A naming convention (`{initiative}-{artifact-type}[-{qualifier}]-{date}.md`), frontmatter metadata schema, controlled initiative taxonomy (8 IDs: vortex, gyre, bmm, forge, helm, enhance, loom, convoke), and artifact type taxonomy (~20 types). Includes a CLI migration script (`convoke-migrate-artifacts`) that retroactively applies the convention to ~60 existing artifacts across MVP-scoped directories (`planning-artifacts/`, `vortex-artifacts/`, `gyre-artifacts/`) with dry-run manifest, frontmatter injection, and git rename mapping. Implementation artifacts (~100 files) deferred to Growth. **Supersedes and extends** the existing repo organization ADR (`adr-repo-organization-conventions-2026-03-22.md`), which defined `{category}-{descriptor}[-{context}][-{date}].md` — I14 elevates initiative as the primary sort dimension and adds frontmatter metadata as a machine-readable layer.
 
 2. **Portfolio Skill (P15)** — A BMM skill that scans planning artifacts across all initiatives and produces a portfolio view: initiative name, phase, health signal, next action, and context re-entry hint (last artifact touched, last open question). Includes a WIP radar that flags overload. Derives state from existing artifacts — zero manual tracking files. Operates in degraded mode on unstructured artifacts (filename inference, git recency) and at full capability on governed artifacts (frontmatter metadata). Inference sources: epic files (story completion %), sprint plans (current sprint state), backlog files (queued work depth), git history (activity recency), and frontmatter metadata (initiative, status).
 
@@ -40,7 +40,7 @@ These capabilities fill a gap already diagnosed in the Lifecycle Expansion Visio
 
 **Design principle — graduation path:** If the portfolio skill's inference capabilities hit limits, the gaps become validated input for a Vortex discovery cycle on a full governance perimeter — ensuring investment follows evidence, not speculation.
 
-### What Makes This Special
+## What Makes This Special
 
 Zero-maintenance visibility. The portfolio skill does not require manual status updates — it infers state from the artifacts the platform already produces. The naming convention and frontmatter schema are not documentation bureaucracy; they are the machine-readable contract that enables automated portfolio intelligence. Convention is the automation layer.
 
@@ -92,37 +92,6 @@ The initiative taxonomy (8 IDs) is a **controlled vocabulary decision** — it c
 | Portfolio phase accuracy | Correct for all active initiatives | Manual verification against known initiative states |
 | Convention drift | 0 violations in 3 months | Periodic scan of new artifacts |
 | Workflow adoption | 2+ workflows emit frontmatter | Code inspection |
-
-## Product Scope
-
-### MVP - Minimum Viable Product
-
-**I14 — Artifact Governance:**
-- Naming convention specification document (the contract)
-- Initiative taxonomy (8 IDs) and artifact type taxonomy (~20 types) as config
-- Frontmatter metadata schema (initiative, artifact_type, status, created) — co-designed by architect + tech writer
-- Migration skill: dry-run manifest → user review → execute rename + frontmatter injection + git rename mapping
-- ADR supersession: existing `adr-repo-organization-conventions-2026-03-22.md` updated to SUPERSEDED status, new ADR produced
-
-**P15 — Portfolio Skill:**
-- Artifact registry: scan output folders, parse filenames + frontmatter, build index by initiative/type/date/status
-- Portfolio view: initiative name, phase, status (ongoing/blocked/paused/complete), next action, context re-entry hint
-- WIP radar: flag when active initiative count exceeds configurable threshold
-- Degraded mode: functional on unstructured artifacts via filename inference + git recency
-
-### Growth Features (Post-MVP)
-
-- Workflow enforcement: update remaining artifact-producing workflows to emit frontmatter at creation time (Phase C from existing ADR)
-- Portfolio trend: show initiative velocity over time (artifacts produced per week, phase transitions)
-- Cross-initiative dependency view: visualize which initiatives block each other
-- Archive integration: connect portfolio skill with the archive system from the existing ADR
-
-### Vision (Future)
-
-- Full governance perimeter: if portfolio skill hits inference limits, graduate to Vortex discovery for a dedicated governance team
-- Value stream mapping: trace evidence signals through perimeter activations to outcomes (lifecycle vision Section 8)
-- Multi-project support: extend taxonomy with project/client prefix for consultants managing multiple engagements
-- Kaizen signals: portfolio skill emits improvement suggestions, not just status ("this initiative has stalled for 2 weeks")
 
 ## User Journeys
 
@@ -242,17 +211,119 @@ One glance: Helm isn't ready for architecture yet. The experiment needs to compl
 - **Taxonomy validation:** lowercase alphanumeric with optional dashes, no spaces, no special characters. Validated by `convoke-doctor`
 - New initiative IDs shipped in Convoke releases appear automatically after update
 
+## Governance Infrastructure Specific Requirements
+
+### Project-Type Overview
+
+This is internal governance infrastructure for the Convoke agentic platform — a CLI migration script and a BMM portfolio skill, backed by a taxonomy config and frontmatter schema. The migration script is a batch Node.js operation invoked via CLI. The portfolio skill is conversational, invoked via Claude Code chat or CLI. Output is multi-format: markdown for documents, terminal-formatted text for CLI.
+
+### Invocation Model
+
+| Capability | Type | Invocation | Notes |
+|-----------|------|------------|-------|
+| Migration | Node.js script (`scripts/migrate-artifacts.js`) | CLI: `convoke-migrate-artifacts [--dry-run \| --apply]` | Batch operation. CLI-only — not conversational. Follows existing `scripts/update/` patterns. |
+| Portfolio | BMAD skill (`.claude/skills/`) | Chat: `/bmad-portfolio-status` CLI: `convoke-portfolio [--markdown \| --terminal]` | Interactive, on-demand. Both chat and CLI. |
+
+- Migration is idempotent: safe to re-run. A file is "already governed" if (a) filename matches the `{initiative}-{artifact-type}` pattern AND (b) has valid frontmatter with `initiative` field. Both conditions required — a file that is renamed but lacks frontmatter ("half-governed") triggers frontmatter injection only.
+- Portfolio is stateless: reads current state on every invocation, produces fresh output
+- Migration script must include `--help` usage output documenting dry-run, apply, and behavior
+
+### Output Formats
+
+**Portfolio skill output modes (MVP):**
+
+| Mode | Format | Use Case |
+|------|--------|----------|
+| `--markdown` | Markdown table | Embedding in documents, skill output in chat |
+| `--terminal` | Colored terminal text with alignment | CLI daily use |
+
+Default: `--terminal` when invoked from CLI, `--markdown` when invoked from chat. YAML structured output deferred to Growth (no consumer exists today).
+
+**Migration script output:**
+- Dry-run: markdown table (old → new mapping + link updates)
+- Execution: terminal progress with summary
+- Mapping file: `artifact-rename-map.md` committed with migration
+
+### Configuration Schema
+
+**Taxonomy config:** `_bmad/_config/taxonomy.yaml` — taxonomy only, no behavior settings
+
+```yaml
+initiatives:
+  platform:
+    - vortex
+    - gyre
+    - bmm
+    - forge
+    - helm
+    - enhance
+    - loom
+    - convoke
+  user: []
+
+artifact_types:
+  - prd
+  - epic
+  - arch
+  - adr
+  - persona
+  - lean-persona
+  - empathy-map
+  - problem-def
+  - hypothesis
+  - experiment
+  - signal
+  - decision
+  - scope
+  - pre-reg
+  - sprint
+  - brief
+  - vision
+  - report
+  - research
+  - story
+  - spec
+```
+
+**Portfolio behavior config:** added to `_bmad/bmm/config.yaml`
+
+```yaml
+portfolio:
+  wip_threshold: 4
+  stale_days: 30
+```
+
+- `initiatives.platform` — read-only, updated by Convoke releases
+- `initiatives.user` — append-only, operator adds custom IDs
+- `portfolio.wip_threshold` — configurable WIP limit before radar flags
+- `portfolio.stale_days` — days without git activity before `stale` status
+- **Future note:** if portfolio becomes a core capability (not BMM-specific), config location needs revisiting
+
+### Integration Surface
+
+- **MVP: standalone.** Portfolio skill reads artifacts directly. Migration script operates independently.
+- **Update pipeline integration:** `convoke-update` includes a migration that creates `taxonomy.yaml` for pre-I14 installations. Migration script is invocable from update pipeline as an optional post-update step.
+- **Future integration:** other skills can read `taxonomy.yaml` for initiative validation at artifact creation time
+
+### Implementation Considerations
+
+- Migration script lives in `scripts/migrate-artifacts.js` with CLI entry point in `bin/convoke-migrate-artifacts`. Same pattern as existing `scripts/update/` infrastructure.
+- Portfolio skill lives in `.claude/skills/bmad-portfolio-status/` with optional CLI wrapper in `bin/convoke-portfolio`
+- Migration script needs filesystem access (read/write `_bmad-output/`), git access (`git mv`, `git log`), and YAML parsing
+- Portfolio skill needs filesystem access (read-only scan of `_bmad-output/`), git access (read-only `git log` for recency), and YAML parsing
+- Both must handle the case where `_bmad-output/` directories don't exist (fresh installation)
+
 ## Innovation & Novel Patterns
 
 ### Detected Innovation Areas
 
 1. **Convention-as-Automation** — The naming convention and frontmatter schema are not governance overhead — they are the machine-readable data layer that enables automated portfolio intelligence. This inverts the traditional relationship between standards and tooling: instead of "tooling enforces standards," here "standards enable tooling." The convention is the automation layer.
 
-2. **Zero-Maintenance Portfolio Inference** — Portfolio status derived entirely from existing artifacts without requiring manual status updates. No tracking spreadsheet, no status field to maintain, no ceremony. The system observes what you produce and infers where you are. This is novel in the agentic AI tooling space where most project management requires explicit status tracking.
+2. **Zero-Maintenance Portfolio Inference** — Portfolio status derived entirely from existing artifacts without requiring manual status updates. No tracking spreadsheet, no status field to maintain, no ceremony. The system observes what you produce and infers where you are. Novel in the agentic AI tooling space where most project management requires explicit status tracking.
 
-3. **Two-Tier Status Model** — Explicit status (set by workflows at creation) coexists with inferred status (derived from artifact chain analysis at read time). This solves the cold-start and adoption gap problem: the portfolio skill works immediately on legacy artifacts via inference, and improves as workflows adopt frontmatter emission. Degraded mode isn't a fallback — it's the adoption bridge.
+3. **Two-Tier Status Model** — Explicit status (set by workflows at creation) coexists with inferred status (derived from artifact chain analysis at read time). Solves the cold-start and adoption gap problem: the portfolio skill works immediately on legacy artifacts via inference, and improves as workflows adopt frontmatter emission. Degraded mode isn't a fallback — it's the adoption bridge.
 
-4. **Governance Health Score** — Every portfolio output includes an adoption nudge: `Governance: 23/163 artifacts governed (14%) — run migration for full accuracy`. Not a gate, not nagging — a factual transparency signal that creates natural pull toward migration. Disappears when governance reaches 100%. Doubles as a trackable success metric.
+4. **Governance Health Score** — Every portfolio output includes an adoption nudge: `Governance: 23/163 artifacts governed (14%) — run migration for full accuracy`. Not a gate, not nagging — a factual transparency signal that creates natural pull toward migration. Disappears at 100%. Doubles as a trackable success metric.
 
 ### Status Enum Clarification
 
@@ -293,4 +364,211 @@ The portfolio skill produces `unknown` under specific, testable conditions:
 - **Risk: Convention not adopted.** Mitigation: concrete MVP adoption roadmap (2 workflows) + convoke-doctor validation + governance health score in every portfolio output. Drift is detectable, not silent.
 - **Risk: Schema locks in too early.** Mitigation: frontmatter `status` is optional. Schema can evolve by adding fields — existing artifacts remain valid.
 - **Risk: Degraded mode "too good."** Mitigation: governance health score makes the quality gap visible. Every portfolio view shows governed vs total artifact count. The operator sees what they're missing, creating natural pull toward full adoption without enforcement.
-- **Risk: Portfolio output at scale.** At 20+ initiative IDs, flat alphabetical view becomes unwieldy. Mitigation (Growth): grouped portfolio output by prefix (referencing Clara's persona — consultant with multiple client engagements). MVP acknowledges the limitation; filtered views (`clientb-*`) are the daily driver at scale.
+- **Risk: Portfolio output at scale.** At 20+ initiative IDs, flat alphabetical view becomes unwieldy. Mitigation (Growth): grouped portfolio output by prefix (referencing Clara's persona). MVP acknowledges the limitation; filtered views (`clientb-*`) are the daily driver at scale.
+
+## Project Scoping & Phased Development
+
+### MVP Strategy & Philosophy
+
+**MVP Approach:** Problem-solving — deliver the minimum that eliminates the cross-initiative coherence pain for a solo operator managing 3+ concurrent initiatives.
+
+**Resource Requirements:** Single developer. Migration script and portfolio skill are independent deliverables with a clear dependency chain (I14 → P15). No parallel team needed.
+
+**Key scoping insight:** I14 (Artifact Governance) is a **standalone product**, not just a P15 prerequisite. The naming convention alone solves the "which initiative owns this file" problem. For solo operators with <10 initiatives, I14 with migration may be sufficient. P15's primary value emerges at scale (10+ initiatives, consultant with multiple clients).
+
+### MVP Feature Set (Phase 1)
+
+**Core User Journeys Supported:**
+- Journey 1 (Amalik) — full support: migration, portfolio view, WIP radar, context re-entry
+- Journey 3 (Dario) — partial support: initiative grouping and phase visibility. Artifact chain awareness is MVP.
+- Journey 2 (Clara) — enabled by taxonomy extensibility but not explicitly targeted. Clara's prefix filtering works out of the box.
+
+**Must-Have Capabilities — I14 (Artifact Governance):**
+
+| # | Capability | Must-Have Rationale |
+|---|-----------|-------------------|
+| 1 | Naming convention specification | The contract — without it, nothing else works |
+| 2 | `taxonomy.yaml` with platform defaults + user extensions | Data source for both migration and portfolio |
+| 3 | Frontmatter metadata schema (initiative, artifact_type, status, created, schema_version) | Machine-readable layer enabling portfolio inference. `schema_version: 1` enables future evolution. |
+| 4 | Migration script with dry-run manifest | Migration of ~60 existing artifacts (planning, vortex, gyre directories) |
+| 5 | Migration scope via CLI flags | `--include` with MVP defaults. Growth adds implementation-artifacts. |
+| 6 | Two-commit migration (rename → frontmatter injection) | Git history preservation — hard requirement |
+| 7 | Internal markdown link updating | Prevents broken cross-references post-migration |
+| 8 | `artifact-rename-map.md` | Rosetta Stone for old → new filename tracing |
+| 9 | ADR supersession | Existing ADR updated to SUPERSEDED, new ADR produced |
+| 10 | `convoke-doctor` taxonomy validation | Catches invalid IDs, malformed config |
+| 11 | `convoke-update` migration for pre-I14 installs | Creates taxonomy.yaml with platform defaults |
+
+**Must-Have Capabilities — P15 (Portfolio Skill):**
+
+| # | Capability | Must-Have Rationale |
+|---|-----------|-------------------|
+| 12 | Artifact registry (scan + parse + index) | Foundation for all portfolio output |
+| 13 | Portfolio view (initiative, phase, status, next action, context hint) | Core deliverable — the "30-second coherence" promise |
+| 14 | Explicit vs inferred status markers | Trust and transparency — operator knows what's reliable |
+| 15 | WIP radar (flag + list) | Overload detection for solo operators |
+| 16 | Degraded mode (filename inference without frontmatter) | Backward compatibility + adoption bridge |
+| 17 | Governance health score | Adoption nudge — governed/total count in every output |
+| 18 | P15 prerequisite check (taxonomy.yaml existence) | Prevents cryptic errors on pre-I14 projects |
+| 19 | Two output formats (markdown + terminal) | Chat and CLI coverage |
+
+**MVP workflow adoption:** `bmad-create-prd` and `bmad-create-epics-and-stories` updated to emit frontmatter at creation time.
+
+**MVP migration scope:** `planning-artifacts/`, `vortex-artifacts/`, `gyre-artifacts/` (~60 files). `implementation-artifacts/` excluded — high effort, low portfolio value, ephemeral story files rarely cross-referenced.
+
+### Post-MVP Features
+
+**Phase 2 (Growth):**
+- `implementation-artifacts/` migration (add via `--include implementation-artifacts` CLI flag)
+- Workflow enforcement: `bmad-create-architecture`, `bmad-create-ux-design`, Vortex agent workflows emit frontmatter
+- YAML structured output format for machine consumption
+- Grouped portfolio output by prefix (Clara's consultant persona)
+- Portfolio inference confidence scoring
+- Cross-initiative dependency view
+- Archive integration with existing ADR archive system
+- `--upgrade-schema` flag for frontmatter schema evolution
+
+**Phase 3 (Vision):**
+- Full governance perimeter via Vortex discovery (if portfolio skill hits limits)
+- Value stream mapping across perimeter activations
+- Multi-project support with project/client prefix taxonomy
+- Kaizen signals — portfolio emits improvement suggestions
+- Automated convention enforcement via pre-write validation hooks
+
+### Effort Distribution
+
+**Migration script is 50-55% of total engineering effort** (revised down from 60-70% after excluding implementation-artifacts). The two high-complexity items — initiative inference and link updating — should become dedicated stories.
+
+### Risk Mitigation Strategy
+
+**Technical Risks:**
+- *Most challenging:* Initiative inference from filenames. Reduced to ~3 predictable patterns after excluding implementation-artifacts. Mitigation: dry-run manifest with human review.
+- *Riskiest assumption:* Portfolio inference accuracy sufficient without explicit status fields. Mitigation: two-tier model + `(inferred)` markers + governance health score. Testable before deployment.
+
+**Market Risks:**
+- *Biggest risk:* Naming convention so effective it cannibalizes portfolio skill value for small-scale operators. Mitigation: this is a success signal, not a failure. I14 alone may suffice for <10 initiatives. P15 value emerges at scale.
+
+**Resource Risks:**
+- *Minimum viable:* Single developer, sequential delivery (I14 then P15).
+- *Absolute minimum:* I14 with migration script (no P15). Convention + migration solves 80% of the coherence pain. Portfolio deferred until scale demands it.
+- *If constrained further:* I14 without migration — just convention spec + taxonomy config + frontmatter schema. Apply convention forward-only. Still solves "which initiative owns this file" for new artifacts.
+
+## Functional Requirements
+
+### Taxonomy & Schema Management
+
+- FR1: Operator can define initiative IDs in a taxonomy config file (`_bmad/_config/taxonomy.yaml`) with platform defaults and user extensions
+- FR2: Operator can define artifact type IDs in the taxonomy config file
+- FR3: System validates taxonomy entries (lowercase alphanumeric with optional dashes, no duplicates, no collisions between platform and user sections)
+- FR4: System provides a frontmatter metadata schema with fields: initiative, artifact_type, status (optional, closed enum: draft/validated/superseded/active), created, schema_version
+- FR5: Operator can add new initiative IDs by appending a single entry to the user section of the taxonomy config
+- FR6: System ships platform taxonomy defaults that include all current Convoke initiative IDs (vortex, gyre, bmm, forge, helm, enhance, loom, convoke)
+
+### Migration
+
+- FR7: Operator can run a dry-run migration that shows a manifest of all proposed renames and link updates without modifying any files
+- FR8: Operator can execute the migration to rename all in-scope artifacts to follow the naming convention `{initiative}-{artifact-type}[-{qualifier}]-{date}.md`
+- FR9: Migration infers initiative from existing filename patterns, folder location, and file content
+- FR10: Migration infers artifact type from existing filename patterns
+- FR11: Migration surfaces ambiguous files (where initiative or type cannot be confidently inferred) for manual resolution by the operator
+- FR12: Migration renames files using `git mv` to preserve version history
+- FR13: Migration preserves full git history for all renamed files, verifiable via `git log --follow`
+- FR14: Migration injects frontmatter metadata into all renamed files, preserving any existing frontmatter
+- FR15: Migration scans and updates internal markdown links (`[text](filename.md)` patterns and frontmatter `inputDocuments` arrays) in all `.md` files within scope
+- FR16: Migration generates an `artifact-rename-map.md` mapping old filenames to new filenames
+- FR17: Migration verifies `git log --follow` works for a sample of renamed files
+- FR18: Migration is idempotent — detects already-governed files (filename match AND valid frontmatter) and skips them. Half-governed files (renamed but lacking frontmatter) trigger frontmatter injection only.
+- FR19: Operator can specify migration scope via CLI flags (`--include`) with MVP defaults (planning-artifacts, vortex-artifacts, gyre-artifacts)
+- FR20: Migration provides `--help` usage output documenting all flags and behavior
+- FR21: Migration produces a new ADR superseding the existing repo organization ADR
+
+### Portfolio View
+
+- FR22: Operator can generate a portfolio view showing all initiatives with: initiative name, phase, status, next action, and context re-entry hint (last artifact touched)
+- FR23: Portfolio view marks each status as `(explicit)` or `(inferred)` for transparency
+- FR24: Portfolio view displays a governance health score showing governed artifact count vs total artifact count
+- FR25: Operator can filter the portfolio view by initiative prefix (glob pattern, e.g., `clientb-*`)
+- FR26: Portfolio view supports two output formats: markdown (for chat) and terminal-formatted text (for CLI)
+- FR27: Portfolio view defaults to terminal format when invoked from CLI and markdown when invoked from chat
+
+### Portfolio Inference
+
+- FR28: Portfolio skill infers initiative phase (discovery, planning, build, blocked, complete) from artifact presence, type, and chain analysis
+- FR29: Portfolio skill infers initiative status using a two-tier model: explicit status from frontmatter when present, inferred status from git history and activity signals when absent
+- FR30: Portfolio skill uses initiative-level status vocabulary: ongoing, blocked, paused, complete, stale, unknown
+- FR31: Portfolio skill marks initiative as `stale` when no git activity detected within configurable threshold (default 30 days)
+- FR32: Portfolio skill produces `unknown` status under specific conditions: no artifacts match initiative ID, or artifacts exist but no phase-determining artifacts found
+- FR33: Portfolio skill infers context re-entry hint from most recently modified artifact (git log) and artifact chain next-step analysis
+- FR34: Portfolio skill infers discovery completeness from Vortex handoff contract chain (HC2 → HC3 → HC4 → HC5 → HC6)
+
+### WIP Management
+
+- FR35: Portfolio skill flags WIP overload when active initiative count exceeds configurable threshold (default 4)
+- FR36: WIP radar lists all active initiatives sorted by last-activity date when threshold is exceeded
+- FR37: Operator can configure WIP threshold and stale-days settings in BMM config
+
+### Backward Compatibility & Integration
+
+- FR38: Portfolio skill operates in degraded mode on artifacts without frontmatter, using filename pattern inference and git recency
+- FR39: Portfolio skill checks for taxonomy config prerequisite and displays clear error if absent, or warning if no governed artifacts found
+- FR40: `convoke-update` creates taxonomy config with platform defaults for pre-I14 installations
+- FR41: `convoke-update` merges new platform taxonomy entries without overwriting user extensions
+- FR42: `convoke-update` promotes user initiative IDs to platform section when they become official platform IDs
+- FR43: `convoke-doctor` validates taxonomy config structure, entry format, and detects duplicates/collisions
+
+### Workflow Adoption (MVP)
+
+- FR44: `bmad-create-prd` workflow emits frontmatter metadata (initiative, artifact_type, status, created, schema_version) when creating new PRD artifacts
+- FR45: `bmad-create-epics-and-stories` workflow emits frontmatter metadata when creating new epic artifacts
+
+### Migration Safety & Recovery
+
+- FR46: Migration supports idempotent recovery from partial failure — each commit phase (rename, frontmatter injection) is independently resumable. Re-running after a partial failure resumes from the incomplete phase without re-executing completed phases.
+- FR47: Migration follows a single interactive flow: dry-run manifest → operator review → confirmation prompt → apply. `--force` flag bypasses the confirmation prompt for automation. Operator cannot `--apply` without seeing the manifest first (unless `--force`).
+- FR48: Portfolio view sorts initiatives alphabetically by initiative ID by default. Operator can override with `--sort last-activity`.
+- FR49: Migration creates `taxonomy.yaml` with platform defaults if not present before executing. Idempotent — does not overwrite existing taxonomy (whether created by `convoke-update` or manually).
+
+## Non-Functional Requirements
+
+### Performance
+
+- NFR1: Portfolio skill completes full scan and output generation in under 5 seconds for repositories with up to 200 artifacts
+- NFR2: Migration dry-run manifest generation completes in under 10 seconds for repositories with up to 200 artifacts
+- NFR3: Migration execution (rename + frontmatter injection) completes in under 60 seconds for up to 100 files, excluding git commit time
+
+### Reliability
+
+- NFR4: Migration must not corrupt file content — any file that cannot be safely processed is skipped with a warning, never partially modified
+- NFR5: If any commit phase fails, all changes from that incomplete phase are rolled back via `git reset --hard` to the last successful commit, discarding all uncommitted changes from the failed phase. The repository is left in a clean, recoverable state.
+- NFR6: Portfolio inference must never produce false-confident results — when confidence is low, status is marked `unknown (inferred)`, not guessed
+- NFR7: Migration dry-run must be 100% accurate — every change shown in the manifest must match what apply executes. No surprises.
+
+### Maintainability
+
+- NFR8: Frontmatter schema supports forward-compatible evolution via `schema_version` field — adding new optional fields must not require re-migration of existing artifacts
+- NFR9: Taxonomy is extensible without code changes — adding a new initiative ID or artifact type requires only a config file edit
+- NFR10: Portfolio inference logic is modular — adding a new phase-detection heuristic (e.g., for a new team module) does not require modifying existing heuristics
+- NFR11: Migration inference rules are documented and testable — each filename pattern → initiative mapping is an explicit, unit-testable rule
+
+### Compatibility
+
+- NFR12: Migration script and portfolio skill must work with Node.js versions supported by the existing Convoke platform (≥18.x)
+- NFR13: All operations must work on macOS, Linux, and Windows (same platforms as existing Convoke CLI tools). Path handling must use `path.join()`, never hardcoded separators.
+- NFR14: Migration must not break existing `convoke-update`, `convoke-doctor`, or `convoke-install` functionality
+- NFR15: Portfolio skill must coexist with all existing BMAD skills without conflicts
+- NFR16: Taxonomy config must be parseable by standard YAML libraries (no custom syntax, no YAML extensions)
+
+### Testing
+
+- NFR17: Migration script must have ≥80% overall test coverage, with **100% coverage on all inference rules** (initiative inference patterns, artifact type inference, link detection patterns)
+- NFR18: Portfolio skill must have ≥80% overall test coverage, with **100% coverage on all inference heuristics** (phase inference, status inference, chain analysis, stale detection)
+- NFR19: Both tools must include test fixtures representing all known filename patterns in the current repository
+
+### Data Integrity
+
+- NFR20: Frontmatter injection preserves all existing file content below the frontmatter block byte-for-byte. Existing frontmatter fields are preserved — migration adds new fields, never overwrites existing fields. Field conflicts (e.g., existing `initiative` with different value) are surfaced in the dry-run manifest for manual resolution.
+- NFR21: Taxonomy changes take effect immediately on next portfolio skill invocation — no restart or cache invalidation required
+
+### Error Handling
+
+- NFR22: Both migration script and portfolio skill must handle malformed `taxonomy.yaml` gracefully — display a clear, actionable error message identifying the syntax or structural issue. No stack traces, no crashes.
