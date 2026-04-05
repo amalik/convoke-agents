@@ -25,7 +25,7 @@
  */
 
 /**
- * Entry in the migration dry-run manifest.
+ * @deprecated Use ManifestEntry instead. Planning placeholder with incomplete fields.
  * @typedef {Object} RenameManifestEntry
  * @property {string} oldPath - Current file path (relative to project root)
  * @property {string} newPath - Proposed new file path
@@ -33,6 +33,33 @@
  * @property {string} artifactType - Inferred artifact type
  * @property {'high'|'low'} confidence - Inference confidence level
  * @property {'fully-governed'|'half-governed'|'ungoverned'|'invalid-governed'} governanceState - Current governance state
+ */
+
+/**
+ * Manifest entry for dry-run display. Replaces RenameManifestEntry.
+ * @typedef {Object} ManifestEntry
+ * @property {string} oldPath - Current relative path (e.g., 'planning-artifacts/prd-gyre.md')
+ * @property {string|null} newPath - Proposed new path (null for SKIP/CONFLICT/AMBIGUOUS)
+ * @property {string|null} initiative - Resolved initiative ID (null if ambiguous)
+ * @property {string|null} artifactType - Resolved artifact type (null if ungoverned)
+ * @property {'high'|'low'} confidence - Initiative inference confidence
+ * @property {string} source - Inference source (exact/alias/empty/unresolved)
+ * @property {'RENAME'|'SKIP'|'INJECT_ONLY'|'CONFLICT'|'AMBIGUOUS'} action
+ * @property {string} dir - Directory name (e.g., 'planning-artifacts')
+ * @property {{firstLines: string[], gitAuthor: string|null, gitDate: string|null}|null} contextClues
+ * @property {string[]|null} crossReferences - Files referencing this one (verbose only)
+ * @property {string[]} candidates - Possible initiative matches (ambiguous only)
+ * @property {string[]|null} collisionWith - Other files colliding on same newPath
+ * @property {string|null} frontmatterInitiative - Initiative from frontmatter (for CONFLICT display)
+ * @property {string|null} fileInitiative - Initiative from filename (for CONFLICT display)
+ */
+
+/**
+ * Result of generateManifest() containing all entries, collisions, and summary.
+ * @typedef {Object} ManifestResult
+ * @property {ManifestEntry[]} entries - All manifest entries
+ * @property {Map<string, string[]>} collisions - Colliding newPath -> list of oldPaths
+ * @property {{total: number, skip: number, rename: number, inject: number, conflict: number, ambiguous: number}} summary
  */
 
 /**
