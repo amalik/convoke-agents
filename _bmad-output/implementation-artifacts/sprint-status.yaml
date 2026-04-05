@@ -290,7 +290,7 @@ development_status:
   ag-1-1-shared-library-extraction-gray-matter: done
   ag-1-2-taxonomy-configuration: done
   ag-1-3-frontmatter-metadata-schema: done
-  ag-epic-1-retrospective: optional
+  ag-epic-1-retrospective: done
 
   # Epic 2: Migration Inference & Planning
   ag-epic-2: backlog
