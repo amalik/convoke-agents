@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
 
-const { validateActivation, _validateSingleAgent, ACTIVATION_REGEX } = require('../../_bmad/bme/_team-factory/lib/writers/activation-validator');
+const { validateActivation, ACTIVATION_REGEX } = require('../../_bmad/bme/_team-factory/lib/writers/activation-validator');
 
 describe('validateActivation', () => {
   let tmpDir;
