@@ -672,6 +672,12 @@ module.exports = {
   // Schema
   validateFrontmatterSchema,
   buildSchemaFields,
+  // Inference
+  ARTIFACT_TYPE_ALIASES,
+  inferArtifactType,
+  inferInitiative,
+  getGovernanceState,
+  generateNewFilename,
   // Git
   ensureCleanTree
 };
