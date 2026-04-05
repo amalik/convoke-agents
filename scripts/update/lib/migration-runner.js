@@ -466,7 +466,7 @@ async function runRefreshOnly(fromVersion, options = {}) {
       try {
         await backupManager.restoreBackup(backupMetadata, projectRoot);
         console.log(chalk.green('✓ Installation restored from backup'));
-      } catch (restoreError) {
+      } catch (_restoreError) {
         console.error(chalk.red('✗ Restore failed!'));
         console.error(chalk.yellow(`Manual restore may be needed from: ${backupMetadata.backup_dir}`));
       }
