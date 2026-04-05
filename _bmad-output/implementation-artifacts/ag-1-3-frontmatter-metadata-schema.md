@@ -1,6 +1,6 @@
 # Story 1.3: Frontmatter Metadata Schema
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -22,50 +22,32 @@ so that governance tools can read and write consistent structured data in every 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create schema validation helper (AC: #1, #2, #3)
-  - [ ] Add `validateFrontmatterSchema(fields, taxonomy)` to `scripts/lib/artifact-utils.js` — accepts fields object AND a `TaxonomyConfig` for initiative/type validation
-  - [ ] Validates required fields present: `initiative`, `artifact_type`, `created`, `schema_version`
-  - [ ] Validates `created` is a string matching ISO 8601 date format (`/^\d{4}-\d{2}-\d{2}$/`)
-  - [ ] Validates `schema_version` is integer >= 1
-  - [ ] Validates `status` (if present) is one of: `draft`, `validated`, `superseded`, `active`
-  - [ ] Validates `initiative` exists in taxonomy (platform or user section) — accepts a `TaxonomyConfig` parameter
-  - [ ] Validates `artifact_type` exists in taxonomy `artifact_types` list
-  - [ ] Returns `{ valid: true }` or `{ valid: false, errors: string[] }` with clear error messages
-  - [ ] Export via `module.exports`
+- [x] Task 1: Create schema validation helper (AC: #1, #2, #3)
+  - [x] Added `validateFrontmatterSchema(fields, taxonomy)` to `scripts/lib/artifact-utils.js`
+  - [x] Validates required fields: initiative, artifact_type, created, schema_version
+  - [x] Validates created is ISO 8601 date format
+  - [x] Validates schema_version is integer >= 1
+  - [x] Validates status (if present) is one of closed enum
+  - [x] Validates initiative exists in taxonomy
+  - [x] Validates artifact_type exists in taxonomy
+  - [x] Returns `{ valid, errors }` with clear messages
+  - [x] Exported VALID_STATUSES constant
 
-- [ ] Task 2: Create `buildSchemaFields()` convenience function (AC: #1, #2)
-  - [ ] Add `buildSchemaFields(initiative, artifactType, options)` to `artifact-utils.js`
-  - [ ] Returns a complete frontmatter object: `{ initiative, artifact_type, created: today's date, schema_version: 1, ...options }`
-  - [ ] If `options.status` is provided, includes it; otherwise omits `status` (it's optional)
-  - [ ] `created` defaults to current date in ISO 8601 format (YYYY-MM-DD) if not provided in options
-  - [ ] Does NOT validate — that's `validateFrontmatterSchema()`'s job
+- [x] Task 2: Create `buildSchemaFields()` convenience function (AC: #1, #2)
+  - [x] Added `buildSchemaFields(initiative, artifactType, options)` to artifact-utils.js
+  - [x] Returns complete frontmatter with schema_version: 1, created defaults to today
+  - [x] Status included only when provided in options
+  - [x] Does NOT validate — separate concern
 
-- [ ] Task 3: Write schema validation tests (AC: #1, #2, #3, #9)
-  - [ ] Create tests in `tests/lib/artifact-utils.test.js` (append to existing file)
-  - [ ] Test valid schema with all required fields passes
-  - [ ] Test valid schema with optional status passes
-  - [ ] Test missing `initiative` field rejects
-  - [ ] Test missing `artifact_type` field rejects
-  - [ ] Test missing `schema_version` field rejects
-  - [ ] Test missing `created` field rejects
-  - [ ] Test invalid `status` value (e.g., `"active-ish"`) rejects
-  - [ ] Test `schema_version: 0` rejects (must be >= 1)
-  - [ ] Test `schema_version: "one"` rejects (must be integer)
-  - [ ] Test initiative not in taxonomy rejects
-  - [ ] Test artifact_type not in taxonomy rejects
-  - [ ] Test invalid `created` format (e.g., `"yesterday"`) rejects
+- [x] Task 3: Write schema validation tests (AC: #1, #2, #3, #9)
+  - [x] 14 test cases: valid pass, all 4 statuses pass, missing fields reject (4), invalid status, schema_version 0, schema_version string, initiative not in taxonomy, type not in taxonomy, invalid created format, multiple errors collected
 
-- [ ] Task 4: Write `buildSchemaFields()` tests (AC: #2)
-  - [ ] Test returns all required fields with correct types
-  - [ ] Test `schema_version` is always `1`
-  - [ ] Test `created` defaults to today's date in YYYY-MM-DD format
-  - [ ] Test `status` included only when provided in options
-  - [ ] Test custom `created` date is respected when provided
+- [x] Task 4: Write `buildSchemaFields()` tests (AC: #2)
+  - [x] 5 test cases: required fields, schema_version=1, today's date, status optional, custom created
 
-- [ ] Task 5: Verify existing `injectFrontmatter()` tests still pass (AC: #4, #5, #6, #7, #8)
-  - [ ] Run existing injectFrontmatter tests — they already cover: no frontmatter, existing frontmatter, metadata-only, field conflicts, content preservation
-  - [ ] These ACs are already satisfied by Story 1.1 — this task is verification only
-  - [ ] If any test fails, investigate and fix
+- [x] Task 5: Verify existing `injectFrontmatter()` tests still pass (AC: #4, #5, #6, #7, #8)
+  - [x] All 62 tests pass (28 from 1.1 + 15 from 1.2 + 19 new)
+  - [x] ACs #4-#8 confirmed satisfied by existing Story 1.1 tests
 
 ## Dev Notes
 
@@ -135,8 +117,22 @@ tests/
 
 ### Agent Model Used
 
+Claude Opus 4.6 (1M context)
+
 ### Debug Log References
+
+- 62/62 lib tests pass (28 story 1.1 + 15 story 1.2 + 19 new)
+- Archive regression: 69 warnings (67 + 2 new files from stories 1.2/1.3 — expected)
 
 ### Completion Notes List
 
+- ✅ Added `validateFrontmatterSchema(fields, taxonomy)` — validates all required fields, types, enums, and taxonomy membership
+- ✅ Added `buildSchemaFields(initiative, artifactType, options)` — convenience builder with schema_version: 1 and today's date default
+- ✅ Exported `VALID_STATUSES` constant: ['draft', 'validated', 'superseded', 'active']
+- ✅ 14 validation test cases + 5 builder test cases = 19 new tests
+- ✅ All existing tests unaffected — 43 prior tests still pass
+
 ### File List
+
+- `scripts/lib/artifact-utils.js` — MODIFIED (added validateFrontmatterSchema, buildSchemaFields, VALID_STATUSES, DATE_PATTERN)
+- `tests/lib/artifact-utils.test.js` — MODIFIED (added 19 tests in 2 new describe blocks)
