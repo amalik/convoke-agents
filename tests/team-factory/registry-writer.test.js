@@ -9,7 +9,6 @@ const {
   derivePrefix,
   buildAgentEntry,
   buildModuleBlock,
-  _buildExportNames,
   buildWorkflowNames,
   applyInsertions,
   escapeSingleQuotes,
@@ -332,9 +331,7 @@ describe('writeRegistryBlock', () => {
     await fs.writeFile(registryPath, originalContent, 'utf8');
 
     // Monkey-patch fs.writeFile to corrupt the registry on the second call (the actual write)
-    const _origWriteFile = fs.writeFile.bind(fs);
-    let _writeCount = 0;
-    const _writerModule = require('../../_bmad/bme/_team-factory/lib/writers/registry-writer');
+    // These vars were part of a monkey-patch approach that was replaced by the trick-content strategy below
     // We can't easily intercept fs inside the module, so instead we'll create a registry
     // where the insertion produces invalid JS that fails require() verification.
     // Use a registry with a module.exports that, when the block is inserted before it,
