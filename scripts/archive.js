@@ -7,7 +7,8 @@ const {
   parseFilename,
   NAMING_PATTERN,
   toLowerKebab,
-  ensureCleanTree
+  ensureCleanTree,
+  scanArtifactDirs
 } = require('./lib/artifact-utils');
 
 // Living documents that are exempt from the category prefix requirement
@@ -100,13 +101,17 @@ Dry-run by default — shows what would happen without changing anything.
   const actions = { archive: [], rename: [], warnings: [] };
 
   // 1. Scan subdirectories for superseded dated files
+  const scannedFiles = await scanArtifactDirs(projectRoot, SCAN_DIRS);
+  // Group scanned files by directory for per-dir processing
+  const filesByDir = {};
+  for (const f of scannedFiles) {
+    if (!filesByDir[f.dir]) filesByDir[f.dir] = [];
+    filesByDir[f.dir].push({ ...parseFilename(f.filename), dir: f.dir, fullPath: f.fullPath });
+  }
+
   for (const dir of SCAN_DIRS) {
     const fullDir = path.join(outputDir, dir);
-    if (!fs.existsSync(fullDir)) continue;
-
-    const files = (await fs.readdir(fullDir))
-      .filter(f => !f.startsWith('.'))
-      .map(f => ({ ...parseFilename(f), dir }));
+    const files = filesByDir[dir] || [];
 
     // Find superseded versions
     const groups = groupByKey(files);
