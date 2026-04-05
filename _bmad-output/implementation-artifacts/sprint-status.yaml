@@ -288,8 +288,8 @@ development_status:
   # Epic 1: Artifact Governance Foundation
   ag-epic-1: in-progress
   ag-1-1-shared-library-extraction-gray-matter: done
-  ag-1-2-taxonomy-configuration: in-progress
-  ag-1-3-frontmatter-metadata-schema: backlog
+  ag-1-2-taxonomy-configuration: done
+  ag-1-3-frontmatter-metadata-schema: in-progress
   ag-epic-1-retrospective: optional
 
   # Epic 2: Migration Inference & Planning
