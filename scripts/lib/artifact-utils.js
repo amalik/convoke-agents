@@ -359,24 +359,22 @@ function inferArtifactType(filename, taxonomy) {
     nameToMatch = baseName.slice(hcMatch[0].length);
   }
 
-  // Sort taxonomy types by length descending (greedy: longest match first)
-  const sortedTypes = [...taxonomy.artifact_types].sort((a, b) => b.length - a.length);
-
-  // Try direct match against taxonomy types (dash boundary)
-  for (const type of sortedTypes) {
-    if (nameToMatch.startsWith(type + '-') || nameToMatch === type) {
-      const remainder = nameToMatch === type ? '' : nameToMatch.slice(type.length + 1);
-      return { type, hcPrefix, remainder, date };
-    }
-  }
-
-  // Try artifact type aliases (long-form → canonical)
+  // Try artifact type aliases FIRST (longer, more specific — e.g., 'hypothesis-contract' before 'hypothesis')
   const sortedAliasKeys = Object.keys(ARTIFACT_TYPE_ALIASES).sort((a, b) => b.length - a.length);
   for (const aliasKey of sortedAliasKeys) {
     if (nameToMatch.startsWith(aliasKey + '-') || nameToMatch === aliasKey) {
       const canonicalType = ARTIFACT_TYPE_ALIASES[aliasKey];
       const remainder = nameToMatch === aliasKey ? '' : nameToMatch.slice(aliasKey.length + 1);
       return { type: canonicalType, hcPrefix, remainder, date };
+    }
+  }
+
+  // Then try direct match against taxonomy types (dash boundary, longest first)
+  const sortedTypes = [...taxonomy.artifact_types].sort((a, b) => b.length - a.length);
+  for (const type of sortedTypes) {
+    if (nameToMatch.startsWith(type + '-') || nameToMatch === type) {
+      const remainder = nameToMatch === type ? '' : nameToMatch.slice(type.length + 1);
+      return { type, hcPrefix, remainder, date };
     }
   }
 
@@ -424,7 +422,20 @@ function inferInitiative(remainder, taxonomy) {
     }
   }
 
-  // Step 4: Try first segment alone
+  // Step 4: Try suffixes (last N segments) — catches 'prd-validation-gyre' → 'gyre'
+  for (let i = 1; i < segments.length; i++) {
+    const suffix = segments.slice(i).join('-');
+
+    if (allInitiatives.includes(suffix)) {
+      return { initiative: suffix, confidence: 'high', source: 'exact', candidates: [] };
+    }
+
+    if (taxonomy.aliases && taxonomy.aliases[suffix]) {
+      return { initiative: taxonomy.aliases[suffix], confidence: 'high', source: 'alias', candidates: [] };
+    }
+  }
+
+  // Step 5: Try first segment alone
   const firstSegment = segments[0];
   if (allInitiatives.includes(firstSegment)) {
     return { initiative: firstSegment, confidence: 'high', source: 'exact', candidates: [] };
@@ -507,36 +518,56 @@ function generateNewFilename(filename, initiative, artifactType, taxonomy) {
 
   // Extract qualifier: remainder minus the initiative segments
   if (typeResult.remainder) {
-    const initiativeResult = inferInitiative(typeResult.remainder, taxonomy);
-    if (initiativeResult.initiative && initiativeResult.confidence === 'high') {
-      // Remove the matched initiative/alias segments from remainder to get pure qualifier
-      const remainderSegments = typeResult.remainder.split('-');
-      const allInitiatives = [...taxonomy.initiatives.platform, ...taxonomy.initiatives.user];
-      const aliasKeys = Object.keys(taxonomy.aliases || {});
+    const remainderSegments = typeResult.remainder.split('-');
+    const allInitiatives = [...taxonomy.initiatives.platform, ...taxonomy.initiatives.user];
+    const aliasKeys = Object.keys(taxonomy.aliases || {});
 
-      // Find how many segments the initiative match consumed
-      let consumed = 0;
-      for (let i = remainderSegments.length; i >= 1; i--) {
-        const candidate = remainderSegments.slice(0, i).join('-');
-        if (allInitiatives.includes(candidate) || aliasKeys.includes(candidate)) {
-          consumed = i;
+    // Try to find which segments the initiative match consumed
+    // Check prefixes (longest first)
+    let consumedStart = -1;
+    let consumedEnd = -1;
+
+    // Try prefix matches first (e.g., 'forge-phase-a' → 'forge' consumed at start)
+    for (let i = remainderSegments.length; i >= 1; i--) {
+      const prefix = remainderSegments.slice(0, i).join('-');
+      if (allInitiatives.includes(prefix) || aliasKeys.includes(prefix)) {
+        consumedStart = 0;
+        consumedEnd = i;
+        break;
+      }
+    }
+
+    // If no prefix match, try suffix matches (e.g., 'decision-strategy-perimeter' → 'strategy-perimeter' consumed at end)
+    if (consumedStart === -1) {
+      for (let i = 1; i < remainderSegments.length; i++) {
+        const suffix = remainderSegments.slice(i).join('-');
+        if (allInitiatives.includes(suffix) || aliasKeys.includes(suffix)) {
+          consumedStart = i;
+          consumedEnd = remainderSegments.length;
           break;
         }
       }
-      // Also check single first segment
-      if (consumed === 0) {
-        const first = remainderSegments[0];
-        if (allInitiatives.includes(first) || aliasKeys.includes(first)) {
-          consumed = 1;
-        }
-      }
+    }
 
-      const qualifierSegments = remainderSegments.slice(consumed);
+    // If still no match, try single first segment
+    if (consumedStart === -1) {
+      const first = remainderSegments[0];
+      if (allInitiatives.includes(first) || aliasKeys.includes(first)) {
+        consumedStart = 0;
+        consumedEnd = 1;
+      }
+    }
+
+    // Build qualifier from unconsumed segments
+    if (consumedStart >= 0) {
+      const before = remainderSegments.slice(0, consumedStart);
+      const after = remainderSegments.slice(consumedEnd);
+      const qualifierSegments = [...before, ...after];
       if (qualifierSegments.length > 0) {
         parts.push(qualifierSegments.join('-'));
       }
     } else {
-      // No initiative found in remainder — entire remainder is qualifier
+      // No initiative found — entire remainder is qualifier
       parts.push(typeResult.remainder);
     }
   }
