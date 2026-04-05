@@ -1,6 +1,6 @@
 # Story 2.1: Initiative Inference Engine
 
-Status: review
+Status: done
 
 ## Story
 
