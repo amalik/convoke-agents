@@ -1,0 +1,1 @@
+# Spec Base Artifact
