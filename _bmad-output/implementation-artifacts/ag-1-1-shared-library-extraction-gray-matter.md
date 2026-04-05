@@ -1,6 +1,6 @@
 # Story 1.1: Shared Library Extraction & gray-matter
 
-Status: review
+Status: done
 
 ## Story
 
