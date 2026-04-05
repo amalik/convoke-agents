@@ -1,0 +1,57 @@
+# Artifact Governance Taxonomy Configuration
+# Schema version: 1
+# Created by: ag-1-2-taxonomy-configuration
+#
+# This file is the single source of truth for initiative IDs, artifact types,
+# and historical name aliases used by the governance system.
+
+# Initiative IDs
+# - platform: Read-only. Updated by Convoke releases. Do not edit manually.
+# - user: Operator-managed. Add custom initiative IDs here (one per line).
+#   Rules: lowercase alphanumeric with optional dashes, no spaces, no special characters.
+initiatives:
+  platform:
+    - vortex
+    - gyre
+    - bmm
+    - forge
+    - helm
+    - enhance
+    - loom
+    - convoke
+  user: []
+
+# Artifact type identifiers
+# Used by naming convention: {initiative}-{artifact_type}[-{qualifier}]-{date}.md
+# Rules: lowercase alphanumeric with optional dashes.
+artifact_types:
+  - prd
+  - epic
+  - arch
+  - adr
+  - persona
+  - lean-persona
+  - empathy-map
+  - problem-def
+  - hypothesis
+  - experiment
+  - signal
+  - decision
+  - scope
+  - pre-reg
+  - sprint
+  - brief
+  - vision
+  - report
+  - research
+  - story
+  - spec
+
+# Historical name aliases (migration-only)
+# Maps old initiative names found in existing filenames to canonical IDs.
+# Used by the migration script to resolve historical naming variants.
+# The portfolio skill does NOT consume aliases — post-migration, all files use canonical IDs.
+aliases:
+  strategy-perimeter: helm
+  strategy: helm
+  team-factory: loom
