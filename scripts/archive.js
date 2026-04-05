@@ -3,15 +3,12 @@
 const fs = require('fs-extra');
 const path = require('path');
 const { findProjectRoot } = require('./update/lib/utils');
-
-// --- Category registry from ADR ---
-const VALID_CATEGORIES = [
-  'prd', 'epic', 'arch', 'adr', 'brief', 'report', 'spec', 'vision',
-  'hc', 'persona', 'experiment', 'learning', 'sprint', 'decision',
-  'research'
-];
-
-const NAMING_PATTERN = /^[a-z][a-z0-9-]*\.(?:md|yaml)$/;
+const {
+  parseFilename,
+  NAMING_PATTERN,
+  toLowerKebab,
+  ensureCleanTree
+} = require('./lib/artifact-utils');
 
 // Living documents that are exempt from the category prefix requirement
 const EXEMPT_FILES = [
@@ -26,37 +23,6 @@ const SCAN_DIRS = ['planning-artifacts', 'vortex-artifacts', 'implementation-art
 const SKIP_ROOT = ['.backups', '.logs', '_archive', ...SCAN_DIRS,
   'brainstorming', 'design-artifacts', 'journey-examples',
   'project-documentation', 'test-artifacts'];
-
-function isValidCategory(cat) {
-  const base = cat.replace(/\d+$/, '');
-  return VALID_CATEGORIES.includes(base) || VALID_CATEGORIES.includes(cat);
-}
-
-const DATED_PATTERN = /^(.+)-(\d{4}-\d{2}-\d{2})\.(md|yaml)$/;
-const CATEGORIZED_PATTERN = /^([a-z]+\d*)-(.+)\.(md|yaml)$/;
-
-// --- Helpers ---
-
-function parseFilename(filename) {
-  const lower = filename.toLowerCase();
-  const dated = lower.match(DATED_PATTERN);
-  const categorized = lower.match(CATEGORIZED_PATTERN);
-
-  return {
-    filename,
-    isDated: !!dated,
-    date: dated ? dated[2] : null,
-    baseName: dated ? dated[1] : lower.replace(/\.(md|yaml)$/, ''),
-    category: categorized ? categorized[1] : null,
-    hasValidCategory: categorized ? isValidCategory(categorized[1]) : false,
-    isUppercase: filename !== lower,
-    matchesConvention: NAMING_PATTERN.test(filename) && categorized && isValidCategory(categorized[1])
-  };
-}
-
-function toLowerKebab(filename) {
-  return filename.toLowerCase();
-}
 
 function groupByKey(files) {
   const groups = {};
@@ -115,6 +81,16 @@ Dry-run by default — shows what would happen without changing anything.
   if (!projectRoot) {
     console.error('Error: Could not find project root (_bmad/ directory not found).');
     process.exit(1);
+  }
+
+  // Clean tree check — only when applying changes (dry-run is safe)
+  if (apply) {
+    try {
+      ensureCleanTree(SCAN_DIRS, projectRoot);
+    } catch (err) {
+      console.error(`❌ ${err.message}`);
+      process.exit(1);
+    }
   }
 
   const outputDir = path.join(projectRoot, '_bmad-output');
