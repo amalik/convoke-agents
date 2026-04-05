@@ -323,28 +323,28 @@ describe('validateFrontmatterSchema', () => {
   });
 
   test('rejects missing initiative', () => {
-    const { initiative, ...fields } = validFields;
+    const { initiative: _, ...fields } = validFields;
     const result = validateFrontmatterSchema(fields, taxonomy);
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual(expect.stringMatching(/missing.*initiative/i));
   });
 
   test('rejects missing artifact_type', () => {
-    const { artifact_type, ...fields } = validFields;
+    const { artifact_type: _, ...fields } = validFields;
     const result = validateFrontmatterSchema(fields, taxonomy);
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual(expect.stringMatching(/missing.*artifact_type/i));
   });
 
   test('rejects missing schema_version', () => {
-    const { schema_version, ...fields } = validFields;
+    const { schema_version: _, ...fields } = validFields;
     const result = validateFrontmatterSchema(fields, taxonomy);
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual(expect.stringMatching(/missing.*schema_version/i));
   });
 
   test('rejects missing created', () => {
-    const { created, ...fields } = validFields;
+    const { created: _, ...fields } = validFields;
     const result = validateFrontmatterSchema(fields, taxonomy);
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual(expect.stringMatching(/missing.*created/i));
