@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [step-01-validate-prerequisites]
+stepsCompleted: [step-01-validate-prerequisites, step-02-design-epics]
 inputDocuments:
   - _bmad-output/planning-artifacts/prd-artifact-governance-portfolio.md
   - _bmad-output/planning-artifacts/arch-artifact-governance-portfolio.md
