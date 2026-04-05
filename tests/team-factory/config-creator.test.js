@@ -5,7 +5,7 @@ const fs = require('fs-extra');
 const os = require('os');
 const yaml = require('js-yaml');
 
-const { createConfig, buildConfigData, detectCollisions, deriveWorkflowNames, toKebab } = require('../../_bmad/bme/_team-factory/lib/writers/config-creator');
+const { createConfig, _buildConfigData, detectCollisions, deriveWorkflowNames, toKebab } = require('../../_bmad/bme/_team-factory/lib/writers/config-creator');
 
 const FIXTURE_PATH = path.join(__dirname, 'fixtures', 'test-team-spec.yaml');
 const GOLDEN_PATH = path.join(__dirname, 'golden', 'golden-config.yaml');
