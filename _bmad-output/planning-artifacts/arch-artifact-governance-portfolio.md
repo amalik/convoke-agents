@@ -1,5 +1,7 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5, 6]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
+status: 'complete'
+completedAt: '2026-04-05'
 inputDocuments:
   - _bmad-output/planning-artifacts/prd-artifact-governance-portfolio.md
   - _bmad-output/planning-artifacts/adr-repo-organization-conventions-2026-03-22.md
@@ -600,3 +602,197 @@ Integration tests must create temp git repos — never test git operations in-pl
 - ❌ Catching errors without logging — violates "never swallow silently"
 - ❌ Using `process.argv` parsing inline — extract to a `parseArgs()` function at the top of each CLI entry point
 - ❌ Putting JS engine code inside `.claude/skills/` — skills are markdown-only, engines live in `scripts/`
+
+## Project Structure & Boundaries
+
+### Component Boundary Map
+
+4 bounded components. No component directly imports from another's internals — they communicate through shared lib only.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    SHARED LIB                            │
+│  scripts/lib/artifact-utils.js  +  types.js             │
+│  (consumed by all three components below)                │
+├──────────────┬──────────────────┬────────────────────────┤
+│  MIGRATION   │    PORTFOLIO     │   ARCHIVE (existing)   │
+│  scripts/    │  scripts/lib/    │   scripts/             │
+│  migrate-    │  portfolio/      │   archive.js           │
+│  artifacts.js│  portfolio-      │   (refactored)         │
+│              │  engine.js       │                        │
+│  bin/convoke │  bin/convoke-    │   npm run archive      │
+│  -migrate-   │  portfolio       │                        │
+│  artifacts   │                  │                        │
+│              │  .claude/skills/ │                        │
+│              │  bmad-portfolio- │                        │
+│              │  status/         │                        │
+│              │  workflow.md     │                        │
+└──────────────┴──────────────────┴────────────────────────┘
+         │              │                    │
+         └──────────────┴────────────────────┘
+                        │
+              ┌─────────┴──────────┐
+              │   CONFIG LAYER     │
+              │  _bmad/_config/    │
+              │  taxonomy.yaml     │
+              │                    │
+              │  _bmad/bmm/        │
+              │  config.yaml       │
+              │  (portfolio section)│
+              └────────────────────┘
+```
+
+### FR-to-File Mapping
+
+| FR Range | Component | Primary File(s) |
+|----------|-----------|-----------------|
+| FR1-FR6 | Config Layer | `_bmad/_config/taxonomy.yaml` |
+| FR7-FR20 | Migration | `scripts/migrate-artifacts.js` + `scripts/lib/artifact-utils.js` |
+| FR21 | Migration | `scripts/migrate-artifacts.js` → generates `_bmad-output/planning-artifacts/adr-artifact-governance-convention-{date}.md` AND updates existing ADR status to `SUPERSEDED` |
+| FR22-FR27 | Portfolio | `scripts/lib/portfolio/portfolio-engine.js` + `formatters/` |
+| FR28-FR34 | Portfolio | `scripts/lib/portfolio/rules/` (4 rule files) |
+| FR35-FR37 | Portfolio | `scripts/lib/portfolio/portfolio-engine.js` (WIP section) |
+| FR38-FR39 | Portfolio | `scripts/lib/portfolio/portfolio-engine.js` (degraded mode + prereq check) |
+| FR40-FR42 | Update Pipeline | `scripts/update/migrations/` (new migration file) |
+| FR43 | Doctor | `scripts/convoke-doctor.js` (new validation check) |
+| FR44-FR45 | Workflow Updates | `.claude/skills/bmad-create-prd/` + `.claude/skills/bmad-create-epics-and-stories/` |
+| FR46-FR47 | Migration | `scripts/migrate-artifacts.js` (transaction + interactive flow) |
+| FR48 | Portfolio | `scripts/lib/portfolio/portfolio-engine.js` (sort option) |
+| FR49-FR50 | Migration | `scripts/migrate-artifacts.js` (taxonomy bootstrap + archive exclusion) |
+
+**Validation: 50/50 FRs mapped. 22/22 NFRs have architectural support. 0 orphan files.**
+
+### Config File Locations
+
+| File | Purpose | Created By | Read By |
+|------|---------|-----------|---------|
+| `_bmad/_config/taxonomy.yaml` | Initiative IDs, artifact types, aliases | Migration script (FR49) or `convoke-update` (FR40) | Migration, portfolio, doctor |
+| `_bmad/bmm/config.yaml` (portfolio section) | WIP threshold, stale days | Manual or `convoke-update` | Portfolio only |
+| `artifact-rename-map.md` | Old→new filename mapping | Migration script (FR16) | Humans (reference) |
+
+### Modification Boundaries
+
+**Files CREATED (new):** ~14 files
+- `scripts/lib/artifact-utils.js`, `scripts/lib/types.js`
+- `scripts/lib/portfolio/portfolio-engine.js`
+- `scripts/lib/portfolio/rules/` (4 rule files)
+- `scripts/lib/portfolio/formatters/` (2 formatter files)
+- `scripts/migrate-artifacts.js`
+- `bin/convoke-migrate-artifacts`, `bin/convoke-portfolio`
+- `.claude/skills/bmad-portfolio-status/workflow.md`
+- `_bmad/_config/taxonomy.yaml`
+
+**Files MODIFIED (existing):**
+- `scripts/archive.js` — refactored to import from shared lib (ADR-1)
+- `scripts/convoke-doctor.js` — add taxonomy validation check (FR43)
+- `package.json` — add gray-matter dep + bin entries + npm scripts
+- `_bmad/bmm/config.yaml` — add portfolio section (FR37)
+- `.claude/skills/bmad-create-prd/` — add frontmatter emission (FR44)
+- `.claude/skills/bmad-create-epics-and-stories/` — add frontmatter emission (FR45)
+- `scripts/update/migrations/` — new migration for taxonomy bootstrap (FR40-42)
+- `_bmad-output/planning-artifacts/adr-repo-organization-conventions-2026-03-22.md` — status → SUPERSEDED (FR21)
+
+**Files NEVER touched:**
+- `_bmad/` directory structure (BMAD Method compatibility)
+- `_bmad-output/_archive/` (FR50)
+- `scripts/update/lib/utils.js` (consumed, not modified)
+- Any file outside `_bmad-output/` scope during migration
+
+### Implementation Sequence → Story Mapping
+
+| Step | Scope | Estimated Stories |
+|------|-------|-------------------|
+| 1 | Shared lib extraction + gray-matter + archive.js refactor | 1 story |
+| 2 | Migration inference rules (greedy matching, aliases) | 1 story |
+| 3 | Migration pipeline (scan → plan → execute → verify, transactional) | 1 story |
+| 4 | Taxonomy config + doctor validation | 1 story |
+| 5 | Portfolio inference rules (4 rule files) | 1 story |
+| 6 | Portfolio engine + formatters + CLI wrapper | 1 story |
+| 7 | Workflow adoption (PRD + epics emit frontmatter) | 1 story |
+| 8 | Update pipeline integration (taxonomy bootstrap) | 1 story |
+
+## Architecture Validation Results
+
+### Coherence Validation ✅
+
+**Decision Compatibility:** CommonJS + gray-matter + fs-extra + js-yaml — all compatible. Jest + CommonJS — native. process.argv + bin/ — standard Node.js CLI. Rule chain + gray-matter + git — sequential, no concurrency conflicts. No contradictions.
+
+**Pattern Consistency:** camelCase functions, kebab-case files. Named exports everywhere. MigrationError for migration, plain Error for portfolio. --flag CLI pattern with --help and dry-run default. Consistent with existing platform tools.
+
+**Structure Alignment:** Shared lib consumed by 3 components, no circular dependencies. Portfolio engine in scripts/ not .claude/skills/ — correct runtime boundary. Config in _bmad/ — follows platform conventions. Tests mirror source — discoverable.
+
+### Requirements Coverage ✅
+
+- **Functional Requirements:** 50/50 mapped to files (self-consistency validated)
+- **Non-Functional Requirements:** 22/22 with architectural support
+- **No orphan files** — every new file traces to at least one FR/NFR
+
+### Implementation Readiness ✅
+
+- 6 core decisions documented with rationale and trade-offs
+- 3 ADRs with formal option analysis
+- 8 failure mode findings integrated
+- Code review gauntlet corrections applied (portfolio engine location, invalid-governed state)
+- 7 reverse-engineering clarity fixes applied (output examples, pseudocode, UX, link patterns)
+
+### Gap Analysis
+
+**Critical Gaps:** None.
+**Important Gaps:** None remaining.
+**Deferred to Growth:** --all-branches, grouped output, YAML format, confidence scoring, --upgrade-schema.
+
+### Architecture Completeness Checklist
+
+- [x] Project context analyzed (50 FRs, 22 NFRs, 3 personas)
+- [x] Scale assessed (Medium-High, ~60 MVP files, ~14 new code files)
+- [x] 8 technical constraints identified
+- [x] 6 cross-cutting concerns mapped
+- [x] 3 ADRs: shared lib, transactional migration, rule chain
+- [x] 6 core decisions with rationale
+- [x] gray-matter: sole new dependency
+- [x] Naming, structure, error handling, process, testing patterns defined
+- [x] 7 conflict points addressed with enforcement guidelines + anti-patterns
+- [x] Complete file tree with FR-to-file mapping (50/50)
+- [x] Component boundaries: migration, portfolio, archive, shared lib
+- [x] Implementation sequence → 8 stories
+
+### Architecture Readiness Assessment
+
+**Overall Status: READY FOR IMPLEMENTATION**
+
+**Confidence Level: High** — validated through multiple A/P/C cycles at every step. Failure mode analysis, code review gauntlet, self-consistency validation, and reverse-engineering test all completed.
+
+**Key Strengths:**
+- Every FR traceable to a file. Every NFR has architectural support.
+- Shared lib prevents code duplication across 3 consumers
+- Transactional migration with rollback prevents data loss
+- Rule chain enables Growth extensibility without modifying MVP code
+- gray-matter handles byte-for-byte preservation without custom parser risk
+- Inference pseudocode and exact link patterns eliminate implementation ambiguity
+
+**Areas for Future Enhancement:**
+- Multi-branch git scanning for stale detection
+- Grouped/hierarchical portfolio output for scale
+- Schema evolution tooling (--upgrade-schema)
+- Confidence scoring on portfolio inference
+
+### Implementation Handoff
+
+**Target Personas (from PRD):**
+- **Amalik (Solo Operator):** 5+ initiatives, needs cross-initiative coherence. Primary MVP persona.
+- **Clara (Consultant):** Multiple clients, needs prefix filtering. Enabled by taxonomy extensibility.
+- **Dario (Platform Builder):** Needs phase/status visibility for build readiness decisions.
+
+**Status Enum Relationship:**
+- **Artifact-level status** (frontmatter: draft/validated/superseded/active) = **input data** written by workflows
+- **Initiative-level status** (portfolio: ongoing/blocked/paused/complete/stale/unknown) = **computed output** derived by portfolio skill
+
+**AI Agent Guidelines:**
+- Follow all architectural decisions exactly as documented
+- Use implementation patterns consistently across all components
+- Respect project structure and boundaries — shared lib is the integration point
+- Refer to this document for all architectural questions
+- Never put JS engine code inside .claude/skills/ — skills are markdown-only
+
+**First Implementation Priority:**
+Step 1: Shared lib extraction from `archive.js` → `scripts/lib/artifact-utils.js` + `scripts/lib/types.js` + `npm install gray-matter`
