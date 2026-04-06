@@ -302,7 +302,7 @@ development_status:
   # Epic 3: Migration Execution & Safety
   ag-epic-3: in-progress
   ag-3-1-transactional-rename-execution: done
-  ag-3-2-frontmatter-injection-link-updating: backlog
+  ag-3-2-frontmatter-injection-link-updating: done
   ag-3-3-interactive-flow-recovery-rename-map: backlog
   ag-3-4-adr-supersession: backlog
   ag-epic-3-retrospective: optional
