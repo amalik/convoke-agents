@@ -664,3 +664,182 @@ describe('executeInjections', () => {
     expect(content).not.toContain('initiative:');
   });
 });
+
+// --- resolveAmbiguous tests ---
+
+describe('resolveAmbiguous', () => {
+  let resolveAmbiguous;
+  let mockPromptFn;
+
+  beforeAll(() => {
+    jest.restoreAllMocks();
+    jest.resetModules();
+    resolveAmbiguous = require('../../scripts/lib/artifact-utils').resolveAmbiguous;
+  });
+
+  beforeEach(() => {
+    mockPromptFn = jest.fn();
+  });
+
+  const makeTaxonomy = () => ({
+    initiatives: { platform: ['gyre', 'forge', 'helm'], user: [] },
+    artifact_types: ['prd', 'epic', 'arch'],
+    aliases: {}
+  });
+
+  const makeManifest = (entries) => ({
+    entries,
+    collisions: new Map(),
+    summary: {
+      total: entries.length,
+      rename: entries.filter(e => e.action === 'RENAME').length,
+      skip: entries.filter(e => e.action === 'SKIP').length,
+      ambiguous: entries.filter(e => e.action === 'AMBIGUOUS').length,
+      conflict: 0, inject: 0
+    }
+  });
+
+  test('operator selects candidate -> entry updated to RENAME', async () => {
+    mockPromptFn.mockResolvedValue('gyre');
+    const manifest = makeManifest([
+      { action: 'AMBIGUOUS', oldPath: 'planning-artifacts/prd.md', dir: 'planning-artifacts', artifactType: 'prd', candidates: ['gyre', 'forge'], initiative: null, newPath: null }
+    ]);
+
+    const result = await resolveAmbiguous(manifest, makeTaxonomy(), '/fake', { promptFn: mockPromptFn });
+    expect(result.resolved).toBe(1);
+    expect(manifest.entries[0].action).toBe('RENAME');
+    expect(manifest.entries[0].initiative).toBe('gyre');
+    expect(manifest.entries[0].newPath).toContain('gyre-prd');
+    expect(manifest.entries[0].source).toBe('operator');
+  });
+
+  test('operator types skip -> entry marked SKIP', async () => {
+    mockPromptFn.mockResolvedValue('skip');
+    const manifest = makeManifest([
+      { action: 'AMBIGUOUS', oldPath: 'planning-artifacts/prd.md', dir: 'planning-artifacts', artifactType: 'prd', candidates: ['gyre'], initiative: null, newPath: null }
+    ]);
+
+    const result = await resolveAmbiguous(manifest, makeTaxonomy(), '/fake', { promptFn: mockPromptFn });
+    expect(result.skipped).toBe(1);
+    expect(manifest.entries[0].action).toBe('SKIP');
+  });
+
+  test('no ambiguous entries -> returns manifest unchanged', async () => {
+    const manifest = makeManifest([
+      { action: 'RENAME', oldPath: 'a.md', newPath: 'x.md' }
+    ]);
+
+    const result = await resolveAmbiguous(manifest, makeTaxonomy(), '/fake', { promptFn: mockPromptFn });
+    expect(result.resolved).toBe(0);
+    expect(result.skipped).toBe(0);
+    expect(mockPromptFn).not.toHaveBeenCalled();
+  });
+
+  test('--force mode -> all ambiguous auto-skipped', async () => {
+    const manifest = makeManifest([
+      { action: 'AMBIGUOUS', oldPath: 'a.md', dir: 'planning-artifacts', artifactType: 'prd', candidates: ['gyre'], initiative: null, newPath: null },
+      { action: 'AMBIGUOUS', oldPath: 'b.md', dir: 'planning-artifacts', artifactType: 'epic', candidates: ['forge'], initiative: null, newPath: null }
+    ]);
+
+    const result = await resolveAmbiguous(manifest, makeTaxonomy(), '/fake', { force: true, promptFn: mockPromptFn });
+    expect(result.skipped).toBe(2);
+    expect(result.resolved).toBe(0);
+    expect(mockPromptFn).not.toHaveBeenCalled();
+  });
+
+  test('non-resolvable entry (no type, no candidates) -> auto-skipped', async () => {
+    const manifest = makeManifest([
+      { action: 'AMBIGUOUS', oldPath: 'planning-artifacts/backlog.md', dir: 'planning-artifacts', artifactType: null, candidates: [], initiative: null, newPath: null }
+    ]);
+
+    const result = await resolveAmbiguous(manifest, makeTaxonomy(), '/fake', { promptFn: mockPromptFn });
+    expect(result.skipped).toBe(1);
+    expect(mockPromptFn).not.toHaveBeenCalled();
+  });
+
+  test('summary counts updated after resolution', async () => {
+    mockPromptFn.mockResolvedValue('gyre');
+    const manifest = makeManifest([
+      { action: 'AMBIGUOUS', oldPath: 'planning-artifacts/prd.md', dir: 'planning-artifacts', artifactType: 'prd', candidates: ['gyre'], initiative: null, newPath: null },
+      { action: 'RENAME', oldPath: 'a.md', newPath: 'x.md' }
+    ]);
+
+    await resolveAmbiguous(manifest, makeTaxonomy(), '/fake', { promptFn: mockPromptFn });
+    expect(manifest.summary.rename).toBe(2);
+    expect(manifest.summary.ambiguous).toBe(0);
+  });
+});
+
+// --- generateRenameMap tests ---
+
+describe('generateRenameMap', () => {
+  let generateRenameMap;
+
+  beforeAll(() => {
+    jest.restoreAllMocks();
+    jest.resetModules();
+    generateRenameMap = require('../../scripts/lib/artifact-utils').generateRenameMap;
+  });
+
+  test('produces markdown table with correct old/new paths', () => {
+    const entries = [
+      { oldPath: 'planning-artifacts/prd-gyre.md', newPath: 'planning-artifacts/gyre-prd.md' },
+      { oldPath: 'vortex-artifacts/epic-forge.md', newPath: 'vortex-artifacts/forge-epic.md' }
+    ];
+    const md = generateRenameMap(entries);
+    expect(md).toContain('# Artifact Rename Map');
+    expect(md).toContain('Total renamed:** 2');
+    expect(md).toContain('| planning-artifacts/prd-gyre.md | planning-artifacts/gyre-prd.md |');
+    expect(md).toContain('| vortex-artifacts/epic-forge.md | vortex-artifacts/forge-epic.md |');
+  });
+
+  test('empty entries -> table with header only', () => {
+    const md = generateRenameMap([]);
+    expect(md).toContain('# Artifact Rename Map');
+    expect(md).toContain('Total renamed:** 0');
+    expect(md).toContain('| Old Path | New Path |');
+  });
+});
+
+// --- detectMigrationState tests ---
+
+describe('detectMigrationState', () => {
+  let mockExecFileSync;
+  let detectMigrationState;
+
+  beforeEach(() => {
+    jest.resetModules();
+    const cp = require('child_process');
+    mockExecFileSync = jest.spyOn(cp, 'execFileSync');
+    detectMigrationState = require('../../scripts/lib/artifact-utils').detectMigrationState;
+  });
+
+  afterEach(() => {
+    mockExecFileSync.mockRestore();
+  });
+
+  test('recent commit is inject message -> returns complete', () => {
+    mockExecFileSync.mockReturnValue('chore: inject frontmatter metadata and update links\n');
+    expect(detectMigrationState('/fake')).toBe('complete');
+  });
+
+  test('recent commit is rename message -> returns renames-done', () => {
+    mockExecFileSync.mockReturnValue('chore: rename artifacts to governance convention\n');
+    expect(detectMigrationState('/fake')).toBe('renames-done');
+  });
+
+  test('no migration commits in recent history -> returns fresh', () => {
+    mockExecFileSync.mockReturnValue('feat: add new feature\nfix: bug fix\n');
+    expect(detectMigrationState('/fake')).toBe('fresh');
+  });
+
+  test('rename message found after intervening commit -> returns renames-done', () => {
+    mockExecFileSync.mockReturnValue('fix: hotfix\nchore: rename artifacts to governance convention\n');
+    expect(detectMigrationState('/fake')).toBe('renames-done');
+  });
+
+  test('git log fails (not a repo) -> returns fresh', () => {
+    mockExecFileSync.mockImplementation(() => { throw new Error('not a git repo'); });
+    expect(detectMigrationState('/fake')).toBe('fresh');
+  });
+});
