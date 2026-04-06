@@ -21,7 +21,9 @@ const {
   executeRenames,
   ArtifactMigrationError,
   verifyHistoryChain,
-  executeInjections
+  executeInjections,
+  resolveAmbiguous,
+  detectMigrationState
 } = require('./lib/artifact-utils');
 
 // --- CLI Argument Parsing ---
@@ -226,12 +228,38 @@ async function main() {
 
   // --- Apply mode ---
 
-  // Pre-apply summary
-  const renameCount = manifest.summary.rename;
-  const skipCount = manifest.summary.ambiguous + manifest.summary.conflict;
-  console.log(`\n${renameCount} files will be renamed. ${skipCount} files skipped (ambiguous/conflict).`);
+  // Idempotent recovery detection
+  let migrationState = detectMigrationState(projectRoot);
+  if (migrationState === 'complete') {
+    // Secondary check: verify manifest confirms all files governed (catches new files added since migration)
+    const hasWork = manifest.entries.some(e => e.action === 'RENAME' || e.action === 'AMBIGUOUS');
+    if (!hasWork) {
+      console.log('\nNothing to migrate -- all files governed.');
+      return;
+    }
+    // New files found — proceed as fresh migration
+    console.log('\nPrevious migration detected, but new ungoverned files found. Proceeding with fresh migration.');
+    migrationState = 'fresh';
+  }
 
-  // Block on collisions
+  // Load taxonomy for ambiguous resolution
+  const taxonomy = readTaxonomy(projectRoot);
+
+  // Resolve ambiguous files interactively (or auto-skip in --force mode)
+  const resolution = await resolveAmbiguous(manifest, taxonomy, projectRoot, { force: args.force });
+  if (resolution.resolved > 0 || resolution.skipped > 0) {
+    console.log(`\nAmbiguous resolution: ${resolution.resolved} resolved, ${resolution.skipped} skipped.`);
+  }
+
+  // Re-compute counts and re-check collisions after resolution (new RENAME entries may collide)
+  const { detectCollisions } = require('./lib/artifact-utils');
+  manifest.collisions = detectCollisions(manifest.entries);
+  const renameCount = manifest.summary.rename;
+  const skipCount = manifest.entries.filter(e => e.action === 'SKIP').length;
+  const ambiguousLeft = manifest.summary.ambiguous;
+  console.log(`\n${renameCount} files will be renamed. ${skipCount} skipped. ${ambiguousLeft} still ambiguous.`);
+
+  // Block on collisions (includes post-resolution collisions)
   if (manifest.collisions.size > 0) {
     console.error(`Error: ${manifest.collisions.size} filename collision(s) detected. Resolve before applying.`);
     process.exit(1);
@@ -259,26 +287,36 @@ async function main() {
     process.exit(1);
   }
 
-  // Execute renames
+  // Execute migration phases
   try {
-    const result = executeRenames(manifest, projectRoot);
-    console.log(`\nRename phase complete. ${result.renamedCount} files renamed. Commit: ${result.commitSha}`);
-
-    // Verify history chain (informational)
-    const renamedEntries = manifest.entries.filter(e => e.action === 'RENAME');
-    const verification = verifyHistoryChain(renamedEntries, projectRoot);
-    if (verification.failed.length > 0) {
-      console.warn(`Warning: git log --follow failed for ${verification.failed.length} file(s):`);
-      for (const f of verification.failed) {
-        console.warn(`  ${f}`);
-      }
+    // Phase routing based on idempotent recovery state
+    if (migrationState === 'renames-done') {
+      const priorCount = manifest.entries.filter(e => e.action === 'RENAME').length;
+      console.log(`\nDetected partial migration (${priorCount} renames done, frontmatter pending). Resuming commit 2.`);
     } else {
-      console.log(`History chain verified for ${verification.verified} sample file(s).`);
+      // Commit 1: renames
+      const renameResult = executeRenames(manifest, projectRoot);
+      console.log(`\nRename phase complete. ${renameResult.renamedCount} files renamed. Commit: ${renameResult.commitSha}`);
+
+      // Verify history chain (informational)
+      const renamedEntries = manifest.entries.filter(e => e.action === 'RENAME');
+      const verification = verifyHistoryChain(renamedEntries, projectRoot);
+      if (verification.failed.length > 0) {
+        console.warn(`Warning: git log --follow failed for ${verification.failed.length} file(s):`);
+        for (const f of verification.failed) {
+          console.warn(`  ${f}`);
+        }
+      } else {
+        console.log(`History chain verified for ${verification.verified} sample file(s).`);
+      }
     }
 
-    // Execute commit 2: frontmatter injection + link updating
+    // Commit 2: frontmatter injection + link updating + rename map
     const injResult = await executeInjections(manifest, projectRoot, filteredIncludeDirs);
     console.log(`\nInjection phase complete. ${injResult.injectedCount} files injected, ${injResult.linkUpdates.updatedLinks} links updated, ${injResult.conflictCount} conflicts skipped. Commit: ${injResult.commitSha}`);
+
+    // Final summary
+    console.log(`\nMigration complete. ${renameCount} files renamed, ${injResult.injectedCount} frontmatter injected, ${injResult.linkUpdates.updatedLinks} links updated, ${skipCount} skipped.`);
   } catch (err) {
     if (err instanceof ArtifactMigrationError && err.phase === 'rename') {
       console.error(`\nRename failed: ${err.message}`);
