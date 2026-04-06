@@ -1328,6 +1328,11 @@ async function executeInjections(manifest, projectRoot, scopeDirs) {
   // Update internal links across all scoped .md files
   const linkUpdates = await updateLinks(oldToNewMap, scopeDirs, projectRoot);
 
+  // Generate rename map (committed with injection phase)
+  const renameMapContent = generateRenameMap(renameEntries);
+  const renameMapPath = path.join(outputDir, 'planning-artifacts', 'artifact-rename-map.md');
+  fs.writeFileSync(renameMapPath, renameMapContent, 'utf8');
+
   // Stage and commit (scoped to _bmad-output/)
   try {
     execFileSync('git', ['add', '_bmad-output/'], { cwd: projectRoot, stdio: 'pipe' });
@@ -1360,6 +1365,150 @@ async function executeInjections(manifest, projectRoot, scopeDirs) {
   }
 
   return { injectedCount, linkUpdates, conflictCount, commitSha };
+}
+
+/**
+ * Prompt operator for initiative assignment on a single ambiguous file.
+ * Exported for mocking in tests — tests should NEVER interact with real readline.
+ *
+ * @param {string} filename - The ambiguous filename
+ * @param {string[]} candidates - Possible initiative matches
+ * @returns {Promise<string>} Selected initiative or 'skip'
+ */
+async function promptInitiative(filename, candidates) {
+  const readline = require('readline');
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const options = [...candidates, 'skip'].join('/');
+  return new Promise(resolve => {
+    let resolved = false;
+    const done = (value) => { if (!resolved) { resolved = true; resolve(value); } };
+    rl.on('close', () => done('skip'));
+    rl.question(`Assign initiative for ${filename} [${options}]: `, answer => {
+      rl.close();
+      const trimmed = (answer || '').trim().toLowerCase();
+      if (trimmed === 'skip' || candidates.includes(trimmed)) {
+        done(trimmed);
+      } else {
+        done('skip');
+      }
+    });
+  });
+}
+
+/**
+ * Resolve ambiguous manifest entries interactively or auto-skip in force mode.
+ * Mutates manifest entries in-place.
+ *
+ * @param {import('./types').ManifestResult} manifest - Manifest to resolve
+ * @param {import('./types').TaxonomyConfig} taxonomy - Taxonomy for filename generation
+ * @param {string} _projectRoot - Project root (reserved)
+ * @param {Object} [options={}]
+ * @param {boolean} [options.force=false] - Auto-skip all ambiguous in force mode
+ * @returns {Promise<{resolved: number, skipped: number}>}
+ */
+async function resolveAmbiguous(manifest, taxonomy, _projectRoot, options = {}) {
+  const { force = false, promptFn = promptInitiative } = options;
+  let resolved = 0;
+  let skipped = 0;
+
+  for (const entry of manifest.entries) {
+    if (entry.action !== 'AMBIGUOUS') continue;
+
+    // Non-resolvable: no type or no candidates — auto-skip
+    if (!entry.artifactType || !entry.candidates || entry.candidates.length === 0) {
+      entry.action = 'SKIP';
+      skipped++;
+      continue;
+    }
+
+    // Force mode: auto-skip all ambiguous
+    if (force) {
+      entry.action = 'SKIP';
+      skipped++;
+      continue;
+    }
+
+    // Interactive prompt
+    const filename = entry.oldPath.split('/').pop();
+    const choice = await promptFn(filename, entry.candidates);
+
+    if (choice === 'skip') {
+      entry.action = 'SKIP';
+      skipped++;
+    } else {
+      entry.initiative = choice;
+      const newFilename = generateNewFilename(filename, choice, entry.artifactType, taxonomy);
+      entry.newPath = `${entry.dir}/${newFilename}`;
+      entry.action = 'RENAME';
+      entry.confidence = 'high';
+      entry.source = 'operator';
+      resolved++;
+    }
+  }
+
+  // Update summary counts
+  manifest.summary.rename = manifest.entries.filter(e => e.action === 'RENAME').length;
+  manifest.summary.skip = manifest.entries.filter(e => e.action === 'SKIP').length;
+  manifest.summary.ambiguous = manifest.entries.filter(e => e.action === 'AMBIGUOUS').length;
+
+  return { resolved, skipped };
+}
+
+/**
+ * Generate artifact-rename-map.md content as a markdown table.
+ *
+ * @param {import('./types').ManifestEntry[]} renamedEntries - Entries that were renamed
+ * @returns {string} Markdown content for the rename map file
+ */
+function generateRenameMap(renamedEntries) {
+  const date = new Date().toISOString().split('T')[0];
+  const lines = [
+    `# Artifact Rename Map`,
+    '',
+    `**Generated:** ${date}`,
+    `**Total renamed:** ${renamedEntries.length}`,
+    '',
+    '| Old Path | New Path |',
+    '|----------|----------|'
+  ];
+
+  for (const entry of renamedEntries) {
+    lines.push(`| ${entry.oldPath} | ${entry.newPath} |`);
+  }
+
+  return lines.join('\n') + '\n';
+}
+
+/**
+ * Detect the current migration state for idempotent recovery.
+ * Uses commit message as primary signal (inference engine can't recognize
+ * initiative-first filenames after rename — see ag-3-3 Dev Notes).
+ *
+ * @param {string} projectRoot - Absolute path to project root
+ * @returns {'complete'|'renames-done'|'fresh'} Current migration state
+ */
+function detectMigrationState(projectRoot) {
+  try {
+    // Check recent commits (not just last one) to handle intervening manual commits
+    const recentMsgs = execFileSync(
+      'git', ['log', '-5', '--format=%s'],
+      { cwd: projectRoot, encoding: 'utf8', stdio: 'pipe' }
+    ).trim().split('\n');
+
+    // Check in order: most recent first
+    for (const msg of recentMsgs) {
+      if (msg === 'chore: inject frontmatter metadata and update links') {
+        return 'complete';
+      }
+      if (msg === 'chore: rename artifacts to governance convention') {
+        return 'renames-done';
+      }
+    }
+  } catch {
+    // Not a git repo or no commits — treat as fresh
+  }
+
+  return 'fresh';
 }
 
 // --- Exports ---
@@ -1405,5 +1554,10 @@ module.exports = {
   executeRenames,
   verifyHistoryChain,
   updateLinks,
-  executeInjections
+  executeInjections,
+  // Interactive & Recovery
+  promptInitiative,
+  resolveAmbiguous,
+  generateRenameMap,
+  detectMigrationState
 };
