@@ -308,13 +308,13 @@ development_status:
   ag-epic-3-retrospective: done
 
   # Epic 4: Portfolio Intelligence
-  ag-epic-4: in-progress
+  ag-epic-4: done
   ag-4-1-portfolio-inference-rules: done
   ag-4-2-portfolio-engine-artifact-registry: done
   ag-4-3-degraded-mode-governance-health: done
   ag-4-4-wip-radar-filtering: done
-  ag-4-5-output-formats-cli-wrapper: backlog
-  ag-epic-4-retrospective: optional
+  ag-4-5-output-formats-cli-wrapper: done
+  ag-epic-4-retrospective: done
 
   # Epic 5: Platform Integration & Adoption
   ag-epic-5: backlog
