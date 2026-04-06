@@ -73,6 +73,7 @@ async function generatePortfolio(projectRoot, options = {}) {
   const registry = new Map();
   let governed = 0;
   let ungoverned = 0;
+  let unattributed = 0;
 
   const mdFiles = allFiles.filter(f => f.filename.endsWith('.md'));
 
@@ -83,20 +84,28 @@ async function generatePortfolio(projectRoot, options = {}) {
       ? inferInitiative(typeResult.remainder, taxonomy)
       : { initiative: null, confidence: 'low', source: 'no-type', candidates: [] };
 
-    // Only index files with resolved initiative
+    // Files with no resolved initiative cannot be attributed — skip
     if (!initResult.initiative) {
-      ungoverned++;
+      unattributed++;
       continue;
     }
 
-    governed++;
+    // Read frontmatter to classify governed vs ungoverned
     let frontmatter = null;
     let content = '';
     try {
       content = fs.readFileSync(file.fullPath, 'utf8');
       frontmatter = parseFrontmatter(content).data;
     } catch {
-      // Unreadable — skip frontmatter
+      // Unreadable — treat as no frontmatter
+    }
+
+    // Governed = has frontmatter with matching initiative field
+    const isGoverned = !!(frontmatter && frontmatter.initiative && frontmatter.initiative === initResult.initiative);
+    if (isGoverned) {
+      governed++;
+    } else {
+      ungoverned++;
     }
 
     const enriched = {
@@ -108,7 +117,9 @@ async function generatePortfolio(projectRoot, options = {}) {
       date: typeResult.date,
       initiative: initResult.initiative,
       frontmatter,
-      content
+      content,
+      isGoverned,
+      degradedMode: !isGoverned
     };
 
     if (!registry.has(initResult.initiative)) {
@@ -143,9 +154,19 @@ async function generatePortfolio(projectRoot, options = {}) {
     results.sort((a, b) => a.initiative.localeCompare(b.initiative));
   }
 
+  // Calculate governance health score (of attributable files only — excludes unattributed)
+  const attributable = governed + ungoverned;
+  const healthPercentage = attributable > 0 ? Math.round((governed / attributable) * 100) : 0;
+
   return {
     initiatives: results,
-    summary: { total: mdFiles.length, governed, ungoverned }
+    summary: {
+      total: mdFiles.length,
+      governed,
+      ungoverned,
+      unattributed,
+      healthScore: { governed, total: attributable, percentage: healthPercentage }
+    }
   };
 }
 
@@ -197,7 +218,9 @@ async function main() {
       : formatTerminal(result.initiatives);
 
     console.log(output);
-    console.log(`\nTotal: ${result.summary.total} artifacts | Governed: ${result.summary.governed} | Ungoverned: ${result.summary.ungoverned}`);
+    console.log(`\nTotal: ${result.summary.total} artifacts | Governed: ${result.summary.governed} | Ungoverned: ${result.summary.ungoverned} | Unattributed: ${result.summary.unattributed}`);
+    const hs = result.summary.healthScore;
+    console.log(`Governance: ${hs.governed}/${hs.total} artifacts governed (${hs.percentage}%)`);
   } catch (err) {
     console.error(`Error: ${err.message}`);
     process.exit(1);
