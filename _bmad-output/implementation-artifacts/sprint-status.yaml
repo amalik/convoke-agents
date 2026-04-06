@@ -324,7 +324,7 @@ development_status:
   ag-epic-5-retrospective: done
 
   # Epic 6: Operator Experience & Skill Wiring
-  ag-epic-6: backlog
+  ag-epic-6: in-progress
   ag-6-1-wire-loom-master-agent: backlog
   ag-6-2-migration-inference-improvements: backlog
   ag-6-3-portfolio-attribution-improvements: backlog
