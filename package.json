@@ -23,7 +23,8 @@
     "convoke-update": "scripts/update/convoke-update.js",
     "convoke-version": "scripts/update/convoke-version.js",
     "convoke-migrate": "scripts/update/convoke-migrate.js",
-    "convoke-doctor": "scripts/convoke-doctor.js"
+    "convoke-doctor": "scripts/convoke-doctor.js",
+    "convoke-migrate-artifacts": "scripts/migrate-artifacts.js"
   },
   "scripts": {
     "install:agents": "node scripts/install-all-agents.js",
