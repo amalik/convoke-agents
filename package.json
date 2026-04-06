@@ -1,6 +1,6 @@
 {
   "name": "convoke-agents",
-  "version": "3.0.4",
+  "version": "3.1.0",
   "description": "Agent teams for complex systems, compatible with BMad Method",
   "main": "index.js",
   "files": [
