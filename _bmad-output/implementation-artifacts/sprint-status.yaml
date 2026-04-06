@@ -305,7 +305,7 @@ development_status:
   ag-3-2-frontmatter-injection-link-updating: done
   ag-3-3-interactive-flow-recovery-rename-map: done
   ag-3-4-adr-supersession: done
-  ag-epic-3-retrospective: optional
+  ag-epic-3-retrospective: done
 
   # Epic 4: Portfolio Intelligence
   ag-epic-4: backlog
@@ -322,3 +322,43 @@ development_status:
   ag-5-2-convoke-doctor-taxonomy-validation: backlog
   ag-5-3-workflow-frontmatter-adoption: backlog
   ag-epic-5-retrospective: optional
+
+  # ============================================================
+  # SKILL PORTABILITY & DISTRIBUTION INITIATIVE
+  # Epic file: epics-skill-portability.md
+  # Vision: vision-skill-portability.md
+  # ============================================================
+
+  # Epic 1: Skill Classification & Metadata
+  sp-epic-1: backlog
+  sp-1-1-define-portability-schema: backlog
+  sp-1-2-classify-all-skills: backlog
+  sp-1-3-validate-classification-completeness: backlog
+  sp-epic-1-retrospective: optional
+
+  # Epic 2: Tier 1 Exporter (Core Engine)
+  sp-epic-2: backlog
+  sp-2-1-canonical-format-specification: backlog
+  sp-2-2-export-engine: backlog
+  sp-2-3-cli-entry-point: backlog
+  sp-2-4-export-all-tier-1-skills: backlog
+  sp-epic-2-retrospective: optional
+
+  # Epic 3: Skill Catalog Generation
+  sp-epic-3: backlog
+  sp-3-1-decision-tree-catalog-generator: backlog
+  sp-3-2-per-skill-readme-generation: backlog
+  sp-epic-3-retrospective: optional
+
+  # Epic 4: Standalone Skills Repository (First Release)
+  sp-epic-4: backlog
+  sp-4-1-create-and-seed-repository: backlog
+  sp-4-2-end-to-end-validation: backlog
+  sp-epic-4-retrospective: optional
+
+  # Epic 5: Tier 2 Export & Platform Adapters
+  sp-epic-5: backlog
+  sp-5-1-template-inlining-for-tier-2-export: backlog
+  sp-5-2-platform-adapter-generation: backlog
+  sp-5-3-export-tier-2-skills-and-update-catalog: backlog
+  sp-epic-5-retrospective: optional
