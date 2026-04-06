@@ -37,7 +37,8 @@
     "test:coverage": "c8 node --test tests/unit/*.test.js tests/integration/*.test.js tests/p0/*.test.js",
     "lint": "eslint scripts/ index.js tests/",
     "docs:audit": "node scripts/docs-audit.js",
-    "archive": "node scripts/archive.js"
+    "archive": "node scripts/archive.js",
+    "check": "node scripts/convoke-check.js"
   },
   "keywords": [
     "convoke-agents",
