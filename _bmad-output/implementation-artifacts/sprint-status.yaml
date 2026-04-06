@@ -312,7 +312,7 @@ development_status:
   ag-4-1-portfolio-inference-rules: done
   ag-4-2-portfolio-engine-artifact-registry: done
   ag-4-3-degraded-mode-governance-health: done
-  ag-4-4-wip-radar-filtering: backlog
+  ag-4-4-wip-radar-filtering: done
   ag-4-5-output-formats-cli-wrapper: backlog
   ag-epic-4-retrospective: optional
 
