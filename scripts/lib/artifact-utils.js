@@ -1045,6 +1045,145 @@ function formatManifest(manifest, options = {}) {
   return lines.join('\n');
 }
 
+// --- Migration Execution ---
+
+/**
+ * Structured error for migration failures. Named ArtifactMigrationError to avoid
+ * collision with MigrationError in scripts/update/lib/migration-runner.js.
+ *
+ * @property {string} file - Which file caused the error
+ * @property {'rename'|'inject'} phase - Drives programmatic rollback target
+ * @property {boolean} recoverable - Can re-run fix this?
+ */
+class ArtifactMigrationError extends Error {
+  constructor(message, { file = null, phase, recoverable = true } = {}) {
+    super(message);
+    this.name = 'ArtifactMigrationError';
+    this.file = file;
+    this.phase = phase;
+    this.recoverable = recoverable;
+  }
+}
+
+/**
+ * Execute all renames from a manifest as a single atomic git commit.
+ * If any git mv fails, rolls back ALL renames via git reset --hard HEAD.
+ *
+ * @param {import('./types').ManifestResult} manifest - Manifest from generateManifest()
+ * @param {string} projectRoot - Absolute path to project root
+ * @returns {{renamedCount: number, commitSha: string}} Result with count and commit SHA
+ * @throws {ArtifactMigrationError} On collision detection or git mv failure (after rollback)
+ */
+function executeRenames(manifest, projectRoot) {
+  const renameEntries = manifest.entries.filter(e => e.action === 'RENAME');
+
+  if (renameEntries.length === 0) {
+    return { renamedCount: 0, commitSha: null };
+  }
+
+  // Pre-flight: refuse to proceed if collisions exist
+  const colliding = renameEntries.filter(e => e.collisionWith && e.collisionWith.length > 0);
+  if (colliding.length > 0) {
+    const details = colliding.map(e => `  ${e.oldPath} -> ${e.newPath} (collides with ${e.collisionWith.join(', ')})`).join('\n');
+    throw new ArtifactMigrationError(
+      `Cannot execute renames: ${colliding.length} filename collision(s) detected.\n${details}`,
+      { phase: 'rename', recoverable: false }
+    );
+  }
+
+  const outputDir = path.join(projectRoot, '_bmad-output');
+
+  // Execute all git mv operations
+  for (const entry of renameEntries) {
+    const oldFull = path.join(outputDir, entry.oldPath);
+    const newFull = path.join(outputDir, entry.newPath);
+
+    try {
+      execFileSync('git', ['mv', oldFull, newFull], { cwd: projectRoot, stdio: 'pipe' });
+    } catch (err) {
+      // Rollback ALL renames done so far
+      let rollbackOk = false;
+      try {
+        execFileSync('git', ['reset', '--hard', 'HEAD'], { cwd: projectRoot, stdio: 'pipe' });
+        rollbackOk = true;
+      } catch { /* rollback failed — tree is dirty */ }
+
+      throw new ArtifactMigrationError(
+        `git mv failed for ${entry.oldPath} -> ${entry.newPath}: ${err.message}`,
+        { file: entry.oldPath, phase: 'rename', recoverable: rollbackOk }
+      );
+    }
+  }
+
+  // Commit all renames as a single atomic commit (git mv already stages changes)
+  try {
+    execFileSync(
+      'git', ['commit', '-m', 'chore: rename artifacts to governance convention'],
+      { cwd: projectRoot, stdio: 'pipe' }
+    );
+  } catch (err) {
+    // Commit failed after all git mv succeeded — rollback all renames
+    let rollbackOk = false;
+    try {
+      execFileSync('git', ['reset', '--hard', 'HEAD'], { cwd: projectRoot, stdio: 'pipe' });
+      rollbackOk = true;
+    } catch { /* rollback failed */ }
+
+    throw new ArtifactMigrationError(
+      `git commit failed after renames: ${err.message}`,
+      { phase: 'rename', recoverable: rollbackOk }
+    );
+  }
+
+  let commitSha = null;
+  try {
+    const shaOutput = execFileSync(
+      'git', ['rev-parse', 'HEAD'],
+      { cwd: projectRoot, encoding: 'utf8', stdio: 'pipe' }
+    );
+    commitSha = (typeof shaOutput === 'string' ? shaOutput : shaOutput.toString('utf8')).trim();
+  } catch {
+    // Commit succeeded but SHA retrieval failed — non-fatal
+  }
+
+  return { renamedCount: renameEntries.length, commitSha };
+}
+
+/**
+ * Verify git history chain is preserved for a sample of renamed files.
+ * Informational only — does NOT rollback on failure.
+ *
+ * @param {import('./types').ManifestEntry[]} renamedEntries - Entries that were renamed
+ * @param {string} projectRoot - Absolute path to project root
+ * @returns {{verified: number, failed: string[]}} Verification result
+ */
+function verifyHistoryChain(renamedEntries, projectRoot) {
+  const sample = renamedEntries.slice(0, 5);
+  let verified = 0;
+  const failed = [];
+
+  for (const entry of sample) {
+    const fullPath = path.join(projectRoot, '_bmad-output', entry.newPath);
+    try {
+      const log = execFileSync(
+        'git', ['log', '--follow', '--oneline', '-3', '--', fullPath],
+        { cwd: projectRoot, encoding: 'utf8', stdio: 'pipe' }
+      ).trim();
+
+      const lines = log.split('\n').filter(Boolean);
+      if (lines.length >= 2) {
+        verified++;
+      } else {
+        failed.push(entry.newPath);
+      }
+    } catch {
+      failed.push(entry.newPath);
+    }
+  }
+
+  return { verified, failed };
+}
+
 // --- Exports ---
 
 module.exports = {
@@ -1082,5 +1221,9 @@ module.exports = {
   buildManifestEntry,
   detectCollisions,
   generateManifest,
-  formatManifest
+  formatManifest,
+  // Execution
+  ArtifactMigrationError,
+  executeRenames,
+  verifyHistoryChain
 };
