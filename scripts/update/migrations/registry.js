@@ -67,6 +67,20 @@ const MIGRATIONS = [
     breaking: true,
     description: 'Product rename: BMAD-Enhanced -> Convoke. CLI commands renamed from bmad-* to convoke-*. _bmad/ directory preserved.',
     module: null
+  },
+  {
+    name: '2.0.x-to-3.1.0',
+    fromVersion: '2.0.x',
+    breaking: false,
+    description: 'Artifact governance: create or merge _bmad/_config/taxonomy.yaml with platform defaults, aliases, and artifact types',
+    module: null
+  },
+  {
+    name: '3.0.x-to-3.1.0',
+    fromVersion: '3.0.x',
+    breaking: false,
+    description: 'Artifact governance: create or merge _bmad/_config/taxonomy.yaml (parallel entry for 3.0.x users)',
+    module: null
   }
   // Future migrations: append here. Only add delta logic for version-specific changes.
 ];
