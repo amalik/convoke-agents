@@ -131,6 +131,17 @@ describe('generatePortfolio', () => {
     }
   });
 
+  test('initiatives have inference trace data (source + confidence)', async () => {
+    const result = await generatePortfolio(projectRoot);
+    for (const s of result.initiatives) {
+      // Every initiative should have source and confidence on phase and status
+      expect(s.phase.source).toBeTruthy();
+      expect(['explicit', 'inferred']).toContain(s.phase.confidence);
+      expect(s.status.source).toBeTruthy();
+      expect(['explicit', 'inferred']).toContain(s.status.confidence);
+    }
+  });
+
   test('known initiatives from taxonomy are present', async () => {
     const result = await generatePortfolio(projectRoot);
     const names = result.initiatives.map(s => s.initiative);
