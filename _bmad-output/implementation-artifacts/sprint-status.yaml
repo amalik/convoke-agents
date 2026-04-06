@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-23
-last_updated: 2026-04-06
+last_updated: 2026-04-06T00:00:00Z
 project: BMAD-Enhanced
 project_key: NOKEY
 tracking_system: file-system
@@ -300,11 +300,11 @@ development_status:
   ag-epic-2-retrospective: done
 
   # Epic 3: Migration Execution & Safety
-  ag-epic-3: in-progress
+  ag-epic-3: done
   ag-3-1-transactional-rename-execution: done
   ag-3-2-frontmatter-injection-link-updating: done
   ag-3-3-interactive-flow-recovery-rename-map: done
-  ag-3-4-adr-supersession: backlog
+  ag-3-4-adr-supersession: done
   ag-epic-3-retrospective: optional
 
   # Epic 4: Portfolio Intelligence
