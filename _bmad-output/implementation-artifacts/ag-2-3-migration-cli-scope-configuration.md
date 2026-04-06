@@ -1,6 +1,6 @@
 # Story 2.3: Migration CLI & Scope Configuration
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -24,69 +24,69 @@ so that I can migrate specific directories and understand all available options.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `scripts/migrate-artifacts.js` with `parseArgs()` (AC: #1, #2, #3, #7)
-  - [ ] Create `scripts/migrate-artifacts.js` with shebang `#!/usr/bin/env node`
-  - [ ] Implement `parseArgs(argv)` as a named function at file top
-  - [ ] Parse `process.argv.slice(2)` using direct string matching (no library -- follows existing pattern)
-  - [ ] Supported flags: `--help`, `--include <dirs>`, `--apply`, `--force`, `--verbose`
-  - [ ] `--include` splits on comma, trims whitespace, replaces defaults
-  - [ ] Default `includeDirs`: `['planning-artifacts', 'vortex-artifacts', 'gyre-artifacts']`
-  - [ ] Return `{ help, includeDirs, apply, force, verbose }` object
+- [x] Task 1: Create `scripts/migrate-artifacts.js` with `parseArgs()` (AC: #1, #2, #3, #7)
+  - [x] Create `scripts/migrate-artifacts.js` with shebang `#!/usr/bin/env node`
+  - [x] Implement `parseArgs(argv)` as a named function at file top
+  - [x] Parse `process.argv.slice(2)` using direct string matching (no library -- follows existing pattern)
+  - [x] Supported flags: `--help`, `--include <dirs>`, `--apply`, `--force`, `--verbose`
+  - [x] `--include` splits on comma, trims whitespace, replaces defaults
+  - [x] Default `includeDirs`: `['planning-artifacts', 'vortex-artifacts', 'gyre-artifacts']`
+  - [x] Return `{ help, includeDirs, apply, force, verbose }` object
 
-- [ ] Task 2: Implement archive exclusion and taxonomy bootstrap (AC: #4, #5, #6, #11)
-  - [ ] In the main function, call `findProjectRoot()` from `scripts/update/lib/utils.js`
-  - [ ] If null, print error "Not in a Convoke project. Could not find _bmad/ directory." and exit 1
-  - [ ] Hardcode `_archive` in `excludeDirs` -- strip it from `includeDirs` if user includes it, warn
-  - [ ] Before calling `generateManifest()`, check if `_bmad/_config/taxonomy.yaml` exists via `fs.existsSync`
-  - [ ] If absent, create it with platform defaults: 8 platform initiatives, empty user array, standard artifact_types list, **empty** aliases map (aliases are migration-specific, not defaults)
-  - [ ] If present, do nothing (idempotent -- never overwrite)
-  - [ ] Wrap `readTaxonomy()` call in try/catch -- on error, print actionable message (file path + error detail), no stack traces, exit 1 (NFR22)
+- [x] Task 2: Implement archive exclusion and taxonomy bootstrap (AC: #4, #5, #6, #11)
+  - [x] In the main function, call `findProjectRoot()` from `scripts/update/lib/utils.js`
+  - [x] If null, print error "Not in a Convoke project. Could not find _bmad/ directory." and exit 1
+  - [x] Hardcode `_archive` in `excludeDirs` -- strip it from `includeDirs` if user includes it, warn
+  - [x] Before calling `generateManifest()`, check if `_bmad/_config/taxonomy.yaml` exists via `fs.existsSync`
+  - [x] If absent, create it with platform defaults: 8 platform initiatives, empty user array, standard artifact_types list, **empty** aliases map (aliases are migration-specific, not defaults)
+  - [x] If present, do nothing (idempotent -- never overwrite)
+  - [x] Wrap `readTaxonomy()` call in try/catch -- on error, print actionable message (file path + error detail), no stack traces, exit 1 (NFR22)
 
-- [ ] Task 3: Implement `--help` output (AC: #1)
-  - [ ] Print usage text covering all flags with descriptions and examples
-  - [ ] Include: command name, description, flags table, examples section
-  - [ ] Show default scope directories
-  - [ ] Exit after printing help
+- [x] Task 3: Implement `--help` output (AC: #1)
+  - [x] Print usage text covering all flags with descriptions and examples
+  - [x] Include: command name, description, flags table, examples section
+  - [x] Show default scope directories
+  - [x] Exit after printing help
 
-- [ ] Task 4: Implement dry-run default flow (AC: #8, #10)
-  - [ ] Call `generateManifest(projectRoot, { includeDirs, excludeDirs, verbose })` from artifact-utils.js
-  - [ ] Call `formatManifest(manifest, { verbose })` to get text output
-  - [ ] Print formatted manifest to stdout
-  - [ ] Always exit 0 for dry-run (conflicts/ambiguous are informational, not errors)
-  - [ ] Exit 1 only for actual failures (no project root, malformed taxonomy, I/O errors)
+- [x] Task 4: Implement dry-run default flow (AC: #8, #10)
+  - [x] Call `generateManifest(projectRoot, { includeDirs, excludeDirs, verbose })` from artifact-utils.js
+  - [x] Call `formatManifest(manifest, { verbose })` to get text output
+  - [x] Print formatted manifest to stdout
+  - [x] Always exit 0 for dry-run (conflicts/ambiguous are informational, not errors)
+  - [x] Exit 1 only for actual failures (no project root, malformed taxonomy, I/O errors)
 
-- [ ] Task 5: Implement `--apply`/`--force` stub and bin entry (AC: #9, #1)
-  - [ ] When `--apply` or `--force` is set: print "Not yet implemented -- coming in ag-3-1" and exit 0
-  - [ ] No readline prompt logic -- execution flow is Epic 3 scope
-  - [ ] Add `"convoke-migrate-artifacts": "scripts/migrate-artifacts.js"` to package.json bin section (direct path, matching existing pattern -- no `bin/` shim directory)
+- [x] Task 5: Implement `--apply`/`--force` stub and bin entry (AC: #9, #1)
+  - [x] When `--apply` or `--force` is set: print "Not yet implemented -- coming in ag-3-1" and exit 0
+  - [x] No readline prompt logic -- execution flow is Epic 3 scope
+  - [x] Add `"convoke-migrate-artifacts": "scripts/migrate-artifacts.js"` to package.json bin section (direct path, matching existing pattern -- no `bin/` shim directory)
 
-- [ ] Task 6: Write CLI tests (AC: #1-#11)
-  - [ ] Create `tests/lib/migrate-artifacts.test.js`
-  - [ ] Test `parseArgs()`:
+- [x] Task 6: Write CLI tests (AC: #1-#11)
+  - [x] Create `tests/lib/migrate-artifacts.test.js`
+  - [x] Test `parseArgs()`:
     - Default args -> correct defaults (3 default dirs, all flags false)
     - `--help` flag detected
     - `--include a,b,c` parsed correctly (splits, trims, replaces defaults)
     - `--apply` and `--force` flags detected
     - `--verbose` flag detected
     - Unknown flags ignored (no error)
-  - [ ] Test archive exclusion:
+  - [x] Test archive exclusion:
     - `_archive` in includeDirs is stripped and warning emitted
-  - [ ] Test taxonomy bootstrap:
+  - [x] Test taxonomy bootstrap:
     - Creates taxonomy.yaml when absent (use temp dir with `_bmad/_config/` structure)
     - Does not overwrite when present
     - Bootstrap has empty aliases (not the 6 migration-specific aliases)
-  - [ ] Test NFR22 error handling:
+  - [x] Test NFR22 error handling:
     - Malformed taxonomy.yaml produces actionable error, no stack trace
-  - [ ] Test dry-run output:
+  - [x] Test dry-run output:
     - Integration test against real project root, verify manifest output is non-empty
-  - [ ] Test `--apply` stub:
+  - [x] Test `--apply` stub:
     - Prints "Not yet implemented" message
 
-- [ ] Task 7: Export and run regression checks
-  - [ ] Export `parseArgs` and `main` for testability
-  - [ ] Run `npx jest tests/lib/` -- all tests pass (139 existing + new)
-  - [ ] Run `node scripts/archive.js --rename` -- regression check
-  - [ ] Test `node scripts/migrate-artifacts.js --help` prints usage and exits 0
+- [x] Task 7: Export and run regression checks
+  - [x] Export `parseArgs` and `main` for testability
+  - [x] Run `npx jest tests/lib/` -- all tests pass (139 existing + new)
+  - [x] Run `node scripts/archive.js --rename` -- regression check
+  - [x] Test `node scripts/migrate-artifacts.js --help` prints usage and exits 0
 
 ## Dev Notes
 
@@ -172,8 +172,36 @@ tests/
 
 ### Agent Model Used
 
+Claude Opus 4.6 (1M context)
+
 ### Debug Log References
+
+- 167/167 lib tests pass (139 existing + 28 new CLI tests)
+- Archive regression: 73 warnings (expected)
+- `--help` prints usage and exits clean
+- Dry-run against real repo: 71 files processed (42 rename, 29 ambiguous, 1 collision)
+- `--apply` stub prints placeholder message and exits 0
+- Code review: 6 patches applied (path traversal, flag consumption, mutable defaults, empty scope, archive test, --force guidance)
 
 ### Completion Notes List
 
+- Created `scripts/migrate-artifacts.js` with `parseArgs()` as named function at file top
+- `parseArgs` uses direct `process.argv` string matching (no library) — `--help`, `--include`, `--apply`, `--force`, `--verbose`
+- `--include` splits on comma, trims whitespace, replaces defaults. Default: planning-artifacts, vortex-artifacts, gyre-artifacts
+- `--include` validates dir names against `VALID_DIR_PATTERN` — rejects path traversal (`../`, `/`, special chars)
+- `--include` skips next arg if it starts with `--` (prevents flag consumption)
+- `DEFAULT_INCLUDE_DIRS` is `Object.freeze`d; `parseArgs` returns a copy via spread
+- Archive exclusion (FR50): `_archive` hardcoded in excludeDirs, stripped from includeDirs with warning. Empty scope after filtering exits with error.
+- Taxonomy bootstrap (FR49): creates `_bmad/_config/taxonomy.yaml` with 8 platform initiatives, 21 artifact types, empty aliases. Idempotent — never overwrites.
+- NFR22 compliance: `readTaxonomy()` wrapped in try/catch, prints actionable error message, no stack traces, exit 1
+- `--apply` prints "Not yet implemented -- coming in ag-3-1". `--force` without `--apply` warns and runs dry-run.
+- `--verbose` passed through to `generateManifest({ verbose: true })`
+- Added `"convoke-migrate-artifacts": "scripts/migrate-artifacts.js"` to package.json bin section
+- Exported `parseArgs`, `main`, `bootstrapTaxonomy`, constants, `VALID_DIR_PATTERN` for testability
+- 28 new tests: parseArgs (14), bootstrapTaxonomy (4), archive exclusion (2), NFR22 (2), dry-run integration (2), --apply stub (3), VALID_DIR_PATTERN (1 describe, covered inline)
+
 ### File List
+
+- `scripts/migrate-artifacts.js` — NEW (migration CLI entry point)
+- `package.json` — MODIFIED (added convoke-migrate-artifacts to bin section)
+- `tests/lib/migrate-artifacts.test.js` — NEW (28 tests)
