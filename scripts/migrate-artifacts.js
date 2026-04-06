@@ -23,7 +23,9 @@ const {
   verifyHistoryChain,
   executeInjections,
   resolveAmbiguous,
-  detectMigrationState
+  detectMigrationState,
+  generateGovernanceADR,
+  supersedePreviousADR
 } = require('./lib/artifact-utils');
 
 // --- CLI Argument Parsing ---
@@ -314,6 +316,33 @@ async function main() {
     // Commit 2: frontmatter injection + link updating + rename map
     const injResult = await executeInjections(manifest, projectRoot, filteredIncludeDirs);
     console.log(`\nInjection phase complete. ${injResult.injectedCount} files injected, ${injResult.linkUpdates.updatedLinks} links updated, ${injResult.conflictCount} conflicts skipped. Commit: ${injResult.commitSha}`);
+
+    // Commit 3: ADR generation (non-blocking — failure logs warning, doesn't rollback)
+    try {
+      const date = new Date().toISOString().split('T')[0];
+      const newADRFilename = `adr-artifact-governance-convention-${date}.md`;
+      const adrContent = generateGovernanceADR(date, {
+        renamedCount: renameCount,
+        injectedCount: injResult.injectedCount,
+        linksUpdated: injResult.linkUpdates.updatedLinks,
+        scopeDirs: filteredIncludeDirs
+      });
+
+      const adrDir = path.join(projectRoot, '_bmad-output', 'planning-artifacts');
+      fs.ensureDirSync(adrDir);
+      const adrPath = path.join(adrDir, newADRFilename);
+      // Write new ADR FIRST, then supersede old (prevents orphaned supersession if write fails)
+      fs.writeFileSync(adrPath, adrContent, 'utf8');
+      supersedePreviousADR(projectRoot, newADRFilename);
+
+      const { execFileSync: execGit } = require('child_process');
+      execGit('git', ['add', '_bmad-output/planning-artifacts/'], { cwd: projectRoot, stdio: 'pipe' });
+      execGit('git', ['commit', '-m', 'chore: generate governance convention ADR'], { cwd: projectRoot, stdio: 'pipe' });
+      console.log(`\nADR generated: ${newADRFilename}`);
+    } catch (adrErr) {
+      console.warn(`\nWarning: ADR generation failed: ${adrErr.message}`);
+      console.warn('Migration data is intact (commits 1-2 preserved). ADR can be generated manually.');
+    }
 
     // Final summary
     console.log(`\nMigration complete. ${renameCount} files renamed, ${injResult.injectedCount} frontmatter injected, ${injResult.linkUpdates.updatedLinks} links updated, ${skipCount} skipped.`);
