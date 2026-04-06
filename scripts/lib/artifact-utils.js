@@ -1184,6 +1184,184 @@ function verifyHistoryChain(renamedEntries, projectRoot) {
   return { verified, failed };
 }
 
+/**
+ * Update internal markdown links in all .md files within scope after renames.
+ * Handles 4 patterns: [text](file.md), [text](./file.md), [text](../dir/file.md),
+ * and frontmatter inputDocuments arrays. Preserves anchor fragments.
+ *
+ * @param {Map<string, string>} oldToNewMap - Map of old basenames to new basenames
+ * @param {string[]} scopeDirs - Directory names to scan (relative to _bmad-output/)
+ * @param {string} projectRoot - Absolute path to project root
+ * @returns {Promise<{updatedFiles: number, updatedLinks: number}>}
+ */
+async function updateLinks(oldToNewMap, scopeDirs, projectRoot) {
+  const allFiles = await scanArtifactDirs(projectRoot, scopeDirs, ['_archive']);
+  let updatedFiles = 0;
+  let updatedLinks = 0;
+
+  for (const file of allFiles) {
+    if (!file.fullPath.endsWith('.md')) continue;
+
+    const original = fs.readFileSync(file.fullPath, 'utf8');
+    let content = original;
+    let fileLinks = 0;
+
+    // Parse frontmatter to handle inputDocuments arrays
+    const parsed = matter(content);
+    let fmChanged = false;
+    if (parsed.data && parsed.data.inputDocuments && Array.isArray(parsed.data.inputDocuments)) {
+      parsed.data.inputDocuments = parsed.data.inputDocuments.map(doc => {
+        if (typeof doc !== 'string') return doc;
+        for (const [oldName, newName] of oldToNewMap) {
+          // Exact match or path-suffix match (e.g., "dir/oldname.md") — prevents substring corruption
+          if (doc === oldName || doc.endsWith('/' + oldName)) {
+            fmChanged = true;
+            fileLinks++;
+            return doc === oldName ? newName : doc.slice(0, doc.length - oldName.length) + newName;
+          }
+        }
+        return doc;
+      });
+    }
+
+    // Reassemble content if frontmatter changed
+    if (fmChanged) {
+      content = matter.stringify(parsed.content, parsed.data);
+    }
+
+    // Update markdown link patterns in body content
+    for (const [oldName, newName] of oldToNewMap) {
+      // Escape dots for regex
+      const escaped = oldName.replace(/\./g, '\\.');
+
+      // Patterns 1+2: [text](oldname.md) or [text](./oldname.md) with optional anchor
+      const directPattern = new RegExp(
+        `(\\[[^\\]]*\\]\\()(\\.\\/)?${escaped}(#[^)]*)?\\)`,
+        'g'
+      );
+
+      // Pattern 3: [text](../dir/oldname.md) with optional anchor — replace only the filename
+      const parentDirPattern = new RegExp(
+        `(\\[[^\\]]*\\]\\([^)]*\\/)${escaped}(#[^)]*)?\\)`,
+        'g'
+      );
+
+      let bodyChanges = 0;
+      content = content.replace(directPattern, (_m, prefix, dotSlash, anchor) => {
+        bodyChanges++;
+        return `${prefix}${dotSlash || ''}${newName}${anchor || ''})`;
+      });
+      content = content.replace(parentDirPattern, (_m, prefix, anchor) => {
+        bodyChanges++;
+        return `${prefix}${newName}${anchor || ''})`;
+      });
+      fileLinks += bodyChanges;
+    }
+
+    if (content !== original) {
+      fs.writeFileSync(file.fullPath, content, 'utf8');
+      updatedFiles++;
+      updatedLinks += fileLinks;
+    }
+  }
+
+  return { updatedFiles, updatedLinks };
+}
+
+/**
+ * Execute commit 2: inject frontmatter into renamed files and update links.
+ * Runs AFTER executeRenames (commit 1) has completed.
+ *
+ * @param {import('./types').ManifestResult} manifest - Manifest from generateManifest()
+ * @param {string} projectRoot - Absolute path to project root
+ * @param {string[]} scopeDirs - Scope directories for link scanning
+ * @returns {Promise<{injectedCount: number, linkUpdates: {updatedFiles: number, updatedLinks: number}, conflictCount: number, commitSha: string|null}>}
+ * @throws {ArtifactMigrationError} On write failure (after rollback to commit 1)
+ */
+async function executeInjections(manifest, projectRoot, scopeDirs) {
+  const renameEntries = manifest.entries.filter(e => e.action === 'RENAME');
+  let injectedCount = 0;
+  let conflictCount = 0;
+  const outputDir = path.join(projectRoot, '_bmad-output');
+
+  // Build old->new basename map for link updating
+  const oldToNewMap = new Map();
+  for (const entry of renameEntries) {
+    const oldBasename = entry.oldPath.split('/').pop();
+    const newBasename = entry.newPath.split('/').pop();
+    if (oldBasename !== newBasename) {
+      oldToNewMap.set(oldBasename, newBasename);
+    }
+  }
+
+  // Inject frontmatter into each renamed file
+  for (const entry of renameEntries) {
+    const filePath = path.join(outputDir, entry.newPath);
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const fields = buildSchemaFields(entry.initiative, entry.artifactType);
+      const result = injectFrontmatter(content, fields);
+
+      // Log conflicts
+      for (const c of result.conflicts) {
+        console.warn(`  Warning: Skipping field "${c.field}" in ${entry.newPath}: existing value "${c.existingValue}" differs from proposed "${c.newValue}"`);
+        conflictCount++;
+      }
+
+      fs.writeFileSync(filePath, result.content, 'utf8');
+      injectedCount++;
+    } catch (err) {
+      // Write failure — rollback to commit 1
+      let rollbackOk = false;
+      try {
+        execFileSync('git', ['reset', '--hard', 'HEAD'], { cwd: projectRoot, stdio: 'pipe' });
+        rollbackOk = true;
+      } catch { /* rollback failed */ }
+
+      throw new ArtifactMigrationError(
+        `Failed to inject frontmatter into ${entry.newPath}: ${err.message}`,
+        { file: entry.newPath, phase: 'inject', recoverable: rollbackOk }
+      );
+    }
+  }
+
+  // Update internal links across all scoped .md files
+  const linkUpdates = await updateLinks(oldToNewMap, scopeDirs, projectRoot);
+
+  // Stage and commit (scoped to _bmad-output/)
+  try {
+    execFileSync('git', ['add', '_bmad-output/'], { cwd: projectRoot, stdio: 'pipe' });
+    execFileSync(
+      'git', ['commit', '-m', 'chore: inject frontmatter metadata and update links'],
+      { cwd: projectRoot, stdio: 'pipe' }
+    );
+  } catch (err) {
+    let rollbackOk = false;
+    try {
+      execFileSync('git', ['reset', '--hard', 'HEAD'], { cwd: projectRoot, stdio: 'pipe' });
+      rollbackOk = true;
+    } catch { /* rollback failed */ }
+
+    throw new ArtifactMigrationError(
+      `git commit failed after injections: ${err.message}`,
+      { phase: 'inject', recoverable: rollbackOk }
+    );
+  }
+
+  let commitSha = null;
+  try {
+    const shaOutput = execFileSync(
+      'git', ['rev-parse', 'HEAD'],
+      { cwd: projectRoot, encoding: 'utf8', stdio: 'pipe' }
+    );
+    commitSha = (typeof shaOutput === 'string' ? shaOutput : shaOutput.toString('utf8')).trim();
+  } catch {
+    // Non-fatal — commit succeeded
+  }
+
+  return { injectedCount, linkUpdates, conflictCount, commitSha };
+}
+
 // --- Exports ---
 
 module.exports = {
@@ -1225,5 +1403,7 @@ module.exports = {
   // Execution
   ArtifactMigrationError,
   executeRenames,
-  verifyHistoryChain
+  verifyHistoryChain,
+  updateLinks,
+  executeInjections
 };
