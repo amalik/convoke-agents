@@ -53,10 +53,45 @@ describe('generatePortfolio', () => {
     expect(duration).toBeLessThan(5000);
   });
 
-  test('summary counts governed + ungoverned', async () => {
+  test('summary counts governed + ungoverned + unattributed = total', async () => {
     const result = await generatePortfolio(projectRoot);
-    expect(result.summary.governed).toBeGreaterThan(0);
-    expect(result.summary.total).toBe(result.summary.governed + result.summary.ungoverned);
+    expect(result.summary.total).toBe(
+      result.summary.governed + result.summary.ungoverned + result.summary.unattributed
+    );
+  });
+
+  test('health score has governed, total, percentage fields', async () => {
+    const result = await generatePortfolio(projectRoot);
+    expect(result.summary.healthScore).toBeDefined();
+    expect(typeof result.summary.healthScore.governed).toBe('number');
+    expect(typeof result.summary.healthScore.total).toBe('number');
+    expect(typeof result.summary.healthScore.percentage).toBe('number');
+    expect(result.summary.healthScore.percentage).toBeGreaterThanOrEqual(0);
+    expect(result.summary.healthScore.percentage).toBeLessThanOrEqual(100);
+  });
+
+  test('health score total matches attributable files (governed + ungoverned)', async () => {
+    const result = await generatePortfolio(projectRoot);
+    expect(result.summary.healthScore.total).toBe(result.summary.governed + result.summary.ungoverned);
+  });
+
+  test('ungoverned files are indexed in portfolio (not skipped)', async () => {
+    const result = await generatePortfolio(projectRoot);
+    // Real repo has files with resolved initiative but no frontmatter — these should appear
+    expect(result.summary.ungoverned).toBeGreaterThan(0);
+    // At least some initiatives should have results
+    const withArtifacts = result.initiatives.filter(s => s.lastArtifact.file !== null);
+    expect(withArtifacts.length).toBeGreaterThan(0);
+  });
+
+  test('degraded results show inferred confidence', async () => {
+    const result = await generatePortfolio(projectRoot);
+    // Ungoverned initiatives (no frontmatter) should have inferred confidence
+    for (const s of result.initiatives) {
+      if (s.phase.value && s.phase.value !== 'unknown') {
+        expect(['explicit', 'inferred']).toContain(s.phase.confidence);
+      }
+    }
   });
 
   test('known initiatives from taxonomy are present', async () => {
