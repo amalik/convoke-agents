@@ -308,8 +308,8 @@ development_status:
   ag-epic-3-retrospective: done
 
   # Epic 4: Portfolio Intelligence
-  ag-epic-4: backlog
-  ag-4-1-portfolio-inference-rules: backlog
+  ag-epic-4: in-progress
+  ag-4-1-portfolio-inference-rules: done
   ag-4-2-portfolio-engine-artifact-registry: backlog
   ag-4-3-degraded-mode-governance-health: backlog
   ag-4-4-wip-radar-filtering: backlog
