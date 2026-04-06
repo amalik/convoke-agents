@@ -181,9 +181,17 @@ The governance system integrates with the Convoke ecosystem — update pipeline 
 **Standalone value:** Ecosystem stays governed over time. New installs get taxonomy. Drift is detectable.
 **Depends on:** Epic 1 (taxonomy exists to validate/merge)
 
+### Epic 6: Operator Experience & Skill Wiring
+Operators interact with migration and portfolio through guided skill conversations — not raw CLI — with smarter inference that suggests defaults, batches ambiguity resolution, and explains what it can't resolve. Loom Master becomes accessible as a platform agent.
+
+**FRs covered:** UX improvements on FR7, FR11, FR22, FR26, FR27, FR38 (no new FRs — experience layer on existing functionality)
+**Additional:** Loom Master wiring (manifest + Claude Code skill), migration skill wrapper, portfolio skill wrapper, inference improvements (suggested defaults, batch resolution, collision handling, unattributed file reduction)
+**Standalone value:** Operators can run migration and portfolio from conversation with guided assistance. 71% unattributed rate in portfolio eliminated. Loom Master invocable for future team/skill creation.
+**Depends on:** Epics 1–5 (all shipped)
+
 ---
 
-**Delivery order:** Epic 1 → Epic 2 → Epic 3 → Epic 4 → Epic 5
+**Delivery order:** Epic 1 → Epic 2 → Epic 3 → Epic 4 → Epic 5 → Epic 6
 
 ---
 
@@ -550,3 +558,113 @@ So that new artifacts are governed from birth without manual metadata entry.
 **And** if the initiative cannot be inferred from context, the workflow prompts the operator: `Which initiative is this for? [{list from taxonomy}]: `
 **And** emitted frontmatter follows the schema v1 exactly as defined in Epic 1 Story 1.3
 **And** existing workflow functionality is unaffected — frontmatter is additive, not disruptive
+
+---
+
+## Epic 6: Operator Experience & Skill Wiring
+
+Operators interact with migration and portfolio through guided skill conversations — not raw CLI — with smarter inference that suggests defaults, batches ambiguity resolution, and explains what it can't resolve. Loom Master becomes accessible as a platform agent.
+
+### Story 6.1: Wire Loom Master Agent
+
+As a Convoke contributor,
+I want the Loom Master agent to be accessible from conversation,
+So that I can invoke the team factory for creating teams, agents, and skills.
+
+**Acceptance Criteria:**
+
+**Given** the Loom Master agent file exists at `_bmad/bme/_team-factory/agents/team-factory.md`
+**When** the wiring is complete
+**Then** `_bmad/_config/agent-manifest.csv` contains a complete entry for team-factory with all required fields (name, displayName, title, icon, role, identity, communicationStyle, principles, module, path, canonicalId)
+**And** a Claude Code skill exists at `.claude/skills/bmad-agent-loom/` following the standard agent skill pattern (matching `bmad-agent-architect`, `bmad-agent-analyst`, etc.)
+**And** the skill loads the Loom Master persona and presents the agent menu on activation
+**And** party mode can load the Loom Master personality from the manifest
+**And** existing agent skills continue to work unchanged
+
+### Story 6.2: Migration Inference Improvements
+
+As a Convoke operator,
+I want the migration engine to suggest defaults for ambiguous files and handle collisions gracefully,
+So that I'm guided through resolution instead of facing a wall of "ACTION REQUIRED" items.
+
+**Acceptance Criteria:**
+
+**Given** the migration dry-run encounters ambiguous files (initiative cannot be confidently inferred)
+**When** the manifest is displayed
+**Then** each ambiguous file shows a suggested default initiative based on: folder location heuristic (planning-artifacts → `convoke` when no other signal), content-based inference (title/header keywords matching initiative names), and git context
+**And** suggestions are marked `(suggested)` with confidence level to distinguish from high-confidence inferences
+**And** filename collisions include guidance: show both source files and suggest a differentiator suffix
+**And** files previously classified as "cannot infer type or initiative" attempt content-based fallback before giving up
+**And** the ambiguity rate on the current repository drops from 31/73 (42%) to under 10/73 (14%)
+**And** all existing inference tests continue to pass
+**And** new tests cover suggested defaults, collision guidance, and content-based fallback
+
+### Story 6.3: Portfolio Attribution Improvements
+
+As a Convoke operator,
+I want the portfolio to attribute more files and explain what it can't resolve,
+So that I get complete visibility instead of 71% of files being silently dropped.
+
+**Acceptance Criteria:**
+
+**Given** the portfolio engine scans `_bmad-output/` directories
+**When** a file cannot be attributed to an initiative
+**Then** the engine attempts content-based fallback: reads first 5 lines for initiative keywords, checks frontmatter for any initiative-like fields, checks parent directory name
+**And** the unattributed rate on the current repository drops from 108/151 (71%) to under 20/151 (13%)
+**And** the portfolio summary includes an `Unattributed` section listing files that couldn't be placed, with a one-line reason per file (e.g., "no initiative signal in filename or content")
+**And** next action suggestions are context-aware: if artifacts exist but are unattributed, suggest "Run migration to govern artifacts" instead of generic "Create PRD or brief"
+**And** initiatives with `unknown` phase show what artifacts were found but couldn't determine phase from (e.g., "3 artifacts found, none match phase heuristics")
+**And** all existing portfolio tests continue to pass
+**And** new tests cover content-based fallback, unattributed reporting, and context-aware next actions
+
+### Story 6.4: Migration Skill Wrapper
+
+As a Convoke operator,
+I want to run artifact migration through a guided skill conversation,
+So that I get the same conversational experience as every other Convoke workflow.
+
+**Acceptance Criteria:**
+
+**Given** the operator invokes the migration skill
+**When** the skill activates
+**Then** a proper skill exists at `.claude/skills/bmad-migrate-artifacts/` with SKILL.md, workflow.md, and step files following the standard skill anatomy
+**And** Step 1 (Scope): presents default directories, lets operator adjust scope, explains what will be scanned
+**And** Step 2 (Dry-run Review): runs the engine, presents results grouped by category (clean renames, suggested resolutions, ambiguous, collisions) — not a flat wall
+**And** Step 3 (Resolve): walks through ambiguous files conversationally, offers batch resolution ("assign all remaining planning-artifacts to `convoke`"), shows suggestions from Story 6.2
+**And** Step 4 (Confirm & Execute): summarizes final plan, confirms, executes migration, reports results
+**And** each step updates frontmatter `stepsCompleted[]` for resumability
+**And** the skill invokes the Node engine (`scripts/migrate-artifacts.js`) for all computation — skill handles conversation only
+
+### Story 6.5: Portfolio Skill Wrapper
+
+As a Convoke operator,
+I want to view the portfolio through a guided skill conversation,
+So that I get contextual explanations and can interactively explore my initiatives.
+
+**Acceptance Criteria:**
+
+**Given** the operator invokes the portfolio skill
+**When** the skill activates
+**Then** the existing skill at `.claude/skills/bmad-portfolio-status/` is upgraded from 5-line wrapper to proper skill with SKILL.md, workflow.md, and step files
+**And** Step 1 (Scan & Present): runs the engine, presents the portfolio table with governance health score
+**And** Step 2 (Explain & Explore): offers to explain any initiative's status, filter by prefix, sort by activity, or show verbose inference trace
+**And** Step 3 (Recommend): if WIP radar triggers, highlights overload; if governance is low, suggests running migration; if stale initiatives exist, suggests review
+**And** the skill invokes the Node engine (`scripts/lib/portfolio/portfolio-engine.js`) for all computation — skill handles presentation and interaction only
+**And** markdown format is default when invoked from skill (chat context), terminal format when invoked from CLI
+
+### Story 6.6: Skill Registration & Wiring
+
+As a Convoke platform developer,
+I want the new and updated skills properly registered in all integration surfaces,
+So that they are discoverable, installable, and validated by the platform.
+
+**Acceptance Criteria:**
+
+**Given** Stories 6.1, 6.4, and 6.5 have produced new/updated skill files
+**When** the wiring is complete
+**Then** `refresh-installation.js` registers the new skill files for installation
+**And** `validator.js` includes validation rules for the new skills (file existence, required structure)
+**And** `module-help.csv` entries exist for migration and portfolio skills so they appear in help/discovery
+**And** `convoke-doctor` passes with the new skills installed
+**And** `convoke-install` correctly copies the new skill files to target projects
+**And** all existing installation, validation, and doctor tests continue to pass
