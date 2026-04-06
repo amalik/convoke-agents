@@ -323,6 +323,16 @@ development_status:
   ag-5-3-workflow-frontmatter-adoption: done
   ag-epic-5-retrospective: done
 
+  # Epic 6: Operator Experience & Skill Wiring
+  ag-epic-6: backlog
+  ag-6-1-wire-loom-master-agent: backlog
+  ag-6-2-migration-inference-improvements: backlog
+  ag-6-3-portfolio-attribution-improvements: backlog
+  ag-6-4-migration-skill-wrapper: backlog
+  ag-6-5-portfolio-skill-wrapper: backlog
+  ag-6-6-skill-registration-wiring: backlog
+  ag-epic-6-retrospective: optional
+
   # ============================================================
   # SKILL PORTABILITY & DISTRIBUTION INITIATIVE
   # Epic file: epics-skill-portability.md
