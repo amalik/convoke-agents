@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.0] - 2026-04-06
+
+### Added
+
+- **Artifact Governance Migration** (`convoke-migrate-artifacts`) — Full transactional migration pipeline that renames artifacts to `{initiative}-{type}[-qualifier][-date].md` convention, injects frontmatter metadata, updates internal links, and generates a governance ADR. Supports dry-run (default), `--apply` with interactive confirmation, `--force` for automation, `--include` for scope control, and `--verbose` for cross-references.
+- **Portfolio Intelligence** (`convoke-portfolio`) — Read-only initiative portfolio showing phase, status, next action, and context for every initiative. Features 4 inference rules (frontmatter, artifact-chain, git-recency, conflict-resolver), degraded mode for ungoverned artifacts, governance health score, WIP overload radar, `--filter` prefix filtering, `--sort last-activity`, `--verbose` inference trace, and terminal + markdown output formats.
+- **Taxonomy Configuration** (`_bmad/_config/taxonomy.yaml`) — Single source of truth for initiative IDs, artifact types, and historical name aliases. Created automatically by `convoke-update` (migration 2.0.x/3.0.x-to-3.1.0) or `convoke-migrate-artifacts`.
+- **convoke-doctor taxonomy validation** — 6 new health checks: file exists, valid YAML, structure, ID format, no duplicates, no initiative/type collisions.
+- **convoke-update taxonomy merger** — Automatic taxonomy creation on upgrade from pre-3.1.0. Merges platform entries without overwriting user additions. Promotes user initiative IDs to platform when they become official (FR42).
+- **convoke-check** (`npm run check`) — Local CI mirror that runs lint + unit + integration + Jest lib tests before push. Prevents CI failures from reaching GitHub Actions.
+- **Workflow frontmatter adoption** — `bmad-create-prd` and `bmad-create-epics-and-stories` templates now include governance frontmatter fields (initiative, artifact_type, status, created, schema_version). Graceful degradation when taxonomy absent.
+- **BMAD portfolio skill** (`.claude/skills/bmad-portfolio-status/`) — Thin wrapper invoking `convoke-portfolio --markdown` for chat/skill context.
+- **Artifact rename map** — `artifact-rename-map.md` generated during migration with old-to-new filename mapping.
+- **Governance ADR** — Migration generates `adr-artifact-governance-convention-{date}.md` documenting the naming convention and supersedes the previous repo organization ADR.
+
+### Changed
+
+- **Frontmatter schema v1** — All governed artifacts include: `initiative`, `artifact_type`, `created` (ISO date), `schema_version: 1`. Optional: `status` (draft/validated/superseded/active).
+- **Shell injection prevention** — All `execSync` calls migrated to `execFileSync` with argument arrays across `artifact-utils.js` and `ensureCleanTree`.
+- **convoke-doctor** — Now exports `checkTaxonomy` for testability; uses `require.main === module` guard.
+
+### Infrastructure
+
+- **320+ tests** across unit (Node built-in), integration, and Jest lib suites
+- **50 FRs and 22 NFRs** addressed across 18 stories in 5 epics
+- **5 retrospectives** with compounding process improvements
+
+---
+
 ## [3.0.0] - 2026-03-25
 
 ### Added
