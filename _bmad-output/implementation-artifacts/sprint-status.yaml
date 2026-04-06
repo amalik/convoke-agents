@@ -317,11 +317,11 @@ development_status:
   ag-epic-4-retrospective: done
 
   # Epic 5: Platform Integration & Adoption
-  ag-epic-5: in-progress
+  ag-epic-5: done
   ag-5-1-convoke-update-taxonomy-integration: done
-  ag-5-2-convoke-doctor-taxonomy-validation: backlog
-  ag-5-3-workflow-frontmatter-adoption: backlog
-  ag-epic-5-retrospective: optional
+  ag-5-2-convoke-doctor-taxonomy-validation: done
+  ag-5-3-workflow-frontmatter-adoption: done
+  ag-epic-5-retrospective: done
 
   # ============================================================
   # SKILL PORTABILITY & DISTRIBUTION INITIATIVE
