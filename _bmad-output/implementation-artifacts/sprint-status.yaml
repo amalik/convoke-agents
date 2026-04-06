@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-23
-last_updated: 2026-04-06T00:00:00Z
+last_updated: 2026-04-06
 project: BMAD-Enhanced
 project_key: NOKEY
 tracking_system: file-system
