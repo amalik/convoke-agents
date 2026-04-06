@@ -399,11 +399,12 @@ describe('Upgrade from v1.7.x (simulated)', () => {
     assert.equal(version, '1.7.1');
   });
 
-  it('finds applicable migration for v1.7.1', () => {
+  it('finds applicable migrations for v1.7.1 (chains to 2.0.x)', () => {
     const migrations = registry.getMigrationsFor('1.7.1');
-    assert.equal(migrations.length, 1);
+    assert.equal(migrations.length, 2);
     assert.equal(migrations[0].name, '1.7.x-to-2.0.0');
     assert.equal(migrations[0].breaking, true);
+    assert.equal(migrations[1].name, '2.0.x-to-3.1.0');
   });
 
   it('reports breaking changes for v1.7.1', () => {
