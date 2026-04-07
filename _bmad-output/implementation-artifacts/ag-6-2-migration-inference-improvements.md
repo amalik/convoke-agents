@@ -1,6 +1,6 @@
 # Story 6.2: Migration Inference Improvements
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -32,10 +32,10 @@ So that I'm guided through resolution instead of facing a wall of "ACTION REQUIR
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Add `suggestInitiative()` to artifact-utils.js** (AC: #1, #2, #3, #4)
-  - [ ] 1.1 Open [scripts/lib/artifact-utils.js](scripts/lib/artifact-utils.js) and locate `inferInitiative()` (around line 393). Add `suggestInitiative()` immediately after it.
-  - [ ] 1.2 Function signature: `function suggestInitiative(filename, dirName, fileContent, taxonomy, projectRoot)`. Returns `{ initiative: string|null, source: 'content-keyword'|'folder-default'|'git-context'|null, confidence: 'medium'|'low'|null }`.
-  - [ ] 1.3 **Step 1 — Content keyword scan** (highest priority):
+- [x] **Task 1: Add `suggestInitiative()` to artifact-utils.js** (AC: #1, #2, #3, #4)
+  - [x] 1.1 Open [scripts/lib/artifact-utils.js](scripts/lib/artifact-utils.js) and locate `inferInitiative()` (around line 393). Add `suggestInitiative()` immediately after it.
+  - [x] 1.2 Function signature: `function suggestInitiative(filename, dirName, fileContent, taxonomy, projectRoot)`. Returns `{ initiative: string|null, source: 'content-keyword'|'folder-default'|'git-context'|null, confidence: 'medium'|'low'|null }`.
+  - [x] 1.3 **Step 1 — Content keyword scan** (highest priority):
     - Read first 10 lines of `fileContent` (already loaded by caller — don't re-read from disk)
     - Also extract any frontmatter `title` field via `gray-matter` (already a dependency)
     - Build search corpus = first 10 lines + title (lowercased)
@@ -43,53 +43,53 @@ So that I'm guided through resolution instead of facing a wall of "ACTION REQUIR
     - If multiple matches, prefer the longest (matches `strategy-perimeter` over `strategy`)
     - If alias matched, resolve via `taxonomy.aliases[match]`
     - Return `{ initiative, source: 'content-keyword', confidence: 'medium' }` on first match
-  - [ ] 1.4 **Step 2 — Folder default** (medium priority):
+  - [x] 1.4 **Step 2 — Folder default** (medium priority):
     - Map: `planning-artifacts` → `convoke`, `vortex-artifacts` → `null` (Vortex artifacts span multiple initiatives, no safe default), `gyre-artifacts` → `gyre`
     - The map should be a module-level constant `FOLDER_DEFAULT_MAP` so tests can read it
     - If a default exists for this dirName, return `{ initiative: default, source: 'folder-default', confidence: 'low' }`
-  - [ ] 1.5 **Step 3 — Git context fallback** (lowest priority):
+  - [x] 1.5 **Step 3 — Git context fallback** (lowest priority):
     - Use `git log --diff-filter=A --format=%s -- {file}` via `execFileSync` (already imported) to get the creation commit message
     - Wrap in try/catch — git failure must NOT crash the migration; return `null` instead
     - Scan the message for any initiative ID or alias (whole-word, case-insensitive)
     - If found, return `{ initiative, source: 'git-context', confidence: 'low' }`
-  - [ ] 1.6 If all three steps yield nothing, return `{ initiative: null, source: null, confidence: null }`.
-  - [ ] 1.7 Export `suggestInitiative` from the module exports at the bottom of the file (find `module.exports = { ... }`).
+  - [x] 1.6 If all three steps yield nothing, return `{ initiative: null, source: null, confidence: null }`.
+  - [x] 1.7 Export `suggestInitiative` from the module exports at the bottom of the file (find `module.exports = { ... }`).
 
-- [ ] **Task 2: Wire `suggestInitiative()` into manifest generation** (AC: #1, #5)
-  - [ ] 2.1 Locate `buildManifestEntry()` in [scripts/lib/artifact-utils.js](scripts/lib/artifact-utils.js) (search for `function buildManifestEntry`).
-  - [ ] 2.2 In the AMBIGUOUS branch (where `entry.action = 'AMBIGUOUS'` is set), call `suggestInitiative(filename, dirName, fileContent, taxonomy, projectRoot)`.
-  - [ ] 2.3 If a suggestion is returned, set `entry.suggestedInitiative`, `entry.suggestedFrom`, and `entry.suggestedConfidence` on the entry.
-  - [ ] 2.4 Verify the entry still has `action: 'AMBIGUOUS'` — the suggestion does NOT auto-resolve, it just adds guidance.
-  - [ ] 2.5 If the file content isn't already loaded at the call site, load it once and pass to both `getGovernanceState()` and `suggestInitiative()` — avoid double-reading the file.
+- [x] **Task 2: Wire `suggestInitiative()` into manifest generation** (AC: #1, #5)
+  - [x] 2.1 Locate `buildManifestEntry()` in [scripts/lib/artifact-utils.js](scripts/lib/artifact-utils.js) (search for `function buildManifestEntry`).
+  - [x] 2.2 In the AMBIGUOUS branch (where `entry.action = 'AMBIGUOUS'` is set), call `suggestInitiative(filename, dirName, fileContent, taxonomy, projectRoot)`.
+  - [x] 2.3 If a suggestion is returned, set `entry.suggestedInitiative`, `entry.suggestedFrom`, and `entry.suggestedConfidence` on the entry.
+  - [x] 2.4 Verify the entry still has `action: 'AMBIGUOUS'` — the suggestion does NOT auto-resolve, it just adds guidance.
+  - [x] 2.5 If the file content isn't already loaded at the call site, load it once and pass to both `getGovernanceState()` and `suggestInitiative()` — avoid double-reading the file.
 
-- [ ] **Task 3: Add collision differentiator suggester** (AC: #6, #7)
-  - [ ] 3.1 In [scripts/lib/artifact-utils.js](scripts/lib/artifact-utils.js), locate `detectCollisions()` (around line 860).
-  - [ ] 3.2 Add a helper `suggestDifferentiator(sourceFilenames, targetFilename)` that:
+- [x] **Task 3: Add collision differentiator suggester** (AC: #6, #7)
+  - [x] 3.1 In [scripts/lib/artifact-utils.js](scripts/lib/artifact-utils.js), locate `detectCollisions()` (around line 860).
+  - [x] 3.2 Add a helper `suggestDifferentiator(sourceFilenames, targetFilename)` that:
     - Strips the common target filename from each source
     - For each source, extracts the segment(s) that differ from the target (e.g., source `lean-persona-strategic-navigator-2026-04-04.md`, target `helm-lean-persona-2026-04-04.md` → differentiator `strategic-navigator` or just `navigator`)
     - Returns a Map of `sourcePath → suggestedNewPath` where the new path inserts the differentiator before the date suffix (e.g., `helm-lean-persona-strategic-navigator-2026-04-04.md`)
-  - [ ] 3.3 In `detectCollisions()`, after a collision is detected, call `suggestDifferentiator(sources, target)` and attach the result to each colliding entry as `entry.suggestedNewPath`.
-  - [ ] 3.4 Edge case: if differentiator extraction fails (sources are too similar to differentiate), set `entry.suggestedNewPath = null` and let the operator handle manually. Don't crash.
-  - [ ] 3.5 Edge case: if the suggested new paths themselves collide (very unlikely but possible), append a numeric suffix (`-1`, `-2`) to ensure uniqueness.
+  - [x] 3.3 In `detectCollisions()`, after a collision is detected, call `suggestDifferentiator(sources, target)` and attach the result to each colliding entry as `entry.suggestedNewPath`.
+  - [x] 3.4 Edge case: if differentiator extraction fails (sources are too similar to differentiate), set `entry.suggestedNewPath = null` and let the operator handle manually. Don't crash.
+  - [x] 3.5 Edge case: if the suggested new paths themselves collide (very unlikely but possible), append a numeric suffix (`-1`, `-2`) to ensure uniqueness.
 
-- [ ] **Task 4: Update `formatManifest()` to render suggestions** (AC: #5, #7)
-  - [ ] 4.1 Locate `formatManifest()` in [scripts/lib/artifact-utils.js](scripts/lib/artifact-utils.js) (around line 974).
-  - [ ] 4.2 In the `case 'AMBIGUOUS'` branch, after the existing `Candidates:` line, check if `entry.suggestedInitiative` exists. If yes:
+- [x] **Task 4: Update `formatManifest()` to render suggestions** (AC: #5, #7)
+  - [x] 4.1 Locate `formatManifest()` in [scripts/lib/artifact-utils.js](scripts/lib/artifact-utils.js) (around line 974).
+  - [x] 4.2 In the `case 'AMBIGUOUS'` branch, after the existing `Candidates:` line, check if `entry.suggestedInitiative` exists. If yes:
     - Add line: `  Suggested: {entry.suggestedInitiative} (source: {entry.suggestedFrom}, confidence: {entry.suggestedConfidence})`
     - Replace the existing `ACTION REQUIRED: Specify initiative for this file` line with `REVIEW SUGGESTION: Accept '{entry.suggestedInitiative}' or specify initiative`
-  - [ ] 4.3 In the RENAME branch, after the existing collision detection block, if `entry.suggestedNewPath` exists:
+  - [x] 4.3 In the RENAME branch, after the existing collision detection block, if `entry.suggestedNewPath` exists:
     - Add line: `  Suggested rename: {entry.suggestedNewPath}` immediately after the COLLISION line
-  - [ ] 4.4 Verify formatting consistency — match the indentation, tone, and bracket style of existing lines.
+  - [x] 4.4 Verify formatting consistency — match the indentation, tone, and bracket style of existing lines.
 
-- [ ] **Task 5: Verify ambiguity rate reduction** (AC: #8)
-  - [ ] 5.1 Run `node scripts/migrate-artifacts.js` from the project root (dry-run mode).
-  - [ ] 5.2 Count entries containing `[!]` and `???` (the AMBIGUOUS marker pattern) in the output, EXCLUDING those with a `Suggested:` line below them.
-  - [ ] 5.3 Confirm the count is **under 10** (down from baseline 31).
-  - [ ] 5.4 Confirm the helm lean-persona collision now shows a `Suggested rename:` line.
-  - [ ] 5.5 If the count is still ≥10 or the collision suggestion is missing, debug the suggester logic — don't lower the threshold.
+- [x] **Task 5: Verify ambiguity rate reduction** (AC: #8)
+  - [x] 5.1 Run `node scripts/migrate-artifacts.js` from the project root (dry-run mode).
+  - [x] 5.2 Count entries containing `[!]` and `???` (the AMBIGUOUS marker pattern) in the output, EXCLUDING those with a `Suggested:` line below them.
+  - [x] 5.3 Confirm the count is **under 10** (down from baseline 31).
+  - [x] 5.4 Confirm the helm lean-persona collision now shows a `Suggested rename:` line.
+  - [x] 5.5 If the count is still ≥10 or the collision suggestion is missing, debug the suggester logic — don't lower the threshold.
 
-- [ ] **Task 6: Write unit tests** (AC: #9, #10)
-  - [ ] 6.1 Create or extend [tests/lib/inference.test.js](tests/lib/inference.test.js) with new tests for `suggestInitiative()`:
+- [x] **Task 6: Write unit tests** (AC: #9, #10)
+  - [x] 6.1 Create or extend [tests/lib/inference.test.js](tests/lib/inference.test.js) with new tests for `suggestInitiative()`:
     - **Test A:** Folder default — file in `planning-artifacts`, no content keyword → suggests `convoke` with source `folder-default`
     - **Test B:** Content keyword — file with `# Gyre Validation Report` as line 1 → suggests `gyre` with source `content-keyword`
     - **Test C:** Alias resolution — file with `Strategy Perimeter` in title → suggests `helm`
@@ -98,14 +98,14 @@ So that I'm guided through resolution instead of facing a wall of "ACTION REQUIR
     - **Test F:** No signal — file in `vortex-artifacts` with no matching content and git failure → returns `{initiative: null, ...}`
     - **Test G:** Case-insensitivity — content `gyre` matches `GYRE` and `Gyre` and `gyre`
     - **Test H:** Whole-word matching — content `gyrescope` does NOT match initiative `gyre`
-  - [ ] 6.2 Create or extend [tests/lib/manifest.test.js](tests/lib/manifest.test.js) with new tests for collision differentiator:
+  - [x] 6.2 Create or extend [tests/lib/manifest.test.js](tests/lib/manifest.test.js) with new tests for collision differentiator:
     - **Test I:** Helm lean-persona case — two source files differing only in `navigator`/`practitioner` → both get `suggestedNewPath` containing the differentiator
     - **Test J:** Synthetic 3-way collision — three source files with three different middle segments → all three get unique `suggestedNewPath` values
     - **Test K:** Indistinguishable sources — two source files with no extractable differentiator → `suggestedNewPath: null` for both, no crash
-  - [ ] 6.3 Add format output tests to [tests/lib/manifest.test.js](tests/lib/manifest.test.js):
+  - [x] 6.3 Add format output tests to [tests/lib/manifest.test.js](tests/lib/manifest.test.js):
     - **Test L:** AMBIGUOUS entry with suggestion → output contains `Suggested: convoke` and `REVIEW SUGGESTION:` (NOT `ACTION REQUIRED:`)
     - **Test M:** RENAME entry with collision + differentiator → output contains `Suggested rename: ...`
-  - [ ] 6.4 Run the full test suite via `npm test` (or whatever the project's test command is — check `package.json`). Confirm zero regressions.
+  - [x] 6.4 Run the full test suite via `npm test` (or whatever the project's test command is — check `package.json`). Confirm zero regressions.
 
 ## Dev Notes
 
@@ -259,10 +259,32 @@ The 1 collision (helm lean-personas) will get a `Suggested rename:` annotation.
 
 ### Agent Model Used
 
-(to be filled in by dev agent)
+claude-opus-4-6 (1M context)
 
 ### Debug Log References
 
+- Discovered the project has TWO test runners: `tests/unit/*.test.js` use Node's built-in `node --test` (npm test), while `tests/lib/*.test.js` use Jest (`npx jest`). Both must pass; they're invoked separately. Documented in completion notes for future devs.
+- Initial dry-run output revealed only some ambiguous entries got suggestions — root cause: cleared after re-checking that the AMBIGUOUS branch is hit for both `state === 'ungoverned'` and `state === 'ambiguous'`. Both paths now flow through the suggester correctly.
+
 ### Completion Notes List
 
+- All 10 ACs satisfied. All 6 task groups complete (30/30 subtasks).
+- **AC8 hit cleanly:** baseline 31 ambiguous → **6 pure ambiguous** (after Story 6.2). Of the 32 AMBIGUOUS entries, 26 now have suggestions (REVIEW SUGGESTION) and 6 remain pure-ambiguous. Note: total bumped from 73→74 because of new artifact files added since baseline; the success metric "under 10 pure ambiguous" is met.
+- **Collision fix verified:** the helm lean-persona collision now produces `helm-lean-persona-navigator-2026-04-04.md` and `helm-lean-persona-practitioner-2026-04-04.md` automatically.
+- **Constraints respected:** `inferInitiative()` and `inferArtifactType()` are unchanged. Suggestions are layered ON TOP via the new `suggestInitiative()` function. The action stays `AMBIGUOUS` — operator must still confirm. NFR6 (no false-confident inference) preserved.
+- **Performance:** Git query counter caps at 50 per run. The whole-repo dry-run still completes in well under 10 seconds.
+- **6 pure-ambiguous remaining files:** All 5 vortex-artifacts personas (no folder default for vortex-artifacts by design, persona content doesn't mention initiatives by name) and 1 telemetry report. These are genuinely ambiguous — operator input required.
+- **Test suite: 733/733 passing.** 408 unit tests + 325 lib tests, including 17 new tests (9 in inference.test.js for `suggestInitiative`, 4 in manifest.test.js for `suggestDifferentiator`, 4 in manifest.test.js for `formatManifest` rendering).
+- **Refinements during impl:** Added `suggestedNewPath` annotation directly in `generateManifest`'s collision loop (cleaner than mutating from inside `detectCollisions`). Added defensive null-safe handling for sentinel `(existing) ...` entries in `suggestDifferentiator`.
+- **convoke-check (full CI mirror) PASSES**: Lint, Unit tests, Integration tests, Jest lib tests, Coverage. Caught and fixed: (1) lint `no-useless-assignment` on `firstLines` initializer, (2) two latent integration test count regressions from Story 6.1 (`dataRows.length` and `lines.length` hardcoded to pre-team-factory counts) — both updated to reflect 12 bme rows (7 vortex + 4 gyre + 1 standalone). The integration regressions did NOT surface in Story 6.1's `npm test` run because integration tests live in a separate suite. **Going forward: always run `npm run check` before marking a story for review.**
+
 ### File List
+
+**Modified:**
+- `scripts/lib/artifact-utils.js` (added FOLDER_DEFAULT_MAP, _scanCorpusForInitiative, suggestInitiative, suggestDifferentiator, _resetGitSuggesterCounter; wired into buildManifestEntry, generateManifest, formatManifest; new module exports)
+- `tests/lib/inference.test.js` (added 9 tests for suggestInitiative + FOLDER_DEFAULT_MAP)
+- `tests/lib/manifest.test.js` (added 4 tests for suggestDifferentiator + 4 tests for formatManifest rendering)
+
+### Change Log
+
+- 2026-04-07: Migration inference improvements (Story 6.2). Added content-keyword/folder-default/git-context suggestion layer for AMBIGUOUS files. Added collision differentiator suggester for filename collisions. Ambiguous count drops from 31→6 on the current repo; helm lean-persona collision now auto-resolves with navigator/practitioner suffixes.
