@@ -452,6 +452,169 @@ function inferInitiative(remainder, taxonomy) {
   return { initiative: null, confidence: 'low', source: 'unresolved', candidates };
 }
 
+// --- Suggested Initiative (Story 6.2) ---
+// inferInitiative() is intentionally cautious — it never guesses. The suggester
+// layers ON TOP, providing reviewable defaults for AMBIGUOUS entries based on
+// content keywords, folder defaults, and git context. Suggestions are guidance,
+// not decisions: the manifest entry stays AMBIGUOUS, but the operator gets a
+// "REVIEW SUGGESTION: accept '{X}' or specify" prompt instead of a bare wall.
+
+/**
+ * Folder-default map for initiative inference.
+ * - planning-artifacts → convoke (platform-level artifacts default to convoke)
+ * - vortex-artifacts → null (Vortex spans multiple initiatives, no safe default)
+ * - gyre-artifacts → gyre (all gyre-artifacts/* belong to gyre)
+ *
+ * @type {Object<string, string|null>}
+ */
+const FOLDER_DEFAULT_MAP = Object.freeze({
+  'planning-artifacts': 'convoke',
+  'vortex-artifacts': null,
+  'gyre-artifacts': 'gyre'
+});
+
+/** Cap on git queries per migration run to preserve NFR2 (dry-run < 10s for 200 files) */
+const MAX_GIT_SUGGESTER_QUERIES = 50;
+let _gitSuggesterQueryCount = 0;
+let _gitSuggesterWarned = false;
+
+/**
+ * Reset the per-run git query counter.
+ * Called by generateManifest() at the start of each run, and by tests
+ * via the exported helper to avoid cross-test state pollution.
+ */
+function _resetGitSuggesterCounter() {
+  _gitSuggesterQueryCount = 0;
+  _gitSuggesterWarned = false;
+}
+
+/**
+ * Scan a text corpus for any taxonomy initiative ID or alias as a whole word.
+ * Returns the first match (longest first to prefer specific over generic).
+ *
+ * Uses hyphen-aware lookarounds rather than `\b` because JS `\b` treats `-` as a
+ * word boundary, which would cause `pre-gyre` to match the `gyre` initiative.
+ * The boundary class `[a-z0-9-]` keeps kebab-case identifiers atomic.
+ *
+ * @param {string} corpus - Lowercased text to scan
+ * @param {import('./types').TaxonomyConfig} taxonomy - Taxonomy with initiatives and aliases
+ * @returns {string|null} Resolved initiative ID, or null if no match
+ */
+function _scanCorpusForInitiative(corpus, taxonomy) {
+  if (!corpus) return null;
+  if (!taxonomy || !taxonomy.initiatives) return null;
+
+  const platform = Array.isArray(taxonomy.initiatives.platform) ? taxonomy.initiatives.platform : [];
+  const user = Array.isArray(taxonomy.initiatives.user) ? taxonomy.initiatives.user : [];
+  const allInitiatives = [...platform, ...user];
+  const aliasKeys = taxonomy.aliases ? Object.keys(taxonomy.aliases) : [];
+
+  // Combine and sort by length descending — prefer 'strategy-perimeter' over 'strategy'.
+  const candidates = [...allInitiatives, ...aliasKeys].sort((a, b) => b.length - a.length);
+
+  for (const candidate of candidates) {
+    const escaped = candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Boundary class: not preceded/followed by [a-z0-9-]. Treats hyphen as word-internal,
+    // so 'gyrescope' rejects (preceded by 'gyre' won't trigger; 'scope' = letter), 'pre-gyre'
+    // also rejects (the leading 'pre-' counts as boundary since hyphen is in the class).
+    const re = new RegExp(`(?:^|[^a-z0-9-])${escaped}(?:$|[^a-z0-9-])`, 'i');
+    if (re.test(corpus)) {
+      // Resolve aliases to canonical initiative
+      if (allInitiatives.includes(candidate)) return candidate;
+      if (taxonomy.aliases && taxonomy.aliases[candidate]) return taxonomy.aliases[candidate];
+    }
+  }
+  return null;
+}
+
+/**
+ * Suggest a likely initiative for a file when inferInitiative() returns null.
+ * Three-step priority chain:
+ *   1. Content keyword scan (frontmatter title + first 10 lines) → 'medium' confidence
+ *   2. Folder default (FOLDER_DEFAULT_MAP) → 'low' confidence
+ *   3. Git creation commit message → 'low' confidence
+ *
+ * Suggestions are GUIDANCE for the operator, not auto-resolutions. The action
+ * label remains AMBIGUOUS so the operator must still confirm.
+ *
+ * @param {string} filename - The file's basename
+ * @param {string} dirName - The parent directory name (e.g., 'planning-artifacts')
+ * @param {string} fileContent - Already-loaded file content (avoids double-read)
+ * @param {import('./types').TaxonomyConfig} taxonomy - Taxonomy config
+ * @param {string} projectRoot - Absolute path to project root (for git queries)
+ * @returns {{initiative: string|null, source: 'content-keyword'|'folder-default'|'git-context'|null, confidence: 'medium'|'low'|null}}
+ */
+function suggestInitiative(filename, dirName, fileContent, taxonomy, projectRoot) {
+  // Step 1: Content keyword scan (highest priority)
+  // Scan frontmatter title + first 10 lines, lowercased.
+  // Note: a file titled "Comparing Gyre vs Vortex" matches both — first match wins
+  // (longest first via _scanCorpusForInitiative). This is a documented trade-off.
+  let title = '';
+  let firstLines;
+  try {
+    const parsed = matter(fileContent);
+    if (parsed.data && typeof parsed.data.title === 'string') {
+      title = parsed.data.title;
+    }
+    const body = parsed.content || fileContent;
+    firstLines = body.split('\n').slice(0, 10).join(' ');
+  } catch {
+    // Frontmatter parse failed — fall back to raw content
+    firstLines = fileContent.split('\n').slice(0, 10).join(' ');
+  }
+
+  const corpus = `${title} ${firstLines}`.toLowerCase();
+  const contentMatch = _scanCorpusForInitiative(corpus, taxonomy);
+  if (contentMatch) {
+    return { initiative: contentMatch, source: 'content-keyword', confidence: 'medium' };
+  }
+
+  // Step 2: Folder default
+  if (Object.prototype.hasOwnProperty.call(FOLDER_DEFAULT_MAP, dirName)) {
+    const folderDefault = FOLDER_DEFAULT_MAP[dirName];
+    if (folderDefault) {
+      return { initiative: folderDefault, source: 'folder-default', confidence: 'low' };
+    }
+  }
+
+  // Step 3: Git context (lowest priority, capped to preserve NFR2).
+  // Skip git entirely if we don't have a project root to run inside.
+  if (!projectRoot) {
+    return { initiative: null, source: null, confidence: null };
+  }
+
+  // Cap check: emit a one-time warning when we first hit the cap, then short-circuit.
+  if (_gitSuggesterQueryCount >= MAX_GIT_SUGGESTER_QUERIES) {
+    if (!_gitSuggesterWarned) {
+      _gitSuggesterWarned = true;
+      console.warn(
+        `Warning: git-context suggester cap reached (${MAX_GIT_SUGGESTER_QUERIES} queries). ` +
+        `Remaining ambiguous files will not get git-based suggestions.`
+      );
+    }
+    return { initiative: null, source: null, confidence: null };
+  }
+
+  _gitSuggesterQueryCount++;
+  try {
+    const relPath = path.join('_bmad-output', dirName, filename);
+    const raw = execFileSync(
+      'git', ['log', '--diff-filter=A', '--format=%s', '--', relPath],
+      { cwd: projectRoot, encoding: 'utf8', stdio: 'pipe' }
+    ).trim();
+    if (raw) {
+      const gitMatch = _scanCorpusForInitiative(raw.toLowerCase(), taxonomy);
+      if (gitMatch) {
+        return { initiative: gitMatch, source: 'git-context', confidence: 'low' };
+      }
+    }
+  } catch {
+    // Git unavailable, file not tracked, or other failure — silent
+  }
+
+  return { initiative: null, source: null, confidence: null };
+}
+
 /**
  * Determine the governance state of a file based on filename convention and frontmatter.
  *
@@ -760,7 +923,7 @@ async function getCrossReferences(targetFilename, scopeFiles, _projectRoot) {
  * @param {string} _projectRoot - Project root (reserved)
  * @returns {Promise<import('./types').ManifestEntry>}
  */
-async function buildManifestEntry(fileInfo, taxonomy, _projectRoot) {
+async function buildManifestEntry(fileInfo, taxonomy, projectRoot) {
   const { filename, dir, fullPath } = fileInfo;
   const oldPath = `${dir}/${filename}`;
 
@@ -771,7 +934,8 @@ async function buildManifestEntry(fileInfo, taxonomy, _projectRoot) {
       confidence: 'low', source: 'non-markdown', action: 'SKIP',
       dir, contextClues: null, crossReferences: null, candidates: [],
       collisionWith: null, frontmatterInitiative: null, fileInitiative: null,
-      typeConfidence: 'low', typeSource: 'none'
+      typeConfidence: 'low', typeSource: 'none',
+      suggestedInitiative: null, suggestedFrom: null, suggestedConfidence: null
     };
   }
 
@@ -784,7 +948,8 @@ async function buildManifestEntry(fileInfo, taxonomy, _projectRoot) {
       confidence: 'low', source: 'unreadable', action: 'AMBIGUOUS',
       dir, contextClues: null, crossReferences: null, candidates: [],
       collisionWith: null, frontmatterInitiative: null, fileInitiative: null,
-      typeConfidence: 'low', typeSource: 'none'
+      typeConfidence: 'low', typeSource: 'none',
+      suggestedInitiative: null, suggestedFrom: null, suggestedConfidence: null
     };
   }
 
@@ -811,15 +976,29 @@ async function buildManifestEntry(fileInfo, taxonomy, _projectRoot) {
     candidates: govState.candidates || [],
     collisionWith: null,
     frontmatterInitiative: govState.frontmatterInitiative,
-    fileInitiative: govState.fileInitiative
+    fileInitiative: govState.fileInitiative,
+    // Suggestion fields (Story 6.2)
+    // - suggestedInitiative/From/Confidence: populated for AMBIGUOUS entries by suggestInitiative()
+    // - suggestedNewPath: populated for colliding RENAME entries by suggestDifferentiator()
+    //   (set to null here so consumers always see a defined field)
+    suggestedInitiative: null,
+    suggestedFrom: null,
+    suggestedConfidence: null,
+    suggestedNewPath: null
   };
 
-  if (govState.state === 'ungoverned') {
-    return { ...base, newPath: null, action: 'AMBIGUOUS' };
-  }
-
-  if (govState.state === 'ambiguous') {
-    return { ...base, newPath: null, action: 'AMBIGUOUS' };
+  // For ambiguous/ungoverned entries, layer a suggestion on top via suggestInitiative.
+  // The action stays AMBIGUOUS — the operator must still confirm. This is guidance, not auto-resolution.
+  if (govState.state === 'ungoverned' || govState.state === 'ambiguous') {
+    const suggestion = suggestInitiative(filename, dir, fileContent, taxonomy, projectRoot);
+    return {
+      ...base,
+      newPath: null,
+      action: 'AMBIGUOUS',
+      suggestedInitiative: suggestion.initiative,
+      suggestedFrom: suggestion.source,
+      suggestedConfidence: suggestion.confidence
+    };
   }
 
   if (govState.state === 'invalid-governed') {
@@ -849,6 +1028,111 @@ async function buildManifestEntry(fileInfo, taxonomy, _projectRoot) {
     return { ...base, newPath: null, action: 'INJECT_ONLY' };
   }
   return { ...base, newPath, action: 'RENAME' };
+}
+
+/**
+ * Suggest a differentiator suffix for two source filenames colliding on the same target.
+ * Strategy:
+ *   1. Strip date suffix from sources and target
+ *   2. For each source, find the longest unique segment chain that the OTHER sources don't share
+ *   3. Insert that differentiator into the target before the date suffix
+ *
+ * Returns null if sources are too similar to differentiate (e.g., exact duplicates).
+ *
+ * @param {string[]} sourcePaths - List of colliding source paths (e.g., 'vortex-artifacts/lean-persona-strategic-navigator-2026-04-04.md')
+ * @param {string} targetPath - The collision target (e.g., 'vortex-artifacts/helm-lean-persona-2026-04-04.md')
+ * @returns {Map<string, string|null>} Map of sourcePath → suggestedNewPath (or null)
+ */
+function suggestDifferentiator(sourcePaths, targetPath) {
+  const result = new Map();
+
+  // Filter out sentinel entries like '(existing) ...' that aren't real source files
+  const realSources = sourcePaths.filter(s => !s.startsWith('(existing) '));
+  if (realSources.length < 2) {
+    for (const s of sourcePaths) result.set(s, null);
+    return result;
+  }
+
+  // Parse target: directory + stem + date + ext
+  const targetMatch = targetPath.match(/^(.*\/)?([^/]+?)(-(\d{4}-\d{2}-\d{2}))?\.(md|yaml)$/);
+  if (!targetMatch) {
+    for (const s of sourcePaths) result.set(s, null);
+    return result;
+  }
+  const targetDir = targetMatch[1] || '';
+  const targetStem = targetMatch[2];
+  const targetDate = targetMatch[4] || '';
+  const targetExt = targetMatch[5];
+
+  // For each real source, extract segments that are not in the target stem.
+  // Then verify uniqueness against the other sources.
+  const sourceData = realSources.map(srcPath => {
+    const srcMatch = srcPath.match(/^(.*\/)?([^/]+?)(-(\d{4}-\d{2}-\d{2}))?\.(md|yaml)$/);
+    if (!srcMatch) return { srcPath, segments: [] };
+    const srcStem = srcMatch[2];
+    const srcSegments = srcStem.split('-');
+    const targetSegments = new Set(targetStem.split('-'));
+    // Keep only segments not present in the target stem
+    const unique = srcSegments.filter(s => !targetSegments.has(s));
+    return { srcPath, segments: unique, srcStem };
+  });
+
+  // Cross-check: each source's segments must also distinguish it from OTHER sources
+  for (const { srcPath, segments } of sourceData) {
+    const otherSegSets = sourceData
+      .filter(d => d.srcPath !== srcPath)
+      .map(d => new Set(d.segments));
+
+    // Find segments that are unique to THIS source (not in any other source's segments)
+    const uniqueToMe = segments.filter(seg => otherSegSets.every(other => !other.has(seg)));
+
+    if (uniqueToMe.length === 0) {
+      // No distinguishing segments — can't differentiate
+      result.set(srcPath, null);
+      continue;
+    }
+
+    // Build the differentiator (join unique segments)
+    const differentiator = uniqueToMe.join('-');
+
+    // Construct the suggested new path: targetDir + targetStem + '-' + differentiator + dateSuffix + ext
+    const dateSuffix = targetDate ? `-${targetDate}` : '';
+    const suggestedFilename = `${targetStem}-${differentiator}${dateSuffix}.${targetExt}`;
+    const suggestedNewPath = `${targetDir}${suggestedFilename}`;
+    result.set(srcPath, suggestedNewPath);
+  }
+
+  // Edge case: if the suggested new paths themselves collide, append a numeric suffix.
+  // First pass: count duplicates. Second pass: rename ALL duplicates (not just 2nd+).
+  // Uses the same greedy regex as the source/target parser above to avoid the
+  // lazy-`.*?` empty-stem bug.
+  const dupCounts = new Map();
+  for (const suggested of result.values()) {
+    if (!suggested) continue;
+    dupCounts.set(suggested, (dupCounts.get(suggested) || 0) + 1);
+  }
+  const assignedSuffix = new Map(); // suggested → next index to assign
+  for (const [src, suggested] of result) {
+    if (!suggested) continue;
+    if ((dupCounts.get(suggested) || 0) < 2) continue; // not a dup, skip
+    const idx = (assignedSuffix.get(suggested) || 0) + 1;
+    assignedSuffix.set(suggested, idx);
+    const reMatch = suggested.match(/^(.*\/)?([^/]+?)(-(\d{4}-\d{2}-\d{2}))?\.(md|yaml)$/);
+    if (reMatch) {
+      const dirPrefix = reMatch[1] || '';
+      const stem = reMatch[2];
+      const dateSuffix = reMatch[4] ? `-${reMatch[4]}` : '';
+      const ext = reMatch[5];
+      result.set(src, `${dirPrefix}${stem}-${idx}${dateSuffix}.${ext}`);
+    }
+  }
+
+  // Sentinels get null
+  for (const s of sourcePaths) {
+    if (!result.has(s)) result.set(s, null);
+  }
+
+  return result;
 }
 
 /**
@@ -917,6 +1201,9 @@ async function generateManifest(projectRoot, options = {}) {
   const scopeFiles = await scanArtifactDirs(projectRoot, includeDirs, excludeDirs);
   const entries = [];
 
+  // Reset the per-run git query counter (Story 6.2 — caps git suggestions to preserve NFR2)
+  _resetGitSuggesterCounter();
+
   for (const fileInfo of scopeFiles) {
     const entry = await buildManifestEntry(fileInfo, taxonomy, projectRoot);
     entries.push(entry);
@@ -925,9 +1212,12 @@ async function generateManifest(projectRoot, options = {}) {
   // Detect collisions and annotate entries
   const collisions = detectCollisions(entries);
   for (const [target, sources] of collisions) {
+    // Compute differentiator suggestions for this collision (Story 6.2)
+    const differentiators = suggestDifferentiator(sources, target);
     for (const entry of entries) {
       if (entry.newPath === target && entry.action === 'RENAME') {
         entry.collisionWith = sources.filter(s => s !== entry.oldPath);
+        entry.suggestedNewPath = differentiators.get(entry.oldPath) || null;
       }
     }
   }
@@ -991,6 +1281,9 @@ function formatManifest(manifest, options = {}) {
         lines.push(`  Type: ${entry.artifactType} (confidence: ${entry.typeConfidence || 'high'}, source: ${entry.typeSource || 'prefix'})`);
         if (entry.collisionWith && entry.collisionWith.length > 0) {
           lines.push(`  [!] COLLISION: same target as ${entry.collisionWith.join(', ')}`);
+          if (entry.suggestedNewPath) {
+            lines.push(`  Suggested rename: ${entry.suggestedNewPath}`);
+          }
         }
         break;
 
@@ -1026,7 +1319,13 @@ function formatManifest(manifest, options = {}) {
         if (entry.candidates.length > 0) {
           lines.push(`  Candidates: ${entry.candidates.join(', ')}`);
         }
-        lines.push('  ACTION REQUIRED: Specify initiative for this file');
+        // Suggestion (Story 6.2): if a default exists, surface it and switch the action label
+        if (entry.suggestedInitiative) {
+          lines.push(`  Suggested: ${entry.suggestedInitiative} (source: ${entry.suggestedFrom}, confidence: ${entry.suggestedConfidence})`);
+          lines.push(`  REVIEW SUGGESTION: Accept '${entry.suggestedInitiative}' or specify initiative`);
+        } else {
+          lines.push('  ACTION REQUIRED: Specify initiative for this file');
+        }
         break;
       }
     }
@@ -1647,6 +1946,9 @@ module.exports = {
   ARTIFACT_TYPE_ALIASES,
   inferArtifactType,
   inferInitiative,
+  suggestInitiative,
+  suggestDifferentiator,
+  FOLDER_DEFAULT_MAP,
   getGovernanceState,
   generateNewFilename,
   // Git
