@@ -1,6 +1,6 @@
 # Story 6.2: Migration Inference Improvements
 
-Status: review
+Status: done
 
 ## Story
 
@@ -288,3 +288,4 @@ claude-opus-4-6 (1M context)
 ### Change Log
 
 - 2026-04-07: Migration inference improvements (Story 6.2). Added content-keyword/folder-default/git-context suggestion layer for AMBIGUOUS files. Added collision differentiator suggester for filename collisions. Ambiguous count drops from 31→6 on the current repo; helm lean-persona collision now auto-resolves with navigator/practitioner suffixes.
+- 2026-04-07: Code review patches (3 HIGH + 2 MED + 1 LOW from Blind Hunter / Edge Case Hunter / Acceptance Auditor): (1) git counter no longer increments before failed try, no longer pollutes test state, emits one-time warning when cap reached; (2) `_scanCorpusForInitiative` replaced naive `\b` boundary with hyphen-aware lookarounds — `pre-gyre` no longer false-matches `gyre`; (3) `suggestDifferentiator` numeric-suffix dedup rewritten with two-pass logic + greedy regex (was leaving first duplicate unchanged + had lazy `.*?` empty-stem bug); (4) `suggestedNewPath: null` initialized in base manifest entry (was `undefined` for non-collision RENAMEs); (5) `_scanCorpusForInitiative` now guards malformed taxonomy; (6) Test E rewritten as real positive git-context test using a temp git repo (was only testing the negative path). Added 4 new regression tests: kebab-case hyphen boundary (3 tests), git query cap enforcement (1 test). 3 deferred items added to backlog: I17 (`.md`/`.yaml`-only differentiator), I18 (pre-compile regex). All checks pass via `npm run check`: Lint, Unit (408), Integration, Jest lib (98), Coverage 91.75%.
