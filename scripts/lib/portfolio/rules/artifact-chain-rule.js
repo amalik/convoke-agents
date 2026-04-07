@@ -90,9 +90,39 @@ function applyArtifactChainRule(state, artifacts, _options = {}) {
     return state;
   }
 
-  // No recognized pattern
-  state.phase = { value: 'unknown', source: 'artifact-chain', confidence: 'inferred' };
+  // No recognized pattern — collect evidence so the operator can see WHY it's unknown (Story 6.3)
+  const evidence = collectPhaseEvidence(artifacts, types, hcPrefixes);
+  state.phase = { value: 'unknown', source: 'artifact-chain', confidence: 'inferred', evidence };
   return state;
+}
+
+/**
+ * Collect a one-line description of what the phase inference looked at when it
+ * couldn't determine a phase. Used to populate the Next Action with context
+ * instead of the generic "Create PRD or brief" message.
+ *
+ * @param {Array<Object>} artifacts - All artifacts for this initiative
+ * @param {Set<string>} types - Distinct artifact types present
+ * @param {Set<string>} hcPrefixes - HC prefixes present (e.g. 'hc1', 'hc2')
+ * @returns {string[]} Evidence list, e.g. ["3 artifacts found", "no PRD/brief", "no HC chain", ...]
+ */
+function collectPhaseEvidence(artifacts, types, hcPrefixes) {
+  const evidence = [];
+  const count = artifacts.length;
+  evidence.push(count === 1 ? '1 artifact found' : `${count} artifacts found`);
+
+  // Special-case: only HC1 present (incomplete discovery, doesn't trigger discovery branch)
+  if (hcPrefixes.size === 1 && hcPrefixes.has('hc1')) {
+    evidence.push('incomplete HC chain (needs HC2-HC6)');
+    return evidence;
+  }
+
+  if (!types.has('prd') && !types.has('brief')) evidence.push('no PRD/brief');
+  if (!types.has('arch')) evidence.push('no architecture');
+  if (hcPrefixes.size === 0) evidence.push('no HC chain');
+  if (!types.has('epic')) evidence.push('no epic');
+
+  return evidence;
 }
 
 /**
@@ -123,4 +153,4 @@ function detectHCChain(state, hcPrefixes) {
   }
 }
 
-module.exports = { applyArtifactChainRule, isEpicDone, detectHCChain, DONE_PATTERNS };
+module.exports = { applyArtifactChainRule, isEpicDone, detectHCChain, collectPhaseEvidence, DONE_PATTERNS };
