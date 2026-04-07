@@ -1,5 +1,5 @@
 const { applyFrontmatterRule } = require('../../scripts/lib/portfolio/rules/frontmatter-rule');
-const { applyArtifactChainRule, isEpicDone, detectHCChain } = require('../../scripts/lib/portfolio/rules/artifact-chain-rule');
+const { applyArtifactChainRule, isEpicDone, detectHCChain, collectPhaseEvidence } = require('../../scripts/lib/portfolio/rules/artifact-chain-rule');
 const { applyConflictResolver, deriveNextAction, comparePhasePriority } = require('../../scripts/lib/portfolio/rules/conflict-resolver');
 
 // Helper: create empty InitiativeState
@@ -442,5 +442,137 @@ describe('comparePhasePriority', () => {
 
   test('same phase -> 0', () => {
     expect(comparePhasePriority('build', 'build')).toBe(0);
+  });
+});
+
+// --- Story 6.3: phase evidence collection ---
+
+describe('collectPhaseEvidence (Story 6.3)', () => {
+  test('K — initiative with 3 artifacts but no PRD/arch/HC/epic → full evidence list', () => {
+    const artifacts = [
+      { type: 'note' },
+      { type: 'note' },
+      { type: 'note' }
+    ];
+    const types = new Set(['note']);
+    const hcPrefixes = new Set();
+    const evidence = collectPhaseEvidence(artifacts, types, hcPrefixes);
+    expect(evidence[0]).toBe('3 artifacts found');
+    expect(evidence).toContain('no PRD/brief');
+    expect(evidence).toContain('no architecture');
+    expect(evidence).toContain('no HC chain');
+    expect(evidence).toContain('no epic');
+  });
+
+  test('L — initiative with only HC1 → incomplete HC chain marker', () => {
+    const artifacts = [{ type: 'hc1', hcPrefix: 'hc1' }];
+    const types = new Set(['hc1']);
+    const hcPrefixes = new Set(['hc1']);
+    const evidence = collectPhaseEvidence(artifacts, types, hcPrefixes);
+    expect(evidence[0]).toBe('1 artifact found');
+    expect(evidence).toContain('incomplete HC chain (needs HC2-HC6)');
+  });
+
+  test('Single artifact pluralization: "1 artifact found" not "1 artifacts found"', () => {
+    const artifacts = [{ type: 'note' }];
+    const evidence = collectPhaseEvidence(artifacts, new Set(['note']), new Set());
+    expect(evidence[0]).toBe('1 artifact found');
+  });
+
+  test('applyArtifactChainRule attaches evidence on unknown phase', () => {
+    const state = {
+      initiative: 'test',
+      phase: { value: null, source: null, confidence: null },
+      status: { value: null, source: null, confidence: null },
+      lastArtifact: { file: null, date: null },
+      nextAction: { value: null, source: null }
+    };
+    const artifacts = [
+      { type: 'note', filename: 'note-1.md', date: '2026-01-01' },
+      { type: 'note', filename: 'note-2.md', date: '2026-01-02' }
+    ];
+    const result = applyArtifactChainRule(state, artifacts);
+    expect(result.phase.value).toBe('unknown');
+    expect(result.phase.source).toBe('artifact-chain');
+    expect(Array.isArray(result.phase.evidence)).toBe(true);
+    expect(result.phase.evidence[0]).toBe('2 artifacts found');
+  });
+});
+
+// --- Story 6.3: conflict-resolver nextAction override ---
+
+describe('applyConflictResolver Story 6.3 nextAction override', () => {
+  test('M — initiative with zero artifacts keeps generic "Create PRD or brief" message', () => {
+    const state = {
+      initiative: 'empty',
+      phase: { value: null, source: null, confidence: null },
+      status: { value: null, source: null, confidence: null },
+      lastArtifact: { file: null, date: null },
+      nextAction: { value: null, source: null }
+    };
+    const result = applyConflictResolver(state, [], {});
+    expect(result.nextAction.value).toBe('Create PRD or brief to start planning');
+  });
+
+  test('N — initiative with recognized-type artifacts but unknown phase → context-aware nextAction', () => {
+    const state = {
+      initiative: 'busy',
+      phase: {
+        value: 'unknown',
+        source: 'artifact-chain',
+        confidence: 'inferred',
+        evidence: ['3 artifacts found', 'no PRD/brief', 'no architecture']
+      },
+      status: { value: null, source: null, confidence: null },
+      lastArtifact: { file: null, date: null },
+      nextAction: { value: null, source: null }
+    };
+    // At least one artifact must have a real (non-'unknown') type to trigger the override.
+    // This guards against the design-intent inversion where a single fallback-attributed
+    // 'unknown'-type artifact would override the legitimate "Create PRD or brief" message.
+    const artifacts = [
+      { filename: 'a.md', type: 'spec' },
+      { filename: 'b.md', type: 'spec' },
+      { filename: 'c.md', type: 'spec' }
+    ];
+    const result = applyConflictResolver(state, artifacts, {});
+    expect(result.nextAction.value).toContain('Unknown phase:');
+    expect(result.nextAction.value).toContain('3 artifacts found');
+    expect(result.nextAction.value).toContain('no PRD/brief');
+    // Generic fallback NOT used
+    expect(result.nextAction.value).not.toBe('Create PRD or brief to start planning');
+  });
+
+  test('Override does NOT trigger when only fallback-attributed (unknown-type) artifacts exist', () => {
+    // Regression guard for the design-intent inversion: if all artifacts are
+    // fallback-attributed with synthetic `type: 'unknown'`, the operator should
+    // still see the generic "Create PRD or brief" message.
+    const state = {
+      initiative: 'fallback-only',
+      phase: {
+        value: 'unknown',
+        source: 'artifact-chain',
+        confidence: 'inferred',
+        evidence: ['1 artifact found', 'no PRD/brief']
+      },
+      status: { value: null, source: null, confidence: null },
+      lastArtifact: { file: null, date: null },
+      nextAction: { value: null, source: null }
+    };
+    const artifacts = [{ filename: 'fallback.md', type: 'unknown' }];
+    const result = applyConflictResolver(state, artifacts, {});
+    expect(result.nextAction.value).toBe('Create PRD or brief to start planning');
+  });
+
+  test('Override does NOT trigger when phase is known (e.g. discovery)', () => {
+    const state = {
+      initiative: 'forge',
+      phase: { value: 'discovery', source: 'artifact-chain', confidence: 'inferred' },
+      status: { value: null, source: null, confidence: null },
+      lastArtifact: { file: null, date: null },
+      nextAction: { value: null, source: null }
+    };
+    const result = applyConflictResolver(state, [{ filename: 'foo.md' }], {});
+    expect(result.nextAction.value).not.toContain('Unknown phase:');
   });
 });
