@@ -5,7 +5,7 @@ const path = require('path');
 const yaml = require('js-yaml');
 const { getPackageVersion } = require('./utils');
 const configMerger = require('./config-merger');
-const { AGENTS, AGENT_FILES, AGENT_IDS, WORKFLOW_NAMES, USER_GUIDES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES } = require('./agent-registry');
+const { AGENTS, AGENT_FILES, AGENT_IDS, WORKFLOW_NAMES, USER_GUIDES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES, EXTRA_BME_AGENTS } = require('./agent-registry');
 
 /**
  * Refresh Installation for Convoke
@@ -89,6 +89,34 @@ async function refreshInstallation(projectRoot, options = {}) {
   } else {
     changes.push('Skipped workflow copy (dev environment — files already in place)');
     if (verbose) console.log('    Skipped workflow copy (dev environment)');
+  }
+
+  // 2b1. Standalone bme submodule trees (e.g., _team-factory)
+  // Each EXTRA_BME_AGENTS entry references a submodule directory under _bmad/bme/
+  // that must be copied wholesale so the agent file, workflows, lib code, and config travel together.
+  // Mirrors the workflow loop pattern (2-step remove-then-copy) so renamed/deleted files
+  // in the package don't survive in the user install as stale leftovers.
+  const copiedExtraSubmodules = new Set();
+  if (!isSameRoot) {
+    for (const agent of EXTRA_BME_AGENTS) {
+      if (copiedExtraSubmodules.has(agent.submodule)) continue;
+      copiedExtraSubmodules.add(agent.submodule);
+      const srcDir = path.join(packageRoot, '_bmad', 'bme', agent.submodule);
+      const destDir = path.join(projectRoot, '_bmad', 'bme', agent.submodule);
+      if (fs.existsSync(srcDir)) {
+        // Remove existing destination first to clear stale files
+        // (e.g., renamed/deleted workflow steps from previous versions)
+        if (fs.existsSync(destDir)) {
+          await fs.remove(destDir);
+        }
+        await fs.copy(srcDir, destDir, { overwrite: true });
+        changes.push(`Refreshed standalone bme submodule: ${agent.submodule}`);
+        if (verbose) console.log(`    Refreshed standalone bme submodule: ${agent.submodule}`);
+      }
+    }
+  } else {
+    changes.push('Skipped standalone bme submodule copy (dev environment — files already in place)');
+    if (verbose) console.log('    Skipped standalone bme submodule copy (dev environment)');
   }
 
   // 2a. Enhance module — read config, copy directory tree, patch target agent menu
@@ -383,16 +411,46 @@ async function refreshInstallation(projectRoot, options = {}) {
     ].map(csvEscape).join(',');
   }
 
+  // Row builder for standalone bme agents (e.g., team-factory) — submodule path differs from team agents
+  function buildExtraBmeAgentRow610(a) {
+    const p = a.persona;
+    return [
+      csvEscape(a.name),
+      csvEscape(''),
+      csvEscape(a.title),
+      csvEscape(a.icon),
+      csvEscape(''),
+      csvEscape(p.role),
+      csvEscape(p.identity),
+      csvEscape(p.communication_style),
+      csvEscape(p.expertise),
+      csvEscape('bme'),
+      csvEscape(`_bmad/bme/${a.submodule}/agents/${a.id}.md`),
+      csvEscape(`bmad-agent-bme-${a.id}`),
+    ].join(',');
+  }
+
+  function buildExtraBmeAgentRowLegacy(a) {
+    const p = a.persona;
+    return [
+      a.id, a.name, a.title, a.icon,
+      p.role, p.identity, p.communication_style, p.expertise,
+      'bme', `_bmad/bme/${a.submodule}/agents/${a.id}.md`,
+    ].map(csvEscape).join(',');
+  }
+
   let bmeRows;
   if (isV610) {
     bmeRows = [
       ...AGENTS.map(a => buildAgentRow610(a, '_vortex')),
       ...GYRE_AGENTS.map(a => buildAgentRow610(a, '_gyre')),
+      ...EXTRA_BME_AGENTS.map(buildExtraBmeAgentRow610),
     ];
   } else {
     bmeRows = [
       ...AGENTS.map(a => buildAgentRowLegacy(a, '_vortex')),
       ...GYRE_AGENTS.map(a => buildAgentRowLegacy(a, '_gyre')),
+      ...EXTRA_BME_AGENTS.map(buildExtraBmeAgentRowLegacy),
     ];
   }
 
@@ -446,6 +504,7 @@ async function refreshInstallation(projectRoot, options = {}) {
   const currentSkillDirs = new Set([
     ...AGENTS.map(a => `bmad-agent-bme-${a.id}`),
     ...GYRE_AGENTS.map(a => `bmad-agent-bme-${a.id}`),
+    ...EXTRA_BME_AGENTS.map(a => `bmad-agent-bme-${a.id}`),
   ]);
   if (fs.existsSync(skillsDir)) {
     const existingSkills = (await fs.readdir(skillsDir)).filter(d => d.startsWith('bmad-agent-bme-'));
@@ -495,6 +554,31 @@ You must fully embody this agent's persona and follow all activation instruction
 
 <agent-activation CRITICAL="TRUE">
 1. LOAD the FULL agent file from {project-root}/_bmad/bme/_gyre/agents/${agent.id}.md
+2. READ its entire contents - this contains the complete agent persona, menu, and instructions
+3. FOLLOW every step in the <activation> section precisely
+4. DISPLAY the welcome/greeting as instructed
+5. PRESENT the numbered menu
+6. WAIT for user input before proceeding
+</agent-activation>
+`;
+    await fs.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf8');
+    changes.push(`Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
+    if (verbose) console.log(`    Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
+  }
+
+  // 6b1. Generate .claude/skills/ for standalone bme agents (e.g., team-factory)
+  for (const agent of EXTRA_BME_AGENTS) {
+    const skillDir = path.join(skillsDir, `bmad-agent-bme-${agent.id}`);
+    await fs.ensureDir(skillDir);
+    const content = `---
+name: bmad-agent-bme-${agent.id}
+description: ${agent.id} agent
+---
+
+You must fully embody this agent's persona and follow all activation instructions exactly as specified. NEVER break character until given an exit command.
+
+<agent-activation CRITICAL="TRUE">
+1. LOAD the FULL agent file from {project-root}/_bmad/bme/${agent.submodule}/agents/${agent.id}.md
 2. READ its entire contents - this contains the complete agent persona, menu, and instructions
 3. FOLLOW every step in the <activation> section precisely
 4. DISPLAY the welcome/greeting as instructed
