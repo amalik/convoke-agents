@@ -768,6 +768,338 @@ describe('resolveAmbiguous', () => {
     expect(manifest.summary.rename).toBe(2);
     expect(manifest.summary.ambiguous).toBe(0);
   });
+
+  // --- Story 6.4: resolutionMap option tests ---
+
+  test('resolutionMap rename → entry becomes RENAME with source operator', async () => {
+    const manifest = makeManifest([
+      { action: 'AMBIGUOUS', oldPath: 'planning-artifacts/prd.md', dir: 'planning-artifacts', artifactType: 'prd', candidates: ['gyre', 'forge'], initiative: null, newPath: null }
+    ]);
+    const resolutionMap = {
+      'planning-artifacts/prd.md': { action: 'rename', initiative: 'forge' }
+    };
+
+    const result = await resolveAmbiguous(manifest, makeTaxonomy(), '/fake', {
+      promptFn: mockPromptFn,
+      resolutionMap
+    });
+
+    expect(result.resolved).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(manifest.entries[0].action).toBe('RENAME');
+    expect(manifest.entries[0].initiative).toBe('forge');
+    expect(manifest.entries[0].source).toBe('operator');
+    expect(manifest.entries[0].confidence).toBe('high');
+    expect(manifest.entries[0].newPath).toContain('forge-prd');
+    // Prompt MUST NOT have been invoked — resolution map takes precedence
+    expect(mockPromptFn).not.toHaveBeenCalled();
+  });
+
+  test('resolutionMap skip → entry becomes SKIP with source operator', async () => {
+    const manifest = makeManifest([
+      { action: 'AMBIGUOUS', oldPath: 'planning-artifacts/prd.md', dir: 'planning-artifacts', artifactType: 'prd', candidates: ['gyre'], initiative: null, newPath: null }
+    ]);
+    const resolutionMap = {
+      'planning-artifacts/prd.md': { action: 'skip' }
+    };
+
+    const result = await resolveAmbiguous(manifest, makeTaxonomy(), '/fake', {
+      promptFn: mockPromptFn,
+      resolutionMap
+    });
+
+    expect(result.skipped).toBe(1);
+    expect(manifest.entries[0].action).toBe('SKIP');
+    expect(manifest.entries[0].source).toBe('operator');
+    expect(mockPromptFn).not.toHaveBeenCalled();
+  });
+
+  test('resolutionMap takes precedence over --force', async () => {
+    const manifest = makeManifest([
+      { action: 'AMBIGUOUS', oldPath: 'planning-artifacts/prd.md', dir: 'planning-artifacts', artifactType: 'prd', candidates: ['gyre'], initiative: null, newPath: null }
+    ]);
+    const resolutionMap = {
+      'planning-artifacts/prd.md': { action: 'rename', initiative: 'gyre' }
+    };
+
+    const result = await resolveAmbiguous(manifest, makeTaxonomy(), '/fake', {
+      force: true,
+      promptFn: mockPromptFn,
+      resolutionMap
+    });
+
+    // --force would have skipped this; resolution map renames it instead
+    expect(result.resolved).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(manifest.entries[0].action).toBe('RENAME');
+  });
+
+  test('resolutionMap entry not present → falls through to existing logic', async () => {
+    mockPromptFn.mockResolvedValue('gyre');
+    const manifest = makeManifest([
+      { action: 'AMBIGUOUS', oldPath: 'planning-artifacts/prd.md', dir: 'planning-artifacts', artifactType: 'prd', candidates: ['gyre'], initiative: null, newPath: null }
+    ]);
+    const resolutionMap = {
+      'planning-artifacts/other.md': { action: 'skip' }  // Not a match for prd.md
+    };
+
+    const result = await resolveAmbiguous(manifest, makeTaxonomy(), '/fake', {
+      promptFn: mockPromptFn,
+      resolutionMap
+    });
+
+    // Falls through to interactive prompt
+    expect(mockPromptFn).toHaveBeenCalledTimes(1);
+    expect(result.resolved).toBe(1);
+    expect(manifest.entries[0].action).toBe('RENAME');
+  });
+
+  test('resolutionMap rename for entry with no artifactType → falls back to synthetic note type', async () => {
+    // Taxonomy MUST declare 'note' as a valid artifact_type for the synthetic fallback to fire.
+    const taxonomy = {
+      initiatives: { platform: ['gyre', 'forge', 'helm'], user: [] },
+      artifact_types: ['prd', 'epic', 'arch', 'note'],
+      aliases: {}
+    };
+    const manifest = makeManifest([
+      { action: 'AMBIGUOUS', oldPath: 'planning-artifacts/random-thoughts.md', dir: 'planning-artifacts', artifactType: null, candidates: [], initiative: null, newPath: null }
+    ]);
+    const resolutionMap = {
+      'planning-artifacts/random-thoughts.md': { action: 'rename', initiative: 'gyre' }
+    };
+
+    const result = await resolveAmbiguous(manifest, taxonomy, '/fake', {
+      promptFn: mockPromptFn,
+      resolutionMap
+    });
+
+    // Without resolution map, this would auto-skip (no candidates).
+    // With resolution map, we honor the override and use a synthetic 'note' type.
+    expect(result.resolved).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(manifest.entries[0].action).toBe('RENAME');
+    expect(manifest.entries[0].artifactType).toBe('note');
+    expect(manifest.entries[0].newPath).toContain('gyre-note');
+  });
+
+  test('synthetic note fallback NOT applied when taxonomy lacks note type → entry stays AMBIGUOUS', async () => {
+    // Default test taxonomy does NOT include 'note' in artifact_types.
+    const taxonomy = makeTaxonomy(); // artifact_types: ['prd', 'epic', 'arch']
+    const manifest = makeManifest([
+      { action: 'AMBIGUOUS', oldPath: 'planning-artifacts/random-thoughts.md', dir: 'planning-artifacts', artifactType: null, candidates: [], initiative: null, newPath: null }
+    ]);
+    const resolutionMap = {
+      'planning-artifacts/random-thoughts.md': { action: 'rename', initiative: 'gyre' }
+    };
+
+    // Suppress the warning console output during this test
+    const origWarn = console.warn;
+    console.warn = () => {};
+    try {
+      await resolveAmbiguous(manifest, taxonomy, '/fake', {
+        promptFn: mockPromptFn,
+        resolutionMap
+      });
+    } finally {
+      console.warn = origWarn;
+    }
+
+    // Without 'note' in the taxonomy, the rename can't happen — entry falls through
+    // to no-candidates auto-skip (since candidates is empty).
+    expect(manifest.entries[0].action).toBe('SKIP');
+  });
+
+  test('resolutionMap rename derives entry.dir from oldPath when dir is missing', async () => {
+    const taxonomy = {
+      initiatives: { platform: ['gyre'], user: [] },
+      artifact_types: ['prd'],
+      aliases: {}
+    };
+    const manifest = makeManifest([
+      // Synthetic entry with no `dir` field set — exercises the safety net
+      { action: 'AMBIGUOUS', oldPath: 'planning-artifacts/foo.md', artifactType: 'prd', candidates: [], initiative: null, newPath: null }
+    ]);
+    const resolutionMap = {
+      'planning-artifacts/foo.md': { action: 'rename', initiative: 'gyre' }
+    };
+
+    const result = await resolveAmbiguous(manifest, taxonomy, '/fake', {
+      promptFn: mockPromptFn,
+      resolutionMap
+    });
+
+    expect(result.resolved).toBe(1);
+    expect(manifest.entries[0].action).toBe('RENAME');
+    // Critical assertion: newPath must NOT start with 'undefined/'
+    expect(manifest.entries[0].newPath).not.toMatch(/^undefined\//);
+    expect(manifest.entries[0].newPath).toMatch(/^planning-artifacts\//);
+  });
+
+  test('resolutionMap with unknown action throws (no silent fall-through)', async () => {
+    const manifest = makeManifest([
+      { action: 'AMBIGUOUS', oldPath: 'a.md', dir: 'planning-artifacts', artifactType: 'prd', candidates: ['gyre'], initiative: null, newPath: null }
+    ]);
+    // Build a malformed map directly (bypassing loadResolutionMap which would catch this)
+    const resolutionMap = { 'a.md': { action: 'delete' } };
+
+    await expect(resolveAmbiguous(manifest, makeTaxonomy(), '/fake', {
+      promptFn: mockPromptFn,
+      resolutionMap
+    })).rejects.toThrow(/unknown action 'delete'/);
+  });
+});
+
+// --- Story 6.4: loadResolutionMap tests ---
+
+describe('loadResolutionMap', () => {
+  let loadResolutionMap;
+  let tmpDir;
+
+  const makeTaxonomy = () => ({
+    initiatives: { platform: ['gyre', 'forge', 'helm'], user: [] },
+    artifact_types: ['prd', 'epic'],
+    aliases: {}
+  });
+
+  beforeAll(() => {
+    jest.restoreAllMocks();
+    jest.resetModules();
+    loadResolutionMap = require('../../scripts/lib/artifact-utils').loadResolutionMap;
+  });
+
+  beforeEach(() => {
+    const fs = require('fs-extra');
+    const os = require('os');
+    const path = require('path');
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'resolution-map-'));
+  });
+
+  afterEach(() => {
+    const fs = require('fs-extra');
+    if (tmpDir) fs.removeSync(tmpDir);
+  });
+
+  function writeFile(name, content) {
+    const fs = require('fs-extra');
+    const path = require('path');
+    const filePath = path.join(tmpDir, name);
+    fs.writeFileSync(filePath, content, 'utf8');
+    return filePath;
+  }
+
+  test('valid file → returns the resolutions object', () => {
+    const filePath = writeFile('valid.json', JSON.stringify({
+      schemaVersion: 1,
+      resolutions: {
+        'planning-artifacts/foo.md': { action: 'rename', initiative: 'gyre' },
+        'planning-artifacts/bar.md': { action: 'skip' }
+      }
+    }));
+
+    const result = loadResolutionMap(filePath, makeTaxonomy());
+    expect(result['planning-artifacts/foo.md']).toEqual({ action: 'rename', initiative: 'gyre' });
+    expect(result['planning-artifacts/bar.md']).toEqual({ action: 'skip' });
+  });
+
+  test('file not found → throws with clear message', () => {
+    const path = require('path');
+    expect(() => loadResolutionMap(path.join(tmpDir, 'missing.json'), makeTaxonomy()))
+      .toThrow(/Resolution file not found/);
+  });
+
+  test('invalid JSON → throws with clear message', () => {
+    const filePath = writeFile('bad.json', '{ not valid json');
+    expect(() => loadResolutionMap(filePath, makeTaxonomy()))
+      .toThrow(/Invalid JSON in resolution file/);
+  });
+
+  test('missing schemaVersion → throws', () => {
+    const filePath = writeFile('no-version.json', JSON.stringify({
+      resolutions: { 'a.md': { action: 'skip' } }
+    }));
+    expect(() => loadResolutionMap(filePath, makeTaxonomy()))
+      .toThrow(/Unsupported schemaVersion/);
+  });
+
+  test('wrong schemaVersion → throws', () => {
+    const filePath = writeFile('wrong-version.json', JSON.stringify({
+      schemaVersion: 2,
+      resolutions: {}
+    }));
+    expect(() => loadResolutionMap(filePath, makeTaxonomy()))
+      .toThrow(/Unsupported schemaVersion 2/);
+  });
+
+  test('missing resolutions object → throws', () => {
+    const filePath = writeFile('no-resolutions.json', JSON.stringify({ schemaVersion: 1 }));
+    expect(() => loadResolutionMap(filePath, makeTaxonomy()))
+      .toThrow(/missing required 'resolutions' object/);
+  });
+
+  test('invalid action → throws with the bad action and oldPath', () => {
+    const filePath = writeFile('bad-action.json', JSON.stringify({
+      schemaVersion: 1,
+      resolutions: { 'foo.md': { action: 'delete' } }
+    }));
+    expect(() => loadResolutionMap(filePath, makeTaxonomy()))
+      .toThrow(/Invalid action 'delete' for foo\.md/);
+  });
+
+  test('rename without initiative → throws', () => {
+    const filePath = writeFile('no-init.json', JSON.stringify({
+      schemaVersion: 1,
+      resolutions: { 'foo.md': { action: 'rename' } }
+    }));
+    expect(() => loadResolutionMap(filePath, makeTaxonomy()))
+      .toThrow(/has action='rename' but no initiative/);
+  });
+
+  test('unknown initiative → throws with the bad initiative name', () => {
+    const filePath = writeFile('bad-init.json', JSON.stringify({
+      schemaVersion: 1,
+      resolutions: { 'foo.md': { action: 'rename', initiative: 'mystery' } }
+    }));
+    expect(() => loadResolutionMap(filePath, makeTaxonomy()))
+      .toThrow(/Unknown initiative 'mystery' for foo\.md/);
+  });
+
+  test('user-section initiative is accepted', () => {
+    const taxonomy = {
+      initiatives: { platform: ['gyre'], user: ['custom'] },
+      artifact_types: [],
+      aliases: {}
+    };
+    const filePath = writeFile('user-init.json', JSON.stringify({
+      schemaVersion: 1,
+      resolutions: { 'foo.md': { action: 'rename', initiative: 'custom' } }
+    }));
+    const result = loadResolutionMap(filePath, taxonomy);
+    expect(result['foo.md'].initiative).toBe('custom');
+  });
+
+  test('__proto__ key is rejected (prototype pollution guard)', () => {
+    // Write raw JSON because JS literal `{ '__proto__': ... }` invokes the prototype setter
+    // and would never produce a real own __proto__ property.
+    const filePath = writeFile('proto.json', '{"schemaVersion":1,"resolutions":{"__proto__":{"action":"skip"}}}');
+    expect(() => loadResolutionMap(filePath, makeTaxonomy()))
+      .toThrow(/Unsafe resolution key '__proto__'/);
+  });
+
+  test('constructor key is rejected', () => {
+    const filePath = writeFile('ctor.json', '{"schemaVersion":1,"resolutions":{"constructor":{"action":"skip"}}}');
+    expect(() => loadResolutionMap(filePath, makeTaxonomy()))
+      .toThrow(/Unsafe resolution key 'constructor'/);
+  });
+
+  test('returned map has null prototype (defense in depth)', () => {
+    const filePath = writeFile('proto-check.json', JSON.stringify({
+      schemaVersion: 1,
+      resolutions: { 'a.md': { action: 'skip' } }
+    }));
+    const result = loadResolutionMap(filePath, makeTaxonomy());
+    // The returned map is built via Object.create(null), so it has no prototype
+    expect(Object.getPrototypeOf(result)).toBeNull();
+  });
 });
 
 // --- generateRenameMap tests ---
