@@ -328,7 +328,7 @@ development_status:
   ag-6-1-wire-loom-master-agent: done
   ag-6-2-migration-inference-improvements: done
   ag-6-3-portfolio-attribution-improvements: done
-  ag-6-4-migration-skill-wrapper: in-progress
+  ag-6-4-migration-skill-wrapper: done
   ag-6-5-portfolio-skill-wrapper: ready-for-dev
   ag-6-6-skill-registration-wiring: backlog
   ag-epic-6-retrospective: optional
