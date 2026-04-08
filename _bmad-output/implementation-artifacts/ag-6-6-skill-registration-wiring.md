@@ -1,6 +1,6 @@
 # Story 6.6: Skill Registration & Wiring
 
-Status: review
+Status: done
 
 ## Story
 
