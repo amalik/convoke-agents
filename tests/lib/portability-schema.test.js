@@ -34,31 +34,32 @@ const EXPECTED_HEADER_COLUMNS = [
 ];
 
 /**
- * CSV-aware column counter that respects double-quoted fields
- * (so commas inside quoted descriptions don't inflate the count).
- */
-function countCsvColumns(line) {
-  let count = 1;
-  let inQuotes = false;
-  for (const ch of line) {
-    if (ch === '"') inQuotes = !inQuotes;
-    else if (ch === ',' && !inQuotes) count++;
-  }
-  return count;
-}
-
-/**
- * Minimal CSV row parser that handles quoted fields.
- * Sufficient for skill-manifest.csv which uses simple quoted strings.
+ * RFC-4180-aware CSV row parser. Single source of truth for both
+ * column counting and field extraction (P1-P3 from sp-1-1 review).
+ *
+ * Handles:
+ * - Quoted fields containing commas
+ * - Escaped quotes (`""` inside a quoted field → literal `"`)
+ * - Unquoted fields
+ * - Trailing CR (CRLF line endings)
  */
 function parseCsvRow(line) {
+  // Strip trailing CR for CRLF tolerance
+  if (line.endsWith('\r')) line = line.slice(0, -1);
+
   const fields = [];
   let current = '';
   let inQuotes = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (ch === '"') {
-      inQuotes = !inQuotes;
+      // RFC-4180: doubled quote inside a quoted field is a literal "
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
     } else if (ch === ',' && !inQuotes) {
       fields.push(current);
       current = '';
@@ -67,8 +68,12 @@ function parseCsvRow(line) {
     }
   }
   fields.push(current);
-  // Strip surrounding double quotes from each field
-  return fields.map((f) => f.replace(/^"|"$/g, ''));
+  return fields;
+}
+
+/** Counts columns by parsing the row and returning field count. */
+function countCsvColumns(line) {
+  return parseCsvRow(line).length;
 }
 
 describe('Skill manifest portability schema', () => {
@@ -79,8 +84,12 @@ describe('Skill manifest portability schema', () => {
   beforeAll(() => {
     const projectRoot = findProjectRoot();
     const manifestPath = path.join(projectRoot, '_bmad', '_config', 'skill-manifest.csv');
-    const content = fs.readFileSync(manifestPath, 'utf8');
-    lines = content.split('\n').filter((l) => l.length > 0);
+    let content = fs.readFileSync(manifestPath, 'utf8');
+    // Strip UTF-8 BOM if present (Excel round-trip protection)
+    if (content.charCodeAt(0) === 0xfeff) content = content.slice(1);
+    // Split on \n and ignore lines that are blank or whitespace-only (handles
+    // CRLF, CR-only legacy files, and accidental whitespace rows)
+    lines = content.split('\n').filter((l) => /\S/.test(l));
     header = lines[0];
     dataRows = lines.slice(1);
   });
