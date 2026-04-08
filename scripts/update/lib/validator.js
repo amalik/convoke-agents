@@ -47,6 +47,9 @@ async function validateInstallation(preMigrationData = {}, projectRoot) {
   // 8. Enhance module validation (optional — passes if not installed)
   checks.push(await validateEnhanceModule(projectRoot));
 
+  // 9. Artifacts module validation (optional — passes if not installed)
+  checks.push(await validateArtifactsModule(projectRoot));
+
   const allPassed = checks.every(c => c.passed);
 
   return {
@@ -480,6 +483,86 @@ async function validateEnhanceModule(projectRoot) {
 }
 
 /**
+ * Validate Artifacts module installation (optional — passes if not installed)
+ * Performs 5-point verification: directory, config, workflows array, per-workflow entry, per-workflow skill wrapper
+ * @param {string} projectRoot - Absolute path to project root
+ * @returns {Promise<object>} Validation check result
+ */
+async function validateArtifactsModule(projectRoot) {
+  const check = {
+    name: 'Artifacts module',
+    passed: false,
+    error: null
+  };
+
+  try {
+    const artifactsDir = path.join(projectRoot, '_bmad/bme/_artifacts');
+
+    // Check 1: Directory exists — if not, Artifacts is simply not installed (optional)
+    if (!fs.existsSync(artifactsDir)) {
+      check.passed = true;
+      check.info = 'not installed';
+      return check;
+    }
+
+    // Check 2: Config parse
+    const configPath = path.join(artifactsDir, 'config.yaml');
+    if (!fs.existsSync(configPath)) {
+      check.error = 'Artifacts: config.yaml not found';
+      return check;
+    }
+
+    let config = null;
+    try {
+      config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+    } catch (err) {
+      check.error = `Artifacts: config.yaml parse error: ${err.message}`;
+      return check;
+    }
+
+    if (!config || typeof config !== 'object') {
+      check.error = 'Artifacts: config.yaml is empty or invalid';
+      return check;
+    }
+
+    // Check 3: Workflows array non-empty
+    if (!Array.isArray(config.workflows) || config.workflows.length === 0) {
+      check.error = 'Artifacts: config.yaml has no workflows array';
+      return check;
+    }
+
+    // Checks 4 & 5: Per-workflow entry point and skill wrapper
+    for (const wf of config.workflows) {
+      if (!wf || !wf.name || !wf.entry) {
+        check.error = `Artifacts: workflow entry missing name or entry field`;
+        return check;
+      }
+
+      // Check 4: Workflow entry point file exists
+      const entryPath = path.join(artifactsDir, wf.entry);
+      if (!fs.existsSync(entryPath)) {
+        check.error = `Artifacts: workflow entry missing for ${wf.name}: ${wf.entry}`;
+        return check;
+      }
+
+      // Check 5: Skill wrapper exists at .claude/skills/{workflow.name}/SKILL.md
+      // (workflow.name already carries the bmad- prefix; do NOT synthesize bmad-${wf.name})
+      const skillWrapperPath = path.join(projectRoot, '.claude', 'skills', wf.name, 'SKILL.md');
+      if (!fs.existsSync(skillWrapperPath)) {
+        check.error = `Artifacts: skill wrapper missing for ${wf.name}`;
+        return check;
+      }
+    }
+
+    check.passed = true;
+  } catch (error) {
+    check.error = error.message;
+  }
+
+  return check;
+}
+
+/**
  * Validate a SKILL.md file has required frontmatter fields
  * @param {string} skillMdPath - Absolute path to SKILL.md file
  * @returns {Promise<object>} Validation result { valid, errors }
@@ -644,6 +727,7 @@ module.exports = {
   validateDeprecatedWorkflows,
   validateWorkflowStepStructure,
   validateEnhanceModule,
+  validateArtifactsModule,
   validateSkillMd,
   validateStepFiles,
   validateSkillCohesion,
