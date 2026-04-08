@@ -1,3 +1,9 @@
+'use strict';
+
+const { describe, it, before, beforeEach, afterEach } = require('node:test');
+const assert = require('node:assert/strict');
+const { mock } = require('node:test');
+
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
@@ -8,7 +14,7 @@ const {
   DEFAULT_INCLUDE_DIRS,
   PLATFORM_INITIATIVES,
   DEFAULT_ARTIFACT_TYPES,
-  VALID_DIR_PATTERN
+  VALID_DIR_PATTERN,
 } = require('../../scripts/migrate-artifacts');
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
 const { generateManifest, formatManifest } = require('../../scripts/lib/artifact-utils');
@@ -16,144 +22,157 @@ const { generateManifest, formatManifest } = require('../../scripts/lib/artifact
 // --- parseArgs tests ---
 
 describe('parseArgs', () => {
-  test('default args -> correct defaults', () => {
+  it('default args -> correct defaults', () => {
     const result = parseArgs([]);
-    expect(result.help).toBe(false);
-    expect(result.apply).toBe(false);
-    expect(result.force).toBe(false);
-    expect(result.verbose).toBe(false);
-    expect(result.includeDirs).toEqual(DEFAULT_INCLUDE_DIRS);
-    expect(result.includeDirs).toHaveLength(3);
+    assert.equal(result.help, false);
+    assert.equal(result.apply, false);
+    assert.equal(result.force, false);
+    assert.equal(result.verbose, false);
+    assert.deepEqual(result.includeDirs, DEFAULT_INCLUDE_DIRS);
+    assert.equal(result.includeDirs.length, 3);
   });
 
-  test('--help flag detected', () => {
-    expect(parseArgs(['--help']).help).toBe(true);
-    expect(parseArgs(['-h']).help).toBe(true);
+  it('--help flag detected', () => {
+    assert.equal(parseArgs(['--help']).help, true);
+    assert.equal(parseArgs(['-h']).help, true);
   });
 
-  test('--include a,b,c parsed correctly', () => {
+  it('--include a,b,c parsed correctly', () => {
     const result = parseArgs(['--include', 'a,b,c']);
-    expect(result.includeDirs).toEqual(['a', 'b', 'c']);
+    assert.deepEqual(result.includeDirs, ['a', 'b', 'c']);
   });
 
-  test('--include trims whitespace', () => {
+  it('--include trims whitespace', () => {
     const result = parseArgs(['--include', ' a , b , c ']);
-    expect(result.includeDirs).toEqual(['a', 'b', 'c']);
+    assert.deepEqual(result.includeDirs, ['a', 'b', 'c']);
   });
 
-  test('--include replaces defaults', () => {
+  it('--include replaces defaults', () => {
     const result = parseArgs(['--include', 'custom-dir']);
-    expect(result.includeDirs).toEqual(['custom-dir']);
-    expect(result.includeDirs).not.toEqual(DEFAULT_INCLUDE_DIRS);
+    assert.deepEqual(result.includeDirs, ['custom-dir']);
+    assert.notDeepEqual(result.includeDirs, DEFAULT_INCLUDE_DIRS);
   });
 
-  test('--include without value uses defaults', () => {
+  it('--include without value uses defaults', () => {
     const result = parseArgs(['--include']);
-    expect(result.includeDirs).toEqual([...DEFAULT_INCLUDE_DIRS]);
+    assert.deepEqual(result.includeDirs, [...DEFAULT_INCLUDE_DIRS]);
   });
 
-  test('--include followed by another flag does not consume the flag', () => {
+  it('--include followed by another flag does not consume the flag', () => {
     const result = parseArgs(['--include', '--verbose']);
-    expect(result.includeDirs).toEqual([...DEFAULT_INCLUDE_DIRS]);
-    expect(result.verbose).toBe(true);
+    assert.deepEqual(result.includeDirs, [...DEFAULT_INCLUDE_DIRS]);
+    assert.equal(result.verbose, true);
   });
 
   // --- Story 6.4: --resolution-file flag ---
 
-  test('default args → resolutionFile is null', () => {
+  it('default args → resolutionFile is null', () => {
     const result = parseArgs([]);
-    expect(result.resolutionFile).toBeNull();
+    assert.equal(result.resolutionFile, null);
   });
 
-  test('--resolution-file <path> captured', () => {
+  it('--resolution-file <path> captured', () => {
     const result = parseArgs(['--resolution-file', '/tmp/resolutions.json']);
-    expect(result.resolutionFile).toBe('/tmp/resolutions.json');
+    assert.equal(result.resolutionFile, '/tmp/resolutions.json');
   });
 
-  test('--resolution-file followed by another flag → parse error (does not silently swallow)', () => {
+  it('--resolution-file followed by another flag → parse error (does not silently swallow)', () => {
     const result = parseArgs(['--resolution-file', '--force']);
-    expect(result.resolutionFile).toBeNull();
-    expect(result.resolutionFileError).toBeTruthy();
-    expect(result.resolutionFileError).toContain('--resolution-file requires a path');
+    assert.equal(result.resolutionFile, null);
+    assert.ok(result.resolutionFileError);
+    assert.ok(result.resolutionFileError.includes('--resolution-file requires a path'));
     // The next flag is still consumed normally
-    expect(result.force).toBe(true);
+    assert.equal(result.force, true);
   });
 
-  test('--resolution-file without value → parse error', () => {
+  it('--resolution-file without value → parse error', () => {
     const result = parseArgs(['--resolution-file']);
-    expect(result.resolutionFile).toBeNull();
-    expect(result.resolutionFileError).toBeTruthy();
-    expect(result.resolutionFileError).toContain('<missing>');
+    assert.equal(result.resolutionFile, null);
+    assert.ok(result.resolutionFileError);
+    assert.ok(result.resolutionFileError.includes('<missing>'));
   });
 
-  test('--resolution-file with single-dash value → parse error', () => {
+  it('--resolution-file with single-dash value → parse error', () => {
     const result = parseArgs(['--resolution-file', '-foo.json']);
-    expect(result.resolutionFile).toBeNull();
-    expect(result.resolutionFileError).toBeTruthy();
+    assert.equal(result.resolutionFile, null);
+    assert.ok(result.resolutionFileError);
   });
 
-  test('--resolution-file=path (GNU equals form) is accepted', () => {
+  it('--resolution-file=path (GNU equals form) is accepted', () => {
     const result = parseArgs(['--resolution-file=/tmp/r.json']);
-    expect(result.resolutionFile).toBe('/tmp/r.json');
-    expect(result.resolutionFileError).toBeNull();
+    assert.equal(result.resolutionFile, '/tmp/r.json');
+    assert.equal(result.resolutionFileError, null);
   });
 
-  test('--resolution-file= (empty equals form) → parse error', () => {
+  it('--resolution-file= (empty equals form) → parse error', () => {
     const result = parseArgs(['--resolution-file=']);
-    expect(result.resolutionFile).toBeNull();
-    expect(result.resolutionFileError).toBeTruthy();
+    assert.equal(result.resolutionFile, null);
+    assert.ok(result.resolutionFileError);
   });
 
-  test('valid --resolution-file → no error', () => {
+  it('valid --resolution-file → no error', () => {
     const result = parseArgs(['--resolution-file', '/tmp/resolutions.json']);
-    expect(result.resolutionFile).toBe('/tmp/resolutions.json');
-    expect(result.resolutionFileError).toBeNull();
+    assert.equal(result.resolutionFile, '/tmp/resolutions.json');
+    assert.equal(result.resolutionFileError, null);
   });
 
-  test('--resolution-file combined with --apply --force', () => {
+  it('--resolution-file combined with --apply --force', () => {
     const result = parseArgs(['--apply', '--force', '--resolution-file', 'r.json']);
-    expect(result.apply).toBe(true);
-    expect(result.force).toBe(true);
-    expect(result.resolutionFile).toBe('r.json');
-    expect(result.resolutionFileError).toBeNull();
+    assert.equal(result.apply, true);
+    assert.equal(result.force, true);
+    assert.equal(result.resolutionFile, 'r.json');
+    assert.equal(result.resolutionFileError, null);
   });
 
-  test('--include with path traversal rejects invalid names', () => {
-    const spy = jest.spyOn(console, 'warn').mockImplementation();
-    const result = parseArgs(['--include', '../../../etc,planning-artifacts']);
-    expect(result.includeDirs).toEqual(['planning-artifacts']);
-    expect(spy).toHaveBeenCalledWith(expect.stringContaining('Invalid directory names'));
-    spy.mockRestore();
+  it('--include with path traversal rejects invalid names', () => {
+    // Silence the warning that parseArgs emits, and capture the call so we
+    // can assert on it. node:test/mock equivalent of jest.spyOn + mockImplementation.
+    const warnSpy = mock.method(console, 'warn', () => {});
+    try {
+      const result = parseArgs(['--include', '../../../etc,planning-artifacts']);
+      assert.deepEqual(result.includeDirs, ['planning-artifacts']);
+
+      // Assert console.warn was called with a string containing 'Invalid directory names'.
+      // jest.toHaveBeenCalledWith(expect.stringContaining(...)) becomes a manual scan
+      // of mock.calls[].arguments. Less terse, but every step is visible.
+      const matched = warnSpy.mock.calls.some((call) => {
+        const firstArg = call.arguments[0];
+        return typeof firstArg === 'string' && firstArg.includes('Invalid directory names');
+      });
+      assert.ok(matched, 'console.warn should have been called with "Invalid directory names" message');
+    } finally {
+      warnSpy.mock.restore();
+    }
   });
 
-  test('--include returns copy of defaults (not same reference)', () => {
+  it('--include returns copy of defaults (not same reference)', () => {
     const result1 = parseArgs([]);
     const result2 = parseArgs([]);
-    expect(result1.includeDirs).not.toBe(result2.includeDirs);
-    expect(result1.includeDirs).toEqual(result2.includeDirs);
+    assert.notStrictEqual(result1.includeDirs, result2.includeDirs);
+    assert.deepEqual(result1.includeDirs, result2.includeDirs);
   });
 
-  test('--apply and --force flags detected', () => {
+  it('--apply and --force flags detected', () => {
     const result = parseArgs(['--apply', '--force']);
-    expect(result.apply).toBe(true);
-    expect(result.force).toBe(true);
+    assert.equal(result.apply, true);
+    assert.equal(result.force, true);
   });
 
-  test('--verbose flag detected', () => {
-    expect(parseArgs(['--verbose']).verbose).toBe(true);
+  it('--verbose flag detected', () => {
+    assert.equal(parseArgs(['--verbose']).verbose, true);
   });
 
-  test('unknown flags ignored (no error)', () => {
+  it('unknown flags ignored (no error)', () => {
     const result = parseArgs(['--unknown', '--also-unknown', 'random']);
-    expect(result.help).toBe(false);
-    expect(result.includeDirs).toEqual(DEFAULT_INCLUDE_DIRS);
+    assert.equal(result.help, false);
+    assert.deepEqual(result.includeDirs, DEFAULT_INCLUDE_DIRS);
   });
 
-  test('multiple flags combined', () => {
+  it('multiple flags combined', () => {
     const result = parseArgs(['--verbose', '--include', 'a,b', '--help']);
-    expect(result.verbose).toBe(true);
-    expect(result.help).toBe(true);
-    expect(result.includeDirs).toEqual(['a', 'b']);
+    assert.equal(result.verbose, true);
+    assert.equal(result.help, true);
+    assert.deepEqual(result.includeDirs, ['a', 'b']);
   });
 });
 
@@ -171,47 +190,47 @@ describe('bootstrapTaxonomy', () => {
     await fs.remove(tmpDir);
   });
 
-  test('creates taxonomy.yaml when absent', () => {
+  it('creates taxonomy.yaml when absent', () => {
     const created = bootstrapTaxonomy(tmpDir);
-    expect(created).toBe(true);
+    assert.equal(created, true);
 
     const configPath = path.join(tmpDir, '_bmad', '_config', 'taxonomy.yaml');
-    expect(fs.existsSync(configPath)).toBe(true);
+    assert.equal(fs.existsSync(configPath), true);
 
     const content = yaml.load(fs.readFileSync(configPath, 'utf8'));
-    expect(content.initiatives.platform).toEqual(PLATFORM_INITIATIVES);
-    expect(content.initiatives.user).toEqual([]);
-    expect(content.artifact_types).toEqual(DEFAULT_ARTIFACT_TYPES);
-    expect(content.aliases).toEqual({});
+    assert.deepEqual(content.initiatives.platform, PLATFORM_INITIATIVES);
+    assert.deepEqual(content.initiatives.user, []);
+    assert.deepEqual(content.artifact_types, DEFAULT_ARTIFACT_TYPES);
+    assert.deepEqual(content.aliases, {});
   });
 
-  test('does not overwrite when present', () => {
+  it('does not overwrite when present', () => {
     const configPath = path.join(tmpDir, '_bmad', '_config', 'taxonomy.yaml');
     fs.writeFileSync(configPath, 'existing: true\n', 'utf8');
 
     const created = bootstrapTaxonomy(tmpDir);
-    expect(created).toBe(false);
+    assert.equal(created, false);
 
     const content = fs.readFileSync(configPath, 'utf8');
-    expect(content).toBe('existing: true\n');
+    assert.equal(content, 'existing: true\n');
   });
 
-  test('bootstrap has empty aliases (not migration-specific ones)', () => {
+  it('bootstrap has empty aliases (not migration-specific ones)', () => {
     bootstrapTaxonomy(tmpDir);
     const configPath = path.join(tmpDir, '_bmad', '_config', 'taxonomy.yaml');
     const content = yaml.load(fs.readFileSync(configPath, 'utf8'));
-    expect(content.aliases).toEqual({});
-    expect(Object.keys(content.aliases)).toHaveLength(0);
+    assert.deepEqual(content.aliases, {});
+    assert.equal(Object.keys(content.aliases).length, 0);
   });
 
-  test('creates _config directory if absent', async () => {
+  it('creates _config directory if absent', async () => {
     const bareDir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-bare-'));
     await fs.ensureDir(path.join(bareDir, '_bmad'));
     // _config does not exist yet
 
     const created = bootstrapTaxonomy(bareDir);
-    expect(created).toBe(true);
-    expect(fs.existsSync(path.join(bareDir, '_bmad', '_config', 'taxonomy.yaml'))).toBe(true);
+    assert.equal(created, true);
+    assert.equal(fs.existsSync(path.join(bareDir, '_bmad', '_config', 'taxonomy.yaml')), true);
 
     await fs.remove(bareDir);
   });
@@ -220,17 +239,17 @@ describe('bootstrapTaxonomy', () => {
 // --- Archive exclusion ---
 
 describe('archive exclusion', () => {
-  test('_archive in --include is parsed (filtering happens in main)', () => {
+  it('_archive in --include is parsed (filtering happens in main)', () => {
     // parseArgs passes through all valid dir names; main() does the _archive filtering
     const args = parseArgs(['--include', 'planning-artifacts,_archive,vortex-artifacts']);
-    expect(args.includeDirs).toContain('_archive');
-    expect(args.includeDirs).toContain('planning-artifacts');
+    assert.ok(args.includeDirs.includes('_archive'));
+    assert.ok(args.includeDirs.includes('planning-artifacts'));
   });
 
-  test('_archive-only include would be caught by empty scope check in main', () => {
+  it('_archive-only include would be caught by empty scope check in main', () => {
     const args = parseArgs(['--include', '_archive']);
-    const filtered = args.includeDirs.filter(d => d !== '_archive');
-    expect(filtered).toHaveLength(0);
+    const filtered = args.includeDirs.filter((d) => d !== '_archive');
+    assert.equal(filtered.length, 0);
   });
 });
 
@@ -248,20 +267,20 @@ describe('NFR22 taxonomy error handling', () => {
     await fs.remove(tmpDir);
   });
 
-  test('malformed taxonomy produces actionable error from readTaxonomy', () => {
+  it('malformed taxonomy produces actionable error from readTaxonomy', () => {
     const configPath = path.join(tmpDir, '_bmad', '_config', 'taxonomy.yaml');
     fs.writeFileSync(configPath, 'not: valid: yaml: [broken', 'utf8');
 
     const { readTaxonomy } = require('../../scripts/lib/artifact-utils');
-    expect(() => readTaxonomy(tmpDir)).toThrow(/Invalid YAML/);
+    assert.throws(() => readTaxonomy(tmpDir), /Invalid YAML/);
   });
 
-  test('taxonomy with missing required fields produces clear error', () => {
+  it('taxonomy with missing required fields produces clear error', () => {
     const configPath = path.join(tmpDir, '_bmad', '_config', 'taxonomy.yaml');
     fs.writeFileSync(configPath, yaml.dump({ initiatives: { platform: 'not-an-array' } }), 'utf8');
 
     const { readTaxonomy } = require('../../scripts/lib/artifact-utils');
-    expect(() => readTaxonomy(tmpDir)).toThrow(/initiatives.platform.*must be an array/);
+    assert.throws(() => readTaxonomy(tmpDir), /initiatives.platform.*must be an array/);
   });
 });
 
@@ -270,68 +289,69 @@ describe('NFR22 taxonomy error handling', () => {
 describe('dry-run integration', () => {
   let projectRoot;
 
-  beforeAll(() => {
+  before(() => {
     projectRoot = findProjectRoot();
   });
 
   // 30-second timeout: real-repo dry-run does up to 50 git-context queries
-  // (Story 6.2 cap), which under load can exceed Jest's default 5s budget.
+  // (Story 6.2 cap), which under load can exceed the default test budget.
   // NFR2 says < 10s for 200 files; 30s gives 3x headroom for CI flake.
-  test('generateManifest + formatManifest produces non-empty output', async () => {
+  // node:test accepts an options object as the second argument to it().
+  it('generateManifest + formatManifest produces non-empty output', { timeout: 30000 }, async () => {
     const manifest = await generateManifest(projectRoot, {
       includeDirs: DEFAULT_INCLUDE_DIRS,
-      excludeDirs: ['_archive']
+      excludeDirs: ['_archive'],
     });
     const output = formatManifest(manifest);
-    expect(output.length).toBeGreaterThan(0);
-    expect(output).toContain('Manifest Summary');
-    expect(manifest.summary.total).toBeGreaterThan(0);
-  }, 30000);
+    assert.ok(output.length > 0);
+    assert.ok(output.includes('Manifest Summary'));
+    assert.ok(manifest.summary.total > 0);
+  });
 
-  test('--include with single dir restricts scope', async () => {
+  it('--include with single dir restricts scope', { timeout: 30000 }, async () => {
     const manifest = await generateManifest(projectRoot, {
       includeDirs: ['gyre-artifacts'],
-      excludeDirs: ['_archive']
+      excludeDirs: ['_archive'],
     });
     for (const entry of manifest.entries) {
-      expect(entry.dir).toBe('gyre-artifacts');
+      assert.equal(entry.dir, 'gyre-artifacts');
     }
-  }, 30000);
+  });
 });
 
 // --- --apply stub ---
 
 describe('--apply stub', () => {
-  test('parseArgs recognizes --apply', () => {
-    expect(parseArgs(['--apply']).apply).toBe(true);
+  it('parseArgs recognizes --apply', () => {
+    assert.equal(parseArgs(['--apply']).apply, true);
   });
 
-  test('parseArgs recognizes --force', () => {
-    expect(parseArgs(['--force']).force).toBe(true);
+  it('parseArgs recognizes --force', () => {
+    assert.equal(parseArgs(['--force']).force, true);
   });
 
-  test('--force without --apply is detected', () => {
+  it('--force without --apply is detected', () => {
     const args = parseArgs(['--force']);
-    expect(args.force).toBe(true);
-    expect(args.apply).toBe(false);
+    assert.equal(args.force, true);
+    assert.equal(args.apply, false);
   });
 });
 
 // --- VALID_DIR_PATTERN ---
 
 describe('VALID_DIR_PATTERN', () => {
-  test('accepts valid directory names', () => {
-    expect(VALID_DIR_PATTERN.test('planning-artifacts')).toBe(true);
-    expect(VALID_DIR_PATTERN.test('vortex-artifacts')).toBe(true);
-    expect(VALID_DIR_PATTERN.test('_archive')).toBe(true);
-    expect(VALID_DIR_PATTERN.test('custom_dir')).toBe(true);
+  it('accepts valid directory names', () => {
+    assert.equal(VALID_DIR_PATTERN.test('planning-artifacts'), true);
+    assert.equal(VALID_DIR_PATTERN.test('vortex-artifacts'), true);
+    assert.equal(VALID_DIR_PATTERN.test('_archive'), true);
+    assert.equal(VALID_DIR_PATTERN.test('custom_dir'), true);
   });
 
-  test('rejects path traversal and special characters', () => {
-    expect(VALID_DIR_PATTERN.test('../../../etc')).toBe(false);
-    expect(VALID_DIR_PATTERN.test('dir/subdir')).toBe(false);
-    expect(VALID_DIR_PATTERN.test('dir name')).toBe(false);
-    expect(VALID_DIR_PATTERN.test('$(cmd)')).toBe(false);
-    expect(VALID_DIR_PATTERN.test('')).toBe(false);
+  it('rejects path traversal and special characters', () => {
+    assert.equal(VALID_DIR_PATTERN.test('../../../etc'), false);
+    assert.equal(VALID_DIR_PATTERN.test('dir/subdir'), false);
+    assert.equal(VALID_DIR_PATTERN.test('dir name'), false);
+    assert.equal(VALID_DIR_PATTERN.test('$(cmd)'), false);
+    assert.equal(VALID_DIR_PATTERN.test(''), false);
   });
 });
