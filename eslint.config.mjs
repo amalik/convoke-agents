@@ -70,6 +70,10 @@ export default [
     }
   },
   {
-    ignores: ["node_modules/", "_bmad/", "_bmad-output/", "_quint/", "coverage/", "tests/team-factory/golden/"]
+    // tests/**/golden/ — byte-exact test fixtures captured from generators.
+    // Excluded from lint because they must mirror generator output exactly,
+    // including any unused variables. Reformatting them to satisfy lint
+    // breaks the regression contract. See tests/team-factory/golden/README.md.
+    ignores: ["node_modules/", "_bmad/", "_bmad-output/", "_quint/", "coverage/", "tests/**/golden/"]
   }
 ];
