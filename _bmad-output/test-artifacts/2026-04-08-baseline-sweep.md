@@ -282,6 +282,66 @@ Discipline matters. The temptation to fix something while I'm in there is exactl
 
 ---
 
+## ADDENDUM — 2026-04-08 (post-Story L + N + F)
+
+After this sweep, three things happened that update the floor and reveal a counting nuance worth recording:
+
+### New verified-passing floor: **1,305 tests** (was 1,283)
+
+| Stage | Sweep baseline (2026-04-08 morning) | Post-L/N/F floor (2026-04-08 evening) |
+|---|---:|---:|
+| `tests/unit/` | 408 | **429** (+21) |
+| `tests/integration/` | 78 | **78** (no change) |
+| `tests/p0/` | 642 | **642** (no change) |
+| `tests/team-factory/` | 155 (1 fail) | **156** (Story L fixed the regression) |
+| **Combined** | **1,283** | **1,305** |
+
+### Where the +22 came from (Story N investigation)
+
+- **+14 tests** from a previously-uncatalogued file: [tests/unit/refresh-installation-artifacts.test.js](../../tests/unit/refresh-installation-artifacts.test.js). It was added in commit `55c73e0` ("Create refresh-installation-artifacts.test.js") sometime between the original astonishment report scan and the baseline sweep run. **Bumped the file count from 61 → 62.**
+- **+1 test** from Story L flipping the team-factory regression from fail → pass.
+- **+7 tests** unaccounted-for. Most likely Epic 6 churn (tests added inline to existing unit files between the original scan and re-run). Not investigated — the floor number doesn't depend on the breakdown, but flagging the unknowns is honest.
+
+### Counting nuance: single-invocation vs composed invocation
+
+After Story F redefined `npm run test:all` to compose `npm test && npm run test:integration && npm run test:p0`, the composed invocation reports:
+
+```
+587 (npm test: unit + team-factory) + 78 (integration) + 642 (p0) = 1,307
+```
+
+That's 2 higher than the single-invocation floor of 1,305. The discrepancy comes from `node --test` counting test fixtures or top-level setup differently when invoked once vs three times. **The authoritative floor is 1,305** (single invocation across the four directory globs) — the +2 in the composed run is a counting artifact, not actually new tests. Anyone checking "did the floor regress?" should use the single-invocation form:
+
+```bash
+node --test tests/unit/*.test.js tests/team-factory/*.test.js \
+            tests/integration/*.test.js tests/p0/*.test.js
+```
+
+### Story F simplification was wrong (mea culpa)
+
+Earlier in this report I claimed Story F should be "one character: change `unit/` to `**/`." That advice was incorrect. The actual implementation took the more nuanced shape:
+
+- `tests/team-factory/` was added to `npm test` (immediate, safe — all tests pass after Story L)
+- `tests/lib/` was given its own dev-only `test:lib` script and **not** wired into CI yet (deferred to F.2 after Story B conversion lands)
+- `test:coverage` glob was updated in lockstep
+- `test:all` was redefined to compose runnable scripts instead of using `tests/**/*.test.js` (which would have been broken)
+
+**Why the one-character fix was wrong:** wiring `tests/lib/*` into CI immediately would have broken every Epic 6 PR until Story B lands. The phasing decision (F.1 + F.3 now, F.2 later) is the correct shape.
+
+### Updated story status (post-2026-04-08 evening)
+
+| ID | Status |
+|---|---|
+| ✅ I — Baseline sweep | Done |
+| ✅ L — Team-factory regression fix | Committed |
+| ✅ N — Test count delta investigation | Done — floor authoritative at 1,305 |
+| ✅ F.1 — Wire team-factory into `npm test` | Done |
+| ✅ F.3 — Add `test:lib` dev script | Done |
+| ⏳ F.2 — Wire `tests/lib/*` into `npm test` | Blocked by Story B |
+| Polish | Bundled into post-review commit (golden README, eslint comment, eslint glob widening, test:all rewrite, test:p0:gate dedup) |
+
+---
+
 ## Closing
 
 The sweep finished in roughly 12 minutes wall-clock. It cost almost nothing. It surfaced **one new critical finding** that the original astonishment report missed, **simplified one story** (Story F is now one character instead of 50 LOC), and **established a verifiable floor** (1,283 tests) that all future work measures against.
