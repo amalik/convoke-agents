@@ -15,6 +15,7 @@ const {
   validateDeprecatedWorkflows,
   validateWorkflowStepStructure,
   validateEnhanceModule,
+  validateArtifactsModule,
   validateSkillMd,
   validateStepFiles,
   validateSkillCohesion,
@@ -616,6 +617,115 @@ describe('validateEnhanceModule', () => {
     // Should contain multiple failures separated by "; "
     const failureCount = result.error.split('; ').length;
     assert.ok(failureCount >= 2, `Expected multiple failures, got: ${result.error}`);
+    await fs.remove(dir);
+  });
+});
+
+// === validateArtifactsModule ===
+
+describe('validateArtifactsModule', () => {
+  /** Helper: create a valid Artifacts installation in tmpDir */
+  async function createValidArtifacts(dir) {
+    const artDir = path.join(dir, '_bmad/bme/_artifacts');
+    const wf1Dir = path.join(artDir, 'workflows/bmad-migrate-artifacts');
+    const wf2Dir = path.join(artDir, 'workflows/bmad-portfolio-status');
+    await fs.ensureDir(wf1Dir);
+    await fs.ensureDir(wf2Dir);
+
+    const config = {
+      name: 'artifacts',
+      version: '1.0.0',
+      description: 'Artifacts module',
+      workflows: [
+        { name: 'bmad-migrate-artifacts', entry: 'workflows/bmad-migrate-artifacts/workflow.md', standalone: true },
+        { name: 'bmad-portfolio-status', entry: 'workflows/bmad-portfolio-status/workflow.md', standalone: true }
+      ]
+    };
+    await fs.writeFile(path.join(artDir, 'config.yaml'), yaml.dump(config), 'utf8');
+    await fs.writeFile(path.join(wf1Dir, 'workflow.md'), '# migrate', 'utf8');
+    await fs.writeFile(path.join(wf2Dir, 'workflow.md'), '# portfolio', 'utf8');
+
+    // Skill wrappers
+    const skill1 = path.join(dir, '.claude/skills/bmad-migrate-artifacts');
+    const skill2 = path.join(dir, '.claude/skills/bmad-portfolio-status');
+    await fs.ensureDir(skill1);
+    await fs.ensureDir(skill2);
+    await fs.writeFile(path.join(skill1, 'SKILL.md'), '---\nname: bmad-migrate-artifacts\n---\nContent', 'utf8');
+    await fs.writeFile(path.join(skill2, 'SKILL.md'), '---\nname: bmad-portfolio-status\n---\nContent', 'utf8');
+  }
+
+  it('passes with info "not installed" when _artifacts/ does not exist', async () => {
+    const emptyDir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-art-empty-'));
+    const result = await validateArtifactsModule(emptyDir);
+    assert.equal(result.passed, true);
+    assert.ok(result.info && result.info.includes('not installed'));
+    await fs.remove(emptyDir);
+  });
+
+  it('fails when config.yaml is missing but _artifacts/ exists', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-art-nocfg-'));
+    await fs.ensureDir(path.join(dir, '_bmad/bme/_artifacts'));
+    const result = await validateArtifactsModule(dir);
+    assert.equal(result.passed, false);
+    assert.ok(result.error.includes('config.yaml not found'));
+    await fs.remove(dir);
+  });
+
+  it('fails when config.yaml is unparseable', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-art-badyaml-'));
+    const artDir = path.join(dir, '_bmad/bme/_artifacts');
+    await fs.ensureDir(artDir);
+    await fs.writeFile(path.join(artDir, 'config.yaml'), '{{{invalid', 'utf8');
+    const result = await validateArtifactsModule(dir);
+    assert.equal(result.passed, false);
+    assert.ok(result.error.includes('parse error'));
+    await fs.remove(dir);
+  });
+
+  it('fails when workflows array is missing or empty', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-art-nowfs-'));
+    const artDir = path.join(dir, '_bmad/bme/_artifacts');
+    await fs.ensureDir(artDir);
+    await fs.writeFile(path.join(artDir, 'config.yaml'), yaml.dump({ name: 'artifacts', version: '1.0.0' }), 'utf8');
+    const result = await validateArtifactsModule(dir);
+    assert.equal(result.passed, false);
+    assert.ok(result.error.includes('no workflows array'));
+    await fs.remove(dir);
+  });
+
+  it('fails when workflow entry point file does not exist', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-art-noentry-'));
+    const artDir = path.join(dir, '_bmad/bme/_artifacts');
+    await fs.ensureDir(artDir);
+    const config = {
+      name: 'artifacts', version: '1.0.0',
+      workflows: [{ name: 'bmad-migrate-artifacts', entry: 'workflows/bmad-migrate-artifacts/workflow.md', standalone: true }]
+    };
+    await fs.writeFile(path.join(artDir, 'config.yaml'), yaml.dump(config), 'utf8');
+    // No workflow.md created
+    const result = await validateArtifactsModule(dir);
+    assert.equal(result.passed, false);
+    assert.ok(result.error.includes('workflow entry missing for bmad-migrate-artifacts'));
+    await fs.remove(dir);
+  });
+
+  it('fails when skill wrapper SKILL.md is missing', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-art-nowrap-'));
+    await createValidArtifacts(dir);
+    // Remove one skill wrapper
+    await fs.remove(path.join(dir, '.claude/skills/bmad-portfolio-status'));
+    const result = await validateArtifactsModule(dir);
+    assert.equal(result.passed, false);
+    assert.ok(result.error.includes('skill wrapper missing for bmad-portfolio-status'));
+    await fs.remove(dir);
+  });
+
+  it('passes when all checks pass', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-art-valid-'));
+    await createValidArtifacts(dir);
+    const result = await validateArtifactsModule(dir);
+    assert.equal(result.passed, true);
+    assert.equal(result.error, null);
     await fs.remove(dir);
   });
 });
