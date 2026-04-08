@@ -88,9 +88,28 @@ function findProjectRoot() {
   return null;
 }
 
+/**
+ * Assert that a version string is valid before stamping a config file.
+ * Throws a clear error if version is undefined, null, or empty.
+ * Used by refresh-installation.js, config-merger.js, and any future config writer
+ * that stamps a version field — closes I30 (ag-7-1).
+ *
+ * @param {string} version - The version string to validate
+ * @param {string} callSite - Identifier for the call site (e.g., 'enhance', 'artifacts', 'config-merger')
+ * @throws {Error} if version is not a non-empty string
+ */
+function assertVersion(version, callSite) {
+  if (version === undefined || version === null || version === '') {
+    throw new Error(
+      `Refresh: cannot stamp config — getPackageVersion() returned ${typeof version === 'string' ? "''" : typeof version}; check package.json (call site: ${callSite})`
+    );
+  }
+}
+
 module.exports = {
   getPackageVersion,
   compareVersions,
   countUserDataFiles,
-  findProjectRoot
+  findProjectRoot,
+  assertVersion
 };
