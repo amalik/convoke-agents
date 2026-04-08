@@ -251,7 +251,7 @@ describe('refreshInstallation — Enhance manifest entries', () => {
   let tmpDir;
 
   const WF_MANIFEST_HEADER = 'name,description,module,path,canonicalId\n';
-  const SK_MANIFEST_HEADER = 'canonicalId,name,description,module,path,install_to_bmad\n';
+  const SK_MANIFEST_HEADER = 'canonicalId,name,description,module,path,install_to_bmad,tier,intent,dependencies\n';
 
   beforeEach(async () => {
     tmpDir = await setupEnhanceTestDir();
