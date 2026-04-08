@@ -3,7 +3,8 @@
 const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('js-yaml');
-const { getPackageVersion } = require('./utils');
+const YAML = require('yaml'); // Comment-preserving YAML library (ag-7-1: I29). Use for WRITE sites that need to preserve comments. js-yaml stays for read-only consumers.
+const { getPackageVersion, assertVersion } = require('./utils');
 const configMerger = require('./config-merger');
 const { AGENTS, AGENT_FILES, AGENT_IDS, WORKFLOW_NAMES, USER_GUIDES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES, EXTRA_BME_AGENTS } = require('./agent-registry');
 
@@ -143,12 +144,17 @@ async function refreshInstallation(projectRoot, options = {}) {
 
     if (!isSameRoot) {
       await fs.copy(packageEnhance, targetEnhance, { overwrite: true });
-      // Stamp enhance config version to match package version
+      // Stamp enhance config version to match package version (ag-7-1: I30 + I29).
+      // Uses comment-preserving YAML.parseDocument so the doc comments survive.
       const targetEnhanceConfig = path.join(targetEnhance, 'config.yaml');
       if (fs.existsSync(targetEnhanceConfig)) {
-        const ecContent = yaml.load(fs.readFileSync(targetEnhanceConfig, 'utf8'));
-        ecContent.version = version;
-        fs.writeFileSync(targetEnhanceConfig, yaml.dump(ecContent, { lineWidth: -1 }), 'utf8');
+        assertVersion(version, 'enhance');
+        const ecDoc = YAML.parseDocument(fs.readFileSync(targetEnhanceConfig, 'utf8'));
+        if (ecDoc.errors && ecDoc.errors.length > 0) {
+          throw new Error(`Refresh: cannot parse Enhance config.yaml: ${ecDoc.errors[0].message}`);
+        }
+        ecDoc.set('version', version);
+        fs.writeFileSync(targetEnhanceConfig, ecDoc.toString({ lineWidth: 0 }), 'utf8');
       }
       changes.push('Refreshed Enhance module: _bmad/bme/_enhance/');
       if (verbose) console.log('    Refreshed Enhance module: _bmad/bme/_enhance/');
@@ -248,12 +254,17 @@ async function refreshInstallation(projectRoot, options = {}) {
         await fs.remove(targetArtifacts);
       }
       await fs.copy(packageArtifacts, targetArtifacts, { overwrite: true });
-      // Stamp artifacts config version to match package version
+      // Stamp artifacts config version to match package version (ag-7-1: I30 + I29).
+      // Uses comment-preserving YAML.parseDocument so the standalone:true doc comments survive.
       const targetArtifactsConfig = path.join(targetArtifacts, 'config.yaml');
       if (fs.existsSync(targetArtifactsConfig)) {
-        const acContent = yaml.load(fs.readFileSync(targetArtifactsConfig, 'utf8'));
-        acContent.version = version;
-        fs.writeFileSync(targetArtifactsConfig, yaml.dump(acContent, { lineWidth: -1 }), 'utf8');
+        assertVersion(version, 'artifacts');
+        const acDoc = YAML.parseDocument(fs.readFileSync(targetArtifactsConfig, 'utf8'));
+        if (acDoc.errors && acDoc.errors.length > 0) {
+          throw new Error(`Refresh: cannot parse Artifacts config.yaml: ${acDoc.errors[0].message}`);
+        }
+        acDoc.set('version', version);
+        fs.writeFileSync(targetArtifactsConfig, acDoc.toString({ lineWidth: 0 }), 'utf8');
       }
       changes.push('Refreshed Artifacts module: _bmad/bme/_artifacts/');
       if (verbose) console.log('    Refreshed Artifacts module: _bmad/bme/_artifacts/');
@@ -335,6 +346,7 @@ async function refreshInstallation(projectRoot, options = {}) {
         agents: GYRE_AGENT_IDS,
         workflows: GYRE_WORKFLOW_NAMES
       };
+      assertVersion(version, 'config-merger:gyre'); // ag-7-1: defense-in-depth before mergeConfig
       const gyreConfigMerged = await configMerger.mergeConfig(gyreConfigTarget, version, gyreUpdates);
       await configMerger.writeConfig(gyreConfigTarget, gyreConfigMerged);
       changes.push(`Updated Gyre config.yaml to v${version}`);
@@ -360,6 +372,7 @@ async function refreshInstallation(projectRoot, options = {}) {
     workflows: WORKFLOW_NAMES
   };
 
+  assertVersion(version, 'config-merger:vortex'); // ag-7-1: defense-in-depth before mergeConfig
   const merged = await configMerger.mergeConfig(configPath, version, updates);
   await configMerger.writeConfig(configPath, merged);
   changes.push(`Updated config.yaml to v${version}`);
