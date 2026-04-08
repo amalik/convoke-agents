@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
 
-const { compareVersions, countUserDataFiles, findProjectRoot, getPackageVersion } = require('../../scripts/update/lib/utils');
+const { compareVersions, countUserDataFiles, findProjectRoot, getPackageVersion, assertVersion } = require('../../scripts/update/lib/utils');
 
 describe('compareVersions', () => {
   it('returns 0 for equal versions', () => {
@@ -90,5 +90,46 @@ describe('findProjectRoot', () => {
     assert.equal(typeof root, 'string');
     // The root should contain _bmad directory
     assert.ok(fs.existsSync(path.join(root, '_bmad')));
+  });
+});
+
+describe('assertVersion (ag-7-1: I30)', () => {
+  it('passes through a valid semver string', () => {
+    assert.doesNotThrow(() => assertVersion('3.1.0', 'test-site'));
+  });
+
+  it('passes through any non-empty string (no semver enforcement here)', () => {
+    assert.doesNotThrow(() => assertVersion('not-a-version-but-non-empty', 'test-site'));
+  });
+
+  it('throws when version is undefined', () => {
+    assert.throws(
+      () => assertVersion(undefined, 'enhance'),
+      /Refresh: cannot stamp config — getPackageVersion\(\) returned undefined; check package\.json \(call site: enhance\)/
+    );
+  });
+
+  it('throws when version is null', () => {
+    assert.throws(
+      () => assertVersion(null, 'artifacts'),
+      /Refresh: cannot stamp config — getPackageVersion\(\) returned object; check package\.json \(call site: artifacts\)/
+    );
+  });
+
+  it('throws when version is empty string', () => {
+    assert.throws(
+      () => assertVersion('', 'config-merger'),
+      /Refresh: cannot stamp config — getPackageVersion\(\) returned ''; check package\.json \(call site: config-merger\)/
+    );
+  });
+
+  it('error message includes the call-site identifier verbatim', () => {
+    try {
+      assertVersion(undefined, 'config-merger:vortex');
+      assert.fail('expected throw');
+    } catch (err) {
+      assert.ok(err.message.includes('call site: config-merger:vortex'),
+        `expected message to include the call-site, got: ${err.message}`);
+    }
   });
 });
