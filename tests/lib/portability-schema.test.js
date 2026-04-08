@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
+const { parseCsvRow, countCsvColumns } = require('../../scripts/portability/manifest-csv');
 
 // Story sp-1-1: Define Portability Schema
 //
@@ -33,48 +34,8 @@ const EXPECTED_HEADER_COLUMNS = [
   'dependencies',
 ];
 
-/**
- * RFC-4180-aware CSV row parser. Single source of truth for both
- * column counting and field extraction (P1-P3 from sp-1-1 review).
- *
- * Handles:
- * - Quoted fields containing commas
- * - Escaped quotes (`""` inside a quoted field → literal `"`)
- * - Unquoted fields
- * - Trailing CR (CRLF line endings)
- */
-function parseCsvRow(line) {
-  // Strip trailing CR for CRLF tolerance
-  if (line.endsWith('\r')) line = line.slice(0, -1);
-
-  const fields = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      // RFC-4180: doubled quote inside a quoted field is a literal "
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (ch === ',' && !inQuotes) {
-      fields.push(current);
-      current = '';
-    } else {
-      current += ch;
-    }
-  }
-  fields.push(current);
-  return fields;
-}
-
-/** Counts columns by parsing the row and returning field count. */
-function countCsvColumns(line) {
-  return parseCsvRow(line).length;
-}
+// parseCsvRow and countCsvColumns are now imported from
+// scripts/portability/manifest-csv.js (extracted in sp-1-2 Task 8).
 
 describe('Skill manifest portability schema', () => {
   let lines;
