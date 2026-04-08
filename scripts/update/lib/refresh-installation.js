@@ -217,6 +217,56 @@ async function refreshInstallation(projectRoot, options = {}) {
     }
   }
 
+  // 2c. Artifacts module — read config, copy directory tree, generate skill wrappers
+  // Workflow-only submodule (no agents). Workflows are STANDALONE: each gets a Claude Code
+  // skill wrapper but NO menu patch. The `standalone: true` flag in the workflow entry is
+  // the discriminator — workflows without it are NOT supported in this module today (Story 6.6).
+  const packageArtifacts = path.join(packageRoot, '_bmad', 'bme', '_artifacts');
+  const artifactsConfigPath = path.join(packageArtifacts, 'config.yaml');
+
+  let artifactsConfig = null;
+  if (fs.existsSync(artifactsConfigPath)) {
+    try {
+      artifactsConfig = yaml.load(fs.readFileSync(artifactsConfigPath, 'utf8'));
+    } catch (err) {
+      const msg = `Artifacts config.yaml parse error: ${err.message} — skipping Artifacts installation`;
+      changes.push(msg);
+      if (verbose) console.log(`    ⚠ ${msg}`);
+    }
+  } else {
+    changes.push('Artifacts config.yaml not found — skipping Artifacts installation');
+    if (verbose) console.log('    ⚠ Artifacts config.yaml not found — skipping Artifacts installation');
+  }
+
+  if (artifactsConfig) {
+    // Copy _artifacts/ directory tree
+    const targetArtifacts = path.join(projectRoot, '_bmad', 'bme', '_artifacts');
+
+    if (!isSameRoot) {
+      // Remove existing destination first to clear stale files
+      if (fs.existsSync(targetArtifacts)) {
+        await fs.remove(targetArtifacts);
+      }
+      await fs.copy(packageArtifacts, targetArtifacts, { overwrite: true });
+      // Stamp artifacts config version to match package version
+      const targetArtifactsConfig = path.join(targetArtifacts, 'config.yaml');
+      if (fs.existsSync(targetArtifactsConfig)) {
+        const acContent = yaml.load(fs.readFileSync(targetArtifactsConfig, 'utf8'));
+        acContent.version = version;
+        fs.writeFileSync(targetArtifactsConfig, yaml.dump(acContent, { lineWidth: -1 }), 'utf8');
+      }
+      changes.push('Refreshed Artifacts module: _bmad/bme/_artifacts/');
+      if (verbose) console.log('    Refreshed Artifacts module: _bmad/bme/_artifacts/');
+    } else {
+      changes.push('Skipped Artifacts copy (dev environment — files already in place)');
+      if (verbose) console.log('    Skipped Artifacts copy (dev environment)');
+    }
+
+    // Skill wrapper generation for each workflow happens later in section 6d,
+    // after skillsDir is defined (mirrors Enhance pattern: config/copy here, skill
+    // wrappers in section 6c after agent skills are generated).
+  }
+
   // 2d. Gyre module — copy agents, workflows, contracts, config
   const packageGyre = path.join(packageRoot, '_bmad', 'bme', '_gyre');
   const targetGyre = path.join(projectRoot, '_bmad', 'bme', '_gyre');
@@ -636,6 +686,47 @@ You must fully embody this agent's persona and follow all activation instruction
   } else if (enhanceConfig && isSameRoot) {
     changes.push('Skipped Enhance skill registration (dev environment — source files unchanged)');
     if (verbose) console.log('    Skipped Enhance skill registration (dev environment)');
+  }
+
+  // 6d. Copy Artifacts workflow skill wrappers (Story 6.6)
+  // Each standalone:true workflow gets a skill wrapper at .claude/skills/{workflow.name}/SKILL.md.
+  // workflow.name already carries the bmad- prefix, so we use it verbatim (unlike Enhance which
+  // synthesizes bmad-enhance-${workflow.name}). The remove-then-copy pattern clears any leftover
+  // files from prior installs (e.g., the obsolete bmad-portfolio-status/workflow.md thin wrapper).
+  if (artifactsConfig && !isSameRoot) {
+    for (const workflow of artifactsConfig.workflows || []) {
+      if (workflow.standalone !== true) {
+        const msg = `Artifacts: workflow ${workflow.name} has no standalone:true flag — only standalone workflows are supported, skipping`;
+        changes.push(msg);
+        if (verbose) console.log(`    ⚠ ${msg}`);
+        continue;
+      }
+
+      const destSkillDir = path.join(skillsDir, workflow.name);
+
+      // Remove the destination directory first to clear leftover files from prior installs
+      if (fs.existsSync(destSkillDir)) {
+        await fs.remove(destSkillDir);
+      }
+      await fs.ensureDir(destSkillDir);
+
+      // Copy source SKILL.md from the package (the SKILL.md uses an absolute {project-root}
+      // path to load workflow.md, so workflow.md does NOT need to be co-located).
+      const sourceSkillPath = path.join(packageRoot, '_bmad', 'bme', '_artifacts', 'workflows', workflow.name, 'SKILL.md');
+      const targetSkillPath = path.join(destSkillDir, 'SKILL.md');
+      if (fs.existsSync(sourceSkillPath)) {
+        await fs.copy(sourceSkillPath, targetSkillPath, { overwrite: true });
+        changes.push(`Generated skill wrapper: ${workflow.name}`);
+        if (verbose) console.log(`    Generated skill wrapper: ${workflow.name}`);
+      } else {
+        const msg = `Artifacts: source SKILL.md not found for ${workflow.name} at ${sourceSkillPath}`;
+        changes.push(msg);
+        if (verbose) console.log(`    ⚠ ${msg}`);
+      }
+    }
+  } else if (artifactsConfig && isSameRoot) {
+    changes.push('Skipped Artifacts skill wrapper generation (dev environment — source files unchanged)');
+    if (verbose) console.log('    Skipped Artifacts skill wrapper generation (dev environment)');
   }
 
   // 7. Generate agent customize files (only if they don't already exist)
