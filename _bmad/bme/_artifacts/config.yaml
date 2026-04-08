@@ -1,0 +1,11 @@
+name: artifacts
+version: 1.0.0
+description: "Artifacts module — operator-facing skills for the Convoke artifact system (migration, portfolio status, future Experience Contract validation)"
+# Workflows in this module are STANDALONE (operator invokes them directly via slash command),
+# unlike _enhance workflows which patch into a target_agent's menu. The `standalone: true`
+# flag distinguishes them so refresh-installation.js handles them differently.
+workflows:
+  - name: bmad-migrate-artifacts
+    entry: workflows/bmad-migrate-artifacts/workflow.md
+    standalone: true
+# Story 6.5 will add bmad-portfolio-status when its files land.
