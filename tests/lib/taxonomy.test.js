@@ -1,3 +1,8 @@
+'use strict';
+
+const { describe, it, before, afterEach } = require('node:test');
+const assert = require('node:assert/strict');
+
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
@@ -9,62 +14,62 @@ const { findProjectRoot } = require('../../scripts/update/lib/utils');
 describe('readTaxonomy — integration with real taxonomy.yaml', () => {
   let projectRoot;
 
-  beforeAll(() => {
+  before(() => {
     projectRoot = findProjectRoot();
     if (!projectRoot) {
       throw new Error('Cannot find project root — run tests from within the Convoke repo');
     }
   });
 
-  test('loads and parses _bmad/_config/taxonomy.yaml successfully', () => {
+  it('loads and parses _bmad/_config/taxonomy.yaml successfully', () => {
     const config = readTaxonomy(projectRoot);
-    expect(config).toBeDefined();
-    expect(config.initiatives).toBeDefined();
-    expect(config.artifact_types).toBeDefined();
+    assert.notEqual(config, undefined);
+    assert.notEqual(config.initiatives, undefined);
+    assert.notEqual(config.artifact_types, undefined);
   });
 
-  test('initiatives.platform contains exactly 8 IDs', () => {
+  it('initiatives.platform contains exactly 8 IDs', () => {
     const config = readTaxonomy(projectRoot);
-    expect(config.initiatives.platform).toHaveLength(8);
-    expect(config.initiatives.platform).toEqual([
-      'vortex', 'gyre', 'bmm', 'forge', 'helm', 'enhance', 'loom', 'convoke'
+    assert.equal(config.initiatives.platform.length, 8);
+    assert.deepEqual(config.initiatives.platform, [
+      'vortex', 'gyre', 'bmm', 'forge', 'helm', 'enhance', 'loom', 'convoke',
     ]);
   });
 
-  test('initiatives.user is an empty array', () => {
+  it('initiatives.user is an empty array', () => {
     const config = readTaxonomy(projectRoot);
-    expect(config.initiatives.user).toEqual([]);
+    assert.deepEqual(config.initiatives.user, []);
   });
 
-  test('aliases contains 6 entries', () => {
+  it('aliases contains 6 entries', () => {
     const config = readTaxonomy(projectRoot);
-    expect(Object.keys(config.aliases)).toHaveLength(6);
-    expect(config.aliases['strategy-perimeter']).toBe('helm');
-    expect(config.aliases['strategy']).toBe('helm');
-    expect(config.aliases['strategic']).toBe('helm');
-    expect(config.aliases['strategic-navigator']).toBe('helm');
-    expect(config.aliases['strategic-practitioner']).toBe('helm');
-    expect(config.aliases['team-factory']).toBe('loom');
+    assert.equal(Object.keys(config.aliases).length, 6);
+    assert.equal(config.aliases['strategy-perimeter'], 'helm');
+    assert.equal(config.aliases['strategy'], 'helm');
+    assert.equal(config.aliases['strategic'], 'helm');
+    assert.equal(config.aliases['strategic-navigator'], 'helm');
+    assert.equal(config.aliases['strategic-practitioner'], 'helm');
+    assert.equal(config.aliases['team-factory'], 'loom');
   });
 
-  test('artifact_types contains ~21 entries', () => {
+  it('artifact_types contains ~21 entries', () => {
     const config = readTaxonomy(projectRoot);
-    expect(config.artifact_types.length).toBeGreaterThanOrEqual(20);
-    expect(config.artifact_types).toContain('prd');
-    expect(config.artifact_types).toContain('epic');
-    expect(config.artifact_types).toContain('lean-persona');
-    expect(config.artifact_types).toContain('hypothesis');
-    expect(config.artifact_types).toContain('spec');
+    assert.ok(config.artifact_types.length >= 20);
+    assert.ok(config.artifact_types.includes('prd'));
+    assert.ok(config.artifact_types.includes('epic'));
+    assert.ok(config.artifact_types.includes('lean-persona'));
+    assert.ok(config.artifact_types.includes('hypothesis'));
+    assert.ok(config.artifact_types.includes('spec'));
   });
 
-  test('all initiative IDs pass validation pattern', () => {
+  it('all initiative IDs pass validation pattern', () => {
     const config = readTaxonomy(projectRoot);
     const idPattern = /^[a-z][a-z0-9-]*$/;
     for (const id of config.initiatives.platform) {
-      expect(id).toMatch(idPattern);
+      assert.match(id, idPattern);
     }
     for (const type of config.artifact_types) {
-      expect(type).toMatch(idPattern);
+      assert.match(type, idPattern);
     }
   });
 });
@@ -89,7 +94,7 @@ describe('readTaxonomy — validation rejection cases', () => {
     }
   });
 
-  test('rejects uppercase initiative ID', async () => {
+  it('rejects uppercase initiative ID', async () => {
     const root = await writeTempTaxonomy(`
 initiatives:
   platform:
@@ -98,10 +103,10 @@ initiatives:
 artifact_types:
   - prd
 `);
-    expect(() => readTaxonomy(root)).toThrow(/invalid initiative id.*helm/i);
+    assert.throws(() => readTaxonomy(root), /invalid initiative id.*helm/i);
   });
 
-  test('rejects initiative ID with spaces', async () => {
+  it('rejects initiative ID with spaces', async () => {
     const root = await writeTempTaxonomy(`
 initiatives:
   platform:
@@ -110,10 +115,10 @@ initiatives:
 artifact_types:
   - prd
 `);
-    expect(() => readTaxonomy(root)).toThrow(/invalid initiative id/i);
+    assert.throws(() => readTaxonomy(root), /invalid initiative id/i);
   });
 
-  test('rejects initiative ID with special characters', async () => {
+  it('rejects initiative ID with special characters', async () => {
     const root = await writeTempTaxonomy(`
 initiatives:
   platform:
@@ -122,10 +127,10 @@ initiatives:
 artifact_types:
   - prd
 `);
-    expect(() => readTaxonomy(root)).toThrow(/invalid initiative id/i);
+    assert.throws(() => readTaxonomy(root), /invalid initiative id/i);
   });
 
-  test('rejects duplicate IDs across platform and user sections', async () => {
+  it('rejects duplicate IDs across platform and user sections', async () => {
     const root = await writeTempTaxonomy(`
 initiatives:
   platform:
@@ -136,10 +141,10 @@ initiatives:
 artifact_types:
   - prd
 `);
-    expect(() => readTaxonomy(root)).toThrow(/duplicate initiative id.*helm/i);
+    assert.throws(() => readTaxonomy(root), /duplicate initiative id.*helm/i);
   });
 
-  test('rejects invalid artifact type', async () => {
+  it('rejects invalid artifact type', async () => {
     const root = await writeTempTaxonomy(`
 initiatives:
   platform:
@@ -148,15 +153,15 @@ initiatives:
 artifact_types:
   - Valid Type
 `);
-    expect(() => readTaxonomy(root)).toThrow(/invalid artifact type/i);
+    assert.throws(() => readTaxonomy(root), /invalid artifact type/i);
   });
 
-  test('throws on missing file', () => {
+  it('throws on missing file', () => {
     const fakeRoot = path.join(os.tmpdir(), 'nonexistent-project');
-    expect(() => readTaxonomy(fakeRoot)).toThrow(/taxonomy config not found/i);
+    assert.throws(() => readTaxonomy(fakeRoot), /taxonomy config not found/i);
   });
 
-  test('throws on malformed YAML', async () => {
+  it('throws on malformed YAML', async () => {
     const root = await writeTempTaxonomy(`
 initiatives:
   platform:
@@ -166,24 +171,24 @@ initiatives:
 artifact_types:
   - prd
 `);
-    expect(() => readTaxonomy(root)).toThrow(/invalid yaml/i);
+    assert.throws(() => readTaxonomy(root), /invalid yaml/i);
   });
 
-  test('throws on missing initiatives.platform', async () => {
+  it('throws on missing initiatives.platform', async () => {
     const root = await writeTempTaxonomy(`
 artifact_types:
   - prd
 `);
-    expect(() => readTaxonomy(root)).toThrow(/missing required field.*initiatives\.platform/i);
+    assert.throws(() => readTaxonomy(root), /missing required field.*initiatives\.platform/i);
   });
 
-  test('throws on missing artifact_types', async () => {
+  it('throws on missing artifact_types', async () => {
     const root = await writeTempTaxonomy(`
 initiatives:
   platform:
     - helm
   user: []
 `);
-    expect(() => readTaxonomy(root)).toThrow(/missing required field.*artifact_types/i);
+    assert.throws(() => readTaxonomy(root), /missing required field.*artifact_types/i);
   });
 });
