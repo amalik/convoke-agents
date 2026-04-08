@@ -9,7 +9,7 @@
  * If this file goes red, every Story B conversion is suspect.
  */
 
-const { describe, it, beforeEach, afterEach } = require('node:test');
+const { describe, it, beforeEach, afterEach, mock } = require('node:test');
 const assert = require('node:assert/strict');
 
 const { mockExecFileSync } = require('../mock-cp');
@@ -25,7 +25,7 @@ describe('mock-cp helper: basic spy installation', () => {
   let mock;
 
   beforeEach(() => {
-    mock = mockExecFileSync(TARGET);
+    mock = mockExecFileSync(TARGET, __dirname);
   });
 
   afterEach(() => {
@@ -51,7 +51,7 @@ describe('mock-cp helper: setImpl + call inspection', () => {
   let mock;
 
   beforeEach(() => {
-    mock = mockExecFileSync(TARGET);
+    mock = mockExecFileSync(TARGET, __dirname);
   });
 
   afterEach(() => {
@@ -142,28 +142,26 @@ describe('mock-cp helper: setReturnValue shorthand', () => {
   let mock;
 
   beforeEach(() => {
-    mock = mockExecFileSync(TARGET);
+    mock = mockExecFileSync(TARGET, __dirname);
   });
 
   afterEach(() => {
     mock.restore();
   });
 
-  it('setReturnValue makes every call return the same value', () => {
-    mock.setReturnValue('constant\n');
-    // We can't easily exercise this through executeRenames without it
-    // hitting the rev-parse branch, but we can verify the spy itself
-    // returns the value by triggering it via a no-op rename batch.
-    // Use an empty rename list — no shellouts — and assert callCount is 0
-    // to prove the spy isn't being invoked spuriously.
-    const { executeRenames } = mock.module;
-    const result = executeRenames({
-      entries: [{ action: 'SKIP', oldPath: 'x.md', newPath: null, collisionWith: null }],
-      collisions: new Map(),
-      summary: { total: 1, rename: 0 },
-    }, '/fake/root');
-    assert.equal(result.renamedCount, 0);
-    assert.equal(mock.callCount(), 0, 'no shellouts when nothing to rename');
+  it('setReturnValue makes every spy invocation return the configured value', () => {
+    mock.setReturnValue('constant-output\n');
+    // Invoke execFileSync directly to verify the spy returns what
+    // setReturnValue configured. We don't go through mock.module here because
+    // that would couple this assertion to a specific source-code path —
+    // the helper's contract is "the spy returns this value," and that's what
+    // we verify directly.
+    const cp = require('node:child_process');
+    const result1 = cp.execFileSync('git', ['rev-parse', 'HEAD']);
+    const result2 = cp.execFileSync('git', ['log', '-1']);
+    assert.equal(result1, 'constant-output\n');
+    assert.equal(result2, 'constant-output\n');
+    assert.equal(mock.callCount(), 2, 'both invocations were captured');
   });
 });
 
@@ -171,7 +169,7 @@ describe('mock-cp helper: throwing impl + restore semantics', () => {
   let mock;
 
   beforeEach(() => {
-    mock = mockExecFileSync(TARGET);
+    mock = mockExecFileSync(TARGET, __dirname);
   });
 
   afterEach(() => {
@@ -207,6 +205,49 @@ describe('mock-cp helper: throwing impl + restore semantics', () => {
   });
 });
 
+describe('mock-cp helper: restore() does NOT destroy sibling spies', () => {
+  // Regression test for a real bug found during self-review: an earlier
+  // version of restore() called mock.restoreAll(), which would have torn
+  // down any other spies the test installed (e.g. console.warn). This test
+  // installs the helper AND a separate console.warn spy, then asserts the
+  // sibling spy still works after the helper restores.
+  let cpMock;
+  let warnSpy;
+
+  beforeEach(() => {
+    cpMock = mockExecFileSync(TARGET, __dirname);
+    warnSpy = mock.method(console, 'warn', () => {});
+  });
+
+  afterEach(() => {
+    // Defensive teardown: only restore the warnSpy if it hasn't already been
+    // touched. If finding #2 regresses, the cpMock.restore() inside the test
+    // body will destroy warnSpy and this afterEach call becomes a no-op
+    // (calling .restore() on an already-restored spy is safe in node:test).
+    warnSpy.mock.restore();
+  });
+
+  it('restoring the cp helper does not restore the console.warn spy', () => {
+    // Sanity: the warn spy is currently active.
+    console.warn('first call — should be silenced');
+    assert.equal(warnSpy.mock.callCount(), 1);
+
+    // Restore the cp helper. If restore() incorrectly uses restoreAll(),
+    // this also tears down the warnSpy and the next console.warn call will
+    // hit the real implementation (and the assertion below will fail
+    // because callCount() will report the restored-spy state).
+    cpMock.restore();
+
+    // The warn spy must still be active after the cp helper is torn down.
+    console.warn('second call — should also be silenced');
+    assert.equal(
+      warnSpy.mock.callCount(),
+      2,
+      'warnSpy should still be capturing calls after cpMock.restore()',
+    );
+  });
+});
+
 describe('mock-cp helper: isolation across beforeEach cycles', () => {
   // Two consecutive tests with their own mocks must not see each other's
   // call history. This is the bug that surfaces if module cache reset is
@@ -214,7 +255,7 @@ describe('mock-cp helper: isolation across beforeEach cycles', () => {
   let mock;
 
   beforeEach(() => {
-    mock = mockExecFileSync(TARGET);
+    mock = mockExecFileSync(TARGET, __dirname);
   });
 
   afterEach(() => {
