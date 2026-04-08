@@ -23,6 +23,7 @@ const {
   verifyHistoryChain,
   executeInjections,
   resolveAmbiguous,
+  loadResolutionMap,
   detectMigrationState,
   generateGovernanceADR,
   supersedePreviousADR
@@ -39,7 +40,7 @@ const VALID_DIR_PATTERN = /^[a-zA-Z0-9_-]+$/;
  * Parse CLI arguments from argv array.
  *
  * @param {string[]} argv - Arguments (typically process.argv.slice(2))
- * @returns {{help: boolean, includeDirs: string[], apply: boolean, force: boolean, verbose: boolean}}
+ * @returns {{help: boolean, includeDirs: string[], apply: boolean, force: boolean, verbose: boolean, resolutionFile: string|null, resolutionFileError: string|null}}
  */
 function parseArgs(argv) {
   const help = argv.includes('--help') || argv.includes('-h');
@@ -66,7 +67,37 @@ function parseArgs(argv) {
     }
   }
 
-  return { help, includeDirs, apply, force, verbose };
+  // Story 6.4: --resolution-file <path> — operator decisions for AMBIGUOUS entries.
+  // Loaded and validated in main() after the manifest is generated.
+  // Also accept the GNU --resolution-file=path form. Reject missing/empty/flag-like
+  // values loudly via parse error so operators don't accidentally run a destructive
+  // --apply --force without their overrides being honored.
+  let resolutionFile = null;
+  let resolutionFileError = null;
+
+  // Check the equals form first: --resolution-file=path
+  const eqArg = argv.find(a => a.startsWith('--resolution-file='));
+  if (eqArg) {
+    const value = eqArg.slice('--resolution-file='.length);
+    if (!value || value.startsWith('-')) {
+      resolutionFileError = `--resolution-file requires a non-empty path (got: '${value}')`;
+    } else {
+      resolutionFile = value;
+    }
+  } else {
+    const resolutionIdx = argv.indexOf('--resolution-file');
+    if (resolutionIdx !== -1) {
+      const nextArg = argv[resolutionIdx + 1];
+      // Reject: missing arg, empty arg, anything starting with `-` (covers --flags AND -singledash)
+      if (!nextArg || nextArg.startsWith('-')) {
+        resolutionFileError = `--resolution-file requires a path argument (got: '${nextArg || '<missing>'}')`;
+      } else {
+        resolutionFile = nextArg;
+      }
+    }
+  }
+
+  return { help, includeDirs, apply, force, verbose, resolutionFile, resolutionFileError };
 }
 
 // --- Help ---
@@ -79,17 +110,21 @@ Analyze artifact files and show what the governance migration would do.
 Dry-run by default — no files are modified.
 
 Options:
-  --include <dirs>  Comma-separated directory names to scan (relative to _bmad-output/)
-                    Default: planning-artifacts,vortex-artifacts,gyre-artifacts
-  --verbose         Show cross-references for ambiguous files
-  --apply           Execute the rename migration (commit 1: git mv)
-  --force           Bypass confirmation prompt (use with --apply for automation)
-  --help, -h        Show this help
+  --include <dirs>           Comma-separated directory names to scan (relative to _bmad-output/)
+                             Default: planning-artifacts,vortex-artifacts,gyre-artifacts
+  --verbose                  Show cross-references for ambiguous files
+  --apply                    Execute the rename migration (commit 1: git mv)
+  --force                    Bypass confirmation prompt (use with --apply for automation)
+  --resolution-file <path>   JSON file with operator decisions for ambiguous entries.
+                             Combined with --force gives a fully non-interactive run.
+                             Schema: { "schemaVersion": 1, "resolutions": { "dir/file.md": { "action": "rename", "initiative": "convoke" } } }
+  --help, -h                 Show this help
 
 Examples:
   convoke-migrate-artifacts                          Dry-run with default scope
   convoke-migrate-artifacts --verbose                Dry-run with cross-references
   convoke-migrate-artifacts --include planning-artifacts   Dry-run for one directory
+  convoke-migrate-artifacts --apply --force --resolution-file resolutions.json   Non-interactive apply with operator decisions
 `);
 }
 
@@ -172,6 +207,13 @@ async function main() {
     return;
   }
 
+  // Story 6.4: fail fast on a malformed --resolution-file flag so a typo can't
+  // silently turn into a destructive --apply --force run with no overrides applied.
+  if (args.resolutionFileError) {
+    console.error(`Error: ${args.resolutionFileError}`);
+    process.exit(1);
+  }
+
   if (args.force && !args.apply) {
     console.log('Warning: --force has no effect without --apply. Running dry-run instead.');
   }
@@ -247,8 +289,25 @@ async function main() {
   // Load taxonomy for ambiguous resolution
   const taxonomy = readTaxonomy(projectRoot);
 
-  // Resolve ambiguous files interactively (or auto-skip in --force mode)
-  const resolution = await resolveAmbiguous(manifest, taxonomy, projectRoot, { force: args.force });
+  // Story 6.4: optional pre-loaded operator resolutions via --resolution-file.
+  // Loaded once here so any validation error fails fast before we touch the manifest.
+  let resolutionMap = null;
+  if (args.resolutionFile) {
+    try {
+      resolutionMap = loadResolutionMap(args.resolutionFile, taxonomy);
+      const count = Object.keys(resolutionMap).length;
+      console.log(`Loaded ${count} operator resolution(s) from ${args.resolutionFile}.`);
+    } catch (err) {
+      console.error(`Error loading resolution file: ${err.message}`);
+      process.exit(1);
+    }
+  }
+
+  // Resolve ambiguous files: resolution map (if any) → no-candidates skip → force skip → interactive prompt
+  const resolution = await resolveAmbiguous(manifest, taxonomy, projectRoot, {
+    force: args.force,
+    resolutionMap
+  });
   if (resolution.resolved > 0 || resolution.skipped > 0) {
     console.log(`\nAmbiguous resolution: ${resolution.resolved} resolved, ${resolution.skipped} skipped.`);
   }
