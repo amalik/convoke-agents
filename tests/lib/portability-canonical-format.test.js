@@ -54,13 +54,22 @@ describe('Canonical format specification (sp-2-1)', () => {
   beforeAll(() => {
     projectRoot = findProjectRoot();
     templatesDir = path.join(projectRoot, TEMPLATES_DIR_REL);
-    const readIfExists = (name) => {
+    // P1 (sp-2-1 review): hard-fail if any required template file is missing.
+    // Returning empty string would cause Tests 3 and 4 to silently pass
+    // (no forbidden strings in '', no curly placeholders in '').
+    const readRequired = (name) => {
       const p = path.join(templatesDir, name);
-      return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
+      if (!fs.existsSync(p)) {
+        throw new Error(
+          `Required template file missing: ${path.relative(projectRoot, p)}. ` +
+          `sp-2-1 spec requires all 3 template files to exist.`
+        );
+      }
+      return fs.readFileSync(p, 'utf8');
     };
-    canonicalFormatContent = readIfExists('canonical-format.md');
-    canonicalExampleContent = readIfExists('canonical-example.md');
-    readmeTemplateContent = readIfExists('readme-template.md');
+    canonicalFormatContent = readRequired('canonical-format.md');
+    canonicalExampleContent = readRequired('canonical-example.md');
+    readmeTemplateContent = readRequired('readme-template.md');
   });
 
   test('Test 1: all 3 template files exist and are non-empty', () => {
@@ -75,30 +84,39 @@ describe('Canonical format specification (sp-2-1)', () => {
   });
 
   test('Test 2: canonical-example.md contains all required section headings in order', () => {
-    // Per AC #2: 7 sections in order. Quality checks (section 7) is optional,
-    // but Carson's example does include it, so we test all 7 here.
+    // Per AC #2: 7 sections in order. P4 (sp-2-1 review): include Quality
+    // checks (section 7) — Carson's example has it, so we validate ordering
+    // for all 7 sections explicitly.
     const requiredHeadingPatterns = [
-      /^# /m, // Title
+      /^# Brainstorming/m, // Title — anchored to specific text to avoid ## prefix collision
       /^## You are /m, // Persona
       /^## When to use this skill$/m,
       /^## Inputs you may need$/m,
       /^## How to proceed$/m,
       /^## What you produce$/m,
-      // Quality checks is optional — present in Carson but tested separately
+      /^## Quality checks$/m, // Section 7 (Carson's example includes it)
     ];
 
-    // Verify each pattern matches
-    for (const pattern of requiredHeadingPatterns) {
-      expect(canonicalExampleContent).toMatch(pattern);
-    }
+    // Verify each pattern matches AND capture the actual match index.
+    // P2 (sp-2-1 review): use RegExp.exec().index instead of indexOf(m[0]) —
+    // the latter searches for the bare 2-char string "# " which appears at
+    // offset 1 inside every "## " heading and silently breaks ordering.
+    const positions = requiredHeadingPatterns.map((pattern) => {
+      const re = new RegExp(pattern.source, pattern.flags);
+      const match = re.exec(canonicalExampleContent);
+      expect(match).not.toBeNull();
+      return match.index;
+    });
 
     // Verify the headings appear in the correct ORDER
-    const positions = requiredHeadingPatterns.map((p) => {
-      const m = canonicalExampleContent.match(p);
-      return m ? canonicalExampleContent.indexOf(m[0]) : -1;
-    });
     for (let i = 1; i < positions.length; i++) {
-      expect(positions[i]).toBeGreaterThan(positions[i - 1]);
+      if (positions[i] <= positions[i - 1]) {
+        throw new Error(
+          `Section heading ${i + 1} (pattern ${requiredHeadingPatterns[i]}) ` +
+          `appears at offset ${positions[i]}, which is not after section ${i} ` +
+          `(at offset ${positions[i - 1]}). Sections are out of order.`
+        );
+      }
     }
   });
 
