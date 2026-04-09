@@ -1,6 +1,6 @@
 # Story 7.2: Doctor Skill-Wrapper Validation
 
-Status: review
+Status: done
 
 ## Story
 
