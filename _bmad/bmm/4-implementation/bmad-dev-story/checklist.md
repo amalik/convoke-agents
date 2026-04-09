@@ -43,6 +43,8 @@ validation-rules:
 - [ ] **Integration Tests:** Integration tests added/updated for component interactions when story requirements demand them
 - [ ] **End-to-End Tests:** End-to-end tests created for critical user flows when story requirements specify them
 - [ ] **Test Coverage:** Tests cover acceptance criteria and edge cases from story Dev Notes
+- [ ] **Phantom Test Guard:** If this story added new test files OR new test functions, the runtime test count reported by the project's test runner (e.g. `npm test`) increased by at least the number of test functions added. **Files existing on disk is NOT sufficient.** Verify by running the test command and reading the summary line (e.g. `ℹ tests N pass N fail 0`). See [phantom test risk](../../../_bmad-output/test-artifacts/2026-04-08-astonishment-report.md) — this guard exists because AI agents have produced test files that were structurally invisible to the runner (Jest API in a `node:test` project, missing imports, files not matched by any glob in `package.json`, etc.).
+- [ ] **Test Wiring Verified:** Any new test file path is matched by at least one npm script glob in `package.json` (or equivalent project test config). A test that the project's test command does not invoke is a phantom test, regardless of how complete it looks.
 - [ ] **Regression Prevention:** ALL existing tests pass (no regressions introduced)
 - [ ] **Code Quality:** Linting and static checks pass when configured in project
 - [ ] **Test Framework Compliance:** Tests use project's testing frameworks and patterns from Dev Notes
