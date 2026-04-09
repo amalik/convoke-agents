@@ -100,8 +100,12 @@ function findProjectRoot() {
  */
 function assertVersion(version, callSite) {
   if (version === undefined || version === null || version === '') {
+    let displayed;
+    if (version === null) displayed = 'null';
+    else if (version === '') displayed = "''";
+    else displayed = 'undefined';
     throw new Error(
-      `Refresh: cannot stamp config — getPackageVersion() returned ${typeof version === 'string' ? "''" : typeof version}; check package.json (call site: ${callSite})`
+      `Refresh: cannot stamp config — getPackageVersion() returned ${displayed}; check package.json (call site: ${callSite})`
     );
   }
 }
