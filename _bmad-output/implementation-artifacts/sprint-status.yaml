@@ -35,6 +35,7 @@
 
 generated: 2026-03-23
 last_updated: 2026-04-09
+# 2026-04-09: sp-2-3-cli-entry-point moved backlog → ready-for-dev
 # 2026-04-08: Epic 7 (Cross-Cutting Platform Debt) added — 4 stories closing 6 backlog items from ag-epic-6 retro
 project: BMAD-Enhanced
 project_key: NOKEY
@@ -361,7 +362,7 @@ development_status:
   sp-epic-2: in-progress
   sp-2-1-canonical-format-specification: done
   sp-2-2-export-engine: review
-  sp-2-3-cli-entry-point: backlog
+  sp-2-3-cli-entry-point: ready-for-dev
   sp-2-4-export-all-tier-1-skills: backlog
   sp-epic-2-retrospective: optional
 
