@@ -5,7 +5,11 @@ const path = require('path');
 const chalk = require('chalk');
 const yaml = require('js-yaml');
 const { findProjectRoot, getPackageVersion } = require('./update/lib/utils');
-const { parseCsvRow } = require('../_bmad/bme/_team-factory/lib/utils/csv-utils');
+// Note: parseCsvRow is loaded LAZILY inside loadSkillManifest() (ag-7-2 review patch).
+// Top-level require would crash the doctor on installs missing _team-factory/ — exactly
+// the broken-install case the doctor exists to diagnose. The lazy require is wrapped
+// in try/catch so a missing _team-factory degrades to "skip wrapper checks" instead
+// of crashing the entire CLI.
 
 /**
  * convoke-doctor — Diagnose common Convoke installation issues.
@@ -281,7 +285,20 @@ function loadSkillManifest(projectRoot) {
   const map = new Map();
 
   if (!fs.existsSync(manifestPath)) {
-    console.warn(chalk.yellow(`  ⚠ skill-manifest.csv not found at ${manifestPath}; skill wrapper checks will fall back to verbatim workflow names`));
+    console.warn(chalk.yellow(`  ⚠ skill-manifest.csv not found at ${manifestPath}; skill wrapper checks will be skipped`));
+    return map;
+  }
+
+  // Lazy-load parseCsvRow from the optional _team-factory submodule.
+  // ag-7-2 review patch (Edge Case Hunter EH#1): if _team-factory/ is missing
+  // (e.g., user opted out of the team-factory module), the top-level require
+  // would crash the doctor before main() even runs — exactly the broken-install
+  // case the doctor exists to diagnose. Lazy + try/catch degrades cleanly.
+  let parseCsvRow;
+  try {
+    ({ parseCsvRow } = require('../_bmad/bme/_team-factory/lib/utils/csv-utils'));
+  } catch (_err) {
+    console.warn(chalk.yellow(`  ⚠ csv-utils unavailable (_team-factory submodule not installed); skill wrapper checks will be skipped`));
     return map;
   }
 
@@ -295,7 +312,7 @@ function loadSkillManifest(projectRoot) {
     const canonicalIdIdx = header.indexOf('canonicalId');
     const pathIdx = header.indexOf('path');
     if (canonicalIdIdx === -1 || pathIdx === -1) {
-      console.warn(chalk.yellow(`  ⚠ skill-manifest.csv missing required columns (canonicalId, path); falling back to verbatim names`));
+      console.warn(chalk.yellow(`  ⚠ skill-manifest.csv missing required columns (canonicalId, path); skill wrapper checks will be skipped`));
       return map;
     }
 
@@ -310,7 +327,7 @@ function loadSkillManifest(projectRoot) {
       }
     }
   } catch (err) {
-    console.warn(chalk.yellow(`  ⚠ skill-manifest.csv parse error (${err.message}); skill wrapper checks will fall back to verbatim workflow names`));
+    console.warn(chalk.yellow(`  ⚠ skill-manifest.csv parse error (${err.message}); skill wrapper checks will be skipped`));
     return new Map();
   }
 
@@ -353,9 +370,23 @@ function checkModuleSkillWrappers(mod, projectRoot, manifestMap) {
   const failures = [];
   const checked = [];
 
+  // Build the source-path prefix from mod.dir (the absolute module directory
+  // discovered by discoverModules) relative to projectRoot. ag-7-2 review patch
+  // (Blind Hunter BH#1): the previous hardcoded `_bmad/bme/` prefix was correct
+  // for current callers (discoverModules only scans bme submodules) but would
+  // silently miss if a future caller scans a different team directory.
+  const moduleRelPath = path.relative(projectRoot, mod.dir);
+
   for (const w of workflowNames) {
+    // Null/empty/object-without-name guard. ag-7-2 review patch (Edge Case
+    // Hunter EH#4 / Blind Hunter BH#7): a malformed config.yaml with
+    // `workflows: [null]` or `workflows: [{}]` would otherwise crash the doctor
+    // with a TypeError instead of producing a clean diagnostic.
+    if (!w) continue;
     const wfName = typeof w === 'object' ? w.name : w;
-    const sourcePath = `_bmad/bme/${mod.name}/workflows/${wfName}/SKILL.md`;
+    if (!wfName || typeof wfName !== 'string') continue;
+
+    const sourcePath = `${moduleRelPath}/workflows/${wfName}/SKILL.md`;
 
     // Manifest is opt-in: only workflows declared in skill-manifest.csv are
     // standalone-skill workflows that need wrappers. Skip the rest silently.
