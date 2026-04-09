@@ -122,7 +122,13 @@ function isInsideProjectRoot(absPath, projectRoot) {
  *
  * Strategy: try the SKILL.md directory first (the simple case), then
  * search the skill's subtree by basename. The first existing match wins.
- * Returns the absolute resolved path on success, or null on failure.
+ *
+ * Returns one of:
+ *   - {string} absolute resolved path (success)
+ *   - {{ error: 'escapes project root' | 'not found', resolved: string }} (failure)
+ *
+ * Note: never returns null. The caller discriminates with
+ * `typeof result === 'string'`.
  */
 function resolveRelativeDep(dep, skillDir, projectRoot) {
   // Attempt 1: resolve against the skill's own directory (handles `./templates/X`)
@@ -154,32 +160,62 @@ function resolveRelativeDep(dep, skillDir, projectRoot) {
  * Walk a directory subtree (bounded to projectRoot) looking for a file
  * matching the target basename. Returns the first absolute match, or null.
  *
+ * P3 (sp-1-3 review): symlinks are followed via `fs.statSync` (rather than
+ * Dirent.isFile/isDirectory which return false for symlinks). Cycles are
+ * prevented with a realpath visited-set.
+ *
  * Stops descending at common skip directories to avoid runaway walks.
  */
 function findFileInSubtree(dir, targetBasename, projectRoot) {
   const SKIP = new Set(['node_modules', '.git', '_archive']);
   const MAX_DEPTH = 6;
+  const visited = new Set();
 
   function walk(currentDir, depth) {
     if (depth > MAX_DEPTH) return null;
     if (!isInsideProjectRoot(currentDir, projectRoot)) return null;
-    let entries;
+
+    // Cycle protection via realpath (follows symlinks)
+    let realDir;
     try {
-      entries = fs.readdirSync(currentDir, { withFileTypes: true });
+      realDir = fs.realpathSync(currentDir);
     } catch (e) {
       return null;
     }
-    // Files first (cheap match)
-    for (const entry of entries) {
-      if (entry.isFile() && entry.name === targetBasename) {
-        return path.join(currentDir, entry.name);
+    if (visited.has(realDir)) return null;
+    visited.add(realDir);
+
+    let entries;
+    try {
+      entries = fs.readdirSync(currentDir);
+    } catch (e) {
+      return null;
+    }
+
+    // Files first (cheap match) — use statSync to follow symlinks
+    for (const name of entries) {
+      if (name !== targetBasename) continue;
+      const fullPath = path.join(currentDir, name);
+      try {
+        const stat = fs.statSync(fullPath); // follows symlinks
+        if (stat.isFile()) return fullPath;
+      } catch (e) {
+        // broken symlink or stat failure — skip
       }
     }
-    // Then recurse into subdirectories
-    for (const entry of entries) {
-      if (entry.isDirectory() && !SKIP.has(entry.name)) {
-        const found = walk(path.join(currentDir, entry.name), depth + 1);
-        if (found) return found;
+
+    // Then recurse into subdirectories (also follows symlinks via statSync)
+    for (const name of entries) {
+      if (SKIP.has(name)) continue;
+      const fullPath = path.join(currentDir, name);
+      try {
+        const stat = fs.statSync(fullPath);
+        if (stat.isDirectory()) {
+          const found = walk(fullPath, depth + 1);
+          if (found) return found;
+        }
+      } catch (e) {
+        // broken symlink or stat failure — skip
       }
     }
     return null;
@@ -406,9 +442,23 @@ function validate(projectRoot) {
 
   const findings = [];
   for (const row of rows) {
-    findings.push(...checkRowVocabulary(row, header));
-    findings.push(...checkRowDependencies(row, header, projectRoot, validSkillNames));
-    findings.push(...checkTier3Prereqs(row, header));
+    // P2 (sp-1-3 review): a malformed row (missing path column, undefined
+    // fields) shouldn't crash the entire validator. Catch per-row errors
+    // and surface them as a [MISSING] finding so the rest of the manifest
+    // still gets validated.
+    try {
+      findings.push(...checkRowVocabulary(row, header));
+      findings.push(...checkRowDependencies(row, header, projectRoot, validSkillNames));
+      findings.push(...checkTier3Prereqs(row, header));
+    } catch (e) {
+      const skillName = row[nameIdx] || '(unknown row)';
+      findings.push({
+        type: '[MISSING]',
+        skill: skillName,
+        detail: `row processing failed: ${e.message}`,
+        recommendation: 'Inspect this row in skill-manifest.csv for malformed fields (missing columns, undefined path, etc.)',
+      });
+    }
   }
 
   return { totalSkills: rows.length, findings };
