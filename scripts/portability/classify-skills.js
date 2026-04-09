@@ -221,6 +221,9 @@ function classifyIntent(name, _modulePath) {
     return 'meta-platform';
   }
 
+  // 9. Enhance module skills — initiatives-backlog manages a planning artifact
+  if (name === 'bmad-enhance-initiatives-backlog') return 'plan-your-work';
+
   return null;
 }
 
