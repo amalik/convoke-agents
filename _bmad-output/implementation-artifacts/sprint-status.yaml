@@ -338,8 +338,8 @@ development_status:
   # Epic file: epic-7-platform-debt.md
   # Sourced from ag-epic-6 retro: closes I29, I30, I31, I32, I34, I10
   ag-epic-7: in-progress
-  ag-7-1-version-stamp-safety-yaml-comments: review
-  ag-7-2-doctor-skill-wrapper-validation: backlog
+  ag-7-1-version-stamp-safety-yaml-comments: done
+  ag-7-2-doctor-skill-wrapper-validation: ready-for-dev
   ag-7-3-validator-refresh-contract-audit: backlog
   ag-7-4-orphan-skill-wrapper-cleanup: backlog
   ag-epic-7-retrospective: optional
@@ -354,7 +354,7 @@ development_status:
   sp-epic-1: in-progress
   sp-1-1-define-portability-schema: done
   sp-1-2-classify-all-skills: done
-  sp-1-3-validate-classification-completeness: review
+  sp-1-3-validate-classification-completeness: done
   sp-epic-1-retrospective: optional
 
   # Epic 2: Tier 1 Exporter (Core Engine)
