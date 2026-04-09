@@ -132,4 +132,26 @@ describe('assertVersion (ag-7-1: I30)', () => {
         `expected message to include the call-site, got: ${err.message}`);
     }
   });
+
+  // Blind Hunter finding #9 (ag-7-1 review): non-string version types must be rejected
+  it('throws when version is a number', () => {
+    assert.throws(
+      () => assertVersion(0, 'enhance'),
+      /returned number \(0\)/
+    );
+  });
+
+  it('throws when version is a boolean', () => {
+    assert.throws(
+      () => assertVersion(false, 'enhance'),
+      /returned boolean \(false\)/
+    );
+  });
+
+  it('throws when version is an object', () => {
+    assert.throws(
+      () => assertVersion({}, 'enhance'),
+      /returned object/
+    );
+  });
 });
