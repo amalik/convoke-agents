@@ -360,7 +360,7 @@ development_status:
   # Epic 2: Tier 1 Exporter (Core Engine)
   sp-epic-2: in-progress
   sp-2-1-canonical-format-specification: done
-  sp-2-2-export-engine: in-progress
+  sp-2-2-export-engine: review
   sp-2-3-cli-entry-point: backlog
   sp-2-4-export-all-tier-1-skills: backlog
   sp-epic-2-retrospective: optional
