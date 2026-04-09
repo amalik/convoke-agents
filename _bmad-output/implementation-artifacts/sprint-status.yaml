@@ -354,7 +354,7 @@ development_status:
   sp-epic-1: in-progress
   sp-1-1-define-portability-schema: done
   sp-1-2-classify-all-skills: done
-  sp-1-3-validate-classification-completeness: backlog
+  sp-1-3-validate-classification-completeness: in-progress
   sp-epic-1-retrospective: optional
 
   # Epic 2: Tier 1 Exporter (Core Engine)
