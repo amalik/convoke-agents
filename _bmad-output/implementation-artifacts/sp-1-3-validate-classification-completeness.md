@@ -1,6 +1,6 @@
 # Story SP-1.3: Validate Classification Completeness
 
-Status: review
+Status: done
 
 ## Story
 
@@ -283,3 +283,4 @@ claude-opus-4-6 (Amelia / dev agent)
 | Date | Change |
 |------|--------|
 | 2026-04-09 | Story sp-1-3 implemented. Built validate-classification.js with 5 hard checks (MISSING/INVALID/BROKEN-DEP/BAD-CONFIG-DEP/ORPHAN-DEP) + 1 warning (MISSING-PREREQS). First run surfaced 5 BROKEN-DEPs from sp-1-2's lossy relative-template extraction; resolved by adding subtree-search fallback in resolveRelativeDep + findFileInSubtree. Final state: PASS / 101 skills / 0 errors / 15 warnings (expected baseline). 9 validator tests added; 21 total SP tests now pass. Closes sp-1-2 deferred D3 (orphan dep detection) and D4 (sidecar regex over-broadness). Epic 1 complete. |
+| 2026-04-09 | Code review complete (Blind Hunter + Edge Case Hunter + Acceptance Auditor). All 10 ACs PASS. Applied 5 patches: P1 (afterEach tmpdir cleanup in test file — prevents dev/CI machine pollution), P2 (per-row try/catch in validate() — malformed rows surface as [MISSING] findings instead of crashing the validator), P3 (findFileInSubtree now follows symlinks via fs.statSync + fs.realpathSync cycle protection), P4 (clarified resolveRelativeDep JSDoc — never returns null), P5 (removed dead readManifest import + unused findingTypes helper from test file). Deferred: D1 (basename collision in subtree search — hypothetical), D2 (non-hermetic smoke test — by design per Task 8), D3 (Windows backslash separators — out of scope). Dismissed 5 false positives. Re-ran full SP suite (21/21 pass) and validator smoke (PASS, 0 errors, 15 warnings, manifest unchanged). Story marked done. |
