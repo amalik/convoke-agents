@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-23
-last_updated: 2026-04-08
+last_updated: 2026-04-09
 # 2026-04-08: Epic 7 (Cross-Cutting Platform Debt) added — 4 stories closing 6 backlog items from ag-epic-6 retro
 project: BMAD-Enhanced
 project_key: NOKEY
@@ -340,7 +340,7 @@ development_status:
   ag-epic-7: in-progress
   ag-7-1-version-stamp-safety-yaml-comments: done
   ag-7-2-doctor-skill-wrapper-validation: done
-  ag-7-3-validator-refresh-contract-audit: backlog
+  ag-7-3-validator-refresh-contract-audit: ready-for-dev
   ag-7-4-orphan-skill-wrapper-cleanup: backlog
   ag-epic-7-retrospective: optional
 
@@ -360,7 +360,7 @@ development_status:
   # Epic 2: Tier 1 Exporter (Core Engine)
   sp-epic-2: in-progress
   sp-2-1-canonical-format-specification: done
-  sp-2-2-export-engine: backlog
+  sp-2-2-export-engine: ready-for-dev
   sp-2-3-cli-entry-point: backlog
   sp-2-4-export-all-tier-1-skills: backlog
   sp-epic-2-retrospective: optional
