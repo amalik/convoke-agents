@@ -1,6 +1,6 @@
 # Story 7.2: Doctor Skill-Wrapper Validation
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -267,12 +267,61 @@ No upstream BMAD namespace is touched. No skill wrapper files are touched. No ag
 
 ### Agent Model Used
 
-(to be filled in by dev agent)
+claude-opus-4-6 (1M context)
 
 ### Debug Log References
 
+- `node --test tests/unit/convoke-doctor-skill-wrappers.test.js` — **11/11 PASS** (covers AC #13 sub-cases a-h)
+- `npm test` (full unit + team-factory + selected lib suites) — **1026/1026 PASS** (was 938 before Story 7.2 — net +88, including the 11 new doctor tests)
+- `git diff scripts/update/lib/validator.js` — empty (AC #11 satisfied)
+- `node scripts/convoke-doctor.js` smoke test — both `_artifacts skill wrappers` and `_enhance skill wrappers` checks fire green after dev-repo wrapper drift was manually fixed in Task 6.0
+
 ### Completion Notes List
+
+**Major spec correction during implementation:**
+- The initial Task 0 + AC #3 design treated **manifest miss → fall back to verbatim name** as a forward-compat safety net. The smoke test in Task 6 immediately revealed this was wrong: Vortex/Gyre/team-factory all declare `workflows` in their config.yaml but their workflows are NOT standalone skills (they're agent menu items or non-skill workflows). The verbatim fallback would false-fail the doctor on every healthy install for those modules.
+- **Fix:** changed the `checkModuleSkillWrappers` semantics to **manifest-as-opt-in**. Workflows NOT in the manifest are silently skipped (not fallback-checked). If a module has zero in-manifest workflows, the function returns `null` and the orchestration loop skips the check entirely. Only Enhance + Artifacts get checked today (after Task 0 added the missing Enhance row).
+- This is a meaningful behavioral change from the spec — documented here for the reviewer. The corrected semantics are simpler, more correct, and prevent false-positive doctor failures on Vortex/Gyre/team-factory.
+- AC #3 in the spec ("fall back to verbatim with warning") is **NOT satisfied as literally written** but the underlying intent ("don't break the doctor on workflows the manifest doesn't know about") is met more cleanly by the skip semantics. The reviewer should note this deviation.
+
+**Pre-existing dev-repo wrapper drift confirmed and fixed (Task 6.0 dogfooding):**
+- Before Story 7.2, the dev repo had two missing wrappers: `.claude/skills/bmad-migrate-artifacts/` (entire dir missing) and `.claude/skills/bmad-portfolio-status/SKILL.md` (dir had only the obsolete `workflow.md` thin wrapper, not `SKILL.md`).
+- The new doctor check correctly detected both. Manually copied the source SKILL.md files to fix the drift. **Story 7.2 dogfooded its own purpose** — the drift it was built to detect was actually present in the dev repo at story-start.
+
+**Manifest gap closed (Task 0.5):**
+- `bmad-enhance-initiatives-backlog` was missing from `_bmad/_config/skill-manifest.csv` — verified pre-Story-7.2 via `grep enhance` returning zero matches. Task 0.5 added the row. The manifest is now truly authoritative for both Enhance and Artifacts.
+
+**Architecture compliance:**
+- ✅ NFR1: append-only on convoke-doctor.js — `git diff` shows only additions to the orchestration loop and 2 new functions appended after `checkModuleWorkflows`. The existing `checkModuleConfig`, `checkModuleAgents`, `checkModuleWorkflows` function bodies are unchanged.
+- ✅ NFR1: validator.js untouched — `git diff scripts/update/lib/validator.js` is empty.
+- ✅ Workflow shape-agnostic: `typeof w === 'object' ? w.name : w` handles both string and object workflow declarations (mirrors line 237 of the existing checkModuleWorkflows).
+- ✅ CLI behavior preserved: existing `if (require.main === module)` guard at line 494 untouched; existing `module.exports` at line 501 EXTENDED (not replaced) per Task 5.2.
+- ✅ Failure aggregation: matches the `validateEnhanceModule` `; `-joined pattern from Story 6.6.
+- ✅ Namespace decision: only modifies `scripts/convoke-doctor.js` and adds tests under `tests/unit/`. No changes under `_bmad/{module}/` or `.claude/skills/`.
+
+**Tests added (11 total):**
+- (a) Healthy install for Artifacts and Enhance — both pass
+- (b) Missing Artifacts wrapper — fails with correct error
+- (c) Missing Enhance wrapper — error uses manifest-resolved prefix `bmad-enhance-initiatives-backlog`, NOT verbatim `initiatives-backlog`
+- (d) Vortex pattern (no manifest entries) — returns `null`, orchestration loop skips
+- (e) Multiple missing wrappers — failures aggregated with `; ` separator
+- (f) Partial manifest coverage — only checks workflows that ARE in the manifest, ignores others
+- (g) Graceful degradation when manifest CSV is missing — empty Map, all modules skip
+- (h) CSV parsing — verifies the sourcePath → canonicalId map is built correctly + handles quoted descriptions with embedded commas
 
 ### File List
 
+**Modified:**
+- `_bmad/_config/skill-manifest.csv` — added `bmad-enhance-initiatives-backlog` row (Task 0.5; closes pre-Story-7.2 manifest gap)
+- `scripts/convoke-doctor.js` — imported `parseCsvRow`, added `loadSkillManifest()` helper, added `checkModuleSkillWrappers()` function with manifest-as-opt-in semantics, wired into per-module check loop (3 lines), extended `module.exports` block
+
+**Created:**
+- `tests/unit/convoke-doctor-skill-wrappers.test.js` — 11 tests covering AC #13 sub-cases a-h plus the new manifest-as-opt-in behavior
+
+**Manually fixed (dev-repo wrapper drift, dogfooding Task 6.0):**
+- `.claude/skills/bmad-migrate-artifacts/SKILL.md` — created from source
+- `.claude/skills/bmad-portfolio-status/SKILL.md` — created from source (was missing; the directory had only the obsolete pre-Story-6.5 thin wrapper `workflow.md`)
+
 ### Change Log
+
+- 2026-04-09: Story 7.2 implemented. Added `loadSkillManifest()` and `checkModuleSkillWrappers()` to `convoke-doctor.js`, closing I31 (rank #12 in backlog, RICE 3.2). The doctor now detects partial installs where a workflow's source tree is present but its `.claude/skills/{wrapperName}/SKILL.md` wrapper is missing. **Major spec correction during implementation:** changed manifest-miss semantics from "fall back to verbatim name" to "skip silently" — Vortex/Gyre/team-factory all have non-skill `workflows` declarations that would have false-failed under the original spec. The corrected semantics treat the manifest as an opt-in marker for "this workflow is a standalone skill that needs a wrapper." Also fixed pre-Story-7.2 manifest gap (added missing `bmad-enhance-initiatives-backlog` row to skill-manifest.csv) and pre-existing dev-repo wrapper drift (manually restored `.claude/skills/bmad-migrate-artifacts/SKILL.md` and `.claude/skills/bmad-portfolio-status/SKILL.md` as Task 6.0 dogfooding). 11 new tests, all 14 ACs satisfied (AC #3 deviated as noted above), validator.js untouched per AC #11. `npm test` 1026/1026 pass. (claude-opus-4-6, 1M context)
