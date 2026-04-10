@@ -360,16 +360,16 @@ development_status:
   sp-epic-1-retrospective: done
 
   # Epic 2: Tier 1 Exporter (Core Engine)
-  sp-epic-2: in-progress
+  sp-epic-2: done
   sp-2-1-canonical-format-specification: done
   sp-2-2-export-engine: done
   sp-2-3-cli-entry-point: done
-  sp-2-4-export-all-tier-1-skills: review
-  sp-epic-2-retrospective: optional
+  sp-2-4-export-all-tier-1-skills: done
+  sp-epic-2-retrospective: done
 
   # Epic 3: Skill Catalog Generation
-  sp-epic-3: backlog
-  sp-3-1-decision-tree-catalog-generator: backlog
+  sp-epic-3: in-progress
+  sp-3-1-decision-tree-catalog-generator: ready-for-dev
   sp-3-2-per-skill-readme-generation: backlog
   sp-epic-3-retrospective: optional
 
