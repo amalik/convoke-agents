@@ -9,6 +9,7 @@ node_modules/
 # Build outputs
 dist/
 build/
+exported-skills/
 *.js.map
 
 # Environment files
