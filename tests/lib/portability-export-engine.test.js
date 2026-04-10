@@ -8,29 +8,7 @@ const { exportSkill, ALLOWED_WARNING_TYPES } = require('../../scripts/portabilit
 // matching the format spec from sp-2-1, for both Carson (Tier 1, strategy 2
 // persona resolution) and Winston (Tier 1, strategy 1 persona resolution).
 
-const FORBIDDEN_STRINGS = [
-  // Claude tool names
-  'Read tool',
-  'Edit tool',
-  'Write tool',
-  'Bash tool',
-  'Glob tool',
-  'Grep tool',
-  'Skill tool',
-  // Framework calls
-  'bmad-init',
-  'bmad-help',
-  'bmad-speak',
-  // Framework paths
-  '_bmad/',
-  '.claude/hooks',
-  '{project-root}',
-  // Micro-file directives
-  'Load step:',
-  'read fully and follow',
-  'Read fully and execute:',
-  'Load fully and follow:',
-];
+const { FORBIDDEN_STRINGS } = require('../../scripts/portability/test-constants');
 
 const REQUIRED_HEADING_PATTERNS = [
   /^# /m, // Title (any H1 — engine generates "# X with Y" or "# X")
