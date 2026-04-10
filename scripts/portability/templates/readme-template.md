@@ -28,9 +28,7 @@
 
 <!-- Bullet list of trigger conditions. Should match the "Use when:" section in instructions.md. -->
 
-- <trigger 1>
-- <trigger 2>
-- <trigger 3>
+<trigger-list>
 
 ## What it produces
 
