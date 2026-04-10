@@ -78,6 +78,7 @@ so that Tier 2 (light-deps) skills can be exported as self-contained files that 
   - [ ] In `convoke-export.js` `validateTier()`: make `--tier 2` / `--tier light-deps` proceed instead of exit 3
   - [ ] In `convoke-export.js` batch mode: `--all` now iterates both `standalone` and `light-deps` tiers
   - [ ] Update `--help` text to reflect the new tier support
+  - [ ] **Update sp-2-3 Test 6** (`tests/lib/portability-cli-entry-point.test.js`): currently asserts `--all` and `--tier 1` produce identical success sets. After this change, `--all` includes light-deps too. Change the assertion to: `--all` success count >= `--tier 1` success count (not equal). The `--tier 1` set must be a subset of the `--all` set.
 
 - [ ] Task 5: Write tests (AC: #8)
   - [ ] Create `tests/lib/portability-tier2-export.test.js`
