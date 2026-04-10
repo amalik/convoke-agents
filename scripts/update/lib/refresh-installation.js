@@ -838,6 +838,12 @@ prompts: []
  * @returns {Array<string>} Changes array entries for removed orphans
  */
 function cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, options = {}) {
+  // Deliberately synchronous (fs.removeSync / fs.readdirSync) — the function returns
+  // Array<string>, not a Promise. The sync pattern keeps the contract simple for both
+  // the caller (section 6e spreads the result into changes[]) and the test file (which
+  // imports the function directly without async scaffolding). The existing agent
+  // stale-skill sweep at section 6 uses async fs.remove because it runs inline in the
+  // async refreshInstallation body; this function is extracted to be testable standalone.
   const { verbose = false } = options;
   const changes = [];
 
