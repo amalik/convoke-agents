@@ -38,34 +38,27 @@
 
 ## How to use it
 
-<!-- Per-platform install instructions. -->
-<!-- For sp-2-1, only Claude Code is documented. -->
-<!-- Copilot, Cursor, and other adapters will be filled in by sp-5-2 -->
-<!-- (Platform Adapter Generation). -->
+<!-- Per-platform install instructions using adapter files. -->
 
 ### Claude Code
 
-Copy this directory into your project's `.claude/skills/<skill-name>/` folder:
-
 ```bash
-cp -r <skill-name>/ .claude/skills/<skill-name>/
+cp adapters/claude-code/SKILL.md .claude/skills/<skill-name>/SKILL.md
 ```
 
-Then invoke the skill in Claude Code by name (e.g., "use the brainstorming skill") or via slash command if your project registers it.
+Then invoke the skill in Claude Code by name or via slash command.
 
 ### GitHub Copilot
 
-<!-- Minimal copy-paste path for sp-3-2. sp-5-2 will add richer adapter wrappers. -->
-
-Append the contents of `instructions.md` to your project's `.github/copilot-instructions.md` file.
+```bash
+cat adapters/copilot/copilot-instructions.md >> .github/copilot-instructions.md
+```
 
 ### Cursor
 
-<!-- Minimal copy-paste path for sp-3-2. sp-5-2 will add richer adapter wrappers. -->
-
-Copy `instructions.md` into your project's `.cursor/rules/` directory as `<skill-name>.md`.
-
-<!-- TODO sp-5-2: Windsurf, Aider, and other platform instructions go here -->
+```bash
+cp adapters/cursor/<skill-name>.md .cursor/rules/<skill-name>.md
+```
 
 ## Tier explanation
 
