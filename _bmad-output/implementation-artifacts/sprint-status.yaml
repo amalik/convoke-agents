@@ -369,8 +369,8 @@ development_status:
 
   # Epic 3: Skill Catalog Generation
   sp-epic-3: in-progress
-  sp-3-1-decision-tree-catalog-generator: ready-for-dev
-  sp-3-2-per-skill-readme-generation: backlog
+  sp-3-1-decision-tree-catalog-generator: done
+  sp-3-2-per-skill-readme-generation: done
   sp-epic-3-retrospective: optional
 
   # Epic 4: Standalone Skills Repository (First Release)
