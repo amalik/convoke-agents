@@ -46,6 +46,7 @@ artifact_types:
   - research
   - story
   - spec
+  - note
 
 # Historical name aliases (migration-only)
 # Maps old initiative names found in existing filenames to canonical IDs.
