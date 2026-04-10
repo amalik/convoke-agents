@@ -14,13 +14,7 @@ const { readManifest } = require('../../scripts/portability/manifest-csv');
 const projectRoot = findProjectRoot();
 const CLI_PATH = path.join(projectRoot, 'scripts', 'portability', 'convoke-export.js');
 
-const FORBIDDEN_STRINGS = [
-  'Read tool', 'Edit tool', 'Write tool', 'Bash tool', 'Glob tool', 'Grep tool',
-  'Skill tool',
-  'bmad-init', 'bmad-help', 'bmad-speak', '_bmad/', '.claude/hooks',
-  '{project-root}', 'Load step:', 'read fully and follow',
-  'Read fully and execute:', 'Load fully and follow:',
-];
+const { FORBIDDEN_STRINGS } = require('../../scripts/portability/test-constants');
 
 let tmpDir, cliResult, skillDirs;
 
