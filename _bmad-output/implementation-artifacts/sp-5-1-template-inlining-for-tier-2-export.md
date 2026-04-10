@@ -119,9 +119,13 @@ so that Tier 2 (light-deps) skills can be exported as self-contained files that 
 
 Only 2 skills have actual template files to inline. The other 3 have skill-refs and/or sidecars only — they'll get companion-skill notes but no inlined content.
 
-### Template placeholder handling
+### Template placeholder handling (CRITICAL — spec review C1 fix)
 
-Templates contain `{{project_name}}`, `{{user_name}}`, `{{date}}`, `{{fr_list}}`, `{{nfr_list}}`, etc. These are NOT the same as the engine's Phase 6 `{var}` placeholders (single braces). The engine's catch-all regex `\{[\w_-]+\}` would strip single-brace vars, but double-brace `{{var}}` are not caught by that regex. So template placeholders survive the transformation pipeline naturally. Add a note line: "Replace template placeholders ({{...}}) with your project's actual values."
+Templates contain `{{project_name}}`, `{{user_name}}`, `{{date}}`, `{{fr_list}}`, `{{nfr_list}}`, etc. **These ARE caught by the engine's Phase 6.** The engine has both single-brace AND double-brace catch-alls:
+- Line 355-359: explicit `{{varName}}` substitution for the 6 mapped vars
+- Line 371: catch-all `\{\{[\w_-]+\}\}` → `[your context]`
+
+So template `{{project_name}}` would become `[your preferred language]` or `[your context]`. This destroys template placeholder semantics. **Fix:** template content is processed through Phases 1-5 and 7 ONLY, skipping Phase 6 entirely. This strips XML tags, framework calls, tool names, and whitespace — but preserves `{{var}}` placeholders for the user to fill in.
 
 ### The tier-check relaxation is minimal
 
