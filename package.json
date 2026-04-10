@@ -26,7 +26,8 @@
     "convoke-migrate": "scripts/update/convoke-migrate.js",
     "convoke-doctor": "scripts/convoke-doctor.js",
     "convoke-migrate-artifacts": "scripts/migrate-artifacts.js",
-    "convoke-portfolio": "scripts/lib/portfolio/portfolio-engine.js"
+    "convoke-portfolio": "scripts/lib/portfolio/portfolio-engine.js",
+    "convoke-export": "scripts/portability/convoke-export.js"
   },
   "scripts": {
     "install:agents": "node scripts/install-all-agents.js",
