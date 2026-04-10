@@ -368,15 +368,15 @@ development_status:
   sp-epic-2-retrospective: done
 
   # Epic 3: Skill Catalog Generation
-  sp-epic-3: in-progress
+  sp-epic-3: done
   sp-3-1-decision-tree-catalog-generator: done
   sp-3-2-per-skill-readme-generation: done
-  sp-epic-3-retrospective: optional
+  sp-epic-3-retrospective: done
 
   # Epic 4: Standalone Skills Repository (First Release)
-  sp-epic-4: backlog
-  sp-4-1-create-and-seed-repository: backlog
-  sp-4-2-end-to-end-validation: backlog
+  sp-epic-4: in-progress
+  sp-4-1-create-and-seed-repository: done
+  sp-4-2-end-to-end-validation: done
   sp-epic-4-retrospective: optional
 
   # Epic 5: Tier 2 Export & Platform Adapters
