@@ -339,12 +339,12 @@ development_status:
   # Epic 7: Cross-Cutting Platform Debt
   # Epic file: epic-7-platform-debt.md
   # Sourced from ag-epic-6 retro: closes I29, I30, I31, I32, I34, I10
-  ag-epic-7: in-progress
+  ag-epic-7: done
   ag-7-1-version-stamp-safety-yaml-comments: done
   ag-7-2-doctor-skill-wrapper-validation: done
   ag-7-3-validator-refresh-contract-audit: done
-  ag-7-4-orphan-skill-wrapper-cleanup: review
-  ag-epic-7-retrospective: optional
+  ag-7-4-orphan-skill-wrapper-cleanup: done
+  ag-epic-7-retrospective: done
 
   # ============================================================
   # SKILL PORTABILITY & DISTRIBUTION INITIATIVE
@@ -364,7 +364,7 @@ development_status:
   sp-2-1-canonical-format-specification: done
   sp-2-2-export-engine: done
   sp-2-3-cli-entry-point: done
-  sp-2-4-export-all-tier-1-skills: in-progress
+  sp-2-4-export-all-tier-1-skills: review
   sp-epic-2-retrospective: optional
 
   # Epic 3: Skill Catalog Generation
