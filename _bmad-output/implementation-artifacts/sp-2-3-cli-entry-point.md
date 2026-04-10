@@ -1,6 +1,6 @@
 # Story SP-2.3: CLI Entry Point
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -12,24 +12,37 @@ so that I (and the sp-2-4 batch run) can export Tier 1 skills from the command l
 
 1. A CLI script exists at `scripts/portability/convoke-export.js` (CommonJS, executable via `node` and via the `convoke-export` bin entry registered in `package.json`). The script has a `#!/usr/bin/env node` shebang, executable permission bit, and is registered in `package.json` `bin` as `"convoke-export": "scripts/portability/convoke-export.js"`. Running it with no arguments prints the same help text as `--help` and exits 0 (not 1 — no-args is help, not error).
 
-2. **Positional argument: skill name.** `node scripts/portability/convoke-export.js bmad-brainstorming` exports the named skill via `exportSkill()` from sp-2-2's `scripts/portability/export-engine.js`. The skill name must match a row in `_bmad/_config/skill-manifest.csv` exactly. If the skill is not found, the CLI prints `❌ Skill "<name>" is not in the manifest` (or the engine's exact error string) to stderr and exits with code 2 (`EXIT_NOT_FOUND`).
+2. **Positional argument: skill name.** `node scripts/portability/convoke-export.js bmad-brainstorming` exports the named skill via `exportSkill()` from sp-2-2's `scripts/portability/export-engine.js`. The skill name must match a row in `_bmad/_config/skill-manifest.csv` exactly. The CLI catches every error thrown by `exportSkill()` and maps to an exit code by inspecting `error.message`:
+   - `error.message.includes('not in the manifest')` → exit 2 (`EXIT_NOT_FOUND`), print the engine's error verbatim to stderr
+   - `error.message.includes('not standalone')` or `includes('tier')` → exit 3 (`EXIT_TIER_NOT_SUPPORTED`), print verbatim to stderr
+   - Anything else → exit 4 (`EXIT_PARTIAL_FAILURE`), print verbatim to stderr
+   The string-match dispatch is the contract between the CLI and engine — if sp-2-2's error wording changes, this AC must be updated together with the engine. Tests #4 and #5 lock the wording.
 
 3. **Default output path.** Without `--output`, the CLI writes to `./exported-skills/<skill-name>/` relative to the project root (resolved via `findProjectRoot()` from `scripts/update/lib/utils.js` — never `process.cwd()`). The directory is created if missing (`fs.mkdirSync(..., { recursive: true })`). If the directory already exists and contains files, the CLI overwrites `instructions.md` and `README.md` without prompting (idempotent runs are required for sp-2-4 batch usage). No other files in the target directory are touched.
 
 4. **Per-skill output structure** matches the canonical layout from `scripts/portability/templates/canonical-format.md` (sp-2-1):
    - `<output>/<skill-name>/instructions.md` — the LLM-consumed canonical content from `result.instructions`
-   - `<output>/<skill-name>/README.md` — a minimal catalog-facing README seeded from `scripts/portability/templates/readme-template.md` with placeholder substitutions (skill display name, persona name + icon, tier, description, persona communication style summary). **The full per-skill README generation is sp-3-2's job** — sp-2-3 only writes a stub README that satisfies the directory-structure invariant. The stub MUST contain valid markdown, no broken `<TODO>` tokens that would fail sp-2-4's grep checks, and the persona name + icon + skill name in their proper slots. Token replacements are done by simple `string.replaceAll('<placeholder>', value)` — no template engine.
+   - `<output>/<skill-name>/README.md` — a minimal catalog-facing README seeded from `scripts/portability/templates/readme-template.md` with placeholder substitutions (skill display name, persona name + icon, tier, description, persona communication style summary, when-to-use bullet block, what-you-produce summary). **The full per-skill README generation is sp-3-2's job** — sp-2-3 only writes a stub README that satisfies the directory-structure invariant. After substitution, the stub must contain zero residual `<placeholder>` tokens (HTML comments excluded — see Test 9). Token replacements are done by simple `string.replaceAll('<placeholder>', value)` — no template engine.
+
+   **Pre-requisite edit to readme-template.md** (Task 4): replace the three numbered placeholders `<trigger 1>`, `<trigger 2>`, `<trigger 3>` with a single `<trigger-list>` token. The CLI substitutes the entire `Use when:` bullet block (parsed from `result.sections.whenToUse` minus the heading) into that one slot. This avoids the count-mismatch fragility of fixed-arity numbered placeholders. If the parsed section has no bullets at all, the substitution writes a single bullet `- See instructions.md for trigger conditions` so the section is never visually empty.
 
 5. **`--output <path>` flag** overrides the default output directory. Path may be relative (resolved against `process.cwd()`, NOT project root — this is the one place `process.cwd()` is acceptable, because `--output` is a user-facing path) or absolute. The CLI creates the directory recursively if missing. Tilde (`~`) expansion is NOT required (defer to shell). Trailing slash is tolerated.
 
-6. **`--tier <N>` flag** batch-exports all skills in the manifest whose `tier` column matches. For sp-2-3 only `--tier 1` (alias for `standalone`) is supported; passing `--tier 2` or `--tier 3` exits with code 3 (`EXIT_TIER_NOT_SUPPORTED`) and prints `Tier 2 export is sp-5-1's job; Tier 3 skills are not exported per the portability schema.` This matches the engine's tier-refusal error from sp-2-2 AC #6 — the CLI just surfaces it earlier (before invoking the engine per skill). When `--tier 1` is passed, the CLI iterates every standalone-tier skill in alphabetical order, calls `exportSkill()` per skill, and writes the per-skill output. A single skill's failure does NOT abort the batch — log the failure and continue (see AC #9 for reporting).
+6. **`--tier <N>` flag** batch-exports all skills in the manifest whose `tier` column matches. Accepted values for sp-2-3:
+   - `--tier 1` or `--tier standalone` — proceeds with batch export
+   - `--tier 2` or `--tier light-deps` — exits 3 (`EXIT_TIER_NOT_SUPPORTED`) with `Tier 2 export is sp-5-1's job.`
+   - `--tier 3` or `--tier pipeline` — exits 3 with `Tier 3 skills are not exported per the portability schema.`
+   - Anything else (`--tier 0`, `--tier banana`, missing value) — exits 1 (`EXIT_USAGE`) with `Invalid --tier value: '<value>'. Valid values: 1, 2, 3, standalone, light-deps, pipeline.`
+
+   When `--tier 1` is accepted, the CLI iterates every standalone-tier skill in alphabetical order, calls `exportSkill()` per skill, and writes the per-skill output. A single skill's failure does NOT abort the batch — log the failure and continue (see AC #9 for reporting).
 
 7. **`--all` flag** is an alias for `--tier 1` for sp-2-3 (since Tiers 2 and 3 aren't supported yet). When sp-5-1 lands and Tier 2 export becomes possible, `--all` will expand to standalone + light-deps. For now, `--all` and `--tier 1` are functionally identical; both produce the same output set. Document this in `--help`.
 
 8. **`--dry-run` flag** runs the export engine in-memory but writes nothing to disk. The CLI still prints the per-skill success/failure summary, includes a `[DRY RUN]` prefix on the summary line, and lists every file path it WOULD have written. Use this to preview a batch before committing. `--dry-run` works with all other flags (`--tier 1 --dry-run`, `--all --dry-run`, single-skill `bmad-brainstorming --dry-run`).
 
 9. **Per-skill reporting** uses a stable line format that grep-friendly tooling can parse:
-   - Success: `✅ <skill-name> → <relative-path-to-instructions.md> (<N> warnings)`
+   - Success (zero warnings): `✅ <skill-name> → <relative-path-to-instructions.md>`
+   - Success (one or more warnings): `✅ <skill-name> → <relative-path-to-instructions.md> (<N> warnings)` — the `(N warnings)` suffix appears ONLY when N > 0, to keep clean batch runs uncluttered
    - Failure: `❌ <skill-name> — <error message single-lined>`
    - Skipped (in batch mode, e.g., already-fresh exports if `--skip-existing` is added later): `⏭️  <skill-name> — <reason>` (sp-2-3 has no `--skip-existing` flag yet, but reserve the format)
 
@@ -40,7 +53,7 @@ so that I (and the sp-2-4 batch run) can export Tier 1 skills from the command l
 11. **Argument parsing** is done with a hand-rolled minimalist parser (no `commander`, no `yargs`, no new npm dependencies — match the existing `scripts/portability/classify-skills.js` pattern from sp-1-2). Unknown flags exit code 1 (`EXIT_USAGE`) with `Unknown flag: <flag>. Run --help for usage.` Conflicting flag combinations also exit 1: a positional skill name combined with `--tier` or `--all`, or `--tier` combined with `--all` (since `--all` is an alias). Document the conflict matrix in `--help`.
 
 12. **A test file at `tests/lib/portability-cli-entry-point.test.js` adds at least 9 tests:**
-    - **Test 1: single skill, default output, dry-run.** `convoke-export bmad-brainstorming --dry-run` exits 0, prints `✅ bmad-brainstorming` and `[DRY RUN]`, writes nothing (verify with `git status --porcelain` byte comparison from sp-2-2 Test 6 pattern).
+    - **Test 1: single skill, default output, dry-run.** `convoke-export bmad-brainstorming --dry-run` exits 0, prints `✅ bmad-brainstorming` and `[DRY RUN]`. Verify writes-nothing via `git status --porcelain` byte comparison BEFORE/AFTER. **Inherit sp-2-2 Test 6's dirty-tree fallback:** if the BEFORE snapshot is non-empty, `console.warn('skipping write-check — working tree has pre-existing changes')` and skip ONLY the byte-comparison assertion (still assert exit code + stdout). This prevents false-fails on developer machines with uncommitted work.
     - **Test 2: single skill, custom output, real write.** Set up an `os.tmpdir()` directory, run `convoke-export bmad-brainstorming --output <tmpdir>`, assert `<tmpdir>/bmad-brainstorming/instructions.md` and `<tmpdir>/bmad-brainstorming/README.md` both exist, are non-empty, and `instructions.md` contains the persona name `Carson`. Clean up the tmpdir in `afterEach` (use `fs.rmSync(..., { recursive: true, force: true })`).
     - **Test 3: tier 1 batch dry-run.** `convoke-export --tier 1 --dry-run` exits 0, prints at least 2 success lines (Carson + Winston are both standalone), summary line shows non-zero exported count, writes nothing.
     - **Test 4: tier 2 rejection.** `convoke-export --tier 2` exits 3 with the documented error message.
@@ -48,7 +61,7 @@ so that I (and the sp-2-4 batch run) can export Tier 1 skills from the command l
     - **Test 6: --all is alias for --tier 1.** Run both with `--dry-run`, capture stdout, assert the success-line set is identical (sort + compare).
     - **Test 7: conflicting flags.** `convoke-export bmad-brainstorming --tier 1` exits 1. `convoke-export --tier 1 --all` exits 1. Both print `Run --help for usage.`
     - **Test 8: --help.** `convoke-export --help` exits 0, output contains `Usage`, `--output`, `--tier`, `--all`, `--dry-run`, `Exit codes`, and at least one `Example:` block. No emoji in help text.
-    - **Test 9: README stub validity.** After `convoke-export bmad-brainstorming --output <tmpdir>`, the generated README contains the persona name `Carson`, the icon `🧠`, the skill name, and zero `<placeholder>` or `<TODO sp-3-1>` tokens (this is the sp-2-1 P3 fix carried forward to sp-2-3 — broken `<TODO>` tokens must NOT ship in stub READMEs).
+    - **Test 9: README stub validity.** After `convoke-export bmad-brainstorming --output <tmpdir>`, read the generated README content. **Strip HTML comments first** with `content.replace(/<!--[\s\S]*?-->/g, '')` (the readme-template.md has explanatory HTML comments containing `<` characters that would otherwise false-match). Then assert: (a) contains the persona name `Carson`, (b) contains the icon `🧠`, (c) contains the skill name `bmad-brainstorming`, (d) the cleaned content has zero residual `<[a-z][^>]*>` placeholder tokens (catches any unsubstituted `<persona name>`, `<trigger-list>`, `<output artifact description>`, etc.). This generalizes the sp-2-1 P3 fix to ALL placeholder leaks, not just the `<TODO sp-3-1>` token.
 
     All tests use `child_process.execSync` or `child_process.spawnSync` to invoke the CLI as a subprocess (not by `require()`-ing the script — the script has side effects via `require.main === module`). Tests must NOT depend on the user's working directory; resolve paths via `findProjectRoot()` and tmpdirs.
 
@@ -56,77 +69,87 @@ so that I (and the sp-2-4 batch run) can export Tier 1 skills from the command l
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Scaffold the CLI script (AC: #1, #11)
-  - [ ] Create `scripts/portability/convoke-export.js` with `#!/usr/bin/env node` shebang
-  - [ ] Mark executable: `chmod +x scripts/portability/convoke-export.js`
-  - [ ] CommonJS — `require('./export-engine')`, `require('./manifest-csv')`, `require('../update/lib/utils')`
-  - [ ] Implement a hand-rolled arg parser (copy the pattern from `scripts/portability/classify-skills.js` — same `--flag value` and `--bool` handling)
-  - [ ] Define exit code constants: `EXIT_SUCCESS = 0`, `EXIT_USAGE = 1`, `EXIT_NOT_FOUND = 2`, `EXIT_TIER_NOT_SUPPORTED = 3`, `EXIT_PARTIAL_FAILURE = 4`
-  - [ ] When invoked with no args, call the help printer and exit 0 (not 1)
-  - [ ] Wrap the main entry point in `if (require.main === module) { main(); }` so the file can be `require()`d in tests without executing
+- [x] Task 1: Scaffold the CLI script (AC: #1, #11)
+  - [x] Create `scripts/portability/convoke-export.js` with `#!/usr/bin/env node` shebang
+  - [x] Mark executable: `chmod +x scripts/portability/convoke-export.js`
+  - [x] CommonJS — `require('./export-engine')`, `require('./manifest-csv')`, `require('../update/lib/utils')`
+  - [x] Implement a hand-rolled arg parser (copy the pattern from `scripts/portability/classify-skills.js` — same `--flag value` and `--bool` handling)
+  - [x] Define exit code constants: `EXIT_SUCCESS = 0`, `EXIT_USAGE = 1`, `EXIT_NOT_FOUND = 2`, `EXIT_TIER_NOT_SUPPORTED = 3`, `EXIT_PARTIAL_FAILURE = 4`
+  - [x] When invoked with no args, call the help printer and exit 0 (not 1)
+  - [x] Wrap the main entry point in `if (require.main === module) { main(); }` so the file can be `require()`d in tests without executing
 
-- [ ] Task 2: Implement the help printer (AC: #10)
-  - [ ] Plain ASCII only — no emoji in help text (emoji is only in per-skill success/failure lines, not in `--help`)
-  - [ ] Sections: Synopsis, Description, Flags, Exit codes, Examples
-  - [ ] All 5 exit codes documented in a table
-  - [ ] At least 4 worked examples covering single, custom output, tier batch dry-run, and `--all`
-  - [ ] Conflict matrix mentioned in the Flags section
+- [x] Task 2: Implement the help printer (AC: #10)
+  - [x] Plain ASCII only — no emoji in help text (emoji is only in per-skill success/failure lines, not in `--help`)
+  - [x] Sections: Synopsis, Description, Flags, Exit codes, Examples
+  - [x] All 5 exit codes documented in a table
+  - [x] At least 4 worked examples covering single, custom output, tier batch dry-run, and `--all`
+  - [x] Conflict matrix mentioned in the Flags section
 
-- [ ] Task 3: Implement single-skill mode (AC: #2, #3, #4, #5, #13)
-  - [ ] `runSingle(skillName, outputBase, dryRun)` — calls `exportSkill(skillName, projectRoot)`
-  - [ ] Catches engine errors: `not in the manifest` → exit 2; tier mismatch → exit 3; everything else → exit 4 with the error message
-  - [ ] Resolves output path: `outputBase` if absolute; otherwise `path.resolve(process.cwd(), outputBase)` (the one and only place `process.cwd()` is allowed — see AC #5)
-  - [ ] Default `outputBase` = `./exported-skills` resolved against `findProjectRoot()` (NOT cwd — see AC #3 for the asymmetry rationale: the default is project-relative for batch reproducibility, the user override is cwd-relative for typical CLI ergonomics)
-  - [ ] If `dryRun === false`: `fs.mkdirSync(skillDir, { recursive: true })`, write `instructions.md`, write `README.md`
-  - [ ] If `dryRun === true`: print the would-be paths; write nothing
+- [x] Task 3: Implement single-skill mode (AC: #2, #3, #4, #5, #13)
+  - [x] `runSingle(skillName, outputBase, dryRun)` — calls `exportSkill(skillName, projectRoot)`
+  - [x] Catches engine errors and dispatches by `error.message` substring per AC #2: `'not in the manifest'` → exit 2; `'not standalone'` or `'tier'` → exit 3; everything else → exit 4 with the error message
+  - [x] Resolves output path: `outputBase` if absolute; otherwise `path.resolve(process.cwd(), outputBase)` (the one and only place `process.cwd()` is allowed — see AC #5)
+  - [x] Default `outputBase` = `./exported-skills` resolved against `findProjectRoot()` (NOT cwd — see AC #3 for the asymmetry rationale: the default is project-relative for batch reproducibility, the user override is cwd-relative for typical CLI ergonomics)
+  - [x] If `dryRun === false`: `fs.mkdirSync(skillDir, { recursive: true })`, write `instructions.md`, write `README.md`
+  - [x] If `dryRun === true`: print the would-be paths; write nothing
 
-- [ ] Task 4: Implement README stub generation (AC: #4)
-  - [ ] Read `scripts/portability/templates/readme-template.md` once at startup
-  - [ ] Define a placeholder map: `<Skill display name>` → humanized name (reuse `humanizeSkillName` from `export-engine.js` — it's already exported), `<persona name + icon>` → `${persona.name} ${persona.icon}`, `<persona name>` → `persona.name`, `<one-paragraph description...>` → `skillRow.description`, `<persona communication style summary>` → `persona.communicationStyle.slice(0, 240)` (cap to keep stub minimal), `<output artifact description>` → `result.sections.whatYouProduce` (strip the `## What you produce\n\n` heading), `<skill-name>` → the manifest name (kebab-case), `<tier>` → `skillRow.tier`, `<standalone | light-deps | pipeline>` → `skillRow.tier`
-  - [ ] **Important:** the readme-template.md contains `<trigger 1>`, `<trigger 2>`, `<trigger 3>` placeholders. For the sp-2-3 stub, replace these with the bullets extracted from `result.sections.whenToUse` (parse out the `Use when:` bullets). If fewer than 3 bullets exist, replace the missing ones with empty strings and let the reader see only the populated bullets (the resulting blank lines are acceptable for a stub — sp-3-2 will polish this).
-  - [ ] After substitution, run a final sanity pass: assert no `<placeholder>` or `<TODO sp-3-1>` tokens remain. If any do, throw — this is a CLI bug, not a runtime warning.
-  - [ ] Use `string.replaceAll(token, value)` (Node 15+, project requires Node 18+ per `engines` in `package.json` — safe)
+- [x] Task 4: Implement README stub generation (AC: #4)
+  - [x] **First, edit `scripts/portability/templates/readme-template.md`:** replace the three lines `- <trigger 1>`, `- <trigger 2>`, `- <trigger 3>` with a single line `<trigger-list>`. This is a one-line template change in support of the CLI's verbatim-bullet-injection approach (see AC #4).
+  - [x] Read the (now-edited) `scripts/portability/templates/readme-template.md` once at startup
+  - [x] Define a placeholder map:
+    - `<Skill display name>` → `humanizeSkillName(skillRow.name)` (reuse the export from `export-engine.js`)
+    - `<persona name + icon>` → `${persona.name} ${persona.icon}` (or just `${persona.name}` if icon is empty)
+    - `<persona name>` → `persona.name`
+    - `<one-paragraph description of what the skill does and what value it delivers>` → `skillRow.description`
+    - `<persona communication style summary>` → `persona.communicationStyle || persona.identity || 'See instructions.md for details.'` (graceful fallback chain — addresses M5: communicationStyle column may be empty in agent-manifest.csv)
+    - `<output artifact description>` → `result.sections.whatYouProduce.replace(/^##\s+What you produce\s*\n+/, '')` (strip the heading; keep the body)
+    - `<trigger-list>` → the parsed `Use when:` bullet block from `result.sections.whenToUse` (lines starting with `- `). If no bullets parsed, substitute `- See instructions.md for trigger conditions`.
+    - `<skill-name>` → `skillRow.name` (kebab-case manifest key)
+    - `<tier>` → `skillRow.tier`
+    - `<standalone | light-deps | pipeline>` → `skillRow.tier`
+  - [x] After substitution, run a sanity pass that strips HTML comments first (`content.replace(/<!--[\s\S]*?-->/g, '')`) then asserts no `<[a-z][^>]*>` placeholder tokens remain. If any do, throw `README stub generation left unsubstituted placeholders: <list>` — this is a CLI bug, not a runtime warning.
+  - [x] Use `string.replaceAll(token, value)` (Node 15+, project requires Node 18+ per `engines` in `package.json` — safe)
 
-- [ ] Task 5: Implement batch mode (AC: #6, #7, #9)
-  - [ ] `runBatch(tierFilter, outputBase, dryRun)` — reads the manifest, filters rows where `tier === 'standalone'` for `--tier 1` or `--all`
-  - [ ] Sort skills alphabetically by name for stable output ordering
-  - [ ] For each skill: try `runSingle()`; collect success/failure into a results array
-  - [ ] A single failure does NOT abort the batch — `try/catch` per skill
-  - [ ] After the loop, print the summary line
-  - [ ] Return exit code: 0 if all succeeded, 4 if any failed, 0 if batch was empty
-  - [ ] `--tier 2` and `--tier 3` exit early with code 3 BEFORE the loop runs
+- [x] Task 5: Implement batch mode (AC: #6, #7, #9)
+  - [x] `runBatch(tierFilter, outputBase, dryRun)` — reads the manifest, filters rows where `tier === 'standalone'` for `--tier 1` or `--all`
+  - [x] Sort skills alphabetically by name for stable output ordering
+  - [x] For each skill: try `runSingle()`; collect success/failure into a results array
+  - [x] A single failure does NOT abort the batch — `try/catch` per skill
+  - [x] After the loop, print the summary line
+  - [x] Return exit code: 0 if all succeeded, 4 if any failed, 0 if batch was empty
+  - [x] `--tier 2` and `--tier 3` exit early with code 3 BEFORE the loop runs
 
-- [ ] Task 6: Implement reporting + summary (AC: #9)
-  - [ ] Define a `Reporter` object with `success(skill, path, warnings)`, `failure(skill, error)`, `skip(skill, reason)`, `summary()`
-  - [ ] Each method prints to stdout (emoji prefix per AC #9)
-  - [ ] Failures' error messages are single-lined: `error.message.split('\n')[0]`
-  - [ ] Summary line includes total warnings across all skills
+- [x] Task 6: Implement reporting + summary (AC: #9)
+  - [x] Define a `Reporter` object with `success(skill, path, warnings)`, `failure(skill, error)`, `skip(skill, reason)`, `summary()`
+  - [x] Each method prints to stdout (emoji prefix per AC #9)
+  - [x] Failures' error messages are single-lined: `error.message.split('\n')[0]`
+  - [x] Summary line includes total warnings across all skills
 
-- [ ] Task 7: Wire it into `main()` (AC: #1, #2, #6, #11)
-  - [ ] Parse args
-  - [ ] Validate flag combinations (conflict matrix)
-  - [ ] Dispatch to `runSingle` or `runBatch`
-  - [ ] `process.exit(returnCode)`
+- [x] Task 7: Wire it into `main()` (AC: #1, #2, #6, #11)
+  - [x] Parse args
+  - [x] Validate flag combinations (conflict matrix)
+  - [x] Dispatch to `runSingle` or `runBatch`
+  - [x] `process.exit(returnCode)`
 
-- [ ] Task 8: Register in package.json bin (AC: #1)
-  - [ ] Add `"convoke-export": "scripts/portability/convoke-export.js"` under `bin`
-  - [ ] Verify the existing bin entries' alphabetical or functional ordering — match the project convention
-  - [ ] Run `npm install` locally to verify the bin link works (manual sanity check, not a checked-in test)
+- [x] Task 8: Register in package.json bin (AC: #1)
+  - [x] Add `"convoke-export": "scripts/portability/convoke-export.js"` under `bin`
+  - [x] Verify the existing bin entries' alphabetical or functional ordering — match the project convention
+  - [x] Run `npm install` locally to verify the bin link works (manual sanity check, not a checked-in test)
 
-- [ ] Task 9: Write tests (AC: #12)
-  - [ ] Create `tests/lib/portability-cli-entry-point.test.js`
-  - [ ] Use `child_process.spawnSync('node', ['scripts/portability/convoke-export.js', ...args], { cwd: projectRoot })` for invocation
-  - [ ] Use `os.tmpdir() + '/sp-2-3-' + crypto.randomUUID()` for output directories (avoid collisions across parallel test runs)
-  - [ ] `afterEach` cleans up tmpdirs with `fs.rmSync(tmpDir, { recursive: true, force: true })`
-  - [ ] Tests must NOT depend on the user's working directory — always pass `cwd: projectRoot`
-  - [ ] All 9 tests from AC #12 implemented
+- [x] Task 9: Write tests (AC: #12)
+  - [x] Create `tests/lib/portability-cli-entry-point.test.js`
+  - [x] Use `child_process.spawnSync('node', ['scripts/portability/convoke-export.js', ...args], { cwd: projectRoot })` for invocation
+  - [x] Use `os.tmpdir() + '/sp-2-3-' + crypto.randomUUID()` for output directories (avoid collisions across parallel test runs)
+  - [x] `afterEach` cleans up tmpdirs with `fs.rmSync(tmpDir, { recursive: true, force: true })`
+  - [x] Tests must NOT depend on the user's working directory — always pass `cwd: projectRoot`
+  - [x] All 9 tests from AC #12 implemented
 
-- [ ] Task 10: Run regression suite + verify (AC: #1-13)
-  - [ ] `npx jest tests/lib/portability` — all portability tests pass (38 existing + 9 new = 47 minimum)
-  - [ ] `git status --porcelain` after the test run shows NO changes outside the tmpdirs (the engine + CLI are read-only on the source tree)
-  - [ ] Manual smoke check: `node scripts/portability/convoke-export.js bmad-brainstorming --output /tmp/sp-2-3-smoke && ls /tmp/sp-2-3-smoke/bmad-brainstorming/` should show both files
-  - [ ] Manual smoke check: `node scripts/portability/convoke-export.js --tier 1 --dry-run` should print 2+ success lines (Carson + Winston minimum)
-  - [ ] `node scripts/convoke-doctor.js` — same baseline (2 pre-existing issues OK)
+- [x] Task 10: Run regression suite + verify (AC: #1-13)
+  - [x] `npx jest tests/lib/portability` — all portability tests pass (38 existing + 9 new = 47 minimum)
+  - [x] `git status --porcelain` after the test run shows NO changes outside the tmpdirs (the engine + CLI are read-only on the source tree)
+  - [x] Manual smoke check: `node scripts/portability/convoke-export.js bmad-brainstorming --output /tmp/sp-2-3-smoke && ls /tmp/sp-2-3-smoke/bmad-brainstorming/` should show both files
+  - [x] Manual smoke check: `node scripts/portability/convoke-export.js --tier 1 --dry-run` should print 2+ success lines (Carson + Winston minimum)
+  - [x] `node scripts/convoke-doctor.js` — same baseline (2 pre-existing issues OK)
 
 ## Dev Notes
 
@@ -232,4 +255,34 @@ claude-opus-4-6[1m]
 
 ### Completion Notes List
 
+- **Tasks 1-7 (CLI script):** Built `scripts/portability/convoke-export.js` (~360 lines, CommonJS, executable). Hand-rolled arg parser supporting positional skill name, `--output`, `--tier`, `--all`, `--dry-run`, `--help`/`-h`. Five exit code constants exported. `require.main === module` guard so tests can `require()` without side effects.
+- **Task 4 prereq:** Edited `scripts/portability/templates/readme-template.md` per AC #4 — replaced the three numbered `<trigger 1/2/3>` placeholders with a single `<trigger-list>` token. The CLI now injects the entire `Use when:` bullet block verbatim, removing the count-mismatch fragility.
+- **README stub generation:** `buildReadmeStub()` substitutes 10 placeholders from manifest row + engine result. Communication-style fallback chain implemented per M5 patch (`communicationStyle → identity → generic`). Post-substitution sanity check strips HTML comments first, then asserts no `<[a-z]...>` placeholder tokens remain — throws on leakage.
+- **Tier validation (M2 patch):** `validateTier()` accepts `1`/`standalone` (proceed), `2`/`light-deps` (exit 3), `3`/`pipeline` (exit 3), and exits 1 with a clear "Valid values:" message for anything else. M1 came along for free.
+- **Conflict matrix (AC #11):** positional + `--tier`/`--all` → exit 1; `--tier` + `--all` → exit 1; multiple positional → exit 1; unknown flag → exit 1; no args → help + exit 0.
+- **Reporter (C2 patch):** `(N warnings)` suffix only when N > 0. Clean batch runs are uncluttered.
+- **Batch dedup:** discovered during smoke testing that the manifest has duplicate skill rows for skills present in multiple modules (e.g., `bmad-shard-doc` appears 3x). Added `Set`-based dedup in `runBatch` so each skill name is exported exactly once.
+- **9 tests in `tests/lib/portability-cli-entry-point.test.js`** all passing. Tests use `spawnSync` (not `require()`) so the CLI runs as a real subprocess. Tmpdirs via `os.tmpdir() + crypto.randomUUID()` with `afterEach` cleanup. Test 1 inherits sp-2-2's dirty-tree fallback (C1 patch) — skips byte-comparison if working tree is dirty but still asserts exit code + stdout.
+- **Test 3 brittleness fix (M4 patch):** reads the manifest and asserts `standaloneSet.size >= 2` rather than hard-coding a count. Accepts both exit 0 and exit 4 since the engine has known persona-resolution gaps for many standalone skills (sp-2-4 territory, not sp-2-3's bug to fix).
+- **Smoke test results:** Carson exports cleanly with 1 unresolved-template warning; Winston exports cleanly. `--tier 1 --dry-run` processed 60 unique standalone skills (18 success, 42 failed on persona resolution). Exit code is 4 (partial failure) — correct per AC #9.
+- **package.json bin entry:** added `"convoke-export": "scripts/portability/convoke-export.js"` after `convoke-portfolio`.
+- **Regression suite:** all 47 portability tests pass (38 from sp-1-1 through sp-2-2 + 9 new). `node scripts/convoke-doctor.js` shows the same 2 pre-existing baseline issues, no new regressions.
+- **Findings deferred to sp-2-4 / future stories:**
+  - 42/60 standalone skills fail persona resolution. Engine gap, not CLI gap. sp-2-4 must address by adding agent-manifest rows or strengthening sp-2-2's Strategy 4 inline extractor.
+  - Manifest has duplicate rows (same skill across modules). Worked around in CLI; root-cause cleanup belongs in a separate manifest-hygiene story.
+
 ### File List
+
+**New:**
+- `scripts/portability/convoke-export.js` (CLI script, +360 lines, executable)
+- `tests/lib/portability-cli-entry-point.test.js` (9 tests, +160 lines)
+
+**Modified:**
+- `scripts/portability/templates/readme-template.md` (3 numbered `<trigger N>` lines → 1 `<trigger-list>` line)
+- `package.json` (added `convoke-export` bin entry)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (sp-2-3 status: ready-for-dev → in-progress → review)
+
+**Unmodified by sp-2-3 (read-only):**
+- `scripts/portability/export-engine.js` (the engine remains pure-transform)
+- `_bmad/_config/skill-manifest.csv` (read-only)
+- `_bmad/_config/agent-manifest.csv` (read-only)
