@@ -246,6 +246,38 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — missing skills directory', (
   });
 });
 
+// === (h) Non-standalone Artifacts workflow name collision (documenting test — BH#3/EH#2) ===
+
+describe('ag-7-4: cleanupOrphanWorkflowWrappers — non-standalone Artifacts name in knownArtifactsNames', () => {
+  let tmpDir, skillsDir;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'orphan-cleanup-test-'));
+    skillsDir = path.join(tmpDir, '.claude', 'skills');
+  });
+  afterEach(async () => { await fs.remove(tmpDir); });
+
+  it('removes a directory matching a non-standalone Artifacts name if it exists (defensive — such dirs should never be installed)', async () => {
+    // Scenario: a future Artifacts workflow "bmad-internal-tool" is declared in config
+    // WITHOUT standalone:true. refresh-installation section 6d would never install a
+    // wrapper for it. But if someone manually created .claude/skills/bmad-internal-tool/,
+    // Strategy 2 correctly removes it because:
+    //   - knownArtifactsNames contains "bmad-internal-tool" (all Artifacts names tracked)
+    //   - currentWrappers does NOT contain it (only standalone:true workflows are in the union)
+    // This is intentional: the name is Convoke-owned, and the directory shouldn't exist.
+    await seedSkillsDir(skillsDir, ['bmad-internal-tool']);
+    const currentWrappers = new Set(); // no standalone workflows
+    const knownArtifactsNames = new Set(['bmad-internal-tool']); // non-standalone, but known
+
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames);
+
+    assert.ok(!fs.existsSync(path.join(skillsDir, 'bmad-internal-tool')),
+      'directory matching a known Artifacts name should be removed even if non-standalone');
+    assert.equal(changes.length, 1);
+    assert.ok(changes[0].includes('bmad-internal-tool'));
+  });
+});
+
 // === Mixed scenario: all wrapper types coexist ===
 
 describe('ag-7-4: cleanupOrphanWorkflowWrappers — mixed scenario', () => {
