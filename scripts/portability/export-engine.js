@@ -136,6 +136,57 @@ function loadAgentManifest(projectRoot) {
 }
 
 /**
+ * Shared agent-manifest matching logic (Strategies 1 + 2 + 2b).
+ * No file I/O — operates purely on the passed-in agents array.
+ * Returns the matched agent row object, or null if no match.
+ */
+const CIS_SKILL_TO_AGENT = {
+  'bmad-cis-storytelling': 'bmad-cis-agent-storyteller',
+  'bmad-cis-innovation-strategy': 'bmad-cis-agent-innovation-strategist',
+  'bmad-cis-problem-solving': 'bmad-cis-agent-creative-problem-solver',
+};
+
+function findAgentMatch(skillName, agents) {
+  // Strategy 1: exact name match
+  let agent = agents.find((a) => a.name === skillName);
+  if (agent) return agent;
+
+  // Strategy 2: bmad-cis-agent-* pattern transformation
+  const base = skillName.startsWith('bmad-cis-')
+    ? skillName.replace(/^bmad-cis-/, 'bmad-cis-agent-')
+    : skillName.replace(/^bmad-/, 'bmad-cis-agent-');
+  const candidates = [base, base + '-coach', base + '-specialist', base + '-expert'];
+  for (const candidate of candidates) {
+    agent = agents.find((a) => a.name === candidate);
+    if (agent) return agent;
+  }
+
+  // Strategy 2b: alias map for CIS stem mismatches
+  const aliasName = CIS_SKILL_TO_AGENT[skillName];
+  if (aliasName) {
+    agent = agents.find((a) => a.name === aliasName);
+    if (agent) return agent;
+  }
+
+  return null;
+}
+
+/**
+ * Lightweight persona summary for catalog generation.
+ * Uses Strategies 1+2+2b only (no file reads). Falls back to humanized name + 🔧.
+ * @param {string} skillName
+ * @param {object[]} agents - array of agent-manifest row objects
+ * @returns {{ name: string, icon: string }}
+ */
+function resolvePersonaSummary(skillName, agents) {
+  const agent = findAgentMatch(skillName, agents);
+  if (agent) {
+    return { name: agent.displayName, icon: agent.icon || '' };
+  }
+  return { name: humanizeSkillName(skillName), icon: '🔧' };
+}
+
+/**
  * Resolve a persona for the given skill via the 5-strategy fallback chain.
  * Strategies 1-4 use agent-manifest or inline extraction. Strategy 5
  * synthesizes a minimal persona from workflow content (never throws).
@@ -143,46 +194,11 @@ function loadAgentManifest(projectRoot) {
 function loadPersona(skillName, skillContent, workflowContent, projectRoot) {
   const agents = loadAgentManifest(projectRoot);
 
-  // Strategy 1: exact name match (handles bmad-agent-pm, bmad-agent-architect, etc.)
-  let agent = agents.find((a) => a.name === skillName);
-
-  // Strategy 2: bmad-cis-agent-* pattern transformation
-  if (!agent) {
-    // bmad-brainstorming → look up bmad-cis-agent-brainstorming-coach
-    // Try various transformations. Use bmad-cis- → bmad-cis-agent- first
-    // (avoids double-cis: bmad-cis-storytelling → bmad-cis-agent-cis-storytelling bug).
-    const base = skillName.startsWith('bmad-cis-')
-      ? skillName.replace(/^bmad-cis-/, 'bmad-cis-agent-')
-      : skillName.replace(/^bmad-/, 'bmad-cis-agent-');
-    const candidates = [
-      base,
-      base + '-coach',
-      base + '-specialist',
-      base + '-expert',
-    ];
-    for (const candidate of candidates) {
-      agent = agents.find((a) => a.name === candidate);
-      if (agent) break;
-    }
-  }
-
-  // Strategy 2b: alias map for CIS skill-to-agent stem mismatches
-  if (!agent) {
-    const CIS_SKILL_TO_AGENT = {
-      'bmad-cis-storytelling': 'bmad-cis-agent-storyteller',
-      'bmad-cis-innovation-strategy': 'bmad-cis-agent-innovation-strategist',
-      'bmad-cis-problem-solving': 'bmad-cis-agent-creative-problem-solver',
-    };
-    const aliasName = CIS_SKILL_TO_AGENT[skillName];
-    if (aliasName) {
-      agent = agents.find((a) => a.name === aliasName);
-    }
-  }
+  // Strategies 1 + 2 + 2b: manifest-based matching (shared with resolvePersonaSummary)
+  let agent = findAgentMatch(skillName, agents);
 
   // Strategy 3: description fuzzy match (look for "talk to <Name>")
   if (!agent) {
-    // Get the skill row's description from the skill manifest (passed via the skillContent here? no — re-read)
-    // Actually we have the skill content; look for persona name patterns
     const allContent = skillContent + '\n' + workflowContent;
     const nameMatch = allContent.match(/\b(?:talk to|requests? the|asks? to talk to|asks? for)\s+([A-Z][a-z]+)/);
     if (nameMatch) {
@@ -910,4 +926,7 @@ module.exports = {
   extractWhatYouProduce,
   extractQualityChecks,
   ALLOWED_WARNING_TYPES,
+  // Catalog support (sp-3-1)
+  resolvePersonaSummary,
+  loadAgentManifest,
 };
