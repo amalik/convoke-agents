@@ -47,7 +47,7 @@ describe('Seed Catalog Repository (sp-4-1)', () => {
     const { header, rows } = readManifest(manifestPath);
     const ni = header.indexOf('name');
     const ti = header.indexOf('tier');
-    const expectedCount = [...new Set(rows.filter((r) => r[ti] === 'standalone').map((r) => r[ni]))].length;
+    const expectedCount = [...new Set(rows.filter((r) => r[ti] === 'standalone' || r[ti] === 'light-deps').map((r) => r[ni]))].length;
     expect(skillDirs.length).toBe(expectedCount);
     expect(fs.existsSync(path.join(tmpDir, 'README.md'))).toBe(true);
   });
