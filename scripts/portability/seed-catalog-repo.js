@@ -23,6 +23,7 @@ const { readManifest } = require('./manifest-csv');
 const { exportSkill, loadSkillRow } = require('./export-engine');
 const { generateCatalog } = require('./catalog-generator');
 const { buildReadme } = require('./convoke-export');
+const { generateAdapters } = require('./generate-adapters');
 
 // =============================================================================
 // CONSTANTS
@@ -87,20 +88,20 @@ function generate(outputDir, projectRoot) {
   const nameIdx = header.indexOf('name');
   const tierIdx = header.indexOf('tier');
 
-  // Get unique standalone skill names
+  // Get unique exportable skill names (standalone + light-deps)
   const seen = new Set();
-  const standaloneNames = [];
+  const exportableNames = [];
   for (const row of rows) {
     const name = row[nameIdx];
     if (seen.has(name)) continue;
     seen.add(name);
-    if (row[tierIdx] === 'standalone') {
-      standaloneNames.push(name);
+    if (row[tierIdx] === 'standalone' || row[tierIdx] === 'light-deps') {
+      exportableNames.push(name);
     }
   }
-  standaloneNames.sort();
+  exportableNames.sort();
 
-  console.log(`Exporting ${standaloneNames.length} standalone skills...`);
+  console.log(`Exporting ${exportableNames.length} skills (standalone + light-deps)...`);
 
   // Create output directory
   fs.mkdirSync(outputDir, { recursive: true });
@@ -108,7 +109,7 @@ function generate(outputDir, projectRoot) {
   // Export each skill
   let exportedCount = 0;
   const failures = [];
-  for (const skillName of standaloneNames) {
+  for (const skillName of exportableNames) {
     try {
       const result = exportSkill(skillName, projectRoot);
       const skillRow = loadSkillRow(skillName, projectRoot);
@@ -118,6 +119,7 @@ function generate(outputDir, projectRoot) {
       fs.mkdirSync(skillDir, { recursive: true });
       fs.writeFileSync(path.join(skillDir, 'instructions.md'), result.instructions);
       fs.writeFileSync(path.join(skillDir, 'README.md'), readme);
+      generateAdapters(skillName, skillRow, result.instructions, skillDir);
       exportedCount++;
     } catch (err) {
       failures.push({ skill: skillName, error: err.message.split('\n')[0] });
@@ -146,7 +148,7 @@ function generate(outputDir, projectRoot) {
   fs.writeFileSync(path.join(outputDir, 'CONTRIBUTING.md'), CONTRIBUTING_MD);
 
   console.log('Generation complete.');
-  return { skillCount: exportedCount, expectedCount: standaloneNames.length };
+  return { skillCount: exportedCount, expectedCount: exportableNames.length };
 }
 
 // =============================================================================
@@ -207,6 +209,20 @@ function verify(outputDir, expectedSkillCount) {
     const lineCount = content.split('\n').length;
     if (lineCount > 80) {
       failures.push(`${dir}/README.md: ${lineCount} lines (exceeds 80)`);
+    }
+  }
+
+  // 4b. Adapters exist for each skill
+  for (const dir of skillDirs) {
+    const adaptersBase = path.join(outputDir, dir, 'adapters');
+    if (!fs.existsSync(path.join(adaptersBase, 'claude-code', 'SKILL.md'))) {
+      failures.push(`${dir}: missing adapters/claude-code/SKILL.md`);
+    }
+    if (!fs.existsSync(path.join(adaptersBase, 'copilot', 'copilot-instructions.md'))) {
+      failures.push(`${dir}: missing adapters/copilot/copilot-instructions.md`);
+    }
+    if (!fs.existsSync(path.join(adaptersBase, 'cursor', `${dir}.md`))) {
+      failures.push(`${dir}: missing adapters/cursor/${dir}.md`);
     }
   }
 
