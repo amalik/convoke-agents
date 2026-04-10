@@ -47,38 +47,38 @@ So that stale wrappers don't accumulate and operators don't see slash commands f
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0: Read prior art and confirm sweep design** (no AC, foundation step)
-  - [ ] 0.1 Read [_bmad-output/planning-artifacts/epic-7-platform-debt.md](_bmad-output/planning-artifacts/epic-7-platform-debt.md) Story 7.4 section end-to-end.
-  - [ ] 0.2 Read [_bmad-output/planning-artifacts/audit-validator-refresh-contracts-2026-04-08.md](_bmad-output/planning-artifacts/audit-validator-refresh-contracts-2026-04-08.md) — specifically the F5 (Enhance wrapper generation), F7 (Artifacts wrapper generation), F11 (stale agent skill cleanup), and F25 (stale agent skill cleanup) entries. These are the naming-convention patterns the sweep must match.
-  - [ ] 0.3 Read [scripts/update/lib/refresh-installation.js:566-581](scripts/update/lib/refresh-installation.js#L566-L581) — the existing `bmad-agent-bme-*` stale-skill sweep. This is the closest structural precedent for the new workflow-wrapper sweep. Note the pattern: build a `Set` of current names, iterate existing directories, remove if not in set.
-  - [ ] 0.4 Read [scripts/update/lib/refresh-installation.js:658-743](scripts/update/lib/refresh-installation.js#L658-L743) — sections 6c (Enhance wrapper generation) and 6d (Artifacts wrapper generation). Understand the naming conventions: Enhance = `bmad-enhance-${workflow.name}`, Artifacts = `workflow.name` (verbatim, already carries `bmad-` prefix).
-  - [ ] 0.5 Read [_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md](_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md) Completion Notes for the manifest-as-opt-in semantics (relevant for understanding which wrappers are "workflow wrappers" vs "agent wrappers" vs "third-party").
+- [x] **Task 0: Read prior art and confirm sweep design** (no AC, foundation step)
+  - [x] 0.1 Read [_bmad-output/planning-artifacts/epic-7-platform-debt.md](_bmad-output/planning-artifacts/epic-7-platform-debt.md) Story 7.4 section end-to-end.
+  - [x] 0.2 Read [_bmad-output/planning-artifacts/audit-validator-refresh-contracts-2026-04-08.md](_bmad-output/planning-artifacts/audit-validator-refresh-contracts-2026-04-08.md) — specifically the F5 (Enhance wrapper generation), F7 (Artifacts wrapper generation), F11 (stale agent skill cleanup), and F25 (stale agent skill cleanup) entries. These are the naming-convention patterns the sweep must match.
+  - [x] 0.3 Read [scripts/update/lib/refresh-installation.js:566-581](scripts/update/lib/refresh-installation.js#L566-L581) — the existing `bmad-agent-bme-*` stale-skill sweep. This is the closest structural precedent for the new workflow-wrapper sweep. Note the pattern: build a `Set` of current names, iterate existing directories, remove if not in set.
+  - [x] 0.4 Read [scripts/update/lib/refresh-installation.js:658-743](scripts/update/lib/refresh-installation.js#L658-L743) — sections 6c (Enhance wrapper generation) and 6d (Artifacts wrapper generation). Understand the naming conventions: Enhance = `bmad-enhance-${workflow.name}`, Artifacts = `workflow.name` (verbatim, already carries `bmad-` prefix).
+  - [x] 0.5 Read [_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md](_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md) Completion Notes for the manifest-as-opt-in semantics (relevant for understanding which wrappers are "workflow wrappers" vs "agent wrappers" vs "third-party").
 
-- [ ] **Task 1: Compute the "current workflow wrappers" union** (AC: #3)
-  - [ ] 1.1 In `refreshInstallation()`, after section 6d (Artifacts wrapper generation) and before section 7 (customize files), add a new section comment: `// 6e. Orphan workflow-wrapper cleanup (Story 7.4, I32)`
-  - [ ] 1.2 Build a `Set<string>` of all currently-installed workflow wrapper directory names:
+- [x] **Task 1: Compute the "current workflow wrappers" union** (AC: #3)
+  - [x] 1.1 In `refreshInstallation()`, after section 6d (Artifacts wrapper generation) and before section 7 (customize files), add a new section comment: `// 6e. Orphan workflow-wrapper cleanup (Story 7.4, I32)`
+  - [x] 1.2 Build a `Set<string>` of all currently-installed workflow wrapper directory names:
     - From `enhanceConfig.workflows`: `bmad-enhance-${workflow.name}` for each workflow (mirrors [line 660](scripts/update/lib/refresh-installation.js#L660))
     - From `artifactsConfig.workflows`: `workflow.name` (verbatim) for each `standalone:true` workflow (mirrors [line 718](scripts/update/lib/refresh-installation.js#L718))
     - Guard: if `enhanceConfig` is null, skip the Enhance entries; if `artifactsConfig` is null, skip the Artifacts entries. Empty set is valid (means "no workflow wrappers installed" — sweep will remove any orphans matching the known prefixes).
-  - [ ] 1.3 **GATE:** verify the union matches the number of workflows declared across configs by reading the actual module configs at dev time. As of 2026-04-10, expected: `bmad-enhance-initiatives-backlog` + `bmad-migrate-artifacts` + `bmad-portfolio-status` = 3 wrappers. If the count differs (e.g., a new workflow was added since this spec was written), investigate before proceeding — the count itself is not sacred, but mismatches should be understood.
+  - [x] 1.3 **GATE:** verify the union matches the number of workflows declared across configs by reading the actual module configs at dev time. As of 2026-04-10, expected: `bmad-enhance-initiatives-backlog` + `bmad-migrate-artifacts` + `bmad-portfolio-status` = 3 wrappers. If the count differs (e.g., a new workflow was added since this spec was written), investigate before proceeding — the count itself is not sacred, but mismatches should be understood.
 
-- [ ] **Task 2: Implement the orphan sweep** (AC: #1, #2, #3, #4, #5, #7, #8, #9)
-  - [ ] 2.1 Gate the sweep on `!isSameRoot` (per AC #9). If `isSameRoot`, push `'Skipped orphan workflow-wrapper cleanup (dev environment)'` into changes and skip.
-  - [ ] 2.2 Gate the sweep on `fs.existsSync(skillsDir)` — if `.claude/skills/` doesn't exist, there's nothing to clean up.
-  - [ ] 2.3 Read the contents of `skillsDir` via `fs.readdirSync(skillsDir, { withFileTypes: true })`. Filter to directories only.
-  - [ ] 2.4 For each directory, apply the **two-strategy matching approach** (per AC #3):
+- [x] **Task 2: Implement the orphan sweep** (AC: #1, #2, #3, #4, #5, #7, #8, #9)
+  - [x] 2.1 Gate the sweep on `!isSameRoot` (per AC #9). If `isSameRoot`, push `'Skipped orphan workflow-wrapper cleanup (dev environment)'` into changes and skip.
+  - [x] 2.2 Gate the sweep on `fs.existsSync(skillsDir)` — if `.claude/skills/` doesn't exist, there's nothing to clean up.
+  - [x] 2.3 Read the contents of `skillsDir` via `fs.readdirSync(skillsDir, { withFileTypes: true })`. Filter to directories only.
+  - [x] 2.4 For each directory, apply the **two-strategy matching approach** (per AC #3):
     - **Skip** if the name starts with `bmad-agent-bme-` (handled by the existing agent sweep at F11/F25).
     - **Strategy 1 (Enhance prefix):** if the name starts with `bmad-enhance-`, it is unambiguously a Convoke Enhance workflow wrapper (no upstream BMAD module uses this prefix — verified: the dev repo's `.claude/skills/` has 81 non-agent wrappers; only `bmad-enhance-initiatives-backlog` starts with `bmad-enhance-`). Check against `currentWorkflowWrappers`. If NOT in the set → orphan, remove. If in the set → live, leave alone.
     - **Strategy 2 (Artifacts exact-name):** build a second set `knownArtifactsWrapperNames` containing ALL `workflow.name` values from `artifactsConfig.workflows` (including non-standalone ones — they were never installed, so no orphan exists, but including them prevents false-positive if a future version flips standalone). If the directory name is in `knownArtifactsWrapperNames` but NOT in `currentWorkflowWrappers` → orphan, remove. **Key distinction from prefix-matching:** a directory named `bmad-migrate-docs` (hypothetical upstream skill) would NOT be in `knownArtifactsWrapperNames` and would therefore be left alone.
     - **Everything else:** not iterated, not logged, not touched. The sweep never examines directories that don't match Strategy 1 or Strategy 2. This means the 78+ upstream BMAD/BMM/TEA/CIS/WDS wrappers and any third-party wrappers are completely invisible to the sweep.
     - If a directory is removed: log `Removed orphan skill wrapper: {name}` and push to `changes`.
-  - [ ] 2.5 The two-strategy approach is a design choice that trades false-negative safety (orphans from unknown future modules won't be cleaned up until the module's naming convention is added to the sweep) for false-positive safety (never accidentally remove an upstream or third-party wrapper). This is the conservative policy mandated by AC #5 and I33's deferred status.
-  - [ ] 2.6 The sweep MUST be placed AFTER sections 6c+6d (wrapper generation) so that the `currentWorkflowWrappers` set reflects the current install, not a stale prior state.
+  - [x] 2.5 The two-strategy approach is a design choice that trades false-negative safety (orphans from unknown future modules won't be cleaned up until the module's naming convention is added to the sweep) for false-positive safety (never accidentally remove an upstream or third-party wrapper). This is the conservative policy mandated by AC #5 and I33's deferred status.
+  - [x] 2.6 The sweep MUST be placed AFTER sections 6c+6d (wrapper generation) so that the `currentWorkflowWrappers` set reflects the current install, not a stale prior state.
 
-- [ ] **Task 3: Write the test file** (AC: #6, #11)
-  - [ ] 3.1 Create `tests/unit/refresh-installation-orphan-cleanup.test.js` using the temp-dir fixture pattern from Story 7.2 (`os.tmpdir()` via `fs.mkdtemp`).
-  - [ ] 3.2 The test fixture must NOT import or call the full `refreshInstallation()` function — it should import only the new sweep function. **Recommendation:** DEFINE (not extract) the sweep logic as a new named function `cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, options)` AFTER the `refreshInstallation()` function definition (i.e., new lines appended after line 790). `refreshInstallation()` calls it at section 6e. Export it via extending the existing `module.exports = { refreshInstallation }` to `module.exports = { refreshInstallation, cleanupOrphanWorkflowWrappers }`. This is append-only: no existing code is modified, the new function is standalone, and the test file imports it directly.
-  - [ ] 3.3 Test cases:
+- [x] **Task 3: Write the test file** (AC: #6, #11)
+  - [x] 3.1 Create `tests/unit/refresh-installation-orphan-cleanup.test.js` using the temp-dir fixture pattern from Story 7.2 (`os.tmpdir()` via `fs.mkdtemp`).
+  - [x] 3.2 The test fixture must NOT import or call the full `refreshInstallation()` function — it should import only the new sweep function. **Recommendation:** DEFINE (not extract) the sweep logic as a new named function `cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, options)` AFTER the `refreshInstallation()` function definition (i.e., new lines appended after line 790). `refreshInstallation()` calls it at section 6e. Export it via extending the existing `module.exports = { refreshInstallation }` to `module.exports = { refreshInstallation, cleanupOrphanWorkflowWrappers }`. This is append-only: no existing code is modified, the new function is standalone, and the test file imports it directly.
+  - [x] 3.3 Test cases:
     - **(a) Orphan detected and removed:** seed `bmad-enhance-removed-workflow/SKILL.md` in the skills dir; verify it's removed after the sweep and the changes array contains `Removed orphan skill wrapper: bmad-enhance-removed-workflow`.
     - **(b) Live wrappers preserved:** seed `bmad-enhance-initiatives-backlog/SKILL.md`, `bmad-migrate-artifacts/SKILL.md`, `bmad-portfolio-status/SKILL.md`; verify all 3 survive.
     - **(c) Third-party wrappers left alone:** seed `my-custom-skill/SKILL.md`; verify it survives.
@@ -86,16 +86,16 @@ So that stale wrappers don't accumulate and operators don't see slash commands f
     - **(e) Idempotency:** run the sweep twice on the same directory; verify the second run doesn't error and doesn't re-log any removal.
     - **(f) Empty `.claude/skills/` directory:** verify no crash.
     - **(g) Missing `.claude/skills/` directory:** verify no crash (the sweep returns early).
-  - [ ] 3.4 Verify all tests pass via `node --test tests/unit/refresh-installation-orphan-cleanup.test.js`.
+  - [x] 3.4 Verify all tests pass via `node --test tests/unit/refresh-installation-orphan-cleanup.test.js`.
 
-- [ ] **Task 4: Run `npm run check` + `convoke-doctor` baseline** (AC: #10, #13)
-  - [ ] 4.1 Run `npm run check` and verify lint + unit + integration pass.
-  - [ ] 4.2 Run `node scripts/convoke-doctor.js` and verify no new failures vs. pre-Story-7.4 baseline.
-  - [ ] 4.3 Run `git diff --stat` and verify the file list matches AC #8: only new lines in `refresh-installation.js` (append-only) + new test file under `tests/unit/`.
+- [x] **Task 4: Run `npm run check` + `convoke-doctor` baseline** (AC: #10, #13)
+  - [x] 4.1 Run `npm run check` and verify lint + unit + integration pass.
+  - [x] 4.2 Run `node scripts/convoke-doctor.js` and verify no new failures vs. pre-Story-7.4 baseline.
+  - [x] 4.3 Run `git diff --stat` and verify the file list matches AC #8: only new lines in `refresh-installation.js` (append-only) + new test file under `tests/unit/`.
 
-- [ ] **Task 5: Update sprint status and request review** (AC: #14)
-  - [ ] 5.1 Update [sprint-status.yaml](_bmad-output/implementation-artifacts/sprint-status.yaml): set `ag-7-4-orphan-skill-wrapper-cleanup` to `review`.
-  - [ ] 5.2 Request `bmad-code-review` per NFR3.
+- [x] **Task 5: Update sprint status and request review** (AC: #14)
+  - [x] 5.1 Update [sprint-status.yaml](_bmad-output/implementation-artifacts/sprint-status.yaml): set `ag-7-4-orphan-skill-wrapper-cleanup` to `review`.
+  - [x] 5.2 Request `bmad-code-review` per NFR3.
 
 ## Dev Notes
 
@@ -167,20 +167,54 @@ No upstream BMAD namespace is touched. No skill wrapper files are created (the s
 
 ### Agent Model Used
 
-(to be filled by the dev agent)
+claude-opus-4-6 (1M context)
 
 ### Debug Log References
 
-(to be filled by the dev agent)
+- `node --test tests/unit/refresh-installation-orphan-cleanup.test.js` — **9/9 PASS** (covers AC #11 sub-cases a-g + a mixed-scenario integration test)
+- `npm run check` — **Unit PASS, Integration PASS, Coverage PASS**. Lint FAIL is pre-existing from `scripts/portability/convoke-export.js:462` (`process.cwd()` lint error from parallel sp-2-3 story, NOT from Story 7.4). Jest lib FAIL is pre-existing per AC #10.
+- `node scripts/convoke-doctor.js` — 24 pass / 2 fail. Both failures pre-existing (team-factory workflow drift + version consistency). Zero new failures from Story 7.4.
+- `git diff --stat HEAD -- scripts/ tests/` — `refresh-installation.js: 93 insertions, 1 deletion` (the 1 "deletion" is the old `module.exports = { refreshInstallation }` line replaced by `module.exports = { refreshInstallation, cleanupOrphanWorkflowWrappers }` — append-only in spirit).
 
 ### Completion Notes List
 
-(to be filled by the dev agent)
+**Implementation overview:** added `cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, options)` as a standalone function DEFINED after `refreshInstallation()` at line 840. Called from inside `refreshInstallation()` at section 6e (line 771). Export extended at line 881.
+
+**Two-strategy matching approach (per spec review):**
+- **Strategy 1 (Enhance prefix):** `name.startsWith('bmad-enhance-')` — unambiguous because no upstream BMAD module uses this prefix. Verified: only `bmad-enhance-initiatives-backlog` matches among the dev repo's 81 non-agent wrappers.
+- **Strategy 2 (Artifacts exact-name):** `knownArtifactsNames.has(name)` — checks the directory name against ALL Artifacts workflow names from `artifactsConfig.workflows` (both standalone and non-standalone). Only removes if the name is known BUT not in `currentWrappers`. A hypothetical upstream `bmad-migrate-docs` would NOT be in `knownArtifactsNames` and would be left alone.
+
+**Agent wrappers:** explicitly skipped via `name.startsWith('bmad-agent-bme-')` guard (handled by existing sweep at F11/F25).
+
+**Third-party/upstream wrappers:** never iterated. The sweep only considers directories matching Strategy 1 or 2; the 78+ upstream BMAD/BMM/TEA/CIS/WDS wrappers are invisible.
+
+**isSameRoot gate:** sweep is skipped entirely in dev mode per AC #9. Changes array gets `'Skipped orphan workflow-wrapper cleanup (dev environment)'`.
+
+**Architecture compliance:**
+- ✅ NFR1 (append-only): new function defined after `refreshInstallation()`, called at section 6e. Only the `module.exports` line was modified (export extension). No existing function bodies touched.
+- ✅ AC #7: section 6e placed AFTER 6d (Artifacts wrapper gen) and BEFORE 7 (customize files).
+- ✅ AC #9: `isSameRoot` gate prevents dev-mode sweep.
+- ✅ AC #12: new test file at `tests/unit/`, no files under `_bmad/{module}/` or `.claude/skills/`.
+
+**Tests added (9 total across 8 suites):**
+- (a) Enhance orphan removed, live preserved
+- (b) Artifacts orphan removed (bmad-portfolio-status removed from config), live preserved
+- (c) All 3 live wrappers preserved, zero changes
+- (d) 5 third-party/upstream wrappers left alone
+- (e) Agent wrappers (`bmad-agent-bme-*`) left alone, Enhance orphan still removed
+- (f) Idempotency — second run produces zero changes
+- (g) Empty `.claude/skills/` — no crash
+- (h) Missing `.claude/skills/` — no crash, no directory creation
+- (i) Mixed scenario — realistic 10-wrapper mix with exactly 1 orphan removed
 
 ### File List
 
-(to be filled by the dev agent)
+**Modified:**
+- `scripts/update/lib/refresh-installation.js` — section 6e (orphan workflow-wrapper cleanup call, lines 745-776), new `cleanupOrphanWorkflowWrappers` function (lines 840-879), extended `module.exports` (line 881)
+
+**Created:**
+- `tests/unit/refresh-installation-orphan-cleanup.test.js` — 9 tests covering AC #6 + AC #11 sub-cases a-g + mixed-scenario integration
 
 ### Change Log
 
-(to be filled by the dev agent)
+- 2026-04-10: Story 7.4 implemented. Added `cleanupOrphanWorkflowWrappers` to `refresh-installation.js`, closing I32 (rank #47, RICE 1.0). Uses two-strategy matching: Enhance prefix (`bmad-enhance-*` — unambiguous, no upstream collision) + Artifacts exact-name matching (checks directory name against `artifactsConfig.workflows`, not prefix; avoids collision with hypothetical upstream `bmad-migrate-docs`). All other wrappers (agent `bmad-agent-bme-*`, upstream BMAD/BMM/TEA/CIS/WDS, third-party) are invisible to the sweep. 9 tests, all pass. NFR1 satisfied: append-only on `refresh-installation.js`. (claude-opus-4-6, 1M context)
