@@ -55,11 +55,7 @@ const STANDALONE_INTENT_HEADINGS = [
   'I need to test my code',
 ];
 
-const FORBIDDEN_STRINGS = [
-  '_bmad/', 'bmad-init', '.claude/hooks', '{project-root}',
-  'Load step:', 'read fully and follow', 'Read fully and execute:',
-  'Load fully and follow:',
-];
+const { FORBIDDEN_STRINGS } = require('../../scripts/portability/test-constants');
 
 describe('Catalog Generator (sp-3-1)', () => {
   let tmpFile;
