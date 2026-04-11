@@ -231,11 +231,11 @@ npx convoke-export bmad-brainstorming --output ./exported
 
 The export engine transforms skill workflows into self-contained instruction documents, then generates platform-specific adapter files:
 
-| Platform | Adapter output |
+| Platform | Adapter output (written inside the export target) |
 |----------|---------------|
-| Claude | `CLAUDE.md` commands |
-| GitHub Copilot | `.github/copilot-instructions.md` |
-| Cursor | `.cursor/rules/` |
+| Claude | `{target}/CLAUDE.md` commands |
+| GitHub Copilot | `{target}/.github/copilot-instructions.md` |
+| Cursor | `{target}/.cursor/rules/` |
 
 Skills are classified by tier: **standalone** skills export cleanly, **light-deps** skills include dependency notes, and **pipeline** skills (multi-step orchestration) are flagged as non-portable.
 
