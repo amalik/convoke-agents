@@ -8,7 +8,7 @@ schema_version: 1
 
 **Created:** 2026-03-08
 **Method:** RICE (Reach, Impact, Confidence, Effort)
-**Last Updated:** 2026-04-10
+**Last Updated:** 2026-04-11
 
 ---
 
@@ -44,6 +44,7 @@ schema_version: 1
 | U4 | **Test upgrade-path step file cleanup** — Integration test simulating real upgrade with renamed step files. Note: v6.2.0 renamed entire directories (`code-review/` → `bmad-code-review/`), not just step files — scope is broader than originally described. | Murat review (M2) | 3 | 1 | 90% | 2 | 1.4 | Keep the lights on | Backlog |
 | U2 | **Validate migration modules at load time** — Fail fast if a migration module lacks `apply()` instead of crashing at execution | Murat review | 2 | 0.5 | 80% | 1 | 0.8 | Keep the lights on | Backlog |
 | U3 | **Robust version detection fallback** — Improve `guessVersionFromFileStructure()` with more markers (agent files, config presence) | Winston review (W3) | 3 | 0.5 | 60% | 2 | 0.5 | Keep the lights on | Backlog |
+| U10 | **BMAD v6.3.0 direct-load migration (WS1)** — Retire `bmad-init` skill. Replace with lightweight direct-YAML loader utility. Sweep all ~25 agent SKILL.md activation steps across core/bmm/cis/tea/wds/bme modules. Ship one-shot migration script in `convoke-update` that converts existing user installs. Maintain one-minor-version backwards-compat window. Effort: ~14 stories, 2–3 weeks. Target: Convoke 4.0.0. Added from Winston architect spike + briefing, 2026-04-11 | Winston architect spike + briefing (2026-04-11) | 10 | 2 | 80% | 7 | 2.3 | Keep the lights on | Backlog |
 
 ### Testing & CI
 
@@ -129,6 +130,8 @@ schema_version: 1
 | A5 | **Research stories must use mechanical search protocol** — Catalogue/audit/inventory deliverables must include a grep-based discovery step (not section-header eyeballing). Story 7.3 went through 3 review rounds due to non-mechanical enumeration. Added from AG Epic 7 retro A1, 2026-04-10 | AG Epic 7 retro (A1), 2026-04-10 | 7 | 1 | 80% | 2 | 2.8 | Move the needle | Backlog |
 | A6 | **Structured-source for count-sensitive deliverables** — Audit tables with arithmetic claims (verdict counts, fold-in mappings) must have YAML/JSON source + validation script. Markdown generated from structured source, not hand-maintained. Added from AG Epic 7 retro A2, 2026-04-10 | AG Epic 7 retro (A2), 2026-04-10 | 5 | 1 | 70% | 2 | 1.8 | Keep the lights on | Backlog |
 | A7 | **Review convergence rule** — Round 1 mandatory; Round 2 if HIGH finding; Round 3 only if Round 2 introduced structural changes. Replaces unbounded "keep reviewing until clean" pattern. Added from AG Epic 7 retro A3, 2026-04-10 | AG Epic 7 retro (A3), 2026-04-10 | 8 | 1 | 80% | 1 | 6.4 | Move the needle | Backlog |
+| A8 | **Adopt upstream Amelia consolidation (WS3)** — Remove `bmad-agent-qa`, `bmad-agent-sm`, `bmad-agent-quick-flow-solo-dev` from Convoke's bmm module (upstream v6.3 merged Barry/Quinn/Bob into Amelia). Pull upstream's updated Amelia. Update `skill-manifest.csv`, `files-manifest.csv`, sprint planning docs, user guides. User-facing migration note points to upstream release notes. Can run parallel to U10. Effort: 3–5 days. Added from Winston architect spike + briefing, 2026-04-11 | Winston architect spike + briefing (2026-04-11) | 5 | 1 | 70% | 2 | 1.8 | Keep the lights on | Backlog |
+| A9 | **Convoke extensions compatibility governance (WS4)** — Convoke ships skills layered on BMM agents (e.g. `bmad-enhance-initiatives-backlog` extends John). These break silently when BMM workflows/capabilities/artifacts shift. Build `_bmad/_config/bmm-dependencies.csv` registry; validation pass against v6.3 upstream; post-upgrade regression gate in `convoke-update`; governance rule requiring new extensions to register. Mirrors I14 (artifact governance) pattern. Must finalize **before** P23 (marketplace version must pass extensions validation). Effort: 3–5 days. Added from Winston architect spike + briefing, 2026-04-11 | Winston architect spike + briefing (2026-04-11) | 5 | 1 | 60% | 2 | 1.5 | Keep the lights on | Backlog |
 
 ### Platform & Product Vision
 
@@ -151,6 +154,7 @@ schema_version: 1
 | P20 | **Multi-platform adapter generation** — Generate thin platform-specific wrappers (Claude Code SKILL.md, Copilot instructions, Cursor rules) from the canonical format. Each adapter < 20 lines of wrapper. Added from vision-skill-portability.md, 2026-04-06 | Party-mode session (Winston, Paige), 2026-04-06 | 7 | 2 | 50% | 4 | 1.8 | Move the needle | Done |
 | P21 | **Convoke Experience Contract — codified UX rules + Loom validation gate** — Reference document codifying operator-facing interaction patterns all Convoke skills must follow: suggest defaults instead of "unknown", batch lists by category, explain WHY decisions matter, never silently drop data, WAIT for input at every decision, actionable errors, max 3 new concepts per round. Becomes a Loom validation gate (Step 05) for future skills. Plus retrofit candidate for existing skills. Origin: party-mode session diagnosing why migration dumped 31 ambiguous items and portfolio silently dropped 71% of files — Loom enforces structural consistency but no rules govern experiential consistency. See `_bmad-output/planning-artifacts/backlog-candidate-experience-contract.md`. Added 2026-04-06 | Party-mode session (Winston + Loom Master), 2026-04-06 | 9 | 2 | 80% | 3 | 4.8 | Move the needle | Backlog |
 | P22 | **SP Epic 6 — Skill Portability UX slash command wrappers** — Slash command wrappers for export/catalog/seed/validate portability tools (4 stories: sp-6-1 through sp-6-4). Convenience layer over existing CLI. Added from sprint-status.yaml, 2026-04-10 | Sprint status (sp-epic-6: backlog), 2026-04-10 | 7 | 1 | 70% | 4 | 1.2 | Move the needle | Backlog |
+| P23 | **BMAD v6.3.0 marketplace publication (WS2)** — Publish Convoke as community module in `bmad-code-org/bmad-plugins-marketplace`. Add `.claude-plugin/marketplace.json`, confirm `_bmad/bme/_vortex/module.yaml` as `module_definition`, audit skill-dir conformance (v6.3 expects `<skill-dir>/SKILL.md`), choose non-colliding module `code`, pick category slug, tag release, open registry PR, add runtime compatibility preflight (v6.3 schema lacks `bmad_version` field — protect ourselves). Sequenced **after** U10 (marketplace version ships on new config model). Effort: 1–2 weeks. Target: Convoke 4.0.0. Added from Winston architect spike + briefing, 2026-04-11 | Winston architect spike + briefing (2026-04-11) | 9 | 2 | 70% | 5 | 2.5 | Move the needle | Backlog |
 
 ---
 
@@ -213,6 +217,9 @@ Remaining update system items not in Hardening: load-time validation, version de
 ### Epic: "Skill Portability" (P17 → P18 → P19 → P16 → P20)
 LLM-agnostic skill distribution for teammates on any AI coding tool. P17 (metadata schema, score 2.8) is the foundation. P18 (exporter CLI, score 1.9) builds the transformation engine. P19 (catalog generator, score 1.9) produces the browsable menu. P16 (standalone repo, score 4.2) is where teammates get value — highest score because low incremental effort once exporter exists. P20 (platform adapters, score 1.8) extends to Copilot/Cursor. Sequencing: P17 first (foundation), then P18+P19 in parallel, then P16 (seed repo), then P20 (adapters). Vision: `vision-skill-portability.md`. Epics: `epics-skill-portability.md`.
 
+### Epic: "BMAD v6.3.0 Adoption" (U10 + P23 + A8 + A9)
+Coordinated release adopting BMAD METHOD v6.3.0 upstream. Target: **Convoke 4.0.0** (breaking change). **Sequencing:** U10 (direct-load migration, score 2.3) and A8 (Amelia consolidation, score 1.8) can run in parallel as the foundation. A9 (extensions governance, score 1.5) must finalize before P23 so the marketplace version passes extensions validation. P23 (marketplace publication, score 2.5) ships last — the v6.3-compatible Convoke shipped to the BMAD community registry at `bmad-code-org/bmad-plugins-marketplace`. **State-of-the-art release quality bar** (per user directive): decision records per workstream, risk register, versioned interface contracts (new config schema, `marketplace.json` shape, `bmm-dependencies.csv` schema), NFRs (idempotency, backwards-compat window, rollback, path safety), traceability epic→workstream, IR gate run *before* dev starts, retrospective at release end. **Key risk:** BMAD registry schema has no `bmad_version` compatibility field — Convoke must add its own runtime preflight check AND file upstream issue. **Source:** Winston architect spike (2026-04-11) reverse-engineered marketplace contract against live upstream at `bmad-code-org/BMAD-METHOD@v6.3.0`. Briefing note: `briefing-bmad-v6.3-adoption.md`.
+
 ---
 
 ## Prioritized View (by RICE Score)
@@ -234,75 +241,79 @@ LLM-agnostic skill distribution for teammates on any AI coding tool. P17 (metada
 | 13 | A5 | Research stories must use mechanical search protocol | 2.8 | Move the needle | Agent Quality |
 | 14 | T3 | End-to-end update test on real project | 2.7 | Keep the lights on | Testing |
 | 15 | I50 | `--quiet` flag for `convoke-export` batch mode — or formally drop | 2.7 | Keep the lights on | Infrastructure |
-| 16 | P13 | Vortex redesign (align to Enhance patterns) | 2.5 | Move the needle | Platform |
-| 17 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
-| 18 | T7 | Add Python linting to CI pipeline | 2.4 | Keep the lights on | Testing |
-| 19 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
-| 20 | I20 | Portfolio markdown formatter — render `--show-unattributed` | 2.3 | Move the needle | Infrastructure |
-| 21 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
-| 22 | I16 | Skill description generator — semantic descriptions for bme agent skills | 2.0 | Move the needle | Infrastructure |
-| 23 | I22 | Resolution-map key normalization | 2.0 | Move the needle | Infrastructure |
-| 24 | I25 | Resolution-map missing-from-manifest validation | 2.0 | Move the needle | Infrastructure |
-| 25 | U9 | Module-aware refresh and validation | 1.9 | Move the needle | Update System |
-| 26 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
-| 27 | I7 | Team Factory CSV quoting hardening | 1.8 | Keep the lights on | Infrastructure |
-| 28 | I23 | Format contract test between CLI and migration skill | 1.8 | Keep the lights on | Infrastructure |
-| 29 | A6 | Structured-source for count-sensitive deliverables | 1.8 | Keep the lights on | Agent Quality |
-| 30 | T8 | Standardize Python PEP 723 dependency declarations | 1.6 | Keep the lights on | Testing |
-| 31 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
-| 32 | I18 | Pre-compile regex inside `_scanCorpusForInitiative` per migration run | 1.6 | Keep the lights on | Infrastructure |
-| 33 | I36 | `yaml` package `doc.warnings` ignored at all 5 write sites | 1.6 | Keep the lights on | Infrastructure |
-| 34 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
-| 35 | I9 | Registry writer idempotency drift detection | 1.4 | Keep the lights on | Infrastructure |
-| 36 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
-| 37 | I5 | Workflow output naming enforcement | 1.2 | Keep the lights on | Infrastructure |
-| 38 | P7 | ML/AI Engineering team exploration | 1.2 | Move the needle | Platform |
-| 39 | P22 | SP Epic 6 — Skill Portability UX slash command wrappers | 1.2 | Move the needle | Platform |
-| 40 | I21 | Parent-dir attribution scan can over-match on multi-token dirs | 1.1 | Keep the lights on | Infrastructure |
-| 41 | I26 | Portfolio skill — case-insensitive input + alias normalization | 1.1 | Keep the lights on | Infrastructure |
-| 42 | I51 | Manifest duplicate rows hygiene | 1.1 | Keep the lights on | Infrastructure |
-| 43 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
-| 44 | I28 | Portfolio engine — `--filter` interaction with summary lines | 1.0 | Keep the lights on | Infrastructure |
-| 45 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
-| 46 | I10 | Config appender YAML comment preservation | 0.9 | Keep the lights on | Infrastructure |
-| 47 | I15 | `validateManifest` CSV parsing — replace substring matching | 0.9 | Keep the lights on | Infrastructure |
-| 48 | I27 | Portfolio skill — Option [4] empty-state messaging | 0.9 | Keep the lights on | Infrastructure |
-| 49 | I39 | Non-atomic version stamp writes in `refresh-installation.js` | 0.9 | Keep the lights on | Infrastructure |
-| 50 | I52 | Collision resolution flag for migration CLI | 0.9 | Keep the lights on | Infrastructure |
-| 51 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
-| 52 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
-| 53 | I6 | Add `--verbose` flag to all CLI commands | 0.8 | Keep the lights on | Infrastructure |
-| 54 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
-| 55 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
-| 56 | I17 | `suggestDifferentiator` — support extensions beyond `.md`/`.yaml` | 0.8 | Keep the lights on | Infrastructure |
-| 57 | I19 | Share `_scanCorpus` between portfolio engine and migration suggester | 0.8 | Keep the lights on | Infrastructure |
-| 58 | I41 | `convoke-doctor` `console.warn` breaks structured-output contract | 0.8 | Keep the lights on | Infrastructure |
-| 59 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
-| 60 | I35 | Naive `split('\n')` CSV parsing — CRLF + quoted-newline edge cases | 0.7 | Keep the lights on | Infrastructure |
-| 61 | I40 | `loadSkillManifest` Map silently overwrites duplicate paths | 0.7 | Keep the lights on | Infrastructure |
-| 62 | I44 | No `validateGyreModule` function | 0.7 | Keep the lights on | Infrastructure |
-| 63 | I8 | Team Factory write verification — value correctness | 0.6 | Keep the lights on | Infrastructure |
-| 64 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
-| 65 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
-| 66 | I11 | Registry Fragment Architecture (D-Q6) | 0.5 | Keep the lights on | Infrastructure |
-| 67 | I13 | Team Factory Express Mode | 0.5 | Keep the lights on | Infrastructure |
-| 68 | I37 | Non-scalar / merge / anchor YAML keys crash `writeConfig` | 0.5 | Keep the lights on | Infrastructure |
-| 69 | I46 | Version-stamp post-check absence in refresh | 0.5 | Keep the lights on | Infrastructure |
-| 70 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Platform |
-| 71 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
-| 72 | I12 | Validator.js hardcoded to Vortex paths | 0.4 | Keep the lights on | Infrastructure |
-| 73 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
-| 74 | I24 | Mock git in unit tests instead of bumping timeouts | 0.4 | Keep the lights on | Infrastructure |
-| 75 | I33 | Workflow-name namespace collision risk | 0.4 | Keep the lights on | Infrastructure |
-| 76 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
-| 77 | I38 | `mergeConfig` Document mutation not idempotent | 0.3 | Keep the lights on | Infrastructure |
-| 78 | I48 | Agent-manifest.csv doctor check + CSV-parse validator upgrade | 0.3 | Keep the lights on | Infrastructure |
-| 79 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
-| 80 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
-| 81 | I42 | `MERGED_DOC_SENTINEL` doesn't survive spread or JSON-serialize | 0.2 | Keep the lights on | Infrastructure |
-| 82 | I53 | Carry-forward: CRLF writeManifest + basename collision | 0.2 | Keep the lights on | Infrastructure |
-| 83 | I45 | Workflow-manifest CSV registration drift not validated | 0.15 | Keep the lights on | Infrastructure |
-| 84 | I47 | Doctor missing Enhance menu-patch check + parallel coverage | 0.35 | Keep the lights on | Infrastructure |
+| 16 | P23 | BMAD v6.3.0 marketplace publication (WS2) | 2.5 | Move the needle | Platform |
+| 17 | P13 | Vortex redesign (align to Enhance patterns) | 2.5 | Move the needle | Platform |
+| 18 | T4 | Migration idempotency CLI test | 2.4 | Keep the lights on | Testing |
+| 19 | T7 | Add Python linting to CI pipeline | 2.4 | Keep the lights on | Testing |
+| 20 | I2 | `gh auth` for CI release creation | 2.4 | Keep the lights on | Infrastructure |
+| 21 | I20 | Portfolio markdown formatter — render `--show-unattributed` | 2.3 | Move the needle | Infrastructure |
+| 22 | U10 | BMAD v6.3.0 direct-load migration (WS1) | 2.3 | Keep the lights on | Update System |
+| 23 | D2 | Add output examples for more agents | 2.1 | Move the needle | Documentation |
+| 24 | I16 | Skill description generator — semantic descriptions for bme agent skills | 2.0 | Move the needle | Infrastructure |
+| 25 | I22 | Resolution-map key normalization | 2.0 | Move the needle | Infrastructure |
+| 26 | I25 | Resolution-map missing-from-manifest validation | 2.0 | Move the needle | Infrastructure |
+| 27 | U9 | Module-aware refresh and validation | 1.9 | Move the needle | Update System |
+| 28 | I1 | NPM_TOKEN secret for CI publish | 1.8 | Keep the lights on | Infrastructure |
+| 29 | I7 | Team Factory CSV quoting hardening | 1.8 | Keep the lights on | Infrastructure |
+| 30 | I23 | Format contract test between CLI and migration skill | 1.8 | Keep the lights on | Infrastructure |
+| 31 | A8 | Adopt upstream Amelia consolidation (WS3) | 1.8 | Keep the lights on | Agent Quality |
+| 32 | A6 | Structured-source for count-sensitive deliverables | 1.8 | Keep the lights on | Agent Quality |
+| 33 | T8 | Standardize Python PEP 723 dependency declarations | 1.6 | Keep the lights on | Testing |
+| 34 | D6 | Reduce narrative overlap in journey example | 1.6 | Keep the lights on | Documentation |
+| 35 | I18 | Pre-compile regex inside `_scanCorpusForInitiative` per migration run | 1.6 | Keep the lights on | Infrastructure |
+| 36 | I36 | `yaml` package `doc.warnings` ignored at all 5 write sites | 1.6 | Keep the lights on | Infrastructure |
+| 37 | A9 | Convoke extensions compatibility governance (WS4) | 1.5 | Keep the lights on | Agent Quality |
+| 38 | U4 | Test upgrade-path step file cleanup | 1.4 | Keep the lights on | Update System |
+| 39 | I9 | Registry writer idempotency drift detection | 1.4 | Keep the lights on | Infrastructure |
+| 40 | P3 | Team installer architecture | 1.2 | Move the needle | Platform |
+| 41 | I5 | Workflow output naming enforcement | 1.2 | Keep the lights on | Infrastructure |
+| 42 | P7 | ML/AI Engineering team exploration | 1.2 | Move the needle | Platform |
+| 43 | P22 | SP Epic 6 — Skill Portability UX slash command wrappers | 1.2 | Move the needle | Platform |
+| 44 | I21 | Parent-dir attribution scan can over-match on multi-token dirs | 1.1 | Keep the lights on | Infrastructure |
+| 45 | I26 | Portfolio skill — case-insensitive input + alias normalization | 1.1 | Keep the lights on | Infrastructure |
+| 46 | I51 | Manifest duplicate rows hygiene | 1.1 | Keep the lights on | Infrastructure |
+| 47 | S1 | Interactive installer | 1.0 | Move the needle | Infrastructure |
+| 48 | I28 | Portfolio engine — `--filter` interaction with summary lines | 1.0 | Keep the lights on | Infrastructure |
+| 49 | D3 | BMAD Core return arrow in diagram | 0.9 | Keep the lights on | Documentation |
+| 50 | I10 | Config appender YAML comment preservation | 0.9 | Keep the lights on | Infrastructure |
+| 51 | I15 | `validateManifest` CSV parsing — replace substring matching | 0.9 | Keep the lights on | Infrastructure |
+| 52 | I27 | Portfolio skill — Option [4] empty-state messaging | 0.9 | Keep the lights on | Infrastructure |
+| 53 | I39 | Non-atomic version stamp writes in `refresh-installation.js` | 0.9 | Keep the lights on | Infrastructure |
+| 54 | I52 | Collision resolution flag for migration CLI | 0.9 | Keep the lights on | Infrastructure |
+| 55 | A1 | Add validate menu items to Wave 3 agents | 0.8 | Keep the lights on | Agent Quality |
+| 56 | A3 | Add npm keywords (`agentic`, `team-of-teams`) | 0.8 | Keep the lights on | Agent Quality |
+| 57 | I6 | Add `--verbose` flag to all CLI commands | 0.8 | Keep the lights on | Infrastructure |
+| 58 | T1 | `convoke-update.js` coverage to 80%+ | 0.8 | Keep the lights on | Testing |
+| 59 | U2 | Validate migration modules at load time | 0.8 | Keep the lights on | Update System |
+| 60 | I17 | `suggestDifferentiator` — support extensions beyond `.md`/`.yaml` | 0.8 | Keep the lights on | Infrastructure |
+| 61 | I19 | Share `_scanCorpus` between portfolio engine and migration suggester | 0.8 | Keep the lights on | Infrastructure |
+| 62 | I41 | `convoke-doctor` `console.warn` breaks structured-output contract | 0.8 | Keep the lights on | Infrastructure |
+| 63 | S2 | Simplified entry point | 0.7 | Move the needle | Infrastructure |
+| 64 | I35 | Naive `split('\n')` CSV parsing — CRLF + quoted-newline edge cases | 0.7 | Keep the lights on | Infrastructure |
+| 65 | I40 | `loadSkillManifest` Map silently overwrites duplicate paths | 0.7 | Keep the lights on | Infrastructure |
+| 66 | I44 | No `validateGyreModule` function | 0.7 | Keep the lights on | Infrastructure |
+| 67 | I8 | Team Factory write verification — value correctness | 0.6 | Keep the lights on | Infrastructure |
+| 68 | P8 | Governance & Support skill set | 0.5 | Move the needle | Platform |
+| 69 | U3 | Robust version detection fallback | 0.5 | Keep the lights on | Update System |
+| 70 | I11 | Registry Fragment Architecture (D-Q6) | 0.5 | Keep the lights on | Infrastructure |
+| 71 | I13 | Team Factory Express Mode | 0.5 | Keep the lights on | Infrastructure |
+| 72 | I37 | Non-scalar / merge / anchor YAML keys crash `writeConfig` | 0.5 | Keep the lights on | Infrastructure |
+| 73 | I46 | Version-stamp post-check absence in refresh | 0.5 | Keep the lights on | Infrastructure |
+| 74 | P2 | Multi-module collaboration workflows | 0.4 | Move the needle | Platform |
+| 75 | T2 | `convoke-version.js` coverage to 80%+ | 0.4 | Keep the lights on | Testing |
+| 76 | I12 | Validator.js hardcoded to Vortex paths | 0.4 | Keep the lights on | Infrastructure |
+| 77 | I3 | CSV parser library for manifest | 0.4 | Keep the lights on | Infrastructure |
+| 78 | I24 | Mock git in unit tests instead of bumping timeouts | 0.4 | Keep the lights on | Infrastructure |
+| 79 | I33 | Workflow-name namespace collision risk | 0.4 | Keep the lights on | Infrastructure |
+| 80 | I47 | Doctor missing Enhance menu-patch check + parallel coverage | 0.35 | Keep the lights on | Infrastructure |
+| 81 | T5 | Expand docs audit — remaining gaps | 0.3 | Keep the lights on | Testing |
+| 82 | I38 | `mergeConfig` Document mutation not idempotent | 0.3 | Keep the lights on | Infrastructure |
+| 83 | I48 | Agent-manifest.csv doctor check + CSV-parse validator upgrade | 0.3 | Keep the lights on | Infrastructure |
+| 84 | A4 | Fix temp dir prefix inconsistency | 0.3 | Keep the lights on | Agent Quality |
+| 85 | A2 | Create `.agent.yaml` source files | 0.2 | Keep the lights on | Agent Quality |
+| 86 | I42 | `MERGED_DOC_SENTINEL` doesn't survive spread or JSON-serialize | 0.2 | Keep the lights on | Infrastructure |
+| 87 | I53 | Carry-forward: CRLF writeManifest + basename collision | 0.2 | Keep the lights on | Infrastructure |
+| 88 | I45 | Workflow-manifest CSV registration drift not validated | 0.15 | Keep the lights on | Infrastructure |
 
 ---
 
@@ -381,6 +392,7 @@ LLM-agnostic skill distribution for teammates on any AI coding tool. P17 (metada
 
 | Date | Change |
 |------|--------|
+| 2026-04-11 | **Triage: Added 4 items (U10, P23, A8, A9) — BMAD v6.3.0 Adoption Initiative** (Convoke 4.0.0 target). U10 (direct-load migration, score 2.3 — rank #22) in Update System. P23 (marketplace publication, score 2.5 — rank #16) in Platform. A8 (Amelia consolidation, score 1.8 — rank #31) and A9 (extensions governance, score 1.5 — rank #37) in Agent Quality. New epic grouping "BMAD v6.3.0 Adoption" (U10+P23+A8+A9) with sequencing: (U10‖A8) → A9 → P23. Source: Winston architect spike + briefing note (2026-04-11) after user flagged BMAD v6.3.0 release impact. Spike reverse-engineered marketplace contract against live upstream source at `bmad-code-org/BMAD-METHOD@v6.3.0` and `bmad-code-org/bmad-plugins-marketplace`. Key risk captured: BMAD registry schema has no `bmad_version` compatibility field (runtime preflight required). Prioritized view regenerated with corrected placement for pre-existing I47 ordering quirk (0.35 moved from rank 84 to rank 80, above the 0.3/0.2/0.15 group). 88 ranked items (up from 84). |
 | 2026-04-10 | Triage: **12 completed items moved to Done** (I14, P15, P16, P17, P18, P19, P20, I29, I30, I31, I32, I34). **9 new items added:** I49 (process uniformity constraints file, 4.3), I50 (`--quiet` flag decision, 2.7), I51 (manifest duplicate rows, 1.1), I52 (collision resolution flag, 0.9), I53 (CRLF + basename carry-forward, 0.2), A5 (mechanical search protocol, 2.8), A6 (structured-source deliverables, 1.8), A7 (review convergence rule, 6.4), P22 (SP Epic 6 UX wrappers, 1.2). Sources: AG migration run, AG Epic 7 retro, SP Epic 2-5 retros, sprint-status.yaml. Prioritized view regenerated (84 ranked items, down from 86 after 12 completions + 9 additions). |
 | 2026-04-10 | **Round 3 review patch:** F23 split out from I47 to **I48** (RICE 0.3) — agent-manifest.csv doctor check + CSV-parse upgrade, bundles with I15. F24 + F25 added to audit catalogue as N/A (legacy `.claude/commands/` cleanup + stale `.claude/skills/` cleanup). I47 row updated to reference F2 only (F5 is SAFE observation, F23 is now I48). Catalogue total: **25 F-rows** (F1-F25), verdict distribution: 5 SAFE / 7 GAP / 5 MIXED / 8 N/A. 87 ranked items. |
 | 2026-04-10 | **Round 2 review patch (was missing from backlog, added in Round 3):** F23 (agent-manifest.csv regeneration) added to audit catalogue as MIXED. I46 backlog row title corrected `MIXED` → `GAP`. Exec summary fold-in arithmetic corrected (11→12 GAP/MIXED). I43 re-score verified (RICE 6.4 confirmed). No new I-items in Round 2 (F23 initially folded into I47; split out to I48 in Round 3). |
