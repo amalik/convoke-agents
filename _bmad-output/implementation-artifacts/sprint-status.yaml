@@ -390,7 +390,7 @@ development_status:
   # Epic file: epic-skill-portability-ux.md
   sp-epic-6: in-progress
   sp-6-1-export-skill-wrapper: done
-  sp-6-2-catalog-seed-skill-wrappers: ready-for-dev
+  sp-6-2-catalog-seed-skill-wrappers: done
   sp-6-3-validate-exports-skill-wrapper: backlog
   sp-6-4-skill-registration-discovery: backlog
   sp-epic-6-retrospective: optional
