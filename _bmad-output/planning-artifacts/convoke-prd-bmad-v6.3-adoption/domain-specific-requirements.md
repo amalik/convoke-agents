@@ -1,0 +1,3 @@
+# Domain-Specific Requirements
+
+**Not applicable** for a general-domain framework release. Convoke operates in the `general` domain (per classification) and does not face regulated-industry compliance concerns (no HIPAA, PCI-DSS, GDPR, FedRAMP, FDA, or equivalent). Platform and ecosystem constraints relevant to 4.0 — skill manifest schema compliance, BMAD marketplace registry conformance, upstream convention tracking, licensing — are already covered under Technical Success (WS2), Business Success (marketplace registry metadata, ADR documentation), and Operating Principles (OP-4 upstream BMAD governance). This section is deliberately empty to record that the decision to omit full domain-requirements work was made explicitly, not as an oversight.
