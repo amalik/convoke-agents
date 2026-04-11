@@ -6,6 +6,14 @@ stepsCompleted:
   - step-02c-executive-summary
   - step-03-success
   - step-04-journeys
+  - step-05-domain
+  - step-06-innovation
+  - step-07-project-type
+  - step-08-scoping
+  - step-09-functional
+  - step-10-nonfunctional
+  - step-11-polish
+  - step-12-complete
 inputDocuments:
   - _bmad-output/planning-artifacts/briefing-bmad-v6.3-adoption.md
   - _bmad-output/planning-artifacts/convoke-note-initiatives-backlog.md
@@ -21,7 +29,7 @@ workflowType: prd
 initiative: convoke
 artifact_type: prd
 qualifier: bmad-v6.3-adoption
-status: draft
+status: complete
 created: '2026-04-11'
 schema_version: 1
 classification:
@@ -571,6 +579,28 @@ partyFindingsRound2:
 **Source Initiative Entries:** U10, P23, A8, A9 in [convoke-note-initiatives-backlog.md](convoke-note-initiatives-backlog.md)
 **Epic Grouping:** "BMAD v6.3.0 Adoption" (U10 + P23 + A8 + A9)
 
+---
+
+*This PRD was authored through the `bmad-create-prd` workflow (11 steps) with extensive multi-round elicitation: Stakeholder Round Table, First Principles Analysis, Shark Tank Pitch, Pre-mortem Analysis, Feynman Technique, and four Party Mode rounds covering execution, narrative, metrics, and innovation. The extensive frontmatter above captures the reasoning trail; the main content below is the ship-ready PRD. For a quick orientation, read the Executive Summary and skim the Functional Requirements; everything else supports these two sections.*
+
+---
+
+## Contents
+
+- [Executive Summary](#executive-summary)
+- [Project Classification](#project-classification)
+- [Success Criteria](#success-criteria) — User/Business/Technical Success, Measurable Outcomes, Release Process Checklist, Operating Principles
+- [Product Scope](#product-scope) — MVP, Growth Features, Vision
+- [User Journeys](#user-journeys) — Priya, Samira, Amalik narratives
+- [Domain-Specific Requirements](#domain-specific-requirements) — Not applicable; empty by design
+- [Innovation & Novel Patterns](#innovation--novel-patterns) — 7 hypotheses across Release/Validation/Communication/Learning Discipline
+- [Developer-Tool Specific Requirements](#developer-tool-specific-requirements) — Language matrix, installation methods, API surface
+- [Project Scoping & Phased Development](#project-scoping--phased-development) — MVP philosophy, resources, risks, scope decisions
+- [Functional Requirements](#functional-requirements) — 50 FRs across 10 capability areas (the capability contract)
+- [Non-Functional Requirements](#non-functional-requirements) — 33 NFRs across Performance/Reliability/Integration/Maintainability/Observability/Backwards Compatibility/Reproducibility
+
+---
+
 ## Executive Summary
 
 **Convoke 4.0 is the first release where Convoke acts on its identity as an ecosystem product — not a side project — with everything that implies for distribution, governance, and sustainability.** It is a coordinated platform alignment release adopting BMAD METHOD v6.3.0 upstream, formalized as the first instance of a named, reusable release class: `host_framework_sync`.
@@ -744,3 +774,572 @@ Per OP-1 and OP-2, each workstream is independently valuable. Per M10, partial M
 - **`host_framework_sync` as a standard release pattern** — every major BMAD rev applies the 4.0 playbook with minimal re-reasoning. v6.4, v7.0, v8.0 all follow the template.
 - **`bmad-certified` trust tier** — earned through sustained stability, community review, and upstream partnership.
 - **Unblocks Convoke ecosystem expansion** — Forge, Helm, Loom teams shipped via marketplace as they mature.
+
+## User Journeys
+
+### Journey 1 — Priya upgrades Convoke mid-engagement (primary user, happy path)
+
+**Persona:** Priya, IT transformation consultant at a large European consultancy. Six weeks into a client engagement running a Vortex discovery with Convoke 3.2.0. Has no interest in framework maintenance; Convoke is a tool she relies on daily but doesn't think about. Target: finish the discovery on time.
+
+**Opening scene.** Tuesday morning, week 7 of the engagement. Priya opens her project terminal, intending to run another Vortex stream with Isla (discovery empathy expert). `convoke-doctor` shows a notice: "Convoke 4.0 is available." She hesitates — mid-engagement upgrades feel risky. She checks the CHANGELOG.
+
+**Rising action.** The CHANGELOG leads with Sophia's `mostHonestOneLineSummary`: *"Convoke 4.0 is a maintenance release that keeps Convoke healthy as BMAD evolves and adds marketplace distribution for reach."* Priya reads three sentences and understands: nothing new to learn, no re-onboarding, just a single command with auto-migration. She runs `convoke-update`.
+
+**Climax (non-event).** The update completes in under 30 seconds. No prompts. No config questions. The `bmad-init` config pattern is silently migrated. Priya runs her Isla stream — the empathy map comes out identical in structure to yesterday's. Agent behavior equivalence holds. She never notices that anything changed under the hood.
+
+**Resolution.** End of day, Priya has completed another Vortex stream without any friction. She closes her terminal without thinking about the upgrade again. **Success state:** the release was invisible.
+
+**Requirements revealed:**
+- Single-command upgrade (`convoke-update`)
+- Idempotent auto-migration script
+- CHANGELOG that leads with honest summary (no FOMO, no FUD)
+- Agent behavioral equivalence guarantee (PF1 validation)
+- Recursive tooling continuity (if Priya was using `bmad-enhance-initiatives-backlog` to track client findings, it must still work — WS4 first validation target)
+
+### Journey 2 — Priya hits an edge case during migration (primary user, error recovery)
+
+**Persona:** Same Priya. Two weeks later, starting a new engagement. Installs Convoke 4.0 fresh in a new project directory.
+
+**Opening scene.** Priya runs `convoke-install` for the new project. It succeeds. She runs `convoke-doctor`. She expects a clean health report. Instead she sees a warning: `Extension governance registry check: 'bmad-enhance-initiatives-backlog' passed. All other dependencies: 0 detected — scan tool unable to parse custom skill pack at .claude/skills/priya-custom-note-tool/SKILL.md`. She froze.
+
+**Rising action.** Priya has a custom skill she wrote herself that extends John (PM) for her own note-taking workflow. It isn't in the official BMM agent set, so `bmm-dependencies.csv` doesn't know what to do with it. The extensions governance registry (WS4) is telling her honestly: "I couldn't validate this, but I detected it, here's what I see." She considers her options:
+1. Remove her custom skill entirely.
+2. Ignore the warning and continue.
+3. Read the governance documentation to understand how to register her custom skill.
+
+She picks option 3. The governance rule documentation (delivered as part of WS4) explains: "New Convoke skills extending BMM agents must register in `bmm-dependencies.csv`." She adds a row manually. `convoke-doctor` re-runs. Clean report.
+
+**Climax.** The edge case wasn't a bug — it was the governance system *working as designed*, surfacing a dependency that would otherwise have silently broken on a future upgrade. The warning was a feature, not a failure. Priya's custom skill is now registered and will be validated on every future upgrade.
+
+**Resolution.** Priya proceeds with her engagement. She now understands, at a basic level, that Convoke has a governance layer that protects her custom work. Next time she writes a custom skill, she'll register it proactively.
+
+**Requirements revealed:**
+- Extensions governance registry surfaces non-standard skills with clear warnings (not silent pass)
+- Governance rule documentation is discoverable (linked from warning message)
+- Manual registry editing is documented and supported for user-owned extensions
+- Warning messages are honest signals, not errors that block work
+- `convoke-doctor` health reports distinguish "missing" from "present but unverified"
+
+### Journey 3 — Samira discovers Convoke via the BMAD marketplace (new user, marketplace flow)
+
+**Persona:** Samira, junior consultant on Priya's team. Has never used Convoke. Heard Priya mention "the Vortex discovery thing" and wants to try it on a smaller project. Already has BMAD installed — she uses the core BMAD methodology for everything.
+
+**Opening scene.** Samira is in her editor, exploring the BMAD installer's community module browser. She's looking for something to help with product discovery on a client proposal she's drafting. She sees a listing: `convoke — A 7-agent product discovery framework for IT transformation consultants`. Trust tier: `unverified`. She recognizes "Vortex" from Priya's conversation and clicks install.
+
+**Rising action.** The marketplace flow shows her Convoke's README preview, the module_definition metadata, and the required/recommended modules. She accepts the install. `git clone` runs (BMAD's community module flow). Convoke is installed alongside BMAD. She runs `convoke-install-vortex` which she sees documented in the post-install notes. It completes without asking her any config questions she doesn't already know from BMAD. She runs her first Vortex stream.
+
+**Climax.** Emma (contextualization expert) greets her, walks her through a problem-framing exercise for her client proposal. Samira feels like she just unlocked a capability — she has an AI teammate who can methodically break down a consulting problem the way Priya does. The `trust_tier: unverified` warning is visible but Samira isn't worried — she trusts the recommendation chain (Priya → Convoke) more than she'd trust a generic trust badge.
+
+**Resolution.** Samira completes her proposal with Emma's help. She tells Priya thank you, Priya says you're welcome, and Samira adds Convoke to her personal tooling. Over the next month she tries Isla, Liam, and Max. Each one works as advertised. She never notices the details of how Convoke was installed; she just notices that it worked.
+
+**Requirements revealed:**
+- `marketplace.json` accurately describes Convoke to the BMAD installer
+- `module_definition` points to the correct `module.yaml` so PluginResolver discovers capabilities
+- Post-install notes guide the user toward `convoke-install-vortex` (or equivalent next step)
+- `trust_tier: unverified` is honestly displayed but doesn't block install
+- First-run experience is coherent without requiring Convoke-specific knowledge beyond what BMAD users already know
+
+### Journey 4 — Amalik (maintainer) runs the release (the operator journey)
+
+**Persona:** Amalik, solo maintainer of Convoke. Six weeks of capacity allocated to 4.0. Wants the state-of-the-art quality bar he committed to but also wants to stay sane.
+
+**Opening scene.** Sprint 0. Amalik sits down to kick off the release. He opens Winston for CA (Create Architecture). They go through the PRD frontmatter together. Winston writes the architecture doc specifying the drift threshold T (M6), the validation battery composition (M9), the governance registry schema (M14), and the `host_framework_sync` playbook outline (M13). The architecture doc passes the IR gate before any dev story starts (M7).
+
+**Rising action — Sprint 1.** Amelia takes the architecture doc and the PRD. Sprint 1 begins with the three pre-registered experiments (M5). Day 1–2: EXP1 migration dry-run on Emma. Day 3: EXP2 marketplace PR pathfinder submitted. Day 4: EXP3 exporter smoke test across Claude Code, Copilot, Cursor. EXP1 passes — equivalence holds on 5 real inputs. EXP2 gets procedural feedback from BMAD org (clean). EXP3 reveals that the Copilot adapter has a minor issue but the Claude Code and Cursor adapters work — Amalik notes the EXP3 result and decides NOT to absorb Bolder Move 3 into 4.0 framing (defers to 4.1). The Executive Summary stays narrow.
+
+**Climax.** Sprints 2–4. WS1 sweep executes per the migration inventory (M1/M2). WS3 Amelia consolidation runs in parallel. WS4 starts with the recursive tooling validation — `bmad-enhance-initiatives-backlog` passes first (Release Process Checklist item). Then the rest of the BMM dependency scan. WS2 submits the marketplace PR (M12a). The PF1 battery runs pre-release and passes (M9). The architecture budget trip-wire (M8) shows the architecture was delivered within N days — on target. Amalik realizes around week 5 that he's actually going to finish this on schedule.
+
+**Resolution — Sprint 5.** Release ships. CHANGELOG published with Sophia's draft (M16). The `mostHonestOneLineSummary` is verbatim. Priya (from Journey 1) gets the notification and upgrades without incident. Samira (from Journey 3) discovers Convoke the next week via the marketplace. Amalik runs the scheduled retrospective (M17, from Release Process Checklist). Findings go back to the initiatives backlog. The bmad-init skill is gone. Convoke 4.0 is live.
+
+**Requirements revealed:**
+- Winston must deliver architecture doc within budget N days for M8 trip-wire
+- IR gate (`bmad-check-implementation-readiness`) must accept the architecture doc cleanly
+- Sprint 1 experiments must be parallelizable and low-friction to run in week 1
+- Migration inventory (M1) must be frozen before Sprint 2 dev work starts
+- Recursive tooling validation must run before other WS4 inventory work
+- PF1 battery must be executable pre-release, not post-release
+- CHANGELOG must be ready by ship day, not after
+- Retrospective must be scheduled in Sprint 0 (not "after we ship")
+
+### Journey Requirements Summary
+
+| Journey | Key Capabilities Revealed |
+|---------|---------------------------|
+| **J1 — Priya's silent upgrade** | Single-command upgrade, idempotent auto-migration, honest CHANGELOG, behavioral equivalence guarantee, recursive tooling continuity |
+| **J2 — Priya's edge case** | Governance registry with honest warnings, discoverable governance documentation, manual registration support, distinction between missing/unverified/present |
+| **J3 — Samira's marketplace install** | `marketplace.json` validation, module_definition pointing correctly, post-install guidance, honest trust tier display, coherent first-run experience |
+| **J4 — Amalik's release operation** | Architecture budget enforcement (M8), IR gate rigor, parallelizable experiments, frozen migration inventory, execution sprints with clear gates, pre-release validation, scheduled retrospective |
+
+**Cross-cutting observation:** Three of four journeys are about *correctness under absence of friction*. Only J4 (Amalik's operator journey) is about *activity and effort*. That's the correct shape for a maintenance release — the users should barely notice, and the maintainer should carry most of the narrative weight.
+
+## Domain-Specific Requirements
+
+**Not applicable** for a general-domain framework release. Convoke operates in the `general` domain (per classification) and does not face regulated-industry compliance concerns (no HIPAA, PCI-DSS, GDPR, FedRAMP, FDA, or equivalent). Platform and ecosystem constraints relevant to 4.0 — skill manifest schema compliance, BMAD marketplace registry conformance, upstream convention tracking, licensing — are already covered under Technical Success (WS2), Business Success (marketplace registry metadata, ADR documentation), and Operating Principles (OP-4 upstream BMAD governance). This section is deliberately empty to record that the decision to omit full domain-requirements work was made explicitly, not as an oversight.
+
+## Innovation & Novel Patterns
+
+### Framing: Mature Discipline for a Young Domain
+
+Convoke 4.0 does not invent breakthrough techniques. It **imports mature disciplines from traditional software, compiler theory, lean UX experimentation, and editorial practice into a young domain** — AI agent framework maintenance — and names them explicitly so they can be reused in future releases. This is disciplined adoption, not green-field invention. The contribution is the *discipline of importing the discipline*: making these practices explicit, first-class, and load-bearing rather than ad-hoc.
+
+Seven innovations are organized into four thematic disciplines. Each is formulated as a **falsifiable hypothesis** with prediction, observation, and falsification condition. The retrospective (scheduled in Sprint 0 per Release Process Checklist) is the validation gate — without post-release observation, the hypothesis framing is performative.
+
+### Theme 1: Release Discipline
+
+#### I1 — `host_framework_sync` as a named, reusable release class
+
+**Source discipline:** Release taxonomy and maintenance-class naming (mainframe, kernel, LTS traditions)
+**Hypothesis:** If we deliver the `host_framework_sync` playbook artifact as part of 4.0, then future BMAD major releases will be processed using the playbook as a starting template (≥50% content reuse), rather than reinventing the release plan from scratch.
+**Observation:** Content reuse percentage at v6.4 adoption, measured by diff between v6.4 release plan and the 4.0 playbook.
+**Falsification:** If v6.4 adoption rewrites ≥50% of the playbook, the release class was premature abstraction.
+
+#### S1 — Honesty constraints as release discipline ⭐
+
+**Source discipline:** Academic publishing pre-registration, trustworthy release communication
+**Hypothesis:** If we name what the release can't promise (`userMigrationFriction: unknown_until_validated`, synthetic-only validation, maintainer bandwidth as a real constraint, no post-release drift monitoring), then post-release retrospectives will NOT surface "we overclaimed" as a finding.
+**Observation:** Retrospective findings tagged `overclaim` or `expectation-mismatch`.
+**Falsification:** If the retrospective finds that users experienced the release as overclaiming despite the honesty constraints, the discipline was theatrical, not functional. *Load-bearing innovation — everything else in the PRD bends around this one.*
+
+#### S3 — Pre-registered experiments as Sprint 1 gates
+
+**Source discipline:** Lean UX experimentation, pre-registration protocols from scientific methodology
+**Hypothesis:** If we pre-register EXP1/EXP2/EXP3 with go/no-go criteria before Sprint 1 starts, then each experiment will produce a documented decision that shapes downstream scope, rather than being run and ignored.
+**Observation:** Does the Sprint 1 artifact contain "what this changed downstream" paragraphs for each experiment? Do those paragraphs correspond to observable scope changes in later sprints?
+**Falsification:** If experiments ran but downstream scope is unchanged regardless of results, the go/no-go criteria weren't load-bearing and the pre-registration was ceremonial.
+
+### Theme 2: Validation Discipline
+
+#### I3 — Pre-release agent behavioral equivalence validation as a shipping commitment
+
+**Source discipline:** Regression testing, snapshot testing, characterization tests from traditional software (applied to LLM outputs for the first time as a release gate in this domain)
+**Hypothesis:** If we require PF1 (agent output equivalence on a representative battery) to pass before release, then we establish a measurable baseline where none existed, against which future releases can detect regressions.
+**Observation:** Presence of a PF1 PASS/FAIL record in the release artifact. Post-release bug reports tagged `behavior-change` in the first 4 weeks post-ship.
+**Falsification:** If ≥3 behavior regression reports land in 4 weeks despite PF1 passing, the synthetic battery was insufficient — we'd need to expand it or add post-release monitoring. *Honest note: there is no baseline to compare against because Convoke has never measured this before. The validation establishes measurement, not necessarily improvement.*
+
+#### I5 — Pre/post skill output drift snapshot
+
+**Source discipline:** Snapshot testing, diff-based regression detection
+**Hypothesis:** If we capture pre-release and post-release output snapshots for 2–3 key skills (e.g., `bmad-enhance-initiatives-backlog`, a Vortex stream output, a PRD draft output) and compare them, we generate a one-time retrospective drift measurement even without ongoing telemetry.
+**Observation:** A drift snapshot comparison file exists in the release artifact, showing semantic diff between pre- and post-release outputs on the same inputs.
+**Falsification:** If the comparison reveals significant unintended drift, the release had a behavioral impact we failed to validate via PF1 alone (which means PF1's sample was too narrow).
+
+### Theme 3: Communication Discipline
+
+#### S2 — Dual-framing for audience
+
+**Source discipline:** Technical writing, plain-language movement, audience-aware documentation
+**Hypothesis:** If we maintain separate `internalOnly` and `userFacing` vocabulary annotations in the PRD frontmatter and enforce them across release documentation, then user-facing communications (CHANGELOG, migration guide, release announcement) will NOT contain any phrase from the `internalOnly` list.
+**Observation:** Grep CHANGELOG + migration guide + release announcement for phrases on the `internalOnly` list (`host_framework_sync`, "content, not software", "strategic bet", "first-class community module", etc.).
+**Falsification:** If any `internalOnly` phrase appears in user-facing docs, the annotation system failed to prevent bleed-through and the dual-framing discipline was aspirational rather than enforced.
+
+### Theme 4: Learning Discipline
+
+#### L1 — Retrospective anti-pattern registry
+
+**Source discipline:** Engineering retrospective practice, standing anti-pattern catalogues (e.g., AntiPatterns by Brown et al., 1998)
+**Hypothesis:** If we document the anti-patterns observed during 4.0 (e.g., "we almost silently reordered the prioritized view during a backlog triage," "we used 'first-class' where the status was unearned," "we let M18 masquerade as a metric when it was a policy") in a standing registry that persists across releases, then future releases will exhibit fewer of these same anti-patterns because maintainers can read the registry before starting new work.
+**Observation:** The retrospective produces an updated `convoke-anti-patterns.md` registry. Future releases' retrospectives reference the registry and note whether each anti-pattern recurred.
+**Falsification:** If the registry exists but is never consulted during subsequent releases, OR if the same anti-patterns recur in v4.1/v6.4 despite the registry, then the Learning Discipline was curation without feedback and failed to change behavior.
+
+### Market Context & Competitive Landscape
+
+**These innovations are not market-facing in the feature sense.** No user is choosing Convoke 4.0 because it has a named release class or a pre-registered experiment protocol. Users choose (or continue using) Convoke because the agents help them run consulting engagements. The innovations matter because they **sustain the framework that users depend on** without requiring users to care about the sustainment work.
+
+**Positioning claim (internal only):** Convoke 4.0 is the first release to apply mature software and editorial discipline to AI agent framework maintenance as a systematic practice. No competing AI agent framework in the Convoke target space (consulting workflow frameworks) is currently doing this. Traditional software has had these disciplines for decades; AI agent frameworks are young enough that the disciplines are still being imported one by one. Convoke's contribution is the *importing*, not the *inventing*.
+
+**User-facing claim (from `userFacing` vocabulary):** Per the dual-framing discipline (S2), this entire section is `internalOnly`. The user-facing equivalent is simply: *"Convoke 4.0 is a maintenance release that keeps Convoke healthy as BMAD evolves and adds marketplace distribution for reach."* The innovations live behind that sentence.
+
+### Validation Approach — Retrospective as the Gate
+
+Every innovation in this section is formulated as a hypothesis with an observation and a falsification condition. **The retrospective (scheduled in Sprint 0 per Release Process Checklist) is the validation gate.** Without post-release retrospective observation, the hypothesis framing is performative.
+
+The retrospective must explicitly address:
+
+1. Did I1's playbook artifact serve its purpose? Will it be reusable at v6.4? *(Defer observation to v6.4 adoption.)*
+2. Did S1's honesty constraints prevent overclaim in user experience? *(Observe in first 4 weeks of user feedback.)*
+3. Did S3's pre-registered experiments produce acted-upon decisions? *(Observe in Sprint 1 artifact.)*
+4. Did I3's PF1 validation establish a useful behavioral baseline? *(Observe in any post-release behavior-change reports.)*
+5. Did I5's drift snapshot reveal unexpected behavioral changes? *(Observe immediately post-release.)*
+6. Did S2's dual-framing prevent internal-only phrases from leaking into user docs? *(Grep the published CHANGELOG.)*
+7. Did L1's anti-pattern registry capture the real anti-patterns from 4.0? *(Review the registry at retrospective time.)*
+
+### Risk Mitigation — Innovation Durability
+
+The main risk for operator-facing innovations is that **they look like innovation in the PRD but don't reach sustained practice.** Naming something doesn't make it durable — patterns must survive at least one reuse to prove the "named class" is real.
+
+**Per-innovation durability mitigations:**
+
+- **I1** survives only if v6.4 adoption reuses the playbook. Can't validate in 4.0; defer to first reuse opportunity. Flagged in Operating Principles.
+- **S1** survives only if honesty constraints become the Convoke default, not a 4.0-specific experiment. Consider a standing rule: every Convoke release must name what it can't promise before ship.
+- **S3** survives only if pre-registered experiments become a Sprint 1 default for future releases. Add to the `host_framework_sync` playbook (I1).
+- **I3** survives only if PF1-style validation becomes a standing requirement. Consider making it the first item in the host_framework_sync playbook.
+- **I5** survives only if the drift snapshot workflow gets codified into a reusable script. Without that, it's a one-time effort.
+- **S2** survives only if the `internalOnly`/`userFacing` annotation discipline propagates to future PRDs. Document as a required frontmatter section for all future Convoke PRDs.
+- **L1** survives only if the anti-pattern registry is consulted at the *start* of future releases, not just updated at the end. Add to Sprint 0 checklist for next release.
+
+**Cross-cutting mitigation:** The `host_framework_sync` playbook (I1) is the carrier for most of these innovations. If the playbook documents S1, S3, I3, I5, S2, and L1 as standard practice, the innovations propagate via the playbook rather than relying on institutional memory.
+
+## Developer-Tool Specific Requirements
+
+### Project-Type Overview
+
+Convoke is a `developer_tool` in the `general` domain. Unlike traditional developer tools (SDKs, libraries, CLI frameworks), Convoke ships **LLM-interpreted content** (prompts, skills, workflow definitions) alongside a thin layer of JS/Python CLI tooling. This hybrid nature means the "API surface" is split: a small CLI surface for human operators and a large content surface that is consumed by Claude Code rather than called programmatically.
+
+This section captures project-type-specific technical requirements for 4.0. Several subsections are intentionally brief because the content is already documented elsewhere in the PRD; cross-references are noted.
+
+### Language Matrix
+
+| Layer | Language/Format | Role | Target audience |
+|-------|-----------------|------|-----------------|
+| **Agent content** | Markdown (SKILL.md, agent files) | Prompts, personas, workflow steps | Claude Code (LLM runtime) |
+| **Configuration** | YAML (`config.yaml`, `module.yaml`) | Module metadata, user settings | Convoke installer + operator |
+| **Manifests** | CSV (`skill-manifest.csv`, `bmm-dependencies.csv`) | Tooling registries | Convoke scripts |
+| **CLI tooling** | JavaScript (Node 18+) | `convoke-install`, `convoke-update`, `convoke-doctor`, `convoke-version`, etc. | Developer/consultant operator |
+| **Scripts/audits** | Python 3.10+ (with `uv`) and JavaScript | Ad-hoc scripts for audits, migration, validation | Maintainer + CI |
+
+**4.0-specific language changes:** None. The language matrix is stable across the release; 4.0 changes *how* content is loaded (direct-load migration) and *where* it's distributed (marketplace), not *what languages* are used.
+
+### Installation Methods
+
+4.0 introduces a second installation path. Both paths must produce equivalent post-install state (validated per Technical Success WS2 parity check).
+
+| Method | Command | Status in 4.0 | Target user |
+|--------|---------|---------------|-------------|
+| **Standalone CLI (primary, existing)** | `npm install -g convoke-agents && convoke-install` | Supported; remains the primary path | Existing Convoke users, users with existing Convoke workflows |
+| **BMAD marketplace (new)** | BMAD community module browser → select `convoke` → install | New in 4.0; `trust_tier: unverified` initially | New users discovering Convoke via BMAD, colleagues of existing users |
+| **Direct git clone + manual install** | `git clone` + `convoke-install` | Unchanged — power-user path, not advertised | Contributors, debuggers |
+
+**Cross-reference:** Installation flow details are in Journey 3 (Samira's marketplace install) and WS2 scope in the Executive Summary.
+
+**Upgrade path:** `convoke-update` remains the canonical upgrade command regardless of install method. Auto-migration handles the `bmad-init` → direct-load transition (WS1).
+
+### API Surface
+
+Convoke exposes **no programmatic API** — there is no `require('convoke-agents')` import path, no HTTP endpoints, no callable library. The "API surface" is split across three modalities:
+
+**1. CLI surface** (for operators):
+- `convoke-install` / `convoke-install-vortex` / `convoke-install-gyre` — installation commands
+- `convoke-update` — upgrade flow including auto-migration
+- `convoke-doctor` — health checks including WS4 governance registry validation
+- `convoke-version` — version display
+- `convoke-migrate` — manual migration trigger
+- Plus future: `convoke-install <module>` (from P3 team installer architecture, not this release)
+
+**2. Claude Code skill surface** (for the LLM runtime):
+- `.claude/skills/<skill-name>/SKILL.md` for each installed skill
+- Activation protocol per BMAD v6.3 convention (must be v6.3-compliant after 4.0)
+- Skill discovery via `bmad-skill-manifest.yaml` and `skill-manifest.csv`
+
+**3. Convoke extension surface** (for operator-authored customizations):
+- Operators can write custom skills that extend BMM agents (e.g., Priya's custom note-taking skill from Journey 2)
+- Extensions register in `_bmad/_config/bmm-dependencies.csv` per WS4 governance rule
+- This is a new first-class surface introduced by WS4 — prior Convoke versions had no formal extension registration
+
+**4.0-specific API surface changes:**
+- WS1 retires the `bmad-init` skill activation pattern — all skills now load config directly
+- WS3 removes three skills from the surface (`bmad-agent-qa`, `bmad-agent-sm`, `bmad-agent-quick-flow-solo-dev`), absorbed into Amelia
+- WS4 adds the extensions registration surface (operators can now formally register custom skills)
+
+### Code Examples
+
+**Existing agent invocation patterns are unchanged by 4.0.** Users invoke agents the same way in 3.2.0 and 4.0:
+
+- Ask to talk to an agent by name: "talk to Winston," "talk to John"
+- Invoke a skill directly: "run lets create PRD," "triage the initiatives backlog"
+- The agent menu and command interactions are identical post-migration
+
+**Cross-reference:** Journey 1 (Priya's silent upgrade) demonstrates the continuity — her Isla stream produces the same output structure after the upgrade as before. This is enforced by PF1 validation (M9).
+
+**4.0-specific code examples (new):**
+- **Manual extension registration** (new in WS4) — when a user creates a custom skill extending a BMM agent, they add a row to `_bmad/_config/bmm-dependencies.csv`:
+  ```
+  skill_name,bmm_agent,owner,registered_date
+  priya-custom-note-tool,bmad-agent-pm,priya@example.com,2026-05-15
+  ```
+- **Marketplace install** (new in WS2) — users select Convoke in the BMAD community module browser (no command-line invocation by the user; handled by BMAD installer).
+
+### Migration Guide
+
+**This section is covered in depth elsewhere — see:**
+- **Journey 1** for the happy-path upgrade experience
+- **Journey 2** for the edge case (governance registry warning for unregistered custom skills)
+- **WS1 scope** in the Executive Summary for the auto-migration mechanism
+- **M3, M4** in Success Criteria for the audit and idempotency metrics
+- **Sophia's release announcement draft** in frontmatter (`partyFindingsRound2.PR2-5`) for the user-facing voice
+
+**One commitment specific to this section:** The 4.0 migration guide will be **≤1 page** and introduce **zero new concepts** users must learn. This is a structural proxy for "zero user action required to re-onboard" (per User Success criteria).
+
+**Implementation considerations:**
+- Migration guide lives at `docs/migration/3.x-to-4.0.md` or equivalent
+- Links from `convoke-update` terminal output when the update runs
+- Linked from CHANGELOG 4.0 entry
+
+### Implementation Considerations
+
+**Non-functional requirements specific to `developer_tool` project type for 4.0:**
+- **Idempotency of CLI commands** — `convoke-update` must be safe to re-run without side effects (M4)
+- **Path safety** — scripts accepting user paths must pass path-safety analysis (per Convoke memory feedback rule, reflected in Technical Success WS1)
+- **Cross-platform support** — Convoke supports macOS, Linux, and WSL. Windows-native is not officially supported and is not in scope for 4.0. No change from 3.2.0.
+- **Minimum runtime versions** — Node 18+, Python 3.10+ (the latter per BMAD v6.3 prerequisites that Convoke inherits)
+- **Offline-safe** — `convoke-update` should degrade gracefully if the marketplace registry is unreachable (per BMAD's own registry client behavior, inherited)
+
+## Project Scoping & Phased Development
+
+*The MVP/Growth/Vision feature breakdown is documented in Success Criteria → Product Scope. This section adds the **strategic framing** for scoping decisions: MVP philosophy, resource requirements, and consolidated risk mitigation. Cross-references point to where specific feature/phase content lives.*
+
+### MVP Strategy & Philosophy
+
+**MVP Approach:** `host_framework_sync` release — a **new class of MVP** for Convoke, distinct from typical MVP philosophies:
+
+| Typical MVP approach | What it targets | Why it doesn't fit 4.0 |
+|----------------------|----------------|------------------------|
+| Problem-solving MVP | Validate a user problem | Convoke already validated the user problem (3.x has live users); 4.0 solves *maintainer* problems, not new *user* problems |
+| Experience MVP | Validate a user experience | User experience stays unchanged (continuity is the goal) |
+| Platform MVP | Validate a distribution/growth channel | Partially fits (marketplace publication IS a new channel) but undersells |
+| Revenue MVP | Validate willingness to pay | Not applicable — Convoke is open source / MIT |
+
+**What 4.0 actually validates:** that Convoke can sustain itself as a downstream of BMAD through structured, honest, reusable release discipline. The MVP validates the **release process**, not the product.
+
+**Chosen MVP philosophy: `host_framework_sync` as a reusable release class** (Innovation I1). The minimum thing that would make this release "validated" is:
+
+1. The release ships with honest constraints named (S1)
+2. The release class is documented as reusable (playbook artifact M13)
+3. The recursive tooling test (the backlog skill must pass WS4 first) is satisfied
+4. At least one non-maintainer user has validated the upgrade (M17)
+
+These are the *load-bearing validation signals*. Everything else in the Success Criteria metrics is a correctness check, not a philosophy validation.
+
+**Cross-reference:** MVP feature set (mandatory / deferrable / quality bar) is documented in Success Criteria → Product Scope → MVP. That enumeration is the authoritative list; not duplicated here.
+
+### Resource Requirements
+
+This release is resource-constrained by design. Operating Principle **OP-1 (maintainer bandwidth awareness)** is the primary constraint.
+
+**Team size and composition:**
+- **Primary author and executor:** Amalik (solo maintainer)
+- **Agent-assisted drafting and design:** Winston (architecture), Amelia (dev), Bob consolidation via Amelia (sprint planning), John (PRD — this document)
+- **External roles:** N=1 external validator for M17 (any non-maintainer person willing to run the upgrade and report back)
+- **Total human FTE:** ~1 (Amalik himself, part-time allocation to this release)
+
+**Skills required:**
+- Node.js 18+ and Python 3.10+ proficiency for CLI tooling and scripts
+- BMAD v6.3 convention knowledge (acquired during the release — Sprint 0 experiments include a pathfinder for this)
+- Git workflow for repo management
+- Markdown authoring for documentation
+- **NOT required:** LLM prompt engineering beyond what's already in Convoke's existing skill library
+
+**Time budget:**
+- **Target:** ~4–5 focused weeks across 5 sprints
+- **Hard ceiling:** If cumulative work materially exceeds expected effort, trigger workstream deferral review (OP-1 — honest principle, no automated enforcement)
+- **Soft budget for architecture delivery:** N days from CA start to IR gate pass (OP-3 trip-wire M8 — enforced)
+
+**Cross-reference:** PM2 (maintainer burnout pre-mortem) in the Executive Summary frontmatter captures the full honesty framing.
+
+### Risk Mitigation Strategy
+
+Risks consolidated from pre-mortem (PM1–PM5), shark tank (ST1–ST4), party round 1 (PF1–PF7), and party round 2 (PR2-1 through PR2-5). Organized by Technical / Market / Resource categories.
+
+#### Technical Risks
+
+| Risk | Mitigation |
+|------|------------|
+| **No `bmad_version` field in marketplace schema** — pre-v6.3 users may install incompatible Convoke and fail at runtime | Runtime compatibility preflight check in Convoke (WS2) + file upstream issue |
+| **Skill directory porting gap** — audit needed to confirm all skills comply with v6.3 `<skill-dir>/SKILL.md` convention | Automated skill-dir audit script (Technical Success WS2); surface in Sprint 1 pathfinder work |
+| **User migration script idempotency failure** — script runs twice and produces different state | M4 (2x re-run test on ≥3 sandbox fixtures) + path safety analysis per Convoke memory feedback rule |
+| **Agent behavioral drift not caught by PF1** — synthetic battery too narrow; live usage surfaces edge cases | PM3 honesty (pre-release battery is *necessary*, not *sufficient*); I5 drift snapshot as retrospective observation; future telemetry capability (deferred to Growth) |
+| **Recursive tooling failure mid-release** — backlog skill breaks during the release that's using it | Release Process Checklist mandates backlog skill as first WS4 validation target (PF5) |
+
+#### Market Risks
+
+| Risk | Mitigation |
+|------|------------|
+| **Marketplace adoption velocity disappoints** — install count stays low for 6+ months | PM1 honesty: success criteria explicitly excludes adoption velocity for 4.0; measured as 12–18 month observation |
+| **Strategic bet on BMAD goes bad** — BMAD stagnates or a superior framework emerges | PM5: strategic bet documented as revalidatable hypothesis (ADR with revalidation trigger); reconsider at each major upstream release |
+| **Enterprise buyers are confused by `unverified` trust tier** — ST2 finding | Honest disclosure in marketplace listing; buyer-facing positioning explicitly deferred to future release |
+| **Convoke looks like a maintenance release with no user value** — existing users ask "why upgrade?" | Sophia's release announcement draft leads with "healthy enough to last" framing; CHANGELOG honesty per M16 |
+
+#### Resource Risks
+
+| Risk | Mitigation |
+|------|------------|
+| **Maintainer burnout during release** (PM2) | OP-1: workstream deferral is the honest response; each workstream is independently valuable; M10 permits ≤1 deferral with ceremony |
+| **WS4 scope is optimistic** — extensions inventory could double the effort (PF3) | Validate inventory size early in Sprint 1 (before WS4 full commitment); relax expected count if sweep reveals more extensions |
+| **Marketplace PR approval timeline** — unknown BMAD org response speed (PF4) | M12 split into M12a (ship-blocking: PR open + validates) and M12b (aspirational: BMAD feedback); approval is not ship-blocking |
+| **Architecture doc takes longer than expected** (blocks several metrics) | OP-3 trip-wire M8 — architecture budget N days from CA start to IR gate pass; overrun triggers deferral review |
+| **Upstream BMAD moves to v6.3.1 or v6.4.0 mid-release** (PF4 / PR2-3) | Freeze target to v6.3.0 explicitly at release kickoff; upstream drift noted but not re-targeted mid-flight |
+
+**Cross-cutting mitigation:** The state-of-the-art release quality commitments (decision records, risk register, versioned interface contracts, traceability, IR gate pre-dev, retrospective post-release) are themselves the primary mitigation for *release-quality* risks. PM2 honesty framing (bandwidth as constraint) is the primary mitigation for *execution* risks.
+
+### Scope Decision Summary
+
+**What we committed to:**
+- Four workstreams (WS1/U10, WS2/P23, WS3/A8, WS4/A9) with explicit sequencing
+- Three Sprint 1 pre-registered experiments (EXP1, EXP2, EXP3)
+- Honesty constraints named in advance
+- Behavioral equivalence validation as a shipping gate
+- Recursive tooling validation as first WS4 target
+- N=1 external user validation before release
+- Documented playbook artifact for future reuse
+- Retrospective scheduled in Sprint 0
+
+**What we explicitly deferred (see Growth Features in Success Criteria):**
+- Post-release drift monitoring
+- Platform-agnostic publishing absorbing Bolder Move 3 (contingent on EXP3 — may be absorbed)
+- Marketplace trust tier promotion
+- Buyer-facing positioning
+- Agent behavior telemetry
+- Community contribution model
+
+**What we did NOT consider and should acknowledge as blind spots:**
+- Windows-native support (still out of scope)
+- Internationalization of user-facing release docs (CHANGELOG, migration guide are English-only)
+- Accessibility of any web-facing Convoke assets (none exist, but noted)
+- Localization of agent personas (agents speak English; no multilingual support)
+
+These are blind spots, not deferrals — we didn't weigh them in the scope discussion. Acknowledging them explicitly keeps the PRD honest about what wasn't considered.
+
+## Functional Requirements
+
+*The capability contract. Every feature shipped in 4.0 must trace back to one of these FRs. Any capability not listed here does not exist in the release. Organized by logical capability areas, not by workstream.*
+
+### Direct-Load Configuration
+
+- **FR1:** Convoke agents load module configuration directly from `_bmad/{module}/config.yaml` without invoking the `bmad-init` skill.
+- **FR2:** Convoke provides a direct-YAML loader utility that replaces `bmad-init` functionality for all agent activation flows.
+- **FR3:** Every Convoke agent's activation protocol follows the v6.3-compliant direct-load pattern after migration.
+- **FR4:** No Convoke skill in the `_bmad/` source tree retains an active reference to `bmad-init` (documentation and historical notes explaining the removal are allowed).
+
+### User Migration
+
+- **FR5:** The operator can upgrade Convoke 3.2.0 → 4.0 in a single command (`convoke-update`).
+- **FR6:** Convoke auto-migrates existing `_bmad/core/config.yaml` and `_bmad/{module}/config.yaml` layouts to v6.3-compliant direct-load conventions during upgrade.
+- **FR7:** The migration script is idempotent — re-running it produces no side effects after the first successful run.
+- **FR8:** The migration script performs only operations within Convoke-owned paths and passes path-safety analysis per the Convoke memory feedback rule.
+- **FR9:** The operator can re-run `convoke-update` after a failed migration and resume safely (re-entrancy).
+- **FR10:** The operator is presented with a migration guide ≤1 page in length, linked from the terminal output of `convoke-update` and from the CHANGELOG.
+- **FR11:** The migration guide introduces zero new concepts the operator must learn (no new agent names, no new config keys, no new workflows).
+
+### Extensions Compatibility Governance
+
+- **FR12:** Convoke maintains `_bmad/_config/bmm-dependencies.csv` — a registry enumerating every Convoke-owned skill that extends a BMM agent.
+- **FR13:** A committed scan tool regenerates `bmm-dependencies.csv` from the `.claude/skills/` filesystem as the canonical source of truth.
+- **FR14:** `convoke-doctor` validates the BMM dependency registry as a standing health check and surfaces drift (new skills, removed skills, unregistered custom skills).
+- **FR15:** `convoke-update` executes a post-upgrade regression gate against the BMM dependency registry before completing.
+- **FR16:** The operator can register a custom skill that extends a BMM agent by adding a row to `bmm-dependencies.csv`.
+- **FR17:** Convoke displays honest warnings for detected-but-unregistered custom skills — warnings are informational, not blocking.
+- **FR18:** The recursive tooling validation (`bmad-enhance-initiatives-backlog` passing WS4 gate first) is enforced as the first validation target before any other dependency inventory work.
+
+### Marketplace Distribution
+
+- **FR19:** Convoke publishes a `.claude-plugin/marketplace.json` at the repo root that passes BMAD's PluginResolver validation.
+- **FR20:** The marketplace entry references `_bmad/bme/_vortex/module.yaml` as the `module_definition`.
+- **FR21:** A new user can install Convoke through the BMAD community module browser with no manual workarounds.
+- **FR22:** Marketplace install produces the same Convoke state as standalone `convoke-install` (dual-distribution parity, validated by post-install filesystem diff).
+- **FR23:** Convoke performs a runtime compatibility preflight check at install and upgrade time, protecting against the missing `bmad_version` field in the marketplace schema.
+- **FR24:** Convoke is registered in `bmad-plugins-marketplace/registry/community/convoke.yaml` with `trust_tier: unverified` and valid `module_definition` metadata.
+- **FR25:** Convoke supports three installation methods simultaneously: standalone CLI, BMAD marketplace, and direct git clone with manual install.
+
+### Agent Consolidation Tracking
+
+- **FR26:** `bmad-agent-qa`, `bmad-agent-sm`, and `bmad-agent-quick-flow-solo-dev` are removed from Convoke's bmm module installation (source tree + installed artifacts).
+- **FR27:** Convoke integrates upstream Amelia (v6.3+) as the sole consolidated developer/QA/SM agent.
+- **FR28:** Convoke's manifests (`skill-manifest.csv`, `files-manifest.csv`, `agent-manifest.csv`) reflect the consolidated Amelia lineup with no stale references.
+- **FR29:** Convoke workflows with historical references to Bob/Quinn/Barry are updated to reference Amelia.
+- **FR30:** Cross-reference grep confirms no remaining mentions of removed agents in any Bme (Vortex, Gyre, etc.) workflows.
+
+### Release Discipline & Playbook
+
+- **FR31:** Convoke delivers a `host_framework_sync` playbook artifact at a committed path as a 4.0 deliverable, signed off by Winston.
+- **FR32:** The playbook documents release class definition, trigger criteria, workstream template, validation battery reference, and known-pitfalls in a reusable format.
+- **FR33:** The operator runs three pre-registered experiments (EXP1, EXP2, EXP3) during Sprint 1 and logs go/no-go decisions for each.
+- **FR34:** Each Sprint 1 experiment produces a documented "what this changed downstream" statement in the Sprint 1 artifact.
+- **FR35:** A strategic bet ADR is created at a committed path containing decision, ≥2 alternatives considered, revalidation trigger, and link to the PRD.
+
+### Validation & Behavioral Equivalence
+
+- **FR36:** Convoke executes a pre-release agent behavioral equivalence validation battery (PF1) against representative inputs sampled from `_bmad-output/vortex-artifacts/`.
+- **FR37:** The validation battery compares pre-migration and post-migration agent outputs within a numerically-defined drift threshold T (defined in architecture NFRs).
+- **FR38:** A validation failure (drift beyond T on any input) blocks release progression.
+- **FR39:** The operator can capture pre/post skill output drift snapshots for 2–3 key skills (e.g., `bmad-enhance-initiatives-backlog`, a Vortex stream output, a PRD draft output) as a retrospective observation artifact.
+- **FR40:** An external non-maintainer user runs the upgrade on their own install and reports no issues before release. The external validation is logged in the release record.
+
+### Release Communication
+
+- **FR41:** Convoke's CHANGELOG contains the `mostHonestOneLineSummary` text verbatim and follows the section structure from Sophia's ship-ready draft.
+- **FR42:** The CHANGELOG is grep-tested against the cliché list from `partyFindingsRound2.PR2-5` and contains zero violations.
+- **FR43:** The PRD and derivative release documents distinguish `internalOnly` from `userFacing` vocabulary annotations; user-facing documents contain no phrases from the `internalOnly` list.
+- **FR44:** The maintainer sign-off on the CHANGELOG is recorded in the release commit message.
+
+### Quality Gates
+
+- **FR45:** The IR gate (`bmad-check-implementation-readiness`) is executed against the architecture doc before any epic implementation story starts. Sprint 1 pre-registered experiments are exempted from this rule.
+- **FR46:** The architecture doc exists at a committed path, defines drift threshold T numerically, and has passed the IR gate with a logged result.
+
+### Retrospective & Learning
+
+- **FR47:** A retrospective is scheduled in Sprint 0 with owner named, date committed, feedback process documented, and target backlog destination (`convoke-note-initiatives-backlog.md`) identified.
+- **FR48:** The retrospective produces an updated `convoke-anti-patterns.md` registry capturing anti-patterns observed during 4.0 execution.
+- **FR49:** The retrospective explicitly addresses each innovation hypothesis (I1, S1, S3, I3, I5, S2, L1) with an observation result or deferred-until-later note.
+- **FR50:** Retrospective findings feed back into `convoke-note-initiatives-backlog.md` as new or updated items with traceable provenance.
+
+## Non-Functional Requirements
+
+*Only categories relevant to Convoke 4.0 are documented. Categories intentionally skipped: Scalability (single-user CLI tool, no concurrent user concerns), Accessibility (no visual UI, CLI tool), Payment/Financial Security (Convoke handles no financial data).*
+
+### Performance
+
+- **NFR1:** `convoke-update` completes end-to-end migration for a typical install in ≤60 seconds on a 2024-era laptop (measured baseline; drift from this triggers investigation).
+- **NFR2:** The direct-YAML config loader utility (FR2) adds ≤50ms overhead per agent activation vs. the prior `bmad-init` flow.
+- **NFR3:** The PF1 agent behavioral equivalence validation battery (FR36) executes in ≤15 minutes against the full representative input set.
+- **NFR4:** The automated skill-dir audit script scans all `.claude/skills/` directories in ≤5 seconds on a typical install.
+- **NFR5:** The `bmm-dependencies.csv` regeneration scan (FR13) completes in ≤10 seconds against the Convoke skill corpus.
+
+### Reliability
+
+- **NFR6:** The user migration script (FR7) is fully idempotent — re-running it after a successful run produces an empty filesystem diff (enforced by M4 test).
+- **NFR7:** The user migration script supports **resume-after-failure** — if interrupted mid-migration, a subsequent run detects partial state and resumes without corrupting it (FR9).
+- **NFR8:** `convoke-update` is offline-safe for the migration phase — does not require network connectivity to complete the direct-load migration itself (marketplace-related checks may require network; migration does not).
+- **NFR9:** The post-upgrade regression gate (FR15) is fail-soft — a registry validation failure produces a warning and allows operator override, not a hard block (per PM3 honesty about validation limits).
+- **NFR10:** `convoke-doctor` degrades gracefully when any module is missing — reports the missing module as a health finding rather than crashing.
+
+### Integration
+
+- **NFR11:** Convoke's `.claude-plugin/marketplace.json` conforms to BMAD's `registry-schema.yaml` for community modules — validated by BMAD's PluginResolver against the published schema.
+- **NFR12:** Convoke's agent SKILL.md files conform to BMAD v6.3 skill directory convention (`<skill-dir>/SKILL.md` with v6.3 frontmatter schema).
+- **NFR13:** Convoke's `_bmad/bme/_vortex/module.yaml` (or equivalent `module_definition` target) conforms to BMAD's expected module.yaml schema for PluginResolver discovery.
+- **NFR14:** Convoke skills activate correctly against Claude Code's v6.3-compliant activation protocol — validated by smoke test on at least one agent per module (core, bmm, cis, tea, wds, bme).
+- **NFR15:** Convoke adapts gracefully when installed *alongside* upstream BMAD (community module install path) — no file collisions, no shared-path conflicts.
+
+### Maintainability
+
+*This is a non-standard NFR category, included because maintainer sustainability is a named load-bearing concern in this release (PM2 / OP-1). Without it, a future maintainer will face unbounded complexity.*
+
+- **NFR16:** The total cumulative lines of code added or modified by 4.0 (JS + Python + YAML + markdown, excluding frontmatter-heavy planning artifacts) is bounded by a target discussed in the architecture doc — overrun triggers scope deferral review per OP-1.
+- **NFR17:** All migration-time decisions that require operator judgment (custom skill registration, deferral choices, etc.) are documented in a single operator-facing migration guide ≤1 page (FR10 / FR11).
+- **NFR18:** The `host_framework_sync` playbook artifact (FR31) is self-contained — a future maintainer can execute a host_framework_sync release by reading only the playbook plus the current BMAD release notes, without needing to re-read this PRD.
+- **NFR19:** All audit scripts (`audit-bmad-init-refs.js`, `audit-skill-dirs.js`, `audit-bmm-dependencies.js`) are placed under a single committed directory (e.g., `scripts/audit/`) with shared utilities for reuse.
+- **NFR20:** The architecture doc defines drift threshold T numerically (not prose) so it can be automated and re-used without interpretation (FR46).
+
+### Observability
+
+- **NFR21:** The PF1 validation battery produces a machine-readable PASS/FAIL record per input, not just a summary pass/fail (supports future investigation of *which* inputs drifted).
+- **NFR22:** The drift snapshot workflow (FR39) produces a semantic diff artifact that can be manually reviewed for unexpected behavioral changes.
+- **NFR23:** The recursive tooling validation result (FR18) is logged as a distinct entry in the WS4 validation log — distinguishable from other dependency checks.
+- **NFR24:** Sprint 1 experiment go/no-go decisions (FR34) are logged with timestamps and "what this changed downstream" paragraphs.
+- **NFR25:** The retrospective (FR47) produces observation results for each innovation hypothesis (FR49) with distinct PASS / FAIL / DEFERRED status per hypothesis.
+
+### Backwards Compatibility
+
+- **NFR26:** Convoke 4.0 maintains a **one-minor-version backwards-compat window** for the old `bmad-init` config loading pattern — if a user is on 4.0 but has somehow retained an old config layout, the system warns and auto-migrates on next `convoke-update`.
+- **NFR27:** The `bmad-init` skill is *deprecated* in 4.0.0, *warned* in 4.0.0 (info-level warning on activation), and *removed* no earlier than 4.1.0 with explicit deprecation date in the playbook artifact.
+- **NFR28:** User-authored custom skills that were working in 3.2.0 continue to function in 4.0 as long as they are registered in `bmm-dependencies.csv` per FR16 — 4.0 does not silently break user customizations.
+- **NFR29:** Convoke 4.0 accepts installation over a 3.2.0 install without requiring uninstall-then-reinstall — the migration path from any 3.x version is idempotent per NFR6.
+
+### Reproducibility
+
+*Quality-threshold counterpart to FR36–FR40. The FRs specify that validation happens; the NFRs specify how much drift is acceptable.*
+
+- **NFR30:** Drift threshold T is defined numerically in the architecture NFR section. Agents producing outputs within T on the representative input battery are considered behaviorally equivalent.
+- **NFR31:** The PF1 battery covers at least 5 representative inputs sampled from real `_bmad-output/vortex-artifacts/` data (minimum; Winston can expand per architecture decision).
+- **NFR32:** The drift snapshot (FR39) produces deterministic output when re-run on the same inputs — the snapshot is reproducible.
+- **NFR33:** The validation battery can be re-run post-release to detect regression if a user reports behavioral changes, using the same inputs and the same threshold T.
