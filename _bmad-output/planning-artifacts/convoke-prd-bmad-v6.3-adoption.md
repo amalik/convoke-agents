@@ -4,6 +4,7 @@ stepsCompleted:
   - step-02-discovery
   - step-02b-vision
   - step-02c-executive-summary
+  - step-03-success
 inputDocuments:
   - _bmad-output/planning-artifacts/briefing-bmad-v6.3-adoption.md
   - _bmad-output/planning-artifacts/convoke-note-initiatives-backlog.md
