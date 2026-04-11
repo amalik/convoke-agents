@@ -55,20 +55,12 @@ export default [
       "no-restricted-syntax": "off"
     }
   },
-  {
-    files: ["tests/**/*.js"],
-    languageOptions: {
-      globals: {
-        test: "readonly",
-        expect: "readonly",
-        jest: "readonly",
-        beforeEach: "readonly",
-        afterEach: "readonly",
-        beforeAll: "readonly",
-        afterAll: "readonly"
-      }
-    }
-  },
+  // Jest globals block REMOVED (Story M). All test files now import
+  // describe/it/before/beforeEach/afterEach from 'node:test' and assert
+  // from 'node:assert/strict' — no globals needed. Removing these globals
+  // is the structural fix to the C1 phantom-test bug class: if a future
+  // test file uses expect() or jest.* without importing, eslint will flag
+  // it as no-undef immediately, preventing the phantom from landing.
   {
     // tests/**/golden/ — byte-exact test fixtures captured from generators.
     // Excluded from lint because they must mirror generator output exactly,
