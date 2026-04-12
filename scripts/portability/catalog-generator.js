@@ -34,7 +34,7 @@ const INTENT_TO_HEADING = {
   'write-documentation': 'I need to write documentation',
   'plan-your-work': 'I need to plan my work',
   'test-your-code': 'I need to test my code',
-  'discover-product-fit': 'I need to discover product-market fit',
+  'discover-product-fit': 'I need to run continuous product discovery',
   'assess-readiness': 'I need to assess production readiness',
   'meta-platform': null, // excluded from catalog
 };
