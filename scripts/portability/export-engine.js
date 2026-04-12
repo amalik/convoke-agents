@@ -172,6 +172,22 @@ const CIS_SKILL_TO_AGENT = {
   'bmad-cis-problem-solving': 'bmad-cis-agent-creative-problem-solver',
 };
 
+// BME agent short-name mapping (agent-manifest uses short names like "Emma")
+const BME_SKILL_TO_AGENT = {
+  'bmad-agent-bme-contextualization-expert': 'Emma',
+  'bmad-agent-bme-discovery-empathy-expert': 'Isla',
+  'bmad-agent-bme-research-convergence-specialist': 'Mila',
+  'bmad-agent-bme-hypothesis-engineer': 'Liam',
+  'bmad-agent-bme-lean-experiments-specialist': 'Wade',
+  'bmad-agent-bme-production-intelligence-specialist': 'Noah',
+  'bmad-agent-bme-learning-decision-expert': 'Max',
+  'bmad-agent-bme-stack-detective': 'Scout',
+  'bmad-agent-bme-model-curator': 'Atlas',
+  'bmad-agent-bme-readiness-analyst': 'Lens',
+  'bmad-agent-bme-review-coach': 'Coach',
+  'bmad-agent-bme-team-factory': 'Loom Master',
+};
+
 function findAgentMatch(skillName, agents) {
   // Strategy 1: exact name match
   let agent = agents.find((a) => a.name === skillName);
@@ -194,6 +210,13 @@ function findAgentMatch(skillName, agents) {
     if (agent) return agent;
   }
 
+  // Strategy 2c: BME agent short-name mapping (Emma, Isla, Scout, etc.)
+  const bmeShortName = BME_SKILL_TO_AGENT[skillName];
+  if (bmeShortName) {
+    agent = agents.find((a) => a.name === bmeShortName);
+    if (agent) return agent;
+  }
+
   return null;
 }
 
@@ -207,7 +230,7 @@ function findAgentMatch(skillName, agents) {
 function resolvePersonaSummary(skillName, agents) {
   const agent = findAgentMatch(skillName, agents);
   if (agent) {
-    return { name: agent.displayName, icon: agent.icon || '' };
+    return { name: agent.displayName || agent.name, icon: agent.icon || '' };
   }
   return { name: humanizeSkillName(skillName), icon: '🔧' };
 }
