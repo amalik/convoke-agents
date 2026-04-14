@@ -121,10 +121,10 @@ describe('Export engine (sp-2-2)', () => {
     assert.ok(result.instructions.includes('## You are'));
   });
 
-  it('Test 4: bmad-dev-story (Tier 3 pipeline) throws an error', () => {
-    assert.throws(() => {
-      exportSkill('bmad-dev-story', projectRoot);
-    }, /pipeline/i);
+  it('Test 4: bmad-dev-story (Tier 3 pipeline) exports with framework-only notice', () => {
+    const result = exportSkill('bmad-dev-story', projectRoot);
+    assert.notStrictEqual(result, undefined);
+    assert.ok(result.instructions.includes('Framework-only skill'));
   });
 
   it('Test 5: nonexistent skill throws a helpful error', () => {
