@@ -84,24 +84,35 @@ function validateInstructions(filePath, skillName) {
     issues.push({ skill: skillName, file: 'instructions.md', issue: 'contains frontmatter block' });
   }
 
-  // Balanced code fences
-  const fenceCount = (content.match(/^```/gm) || []).length;
-  if (fenceCount % 2 !== 0) {
-    issues.push({ skill: skillName, file: 'instructions.md', issue: `unbalanced code fences (${fenceCount} found)` });
-  }
+  // Framework-only (pipeline) skills skip strict structural checks since they
+  // intentionally reference framework-internal paths and may have unbalanced
+  // fences after transformations strip framework scaffolding
+  const isFrameworkOnly = content.includes('⚠️ Framework-only skill.');
 
-  // Broken markdown links (links to local files that aren't URLs or anchors)
-  const localLinks = [...content.matchAll(/\[([^\]]*)\]\((?!https?:\/\/|#|mailto:)([^)]+)\)/g)];
-  for (const match of localLinks) {
-    const linkTarget = match[2];
-    // Skip links containing template placeholders or non-path content
-    if (linkTarget.includes('[') || linkTarget.includes('{')) continue;
-    if (linkTarget.includes(' ')) continue; // URLs/paths don't have spaces; this is prose like "(none found)"
-    const resolved = path.resolve(path.dirname(filePath), linkTarget);
-    if (!fs.existsSync(resolved)) {
-      issues.push({ skill: skillName, file: 'instructions.md', issue: `broken link: [${match[1]}](${linkTarget})` });
+  // Balanced code fences (skipped for framework-only)
+  if (!isFrameworkOnly) {
+    const fenceCount = (content.match(/^```/gm) || []).length;
+    if (fenceCount % 2 !== 0) {
+      issues.push({ skill: skillName, file: 'instructions.md', issue: `unbalanced code fences (${fenceCount} found)` });
     }
   }
+
+  // Broken markdown links (skipped for framework-only)
+  if (!isFrameworkOnly) {
+    // Broken markdown links (links to local files that aren't URLs or anchors)
+    const localLinks = [...content.matchAll(/\[([^\]]*)\]\((?!https?:\/\/|#|mailto:)([^)]+)\)/g)];
+    for (const match of localLinks) {
+      const linkTarget = match[2];
+      // Skip links containing template placeholders or non-path content
+      if (linkTarget.includes('[') || linkTarget.includes('{')) continue;
+      if (linkTarget.includes(' ')) continue; // URLs/paths don't have spaces; this is prose like "(none found)"
+      const resolved = path.resolve(path.dirname(filePath), linkTarget);
+      if (!fs.existsSync(resolved)) {
+        issues.push({ skill: skillName, file: 'instructions.md', issue: `broken link: [${match[1]}](${linkTarget})` });
+      }
+    }
+  }
+
 
   return issues;
 }
