@@ -1,219 +1,309 @@
 # Backlog Format Specification
 
-Reference document for consistent backlog file formatting across all initiatives backlog operations. Loaded by the workflow during file write operations to ensure output matches the canonical format.
+Reference document for the **Convoke Initiative Lifecycle & Backlog** format. Loaded by the workflow during file write operations to ensure output matches the canonical structure defined by the lifecycle process.
 
-All output must be standard markdown — no proprietary extensions, HTML embeds, or tool-specific syntax (NFR6).
-
----
-
-## Metadata Header
-
-Every backlog file begins with:
-
-```markdown
-# Convoke Initiatives Backlog
-
-**Created:** YYYY-MM-DD
-**Method:** RICE (Reach, Impact, Confidence, Effort)
-**Last Updated:** YYYY-MM-DD
-```
-
-The `Last Updated` date is refreshed on every write operation.
+All output must be standard markdown — no proprietary extensions, HTML embeds, or tool-specific syntax.
 
 ---
 
-## Section Hierarchy
+## File Identity
 
-The backlog file uses this exact heading structure. Sections must appear in this order.
+**Canonical filename:** `convoke-note-initiative-lifecycle-backlog.md`
+**Canonical location:** `{planning_artifacts}/convoke-note-initiative-lifecycle-backlog.md`
+**Supersedes:** `convoke-note-initiatives-backlog.md` (archived 2026-04-15 to `_archive/superseded/`)
+
+---
+
+## Frontmatter
+
+Every backlog file begins with YAML frontmatter:
+
+```yaml
+---
+initiative: convoke
+artifact_type: note
+qualifier: initiative-lifecycle-backlog
+created: 'YYYY-MM-DD'
+schema_version: 1
+status: draft | active
+origin: '<short origin description>'
+supersedes: convoke-note-initiatives-backlog.md
+---
+```
+
+The `created` date is set on first write and never changed thereafter.
+
+---
+
+## Document Structure
+
+The file uses this exact structure. Sections must appear in this order.
 
 ```
-# Convoke Initiatives Backlog                    (H1 — title)
+# Convoke Initiative Lifecycle & Backlog              (H1 — title)
 
-## RICE Scoring Guide                            (H2 — inline scoring reference)
+## Part 1: Lifecycle Process                           (H2 — process definition, semi-static)
+### 1.1 Intake                                         (H3)
+### 1.2 Qualifying Gate                                (H3)
+### 1.3 Three Lanes                                    (H3)
+####   Bug Lane / Fast Lane / Initiative Lane          (H4)
+### 1.4 Portfolio Attachment                           (H3)
+### 1.5 Pipeline Stages (Evolvable)                    (H3)
+### 1.6 RICE Scoring                                   (H3)
 
-## Backlog                                       (H2 — active items container)
-### [Category Name]                              (H3 — one per category, repeating)
+## Part 2: Backlog                                     (H2 — operational data, mutates frequently)
+### 2.1 Intakes (Unqualified)                          (H3)
+### 2.2 Bug Lane                                       (H3)
+### 2.3 Fast Lane (Quick Wins + Spikes)                (H3)
+### 2.4 Initiative Lane                                (H3)
+### 2.5 Absorbed / Archived                            (H3)
+####   Absorbed into [name] / Completed (shipped)      (H4 — optional sub-grouping)
 
-## Exploration Candidates                        (H2 — unscored items needing discovery)
+## Appendix: Initiative Details                        (H2 — full descriptions for §2.4 items)
+### [Item ID] — [Title]                                (H3 — one per initiative when detail is needed)
 
-## Epic Groupings                                (H2 — bundled delivery suggestions)
-### Epic: "[Name]" ([item IDs])                  (H3 — one per grouping)
-
-## Prioritized View (by RICE Score)              (H2 — auto-generated ranked table)
-
-## Completed                                     (H2 — finished items, grouped by date)
-### YYYY-MM-DD                                   (H3 — date grouping for milestones)
-
-## Change Log                                    (H2 — operational history)
+## Change Log                                          (H2 — operational history)
 ```
 
-### Category Names
+**Part 1** is semi-static (the lifecycle process definition). The skill **must NOT regenerate or modify Part 1 contents** unless explicitly running Create mode. In Triage and Review modes, Part 1 is loaded for context but never written.
 
-Categories are user-defined H3 headings under `## Backlog`. The existing backlog uses:
+**Part 2** is the operational surface — Triage adds rows, Review updates rows.
 
-- Documentation & Onboarding
-- Update & Migration System
-- Testing & CI
-- Infrastructure
-- Agent Quality & Consistency
-- Platform & Product Vision
-
-New categories may be added. Category names must be unique within the backlog.
+**Appendix** holds detailed descriptions for Initiative Lane items whose table row is a one-liner.
 
 ---
 
 ## Table Formats
 
-### Category Table (under each H3 category)
+### §2.1 Intakes Table
 
 ```markdown
-| # | Initiative | Source | R | I | C | E | Score | Track | Status |
-|---|-----------|--------|---|---|---|---|-------|-------|--------|
+| ID | Description | Source | Date | Raiser |
+|----|-------------|--------|------|--------|
 ```
 
-**Column rules:**
-- `#`: Short alphanumeric ID (e.g., D2, P4, T3). Unique within the backlog.
-- `Initiative`: `**[Bold title]** — [description]`. May include markdown links.
-- `Source`: Origin of the initiative (e.g., "Vortex review (Liam, Wade)", "Product owner")
-- `R`: Reach score (integer 1-10)
-- `I`: Impact score (0.25, 0.5, 1, 2, or 3)
-- `C`: Confidence as percentage (e.g., 70%, 90%)
-- `E`: Effort score (integer 1-10)
-- `Score`: Composite RICE score, one decimal place (e.g., 2.8)
-- `Track`: "Keep the lights on" or "Move the needle"
-- `Status`: One of: Backlog, In Planning, In Progress, Done, Blocked
+**Columns:**
+- `ID`: `IN-{n}` sequential integer. Optionally `IN-{n} (was {oldId})` for migrated entries.
+- `Description`: One-line summary. Detail goes in Appendix if needed.
+- `Source`: Where it came from (party mode, code review, retrospective, user report, etc.).
+- `Date`: Absolute date `YYYY-MM-DD`. Never relative.
+- `Raiser`: Person or agent name.
 
-### Prioritized View Table (under `## Prioritized View`)
+**Rules:**
+- Append-only — intakes never disappear, even after qualification (audit trail).
+- After qualification, the intake stays here; a corresponding row is added to the assigned lane.
+
+### §2.2 Bug Lane Table
 
 ```markdown
-| Rank | # | Initiative | Score | Track | Category |
-|------|---|-----------|-------|-------|----------|
+| ID | Description | R | I | C | E | Score | Portfolio | Status | Linked Follow-up |
+|----|-------------|---|---|---|---|-------|-----------|--------|------------------|
+```
+
+**Columns:**
+- `ID`: Bug-prefixed sequential — `BUG-{n}`.
+- `Description`: One-line summary of the broken behavior + intended fix scope.
+- `R`, `I`, `C`, `E`: RICE component scores. Impact often hardcoded high (2–3) when user-facing.
+- `Score`: Composite, one decimal place.
+- `Portfolio`: Portfolio attachment (convoke, vortex, gyre, forge, bmm, enhance, loom, helm, or new).
+- `Status`: `Open`, `In Fix`, `In Review`, `Shipped`.
+- `Linked Follow-up`: Reference to a Fast Lane or Initiative item if the bug spawned deeper work.
+
+**Sort:** Descending by composite Score.
+
+### §2.3 Fast Lane Table
+
+```markdown
+| ID | Description | R | I | C | E | Score | Portfolio | Status |
+|----|-------------|---|---|---|---|-------|-----------|--------|
+```
+
+**Columns:**
+- `ID`: Original IDs preserved during migration (D2, U7, T6, I43, A7, P10, P11, etc.) or new prefix as needed.
+- `Description`: Compact one-liner; full detail can live in Appendix if helpful.
+- `R`, `I`, `C`, `E`, `Score`: RICE per scoring guide.
+- `Portfolio`: Portfolio attachment.
+- `Status`: `Backlog`, `In Story`, `In Sprint`, `Shipped`.
+
+**Sort:** Descending by composite Score.
+
+### §2.4 Initiative Lane Table
+
+```markdown
+| ID | Description | R | I | C | E | Score | Portfolio | Stage | Artifacts |
+|----|-------------|---|---|---|---|-------|-----------|-------|-----------|
+```
+
+**Columns:**
+- `ID`: Original IDs preserved (P9, P12, S3, P21, etc.). Bundles allowed using `+` (e.g., `U10+P23+A8+A9` for v6.3 Adoption).
+- `Description`: Bold title. Full detail in Appendix.
+- `R`, `I`, `C`, `E`, `Score`: RICE per scoring guide.
+- `Portfolio`: Portfolio attachment (or `*(pending)*` if undecided).
+- `Stage`: One of: `Qualified`, `In Pipeline`, `Ready`, `In Sprint`, `Done`. May include parenthetical (e.g., `Qualified (Blocked on P12)`).
+- `Artifacts`: Compact indicator of which planning artifacts exist:
+  - `B` = Brief
+  - `P` = PRD
+  - `P✓` = PRD validated
+  - `A` = Architecture
+  - `IR` = Implementation Readiness report
+  - `E` = Epic breakdown
+  - `D` = Discovery (Vortex)
+  - Combine with commas. Example: `D, P✓, A, IR, E`.
+
+**Sort:** Descending by composite Score (same rule as Fast Lane).
+
+### §2.5 Absorbed / Archived Tables
+
+Use H4 sub-headings to group:
+
+**Absorbed into [target]:**
+```markdown
+| ID | Original Description | Absorbed Into | Reference | Date |
+|----|---------------------|---------------|-----------|------|
+```
+
+**Completed (shipped):**
+```markdown
+| ID | Description | Shipped | Score | Portfolio |
+|----|-------------|---------|-------|-----------|
 ```
 
 **Rules:**
-- Sorted by composite RICE score, descending
-- Tiebreak: Confidence (higher first), then insertion order (newer first)
-- Only includes active items (not Done or in Completed section)
-- Regenerated from scratch on every write operation — not manually maintained
-- Rank is a sequential integer starting at 1
+- Nothing disappears without a receipt.
+- Absorbed items must reference the target (epic file, larger initiative).
+- Completed items are append-only.
 
-### Exploration Candidates Table (under `## Exploration Candidates`)
+### Appendix Detail Format
+
+For each Initiative Lane item warranting detail:
 
 ```markdown
-| # | Initiative | Source | Next Step |
-|---|-----------|--------|-----------|
+### [ID] — [Title]
+
+**Stage:** [stage] | **Portfolio:** [portfolio] | **RICE:** [score]
+
+**Planning artifacts:** [list with file paths]
+
+**Missing (to reach Ready):** [list]
+
+**Blocker:** [if any]
+
+**Scope hint:** [paragraph or bullets]
 ```
 
-These items are unscored and not included in the prioritized view.
-
-### Completed Section Tables (under `## Completed`)
-
-Grouped by date using H3 headers:
+### Change Log Table
 
 ```markdown
-### YYYY-MM-DD
-
-| # | Initiative | Score | Category |
-|---|-----------|-------|----------|
-```
-
-**Note:** Legacy completed entries (pre-backlog era) may use non-standard table formats (e.g., `| Item | Fix Applied |`). These should be preserved as-is during write operations — do not attempt to reformat them.
-
----
-
-## Change Log Format
-
-The Change Log section uses a table:
-
-```markdown
-## Change Log
-
 | Date | Change |
 |------|--------|
 | YYYY-MM-DD | [Description of what changed] |
 ```
 
-Entries are prepended (newest first). Each workflow session adds one entry summarizing items added, removed, rescored, or moved.
+Entries are prepended (newest first). Each workflow session adds one entry.
 
 ---
 
 ## RICE Composite Formula
 
-**Formula:** Score = (Reach x Impact x Confidence) / Effort
+**Formula:** Score = (Reach × Impact × Confidence) / Effort
 
 Where Confidence is expressed as a decimal (e.g., 70% = 0.7).
 
-**Example:** R:8, I:3, C:70%, E:6 = (8 x 3 x 0.7) / 6 = 2.8
+**Example:** R:8, I:3, C:70%, E:6 = (8 × 3 × 0.7) / 6 = 2.8
 
-**Sort order:** Descending by composite score. Ties broken by:
+**Sort order (within each lane):** Descending by composite score. Ties broken by:
 1. Confidence — higher first
 2. Insertion order — newer first
 
 ---
 
-## Insertion Rules
+## Lane Assignment Rules
 
-### Adding New Items (Triage mode, Create mode)
+The qualifying gate (Vortex, John, or Winston) assigns each intake to one lane:
 
-1. Identify the target category H3 section under `## Backlog`
-2. Append the new row to the end of that category's table
-3. If the category doesn't exist, create a new H3 heading at the end of the `## Backlog` section (before `## Exploration Candidates`)
-4. Regenerate the `## Prioritized View` table with all active items sorted by composite score
-5. Add a Change Log entry
+**Bug Lane** if:
+- Observed broken behavior, regression, or data loss risk
+- Fix is the scope (deeper rework spawns separate Fast Lane / Initiative item)
 
-### Moving Items to Completed
+**Fast Lane** if:
+- Single-module, contained scope
+- Point fix from code review, retrospective, audit
+- Process rule to encode
+- Test debt, doc improvement, small enhancement
+- Spike (time-boxed learning with uncertain outcome)
 
-1. Remove the item row from its category table
-2. Add it to the appropriate `### YYYY-MM-DD` group under `## Completed`
-3. If no group exists for today's date, create one
-4. Regenerate the `## Prioritized View` table
-5. Add a Change Log entry
+**Initiative Lane** if:
+- Multi-module or architectural impact
+- User-facing behavior change
+- Requires full pipeline (Brief → PRD → Arch → PRD Validation → IR → Epics)
+- Bundle of related work that needs coordinated planning
+
+**When uncertain:** default to Fast Lane unless a clear architectural or multi-module signal exists. The qualifier can promote later if scope grows.
 
 ---
 
-## Provenance Tags
+## Insertion Rules
 
-Provenance is recorded in the Initiative cell description or as a separate annotation.
+### Triage Mode (steps-t)
 
-### Triage Mode — New Items
+1. Every extracted finding is logged to **§2.1 Intakes** first, with sequential `IN-{n}` ID.
+2. Optional in-session qualification: for each intake, the qualifier assigns lane + portfolio + RICE.
+3. Qualified intakes get a corresponding row appended to their lane's table (§2.2/2.3/2.4).
+4. The intake row in §2.1 stays — it's the audit trail.
+5. A Change Log entry is added.
 
-Format: `"Added from [source], [date]"`
+### Review Mode (steps-r)
 
-Example: `Added from party-mode review transcript, 2026-03-15`
+1. User chooses which lane(s) to walk: Bug, Fast, Initiative, or All.
+2. Walk through items in the chosen lane(s); rescore RICE per the scoring guide.
+3. Update only items whose composite score changed; provenance line appended in Description cell.
+4. Confirmed and skipped items remain unchanged.
+5. A Change Log entry is added.
 
-The score recorded is the **final** score after any Gate 2 user adjustments. The agent's initial proposal is not recorded separately. Triage Gate 2 adjustments are NOT rescores — they are the initial score. No rescore provenance is generated.
+### Create Mode (steps-c)
 
-### Review Mode — Rescored Items
+1. Detect existing file; warn before overwriting.
+2. Generate **Part 1** verbatim from `templates/lifecycle-process-spec.md` (canonical process definition).
+3. Initialize empty Part 2 tables.
+4. Optionally gather initial intakes (loop).
+5. Optionally qualify each intake into a lane.
+6. Write the complete file.
 
-Format: `"Rescored [old]->[new], Review, [date]"`
+### Moving Items Between Sections
 
-Example: `Rescored 1.8->2.4, Review, 2026-03-15`
+- **Intake → Lane:** Append to lane table. Intake row in §2.1 stays.
+- **Bug → Fast Lane / Initiative (deeper rework):** Add row to target lane referencing the bug ID in `Linked Follow-up`.
+- **Fast Lane → Initiative (scope grew):** Move row, update ID prefix or keep original. Note in Change Log.
+- **Any → §2.5 Absorbed:** Move row to §2.5 with reference to absorbing target.
+- **Any → §2.5 Completed (shipped):** Move row to Completed sub-table with shipping date.
 
-Only recorded when the composite score actually changes. Confirming an existing score or skipping an item generates no provenance entry.
-
-### Create Mode — New Items
-
-Format: `"Added from Create mode, [date]"`
+Never delete a row outright — every removal becomes a §2.5 entry.
 
 ---
 
 ## Pre-Write Validation
 
-Before writing to the backlog file, the workflow must validate:
+Before writing, the workflow must validate:
 
-1. **Section heading anchors** — All required H2 sections exist in the correct order
-2. **Prioritized view table column count** — Table has exactly 6 columns
-3. **Category table column count** — Each category table has exactly 10 columns
-4. **Change Log section existence** — The Change Log H2 section exists
-5. **No data loss** — Existing category section content is preserved (no deletions, overwrites, or reordering of existing rows). The Prioritized View is excluded from this check since it is regenerated.
+1. **Frontmatter present** — Required YAML block at top of file.
+2. **Part 1 unchanged** (Triage and Review modes only) — H2 `## Part 1: Lifecycle Process` content matches the loaded snapshot. If modified, warn before proceeding.
+3. **Part 2 section anchors** — All five H3 sections (`### 2.1` through `### 2.5`) exist in correct order under `## Part 2: Backlog`.
+4. **Table column counts:**
+   - §2.1 Intakes: 5 columns
+   - §2.2 Bug Lane: 10 columns
+   - §2.3 Fast Lane: 9 columns
+   - §2.4 Initiative Lane: 10 columns
+   - §2.5 sub-tables: 5 columns each
+5. **Change Log present** — `## Change Log` H2 exists.
+6. **No data loss** — Existing rows preserved; only the touched rows changed, only the touched lanes reordered.
 
-If validation detects a structural mismatch, the user can proceed or abort.
+If validation detects a structural mismatch, the user can proceed (Y) or abort (X).
 
 ---
 
 ## Format Consistency
 
-The backlog output must match the exact current format of `initiatives-backlog.md`. When in doubt, load the existing file and match its patterns precisely. This ensures:
+The backlog output must match the canonical structure of this spec. When in doubt, load the existing file and match its patterns precisely. This ensures:
 - Round-trip parseability (the workflow can reload its own output)
-- Manual editability (users can edit the file in any text editor between sessions)
+- Manual editability (users can edit between sessions)
 - `git diff` readability (consistent formatting minimizes noise)
