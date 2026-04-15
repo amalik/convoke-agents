@@ -96,8 +96,8 @@ The file uses this exact structure. Sections must appear in this order.
 ### §2.2 Bug Lane Table
 
 ```markdown
-| ID | Description | R | I | C | E | Score | Portfolio | Status | Linked Follow-up |
-|----|-------------|---|---|---|---|-------|-----------|--------|------------------|
+| ID | Description | R | I | C | E | Score | Portfolio | Status | Dependencies | Linked Follow-up |
+|----|-------------|---|---|---|---|-------|-----------|--------|--------------|------------------|
 ```
 
 **Columns:**
@@ -107,15 +107,16 @@ The file uses this exact structure. Sections must appear in this order.
 - `Score`: Composite, one decimal place.
 - `Portfolio`: Portfolio attachment (convoke, vortex, gyre, forge, bmm, enhance, loom, helm, or new).
 - `Status`: `Open`, `In Fix`, `In Review`, `Shipped`.
+- `Dependencies`: Comma-separated upstream item IDs (any lane). Use `—` when none. See Dependency Notation rules below.
 - `Linked Follow-up`: Reference to a Fast Lane or Initiative item if the bug spawned deeper work.
 
-**Sort:** Descending by composite Score.
+**Sort:** Descending by composite Score. Dependencies do not affect sort — they are informational. The reader is responsible for noting when a high-RICE item is blocked.
 
 ### §2.3 Fast Lane Table
 
 ```markdown
-| ID | Description | R | I | C | E | Score | Portfolio | Status |
-|----|-------------|---|---|---|---|-------|-----------|--------|
+| ID | Description | R | I | C | E | Score | Portfolio | Status | Dependencies |
+|----|-------------|---|---|---|---|-------|-----------|--------|--------------|
 ```
 
 **Columns:**
@@ -124,14 +125,15 @@ The file uses this exact structure. Sections must appear in this order.
 - `R`, `I`, `C`, `E`, `Score`: RICE per scoring guide.
 - `Portfolio`: Portfolio attachment.
 - `Status`: `Backlog`, `In Story`, `In Sprint`, `Shipped`.
+- `Dependencies`: Comma-separated upstream item IDs (any lane). Use `—` when none. See Dependency Notation rules below.
 
-**Sort:** Descending by composite Score.
+**Sort:** Descending by composite Score. Dependencies do not affect sort.
 
 ### §2.4 Initiative Lane Table
 
 ```markdown
-| ID | Description | R | I | C | E | Score | Portfolio | Stage | Artifacts |
-|----|-------------|---|---|---|---|-------|-----------|-------|-----------|
+| ID | Description | R | I | C | E | Score | Portfolio | Stage | Artifacts | Dependencies |
+|----|-------------|---|---|---|---|-------|-----------|-------|-----------|--------------|
 ```
 
 **Columns:**
@@ -149,8 +151,9 @@ The file uses this exact structure. Sections must appear in this order.
   - `E` = Epic breakdown
   - `D` = Discovery (Vortex)
   - Combine with commas. Example: `D, P✓, A, IR, E`.
+- `Dependencies`: Comma-separated upstream item IDs (any lane). Use `—` when none. See Dependency Notation rules below.
 
-**Sort:** Descending by composite Score (same rule as Fast Lane).
+**Sort:** Descending by composite Score (same rule as Fast Lane). Dependencies do not affect sort.
 
 ### §2.5 Absorbed / Archived Tables
 
@@ -214,6 +217,24 @@ Where Confidence is expressed as a decimal (e.g., 70% = 0.7).
 **Sort order (within each lane):** Descending by composite score. Ties broken by:
 1. Confidence — higher first
 2. Insertion order — newer first
+
+---
+
+## Dependency Notation
+
+The `Dependencies` column captures upstream relationships. Notation rules:
+
+- **Format:** comma-separated item IDs from any lane. Cross-lane references are explicitly allowed (a Fast Lane item can depend on an Initiative Lane item, and vice versa).
+- **Empty state:** use `—` (em-dash) when an item has no dependencies.
+- **Done dependencies:** if a dependency has shipped, prefix with `✓` (e.g., `✓P1` means "depended on P1, which is now done"). This preserves history without making the item look blocked.
+- **Bundle relationships:** for items that travel together (ship as one PR or one epic), use `bundles-with: ID, ID`. Example: `bundles-with: I48`.
+- **Absorbed-into shorthand:** items absorbed into another initiative live in §2.5. Their original lane row is removed. The Dependencies column does not need to track absorption.
+- **External dependencies:** for blockers outside the backlog (e.g., upstream BMAD release, external user availability), use `external: short-description` (e.g., `external: BMAD v6.3 release`). Keep the description under 30 chars.
+- **Multiple types:** when an item has both internal and external dependencies, separate with semicolons. Example: `P12; external: marketplace-PR-merge`.
+
+**Dependencies do not change RICE sort order.** Two items with the same RICE score do not get re-ordered by dependency direction. The reader is expected to scan the Dependencies column when planning sequencing.
+
+**Stage parenthetical vs. Dependencies column:** if an Initiative is currently blocked, both should reflect it: the Stage cell shows `Qualified (Blocked on X)` for visibility, and the Dependencies cell lists `X` for parseability. Stage parenthetical is human signal; Dependencies cell is the canonical reference.
 
 ---
 
@@ -290,9 +311,9 @@ Before writing, the workflow must validate:
 3. **Part 2 section anchors** — All five H3 sections (`### 2.1` through `### 2.5`) exist in correct order under `## Part 2: Backlog`.
 4. **Table column counts:**
    - §2.1 Intakes: 5 columns
-   - §2.2 Bug Lane: 10 columns
-   - §2.3 Fast Lane: 9 columns
-   - §2.4 Initiative Lane: 10 columns
+   - §2.2 Bug Lane: 11 columns (Dependencies column added 2026-04-15)
+   - §2.3 Fast Lane: 10 columns (Dependencies column added 2026-04-15)
+   - §2.4 Initiative Lane: 11 columns (Dependencies column added 2026-04-15)
    - §2.5 sub-tables: 5 columns each
 5. **Change Log present** — `## Change Log` H2 exists.
 6. **No data loss** — Existing rows preserved; only the touched rows changed, only the touched lanes reordered.
