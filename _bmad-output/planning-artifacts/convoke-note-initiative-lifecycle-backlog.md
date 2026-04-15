@@ -231,9 +231,9 @@ Items awaiting qualification. No lane, no priority, no commitment.
 
 Active bugs — fix pipeline only. Deeper follow-ups spawn Fast Lane or Initiative items.
 
-| ID | Description | R | I | C | E | Score | Portfolio | Status | Linked Follow-up |
-|----|-------------|---|---|---|---|-------|-----------|--------|------------------|
-| *(none active)* | | | | | | | | | |
+| ID | Description | R | I | C | E | Score | Portfolio | Status | Dependencies | Linked Follow-up |
+|----|-------------|---|---|---|---|-------|-----------|--------|--------------|------------------|
+| *(none active)* | | | | | | | | | | — |
 
 **Note:** No actively broken functionality in the backlog as of 2026-04-12. All previous latent risks (YAML parsing, atomic writes, etc.) were never observed as bugs — they sit in Fast Lane as preventive hardening.
 
@@ -241,99 +241,99 @@ Active bugs — fix pipeline only. Deeper follow-ups spawn Fast Lane or Initiati
 
 Items qualified as not needing the full initiative pipeline. Sorted by RICE score.
 
-| ID | Description | R | I | C | E | Score | Portfolio | Status |
-|----|-------------|---|---|---|---|-------|-----------|--------|
-| T6 | Python test execution in CI (blocker — Gyre DL-001) | 8 | 2 | 90% | 1 | 14.4 | convoke | Backlog |
-| I43 | Doctor validates all 12 bme agent skill wrappers | 8 | 2 | 80% | 2 | 6.4 | convoke | Backlog |
-| A7 | Review convergence rule (R1 mandatory, R2 if HIGH, R3 if structural) | 8 | 1 | 80% | 1 | 6.4 | convoke | Backlog |
-| P10 | Operationalize Capability Evaluation Framework (doc complete, needs integration) | 7 | 2 | 80% | 2 | 5.6 | helm | Backlog |
-| P11 | Distribute friction log template to consulting teams | 8 | 1 | 70% | 1 | 5.6 | helm | Backlog |
-| U7 | Changelog surface during `convoke-update` | 8 | 2 | 80% | 3 | 4.3 | convoke | Backlog |
-| I49 | Process uniformity — encoded constraints file (project-context.md) | 8 | 2 | 80% | 3 | 4.3 | convoke | Backlog |
-| U8 | Respect user agent exclusions on update | 6 | 2 | 80% | 3 | 3.2 | convoke | Backlog |
-| A5 | Research stories must use mechanical search protocol | 7 | 1 | 80% | 2 | 2.8 | convoke | Backlog |
-| T3 | End-to-end update test on real project | 5 | 2 | 80% | 3 | 2.7 | convoke | Backlog |
-| I50 | `--quiet` flag for `convoke-export` batch mode (or drop) | 6 | 0.5 | 90% | 1 | 2.7 | enhance | Backlog |
-| T4 | Migration idempotency CLI test | 3 | 1 | 80% | 1 | 2.4 | convoke | Backlog |
-| T7 | Python linting in CI pipeline | 6 | 1 | 80% | 2 | 2.4 | convoke | Backlog |
-| I2 | `gh auth` for CI release creation | 6 | 1 | 80% | 2 | 2.4 | convoke | Backlog |
-| I20 | Portfolio markdown formatter — render `--show-unattributed` | 5 | 0.5 | 90% | 1 | 2.3 | enhance | Backlog |
-| D2 | Add output examples for more agents (Isla, Wade, Noah) | 6 | 1 | 70% | 2 | 2.1 | convoke | Backlog |
-| I16 | Skill description generator — semantic descriptions for bme skills | 5 | 0.5 | 80% | 1 | 2.0 | convoke | Backlog |
-| I22 | Resolution-map key normalization (migration skill) | 5 | 1 | 80% | 2 | 2.0 | enhance | Backlog |
-| I25 | Resolution-map missing-from-manifest validation | 5 | 0.5 | 80% | 1 | 2.0 | enhance | Backlog |
-| P22 | SP Epic 6 — skill portability UX slash command wrappers (4 stories) | 7 | 1 | 70% | 4 | 1.2 | enhance | Backlog |
-| I1 | NPM_TOKEN secret for CI publish | 8 | 2 | 90% | 8 | 1.8 | convoke | Backlog |
-| I7 | Team Factory CSV quoting hardening | 4 | 0.5 | 90% | 1 | 1.8 | loom | Backlog |
-| I23 | Format contract test between CLI and migration skill | 4 | 0.5 | 90% | 1 | 1.8 | enhance | Backlog |
-| A6 | Structured-source for count-sensitive deliverables | 5 | 1 | 70% | 2 | 1.8 | convoke | Backlog |
-| T8 | Standardize Python PEP 723 dependency declarations | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Backlog |
-| D6 | Reduce narrative overlap in journey example | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Backlog |
-| I18 | Pre-compile regex in `_scanCorpusForInitiative` per migration run | 4 | 0.5 | 80% | 1 | 1.6 | enhance | Backlog |
-| I36 | `yaml` package `doc.warnings` ignored at 5 write sites | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Backlog |
-| U4 | Test upgrade-path step file cleanup | 3 | 1 | 90% | 2 | 1.4 | convoke | Backlog |
-| I9 | Registry writer idempotency drift detection | 3 | 0.5 | 90% | 1 | 1.4 | loom | Backlog |
-| I5 | Workflow output naming enforcement (ADR Phase C) | 8 | 0.5 | 90% | 3 | 1.2 | convoke | Backlog |
-| I21 | Parent-dir attribution scan over-match on multi-token dirs | 3 | 0.5 | 70% | 1 | 1.1 | enhance | Backlog |
-| I26 | Portfolio skill — case-insensitive input + alias normalization | 5 | 0.25 | 90% | 1 | 1.1 | enhance | Backlog |
-| I51 | Manifest duplicate rows hygiene (same skill across modules) | 3 | 0.5 | 70% | 1 | 1.1 | enhance | Backlog |
-| I28 | Portfolio engine — `--filter` interaction with summary lines | 5 | 0.5 | 80% | 2 | 1.0 | enhance | Backlog |
-| D3 | BMAD Core return arrow in diagram | 4 | 0.25 | 90% | 1 | 0.9 | convoke | Backlog |
-| I10 | Config appender YAML comment preservation (Team Factory) | 4 | 0.5 | 90% | 2 | 0.9 | loom | Backlog |
-| I15 | `validateManifest` CSV parsing — replace substring matching | 4 | 0.5 | 90% | 2 | 0.9 | convoke | Backlog |
-| I27 | Portfolio skill — Option [4] empty-state messaging | 4 | 0.25 | 90% | 1 | 0.9 | enhance | Backlog |
-| I39 | Non-atomic version stamp writes in `refresh-installation.js` | 4 | 1 | 70% | 3 | 0.9 | convoke | Backlog |
-| I52 | Collision resolution flag for migration CLI | 4 | 0.5 | 90% | 2 | 0.9 | enhance | Backlog |
-| A1 | Add validate menu items to Wave 3 Vortex agents (Mila, Liam, Noah) | 4 | 0.5 | 80% | 2 | 0.8 | vortex | Backlog |
-| A3 | Add `agentic` + `team-of-teams` npm keywords | 3 | 0.25 | 100% | 1 | 0.8 | convoke | Backlog |
-| I6 | `--verbose` flag across all CLI commands | 4 | 0.5 | 80% | 2 | 0.8 | convoke | Backlog |
-| T1 | `convoke-update.js` coverage to 80%+ | 3 | 1 | 80% | 3 | 0.8 | convoke | Backlog |
-| U2 | Validate migration modules at load time | 2 | 0.5 | 80% | 1 | 0.8 | convoke | Backlog |
-| I17 | `suggestDifferentiator` — support extensions beyond `.md`/`.yaml` | 4 | 0.25 | 80% | 1 | 0.8 | enhance | Backlog |
-| I19 | Share `_scanCorpus` between portfolio engine and migration suggester | 4 | 0.25 | 80% | 1 | 0.8 | enhance | Backlog |
-| I41 | `convoke-doctor` `console.warn` breaks structured-output contract | 4 | 0.25 | 80% | 1 | 0.8 | convoke | Backlog |
-| I35 | Naive `split('\n')` CSV parsing — CRLF + quoted-newline edges | 4 | 0.5 | 70% | 2 | 0.7 | convoke | Backlog |
-| I40 | `loadSkillManifest` Map silently overwrites duplicate paths | 3 | 0.25 | 90% | 1 | 0.7 | convoke | Backlog |
-| I44 | No `validateGyreModule` function in validator.js | 2 | 1.5 | 70% | 3 | 0.7 | gyre | Backlog |
-| I8 | Team Factory write verification — value correctness | 3 | 0.5 | 80% | 2 | 0.6 | loom | Backlog |
-| U3 | Robust version detection fallback | 3 | 0.5 | 60% | 2 | 0.5 | convoke | Backlog |
-| I11 | Registry Fragment Architecture (D-Q6) | 3 | 1 | 60% | 4 | 0.5 | loom | Backlog |
-| I13 | Team Factory Express Mode (pre-filled spec file input) | 2 | 1 | 70% | 3 | 0.5 | loom | Backlog |
-| I37 | Non-scalar/merge/anchor YAML keys crash `writeConfig` loop | 3 | 0.25 | 70% | 1 | 0.5 | convoke | Backlog |
-| I46 | Version-stamp post-check absence in refresh | 2 | 1 | 50% | 2 | 0.5 | convoke | Backlog |
-| T2 | `convoke-version.js` coverage to 80%+ | 2 | 0.5 | 80% | 2 | 0.4 | convoke | Backlog |
-| I12 | Validator.js hardcoded to Vortex paths (make module-agnostic) | 3 | 0.5 | 80% | 3 | 0.4 | convoke | Backlog |
-| I3 | CSV parser library for manifest (replace regex) | 2 | 0.25 | 70% | 1 | 0.4 | convoke | Backlog |
-| I24 | Mock git in unit tests instead of bumping timeouts | 4 | 0.25 | 80% | 2 | 0.4 | enhance | Backlog |
-| I33 | Workflow-name namespace collision risk (verbatim names) | 4 | 0.5 | 60% | 3 | 0.4 | enhance | Backlog |
-| I47 | Doctor missing Enhance menu-patch check + parallel coverage consolidation | 1 | 1 | 70% | 2 | 0.35 | convoke | Backlog |
-| T5 | Expand docs audit — tense consistency + prose patterns | 2 | 0.5 | 60% | 2 | 0.3 | convoke | Backlog |
-| I38 | `mergeConfig` Document mutation not idempotent across writes | 2 | 0.5 | 80% | 3 | 0.3 | convoke | Backlog |
-| I48 | Agent-manifest.csv doctor check + CSV-parse validator upgrade | 2 | 0.5 | 60% | 2 | 0.3 | convoke | Backlog |
-| A4 | Fix temp dir prefix inconsistency (`bmad-` vs `convoke-`) | 1 | 0.25 | 100% | 1 | 0.3 | convoke | Backlog |
-| A2 | Create `.agent.yaml` source files for Vortex agents | 2 | 0.5 | 60% | 4 | 0.2 | vortex | Backlog |
-| I42 | `MERGED_DOC_SENTINEL` doesn't survive spread or JSON-serialize | 2 | 0.25 | 70% | 2 | 0.2 | convoke | Backlog |
-| I53 | Carry-forward: CRLF writeManifest + basename collision | 2 | 0.25 | 40% | 1 | 0.2 | enhance | Backlog |
-| I45 | Workflow-manifest CSV registration drift not validated | 1 | 0.5 | 60% | 2 | 0.15 | convoke | Backlog |
+| ID | Description | R | I | C | E | Score | Portfolio | Status | Dependencies |
+|----|-------------|---|---|---|---|-------|-----------|--------|--------------|
+| T6 | Python test execution in CI (blocker — Gyre DL-001) | 8 | 2 | 90% | 1 | 14.4 | convoke | Backlog | — |
+| I43 | Doctor validates all 12 bme agent skill wrappers | 8 | 2 | 80% | 2 | 6.4 | convoke | Backlog | ✓I34 |
+| A7 | Review convergence rule (R1 mandatory, R2 if HIGH, R3 if structural) | 8 | 1 | 80% | 1 | 6.4 | convoke | Backlog | — |
+| P10 | Operationalize Capability Evaluation Framework (doc complete, needs integration) | 7 | 2 | 80% | 2 | 5.6 | helm | Backlog | — |
+| P11 | Distribute friction log template to consulting teams | 8 | 1 | 70% | 1 | 5.6 | helm | Backlog | — |
+| U7 | Changelog surface during `convoke-update` | 8 | 2 | 80% | 3 | 4.3 | convoke | Backlog | — |
+| I49 | Process uniformity — encoded constraints file (project-context.md) | 8 | 2 | 80% | 3 | 4.3 | convoke | Backlog | — |
+| U8 | Respect user agent exclusions on update | 6 | 2 | 80% | 3 | 3.2 | convoke | Backlog | — |
+| A5 | Research stories must use mechanical search protocol | 7 | 1 | 80% | 2 | 2.8 | convoke | Backlog | — |
+| T3 | End-to-end update test on real project | 5 | 2 | 80% | 3 | 2.7 | convoke | Backlog | — |
+| I50 | `--quiet` flag for `convoke-export` batch mode (or drop) | 6 | 0.5 | 90% | 1 | 2.7 | enhance | Backlog | — |
+| T4 | Migration idempotency CLI test | 3 | 1 | 80% | 1 | 2.4 | convoke | Backlog | — |
+| T7 | Python linting in CI pipeline | 6 | 1 | 80% | 2 | 2.4 | convoke | Backlog | T6 |
+| I2 | `gh auth` for CI release creation | 6 | 1 | 80% | 2 | 2.4 | convoke | Backlog | — |
+| I20 | Portfolio markdown formatter — render `--show-unattributed` | 5 | 0.5 | 90% | 1 | 2.3 | enhance | Backlog | — |
+| D2 | Add output examples for more agents (Isla, Wade, Noah) | 6 | 1 | 70% | 2 | 2.1 | convoke | Backlog | — |
+| I16 | Skill description generator — semantic descriptions for bme skills | 5 | 0.5 | 80% | 1 | 2.0 | convoke | Backlog | — |
+| I22 | Resolution-map key normalization (migration skill) | 5 | 1 | 80% | 2 | 2.0 | enhance | Backlog | — |
+| I25 | Resolution-map missing-from-manifest validation | 5 | 0.5 | 80% | 1 | 2.0 | enhance | Backlog | — |
+| P22 | SP Epic 6 — skill portability UX slash command wrappers (4 stories) | 7 | 1 | 70% | 4 | 1.2 | enhance | Backlog | — |
+| I1 | NPM_TOKEN secret for CI publish | 8 | 2 | 90% | 8 | 1.8 | convoke | Backlog | — |
+| I7 | Team Factory CSV quoting hardening | 4 | 0.5 | 90% | 1 | 1.8 | loom | Backlog | — |
+| I23 | Format contract test between CLI and migration skill | 4 | 0.5 | 90% | 1 | 1.8 | enhance | Backlog | — |
+| A6 | Structured-source for count-sensitive deliverables | 5 | 1 | 70% | 2 | 1.8 | convoke | Backlog | — |
+| T8 | Standardize Python PEP 723 dependency declarations | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Backlog | T6 |
+| D6 | Reduce narrative overlap in journey example | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Backlog | — |
+| I18 | Pre-compile regex in `_scanCorpusForInitiative` per migration run | 4 | 0.5 | 80% | 1 | 1.6 | enhance | Backlog | — |
+| I36 | `yaml` package `doc.warnings` ignored at 5 write sites | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Backlog | — |
+| U4 | Test upgrade-path step file cleanup | 3 | 1 | 90% | 2 | 1.4 | convoke | Backlog | — |
+| I9 | Registry writer idempotency drift detection | 3 | 0.5 | 90% | 1 | 1.4 | loom | Backlog | — |
+| I5 | Workflow output naming enforcement (ADR Phase C) | 8 | 0.5 | 90% | 3 | 1.2 | convoke | Backlog | — |
+| I21 | Parent-dir attribution scan over-match on multi-token dirs | 3 | 0.5 | 70% | 1 | 1.1 | enhance | Backlog | — |
+| I26 | Portfolio skill — case-insensitive input + alias normalization | 5 | 0.25 | 90% | 1 | 1.1 | enhance | Backlog | — |
+| I51 | Manifest duplicate rows hygiene (same skill across modules) | 3 | 0.5 | 70% | 1 | 1.1 | enhance | Backlog | — |
+| I28 | Portfolio engine — `--filter` interaction with summary lines | 5 | 0.5 | 80% | 2 | 1.0 | enhance | Backlog | — |
+| D3 | BMAD Core return arrow in diagram | 4 | 0.25 | 90% | 1 | 0.9 | convoke | Backlog | — |
+| I10 | Config appender YAML comment preservation (Team Factory) | 4 | 0.5 | 90% | 2 | 0.9 | loom | Backlog | — |
+| I15 | `validateManifest` CSV parsing — replace substring matching | 4 | 0.5 | 90% | 2 | 0.9 | convoke | Backlog | bundles-with: I45, I48 |
+| I27 | Portfolio skill — Option [4] empty-state messaging | 4 | 0.25 | 90% | 1 | 0.9 | enhance | Backlog | — |
+| I39 | Non-atomic version stamp writes in `refresh-installation.js` | 4 | 1 | 70% | 3 | 0.9 | convoke | Backlog | bundles-with: I46 |
+| I52 | Collision resolution flag for migration CLI | 4 | 0.5 | 90% | 2 | 0.9 | enhance | Backlog | — |
+| A1 | Add validate menu items to Wave 3 Vortex agents (Mila, Liam, Noah) | 4 | 0.5 | 80% | 2 | 0.8 | vortex | Backlog | — |
+| A3 | Add `agentic` + `team-of-teams` npm keywords | 3 | 0.25 | 100% | 1 | 0.8 | convoke | Backlog | — |
+| I6 | `--verbose` flag across all CLI commands | 4 | 0.5 | 80% | 2 | 0.8 | convoke | Backlog | — |
+| T1 | `convoke-update.js` coverage to 80%+ | 3 | 1 | 80% | 3 | 0.8 | convoke | Backlog | — |
+| U2 | Validate migration modules at load time | 2 | 0.5 | 80% | 1 | 0.8 | convoke | Backlog | — |
+| I17 | `suggestDifferentiator` — support extensions beyond `.md`/`.yaml` | 4 | 0.25 | 80% | 1 | 0.8 | enhance | Backlog | — |
+| I19 | Share `_scanCorpus` between portfolio engine and migration suggester | 4 | 0.25 | 80% | 1 | 0.8 | enhance | Backlog | — |
+| I41 | `convoke-doctor` `console.warn` breaks structured-output contract | 4 | 0.25 | 80% | 1 | 0.8 | convoke | Backlog | — |
+| I35 | Naive `split('\n')` CSV parsing — CRLF + quoted-newline edges | 4 | 0.5 | 70% | 2 | 0.7 | convoke | Backlog | — |
+| I40 | `loadSkillManifest` Map silently overwrites duplicate paths | 3 | 0.25 | 90% | 1 | 0.7 | convoke | Backlog | — |
+| I44 | No `validateGyreModule` function in validator.js | 2 | 1.5 | 70% | 3 | 0.7 | gyre | Backlog | ✓I34 |
+| I8 | Team Factory write verification — value correctness | 3 | 0.5 | 80% | 2 | 0.6 | loom | Backlog | — |
+| U3 | Robust version detection fallback | 3 | 0.5 | 60% | 2 | 0.5 | convoke | Backlog | — |
+| I11 | Registry Fragment Architecture (D-Q6) | 3 | 1 | 60% | 4 | 0.5 | loom | Backlog | — |
+| I13 | Team Factory Express Mode (pre-filled spec file input) | 2 | 1 | 70% | 3 | 0.5 | loom | Backlog | — |
+| I37 | Non-scalar/merge/anchor YAML keys crash `writeConfig` loop | 3 | 0.25 | 70% | 1 | 0.5 | convoke | Backlog | — |
+| I46 | Version-stamp post-check absence in refresh | 2 | 1 | 50% | 2 | 0.5 | convoke | Backlog | ✓I34, bundles-with: I39 |
+| T2 | `convoke-version.js` coverage to 80%+ | 2 | 0.5 | 80% | 2 | 0.4 | convoke | Backlog | — |
+| I12 | Validator.js hardcoded to Vortex paths (make module-agnostic) | 3 | 0.5 | 80% | 3 | 0.4 | convoke | Backlog | — |
+| I3 | CSV parser library for manifest (replace regex) | 2 | 0.25 | 70% | 1 | 0.4 | convoke | Backlog | — |
+| I24 | Mock git in unit tests instead of bumping timeouts | 4 | 0.25 | 80% | 2 | 0.4 | enhance | Backlog | — |
+| I33 | Workflow-name namespace collision risk (verbatim names) | 4 | 0.5 | 60% | 3 | 0.4 | enhance | Backlog | ✓I32 (originally deferred until I32 forced ownership question — I32 shipped without forcing it; revisit needed) |
+| I47 | Doctor missing Enhance menu-patch check + parallel coverage consolidation | 1 | 1 | 70% | 2 | 0.35 | convoke | Backlog | ✓I34 |
+| T5 | Expand docs audit — tense consistency + prose patterns | 2 | 0.5 | 60% | 2 | 0.3 | convoke | Backlog | — |
+| I38 | `mergeConfig` Document mutation not idempotent across writes | 2 | 0.5 | 80% | 3 | 0.3 | convoke | Backlog | — |
+| I48 | Agent-manifest.csv doctor check + CSV-parse validator upgrade | 2 | 0.5 | 60% | 2 | 0.3 | convoke | Backlog | ✓I34, bundles-with: I15 |
+| A4 | Fix temp dir prefix inconsistency (`bmad-` vs `convoke-`) | 1 | 0.25 | 100% | 1 | 0.3 | convoke | Backlog | — |
+| A2 | Create `.agent.yaml` source files for Vortex agents | 2 | 0.5 | 60% | 4 | 0.2 | vortex | Backlog | — |
+| I42 | `MERGED_DOC_SENTINEL` doesn't survive spread or JSON-serialize | 2 | 0.25 | 70% | 2 | 0.2 | convoke | Backlog | — |
+| I53 | Carry-forward: CRLF writeManifest + basename collision | 2 | 0.25 | 40% | 1 | 0.2 | enhance | Backlog | — |
+| I45 | Workflow-manifest CSV registration drift not validated | 1 | 0.5 | 60% | 2 | 0.15 | convoke | Backlog | ✓I34, bundles-with: I15 |
 
 ### 2.4 Initiative Lane
 
 Items requiring the full pipeline: Brief → PRD → Arch → PRD Validation → IR → Epics.
 
-| ID | Description | R | I | C | E | Score | Portfolio | Stage | Artifacts |
-|----|-------------|---|---|---|---|-------|-----------|-------|-----------|
-| P21 | **Convoke Experience Contract — codified UX rules + Loom validation gate** | 9 | 2 | 80% | 3 | 4.8 | convoke | **Qualified** | Candidate doc |
-| S3 | **One-command standalone install (`npx convoke-agents init`)** | 9 | 2 | 80% | 4 | 3.6 | convoke | **Qualified** | Strategy doc |
-| P12 | **Enhance framework — Team Module Generator (BMB)** | 8 | 3 | 80% | 6 | 3.2 | enhance | **Qualified** | ADR only |
-| P9 | **Forge team — Domain Knowledge Extraction** | 9 | 3 | 90% | 8 | 3.0 | forge | **In Pipeline** (Blocked on Gate 1) | D, E(partial) |
-| P13 | **Vortex redesign (align to Enhance-codified patterns)** | 7 | 2 | 70% | 4 | 2.5 | vortex | **Qualified** (Blocked on P12) | — |
-| U10+P23+A8+A9 | **BMAD v6.3.0 Adoption (Convoke 4.0)** | 10 | 2 | 80% | 7 | 2.3 | convoke | **In Sprint** | B, P✓, A, IR, E |
-| ILE-1 | **Initiative Lifecycle Engine** (rework of backlog/portfolio/governance skills into integrated lifecycle management) | 9 | 3 | 60% | 8 | 2.0 | helm | **Qualified** | — |
-| U9 | **Module-aware refresh and validation (modules-manifest.yaml)** | 8 | 2 | 70% | 6 | 1.9 | convoke | **Qualified** | — |
-| P3 | **Team installer architecture (`convoke-install <module-name>`)** | 6 | 1 | 80% | 4 | 1.2 | convoke | **Qualified** | — |
-| P7 | **ML/AI Engineering team exploration** | 6 | 2 | 30% | 3 | 1.2 | *(pending)* | **Qualified** (needs discovery) | — |
-| P8 | **Governance & Support skill set** | 5 | 1 | 30% | 3 | 0.5 | helm | **Qualified** (needs discovery) | — |
-| P2 | **Multi-module collaboration workflows (cross-team handoffs)** | 5 | 2 | 30% | 8 | 0.4 | convoke | **Qualified** (Unblocked by P1) | — |
+| ID | Description | R | I | C | E | Score | Portfolio | Stage | Artifacts | Dependencies |
+|----|-------------|---|---|---|---|-------|-----------|-------|-----------|--------------|
+| P21 | **Convoke Experience Contract — codified UX rules + Loom validation gate** | 9 | 2 | 80% | 3 | 4.8 | convoke | **Qualified** | Candidate doc | — |
+| S3 | **One-command standalone install (`npx convoke-agents init`)** | 9 | 2 | 80% | 4 | 3.6 | convoke | **Qualified** | Strategy doc | — |
+| P12 | **Enhance framework — Team Module Generator (BMB)** | 8 | 3 | 80% | 6 | 3.2 | enhance | **Qualified** | ADR only | — |
+| P9 | **Forge team — Domain Knowledge Extraction** | 9 | 3 | 90% | 8 | 3.0 | forge | **In Pipeline** (Blocked on Gate 1) | D, E(partial) | external: shadow engagement (Gate 1) |
+| P13 | **Vortex redesign (align to Enhance-codified patterns)** | 7 | 2 | 70% | 4 | 2.5 | vortex | **Qualified** (Blocked on P12) | — | P12 |
+| U10+P23+A8+A9 | **BMAD v6.3.0 Adoption (Convoke 4.0)** | 10 | 2 | 80% | 7 | 2.3 | convoke | **In Sprint** | B, P✓, A, IR, E | external: BMAD v6.3.0 release |
+| ILE-1 | **Initiative Lifecycle Engine** (rework of backlog/portfolio/governance skills into integrated lifecycle management) | 9 | 3 | 60% | 8 | 2.0 | helm | **Qualified** | — | ✓P15, ✓bmad-enhance-initiatives-backlog-v2.0.0 |
+| U9 | **Module-aware refresh and validation (modules-manifest.yaml)** | 8 | 2 | 70% | 6 | 1.9 | convoke | **Qualified** | — | — |
+| P3 | **Team installer architecture (`convoke-install <module-name>`)** | 6 | 1 | 80% | 4 | 1.2 | convoke | **Qualified** | — | bundles-with: S3 |
+| P7 | **ML/AI Engineering team exploration** | 6 | 2 | 30% | 3 | 1.2 | *(pending)* | **Qualified** (needs discovery) | — | — |
+| P8 | **Governance & Support skill set** | 5 | 1 | 30% | 3 | 0.5 | helm | **Qualified** (needs discovery) | — | — |
+| P2 | **Multi-module collaboration workflows (cross-team handoffs)** | 5 | 2 | 30% | 8 | 0.4 | convoke | **Qualified** (Unblocked by P1) | — | ✓P1 |
 
 **Notes on initiatives:**
 
@@ -566,5 +566,6 @@ Full descriptions for items in §2.4 whose table row is a one-liner.
 
 | Date | Change |
 |------|--------|
+| 2026-04-15 | **Dependencies column added** to all three lane tables (§2.2 Bug, §2.3 Fast, §2.4 Initiative). Notation rules added to backlog-format-spec.md: comma-separated IDs, cross-lane allowed, `—` for none, `✓ID` for shipped deps, `bundles-with: ID` for paired items, `external: short-desc` for non-backlog blockers. Bulk-added `—` to all existing rows; populated meaningful dependencies on ~13 items (Initiative: P9, P13, v6.3, ILE-1, P3, P2; Fast: T7, T8, I43, I44, I45, I46, I47, I48, I15, I39, I33). Format spec column counts updated: Bug 11, Fast 10, Initiative 11. |
 | 2026-04-15 | **Qualifying gate run on IN-9.** Qualifier: John+Winston (per §1.2 shortcut rule). Lane: Initiative. Portfolio: helm (current-best-fit, revisitable). RICE: R:9 I:3 C:60% E:8 = 2.0. New row added to §2.4 Initiative Lane as **ILE-1** (Initiative Lifecycle Engine). Intake row IN-9 in §2.1 cross-referenced via `→ ILE-1` per §1.1 audit-trail rule. Appendix entry added with three-workstream scope hint and precedent notes (WS1+WS2 already executed as spikes; skill rework v2.0.0 partially shipped). Initiative Lane re-sorted: ILE-1 (2.0) sits between v6.3 Adoption (2.3) and U9 (1.9). |
 | 2026-04-12 | **Pass 1 + Pass 2 complete.** Document created from `convoke-note-initiatives-backlog.md` retroactive review. All 88 items classified across three lanes per lifecycle process established in party mode session (John, Winston, Amalik). Supersedes `convoke-note-initiatives-backlog.md`. Intakes: 9 (was 8 "exploration candidates" + 1 new meta-initiative IN-9). Bug Lane: 0. Fast Lane: 65. Initiative Lane: 11 (4 absorbed into v6.3, 7 standalone). Absorbed/Archived: 27 (4 absorbed into v6.3 Epic, 2 absorbed into S3, 21 completed). S1/S2 folded into S3. Original IDs preserved for traceability. |
