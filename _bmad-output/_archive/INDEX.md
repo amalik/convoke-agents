@@ -236,3 +236,9 @@ _Initial archive: 2026-03-22, per ADR: adr-repo-organization-conventions-2026-03
 | post-release-review-template.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
 | rayas-journey-acceptance-test.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
 | scope-adjacent-backlog.md | _bmad-output (root)/ | 2026-03-22 | Loose file in _bmad-output root — archived as historical |
+
+## superseded/ — Documents Replaced by Newer Versions
+
+| File | Original Location | Archive Date | Reason |
+|------|-------------------|--------------|--------|
+| convoke-note-initiatives-backlog.md | planning-artifacts/ | 2026-04-15 | Superseded by convoke-note-initiative-lifecycle-backlog.md (three-lane model with Intake/Bug/Fast/Initiative + qualifying gate) |
