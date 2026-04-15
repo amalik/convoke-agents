@@ -1,16 +1,16 @@
 ---
 name: 'step-t-04-update'
-description: 'Validate backlog structure, append scored items safely, regenerate prioritized view, and present completion summary'
-outputFile: '{planning_artifacts}/initiatives-backlog.md'
+description: 'Validate backlog structure, log every finding as an Intake in §2.1, append qualified items to their lanes, update Change Log, and present completion summary'
+outputFile: '{planning_artifacts}/convoke-note-initiative-lifecycle-backlog.md'
 templateFile: '{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/templates/backlog-format-spec.md'
 workflowFile: '{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/workflow.md'
 ---
 
-# Step 4: Backlog Update, Safety & Completion
+# Step 4: Backlog Update — Log Intakes & Append Qualified Items
 
 ## STEP GOAL:
 
-Validate backlog structure, safely append scored items from Gate 2, regenerate the prioritized view, and present a completion summary before returning to the T/R/C menu.
+Validate backlog structure, log every finding (qualified or raw) as an **Intake** in §2.1 (the audit trail), append qualified items to their assigned lane's table (§2.2 Bug / §2.3 Fast / §2.4 Initiative), update the Change Log, and present a completion summary before returning to the T/R/C menu.
 
 ## MANDATORY EXECUTION RULES (READ FIRST):
 
@@ -21,17 +21,18 @@ Validate backlog structure, safely append scored items from Gate 2, regenerate t
 - 📋 YOU ARE A BACKLOG OPERATIONS SPECIALIST performing safe, structured writes
 
 ### Role Reinforcement:
-- ✅ You are a **backlog operations specialist** — precise, non-destructive, append-only
-- ✅ Preserve all existing content — never delete, overwrite, or reorder existing rows
-- ✅ The Prioritized View is the ONLY section regenerated from scratch
+- ✅ You are a **backlog operations specialist** — precise, non-destructive, append-only for lanes and intakes
+- ✅ Preserve all existing content — never delete, overwrite, or reorder existing rows outside the touched lane's sort update
+- ✅ **Part 1 (Lifecycle Process) must not be modified** — it's semi-static documentation
+- ✅ Every qualified item generates **two** rows: one in §2.1 Intakes (audit trail) AND one in the assigned lane
 - ✅ All output must be standard markdown — no HTML, no proprietary syntax
 
 ### Step-Specific Rules:
 - 🎯 Focus on validation, safe writes, and completion reporting
-- 🚫 FORBIDDEN to delete or reorder existing backlog items (FR18, NFR1)
-- 🚫 FORBIDDEN to re-score items (scoring was finalized at Gate 2)
-- 🚫 FORBIDDEN to modify step-t-01, step-t-02, or step-t-03
-- 💬 Approach: validate first, write safely, summarize clearly
+- 🚫 FORBIDDEN to delete or reorder existing §2.1 Intakes (append-only per §1.1)
+- 🚫 FORBIDDEN to re-qualify items (qualification was finalized at step-t-03)
+- 🚫 FORBIDDEN to modify Part 1 (Lifecycle Process) — load it for context only
+- 💬 Approach: validate first, write intakes + lane items safely, summarize clearly
 
 ## EXECUTION PROTOCOLS:
 - 🎯 Follow the MANDATORY SEQUENCE exactly
@@ -39,10 +40,10 @@ Validate backlog structure, safely append scored items from Gate 2, regenerate t
 - 💾 Write to `{outputFile}` only after validation passes (or user overrides)
 
 ## CONTEXT BOUNDARIES:
-- Available context: Scored findings from Gate 2, existing backlog file, backlog format spec template
-- Focus: Structural validation, safe append, prioritized view regeneration, completion summary
-- Limits: Do NOT re-score, re-extract, or re-classify items
-- Dependencies: step-t-03-score.md (scored findings from Gate 2)
+- Available context: Qualified items + raw intakes + dropped items from step-t-03, qualifier identity, existing backlog file, format spec
+- Focus: Structural validation, append to §2.1 and lanes, lane sort, Change Log, completion summary
+- Limits: Do NOT re-qualify, re-extract, or re-classify items; do NOT modify Part 1
+- Dependencies: step-t-03-qualify.md (qualified + raw items + qualifier identity)
 
 ## MANDATORY SEQUENCE
 
@@ -50,21 +51,25 @@ Validate backlog structure, safely append scored items from Gate 2, regenerate t
 
 ### 1. Pre-Write Validation
 
-Load `{outputFile}` (existing backlog) and validate structural integrity:
+Load `{outputFile}` (existing backlog) and validate structural integrity per format spec:
 
-1. **Section heading anchors** — All 7 required H2 sections exist in correct order:
-   - `## RICE Scoring Guide`
-   - `## Backlog`
-   - `## Exploration Candidates`
-   - `## Epic Groupings`
-   - `## Prioritized View (by RICE Score)`
-   - `## Completed`
-   - `## Change Log`
-2. **Prioritized view table** — Has exactly 6 columns (Rank, #, Initiative, Score, Track, Category)
-3. **Category tables** — Each table under `## Backlog` has exactly 10 columns (#, Initiative, Source, R, I, C, E, Score, Track, Status)
-4. **Change Log section** — The `## Change Log` H2 section exists with a table
+1. **Frontmatter present** — YAML block at top of file.
+2. **Part 1 section anchor** — `## Part 1: Lifecycle Process` exists. (Content is not inspected — only the anchor.)
+3. **Part 2 section anchors** — All five H3 sections exist in correct order under `## Part 2: Backlog`:
+   - `### 2.1 Intakes (Unqualified)`
+   - `### 2.2 Bug Lane`
+   - `### 2.3 Fast Lane (Quick Wins + Spikes)`
+   - `### 2.4 Initiative Lane`
+   - `### 2.5 Absorbed / Archived`
+4. **Table column counts:**
+   - §2.1 Intakes: 5 columns (ID, Description, Source, Date, Raiser)
+   - §2.2 Bug Lane: 10 columns
+   - §2.3 Fast Lane: 9 columns
+   - §2.4 Initiative Lane: 10 columns
+5. **Change Log section** — `## Change Log` H2 exists with a table.
+6. **File missing guard** — If the backlog file does not exist, display: "No backlog file found at `{outputFile}`. Triage cannot create a new file — use Create mode [C] first." Then load workflow.md and return.
 
-If ALL checks pass, proceed directly to step 3 (Append Items).
+If ALL checks pass, proceed directly to step 3 (Append Intakes).
 
 ### 2. Mismatch Handling
 
@@ -79,54 +84,50 @@ If ANY validation check fails, present the specific mismatch(es):
 
 **ALWAYS halt and wait for user input.**
 
-- IF Y: Continue to step 3 (Append Items)
-- IF X: Display "Aborting backlog update." then load, read the entire file, and execute `{workflowFile}` to return to mode selection
-- IF any other input: Display "Please select **Y** or **X**." then redisplay the prompt
+- IF Y: Continue to step 3.
+- IF X: Display "Aborting backlog update." then load, read the entire file, and execute `{workflowFile}` to return to mode selection.
+- IF any other input: Display "Please select **Y** or **X**." then redisplay the prompt.
 
-### 3. Append Items
+### 3. Append Intakes to §2.1
 
-For each scored item from Gate 2:
+For **every** finding that reached this step (qualified + raw intake + dropped), append a row to §2.1 Intakes:
 
-1. **Find target category** — Locate the H3 section under `## Backlog` matching the item's category
-2. **Create category if needed** — If category doesn't exist, add a new H3 heading with a 10-column table at the end of `## Backlog` (before `## Exploration Candidates`)
-3. **Generate item ID** — Use category prefix letter (D/U/T/I/A/P) + next number (increment from highest existing in that category)
-4. **Append row** — Add new row to end of category table. NEVER delete, overwrite, or reorder existing rows
-5. **Add provenance** — Include in the Initiative description: `Added from [source], [date]` where source is the input origin from step-t-01 and date is the current session date
+1. **Generate Intake ID** — `IN-{n}` where `n` is the next sequential integer after the highest existing IN-ID in §2.1.
+2. **Description** — concise one-line summary from the finding.
+3. **Source** — session origin (e.g., "party mode 2026-04-15", "code review ag-7-5", "retrospective sp-epic-5").
+4. **Date** — current session date (YYYY-MM-DD, absolute).
+5. **Raiser** — the qualifier identity from step-t-03 (Vortex / John / Winston / raw-only).
 
-**Column format** (10 columns per backlog-format-spec.md):
-```
-| [ID] | **[Title]** — [description]. Added from [source], [date] | [source ref] | [R] | [I] | [C]% | [E] | [score] | [track] | Backlog |
-```
+**Do NOT delete or reorder existing Intake rows.** Append new rows at the end of the table.
 
-**Important:** Triage Gate 2 adjustments are the initial score — no rescore provenance is generated.
+**Dropped items are also logged to §2.1** — with a Description prefixed `[DROPPED]` and the reason in the Change Log. This preserves the audit trail even for findings the qualifier chose not to route.
 
-### 4. Regenerate Prioritized View
+### 4. Append Qualified Items to Their Lanes
 
-Rebuild the `## Prioritized View (by RICE Score)` table from scratch:
+For each item in `qualified_items` (i.e., findings routed to Bug / Fast / Initiative):
 
-1. Collect ALL active items from all category tables (existing + newly appended)
-2. Exclude items with Status "Done" or items in the `## Completed` section
-3. Sort by composite RICE score descending
-4. Tiebreak: (1) Higher Confidence first, (2) Newer insertion order first
-5. Generate sequential rank numbers starting at 1
+1. **Find target lane table** — §2.2 (Bug), §2.3 (Fast), or §2.4 (Initiative).
+2. **Generate lane ID:**
+   - Bug Lane: `BUG-{n}` sequential.
+   - Fast Lane + Initiative Lane: single alpha prefix from a simple heuristic (U for Update, I for Infrastructure, T for Testing, A for Agent, D for Doc, P for Platform). If uncertain, use `Q-{n}` (for Qualified-uncategorized).
+3. **Append row** with the columns defined in the format spec for the target lane. Include the RICE score rationale as a tail note only if it aids future review (keep rows compact).
+4. **Cross-reference** — In the Intake row's Description cell (in §2.1), append ` → [laneID]` so intake→lane linkage is preserved.
+5. **Re-sort the touched lane's table by composite RICE score descending.** Tiebreak: Confidence higher first, then insertion order newer first.
 
-Table format (6 columns):
-```
-| Rank | # | Initiative | Score | Track | Category |
-|------|---|-----------|-------|-------|----------|
-```
+**Never delete, overwrite, or reorder rows in lanes that were not touched this session.**
 
-### 5. Add Changelog Entry
+### 5. Add Change Log Entry
 
 Prepend a new row to the `## Change Log` table (newest first):
 
 ```
-| YYYY-MM-DD | Triage: Added [N] items ([categories affected]). [Any merge notes if applicable] |
+| YYYY-MM-DD | Triage by [Qualifier]: Logged [N] intakes. Qualified [X] ([Bug: a, Fast: b, Initiative: c]). Raw intakes: [Y]. Dropped: [Z]. [Any new portfolio proposals flagged.] |
 ```
 
-### 6. Update Last Updated Date
+### 6. Update Frontmatter
 
-Set the metadata header `Last Updated` field to the current date (YYYY-MM-DD format).
+- Set `status: active` if this is the first write to the file (was `draft`).
+- Do NOT modify the `created` date.
 
 ### 7. Completion Summary & Return to Menu
 
@@ -134,11 +135,15 @@ After successful write, display:
 
 > **Triage Complete**
 >
-> **Items added:** [N]
-> **Items merged:** [N] (absorbed into existing items at Gate 1)
-> **Categories affected:** [list]
+> **Intakes logged:** [N]
+> **Qualified into lanes:** [X]
+>   - Bug Lane: [n]
+>   - Fast Lane: [n]
+>   - Initiative Lane: [n]
+> **Raw intakes (awaiting qualification):** [Y]
+> **Dropped (logged with reason):** [Z]
 >
-> **New Top 3 Positions:**
+> **Top 3 Fast Lane positions (post-sort):**
 > 1. [#ID] [title] — Score: [X.X]
 > 2. [#ID] [title] — Score: [X.X]
 > 3. [#ID] [title] — Score: [X.X]
@@ -150,6 +155,6 @@ Then return to the T/R/C menu:
 Load, read the entire file, and execute `{workflowFile}`.
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS:
-### ✅ SUCCESS: Pre-write validation performed, existing content preserved, items appended with correct IDs and provenance, prioritized view regenerated with all items sorted correctly, changelog updated, completion summary displayed with top 3, T/R/C menu re-presented
-### ❌ SYSTEM FAILURE: Existing backlog content deleted/overwritten/reordered, items written without validation, wrong IDs or missing provenance, prioritized view not regenerated, no completion summary, no return to menu
+### ✅ SUCCESS: Validation performed, every finding logged as an Intake (audit trail complete), qualified items appended to correct lanes with proper IDs, lanes re-sorted by RICE, Change Log updated with qualifier identity and counts, completion summary displayed, menu re-presented
+### ❌ SYSTEM FAILURE: Findings not logged as Intakes, qualified items written without the cross-reference in Intakes, Part 1 modified, existing rows deleted/reordered, Change Log missing the qualifier identity, dropped items lost without audit trail
 **Master Rule:** Skipping steps is FORBIDDEN.
