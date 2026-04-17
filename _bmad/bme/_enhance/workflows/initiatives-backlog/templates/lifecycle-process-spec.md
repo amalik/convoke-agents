@@ -44,6 +44,7 @@ The qualifying gate is the single decision point that determines what happens to
 - Vortex team can qualify intakes during discovery and ship spikes directly in a quick process
 - The qualifier assigns: lane, portfolio attachment, and initial RICE score
 - The qualifying decision is recorded with rationale
+- For capability-type intakes (new skill, agent, or team proposals): run the **Capability Evaluation Framework** decision tree (`convoke-note-capability-evaluation-framework.md`) to determine form factor (Skill → Agent → Team) before assigning a lane. Friction log evidence (`convoke-note-friction-log-template.md`) is the required input signal — vision is not demand.
 
 **Gate output:** one of three lanes.
 
