@@ -472,7 +472,7 @@ MIT License — see [LICENSE](LICENSE)
 
 ## Acknowledgments
 
-- [BMAD Method v6.0.0](https://github.com/bmadhub/bmad) — Foundation for agent architecture
+- [BMAD Method v6.0.0](https://github.com/bmad-code-org) — Foundation for agent architecture
 - [Innovation Vortex](https://unfix.com/innovation-vortex) — Pattern from the [unFIX model](https://unfix.com/) by [Jurgen Appelo](https://jurgenappelo.com/)
 - Claude (Anthropic) — AI reasoning and agent development
 
