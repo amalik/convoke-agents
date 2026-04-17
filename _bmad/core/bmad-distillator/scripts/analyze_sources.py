@@ -1,6 +1,6 @@
 # /// script
-# /// requires-python = ">=3.10"
-# /// dependencies = []
+# requires-python = ">=3.9"
+# dependencies = []
 # ///
 """Analyze source documents for the distillation generator.
 
@@ -183,6 +183,12 @@ def suggest_groups(files: list[Path]) -> list[dict]:
     return result
 
 
+def _threshold_reason(total_tokens: int) -> str:
+    if total_tokens > SINGLE_COMPRESSOR_MAX_TOKENS:
+        return f">{SINGLE_COMPRESSOR_MAX_TOKENS} tokens"
+    return "> 3 files"
+
+
 def analyze(inputs: list[str], output_path: str | None = None) -> None:
     """Main analysis function."""
     files = resolve_inputs(inputs)
@@ -225,7 +231,7 @@ def analyze(inputs: list[str], output_path: str | None = None) -> None:
         routing_reason = (
             f"{len(files)} file(s), ~{total_tokens:,} estimated tokens — "
             f"exceeds single compressor threshold "
-            f"({'>' + str(SINGLE_COMPRESSOR_MAX_TOKENS) + ' tokens' if total_tokens > SINGLE_COMPRESSOR_MAX_TOKENS else '> 3 files'})"
+            f"({_threshold_reason(total_tokens)})"
         )
 
     # Split prediction
