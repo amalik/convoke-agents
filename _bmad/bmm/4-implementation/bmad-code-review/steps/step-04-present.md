@@ -117,13 +117,30 @@ If `{sprint_status}` file does not exist, note that story status was updated in 
 > **Deferred:** <W>
 > **Dismissed:** <R>
 
-### 7. Next steps
+### 7. Next steps (with convergence rule enforcement)
 
-Present the user with follow-up options:
+**Review convergence rule** (from project-context.md `code-review-convergence`):
+- Round 1: mandatory.
+- Round 2: only if Round 1 had any HIGH finding.
+- Round 3: only if Round 2 introduced structural changes (new files, renamed functions, altered control flow).
+- No Round 4. Remaining issues go to backlog as deferred items.
+
+**Determine the current round number.** If `{spec_file}` is set, count existing `### Review Findings` subsections in the story file — each represents one completed round. Otherwise, ask the user which round this was.
+
+**Apply stopping criteria before offering re-run:**
+
+- **If Round 1 just completed AND no HIGH findings:** present options 1 and 3 only (no re-run option — convergence reached).
+- **If Round 2 just completed AND no structural changes were made between Round 1 and Round 2:** present options 1 and 3 only.
+- **If Round 3 just completed:** present options 1 and 3 only. If unresolved findings remain, note: "Remaining findings should be triaged to the initiatives backlog via `bmad-enhance-initiatives-backlog` Triage mode."
+- **Otherwise (re-run is allowed):** present all three options.
+
+Present the user with the applicable options:
 
 > **What would you like to do next?**
 > 1. **Start the next story** — run `dev-story` to pick up the next `ready-for-dev` story
-> 2. **Re-run code review** — address findings and review again
+> 2. **Re-run code review** — address findings and review again *(only shown when convergence rule allows)*
 > 3. **Done** — end the workflow
+>
+> *[If convergence reached, show instead:]* Review convergence reached (Round [N], no escalation trigger). Remaining deferred findings can be triaged via `bmad-enhance-initiatives-backlog`.
 
 **HALT** — I am waiting for your choice. Do not proceed until the user selects an option.
