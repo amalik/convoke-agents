@@ -55,6 +55,7 @@ The qualifying gate is the single decision point that determines what happens to
 - Vortex team can qualify intakes during discovery and ship spikes directly in a quick process
 - The qualifier assigns: lane, portfolio attachment, and initial RICE score
 - The qualifying decision is recorded with rationale
+- For capability-type intakes (new skill, agent, or team proposals): run the **Capability Evaluation Framework** decision tree (`convoke-note-capability-evaluation-framework.md`) to determine form factor (Skill → Agent → Team) before assigning a lane. Friction log evidence (`convoke-note-friction-log-template.md`) is the required input signal — vision is not demand.
 
 **Gate output:** one of three lanes.
 
@@ -243,8 +244,6 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 
 | ID | Description | R | I | C | E | Score | Portfolio | Status | Dependencies |
 |----|-------------|---|---|---|---|-------|-----------|--------|--------------|
-| P10 | Operationalize Capability Evaluation Framework (doc complete, needs integration) | 7 | 2 | 80% | 2 | 5.6 | helm | Backlog | — |
-| P11 | Distribute friction log template to consulting teams | 8 | 1 | 70% | 1 | 5.6 | helm | Backlog | — |
 | U7 | Changelog surface during `convoke-update` | 8 | 2 | 80% | 3 | 4.3 | convoke | Backlog | — |
 | I49 | Process uniformity — encoded constraints file (project-context.md) | 8 | 2 | 80% | 3 | 4.3 | convoke | Backlog | — |
 | U8 | Respect user agent exclusions on update | 6 | 2 | 80% | 3 | 3.2 | convoke | Backlog | — |
@@ -364,6 +363,8 @@ Items removed from the active backlog. Nothing disappears without a receipt.
 
 | ID | Description | Shipped | Score | Portfolio |
 |----|-------------|---------|-------|-----------|
+| P10 | Capability Evaluation Framework operationalized — moved from archive to planning-artifacts, referenced from lifecycle §1.2 + project-context.md rule. | 2026-04-18 | 5.6 | helm |
+| P11 | Friction log template operationalized — moved from archive to planning-artifacts, linked as CEF input feed. | 2026-04-18 | 5.6 | helm |
 | A7 | Review convergence rule — R1 mandatory, R2 if HIGH, R3 if structural, no R4. Encoded in project-context.md + step-04-present.md (both source and installed). | 2026-04-18 | 6.4 | convoke |
 | T6 | Python test execution in CI — `python-test` job, 5 files, 116+ tests, publish gate updated. Resolves Gyre DL-001 blocker. | 2026-04-17 | 14.4 | convoke |
 | I43 | Doctor validates all 12 bme agent skill wrappers — `checkAgentSkillWrappers()`. Closes F6+F20+F21 GAPs. | 2026-04-17 | 6.4 | convoke |
@@ -566,6 +567,7 @@ Full descriptions for items in §2.4 whose table row is a one-liner.
 
 | Date | Change |
 |------|--------|
+| 2026-04-18 | **P10+P11 shipped.** Capability Evaluation Framework and Friction Log Template moved from `_archive/exploratory/` to `planning-artifacts/` with governance naming. Framework referenced from lifecycle §1.2 qualifying gate (capability-type intakes must run decision tree). Friction log linked as required input feed. `project-context.md` rule `capability-form-factor-evaluation` added. `lifecycle-process-spec.md` template updated with same gate rule. Archive INDEX.md entries annotated with move dates. |
 | 2026-04-18 | **A7 shipped.** Review convergence rule encoded in two locations: `project-context.md` (Rule: `code-review-convergence` — R1 mandatory, R2 only if HIGH, R3 only if structural changes, no R4, remainder deferred to backlog) and `bmad-code-review` step-04-present.md section 7 (enforcement logic: round counting via `### Review Findings` subsections, stopping criteria gate before offering re-run option). Both source (`_bmad/bmm/4-implementation/`) and installed (`.claude/skills/`) copies updated. Origin: ag-epic-7 retro Action Item #3. |
 | 2026-04-17 | **Shipped items moved to §2.5.** T6, I43, T7, T8 moved from §2.3 Fast Lane to §2.5 Completed per format spec. |
 | 2026-04-15 | **WS1 spike: `bmad-enhance-initiatives-backlog` skill reworked to v2.0.0.** 14 files rewritten (workflow.md, 11 step files, SKILL.md) + 2 new templates (backlog-format-spec.md rewrite, lifecycle-process-spec.md new). Three modes updated: Triage now logs to Intakes then runs qualifying gate (lane + portfolio + RICE); Review is lane-aware with scope selection; Create emits Part 1 verbatim from template. Step renames: step-t-03-score → step-t-03-qualify, step-c-03-score → step-c-03-qualify, step-c-04-prioritize → step-c-04-generate. |
