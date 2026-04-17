@@ -5,6 +5,7 @@ const path = require('path');
 const chalk = require('chalk');
 const yaml = require('js-yaml');
 const { findProjectRoot, getPackageVersion } = require('./update/lib/utils');
+const { AGENTS, GYRE_AGENTS, EXTRA_BME_AGENTS } = require('./update/lib/agent-registry');
 // Note: parseCsvRow is loaded LAZILY inside loadSkillManifest() (ag-7-2 review patch).
 // Top-level require would crash the doctor on installs missing _team-factory/ — exactly
 // the broken-install case the doctor exists to diagnose. The lazy require is wrapped
@@ -82,7 +83,10 @@ async function main() {
     }
   }
 
-  // 4. Global checks (module-agnostic)
+  // 4. Agent skill wrapper check (I43: spans all bme modules)
+  checks.push(checkAgentSkillWrappers(projectRoot));
+
+  // 5. Global checks (module-agnostic)
   checks.push(await checkOutputDir(projectRoot));
   checks.push(checkMigrationLock(projectRoot));
   checks.push(checkVersionConsistency(projectRoot, modules));
@@ -418,6 +422,34 @@ function checkModuleSkillWrappers(mod, projectRoot, manifestMap) {
     name: label,
     passed: true,
     info: `${checked.length} standalone-skill workflows have wrappers`
+  };
+}
+
+function checkAgentSkillWrappers(projectRoot) {
+  const label = 'BME agent skill wrappers';
+  const allAgents = [...AGENTS, ...GYRE_AGENTS, ...EXTRA_BME_AGENTS];
+  const failures = [];
+
+  for (const agent of allAgents) {
+    const wrapperPath = path.join(projectRoot, '.claude', 'skills', `bmad-agent-bme-${agent.id}`, 'SKILL.md');
+    if (!fs.existsSync(wrapperPath)) {
+      failures.push(`Missing: .claude/skills/bmad-agent-bme-${agent.id}/SKILL.md`);
+    }
+  }
+
+  if (failures.length > 0) {
+    return {
+      name: label,
+      passed: false,
+      error: failures.join('; '),
+      fix: 'Run convoke-update to regenerate agent skill wrappers'
+    };
+  }
+
+  return {
+    name: label,
+    passed: true,
+    info: `${allAgents.length} agent skill wrappers verified`
   };
 }
 
