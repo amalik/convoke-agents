@@ -5,16 +5,13 @@
 # ///
 """Unit tests for merge-help-csv.py."""
 
-import csv
 import os
-import sys
 import tempfile
 import unittest
-from io import StringIO
-from pathlib import Path
 
 # Import merge_help_csv module
-from importlib.util import spec_from_file_location, module_from_spec
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 
 _spec = spec_from_file_location(
     "merge_help_csv",
@@ -116,7 +113,7 @@ class TestEndToEnd(unittest.TestCase):
 
             # Simulate merge
             _, source_rows = read_csv_rows(source_path)
-            source_codes = extract_module_codes(source_rows)
+            extract_module_codes(source_rows)
             write_csv(target_path, HEADER, source_rows)
 
             _, result_rows = read_csv_rows(target_path)
