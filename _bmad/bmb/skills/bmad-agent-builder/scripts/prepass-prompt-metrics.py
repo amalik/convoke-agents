@@ -31,7 +31,6 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 # Defensive padding / filler patterns
 WASTE_PATTERNS = [
     (r'\b[Mm]ake sure (?:to|you)\b', 'defensive-padding', 'Defensive: "make sure to/you"'),
