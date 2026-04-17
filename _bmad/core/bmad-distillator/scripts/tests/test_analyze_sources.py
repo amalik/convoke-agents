@@ -1,24 +1,26 @@
+# /// script
+# requires-python = ">=3.9"
+# dependencies = ["pytest"]
+# ///
 """Tests for analyze_sources.py"""
 
 import json
 import os
-import tempfile
-from pathlib import Path
-from unittest.mock import patch
-
-import pytest
 
 # Add parent dir to path so we can import the script
 import sys
+import tempfile
+from pathlib import Path
+
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from analyze_sources import (
-    resolve_inputs,
-    detect_doc_type,
-    suggest_groups,
     analyze,
-    INCLUDE_EXTENSIONS,
-    SKIP_DIRS,
+    detect_doc_type,
+    resolve_inputs,
+    suggest_groups,
 )
 
 
