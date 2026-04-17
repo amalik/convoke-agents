@@ -84,3 +84,21 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 **Why.** See `feedback_no_code_in_party_mode.md` in auto-memory.
 
 **How to apply.** If a user asks for code inside party mode, the agent proposes exiting party mode and creating a story instead.
+
+---
+
+## Rule: code-review-convergence
+
+**Statement.** Code reviews follow a bounded convergence rule:
+- **Round 1** is mandatory.
+- **Round 2** is triggered only if Round 1 produces any HIGH-severity finding.
+- **Round 3** is triggered only if Round 2 introduces structural changes (new files, renamed functions, altered control flow) — not for wording fixes, comment edits, or cosmetic patches.
+- **No Round 4.** If Round 3 still has issues, defer remaining findings to the backlog (via `bmad-enhance-initiatives-backlog` Triage mode) rather than running another review pass.
+
+**Why.** Story 7.3 went through 3 unbounded review rounds producing 30 findings. The unbounded "keep reviewing until clean" pattern wastes time and generates diminishing-return findings. Retrospective: ag-epic-7-retro-2026-04-10, Action Item #3.
+
+**How to apply.**
+- When running `bmad-code-review`, track the current round number. The skill's step-04-present enforces the stopping criteria at the "Re-run code review" prompt.
+- If you're manually re-running a review, check whether the stopping criteria are met before proceeding.
+- If Round 2 produces only LOW/MEDIUM findings (no HIGH), stop — do not trigger Round 3.
+- Remaining findings after the final allowed round go to the initiatives backlog as deferred items, not into another review cycle.
