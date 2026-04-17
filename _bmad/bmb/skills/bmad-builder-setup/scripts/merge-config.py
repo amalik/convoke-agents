@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # /// script
 # requires-python = ">=3.9"
-# dependencies = ["pyyaml"]
+# dependencies = ["pyyaml>=6.0"]
 # ///
 """Merge module configuration into shared _bmad/config.yaml and config.user.yaml.
 
@@ -73,14 +73,14 @@ def load_yaml_file(path: str) -> dict:
     file_path = Path(path)
     if not file_path.exists():
         return {}
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         content = yaml.safe_load(f)
     return content if content else {}
 
 
 def load_json_file(path: str) -> dict:
     """Load a JSON file."""
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
