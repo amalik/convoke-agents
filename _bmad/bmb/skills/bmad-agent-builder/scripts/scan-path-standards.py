@@ -26,7 +26,6 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 # Patterns to detect
 # {project-root} NOT followed by /_bmad
 PROJECT_ROOT_NOT_BMAD_RE = re.compile(r'\{project-root\}/(?!_bmad)')
