@@ -82,7 +82,7 @@ def read_csv_rows(path: str) -> tuple[list[str], list[list[str]]]:
     if not file_path.exists():
         return [], []
 
-    with open(file_path, "r", encoding="utf-8", newline="") as f:
+    with open(file_path, encoding="utf-8", newline="") as f:
         content = f.read()
 
     reader = csv.reader(StringIO(content))
