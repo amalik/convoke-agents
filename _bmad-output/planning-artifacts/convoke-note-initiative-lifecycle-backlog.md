@@ -243,7 +243,7 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 
 | ID | Description | R | I | C | E | Score | Portfolio | Status | Dependencies |
 |----|-------------|---|---|---|---|-------|-----------|--------|--------------|
-| T6 | Python test execution in CI (blocker — Gyre DL-001) | 8 | 2 | 90% | 1 | 14.4 | convoke | Backlog | — |
+| T6 | Python test execution in CI (blocker — Gyre DL-001) | 8 | 2 | 90% | 1 | 14.4 | convoke | Shipped | — |
 | I43 | Doctor validates all 12 bme agent skill wrappers | 8 | 2 | 80% | 2 | 6.4 | convoke | Backlog | ✓I34 |
 | A7 | Review convergence rule (R1 mandatory, R2 if HIGH, R3 if structural) | 8 | 1 | 80% | 1 | 6.4 | convoke | Backlog | — |
 | P10 | Operationalize Capability Evaluation Framework (doc complete, needs integration) | 7 | 2 | 80% | 2 | 5.6 | helm | Backlog | — |
@@ -255,7 +255,7 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 | T3 | End-to-end update test on real project | 5 | 2 | 80% | 3 | 2.7 | convoke | Backlog | — |
 | I50 | `--quiet` flag for `convoke-export` batch mode (or drop) | 6 | 0.5 | 90% | 1 | 2.7 | enhance | Backlog | — |
 | T4 | Migration idempotency CLI test | 3 | 1 | 80% | 1 | 2.4 | convoke | Backlog | — |
-| T7 | Python linting in CI pipeline | 6 | 1 | 80% | 2 | 2.4 | convoke | Backlog | T6 |
+| T7 | Python linting in CI pipeline | 6 | 1 | 80% | 2 | 2.4 | convoke | Shipped | ✓T6 |
 | I2 | `gh auth` for CI release creation | 6 | 1 | 80% | 2 | 2.4 | convoke | Backlog | — |
 | I20 | Portfolio markdown formatter — render `--show-unattributed` | 5 | 0.5 | 90% | 1 | 2.3 | enhance | Backlog | — |
 | D2 | Add output examples for more agents (Isla, Wade, Noah) | 6 | 1 | 70% | 2 | 2.1 | convoke | Backlog | — |
@@ -267,7 +267,7 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 | I7 | Team Factory CSV quoting hardening | 4 | 0.5 | 90% | 1 | 1.8 | loom | Backlog | — |
 | I23 | Format contract test between CLI and migration skill | 4 | 0.5 | 90% | 1 | 1.8 | enhance | Backlog | — |
 | A6 | Structured-source for count-sensitive deliverables | 5 | 1 | 70% | 2 | 1.8 | convoke | Backlog | — |
-| T8 | Standardize Python PEP 723 dependency declarations | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Backlog | T6 |
+| T8 | Standardize Python PEP 723 dependency declarations | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Shipped | ✓T6 |
 | D6 | Reduce narrative overlap in journey example | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Backlog | — |
 | I18 | Pre-compile regex in `_scanCorpusForInitiative` per migration run | 4 | 0.5 | 80% | 1 | 1.6 | enhance | Backlog | — |
 | I36 | `yaml` package `doc.warnings` ignored at 5 write sites | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Backlog | — |
@@ -566,6 +566,9 @@ Full descriptions for items in §2.4 whose table row is a one-liner.
 
 | Date | Change |
 |------|--------|
+| 2026-04-17 | **T7 shipped.** Ruff linting added to CI (`python-test` job, piggybacked on T6). Config: `ruff.toml` (line-length 120, select E/W/F/I/N/UP, per-file E501 ignores for HTML generators + data-heavy files). 40 auto-fixes applied (import sorting, unused imports, redundant open modes). 3 manual fixes (f-string refactor in analyze_sources.py × 2, unused variable in test-merge-help-csv.py). All 116 tests pass post-fix. |
+| 2026-04-17 | **T8 shipped.** PEP 723 standardized across all 24 Python files. Fixes: `"pyyaml"` → `"pyyaml>=6.0"` (4 files), `# ///` syntax → standard `# ` content lines (2 distillator files), `>=3.10` → `>=3.9` (2 bmad-init files), added missing metadata blocks (2 test files). 22→24 files now have consistent PEP 723 blocks. |
+| 2026-04-17 | **T6 shipped.** Python test execution added to CI (`python-test` job in ci.yml). 5 test files, ~116 tests across BMB (merge-config, merge-help-csv, cleanup-legacy) and Core (bmad_init, analyze_sources). Publish gate updated to require `python-test`. Resolves Gyre DL-001 blocker. CI green. |
 | 2026-04-17 | **Rescore I33** (Workflow-name namespace collision risk): 0.4 → 0.9. R:4→4, I:0.5→1, C:60%→70%, E:3→3. Rationale: I32 shipped active orphan deletion (two-strategy matching) which increased collision blast radius from overwrite-only to overwrite + cleanup deletes. Moved from rank ~78 to 0.9 block (after I52, before I39). Fast Lane re-sorted within 0.9 tiebreak (C:90% before C:70%). |
 | 2026-04-15 | **Dependencies column added** to all three lane tables (§2.2 Bug, §2.3 Fast, §2.4 Initiative). Notation rules added to backlog-format-spec.md: comma-separated IDs, cross-lane allowed, `—` for none, `✓ID` for shipped deps, `bundles-with: ID` for paired items, `external: short-desc` for non-backlog blockers. Bulk-added `—` to all existing rows; populated meaningful dependencies on ~13 items (Initiative: P9, P13, v6.3, ILE-1, P3, P2; Fast: T7, T8, I43, I44, I45, I46, I47, I48, I15, I39, I33). Format spec column counts updated: Bug 11, Fast 10, Initiative 11. |
 | 2026-04-15 | **Qualifying gate run on IN-9.** Qualifier: John+Winston (per §1.2 shortcut rule). Lane: Initiative. Portfolio: helm (current-best-fit, revisitable). RICE: R:9 I:3 C:60% E:8 = 2.0. New row added to §2.4 Initiative Lane as **ILE-1** (Initiative Lifecycle Engine). Intake row IN-9 in §2.1 cross-referenced via `→ ILE-1` per §1.1 audit-trail rule. Appendix entry added with three-workstream scope hint and precedent notes (WS1+WS2 already executed as spikes; skill rework v2.0.0 partially shipped). Initiative Lane re-sorted: ILE-1 (2.0) sits between v6.3 Adoption (2.3) and U9 (1.9). |
