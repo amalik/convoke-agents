@@ -243,8 +243,6 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 
 | ID | Description | R | I | C | E | Score | Portfolio | Status | Dependencies |
 |----|-------------|---|---|---|---|-------|-----------|--------|--------------|
-| T6 | Python test execution in CI (blocker — Gyre DL-001) | 8 | 2 | 90% | 1 | 14.4 | convoke | Shipped | — |
-| I43 | Doctor validates all 12 bme agent skill wrappers | 8 | 2 | 80% | 2 | 6.4 | convoke | Backlog | ✓I34 |
 | A7 | Review convergence rule (R1 mandatory, R2 if HIGH, R3 if structural) | 8 | 1 | 80% | 1 | 6.4 | convoke | Backlog | — |
 | P10 | Operationalize Capability Evaluation Framework (doc complete, needs integration) | 7 | 2 | 80% | 2 | 5.6 | helm | Backlog | — |
 | P11 | Distribute friction log template to consulting teams | 8 | 1 | 70% | 1 | 5.6 | helm | Backlog | — |
@@ -255,7 +253,6 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 | T3 | End-to-end update test on real project | 5 | 2 | 80% | 3 | 2.7 | convoke | Backlog | — |
 | I50 | `--quiet` flag for `convoke-export` batch mode (or drop) | 6 | 0.5 | 90% | 1 | 2.7 | enhance | Backlog | — |
 | T4 | Migration idempotency CLI test | 3 | 1 | 80% | 1 | 2.4 | convoke | Backlog | — |
-| T7 | Python linting in CI pipeline | 6 | 1 | 80% | 2 | 2.4 | convoke | Shipped | ✓T6 |
 | I2 | `gh auth` for CI release creation | 6 | 1 | 80% | 2 | 2.4 | convoke | Backlog | — |
 | I20 | Portfolio markdown formatter — render `--show-unattributed` | 5 | 0.5 | 90% | 1 | 2.3 | enhance | Backlog | — |
 | D2 | Add output examples for more agents (Isla, Wade, Noah) | 6 | 1 | 70% | 2 | 2.1 | convoke | Backlog | — |
@@ -267,7 +264,6 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 | I7 | Team Factory CSV quoting hardening | 4 | 0.5 | 90% | 1 | 1.8 | loom | Backlog | — |
 | I23 | Format contract test between CLI and migration skill | 4 | 0.5 | 90% | 1 | 1.8 | enhance | Backlog | — |
 | A6 | Structured-source for count-sensitive deliverables | 5 | 1 | 70% | 2 | 1.8 | convoke | Backlog | — |
-| T8 | Standardize Python PEP 723 dependency declarations | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Shipped | ✓T6 |
 | D6 | Reduce narrative overlap in journey example | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Backlog | — |
 | I18 | Pre-compile regex in `_scanCorpusForInitiative` per migration run | 4 | 0.5 | 80% | 1 | 1.6 | enhance | Backlog | — |
 | I36 | `yaml` package `doc.warnings` ignored at 5 write sites | 4 | 0.5 | 80% | 1 | 1.6 | convoke | Backlog | — |
@@ -369,6 +365,10 @@ Items removed from the active backlog. Nothing disappears without a receipt.
 
 | ID | Description | Shipped | Score | Portfolio |
 |----|-------------|---------|-------|-----------|
+| T6 | Python test execution in CI — `python-test` job, 5 files, 116+ tests, publish gate updated. Resolves Gyre DL-001 blocker. | 2026-04-17 | 14.4 | convoke |
+| I43 | Doctor validates all 12 bme agent skill wrappers — `checkAgentSkillWrappers()`. Closes F6+F20+F21 GAPs. | 2026-04-17 | 6.4 | convoke |
+| T7 | Python linting in CI — ruff added to `python-test` job. `ruff.toml` config, 40 auto-fixes, 3 manual fixes. | 2026-04-17 | 2.4 | convoke |
+| T8 | PEP 723 standardized — `pyyaml>=6.0` pinning, syntax fix, `>=3.9` version, 2 missing blocks added. 24/24 files covered. | 2026-04-17 | 1.6 | convoke |
 | I14 | Artifact Governance — naming convention, taxonomies, migration skill (7 epics) | 2026-04-10 | 3.2 | convoke |
 | P15 | Portfolio skill — cross-initiative visibility, WIP radar, context re-entry | 2026-04-10 | 1.7 | convoke |
 | P16 | Standalone skills repository (49 skills, 86 tests) | 2026-04-10 | 4.2 | enhance |
@@ -566,6 +566,9 @@ Full descriptions for items in §2.4 whose table row is a one-liner.
 
 | Date | Change |
 |------|--------|
+| 2026-04-17 | **Shipped items moved to §2.5.** T6, I43, T7, T8 moved from §2.3 Fast Lane to §2.5 Completed per format spec. |
+| 2026-04-15 | **WS1 spike: `bmad-enhance-initiatives-backlog` skill reworked to v2.0.0.** 14 files rewritten (workflow.md, 11 step files, SKILL.md) + 2 new templates (backlog-format-spec.md rewrite, lifecycle-process-spec.md new). Three modes updated: Triage now logs to Intakes then runs qualifying gate (lane + portfolio + RICE); Review is lane-aware with scope selection; Create emits Part 1 verbatim from template. Step renames: step-t-03-score → step-t-03-qualify, step-c-03-score → step-c-03-qualify, step-c-04-prioritize → step-c-04-generate. |
+| 2026-04-17 | **I43 shipped.** `checkAgentSkillWrappers()` added to `convoke-doctor.js`. Validates all 12 bme agent skill wrappers (7 Vortex + 4 Gyre + 1 team-factory) at `.claude/skills/bmad-agent-bme-{id}/SKILL.md`. Imports AGENTS/GYRE_AGENTS/EXTRA_BME_AGENTS from agent-registry.js. Mirrors I31 pattern. Verified: passes with all 12 present, fails with clear diagnostic when any missing. All 1,123 tests pass. Closes F6+F20+F21 GAPs from ag-7-3 contract audit. |
 | 2026-04-17 | **T7 shipped.** Ruff linting added to CI (`python-test` job, piggybacked on T6). Config: `ruff.toml` (line-length 120, select E/W/F/I/N/UP, per-file E501 ignores for HTML generators + data-heavy files). 40 auto-fixes applied (import sorting, unused imports, redundant open modes). 3 manual fixes (f-string refactor in analyze_sources.py × 2, unused variable in test-merge-help-csv.py). All 116 tests pass post-fix. |
 | 2026-04-17 | **T8 shipped.** PEP 723 standardized across all 24 Python files. Fixes: `"pyyaml"` → `"pyyaml>=6.0"` (4 files), `# ///` syntax → standard `# ` content lines (2 distillator files), `>=3.10` → `>=3.9` (2 bmad-init files), added missing metadata blocks (2 test files). 22→24 files now have consistent PEP 723 blocks. |
 | 2026-04-17 | **T6 shipped.** Python test execution added to CI (`python-test` job in ci.yml). 5 test files, ~116 tests across BMB (merge-config, merge-help-csv, cleanup-legacy) and Core (bmad_init, analyze_sources). Publish gate updated to require `python-test`. Resolves Gyre DL-001 blocker. CI green. |
