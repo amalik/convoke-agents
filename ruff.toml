@@ -1,0 +1,11 @@
+target-version = "py39"
+line-length = 120
+
+[lint]
+select = ["E", "W", "F", "I", "N", "UP"]
+
+[lint.per-file-ignores]
+"**/generate-html-report.py" = ["E501"]
+"**/prepass-prompt-metrics.py" = ["E501"]
+"**/scan-path-standards.py" = ["E501"]
+"**/test-merge-help-csv.py" = ["E501"]
