@@ -37,6 +37,15 @@ async function refreshInstallation(projectRoot, options = {}) {
   // source and destination are identical — skip file copies.
   const isSameRoot = path.resolve(packageRoot) === path.resolve(projectRoot);
 
+  // U8: read per-module `excluded_agents` from target configs BEFORE copy.
+  // These are opt-out lists the operator maintains; excluded agents don't get
+  // their agent file copied, don't get a skill wrapper generated, and don't
+  // fail presence checks downstream.
+  const vortexExcluded = configMerger.readExcludedAgents(path.join(targetVortex, 'config.yaml'));
+  const gyreExcluded = configMerger.readExcludedAgents(
+    path.join(projectRoot, '_bmad', 'bme', '_gyre', 'config.yaml')
+  );
+
   // 1. Copy agent files
   const agentsSource = path.join(packageVortex, 'agents');
   const agentsTarget = path.join(targetVortex, 'agents');
@@ -44,6 +53,12 @@ async function refreshInstallation(projectRoot, options = {}) {
 
   if (!isSameRoot) {
     for (const file of AGENT_FILES) {
+      const agentId = file.replace(/\.md$/, '');
+      if (vortexExcluded.includes(agentId)) {
+        changes.push(`Skipped excluded Vortex agent: ${file}`);
+        if (verbose) console.log(`    Skipped excluded Vortex agent: ${file}`);
+        continue;
+      }
       const src = path.join(agentsSource, file);
       if (fs.existsSync(src)) {
         await fs.copy(src, path.join(agentsTarget, file), { overwrite: true });
@@ -290,6 +305,12 @@ async function refreshInstallation(projectRoot, options = {}) {
 
     if (!isSameRoot) {
       for (const file of GYRE_AGENT_FILES) {
+        const agentId = file.replace(/\.md$/, '');
+        if (gyreExcluded.includes(agentId)) {
+          changes.push(`Skipped excluded Gyre agent: ${file}`);
+          if (verbose) console.log(`    Skipped excluded Gyre agent: ${file}`);
+          continue;
+        }
         const src = path.join(gyreAgentsSource, file);
         if (fs.existsSync(src)) {
           await fs.copy(src, path.join(gyreAgentsTarget, file), { overwrite: true });
@@ -563,10 +584,13 @@ async function refreshInstallation(projectRoot, options = {}) {
 
   const skillsDir = path.join(projectRoot, '.claude', 'skills');
 
-  // Remove stale skill directories (agents no longer in registry)
+  // Remove stale skill directories (agents no longer in registry OR excluded by operator).
+  // U8: excluded agents are intentionally omitted from the valid set so the stale-removal
+  // loop below deletes their wrappers on the next refresh. Re-inclusion (removing from
+  // excluded_agents) regenerates the wrapper here.
   const currentSkillDirs = new Set([
-    ...AGENTS.map(a => `bmad-agent-bme-${a.id}`),
-    ...GYRE_AGENTS.map(a => `bmad-agent-bme-${a.id}`),
+    ...AGENTS.filter(a => !vortexExcluded.includes(a.id)).map(a => `bmad-agent-bme-${a.id}`),
+    ...GYRE_AGENTS.filter(a => !gyreExcluded.includes(a.id)).map(a => `bmad-agent-bme-${a.id}`),
     ...EXTRA_BME_AGENTS.map(a => `bmad-agent-bme-${a.id}`),
   ]);
   if (fs.existsSync(skillsDir)) {
@@ -581,6 +605,7 @@ async function refreshInstallation(projectRoot, options = {}) {
   }
 
   for (const agent of AGENTS) {
+    if (vortexExcluded.includes(agent.id)) continue;
     const skillDir = path.join(skillsDir, `bmad-agent-bme-${agent.id}`);
     await fs.ensureDir(skillDir);
     const content = `---
@@ -606,6 +631,7 @@ You must fully embody this agent's persona and follow all activation instruction
 
   // 6b. Generate .claude/skills/ for Gyre agents
   for (const agent of GYRE_AGENTS) {
+    if (gyreExcluded.includes(agent.id)) continue;
     const skillDir = path.join(skillsDir, `bmad-agent-bme-${agent.id}`);
     await fs.ensureDir(skillDir);
     const content = `---
