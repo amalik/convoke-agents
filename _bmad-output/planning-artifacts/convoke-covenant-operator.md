@@ -10,7 +10,7 @@ schema_version: 1
 
 > **The operator is the resolver.**
 
-This is the Convoke Operator Covenant: a single axiom and seven commitments that every Convoke skill must honor.
+This is the Convoke Operator Covenant: an axiom, foundational vocabulary, two founding incidents, seven commitments, and a compliance protocol that every Convoke skill must honor.
 
 ---
 
