@@ -819,4 +819,605 @@ Normative patterns (N), their specific test files + assertions, and affected com
 - **Git-ignore seeding**: `.ile/` and any `.ile.lock` pattern added to the installation's seeded `.gitignore` entries.
 - **Conformance test suite**: 16 new test files listed in the Compliance Table; scaffolded in sprint 0 / early sprint 1.
 
+## Project Structure & Boundaries
+
+ILE-1 ships inside Convoke's existing monorepo (brownfield). Structure composes decisions from Steps 4–5 into a complete implementation tree and names integration points with existing Convoke systems. Refined via three elicitation/party-mode passes: CST on uninstall (4 real UX gaps), missing-link scan (12 named-but-not-placed items), What-If on LLM-host invocation model (8 findings, including the Hybrid Model reframe), plus a final coherence pass (6 naming/testability/envelope-TTL refinements).
+
+### LLM-Host Invocation Model (Hybrid)
+
+ILE-1 runs inside Claude Code (primary host; Copilot/Cursor via export pipeline). The host **interprets `workflow.md`** and executes its step instructions via tools (Read, Edit, Bash). Each Bash invocation of a Node script = a **fresh Node.js process**. This has a direct consequence for state propagation.
+
+**The Hybrid Model:**
+
+- **`workflow.md` is the orchestrator** — BMAD-conformant, operator-visible. Each step is instructions Claude follows.
+- **Critical per-phase work bundled into fat-script entry points** at `scripts/lifecycle/entries/{skill-name}-entry.js`. One Node process per fat-script call; within it, lock acquisition + heartbeat + mutation + reactive check + log correlation all happen atomically.
+- **Context propagates across fat-script calls via env var envelope** (invocationId, skillName, backlogPath, configHash, envelopeCreatedAt). Within a single fat-script call, AsyncLocalStorage is the within-process mechanism.
+
+**Envelope shape (env var names):**
+
+```
+ILE_INVOCATION_ID         — ULID
+ILE_SKILL_NAME            — orchestrator skill name
+ILE_BACKLOG_PATH          — resolved backlog file path
+ILE_CONFIG_HASH           — SHA-256 of resolved config (drift detection)
+ILE_ENVELOPE_CREATED_AT   — ISO 8601 timestamp (TTL support)
+```
+
+**Envelope TTL**: 30 minutes default (configurable via `envelopeTTLMinutes`). `readEnvelope()` treats envelopes older than TTL as expired; generates fresh envelope. Prevents stale-envelope contamination from prior workflows.
+
+**Config drift detection**: each fat-script's `withISWC` preamble computes current config hash and compares to `ILE_CONFIG_HASH` envelope value. On drift: log WARN, continue with currently-resolved config (operator likely edited intentionally). Doctor check surfaces cumulative drift as `CONFIG-009` after N occurrences in trailing window. No fatal path — operator-covenant.
+
+**Inter-fat-script interleave acknowledgment**: between fat-script calls within a single workflow.md, `.ile.lock` is released. Another invocation could acquire during this window; when the original's next phase acquires, it re-reads current state. v1 stance: accept interleave; rely on deterministic re-evaluation (each fat-script reads current backlog → evaluates → acts). Workflow authors structure `workflow.md` so critical atomic transitions live within a single fat-script, never across Bash calls. Growth-phase escape hatch: `_ile.session.lock` (held across workflow.md) as additive feature if field data demands.
+
+### `workflow.md` Step-00 Template (new convention)
+
+Every ILE-1 skill's `workflow.md` begins with:
+
+```markdown
+## Step 00 — Initialize ISWC envelope
+
+Check if `ILE_INVOCATION_ID` env var is set:
+
+- **If set** (chained-invocation case — parent skill is orchestrating):
+  Reuse the envelope; do NOT generate a new ID.
+
+- **If not set** (root invocation):
+  - Generate a ULID: `ULID=$(node -e "console.log(require('ulid').ulid())")`
+  - Export envelope:
+    export ILE_INVOCATION_ID="$ULID"
+    export ILE_SKILL_NAME="ile-sync"
+    export ILE_BACKLOG_PATH="$(node scripts/lifecycle/lib/runtime/paths.js --get-backlog-path)"
+    export ILE_CONFIG_HASH="$(node scripts/lifecycle/lib/config/config.js --hash)"
+    export ILE_ENVELOPE_CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+
+Subsequent steps invoking Bash inherit these env vars automatically.
+```
+
+Enforcement: `iswc-workflow-header.test.js` — every ILE-1 `workflow.md` must contain step-00 matching this pattern.
+
+### Requirements-to-Structure Mapping
+
+Mapping the 9 PRD capability areas to directories:
+
+| PRD capability area | Lives in |
+|---|---|
+| 1. Intake, Qualification & Lane Management (13 FRs) | `_bmad/bme/_ile/workflows/intake/`, `_bmad/bme/_ile/workflows/qualify/`, `scripts/lifecycle/lib/data/validity-contracts/` |
+| 2. Portfolio Visibility & Navigation (9 FRs) | `_bmad/bme/_ile/workflows/portfolio-status/`, `scripts/lifecycle/lib/observability/portfolio-render.js` |
+| 3. Reactive Behaviors & Trust Contract (7 FRs) | `scripts/lifecycle/lib/reactive/`, `scripts/lifecycle/lib/frame/skill-frame.js` (ISWC) |
+| 4. Observability Signals (3 FRs) | `scripts/lifecycle/lib/observability/` |
+| 5. Shared Data Model, Integration & Governance (8 FRs) | `scripts/lifecycle/lib/data/`, `scripts/lifecycle/lib/data/schemas/` |
+| 6. Onboarding, Help & Error Communication (8 FRs) | `_bmad/bme/_ile/workflows/*/help.md`, `scripts/lifecycle/lib/errors/` |
+| 7. Interaction Safety & Recovery (4 FRs) | `scripts/lifecycle/lib/reactive/crash-recovery.js`, `scripts/lifecycle/lib/frame/lock.js`, `_bmad/bme/_ile/workflows/ile-sync/`, `_bmad/bme/_ile/workflows/ile-force-unlock/` |
+| 8. Schema Evolution, Migration & Lifecycle Completeness (7 FRs) | `scripts/lifecycle/lib/migrations/`, `_bmad/bme/_ile/workflows/uninstall/` |
+| 9. Developer Tooling & Debugging (4 FRs) | `scripts/lifecycle/lib/runtime/logger.js`, `_bmad/bme/_ile/workflows/ile-logs-purge/`, `_bmad/bme/_ile/workflows/ile-log/` |
+
+### Complete Project Tree (ILE-1 additions)
+
+```
+BMAD-Enhanced/
+├── _bmad/
+│   ├── _config/
+│   │   ├── ile.yaml                                ← NEW: team-level config (seeded)
+│   │   └── bmm-dependencies.csv                    ← EXTENDED: 3 ILE-1 rows
+│   └── bme/
+│       └── _ile/                                   ← NEW: dedicated ILE namespace
+│           ├── SKILL.md                            ← namespace-level metadata only
+│           └── workflows/
+│               ├── intake/
+│               │   ├── SKILL.md
+│               │   ├── workflow.md                 ← starts with step-00 envelope init
+│               │   ├── help.md                     ← progressive-disclosure tagged
+│               │   └── steps/
+│               │       ├── step-01-capture.md
+│               │       ├── step-02-classify-lane.md
+│               │       └── step-03-record.md
+│               ├── qualify/
+│               │   ├── SKILL.md
+│               │   ├── workflow.md
+│               │   ├── help.md
+│               │   └── steps/
+│               │       ├── step-01-load-artifact.md
+│               │       ├── step-02-evaluate-contracts.md
+│               │       ├── step-03-propose-lane.md
+│               │       └── step-04-log-decision.md
+│               ├── portfolio-status/
+│               │   ├── SKILL.md
+│               │   ├── workflow.md
+│               │   ├── help.md
+│               │   └── steps/
+│               │       ├── step-01-build-index.md
+│               │       ├── step-02-compute-observability.md
+│               │       ├── step-03-render-kanban.md
+│               │       └── step-04-drill-down.md
+│               ├── ile-sync/
+│               │   ├── SKILL.md
+│               │   ├── workflow.md
+│               │   ├── help.md
+│               │   └── steps/
+│               │       ├── step-01-acquire-lock.md
+│               │       ├── step-02-migrate.md
+│               │       ├── step-03-replay-breadcrumbs.md
+│               │       ├── step-04-scan-drift.md
+│               │       └── step-05-batch-review.md
+│               ├── ile-force-unlock/
+│               │   ├── SKILL.md
+│               │   ├── workflow.md
+│               │   ├── help.md
+│               │   └── steps/
+│               │       ├── step-01-display-lock.md
+│               │       ├── step-02-confirm.md
+│               │       └── step-03-release.md
+│               ├── ile-log/
+│               │   ├── SKILL.md
+│               │   ├── workflow.md
+│               │   ├── help.md
+│               │   └── steps/
+│               │       ├── step-01-parse-filter.md
+│               │       └── step-02-render-results.md
+│               ├── ile-logs-purge/
+│               │   ├── SKILL.md
+│               │   ├── workflow.md
+│               │   ├── help.md
+│               │   └── steps/
+│               │       ├── step-01-scan-old-logs.md
+│               │       ├── step-02-confirm.md
+│               │       └── step-03-remove.md
+│               └── uninstall/
+│                   ├── SKILL.md
+│                   ├── workflow.md
+│                   ├── help.md
+│                   └── steps/
+│                       ├── step-01-summarize-removals.md
+│                       ├── step-02-confirm.md
+│                       ├── step-03-archive-change-log.md
+│                       ├── step-04-remove-files.md
+│                       ├── step-05-surgical-config-edits.md
+│                       └── step-06-final-change-log-entry.md
+│
+├── scripts/
+│   └── lifecycle/                                  ← NEW: ILE-1 library + entries root
+│       ├── lib/
+│       │   ├── frame/                              ← BMAD-aware (only subtree)
+│       │   │   ├── skill-frame.js                  ← withISWC() + ileContext AsyncLocalStorage
+│       │   │   ├── lock.js                         ← acquire/release; tiered staleness
+│       │   │   ├── heartbeat.js                    ← tick() with atomic lock-file update
+│       │   │   └── context-envelope.js             ← readEnvelope() + writeEnvelope() (cross-process)
+│       │   ├── writes/
+│       │   │   ├── atomic-write.js                 ← write-to-tmp → rename primitive
+│       │   │   └── change-log.js                   ← append-only JSONL writer/reader
+│       │   ├── data/
+│       │   │   ├── index-builder.js                ← in-memory index per invocation
+│       │   │   ├── validity-contracts/
+│       │   │   │   ├── registry.js                 ← registerContract()
+│       │   │   │   ├── prd-ready-for-architecture.js
+│       │   │   │   ├── brief-complete.js
+│       │   │   │   ├── ir-ready.js
+│       │   │   │   └── ... (one file per contract)
+│       │   │   └── schemas/                        ← JSON Schemas
+│       │   │       ├── backlog.schema.json
+│       │   │       ├── change-log-entry.schema.json
+│       │   │       ├── proposal.schema.json
+│       │   │       ├── brief.schema.json
+│       │   │       ├── prd.schema.json
+│       │   │       ├── ir.schema.json
+│       │   │       ├── architecture.schema.json
+│       │   │       └── debug-log-entry.schema.json
+│       │   ├── errors/
+│       │   │   ├── errors.js                       ← ILEError class
+│       │   │   └── error-registry.js               ← seed codes + detailsShape
+│       │   ├── migrations/
+│       │   │   ├── registry.js                     ← append-only; mirrors install-migration shape
+│       │   │   ├── schema-migrator.js              ← ensureSchemaCurrent()
+│       │   │   └── ile-data-implicit-v0-to-1.0.0.js
+│       │   ├── reactive/
+│       │   │   ├── reactive-detector.js            ← detectReactiveProposals()
+│       │   │   ├── proposal.js                     ← createProposal/render/apply + batch UX
+│       │   │   └── crash-recovery.js               ← breadcrumb scan + replay (W1/W2/W3)
+│       │   ├── observability/
+│       │   │   ├── observability.js                ← computeSignals() (S1–S4, unified active+archived)
+│       │   │   └── portfolio-render.js             ← kanban + filtering + drill-down
+│       │   ├── config/
+│       │   │   ├── config.js                       ← resolveConfig() + drift hash
+│       │   │   └── config-defaults.js              ← ILE-1 shipped defaults
+│       │   ├── runtime/
+│       │   │   ├── logger.js                       ← shared logger; AsyncLocalStorage + bootstrap fallback
+│       │   │   ├── paths.js                        ← canonical path helpers
+│       │   │   └── lanes.js                        ← LANES const enum
+│       │   ├── format/
+│       │   │   └── markdown.js                     ← renderTable() helper
+│       │   └── doctor/                             ← 4th registry
+│       │       ├── registry.js                     ← append-only doctor-check registry
+│       │       ├── bmad-version-gate.js            ← CONFIG-002
+│       │       ├── lane-enum-conformance.js        ← CONFIG-003
+│       │       ├── schema-validation.js            ← CONFIG-004
+│       │       ├── orphan-refs.js                  ← CONFIG-005
+│       │       ├── unknown-config-keys.js          ← CONFIG-007
+│       │       ├── single-config-file.js           ← CONFIG-008
+│       │       ├── config-drift-cumulative.js      ← CONFIG-009
+│       │       └── artifact-mtime-drift.js         ← suggests /ile-sync
+│       └── entries/                                ← fat-script entry points (Hybrid Model)
+│           ├── intake-entry.js                     ← one atomic fat-script per workflow phase
+│           ├── qualify-entry.js
+│           ├── portfolio-status-entry.js
+│           ├── ile-sync-entry.js
+│           ├── ile-force-unlock-entry.js
+│           ├── ile-log-entry.js
+│           ├── ile-logs-purge-entry.js
+│           └── uninstall-entry.js
+│
+├── docs/
+│   └── ile/                                        ← NEW: canonical spec + concepts
+│       ├── spec/                                   ← artifact-type specs (pair with schemas)
+│       │   ├── index.md
+│       │   ├── backlog.md
+│       │   ├── change-log.md
+│       │   ├── proposal.md
+│       │   ├── brief.md
+│       │   ├── prd.md
+│       │   ├── ir.md
+│       │   └── architecture.md
+│       └── concepts/                               ← architectural concepts (prose-only)
+│           ├── iswc.md
+│           ├── crash-recovery-model.md
+│           ├── lane-taxonomy.md
+│           ├── observability-model.md
+│           ├── trust-contract.md
+│           └── llm-host-invocation-model.md
+│
+├── tests/
+│   ├── lib/
+│   │   └── ile/                                    ← unit tests (Cluster 1 D3)
+│   │       ├── test-helpers.js                     ← runInISWC() (process.env round-trip)
+│   │       ├── iswc-conformance.test.js
+│   │       ├── iswc-workflow-header.test.js        ← NEW: workflow.md step-00 pattern
+│   │       ├── entry-structure.test.js             ← NEW: fat-script main() + require.main guard
+│   │       ├── error-contract.test.js
+│   │       ├── atomic-write-conformance.test.js
+│   │       ├── lane-enum-conformance.test.js
+│   │       ├── validity-contract-registry.test.js
+│   │       ├── reactive-detector.test.js
+│   │       ├── migration-registry-conformance.test.js
+│   │       ├── schema-enforcement.test.js
+│   │       ├── change-log-schema.test.js
+│   │       ├── doctor-refs.test.js
+│   │       ├── doctor-registry-conformance.test.js
+│   │       ├── date-format-conformance.test.js
+│   │       ├── spec-conformance.test.js
+│   │       ├── config-read-discipline.test.js
+│   │       ├── ile-config-single-source.test.js
+│   │       ├── unknown-config-keys.test.js
+│   │       ├── debug-log-schema.test.js
+│   │       ├── help-registry.test.js
+│   │       ├── help-presence.test.js
+│   │       ├── test-layout.test.js
+│   │       ├── workflow-structure.test.js
+│   │       ├── frame-boundary.test.js
+│   │       ├── logger-discipline.test.js
+│   │       └── paths-discipline.test.js
+│   ├── integration/
+│   │   └── ile/
+│   │       ├── heartbeat-coverage.test.js
+│   │       ├── config-precedence.test.js
+│   │       ├── trust-contract-tac1.test.js
+│   │       ├── round-trip-tac3.test.js
+│   │       ├── consulting-scale-nfr.test.js
+│   │       ├── uninstall-tac.test.js
+│   │       └── portability-golden.test.js
+│   ├── fixtures/
+│   │   └── ile/
+│   │       ├── uncertain-case-fixtures/
+│   │       ├── round-trip-fixtures/
+│   │       ├── consulting-scale-observability/    ← 60/150/300 × 2K/10K/50K
+│   │       ├── uninstall-partial-states/
+│   │       ├── git-workflow-states/
+│   │       └── portability-golden/
+│   │           ├── macos/
+│   │           ├── linux/
+│   │           └── windows/
+│   └── tmp/                                        ← NEW: test-run-only; gitignored
+│       └── ile/
+│           └── exports/
+│               ├── macos/
+│               ├── linux/
+│               └── windows/
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml                                  ← EXTENDED: lint, ile-unit, ile-integration, ile-portability-matrix
+│
+├── .gitignore                                      ← EXTENDED: .ile/, tests/tmp/
+├── .eslintrc.js                                    ← EXTENDED: 3 ILE rules
+├── package.json                                    ← EXTENDED: ulid, ajv (verify) dependencies
+├── project-context.md                              ← EXTENDED: ile-skill-workflow-contract + ile-error-contract rules
+└── ruff.toml                                       ← EXISTING: unchanged
+```
+
+**Runtime-created (not in repo; gitignored):**
+
+```
+.ile/                                               ← local runtime state
+├── change-log.jsonl                                ← active append-only
+├── change-log-archived-{YYYY-MM-DD}.jsonl          ← created on uninstall (preserved audit)
+├── {backlog-name}.lock                             ← concurrency guard
+├── pending-reactive-check-{invocationId}           ← crash breadcrumbs
+├── breadcrumbs-archived-{YYYY-MM-DD}/              ← created on reinstall for orphan breadcrumbs
+└── logs/
+    └── {YYYY-MM-DD}.jsonl                          ← daily-rotated debug log
+```
+
+Observability reads `change-log.jsonl` + all `change-log-archived-*.jsonl` as unified read-only history for signal computation. Writes go only to active log.
+
+### Architectural Boundaries
+
+**Library boundary** (`scripts/lifecycle/lib/`):
+
+- **`frame/` is BMAD-aware** — `withISWC()` is the BMAD skill-contract wrapper in code form. It depends on BMAD's workflow-step architecture conceptually, though it doesn't import BMAD modules.
+- **All other subtrees** (`writes/`, `data/`, `errors/`, `migrations/`, `reactive/`, `observability/`, `config/`, `runtime/`, `format/`, `doctor/`) are framework-neutral. Could be extracted into a standalone npm package.
+- One-way dependency: `frame/` may import from any other subtree. Other subtrees MUST NOT import from `frame/` (enforced by `frame-boundary.test.js`).
+
+**Entries boundary** (`scripts/lifecycle/entries/`):
+
+- Fat-script entry points, one per atomic workflow phase
+- Each file:
+  - Imports `readEnvelope` + `withISWC` from `lib/frame/`
+  - Exports `main(testOverrides = null)` function
+  - `main()` reads envelope (or uses overrides) + wraps work in `withISWC`
+  - Standard bottom block: `if (require.main === module) main().catch(err => { ... process.exit(1); });`
+- Enforced by `entry-structure.test.js`
+
+**Skill boundary** (`_bmad/bme/_ile/workflows/`):
+
+- BMAD SKILL.md + workflow.md + steps/ contract (per-skill SKILL.md)
+- `workflow.md` starts with step-00 envelope initialization
+- Steps invoke fat-scripts in `scripts/lifecycle/entries/` via Bash
+- Consumes `scripts/lifecycle/` one-way
+
+**Test boundary**:
+
+- Unit tests (`tests/lib/ile/`): import library functions directly; wrap in `runInISWC` test helper when AsyncLocalStorage context needed
+- Integration tests (`tests/integration/ile/`): use real I/O (per feedback memory); may spawn fat-scripts as subprocesses
+- Fixtures in `tests/fixtures/ile/{category}/`; tmp runtime output in `tests/tmp/ile/`
+
+**Documentation boundary** (`docs/ile/`):
+
+- `spec/` pairs 1:1 with `scripts/lifecycle/lib/data/schemas/`
+- `concepts/` has no schema pairing (prose-only architectural concepts)
+- `spec-conformance.test.js` asserts spec ↔ schema set-equality; `concepts/` out of scope
+
+### Integration Points with Existing Convoke Systems
+
+**Existing → ILE-1 touches:**
+
+| Existing system | ILE-1 integration |
+|---|---|
+| `scripts/convoke-doctor.js` | One-line edit: load `scripts/lifecycle/lib/doctor/registry.js` and run its checks after existing checks |
+| `scripts/update/migrations/registry.js` (install migrations) | Untouched. ILE-1's data-migration registry is a parallel instance with the same shape |
+| `scripts/update/lib/refresh-installation.js` | Extended seed list: `docs/ile/`, `scripts/lifecycle/`, `_bmad/bme/_ile/`, `_bmad/_config/ile.yaml`, `.eslintrc.js` ILE rules, `.gitignore` additions |
+| `scripts/update/lib/validator.js` | Extended to validate the new ILE skill namespace; existing validation paths unchanged |
+| `scripts/update/lib/config-merger.js` | Extended to seed `_bmad/_config/ile.yaml` stub via existing `mergeConfig()` pattern |
+| `_bmad/bme/_enhance/workflows/initiatives-backlog/v2.0.0/` | Wrapped, not replaced. ILE-1 intake/qualify skills delegate into existing backlog-mutation steps; physical relocation deferred |
+| `tests/lib/` (existing 475-test suite) | Untouched; ILE-1 adds `tests/lib/ile/` subtree |
+| `_bmad/_config/taxonomy.yaml` (I14 artifact governance) | ILE-1 artifact types register with taxonomy; no schema conflicts |
+| `package.json` | Extended: adds `ulid@^2.3.0`; verifies/adds `ajv@^8.12.0` |
+| `.eslintrc.js` | Extended: 3 rules — `no-floating-promises`, `require-await`, `no-return-await` |
+
+**File modifications beyond additions:**
+
+| File | Modification | Source |
+|---|---|---|
+| `project-context.md` | Append rules: `ile-skill-workflow-contract`, `ile-error-contract` | ISWC + ADR-8 |
+| `scripts/convoke-doctor.js` | Load ILE-1 doctor registry; run its checks | M-2 |
+| `scripts/update/lib/refresh-installation.js` | Extend seed list for ILE-1 trees + config + gitignore + eslintrc entries | Install integration |
+| `scripts/update/lib/config-merger.js` | Seed `_bmad/_config/ile.yaml` stub | M-9 |
+| `.eslintrc.js` | Add 3 ILE rules | D26 |
+| `.github/workflows/ci.yml` | Add `lint`, `ile-unit`, `ile-integration`, `ile-portability-matrix` jobs; extend `publish-gate.needs` | Step 5 CI |
+| `.gitignore` | Append `.ile/` and `tests/tmp/` | Runtime + fixture hygiene |
+| `package.json` | Add `ulid`; verify `ajv` | M-6 |
+| `_bmad/_config/bmm-dependencies.csv` | Append 3 ILE-1 rows | v6.3 A9 (M-4) |
+
+**`bmm-dependencies.csv` entries (ILE-1 stub):**
+
+```csv
+extension-name,path,version,scope
+convoke-ile,_bmad/bme/_ile/,1.0.0,skill-namespace
+convoke-lifecycle-lib,scripts/lifecycle/,1.0.0,runtime-library
+convoke-ile-spec,docs/ile/,1.0.0,documentation
+```
+
+### Uninstall Workflow Specification
+
+**Removed (default)**:
+
+- `_bmad/bme/_ile/` (all ILE-1 skills)
+- `scripts/lifecycle/` (all ILE-1 library + entries)
+- `docs/ile/` (spec + concepts)
+- ILE-1-specific ESLint rule entries from `.eslintrc.js` (surgical edit, not file replacement)
+- `ulid` from `package.json` dependencies (if added exclusively by ILE-1 — doctor verifies)
+- `_bmad/_config/ile.yaml` (operator config — uninstall prompts "Remove your ILE-1 config? (y/n)")
+
+**Preserved (audit record)**:
+
+- `.ile/change-log.jsonl` → renamed to `.ile/change-log-archived-{YYYY-MM-DD}.jsonl`
+- Archived logs remain readable by a future re-install's observability layer; S1–S4 unify active + archived logs as read-only history
+- Historical logs in `.ile/logs/` → retained (operator may purge manually)
+
+**Preserved on artifacts (non-destructive to non-ILE tooling)**:
+
+- Frontmatter `schemaVersion` field
+- Frontmatter `refs: [...]` arrays
+
+**Optional flag `--purge-runtime-state`**: fully removes `.ile/` (operator loses audit record). Prompts with path-safety explicit-word confirmation.
+
+**Warnings (non-fatal)**:
+
+- Orphan `refs:` frontmatter — warns; operator may want to keep for re-install
+- `bmm-dependencies.csv` ILE-1 entries — warns; operator removes manually per v6.3 A9 governance
+
+**Change Log entry at uninstall**: final entry with `{type: 'uninstall', at, archivedChangeLogPath}`. Written before archival.
+
+**Re-install behavior**:
+
+- Fresh `.ile/change-log.jsonl` created on first mutation after re-install
+- `/ile-sync` preamble scans `.ile/pending-reactive-check-*` breadcrumbs:
+  - Breadcrumb mtime > active Change Log creation → replay (normal flow)
+  - Breadcrumb mtime < active Change Log creation → archive to `.ile/breadcrumbs-archived-{YYYY-MM-DD}/` + WARN; NOT replayed (stale invocationIds from prior cycle)
+- `resolveConfig` logs WARN entries for unknown keys in `_bmad/_config/ile.yaml`; doctor reports `CONFIG-007`
+- Observability layer gracefully handles archived-log read failures (malformed lines logged WARN, skipped)
+
+### Schema-Field Enum Evolution Invariant
+
+Any change to the accepted values of a schema-bound enum field (e.g., `refs[].type`, `refs[].relationship`, `proposedMutation.type`) requires a data migration. The migration must either (a) transform historical values to new forms, or (b) explicitly tolerate historical values as valid aliases. Merely editing the JSON Schema to accept new values is insufficient — historical artifacts fail validation post-upgrade. Applies to all schemas in `scripts/lifecycle/lib/data/schemas/`.
+
+### Help.md Reference Shape
+
+Each ILE-1 skill's `help.md` follows this tagged-heading convention:
+
+```markdown
+# /ile-sync — help
+
+## What it does [beginner]
+One-paragraph description.
+
+## When to run it [beginner]
+Typical triggers and use cases.
+
+## Common options [intermediate]
+Flags and modifiers with short examples.
+
+## Recovery modes [intermediate]
+Crash-recovery behavior; breadcrumb semantics.
+
+## Advanced: internal flow [advanced]
+Preamble → migrate → replay → scan → batch review → postamble.
+```
+
+`help-registry.test.js` asserts every heading has exactly one of `[beginner] | [intermediate] | [advanced]` tag.
+
+### Seeded `_bmad/_config/ile.yaml`
+
+```yaml
+# _bmad/_config/ile.yaml
+# ILE-1 team-level configuration.
+# All keys are optional; uncomment + edit to override ILE-1 defaults.
+# Full default values: scripts/lifecycle/lib/config/config-defaults.js
+# Precedence (low → high):
+#   defaults < team (this file) < backlog frontmatter < initiative frontmatter < invocation flags
+
+# logLevel:
+#   default: info
+#   bmad-create-prd: debug
+# logRetentionDays: 30
+
+# validityContractTimeoutMs: 5000
+
+# lockStaleThresholds:
+#   activeMax: 300          # seconds; below → UNCERTAIN-001
+#   possiblyStaleMax: 900   # seconds; above → auto-override
+
+# observability:
+#   changeLogWindowDays: 90
+
+# proposalBatchThreshold: 3
+
+# envelopeTTLMinutes: 30    # cross-process context TTL
+```
+
+Seeded by `scripts/update/lib/config-merger.js`.
+
+### Data Flow (Skill Invocation — Hybrid Model)
+
+```
+User types /ile-sync
+    │
+    ▼
+Claude Code reads _bmad/bme/_ile/workflows/ile-sync/SKILL.md + workflow.md
+    │
+    ▼
+Step 00 — Envelope init (one-shot):
+    ULID=$(node -e "...") ; export ILE_INVOCATION_ID + ILE_SKILL_NAME + ...
+    │
+    ▼
+Step 01+ (per phase) — Claude invokes fat-script via Bash:
+    $ node scripts/lifecycle/entries/ile-sync-entry.js [phase-arg]
+        │
+        ▼
+    Fresh Node process spawned
+        │
+        ▼
+    readEnvelope() reads env vars + TTL check
+        │
+        ▼
+    withISWC(envelope, async () => {
+        │
+        ├─▶ Preamble:
+        │       • acquireLock() (if mutating)            [frame/lock.js]
+        │       • ensureSchemaCurrent()                  [migrations/schema-migrator.js]
+        │       • Check config hash drift → WARN + continue
+        │       • heartbeat.tick('preamble')
+        │       • buildIndex() if reads                  [data/index-builder.js]
+        │           └─▶ computeSignals() on index        [observability/observability.js]
+        │
+        ├─▶ Body:
+        │       • Mutation: write breadcrumb + atomic-write via atomic-write.js
+        │       • Periodic heartbeat.tick(label)
+        │       • Errors: throw ILEError(code, {context, ...})
+        │
+        ├─▶ Postamble (success):
+        │       • detectReactiveProposals() if mutating
+        │       • Orchestrator loop: render + y/n + applyProposal + append Change Log
+        │       • Batch UX for >3 proposals
+        │       • clearBreadcrumb() + releaseLock()
+        │
+        └─▶ Postamble (error):
+            • Lock release (always)
+            • Leave breadcrumb for /ile-sync recovery
+            • ILEError serialized to stderr (JSON); process.exit(1)
+    })
+        │
+        ▼
+    Process exits → env vars persist for next Bash call
+    │
+    ▼
+Claude proceeds to next workflow.md step (or end)
+```
+
+### Compliance Table Updates from Step 6
+
+New N-rows from Step 6 passes:
+
+| Pattern | N/L | Test file | Specific assertion | Affected |
+|---|---|---|---|---|
+| Frame-boundary direction | N | `frame-boundary.test.js` | grep for `frame/*` imports outside `frame/` itself or `_bmad/bme/_ile/workflows/` — zero matches | all lib subtrees |
+| Doctor checks via registry | N | `doctor-registry-conformance.test.js` | every `.js` in `doctor/` (except `registry.js`) self-registers; registry enumeration matches directory | Doctor integration |
+| Single team-config file | N | `ile-config-single-source.test.js` | exactly one file matches `_bmad/_config/ile*.yaml`; doctor reports multiple as `CONFIG-008` | `_bmad/_config/` |
+| Unknown config keys warned | N | `unknown-config-keys.test.js` | `resolveConfig` fixture with unknown keys emits WARN matching expected key names | `resolveConfig` + logger |
+| Workflow.md envelope initialization | N | `iswc-workflow-header.test.js` | every `workflow.md` starts with step-00 matching envelope-init pattern | all skill workflows |
+| Fat-script entry structure | N | `entry-structure.test.js` | every `entries/*.js` exports `main`, has `require.main === module` guard, `main` accepts optional test overrides | fat-script entries |
+| Split: workflow-step naming | N | `workflow-structure.test.js` | filenames match `/^step-\d{2}[a-z]?-[a-z0-9-]+\.md$/` | all skill step dirs |
+| Split: test-layout directory presence | N | `test-layout.test.js` | `tests/lib/ile/`, `tests/integration/ile/`, `tests/fixtures/ile/` present; no flat-pattern files | test tree |
+| Split: help.md presence per skill | N | `help-presence.test.js` | every skill dir has `help.md` | all skills |
+
+### New/Updated Error Codes Surfaced in Step 6
+
+Beyond the 20 seed codes (PRD FR48), architecture-phase discovery added:
+
+- `CONFIG-006` (INFO) — archived logs detected at re-install
+- `CONFIG-007` (WARN) — unknown config keys
+- `CONFIG-008` (WARN) — multiple `_bmad/_config/ile*.yaml` files
+- `CONFIG-009` (WARN) — cumulative config drift within workflows
+
+Total CONFIG codes: 002–009 (7 codes). `registerCode` discipline (ADR-8) governs. Per PRD FR48, any addition goes through the error-registry at code time.
+
+### To Incorporate in Step 7 (Validation)
+
+- Coherence check: all 26+ N-row conformance tests exist as planned test files
+- Coverage check: every Step 4 ADR has at least one enforcement mechanism (test or runtime gate)
+- Coverage check: every Step 5 decision has at least one compliance-table row
+- Coverage check: every PRD FR maps to at least one component/directory in the tree
+- Coverage check: TAC1–TAC4 fixtures are scoped at appropriate levels
+- Discovery tasks flagged for sprint 0:
+  - Verify `scripts/bmad-validate-exports.js` existence (M-5)
+  - Verify `ajv` presence in `package.json` (M-6)
+  - Confirm BMAD v6.3 skill-namespace `SKILL.md` semantics vs. per-skill `SKILL.md` (M-3)
+
 
