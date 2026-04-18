@@ -1,6 +1,6 @@
 # Story 1.4: Author The Convoke Operator Covenant
 
-Status: review
+Status: done
 
 ## Story
 
