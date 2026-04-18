@@ -5,6 +5,13 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of oc-1-2-taxonomy-extension (2026-04-18)
+
+- **Duplicate `DEFAULT_ARTIFACT_TYPES` across two files** — `scripts/migrate-artifacts.js:135` and `scripts/update/lib/taxonomy-merger.js:11` maintain identical hardcoded arrays that must stay in lockstep with each other and with `_bmad/_config/taxonomy.yaml`. Adding a new artifact_type requires editing three locations symmetrically — a drift bug waiting to happen. Refactor to a single source (either a shared constant module or reading from the shipped yaml at startup). Pre-existing architectural debt; surfaced by Blind Hunter during Round 1 review.
+- **`generateGovernanceADR` hardcodes "Artifact types (21)"** — `scripts/lib/artifact-utils.js:2033` contains a template literal claiming 21 types and listing only 21 names. After recent additions (`note`, now `covenant`), the committed `_bmad/_config/taxonomy.yaml` has 23 types. Every governance ADR produced by a migration `--apply` now misreports the type count and omits both new types. Fix: derive the list and count from the taxonomy passed into `generateGovernanceADR` instead of hardcoding. Pre-existing drift; surfaced by Edge Case Hunter during Round 1 review.
+
+---
+
 ## 🚨 URGENT — phantom test recurrence detected (2026-04-09)
 
 **This is the C1 pattern from the original [astonishment report](../test-artifacts/2026-04-08-astonishment-report.md)
