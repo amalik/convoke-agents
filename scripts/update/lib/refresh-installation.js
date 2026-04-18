@@ -6,7 +6,7 @@ const yaml = require('js-yaml');
 const YAML = require('yaml'); // Comment-preserving YAML library (ag-7-1: I29). Use for WRITE sites that need to preserve comments. js-yaml stays for read-only consumers.
 const { getPackageVersion, assertVersion } = require('./utils');
 const configMerger = require('./config-merger');
-const { AGENTS, AGENT_FILES, AGENT_IDS, WORKFLOW_NAMES, USER_GUIDES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES, EXTRA_BME_AGENTS } = require('./agent-registry');
+const { AGENTS, AGENT_FILES, AGENT_IDS, WORKFLOW_NAMES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES, EXTRA_BME_AGENTS } = require('./agent-registry');
 
 /**
  * Refresh Installation for Convoke
@@ -523,17 +523,21 @@ async function refreshInstallation(projectRoot, options = {}) {
     ].map(csvEscape).join(',');
   }
 
+  // U8: filter out excluded agents so manifest rows don't point at wrappers the
+  // stale-cleanup loop (§6) just removed. Left in, rows become dangling pointers.
+  const activeVortexAgents = AGENTS.filter(a => !vortexExcluded.includes(a.id));
+  const activeGyreAgents = GYRE_AGENTS.filter(a => !gyreExcluded.includes(a.id));
   let bmeRows;
   if (isV610) {
     bmeRows = [
-      ...AGENTS.map(a => buildAgentRow610(a, '_vortex')),
-      ...GYRE_AGENTS.map(a => buildAgentRow610(a, '_gyre')),
+      ...activeVortexAgents.map(a => buildAgentRow610(a, '_vortex')),
+      ...activeGyreAgents.map(a => buildAgentRow610(a, '_gyre')),
       ...EXTRA_BME_AGENTS.map(buildExtraBmeAgentRow610),
     ];
   } else {
     bmeRows = [
-      ...AGENTS.map(a => buildAgentRowLegacy(a, '_vortex')),
-      ...GYRE_AGENTS.map(a => buildAgentRowLegacy(a, '_gyre')),
+      ...activeVortexAgents.map(a => buildAgentRowLegacy(a, '_vortex')),
+      ...activeGyreAgents.map(a => buildAgentRowLegacy(a, '_gyre')),
       ...EXTRA_BME_AGENTS.map(buildExtraBmeAgentRowLegacy),
     ];
   }
@@ -549,7 +553,16 @@ async function refreshInstallation(projectRoot, options = {}) {
   await fs.ensureDir(guidesTarget);
 
   if (!isSameRoot) {
-    for (const guide of USER_GUIDES) {
+    // U8: user guides are named after each agent (e.g., NOAH-USER-GUIDE.md). Iterate
+    // AGENTS so we can match guides to agent IDs and skip excluded ones — a guide
+    // without its agent is dead docs.
+    for (const agent of AGENTS) {
+      const guide = `${agent.name.toUpperCase()}-USER-GUIDE.md`;
+      if (vortexExcluded.includes(agent.id)) {
+        changes.push(`Skipped excluded guide: ${guide}`);
+        if (verbose) console.log(`    Skipped excluded guide: ${guide}`);
+        continue;
+      }
       const src = path.join(guidesSource, guide);
       const dest = path.join(guidesTarget, guide);
 
