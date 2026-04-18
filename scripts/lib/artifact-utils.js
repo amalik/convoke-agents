@@ -1996,10 +1996,13 @@ function generateRenameMap(renamedEntries) {
  *
  * @param {string} date - ISO date string (YYYY-MM-DD)
  * @param {{renamedCount: number, injectedCount: number, linksUpdated: number, scopeDirs: string[]}} migrationStats
+ * @param {import('./types').TaxonomyConfig} taxonomy - Loaded taxonomy (source of truth for platform/type lists and counts)
  * @returns {string} Markdown content for the ADR file
  */
-function generateGovernanceADR(date, migrationStats = {}) {
+function generateGovernanceADR(date, migrationStats = {}, taxonomy) {
   const { renamedCount = 0, injectedCount = 0, linksUpdated = 0, scopeDirs = [] } = migrationStats;
+  const platformIds = taxonomy.initiatives.platform;
+  const artifactTypes = taxonomy.artifact_types;
   return `# Architecture Decision Record: Artifact Governance Convention
 
 **Status:** ACCEPTED
@@ -2028,9 +2031,9 @@ All artifacts within \`_bmad-output/\` follow the governance naming convention:
 
 ## Taxonomy
 
-**Platform initiatives (8):** vortex, gyre, bmm, forge, helm, enhance, loom, convoke
+**Platform initiatives (${platformIds.length}):** ${platformIds.join(', ')}
 
-**Artifact types (21):** prd, epic, arch, adr, persona, lean-persona, empathy-map, problem-def, hypothesis, experiment, signal, decision, scope, pre-reg, sprint, brief, vision, report, research, story, spec
+**Artifact types (${artifactTypes.length}):** ${artifactTypes.join(', ')}
 
 **Aliases (migration-specific):** Historical name variants mapped to canonical initiative IDs during migration (e.g., strategy-perimeter -> helm, team-factory -> loom).
 
