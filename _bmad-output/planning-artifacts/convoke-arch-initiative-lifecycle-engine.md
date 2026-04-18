@@ -4,6 +4,7 @@ stepsCompleted:
   - step-02-context
   - step-03-starter
   - step-04-decisions
+  - step-05-patterns
 inputDocuments:
   - _bmad-output/planning-artifacts/convoke-brief-initiative-lifecycle-engine.md
   - _bmad-output/planning-artifacts/convoke-brief-initiative-lifecycle-engine-distillate.md
@@ -499,4 +500,322 @@ Three crash windows, distinct handling:
 - **File-watch or git-hook reactive triggers** (ADR-2 additive layer) — add if out-of-band edit frequency justifies proposal-queue UX.
 - **Custom ESLint rule for error codes** (ADR-8 Option B) — add only if test-based enforcement proves inadequate in practice.
 - **Reactive-check coalescing across chained invocations** (ADR-2) — collapse 3 back-to-back state-mutating skills into one end-of-chain proposal session.
+
+## Implementation Patterns & Consistency Rules
+
+24 decisions across 4 clusters, resolved in sequence **3 → 1 → 2 → 4** (interface contracts first to unblock component parallelization, per Party Mode Finding 3). Each pattern is marked **N (normative, binds all agents)** or **L (local, binds one module's internals)**. The Agent Compliance Table at the end is the audit reference for code reviewers.
+
+Three elicitation/party-mode passes refined the patterns: Path-1 reverse-engineering hardened soft enforcement rows into concrete test names; Path-2 surfaced three missing patterns (logger, paths API, invocationId propagation); a third Party Mode pass added AsyncLocalStorage fallback spec, disambiguated write-durability vs. write-exclusivity, added a test helper, refined grep-discipline scoping, and introduced the concept-docs location alongside spec docs.
+
+### Cluster 3 — Interface Contracts
+
+#### 21. Validity Contract Representation (N)
+
+Pure functions registered via `registerContract(name, evaluatorFn, metadata)`.
+
+- **Location**: `scripts/lifecycle/lib/validity-contracts/` — one `.js` file per contract
+- **Registry**: `scripts/lifecycle/lib/validity-contracts/registry.js` — append-only (mirrors error-registry, migration-registry idioms)
+- **Signature**: `evaluatorFn: (artifact, index) => { status: 'complete' | 'uncertain' | 'invalid', reasons: string[], missing?: string[] }`
+- **Metadata**: `{ description, appliesTo, category }`
+- **Growth-phase defer**: YAML-declarative shortcuts compiled to pure functions at registry-load
+
+#### 22. Reactive Detector Output Shape (N)
+
+`detectReactiveProposals(index, triggerContext) => Proposal[]`.
+
+- Single direct consumer: Component 4 (orchestrator). Observability and portfolio render consume Change Log / artifact state, not detector output.
+- `triggerContext`: `{ invokingSkill, invocationId, mutatedArtifacts? }`
+- Empty array = "checked, nothing to propose" (distinct from undefined/null, which is an ISWC violation)
+- Deterministic ordering: sort by `targetArtifact` then `proposedMutation.type`
+- Library: `scripts/lifecycle/lib/reactive-detector.js`
+
+#### 23. Migration Function Signature (N)
+
+Adopt install-migration signature from `scripts/update/migrations/*.js` verbatim.
+
+- Module shape: `{ name, fromVersion, breaking, description, async preview(), async apply(projectRoot) }`
+- Location: `scripts/lifecycle/migrations/` (parallel structure, distinct instance from install migrations)
+- Name format: `ile-data/{fromDataSchema}-to-{toDataSchema}` (data-schema semver)
+- Tracking: applied migrations logged to backlog's Change Log (adapted from install migrations' config.yaml tracking)
+- Registry API mirrors install-migration registry: `getMigrationsFor`, `hasMigrationBeenApplied`, `getBreakingChanges`, `getAllMigrations`
+
+#### 25. `ILEError` `details` Shape (N)
+
+Minimum common base + documented per-code extensions.
+
+- Base shape: `details: { context: string, ...codeSpecific }` — `context` is a one-line description of what was being attempted
+- Auto-injection: `ILEError` constructor merges current `invocationId` from ISWC frame context into `details._invocationId`
+- Per-code extensions documented in registry entry (`detailsShape` field)
+- Log serialization: full `details` JSON-serialized in debug log per Decision 14
+
+#### 26. Async/Sync Contract Convention (N)
+
+Sync-when-pure, async-when-I/O. ESLint enforces; naming signals at read time.
+
+- Sync: `registerContract`, `registerCode`, `evaluate`, `createProposal`, `renderProposal`, `ILEError` construction, pure helpers
+- Async: `readArtifact`, `writeArtifactAtomic`, `buildIndex`, `ensureSchemaCurrent`, `applyProposal`, `heartbeat.tick`, `acquireLock`, all skill-level entry points
+- Ambiguous → default async
+- ESLint rules: `no-floating-promises`, `require-await`, `no-return-await`
+- Naming: I/O uses verb+object; pure is short; no `Async` suffix
+- Integration tests exercise async paths with real I/O (not mocked) per feedback memory
+
+### Cluster 1 — Layout & Namespace
+
+#### 2. Skill Directory Layout (N)
+
+`_bmad/bme/_ile/workflows/{skill-name}/` — dedicated ILE namespace.
+
+**Namespace-decision rationale**: Convoke-native (`_bmad/bme/_ile/`), not upstream BMAD. ILE-1 is Convoke's governance-capability extension layer.
+
+Existing `_bmad/bme/_enhance/workflows/initiatives-backlog/v2.0.0/` wrapped by ILE-1 skills; physical relocation deferred.
+
+#### 3. Test Layout (N)
+
+Extends existing `tests/lib/` pattern:
+
+- `tests/lib/ile/*.test.js` — unit tests
+- `tests/integration/ile/*.test.js` — integration tests
+- `tests/lib/ile/test-helpers.js` — shared test helpers, including `runInISWC(overrides, testFn)` to wrap tests in AsyncLocalStorage context without boilerplate
+- `tests/fixtures/ile/{category}/` — categorized fixtures:
+  - `uncertain-case-fixtures/` (TAC1)
+  - `round-trip-fixtures/` (TAC3)
+  - `consulting-scale-observability/` (ADR-3 NFR1/2 fixture)
+  - `uninstall-partial-states/`
+  - `git-workflow-states/`
+  - `portability-golden/{platform}/` (NFR21)
+
+**Test helper pattern**:
+
+```javascript
+const { runInISWC } = require('./test-helpers');
+test('evaluator handles missing field', async () => {
+  await runInISWC({}, async () => {
+    const result = evaluate(fixture, index);
+    assert.equal(result.status, 'uncertain');
+  });
+});
+```
+
+#### 28. Lane Taxonomy Registry (N)
+
+Const enum in `scripts/lifecycle/lib/lanes.js`:
+
+```javascript
+const LANES = Object.freeze({
+  INTAKE: 'Intake',
+  QUALIFYING_GATE: 'Qualifying Gate',
+  BUG: 'Bug',
+  FAST: 'Fast',
+  INITIATIVE: 'Initiative',
+});
+module.exports = { LANES };
+```
+
+- Canonical source for all lane references
+- `convoke-doctor` flags backlogs with lane values outside the enum as `CONFIG-003`
+- Operator customization deferred to Growth
+
+#### 30. BMAD Step-File Naming (N)
+
+`step-NN-description.md` — matches upstream BMAD convention.
+
+- `NN`: 2-digit zero-padded; `description`: kebab-case
+- Variants allowed for branching steps (e.g., `step-01b-continue.md`)
+- Each skill's `workflow.md` loads steps via `load step: ./steps/step-NN-description.md`
+
+### Cluster 2 — Artifact Conventions
+
+#### 4. Frontmatter Schema Shape (N)
+
+JSON Schema via Ajv, runtime-validated.
+
+- Schemas: `scripts/lifecycle/lib/schemas/{artifact-type}.schema.json`
+- Validator: Ajv with `strict: true`, `useDefaults: false`
+- Component 1 validates at artifact-load time; failure → `CONFIG-004` with failing field in `details`
+
+#### 5. Change Log Format (N)
+
+JSONL at `.ile/change-log.jsonl` (one JSON object per line, append-only).
+
+- Common fields: `{at, invocationId, skill, actor, type}` + type-specific fields
+- Entry types: `proposal-decision`, `schema-migration`, `lane-move`, `force-unlock`, `doctor-check-run`, others as needed
+- Atomic append: write-to-tmp → append → rename (NFR13)
+- Human access via `/ile-log` query skill or observability summary
+
+#### 20. Markdown Table Formatting (L)
+
+Hand-aligned via `scripts/lifecycle/lib/markdown.js` `renderTable(rows, options)`. Generator functions produce aligned output; not CI-enforced.
+
+#### 24. Schema-Version Missing-Field Semantics (N)
+
+Treat as implicit v0; migrate gracefully via `ile-data/implicit-v0-to-1.0.0` migration. One Change Log entry per migrated artifact.
+
+#### 27. Cross-Skill Artifact Reference Format (N)
+
+Both — markdown link for humans, frontmatter `refs` for machines; frontmatter canonical.
+
+- Frontmatter shape: `refs: [{to, type, relationship}]`
+- TAC3 tests + S4 observability read `refs` only
+- Markdown body links are presentational
+- Doctor flags orphan refs as `CONFIG-005`
+
+#### 29. ISO Date Format (N)
+
+`new Date().toISOString()` uniformly. UTC only. Format: `2026-04-19T10:15:32.445Z`.
+
+#### 31. Canonical Artifact-Spec Document (N)
+
+Structured at `docs/ile/`:
+
+- `docs/ile/spec/` — **artifact types only** (backlog, change-log, proposal, brief, prd, ir, architecture, etc.); each `{type}.md` pairs with a JSON Schema in `scripts/lifecycle/lib/schemas/`
+- `docs/ile/concepts/` — **architectural concepts** (iswc, crash-recovery-model, lane-taxonomy, observability-model, etc.); prose-only, no schema pairing
+- `docs/ile/spec/index.md` — overview; links into both `spec/` and `concepts/`
+- `spec-conformance.test.js` scope: set-equality between `spec/*.md` and `schemas/*.schema.json` only; `concepts/` is outside the test's scope
+
+### Cluster 4 — Configuration & Runtime Conventions
+
+#### 9. Heartbeat `tick()` Label Convention (L)
+
+Free-form strings with `phase:detail` colon-separated namespacing.
+
+- Examples: `index-build:parsing`, `migration:applying:ile-data-1.0.x-to-1.1.0`, `writes:change-log-append`, `proposal-render:batch:3-of-12`
+- Labels for diagnosis, not interface contracts
+
+#### 12. Configuration Precedence (N)
+
+Highest-precedence-wins layered merge via `deepMerge(defaults, team, backlog, initiative, invocation)`:
+
+1. ILE-1 defaults (`scripts/lifecycle/lib/config-defaults.js`)
+2. Team-level (`_bmad/_config/ile.yaml`)
+3. Backlog-level (backlog frontmatter, `ile:` namespace)
+4. Per-initiative (initiative frontmatter, `ile:` namespace; scope: that initiative only)
+5. Per-invocation flags (CLI args / skill parameters)
+
+API: `resolveConfig(invocationContext)` in `scripts/lifecycle/lib/config.js`.
+
+#### 14. Debug Log Format + Rotation (N)
+
+JSONL lines at `.ile/logs/{YYYY-MM-DD}.jsonl`; daily rotation; local-only.
+
+- Entry shape: `{ts, level, invocationId, skill, phase, msg, context}`
+- Verbosity: default `info`; `--verbose` lifts to `debug`; per-skill override via `logLevel.{skill-name}` config key
+- Rotation: daily file per UTC date; 30-day retention (`logRetentionDays` configurable)
+- Cleanup: `/ile-logs-purge` skill
+- Local-only: `.ile/` git-ignored via seeded `.gitignore`
+
+**AsyncLocalStorage fallback**: when `ileContext.getStore()` returns undefined (module-load-time diagnostics, tests not wrapping in `ileContext.run`), logger emits with `invocationId: 'bootstrap'` and `skill: null`. Logger NEVER throws; failure to write falls back to console.error with intended payload.
+
+#### 15. Progressive-Disclosure Help UX (N)
+
+Rule-based by `user_skill_level` + `--verbose` override.
+
+- Help items tagged with minimum skill level (`beginner | intermediate | advanced`)
+- Default hides advanced unless `user_skill_level: advanced` OR `--verbose`
+- Location: `_bmad/bme/_ile/workflows/{skill-name}/help.md` per skill
+- Registry: per-skill help loaders register with central dispatcher; `explain <concept>` routes to appropriate loader
+
+#### 19. Invocation ID Format (N)
+
+ULID (Crockford-base32, 26 chars, time-sortable).
+
+- Dependency: `ulid` npm package
+- Format: `01HQXK3F7Y...` (26 chars)
+- Usage: `invocationId` in every Change Log entry, debug log line, proposal object, lock file, crash breadcrumb
+- Generation: `withISWC()` creates at skill entry; propagated via AsyncLocalStorage (see Missing 3)
+
+### Missing Patterns (Cluster 2 augmentation)
+
+#### M1. Logger Instantiation (N)
+
+Single shared logger at `scripts/lifecycle/lib/logger.js`; imported directly; auto-includes current invocationId from AsyncLocalStorage (see M3).
+
+- API: `logger.info(msg, context?)`, `logger.debug(...)`, `logger.warn(...)`, `logger.error(...)`
+- Each call reads `invocationId` + `skill` from `ileContext.getStore()` transparently
+- Writes to `.ile/logs/{YYYY-MM-DD}.jsonl` per Decision 14
+- No per-module instances (overhead without benefit at our scale)
+- Fallback behavior per Decision 14 AsyncLocalStorage fallback clause
+
+#### M2. Paths API (N)
+
+`scripts/lifecycle/lib/paths.js` is the canonical source for all path construction:
+
+```javascript
+getProjectRoot()                              // wraps existing findProjectRoot
+getBacklogPath(projectRoot)                   // finds backlog in planning-artifacts
+getChangeLogPath(projectRoot)                 // .ile/change-log.jsonl
+getLockPath(projectRoot, backlogName)         // .ile/{backlogName}.lock
+getLogPath(projectRoot, date)                 // .ile/logs/{YYYY-MM-DD}.jsonl
+getBreadcrumbPath(projectRoot, invocationId)  // .ile/pending-reactive-check-{invocationId}
+getSpecDir(projectRoot)                       // docs/ile/spec/
+getConceptsDir(projectRoot)                   // docs/ile/concepts/
+getSchemaDir(projectRoot)                     // scripts/lifecycle/lib/schemas/
+getPendingBreadcrumbGlob(projectRoot)         // for /ile-sync breadcrumb scanning
+```
+
+- No `process.cwd()` reads (per `no-process-cwd-in-libs` rule)
+- All ILE-1 code MUST use helpers; direct path construction forbidden
+- Enforcement: `paths-discipline.test.js` — literals `.ile/`, `docs/ile/`, `change-log.jsonl`, `pending-reactive-check-`, `logs/`, etc. appear only in allow-listed locations (`paths.js` + `tests/fixtures/ile/**` + `docs/**`)
+
+#### M3. invocationId Propagation (N)
+
+AsyncLocalStorage (Node.js stdlib, 16+).
+
+- `withISWC()` wraps skill body in `ileContext.run({invocationId, skillName, backlogPath, config}, skillBody)`
+- Downstream code (`ILEError`, `logger`, `heartbeat.tick`, proposal creation) reads `ileContext.getStore().invocationId` transparently
+- No explicit context threading through function signatures
+- Context store also carries `skillName`, `backlogPath`, resolved config
+- Test helper `runInISWC(overrides, testFn)` (Cluster 1 Decision 3) provides ISWC-wrapped context for unit tests
+
+### Project-Context Rules Introduced
+
+Two consolidated rules (replacing earlier proposed separate rules):
+
+1. **`ile-skill-workflow-contract`** (ISWC, from Step 4) — all ILE-1 skills wrap via `withISWC()`; exemptions documented inline.
+2. **`ile-error-contract`** (ADR-8, from Step 4) — all ILE-1 error paths use `ILEError`; codes registered with `detailsShape` before use.
+
+### Agent Compliance Table
+
+Normative patterns (N), their specific test files + assertions, and affected components. Reviewers use this table to audit contributions.
+
+| Pattern | N/L | Test file | Specific assertion | Affected |
+|---|---|---|---|---|
+| `withISWC` wrapper for all skills | N | `iswc-conformance.test.js` | every ILE-1 `workflow.md` calls `withISWC()`; exemptions documented | all skills |
+| ULID invocation IDs | N | `iswc-conformance.test.js` | 100 generated IDs match `/^[0-9A-HJKMNP-TV-Z]{26}$/` and are time-sortable | ISWC preamble |
+| AsyncLocalStorage propagation | N | `iswc-conformance.test.js` | `ileContext.getStore()` returns valid `{invocationId, skillName, backlogPath}` inside wrapped body | all libs |
+| `ILEError` emission via registered codes | N | `error-contract.test.js` | bidirectional: all string-literal `CATEGORY-NNN` codes in source are registered; all registered codes are referenced | all libs |
+| `detailsShape` documented per code | N | `error-contract.test.js` (extension) | every registered code has a `detailsShape` field | error registry |
+| **Write durability** (atomic write-to-tmp → rename) | N | `atomic-write-conformance.test.js` | grep for direct `fs.writeFile*`/`fs.appendFile*` outside `atomic-write.js` helper — zero matches | all write paths |
+| **Write exclusivity** (lock via ISWC) | N | `iswc-conformance.test.js` | state-mutating workflows wrapped in `withISWC({mutating: true})`; lock acquired before first mutation | all write paths |
+| Heartbeat coverage in long ops | N (partial) | `heartbeat-coverage.test.js` (integration) | long-running skills (migration, observability compute, `/ile-sync`) under consulting-scale fixture update lock `lastHeartbeat` ≥ N times | long-running skills |
+| Lane references use `LANES` enum | N | `lane-enum-conformance.test.js` | string literals matching lane names appear only in `lanes.js` + tests + fixtures | Components 1, 3, 5 |
+| Validity contracts via `registerContract` | N | `validity-contract-registry.test.js` | every `.js` in `validity-contracts/` registers itself; registry enumeration matches directory listing | Component 3 |
+| Detector returns `Proposal[]` | N | `reactive-detector.test.js` | `detectReactiveProposals()` returns array (possibly empty); empty-array semantics preserved; deterministic ordering | Component 2 |
+| Migration modules match install-migration shape | N | `migration-registry-conformance.test.js` | every module in `scripts/lifecycle/migrations/` exports `{name, fromVersion, breaking, description, preview, apply}` | Component 7 |
+| Async/sync discipline | N | ESLint via CI lint job | `no-floating-promises`, `require-await`, `no-return-await` rules enabled; build fails on error | all libs |
+| JSON Schema validation at load | N | `schema-enforcement.test.js` | loading invalid fixture → `CONFIG-004` raised with failing field in `details` | Component 1 |
+| Change Log JSONL format | N | `change-log-schema.test.js` | (a) path grep: `change-log.jsonl` literal only in allow-list. (b) per-line schema validation of fixture Change Logs | all write paths |
+| `refs` orphan check | N | `doctor-refs.test.js` | orphan-ref fixtures cause doctor to report `CONFIG-005`; fully-resolved fixtures pass | all artifacts |
+| `toISOString()` for timestamps | N | `date-format-conformance.test.js` | forbidden-pattern regex flags `Date.now()`, `.toString()` / `.toLocaleString()` on Date, bare `new Date()` without `.toISOString()` | all components |
+| Spec doc ↔ JSON Schema correspondence | N | `spec-conformance.test.js` | set-equality of files in `docs/ile/spec/` and `scripts/lifecycle/lib/schemas/` | docs + schemas |
+| Config precedence via `resolveConfig` | N | `config-read-discipline.test.js` + `config-precedence.test.js` | (a) grep: `yaml.load`/`JSON.parse` of config-like paths outside `config.js` — zero matches. (b) layered-fixture integration test verifies Decision 12 order | all consumers |
+| JSONL debug log format | N | `debug-log-schema.test.js` | fixture skill under instrumentation; each log line parses as JSON + matches `debug-log-entry.schema.json` | all libs |
+| Progressive-disclosure help by skill level | N | `help-registry.test.js` | every skill's `help.md` items tagged with `beginner`/`intermediate`/`advanced`; no untagged items | user-facing skills |
+| Workflow-step naming | N | `skill-structure.test.js` | filenames match `/^step-\d{2}[a-z]?-[a-z0-9-]+\.md$/` | all skill dirs |
+| Test-layout convention | N | `skill-structure.test.js` (extension) | `tests/lib/ile/`, `tests/integration/ile/`, `tests/fixtures/ile/` present; no `tests/lib/ile-*.test.js` flat-pattern files | all test files |
+| Logger via shared `logger.js` | N | `logger-discipline.test.js` | grep for direct `fs.appendFile*` to `.ile/logs/` outside `logger.js` — zero matches | all libs |
+| Paths via `paths.js` helpers | N | `paths-discipline.test.js` | literals `.ile/`, `docs/ile/`, `change-log.jsonl`, `pending-reactive-check-`, `logs/` appear only in allow-listed locations (`paths.js`, `tests/fixtures/ile/**`, `docs/**`) | all libs |
+| Test helper `runInISWC` available | L | (documented pattern; not asserted) | tests use `runInISWC` to set up AsyncLocalStorage context without boilerplate | all ile tests |
+| Markdown table hand-alignment via `renderTable()` | L | (convention; generator functions only) | — | markdown generators |
+| Heartbeat label format `phase:detail` | L | (convention; diagnosis aid) | — | long-running bodies |
+| Heartbeat tick-per-loop-iteration | L | (convention; unenforceable without AST) | — | long-running loops |
+
+**Summary**: 26 N-rows with concrete test files + assertions; 4 L-rows with documented unenforceability.
+
+### To Incorporate in Step 6 (Project Structure)
+
+- **CI pipeline additions**: `.github/workflows/ci.yml` gains `lint` job running `npm run lint` — required before `publish-gate` job. ESLint config `.eslintrc.js` enables the three rules from Decision 26.
+- **Package dependencies**: `ulid` npm package added to `dependencies` (M3 runtime); `ajv` already present or added to `dependencies` (Decision 4).
+- **Git-ignore seeding**: `.ile/` and any `.ile.lock` pattern added to the installation's seeded `.gitignore` entries.
+- **Conformance test suite**: 16 new test files listed in the Compliance Table; scaffolded in sprint 0 / early sprint 1.
+
 
