@@ -48,6 +48,7 @@ last_updated: 2026-04-18
 # 2026-04-18: oc-1-1-covenant-audit moved review → done (Round 3 code review complete, decisions D1a-D5a accepted, 46/56 = 82% compliance, no bottleneck, AC #3/#4 amended)
 # 2026-04-18: oc-1-3-checklist-derivation moved backlog → in-progress → review (Checklist spec authored at convoke-spec-covenant-compliance-checklist.md, 7 rows, 3 columns, doctor green)
 # 2026-04-18: oc-1-3-checklist-derivation moved review → done (Rounds 1-3 code review complete; Round 2 structural rewrite + Round 3 patches applied; 5 deferred findings triaged to backlog per no-R4 rule)
+# 2026-04-18: oc-1-4-covenant-authoring moved backlog → in-progress → review (Covenant authored via Paige persona; 8 sections including axiom+JTBD+foundational-vocabulary+scar-stories+3-audience-guidance+7-rights+derivation+compliance-guidance; self-compliance gate walked with 2 inline fixes; doctor green)
 project: BMAD-Enhanced
 project_key: NOKEY
 tracking_system: file-system
@@ -418,7 +419,7 @@ development_status:
   oc-1-1-covenant-audit: done
   oc-1-2-taxonomy-extension: done
   oc-1-3-checklist-derivation: done
-  oc-1-4-covenant-authoring: in-progress
+  oc-1-4-covenant-authoring: review
   oc-1-5-adoption-surface: backlog
   oc-epic-1-retrospective: optional
 
