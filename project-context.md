@@ -2,6 +2,8 @@
 
 Rules and conventions that BMAD dev agents and contributors must follow when working in this repository. These are encoded here (not just in retros) so that the dev agent reads them before writing code.
 
+> **Authoring a new skill, workflow, or agent under `_bmad/bme/`?** Before anything else, read [The Convoke Operator Covenant](_bmad-output/planning-artifacts/convoke-covenant-operator.md) — one axiom and seven commitments every Convoke skill must honor — and self-check against the [Covenant Compliance Checklist](_bmad-output/planning-artifacts/convoke-spec-covenant-compliance-checklist.md). The rule is `covenant-compliance-for-convoke-skills` below. Covenant compliance is an architectural concern, not a styling concern: it's what makes a `_bmad/bme/` skill a *Convoke* skill rather than a generic one.
+
 ---
 
 ## Rule: test-fixture-isolation
@@ -64,6 +66,20 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 **Why.** Convoke is an extension of BMAD Method, and keeping the boundaries clean prevents accidental upstream contamination and makes future merges tractable. See `feedback_namespace_audit.md` in auto-memory.
 
 **How to apply.** Include the section in the story. If the choice isn't obvious (mixed-namespace work, refactoring that crosses the boundary), escalate to the user before coding.
+
+---
+
+## Rule: covenant-compliance-for-convoke-skills
+
+**Statement.** Before authoring a new skill, workflow, or agent under `_bmad/bme/` (Convoke's owned namespace), the author must read [The Convoke Operator Covenant](_bmad-output/planning-artifacts/convoke-covenant-operator.md) and self-check the deliverable against the [Covenant Compliance Checklist](_bmad-output/planning-artifacts/convoke-spec-covenant-compliance-checklist.md) before marking the story ready-for-review.
+
+**Why.** The Covenant encodes one axiom ("the operator is the resolver") and seven Operator Rights that distinguish a Convoke skill from a generic skill. Authoring without consulting it produces skills that look structurally correct but violate the operator-experience standard the rest of the ecosystem relies on. The baseline audit (2026-04-18) found 10 violations across 56 cells (~82% compliance) in existing skills — all of them introduced by authors who never had the Covenant to consult. Making the Covenant required reading at the point of authorship is how we stop adding new violations while we retrofit the old ones.
+
+**How to apply.**
+- **Authoring a new `_bmad/bme/` skill or workflow.** Read the Covenant before you start. When drafting the deliverable, work through the Checklist's OC-R1 through OC-R7 rules and confirm each either PASSes or has a declared N/A variant with rationale.
+- **Reviewing a `_bmad/bme/` skill PR.** Check whether the author ran the Checklist. If the diff introduces new operator-facing behavior (prompts, errors, output formats, decision points), verify the relevant Right's compliance — cite the specific OC-Rn rule in the review comment, not a generic "improve UX" note.
+- **Exception: upstream BMAD contributions.** Skills contributed upstream (`_bmad/core/`, `_bmad/bmm/`, `_bmad/bmb/`, etc.) are out of scope for the Covenant — it's a Convoke-specific standard, not a BMAD Method requirement. If the skill is genuinely upstream-appropriate (see `namespace-decision-for-new-skills`), the Covenant does not apply.
+- **Reference, not boilerplate.** Cite the Covenant by its display name and link, with a sentence explaining *why* compliance matters for the surface in question. "See the Covenant" with no rationale violates the Right to rationale that the Covenant itself encodes.
 
 ---
 
