@@ -386,7 +386,7 @@ async function main() {
         injectedCount: injResult.injectedCount,
         linksUpdated: injResult.linkUpdates.updatedLinks,
         scopeDirs: filteredIncludeDirs
-      });
+      }, taxonomy);
 
       const adrDir = path.join(projectRoot, '_bmad-output', 'planning-artifacts');
       fs.ensureDirSync(adrDir);
