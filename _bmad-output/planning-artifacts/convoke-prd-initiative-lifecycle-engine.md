@@ -10,6 +10,10 @@ stepsCompleted:
   - step-06-innovation
   - step-07-project-type
   - step-08-scoping
+  - step-09-functional
+  - step-10-nonfunctional
+  - step-11-polish
+  - step-12-complete
 inputDocuments:
   - _bmad-output/planning-artifacts/convoke-brief-initiative-lifecycle-engine.md
   - _bmad-output/planning-artifacts/convoke-brief-initiative-lifecycle-engine-distillate.md
@@ -22,8 +26,9 @@ workflowType: 'prd'
 initiative: convoke
 artifact_type: prd
 qualifier: initiative-lifecycle-engine
-status: draft
+status: complete
 created: '2026-04-18'
+completed: '2026-04-18'
 schema_version: 1
 classification:
   projectType: developer_tool
@@ -205,6 +210,8 @@ The dream version, not committed, not blocking MVP:
 - Value-stream funding models (Lean Portfolio Management)
 - Autonomous portfolio management within human-set guardrails
 - ESG / sustainability as portfolio criteria
+
+This section defines scope **boundaries** (what's in / out of MVP, Growth, Vision). For scope **strategy** (ship-essential vs. thesis-essential split, dependency graph, phased roadmap, risk-based scoping, contingency ladder, and descope governance), see **Project Scoping & Phased Development** later in this document.
 
 ## User Journeys
 
@@ -746,6 +753,8 @@ Debugging reactive misfires without logs is archaeology. ILE-1 ships with develo
 
 ## Project Scoping & Phased Development
 
+The scope **boundaries** (what's in MVP, Growth, Vision) are defined in **Product Scope** earlier in this document. This section addresses scope **management**: MVP strategy and ship-vs-thesis-essential distinction, execution phasing with sprint estimates, the dependency graph, risk-based reasoning, a contingency scope ladder, and descope governance.
+
 ### MVP Strategy & Philosophy
 
 **MVP Approach: Problem-solving MVP with integrated skeleton.**
@@ -903,3 +912,166 @@ PMI/MSP/SAFe LPM alignment items: BRM lifecycle tracking; OKRs linked to initiat
 **Disagreement-breaking / unavailability:** If the joint call cannot resolve within 48 hours (both unavailable, or they disagree and escalation path is unclear), default to the **conservative call** — keep more scope, extend timeline — with decision logged. Team continues at original scope until resolution. Dev MAY NOT unilaterally descope during a sprint.
 
 **Re-scope-up mechanism:** Descope is reversible within a limited window. If a trigger-cause resolves within 30 days of descope call (Architecture question answered, fixture fixed, scope estimate corrected), John+Winston may re-scope up with a recorded decision note. After 30 days, the descoped tier locks in; re-expansion becomes a Phase 2 backlog item.
+
+## Functional Requirements
+
+### Intake, Qualification & Lane Management
+
+- **FR1:** Users can invoke `bmad-enhance-initiatives-backlog triage` to ingest text input (review transcripts, retros, audit outputs) and extract actionable findings.
+- **FR2:** The system logs every extracted finding as an intake in §2.1 of the lifecycle backlog with ID, description, source, date, and raiser.
+- **FR3:** Intakes are never removed from §2.1 by any ILE-1 skill operation (append-only preservation of the audit trail).
+- **FR4:** Authorized qualifiers (Vortex team, John, or Winston) can qualify an intake by assigning a Lane (Bug / Fast / Initiative), a Portfolio attachment, and an initial RICE score.
+- **FR5:** Users can mark a finding as RAW (intake only, no lane) when more information is needed before routing.
+- **FR6:** The system presents orphan-intake-scan proposals individually per-item, not as batch yes/no, to prevent mis-routing.
+- **FR7:** The system detects duplicate findings (semantic similarity against existing backlog items) and surfaces them for user review.
+- **FR8:** Users can invoke `bmad-enhance-initiatives-backlog review` to walk initiative-lane items and rescore RICE components.
+- **FR9:** Review mode presents prior scoring rationale alongside current values, not just numeric scores.
+- **FR10:** Users can invoke `bmad-enhance-initiatives-backlog create` to bootstrap a new lifecycle backlog from scratch.
+- **FR11:** The system verifies qualifier authorization before allowing lane/portfolio/RICE assignment; unauthorized users can log intakes but not qualify them.
+- **FR12:** The qualifying gate proposes initial lane, portfolio, and RICE values based on finding content; the user confirms or overrides per-item. Proposals are non-binding; accepting is explicit.
+- **FR13:** Users can invoke the qualifying gate on previously-logged raw intakes to route them into a lane. The original intake row in §2.1 is updated with lane routing; a new row is not created.
+
+### Portfolio Visibility & Navigation
+
+- **FR14:** Users can invoke `bmad-portfolio-status` to see a lifecycle-aware view of initiatives with stages, lanes, and WIP signals.
+- **FR15:** The portfolio view supports a one-keystroke filter by portfolio attachment (convoke, vortex, gyre, forge, bmm, enhance, loom, helm, or a custom entry).
+- **FR16:** The portfolio view supports a filter by staleness-flag state.
+- **FR17:** The portfolio view displays an observability-signals summary at the top of the output.
+- **FR18:** Users can drill down from a summary signal to its underlying event-level history.
+- **FR19:** The portfolio view shows pipeline-completeness indicators (which artifacts exist per initiative: B / P / P✓ / A / IR / E / D) for each initiative in the portfolio view output.
+- **FR20:** The portfolio view renders at consulting scale (target: 60+ initiatives across 10+ portfolios) within the performance SLO specified in NFRs.
+- **FR21:** Users can return to the portfolio view from a drill-down or review session without re-invoking the portfolio-status skill (session preserves position in the parent view).
+- **FR22:** When the portfolio view renders more than a threshold number of initiatives (configurable; default 20), the system produces an aggregate summary (counts by lane/stage, signals, top-priority items) before listing individual initiatives — reducing per-session context window usage.
+
+### Reactive Behaviors & Trust Contract
+
+- **FR23:** The system detects lifecycle-state-change signals from artifact presence (new PRD, closed epic, sprint closure) and proposes state transitions — it never silently commits.
+- **FR24:** For uncertain cases (partial artifact, race condition, moved file, empty-but-present file), the system always requires explicit user confirmation before committing a state transition (propose-before-commit contract).
+- **FR25:** The system scans for orphan intakes when a new initiative is logged and proposes attachment to existing items.
+- **FR26:** The system detects stale items (> 14 days in the same stage — both qualified lane items and raw intakes included) and flags them in the portfolio view.
+- **FR27:** Users can accept or reject proposed state transitions individually.
+- **FR28:** Teams can configure artifact validity contracts per their conventions (e.g., "draft PRD counts as Ready only when IR pass is present").
+- **FR29:** Individual initiatives can override team-level validity contracts via per-initiative `config:` frontmatter.
+
+### Observability Signals
+
+- **FR30:** The system computes values for four observability signals from the Change Log and backlog parsing: S1 (reactive misfire rate), S2 (qualifying-gate abandon rate), S3 (backlog entropy), S4 (cross-skill inconsistency).
+- **FR31:** When a signal's value crosses a configured threshold (defaults shipped in config; user-overridable), the portfolio view displays a threshold-breach indicator next to that signal.
+- **FR32:** Users can drill down from a signal summary to the event-level history that produced it.
+
+### Shared Data Model, Integration & Governance
+
+- **FR33:** All three ILE-1 skills read from and write to the same lifecycle backlog file using the same frontmatter schema.
+- **FR34:** The system enforces cross-skill round-trip parseability: skill A's output can be read by skill B and re-read by skill A without semantic corruption.
+- **FR35:** The lifecycle backlog's Change Log section is append-only at the application layer.
+- **FR36:** A second enforcement layer (optional pre-commit hook) catches non-append edits to the Change Log before they are committed to git.
+- **FR37:** Every qualifying-gate decision, rescore, or lane move is recorded in the Change Log with qualifier identity and timestamp.
+- **FR38:** Concurrent ILE-1 skill invocations against the same backlog are prevented: when a skill is running, any second invocation is refused with a clear error message.
+- **FR39:** The system extends `convoke-doctor` to validate ILE-1 schemas and integration contracts.
+- **FR40:** The system supports skill portability via the existing Convoke export pipeline, with ILE-1-specific golden-file comparisons per target platform (Claude Code, Copilot, Cursor).
+
+### Onboarding, Help & Error Communication
+
+- **FR41:** Users invoking the initiatives-backlog skill for the first time see a minimal bootstrap — essential lifecycle process only, not the full canonical text.
+- **FR42:** Users can request the full canonical lifecycle process on demand (progressive disclosure).
+- **FR43:** Users can invoke contextual help sub-commands at any point in any ILE-1 skill: `explain <concept>`, `why <field>?`, `what does this flag mean?`.
+- **FR44:** RICE calibration examples shown during qualification match the user's persona context (OSS-solo vs. enterprise-consulting) rather than a single fixed enterprise-oriented set.
+- **FR45:** The system communicates errors with one of four category prefixes: `[USER]`, `[CONFIG]`, `[INTERNAL]`, `[UNCERTAIN]`, each with defined communication semantics.
+- **FR46:** Each error carries a registered error code from the seed error-code registry (USER-NNN, CONFIG-NNN, INTERNAL-NNN, UNCERTAIN-NNN).
+- **FR47:** Reactive uncertainty is always communicated as a proposal with `[UNCERTAIN]` prefix, never as an error.
+- **FR48:** New error codes require a CHANGELOG entry, test fixture producing the error, and category determination — all committed in the same PR.
+
+### Interaction Safety & Recovery
+
+- **FR49:** Destructive operations (drop intake, archive absorbed item, remove portfolio attachment) require explicit user confirmation in a dedicated confirmation step — no passthrough.
+- **FR50:** Users can undo the last qualifying-gate decision within the same session before it is persisted to the backlog file. Once persisted, re-qualification follows the rescore path (FR8).
+- **FR51:** Operations exceeding an interactive latency threshold (~2 seconds) display progress indication (spinner, percentage, or stage identifier) so users know the skill is processing.
+- **FR52:** After any `[USER]` or `[CONFIG]` category error, the system returns the user to the last consistent state (no partial writes committed) and allows retry with corrected input. `[INTERNAL]` errors guide users to doctor-based investigation.
+
+### Schema Evolution, Migration & Lifecycle Completeness
+
+- **FR53:** The lifecycle backlog frontmatter carries `schema_version` as a monotonically-increasing integer.
+- **FR54:** Breaking schema changes (field rename, removal, semantic reinterpretation) bump `schema_version`.
+- **FR55:** v1.N skills can read v1.(N-1) backlogs with a deprecation warning; earlier versions require explicit migration.
+- **FR56:** Schema migrations run automatically on skill invocation after user confirmation when a version mismatch is detected.
+- **FR57:** A non-interactive `--migrate` mode supports CI contexts.
+- **FR58:** Users can uninstall ILE-1 via a documented manual procedure; `convoke-doctor` detects partial-removal states and reports diagnostics for cleanup.
+- **FR59:** The lifecycle backlog file is preserved across uninstall (user data, never removed).
+
+### Developer Tooling & Debugging
+
+- **FR60:** Every ILE-1 skill accepts `--verbose` (execution trace) and `--debug` (state dumps) flags.
+- **FR61:** The system writes reactive-layer decision logs to a known location with daily rotation, including artifact paths, signal fires, validity check results, proposals made, and user responses.
+- **FR62:** Log retention is configurable (default 90 days); users can opt out entirely.
+- **FR63:** ILE-1 log-writing code contains no calls to external network endpoints; verifiable via static analysis of log-writing modules.
+
+**Total: 63 FRs across 9 capability areas.** Every FR traces back to at least one prior section (journey, success criterion, domain requirement, project-type requirement, or scoping decision). Every FR is testable: acceptance criteria can be written for each.
+
+## Non-Functional Requirements
+
+NFRs specify HOW WELL the system must perform. Only categories that matter for ILE-1 are included; Scalability (user-growth) and Accessibility (UI-specific) are skipped — reasons noted under Skipped in Project-Type Requirements.
+
+### Performance
+
+- **NFR1:** End-to-end median ILE-1 skill invocation (including LLM agent roundtrip) completes within 5 seconds on a baseline consulting-scale backlog (60+ initiatives across 10+ portfolios). Of that, ILE-1 code execution alone (excluding LLM roundtrip) must not exceed 2 seconds median.
+- **NFR2:** End-to-end p99 ILE-1 skill invocation completes within 15 seconds on the same baseline. ILE-1 code execution alone must not exceed 5 seconds p99. End-to-end numbers are manually captured in acceptance fixtures with `--debug` timing; CI runs an approximation via isolated code-path benchmark (LLM-excluded). A fully instrumented Claude Code harness is deferred to Growth.
+- **NFR3:** When the portfolio view renders more than 20 initiatives, summary-first rendering is used to reduce per-session context-window consumption. Threshold reflects typical human scan-at-a-glance capacity; the threshold is configurable per user preference.
+- **NFR4:** The system handles 100+ initiatives with explicit graceful degradation: at 100–500 items the system warns but functions, response time may degrade up to 2× the SLO; at 500+ items the system emits explicit user-facing guidance that performance is outside v1 target. No silent failure.
+
+### Security & Data Handling
+
+- **NFR5:** Lifecycle backlog file contents are never transmitted externally by ILE-1 code beyond what the user's LLM agent provider receives as conversation context. Verifiable via static analysis of ILE-1 code paths.
+- **NFR6:** ILE-1 has no telemetry backend, analytics service, or external update server. Verified via dependency audit on every release; any addition of an external-endpoint dependency requires a CHANGELOG entry and architectural review.
+- **NFR7:** Developer debug logs remain local to the user's environment; ILE-1 log-writing code contains no calls to external network endpoints (verifiable via static analysis of log-writing modules).
+- **NFR8:** Any ILE-1 script accepting user-provided paths for destructive operations performs resolve-normalize-contains-check against the project root and refuses paths outside.
+
+### Reliability & Trust
+
+- **NFR9:** The propose-before-commit contract is enforced against all four TAC1 uncertain-case fixtures (partial, race, moved, empty). Zero silent state changes allowed.
+- **NFR10:** ILE-1's data format has no runtime dependency on the LLM agent for read access. When the LLM provider is unreachable, the user's LLM coding tool surfaces the unavailability (not ILE-1's responsibility); the backlog file and logs remain locally readable via any markdown viewer or text editor.
+- **NFR11:** ILE-1 skill invocations are idempotent for read operations: running the same read-only skill twice on unchanged input produces identical output.
+- **NFR12:** Schema migrations are resume-safe: interruption mid-migration leaves a recoverable state; re-invocation completes the migration.
+- **NFR13:** All schema-bearing file writes go through an atomic-write helper (write-to-tmp → verify parse → rename). Verified via static analysis: no direct `fs.writeFileSync` calls into schema files; all writes targeted through the helper.
+- **NFR14:** The rate of `[INTERNAL]` category errors across ILE-1 skill invocations must remain below 1% in any 100-invocation measurement window; rising `[INTERNAL]` rate triggers a post-MVP reliability review.
+
+### Maintainability
+
+- **NFR15:** Target individual ILE-1 skill files at < 500 LOC per main script; files exceeding require justification in PR review and trigger a decomposition review.
+- **NFR16:** The frontmatter schema is documented with inline comments in the canonical spec file; downstream code references the spec for field semantics.
+- **NFR17:** Any change to the frontmatter schema requires a CHANGELOG entry; breaking changes require a `schema_version` bump and migration.
+- **NFR18:** Debug infrastructure (verbosity flags, logs, session recording) enables post-hoc analysis without rebuilding or redeploying.
+
+### Integration & Compatibility
+
+- **NFR19:** ILE-1 v1 must work on BMAD v6.2 (current default) and v6.3 (post-migration), OR the v1 release is explicitly gated behind v6.3 shipping. This is a conditional requirement: Architecture chooses path; NFR text is updated when the path is chosen.
+- **NFR20:** The backlog file survives standard git workflows (merge, rebase, cherry-pick) without corruption. Fixture set `tests/fixtures/ile-1/git-workflow/{merge-clean,merge-conflict,rebase,cherry-pick}/` contains reproducible scenarios; assertion is that the backlog file is parseable post-operation.
+- **NFR21:** ILE-1 extends `bmad-validate-exports` with ILE-1-specific assertions (schema roundtrip; no fixture-path leaks; golden-file comparison per platform: Claude Code, Copilot, Cursor). Extension work is implicit in MVP #1 and MVP #4 scope.
+- **NFR22:** ILE-1's Node.js support is inherited from Convoke core at each release; ILE-1 does not declare independent Node.js compatibility ranges. Convoke Node range changes propagate to ILE-1 automatically at the next release.
+- **NFR23:** Cross-skill integration contracts are version-matched: `convoke-doctor` checks at install time that all three ILE-1 skills declare the same `schema_version`; mismatches are errors (not warnings).
+
+### Observability (System-Level)
+
+- **NFR24:** All reactive-layer decisions are logged with artifact path, signal fired, validity check result, proposal made, and user response — sufficient to reconstruct any decision post-hoc. Users can query reactive-layer decision logs via `convoke-ile-logs <query>` (or equivalent) with filters for initiative, date range, signal type, and user-action (accept/reject). Query capability is MVP scope, not Growth.
+- **NFR25:** S1–S4 observability signals are computable from the existing Change Log and backlog parsing — no external instrumentation required.
+- **NFR26:** Log format is stable across v1 patch and minor releases; breaking log-format changes require a CHANGELOG entry.
+- **NFR27:** Each S1–S4 signal value must be useful for decision-making in real deployments. At the month-3 innovation review, each signal is audited for actionability: did the signal identify a real problem that led to a real decision? Signals failing the audit are re-tuned or flagged for deprecation.
+
+### Usability (Developer-Tool DX)
+
+- **NFR28:** Error messages include a `What to try:` line with at least one concrete remediation step; generic "error occurred" messages are forbidden. Verified via error-fixture test assertions on all 20 seed error codes.
+- **NFR29:** Contextual help is available at every decision point (any user-input prompt) via the `explain <concept>` sub-command; listed in the prompt's help text. No upfront reading is mandatory.
+- **NFR30:** Operations exceeding ~2 seconds of interactive latency display progress indication (spinner, percentage, or stage identifier).
+- **NFR31:** Console output conveys all critical information in plain text; color coding, when used, is informational enhancement only (not required for comprehension).
+
+### Backwards Compatibility
+
+- **NFR32:** v1.N skills can read v1.(N-1) backlogs with a deprecation warning; no v1 skill reads pre-v1 unversioned backlogs without explicit migration.
+- **NFR33:** Deprecated features or schema fields are preserved for one full Convoke minor-version cycle before removal.
+- **NFR34:** Schema migrations are non-destructive by default; breaking changes require explicit user confirmation.
+
+### Reproducibility
+
+- **NFR35:** Every NFR or FR referencing a test fixture has that fixture in the shipped repo. Verified via CI check: every TAC/NFR/FR with a fixture reference must have a corresponding fixture file (CI exits non-zero on orphan reference).
+- **NFR36:** `convoke-doctor` result is reproducible given the same installation state — two runs on the same state produce identical output.
+
+**Total: 36 NFRs across 9 categories.** Scalability (user-growth) and Accessibility (UI-specific) were deliberately skipped as not applicable to ILE-1's single-user-per-repo CLI-native design. Every NFR is testable: verification method is named (CI gate, fixture-based test, static analysis, manual measurement in acceptance fixture, or post-MVP review).
