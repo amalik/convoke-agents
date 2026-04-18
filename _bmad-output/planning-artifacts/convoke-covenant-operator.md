@@ -57,11 +57,11 @@ The Covenant is not abstract. Two production incidents gave it shape.
 
 ### Scar 1 — Migration: 31 items, no guidance
 
-In early 2026, the artifact migration skill encountered a batch of 31 files it could not cleanly classify. Its response: emit 31 lines of `ACTION REQUIRED: Specify initiative for this file`, render them as a wall of text, and exit.
+In early 2026, the artifact migration skill encountered a batch of 31 files whose filename and frontmatter disagreed about the initiative. Its response: emit 31 lines of `ACTION REQUIRED: Resolve initiative conflict before migration`, render them as a wall of text, and exit.
 
-The operator saw a screen of demands with no indication of what "specify initiative" meant mechanically. Edit the filename? Add frontmatter? Run a different command? The skill did not say. The operator was informed that action was required but given no mechanism to take it.
+The operator saw a screen of demands with no indication of what "resolve the conflict" meant mechanically. Edit the filename? Update the frontmatter? Which should win? The skill did not say. The operator was informed that action was required but given no mechanism to take it.
 
-> **What this taught us:** an error that names an action but not a mechanism is not a next action — it is a demand. The *Right to next action* was born here.
+> **What this taught us:** an error that names an action but not a mechanism is not a next action — it is a demand. The *Right to next action* was born here. The same incident also exposed the need for *Right to a default* (the operator had no proposed resolution to accept) and *Right to pacing* (31 demands in one round is not one round, it is thirty-one).
 
 ### Scar 2 — Portfolio: 108 of 151 files silently dropped
 
@@ -71,9 +71,9 @@ Around the same time, the portfolio skill scanned 151 files, found 108 it could 
 
 ### The generalization
 
-Both incidents shared a pattern: the skill resolved from its own position — emitting output based on what it thought was sufficient — rather than treating the operator as the resolver. Fixing the individual skills was not enough; we needed a codified standard so future skills would be built with the operator's perspective as a first-class design constraint.
+Both incidents shared a pattern: the skill resolved from its own position — emitting output based on what it thought was sufficient — rather than treating the operator as the resolver. Fixing the individual skills was not enough; a codified standard was needed so future skills would be built with the operator's perspective as a first-class design constraint.
 
-That standard is this Covenant.
+That standard is this Covenant. Each scar above touched several of the seven rights, not one cleanly — the one-to-one "this scar motivated this right" phrasing above is a narrative convenience. The rights were distilled together from the patterns both scars revealed.
 
 ---
 
@@ -157,7 +157,7 @@ The full list, in canonical order:
 
 **Why it exists.** Migration's "ACTION REQUIRED" wall was the canonical violation. An error that names the need for action without naming the mechanism is not a next action.
 
-**Good example.** The portfolio engine's missing-taxonomy error reads: *"taxonomy.yaml not found — run `convoke-migrate-artifacts` or `convoke-update` to create"*. The error names the remedy by command.
+**Good example.** The portfolio engine's missing-taxonomy error reads: *"Taxonomy config not found at `<path>`. Run `convoke-migrate-artifacts` or `convoke-update` to create it."* The error names the remedy by command.
 
 **Anti-pattern.** Errors that say "Failed. Resolve manually and re-run." with no indication of what "manually" entails.
 
@@ -167,7 +167,7 @@ The full list, in canonical order:
 
 **Why it exists.** Operators have limited working memory within a single round. A skill that dumps five or ten new terms in one prompt forces the operator to parse vocabulary before they can make the decision. The concept budget is how Convoke protects the operator's attention.
 
-**Good example.** Loom's `add-team` step-01 closes with an explicit `Concept count: 3/3` footer. The skill was designed with the budget in mind.
+**Good example.** Loom's `add-team` step-01 closes with the footer `Concept count: 3/3 (team identity, pattern, agents)` — three novel concepts introduced in the step, right at the budget limit. The skill was authored with the pacing constraint made visible to the reader.
 
 **Anti-pattern.** A menu that presents a long enumeration of categories, decision verbs, and escape hatches in one round, asking the operator to navigate a surface of many options.
 
@@ -183,7 +183,7 @@ Each right is a direct consequence of *the operator is the resolver*:
 - **Completeness** — resolution requires knowing what was dropped.
 - **Pause** — resolution requires the skill to wait.
 - **Next action** — resolution after an error requires knowing how to proceed.
-- **Pacing** — resolution within a budget requires the skill to fit that budget.
+- **Pacing** — the axiom assigns resolution to a human, and humans resolve within finite working memory. A round that overwhelms the resolver with novel vocabulary doesn't produce resolution; it produces guesswork or defeat. The pacing constraint is how the skill keeps the resolver *able* to resolve.
 
 If a future right is proposed for the Covenant, it must be shown as a direct consequence of the axiom. If it cannot, it does not belong here.
 
@@ -197,7 +197,18 @@ Convoke skills are audited against the Compliance Checklist (`convoke-spec-coven
 - **Reviewers:** use the Checklist as your audit instrument. Reach for this Covenant when a rule's intent is unclear.
 - **Auditors:** the Checklist's rubric maps 1-to-1 to the rights above; every FAIL cell cites a violation of one of the seven.
 
-The Covenant is not aspirational. As of 2026-04-18, eight Convoke skills have been audited against the rights: 46 of 56 cells (82%) pass. The remaining retrofit work is tracked in the initiative backlog. External publication of this Covenant will cite both compliance and known gaps honestly — *you do not publish a covenant you cannot keep*.
+The Covenant is not aspirational. As of 2026-04-18, eight Convoke skills have been audited against the rights: 46 of 56 cells (82%) pass. The remaining retrofit work is tracked in the initiative backlog.
+
+**Honest caveats that must accompany the 82% number.** The audit is grounded in evidence — every cell cites a specific file, step, and behavior — but has real limitations:
+
+- **Single LLM reviewer.** The audit was executed by one AI reviewer, not a two-human inter-reviewer panel. A reproducibility gate on one cell showed 100% verdict agreement between two independent LLM reviewers, but that's narrow cross-validation, not external independence.
+- **Static review primary.** One skill was exercised live in the auditing session; the other seven were scored from workflow and step file review. Live exposure would likely surface violations static review missed. The 82% rate is more plausibly a ceiling than a floor.
+- **Sample size.** Eight skills audited from roughly thirty-three Convoke-owned skills. Generalizing the number to the full Convoke surface requires larger follow-up.
+- **Auditor inside the project.** The auditor was a Convoke-authored persona running against Convoke-authored skills. An external audit would add credibility this report does not claim.
+- **One scoped verdict.** Loom's `add-team` passes Right to pacing on the audited step-01; the remaining steps (02-05) were not individually audited and may narrow the verdict when re-checked.
+- **Calibration was re-baselined.** Two of the audit's story-level acceptance criteria were formally amended when the scar cases turned out to already be remediated; the amendment is documented in the audit report.
+
+External publication of this Covenant must cite both the 82% number and these caveats — *you do not publish a covenant you cannot keep*.
 
 ---
 
@@ -206,3 +217,4 @@ The Covenant is not aspirational. As of 2026-04-18, eight Convoke skills have be
 | Date | Change | Source |
 |------|--------|--------|
 | 2026-04-18 | Initial authoring. Preamble introduces the 9 foundational terms required by the Compliance Checklist's preamble authoring contract. Seven rights follow the 4-part format (statement / why / good example / anti-pattern). Scar stories (Migration, Portfolio) cited by name with their specific violations. | oc-1-4 |
+| 2026-04-18 | Round 1 code review applied (1 HIGH + 7 MEDIUM + 2 LOW patches): corrected the portfolio engine's missing-taxonomy error quote to match actual CLI output, corrected Migration Scar 1 to quote the CONFLICT-case string, added `operator` / `resolver` / `error` to Foundational Vocabulary, distinguished `default` from `fallback`, strengthened Right to pacing derivation with the finite-working-memory premise, acknowledged that scars taught multiple rights rather than 1-to-1, clarified `Concept count: 3/3` example, added publication caveats to §8 per audit §7.2 / §10.2 requirements, dropped "we" voice in §4, updated opening bill-of-contents to reflect document structure. | oc-1-4 Round 1 review |
