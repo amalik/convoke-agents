@@ -111,7 +111,15 @@ async function validateAgentFiles(projectRoot) {
 
   try {
     const agentsDir = path.join(projectRoot, '_bmad/bme/_vortex/agents');
-    const requiredAgents = AGENT_FILES;
+    // U8: honor operator agent exclusions from the target config.yaml, so a
+    // deliberately-removed agent doesn't fail post-upgrade validation.
+    const configMerger = require('./config-merger');
+    const excluded = configMerger.readExcludedAgents(
+      path.join(projectRoot, '_bmad/bme/_vortex/config.yaml')
+    );
+    const requiredAgents = AGENT_FILES.filter(
+      f => !excluded.includes(f.replace(/\.md$/, ''))
+    );
 
     if (!fs.existsSync(agentsDir)) {
       check.error = 'agents/ directory not found';
