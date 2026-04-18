@@ -6,6 +6,9 @@ stepsCompleted:
   - step-04-decisions
   - step-05-patterns
   - step-06-structure
+  - step-07-validation
+  - step-08-complete
+lastStep: 8
 inputDocuments:
   - _bmad-output/planning-artifacts/convoke-brief-initiative-lifecycle-engine.md
   - _bmad-output/planning-artifacts/convoke-brief-initiative-lifecycle-engine-distillate.md
@@ -21,7 +24,8 @@ qualifier: initiative-lifecycle-engine
 project_name: 'Convoke — Initiative Lifecycle Engine (ILE-1)'
 user_name: 'Amalik'
 date: '2026-04-18'
-status: draft
+completedAt: '2026-04-19'
+status: complete
 schema_version: 1
 ---
 
@@ -1419,5 +1423,191 @@ Total CONFIG codes: 002–009 (7 codes). `registerCode` discipline (ADR-8) gover
   - Verify `scripts/bmad-validate-exports.js` existence (M-5)
   - Verify `ajv` presence in `package.json` (M-6)
   - Confirm BMAD v6.3 skill-namespace `SKILL.md` semantics vs. per-skill `SKILL.md` (M-3)
+
+## Architecture Validation Results
+
+Comprehensive validation run against the complete Steps 2–6 content. Four elicitation/party-mode passes and one focused gap analysis preceded this step; validation here is final coherence + coverage + readiness check before handoff to implementation.
+
+### Coherence Validation — PASS
+
+**Decision compatibility**: 8 ADRs + ISWC + Crash Recovery Model + 21 Cluster decisions + 3 Missing decisions + Hybrid Model addendum all compose without conflict. Cross-cutting traces:
+
+- Lock discipline (ADR-4) + Heartbeat (Red Team) + Crash windows (ISWC) → all flow into ISWC preamble/postamble + tiered staleness
+- In-memory index (ADR-1) + Observability compute (ADR-3) + NFR1/2 fixture → fit-to-SLO path clear
+- ISWC + AsyncLocalStorage + Env Envelope (Hybrid) → context propagates cleanly within and across fat-scripts
+- Registry pattern (error-registry, migration, validity-contracts, doctor-checks) → four registries with consistent idiom
+- Atomic write + Change Log JSONL + Auditability → trust contract foundation holds
+
+**Pattern consistency**: 26 N-rows in the Compliance Table, each with named test file and specific assertion. No identified contradiction between patterns. Cluster sequence 3 → 1 → 2 → 4 correctly places interface contracts before layout-derived decisions.
+
+**Structure alignment**: Tree composes decisions 1:1 (ADR-1 → `data/index-builder.js`; ADR-4 → `frame/lock.js`; ISWC → `frame/skill-frame.js`; ADR-8 → `errors/`). No orphan decisions lacking tree placement. No orphan tree nodes lacking a decision.
+
+### Requirements Coverage Validation — PASS (with sprint-0 verification note)
+
+**9 FR capability areas, 63 FRs — all architecturally supported:**
+
+| PRD area | FRs | Architectural home |
+|---|---|---|
+| 1. Intake/Qualifying/Lanes | 13 | `intake/`, `qualify/` workflows + `validity-contracts/` + `lanes.js` |
+| 2. Portfolio Visibility | 9 | `portfolio-status/` workflow + `observability/portfolio-render.js` |
+| 3. Reactive + Trust Contract | 7 | `reactive/` subtree + ISWC + `proposal.js` |
+| 4. Observability Signals | 3 | `observability/observability.js` + unified active+archived log read |
+| 5. Shared Data Model | 8 | `data/` + `data/schemas/` + `index-builder.js` |
+| 6. Onboarding/Help/Error | 8 | `help.md` convention + `errors/` + `doctor/` |
+| 7. Safety/Recovery | 4 | `crash-recovery.js` + `lock.js` + `/ile-sync` + `/ile-force-unlock` |
+| 8. Schema/Migration | 7 | `migrations/` + `ensureSchemaCurrent()` + uninstall workflow |
+| 9. Dev Tooling | 4 | `logger.js` + `/ile-log` + `/ile-logs-purge` |
+
+**36 NFRs — all architecturally supported:**
+
+Load-bearing NFRs explicitly verified:
+
+- **NFR1/NFR2** (Performance SLO): ADR-3 CI fixture at 60/150/300 artifact scales
+- **NFR9** (Trust contract 4 fixtures): `tests/fixtures/ile/uncertain-case-fixtures/` + `trust-contract-tac1.test.js`
+- **NFR13** (Atomic writes): `atomic-write.js` + Compliance Table enforcement
+- **NFR14** (INTERNAL error rate < 1%): ADR-8 runtime registry; observability counts via Change Log
+- **NFR19** (v6.2/v6.3 compat): ADR-6 decided v6.3-gated
+- **NFR21** (Portability via `bmad-validate-exports`): fixtures + CI matrix jobs; **sprint-0 discovery task M-5** to verify existing infrastructure
+- **NFR23** (Schema-version cross-skill match): `convoke-doctor` + ILE doctor registry + install-time check
+- **NFR35** (Fixture-shipping CI check): orphan-reference detection via `doctor-refs.test.js` + portability-matrix
+
+Remaining 28 NFRs map to specific architectural decisions documented throughout Steps 4–6.
+
+**Note**: NFR21 coverage is architecturally complete but depends on sprint-0 discovery confirming existing `bmad-validate-exports` infrastructure. Not architecture-blocking.
+
+### Implementation Readiness Validation — PASS
+
+**Decision completeness**: every ADR has decision + rationale + specifics + affects. Every Cluster decision has decision + rationale + specifics + N/L marking. Every Missing decision complete.
+
+**Structure completeness**: tree is specific (files named, not placeholders). Every test file named in Compliance Table has a directory home. Every architectural concept has a code location or doc location.
+
+**Pattern completeness**: all identified conflict-points addressed. Unenforceable patterns explicitly marked L (e.g., heartbeat tick-per-loop-iteration; unenforceable without AST analysis).
+
+**Sprint-0 build order (tightened from Step 4 sequencing):**
+
+1. `runtime/logger.js` (with AsyncLocalStorage + bootstrap fallback)
+2. `runtime/paths.js`
+3. `runtime/lanes.js`
+4. `errors/error-registry.js` (registers 20+ seed codes + detailsShape)
+5. `errors/errors.js` (`ILEError` class reads registry)
+6. `frame/context-envelope.js`
+7. `writes/atomic-write.js`
+8. `frame/lock.js` + `frame/heartbeat.js`
+9. `frame/skill-frame.js` (`withISWC` wraps it all)
+10. `config/config.js` + `config/config-defaults.js`
+11. `data/schemas/` (JSON Schemas authored)
+12. `data/index-builder.js`
+13. First conformance tests shipped: `error-contract`, `iswc-conformance`, `atomic-write-conformance`, `frame-boundary`, `paths-discipline`
+
+### Gap Analysis
+
+**Four items identified; all have resolutions proposed. None architecture-blocking.**
+
+**Medium priority (address during sprint 0):**
+
+1. **`/ile-force-unlock` skill surface vs. `--force-unlock` flag.** ADR-4 mentioned a flag; Step 6 introduced the slash-command skill. **Resolution**: `/ile-force-unlock` is the operator-facing slash-command skill (per slash-command-ux feedback rule); internally it invokes `entries/ile-force-unlock-entry.js` which calls `lock.js#releaseForced()` after explicit-word confirmation. The `--force-unlock` flag is the internal CLI fallback (fat-script invoked directly without skill wrapper). Both paths documented; skill is the canonical operator-facing surface.
+
+2. **Schema migration rollback mechanism.** ADR-5 said "INTERNAL-002 + rollback" but multi-artifact migration halt-mid-way behavior was underspecified. **Resolution**: migrations are **resumable, not rollbackable**. Individual artifact writes are atomic (NFR13); per-file consistency guaranteed. Partial-state after halt is a mix of migrated + un-migrated artifacts. Next `ensureSchemaCurrent()` detects mixed state, resumes migration from un-migrated artifacts (migrations are idempotent per schema-semver discipline). Document in `docs/ile/concepts/crash-recovery-model.md`.
+
+3. **LLM-host chained-invocation integration test.** Hybrid Model specifies envelope inheritance across parent → child skill invocation; no named integration test. **Resolution**: add `tests/integration/ile/chained-invocation.test.js` — parent script sets env vars, spawns child via `child_process.spawn`, child's `readEnvelope()` returns inherited envelope (with `envelopeSource: 'inherited'`). Added to Compliance Table as N.
+
+**Minor (flag for implementation, not blocking):**
+
+4. **`/ile-log` query UX underspecified.** Skill exists in tree + step files listed; query grammar undefined. **Resolution**: deferred to sprint-2 implementation-time decision. v1 minimum: filter by date range, invocationId, skillName, batchId, entry type. Logged as implementation story, not architecture gap.
+
+### Sprint-0 Discovery Tasks (consolidated)
+
+**From Step 6 / Step 7 validation:**
+
+- Verify `scripts/bmad-validate-exports.js` (or equivalent) existence; extend if present, scope new utility if absent (M-5).
+- Verify `ajv` in `package.json` dependencies; add if absent (M-6).
+- Confirm BMAD v6.3 `SKILL.md` semantics at namespace level vs. per-skill (M-3).
+- Document Gap 1 resolution (force-unlock slash-skill ↔ flag relationship) in concepts docs.
+- Add `chained-invocation.test.js` + subprocess-spawn test helper.
+- Document Gap 2 resolution (resumable-not-rollbackable migrations) in `crash-recovery-model.md`.
+
+### Architecture Completeness Checklist
+
+**Requirements Analysis** ✅
+- [x] Project context thoroughly analyzed (Step 2: 8 first-class components + 4 extension patterns + 1 shared utility + 12 cross-cutting concerns in 3 layers)
+- [x] Scale + complexity assessed (consulting-scale 60/150/300 fixture parametrization)
+- [x] Technical constraints identified (BMAD v6.3, markdown+YAML, no-DB, single-user-per-repo)
+- [x] Cross-cutting concerns mapped (ISWC, Crash Recovery Model, Error Contract, Registry pattern, Hybrid Model)
+
+**Architectural Decisions** ✅
+- [x] 8 ADRs documented with rationale + specifics (ADR-1 through ADR-8)
+- [x] Technology stack specified (Node ≥18, Python ≥3.9, node:test, ulid, ajv)
+- [x] Integration patterns defined (four registries, ISWC wrapper, Hybrid Model env envelope)
+- [x] Performance considerations addressed (ADR-3 CI fixture, in-memory index, intra-invocation memoization)
+
+**Implementation Patterns** ✅
+- [x] 24 decisions + 3 missing patterns + 6 final-coherence refinements with N/L markings
+- [x] Structure patterns defined (layout, naming, test placement)
+- [x] Communication patterns specified (AsyncLocalStorage + env var envelope)
+- [x] Process patterns documented (error emission, atomic writes, heartbeat, crash recovery, envelope TTL, config drift)
+
+**Project Structure** ✅
+- [x] Complete directory structure (every file named; no placeholders)
+- [x] Component boundaries established (`frame/` BMAD-aware + other subtrees framework-neutral)
+- [x] Integration points mapped (file-modification table + `bmm-dependencies.csv` stub + uninstall spec)
+- [x] Requirements-to-structure mapping table
+
+**Validation** ✅
+- [x] Coherence verified (decisions + patterns + structure compose)
+- [x] Requirements coverage verified (9 PRD areas + 36 NFRs)
+- [x] Gap analysis completed (4 items; resolution proposed for each)
+- [x] Sprint-0 discovery tasks named
+
+### Architecture Readiness Assessment
+
+**Overall Status: READY FOR IMPLEMENTATION**
+
+**Confidence Level: HIGH**, with the following caveats:
+
+- Sprint-0 discovery tasks must complete before implementation can proceed past the first week of sprint 0. None are architecture-blocking; they are infrastructure verifications.
+- Gap 1 (force-unlock resolution) and Gap 3 (chained-invocation test) should be incorporated into the first implementation story as documented resolution + test additions.
+- Gap 2 (migration resumable-not-rollbackable framing) should be documented in `docs/ile/concepts/crash-recovery-model.md` as part of sprint-0.
+
+**Key Strengths**:
+
+- Propose-before-commit trust contract enforced structurally (ISWC + reactive-detector + `proposal.js`), not just by convention
+- Operator-covenant preserved ("operator is the resolver") through tiered lock staleness, batch UX forcing individual rejection, config-drift warn-and-continue
+- Hybrid Model recognizes LLM-host process boundary reality rather than pretending single-process context
+- 26 enforceable N-row compliance tests prevent most agent drift at CI time
+- Four consistent registries (errors, migrations, validity-contracts, doctor-checks) simplify mental model
+
+**Areas for Future Enhancement** (not v1; documented as Growth-phase options):
+
+- Scratch-file diff-review proposals (ADR-7 Option B)
+- Bounded-window observability aggregation (ADR-3 Option C)
+- Cross-invocation persistent index (ADR-1 escape hatch)
+- File-watch or git-hook reactive triggers (ADR-2 additive layer)
+- `_ile.session.lock` for cross-fat-script exclusivity (ADR-4 growth)
+- Reactive-check coalescing across chained invocations
+- YAML-declarative validity-contract shortcuts (Cluster 3 D21)
+- Custom ESLint rule for error codes (ADR-8 Option B)
+- `scripts/lifecycle/scaffold-skill.js` (sprint-3 story)
+- v6.2 backport (ADR-6 revisit trigger)
+
+### Implementation Handoff
+
+**AI Agent Guidelines**:
+
+- Follow all ADRs (8) and Cluster decisions (21 + 3 missing + 6 coherence refinements) exactly as documented; deviation requires documented rationale
+- Use ISWC (`withISWC` wrapper) for every skill — no exceptions without documented exemption
+- All errors via `ILEError(code, details)`; codes registered in `error-registry.js` with `detailsShape`
+- All paths via `scripts/lifecycle/lib/runtime/paths.js` helpers — no literal `.ile/`, `docs/ile/`, `change-log.jsonl` outside `paths.js` + fixtures
+- All writes via `scripts/lifecycle/lib/writes/atomic-write.js`
+- Heartbeat ticks at checkpoints in long operations (per file, per step, per batch item)
+- Tests import via `tests/lib/ile/test-helpers.js` `runInISWC()` helper; avoid env var manipulation directly
+- Four registries have same idiom: append-only, lazy-load, enumeration test
+
+**First Implementation Priorities (sprint 0)**:
+
+1. Build `runtime/`, `errors/`, `frame/context-envelope.js`, `writes/atomic-write.js`
+2. Build `frame/lock.js` + `frame/heartbeat.js` + `frame/skill-frame.js`
+3. Complete sprint-0 discovery tasks
+4. Ship first conformance tests: `error-contract`, `iswc-conformance`, `atomic-write-conformance`, `frame-boundary`, `paths-discipline`
+5. Scaffold `entries/` with one fat-script (`portfolio-status-entry.js` recommended — read-only, simplest to bootstrap)
 
 
