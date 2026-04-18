@@ -5,6 +5,17 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of U8 — excluded_agents (2026-04-18)
+
+- **Cross-module exclusion-ID validation** — `excluded_agents: [stack-detective]` in `_bmad/bme/_vortex/config.yaml` silently no-ops (Vortex never iterates that ID), and typos like `noha` (meant `noah`) silently no-op too. Neither `mergeConfig`, `refresh-installation`, nor `convoke-doctor` warns. Validation would require knowing each module's legal agent ID set.
+- **`excluded_agents: []` default appears without explanatory comment on upgrade** — fresh installs get the shipped source YAML with the inline comment block. Operators upgrading from pre-U8 see `excluded_agents: []` appear in their config (via `merged.excluded_agents = excludedAgents` in `scripts/update/lib/config-merger.js`) but with no context. Fix requires comment-injection logic in `writeConfig` — broader scope.
+- **YAML parser asymmetry between `readExcludedAgents` and `mergeConfig`** — the reader uses js-yaml (`yaml.load`), `mergeConfig` uses the `yaml` package (`YAML.parseDocument`). A file that parses differently under the two libraries (rare anchor/merge-key edge cases) could cause `refresh-installation` to copy an excluded agent's files while `mergeConfig` removes the ID from `merged.agents`. Pre-existing architectural split from ag-7-1.
+- **Duplicate entries in `excluded_agents` not deduped** — `excluded_agents: ['noah', 'noah']` persists both entries through the merge. Inconsistent with the `Set`-based dedup on `agents`. Purely cosmetic.
+- **EXTRA_BME_AGENTS (team-factory, etc.) have no exclusion mechanism** — `_team-factory/config.yaml` has no `excluded_agents` field and `refresh-installation` only reads Vortex + Gyre configs for the exclusion snapshot. Operators can't opt out of standalone bme agents. Feature-scope choice — revisit if a standalone agent ever needs opt-out.
+- **Dev-mode (isSameRoot) skill wrapper generation doesn't honor exclusion** — when `packageRoot === projectRoot`, the agent-file copy loop is skipped but the skill-wrapper generation loops (§6 and §6b) still fire. Minor inconsistency that only affects dev testing of exclusions via same-root install.
+
+---
+
 ## Deferred from: code review of BUG-1 + U7 (2026-04-18)
 
 - **`DEFAULT_ARTIFACT_TYPES` drift from taxonomy** — `scripts/migrate-artifacts.js:135` lists 22 types (no `note`); `_bmad/_config/taxonomy.yaml` has 23. A fresh project that hits `bootstrapTaxonomy` before the first migration renders an ADR with the bootstrap list, not the committed taxonomy. Already tracked as **I54** in `convoke-note-initiative-lifecycle-backlog.md` — not re-logging.
