@@ -29,14 +29,26 @@ const MERGED_DOC_SENTINEL = Symbol.for('convoke.config-merger.docMerged');
  * @returns {string[]} Array of excluded agent IDs (empty if missing, malformed, or not an array)
  */
 function readExcludedAgents(configPath) {
-  if (!fs.existsSync(configPath)) return [];
+  let content;
   try {
-    const parsed = yaml.load(fs.readFileSync(configPath, 'utf8'));
+    content = fs.readFileSync(configPath, 'utf8');
+  } catch (err) {
+    // ENOENT is expected on fresh installs (config hasn't been written yet).
+    // Other IO errors (EACCES, EISDIR, EMFILE, ...) indicate a real misconfiguration —
+    // warn so the operator knows their exclusions won't be applied this run. Never throw:
+    // this reader must not break the install flow.
+    if (err && err.code !== 'ENOENT') {
+      console.warn(`Warning: could not read ${configPath} for excluded_agents (${err.code || err.message}). Proceeding without exclusions.`);
+    }
+    return [];
+  }
+  try {
+    const parsed = yaml.load(content);
     if (parsed && Array.isArray(parsed.excluded_agents)) {
       return parsed.excluded_agents.filter(a => typeof a === 'string');
     }
-  } catch {
-    // malformed yaml — degrade to "no exclusions" rather than break the install flow
+  } catch (err) {
+    console.warn(`Warning: could not parse ${configPath} for excluded_agents (${err.message}). Proceeding without exclusions.`);
   }
   return [];
 }
@@ -103,9 +115,9 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}) {
   // are preserved and deduplicated.
   //
   // U8: respect `excluded_agents` — an operator-maintained opt-out list. Agents named in that
-  // list are filtered out of the active `agents` array after restoration, so deliberate removals
-  // survive upgrades. Re-inclusion works by removing the agent from `excluded_agents` — the next
-  // merge restores it via the canonical spread above.
+  // list are filtered out of the active `agents` array so deliberate removals survive upgrades.
+  // Re-inclusion works by removing the agent from `excluded_agents` — the next merge restores
+  // it via the canonical spread above.
   const excludedAgents = Array.isArray(current.excluded_agents)
     ? current.excluded_agents.filter(a => typeof a === 'string')
     : [];
@@ -113,10 +125,13 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}) {
     const userAgents = Array.isArray(current.agents)
       ? [...new Set(current.agents.filter(a => !AGENT_IDS.includes(a)))]
       : [];
-    const restored = [...updates.agents, ...userAgents];
-    merged.agents = excludedAgents.length > 0
-      ? restored.filter(a => !excludedAgents.includes(a))
-      : restored;
+    merged.agents = [...updates.agents, ...userAgents];
+  }
+  // Apply exclusions to merged.agents regardless of whether `updates.agents` was provided —
+  // otherwise callers that pass empty updates (e.g., a workflows-only migration delta) would
+  // leak excluded agents back via the `defaults` spread at line 96.
+  if (excludedAgents.length > 0 && Array.isArray(merged.agents)) {
+    merged.agents = merged.agents.filter(a => !excludedAgents.includes(a));
   }
   // Preserve the exclusion list as a first-class field (empty stays empty — the schema default).
   merged.excluded_agents = excludedAgents;
