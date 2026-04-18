@@ -439,7 +439,7 @@ From the positive examples in the audit:
 ### 10.2 Honest limitations (tempered credibility)
 
 1. **Single LLM reviewer.** "Murat" is one LLM acting as a persona. A second independent LLM scored one cell in the reproducibility gate (§2.5) with 100% verdict agreement — but that's a narrow cross-check, not a full audit.
-2. **Inter-reviewer reproducibility measured on ONE cell.** AC #1's requirement was "on at least one skill before the methodology is locked." Met at 1 cell; ideal would be ≥3. Future audits should expand this.
+2. **Inter-reviewer reproducibility measured on ONE cell.** AC #1's requirement was "on at least one skill before the methodology is locked." Met at 1 cell; ideal would be ≥3. Future audits should expand this. **(Formalized 2026-04-18 via A10 — see [Compliance Checklist §Reproducibility gate (multi-skill audits)](convoke-spec-covenant-compliance-checklist.md#reproducibility-gate-multi-skill-audits). v2+ audits MUST cover ≥3 cells spanning expected-PASS + expected-FAIL + borderline, with zero-disagreement threshold at N=3-4 and ≥80% at N≥5. v1's 1-cell gate is grandfathered under the pre-A10 methodology; re-running under A10 semantics is not required retroactively.)**
 3. **Sample bias direction: likely optimistic.** Static file-review primary; only enhance-backlog was exercised live. Live exposure surfaces violations static review misses. **The 84% compliance rate is likely a ceiling — live-exercise follow-ups on 2-3 currently-PASSing skills would quantify the bias.**
 4. **Auditor is inside the project.** "Murat" is a Convoke-authored persona auditing Convoke-authored skills. This is not a claim of external independence. An external audit would add credibility the current report does not claim.
 5. **Sample size.** 8 skills audited out of ~33 Convoke-owned skills/workflows. Generalization to the full Convoke surface requires larger follow-up. The §1 compliance rate applies to the sample; the Covenant publication (Story 2.3) should cite this.
@@ -478,6 +478,13 @@ Round 3 code review surfaced that Round 2's rewrite did not fully deliver on its
 Round 3 decisions D1a through D5a all accepted (see §5.1). Matrix and retrofits updated accordingly. Compliance rate shifted 84% → 82% with no bottleneck right (previously claimed at 50%). This is the honest, post-Round-3 state.
 
 Remaining Round 3 findings deferred to backlog Triage per `code-review-convergence` no-Round-4 rule. Final assessment: the audit is **suitable as internal calibration evidence** for Epic 2 Story 2.1 retrofit scoping. Epic 2 Story 2.3 (Publication) must cite all §5.1 decisions + §10.2 limitations + the 82% rate with its caveats in a "Known gaps" section rather than quote headline-only percentages.
+
+### 10.5 Post-audit methodology extensions (2026-04-18)
+
+After this audit was frozen, two additional methodology rules were added to the Compliance Checklist spec. Neither retroactively reopens v1 verdicts; both bind v2+ audits:
+
+- **A10 — Reproducibility gate for multi-skill audits.** See §10.2 limitation 2 above and the [Compliance Checklist §Reproducibility gate (multi-skill audits)](convoke-spec-covenant-compliance-checklist.md#reproducibility-gate-multi-skill-audits). v1's 1-cell gate is grandfathered under the pre-A10 methodology.
+- **A15 — `N/A — external-declared (<tool>)` escape hatch on OC-R6** for skills wrapping externally-owned CLIs (git, npm, docker, ...). **No cell in this audit retroactively qualifies for the new value.** The audited Layer 3 surfaces — Migration (`scripts/migrate-artifacts.js`), Portfolio (`scripts/lib/portfolio/portfolio-engine.js`), bmad-export-skill, bmad-validate-exports, Loom add-team, enhance-backlog, Vortex lean-persona, Gyre stack-detection — are all internally-authored scripts, not externally-owned CLIs. Any v2+ audit that reaches a skill wrapping git/npm/docker MUST consult A15's preconditions before using the value.
 
 ---
 
