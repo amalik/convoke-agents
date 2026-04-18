@@ -236,9 +236,9 @@ Active bugs — fix pipeline only. Deeper follow-ups spawn Fast Lane or Initiati
 
 | ID | Description | R | I | C | E | Score | Portfolio | Status | Dependencies | Linked Follow-up |
 |----|-------------|---|---|---|---|-------|-----------|--------|--------------|------------------|
-| BUG-1 | `generateGovernanceADR` hardcodes "(21)" type count — emits 21 types, taxonomy has 23 (note + covenant). Every migration `--apply` produces misleading ADRs. | 3 | 1 | 90% | 1 | 2.7 | convoke | Backlog | related: A6 | — |
+| _none_ | | | | | | | | | | |
 
-**Note:** As of 2026-04-18, Bug Lane has its first active entry (BUG-1). Prior state (2026-04-12) was empty — previous latent risks (YAML parsing, atomic writes, etc.) were never observed as bugs; they sit in Fast Lane as preventive hardening.
+**Note:** Bug Lane is currently empty. BUG-1 (first-ever active entry, logged 2026-04-18) shipped same day — see §2.5. Latent risks (YAML parsing, atomic writes, etc.) sit in Fast Lane as preventive hardening, not observed bugs.
 
 ### 2.3 Fast Lane (Quick Wins + Spikes)
 
