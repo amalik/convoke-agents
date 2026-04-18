@@ -112,6 +112,35 @@ describe('validateAgentFiles', () => {
     const result = await validateAgentFiles(tmpDir);
     assert.equal(result.passed, true);
   });
+
+  it('passes when an excluded agent file is absent (U8)', async () => {
+    // Fresh temp dir so state from previous tests does not bleed.
+    const localTmp = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-val-excl-'));
+    try {
+      const vortexDir = path.join(localTmp, '_bmad/bme/_vortex');
+      const agentsDir = path.join(vortexDir, 'agents');
+      await fs.ensureDir(agentsDir);
+
+      const { AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
+      const excludedId = 'production-intelligence-specialist';
+      // Write all agent files EXCEPT the excluded one.
+      for (const id of AGENT_IDS) {
+        if (id === excludedId) continue;
+        await fs.writeFile(path.join(agentsDir, `${id}.md`), `# ${id}`, 'utf8');
+      }
+      // Write the config with the exclusion.
+      fs.writeFileSync(
+        path.join(vortexDir, 'config.yaml'),
+        yaml.dump({ agents: AGENT_IDS.filter(id => id !== excludedId), excluded_agents: [excludedId] }),
+        'utf8'
+      );
+
+      const result = await validateAgentFiles(localTmp);
+      assert.equal(result.passed, true, `validator must pass when excluded agent file is absent — got error: ${result.error}`);
+    } finally {
+      await fs.remove(localTmp);
+    }
+  });
 });
 
 // === validateWorkflows ===
