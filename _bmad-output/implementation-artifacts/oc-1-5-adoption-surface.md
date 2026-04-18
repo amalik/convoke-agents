@@ -1,6 +1,6 @@
 # Story 1.5: Adoption Surface
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -17,11 +17,11 @@ so that the Covenant is consulted at the point of authorship — not discovered 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Edit repo root `README.md` to add Covenant reference in the first section (AC #1, #2)
-- [ ] Task 2: Create `_bmad/bme/README.md` as the bme-module landing page with Covenant reference (AC #1, #2)
-- [ ] Task 3: Edit `project-context.md` to add a `covenant-compliance-for-convoke-skills` rule referencing the Covenant (AC #1, #2, #4)
-- [ ] Task 4: Verify 3-of-4 discovery-path coverage (AC #3)
-- [ ] Task 5: Verify each reference includes rationale (AC #4)
+- [x] Task 1: Edit repo root `README.md` to add Covenant reference in the first section (AC #1, #2)
+- [x] Task 2: Create `_bmad/bme/README.md` as the bme-module landing page with Covenant reference (AC #1, #2)
+- [x] Task 3: Edit `project-context.md` to add a `covenant-compliance-for-convoke-skills` rule referencing the Covenant (AC #1, #2, #4)
+- [x] Task 4: Verify 3-of-4 discovery-path coverage (AC #3)
+- [x] Task 5: Verify each reference includes rationale (AC #4)
 
 ## Dev Notes
 
@@ -62,10 +62,25 @@ No new skill or workflow being added. This story edits three Convoke-owned docum
 
 ### Agent Model Used
 
-_To be filled when story is picked up_
+Claude Opus 4.7 (1M context) — direct execution, no workflow skill (small documentation-surface story).
 
 ### Debug Log References
 
+_None._
+
 ### Completion Notes List
 
+- **Coverage achieved:** 3/4 discovery paths covered (repo root README, new bme README, project-context.md). The 4th (docs index) does not exist; substitution documented in Dev Notes. Satisfies AC #3.
+- **Above-the-fold placement:** All 3 references appear before the first `##` heading on their respective surfaces. README.md: Covenant blockquote at line 20 (first `##` is at line 36). `_bmad/bme/README.md`: Covenant blockquote at line 5 (first `##` is at line 7). `project-context.md`: Covenant blockquote at line 5 (first `##` is at line 9). Satisfies AC #2.
+- **Rationale dogfooded:** Every reference explains *why* Covenant compliance matters, not just "read this" — dogfooding the Right to rationale per NFR7. README cites "architectural concern, not a styling concern; skills that violate it erode operator trust across the skill ecosystem". bme README cites "what makes a `_bmad/bme/` skill a *Convoke* skill rather than a generic one". project-context.md pointer cites the same plus links the rule. Satisfies AC #4.
+- **project-context.md placement decision:** Added both a top-of-file blockquote (line 5) that meets AC #2's "before first `##`" requirement AND the full `covenant-compliance-for-convoke-skills` rule in its topical position after `namespace-decision-for-new-skills`. The top pointer surfaces the Covenant to anyone landing on the file; the rule in topical position gives full How-to-apply guidance alongside sibling authoring rules.
+- **Upstream BMAD namespace carve-out:** The new rule explicitly exempts upstream BMAD contributions (`_bmad/core/`, `_bmad/bmm/`, `_bmad/bmb/`) — Covenant is a Convoke-specific standard, not a BMAD Method requirement. Consistent with `namespace-decision-for-new-skills`.
+
 ### File List
+
+**Modified:**
+- `README.md` — added Covenant blockquote at line 20 (after intro paragraph, before teams table)
+- `project-context.md` — added top-of-file Covenant pointer at line 5 + `covenant-compliance-for-convoke-skills` rule in topical position
+
+**Created:**
+- `_bmad/bme/README.md` — new bme-module landing page with Covenant blockquote at line 5 and submodule table
