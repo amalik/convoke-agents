@@ -1,6 +1,6 @@
 # Story 1.1: Covenant Audit with Calibration Cases
 
-Status: review
+Status: done
 
 ## Story
 
@@ -201,13 +201,19 @@ Modified:
 - 2026-04-18: Code review of Round 1 produced 6 HIGH + 7 MEDIUM + 6 LOW findings, triggering Round 2 per `code-review-convergence` rule.
 - 2026-04-18: Round 2 rewrite complete. All Round 1 HIGH findings addressed: reproducibility gate run (H1, 100% agreement on 1 cell), novel-concept glossary added (H2), Migration worst-case scoping clarified with scar-shape correction (H3), sample bias disclosed as likely-ceiling (H4), scope expanded to 8 skills / 6 of 6 submodules (H5), Executive Summary corrected (H6). All MEDIUM patches applied (names-not-numbers, credibility tempering, self-audit caveat, archetype-diversity criterion, COI disclosure, 1-to-1 retrofit mapping, validate-exports R6 re-scored). Status remains review pending user approval of Round 2 content.
 
-### AC Verification Summary (Round 2)
+### AC Verification Summary (Round 3 final, post-decisions D1a–D5a)
 
-- **AC #1 (methodology + reproducibility ≥80%):** PASS — gate run on 1 cell at 100% agreement; honest limitations documented (one cell not three; LLM reviewers not human).
-- **AC #2 (rights by name not number):** PASS — R1-R7 replaced throughout.
-- **AC #3 (Migration calibration):** PASS with corrected interpretation — Migration scar was Right-to-next-action-shaped (not Right-to-completeness / Right-to-pause as story predicted). Methodology catches the actual scar shape + current violations (Right to a default, Right to next action, Right to pacing). Path A mitigation applies.
-- **AC #4 (Portfolio calibration):** PASS — scar remediated; methodology correctly identifies current compliance + Right-to-pacing violation. Path A mitigation applies.
-- **AC #5 (calibration failure handling):** PASS — Path A explicitly chosen and re-baselined; story's Migration-scar-shape misclassification surfaced as additional finding.
-- **AC #6 (representative skills across archetypes):** PASS — 6 skills (up from 4) covering all 4 archetypes + 6 of 6 Convoke submodules. Archetype-diversity criterion added.
-- **AC #7 (matrix + bottleneck ranking ≥50%):** PASS — matrix is 56 cells; sole bottleneck is Right to pacing at 4/8 (50%). Exec Summary arithmetic corrected.
-- **AC #8 (report saved with governance frontmatter):** PASS — file exists at specified path with required frontmatter.
+- **AC #1 (methodology + reproducibility ≥80%):** PASS — reproducibility gate run on 1 cell at 100% verdict agreement between two independent LLM reviewers. AC #1 timeline resolved via D2a (Round 2 rewrite treated as methodology lock event). Honest limitations documented (single cell not three; LLM reviewers not human) in report §2.5 + §10.2.
+- **AC #2 (rights by name not number):** PASS — prose and evidence notes use names throughout; retrofit cell identifiers in §9.1 use "skill × Right to X" form (Round 3 patch).
+- **AC #3 (Migration calibration):** **PASS via amended AC (D1a)** — original AC text ("Migration flagged as violating Right-to-completeness + Right-to-pause at minimum") formally amended to "methodology catches violations where they currently exist OR, where remediated, correctly identifies remediation." Under the amended AC: methodology correctly identifies Migration's current violations (Right to a default, Right to next action, Right to pacing) and correctly identifies Right-to-completeness and Right-to-pause as remediated since the 2026-03-era scar. Report §3.1 documents the full reasoning. The original AC's scar-shape prediction (completeness + pause) is also noted as a story-level misclassification; actual scar shape was Right-to-next-action.
+- **AC #4 (Portfolio calibration):** **PASS via amended AC (D1a)** — same amendment applies. Methodology correctly identifies Portfolio's scars (Right-to-the-full-universe + Right-to-completeness) as remediated. Portfolio currently compliant with all 7 rights (Round 3 D3a re-scored Right-to-pacing to PASS under strict glossary). Report §3.2.
+- **AC #5 (calibration failure handling):** PASS — Path A explicitly chosen and re-baselined per §5. Round 3 ratified this path via D1a AC amendments.
+- **AC #6 (representative skills across archetypes):** PASS — 6 skills (up from 4) covering all 4 archetypes + 6 of 7 `_bmad/bme/` subdirectories (`_config` empty, disclosed in §6). Archetype-diversity criterion added.
+- **AC #7 (matrix + bottleneck ranking ≥50%):** PASS — matrix is 56 cells; **no bottleneck right exists at ≥50% threshold** (Round 3 D3a re-score eliminated the Round 2 claim; 2 rights tie at 38%: Right to a default, Right to pacing). Report §7.1 + §7.2 final numbers reflect this.
+- **AC #8 (report saved with governance frontmatter):** PASS — file at specified path with required frontmatter.
+
+**Final compliance rate (Round 3 final):** 46/56 = 82% (was 84% in Round 2 before D3a/D5a re-scoring).
+
+**Additional commitments:**
+- **D4a:** Loom add-team steps 02-05 follow-up audit scoped into Epic 2 Story 2.1 planning.
+- **Backlog triage:** Vortex sampling representativeness, AC #6 distribution skew, AC #1 "cells" plural reading, Migration scar evidence grounding — logged as intakes via `bmad-enhance-initiatives-backlog` Triage mode post-story-closure.
