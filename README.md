@@ -17,6 +17,8 @@
 
 Convoke extends AI agents with two types of installable modules: **Teams** bring new agents for a domain, **Skills** add new capabilities to existing agents. Install them independently or combine them.
 
+> **Authoring a Convoke skill?** Required reading first: [The Convoke Operator Covenant](_bmad-output/planning-artifacts/convoke-covenant-operator.md) — one axiom and seven commitments every Convoke skill must honor. The Covenant exists because operator-facing UX is an architectural concern in agent systems, not a styling concern; skills that violate it erode operator trust across the skill ecosystem, not just on their own surface.
+
 | Team | Agents | Domain |
 |------|--------|--------|
 | **Vortex** | 7 agents, 22 workflows | Product discovery — from user insight to evidence-based decisions |
