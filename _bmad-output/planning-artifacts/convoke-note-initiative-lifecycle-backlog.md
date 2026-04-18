@@ -365,6 +365,7 @@ Items removed from the active backlog. Nothing disappears without a receipt.
 
 | ID | Description | Shipped | Score | Portfolio |
 |----|-------------|---------|-------|-----------|
+| BUG-1 | `generateGovernanceADR` now derives platform + artifact-type counts and lists from taxonomy (was hardcoded "(21)" / "(8)"). Fix + 1 new test asserting custom taxonomy reflected. | 2026-04-18 | 2.7 | convoke |
 | I49 | Process uniformity — 4 rules added to project-context.md: derive-counts-from-source, shared-test-constants, catch-all-phase-review, spec-verify-referenced-files. | 2026-04-18 | 4.3 | convoke |
 | P10 | Capability Evaluation Framework operationalized — moved from archive to planning-artifacts, referenced from lifecycle §1.2 + project-context.md rule. | 2026-04-18 | 5.6 | helm |
 | P11 | Friction log template operationalized — moved from archive to planning-artifacts, linked as CEF input feed. | 2026-04-18 | 5.6 | helm |
