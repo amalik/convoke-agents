@@ -2,6 +2,7 @@
 initiative: convoke
 artifact_type: vision
 created: '2026-04-10'
+updated: '2026-04-18'
 schema_version: 1
 ---
 # Convoke Ecosystem Vision
@@ -31,7 +32,7 @@ Each scope in the ecosystem answers one question. Only scopes with **validated d
 | 3 | **Sentinel** | SNT | What do we do when things break? | Hypothesis | TBD — evaluated as agent-in-Gyre |
 | 4 | **Ledger** | LDG | Can we prove it to auditors? | Hypothesis | TBD — likely module, not team |
 | 5 | **Pulse** | PLS | Will anyone actually use it? | Hypothesis | TBD |
-| 6 | **Loom** | LOM | Who decides what, when? | Hypothesis | TBD |
+| 6 | **Loom** | LOM | How do we scale team creation? | **Shipping** (v3.2) | Team Factory |
 | 7 | **Conduit** | CDT | Can we move the data safely? | Hypothesis | TBD |
 | 8 | **Compass** | CMP | Are the right people behind us? | Hypothesis | TBD |
 
@@ -41,21 +42,22 @@ Each scope in the ecosystem answers one question. Only scopes with **validated d
 
 ## Lifecycle positioning
 
-```
-  DISCOVER          UNDERSTAND          BUILD            READY           RUN
- ┌─────────┐      ┌─────────┐      ┌──────────┐    ┌──────────┐   ┌──────────┐
- │ Vortex  │─────▶│  Forge  │─────▶│   BMAD   │───▶│  Gyre    │──▶│ Sentinel │
- │  (VTX)  │      │  (FRG)  │      │  + TEA   │    │  (GYR)   │   │  (SNT)   │
- └─────────┘      └─────────┘      └──────────┘    └──────────┘   └──────────┘
-   Shipping         Validated        Existing        In dev         Hypothesis
-```
+> **Note:** This ecosystem previously used a linear lifecycle diagram (Discover → Understand → Build → Ready → Run). That model has been superseded by the **Gravity Model** — a radial constellation where all perimeters orbit a central Evidence Gravity node. See the [Strategic Vision](convoke-vision-original-readme.md) for the full Gravity Model description and its Holling Panarchy theoretical basis.
 
-**Lifecycle spans (when active):**
-- **Loom** — human-agent orchestration rules, continuous meta-layer
-- **Conduit** — data lifecycle, active during Understand → Build
+### Perimeter types
+
+The ecosystem distinguishes **practice perimeters** (domain-specific capabilities that produce and consume evidence) from **infrastructure perimeters** (cross-cutting capabilities that make practice perimeters reliable). Infrastructure ships first — practice perimeters depend on it.
+
+**Practice perimeters:** Vortex (Discovery), Gyre (Readiness), Forge (Knowledge Eng.), Strategy, Delivery, Operations, Security, Growth
+**Infrastructure perimeters:** Knowledge Engineering (Forge dual role), Documentation, Entropy Management, Mesh Infrastructure
+
+### Continuous spans
+
+- **Loom** — Team Factory: industrialized creation of new teams, agents, and skills (shipped v3.2)
+- **Conduit** — data lifecycle, active during knowledge extraction and build
 - **Compass** — stakeholder alignment, continuous
-- **Ledger** — audit traceability, active during Build → Run
-- **Pulse** — adoption & change, active from mid-Build through Run
+- **Ledger** — audit traceability, active during build and operations
+- **Pulse** — adoption & change, active from mid-build through operations
 
 ---
 
@@ -116,12 +118,14 @@ Each scope below is a hypothesis. It remains a brief until real project friction
 **Key capabilities:** Stakeholder sentiment sensing, change narrative shaping, training & enablement, adoption embedding, sustainability.
 **When needed:** Large brownfield transformations where end-user adoption is the primary risk.
 
-### Loom — Human-agent orchestration
+### Loom — Team Factory (SHIPPED)
 
-**Question:** Who decides what, when?
-**Gap it fills:** As agent count grows, rules are needed for which agents can act autonomously vs. which escalate to humans.
-**Key capabilities:** Orchestration chartering, boundary definition, escalation protocols, rule evolution.
-**When needed:** When multiple teams are active on the same engagement.
+> **Status update (2026-04-18):** Loom shipped in v3.2.0 as the Team Factory — a guided orchestration layer for creating new BMAD-compliant teams. Validated on Vortex and Gyre. Awaiting Forge Gate 1 for next validation. See [Team Factory Vision](../../_bmad-output/vortex-artifacts/loom-vision-2026-03-21.md).
+
+**Original question:** Who decides what, when?
+**What it became:** How do we scale team creation?
+**Capabilities delivered:** Guided team composition, agent scope definition with overlap detection, contract design, integration wiring, spec persistence for resume/express mode.
+**Note:** The original "human-agent orchestration" question (agent autonomy rules, escalation protocols) remains an open design question for when multiple teams are active on the same engagement. This may resurface as a governance concern in Wave 2.
 
 ### Conduit — Data lifecycle & migration
 
@@ -164,12 +168,34 @@ Integration follows a **demand-pull** pattern, not a mesh. Connections are activ
 2. **Capability Evaluation Framework** determines form factor (skill → agent → team)
 3. **Overlap analysis** (Gyre pattern) ensures clean boundaries before building
 4. **Promotion/demotion** keeps form factors right-sized as usage data accumulates
+5. **Team Factory (Loom)** — industrialized scaffolding of new teams through a guided workflow that enforces architectural thinking and produces complete integration (shipped v3.2)
+6. **Marketplace distribution** — Convoke is listed in the BMAD marketplace, enabling discovery and installation through the community module browser (formalized in Convoke 4.0, Epic 3)
+7. **Skill portability** — individual skills exportable to standalone LLM-agnostic format with platform adapters (Claude Code, Copilot, Cursor), lowering the barrier from "install the framework" to "copy one skill"
+8. **Gravity Check protocol** — structured reassessment after each wave ships: evidence review, plan validation, assumption check, WIP check, entropy check, resource check (see [Lifecycle Expansion Plan](convoke-note-lifecycle-expansion-plan.md))
 
 See companion documents:
+- **[Strategic Vision](convoke-vision-original-readme.md)** — Gravity Model, Panarchy basis, three strategic pillars
+- **[Lifecycle Expansion Plan](convoke-note-lifecycle-expansion-plan.md)** — wave structure, gravity checks, resource model
+- **[Skill Portability Vision](convoke-vision-skill-portability.md)** — cross-platform distribution strategy
+- **[Team Factory Vision](../../_bmad-output/vortex-artifacts/loom-vision-2026-03-21.md)** — scaling team creation
 - **Capability Evaluation Framework** — decision tree for form factor selection
 - **Forge Phase A Epic** — Silo + Rune build plan
 - **Forge↔Gyre Handoff Contract** — integration specification
 - **Friction Log Template** — demand capture tool for consulting teams
+
+---
+
+## Current initiative: v6.3 Adoption (Convoke 4.0)
+
+Convoke 4.0 aligns the platform with BMAD Method v6.3.0. This is infrastructure work that benefits all current and future perimeters:
+
+- **Config-loader migration** — replaces deprecated `bmad-init` with direct YAML loading (FR1-FR11)
+- **Marketplace distribution** — `.claude-plugin/marketplace.json` for community discovery (FR19-FR25)
+- **BMM dependency governance** — scan tool and registry for custom skill compatibility (FR12-FR18)
+- **Agent consolidation** — Bob/Quinn/Barry consolidated into upstream Amelia (FR26-FR30)
+- **Behavioral equivalence validation** — PF1 LLM-as-judge battery proving upgrade safety (FR36-FR40)
+
+5 sprints, 28 stories, 50 functional requirements. See [Epic Breakdown](convoke-epic-bmad-v6.3-adoption.md).
 
 ---
 
