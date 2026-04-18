@@ -225,6 +225,9 @@ Items awaiting qualification. No lane, no priority, no commitment.
 | IN-13 | Decision-support archetype undersampled — oc-1-1 had only 1 decision-support skill (enhance-backlog) which also carried COI disclosure. Add 1 more decision-support skill to v2 Covenant audit baseline → A9 | Code review oc-1-1 Round 3 (Acceptance Auditor) | 2026-04-18 | Winston |
 | IN-14 | Reproducibility gate ≥3 cells for future Covenant audits — oc-1-1 AC #1 literal reading says "cells" (plural); v1 gate measured 1 cell via D2a pragmatic reading. Future audits should cover ≥3 cells (expected-PASS + expected-FAIL + borderline) per §2.5 → A10 | Code review oc-1-1 Round 3 (Acceptance Auditor) | 2026-04-18 | Winston |
 | IN-15 | Migration scar re-interpretation evidence grounding — oc-1-1 §4.2 asserted Right-to-next-action scar shape using current CLI evidence, not historical scar-era quotes. Locate scar-era retro/logs or soften the re-interpretation with evidence-limitation note → A11 | Code review oc-1-1 Round 3 (Edge Case Hunter) | 2026-04-18 | Winston |
+| IN-16 | `compareVersions` silently coerces pre-release versions to base — `scripts/update/lib/utils.js:27-39` does `Number('4-alpha') → NaN → 0`, so `compareVersions('1.0.4-alpha', '1.0.4') === 0`. Shared utility used by changelog-reader filter and migration-path decisions → U11 | Code review BUG-1+U7 Round 1 (Edge Case Hunter) | 2026-04-18 | Winston |
+| IN-17 | Empty `taxonomy.initiatives.platform` / `artifact_types` not validated — `readTaxonomy` (`scripts/lib/artifact-utils.js:148-160`) accepts empty arrays; operator commenting out all entries produces degenerate ADR text like "**Platform initiatives (0):** " → I55 | Code review BUG-1+U7 Round 1 (Edge Case Hunter) | 2026-04-18 | Winston |
+| IN-18 | `taxonomy.initiatives.user` silently dropped from generated ADR — `scripts/lib/artifact-utils.js:2031` renders only `platform`; user-scope initiatives invisible in governance artifact → I56 | Code review BUG-1+U7 Round 1 (Blind Hunter) | 2026-04-18 | Winston |
 
 **Notes on intakes:**
 
@@ -250,7 +253,6 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 
 | ID | Description | R | I | C | E | Score | Portfolio | Status | Dependencies |
 |----|-------------|---|---|---|---|-------|-----------|--------|--------------|
-| U7 | Changelog surface during `convoke-update` | 8 | 2 | 80% | 3 | 4.3 | convoke | Backlog | — |
 | U8 | Respect user agent exclusions on update | 6 | 2 | 80% | 3 | 3.2 | convoke | Backlog | — |
 | A5 | Research stories must use mechanical search protocol | 7 | 1 | 80% | 2 | 2.8 | convoke | Backlog | — |
 | T3 | End-to-end update test on real project | 5 | 2 | 80% | 3 | 2.7 | convoke | Backlog | — |
@@ -286,6 +288,7 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 | I27 | Portfolio skill — Option [4] empty-state messaging | 4 | 0.25 | 90% | 1 | 0.9 | enhance | Backlog | — |
 | I52 | Collision resolution flag for migration CLI | 4 | 0.5 | 90% | 2 | 0.9 | enhance | Backlog | — |
 | I54 | Refactor `DEFAULT_ARTIFACT_TYPES` to single source of truth (migrate-artifacts.js + taxonomy-merger.js + taxonomy.yaml) | 4 | 0.5 | 90% | 2 | 0.9 | convoke | Backlog | — |
+| U11 | `compareVersions` semver-aware pre-release handling — fix `Number('4-alpha')→0` coercion in `scripts/update/lib/utils.js:27-39`; proper tuple compare + pre-release identifier ordering per semver spec | 2 | 0.5 | 90% | 1 | 0.9 | convoke | Backlog | deferred-from: BUG-1+U7 Round 1 |
 | A11 | Migration scar re-interpretation evidence grounding — locate scar-era retro/logs to anchor Right-to-next-action classification, or soften re-interpretation with evidence-limitation note | 3 | 0.5 | 60% | 1 | 0.9 | convoke | Backlog | deferred-from: oc-1-1 Round 3 |
 | I33 | Workflow-name namespace collision risk (verbatim names) | 4 | 1 | 70% | 3 | 0.9 | enhance | Backlog | ✓I32 (I32 made orphan deletion active — blast radius increased) |
 | I39 | Non-atomic version stamp writes in `refresh-installation.js` | 4 | 1 | 70% | 3 | 0.9 | convoke | Backlog | bundles-with: I46 |
@@ -297,6 +300,7 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 | I17 | `suggestDifferentiator` — support extensions beyond `.md`/`.yaml` | 4 | 0.25 | 80% | 1 | 0.8 | enhance | Backlog | — |
 | I19 | Share `_scanCorpus` between portfolio engine and migration suggester | 4 | 0.25 | 80% | 1 | 0.8 | enhance | Backlog | — |
 | I41 | `convoke-doctor` `console.warn` breaks structured-output contract | 4 | 0.25 | 80% | 1 | 0.8 | convoke | Backlog | — |
+| I56 | Render `taxonomy.initiatives.user` in generated ADR — add a "User initiatives" line to `generateGovernanceADR` so operator-added initiatives appear in the governance artifact | 2 | 0.5 | 80% | 1 | 0.8 | convoke | Backlog | deferred-from: BUG-1+U7 Round 1 |
 | I35 | Naive `split('\n')` CSV parsing — CRLF + quoted-newline edges | 4 | 0.5 | 70% | 2 | 0.7 | convoke | Backlog | — |
 | I40 | `loadSkillManifest` Map silently overwrites duplicate paths | 3 | 0.25 | 90% | 1 | 0.7 | convoke | Backlog | — |
 | I44 | No `validateGyreModule` function in validator.js | 2 | 1.5 | 70% | 3 | 0.7 | gyre | Backlog | ✓I34 |
@@ -318,6 +322,7 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 | A2 | Create `.agent.yaml` source files for Vortex agents | 2 | 0.5 | 60% | 4 | 0.2 | vortex | Backlog | — |
 | I42 | `MERGED_DOC_SENTINEL` doesn't survive spread or JSON-serialize | 2 | 0.25 | 70% | 2 | 0.2 | convoke | Backlog | — |
 | I53 | Carry-forward: CRLF writeManifest + basename collision | 2 | 0.25 | 40% | 1 | 0.2 | enhance | Backlog | — |
+| I55 | Validate `taxonomy.initiatives.platform` + `artifact_types` non-empty in `readTaxonomy` — reject/warn on all-commented config before rendering degenerate ADR text | 1 | 0.25 | 90% | 1 | 0.2 | convoke | Backlog | deferred-from: BUG-1+U7 Round 1 |
 | I45 | Workflow-manifest CSV registration drift not validated | 1 | 0.5 | 60% | 2 | 0.15 | convoke | Backlog | ✓I34, bundles-with: I15 |
 
 ### 2.4 Initiative Lane
@@ -373,6 +378,7 @@ Items removed from the active backlog. Nothing disappears without a receipt.
 
 | ID | Description | Shipped | Score | Portfolio |
 |----|-------------|---------|-------|-----------|
+| U7 | Changelog surface during `convoke-update` — new `changelog-reader.js` parses Keep-a-Changelog headers (incl. pre-release), pre-prompt "What's New" block in refresh-only + upgrade paths. Code review Round 1 applied 4 patches (taxonomy guard, broadened HEADER_RE + semver post-filter, fenced-code tracking, integration tests). 15 tests added; 6 items deferred. | 2026-04-18 | 4.3 | convoke |
 | BUG-1 | `generateGovernanceADR` now derives platform + artifact-type counts and lists from taxonomy (was hardcoded "(21)" / "(8)"). Fix + 1 new test asserting custom taxonomy reflected. | 2026-04-18 | 2.7 | convoke |
 | I49 | Process uniformity — 4 rules added to project-context.md: derive-counts-from-source, shared-test-constants, catch-all-phase-review, spec-verify-referenced-files. | 2026-04-18 | 4.3 | convoke |
 | P10 | Capability Evaluation Framework operationalized — moved from archive to planning-artifacts, referenced from lifecycle §1.2 + project-context.md rule. | 2026-04-18 | 5.6 | helm |
@@ -579,6 +585,8 @@ Full descriptions for items in §2.4 whose table row is a one-liner.
 
 | Date | Change |
 |------|--------|
+| 2026-04-18 | **Triage by Amalik: Logged 3 intakes (IN-16, IN-17, IN-18) from code review of BUG-1+U7 Round 1.** Qualified 3 to Fast Lane: U11 (compareVersions semver-aware pre-release handling, score 0.9), I56 (render `taxonomy.initiatives.user` in ADR, score 0.8), I55 (validate non-empty taxonomy arrays, score 0.2). All deferred-from BUG-1+U7 Round 1. Other deferred items (D1=I54 duplicate, D5 __dirname fragility, D6 verbose-gating) remain in `deferred-work.md` only — too speculative for intake qualification. |
+| 2026-04-18 | **U7 shipped.** New `scripts/update/lib/changelog-reader.js` (pure parser, Keep-a-Changelog headers incl. pre-release, fenced-code-aware, semver post-filter). Wired into `convoke-update.js` via `printChangelog()` helper — "What's New" block surfaces before the confirm prompt in both refresh-only and upgrade branches. Code review Round 1 applied 4 patches (taxonomy guard in `generateGovernanceADR`, broadened HEADER_RE, fenced-code tracking, integration tests). Full suite 1142/1142 (+16 new tests). U7 moved Fast Lane → §2.5 Completed. |
 | 2026-04-18 | **ILE-1 PRD complete.** 12-step PRD workflow delivered `convoke-prd-initiative-lifecycle-engine.md`: Executive Summary, Project Classification (developer_tool / capability-layer / portfolio-and-program-management / high / brownfield), Success Criteria (3 user success + business success + L1-L2 leading + M1-M4 outcomes + 4 falsification + 2 kill criteria w/ diagnostic + 4 TACs + 4 observability signals), Product Scope (MVP 6 items + Growth + Vision), 8 User Journeys + requirements summary + open questions + UX risk, Domain Requirements, Innovation (Christensen-honest framing + 3 positioning framings + 4 feature claims + 2-tier validation + month-3/6 reviews + 3-question kill diagnostic), Project-Type Requirements (13 subsections incl. Error Contract w/ 20 seed codes), Project Scoping & Phased Development (ship-essential vs thesis-essential + dependency graph + 5-7 sprint baseline + 4-tier contingency + descope governance), 63 FRs across 9 capability areas, 36 NFRs across 9 categories. 10 rounds of elicitation + multiple party-mode reviews. Stage: In Pipeline; artifacts: B, P. Next pipeline step: Architecture. |
 | 2026-04-18 | **BUG-1 shipped.** `generateGovernanceADR` (`scripts/lib/artifact-utils.js:2001`) now accepts `taxonomy` param and derives platform + artifact-type counts/lists from it (was hardcoded "(8)" and "(21)"); call site `scripts/migrate-artifacts.js:384` passes the already-loaded taxonomy through. Tests updated (`tests/lib/migration-execution.test.js:1210`) — 1 new case asserts custom taxonomy is reflected in output, not hardcoded. Full suite 1126/1126 green. BUG-1 moved Bug Lane → §2.5 Completed; Bug Lane empty again. |
 | 2026-04-18 | **Triage by Winston: Logged 4 intakes (IN-12, IN-13, IN-14, IN-15) from code review of oc-1-1-covenant-audit Round 3.** Qualified 4 to Fast Lane: A10 (reproducibility ≥3 cells for v2 audits, score 2.7), A8 (Vortex audit expansion, score 2.4), A9 (decision-support archetype addition, score 1.6), A11 (Migration scar evidence grounding, score 0.9). All deferred-from oc-1-1 Round 3 per code-review-convergence no-R4 rule. Raw intakes: 0. Dropped: 0. |
