@@ -174,3 +174,16 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 - When writing a spec: for every file path mentioned, run a quick existence check (`ls` or glob). If the file doesn't exist, note the correct path or mark it as "to be created."
 - When picking up a story: before coding, grep/glob for every file referenced in the spec. Flag any that are missing — don't silently skip them.
 - **Reviewing a spec.** If a spec references a file path, verify it. If it references a pattern ("all files matching X"), run the glob and confirm the count matches the spec's claim.
+
+---
+
+## Rule: mechanical-research-enumeration
+
+**Statement.** Research, catalog, audit, or inventory deliverables must enumerate their subject space via a mechanical search (`grep`, `glob`, `rg`) — not by eyeballing section headers, tables of contents, or file listings.
+
+**Why.** Eyeballed enumeration silently undercounts. Section headers may not match what the story actually needs ("all skills invoking X" ≠ "sections titled X"), files may have moved, and a human scanning hundreds of files misses edges a grep would catch. Story 7.3 went through 3 review rounds because its inventory was built from section-header eyeballing rather than pattern-based search — edges found in Rounds 2 and 3 should have been found in Round 1. AG Epic 7 retro A1.
+
+**How to apply.**
+- When the deliverable is "list all X": run the grep/glob first, paste the raw output into the working notes, *then* transform it to the presentation format. The raw output is the evidence of completeness.
+- In story specs for research/catalog work: include the exact search command as a required input. Example: `grep -l 'OC-R6' _bmad/**/*.md` rather than "review all Covenant-related files for OC-R6 references".
+- **Reviewing a research/catalog PR.** If the deliverable doesn't cite a mechanical search, ask how the enumeration was built. If it was eyeballed, request a grep-based re-verification pass before approving.
