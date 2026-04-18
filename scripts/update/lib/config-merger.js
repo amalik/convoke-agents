@@ -20,6 +20,28 @@ const { assertVersion } = require('./utils');
 const MERGED_DOC_SENTINEL = Symbol.for('convoke.config-merger.docMerged');
 
 /**
+ * Read `excluded_agents` from a module's config.yaml without going through the
+ * full merge path. Used by refresh-installation and validator to skip copying
+ * / checking agents the operator has opted out of. U8: permanent agent
+ * exclusions that survive upgrades.
+ *
+ * @param {string} configPath - Absolute path to module config.yaml
+ * @returns {string[]} Array of excluded agent IDs (empty if missing, malformed, or not an array)
+ */
+function readExcludedAgents(configPath) {
+  if (!fs.existsSync(configPath)) return [];
+  try {
+    const parsed = yaml.load(fs.readFileSync(configPath, 'utf8'));
+    if (parsed && Array.isArray(parsed.excluded_agents)) {
+      return parsed.excluded_agents.filter(a => typeof a === 'string');
+    }
+  } catch {
+    // malformed yaml — degrade to "no exclusions" rather than break the install flow
+  }
+  return [];
+}
+
+/**
  * Merge current config with new template while preserving user preferences.
  * Agents and workflows use smart-merge: canonical entries in registry order
  * first, then any user-added entries (not in AGENT_IDS/WORKFLOW_NAMES)
@@ -78,13 +100,26 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}) {
 
   // Smart-merge agents: canonical agents in order, then unique user-added agents appended.
   // Core agents are always restored to canonical order. User-added agents (not in AGENT_IDS)
-  // are preserved and deduplicated. Deliberately removed core agents are restored on upgrade.
+  // are preserved and deduplicated.
+  //
+  // U8: respect `excluded_agents` — an operator-maintained opt-out list. Agents named in that
+  // list are filtered out of the active `agents` array after restoration, so deliberate removals
+  // survive upgrades. Re-inclusion works by removing the agent from `excluded_agents` — the next
+  // merge restores it via the canonical spread above.
+  const excludedAgents = Array.isArray(current.excluded_agents)
+    ? current.excluded_agents.filter(a => typeof a === 'string')
+    : [];
   if (updates.agents) {
     const userAgents = Array.isArray(current.agents)
       ? [...new Set(current.agents.filter(a => !AGENT_IDS.includes(a)))]
       : [];
-    merged.agents = [...updates.agents, ...userAgents];
+    const restored = [...updates.agents, ...userAgents];
+    merged.agents = excludedAgents.length > 0
+      ? restored.filter(a => !excludedAgents.includes(a))
+      : restored;
   }
+  // Preserve the exclusion list as a first-class field (empty stays empty — the schema default).
+  merged.excluded_agents = excludedAgents;
 
   // Smart-merge workflows: canonical workflows in order, then unique user-added appended
   if (updates.workflows) {
@@ -365,6 +400,7 @@ function addMigrationHistory(config, fromVersion, toVersion, migrationsApplied) 
 module.exports = {
   CONFIG_SCHEMA,
   mergeConfig,
+  readExcludedAgents,
   extractUserPreferences,
   validateConfig,
   writeConfig,
