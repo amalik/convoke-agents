@@ -135,7 +135,8 @@ const PLATFORM_INITIATIVES = ['vortex', 'gyre', 'bmm', 'forge', 'helm', 'enhance
 const DEFAULT_ARTIFACT_TYPES = [
   'prd', 'epic', 'arch', 'adr', 'persona', 'lean-persona', 'empathy-map',
   'problem-def', 'hypothesis', 'experiment', 'signal', 'decision', 'scope',
-  'pre-reg', 'sprint', 'brief', 'vision', 'report', 'research', 'story', 'spec'
+  'pre-reg', 'sprint', 'brief', 'vision', 'report', 'research', 'story', 'spec',
+  'covenant'
 ];
 
 /**
