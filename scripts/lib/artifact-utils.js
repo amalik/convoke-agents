@@ -2000,6 +2000,16 @@ function generateRenameMap(renamedEntries) {
  * @returns {string} Markdown content for the ADR file
  */
 function generateGovernanceADR(date, migrationStats = {}, taxonomy) {
+  if (
+    !taxonomy ||
+    !taxonomy.initiatives ||
+    !Array.isArray(taxonomy.initiatives.platform) ||
+    !Array.isArray(taxonomy.artifact_types)
+  ) {
+    throw new TypeError(
+      'generateGovernanceADR: taxonomy arg is required and must expose initiatives.platform and artifact_types as arrays (pass the object returned by readTaxonomy)'
+    );
+  }
   const { renamedCount = 0, injectedCount = 0, linksUpdated = 0, scopeDirs = [] } = migrationStats;
   const platformIds = taxonomy.initiatives.platform;
   const artifactTypes = taxonomy.artifact_types;
