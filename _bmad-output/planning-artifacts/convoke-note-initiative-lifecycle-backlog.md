@@ -233,6 +233,12 @@ Items awaiting qualification. No lane, no priority, no commitment.
 | IN-21 | Conditional-surface skills (e.g., Gyre single- vs multi-service) don't fit 2-variant N/A taxonomy; needs `N/A — conditional (<branch>)` variant or per-branch verdicts. → A14 | Code review oc-1-3 Round 3 (Edge Case Hunter) | 2026-04-18 | Winston |
 | IN-22 | Layer 3 uncontrollable stderr — skills wrapping external CLIs (git, npm) whose errors lack next-action clauses lock OC-R6 to permanent FAIL. Need external-declaration escape hatch in worst-case rule. → A15 | Code review oc-1-3 Round 3 (Edge Case Hunter) | 2026-04-18 | Winston |
 | IN-23 | Workflow-inherited concepts rule uni-directional — no rule for out-of-order review or concepts used-before-defined. Checklist audit-discipline ambiguity. → A16 | Code review oc-1-3 Round 3 (Blind Hunter) | 2026-04-18 | Winston |
+| IN-24 | Cross-module exclusion-ID validation for `excluded_agents` — `mergeConfig`, `refresh-installation`, and `convoke-doctor` silently no-op on typos (`noha` for `noah`) or wrong-module IDs (Vortex ID in Gyre config). Add a cross-registry warn when an ID isn't recognized. → I57 | Code review U8 Round 1 (Blind Hunter) | 2026-04-18 | Winston |
+| IN-25 | `excluded_agents: []` default appears in pre-U8 upgraded configs without the explanatory comment — `merged.excluded_agents = excludedAgents` emits the field but the comment lives only in the shipped source YAML. Inject it via `writeConfig` comment-preservation path. → U12 | Code review U8 Round 1 (Edge Case Hunter) | 2026-04-18 | Winston |
+| IN-26 | YAML parser asymmetry between `readExcludedAgents` (js-yaml) and `mergeConfig` (yaml package) — rare anchor/merge-key divergence could cause `refresh-installation` to copy an excluded agent while `mergeConfig` filters it out. Unify on the `yaml` package. → I58 | Code review U8 Round 1 (Edge Case Hunter) | 2026-04-18 | Winston |
+| IN-27 | Duplicate entries in `excluded_agents` not deduped — `['noah', 'noah']` persists both entries through merge, inconsistent with `Set`-based dedup on `agents`. → I59 | Code review U8 Round 1 (Blind Hunter) | 2026-04-18 | Winston |
+| IN-28 | `EXTRA_BME_AGENTS` (team-factory + other standalone bme agents) have no exclusion mechanism — `refresh-installation` only reads Vortex + Gyre configs for exclusion snapshots; standalone bme agents have no opt-out path. → U13 | Code review U8 Round 1 (Edge Case Hunter) | 2026-04-18 | Winston |
+| IN-29 | Dev-mode (`isSameRoot`) skill wrapper generation loops (§6, §6b) don't honor `excluded_agents` — agent-file copy is skipped but skill wrappers are still generated when `packageRoot === projectRoot`. → U14 | Code review U8 Round 1 (Blind Hunter) | 2026-04-18 | Winston |
 
 **Notes on intakes:**
 
@@ -258,7 +264,6 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 
 | ID | Description | R | I | C | E | Score | Portfolio | Status | Dependencies |
 |----|-------------|---|---|---|---|-------|-----------|--------|--------------|
-| U8 | Respect user agent exclusions on update | 6 | 2 | 80% | 3 | 3.2 | convoke | Backlog | — |
 | A15 | Layer 3 uncontrollable stderr escape hatch — add `external-declared` marker for skills wrapping git/npm/etc. so OC-R6 worst-case rule honors the declaration | 4 | 1 | 80% | 1 | 3.2 | convoke | Backlog | deferred-from: oc-1-3 Round 3 |
 | A5 | Research stories must use mechanical search protocol | 7 | 1 | 80% | 2 | 2.8 | convoke | Backlog | — |
 | T3 | End-to-end update test on real project | 5 | 2 | 80% | 3 | 2.7 | convoke | Backlog | — |
@@ -314,6 +319,7 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 | I40 | `loadSkillManifest` Map silently overwrites duplicate paths | 3 | 0.25 | 90% | 1 | 0.7 | convoke | Backlog | — |
 | I44 | No `validateGyreModule` function in validator.js | 2 | 1.5 | 70% | 3 | 0.7 | gyre | Backlog | ✓I34 |
 | I8 | Team Factory write verification — value correctness | 3 | 0.5 | 80% | 2 | 0.6 | loom | Backlog | — |
+| I57 | Cross-module exclusion-ID validation for `excluded_agents` — `readExcludedAgents` + doctor warn when an ID doesn't match any known agent in any module's registry | 2 | 0.5 | 90% | 2 | 0.5 | convoke | Backlog | deferred-from: U8 Round 1 |
 | U3 | Robust version detection fallback | 3 | 0.5 | 60% | 2 | 0.5 | convoke | Backlog | — |
 | I11 | Registry Fragment Architecture (D-Q6) | 3 | 1 | 60% | 4 | 0.5 | loom | Backlog | — |
 | I13 | Team Factory Express Mode (pre-filled spec file input) | 2 | 1 | 70% | 3 | 0.5 | loom | Backlog | — |
@@ -324,15 +330,20 @@ Items qualified as not needing the full initiative pipeline. Sorted by RICE scor
 | I3 | CSV parser library for manifest (replace regex) | 2 | 0.25 | 70% | 1 | 0.4 | convoke | Backlog | — |
 | I24 | Mock git in unit tests instead of bumping timeouts | 4 | 0.25 | 80% | 2 | 0.4 | enhance | Backlog | — |
 | I47 | Doctor missing Enhance menu-patch check + parallel coverage consolidation | 1 | 1 | 70% | 2 | 0.35 | convoke | Backlog | ✓I34 |
+| I58 | Unify YAML parser in `readExcludedAgents` to use the `yaml` package (match `mergeConfig`) — closes js-yaml / `yaml` library split that could cause filesystem/config state drift | 1 | 1 | 60% | 2 | 0.3 | convoke | Backlog | deferred-from: U8 Round 1 |
 | T5 | Expand docs audit — tense consistency + prose patterns | 2 | 0.5 | 60% | 2 | 0.3 | convoke | Backlog | — |
 | I38 | `mergeConfig` Document mutation not idempotent across writes | 2 | 0.5 | 80% | 3 | 0.3 | convoke | Backlog | — |
 | I48 | Agent-manifest.csv doctor check + CSV-parse validator upgrade | 2 | 0.5 | 60% | 2 | 0.3 | convoke | Backlog | ✓I34, bundles-with: I15 |
 | A4 | Fix temp dir prefix inconsistency (`bmad-` vs `convoke-`) | 1 | 0.25 | 100% | 1 | 0.3 | convoke | Backlog | — |
+| U14 | Honor `excluded_agents` in dev-mode (`isSameRoot`) skill wrapper generation loops — align with agent-file copy skip behavior | 1 | 0.25 | 100% | 1 | 0.25 | convoke | Backlog | deferred-from: U8 Round 1 |
+| I59 | Dedup duplicate entries in `excluded_agents` using Set — consistent with `Set`-based dedup on `agents` | 1 | 0.25 | 100% | 1 | 0.25 | convoke | Backlog | deferred-from: U8 Round 1 |
+| U13 | Extend `excluded_agents` support to `EXTRA_BME_AGENTS` (team-factory + other standalone bme agents) — add per-submodule exclusion plumbing in `refresh-installation` + doctor | 2 | 0.5 | 70% | 3 | 0.2 | convoke | Backlog | deferred-from: U8 Round 1 |
 | A2 | Create `.agent.yaml` source files for Vortex agents | 2 | 0.5 | 60% | 4 | 0.2 | vortex | Backlog | — |
 | I42 | `MERGED_DOC_SENTINEL` doesn't survive spread or JSON-serialize | 2 | 0.25 | 70% | 2 | 0.2 | convoke | Backlog | — |
 | I53 | Carry-forward: CRLF writeManifest + basename collision | 2 | 0.25 | 40% | 1 | 0.2 | enhance | Backlog | — |
 | I55 | Validate `taxonomy.initiatives.platform` + `artifact_types` non-empty in `readTaxonomy` — reject/warn on all-commented config before rendering degenerate ADR text | 1 | 0.25 | 90% | 1 | 0.2 | convoke | Backlog | deferred-from: BUG-1+U7 Round 1 |
 | I45 | Workflow-manifest CSV registration drift not validated | 1 | 0.5 | 60% | 2 | 0.15 | convoke | Backlog | ✓I34, bundles-with: I15 |
+| U12 | Inject `excluded_agents` inline comment on pre-U8 config upgrade via `writeConfig` — operators upgrading see the field appear without context | 2 | 0.25 | 70% | 3 | 0.1 | convoke | Backlog | deferred-from: U8 Round 1 |
 
 ### 2.4 Initiative Lane
 
@@ -388,6 +399,7 @@ Items removed from the active backlog. Nothing disappears without a receipt.
 | ID | Description | Shipped | Score | Portfolio |
 |----|-------------|---------|-------|-----------|
 | A12 | Covenant OC-R7 doc-mapping double-count fix — clarifies that doc rule uses cumulative vocabulary (concepts introduced in earlier Covenant sections are pre-existing for later sections) and that example/anti-pattern illustrations don't count as novel if they illustrate an already-introduced concept. Code review Round 1 applied 3 follow-up patches (softened shipping claim, added Covenant preamble authoring contract, closed illustration loophole). Narrows OC-R7 failure surface; Section 1 passability depends on preamble contract. | 2026-04-18 | 6.3 | convoke |
+| U8 | Respect user agent exclusions on update — new `excluded_agents: []` field in Vortex + Gyre `config.yaml` with `readExcludedAgents()` helper. `mergeConfig` filters excluded from `merged.agents`; `refresh-installation` skips agent-file copy, user-guide copy, skill-wrapper generation, and manifest rows for excluded agents. `validator` + `convoke-doctor` honor exclusions. 2 rounds of code review applied 9 patches (HIGH: manifest drift; MEDIUM: falsy-updates filter bypass, user-guide skip, IO error discrimination). 14 new tests; 6 items deferred. | 2026-04-18 | 3.2 | convoke |
 | U7 | Changelog surface during `convoke-update` — new `changelog-reader.js` parses Keep-a-Changelog headers (incl. pre-release), pre-prompt "What's New" block in refresh-only + upgrade paths. Code review Round 1 applied 4 patches (taxonomy guard, broadened HEADER_RE + semver post-filter, fenced-code tracking, integration tests). 15 tests added; 6 items deferred. | 2026-04-18 | 4.3 | convoke |
 | BUG-1 | `generateGovernanceADR` now derives platform + artifact-type counts and lists from taxonomy (was hardcoded "(21)" / "(8)"). Fix + 1 new test asserting custom taxonomy reflected. | 2026-04-18 | 2.7 | convoke |
 | I49 | Process uniformity — 4 rules added to project-context.md: derive-counts-from-source, shared-test-constants, catch-all-phase-review, spec-verify-referenced-files. | 2026-04-18 | 4.3 | convoke |
@@ -595,6 +607,8 @@ Full descriptions for items in §2.4 whose table row is a one-liner.
 
 | Date | Change |
 |------|--------|
+| 2026-04-18 | **U8 shipped.** New `excluded_agents: []` field in Vortex + Gyre `config.yaml` with operator-facing comment; new `readExcludedAgents(configPath)` helper in `config-merger.js`; `mergeConfig` filters excluded from `merged.agents`; `refresh-installation` skips agent-file copy + user-guide copy + skill-wrapper generation + manifest rows for excluded agents; `validator.validateAgentFiles` and `convoke-doctor.checkModuleAgents`/`checkAgentSkillWrappers` honor exclusions. 2 rounds of code review applied 9 patches (HIGH: manifest drift; MEDIUM: falsy-updates filter bypass, user-guide skip, IO error discrimination; LOW: hoisted `guide` var, Gyre positive assertion). Full suite 1167/1167 (+14 new tests). U8 moved Fast Lane → §2.5 Completed. |
+| 2026-04-18 | **Triage by Winston: Logged 6 intakes (IN-24, IN-25, IN-26, IN-27, IN-28, IN-29) from code review of U8 Round 1.** Qualified 6 to Fast Lane: I57 (cross-module exclusion-ID validation, score 0.5), I58 (unify YAML parser in `readExcludedAgents`, 0.3), U14 (honor exclusion in dev-mode skill wrapper generation, 0.25), I59 (dedup duplicate `excluded_agents`, 0.25), U13 (extend `excluded_agents` to `EXTRA_BME_AGENTS`, 0.2), U12 (inject `excluded_agents` comment on upgrade, 0.1). All deferred-from U8 Round 1. Raw intakes: 0. Dropped: 0. |
 | 2026-04-18 | **A12 shipped + Round 1 code-review follow-up.** Initial A12 fix applied (cumulative vocabulary + illustration carve-out). Round 1 code review surfaced 3 HIGH findings: (H1) Section 1 still exceeds budget in statement alone; (H2) illustration/introduction adjudication subjective; (H3) shipping claim overstated. Follow-up patches applied inline: softened Revisions claim to "narrows surface", added Covenant preamble authoring contract (preamble MUST pre-introduce 9 foundational terms: `default`, `fallback`, `override`, `unresolvable state`, `exclusion`, `decision point`, `interaction round`, `concept budget`, `scope`), closed illustration loophole (new domain nouns inside illustrations still count). A12 + follow-up moved Fast Lane → §2.5 Completed (shipped 2026-04-18, score 6.3). Story 1.4 authoring contract now explicit. |
 | 2026-04-18 | **Triage by Winston: Logged 5 intakes (IN-19, IN-20, IN-21, IN-22, IN-23) from code review of oc-1-3-checklist-derivation Round 3.** Qualified 5 to Fast Lane: A12 (Covenant OC-R7 doc-mapping double-count fix — score 6.3, blocks Story 1.4), A15 (Layer 3 uncontrollable stderr escape hatch — score 3.2), A16 (workflow-inherited concepts bidirectional rule — score 1.8), A14 (conditional-surface N/A variant — score 1.2), A13 (compound-concept counting rules — score 1.17). Per no-R4 convergence rule — remaining Round 3 findings triaged to backlog. ⚠️ A12 blocks Story 1.4. |
 | 2026-04-18 | **Triage by Amalik: Logged 3 intakes (IN-16, IN-17, IN-18) from code review of BUG-1+U7 Round 1.** Qualified 3 to Fast Lane: U11 (compareVersions semver-aware pre-release handling, score 0.9), I56 (render `taxonomy.initiatives.user` in ADR, score 0.8), I55 (validate non-empty taxonomy arrays, score 0.2). All deferred-from BUG-1+U7 Round 1. Other deferred items (D1=I54 duplicate, D5 __dirname fragility, D6 verbose-gating) remain in `deferred-work.md` only — too speculative for intake qualification. |
