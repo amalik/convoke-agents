@@ -10,6 +10,9 @@ agents:
   - lean-experiments-specialist
   - production-intelligence-specialist
   - learning-decision-expert
+# Agents you have deliberately removed — they will NOT be restored on `convoke-update`.
+# Add an agent ID here to opt out permanently; remove to re-enable on the next update.
+excluded_agents: []
 workflows:
   - lean-persona
   - product-vision
