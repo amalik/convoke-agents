@@ -2,7 +2,7 @@
 
 This directory is Convoke's owned namespace — everything under `_bmad/bme/` is authored and maintained by the Convoke project, distinct from upstream BMAD Method modules (`_bmad/core/`, `_bmad/bmm/`, `_bmad/bmb/`, etc.).
 
-> **Authoring a new skill, workflow, or agent in `_bmad/bme/`?** Required reading first: [The Convoke Operator Covenant](../../_bmad-output/planning-artifacts/convoke-covenant-operator.md) — one axiom and seven commitments every Convoke skill must honor. The Covenant is what makes a `_bmad/bme/` skill a *Convoke* skill rather than a generic one; authoring without consulting it produces skills that may look structurally correct but violate the operator experience standard the rest of the ecosystem relies on.
+> **Authoring a new skill, workflow, or agent in `_bmad/bme/`?** Required reading first: [The Convoke Operator Covenant](../../_bmad-output/planning-artifacts/convoke-covenant-operator.md) — one axiom and seven Operator Rights every Convoke skill must honor. The Covenant is what makes a `_bmad/bme/` skill a *Convoke* skill rather than a generic one; authoring without consulting it produces skills that may look structurally correct but violate the operator experience standard the rest of the ecosystem relies on.
 
 ## Submodules
 
