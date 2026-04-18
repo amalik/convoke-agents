@@ -397,6 +397,15 @@ describe('validateFrontmatterSchema', () => {
     assertErrorMatching(result.errors, /initiative.*not found in taxonomy/i);
   });
 
+  it('accepts covenant artifact_type when present in taxonomy', () => {
+    // When taxonomy includes 'covenant', files with artifact_type: covenant must validate.
+    // Covers the consumer path exercised by files like convoke-covenant-operator.md.
+    const taxonomyWithCovenant = { ...taxonomy, artifact_types: [...taxonomy.artifact_types, 'covenant'] };
+    const result = validateFrontmatterSchema({ ...validFields, artifact_type: 'covenant' }, taxonomyWithCovenant);
+    assert.equal(result.valid, true);
+    assert.deepEqual(result.errors, []);
+  });
+
   it('rejects artifact_type not in taxonomy', () => {
     const result = validateFrontmatterSchema({ ...validFields, artifact_type: 'unknown-type' }, taxonomy);
     assert.equal(result.valid, false);
