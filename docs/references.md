@@ -3,7 +3,7 @@
 > Comprehensive bibliography mapping the theoretical foundations of the Convoke Agents project.
 > Each reference is linked to the specific project component(s) it underpins.
 >
-> **Last updated:** March 2026
+> **Last updated:** April 2026
 
 ---
 
