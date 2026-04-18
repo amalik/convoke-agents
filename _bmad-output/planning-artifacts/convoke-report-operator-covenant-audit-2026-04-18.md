@@ -111,7 +111,7 @@ Threshold in AC #1: ≥ 80%. **Met at 100% on the tested cell.**
 
 **Honest limitations of this gate:**
 1. Both reviewers are LLMs with shared base training. This validates that the rubric is unambiguous enough for LLM reviewers to agree; it does NOT validate the rubric against human judgment.
-2. Only one cell was measured, not a per-cell distribution. A weaker cell (say, a PASS-verdict that could plausibly be FAIL) might expose more disagreement. Recommendation for future audits: measure reproducibility on ≥3 cells, including at least one expected-PASS and one expected-FAIL.
+2. Only one cell was measured, not a per-cell distribution. A weaker cell (say, a PASS-verdict that could plausibly be FAIL) might expose more disagreement. Recommendation for future audits: measure reproducibility on ≥3 cells, including at least one expected-PASS and one expected-FAIL. **(Formalized 2026-04-18 via A10 — see [Compliance Checklist §Reproducibility gate (multi-skill audits)](convoke-spec-covenant-compliance-checklist.md#reproducibility-gate-multi-skill-audits). v2+ audits MUST satisfy that gate before publishing headline findings.)**
 3. The reviewers read the same file with the same glossary; they did not cross-check each other's citations. The agreement measures verdict concurrence, not evidence-note equivalence.
 
 ### 2.6 Novel-Concept Glossary (for Right to pacing)
