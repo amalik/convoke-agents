@@ -422,7 +422,7 @@ development_status:
   oc-1-3-checklist-derivation: done
   oc-1-4-covenant-authoring: done
   oc-1-5-adoption-surface: done
-  oc-epic-1-retrospective: optional
+  oc-epic-1-retrospective: done
 
   # Epic 2: Adopt and Publish the Convoke Operator Covenant (deferred)
   # Story 2.2 blocked by Phase 3 Loom Add Skill workflow existing
