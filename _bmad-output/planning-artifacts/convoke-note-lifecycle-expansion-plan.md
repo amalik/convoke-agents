@@ -2,6 +2,7 @@
 initiative: convoke
 artifact_type: note
 created: '2026-04-10'
+updated: '2026-04-18'
 schema_version: 1
 ---
 # Lifecycle Expansion Plan — Draft for Challenge
@@ -11,6 +12,25 @@ schema_version: 1
 > **Date:** 2026-04-04
 > **Principle:** This plan follows the vision's default gradient, but the gravity model governs — evidence shifts priority, not the plan.
 > **WIP Limit:** Maximum 2 perimeters consuming active creative/authoring energy simultaneously. Lightweight validation work (desk exercises, entropy prototyping) doesn't count against the limit. Provisional — revisit after Wave 1.
+
+---
+
+## Active Infrastructure Initiative: v6.3 Adoption (Convoke 4.0)
+
+> **Added 2026-04-18.** Running in parallel with Wave 0 perimeter work.
+
+Convoke 4.0 aligns the platform with BMAD Method v6.3.0. This is infrastructure work that benefits all current and future perimeters — it does not count against the WIP limit (infrastructure, not creative/authoring energy).
+
+**Key deliverables:**
+- **Config-loader migration** — replaces `bmad-init` with direct YAML loading. All ~25 SKILL.md files migrated. Factory-produced teams (Loom) must follow the new v6.3 activation template (Pattern 6).
+- **Marketplace distribution** — `.claude-plugin/marketplace.json` enables community discovery. This makes the demand-pull pattern (§ "How this ecosystem grows") concrete: new users find Convoke through the BMAD marketplace alongside other extensions.
+- **BMM dependency governance** — scan tool and CSV registry for custom skill compatibility. Catches drift after upgrades.
+- **Agent consolidation** — Bob/Quinn/Barry consolidated into upstream Amelia.
+- **Behavioral equivalence validation (PF1)** — LLM-as-judge battery proving upgrade safety before release.
+
+**Scope:** 5 sprints, 28 stories, 50 FRs, 33 NFRs. See [Epic Breakdown](convoke-epic-bmad-v6.3-adoption.md).
+
+**Impact on this plan:** Team Factory (Loom) scaffolding must produce v6.3-compliant output. Marketplace distribution is now a concrete growth mechanism, not hypothetical.
 
 ---
 
@@ -48,7 +68,7 @@ The plan is deliberately NOT time-boxed. Consulting engagements generate the evi
 1. Run shadow engagement (Gate 1) — 6 weeks, external dependency
 2. **Parallel desk exercise** — apply KORE retroactively to a past brownfield engagement to de-risk A2 (extraction quality) and A3 (TKA utility) while waiting for Gate 1 *(C6)*
 3. Gate 1 decision: Persevere / Patch / Pivot
-4. If Gate 1 passes → Scaffold Forge Phase A via Loom (5 sprints). **Acceptance criterion:** Governance checklist (0.3) applied to agent design *(C1)*
+4. If Gate 1 passes → Scaffold Forge Phase A via Loom (5 sprints). **Acceptance criterion:** Governance checklist (0.3) applied to agent design *(C1)*. **Note (2026-04-18):** Loom (Team Factory) shipped in v3.2 and is validated on Vortex and Gyre — scaffolding mechanism is ready. Factory output must follow v6.3 conventions (see Active Infrastructure Initiative above).
 5. Author domain content (personas, workflow steps, KORE methodology formalization) — **authored by:** domain expert (Amalik) with agent-assisted drafting. See Resource Model below *(C4)*
 6. Implement Forge↔Gyre contracts (FG-HC1, FG-HC2, GF-HC1)
 7. Gate 2 decision: Scope of Phase B/C — pure Forge or broader KE perimeter?
