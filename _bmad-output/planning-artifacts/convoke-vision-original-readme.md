@@ -2,287 +2,227 @@
 initiative: convoke
 artifact_type: vision
 created: '2026-04-10'
+updated: '2026-04-18'
 schema_version: 1
 ---
-# Convoke
+# Convoke Strategic Vision
 
-**Unified AI-Assisted Software Development Platform**
-
-> Complete traceability from hypothesis to deployment with evidence-based validation
-
-[![Status](https://img.shields.io/badge/status-planning-blue)]()
-[![Version](https://img.shields.io/badge/version-1.0.0--alpha-orange)]()
-[![License](https://img.shields.io/badge/license-MIT-green)]()
+**Version:** 2.0.0
+**Date:** 2026-04-18
+**Status:** Vision — not a build commitment
+**Context:** IT consultancy for large enterprise brownfield transformations
+**Supersedes:** Original Convoke README vision (4-framework integration model, 2026-02)
 
 ---
 
-## 🎯 What is Convoke?
+## The problem
 
-Convoke integrates **4 powerful frameworks** into a single platform that preserves your entire reasoning chain from initial hypothesis through to production deployment.
+Linear lifecycle models fail in three ways that compound each other:
+
+1. **Building in the wrong direction.** Teams optimize for delivery speed without structured discovery. The result: beautifully engineered products that nobody needs. Industry data puts feature failure rates at 37% or higher — not because teams can't build, but because they build before validating what to build.
+
+2. **Silent decay.** Lehman's laws of software evolution tell us that every system increases in complexity unless active work is done to reduce it. Cognitive debt accumulates in teams. Architectural entropy creeps into codebases. Most frameworks pretend this isn't happening. By the time decay surfaces, it's a crisis.
+
+3. **Adoption resistance.** Good frameworks die not because they're wrong, but because teams can't adopt them without disruption. Governance is deferred to "later." Later never comes. The framework sits unused while the problems it solves persist.
+
+These three failures feed each other: teams build the wrong thing, the wrong thing decays, and the framework that could have prevented both never gets adopted.
+
+---
+
+## The paradigm shift: Evidence Gravity
+
+Traditional product lifecycle models are linear — discover, design, build, ship, maintain. Reality doesn't move in lines. Markets shift mid-build. Assumptions decay silently. Teams loop back but the model doesn't.
+
+Convoke replaces the linear model with the **Gravity Model**: a radial constellation where every practice and infrastructure capability orbits a central force — **evidence**.
 
 ```
-WHY?           WHAT?          HOW?           QUALITY?
-┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐
-│  Quint  │──▶│DesignOS │──▶│  BMAD   │──▶│AgentOS  │
-│   FPF   │   │         │   │ Method  │   │         │
-└─────────┘   └─────────┘   └─────────┘   └─────────┘
-Hypotheses    Design        Stories &     Quality
-Evidence      Rationale     Tests         Gates
+                        EVIDENCE
+                        GRAVITY
+                           ●
+                      ╱    │    ╲
+                 ╱         │         ╲
+            ╱              │              ╲
+    ┌──────────┐    ┌──────────┐    ┌──────────┐
+    │ Discovery│    │ Readiness│    │ Delivery │
+    │ (Vortex) │    │  (Gyre)  │    │          │
+    └──────────┘    └──────────┘    └──────────┘
+            ╲              │              ╱
+                 ╲         │         ╱
+                      ╲    │    ╱
+                    ┌──────────┐
+                    │Operations│
+                    └──────────┘
 
-Every line of code traces back to validated user need
+    ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+    Infrastructure perimeters (the stage):
+    Knowledge Eng. · Documentation ·
+    Entropy Mgmt. · Mesh Infrastructure
 ```
 
-### The Problem We Solve
+Nothing moves in a fixed sequence. Everything pulls toward evidence. A production signal can route directly back to discovery. A knowledge gap can trigger readiness reassessment. The gravity model governs priority — evidence shifts what matters, not a predetermined plan.
 
-**37% of features** ship but don't solve the original problem because teams lose context between discovery, design, and development.
+### Theoretical basis: Holling Panarchy
 
-**Convoke** maintains complete traceability:
-- **Why** was this decision made? → Quint hypothesis with evidence
-- **What** should we design? → DesignOS decision records
-- **How** should we build it? → BMAD stories with tests
-- **Is it ready?** → AgentOS quality gates with validation
+The Gravity Model is grounded in the **Holling Panarchy** — an adaptive cycle observed in every complex system, from ecosystems to economies:
 
----
+- **r (Growth)** — rapid expansion, discovery, experimentation
+- **K (Conservation)** — stabilization, optimization, increasing efficiency but also increasing rigidity
+- **Ω (Release)** — disruption, breakdown of rigid structures, creative destruction
+- **α (Reorganization)** — recombination, learning, renewal
 
-## ⚡ Quick Start
-
-### Prerequisites
-
-- Node.js 18+ or Bun
-- Git
-- Claude Code (optional, for AI-assisted workflows)
-
-### Installation
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/Convoke.git
-cd Convoke
-
-# Install dependencies
-npm install
-# or
-bun install
-
-# Initialize Convoke
-bmad init
-
-# Install git hooks (optional but recommended)
-bmad init --install-hooks
-
-# (Optional) Clone Quint framework for local analysis
-git clone https://github.com/m0n0x41d/quint-code _quint
-```
-
-**Note:** `_quint/` is excluded from version control (analysis only).
-
-### Your First Workflow
-
-```bash
-# 1. Create a hypothesis (Quint)
-bmad create-hypothesis
-> "Users abandon checkout due to complex 5-step process"
-
-# 2. Create design from hypothesis (DesignOS)
-bmad create-design --from-hypothesis hypothesis-001
-
-# 3. Create story from design (BMAD)
-bmad create-story --from-design design-001
-
-# 4. Validate alignment
-bmad align story-001
-✅ All traces aligned (score: 0.92)
-
-# 5. Implement and test
-bmad dev-story story-001
-```
+Most frameworks design for the growth phase only. Convoke supports all four — because every product, every team, and every organization will pass through every one of them. The gravity model ensures that evidence from any phase can pull resources and attention to where they're needed, regardless of where the plan says you "should" be.
 
 ---
 
-## 🏗️ Architecture
+## Infrastructure vs practice
 
-### Integration Approach: BMAD-First
+The Gravity Model distinguishes two types of perimeters that orbit the evidence center:
 
-After evaluating 3 architectural options (Quint-First, BMAD-First, Greenfield), we selected **BMAD-First Architecture** (scored 8.55/10):
+### Practice perimeters (the performance)
 
-**Core Strategy:**
-- **Foundation:** BMAD Method's markdown-based workflow engine (41 workflows, 22 AI agents)
-- **Quint Integration:** 2,700 LOC bidirectional sync adapter connecting Quint's SQLite database to markdown artifacts
-- **Best of both worlds:** Quint's FPF reasoning + BMAD's Git-friendly collaboration
+These are the domain-specific capabilities that do the work:
 
-**Why BMAD-First:**
-- Fastest delivery: POC Week 3, launch Week 16
-- 100% code reuse (both systems production-tested)
-- Lowest risk with phased rollout
+- **Discovery** (Vortex) — structured product discovery through 7 streams
+- **Readiness** (Gyre) — production readiness assessment across 4 domains
+- **Knowledge Engineering** (Forge) — domain knowledge extraction for brownfield contexts
+- **Delivery, Operations, Security, Growth** — future practice perimeters, activated by demand
 
-### Four Integrated Frameworks
+Practice perimeters produce and consume evidence. They are the reason the system exists.
 
-| Framework | Purpose | Status | Key Features |
-|-----------|---------|--------|--------------|
-| **[Quint FPF](https://github.com/m0n0x41d/quint-code)** | Discovery & Validation | ✅ Mature | • Hypothesis layers (L0→L2)<br>• Evidence tracking<br>• Trust score computation |
-| **DesignOS** | Design Rationale | 🟡 Planned | • Design Decision Records<br>• Figma integration<br>• Token export |
-| **[BMAD Method](https://github.com/bmadhub/bmad)** | Development Lifecycle | ✅ Mature v6.0 | • 22 AI agents<br>• 41 workflows<br>• Complete SDLC |
-| **AgentOS** | Quality Orchestration | 🟡 Planned | • Quality gates<br>• Standards enforcement<br>• Multi-agent coordination |
+### Infrastructure perimeters (the stage)
 
----
+These are the cross-cutting capabilities that make practice perimeters reliable:
 
-## 🚀 Key Features
+- **Knowledge Engineering** — extraction, codification, and validation of domain knowledge (Forge serves both roles)
+- **Documentation** — systematic documentation strategy across the lifecycle
+- **Entropy Management** — staleness detection, drift monitoring, decay scoring across all artifacts
+- **Mesh Infrastructure** — contracts, routing, and integration between perimeters
 
-### 1. Evidence-Based Development
-Every feature starts with validated hypotheses backed by real data
+Infrastructure perimeters don't produce user-visible value directly. They ensure that practice perimeters don't operate on quicksand. Without them, every practice perimeter's outputs silently decay.
 
-### 2. Design Rationale Preservation
-Capture *why* design decisions were made, not just *what* was decided
-
-### 3. Complete Traceability
-Every artifact traces back through the entire reasoning chain
-
-### 4. Alignment Validation
-Automatic semantic drift detection prevents artifacts from diverging
-
-### 5. Quality Gates
-Automated quality enforcement before each deployment milestone
+The distinction matters for presentation, for governance, and for build priority: infrastructure ships first (Wave 0), because practice perimeters depend on it.
 
 ---
 
-## 📚 Documentation
+## Three strategic pillars
 
-### Planning Artifacts (All Complete ✅)
+### 1. Coverage — full lifecycle, expanding constellation
 
-1. **[Executive Summary](_bmad-output/planning-artifacts/executive-summary-presentation.md)** - Business case, ROI, competitive landscape
-2. **[Product Brief](_bmad-output/planning-artifacts/product-brief-Convoke-2026-02-01.md)** - Complete vision with ADRs
-3. **[4-Framework Comparison](_bmad-output/planning-artifacts/4-framework-comparison-matrix.md)** - Detailed framework analysis
-4. **[BaseArtifact Contract](_bmad-output/planning-artifacts/baseartifact-contract-spec.md)** - Technical foundation
-5. **[`/align` Command](_bmad-output/planning-artifacts/align-command-prototype.md)** - Alignment validation
-6. **[Integration Roadmap](_bmad-output/planning-artifacts/integration-roadmap.md)** - 24-week implementation plan
+Every gap in the product lifecycle is a place where assumptions hide unchallenged. Convoke doesn't patch gaps — it eliminates them through an expanding constellation of specialized teams:
 
-### Architecture Decision Documents
+| Team | Domain | Status |
+|------|--------|--------|
+| **Vortex** | Product discovery (7 agents, 22 workflows) | Shipping |
+| **Gyre** | Production readiness (4 agents, 7 workflows) | Shipping |
+| **Forge** | Domain knowledge extraction (KORE method) | Validated demand |
+| **Strategy** | Strategic analysis and positioning | Wave 0 discovery |
+| **Delivery** | Release engineering and progressive delivery | Wave 1 |
+| **Operations** | Incident lifecycle and SRE workflows | Wave 1 |
+| **Security** | Threat modeling and DevSecOps | Wave 1 |
 
-7. **[Technical Deep-Dive Analysis](_bmad-output/planning-artifacts/technical-deep-dive-analysis.md)** - 50K+ word comprehensive technical analysis
-8. **[Architectural Comparison: Quint-First vs BMAD-First](_bmad-output/planning-artifacts/architectural-comparison-quint-vs-bmad-first.md)** - Options 1 & 2 detailed analysis
-9. **[Greenfield Architecture Analysis](_bmad-output/planning-artifacts/greenfield-architecture-analysis.md)** - Option 3 evaluation and 3-way comparison
-10. **[Architecture Decision Record (ADR)](_bmad-output/planning-artifacts/architectural-decision-record.md)** - Official decision: BMAD-First Architecture
+Each team answers one question. Only teams with validated demand get built. Everything else remains a hypothesis tracked via friction logs until real consulting engagement pull justifies investment. This is the **demand-pull pattern** — the constellation grows because evidence demands it, not because a roadmap says so.
 
----
+### 2. Industrialization — engineered process, not artisanal craft
 
-## 🛠️ Development Roadmap
+Every other framework says "be agile, figure it out." Convoke says: we've engineered the process.
 
-### Current Status: **Planning Phase Complete** ✅
+**Team Factory (Loom):** A guided workflow for creating new agent teams that enforces architectural thinking before file generation. Every addition goes through structured discovery, produces complete integration (registry, config, contracts), and matches native team quality. The factory is how the constellation scales without losing coherence.
 
-### 6-Month Implementation Plan
+**Asymmetric Port Maturity (L0→L4):** Not every team or ops module in an organization is at the same maturity. Forcing a single operating model creates friction, resistance, and shadow processes. The maturity graduation model meets each module where it is:
 
-```
-MONTH 1-2          MONTH 3-4          MONTH 5           MONTH 6
-├────────────┬────────────┬────────────┬────────────┬────────────────────┤
-│  PHASE 1   │  PHASE 2   │  PHASE 3   │  PHASE 4   │     PHASE 5        │
-│  Contract  │  Quint ↔   │  DesignOS  │  AgentOS   │  Cross-Framework   │
-│  Foundation│  BMAD      │  Implement │  Orchestr. │  Traceability      │
-│  Week 1-4  │  Week 5-10 │  Week 11-14│  Week 15-18│  Week 19-24        │
-└────────────┴────────────┴────────────┴────────────┴────────────────────┘
+- **L0** — Ad hoc
+- **L1** — Aware (advisory)
+- **L2** — Practicing
+- **L3** — Measured
+- **L4** — Optimized
 
-Week 4:  ✅ Foundation ready
-Week 10: ✅ Quint ↔ BMAD working (70% of value)
-Week 14: ✅ Design rationale preserved
-Week 18: ✅ Quality gates operational
-Week 24: 🚀 v1.0.0 LAUNCH
-```
+Teams graduate at their own pace. No team is left behind. No team is held back.
 
-**See:** [Complete Integration Roadmap](_bmad-output/planning-artifacts/integration-roadmap.md) (87 tasks, 5 phases)
+**Formal Contracts:** Agent teams don't just run in parallel — they hand off work through formal contracts. Vortex has 10 handoff contracts (5 forward flows, 5 feedback routes). When production intelligence reveals a market shift, it routes back to the right discovery stream automatically. This is not coordination by convention — it's coordination by contract.
 
----
+### 3. Anti-entropy — fighting decay as a design principle
 
-## 💡 Business Value
+Lehman's laws of software evolution are empirical, not theoretical. Every system increases in complexity unless active work is done to reduce it. Convoke treats entropy as a **cross-cutting force** — detected across every perimeter, measured, and actively fought.
 
-**For a 50-person engineering team:**
+**Three forms of entropy Convoke addresses:**
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| Rework time | 25% | 8% | **68% reduction** |
-| Feature alignment | 63% | 94% | **49% improvement** |
-| Onboarding time | 8 weeks | 3 weeks | **62% faster** |
-| Annual waste | $1.75M | $560K | **$1.19M saved/year** |
+- **Artifact entropy** — discovery outputs, readiness assessments, knowledge assets all have a half-life. Staleness detection protocols assign confidence decay per artifact type.
+- **Cognitive entropy** — teams accumulate implicit knowledge that isn't codified. The Knowledge Engineering perimeter (Forge) extracts and validates tribal knowledge before it's lost.
+- **Architectural entropy** — systems rigidify (Panarchy K-phase). Complexity creeps in. Drift monitoring compares current state against baseline assumptions.
 
-**Calculation:** 50 engineers × $140K loaded cost = $7M/year total
-
-**Break-Even:** 2 months • **ROI:** 496% (Year 1)
+Entropy management isn't a feature — it's a design principle. It appears in the Knowledge Engineering flow, in the Gravity Check protocol that reassesses priorities after each wave, and in the structural principles that govern how perimeters interact.
 
 ---
 
-## 🤝 Contributing
+## Governance from Wave 0
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Most frameworks defer governance to "when we're ready." By then, adoption patterns are calcified and resistance is entrenched.
 
-### Areas Where We Need Help
+Convoke embeds governance principles from Wave 0 — before the first practice perimeter ships:
 
-- Documentation (user guides, tutorials, videos)
-- Testing (E2E scenarios)
-- Figma plugin development
-- Performance optimization
-- Community management
+- **Fogg's Tiny Habits** — behavioral change must be small enough to stick. New capabilities are introduced as minimal additions to existing workflows, not wholesale replacements.
+- **Rogers' Diffusion** — adoption sequences through innovators and early adopters first. The framework doesn't demand organization-wide change on day one.
+- **Edmondson's Psychological Safety** — it must be safe to try and fail with new capabilities. Agent autonomy follows the Cynefin framework: clear contexts get autonomous agents, complex contexts require human-in-the-loop.
 
----
-
-## 📊 Project Status
-
-**Completed ✅**
-- Planning phase (all 5 documents)
-- Architecture design (BaseArtifact v2.0.0)
-- Integration strategy
-- Implementation roadmap (87 tasks)
-
-**Next:** Phase 1 - Contract Finalization (Weeks 1-4)
+These principles are active from the start as a design lens — a checklist that every new perimeter must satisfy. The full Governance & Change perimeter, with dedicated agents for change architecture, adoption facilitation, and transformation assessment, graduates in Wave 2. But the principles don't wait.
 
 ---
 
-## 🎯 Success Metrics (Post-Launch)
+## BMAD + Convoke
 
-**Adoption:**
-- 100+ teams using
-- 80%+ enable git hooks
-- NPS ≥8
+BMAD Method provides world-class software delivery — from requirements through architecture to working code. It is an engine of exceptional build capability.
 
-**Quality:**
-- 95%+ artifacts traced
-- 90%+ alignment scores >0.8
+Convoke provides everything that surrounds that engine:
 
-**Performance:**
-- Trace queries: <100ms (p95)
-- Alignment validation: <2s (p95)
+- **Before build:** Structured discovery so you know what to build (Vortex)
+- **Alongside build:** Production readiness so you know you can ship it (Gyre), domain knowledge so you understand the context (Forge)
+- **After build:** Entropy management so what you shipped doesn't silently decay
+- **Across the lifecycle:** Governance so adoption actually happens, industrialization so the process scales
 
----
+The relationship is complementary by design:
 
-## 📜 License
+> BMAD builds the thing right. Convoke makes sure you're building the right thing — and that it stays right.
 
-MIT License - see [LICENSE](LICENSE)
+Convoke works standalone or as an extension. No BMAD Method installation required. But together, they provide complete lifecycle coverage from first hypothesis to sustained operation.
 
 ---
 
-## 🙏 Acknowledgments
+## Growth mechanisms
 
-Built on:
-- **BMAD Method v6.0.0** - Development lifecycle
-- **Quint FPF** - Hypothesis validation
-- **Claude (Anthropic)** - AI reasoning
-- **Open Source Community**
+Four mechanisms drive the constellation's expansion:
 
----
+1. **Demand-pull activation** — friction logs from consulting engagements capture demand signals. Only validated demand triggers perimeter build. The Gravity Check protocol reassesses priorities after each wave ships.
 
-## 📞 Contact
+2. **Team Factory (Loom)** — industrialized team creation. New teams are scaffolded through a guided workflow that enforces architectural thinking, produces complete integration, and matches native quality. The factory shipped in v3.2 and has been validated on two teams (Vortex, Gyre).
 
-**Project Lead:** Amalik Amriou
-**Repository:** [github.com/yourusername/Convoke](https://github.com/yourusername/Convoke)
-**Documentation:** `_bmad-output/planning-artifacts/`
+3. **Marketplace distribution** — Convoke is listed in the BMAD marketplace (`.claude-plugin/marketplace.json`), enabling discovery and installation through the community module browser. New users find Convoke alongside other BMAD extensions.
+
+4. **Skill portability** — any BMAD skill can be exported to a standalone, LLM-agnostic format with platform adapters for Claude Code, GitHub Copilot, and Cursor. This lowers the barrier from "install the whole framework" to "copy one skill."
 
 ---
 
-<div align="center">
+## Current state
 
-**Convoke**
+| Layer | What | Status |
+|-------|------|--------|
+| **Shipping** | Vortex (discovery), Gyre (readiness), Team Factory, Skill Portability, Enhance (agent skills) | v3.2.0 |
+| **In progress** | v6.3 adoption (Convoke 4.0) — config-loader migration, marketplace distribution, BMM governance, behavioral equivalence validation | 5 sprints, 28 stories |
+| **Validated demand** | Forge (knowledge engineering) — 9 discovery artifacts complete, awaiting Gate 1 shadow engagement | Wave 0 |
+| **Wave 0 discovery** | Strategy perimeter (self-discovery protocol), entropy monitoring baseline, governance lens | Parallel tracks |
+| **Wave 1 (default)** | Delivery, Operations, Security perimeters | After Wave 0 ships |
+| **Wave 2+** | Growth, Documentation, full Governance perimeter | Evidence-driven |
 
-*From Hypothesis to Deployment with Evidence*
+The ecosystem vision document maps all scopes. The lifecycle expansion plan governs sequencing. This document provides the strategic rationale — the *why* behind the *what*.
 
-[Get Started](#quick-start) • [Documentation](#documentation) • [Roadmap](#development-roadmap)
+---
 
-Made with ❤️ by the Convoke community
+## See also
 
-</div>
+- **[Ecosystem Vision](convoke-vision-ecosystem.md)** — scope map of all teams and their relationships
+- **[Lifecycle Expansion Plan](convoke-note-lifecycle-expansion-plan.md)** — wave structure, gravity checks, resource model
+- **[Skill Portability Vision](convoke-vision-skill-portability.md)** — cross-platform distribution strategy
+- **[Team Factory Vision](../../_bmad-output/vortex-artifacts/loom-vision-2026-03-21.md)** — scaling team creation
+
+---
+
+*This document captures the strategic direction of Convoke as of 2026-04-18. It is governed by the Gravity Model: evidence shifts priority, not the plan. The lifecycle expansion plan operationalizes this vision into waves and gates.*
