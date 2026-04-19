@@ -353,6 +353,21 @@ So that the Covenant is consulted at the point of authorship — not discovered 
 
 The Covenant transitions from codified principle to enforced standard — retrofitted into existing skills, structurally gated for new skills, and published externally as Convoke's positioning wedge. Epic 2 is deferred pending Epic 1 completion and Phase 3 Add Skill workflow availability.
 
+### Retrofit Trigger Rule (A5, locked 2026-04-19)
+
+oc-2-1 retrofit is scoped when EITHER trigger fires:
+
+- **T1 (concentrated bottleneck):** Any (team × Right) cell measures < 70% compliance across ≥ 3 audited skills in that team. (The N ≥ 3 floor prevents single-sample tyranny — one low-compliance skill in a team is not a team-level bottleneck.)
+- **T2 (systemic bottleneck):** Overall audit compliance < 75%, OR any Right < 70% compliance averaged across all audited teams.
+
+Retrofit scope = the (team × Right) cell(s) that tripped the trigger — not the full audit matrix. Rights are treated as peers; severity weighting applies to *scope sequencing within the triggered cells*, not to the trigger threshold itself.
+
+Trigger evaluation re-runs after each audit refresh (v1 oc-1-1 = 2026-04-18 baseline; v2 post-IN-12 Vortex-focused re-audit; v3+ post future re-audits).
+
+**v1 baseline result:** No trigger fires. Overall 82% (>75%); every Right ≥ 70%; no (team × Right) cell at N ≥ 3 measured < 70%. oc-2-1 correctly deferred — but Vortex sampled at N = 1 only, so T1 cannot yet be evaluated for Vortex specifically. IN-12 resolves that.
+
+**Supersedes** the original Story 2.1 AC framing ("rights violated by ≥ 50% of audited skills"), which was undersampled single-matrix-based and did not handle concentrated (team-level) bottlenecks. Retained Story 2.1 ACs below still apply to the *scope definition and regression testing* of the retrofit once a trigger fires.
+
 ### Story 2.1: Retrofit Highest-Violation Skills
 
 As an operator of existing Convoke skills whose rights are currently violated,
