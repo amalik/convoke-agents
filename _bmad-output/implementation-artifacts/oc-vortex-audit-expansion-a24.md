@@ -1,6 +1,6 @@
 # A24: Vortex Audit Expansion (IN-12)
 
-Status: done (2026-04-19) — report: [convoke-report-operator-covenant-audit-vortex-2026-04-19.md](../planning-artifacts/convoke-report-operator-covenant-audit-vortex-2026-04-19.md)
+Status: **done (2026-04-19, non-provisional)** — A10 reproducibility gate cleared 3/3 = 100% — report: [convoke-report-operator-covenant-audit-vortex-2026-04-19.md](../planning-artifacts/convoke-report-operator-covenant-audit-vortex-2026-04-19.md)
 
 ## Story
 
@@ -124,6 +124,29 @@ so that the Vortex team cell reaches N ≥ 4 and T1 trigger evaluation for Vorte
 - Duplicate findings across layers (same issue surfaced by Blind + Edge or Edge + Auditor) already captured in the accepted findings above.
 
 **Convergence check (Round 2):** Round 2 patches did introduce structural changes (§5 table restructure preserved, §4.4 rewrite, §8.1 softening, 4 new IN rows). Round 3 would technically be allowed — but Round 2 surfaced no new HIGH findings beyond what the same agent has seen before, and the COI compounds with each self-review cycle. Per `code-review-convergence`, continued adversarial scanning by the same agent has diminishing returns. Recommend: stop at Round 2 and route through the A10 reproducibility gate (an independent-reviewer gate) rather than a Round 3 self-review.
+
+### A10 Reproducibility Pass — executed 2026-04-19 (outcome: gate CLEAR)
+
+**3 cells scored by 2 independent LLM reviewers blind to each other:**
+
+| # | Cell | Reviewer A | Reviewer B | Agreement |
+|---|------|:---:|:---:|:---:|
+| 1 | `hypothesis-engineering` × R3 rationale | PASS | PASS | ✓ |
+| 2 | `assumption-mapping` × R7 pacing | FAIL | FAIL | ✓ |
+| 3 | `empathy-map` × R7 pacing | PASS | PASS | ✓ |
+
+**3/3 = 100% agreement → A10 threshold met at N=3.**
+
+**Key consequences:**
+- T1-FIRES verdict is now **non-provisional** (§7 + §7.1 of report updated).
+- §8.1 **G1 retrofit scoping block ✓ satisfied**; 2 new retrofit cells (R7-V1 assumption-mapping, R7-V2 hypothesis-engineering) are eligible for Epic 2 Story 2.1 commitments pending Epic 2 ratification.
+- §8.1 **G2 independent FAIL-cell verification ✓ satisfied** via Cell 2 reproducibility; R7-V2 covered by analogy (stricter per-cell reading tracked in IN-56).
+- **Cell 2 reviewers naturally used charitable compound-grouping (6-7 concepts)**, not strict sub-field counting (> 10). §4.1/§4.3 evidence notes reverted to reviewer-validated counts; strict alternative preserved in §4.4 Notes.
+- **Cell 3 reviewers naturally applied the broader §2.6 reading** (workflow.md concepts pre-existing); §9 ambiguity #5 did not operationally surface under independent review. §4.2 PASS is reproducibility-validated under the natural reviewer reading.
+
+**Honest caveat (per oc-1-1 §2.5):** same-model LLM reviewers share base training. Agreement validates rubric unambiguity *for LLMs*, not against human judgment. Numeric A10 threshold met; structural limit persists.
+
+**A24 formally closed** — all tasks done, all review findings resolved, reproducibility gate cleared. Open follow-ups tracked in backlog intakes IN-53 through IN-56.
 
 
 
