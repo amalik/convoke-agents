@@ -1,0 +1,48 @@
+name: Regenerate badges.json
+
+# Auto-regenerates docs/badges.json when any of the source-of-truth files changes.
+# The README header shields read this file via shields.io dynamic/json.
+# Manual regeneration is also available via `npm run badges`.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '_bmad/bme/_*/config.yaml'
+      - '_bmad/_config/skill-manifest.csv'
+      - 'scripts/generate-badges-json.js'
+
+concurrency:
+  group: badges-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    # Don't loop on our own auto-commit.
+    if: "!contains(github.event.head_commit.message, 'chore(badges): auto-regenerate')"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Regenerate docs/badges.json
+        run: npm run badges
+      - name: Commit if changed
+        run: |
+          if git diff --exit-code docs/badges.json; then
+            echo "No changes; badges.json is already in sync."
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add docs/badges.json
+            git commit -m 'chore(badges): auto-regenerate badges.json [skip ci]'
+            git push
+          fi
