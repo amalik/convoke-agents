@@ -71,7 +71,10 @@ function parseArgs(argv) {
       opts.quiet = true;
     } else if (a === '--output') {
       const next = argv[i + 1];
-      if (!next || next.startsWith('--')) {
+      // Reject any `-`-prefixed token as a value — covers both long (`--flag`)
+      // and short (`-q`, `-h`) neighbors. Previously accepted `-q` as a literal
+      // output path; I50's short-alias introduction made that exploitable.
+      if (!next || next.startsWith('-')) {
         opts.unknown = '--output (missing value)';
         return opts;
       }
@@ -82,7 +85,8 @@ function parseArgs(argv) {
       opts.output = val;
     } else if (a === '--tier') {
       const next = argv[i + 1];
-      if (!next || next.startsWith('--')) {
+      // See note on `--output` above: reject any `-`-prefixed token as a value.
+      if (!next || next.startsWith('-')) {
         opts.unknown = '--tier (missing value)';
         return opts;
       }
@@ -198,6 +202,9 @@ function makeReporter(opts = {}) {
     },
     counts() {
       return results;
+    },
+    isQuiet() {
+      return quiet;
     },
   };
 }
@@ -420,7 +427,11 @@ function runBatch(tierValue, outputBase, dryRun, projectRoot, reporter) {
   ].sort();
 
   if (matchingSkills.length === 0) {
-    process.stdout.write('Nothing to export — manifest matches found 0 skills\n');
+    // Suppress the friendly message in --quiet mode so the caller only sees
+    // the single-line summary ("Exported 0 skills (0/0/0) — 0 warnings total").
+    if (!reporter.isQuiet()) {
+      process.stdout.write('Nothing to export — manifest matches found 0 skills\n');
+    }
     return EXIT_SUCCESS;
   }
 
