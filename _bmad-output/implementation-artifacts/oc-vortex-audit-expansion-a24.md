@@ -6,7 +6,7 @@ Status: done (2026-04-19) — report: [convoke-report-operator-covenant-audit-vo
 
 As a Convoke contributor preparing Epic 2 Story 2.1's T1 (team × Right) trigger evaluation,
 I want a Vortex-scoped audit extension that scores ≥ 3 additional Vortex workflows beyond `lean-persona` against all 7 Operator Rights using the locked oc-1-1 methodology,
-so that the Vortex team cell reaches N ≥ 4 and T1 trigger evaluation for Vortex becomes valid (currently blocked at N = 1 per [convoke-epic-operator-covenant.md:365](../planning-artifacts/convoke-epic-operator-covenant.md#L365)).
+so that the Vortex team cell reaches N ≥ 4 and T1 trigger evaluation for Vortex becomes valid (currently blocked at N = 1 per [convoke-epic-operator-covenant.md:367](../planning-artifacts/convoke-epic-operator-covenant.md#L367)).
 
 ## Acceptance Criteria
 
@@ -36,7 +36,7 @@ so that the Vortex team cell reaches N ≥ 4 and T1 trigger evaluation for Vorte
 - [x] Task 2: Identify representative step per workflow (AC #4) — cite step path (e.g., `_bmad/bme/_vortex/workflows/assumption-mapping/step-01-<name>.md`) and rationale for step choice.
 - [x] Task 3: Score each workflow × 7 rights (AC #5, #6) — 3 workflows × 7 rights = 21 new cells; evidence notes cite specific file:line references where behavior is defined.
 - [x] Task 4: Compute Vortex team × Right row (AC #8) — 4 workflows (3 new + lean-persona from oc-1-1 §7) × 7 rights; report per-right fail count and fail rate.
-- [x] Task 5: Evaluate T1 trigger for Vortex (AC #9) — per-right: does `(fails / N) > 0.30` at `N ≥ 3`? (i.e., compliance strictly < 70%). Any `TRUE` escalates.
+- [x] Task 5: Evaluate T1 trigger for Vortex (AC #9) — per-right: does `(fails / N) > 0.30` at `N ≥ 3`? (equivalent to compliance `< 70%` per Epic T1). Any `TRUE` escalates.
 - [x] Task 6: Draft §Implications section — for each T1-tripping right (if any), recommend retrofit pattern drawing from oc-1-1 §9.1's retrofit catalogue where applicable.
 - [x] Task 7: Save report (AC #7) + run `npx convoke-doctor` to verify governance acceptance.
 - [x] Task 8: Update initiatives backlog (AC #10) — activity-log row + move A24 to §2.5 Completed.
@@ -58,7 +58,7 @@ so that the Vortex team cell reaches N ≥ 4 and T1 trigger evaluation for Vorte
 - [x] [Review][Patch→Applied 2026-04-19] **Compound-concept "A13" rule applied beyond locked §2.6** — §4.1 and §4.3 reframed without compound-concept grouping references. FAIL verdicts hold (6-7 distinct concepts under strict §2.6). Compound-concept caveat moved to §4.4 Notes.
 - [x] [Review][Patch→Applied 2026-04-19] **Pacing FAIL evidence notes exceed ≤ 2 sentences** — §4.1, §4.2, §4.3 R7 trimmed to 2 sentences. Supporting evidence moved to §4.4 Notes.
 - [x] [Review][Patch→Applied 2026-04-19] **Story spec task checkboxes unchecked despite "done" status** — 8/8 Tasks now `[x]`.
-- [~] [Review][Patch→Dismissed 2026-04-19 on verification] **Wrong line-anchor citations to Covenant epic** — False positive. Verified against current epic file: T1 IS at line 360 (as cited); line 365 IS the "Trigger evaluation re-runs... v2 post-IN-12..." text (as cited). Edge Case Hunter's finding was based on a prior/different version of the epic. No citations need changing.
+- [x] [Review][Partial-dismiss→Re-opened Round 2] **Wrong line-anchor citations to Covenant epic** — Partial: T1 citation to L360 verified correct; but L365 citation for "N = 1 blocked" claim was wrong (N=1 text is at L367). Round 2 corrected to L367 in Story Statement + Dev Notes §Downstream Consumers.
 - [x] [Review][Patch→Applied 2026-04-19] **Activity-log "A24 shipped" wording contradicts §7 provisional verdict** — backlog A24 activity-log entry now reads "A24 shipped provisional" and T1 FIRES is explicitly qualified "(provisional)". §2.5 row note also reads "(provisional)".
 - [x] [Review][Patch→Applied 2026-04-19] **AC #6 "§notes" section missing** — §4.4 Notes subsection added with 3 entries (compound-concept caveat, IN-12 estimate comparison, workflow.md-vs-step-01 scope). AC #6 satisfied literally.
 - [x] [Review][Patch→Applied 2026-04-19] **AC #8 emits compliance rate, not `vortex_fail_rate`** — §5 table now emits Fails/N, Fail rate, Compliance, and T1 verdict columns per AC #8 literal formula.
@@ -85,6 +85,46 @@ so that the Vortex team cell reaches N ≥ 4 and T1 trigger evaluation for Vorte
 - "Implicit wait" boilerplate across Pause cells — method-consistent with oc-1-1 §8.7 lean-persona scoring verbatim.
 - Shared Right-to-default fallback text scored twice — each workflow is a distinct audit unit; independent scoring is correct.
 
+### Review Findings (Round 2, 2026-04-19)
+
+**Round 2 scope:** 3 sub-agents reviewed the Round 1 resolution output (14 patches + 3 decision resolutions + findings block). Found deeper issues in the patches themselves.
+
+#### Decisions (2) — resolved this round
+
+- [x] [Review][Decision→Resolved 2026-04-19] **Compound-concept counting — §4.1/§4.3 claimed "strict" but used charitable grouping (AC #1 violation)** — **Resolution: 1** (rewrite §4.1/§4.3 under true strict §2.6 sub-field counting). §4.1 now reads "> 10 novel concepts under strict §2.6"; §4.3 reads "> 15". Both FAIL verdicts robust; §4.4 Notes now carries strict vs charitable breakdown for transparency.
+- [x] [Review][Decision→Resolved 2026-04-19] **§8.1 Mitigation Gate logic gaps (G1 cell composition, G2 "independent" undefined, G4 no empathy-map drift handling, etc.)** — **Resolution: 2** (defer gate refinements to Epic 2 governance). §8.1 softened to "proposed… pending Epic 2 ratification"; gate-refinement candidates logged as backlog intake IN-56 → A34. G1-G4 retained with softened should-language.
+
+#### Patches (16) — applied this round
+
+- [x] [Review][Patch] **§9 ambiguity #5 "verdict stability" claim was partially false** — corrected. §4.2 empathy-map PASS is explicitly reading-dependent; §4.1/§4.3 FAILs stable either way. §5 table footnote added.
+- [x] [Review][Patch] **§4.2 evidence note was 3 sentences (AC #5 violation)** — trimmed to 2 sentences with reading-dependent framing.
+- [x] [Review][Patch] **§4.4 Note 1 internally inconsistent on "6 distinct items" labeling** — rewritten with explicit strict-vs-charitable counts.
+- [x] [Review][Patch] **Story L365 citations actually map to L367 (N=1 baseline text)** — corrected in Story Statement + Dev Notes §Downstream Consumers. F6 partial-dismissal note updated.
+- [x] [Review][Patch] **F6 checkbox `[~]` was non-standard markdown** — replaced with `[x]` + "Partial-dismiss→Re-opened Round 2" annotation.
+- [x] [Review][Patch] **3 new rubric ambiguities (#3, #4, #5) not logged as backlog intakes (AC #1 violation)** — IN-53 (cross-doc consistency), IN-54 (R6 intake-only step), IN-55 (workflow.md scope) added.
+- [x] [Review][Patch] **Task 5 "strictly < 70%" redundant qualifier tacitly resolved deferred boundary** — reworded as "equivalent to compliance `< 70%` per Epic T1" without the "strictly" prefix.
+- [x] [Review][Patch] **§5 table summary duplicated the per-right figures shown in the table** — removed duplication; summary now references the table columns rather than restating numbers.
+- [x] [Review][Patch] **Backlog A24 row denominator "0/4" vs "3/4" unlabeled unit** — row rewritten with "per-right fail counts (across N=4 Vortex skills)" framing; charitable-vs-strict counting noted.
+- [x] [Review][Patch] **"Completed (provisional)" new lifecycle sub-status lacked definition** — row annotated "provisional — denotes shipped artifact with deferred-resolution items pending".
+- [x] [Review][Patch] **§6.4 still emitted quantitative figures after Round 1 "no number is emitted" claim** — specific numbers moved to §9 ambiguity #3 reference; §6.4 now just flags the question.
+- [x] [Review][Patch] **§8.1 "locked 2026-04-19 via Round 1 code review" attribution over-claimed authority** — softened to "proposed… pending Epic 2 governance ratification".
+- [x] [Review][Patch] **IN-43 intake reproduced "23 workflows" without §6.2's pending-inventory qualifier** — intake text revised; §6.2 now cites IN-43 as proposed-not-scored (A26 pending qualifying gate).
+- [x] [Review][Patch] **§4.4 header parenthetical invented an AC #6 interpretation** — rephrased as "(AC #6 supporting material)".
+- [x] [Review][Patch] **G3 "intake-only" vs §4.4 adjudicating compound-concept in-story** — §4.4 Notes now frames itself as descriptive comparison, not a rubric decision; G3 text unchanged.
+- [x] [Review][Patch] **Backlog IN-43 row referenced A26 without qualifying-gate note** — revised intake text and §6.2 citation framing.
+
+#### Deferred (3)
+
+- [x] [Review][Defer] **ILE-1 commits bundled into A24 patch range** — commit-hygiene observation; other sessions auto-committed ILE-1 work during this session's timeline. Not an A24 correctness issue.
+- [x] [Review][Defer] **T4 activity-log entries bundled into A24 patch commit range** — same root cause: parallel auto-commits from other work. T4 → deferred-work.md already captures the real T4 bug.
+- [x] [Review][Defer] **Gate "gatekeeper identity" (who provides non-COI reviewers)** — governance question folded into IN-56 gate-refinement intake; not an A24-level question.
+
+#### Dismissed (~10)
+
+- Duplicate findings across layers (same issue surfaced by Blind + Edge or Edge + Auditor) already captured in the accepted findings above.
+
+**Convergence check (Round 2):** Round 2 patches did introduce structural changes (§5 table restructure preserved, §4.4 rewrite, §8.1 softening, 4 new IN rows). Round 3 would technically be allowed — but Round 2 surfaced no new HIGH findings beyond what the same agent has seen before, and the COI compounds with each self-review cycle. Per `code-review-convergence`, continued adversarial scanning by the same agent has diminishing returns. Recommend: stop at Round 2 and route through the A10 reproducibility gate (an independent-reviewer gate) rather than a Round 3 self-review.
+
 
 
 ## Dev Notes
@@ -103,7 +143,7 @@ This is a hypothesis, not a prediction. The audit executes the methodology and r
 
 ### Downstream Consumers
 
-- **Epic 2 §Retrofit Trigger Rule ([line 365](../planning-artifacts/convoke-epic-operator-covenant.md#L365)):** baseline updates from "v1 oc-1-1 (N_vortex = 1, T1-invalid)" to "v2 post-A24 (N_vortex ≥ 4, T1-valid)". This is the *primary* consumer regardless of outcome.
+- **Epic 2 §Retrofit Trigger Rule ([v1 baseline line 367](../planning-artifacts/convoke-epic-operator-covenant.md#L367)):** baseline updates from "v1 oc-1-1 (N_vortex = 1, T1-invalid)" to "v2 post-A24 (N_vortex ≥ 4, T1-valid)". This is the *primary* consumer regardless of outcome.
 - **Epic 2 Story 2.1:** if any Vortex × Right cell trips T1, that cell becomes in-scope retrofit. Escalation path: report §Implications → sprint-planning on Epic 2.
 - **Operator Covenant external publication (Epic 2 Story 2.3):** Publication Gate evaluates against the refreshed matrix; a T1-valid Vortex row is required before publication.
 
