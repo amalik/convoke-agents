@@ -5,6 +5,14 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: scope of T4 (migration idempotency CLI test) — 2026-04-19
+
+T4's CLI-level idempotency test revealed a latent UX issue while verifying functional idempotency holds:
+
+- **Migration-generated meta-artifacts flagged as ungoverned on re-run** — MEDIUM. When `convoke-migrate --apply --force` runs against a fresh project, it writes `_bmad-output/planning-artifacts/adr-artifact-governance-convention-<date>.md` and `_bmad-output/planning-artifacts/artifact-rename-map.md`. On the next run, the inference engine flags these as "ambiguous — cannot infer type or initiative" because their filenames don't match the `{initiative}-{artifact_type}` convention the migration itself is enforcing. Functional idempotency still holds (no new commits, no state change — T4 asserts this directly), but the CLI emits `"Previous migration detected, but new ungoverned files found. Proceeding with fresh migration."` followed by `"Nothing to rename"` instead of the cleaner `"Nothing to migrate — all files governed."`. Fix options: (a) inject governance frontmatter into the ADR and rename-map on creation so they're recognized as governed, or (b) add these specific filenames to an inference-time exclusion list. Deferred because the user-facing confusion is mild and the functional idempotency holds; however this should be fixed before any retro cites "Nothing to migrate" as the canonical no-op signal. Relevant: `scripts/migrate-artifacts.js:278-287` (`detectMigrationState` + manifest-has-work check); `scripts/lib/artifact-utils.js:926` (`buildManifestEntry`).
+
+---
+
 ## Deferred from: scope of T3 (end-to-end update test on real project) — 2026-04-19
 
 T3 shipped as a CLI-level non-dry-run upgrade test with full post-state verification (previously missing). The following were explicitly scoped out as they'd be disproportionate to T3's score (2.7) or would reintroduce flakiness:
