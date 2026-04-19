@@ -81,7 +81,7 @@ Binary verdicts per oc-1-1 §2.3. Evidence notes cite `workflow:step:§section` 
 - **Right to completeness — PASS.** No exclusion mechanics in step-01; §3 explicitly commits to surfacing gaps rather than dropping them. Input is preserved wholesale.
 - **Right to pause — PASS.** `step-01-setup.md:58–60` §Your Turn: "Please provide your hypothesis contracts — file path(s), description, or both. I'll validate them and we'll proceed…" Implicit wait pattern, equivalent to lean-persona oc-1-1 §8.7 scoring.
 - **Right to next action — PASS.** No error surface at step-01; non-conforming inputs are routed into the next step with gaps named, not errors.
-- **Right to pacing — FAIL.** `step-01-setup.md:36–52` §3 Input Validation introduces ≥ 6 novel concepts in a single intake round: (1) **HC3** contract identifier, (2) the **4-field hypothesis contract** structure with its 4 named sub-fields (Expected Outcome / Target Behavior Change / Rationale / Riskiest Assumption), (3) **Assumption Risk Map**, (4) **Recommended Testing Order**, (5) **Flagged Concerns**, (6) **target_agents / input_artifacts / source_agent / source_workflow** frontmatter mechanics. Even under generous compound-concept treatment (collapsing the 4 sub-fields into 1 concept per §2.6 compound-concept grouping A13), the round still introduces ≥ 5 novel concepts. Exceeds 3-concept budget. IN-12 spot-check estimated ~10 novel concepts; strict enumeration measures 6–9 depending on compound-concept treatment.
+- **Right to pacing — FAIL.** `step-01-setup.md:36–52` §3 Input Validation introduces 6 novel concepts in a single intake round: HC3 contract; 4-field hypothesis contract (Expected Outcome / Target Behavior Change / Rationale / Riskiest Assumption); Assumption Risk Map; Recommended Testing Order; Flagged Concerns; frontmatter mechanics (target_agents / input_artifacts / source_agent / source_workflow). Exceeds 3-concept budget — see §4.4 Notes for IN-12 estimate comparison and compound-concept caveat.
 
 ### 4.2 `empathy-map` step-01-define-user
 
@@ -91,7 +91,7 @@ Binary verdicts per oc-1-1 §2.3. Evidence notes cite `workflow:step:§section` 
 - **Right to completeness — PASS.** All 4 question groups shown explicitly; operator input preserved wholesale; no exclusion mechanics.
 - **Right to pause — PASS.** `step-01-define-user.md:52–58` §Your Turn: "Please define your target user using the structure above." Implicit wait (lean-persona §8.7 pattern).
 - **Right to next action — PASS.** No error surface at step-01. If AI rejects as "not specific enough" at step transition, the §Example block serves as implicit remediation pointer (same deference as lean-persona §8.7).
-- **Right to pacing — PASS.** Step-01 introduces ≤ 2 novel concepts: (1) **Empathy map** framework identity (inherited from workflow.md), (2) **Job-to-be-Done** (`step-01-define-user.md:25–26` §2). Demographics, context, and research-source categories use general-literacy terms (interview transcripts / surveys / observational studies / analytics data) that don't require domain-specific redefinition — pre-existing per §2.6. The 6 empathy-map quadrants (Says/Thinks, Does/Feels, Pain Points, Gains) named in workflow.md's Steps Overview are framework signposts not unpacked in step-01 and do not constrain the operator's action in this round. Within 3-concept budget.
+- **Right to pacing — PASS.** Step-01 introduces only 1 novel concept: Job-to-be-Done (`step-01-define-user.md:25–26` §2). Empathy map + the 6 quadrants (workflow.md Steps Overview) are pre-existing per §2.6 "previously encountered" semantics; general-literacy research-source categories are in the §2.6 pre-existing list; within 3-concept budget. See §4.4 Notes for workflow.md-vs-step-01 scope caveat (§9 ambiguity #5).
 
 ### 4.3 `hypothesis-engineering` step-01-setup
 
@@ -101,9 +101,15 @@ Binary verdicts per oc-1-1 §2.3. Evidence notes cite `workflow:step:§section` 
 - **Right to completeness — PASS.** No exclusion mechanics; non-conforming inputs have gaps named rather than dropped.
 - **Right to pause — PASS.** `step-01-setup.md:58–60` §Your Turn: "Please provide your problem definition — file path, description, or both. I'll validate it and we'll proceed…" Implicit wait.
 - **Right to next action — PASS.** No error surface at step-01; non-conforming routes into step-02 with gaps identified.
-- **Right to pacing — FAIL.** `step-01-setup.md:35–51` §3 introduces ≥ 6 novel concepts: (1) **HC2** contract, (2) **Converged Problem Statement** (with sub-axes: Confidence, Scope), (3) **Jobs-to-be-Done** with 3 sub-axes (Functional / Emotional / Social Jobs), (4) **Pains** (prioritized with evidence), (5) **Gains**, (6) **Evidence Summary** (convergence assessment + gaps), (7) **Assumptions (with basis and risk if wrong)**. §Why This Matters additionally introduces (8) the **falsifiability** mental model ("if you can't prove it wrong, it's not a hypothesis"). Under compound-concept grouping (each multi-axis concept as 1), still ≥ 6 novel concepts. Exceeds 3-budget.
+- **Right to pacing — FAIL.** `step-01-setup.md:35–51` §3 introduces 7 novel concepts: HC2 contract; Converged Problem Statement (Confidence, Scope); Jobs-to-be-Done (Functional / Emotional / Social); Pains (prioritized with evidence); Gains; Evidence Summary (convergence + gaps); Assumptions-with-risk — plus falsifiability mental model in §Why This Matters (§Why-Matters:11–13). Exceeds 3-concept budget — see §4.4 Notes for compound-concept caveat.
 
 **Pattern observation:** `assumption-mapping` step-01 and `hypothesis-engineering` step-01 are structural twins — both enumerate an HC-schema (HC2 / HC3) in §3 Input Validation as the first operator-facing surface. Both FAIL on Right to pacing for the same reason. This is a **shared architectural pattern**, not two independent violations. See §6 Implications.
+
+### 4.4 Notes (AC #6 — supporting evidence not required in-line)
+
+- **Compound-concept caveat.** The 4-field hypothesis contract (§4.1) and the 3 JTBD sub-axes (§4.3) are each structurally a named compound. Under strict §2.6, sub-fields count separately; under a charitable grouping reading, each compound counts as 1. Both FAIL verdicts hold under either reading: assumption-mapping remains ≥ 5 novel concepts under grouping (6 distinct items), hypothesis-engineering remains ≥ 6. The grouping rule itself is not in the locked §2.6 glossary; the compound-concept counting rule is a backlog candidate tracked as A13 (OC-R7 compound-concept counting, §9 ambiguity #1).
+- **IN-12 spot-check estimate vs. measured count (AC #6).** IN-12's spot-check estimated "~10 novel concepts" in assumption-mapping step-01. Strict enumeration here measures 6 distinct items (or 9 if sub-fields count separately). The estimate was directionally correct (clearly over-budget) but over-counted; the FAIL verdict is unaffected.
+- **workflow.md-vs-step-01 scope.** §2.6's workflow-inherited rule explicitly covers earlier steps but is silent on workflow.md. §4.2 (empathy-map) applies the broader reading (workflow.md concepts pre-exist by step-01); §4.1 and §4.3 don't need the broader reading (their novel concepts are introduced in step-01 itself). Tracked as §9 ambiguity #5.
 
 ---
 
@@ -111,17 +117,19 @@ Binary verdicts per oc-1-1 §2.3. Evidence notes cite `workflow:step:§section` 
 
 N_vortex = 4 (lean-persona + 3 new workflows). Meets T1's N ≥ 3 floor.
 
-| Right | lean-persona (oc-1-1 §8.7) | assumption-mapping | empathy-map | hypothesis-engineering | **Vortex compliance** | **T1 verdict (< 70% at N ≥ 3)** |
-|-------|:---:|:---:|:---:|:---:|:---:|:---:|
-| Right to a default | ✅ | ✅ | ✅ | ✅ | **4/4 (100%)** | Does not fire |
-| Right to the full universe | ✅ | ✅ | ✅ | ✅ | **4/4 (100%)** | Does not fire |
-| Right to rationale | ✅ | ✅ | ✅ | ✅ | **4/4 (100%)** | Does not fire |
-| Right to completeness | ✅ | ✅ | ✅ | ✅ | **4/4 (100%)** | Does not fire |
-| Right to pause | ✅ | ✅ | ✅ | ✅ | **4/4 (100%)** | Does not fire |
-| Right to next action | ✅ | ✅ | ✅ | ✅ | **4/4 (100%)** | Does not fire |
-| **Right to pacing** | ❌ | ❌ | ✅ | ❌ | **1/4 (25%)** | **T1 FIRES (25% < 70%)** |
+Per AC #8: `vortex_fail_rate = fails_in_vortex / N_vortex_audited`. Compliance shown alongside for readability.
 
-**Vortex team cell summary:** 25/28 PASS (89% overall compliance). 6 rights at 100%. 1 right at 25%. **Single concentrated bottleneck: Right to pacing.**
+| Right | lean-persona (oc-1-1 §8.7) | assumption-mapping | empathy-map | hypothesis-engineering | **Fails / N** | **Fail rate** | **Compliance** | **T1 verdict (< 70% compliance at N ≥ 3)** |
+|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Right to a default | ✅ | ✅ | ✅ | ✅ | 0/4 | 0% | 100% | Does not fire |
+| Right to the full universe | ✅ | ✅ | ✅ | ✅ | 0/4 | 0% | 100% | Does not fire |
+| Right to rationale | ✅ | ✅ | ✅ | ✅ | 0/4 | 0% | 100% | Does not fire |
+| Right to completeness | ✅ | ✅ | ✅ | ✅ | 0/4 | 0% | 100% | Does not fire |
+| Right to pause | ✅ | ✅ | ✅ | ✅ | 0/4 | 0% | 100% | Does not fire |
+| Right to next action | ✅ | ✅ | ✅ | ✅ | 0/4 | 0% | 100% | Does not fire |
+| **Right to pacing** | ❌ | ❌ | ✅ | ❌ | **3/4** | **75%** | **25%** | **T1 FIRES (25% < 70%)** |
+
+**Vortex team cell summary:** 25/28 PASS (89% overall compliance). 6 rights at 100% compliance / 0% fail rate. 1 right at 25% compliance / 75% fail rate. **Single concentrated bottleneck: Right to pacing.**
 
 ---
 
@@ -151,7 +159,7 @@ This is not a lean-persona-specific oddity. It is a **Vortex-wide authoring conv
 - `pivot-resynthesis` (consumes HC2)
 - `production-monitoring` / `signal-interpretation` / `behavior-analysis` (stream 6)
 
-A **recommended follow-up audit** (candidate initiative: "A26 — Vortex HC-schema pattern audit") would verify the hypothesis that this pattern is Vortex-wide, and motivate a **class-level retrofit** rather than per-workflow patches. Rough estimate: if 8+ of the 23 Vortex workflows share the pattern, a shared `step-01-receive-contract` template fix would close all cells at once.
+A **recommended follow-up audit** (logged as IN-43 → A26 in the initiatives backlog — Vortex HC-schema pattern audit) would verify the hypothesis that this pattern is Vortex-wide, and motivate a **class-level retrofit** rather than per-workflow patches. Rough estimate pending a proper Vortex-wide workflow inventory: if a majority of Vortex workflows share the pattern (≈23 workflows listed in `_bmad/bme/_vortex/workflows/`; exact count and pattern-overlap to be measured by A26), a shared `step-01-receive-contract` template fix would close all cells at once.
 
 ### 6.3 Discovery-workflow pacing structural tension (confirms oc-1-1 §10)
 
@@ -161,25 +169,21 @@ oc-1-1 §10 observed that "Discovery workflows may need a budget-aware pattern" 
 
 This formalization is **out of scope for A24**. It is a candidate for Covenant Compliance Checklist §Discovery patterns (if/when authored) or a project-context.md rule.
 
-### 6.4 T2 (systemic) trigger — observation only, out of scope
+### 6.4 T2 (systemic) trigger — out of scope
 
-Adding A24's 2 new Right-to-pacing FAILs to oc-1-1's global matrix (for illustration):
-- oc-1-1 Right to pacing: 3/8 fails (38%) = 62.5% compliance (already < 70% per strict reading).
-- Post-A24 combined: 5/11 fails (45%) = 55% compliance globally if the global matrix were recomputed.
+A24 adds 2 new Right-to-pacing FAILs. A rigorous T2 re-evaluation would require a full re-audit of the 8 oc-1-1 skills (Migration, Portfolio, export-skill, validate-exports, Loom add-team, enhance-backlog, Gyre stack-detection are not re-audited here). A24's scope is Vortex-only per AC anti-pattern. **T2 is NOT re-evaluated in this report.** Any directional observation about post-A24 systemic Right-to-pacing compliance would mix A24's Vortex-only cells with oc-1-1's frozen non-Vortex cells, which violates Anti-Pattern #5 — so no number is emitted here.
 
-**However:** T2 re-evaluation would require full re-audit of the 8 oc-1-1 skills (Migration, Portfolio, export-skill, validate-exports, Loom add-team, enhance-backlog, Gyre stack-detection are not re-audited here). A24's scope is Vortex-only per AC anti-pattern. **T2 is NOT re-evaluated in this report.** The number above is observational, not a trigger verdict.
-
-Separately, oc-1-1 line 367 states "v1 baseline result: No trigger fires … every Right ≥ 70%" — but oc-1-1 §7 Right-to-pacing is 62.5% compliance globally. This apparent internal inconsistency in oc-1-1 is flagged as a **backlog intake candidate** (not resolved in A24 — out of scope per AC #1's methodology-reuse-not-revision constraint).
+Separately, a **cross-document consistency question** is logged as a backlog intake candidate: `convoke-epic-operator-covenant.md:367` states the v1 baseline result "every Right ≥ 70%", but the oc-1-1 matrix at `convoke-report-operator-covenant-audit-2026-04-18.md:271` shows Right-to-pacing at 62.5% compliance (3/8 fail). The threshold phrasing may refer to a different computation (e.g., compliance-averaged-across-teams rather than across-all-skills). This is a cross-document (Epic vs. oc-1-1) clarification, not an internal inconsistency in oc-1-1 itself. Not resolved here per AC #1 methodology-reuse constraint.
 
 ### 6.5 Covenant v2 audit baseline advances
 
 Per [convoke-epic-operator-covenant.md §Retrofit Trigger Rule](convoke-epic-operator-covenant.md): "Trigger evaluation re-runs after each audit refresh (v1 oc-1-1 = 2026-04-18 baseline; v2 post-IN-12 Vortex-focused re-audit; v3+ post future re-audits)."
 
-**This report is the v2 audit refresh.** Epic 2 §Retrofit Trigger Rule baseline now reads:
+**This report is the v2 audit refresh.** Epic 2 §Retrofit Trigger Rule baseline **should be updated** (subject to Epic 2 governance ratification, gated on G1 per §8.1) to read:
 - v1 oc-1-1 (2026-04-18): Vortex N=1, T1 inconclusive for Vortex.
-- **v2 A24 (2026-04-19): Vortex N=4. T1 FIRES on Right to pacing. 3 pacing cells in retrofit scope (2 new + 1 carried).**
+- **v2 A24 (2026-04-19, provisional): Vortex N=4. T1 FIRES on Right to pacing. 3 pacing cells flagged for retrofit scope (2 new + 1 carried).**
 
-Epic 2 Story 2.3 Publication Gate precondition: "all fails addressed or documented" (per oc-1-1 D3a) now includes the 2 new Vortex pacing cells.
+Epic 2 Story 2.3 Publication Gate precondition "all fails addressed or documented" (per oc-1-1 D3a) **should extend** to cover the 2 new Vortex pacing cells once the reproducibility gate clears and Epic 2 owner ratifies the v2 baseline.
 
 ---
 
@@ -202,6 +206,17 @@ The auditor (Claude working under Amalik's direction in this session) has **not 
 
 Note: auditor did author the A24 story spec ([oc-vortex-audit-expansion-a24.md](../implementation-artifacts/oc-vortex-audit-expansion-a24.md)) earlier in the same session; the story spec defined AC-level constraints (e.g., AC #4 representative-step scoping) that shaped this audit's frame. This is not a workflow-content COI but a methodology-frame COI worth noting: the audit frame was authored by the auditor rather than a separate reviewer.
 
+### 8.1 Mitigation Gates (locked 2026-04-19 via Round 1 code review)
+
+Because §7 declares the T1-FIRES verdict provisional (A10 reproducibility gate not yet cleared) AND §8 discloses a methodology-frame COI, downstream actions that treat A24 findings as load-bearing MUST satisfy these gates first:
+
+- **G1 — Epic 2 Story 2.1 retrofit scoping block:** The 2 new retrofit cells introduced in §6.1 (R7-V1 `assumption-mapping`, R7-V2 `hypothesis-engineering`) MUST NOT be added to Epic 2 Story 2.1 retrofit commitments until the A10 reproducibility gate clears ≥ 3 cells per the Compliance Checklist §Reproducibility gate rule.
+- **G2 — Independent FAIL cell verification:** Before retrofit work begins for either R7-V1 or R7-V2, at least one FAIL cell per new workflow (i.e., one from each of `assumption-mapping` step-01 or `hypothesis-engineering` step-01) must be independently re-scored by a second reviewer. G2 is subsumed by G1 if the ≥3-cell reproducibility pool happens to include both.
+- **G3 — Rubric ambiguities stay intake-only:** The 5 ambiguities logged in §9 MUST be triaged as backlog intakes via `bmad-enhance-initiatives-backlog` Triage mode — not resolved in this story per AC #1's methodology-reuse-not-revision constraint.
+- **G4 — Carried-forward cells locked:** `lean-persona` verdicts from oc-1-1 §8.7 carry forward **unchanged**. If the reproducibility pass surfaces a drift concern on lean-persona, it becomes a v3 audit input, not an in-story correction.
+
+The Covenant v2 audit baseline advancement described in §6.5 is effective for this report's own records but requires Epic 2 governance ratification before it becomes the authoritative v2 baseline. That ratification is itself gated on G1.
+
 ---
 
 ## 9. Rubric Ambiguities Surfaced (Backlog Intake Candidates)
@@ -210,7 +225,9 @@ Per AC #1, rubric ambiguities go to the initiatives backlog, not resolved in-sto
 
 1. **Compound-concept treatment for 4-field contracts.** The 4-field hypothesis contract (Expected Outcome / Target Behavior Change / Rationale / Riskiest Assumption) is structurally a "named contract" (1 concept) but enumerating it adds 4 sub-fields. Under A13 (OC-R7 concept-counting rules for compound concepts), this needs a glossary rule. My audit used the charitable reading (1 compound concept) to avoid over-counting, but the FAIL verdict holds under either reading.
 2. **HC-schema enumeration as single vs. multiple concepts.** §3 Input Validation lists "HC3 frontmatter fields" (7 items) and "HC3 body sections" (5-6 items). Are these 12 distinct concepts or 2 compound ones? Related to A13 above.
-3. **oc-1-1 line 367 vs. line 271 internal consistency.** Line 367 claims "every Right ≥ 70%" at v1 baseline but line 271 shows Right to pacing at 62.5% compliance. Either the threshold is compliance-averaged-across-teams (not compliance-across-all-skills) or the v1 baseline calculation is internally inconsistent. Logged as a clarification request; does not affect A24 Vortex-only findings.
+3. **Cross-document consistency — Epic v1 baseline claim vs. oc-1-1 matrix.** `convoke-epic-operator-covenant.md:367` states v1 baseline "every Right ≥ 70%"; oc-1-1 §7 (line 271) shows Right to pacing at 62.5% compliance across 8 skills. Either the threshold is compliance-averaged-across-teams (not across-all-skills) or the Epic claim is loose. Logged as a clarification request; corrected from an earlier draft which mis-attributed the phrase to the oc-1-1 report itself. Does not affect A24 Vortex-only findings.
+4. **Right-to-next-action scoring at intake-only steps — PASS vs N/A ambiguity.** All 3 workflows scored PASS for Right to next action with the reasoning "no error surface at step-01; non-conforming routes into step-02+ with gaps named". This matches oc-1-1 §8.7 lean-persona verbatim ("No error surface in this discovery step; validation happens in later steps") and is method-consistent with the locked methodology — but both audits rely on the next step for the evidence, which is a vacuous PASS at the step-01 unit of analysis (AC #4 "one representative step per workflow"). §2.3 N/A discipline ("right cannot apply to the skill's interaction surface") could arguably cover intake-only steps. Added 2026-04-19 via Round 1 code review (Edge Case Hunter). Logged for v3+ rubric clarification; does not affect A24 or oc-1-1 verdicts.
+5. **workflow.md-vs-step-01 scope for §2.6 novel-concept counting.** §2.6's workflow-inherited rule explicitly covers "concepts introduced in earlier steps" but is silent on whether concepts introduced in workflow.md (the orchestration file, loaded before any step) count as "previously encountered in the current workflow" by the time the operator reaches step-01. This audit applies the broader reading (workflow.md counts as prior encounter) — e.g., §4.2 treats the 6 empathy-map quadrants named in workflow.md's Steps Overview as pre-existing. Under the narrower reading (only earlier steps count), empathy-map's step-01 cell might flip FAIL. Verdicts are stable under either reading for all 3 A24 cells (empathy-map PASS holds both ways once JTBD is the only net-new step-01 concept; assumption-mapping + hypothesis-engineering FAILs hold either way with ≥ 6 step-01-introduced concepts). Added 2026-04-19 via Round 1 code review (Edge Case Hunter + Acceptance Auditor). Logged for v3+ glossary clarification.
 
 ---
 
