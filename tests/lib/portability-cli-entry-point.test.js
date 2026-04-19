@@ -204,16 +204,21 @@ describe('convoke-export CLI — --quiet flag (I50)', () => {
     const noisyLines = noisy.stdout.split('\n').filter(l => l.length > 0);
     const quietLines = quiet.stdout.split('\n').filter(l => l.length > 0);
 
-    // Noisy should have N+1 lines (N skills + summary); quiet should have exactly 1.
-    assert.ok(noisyLines.length > 5, `noisy batch should emit per-skill lines (got ${noisyLines.length})`);
+    // Quiet must have exactly 1 line (the summary); noisy must have at least one
+    // per-skill line on top. Relative comparison avoids brittleness if the
+    // manifest ever shrinks below a hardcoded floor.
     assert.equal(quietLines.length, 1, `quiet batch should emit only the summary (got ${quietLines.length}): ${quiet.stdout}`);
+    assert.ok(noisyLines.length > quietLines.length, `noisy batch must emit more lines than quiet (noisy=${noisyLines.length}, quiet=${quietLines.length})`);
   });
 
-  it('-q short alias works', () => {
+  it('-q short alias produces identical stdout AND stderr to --quiet', () => {
     const longForm = runCli(['--all', '--dry-run', '--quiet']);
     const shortForm = runCli(['--all', '--dry-run', '-q']);
     assert.equal(longForm.status, shortForm.status);
     assert.equal(longForm.stdout, shortForm.stdout);
+    // stderr parity: a future divergence (e.g., one form triggering a
+    // deprecation warning) must not silently pass.
+    assert.equal(longForm.stderr, shortForm.stderr);
   });
 
   it('summary line is still emitted in quiet mode', () => {
