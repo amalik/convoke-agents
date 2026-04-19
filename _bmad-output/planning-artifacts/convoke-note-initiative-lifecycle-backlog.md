@@ -373,7 +373,7 @@ Items requiring the full pipeline: Brief → PRD → Arch → PRD Validation →
 | P9 | **Forge team — Domain Knowledge Extraction** | 9 | 3 | 90% | 8 | 3.0 | forge | **In Pipeline** (Blocked on Gate 1) | D, E(partial) | external: shadow engagement (Gate 1) |
 | P13 | **Vortex redesign (align to Enhance-codified patterns)** | 7 | 2 | 70% | 4 | 2.5 | vortex | **Qualified** (Blocked on P12) | — | P12 |
 | U10+P23+A8+A9 | **BMAD v6.3.0 Adoption (Convoke 4.0)** | 10 | 2 | 80% | 7 | 2.3 | convoke | **In Sprint** | B, P✓, A, IR, E | external: BMAD v6.3.0 release |
-| ILE-1 | **Initiative Lifecycle Engine** (Portfolio-as-Code — rework of backlog/portfolio/governance skills into integrated lifecycle management) | 9 | 3 | 60% | 8 | 2.0 | helm | **In Pipeline** | B, P, IR(pre-arch), A, E | ✓P15, ✓P10, ✓I49, ✓bmad-enhance-initiatives-backlog-v2.0.0 |
+| ILE-1 | **Initiative Lifecycle Engine** (Portfolio-as-Code — rework of backlog/portfolio/governance skills into integrated lifecycle management) | 9 | 3 | 60% | 8 | 2.0 | helm | **Ready for Sprint** | B, P, IR(pre-arch), A, E, IR✓ | ✓P15, ✓P10, ✓I49, ✓bmad-enhance-initiatives-backlog-v2.0.0 |
 | U9 | **Module-aware refresh and validation (modules-manifest.yaml)** | 8 | 2 | 70% | 6 | 1.9 | convoke | **Qualified** | — | — |
 | P24 | **Relocate Covenant + Checklist out of `_bmad-output/planning-artifacts/`** — path smell conflating workflow output with canonical spec; propose `docs/covenant/` with pointer retained in old location; touches ~8 references | 4 | 1 | 70% | 2 | 1.4 | convoke | **Qualified** | — | deferred-from: oc-1-5 Round 1 |
 | P3 | **Team installer architecture (`convoke-install <module-name>`)** | 6 | 1 | 80% | 4 | 1.2 | convoke | **Qualified** | — | bundles-with: S3 |
@@ -589,13 +589,13 @@ Full descriptions for items in §2.4 whose table row is a one-liner.
 
 ### ILE-1 — Initiative Lifecycle Engine
 
-**Stage:** In Pipeline | **Portfolio:** helm | **RICE:** 2.0
+**Stage:** Ready for Sprint | **Portfolio:** helm | **RICE:** 2.0
 
 **Origin:** Party mode session 2026-04-12 (John, Winston, Amalik). Qualified 2026-04-15 by John+Winston (per §1.2 shortcut rule).
 
-**Planning artifacts (complete):** Brief (B) + distillate; PRD (P); pre-Architecture IR; Architecture (A) — 8 ADRs + 24 patterns + complete project tree + validation; Epics (E) — `convoke-epics-initiative-lifecycle-engine.md` shipped 2026-04-19 with 6 epics × 67 stories, full FR/NFR coverage, revised 7-sprint baseline.
+**Planning artifacts (complete):** Brief (B) + distillate; PRD (P); pre-Architecture IR; Architecture (A) — 8 ADRs + 24 patterns + complete project tree + validation; Epics (E) — 6 epics × 67 stories, 63/63 FR coverage; post-Architecture+Epics IR (IR✓) — `convoke-report-implementation-readiness-initiative-lifecycle-engine-post-epics.md` shipped 2026-04-19, verdict **FULL READY** (0 critical issues, 0 major issues, 0 blocking concerns across all 5 validation categories).
 
-**Missing (to reach Ready):** post-Architecture+Epics IR gate (sprint-0 confirmation).
+**Missing (to reach Ready):** none. **Ready for Sprint 0 execution.**
 
 **Scope hint (three workstreams):**
 
