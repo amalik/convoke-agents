@@ -10,6 +10,10 @@
                 Agent teams for complex systems
 ```
 
+[![Teams](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/docs/badges.json&query=$.teams&label=teams&color=blueviolet)](#teams)
+[![Agents](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/docs/badges.json&query=$.agents&label=agents&color=brightgreen)](docs/agents.md)
+[![Workflows](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/docs/badges.json&query=$.workflows&label=workflows&color=success)](docs/agents.md)
+[![Skills](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/docs/badges.json&query=$.skills&label=skills&color=orange)](_bmad/_config/skill-manifest.csv)
 [![Version](https://img.shields.io/npm/v/convoke-agents?color=blue&label=version)](https://www.npmjs.com/package/convoke-agents)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
