@@ -2,6 +2,7 @@
 stepsCompleted:
   - step-01-validate-prerequisites
   - step-02-design-epics
+  - step-03-create-stories
 inputDocuments:
   - _bmad-output/planning-artifacts/convoke-prd-initiative-lifecycle-engine.md
   - _bmad-output/planning-artifacts/convoke-arch-initiative-lifecycle-engine.md
@@ -292,7 +293,7 @@ All 63 FRs mapped to one of six epics:
 | FR47 | Epic 4 | Reactive uncertainty as proposal |
 | FR48 | Epic 5 | Error-code registration PR discipline |
 | FR49 | Epic 6 | Destructive-op confirmation |
-| FR50 | Epic 4 | Session undo |
+| FR50 | Epic 2 | Session undo (qualifying-gate decisions) |
 | FR51 | Epic 6 | Progress indication > 2s |
 | FR52 | Epic 5 | Error → last consistent state |
 | FR53 | Epic 6 | `schema_version` frontmatter |
@@ -322,11 +323,13 @@ All 63 FRs mapped to one of six epics:
 **Architecture foundations delivered in this epic**:
 
 - **Core runtime infrastructure** (foundational; fully implemented here): AR-ADR1 (index-builder skeleton with empty-state handling), AR-ADR4 (lock with heartbeat + tiered staleness), AR-ADR6 (v6.3 gate via doctor check), AR-ISWC (`withISWC` wrapper), AR-ENV (env envelope + AsyncLocalStorage propagation), AR-PATHS, AR-LOGGER (with bootstrap fallback), AR-ATOMIC, AR-CHANGELOG (JSONL writer/reader; writers exercised), AR-LANES (const enum), AR-ULID, AR-DATE, AR-REFS (frontmatter discipline enforced), AR-CONFIG (`resolveConfig` precedence), AR-TESTHELP (`runInISWC`), AR-FIXTURES (directory scaffolding), AR-STEP00 (workflow template), AR-ENTRIES (fat-script pattern).
+- **Reactive-detector stub** — `scripts/lifecycle/lib/reactive/reactive-detector.js` ships as `detectReactiveProposals(index, triggerContext) => []` (always returns empty; Epic 4 replaces with real detection). Stub lets `iswc-conformance.test.js` assert the reactive-check step exists in workflows without requiring E4 to land.
+- **First concrete fat-scripts** — `scripts/lifecycle/entries/doctor-entry.js` (runs `convoke-doctor` checks via ISWC frame — exercises full entry pattern + gives E1 a meaningful user-facing `/ile-doctor` capability) + `scripts/lifecycle/entries/uninstall-entry.js` + `scripts/lifecycle/entries/ile-force-unlock-entry.js` (minimum viable force-unlock — shows lock contents, explicit-word confirmation, releases. Polish moves to Epic 6.)
 - **Registries base infrastructure** (AR-REG): all 4 registries scaffolded (`errors/error-registry.js`, `migrations/registry.js`, `data/validity-contracts/registry.js`, `doctor/registry.js`) — each empty except for items needed for Epic 1 operation (see below).
 - **Error system** (AR-ADR8 — scope-narrowed): `ILEError` class + `registerCode` + bidirectional test (`error-contract.test.js`) + 4-category taxonomy + CONFIG-001/002/003/004/005/006/007/008/009 (all CONFIG codes, required for install/doctor/lifecycle). **USER-NNN and INTERNAL-NNN codes register with the epic that throws them** (Epic 2 registers USER codes for qualifying-gate rejection; Epic 5 ensures full seed coverage for NFR28 fixture assertions).
 - **Migration system** (AR-ADR5 — scope-narrowed): `schema-migrator.js` + `ensureSchemaCurrent()` preamble + migration registry + **only the `ile-data/implicit-v0-to-1.0.0` migration**. Breaking-change migration machinery, `--migrate` non-interactive mode, and schema_version bump semantics are **Epic 6 scope**.
 - **Doctor system** (AR-DOCTOR): `doctor/registry.js` + ILE-1 checks: `bmad-version-gate` (CONFIG-002), `lane-enum-conformance` (CONFIG-003), `schema-validation` (CONFIG-004), `orphan-refs` (CONFIG-005), `single-config-file` (CONFIG-008). Registered with `scripts/convoke-doctor.js` via one-line extension.
-- **Schema system** (AR-SCHEMA): JSON Schema base validator (Ajv); ships with `backlog.schema.json` + `change-log-entry.schema.json` + `debug-log-entry.schema.json` (E1-consumed). Per-artifact schemas (prd, brief, ir, proposal, architecture) ship with the epic that references/validates them.
+- **Schema system** (AR-SCHEMA): JSON Schema base validator (Ajv); ships with `backlog.schema.json` + `change-log-entry.schema.json` + `debug-log-entry.schema.json` (E1-consumed). Per-artifact schemas (prd, brief, ir, proposal, architecture) ship with the epic that references/validates them. **`spec-conformance.test.js` uses a registered-specs allowlist** — Epic 1 ships ONLY specs for artifacts with schemas present (backlog, change-log, debug-log). Each later epic registers new (spec, schema) pairs together — never one without the other — to keep the set-equality test honestly passing across the lifecycle.
 - **Crash recovery** (AR-CRASH — scope-narrowed): breadcrumb-write infrastructure (ISWC postamble-on-error writes `.ile/pending-reactive-check-{invocationId}`). **Breadcrumb scan + replay semantics are Epic 4 scope** (live in `/ile-sync`).
 - **Install/uninstall infrastructure**: AR-PKG (deps), AR-CI (ci.yml extensions), AR-GITIGNORE, AR-ESLINT, AR-RULES (`project-context.md` additions), AR-BMMDEP (csv rows), AR-INSTALL (refresh-installation seed list), AR-UNINSTALL (workflow delivered here — preserves audit data per spec).
 - **Sprint-0 discovery tasks** (AR-DISCOVERY): 3 prerequisite verifications before Epic 1 implementation proceeds past sprint-0 week 1.
@@ -361,6 +364,7 @@ All 63 FRs mapped to one of six epics:
 - When `state !== 'computed'`, the portfolio view displays the signal slot with the reason (e.g., `"S1 insufficient data: 3 of 10 proposals required"`) rather than a numeric value — no misleading "0% misfires" when there's no data to measure
 - **Data sources + availability timelines**: S3 (backlog entropy) + S4 (cross-skill inconsistency) compute immediately once Epic 2 lands (artifacts in backlog). S2 (gate abandon rate) after Epic 2 (qualifying-gate decisions logged). S1 (reactive misfire rate) only after Epic 4 ships (proposal decisions in Change Log).
 - Test fixture at `tests/fixtures/ile/consulting-scale-observability/no-data/` asserts insufficient-data rendering — "no data" is a first-class signal state.
+- **Onboarding banner** — the portfolio view's first render per session (when any signal is `insufficient-data`) shows a one-line banner: `"Observability signals mature as ILE-1 sees data from your workflow. Run 'explain signals' for details."` Epic 5's help registry includes an `explain signals` entry covering the S1–S4 minimum-data thresholds and timelines.
 
 **FRs covered**: FR14, FR15, FR16, FR17, FR18, FR19, FR20, FR21, FR22, FR30, FR31, FR32
 
@@ -386,7 +390,7 @@ All 63 FRs mapped to one of six epics:
 **NFRs exercised here**: NFR9 (trust contract enforced against 4 TAC1 fixtures — zero silent changes)
 
 **Architecture integration — this epic fully creates**:
-- **AR-ADR2** — `scripts/lifecycle/lib/reactive/reactive-detector.js` with `detectReactiveProposals(index, triggerContext) => Proposal[]`. Intra-skill-trigger convention enforced: every state-mutating ILE-1 skill calls detector as final workflow step.
+- **AR-ADR2** — replaces Epic 1's stub with real `scripts/lifecycle/lib/reactive/reactive-detector.js`: `detectReactiveProposals(index, triggerContext) => Proposal[]`. Intra-skill-trigger convention enforced: every state-mutating ILE-1 skill calls detector as final workflow step.
 - **AR-ADR7** — `scripts/lifecycle/lib/reactive/proposal.js` (createProposal / renderProposal / applyProposal / recordDecision) + batch UX when > 3 pending (homogeneous accept-all OR individual review; no bulk-reject to preserve S1 integrity).
 - **AR-CRASH replay semantics** — `scripts/lifecycle/lib/reactive/crash-recovery.js` with `scanOrphanBreadcrumbs()` + `replayMissedReactiveChecks()`. Breadcrumb scan + replay only lives in `/ile-sync`; base breadcrumb-write infra comes from Epic 1.
 - **`/ile-sync` skill** (operator-recovery entry point) — full workflow: acquire lock → migrate → scan breadcrumbs → scan drift → batch review.
@@ -406,7 +410,8 @@ All 63 FRs mapped to one of six epics:
 **NFRs exercised here**: NFR28 (`What to try:` required; fixture assertions on all 20 seed codes), NFR29 (contextual help at every decision point), NFR31 (plain-text critical info)
 
 **Architecture integration — this epic completes**:
-- **Full seed error-code coverage** — ensures all 20 seed codes across USER/CONFIG/INTERNAL/UNCERTAIN categories are registered with `detailsShape`. CONFIG codes already shipped in Epic 1. USER codes and INTERNAL codes are registered by their throwing epics (Epic 2, Epic 4, Epic 6); Epic 5 verifies completeness via fixture assertions on all 20 codes (NFR28).
+- **Timeline-aware seed error-code completeness check** — ensures all codes known at E5's point in the timeline are registered with `detailsShape` and have `What to try:` remediation strings. CONFIG codes shipped in Epic 1. USER and INTERNAL codes registered by their throwing epics (E2, E4) up to E5's ship point. **Full 20-code seed coverage assertion (NFR28) moves to Epic 6 final story / sprint-7 integration** — Epic 5's assertion is "all codes known-at-this-point are present and compliant," not "all 20." Avoids failure when E6 hasn't shipped yet.
+- **Help registry includes `explain signals`** (covers S1–S4 minimum-data thresholds + availability timelines — referenced from Epic 3's onboarding banner).
 - **`What to try:` remediation strings** — quality-pass on all 20 registered codes; each has a concrete remediation step. Fixture-tested.
 - **Help registry** — per-skill `help.md` content authored + progressive-disclosure tagging (`[beginner] / [intermediate] / [advanced]`) per Step 5 Decision 15. `help-registry.test.js` enforces tagging.
 - **Persona-matched RICE calibration examples** — examples swap based on `user_skill_level` / persona config key (OSS-solo vs. enterprise-consulting).
@@ -426,11 +431,12 @@ All 63 FRs mapped to one of six epics:
 **NFRs exercised here**: NFR12 (resume-safe migrations), NFR17 (schema CHANGELOG discipline), NFR20 (backlog survives git workflows), NFR21 (`bmad-validate-exports` extensions + golden files), NFR30 (progress indication), NFR32, NFR33, NFR34
 
 **Architecture integration — this epic fully creates**:
-- **Schema-bump migration machinery** — second migration beyond Epic 1's `ile-data/implicit-v0-to-1.0.0`. Breaking-change detection in `schema-migrator.js` + explicit-word user confirmation + summary of what will change + rollback on failure (`INTERNAL-002`) + Change Log entry on success.
+- **Schema-bump migration machinery** — second migration beyond Epic 1's `ile-data/implicit-v0-to-1.0.0`. Breaking-change detection in `schema-migrator.js` + explicit-word user confirmation + summary of what will change + rollback on failure (`INTERNAL-002`) + Change Log entry on success. **Synthetic-fixture test migration** `ile-data/test-fixture-v1.0.0-to-test-fixture-v1.1.0` ships in `tests/fixtures/ile/migrations/` — exercises the full breaking-change path in CI without requiring a real v1.1 schema during v1 development. Real v1.N→v1.(N+1) migrations ship as future Convoke releases bump the ILE-1 schema.
+- **Full 20-code seed coverage assertion (NFR28)** — Epic 6 final story / sprint-7 integration verifies all 20 seed codes across USER/CONFIG/INTERNAL/UNCERTAIN are registered with `detailsShape` + `What to try:` remediation. Fixture assertions on each code emit the registered shape.
 - **`--migrate` non-interactive flag** — supports CI contexts (FR57). Accepts all pending migrations without prompt; logs to debug log.
 - **Resume-safe migration semantics** (NFR12) — interruption mid-migration leaves partial state that next `ensureSchemaCurrent()` detects and resumes; migrations are idempotent by construction (per ADR-5 "resumable, not rollbackable" framing).
 - **`schema_version` frontmatter enforcement** — FR53–55 implemented: all backlog frontmatter carries `schema_version`; deprecation warning shown on v1.N reading v1.(N-1) backlog.
-- **`/ile-force-unlock` skill** — operator-facing slash-command (per slash-command-ux rule). Invokes `ile-force-unlock-entry.js`, displays lock contents, requires explicit-word confirmation, calls `lock.js#releaseForced()`.
+- **`/ile-force-unlock` skill polish** — Epic 1 scaffolded the minimum viable force-unlock (`ile-force-unlock-entry.js` + basic show-lock + confirmation + release). Epic 6 polishes: richer lock-content display formatting, additional safety checks (detect long-running migrations that shouldn't be force-unlocked, warn on recent heartbeat), per-skill diagnostic hints.
 - **Skill portability + per-platform golden files** — extends `bmad-validate-exports` (pending AR-DISCOVERY task outcome from Epic 1). Golden files at `tests/fixtures/ile/portability-golden/{macos,linux,windows}/`. CI portability-matrix job validates per-platform exports match goldens.
 - **Progress indication library** — implementation of FR51 (operations > 2s display spinner/percentage/stage identifier).
 - **Destructive-op confirmation** (FR49) — applied consistently across destructive workflows (drop intake, archive absorbed item, remove portfolio attachment, --purge-runtime-state uninstall). Confirmation step is explicit-word (path-safety rule).
@@ -450,3 +456,933 @@ All 63 FRs mapped to one of six epics:
 | 6 | Epic 6 (migration + portability + uninstall) | Integration, release prep |
 
 5–7 sprint baseline from PRD Scoping preserved; Sprint 7 reserved for buffer / integration / release.
+
+## Epic 1: Safe Ground — Installation, Foundation & Empty-State
+
+Operator installs ILE-1 on their repo. `convoke-doctor` reports all ILE-1 checks green. Operator can invoke any ILE-1 skill on empty state and have it exit cleanly. `--verbose`/`--debug` work. Operator can uninstall without losing the audit trail. The system is safe to try.
+
+### Story 1.1: Sprint-0 Discovery Tasks Verified
+
+As an operator,
+I want the 3 prerequisite discovery tasks verified,
+So that Epic 1 implementation proceeds on confirmed infrastructure assumptions.
+
+**Acceptance Criteria:**
+
+**Given** ILE-1 architecture document's 3 sprint-0 discovery tasks
+**When** discovery is performed
+**Then** `scripts/bmad-validate-exports.js` existence is confirmed (or absence noted with a sprint-5+ scope note)
+**And** `ajv` dependency presence in `package.json` is confirmed (or added to dependencies)
+**And** BMAD v6.3 `SKILL.md` namespace-vs-per-skill semantics is confirmed via upstream BMAD doc reference
+**And** findings are recorded in `_bmad-output/implementation-artifacts/ile-sprint-0-discovery.md`
+
+### Story 1.2: Core Runtime Libraries
+
+As a developer,
+I want `scripts/lifecycle/lib/runtime/` with paths helpers, shared logger, ULID generation, ISO date utilities, and LANES const enum,
+So that all later stories have canonical runtime primitives.
+
+**Acceptance Criteria:**
+
+**Given** a fresh ILE-1 codebase
+**When** runtime libraries are implemented
+**Then** `paths.js` exports `getProjectRoot`, `getBacklogPath`, `getChangeLogPath`, `getLockPath`, `getLogPath`, `getBreadcrumbPath`, `getSpecDir`, `getConceptsDir`, `getSchemaDir`, `getPendingBreadcrumbGlob` with no `process.cwd()` reads
+**And** `logger.js` exports `info`/`debug`/`warn`/`error` with AsyncLocalStorage read + bootstrap fallback (emits `invocationId: 'bootstrap'` when no ISWC context); never throws
+**And** `lanes.js` exports frozen `LANES` enum (INTAKE, QUALIFYING_GATE, BUG, FAST, INITIATIVE)
+**And** `paths-discipline.test.js`, `logger-discipline.test.js`, `lane-enum-conformance.test.js`, `date-format-conformance.test.js` all pass
+
+### Story 1.3: Error Registry + ILEError Class + CONFIG Codes
+
+As a developer,
+I want `scripts/lifecycle/lib/errors/` (ILEError class + error-registry + CONFIG-001–009 registered with `detailsShape`),
+So that all ILE-1 error paths emit through a consistent API.
+
+**Acceptance Criteria:**
+
+**Given** error-registry.js + errors.js modules
+**When** modules are loaded at startup
+**Then** `ILEError` class throws `INTERNAL-001` when instantiated with unregistered code
+**And** registry is populated with CONFIG-001 through CONFIG-009 (9 codes: generic, BMAD version, lane enum, schema validation, orphan refs, archived logs INFO, unknown config keys, multiple config files, config drift)
+**And** each CONFIG code has `message`, `remediation` (`What to try:` string), and `detailsShape` documented
+**And** `error-contract.test.js` bidirectional check passes (source ⟷ registry)
+
+### Story 1.4: Atomic Write Helper + Change Log JSONL
+
+As a developer,
+I want `atomic-write.js` (tmp → rename primitive) + `change-log.js` (JSONL append-only writer/reader),
+So that every ILE-1 write is durable and audit-logged.
+
+**Acceptance Criteria:**
+
+**Given** implemented atomic-write + change-log modules
+**When** any ILE-1 code writes an artifact or Change Log entry
+**Then** writes go through `atomicWrite(path, content)` helper exclusively
+**And** `atomic-write-conformance.test.js` greps for direct `fs.writeFile*`/`fs.appendFile*` outside the helper and asserts zero matches
+**And** Change Log entries validated against `change-log-entry.schema.json`; `change-log-schema.test.js` passes
+**And** observability reads `change-log.jsonl` + any `change-log-archived-*.jsonl` as unified history
+
+### Story 1.5: `.ile.lock` + Heartbeat + Tiered Staleness
+
+As an operator,
+I want concurrent ILE-1 invocations prevented via `.ile.lock` with heartbeat and tiered staleness,
+So that simultaneous runs can't corrupt my backlog.
+
+**Acceptance Criteria:**
+
+**Given** lock.js + heartbeat.js modules
+**When** an ILE-1 skill runs and acquires the lock
+**Then** lock file contains `{pid, bootTime, startedAt, lastHeartbeat, invocationId, skillName}` via atomic write
+**And** `heartbeat.tick(label)` updates `lastHeartbeat` via atomic rename
+**And** second invocation with `(now - lastHeartbeat) < 5min` returns `UNCERTAIN-001` with retry remediation
+**And** second invocation with `5min ≤ age < 15min` returns `UNCERTAIN-002` with force-unlock instructions + lock contents
+**And** second invocation with `age ≥ 15min` auto-overrides with warning logged to Change Log
+**And** error messages include lock contents, recovery command, and auto-clear ETA per spec
+
+### Story 1.6: Context Envelope + withISWC + AsyncLocalStorage
+
+As a developer,
+I want `withISWC()` + env var envelope + AsyncLocalStorage propagation,
+So that ILE-1 skills have consistent frame behavior and context flows within-process.
+
+**Acceptance Criteria:**
+
+**Given** skill-frame.js + context-envelope.js modules
+**When** `withISWC({...opts}, body)` is invoked
+**Then** `readEnvelope()` reads `ILE_INVOCATION_ID`, `ILE_SKILL_NAME`, `ILE_BACKLOG_PATH`, `ILE_CONFIG_HASH`, `ILE_ENVELOPE_CREATED_AT` env vars
+**And** envelope TTL (default 30min) triggers fresh ULID generation on expired envelopes
+**And** `ileContext.run()` propagates context; `ileContext.getStore()` returns valid context inside body
+**And** 100 generated IDs match `/^[0-9A-HJKMNP-TV-Z]{26}$/` and are time-sortable
+**And** `iswc-conformance.test.js` passes all assertions
+
+### Story 1.7: JSON Schema Validation + Base Schemas + Spec Docs
+
+As a developer,
+I want JSON Schemas for backlog + change-log-entry + debug-log-entry with Ajv validation at load + matching spec docs,
+So that artifact shape is enforced and documented.
+
+**Acceptance Criteria:**
+
+**Given** schemas at `scripts/lifecycle/lib/data/schemas/` + spec docs at `docs/ile/spec/`
+**When** an artifact is loaded
+**Then** Ajv validates against the matching schema with `strict: true, useDefaults: false`
+**And** validation failure throws `CONFIG-004` with failing field in `details`
+**And** `backlog.schema.json` + `change-log-entry.schema.json` + `debug-log-entry.schema.json` + their spec-doc counterparts exist
+**And** `spec-conformance.test.js` uses a registered-specs allowlist and asserts set-equality for the registered pairs
+**And** `schema-enforcement.test.js` loads invalid fixtures and asserts `CONFIG-004` raised
+
+### Story 1.8: Config Resolution + Team Config Seed
+
+As an operator,
+I want `resolveConfig()` with 5-level precedence + seeded `_bmad/_config/ile.yaml`,
+So that I can override ILE-1 defaults at appropriate levels.
+
+**Acceptance Criteria:**
+
+**Given** config.js + config-defaults.js modules
+**When** an ILE-1 skill resolves configuration
+**Then** precedence is `defaults < team < backlog < initiative < invocation flags`
+**And** `config-precedence.test.js` (integration) verifies order with layered fixtures
+**And** `config-read-discipline.test.js` greps for `yaml.load`/`JSON.parse` of config-like paths outside `config.js` and asserts zero matches
+**And** unknown config keys emit WARN log entries; `unknown-config-keys.test.js` asserts expected warn entries
+**And** `_bmad/_config/ile.yaml` is seeded with comments-only example content per specification during install
+
+### Story 1.9: In-Memory Index Builder + Stub Reactive Detector
+
+As a developer,
+I want `data/index-builder.js` with empty-state handling + `reactive/reactive-detector.js` stub returning `[]`,
+So that later epics have concrete interfaces to build against.
+
+**Acceptance Criteria:**
+
+**Given** index-builder + reactive-detector modules
+**When** `buildIndex(backlogPath)` runs on an empty or non-existent backlog
+**Then** it returns a valid index object with empty collections (no crash)
+**And** `detectReactiveProposals(index, triggerContext)` stub returns `[]` deterministically
+**And** stub enables `iswc-conformance.test.js` to assert reactive-check step exists in workflows
+**And** Epic 4 replaces the stub without changing the exported signature
+
+### Story 1.10: Migration Registry + Implicit-v0 Migration + Preamble
+
+As an operator,
+I want `ensureSchemaCurrent()` preamble that migrates un-versioned artifacts to v1.0.0,
+So that my pre-ILE-1 backlog migrates gracefully on first invocation.
+
+**Acceptance Criteria:**
+
+**Given** schema-migrator.js + migration registry + `ile-data-implicit-v0-to-1.0.0.js` modules
+**When** ILE-1 skill invokes `ensureSchemaCurrent(backlogPath)` on an artifact missing `schemaVersion` frontmatter
+**Then** migration runs, inserts `schemaVersion: 1.0.0`
+**And** Change Log records `{type: 'schema-migration', migrationName: 'ile-data/implicit-v0-to-1.0.0', from: '(implicit v0)', to: '1.0.0', at, artifactsMigrated}`
+**And** migration is idempotent (re-running on already-migrated artifact is no-op)
+**And** `migration-registry-conformance.test.js` asserts registry module shape matches install-migration signature
+
+### Story 1.11: Crash Breadcrumb Write Infrastructure
+
+As a developer,
+I want breadcrumb-write infra in ISWC postamble,
+So that Epic 4's replay mechanism has data to consume.
+
+**Acceptance Criteria:**
+
+**Given** ISWC wrapper with breadcrumb hooks
+**When** a mutating skill body throws an error
+**Then** postamble writes `.ile/pending-reactive-check-{invocationId}` before lock release
+**And** successful execution clears the breadcrumb via atomic rename delete
+**And** breadcrumb file contains `{invocationId, skillName, at, mutatedArtifacts?}` for future replay
+**And** Epic 4 scans + replays breadcrumbs via `/ile-sync` (scope boundary preserved — E1 writes only)
+
+### Story 1.12: Doctor Check Registry + ILE-1 Checks
+
+As an operator,
+I want `convoke-doctor` to run ILE-1 checks,
+So that I can verify my ILE-1 install is healthy.
+
+**Acceptance Criteria:**
+
+**Given** `scripts/lifecycle/lib/doctor/` registry + checks
+**When** `convoke-doctor` runs
+**Then** doctor loads ILE-1 registry + runs its checks after existing Convoke checks
+**And** `bmad-version-gate` fires `CONFIG-002` if BMAD <6.3
+**And** `lane-enum-conformance` fires `CONFIG-003` on non-enum lane values in backlog
+**And** `schema-validation` fires `CONFIG-004` on frontmatter schema violations
+**And** `orphan-refs` fires `CONFIG-005` on unresolvable `refs:` entries
+**And** `single-config-file` fires `CONFIG-008` if multiple `_bmad/_config/ile*.yaml` files detected
+**And** clean install reports all ILE-1 checks green
+**And** `doctor-registry-conformance.test.js` asserts every .js in `doctor/` self-registers
+
+### Story 1.13: Fat-Script Entries — Doctor, Force-Unlock, Uninstall
+
+As an operator,
+I want `/ile-doctor`, `/ile-force-unlock`, and `/ile-uninstall` skills,
+So that I have user-facing capabilities from Epic 1 for diagnostics + safety + clean removal.
+
+**Acceptance Criteria:**
+
+**Given** entries at `scripts/lifecycle/entries/` + workflow.md files at `_bmad/bme/_ile/workflows/`
+**When** any of the three skills is invoked via slash command
+**Then** every entry file exports `main(testOverrides?)` with `require.main === module` guard
+**And** `entry-structure.test.js` asserts pattern compliance across all entry files
+**And** `/ile-doctor` wraps `convoke-doctor` check loop in withISWC, exercising full ISWC frame
+**And** `/ile-force-unlock` displays lock contents, requires explicit-word confirmation, calls `lock.releaseForced()` (minimum viable — polish in Epic 6)
+**And** `/ile-uninstall` archives `.ile/change-log.jsonl` → `.ile/change-log-archived-{date}.jsonl`, removes ILE-1 trees per uninstall spec, honors `--purge-runtime-state` with explicit-word confirmation
+**And** each workflow.md starts with step-00 envelope initialization; `iswc-workflow-header.test.js` asserts pattern
+
+### Story 1.14: CI Pipeline + Package Dependencies + Install Extensions
+
+As a maintainer,
+I want CI pipeline + deps + install extensions,
+So that ILE-1 builds, installs, and lints cleanly.
+
+**Acceptance Criteria:**
+
+**Given** repo-wide changes at `.github/workflows/ci.yml`, `package.json`, `.eslintrc.js`, `project-context.md`, `_bmad/_config/bmm-dependencies.csv`, `.gitignore`, `scripts/update/lib/refresh-installation.js`, `scripts/update/lib/config-merger.js`
+**When** changes are applied
+**Then** `ci.yml` has `lint`, `ile-unit`, `ile-integration`, `ile-portability-matrix` jobs gated before `publish-gate`
+**And** ESLint rules `no-floating-promises`, `require-await`, `no-return-await` are enabled
+**And** `package.json` includes `ulid@^2.3.0` (+ `ajv@^8.12.0` if not already present)
+**And** `project-context.md` has 2 new rules: `ile-skill-workflow-contract`, `ile-error-contract`
+**And** `bmm-dependencies.csv` has 3 ILE-1 rows
+**And** `.gitignore` includes `.ile/` and `tests/tmp/`
+**And** fresh-clone install via `convoke-update` seeds all ILE-1 trees + `_bmad/_config/ile.yaml`
+**And** `convoke-doctor` runs green post-install
+
+## Epic 2: Intake Capture & Qualifying Gate
+
+Operator can run `bmad-enhance-initiatives-backlog triage` on review transcripts / retros / audit output and have findings automatically logged as intakes. Authorized qualifiers (Vortex / John / Winston) can route intakes into Bug / Fast / Initiative lanes with portfolio + RICE assignment. Operator can invoke `review` to rescore and `create` to bootstrap a fresh backlog. Orphan scanning suggests attachment per-item. Duplicate findings are surfaced.
+
+### Story 2.1: Intake Schema + Append-Only Persistence
+
+As a developer,
+I want the intake data model (schema at `docs/ile/spec/intake.md` + `intake.schema.json`) with append-only write through the existing Change Log + §2.1 section,
+So that every FR2 intake log is structurally enforced and audit-safe.
+
+**Acceptance Criteria:**
+
+**Given** intake schema (`{id, description, source, date, raiser}`) + §2.1 backlog section
+**When** an intake is logged via ILE-1 code
+**Then** Ajv validates the intake against `intake.schema.json`
+**And** `spec-conformance.test.js` passes for the new (intake.md, intake.schema.json) pair
+**And** attempts to mutate an existing §2.1 intake row fire `CONFIG-004` (append-only violation)
+**And** all writes route through `atomic-write.js`
+
+### Story 2.2: `bmad-enhance-initiatives-backlog triage` Ingestion
+
+As an operator,
+I want `triage` to ingest text and extract findings + log each as an intake per FR1–FR2,
+So that I can capture findings from review sessions in one step.
+
+**Acceptance Criteria:**
+
+**Given** `bmad-enhance-initiatives-backlog triage` invoked on raw text input
+**When** the skill extracts actionable findings from the text
+**Then** each finding is logged as a new intake row in §2.1 with a fresh ID, description, source, date, and raiser
+**And** every logged intake has a matching Change Log entry with `type: 'intake-logged'`
+**And** the skill supports multi-line + multi-paragraph input
+**And** empty input or no-findings-detected paths exit cleanly with informational message
+
+### Story 2.3: Duplicate Detection on Triage
+
+As an operator,
+I want triage to detect semantic-similarity duplicates against existing backlog items per FR7 and surface them for review,
+So that I don't pollute the backlog with re-logged findings.
+
+**Acceptance Criteria:**
+
+**Given** an incoming finding during triage
+**When** similarity against existing intake/item exceeds the configurable threshold
+**Then** the finding is flagged for review before log
+**And** operator sees side-by-side comparison (new vs. existing)
+**And** operator can choose log-anyway, merge-as-update, or discard
+**And** duplicate detection uses lexical + structural matching (exact-title + token-overlap signals)
+
+### Story 2.4: Qualifying Gate — Lane + Portfolio + RICE Assignment
+
+As an authorized qualifier (Vortex / John / Winston),
+I want the qualifying gate to assign a finding's Lane, Portfolio, and initial RICE score per FR4 + FR11 + FR12,
+So that intakes are routed into the appropriate downstream track.
+
+**Acceptance Criteria:**
+
+**Given** the qualifying gate invoked by an operator
+**When** the operator attempts to qualify an intake
+**Then** qualifier authorization is verified against the configured qualifier list
+**And** unauthorized attempts fire `USER-001` with remediation (`What to try:` explains authorized-qualifier rule)
+**And** the gate proposes initial lane/portfolio/RICE values based on finding content
+**And** operator confirms or overrides each field explicitly (no silent acceptance)
+**And** qualifying-gate writes lane + portfolio + RICE with Change Log entry per FR37
+
+### Story 2.5: RAW Intakes + Re-qualification
+
+As an operator,
+I want to mark a finding as RAW per FR5 + later re-qualify it per FR13,
+So that findings lacking routing context are preserved and routable when context arrives.
+
+**Acceptance Criteria:**
+
+**Given** a qualifying-gate session on a new finding
+**When** operator chooses `mark as RAW`
+**Then** an intake row is created in §2.1 with no lane assigned
+**And** RAW intakes display an explicit RAW marker in the portfolio view
+**When** the operator later invokes `qualify` on the raw intake
+**Then** the SAME §2.1 row is updated with lane/portfolio/RICE (no duplicate row)
+**And** Change Log records the original RAW log plus the subsequent qualification as distinct entries
+
+### Story 2.6: Orphan-Intake Scan (Per-Item Proposals)
+
+As an operator,
+I want orphan-intake scanning to propose attachments per-item per FR6,
+So that I'm not forced into batch yes/no decisions that cause mis-routing.
+
+**Acceptance Criteria:**
+
+**Given** an intake is logged + existing backlog has potential attachment candidates
+**When** the orphan scan runs
+**Then** attachment proposals are presented one-at-a-time with accept / reject / skip
+**And** no batch-approve option exists (per-item rule enforced)
+**And** each decision is logged individually in the Change Log with `type: 'orphan-attachment'`
+**And** scan completes + exits to qualifying-gate flow regardless of attachment outcome
+
+### Story 2.7: `review` Mode — Rescore RICE with Prior Rationale
+
+As an operator,
+I want `review` to walk initiative-lane items and show prior scoring rationale + re-collect RICE per FR8 + FR9,
+So that rescoring preserves calibration history.
+
+**Acceptance Criteria:**
+
+**Given** `bmad-enhance-initiatives-backlog review` invoked
+**When** the skill walks initiative-lane items
+**Then** items are sorted by staleness (oldest rescore first)
+**And** for each item, prior R/I/C/E values + rationale are shown alongside current values
+**And** operator edits R/I/C/E + provides new rationale; skill computes new RICE score
+**And** Change Log records rescore with both old + new values + reason per FR37
+**And** review exits cleanly when operator signals completion
+
+### Story 2.8: `create` Mode — Bootstrap Empty Backlog
+
+As an operator,
+I want `create` mode to bootstrap a fresh lifecycle backlog per FR10,
+So that a new project can adopt ILE-1 without manual setup.
+
+**Acceptance Criteria:**
+
+**Given** `bmad-enhance-initiatives-backlog create` invoked on a repo
+**When** no existing backlog file is present
+**Then** the skill generates a fully-conformant backlog at the configured path
+**And** the generated file passes `backlog.schema.json` validation (v1.0.0 schema)
+**And** the file contains empty §2.1 + lane sections + Change Log + all required frontmatter
+**When** an existing backlog is present
+**Then** the skill refuses to overwrite and requires explicit-word confirmation (path-safety rule)
+
+### Story 2.9: Session Undo for Qualifying-Gate Decisions
+
+As an operator,
+I want to undo the last qualifying-gate decision within the same session before persistence per FR50,
+So that immediate mis-clicks or mis-calibrations are recoverable.
+
+**Acceptance Criteria:**
+
+**Given** a qualifying-gate decision made in the current session but not yet persisted
+**When** operator invokes `undo` within the same session
+**Then** the in-memory decision state reverts to pre-decision
+**And** operator re-enters the qualifying-gate flow for that intake
+**When** the decision has already been persisted to the backlog
+**Then** `undo` is no longer offered; operator must use `review` mode (FR8) to rescore
+**And** Change Log never records an un-persisted decision (no ghost entries)
+
+## Epic 3: Portfolio Visibility & Observability Signals
+
+Operator can invoke `bmad-portfolio-status` to see a lifecycle-aware view of the portfolio — stages, lanes, WIP signals, observability signals (S1–S4) summary at top, pipeline-completeness indicators, filters by portfolio / staleness, drill-down from signal summary to event-level history, summary-first rendering when > 20 initiatives. Renders at consulting scale within SLO.
+
+### Story 3.1: `bmad-portfolio-status` Skill — Basic Kanban Render
+
+As an operator,
+I want `bmad-portfolio-status` to render a lifecycle-aware portfolio view with stages, lanes, and WIP signals per FR14,
+So that I can see my portfolio at a glance.
+
+**Acceptance Criteria:**
+
+**Given** a backlog with initiatives across lanes
+**When** `bmad-portfolio-status` is invoked
+**Then** a kanban-style view renders with lanes (Intake / Qualifying Gate / Bug / Fast / Initiative)
+**And** initiative stages within each lane are displayed
+**And** WIP signals (counts, stale flags) appear per lane
+**And** invocation on an empty backlog exits cleanly with an informational message
+
+### Story 3.2: Portfolio Filters — Portfolio + Staleness
+
+As an operator,
+I want one-keystroke filters by portfolio (FR15) and staleness-flag state (FR16),
+So that I can focus on specific slices.
+
+**Acceptance Criteria:**
+
+**Given** `bmad-portfolio-status` invoked with filter flags
+**When** `--portfolio <name>` is passed
+**Then** the view filters to items attached to the named portfolio (convoke/vortex/gyre/forge/bmm/enhance/loom/helm/custom)
+**When** `--stale` is passed
+**Then** the view filters to items flagged stale
+**And** filters compose (multiple filters narrow the view)
+**And** invalid portfolio name fires `USER-NNN` with remediation
+
+### Story 3.3: Pipeline-Completeness Indicators
+
+As an operator,
+I want each initiative to show which artifacts exist per FR19,
+So that I can see pipeline progress at a glance without opening individual files.
+
+**Acceptance Criteria:**
+
+**Given** an initiative with various artifacts
+**When** the portfolio view renders the initiative
+**Then** an indicator shows B / P / P✓ / A / IR / E / D based on presence of brief, PRD, validated-PRD, architecture, IR, epics, dev-complete artifacts
+**And** detection uses frontmatter `refs:` or canonical file-path patterns
+**And** missing artifacts display as `—`
+**And** indicator accuracy verified against fixture initiatives with known artifact sets
+
+### Story 3.4: Summary-First Rendering at > 20 Items
+
+As an operator with a consulting-scale backlog,
+I want summary-first rendering when > 20 initiatives per FR22 + NFR3,
+So that my session context isn't consumed by individual items I'm not inspecting.
+
+**Acceptance Criteria:**
+
+**Given** a backlog with more than the configured threshold (default 20) of initiatives
+**When** the portfolio view renders
+**Then** aggregate summary appears first (lane counts, stage distribution, signals, top-3 by RICE)
+**And** individual listings appear below the summary
+**And** threshold is configurable via `portfolioSummaryFirstThreshold` config key
+**And** backlog with ≤ threshold items renders without summary-first (original format)
+
+### Story 3.5: Session Position Preservation
+
+As an operator navigating portfolio → drill-down → back,
+I want session to preserve my position per FR21,
+So that I don't lose context mid-investigation.
+
+**Acceptance Criteria:**
+
+**Given** operator navigates from portfolio view into an initiative drill-down
+**When** the operator returns to the portfolio view from the drill-down
+**Then** the portfolio view restores to the same scroll/focus position
+**And** state is held in-memory within the ISWC session (no persistence, per ADR-1 in-memory scope)
+**And** a fresh invocation (new ISWC session) starts at the default position
+
+### Story 3.6: Consulting-Scale Rendering Performance
+
+As an operator with 60+ initiatives across 10+ portfolios,
+I want rendering within NFR1/NFR2 SLO per FR20,
+So that the tool remains usable at real scale.
+
+**Acceptance Criteria:**
+
+**Given** consulting-scale fixtures at 60 / 150 / 300 artifact counts
+**When** the portfolio view renders
+**Then** at 60 initiatives: end-to-end < 5s median / < 15s p99; ILE-1 code alone < 2s median / < 5s p99
+**And** at 150 initiatives: same SLO (degrades gracefully)
+**And** at 300 initiatives: if SLO breaks, Epic 1's cross-invocation cache escape hatch is promoted to v1 scope per ADR-1
+**And** CI fixture runs at all three scales; failure breaks the build
+
+### Story 3.7: `observability.js` — S1/S2/S3/S4 Compute + Data-Availability States
+
+As a developer,
+I want `observability.js` with full S1–S4 computation and data-availability state handling per FR30 + AR-ADR3,
+So that signals compute honestly with minimum-data thresholds.
+
+**Acceptance Criteria:**
+
+**Given** observability.js module + Change Log + backlog index
+**When** `computeSignals(indexState)` is called at index-build time
+**Then** it returns `{s1, s2, s3, s4, computedAt, sourceCounts}`
+**And** each signal includes `{state: 'computed' | 'insufficient-data' | 'disabled', value?, dataCount, minDataThreshold}`
+**And** S3 (backlog entropy) + S4 (cross-skill inconsistency) compute immediately from current backlog
+**And** S2 (gate abandon rate) computes from qualifying-gate Change Log entries
+**And** S1 (reactive misfire rate) computes from proposal-decision Change Log entries; reports `insufficient-data` until Epic 4 ships
+**And** `tests/fixtures/ile/consulting-scale-observability/no-data/` asserts insufficient-data rendering
+
+### Story 3.8: Signals Summary + Threshold-Breach + Onboarding Banner
+
+As an operator,
+I want observability signals at the top of portfolio view (FR17) + threshold-breach indicators (FR31) + onboarding banner for insufficient-data,
+So that I understand signal state and why some signals aren't yet actionable.
+
+**Acceptance Criteria:**
+
+**Given** portfolio view + computed signals
+**When** the view renders
+**Then** S1–S4 summary appears at the top of the output
+**And** signals with value crossing the configured threshold show a breach indicator
+**And** when ANY signal is `insufficient-data`, a one-line banner appears: "Observability signals mature as ILE-1 sees data from your workflow. Run 'explain signals' for details."
+**And** thresholds configurable per signal via config
+
+### Story 3.9: Signal Drill-Down via `convoke-ile-logs`
+
+As an operator investigating a signal,
+I want drill-down from signal summary to event-level history per FR18 + FR32 via `convoke-ile-logs <query>` (NFR24),
+So that I can see the events that produced the signal value.
+
+**Acceptance Criteria:**
+
+**Given** portfolio view with signals displayed
+**When** operator invokes signal drill-down (keystroke or explicit command)
+**Then** result shows filtered Change Log entries that contributed to the signal's computation
+**And** `convoke-ile-logs` accepts filters for initiative, date range, signal type, user-action (accept/reject)
+**And** drill-down is MVP scope (not deferred to Growth)
+**And** query performance on 50K-entry Change Log completes within NFR1 SLO
+
+## Epic 4: Reactive Behaviors & Trust Contract
+
+When artifacts change (new PRD, closed epic, sprint closure), the system proposes lifecycle-state transitions — and never silently commits. For uncertain cases (partial / race / moved / empty-but-present), the system always requires explicit confirmation. Operators accept or reject proposals individually. Teams can configure artifact validity contracts; initiatives can override. `/ile-sync` reconciles out-of-band edits.
+
+### Story 4.1: Validity Contract Registry Population
+
+As a developer,
+I want concrete validity contracts registered via `registerContract()` per FR28 + AR-ADR2,
+So that Epic 4's detector has evaluation logic for each lifecycle-state-change signal.
+
+**Acceptance Criteria:**
+
+**Given** the validity-contracts registry from Epic 1
+**When** Epic 4 populates validity contracts
+**Then** at least 8 contracts registered: `prd-ready-for-architecture`, `brief-complete`, `ir-ready`, `architecture-ready-for-epics`, `epics-ready-for-sprint-planning`, `sprint-closed`, `intake-orphan-candidate`, `item-stale-14-days`
+**And** each follows `evaluatorFn: (artifact, index) => { status, reasons, missing? }` signature
+**And** each contract has unit tests with fixture artifacts covering complete/uncertain/invalid paths
+**And** `validity-contract-registry.test.js` enumeration test passes
+
+### Story 4.2: Real `reactive-detector.js` — Replaces Epic 1 Stub
+
+As a developer,
+I want the real `detectReactiveProposals(index, triggerContext)` implementation per FR23 + AR-ADR2,
+So that the reactive layer produces genuine state-change proposals.
+
+**Acceptance Criteria:**
+
+**Given** the real reactive-detector module
+**When** invoked with an index + trigger context
+**Then** it iterates registered validity contracts + applies each to relevant artifacts
+**And** returns `Proposal[]` with fields `{id, triggeredBy, targetArtifact, proposedMutation, reason, createdAt}`
+**And** result sorts deterministically by `targetArtifact` then `proposedMutation.type`
+**And** empty return = "checked, nothing to propose" (distinct from undefined/null which is an ISWC violation)
+**And** Epic 1's stub signature is preserved (no exported-signature change)
+
+### Story 4.3: Per-Initiative Validity Contract Overrides
+
+As an operator,
+I want to override team-level validity contracts per-initiative via `config:` frontmatter per FR29,
+So that special-case initiatives can define their own completion criteria.
+
+**Acceptance Criteria:**
+
+**Given** an initiative artifact with `config: {validityContracts: {...}}` frontmatter
+**When** the reactive detector evaluates that initiative's artifacts
+**Then** the initiative-level override takes precedence over team-level + defaults via config-precedence merger
+**And** override applies only to that initiative's own artifacts (no leakage to siblings)
+**And** unknown contract names in override emit WARN + fire `CONFIG-007` via doctor check
+
+### Story 4.4: Proposal Library — Create/Render/Apply + Inline Y/N UX
+
+As a developer,
+I want `proposal.js` with full create/render/apply/recordDecision flow + inline text y/n rendering per FR27 + AR-ADR7,
+So that individual proposals can be accepted or rejected.
+
+**Acceptance Criteria:**
+
+**Given** proposal.js module
+**When** a proposal is created + rendered
+**Then** `createProposal()` returns a valid Proposal object
+**And** `renderProposal()` outputs human-readable text with reason + target + proposed mutation
+**And** operator response `y` → `applyProposal()` + Change Log entry with `decision: 'accepted'`
+**And** operator response `n` → Change Log entry with `decision: 'rejected'`
+**And** no edit primitive is offered (reject + manual action is the workflow)
+**And** no bulk-reject pathway exists (preserves S1 integrity per ADR-7)
+
+### Story 4.5: Batch Proposal UX for `/ile-sync` Catch-up
+
+As an operator returning from a catch-up gap,
+I want batch UX when > 3 proposals are pending per AR-ADR7 + AR-BATCH,
+So that I'm not exhausted by sequential individual reviews.
+
+**Acceptance Criteria:**
+
+**Given** `/ile-sync` produces > 3 proposals in one invocation
+**When** the batch UX is triggered
+**Then** a pre-prompt summary renders: `Found N pending transitions: ...` with per-category counts
+**And** menu offers `(i) Review individually / (b) Accept homogeneous batches / (q) Quit` — no reject all
+**And** `b` offers per-category accept-all with expand-detail option (e.g., "Accept 9 × Intake → Qualifying Gate? (y/n/expand)")
+**And** batch acceptance records `decision: 'accepted-in-batch'` with shared `batchId`
+**And** destructive proposals (archive, delete, demote-lane) are never batch-acceptable (each requires individual explicit-word confirmation)
+
+### Story 4.6: Crash-Recovery Replay via `/ile-sync` (W3 Window)
+
+As an operator recovering from a mid-session crash,
+I want `/ile-sync` to scan + replay orphan reactive-check breadcrumbs per AR-CRASH replay semantics,
+So that missed proposals surface at recovery time.
+
+**Acceptance Criteria:**
+
+**Given** `/ile-sync` is invoked with orphan `.ile/pending-reactive-check-*` breadcrumbs present
+**When** the preamble scans breadcrumbs
+**Then** breadcrumbs with mtime > active Change Log creation time → replay (normal flow)
+**And** breadcrumbs with mtime < active Change Log creation time → archive to `.ile/breadcrumbs-archived-{date}/` + WARN (stale from prior cycle)
+**And** each replay invokes the detector against current state + surfaces proposals via batch UX
+**And** test fixtures at `tests/fixtures/ile/crash-recovery/` cover W1 (pre-mutation), W2 (mid-mutation), W3 (post-mutation-pre-check) crash windows
+
+### Story 4.7: `/ile-sync` Skill — Full Operator-Recovery Entry Point
+
+As an operator,
+I want `/ile-sync` as the operator-recovery entry point per AR-ADR2 + FR24 + FR27,
+So that I have one skill covering out-of-band edits, missed proposals, and drift.
+
+**Acceptance Criteria:**
+
+**Given** `/ile-sync` workflow.md + `ile-sync-entry.js` fat-script
+**When** operator invokes `/ile-sync`
+**Then** workflow sequence executes: step-00 envelope init → step-01 acquire lock → step-02 ensureSchemaCurrent → step-03 replay breadcrumbs (W3) → step-04 scan drift (all artifacts re-evaluated) → step-05 batch review
+**And** `/ile-sync` is discoverable via `convoke-doctor` drift-heuristic (artifact mtime > Change-Log mtime → suggests `/ile-sync`)
+**And** scan-drift step uses all validity contracts from Story 4.1
+
+### Story 4.8: Trust-Contract Fixtures + Intra-Skill Trigger Discipline
+
+As a developer,
+I want NFR9 trust-contract enforcement against 4 TAC1 fixtures + intra-skill trigger discipline per ISWC,
+So that the propose-before-commit contract is mechanically verified.
+
+**Acceptance Criteria:**
+
+**Given** `tests/fixtures/ile/uncertain-case-fixtures/` with 4 TAC1 fixtures
+**When** the integration test runs the 4 fixtures (partial artifact / race condition / moved file / empty-but-present)
+**Then** test asserts zero silent state changes across all four fixtures
+**And** `iswc-conformance.test.js` asserts every state-mutating ILE-1 skill workflow ends in a reactive-check step
+**And** FR35 Change Log append-only enforced at app layer + verified by schema validation on non-append mutations
+
+## Epic 5: Onboarding, Help & Error Communication
+
+First-time user sees a minimal bootstrap of the lifecycle process (not the full canonical text). Full canonical process available on demand. Contextual help at every decision point via `explain <concept>`, `why <field>?`, `what does this flag mean?`. RICE calibration examples match user's persona (solo vs. consulting). Errors use category prefixes with registered codes and `What to try:` remediation.
+
+### Story 5.1: Minimal Bootstrap for First-Time Users
+
+As a first-time operator,
+I want a minimal bootstrap on initiatives-backlog first invocation per FR41,
+So that I'm not overwhelmed by the full canonical lifecycle text.
+
+**Acceptance Criteria:**
+
+**Given** a fresh install with no prior ILE-1 use (`.ile/` absent or empty Change Log)
+**When** the initiatives-backlog skill is invoked for the first time
+**Then** a condensed lifecycle summary renders (lanes + qualifying gate + core commands)
+**And** the condensed summary is substantially shorter than the full canonical text
+**And** pointer to `explain lifecycle` for the full text appears in the summary
+**And** subsequent invocations skip the bootstrap (detected via Change Log presence)
+
+### Story 5.2: Full Canonical Lifecycle on Demand
+
+As an operator,
+I want to request the full canonical lifecycle process on demand per FR42,
+So that I can read the complete spec when needed.
+
+**Acceptance Criteria:**
+
+**Given** the canonical lifecycle content in `docs/ile/concepts/lifecycle-process.md`
+**When** the operator invokes `explain lifecycle` (or equivalent command)
+**Then** the full canonical lifecycle text renders
+**And** content is sourced from the single canonical file (no duplication across skills)
+**And** the minimal bootstrap from Story 5.1 points to this command as the path to the full text
+
+### Story 5.3: Contextual Help Sub-Commands
+
+As an operator at any decision point,
+I want contextual help sub-commands per FR43,
+So that I can get just-in-time guidance without leaving the current flow.
+
+**Acceptance Criteria:**
+
+**Given** help registry populated with concepts + field definitions + flag documentation
+**When** operator invokes `explain <concept>`
+**Then** the system routes to the concept's help entry (e.g., `explain signals`, `explain lanes`, `explain qualifying-gate`)
+**When** operator invokes `why <field>?`
+**Then** system returns the field's definition + rationale
+**When** operator invokes `what does this flag mean?` in context of a prompt
+**Then** system returns the current flag's documentation
+**And** unknown concepts fire `USER-NNN` with remediation suggesting `explain --list` to enumerate available concepts
+
+### Story 5.4: Per-Skill Help Content + Progressive Disclosure
+
+As an operator viewing a skill's help,
+I want progressive disclosure by `user_skill_level` per AR-CONFIG + Decision 15,
+So that I see concepts appropriate to my experience.
+
+**Acceptance Criteria:**
+
+**Given** every ILE-1 skill has `_bmad/bme/_ile/workflows/{skill-name}/help.md` with heading-tagged content
+**When** help is rendered
+**Then** tags `[beginner]`, `[intermediate]`, `[advanced]` filter by `user_skill_level` config
+**And** `--verbose` flag overrides filter to show all sections
+**And** `help-presence.test.js` asserts every ILE-1 skill directory contains `help.md`
+**And** `help-registry.test.js` asserts every heading in every help.md has exactly one of the three tags
+
+### Story 5.5: Persona-Matched RICE Calibration Examples
+
+As an operator in the qualifying gate,
+I want RICE examples that match my persona per FR44,
+So that calibration signals are relevant to my scale.
+
+**Acceptance Criteria:**
+
+**Given** config key `persona: 'solo' | 'consulting'` in `_bmad/_config/ile.yaml`
+**When** the qualifying gate displays RICE calibration examples
+**Then** `solo` persona shows examples referencing single-product OSS contexts
+**And** `consulting` persona shows examples referencing multi-client engagements
+**And** default persona inferred from config (falls back to prompting on first use if absent)
+**And** persona can be switched by editing the config file (no code change)
+
+### Story 5.6: USER + INTERNAL Error Codes — Timeline-Aware Coverage
+
+As a developer,
+I want all USER-NNN + INTERNAL-NNN error codes known at E5's point in the timeline registered with `detailsShape` per FR46 + FR48,
+So that Epic 5's discipline is enforced across all already-shipped error paths.
+
+**Acceptance Criteria:**
+
+**Given** codes thrown by Epics 1–4 (E1: INTERNAL-001 unregistered-code, INTERNAL-002 migration rollback; E2: USER-001 unauthorized qualifier, USER-002 invalid input; E3: USER-003 invalid filter; E4: USER-004 force-unlock misuse)
+**When** E5's error-contract completeness check runs
+**Then** every code known-at-this-point is registered with `message`, `remediation`, `detailsShape`
+**And** fixture tests assert each registered code emits the documented shape
+**And** full-20-code seed coverage assertion is Epic 6 scope (E5 asserts only codes-known-at-this-point)
+
+### Story 5.7: `What to try:` Remediation Quality Pass
+
+As an operator seeing any error,
+I want every error's `What to try:` remediation to be concrete and actionable per FR45 + NFR28,
+So that errors guide me to resolution.
+
+**Acceptance Criteria:**
+
+**Given** every registered error code (CONFIG-001–009, USER-001–004, INTERNAL-001–004)
+**When** the remediation quality test runs
+**Then** each code's remediation text is non-empty
+**And** each contains at least one imperative verb (action-oriented)
+**And** generic "error occurred" strings fail the test
+**And** remediation is reviewed by human for concrete next-step quality
+
+### Story 5.8: Error → Last-Consistent-State Behavior
+
+As an operator recovering from any error,
+I want error paths to return me to the last consistent state per FR52,
+So that I don't lose progress mid-retry.
+
+**Acceptance Criteria:**
+
+**Given** any USER or CONFIG category error raised during a write operation
+**When** the error propagates
+**Then** the operator is returned to pre-error state with no partial writes committed (atomic-write discipline)
+**And** retry with corrected input resumes cleanly
+**When** an INTERNAL category error is raised
+**Then** the operator sees guidance to run `convoke-doctor` for investigation
+**And** integration tests verify across all write paths (intake log, qualify, rescore, migration)
+
+## Epic 6: Interaction Safety, Schema Evolution & Long-Term Viability
+
+Destructive operations require explicit confirmation. Progress indication appears on operations > 2s. Backlog carries `schema_version`; v1.N skills read v1.(N-1) with deprecation warning; migrations run automatically on version mismatch with confirmation. Non-interactive `--migrate` for CI. Schema migrations are resume-safe and non-destructive by default. `/ile-force-unlock` skill polish. Skill portability via export pipeline + per-platform golden files.
+
+### Story 6.1: Destructive-Op Confirmation Across All Workflows
+
+As an operator,
+I want destructive operations to require explicit-word confirmation per FR49,
+So that I can't accidentally drop an intake, archive an absorbed item, or remove a portfolio attachment.
+
+**Acceptance Criteria:**
+
+**Given** any destructive operation (drop intake, archive absorbed item, remove portfolio attachment, `--purge-runtime-state` uninstall)
+**When** the operator triggers the operation
+**Then** an explicit-word confirmation prompt appears (exact phrase typed, not y/n)
+**And** the prompt displays what will be destroyed + consequences
+**And** typing anything except the exact phrase cancels the operation
+**And** integration tests cover each destructive path with both confirm + cancel flows
+
+### Story 6.2: Progress Indication on > 2s Operations
+
+As an operator running a slow operation,
+I want progress indication per FR51 + NFR30,
+So that I know the skill hasn't hung.
+
+**Acceptance Criteria:**
+
+**Given** an operation expected to exceed ~2s interactive latency
+**When** the operation runs
+**Then** a progress indicator displays (spinner, percentage, or stage identifier)
+**And** `heartbeat.tick(label)` labels feed the progress display (e.g., "index-build:parsing" shown as "Parsing artifacts...")
+**And** consulting-scale `/ile-sync`, observability compute, and large migrations all show progress
+**And** plain-text rendering conveys all critical info (color is informational only per NFR31)
+
+### Story 6.3: `schema_version` Frontmatter + Deprecation Warning
+
+As a developer,
+I want `schema_version` frontmatter enforced + deprecation warning on v1.N reading v1.(N-1) per FR53 + FR54 + FR55,
+So that schema evolution is explicit and backward compatibility is bounded.
+
+**Acceptance Criteria:**
+
+**Given** a backlog file
+**When** an ILE-1 skill loads the file
+**Then** frontmatter must contain `schema_version` as a monotonic integer
+**And** writes missing `schema_version` fire `CONFIG-004`
+**When** a v1.N skill reads a v1.(N-1) backlog
+**Then** a deprecation WARN is emitted recommending migration
+**When** a v1.N skill reads a pre-v1 unversioned backlog (and `ensureSchemaCurrent()` didn't already migrate)
+**Then** `CONFIG-010` is raised requiring explicit migration
+**And** fixture tests cover each version cross-read scenario
+
+### Story 6.4: Schema-Bump Migration Machinery + Synthetic Test Fixture
+
+As a developer,
+I want schema-bump migration machinery + a synthetic test fixture per FR56 + AR-ADR5,
+So that future real v1.N migrations work and CI exercises the full path.
+
+**Acceptance Criteria:**
+
+**Given** `schema-migrator.js` extended + `ile-data/test-fixture-v1.0.0-to-test-fixture-v1.1.0` synthetic migration at `tests/fixtures/ile/migrations/`
+**When** a breaking-change migration is detected
+**Then** operator is prompted with explicit-word confirmation + summary from `preview()` action list
+**And** migration applies atomically (write-to-tmp → verify → rename per NFR13)
+**And** Change Log records the migration entry
+**When** migration fails mid-way
+**Then** `INTERNAL-002` is raised + rollback leaves artifacts consistent
+**And** CI integration test exercises the full breaking-change path
+
+### Story 6.5: `--migrate` Non-Interactive Mode
+
+As a maintainer running CI pipelines,
+I want `--migrate` non-interactive mode per FR57,
+So that migrations can run in automated contexts without prompts.
+
+**Acceptance Criteria:**
+
+**Given** any ILE-1 skill invoked with `--migrate` flag
+**When** pending migrations are detected
+**Then** all pending migrations are auto-accepted without prompts
+**And** breaking-change migrations log WARN to debug log identifying what was auto-accepted
+**When** a migration lacks a `preview()` action list (safety barrier)
+**Then** `--migrate` refuses to auto-accept and reports which migration is blocking
+**And** integration test verifies the non-interactive path
+
+### Story 6.6: Resume-Safe Migration Semantics
+
+As an operator recovering from an interrupted migration,
+I want resume-safe semantics per NFR12,
+So that crashes mid-migration don't corrupt my backlog.
+
+**Acceptance Criteria:**
+
+**Given** a migration interrupted mid-way
+**When** the next `ensureSchemaCurrent()` runs
+**Then** partial state is detected and migration resumes from the interruption point
+**And** each migration is idempotent by construction (re-run on partial state completes cleanly)
+**And** Change Log records resumption as a distinct entry (not confused with initial attempt)
+**And** fixture tests interrupt migrations at various points and verify resume completion
+
+### Story 6.7: `/ile-force-unlock` Polish
+
+As an operator using force-unlock,
+I want enriched display + safety checks per FR49 discipline,
+So that I can make informed decisions without accidentally overriding legitimate work.
+
+**Acceptance Criteria:**
+
+**Given** Epic 1's minimum-viable `/ile-force-unlock` skill
+**When** Epic 6 polishes the skill
+**Then** lock-content display is pretty-printed with timestamps localized for readability (UTC preserved in audit)
+**And** long-running migrations in-progress (recent `lastHeartbeat`) are flagged specifically with warning
+**And** heartbeat < 5 min old triggers warn-with-reason (not automatic blocking, but prominent caution)
+**And** diagnostic hints appear per skill if skill metadata is available
+**And** cancellation on explicit-word mismatch returns operator to pre-force state without side effects
+
+### Story 6.8: Skill Portability + Per-Platform Golden Files
+
+As an operator on Copilot / Cursor (not just Claude Code),
+I want ILE-1 skills to export cleanly per FR40 + NFR21,
+So that I can use ILE-1 regardless of my LLM host.
+
+**Acceptance Criteria:**
+
+**Given** `bmad-validate-exports` extended with ILE-1-specific assertions
+**When** ILE-1 skills are exported
+**Then** schema roundtrip passes (exported skills re-import without semantic loss)
+**And** no fixture-path leaks occur in exports
+**And** per-platform golden files at `tests/fixtures/ile/portability-golden/{macos,linux,windows}/` match exactly
+**And** CI `ile-portability-matrix` job runs per-platform and asserts match
+**And** mismatch produces readable diff output for operator debugging
+
+### Story 6.9: Git-Workflow Resilience Fixtures
+
+As a team operator using standard git workflows,
+I want backlog survival across merge / rebase / cherry-pick per NFR20,
+So that my audit trail and lifecycle state aren't corrupted by ordinary git operations.
+
+**Acceptance Criteria:**
+
+**Given** fixture set at `tests/fixtures/ile/git-workflow/{merge-clean,merge-conflict,rebase,cherry-pick}/`
+**When** each fixture's git scenario is reproduced
+**Then** the backlog file is parseable post-operation
+**And** the backlog passes `backlog.schema.json` validation
+**And** `merge-conflict/` fixture documents conflict-resolution guidance for operators
+**And** integration tests run all 4 fixtures + assert pass
+
+### Story 6.10: Full 20-Code Seed Coverage + v1 Release Gate
+
+As a release engineer,
+I want the full 20-code seed coverage assertion + complete v1 gate checks per NFR28 + NFR14,
+So that we know v1 is shipment-ready.
+
+**Acceptance Criteria:**
+
+**Given** all seed codes registered across Epics 1–5 + Epic 6 additions
+**When** the final release gate runs
+**Then** full 20-code seed coverage is verified (5 USER + 5 canonical CONFIG + 5 INTERNAL + 5 UNCERTAIN; plus CONFIG-006–010 extensions)
+**And** each code has `detailsShape`, `message`, `remediation`; fixture asserts emission produces documented shape
+**And** `[INTERNAL]` error rate < 1% per 100-invocation window (NFR14) verified via instrumented fixture
+**And** all conformance tests green
+**And** all portability goldens match
+**And** NFR1/NFR2 fixtures green at 60/150/300 artifact scales
+**And** `convoke-doctor` reports green on a clean install
+**And** uninstall round-trip verified (install → use → uninstall → re-install with archived-log recovery)
