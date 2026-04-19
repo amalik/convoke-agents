@@ -5,6 +5,16 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: scope of T3 (end-to-end update test on real project) — 2026-04-19
+
+T3 shipped as a CLI-level non-dry-run upgrade test with full post-state verification (previously missing). The following were explicitly scoped out as they'd be disproportionate to T3's score (2.7) or would reintroduce flakiness:
+
+- **Real `npm pack` fetch of published versions** — MEDIUM. T3 uses a simulated older-version fixture (mirroring `tests/integration/upgrade.test.js` pattern). A true end-to-end test would `npm pack` the old version from the registry, extract it, install into a tmp project, then run `convoke-update`. Rejected because: (a) registry lookup is network-dependent and flakier than library tests, (b) the signal added beyond the simulated fixture is narrow (shape-of-old-install is what matters, not provenance), (c) cost compounds if we span multiple old versions. Revisit if CI ever hits a regression the simulated-fixture pattern missed.
+- **Migration of user-authored custom agents** — LOW. `mergeConfig` already preserves user-added agents (not in `AGENT_IDS`) via the `userAgents` spread at `scripts/update/lib/config-merger.js:113-117`. Unit tests cover this. An end-to-end CLI test for user-authored custom agents would extend T3's scope into a separate concern. Split if custom-agent upgrade behavior ever regresses.
+- **Interactive prompt mode testing** — LOW. T3 uses `--yes` to bypass the confirm prompt. Covering the interactive path would require TTY simulation (pty, expect-style harness) — high cost for low signal since the non-interactive path exercises the same code modulo the single `readline` call. Split if interactive-mode bugs surface.
+
+---
+
 ## Deferred from: code review of A15 + A5 + A10 Round 2 (2026-04-18)
 
 - **Revisions table row is a multi-hundred-word paragraph per patch cycle** — LOW. Each shipping round appends a long cell to §Revisions. Cell readability is degrading. Consider splitting into one row per shipped patch or extracting Round-level detail to a dedicated `revisions/` folder with a pointer from the table.
