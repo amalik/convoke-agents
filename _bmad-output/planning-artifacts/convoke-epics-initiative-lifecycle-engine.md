@@ -3,6 +3,9 @@ stepsCompleted:
   - step-01-validate-prerequisites
   - step-02-design-epics
   - step-03-create-stories
+  - step-04-final-validation
+status: complete
+completedAt: '2026-04-19'
 inputDocuments:
   - _bmad-output/planning-artifacts/convoke-prd-initiative-lifecycle-engine.md
   - _bmad-output/planning-artifacts/convoke-arch-initiative-lifecycle-engine.md
@@ -14,7 +17,6 @@ artifact_type: epic
 qualifier: initiative-lifecycle-engine
 project_name: 'Convoke — Initiative Lifecycle Engine (ILE-1)'
 user_name: 'Amalik'
-status: draft
 created: '2026-04-19'
 schema_version: 1
 ---
@@ -443,25 +445,30 @@ All 63 FRs mapped to one of six epics:
 
 **Architecture integration — this epic consumes**: AR-ADR5 (preamble infrastructure from Epic 1), AR-UNINSTALL (workflow from Epic 1), TAC1–TAC4 fixtures exercised, AR-CHANGELOG (schema-migration entries written).
 
-### Sprint Mapping
+### Sprint Mapping (revised for 66-story reality)
 
-| Sprint | Primary | Secondary |
+Epic 1's expansion from 14 → 20 stories (NFR coverage + sizing splits) pushes it across ~2.5 sprints. Epic 2 can parallelize starting mid-Sprint 1 once shared data model (Story 1.7) lands.
+
+| Sprint | Primary | Secondary (parallelizable) |
 |---|---|---|
-| 0 | Epic 1 (infrastructure core) | Sprint-0 discovery tasks (AR-DISCOVERY) |
-| 1 | Epic 1 (completion) + Epic 2 start | — |
-| 2 | Epic 2 (completion) | Epic 3 start (index + render) |
-| 3 | Epic 3 (observability signals) | Epic 4 start (reactive detector) |
-| 4 | Epic 4 (trust contract fixtures + /ile-sync) | Epic 5 start (help + bootstrap) |
-| 5 | Epic 5 (error registry completion + persona examples) | Epic 6 start (schema migration) |
-| 6 | Epic 6 (migration + portability + uninstall) | Integration, release prep |
+| 0 | Epic 1 Stories 1.1–1.9 (spike + runtime + errors + atomic-write + lock + ISWC + schemas + config + index-stub) | — |
+| 1 | Epic 1 Stories 1.10–1.16 (migration + breadcrumbs + doctor + entries + CI + security + LOC) | Epic 2 Story 2.1 can start once 1.7 lands |
+| 2 | Epic 1 tail + Epic 2 (2.1–2.9 complete) | Epic 3 Story 3.1 can start once 2.1 lands |
+| 3 | Epic 3 (3.1–3.9) | Epic 4 start (Story 4.1 validity contracts) once 3.7 observability shape lands |
+| 4 | Epic 4 (4.2–4.8) | Epic 5 start (5.1–5.3 help) |
+| 5 | Epic 5 (5.4–5.9) | Epic 6 start (6.1–6.4 destructive + schema) |
+| 6 | Epic 6 core (6.5–6.9 migrations + portability) | — |
+| 7 | Epic 6 tail (6.10–6.11 release gate) + integration + release prep | — |
 
-5–7 sprint baseline from PRD Scoping preserved; Sprint 7 reserved for buffer / integration / release.
+**Sprint baseline revised**: 7 sprints realistic (was 5–7; now trending toward upper end of range due to NFR coverage expansion). Still within PRD's 3–10 sprint range. Actual velocity will vary; dependencies allow parallel Epic starts.
 
 ## Epic 1: Safe Ground — Installation, Foundation & Empty-State
 
 Operator installs ILE-1 on their repo. `convoke-doctor` reports all ILE-1 checks green. Operator can invoke any ILE-1 skill on empty state and have it exit cleanly. `--verbose`/`--debug` work. Operator can uninstall without losing the audit trail. The system is safe to try.
 
-### Story 1.1: Sprint-0 Discovery Tasks Verified
+### Story 1.1 [SPIKE]: Sprint-0 Discovery Tasks Verified
+
+**Spike note**: This is a time-boxed investigation, not a feature-delivery story. Completion criterion is "answers obtained + documented," not "code shipped." Target box: ≤ 2 dev-agent sessions.
 
 As an operator,
 I want the 3 prerequisite discovery tasks verified,
@@ -649,42 +656,139 @@ So that I can verify my ILE-1 install is healthy.
 **And** `single-config-file` fires `CONFIG-008` if multiple `_bmad/_config/ile*.yaml` files detected
 **And** clean install reports all ILE-1 checks green
 **And** `doctor-registry-conformance.test.js` asserts every .js in `doctor/` self-registers
+**And** NFR36 — doctor reproducibility test asserts two runs on the same install state produce byte-identical output
+**And** NFR23 — `cross-skill-version-match` check verifies all 3 ILE-1 skills declare the same `schema_version` in their manifests; mismatches fire `CONFIG-011` (not warnings)
 
-### Story 1.13: Fat-Script Entries — Doctor, Force-Unlock, Uninstall
+### Story 1.13a: `/ile-doctor` Fat-Script
 
 As an operator,
-I want `/ile-doctor`, `/ile-force-unlock`, and `/ile-uninstall` skills,
-So that I have user-facing capabilities from Epic 1 for diagnostics + safety + clean removal.
+I want `/ile-doctor` as a first user-facing skill that wraps `convoke-doctor` check loop in ISWC,
+So that I can verify my ILE-1 install is healthy + the fat-script pattern is exercised in production code.
 
 **Acceptance Criteria:**
 
-**Given** entries at `scripts/lifecycle/entries/` + workflow.md files at `_bmad/bme/_ile/workflows/`
-**When** any of the three skills is invoked via slash command
-**Then** every entry file exports `main(testOverrides?)` with `require.main === module` guard
-**And** `entry-structure.test.js` asserts pattern compliance across all entry files
-**And** `/ile-doctor` wraps `convoke-doctor` check loop in withISWC, exercising full ISWC frame
-**And** `/ile-force-unlock` displays lock contents, requires explicit-word confirmation, calls `lock.releaseForced()` (minimum viable — polish in Epic 6)
-**And** `/ile-uninstall` archives `.ile/change-log.jsonl` → `.ile/change-log-archived-{date}.jsonl`, removes ILE-1 trees per uninstall spec, honors `--purge-runtime-state` with explicit-word confirmation
-**And** each workflow.md starts with step-00 envelope initialization; `iswc-workflow-header.test.js` asserts pattern
+**Given** `scripts/lifecycle/entries/doctor-entry.js` + `_bmad/bme/_ile/workflows/ile-doctor/` workflow
+**When** operator invokes `/ile-doctor`
+**Then** `doctor-entry.js` exports `main(testOverrides?)` with `require.main === module` guard
+**And** workflow wraps the `convoke-doctor` check loop in `withISWC()`, exercising full ISWC frame
+**And** heartbeat ticks per doctor check (for progress indication)
+**And** workflow.md starts with step-00 envelope initialization; `iswc-workflow-header.test.js` asserts pattern
+**And** `entry-structure.test.js` asserts `main` + require-main guard pattern
 
-### Story 1.14: CI Pipeline + Package Dependencies + Install Extensions
+### Story 1.13b: `/ile-force-unlock` Minimum Viable
+
+As an operator facing a stuck lock,
+I want `/ile-force-unlock` as a minimum-viable safety net from Epic 1,
+So that I can recover from stale locks without waiting for Epic 6 polish.
+
+**Acceptance Criteria:**
+
+**Given** `scripts/lifecycle/entries/ile-force-unlock-entry.js` + `_bmad/bme/_ile/workflows/ile-force-unlock/` workflow
+**When** operator invokes `/ile-force-unlock`
+**Then** the skill reads the current lock file and displays its contents (pid, skillName, heartbeat age)
+**And** prompts for explicit-word confirmation (exact phrase typed, not y/n)
+**And** on confirmation, calls `lock.releaseForced()` which atomically removes the lock file
+**And** cancellation on phrase mismatch returns operator to pre-state without side effects
+**And** polish (pretty-printed display, safety checks for recent heartbeat, per-skill hints) is Epic 6 scope
+
+### Story 1.13c: `/ile-uninstall` Workflow
+
+As an operator removing ILE-1 from a repo,
+I want `/ile-uninstall` to remove ILE-1 trees while preserving audit trail per uninstall spec,
+So that I can try ILE-1 without losing my Change Log history.
+
+**Acceptance Criteria:**
+
+**Given** `scripts/lifecycle/entries/uninstall-entry.js` + `_bmad/bme/_ile/workflows/uninstall/` workflow
+**When** operator invokes `/ile-uninstall`
+**Then** `.ile/change-log.jsonl` is renamed to `.ile/change-log-archived-{YYYY-MM-DD}.jsonl` (preserved as audit)
+**And** removes `_bmad/bme/_ile/`, `scripts/lifecycle/`, `docs/ile/` + ILE-1-specific edits to `.eslintrc.js` / `project-context.md` / `bmm-dependencies.csv`
+**And** prompts for `_bmad/_config/ile.yaml` removal (operator decides)
+**And** `--purge-runtime-state` flag fully removes `.ile/` with explicit-word confirmation (loses audit)
+**And** orphan `refs:` frontmatter warns (non-fatal); archived Change Log path logged as final Change Log entry before archival
+**And** integration test verifies uninstall + re-install round-trip preserves observability history via archived logs
+
+### Story 1.14a: CI Pipeline Extensions
 
 As a maintainer,
-I want CI pipeline + deps + install extensions,
-So that ILE-1 builds, installs, and lints cleanly.
+I want CI pipeline jobs (lint + ile-unit + ile-integration + ile-portability-matrix) gated before publish,
+So that ILE-1 code quality is enforced on every PR.
 
 **Acceptance Criteria:**
 
-**Given** repo-wide changes at `.github/workflows/ci.yml`, `package.json`, `.eslintrc.js`, `project-context.md`, `_bmad/_config/bmm-dependencies.csv`, `.gitignore`, `scripts/update/lib/refresh-installation.js`, `scripts/update/lib/config-merger.js`
-**When** changes are applied
-**Then** `ci.yml` has `lint`, `ile-unit`, `ile-integration`, `ile-portability-matrix` jobs gated before `publish-gate`
-**And** ESLint rules `no-floating-promises`, `require-await`, `no-return-await` are enabled
-**And** `package.json` includes `ulid@^2.3.0` (+ `ajv@^8.12.0` if not already present)
-**And** `project-context.md` has 2 new rules: `ile-skill-workflow-contract`, `ile-error-contract`
-**And** `bmm-dependencies.csv` has 3 ILE-1 rows
-**And** `.gitignore` includes `.ile/` and `tests/tmp/`
+**Given** `.github/workflows/ci.yml`
+**When** the workflow is updated
+**Then** `lint` job runs `npm run lint` (ESLint) and `ruff check` (Python)
+**And** `ile-unit` job runs `tests/lib/ile/*.test.js`
+**And** `ile-integration` job runs `tests/integration/ile/*.test.js`
+**And** `ile-portability-matrix` job runs per-platform on `{macos-latest, ubuntu-latest, windows-latest}` matrix
+**And** all four jobs are listed in `publish-gate.needs[]`
+**And** `.eslintrc.js` has rules `no-floating-promises`, `require-await`, `no-return-await` enabled
+
+### Story 1.14b: Package Dependencies + Install Seeding
+
+**Dependency note**: this story requires Story 1.14a completion — `ile-unit` + `ile-integration` CI jobs must exist before this story's install-seed test can verify fresh-clone install via CI.
+
+As a maintainer,
+I want package deps + install-seeding extensions,
+So that fresh installs get ILE-1 trees + `_bmad/_config/ile.yaml` properly seeded.
+
+**Acceptance Criteria:**
+
+**Given** Story 1.14a complete (CI jobs exist) and `package.json` + `scripts/update/lib/refresh-installation.js` + `scripts/update/lib/config-merger.js`
+**When** dependencies and install extensions are applied
+**Then** `package.json` includes `ulid@^2.3.0` (and `ajv@^8.12.0` if not already present)
+**And** `package.json` `engines` field inherits from Convoke core — Node.js range matches Convoke's declared range (NFR22)
+**And** `refresh-installation.js` seed list includes `docs/ile/`, `scripts/lifecycle/`, `_bmad/bme/_ile/`
+**And** `config-merger.js` seeds `_bmad/_config/ile.yaml` from the spec'd example content
 **And** fresh-clone install via `convoke-update` seeds all ILE-1 trees + `_bmad/_config/ile.yaml`
 **And** `convoke-doctor` runs green post-install
+
+### Story 1.14c: Project-Context Rules + BMM Dependencies + Gitignore
+
+As a maintainer,
+I want project-context rule additions + bmm-dependencies entries + gitignore hygiene,
+So that ILE-1 is registered in the Convoke extension governance system.
+
+**Acceptance Criteria:**
+
+**Given** `project-context.md` + `_bmad/_config/bmm-dependencies.csv` + `.gitignore`
+**When** changes are applied
+**Then** `project-context.md` has 2 new rules appended: `ile-skill-workflow-contract`, `ile-error-contract`
+**And** `bmm-dependencies.csv` has 3 ILE-1 rows (`convoke-ile`, `convoke-lifecycle-lib`, `convoke-ile-spec`) per v6.3 A9 governance
+**And** `.gitignore` includes `.ile/` + `tests/tmp/`
+**And** each rule has a descriptive one-line hook + points to the governing artifact
+
+### Story 1.15: Security-by-Design Static Analysis (NFR5/6/7/8)
+
+As a **privacy-sensitive operator** running ILE-1 on confidential portfolios,
+I want static-analysis verification that ILE-1 code has no external network calls, no telemetry, and no external log transmission per NFR5, NFR6, NFR7,
+So that I can trust the "no external transmission" claim.
+
+**Acceptance Criteria:**
+
+**Given** ILE-1 source tree at `scripts/lifecycle/`, `_bmad/bme/_ile/`, `tests/lib/ile/`
+**When** `tests/lib/ile/security-static-analysis.test.js` runs
+**Then** grep-based scan flags zero matches for `http(s)://` strings outside allow-listed locations (docs, fixtures, error remediation text)
+**And** zero matches for `fetch(`, `require('axios')`, `require('got')`, `require('node-fetch')`, `require('https')` outside allow-list
+**And** zero matches for `require('http')` or `require('dns')` outside allow-list
+**And** path-safety enforcement (NFR8): all scripts accepting user-provided destructive-op paths call `resolve-normalize-contains-check` against project root; test asserts zero direct `fs.rm*` / `fs.unlink*` / `fs.rmdir*` calls outside the safety helper
+**And** CI fails the build on any violation
+
+### Story 1.16: LOC Budget Enforcement (NFR15)
+
+As a **maintainer** preserving readability discipline,
+I want LOC budget enforcement per NFR15 (< 500 LOC per main script),
+So that scripts stay reviewable and invite decomposition when they grow.
+
+**Acceptance Criteria:**
+
+**Given** a CI check that counts LOC per `scripts/lifecycle/**/*.js` file (excluding tests + fixtures)
+**When** the check runs on a PR
+**Then** files > 500 LOC are flagged in the CI output
+**And** a PR with any file > 500 LOC is allowed to proceed only with a PR-description justification (human-reviewed exception)
+**And** the check runs as part of the `lint` CI job
+**And** LOC count excludes blank lines + comment-only lines (substantive code only)
 
 ## Epic 2: Intake Capture & Qualifying Gate
 
@@ -735,21 +839,35 @@ So that I don't pollute the backlog with re-logged findings.
 **And** operator can choose log-anyway, merge-as-update, or discard
 **And** duplicate detection uses lexical + structural matching (exact-title + token-overlap signals)
 
-### Story 2.4: Qualifying Gate — Lane + Portfolio + RICE Assignment
+### Story 2.4a: Qualifier Authorization Gate
+
+As an operator invoking the qualifying gate,
+I want qualifier authorization verified before any qualification logic runs per FR11,
+So that unauthorized users cannot assign lanes/portfolios/RICE.
+
+**Acceptance Criteria:**
+
+**Given** a configured qualifier list in `_bmad/_config/ile.yaml` (defaulting to Vortex, John, Winston)
+**When** an operator invokes the qualifying gate
+**Then** the identity of the invoking operator is checked against the authorized list
+**And** unauthorized operators receive `USER-001` with remediation (`What to try:` explains authorized-qualifier rule + how to update config)
+**And** authorized operators proceed to the qualification flow (Story 2.4b)
+**And** unauthorized users can still log raw intakes via `triage` (per FR11 two-tier permission)
+
+### Story 2.4b: Qualifying Gate — Lane + Portfolio + RICE Assignment Flow
 
 As an authorized qualifier (Vortex / John / Winston),
-I want the qualifying gate to assign a finding's Lane, Portfolio, and initial RICE score per FR4 + FR11 + FR12,
+I want to assign a finding's Lane, Portfolio, and initial RICE score per FR4 + FR12,
 So that intakes are routed into the appropriate downstream track.
 
 **Acceptance Criteria:**
 
-**Given** the qualifying gate invoked by an operator
-**When** the operator attempts to qualify an intake
-**Then** qualifier authorization is verified against the configured qualifier list
-**And** unauthorized attempts fire `USER-001` with remediation (`What to try:` explains authorized-qualifier rule)
-**And** the gate proposes initial lane/portfolio/RICE values based on finding content
+**Given** authorized qualifier has passed the authorization gate (Story 2.4a)
+**When** the gate proposes initial lane, portfolio, and RICE values based on finding content
+**Then** each proposed field is displayed with its rationale
 **And** operator confirms or overrides each field explicitly (no silent acceptance)
-**And** qualifying-gate writes lane + portfolio + RICE with Change Log entry per FR37
+**And** on confirmation, qualifying-gate writes lane + portfolio + RICE to the intake row
+**And** Change Log entry is recorded per FR37 with qualifier identity, timestamp, proposed vs. final values
 
 ### Story 2.5: RAW Intakes + Re-qualification
 
@@ -1070,6 +1188,8 @@ So that missed proposals surface at recovery time.
 
 ### Story 4.7: `/ile-sync` Skill — Full Operator-Recovery Entry Point
 
+**Bundling judgment**: this story intentionally bundles 5 workflow steps because they form a single workflow-composition unit (`/ile-sync` IS the composition), not independent capabilities. Unlike Stories 1.13 or 2.4 which split because they covered orthogonal concerns, `/ile-sync`'s 5 steps (acquire lock → migrate → replay → scan → batch review) are sequential phases of one operator-recovery entry point. Splitting would fragment the skill definition.
+
 As an operator,
 I want `/ile-sync` as the operator-recovery entry point per AR-ADR2 + FR24 + FR27,
 So that I have one skill covering out-of-band edits, missed proposals, and drift.
@@ -1221,6 +1341,25 @@ So that I don't lose progress mid-retry.
 **Then** the operator sees guidance to run `convoke-doctor` for investigation
 **And** integration tests verify across all write paths (intake log, qualify, rescore, migration)
 
+### Story 5.9: First-Run Experience Integration Test
+
+As a first-time operator adopting ILE-1,
+I want a cohesive first-run experience from install through first qualify + first portfolio view,
+So that I form a correct mental model of the tool without friction between individual feature surfaces.
+
+**Acceptance Criteria:**
+
+**Given** a clean repo with ILE-1 freshly installed (Story 1.14b) + no prior ILE-1 use
+**When** an integration test walks the full first-time-user path
+**Then** `/ile-doctor` reports green with beginner-friendly output
+**And** `bmad-enhance-initiatives-backlog create` produces an empty backlog
+**And** `bmad-enhance-initiatives-backlog triage` on sample text produces intakes + minimal-bootstrap lifecycle summary
+**And** qualifying gate runs with persona-matched RICE examples (Story 5.5)
+**And** `bmad-portfolio-status` renders with observability onboarding banner (Story 3.8)
+**And** `explain <concept>` works at every decision point
+**And** no orphaned ISWC frame, no uncleared breadcrumb, no unlogged decision across the full path
+**And** test asserts that each prompt contains at least one `explain`-style help pointer to the next help registry entry
+
 ## Epic 6: Interaction Safety, Schema Evolution & Long-Term Viability
 
 Destructive operations require explicit confirmation. Progress indication appears on operations > 2s. Backlog carries `schema_version`; v1.N skills read v1.(N-1) with deprecation warning; migrations run automatically on version mismatch with confirmation. Non-interactive `--migrate` for CI. Schema migrations are resume-safe and non-destructive by default. `/ile-force-unlock` skill polish. Skill portability via export pipeline + per-platform golden files.
@@ -1370,19 +1509,36 @@ So that my audit trail and lifecycle state aren't corrupted by ordinary git oper
 
 ### Story 6.10: Full 20-Code Seed Coverage + v1 Release Gate
 
+**Gate-aggregator note**: This story aggregates the outcomes of many prior stories — it does NOT re-implement them. Required-green input stories: **1.15** (security static analysis), **1.16** (LOC budget), **3.6** (consulting-scale NFR fixture), **4.8** (TAC1 trust-contract fixtures), **5.6 + 5.7** (error-code coverage + remediation quality), **6.4** (schema-bump machinery), **6.6** (resume-safe migration), **6.8** (portability goldens), **6.9** (git-workflow fixtures), **6.11** (log format stability).
+
 As a release engineer,
 I want the full 20-code seed coverage assertion + complete v1 gate checks per NFR28 + NFR14,
 So that we know v1 is shipment-ready.
 
 **Acceptance Criteria:**
 
-**Given** all seed codes registered across Epics 1–5 + Epic 6 additions
+**Given** all input stories listed above are green + all seed codes registered across Epics 1–5 + Epic 6 additions
 **When** the final release gate runs
-**Then** full 20-code seed coverage is verified (5 USER + 5 canonical CONFIG + 5 INTERNAL + 5 UNCERTAIN; plus CONFIG-006–010 extensions)
+**Then** full 20-code seed coverage is verified (5 USER + 5 canonical CONFIG + 5 INTERNAL + 5 UNCERTAIN; plus CONFIG-006–011 extensions)
 **And** each code has `detailsShape`, `message`, `remediation`; fixture asserts emission produces documented shape
 **And** `[INTERNAL]` error rate < 1% per 100-invocation window (NFR14) verified via instrumented fixture
-**And** all conformance tests green
-**And** all portability goldens match
-**And** NFR1/NFR2 fixtures green at 60/150/300 artifact scales
-**And** `convoke-doctor` reports green on a clean install
-**And** uninstall round-trip verified (install → use → uninstall → re-install with archived-log recovery)
+**And** all conformance tests green (inputs listed above)
+**And** all portability goldens match (Story 6.8 output)
+**And** NFR1/NFR2 fixtures green at 60/150/300 artifact scales (Story 3.6 output)
+**And** `convoke-doctor` reports green on a clean install (Story 1.12 output)
+**And** uninstall round-trip verified — install → use → uninstall → re-install with archived-log recovery (Story 1.13c + Story 4.6 + Story 6.8 integration)
+
+### Story 6.11: Log Format Stability Test (NFR26)
+
+As a release engineer preserving log consumer compatibility,
+I want a log-format stability test per NFR26,
+So that patch/minor releases don't silently break downstream log consumers or observability readers.
+
+**Acceptance Criteria:**
+
+**Given** a golden-fixture debug log generated from a canonical scenario + JSON Schema at `debug-log-entry.schema.json`
+**When** the stability test runs on a PR
+**Then** current release's debug log output is validated against the same schema as the prior release
+**And** any breaking format change (removed field, renamed field, type change) fails the test
+**And** breaking format changes are allowed only with a CHANGELOG entry referencing `NFR26-break` tag + explicit maintainer sign-off
+**And** additive changes (new optional fields) pass without CHANGELOG requirement
