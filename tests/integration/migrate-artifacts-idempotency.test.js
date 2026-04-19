@@ -17,26 +17,39 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const { runScript, PACKAGE_ROOT } = require('../helpers');
 
 const MIGRATE_SCRIPT = path.join(PACKAGE_ROOT, 'scripts/migrate-artifacts.js');
 
-function git(cwd, cmd) {
-  return execSync(`git ${cmd}`, { cwd, stdio: 'pipe', encoding: 'utf8' });
+// Hermetic git invocation. Neutralize global pollution that could hang CI:
+//  - `core.hooksPath=/dev/null`: ignore globally-configured pre-commit hooks
+//    (husky, etc.) that would block waiting on an interactive editor.
+//  - `commit.gpgsign=false`: force-off signing regardless of user config.
+//  - `GIT_TERMINAL_PROMPT=0`: bail on any prompt instead of hanging.
+//  - `timeout: 15000`: cap each git call (seed commits are sub-second in practice).
+function git(cwd, args) {
+  return execFileSync(
+    'git',
+    ['-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', ...args],
+    {
+      cwd,
+      stdio: 'pipe',
+      encoding: 'utf8',
+      timeout: 15000,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+    }
+  );
 }
 
 // Seed a minimal Convoke-shaped project: git-initialized, one ungoverned
 // planning artifact using the legacy `type-initiative` convention that the
 // migration should rewrite to `initiative-type`.
 async function seedProject(tmpDir) {
-  git(tmpDir, 'init -q');
-  git(tmpDir, 'config user.email test@convoke.test');
-  git(tmpDir, 'config user.name "Convoke T4 Test"');
-  // Node's execSync can't set `-c commit.gpgsign=false` per-invocation
-  // portably across git versions; set it at repo level.
-  git(tmpDir, 'config commit.gpgsign false');
+  git(tmpDir, ['init', '-q']);
+  git(tmpDir, ['config', 'user.email', 'test@convoke.test']);
+  git(tmpDir, ['config', 'user.name', 'Convoke T4 Test']);
 
   // `findProjectRoot` walks up looking for a `_bmad/` dir — create it so the
   // CLI recognizes the tmp dir as a Convoke project.
@@ -56,17 +69,55 @@ async function seedProject(tmpDir) {
   );
 
   // Initial commit so `detectMigrationState` has a git log to read.
-  git(tmpDir, 'add -A');
-  git(tmpDir, 'commit -q -m "seed: ungoverned gyre PRD"');
+  git(tmpDir, ['add', '-A']);
+  git(tmpDir, ['commit', '-q', '-m', 'seed: ungoverned gyre PRD']);
 }
 
 function gitLogCount(cwd) {
-  return parseInt(git(cwd, 'rev-list --count HEAD').trim(), 10);
+  const out = git(cwd, ['rev-list', '--count', 'HEAD']).trim();
+  const n = parseInt(out, 10);
+  // Defensive: `parseInt('', 10)` is NaN; catch silent failure modes early.
+  if (!Number.isInteger(n)) {
+    throw new Error(`gitLogCount: expected integer, got ${JSON.stringify(out)}`);
+  }
+  return n;
+}
+
+// Guard against silently-downgraded failures in the migration CLI —
+// `scripts/migrate-artifacts.js` emits `Warning: …` on stderr while still
+// exiting 0. A regression in `verifyHistoryChain` or the ADR phase would pass
+// the exit-code check but leave a warning trail.
+//
+// Two warning classes are ALLOWED in this test's fixture context:
+//   1. "Previous ADR not found ... Skipping supersession." — expected on the
+//      first run of any fresh fixture; the supersede-target ADR from the
+//      2026-03-22 era isn't present.
+//   2. "ADR generation failed: Command failed: git commit …" — the known
+//      byte-identical-ADR bug documented in deferred-work.md under
+//      "scope of T4". Fires on the third run because the ADR content is
+//      deterministic over (date, rename-count, scopeDirs) and therefore
+//      identical to the first run's ADR → `git commit` errors on empty tree.
+// Any OTHER `Warning:` / `failed` line indicates an unexpected regression.
+const ALLOWED_WARNING_PATTERNS = [
+  /Previous ADR not found at expected path\. Skipping supersession\./,
+  /ADR generation failed: Command failed: git commit/,
+  /Migration data is intact/,
+];
+
+function assertNoUnexpectedWarnings(stderr, label) {
+  const lines = stderr.split('\n').filter(l => l.length > 0);
+  const unexpected = lines.filter(l =>
+    /Warning:|failed/i.test(l) && !ALLOWED_WARNING_PATTERNS.some(re => re.test(l))
+  );
+  assert.equal(
+    unexpected.length,
+    0,
+    `${label} stderr contains unexpected warnings:\n${unexpected.join('\n')}\n\nFull stderr:\n${stderr}`
+  );
 }
 
 describe('convoke-migrate CLI idempotency (T4)', () => {
   let tmpDir;
-  let commitsAfterFirstRun;
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-t4-migrate-'));
@@ -83,6 +134,11 @@ describe('convoke-migrate CLI idempotency (T4)', () => {
 
     const result = await runScript(MIGRATE_SCRIPT, ['--apply', '--force'], { cwd: tmpDir, timeout: 60000 });
     assert.equal(result.exitCode, 0, `first migrate run must exit 0\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
+    // Guard against silently-downgraded failures: `scripts/migrate-artifacts.js`
+    // emits `Warning: …` / `ADR generation failed: …` on stderr while still
+    // exiting 0. A regression in `verifyHistoryChain` or the ADR phase would
+    // pass the exit-code check but leave a warning trail.
+    assertNoUnexpectedWarnings(result.stderr, 'first run');
 
     // File renamed to governance convention.
     const newPath = path.join(tmpDir, '_bmad-output/planning-artifacts/gyre-prd.md');
@@ -90,53 +146,61 @@ describe('convoke-migrate CLI idempotency (T4)', () => {
     assert.ok(fs.existsSync(newPath), 'gyre-prd.md must exist after migration');
     assert.ok(!fs.existsSync(oldPath), 'prd-gyre.md must no longer exist');
 
-    // At least one new migration commit landed (rename phase, injection phase).
-    commitsAfterFirstRun = gitLogCount(tmpDir);
-    assert.ok(commitsAfterFirstRun > baselineCommits, `migration must create commits (baseline=${baselineCommits}, after=${commitsAfterFirstRun})`);
+    const commitsAfterFirstRun = gitLogCount(tmpDir);
+    assert.ok(
+      commitsAfterFirstRun > baselineCommits,
+      `migration must create commits (baseline=${baselineCommits}, after=${commitsAfterFirstRun})`
+    );
   });
 
-  it('second run with identical state exits 0 and reports an idempotent no-op', async () => {
+  it('second run is a functional no-op — exits 0 AND creates zero new commits', async () => {
+    // Re-read commit count fresh — no cross-test state coupling, so a failure
+    // in test 1 can't cascade into a misleading undefined-baseline comparison.
+    const commitsBefore = gitLogCount(tmpDir);
+
     const result = await runScript(MIGRATE_SCRIPT, ['--apply', '--force'], { cwd: tmpDir, timeout: 60000 });
     assert.equal(result.exitCode, 0, `second run must exit 0\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
-    // The CLI emits one of these on a clean re-run:
-    //   - "Nothing to migrate" (state === 'complete' AND manifest has no work)
-    //   - "Nothing to rename" (state === 'complete' but manifest flags leftover
-    //     meta-artifacts like the ADR + rename-map generated by the first run)
-    // Either satisfies functional idempotency — the `no-new-commits` test below
-    // is the hard proof.
-    assert.match(
-      result.stdout,
-      /Nothing to (migrate|rename)/i,
-      `second run should report a no-op state — got:\n${result.stdout}`
-    );
-  });
+    assertNoUnexpectedWarnings(result.stderr, 'second run');
 
-  it('second run creates no new git commits (idempotency proof)', () => {
-    const commitsAfterSecondRun = gitLogCount(tmpDir);
+    const commitsAfter = gitLogCount(tmpDir);
+    // The HARD idempotency proof — stdout messages are not the contract
+    // (they vary between `"Nothing to migrate"` and `"Nothing to rename"`
+    // depending on whether the first run's meta-artifacts got re-flagged —
+    // see `deferred-work.md` under "scope of T4"). Commit-count equality is
+    // the actual functional guarantee.
     assert.equal(
-      commitsAfterSecondRun,
-      commitsAfterFirstRun,
-      `second run must not add commits (after first=${commitsAfterFirstRun}, after second=${commitsAfterSecondRun})`
+      commitsAfter,
+      commitsBefore,
+      `second run must not add commits (before=${commitsBefore}, after=${commitsAfter})`
     );
   });
 
-  it('third run after adding a new ungoverned file resumes migration', async () => {
+  it('third run after adding a new ungoverned file resumes migration with the expected commit delta', async () => {
     const newFile = path.join(tmpDir, '_bmad-output/planning-artifacts/epic-gyre.md');
     await fs.writeFile(newFile, '# New Gyre Epic\n\nAdded after first migration.\n', 'utf8');
-    git(tmpDir, 'add -A');
-    git(tmpDir, 'commit -q -m "seed: add ungoverned epic after migration"');
+    git(tmpDir, ['add', '-A']);
+    git(tmpDir, ['commit', '-q', '-m', 'seed: add ungoverned epic after migration']);
 
     const commitsBefore = gitLogCount(tmpDir);
     const result = await runScript(MIGRATE_SCRIPT, ['--apply', '--force'], { cwd: tmpDir, timeout: 60000 });
     assert.equal(result.exitCode, 0, `third run must exit 0\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
+    assertNoUnexpectedWarnings(result.stderr, 'third run');
 
-    // New file should be renamed to governance convention.
+    // New file renamed to governance convention.
     const migratedPath = path.join(tmpDir, '_bmad-output/planning-artifacts/gyre-epic.md');
     const origPath = path.join(tmpDir, '_bmad-output/planning-artifacts/epic-gyre.md');
     assert.ok(fs.existsSync(migratedPath), 'gyre-epic.md must exist after third run');
     assert.ok(!fs.existsSync(origPath), 'epic-gyre.md must no longer exist');
 
-    const commitsAfter = gitLogCount(tmpDir);
-    assert.ok(commitsAfter > commitsBefore, `third run must create new commits when ungoverned files exist (before=${commitsBefore}, after=${commitsAfter})`);
+    // Tight commit-count bound — migration creates up to 3 commits
+    // (rename, injection, ADR). ADR commit may be skipped when the ADR content
+    // is byte-identical to the previous run's ADR (same date, same rename count).
+    // Accept 2-3 new commits; reject 1 (rename-without-injection would indicate
+    // a real regression) and reject 4+ (unexpected extra work).
+    const delta = gitLogCount(tmpDir) - commitsBefore;
+    assert.ok(
+      delta >= 2 && delta <= 3,
+      `third run should produce 2-3 new commits (rename + injection [+ ADR]); got ${delta}`
+    );
   });
 });
