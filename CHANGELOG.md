@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.3.0] - 2026-04-19
+
+### Added
+
+- **Convoke Operator Covenant** (P21 Epic 1) — New architectural contract governing operator experience across all Convoke skills. Axiom *"the operator is the resolver"* + 7 Operator Rights (default, full universe, rationale, completeness, pause, next action, pacing). Compliance Checklist (OC-R0..OC-R7) with 3-layer audit scope, 6 status values, reproducibility-gate methodology. New `covenant` artifact type in taxonomy. Artifacts: `convoke-covenant-operator.md`, `convoke-spec-covenant-compliance-checklist.md`, Epic 1 story set `oc-1-1`..`oc-1-5` + retro.
+- **User agent exclusions** (U8) — `excluded_agents: []` field in `_bmad/bme/_vortex/config.yaml` and `_bmad/bme/_gyre/config.yaml`. `mergeConfig`, `refresh-installation`, `validator`, and `convoke-doctor` all honor exclusions — agent files, user guides, skill wrappers, and manifest rows skip excluded agents. 14 new tests.
+- **Update-time changelog display** (U7) — `convoke-update` now surfaces a "What's New" block from `CHANGELOG.md` before confirming refresh/upgrade. New `scripts/update/lib/changelog-reader.js` with Keep-a-Changelog header parsing (incl. pre-release semver). 15 new tests.
+- **`convoke-export --quiet`** (I50) — `-q` / `--quiet` flag suppresses per-skill stdout in batch mode; failures (stderr) and single-line summary always emit. Batch dry-run output drops 50 → 1 lines. 6 new integration tests.
+- **Capability Evaluation Framework** (P10) + **Friction Log Template** (P11) — Operationalized from archive to `_bmad-output/planning-artifacts/`. Referenced from initiative-lifecycle §1.2 as the qualifying gate for capability-type intakes.
+- **Staleness pre-flight rule** (A27, Phase 1) — `staleness-preflight-for-backlog-pickup` rule in `project-context.md` with four checks (existence, dependency, code-anchor validity, semantic-anchor) + GREEN/YELLOW/RED verdict semantics + four exemption classes. Phase 2 (**I62**, `[P] Preflight` step file in `bmad-enhance-initiatives-backlog`) and Phase 3 (**I63**, `bmad-help` decorator integration) are tracked as blocked-pending-evidence — unblock when A27 applied ≥3× with ≥1 real drift caught, or 2 weeks elapsed.
+- **Review convergence rule** (A7) — R1 mandatory, R2 only if HIGH, R3 only if structural changes, no R4. Encoded in `project-context.md` and `bmad-code-review` skill's `step-04-present.md`.
+- **Mechanical research protocol** (A5) — New `mechanical-research-enumeration` rule: catalog/audit/inventory deliverables must enumerate via `grep`/`glob` with raw output as evidence.
+- **Reproducibility gate for multi-skill audits** (A10) — v2+ Covenant audits cover ≥3 cells (expected-PASS + expected-FAIL + borderline) at 100% agreement at N=3-4 / ≥80% at N≥5. Four-path failure-mode handling (revise / DISPUTED-exclude with N-recomputation / methodology-invalid / shrink-scope).
+- **OC-R6 external-declared escape hatch** (A15) — 6th Compliance Status value `N/A — external-declared (<tool>)` for skills wrapping external CLIs (git, npm, docker) whose stderr they can't rewrite. Required evidence-note template `Layers: L1 PASS (<ref>), L2 PASS (<ref>), L3 external-declared (<tool>)`.
+- **4 new `project-context.md` rules** (I49) — `derive-counts-from-source` (no hardcoded counts), `shared-test-constants` (import from shared files), `catch-all-phase-review` (review fallback matcher output before shipping), `spec-verify-referenced-files` (existence-check file paths in specs).
+
+### Changed
+
+- **`generateGovernanceADR`** (BUG-1) — Platform-initiative and artifact-type counts/lists now derived from `taxonomy.yaml` (was hardcoded `(8)` / `(21)`; taxonomy now carries 23 types and any number of initiatives). Call site `scripts/migrate-artifacts.js` passes the loaded taxonomy through.
+- **OC-R7 doc-mapping clarified** (A12) — Compliance Checklist doc rule now uses cumulative vocabulary (concepts introduced in earlier Covenant sections are pre-existing for later sections); example/anti-pattern illustrations don't count as novel when they illustrate an already-introduced concept.
+
+### Fixed
+
+- **`runScript` test helper hardened** (I64) — `tests/helpers.js` timeout handling: `exitCode` is now always a finite integer (was `null` on `execFile` timeout, surfacing as opaque `null !== 0` in any CLI-integration test hitting a timeout). New `timedOut` and `signal` fields surface distinct timeout semantics. Pre-existing helper bug surfaced by T4 code-review warning guard. 4 new tests in `tests/unit/helpers.test.js` lock the contract. First application of A27 staleness pre-flight (all 4 checks GREEN).
+
+### Documentation
+
+- **`_bmad/bme/README.md`** (D8) — New `## Files at _bmad/bme/ root` section listing `config.yaml` with a one-line description. Placed between the Submodules table (directories) and the "When to add here vs upstream" guidance.
+- **`docs/README.md`** (D9) — New docs index with Covenant pointer as the featured callout. Contents table enumerates the 6 contributor-facing docs; cross-refs to repo README, bme README, and `project-context.md`.
+
+### Infrastructure / Tests
+
+- **Python CI + linting + PEP 723** (T6, T7, T8) — New `python-test` GitHub Actions job running 116+ Python tests across 5 files; `ruff` linter added with `ruff.toml` (40 auto-fixes + 3 manual); PEP 723 inline metadata standardized with `pyyaml>=6.0` pinning and `>=3.9` version floors (24/24 files covered). Publish gate updated. Resolves Gyre DL-001 blocker.
+- **Migration idempotency CLI test** (T4) — New `tests/integration/migrate-artifacts-idempotency.test.js` with hermetic `git()` helper (timeout + inline `-c core.hooksPath=/dev/null` / `commit.gpgsign=false` / `GIT_TERMINAL_PROMPT=0`). 3 tests cover first-run rename + commits, second-run no-op (exit 0 + zero new commits), third-run resume on added ungoverned file.
+- **Upgrade CLI end-to-end test** (T3) — New `tests/integration/upgrade-cli-e2e.test.js` exercises real `convoke-update --yes` child-process flow against a v1.7.x fixture (spans 1.7 → 2.0 rename + 2.0 → 3.1 migrations). 4 tests cover fresh-upgrade exit-0, full post-state verification (AGENT_FILES + WORKFLOW_NAMES + skill wrappers + agent-manifest.csv + deprecated-agent cleanup), and second-run refresh-only behavior.
+- **Doctor BME skill-wrapper validation** (I43) — `checkAgentSkillWrappers()` validates all 12 bme agent skill wrappers.
+- **Test count:** 1,253+ green (≈1,173 unit + 82 integration), up from 1,123 at 3.2.0.
+
+### Governance evidence (for Covenant adopters)
+
+- **oc-1-1 baseline audit** — 8 skills × 7 rights = 56 cells. Overall compliance 82%. Migration and Portfolio calibration cases correctly identify scar-era violations; Portfolio is remediated.
+- **A24 Vortex audit expansion** — 3 additional Vortex workflows scored at step-01 (`assumption-mapping`, `empathy-map`, `hypothesis-engineering`). **T1 FIRES for Vortex × Right to pacing** at 25% compliance (1/4 PASS, N=4). A10 reproducibility gate cleared 3/3 = 100% with 2 independent LLM reviewers. Two new Epic 2 Story 2.1 retrofit cells identified (assumption-mapping step-01 + hypothesis-engineering step-01), pending Epic 2 ratification.
+
+### Note
+
+- v3.2.1 (2026-04-12) was a patch bump that was not documented in the changelog at the time. A retroactive entry is included below for audit completeness.
+
+---
+
+## [3.2.1] - 2026-04-12
+
+Patch bump: portability-system hardening + bme agent coverage in catalog manifest + integration-test isolation fixes.
+
+### Added
+
+- **bme agent rows in `_bmad/_config/skill-manifest.csv`** — 12 new rows (7 Vortex agents: Emma, Isla, Mila, Liam, Wade, Noah, Max; 4 Gyre agents; 1 team-factory agent) so `convoke-export` and the decision-tree catalog surface bme agents as portable skills. Required for v3.2.0 Portability System to cover discovery-side personas.
+
+### Changed
+
+- **Portability Export Engine** (`scripts/portability/export-engine.js`) — Minor refinements to discovery-workflow export output.
+- **Catalog Generator** (`scripts/portability/catalog-generator.js`) — Minor fix.
+
+### Fixed
+
+- **Integration test isolation** — `tests/integration/cli-entry-points.test.js`, `convoke-doctor.test.js`, `postinstall.test.js`, and `tests/unit/docs-audit.test.js` refactored to use per-test `cliTmpDir` cwd instead of polluting repo root. `tests/helpers.js` supports the refactored pattern.
+
+---
+
 ## [3.2.0] - 2026-04-11
 
 ### Added
