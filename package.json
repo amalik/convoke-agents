@@ -42,6 +42,9 @@
     "test:coverage": "c8 node --test tests/unit/*.test.js tests/team-factory/*.test.js tests/lib/*.test.js tests/integration/*.test.js tests/p0/*.test.js",
     "lint": "eslint scripts/ index.js tests/",
     "docs:audit": "node scripts/docs-audit.js",
+    "badges": "node scripts/generate-badges-json.js",
+    "badges:check": "npm run badges && git diff --exit-code docs/badges.json",
+    "prepublishOnly": "npm run badges:check",
     "archive": "node scripts/archive.js",
     "check": "node scripts/convoke-check.js"
   },
