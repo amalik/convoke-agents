@@ -184,3 +184,69 @@ describe('convoke-export CLI (sp-2-3)', () => {
     assert.equal(leftover, null);
   });
 });
+
+// I50: `--quiet` / `-q` flag — suppress per-skill success + skip lines, keep
+// failures (stderr) + the single-line summary. Useful for CI / scripted
+// pipelines. Deferred through 4 SP-Epic retros; resolved 2026-04-19.
+describe('convoke-export CLI — --quiet flag (I50)', () => {
+  const tmpDirs = [];
+  afterEach(() => {
+    while (tmpDirs.length) cleanupTmpDir(tmpDirs.pop());
+  });
+
+  it('suppresses per-skill success lines on batch when --quiet is passed', () => {
+    const noisy = runCli(['--all', '--dry-run']);
+    const quiet = runCli(['--all', '--dry-run', '--quiet']);
+
+    assert.equal(noisy.status, 0);
+    assert.equal(quiet.status, 0);
+
+    const noisyLines = noisy.stdout.split('\n').filter(l => l.length > 0);
+    const quietLines = quiet.stdout.split('\n').filter(l => l.length > 0);
+
+    // Noisy should have N+1 lines (N skills + summary); quiet should have exactly 1.
+    assert.ok(noisyLines.length > 5, `noisy batch should emit per-skill lines (got ${noisyLines.length})`);
+    assert.equal(quietLines.length, 1, `quiet batch should emit only the summary (got ${quietLines.length}): ${quiet.stdout}`);
+  });
+
+  it('-q short alias works', () => {
+    const longForm = runCli(['--all', '--dry-run', '--quiet']);
+    const shortForm = runCli(['--all', '--dry-run', '-q']);
+    assert.equal(longForm.status, shortForm.status);
+    assert.equal(longForm.stdout, shortForm.stdout);
+  });
+
+  it('summary line is still emitted in quiet mode', () => {
+    const result = runCli(['--all', '--dry-run', '--quiet']);
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Exported \d+ skills/);
+    assert.match(result.stdout, /warnings total/);
+  });
+
+  it('single-skill mode with --quiet still writes output and exits 0; success line suppressed', () => {
+    const tmpDir = makeTmpDir();
+    tmpDirs.push(tmpDir);
+    const result = runCli(['bmad-brainstorming', '--output', tmpDir, '--quiet']);
+    assert.equal(result.status, 0);
+    // Per-skill success line (✅ ... → ...) must be suppressed; summary still prints.
+    const lines = result.stdout.split('\n').filter(l => l.length > 0);
+    assert.equal(lines.length, 1, `expected only summary line; got:\n${result.stdout}`);
+    assert.match(lines[0], /Exported 1 skills/);
+    assert.ok(!/✅/.test(result.stdout), 'per-skill success emoji line must be suppressed');
+    // Output files still landed on disk.
+    assert.ok(fs.existsSync(path.join(tmpDir, 'bmad-brainstorming', 'instructions.md')));
+  });
+
+  it('help text documents --quiet', () => {
+    const result = runCli(['--help']);
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /--quiet/);
+    assert.match(result.stdout, /-q/);
+  });
+
+  it('unknown flag starting with --quiet- is still rejected', () => {
+    const result = runCli(['--quietz']);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Unknown flag/);
+  });
+});
