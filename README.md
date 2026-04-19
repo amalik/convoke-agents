@@ -10,7 +10,7 @@
                 Agent teams for complex systems
 ```
 
-[![Version](https://img.shields.io/badge/version-3.2.0-blue)](https://github.com/amalik/convoke-agents)
+[![Version](https://img.shields.io/npm/v/convoke-agents?color=blue&label=version)](https://www.npmjs.com/package/convoke-agents)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 </div>
@@ -19,26 +19,26 @@ Convoke extends AI agents with two types of installable modules: **Teams** bring
 
 > **Authoring a Convoke skill?** Required reading first: [The Convoke Operator Covenant](_bmad-output/planning-artifacts/convoke-covenant-operator.md) — one axiom and seven Operator Rights every Convoke skill must honor. The Covenant exists because operator-facing UX is an architectural concern in agent systems, not a styling concern; skills that violate it erode operator trust across the skill ecosystem, not just on their own surface.
 
-| Team | Agents | Domain |
-|------|--------|--------|
-| **Vortex** | 7 agents, 22 workflows | Product discovery — from user insight to evidence-based decisions |
-| **Gyre** | 4 agents, 7 workflows | Production readiness — from stack detection to gap analysis |
+| Team | Domain |
+|------|--------|
+| **Vortex** | Product discovery — from user insight to evidence-based decisions |
+| **Gyre** | Production readiness — from stack detection to gap analysis |
 
-### What's New in 3.2
+### What's New in 3.3
 
-- **Portable skills** — export any BMAD skill to a standalone format with platform adapters for Claude, Copilot, and Cursor (`npx convoke-export <skill>`)
-- **Team Factory ships** — the module for creating new BMAD-compliant teams is now included in the npm package
-- **1,123 tests** — test infrastructure recovery resolved a phantom-test bug class; test gate tripled from 320+ to 1,123 verified-passing tests
+- **Convoke Operator Covenant** — one axiom ("*the operator is the resolver*") and seven Operator Rights every Convoke skill must honor. Reproducibility-validated governance contract with a published baseline audit and Compliance Checklist.
+- **Opt out of agents you don't need** — new `excluded_agents: []` field in Vortex and Gyre configs; `convoke-update` honors exclusions end-to-end. Non-breaking.
+- **Update-time changelog surfacing** — `convoke-update` shows "What's New" before confirming the refresh.
 - See the [CHANGELOG](CHANGELOG.md) for the full release details
 
 ---
 
 ## Vortex — Product Discovery Team
 
-**7 agents guide you from insight to evidence and back again — a continuous discovery loop, not a one-shot checklist**
+**Specialist agents guide you from insight to evidence and back again — a continuous discovery loop, not a one-shot checklist**
 
-[![Agents](https://img.shields.io/badge/agents-7-brightgreen)](docs/agents.md)
-[![Workflows](https://img.shields.io/badge/workflows-22-success)](docs/agents.md)
+[![Agents](https://img.shields.io/badge/dynamic/yaml?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/_bmad/bme/_vortex/config.yaml&query=$.agents.length&label=agents&color=brightgreen)](docs/agents.md)
+[![Workflows](https://img.shields.io/badge/dynamic/yaml?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/_bmad/bme/_vortex/config.yaml&query=$.workflows.length&label=workflows&color=success)](docs/agents.md)
 
 Vortex guides you through seven discovery streams — from understanding your users to interpreting production signals — so you can make evidence-based decisions before, during, and after you build. Each stream builds on the previous one's findings, and when gaps appear, the system routes you back to fill them.
 
@@ -147,10 +147,10 @@ For detailed workflow descriptions, see the [Agent Guide](docs/agents.md) and in
 
 ## Gyre — Production Readiness Team
 
-**4 agents assess whether your project is ready to ship — detect your stack, model what "ready" means, find what's missing, and refine together**
+**Specialist agents assess whether your project is ready to ship — detect your stack, model what "ready" means, find what's missing, and refine together**
 
-[![Agents](https://img.shields.io/badge/agents-4-brightgreen)](docs/agents.md)
-[![Workflows](https://img.shields.io/badge/workflows-7-success)](docs/agents.md)
+[![Agents](https://img.shields.io/badge/dynamic/yaml?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/_bmad/bme/_gyre/config.yaml&query=$.agents.length&label=agents&color=brightgreen)](docs/agents.md)
+[![Workflows](https://img.shields.io/badge/dynamic/yaml?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/_bmad/bme/_gyre/config.yaml&query=$.workflows.length&label=workflows&color=success)](docs/agents.md)
 
 Most teams ship to production without knowing if they're actually ready — missing SLOs, incomplete observability, unreviewed deployment strategies. Gyre analyzes your project's filesystem, builds a capabilities model tailored to your specific tech stack, and surfaces what's absent. No generic checklists — every finding is contextual to your project.
 
