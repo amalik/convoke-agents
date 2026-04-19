@@ -127,7 +127,7 @@ schema_version: 1
 | A2 | Execute IN-16: ground Migration scar re-interpretation in historical evidence (or soften classification) | Murat / Winston | Methodology | §4.2 of audit report updated with historical quote or formal softening note |
 | A3 | Execute IN-15: upgrade Covenant audit v2 reproducibility gate from 1 cell to ≥3 cells | Murat | Methodology | Next audit methodology doc updated |
 | A4 | Resolve 3 oc-1-5-deferred items (see deferred-work.md): bme/config.yaml inventory, docs/README pointer, Covenant canonical location | Paige / Amalik | Docs | All three patched or explicitly rejected with rationale |
-| A5 | Decide Epic 2 trigger criteria: conditions under which oc-2-1 moves from deferred to in-progress | Alice / Amalik | Planning | Sprint-status notes updated with trigger rule |
+| A5 | ✅ **Complete 2026-04-19.** Decided Epic 2 trigger criteria via Winston + John party-mode. Two-trigger rule (T1 concentrated + T2 systemic) locked into Epic file §"Retrofit Trigger Rule" — 70% compliance floor per Right, N ≥ 3 threshold prevents single-sample tyranny. v1 baseline correctly produces no trigger; re-evaluation happens after each audit refresh. | Alice / Amalik | Planning | ✅ Epic file updated with trigger rule |
 | A6 | When Phase 3 Loom Add Skill ships, unblock oc-2-2 and scope the Checklist integration | Winston | Blocked | Scoped when Loom Add Skill exists |
 | A7 | Run 1 additional decision-support archetype audit (per IN-14) to cover the COI-flagged sample in oc-1-1 | Murat | Methodology | bmad-cis-creative-problem-solver or innovation-strategy audited |
 
