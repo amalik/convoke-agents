@@ -32,14 +32,14 @@ so that the Vortex team cell reaches N ≥ 4 and T1 trigger evaluation for Vorte
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Confirm workflow selection (AC #3) — pick the third workflow from `hypothesis-engineering` or `lean-experiment`; document rationale (e.g., coverage of different Vortex stream archetypes, skill maturity, recent adoption).
-- [ ] Task 2: Identify representative step per workflow (AC #4) — cite step path (e.g., `_bmad/bme/_vortex/workflows/assumption-mapping/step-01-<name>.md`) and rationale for step choice.
-- [ ] Task 3: Score each workflow × 7 rights (AC #5, #6) — 3 workflows × 7 rights = 21 new cells; evidence notes cite specific file:line references where behavior is defined.
-- [ ] Task 4: Compute Vortex team × Right row (AC #8) — 4 workflows (3 new + lean-persona from oc-1-1 §7) × 7 rights; report per-right fail count and fail rate.
-- [ ] Task 5: Evaluate T1 trigger for Vortex (AC #9) — per-right: does `(fails / N) < 0.30` at `N ≥ 3`? Any `TRUE` escalates.
-- [ ] Task 6: Draft §Implications section — for each T1-tripping right (if any), recommend retrofit pattern drawing from oc-1-1 §9.1's retrofit catalogue where applicable.
-- [ ] Task 7: Save report (AC #7) + run `npx convoke-doctor` to verify governance acceptance.
-- [ ] Task 8: Update initiatives backlog (AC #10) — activity-log row + move A24 to §2.5 Completed.
+- [x] Task 1: Confirm workflow selection (AC #3) — pick the third workflow from `hypothesis-engineering` or `lean-experiment`; document rationale (e.g., coverage of different Vortex stream archetypes, skill maturity, recent adoption).
+- [x] Task 2: Identify representative step per workflow (AC #4) — cite step path (e.g., `_bmad/bme/_vortex/workflows/assumption-mapping/step-01-<name>.md`) and rationale for step choice.
+- [x] Task 3: Score each workflow × 7 rights (AC #5, #6) — 3 workflows × 7 rights = 21 new cells; evidence notes cite specific file:line references where behavior is defined.
+- [x] Task 4: Compute Vortex team × Right row (AC #8) — 4 workflows (3 new + lean-persona from oc-1-1 §7) × 7 rights; report per-right fail count and fail rate.
+- [x] Task 5: Evaluate T1 trigger for Vortex (AC #9) — per-right: does `(fails / N) > 0.30` at `N ≥ 3`? (i.e., compliance strictly < 70%). Any `TRUE` escalates.
+- [x] Task 6: Draft §Implications section — for each T1-tripping right (if any), recommend retrofit pattern drawing from oc-1-1 §9.1's retrofit catalogue where applicable.
+- [x] Task 7: Save report (AC #7) + run `npx convoke-doctor` to verify governance acceptance.
+- [x] Task 8: Update initiatives backlog (AC #10) — activity-log row + move A24 to §2.5 Completed.
 
 ### Review Findings (Round 1, 2026-04-19)
 
@@ -49,9 +49,9 @@ so that the Vortex team cell reaches N ≥ 4 and T1 trigger evaluation for Vorte
 
 #### Decision-needed (3) — require operator input before fix
 
-- [ ] [Review][Decision] **Right-to-next-action PASS vs AC #4 unit-of-analysis** — evidence notes for all 3 workflows say "no error surface at step-01; non-conforming routes into step-02 with gaps named". The PASS verdict leans on step-02+ behavior, which contradicts AC #4 (one representative step per workflow). Options: (a) rescore as N/A at intake-only step-01 per §2.3 with justification, (b) extend scope to include step-02 error paths (violates AC #4), (c) accept PASS as method-consistent with lean-persona oc-1-1 §8.7 (same reasoning was accepted there). HIGH. [convoke-report-operator-covenant-audit-vortex-2026-04-19.md:§4.1,4.2,4.3 R6]
-- [ ] [Review][Decision] **Empathy-map Right-to-pacing glossary consistency** — §4.2 excludes the 6 empathy-map quadrants (Says/Thinks, Does/Feels, Pain Points, Gains) as "framework signposts not unpacked in step-01", while §4.3 counts hypothesis-engineering's Functional/Emotional/Social Jobs as distinct sub-axes. If the §2.6 workflow-inherited rule is applied strictly (workflow.md counts as prior introduction), empathy-map's 6 quadrants push the count over the budget → FAIL, making Vortex pacing 0/4 (0%). Trigger still fires either way, but the cell is affected. HIGH. [convoke-report-operator-covenant-audit-vortex-2026-04-19.md:§4.2 R7]
-- [ ] [Review][Decision] **COI mitigation for self-authored spec/self-executed audit** — §8 discloses the methodology-frame COI (auditor wrote the story spec then executed against it) but proposes no mitigation beyond the A10 reproducibility gate. Options: (a) treat as disqualifying — rerun by separate reviewer; (b) accept provisional with COI caveat (current state); (c) accept as-is without provisional qualifier. HIGH. [convoke-report-operator-covenant-audit-vortex-2026-04-19.md:§8]
+- [x] [Review][Decision→Resolved 2026-04-19] **Right-to-next-action PASS vs AC #4 unit-of-analysis** — **Resolution: 3+4** (keep PASS as method-consistent with lean-persona oc-1-1 §8.7 + log rubric ambiguity). Verdicts stand for all 3 workflows. Added as §9 ambiguity #4 in audit report for v3+ rubric clarification.
+- [x] [Review][Decision→Resolved 2026-04-19] **Empathy-map Right-to-pacing glossary consistency** — **Resolution: 1** (patch §4.2 evidence note + log §9 ambiguity #5). §4.2 reworded to cite §2.6 "previously encountered" semantics rigorously; empathy-map/HE asymmetry is structural (workflow.md vs step-01 placement), not an error. Verdicts stable under both strict and lenient readings. Ambiguity #5 added for v3+ glossary clarification.
+- [x] [Review][Decision→Resolved 2026-04-19] **COI mitigation for self-authored spec/self-executed audit** — **Resolution: 2+4** (accept provisional + add explicit mitigation gates). §8.1 "Mitigation Gates" added to audit report: G1 (Epic 2 Story 2.1 retrofit scoping blocked on A10 reproducibility gate), G2 (independent FAIL cell verification per workflow), G3 (rubric ambiguities stay intake-only), G4 (carried-forward lean-persona cells locked). v2 baseline advancement in §6.5 now requires Epic 2 governance ratification (gated on G1).
 
 #### Patches (15) — fixable without operator input
 
