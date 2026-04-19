@@ -138,7 +138,21 @@ async function createInstallation(tmpDir, version) {
  * @param {string} script - Absolute path to script
  * @param {string[]} [args=[]] - CLI arguments
  * @param {object} [opts={}] - Options: cwd, timeout
- * @returns {Promise<{exitCode: number, stdout: string, stderr: string}>}
+ * @returns {Promise<{exitCode: number, stdout: string, stderr: string, timedOut: boolean, signal: string | null}>}
+ *
+ * Return-shape notes (I64):
+ *   - `exitCode` is always a finite integer. On timeout the child is killed
+ *     (SIGTERM by default) and `err.code` is `null`; on spawn failure `err.code`
+ *     is a string like `'ENOENT'`. Both cases previously leaked out as
+ *     `exitCode: null` / `exitCode: 'ENOENT'` and produced opaque assertions.
+ *     We now coerce any non-integer err.code (null, string, undefined) to 1
+ *     so `exitCode === 0` assertions fail with an actionable numeric mismatch,
+ *     and the caller can distinguish timeout from other error classes via
+ *     the `timedOut` / `signal` fields.
+ *   - `timedOut` is true iff execFile killed the child for exceeding `timeout`.
+ *     Keyed on `err.killed` (not signal name) so an operator-overridden
+ *     `killSignal` still reports correctly.
+ *   - `signal` is the signal that killed the child (e.g., 'SIGTERM') or null.
  */
 function runScript(script, args = [], opts = {}) {
   const cwd = opts.cwd || PACKAGE_ROOT;
@@ -146,7 +160,18 @@ function runScript(script, args = [], opts = {}) {
 
   return new Promise((resolve) => {
     execFile('node', [script, ...args], { cwd, timeout }, (err, stdout, stderr) => {
-      resolve({ exitCode: err ? err.code : 0, stdout, stderr });
+      // `err.killed` is the authoritative "Node killed the child" flag — it is
+      // set iff execFile's own timeout mechanism called `child.kill()`. The
+      // caller has no handle to the child, so external signals that happen to
+      // also produce SIGTERM cannot be confused with Node's kill here.
+      const timedOut = !!(err && err.killed);
+      const signal = (err && err.signal) || null;
+      // `err.code` is the child's numeric exit code when the process exited
+      // normally with non-zero. On spawn failure (ENOENT / EACCES / …) Node
+      // sets it to a string like 'ENOENT'; coerce any non-integer to 1 so the
+      // contract "exitCode is always a finite integer" holds.
+      const exitCode = err ? (Number.isInteger(err.code) ? err.code : 1) : 0;
+      resolve({ exitCode, stdout, stderr, timedOut, signal });
     });
   });
 }
