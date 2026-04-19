@@ -67,6 +67,8 @@ function parseArgs(argv) {
       opts.dryRun = true;
     } else if (a === '--all') {
       opts.all = true;
+    } else if (a === '--quiet' || a === '-q') {
+      opts.quiet = true;
     } else if (a === '--output') {
       const next = argv[i + 1];
       if (!next || next.startsWith('--')) {
@@ -126,6 +128,9 @@ function printHelp() {
     '  --all                 Export all exportable tiers (standalone + light-deps).',
     '  --dry-run             Run the engine in-memory; print would-be paths; write',
     '                        nothing. Combinable with all other flags.',
+    '  --quiet, -q           Suppress per-skill success and skip lines. Failures',
+    '                        (stderr) and the final summary line are still emitted.',
+    '                        Useful in CI / scripted pipelines.',
     '  --help, -h            Print this message and exit 0.',
     '',
     '  Conflicts:',
@@ -161,25 +166,30 @@ function printHelp() {
 // REPORTER
 // =============================================================================
 
-function makeReporter() {
+function makeReporter(opts = {}) {
+  const { quiet = false } = opts;
   const results = { success: 0, failed: 0, skipped: 0, warnings: 0 };
   return {
     success(skill, relPath, warnings) {
       results.success++;
       results.warnings += warnings;
+      if (quiet) return;
       const suffix = warnings > 0 ? ` (${warnings} warnings)` : '';
       process.stdout.write(`✅ ${skill} → ${relPath}${suffix}\n`);
     },
     failure(skill, error) {
+      // Failures always emit — `--quiet` suppresses success noise, not errors.
       results.failed++;
       const msg = (error && error.message ? error.message : String(error)).split('\n')[0];
       process.stderr.write(`❌ ${skill} — ${msg}\n`);
     },
     skip(skill, reason) {
       results.skipped++;
+      if (quiet) return;
       process.stdout.write(`⏭️  ${skill} — ${reason}\n`);
     },
     summary(dryRun) {
+      // Summary always emits — it's a single line that tells CI the batch outcome.
       const prefix = dryRun ? '[DRY RUN] ' : '';
       const total = results.success + results.failed + results.skipped;
       process.stdout.write(
@@ -484,7 +494,7 @@ function main() {
     outputBase = path.join(projectRoot, 'exported-skills');
   }
 
-  const reporter = makeReporter();
+  const reporter = makeReporter({ quiet: !!opts.quiet });
 
   let exitCode;
   if (hasPositional) {
