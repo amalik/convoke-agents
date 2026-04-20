@@ -66,6 +66,30 @@ context:
 - Given a future reviewer auditing a Vortex workflow under A33, when a workflow.md introduces concept X and step-01 uses concept X, then X counts as pre-existing — no FAIL triggers for re-introduction.
 - Given a workflow.md that dumps >3 novel concepts in its preamble, when OC-R7 is scored at Layer 1 per §2.4, then that Layer 1 FAILs and the skill-level verdict is FAIL (§2.4 worst-case aggregation) — A33 does not rescue such cases.
 
+### Review Findings
+
+**Round 2 — bmad-code-review (2026-04-20)**
+
+Patches:
+- [x] [Review][Patch] Audit report §9#5 annotation says "two new paragraphs" — actual ship is four [`convoke-report-operator-covenant-audit-vortex-2026-04-19.md:253`]
+- [x] [Review][Patch] Anti-escape-hatch clause: "(not required)" parenthetical dangles, reads as governing optional behavior — rephrase [`convoke-spec-covenant-compliance-checklist.md:126`]
+- [x] [Review][Patch] ¶2 and ¶3 appear to contradict on FAILing Layer-1 inheritance — clarify composition (actually coherent but confusing) [`convoke-spec-covenant-compliance-checklist.md:122-124`]
+- [x] [Review][Patch] ¶3 FAIL-specific wording silent on N/A verdicts at Layer 1 — generalize to any non-PASS verdict [`convoke-spec-covenant-compliance-checklist.md:124`]
+- [x] [Review][Patch] Spec Suggested Review Order cites `:171` but §"Operator-facing vs agent-facing text" heading is at L173 [`spec-a33-checklist-workflow-md-scope.md` Suggested Review Order]
+
+Deferred (pre-existing / out-of-scope):
+- [x] [Review][Defer] "operator-visible only" boundary cases (frontmatter, HTML comments, inline code, INITIALIZATION blocks) undefined — deferred, pre-existing §171 scope issue
+- [x] [Review][Defer] Steps Overview bullet headers: navigational vs concept-introducing — deferred, pre-existing §2.6 novel-concept ambiguity (related to A13)
+- [x] [Review][Defer] Alias/parenthetical expansion (JTBD ↔ job-to-be-done) counting — deferred, related to A13 in backlog
+- [x] [Review][Defer] Sibling files (`template.md`, `validate.md`) silently escape Layer 1/2 enumeration — deferred, new follow-up candidate
+- [x] [Review][Defer] Step-01 that `Read`s workflow.md and echoes concepts — re-introduction semantics undefined — deferred
+- [x] [Review][Defer] Cross-module `Read` (e.g., `bmad-init` bridging) — cross-workflow inheritance — deferred, separate rule space
+- [x] [Review][Defer] Adopting A33 broader reading creates new FAIL surfaces at dense Layer 1 (assumption-mapping, hypothesis-engineering) — deferred, already captured in Epic 2 Story 2.1 retrofit scope
+- [x] [Review][Defer] §171 examples list not exhaustive (`<critical-rules>`, `SYSTEM:`, `INITIALIZATION` blocks unenumerated) — deferred, pre-existing §171 issue
+- [x] [Review][Defer] Cross-workflow concept reuse silence (workflow B step referencing workflow A concepts) — deferred, separate rule space
+
+Dismissed (noise): 5 findings (rescore-history meta, ship-count arithmetic — actually correct cumulative, "pragmatic path" stylistic, "four grounds" falsifiability stylistic, §7.1 self-citation — §7.1 is evidence not ambiguity).
+
 ## Spec Change Log
 
 ### 2026-04-20 — Round 1 review (pragmatic path)
@@ -130,8 +154,8 @@ context:
 - Entry point: the four new paragraphs canonicalizing the broader reading + scope + inheritance + anti-escape-hatch.
   [`convoke-spec-covenant-compliance-checklist.md:120`](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md#L120)
 
-- Cross-reference target for the Scope paragraph — confirms §171 rule is consistent.
-  [`convoke-spec-covenant-compliance-checklist.md:171`](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md#L171)
+- Cross-reference target for the Scope paragraph — confirms §"Operator-facing vs agent-facing text" rule is consistent.
+  [`convoke-spec-covenant-compliance-checklist.md:173`](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md#L173)
 
 - Revisions table row — 4-paragraph description + Winston rationale + Round 1 review summary.
   [`convoke-spec-covenant-compliance-checklist.md:296`](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md#L296)
