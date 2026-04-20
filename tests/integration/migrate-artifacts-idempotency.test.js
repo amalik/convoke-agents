@@ -88,20 +88,21 @@ function gitLogCount(cwd) {
 // exiting 0. A regression in `verifyHistoryChain` or the ADR phase would pass
 // the exit-code check but leave a warning trail.
 //
-// Two warning classes are ALLOWED in this test's fixture context:
+// One warning class is ALLOWED in this test's fixture context:
 //   1. "Previous ADR not found ... Skipping supersession." — expected on the
 //      first run of any fresh fixture; the supersede-target ADR from the
 //      2026-03-22 era isn't present.
-//   2. "ADR generation failed: Command failed: git commit …" — the known
-//      byte-identical-ADR bug documented in deferred-work.md under
-//      "scope of T4". Fires on the third run because the ADR content is
-//      deterministic over (date, rename-count, scopeDirs) and therefore
-//      identical to the first run's ADR → `git commit` errors on empty tree.
+//
+// BUG-2 (2026-04-20): the byte-identical-ADR path no longer emits a warning —
+// `scripts/migrate-artifacts.js` now detects the empty staged tree before
+// calling `git commit` and logs `"ADR already current"` on stdout instead.
+// The `"ADR generation failed: …"` and `"Migration data is intact"` patterns
+// were removed from this allow-list; their appearance now signals a genuine
+// regression.
+//
 // Any OTHER `Warning:` / `failed` line indicates an unexpected regression.
 const ALLOWED_WARNING_PATTERNS = [
   /Previous ADR not found at expected path\. Skipping supersession\./,
-  /ADR generation failed: Command failed: git commit/,
-  /Migration data is intact/,
 ];
 
 function assertNoUnexpectedWarnings(stderr, label) {
@@ -193,14 +194,25 @@ describe('convoke-migrate CLI idempotency (T4)', () => {
     assert.ok(!fs.existsSync(origPath), 'epic-gyre.md must no longer exist');
 
     // Tight commit-count bound — migration creates up to 3 commits
-    // (rename, injection, ADR). ADR commit may be skipped when the ADR content
-    // is byte-identical to the previous run's ADR (same date, same rename count).
-    // Accept 2-3 new commits; reject 1 (rename-without-injection would indicate
-    // a real regression) and reject 4+ (unexpected extra work).
+    // (rename, injection, ADR). Per BUG-2 fix (2026-04-20), the ADR commit is
+    // intentionally skipped when the ADR content is byte-identical to the
+    // previous run's ADR (same date + same stats → rename-count=1 here matches
+    // the first run). The CLI logs `"ADR already current"` on stdout for the
+    // no-op case. Accept 2-3 new commits; reject 1 (rename-without-injection
+    // would indicate a real regression) and reject 4+ (unexpected extra work).
     const delta = gitLogCount(tmpDir) - commitsBefore;
     assert.ok(
       delta >= 2 && delta <= 3,
       `third run should produce 2-3 new commits (rename + injection [+ ADR]); got ${delta}`
+    );
+    // Lock in the BUG-2 no-op branch: stats match the first run (renameCount=1),
+    // so the ADR content is byte-identical and the commit is skipped with this
+    // stdout marker. Without this assertion a regression that silently bypassed
+    // both ADR branches (no commit, no log) would still satisfy the delta bound.
+    assert.match(
+      result.stdout,
+      /ADR already current/,
+      `third run should take the idempotent no-op branch since stats match the first run\nstdout:\n${result.stdout}`
     );
   });
 });
