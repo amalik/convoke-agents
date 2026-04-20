@@ -259,6 +259,47 @@ describe('formatMarkdown', () => {
     const output = formatMarkdown([]);
     assert.ok(output.includes('No initiatives found'));
   });
+
+  // I20: --show-unattributed markdown rendering
+  const sampleInit = [
+    { initiative: 'gyre', phase: { value: 'planning', confidence: 'inferred' }, status: { value: 'ongoing', confidence: 'inferred' }, lastArtifact: { file: 'a.md', date: '2026-04-01' }, nextAction: { value: 'next', source: 't' } },
+  ];
+  const sampleUnattributed = [
+    { dir: 'vortex-artifacts', filename: 'persona-foo.md', reason: 'no initiative signal' },
+    { dir: 'drafts', filename: 'untitled.md', reason: 'empty frontmatter and body' },
+  ];
+
+  it('I20: showUnattributed + files -> markdown section rendered', () => {
+    const output = formatMarkdown(sampleInit, { showUnattributed: true, unattributedFiles: sampleUnattributed });
+    assert.ok(output.includes('## Unattributed Files (2)'));
+    assert.ok(output.includes('| Path | Reason |'));
+    assert.ok(output.includes('| vortex-artifacts/persona-foo.md | no initiative signal |'));
+    assert.ok(output.includes('| drafts/untitled.md | empty frontmatter and body |'));
+    // No terminal-style delimiter
+    assert.ok(!output.includes('--- Unattributed Files ('));
+  });
+
+  it('I20: showUnattributed + empty array -> no section', () => {
+    const output = formatMarkdown(sampleInit, { showUnattributed: true, unattributedFiles: [] });
+    assert.ok(!output.includes('## Unattributed Files'));
+  });
+
+  it('I20: legacy single-arg call -> backwards-compatible (no section)', () => {
+    const output = formatMarkdown(sampleInit);
+    assert.ok(output.includes('| gyre |'));
+    assert.ok(!output.includes('## Unattributed Files'));
+  });
+
+  it('I20: showUnattributed false with files -> no section', () => {
+    const output = formatMarkdown(sampleInit, { showUnattributed: false, unattributedFiles: sampleUnattributed });
+    assert.ok(!output.includes('## Unattributed Files'));
+  });
+
+  it('I20: empty initiatives + showUnattributed + files -> "No initiatives found" then section', () => {
+    const output = formatMarkdown([], { showUnattributed: true, unattributedFiles: sampleUnattributed });
+    assert.ok(output.includes('No initiatives found'));
+    assert.ok(output.includes('## Unattributed Files (2)'));
+  });
 });
 
 // --- makeEmptyState ---
