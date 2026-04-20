@@ -301,18 +301,49 @@ describe('formatMarkdown', () => {
     assert.ok(output.includes('## Unattributed Files (2)'));
   });
 
-  it('I20: escapes pipe and newline in unattributed values (table safety)', () => {
+  it('I20: escapes pipe, newline, and backslash in unattributed values (table safety)', () => {
     const risky = [
-      { dir: 'weird', filename: 'a|b.md', reason: 'line1\nline2 | with pipe' },
+      { dir: 'we|ird', filename: 'a|b.md', reason: 'line1\nline2 | with pipe and trailing \\' },
     ];
     const output = formatMarkdown([], { showUnattributed: true, unattributedFiles: risky });
-    // Pipes escaped, not raw
-    assert.ok(output.includes('a\\|b.md'));
-    assert.ok(output.includes('line1 line2 \\| with pipe'));
+    // Pipes escaped in dir + filename + reason
+    assert.ok(output.includes('we\\|ird'), 'pipe in dir escaped');
+    assert.ok(output.includes('a\\|b.md'), 'pipe in filename escaped');
+    assert.ok(output.includes('line1 line2 \\| with pipe'), 'pipe + newline in reason escaped');
+    // Trailing backslash doubled (so it cannot escape the cell-boundary space-pipe)
+    assert.ok(output.includes('trailing \\\\'), 'trailing backslash doubled');
     // No raw newline inside a row
-    const rowLine = output.split('\n').find(l => l.startsWith('| weird/'));
+    const rowLine = output.split('\n').find(l => l.startsWith('| we\\|ird/'));
     assert.ok(rowLine, 'unattributed row present');
     assert.ok(!rowLine.includes('\nline2'), 'row has no embedded newline');
+  });
+
+  it('I20: handles lone CR (legacy Mac line ending) in unattributed values', () => {
+    const risky = [{ dir: 'd', filename: 'f.md', reason: 'line1\rline2' }];
+    const output = formatMarkdown([], { showUnattributed: true, unattributedFiles: risky });
+    const rowLine = output.split('\n').find(l => l.startsWith('| d/f.md '));
+    assert.ok(rowLine, 'row rendered');
+    assert.ok(!rowLine.includes('\r'), 'lone CR collapsed to space');
+    assert.ok(rowLine.includes('line1 line2'), 'CR replaced with a space');
+  });
+
+  it('I20: empty-string dir/filename/reason render without crashing (missing-field safety)', () => {
+    const sparse = [{ dir: '', filename: '', reason: '' }];
+    const output = formatMarkdown([], { showUnattributed: true, unattributedFiles: sparse });
+    assert.ok(output.includes('## Unattributed Files (1)'));
+    // Row emitted even with empty fields — does not crash, does not corrupt the table
+    assert.ok(output.includes('| / |  |'), 'empty-field row rendered as "| / |  |"');
+  });
+
+  it('I20: initiative-row escCell retrofit locks in (Round 1 consistency fix)', () => {
+    const initWithPipe = [
+      { initiative: 'a|b', phase: { value: 'planning', confidence: 'inferred' }, status: { value: 'ongoing', confidence: 'inferred' }, lastArtifact: { file: null }, nextAction: { value: 'n|x', source: 't' } },
+    ];
+    const output = formatMarkdown(initWithPipe);
+    // Pipe in initiative name escaped
+    assert.ok(output.includes('| a\\|b |'), 'pipe in initiative name escaped on the initiative row');
+    // Pipe in nextAction (context column) escaped
+    assert.ok(output.includes('n\\|x'), 'pipe in nextAction/context escaped');
   });
 
   it('I20: options=null does not crash (defensive fallback)', () => {

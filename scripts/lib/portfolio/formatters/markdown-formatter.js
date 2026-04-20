@@ -4,9 +4,9 @@
  * @module markdown-formatter
  */
 
-/** Escape a value for safe markdown-table cell rendering: `|` → `\|`, CR/LF → space. */
+/** Escape a value for safe markdown-table cell rendering: escape `\`, then `|`; collapse CR/LF to space. */
 function escCell(v) {
-  return String(v ?? '').replace(/\r?\n/g, ' ').replace(/\|/g, '\\|');
+  return String(v ?? '').replace(/\\/g, '\\\\').replace(/[\r\n]+/g, ' ').replace(/\|/g, '\\|');
 }
 
 /**
