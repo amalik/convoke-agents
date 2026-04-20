@@ -403,9 +403,9 @@ async function main() {
       // pattern in supersedePreviousADR.
       //
       // `git diff --cached --quiet` exit codes: 0 = no staged diff, 1 = diff present,
-      // >1 = genuine git error (index lock, corrupt index, etc.). Discriminate on `err.status`
-      // so real errors propagate to the outer catch with their actual message instead of being
-      // misreported as "staged changes → commit failed".
+      // non-0 and non-1 = genuine git error (index lock, corrupt index, etc.). Discriminate on
+      // `err.status` so real errors surface the underlying git error via the outer catch,
+      // rather than being indistinguishable from a "nothing to commit" false alarm.
       let hasStagedChanges = false;
       try {
         execGit('git', ['diff', '--cached', '--quiet'], { cwd: projectRoot, stdio: 'pipe' });
