@@ -397,8 +397,31 @@ async function main() {
 
       const { execFileSync: execGit } = require('child_process');
       execGit('git', ['add', '_bmad-output/planning-artifacts/'], { cwd: projectRoot, stdio: 'pipe' });
-      execGit('git', ['commit', '-m', 'chore: generate governance convention ADR'], { cwd: projectRoot, stdio: 'pipe' });
-      console.log(`\nADR generated: ${newADRFilename}`);
+      // Idempotency check: on re-run with byte-identical ADR content (same date + same stats),
+      // nothing is staged and `git commit` would error with "nothing to commit". Skip cleanly
+      // rather than downgrading that error to a misleading warning. Matches the check-then-act
+      // pattern in supersedePreviousADR.
+      //
+      // `git diff --cached --quiet` exit codes: 0 = no staged diff, 1 = diff present,
+      // >1 = genuine git error (index lock, corrupt index, etc.). Discriminate on `err.status`
+      // so real errors propagate to the outer catch with their actual message instead of being
+      // misreported as "staged changes → commit failed".
+      let hasStagedChanges = false;
+      try {
+        execGit('git', ['diff', '--cached', '--quiet'], { cwd: projectRoot, stdio: 'pipe' });
+      } catch (diffErr) {
+        if (diffErr.status === 1) {
+          hasStagedChanges = true;
+        } else {
+          throw diffErr;
+        }
+      }
+      if (hasStagedChanges) {
+        execGit('git', ['commit', '-m', 'chore: generate governance convention ADR'], { cwd: projectRoot, stdio: 'pipe' });
+        console.log(`\nADR generated: ${newADRFilename}`);
+      } else {
+        console.log(`\nADR already current: ${newADRFilename} (no changes to commit)`);
+      }
     } catch (adrErr) {
       console.warn(`\nWarning: ADR generation failed: ${adrErr.message}`);
       console.warn('Migration data is intact (commits 1-2 preserved). ADR can be generated manually.');
