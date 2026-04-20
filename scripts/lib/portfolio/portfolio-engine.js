@@ -501,7 +501,10 @@ async function main() {
     });
 
     const output = useMarkdown
-      ? formatMarkdown(result.initiatives)
+      ? formatMarkdown(result.initiatives, {
+          showUnattributed,
+          unattributedFiles: result.unattributedFiles,
+        })
       : formatTerminal(result.initiatives);
 
     console.log(output);
@@ -524,8 +527,8 @@ async function main() {
       );
     }
 
-    // Story 6.3: Unattributed details
-    if (result.unattributedFiles && result.unattributedFiles.length > 0) {
+    // Story 6.3: Unattributed details — terminal path only; markdown path is handled by formatMarkdown().
+    if (!useMarkdown && result.unattributedFiles && result.unattributedFiles.length > 0) {
       if (showUnattributed) {
         console.log(`\n--- Unattributed Files (${result.unattributedFiles.length}) ---`);
         for (const u of result.unattributedFiles) {
