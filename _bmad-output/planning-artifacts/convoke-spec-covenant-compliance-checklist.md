@@ -121,9 +121,9 @@ Within a single workflow, a concept introduced in earlier steps is pre-existing 
 
 **Scope: operator-visible only.** Per §"Operator-facing vs agent-facing text" below, OC-R7 counts only text the operator reads. The same scope applies here — concepts appearing exclusively in `MANDATORY EXECUTION RULES`, `YOUR ROLE:`, or similar agent-facing blocks are neither counted at Layer 1 *nor* inherited by step files. Inheritance applies to operator-visible concept-introductions in workflow.md only.
 
-**Inheritance is unconditional with respect to Layer 1's own verdict.** Even if workflow.md's Layer 1 OC-R7 verdict is FAIL, its operator-visible concepts remain pre-existing for step-file cells. §2.4 worst-case aggregation already captures composition — a FAILing Layer 1 FAILs the whole skill — so step cells don't need additional taint. Cell-level scoring stays compositionally simple.
+**Inheritance is unconditional with respect to Layer 1's own verdict.** Even when workflow.md's own Layer 1 OC-R7 verdict is non-PASS (FAIL, or an `N/A` variant such as `N/A — vacuous`), its operator-visible concepts remain pre-existing for step-file cells. The concepts being inherited are — by definition — the same operator-visible set that ¶2 admits to Layer 1 scoring in the first place; cell-level inheritance uses that same set unconditionally. §2.4 worst-case aggregation composes the skill verdict from the Layer 1 and per-step cells, so a FAILing Layer 1 FAILs the whole skill regardless of step-cell outcomes — no additional cell-level taint is needed to prevent escape. Cell-level scoring stays compositionally simple.
 
-**Anti-escape-hatch clause.** This rule does not let authors hide novel concepts via preamble dumping. Workflow.md's own operator-visible content must still pass OC-R7 at Layer 1 under the existing §2.6 concept-count rules — no new threshold is introduced. The rule governs *re-introduction* in step-01 (not required), not total concept budget.
+**Anti-escape-hatch clause.** This rule does not let authors hide novel concepts via preamble dumping. Workflow.md's own operator-visible content must still pass OC-R7 at Layer 1 under the existing §2.6 concept-count rules — no new threshold is introduced. The amendment's *only* effect is to exempt re-introduction in step-01; the Layer 1 concept budget itself is untouched.
 
 ### What counts as novel
 
