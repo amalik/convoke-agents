@@ -527,12 +527,16 @@ async function main() {
       );
     }
 
-    // Story 6.3: Unattributed details — terminal path only; markdown path is handled by formatMarkdown().
-    if (!useMarkdown && result.unattributedFiles && result.unattributedFiles.length > 0) {
+    // Story 6.3 / I20: terminal unattributed details are rendered here; markdown details are rendered inside formatMarkdown().
+    // The non-details hint line ("N unattributed files (run with --show-unattributed)") is emitted for both paths so markdown
+    // consumers aren't silently deprived of the flag hint.
+    if (result.unattributedFiles && result.unattributedFiles.length > 0) {
       if (showUnattributed) {
-        console.log(`\n--- Unattributed Files (${result.unattributedFiles.length}) ---`);
-        for (const u of result.unattributedFiles) {
-          console.log(`  ${u.dir}/${u.filename}: ${u.reason}`);
+        if (!useMarkdown) {
+          console.log(`\n--- Unattributed Files (${result.unattributedFiles.length}) ---`);
+          for (const u of result.unattributedFiles) {
+            console.log(`  ${u.dir}/${u.filename}: ${u.reason}`);
+          }
         }
       } else {
         console.log(

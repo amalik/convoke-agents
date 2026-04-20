@@ -4,6 +4,11 @@
  * @module markdown-formatter
  */
 
+/** Escape a value for safe markdown-table cell rendering: `|` → `\|`, CR/LF → space. */
+function escCell(v) {
+  return String(v ?? '').replace(/\r?\n/g, ' ').replace(/\|/g, '\\|');
+}
+
 /**
  * Format InitiativeState array as markdown table.
  *
@@ -13,8 +18,8 @@
  * @param {Array<{dir: string, filename: string, reason: string}>} [options.unattributedFiles]
  * @returns {string}
  */
-function formatMarkdown(initiatives, options = {}) {
-  const { showUnattributed, unattributedFiles } = options;
+function formatMarkdown(initiatives, options) {
+  const { showUnattributed, unattributedFiles } = options || {};
   const lines = [];
 
   if (initiatives.length === 0) {
@@ -35,7 +40,7 @@ function formatMarkdown(initiatives, options = {}) {
           ? `Last: ${s.lastArtifact.file} (${s.lastArtifact.date || '?'})`
           : 'No artifacts';
 
-      lines.push(`| ${s.initiative} | ${phase} | ${status} | ${context} |`);
+      lines.push(`| ${escCell(s.initiative)} | ${escCell(phase)} | ${escCell(status)} | ${escCell(context)} |`);
     }
   }
 
@@ -46,7 +51,7 @@ function formatMarkdown(initiatives, options = {}) {
     lines.push('| Path | Reason |');
     lines.push('|------|--------|');
     for (const u of unattributedFiles) {
-      lines.push(`| ${u.dir}/${u.filename} | ${u.reason} |`);
+      lines.push(`| ${escCell(u.dir)}/${escCell(u.filename)} | ${escCell(u.reason)} |`);
     }
   }
 

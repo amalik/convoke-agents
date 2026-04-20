@@ -300,6 +300,26 @@ describe('formatMarkdown', () => {
     assert.ok(output.includes('No initiatives found'));
     assert.ok(output.includes('## Unattributed Files (2)'));
   });
+
+  it('I20: escapes pipe and newline in unattributed values (table safety)', () => {
+    const risky = [
+      { dir: 'weird', filename: 'a|b.md', reason: 'line1\nline2 | with pipe' },
+    ];
+    const output = formatMarkdown([], { showUnattributed: true, unattributedFiles: risky });
+    // Pipes escaped, not raw
+    assert.ok(output.includes('a\\|b.md'));
+    assert.ok(output.includes('line1 line2 \\| with pipe'));
+    // No raw newline inside a row
+    const rowLine = output.split('\n').find(l => l.startsWith('| weird/'));
+    assert.ok(rowLine, 'unattributed row present');
+    assert.ok(!rowLine.includes('\nline2'), 'row has no embedded newline');
+  });
+
+  it('I20: options=null does not crash (defensive fallback)', () => {
+    const output = formatMarkdown(sampleInit, null);
+    assert.ok(output.includes('| gyre |'));
+    assert.ok(!output.includes('## Unattributed Files'));
+  });
 });
 
 // --- makeEmptyState ---
