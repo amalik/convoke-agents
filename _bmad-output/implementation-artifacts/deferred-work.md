@@ -5,6 +5,13 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of spec-bug-2-adr-idempotent-noop-commit (2026-04-20)
+
+- **Broad `git add _bmad-output/planning-artifacts/` stages unrelated modified files** — `scripts/migrate-artifacts.js:399` stages every modified/untracked file under the scope dir, not just the ADR paths written by this phase. If the operator has unstaged edits to sibling ADRs or notes when re-running the migration, they silently get absorbed into the `"chore: generate governance convention ADR"` commit. Pre-existing; explicitly scoped out of BUG-2 per spec I/O Matrix. Fix path: stage only `adrPath` and (when `supersedePreviousADR` returns true) the supersede target path.
+- **Concurrent `convoke-migrate` invocations create TOCTOU window** — `scripts/migrate-artifacts.js:399-418`. Between `git add`, `git diff --cached`, and `git commit` a second process could empty the index. With the BUG-2 fix, the diff-check says "has staged changes" but the subsequent commit then errors with "nothing to commit", landing in the outer catch as a misleading ADR warning. Real user exposure is low (migrations aren't intended to be run concurrently) and the T4 test isolates each invocation. Fix path: `_bmad-output/planning-artifacts/.migration.lock` flock around all three commit phases, or `git commit -o <pathspec>` to restrict the commit to ADR paths.
+
+---
+
 ## Deferred from: code review of oc-vortex-audit-expansion-a24 (2026-04-19)
 
 Round 1 code review of A24 produced these `defer` items (real findings, out of scope for the current round or already acknowledged in-report):
