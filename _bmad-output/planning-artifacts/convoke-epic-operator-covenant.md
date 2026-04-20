@@ -368,6 +368,15 @@ Trigger evaluation re-runs after each audit refresh (v1 oc-1-1 = 2026-04-18 base
 
 **Supersedes** the original Story 2.1 AC framing ("rights violated by ≥ 50% of audited skills"), which was undersampled single-matrix-based and did not handle concentrated (team-level) bottlenecks. Retained Story 2.1 ACs below still apply to the *scope definition and regression testing* of the retrofit once a trigger fires.
 
+**A24 status under new Selection Discipline:** Under A29 (Skill Selection, shipped 2026-04-20), A24 is retroactively classified as a **mixed audit** — per A29 §4, mixed audits combine a pattern-verification cluster with one or more independent variations:
+
+- **Pattern-verification cluster** (picks 1 and 3): `assumption-mapping` + `hypothesis-engineering` step-01 — structural twins lacking template/validate scaffolding, both invoking HC-contract-at-step-01 in §3 Input Validation. Both FAIL pacing, confirming the pattern replicates. Findings R7-V1 (assumption-mapping retrofit) and R7-V2 (hypothesis-engineering retrofit) represent the SAME shared architectural pattern surfacing in two workflows — not two independent datapoints.
+- **Independent variation** (pick 2): `empathy-map` step-01 — structural variation (has `template.md` + `validate.md` scaffolding, different archetype). PASSES pacing, falsifying any "all Vortex step-01 FAIL pacing" class-wide claim.
+
+Retrofit scope is unchanged: R7-V1 + R7-V2 address the one shared pattern; empathy-map's PASS requires no retrofit. T1 trigger firing math is unaffected — even counting the twins as one pattern (effective N_vortex = 3: lean-persona + HC-contract cluster + empathy-map), pacing compliance remains below 70% (2/3 FAIL under pattern-dedup; 3/4 FAIL under workflow-count), so T1 fires either way.
+
+The new Selection Discipline applies **forward-only**. A24 predates A29's declaration requirement; its intent is reconstructed here from the audit report's §2 rationale (which independently documented the twins-vs-variation selection logic) and §6.2 (which grouped twins' findings as a shared pattern). Independent verification of the broader Vortex-wide class claim is the scope of A26 (future Vortex-wide HC-schema pattern audit).
+
 ### Story 2.1: Retrofit Highest-Violation Skills
 
 As an operator of existing Convoke skills whose rights are currently violated,
