@@ -5,6 +5,17 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of A40 Publication Gate amendment (2026-04-21)
+
+Round 1 code review of A40 (5 spec edits to `convoke-epic-operator-covenant.md`) produced 4 `defer` items — pre-existing or out of A40 scope.
+
+- **"Worst-scoring rights" remains undefined** — Blind Hunter. The retrofit clause says "rights scoring worst in the audit" but does not specify a threshold (top-1? bottom-quartile? below some score?). Pre-existing from 2026-04-18 amendment; re-entrenched but not introduced by A40. Fix path: add explicit threshold to Epic retrofit rule, or reference Selection Discipline criteria from the Compliance Checklist. Candidate for a follow-up Fast Lane item.
+- **Rationale parentheticals embedded in normative text** — Blind Hunter. "(you don't publish a covenant you can't keep) AND evidentiary breadth... (you don't publish a claim you can't back with evidence)" — rhetorical justification mixed inside gate clauses. Pre-existing pattern from original 2026-04-18 amendment; retained for voice consistency. Style issue, not a correctness issue.
+- **Secondary-channel (blog post) approval loophole unchanged** — Blind Hunter. Story 2.3 AC says "an accompanying blog post is optional and requires separate approval (secondary channel)" — the separate-approval authority is unspecified. Pre-existing, out of A40 scope (A40 is specifically about the Publication Gate conditions, not secondary-channel governance).
+- **T1/T2 trigger interaction with ≥2 portfolio audits unspecified** — Edge Case Hunter. A new portfolio audit at N ≥ 3 could fire T1 on a new right in a team that was previously un-audited. Story 2.1 was closed under v1 trigger evaluation. The Epic is silent on whether T1 re-firing on new portfolio data re-opens Story 2.1's retrofit scope automatically (vs. the A40 patch that covers "newly-surfaced bottleneck rights"). Interesting follow-up: tighten the T1/T2 rule to explicitly cascade across portfolio audits added post-v1.
+
+---
+
 ## Deferred from: code review of spec-a33-checklist-workflow-md-scope (2026-04-20)
 
 Round 2 code review of A33 produced these `defer` items — real findings, but pre-existing, bounded out-of-scope by A33's §2.6-amendment focus, or already captured in downstream Epic 2 Story 2.1 retrofit scope.
