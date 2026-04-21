@@ -465,13 +465,37 @@ async function main() {
   const useMarkdown = args.includes('--markdown');
   const useVerbose = args.includes('--verbose');
   const showUnattributed = args.includes('--show-unattributed');
-  const sortMode = args.includes('--sort') && args[args.indexOf('--sort') + 1] === 'last-activity'
-    ? 'last-activity'
-    : 'alpha';
+
+  const VALID_SORT_MODES = ['alpha', 'last-activity'];
+  let sortMode = 'alpha';
+  const sortIdx = args.indexOf('--sort');
+  if (sortIdx !== -1) {
+    const sortValue = args[sortIdx + 1];
+    if (sortValue === undefined) {
+      console.error(`Error: --sort requires a value. Valid values: ${VALID_SORT_MODES.join(', ')}`);
+      process.exit(2);
+    }
+    if (!VALID_SORT_MODES.includes(sortValue)) {
+      console.error(`Error: invalid --sort value '${sortValue}'. Valid values: ${VALID_SORT_MODES.join(', ')}`);
+      process.exit(2);
+    }
+    sortMode = sortValue;
+  }
+
+  let filterPattern = null;
   const filterIdx = args.indexOf('--filter');
-  const filterPattern = (filterIdx !== -1 && args[filterIdx + 1] && !args[filterIdx + 1].startsWith('--'))
-    ? args[filterIdx + 1]
-    : null;
+  if (filterIdx !== -1) {
+    const filterValue = args[filterIdx + 1];
+    if (filterValue === undefined) {
+      console.error('Error: --filter requires a value.');
+      process.exit(2);
+    }
+    if (filterValue.startsWith('--')) {
+      console.error(`Error: --filter requires a value; got '${filterValue}' which looks like a flag. Quote the value if it must start with '--'.`);
+      process.exit(2);
+    }
+    filterPattern = filterValue;
+  }
 
   // Read portfolio config from _bmad/bmm/config.yaml (optional)
   let wipThreshold = 4;
