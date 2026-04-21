@@ -430,7 +430,8 @@ Items requiring the full pipeline: Brief → PRD → Arch → PRD Validation →
 - **v6.3 Adoption** is the only initiative at **In Sprint** with the full artifact set. This is the reference standard.
 - **P9 (Forge)** has complete Vortex discovery (all 7 streams, 9 artifacts) and partial epic breakdown. Missing: formal PRD, Architecture, IR report. Blocked on Gate 1 (shadow engagement).
 - **P12 (Enhance)** has only an ADR. Needs the full pipeline before build.
-- **S3, P21, U9, P3, P13, P7, P8, P2** are all **Qualified** — they have a backlog entry and rationale but no planning artifacts. Next step: Product Brief.
+- **P21 (Convoke Operator Covenant)** — Epic 1 ✓ shipped 2026-04-19 (Covenant + Compliance Checklist + baseline audit + Vortex audit + 5 stories + retro). Epic 2 deferred pending IN-12 Vortex re-audit outcome + external Phase 3 Loom Add Skill workflow. See `convoke-epic-operator-covenant.md` (status: `ready-for-sprint-planning`).
+- **S3, U9, P3, P13, P7, P8, P2** are all **Qualified** — they have a backlog entry and rationale but no planning artifacts. Next step: Product Brief.
 - **P7** portfolio is pending — could be a new portfolio item or absorbed into an existing one. Decision deferred to qualification session.
 
 ### 2.5 Absorbed / Archived
@@ -578,15 +579,43 @@ Full descriptions for items in §2.4 whose table row is a one-liner.
 
 **Scope hint:** Replace two-step flow (`npm install -g` + `convoke-install`) with single `npx convoke-agents init`. Subsumes S1 (interactive questions) and S2 (simplified entry point). Unified `convoke-install` with flags for global-install users.
 
-### P21 — Convoke Experience Contract
+### P21 — Convoke Operator Covenant
 
-**Stage:** Qualified | **Portfolio:** convoke | **RICE:** 4.8
+**Stage:** Epic 1 ✓ (shipped 2026-04-19) | Epic 2 deferred | **Portfolio:** convoke | **RICE:** 9.0
 
-**Planning artifacts:** `backlog-candidate-experience-contract.md` (candidate doc, not PRD).
+**Origin:** Party mode session 2026-04-18 (Sally, John, Loom Master, Winston, Paige, Bob, Dr. Quinn, Victor). Renamed from "Convoke Experience Contract" during that session. Qualified 2026-04-18 by Winston (per §1.2 shortcut rule).
 
-**Missing:** Brief, PRD, Architecture, PRD Validation, IR, Epics.
+**Planning artifacts (Epic 1 complete):**
+- Candidate doc `loom-note-backlog-candidate-experience-contract.md` (pre-rename, archival)
+- Epic spec `convoke-epic-operator-covenant.md` — `status: ready-for-sprint-planning`, two epics defined (Epic 1: Define; Epic 2: Adopt + Publish)
+- Covenant reference doc `convoke-covenant-operator.md` (axiom + 7 Operator Rights + scar stories + JTBD + audience guidance)
+- Compliance Checklist `convoke-spec-covenant-compliance-checklist.md` (OC-R0..OC-R7 + 3-layer audit scope + 6 status values + reproducibility gate via Selection Discipline: Skill / Step / Cell)
+- Baseline audit `convoke-report-operator-covenant-audit-2026-04-18.md` (calibration cases: Migration + Portfolio; methodology locked)
+- Vortex audit `convoke-report-operator-covenant-audit-vortex-2026-04-19.md` (extended methodology)
+- Epic 1 retrospective `oc-epic-1-retro-2026-04-19.md` (7 action items)
+- Stories `oc-1-1`..`oc-1-5` all shipped 2026-04-19
 
-**Scope hint:** Codify operator-facing interaction patterns all Convoke skills must follow (suggest defaults, batch lists, explain WHY, never silently drop data, wait for input, actionable errors, max 3 new concepts per round). Becomes a Loom validation gate (Step 05) for new skills + retrofit candidate for existing skills.
+**Missing (to reach Epic 2 Ready):** Epic 2 Sprint Planning — blocked on IN-12 Vortex re-audit outcome + external Phase 3 Loom Add Skill workflow for Story 2.2.
+
+**Scope hint (two-epic architecture):**
+
+1. **Epic 1 — Define the Covenant (✓ shipped 2026-04-19):** Two-artifact structure (Covenant reference + Compliance Checklist). Self-compliance gated (Covenant document passes its own Checklist before shipping). Audit methodology locked with calibration cases (Migration + Portfolio as known violators). Adoption surface coverage in contributor-facing docs (bme module README, agent-builder skill intro, CLAUDE.md rule `covenant-compliance-for-convoke-skills`).
+
+2. **Epic 2 — Adopt and Publish (deferred):**
+   - Story 2.1: Retrofit bottleneck rights — A5 trigger rule locked (T1 concentrated < 70% cell at N ≥ 3; T2 systemic < 75% overall or any Right < 70%). v1 baseline doesn't fire either trigger — Epic 2 correctly deferred pending IN-12 Vortex re-audit.
+   - Story 2.2: Wire Compliance Checklist into Loom Add Skill workflow (Phase 3 dependency — blocked on external P12/Loom work).
+   - Story 2.3: Publication Gate — publish Covenant as external positioning material. Blocked on Story 2.1 completing bottleneck-rights retrofits (don't publish a covenant you can't keep).
+
+**Strategic positioning (Blue Ocean wedge):** Competitors (CrewAI, LangGraph, AutoGen, Agentic Mesh) compete on capability density. Convoke competes on operator experience as a first-class architectural concern. The Covenant + Checklist are internal quality gates that *become external launch material* once the methodology earns credibility through audit. Impact scored I:2 pre-publication (internal compliance value); re-score trigger `I:2 → I:3` fires when Story 2.3 publishes.
+
+**Dependencies and triggers:**
+- Epic 2 Story 2.2 blocked on external Phase 3 Loom Add Skill workflow (P12/Loom team factory — separate initiative).
+- P24 (relocate Covenant + Checklist out of `_bmad-output/planning-artifacts/`) is a soft prerequisite for Story 2.3 Publication — can't publish pointing at a workflow-output path.
+- IN-12 (Vortex re-audit) pending — if re-audit fires T1/T2 trigger, Epic 2 Story 2.1 retrofit scope expands.
+
+**Axiom:** "The operator is the resolver."
+
+**JTBD:** Operators don't hire Convoke to produce output. They hire Convoke to feel in control of decisions they don't fully understand.
 
 ### U9 — Module-aware refresh and validation
 
