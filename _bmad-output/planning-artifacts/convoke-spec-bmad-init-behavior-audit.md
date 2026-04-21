@@ -2,7 +2,7 @@
 initiative: convoke
 artifact_type: spec
 qualifier: bmad-init-behavior-audit
-status: draft
+status: complete
 created: '2026-04-21'
 schema_version: 1
 ---
@@ -23,7 +23,7 @@ schema_version: 1
 
 **Key reframe from mechanical enumeration:** the "v6.3 migration sweep" surface is **18 upstream BMAD `SKILL.md` files** matching the `"Load config via bmad-init skill"` pattern (not ~25 as the PRD estimated). Convoke's own **12 bme agents** — Vortex × 7 + Gyre × 4 + Team Factory × 1 — **already direct-load** their module `config.yaml` at activation and contain zero references to `bmad-init`. They are v6.3-compliant today. Sweep count is **18 current** (pending Epic 1B removal of Bob/Quinn/Barry, which would bring the net to 15).
 
-**Disposition summary — counted directly from the Disposition Table below:** the 13 enumerated behavior groups (§1–§13) decompose into **56 sub-behaviors** (B1.1–B13). After tagging each sub-behavior in the table, the aggregate is approximately **8 `reproduce-in-loader` / 15 `drop-with-rationale` / 33 `move-to-convoke-install`**. Exact row-level counts are in the Disposition Table — that table is the canonical source; this summary is rounded.
+**Disposition summary — counted directly from the Disposition Table below:** the 14 enumerated behavior groups (§1–§14, including the consolidated error-handling section) decompose into **56 sub-behaviors** (B1.1–B13 + E14.1–E14.6). After tagging each sub-behavior, the canonical aggregate is **9 `reproduce-in-loader` / 20 `drop-with-rationale` / 33 `move-to-convoke-install`** (2 of the 9 reproduce-in-loader behaviors are *modified* from Python semantics — B4.1 silent-None→throw and B8.3 missing-config→throw). Plus one architectural addition (WR8 deprecation fallback, tagged `add-in-loader` and not counted in the 56 since it's new, not ported).
 
 The loader body is projected at **~40 LOC** versus bmad_init's 591 — a ~15× reduction tracking the v6.3 "content, not software" insight. (Story spec's "Reference implementation hints" §Dev Notes estimated ~50 LOC; revised down to ~40 after seeing how little load-path code survives from bmad_init.)
 
@@ -224,12 +224,23 @@ Total: **19 rows** — 18 with the "Load config via bmad-init skill" pattern + 1
 - **B4.3:** `load_module_config(module_code, project_root)` = thin wrapper: `load_config_file({project_root}/_bmad/{module_code}/config.yaml)`.
 - **B4.4:** **Module configs already contain core vars merged in** (verified by [test_load_module_includes_core_vars](../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L314-L320) and spot-check of [`_bmad/bme/config.yaml`](../../_bmad/bme/config.yaml) which contains `user_name`, `communication_language`, `document_output_language`, `output_folder`).
 
-**Disposition:** `reproduce-in-loader`.
+**Disposition:** `reproduce-in-loader` (B4.1 behavior is *modified* — see key deltas below; tagged `reproduce-in-loader` with an explicit "modified to throw" callout in the Disposition Table).
 
 **JS equivalent (Pattern 3 from architecture doc):**
 
 ```js
 const yaml = require('yaml');
+/**
+ * Load and parse a module's flat config.yaml.
+ * @param {string} projectRoot - Absolute path to the Convoke project root.
+ * @param {string} moduleConfigPath - Module subdirectory under `_bmad/` (e.g.,
+ *   `'bme/_vortex'`, `'bme/_enhance'`, `'core'`). Despite the parameter name
+ *   retained from architecture Decision 1, this is a directory path, not a
+ *   path to the config.yaml file itself. Kept as-named to match the arch doc
+ *   API contract; rename deferred to a future arch-doc revision.
+ * @returns {object} Plain JS object with keys from the YAML config.
+ * @throws {Error} If config file is missing, malformed, or not a YAML object.
+ */
 function loadModuleConfig(projectRoot, moduleConfigPath) {
   const configPath = path.join(projectRoot, '_bmad', moduleConfigPath, 'config.yaml');
   if (!fs.existsSync(configPath)) throw new Error(`Config not found: ${configPath}`);
@@ -246,7 +257,7 @@ function loadModuleConfig(projectRoot, moduleConfigPath) {
 ```
 
 **Key deltas from Python behavior:**
-- **B4.1 → throw, not return None** — FM1-3 mitigation. Silent None returns are a bug; the loader must fail loudly with actionable error. Callers that want graceful degradation wrap the call in try/catch at their level.
+- **B4.1 → throw, not return None** — FM1-3 mitigation. Silent None returns are a bug; the loader must fail loudly with actionable error. Callers that want graceful degradation wrap the call in try/catch at their level. *This is a semantic change, not a pure reproduction — the Disposition Table below reflects this as `reproduce-in-loader (modified)`.*
 - **B4.4 → no cascade logic** — since the module config already contains core vars, the loader returns the parsed object directly. No separate core-merge pass.
 
 ---
@@ -275,8 +286,9 @@ function _resolveProjectRootPlaceholder(config, projectRoot) {
 ```
 
 **Notes:**
-- `{project-root}` is the **only** placeholder the load path resolves. All other placeholders (`{value}`, `{directory_name}`, `{var-name}`) are resolved at **write time** by `cmd_write` via `apply_result_template`, not at load time. They never appear in the installed `config.yaml`.
-- Loader leaves nested objects/arrays untouched — spot-check of installed configs shows only flat string values with `{project-root}` in `output_folder` and similar. If future configs add nested structures with placeholders, extend this helper recursively — but YAGNI for 4.0.
+- `{project-root}` is the **primary** placeholder the load path resolves in current installed configs. The write-time placeholders (`{value}`, `{directory_name}`) from `apply_result_template` are resolved at `cmd_write` time and never appear in the installed `config.yaml`.
+- **However, mechanical enumeration (§Mechanical Enumeration Evidence) surfaced `{user}` as an un-resolved placeholder in 3 Convoke-bme configs** (`_bmad/bme/_vortex/config.yaml:40`, `_bmad/bme/_team-factory/config.yaml:10`, `_bmad/bme/_gyre/config.yaml:22`, each stored as `user_name: "{user}"`). This appears to be a Convoke-bme convention for cross-module `user_name` indirection (child module reads `user_name` from `_bmad/core/config.yaml`), and the current Python `cmd_load` does NOT resolve it — callers (LLM agents reading the config) handle it themselves. **Story 1A.2 must decide:** does the new loader resolve `{user}` by reading core config, OR preserve current Python behavior and leave it to callers? Recommend preserving current behavior (leave `{user}` unresolved at load time) for backwards compatibility; document the convention in the loader's JSDoc.
+- Loader iterates top-level keys only. Spot-check of all 13 installed configs shows only flat string values contain `{project-root}`. If future configs add nested structures with placeholders, extend this helper recursively — but out-of-scope for 4.0. An explicit assertion that rejects unexpected nested placeholder strings would be a defensive hardening (optional, Story 1A.2 design choice).
 
 ---
 
@@ -292,9 +304,11 @@ function _resolveProjectRootPlaceholder(config, projectRoot) {
 
 **Disposition:** `drop-with-rationale`.
 
-**Rationale:** The new loader's API (`loadModuleConfig(projectRoot, moduleConfigPath)`) returns the **entire config object** — callers destructure what they need in JS rather than passing `--vars var1:def1,var2:def2` strings. Destructuring with defaults is idiomatic JS (`const { user_name = 'BMad', communication_language = 'English' } = loadModuleConfig(...)`), eliminating the need for this parser entirely.
+**Rationale:** The split here follows architecture Pattern 4 ("library modules return result objects; CLI modules format them"): `loadModuleConfig` is a library function that returns the whole parsed config object. JS consumers of the loader (migration-runner, validator, convoke-doctor, and install-time wiring) destructure what they need — `const { user_name = 'BMad', communication_language = 'English' } = loadModuleConfig(projectRoot, 'bme/_vortex');` — without needing a `--vars var1:def1,var2:def2` parser.
 
-Old CLI callers passing `--vars foo:bar` don't exist in 4.0's architecture — agent SKILL.md files use the v4 activation template (architecture Pattern 6) that reads the whole config object.
+Mechanical verification (§Mechanical Enumeration Evidence) confirms the `--vars` and `--all` flags are documented only in `_bmad/core/bmad-init/SKILL.md` itself — no external skill or script invokes `bmad_init.py load` with `--vars` or `--all`. Dropping the parser is safe; no caller breaks.
+
+(Separately, agent SKILL.md files use v4 activation templates — architecture Pattern 6 — that instruct the *LLM* to read the YAML file directly. That's a parallel pattern, not a direct consumer of `loadModuleConfig`; both patterns return the whole config object, so they're compatible.)
 
 ---
 
@@ -309,7 +323,7 @@ Old CLI callers passing `--vars foo:bar` don't exist in 4.0's architecture — a
 
 **Disposition:** `move-to-convoke-install`.
 
-**Rationale:** `apply_result_template` is called only by `cmd_write` ([bmad_init.py:442, 489](../../_bmad/core/bmad-init/scripts/bmad_init.py#L442)) during config **authoring**, not loading. The `result` template field comes from `module.yaml` variable definitions ([core-module.yaml](../../_bmad/core/bmad-init/resources/core-module.yaml#L10)) — e.g., `output_folder.result: "{project-root}/{value}"`. These transform raw operator answers (`"_bmad-output"`) into the stored config form (`"{project-root}/_bmad-output"`).
+**Rationale:** `apply_result_template` is called only by `cmd_write` ([bmad_init.py:442, 489](../../_bmad/core/bmad-init/scripts/bmad_init.py#L442)) during config **authoring**, not loading. The `result` template field comes from `module.yaml` variable definitions ([core-module.yaml line 25](../../_bmad/core/bmad-init/resources/core-module.yaml#L25)) — e.g., `output_folder.result: "{project-root}/{value}"`. These transform raw operator answers (`"_bmad-output"`) into the stored config form (`"{project-root}/_bmad-output"`).
 
 By the time the loader runs, these transformations are already baked into the stored `config.yaml`. The loader only needs to resolve `{project-root}` at read time (see §5); it does not evaluate `result` templates.
 
@@ -376,7 +390,19 @@ function loadModuleConfig(projectRoot, moduleConfigPath) {
 **Preserved in modified form:**
 - Missing-config detection (B8.3) — now `fs.existsSync` check + `throw Error` with actionable message.
 - `{project-root}` resolution (B8.4) — preserved exactly.
-- Default-module-code (B8.2) — **dropped**. The JS API requires explicit `moduleConfigPath`; callers pass `'core'` explicitly. Prevents silent default-module bugs.
+
+### ⚠️ Design deltas from bmad_init (explicit for Story 1A.2 implementer)
+
+These are behaviors that the drafted loader **intentionally departs from** `bmad_init.py`. They are design decisions embedded in this audit, not pure behavioral reproduction. Story 1A.2's implementer should review and confirm each before writing the loader.
+
+1. **B4.1 silent-None → throw actionable error.** Python returns `None` on YAML parse exception (line 148-154 of bmad_init.py). Loader must throw with file path + line number in the message. Rationale: FM1-3 mitigation; loud failure over silent degradation.
+2. **B8.2 default module='core' → explicit required parameter.** Python `cmd_load` defaults to `module='core'` when `--module` omitted (line 240). Loader requires explicit `moduleConfigPath` with no default. Rationale: prevents silent bugs where caller forgets to specify the module and gets core config instead. *If this conflicts with a real use case the implementer finds, escalate before coding — this was decided unilaterally in this audit.*
+3. **B8.5 `--all` vs `--vars` flag distinction → always return whole object.** Python has two CLI modes (all-keys vs specified-keys); loader returns the full parsed object; callers destructure. Rationale: Pattern 4 (library API vs CLI API) — library function's job is to return data, caller's job is to pick fields.
+4. **Output protocol JSON-to-stdout → JS return value.** Python prints JSON to stdout for CLI consumption; loader returns a JS object. Rationale: imported library, not subprocess.
+5. **Exit-code signaling → thrown errors.** Python exits 1 on missing/malformed config; loader throws. Rationale: Pattern 4 — library modules never call `process.exit()`.
+6. **B1 project-root detection → caller's responsibility.** Python walks filesystem looking for `_bmad/`; loader accepts `projectRoot` as required parameter. Rationale: `no-process-cwd-in-libs` rule + existing `findProjectRoot()` utility in `scripts/update/lib/utils.js`.
+
+All six deltas are defended in the Anti-Drift Compliance Walk. If Story 1A.2 implementation disagrees with any delta, propose a spec amendment before writing code.
 
 ---
 
@@ -456,38 +482,78 @@ For the install path in 4.0: `convoke-install` can perform its own `fs.existsSyn
 
 **Disposition:** `drop-with-rationale`.
 
-**Rationale:** The loader is a **library module**, not a CLI. There is no JS main() entry. Per architecture Pattern 4, library modules never call `process.exit()` — they throw. CLI concerns (exit codes, stderr) belong to `convoke-install`.
+**Rationale:** The loader is a **library module**, not a CLI. There is no JS main() entry. Per architecture Pattern 4, library modules never call `process.exit()` — they throw. CLI concerns (exit codes, stderr) belong to `convoke-install`. Note: the `drop-with-rationale` tag on CLI entry means it's not reproduced *in the loader* — the existing Python CLI remains callable during 4.0 (bootstrap still runs Python per architecture Decision 6 scope); it's dropped from the *loader's* scope, not from the codebase.
+
+---
+
+### §14 — Error-handling patterns (consolidated cross-function view)
+
+Per AC1 category 12, this section consolidates error-handling behavior scattered across earlier sections into a unified cross-function view.
+
+**Behaviors observed:**
+- **E14.1 — Silent `None` on YAML parse exception** ([bmad_init.py:149-154](../../_bmad/core/bmad-init/scripts/bmad_init.py#L149-L154)). `load_config_file` and `load_module_yaml` wrap `yaml.safe_load` in bare `try/except Exception:` returning `None`. No log, no stderr message, no propagation. (Also B3.1, B4.1.)
+- **E14.2 — JSON-to-stderr error + exit 1 for CLI errors.** `cmd_load`, `cmd_check`, `cmd_resolve_defaults`, `cmd_write` each emit `print(json.dumps({'error': ...}), file=sys.stderr); sys.exit(1)` for their failure paths ([bmad_init.py:236-238](../../_bmad/core/bmad-init/scripts/bmad_init.py#L236-L238), [246-249](../../_bmad/core/bmad-init/scripts/bmad_init.py#L246-L249), [259-261](../../_bmad/core/bmad-init/scripts/bmad_init.py#L259-L261), [348-356](../../_bmad/core/bmad-init/scripts/bmad_init.py#L348-L356), [405-412](../../_bmad/core/bmad-init/scripts/bmad_init.py#L405-L412), [417-421](../../_bmad/core/bmad-init/scripts/bmad_init.py#L417-L421)). Structured JSON error shape: `{"error": "..."}` or `{"init_required": true, "missing_module": "..."}`.
+- **E14.3 — `argparse` SystemExit on missing/invalid CLI args.** `main()` prints help + `sys.exit(1)` when `args.command is None` or handler dispatch fails ([bmad_init.py:572-587](../../_bmad/core/bmad-init/scripts/bmad_init.py#L572-L587)).
+- **E14.4 — No exception handler around `yaml.safe_dump`.** `_write_config_file` writes the config with no try/except ([bmad_init.py:523-530](../../_bmad/core/bmad-init/scripts/bmad_init.py#L523-L530)) — a disk-full or permission-denied error would propagate as an unhandled Python exception, visible to CLI but not formatted as JSON.
+- **E14.5 — `find_project_root` returns `None` (not exception) for unresolvable project.** Callers check for `None` and emit their own JSON error. Distributed error handling, not centralized.
+- **E14.6 — Template expansion silently skips `None` values in context** ([bmad_init.py:206-207](../../_bmad/core/bmad-init/scripts/bmad_init.py#L206-L207)). `apply_result_template`/`expand_template` skip keys whose values are `None`. A bootstrapping bug where a core answer is `None` (instead of absent) produces a still-expanded partial string, not an error — surprising for the operator.
+
+**Disposition (all error-handling behaviors):** mixed — see per-row table below.
+
+| Behavior | Disposition | Rationale |
+|----------|-------------|-----------|
+| E14.1 Silent None | `drop-with-rationale` (FM1-3) | Loader throws actionable errors instead. |
+| E14.2 JSON-to-stderr + exit | `drop-with-rationale` | Loader is library; callers format output. |
+| E14.3 argparse SystemExit | `drop-with-rationale` | No CLI in loader. |
+| E14.4 No write exception handler | `move-to-convoke-install` | Write path belongs to installer; installer should add Pattern 4 error handling. |
+| E14.5 None-as-fail-signal from project-root | `drop-with-rationale` | Caller uses `findProjectRoot()` (utils.js); its contract is `throw` on failure, not `null` return. |
+| E14.6 Silent None skip in templates | `move-to-convoke-install` | Templates resolve at write time; installer decides whether partial-template should warn. |
+
+**No error-handling behaviors are `reproduce-in-loader`** — the loader replaces all of them with Pattern 4 `throw` semantics and actionable error messages.
 
 ---
 
 ## Disposition Table (AC2)
 
+Behavior groups B1–B13 decompose into 56 sub-behaviors (B1.1 through B13, inclusive). The table below tags by sub-behavior group (collapsed where all sub-behaviors in a group share a disposition); expanded when a group has mixed dispositions (B4, B8).
+
 | # | Behavior | Lines | Disposition | Target |
 |---|----------|-------|-------------|--------|
-| B1.1–B1.4 | Project-root detection | 46-71 | `drop-with-rationale` | `findProjectRoot()` already exists |
-| B2.1–B2.4 | module.yaml discovery | 112-140 | `move-to-convoke-install` | `convoke-install` |
-| B3.1–B3.4 | module.yaml parsing | 78-109 | `move-to-convoke-install` | `convoke-install` |
-| B4.1 | YAML parse silent-None | 147-154 | `drop-with-rationale` | Replaced by throw (FM1-3) |
-| B4.2 | Dict type guard | 152-154 | `reproduce-in-loader` | Explicit check in loader |
-| B4.3 | Module config path construction | 157-160 | `reproduce-in-loader` | `path.join` in loader |
-| B4.4 | Flat merged-core shape | — | `reproduce-in-loader` (zero cost) | Loader returns whole object |
-| B5.1–B5.3 | `{project-root}` resolution | 163-169 | `reproduce-in-loader` | Helper in loader |
-| B6.1–B6.5 | `--vars` spec parsing | 172-189 | `drop-with-rationale` | JS destructuring |
-| B7.1–B7.4 | Template expansion | 196-225 | `move-to-convoke-install` | Bootstrap concern |
-| B8.1 | find_project_root invocation | 232-239 | `drop-with-rationale` | Caller passes projectRoot |
-| B8.2 | Default module='core' | 240 | `drop-with-rationale` | Explicit required param |
-| B8.3 | Missing-config handling | 243-249 | `reproduce-in-loader` | Throw with actionable msg |
-| B8.4 | {project-root} sweep | 252-253 | `reproduce-in-loader` | Helper in loader |
-| B8.5 | --all flag | 255-256 | `drop-with-rationale` | JS returns whole object |
-| B8.6–B8.7 | --vars dict build | 258-271 | `drop-with-rationale` | JS destructuring |
-| B8.8 | JSON-to-stdout | 272 | `drop-with-rationale` | JS return value |
-| B9.1–B9.4 | cmd_check status probe | 279-338 | `move-to-convoke-install` | Installer does fs checks |
-| B10.1–B10.4 | cmd_resolve_defaults | 345-396 | `move-to-convoke-install` | Bootstrap concern |
-| B11.1–B11.9 | cmd_write | 403-520 | `move-to-convoke-install` | `convoke-install` |
-| B12.1–B12.2 | Write format | 523-530 | `move-to-convoke-install` | `convoke-install` (use round-trip) |
-| B13 | CLI main() | 537-591 | `drop-with-rationale` | Library, not CLI |
+| B1.1–B1.4 (4) | Project-root detection | 46-71 | `drop-with-rationale` | `findProjectRoot()` in `scripts/update/lib/utils.js` already exists |
+| B2.1–B2.4 (4) | module.yaml discovery | 112-140 | `move-to-convoke-install` | `convoke-install` |
+| B3.1–B3.4 (4) | module.yaml parsing | 78-109 | `move-to-convoke-install` | `convoke-install` |
+| B4.1 (1) | YAML parse silent-None | 147-154 | `reproduce-in-loader` (modified) | Loader throws actionable error instead; see §4 and §Design deltas |
+| B4.2 (1) | Dict type guard | 152-154 | `reproduce-in-loader` | Explicit `typeof !== 'object'` check |
+| B4.3 (1) | Module config path construction | 157-160 | `reproduce-in-loader` | `path.join(projectRoot, '_bmad', moduleConfigPath, 'config.yaml')` |
+| B4.4 (1) | Flat merged-core shape | — | `reproduce-in-loader` (zero cost) | Loader returns whole object |
+| B5.1–B5.3 (3) | `{project-root}` resolution | 163-169 | `reproduce-in-loader` | `_resolveProjectRootPlaceholder` helper |
+| B6.1–B6.5 (5) | `--vars` spec parsing | 172-189 | `drop-with-rationale` | JS destructuring (Pattern 4) |
+| B7.1–B7.4 (4) | Template expansion | 196-225 | `move-to-convoke-install` | Bootstrap concern |
+| B8.1 (1) | find_project_root invocation | 232-239 | `drop-with-rationale` | Caller passes `projectRoot` |
+| B8.2 (1) | Default module='core' | 240 | `drop-with-rationale` (design delta — see §8) | Explicit required param prevents silent default-module bugs |
+| B8.3 (1) | Missing-config handling | 243-249 | `reproduce-in-loader` (modified) | Throw with actionable `"Run 'convoke-install' to bootstrap"` message |
+| B8.4 (1) | `{project-root}` sweep | 252-253 | `reproduce-in-loader` | Helper in loader |
+| B8.5 (1) | --all flag | 255-256 | `drop-with-rationale` | JS returns whole object |
+| B8.6–B8.7 (2) | --vars dict build | 258-271 | `drop-with-rationale` | JS destructuring |
+| B8.8 (1) | JSON-to-stdout | 272 | `drop-with-rationale` | JS return value |
+| B9.1–B9.4 (4) | cmd_check status probe | 279-338 | `move-to-convoke-install` | Installer does `fs.existsSync` checks |
+| B10.1–B10.4 (4) | cmd_resolve_defaults | 345-396 | `move-to-convoke-install` | Bootstrap concern |
+| B11.1–B11.9 (9) | cmd_write | 403-520 | `move-to-convoke-install` | `convoke-install` |
+| B12.1–B12.2 (2) | Write format | 523-530 | `move-to-convoke-install` | `convoke-install` (use round-trip to preserve operator comments) |
+| B13 (1) | CLI main() | 537-591 | `drop-with-rationale` | Library, not CLI |
+| E14.1–E14.6 (6) | Error-handling patterns (cross-function) | see §14 | mixed — see §14 disposition sub-table | Per-behavior: drop (E14.1, E14.2, E14.3, E14.5), move-to-install (E14.4, E14.6) |
 
-**Bonus finding: WR8 deprecation fallback (new behavior, not in bmad_init)** — add to loader per architecture Decision 1: `if (!config && oldBmadInitExists) { warn; loadLegacy(); }`. Tagged `reproduce-in-loader` as architectural addition.
+**Sub-behavior tally (canonical):** B1–B13 = **50 sub-behaviors**, plus E14.1–E14.6 = **6 cross-function sub-behaviors** → **56 total**.
+
+**Disposition counts (canonical, row-by-row):**
+
+- `reproduce-in-loader`: B4.1 (modified), B4.2, B4.3, B4.4, B5.1, B5.2, B5.3, B8.3 (modified), B8.4 = **9 sub-behaviors** (2 of which are modified from Python semantics)
+- `drop-with-rationale`: B1.1, B1.2, B1.3, B1.4, B6.1, B6.2, B6.3, B6.4, B6.5, B8.1, B8.2, B8.5, B8.6, B8.7, B8.8, B13, E14.1, E14.2, E14.3, E14.5 = **20 sub-behaviors**
+- `move-to-convoke-install`: B2.1, B2.2, B2.3, B2.4, B3.1, B3.2, B3.3, B3.4, B7.1, B7.2, B7.3, B7.4, B9.1, B9.2, B9.3, B9.4, B10.1, B10.2, B10.3, B10.4, B11.1, B11.2, B11.3, B11.4, B11.5, B11.6, B11.7, B11.8, B11.9, B12.1, B12.2, E14.4, E14.6 = **33 sub-behaviors**
+
+**Rounded summary cited in Executive Summary:** 9 / 20 / 33. Previous drafts cited "4 / 10 / 12" — that was behavior-group rounding. The table above is the canonical source; earlier rounded counts have been reconciled.
+
+**Architectural addition (WR8 deprecation fallback)** — not in bmad_init.py. Per architecture Decision 1: if config missing but `_bmad/core/bmad-init/` exists → emit deprecation warning + shell out to Python loader. This is a *new* loader behavior, not a port of bmad_init's behavior. Tagged separately as **`add-in-loader`** in prose (not in the table above, since it has no B-number — it's an architectural addition).
 
 ---
 
@@ -511,7 +577,9 @@ Per project-context.md anchor rules, each `reproduce-in-loader` recommendation i
 
 **Compliance:** ✅ The `reproduce-in-loader` implementation uses `yaml.parseDocument()`, checks `doc.errors` (throw) and `doc.warnings` (console.warn), then `doc.toJSON()`. This exactly matches the established pattern from [architecture §Pattern 3](convoke-arch-bmad-v6.3-adoption.md#pattern-3-yaml-readwrite-safety) and avoids the `yaml.load()` + `yaml.dump()` round-trip-that-strips-comments anti-pattern (I10/I29).
 
-**All four anchor rules pass.** No reworking required.
+**Explicit subprocess exception for `_loadLegacyConfig`:** the WR8 backwards-compatibility fallback (§Handoff Notes, item 2) uses `child_process.spawnSync('python', ['bmad_init.py', 'load', '--all', ...])` to delegate to the Python loader. The subprocess consumes Python's `yaml.safe_load` output, not JS's `yaml.parseDocument`, so it does not itself apply Pattern 3. This is an acknowledged exception: the legacy path preserves whatever semantics the Python reader always had, for the one-minor-version backwards-compat window (4.0→4.1). Pattern 3 applies to all native JS reads in the loader; Pattern 3 does NOT cross the subprocess boundary. Story 1A.2's implementer should document this in the loader's JSDoc for `_loadLegacyConfig`.
+
+**All four anchor rules pass.** One acknowledged exception for the subprocess fallback.
 
 ---
 
@@ -520,19 +588,27 @@ Per project-context.md anchor rules, each `reproduce-in-loader` recommendation i
 ### What the implementer needs
 
 1. **The full load-path body** is drafted in §4 and §8 of this audit. Copy verbatim as a starting point; adjust to final project conventions.
-2. **Three helpers** compose the implementation:
+2. **Integration wiring** at the CLI entry point:
+   ```js
+   const { findProjectRoot } = require('../lib/utils');
+   const { loadModuleConfig } = require('../lib/config-loader');
+   const root = findProjectRoot();  // throws if no _bmad/ found
+   const vortexConfig = loadModuleConfig(root, 'bme/_vortex');
+   ```
+   The loader never calls `findProjectRoot()` itself (respects `no-process-cwd-in-libs`).
+3. **Three helpers** compose the implementation:
    - `loadModuleConfig(projectRoot, moduleConfigPath)` — public API.
    - `_resolveProjectRootPlaceholder(config, projectRoot)` — internal, §5.
-   - `_loadLegacyConfig(projectRoot, moduleConfigPath)` — internal, backwards-compat (WR8). Body deferred to 1A.2 author; spec is "return whatever the old bmad-init load path would have returned, via a subprocess shell-out to `python bmad_init.py load --all --module {module} --project-root {root}` and JSON-parse stdout."
-3. **Test matrix** for `tests/lib/config-loader.test.js` per architecture Decision 1 testability:
-   - v4 fresh load (present config, correct shape).
-   - v3 fallback with deprecation warning (config missing, bmad-init present).
-   - Nested module paths (`'bme/_vortex'`, `'bme/_enhance'`, `'core'`).
-   - Missing config, no bmad-init → actionable error thrown.
-   - Malformed YAML → actionable error thrown (file + line in message).
-   - Empty file → actionable error thrown ("YAML object expected").
-   - `{project-root}` placeholder resolved across every value.
-   - Non-string values (numbers, bools, nested objects) pass through unchanged.
+   - `_loadLegacyConfig(projectRoot, moduleConfigPath)` — internal, backwards-compat (WR8). Body deferred to 1A.2 author; spec is "return whatever the old bmad-init load path would have returned, via a subprocess shell-out to `python bmad_init.py load --all --module {module} --project-root {root}` and JSON-parse stdout." See §Anti-Drift Compliance Walk for the acknowledged Pattern 3 subprocess exception.
+4. **Test matrix (8 canonical cases)** for `tests/lib/config-loader.test.js` per architecture Decision 1 testability:
+   1. v4 fresh load — present config, returns correct shape.
+   2. v3 fallback with deprecation warning — config missing, bmad-init directory present, legacy path invoked.
+   3. Nested module path handling — single parameterized test covers `'bme/_vortex'`, `'bme/_enhance'`, `'core'` as table-driven cases (one test, three inputs).
+   4. Missing config, no bmad-init → actionable error thrown.
+   5. Malformed YAML → actionable error thrown (file + line in message).
+   6. Empty file → actionable error thrown ("YAML object expected").
+   7. `{project-root}` placeholder resolved across every top-level value.
+   8. Non-string values (numbers, bools, nested objects) pass through unchanged.
 
 ### What the implementer must NOT port
 
@@ -545,9 +621,9 @@ Per project-context.md anchor rules, each `reproduce-in-loader` recommendation i
 
 ### Follow-up work for Story 1A.3+
 
-- **Sweep count revision:** PRD estimated ~25; audit confirms **18 SKILL.md files match the invocation pattern** (16 net after Epic 1B removes Bob/Quinn/Barry). Story 1A.3 should start from the 18-entry table in §Mechanical Enumeration Evidence.
-- **`bmad-product-brief/SKILL.md`** mentions bmad-init but may not use the exact activation pattern — Story 1A.3 must verify.
-- **`convoke-install` JS porting** — the 12 behaviors tagged `move-to-convoke-install` accumulate into a substantial rewrite. This is NOT part of 4.0 scope per architecture Decision 6 (Sprint 0 + Sprint 1 focus on loader + migration only); bootstrap stays in Python `bmad_init.py` until a future initiative explicitly tackles it. The `drop-with-rationale` tag on CLI entry (§13) does NOT imply CLI removal — it implies the CLI is not reproduced **in the loader**. The CLI remains callable from `convoke-install` flows in 4.0, and Python-to-JS porting is deferred.
+- **Sweep count:** PRD estimated ~25; mechanical enumeration confirms **18 SKILL.md files match the invocation pattern** (current count; pending Epic 1B removal of Bob/Quinn/Barry, which would bring the net to 15 — but do NOT pre-subtract in Story 1A.3 inventory, since Epic 1B may slip. Start from the 18-entry table in §Mechanical Enumeration Evidence.)
+- **Separately:** `_bmad/bmm/1-analysis/bmad-product-brief/SKILL.md` mentions `bmad-init` but does NOT match the exact `"Load config via bmad-init skill"` activation pattern. Story 1A.3 must verify whether it needs inclusion in the sweep; track as a candidate outside the canonical 18.
+- **`convoke-install` JS porting** — the 33 sub-behaviors tagged `move-to-convoke-install` (B2, B3, B7, B9, B10, B11, B12, E14.4, E14.6) accumulate into a substantial rewrite. This is NOT part of 4.0 scope per architecture Decision 6 (Sprint 0 + Sprint 1 focus on loader + migration only); bootstrap stays in Python `bmad_init.py` until a future initiative explicitly tackles it. The `drop-with-rationale` tag on CLI entry (§13) does NOT imply CLI removal — it implies the CLI is not reproduced **in the loader**. The CLI remains callable from `convoke-install` flows in 4.0.
 
 ### Deprecation timeline (from architecture)
 
@@ -560,9 +636,11 @@ Per project-context.md anchor rules, each `reproduce-in-loader` recommendation i
 
 This was the most surprising finding of the audit and deserves preservation:
 
-**Grep result:** `grep -c 'bmad-init\|bmad_init' _bmad/bme/*` → **0 matches**.
+**Grep result (recursive, `-rn`):** `grep -rn 'bmad-init\|bmad_init' _bmad/bme/` → **0 matches**.
 
-Convoke's own 14 `_bmad/bme/` agents (Vortex × 7, Gyre × 4, Team Factory × 1, Enhance × 2) already direct-load their module configs at activation. Sample from [`_bmad/bme/_vortex/agents/contextualization-expert.md:13`](../../_bmad/bme/_vortex/agents/contextualization-expert.md#L13):
+**Find result:** `find _bmad/bme -path '*/agents/*.md'` → **12 agent files** (Vortex × 7, Gyre × 4, Team Factory × 1). The `_bmad/bme/_enhance/` module exists but has no `agents/` subdirectory — `_enhance` ships skills + workflows, no standalone agents.
+
+All 12 bme agents already direct-load their module configs at activation. Sample from [`_bmad/bme/_vortex/agents/contextualization-expert.md:13`](../../_bmad/bme/_vortex/agents/contextualization-expert.md#L13):
 
 ```
 - Load and read {project-root}/_bmad/bme/_vortex/config.yaml NOW
@@ -572,4 +650,12 @@ Convoke's own 14 `_bmad/bme/` agents (Vortex × 7, Gyre × 4, Team Factory × 1,
 
 This is **already the v6.3 direct-load pattern** — the LLM reads the YAML file itself, no subprocess. The 4.0 "migration sweep" does not touch these files. It only rewrites the 18 upstream BMAD agent SKILL.md files.
 
-**Implication for PRD honesty:** the "massive migration" framing understates how much of Convoke already complies. The actual change is scoped to upstream-BMAD-agent activation strings. This is an observation for Story 5B retrospective (anti-patterns / innovation hypothesis observations) — **we were already 74% of the way to v6.3 before we started**. Worth a note in the Convoke 4.0 announcement: "Convoke's own agents were already direct-load; this release brings upstream BMAD agents into the same pattern."
+**Compliance ratio (mechanical):**
+- Convoke-owned agents already compliant: **12** (all bme agents direct-load; zero bmad-init references)
+- Upstream-BMAD agents requiring migration: **18**
+- Total in-scope for activation pattern: **30**
+- Convoke already v6.3-compliant: **12 / 30 = 40%**
+
+Earlier drafts of this audit cited "74% compliant," derived from `14 / (14 + 18)` — both the numerator (14 bme agents) and the framing were incorrect. The 40% figure is the one backed by mechanical enumeration. A 40%-already-compliant baseline is still notable and worth observing in Story 5B retrospective as context for the innovation hypothesis about Convoke's v6.3 convention adoption.
+
+**Implication for Convoke 4.0 announcement:** "Convoke's own agents were already direct-load; this release brings upstream BMAD agents into the same pattern." The framing is genuine — the migration is scoped to upstream-BMAD SKILL.md rewrites, not a cross-tree sweep.
