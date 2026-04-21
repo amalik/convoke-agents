@@ -2109,7 +2109,7 @@ function supersedePreviousADR(projectRoot, newADRFilename) {
   }
 
   fs.writeFileSync(oldADRPath, content, 'utf8');
-  return true;
+  return oldADRPath;
 }
 
 function detectMigrationState(projectRoot) {
