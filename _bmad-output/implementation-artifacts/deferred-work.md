@@ -19,6 +19,18 @@ Round 1 code review of Story 1A.1's audit deliverable produced 7 `defer` items �
 
 ---
 
+## Deferred from: code review of I69+I70 portfolio-engine validation bundle (2026-04-21)
+
+Round 1 review (0 HIGH) — convergence at Round 1. 1 MEDIUM patched (prefix-asymmetry regression). 4 LOW items deferred as pre-existing or out of I69+I70 scope:
+
+- **`--sort=value` equals-form not supported** — Edge Case Hunter MEDIUM→LOW (downgraded: pre-existing, not a regression). `args.indexOf('--sort')` matches only the exact token `--sort`, so `--sort=last-activity` silently skips the sort block and falls to default alpha. Pre-patch behavior preserved. Fix path: accept both `--sort value` and `--sort=value` forms. Minor UX improvement.
+- **Duplicate `--sort` / `--filter` flags silently use first occurrence** — Blind + Edge LOW. `indexOf` returns only the first match; `--sort alpha --sort last-activity` silently honors `alpha`. Pre-existing, not introduced by I69+I70. Fix path: detect duplicates and error.
+- **`--filter` error message lacks value-shape hint** — Blind Hunter LOW. `--sort` error lists valid values; `--filter` error says only "requires a value" with no format hint. Minor UX asymmetry.
+- **`process.exit(2)` inside `main()` prevents unit-level validation tests** — Blind Hunter LOW. Validation logic is exercised only via subprocess spawn (CLI integration tests). Structural concern; refactor would extract arg parsing to a pure function with error-return semantics. Interacts with I20 Round 2 defer about fixture-isolated CLI integration tests.
+- **Empty-string value (`--sort ""`) triggers "requires a value" error** — Blind Hunter LOW. `sortValue === undefined` check is clean; pre-M1-patch version used `!sortValue` which conflated empty with missing. Current M1 patch uses `=== undefined` for sort but still uses falsy check variant isn't needed. Minor edge case.
+
+---
+
 ## Deferred from: code review of A35+A36 bundle — Round 1, reverted (2026-04-21)
 
 Round 1 review surfaced 5 HIGH + 6 MEDIUM findings revealing architectural premise issues with A36 ("`validate.md` is a standalone workflow, not a sibling companion" — Edge Case Hunter). Both edits reverted; combined rework tracked as **A44** (Layer 1 + operator-facing text correct semantics). Defers below capture findings adjacent to A44's primary scope:
