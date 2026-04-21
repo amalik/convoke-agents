@@ -393,10 +393,15 @@ async function main() {
       const adrPath = path.join(adrDir, newADRFilename);
       // Write new ADR FIRST, then supersede old (prevents orphaned supersession if write fails)
       fs.writeFileSync(adrPath, adrContent, 'utf8');
-      supersedePreviousADR(projectRoot, newADRFilename);
+      const supersededADRPath = supersedePreviousADR(projectRoot, newADRFilename);
+
+      // Stage only the paths this phase writes — not the entire planning-artifacts/ dir —
+      // so unrelated staged/modified files in the directory don't get absorbed into the ADR commit.
+      const pathsToStage = [adrPath];
+      if (supersededADRPath) pathsToStage.push(supersededADRPath);
 
       const { execFileSync: execGit } = require('child_process');
-      execGit('git', ['add', '_bmad-output/planning-artifacts/'], { cwd: projectRoot, stdio: 'pipe' });
+      execGit('git', ['add', '--', ...pathsToStage], { cwd: projectRoot, stdio: 'pipe' });
       // Idempotency check: on re-run with byte-identical ADR content (same date + same stats),
       // nothing is staged and `git commit` would error with "nothing to commit". Skip cleanly
       // rather than downgrading that error to a misleading warning. Matches the check-then-act
