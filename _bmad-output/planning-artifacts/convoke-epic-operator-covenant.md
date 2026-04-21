@@ -81,7 +81,7 @@ Competitors (CrewAI, LangGraph, AutoGen, Agentic Mesh) compete on **capability d
 
 - FR15 [Retrofit]: Skills identified in FR9 audit with highest violation counts are retrofitted to comply with the specific rights they violated
 - FR16 [Enforcement]: Covenant Compliance Checklist is wired into the Loom Add Skill workflow (Phase 3 dependency) as a validation gate before skill generation completes
-- FR17 [Publication]: The Covenant is published as external positioning material (repository README section, blog post, or equivalent) with audit findings as credibility evidence. **Publication Gate:** Story 2.3 is blocked by Story 2.1 completing retrofits of at least the rights scoring worst in the audit — publication requires internal compliance on the bottleneck rights. [Amended 2026-04-18, pre-mortem failure mode 5]
+- FR17 [Publication]: The Covenant is published as external positioning material (repository README section, blog post, or equivalent) with audit findings as credibility evidence. **Publication Gate:** Story 2.3 is blocked by BOTH (a) Story 2.1 completing retrofits of at least the rights scoring worst in the audit AND (b) at least two audits covering distinct portfolios. Publication requires internal compliance on bottleneck rights (you don't publish a covenant you can't keep) AND evidentiary breadth across portfolios (you don't publish a claim you can't back with evidence). **Operational definitions deferred:** what counts as a "portfolio audit", the reproducibility threshold, methodology-lock semantics, "no regressions" baseline, and cascade termination rules are scoped to follow-up work (A41). [Amended 2026-04-18, pre-mortem failure mode 5; coverage-breadth clause added 2026-04-21 via A40; operational definitions deferred to A41]
 
 ### NonFunctional Requirements
 
@@ -201,7 +201,7 @@ All 17 FRs mapped. No orphans.
 **Internal dependencies:**
 - Story 2.1 independent of others
 - Story 2.2 blocked by Phase 3 Add Skill workflow
-- **Publication Gate:** Story 2.3 blocked by Story 2.1 completing retrofit of at least the rights scoring worst in the audit. External publication requires internal compliance on bottleneck rights — you don't publish a covenant you can't keep.
+- **Publication Gate:** Story 2.3 blocked by BOTH (a) Story 2.1 completing retrofit of at least the rights scoring worst in the audit AND (b) at least two audits covering distinct portfolios. External publication requires internal compliance on bottleneck rights AND evidentiary breadth across portfolios. See FR17; operational definitions deferred to A41.
 
 **Standalone property:** Pure adoption work. Requires Epic 1 complete. Stories independently deliverable within Epic 2, subject to the Publication Gate.
 
@@ -403,7 +403,7 @@ So that the Covenant's claims have real backing before external publication, and
 
 **Given** the retrofits are complete for bottleneck rights with no regressions
 **When** the Publication Gate (FR17) is evaluated
-**Then** it unblocks Story 2.3 — other non-bottleneck retrofits may continue but are not blockers for publication
+**Then** it unblocks Story 2.3 ONLY IF at least two audits covering distinct portfolios exist (operational definitions: A41); otherwise publication remains blocked on coverage-breadth evidence. Other non-bottleneck retrofits may continue but are not blockers for publication.
 
 ### Story 2.2: Wire Checklist into Loom Add Skill Workflow
 
@@ -439,7 +439,7 @@ So that Convoke's commitment to operator experience as a first-class architectur
 
 **Acceptance Criteria:**
 
-**Given** the Publication Gate is cleared (Story 2.1 complete for bottleneck rights with no regressions)
+**Given** the Publication Gate is cleared (Story 2.1 complete for bottleneck rights with no regressions AND ≥2 audits covering distinct portfolios exist)
 **When** external publication proceeds
 **Then** the Covenant appears in the repository README as a dedicated section (primary channel); an accompanying blog post is optional and requires separate approval (secondary channel)
 
@@ -451,6 +451,6 @@ So that Convoke's commitment to operator experience as a first-class architectur
 **When** readers see it
 **Then** every violating skill is named explicitly, every violated right is named by rule ID, and each row shows a remediation status (complete / in-progress / deferred) — no violations hidden or aggregated away
 
-**Given** the Publication Gate is NOT cleared (bottleneck rights still violated or regressions present)
+**Given** the Publication Gate is NOT cleared (bottleneck rights still violated OR regressions present OR fewer than 2 distinct-portfolio audits exist)
 **When** external publication is attempted
 **Then** it does NOT proceed; internal use and internal references remain permitted, but external publication is blocked
