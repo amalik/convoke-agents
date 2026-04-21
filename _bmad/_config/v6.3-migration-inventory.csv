@@ -1,0 +1,20 @@
+file,module_config_path,module,agent_name,pattern_matched,candidate_status
+_bmad/bmm/1-analysis/bmad-agent-analyst/SKILL.md,bmm,bmm,bmad-agent-analyst,1. **Load config via bmad-init skill**,canonical
+_bmad/bmm/1-analysis/bmad-agent-tech-writer/SKILL.md,bmm,bmm,bmad-agent-tech-writer,1. **Load config via bmad-init skill**,canonical
+_bmad/bmm/1-analysis/bmad-product-brief/SKILL.md,bmm,bmm,bmad-product-brief,(candidate — non-canonical mention),candidate
+_bmad/bmm/2-plan-workflows/bmad-agent-pm/SKILL.md,bmm,bmm,bmad-agent-pm,1. **Load config via bmad-init skill**,canonical
+_bmad/bmm/2-plan-workflows/bmad-agent-ux-designer/SKILL.md,bmm,bmm,bmad-agent-ux-designer,1. **Load config via bmad-init skill**,canonical
+_bmad/bmm/3-solutioning/bmad-agent-architect/SKILL.md,bmm,bmm,bmad-agent-architect,1. **Load config via bmad-init skill**,canonical
+_bmad/bmm/4-implementation/bmad-agent-dev/SKILL.md,bmm,bmm,bmad-agent-dev,1. **Load config via bmad-init skill**,canonical
+_bmad/bmm/4-implementation/bmad-agent-qa/SKILL.md,bmm,bmm,bmad-agent-qa,1. **Load config via bmad-init skill**,canonical
+_bmad/bmm/4-implementation/bmad-agent-quick-flow-solo-dev/SKILL.md,bmm,bmm,bmad-agent-quick-flow-solo-dev,1. **Load config via bmad-init skill**,canonical
+_bmad/bmm/4-implementation/bmad-agent-sm/SKILL.md,bmm,bmm,bmad-agent-sm,1. **Load config via bmad-init skill**,canonical
+_bmad/cis/skills/bmad-cis-agent-brainstorming-coach/SKILL.md,cis,cis,bmad-cis-agent-brainstorming-coach,1. **Load config via bmad-init skill**,canonical
+_bmad/cis/skills/bmad-cis-agent-creative-problem-solver/SKILL.md,cis,cis,bmad-cis-agent-creative-problem-solver,1. **Load config via bmad-init skill**,canonical
+_bmad/cis/skills/bmad-cis-agent-design-thinking-coach/SKILL.md,cis,cis,bmad-cis-agent-design-thinking-coach,1. **Load config via bmad-init skill**,canonical
+_bmad/cis/skills/bmad-cis-agent-innovation-strategist/SKILL.md,cis,cis,bmad-cis-agent-innovation-strategist,1. **Load config via bmad-init skill**,canonical
+_bmad/cis/skills/bmad-cis-agent-presentation-master/SKILL.md,cis,cis,bmad-cis-agent-presentation-master,1. **Load config via bmad-init skill**,canonical
+_bmad/cis/skills/bmad-cis-agent-storyteller/SKILL.md,cis,cis,bmad-cis-agent-storyteller,1. **Load config via bmad-init skill**,canonical
+_bmad/tea/agents/bmad-tea/SKILL.md,tea,tea,bmad-tea,1. **Load config via bmad-init skill**,canonical
+_bmad/wds/agents/wds-agent-freya-ux/SKILL.md,wds,wds,wds-agent-freya-ux,1. **Load config via bmad-init skill**,canonical
+_bmad/wds/agents/wds-agent-saga-analyst/SKILL.md,wds,wds,wds-agent-saga-analyst,1. **Load config via bmad-init skill**,canonical
