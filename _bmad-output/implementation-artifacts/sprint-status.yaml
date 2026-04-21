@@ -560,7 +560,7 @@ development_status:
   # Dependency chain: 1A.1 → 1A.2 → 1A.3 → 1A.4 → 1A.5 (robustness) ∥ 1A.6 (guide)
   # FRs: FR1–FR11. Primary beneficiary: User (Priya). Not deferrable.
   v63-epic-1a: in-progress
-  v63-1a-1-audit-bmad-init-behavior-before-replacement: ready-for-dev
+  v63-1a-1-audit-bmad-init-behavior-before-replacement: in-progress
   v63-1a-2-create-config-loader-js-with-direct-yaml-loading: backlog
   v63-1a-3-create-v6-3-migration-inventory: backlog
   v63-1a-4-create-migration-script-3-x-to-4-0-js: backlog
