@@ -1,6 +1,6 @@
 # Story 1A.2: Create config-loader.js with direct-YAML loading
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -155,7 +155,7 @@ module.exports = { loadModuleConfig };
   - [x] Bonus: 3 additional v3-fallback failure-mode tests (non-zero exit, non-JSON stdout, non-object JSON) → total 13 tests, 8 canonical + 5 robustness-extras.
 
 - [x] **Task 6: Run validation suite and confirm no regressions**
-  - [x] 6.1 `npm test` — 1201 tests, 1201 pass, 0 fail, 0 skipped. 13 new tests included via glob discovery.
+  - [x] 6.1 `npm test` — full suite passes, 0 fail, 0 skipped; new `tests/lib/config-loader.test.js` included via glob discovery.
   - [x] 6.2 Coverage wire-up verified by test-runner including `tests/lib/` glob — file is discovered (not phantom-excluded).
   - [x] 6.3 `npx -p convoke-agents convoke-doctor` — same 2 pre-existing findings as Story 1A.1 (Team Factory `add-team` missing + cross-module version drift). Zero new findings from this story.
   - [x] 6.4 Manual smoke in a real node invocation: `loadModuleConfig(process.cwd(), 'bme/_vortex')` returns the actual Vortex config with 10+ keys and `output_folder` resolved to `/Users/amalikamriou/BMAD-Enhanced/_bmad-output/vortex-artifacts`.
@@ -288,10 +288,11 @@ claude-opus-4-7 (executing `/bmad-dev-story` workflow)
 
 ### Debug Log References
 
-- **Round 1 test run:** 12/13 passed; one test failed due to an over-strict regex anchor (`$/m` end-of-line) that didn't match the actual error message (path is mid-sentence, not at EOL). Fix was 1-char: removed `$/m` from the pattern. Second run: 13/13.
-- **Final suite:** 1201/1201 passing across all suites (tests/unit, tests/team-factory, tests/lib). `npm test` runtime ~35s.
-- **Manual smoke:** real Vortex config load returns 10 keys (`submodule_name`, `description`, `module`, `output_folder`, `agents`, `excluded_agents`, `workflows`, `version`, `user_name`, `communication_language`) with `output_folder` correctly resolved to absolute path.
-- **convoke-doctor:** 24 checks pass, 2 pre-existing findings (Team Factory `add-team` missing + cross-module version drift) — both already tracked in [deferred-work.md](deferred-work.md) from Story 1A.1. Zero new findings.
+- **Round 1 (initial impl) test run:** 12/13 passed on first try; one test failed due to an over-strict regex anchor (`$/m` end-of-line) that didn't match the actual error message (path is mid-sentence, not at EOL). Fix was 1-char: removed `$/m` from the pattern. Second run: 13/13.
+- **Round 1 review hardening:** 20 patches applied (HIGH path traversal, MED input validation, MED subprocess failure-mode discrimination, MED EACCES/EISDIR, plus 8 LOW/NIT code patches and 9 new test cases). One test failure during patch application revealed that `path.join` silently strips leading `/` from absolute-path args on Unix — fixed by adding explicit `path.isAbsolute` pre-check (platform-defensive, handles Windows drive-letter edge cases too).
+- **Final suite:** full `npm test` passes (test count grew by the net number of new tests in this story); all pre-existing and new tests green. Runtime ~36s.
+- **Manual smoke:** real Vortex config load returns 10 keys with `output_folder` correctly resolved to absolute path. Works identically before and after Round 1 patches.
+- **convoke-doctor:** unchanged from pre-story baseline — same 2 pre-existing findings (Team Factory `add-team` missing + cross-module version drift), both tracked in [deferred-work.md](deferred-work.md) from Story 1A.1. Zero new findings introduced by this story.
 
 ### Completion Notes List
 
@@ -321,9 +322,9 @@ claude-opus-4-7 (executing `/bmad-dev-story` workflow)
 
 ### File List
 
-_New files:_
-- [`scripts/update/lib/config-loader.js`](../../scripts/update/lib/config-loader.js) — 140 LOC (including JSDoc). Public: `loadModuleConfig`. Internal: `_resolveProjectRootPlaceholder`, `_loadLegacyConfig`.
-- [`tests/lib/config-loader.test.js`](../../tests/lib/config-loader.test.js) — 230 LOC. 13 tests across 2 suites (v4 load + v3 fallback). Uses `mockExecFileSync` from `tests/mock-cp.js`.
+_New files (post-Round-1 review hardening):_
+- [`scripts/update/lib/config-loader.js`](../../scripts/update/lib/config-loader.js) — 285 LOC (including JSDoc). Public: `loadModuleConfig`. Internal: `_resolveProjectRootPlaceholder`, `_loadLegacyConfig`, `_handleMissingConfig`, `_describeType`. Hardened in Round 1 with: two-layer path-traversal guard, input-type validation (`TypeError`), TOCTOU-free read (catch ENOENT from readFileSync), EACCES/EISDIR actionable errors, multi-error YAML joining, subprocess failure-mode discrimination (ENOENT/SIGTERM/script-missing/generic), explicit `maxBuffer`/`stdio`, `[config-loader]` warn prefix, trailing-slash normalization.
+- [`tests/lib/config-loader.test.js`](../../tests/lib/config-loader.test.js) — 488 LOC. 33 tests across 6 suites (v4 load, v3 fallback, input validation, path traversal guard, additional YAML/behavior coverage, public API surface freeze). Uses `mockExecFileSync` from `tests/mock-cp.js`.
 
 _Modified files:_
 - [`_bmad-output/implementation-artifacts/sprint-status.yaml`](sprint-status.yaml) — status transitions for this story only: `ready-for-dev → in-progress → review`.
@@ -336,38 +337,40 @@ _Deleted files:_
 | Date | Change | Reference |
 |------|--------|-----------|
 | 2026-04-21 | Story created per `/bmad-create-story v63-1a-2-...` invocation; AC5 carry-forward from Story 1A.1 satisfied via citation of `convoke-spec-bmad-init-behavior-audit.md` in Dev Notes. | [sprint-status.yaml](sprint-status.yaml) |
-| 2026-04-21 | Implementation: 7 tasks complete; `config-loader.js` (140 LOC) + `config-loader.test.js` (13 tests) shipped; full regression `npm test` passes 1201/1201; convoke-doctor clean (2 pre-existing unrelated findings); API frozen per AC9; status → `review`. One spec-vs-implementation note for reviewer: AC5's `spawnSync` → `execFileSync` for test-ecosystem alignment (functionally equivalent). | This file |
+| 2026-04-21 | Implementation: 7 tasks complete; initial `config-loader.js` (~140 LOC) + `config-loader.test.js` (13 tests) shipped; full regression passes; convoke-doctor clean (2 pre-existing unrelated findings); API frozen per AC9; status → `review`. One spec-vs-implementation note surfaced for reviewer: AC5's `spawnSync` → `execFileSync` for test-ecosystem alignment (functionally equivalent). | This file |
+| 2026-04-21 | Round 1 code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor): Auditor verified all 9 ACs satisfied; Blind + Edge surfaced 1 HIGH (path traversal) + defensive-hardening gaps. Triage: 1 decision + 20 patches + 9 defers + 4 dismissed. Decision resolved Option 1 (amend AC5 spec wording to `execFileSync`). Patches applied: loader grew to 285 LOC with two-layer traversal guard, input validation, subprocess failure-mode discrimination (ENOENT/SIGTERM/script-missing/generic), EACCES/EISDIR messages, TOCTOU fix, multi-error YAML joining, `[config-loader]` warn prefix, explicit maxBuffer/stdio, trailing-slash normalization. Tests grew to 488 LOC / 33 tests across 6 suites (added input validation, path traversal, additional YAML coverage, public API surface freeze). Full suite still passes; convoke-doctor unchanged. Defers persisted to [deferred-work.md](deferred-work.md). Status → `done`. | Review Findings section above |
+| 2026-04-21 | Round 2 code review triggered by Round 1's HIGH (convergence rule). Auditor verified all 21 Round 1 resolutions hold; Blind + Edge caught 1 new HIGH bug introduced by Round 1's trailing-slash-normalization patch: `projectRoot = '/'` silently loaded cwd-based config. Triage: 6 patches + 5 defers + 2 dismissed. Patches applied: post-normalization `normalizedRoot` guard + `path.isAbsolute(normalizedRoot)` enforcement (closes the '/' bug), SIGKILL/SIGPIPE/other-signal discrimination branch, JSDoc constant reference for 30s timeout, multi-line YAML error indentation fix, readFileSync error double-space fix, Task 6.1 hardcoded test count removal. +3 new tests (`projectRoot='/'`, relative-path rejection, SIGKILL signal discrimination) — 36 tests total, still 488-ish LOC. Full suite 1224/1224 pass. Per convergence rule, Round 3 NOT allowed (Round 2 patches are guard additions + message format tweaks, no structural changes). Review converged at Round 2. | Review Findings section above |
 
 ### Review Findings (Round 1, 2026-04-21)
 
 Three-layer adversarial review (Blind Hunter + Edge Case Hunter + Acceptance Auditor) against the implementation. Acceptance Auditor verified **all 9 ACs satisfied cleanly** (line-by-line trace to implementation). Blind Hunter + Edge Case Hunter surfaced defensive-hardening gaps and test-coverage holes; 1 HIGH security finding (path traversal).
 
-**Decision-needed (1):**
+**Decision-needed (1) — RESOLVED:**
 
-- [ ] [Review][Decision] **AC5 spawnSync → execFileSync drift** — Story AC5 text specifies `child_process.spawnSync`; implementation uses `execFileSync`. Story Completion Notes surface this explicitly. Options: (a) amend AC5 wording to `execFileSync` (implementation unchanged; spec tracks reality); (b) rework impl to `spawnSync` (adds parallel `mockSpawnSync` helper or inline mock); (c) update the spec's §API adjustment section to formally document `execFileSync` as the chosen binding and leave AC5 language abstract. [blind+auditor, MED — blocks audit trail cleanliness, not code correctness]
+- [x] [Review][Decision] **AC5 spawnSync → execFileSync drift** → resolved Option 1: amended AC5 wording to specify `execFileSync` with rationale inline. Implementation unchanged; spec now tracks reality. [blind+auditor, MED]
 
-**Patch (20):**
+**Patch (20) — ALL RESOLVED:**
 
-- [ ] [Review][Patch] **[HIGH] Path traversal via `moduleConfigPath`** — `path.join(projectRoot, '_bmad', moduleConfigPath, 'config.yaml')` with `moduleConfigPath = '../../etc/passwd'` escapes the `_bmad/` scope. Absolute paths and `..` segments both pass through unchecked. Fix: after computing `configPath`, assert `path.resolve(configPath).startsWith(path.resolve(projectRoot, '_bmad') + path.sep)` and throw on mismatch. [blind+edge, config-loader.js:46]
-- [ ] [Review][Patch] **[MED] Input-type validation on public API** — `loadModuleConfig(null, undefined)` throws an opaque internal `TypeError` from `path.join`; empty-string `projectRoot` silently resolves against `cwd`; empty `moduleConfigPath` resolves to `_bmad/config.yaml`. Fix: guard `typeof projectRoot !== 'string' || !projectRoot` and same for `moduleConfigPath` at function entry; throw actionable `Error` with param name. [blind+edge, config-loader.js:45]
-- [ ] [Review][Patch] **[MED] Subprocess failure-mode discrimination** — `_loadLegacyConfig` catch block conflates four distinct failures: (a) `python3` missing (`err.code === 'ENOENT'`), (b) script missing at path (script exit 2 with stderr "No such file"), (c) 30s timeout (`err.signal === 'SIGTERM'`), (d) non-zero exit from real Python error. Each needs different remediation. Fix: branch on `err.code === 'ENOENT'` → "python3 not found on PATH; install Python 3"; `err.signal === 'SIGTERM'` → "subprocess exceeded 30s timeout"; pre-check `bmadInitPath` exists → "bmad-init dir present but script missing at {path}"; current generic path for anything else. [blind+edge, config-loader.js:146-156]
-- [ ] [Review][Patch] **[MED] EACCES unwrapped from `fs.readFileSync`** — permission errors leak raw Node error with no "check file permissions" hint. Fix: wrap `readFileSync` in try/catch, rethrow with actionable message including `err.code`. (Bundles with TOCTOU fix below.) [blind, config-loader.js:63]
-- [ ] [Review][Patch] **[LOW] TOCTOU between `existsSync` and `readFileSync`** — file deletion between check and read throws raw ENOENT. Drop the `existsSync` check, catch `err.code === 'ENOENT'` from `readFileSync`, branch into fallback-or-throw logic. Saves a stat() too. [blind, config-loader.js:48+63]
-- [ ] [Review][Patch] **[LOW] Multiple `doc.errors` surface only the first** — operator fixes error 1, reruns, hits error 2, repeat. Fix: join `doc.errors.map(e => e.message)` with newline or iterate explicitly. [blind, config-loader.js:68-70]
-- [ ] [Review][Patch] **[LOW] Unbounded subprocess stdout buffer** — `execFileSync` defaults to `maxBuffer: 1MB`. Set explicitly (e.g., 10MB) or handle `ERR_CHILD_PROCESS_STDIO_MAXBUFFER` distinctly. [blind, config-loader.js:133]
-- [ ] [Review][Patch] **[LOW] `execFileSync` missing explicit `stdio`** — inherits parent's stdin; a TTY parent + Python reading stdin hangs until timeout. Fix: `stdio: ['ignore', 'pipe', 'pipe']`. [blind, config-loader.js:133]
-- [ ] [Review][Patch] **[LOW] `console.warn` emissions lack `[config-loader]` prefix** — consumers of stderr can't distinguish loader warnings from arbitrary other output. Fix: prefix all `console.warn` calls with `[config-loader]`. [blind, config-loader.js:52+71]
-- [ ] [Review][Patch] **[LOW] Trailing slash on `projectRoot` produces double slashes in resolved paths** — `replaceAll('{project-root}', '/foo/')` yields `/foo//sub`. Fix: `const normalizedRoot = projectRoot.replace(/[\\/]+$/, '')` before `replaceAll`. [edge, config-loader.js:108]
-- [ ] [Review][Patch] **[LOW] JSDoc `@throws` enumeration incomplete** — missing: input-type errors (once added), subprocess failures (listed in helper JSDoc but not public-API JSDoc), permission errors. Fix: expand `@throws` block to enumerate all throw conditions reachable from `loadModuleConfig`. [blind, config-loader.js:33-44]
-- [ ] [Review][Patch] **[MED] Story File List claims 140 LOC loader / 230 LOC test; actual 180 / 273** — stale LOC citations (author wrote counts during early drafting, didn't update after expansions during review). Fix: update story Completion Notes + File List rows. [edge+auditor, story file]
-- [ ] [Review][Patch] **[LOW] Story hardcodes "1201 tests" and "24 pass + 2 pre-existing"** — per project-context.md `derive-counts-from-source` rule, these numbers rot at the next test addition. Fix: drop numeric specifics, say "full suite passes, convoke-doctor clean (pre-existing findings unchanged)." [blind, story file]
-- [ ] [Review][Patch] **[test] API-freeze enforcement test** — top-of-file comment is not machine-checked. Fix: add test asserting `Object.keys(require('.../config-loader')).sort()` equals `['loadModuleConfig']` and `loadModuleConfig.length === 2`. Detects silent third-param additions or extra exports. [edge, tests/lib/config-loader.test.js]
-- [ ] [Review][Patch] **[test] `{user}` placeholder regression test** — audit §5 says loader MUST NOT resolve `{user}`; no test asserts the literal pass-through. Fix: add test with config containing `author: "{user}"` and assert `result.author === '{user}'`. [edge, tests/lib/config-loader.test.js]
-- [ ] [Review][Patch] **[test] UTF-8 BOM fixture** — yaml lib handles BOM, but no test verifies. Fix: add fixture with `\uFEFF` prefix asserting successful parse. [blind+edge, tests/lib/config-loader.test.js]
-- [ ] [Review][Patch] **[test] Multi-document YAML fixture** — `foo: bar\n---\nbaz: qux\n` produces `doc.errors`; verify thrown. [edge, tests/lib/config-loader.test.js]
-- [ ] [Review][Patch] **[test] Comments-only file fixture** — `# only a comment\n` parses to `null`, caught by shape guard; add test to lock the behavior. [edge, tests/lib/config-loader.test.js]
-- [ ] [Review][Patch] **[test] python3-missing (ENOENT) mock test** — current v3-fallback tests set `err.status = 1` but not `err.code = 'ENOENT'`. Add test case where `execFileSync` throws with `err.code === 'ENOENT'` and assert the error message distinguishes "python3 not on PATH." (Bundles with the subprocess-discrimination patch above.) [edge, tests/lib/config-loader.test.js]
-- [ ] [Review][Patch] **[test] Top-level array of placeholder strings** — `paths: ['{project-root}/a', '{project-root}/b']` silently unresolved (consistent with "top-level string only" but not explicitly tested). Add assertion documenting this. [blind, tests/lib/config-loader.test.js]
+- [x] [Review][Patch] **[HIGH] Path traversal via `moduleConfigPath`** — two-layer guard added: (1) `path.isAbsolute` reject for absolute paths (platform-defensive: Windows `C:\` drive letters + Unix `/etc`); (2) `resolvedConfigPath.startsWith(bmadRoot + path.sep)` check after normalization (catches `..` escape). 3 test cases added under `— path traversal guard` suite. [config-loader.js:76-92]
+- [x] [Review][Patch] **[MED] Input-type validation** — `TypeError` thrown with param name when `projectRoot`/`moduleConfigPath` is null/undefined/empty/non-string. 6 test cases added under `— input validation` suite. [config-loader.js:66-73]
+- [x] [Review][Patch] **[MED] Subprocess failure-mode discrimination** — 4 distinct branches now: (a) ENOENT → "python3 not found on PATH"; (b) SIGTERM → "exceeded 30s timeout"; (c) pre-check bmad_init.py exists → "script missing"; (d) generic non-zero. 3 test cases added (ENOENT, SIGTERM, script-missing). [config-loader.js:203-221 + 192-197]
+- [x] [Review][Patch] **[MED] EACCES actionable error** — `readFileSync` wrapped; EACCES → "permission denied (EACCES). Check file permissions."; EISDIR → "path is a directory, not a file." [config-loader.js:107-121]
+- [x] [Review][Patch] **[LOW] TOCTOU fix** — dropped `fs.existsSync` pre-check; catch `err.code === 'ENOENT'` from `readFileSync` to branch into fallback logic. One fewer stat() on happy path. [config-loader.js:101-121]
+- [x] [Review][Patch] **[LOW] Multiple `doc.errors`** — now joins all parse errors: `doc.errors.map(e => e.message).join('\n  - ')` with count label ("parse errors (N)" vs "parse error"). [config-loader.js:126-132]
+- [x] [Review][Patch] **[LOW] Explicit subprocess `maxBuffer`** — set to 10 MB via `SUBPROCESS_MAX_BUFFER` constant. [config-loader.js:32 + 207]
+- [x] [Review][Patch] **[LOW] Explicit `stdio`** — `['ignore', 'pipe', 'pipe']` prevents stdin inheritance + TTY hangs. [config-loader.js:210]
+- [x] [Review][Patch] **[LOW] `[config-loader]` prefix on console.warn** — both deprecation warning and YAML-warning path now prefixed via `WARN_PREFIX` constant. [config-loader.js:30 + 134 + 157-159]
+- [x] [Review][Patch] **[LOW] Trailing-slash normalization on projectRoot** — `projectRoot.replace(/[\\/]+$/, '')` before any path work. Test case verifies no double-slash in resolved placeholder. [config-loader.js:75]
+- [x] [Review][Patch] **[LOW] JSDoc `@throws` completeness** — expanded `@throws` block enumerates TypeError (input validation), Error (traversal / missing / malformed / non-object / IO / fallback). [config-loader.js:48-62]
+- [x] [Review][Patch] **[MED] Story LOC claims drift** — updated to post-patch values: loader 285 LOC, test file 488 LOC. See File List below. [story file]
+- [x] [Review][Patch] **[LOW] Story hardcoded test counts** — removed "1201/1201" and "24 pass + 2 pre-existing" numeric specifics; now says "full suite passes, convoke-doctor clean (pre-existing findings unchanged)." [story file]
+- [x] [Review][Patch] **[test] API-freeze enforcement** — new suite `— public API surface (freeze test for FM6-1 / AC9)`: asserts `Object.keys(mod).sort() === ['loadModuleConfig']` and `loadModuleConfig.length === 2`. Detects silent third-param additions or extra exports. [tests/lib/config-loader.test.js]
+- [x] [Review][Patch] **[test] `{user}` placeholder regression** — new test asserts config containing `author: "{user}"`, `user_name: "{user}"`, plus a `{project-root}` key; verifies `{user}` literals pass through AND `{project-root}` still resolves (sanity check). [tests/lib/config-loader.test.js]
+- [x] [Review][Patch] **[test] UTF-8 BOM fixture** — new test with `\uFEFFuser_name: Amalik\nenabled: true\n`; asserts clean parse. [tests/lib/config-loader.test.js]
+- [x] [Review][Patch] **[test] Multi-document YAML** — new test with `foo: bar\n---\nbaz: qux\n`; asserts throws with file path. [tests/lib/config-loader.test.js]
+- [x] [Review][Patch] **[test] Comments-only file** — new test with pure-comment content; asserts "YAML object" throw (locks in the null-parsed-to-actionable-error path). [tests/lib/config-loader.test.js]
+- [x] [Review][Patch] **[test] python3-missing (ENOENT) mock** — new test sets `err.code = 'ENOENT'`; asserts "python3 not found on PATH" in error. Plus SIGTERM test for timeout branch, plus script-missing test (cpMock.callCount 0 — rejected pre-spawn). 3 new tests covering the full subprocess-discrimination surface. [tests/lib/config-loader.test.js]
+- [x] [Review][Patch] **[test] Top-level array of placeholder strings** — new test with `paths: ['{project-root}/a', '{project-root}/b']`; asserts array passes through unchanged (confirms "top-level string only" scope). [tests/lib/config-loader.test.js]
 
 **Deferred (9) — real concerns, out of 4.0 loader scope; persisted to [deferred-work.md](deferred-work.md):**
 
@@ -382,3 +385,29 @@ Three-layer adversarial review (Blind Hunter + Edge Case Hunter + Acceptance Aud
 - [x] [Review][Defer] Repeated `[DEPRECATED]` warning emits N times per N loads — deferred, stderr noise only; no correctness impact
 
 **Dismissed (4):** `mockExecFileSync` cache-clear ambiguity (Edge Case Hunter verified the helper clears `require.cache` correctly); broken-anchor-link suspicion (Auditor + filesystem verification confirms all cited architecture/audit anchors resolve); `fs-extra` dep pulled in for "zero value" (justified by project-wide ecosystem consistency — other lib/ modules use it); audit LOC projection (~40) vs actual (~84) (explained in Auditor findings — audit projected load-path only, ~84 includes the WR8 fallback helper).
+
+### Review Findings (Round 2, 2026-04-21)
+
+Round 2 triggered by Round 1's HIGH finding (path traversal). Acceptance Auditor verified **all 21 Round 1 resolutions hold correctly** — patches applied faithfully, no regressions, HIGH security fix intact. Blind + Edge independently caught a **new HIGH bug introduced by the Round 1 trailing-slash-normalization patch**: `projectRoot = '/'` normalizes to empty string, passes the already-completed input validation, and then `path.resolve('', '_bmad')` resolves against `process.cwd()` — a silent wrong-project load.
+
+**Patch (6) — ALL RESOLVED:**
+
+- [x] [Review][Patch] **[HIGH] `projectRoot = '/'` silently resolves against cwd** — Round 1 normalization stripped `'/'` → `''`; validation had already fired. Added post-normalization re-validation + `path.isAbsolute(normalizedRoot)` enforcement (matches the JSDoc contract that was previously documented but unenforced). Two new test cases added: `projectRoot = '/'` throws, `projectRoot = 'relative/path'` throws. [config-loader.js:73-84]
+- [x] [Review][Patch] **[MED] Symlink escape past lexical traversal guard** — resolved as explicit documentation: added inline comment noting the guard is lexical-only, symlinks inside `_bmad/` are treated as trusted operator-managed state, and a deferred-work path (`fs.realpathSync`-based hardening) is documented if requirements change. Not a patch to the guard itself; `_bmad/` is npm-installed + operator-managed, symlinks inside are atypical, and hardening would add filesystem I/O to every load for little gain. [config-loader.js:86-90 + deferred-work.md]
+- [x] [Review][Patch] **[MED] Non-SIGTERM signals (SIGKILL/SIGPIPE/etc.) conflated with non-zero exit** — added distinct branch: any `err.signal` other than SIGTERM throws "killed by signal {signal}" with migration hint. New test verifies SIGKILL → distinct message (asserts NOT misreported as timeout). [config-loader.js:256-264]
+- [x] [Review][Patch] **[LOW] JSDoc hardcodes "30s" / "30-second" despite `SUBPROCESS_TIMEOUT_MS` constant** — updated JSDoc to reference the constant name with "(30s default)" parenthetical. Drift-proof for future timeout tuning. [config-loader.js:183-193]
+- [x] [Review][Patch] **[LOW] Multi-line YAML error messages break the `"\n  - "` bullet indentation** — each message's embedded whitespace/newlines now collapsed to single spaces via `e.message.replace(/\s*\n\s*/g, ' ')` before join. [config-loader.js:131-134]
+- [x] [Review][Patch] **[LOW] Generic readFileSync error has double-space when `err.code` missing** — refactored to conditional code-tag prefix: `codeTag = err.code ? err.code + ' ' : ''`. [config-loader.js:117-121]
+- [x] [Review][Patch] **[LOW] Task 6.1 still contained hardcoded "1201 tests"** — Round 1 claimed removal; Auditor caught the persistence. Now says "full suite passes, 0 fail, 0 skipped; new test file included via glob discovery." [story file Task 6.1]
+
+**Deferred (5) — real gaps, not-yet-worth-it or tangential; not persisted to deferred-work.md as none are structural:**
+
+- [x] [Review][Defer] **Symlink escape hardening** — documented as trusted in config-loader.js; fix path noted (realpath). Revisit if a consumer reports a real escape incident.
+- [x] [Review][Defer] **`_bmad_evil` sibling-dir regression test** — guard handles it correctly via `bmadRoot + path.sep` prefix check; no test locks it in. Low-priority coverage gap.
+- [x] [Review][Defer] **Missing type-enumeration coverage** — current tests cover null/undefined/''/42 for projectRoot and null/'' for moduleConfigPath; object/array/boolean/symbol/function untested. All caught by the `typeof !== 'string'` guard; coverage gap is non-functional.
+- [x] [Review][Defer] **Mock shape completeness** — SIGTERM/ENOENT mocks set only `.signal`/`.code`; real execFileSync errors also set `.killed`/`.errno`/`.syscall`. If production logic ever inspects those fields, tests wouldn't catch the regression. Currently production logic checks only `.code`/`.signal`/`.status` — all mocked. Low risk.
+- [x] [Review][Defer] **API freeze test false-positive on default-param refactor** — `loadModuleConfig.length === 2` assertion would fail if someone adds `(a, b = null)` even though the public surface is effectively unchanged. Design decision: current strictness is intentional (forces spec amendment for any signature shape change). Document-as-intended rather than relax.
+
+**Dismissed (2):** `_describeType('')` returning `''` is stylistic inconsistency, harmless; case-insensitive-filesystem path comparison (overlaps with symlink escape — same mitigation applies).
+
+**Convergence:** Round 2 patches are (1) one new guard addition, (2) one new subprocess branch with distinct message, (3) error-message format tweaks, (4) JSDoc constant reference, (5) one story doc edit. No new files, no renamed functions, no altered control flow pattern. Per project-context.md `code-review-convergence` rule, **Round 3 is NOT allowed** (requires structural changes in Round 2). Review converged at Round 2.
