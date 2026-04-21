@@ -52,6 +52,7 @@ last_updated: 2026-04-21
 # 2026-04-18: oc-1-4-covenant-authoring moved review → done (Amalik approved on read-through)
 # 2026-04-19: ILE-1 (Initiative Lifecycle Engine) added — 6 epics × 67 stories after FULL READY IR gate passed. Sprint 0 starts with Story 1.1 [SPIKE].
 # 2026-04-21: BMAD v6.3.0 Adoption (Convoke 4.0) added — 7 epics × 28 stories after IR gate passed. Sprint 0 pre-work: bmad-init audit, CLI scriptability spike, schedule retrospective. Sequencing: (WS1/U10 ‖ WS3/A8) → WS4/A9 → WS2/P23.
+# 2026-04-21: P5 Migration Chaining Fix & Doc Accuracy added retroactively — 2 epics × 6 stories, all done (work shipped prior to epic being drafted 2026-04-10). Chain traversal fix verified in scripts/update/migrations/registry.js:97-132 (parseTargetVersion + while-loop chain); tests in tests/unit/registry.test.js + migration-runner-orchestration.test.js; doc fixes verified in README.md (dynamic npm badge), INSTALLATION.md, docs/BMAD-METHOD-COMPATIBILITY.md.
 project: BMAD-Enhanced
 project_key: NOKEY
 tracking_system: file-system
@@ -617,3 +618,27 @@ development_status:
   v63-5b-2-run-retrospective-and-create-anti-pattern-registry: backlog
   v63-5b-3-complete-playbook-and-ship-release-artifacts: backlog
   v63-epic-5b-retrospective: optional
+
+  # ============================================================
+  # P5: MIGRATION CHAINING FIX & DOC ACCURACY (retroactive)
+  # Epic file: convoke-epic-migration-chaining-fix-p5.md
+  # Origin: party-mode-audit-2026-03-15; epic drafted 2026-04-10
+  # Added 2026-04-21 retroactively — all work shipped prior to tracking
+  # Verification: registry.js:97-132 (parseTargetVersion + chain walk);
+  #   tests/unit/registry.test.js + migration-runner-orchestration.test.js;
+  #   README.md dynamic npm badge; INSTALLATION.md + BMAD-METHOD-COMPATIBILITY.md cleaned
+  # ============================================================
+
+  # Epic 1: Migration Chaining Fix & Tests (3 stories, atomic commit)
+  p5-epic-1: done
+  p5-1-1-fix-migration-chain-traversal-in-registry-js: done
+  p5-1-2-update-and-expand-unit-tests-for-chain-traversal: done
+  p5-1-3-integration-test-full-multi-version-update-path: done
+  p5-epic-1-retrospective: optional
+
+  # Epic 2: Documentation Accuracy (3 stories, independent)
+  p5-epic-2: done
+  p5-2-1-fix-readme-version-badge: done
+  p5-2-2-fix-npx-commands-in-installation-md: done
+  p5-2-3-fix-package-name-and-npx-commands-in-bmad-method-compatibility-md: done
+  p5-epic-2-retrospective: optional
