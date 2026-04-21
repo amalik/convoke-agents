@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it, before, beforeEach, afterEach, mock } = require('node:test');
+const { describe, it, beforeEach, afterEach, mock } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs-extra');
 const os = require('node:os');
@@ -263,6 +263,13 @@ describe('writeInventoryCsv + renderInventoryCsv', () => {
     assert.match(dataLine, /"agent, with comma"/);
     // Inner quotes should be doubled.
     assert.match(dataLine, /"has ""inner quotes"" inside"/);
+  });
+
+  it('renderInventoryCsv throws TypeError when entries is not an array (symmetric with writeInventoryCsv)', () => {
+    assert.throws(() => renderInventoryCsv(null), /TypeError.*entries must be an array/s);
+    assert.throws(() => renderInventoryCsv(undefined), /TypeError.*entries must be an array/s);
+    assert.throws(() => renderInventoryCsv({}), /TypeError.*entries must be an array/s);
+    assert.throws(() => renderInventoryCsv('not an array'), /TypeError.*entries must be an array/s);
   });
 
   it('produces byte-identical output on repeated serialization (determinism for AC8)', () => {
