@@ -5,6 +5,22 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of v63-1a-2-create-config-loader-js-with-direct-yaml-loading (2026-04-21)
+
+Round 1 code review of the `config-loader.js` implementation produced 9 `defer` items — real concerns that exceed Story 1A.2's 4.0-scoped AC surface. Acceptance Auditor verified all 9 story ACs satisfied; these defers cover defensive-hardening opportunities the audit explicitly de-scoped or that belong to later stories.
+
+- **`console.warn` side-effects not routable** — Blind Hunter MED. Library writes to stderr directly via `console.warn` for deprecation + YAML warnings. Callers (CLI, JSON-logging consumers, test runners) can't route or suppress. Fix path: accept optional `{ logger = console }` option, or emit via EventEmitter. Out of 4.0 loader scope — broader library-logging convention concern.
+- **Nested `{project-root}` silently unresolved** — Blind Hunter + Edge Case Hunter MED. `_resolveProjectRootPlaceholder` is top-level-only by design (audit §5 YAGNI for 4.0). Nested objects/arrays containing `{project-root}` strings pass through unresolved with no warning. Fix path: either recurse or emit a `console.warn` when a nested string contains the placeholder. Deferred per audit §5 explicit scope decision; revisit if a config author hits this.
+- **Windows path-separator mismatch** — Blind Hunter MED. `replaceAll('{project-root}', projectRoot)` on Windows with `projectRoot = 'C:\\Users\\x'` and YAML `output_folder: "{project-root}/foo"` yields `C:\\Users\\x/foo` (mixed separators). Most Node APIs tolerate, but downstream string comparison / glob logic may not. Fix path: normalize via `path.join` where strings look like paths, or document Unix-style separator contract. Cross-platform is not a 4.0 promise per PRD; revisit if Windows CI is added.
+- **Test `console.warn` spy restore-on-failure edge case** — Blind Hunter LOW. If a v3-fallback test's `beforeEach` throws before `afterEach` runs, `console.warn` stays globally mocked, poisoning subsequent test files in the same process. Fix path: wrap setup in try/catch or use `t.mock` (test-scoped). Project convention is global `mock.method`; not worth breaking the pattern for a rare edge.
+- **EISDIR / broken-symlink at configPath unhandled** — Blind Hunter LOW. `fs.existsSync` returns true for a directory at the path; `readFileSync` then fails with raw EISDIR. Broken symlink yields false from existsSync and masquerades as missing-config. Fix path: `fs.statSync + isFile()` check, or catch EISDIR and rethrow with actionable message. Low-impact edge; add if a real report surfaces.
+- **YAML merge keys `<<:` preserved as literal `"<<"` key** — Edge Case Hunter. Callers expecting merge-key expansion are surprised. Fix path: pass `{ merge: true }` to `yaml.parseDocument + toJSON`, or document non-support. No current config uses merge keys; document if a user authors one.
+- **Python2-as-python3 PATH resolution** — Edge Case Hunter. If `python3` on PATH is actually Python 2, the script fails with SyntaxError, surfaces via non-zero exit + stderr. Current error handling catches this path correctly; just no explicit version-check. Fix path: prepend `python3 --version` check, or document requirement. Acceptable for a legacy fallback — the migration path (`convoke-update`) should normalize Python before hitting this path.
+- **Subprocess stdout with warning-prelude-then-JSON** — Edge Case Hunter. If bmad_init.py emits a deprecation warning line before JSON, `JSON.parse` fails → caught by "non-JSON stdout" branch with generic error. Fix path: extract last-line JSON before parse, or assert bmad_init.py emits pure JSON. bmad_init.py is internal and we control its output shape — low risk.
+- **Repeated `[DEPRECATED]` warning on N loader calls** — Edge Case Hunter LOW. A session calling the loader multiple times (e.g., doctor health check scanning multiple modules) spams the deprecation warning N times. Fix path: module-scoped `Set` keyed by `legacyInitDir`, warn once per path per process. Stderr noise only; no correctness impact.
+
+---
+
 ## Deferred from: code review of v63-1a-1-audit-bmad-init-behavior-before-replacement (2026-04-21)
 
 Round 1 code review of Story 1A.1's audit deliverable produced 7 `defer` items — scope belongs to downstream stories or other initiatives.
@@ -16,6 +32,14 @@ Round 1 code review of Story 1A.1's audit deliverable produced 7 `defer` items �
 - **Architecture doc Decision 1 vs Pattern 3 inconsistency** — Acceptance Auditor. Architecture doc's Decision 1 sample uses `yaml.parse()`; Pattern 3 says `yaml.parseDocument()` for read-write. The audit resolved this correctly (followed Pattern 3), but the arch doc itself has an internal inconsistency. Not caused by 1A.1. Fix path: flag to Winston for a Round 2 arch doc edit; audit stays as-is.
 - **`_resolveProjectRootPlaceholder` mutates input config in place** — Edge Case Hunter. The drafted JS mutates `config[key]` rather than returning a new object. Maintainability / test-mocking hazard. Belongs to Story 1A.2 implementation choice — audit's draft is a hint. Fix path: Story 1A.2 implementer decides mutate-vs-clone based on caller contract.
 - **`safe_dump` comment-stripping claim unverified** — Edge Case Hunter. Audit §12 asserts `yaml.safe_dump` strips operator comments as justification for Story 1A.4 round-trip writer. Claim not backed by grep evidence of existing operator comments in installed configs. Belongs to Story 1A.4 migration writer design — the round-trip justification may or may not be warranted. Fix path: before Story 1A.4 implements round-trip, grep installed configs for operator-added comments; if none, simpler `safe_dump` approach is fine.
+
+---
+
+## Deferred from: code review of I71 migration ADR git-add scope narrowing (2026-04-21)
+
+Round 1 review (0 HIGH, 0 patches needed — convergence at Round 1). 1 item deferred:
+
+- **Stale doc reference in historical story artifact `ag-3-4-adr-supersession.md:41`** — the shipped story doc's task checklist still reads `Stage both files: git add _bmad-output/planning-artifacts/`, reflecting pre-I71 broad-stage pattern. Per Convoke doc-immutability convention, shipped story artifacts are frozen at ship-time and not retroactively amended. The reference is LOW severity (historical checklist item, not load-bearing guidance for current work). If a future sweep revisits historical story docs for accuracy, update this line; otherwise leave as-is. Tracked here for audit trail only.
 
 ---
 
