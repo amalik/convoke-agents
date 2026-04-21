@@ -54,6 +54,7 @@ last_updated: 2026-04-21
 # 2026-04-21: BMAD v6.3.0 Adoption (Convoke 4.0) added — 7 epics × 28 stories after IR gate passed. Sprint 0 pre-work: bmad-init audit, CLI scriptability spike, schedule retrospective. Sequencing: (WS1/U10 ‖ WS3/A8) → WS4/A9 → WS2/P23.
 # 2026-04-21: P5 Migration Chaining Fix & Doc Accuracy added retroactively — 2 epics × 6 stories, all done (work shipped prior to epic being drafted 2026-04-10). Chain traversal fix verified in scripts/update/migrations/registry.js:97-132 (parseTargetVersion + while-loop chain); tests in tests/unit/registry.test.js + migration-runner-orchestration.test.js; doc fixes verified in README.md (dynamic npm badge), INSTALLATION.md, docs/BMAD-METHOD-COMPATIBILITY.md.
 # 2026-04-21: v63-epic-1a auto-transitioned backlog → in-progress (first story v63-1a-1 created); v63-1a-1-audit-bmad-init-behavior-before-replacement moved backlog → ready-for-dev. Audit story for FM1-2 failure mode closure (bmad-init behavior documentation before config-loader.js replacement).
+# 2026-04-21: v63-1a-1-audit-bmad-init-behavior-before-replacement moved ready-for-dev → in-progress → review. Deliverable shipped at _bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md (~440 lines, 13 behavior sections, 26 behaviors dispositioned: 4 reproduce-in-loader / 10 drop-with-rationale / 12 move-to-convoke-install). Key reframe: sweep surface is 18 upstream-BMAD SKILL.md files, not ~25 as PRD estimated — Convoke's 14 bme agents already direct-load.
 project: BMAD-Enhanced
 project_key: NOKEY
 tracking_system: file-system
@@ -560,7 +561,7 @@ development_status:
   # Dependency chain: 1A.1 → 1A.2 → 1A.3 → 1A.4 → 1A.5 (robustness) ∥ 1A.6 (guide)
   # FRs: FR1–FR11. Primary beneficiary: User (Priya). Not deferrable.
   v63-epic-1a: in-progress
-  v63-1a-1-audit-bmad-init-behavior-before-replacement: in-progress
+  v63-1a-1-audit-bmad-init-behavior-before-replacement: review
   v63-1a-2-create-config-loader-js-with-direct-yaml-loading: backlog
   v63-1a-3-create-v6-3-migration-inventory: backlog
   v63-1a-4-create-migration-script-3-x-to-4-0-js: backlog
