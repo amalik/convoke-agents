@@ -27,7 +27,10 @@ const { findProjectRoot } = require('../update/lib/utils');
 
 const CANONICAL_PATTERN_RE = /^1\. \*\*Load config via bmad-init skill\*\*/m;
 const BMAD_INIT_MENTION_RE = /bmad-init|bmad_init/;
-const SELF_REF_PREFIX = '_bmad/core/bmad-init';
+// Trailing slash is load-bearing: ensures segment-aware matching so a future
+// _bmad/core/bmad-init-v2/ (or similar sibling) is NOT incorrectly filtered
+// as a self-reference via substring prefix.
+const SELF_REF_PREFIX = '_bmad/core/bmad-init/';
 const INVENTORY_CSV_PATH = '_bmad/_config/v6.3-migration-inventory.csv';
 const CSV_HEADER = 'file,module_config_path,module,agent_name,pattern_matched,candidate_status';
 
@@ -133,8 +136,12 @@ function writeInventoryCsv(entries, outputPath) {
  *
  * @param {Array} entries
  * @returns {string}
+ * @throws {TypeError} if entries is not an array (symmetric with writeInventoryCsv)
  */
 function renderInventoryCsv(entries) {
+  if (!Array.isArray(entries)) {
+    throw new TypeError('renderInventoryCsv: entries must be an array');
+  }
   const lines = [CSV_HEADER];
   for (const e of entries) {
     lines.push([
@@ -208,45 +215,52 @@ function _formatCsvValue(value) {
 // --- CLI entry ---
 
 function _runCli(argv) {
-  const args = argv.slice(2);
-  const dryRun = args.includes('--dry-run');
-  const verifyOnly = args.includes('--verify-only');
+  try {
+    const args = argv.slice(2);
+    const dryRun = args.includes('--dry-run');
+    const verifyOnly = args.includes('--verify-only');
 
-  const projectRoot = findProjectRoot();
-  if (!projectRoot) {
-    console.error('audit-bmad-init-refs: no _bmad/ directory found from cwd');
-    process.exit(1);
-  }
+    const projectRoot = findProjectRoot();
+    if (!projectRoot) {
+      console.error('audit-bmad-init-refs: no _bmad/ directory found from cwd');
+      return 1;
+    }
 
-  const entries = scanBmadInitRefs(projectRoot);
-  const generated = renderInventoryCsv(entries);
-  const canonicalCount = entries.filter(e => e.candidateStatus === 'canonical').length;
-  const candidateCount = entries.filter(e => e.candidateStatus === 'candidate').length;
+    const entries = scanBmadInitRefs(projectRoot);
+    const generated = renderInventoryCsv(entries);
+    const canonicalCount = entries.filter(e => e.candidateStatus === 'canonical').length;
+    const candidateCount = entries.filter(e => e.candidateStatus === 'candidate').length;
 
-  if (dryRun) {
-    process.stdout.write(generated);
-    console.error(`[audit-bmad-init-refs] dry-run: ${canonicalCount} canonical + ${candidateCount} candidate entries`);
-    return 0;
-  }
-
-  const outputAbs = path.join(projectRoot, INVENTORY_CSV_PATH);
-
-  if (verifyOnly) {
-    const committed = fs.existsSync(outputAbs)
-      ? fs.readFileSync(outputAbs, 'utf8')
-      : '';
-    if (committed === generated) {
-      console.log(`[audit-bmad-init-refs] verify-only: committed CSV matches generated output (${canonicalCount} canonical + ${candidateCount} candidate)`);
+    if (dryRun) {
+      process.stdout.write(generated);
+      console.error(`[audit-bmad-init-refs] dry-run: ${canonicalCount} canonical + ${candidateCount} candidate entries`);
       return 0;
     }
-    console.error(`[audit-bmad-init-refs] verify-only: DRIFT DETECTED at ${INVENTORY_CSV_PATH}`);
-    console.error('Re-run without --verify-only to regenerate, then commit the result.');
+
+    const outputAbs = path.join(projectRoot, INVENTORY_CSV_PATH);
+
+    if (verifyOnly) {
+      const committed = fs.existsSync(outputAbs)
+        ? fs.readFileSync(outputAbs, 'utf8')
+        : '';
+      if (committed === generated) {
+        console.log(`[audit-bmad-init-refs] verify-only: committed CSV matches generated output (${canonicalCount} canonical + ${candidateCount} candidate)`);
+        return 0;
+      }
+      console.error(`[audit-bmad-init-refs] verify-only: DRIFT DETECTED at ${INVENTORY_CSV_PATH}`);
+      console.error('Re-run without --verify-only to regenerate, then commit the result.');
+      return 1;
+    }
+
+    fs.writeFileSync(outputAbs, generated, 'utf8');
+    console.log(`[audit-bmad-init-refs] Wrote ${canonicalCount} canonical + ${candidateCount} candidate entries to ${INVENTORY_CSV_PATH}`);
+    return 0;
+  } catch (err) {
+    // Surface a clean error message instead of a raw stack trace when the
+    // scan / write path throws (bad projectRoot, missing _bmad/, IO failure).
+    console.error(`[audit-bmad-init-refs] ERROR: ${(err && err.message) || String(err)}`);
     return 1;
   }
-
-  fs.writeFileSync(outputAbs, generated, 'utf8');
-  console.log(`[audit-bmad-init-refs] Wrote ${canonicalCount} canonical + ${candidateCount} candidate entries to ${INVENTORY_CSV_PATH}`);
-  return 0;
 }
 
 // --- Exports ---
