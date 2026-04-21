@@ -58,6 +58,7 @@ last_updated: 2026-04-21
 # 2026-04-21: v63-1a-2-create-config-loader-js-with-direct-yaml-loading moved backlog → ready-for-dev. Story file authored via /bmad-create-story; 9 ACs covering the 9 reproduce-in-loader + 1 add-in-loader behaviors from the audit. AC5 carry-forward from 1A.1 satisfied — story Dev Notes cite convoke-spec-bmad-init-behavior-audit.md as primary functional spec. Projected ~40–50 LOC loader + ~20 LOC helpers + 8-case test matrix.
 # 2026-04-21: v63-1a-2-create-config-loader-js-with-direct-yaml-loading moved ready-for-dev → in-progress → review → done. Initial impl shipped; Round 1 review (1 HIGH path-traversal + 20 patches + 1 decision + 9 defers + 4 dismissed) hardened loader to 285 LOC and tests to 33 across 6 suites. AC5 wording amended to execFileSync. Round 2 review (triggered by Round 1 HIGH) verified all 21 Round 1 resolutions hold; caught 1 new HIGH bug (projectRoot='/' silently loading cwd-config) introduced by Round 1's trailing-slash normalization; applied 6 Round 2 patches (post-normalization guard + absolute-path enforcement, SIGKILL signal discrimination, JSDoc constant reference, multi-line YAML error fix, readFileSync error cleanup, Task 6.1 hardcoded count removal). Full suite 1224/1224 pass. Per convergence rule, Round 3 NOT allowed — Round 2 introduced no structural changes. Review converged at Round 2.
 # 2026-04-21: v63-1a-3-create-v6-3-migration-inventory moved backlog → ready-for-dev. Story file authored via /bmad-create-story; 9 ACs covering scan tool + committed CSV inventory. Primary functional spec = Story 1A.1 audit §Mechanical Enumeration Evidence (canonical 18 + 1 candidate). Creates new scripts/audit/ directory (first occupant). Epic "~25 agents" estimate reconciled to audit's mechanical 18 per derive-counts-from-source rule.
+# 2026-04-21: v63-1a-3-create-v6-3-migration-inventory moved ready-for-dev → in-progress → review. Shipped scripts/audit/audit-bmad-init-refs.js (167 LOC, 4 exports) + README.md + _bmad/_config/v6.3-migration-inventory.csv (18 canonical + 1 candidate, exact match with audit) + tests/lib/audit-bmad-init-refs.test.js (12 tests / 4 suites). Full suite 1236/1236 pass; convoke-doctor 24 pass + 2 pre-existing (unchanged); --verify-only confirms AC8 determinism.
 project: BMAD-Enhanced
 project_key: NOKEY
 tracking_system: file-system
@@ -566,7 +567,7 @@ development_status:
   v63-epic-1a: in-progress
   v63-1a-1-audit-bmad-init-behavior-before-replacement: done
   v63-1a-2-create-config-loader-js-with-direct-yaml-loading: done
-  v63-1a-3-create-v6-3-migration-inventory: in-progress
+  v63-1a-3-create-v6-3-migration-inventory: review
   v63-1a-4-create-migration-script-3-x-to-4-0-js: backlog
   v63-1a-5-migration-robustness-idempotency-resume-offline-lockfile: backlog
   v63-1a-6-author-migration-guide-standalone-deliverable: backlog
