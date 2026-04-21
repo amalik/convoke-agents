@@ -2,7 +2,7 @@
 initiative: convoke
 artifact_type: spec
 qualifier: bmad-init-behavior-audit
-status: complete
+status: draft
 created: '2026-04-21'
 schema_version: 1
 ---
@@ -19,31 +19,25 @@ schema_version: 1
 
 ## Executive Summary
 
-`bmad_init.py` is a **591-line multi-command script** that conflates two concerns v6.3 separates: **loading** already-written configs (~20% of the code) and **bootstrapping** missing configs (~80%). The replacement `config-loader.js` owns only the load path. Most bmad_init behaviors drop from the loader with rationale or move to `convoke-install`.
+`bmad_init.py` is a **591-line multi-command script** that conflates two concerns v6.3 separates: **loading** already-written configs and **bootstrapping** missing configs. By line-range counting (load-path: `cmd_load` 232–272 + helpers 147–169 = ~65 LOC; bootstrap-path: `cmd_check` 279–338 + `cmd_resolve_defaults` 345–396 + `cmd_write` 403–520 + `_write_config_file` 523–530 = ~175 LOC), roughly **27% load / 73% bootstrap** — the rest is infrastructure (imports, CLI plumbing, project-root detection). The replacement `config-loader.js` owns only the load path. Most bmad_init behaviors drop from the loader with rationale or move to `convoke-install`.
 
-**Key reframe from pre-audit research:** the "v6.3 migration sweep" surface is **18 upstream BMAD `SKILL.md` files** (all using `"Load config via bmad-init skill"`), not ~25 as the PRD estimated. Convoke's own 14 bme agents (7 Vortex + Gyre + Enhance + Team Factory + Artifacts) **already direct-load** `{project-root}/_bmad/{module}/config.yaml` at activation — they are v6.3-compliant today. This narrows the scope of Story 1A.3 (migration inventory) and Story 1A.4 Phase 3 (agent sweep) materially.
+**Key reframe from mechanical enumeration:** the "v6.3 migration sweep" surface is **18 upstream BMAD `SKILL.md` files** matching the `"Load config via bmad-init skill"` pattern (not ~25 as the PRD estimated). Convoke's own **12 bme agents** — Vortex × 7 + Gyre × 4 + Team Factory × 1 — **already direct-load** their module `config.yaml` at activation and contain zero references to `bmad-init`. They are v6.3-compliant today. Sweep count is **18 current** (pending Epic 1B removal of Bob/Quinn/Barry, which would bring the net to 15).
 
-**Disposition summary (26 behaviors classified):**
+**Disposition summary — counted directly from the Disposition Table below:** the 13 enumerated behavior groups (§1–§13) decompose into **56 sub-behaviors** (B1.1–B13). After tagging each sub-behavior in the table, the aggregate is approximately **8 `reproduce-in-loader` / 15 `drop-with-rationale` / 33 `move-to-convoke-install`**. Exact row-level counts are in the Disposition Table — that table is the canonical source; this summary is rounded.
 
-| Disposition | Count | Meaning |
-|-------------|------:|---------|
-| `reproduce-in-loader` | 4 | Load-path behaviors; must appear in `config-loader.js` |
-| `drop-with-rationale` | 10 | Bootstrap-path or legacy-only; explicitly not ported |
-| `move-to-convoke-install` | 12 | Bootstrap concerns; belong to installer, not loader |
-
-The loader body is projected at ~30 LOC versus bmad_init's 591 — a 20× reduction tracking the v6.3 "content, not software" insight.
+The loader body is projected at **~40 LOC** versus bmad_init's 591 — a ~15× reduction tracking the v6.3 "content, not software" insight. (Story spec's "Reference implementation hints" §Dev Notes estimated ~50 LOC; revised down to ~40 after seeing how little load-path code survives from bmad_init.)
 
 ---
 
 ## Mechanical Enumeration Evidence (AC3)
 
-Per project-context.md `mechanical-research-enumeration` rule, all enumeration derives from grep/glob/wc output, not eyeballing:
+Per project-context.md `mechanical-research-enumeration` rule, all enumeration derives from grep/glob/wc/find output, not eyeballing. The four commands the story AC3 names are run verbatim below:
 
 ```text
 $ wc -l _bmad/core/bmad-init/scripts/bmad_init.py
      591 _bmad/core/bmad-init/scripts/bmad_init.py
 
-$ grep -n '^def ' _bmad/core/bmad-init/scripts/bmad_init.py
+$ grep -n '^def \|^    def ' _bmad/core/bmad-init/scripts/bmad_init.py
 46:def find_project_root(llm_provided=None):
 78:def load_module_yaml(path):
 112:def find_core_module_yaml():
@@ -60,24 +54,80 @@ $ grep -n '^def ' _bmad/core/bmad-init/scripts/bmad_init.py
 403:def cmd_write(args):
 523:def _write_config_file(path, data, module_label):
 537:def main():
+# 16 top-level functions + 1 nested helper prefixed `_write_config_file`.
+# The `^    def` alternative in the pattern caught no nested methods — bmad_init.py
+# has no classes, so no nested `def` inside class bodies.
 
-$ ls -la _bmad/*/config.yaml
--rw-r--r--  _bmad/_memory/config.yaml   270B
--rw-r--r--  _bmad/bmb/config.yaml       391B
--rw-r--r--  _bmad/bme/config.yaml       266B
--rw-r--r--  _bmad/bmm/config.yaml       510B
--rw-r--r--  _bmad/cis/config.yaml       339B
--rw-r--r--  _bmad/core/config.yaml      238B
--rw-r--r--  _bmad/tea/config.yaml       750B
--rw-r--r--  _bmad/wds/config.yaml       488B
-# 8 flat per-module configs, 238B–750B — confirms shape: flat YAML with core vars merged in
+$ find _bmad -name config.yaml -type f | sort
+_bmad/_memory/config.yaml
+_bmad/bmb/config.yaml
+_bmad/bme/_artifacts/config.yaml
+_bmad/bme/_enhance/config.yaml
+_bmad/bme/_gyre/config.yaml
+_bmad/bme/_team-factory/config.yaml
+_bmad/bme/_vortex/config.yaml
+_bmad/bme/config.yaml
+_bmad/bmm/config.yaml
+_bmad/cis/config.yaml
+_bmad/core/config.yaml
+_bmad/tea/config.yaml
+_bmad/wds/config.yaml
+# 13 config.yaml files total (supersedes earlier shallow `ls _bmad/*/config.yaml` count of 8;
+# the shallow glob missed 5 nested Convoke-bme submodule configs: _artifacts, _enhance,
+# _gyre, _team-factory, _vortex). All files are flat YAML with core vars merged in;
+# `_bmad/_memory/config.yaml` is an internal-scope dir (leading underscore) but structurally
+# identical and readable by the loader if a caller asks for it.
 
 $ grep -l 'Load config via bmad-init' _bmad/**/*.md | wc -l
 18
-# Sweep surface: 18 SKILL.md files, all in upstream BMAD namespace
+# Sweep surface: 18 SKILL.md files matching the exact activation pattern, all in
+# upstream BMAD namespace (bmm, cis, wds, tea). Separately, one additional file
+# (_bmad/bmm/1-analysis/bmad-product-brief/SKILL.md) mentions bmad-init but does
+# NOT match the "Load config via bmad-init skill" activation pattern — tracked as
+# a candidate for Story 1A.3 precise-pattern re-audit, not counted in the 18.
 
-$ grep -c 'bmad-init\|bmad_init' _bmad/bme/**/*.md
-# (zero hits in Convoke's bme namespace — they already direct-load)
+$ grep -rn 'bmad-init\|bmad_init' _bmad/bme/
+# (zero hits — Convoke's bme namespace has no bmad-init references; all bme agents
+# already direct-load their module config.yaml at activation)
+
+$ find _bmad/bme -path '*/agents/*.md' -type f | sort
+_bmad/bme/_gyre/agents/model-curator.md
+_bmad/bme/_gyre/agents/readiness-analyst.md
+_bmad/bme/_gyre/agents/review-coach.md
+_bmad/bme/_gyre/agents/stack-detective.md
+_bmad/bme/_team-factory/agents/team-factory.md
+_bmad/bme/_vortex/agents/contextualization-expert.md
+_bmad/bme/_vortex/agents/discovery-empathy-expert.md
+_bmad/bme/_vortex/agents/hypothesis-engineer.md
+_bmad/bme/_vortex/agents/lean-experiments-specialist.md
+_bmad/bme/_vortex/agents/learning-decision-expert.md
+_bmad/bme/_vortex/agents/production-intelligence-specialist.md
+_bmad/bme/_vortex/agents/research-convergence-specialist.md
+# 12 Convoke-owned bme agents — Vortex × 7, Gyre × 4, Team Factory × 1.
+# Note: `_enhance` module exists but has no agents/ subdirectory (skills/workflows only);
+# an earlier draft of this audit over-counted 14 by assuming "Enhance × 2."
+
+$ grep -rn '\{[a-z][a-z_-]*\}' _bmad/**/config.yaml
+# Placeholders found in installed configs:
+# - {project-root} — in 13/13 files (output paths)
+# - {user} — in 3 files (_bmad/bme/_vortex, _bmad/bme/_team-factory, _bmad/bme/_gyre),
+#   stored as `user_name: "{user}"` — appears to be a Convoke-bme convention for
+#   cross-module user_name indirection. Story 1A.2 must verify the loader's handling.
+# No other placeholder patterns detected.
+
+$ grep -rn -- '--vars\|--all\|bmad_init\.py load --module\|bmad-init.*load --module' _bmad/ --include='*.md'
+_bmad/core/bmad-init/SKILL.md:4:argument-hint: "[--module=module_code] [--vars=var1:default1,var2] ..."
+_bmad/core/bmad-init/SKILL.md:23:- To load all vars, include `--all`
+_bmad/core/bmad-init/SKILL.md:24:- To request specific variables with defaults, use `--vars var1:default1,var2`
+# Only the bmad-init SKILL.md itself documents `--vars`/`--all` flags. No external
+# callers in the 18 sweep-target SKILL.md files use them. Confirms the loader can
+# safely drop parse_var_specs + --all flag without breaking any consumer.
+
+$ grep -rn 'bmad_init\.py check\|bmad-init check' . --include='*.md' --include='*.py'
+_bmad/core/bmad-init/scripts/bmad_init.py:25:  python bmad_init.py check --project-root /path
+_bmad/core/bmad-init/scripts/bmad_init.py:26:  python bmad_init.py check --module bmb --skill-path /path/to/skill --project-root /path
+# Only the bmad_init.py docstring references `check`. No skill or script invokes
+# `cmd_check` externally. Moving check semantics into convoke-install is safe.
 ```
 
 **Callers enumeration (sweep target for Story 1A.4 Phase 3):**
