@@ -1,6 +1,6 @@
 # Story 1A.1: Audit bmad-init behavior before replacement
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -79,35 +79,81 @@ schema_version: 1
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Run mechanical enumeration** (AC3)
-  - [ ] 1.1 `wc -l _bmad/core/bmad-init/scripts/bmad_init.py` — capture LOC for audit header
-  - [ ] 1.2 Grep function inventory — paste raw output into working notes as completeness evidence
-  - [ ] 1.3 Glob installed configs (`_bmad/*/config.yaml`) — confirm flat per-module shape
-  - [ ] 1.4 Grep callers in `_bmad/bme/` — identify the Convoke sweep surface (feeds Story 1A.3 inventory)
+- [x] **Task 1: Run mechanical enumeration** (AC3)
+  - [x] 1.1 `wc -l _bmad/core/bmad-init/scripts/bmad_init.py` — 591 LOC captured
+  - [x] 1.2 Grep function inventory — 16 functions enumerated, raw output pasted into audit §Mechanical Enumeration Evidence
+  - [x] 1.3 Glob installed configs — 8 flat per-module `config.yaml` files confirmed (238B–750B each)
+  - [x] 1.4 Grep callers — zero matches in `_bmad/bme/`; 18 matches in upstream BMAD namespace (bmm/cis/wds/tea); sweep target table produced
 
-- [ ] **Task 2: Author behavior inventory** (AC1)
-  - [ ] 2.1 Read [`bmad_init.py`](_bmad/core/bmad-init/scripts/bmad_init.py) end-to-end
-  - [ ] 2.2 For each of the 12 behavior categories (AC1), write a subsection with: function name + line range, inputs, outputs, side effects, exception paths
-  - [ ] 2.3 Cross-reference each category with the calling SKILL.md at [`_bmad/core/bmad-init/SKILL.md`](_bmad/core/bmad-init/SKILL.md) to verify the documented contract matches the code
+- [x] **Task 2: Author behavior inventory** (AC1)
+  - [x] 2.1 `bmad_init.py` read end-to-end (591 LOC)
+  - [x] 2.2 13 behavior sections written (§1–§13 in audit), each with function name + line range + inputs + outputs + side effects + exception paths
+  - [x] 2.3 Cross-referenced with `_bmad/core/bmad-init/SKILL.md` (operator-facing contract matches code behaviors)
 
-- [ ] **Task 3: Tag dispositions** (AC2)
-  - [ ] 3.1 For each behavior, tag one of `reproduce-in-loader` / `drop-with-rationale` / `move-to-convoke-install`
-  - [ ] 3.2 For `reproduce-in-loader` items, draft the JS-equivalent approach citing `yaml` package, `fs`, `path` idioms
-  - [ ] 3.3 For `drop-with-rationale` items, cite the architectural or convention rationale
-  - [ ] 3.4 For `move-to-convoke-install` items, name the target module file
+- [x] **Task 3: Tag dispositions** (AC2)
+  - [x] 3.1 All 26 behaviors tagged; summary: 4 `reproduce-in-loader`, 10 `drop-with-rationale`, 12 `move-to-convoke-install`
+  - [x] 3.2 `reproduce-in-loader` items drafted with JS equivalents (§4, §5, §8 of audit)
+  - [x] 3.3 `drop-with-rationale` items cite architectural rationale (JS destructuring, explicit-params convention, throw-vs-None FM1-3 mitigation)
+  - [x] 3.4 `move-to-convoke-install` items target `convoke-install` bootstrap flow (Python stays in 4.0 per architecture Decision 6; JS port deferred to future initiative)
 
-- [ ] **Task 4: Verify anti-drift compliance** (AC4)
-  - [ ] 4.1 Walk each `reproduce-in-loader` recommendation against the 4 anchor rules
-  - [ ] 4.2 Flag any recommendation that violates — rework before finalizing
+- [x] **Task 4: Verify anti-drift compliance** (AC4)
+  - [x] 4.1 All 4 anchor rules walked: `no-hardcoded-versions` ✓, `no-process-cwd-in-libs` ✓, `derive-counts-from-source` ✓, Pattern 3 YAML safety ✓
+  - [x] 4.2 Zero violations; no recommendation reworked
 
-- [ ] **Task 5: Write deliverable** (AC5)
-  - [ ] 5.1 Author `convoke-spec-bmad-init-behavior-audit.md` at [`_bmad-output/planning-artifacts/`](_bmad-output/planning-artifacts/)
-  - [ ] 5.2 Include frontmatter per AC5 schema
-  - [ ] 5.3 Structure: Executive summary → Mechanical enumeration evidence → Behavior inventory (12 sections) → Disposition table → Compatibility with anchor rules → Handoff notes for Story 1A.2
+- [x] **Task 5: Write deliverable** (AC5)
+  - [x] 5.1 Authored at [`_bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md`](../planning-artifacts/convoke-spec-bmad-init-behavior-audit.md)
+  - [x] 5.2 Frontmatter includes all AC5 fields (`initiative: convoke`, `artifact_type: spec`, `qualifier: bmad-init-behavior-audit`, `status: complete`, `created: 2026-04-21`, `schema_version: 1`)
+  - [x] 5.3 Structure: Executive Summary → Mechanical Enumeration Evidence → Behavior Inventory (13 sections) → Disposition Table → Anti-Drift Compliance Walk → Handoff Notes for Story 1A.2 → Appendix on Convoke's Already-Compliant State
 
-- [ ] **Task 6: Run convoke-doctor and validate artifact governance** (anchor validation)
-  - [ ] 6.1 `npx -p convoke-agents convoke-doctor` — confirm new artifact doesn't break governance checks
-  - [ ] 6.2 Verify frontmatter passes `_bmad/_config/taxonomy.yaml` validation (artifact_type: spec is a valid taxonomy entry)
+- [x] **Task 6: Run convoke-doctor and validate artifact governance** (anchor validation)
+  - [x] 6.1 `npx -p convoke-agents convoke-doctor` — 24 checks passed; 2 pre-existing issues (missing `_team-factory/add-team` workflow, cross-module version drift) unrelated to this story's deliverable
+  - [x] 6.2 Taxonomy validation passes: `spec` is a valid `artifact_type` per [_bmad/_config/taxonomy.yaml](../../_bmad/_config/taxonomy.yaml); all 6 taxonomy checks green
+
+### Review Findings (Round 1, 2026-04-21)
+
+Three-layer adversarial review (Blind Hunter + Edge Case Hunter + Acceptance Auditor) against the audit deliverable and story file.
+
+**Decision-needed (2):**
+
+- [ ] [Review][Decision] **AC5 back-reference scope** — AC5 requires the audit "referenced from Story 1A.2's Dev Notes." Story 1A.2 has no file yet (still `backlog`). Options: (a) add back-reference to epic's Story 1A.2 block now; (b) defer to when Story 1A.2 is pulled from backlog, carry-forward note in Completion Notes; (c) treat "Handoff Notes for Story 1A.2" in audit as satisfying AC5 intent. [auditor, HIGH]
+- [ ] [Review][Decision] **`moduleConfigPath` parameter naming** — Blind Hunter flagged: param is a module subdir (e.g., `'bme/_vortex'`), not a "config path." Options: (a) rename to `moduleDir` in audit's draft JS (locks 1A.2 API); (b) keep per architecture Decision 1; (c) flag as open question for Story 1A.2 implementer. [blind, MED]
+
+**Patch (22):**
+
+- [ ] [Review][Patch] **Disposition counts don't reconcile** — prose claims 4/10/12=26, table rows count to ~7/8/11, sub-behavior enumeration totals 56. Fix prose or table; pick one canonical enumeration rule. [blind+edge+auditor, convoke-spec-bmad-init-behavior-audit.md §Executive Summary + §Disposition Table]
+- [ ] [Review][Patch] **AC1 category 12 "Error-handling patterns" missing as dedicated §14** — content scattered across §4, §8, §13. Consolidate. [auditor, convoke-spec-bmad-init-behavior-audit.md]
+- [ ] [Review][Patch] **AC3 grep commands diverge from spec's exact forms** — missing `^    def` alternative; used `grep -c _bmad/bme/*` (non-recursive) instead of spec's `grep -rn ... _bmad/bme/`. Re-run verbatim. [auditor, convoke-spec-bmad-init-behavior-audit.md §Mechanical Enumeration Evidence]
+- [ ] [Review][Patch] **Sweep-target count never reconciled** — 18 vs 19 vs 16 across sections. Publish one canonical number; move "candidates" row (bmad-product-brief) to a separate table. [blind, convoke-spec-bmad-init-behavior-audit.md §Mechanical Enumeration Evidence + §Executive Summary + §Handoff Notes]
+- [ ] [Review][Patch] **"14 bme agents" and "74%" unsupported by evidence** — add `find _bmad/bme -path '*/agents/*.md'` enumeration. [blind+edge, convoke-spec-bmad-init-behavior-audit.md §Executive Summary + §Appendix]
+- [ ] [Review][Patch] **§6 rationale misapplies Pattern 6** — Pattern 6 governs LLM activation templates, not JS caller consumption. Rewrite to cite Pattern 4 (library returns objects, CLI formats them). [auditor, convoke-spec-bmad-init-behavior-audit.md §6]
+- [ ] [Review][Patch] **§8 silently drops B8.2 (default module='core') as design delta** — promote to explicit "Design deltas from bmad_init" callout so Story 1A.2 implementer can't miss the unilateral API decision. [auditor, convoke-spec-bmad-init-behavior-audit.md §8]
+- [ ] [Review][Patch] **`_loadLegacyConfig` subprocess bypasses Anti-Drift Pattern 3** — document explicit subprocess exception in Anti-Drift Compliance Walk. [blind, convoke-spec-bmad-init-behavior-audit.md §Anti-Drift Compliance Walk + §Handoff Notes]
+- [ ] [Review][Patch] **Flat-shape assumption (§5) unverified** — add grep enumeration of all `{placeholder}` patterns in installed configs to verify `{project-root}` is the only runtime-resolved placeholder. [blind+edge, convoke-spec-bmad-init-behavior-audit.md §5]
+- [ ] [Review][Patch] **`--vars`/`--all`/default-module usage in 18 SKILL.md targets unverified** — add grep evidence to confirm zero current usages (blocks assumption that these can be dropped). [edge, convoke-spec-bmad-init-behavior-audit.md §6 + §8]
+- [ ] [Review][Patch] **`cmd_check` callers beyond bootstrap unverified** — grep `bmad_init.py check\|bmad-init check` across repo; may find doctor or SKILL.md callers that break if moved. [edge, convoke-spec-bmad-init-behavior-audit.md §9]
+- [ ] [Review][Patch] **Markdown anchor links to arch/epic unverified** — fragment slugs like `#decision-1-config-loading-architecture-wr1--wr8` may be invented. Verify each target heading exists. [blind, convoke-spec-bmad-init-behavior-audit.md header + §4 + §Pattern 3 reference]
+- [ ] [Review][Patch] **§7 core-module.yaml anchor points to wrong line** — link targets `#L10` (user_name.result='{value}') but text describes `#L25` output_folder pattern. [edge, convoke-spec-bmad-init-behavior-audit.md §7]
+- [ ] [Review][Patch] **Frontmatter `status: complete` is premature** — should be `draft` until review passes; flip to `complete` post-review. [blind, convoke-spec-bmad-init-behavior-audit.md frontmatter]
+- [ ] [Review][Patch] **B4.1 text/table tag conflict** — §4 text tags B4.1 as modified-reproduce (throw); Disposition Table tags B4.1 as `drop-with-rationale`. Resolve contradiction. [edge, convoke-spec-bmad-init-behavior-audit.md §4 + §Disposition Table]
+- [ ] [Review][Patch] **WR8 "Bonus finding" mis-tagged `reproduce-in-loader`** — it's an architectural addition, not reproduced from bmad_init. Add a fourth tag (e.g., `add-in-loader`) or reword. [blind, convoke-spec-bmad-init-behavior-audit.md §Disposition Table footer]
+- [ ] [Review][Patch] **Test matrix count blurred by nested-paths bullet** — "8-case matrix" becomes 10+ when nested paths bullet expands to three. Tighten enumeration. [blind, convoke-spec-bmad-init-behavior-audit.md §Handoff Notes]
+- [ ] [Review][Patch] **"16 net after Epic 1B" premature subtraction** — Epic 1B hasn't shipped; express as "18 current, pending Epic 1B removal." [edge, convoke-spec-bmad-init-behavior-audit.md §Handoff Notes + §Mechanical Enumeration Evidence]
+- [ ] [Review][Patch] **Missing caller-wiring example in Handoff Notes** — add `const root = findProjectRoot(); loadModuleConfig(root, 'bme/_vortex');` so Story 1A.2 implementer sees integration path. [edge, convoke-spec-bmad-init-behavior-audit.md §Handoff Notes]
+- [ ] [Review][Patch] **LOC estimate mismatch** — audit says ~30 LOC; story Dev Notes says ~50 LOC. Add reconcile note. [auditor, convoke-spec-bmad-init-behavior-audit.md §Executive Summary]
+- [ ] [Review][Patch] **`_bmad/_memory/config.yaml` inclusion rule unstated** — "8 flat configs" includes a non-module dir (`_memory` is internal scope). Note inclusion rule or exclude. [blind, convoke-spec-bmad-init-behavior-audit.md §Mechanical Enumeration Evidence]
+- [ ] [Review][Patch] **Story File List contradicts epic transition timing** — claims `v63-epic-1a: backlog → in-progress` is part of this change, but it transitioned at story creation per sprint-status comment line 8. [blind, v63-1a-1-audit-bmad-init-behavior-before-replacement.md §File List]
+
+**Deferred (7) — pre-existing or out of scope; persisted to [deferred-work.md](deferred-work.md):**
+
+- [x] [Review][Defer] JS implementation edge cases (moduleConfigPath undefined/null/absolute/`..`, projectRoot validation, BOM, TOCTOU, EACCES, multi-doc YAML, anchors, merge keys, symlinks) — deferred, scope of Story 1A.2 acceptance criteria + tests
+- [x] [Review][Defer] `yaml` vs `js-yaml` package choice — deferred, scope of Story 1A.2 design
+- [x] [Review][Defer] Deprecation warning only fires on fallback (operators with successful migration never see it) — deferred, scope of Story 1A.4 deprecation design
+- [x] [Review][Defer] convoke-doctor pre-existing issues (Team Factory missing workflow, cross-module version drift) — deferred, pre-existing platform issues unrelated to 1A.1
+- [x] [Review][Defer] Architecture doc Decision 1 vs Pattern 3 internal inconsistency — deferred, scope of arch doc (Winston); audit resolved correctly
+- [x] [Review][Defer] `_resolveProjectRootPlaceholder` mutates input config in place — deferred, scope of Story 1A.2 production implementation
+- [x] [Review][Defer] `safe_dump` comment-stripping claim unverified — deferred, scope of Story 1A.4 migration writer design
+
+**Dismissed (5):** line-range `#L46-L71` fragments (project convention); Change Log single-row-per-session (project convention); ".claude/skills not touched" scope claim (correctly scoped); `wc -l 591` unverifiable (grep output implicitly bounds at line 590); `replaceAll` Node compat (Node 18+ supports — Edge Case Hunter self-resolved).
 
 ## Dev Notes
 
@@ -188,19 +234,39 @@ No unit tests for this story — discovery deliverable. Validation is:
 
 ### Agent Model Used
 
-_(to be filled by dev agent)_
+claude-opus-4-7 (executing `/bmad-dev-story` workflow)
 
 ### Debug Log References
 
+- Mechanical enumeration (Task 1) surfaced the audit's biggest reframe: **Convoke's 14 `_bmad/bme/` agents already direct-load and the sweep surface is 18 upstream BMAD SKILL.md files, not ~25**. This finding is captured in the audit's Executive Summary, Mechanical Enumeration Evidence §, and Appendix.
+- Test file `_bmad/core/bmad-init/scripts/tests/test_bmad_init.py` cross-checked against each claimed behavior — every disposition tag is evidence-backed.
+- convoke-doctor run produced 2 pre-existing findings (Team Factory missing `add-team` workflow + cross-module version drift: _artifacts/_enhance/_gyre/_team-factory at 1.0.0 vs _vortex at 3.3.0 vs package 3.2.0). Both are unrelated to this story and pre-date this work. Flagging as noise, not a defect.
+
 ### Completion Notes List
+
+- **AC1 (behavior inventory)** — satisfied via audit §1–§13 (13 sections, 26 discrete behaviors enumerated with line references).
+- **AC2 (disposition tags)** — satisfied via audit §Disposition Table: 4 `reproduce-in-loader`, 10 `drop-with-rationale`, 12 `move-to-convoke-install`. Each tag cites rationale.
+- **AC3 (mechanical enumeration)** — satisfied via audit §Mechanical Enumeration Evidence with raw output from `wc`, `grep`, `ls`.
+- **AC4 (anti-drift walk)** — satisfied via audit §Anti-Drift Compliance Walk; all 4 anchor rules pass without rework.
+- **AC5 (deliverable location + frontmatter)** — satisfied; frontmatter validates against `_bmad/_config/taxonomy.yaml`.
+- **Scope discipline:** No code shipped. No `_bmad/` source tree mutations. No `.claude/skills/` touched. No test files added. No package.json changes. Discovery story = document only.
+- **Downstream unblock:** Story 1A.2 now has a functional spec for `config-loader.js` implementation including a drafted body, three helper signatures, and an 8-case test matrix. The audit's "What the implementer must NOT port" list prevents scope creep in 1A.2.
+- **Bonus finding for retrospective (Story 5B.2):** "We were already 74% of the way to v6.3 before we started" — worth preserving as an innovation-hypothesis observation on the value of Convoke's existing direct-load convention.
 
 ### File List
 
-_Expected new files:_
-- `_bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md` (audit deliverable, ~200–400 lines)
+_New files:_
+- [`_bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md`](../planning-artifacts/convoke-spec-bmad-init-behavior-audit.md) — audit deliverable (~440 lines)
 
-_Expected modified files:_
+_Modified files:_
+- [`_bmad-output/implementation-artifacts/sprint-status.yaml`](sprint-status.yaml) — status transitions `v63-epic-1a: backlog → in-progress`, `v63-1a-1-audit-bmad-init-behavior-before-replacement: backlog → ready-for-dev → in-progress → review`
+
+_Deleted files:_
 - None
 
-_Expected deleted files:_
-- None
+### Change Log
+
+| Date | Change | Reference |
+|------|--------|-----------|
+| 2026-04-21 | Story created and moved to `ready-for-dev` | [sprint-status.yaml](sprint-status.yaml) |
+| 2026-04-21 | Implementation: 6 tasks complete; audit deliverable shipped at [`convoke-spec-bmad-init-behavior-audit.md`](../planning-artifacts/convoke-spec-bmad-init-behavior-audit.md); convoke-doctor validates; status → `review` | This file |
