@@ -56,7 +56,8 @@ last_updated: 2026-04-21
 # 2026-04-21: v63-epic-1a auto-transitioned backlog → in-progress (first story v63-1a-1 created); v63-1a-1-audit-bmad-init-behavior-before-replacement moved backlog → ready-for-dev. Audit story for FM1-2 failure mode closure (bmad-init behavior documentation before config-loader.js replacement).
 # 2026-04-21: v63-1a-1-audit-bmad-init-behavior-before-replacement moved ready-for-dev → in-progress → review → done. Deliverable shipped at _bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md. Round 1 + Round 2 code reviews produced 2 decisions + 32 patches + 7 defers + 5 dismissed — all resolved, all patches applied, per convergence rule no Round 3 allowed. Post-review canonical counts: 56 B-sub-behaviors dispositioned (9 reproduce-in-loader + 16 drop-with-rationale + 31 move-to-convoke-install; §14 is a cross-cutting view, not additive; +1 add-in-loader architectural addition). Sweep surface = 18 upstream-BMAD SKILL.md; Convoke compliance baseline = 12 bme agents / 30 total = 40% (corrected from earlier 74% draft). AC5 clause 2 carry-forward to v63-1a-2 create-story.
 # 2026-04-21: v63-1a-2-create-config-loader-js-with-direct-yaml-loading moved backlog → ready-for-dev. Story file authored via /bmad-create-story; 9 ACs covering the 9 reproduce-in-loader + 1 add-in-loader behaviors from the audit. AC5 carry-forward from 1A.1 satisfied — story Dev Notes cite convoke-spec-bmad-init-behavior-audit.md as primary functional spec. Projected ~40–50 LOC loader + ~20 LOC helpers + 8-case test matrix.
-# 2026-04-21: v63-1a-2-create-config-loader-js-with-direct-yaml-loading moved ready-for-dev → in-progress → review. Shipped scripts/update/lib/config-loader.js (140 LOC, API frozen per AC9) + tests/lib/config-loader.test.js (13 tests — 8 canonical + 5 robustness-extras). Full regression 1201/1201 pass; convoke-doctor 24 pass + 2 pre-existing (unchanged). API adjustment note for reviewer: subprocess uses execFileSync instead of AC5's spawnSync for test-ecosystem consistency (functionally equivalent).
+# 2026-04-21: v63-1a-2-create-config-loader-js-with-direct-yaml-loading moved ready-for-dev → in-progress → review → done. Initial impl shipped; Round 1 review (1 HIGH path-traversal + 20 patches + 1 decision + 9 defers + 4 dismissed) hardened loader to 285 LOC and tests to 33 across 6 suites. AC5 wording amended to execFileSync. Round 2 review (triggered by Round 1 HIGH) verified all 21 Round 1 resolutions hold; caught 1 new HIGH bug (projectRoot='/' silently loading cwd-config) introduced by Round 1's trailing-slash normalization; applied 6 Round 2 patches (post-normalization guard + absolute-path enforcement, SIGKILL signal discrimination, JSDoc constant reference, multi-line YAML error fix, readFileSync error cleanup, Task 6.1 hardcoded count removal). Full suite 1224/1224 pass. Per convergence rule, Round 3 NOT allowed — Round 2 introduced no structural changes. Review converged at Round 2.
+# 2026-04-21: v63-1a-3-create-v6-3-migration-inventory moved backlog → ready-for-dev. Story file authored via /bmad-create-story; 9 ACs covering scan tool + committed CSV inventory. Primary functional spec = Story 1A.1 audit §Mechanical Enumeration Evidence (canonical 18 + 1 candidate). Creates new scripts/audit/ directory (first occupant). Epic "~25 agents" estimate reconciled to audit's mechanical 18 per derive-counts-from-source rule.
 project: BMAD-Enhanced
 project_key: NOKEY
 tracking_system: file-system
@@ -564,8 +565,8 @@ development_status:
   # FRs: FR1–FR11. Primary beneficiary: User (Priya). Not deferrable.
   v63-epic-1a: in-progress
   v63-1a-1-audit-bmad-init-behavior-before-replacement: done
-  v63-1a-2-create-config-loader-js-with-direct-yaml-loading: review
-  v63-1a-3-create-v6-3-migration-inventory: backlog
+  v63-1a-2-create-config-loader-js-with-direct-yaml-loading: done
+  v63-1a-3-create-v6-3-migration-inventory: in-progress
   v63-1a-4-create-migration-script-3-x-to-4-0-js: backlog
   v63-1a-5-migration-robustness-idempotency-resume-offline-lockfile: backlog
   v63-1a-6-author-migration-guide-standalone-deliverable: backlog
