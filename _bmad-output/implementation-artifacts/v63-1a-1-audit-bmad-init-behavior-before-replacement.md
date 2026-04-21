@@ -91,7 +91,7 @@ schema_version: 1
   - [x] 2.3 Cross-referenced with `_bmad/core/bmad-init/SKILL.md` (operator-facing contract matches code behaviors)
 
 - [x] **Task 3: Tag dispositions** (AC2)
-  - [x] 3.1 All 26 behaviors tagged; summary: 4 `reproduce-in-loader`, 10 `drop-with-rationale`, 12 `move-to-convoke-install`
+  - [x] 3.1 All 56 B-sub-behaviors tagged; canonical counts: **9 `reproduce-in-loader` / 16 `drop-with-rationale` / 31 `move-to-convoke-install`** (§14 E14.1–E14.6 is a cross-cutting view, not additional sub-behaviors). Plus one architectural addition (WR8 deprecation fallback, tagged `add-in-loader`).
   - [x] 3.2 `reproduce-in-loader` items drafted with JS equivalents (§4, §5, §8 of audit)
   - [x] 3.3 `drop-with-rationale` items cite architectural rationale (JS destructuring, explicit-params convention, throw-vs-None FM1-3 mitigation)
   - [x] 3.4 `move-to-convoke-install` items target `convoke-install` bootstrap flow (Python stays in 4.0 per architecture Decision 6; JS port deferred to future initiative)
@@ -154,6 +154,28 @@ Three-layer adversarial review (Blind Hunter + Edge Case Hunter + Acceptance Aud
 - [x] [Review][Defer] `safe_dump` comment-stripping claim unverified — deferred, scope of Story 1A.4 migration writer design
 
 **Dismissed (5):** line-range `#L46-L71` fragments (project convention); Change Log single-row-per-session (project convention); ".claude/skills not touched" scope claim (correctly scoped); `wc -l 591` unverifiable (grep output implicitly bounds at line 590); `replaceAll` Node compat (Node 18+ supports — Edge Case Hunter self-resolved).
+
+### Review Findings (Round 2, 2026-04-21)
+
+Round 2 triggered by Round 1's HIGH finding (AC5). All three reviewers re-ran on the Round 1 patch delta. Round 2 surfaced 1 HIGH (patch-introduced arithmetic regression) + 5 MED + 3 LOW + 1 NIT. **All classified `patch` and applied in one pass.** No `decision-needed`, no new `defer`, no new `dismiss` (the dismiss from Round 1 remained dismissed).
+
+**Patch (10) — ALL RESOLVED:**
+
+- [x] [Review][Patch] **Sub-behavior arithmetic regression (HIGH)** — Round 1 patch incorrectly added §14 E-row counts (6) to B-row per-category counts, yielding 9/20/33 which doesn't sum to the claimed 56. Root cause: §14 is a cross-cutting view where E-entries explicitly cross-reference B-entries (e.g., E14.1 ≡ B3.1 + B4.1); adding E-rows to per-disposition tallies double-counts. Canonical reconcile: B-rows only = 56 = 9/16/31. §14 clarified as "view, not additive." [convoke-spec-bmad-init-behavior-audit.md §Executive Summary + §Disposition Table + §14 table row]
+- [x] [Review][Patch] **Story file stale 4/10/12 + 26-behavior counts (MED)** — Round 1 updated the audit but did not sweep Task 3.1 Summary + Completion Notes AC2 entries; both now corrected to 9/16/31 and 56 B-sub-behaviors. [v63-1a-1-*.md §Tasks §Completion Notes]
+- [x] [Review][Patch] **Story Debug Log stale "14 bme agents" (MED)** — Round 1 patched audit but not story Debug Log; now says 12 with Round 2 reconciliation note. [v63-1a-1-*.md §Debug Log References]
+- [x] [Review][Patch] **Audit §Mechanical Enumeration "~16 net sweep targets" (MED)** — contradicted Handoff Notes "do not pre-subtract" policy and arithmetic (18-3=15, not 16). Removed pre-subtraction; reframed as "18 canonical + 1 candidate, Story 1A.4 reconciles post-Epic-1B." [convoke-spec-bmad-init-behavior-audit.md §Mechanical Enumeration Evidence]
+- [x] [Review][Patch] **Story File List missing "→ done" transition (MED)** — added. [v63-1a-1-*.md §File List]
+- [x] [Review][Patch] **Story Change Log missing Round 1 + Round 2 session entries (MED)** — added both rows. [v63-1a-1-*.md §Change Log]
+- [x] [Review][Patch] **§8 Design Deltas items 4+5 framed as decisions when they're language-port mechanics (LOW)** — split into two subcategories: "Design decisions requiring review" (items 1–3: B4.1 silent-None, B8.2 default module, B1 project-root) vs "Language-port mechanics" (items 4–6: JSON-return, exit-code-throw, flag drops). Mechanics not negotiable; decisions escalatable. [convoke-spec-bmad-init-behavior-audit.md §8]
+- [x] [Review][Patch] **§5 `{user}` framing ambiguous (LOW)** — Round 1 version asked Story 1A.2 to decide AND recommended the answer. Round 2 promoted to explicit audit decision: loader leaves `{user}` unresolved (preserve Python behavior), documented in JSDoc as non-goal. Added scope note that audit enumerates `{user}` in installed configs only, not JS/MD source files. [convoke-spec-bmad-init-behavior-audit.md §5]
+- [x] [Review][Patch] **E14.1/B4.1 coherence — verified clean (LOW)** — E14.1 = silent-None-handling (dropped/replaced by throw); B4.1 = YAML-parse-error-detection (reproduced-modified). Distinct aspects of same source code. No contradiction; §14 prose already clarifies the split. [convoke-spec-bmad-init-behavior-audit.md §14 vs §4]
+- [x] [Review][Patch] **sprint-status.yaml Change Log stale count (MED, propagated from HIGH)** — updated to 9/16/31 + Round 1+2 summary. [sprint-status.yaml Change Log]
+
+**Deferred (0) — no new defers in Round 2.**
+**Dismissed (0) — no new dismissals in Round 2.**
+
+**Convergence:** Round 2 patches are all markdown content corrections — no new files, no renamed functions, no altered control flow. Per project-context.md `code-review-convergence` rule, Round 3 is NOT triggered (requires structural changes in Round 2). Review converged at Round 2.
 
 ## Dev Notes
 
@@ -238,14 +260,14 @@ claude-opus-4-7 (executing `/bmad-dev-story` workflow)
 
 ### Debug Log References
 
-- Mechanical enumeration (Task 1) surfaced the audit's biggest reframe: **Convoke's 14 `_bmad/bme/` agents already direct-load and the sweep surface is 18 upstream BMAD SKILL.md files, not ~25**. This finding is captured in the audit's Executive Summary, Mechanical Enumeration Evidence §, and Appendix.
+- Mechanical enumeration (Task 1) surfaced the audit's biggest reframe: **Convoke's 12 `_bmad/bme/` agents already direct-load and the sweep surface is 18 upstream BMAD SKILL.md files, not ~25** (initial draft said 14 bme agents; Round 2 `find _bmad/bme -path '*/agents/*.md'` enumeration returned 12 — Vortex × 7 + Gyre × 4 + Team Factory × 1; `_enhance` module has no `agents/` subdirectory). This finding is captured in the audit's Executive Summary, Mechanical Enumeration Evidence §, and Appendix.
 - Test file `_bmad/core/bmad-init/scripts/tests/test_bmad_init.py` cross-checked against each claimed behavior — every disposition tag is evidence-backed.
 - convoke-doctor run produced 2 pre-existing findings (Team Factory missing `add-team` workflow + cross-module version drift: _artifacts/_enhance/_gyre/_team-factory at 1.0.0 vs _vortex at 3.3.0 vs package 3.2.0). Both are unrelated to this story and pre-date this work. Flagging as noise, not a defect.
 
 ### Completion Notes List
 
-- **AC1 (behavior inventory)** — satisfied via audit §1–§13 (13 sections, 26 discrete behaviors enumerated with line references).
-- **AC2 (disposition tags)** — satisfied via audit §Disposition Table: 4 `reproduce-in-loader`, 10 `drop-with-rationale`, 12 `move-to-convoke-install`. Each tag cites rationale.
+- **AC1 (behavior inventory)** — satisfied via audit §1–§13 (13 numbered behavior sections + §14 cross-cutting error-handling view; 56 B-sub-behaviors enumerated with line references).
+- **AC2 (disposition tags)** — satisfied via audit §Disposition Table. Canonical counts (post-Round-2-reconcile): 9 `reproduce-in-loader` / 16 `drop-with-rationale` / 31 `move-to-convoke-install`. Each tag cites rationale.
 - **AC3 (mechanical enumeration)** — satisfied via audit §Mechanical Enumeration Evidence with raw output from `wc`, `grep`, `ls`.
 - **AC4 (anti-drift walk)** — satisfied via audit §Anti-Drift Compliance Walk; all 4 anchor rules pass without rework.
 - **AC5 (deliverable location + frontmatter)** — satisfied; frontmatter validates against `_bmad/_config/taxonomy.yaml`.
@@ -260,7 +282,7 @@ _New files:_
 - [`_bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md`](../planning-artifacts/convoke-spec-bmad-init-behavior-audit.md) — audit deliverable (~440 lines)
 
 _Modified files:_
-- [`_bmad-output/implementation-artifacts/sprint-status.yaml`](sprint-status.yaml) — status transitions this story only: `v63-1a-1-audit-bmad-init-behavior-before-replacement: ready-for-dev → in-progress → review`. The epic `v63-epic-1a: backlog → in-progress` transition happened at story-creation time (see sprint-status Change Log entry for that date), not as part of this change.
+- [`_bmad-output/implementation-artifacts/sprint-status.yaml`](sprint-status.yaml) — status transitions this story only: `v63-1a-1-audit-bmad-init-behavior-before-replacement: ready-for-dev → in-progress → review → done`. The epic `v63-epic-1a: backlog → in-progress` transition happened at story-creation time (see sprint-status Change Log entry for that date), not as part of this change.
 
 _Deleted files:_
 - None
@@ -271,3 +293,5 @@ _Deleted files:_
 |------|--------|-----------|
 | 2026-04-21 | Story created and moved to `ready-for-dev` | [sprint-status.yaml](sprint-status.yaml) |
 | 2026-04-21 | Implementation: 6 tasks complete; audit deliverable shipped at [`convoke-spec-bmad-init-behavior-audit.md`](../planning-artifacts/convoke-spec-bmad-init-behavior-audit.md); convoke-doctor validates; status → `review` | This file |
+| 2026-04-21 | Round 1 code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor); triage produced 2 decisions + 22 patches + 7 defers + 5 dismissed; all decisions resolved (Option 2 / Option 2) and all patches applied; defers persisted to [deferred-work.md](deferred-work.md); status → `done` | Review Findings section above |
+| 2026-04-21 | Round 2 code review (re-run after Round 1's HIGH finding); reviewers caught a patch-arithmetic regression (9/20/33 sub-behavior counts incorrectly added E14 cross-references to B-row counts). Round 2 applied 10 follow-up patches: canonical count corrected to 9/16/31 across audit + sprint-status + story file; stale "14 bme agents" / "26 behaviors" / "4/10/12" story-file references swept; §8 Design Deltas split into decisions-vs-mechanics; §5 `{user}` framing moved from "ask + recommend" to decision-made; §Mechanical Enumeration subtraction removed; File List + Change Log brought coherent with `→ done`. Per convergence rule, no Round 3 allowed (no structural changes in Round 2). | Review Findings section above |
