@@ -571,7 +571,7 @@ Full descriptions for items in §2.4 whose table row is a one-liner.
 
 ### S3 — One-command standalone install
 
-**Stage:** Qualified | **Portfolio:** convoke | **RICE:** 3.6
+**Stage:** Qualified | **Portfolio:** convoke | **RICE:** 4.0
 
 **Planning artifacts:** `docs/standalone-decoupling-strategy.md` (strategy, not PRD).
 
@@ -619,7 +619,7 @@ Full descriptions for items in §2.4 whose table row is a one-liner.
 
 ### U9 — Module-aware refresh and validation
 
-**Stage:** Qualified | **Portfolio:** convoke | **RICE:** 1.9
+**Stage:** Qualified | **Portfolio:** convoke | **RICE:** 2.1
 
 **Missing:** Brief, PRD, Architecture, PRD Validation, IR, Epics.
 
@@ -669,7 +669,7 @@ Full descriptions for items in §2.4 whose table row is a one-liner.
 
 ### ILE-1 — Initiative Lifecycle Engine
 
-**Stage:** Ready for Sprint | **Portfolio:** helm | **RICE:** 2.0
+**Stage:** Ready for Sprint | **Portfolio:** helm | **RICE:** 2.7
 
 **Origin:** Party mode session 2026-04-12 (John, Winston, Amalik). Qualified 2026-04-15 by John+Winston (per §1.2 shortcut rule).
 
@@ -713,6 +713,7 @@ Full descriptions for items in §2.4 whose table row is a one-liner.
 
 | Date | Change |
 |------|--------|
+| 2026-04-21 | **§3 Appendix RICE sweep by Winston (follow-up to prose cleanup).** Scanned all 12 Appendix entries for RICE-vs-row lag. Fixed 3 lags: **S3** Appendix RICE 3.6 → **4.0** (lag from today's Review pass); **U9** Appendix RICE 1.9 → **2.1** (lag from 2026-04-19 rescore); **ILE-1** Appendix RICE 2.0 → **2.7** (lag from 2026-04-19 rescore). 9 entries matched (U10+P23+A8+A9, P9, P12, P21 [just rewritten], P3, P13, P7, P8, P2). All Stage cells across Appendix match their row counterparts — no Stage drift detected this pass. Zero RICE scoring changes (pure cross-reference synchronization). The pattern is clear: §2.4 Initiative Lane row updates are immediate per Review/Triage, but §3 Appendix narrative entries are manually kept in sync — a known ergonomic gap. If this sweep repeats, consider either a validator (flag Appendix RICE != row RICE) or demoting the Appendix to pointer-only references into the lane row. Deferred as a potential future backlog item pending evidence this recurs. |
 | 2026-04-21 | **Prose cleanup by Winston: backlog narrative sections reconciled to post-Epic-1 state.** Six items executed in order: (1) **§3 Appendix P21 entry rewritten** — title "Experience Contract" → "Operator Covenant", Stage "Qualified" → "Epic 1 ✓ \| Epic 2 deferred", RICE 4.8 → 9.0, full artifact enumeration (Epic file + Covenant + Checklist + 2 audits + retro + 5 stories), two-epic scope expanded with Publication-Gate rationale, strategic positioning (Blue Ocean wedge), axiom + JTBD. (2) **§1 Notes paragraph (line 433)** — removed P21 from "Qualified with no planning artifacts" list; added dedicated P21 bullet referencing Epic file status. (3) **P12 Dependencies review** — no edit needed (forward-pointer convention per backlog-format-spec §Dependency Notation); verified "Phase 3 Loom Add Skill" (P21 Story 2.2 blocker) refers to **Loom Team Factory Phase 3** (TF-FR25/26 per `loom-epic.md:84-87`), not P12/BMB. Gap surfaced: Team Factory Phase 3 is a real blocker with no Initiative Lane row — queued for Triage intake when Story 2.2 is prioritized. (4) **v6.3 Adoption Architecture verified** at `convoke-arch-bmad-v6.3-adoption.md` (status: complete, completedAt: 2026-04-12); row A indicator correct; updated stale one-line hook in memory MEMORY.md. (5) **P24 soft-prereq wiring for P21 Story 2.3** — appended sequencing-pref sentence to P24 Description ("external publication shouldn't point at workflow-output path"); P21 Appendix also captures reciprocal linkage. (6) **U9 → P3 sequencing wiring** — appended to P3 Description that U9 shipping first drops P3 E:4 → E:2 (manifest reader pre-exists); on-ship-of-U9, re-score P3. Zero RICE changes in this pass (prose and cross-reference only). Additional drift surfaced and queued (not fixed this pass): ILE-1 Appendix shows RICE 2.0 but row is 2.7 — likely same lag pattern across other Appendix entries; next sweep should check all 12 entries. |
 | 2026-04-20 | **Review by Winston: Initiative Lane rescoring pass (stage/dependency drift triage).** Rescored **2 items** — Bug: 0, Fast: 0, Initiative: 2. Confirmed: 11, skipped: 0. **P21** R:9→10 CF:80%→90% E:3→2 (score **4.8→9.0**, party-mode consensus: Winston + Bob + John + Victor — Reach ceiling realized via CLAUDE.md rule wiring of `covenant-compliance-for-convoke-skills`; Confidence uplift from 2 audit runs + 5 stories + retro; Effort rebased to Epic-2-remaining). **S3** R:9→10 (score **3.6→4.0**, Reach ceiling — every first-time Convoke installer). Lanes re-sorted: Initiative Lane (no row reorder — P21 stayed #1, S3 stayed #2; scores only). Staleness pre-flight observation: §2.4 row for P21 was already current post-Epic-1-ship (Stage, Artifacts, Dependencies all reflect 2026-04-19 state). Drift surfaced is **downstream** — §3 Appendix P21 entry (lines 581-589) still reads "Experience Contract / Qualified / no artifacts" + §1 Notes paragraph (line 433) still lists P21 in the "Qualified with no planning artifacts" group. Post-Review prose cleanup queued: §3 Appendix rewrite, §1 Notes fix, P12 Dependencies review, v6.3 Architecture artifact verification, P24↔P21-Story-2.3 soft-prereq wiring, U9→P3 sequencing wiring. **First real-drift hit** counting toward I62 unblock trigger (staleness-preflight-for-backlog-pickup applications ≥ 3). |
 | 2026-04-20 | **Triage by Winston: Logged 5 intakes (IN-66..IN-70) from code review Round 2 of A33.** Qualified 4 to Fast Lane: **A35** (operator-visible boundary formalization in Checklist §171, R:4 I:1 CF:80% E:1 = **3.2**), **A36** (sibling files `template.md`/`validate.md` escape §2.4 Layer 1/2 enumeration, R:3 I:1 CF:80% E:1 = **2.4**), **A38** (cross-module + cross-workflow concept inheritance rule, R:4 I:1 CF:70% E:2 = **1.4**), **A37** (step-01 workflow.md-Read echo re-introduction-or-fresh semantics, R:2 I:0.5 CF:70% E:1 = **0.7**). All four delegated from A33's `<frozen>` Ask-First deferrals — none re-surface IG1/IG2 (those resolved at Round 1). 2 findings absorbed into existing **A13** (OC-R7 concept-counting) as concrete sub-examples: Steps Overview bullet headers + alias/parenthetical expansion — no new intake, A13 description extended. 1 dropped: **IN-70** (new FAIL surfaces at dense Layer 1 workflows like assumption-mapping) — already captured in Epic 2 Story 2.1 retrofit scope; logged as `[DROPPED]` for audit trail. Bundling observation: A35 + A36 cover distinct §171 + §2.4 scope surfaces both introduced/load-bearing by A33; A38 is a separate rule space; A37 is narrow-edge. Raw intakes: 0. New portfolio proposals: 0. Qualifier: Winston. |
