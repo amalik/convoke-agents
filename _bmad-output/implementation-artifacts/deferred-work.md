@@ -5,6 +5,31 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of v63-1a-1-audit-bmad-init-behavior-before-replacement (2026-04-21)
+
+Round 1 code review of Story 1A.1's audit deliverable produced 7 `defer` items — scope belongs to downstream stories or other initiatives.
+
+- **JS implementation edge cases** — Edge Case Hunter. `moduleConfigPath` undefined/null/empty/absolute/`..`-containing, `projectRoot` undefined/null/trailing-slash/symlinked, BOM handling, EACCES, TOCTOU race between `existsSync` and `readFileSync`, YAML multi-document streams, anchors, merge keys. These are real production-code concerns for the loader but belong to Story 1A.2 acceptance criteria + tests — the audit's drafted JS is a hint block, not production code. Fix path: Story 1A.2 must include these as explicit test cases.
+- **`yaml` vs `js-yaml` package choice** — Edge Case Hunter. Both are in `package.json` dependencies; the audit's drafted body uses `yaml` (eemeli) but some existing Convoke modules use `js-yaml`. Decision belongs to Story 1A.2 design. Fix path: Story 1A.2 design doc should pick one and enforce consistency across `scripts/update/lib/`.
+- **Deprecation warning only fires on fallback path** — Blind Hunter. Operators with successful v3→v4 migration will never hit `_loadLegacyConfig`, so they never see the 4.0 deprecation notice and may not realize `bmad-init` is being removed in 4.1. Belongs to Story 1A.4 (deprecation design) — consider emitting a one-shot notice when `_bmad/core/bmad-init/` directory exists even if config loads successfully.
+- **convoke-doctor pre-existing issues** — Blind Hunter (triage). Two findings surfaced by `convoke-doctor` during AC6 validation: (a) `_team-factory` missing `add-team` workflow, (b) cross-module version drift (`_artifacts/_enhance/_gyre/_team-factory` at 1.0.0 vs `_vortex` at 3.3.0 vs package 3.2.0). Pre-existing platform hygiene issues, unrelated to 1A.1. Fix path: open separate backlog items for each; neither blocks Story 1A.1 sign-off.
+- **Architecture doc Decision 1 vs Pattern 3 inconsistency** — Acceptance Auditor. Architecture doc's Decision 1 sample uses `yaml.parse()`; Pattern 3 says `yaml.parseDocument()` for read-write. The audit resolved this correctly (followed Pattern 3), but the arch doc itself has an internal inconsistency. Not caused by 1A.1. Fix path: flag to Winston for a Round 2 arch doc edit; audit stays as-is.
+- **`_resolveProjectRootPlaceholder` mutates input config in place** — Edge Case Hunter. The drafted JS mutates `config[key]` rather than returning a new object. Maintainability / test-mocking hazard. Belongs to Story 1A.2 implementation choice — audit's draft is a hint. Fix path: Story 1A.2 implementer decides mutate-vs-clone based on caller contract.
+- **`safe_dump` comment-stripping claim unverified** — Edge Case Hunter. Audit §12 asserts `yaml.safe_dump` strips operator comments as justification for Story 1A.4 round-trip writer. Claim not backed by grep evidence of existing operator comments in installed configs. Belongs to Story 1A.4 migration writer design — the round-trip justification may or may not be warranted. Fix path: before Story 1A.4 implements round-trip, grep installed configs for operator-added comments; if none, simpler `safe_dump` approach is fine.
+
+---
+
+## Deferred from: code review of A35+A36 bundle — Round 1, reverted (2026-04-21)
+
+Round 1 review surfaced 5 HIGH + 6 MEDIUM findings revealing architectural premise issues with A36 ("`validate.md` is a standalone workflow, not a sibling companion" — Edge Case Hunter). Both edits reverted; combined rework tracked as **A44** (Layer 1 + operator-facing text correct semantics). Defers below capture findings adjacent to A44's primary scope:
+
+- **`_deprecated/` subtree audit scope** — Edge Case Hunter MEDIUM. `_bmad/bme/_vortex/workflows/_deprecated/empathy-map/` still contains workflow.md + validate.md + template.md. A44's filesystem survey should decide whether deprecated-subtree files are in scope for current audits. Fix path: explicit carve-out in §2.4 for `_deprecated/**` subtrees, OR include them with a clear "deprecated workflows are audited-but-not-retrofitted" policy.
+- **README-like / operator-read-but-not-workflow-loaded files** — Edge Case Hunter LOW. Workflow-root `README.md`-style files that operators might read in a repo browser but workflows don't `Read` at runtime. A44's categorization should address this boundary — are repo-browsing reads "normal execution path" or out-of-scope?
+- **Multi-step `Read` attribution** — Edge Case Hunter MEDIUM. If `empathy-map.template.md` is `Read` by both step-04 and step-06, is it Layer 1 (once at workflow level) or Layer 2 (per-step)? A44 must resolve; interacts with §2.6 inheritance semantics.
+- **A10 §Cell Selection semantic effect** — Edge Case Hunter LOW. A36's Layer 1 expansion (had it shipped) would create a new class of borderline cells — companion-file contributions to Layer 1. A44 resolution should note whether Cell Selection guidance needs amendment to include companion-file inclusion as a candidate borderline axis.
+
+---
+
 ## Deferred from: code review of A40 Publication Gate amendment (2026-04-21)
 
 Round 1 code review of A40 (5 spec edits to `convoke-epic-operator-covenant.md`) produced 4 `defer` items — pre-existing or out of A40 scope.
