@@ -1,6 +1,6 @@
 # Story 1A.3: Create v6.3 migration inventory
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -253,10 +253,10 @@ claude-opus-4-7 (executing `/bmad-dev-story` workflow)
 ### File List
 
 _New files:_
-- [`scripts/audit/audit-bmad-init-refs.js`](../../scripts/audit/audit-bmad-init-refs.js) — 167 LOC. Public: `scanBmadInitRefs`, `writeInventoryCsv`, `renderInventoryCsv`, `CSV_HEADER`. Internal: `_findSkillMdFiles`, `_tryParseFrontmatter`, `_firstSegmentUnderBmad`, `_inferAgentNameFromPath`, `_formatCsvValue`, `_runCli`.
+- [`scripts/audit/audit-bmad-init-refs.js`](../../scripts/audit/audit-bmad-init-refs.js) — 277 LOC post-Round-1 review (initial draft 263 LOC; grew by ~14 for the traversal-safe self-ref prefix comment, the `renderInventoryCsv` type guard, and the `_runCli` try/catch error wrapper). Public: `scanBmadInitRefs`, `writeInventoryCsv`, `renderInventoryCsv`, `CSV_HEADER`. Internal: `_findSkillMdFiles`, `_tryParseFrontmatter`, `_firstSegmentUnderBmad`, `_inferAgentNameFromPath`, `_formatCsvValue`, `_runCli`.
 - [`scripts/audit/README.md`](../../scripts/audit/README.md) — 13 lines. Directory scope + occupant table.
 - [`_bmad/_config/v6.3-migration-inventory.csv`](../../_bmad/_config/v6.3-migration-inventory.csv) — 20 lines (header + 18 canonical + 1 candidate).
-- [`tests/lib/audit-bmad-init-refs.test.js`](../../tests/lib/audit-bmad-init-refs.test.js) — 12 tests across 4 suites.
+- [`tests/lib/audit-bmad-init-refs.test.js`](../../tests/lib/audit-bmad-init-refs.test.js) — 306 LOC. 13 tests across 4 suites (12 initial + 1 Round 1 patch test for the `renderInventoryCsv` type guard).
 
 _Modified files:_
 - [`_bmad-output/implementation-artifacts/sprint-status.yaml`](sprint-status.yaml) — status transitions for this story only: `ready-for-dev → in-progress → review`.
@@ -269,4 +269,32 @@ _Deleted files:_
 | Date | Change | Reference |
 |------|--------|-----------|
 | 2026-04-21 | Story created per `/bmad-create-story v63-1a-3-...` invocation. Primary functional spec = Story 1A.1 audit §Mechanical Enumeration Evidence (canonical 18 + 1 candidate). | [sprint-status.yaml](sprint-status.yaml) |
-| 2026-04-21 | Implementation: 7 tasks complete. Shipped `audit-bmad-init-refs.js` (167 LOC, 4 exports) + `README.md` + `v6.3-migration-inventory.csv` (18 canonical + 1 candidate, matches audit exactly) + test file (12 tests across 4 suites). `npm test` passes 1236/1236; convoke-doctor clean (pre-existing findings unchanged); `--verify-only` confirms AC8 determinism. Status → `review`. | This file |
+| 2026-04-21 | Implementation: 7 tasks complete. Shipped `audit-bmad-init-refs.js` (initial 263 LOC, 4 exports) + `README.md` + `v6.3-migration-inventory.csv` (18 canonical + 1 candidate, matches audit exactly) + test file (12 tests across 4 suites). `npm test` passes; convoke-doctor clean (pre-existing findings unchanged); `--verify-only` confirms AC8 determinism. Status → `review`. | This file |
+| 2026-04-21 | Round 1 code review (inline pass after subagent API instability). Acceptance Auditor verdict: **all 9 ACs verified.** No HIGH findings. Applied 4 MED patches: (1) `SELF_REF_PREFIX` trailing slash (segment-aware self-ref filter, prevents false-positive filtering of hypothetical `_bmad/core/bmad-init-v2/`); (2) `renderInventoryCsv` Array.isArray guard (symmetric with `writeInventoryCsv`); (3) `_runCli` try/catch wrapper (clean error messages instead of raw stack traces); (4) story-file LOC drift fix (167 → 277). +1 test (`renderInventoryCsv` type guard). Full suite 1237/1237 pass. Per convergence rule, no Round 2 triggered (zero HIGH findings). Status → `done`. | Review Findings section below |
+
+### Review Findings (Round 1, 2026-04-21)
+
+Round 1 code review run inline (3-subagent parallel launch hit API instability; pivoted to direct review with same coverage). All 9 ACs verified via mechanical checks (`--verify-only` exit 0, grep counts matching audit, test suite passing). No HIGH findings. 4 MED patches applied in batch.
+
+**Decision-needed (0).**
+
+**Patch (4) — ALL RESOLVED:**
+
+- [x] [Review][Patch] **[MED] `SELF_REF_PREFIX` lacks trailing slash** — `_bmad/core/bmad-init` as a substring prefix would false-positive-filter any future sibling like `_bmad/core/bmad-init-v2/`. Fixed with `_bmad/core/bmad-init/` + inline comment explaining the load-bearing slash. [audit-bmad-init-refs.js:30]
+- [x] [Review][Patch] **[MED] `renderInventoryCsv` missing `Array.isArray(entries)` guard** — asymmetric with `writeInventoryCsv`; caller passing `null` would produce a low-signal TypeError. Added matching guard + JSDoc `@throws` entry. [audit-bmad-init-refs.js:141-143]
+- [x] [Review][Patch] **[MED] `_runCli` doesn't wrap `scanBmadInitRefs` in try/catch** — thrown errors (bad projectRoot, missing _bmad/, IO failures) surfaced as raw stack traces. Wrapped in try/catch; emits `[audit-bmad-init-refs] ERROR: {msg}` to stderr and returns 1 cleanly. Smoke-tested from `/tmp` (missing `_bmad/`) — outputs clean error, exit 1 as expected. [audit-bmad-init-refs.js:215-263]
+- [x] [Review][Patch] **[MED] Story File List LOC drift (167 claimed, 277 actual)** — same doc-drift pattern caught on Story 1A.2 Round 1. Updated File List entries to cite actual post-Round-1 values. [story file File List]
+
+**Deferred (1):**
+
+- [x] [Review][Defer] **Windows CRLF test coverage** — CANONICAL regex should work on CRLF files (the `m` flag makes `^` match after any `\n`, which follows `\r`), but no fixture tests this. Not a blocker: Convoke has no Windows promise in 4.0; add when Windows CI is added.
+
+**Dismissed (2):** `_formatCsvValue` lacks tab/control-char handling (RFC 4180 doesn't require it); `gray-matter` default engine not pinned (very low risk — would need a breaking gray-matter release to bite).
+
+**Non-findings (worth noting for the record):**
+
+- Story AC5 count-band check (15–22) is operator-enforced, not tool-enforced. Deliberately out of scope for the tool per the story spec ("STOP and investigate" is operator workflow). Not a defect.
+- File-disappeared warning branch (config-loader line 87-89) is racy to test; coverage gap acknowledged as not worth a dedicated test.
+- `candidateStatus` hardcoded strings (`'canonical'`/`'candidate'`) — downstream story 1A.4 will couple to these literals. Flagged for future hardening via shared constants module if a third consumer appears.
+
+**Convergence:** Round 1 had zero HIGH findings. Per project-context.md `code-review-convergence` rule, **Round 2 is NOT triggered** — convergence reached at Round 1. All 4 MED patches applied cleanly; regression suite passes 1237/1237.
