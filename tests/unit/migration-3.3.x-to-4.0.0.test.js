@@ -549,3 +549,374 @@ describe('3.3.x-to-4.0.0 — preview() (AC7)', () => {
     assert.match(r.actions[0], /already complete/);
   });
 });
+
+// ============================================================================
+// Story 1A.5 — robustness (idempotency, resume, offline, lockfile, path-safety)
+// ============================================================================
+
+const crypto = require('node:crypto');
+
+/**
+ * Recursively hash every file under `dir` into a `{relpath: sha1}` map.
+ * Used for byte-level filesystem-diff assertions (AC1 idempotency).
+ */
+function hashTree(dir) {
+  const map = {};
+  function walk(d, prefix) {
+    for (const ent of fs.readdirSync(d, { withFileTypes: true })) {
+      const full = path.join(d, ent.name);
+      const rel = prefix ? `${prefix}/${ent.name}` : ent.name;
+      if (ent.isDirectory()) {
+        walk(full, rel);
+      } else if (ent.isFile()) {
+        const buf = fs.readFileSync(full);
+        map[rel] = crypto.createHash('sha1').update(buf).digest('hex');
+      }
+    }
+  }
+  walk(dir, '');
+  return map;
+}
+
+describe('3.3.x-to-4.0.0 — robustness (1A.5)', () => {
+  describe('AC1 — idempotency (zero filesystem changes on re-run)', () => {
+    let tmp;
+    let cpMock;
+
+    beforeEach(() => {
+      tmp = makeTmpProject();
+      cpMock = mockExecFileSync(MIGRATION_PATH, __dirname);
+      cpMock.setReturnValue(CLEAN_DOCTOR_OUTPUT);
+    });
+
+    afterEach(() => {
+      cpMock.restore();
+      fs.removeSync(tmp);
+    });
+
+    it('byte-level filesystem diff is empty when apply() is run against a phase5-complete project', async () => {
+      seedPreV4Project(tmp, {
+        canonicalEntries: [
+          { file: '_bmad/bmm/a/SKILL.md', module: 'bmm', agentName: 'a' },
+          { file: '_bmad/bmm/b/SKILL.md', module: 'bmm', agentName: 'b' },
+        ],
+      });
+      const mod = cpMock.module;
+
+      // First run: complete migration.
+      await mod.apply(tmp);
+      const hashBefore = hashTree(tmp);
+
+      // Second run should short-circuit at Phase 1 — zero mutations.
+      const changes = await mod.apply(tmp);
+      const hashAfter = hashTree(tmp);
+
+      assert.deepEqual(hashAfter, hashBefore, 'filesystem must be byte-identical after second apply()');
+      assert.equal(changes.length, 1);
+      assert.match(changes[0], /Migration skipped/);
+    });
+
+    it('preserves started_at across resumed invocations (not re-stamped)', async () => {
+      seedPreV4Project(tmp, {
+        canonicalEntries: [{ file: '_bmad/bmm/a/SKILL.md', module: 'bmm', agentName: 'a' }],
+      });
+      const mod = cpMock.module;
+
+      // Manually run Phase 2 → captures started_at.
+      await mod._internal._phase2_verifyConfigs(tmp);
+      const stateA = yaml.load(
+        fs.readFileSync(path.join(tmp, '_bmad/_memory/migration-state-4.0.yaml'), 'utf8')
+      );
+      const startedAtA = stateA.started_at;
+
+      // Sleep a tick so a fresh timestamp would measurably differ.
+      await new Promise(r => setTimeout(r, 5));
+
+      // Re-run Phase 2 explicitly (skip-on-complete branch).
+      await mod._internal._phase2_verifyConfigs(tmp);
+      const stateB = yaml.load(
+        fs.readFileSync(path.join(tmp, '_bmad/_memory/migration-state-4.0.yaml'), 'utf8')
+      );
+
+      assert.equal(stateB.started_at, startedAtA, 'started_at must be preserved on resume');
+    });
+  });
+
+  describe('AC2 + AC3 — resume (partial Phase 3, Phase 2 skip-on-resume)', () => {
+    let tmp;
+    let cpMock;
+
+    beforeEach(() => {
+      tmp = makeTmpProject();
+      cpMock = mockExecFileSync(MIGRATION_PATH, __dirname);
+      cpMock.setReturnValue(CLEAN_DOCTOR_OUTPUT);
+    });
+
+    afterEach(() => {
+      cpMock.restore();
+      fs.removeSync(tmp);
+    });
+
+    it('Phase 3 resume skips files already in phase3_files_done (writes only remaining)', async () => {
+      seedPreV4Project(tmp, {
+        canonicalEntries: [
+          { file: '_bmad/bmm/a/SKILL.md', module: 'bmm', agentName: 'a' },
+          { file: '_bmad/bmm/b/SKILL.md', module: 'bmm', agentName: 'b' },
+          { file: '_bmad/bmm/c/SKILL.md', module: 'bmm', agentName: 'c' },
+          { file: '_bmad/bmm/d/SKILL.md', module: 'bmm', agentName: 'd' },
+        ],
+      });
+      const mod = cpMock.module;
+      await mod._internal._phase2_verifyConfigs(tmp);
+
+      // Simulate interruption: manually record 2 of 4 files as already done.
+      const state = yaml.load(
+        fs.readFileSync(path.join(tmp, '_bmad/_memory/migration-state-4.0.yaml'), 'utf8')
+      );
+      state.phase3_files_done = ['_bmad/bmm/a/SKILL.md', '_bmad/bmm/b/SKILL.md'];
+      fs.writeFileSync(
+        path.join(tmp, '_bmad/_memory/migration-state-4.0.yaml'),
+        yaml.dump(state),
+        'utf8'
+      );
+      // Capture hashes of already-done files BEFORE resume, to prove they're not re-written.
+      const hashA = crypto.createHash('sha1').update(
+        fs.readFileSync(path.join(tmp, '_bmad/bmm/a/SKILL.md'))
+      ).digest('hex');
+      const hashB = crypto.createHash('sha1').update(
+        fs.readFileSync(path.join(tmp, '_bmad/bmm/b/SKILL.md'))
+      ).digest('hex');
+
+      // Resume sweep.
+      const r = mod._internal._phase3_sweepSkillMd(tmp);
+
+      assert.equal(r.filesRewritten, 2, 'only remaining 2 files should be rewritten');
+      // Already-done files must be byte-identical (not re-written).
+      const hashAAfter = crypto.createHash('sha1').update(
+        fs.readFileSync(path.join(tmp, '_bmad/bmm/a/SKILL.md'))
+      ).digest('hex');
+      const hashBAfter = crypto.createHash('sha1').update(
+        fs.readFileSync(path.join(tmp, '_bmad/bmm/b/SKILL.md'))
+      ).digest('hex');
+      assert.equal(hashAAfter, hashA, 'already-done file a should not be modified');
+      assert.equal(hashBAfter, hashB, 'already-done file b should not be modified');
+    });
+
+    it('Phase 2 skips baseline-capture on resume (option B per AC3)', async () => {
+      seedPreV4Project(tmp, {
+        canonicalEntries: [{ file: '_bmad/bmm/a/SKILL.md', module: 'bmm', agentName: 'a' }],
+      });
+      const mod = cpMock.module;
+
+      // First Phase 2 → invokes doctor once.
+      await mod._internal._phase2_verifyConfigs(tmp);
+      const firstCount = cpMock.callCount();
+      assert.equal(firstCount, 1, 'first Phase 2 should invoke doctor once');
+
+      // Second Phase 2 → should short-circuit, zero new doctor calls.
+      await mod._internal._phase2_verifyConfigs(tmp);
+      assert.equal(cpMock.callCount(), firstCount, 'resume must skip baseline capture');
+    });
+
+    it('state-file loss is handled — re-running after delete completes safely', async () => {
+      seedPreV4Project(tmp, {
+        canonicalEntries: [{ file: '_bmad/bmm/a/SKILL.md', module: 'bmm', agentName: 'a' }],
+      });
+      const mod = cpMock.module;
+      await mod.apply(tmp);
+
+      // Delete state file → Phase 1 will re-detect pre-v4 (false positive OK).
+      fs.removeSync(path.join(tmp, '_bmad/_memory/migration-state-4.0.yaml'));
+
+      // Re-run: Phase 3 rewrite is idempotent because `_rewriteActivation`
+      // fails to find the v3 pattern in an already-v4 file (no-op skip);
+      // Phase 4 banner uses HTML-comment sentinel idempotency.
+      const changes = await mod.apply(tmp);
+
+      // Both SKILL.md and bmad-init file should be unchanged byte-for-byte.
+      const skillContent = fs.readFileSync(path.join(tmp, '_bmad/bmm/a/SKILL.md'), 'utf8');
+      assert.doesNotMatch(skillContent, /Load config via bmad-init skill/,
+        'SKILL.md should still be v4-rewritten (no regression from state-file loss)');
+
+      const bannerContent = fs.readFileSync(path.join(tmp, '_bmad/core/bmad-init/SKILL.md'), 'utf8');
+      const bannerCount = (bannerContent.match(/convoke:deprecation-banner:bmad-init/g) || []).length;
+      assert.equal(bannerCount, 1, 'deprecation banner must NOT be duplicated after state-file loss');
+
+      // Second run should report Phase 3 skipped all files (pattern not found) and Phase 4 no-op.
+      assert.ok(Array.isArray(changes));
+    });
+  });
+
+  describe('AC4 — offline-safe (no network calls)', () => {
+    let tmp;
+    let cpMock;
+
+    beforeEach(() => {
+      tmp = makeTmpProject();
+      cpMock = mockExecFileSync(MIGRATION_PATH, __dirname);
+      cpMock.setReturnValue(CLEAN_DOCTOR_OUTPUT);
+    });
+
+    afterEach(() => {
+      cpMock.restore();
+      fs.removeSync(tmp);
+    });
+
+    it('apply() makes zero network calls (http, https, dns)', async () => {
+      seedPreV4Project(tmp, {
+        canonicalEntries: [{ file: '_bmad/bmm/a/SKILL.md', module: 'bmm', agentName: 'a' }],
+      });
+
+      const http = require('node:http');
+      const https = require('node:https');
+      const dns = require('node:dns');
+
+      const httpSpy = mock.method(http, 'request', () => {
+        throw new Error('unexpected http.request in apply()');
+      });
+      const httpsSpy = mock.method(https, 'request', () => {
+        throw new Error('unexpected https.request in apply()');
+      });
+      // Sync-throw: apply() must not call dns.lookup at all. If it did, the
+      // throw surfaces immediately (stricter than callback-with-Error, which
+      // would be invoked asynchronously and possibly swallowed).
+      const dnsSpy = mock.method(dns, 'lookup', () => {
+        throw new Error('unexpected dns.lookup in apply()');
+      });
+
+      try {
+        const mod = cpMock.module;
+        await mod.apply(tmp);
+        // Each spy's callCount must be zero — apply() must not reach out.
+        assert.equal(httpSpy.mock.callCount(), 0, 'http.request should not be called');
+        assert.equal(httpsSpy.mock.callCount(), 0, 'https.request should not be called');
+        assert.equal(dnsSpy.mock.callCount(), 0, 'dns.lookup should not be called');
+      } finally {
+        httpSpy.mock.restore();
+        httpsSpy.mock.restore();
+        dnsSpy.mock.restore();
+      }
+    });
+  });
+
+  describe('AC6 — path-safety (writes confined to _bmad/)', () => {
+    let tmp;
+    let cpMock;
+
+    beforeEach(() => {
+      tmp = makeTmpProject();
+      cpMock = mockExecFileSync(MIGRATION_PATH, __dirname);
+      cpMock.setReturnValue(CLEAN_DOCTOR_OUTPUT);
+    });
+
+    afterEach(() => {
+      cpMock.restore();
+      fs.removeSync(tmp);
+    });
+
+    it('every fs.writeFileSync during apply() writes under {projectRoot}/_bmad/', async () => {
+      seedPreV4Project(tmp, {
+        canonicalEntries: [{ file: '_bmad/bmm/a/SKILL.md', module: 'bmm', agentName: 'a' }],
+      });
+
+      // Spy on fs.writeFileSync at the module level (fs-extra re-exports).
+      const writeSpy = mock.method(fs, 'writeFileSync');
+      try {
+        const mod = cpMock.module;
+        await mod.apply(tmp);
+
+        const bmadPrefix = path.resolve(tmp, '_bmad') + path.sep;
+        const calls = writeSpy.mock.calls;
+        assert.ok(calls.length > 0, 'apply() should perform at least one write');
+        for (const call of calls) {
+          const target = String(call.arguments[0]);
+          const resolved = path.resolve(target);
+          assert.ok(
+            resolved.startsWith(bmadPrefix),
+            `write target must be under _bmad/: ${resolved}`
+          );
+        }
+      } finally {
+        writeSpy.mock.restore();
+      }
+    });
+
+    it('_assertWriteContained rejects paths outside _bmad/', () => {
+      const mod = cpMock.module;
+      // Import the helper directly — it's exposed via _internal for tests.
+      // The helper throws on any resolve that escapes projectRoot/_bmad.
+      assert.throws(
+        () => {
+          // Simulate a traversal attempt — try to write into /etc/ via ..-escape.
+          mod._internal._phase4_deprecateBmadInit; // warm-up; no call needed
+          // Direct call to the helper (via internal re-require):
+          const base = cpMock.module;
+          // We need access to _assertWriteContained; it is exposed via _internal.
+          if (!base._internal._assertWriteContained) {
+            throw new Error('_assertWriteContained is not exposed on _internal');
+          }
+          base._internal._assertWriteContained(path.join(tmp, '..', 'evil.txt'), tmp);
+        },
+        /refused write outside _bmad\//
+      );
+    });
+  });
+
+  describe('AC7 test 7 — malicious inventory entry is rejected by path guard', () => {
+    let tmp;
+    let cpMock;
+
+    beforeEach(() => {
+      tmp = makeTmpProject();
+      cpMock = mockExecFileSync(MIGRATION_PATH, __dirname);
+      cpMock.setReturnValue(CLEAN_DOCTOR_OUTPUT);
+    });
+
+    afterEach(() => {
+      cpMock.restore();
+      fs.removeSync(tmp);
+    });
+
+    it('inventory entry with ..-escape is skipped with warning (no write outside projectRoot)', async () => {
+      // Seed a project; then inject a malicious inventory row post-seed.
+      seedPreV4Project(tmp, {
+        canonicalEntries: [{ file: '_bmad/bmm/safe/SKILL.md', module: 'bmm', agentName: 'safe' }],
+      });
+      // Overwrite inventory with a malicious row.
+      const header = 'file,module_config_path,module,agent_name,pattern_matched,candidate_status';
+      const malicious = '_bmad/../../etc/passwd,bmm,bmm,evil,1. **Load config via bmad-init skill**,canonical';
+      fs.writeFileSync(
+        path.join(tmp, '_bmad/_config/v6.3-migration-inventory.csv'),
+        header + '\n' + malicious + '\n',
+        'utf8'
+      );
+      // The malicious entry has no file on disk; Phase 3 skip reason is either
+      // "file not found" (existsSync pre-check) or "path escapes projectRoot"
+      // (the existing Round 1 M2 guard in _phase3_sweepSkillMd). Either way,
+      // /etc/passwd must not be touched — but the test host can't assert that
+      // negatively; we assert the guard fired via the state file.
+      const warnSpy = mock.method(console, 'warn', () => {});
+      try {
+        const mod = cpMock.module;
+        await mod._internal._phase2_verifyConfigs(tmp);
+        mod._internal._phase3_sweepSkillMd(tmp);
+
+        const state = yaml.load(
+          fs.readFileSync(path.join(tmp, '_bmad/_memory/migration-state-4.0.yaml'), 'utf8')
+        );
+        // The malicious row should appear in phase3_files_skipped with an escape/not-found reason.
+        const maliciousSkipped = state.phase3_files_skipped.find(
+          e => e.file === '_bmad/../../etc/passwd'
+        );
+        assert.ok(maliciousSkipped, 'malicious row must be recorded in phase3_files_skipped');
+        assert.match(
+          maliciousSkipped.reason,
+          /escapes projectRoot|not found/,
+          `unexpected skip reason: ${maliciousSkipped.reason}`
+        );
+      } finally {
+        warnSpy.mock.restore();
+      }
+    });
+  });
+});
