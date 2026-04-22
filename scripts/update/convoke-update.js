@@ -220,6 +220,7 @@ async function main() {
     assessment.breakingChanges.forEach(change => {
       console.log(chalk.yellow(`  - ${change}`));
     });
+    console.log(chalk.cyan('  Migration guide: docs/migration/3.x-to-4.0.md'));
     console.log('');
   }
 
