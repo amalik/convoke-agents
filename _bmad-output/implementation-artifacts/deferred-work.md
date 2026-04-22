@@ -5,6 +5,14 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of v63-1a-6-author-migration-guide-standalone-deliverable (2026-04-22)
+
+Round 1 code review of Story 1A.6's migration guide + CLI wiring. 1 `defer` item — spec-authoring convention gap, not an implementation miss.
+
+- **AC7 measurement proxy too narrow** — Edge Case Hunter MED. AC7's validation script only walks `[text](url)` markdown-link patterns. Bare prose references (the CLI path string `docs/migration/3.x-to-4.0.md` emitted to stdout, the CSV path `_bmad/_config/bmm-dependencies.csv` referenced in guide body) escape the check. This means Story 1A.6's broken-link check passed while still containing unresolvable prose references. Fix path: future stories that carry "no broken links" ACs should specify a proxy that walks prose citations of file paths (e.g., regex for `(scripts|docs|_bmad|tests)/\S+\.(md|js|yaml|csv)` and verify each resolves). Not actionable against 1A.6's implementation — spec-authoring-convention refinement, belongs to a future AC-template story.
+
+---
+
 ## Deferred from: code review of v63-1a-2-create-config-loader-js-with-direct-yaml-loading (2026-04-21)
 
 Round 1 code review of the `config-loader.js` implementation produced 9 `defer` items — real concerns that exceed Story 1A.2's 4.0-scoped AC surface. Acceptance Auditor verified all 9 story ACs satisfied; these defers cover defensive-hardening opportunities the audit explicitly de-scoped or that belong to later stories.
