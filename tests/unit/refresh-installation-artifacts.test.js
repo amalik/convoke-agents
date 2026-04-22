@@ -159,6 +159,11 @@ describe('refreshInstallation — Artifacts skill wrappers', () => {
 
     const pmAfter = fs.readFileSync(pmPathBefore, 'utf8');
     // pm.md will have the Enhance menu patch added (initiatives-backlog), but NOT any artifacts entries
+    // (Strengthened 2026-04-22 per lint-1.1 AC2: `pmBefore` was captured but never compared —
+    // the test only checked the absence of artifacts entries, not the presence of the Enhance patch
+    // that the comment claimed would happen. Now uses pmBefore to assert both facts.)
+    assert.notStrictEqual(pmAfter, pmBefore, 'pm.md should be modified by Enhance menu patch');
+    assert.ok(pmAfter.includes('initiatives-backlog'), 'pm.md should contain the Enhance menu patch (initiatives-backlog)');
     assert.ok(!pmAfter.includes('bmad-migrate-artifacts'), 'pm.md should not contain artifacts menu entries');
     assert.ok(!pmAfter.includes('bmad-portfolio-status'), 'pm.md should not contain artifacts menu entries');
   });
