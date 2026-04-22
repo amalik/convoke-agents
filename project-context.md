@@ -121,6 +121,23 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 
 ---
 
+## Rule: lint-passes-before-review
+
+**Statement.** Before marking a story `review` (or submitting a PR for review), run `npm run lint` and verify it exits 0 **with zero warnings in any file the story modifies**. The scope is the story's diff, not the whole repo — pre-existing warnings in files the story does not touch are owned by whichever story currently owns those files (or by a follow-up lint-cleanup backlog item).
+
+**Why.** Story 1A.2 (`v63-1a-2-create-config-loader-js-with-direct-yaml-loading`) shipped with 1,224 tests passing and two full code-review rounds converged — but produced 8 ESLint `preserve-caught-error` errors in `scripts/update/lib/config-loader.js` that were first surfaced by CI run #714 (2026-04-21). Review Round 1 + Round 2 both gated on `npm test`, not `npm run lint`, so the regression slipped past both rounds. The existing dev-story DoD checklist said "Linting and static checks pass **when configured in project**" — a weasel qualifier that made the gate skippable despite ESLint being configured. This rule closes that gap: the DoD checklist is amended (via lint-1.1) to remove the weasel wording, and this rule restates the norm so dev agents see it as a citable convention before touching code.
+
+**How to apply.**
+- **Before marking a story `review`.** Run `npm run lint` unprefixed (no file filter — the CI gate is unfiltered). If it surfaces any error in files this story modifies, fix before `review`. If it surfaces any *warning* in files this story modifies, fix before `review`. Pre-existing warnings in untouched files are out of scope — log a deferred backlog item if the warning count is growing, but do not scope-creep the current story.
+- **Scoping the "files modified by this story".** Run `git diff --name-only main...HEAD` (or equivalent) — that's your touched-files set. The DoD gate applies to every `.js` / `.mjs` / `.cjs` in that set.
+- **When the weaker ESLint-rule default hides a real problem.** `no-unused-vars` defaults to `args: "after-used"` (only trailing unused args are flagged). TypeScript's language server flags *all* unused args, which is stricter than ESLint. If the IDE reports an unused arg that ESLint misses, use judgment — if it's public API, prefix with `_`; if it's dead, delete. Do not disable the IDE hint without replacing it with the corresponding fix.
+- **Reviewing a PR.** If the diff touches `scripts/**` or `tests/**` and the author has not explicitly cited `npm run lint` output in the PR description or commit message, ask for it before approving. An author whose DoD step ran `npm run lint` and saw errors would have fixed them — their silence about lint is evidence the gate wasn't walked.
+- **When CI lint fails but your local doesn't.** Different ESLint versions, different rule sets, or uncommitted changes. Run `npm ci && npm run lint` (clean install, matches CI) before assuming the failure is spurious.
+
+**Scope exemptions.** None under normal circumstances. If the story amends ESLint configuration itself (e.g., disabling a rule project-wide), the new rule set is what `npm run lint` exercises — the DoD still applies. If the story is authored specifically to clean up lint (like lint-1.1 itself), the DoD applies forward: the story's own diff must be lint-clean. Pre-existing WIP warnings from parallel in-flight stories (e.g., the 1A.4 migration script in progress during lint-1.1's implementation) are scope-excluded **only if** the scope exclusion is documented in the story file at authoring time, not retroactively.
+
+---
+
 ## Rule: capability-form-factor-evaluation
 
 **Statement.** When a new capability enters the qualifying gate (§1.2 of the initiative lifecycle), and the question is "what form should this take?" — run it through the Capability Evaluation Framework decision tree before assigning a lane or committing to a form factor.
