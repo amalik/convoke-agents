@@ -81,6 +81,37 @@ const MIGRATIONS = [
     breaking: false,
     description: 'Artifact governance: create or merge _bmad/_config/taxonomy.yaml (parallel entry for 3.0.x users)',
     module: null
+  },
+  {
+    name: '3.3.x-to-4.0.0',
+    fromVersion: '3.3.x',
+    breaking: true,
+    description: 'v6.3 direct-load migration: rewrites 18 upstream-BMAD SKILL.md activation blocks from bmad-init invocation to v4 direct-YAML-load pattern. Marks bmad-init deprecated. Validates via convoke-doctor diff.',
+    module: null
+  },
+  // Parallel entry points for earlier 3.x users: all share the same module
+  // logic. matchesVersionRange requires `{major}.{minor}.x` form, so we ship
+  // one entry per prior 3.x minor line to guarantee every 3.x user reaches 4.0.
+  {
+    name: '3.0.x-to-4.0.0',
+    fromVersion: '3.0.x',
+    breaking: true,
+    description: 'v6.3 direct-load migration (parallel entry for 3.0.x users — same logic as 3.3.x-to-4.0.0).',
+    module: null
+  },
+  {
+    name: '3.1.x-to-4.0.0',
+    fromVersion: '3.1.x',
+    breaking: true,
+    description: 'v6.3 direct-load migration (parallel entry for 3.1.x users — same logic as 3.3.x-to-4.0.0).',
+    module: null
+  },
+  {
+    name: '3.2.x-to-4.0.0',
+    fromVersion: '3.2.x',
+    breaking: true,
+    description: 'v6.3 direct-load migration (parallel entry for 3.2.x users — same logic as 3.3.x-to-4.0.0).',
+    module: null
   }
   // Future migrations: append here. Only add delta logic for version-specific changes.
 ];
