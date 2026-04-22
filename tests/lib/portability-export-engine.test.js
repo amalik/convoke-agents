@@ -137,7 +137,7 @@ describe('Export engine (sp-2-2)', () => {
     let before;
     try {
       before = execSync('git status --porcelain', { cwd: projectRoot, encoding: 'utf8' });
-    } catch (e) {
+    } catch (_e) {
       console.warn('skipping read-only test — git not available or not a repo');
       return;
     }
