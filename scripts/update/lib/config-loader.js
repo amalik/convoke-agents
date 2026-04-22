@@ -120,17 +120,20 @@ function loadModuleConfig(projectRoot, moduleConfigPath) {
     }
     if (err && err.code === 'EACCES') {
       throw new Error(
-        `Cannot read ${configPath}: permission denied (EACCES). Check file permissions.`
+        `Cannot read ${configPath}: permission denied (EACCES). Check file permissions.`,
+        { cause: err }
       );
     }
     if (err && err.code === 'EISDIR') {
       throw new Error(
-        `Cannot read ${configPath}: path is a directory, not a file.`
+        `Cannot read ${configPath}: path is a directory, not a file.`,
+        { cause: err }
       );
     }
     const codeTag = err && err.code ? `${err.code} ` : '';
     throw new Error(
-      `Cannot read ${configPath}: ${codeTag}${(err && err.message) || 'unknown error'}`.trim()
+      `Cannot read ${configPath}: ${codeTag}${(err && err.message) || 'unknown error'}`.trim(),
+      { cause: err }
     );
   }
 
@@ -267,13 +270,15 @@ function _loadLegacyConfig(projectRoot, moduleConfigPath) {
   } catch (err) {
     if (err && err.code === 'ENOENT') {
       throw new Error(
-        `python3 not found on PATH. Install Python 3 or run 'convoke-update' to migrate off bmad-init.`
+        `python3 not found on PATH. Install Python 3 or run 'convoke-update' to migrate off bmad-init.`,
+        { cause: err }
       );
     }
     if (err && err.signal === 'SIGTERM') {
       throw new Error(
         `Legacy bmad-init fallback exceeded ${SUBPROCESS_TIMEOUT_MS / 1000}s timeout. ` +
-        `Run 'convoke-update' to migrate off bmad-init.`
+        `Run 'convoke-update' to migrate off bmad-init.`,
+        { cause: err }
       );
     }
     // Catch other signals (SIGKILL from OOM, SIGPIPE, etc.) with a distinct message so
@@ -281,14 +286,16 @@ function _loadLegacyConfig(projectRoot, moduleConfigPath) {
     if (err && err.signal) {
       throw new Error(
         `Legacy bmad-init fallback killed by signal ${err.signal}. ` +
-        `Run 'convoke-update' to migrate off bmad-init.`
+        `Run 'convoke-update' to migrate off bmad-init.`,
+        { cause: err }
       );
     }
     const stderrText = (err && err.stderr) ? String(err.stderr).trim() : '';
     const statusInfo = err && err.status != null ? ` (exit ${err.status})` : '';
     throw new Error(
       `Legacy bmad-init fallback failed${statusInfo}: ${stderrText || (err && err.message) || 'unknown error'}. ` +
-      `Run 'convoke-update' to migrate off bmad-init.`
+      `Run 'convoke-update' to migrate off bmad-init.`,
+      { cause: err }
     );
   }
 
@@ -298,7 +305,8 @@ function _loadLegacyConfig(projectRoot, moduleConfigPath) {
   } catch (err) {
     throw new Error(
       `Legacy bmad-init fallback returned non-JSON stdout: ${err.message}. ` +
-      `Run 'convoke-update' to migrate off bmad-init.`
+      `Run 'convoke-update' to migrate off bmad-init.`,
+      { cause: err }
     );
   }
 
