@@ -16,6 +16,8 @@ constraints: >-
 
 # Convoke 4.0 Migration Guide — 3.x → 4.0 (Draft)
 
+> **Finalized 2026-04-22:** this draft has been published at [`docs/migration/3.x-to-4.0.md`](../../docs/migration/3.x-to-4.0.md) per Story v63-1a-6. This draft is preserved as the artifact-governance source; the user-facing final lives at the `docs/` path.
+
 **Status:** Draft. This guide will be linked from the `convoke-update` terminal output and from the CHANGELOG entry.
 
 ---
