@@ -313,7 +313,8 @@ describe('runMigrations multi-version chain traversal', () => {
       '1.5.x-to-1.6.0',
       '1.6.x-to-1.7.0',
       '1.7.x-to-2.0.0',
-      '2.0.x-to-3.1.0'
+      '2.0.x-to-3.1.0',
+      '3.1.x-to-4.0.0',  // Added by Story 1A.4 — extends chain from 3.1.0 → 4.0.0
     ]);
 
     // Migration history should record all 4
@@ -326,7 +327,8 @@ describe('runMigrations multi-version chain traversal', () => {
       '1.5.x-to-1.6.0',
       '1.6.x-to-1.7.0',
       '1.7.x-to-2.0.0',
-      '2.0.x-to-3.1.0'
+      '2.0.x-to-3.1.0',
+      '3.1.x-to-4.0.0',  // Story 1A.4 — chain now extends to 4.0.0
     ]);
   });
 
