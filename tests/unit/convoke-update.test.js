@@ -743,10 +743,26 @@ describe('convoke-update CLI (main)', () => {
       );
       assert.ok(stdout.includes('BREAKING CHANGES'), 'should display breaking changes warning');
       assert.ok(stdout.includes('Migration Plan'), 'should show migration plan');
-      // Story v63-1a-6: migration guide link printed alongside breaking changes.
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  // Story v63-1a-6 AC4: migration guide link printed alongside breaking changes
+  // when the migration chain lands on a -to-4.0.0 hop. Uses 3.2.0 (not 3.3.0
+  // which equals the current package.json version → 'up-to-date' action).
+  it('links the migration guide in breaking-changes output for v3.x upgrade', async () => {
+    const tmpDir = await createTempDir('bmad-cli-');
+    try {
+      await createInstallation(tmpDir, '3.2.0');
+
+      const { stdout } = await runScriptWithInput(
+        SCRIPT_PATH, [], 'n\n', { cwd: tmpDir }
+      );
+      assert.ok(stdout.includes('BREAKING CHANGES'), 'should display breaking changes warning');
       assert.ok(
-        stdout.includes('docs/migration/3.x-to-4.0.md'),
-        'should link the migration guide from breaking-changes output'
+        stdout.includes('https://github.com/amalik/convoke-agents/blob/main/docs/migration/3.x-to-4.0.md'),
+        'should link the migration guide from breaking-changes output for 3.x→4.0 upgrade'
       );
     } finally {
       await fs.remove(tmpDir);
