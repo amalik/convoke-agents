@@ -79,7 +79,7 @@ describe('Portability validator (sp-1-3)', () => {
       const dir = createdTmpDirs.pop();
       try {
         fs.rmSync(dir, { recursive: true, force: true });
-      } catch (e) {
+      } catch (_e) {
         // Best-effort cleanup; don't fail tests on filesystem races
       }
     }
