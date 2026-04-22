@@ -64,7 +64,10 @@ describe('getMigrationsFor', () => {
 });
 
 describe('getMigrationsFor - chain traversal', () => {
-  it('chains from 1.0.5 through all 5 hops', () => {
+  // Note: Story 1A.4 (v6.3 direct-load migration) extends every chain from any
+  // 3.x entry to 4.0.0. Users from 1.x/2.x chain through 2.0.x-to-3.1.0 →
+  // targets 3.1.0 → first match is `3.1.x-to-4.0.0` (added by Story 1A.4).
+  it('chains from 1.0.5 through to 4.0.0', () => {
     const migrations = registry.getMigrationsFor('1.0.5');
     const names = migrations.map(m => m.name);
     assert.deepEqual(names, [
@@ -73,11 +76,12 @@ describe('getMigrationsFor - chain traversal', () => {
       '1.5.x-to-1.6.0',
       '1.6.x-to-1.7.0',
       '1.7.x-to-2.0.0',
-      '2.0.x-to-3.1.0'
+      '2.0.x-to-3.1.0',
+      '3.1.x-to-4.0.0',
     ]);
   });
 
-  it('chains from 1.1.3 through all 5 hops', () => {
+  it('chains from 1.1.3 through to 4.0.0', () => {
     const migrations = registry.getMigrationsFor('1.1.3');
     const names = migrations.map(m => m.name);
     assert.deepEqual(names, [
@@ -86,11 +90,12 @@ describe('getMigrationsFor - chain traversal', () => {
       '1.5.x-to-1.6.0',
       '1.6.x-to-1.7.0',
       '1.7.x-to-2.0.0',
-      '2.0.x-to-3.1.0'
+      '2.0.x-to-3.1.0',
+      '3.1.x-to-4.0.0',
     ]);
   });
 
-  it('chains from 1.3.7 through 4 hops', () => {
+  it('chains from 1.3.7 through to 4.0.0', () => {
     const migrations = registry.getMigrationsFor('1.3.7');
     const names = migrations.map(m => m.name);
     assert.deepEqual(names, [
@@ -98,47 +103,56 @@ describe('getMigrationsFor - chain traversal', () => {
       '1.5.x-to-1.6.0',
       '1.6.x-to-1.7.0',
       '1.7.x-to-2.0.0',
-      '2.0.x-to-3.1.0'
+      '2.0.x-to-3.1.0',
+      '3.1.x-to-4.0.0',
     ]);
   });
 
-  it('chains from 1.5.2 through 3 hops', () => {
+  it('chains from 1.5.2 through to 4.0.0', () => {
     const migrations = registry.getMigrationsFor('1.5.2');
     const names = migrations.map(m => m.name);
     assert.deepEqual(names, [
       '1.5.x-to-1.6.0',
       '1.6.x-to-1.7.0',
       '1.7.x-to-2.0.0',
-      '2.0.x-to-3.1.0'
+      '2.0.x-to-3.1.0',
+      '3.1.x-to-4.0.0',
     ]);
   });
 
-  it('chains from 1.6.0 through 2 hops', () => {
+  it('chains from 1.6.0 through to 4.0.0', () => {
     const migrations = registry.getMigrationsFor('1.6.0');
     const names = migrations.map(m => m.name);
     assert.deepEqual(names, [
       '1.6.x-to-1.7.0',
       '1.7.x-to-2.0.0',
-      '2.0.x-to-3.1.0'
+      '2.0.x-to-3.1.0',
+      '3.1.x-to-4.0.0',
     ]);
   });
 
-  it('chains from 1.7.1 through 2 hops', () => {
+  it('chains from 1.7.1 through to 4.0.0', () => {
     const migrations = registry.getMigrationsFor('1.7.1');
     const names = migrations.map(m => m.name);
-    assert.deepEqual(names, ['1.7.x-to-2.0.0', '2.0.x-to-3.1.0']);
+    assert.deepEqual(names, [
+      '1.7.x-to-2.0.0',
+      '2.0.x-to-3.1.0',
+      '3.1.x-to-4.0.0',
+    ]);
   });
 
-  it('returns single hop from 2.0.1', () => {
+  it('chains from 2.0.1 through to 4.0.0', () => {
     const migrations = registry.getMigrationsFor('2.0.1');
     const names = migrations.map(m => m.name);
-    assert.deepEqual(names, ['2.0.x-to-3.1.0']);
+    assert.deepEqual(names, ['2.0.x-to-3.1.0', '3.1.x-to-4.0.0']);
   });
 
-  it('returns single hop from 3.0.4 (parallel entry)', () => {
+  it('chains from 3.0.4 through to 4.0.0 (parallel entry for 3.0.x users)', () => {
     const migrations = registry.getMigrationsFor('3.0.4');
     const names = migrations.map(m => m.name);
-    assert.deepEqual(names, ['3.0.x-to-3.1.0']);
+    // Walker finds `3.0.x-to-3.1.0` first (older entry wins), targets 3.1.0,
+    // then hits `3.1.x-to-4.0.0` added by Story 1A.4.
+    assert.deepEqual(names, ['3.0.x-to-3.1.0', '3.1.x-to-4.0.0']);
   });
 });
 
@@ -166,21 +180,25 @@ describe('getMigrationsFor - parallel entry exclusion', () => {
 });
 
 describe('getBreakingChanges', () => {
-  it('returns breaking changes for 1.0.x (chain includes 1.0.x and 1.7.x)', () => {
+  // Story 1A.4 adds breaking `3.x-to-4.0.0` entries — every 1.x/2.x/3.x chain
+  // now picks up the 4.0 breaking change on the tail.
+  it('returns breaking changes for 1.0.x (1.0.x-to-1.3.0 + 1.7.x-to-2.0.0 + 3.1.x-to-4.0.0)', () => {
     const changes = registry.getBreakingChanges('1.0.5');
-    assert.equal(changes.length, 2);
+    assert.equal(changes.length, 3);
   });
 
-  it('returns breaking change for 1.1.x (chain reaches 1.7.x-to-2.0.0)', () => {
+  it('returns breaking changes for 1.1.x (1.7.x-to-2.0.0 + 3.1.x-to-4.0.0)', () => {
     const changes = registry.getBreakingChanges('1.1.0');
-    assert.equal(changes.length, 1);
-    assert.ok(changes[0].includes('Product rename'));
+    assert.equal(changes.length, 2);
+    assert.ok(changes.some(c => c.includes('Product rename')));
+    assert.ok(changes.some(c => c.includes('v6.3 direct-load')));
   });
 
-  it('returns breaking change for 1.5.x (chain reaches 1.7.x-to-2.0.0)', () => {
+  it('returns breaking changes for 1.5.x (1.7.x-to-2.0.0 + 3.1.x-to-4.0.0)', () => {
     const changes = registry.getBreakingChanges('1.5.2');
-    assert.equal(changes.length, 1);
-    assert.ok(changes[0].includes('Product rename'));
+    assert.equal(changes.length, 2);
+    assert.ok(changes.some(c => c.includes('Product rename')));
+    assert.ok(changes.some(c => c.includes('v6.3 direct-load')));
   });
 
   it('returns empty for future version beyond all migrations', () => {
