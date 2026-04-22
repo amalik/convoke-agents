@@ -7,15 +7,16 @@ required-inputs:
   - 'Completed Tasks/Subtasks section with all items marked [x]'
   - 'Updated File List section with all changed files'
   - 'Updated Dev Agent Record with implementation notes'
+  - 'Linting reports — `npm run lint` output proving zero errors and zero warnings in files modified by this story'
 optional-inputs:
   - 'Test results output'
   - 'CI logs'
-  - 'Linting reports'
 validation-rules:
   - 'Only permitted story sections modified: Tasks/Subtasks checkboxes, Dev Agent Record, File List, Change Log, Status'
   - 'All implementation requirements from story Dev Notes must be satisfied'
   - 'Definition of Done checklist must pass completely'
   - 'Enhanced story context must contain sufficient technical guidance'
+  - '`npm run lint` exits 0 AND reports zero warnings in files modified by this story (per project-context.md §Rule: lint-passes-before-review)'
 ---
 
 # 🎯 Enhanced Definition of Done Checklist
@@ -46,7 +47,7 @@ validation-rules:
 - [ ] **Phantom Test Guard:** If this story added new test files OR new test functions, the runtime test count reported by the project's test runner (e.g. `npm test`) increased by at least the number of test functions added. **Files existing on disk is NOT sufficient.** Verify by running the test command and reading the summary line (e.g. `ℹ tests N pass N fail 0`). See [phantom test risk](../../../_bmad-output/test-artifacts/2026-04-08-astonishment-report.md) — this guard exists because AI agents have produced test files that were structurally invisible to the runner (Jest API in a `node:test` project, missing imports, files not matched by any glob in `package.json`, etc.).
 - [ ] **Test Wiring Verified:** Any new test file path is matched by at least one npm script glob in `package.json` (or equivalent project test config). A test that the project's test command does not invoke is a phantom test, regardless of how complete it looks.
 - [ ] **Regression Prevention:** ALL existing tests pass (no regressions introduced)
-- [ ] **Code Quality:** Linting and static checks pass when configured in project
+- [ ] **Code Quality:** `npm run lint` exits 0 with zero warnings in files modified by this story (per [`project-context.md` §Rule: lint-passes-before-review](../../../../project-context.md#rule-lint-passes-before-review))
 - [ ] **Test Framework Compliance:** Tests use project's testing frameworks and patterns from Dev Notes
 
 ## 📝 Documentation & Tracking
