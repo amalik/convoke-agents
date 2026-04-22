@@ -574,7 +574,7 @@ development_status:
   v63-1a-2-create-config-loader-js-with-direct-yaml-loading: done
   v63-1a-3-create-v6-3-migration-inventory: done
   v63-1a-4-create-migration-script-3-x-to-4-0-js: done
-  v63-1a-5-migration-robustness-idempotency-resume-offline-lockfile: backlog
+  v63-1a-5-migration-robustness-idempotency-resume-offline-lockfile: done
   v63-1a-6-author-migration-guide-standalone-deliverable: backlog
   v63-epic-1a-retrospective: optional
 
