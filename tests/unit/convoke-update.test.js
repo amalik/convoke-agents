@@ -743,6 +743,11 @@ describe('convoke-update CLI (main)', () => {
       );
       assert.ok(stdout.includes('BREAKING CHANGES'), 'should display breaking changes warning');
       assert.ok(stdout.includes('Migration Plan'), 'should show migration plan');
+      // Story v63-1a-6: migration guide link printed alongside breaking changes.
+      assert.ok(
+        stdout.includes('docs/migration/3.x-to-4.0.md'),
+        'should link the migration guide from breaking-changes output'
+      );
     } finally {
       await fs.remove(tmpDir);
     }
