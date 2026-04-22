@@ -220,7 +220,9 @@ async function main() {
     assessment.breakingChanges.forEach(change => {
       console.log(chalk.yellow(`  - ${change}`));
     });
-    console.log(chalk.cyan('  Migration guide: docs/migration/3.x-to-4.0.md'));
+    if (assessment.migrations.some(m => m.name && m.name.endsWith('-to-4.0.0'))) {
+      console.log(chalk.cyan('  Migration guide: https://github.com/amalik/convoke-agents/blob/main/docs/migration/3.x-to-4.0.md'));
+    }
     console.log('');
   }
 
