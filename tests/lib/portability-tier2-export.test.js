@@ -72,8 +72,14 @@ describe('Tier 2 Export (sp-5-1)', () => {
     const lightDepsCount = [...new Set(rows.filter((r) => r[tierIdx] === 'light-deps').map((r) => r[nameIdx]))].length;
 
     const successLines = [...allResult.stdout.matchAll(/^✅ (\S+)/gm)];
-    assert.ok(successLines.length >= standaloneCount);
-    // Should also include some light-deps
+    // --all exports both tiers — total successes must cover every standalone + every light-deps
+    // (Strengthened 2026-04-22 per lint-1.1 AC2: was `>= standaloneCount` only, which didn't
+    // check tier-2 coverage at all despite the test name claiming "includes both tier 1 and tier 2".)
+    assert.ok(
+      successLines.length >= standaloneCount + lightDepsCount,
+      `expected ≥ ${standaloneCount + lightDepsCount} successes (standalone=${standaloneCount} + light-deps=${lightDepsCount}), got ${successLines.length}`
+    );
+    // Belt-and-suspenders: verify at least one known light-deps skill is in the output.
     assert.ok(allResult.stdout.includes('bmad-create-prd'));
   });
 });
