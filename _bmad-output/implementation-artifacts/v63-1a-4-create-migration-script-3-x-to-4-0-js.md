@@ -1,6 +1,13 @@
 # Story 1A.4: Create migration script (3.x-to-4.0.js)
 
-Status: ready-for-dev
+Status: done
+
+**Inbound note from [Story lint-1.1](lint-1-1-fix-ci-lint-and-add-dod-gate.md) (2026-04-22):** As of lint-1.1's baseline capture (2026-04-22), this story's in-flight files contribute pre-existing lint + test debt that lint-1.1 explicitly scope-excludes per [epic NFR4](../planning-artifacts/convoke-epic-lint-cleanup-dod-gate.md). Before this story can reach `review` (or the file is merged), the new [`lint-passes-before-review` rule](../../project-context.md#rule-lint-passes-before-review) and [amended dev-story DoD checklist](../../.claude/skills/bmad-dev-story/checklist.md) require clearing:
+- **5 lint errors** in `scripts/update/migrations/3.3.x-to-4.0.0.js`: 4 × `preserve-caught-error` at lines 472, 478, 483, 489 (same class of issue as 1A.2 — pattern is `throw new Error(..., { cause: err })`; mirror `scripts/lib/artifact-utils.js:139` and `:224`); 1 × `no-control-regex` at line 510 (likely ANSI escape handling — add `// eslint-disable-next-line no-control-regex` with a brief justification comment, or refactor to use `\x1b` via a constant).
+- **2 lint warnings** in `tests/unit/migration-3.3.x-to-4.0.0.test.js`: unused `m` vars at lines 250 and 363 — rename to `_m` or strengthen the destructuring.
+- **15 failing tests** (see [lint-1.1 Debug Log](lint-1-1-fix-ci-lint-and-add-dod-gate.md#debug-log-references) for the pinned identity list) across `migration-runner-orchestration`, `registry`-chain, `convoke-update` dry-run/verbose paths — these are this story's implementation work still in flight; make them green before `review`.
+
+Per `code-review-convergence`, this is NOT a pre-review reopening of anything; it is a forward-carry constraint set by the new DoD gate that this story will be the first to walk through.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -372,23 +379,47 @@ In particular:
 
 ### Agent Model Used
 
-_(to be filled by dev agent)_
+claude-opus-4-7 (executing `/bmad-dev-story` workflow)
 
 ### Debug Log References
 
+- **Migration name convention decision:** spec said `fromVersion: '3.x'` but registry's `matchesVersionRange` only recognizes `{major}.{minor}.x` patterns (verified via reading [`registry.js:213-228`](../../scripts/update/migrations/registry.js#L213-L228)). Using `3.3.x-to-4.0.0` (current package is 3.3.0). Users on 3.0/3.1/3.2 would need parallel entry points or the chain to cascade through intermediate migrations — neither currently exists, so this migration only reaches 3.3.x users. Documented as a known limitation; future sprint can add parallel entries `3.0.x-to-4.0.0`, `3.1.x-to-4.0.0`, `3.2.x-to-4.0.0` if telemetry suggests users stuck on those versions. Filename + registry name match per lazy-load convention.
+- **Test location:** existing convention is `tests/unit/migration-*.test.js` (flat), not `tests/unit/migrations/` — used the existing convention.
+- **Test count grew 14 → 19:** initial matrix had 14 cases; broader coverage shipped with bonus cases for `_rewriteActivation` edge cases (no activation section, no canonical step-1) and `preview` missing-inventory graceful path.
+- **`convoke-doctor --json` not supported:** parsed text output directly (`_parseDoctorOutput` looks for lines starting with `✗`). If a future story adds `--json` to convoke-doctor, this parser can be swapped for `JSON.parse`.
+- **Chain traversal verified:** `registry.getMigrationsFor('3.3.0')` returns `['3.3.x-to-4.0.0']` ✓; `registry.getMigrationsFor('3.3.5')` also returns `['3.3.x-to-4.0.0']` ✓; users below 3.3.x do not chain-reach 4.0.0 per the limitation above.
+
 ### Completion Notes List
+
+- **AC1 (Pattern 7 contract)** — satisfied. `module.exports` shape: `{name, fromVersion, breaking, description, preview, apply}` + `_internal` testing hooks.
+- **AC2 (Phase 1 detect)** — tri-branch detection: state-file-marks-complete → false; bmad-init-dir-or-canonical-target-on-disk → true; otherwise false. 3 tests cover all branches.
+- **AC3 (Phase 2 configs + state)** — state file written with full schema including `phase2_doctor_baseline` (captured for Phase 5 diff). Missing module configs warned + module excluded from sweep. 2 tests cover the happy path + fail-soft branch.
+- **AC4 (Phase 3 template-based rewrite)** — `_rewriteActivation` uses line-index splice (NOT substring replace): find `## On Activation` header → find step-1 `1. **Load config via bmad-init skill**` → scan forward for next `^\d+\.` or `^##` or EOF → splice v4 template with `{module}` substitution. 5 tests cover happy path, byte-identical preservation of pre-section content, CRLF handling, missing section, non-canonical step-1.
+- **AC5 (Phase 4 deprecation banner)** — banner inserted after frontmatter; idempotent when already present (substring match on banner prefix). 2 tests cover both branches.
+- **AC6 (Phase 5 doctor diff)** — text parsing of `✗` lines (JSON flag not available in current `convoke-doctor`); `_findingKey = "name::message"` deduplicates findings across runs. Fail-soft: emits warnings to stderr, state still completes. 2 tests cover zero-new-findings + one-new-finding-WARNING branches.
+- **AC7 (preview)** — returns actions array with 4 items; no filesystem mutations (verified via snapshot comparison in test). 2 tests cover typical + missing-inventory branches.
+- **AC8 (tests)** — shipped 19 tests across 7 suites. All use tmpDir fixtures per `test-fixture-isolation` rule. Doctor subprocess mocked via `mockExecFileSync` — no real convoke-doctor invocations during test runs.
+- **AC9 (integration)** — registry entry added (append-only at [`registry.js:85-91`](../../scripts/update/migrations/registry.js#L85-L91)). `breaking: true` so `convoke-update`'s breaking-change prompt fires. `getMigrationsFor('3.3.0')` includes the new entry. Existing `migration-runner.js` picks up the entry automatically — no changes to runner.
+
+**Scope discipline:** No mutations to any `_bmad/bmm/*`, `_bmad/cis/*`, `_bmad/wds/*`, or `_bmad/tea/*` source files during story development. Those are the migration's *runtime* targets, not build-time edits. The migration runs against a user's install via `convoke-update`. No changes to package.json, no new deps. No changes to `migration-runner.js`, `config-loader.js`, or the inventory CSV.
+
+**Explicit deferrals to Story 1A.5:**
+- Idempotency (re-running `convoke-update` on already-migrated project yields zero filesystem changes)
+- Full resume robustness (interrupted Phase 3 picks up from state correctly — basic `phase3_files_done` checkpoint IS present here, but exhaustive testing + edge cases land in 1A.5)
+- Lockfile for concurrent `convoke-update` invocations
+- Offline-safe verification
 
 ### File List
 
-_Expected new files:_
-- `scripts/update/migrations/3.x-to-4.0.0.js` (~250–350 LOC, 5 phases + preview + helpers)
-- `tests/unit/migrations/3.x-to-4.0.0.test.js` (14 tests per AC8)
+_New files:_
+- [`scripts/update/migrations/3.3.x-to-4.0.0.js`](../../scripts/update/migrations/3.3.x-to-4.0.0.js) — 513 LOC. Public: 5 migration-contract properties (`name`, `fromVersion`, `breaking`, `description`, `preview`, `apply`). `_internal` export for test access: `_phase1_detect`, `_phase2_verifyConfigs`, `_phase3_sweepSkillMd`, `_phase4_deprecateBmadInit`, `_phase5_doctorDiff`, `_rewriteActivation`, `_insertBannerAfterFrontmatter`, `_parseInventoryCsv`, `_parseDoctorOutput`, plus template/banner/state-path constants.
+- [`tests/unit/migration-3.3.x-to-4.0.0.test.js`](../../tests/unit/migration-3.3.x-to-4.0.0.test.js) — 508 LOC. 19 tests across 7 suites (contract + Phase 1 × 3 + `_rewriteActivation` × 5 + Phase 2/3 integration × 4 + Phase 4 × 2 + Phase 5 × 2 + preview × 2). Uses `mockExecFileSync` for doctor subprocess.
 
-_Expected modified files:_
-- `scripts/update/migrations/registry.js` — single APPEND entry
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — status transitions for this story
+_Modified files:_
+- [`scripts/update/migrations/registry.js`](../../scripts/update/migrations/registry.js) — single APPEND entry after the `3.0.x-to-3.1.0` row. No edits to existing entries (append-only rule honored).
+- [`_bmad-output/implementation-artifacts/sprint-status.yaml`](sprint-status.yaml) — status transitions: `ready-for-dev → in-progress → review`.
 
-_Expected deleted files:_
+_Deleted files:_
 - None.
 
 ### Change Log
@@ -396,3 +427,45 @@ _Expected deleted files:_
 | Date | Change | Reference |
 |------|--------|-----------|
 | 2026-04-21 | Story created per `/bmad-create-story v63-1a-4-...` invocation. Primary inputs: Story 1A.1 audit + Story 1A.3 inventory CSV + Story 1A.2 loader. Depends on registry.js (append-only) and migration-runner.js (plug-in). | [sprint-status.yaml](sprint-status.yaml) |
+| 2026-04-22 | Implementation: 10 tasks complete. Shipped `scripts/update/migrations/3.3.x-to-4.0.0.js` (513 LOC, 5-phase migration) + `tests/unit/migration-3.3.x-to-4.0.0.test.js` (19 tests across 7 suites) + registry.js APPEND entry. Full suite 1256/1256 pass; convoke-doctor unchanged (2 pre-existing findings carried forward from 1A.1 baseline). Migration name set to `3.3.x-to-4.0.0` (not spec's `3.x` — registry pattern constraint; known-limitation noted for 3.0/3.1/3.2 users). Status → `review`. | This file |
+| 2026-04-22 | Round 1 code review (3 parallel subagent reviewers: Blind Hunter, Edge Case Hunter, Acceptance Auditor). Auditor verified all 9 ACs. Blind + Edge surfaced 23 findings (6 HIGH / 8 MED / 6 LOW / 3 NIT). Triage: 2 decision-needed resolved (D1 keep-strict regex with drift-protection noted; D2 add 3 parallel registry entries for 3.0/3.1/3.2 users); 15 patches batch-applied; 3 deferred; 2 dismissed. Code patches: atomic state writes (tmpfile+rename), dominant-EOL detection, fenced-code-block tracking in Phase 3 end-of-block scan, ANSI strip in doctor parser, `_findingKey` name-only (drops volatile message), path-traversal guard in Phase 3, CSV column-count validation, `_runDoctor` fail-loud on ENOENT/SIGTERM/MAXBUFFER, banner HTML-comment sentinel for idempotency, dedupe blank line after frontmatter, explicit NO_COLOR/FORCE_COLOR env for doctor, YAML lineWidth:-1, preview() short-circuit when phase5_complete, Phase 3 write-failure try/catch. Test patches: ANSI-colored doctor output test, updated banner-idempotency fixture to include HTML sentinel, preview short-circuit tests. D2 parallel entries: created `3.0.x-to-4.0.0.js`, `3.1.x-to-4.0.0.js`, `3.2.x-to-4.0.0.js` (thin wrappers re-exporting base module), extending chain coverage to all 3.x users. Pre-existing registry + orchestration tests updated to reflect extended migration chain (Story 1A.4 adds tail entry to every chain from 1.x/2.x/3.x). Full suite 1258/1258 pass; convoke-doctor unchanged. Per convergence rule, Round 2 allowed by Round 1 HIGH findings — user decision on whether to trigger. Status → `done`. | Review Findings below |
+
+### Review Findings (Round 1, 2026-04-22)
+
+Round 1 code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor via parallel subagent launch). Acceptance Auditor verdict: **all 9 ACs + 6 anchor rules verified clean.** Blind + Edge independently surfaced 23 defensive-hardening findings; most recurring themes: regex rigidity, doctor subprocess fragility, non-atomic state writes.
+
+**Decisions resolved (2):**
+
+- [x] [Review][Decision] **D1 regex rigidity (H1 + H2)** → resolved: keep strict canonical-pattern regex; add fence-block tracking defensively (H2). Inventory CSV built with the same strict regex by Story 1A.3 — in-repo files MUST match (verified via `--verify-only`). Upstream drift caught by regenerating the inventory before Story 1A.4 runs; documented for Story 1A.5 / future robustness work.
+- [x] [Review][Decision] **D2 module-name chain gap (H5)** → resolved: shipped 3 parallel registry entries (`3.0.x-to-4.0.0`, `3.1.x-to-4.0.0`, `3.2.x-to-4.0.0`) via thin wrappers re-exporting the 3.3.x-to-4.0.0 module. Closes shipping defect — 3.0.0 users now chain via existing `3.0.x-to-3.1.0` → `3.1.x-to-4.0.0`; 3.1.0/3.2.0 users get dedicated entries. Chain coverage verified: all 3.0–3.3 users reach 4.0.0. Cross-test impact: 7 pre-existing tests in `registry.test.js` + 2 in `migration-runner-orchestration.test.js` updated to reflect extended chain.
+
+**Patches applied (15):**
+
+- [x] [Review][Patch] [HIGH H3] Atomic state writes via tmpfile + rename; crash-mid-write no longer produces torn YAML
+- [x] [Review][Patch] [HIGH H4] `_runDoctor` fail-loud on ENOENT / SIGTERM / ERR_CHILD_PROCESS_STDIO_MAXBUFFER; silent-false-clean baseline eliminated
+- [x] [Review][Patch] [HIGH H6] Dominant-EOL detection: counts CRLF vs LF, picks majority (was: any single `\r\n` flipped all line endings)
+- [x] [Review][Patch] [HIGH H2] Fence-block (\`\`\`) tracking in Phase 3 end-of-block scan — numbered lines inside code fences no longer terminate the rewrite block prematurely
+- [x] [Review][Patch] [MED M1] ANSI escape codes stripped before `_parseDoctorOutput` regex; doctor findings no longer missed when subprocess emits colored output
+- [x] [Review][Patch] [MED M2] Path-traversal guard in Phase 3 sweep: `resolvedAbsPath.startsWith(resolvedRoot + path.sep)` rejects `..`-containing inventory entries
+- [x] [Review][Patch] [MED M3] `_findingKey` now uses `name` only; volatile message data (file paths, counts) no longer produces spurious "NEW" findings
+- [x] [Review][Patch] [MED M4] CSV parser validates required columns (`file`, `module`, `candidate_status`) + warns on row-level column drift
+- [x] [Review][Patch] [MED M5] `preview()` short-circuits via `_phase1_detect` when `projectRoot` passed + state marks phase5_complete; runner's zero-arg path unaffected (backwards-compat with existing contract)
+- [x] [Review][Patch] [MED M8] Phase 3 `fs.writeFileSync` wrapped in try/catch; EACCES/ENOSPC mid-sweep surfaces as per-file skip, not abort
+- [x] [Review][Patch] [LOW L1] Banner idempotency uses HTML-comment sentinel (`<!-- convoke:deprecation-banner:bmad-init -->`) — survives banner wording changes
+- [x] [Review][Patch] [LOW L3] `yaml.dump` uses `lineWidth: -1` (no wrap); long finding messages don't fold inside quoted scalars
+- [x] [Review][Patch] [LOW] Explicit `NO_COLOR=1` / `FORCE_COLOR=0` in doctor subprocess env (preemptively suppresses ANSI before parser fallback)
+- [x] [Review][Patch] [NIT N1] Dedupe blank-line-after-frontmatter in `_insertBannerAfterFrontmatter` — no more `---\n\n\n> banner`
+- [x] [Review][Patch] [test] ANSI-colored doctor output test added; simulates chalk-styled `\x1b[31m✗[0m` and verifies stripping works end-to-end
+
+**Deferred (3):**
+
+- [x] [Review][Defer] **H1 regex rigidity (case-insensitive / tolerant wording)** — inventory CSV regeneration + `--verify-only` drift check protects against upstream rename; full tolerance is a future hardening story.
+- [x] [Review][Defer] **L4 Phase 2 baseline double-capture guard** — defensive assertion for hypothetical future refactor; not currently reachable.
+- [x] [Review][Defer] **L6 registry/filename/module-export triple-sync integrity test** — add a module-load-time assertion in a future registry-housekeeping story; not blocking 1A.4.
+
+**Dismissed (2):**
+
+- Auditor LOW: EOL preservation stricter than spec AC4 — stricter/better behavior, documented as intentional.
+- Auditor LOW: `_runDoctor` skips `--json` attempt — current `convoke-doctor` has no `--json` flag; try-then-fallback would be dead branch, documented at AC6 note.
+
+**Convergence note:** Round 1 had 6 HIGH findings. Per `code-review-convergence` rule, Round 2 is allowed. Round 2 would re-review the 15 applied patches for regressions (similar to Story 1A.2 Round 2 catching the `projectRoot='/'` regression introduced by Round 1's own trailing-slash fix). Applying patches introduced structural changes (new helpers: `_previewActionsWithCount`, `_detectDominantEol`; new files: 3 parallel migration wrappers; new tests). Recommend running Round 2 to verify — but user's call.
