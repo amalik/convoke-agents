@@ -53,7 +53,7 @@ describe('convoke-export CLI (sp-2-3)', () => {
     let canCompare = true;
     try {
       before = execSync('git status --porcelain', { cwd: projectRoot, encoding: 'utf8' });
-    } catch (e) {
+    } catch (_e) {
       canCompare = false;
     }
     if (canCompare && before.length > 0) {
