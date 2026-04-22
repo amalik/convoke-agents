@@ -7,7 +7,8 @@ required-inputs:
   - 'Completed Tasks/Subtasks section with all items marked [x]'
   - 'Updated File List section with all changed files'
   - 'Updated Dev Agent Record with implementation notes'
-  - 'Linting reports — `npm run lint` output proving zero errors and zero warnings in files modified by this story'
+conditional-inputs:
+  - '`npm run lint` output proving zero errors and zero warnings in files modified by this story — REQUIRED if the story modified any .js / .mjs / .cjs file; N/A for pure-docs or spec-only stories'
 optional-inputs:
   - 'Test results output'
   - 'CI logs'
@@ -16,7 +17,7 @@ validation-rules:
   - 'All implementation requirements from story Dev Notes must be satisfied'
   - 'Definition of Done checklist must pass completely'
   - 'Enhanced story context must contain sufficient technical guidance'
-  - '`npm run lint` exits 0 AND reports zero warnings in files modified by this story (per project-context.md §Rule: lint-passes-before-review)'
+  - 'If the story modified any .js / .mjs / .cjs file, `npm run lint` exits 0 AND reports zero warnings in those files (per project-context.md §Rule: lint-passes-before-review). Pure-docs stories are exempt by construction.'
 ---
 
 # 🎯 Enhanced Definition of Done Checklist
