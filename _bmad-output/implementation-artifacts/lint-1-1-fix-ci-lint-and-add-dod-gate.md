@@ -1,6 +1,6 @@
 # Story lint-1.1: Fix CI lint failures and add `npm run lint` as DoD gate
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -77,12 +77,14 @@ throw new Error(message, { cause: err });
 
 **AC4 — Design decision on DoD scope (touched-files, not global).** The wording `"zero warnings in files modified by this story"` is a **deliberate narrowing**, not an oversight. Rationale: (1) CI's `npm run lint` job already enforces the global gate — it exits non-zero on any error and is blocking. (2) Scoping the DoD to the story's diff means a story cannot ship with its *own* new lint violations, but it also cannot be blocked by pre-existing unrelated warning debt that some other initiative needs to clean up. (3) Without this narrowing, every future story would become a de-facto co-owner of the full portability/test warning surface, which is exactly the scope-creep anti-pattern that this epic's Scope Exclusions warn against (NFR4 of [the epic file](../planning-artifacts/convoke-epic-lint-cleanup-dod-gate.md)). The dev agent amending the DoD wording in Task 6.2 must preserve the "in files modified by this story" qualifier, not strip it.
 
-**AC5 — CI goes green.**
-**Given** local `npm run lint` currently reports `✖ 25 problems (8 errors, 17 warnings)` (17 not 15 because 2 new warnings appeared in [tests/unit/migration-3.3.x-to-4.0.0.test.js](../../tests/unit/migration-3.3.x-to-4.0.0.test.js) after CI #714 ran — these are v63-1a-4 WIP territory, **scope-excluded** per §Scope Exclusions)
+**AC5 — CI goes green for in-scope files.** *(Amended 2026-04-22 at review-time to reflect the post-implementation baseline drift: the original enumeration anticipated 2 scope-excluded warnings, but by the time Task 1 captured the actual baseline, 1A.4 WIP had contributed 5 new errors + 2 new warnings. All still scope-excluded per §Scope Exclusions and epic NFR4.)*
+**Given** local `npm run lint` at Task 1 baseline (2026-04-22) reports `✖ 30 problems (13 errors, 17 warnings)`:
+- 8 errors + 15 warnings are **in-scope** for this story (AC1 + AC2).
+- **5 new errors** (4 × `preserve-caught-error` + 1 × `no-control-regex`) in [scripts/update/migrations/3.3.x-to-4.0.0.js](../../scripts/update/migrations/3.3.x-to-4.0.0.js) + **2 new warnings** in [tests/unit/migration-3.3.x-to-4.0.0.test.js](../../tests/unit/migration-3.3.x-to-4.0.0.test.js) are **scope-excluded** as 1A.4 WIP territory.
 **When** the story is implemented (AC1 + AC2 applied)
-**Then** `npm run lint` exits 0 **for files in scope** (AC1 + AC2).
-**And** the 2 `migration-3.3.x-to-4.0.0.test.js` warnings are **not blockers** for this story — they belong to in-flight Story 1A.4 and will be caught by the new DoD gate (AC3) when that story moves to `review`.
-**And** a note is added to the v63-1a-4 story file (Status section or Dev Notes) flagging that the new lint DoD gate will require fixing those 2 warnings before 1A.4 can reach `review`.
+**Then** `npm run lint` exits 0 **for files in scope** (AC1 + AC2). Exit code 1 overall is acceptable if and only if the remaining issues are exactly the 5 errors + 2 warnings in the 1A.4 WIP files listed above — no more, no others.
+**And** the scope-excluded 1A.4 issues are **not blockers** for this story — they belong to in-flight Story 1A.4 and will be caught by the new DoD gate (AC3) when that story moves to `review`.
+**And** a note is added to the v63-1a-4 story file (Status section or Dev Notes) flagging what 1A.4 must clear before reaching `review`.
 
 **AC6 — No new regressions in files touched by this story.** *(Amended 2026-04-22 mid-implementation per operator option (3): original "1237 passing" baseline premise invalidated by 1A.4 WIP drift — see Change Log.)*
 **Given** the pre-implementation test baseline captured 2026-04-22 in Dev Agent Record Debug Log: `npm test` exits 1 with **15 pre-existing failing tests (unique names, dedup-stripped), all in 1A.4 WIP files** ([migration-runner-orchestration.test.js](../../tests/unit/migration-runner-orchestration.test.js), [migration-3.3.x-to-4.0.0.test.js](../../tests/unit/migration-3.3.x-to-4.0.0.test.js), and related registry-chain fixtures). These are NOT caused by lint-1.1 work and are owned by 1A.4.
@@ -258,6 +260,21 @@ CI's existing `npm run lint` job ([.github/workflows/ci.yml:14-30](../../.github
 - **AC6 amendment context (see Change Log):** 1A.4's impl + test files were externally updated during my work (mtime `Apr 22 07:01` baseline → `07:23` + `07:15` at verification), which fortuitously fixed all 15 baseline-failing unit tests. This is orthogonal to lint-1.1 — my changes touched neither 1A.4 file. Post-fix state: `npm test` 1258/1258 pass (exit 0), `npm run lint` 7 issues remaining (all 1A.4 WIP per NFR4), `npm run test:integration` 82/85 (3 failures in `upgrade.test.js` — 1A.4 migration chain territory, scope-excluded per AC5).
 - **Baseline drift discipline:** Throughout implementation, I distinguished my in-scope work from parallel 1A.4 WIP by mechanical file-path checks (config-loader.js and portability/ vs. migrations/ and migration-* tests). No in-scope assertions about test count or failure identity were altered to compensate for 1A.4 drift — AC6 was amended once at Task 1 (documented in Change Log) and held thereafter.
 
+### Review Findings (Round 1, 2026-04-22)
+
+**Summary:** 3 patch, 4 defer, 1 decision-needed, 8 dismissed. **No HIGH findings** post-verification (Blind Hunter, Edge Case Hunter, Acceptance Auditor layers).
+
+- [x] [Review][Decision resolved] Zero-slack `--all` tier-2 assertion — **kept as-is (option 1)**. Intentional strictness: the test's name promises "includes both tier 1 and tier 2" coverage, and zero slack honors that promise. Any skill regression (standalone or light-deps) reds the test — which is the correct signal. [tests/lib/portability-tier2-export.test.js:75]
+- [x] [Review][Patch applied] DoD required-input gate fires on pure-docs stories — moved lint-reports entry from `required-inputs` to a new `conditional-inputs` block with explicit "REQUIRED if the story modified any .js/.mjs/.cjs file; N/A for pure-docs" wording. Both canonical and `.claude/` copy amended. `validation-rules` bullet also updated with matching conditional. [_bmad/bmm/4-implementation/bmad-dev-story/checklist.md + .claude/skills/bmad-dev-story/checklist.md]
+- [x] [Review][Patch applied] v63-1a-4 forward-constraint note cites stale line numbers — rewrote the note to capture both the baseline state (5 errors + 2 warnings + 15 failing tests at lint-1.1 morning) AND the post-parallel-work resolved state (all clear at lint-1.1 afternoon review). Added a "Going forward" clause that preserves the DoD-gate forward-carry semantics for any future 1A.4 changes before its own `review`. [v63-1a-4 story file]
+- [x] [Review][Patch applied] AC5 original enumeration not amended to match post-fix reality — rewrote AC5 body to cite the correct baseline (`30 problems (13 errors, 17 warnings)`) with the in-scope/scope-excluded split explicit (8+15 in-scope, 5+2 in 1A.4 WIP). Added a review-time amendment note mirroring AC6's style. [lint-1-1 AC5 body]
+- [x] [Review][Defer] Touched-files scope has no tooling automation — rule requires unfiltered `npm run lint` + manual reviewer filter; error-prone. Backlog candidate: a helper script that runs lint scoped to `git diff --name-only` output. [project-context.md §lint-passes-before-review]
+- [x] [Review][Defer] `.claude/skills/bmad-dev-story/checklist.md` not refreshed by `convoke-update` — dual-maintenance debt institutionalized. Change Log already flags this; formalize as backlog item. [scripts/update/lib/refresh-installation.js (missing refresh block)]
+- [x] [Review][Defer] Canonical→runtime copy would break relative `project-context.md` link — future auto-copy fix needs a path-rewrite step (canonical uses `../../../../`, runtime uses `../../../`). [_bmad/bmm/4-implementation/bmad-dev-story/checklist.md:50 vs .claude/skills/bmad-dev-story/checklist.md:48]
+- [x] [Review][Defer] `_warnings` rename in `loadSkillSource` masks pre-existing unused-threaded-param bug — `warnings` array was passed but never populated; `_`-prefix makes the dead-code signal permanent. Pre-existing, not lint-1.1-caused. [scripts/portability/export-engine.js:105]
+
+(8 dismissed: Node<16.9 cause-drop — package.json engines ≥18 is sufficient; `pmBefore` provenance — verified captured at line 156; tier-2 disjoint buckets — manifest enforces; `pmAfter !== pmBefore` coupling — arguably desirable tripwire; AC2 var/param language — no-op; v63-1a-5 status bump — no bump exists in diff; v63-1a-4 full-file creation — diff-scope artifact, not scope creep; `.claude/` gitignore contradiction — canonical file is what's in the diff.)
+
 ### File List
 
 **Modified by this story (13 files, in scope):**
@@ -272,7 +289,8 @@ CI's existing `npm run lint` job ([.github/workflows/ci.yml:14-30](../../.github
 - `tests/lib/portability-validation.test.js` — catch `_e` rename (Task 3.7)
 - `tests/unit/refresh-installation-artifacts.test.js` — strengthened assertions using `pmBefore` (Task 4.2)
 - `project-context.md` — new `lint-passes-before-review` rule (Task 5)
-- `.claude/skills/bmad-dev-story/checklist.md` — DoD line rewrite + frontmatter input promotion + validation-rule addition (Task 6)
+- `_bmad/bmm/4-implementation/bmad-dev-story/checklist.md` — **canonical source** of the dev-story DoD checklist: DoD line rewrite + frontmatter input promotion + validation-rule addition (Task 6). This is what CI + other developers see via git.
+- `.claude/skills/bmad-dev-story/checklist.md` — local runtime copy (gitignored; installed/refreshed by `convoke-update`). Amended for current-session parity; will be regenerated from the canonical on the next `convoke-update`.
 - `_bmad-output/implementation-artifacts/v63-1a-2-create-config-loader-js-with-direct-yaml-loading.md` — post-review note upholding convergence rule (Task 7.1)
 - `_bmad-output/implementation-artifacts/v63-1a-4-create-migration-script-3-x-to-4-0-js.md` — forward-constraint note for 1A.4 DoD gate (Task 7.2)
 
@@ -285,4 +303,6 @@ CI's existing `npm run lint` job ([.github/workflows/ci.yml:14-30](../../.github
 
 ## Change Log
 
+- **2026-04-22 (Round 1 code review)** — `/bmad-code-review` Round 1 executed with 3 parallel adversarial layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor). Triage: **1 decision-needed (resolved — kept zero-slack tier-2 assertion per operator option 1)**, **3 patches (all applied)**, **4 defers (appended to deferred-work.md)**, **8 dismissed as noise or diff-scope artifacts**. **No HIGH findings** after verification — the two Auditor HIGH findings flipped to dismiss once diff scope was checked (v63-1a-5 bump and v63-1a-4 full-file creation were both external/out-of-band artifacts of the e8e6c6de-to-HEAD diff range, not lint-1.1 work). Per `code-review-convergence`, Round 2 is **NOT triggered** (zero HIGH findings); Round 1 is the convergence point. Patches applied: (a) DoD required-input gate moved to `conditional-inputs` with JS-touched scoping so pure-docs stories don't fail the checklist; (b) v63-1a-4 forward-constraint note updated to reflect that 1A.4's lint debt was resolved in parallel between baseline and review; (c) AC5 body amended to the correct post-baseline enumeration (13 errors, 17 warnings at Task 1 capture — 8+15 in-scope, 5+2 scope-excluded).
+- **2026-04-22 (review-time)** — Caught during post-implementation review: Task 6 originally amended only the gitignored `.claude/skills/bmad-dev-story/checklist.md` copy. That file is local-runtime-only (`.claude/` is gitignored at `.gitignore:46`), so the amendment would NOT have propagated to CI, other developers, or the remote — defeating AC4's intent. Fixed by also amending the canonical source at [_bmad/bmm/4-implementation/bmad-dev-story/checklist.md](../../_bmad/bmm/4-implementation/bmad-dev-story/checklist.md) (tracked). File List updated. Both copies now in sync. Lesson for the initiatives backlog: `convoke-install` / `convoke-update` must be verified to actually refresh `.claude/skills/*/checklist.md` from the canonical on install — if not, this pair will drift again in future amendments.
 - **2026-04-22** — Operator-authorized AC6 amendment mid-implementation (option 3 of 3 presented). Original AC6 premise "npm test → 1237 tests passing" invalidated by 1A.4 WIP drift (1A.4's `scripts/update/migrations/3.3.x-to-4.0.0.js` + test file were partially shipped between story authoring and dev pickup, contributing 15 pre-existing failures and 5 new lint errors + 2 new warnings). AC6 rewritten to (a) pin the 15 baseline failure identities as expected-state, (b) assert zero-tolerance for new failures in files touched by this story, (c) allow `npm test` exit 1 as long as failure count and identity match baseline, (d) add an explicit Task 7.2 carry-forward obligation to v63-1a-4 to clear those 15 failures before `review`. The 5 new 1A.4 lint errors and 2 warnings are scope-excluded per epic NFR4 and carry forward to 1A.4 under the new DoD gate.
