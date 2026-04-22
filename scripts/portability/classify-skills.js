@@ -256,7 +256,7 @@ function readSkillContent(projectRoot, relativePath, maxDepth = 3) {
     let content;
     try {
       content = fs.readFileSync(absPath, 'utf8');
-    } catch (e) {
+    } catch (_e) {
       return;
     }
     chunks.push(content);
