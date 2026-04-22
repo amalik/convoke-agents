@@ -2,6 +2,8 @@
 
 Status: done
 
+**Post-review note (2026-04-22):** CI run #714 (2026-04-21) surfaced 8 `preserve-caught-error` ESLint errors in `scripts/update/lib/config-loader.js` at lines 122, 127, 132, 269, 274, 282, 289, 299 — all from this story's Round 2 output. Both review rounds gated on `npm test` only, not `npm run lint`, so the lint regression slipped past. Per the [`code-review-convergence` rule](../../project-context.md#rule-code-review-convergence), this story **remains converged at Round 2 and is NOT reopened for a Round 3**. The remediation ships as a forward-going follow-up: [Story lint-1.1](lint-1-1-fix-ci-lint-and-add-dod-gate.md) adds `{ cause: err }` to all 8 sites, adds `npm run lint` as a mandatory DoD gate in two layers (project-context.md rule + dev-story checklist amendment), and closes the class of miss. See [lint-epic-1](../planning-artifacts/convoke-epic-lint-cleanup-dod-gate.md) for epic-level context.
+
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
 **Epic:** [Epic 1A — Seamless Config Migration](../planning-artifacts/convoke-epic-bmad-v6.3-adoption.md#epic-1a-seamless-config-migration)
