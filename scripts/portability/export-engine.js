@@ -102,7 +102,7 @@ function loadSkillRow(skillName, projectRoot) {
  * Returns { skillContent, workflowContent, stepContents }
  * where stepContents is { 'step-01-foo': '...', 'step-02a-bar': '...' }
  */
-function loadSkillSource(skillRow, projectRoot, warnings) {
+function loadSkillSource(skillRow, projectRoot, _warnings) {
   const skillPath = path.join(projectRoot, skillRow.path);
   const skillContent = fs.existsSync(skillPath) ? fs.readFileSync(skillPath, 'utf8') : '';
 
@@ -589,7 +589,7 @@ function extractPersona(persona) {
   return lines.join('\n');
 }
 
-function extractWhenToUse(skillRow, workflowContent) {
+function extractWhenToUse(skillRow, _workflowContent) {
   const lines = [];
   lines.push('## When to use this skill');
   lines.push('');
@@ -620,7 +620,7 @@ function extractWhenToUse(skillRow, workflowContent) {
   return lines.join('\n');
 }
 
-function extractInputs(workflowContent, stepContents) {
+function extractInputs(workflowContent, _stepContents) {
   const lines = [];
   lines.push('## Inputs you may need');
   lines.push('');
@@ -1005,7 +1005,7 @@ function buildDependencyNotes(skillRefs, sidecars, manifestSkillNames) {
  * - if the skill's tier is 'pipeline' (only standalone + light-deps are exportable)
  * - if persona resolution fails (all 5 strategies)
  */
-function exportSkill(skillName, projectRoot, options = {}) {
+function exportSkill(skillName, projectRoot, _options = {}) {
   const warnings = [];
 
   // 1. Load skill row (all tiers exportable; pipeline skills get a framework-only notice)
