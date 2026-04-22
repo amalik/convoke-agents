@@ -2,12 +2,13 @@
 
 Status: done
 
-**Inbound note from [Story lint-1.1](lint-1-1-fix-ci-lint-and-add-dod-gate.md) (2026-04-22):** As of lint-1.1's baseline capture (2026-04-22), this story's in-flight files contribute pre-existing lint + test debt that lint-1.1 explicitly scope-excludes per [epic NFR4](../planning-artifacts/convoke-epic-lint-cleanup-dod-gate.md). Before this story can reach `review` (or the file is merged), the new [`lint-passes-before-review` rule](../../project-context.md#rule-lint-passes-before-review) and [amended dev-story DoD checklist](../../.claude/skills/bmad-dev-story/checklist.md) require clearing:
-- **5 lint errors** in `scripts/update/migrations/3.3.x-to-4.0.0.js`: 4 × `preserve-caught-error` at lines 472, 478, 483, 489 (same class of issue as 1A.2 — pattern is `throw new Error(..., { cause: err })`; mirror `scripts/lib/artifact-utils.js:139` and `:224`); 1 × `no-control-regex` at line 510 (likely ANSI escape handling — add `// eslint-disable-next-line no-control-regex` with a brief justification comment, or refactor to use `\x1b` via a constant).
-- **2 lint warnings** in `tests/unit/migration-3.3.x-to-4.0.0.test.js`: unused `m` vars at lines 250 and 363 — rename to `_m` or strengthen the destructuring.
-- **15 failing tests** (see [lint-1.1 Debug Log](lint-1-1-fix-ci-lint-and-add-dod-gate.md#debug-log-references) for the pinned identity list) across `migration-runner-orchestration`, `registry`-chain, `convoke-update` dry-run/verbose paths — these are this story's implementation work still in flight; make them green before `review`.
+**Inbound note from [Story lint-1.1](lint-1-1-fix-ci-lint-and-add-dod-gate.md) (2026-04-22, updated at lint-1.1 review-time):** At lint-1.1's baseline capture (2026-04-22 morning), this story's in-flight files contributed 5 lint errors (4 × `preserve-caught-error` + 1 × `no-control-regex`) in `scripts/update/migrations/3.3.x-to-4.0.0.js`, 2 × `no-unused-vars` warnings in `tests/unit/migration-3.3.x-to-4.0.0.test.js`, and 15 failing tests across the migration-chain / registry / convoke-update test suites. lint-1.1 scope-excluded all of these per [epic NFR4](../planning-artifacts/convoke-epic-lint-cleanup-dod-gate.md) as 1A.4 WIP territory.
 
-Per `code-review-convergence`, this is NOT a pre-review reopening of anything; it is a forward-carry constraint set by the new DoD gate that this story will be the first to walk through.
+**Status at lint-1.1 review (2026-04-22 afternoon):** this story's parallel implementation work resolved the above between lint-1.1's baseline and its verification. `npm run lint scripts/update/migrations/3.3.x-to-4.0.0.js tests/unit/migration-3.3.x-to-4.0.0.test.js` is now clean, and `npm test` passes 1258/1258 (the 15 baseline failures are all green). No forward-carry constraint from lint-1.1 remains.
+
+**Going forward:** the new [`lint-passes-before-review` rule](../../project-context.md#rule-lint-passes-before-review) and the [amended dev-story DoD checklist](../../.claude/skills/bmad-dev-story/checklist.md) apply to any *future* changes this story makes before it reaches `review`. If additional lint debt is introduced, it must be cleared; if any of the 15 unit tests regress, they must be made green again.
+
+Per `code-review-convergence`, this note is NOT a pre-review reopening of anything; it is a forward-carry record of a constraint that was already satisfied in parallel.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
