@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-23
-last_updated: 2026-04-22 (lint-1-1 → review; 23 in-scope issues fixed)
+last_updated: 2026-04-22 (v63-1a-6 migration guide → review; Epic 1A 5/6 done + 1/6 review pending sign-off)
 # 2026-04-09: sp-2-3-cli-entry-point moved backlog → ready-for-dev
 # 2026-04-10: sp-2-3-cli-entry-point moved ready-for-dev → done; sp-2-2 review → done
 # 2026-04-08: Epic 7 (Cross-Cutting Platform Debt) added — 4 stories closing 6 backlog items from ag-epic-6 retro
@@ -63,7 +63,9 @@ last_updated: 2026-04-22 (lint-1-1 → review; 23 in-scope issues fixed)
 # 2026-04-21: CI run #714 (npm run lint) FAILED — 8 errors + 15 warnings. Errors: all 8 are `preserve-caught-error` (missing `cause` on re-thrown errors) in scripts/update/lib/config-loader.js:122,127,132,269,274,282,289,299 — shipped via Story 1A.2 (currently `done`). Warnings: 15 `no-unused-vars` pre-existing across portability scripts (classify-skills.js, export-engine.js, validate-classification.js) and portability/refresh-installation tests — not from recent v63 work. Story 1A.2 review gated on `npm test` (1224/1224 green) but not `npm run lint`; regression surfaced only when CI ran lint. Action pending operator decision: (a) patch 1A.2 in-place + reopen review, or (b) open a new lint-cleanup story covering both the 8 errors and the 15 warnings.
 # 2026-04-22: Decision → option (b) + placement (i): standalone cross-cutting epic lint-epic-1 added (not folded into v63-epic-1a because the 15 warnings predate v63 work; precedent = ag-epic-7 Cross-Cutting Platform Debt). Single story lint-1-1-fix-ci-lint-and-add-dod-gate scoped to: (1) fix 8 `preserve-caught-error` errors in config-loader.js, (2) fix 15 `no-unused-vars` warnings across sp-epic portability scripts + tests, (3) add `npm run lint` as story DoD gate, (4) verify CI green. Story file creation pending /bmad-create-story run.
 # 2026-04-22: lint-1-1-fix-ci-lint-and-add-dod-gate moved backlog → ready-for-dev; lint-epic-1 auto-transitioned backlog → in-progress. Story file authored via /bmad-create-story with 7 ACs covering the 8 errors + 13 explicit warnings + DoD gate in two layers (project-context.md rule + dev-story checklist.md amendment). Convergence-rule preservation made explicit (AC7) — Story 1A.2 remains converged at Round 2, lint-1.1 is the forward-going remediation artifact, not a Round 3 reopening. Scope exclusions: 2 pre-existing warnings in tests/unit/migration-3.3.x-to-4.0.0.test.js (1A.4 WIP — the new DoD gate will force their fix before 1A.4 → review); pre-commit hooks out of scope (CI + DoD suffice, lefthook logged as candidate backlog item). Story references verified extant at authoring time (spec-verify-referenced-files rule).
+# 2026-04-22: lint-1-1-fix-ci-lint-and-add-dod-gate moved review → done via /bmad-code-review Round 1. Triage: 1 decision-needed (kept zero-slack tier-2 assertion, operator option 1), 3 patches applied (DoD required-input conditional-ization, v63-1a-4 note updated for resolved state, AC5 enumeration amended), 4 deferred to deferred-work.md (touched-files scope automation, .claude/ refresh gap, relative-link path-rewrite for canonical→runtime copy, _warnings threaded-param surface bug), 8 dismissed (including two Auditor HIGH findings that flipped after diff-scope verification). Per code-review-convergence: zero HIGH findings → Round 2 NOT triggered → Round 1 is the convergence point. lint-epic-1 auto-transitioned in-progress → done (single-story epic, story closed). Retrospective remains optional.
 # 2026-04-22: lint-1-1-fix-ci-lint-and-add-dod-gate moved ready-for-dev → in-progress → review via /bmad-dev-story. AC6 amended mid-implementation (operator-authorized path 3 of 3) — original "1237 passing" baseline invalidated by 1A.4 WIP drift (15 pre-existing failing tests + 5 new 1A.4 lint errors + 2 new 1A.4 warnings), rewritten to pin baseline identity + assert zero new failures in touched files. All 23 in-scope lint issues fixed (8 `{ cause: err }` in config-loader.js + 13 `_`-prefix renames across portability scripts/tests + 2 dead-assertions strengthened in refresh-installation-artifacts.test.js and portability-tier2-export.test.js). Both DoD gate layers delivered: `lint-passes-before-review` rule added to project-context.md after code-review-convergence; dev-story DoD checklist amended (weasel "when configured" removed + Linting reports promoted from optional → required-inputs + new validation-rules bullet). Cross-references appended to v63-1a-2 (post-review note upholding convergence rule — NO Round 3 reopening) and v63-1a-4 (forward-constraint note listing 5 errors + 2 warnings + 15 baseline-failing tests the new DoD gate will force it to clear). Final verification: `npm run lint` 7 issues remaining (all 1A.4 WIP per NFR4, matches AC5 expectation); `npm test` 1258/1258 pass exit 0 (1A.4 WIP externally progressed during implementation, fortuitously fixing the 15 baseline failures — orthogonal to lint-1.1 scope); `npm run test:integration` 82/85 (3 upgrade.test.js migration-chain failures in 1A.4 territory, scope-excluded per AC5). 13 files touched by this story (matches spec's ≤13 expectation exactly). Ready for /bmad-code-review.
+# 2026-04-22: v63-1a-6-author-migration-guide-standalone-deliverable moved ready-for-dev → in-progress → review via /bmad-dev-story. Published final user-facing guide at docs/migration/3.x-to-4.0.md (55 LOC, ≤1 page per NFR17). Draft at convoke-migration-guide-3.x-to-4.0-draft.md updated with pointer to final. Wired guide link into convoke-update breaking-changes stdout (scripts/update/convoke-update.js) with assertion added to tests/unit/convoke-update.test.js. Added CHANGELOG marker comment at top of CHANGELOG.md for Story 5B.1 handoff (full entry composition deferred to 5B). AC3 vocabulary blacklist verified via grep (zero "bmad-init"/"skill"/"config-loader"/"YAML" terms in final guide — `bmad-init` rephrased to "internal helper"). All 8 ACs satisfied. DoD gates green: `npm test` 1267/1267 pass, `npm run lint` clean, `convoke-doctor` unchanged, broken-link check 0 broken. Epic 1A now 6/6 implementation-complete pending 1A.6 review sign-off; retrospective remains optional.
 project: BMAD-Enhanced
 project_key: NOKEY
 tracking_system: file-system
@@ -575,7 +577,7 @@ development_status:
   v63-1a-3-create-v6-3-migration-inventory: done
   v63-1a-4-create-migration-script-3-x-to-4-0-js: done
   v63-1a-5-migration-robustness-idempotency-resume-offline-lockfile: done
-  v63-1a-6-author-migration-guide-standalone-deliverable: backlog
+  v63-1a-6-author-migration-guide-standalone-deliverable: review
   v63-epic-1a-retrospective: optional
 
   # Epic 1B: Upstream Agent Consolidation (3 stories, Sprint 2–3)
@@ -663,6 +665,6 @@ development_status:
   # ============================================================
 
   # Epic 1: Lint Cleanup & DoD Gate (1 story)
-  lint-epic-1: in-progress
-  lint-1-1-fix-ci-lint-and-add-dod-gate: review
+  lint-epic-1: done
+  lint-1-1-fix-ci-lint-and-add-dod-gate: done
   lint-epic-1-retrospective: optional
