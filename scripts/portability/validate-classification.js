@@ -144,7 +144,7 @@ function resolveRelativeDep(dep, skillDir, projectRoot) {
   try {
     const found = findFileInSubtree(skillDir, basename, projectRoot);
     if (found) return found;
-  } catch (e) {
+  } catch (_e) {
     // ignore stat errors during subtree walk
   }
 
@@ -179,7 +179,7 @@ function findFileInSubtree(dir, targetBasename, projectRoot) {
     let realDir;
     try {
       realDir = fs.realpathSync(currentDir);
-    } catch (e) {
+    } catch (_e) {
       return null;
     }
     if (visited.has(realDir)) return null;
@@ -188,7 +188,7 @@ function findFileInSubtree(dir, targetBasename, projectRoot) {
     let entries;
     try {
       entries = fs.readdirSync(currentDir);
-    } catch (e) {
+    } catch (_e) {
       return null;
     }
 
@@ -199,7 +199,7 @@ function findFileInSubtree(dir, targetBasename, projectRoot) {
       try {
         const stat = fs.statSync(fullPath); // follows symlinks
         if (stat.isFile()) return fullPath;
-      } catch (e) {
+      } catch (_e) {
         // broken symlink or stat failure — skip
       }
     }
@@ -214,7 +214,7 @@ function findFileInSubtree(dir, targetBasename, projectRoot) {
           const found = walk(fullPath, depth + 1);
           if (found) return found;
         }
-      } catch (e) {
+      } catch (_e) {
         // broken symlink or stat failure — skip
       }
     }
