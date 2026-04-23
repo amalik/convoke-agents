@@ -5,6 +5,21 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of v63-2-2-integrate-governance-check-into-convoke-doctor (2026-04-23)
+
+Round 1 code review added 3 `defer` items — all LOW, all non-impactful today but worth watching:
+
+- **FR17 CSV template not RFC-4180-escape-safe** — Blind Hunter LOW. The `fix:` string in the unregistered-custom-skill finding builds a literal CSV row by interpolating `${r.skill_name},${r.bmm_agent},...` into a comma-separated template. If a skill name ever contains commas, quotes, or CRLF, a user copy-pasting the suggestion into `bmm-dependencies.csv` would produce a malformed row. Skill directory naming convention currently prevents this (kebab-case, no special chars), so no live exposure. Fix path: use `formatCsvRow` from csv-utils when building the suggestion, OR document that skill names must stay kebab-safe. Defer until a user reports breakage.
+- **Broken-symlink UX in skill-gone categorization** — Edge Hunter LOW. `fs.existsSync(path.join(claudeSkillsRoot, r.skill_name))` returns false for dangling symlinks (symlink target missing) — same result as skill-dir genuinely absent. An operator whose `.claude/skills/foo` is a symlink to an unmounted external volume would see `[stale:skill-gone]` warnings that don't match their mental model. Fix path: `fs.lstatSync` + link-target check to distinguish "absent" from "dangling symlink" in the warning text. Low-priority UX polish.
+- **Test fixture coupling between Story 2.1 and 2.2** — Edge Hunter LOW. Story 2.2's `tests/unit/bmm-dependencies-doctor.test.js` reuses `tests/fixtures/bmm-dependencies/*` from Story 2.1. If a future 2.1 story mutates these fixtures (e.g., adding deps to `skill-with-removed-dep`), Story 2.2's stale/drift tests will shift. Works today because 2.1 fixtures are frozen. Defensive fix path: 2.2 tests construct minimal skill directories inline for cases where exact content matters, reducing cross-story coupling. Low ROI at current fixture stability.
+
+Round 2 code review added 2 more `defer` items (both LOW):
+
+- **H1 integration test non-hermetic via live taxonomy.yaml read** — Edge Hunter Round 2 LOW. The new `convoke-doctor: governance softWarning exit-code` test in `tests/integration/convoke-doctor.test.js` reads the repo's live `_bmad/_config/taxonomy.yaml` to populate the fixture's taxonomy. If the live taxonomy becomes mid-refactor invalid on a branch, the integration test goes red for unrelated reasons. Also if taxonomy.yaml is ever deleted, the test fails with ENOENT before reaching its assertions. Fix path: pin a minimal inline YAML fixture matching the schema's required shape (initiatives + artifact_types), OR wrap the live read in a descriptive error message pointing at the broken taxonomy. Low-impact today because taxonomy.yaml is stable and load-bearing.
+- **H1 integration test fixture doesn't create package.json** — Blind Hunter Round 2 LOW. The H1 fixture creates `_bmad/`, agents, skills, taxonomy, `_bmad-output/` — but NOT a `package.json`. `findProjectRoot` walks up from `tmpDir` looking for `package.json` and eventually lands on the real repo's. Works today (pkg.version matches the fixture's version config so `checkVersionConsistency` passes). Couples integration test to the repo's current package.json. Fix path: write a pinned `{"name":"fixture","version":"${pkg.version}"}` into `tmpDir/package.json`. Hardens test isolation.
+
+---
+
 ## Deferred from: code review of v63-2-1-create-bmm-dependency-scan-tool-and-registry (2026-04-23)
 
 Round 1 code review produced 2 `defer` items — real concerns that don't block Story 2.1's AC surface but should be re-evaluated during Story 2.4 or a future refinement cycle.
