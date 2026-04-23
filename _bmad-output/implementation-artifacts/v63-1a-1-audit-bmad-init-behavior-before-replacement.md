@@ -1,3 +1,11 @@
+---
+initiative: convoke
+artifact_type: story
+qualifier: v63-1a-1-audit-bmad-init-behavior-before-replacement
+epic: v63-1a-epic
+schema_version: 1
+---
+
 # Story 1A.1: Audit bmad-init behavior before replacement
 
 Status: done
