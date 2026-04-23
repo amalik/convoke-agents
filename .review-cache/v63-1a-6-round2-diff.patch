@@ -1,0 +1,212 @@
+diff --git a/_bmad-output/implementation-artifacts/v63-1a-6-author-migration-guide-standalone-deliverable.md b/_bmad-output/implementation-artifacts/v63-1a-6-author-migration-guide-standalone-deliverable.md
+index 1fd38582..bbb3adf9 100644
+--- a/_bmad-output/implementation-artifacts/v63-1a-6-author-migration-guide-standalone-deliverable.md
++++ b/_bmad-output/implementation-artifacts/v63-1a-6-author-migration-guide-standalone-deliverable.md
+@@ -9,7 +9,7 @@ Status: review
+ **FR coverage:** FR10 (migration guide ≤1 page), FR11 (zero new concepts introduced)
+ **NFR coverage:** NFR17 (single-page rendered length)
+ **Primary source:** **[`convoke-migration-guide-3.x-to-4.0-draft.md`](../planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md)** (79 lines, status: draft; frontmatter derived from PRD §visionDraft.plainLanguage) — this story finalizes the draft into a user-facing deliverable.
+-**Namespace decision:** New user-facing doc at `docs/migration/3.x-to-4.0.md` (creates new `docs/migration/` directory). Linked from `scripts/convoke-update.js` CLI output + `CHANGELOG.md`. Not a `_bmad/bme/` skill; Covenant checklist does NOT apply.
++**Namespace decision:** New user-facing doc at `docs/migration/3.x-to-4.0.md` (creates new `docs/migration/` directory). Linked from `scripts/update/convoke-update.js` CLI output + `CHANGELOG.md`. Not a `_bmad/bme/` skill; Covenant checklist does NOT apply.
+ 
+ ## Story
+ 
+@@ -43,7 +43,7 @@ so that I can upgrade confidently without wading through the PRD, the audit spec
+ **Given** a user running `npx -p convoke-agents convoke-update` from a 3.x install
+ **When** the breaking-changes prompt appears (standard `convoke-update` flow when `breaking: true` migration is in chain — Story 1A.4's `3.3.x-to-4.0.0`)
+ **Then** the output includes a line like `"For the full migration guide, see: docs/migration/3.x-to-4.0.md"` (or equivalent GitHub URL / tarball path).
+-**Implementation:** modify [`scripts/convoke-update.js`](../../scripts/convoke-update.js) to print this line in the breaking-change banner path. Single-line addition; path is a relative-from-repo-root string.
++**Implementation:** modify [`scripts/update/convoke-update.js`](../../scripts/update/convoke-update.js) to print this line in the breaking-change banner path. Single-line addition; path is a relative-from-repo-root string.
+ **Acceptable alternative:** if `convoke-update.js` is already verbose enough that a 1-line addition feels bolted-on, the guide reference can be added to the breaking-changes section of [`scripts/update/lib/migration-runner.js`](../../scripts/update/lib/migration-runner.js) where breaking-change descriptions are already printed.
+ 
+ **AC5 — Link from CHANGELOG.md.**
+@@ -96,7 +96,7 @@ so that I can upgrade confidently without wading through the PRD, the audit spec
+   - [ ] 2.3 If trimming: favor cutting examples, keeping the decision-tree ("should I upgrade?" → "yes, run this command" → "what happens") intact.
+ 
+ - [ ] **Task 3: Wire the convoke-update CLI reference** (AC4)
+-  - [ ] 3.1 Read [`scripts/convoke-update.js`](../../scripts/convoke-update.js) — find the breaking-change banner path (grep for `breaking` or `displays breaking changes warning`).
++  - [ ] 3.1 Read [`scripts/update/convoke-update.js`](../../scripts/update/convoke-update.js) — find the breaking-change banner path (grep for `breaking` or `displays breaking changes warning`).
+   - [ ] 3.2 Add one `console.log` (or equivalent) line printing the guide path. Use a relative repo path like `docs/migration/3.x-to-4.0.md` — operators can click it from a modern terminal.
+   - [ ] 3.3 Add one test assertion to an existing `convoke-update.test.js` case (breaking-change test) — `assert.ok(stdout.includes('docs/migration/3.x-to-4.0.md'))`.
+ 
+@@ -146,7 +146,7 @@ The draft file at `_bmad-output/planning-artifacts/` is the artifact-governance-
+ 
+ - **New directory:** `docs/migration/` (first occupant)
+ - **New file:** `docs/migration/3.x-to-4.0.md` (projected ≤100 raw LOC)
+-- **Modified:** `scripts/convoke-update.js` (one-line addition to breaking-change output)
++- **Modified:** `scripts/update/convoke-update.js` (one-line addition to breaking-change output)
+ - **Modified:** `tests/unit/convoke-update.test.js` (one assertion added to an existing test)
+ - **Modified:** `_bmad-output/planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md` (append 2-line pointer to final)
+ - **Possibly modified:** `CHANGELOG.md` (insert link or marker comment)
+@@ -171,6 +171,27 @@ Minimal: one assertion added to an existing `convoke-update.test.js` test that e
+ - **PRD vocabulary rules:** `convoke-prd-bmad-v6.3-adoption/frontmatter.md` §vocabulary (`internalOnly` vs `userFacing` annotations)
+ - **Taxonomy validator:** [`_bmad/_config/taxonomy.yaml`](../../_bmad/_config/taxonomy.yaml)
+ 
++### Review Findings (Round 1 — 2026-04-22)
++
++**Reviewers:** Blind Hunter, Edge Case Hunter, Acceptance Auditor. 15 findings total → 3 decision-needed, 5 patch, 1 defer, 6 dismissed.
++
++_Decision-needed:_
++- [x] [Review][Decision] Guide §"custom skill" describes nonexistent machinery — `docs/migration/3.x-to-4.0.md:41-56` referred to `_bmad/_config/bmm-dependencies.csv` and a `convoke-doctor` "unregistered custom skill" warning. Neither exists; both are Epic 2 (v63-epic-2) scope. **Resolved: option (a) — stripped the section.** Epic 2 will re-add when machinery ships. Also voids X4 dismissal (stale example date) and makes P9 (registration date placeholder) unnecessary. Guide now 43 LOC.
++- [x] [Review][Decision] `_bmad/bmm/4-implementation/bmad-dev-story/checklist.md` DoD gate loosening — demoted `npm run lint` from `required-inputs` to `conditional-inputs` with "N/A for pure-docs or spec-only stories". Not in Story 1A.6 File List (scope leak) and re-introduced the weasel-qualifier pattern lint-1.1 removed. **Resolved: option (a) — reverted.** Both lines restored to lint-1.1's strict form. Story 1A.6 passes strict lint (zero errors, zero warnings), so revert doesn't block ship. If pure-docs exemption is genuinely desired, file a new story with a mechanical predicate.
++- [x] [Review][Decision] Forward-promise about PF1 behavioral-equivalence testing — `docs/migration/3.x-to-4.0.md` claimed "Convoke 4.0 tests whether your agents produce equivalent outputs" but PF1 is Epic 4 scope, unshipped. **Resolved: option (b) — rephrased as present-tense-about-process.** New line: "Convoke 4.0 validates agent output equivalence as part of release gating — 'it works' is a process claim, not a promise about every possible input." Also removed the now-redundant "Convoke 4.0 validates behavioral equivalence before release, but we can't test every possible input" sentence in §"What if something goes wrong" (it hedged a claim that was itself rephrased).
++
++_Patches:_
++- [x] [Review][Patch] Test assertion attached to wrong migration path [tests/unit/convoke-update.test.js:736-754] — **Applied.** Removed the misplaced assertion from the v1.7.x test and added a dedicated `v3.x upgrade` test using `createInstallation(tmpDir, '3.2.0')` (not 3.3.0 — that equals current package version → 'up-to-date' action, yields no breaking changes). New test asserts `BREAKING CHANGES` banner + full GitHub URL presence.
++- [x] [Review][Patch] CLI guide-link print not gated on 4.0-target migrations [scripts/update/convoke-update.js:218-224] — **Applied.** Wrapped `console.log` in `if (assessment.migrations.some(m => m.name && m.name.endsWith('-to-4.0.0')))`. v1.7.x users who multi-hop through 4.0 still see the link (chain includes `3.1.x-to-4.0.0`); 1.0.x→1.3.0-breaking upgraders no longer see an irrelevant guide.
++- [x] [Review][Patch] Bare relative path `docs/migration/3.x-to-4.0.md` unresolvable at npx runtime [scripts/update/convoke-update.js:223] — **Applied.** Replaced with `https://github.com/amalik/convoke-agents/blob/main/docs/migration/3.x-to-4.0.md` (canonical repo URL per package.json). Resolves universally from any cwd.
++- [x] [Review][Patch] Draft file metadata contradicts finalized banner [_bmad-output/planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md:18-19] — **Applied.** Title updated `(Draft)` → `(Superseded draft)`; `Status: Draft` line rewritten to `Status: Superseded` with explicit pointer to live copy location.
++- [x] [Review][Patch] Story spec path inconsistency [this file:12, 46, 99, 149] — **Applied.** Replaced 4 occurrences of `scripts/convoke-update.js` with `scripts/update/convoke-update.js` across Namespace decision, AC4 implementation directive, Task 3.1, and Project Structure Notes.
++
++_Deferred:_
++- [x] [Review][Defer] AC7 measurement proxy too narrow [this file:70-74] — only checks `[text](url)` patterns; bare prose references (CLI path strings, CSV paths) escape validation. Spec-authoring convention gap, not implementation miss. Refine in future story.
++
++_Dismissed (6):_ CHANGELOG marker placement (AC5 allows alternative), no `--json` branch (Edge Hunter confirmed no defect), substring-only test assertion (folded into P1 strengthening), guide example stale date (moot if D1 resolves via strip), "1267/1267 pass" claim without negative test (positive is sufficient), AC5 marker wording diverges from literal spec suggestion (intent preserved).
++
+ ## Dev Agent Record
+ 
+ ### Agent Model Used
+@@ -205,13 +226,14 @@ claude-opus-4-7 (executing `/bmad-dev-story` workflow)
+ ### File List
+ 
+ _New files:_
+-- [`docs/migration/3.x-to-4.0.md`](../../docs/migration/3.x-to-4.0.md) — 55 LOC. Finalized migration guide for 3.x → 4.0 users.
++- [`docs/migration/3.x-to-4.0.md`](../../docs/migration/3.x-to-4.0.md) — 43 LOC (was 55 pre-review; custom-skill registration section stripped per Round 1 D1). Finalized migration guide for 3.x → 4.0 users.
+ 
+ _Modified files:_
+-- [`scripts/update/convoke-update.js`](../../scripts/update/convoke-update.js) — +1 line: guide link in breaking-changes CLI output.
+-- [`tests/unit/convoke-update.test.js`](../../tests/unit/convoke-update.test.js) — +5 lines: guide-link assertion in v1.7.x breaking-change test.
+-- [`_bmad-output/planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md`](../planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md) — +2 lines: pointer to final.
+-- [`CHANGELOG.md`](../../CHANGELOG.md) — +3 lines: HTML-comment marker for Story 5B.1 handoff.
++- [`scripts/update/convoke-update.js`](../../scripts/update/convoke-update.js) — +3 lines: gated guide-link print (only when chain hits a `-to-4.0.0` migration), full GitHub URL. Reviewed Round 1 P2+P3.
++- [`tests/unit/convoke-update.test.js`](../../tests/unit/convoke-update.test.js) — +17 lines net: removed misplaced v1.7.x assertion + added dedicated v3.x upgrade test (uses `createInstallation(tmpDir, '3.2.0')`) asserting GitHub URL presence. Reviewed Round 1 P1.
++- [`_bmad-output/planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md`](../planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md) — pointer to final + title/status rewritten to `Superseded`. Reviewed Round 1 P4.
++- [`CHANGELOG.md`](../../CHANGELOG.md) — +4 lines: HTML-comment marker for Story 5B.1 handoff.
++- [`_bmad/bmm/4-implementation/bmad-dev-story/checklist.md`](../../_bmad/bmm/4-implementation/bmad-dev-story/checklist.md) — **Round 1 D2 revert:** restored `required-inputs` lint gate + validation-rule to lint-1.1 strict form. Net-zero diff vs pre-1A.6 baseline.
+ - [`_bmad-output/implementation-artifacts/sprint-status.yaml`](sprint-status.yaml) — status transitions for this story.
+ 
+ _New directories:_
+@@ -225,3 +247,4 @@ _Deleted files:_ None.
+ |------|--------|-----------|
+ | 2026-04-22 | Story created per `/bmad-create-story v63-1a-6-...` invocation. Documentation-only story: finalize existing 79-line draft into `docs/migration/3.x-to-4.0.md` + wire from `convoke-update` CLI + CHANGELOG link. 8 ACs covering length, vocabulary, integration points, frontmatter, validation. Scope: ~100 raw-LOC guide + 2 one-line code edits. Epic 1A's final story. | [sprint-status.yaml](sprint-status.yaml) |
+ | 2026-04-22 | Implementation: 5 tasks complete. Shipped `docs/migration/3.x-to-4.0.md` (55 LOC, user-facing, zero blacklist terms). Wired CLI link via `scripts/update/convoke-update.js` breaking-changes block + test assertion. CHANGELOG handoff marker added for Story 5B.1. Draft preserved with pointer to final. Full suite 1267/1267 pass; lint clean; convoke-doctor unchanged. Status → `review`. Epic 1A is now 6/6 complete pending 1A.6 review sign-off. | This file |
++| 2026-04-22 | Round 1 code review complete. 15 findings: 3 decisions + 5 patches + 1 defer + 6 dismissed. All 3 decisions resolved (D1: strip custom-skill section referencing nonexistent `bmm-dependencies.csv`; D2: revert `checklist.md` DoD gate loosening to preserve lint-1.1 strict gate; D3: rephrase PF1 equivalence claim as present-tense-about-process). All 5 patches applied (P1: move test to `createInstallation(tmpDir, '3.2.0')` 3.x upgrade fixture; P2: gate CLI print on `-to-4.0.0` migration-chain presence; P3: replace bare path with full GitHub URL; P4: draft file title `Draft` → `Superseded`; P5: fix 4 story spec path references). Validation: full suite 1268/1268 pass (+1 new test case); `npm run lint` clean. Guide length now 43 LOC (was 55). Ready for Round 2 convergence check — 4 HIGH findings in Round 1 trigger Round 2 per `code-review-convergence` rule. | This file |
+diff --git a/_bmad-output/planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md b/_bmad-output/planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md
+index faf69be4..645c0f57 100644
+--- a/_bmad-output/planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md
++++ b/_bmad-output/planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md
+@@ -14,11 +14,11 @@ constraints: >-
+   has to learn (per PRD NFR17 and Success Criteria User Success bullets).
+ ---
+ 
+-# Convoke 4.0 Migration Guide — 3.x → 4.0 (Draft)
++# Convoke 4.0 Migration Guide — 3.x → 4.0 (Superseded draft)
+ 
+ > **Finalized 2026-04-22:** this draft has been published at [`docs/migration/3.x-to-4.0.md`](../../docs/migration/3.x-to-4.0.md) per Story v63-1a-6. This draft is preserved as the artifact-governance source; the user-facing final lives at the `docs/` path.
+ 
+-**Status:** Draft. This guide will be linked from the `convoke-update` terminal output and from the CHANGELOG entry.
++**Status:** Superseded. The live, user-facing copy is at `docs/migration/3.x-to-4.0.md` (linked from `convoke-update` terminal output and the CHANGELOG entry).
+ 
+ ---
+ 
+diff --git a/_bmad/bmm/4-implementation/bmad-dev-story/checklist.md b/_bmad/bmm/4-implementation/bmad-dev-story/checklist.md
+index 90b1b22c..6b12ded6 100644
+--- a/_bmad/bmm/4-implementation/bmad-dev-story/checklist.md
++++ b/_bmad/bmm/4-implementation/bmad-dev-story/checklist.md
+@@ -7,8 +7,7 @@ required-inputs:
+   - 'Completed Tasks/Subtasks section with all items marked [x]'
+   - 'Updated File List section with all changed files'
+   - 'Updated Dev Agent Record with implementation notes'
+-conditional-inputs:
+-  - '`npm run lint` output proving zero errors and zero warnings in files modified by this story — REQUIRED if the story modified any .js / .mjs / .cjs file; N/A for pure-docs or spec-only stories'
++  - 'Linting reports — `npm run lint` output proving zero errors and zero warnings in files modified by this story'
+ optional-inputs:
+   - 'Test results output'
+   - 'CI logs'
+@@ -17,7 +16,7 @@ validation-rules:
+   - 'All implementation requirements from story Dev Notes must be satisfied'
+   - 'Definition of Done checklist must pass completely'
+   - 'Enhanced story context must contain sufficient technical guidance'
+-  - 'If the story modified any .js / .mjs / .cjs file, `npm run lint` exits 0 AND reports zero warnings in those files (per project-context.md §Rule: lint-passes-before-review). Pure-docs stories are exempt by construction.'
++  - '`npm run lint` exits 0 AND reports zero warnings in files modified by this story (per project-context.md §Rule: lint-passes-before-review)'
+ ---
+ 
+ # 🎯 Enhanced Definition of Done Checklist
+diff --git a/docs/migration/3.x-to-4.0.md b/docs/migration/3.x-to-4.0.md
+index 0b3ff668..d64d40e8 100644
+--- a/docs/migration/3.x-to-4.0.md
++++ b/docs/migration/3.x-to-4.0.md
+@@ -34,22 +34,11 @@ This is a maintenance change that keeps Convoke in sync with upstream BMAD. Noth
+ 
+ If `convoke-update` fails for any reason, re-run it. The migration is idempotent — safe to run twice, three times, or however many times you need. It will resume from where it stopped.
+ 
+-If your agents start behaving differently after the upgrade (producing noticeably different outputs on the same inputs), that's a bug, not expected behavior. Convoke 4.0 validates behavioral equivalence before release, but we can't test every possible input. Report behavioral surprises to the maintainer.
+-
+-## What if you have a custom skill that extends a BMM agent
+-
+-If you wrote your own skill that adds capabilities to John, Mary, Winston, or any other BMM agent, run `convoke-doctor` after upgrading. If it surfaces a warning about an unregistered custom skill, register it by adding a row to `_bmad/_config/bmm-dependencies.csv`:
+-
+-```
+-skill_name,bmm_agent,owner,registered_date
+-your-custom-skill-name,bmad-agent-pm,your-email@example.com,2026-04-11
+-```
+-
+-This tells Convoke's compatibility registry that your skill exists and should be validated on future upgrades. Without this registration, future upgrades might silently break your custom skill.
++If your agents start behaving differently after the upgrade (producing noticeably different outputs on the same inputs), that's a bug, not expected behavior. Report behavioral surprises to the maintainer.
+ 
+ ## What's new (that you might notice)
+ 
+ - **Convoke is now installable through the BMAD community marketplace.** If you have colleagues who use BMAD but haven't tried Convoke, they can install it through the normal BMAD plugin system.
+-- **Your CHANGELOG is honest.** Convoke 4.0 tests whether your agents produce equivalent outputs before the release ships. You can trust that "it works" is an empirically-validated claim, not a hope.
++- **Your CHANGELOG is honest.** Convoke 4.0 validates agent output equivalence as part of release gating — "it works" is a process claim, not a promise about every possible input.
+ 
+ That's it. Everything else is internal maintenance.
+diff --git a/scripts/update/convoke-update.js b/scripts/update/convoke-update.js
+index 2427e349..598d9b60 100755
+--- a/scripts/update/convoke-update.js
++++ b/scripts/update/convoke-update.js
+@@ -220,7 +220,9 @@ async function main() {
+     assessment.breakingChanges.forEach(change => {
+       console.log(chalk.yellow(`  - ${change}`));
+     });
+-    console.log(chalk.cyan('  Migration guide: docs/migration/3.x-to-4.0.md'));
++    if (assessment.migrations.some(m => m.name && m.name.endsWith('-to-4.0.0'))) {
++      console.log(chalk.cyan('  Migration guide: https://github.com/amalik/convoke-agents/blob/main/docs/migration/3.x-to-4.0.md'));
++    }
+     console.log('');
+   }
+ 
+diff --git a/tests/unit/convoke-update.test.js b/tests/unit/convoke-update.test.js
+index bd03a41d..79dddbb1 100644
+--- a/tests/unit/convoke-update.test.js
++++ b/tests/unit/convoke-update.test.js
+@@ -743,10 +743,26 @@ describe('convoke-update CLI (main)', () => {
+       );
+       assert.ok(stdout.includes('BREAKING CHANGES'), 'should display breaking changes warning');
+       assert.ok(stdout.includes('Migration Plan'), 'should show migration plan');
+-      // Story v63-1a-6: migration guide link printed alongside breaking changes.
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // Story v63-1a-6 AC4: migration guide link printed alongside breaking changes
++  // when the migration chain lands on a -to-4.0.0 hop. Uses 3.2.0 (not 3.3.0
++  // which equals the current package.json version → 'up-to-date' action).
++  it('links the migration guide in breaking-changes output for v3.x upgrade', async () => {
++    const tmpDir = await createTempDir('bmad-cli-');
++    try {
++      await createInstallation(tmpDir, '3.2.0');
++
++      const { stdout } = await runScriptWithInput(
++        SCRIPT_PATH, [], 'n\n', { cwd: tmpDir }
++      );
++      assert.ok(stdout.includes('BREAKING CHANGES'), 'should display breaking changes warning');
+       assert.ok(
+-        stdout.includes('docs/migration/3.x-to-4.0.md'),
+-        'should link the migration guide from breaking-changes output'
++        stdout.includes('https://github.com/amalik/convoke-agents/blob/main/docs/migration/3.x-to-4.0.md'),
++        'should link the migration guide from breaking-changes output for 3.x→4.0 upgrade'
+       );
+     } finally {
+       await fs.remove(tmpDir);
