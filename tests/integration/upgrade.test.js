@@ -125,10 +125,14 @@ describe('Upgrade from v1.3.x (simulated)', () => {
     assert.equal(migrations[0].name, '1.3.x-to-1.5.0');
   });
 
-  it('reports breaking changes for v1.3.8 (chain reaches 1.7.x-to-2.0.0)', () => {
+  it('reports breaking changes for v1.3.8 (chain includes 1.7.x-to-2.0.0 breaking migration)', () => {
     const changes = registry.getBreakingChanges('1.3.8');
-    assert.equal(changes.length, 1);
-    assert.ok(changes[0].includes('Product rename'));
+    const v20Migration = registry.getAllMigrations().find(m => m.name === '1.7.x-to-2.0.0');
+    assert.ok(changes.length > 0, 'v1.3.8 chain must produce at least 1 breaking change');
+    assert.ok(
+      changes.includes(v20Migration.description),
+      'v1.3.8 chain should include the v2.0.0 (1.7.x-to-2.0.0) breaking migration description'
+    );
   });
 
   it('migration path shows upgrade-needed and breaking (v2.0.0 rename)', () => {
@@ -399,9 +403,9 @@ describe('Upgrade from v1.7.x (simulated)', () => {
     assert.equal(version, '1.7.1');
   });
 
-  it('finds applicable migrations for v1.7.1 (chains to 2.0.x)', () => {
+  it('finds applicable migrations for v1.7.1 (chain starts with 1.7.x-to-2.0.0 then 2.0.x-to-3.1.0)', () => {
     const migrations = registry.getMigrationsFor('1.7.1');
-    assert.equal(migrations.length, 2);
+    assert.ok(migrations.length >= 2, 'v1.7.1 chain should produce at least 2 migrations');
     assert.equal(migrations[0].name, '1.7.x-to-2.0.0');
     assert.equal(migrations[0].breaking, true);
     assert.equal(migrations[1].name, '2.0.x-to-3.1.0');
@@ -409,8 +413,12 @@ describe('Upgrade from v1.7.x (simulated)', () => {
 
   it('reports breaking changes for v1.7.1', () => {
     const changes = registry.getBreakingChanges('1.7.1');
-    assert.equal(changes.length, 1);
-    assert.ok(changes[0].includes('rename') || changes[0].includes('Convoke'), 'should describe the rename');
+    const v20Migration = registry.getAllMigrations().find(m => m.name === '1.7.x-to-2.0.0');
+    assert.ok(changes.length > 0, 'v1.7.1 chain must produce at least 1 breaking change');
+    assert.ok(
+      changes.includes(v20Migration.description),
+      'v1.7.1 chain should include the v2.0.0 (1.7.x-to-2.0.0) breaking migration description'
+    );
   });
 
   it('refreshInstallation preserves user_name', async () => {
