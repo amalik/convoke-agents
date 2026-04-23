@@ -1,8 +1,8 @@
 'use strict';
 
 /**
- * RFC 4180-aware CSV row parser for team factory validation.
- * Handles quoted fields containing commas and escaped quotes ("").
+ * RFC 4180-aware CSV row parser and formatter.
+ * Handles quoted fields containing commas, embedded quotes (""), and newlines.
  */
 
 /**
@@ -59,4 +59,27 @@ function parseCsvRow(line) {
   return fields;
 }
 
-module.exports = { parseCsvRow };
+/**
+ * Format an array of field values into a single RFC 4180 CSV row.
+ * A field is quoted iff it contains one of: `,`, `"`, or `\n`.
+ * Inside a quoted field, `"` is escaped as `""`.
+ *
+ * @param {string[]} fields - Array of field values to serialize.
+ * @returns {string} A CSV row (no trailing newline).
+ */
+function formatCsvRow(fields) {
+  if (!Array.isArray(fields)) {
+    throw new TypeError('formatCsvRow: fields must be an array of strings');
+  }
+
+  return fields
+    .map(field => {
+      const s = field == null ? '' : String(field);
+      const needsQuoting = /[",\n]/.test(s);
+      if (!needsQuoting) return s;
+      return `"${s.replace(/"/g, '""')}"`;
+    })
+    .join(',');
+}
+
+module.exports = { parseCsvRow, formatCsvRow };
