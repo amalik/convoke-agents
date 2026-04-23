@@ -1,3 +1,11 @@
+---
+initiative: convoke
+artifact_type: story
+qualifier: v63-1a-2-create-config-loader-js-with-direct-yaml-loading
+epic: v63-1a-epic
+schema_version: 1
+---
+
 # Story 1A.2: Create config-loader.js with direct-YAML loading
 
 Status: done
