@@ -1,6 +1,6 @@
 # Story 1A.6: Author migration guide (standalone deliverable)
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -192,6 +192,22 @@ _Deferred:_
 
 _Dismissed (6):_ CHANGELOG marker placement (AC5 allows alternative), no `--json` branch (Edge Hunter confirmed no defect), substring-only test assertion (folded into P1 strengthening), guide example stale date (moot if D1 resolves via strip), "1267/1267 pass" claim without negative test (positive is sufficient), AC5 marker wording diverges from literal spec suggestion (intent preserved).
 
+### Review Findings (Round 2 — 2026-04-23)
+
+**Reviewers:** Blind Hunter, Edge Case Hunter, Acceptance Auditor. 4 findings → 1 patch + 3 defer + 0 HIGH + 0 MED. All 8 Round 1 items verified RESOLVED (per Auditor: "all 8 Round 1 items RESOLVED; no new concerns").
+
+_Patches:_
+- [x] [Review][Patch] R2-P1 — Draft file frontmatter `status: draft` not updated to match body text [_bmad-output/planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md:11]. Round 1 P4 updated the title and the body `**Status:**` line to "Superseded" but missed the YAML frontmatter `status` field. Artifact-governance queries read frontmatter, so this inconsistency would cause the governance system to still classify the file as a live draft. **Applied:** changed `status: draft` → `status: superseded`. `convoke-doctor` taxonomy checks still pass (25/25 — only 2 pre-existing version-consistency failures unrelated).
+
+_Deferred:_
+- [x] [Review][Defer] R2-D1 — Missing test coverage for v1.7.x multi-hop positive case. P2's gate fires when chain includes `-to-4.0.0`, which for 1.7.1 walks 1.7.x→2.0.0→2.0.x→3.1.0→3.1.x→4.0.0. The v3.x test covers direct upgrade; no test pins the multi-hop path. Fix path: add a test case with `createInstallation(tmpDir, '1.7.1')` asserting the guide link appears. Low value relative to scope; can land in Epic 5B (release discipline).
+- [x] [Review][Defer] R2-D2 — Hardcoded GitHub URL `https://github.com/amalik/convoke-agents/...` in `scripts/update/convoke-update.js:223` instead of derived from `package.json.repository.url`. Correct today (matches package.json owner segment), but fragile against future repo moves. Fix path: 3–5 LOC helper that parses `package.json` repository field and constructs blob URL. Defer to Epic 5B or a separate refactor.
+- [x] [Review][Defer] R2-D3 — PF1 rephrase still uses present-tense "validates" for a gating step that is Epic 4 scope. Subjective — the rephrase "Convoke 4.0 validates agent output equivalence as part of release gating" asserts a process rather than a shipped feature; Epic 4 makes it retroactively true by release. Fix path: re-read at Epic 4 ship time; if Epic 4 slips past 4.0 release, tighten to "will validate". No action until Epic 4 status is known.
+
+_Dismissed:_ None — Round 2 surfaced no noise-level findings.
+
+**Convergence reached at Round 2.** Round 2 had zero HIGH findings AND the one patch (frontmatter edit) was non-structural. Per `code-review-convergence` rule, Round 3 not permitted. Story ready for `done`.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -248,3 +264,4 @@ _Deleted files:_ None.
 | 2026-04-22 | Story created per `/bmad-create-story v63-1a-6-...` invocation. Documentation-only story: finalize existing 79-line draft into `docs/migration/3.x-to-4.0.md` + wire from `convoke-update` CLI + CHANGELOG link. 8 ACs covering length, vocabulary, integration points, frontmatter, validation. Scope: ~100 raw-LOC guide + 2 one-line code edits. Epic 1A's final story. | [sprint-status.yaml](sprint-status.yaml) |
 | 2026-04-22 | Implementation: 5 tasks complete. Shipped `docs/migration/3.x-to-4.0.md` (55 LOC, user-facing, zero blacklist terms). Wired CLI link via `scripts/update/convoke-update.js` breaking-changes block + test assertion. CHANGELOG handoff marker added for Story 5B.1. Draft preserved with pointer to final. Full suite 1267/1267 pass; lint clean; convoke-doctor unchanged. Status → `review`. Epic 1A is now 6/6 complete pending 1A.6 review sign-off. | This file |
 | 2026-04-22 | Round 1 code review complete. 15 findings: 3 decisions + 5 patches + 1 defer + 6 dismissed. All 3 decisions resolved (D1: strip custom-skill section referencing nonexistent `bmm-dependencies.csv`; D2: revert `checklist.md` DoD gate loosening to preserve lint-1.1 strict gate; D3: rephrase PF1 equivalence claim as present-tense-about-process). All 5 patches applied (P1: move test to `createInstallation(tmpDir, '3.2.0')` 3.x upgrade fixture; P2: gate CLI print on `-to-4.0.0` migration-chain presence; P3: replace bare path with full GitHub URL; P4: draft file title `Draft` → `Superseded`; P5: fix 4 story spec path references). Validation: full suite 1268/1268 pass (+1 new test case); `npm run lint` clean. Guide length now 43 LOC (was 55). Ready for Round 2 convergence check — 4 HIGH findings in Round 1 trigger Round 2 per `code-review-convergence` rule. | This file |
+| 2026-04-23 | Round 2 code review complete. 4 findings: 1 patch + 3 defer + 0 HIGH + 0 MED. All 8 Round 1 items verified RESOLVED by Auditor ("all 8 Round 1 items RESOLVED; no new concerns"). Round 1 patches held up under regression scrutiny: P2 gate correctly fires for both 1.7.x multi-hop chain (1.7→2.0→3.1→4.0) and direct 3.x→4.0 upgrades; P3 GitHub URL owner segment matches `package.json.repository.url`; D1 strip reads coherently with zero dangling references; D2 checklist revert clean against pre-1A.6 baseline. **R2-P1:** completed the P4 fix by updating draft file YAML frontmatter `status: draft → superseded` (body was updated in R1 but frontmatter missed). `convoke-doctor` still 25/25 passes taxonomy checks. **Deferred:** R2-D1 missing 1.7.x multi-hop test coverage, R2-D2 hardcoded URL vs package.json derivation, R2-D3 PF1 present-tense caveat (all LOW, tracked in deferred-work.md). **Convergence reached at Round 2** — zero HIGH findings + non-structural patch → Round 3 not permitted per `code-review-convergence` rule. Status → `done`. Epic 1A is now 6/6 complete. | This file |
