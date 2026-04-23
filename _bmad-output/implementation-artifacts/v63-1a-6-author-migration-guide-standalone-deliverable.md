@@ -1,3 +1,11 @@
+---
+initiative: convoke
+artifact_type: story
+qualifier: v63-1a-6-author-migration-guide-standalone-deliverable
+epic: v63-1a-epic
+schema_version: 1
+---
+
 # Story 1A.6: Author migration guide (standalone deliverable)
 
 Status: done
