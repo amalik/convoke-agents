@@ -1,3 +1,11 @@
+---
+initiative: convoke
+artifact_type: story
+qualifier: v63-2-1-create-bmm-dependency-scan-tool-and-registry
+epic: v63-2-epic
+schema_version: 1
+---
+
 # Story 2.1: Create BMM dependency scan tool and registry
 
 Status: done
