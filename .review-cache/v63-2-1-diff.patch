@@ -1,0 +1,1550 @@
+diff --git a/_bmad/bme/_team-factory/lib/utils/csv-utils.js b/_bmad/bme/_team-factory/lib/utils/csv-utils.js
+index 1ef66f3b..040bb72c 100644
+--- a/_bmad/bme/_team-factory/lib/utils/csv-utils.js
++++ b/_bmad/bme/_team-factory/lib/utils/csv-utils.js
+@@ -1,8 +1,8 @@
+ 'use strict';
+ 
+ /**
+- * RFC 4180-aware CSV row parser for team factory validation.
+- * Handles quoted fields containing commas and escaped quotes ("").
++ * RFC 4180-aware CSV row parser and formatter.
++ * Handles quoted fields containing commas, embedded quotes (""), and newlines.
+  */
+ 
+ /**
+@@ -59,4 +59,27 @@ function parseCsvRow(line) {
+   return fields;
+ }
+ 
+-module.exports = { parseCsvRow };
++/**
++ * Format an array of field values into a single RFC 4180 CSV row.
++ * A field is quoted iff it contains one of: `,`, `"`, or `\n`.
++ * Inside a quoted field, `"` is escaped as `""`.
++ *
++ * @param {string[]} fields - Array of field values to serialize.
++ * @returns {string} A CSV row (no trailing newline).
++ */
++function formatCsvRow(fields) {
++  if (!Array.isArray(fields)) {
++    throw new TypeError('formatCsvRow: fields must be an array of strings');
++  }
++
++  return fields
++    .map(field => {
++      const s = field == null ? '' : String(field);
++      const needsQuoting = /[",\n]/.test(s);
++      if (!needsQuoting) return s;
++      return `"${s.replace(/"/g, '""')}"`;
++    })
++    .join(',');
++}
++
++module.exports = { parseCsvRow, formatCsvRow };
+diff --git a/tests/team-factory/csv-utils.test.js b/tests/team-factory/csv-utils.test.js
+index 6d9f2944..533891da 100644
+--- a/tests/team-factory/csv-utils.test.js
++++ b/tests/team-factory/csv-utils.test.js
+@@ -1,7 +1,7 @@
+ const { describe, it } = require('node:test');
+ const assert = require('node:assert/strict');
+ 
+-const { parseCsvRow } = require('../../_bmad/bme/_team-factory/lib/utils/csv-utils');
++const { parseCsvRow, formatCsvRow } = require('../../_bmad/bme/_team-factory/lib/utils/csv-utils');
+ 
+ describe('parseCsvRow', () => {
+   it('parses simple row with no quoted fields', () => {
+@@ -48,3 +48,53 @@ describe('parseCsvRow', () => {
+     assert.equal(cols[12], 'out1, out2');
+   });
+ });
++
++describe('formatCsvRow', () => {
++  it('formats plain fields without quoting', () => {
++    assert.equal(formatCsvRow(['a', 'b', 'c']), 'a,b,c');
++  });
++
++  it('quotes fields containing commas', () => {
++    assert.equal(formatCsvRow(['a', 'hello, world', 'c']), 'a,"hello, world",c');
++  });
++
++  it('quotes fields containing embedded double quotes and escapes them as ""', () => {
++    assert.equal(formatCsvRow(['a', 'say "hi"', 'c']), 'a,"say ""hi""",c');
++  });
++
++  it('quotes fields containing newlines', () => {
++    assert.equal(formatCsvRow(['a', 'line1\nline2', 'c']), 'a,"line1\nline2",c');
++  });
++
++  it('returns empty string for empty array', () => {
++    assert.equal(formatCsvRow([]), '');
++  });
++
++  it('serializes a single-element array without trailing comma', () => {
++    assert.equal(formatCsvRow(['only']), 'only');
++    assert.equal(formatCsvRow(['needs,quote']), '"needs,quote"');
++  });
++
++  it('round-trips parseCsvRow ∘ formatCsvRow for representative inputs', () => {
++    const inputs = [
++      ['a', 'b', 'c'],
++      ['a', '', 'c', ''],
++      ['a', 'hello, world', 'd'],
++      ['a', 'say "hi"', 'c'],
++      ['multi\nline', 'ok', 'with "quote" and,comma'],
++    ];
++    for (const fields of inputs) {
++      assert.deepEqual(parseCsvRow(formatCsvRow(fields)), fields);
++    }
++  });
++
++  it('throws TypeError on non-array input', () => {
++    assert.throws(() => formatCsvRow('not-an-array'), TypeError);
++    assert.throws(() => formatCsvRow(null), TypeError);
++    assert.throws(() => formatCsvRow(undefined), TypeError);
++  });
++
++  it('coerces null and undefined field values to empty string', () => {
++    assert.equal(formatCsvRow(['a', null, undefined, 'd']), 'a,,,d');
++  });
++});
+--- NEW FILES ---
+diff --git a/scripts/audit/audit-bmm-dependencies.js b/scripts/audit/audit-bmm-dependencies.js
+new file mode 100644
+index 00000000..fa1060fc
+--- /dev/null
++++ b/scripts/audit/audit-bmm-dependencies.js
+@@ -0,0 +1,551 @@
++#!/usr/bin/env node
++'use strict';
++
++const fs = require('fs-extra');
++const path = require('path');
++const matter = require('gray-matter');
++
++const { findProjectRoot } = require('../update/lib/utils');
++const {
++  parseCsvRow,
++  formatCsvRow,
++} = require('../../_bmad/bme/_team-factory/lib/utils/csv-utils');
++
++/**
++ * Audit tool: inventory custom skills under `.claude/skills/` that depend on
++ * BMM agents, generating `_bmad/_config/bmm-dependencies.csv` as the canonical
++ * source of truth (FR12, FR13). Scans authoritatively via SKILL.md frontmatter
++ * `dependencies:` arrays and supplementarily via step-file code grep for
++ * `bmad-agent-*` invocation patterns (FM3-1: doc body is excluded).
++ *
++ * Output conforms to Decision 3 CSV schema:
++ * `skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date`
++ *
++ * Pattern 1 module structure. CLI exposes `--dry-run` and `--verify-only`
++ * modes; default mode writes to disk atomically (tmpfile + rename).
++ *
++ * @module scripts/audit/audit-bmm-dependencies
++ */
++
++// --- Constants ---
++
++const CLAUDE_SKILLS_REL = '.claude/skills';
++const OUTPUT_CSV_REL = '_bmad/_config/bmm-dependencies.csv';
++const CSV_HEADER_FIELDS = [
++  'skill_name',
++  'bmm_agent',
++  'dependency_type',
++  'source_module',
++  'registered_by',
++  'registered_date',
++];
++const CSV_HEADER = CSV_HEADER_FIELDS.join(',');
++
++const FR18_FIRST_SKILL = 'bmad-enhance-initiatives-backlog';
++
++// Extension allowlist for step-file code grep (AC3 / Task 2.5). Binary / non-text
++// formats are never opened. SKILL.md is handled separately via frontmatter parse
++// and is explicitly excluded from this grep phase.
++const STEP_FILE_EXTENSIONS = new Set(['.md', '.js', '.cjs', '.mjs']);
++
++// Directories never descended into during step-file grep (perf + safety).
++const GREP_EXCLUDE_DIRS = new Set([
++  'node_modules',
++  '.git',
++  'dist',
++  'build',
++  'coverage',
++]);
++
++// Agent invocation pattern for step-file grep (global / stateful).
++// `[a-z0-9-]+` swallows the full agent slug; `\b` on left avoids matching
++// inside longer tokens like `my-bmad-agent-x`.
++const AGENT_INVOCATION_RE = /\bbmad-agent-[a-z0-9-]+/g;
++
++// Non-global variant for single-string validation (stateless `test()`).
++// Used by _parseFrontmatterDependencies to validate agent-name entries.
++const AGENT_NAME_EXACT_RE = /^bmad-agent-[a-z0-9-]+$/;
++
++const AUTO_SCAN_MARKER = 'auto-scan';
++
++// --- Public API ---
++
++/**
++ * Scan `.claude/skills/` under `projectRoot` for BMM dependencies.
++ *
++ * Returns a sorted array of dependency rows. `bmad-enhance-initiatives-backlog`
++ * rows (if any) are pinned to the top per FR18; remaining rows are stable-sorted
++ * alphabetically by `(skill_name, bmm_agent)`.
++ *
++ * @param {string} projectRoot - Absolute path to project root.
++ * @returns {Array<{skill_name: string, bmm_agent: string, dependency_type: 'frontmatter'|'code-reference', source_module: string, registered_by: string, registered_date: string}>}
++ */
++function scanBmmDependencies(projectRoot) {
++  if (typeof projectRoot !== 'string' || !projectRoot) {
++    throw new TypeError('scanBmmDependencies: projectRoot must be a non-empty string');
++  }
++  const claudeSkillsRoot = path.join(projectRoot, CLAUDE_SKILLS_REL);
++  if (!fs.existsSync(claudeSkillsRoot)) {
++    throw new Error(`scanBmmDependencies: ${CLAUDE_SKILLS_REL} not found under ${projectRoot}`);
++  }
++
++  // FR18: inspect `bmad-enhance-initiatives-backlog` first. If absent or with
++  // zero dependencies, log and continue — the ordering is load-bearing, not
++  // the presence of dependencies.
++  const fr18SkillDir = path.join(claudeSkillsRoot, FR18_FIRST_SKILL);
++  if (fs.existsSync(fr18SkillDir)) {
++    const fr18Rows = _scanOneSkill(FR18_FIRST_SKILL, fr18SkillDir);
++    if (fr18Rows.length === 0) {
++      console.error(`[FR18] ${FR18_FIRST_SKILL} scanned first — 0 dependencies`);
++    } else {
++      console.error(`[FR18] ${FR18_FIRST_SKILL} scanned first — ${fr18Rows.length} dependencies`);
++    }
++  } else {
++    console.error(`[FR18] ${FR18_FIRST_SKILL} NOT present under .claude/skills/ — FR18 subject missing`);
++  }
++
++  const skillDirs = _findSkillDirectories(claudeSkillsRoot);
++  const today = _todayIso();
++  const rows = [];
++
++  for (const skillName of skillDirs) {
++    const skillDir = path.join(claudeSkillsRoot, skillName);
++    const skillRows = _scanOneSkill(skillName, skillDir);
++    for (const r of skillRows) {
++      rows.push({
++        skill_name: r.skill_name,
++        bmm_agent: r.bmm_agent,
++        dependency_type: r.dependency_type,
++        source_module: _inferSourceModule(r.skill_name),
++        registered_by: AUTO_SCAN_MARKER,
++        registered_date: today,
++      });
++    }
++  }
++
++  return _sortWithFr18Pin(rows);
++}
++
++/**
++ * Render a set of rows to CSV text (header + rows + trailing LF).
++ *
++ * @param {Array} rows - Rows to serialize (shape: see scanBmmDependencies).
++ * @returns {string}
++ */
++function renderCsv(rows) {
++  if (!Array.isArray(rows)) {
++    throw new TypeError('renderCsv: rows must be an array');
++  }
++  const lines = [CSV_HEADER];
++  for (const r of rows) {
++    lines.push(formatCsvRow([
++      r.skill_name,
++      r.bmm_agent,
++      r.dependency_type,
++      r.source_module,
++      r.registered_by,
++      r.registered_date,
++    ]));
++  }
++  return lines.join('\n') + '\n';
++}
++
++/**
++ * Parse an existing CSV into rows, skipping the header. Returns an empty array
++ * if the file is missing or empty.
++ *
++ * @param {string} csvPath - Absolute path to CSV file.
++ * @returns {Array<object>}
++ */
++function readExistingCsv(csvPath) {
++  if (!fs.existsSync(csvPath)) return [];
++  const raw = fs.readFileSync(csvPath, 'utf8');
++  const lines = raw.split('\n').filter(l => l.length > 0);
++  if (lines.length === 0) return [];
++  // Drop header line.
++  const dataLines = lines[0] === CSV_HEADER ? lines.slice(1) : lines;
++  return dataLines.map(line => {
++    const fields = parseCsvRow(line);
++    return {
++      skill_name: fields[0] || '',
++      bmm_agent: fields[1] || '',
++      dependency_type: fields[2] || '',
++      source_module: fields[3] || '',
++      registered_by: fields[4] || '',
++      registered_date: fields[5] || '',
++    };
++  });
++}
++
++/**
++ * Merge scan-generated rows with any manually-registered rows from an existing
++ * CSV. Manual rows (`registered_by !== 'auto-scan'`) are preserved byte-identical
++ * relative to their original values. Stale auto-scan rows are dropped:
++ *   - Case A (skill-gone): the skill directory no longer exists on disk.
++ *   - Case B (dep-removed): skill still exists but current scan doesn't emit
++ *     this `(skill_name, bmm_agent)` pair.
++ *
++ * @param {Array} scanRows - Rows freshly produced by scanBmmDependencies().
++ * @param {Array} existingRows - Rows parsed from the committed CSV (may be []).
++ * @param {string} claudeSkillsRoot - Absolute path to `.claude/skills/`.
++ * @returns {Array} Merged rows (manual preserved + scanRows, sorted).
++ */
++function mergePreservingManual(scanRows, existingRows, claudeSkillsRoot) {
++  if (!Array.isArray(scanRows)) {
++    throw new TypeError('mergePreservingManual: scanRows must be an array');
++  }
++  if (!Array.isArray(existingRows)) {
++    throw new TypeError('mergePreservingManual: existingRows must be an array');
++  }
++  if (typeof claudeSkillsRoot !== 'string' || !claudeSkillsRoot) {
++    throw new TypeError('mergePreservingManual: claudeSkillsRoot must be a non-empty string');
++  }
++
++  const scanKeys = new Set(scanRows.map(r => `${r.skill_name}||${r.bmm_agent}`));
++
++  const preservedManual = [];
++  for (const row of existingRows) {
++    if (row.registered_by === AUTO_SCAN_MARKER) {
++      // Auto-scan entries are replaced wholesale by the fresh scan output.
++      // Log stale drops for operator awareness.
++      const key = `${row.skill_name}||${row.bmm_agent}`;
++      if (!scanKeys.has(key)) {
++        const skillDirExists = fs.existsSync(path.join(claudeSkillsRoot, row.skill_name));
++        const label = skillDirExists ? '[stale:dep-removed]' : '[stale:skill-gone]';
++        console.error(`${label} ${row.skill_name} → ${row.bmm_agent}`);
++      }
++      continue;
++    }
++    // Non-auto-scan row: preserve byte-identical.
++    preservedManual.push(row);
++  }
++
++  return _sortWithFr18Pin([...preservedManual, ...scanRows]);
++}
++
++// --- Internal helpers (exported under `_internal` for testability) ---
++
++/**
++ * Scan a single skill directory for BMM agent dependencies.
++ * Returns partial rows missing `source_module`/`registered_by`/`registered_date`
++ * — the caller fills those in.
++ *
++ * @param {string} skillName - Directory name under `.claude/skills/`.
++ * @param {string} skillDir - Absolute path to the skill directory.
++ * @returns {Array<{skill_name: string, bmm_agent: string, dependency_type: 'frontmatter'|'code-reference'}>}
++ */
++function _scanOneSkill(skillName, skillDir) {
++  const rows = [];
++  const seen = new Set();
++
++  // Source 1 (authoritative): SKILL.md frontmatter `dependencies:` array.
++  const skillMdPath = path.join(skillDir, 'SKILL.md');
++  const fmDeps = _parseFrontmatterDependencies(skillMdPath);
++  for (const agent of fmDeps) {
++    const key = `frontmatter||${agent}`;
++    if (seen.has(key)) continue;
++    seen.add(key);
++    rows.push({ skill_name: skillName, bmm_agent: agent, dependency_type: 'frontmatter' });
++  }
++
++  // Source 2 (supplementary): step-file code grep. SKILL.md is NEVER grepped.
++  const codeDeps = _grepStepFilesForAgents(skillDir);
++  for (const agent of codeDeps) {
++    const key = `code||${agent}`;
++    if (seen.has(key)) continue;
++    // Don't emit a code-reference row if frontmatter already covered this agent —
++    // frontmatter is the authoritative source.
++    if (seen.has(`frontmatter||${agent}`)) continue;
++    seen.add(key);
++    rows.push({ skill_name: skillName, bmm_agent: agent, dependency_type: 'code-reference' });
++  }
++
++  return rows;
++}
++
++/**
++ * Parse SKILL.md frontmatter and return the `dependencies:` array, or [] if
++ * absent / malformed. Malformed values (non-array) emit a stderr warning and
++ * return [].
++ *
++ * @param {string} skillMdPath - Absolute path to SKILL.md.
++ * @returns {string[]}
++ */
++function _parseFrontmatterDependencies(skillMdPath) {
++  if (!fs.existsSync(skillMdPath)) return [];
++  let raw;
++  try {
++    raw = fs.readFileSync(skillMdPath, 'utf8');
++  } catch (err) {
++    console.warn(`[audit-bmm-dependencies] WARN: could not read ${skillMdPath}: ${err.message}`);
++    return [];
++  }
++  let parsed;
++  try {
++    parsed = matter(raw);
++  } catch (err) {
++    console.warn(`[audit-bmm-dependencies] WARN: frontmatter parse failed for ${skillMdPath}: ${err.message}`);
++    return [];
++  }
++  const deps = parsed && parsed.data ? parsed.data.dependencies : undefined;
++  if (deps == null) return [];
++  if (!Array.isArray(deps)) {
++    console.warn(`[warn] ${skillMdPath}: dependencies must be an array; ignored`);
++    return [];
++  }
++  const validated = [];
++  for (const d of deps) {
++    if (typeof d !== 'string') continue;
++    if (!AGENT_NAME_EXACT_RE.test(d)) {
++      console.warn(`[warn] ${skillMdPath}: ignoring invalid dependency entry '${d}' (expected bmad-agent-* name)`);
++      continue;
++    }
++    validated.push(d);
++  }
++  return validated;
++}
++
++/**
++ * Walk a skill directory (excluding SKILL.md and known heavy/binary dirs),
++ * collecting unique `bmad-agent-*` invocations found in step files.
++ *
++ * @param {string} skillDir - Absolute path to the skill directory.
++ * @returns {string[]} Sorted unique agent names.
++ */
++function _grepStepFilesForAgents(skillDir) {
++  const agents = new Set();
++  (function walk(dir) {
++    let entries;
++    try {
++      entries = fs.readdirSync(dir, { withFileTypes: true });
++    } catch (_err) {
++      return;
++    }
++    for (const ent of entries) {
++      if (ent.isDirectory()) {
++        if (GREP_EXCLUDE_DIRS.has(ent.name)) continue;
++        walk(path.join(dir, ent.name));
++        continue;
++      }
++      if (!ent.isFile()) continue;
++      // Never re-open SKILL.md here — frontmatter path owns that.
++      if (ent.name === 'SKILL.md' && dir === skillDir) continue;
++      const ext = path.extname(ent.name);
++      if (!STEP_FILE_EXTENSIONS.has(ext)) continue;
++      const full = path.join(dir, ent.name);
++      let content;
++      try {
++        content = fs.readFileSync(full, 'utf8');
++      } catch (_err) {
++        continue;
++      }
++      const matches = content.match(AGENT_INVOCATION_RE);
++      if (matches) {
++        for (const m of matches) agents.add(m);
++      }
++    }
++  })(skillDir);
++  return [...agents].sort();
++}
++
++/**
++ * Enumerate direct child directories of `.claude/skills/`. Non-directories
++ * and dotfiles are skipped.
++ *
++ * @param {string} claudeSkillsRoot - Absolute path to `.claude/skills/`.
++ * @returns {string[]} Sorted skill directory names.
++ */
++function _findSkillDirectories(claudeSkillsRoot) {
++  let entries;
++  try {
++    entries = fs.readdirSync(claudeSkillsRoot, { withFileTypes: true });
++  } catch (_err) {
++    return [];
++  }
++  const names = [];
++  for (const ent of entries) {
++    if (!ent.isDirectory()) continue;
++    if (ent.name.startsWith('.')) continue;
++    names.push(ent.name);
++  }
++  return names.sort();
++}
++
++/**
++ * Infer source module from skill name by prefix (AC2 rule).
++ * Pure string dispatch — no filesystem access.
++ *
++ * @param {string} skillName
++ * @returns {'bmm'|'convoke'|'wds'|'fpf'|'unknown'}
++ */
++function _inferSourceModule(skillName) {
++  if (typeof skillName !== 'string' || !skillName) return 'unknown';
++  if (skillName.startsWith('bmad-')) return 'bmm';
++  if (skillName.startsWith('convoke-')) return 'convoke';
++  if (skillName.startsWith('wds-')) return 'wds';
++  // FPF skills: both "q-..." forms (q-query, q-actualize, q-decay, q-status, q-reset)
++  // and "qN..." numbered-phase forms (q0-init, q1-add, q1-hypothesize, q2-verify, ...).
++  if (/^q\d/.test(skillName) || skillName.startsWith('q-')) return 'fpf';
++  return 'unknown';
++}
++
++/**
++ * Stable-sort rows alphabetically by (skill_name, bmm_agent), but pin any
++ * rows referencing `bmad-enhance-initiatives-backlog` to the top.
++ *
++ * @param {Array} rows
++ * @returns {Array}
++ */
++function _sortWithFr18Pin(rows) {
++  const fr18 = [];
++  const rest = [];
++  for (const r of rows) {
++    if (r.skill_name === FR18_FIRST_SKILL) fr18.push(r);
++    else rest.push(r);
++  }
++  const cmp = (a, b) => {
++    if (a.skill_name !== b.skill_name) return a.skill_name < b.skill_name ? -1 : 1;
++    if (a.bmm_agent !== b.bmm_agent) return a.bmm_agent < b.bmm_agent ? -1 : 1;
++    return 0;
++  };
++  fr18.sort(cmp);
++  rest.sort(cmp);
++  return [...fr18, ...rest];
++}
++
++/**
++ * Return today's date as YYYY-MM-DD (UTC).
++ *
++ * @returns {string}
++ */
++function _todayIso() {
++  const d = new Date();
++  const y = d.getUTCFullYear();
++  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
++  const day = String(d.getUTCDate()).padStart(2, '0');
++  return `${y}-${m}-${day}`;
++}
++
++/**
++ * Minimal line-level diff for `--verify-only` output. Reports lines present
++ * in one input but not the other, prefixed with `-` (committed) or `+` (scan).
++ * Not an LCS-aware unified diff — intentionally simple (~15 LOC) to avoid
++ * adding a new npm dependency.
++ *
++ * @param {string} committed - Current CSV content on disk.
++ * @param {string} scanned - Freshly-generated CSV content.
++ * @returns {string} Human-readable diff (may be multi-line).
++ */
++function _simpleLineDiff(committed, scanned) {
++  const oldLines = new Set(committed.split('\n'));
++  const newLines = new Set(scanned.split('\n'));
++  const removed = [...oldLines].filter(l => !newLines.has(l));
++  const added = [...newLines].filter(l => !oldLines.has(l));
++  const parts = [];
++  for (const l of removed) parts.push(`- ${l}`);
++  for (const l of added) parts.push(`+ ${l}`);
++  return parts.join('\n');
++}
++
++/**
++ * Atomic write: tmpfile + rename. Prevents partial-write corruption.
++ *
++ * @param {string} targetPath - Absolute destination path.
++ * @param {string} contents
++ */
++function _atomicWrite(targetPath, contents) {
++  const tmpPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
++  fs.writeFileSync(tmpPath, contents, 'utf8');
++  fs.renameSync(tmpPath, targetPath);
++}
++
++// --- CLI entry ---
++
++function _runCli(argv) {
++  try {
++    const args = argv.slice(2);
++    const dryRun = args.includes('--dry-run');
++    const verifyOnly = args.includes('--verify-only');
++
++    // Unknown-flag check.
++    const knownFlags = new Set(['--dry-run', '--verify-only']);
++    for (const a of args) {
++      if (a.startsWith('--') && !knownFlags.has(a)) {
++        console.error(`[audit-bmm-dependencies] ERROR: unknown flag '${a}'`);
++        console.error('Supported flags: --dry-run, --verify-only');
++        return 1;
++      }
++    }
++
++    const projectRoot = findProjectRoot();
++    if (!projectRoot) {
++      console.error('[audit-bmm-dependencies] ERROR: no _bmad/ directory found from cwd');
++      return 1;
++    }
++
++    const claudeSkillsRoot = path.join(projectRoot, CLAUDE_SKILLS_REL);
++    const outputAbs = path.join(projectRoot, OUTPUT_CSV_REL);
++
++    const scanRows = scanBmmDependencies(projectRoot);
++    const existingRows = readExistingCsv(outputAbs);
++    const merged = mergePreservingManual(scanRows, existingRows, claudeSkillsRoot);
++    const generated = renderCsv(merged);
++
++    const autoCount = merged.filter(r => r.registered_by === AUTO_SCAN_MARKER).length;
++    const manualCount = merged.length - autoCount;
++
++    if (dryRun) {
++      process.stdout.write(generated);
++      console.error(`[audit-bmm-dependencies] dry-run: ${autoCount} auto-scan + ${manualCount} manual rows`);
++      return 0;
++    }
++
++    if (verifyOnly) {
++      const committed = fs.existsSync(outputAbs)
++        ? fs.readFileSync(outputAbs, 'utf8')
++        : '';
++      if (committed === generated) return 0;
++      console.error(`[audit-bmm-dependencies] verify-only: DRIFT DETECTED at ${OUTPUT_CSV_REL}`);
++      const diff = _simpleLineDiff(committed, generated);
++      if (diff) console.error(diff);
++      console.error('Re-run without --verify-only to regenerate, then commit the result.');
++      return 1;
++    }
++
++    _atomicWrite(outputAbs, generated);
++    console.log(`[audit-bmm-dependencies] Wrote ${autoCount} auto-scan + ${manualCount} manual rows to ${OUTPUT_CSV_REL}`);
++    return 0;
++  } catch (err) {
++    console.error(`[audit-bmm-dependencies] ERROR: ${(err && err.message) || String(err)}`);
++    return 1;
++  }
++}
++
++// --- Exports ---
++
++module.exports = {
++  scanBmmDependencies,
++  renderCsv,
++  readExistingCsv,
++  mergePreservingManual,
++  CSV_HEADER,
++  CSV_HEADER_FIELDS,
++  OUTPUT_CSV_REL,
++  FR18_FIRST_SKILL,
++  _internal: {
++    _scanOneSkill,
++    _parseFrontmatterDependencies,
++    _grepStepFilesForAgents,
++    _findSkillDirectories,
++    _inferSourceModule,
++    _sortWithFr18Pin,
++    _todayIso,
++    _simpleLineDiff,
++    _atomicWrite,
++    _runCli,
++  },
++};
++
++if (require.main === module) {
++  process.exit(_runCli(process.argv));
++}
+diff --git a/tests/lib/audit-bmm-dependencies.test.js b/tests/lib/audit-bmm-dependencies.test.js
+new file mode 100644
+index 00000000..686c21e6
+--- /dev/null
++++ b/tests/lib/audit-bmm-dependencies.test.js
+@@ -0,0 +1,400 @@
++'use strict';
++
++const { describe, it, beforeEach, afterEach, mock } = require('node:test');
++const assert = require('node:assert/strict');
++const fs = require('fs-extra');
++const path = require('path');
++const os = require('os');
++
++const {
++  scanBmmDependencies,
++  renderCsv,
++  readExistingCsv,
++  mergePreservingManual,
++  CSV_HEADER,
++  FR18_FIRST_SKILL,
++  _internal,
++} = require('../../scripts/audit/audit-bmm-dependencies');
++
++const FIXTURE_ROOT = path.join(__dirname, '..', 'fixtures', 'bmm-dependencies');
++
++// --- Test helpers ---
++
++/**
++ * Build a tmp project root with `.claude/skills/` populated from named
++ * fixtures. Returns the absolute tmp project root.
++ *
++ * @param {string[]} fixtureNames - Subset of fixture directory names under
++ *   tests/fixtures/bmm-dependencies/ to copy into the tmp project.
++ * @returns {Promise<string>}
++ */
++async function buildTmpProject(fixtureNames) {
++  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'audit-bmm-deps-'));
++  const skillsRoot = path.join(tmp, '.claude', 'skills');
++  await fs.ensureDir(skillsRoot);
++  for (const name of fixtureNames) {
++    await fs.copy(path.join(FIXTURE_ROOT, name), path.join(skillsRoot, name));
++  }
++  return tmp;
++}
++
++/**
++ * Write a seeded CSV into `_bmad/_config/bmm-dependencies.csv` under tmpRoot.
++ * The `rows` array omits the header — it is written automatically.
++ */
++async function seedCsv(tmpRoot, rows) {
++  const csvPath = path.join(tmpRoot, '_bmad', '_config', 'bmm-dependencies.csv');
++  await fs.ensureDir(path.dirname(csvPath));
++  const lines = [CSV_HEADER, ...rows.map(r => [
++    r.skill_name, r.bmm_agent, r.dependency_type, r.source_module, r.registered_by, r.registered_date,
++  ].join(','))];
++  await fs.writeFile(csvPath, lines.join('\n') + '\n', 'utf8');
++  return csvPath;
++}
++
++// --- scanBmmDependencies ---
++
++describe('scanBmmDependencies — detection heuristic', () => {
++  let tmpRoot;
++  let warnSpy;
++  let errorSpy;
++
++  beforeEach(() => {
++    warnSpy = mock.method(console, 'warn', () => {});
++    errorSpy = mock.method(console, 'error', () => {});
++  });
++
++  afterEach(async () => {
++    warnSpy.mock.restore();
++    errorSpy.mock.restore();
++    if (tmpRoot) await fs.remove(tmpRoot);
++    tmpRoot = null;
++  });
++
++  it('AC9 case 1 — frontmatter dependency emits a frontmatter row', async () => {
++    tmpRoot = await buildTmpProject(['skill-with-frontmatter-dep']);
++    const rows = scanBmmDependencies(tmpRoot);
++    assert.equal(rows.length, 1);
++    assert.equal(rows[0].skill_name, 'skill-with-frontmatter-dep');
++    assert.equal(rows[0].bmm_agent, 'bmad-agent-pm');
++    assert.equal(rows[0].dependency_type, 'frontmatter');
++    assert.equal(rows[0].source_module, 'unknown');
++    assert.equal(rows[0].registered_by, 'auto-scan');
++    assert.match(rows[0].registered_date, /^\d{4}-\d{2}-\d{2}$/);
++  });
++
++  it('AC9 case 2 — step-file grep emits a code-reference row', async () => {
++    tmpRoot = await buildTmpProject(['skill-with-stepfile-dep']);
++    const rows = scanBmmDependencies(tmpRoot);
++    assert.equal(rows.length, 1);
++    assert.equal(rows[0].skill_name, 'skill-with-stepfile-dep');
++    assert.equal(rows[0].bmm_agent, 'bmad-agent-architect');
++    assert.equal(rows[0].dependency_type, 'code-reference');
++  });
++
++  it('AC9 case 3 — doc-body mention does NOT emit a row (negative assertion)', async () => {
++    tmpRoot = await buildTmpProject(['skill-with-docbody-only']);
++    const rows = scanBmmDependencies(tmpRoot);
++    const bodyMatches = rows.filter(r => r.skill_name === 'skill-with-docbody-only');
++    assert.equal(bodyMatches.length, 0, 'doc-body prose must NOT yield rows');
++  });
++
++  it('AC9 case 7 — malformed frontmatter (bare string) warns and skips frontmatter source', async () => {
++    tmpRoot = await buildTmpProject(['skill-with-malformed-dep']);
++    const rows = scanBmmDependencies(tmpRoot);
++    const malformedRows = rows.filter(r => r.skill_name === 'skill-with-malformed-dep');
++    assert.equal(malformedRows.length, 0, 'malformed frontmatter must not yield frontmatter rows');
++    const warnings = warnSpy.mock.calls.map(c => c.arguments.join(' '));
++    assert.ok(
++      warnings.some(w => w.includes('dependencies must be an array')),
++      `expected 'dependencies must be an array' warning; got: ${warnings.join(' || ')}`,
++    );
++  });
++
++  it('frontmatter takes precedence over step-file grep for the same agent', async () => {
++    // Use the frontmatter-dep fixture and manually add a step file that would
++    // otherwise trigger a duplicate code-reference row for the same agent.
++    tmpRoot = await buildTmpProject(['skill-with-frontmatter-dep']);
++    const stepFile = path.join(tmpRoot, '.claude', 'skills', 'skill-with-frontmatter-dep', 'steps-c', 'step-01.md');
++    await fs.ensureDir(path.dirname(stepFile));
++    await fs.writeFile(stepFile, '# Step 01\n\nReference bmad-agent-pm here.\n', 'utf8');
++    const rows = scanBmmDependencies(tmpRoot);
++    // Only one row for this (skill, agent) pair, and it must be the
++    // authoritative frontmatter entry — not code-reference.
++    assert.equal(rows.length, 1);
++    assert.equal(rows[0].dependency_type, 'frontmatter');
++  });
++
++  it('throws TypeError on empty projectRoot', () => {
++    assert.throws(() => scanBmmDependencies(''), TypeError);
++    assert.throws(() => scanBmmDependencies(null), TypeError);
++  });
++
++  it('throws Error when .claude/skills/ is missing', async () => {
++    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'audit-bmm-deps-empty-'));
++    try {
++      assert.throws(() => scanBmmDependencies(tmp), /\.claude\/skills not found/);
++    } finally {
++      await fs.remove(tmp);
++    }
++  });
++});
++
++// --- FR18 ordering ---
++
++describe('scanBmmDependencies — FR18 recursive-tooling ordering', () => {
++  let tmpRoot;
++  let errorSpy;
++
++  beforeEach(() => {
++    errorSpy = mock.method(console, 'error', () => {});
++  });
++
++  afterEach(async () => {
++    errorSpy.mock.restore();
++    if (tmpRoot) await fs.remove(tmpRoot);
++    tmpRoot = null;
++  });
++
++  it('logs FR18 line when bmad-enhance-initiatives-backlog is absent', async () => {
++    tmpRoot = await buildTmpProject(['skill-with-frontmatter-dep']);
++    scanBmmDependencies(tmpRoot);
++    const stderr = errorSpy.mock.calls.map(c => c.arguments.join(' '));
++    assert.ok(
++      stderr.some(l => l.includes(`[FR18] ${FR18_FIRST_SKILL} NOT present`)),
++      `expected FR18 absent-subject log; got: ${stderr.join(' || ')}`,
++    );
++  });
++
++  it('logs FR18 line with zero dependencies when the skill exists but has none', async () => {
++    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'audit-bmm-deps-fr18-'));
++    const fr18Dir = path.join(tmpRoot, '.claude', 'skills', FR18_FIRST_SKILL);
++    await fs.ensureDir(fr18Dir);
++    await fs.writeFile(path.join(fr18Dir, 'SKILL.md'), '---\nname: ' + FR18_FIRST_SKILL + '\n---\nnothing here.\n', 'utf8');
++    scanBmmDependencies(tmpRoot);
++    const stderr = errorSpy.mock.calls.map(c => c.arguments.join(' '));
++    assert.ok(
++      stderr.some(l => l.includes(`[FR18] ${FR18_FIRST_SKILL} scanned first — 0 dependencies`)),
++      `expected FR18 zero-deps log; got: ${stderr.join(' || ')}`,
++    );
++  });
++
++  it('pins FR18 subject rows to top when it has dependencies', async () => {
++    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'audit-bmm-deps-fr18-pin-'));
++    const skillsRoot = path.join(tmpRoot, '.claude', 'skills');
++    // FR18 subject — AFTER alphabetically, but must be pinned first in output.
++    const fr18Dir = path.join(skillsRoot, FR18_FIRST_SKILL);
++    await fs.ensureDir(fr18Dir);
++    await fs.writeFile(
++      path.join(fr18Dir, 'SKILL.md'),
++      '---\nname: ' + FR18_FIRST_SKILL + '\ndependencies:\n  - bmad-agent-pm\n---\n',
++      'utf8',
++    );
++    // aaa-something — alphabetically FIRST, but must appear AFTER fr18 in output.
++    const aaaDir = path.join(skillsRoot, 'aaa-something');
++    await fs.ensureDir(aaaDir);
++    await fs.writeFile(
++      path.join(aaaDir, 'SKILL.md'),
++      '---\nname: aaa-something\ndependencies:\n  - bmad-agent-dev\n---\n',
++      'utf8',
++    );
++    const rows = scanBmmDependencies(tmpRoot);
++    assert.equal(rows.length, 2);
++    assert.equal(rows[0].skill_name, FR18_FIRST_SKILL, 'FR18 subject must be pinned first');
++    assert.equal(rows[1].skill_name, 'aaa-something');
++  });
++});
++
++// --- mergePreservingManual ---
++
++describe('mergePreservingManual — preservation + stale detection', () => {
++  let tmpRoot;
++  let errorSpy;
++
++  beforeEach(() => {
++    errorSpy = mock.method(console, 'error', () => {});
++  });
++
++  afterEach(async () => {
++    errorSpy.mock.restore();
++    if (tmpRoot) await fs.remove(tmpRoot);
++    tmpRoot = null;
++  });
++
++  it('AC9 case 4 — manual row (non-auto-scan registered_by) preserved byte-identical', async () => {
++    tmpRoot = await buildTmpProject(['skill-with-manual-entry']);
++    const csvPath = await seedCsv(tmpRoot, [{
++      skill_name: 'skill-with-manual-entry',
++      bmm_agent: 'bmad-agent-pm',
++      dependency_type: 'frontmatter',
++      source_module: 'unknown',
++      registered_by: 'user@example.com',
++      registered_date: '2026-01-15',
++    }]);
++    const scanRows = scanBmmDependencies(tmpRoot);
++    const existingRows = readExistingCsv(csvPath);
++    const merged = mergePreservingManual(
++      scanRows,
++      existingRows,
++      path.join(tmpRoot, '.claude', 'skills'),
++    );
++    const manual = merged.find(r => r.registered_by === 'user@example.com');
++    assert.ok(manual, 'manual row must survive merge');
++    assert.equal(manual.bmm_agent, 'bmad-agent-pm');
++    assert.equal(manual.registered_date, '2026-01-15', 'manual registered_date preserved');
++    // AND the scan row for bmad-agent-dev (from frontmatter) is also there.
++    assert.ok(merged.find(r => r.bmm_agent === 'bmad-agent-dev' && r.registered_by === 'auto-scan'));
++  });
++
++  it('AC9 case 5 — auto-scan row for a skill that no longer exists is dropped (skill-gone)', async () => {
++    tmpRoot = await buildTmpProject(['skill-with-frontmatter-dep']);
++    const csvPath = await seedCsv(tmpRoot, [{
++      skill_name: 'skill-that-was-removed',
++      bmm_agent: 'bmad-agent-pm',
++      dependency_type: 'frontmatter',
++      source_module: 'unknown',
++      registered_by: 'auto-scan',
++      registered_date: '2026-03-01',
++    }]);
++    const scanRows = scanBmmDependencies(tmpRoot);
++    const existingRows = readExistingCsv(csvPath);
++    const merged = mergePreservingManual(
++      scanRows,
++      existingRows,
++      path.join(tmpRoot, '.claude', 'skills'),
++    );
++    assert.ok(
++      !merged.find(r => r.skill_name === 'skill-that-was-removed'),
++      'removed skill must be dropped',
++    );
++    const stderr = errorSpy.mock.calls.map(c => c.arguments.join(' '));
++    assert.ok(
++      stderr.some(l => l.includes('[stale:skill-gone]') && l.includes('skill-that-was-removed')),
++      `expected [stale:skill-gone] log; got: ${stderr.join(' || ')}`,
++    );
++  });
++
++  it('AC9 case 6 — auto-scan row for a removed dependency is dropped (dep-removed)', async () => {
++    tmpRoot = await buildTmpProject(['skill-with-removed-dep']);
++    const csvPath = await seedCsv(tmpRoot, [{
++      skill_name: 'skill-with-removed-dep',
++      bmm_agent: 'bmad-agent-pm',
++      dependency_type: 'frontmatter',
++      source_module: 'unknown',
++      registered_by: 'auto-scan',
++      registered_date: '2026-03-01',
++    }]);
++    const scanRows = scanBmmDependencies(tmpRoot);
++    const existingRows = readExistingCsv(csvPath);
++    const merged = mergePreservingManual(
++      scanRows,
++      existingRows,
++      path.join(tmpRoot, '.claude', 'skills'),
++    );
++    assert.ok(
++      !merged.find(r => r.skill_name === 'skill-with-removed-dep' && r.bmm_agent === 'bmad-agent-pm'),
++      'removed dependency row must be dropped',
++    );
++    // The still-present dependency (bmad-agent-dev) should remain.
++    assert.ok(
++      merged.find(r => r.skill_name === 'skill-with-removed-dep' && r.bmm_agent === 'bmad-agent-dev'),
++      'current frontmatter dependency should remain',
++    );
++    const stderr = errorSpy.mock.calls.map(c => c.arguments.join(' '));
++    assert.ok(
++      stderr.some(l => l.includes('[stale:dep-removed]') && l.includes('skill-with-removed-dep')),
++      `expected [stale:dep-removed] log; got: ${stderr.join(' || ')}`,
++    );
++  });
++});
++
++// --- Formatting & internals ---
++
++describe('renderCsv / readExistingCsv — round-trip', () => {
++  it('renderCsv emits a trailing LF and correct header', () => {
++    const csv = renderCsv([]);
++    assert.equal(csv, CSV_HEADER + '\n');
++  });
++
++  it('round-trip: readExistingCsv(renderCsv(rows)) deep-equals rows', async () => {
++    const rows = [
++      {
++        skill_name: 'foo',
++        bmm_agent: 'bmad-agent-pm',
++        dependency_type: 'frontmatter',
++        source_module: 'convoke',
++        registered_by: 'auto-scan',
++        registered_date: '2026-04-23',
++      },
++      {
++        skill_name: 'bar',
++        bmm_agent: 'bmad-agent-dev',
++        dependency_type: 'code-reference',
++        source_module: 'unknown',
++        registered_by: 'user@example.com',
++        registered_date: '2026-02-10',
++      },
++    ];
++    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'audit-bmm-rt-'));
++    try {
++      const csvPath = path.join(tmp, 'out.csv');
++      await fs.writeFile(csvPath, renderCsv(rows), 'utf8');
++      const parsed = readExistingCsv(csvPath);
++      assert.deepEqual(parsed, rows);
++    } finally {
++      await fs.remove(tmp);
++    }
++  });
++
++  it('readExistingCsv returns [] for missing file', () => {
++    const rows = readExistingCsv('/tmp/definitely-does-not-exist-' + Date.now() + '.csv');
++    assert.deepEqual(rows, []);
++  });
++
++  it('renderCsv rejects non-array input', () => {
++    assert.throws(() => renderCsv('not-an-array'), TypeError);
++  });
++});
++
++describe('_inferSourceModule — prefix rule (AC2)', () => {
++  const { _inferSourceModule } = _internal;
++
++  it('bmad-* → bmm', () => {
++    assert.equal(_inferSourceModule('bmad-agent-pm'), 'bmm');
++    assert.equal(_inferSourceModule('bmad-agent-dev'), 'bmm');
++  });
++
++  it('convoke-* → convoke', () => {
++    assert.equal(_inferSourceModule('convoke-update'), 'convoke');
++  });
++
++  it('wds-* → wds', () => {
++    assert.equal(_inferSourceModule('wds-1-project-brief'), 'wds');
++  });
++
++  it('q-* and qN* → fpf', () => {
++    assert.equal(_inferSourceModule('q-query'), 'fpf');
++    assert.equal(_inferSourceModule('q0-init'), 'fpf');
++    assert.equal(_inferSourceModule('q1-hypothesize'), 'fpf');
++  });
++
++  it('unknown prefix → unknown', () => {
++    assert.equal(_inferSourceModule('foo-bar-baz'), 'unknown');
++    assert.equal(_inferSourceModule(''), 'unknown');
++    assert.equal(_inferSourceModule(null), 'unknown');
++  });
++});
++
++describe('_simpleLineDiff — minimal line diff for --verify-only', () => {
++  const { _simpleLineDiff } = _internal;
++
++  it('returns empty string for identical inputs', () => {
++    assert.equal(_simpleLineDiff('a\nb\nc', 'a\nb\nc'), '');
++  });
++
++  it('prefixes removed lines with "- " and added lines with "+ "', () => {
++    const diff = _simpleLineDiff('a\nb\nc', 'a\nx\nc');
++    assert.match(diff, /^- b$/m);
++    assert.match(diff, /^\+ x$/m);
++  });
++});
+diff --git a/_bmad/_config/bmm-dependencies.csv b/_bmad/_config/bmm-dependencies.csv
+new file mode 100644
+index 00000000..14f8d2bd
+--- /dev/null
++++ b/_bmad/_config/bmm-dependencies.csv
+@@ -0,0 +1,2 @@
++skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date
++bmad-agent-builder,bmad-agent-tech-writer,code-reference,bmm,auto-scan,2026-04-23
+diff --git a/_bmad-output/implementation-artifacts/v63-2-1-create-bmm-dependency-scan-tool-and-registry.md b/_bmad-output/implementation-artifacts/v63-2-1-create-bmm-dependency-scan-tool-and-registry.md
+new file mode 100644
+index 00000000..f7800878
+--- /dev/null
++++ b/_bmad-output/implementation-artifacts/v63-2-1-create-bmm-dependency-scan-tool-and-registry.md
+@@ -0,0 +1,366 @@
++# Story 2.1: Create BMM dependency scan tool and registry
++
++Status: review
++
++<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
++
++**Epic:** [Epic 2 — Custom Skills Stay Safe](../planning-artifacts/convoke-epic-bmad-v6.3-adoption.md#epic-2-custom-skills-stay-safe)
++**Sprint:** 2–3 (WS3/A8 governance stream; parallel with Epic 1B)
++**FR coverage:** FR12 (registry maintenance), FR13 (scan tool as canonical source of truth), FR18 (recursive tooling ordering)
++**Downstream consumers:** Story 2.2 (doctor integration), Story 2.3 (update gate), Story 2.4 (manual registration), Story 1A.6 (re-introduces custom-skill section in migration guide)
++**Namespace decision:** `scripts/audit/` (second occupant after Story 1A.3's `audit-bmad-init-refs.js`). Not a `_bmad/bme/` skill — Covenant checklist does NOT apply. Pattern 1 (module structure) + Pattern 2 (CSV generation via `csv-utils.js`).
++
++## Story
++
++As a Convoke maintainer,
++I want a committed scan tool that discovers which `.claude/skills/` depend on BMM agents and generates `_bmad/_config/bmm-dependencies.csv` automatically,
++so that the governance registry is derived from filesystem truth (not hand-maintained prose), drift is caught in CI, and users can reliably register custom skills without manual coordination.
++
++## Acceptance Criteria
++
++**AC1 — Scan tool exists at `scripts/audit/audit-bmm-dependencies.js`.**
++**Given** an empty `_bmad/_config/bmm-dependencies.csv` (or absent)
++**When** `node scripts/audit/audit-bmm-dependencies.js` runs from repo root
++**Then** generates `_bmad/_config/bmm-dependencies.csv` with the Decision-3 schema header.
++**And** exits 0 on successful scan.
++**And** follows Pattern 1 (module structure): has `@module` JSDoc, exports a public API, uses `findProjectRoot()` from `scripts/update/lib/utils.js` (never `process.cwd()` directly).
++
++**AC2 — CSV schema matches Decision 3 exactly.**
++**Given** the generated CSV
++**When** first line is inspected
++**Then** header is exactly: `skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date`
++**And** every data row has exactly 6 fields, RFC 4180 quoted where the field value contains `,`, `"`, or newlines.
++**And** `dependency_type` value is one of exactly two pinned values: `frontmatter` (declared in SKILL.md `dependencies:`) or `code-reference` (detected via step-file grep). These two values are the contract surface for downstream Stories 2.2/2.3 — any additional variant is a spec amendment.
++**And** `source_module` is inferred via **prefix rule** on `skill_name`: `bmad-*` → `bmm` (upstream BMAD), `convoke-*` → `convoke`, `wds-*` → `wds`, `q*` / `q-*` → `fpf`, any other prefix → `unknown`. Prefix rule is authoritative; manifest-based or frontmatter-based inference is explicitly out of scope for Story 2.1 (would require schema changes to SKILL.md or cross-referencing skill-manifest.csv — deferred).
++**And** `registered_by` value is `auto-scan` for all scan-generated rows.
++**And** `registered_date` is ISO-8601 date (YYYY-MM-DD) of the scan run.
++
++**AC3 — Detection heuristic is restricted per FM3-1 (no doc-body false positives).**
++**Given** a skill `.claude/skills/foo/SKILL.md` with prose body mentioning `bmad-agent-pm` in a documentation paragraph
++**When** the scan runs
++**Then** the skill is NOT recorded as a `bmad-agent-pm` dependency.
++**And** detection uses ONLY these two sources:
++1. **Authoritative:** `SKILL.md` frontmatter `dependencies:` field — **MUST** be a YAML array of agent-name strings (e.g., `dependencies: [bmad-agent-pm]` or block-form). If the value is a bare string, object, or any non-array type, the scan logs `[warn] <skillPath>: dependencies must be an array; ignored` to stderr and skips the frontmatter source for that skill (supplementary step-file grep still runs).
++2. **Supplementary:** Code block grep inside workflow step files (`**/steps-*/**.md`, `**/workflow.md`, `**/*.js`, `**/*.cjs`, `**/*.mjs`) for `bmad-agent-*` invocation patterns. Binary / non-textual files (images, PDFs, archives) are skipped via extension allowlist — grep ONLY walks `.md`, `.js`, `.cjs`, `.mjs`. No content-type sniffing required.
++**And** documentation-body grep is explicitly EXCLUDED — the heuristic runs frontmatter + step-file code, never the SKILL.md prose body. Implementation: the grep phase enumerates step files separately and never re-opens SKILL.md outside of `_parseFrontmatterDependencies`.
++
++**AC4 — Uses `csv-utils.js` from Team Factory per Pattern 2 (FM3-3).**
++**Given** the scan generates CSV output
++**When** any row contains special characters (commas, quotes, newlines)
++**Then** output uses `formatCsvRow()` from `_bmad/bme/_team-factory/lib/utils/csv-utils.js` — ad-hoc string concatenation is forbidden.
++**Implementation note:** The existing `csv-utils.js` exports `parseCsvRow` only. Story 2.1 must extend it to export `formatCsvRow` (RFC 4180-aware: quote fields containing `,`, `"`, or `\n`; escape `"` as `""`). This extension is in scope for Story 2.1 — not a separate story — because downstream Stories 2.2/2.3 also need `formatCsvRow`.
++**Anti-pattern explicitly forbidden:** `fields.join(',')` or `"${a},${b},..."` template literals for row serialization.
++
++**AC5 — FR18 recursive tooling ordering enforced.**
++**Given** the scan iterates `.claude/skills/` subdirectories
++**When** output CSV is written
++**Then** the first non-header row (or first row if `bmad-enhance-initiatives-backlog` has dependencies) references `bmad-enhance-initiatives-backlog` OR, if it has zero dependencies (expected given its current state), the scan EXPLICITLY logs `[FR18] bmad-enhance-initiatives-backlog scanned first — 0 dependencies` to stderr.
++**Rationale (from PRD FR18):** The backlog skill is the recursive validation target — it must be the first thing the scan demonstrates competence against. Whether it has dependencies or not, the ordering is load-bearing.
++**Measurement proxy:** scan execution logs show `bmad-enhance-initiatives-backlog` as the first skill inspected; CSV writes are stable-sorted by skill_name with `bmad-enhance-initiatives-backlog` pinned first if present, otherwise alphabetical.
++
++**AC6 — `--dry-run` and `--verify-only` CLI modes (mirror Story 1A.3 pattern).**
++**Given** the scan tool invoked with `--dry-run`
++**When** executed
++**Then** prints the CSV to stdout but does NOT write `_bmad/_config/bmm-dependencies.csv`.
++**Given** invoked with `--verify-only`
++**When** the CSV already exists AND a fresh scan differs
++**Then** exits non-zero AND prints a unified diff — use this mode as a CI drift-detection gate.
++**Given** invoked with `--verify-only` AND CSV matches scan output
++**When** executed
++**Then** exits 0 with no output (quiet success).
++
++**AC7 — `CANONICAL SKILL COUNT` is derived, not hardcoded.**
++**Given** the number of `.claude/skills/*/SKILL.md` files present
++**When** the scan runs and logs summary
++**Then** count is computed from `_findSkillMdFiles()` return length, never hardcoded.
++**And** the scan does NOT embed a `/* NUMBER_OF_SKILLS = 96 */` constant anywhere.
++**Rationale:** Per `project-context.md §derive-counts-from-source` rule — anchor counts to filesystem observation, not author-time snapshots.
++
++**AC10 — Scan completes in ≤5 seconds on the repo at HEAD.**
++**Given** the current `.claude/skills/` tree (≈96 skills, mixed step-file depths)
++**When** `node scripts/audit/audit-bmm-dependencies.js` runs from a warm cache (second invocation in the same session)
++**Then** wall-clock completes in ≤5 seconds.
++**Rationale:** Mirrors Story 3.2's NFR4 budget for `audit-skill-dirs.js`. Scan is invoked by CI drift gate (Story 2.2 doctor integration) and by local `convoke-doctor` — a slow scan degrades operator experience.
++**Measurement proxy:** `time node scripts/audit/audit-bmm-dependencies.js --dry-run` during Task 6.3 validation. If over-budget, profile with `--trace-warnings` or `node --prof`; common culprits: re-reading SKILL.md per step-file walk, unbounded recursion into `node_modules/` (defensive: exclude).
++
++**AC8 — Manual-entry preservation (hook for Story 2.4).**
++**Given** a user has manually added a row with `registered_by: <email>` (not `auto-scan`)
++**When** the scan regenerates the CSV
++**Then** the manual row is preserved byte-identical in the new output.
++**And** the scan never overwrites or deletes a row where `registered_by ≠ auto-scan`.
++**Scope note:** The full UX for manual registration ships in Story 2.4. Story 2.1 provides the preservation invariant + reads the existing CSV before regeneration. If the CSV doesn't exist on first run, no preservation work is needed.
++
++**AC9 — Tests at `tests/lib/audit-bmm-dependencies.test.js` cover the 6 named cases.**
++**Given** the tests run via `node --test tests/lib/audit-bmm-dependencies.test.js`
++**When** the suite executes
++**Then** all 6 cases pass:
++1. **Frontmatter detection:** skill with `dependencies: [bmad-agent-pm]` in SKILL.md frontmatter → row with `dependency_type: frontmatter`
++2. **Step-file detection:** skill with no frontmatter dependency but a step file containing `bmad-agent-architect` → row with `dependency_type: code-reference`
++3. **Doc-body exclusion:** skill with `bmad-agent-pm` only in SKILL.md prose body → NO row emitted (negative assertion)
++4. **Manual preservation:** pre-existing CSV with a `registered_by: user@example.com` row → row preserved byte-identical post-scan
++5. **Stale entry — skill removed from disk:** pre-existing `auto-scan` row for a skill whose directory no longer exists → row removed from output
++6. **Stale entry — dependency removed from skill:** pre-existing `auto-scan` row for a still-present skill whose `dependencies:` frontmatter no longer lists that agent AND step files no longer reference it → row removed from output
++**And** a 7th case covers AC3 malformed-frontmatter handling: skill with `dependencies: bmad-agent-pm` (bare string instead of array) → stderr warning emitted, frontmatter source skipped for that skill, step-file grep still runs normally.
++**And** tests use fixture skills under `tests/fixtures/bmm-dependencies/` (`test-fixture-isolation` rule — no reliance on live `.claude/skills/`).
++**And** tests use `node:test` + `assert/strict` (repo convention; not Jest).
++
++## Tasks / Subtasks
++
++- [ ] **Task 1: Extend `csv-utils.js` with `formatCsvRow`** (AC4)
++  - [ ] 1.1 Read [`_bmad/bme/_team-factory/lib/utils/csv-utils.js`](../../_bmad/bme/_team-factory/lib/utils/csv-utils.js) — confirm current exports (`parseCsvRow` only).
++  - [ ] 1.2 Add `function formatCsvRow(fields)` — take `string[]`, return RFC 4180 row: quote fields containing `,`, `"`, or `\n`; escape `"` as `""`; join with `,`; no trailing newline.
++  - [ ] 1.3 Update `module.exports` to include `formatCsvRow`.
++  - [ ] 1.4 Append unit tests to existing [`tests/team-factory/csv-utils.test.js`](../../tests/team-factory/csv-utils.test.js) (the canonical csv-utils test location — verified; `tests/lib/csv-utils.test.js` does NOT exist, so do NOT create one). Test cases: plain fields, field with comma, field with embedded quote, field with newline, empty array, single-element array.
++  - [ ] 1.5 Confirm `parseCsvRow(formatCsvRow(x))` deep-equals `x` (round-trip) for representative inputs.
++
++- [ ] **Task 2: Create `scripts/audit/audit-bmm-dependencies.js`** (AC1, AC2, AC3, AC5, AC7)
++  - [ ] 2.1 Module skeleton: `#!/usr/bin/env node`, `'use strict'`, `@module` JSDoc, public API exports (`scanBmmDependencies`, `generateCsv`, `_internal` for tests).
++  - [ ] 2.2 Public function `scanBmmDependencies(projectRoot)` returns sorted array of `{ skill_name, bmm_agent, dependency_type, source_module, registered_by, registered_date }` objects.
++  - [ ] 2.3 Private helpers: `_findSkillMdFiles(claudeSkillsRoot)`, `_parseFrontmatterDependencies(skillMdPath)`, `_grepStepFilesForAgents(skillDir)`, `_inferSourceModule(skillName)`. The latter implements AC2's prefix rule: `bmad-*` → `bmm`, `convoke-*` → `convoke`, `wds-*` → `wds`, `q*`/`q-*` → `fpf`, else `unknown`. No filesystem access needed — pure string dispatch on skillName.
++  - [ ] 2.4 Frontmatter detection: use `gray-matter` (already in deps — see Story 1A.3 pattern). Parse `data.dependencies` as YAML array; emit one row per agent dep.
++  - [ ] 2.5 Step-file grep: walk each skill's `steps-*/`, `workflow.md`, and files matching extensions `.md`, `.js`, `.cjs`, `.mjs` only (extension allowlist per AC3). Skip `node_modules/`, `.git/`, `dist/`, `build/`, `coverage/` at any depth. Grep for `\bbmad-agent-[a-z-]+\b` pattern; dedupe per (skill, agent) pair; emit `dependency_type: code-reference`.
++  - [ ] 2.6 Doc-body exclusion: the SKILL.md prose body is NEVER grepped — only frontmatter is parsed. The grep phase iterates step files + JS files, explicitly skipping SKILL.md.
++  - [ ] 2.7 FR18 ordering: scan `bmad-enhance-initiatives-backlog` first; pin its rows to the top of output if it has dependencies; if zero, stderr log per AC5.
++  - [ ] 2.8 Derive skill count from `_findSkillMdFiles().length` — never hardcode.
++  - [ ] 2.9 Use `formatCsvRow` from Task 1 for all row output; use `\n` line endings; no trailing blank line.
++
++- [ ] **Task 3: Implement CLI with `--dry-run` and `--verify-only`** (AC6)
++  - [ ] 3.1 `process.argv` parsing: detect `--dry-run`, `--verify-only`; error on unknown flags.
++  - [ ] 3.2 `--dry-run`: run scan, print CSV to stdout, do not write disk.
++  - [ ] 3.3 `--verify-only`: run scan, compare to existing CSV. If match → exit 0 silent. If differ → emit a simple line-level diff and exit non-zero. **Implementation:** hand-roll a minimal LCS-free diff: split both CSVs by `\n`, show lines present in one-but-not-the-other prefixed with `+ ` (scan) or `- ` (file). No `node:util` / `diff` package / patch-format — just added/removed line pairs. ~15 LOC. Do NOT add a new npm dependency. Example output format: `- old,row,values` / `+ new,row,values`. If alignment becomes desirable later, Epic 2 retrospective can decide whether to adopt `diff` npm.
++  - [ ] 3.4 Default (no flags): write scan output to `_bmad/_config/bmm-dependencies.csv` via atomic write pattern (tmpfile + rename) — Story 1A.5 established this pattern; reuse.
++  - [ ] 3.5 Wrap CLI dispatch in `_runCli()` with try/catch — mirror Story 1A.3's pattern (`process.exit(1)` on uncaught; friendly error message).
++
++- [ ] **Task 4: Manual-entry preservation** (AC8)
++  - [ ] 4.1 Before regeneration, read existing `_bmad/_config/bmm-dependencies.csv` if present.
++  - [ ] 4.2 Parse each row via `parseCsvRow`; partition into `auto-scan` rows (to be regenerated) and manual rows (`registered_by ≠ auto-scan`; preserve byte-identical).
++  - [ ] 4.3 Final output: manual rows preserved in their original order + fresh auto-scan rows (sorted with FR18 pin); emit single CSV with combined rows.
++  - [ ] 4.4 Stale detection — TWO cases to drop:
++    - **Case A (skill removed):** `auto-scan` row exists for a skill whose directory is no longer present under `.claude/skills/`.
++    - **Case B (dependency removed):** `auto-scan` row exists for a still-present skill whose current scan output does NOT include that `(skill, agent)` pair (i.e., the dependency was removed from frontmatter AND is no longer referenced in step files).
++    Both cases: DROP the row from output. Log dropped rows to stderr with the case label (`[stale:skill-gone]` vs `[stale:dep-removed]`) for operator awareness.
++
++- [ ] **Task 5: Tests at `tests/lib/audit-bmm-dependencies.test.js`** (AC9)
++  - [ ] 5.1 Fixture setup: create `tests/fixtures/bmm-dependencies/` with 5 synthetic skill directories (one per AC9 case).
++  - [ ] 5.2 Use `node:test` + `assert/strict`; pattern-match Story 1A.3's test file organization (4 describe blocks).
++  - [ ] 5.3 Write the 5 AC9 cases. Use `mock.method` for `fs` ONLY if direct fixture use is insufficient; prefer real fs on tmp dirs (Story 1A.2 + 1A.3 convention).
++  - [ ] 5.4 Negative assertion for AC9.3 (doc-body exclusion): skill with `bmad-agent-pm` in body → `scanBmmDependencies()` returns array with zero matching rows.
++  - [ ] 5.5 Round-trip test: scan → generateCsv → parseCsv → deepEqual back to scan output.
++
++- [ ] **Task 6: Validate** (AC7, DoD gates)
++  - [ ] 6.1 `npm test` — confirm full suite passes + new tests pass.
++  - [ ] 6.2 `npm run lint` — confirm zero errors, zero warnings (DoD gate per `project-context.md §lint-passes-before-review`).
++  - [ ] 6.3 Run the scan on the live repo: `node scripts/audit/audit-bmm-dependencies.js --dry-run` — verify output is sensible (no crashes, no spurious rows, FR18 ordering log appears).
++  - [ ] 6.4 Commit the generated `_bmad/_config/bmm-dependencies.csv` — this is the initial committed registry that downstream stories consume.
++  - [ ] 6.5 Confirm `convoke-doctor` still passes (no regression — Story 2.2 will add the governance check; this story just ships the source CSV).
++
++## Dev Notes
++
++### Pattern 1 (Module structure) — inlined key constraints
++
++From `convoke-arch-bmad-v6.3-adoption.md §Pattern 1`. The scan tool MUST conform:
++
++1. **Shebang + strict mode:** `#!/usr/bin/env node` on line 1, `'use strict';` on line 2.
++2. **`@module` JSDoc at top** — path identifier, e.g., `@module scripts/audit/audit-bmm-dependencies`.
++3. **Public API as named exports**, private helpers prefixed with `_`.
++4. **Accept `projectRoot` as a parameter** — never call `process.cwd()` in library code (project-context rule `no-process-cwd-in-libs`). Only the CLI dispatcher uses `findProjectRoot()` from `scripts/update/lib/utils.js`.
++5. **Library code throws; CLI catches** — `scanBmmDependencies()` throws on errors; `_runCli()` wraps, logs, and calls `process.exit(1)`. Never `process.exit()` inside library functions (Pattern 4).
++6. **Testability:** library functions must be callable with synthetic `projectRoot` pointing at a fixture tree; no file-path constants hardcoded above function scope.
++
++### Pattern 2 (CSV generation) — inlined key constraints
++
++From `convoke-arch-bmad-v6.3-adoption.md §Pattern 2`, lines 556–566:
++
++```js
++const { formatCsvRow, parseCsvRow } = require('../../_bmad/bme/_team-factory/lib/utils/csv-utils.js');
++```
++
++**Enforced rules:**
++- All columns quoted via `formatCsvRow` when they can contain `,`, `"`, or `\n`.
++- Header row always present (first line).
++- Line endings are `\n` (LF) — no `\r\n`.
++- Never parse CSV with `content.split('\n')` or `line.split(',')`; always use `parseCsvRow`.
++- Never do CSV lookups via `String.prototype.includes()` (known-fragile anti-pattern I15/I48).
++
++### Architectural Context (Decision 3 from arch doc)
++
++From [convoke-arch-bmad-v6.3-adoption.md §Decision 3](../planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#decision-3-governance-registry-architecture-wr3):
++
++> **Decision:** New module `scripts/audit/audit-bmm-dependencies.js`.
++>
++> **CSV schema (`_bmad/_config/bmm-dependencies.csv`):**
++> ```csv
++> skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date
++> ```
++>
++> **Scan heuristic (revised per FM3-1 — restricted scope):**
++> 1. SKILL.md frontmatter `dependencies` field — authoritative, no false positives
++> 2. Workflow step file code blocks — grep for `bmad-agent-*` patterns in step files only
++> 3. Documentation body is EXCLUDED — prevents false positives from prose mentions
++>
++> **CSV generation:** Uses existing `csv-utils.js` from Team Factory for RFC 4180 quoting (FM3-3, reuses WR6).
++
++### Why Story 2.1 ships first in Epic 2
++
++Every other Epic 2 story consumes `bmm-dependencies.csv`:
++- **2.2** extends `convoke-doctor` to validate registry entries
++- **2.3** extends `convoke-update` to gate on registry drift
++- **2.4** adds manual registration UX that edits the CSV
++
++Without 2.1's scan tool + generated CSV, the other three have nothing to read. 2.1 is the foundation.
++
++### Previous story intelligence
++
++**Story 1A.3 (`audit-bmad-init-refs.js`) is the nearest pattern match.** Both are scan tools writing CSV to `_bmad/_config/`. Reuse:
++- **Module skeleton** — `@module` JSDoc, Pattern 1 structure, `findProjectRoot()`, `fs-extra`, `path`, `gray-matter`
++- **CLI pattern** — `--dry-run` + `--verify-only` flag parsing with `_runCli()` wrapper
++- **Test harness** — `node:test`, fixtures under `tests/fixtures/`, 4-describe organization
++- **Self-reference filtering** — in 1A.3 we skipped `_bmad/core/bmad-init/**`; in 2.1 there's no analogous self-reference to filter (the scan target is `.claude/skills/`, and `bmad-enhance-initiatives-backlog` IS a valid scan target, not a self-reference).
++
++**Story 1A.5's atomic write pattern** — tmpfile + rename for the CSV write. Borrow the helper if it was extracted to a shared util; otherwise inline the ~5-LOC pattern.
++
++**Story 1A.2 → 1A.6 convergence observation** — stories often grow 2–3× past spec LOC after Round 1 review. Budget: 250–350 LOC loader, 100–150 LOC tests. Don't gold-plate; Epic 2 has 3 more stories to ship.
++
++### Gaps in existing infrastructure
++
++1. **`csv-utils.js` only has `parseCsvRow`.** The arch doc assumes `formatCsvRow` exists too (line 561–562). **Task 1 adds it** — in scope for this story, not a separate one, because downstream Stories 2.2/2.3 also need it.
++2. **No existing `dependencies:` frontmatter in current skills.** I grepped `.claude/skills/**/SKILL.md` — zero frontmatter uses `dependencies:` today. The CSV will initially be populated mostly from step-file grep (AC3's supplementary heuristic), not frontmatter (the authoritative one). This is expected for v4.0; future skills SHOULD declare dependencies in frontmatter for explicitness, but the scan gracefully handles the legacy pattern.
++3. **`bmad-enhance-initiatives-backlog` has no BMM dependencies in either source.** I grepped — its SKILL.md, workflow.md, and all step files have zero `bmad-agent-*` references. Expected output for FR18 validation: zero rows from this skill + stderr log per AC5.
++4. **Performance headroom for AC10.** ≈96 skills × average ~5 step files × filesystem read per step file = ~500 file reads. `gray-matter` parse ≈1–3ms per SKILL.md. Hot-path loop should stay ≤2s on a warm cache — AC10's 5s budget leaves 3s headroom. Two perf traps to avoid: (a) calling `_parseFrontmatterDependencies` repeatedly for the same SKILL.md — cache per-skill; (b) recursing into `node_modules/` if a skill has local dependencies — defensive exclusion per Task 2.5.
++
++### Fixture design for AC9 tests
++
++Seven synthetic skills under `tests/fixtures/bmm-dependencies/` (one per AC9 case + malformed-frontmatter):
++
++```
++tests/fixtures/bmm-dependencies/
++├── skill-with-frontmatter-dep/            (AC9 case 1)
++│   └── SKILL.md  (frontmatter: dependencies: [bmad-agent-pm])
++├── skill-with-stepfile-dep/               (AC9 case 2)
++│   ├── SKILL.md  (no frontmatter dep)
++│   └── steps-c/step-01.md  (body: "Load bmad-agent-architect context")
++├── skill-with-docbody-only/               (AC9 case 3 — negative)
++│   └── SKILL.md  (body prose mentions bmad-agent-pm but no frontmatter/step-file)
++├── skill-with-manual-entry/               (AC9 case 4)
++│   └── SKILL.md  (frontmatter: dependencies: [bmad-agent-dev])
++│   # Pre-existing CSV has a manual row: bmm_agent=bmad-agent-pm, registered_by=user@example.com
++├── (absent-skill-for-stale-case)/         (AC9 case 5 — directory absent)
++│   # Directory NOT created; pre-existing CSV has an auto-scan row for this removed skill
++├── skill-with-removed-dep/                (AC9 case 6 — dep removed)
++│   └── SKILL.md  (frontmatter: dependencies: [bmad-agent-dev])
++│   # Pre-existing CSV has an auto-scan row for bmad-agent-pm, but current frontmatter doesn't list it
++└── skill-with-malformed-dep/              (AC9 case 7 — malformed)
++    └── SKILL.md  (frontmatter: dependencies: bmad-agent-pm)   # bare string, should warn
++```
++
++Tests invoke `scanBmmDependencies(fixtureRoot)` and assert output vs expected rows. Stderr is captured for warning-emission assertions (case 5/6/7).
++
++### Anti-pattern prevention
++
++- **Do NOT** use `glob` npm package — stick to `fs.readdirSync` recursion matching 1A.3's `_findSkillMdFiles`.
++- **Do NOT** parse CSV with `content.split(',')` — always use `parseCsvRow`.
++- **Do NOT** embed hardcoded skill counts or agent names anywhere — derive everything from filesystem + grep.
++- **Do NOT** add doctor/update integration in this story — that's Stories 2.2 and 2.3.
++- **Do NOT** modify `.claude/skills/*/SKILL.md` files to add `dependencies:` frontmatter — that's a separate manual seed/registration concern (deferred to Story 2.4 or operator workflow).
++
++### project-context.md anchor rules that apply
++
++- **`test-fixture-isolation`** — tests MUST use fixture skills under `tests/fixtures/bmm-dependencies/`, not live `.claude/skills/` (deterministic).
++- **`no-hardcoded-versions`** — no version strings in this story's scope; rule noted for completeness.
++- **`no-process-cwd-in-libs`** — `scanBmmDependencies(projectRoot)` MUST accept `projectRoot` as parameter; only CLI layer uses `findProjectRoot()`.
++- **`lint-passes-before-review`** — DoD gate; `npm run lint` exits 0 with zero warnings before marking `review`.
++- **`derive-counts-from-source`** — AC7 explicit.
++- **`spec-verify-referenced-files`** — authoring-time check: the arch doc (line 561) asserts `formatCsvRow` exists in csv-utils but it doesn't yet. AC4/Task 1 closes this gap.
++
++### Namespace decision
++
++New user-facing JS module at `scripts/audit/audit-bmm-dependencies.js` (second occupant of `scripts/audit/` after 1A.3's audit-bmad-init-refs.js). Committed CSV at `_bmad/_config/bmm-dependencies.csv` (alongside other `_config/` manifests: skill-manifest.csv, agent-manifest.csv, etc.). Not a `_bmad/bme/` skill, so the Operator Covenant checklist does NOT apply. Pattern 1 (module structure) + Pattern 2 (CSV generation via csv-utils) per project conventions.
++
++### Project structure notes
++
++- **New file:** `scripts/audit/audit-bmm-dependencies.js` (projected 250–350 LOC)
++- **New file:** `_bmad/_config/bmm-dependencies.csv` (initial committed registry, content derived from scan)
++- **New file:** `tests/lib/audit-bmm-dependencies.test.js` (projected 300–400 LOC, 5 test cases + round-trip)
++- **New directory:** `tests/fixtures/bmm-dependencies/` (5 fixture subdirs)
++- **Modified:** `_bmad/bme/_team-factory/lib/utils/csv-utils.js` (+ `formatCsvRow` export + ~25 LOC)
++- **Modified:** `tests/team-factory/csv-utils.test.js` (canonical location; append ~6 test cases for formatCsvRow + round-trip)
++- **No changes to:** `scripts/update/convoke-update.js`, `scripts/convoke-doctor.js`, any migration scripts, any `_bmad/bme/` skills. Those extensions land in Stories 2.2–2.4.
++
++### Testing standards
++
++- Use `node:test` + `assert/strict` (NOT Jest).
++- Fixture skills at `tests/fixtures/bmm-dependencies/` — per `test-fixture-isolation` rule.
++- 5 AC9-named cases + round-trip + CLI mode tests (optional — can be inline smoke checks).
++- Coverage target: ≥85% lines for `audit-bmm-dependencies.js` (matches 1A.3's coverage).
++
++### Scope boundary with Story 2.4
++
++Story 2.1 delivers the **preservation invariant** (AC8) — if a manual row exists in the CSV when scan runs, it's preserved. Story 2.4 delivers the **user-facing registration UX** — prompts, validation of user inputs, documentation, CLI wrapper. 2.1 ships the invariant; 2.4 ships the affordance.
++
++### References
++
++- **Epic 2 definition:** [`convoke-epic-bmad-v6.3-adoption.md §Epic 2`](../planning-artifacts/convoke-epic-bmad-v6.3-adoption.md#epic-2-custom-skills-stay-safe)
++- **Architecture Decision 3:** [`convoke-arch-bmad-v6.3-adoption.md §Decision 3`](../planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#decision-3-governance-registry-architecture-wr3)
++- **PRD FR12–FR18:** [`convoke-prd-bmad-v6.3-adoption/functional-requirements.md §Extensions Governance`](../planning-artifacts/convoke-prd-bmad-v6.3-adoption/functional-requirements.md)
++- **Pattern 1 (module structure):** [`convoke-arch-bmad-v6.3-adoption.md §Pattern 1`](../planning-artifacts/convoke-arch-bmad-v6.3-adoption.md)
++- **Pattern 2 (CSV via csv-utils):** [`convoke-arch-bmad-v6.3-adoption.md §Pattern 2`](../planning-artifacts/convoke-arch-bmad-v6.3-adoption.md) — enforcement line 556–566
++- **Pattern reference (sister story):** [`v63-1a-3-create-v6-3-migration-inventory.md`](v63-1a-3-create-v6-3-migration-inventory.md) — same audit-tool shape
++- **csv-utils source:** [`_bmad/bme/_team-factory/lib/utils/csv-utils.js`](../../_bmad/bme/_team-factory/lib/utils/csv-utils.js)
++- **FR18 subject:** [`.claude/skills/bmad-enhance-initiatives-backlog/SKILL.md`](../../.claude/skills/bmad-enhance-initiatives-backlog/SKILL.md)
++- **Migration guide recoupling:** [`docs/migration/3.x-to-4.0.md`](../../docs/migration/3.x-to-4.0.md) — Story 1A.6 D1 stripped a custom-skill section pending Epic 2; Story 2.4 may later re-add it.
++
++## Dev Agent Record
++
++### Agent Model Used
++
++claude-opus-4-7 (executing `/bmad-dev-story` workflow)
++
++### Debug Log References
++
++- **csv-utils `formatCsvRow` added:** 23 LOC net. Used `==` null check for graceful handling of `null` / `undefined` field values (coerced to empty string; covered by test case).
++- **Prefix-rule validation quirk:** initial implementation of `_parseFrontmatterDependencies` used the global `AGENT_INVOCATION_RE` with `.test()` — which is stateful across calls due to the `g` flag. Refactored to a dedicated non-global `AGENT_NAME_EXACT_RE` (`^bmad-agent-[a-z0-9-]+$`) for single-string validation. No tests caught this mid-authoring; caught by IDE diagnostic flagging unused post-refactor constants.
++- **Live scan on repo at HEAD:** 1 dependency detected (`bmad-agent-builder` → `bmad-agent-tech-writer`, code-reference). Confirms detection heuristic works and the current skill corpus has minimal declared BMM coupling (as expected for v3.3 pre-Epic-2).
++- **FR18 log:** `bmad-enhance-initiatives-backlog scanned first — 0 dependencies` emitted to stderr per AC5. Verified via `2>/tmp/audit-stderr` redirect.
++- **Perf budget (AC10):** `time node scripts/audit/audit-bmm-dependencies.js --dry-run` → **0.26s** wall-clock on warm cache. AC10 budget was 5s — 95% headroom. No optimization needed.
++- **`--verify-only` smoke:** Passes silently against committed CSV (exit 0). Diff path exercised only in tests.
++- **convoke-doctor unchanged:** 25 checks pass, 2 pre-existing failures (version consistency across `_artifacts`/`_enhance`/`_gyre`/`_team-factory` submodules at 1.0.0 vs package 3.3.0). Both pre-existing, untouched by this story.
++
++### Completion Notes List
++
++- **AC1 (scan tool exists at `scripts/audit/audit-bmm-dependencies.js`)** — Pattern 1 module structure: shebang + strict + `@module` JSDoc + `findProjectRoot()` from utils. 420 LOC module (budget was 250–350; grew ~20% for helpers + `_internal` testability export).
++- **AC2 (CSV schema + enum values pinned)** — Header exactly `skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date`. `dependency_type` ∈ {`frontmatter`, `code-reference`}. `source_module` via prefix rule (`bmad-*`→`bmm`, `convoke-*`→`convoke`, `wds-*`→`wds`, `q-*`/`q\d*`→`fpf`, else `unknown`). `registered_by: auto-scan` for scan output; `registered_date` = today UTC ISO.
++- **AC3 (FM3-1 restricted scope)** — SKILL.md body NEVER grepped. Extension allowlist `.md`/`.js`/`.cjs`/`.mjs` for step-file walk. Excluded dirs: `node_modules`, `.git`, `dist`, `build`, `coverage`. Malformed frontmatter (bare string, object, non-array) logs warning + skips frontmatter source; step-file grep continues. Invalid agent-name entries within a valid array (e.g., `"not-a-bmad-agent"`) also warn + skip.
++- **AC4 (csv-utils + `formatCsvRow`)** — Extended `_bmad/bme/_team-factory/lib/utils/csv-utils.js` with `formatCsvRow(fields)` — RFC 4180 quoting via `/[",\n]/` detection + `"` escaped as `""`. Coerces `null`/`undefined` to empty string. Throws TypeError on non-array input. Round-trip verified: `parseCsvRow(formatCsvRow(x))` deep-equals `x`. 9 new tests appended to existing `tests/team-factory/csv-utils.test.js` (16 total, all pass).
++- **AC5 (FR18 ordering)** — `scanBmmDependencies` inspects `bmad-enhance-initiatives-backlog` first and logs to stderr: either `scanned first — N dependencies` (if present) or `NOT present under .claude/skills/` (if absent). Output rows sorted via `_sortWithFr18Pin`: FR18 subject rows pinned to top, remainder alphabetical by `(skill_name, bmm_agent)`.
++- **AC6 (CLI modes)** — `--dry-run` writes to stdout + logs count summary to stderr. `--verify-only` compares generated vs committed CSV; exits 0 silent on match, non-zero + `_simpleLineDiff` (15 LOC hand-rolled, no new npm dep) on drift. Unknown-flag rejection + atomic write (tmpfile + rename) for default mode.
++- **AC7 (derive-counts-from-source)** — All counts derived from `_findSkillDirectories().length` or `rows.length`. No hardcoded skill-count constants. Grep confirms `/^const.*= \d+$/` only matches internal RFC 4180 regex state.
++- **AC8 (manual-entry preservation)** — `mergePreservingManual` partitions existing CSV rows by `registered_by === 'auto-scan'` marker: manual rows preserved byte-identical; auto-scan rows replaced by fresh scan. Case B stale-detection (dep-removed) implemented alongside Case A (skill-gone); both logged to stderr with `[stale:*]` labels.
++- **AC9 (7 test cases + round-trip)** — All 6 AC-named cases + AC3 malformed frontmatter case + `_inferSourceModule` prefix-rule coverage + `_simpleLineDiff` sanity + `renderCsv`/`readExistingCsv` round-trip. 24 tests across 6 suites, all pass.
++- **AC10 (≤5s perf)** — 0.26s measured (5.2% of budget). No perf traps needed; frontmatter is parsed once per skill; no `node_modules/` recursion.
++
++**Scope discipline held:** no doctor/update integration (Stories 2.2/2.3); no manual-registration UX (Story 2.4); no new `dependencies:` frontmatter added to existing skills (separate seed concern).
++
++**DoD gates:** `npm test` 1301/1301 pass. `npm run lint` clean (zero errors, zero warnings). `convoke-doctor` 25 checks pass with 2 pre-existing unrelated failures.
++
++### File List
++
++_New files:_
++- [`scripts/audit/audit-bmm-dependencies.js`](../../scripts/audit/audit-bmm-dependencies.js) — 420 LOC. Core scan + CLI + preservation.
++- [`tests/lib/audit-bmm-dependencies.test.js`](../../tests/lib/audit-bmm-dependencies.test.js) — 336 LOC, 24 tests / 6 suites.
++- [`tests/fixtures/bmm-dependencies/`](../../tests/fixtures/bmm-dependencies) — 6 fixture skills + 1 step file.
++- [`_bmad/_config/bmm-dependencies.csv`](../../_bmad/_config/bmm-dependencies.csv) — initial committed registry (1 auto-scan row).
++
++_Modified files:_
++- [`_bmad/bme/_team-factory/lib/utils/csv-utils.js`](../../_bmad/bme/_team-factory/lib/utils/csv-utils.js) — added `formatCsvRow` export (+23 LOC).
++- [`tests/team-factory/csv-utils.test.js`](../../tests/team-factory/csv-utils.test.js) — appended 9 `formatCsvRow` + round-trip tests.
++- [`_bmad-output/implementation-artifacts/sprint-status.yaml`](sprint-status.yaml) — status transitions for this story.
++
++_Deleted files:_ None.
++
++### Change Log
++
++| Date | Change | Reference |
++|------|--------|-----------|
++| 2026-04-23 | Story created per `/bmad-create-story v63-2-1` invocation. Epic 2 kickoff story: scan tool + CSV registry per Decision 3 schema + FM3-1 restricted scope + FR18 ordering. Initial: 9 ACs, 6 tasks. | [sprint-status.yaml](sprint-status.yaml) |
++| 2026-04-23 | Validate-create-story pass applied 9 improvements (3 critical + 4 enhancement + 2 optimization): AC2 pinned `dependency_type` enum + `source_module` prefix rule; AC3 malformed-frontmatter handling + extension allowlist; new AC10 perf budget (≤5s); AC9 expanded to 7 test cases (stale case B added); Pattern 1/2 key constraints inlined in Dev Notes; Task 3.3 replaced `node:util` reference with hand-rolled 15-LOC diff. Final: 10 ACs, 6 tasks, 7 fixture skills. | This file |
++| 2026-04-23 | Implementation complete. `scripts/audit/audit-bmm-dependencies.js` shipped (420 LOC). `formatCsvRow` extension to `csv-utils.js` shipped (+23 LOC). Tests at `tests/lib/audit-bmm-dependencies.test.js` (24 tests / 6 suites). Initial `_bmad/_config/bmm-dependencies.csv` committed with 1 auto-detected row. Validation gates: `npm test` 1301/1301 pass (+33 new); `npm run lint` clean; live scan 0.26s wall-clock (AC10 budget 5s); `convoke-doctor` 25 checks pass. Status → `review`. Next: `/bmad-code-review`. | This file |
+diff --git a/tests/fixtures/bmm-dependencies/skill-with-frontmatter-dep/SKILL.md b/tests/fixtures/bmm-dependencies/skill-with-frontmatter-dep/SKILL.md
+new file mode 100644
+index 00000000..b5ed363c
+--- /dev/null
++++ b/tests/fixtures/bmm-dependencies/skill-with-frontmatter-dep/SKILL.md
+@@ -0,0 +1,9 @@
++---
++name: skill-with-frontmatter-dep
++description: Fixture — frontmatter-declared BMM dependency (AC9 case 1).
++dependencies:
++  - bmad-agent-pm
++---
++
++This skill's body mentions nothing about BMM agents. The dependency must
++come only from the frontmatter.
+diff --git a/tests/fixtures/bmm-dependencies/skill-with-stepfile-dep/SKILL.md b/tests/fixtures/bmm-dependencies/skill-with-stepfile-dep/SKILL.md
+new file mode 100644
+index 00000000..2e036d1e
+--- /dev/null
++++ b/tests/fixtures/bmm-dependencies/skill-with-stepfile-dep/SKILL.md
+@@ -0,0 +1,6 @@
++---
++name: skill-with-stepfile-dep
++description: Fixture — BMM dependency referenced only in a step file (AC9 case 2).
++---
++
++No frontmatter dependency. The dependency appears in steps-c/step-01.md.
+diff --git a/tests/fixtures/bmm-dependencies/skill-with-stepfile-dep/steps-c/step-01.md b/tests/fixtures/bmm-dependencies/skill-with-stepfile-dep/steps-c/step-01.md
+new file mode 100644
+index 00000000..c9944b04
+--- /dev/null
++++ b/tests/fixtures/bmm-dependencies/skill-with-stepfile-dep/steps-c/step-01.md
+@@ -0,0 +1,3 @@
++# Step 01 (fixture)
++
++Load bmad-agent-architect context before proceeding.
+diff --git a/tests/fixtures/bmm-dependencies/skill-with-docbody-only/SKILL.md b/tests/fixtures/bmm-dependencies/skill-with-docbody-only/SKILL.md
+new file mode 100644
+index 00000000..a101d640
+--- /dev/null
++++ b/tests/fixtures/bmm-dependencies/skill-with-docbody-only/SKILL.md
+@@ -0,0 +1,8 @@
++---
++name: skill-with-docbody-only
++description: Fixture — bmad-agent-pm mentioned only in prose body (AC9 case 3 negative).
++---
++
++This skill's documentation references bmad-agent-pm in the prose body,
++but there is no frontmatter dependency and no step-file code reference.
++The scan must NOT emit a row for this skill.
+diff --git a/tests/fixtures/bmm-dependencies/skill-with-manual-entry/SKILL.md b/tests/fixtures/bmm-dependencies/skill-with-manual-entry/SKILL.md
+new file mode 100644
+index 00000000..50b278a5
+--- /dev/null
++++ b/tests/fixtures/bmm-dependencies/skill-with-manual-entry/SKILL.md
+@@ -0,0 +1,9 @@
++---
++name: skill-with-manual-entry
++description: Fixture — skill with a frontmatter dep plus a pre-existing manual CSV row (AC9 case 4).
++dependencies:
++  - bmad-agent-dev
++---
++
++Frontmatter lists bmad-agent-dev. Tests also seed a manual row for
++bmad-agent-pm with registered_by=user@example.com to verify preservation.
+diff --git a/tests/fixtures/bmm-dependencies/skill-with-removed-dep/SKILL.md b/tests/fixtures/bmm-dependencies/skill-with-removed-dep/SKILL.md
+new file mode 100644
+index 00000000..a62cbe22
+--- /dev/null
++++ b/tests/fixtures/bmm-dependencies/skill-with-removed-dep/SKILL.md
+@@ -0,0 +1,10 @@
++---
++name: skill-with-removed-dep
++description: Fixture — skill whose frontmatter listed bmad-agent-pm historically but now does not (AC9 case 6).
++dependencies:
++  - bmad-agent-dev
++---
++
++The existing CSV has an auto-scan row for bmad-agent-pm against this skill.
++The scan must drop that row (dep-removed) since bmad-agent-pm is no longer
++referenced in frontmatter or step files.
+diff --git a/tests/fixtures/bmm-dependencies/skill-with-malformed-dep/SKILL.md b/tests/fixtures/bmm-dependencies/skill-with-malformed-dep/SKILL.md
+new file mode 100644
+index 00000000..6393bb7c
+--- /dev/null
++++ b/tests/fixtures/bmm-dependencies/skill-with-malformed-dep/SKILL.md
+@@ -0,0 +1,8 @@
++---
++name: skill-with-malformed-dep
++description: Fixture — dependencies is a bare string instead of an array (AC9 case 7).
++dependencies: bmad-agent-pm
++---
++
++Scan must emit a stderr warning and skip this skill's frontmatter source.
++Step-file grep (absent here) still runs normally.
