@@ -5,6 +5,17 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of v63-2-3-integrate-registry-gate-into-convoke-update (2026-04-24)
+
+Round 1 code review added 2 `defer` items — both LOW, both CI-hygiene concerns with no live correctness impact:
+
+- **200ms hardcoded stdin-write delay in `runScriptWithInput`** — Blind+Edge LOW. The test helper uses `setTimeout(..., 200)` to write piped input, assuming readline is ready by then. Works today, but burns 200ms × 7 tests = 1.4s in the Story 2.3 suite, and risks hanging on slow CI if convoke-update prompts earlier than 200ms for interactive paths. Also: on 15s timeout, `fs.remove(tmpDir)` may fail silently on macOS if SIGTERM leaves orphan child processes holding file descriptors. Fix path: refactor to `child.stdin.on('ready', ...)` or use a write-when-flowing pattern; add fs.remove retry on EBUSY.
+- **`_scanWithSuppressedStderr` "no concurrent invocations" invariant violation** — Edge LOW. `scripts/convoke-doctor.js`'s helper mutates global `console.error` during the scan. JSDoc says "safe ONLY because `main()` runs checks serially" — but Story 2.3's new call-site in convoke-update runs post-`runMigrations`, where migration-runner cleanup logic may log to stderr concurrently. Actual risk: timing-based silent log swallow during the ~5-50ms scan window. Low probability (runMigrations is awaited before the gate), but the documented invariant is formally violated. Fix path: refactor convoke-doctor's helper to stack-counted reentrant shim, or assert sync-only at runtime via Promise-detection. Revisit if stderr silencing becomes observable.
+
+---
+
+---
+
 ## Deferred from: code review of v63-2-2-integrate-governance-check-into-convoke-doctor (2026-04-23)
 
 Round 1 code review added 3 `defer` items — all LOW, all non-impactful today but worth watching:
