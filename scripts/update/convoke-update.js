@@ -7,6 +7,11 @@ const migrationRunner = require('./lib/migration-runner');
 const registry = require('./migrations/registry');
 const { findProjectRoot } = require('./lib/utils');
 const { readChangelogEntries } = require('./lib/changelog-reader');
+// Story v63-2-3: post-upgrade governance gate. `checkBmmDependencies` is
+// lazy-required inside `_runPostUpgradeGate` (Round 1 R1-M2 fix) so a
+// load-time error in convoke-doctor can't abort convoke-update startup, and
+// non-gate exit paths (no-project / fresh / broken / downgrade) don't pay the
+// transitive import cost.
 
 /**
  * Convoke Update CLI
@@ -65,6 +70,129 @@ function assessUpdate(projectRoot) {
     migrations,
     breakingChanges
   };
+}
+
+// --- Story v63-2-3: post-upgrade BMM dependency gate ---
+
+/**
+ * Run the governance gate against the post-upgrade state and render findings
+ * to stdout. Fail-soft per NFR9: scan-failure or any internal error falls back
+ * to a single yellow warning + gray fix hint; exit code is never escalated.
+ *
+ * Wired into BOTH successful state-changing exit paths: `refresh-only` (after
+ * runRefreshOnly) and `upgrade` (after runMigrations). Skipped in `--dry-run`
+ * by placement — the dry-run branches exit before reaching the runXxx() calls.
+ *
+ * @param {string} projectRoot - Absolute project root resolved by main().
+ */
+function _runPostUpgradeGate(projectRoot) {
+  try {
+    // Lazy-require (R1-M2): a load-time failure in convoke-doctor (syntax
+    // error, missing transitive dep) would abort convoke-update at startup if
+    // this were a top-level require. Inline-requiring inside the try/catch
+    // ensures such failures fall through to the fail-soft warning branch.
+    // Early exit paths (no-project, fresh, broken, etc.) also skip the import
+    // cost entirely.
+    const { checkBmmDependencies } = require('../convoke-doctor');
+    const findings = checkBmmDependencies(projectRoot);
+    _printPostUpgradeGate(findings);
+  } catch (err) {
+    // AC6: scan failure is fail-soft. Render a single yellow warning and
+    // continue. Never re-throw — call-sites place this AFTER the migration
+    // try/catch, so any throw here would leak to main() as an uncaught
+    // exception. Belt-and-braces: swallow everything, rendering included.
+    try {
+      console.log('');
+      console.log(chalk.yellow(`  ⚠ Governance gate: scan failed — ${(err && err.message) || String(err)}`));
+      console.log(chalk.gray('    Run: node scripts/audit/audit-bmm-dependencies.js --dry-run'));
+      console.log('');
+    } catch (_renderErr) {
+      // Even the warning-render failed (stdout closed?). Nothing sensible we
+      // can do — swallow to preserve the exit-0 contract.
+    }
+  }
+}
+
+/**
+ * Render the gate's findings with convoke-doctor's visual conventions.
+ * Intentionally NOT sharing `printResults` from convoke-doctor: the summary
+ * wording differs ("BMM registry consistent — no drift" vs "All N checks
+ * passed"), and a shared helper would obscure the context-specific messaging.
+ *
+ * @param {Array<{name: string, passed: boolean, softWarning?: boolean, warning?: string, info?: string, error?: string, fix?: string}>} findings
+ */
+function _printPostUpgradeGate(findings) {
+  if (!Array.isArray(findings) || findings.length === 0) {
+    // Defensive: empty findings would be unexpected (Story 2.2 always emits at
+    // least one finding — either "registry consistent" pass or a softWarning).
+    // Render nothing rather than an empty section.
+    return;
+  }
+
+  console.log('');
+  console.log(chalk.cyan.bold('Post-upgrade governance check:'));
+
+  // Track soft and hard counts separately (R1-M1). Story 2.2 guarantees
+  // governance findings always set `softWarning: true` when `passed: false`,
+  // so hardFailCount should stay 0 in practice — but if Story 2.2's contract
+  // ever drifts or a third-party check plugs in, the summary must not
+  // misreport hard-fail findings as "0 governance warning(s) surfaced".
+  let softWarnCount = 0;
+  let hardFailCount = 0;
+
+  for (const check of findings) {
+    // R1-L1: defensive field guards. Malformed findings render a placeholder
+    // name instead of the literal string "undefined".
+    const name = typeof check.name === 'string' && check.name.length > 0
+      ? check.name
+      : '(unnamed check)';
+
+    if (check.passed) {
+      console.log(chalk.green(`  ✓ ${name}`));
+      if (typeof check.info === 'string' && check.info.length > 0) {
+        console.log(chalk.gray(`    ${check.info}`));
+      }
+    } else if (check.softWarning) {
+      softWarnCount += 1;
+      console.log(chalk.yellow(`  ⚠ ${name}`));
+      const msg = (typeof check.warning === 'string' && check.warning)
+        || (typeof check.error === 'string' && check.error)
+        || '';
+      if (msg) console.log(chalk.yellow(`    ${msg}`));
+      // R1-L2: only split `fix` if it's already a string. Non-string fix
+      // would render `[object Object]` under a blind String() coercion.
+      if (typeof check.fix === 'string' && check.fix.length > 0) {
+        check.fix.split('\n').forEach(line => console.log(chalk.gray(`    ${line}`)));
+      }
+    } else {
+      // Defensive hard-fail branch: see hardFailCount rationale above.
+      hardFailCount += 1;
+      console.log(chalk.red(`  ✗ ${name}`));
+      const msg = (typeof check.warning === 'string' && check.warning)
+        || (typeof check.error === 'string' && check.error)
+        || '';
+      if (msg) console.log(chalk.red(`    ${msg}`));
+      if (typeof check.fix === 'string' && check.fix.length > 0) {
+        console.log(chalk.yellow(`    Fix: ${check.fix}`));
+      }
+    }
+  }
+
+  // Summary line (R1-M1 fix): faithfully reports both counts.
+  const allClean = softWarnCount === 0 && hardFailCount === 0;
+  if (allClean) {
+    console.log(chalk.green('  BMM registry consistent — no drift'));
+  } else if (hardFailCount > 0 && softWarnCount > 0) {
+    console.log(chalk.red(`  ${hardFailCount} issue(s) + ${softWarnCount} governance warning(s) surfaced`));
+    console.log(chalk.gray('  Run `convoke-doctor` for detailed governance checks.'));
+  } else if (hardFailCount > 0) {
+    console.log(chalk.red(`  ${hardFailCount} issue(s) surfaced`));
+    console.log(chalk.gray('  Run `convoke-doctor` for detailed governance checks.'));
+  } else {
+    console.log(chalk.yellow(`  ${softWarnCount} governance warning(s) surfaced (non-blocking)`));
+    console.log(chalk.gray('  Run `convoke-doctor` for detailed governance checks.'));
+  }
+  console.log('');
 }
 
 async function main() {
@@ -199,6 +327,10 @@ async function main() {
       process.exit(1);
     }
 
+    // Story v63-2-3: post-upgrade BMM dependency gate. Runs on refresh-only
+    // success path (state changed, governance drift possible).
+    _runPostUpgradeGate(projectRoot);
+
     process.exit(0);
   }
 
@@ -285,6 +417,12 @@ async function main() {
     // Error already logged by migration-runner
     process.exit(1);
   }
+
+  // Story v63-2-3: post-upgrade BMM dependency gate (R1-M3 placement).
+  // OUTSIDE the migration try/catch so any helper exception (despite the
+  // helper's own belt-and-braces try/catch) is never misattributed to
+  // migration failure. Symmetric with refresh-only call-site placement.
+  _runPostUpgradeGate(projectRoot);
 }
 
 /**
@@ -327,7 +465,19 @@ async function confirm(message) {
 }
 
 // Export for testing
-module.exports = { assessUpdate, printChangelog };
+module.exports = {
+  assessUpdate,
+  printChangelog,
+  // Story v63-2-3 R1-H1: helpers exposed under `_internal` so tests can
+  // invoke the fail-soft gate directly (bypassing CLI spawn) to exercise the
+  // scan-throw → yellow-warning branch. CLI spawn tests can't cover this
+  // because refreshInstallation recreates `.claude/skills/` before the gate
+  // runs, making scan errors unreachable through integration-level tests.
+  _internal: {
+    _runPostUpgradeGate,
+    _printPostUpgradeGate,
+  },
+};
 
 // Run main when executed directly
 if (require.main === module) {
