@@ -294,3 +294,90 @@ describe('convoke-doctor: excluded_agents (U8)', () => {
       'excluded agent wrapper must not be flagged as missing');
   });
 });
+
+// Story v63-2-2 H1: governance warnings must NOT hard-fail the doctor exit
+// code (NFR9 fail-soft contract). Unit tests enforce the field-level invariant
+// but the exit-code wiring in `main()` needs an integration guard — if a
+// future refactor swaps the `!c.passed && !c.softWarning` filter back to
+// `!c.passed`, unit tests stay green while the regression reaches production.
+describe('convoke-doctor: governance softWarning exit-code (Story v63-2-2 H1)', () => {
+  let tmpDir;
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-doc-softwarn-'));
+    const yaml = require('js-yaml');
+    const { AGENT_IDS, GYRE_AGENTS, EXTRA_BME_AGENTS } = require('../../scripts/update/lib/agent-registry');
+
+    // _bmad/bme/_vortex/ — valid config + all agents present + workflows listed.
+    const vortexDir = path.join(tmpDir, '_bmad/bme/_vortex');
+    await fs.ensureDir(path.join(vortexDir, 'agents'));
+    await fs.ensureDir(path.join(vortexDir, 'workflows'));
+    await fs.writeFile(
+      path.join(vortexDir, 'config.yaml'),
+      yaml.dump({ version: pkg.version, agents: [...AGENT_IDS], workflows: [] }),
+      'utf8'
+    );
+    for (const id of AGENT_IDS) {
+      await fs.writeFile(path.join(vortexDir, 'agents', `${id}.md`), `# ${id}`, 'utf8');
+    }
+
+    // Skill wrappers for all expected agents (Vortex + Gyre + EXTRA_BME).
+    const skillsDir = path.join(tmpDir, '.claude/skills');
+    await fs.ensureDir(skillsDir);
+    for (const id of AGENT_IDS) {
+      const dir = path.join(skillsDir, `bmad-agent-bme-${id}`);
+      await fs.ensureDir(dir);
+      await fs.writeFile(path.join(dir, 'SKILL.md'), '# stub', 'utf8');
+    }
+    for (const a of [...GYRE_AGENTS, ...EXTRA_BME_AGENTS]) {
+      const dir = path.join(skillsDir, `bmad-agent-bme-${a.id}`);
+      await fs.ensureDir(dir);
+      await fs.writeFile(path.join(dir, 'SKILL.md'), '# stub', 'utf8');
+    }
+
+    // Valid taxonomy.yaml so `checkTaxonomy` passes (existing taxonomy check
+    // uses `passed: false` without `softWarning` and would hard-fail exit).
+    const taxonomyDir = path.join(tmpDir, '_bmad/_config');
+    await fs.ensureDir(taxonomyDir);
+    const realTaxonomy = await fs.readFile(
+      path.join(PACKAGE_ROOT, '_bmad/_config/taxonomy.yaml'),
+      'utf8'
+    );
+    await fs.writeFile(path.join(taxonomyDir, 'taxonomy.yaml'), realTaxonomy, 'utf8');
+
+    // Output dir (writable) so checkOutputDir passes.
+    await fs.ensureDir(path.join(tmpDir, '_bmad-output'));
+
+    // Intentionally DO NOT create bmm-dependencies.csv — that triggers the
+    // softWarning path ("registry not yet created") which is the state under
+    // test.
+  });
+
+  after(async () => {
+    await fs.remove(tmpDir);
+  });
+
+  it('exits 0 when BMM registry is absent (softWarning only, no hard failures)', async () => {
+    const { exitCode, stdout } = await runDoctor(tmpDir);
+    // NFR9 contract: governance warnings alone must not hard-fail exit.
+    assert.equal(exitCode, 0,
+      `governance warnings must not affect exit code; stdout:\n${stdout}`);
+    // Confirm the softWarning was actually rendered (otherwise the test
+    // proves nothing — we need to see the yellow ⚠ path exercised).
+    assert.ok(stdout.includes('BMM dependencies'),
+      `expected BMM dependencies check in output; stdout:\n${stdout}`);
+    assert.ok(
+      stdout.includes('bmm-dependencies.csv not found')
+      || stdout.includes('governance warning'),
+      `expected softWarning rendering; stdout:\n${stdout}`,
+    );
+  });
+
+  it('summary line reports governance warning(s) without claiming hard failures', async () => {
+    const { stdout } = await runDoctor(tmpDir);
+    // Either "N governance warning(s) surfaced" (soft-only) or the all-pass
+    // line — NEVER "issue(s) found" which is the hard-failure phrasing.
+    assert.ok(!stdout.includes('issue(s) found'),
+      `hard-failure summary must not appear for governance-only warnings; stdout:\n${stdout}`);
+  });
+});
