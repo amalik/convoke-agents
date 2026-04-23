@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { parseCsvRow } = require('../../_bmad/bme/_team-factory/lib/utils/csv-utils');
+const { parseCsvRow, formatCsvRow } = require('../../_bmad/bme/_team-factory/lib/utils/csv-utils');
 
 describe('parseCsvRow', () => {
   it('parses simple row with no quoted fields', () => {
@@ -46,5 +46,55 @@ describe('parseCsvRow', () => {
     assert.equal(cols[8], 'agent-id');
     assert.equal(cols[10], 'description, with comma');
     assert.equal(cols[12], 'out1, out2');
+  });
+});
+
+describe('formatCsvRow', () => {
+  it('formats plain fields without quoting', () => {
+    assert.equal(formatCsvRow(['a', 'b', 'c']), 'a,b,c');
+  });
+
+  it('quotes fields containing commas', () => {
+    assert.equal(formatCsvRow(['a', 'hello, world', 'c']), 'a,"hello, world",c');
+  });
+
+  it('quotes fields containing embedded double quotes and escapes them as ""', () => {
+    assert.equal(formatCsvRow(['a', 'say "hi"', 'c']), 'a,"say ""hi""",c');
+  });
+
+  it('quotes fields containing newlines', () => {
+    assert.equal(formatCsvRow(['a', 'line1\nline2', 'c']), 'a,"line1\nline2",c');
+  });
+
+  it('returns empty string for empty array', () => {
+    assert.equal(formatCsvRow([]), '');
+  });
+
+  it('serializes a single-element array without trailing comma', () => {
+    assert.equal(formatCsvRow(['only']), 'only');
+    assert.equal(formatCsvRow(['needs,quote']), '"needs,quote"');
+  });
+
+  it('round-trips parseCsvRow ∘ formatCsvRow for representative inputs', () => {
+    const inputs = [
+      ['a', 'b', 'c'],
+      ['a', '', 'c', ''],
+      ['a', 'hello, world', 'd'],
+      ['a', 'say "hi"', 'c'],
+      ['multi\nline', 'ok', 'with "quote" and,comma'],
+    ];
+    for (const fields of inputs) {
+      assert.deepEqual(parseCsvRow(formatCsvRow(fields)), fields);
+    }
+  });
+
+  it('throws TypeError on non-array input', () => {
+    assert.throws(() => formatCsvRow('not-an-array'), TypeError);
+    assert.throws(() => formatCsvRow(null), TypeError);
+    assert.throws(() => formatCsvRow(undefined), TypeError);
+  });
+
+  it('coerces null and undefined field values to empty string', () => {
+    assert.equal(formatCsvRow(['a', null, undefined, 'd']), 'a,,,d');
   });
 });
