@@ -8,7 +8,7 @@ source: >-
   Extracted from convoke-prd-bmad-v6.3-adoption.md frontmatter
   (visionDraft.plainLanguage.whatExistingUsersGet — Feynman-translated
   plain language for user-facing docs).
-status: draft
+status: superseded
 constraints: >-
   This guide MUST be ≤1 page and MUST introduce zero new concepts the user
   has to learn (per PRD NFR17 and Success Criteria User Success bullets).
