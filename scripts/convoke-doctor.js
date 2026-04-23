@@ -6,6 +6,12 @@ const chalk = require('chalk');
 const yaml = require('js-yaml');
 const { findProjectRoot, getPackageVersion } = require('./update/lib/utils');
 const { AGENTS, GYRE_AGENTS, EXTRA_BME_AGENTS } = require('./update/lib/agent-registry');
+const {
+  scanBmmDependencies,
+  readExistingCsv,
+  OUTPUT_CSV_REL: BMM_DEPS_CSV_REL,
+  _internal: bmmDepsInternal,
+} = require('./audit/audit-bmm-dependencies');
 // Note: parseCsvRow is loaded LAZILY inside loadSkillManifest() (ag-7-2 review patch).
 // Top-level require would crash the doctor on installs missing _team-factory/ — exactly
 // the broken-install case the doctor exists to diagnose. The lazy require is wrapped
@@ -91,11 +97,17 @@ async function main() {
   checks.push(checkMigrationLock(projectRoot));
   checks.push(checkVersionConsistency(projectRoot, modules));
   checks.push(...checkTaxonomy(projectRoot));
+  // Governance grouping: BMM dependency registry check follows taxonomy so both
+  // drift-style checks appear together in doctor output (Story 2.2 AC wire-up).
+  checks.push(...checkBmmDependencies(projectRoot));
 
   printResults(checks);
 
-  const failed = checks.filter(c => !c.passed);
-  process.exit(failed.length > 0 ? 1 : 0);
+  // NFR9: governance warnings are fail-soft — `softWarning` findings do NOT
+  // contribute to the exit code. Only hard failures (passed=false without
+  // softWarning) cause non-zero exit.
+  const hardFailed = checks.filter(c => !c.passed && !c.softWarning);
+  process.exit(hardFailed.length > 0 ? 1 : 0);
 }
 
 /**
@@ -567,7 +579,8 @@ function checkVersionConsistency(projectRoot, modules) {
 
 function printResults(checks) {
   const passed = checks.filter(c => c.passed);
-  const failed = checks.filter(c => !c.passed);
+  const softWarned = checks.filter(c => !c.passed && c.softWarning);
+  const hardFailed = checks.filter(c => !c.passed && !c.softWarning);
 
   checks.forEach(check => {
     if (check.passed) {
@@ -575,9 +588,22 @@ function printResults(checks) {
       if (check.info) {
         console.log(chalk.gray(`    ${check.info}`));
       }
+    } else if (check.softWarning) {
+      // NFR9 fail-soft: governance warnings render distinctly from hard failures.
+      console.log(chalk.yellow(`  ⚠ ${check.name}`));
+      const msg = check.warning || check.error;
+      if (msg) console.log(chalk.yellow(`    ${msg}`));
+      if (check.fix) {
+        const fixLines = String(check.fix).split('\n');
+        fixLines.forEach(line => console.log(chalk.gray(`    ${line}`)));
+      }
     } else {
       console.log(chalk.red(`  ✗ ${check.name}`));
-      console.log(chalk.red(`    ${check.error}`));
+      // Field precedence unified with soft-warning branch: `warning` first,
+      // then `error` as fallback. Prevents confusion if a check accidentally
+      // sets both fields.
+      const msg = check.warning || check.error;
+      if (msg) console.log(chalk.red(`    ${msg}`));
       if (check.fix) {
         console.log(chalk.yellow(`    Fix: ${check.fix}`));
       }
@@ -585,12 +611,291 @@ function printResults(checks) {
   });
 
   console.log('');
-  if (failed.length === 0) {
+  if (hardFailed.length === 0 && softWarned.length === 0) {
     console.log(chalk.green.bold(`All ${passed.length} checks passed. Installation looks healthy!`));
+  } else if (hardFailed.length === 0) {
+    console.log(chalk.yellow.bold(`${softWarned.length} governance warning(s) surfaced, ${passed.length} checks passed (no hard failures).`));
   } else {
-    console.log(chalk.red.bold(`${failed.length} issue(s) found, ${passed.length} checks passed.`));
+    const warnSuffix = softWarned.length > 0 ? `, ${softWarned.length} governance warning(s)` : '';
+    console.log(chalk.red.bold(`${hardFailed.length} issue(s) found, ${passed.length} checks passed${warnSuffix}.`));
   }
   console.log('');
+}
+
+// --- BMM Dependency Governance Check (Story 2.2) ---
+
+/**
+ * Summary-mode threshold (AC7a): when a single drift category produces at least
+ * this many findings, collapse into a single summary finding instead of emitting
+ * one finding per row. Prevents flooding doctor output when a systemic cause
+ * (empty `.claude/skills/`, wholesale migration, etc.) produces N>>1 drift rows.
+ */
+const BMM_DRIFT_SUMMARY_THRESHOLD = 10;
+
+/**
+ * Sort rows deterministically by (skill_name, bmm_agent, dependency_type) for
+ * CI-stable output. The tertiary `dependency_type` key guards against two
+ * distinct triples sharing a (skill, agent) pair (e.g. same skill with both
+ * `frontmatter` and `code-reference` deps on the same agent) — without it, the
+ * relative ordering would depend on input-insertion order from the scan tool,
+ * coupling doctor determinism to unrelated scan-tool changes.
+ */
+function _bmmRowCmp(a, b) {
+  if (a.skill_name !== b.skill_name) return a.skill_name < b.skill_name ? -1 : 1;
+  if (a.bmm_agent !== b.bmm_agent) return a.bmm_agent < b.bmm_agent ? -1 : 1;
+  if (a.dependency_type !== b.dependency_type) return a.dependency_type < b.dependency_type ? -1 : 1;
+  return 0;
+}
+
+/**
+ * Suppress `scanBmmDependencies`'s stderr (`[FR18] ...` / `[stale:*]` logs)
+ * during the call — those belong to the scan tool's CLI mode, not the doctor's
+ * structured output. Captured messages are discarded in production.
+ *
+ * IMPORTANT — sync-only invariant: this function mutates `console.error` as a
+ * process-global. It is safe ONLY because `scanBmmDependencies` is synchronous
+ * AND because `main()` runs checks serially (no concurrent invocations). If a
+ * future change makes the scan async OR lets multiple callers invoke this
+ * simultaneously, the nested try/finally will stomp each other's restore
+ * (caller A saves `original`; caller B saves A's stub as "original"; A restores;
+ * B restores the stub permanently). Refactor to a stack-counted reentrant shim
+ * (or `process.stderr.write` override with ref-count) before relaxing either
+ * invariant.
+ *
+ * @param {string} projectRoot
+ * @returns {Array}
+ */
+function _scanWithSuppressedStderr(projectRoot) {
+  const originalConsoleError = console.error;
+  console.error = () => {};
+  try {
+    const result = scanBmmDependencies(projectRoot);
+    // R2-P3: runtime enforcement of the sync-only invariant documented above.
+    // If scanBmmDependencies ever returns a Promise, the async value would
+    // settle AFTER `finally` restores console.error — silently corrupting the
+    // suppression contract. Fail loud instead.
+    if (result && typeof result.then === 'function') {
+      throw new Error(
+        '_scanWithSuppressedStderr: scanBmmDependencies returned a Promise; '
+        + 'the stderr-suppression shim requires synchronous scan. '
+        + 'Refactor to a reference-counted reentrant pattern before making scan async.'
+      );
+    }
+    return result;
+  } finally {
+    console.error = originalConsoleError;
+  }
+}
+
+/**
+ * Validate the BMM dependency registry as a standing health check (FR14).
+ * Surfaces drift as fail-soft governance warnings (NFR9) — never hard-fails
+ * convoke-doctor's exit code. Reuses Story 2.1's scan primitives; doctor is
+ * READ-ONLY and performs no writes.
+ *
+ * Four drift categories (Story 2.2 AC3):
+ *  1. stale-autoscan — auto-scan row for triple the fresh scan no longer emits
+ *  2. unregistered-custom-skill — fresh scan detects source_module=unknown dep
+ *     the CSV doesn't have (FR17 honest warning with registration instructions)
+ *  3. missing-scan-target — CSV row references a known-prefix skill absent on disk
+ *  4. scan-vs-csv-mismatch — first-party skill scan sees that CSV doesn't know
+ *
+ * @param {string} projectRoot - Absolute project root.
+ * @returns {Array<{name: string, passed: boolean, softWarning?: boolean, warning?: string, info?: string, fix?: string}>}
+ */
+function checkBmmDependencies(projectRoot) {
+  const csvAbs = path.join(projectRoot, BMM_DEPS_CSV_REL);
+
+  // AC5: CSV absent → informational finding, no scan attempted.
+  if (!fs.existsSync(csvAbs)) {
+    return [{
+      name: 'BMM dependencies: registry present',
+      passed: false,
+      softWarning: true,
+      warning: 'bmm-dependencies.csv not found — governance registry has not been generated yet',
+      fix: 'Run: node scripts/audit/audit-bmm-dependencies.js',
+    }];
+  }
+
+  // AC6: fail-soft if scan throws. Scan stderr suppressed either way.
+  let scanRows;
+  try {
+    scanRows = _scanWithSuppressedStderr(projectRoot);
+  } catch (err) {
+    return [{
+      name: 'BMM dependencies: scan',
+      passed: false,
+      softWarning: true,
+      warning: `scan failed: ${(err && err.message) || String(err)}`,
+      fix: 'Debug with: node scripts/audit/audit-bmm-dependencies.js --dry-run',
+    }];
+  }
+
+  const csvRows = readExistingCsv(csvAbs);
+  const claudeSkillsRoot = path.join(projectRoot, '.claude', 'skills');
+  const { _tripleKey } = bmmDepsInternal;
+
+  const scanTripleKeys = new Set(scanRows.map(_tripleKey));
+  const csvTripleKeys = new Set(csvRows.map(_tripleKey));
+
+  const AUTO_SCAN = 'auto-scan';
+  const isAutoScan = (r) => String(r.registered_by || '').toLowerCase().trim() === AUTO_SCAN;
+
+  // Category 1: stale-autoscan — auto-scan rows whose triple is not in scan output.
+  const staleEntries = csvRows
+    .filter(isAutoScan)
+    .filter(r => !scanTripleKeys.has(_tripleKey(r)));
+  const staleSkillGone = staleEntries.filter(r =>
+    !fs.existsSync(path.join(claudeSkillsRoot, r.skill_name))).sort(_bmmRowCmp);
+  const staleDepRemoved = staleEntries.filter(r =>
+    fs.existsSync(path.join(claudeSkillsRoot, r.skill_name))).sort(_bmmRowCmp);
+
+  // Category 2: unregistered-custom-skill — scan sees source_module=unknown,
+  // CSV doesn't have this triple (FR17).
+  const unregisteredCustom = scanRows
+    .filter(r => r.source_module === 'unknown')
+    .filter(r => !csvTripleKeys.has(_tripleKey(r)))
+    .sort(_bmmRowCmp);
+
+  // Category 3: missing-scan-target — MANUAL CSV row (non-auto-scan) whose
+  // skill directory is absent on disk. Applies regardless of `source_module`
+  // (R2-1 fix): previously restricted to known-prefix rows, which silently
+  // dropped manually-registered custom skills (`source_module: 'unknown'`)
+  // whose dirs were later deleted. The `!isAutoScan` predicate is what
+  // prevents Cat 1/Cat 3 double-count, not the prefix restriction.
+  const missingScanTarget = csvRows
+    .filter(r => !isAutoScan(r))
+    .filter(r => !fs.existsSync(path.join(claudeSkillsRoot, r.skill_name)))
+    .sort(_bmmRowCmp);
+
+  // Category 4: scan-vs-csv-mismatch — first-party (known-prefix) scan triple
+  // absent from CSV. The truthiness check on `source_module` rejects both
+  // undefined and empty-string values (both falsy in JS); an explicit
+  // `!== ''` conjunct would be dead code.
+  const scanVsCsvMismatch = scanRows
+    .filter(r => r.source_module && r.source_module !== 'unknown')
+    .filter(r => !csvTripleKeys.has(_tripleKey(r)))
+    .sort(_bmmRowCmp);
+
+  const totalDrift = staleEntries.length + unregisteredCustom.length
+    + missingScanTarget.length + scanVsCsvMismatch.length;
+
+  // All clean — emit single success finding.
+  if (totalDrift === 0) {
+    const autoCount = csvRows.filter(isAutoScan).length;
+    const manualCount = csvRows.length - autoCount;
+    return [{
+      name: 'BMM dependencies: registry consistent',
+      passed: true,
+      info: `${autoCount} auto-scan + ${manualCount} manual rows, no drift`,
+    }];
+  }
+
+  // Emit findings per-category (deterministic order per AC8).
+  const results = [];
+
+  // Category 1: stale-autoscan.
+  if (staleEntries.length >= BMM_DRIFT_SUMMARY_THRESHOLD) {
+    results.push({
+      name: `BMM dependencies: stale-autoscan (${staleEntries.length} findings)`,
+      passed: false,
+      softWarning: true,
+      warning: `${staleEntries.length} stale entries detected — likely systemic cause (empty .claude/skills/, wholesale migration, etc.)`,
+      fix: 'Run: node scripts/audit/audit-bmm-dependencies.js --dry-run to see individual drift entries; regenerate with: node scripts/audit/audit-bmm-dependencies.js',
+    });
+  } else {
+    staleSkillGone.forEach(r => {
+      results.push({
+        name: `BMM dependencies: [stale:skill-gone] ${r.skill_name} → ${r.bmm_agent}`,
+        passed: false,
+        softWarning: true,
+        warning: `auto-scan row references skill directory '${r.skill_name}' which is not present on disk`,
+        fix: 'Remove the row or restore the skill; regenerate with: node scripts/audit/audit-bmm-dependencies.js',
+      });
+    });
+    staleDepRemoved.forEach(r => {
+      results.push({
+        name: `BMM dependencies: [stale:dep-removed] ${r.skill_name} → ${r.bmm_agent}`,
+        passed: false,
+        softWarning: true,
+        warning: `auto-scan row for (${r.skill_name}, ${r.bmm_agent}, ${r.dependency_type}) no longer matches scan output`,
+        fix: 'Regenerate with: node scripts/audit/audit-bmm-dependencies.js',
+      });
+    });
+  }
+
+  // Category 2: unregistered-custom-skill (FR17).
+  if (unregisteredCustom.length >= BMM_DRIFT_SUMMARY_THRESHOLD) {
+    results.push({
+      name: `BMM dependencies: unregistered-custom-skill (${unregisteredCustom.length} findings)`,
+      passed: false,
+      softWarning: true,
+      warning: `${unregisteredCustom.length} custom skills detected that are not in the registry — future upgrades won't validate them`,
+      fix: 'Register each by adding a row to _bmad/_config/bmm-dependencies.csv, or regenerate auto-scan with: node scripts/audit/audit-bmm-dependencies.js',
+    });
+  } else {
+    unregisteredCustom.forEach(r => {
+      results.push({
+        name: `BMM dependencies: [unregistered] ${r.skill_name} → ${r.bmm_agent}`,
+        passed: false,
+        softWarning: true,
+        warning: `custom skill not in registry — future upgrades won't validate it`,
+        // Literal `<YYYY-MM-DD>` placeholder rather than today's date: (a) matches
+        // the spec's AC4 template wording, (b) keeps AC8 output deterministic
+        // across UTC midnight, (c) correctly prompts the operator to substitute
+        // the date they're actually registering on.
+        fix:
+          'Register this skill by adding a row to _bmad/_config/bmm-dependencies.csv:\n'
+          + `  ${r.skill_name},${r.bmm_agent},${r.dependency_type},${r.source_module},your-email@example.com,<YYYY-MM-DD>\n`
+          + '\nOr regenerate the auto-scan baseline with:\n'
+          + '  node scripts/audit/audit-bmm-dependencies.js',
+      });
+    });
+  }
+
+  // Category 3: missing-scan-target.
+  if (missingScanTarget.length >= BMM_DRIFT_SUMMARY_THRESHOLD) {
+    results.push({
+      name: `BMM dependencies: missing-scan-target (${missingScanTarget.length} findings)`,
+      passed: false,
+      softWarning: true,
+      warning: `${missingScanTarget.length} registry rows reference skills not present on disk`,
+      fix: 'Either add the skills back or run: node scripts/audit/audit-bmm-dependencies.js to reconcile',
+    });
+  } else {
+    missingScanTarget.forEach(r => {
+      results.push({
+        name: `BMM dependencies: [missing-target] ${r.skill_name}`,
+        passed: false,
+        softWarning: true,
+        warning: `registry row references skill '${r.skill_name}' (${r.source_module}) which is not present on disk`,
+        fix: 'Either add the skill back or run: node scripts/audit/audit-bmm-dependencies.js to reconcile',
+      });
+    });
+  }
+
+  // Category 4: scan-vs-csv-mismatch.
+  if (scanVsCsvMismatch.length >= BMM_DRIFT_SUMMARY_THRESHOLD) {
+    results.push({
+      name: `BMM dependencies: scan-vs-csv-mismatch (${scanVsCsvMismatch.length} findings)`,
+      passed: false,
+      softWarning: true,
+      warning: `${scanVsCsvMismatch.length} first-party dependencies in scan output not reflected in registry`,
+      fix: 'Run: node scripts/audit/audit-bmm-dependencies.js to sync registry with current scan output',
+    });
+  } else {
+    scanVsCsvMismatch.forEach(r => {
+      results.push({
+        name: `BMM dependencies: [drift] ${r.skill_name} → ${r.bmm_agent}`,
+        passed: false,
+        softWarning: true,
+        warning: `first-party dependency (${r.skill_name}, ${r.bmm_agent}, ${r.dependency_type}) is in scan output but not the registry`,
+        fix: 'Run: node scripts/audit/audit-bmm-dependencies.js to sync',
+      });
+    });
+  }
+
+  return results;
 }
 
 // --- Taxonomy Validation ---
@@ -723,4 +1028,12 @@ if (require.main === module) {
   });
 }
 
-module.exports = { checkTaxonomy, loadSkillManifest, checkModuleSkillWrappers };
+module.exports = {
+  checkTaxonomy,
+  loadSkillManifest,
+  checkModuleSkillWrappers,
+  checkBmmDependencies,
+  // Exposed for tests: allow direct verification of the summary-mode threshold
+  // without mutating a copy of the check function.
+  BMM_DRIFT_SUMMARY_THRESHOLD,
+};
