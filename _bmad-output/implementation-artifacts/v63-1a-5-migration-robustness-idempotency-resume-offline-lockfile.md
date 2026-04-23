@@ -1,3 +1,11 @@
+---
+initiative: convoke
+artifact_type: story
+qualifier: v63-1a-5-migration-robustness-idempotency-resume-offline-lockfile
+epic: v63-1a-epic
+schema_version: 1
+---
+
 # Story 1A.5: Migration robustness (idempotency, resume, offline, lockfile)
 
 Status: done
