@@ -1,3 +1,11 @@
+---
+initiative: convoke
+artifact_type: story
+qualifier: v63-1a-4-create-migration-script-3-x-to-4-0-js
+epic: v63-1a-epic
+schema_version: 1
+---
+
 # Story 1A.4: Create migration script (3.x-to-4.0.js)
 
 Status: done
