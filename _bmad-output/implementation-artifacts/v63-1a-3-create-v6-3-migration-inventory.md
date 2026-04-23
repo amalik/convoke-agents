@@ -1,3 +1,11 @@
+---
+initiative: convoke
+artifact_type: story
+qualifier: v63-1a-3-create-v6-3-migration-inventory
+epic: v63-1a-epic
+schema_version: 1
+---
+
 # Story 1A.3: Create v6.3 migration inventory
 
 Status: done
