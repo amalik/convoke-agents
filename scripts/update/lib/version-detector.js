@@ -166,19 +166,41 @@ function detectInstallationScenario(projectRoot) {
     return 'partial';
   }
 
-  // Check agent files
-  const requiredAgents = [
-    'contextualization-expert.md',
-    'lean-experiments-specialist.md'
-  ];
+  // R1-H4 (post-Story-3.1 hardening): iterate ALL 7 Vortex AGENT_IDS, not
+  // just 2 hardcoded sentinels. Accept BOTH flat `.md` (pre-4.0) AND
+  // skill-dir `<id>/SKILL.md` (post-4.0) as "present" so upgrade flow can
+  // fire `refreshInstallation` without tripping "corrupted." Mixed-shape
+  // (some agents flat, some skill-dir) means mid-migration drift — return
+  // 'corrupted' so the operator is routed through recovery.
+  const { AGENT_IDS } = require('./agent-registry');
 
   if (!fs.existsSync(agentsDir)) {
     return 'corrupted';
   }
 
-  const missingAgents = requiredAgents.filter(agent =>
-    !fs.existsSync(path.join(agentsDir, agent))
-  );
+  let flatCount = 0;
+  let dirCount = 0;
+  const missingAgents = [];
+  for (const agentId of AGENT_IDS) {
+    const hasFlat = fs.existsSync(path.join(agentsDir, `${agentId}.md`));
+    const hasDir = fs.existsSync(path.join(agentsDir, agentId, 'SKILL.md'));
+    if (!hasFlat && !hasDir) {
+      missingAgents.push(agentId);
+    } else {
+      if (hasFlat) flatCount += 1;
+      if (hasDir) dirCount += 1;
+    }
+  }
+
+  // Mixed-shape drift: some agents in flat layout, some in skill-dir.
+  // Indicates an in-progress migration (crash during R1-H2 cleanup, or
+  // operator interrupted convoke-update). R2-H6 returns 'partial' (not
+  // 'corrupted') so `refreshInstallation` is routed to auto-remediate on
+  // next run — 'corrupted' would brick the operator by routing to manual
+  // recovery even though `refreshInstallation` can finish the migration.
+  if (flatCount > 0 && dirCount > 0 && missingAgents.length === 0) {
+    return 'partial';
+  }
 
   if (missingAgents.length > 0) {
     return 'corrupted';
