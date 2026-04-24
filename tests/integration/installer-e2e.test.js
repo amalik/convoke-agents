@@ -32,10 +32,11 @@ describe('install-vortex-agents CLI E2E', () => {
 
   it('creates all agent files (registry-driven)', async () => {
     for (const agentId of AGENT_IDS) {
-      const agentPath = path.join(tmpDir, '_bmad/bme/_vortex/agents', `${agentId}.md`);
-      assert.ok(fs.existsSync(agentPath), `${agentId}.md should exist`);
+      // Story v63-3-1: Vortex migrated to skill-dir layout (<id>/SKILL.md).
+      const agentPath = path.join(tmpDir, '_bmad/bme/_vortex/agents', agentId, 'SKILL.md');
+      assert.ok(fs.existsSync(agentPath), `${agentId}/SKILL.md should exist`);
       const stat = fs.statSync(agentPath);
-      assert.ok(stat.size > 0, `${agentId}.md should be non-empty`);
+      assert.ok(stat.size > 0, `${agentId}/SKILL.md should be non-empty`);
     }
   });
 
