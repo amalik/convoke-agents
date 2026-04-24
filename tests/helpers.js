@@ -101,9 +101,17 @@ async function createValidInstallation(tmpDir) {
   const config = fullConfig();
   await fs.writeFile(path.join(vortexDir, 'config.yaml'), yaml.dump(config), 'utf8');
 
-  // Agent files (all from registry)
+  // Agent files (all from registry) — Story v63-3-1: Vortex migrated to
+  // skill-dir layout (`<agentId>/SKILL.md`) per BMAD v6.3 convention.
+  // Minimal v6.3-compliant frontmatter so the fixture matches real layout.
   for (const agentId of AGENT_IDS) {
-    await fs.writeFile(path.join(agentsDir, `${agentId}.md`), `# ${agentId}`, 'utf8');
+    const skillDir = path.join(agentsDir, agentId);
+    await fs.ensureDir(skillDir);
+    await fs.writeFile(
+      path.join(skillDir, 'SKILL.md'),
+      `---\nname: ${agentId}\ndescription: test fixture ${agentId}\n---\n\n# ${agentId}\n`,
+      'utf8'
+    );
   }
 
   // Workflow dirs with workflow.md
