@@ -5,7 +5,9 @@ const path = require('path');
 const yaml = require('js-yaml');
 const configMerger = require('./config-merger');
 const { countUserDataFiles } = require('./utils');
-const { AGENT_FILES, AGENT_IDS, WORKFLOW_NAMES, WAVE3_WORKFLOW_NAMES, EXTRA_BME_AGENTS, EXTRA_BME_AGENT_IDS } = require('./agent-registry');
+// Story v63-3-1: AGENT_FILES dropped — validateAgentFiles now uses
+// VORTEX_SKILL_PATHS (lazy-required inside the function).
+const { AGENT_IDS, WORKFLOW_NAMES, WAVE3_WORKFLOW_NAMES, EXTRA_BME_AGENTS, EXTRA_BME_AGENT_IDS } = require('./agent-registry');
 
 /**
  * Validator for Convoke
@@ -117,8 +119,12 @@ async function validateAgentFiles(projectRoot) {
     const excluded = configMerger.readExcludedAgents(
       path.join(projectRoot, '_bmad/bme/_vortex/config.yaml')
     );
-    const requiredAgents = AGENT_FILES.filter(
-      f => !excluded.includes(f.replace(/\.md$/, ''))
+    // Story v63-3-1: Vortex agents are now skill-dirs (`<id>/SKILL.md`)
+    // per BMAD v6.3 convention. VORTEX_SKILL_PATHS is the post-migration
+    // source of truth; `AGENT_FILES` is kept for legacy compatibility.
+    const { VORTEX_SKILL_PATHS } = require('./agent-registry');
+    const requiredAgents = VORTEX_SKILL_PATHS.filter(
+      p => !excluded.includes(p.replace(/\/SKILL\.md$/, ''))
     );
 
     if (!fs.existsSync(agentsDir)) {
