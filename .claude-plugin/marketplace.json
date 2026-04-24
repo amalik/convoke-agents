@@ -2,7 +2,7 @@
   "name": "convoke",
   "owner": { "name": "Amalik Amriou" },
   "license": "MIT",
-  "repository": "https://github.com/amalikamriou/convoke-agents",
+  "repository": "https://github.com/amalik/convoke-agents",
   "keywords": ["bmad", "discovery", "vortex", "product-discovery", "innovation"],
   "plugins": [
     {
