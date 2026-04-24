@@ -24,7 +24,7 @@ describe('P0 Isla: Activation Sequence', () => {
 
   before(() => {
     def = loadAgentDefinition(ISLA_ID);
-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${ISLA_ID}.md`), 'utf8');
+    rawContent = fs.readFileSync(path.join(AGENTS_DIR, ISLA_ID, 'SKILL.md'), 'utf8');
   });
 
   it('persona role contains "Qualitative Research Expert"', () => {
