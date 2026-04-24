@@ -31,7 +31,7 @@ describe('P0 Liam: Activation Sequence', () => {
 
   before(() => {
     def = loadAgentDefinition(LIAM_ID);
-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${LIAM_ID}.md`), 'utf8');
+    rawContent = fs.readFileSync(path.join(AGENTS_DIR, LIAM_ID, 'SKILL.md'), 'utf8');
   });
 
   it('persona role contains "Hypothesis Engineering"', () => {
