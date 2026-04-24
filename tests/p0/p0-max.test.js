@@ -24,7 +24,8 @@ describe('P0 Max: Activation Sequence', () => {
 
   before(() => {
     def = loadAgentDefinition(MAX_ID);
-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${MAX_ID}.md`), 'utf8');
+    // Story v63-3-1: Vortex migrated to skill-dir layout (<id>/SKILL.md).
+    rawContent = fs.readFileSync(path.join(AGENTS_DIR, MAX_ID, 'SKILL.md'), 'utf8');
   });
 
   it('persona role contains "Validated Learning"', () => {
