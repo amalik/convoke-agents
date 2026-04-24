@@ -88,8 +88,10 @@ describe('convoke-version CLI — status branches', () => {
     const tmpDir = await createTempDir('bmad-ver-');
     try {
       const vortexDir = await createValidInstallation(tmpDir);
-      // Remove one of the two required agent files checked by detectInstallationScenario
-      await fs.remove(path.join(vortexDir, 'agents/contextualization-expert.md'));
+      // Remove one of the two required agents checked by detectInstallationScenario.
+      // Story v63-3-1: Vortex migrated to skill-dir layout; remove the directory
+      // to fail BOTH shape checks (flat <id>.md AND <id>/SKILL.md).
+      await fs.remove(path.join(vortexDir, 'agents/contextualization-expert'));
 
       const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
       assert.equal(exitCode, 0, 'should exit 0');
