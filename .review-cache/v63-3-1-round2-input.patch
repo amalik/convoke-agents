@@ -1,0 +1,650 @@
+--- /tmp/v63-3-1-pre-r1/scripts/audit/validate-marketplace.js	2026-04-24 22:48:46
++++ /Users/amalikamriou/BMAD-Enhanced/scripts/audit/validate-marketplace.js	2026-04-24 22:20:27
+@@ -39,6 +39,11 @@
+ const REQUIRED_TOP_FIELDS = ['name', 'owner', 'license', 'repository', 'keywords', 'plugins'];
+ const REQUIRED_PLUGIN_FIELDS = ['name', 'source', 'description', 'version', 'author', 'skills'];
+ const REQUIRED_MODULE_YAML_FIELDS = ['code', 'name', 'description'];
++// R1-M2: cap on SKILL.md size for the frontmatter scan. A well-formed v6.3
++// SKILL.md is well under 100 KB; anything past 1 MB is a red flag and could
++// DoS this auditor if copy-pasted from a large binary. feedback_path_safety
++// dictates failing loud on suspicious inputs rather than silently reading.
++const SKILL_MD_MAX_BYTES = 1_000_000;
+ 
+ // ─── Check helpers ────────────────────────────────────────────────
+ 
+@@ -108,13 +113,30 @@
+     return { name, passed: false, error: `plugins[0] missing required field(s): ${missing.join(', ')}` };
+   }
+   const typeErrors = [];
+-  if (typeof plugin.name !== 'string' || plugin.name.length === 0) typeErrors.push('plugins[0].name must be non-empty string');
+-  if (plugin.name !== EXPECTED_PLUGIN_NAME) typeErrors.push(`plugins[0].name must be "${EXPECTED_PLUGIN_NAME}" per Architecture Decision 5 (FR20); got "${plugin.name}"`);
++  // R1-M8: short-circuit — when plugin.name fails the non-empty-string
++  // check, skip the invariant-match check to avoid emitting double errors
++  // for one root cause.
++  const nameTypeOk = typeof plugin.name === 'string' && plugin.name.length > 0;
++  if (!nameTypeOk) {
++    typeErrors.push('plugins[0].name must be non-empty string');
++  } else if (plugin.name !== EXPECTED_PLUGIN_NAME) {
++    typeErrors.push(`plugins[0].name must be "${EXPECTED_PLUGIN_NAME}" per Architecture Decision 5 (FR20); got "${plugin.name}"`);
++  }
+   if (typeof plugin.source !== 'string') typeErrors.push('plugins[0].source must be string');
+   if (typeof plugin.description !== 'string' || plugin.description.length === 0) typeErrors.push('plugins[0].description must be non-empty string');
+   if (typeof plugin.version !== 'string') typeErrors.push('plugins[0].version must be string');
+   if (typeof plugin.author !== 'object' || !plugin.author || typeof plugin.author.name !== 'string') typeErrors.push('plugins[0].author must be object with `name` string');
+   if (!Array.isArray(plugin.skills) || plugin.skills.some(s => typeof s !== 'string')) typeErrors.push('plugins[0].skills must be array of strings');
++  // R1-D3: skill count invariant — marketplace.json MUST list exactly as many
++  // paths as the registry exports. Prevents the "8-path marketplace silently
++  // passes" scenario where a ghost entry slips in alongside the 7 real ones.
++  if (Array.isArray(plugin.skills)) {
++    const { AGENT_IDS } = require('../update/lib/agent-registry');
++    const expected = AGENT_IDS.length;
++    if (plugin.skills.length !== expected) {
++      typeErrors.push(`plugins[0].skills must list exactly ${expected} Vortex agents; got ${plugin.skills.length}`);
++    }
++  }
+   if (typeErrors.length > 0) {
+     return { name, passed: false, error: typeErrors.join('; ') };
+   }
+@@ -131,6 +153,8 @@
+     return { name, passed: false, error: 'plugins[0].skills is not an array' };
+   }
+   const errors = [];
++  // R1-M2: normalized project root with trailing sep for containment checks.
++  const rootWithSep = projectRoot.endsWith(path.sep) ? projectRoot : projectRoot + path.sep;
+   for (const rel of skills) {
+     if (typeof rel !== 'string' || rel.length === 0) {
+       errors.push(`invalid path: ${JSON.stringify(rel)}`);
+@@ -140,6 +164,18 @@
+     if (!fs.existsSync(absDir)) {
+       errors.push(`path does not exist: ${rel}`);
+       continue;
++    }
++    // R1-M2: symlink guard — reject skill-dir symlinks that escape the
++    // project root. feedback_path_safety requires safety analysis for any
++    // script walking operator-controlled paths; a skills[] pointing at
++    // `/etc/hosts` via a symlink shouldn't be read by this auditor.
++    const lstat = fs.lstatSync(absDir);
++    if (lstat.isSymbolicLink()) {
++      const realDir = fs.realpathSync(absDir);
++      if (!realDir.startsWith(rootWithSep) && realDir !== projectRoot) {
++        errors.push(`symlink escapes project root: ${rel} → ${realDir}`);
++        continue;
++      }
+     }
+     if (!fs.statSync(absDir).isDirectory()) {
+       errors.push(`path is not a directory: ${rel}`);
+@@ -150,6 +186,12 @@
+       errors.push(`missing SKILL.md: ${rel}/SKILL.md`);
+       continue;
+     }
++    // R1-M2: size guard — refuse to read pathologically large SKILL.md.
++    const skillMdStat = fs.statSync(skillMdPath);
++    if (skillMdStat.size > SKILL_MD_MAX_BYTES) {
++      errors.push(`SKILL.md exceeds ${SKILL_MD_MAX_BYTES} bytes (${skillMdStat.size}): ${rel}/SKILL.md`);
++      continue;
++    }
+     // Minimal v6.3 frontmatter check: must have `name:` and `description:` keys.
+     const content = fs.readFileSync(skillMdPath, 'utf8');
+     const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
+@@ -213,6 +255,22 @@
+   if (missing.length > 0) {
+     return { name, passed: false, error: `${MODULE_YAML_REL} missing required field(s): ${missing.join(', ')}` };
+   }
++  // R1-M1: type guards — YAML can coerce `code: 01` → number, `name: null`
++  // → null, etc. Without string-type assertions the EXPECTED_MODULE_CODE
++  // equality check below would silently pass a bad module.yaml.
++  const typeErrors = [];
++  if (typeof parsed.code !== 'string' || parsed.code.length === 0) {
++    typeErrors.push('code must be non-empty string');
++  }
++  if (typeof parsed.name !== 'string' || parsed.name.length === 0) {
++    typeErrors.push('name must be non-empty string');
++  }
++  if (typeof parsed.description !== 'string' || parsed.description.length === 0) {
++    typeErrors.push('description must be non-empty string');
++  }
++  if (typeErrors.length > 0) {
++    return { name, passed: false, error: `${MODULE_YAML_REL} field type errors: ${typeErrors.join('; ')}` };
++  }
+   if (parsed.code !== EXPECTED_MODULE_CODE) {
+     return {
+       name,
+@@ -232,6 +290,14 @@
+   if (!marketplaceVersion || !pkgVersion) {
+     return { name, passed: false, error: 'one or both versions missing' };
+   }
++  // R1-M6: reject literal "undefined"/"null" strings. A stringified
++  // `undefined` in marketplace.json would otherwise tunnel through
++  // truthiness + equality checks and surface as "both at undefined".
++  for (const [label, value] of [['marketplaceVersion', marketplaceVersion], ['pkgVersion', pkgVersion]]) {
++    if (typeof value !== 'string' || value === 'undefined' || value === 'null') {
++      return { name, passed: false, error: `${label} is not a valid version string: ${JSON.stringify(value)}` };
++    }
++  }
+   if (marketplaceVersion === pkgVersion) {
+     return { name, passed: true, info: `both at ${pkgVersion}` };
+   }
+--- /tmp/v63-3-1-pre-r1/scripts/update/lib/agent-registry.js	2026-04-24 22:48:46
++++ /Users/amalikamriou/BMAD-Enhanced/scripts/update/lib/agent-registry.js	2026-04-24 22:21:01
+@@ -242,6 +242,36 @@
+ ];
+ 
+ const EXTRA_BME_AGENT_IDS = EXTRA_BME_AGENTS.map(a => a.id);
++
++// R1-M4: disjoint-IDs assertion. AGENT_IDS (Vortex), GYRE_AGENT_IDS (Gyre),
++// and EXTRA_BME_AGENT_IDS (standalone bme) MUST be mutually disjoint — an
++// overlap would mean refresh-installation, validator, and doctor would
++// double-process the same id under different submodule shapes (Vortex
++// skill-dir vs Gyre flat) and one side would silently win. Better to fail
++// fast at require-time than to debug a corrupted installation later.
++(function assertDisjointAgentIds() {
++  const buckets = {
++    AGENT_IDS,
++    GYRE_AGENT_IDS,
++    EXTRA_BME_AGENT_IDS,
++  };
++  const seen = new Map(); // id → bucket name
++  const collisions = [];
++  for (const [bucketName, ids] of Object.entries(buckets)) {
++    for (const id of ids) {
++      if (seen.has(id)) {
++        collisions.push(`"${id}" appears in both ${seen.get(id)} and ${bucketName}`);
++      } else {
++        seen.set(id, bucketName);
++      }
++    }
++  }
++  if (collisions.length > 0) {
++    throw new Error(
++      `agent-registry.js: agent id collision detected — registries must be disjoint. ${collisions.join('; ')}`
++    );
++  }
++})();
+ 
+ module.exports = {
+   AGENTS,
+--- /tmp/v63-3-1-pre-r1/scripts/update/lib/refresh-installation.js	2026-04-24 22:48:46
++++ /Users/amalikamriou/BMAD-Enhanced/scripts/update/lib/refresh-installation.js	2026-04-24 22:16:06
+@@ -92,16 +92,46 @@
+       if (verbose) console.log(`    Removed deprecated agent: ${file}`);
+     }
+   }
+-  // v63-3-1 cleanup: if any flat `<agentId>.md` survives from a pre-4.0
+-  // install (e.g., operator upgrading from 3.3.0), remove it so the new
+-  // skill-dir layout is authoritative.
+-  for (const agentId of AGENT_IDS) {
+-    const staleFlatPath = path.join(agentsTarget, `${agentId}.md`);
+-    if (fs.existsSync(staleFlatPath) && fs.statSync(staleFlatPath).isFile()) {
+-      await fs.remove(staleFlatPath);
+-      changes.push(`Removed stale flat agent file: ${agentId}.md`);
+-      if (verbose) console.log(`    Removed stale flat agent file: ${agentId}.md`);
++  // Story v63-3-1 cleanup + R1-H2 safety net: if any flat `<agentId>.md`
++  // survives from a pre-4.0 install (e.g., operator upgrading from 3.3.0),
++  // move it to `.backup-v4/` BEFORE removing — operator hand-edits deserve
++  // preservation, not silent deletion. Respects feedback_path_safety.md
++  // (explicit safety analysis required for destructive ops on user paths).
++  // Skip in dev/isSameRoot mode so we don't accidentally wipe source backups.
++  if (!isSameRoot) {
++    const backupDir = path.join(agentsTarget, '.backup-v4');
++    let backedUpAny = false;
++    for (const agentId of AGENT_IDS) {
++      const staleFlatPath = path.join(agentsTarget, `${agentId}.md`);
++      if (fs.existsSync(staleFlatPath) && fs.statSync(staleFlatPath).isFile()) {
++        if (!backedUpAny) {
++          await fs.ensureDir(backupDir);
++          backedUpAny = true;
++        }
++        const backupPath = path.join(backupDir, `${agentId}.md`);
++        try {
++          await fs.move(staleFlatPath, backupPath, { overwrite: true });
++          changes.push(`Backed up pre-v4.0 flat agent file: ${agentId}.md → .backup-v4/${agentId}.md`);
++          if (verbose) {
++            console.log(`    Backed up pre-v4.0 flat agent file: ${agentId}.md → .backup-v4/${agentId}.md`);
++          }
++        } catch (_moveErr) {
++          // If move fails (permissions, concurrent writer), fall back to
++          // remove — better than blocking the migration, but log loudly.
++          await fs.remove(staleFlatPath);
++          changes.push(`Removed stale flat agent file (backup attempt failed): ${agentId}.md`);
++          if (verbose) {
++            console.log(`    WARNING: Removed stale flat agent file ${agentId}.md — backup attempt failed (${_moveErr.message})`);
++          }
++        }
++      }
+     }
++    if (backedUpAny) {
++      changes.push(`Note: pre-v4.0 agent file backups preserved under .backup-v4/ — review and delete when confident migration is complete`);
++      if (verbose) {
++        console.log(`    Note: pre-v4.0 agent file backups preserved under .backup-v4/`);
++      }
++    }
+   }
+ 
+   // 2. Copy workflow directories
+--- /tmp/v63-3-1-pre-r1/scripts/update/lib/version-detector.js	2026-04-24 22:48:46
++++ /Users/amalikamriou/BMAD-Enhanced/scripts/update/lib/version-detector.js	2026-04-24 22:17:10
+@@ -166,23 +166,40 @@
+     return 'partial';
+   }
+ 
+-  // Check agent files. Story v63-3-1: Vortex migrated to skill-dir layout
+-  // (`<id>/SKILL.md`) post-4.0 — but this detector must recognize BOTH
+-  // shapes: flat `.md` for pre-4.0 operators (who run convoke-update TO
+-  // trigger the migration) AND the new skill-dir layout for 4.0+ installs.
+-  // Treat either shape as "present"; `refreshInstallation` handles the
+-  // actual transition.
+-  const requiredAgents = ['contextualization-expert', 'lean-experiments-specialist'];
++  // R1-H4 (post-Story-3.1 hardening): iterate ALL 7 Vortex AGENT_IDS, not
++  // just 2 hardcoded sentinels. Accept BOTH flat `.md` (pre-4.0) AND
++  // skill-dir `<id>/SKILL.md` (post-4.0) as "present" so upgrade flow can
++  // fire `refreshInstallation` without tripping "corrupted." Mixed-shape
++  // (some agents flat, some skill-dir) means mid-migration drift — return
++  // 'corrupted' so the operator is routed through recovery.
++  const { AGENT_IDS } = require('./agent-registry');
+ 
+   if (!fs.existsSync(agentsDir)) {
+     return 'corrupted';
+   }
+ 
+-  const missingAgents = requiredAgents.filter(agentId =>
+-    !fs.existsSync(path.join(agentsDir, `${agentId}.md`)) &&
+-    !fs.existsSync(path.join(agentsDir, agentId, 'SKILL.md'))
+-  );
++  let flatCount = 0;
++  let dirCount = 0;
++  const missingAgents = [];
++  for (const agentId of AGENT_IDS) {
++    const hasFlat = fs.existsSync(path.join(agentsDir, `${agentId}.md`));
++    const hasDir = fs.existsSync(path.join(agentsDir, agentId, 'SKILL.md'));
++    if (!hasFlat && !hasDir) {
++      missingAgents.push(agentId);
++    } else {
++      if (hasFlat) flatCount += 1;
++      if (hasDir) dirCount += 1;
++    }
++  }
+ 
++  // Mixed-shape drift: some agents in flat layout, some in skill-dir.
++  // Indicates a partial migration (crash or manual interference). Route to
++  // 'corrupted' so the operator hits recovery rather than silently ignoring
++  // the drift.
++  if (flatCount > 0 && dirCount > 0 && missingAgents.length === 0) {
++    return 'corrupted';
++  }
++
+   if (missingAgents.length > 0) {
+     return 'corrupted';
+   }
+--- /tmp/v63-3-1-pre-r1/tests/integration/installer-e2e.test.js	2026-04-24 22:48:40
++++ /Users/amalikamriou/BMAD-Enhanced/tests/integration/installer-e2e.test.js	2026-04-24 22:08:45
+@@ -32,10 +32,11 @@
+ 
+   it('creates all agent files (registry-driven)', async () => {
+     for (const agentId of AGENT_IDS) {
+-      const agentPath = path.join(tmpDir, '_bmad/bme/_vortex/agents', `${agentId}.md`);
+-      assert.ok(fs.existsSync(agentPath), `${agentId}.md should exist`);
++      // Story v63-3-1: Vortex migrated to skill-dir layout (<id>/SKILL.md).
++      const agentPath = path.join(tmpDir, '_bmad/bme/_vortex/agents', agentId, 'SKILL.md');
++      assert.ok(fs.existsSync(agentPath), `${agentId}/SKILL.md should exist`);
+       const stat = fs.statSync(agentPath);
+-      assert.ok(stat.size > 0, `${agentId}.md should be non-empty`);
++      assert.ok(stat.size > 0, `${agentId}/SKILL.md should be non-empty`);
+     }
+   });
+ 
+--- /tmp/v63-3-1-pre-r1/tests/p0/helpers.js	2026-04-24 22:48:40
++++ /Users/amalikamriou/BMAD-Enhanced/tests/p0/helpers.js	2026-04-24 22:08:24
+@@ -34,7 +34,8 @@
+ 
+     return {
+       ...agent,
+-      agentFilePath: path.join(AGENTS_DIR, `${agent.id}.md`),
++      // Story v63-3-1: Vortex migrated to skill-dir layout (<id>/SKILL.md).
++      agentFilePath: path.join(AGENTS_DIR, agent.id, 'SKILL.md'),
+       workflowNames,
+       workflowDirs,
+     };
+@@ -57,7 +58,8 @@
+  *   - hasErrorHandling: boolean (step 2 contains error handling)
+  */
+ function loadAgentDefinition(agentId) {
+-  const filePath = path.join(AGENTS_DIR, `${agentId}.md`);
++  // Story v63-3-1: Vortex migrated to skill-dir layout (<id>/SKILL.md).
++  const filePath = path.join(AGENTS_DIR, agentId, 'SKILL.md');
+   const content = fs.readFileSync(filePath, 'utf8');
+ 
+   // Parse YAML frontmatter (between --- markers)
+--- /tmp/v63-3-1-pre-r1/tests/p0/p0-emma.test.js	2026-04-24 22:48:40
++++ /Users/amalikamriou/BMAD-Enhanced/tests/p0/p0-emma.test.js	2026-04-24 22:09:41
+@@ -31,7 +31,8 @@
+ 
+   before(() => {
+     def = loadAgentDefinition(EMMA_ID);
+-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${EMMA_ID}.md`), 'utf8');
++    // Story v63-3-1: Vortex migrated to skill-dir layout (<id>/SKILL.md).
++    rawContent = fs.readFileSync(path.join(AGENTS_DIR, EMMA_ID, 'SKILL.md'), 'utf8');
+   });
+ 
+   it('persona role contains "Product Context Architect"', () => {
+--- /tmp/v63-3-1-pre-r1/tests/p0/p0-isla.test.js	2026-04-24 22:48:40
++++ /Users/amalikamriou/BMAD-Enhanced/tests/p0/p0-isla.test.js	2026-04-24 22:15:40
+@@ -24,7 +24,7 @@
+ 
+   before(() => {
+     def = loadAgentDefinition(ISLA_ID);
+-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${ISLA_ID}.md`), 'utf8');
++    rawContent = fs.readFileSync(path.join(AGENTS_DIR, ISLA_ID, 'SKILL.md'), 'utf8');
+   });
+ 
+   it('persona role contains "Qualitative Research Expert"', () => {
+--- /tmp/v63-3-1-pre-r1/tests/p0/p0-liam.test.js	2026-04-24 22:48:40
++++ /Users/amalikamriou/BMAD-Enhanced/tests/p0/p0-liam.test.js	2026-04-24 22:15:40
+@@ -31,7 +31,7 @@
+ 
+   before(() => {
+     def = loadAgentDefinition(LIAM_ID);
+-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${LIAM_ID}.md`), 'utf8');
++    rawContent = fs.readFileSync(path.join(AGENTS_DIR, LIAM_ID, 'SKILL.md'), 'utf8');
+   });
+ 
+   it('persona role contains "Hypothesis Engineering"', () => {
+--- /tmp/v63-3-1-pre-r1/tests/p0/p0-max.test.js	2026-04-24 22:48:40
++++ /Users/amalikamriou/BMAD-Enhanced/tests/p0/p0-max.test.js	2026-04-24 22:09:52
+@@ -24,7 +24,8 @@
+ 
+   before(() => {
+     def = loadAgentDefinition(MAX_ID);
+-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${MAX_ID}.md`), 'utf8');
++    // Story v63-3-1: Vortex migrated to skill-dir layout (<id>/SKILL.md).
++    rawContent = fs.readFileSync(path.join(AGENTS_DIR, MAX_ID, 'SKILL.md'), 'utf8');
+   });
+ 
+   it('persona role contains "Validated Learning"', () => {
+--- /tmp/v63-3-1-pre-r1/tests/p0/p0-mila.test.js	2026-04-24 22:48:40
++++ /Users/amalikamriou/BMAD-Enhanced/tests/p0/p0-mila.test.js	2026-04-24 22:15:40
+@@ -24,7 +24,7 @@
+ 
+   before(() => {
+     def = loadAgentDefinition(MILA_ID);
+-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${MILA_ID}.md`), 'utf8');
++    rawContent = fs.readFileSync(path.join(AGENTS_DIR, MILA_ID, 'SKILL.md'), 'utf8');
+   });
+ 
+   it('persona role contains "Research Convergence"', () => {
+--- /tmp/v63-3-1-pre-r1/tests/p0/p0-noah.test.js	2026-04-24 22:48:40
++++ /Users/amalikamriou/BMAD-Enhanced/tests/p0/p0-noah.test.js	2026-04-24 22:15:40
+@@ -24,7 +24,7 @@
+ 
+   before(() => {
+     def = loadAgentDefinition(NOAH_ID);
+-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${NOAH_ID}.md`), 'utf8');
++    rawContent = fs.readFileSync(path.join(AGENTS_DIR, NOAH_ID, 'SKILL.md'), 'utf8');
+   });
+ 
+   it('persona role contains "Signal Interpretation"', () => {
+--- /tmp/v63-3-1-pre-r1/tests/p0/p0-wade.test.js	2026-04-24 22:48:40
++++ /Users/amalikamriou/BMAD-Enhanced/tests/p0/p0-wade.test.js	2026-04-24 22:15:40
+@@ -32,7 +32,7 @@
+ 
+   before(() => {
+     def = loadAgentDefinition(WADE_ID);
+-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${WADE_ID}.md`), 'utf8');
++    rawContent = fs.readFileSync(path.join(AGENTS_DIR, WADE_ID, 'SKILL.md'), 'utf8');
+   });
+ 
+   it('persona role contains "Validated Learning Expert"', () => {
+--- /tmp/v63-3-1-pre-r1/tests/unit/validate-marketplace.test.js	2026-04-24 22:48:46
++++ /Users/amalikamriou/BMAD-Enhanced/tests/unit/validate-marketplace.test.js	2026-04-24 22:25:26
+@@ -340,7 +340,86 @@
+     }
+   });
+ 
+-  // ── Test 14: repository URL parity (Decision 3 — reversed post-V-pass-correction) ──
++  // ── Test 14 (R1-D1): AC6 Case 14 — body byte-identity pre/post migration ──
++  //
++  // AC6 invariant: when an agent's flat `<id>.md` is moved to skill-dir
++  // `<id>/SKILL.md`, the BODY (everything after the frontmatter block) must
++  // be byte-for-byte identical. Frontmatter `name:` normalizes from the
++  // quoted two-word form to hyphenated directory basename (AC3 Case 13
++  // covers that); the body itself must never be touched.
++  //
++  // Verification method: `git log --follow --diff-filter=A` locates the
++  // commit that first introduced the new skill-dir path; `git show <sha>~1`
++  // retrieves the pre-rename flat file content; body slices are compared.
++  // One canonical agent gets exact-byte equality; others get a non-empty
++  // sanity check (cost-vs-confidence trade-off per spec).
++  it('AC6 Case 14 (R1-D1): post-migration SKILL.md body byte-identical to pre-migration flat .md body', () => {
++    const { execFileSync } = require('node:child_process');
++    const canonicalAgentId = 'contextualization-expert';
++
++    // Two-stage lookup: the rename may be uncommitted (HEAD still has the
++    // flat-file blob) or already committed (need --follow to find the
++    // rename commit and read the parent's blob). Try the uncommitted path
++    // first since it's cheaper.
++    let preMigrationContent;
++    const flatPath = `_bmad/bme/_vortex/agents/${canonicalAgentId}.md`;
++    try {
++      // Stage A: uncommitted rename — `git show HEAD:<flat>` succeeds.
++      try {
++        preMigrationContent = execFileSync('git', ['show', `HEAD:${flatPath}`], {
++          cwd: PACKAGE_ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
++        });
++      } catch (_uncommittedErr) {
++        // Stage B: committed rename — walk --follow history to find the
++        // commit that first introduced the new skill-dir path, then read
++        // the flat file blob from its parent.
++        const logOut = execFileSync('git', [
++          'log', '--diff-filter=A', '--follow', '--format=%H',
++          '--', `_bmad/bme/_vortex/agents/${canonicalAgentId}/SKILL.md`,
++        ], { cwd: PACKAGE_ROOT, encoding: 'utf8' }).trim();
++        const commits = logOut.split('\n').filter(Boolean);
++        const renameCommit = commits[commits.length - 1];
++        if (!renameCommit) {
++          console.error('[Case 14] no rename commit found; skipping byte-identity check');
++          return;
++        }
++        preMigrationContent = execFileSync('git', [
++          'show', `${renameCommit}~1:${flatPath}`,
++        ], { cwd: PACKAGE_ROOT, encoding: 'utf8' });
++      }
++    } catch (err) {
++      console.error('[Case 14] git unavailable or pre-rename blob missing; skipping. Error:', err.message);
++      return;
++    }
++
++    const fmSlice = /^---\s*\n[\s\S]*?\n---\n([\s\S]*)$/;
++    const preMatch = preMigrationContent.match(fmSlice);
++    assert.ok(preMatch, `pre-migration ${canonicalAgentId}.md must have frontmatter block`);
++    const preBody = preMatch[1];
++
++    const postPath = path.join(PACKAGE_ROOT, '_bmad/bme/_vortex/agents', canonicalAgentId, 'SKILL.md');
++    const postContent = fs.readFileSync(postPath, 'utf8');
++    const postMatch = postContent.match(fmSlice);
++    assert.ok(postMatch, `post-migration ${canonicalAgentId}/SKILL.md must have frontmatter block`);
++    const postBody = postMatch[1];
++
++    assert.equal(postBody, preBody,
++      `AC6 Case 14: ${canonicalAgentId} body must be byte-identical pre/post migration`);
++
++    // Sanity check for the other 6: non-empty body post-migration. Full
++    // byte-identity on all 7 is expensive; single-canonical + existence is
++    // sufficient per R1-D1 trade-off.
++    for (const otherId of AGENT_IDS.filter(id => id !== canonicalAgentId)) {
++      const otherPostPath = path.join(PACKAGE_ROOT, '_bmad/bme/_vortex/agents', otherId, 'SKILL.md');
++      assert.ok(fs.existsSync(otherPostPath), `post-migration SKILL.md exists for ${otherId}`);
++      const otherContent = fs.readFileSync(otherPostPath, 'utf8');
++      const otherMatch = otherContent.match(fmSlice);
++      assert.ok(otherMatch && otherMatch[1].length > 0,
++        `post-migration ${otherId} body must be non-empty`);
++    }
++  });
++
++  // ── Test 14 (Decision 3): repository URL parity (Decision 3 — reversed post-V-pass-correction) ──
+   it('Decision 3: marketplace.json.repository equals normalized package.json.repository.url', async () => {
+     const mp = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, '.claude-plugin/marketplace.json'), 'utf8'));
+     const pkgRepoRaw = pkg.repository && pkg.repository.url;
+@@ -376,32 +455,93 @@
+     }
+   });
+ 
+-  // ── Test 16 (AC9 non-negotiable): v3.x → v4.0 upgrade rewrites runtime wrapper LOAD path ──
+-  it('AC9: v3.x → v4.0 upgrade rewrites runtime wrapper LOAD to new SKILL.md path', async () => {
+-    const tmpDir = await createTempDir('bmad-upgrade-');
++  // ── Test 16 (AC9 non-negotiable) R1-H3-rebuilt: actually simulate v3.x → v4.0 upgrade ──
++  //
++  // R1-H3: the initial Test 16 called `createInstallation(tmpDir, '3.3.0')`
++  // which (post-Story-3.1) seeds the NEW skill-dir layout — meaning the
++  // "3.3.0" arg was cosmetic (only the version stamp), and the fixture was
++  // already in 4.0 shape. That proved "fresh 4.0 install works" but NOT
++  // "v3.x → v4.0 upgrade works." This rebuild manually seeds actual
++  // pre-migration state: flat `<id>.md` sources + old-shape runtime wrappers
++  // pointing at the flat path. Running `refreshInstallation` must then
++  // transition the whole state to the new layout.
++  it('AC9 (R1-H3 rebuilt): v3.x → v4.0 upgrade truly migrates flat-.md + old wrapper to new skill-dir + new wrapper', async () => {
++    const { refreshInstallation } = require('../../scripts/update/lib/refresh-installation');
++    const tmpDir = await createTempDir('bmad-upgrade-v3x-');
+     try {
+-      await createInstallation(tmpDir, '3.3.0');
+-      // createInstallation calls refreshInstallation with current package version.
+-      // Post-migration, the runtime wrapper MUST point at the new skill-dir path.
++      // Step 1: seed v3.x state by hand (do NOT use createInstallation — that
++      // seeds the post-migration shape).
++      const agentsDir = path.join(tmpDir, '_bmad/bme/_vortex/agents');
++      const skillsDir = path.join(tmpDir, '.claude/skills');
++      await fs.ensureDir(agentsDir);
++      await fs.ensureDir(skillsDir);
++
++      // Minimal config.yaml + version stamp so version-detector classifies it.
++      const yaml = require('js-yaml');
++      const vortexDir = path.join(tmpDir, '_bmad/bme/_vortex');
++      await fs.writeFile(
++        path.join(vortexDir, 'config.yaml'),
++        yaml.dump({
++          submodule_name: '_vortex', module: 'bme', version: '3.3.0',
++          agents: [...AGENT_IDS], workflows: [],
++        }),
++        'utf8'
++      );
++
++      // Seed FLAT `<id>.md` sources for all 7 Vortex agents.
+       for (const agentId of AGENT_IDS) {
+-        const wrapperPath = path.join(tmpDir, '.claude/skills', `bmad-agent-bme-${agentId}`, 'SKILL.md');
++        await fs.writeFile(
++          path.join(agentsDir, `${agentId}.md`),
++          `---\nname: "${agentId.replace(/-/g, ' ')}"\ndescription: pre-migration fixture\n---\n\n# v3.x body for ${agentId}\n`,
++          'utf8'
++        );
++      }
++
++      // Seed OLD-shape runtime wrapper — LOAD instruction points at the
++      // flat `.md` source (mirrors what refresh-installation.js:632 wrote
++      // pre-Story-3.1).
++      for (const agentId of AGENT_IDS) {
++        const wrapperDir = path.join(skillsDir, `bmad-agent-bme-${agentId}`);
++        await fs.ensureDir(wrapperDir);
++        await fs.writeFile(
++          path.join(wrapperDir, 'SKILL.md'),
++          `---\nname: bmad-agent-bme-${agentId}\ndescription: ${agentId} agent\n---\n\n<agent-activation>\n1. LOAD the FULL agent file from {project-root}/_bmad/bme/_vortex/agents/${agentId}.md\n</agent-activation>\n`,
++          'utf8'
++        );
++      }
++
++      // Step 2: run refreshInstallation — simulating the `convoke-update`
++      // flow on a 3.x install.
++      await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
++
++      // Step 3: assert the transition landed for all 7 agents.
++      for (const agentId of AGENT_IDS) {
++        const wrapperPath = path.join(skillsDir, `bmad-agent-bme-${agentId}`, 'SKILL.md');
+         const wrapper = await fs.readFile(wrapperPath, 'utf8');
+-        // NEW path must appear.
++
++        // (a) NEW path must appear.
+         assert.ok(
+           wrapper.includes(`_bmad/bme/_vortex/agents/${agentId}/SKILL.md`),
+           `wrapper for ${agentId} must LOAD new skill-dir path; got:\n${wrapper}`,
+         );
+-        // OLD flat path must NOT appear (guard against partial updates).
+-        // Precise check: `.md` immediately followed by whitespace or end-of-line.
++        // (b) OLD flat path must NOT appear anywhere in the wrapper.
+         const flatPattern = new RegExp(`_bmad/bme/_vortex/agents/${agentId}\\.md(?=\\s|$)`);
+         assert.ok(
+           !flatPattern.test(wrapper),
+           `wrapper for ${agentId} must NOT reference old flat-.md path; got:\n${wrapper}`,
+         );
+-        // Source of the new LOAD path must exist on disk.
+-        const sourceSkillPath = path.join(tmpDir, '_bmad/bme/_vortex/agents', agentId, 'SKILL.md');
++        // (c) New source MUST exist on disk.
++        const sourceSkillPath = path.join(agentsDir, agentId, 'SKILL.md');
+         assert.ok(await fs.pathExists(sourceSkillPath),
+           `source SKILL.md missing for ${agentId} post-upgrade`);
++        // (d) Old flat source MUST be gone (cleanup ran) — expect it at
++        // backup path per R1-H2 safety net.
++        const flatSourcePath = path.join(agentsDir, `${agentId}.md`);
++        assert.ok(!(await fs.pathExists(flatSourcePath)),
++          `flat-.md source for ${agentId} must be removed after upgrade`);
++        const backupPath = path.join(agentsDir, '.backup-v4', `${agentId}.md`);
++        assert.ok(await fs.pathExists(backupPath),
++          `R1-H2 safety net: flat-.md for ${agentId} must be preserved at .backup-v4/`);
+       }
+     } finally {
+       await fs.remove(tmpDir);
+--- /tmp/v63-3-1-pre-r1/tests/unit/version-detector.test.js	2026-04-24 22:48:40
++++ /Users/amalikamriou/BMAD-Enhanced/tests/unit/version-detector.test.js	2026-04-24 22:27:17
+@@ -6,6 +6,7 @@
+ const yaml = require('js-yaml');
+ 
+ const versionDetector = require('../../scripts/update/lib/version-detector');
++const { AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
+ 
+ describe('getTargetVersion', () => {
+   it('returns a valid semver string', () => {
+@@ -177,12 +178,44 @@
+     assert.equal(versionDetector.detectInstallationScenario(tmpDir), 'corrupted');
+   });
+ 
+-  it('returns complete when all required files exist', async () => {
++  it('returns complete when all 7 agents exist in skill-dir layout', async () => {
+     const vortexDir = path.join(tmpDir, '_bmad/bme/_vortex');
+-    await fs.ensureDir(path.join(vortexDir, 'agents'));
++    const agentsDir = path.join(vortexDir, 'agents');
++    await fs.ensureDir(agentsDir);
+     await fs.ensureDir(path.join(vortexDir, 'workflows'));
+-    await fs.writeFile(path.join(vortexDir, 'agents', 'contextualization-expert.md'), '# Emma');
+-    await fs.writeFile(path.join(vortexDir, 'agents', 'lean-experiments-specialist.md'), '# Wade');
++    // Post-R1-H4: detectInstallationScenario iterates ALL 7 AGENT_IDS and
++    // accepts either flat `.md` or skill-dir `<id>/SKILL.md` shape. Seed
++    // the canonical v4.0 skill-dir layout here.
++    for (const agentId of AGENT_IDS) {
++      const skillDir = path.join(agentsDir, agentId);
++      await fs.ensureDir(skillDir);
++      await fs.writeFile(path.join(skillDir, 'SKILL.md'), `# ${agentId}\n`);
++    }
+     assert.equal(versionDetector.detectInstallationScenario(tmpDir), 'complete');
+   });
++
++  it('returns corrupted on mixed-shape drift (R1-H4)', async () => {
++    const mixedDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-mixed-'));
++    try {
++      const vortexDir = path.join(mixedDir, '_bmad/bme/_vortex');
++      const agentsDir = path.join(vortexDir, 'agents');
++      await fs.ensureDir(agentsDir);
++      await fs.ensureDir(path.join(vortexDir, 'workflows'));
++      await fs.writeFile(path.join(vortexDir, 'config.yaml'), yaml.dump({ version: '4.0.0' }));
++      // Seed 4 agents as flat `.md`, 3 as skill-dir — partial-migration drift.
++      const flatIds = AGENT_IDS.slice(0, 4);
++      const dirIds = AGENT_IDS.slice(4);
++      for (const id of flatIds) {
++        await fs.writeFile(path.join(agentsDir, `${id}.md`), `# ${id}`);
++      }
++      for (const id of dirIds) {
++        const skillDir = path.join(agentsDir, id);
++        await fs.ensureDir(skillDir);
++        await fs.writeFile(path.join(skillDir, 'SKILL.md'), `# ${id}\n`);
++      }
++      assert.equal(versionDetector.detectInstallationScenario(mixedDir), 'corrupted');
++    } finally {
++      await fs.remove(mixedDir);
++    }
++  });
+ });
