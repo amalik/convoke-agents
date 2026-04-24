@@ -34,7 +34,8 @@ function discoverAgents() {
 
     return {
       ...agent,
-      agentFilePath: path.join(AGENTS_DIR, `${agent.id}.md`),
+      // Story v63-3-1: Vortex migrated to skill-dir layout (<id>/SKILL.md).
+      agentFilePath: path.join(AGENTS_DIR, agent.id, 'SKILL.md'),
       workflowNames,
       workflowDirs,
     };
@@ -57,7 +58,8 @@ function discoverAgents() {
  *   - hasErrorHandling: boolean (step 2 contains error handling)
  */
 function loadAgentDefinition(agentId) {
-  const filePath = path.join(AGENTS_DIR, `${agentId}.md`);
+  // Story v63-3-1: Vortex migrated to skill-dir layout (<id>/SKILL.md).
+  const filePath = path.join(AGENTS_DIR, agentId, 'SKILL.md');
   const content = fs.readFileSync(filePath, 'utf8');
 
   // Parse YAML frontmatter (between --- markers)
