@@ -105,8 +105,10 @@ describe('validateAgentFiles', () => {
   it('passes when all required agents exist', async () => {
     const agentsDir = path.join(tmpDir, '_bmad/bme/_vortex/agents');
     const { AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
+    // Story v63-3-1: agents now in skill-dir layout (<id>/SKILL.md).
     for (const id of AGENT_IDS) {
-      await fs.writeFile(path.join(agentsDir, `${id}.md`), `# ${id}`, 'utf8');
+      await fs.ensureDir(path.join(agentsDir, id));
+      await fs.writeFile(path.join(agentsDir, id, 'SKILL.md'), `# ${id}`, 'utf8');
     }
 
     const result = await validateAgentFiles(tmpDir);
@@ -123,10 +125,11 @@ describe('validateAgentFiles', () => {
 
       const { AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
       const excludedId = 'production-intelligence-specialist';
-      // Write all agent files EXCEPT the excluded one.
+      // Write all agent skill-dirs EXCEPT the excluded one.
       for (const id of AGENT_IDS) {
         if (id === excludedId) continue;
-        await fs.writeFile(path.join(agentsDir, `${id}.md`), `# ${id}`, 'utf8');
+        await fs.ensureDir(path.join(agentsDir, id));
+        await fs.writeFile(path.join(agentsDir, id, 'SKILL.md'), `# ${id}`, 'utf8');
       }
       // Write the config with the exclusion.
       fs.writeFileSync(
