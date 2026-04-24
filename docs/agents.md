@@ -17,7 +17,7 @@ Detailed reference for all Convoke team agents — their workflows, positioning,
 
 ## Emma - Contextualization Expert
 
-**Stream:** Contextualize | **Icon:** 🎯 | **File:** `_bmad/bme/_vortex/agents/contextualization-expert.md`
+**Stream:** Contextualize | **Icon:** 🎯 | **File:** `_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md`
 
 Emma helps teams frame the right problem before building solutions. She focuses on Lean Startup methodologies, validated assumptions, and strategic clarity.
 
@@ -47,7 +47,7 @@ Emma answers the strategic question before Maya answers the tactical one.
 
 ## Isla - Discovery & Empathy Expert
 
-**Stream:** Empathize | **Icon:** 🔍 | **File:** `_bmad/bme/_vortex/agents/discovery-empathy-expert.md`
+**Stream:** Empathize | **Icon:** 🔍 | **File:** `_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md`
 
 Isla helps teams deeply understand users before designing solutions. She focuses on evidence-based user insights over assumptions, bridging strategic framing and experimentation.
 
@@ -77,7 +77,7 @@ Isla provides the user understanding that informs Emma's strategic framing.
 
 ## Mila - Research Convergence Specialist
 
-**Stream:** Synthesize | **Icon:** 🔬 | **File:** `_bmad/bme/_vortex/agents/research-convergence-specialist.md`
+**Stream:** Synthesize | **Icon:** 🔬 | **File:** `_bmad/bme/_vortex/agents/research-convergence-specialist/SKILL.md`
 
 Mila converges divergent research streams into actionable problem definitions. She transforms raw empathy data and contextual insights into clear, prioritized problem statements using Jobs-to-be-Done framing and Pains & Gains analysis.
 
@@ -107,7 +107,7 @@ Mila turns Isla's divergent research into a converged, actionable problem defini
 
 ## Liam - Hypothesis Engineer
 
-**Stream:** Hypothesize | **Icon:** 💡 | **File:** `_bmad/bme/_vortex/agents/hypothesis-engineer.md`
+**Stream:** Hypothesize | **Icon:** 💡 | **File:** `_bmad/bme/_vortex/agents/hypothesis-engineer/SKILL.md`
 
 Liam engineers testable hypotheses from validated problem definitions. He ideates alongside the user as a creative peer, using structured brainwriting, 4-field hypothesis contracts, and assumption mapping to turn problems into experiments.
 
@@ -137,7 +137,7 @@ Liam produces the hypothesis contracts that Wade executes as experiments.
 
 ## Wade - Lean Experiments Specialist
 
-**Stream:** Externalize | **Icon:** 🧪 | **File:** `_bmad/bme/_vortex/agents/lean-experiments-specialist.md`
+**Stream:** Externalize | **Icon:** 🧪 | **File:** `_bmad/bme/_vortex/agents/lean-experiments-specialist/SKILL.md`
 
 Wade helps teams test assumptions with real users through rapid experiments. He focuses on validated learning over perfection, guiding teams from hypotheses to evidence.
 
@@ -168,7 +168,7 @@ Wade validates the product direction before Sally validates the implementation.
 
 ## Noah - Production Intelligence Specialist
 
-**Stream:** Sensitize | **Icon:** 📡 | **File:** `_bmad/bme/_vortex/agents/production-intelligence-specialist.md`
+**Stream:** Sensitize | **Icon:** 📡 | **File:** `_bmad/bme/_vortex/agents/production-intelligence-specialist/SKILL.md`
 
 Noah interprets production signals through the lens of experiment history. He connects real-world metrics to their original hypotheses, revealing what production usage actually means for product-market fit. Noah reports — he does not prescribe strategy.
 
@@ -198,7 +198,7 @@ Noah provides the intelligence; Max makes the strategic decisions.
 
 ## Max - Learning & Decision Expert
 
-**Stream:** Systematize | **Icon:** 🧭 | **File:** `_bmad/bme/_vortex/agents/learning-decision-expert.md`
+**Stream:** Systematize | **Icon:** 🧭 | **File:** `_bmad/bme/_vortex/agents/learning-decision-expert/SKILL.md`
 
 Max helps teams systematize learnings and make evidence-based decisions. He captures validated learning as organizational knowledge and navigates between Vortex streams based on evidence gaps.
 
