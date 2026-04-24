@@ -60,8 +60,8 @@ describe('Upgrade from v1.0.x (simulated)', () => {
     await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
 
     // New agents should exist
-    assert.ok(fs.existsSync(path.join(tmpDir, '_bmad/bme/_vortex/agents/contextualization-expert.md')));
-    assert.ok(fs.existsSync(path.join(tmpDir, '_bmad/bme/_vortex/agents/lean-experiments-specialist.md')));
+    assert.ok(fs.existsSync(path.join(tmpDir, '_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md')));
+    assert.ok(fs.existsSync(path.join(tmpDir, '_bmad/bme/_vortex/agents/lean-experiments-specialist/SKILL.md')));
 
     // Old deprecated agents should be removed by refreshInstallation
     assert.ok(!fs.existsSync(path.join(tmpDir, '_bmad/bme/_vortex/agents/empathy-mapper.md')));
@@ -157,7 +157,7 @@ describe('Upgrade from v1.3.x (simulated)', () => {
   });
 
   it('refreshInstallation updates agent files to latest', async () => {
-    const agentPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/contextualization-expert.md');
+    const agentPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md');
     const content = fs.readFileSync(agentPath, 'utf8');
 
     // Should no longer be our stub content
@@ -165,8 +165,8 @@ describe('Upgrade from v1.3.x (simulated)', () => {
   });
 
   it('refreshInstallation adds Wave 2 agents', async () => {
-    const islaPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/discovery-empathy-expert.md');
-    const maxPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/learning-decision-expert.md');
+    const islaPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md');
+    const maxPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/learning-decision-expert/SKILL.md');
 
     assert.ok(fs.existsSync(islaPath), 'Isla should be installed after upgrade');
     assert.ok(fs.existsSync(maxPath), 'Max should be installed after upgrade');
@@ -272,8 +272,8 @@ describe('Upgrade from v1.4.x (simulated)', () => {
   it('refreshInstallation adds Isla and Max agents', async () => {
     await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
 
-    assert.ok(fs.existsSync(path.join(tmpDir, '_bmad/bme/_vortex/agents/discovery-empathy-expert.md')));
-    assert.ok(fs.existsSync(path.join(tmpDir, '_bmad/bme/_vortex/agents/learning-decision-expert.md')));
+    assert.ok(fs.existsSync(path.join(tmpDir, '_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md')));
+    assert.ok(fs.existsSync(path.join(tmpDir, '_bmad/bme/_vortex/agents/learning-decision-expert/SKILL.md')));
   });
 
   it('preserves user_name after upgrade', async () => {
