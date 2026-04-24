@@ -23,6 +23,20 @@ const SCRIPT_PATH = path.join(PACKAGE_ROOT, 'scripts/update/convoke-update.js');
 // this version, edit this constant and the impact is localized.
 const FIXTURE_VERSION = '1.4.1';
 
+// R2-L1: Test 1b uses fixture 2.5.0 to exercise the refresh-only path, which
+// depends on the registry having no entries for 2.5.x. Pin the invariant so
+// if a future migration (e.g., 2.5.x-to-3.0.0) is ever added, the guard fires
+// loudly instead of silently rehoming Test 1b onto the upgrade path.
+const REFRESH_ONLY_FIXTURE = '2.5.0';
+{
+  const { getMigrationsFor } = require('../../scripts/update/migrations/registry');
+  assert.equal(
+    getMigrationsFor(REFRESH_ONLY_FIXTURE).length,
+    0,
+    `REFRESH_ONLY_FIXTURE (${REFRESH_ONLY_FIXTURE}) must have zero registry entries — Test 1b would otherwise silently hit the upgrade path. Update fixture version if registry evolves.`
+  );
+}
+
 /**
  * Spawn convoke-update with piped stdin. Mirror of the inline helper in
  * convoke-update.test.js — kept local to avoid cross-test coupling.
@@ -85,12 +99,14 @@ describe('convoke-update governance gate (Story v63-2-3)', () => {
   it('emits governance section header on successful refresh-only update', async () => {
     const tmpDir = await createTempDir('bmad-gov-');
     try {
-      // Version 2.5.0 has no migration-registry entry matching `2.5.x`, so
-      // `migrations.length === 0` and `assessUpdate` returns `refresh-only`
-      // instead of `upgrade`. This exercises call-site #1 at convoke-update.js
-      // line 207 (after `runRefreshOnly`), which the FIXTURE_VERSION path
-      // doesn't touch. Closes the Round 1 L5 coverage gap.
-      await createInstallation(tmpDir, '2.5.0');
+      // REFRESH_ONLY_FIXTURE (2.5.0) has no migration-registry entry matching
+      // `2.5.x`, so `migrations.length === 0` and `assessUpdate` returns
+      // `refresh-only` instead of `upgrade`. This exercises call-site #1 at
+      // convoke-update.js line 207 (after `runRefreshOnly`), which the
+      // FIXTURE_VERSION path doesn't touch. Closes the Round 1 L5 coverage
+      // gap. The invariant is pinned by the assertion at the top of this
+      // file (R2-L1).
+      await createInstallation(tmpDir, REFRESH_ONLY_FIXTURE);
 
       const { exitCode, stdout } = await runScriptWithInput(
         SCRIPT_PATH, ['--yes'], '', { cwd: tmpDir }
@@ -130,11 +146,14 @@ describe('convoke-update governance gate (Story v63-2-3)', () => {
         stdout.includes('Post-upgrade governance check:'),
         `expected governance header; got:\n${stdout}`,
       );
+      // R2-M2: tightened from a permissive 3-way || (previous `'governance
+      // warning'` alternative matched the summary-line wording regardless of
+      // which finding surfaced — allowed false-positive greens). Now assert
+      // the specific CSV-absent text that only Story 2.2's registry-missing
+      // finding can emit.
       assert.ok(
-        stdout.includes('bmm-dependencies.csv not found')
-        || stdout.includes('registry not yet created')
-        || stdout.includes('governance warning'),
-        `expected softWarning content for absent CSV; got:\n${stdout}`,
+        stdout.includes('bmm-dependencies.csv') && stdout.includes('not found'),
+        `expected specific CSV-absent softWarning (bmm-dependencies.csv + "not found"); got:\n${stdout}`,
       );
     } finally {
       await fs.remove(tmpDir);
@@ -241,10 +260,18 @@ describe('convoke-update governance gate (Story v63-2-3)', () => {
 
     // Story 2.2's `checkBmmDependencies` catches its own scan errors and
     // returns structured findings. To exercise `_runPostUpgradeGate`'s OUTER
-    // catch — which handles require-load failures and any unexpected throw
-    // inside the helper chain — we stub `checkBmmDependencies` via require
-    // cache to throw directly. This simulates what would happen if convoke
-    // -doctor's module load failed or if the check's contract ever drifted.
+    // catch — which handles invocation-throw (contract drift in convoke-doctor
+    // or unexpected internal errors in the check function) — we stub
+    // `checkBmmDependencies` via require.cache so it throws directly.
+    //
+    // Scope-of-coverage note (R2-M1): this test covers the POST-LOAD contract-
+    // drift / invocation-throw path. It does NOT cover actual cold-load
+    // failure of convoke-doctor (syntax error, missing transitive dep) — the
+    // pre-require at the next line warms the cache, so the gate's lazy-require
+    // succeeds and sees the stubbed exports. Cold-load failure is covered
+    // implicitly by the outer catch being shaped the same way; a dedicated
+    // test would need a module-level mock framework not yet in use here.
+    require('../../scripts/convoke-doctor');
     const doctorModulePath = require.resolve('../../scripts/convoke-doctor');
     const cached = require.cache[doctorModulePath];
     const original = cached.exports.checkBmmDependencies;
@@ -285,8 +312,13 @@ describe('convoke-update governance gate (Story v63-2-3)', () => {
       );
     } finally {
       // Restore the real checkBmmDependencies so subsequent tests see the
-      // normal contract.
-      cached.exports.checkBmmDependencies = original;
+      // normal contract. R2-M1 defensive guard: if another test removed the
+      // cache entry between setup and restore, `cached` could be detached
+      // from require.cache — guard the write to avoid a confusing TypeError
+      // that would mask the original assertion failure (if any).
+      if (cached && cached.exports) {
+        cached.exports.checkBmmDependencies = original;
+      }
       await fs.remove(tmpDir);
     }
   });
@@ -322,45 +354,10 @@ describe('convoke-update governance gate (Story v63-2-3)', () => {
     );
   });
 
-  // Legacy test 7 (CLI-spawn approach — kept for backwards-compat / canary):
-  it('legacy integration: CLI spawn with missing .claude/skills/ still exits 0', async () => {
-    // This test uses the CLI spawn approach. refreshInstallation recreates
-    // `.claude/skills/` before the gate runs, so `scanBmmDependencies` does
-    // NOT throw — the gate sees a valid (empty-ish) skills tree. This is the
-    // wrong test for the fail-soft path (see the direct-invocation test above
-    // for the real coverage), but it's still a useful smoke test proving
-    // convoke-update exits 0 under this adversarial fixture state.
-    //
-    // Direct unit test of the exported _runPostUpgradeGate behavior via
-    // require, bypassing the CLI spawn. This pins the "gate throws
-    // unexpectedly → convoke-update exits 0" contract at the function level.
-    //
-    // We don't export _runPostUpgradeGate publicly, so the behavior is
-    // asserted via the helper's try/catch rendering a yellow warning when
-    // scanBmmDependencies throws. We can simulate that by running against
-    // a project root where .claude/skills/ is missing — scanBmmDependencies
-    // throws, the helper catches, logs yellow warning, and returns normally.
-    const tmpDir = await createTempDir('bmad-gov-');
-    try {
-      await createInstallation(tmpDir, FIXTURE_VERSION);
-      // Remove .claude/skills/ to make scanBmmDependencies throw (it requires
-      // the directory to exist).
-      await fs.remove(path.join(tmpDir, '.claude', 'skills'));
-
-      const { exitCode, stdout } = await runScriptWithInput(
-        SCRIPT_PATH, ['--yes'], '', { cwd: tmpDir }
-      );
-      // Contract: convoke-update still exits 0 despite the gate's scan failure.
-      assert.equal(exitCode, 0, 'gate internal throw must not abort convoke-update');
-      // The fail-soft warning should render.
-      assert.ok(
-        stdout.includes('Governance gate: scan failed')
-        || stdout.includes('.claude/skills')
-        || stdout.includes('scan failed'),
-        `expected fail-soft scan-failure warning; got:\n${stdout}`,
-      );
-    } finally {
-      await fs.remove(tmpDir);
-    }
-  });
+  // R2-M2: removed Legacy Test 9 (CLI-spawn with missing .claude/skills/).
+  // It admitted in its own comment that `refreshInstallation` recreates the
+  // directory before the gate runs, so `scanBmmDependencies` doesn't throw
+  // — the assertion passed on incidental `.claude/skills` / `scan failed`
+  // substring matches in unrelated output, not on the intended fail-soft
+  // path. The direct-unit R1-H1 test above covers the real contract cleanly.
 });
