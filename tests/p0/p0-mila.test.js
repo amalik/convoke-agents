@@ -24,7 +24,7 @@ describe('P0 Mila: Activation Sequence', () => {
 
   before(() => {
     def = loadAgentDefinition(MILA_ID);
-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${MILA_ID}.md`), 'utf8');
+    rawContent = fs.readFileSync(path.join(AGENTS_DIR, MILA_ID, 'SKILL.md'), 'utf8');
   });
 
   it('persona role contains "Research Convergence"', () => {
