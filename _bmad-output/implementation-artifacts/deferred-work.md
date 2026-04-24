@@ -5,6 +5,26 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of v63-3-1-create-and-validate-marketplace-metadata (2026-04-24)
+
+Round 1 code review added 13 `defer` items (5 MED + 7 LOW + 1 DRIFT):
+
+- **R1-M3 — Test 20 (`npm pack --dry-run`) JSON shape brittleness.** npm v6 vs v7+ output schema differs. Current `parsed[0]` assumes v7+ array form. Fix path: `Array.isArray(parsed) ? parsed[0] : parsed`.
+- **R1-M5 — `refreshInstallation` flat-cleanup runs in dev environment.** Cleanup loop at refresh-installation.js:95-105 is outside the `isSameRoot` guard — could wipe `<id>.md.bak` files in the dev tree. Fix: move inside `!isSameRoot` block. Zero operator risk today.
+- **R1-M7 — Test 14 repo-URL regex doesn't handle `git+ssh://` / trailing slashes.** Normalization `replace(/^git\+/, '').replace(/\.git$/, '')` wouldn't round-trip `git+ssh://git@github.com/X.git` to `https://github.com/X`. Low risk — current repo uses `git+https://`.
+- **R1-M9 — Test 13 assertion message unhelpful.** Future regression failures lack fix hint / AC3 citation.
+- **R1-M10 — Test 16 doesn't verify `{project-root}` resolves at activation.** Verifies wrapper content but not end-to-end activation correctness. Fix path: load SKILL.md target + assert minimal structure.
+- **R1-D2 — Test numbering reordered vs spec AC6 case numbers** (cases 14/19 swapped). Cosmetic spec-body drift (PI-5 violation). Fix: renumber tests OR update spec.
+- **R1-L1 — Race in Vortex copy loop.** fs.remove then fs.copy — concurrent observer sees empty dir. Low under CLI invocation, real under Windows file-lock scenarios.
+- **R1-L2 — `_agentManifestPath` has no submodule allowlist.** Unknown names fall through to flat-`.md` silently. Fix: whitelist + throw.
+- **R1-L3 — Test 15 only covers "6 dirs, 7 paths" not "7 dirs, 8 paths"** reciprocal case. Parameterize.
+- **R1-L4 — `EXTRA_BME_AGENTS` wrapper hardcodes flat-`.md` LOAD.** Correct today; future skill-dir EXTRA_BME agents would silently break. Add `layout` field to registry.
+- **R1-L5 — `detectInstallationScenario` accepts 0-byte SKILL.md as complete.** convoke-doctor catches later; detector only gates routing.
+- **R1-L6 — Concurrent `refreshInstallation` race.** Parallel to Story 2.4 R1-H1. Fix path: lockfile.
+- **R1-L7 — `_scanWithSuppressedStderr` re-entrancy guard.** Runtime check only catches Promises, not re-entrancy. Future doctor-check collisions possible.
+
+---
+
 ## Deferred from: code review of v63-2-4-custom-skill-registration-and-honest-warnings (2026-04-24)
 
 Round 1 code review added 7 `defer` items (1 MED + 2 MED edge-cases + 4 LOW):
@@ -519,3 +539,11 @@ F.2 unblocks when **all 3 portability tests pass standalone under
 - **Unfixed hardcoded count `config.agents.length >= 7` with only 2 of 7 agents named at line 446** — Edge Case Hunter. Same pattern: a refresh bug that drops `hypothesis-engineer` but duplicates another agent to reach 7 would pass the length check and never trigger the 2 named-agent assertions. Fix path: assert each of the 7 named agents explicitly.
 - **v3.0.x chain-walker non-determinism in registry.js** — Edge Case Hunter. `getMigrationsFor('3.0.5')` could match either `3.0.x-to-3.1.0` OR `3.0.x-to-4.0.0` at `registry.js:151-153` — `Array.prototype.find` returns the first registry-order match. A 3.0.x user could be routed through the non-breaking 3.1.0 hop and miss the 4.0.0 breaking migration silently. Pre-existing, registry-side concern — out of any test-level story scope. Fix path: add a v3.0.x describe block asserting `getMigrationsFor('3.0.5')` contains `'3.0.x-to-4.0.0'`, OR enforce registry invariant that only one migration matches per `fromVersion`. Belongs in a registry-housekeeping story.
 - **Append-safety simulation did not cover mid-chain insertion** — Blind Hunter. Task 5 probe appended `4.0.x-to-5.0.0` at the tail. A hypothetical mid-chain insert (e.g., a patch migration between `2.0.x-to-3.1.0` and `3.1.x-to-4.0.0`) would rot AC2's positional assertions (`migrations[1].name === '2.0.x-to-3.1.0'`). AC1/AC3's `some(...)` checks are position-agnostic and would survive either way. Future reviews of registry-touching stories should probe mid-insertion when positional identity is used.
+
+## Deferred from: code review of v63-3-1-create-and-validate-marketplace-metadata Round 2 (2026-04-24)
+
+- **R2-L1: SKILL_MD_MAX_BYTES decimal-MB naming + `>` vs `>=` boundary** — `scripts/audit/validate-marketplace.js:47` constant is 1,000,000 bytes (decimal MB). Comment says "1 MB red flag". Check uses `>` so exactly 1,000,000 bytes passes unchecked. Cosmetic alignment with comment intent; realistic SKILL.md is <100KB so no real-world impact. Fix path: change to `>=` or re-document as decimal MB explicitly.
+- **R2-L2: `assertDisjointAgentIds` throws at require-time** — `scripts/update/lib/agent-registry.js:143-162` IIFE bricks every caller on registry collision. Fail-fast is arguably correct for a developer-bug scenario. Epic 4 may revisit by exporting a `validateRegistry()` function called from doctor/update entry points with structured error emission for better operator UX.
+- **R2-L3: Backup `{ overwrite: true }` clobbers prior backups on re-run** — `scripts/update/lib/refresh-installation.js:199`. Operator scenario: convoke-update #1 backs up to `.backup-v4/<id>.md`; operator recovers/edits flat file; convoke-update #2 overwrites backup. Loses original 3.x content. Timestamp-suffix fix on conflict is defensive overkill for a one-time migration scenario.
+- **R2-L4: R1-M1 module.yaml whitespace-only fields pass type guard** — `scripts/audit/validate-marketplace.js:262-270`. `code: "   "` (whitespace) passes `typeof === 'string' && length > 0` but fails EXPECTED_MODULE_CODE equality with cryptic `"has code=\"   \"; expected \"bme\""` diagnostic. Low-impact cosmetic — add `trim() !== ''` when convenient.
+- **R2-L5: R1-H3 Test 16 comment wording slightly inaccurate** — `tests/unit/validate-marketplace.test.js:502-503`. Comment says "simulating the `convoke-update` flow on a 3.x install"; more precisely, the test only calls `refreshInstallation` directly and bypasses the detector's routing logic. Cosmetic; clarify in a future pass.
