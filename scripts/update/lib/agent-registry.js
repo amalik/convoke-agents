@@ -123,7 +123,19 @@ const WORKFLOWS = [
 ];
 
 // Derived lists — computed from the canonical arrays above
+/**
+ * @deprecated post-v4.0 Vortex migrated to skill-dir layout
+ *   (`<agent-id>/SKILL.md`). Prefer `VORTEX_SKILL_PATHS` below. Kept for
+ *   any legacy consumer that still iterates flat filenames; will be removed
+ *   once Story 3.1 downstream audit confirms zero references remain.
+ */
 const AGENT_FILES = AGENTS.map(a => `${a.id}.md`);
+/**
+ * Vortex agent SKILL.md paths (relative to `_bmad/bme/_vortex/agents/`).
+ * Story v63-3-1 migration: flat `${id}.md` → `${id}/SKILL.md` per BMAD v6.3
+ * skill-dir convention (NFR12) + marketplace.json `skills[]` path resolution.
+ */
+const VORTEX_SKILL_PATHS = AGENTS.map(a => `${a.id}/SKILL.md`);
 const AGENT_IDS = AGENTS.map(a => a.id);
 const WORKFLOW_NAMES = WORKFLOWS.map(w => w.name);
 const USER_GUIDES = AGENTS.map(a => `${a.name.toUpperCase()}-USER-GUIDE.md`);
@@ -231,10 +243,41 @@ const EXTRA_BME_AGENTS = [
 
 const EXTRA_BME_AGENT_IDS = EXTRA_BME_AGENTS.map(a => a.id);
 
+// R1-M4: disjoint-IDs assertion. AGENT_IDS (Vortex), GYRE_AGENT_IDS (Gyre),
+// and EXTRA_BME_AGENT_IDS (standalone bme) MUST be mutually disjoint — an
+// overlap would mean refresh-installation, validator, and doctor would
+// double-process the same id under different submodule shapes (Vortex
+// skill-dir vs Gyre flat) and one side would silently win. Better to fail
+// fast at require-time than to debug a corrupted installation later.
+(function assertDisjointAgentIds() {
+  const buckets = {
+    AGENT_IDS,
+    GYRE_AGENT_IDS,
+    EXTRA_BME_AGENT_IDS,
+  };
+  const seen = new Map(); // id → bucket name
+  const collisions = [];
+  for (const [bucketName, ids] of Object.entries(buckets)) {
+    for (const id of ids) {
+      if (seen.has(id)) {
+        collisions.push(`"${id}" appears in both ${seen.get(id)} and ${bucketName}`);
+      } else {
+        seen.set(id, bucketName);
+      }
+    }
+  }
+  if (collisions.length > 0) {
+    throw new Error(
+      `agent-registry.js: agent id collision detected — registries must be disjoint. ${collisions.join('; ')}`
+    );
+  }
+})();
+
 module.exports = {
   AGENTS,
   WORKFLOWS,
   AGENT_FILES,
+  VORTEX_SKILL_PATHS,
   AGENT_IDS,
   WORKFLOW_NAMES,
   USER_GUIDES,
