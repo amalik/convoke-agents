@@ -24,7 +24,7 @@ describe('P0 Noah: Activation Sequence', () => {
 
   before(() => {
     def = loadAgentDefinition(NOAH_ID);
-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${NOAH_ID}.md`), 'utf8');
+    rawContent = fs.readFileSync(path.join(AGENTS_DIR, NOAH_ID, 'SKILL.md'), 'utf8');
   });
 
   it('persona role contains "Signal Interpretation"', () => {
