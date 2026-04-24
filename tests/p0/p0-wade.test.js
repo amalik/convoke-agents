@@ -32,7 +32,7 @@ describe('P0 Wade: Activation Sequence', () => {
 
   before(() => {
     def = loadAgentDefinition(WADE_ID);
-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${WADE_ID}.md`), 'utf8');
+    rawContent = fs.readFileSync(path.join(AGENTS_DIR, WADE_ID, 'SKILL.md'), 'utf8');
   });
 
   it('persona role contains "Validated Learning Expert"', () => {
