@@ -12,6 +12,14 @@ Round 1 code review added 2 `defer` items — both LOW, both CI-hygiene concerns
 - **200ms hardcoded stdin-write delay in `runScriptWithInput`** — Blind+Edge LOW. The test helper uses `setTimeout(..., 200)` to write piped input, assuming readline is ready by then. Works today, but burns 200ms × 7 tests = 1.4s in the Story 2.3 suite, and risks hanging on slow CI if convoke-update prompts earlier than 200ms for interactive paths. Also: on 15s timeout, `fs.remove(tmpDir)` may fail silently on macOS if SIGTERM leaves orphan child processes holding file descriptors. Fix path: refactor to `child.stdin.on('ready', ...)` or use a write-when-flowing pattern; add fs.remove retry on EBUSY.
 - **`_scanWithSuppressedStderr` "no concurrent invocations" invariant violation** — Edge LOW. `scripts/convoke-doctor.js`'s helper mutates global `console.error` during the scan. JSDoc says "safe ONLY because `main()` runs checks serially" — but Story 2.3's new call-site in convoke-update runs post-`runMigrations`, where migration-runner cleanup logic may log to stderr concurrently. Actual risk: timing-based silent log swallow during the ~5-50ms scan window. Low probability (runMigrations is awaited before the gate), but the documented invariant is formally violated. Fix path: refactor convoke-doctor's helper to stack-counted reentrant shim, or assert sync-only at runtime via Promise-detection. Revisit if stderr silencing becomes observable.
 
+Round 2 code review added 5 `defer` items — all LOW, all defensive-polish with no live correctness impact:
+
+- **R2-L6 — `check.info` only rendered on pass branch.** `_printPostUpgradeGate` emits `info` only in the ✓ branch; softWarning/hard-fail drop it. Story 2.2 contract today doesn't set `info` on non-pass findings. Future: render in all branches for defense-in-depth.
+- **R2-L7 — Summary math double-counts duplicates.** `_printPostUpgradeGate` iterates `findings` blindly; duplicate entries (same triple-key) would count twice. Story 2.2 dedup prevents this upstream. Future: runtime uniqueness assertion.
+- **R2-L9 — Lazy-require not memoized.** `_runPostUpgradeGate` `require('../convoke-doctor')` relies on Node's module cache for efficiency. AC8 183ms budget proven for first call only. Non-issue today (at most one call per convoke-update run). Future batch-mode needs explicit memo.
+- **R2-L10 — Console monkey-patching blind to `process.stdout.write`.** Tests 7+8 capture via `console.log` override. Helper stably uses `console.log`; future-proofing only.
+- **R2-L11 — tmpDir cleanup ordering in R1-H1 test.** `finally` block restores `cached.exports.checkBmmDependencies` BEFORE `fs.remove(tmpDir)`. If restoration throws, tmpDir leaks. Very low probability; OS tmp cleanup handles it eventually. Fix path: wrap restoration in inner try/catch.
+
 ---
 
 ---
