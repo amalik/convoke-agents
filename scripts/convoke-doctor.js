@@ -228,20 +228,27 @@ function checkModuleAgents(mod) {
     };
   }
 
-  const missing = agentIds.filter(id => !fs.existsSync(path.join(agentsDir, `${id}.md`)));
+  // Story v63-3-1: Vortex migrated to skill-dir layout (`<id>/SKILL.md`) per
+  // BMAD v6.3 convention; Gyre + EXTRA_BME stay flat (`<id>.md`) per
+  // Decision 2. Discriminator: module name.
+  const isVortexSkillDir = mod.name === '_vortex';
+  const leafFor = (id) => isVortexSkillDir ? path.join(id, 'SKILL.md') : `${id}.md`;
+  const leafDisplayFor = (id) => isVortexSkillDir ? `${id}/SKILL.md` : `${id}.md`;
+
+  const missing = agentIds.filter(id => !fs.existsSync(path.join(agentsDir, leafFor(id))));
 
   if (missing.length > 0) {
     return {
       name: label,
       passed: false,
-      error: `Missing: ${missing.map(id => `${id}.md`).join(', ')}`,
+      error: `Missing: ${missing.map(leafDisplayFor).join(', ')}`,
       fix: `Reinstall the ${mod.name} module`
     };
   }
 
   // Check files are non-empty
   const empty = agentIds.filter(id => {
-    const stat = fs.statSync(path.join(agentsDir, `${id}.md`));
+    const stat = fs.statSync(path.join(agentsDir, leafFor(id)));
     return stat.size === 0;
   });
 
@@ -249,7 +256,7 @@ function checkModuleAgents(mod) {
     return {
       name: label,
       passed: false,
-      error: `Empty agent files: ${empty.map(id => `${id}.md`).join(', ')}`,
+      error: `Empty agent files: ${empty.map(leafDisplayFor).join(', ')}`,
       fix: `Reinstall the ${mod.name} module`
     };
   }
