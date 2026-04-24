@@ -94,6 +94,13 @@ function _runPostUpgradeGate(projectRoot) {
     // Early exit paths (no-project, fresh, broken, etc.) also skip the import
     // cost entirely.
     const { checkBmmDependencies } = require('../convoke-doctor');
+    // R2-M3: distinguish a wiring bug (missing / renamed export) from a scan
+    // failure. Without this, a destructure-to-undefined throws `TypeError:
+    // checkBmmDependencies is not a function` via the outer catch, which the
+    // operator sees as "scan failed" — obscuring the real root cause.
+    if (typeof checkBmmDependencies !== 'function') {
+      throw new Error('convoke-doctor does not export checkBmmDependencies (wiring bug, not scan failure)');
+    }
     const findings = checkBmmDependencies(projectRoot);
     _printPostUpgradeGate(findings);
   } catch (err) {
@@ -122,13 +129,21 @@ function _runPostUpgradeGate(projectRoot) {
  * @param {Array<{name: string, passed: boolean, softWarning?: boolean, warning?: string, info?: string, error?: string, fix?: string}>} findings
  */
 function _printPostUpgradeGate(findings) {
-  if (!Array.isArray(findings) || findings.length === 0) {
-    // Defensive: empty findings would be unexpected (Story 2.2 always emits at
-    // least one finding — either "registry consistent" pass or a softWarning).
-    // Render nothing rather than an empty section.
+  // R2-M4: non-array types indicate contract drift in checkBmmDependencies
+  // (e.g., a refactor that returns `{ findings: [...] }` or `null`). Surface
+  // this as a fail-soft warning rather than silently rendering nothing — a
+  // broken contract should be visible, not invisible.
+  if (!Array.isArray(findings)) {
+    console.log('');
+    console.log(chalk.yellow(`  ⚠ Governance gate: contract drift — findings was ${findings === null ? 'null' : typeof findings}, expected array`));
+    console.log(chalk.gray('    Run: node scripts/audit/audit-bmm-dependencies.js --dry-run'));
+    console.log('');
     return;
   }
 
+  // Always render the header + summary line, even when findings.length === 0
+  // (R2-L3). Silent return would leave the operator with no evidence the gate
+  // executed. An empty array is treated as all-clean.
   console.log('');
   console.log(chalk.cyan.bold('Post-upgrade governance check:'));
 
@@ -141,18 +156,22 @@ function _printPostUpgradeGate(findings) {
   let hardFailCount = 0;
 
   for (const check of findings) {
+    // R2-L4: guard against null/undefined entries in findings array. A null
+    // would throw TypeError on `check.name` access and cause the outer catch
+    // to fire "scan failed" — obscuring any valid findings in the same array.
+    if (!check || typeof check !== 'object') continue;
+
     // R1-L1: defensive field guards. Malformed findings render a placeholder
     // name instead of the literal string "undefined".
     const name = typeof check.name === 'string' && check.name.length > 0
       ? check.name
       : '(unnamed check)';
 
-    if (check.passed) {
-      console.log(chalk.green(`  ✓ ${name}`));
-      if (typeof check.info === 'string' && check.info.length > 0) {
-        console.log(chalk.gray(`    ${check.info}`));
-      }
-    } else if (check.softWarning) {
+    // R2-L2: check softWarning FIRST. Story 2.2's contract is
+    // `softWarning: true` ⇒ `passed: false`, but a contradictory finding
+    // `{passed: true, softWarning: true}` should NOT render as clean — the
+    // softWarning flag IS the advisory signal and must drive the branch.
+    if (check.softWarning) {
       softWarnCount += 1;
       console.log(chalk.yellow(`  ⚠ ${name}`));
       const msg = (typeof check.warning === 'string' && check.warning)
@@ -163,6 +182,11 @@ function _printPostUpgradeGate(findings) {
       // would render `[object Object]` under a blind String() coercion.
       if (typeof check.fix === 'string' && check.fix.length > 0) {
         check.fix.split('\n').forEach(line => console.log(chalk.gray(`    ${line}`)));
+      }
+    } else if (check.passed) {
+      console.log(chalk.green(`  ✓ ${name}`));
+      if (typeof check.info === 'string' && check.info.length > 0) {
+        console.log(chalk.gray(`    ${check.info}`));
       }
     } else {
       // Defensive hard-fail branch: see hardFailCount rationale above.
@@ -473,10 +497,13 @@ module.exports = {
   // scan-throw → yellow-warning branch. CLI spawn tests can't cover this
   // because refreshInstallation recreates `.claude/skills/` before the gate
   // runs, making scan errors unreachable through integration-level tests.
-  _internal: {
+  // R2-L5: freeze to prevent test-order leaks. Without Object.freeze, a test
+  // that overwrites `_internal._runPostUpgradeGate` and forgets to restore
+  // would poison later tests via require.cache for the rest of the process.
+  _internal: Object.freeze({
     _runPostUpgradeGate,
     _printPostUpgradeGate,
-  },
+  }),
 };
 
 // Run main when executed directly
