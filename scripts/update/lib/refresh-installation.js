@@ -6,7 +6,10 @@ const yaml = require('js-yaml');
 const YAML = require('yaml'); // Comment-preserving YAML library (ag-7-1: I29). Use for WRITE sites that need to preserve comments. js-yaml stays for read-only consumers.
 const { getPackageVersion, assertVersion } = require('./utils');
 const configMerger = require('./config-merger');
-const { AGENTS, AGENT_FILES, AGENT_IDS, WORKFLOW_NAMES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES, EXTRA_BME_AGENTS } = require('./agent-registry');
+// Story v63-3-1: AGENT_FILES dropped from this file's imports — post-migration
+// the Vortex copy loop iterates AGENT_IDS and handles skill-dir shape inline.
+// AGENT_FILES remains @deprecated in agent-registry for any external consumers.
+const { AGENTS, AGENT_IDS, WORKFLOW_NAMES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES, EXTRA_BME_AGENTS } = require('./agent-registry');
 
 /**
  * Refresh Installation for Convoke
@@ -52,18 +55,24 @@ async function refreshInstallation(projectRoot, options = {}) {
   await fs.ensureDir(agentsTarget);
 
   if (!isSameRoot) {
-    for (const file of AGENT_FILES) {
-      const agentId = file.replace(/\.md$/, '');
+    // Story v63-3-1: Vortex agents are now skill-dirs (`<agentId>/SKILL.md`)
+    // per BMAD v6.3 convention. Copy the entire agent directory tree.
+    for (const agentId of AGENT_IDS) {
       if (vortexExcluded.includes(agentId)) {
-        changes.push(`Skipped excluded Vortex agent: ${file}`);
-        if (verbose) console.log(`    Skipped excluded Vortex agent: ${file}`);
+        changes.push(`Skipped excluded Vortex agent: ${agentId}`);
+        if (verbose) console.log(`    Skipped excluded Vortex agent: ${agentId}`);
         continue;
       }
-      const src = path.join(agentsSource, file);
-      if (fs.existsSync(src)) {
-        await fs.copy(src, path.join(agentsTarget, file), { overwrite: true });
-        changes.push(`Refreshed agent: ${file}`);
-        if (verbose) console.log(`    Refreshed agent: ${file}`);
+      const srcDir = path.join(agentsSource, agentId);
+      const destDir = path.join(agentsTarget, agentId);
+      if (fs.existsSync(srcDir)) {
+        // Remove existing agent dir first to clear stale files.
+        if (fs.existsSync(destDir)) {
+          await fs.remove(destDir);
+        }
+        await fs.copy(srcDir, destDir, { overwrite: true });
+        changes.push(`Refreshed agent: ${agentId}/SKILL.md`);
+        if (verbose) console.log(`    Refreshed agent: ${agentId}/SKILL.md`);
       }
     }
   } else {
@@ -71,7 +80,9 @@ async function refreshInstallation(projectRoot, options = {}) {
     if (verbose) console.log('    Skipped agent copy (dev environment)');
   }
 
-  // Remove deprecated agent files if still present
+  // Remove deprecated agent files if still present (both pre-v4.0 flat-.md
+  // and legacy v1.0.x agent names). Post-v4.0 migration, also clean up any
+  // lingering flat <agentId>.md from a previous skill-dir migration boundary.
   const deprecatedAgents = ['empathy-mapper.md', 'wireframe-designer.md'];
   for (const file of deprecatedAgents) {
     const agentPath = path.join(agentsTarget, file);
@@ -79,6 +90,59 @@ async function refreshInstallation(projectRoot, options = {}) {
       await fs.remove(agentPath);
       changes.push(`Removed deprecated agent: ${file}`);
       if (verbose) console.log(`    Removed deprecated agent: ${file}`);
+    }
+  }
+  // Story v63-3-1 cleanup + R1-H2 safety net: if any flat `<agentId>.md`
+  // survives from a pre-4.0 install (e.g., operator upgrading from 3.3.0),
+  // move it to `.backup-v4/` BEFORE removing — operator hand-edits deserve
+  // preservation, not silent deletion. Respects feedback_path_safety.md
+  // (explicit safety analysis required for destructive ops on user paths).
+  // Skip in dev/isSameRoot mode so we don't accidentally wipe source backups.
+  //
+  // R2-H1: skip `vortexExcluded` agents — the copy loop at :61 already
+  // skipped them, so the operator's opt-out flat file is legitimate state,
+  // not stale. Removing it here would leave them with NO agent file
+  // anywhere (not in skill-dir, not in agents root).
+  //
+  // R2-H5: backup dir lives at `_bmad/bme/_vortex/.backup-v4` (outside
+  // `agentsTarget`). Placing it inside `agentsTarget` risked recursive
+  // re-processing by directory walkers (workflow-copy, future doctor scans)
+  // that treat `.backup-v4/<id>.md` as stale flat agents or copy them into
+  // runtime wrappers.
+  if (!isSameRoot) {
+    const backupDir = path.join(targetVortex, '.backup-v4');
+    let backedUpAny = false;
+    for (const agentId of AGENT_IDS) {
+      if (vortexExcluded.includes(agentId)) continue;
+      const staleFlatPath = path.join(agentsTarget, `${agentId}.md`);
+      if (fs.existsSync(staleFlatPath) && fs.statSync(staleFlatPath).isFile()) {
+        if (!backedUpAny) {
+          await fs.ensureDir(backupDir);
+          backedUpAny = true;
+        }
+        const backupPath = path.join(backupDir, `${agentId}.md`);
+        try {
+          await fs.move(staleFlatPath, backupPath, { overwrite: true });
+          changes.push(`Backed up pre-v4.0 flat agent file: ${agentId}.md → _vortex/.backup-v4/${agentId}.md`);
+          if (verbose) {
+            console.log(`    Backed up pre-v4.0 flat agent file: ${agentId}.md → _vortex/.backup-v4/${agentId}.md`);
+          }
+        } catch (_moveErr) {
+          // If move fails (permissions, concurrent writer), fall back to
+          // remove — better than blocking the migration, but log loudly.
+          await fs.remove(staleFlatPath);
+          changes.push(`Removed stale flat agent file (backup attempt failed): ${agentId}.md`);
+          if (verbose) {
+            console.log(`    WARNING: Removed stale flat agent file ${agentId}.md — backup attempt failed (${_moveErr.message})`);
+          }
+        }
+      }
+    }
+    if (backedUpAny) {
+      changes.push(`Note: pre-v4.0 agent file backups preserved under _vortex/.backup-v4/ — review and delete when confident migration is complete`);
+      if (verbose) {
+        console.log(`    Note: pre-v4.0 agent file backups preserved under _vortex/.backup-v4/`);
+      }
     }
   }
 
@@ -467,6 +531,15 @@ async function refreshInstallation(projectRoot, options = {}) {
     isV610 = true;
   }
 
+  // Story v63-3-1: path shape depends on submodule. Vortex migrated to
+  // skill-dir convention (`<id>/SKILL.md`); Gyre and EXTRA_BME stay flat
+  // (`<id>.md`) per Decision 2. Single helper to avoid drift.
+  function _agentManifestPath(submodule, agentId) {
+    const isVortexSkillDir = submodule === '_vortex';
+    const leaf = isVortexSkillDir ? `${agentId}/SKILL.md` : `${agentId}.md`;
+    return `_bmad/bme/${submodule}/agents/${leaf}`;
+  }
+
   // Build fresh bme rows matching the detected schema (Vortex + Gyre agents)
   function buildAgentRow610(a, submodule) {
     const p = a.persona;
@@ -481,7 +554,7 @@ async function refreshInstallation(projectRoot, options = {}) {
       csvEscape(p.communication_style), // communicationStyle
       csvEscape(p.expertise),      // principles
       csvEscape('bme'),            // module
-      csvEscape(`_bmad/bme/${submodule}/agents/${a.id}.md`), // path
+      csvEscape(_agentManifestPath(submodule, a.id)), // path
       csvEscape(`bmad-agent-bme-${a.id}`), // canonicalId
     ].join(',');
   }
@@ -491,7 +564,7 @@ async function refreshInstallation(projectRoot, options = {}) {
     return [
       a.id, a.name, a.title, a.icon,
       p.role, p.identity, p.communication_style, p.expertise,
-      'bme', `_bmad/bme/${submodule}/agents/${a.id}.md`,
+      'bme', _agentManifestPath(submodule, a.id),
     ].map(csvEscape).join(',');
   }
 
@@ -509,7 +582,7 @@ async function refreshInstallation(projectRoot, options = {}) {
       csvEscape(p.communication_style),
       csvEscape(p.expertise),
       csvEscape('bme'),
-      csvEscape(`_bmad/bme/${a.submodule}/agents/${a.id}.md`),
+      csvEscape(_agentManifestPath(a.submodule, a.id)),
       csvEscape(`bmad-agent-bme-${a.id}`),
     ].join(',');
   }
@@ -519,7 +592,7 @@ async function refreshInstallation(projectRoot, options = {}) {
     return [
       a.id, a.name, a.title, a.icon,
       p.role, p.identity, p.communication_style, p.expertise,
-      'bme', `_bmad/bme/${a.submodule}/agents/${a.id}.md`,
+      'bme', _agentManifestPath(a.submodule, a.id),
     ].map(csvEscape).join(',');
   }
 
@@ -621,6 +694,9 @@ async function refreshInstallation(projectRoot, options = {}) {
     if (vortexExcluded.includes(agent.id)) continue;
     const skillDir = path.join(skillsDir, `bmad-agent-bme-${agent.id}`);
     await fs.ensureDir(skillDir);
+    // Story v63-3-1 / AC9: LOAD path points at the migrated skill-dir
+    // (`<id>/SKILL.md`), NOT the pre-4.0 flat `<id>.md`. This is the
+    // critical runtime contract for existing operators upgrading from 3.x.
     const content = `---
 name: bmad-agent-bme-${agent.id}
 description: ${agent.id} agent
@@ -629,7 +705,7 @@ description: ${agent.id} agent
 You must fully embody this agent's persona and follow all activation instructions exactly as specified. NEVER break character until given an exit command.
 
 <agent-activation CRITICAL="TRUE">
-1. LOAD the FULL agent file from {project-root}/_bmad/bme/_vortex/agents/${agent.id}.md
+1. LOAD the FULL agent file from {project-root}/_bmad/bme/_vortex/agents/${agent.id}/SKILL.md
 2. READ its entire contents - this contains the complete agent persona, menu, and instructions
 3. FOLLOW every step in the <activation> section precisely
 4. DISPLAY the welcome/greeting as instructed
