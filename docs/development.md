@@ -49,8 +49,8 @@ Migrations live in `scripts/update/migrations/registry.js` (append-only).
 1. **Clone an existing agent as a template:**
 
    ```bash
-   cp _bmad/bme/_vortex/agents/contextualization-expert.md \
-      _bmad/bme/_vortex/agents/your-agent.md
+   cp _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md \
+      _bmad/bme/_vortex/agents/your-agent/SKILL.md
    ```
 
 2. **Customize the agent definition:**
