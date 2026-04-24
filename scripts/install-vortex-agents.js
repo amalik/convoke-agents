@@ -107,7 +107,7 @@ function verifyInstallation(projectRoot) {
   console.log(`${CYAN}[5/5]${RESET} Verifying installation...`);
 
   const checks = [
-    ...AGENTS.map(a => ({ path: `_bmad/bme/_vortex/agents/${a.id}.md`, name: `${a.name} agent file` })),
+    ...AGENTS.map(a => ({ path: `_bmad/bme/_vortex/agents/${a.id}/SKILL.md`, name: `${a.name} agent file` })),
     ...AGENTS.map(a => ({ path: `.claude/skills/bmad-agent-bme-${a.id}/SKILL.md`, name: `${a.name} skill` })),
     { path: '_bmad/bme/_vortex/config.yaml', name: 'Configuration file' },
   ];
@@ -157,7 +157,7 @@ function printSuccess() {
   }
   console.log('');
   console.log(`  ${YELLOW}3.${RESET} Or read the agent file directly:`);
-  console.log(`     ${CYAN}cat _bmad/bme/_vortex/agents/{agent-id}.md${RESET}`);
+  console.log(`     ${CYAN}cat _bmad/bme/_vortex/agents/{agent-id}/SKILL.md${RESET}`);
   console.log('');
 }
 
