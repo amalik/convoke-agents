@@ -31,7 +31,8 @@ describe('P0 Emma: Activation Sequence', () => {
 
   before(() => {
     def = loadAgentDefinition(EMMA_ID);
-    rawContent = fs.readFileSync(path.join(AGENTS_DIR, `${EMMA_ID}.md`), 'utf8');
+    // Story v63-3-1: Vortex migrated to skill-dir layout (<id>/SKILL.md).
+    rawContent = fs.readFileSync(path.join(AGENTS_DIR, EMMA_ID, 'SKILL.md'), 'utf8');
   });
 
   it('persona role contains "Product Context Architect"', () => {
