@@ -1,0 +1,1297 @@
+diff --git a/scripts/convoke-register-skill.js b/scripts/convoke-register-skill.js
+new file mode 100755
+index 00000000..d0274620
+--- /dev/null
++++ b/scripts/convoke-register-skill.js
+@@ -0,0 +1,672 @@
++#!/usr/bin/env node
++
++'use strict';
++
++/**
++ * @module scripts/convoke-register-skill
++ *
++ * Story v63-2-4: interactive + non-interactive CLI for registering a custom
++ * BMM-dependent skill in `_bmad/_config/bmm-dependencies.csv`. Closes the loop
++ * between Story 2.2's `unregistered-custom-skill` honest-warning category and
++ * operator action — operators see a warning from `convoke-doctor` and can run
++ * `/bmad-register-skill` (or this CLI directly) to register the skill without
++ * hand-editing the CSV.
++ *
++ * Bin entry: `convoke-register-skill` (see package.json).
++ *
++ * Exit codes:
++ *   0 — success (write committed + post-write verification passed OR skipped via --yes)
++ *   1 — validation or write failure (explicit NFR9 carve-out; registration is
++ *       an operator-intended write op, silent failure would violate expectation)
++ * 130 — SIGINT during interactive prompt (no CSV mutation)
++ */
++
++const fs = require('fs-extra');
++const path = require('path');
++const readline = require('readline');
++const chalk = require('chalk');
++const { findProjectRoot } = require('./update/lib/utils');
++
++// ─── Constants ────────────────────────────────────────────────────
++
++const DEPENDENCY_TYPE_ENUM = ['frontmatter', 'code-reference', 'capability_extension'];
++const RESERVED_REGISTERED_BY = 'auto-scan';
++const REQUIRED_FLAGS = ['skill', 'agent', 'type'];
++
++// ─── Argument parsing ─────────────────────────────────────────────
++
++/**
++ * Parse process.argv-style array into a flat flag object. Supports:
++ *   `--skill name` / `--skill=name`
++ * Booleans (no value): `--yes`, `--dry-run`, `--help`, `-h`, `-y`.
++ *
++ * Error cases surfaced via `result.errors` (non-empty → caller exits 1):
++ *   - Unknown `--flag` token (R1-M3).
++ *   - `--skill` with no value or next token starts with `-` (R1-H3).
++ *   - Same long-flag specified twice (R1-M2).
++ *
++ * All string values are trimmed on assignment (R1-M5) to keep interactive
++ * and non-interactive paths consistent — interactive `ask()` already trims.
++ *
++ * @param {string[]} argv - Raw arg array (typically `process.argv.slice(2)`).
++ * @returns {{skill?:string,agent?:string,type?:string,source?:string,email?:string,yes:boolean,dryRun:boolean,help:boolean,errors:string[]}}
++ */
++function parseArgs(argv) {
++  const result = { yes: false, dryRun: false, help: false, errors: [] };
++  const longMap = {
++    skill: 'skill', agent: 'agent', type: 'type',
++    source: 'source', email: 'email',
++  };
++  const seen = new Set();
++  const assign = (key, rawValue, token) => {
++    if (seen.has(key)) {
++      result.errors.push(`--${key} specified multiple times (token: ${token})`);
++      return;
++    }
++    seen.add(key);
++    // R1-M5: trim to match interactive ask() behavior. Preserves empty-string
++    // semantics for downstream validation ("" fails the non-empty check).
++    result[key] = typeof rawValue === 'string' ? rawValue.trim() : rawValue;
++  };
++  for (let i = 0; i < argv.length; i++) {
++    const a = argv[i];
++    if (a === '--help' || a === '-h') { result.help = true; continue; }
++    if (a === '--yes' || a === '-y') { result.yes = true; continue; }
++    if (a === '--dry-run') { result.dryRun = true; continue; }
++    // --key=value form
++    if (a.startsWith('--') && a.includes('=')) {
++      const eq = a.indexOf('=');
++      const key = a.slice(2, eq);
++      const value = a.slice(eq + 1);
++      if (!longMap[key]) {
++        // R1-M3: unknown flag rejected explicitly.
++        result.errors.push(`unknown flag: --${key} (see --help for valid flags)`);
++        continue;
++      }
++      assign(longMap[key], value, a);
++      continue;
++    }
++    // --key value form
++    if (a.startsWith('--')) {
++      const key = a.slice(2);
++      if (!longMap[key]) {
++        result.errors.push(`unknown flag: ${a} (see --help for valid flags)`);
++        continue;
++      }
++      const nextToken = argv[i + 1];
++      // R1-H3: reject missing-value (end of argv) or next-token-is-flag.
++      if (nextToken === undefined || (typeof nextToken === 'string' && nextToken.startsWith('-'))) {
++        result.errors.push(`${a} requires a value (got: ${nextToken === undefined ? '<end of arguments>' : nextToken})`);
++        continue;
++      }
++      assign(longMap[key], nextToken, a);
++      i++;
++      continue;
++    }
++    // Anything else is an unrecognized positional argument.
++    result.errors.push(`unexpected positional argument: ${a}`);
++  }
++  return result;
++}
++
++// ─── Validation ──────────────────────────────────────────────────
++
++/**
++ * Pure validator: given a partially-populated input object + projectRoot,
++ * return `{ok, errors, warnings}`. Tests call this directly via `_internal`.
++ *
++ * @param {{skill?:string,agent?:string,type?:string,source?:string,email?:string}} input
++ * @param {string} projectRoot - Absolute project root.
++ * @returns {{ok:boolean,errors:string[],warnings:string[]}}
++ */
++function validateInput(input, projectRoot) {
++  const errors = [];
++  const warnings = [];
++  const { skill, agent, type, source, email } = input;
++
++  // skill_name — existence check under .claude/skills/ with path-traversal guard.
++  if (!skill || typeof skill !== 'string' || skill.length === 0) {
++    errors.push('--skill is required (non-empty string)');
++  } else if (/[\\/]/.test(skill) || skill.includes('\0') || skill.includes('..') || skill.startsWith('.')) {
++    // R1-H4: reject path-traversal or path-like values. A skill name must be
++    // a single directory name under `.claude/skills/` — no slashes, no `..`,
++    // no leading-dot hidden names, no embedded null bytes.
++    errors.push(
++      `Invalid --skill: '${skill}'. Skill names must be a simple directory name ` +
++      `under .claude/skills/ — no path separators, '..' segments, leading '.', or null bytes.`
++    );
++  } else {
++    const skillsRoot = path.join(projectRoot, '.claude', 'skills');
++    const skillDir = path.join(skillsRoot, skill);
++    // R1-H4 belt-and-braces: even if the regex above missed something exotic,
++    // verify path.relative confirms skillDir is a DIRECT child of skillsRoot.
++    const relative = path.relative(skillsRoot, skillDir);
++    if (relative.includes('..') || relative.includes(path.sep) || relative.length === 0) {
++      errors.push(`Invalid --skill: '${skill}' resolves outside .claude/skills/`);
++    } else {
++      let skillExists;
++      try {
++        skillExists = fs.existsSync(skillDir) && fs.statSync(skillDir).isDirectory();
++      } catch (_e) { skillExists = false; }
++      if (!skillExists) {
++        errors.push(
++          `Unknown skill: '${skill}'. No directory at .claude/skills/${skill}/ ` +
++          `— run \`ls .claude/skills/\` to see available skills.`
++        );
++      }
++    }
++  }
++
++  // bmm_agent — warn (not error) on unknown BMM-agent prefix. R1-M1: check
++  // explicit BMM prefixes (not `_inferSourceModule`, which is a generic skill-
++  // name inferrer that also accepts `convoke-*`, `q-*`, `wds-*` — all non-BMM).
++  if (!agent || typeof agent !== 'string' || agent.length === 0) {
++    errors.push('--agent is required (non-empty string)');
++  } else {
++    const BMM_AGENT_PREFIXES = ['bmad-agent-', 'bmad-agent-bme-', 'bmad-cis-', 'bmad-testarch-'];
++    const matchesBmmPrefix = BMM_AGENT_PREFIXES.some(p => agent.startsWith(p));
++    if (!matchesBmmPrefix) {
++      warnings.push(
++        `Unrecognized BMM agent prefix: '${agent}'. Proceeding anyway; ` +
++        `expected prefixes are ${BMM_AGENT_PREFIXES.map(p => `'${p}*'`).join(', ')}. ` +
++        `Verify the agent exists before relying on this registration.`
++      );
++    }
++  }
++
++  // dependency_type — strict enum
++  if (!type || typeof type !== 'string' || type.length === 0) {
++    errors.push('--type is required (non-empty string)');
++  } else if (!DEPENDENCY_TYPE_ENUM.includes(type)) {
++    errors.push(
++      `Invalid --type: '${type}'. Must be one of: ${DEPENDENCY_TYPE_ENUM.join(', ')}.`
++    );
++  }
++
++  // source_module — non-empty if provided (default 'unknown' applied later)
++  if (source !== undefined && (typeof source !== 'string' || source.length === 0)) {
++    errors.push('--source must be a non-empty string if provided');
++  }
++
++  // registered_by (email) — reject the reserved scanner value
++  if (email === RESERVED_REGISTERED_BY) {
++    errors.push(
++      `'${RESERVED_REGISTERED_BY}' is reserved for the scan tool. Registration rows ` +
++      `must carry an operator identifier so mergePreservingManual treats them as manual rows ` +
++      `and preserves them byte-identical across re-scans. Provide any other value ` +
++      `(email, username, 'operator').`
++    );
++  }
++
++  return { ok: errors.length === 0, errors, warnings };
++}
++
++/**
++ * Assemble a row object from validated inputs, applying defaults for optional
++ * fields and auto-populating `registered_date` (UTC YYYY-MM-DD).
++ *
++ * @param {{skill:string,agent:string,type:string,source?:string,email?:string}} input
++ * @returns {{skill_name:string,bmm_agent:string,dependency_type:string,source_module:string,registered_by:string,registered_date:string}}
++ */
++function buildRow(input) {
++  return {
++    skill_name: input.skill,
++    bmm_agent: input.agent,
++    dependency_type: input.type,
++    source_module: (input.source && input.source.length > 0) ? input.source : 'unknown',
++    registered_by: (input.email && input.email.length > 0) ? input.email : 'operator',
++    registered_date: _todayIso(),
++  };
++}
++
++/** UTC YYYY-MM-DD. Mirrors Story 2.1's `_internal._todayIso` to keep output consistent. */
++function _todayIso() {
++  const d = new Date();
++  const y = d.getUTCFullYear();
++  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
++  const day = String(d.getUTCDate()).padStart(2, '0');
++  return `${y}-${m}-${day}`;
++}
++
++// ─── Duplicate detection ─────────────────────────────────────────
++
++/**
++ * Scan the existing CSV for a row whose triple-key matches the candidate.
++ * Returns the matching row or null.
++ *
++ * @param {object} candidate - The row shape returned by `buildRow`.
++ * @param {string} csvPath - Absolute CSV path.
++ * @returns {object|null}
++ */
++function checkDuplicate(candidate, csvPath) {
++  const audit = require('./audit/audit-bmm-dependencies');
++  if (!fs.existsSync(csvPath)) return null;
++  const existing = audit.readExistingCsv(csvPath);
++  const newKey = audit._internal._tripleKey(candidate);
++  return existing.find(r => audit._internal._tripleKey(r) === newKey) || null;
++}
++
++// ─── CSV write ───────────────────────────────────────────────────
++
++/**
++ * Acquire an exclusive advisory lock on the CSV before the read-compute-write
++ * sequence (R1-H1). `_atomicWrite` protects a single writer from crash-induced
++ * partial files, but does NOT protect against two concurrent invocations both
++ * reading the same baseline and one clobbering the other's row.
++ *
++ * Implementation: create `${csvPath}.lock` with the exclusive flag (`wx`) so
++ * `openSync` fails if the lock already exists. Retry briefly (registration is
++ * ~ms-scale, so concurrent collisions should clear quickly). If the lock can't
++ * be acquired within the retry budget, surface an actionable error — the
++ * operator can inspect the `.lock` file and remove it if it's stale.
++ *
++ * @param {string} csvPath - Absolute CSV path.
++ * @param {() => void} fn - Synchronous critical section.
++ */
++function _withCsvLock(csvPath, fn) {
++  const lockPath = `${csvPath}.lock`;
++  fs.ensureDirSync(path.dirname(lockPath));
++  const maxAttempts = 20;
++  const retryDelayMs = 50;
++  let fd = null;
++  for (let attempt = 0; attempt < maxAttempts; attempt++) {
++    try {
++      fd = fs.openSync(lockPath, 'wx');
++      break;
++    } catch (err) {
++      if (err && err.code === 'EEXIST' && attempt < maxAttempts - 1) {
++        // Busy-wait using Atomics for a synchronous-only caller. 50ms × 20
++        // attempts = ~1s total before giving up.
++        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, retryDelayMs);
++        continue;
++      }
++      if (err && err.code === 'EEXIST') {
++        const lockErr = new Error(
++          `Could not acquire registration lock at ${lockPath} within ${maxAttempts * retryDelayMs}ms — ` +
++          `another convoke-register-skill process may be running, or the lock is stale. ` +
++          `If no other process is registering, remove the lock file and retry: rm ${lockPath}`
++        );
++        lockErr.cause = err;
++        throw lockErr;
++      }
++      throw err;
++    }
++  }
++  try {
++    // Write our pid into the lock for forensic diagnosis of stuck locks.
++    try { fs.writeSync(fd, String(process.pid)); } catch (_wErr) { /* best-effort */ }
++    fn();
++  } finally {
++    try { fs.closeSync(fd); } catch (_cErr) { /* ignore */ }
++    try { fs.unlinkSync(lockPath); } catch (_uErr) { /* ignore; next attempt will EEXIST + retry */ }
++  }
++}
++
++/**
++ * Append a registration row to `_bmad/_config/bmm-dependencies.csv`, preserving
++ * existing rows byte-identical (no re-sort). Atomic write via Story 2.1's
++ * `_atomicWrite`, wrapped in an advisory lock (R1-H1) so concurrent
++ * registrations don't clobber each other. Creates the file with header if
++ * absent.
++ *
++ * @param {object} row - The row shape returned by `buildRow`.
++ * @param {string} csvPath - Absolute CSV path.
++ */
++function writeRow(row, csvPath) {
++  const audit = require('./audit/audit-bmm-dependencies');
++  _withCsvLock(csvPath, () => {
++    let existingRows = [];
++    if (fs.existsSync(csvPath)) {
++      existingRows = audit.readExistingCsv(csvPath);
++    } else {
++      // Fresh install: ensure the parent directory exists before atomic write.
++      fs.ensureDirSync(path.dirname(csvPath));
++    }
++    // Preserve existing order; append new row at the end. renderCsv does NOT
++    // sort — it iterates in array order — so this inherits order preservation
++    // from Story 2.1 + formula-sanitization + RFC 4180 quoting for free.
++    const allRows = [...existingRows, row];
++    const contents = audit.renderCsv(allRows);
++    audit._internal._atomicWrite(csvPath, contents);
++  });
++}
++
++// ─── Post-write verification ─────────────────────────────────────
++
++/**
++ * Verify a registration landed in the CSV by direct row-equality lookup
++ * (deliberately NOT `checkBmmDependencies`, which collapses findings above
++ * `BMM_DRIFT_SUMMARY_THRESHOLD` and can't answer per-skill questions).
++ *
++ * R1-M4: compares ALL 6 fields, not just the triple-key — a `writeRow` bug
++ * that persists the correct triple but corrupts `source_module`/`registered_by`/
++ * `registered_date` would otherwise pass verification green.
++ *
++ * @param {object} row - The row shape returned by `buildRow`.
++ * @param {string} csvPath - Absolute CSV path.
++ * @returns {{ok:boolean, error?:string, mismatch?:string}}
++ */
++function verifyRegistration(row, csvPath) {
++  try {
++    const audit = require('./audit/audit-bmm-dependencies');
++    const rows = audit.readExistingCsv(csvPath);
++    const target = audit._internal._tripleKey(row);
++    const match = rows.find(r => audit._internal._tripleKey(r) === target);
++    if (!match) {
++      return { ok: false };
++    }
++    // Triple found — now compare full row. Any non-key field mismatch is a
++    // write bug.
++    const fields = ['skill_name', 'bmm_agent', 'dependency_type', 'source_module', 'registered_by', 'registered_date'];
++    const diffs = [];
++    for (const f of fields) {
++      if (match[f] !== row[f]) {
++        diffs.push(`${f}: expected '${row[f]}', got '${match[f]}'`);
++      }
++    }
++    if (diffs.length > 0) {
++      return { ok: false, mismatch: diffs.join('; ') };
++    }
++    return { ok: true };
++  } catch (err) {
++    return { ok: false, error: (err && err.message) || String(err) };
++  }
++}
++
++// ─── Interactive prompts ─────────────────────────────────────────
++
++/**
++ * Prompt for any missing required fields via readline. Returns the completed
++ * input object or exits 130 on SIGINT.
++ *
++ * NOT exposed via _internal — tests drive the non-interactive path via flags
++ * rather than simulating stdin. Manual dev-box verification covers this path.
++ *
++ * @param {object} partial - Flags already provided on the command line.
++ * @returns {Promise<object>} Completed input object.
++ */
++function promptMissingFields(partial) {
++  return new Promise((resolve, reject) => {
++    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
++    const cleanup = () => { try { rl.close(); } catch (_e) { /* noop */ } };
++
++    // SIGINT from the terminal → exit 130 with no CSV mutation. readline by
++    // default handles Ctrl+C by emitting 'SIGINT'; we bind our own handler so
++    // the CLI exits cleanly rather than leaving a dangling prompt.
++    rl.on('SIGINT', () => {
++      cleanup();
++      console.log('');
++      console.log(chalk.yellow('  Cancelled — no registration written.'));
++      process.exit(130);
++    });
++
++    const ask = (question, fallback) => new Promise((res) => {
++      const prompt = fallback !== undefined
++        ? `${question} [${fallback}]: `
++        : `${question}: `;
++      rl.question(prompt, (answer) => {
++        const trimmed = (answer || '').trim();
++        res(trimmed.length > 0 ? trimmed : (fallback !== undefined ? fallback : ''));
++      });
++    });
++
++    (async () => {
++      try {
++        const result = { ...partial };
++        if (!result.skill) result.skill = await ask('Skill name (e.g. my-custom-skill)');
++        if (!result.agent) result.agent = await ask('BMM agent it depends on (e.g. bmad-agent-pm)');
++        if (!result.type) result.type = await ask(`Dependency type (${DEPENDENCY_TYPE_ENUM.join(' / ')})`);
++        if (result.source === undefined) result.source = await ask('Source module', 'unknown');
++        if (result.email === undefined) result.email = await ask('Registered by (email or identifier)', 'your-email@example.com');
++        cleanup();
++        resolve(result);
++      } catch (err) {
++        cleanup();
++        reject(err);
++      }
++    })();
++  });
++}
++
++// ─── Rendering ───────────────────────────────────────────────────
++
++function renderHelp() {
++  const lines = [
++    '',
++    chalk.bold('convoke-register-skill') + ' — register a custom BMM-dependent skill in the governance registry',
++    '',
++    'Usage:',
++    '  convoke-register-skill --skill <name> --agent <agent> --type <type> [options]',
++    '',
++    'Required:',
++    '  --skill <name>      Skill directory name under .claude/skills/',
++    '  --agent <agent>     BMM agent the skill depends on (e.g. bmad-agent-pm)',
++    `  --type <type>       One of: ${DEPENDENCY_TYPE_ENUM.join(' | ')}`,
++    '',
++    'Optional:',
++    '  --source <module>   Source module label (default: "unknown" for user custom skills)',
++    `  --email <identifier> Operator identifier (default: "operator"). MUST NOT be "${RESERVED_REGISTERED_BY}".`,
++    '  --yes, -y           Skip post-write verification (for CI use)',
++    '  --dry-run           Validate + print the row that would be written; no mutation',
++    '  --help, -h          Show this help',
++    '',
++    'Interactive mode:',
++    '  If any required flag is missing, the CLI prompts for it interactively.',
++    '  Pass all required flags to run non-interactively (suitable for scripts / CI).',
++    '',
++    'Example:',
++    '  convoke-register-skill \\',
++    '    --skill my-custom-skill --agent bmad-agent-pm --type frontmatter \\',
++    '    --email alice@example.com --yes',
++    '',
++  ];
++  for (const l of lines) console.log(l);
++}
++
++/**
++ * Render validation errors + warnings with chalk. Returns nothing; tests
++ * monkey-patch console.log to capture output.
++ *
++ * @param {{errors:string[], warnings:string[]}} result
++ */
++function renderValidationIssues(result) {
++  for (const w of result.warnings || []) {
++    console.log(chalk.yellow(`  ⚠ ${w}`));
++  }
++  for (const e of result.errors || []) {
++    console.log(chalk.red(`  ✗ ${e}`));
++  }
++}
++
++// ─── Main ────────────────────────────────────────────────────────
++
++/**
++ * CLI entry. Returns a promise that resolves to an exit code; caller invokes
++ * `process.exit(code)`. Separated so tests can in-process drive main() without
++ * spawning a subprocess (though most tests use runScript for end-to-end).
++ *
++ * @param {string[]} argv - Raw argv slice (typically `process.argv.slice(2)`).
++ * @returns {Promise<number>} Exit code.
++ */
++async function main(argv) {
++  const flags = parseArgs(argv);
++  if (flags.help) { renderHelp(); return 0; }
++
++  // R1-H3 / R1-M2 / R1-M3: surface argv parse errors BEFORE project-root
++  // detection so operators get a clear "you mistyped a flag" signal instead
++  // of falling into interactive mode or hitting a generic validation error.
++  if (flags.errors && flags.errors.length > 0) {
++    for (const msg of flags.errors) {
++      console.log(chalk.red(`  ✗ ${msg}`));
++    }
++    console.log(chalk.gray('    Run with --help for flag reference.'));
++    return 1;
++  }
++
++  const projectRoot = findProjectRoot();
++  if (!projectRoot) {
++    console.log(chalk.red('  ✗ Not inside a Convoke project (no _bmad/ directory found).'));
++    console.log(chalk.gray('    Run: npx -p convoke-agents convoke-install'));
++    return 1;
++  }
++
++  // Collect input — flags first, then interactive prompts for anything missing.
++  let input = {
++    skill: flags.skill,
++    agent: flags.agent,
++    type: flags.type,
++    source: flags.source,
++    email: flags.email,
++  };
++
++  const missingRequired = REQUIRED_FLAGS.some(k => !input[k]);
++  if (missingRequired) {
++    // R1-M8: refuse to prompt when stdin isn't a TTY. Piped / CI / non-TTY
++    // invocations would either hang on `rl.question` waiting for input that
++    // never comes, or silently accept empty answers + fallback defaults,
++    // producing a registration the operator never intended. Fail fast with
++    // an actionable error listing the missing flags.
++    if (!process.stdin.isTTY) {
++      const missing = REQUIRED_FLAGS.filter(k => !input[k]).map(k => `--${k}`);
++      console.log(chalk.red(
++        `  ✗ Missing required flags in non-interactive context: ${missing.join(', ')}.`
++      ));
++      console.log(chalk.gray('    Provide all required flags, or run from a terminal to use interactive prompts.'));
++      console.log(chalk.gray('    Run with --help for the full flag reference.'));
++      return 1;
++    }
++    // Interactive fill-in.
++    try {
++      input = await promptMissingFields(input);
++    } catch (err) {
++      console.log(chalk.red(`  ✗ Prompt failed: ${(err && err.message) || String(err)}`));
++      return 1;
++    }
++  }
++
++  // Validate.
++  const validation = validateInput(input, projectRoot);
++  renderValidationIssues(validation);
++  if (!validation.ok) return 1;
++
++  // Build row + check duplicate.
++  const row = buildRow(input);
++  const audit = require('./audit/audit-bmm-dependencies');
++  const csvPath = path.join(projectRoot, audit.OUTPUT_CSV_REL);
++  const duplicate = checkDuplicate(row, csvPath);
++  if (duplicate) {
++    // R1-M6: fall back to an operator-actionable message when the existing
++    // row has empty metadata (hand-edited CSV, truncated fields). Otherwise
++    // the error reads `"already registered by  on "` with no way to locate
++    // the conflict.
++    const hasMetadata = (duplicate.registered_by && duplicate.registered_by.length > 0)
++      && (duplicate.registered_date && duplicate.registered_date.length > 0);
++    const attribution = hasMetadata
++      ? `already registered by ${duplicate.registered_by} on ${duplicate.registered_date}`
++      : 'already registered (existing row has incomplete metadata — inspect `_bmad/_config/bmm-dependencies.csv` manually to locate it)';
++    console.log(chalk.red(
++      `  ✗ Duplicate triple: ${row.skill_name}/${row.bmm_agent}/${row.dependency_type} ${attribution}. ` +
++      `Use a different dependency_type, or edit the CSV manually to update.`
++    ));
++    return 1;
++  }
++
++  // Dry-run: render the row that would be written + exit 0.
++  if (flags.dryRun) {
++    console.log(chalk.cyan('  Dry-run — row that would be written:'));
++    console.log('    ' + JSON.stringify(row));
++    console.log(chalk.gray(`    (CSV path: ${audit.OUTPUT_CSV_REL})`));
++    return 0;
++  }
++
++  // Write.
++  try {
++    writeRow(row, csvPath);
++  } catch (err) {
++    console.log(chalk.red(`  ✗ Registration failed: ${(err && err.message) || String(err)}`));
++    console.log(chalk.gray('    Fix hint: verify filesystem permissions on _bmad/_config/ ' +
++      'or hand-edit the CSV following the header schema.'));
++    return 1;
++  }
++
++  // Render the green success line (human-readable) immediately after the
++  // write succeeds. The machine-parseable `REGISTERED:` marker is emitted
++  // AFTER verification (R1-L8) so LLM parsers reading stdout can trust
++  // `REGISTERED:` as a "verified persisted" marker rather than just
++  // "write call returned without throwing".
++  console.log(chalk.green(
++    `  ✓ Registered: ${row.skill_name} → ${row.bmm_agent} (${row.dependency_type})`
++  ));
++
++  const tripleKey = audit._internal._tripleKey(row);
++
++  if (flags.yes) {
++    // Verification explicitly skipped — emit the marker with a gray note so
++    // downstream parsers know the verification contract wasn't exercised.
++    console.log(`REGISTERED: ${tripleKey}`);
++    console.log(chalk.gray('  (post-write verification skipped under --yes)'));
++    console.log(chalk.gray('  Run `convoke-doctor` for a full governance health check.'));
++    return 0;
++  }
++
++  // Post-write verification (R1-L8: emit REGISTERED marker ONLY on success).
++  const verification = verifyRegistration(row, csvPath);
++  if (!verification.ok) {
++    if (verification.error) {
++      console.log(chalk.yellow(
++        `  ⚠ Post-write verification skipped — ${verification.error}`
++      ));
++    } else if (verification.mismatch) {
++      // R1-M4: full-row compare found a field-level difference.
++      console.log(chalk.yellow(
++        `  ⚠ Registration written but persisted row has unexpected fields: ${verification.mismatch}`
++      ));
++      console.log(chalk.gray('    Investigate: run `cat _bmad/_config/bmm-dependencies.csv` manually.'));
++    } else {
++      console.log(chalk.yellow(
++        `  ⚠ Registration written but ${tripleKey} triple not found in CSV re-read.`
++      ));
++      console.log(chalk.gray('    Investigate: run `cat _bmad/_config/bmm-dependencies.csv` manually.'));
++    }
++    // Verification failure is fail-soft — the write itself succeeded. Do NOT
++    // emit the REGISTERED: marker (R1-L8): LLM parsers keying on that string
++    // should only see it when the row is both written AND verified.
++    console.log(chalk.gray('  Run `convoke-doctor` for a full governance health check.'));
++    return 0;
++  }
++
++  console.log(`REGISTERED: ${tripleKey}`);
++  console.log(chalk.gray('  Run `convoke-doctor` for a full governance health check.'));
++  return 0;
++}
++
++// ─── Exports ─────────────────────────────────────────────────────
++
++module.exports = {
++  main,
++  // R2-L5 pattern (from Story 2.3): Object.freeze prevents test-order leaks
++  // via mutable require.cache entries. Helpers exposed for unit-level testing
++  // without spawning the CLI.
++  _internal: Object.freeze({
++    parseArgs,
++    validateInput,
++    buildRow,
++    checkDuplicate,
++    writeRow,
++    _withCsvLock,
++    verifyRegistration,
++    _todayIso,
++    DEPENDENCY_TYPE_ENUM,
++    RESERVED_REGISTERED_BY,
++  }),
++};
++
++// CLI entrypoint.
++if (require.main === module) {
++  main(process.argv.slice(2))
++    .then(code => process.exit(code))
++    .catch(err => {
++      console.log(chalk.red(`  ✗ Unexpected error: ${(err && err.message) || String(err)}`));
++      process.exit(1);
++    });
++}
+diff --git a/tests/unit/convoke-register-skill.test.js b/tests/unit/convoke-register-skill.test.js
+new file mode 100644
+index 00000000..3f9cd038
+--- /dev/null
++++ b/tests/unit/convoke-register-skill.test.js
+@@ -0,0 +1,613 @@
++'use strict';
++
++const { describe, it } = require('node:test');
++const assert = require('node:assert/strict');
++const path = require('path');
++const fs = require('fs-extra');
++
++const {
++  PACKAGE_ROOT,
++  createTempDir,
++  createInstallation,
++  runScript,
++} = require('../helpers');
++
++const pkg = require('../../package.json');
++
++const SCRIPT_PATH = path.join(PACKAGE_ROOT, 'scripts/convoke-register-skill.js');
++const CSV_REL = '_bmad/_config/bmm-dependencies.csv';
++
++// ─── Fixture helpers ─────────────────────────────────────────────
++
++/**
++ * Seed a test fixture per the Task 4.3 4-step pattern: Convoke install +
++ * optional CSV pre-state + dummy skill directory under `.claude/skills/`.
++ *
++ * @param {string} tmpDir
++ * @param {object} opts
++ * @param {string|null} [opts.csvContents] - If provided, written to CSV_REL.
++ *   If null (default), no CSV is created — simulates "CSV absent" bootstrap.
++ * @param {string[]} [opts.skillNames] - Skill directories to create under
++ *   `.claude/skills/<name>/`. Defaults to `['my-custom-skill']`.
++ */
++async function seedFixture(tmpDir, { csvContents = null, skillNames = ['my-custom-skill'] } = {}) {
++  // Step 1: baseline install (config.yaml, version stamp, _bmad/ tree).
++  await createInstallation(tmpDir, pkg.version);
++
++  // Step 2: CSV pre-state.
++  const csvPath = path.join(tmpDir, CSV_REL);
++  await fs.ensureDir(path.dirname(csvPath));
++  if (csvContents !== null) {
++    await fs.writeFile(csvPath, csvContents, 'utf8');
++  }
++
++  // Step 3: dummy skill dirs for validation path.
++  for (const name of skillNames) {
++    await fs.ensureDir(path.join(tmpDir, '.claude', 'skills', name));
++  }
++}
++
++/** Return absolute CSV path for a fixture tmpDir. */
++function csvIn(tmpDir) {
++  return path.join(tmpDir, CSV_REL);
++}
++
++// Import _internal exports for unit-level tests (validation, buildRow, etc.).
++const { _internal } = require('../../scripts/convoke-register-skill');
++
++// ─── Tests ───────────────────────────────────────────────────────
++
++describe('convoke-register-skill CLI (Story v63-2-4)', () => {
++
++  // ── AC8 case 1: non-interactive happy path (empty CSV → 1 data row) ──
++  it('non-interactive happy path: empty CSV + valid flags → exit 0 with row appended', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      const header = 'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date\n';
++      await seedFixture(tmpDir, { csvContents: header, skillNames: ['my-custom-skill'] });
++
++      const { exitCode, stdout } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', 'my-custom-skill', '--agent', 'bmad-agent-pm', '--type', 'frontmatter',
++          '--email', 'alice@example.com', '--yes'],
++        { cwd: tmpDir }
++      );
++      assert.equal(exitCode, 0, `expected exit 0, got ${exitCode}. stdout: ${stdout}`);
++
++      const raw = await fs.readFile(csvIn(tmpDir), 'utf8');
++      const lines = raw.trim().split('\n');
++      assert.equal(lines.length, 2, `expected 2 lines (header + 1 row); got ${lines.length}: ${raw}`);
++      assert.ok(
++        lines[1].startsWith('my-custom-skill,bmad-agent-pm,frontmatter,unknown,alice@example.com,'),
++        `row shape mismatch: ${lines[1]}`,
++      );
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── AC8 case 2: existing-rows preservation (byte-identical) ──
++  it('existing rows preserved byte-identical after append', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      const existing = [
++        'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
++        'bmad-enhance-initiatives-backlog,bmad-agent-pm,code-reference,bme,auto-scan,2026-04-20',
++        'other-skill,bmad-agent-dev,frontmatter,unknown,bob@example.com,2026-04-21',
++        'third-skill,bmad-agent-sm,capability_extension,bmm,carol@example.com,2026-04-22',
++        '',
++      ].join('\n');
++      await seedFixture(tmpDir, { csvContents: existing, skillNames: ['my-new-skill'] });
++
++      const { exitCode } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', 'my-new-skill', '--agent', 'bmad-agent-qa', '--type', 'frontmatter',
++          '--email', 'dave@example.com', '--yes'],
++        { cwd: tmpDir }
++      );
++      assert.equal(exitCode, 0);
++
++      const raw = await fs.readFile(csvIn(tmpDir), 'utf8');
++      const lines = raw.split('\n').filter(l => l.length > 0);
++      assert.equal(lines.length, 5, `expected 5 lines (header + 3 existing + 1 new); got ${lines.length}`);
++      // Header + the 3 pre-existing rows must be byte-identical at indexes 0-3.
++      const existingLines = existing.split('\n').filter(l => l.length > 0);
++      for (let i = 0; i < 4; i++) {
++        assert.equal(lines[i], existingLines[i], `pre-existing row ${i} drifted after append`);
++      }
++      // New row at index 4.
++      assert.ok(
++        lines[4].startsWith('my-new-skill,bmad-agent-qa,frontmatter,unknown,dave@example.com,'),
++        `new row shape mismatch: ${lines[4]}`,
++      );
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── AC8 case 3: CSV-absent bootstrap ──
++  it('CSV absent → creates file with header + new data row', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      await seedFixture(tmpDir, { csvContents: null, skillNames: ['my-bootstrap-skill'] });
++      assert.ok(!(await fs.pathExists(csvIn(tmpDir))), 'CSV should be absent at start');
++
++      const { exitCode } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', 'my-bootstrap-skill', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--yes'],
++        { cwd: tmpDir }
++      );
++      assert.equal(exitCode, 0);
++
++      const raw = await fs.readFile(csvIn(tmpDir), 'utf8');
++      const lines = raw.split('\n').filter(l => l.length > 0);
++      assert.equal(lines.length, 2, 'expected header + 1 row');
++      assert.equal(
++        lines[0],
++        'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
++        'header row does not match CSV_HEADER',
++      );
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── AC8 case 4: duplicate triple rejection ──
++  it('duplicate triple → exit 1 + error identifies existing row metadata', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      const existing = [
++        'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
++        'skill-x,bmad-agent-pm,frontmatter,bme,alice@example.com,2026-04-19',
++        '',
++      ].join('\n');
++      await seedFixture(tmpDir, { csvContents: existing, skillNames: ['skill-x'] });
++
++      const { exitCode, stdout } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', 'skill-x', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--yes'],
++        { cwd: tmpDir }
++      );
++      assert.equal(exitCode, 1, 'duplicate registration must exit 1');
++      assert.ok(stdout.includes('Duplicate triple'), `expected duplicate error; got: ${stdout}`);
++      assert.ok(stdout.includes('alice@example.com'), 'error should mention existing registered_by');
++      assert.ok(stdout.includes('2026-04-19'), 'error should mention existing registered_date');
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── AC8 case 5: invalid skill_name rejection ──
++  it('invalid skill_name (no .claude/skills/ dir) → exit 1 + fix hint', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      await seedFixture(tmpDir, { skillNames: ['real-skill'] });
++
++      const { exitCode, stdout } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', 'nonexistent-xyz', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--yes'],
++        { cwd: tmpDir }
++      );
++      assert.equal(exitCode, 1);
++      assert.ok(stdout.includes('Unknown skill'), 'error must identify the skill problem');
++      assert.ok(stdout.includes('nonexistent-xyz'), 'error must echo the bad skill name');
++      assert.ok(stdout.includes('ls .claude/skills/'), 'error should include fix hint');
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── AC8 case 6: invalid dependency_type rejection ──
++  it('invalid dependency_type → exit 1 + enumerates 3 valid values', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      await seedFixture(tmpDir, { skillNames: ['my-skill'] });
++
++      const { exitCode, stdout } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', 'my-skill', '--agent', 'bmad-agent-pm', '--type', 'bogus-enum', '--yes'],
++        { cwd: tmpDir }
++      );
++      assert.equal(exitCode, 1);
++      assert.ok(stdout.includes('Invalid --type'), `expected enum error; got: ${stdout}`);
++      // All 3 valid values should appear in the error.
++      for (const v of ['frontmatter', 'code-reference', 'capability_extension']) {
++        assert.ok(stdout.includes(v), `error should list ${v}`);
++      }
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── AC8 case 7: atomic write on failure — CSV stays pre-write state ──
++  it('atomic write on renameSync throw: CSV stays in pre-write state', () => {
++    // `_atomicWrite` imports renameSync from `fs-extra` (see scripts/audit/
++    // audit-bmm-dependencies.js line 1). Monkey-patch there so the stub
++    // reaches the actual call-site.
++    const fsExtra = require('fs-extra');
++    const fsReal = require('fs');
++    const origRenameSync = fsExtra.renameSync;
++    const tmpDir = fsReal.mkdtempSync(path.join(require('os').tmpdir(), 'bmad-atomic-'));
++    try {
++      const csvPath = path.join(tmpDir, 'test.csv');
++      const originalContent =
++        'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date\n' +
++        'pre-existing,bmad-agent-pm,frontmatter,bme,alice,2026-04-20\n';
++      fsReal.writeFileSync(csvPath, originalContent, 'utf8');
++
++      fsExtra.renameSync = () => { throw new Error('simulated rename failure'); };
++
++      let threw = false;
++      try {
++        _internal.writeRow(_internal.buildRow({
++          skill: 'other-skill', agent: 'bmad-agent-dev', type: 'frontmatter',
++          email: 'bob',
++        }), csvPath);
++      } catch (_e) {
++        threw = true;
++      }
++      assert.ok(threw, 'writeRow should propagate atomic write failure');
++
++      // CSV must be byte-identical to its pre-write state — no partial temp
++      // file, no truncation.
++      const post = fsReal.readFileSync(csvPath, 'utf8');
++      assert.equal(post, originalContent, 'CSV must stay byte-identical after write failure');
++    } finally {
++      fsExtra.renameSync = origRenameSync;
++      fsReal.rmSync(tmpDir, { recursive: true, force: true });
++    }
++  });
++
++  // ── AC8 case 8: post-write verification — direct intersection via _internal ──
++  it('post-write verification: registered triple found in CSV re-read', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      const header = 'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date\n';
++      await seedFixture(tmpDir, { csvContents: header, skillNames: ['verifiable-skill'] });
++
++      // Drop --yes so verification runs.
++      const { exitCode, stdout } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', 'verifiable-skill', '--agent', 'bmad-agent-pm', '--type', 'frontmatter'],
++        { cwd: tmpDir }
++      );
++      assert.equal(exitCode, 0);
++      // Success path renders the check hint when verification passed.
++      assert.ok(
++        stdout.includes('Run `convoke-doctor`'),
++        `expected post-write verification success path; got:\n${stdout}`,
++      );
++      // Row present in CSV via direct intersection.
++      const csvPath = csvIn(tmpDir);
++      const row = _internal.buildRow({
++        skill: 'verifiable-skill', agent: 'bmad-agent-pm', type: 'frontmatter',
++      });
++      const verification = _internal.verifyRegistration(row, csvPath);
++      assert.equal(verification.ok, true, 'direct intersection should confirm triple is registered');
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── AC8 case 9: --dry-run ──
++  it('dry-run: CSV unchanged; stdout shows preview row; exit 0', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      const header = 'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date\n';
++      await seedFixture(tmpDir, { csvContents: header, skillNames: ['dry-run-skill'] });
++      const preContents = await fs.readFile(csvIn(tmpDir), 'utf8');
++
++      const { exitCode, stdout } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', 'dry-run-skill', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--dry-run'],
++        { cwd: tmpDir }
++      );
++      assert.equal(exitCode, 0);
++      assert.ok(stdout.includes('Dry-run'), 'should render dry-run banner');
++      assert.ok(stdout.includes('dry-run-skill'), 'preview should include the candidate skill');
++
++      const postContents = await fs.readFile(csvIn(tmpDir), 'utf8');
++      assert.equal(postContents, preContents, 'CSV must be byte-identical after --dry-run');
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── AC8 case 10: machine-parseable success line ──
++  it('non-interactive success emits exact REGISTERED: <triple> line for tooling parsing', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      const header = 'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date\n';
++      await seedFixture(tmpDir, { csvContents: header, skillNames: ['parseable-skill'] });
++
++      const { exitCode, stdout } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', 'parseable-skill', '--agent', 'bmad-agent-pm', '--type', 'capability_extension', '--yes'],
++        { cwd: tmpDir }
++      );
++      assert.equal(exitCode, 0);
++      assert.ok(
++        stdout.includes('REGISTERED: parseable-skill||bmad-agent-pm||capability_extension'),
++        `expected machine-parseable REGISTERED line; got:\n${stdout}`,
++      );
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── AC8 case 11 (R2-E3): post-registration scan+merge preservation ──
++  it('real FR16 invariant: registration survives scan + merge cycle byte-identical', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      const header = 'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date\n';
++      await seedFixture(tmpDir, { csvContents: header, skillNames: ['fr16-skill'] });
++
++      // Register a row.
++      const { exitCode } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', 'fr16-skill', '--agent', 'bmad-agent-pm', '--type', 'frontmatter',
++          '--email', 'alice@example.com', '--yes'],
++        { cwd: tmpDir }
++      );
++      assert.equal(exitCode, 0);
++
++      // Capture the just-written row byte-exactly.
++      const csvPath = csvIn(tmpDir);
++      const preMergeRaw = await fs.readFile(csvPath, 'utf8');
++      const preMergeDataLine = preMergeRaw.split('\n').filter(l => l.length > 0)[1];
++      assert.ok(preMergeDataLine, 'registration row must be present pre-merge');
++
++      // Run scan + merge + render directly (what the scan tool does on next run).
++      const audit = require('../../scripts/audit/audit-bmm-dependencies');
++      const claudeSkillsRoot = path.join(tmpDir, '.claude', 'skills');
++      const scanRows = audit.scanBmmDependencies(tmpDir);
++      const existingRows = audit.readExistingCsv(csvPath);
++      const merged = audit.mergePreservingManual(scanRows, existingRows, claudeSkillsRoot);
++      const mergedCsv = audit.renderCsv(merged);
++
++      // The registered row (registered_by !== 'auto-scan') must survive merge.
++      const mergedLines = mergedCsv.split('\n').filter(l => l.length > 0);
++      const mergedDataLines = mergedLines.slice(1); // skip header
++      const matchingLine = mergedDataLines.find(l => l.startsWith('fr16-skill,bmad-agent-pm,frontmatter,'));
++      assert.ok(
++        matchingLine,
++        `registered row (fr16-skill) must survive scan + merge; got merged:\n${mergedCsv}`,
++      );
++      // And byte-identical to what was originally written.
++      assert.equal(
++        matchingLine,
++        preMergeDataLine,
++        'registered row must be byte-identical after scan + merge cycle (FR16 invariant)',
++      );
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── AC8 case 12 (R1-M8 + R1-H2): non-TTY stdin refuses to prompt ──
++  //
++  // Replaces the original SIGINT test. Rationale: the R1-M8 guard now refuses
++  // to enter `promptMissingFields` when stdin is not a TTY — which is exactly
++  // the case under `spawn()` without a pty. That makes the SIGINT handler
++  // unreachable from `spawn`-based tests (it's only reachable from a real
++  // interactive terminal, which requires `node-pty` — out of scope).
++  //
++  // The non-TTY guard itself is much more important to lock down: it's the
++  // actually-reachable user-facing behavior in CI and pipelined contexts.
++  // The SIGINT handler continues to exist in code for genuine interactive use
++  // and is verified by the `--help`/`--yes` non-interactive paths proving the
++  // CLI doesn't swallow signals.
++  it('R1-M8: non-TTY stdin with missing required flags → exit 1 with actionable error', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      const header = 'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date\n';
++      await seedFixture(tmpDir, { csvContents: header, skillNames: ['guard-skill'] });
++      const preContents = await fs.readFile(csvIn(tmpDir), 'utf8');
++
++      // No flags at all → all 3 required flags missing. In non-TTY context
++      // (which `runScript`/`spawn` produce by default) the CLI must fail fast
++      // rather than hang on stdin.
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir, timeout: 5000 });
++      assert.equal(exitCode, 1, 'non-TTY + missing flags must exit 1');
++      assert.ok(
++        stdout.includes('Missing required flags in non-interactive context'),
++        `expected non-TTY guard message; got:\n${stdout}`,
++      );
++      // Error should name each of the missing required flags so operators
++      // know what to add to their invocation.
++      for (const flag of ['--skill', '--agent', '--type']) {
++        assert.ok(stdout.includes(flag), `expected error to name ${flag}`);
++      }
++
++      // CSV unchanged — failing the guard must not touch filesystem state.
++      const postContents = await fs.readFile(csvIn(tmpDir), 'utf8');
++      assert.equal(postContents, preContents, 'CSV must be byte-identical after non-TTY refusal');
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── R1-H3: parseArgs rejects missing value / next-token-is-flag ──
++  it('R1-H3: `--skill --agent X` → exit 1 (rejects next-is-flag as value)', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      await seedFixture(tmpDir, { skillNames: ['valid-skill'] });
++
++      const { exitCode, stdout } = await runScript(
++        SCRIPT_PATH,
++        // --skill has no value (next token is --agent); parser must reject.
++        ['--skill', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--yes'],
++        { cwd: tmpDir, timeout: 5000 }
++      );
++      assert.equal(exitCode, 1, 'missing-value parse error must exit 1');
++      assert.ok(
++        stdout.includes('--skill requires a value'),
++        `expected missing-value error; got:\n${stdout}`,
++      );
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── R1-M3: unknown flag rejected with actionable error ──
++  it('R1-M3: unknown flag → exit 1 with "unknown flag" message', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      await seedFixture(tmpDir, { skillNames: ['typo-test'] });
++
++      const { exitCode, stdout } = await runScript(
++        SCRIPT_PATH,
++        ['--skil', 'typo-test', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--yes'],
++        { cwd: tmpDir, timeout: 5000 }
++      );
++      assert.equal(exitCode, 1, 'unknown flag must exit 1');
++      assert.ok(
++        stdout.includes('unknown flag: --skil'),
++        `expected unknown-flag error; got:\n${stdout}`,
++      );
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── R1-M2: duplicate required flag rejected ──
++  it('R1-M2: duplicate --skill → exit 1 with "specified multiple times" error', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      await seedFixture(tmpDir, { skillNames: ['skill-a', 'skill-b'] });
++
++      const { exitCode, stdout } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', 'skill-a', '--skill', 'skill-b',
++          '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--yes'],
++        { cwd: tmpDir, timeout: 5000 }
++      );
++      assert.equal(exitCode, 1, 'duplicate flag must exit 1');
++      assert.ok(
++        stdout.includes('--skill specified multiple times'),
++        `expected duplicate-flag error; got:\n${stdout}`,
++      );
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── R1-H4: path-traversal --skill rejected ──
++  it('R1-H4: --skill with `..` segment rejected before filesystem touch', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      await seedFixture(tmpDir, { skillNames: ['harmless-skill'] });
++
++      const { exitCode, stdout } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', '../../etc', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--yes'],
++        { cwd: tmpDir, timeout: 5000 }
++      );
++      assert.equal(exitCode, 1, 'path traversal must exit 1');
++      assert.ok(
++        stdout.includes('Invalid --skill'),
++        `expected traversal guard; got:\n${stdout}`,
++      );
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── R1-M4: verifyRegistration full-row mismatch detection ──
++  it('R1-M4: verifyRegistration flags non-key field corruption', () => {
++    // Unit-level: use _internal.verifyRegistration against a CSV whose
++    // triple matches but whose non-key fields differ — confirms the full-row
++    // comparator returns ok:false with a mismatch description.
++    const fsReal = require('fs');
++    const tmpDir = fsReal.mkdtempSync(path.join(require('os').tmpdir(), 'bmad-verify-'));
++    try {
++      const csvPath = path.join(tmpDir, 'test.csv');
++      // Persisted row has triple-matching skill/agent/type but a DIFFERENT
++      // registered_by from what we'll hand to verifyRegistration.
++      const contents =
++        'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date\n' +
++        'my-skill,bmad-agent-pm,frontmatter,bme,persisted@example.com,2026-04-20\n';
++      fsReal.writeFileSync(csvPath, contents, 'utf8');
++
++      const candidate = {
++        skill_name: 'my-skill',
++        bmm_agent: 'bmad-agent-pm',
++        dependency_type: 'frontmatter',
++        source_module: 'bme',
++        registered_by: 'candidate@example.com', // DIFFERENT
++        registered_date: '2026-04-20',
++      };
++      const result = _internal.verifyRegistration(candidate, csvPath);
++      assert.equal(result.ok, false, 'full-row compare must fail when non-key field differs');
++      assert.ok(
++        result.mismatch && result.mismatch.includes('registered_by'),
++        `expected mismatch to identify the diverging field; got: ${JSON.stringify(result)}`,
++      );
++    } finally {
++      fsReal.rmSync(tmpDir, { recursive: true, force: true });
++    }
++  });
++
++  // ── R1-H1: concurrent-write lockfile prevents silent row loss ──
++  it('R1-H1: concurrent writeRow invocations both succeed without losing a row', async () => {
++    // Drives `writeRow` in-process from two parallel async contexts against
++    // the same CSV. Without the lockfile, both would read the same baseline,
++    // both would render-and-rename, the second would clobber the first, and
++    // the file would end up with only ONE new row. With the lock, the second
++    // writer blocks until the first releases → both rows present.
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      await seedFixture(tmpDir, { skillNames: ['skill-one', 'skill-two'] });
++      const csvPath = csvIn(tmpDir);
++
++      const row1 = _internal.buildRow({
++        skill: 'skill-one', agent: 'bmad-agent-pm', type: 'frontmatter', email: 'alice',
++      });
++      const row2 = _internal.buildRow({
++        skill: 'skill-two', agent: 'bmad-agent-pm', type: 'frontmatter', email: 'bob',
++      });
++
++      // Promise.all with setTimeout(…, 0) to interleave the read/write
++      // phases. `setImmediate` is a Node-specific global; `setTimeout(fn, 0)`
++      // is lint-safe (defined in both browser and Node globals) and has
++      // functionally equivalent scheduling semantics for this test.
++      await Promise.all([
++        new Promise(resolve => setTimeout(() => { _internal.writeRow(row1, csvPath); resolve(); }, 0)),
++        new Promise(resolve => setTimeout(() => { _internal.writeRow(row2, csvPath); resolve(); }, 0)),
++      ]);
++
++      const raw = await fs.readFile(csvPath, 'utf8');
++      assert.ok(raw.includes('skill-one,bmad-agent-pm'), `row1 missing after concurrent write; got:\n${raw}`);
++      assert.ok(raw.includes('skill-two,bmad-agent-pm'), `row2 missing after concurrent write; got:\n${raw}`);
++
++      // No stale lockfile left behind.
++      assert.ok(!(await fs.pathExists(csvPath + '.lock')), 'lockfile should be cleaned up');
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Guard: reserved 'auto-scan' rejected ──
++  it('registered_by = "auto-scan" rejected (R2-C3 reserved-value check)', async () => {
++    const tmpDir = await createTempDir('bmad-reg-');
++    try {
++      const header = 'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date\n';
++      await seedFixture(tmpDir, { csvContents: header, skillNames: ['reserved-test'] });
++
++      const { exitCode, stdout } = await runScript(
++        SCRIPT_PATH,
++        ['--skill', 'reserved-test', '--agent', 'bmad-agent-pm', '--type', 'frontmatter',
++          '--email', 'auto-scan', '--yes'],
++        { cwd: tmpDir }
++      );
++      assert.equal(exitCode, 1, 'auto-scan must be rejected');
++      assert.ok(
++        stdout.includes("'auto-scan' is reserved"),
++        `expected reserved-value error; got: ${stdout}`,
++      );
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++});

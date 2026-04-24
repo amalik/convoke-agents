@@ -1,0 +1,507 @@
+diff --git a/package.json b/package.json
+index 7767872f..4f5ed23e 100644
+--- a/package.json
++++ b/package.json
+@@ -27,6 +27,7 @@
+     "convoke-version": "scripts/update/convoke-version.js",
+     "convoke-migrate": "scripts/update/convoke-migrate.js",
+     "convoke-doctor": "scripts/convoke-doctor.js",
++    "convoke-register-skill": "scripts/convoke-register-skill.js",
+     "convoke-migrate-artifacts": "scripts/migrate-artifacts.js",
+     "convoke-portfolio": "scripts/lib/portfolio/portfolio-engine.js",
+     "convoke-export": "scripts/portability/convoke-export.js"
+---
+diff --git a/scripts/convoke-register-skill.js b/scripts/convoke-register-skill.js
+new file mode 100755
+index 00000000..77e8e677
+--- /dev/null
++++ b/scripts/convoke-register-skill.js
+@@ -0,0 +1,488 @@
++#!/usr/bin/env node
++
++'use strict';
++
++/**
++ * @module scripts/convoke-register-skill
++ *
++ * Story v63-2-4: interactive + non-interactive CLI for registering a custom
++ * BMM-dependent skill in `_bmad/_config/bmm-dependencies.csv`. Closes the loop
++ * between Story 2.2's `unregistered-custom-skill` honest-warning category and
++ * operator action — operators see a warning from `convoke-doctor` and can run
++ * `/bmad-register-skill` (or this CLI directly) to register the skill without
++ * hand-editing the CSV.
++ *
++ * Bin entry: `convoke-register-skill` (see package.json).
++ *
++ * Exit codes:
++ *   0 — success (write committed + post-write verification passed OR skipped via --yes)
++ *   1 — validation or write failure (explicit NFR9 carve-out; registration is
++ *       an operator-intended write op, silent failure would violate expectation)
++ * 130 — SIGINT during interactive prompt (no CSV mutation)
++ */
++
++const fs = require('fs-extra');
++const path = require('path');
++const readline = require('readline');
++const chalk = require('chalk');
++const { findProjectRoot } = require('./update/lib/utils');
++
++// ─── Constants ────────────────────────────────────────────────────
++
++const DEPENDENCY_TYPE_ENUM = ['frontmatter', 'code-reference', 'capability_extension'];
++const RESERVED_REGISTERED_BY = 'auto-scan';
++const REQUIRED_FLAGS = ['skill', 'agent', 'type'];
++
++// ─── Argument parsing ─────────────────────────────────────────────
++
++/**
++ * Parse process.argv-style array into a flat flag object. Supports:
++ *   `--skill name` / `--skill=name` / `-s name`
++ * Booleans (no value): `--yes`, `--dry-run`, `--help`, `-h`, `-y`.
++ *
++ * @param {string[]} argv - Raw arg array (typically `process.argv.slice(2)`).
++ * @returns {{skill?:string,agent?:string,type?:string,source?:string,email?:string,yes:boolean,dryRun:boolean,help:boolean}}
++ */
++function parseArgs(argv) {
++  const result = { yes: false, dryRun: false, help: false };
++  const longMap = {
++    skill: 'skill', agent: 'agent', type: 'type',
++    source: 'source', email: 'email',
++  };
++  for (let i = 0; i < argv.length; i++) {
++    const a = argv[i];
++    if (a === '--help' || a === '-h') { result.help = true; continue; }
++    if (a === '--yes' || a === '-y') { result.yes = true; continue; }
++    if (a === '--dry-run') { result.dryRun = true; continue; }
++    // --key=value form
++    if (a.startsWith('--') && a.includes('=')) {
++      const eq = a.indexOf('=');
++      const key = a.slice(2, eq);
++      const value = a.slice(eq + 1);
++      if (longMap[key]) result[longMap[key]] = value;
++      continue;
++    }
++    // --key value form
++    if (a.startsWith('--')) {
++      const key = a.slice(2);
++      if (longMap[key] && i + 1 < argv.length) {
++        result[longMap[key]] = argv[i + 1];
++        i++;
++      }
++    }
++  }
++  return result;
++}
++
++// ─── Validation ──────────────────────────────────────────────────
++
++/**
++ * Pure validator: given a partially-populated input object + projectRoot,
++ * return `{ok, errors, warnings}`. Tests call this directly via `_internal`.
++ *
++ * @param {{skill?:string,agent?:string,type?:string,source?:string,email?:string}} input
++ * @param {string} projectRoot - Absolute project root.
++ * @returns {{ok:boolean,errors:string[],warnings:string[]}}
++ */
++function validateInput(input, projectRoot) {
++  const errors = [];
++  const warnings = [];
++  const { skill, agent, type, source, email } = input;
++
++  // skill_name — existence check under .claude/skills/
++  if (!skill || typeof skill !== 'string' || skill.length === 0) {
++    errors.push('--skill is required (non-empty string)');
++  } else {
++    const skillDir = path.join(projectRoot, '.claude', 'skills', skill);
++    let skillExists;
++    try {
++      skillExists = fs.existsSync(skillDir) && fs.statSync(skillDir).isDirectory();
++    } catch (_e) { skillExists = false; }
++    if (!skillExists) {
++      errors.push(
++        `Unknown skill: '${skill}'. No directory at .claude/skills/${skill}/ ` +
++        `— run \`ls .claude/skills/\` to see available skills.`
++      );
++    }
++  }
++
++  // bmm_agent — warn (not error) on unknown prefix; delegate prefix-set to
++  // Story 2.1's _inferSourceModule to avoid drift.
++  if (!agent || typeof agent !== 'string' || agent.length === 0) {
++    errors.push('--agent is required (non-empty string)');
++  } else {
++    const { _internal } = require('./audit/audit-bmm-dependencies');
++    const sourceModule = _internal._inferSourceModule(agent);
++    if (sourceModule === 'unknown') {
++      warnings.push(
++        `Unrecognized BMM agent prefix: '${agent}'. Proceeding anyway; ` +
++        `verify the agent exists (expected prefixes: bmad-agent-*, bmad-agent-bme-*, bmad-cis-*, bmad-testarch-*).`
++      );
++    }
++  }
++
++  // dependency_type — strict enum
++  if (!type || typeof type !== 'string' || type.length === 0) {
++    errors.push('--type is required (non-empty string)');
++  } else if (!DEPENDENCY_TYPE_ENUM.includes(type)) {
++    errors.push(
++      `Invalid --type: '${type}'. Must be one of: ${DEPENDENCY_TYPE_ENUM.join(', ')}.`
++    );
++  }
++
++  // source_module — non-empty if provided (default 'unknown' applied later)
++  if (source !== undefined && (typeof source !== 'string' || source.length === 0)) {
++    errors.push('--source must be a non-empty string if provided');
++  }
++
++  // registered_by (email) — reject the reserved scanner value
++  if (email === RESERVED_REGISTERED_BY) {
++    errors.push(
++      `'${RESERVED_REGISTERED_BY}' is reserved for the scan tool. Registration rows ` +
++      `must carry an operator identifier so mergePreservingManual treats them as manual rows ` +
++      `and preserves them byte-identical across re-scans. Provide any other value ` +
++      `(email, username, 'operator').`
++    );
++  }
++
++  return { ok: errors.length === 0, errors, warnings };
++}
++
++/**
++ * Assemble a row object from validated inputs, applying defaults for optional
++ * fields and auto-populating `registered_date` (UTC YYYY-MM-DD).
++ *
++ * @param {{skill:string,agent:string,type:string,source?:string,email?:string}} input
++ * @returns {{skill_name:string,bmm_agent:string,dependency_type:string,source_module:string,registered_by:string,registered_date:string}}
++ */
++function buildRow(input) {
++  return {
++    skill_name: input.skill,
++    bmm_agent: input.agent,
++    dependency_type: input.type,
++    source_module: (input.source && input.source.length > 0) ? input.source : 'unknown',
++    registered_by: (input.email && input.email.length > 0) ? input.email : 'operator',
++    registered_date: _todayIso(),
++  };
++}
++
++/** UTC YYYY-MM-DD. Mirrors Story 2.1's `_internal._todayIso` to keep output consistent. */
++function _todayIso() {
++  const d = new Date();
++  const y = d.getUTCFullYear();
++  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
++  const day = String(d.getUTCDate()).padStart(2, '0');
++  return `${y}-${m}-${day}`;
++}
++
++// ─── Duplicate detection ─────────────────────────────────────────
++
++/**
++ * Scan the existing CSV for a row whose triple-key matches the candidate.
++ * Returns the matching row or null.
++ *
++ * @param {object} candidate - The row shape returned by `buildRow`.
++ * @param {string} csvPath - Absolute CSV path.
++ * @returns {object|null}
++ */
++function checkDuplicate(candidate, csvPath) {
++  const audit = require('./audit/audit-bmm-dependencies');
++  if (!fs.existsSync(csvPath)) return null;
++  const existing = audit.readExistingCsv(csvPath);
++  const newKey = audit._internal._tripleKey(candidate);
++  return existing.find(r => audit._internal._tripleKey(r) === newKey) || null;
++}
++
++// ─── CSV write ───────────────────────────────────────────────────
++
++/**
++ * Append a registration row to `_bmad/_config/bmm-dependencies.csv`, preserving
++ * existing rows byte-identical (no re-sort). Atomic write via Story 2.1's
++ * `_atomicWrite`. Creates the file with header if absent.
++ *
++ * @param {object} row - The row shape returned by `buildRow`.
++ * @param {string} csvPath - Absolute CSV path.
++ */
++function writeRow(row, csvPath) {
++  const audit = require('./audit/audit-bmm-dependencies');
++  let existingRows = [];
++  if (fs.existsSync(csvPath)) {
++    existingRows = audit.readExistingCsv(csvPath);
++  } else {
++    // Fresh install: ensure the parent directory exists before atomic write.
++    fs.ensureDirSync(path.dirname(csvPath));
++  }
++  // Preserve existing order; append new row at the end. renderCsv does NOT
++  // sort — it iterates in array order — so this inherits order preservation
++  // from Story 2.1 + formula-sanitization + RFC 4180 quoting for free.
++  const allRows = [...existingRows, row];
++  const contents = audit.renderCsv(allRows);
++  audit._internal._atomicWrite(csvPath, contents);
++}
++
++// ─── Post-write verification ─────────────────────────────────────
++
++/**
++ * Verify a registration landed in the CSV by direct `_tripleKey` intersection
++ * (deliberately NOT `checkBmmDependencies`, which collapses findings above
++ * `BMM_DRIFT_SUMMARY_THRESHOLD` and can't answer per-skill questions).
++ *
++ * @param {object} row - The row shape returned by `buildRow`.
++ * @param {string} csvPath - Absolute CSV path.
++ * @returns {{ok:boolean, error?:string}}
++ */
++function verifyRegistration(row, csvPath) {
++  try {
++    const audit = require('./audit/audit-bmm-dependencies');
++    const rows = audit.readExistingCsv(csvPath);
++    const target = audit._internal._tripleKey(row);
++    const tripleKeys = new Set(rows.map(audit._internal._tripleKey));
++    return { ok: tripleKeys.has(target) };
++  } catch (err) {
++    return { ok: false, error: (err && err.message) || String(err) };
++  }
++}
++
++// ─── Interactive prompts ─────────────────────────────────────────
++
++/**
++ * Prompt for any missing required fields via readline. Returns the completed
++ * input object or exits 130 on SIGINT.
++ *
++ * NOT exposed via _internal — tests drive the non-interactive path via flags
++ * rather than simulating stdin. Manual dev-box verification covers this path.
++ *
++ * @param {object} partial - Flags already provided on the command line.
++ * @returns {Promise<object>} Completed input object.
++ */
++function promptMissingFields(partial) {
++  return new Promise((resolve, reject) => {
++    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
++    const cleanup = () => { try { rl.close(); } catch (_e) { /* noop */ } };
++
++    // SIGINT from the terminal → exit 130 with no CSV mutation. readline by
++    // default handles Ctrl+C by emitting 'SIGINT'; we bind our own handler so
++    // the CLI exits cleanly rather than leaving a dangling prompt.
++    rl.on('SIGINT', () => {
++      cleanup();
++      console.log('');
++      console.log(chalk.yellow('  Cancelled — no registration written.'));
++      process.exit(130);
++    });
++
++    const ask = (question, fallback) => new Promise((res) => {
++      const prompt = fallback !== undefined
++        ? `${question} [${fallback}]: `
++        : `${question}: `;
++      rl.question(prompt, (answer) => {
++        const trimmed = (answer || '').trim();
++        res(trimmed.length > 0 ? trimmed : (fallback !== undefined ? fallback : ''));
++      });
++    });
++
++    (async () => {
++      try {
++        const result = { ...partial };
++        if (!result.skill) result.skill = await ask('Skill name (e.g. my-custom-skill)');
++        if (!result.agent) result.agent = await ask('BMM agent it depends on (e.g. bmad-agent-pm)');
++        if (!result.type) result.type = await ask(`Dependency type (${DEPENDENCY_TYPE_ENUM.join(' / ')})`);
++        if (result.source === undefined) result.source = await ask('Source module', 'unknown');
++        if (result.email === undefined) result.email = await ask('Registered by (email or identifier)', 'your-email@example.com');
++        cleanup();
++        resolve(result);
++      } catch (err) {
++        cleanup();
++        reject(err);
++      }
++    })();
++  });
++}
++
++// ─── Rendering ───────────────────────────────────────────────────
++
++function renderHelp() {
++  const lines = [
++    '',
++    chalk.bold('convoke-register-skill') + ' — register a custom BMM-dependent skill in the governance registry',
++    '',
++    'Usage:',
++    '  convoke-register-skill --skill <name> --agent <agent> --type <type> [options]',
++    '',
++    'Required:',
++    '  --skill <name>      Skill directory name under .claude/skills/',
++    '  --agent <agent>     BMM agent the skill depends on (e.g. bmad-agent-pm)',
++    `  --type <type>       One of: ${DEPENDENCY_TYPE_ENUM.join(' | ')}`,
++    '',
++    'Optional:',
++    '  --source <module>   Source module label (default: "unknown" for user custom skills)',
++    `  --email <identifier> Operator identifier (default: "operator"). MUST NOT be "${RESERVED_REGISTERED_BY}".`,
++    '  --yes, -y           Skip post-write verification (for CI use)',
++    '  --dry-run           Validate + print the row that would be written; no mutation',
++    '  --help, -h          Show this help',
++    '',
++    'Interactive mode:',
++    '  If any required flag is missing, the CLI prompts for it interactively.',
++    '  Pass all required flags to run non-interactively (suitable for scripts / CI).',
++    '',
++    'Example:',
++    '  convoke-register-skill \\',
++    '    --skill my-custom-skill --agent bmad-agent-pm --type frontmatter \\',
++    '    --email alice@example.com --yes',
++    '',
++  ];
++  for (const l of lines) console.log(l);
++}
++
++/**
++ * Render validation errors + warnings with chalk. Returns nothing; tests
++ * monkey-patch console.log to capture output.
++ *
++ * @param {{errors:string[], warnings:string[]}} result
++ */
++function renderValidationIssues(result) {
++  for (const w of result.warnings || []) {
++    console.log(chalk.yellow(`  ⚠ ${w}`));
++  }
++  for (const e of result.errors || []) {
++    console.log(chalk.red(`  ✗ ${e}`));
++  }
++}
++
++// ─── Main ────────────────────────────────────────────────────────
++
++/**
++ * CLI entry. Returns a promise that resolves to an exit code; caller invokes
++ * `process.exit(code)`. Separated so tests can in-process drive main() without
++ * spawning a subprocess (though most tests use runScript for end-to-end).
++ *
++ * @param {string[]} argv - Raw argv slice (typically `process.argv.slice(2)`).
++ * @returns {Promise<number>} Exit code.
++ */
++async function main(argv) {
++  const flags = parseArgs(argv);
++  if (flags.help) { renderHelp(); return 0; }
++
++  const projectRoot = findProjectRoot();
++  if (!projectRoot) {
++    console.log(chalk.red('  ✗ Not inside a Convoke project (no _bmad/ directory found).'));
++    console.log(chalk.gray('    Run: npx -p convoke-agents convoke-install'));
++    return 1;
++  }
++
++  // Collect input — flags first, then interactive prompts for anything missing.
++  let input = {
++    skill: flags.skill,
++    agent: flags.agent,
++    type: flags.type,
++    source: flags.source,
++    email: flags.email,
++  };
++
++  const missingRequired = REQUIRED_FLAGS.some(k => !input[k]);
++  if (missingRequired) {
++    // Interactive fill-in.
++    try {
++      input = await promptMissingFields(input);
++    } catch (err) {
++      console.log(chalk.red(`  ✗ Prompt failed: ${(err && err.message) || String(err)}`));
++      return 1;
++    }
++  }
++
++  // Validate.
++  const validation = validateInput(input, projectRoot);
++  renderValidationIssues(validation);
++  if (!validation.ok) return 1;
++
++  // Build row + check duplicate.
++  const row = buildRow(input);
++  const audit = require('./audit/audit-bmm-dependencies');
++  const csvPath = path.join(projectRoot, audit.OUTPUT_CSV_REL);
++  const duplicate = checkDuplicate(row, csvPath);
++  if (duplicate) {
++    console.log(chalk.red(
++      `  ✗ Duplicate triple: ${row.skill_name}/${row.bmm_agent}/${row.dependency_type} ` +
++      `already registered by ${duplicate.registered_by} on ${duplicate.registered_date}. ` +
++      `Use a different dependency_type, or edit the CSV manually to update.`
++    ));
++    return 1;
++  }
++
++  // Dry-run: render the row that would be written + exit 0.
++  if (flags.dryRun) {
++    console.log(chalk.cyan('  Dry-run — row that would be written:'));
++    console.log('    ' + JSON.stringify(row));
++    console.log(chalk.gray(`    (CSV path: ${audit.OUTPUT_CSV_REL})`));
++    return 0;
++  }
++
++  // Write.
++  try {
++    writeRow(row, csvPath);
++  } catch (err) {
++    console.log(chalk.red(`  ✗ Registration failed: ${(err && err.message) || String(err)}`));
++    console.log(chalk.gray('    Fix hint: verify filesystem permissions on _bmad/_config/ ' +
++      'or hand-edit the CSV following the header schema.'));
++    return 1;
++  }
++
++  // Emit machine-parseable success line BEFORE verification so CI tooling
++  // can parse the triple regardless of verification outcome.
++  console.log(chalk.green(
++    `  ✓ Registered: ${row.skill_name} → ${row.bmm_agent} (${row.dependency_type})`
++  ));
++  console.log(`REGISTERED: ${audit._internal._tripleKey(row)}`);
++
++  // Post-write verification (skipped under --yes for CI).
++  if (!flags.yes) {
++    const verification = verifyRegistration(row, csvPath);
++    if (!verification.ok) {
++      if (verification.error) {
++        console.log(chalk.yellow(
++          `  ⚠ Post-write verification skipped — ${verification.error}`
++        ));
++      } else {
++        console.log(chalk.yellow(
++          `  ⚠ Registration written but ${audit._internal._tripleKey(row)} ` +
++          `triple not found in CSV re-read.`
++        ));
++        console.log(chalk.gray('    Investigate: run `cat _bmad/_config/bmm-dependencies.csv` manually.'));
++      }
++      // Verification failure is fail-soft — the write itself succeeded.
++      return 0;
++    }
++  }
++
++  console.log(chalk.gray('  Run `convoke-doctor` for a full governance health check.'));
++  return 0;
++}
++
++// ─── Exports ─────────────────────────────────────────────────────
++
++module.exports = {
++  main,
++  // R2-L5 pattern (from Story 2.3): Object.freeze prevents test-order leaks
++  // via mutable require.cache entries. Helpers exposed for unit-level testing
++  // without spawning the CLI.
++  _internal: Object.freeze({
++    parseArgs,
++    validateInput,
++    buildRow,
++    checkDuplicate,
++    writeRow,
++    verifyRegistration,
++    _todayIso,
++    DEPENDENCY_TYPE_ENUM,
++    RESERVED_REGISTERED_BY,
++  }),
++};
++
++// CLI entrypoint.
++if (require.main === module) {
++  main(process.argv.slice(2))
++    .then(code => process.exit(code))
++    .catch(err => {
++      console.log(chalk.red(`  ✗ Unexpected error: ${(err && err.message) || String(err)}`));
++      process.exit(1);
++    });
++}

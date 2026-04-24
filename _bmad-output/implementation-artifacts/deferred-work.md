@@ -5,6 +5,33 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of v63-2-4-custom-skill-registration-and-honest-warnings (2026-04-24)
+
+Round 1 code review added 7 `defer` items (1 MED + 2 MED edge-cases + 4 LOW):
+
+- **R1-M7 — `_tripleKey` dedup not normalization-aware.** Case/trailing-whitespace/Unicode (NFC vs NFD) variants slip past duplicate detection. macOS case-insensitive filesystem catches most case-variants via the skill-dir existence check. Fix path: normalize all 3 components via `.normalize('NFC').trim().toLowerCase()` before building the triple key. Revisit if reported by operators.
+- **R1-M9 — `--dry-run` runs disk-existence check** on `skill_name`. Operators trying to preview the row format before creating the skill dir get a hard error. Defensible today — dry-run validates what registration *would* check. Fix path: accept `{dryRun: true}` option in `validateInput` and demote the skill-exists error to a warning when dry-run is set.
+- **R1-L2 — Formula sanitization idempotence on literal `=foo` rows.** `_sanitizeFormula` is idempotent only when the original escape was applied; a hand-edited CSV with literal `=foo` would get a `'` prepended on every `writeRow` call. No committed CSV contains such a row today. Fix path touches upstream Story 2.1 (`_sanitizeFormula`).
+- **R1-L4 — Test 7 couples to `fs-extra.renameSync` call-site.** If a future refactor destructures `const { renameSync } = require('fs-extra')` in the audit tool, the monkey-patch silently misses. Fix path: dependency-inject `renameSync` into `_atomicWrite` or stub at `node:fs` level.
+- **R1-L5 — FR16 merge-collision test missing.** Test 11 seeds a bare skill dir with no SKILL.md `dependencies:` frontmatter, so `scanBmmDependencies` returns 0 rows — the `mergePreservingManual` dedup path isn't exercised for a skill that BOTH exists in the CSV and is auto-detected. Fix path: extend Test 11 seeding to write SKILL.md with `dependencies: [bmad-agent-pm]`.
+- **R1-L6 — SKILL.md trigger phrase overlap risk.** "register my skill" / "register custom skill" might collide with future registration/export skills. No collision today. Revisit as the skill catalog grows.
+- **R1-L7 — Workflow.md doesn't offer `--dry-run` as an operator affordance.** Cautious operators asking "show me what would happen" don't get a preview step by default. Fix path: add a bullet to workflow.md Phase 2.
+
+Round 2 code review added 10 additional `defer` items:
+
+- **R2-M1 — R1-H1 concurrency test is not actually concurrent.** `Promise.all([setTimeout(…, 0), setTimeout(…, 0)])` runs serially on Node's single-threaded event loop. `_withCsvLock` is synchronous → callback 1 completes the full lock cycle before callback 2 starts. Test passes regardless of lock correctness. Fix path: spawn two `runScript` subprocesses in parallel; assert both rows land. Deferred because the lock is correct in principle; the fix requires adding real subprocess parallelism to the test harness.
+- **R2-M3 — Silent `writeSync(fd, String(pid))` failure weakens forensic value of stale-lock diagnosis.** The pid in the lockfile is meant to help operators verify staleness before `rm`. A silent write failure means no pid lands. Low probability on modern Node.
+- **R2-M4 — Duplicate-flag detection doesn't fire for `--skill foo --skill` (trailing no-value).** Missing-value error fires first; operator sees wrong error. Edge-case where both technically apply. Fix path: detect seen-before-value-fetch.
+- **R2-M7 — Unverified-but-written exit 0 ambiguity.** When verification fails fail-soft, the CLI exits 0 without REGISTERED marker. LLM parsers correctly treat as not-success; scripted callers keyed only on exit code treat as success. Could emit `REGISTRATION_UNVERIFIED: <triple>` as a distinct machine marker.
+- **R2-M8 — Non-TTY guard rejects piped-with-data stdin without hint.** `echo 'foo' | convoke-register-skill` silently refused rather than explaining pipe mode is unsupported. Minor UX.
+- **R2-M9 — `process.stdin.isTTY` edge cases.** Current `!process.stdin.isTTY` coercion works but is "accidentally correct" for `undefined`. Defensive hardening could explicitly check type.
+- **R2-L1 — `verifyRegistration` "not found" return shape lacks discriminator.** `{ok: false}` with no `error`/`mismatch` is indistinguishable from other failure modes. Programmatic consumers want `reason: 'not-found'` field.
+- **R2-L2 — Cascade errors when `--key <value>` fails.** Positional-argument error follows the missing-value error, adding noise. Fix path: advance `i++` past the intended-value token even when rejected.
+- **R2-L3 — `--dry-run` doesn't acquire the lockfile.** Preview could be stale under concurrent writers. Low impact — dry-run is advisory.
+- **R2-L4 + R2-L5 — CRLF-edited CSV trim interactions + stale-lock forensics hint.** Both polish.
+
+---
+
 ## Deferred from: code review of v63-2-3-integrate-registry-gate-into-convoke-update (2026-04-24)
 
 Round 1 code review added 2 `defer` items — both LOW, both CI-hygiene concerns with no live correctness impact:
