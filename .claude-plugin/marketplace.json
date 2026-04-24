@@ -1,0 +1,25 @@
+{
+  "name": "convoke",
+  "owner": { "name": "Amalik Amriou" },
+  "license": "MIT",
+  "repository": "https://github.com/amalikamriou/convoke-agents",
+  "keywords": ["bmad", "discovery", "vortex", "product-discovery", "innovation"],
+  "plugins": [
+    {
+      "name": "convoke-vortex",
+      "source": "./",
+      "description": "Vortex Framework — 7-stream product discovery for IT transformation consultants.",
+      "version": "4.0.0",
+      "author": { "name": "Amalik Amriou" },
+      "skills": [
+        "./_bmad/bme/_vortex/agents/contextualization-expert",
+        "./_bmad/bme/_vortex/agents/discovery-empathy-expert",
+        "./_bmad/bme/_vortex/agents/research-convergence-specialist",
+        "./_bmad/bme/_vortex/agents/hypothesis-engineer",
+        "./_bmad/bme/_vortex/agents/lean-experiments-specialist",
+        "./_bmad/bme/_vortex/agents/production-intelligence-specialist",
+        "./_bmad/bme/_vortex/agents/learning-decision-expert"
+      ]
+    }
+  ]
+}
