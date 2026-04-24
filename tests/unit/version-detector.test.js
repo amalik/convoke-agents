@@ -6,6 +6,7 @@ const os = require('os');
 const yaml = require('js-yaml');
 
 const versionDetector = require('../../scripts/update/lib/version-detector');
+const { AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
 
 describe('getTargetVersion', () => {
   it('returns a valid semver string', () => {
@@ -177,12 +178,75 @@ describe('detectInstallationScenario', () => {
     assert.equal(versionDetector.detectInstallationScenario(tmpDir), 'corrupted');
   });
 
-  it('returns complete when all required files exist', async () => {
+  it('returns complete when all 7 agents exist in skill-dir layout', async () => {
     const vortexDir = path.join(tmpDir, '_bmad/bme/_vortex');
-    await fs.ensureDir(path.join(vortexDir, 'agents'));
+    const agentsDir = path.join(vortexDir, 'agents');
+    await fs.ensureDir(agentsDir);
     await fs.ensureDir(path.join(vortexDir, 'workflows'));
-    await fs.writeFile(path.join(vortexDir, 'agents', 'contextualization-expert.md'), '# Emma');
-    await fs.writeFile(path.join(vortexDir, 'agents', 'lean-experiments-specialist.md'), '# Wade');
+    // Post-R1-H4: detectInstallationScenario iterates ALL 7 AGENT_IDS and
+    // accepts either flat `.md` or skill-dir `<id>/SKILL.md` shape. Seed
+    // the canonical v4.0 skill-dir layout here.
+    for (const agentId of AGENT_IDS) {
+      const skillDir = path.join(agentsDir, agentId);
+      await fs.ensureDir(skillDir);
+      await fs.writeFile(path.join(skillDir, 'SKILL.md'), `# ${agentId}\n`);
+    }
     assert.equal(versionDetector.detectInstallationScenario(tmpDir), 'complete');
+  });
+
+  it('returns partial on mixed-shape drift — disjoint (R1-H4 + R2-H6)', async () => {
+    const mixedDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-mixed-'));
+    try {
+      const vortexDir = path.join(mixedDir, '_bmad/bme/_vortex');
+      const agentsDir = path.join(vortexDir, 'agents');
+      await fs.ensureDir(agentsDir);
+      await fs.ensureDir(path.join(vortexDir, 'workflows'));
+      await fs.writeFile(path.join(vortexDir, 'config.yaml'), yaml.dump({ version: '4.0.0' }));
+      // Seed 4 agents as flat `.md`, 3 as skill-dir — disjoint mid-migration
+      // drift (different agents in different shapes).
+      const flatIds = AGENT_IDS.slice(0, 4);
+      const dirIds = AGENT_IDS.slice(4);
+      for (const id of flatIds) {
+        await fs.writeFile(path.join(agentsDir, `${id}.md`), `# ${id}`);
+      }
+      for (const id of dirIds) {
+        const skillDir = path.join(agentsDir, id);
+        await fs.ensureDir(skillDir);
+        await fs.writeFile(path.join(skillDir, 'SKILL.md'), `# ${id}\n`);
+      }
+      // R2-H6: partial (not corrupted) so refreshInstallation auto-remediates.
+      assert.equal(versionDetector.detectInstallationScenario(mixedDir), 'partial');
+    } finally {
+      await fs.remove(mixedDir);
+    }
+  });
+
+  // R2-M6: per-agent dual-presence — single agent has BOTH flat `.md` AND
+  // skill-dir `<id>/SKILL.md` simultaneously. Failure mode is partial R1-H2
+  // cleanup (backup succeeded, flat removal failed). Should route to mixed-
+  // shape branch and return 'partial' so refresh auto-remediates.
+  it('returns partial on per-agent dual-presence (R2-M6)', async () => {
+    const dualDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-dual-'));
+    try {
+      const vortexDir = path.join(dualDir, '_bmad/bme/_vortex');
+      const agentsDir = path.join(vortexDir, 'agents');
+      await fs.ensureDir(agentsDir);
+      await fs.ensureDir(path.join(vortexDir, 'workflows'));
+      await fs.writeFile(path.join(vortexDir, 'config.yaml'), yaml.dump({ version: '4.0.0' }));
+      // Seed 1 agent with BOTH shapes; the other 6 with skill-dir only.
+      const dualId = AGENT_IDS[0];
+      const dualSkillDir = path.join(agentsDir, dualId);
+      await fs.ensureDir(dualSkillDir);
+      await fs.writeFile(path.join(dualSkillDir, 'SKILL.md'), `# ${dualId}\n`);
+      await fs.writeFile(path.join(agentsDir, `${dualId}.md`), `# ${dualId}`);
+      for (const id of AGENT_IDS.slice(1)) {
+        const skillDir = path.join(agentsDir, id);
+        await fs.ensureDir(skillDir);
+        await fs.writeFile(path.join(skillDir, 'SKILL.md'), `# ${id}\n`);
+      }
+      assert.equal(versionDetector.detectInstallationScenario(dualDir), 'partial');
+    } finally {
+      await fs.remove(dualDir);
+    }
   });
 });
