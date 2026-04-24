@@ -54,13 +54,14 @@ describe('refreshInstallation — Vortex excluded_agents (U8)', () => {
   });
 
   it('does not copy the excluded agent file on refresh', async () => {
-    // Remove the pre-existing agent file so we can assert refresh did not re-copy it.
-    const agentPath = path.join(tmpDir, `_bmad/bme/_vortex/agents/${EXCLUDED_ID}.md`);
-    if (fs.existsSync(agentPath)) await fs.remove(agentPath);
+    // Story v63-3-1: Vortex now uses skill-dir layout (<id>/SKILL.md).
+    const agentPath = path.join(tmpDir, `_bmad/bme/_vortex/agents/${EXCLUDED_ID}/SKILL.md`);
+    const agentDir = path.join(tmpDir, `_bmad/bme/_vortex/agents/${EXCLUDED_ID}`);
+    if (fs.existsSync(agentDir)) await fs.remove(agentDir);
 
     await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
 
-    assert.ok(!fs.existsSync(agentPath), `${EXCLUDED_ID}.md must not be copied when excluded`);
+    assert.ok(!fs.existsSync(agentPath), `${EXCLUDED_ID}/SKILL.md must not be copied when excluded`);
   });
 
   it('does not generate skill wrapper for the excluded agent', async () => {
@@ -99,18 +100,20 @@ describe('refreshInstallation — Vortex excluded_agents (U8)', () => {
     const content = fs.readFileSync(manifestPath, 'utf8');
     assert.ok(!content.includes(`bmad-agent-bme-${EXCLUDED_ID}`),
       'manifest must not reference the excluded agent canonicalId');
-    assert.ok(!content.includes(`agents/${EXCLUDED_ID}.md`),
-      'manifest must not reference the excluded agent path');
+    assert.ok(!content.includes(`_vortex/agents/${EXCLUDED_ID}/SKILL.md`),
+      'manifest must not reference the excluded Vortex agent path');
   });
 
   it('still copies non-excluded agents (no over-filter)', async () => {
     const kept = AGENTS.find(a => a.id !== EXCLUDED_ID);
-    const keptPath = path.join(tmpDir, `_bmad/bme/_vortex/agents/${kept.id}.md`);
-    if (fs.existsSync(keptPath)) await fs.remove(keptPath);
+    // Story v63-3-1: Vortex skill-dir layout.
+    const keptPath = path.join(tmpDir, `_bmad/bme/_vortex/agents/${kept.id}/SKILL.md`);
+    const keptDir = path.join(tmpDir, `_bmad/bme/_vortex/agents/${kept.id}`);
+    if (fs.existsSync(keptDir)) await fs.remove(keptDir);
 
     await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
 
-    assert.ok(fs.existsSync(keptPath), `non-excluded agent ${kept.id}.md must still be copied`);
+    assert.ok(fs.existsSync(keptPath), `non-excluded agent ${kept.id}/SKILL.md must still be copied`);
   });
 
   it('updates config.yaml so agents list excludes the agent and excluded_agents is preserved', async () => {
