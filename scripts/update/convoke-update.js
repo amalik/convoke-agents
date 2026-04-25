@@ -7,6 +7,7 @@ const migrationRunner = require('./lib/migration-runner');
 const registry = require('./migrations/registry');
 const { findProjectRoot } = require('./lib/utils');
 const { readChangelogEntries } = require('./lib/changelog-reader');
+const { runCompatPreflight } = require('./lib/compat-preflight');
 // Story v63-2-3: post-upgrade governance gate. `checkBmmDependencies` is
 // lazy-required inside `_runPostUpgradeGate` (Round 1 R1-M2 fix) so a
 // load-time error in convoke-doctor can't abort convoke-update startup, and
@@ -233,6 +234,10 @@ async function main() {
   console.log('');
 
   const projectRoot = findProjectRoot();
+
+  // Story v63-3-2 (FR23): runtime BMAD-version preflight (soft-warn only).
+  if (projectRoot) runCompatPreflight(projectRoot);
+
   const assessment = assessUpdate(projectRoot);
 
   switch (assessment.action) {
