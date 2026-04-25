@@ -13,6 +13,7 @@
     "_bmad/bme/_portability/",
     "_bmad/bme/_team-factory/",
     ".claude-plugin/",
+    ".claude/skills/bmad-audit-skill-dirs/",
     "INSTALLATION.md",
     "UPDATE-GUIDE.md",
     "CHANGELOG.md",
@@ -30,6 +31,7 @@
     "convoke-doctor": "scripts/convoke-doctor.js",
     "convoke-register-skill": "scripts/convoke-register-skill.js",
     "convoke-validate-marketplace": "scripts/audit/validate-marketplace.js",
+    "convoke-audit-skill-dirs": "scripts/audit/audit-skill-dirs.js",
     "convoke-migrate-artifacts": "scripts/migrate-artifacts.js",
     "convoke-portfolio": "scripts/lib/portfolio/portfolio-engine.js",
     "convoke-export": "scripts/portability/convoke-export.js"
