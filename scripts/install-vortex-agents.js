@@ -4,6 +4,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { refreshInstallation } = require('./update/lib/refresh-installation');
 const { findProjectRoot } = require('./update/lib/utils');
+const { runCompatPreflight } = require('./update/lib/compat-preflight');
 const { AGENTS } = require('./update/lib/agent-registry');
 
 const BOLD = '\x1b[1m';
@@ -165,6 +166,10 @@ async function main() {
   try {
     // Use findProjectRoot for existing projects, fall back to cwd for fresh installs
     const projectRoot = findProjectRoot() || process.cwd();
+
+    // Story v63-3-2 (FR23): runtime BMAD-version preflight. Soft-warn only —
+    // emits stderr WARNING when BMAD < 6.3 or absent; never blocks install.
+    runCompatPreflight(projectRoot);
 
     printBanner();
     checkPrerequisites(projectRoot);
