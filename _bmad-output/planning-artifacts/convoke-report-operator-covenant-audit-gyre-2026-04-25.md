@@ -1,0 +1,430 @@
+---
+initiative: convoke
+artifact_type: report
+created: '2026-04-25'
+schema_version: 1
+---
+
+# Gyre Covenant Audit Report (A39 / IN-73)
+
+**Scope:** Gyre-team Operator Covenant audit — first audit of the Gyre team (4 agents × 1 representative workflow per agent × 7 Operator Rights = 28 cells) under the locked methodology (oc-1-1 §2.3 / §2.4 / §2.6 + A10 reproducibility gate + A28 Step Selection + A29 Skill Selection). Establishes Gyre's N=4 baseline for T1 trigger evaluation per [convoke-epic-operator-covenant.md §Retrofit Trigger Rule](convoke-epic-operator-covenant.md). Contributes the second team-audit input required for P21 Epic 2 Story 2.3 Publication Gate clearance per A40 amendment 2026-04-21 (gate-counting-status pending A41 definition of "portfolio audit" granularity).
+
+**Headline finding (PROVISIONAL — A10 gate FAILED, see §7.1; ALSO subject to R2 verdict-overturn cascade — see §4.4 Coach R5 + §4.5 Notes):** **T1 *would* fire for Gyre on TWO rights (provisional verdicts)** under the main audit's reading post-R2:
+
+**Right to a default — T1 fires PROVISIONAL (2/4 fails, 50% compliance).** Two distinct mechanisms:
+- **Scout/stack-detection × Right to a default — FAIL (multi-service branch).** Confirms oc-1-1 §3.5 D5a finding under the fuller team picture; same surface (`step-01-scan-filesystem.md` §7) lists detected services in a table without proposing a default service to analyze.
+- **Coach/model-review × Right to a default — FAIL (Review Mode menu mechanism per main audit; A10 reviewers diverged on which surface applies — see §7.1 Cell 1 disagreement). `step-01-load-context.md` §5 asks "What would you like to review?" with 4 options (Review Model / Review Findings / Both / skip) without proposing a default mode — contrast oc-1-1 §8.5 Loom add-team R1 PASS pattern: "Default suggestion: ...".** Coach lacks this default-suggestion pattern.
+
+**Right to pause — T1 fires PROVISIONAL (2/4 fails, 50% compliance) — newly added in R2 overturn cascade 2026-04-25.** Two distinct mechanisms:
+- **Scout/stack-detection × Right to pause — FAIL (single-service auto-decide branch).** Confirms oc-1-1 §3.5 D5a finding; auto-advances to step-02 with no operator override option.
+- **Coach/model-review × Right to pause — FAIL (§4 dangling deferred-review prompt).** Verdict overturned PASS → FAIL in R2 per file evidence verification (EC-R2-M5): the deferred-review prompt at line 60 lacks a halt marker and §5's wait does not consume it; canonical "prompt-without-wait" R5 FAIL pattern. Original PASS verdict rested on a verifiably false composition claim (now corrected).
+
+The overall verdict is suspended pending A10 clearance per A41 + v4+ refresh.
+
+**Provisional status:** A10 reproducibility pass (§7.1) returned **1/3 pairwise A-vs-B agreement = 33%** — the only A10-grounded metric per oc-1-1 §2.5 + A10 definition (R2 patch reverted earlier "verdict-concurrence-with-main = 2/3" as non-A10-grounded per AA-R2-M1: A10 explicitly operationalizes blind A-vs-B agreement, not main-audit-as-third-reviewer). The two A10 reviewers and the main audit produced **three distinct readings** of Coach × Right to a default: PASS (Reviewer A — applied R1 to file-loading branch with fallback paths), FAIL on file-loading branch (Reviewer B — different mechanism than main audit), FAIL on Review Mode menu (main audit). The disagreement validates §9 ambiguities **#1 and #4** as operationally divisive, not theoretical (§9 #3 vacuous-PASS was not directly tested by any A10 cell — it is methodology-level surfacing in §4.5 / §6.6, separately load-bearing for A41). **Per A24 §8.1 G1 mitigation gate, A39's findings should NOT be treated as load-bearing input to Epic 2 Story 2.1 retrofit scoping until R1-rubric ambiguity is resolved (e.g., via A41 Publication Gate definitional rigor).** A39's contribution to Epic 2 Story 2.3 Publication Gate breadth-coverage requirement (per A40) is structurally satisfied (this IS a second team-audit beyond Vortex), but findings cannot be cited as definitive without the provisional caveat.
+
+**Right to pause (post-R2 overturn cascade)** — see top-of-§1 finding above. **NOTE:** earlier framing claimed "R5 fail rate dilutes to 25% under N=4 expansion → T1 does NOT fire" based on the original Coach R5 = PASS verdict. The R2 overturn (Coach R5: PASS → FAIL) restores R5 to T1-firing status at 50% compliance, mirroring R1. The "dilution" framing was structurally correct at the time of original verdict but is no longer descriptive post-overturn.
+
+**Other rights (under main audit's reading post-R2):** R2/R3/R4/R6 = 100% explicit PASS at 4/4 across the team. Right to pacing (R7) = 100% PASS under broader §2.6 reading; under strict sub-field reading R7 fires T1 at 75% fail rate matching A24's Vortex pacing pattern (per R1 patch P10 + §6.2). **R7 verdict reading-dependent (Reviewer B's worst-case multi-service reading on Scout R7 → FAIL diverges from main audit's PASS) — see §7.1.** Post-R2: of 24 PASS cells, 17 explicit + 4 vacuous + 3 reading-dependent (PASS taxonomy updated in §5 below).
+
+---
+
+## 1. Scope and Non-Scope
+
+**In scope:**
+- Score 4 Gyre agent-owned workflows × 7 Operator Rights = 28 cells using oc-1-1 §2.3 / §2.4 / §2.6 verbatim.
+- Apply A28 Step Selection rule: scope to step-01 with documented rationale (cross-audit comparability with A24 + GC-contract receipt point for 3 of 4 workflows).
+- Apply A29 Skill Selection rule: declare structural dimensions, per-pick classification, selection intent (independent verification — see §2).
+- Compute Gyre (team × Right) row at N=4 and evaluate T1 trigger.
+- Identify retrofit candidates for Epic 2 Story 2.1 scope.
+- A10 reproducibility pass (≥3 cells, ≥80% threshold per oc-1-1 §2.5; 100% bar per A10 v3+ standard).
+
+**Not in scope:**
+- Re-audit of oc-1-1's 8-skill matrix or A24's 4 Vortex workflows. Non-Gyre verdicts stay locked. Specifically, oc-1-1's single Gyre stack-detection cell (§7 line 271) is *re-baselined* into the fuller A39 team picture — A39 supersedes oc-1-1's single-skill Gyre finding for Story 2.1 retrofit scoping purposes, but does NOT re-score the other 7 oc-1-1 skills.
+- Lens's `delta-report` workflow. Pre-Author Decision 1 (A39 spec, 2026-04-25) selected `gap-analysis` as Lens's representative workflow. `delta-report` is a candidate for a follow-up audit if Gyre passes A39 cleanly — not relevant here as A39 trips T1 already.
+- Methodology revision. Any rubric ambiguities surfaced are logged as backlog intakes, not resolved here (§9).
+- T2 (systemic) trigger re-evaluation across all teams. A39 adds 2 new R1 fails (Scout, Coach); a rigorous T2 re-evaluation would mix A39 cells with oc-1-1's frozen non-Gyre cells, violating Anti-Pattern #5 (per A24 §6.4 framing). T2 NOT re-evaluated here.
+
+**Methodology reuse (AC1 affirmation):**
+- Scoring scheme: oc-1-1 §2.3 (strict binary PASS/FAIL, no partial credit, no borderline). Vacuous PASS (no operator decision at step-01) is permitted; rationale per cell in §4.
+- Rubric: oc-1-1 §2.4 (per-right audit questions and PASS/FAIL definitions).
+- Novel-concept glossary: oc-1-1 §2.6 (pre-existing terms list, workflow-inherited rule per Compliance Checklist update, compound-concept treatment).
+- Unit of analysis: oc-1-1 §2.2 — operator-visible interaction surface. Per A28 Step Selection, A39 scopes to step-01 with documented rationale (see §2.3 below). Per Compliance Checklist OC-R0, the 3-layer surface (workflow.md + steps + invoked scripts) must be enumerated; A39 records the 3-layer surface for each workflow in §4 evidence notes.
+
+**Filename references corrected at V-pass (2026-04-25):** post-artifact-governance-migration filenames are `convoke-covenant-operator.md` and `convoke-spec-covenant-compliance-checklist.md` (not the pre-migration `convoke-note-operator-covenant*.md` paths).
+
+---
+
+## 2. Workflow Selection and Representative Step
+
+### 2.1 A29 Selection Discipline declaration (per AC3)
+
+**Structural dimensions used for selection:**
+1. **Workflow phase** — operator-perceived role of the workflow in the Gyre lifecycle: scan / generate / decide / review.
+2. **GC contract role at step-01** — which Gyre handoff contracts (GC1 stack-profile / GC2 capabilities-manifest / GC3 findings-report / GC4 feedback-loop) the workflow consumes or produces at the operator-facing entry point.
+
+**Per-pick classification:**
+
+| # | Workflow | Agent | Phase | GC role at step-01 | Step count |
+|---|---|---|---|---|---|
+| 1 | `stack-detection` | Scout 🔎 | scan | None at input — consumes raw codebase signals (Glob/Grep/Read tools); produces GC1 at step-03 | 3 |
+| 2 | `model-generation` | Atlas 📐 | generate | GC1 consumer (+ optional GC4 amendments check); produces GC2 at step-04 | 4 |
+| 3 | `gap-analysis` | Lens 🔬 | decide | GC2 consumer; produces GC3 at step-05 | 5 |
+| 4 | `model-review` | Coach 🏋️ | review | GC2 + GC3 consumer (+ feedback.yaml check); produces GC4-equivalent feedback amendments | 5 |
+
+**Selection intent: Independent Verification** — 4 distinct phase archetypes (scan / generate / decide / review); no pattern-cluster claim per A29 §independent-verification-mode. Note: 3 of 4 workflows (Atlas / Lens / Coach) are GC-contract consumers at step-01 — see §6 Implications for the GC-schema-at-step-01 cross-team observation pattern relative to A24's Vortex finding (HC-schema-at-step-01 pacing pattern). Scout's position as the sole non-GC-consumer at step-01 makes it the natural control case for that hypothesis.
+
+### 2.2 Pre-Author Decision 1 (Lens workflow pick)
+
+Lens (readiness-analyst) owns 2 workflows: `gap-analysis` and `delta-report`. A39 spec Pre-Author Decision 1 (operator-resolved 2026-04-25, Party Mode John+Winston+Amalik) selected `gap-analysis` for higher comparability with A24's HC-schema-at-step-01 baseline. `delta-report` is logged as a follow-up audit candidate (backlog intake at §11 close; not opened in this report since A39 already trips T1).
+
+### 2.3 Representative step per workflow (A28 Step Selection rule)
+
+A28 requires "≥2 steps OR explicitly scope to single step with documented rationale" (per backlog row line 580: "Rationale examples accepted: scope-matching a prior single-step audit for cross-audit comparability; later steps run headless (no operator-facing surface). Circular rationale like 'step-01 is the highest-concept-density step' explicitly forbidden."). A39 scopes to **step-01 only** for all 4 workflows. **Documented rationale (non-circular):**
+1. **Cross-audit comparability with A24 baseline** — A24 scoped to step-01 across 4 Vortex workflows. Cross-team comparability of A24 Vortex × A39 Gyre at the team-row level requires unit-of-analysis parity. This rationale matches the explicit A28-accepted form ("scope-matching a prior single-step audit for cross-audit comparability").
+2. **GC-contract receipt point for 3 of 4 workflows** — Atlas / Lens / Coach all receive a Gyre handoff contract (GC1 / GC2 / GC2+GC3 respectively) at step-01. The GC-receipt surface is the operator's first contact with a workflow's domain vocabulary load. For Scout, step-01 is the filesystem-scan surface — also the first operator-facing content. Step-01 is therefore the architecturally-aligned representative step for cross-workflow comparison within Gyre.
+
+**Per-workflow step paths:**
+
+| # | Workflow | Step file path | Layer-3 (invoked scripts/CLIs) |
+|---|---|---|---|
+| 1 | `stack-detection` | [`_bmad/bme/_gyre/workflows/stack-detection/steps/step-01-scan-filesystem.md`](../../_bmad/bme/_gyre/workflows/stack-detection/steps/step-01-scan-filesystem.md) | Claude Code Glob/Grep/Read tools (external — not script-shelled) |
+| 2 | `model-generation` | [`_bmad/bme/_gyre/workflows/model-generation/steps/step-01-load-profile.md`](../../_bmad/bme/_gyre/workflows/model-generation/steps/step-01-load-profile.md) | Claude Code Read tool (external) |
+| 3 | `gap-analysis` | [`_bmad/bme/_gyre/workflows/gap-analysis/steps/step-01-load-manifest.md`](../../_bmad/bme/_gyre/workflows/gap-analysis/steps/step-01-load-manifest.md) | Claude Code Read tool (external) |
+| 4 | `model-review` | [`_bmad/bme/_gyre/workflows/model-review/steps/step-01-load-context.md`](../../_bmad/bme/_gyre/workflows/model-review/steps/step-01-load-context.md) | Claude Code Read tool (external) |
+
+**Layer-3 note:** none of the 4 step-01 files shell out to internal Convoke scripts at step-01. All Layer-3 access is via Claude Code's built-in tools (Glob/Grep/Read) — externally-owned per the Compliance Checklist OC-R0 `(external)` qualifier. This means OC-R6 evaluation reduces to Layer 1 + Layer 2 for all 4 cells (no OC-R6 `external-declared` carve-out invoked at step-01 since none of the 4 step-01 surfaces emit shell-error stderr; they handle missing-file branches themselves with explicit remediation messages).
+
+---
+
+## 3. Audit Matrix — Gyre × 7 Rights
+
+Binary verdicts per oc-1-1 §2.3. Evidence notes in §4 cite `file:line` anchored to specific behavior. Rights referenced by name throughout (per AC2; same rule as oc-1-1 AC #2 and A24 AC #2).
+
+| Right | Scout / `stack-detection` step-01 | Atlas / `model-generation` step-01 | Lens / `gap-analysis` step-01 | Coach / `model-review` step-01 |
+|-------|:---:|:---:|:---:|:---:|
+| Right to a default | ❌ | ✅¹ | ✅¹ | ❌ |
+| Right to the full universe | ✅ | ✅ | ✅ | ✅ |
+| Right to rationale | ✅ | ✅ | ✅ | ✅ |
+| Right to completeness | ✅ | ✅ | ✅ | ✅ |
+| Right to pause | ❌ | ✅¹ | ✅¹ | ❌³ |
+| Right to next action | ✅ | ✅ | ✅ | ✅ |
+| Right to pacing | ✅² | ✅² | ✅ | ✅² |
+
+**28 cells scored. 4 FAILs (Scout R1, Scout R5, Coach R1, Coach R5). 24 PASSes. 0 N/A.** *(Coach R5 verdict overturned 2026-04-25 in Round 2 code review — see footnote ³ + §4.4 evidence + §4.5 Notes.)*
+
+¹ Vacuous PASS — step-01 has no operator-decision branch at which the right's PASS/FAIL test could fire. Per oc-1-1 §2.3 spirit: N/A is permitted only when the right cannot apply; for Atlas / Lens step-01 the right *can* apply but the surface presents no decision branch. Vacuous PASS chosen over N/A to preserve the cell as scored. See §4 evidence notes for per-cell rationale.
+
+² Reading-dependent verdict — under broader §2.6 reading (workflow.md vocabulary inherited; data-display content distinguished from decision-mechanic content per A24 §4.2 empathy-map precedent), all three PASS. Under stricter sub-field counting, Scout flips at the §Stack Detection Results table (5 sub-categories), Atlas at the GC1 field enumeration (~6 fields), and Coach at the Previous Feedback table columns. Per A24 §4.4 Notes pattern, the strict alternative is preserved in §4.4 below; the headline verdict uses the broader reading consistent with A24. See §9 ambiguity #1 *(citation corrected from #3 per R2 patch EC-R2-H2; §9 #3 is vacuous-PASS, not R7 charitable/strict counting — that's #1)*.
+
+³ Coach R5 = FAIL — overturned PASS → FAIL 2026-04-25 in Round 2 code review per EC-R2-M5 (verified file structure: deferred-review prompt at line 60 is dangling — no wait marker, no consumption by §5 wait). Original PASS rested on a verifiably false composition claim. See §4.4 Coach R5 evidence + §4.5 Notes "Coach R5 dangling-deferred-review-prompt" entry for full overturn detail.
+
+---
+
+## 4. Per-Cell Evidence
+
+### 4.1 Scout / `stack-detection` step-01-scan-filesystem.md
+
+**Surface enumeration (OC-R0):** [`workflow.md`](../../_bmad/bme/_gyre/workflows/stack-detection/workflow.md) (3 steps overview + GC1 output framing) + [`step-01-scan-filesystem.md`](../../_bmad/bme/_gyre/workflows/stack-detection/steps/step-01-scan-filesystem.md) (7 scan categories + monorepo detection §7) + Claude Code Glob/Grep/Read tools (external — operator does not see tool stderr at step-01).
+
+- **Right to a default — FAIL.** [`step-01-scan-filesystem.md:122–135`](../../_bmad/bme/_gyre/workflows/stack-detection/steps/step-01-scan-filesystem.md#L122) §7 Monorepo / Multi-Service Detection: when ≥2 service roots are detected, the prompt lists services in a table and asks "Which service would you like to analyze? (number or name)" — no proposed default service. Compare oc-1-1 §8.5 Loom add-team R1 PASS pattern (which proposed a default with reasoning). Confirms oc-1-1 §3.5 D5a Gyre R1 FAIL finding under A39's fuller team picture; same surface, same mechanism.
+- **Right to the full universe — PASS.** [`step-01-scan-filesystem.md:148–166`](../../_bmad/bme/_gyre/workflows/stack-detection/steps/step-01-scan-filesystem.md#L148) §FINDINGS COMPILATION: presents all 7 scan categories with Detected/Evidence columns + a "Not detected: [list categories with no evidence found]" line — full universe shown (both detected and absent categories enumerated). Multi-service branch §7 (line 124–135): all detected services tabled before selection prompt — universe shown.
+- **Right to rationale — PASS.** [`step-01-scan-filesystem.md:135`](../../_bmad/bme/_gyre/workflows/stack-detection/steps/step-01-scan-filesystem.md#L135) multi-service prompt closes with "Note: Each service gets its own `.gyre/` directory at its root." — explicit downstream consequence statement (rationale for why service selection matters). Single-service auto-decide path is self-evident from the §"single service" section comment at line 144.
+- **Right to completeness — PASS.** §FINDINGS COMPILATION explicitly says "for each category, record what was found and what was NOT found" (line 20–21 §SCAN SEQUENCE preamble). The `Not detected:` line in the final table caps this. No silent drops; both presence and absence reported.
+- **Right to pause — FAIL.** Load-bearing FAIL: [`step-01-scan-filesystem.md:144`](../../_bmad/bme/_gyre/workflows/stack-detection/steps/step-01-scan-filesystem.md#L144) §"If single service (or monorepo with shared deployment)" auto-advances to step-02 without operator confirmation — the "this is a single-service project" determination is made without operator override option (per oc-1-1 §2.4 R5 FAIL definition: "Auto-advance, silent default"). Confirms oc-1-1 §3.5 D5a Gyre R5 FAIL finding. (Secondary methodology-tension on multi-service prompt at [line 133](../../_bmad/bme/_gyre/workflows/stack-detection/steps/step-01-scan-filesystem.md#L133) implicit-wait vs Checklist OC-R5 strict marker requirement deferred to §4.5 Notes per Round 1 review patch EC-L2 + AA-H1 condensation; A39 follows oc-1-1 §2.4 verbatim per AC1.)
+- **Right to next action — PASS.** Step-01 has no operator-visible error surface; scan failures from Glob/Grep tools are external (per OC-R0 enumeration). The §"single service" auto-decide path emits no error. Multi-service prompt has no error path at step-01 (invalid-selection handling, if any, would surface in step-02). Vacuous PASS pattern.
+- **Right to pacing — PASS (reading-dependent).** Workflow.md inheritance: Stack Profile, GC1 contract, stack detection workflow, step-file architecture, "discover technology indicators", "static detection" — all pre-existing for step-01. Step-01 introduces: in §FINDINGS COMPILATION, 7 categories are displayed (Language/Framework, Container, Orchestration, CI/CD, Observability, Cloud Provider, Communication). Of these, "Container", "CI/CD", "Observability", "Cloud Provider", "Communication" are domain-specific terms but fit within general computing literacy per §2.6 pre-existing list. "Orchestration" and the multi-service prompt's "service root" + ".gyre/ directory per service root" (2 concepts) are the load-bearing novel concepts. Charitable count: 2 novel concepts (PASS, ≤3 budget). Strict count under §4.4 alternative: ~5 novel concepts including Orchestration + service-root + .gyre-directory + category-subdivisions (FAIL, > 3 budget). Headline verdict uses charitable reading per A24 §4.2 empathy-map precedent (data-display surface, not decision-mechanic surface).
+
+### 4.2 Atlas / `model-generation` step-01-load-profile.md
+
+**Surface enumeration (OC-R0):** [`workflow.md`](../../_bmad/bme/_gyre/workflows/model-generation/workflow.md) (4 steps overview + GC1 prereq + GC4 amendment policy + Model Ownership framing) + [`step-01-load-profile.md`](../../_bmad/bme/_gyre/workflows/model-generation/steps/step-01-load-profile.md) (load GC1 + check amendments + present summary) + Claude Code Read tool (external).
+
+- **Right to a default — PASS (vacuous).** Step-01 has no operator-visible decision branch. The file-loading paths handle missing-GC1 with R6-shaped remediation (next-action, not default-value); the regeneration vs first-time framing is informational display. No unresolvable-state branch needing a default value to propose. Per oc-1-1 §2.3 spirit, vacuous PASS preserved over N/A since the right *could* apply if a decision branch were added.
+- **Right to the full universe — PASS.** [`step-01-load-profile.md:53–67`](../../_bmad/bme/_gyre/workflows/model-generation/steps/step-01-load-profile.md#L53) §3 Present Profile Summary displays all 7 GC1 fields (Stack, Deployment, CI/CD, Observability, Communication, Confidence, plus the regeneration / first-time framing) in a structured summary block. Universe of GC1 data shown to operator before any downstream filtering or generation.
+- **Right to rationale — PASS.** [`step-01-load-profile.md:29–38`](../../_bmad/bme/_gyre/workflows/model-generation/steps/step-01-load-profile.md#L29) file-not-found message explains why GC1 is needed: "I need a Stack Profile (GC1) before I can generate a capabilities model" — consequence-shaped rationale. Profile summary lines are data display (no decision rationale needed).
+- **Right to completeness — PASS.** [`step-01-load-profile.md:55–67`](../../_bmad/bme/_gyre/workflows/model-generation/steps/step-01-load-profile.md#L55) profile summary displays all 6 GC1 summary rows (compressed from 7 sub-fields per the load layer at line 24) without operator-relevant omission. *(Field-count corrected per R2 patch EC-R2-M6 — earlier "all 7 fields" was load-layer count, not display-layer count.)* Amendment check at line 41–50 stores amendment list for step-02 — does NOT silently drop amendments; just defers them to the regeneration step. Detection confidence shown at line 61.
+- **Right to pause — PASS (vacuous).** No operator-visible decision branch at step-01. File-not-found path explicitly halts ("Then STOP — do not proceed" line 39). Otherwise auto-advances to step-02 — but auto-advance is at workflow boundary, not at a designated decision (per oc-1-1 §2.4 R5: "every designated decision has explicit halt-and-wait"; if no designated decision exists, no FAIL possible). Vacuous PASS.
+- **Right to next action — PASS.** [`step-01-load-profile.md:29–38`](../../_bmad/bme/_gyre/workflows/model-generation/steps/step-01-load-profile.md#L29) file-not-found error includes 2 concrete remediation paths: "Activate Scout: /bmad-agent-bme-stack-detective; Select [DS] Detect Stack" OR "Select [FA] Full Analysis." Both are commands operator can execute directly. Compare oc-1-1 §8.4 validate-exports R6 FAIL ("path may not exist or may not be a directory" with no how-to-fix) — Atlas's pattern is the opposite shape (clear how-to-fix).
+- **Right to pacing — PASS (reading-dependent).** Workflow.md inheritance: Capabilities Manifest, Stack Profile, GC1, GC2, GC4, "amendments", "regeneration", "model ownership", "amended", "removed" — all pre-existing for step-01. Step-01 introduces the GC1 field-shape (primary_language, primary_framework, container_orchestration, ci_cd_platform, observability_tooling, cloud_provider, communication_protocol — 7 sub-fields). Charitable count under compound-grouping: 1 novel concept ("GC1 field shape"). Strict sub-field counting: ~6-7 novel data-field names. Headline uses charitable reading per A24 precedent. The file-not-found remediation message introduces ~6 concepts (Scout, /bmad-agent-bme-stack-detective slash command, [DS], [FA], "stack detection", "full analysis pipeline") but error-path concepts are not normal-flow surface — separate counting per A24 §4.4 Notes precedent. PASS at charitable reading; FAIL at strict sub-field counting (see §4.4 below + §9 ambiguity #1).
+
+### 4.3 Lens / `gap-analysis` step-01-load-manifest.md
+
+**Surface enumeration (OC-R0):** [`workflow.md`](../../_bmad/bme/_gyre/workflows/gap-analysis/workflow.md) (5 steps overview + GC2 prereq + privacy boundary framing) + [`step-01-load-manifest.md`](../../_bmad/bme/_gyre/workflows/gap-analysis/steps/step-01-load-manifest.md) (load GC2 + filter/group + present analysis plan) + Claude Code Read tool (external).
+
+- **Right to a default — PASS (vacuous).** Same shape as Atlas §4.2 R1 — no operator-decision branch at step-01. File-not-found handled by R6.
+- **Right to the full universe — PASS.** [`step-01-load-manifest.md:51–65`](../../_bmad/bme/_gyre/workflows/gap-analysis/steps/step-01-load-manifest.md#L51) §3 Present Analysis Plan: "Total capabilities: [N] ([N] active, [M] removed by user)" — full universe split into active vs removed, both counts shown. "Limited coverage: [yes/no]" flag for partial coverage. Per-domain capability counts shown before analysis runs.
+- **Right to rationale — PASS.** [`step-01-load-manifest.md:29–38`](../../_bmad/bme/_gyre/workflows/gap-analysis/steps/step-01-load-manifest.md#L29) file-not-found message explains why GC2 is needed. Filter rationale implicit (operator-removed capabilities excluded — operator's own intent). Domain grouping (observability vs deployment+reliability+security) is informational, not a decision point requiring rationale.
+- **Right to completeness — PASS.** [`step-01-load-manifest.md:43`](../../_bmad/bme/_gyre/workflows/gap-analysis/steps/step-01-load-manifest.md#L43) names the exclusion action ("Remove capabilities with `removed: true` from the analysis set"); the actual count is emitted in the Analysis Plan presentation block at [`step-01-load-manifest.md:56`](../../_bmad/bme/_gyre/workflows/gap-analysis/steps/step-01-load-manifest.md#L56) ("Total capabilities: [N] ([N] active, [M] removed by user)"). Removed-by-user capabilities are excluded from analysis but counted in the Total. Reason per exclusion class: "removed: true" (i.e., operator-removed via Coach review) — single class, named. Per-domain split shows capability counts per category. *(Citation corrected from :42 to :43 per R2 patch EC-R2-M4 — :42 was section heading, :43 is action sentence.)*
+- **Right to pause — PASS (vacuous).** Same shape as Atlas §4.2 R5 — no designated operator decision at step-01.
+- **Right to next action — PASS.** [`step-01-load-manifest.md:29–38`](../../_bmad/bme/_gyre/workflows/gap-analysis/steps/step-01-load-manifest.md#L29) file-not-found error includes 2 concrete remediation paths: "Activate Atlas: /bmad-agent-bme-model-curator; Select [GM] Generate Model" OR "Select [FA] Full Analysis." Same shape as Atlas — clear how-to-fix.
+- **Right to pacing — PASS.** Workflow.md inheritance: Capabilities Manifest, GC2, GC3, capability IDs, evidence summaries, observability domain, deployment domain, "absence detection", "compound patterns", "removed: true" — all pre-existing for step-01. Step-01 introduces: "Limited coverage" flag (1 novel concept — workflow.md mentions "absence detection" but not "limited coverage" specifically) + grouping rules ("reliability + security with deployment" — 1 compound grouping concept). Total: ~2 novel concepts, well within ≤3 budget. PASS under both charitable AND strict readings.
+
+### 4.4 Coach / `model-review` step-01-load-context.md
+
+**Surface enumeration (OC-R0):** [`workflow.md`](../../_bmad/bme/_gyre/workflows/model-review/workflow.md) (5 steps overview + GC2/GC3 prereq + 3 review modes + Error Recovery framing) + [`step-01-load-context.md`](../../_bmad/bme/_gyre/workflows/model-review/steps/step-01-load-context.md) (load GC2/GC3/feedback + check deferred flag + ask Review Mode) + Claude Code Read tool (external).
+
+- **Right to a default — FAIL.** [`step-01-load-context.md:65–75`](../../_bmad/bme/_gyre/workflows/model-review/steps/step-01-load-context.md#L65) §5 Ask Review Mode: "What would you like to review? 1. Review Model... 2. Review Findings... 3. Both... Or type 'skip' to go straight to feedback capture." The 4-option menu has no proposed default mode. Compare oc-1-1 §8.5 Loom add-team R1 PASS pattern (which had an explicit "Default suggestion: Based on the team description, suggest the most likely pattern with reasoning"). Coach lacks this default-suggestion pattern despite having clear context to base one on (e.g., "If GC3 exists and feedback.yaml is empty, default to option 3 'Both'; otherwise default to option 1"). Secondary R1 weakness at line 60 deferred-review prompt: "would you like to review now?" yes/no without proposed default — but the deferred-review prompt is conditional (only fires if `review_deferred: true`), so the load-bearing FAIL is the unconditional Review Mode menu at §5.
+- **Right to the full universe — PASS.** [`step-01-load-context.md:42–53`](../../_bmad/bme/_gyre/workflows/model-review/steps/step-01-load-context.md#L42) §3 Display Existing Feedback: when feedback.yaml has entries, ALL prior entries are shown in a table (date / reporter / type / description columns) — no filtering or sampling. §5 Review Mode menu shows all 4 options inline.
+- **Right to rationale — PASS.** [`step-01-load-context.md:52`](../../_bmad/bme/_gyre/workflows/model-review/steps/step-01-load-context.md#L52) Previous Feedback intro: "These entries inform model improvement. You can add more during this review." — rationale for why feedback is shown (downstream consequence: informs model improvement). [`step-01-load-context.md:70–74`](../../_bmad/bme/_gyre/workflows/model-review/steps/step-01-load-context.md#L70) Review Mode options each include a brief description (e.g., "Walk through your capabilities one by one (keep/remove/edit/add)") — matches oc-1-1 §8.3 export-skill R3 PASS pattern ("§1 asks with 4 options each explained with meaning"). *(File:line citations corrected per Round 1 review patches EC-M1, EC-M2.)*
+- **Right to completeness — PASS.** Previous Feedback shown in full if present (no silent sampling). Deferred-review flag honored if present. All 4 Review Mode options shown explicitly.
+- **Right to pause — FAIL** *(verdict overturned 2026-04-25 in Round 2 code review per finding EC-R2-M5 + AA-R2-H3; previous PASS rested on a verifiably false composition claim — see §4.5 Notes for the methodology-application detail).* Load-bearing FAIL: [`step-01-load-context.md:55-77`](../../_bmad/bme/_gyre/workflows/model-review/steps/step-01-load-context.md#L55) §4 Check Deferred Review Flag emits the deferred-review prompt at line 60 ("would you like to review now?") inside a conditional branch but provides no halt marker, no yes/no branching, and no wait pattern — §5 Review Mode menu at line 63 fires unconditionally regardless of operator response (verified 2026-04-25). Per oc-1-1 §2.4 R5 FAIL definition: "**prompt-without-wait**" is the canonical R5 violation. The §5 Review Mode menu's own explicit wait at [line 77](../../_bmad/bme/_gyre/workflows/model-review/steps/step-01-load-context.md#L77) ("Wait for user input.") is a separate decision-point wait, not a wait for the §4 deferred-review prompt's response.
+- **Right to next action — PASS.** [`step-01-load-context.md:23–32`](../../_bmad/bme/_gyre/workflows/model-review/steps/step-01-load-context.md#L23) GC2 file-not-found error: "Coach needs a capabilities model to review. Please run model generation first: Activate Atlas (Model Curator) and run [GM] Generate Model. Or run [FA] Full Analysis to generate everything from scratch." — clear remediation. GC3 missing path ([line 37](../../_bmad/bme/_gyre/workflows/model-review/steps/step-01-load-context.md#L37)): "note that findings review is unavailable but model review can proceed" — tells operator what's unavailable but offers alternative path. Workflow.md §Error Recovery extends with amendment-write-failure recovery pattern. *(GC3 line citation corrected per Round 1 review patch EC-M3.)*
+- **Right to pacing — PASS (reading-dependent).** Workflow.md inheritance: Capabilities Manifest, Findings Report, GC2, GC3, capabilities, findings, amendments, feedback, Review Model, Review Findings, Both, "feedback.yaml" — all pre-existing for step-01. Step-01 introduces: "Previous Feedback" table (1 compound concept — table format with 4 sub-columns: date / reporter / type / description) + "deferred review" flag (1 concept) + "skip" mode (treated as pre-existing per §2.6 list). Charitable count: 2 novel concepts (PASS). Strict sub-field counting: ~5 novel (4 table columns + deferred flag) (FAIL). Headline uses charitable reading per A24 §4.4 Notes precedent.
+
+### 4.5 Notes (AC6 supporting material)
+
+- **Compound-concept counting — charitable (default) vs strict.** §4.1 / §4.2 / §4.4 R7 evidence notes use charitable compound-grouping (treating each named compound — e.g., "GC1 field shape", "Stack Detection Results table", "Previous Feedback table" — as 1 concept). This matches the reader-natural interpretation validated by the A10 reproducibility pass §7.1 below: 2 independent reviewers both arrived at charitable counts without prompting toward either reading. Under strict §2.6 sub-field counting: §4.1 strict count rises to ~5 (Orchestration / service-root / .gyre-per-root / sub-categories), §4.2 strict count rises to ~6-7 (GC1 sub-fields), §4.4 strict count rises to ~5 (feedback table sub-columns + deferred flag). All three would FAIL under strict reading. **§4.3 Lens R7 PASSes under both readings** (only ~2 novel concepts surfaced). §2.6 itself is silent on compound treatment — tracked as backlog intake IN-20 → A13 + repeated as §9 ambiguity #1 in this report. Same pattern as A24 §4.4 Notes.
+- **Vacuous PASS for R1 / R5 on Atlas + Lens.** Two cells (R1, R5) on each of Atlas and Lens scored vacuous PASS — step-01 has no operator-decision branch at which the right's PASS/FAIL test could fire. This is a pattern: workflows whose step-01 is data-loading + presentation (no operator input) cannot generate R1 or R5 violations at step-01. The PASS verdicts are accurate but uninformative — they don't strengthen or weaken Gyre's R1/R5 standing. If the audit scope expanded to ≥2 steps per A28 (deeper sample), Atlas and Lens R1/R5 cells would be re-tested at the actual operator-decision points (step-02 generate, step-04 walkthrough). A39's step-01 scope intentionally trades depth for cross-audit comparability with A24.
+- **R5 multi-service-branch persistence under N=4 dilution.** Scout/stack-detection R5 = FAIL is a single-cell finding (multi-service branch auto-decides single-service mode without operator confirmation). The other 3 Gyre cells PASS R5 (vacuous-PASS for Atlas/Lens; explicit-PASS for Coach via "Wait for user input"). Team-level R5 fail rate = 1/4 = 25%, **below T1 threshold of 30%**. The R5 issue persists at the cell level (and oc-1-1 D5a flagged it) but no longer rises to team-level T1 firing under the fuller team picture. This is a **scope-aggregate effect** of the team expansion — the same issue, now contextualized against 3 cells where R5 doesn't apply or PASSes, no longer triggers team-level retrofit. See §6 Implications for the methodological implication.
+- **GC-receipt asymmetry across Gyre.** 3 of 4 Gyre workflows (Atlas / Lens / Coach) consume GC contracts at step-01. Scout is the sole non-GC-consumer at step-01 (consumes raw codebase via Glob/Grep). Per A24 §6.2 "shared architectural pattern" finding (HC-schema-at-step-01 pacing FAIL across 2 of 3 Vortex workflows), the Gyre analog would be GC-schema-at-step-01 pacing FAIL — but A39 finds **Atlas / Lens / Coach all PASS R7 under broader reading**, and Lens PASSes under both readings. Strict-reading FAILs concentrate on the GC1-receiving (Atlas) and feedback-table-presenting (Coach) surfaces, not the GC2-receiving (Lens) surface. So Gyre does NOT replicate A24's HC-schema-at-step-01 pattern at the headline level under the broader reading consistent with A24's own scoring. See §6.2 for cross-team observation.
+- **Compliance Checklist OC-R5 vs oc-1-1 §2.4 R5 methodology tension.** Compliance Checklist OC-R5 is stricter than oc-1-1 §2.4 R5 (Checklist requires literal HALT marker; oc-1-1 §2.4 R5 accepts implicit wait per A24 lean-persona §8.7 precedent). A39 follows oc-1-1 §2.4 verbatim per AC1. Under Checklist OC-R5, additional cells might flip to FAIL: Scout multi-service prompt (no literal HALT — already FAIL on auto-advance issue), Atlas / Lens vacuous-PASS cells (no decision = no halt-marker = N/A vs FAIL ambiguity), Coach §5 Review Mode menu (still PASS — has literal "Wait for user input" at line 77). Net effect under stricter Checklist reading: minimal change to headline (Coach R5 already FAIL on §4 dangling-prompt mechanism per Round 2 overturn). Logged as §9 ambiguity #2.
+
+- **Coach R5 dangling-deferred-review-prompt — methodology-application observation post-R2 verdict overturn.** The §4.4 Coach R5 cell was originally scored PASS at A39 first authoring, on the basis that the deferred-review prompt (line 60) was conditional and "fed directly into the §5 menu where the explicit wait fires" — characterized as implicit wait + downstream-explicit-wait composition per A24 §4.x precedent. Round 2 code review (Edge Case Hunter EC-R2-M5 + Acceptance Auditor AA-R2-H3) verified the file structure: the deferred-review prompt at line 60 has no halt marker, no yes/no branching, no wait pattern; §5 fires unconditionally regardless of yes/no answer. The composition claim was structurally incorrect. **The "implicit wait + downstream-explicit-wait composition" precedent applies to designs where the downstream wait CONSUMES the upstream prompt's response (as in lean-persona §8.7 where "Your Turn:" prompt halts for the operator's typed input).** Coach §4 → §5 doesn't have this consumption relationship; §5 ignores §4's prompt response. Per oc-1-1 §2.4 R5 strict reading, the §4 prompt-without-wait is a canonical R5 FAIL. **The verdict was overturned PASS → FAIL in R2.** This is the first within-A39 verdict overturn; the §3 matrix, §5 row, §6.1 retrofit scope, §10 activity log, and §1 headline were updated to reflect Coach R5 = FAIL. **Implication for future Covenant audits (A41 input):** the implicit-wait + downstream-explicit-wait composition rule needs an explicit consumption-relationship test ("does the downstream wait halt for the upstream prompt's specific response?") to prevent future composition-claim drift.
+
+---
+
+## 5. Gyre (Team × Right) Row — T1 Trigger Evaluation
+
+N_gyre = 4 (Scout / Atlas / Lens / Coach). Meets T1's N ≥ 3 floor.
+
+Per AC8: `gyre_fail_rate = fails_in_gyre / N_gyre_audited`. Compliance shown alongside for readability.
+
+| Right | Scout | Atlas | Lens | Coach | **Fails / N** | **Fail rate** | **Compliance** | **T1 verdict (< 70% compliance at N ≥ 3)** |
+|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Right to a default** | ❌ | ✅¹ | ✅¹ | ❌ | **2/4** | **50%** | **50%** | **T1 fires PROVISIONAL (50% < 70%; A10 not cleared per §7.1)** |
+| Right to the full universe | ✅ | ✅ | ✅ | ✅ | 0/4 | 0% | 100% | Does not fire |
+| Right to rationale | ✅ | ✅ | ✅ | ✅ | 0/4 | 0% | 100% | Does not fire |
+| Right to completeness | ✅ | ✅ | ✅ | ✅ | 0/4 | 0% | 100% | Does not fire |
+| **Right to pause** | ❌ | ✅¹ | ✅¹ | ❌³ | **2/4** | **50%** | **50%** | **T1 fires PROVISIONAL (50% < 70%; cell 4 overturned 2026-04-25 R2 — see footnote ³)** |
+| Right to next action | ✅ | ✅ | ✅ | ✅ | 0/4 | 0% | 100% | Does not fire |
+| Right to pacing | ✅² | ✅² | ✅ | ✅² | 0/4 | 0% | 100% | Does not fire (under broader §2.6 reading) |
+
+¹ Vacuous PASS — see §3 footnote 1 + §4.5 Notes for definition + per-cell rationale.
+² Reading-dependent verdict — see §3 footnote 2 + §4.5 Notes. Under strict sub-field counting, R7 fail rate would be 3/4 = 75% (only Lens PASSes under both readings) → **T1 FIRES under strict reading too**, but at 25% compliance. Headline uses charitable reading per A24 §4.4 precedent. The reading dependency is noted as §9 ambiguity #1.
+
+**Gyre team cell summary (post-R2 overturn):** **two concentrated bottlenecks** under main audit reading: Right to a default (2/4 fails — Scout multi-service branch + Coach Review Mode menu) AND Right to pause (2/4 fails — Scout single-service auto-decide + Coach §4 dangling deferred-review prompt). All other rights compliant under headline reading (with vacuous-PASS / reading-dependent caveats per §3 footnotes — see PASS taxonomy line below). Under strict R7 sub-field reading, R7 also fires T1 at 75% fail rate (R2 patch addresses §6.2 framing).
+
+T1 verdict on Right to a default is **reading-dependent under §7.1 A10 outcome** — main audit reads FAIL on Coach R1 (§5 Review Mode menu mechanism); Reviewer A read PASS on Coach R1 (file-loading branch mechanism); Reviewer B read FAIL on Coach R1 (file-loading branch, different mechanism than main audit). Three distinct readings on the load-bearing cell makes the verdict **provisional, not robust** — earlier wording "robust" was incorrect and corrected per R1 code review patch P2.
+
+T1 verdict on Right to pause is also provisional — the Coach R5 overturn (PASS → FAIL on §4 dangling deferred-review prompt) was applied in R2 same-round per `verify_external_identifiers` rule (file evidence disconfirmed the prior PASS's composition claim); operator may invoke Round 3 if they want the overturn cascade independently sanity-checked, OR the v4+ refresh under clarified A41 rubric will re-test naturally. T1 verdict on Right to pacing is reading-dependent per footnote 2.
+
+**PASS taxonomy (updated post-R2 cascade)**: of the 24 PASS cells in §3, the breakdown is:
+- **17 explicit PASS** — operator-decision branch present at step-01; rubric test fired; verdict passes.
+- **4 vacuous PASS** — no operator-decision branch at step-01 (Atlas R1+R5, Lens R1+R5); rubric test could not fire; PASS by absence-of-violation rather than affirmative compliance. See §4.5 Notes.
+- **3 reading-dependent PASS** — Scout R7 / Atlas R7 / Coach R7; charitable compound-grouping → PASS, strict sub-field counting → FAIL; headline uses charitable per A24 §4.4 precedent. See §3 footnote ² + §4.5 Notes.
+
+The "100% compliance on 4 other rights (R2/R3/R4/R6)" framing is most accurate as: **R2/R3/R4/R6 = 100% explicit PASS across all 4 cells; R7 = 100% under broader reading only**. Vacuous-PASS cells (R1+R5 on Atlas+Lens) PASS by absence — uninformative evidence rather than affirmative compliance. Total Pass count decreased 25 → 24 in R2 due to Coach R5 overturn; total FAIL count increased 3 → 4.
+
+---
+
+## 6. Implications
+
+### 6.1 Epic 2 Story 2.1 retrofit scope — 2 new cells PROPOSED (provisional pending A10 clearance)
+
+**Status note:** §7.1 A10 pass returned 1/3 pairwise agreement (the only A10-grounded metric per oc-1-1 §2.5 + A10 definition; see §7.1 below). The 4 cells below are **proposed retrofit additions, not committed retrofits.** Per §8.1 G1 mitigation gate, commitment is gated on A41 rubric clarification + a v4+ refresh re-running A10 against the clarified rubric. Cells are documented here for Epic 2 Story 2.1 governance to evaluate; do not add to retrofit scope without A10 clearance.
+
+**Cell-count semantics (clarified per Round 1 code review patch P4 — addresses BH-H3 contradiction with §1 supersession):** A39 **supersedes** oc-1-1's single-skill Gyre × R1 finding (per §1 non-scope clause: "A39 *re-baselines* into the fuller A39 team picture"). The retrofit cell COMPOSITION is therefore **2 cells total under A39** (R1-G1 Scout + R1-G2 Coach), NOT "2 cells on top of oc-1-1 D5a's retrofit". oc-1-1's R1 finding is structurally the same as R1-G1 (Scout multi-service branch) — A39's R1-G1 is a higher-fidelity re-statement of the same cell, not an additional cell. R1-G2 (Coach Review Mode menu) is the single net-new retrofit cell from A39's expansion to N=4. **Net retrofit delta vs oc-1-1:** +1 cell (R1-G2 Coach), with R1-G1 Scout replacing oc-1-1's pre-existing Gyre R1 retrofit at higher fidelity:
+
+- **R1-G1: Scout / `stack-detection` step-01-scan-filesystem.md §7 Multi-Service Detection × Right to a default.** Retrofit pattern: when ≥2 service roots are detected, propose a default service per heuristic (e.g., "the service with the most-recent file modification time" OR "the service whose directory name matches the project name OR is named `api` / `app` / `web`"); show the proposed default with override option ("Use detected default `services/api`? [Y/n] Or pick: 1 / 2 / 3"). Rationale follows A24 §6.1 R7 retrofit shape: split a default-less branch into propose-then-accept-or-override.
+- **R1-G2 (NEW): Coach / `model-review` step-01-load-context.md §5 Ask Review Mode × Right to a default.** Retrofit pattern: based on context (`feedback.yaml` empty? `findings.yaml` exists? prior `review_deferred` flag?), propose a default mode with reasoning and override option. Example: "Default suggestion: option 3 (Both) — your findings.yaml is fresh and feedback.yaml is empty, so a full review will catch the most context. Type Y to accept, or pick: 1 / 2 / 3 / skip." Mirrors oc-1-1 §8.5 Loom add-team R1 PASS pattern explicitly.
+
+**Total Gyre R1 retrofit cells under A39 baseline: 2 cells (R1-G1 + R1-G2).** Net delta vs oc-1-1 in Gyre R1 retrofits: +1 cell (R1-G2 is net-new; R1-G1 supersedes oc-1-1's pre-existing single-skill R1 retrofit at higher fidelity). **Total Gyre retrofit cells overall: 3 cells (R1-G1 + R1-G2 + R5-G1).** Net delta vs oc-1-1 in Gyre retrofits overall: +1 cell — corrected per R2 patch EC-R2-M2 (oc-1-1 §3.5 D5a actually added TWO Gyre retrofits at #10 R1 and #11 R5 per oc-1-1 §9.1 lines 402-403; A39's R1-G1 supersedes #10 and R5-G1 supersedes #11 at higher fidelity, R1-G2 is net-new). Earlier framing claimed "Net delta in Gyre retrofits overall: 0" then "+1 R1 net = 0 overall" was math-incorrect; the R2-overturn-induced R5-G1 addition restores symmetry and yields +1 net overall.
+
+**R5 retrofit (added by R2 overturn 2026-04-25):**
+- **R5-G1 (NEW per R2 overturn): Coach / `model-review` step-01-load-context.md §4 Check Deferred Review Flag × Right to pause.** Retrofit pattern: add an explicit halt-and-wait pattern to the deferred-review prompt at line 60. Mechanical fix: insert a `Wait for response. If "yes" or absent, proceed to §5. If "no", skip §5 and proceed directly to feedback capture (§4 of step-04).` after the prompt. This converts the dangling prompt into a designated decision point with operator-visible branching. Mirrors A24 §6.1 R7 retrofit shape: convert prompt-without-wait to prompt-with-explicit-wait + branching.
+
+**Note on Scout R5 (multi-service auto-decide) — also retrofit-scoped under A39 baseline:**
+- **R5-G2 (was previously NOT retrofit-scoped pre-R2 overturn; restored to retrofit scope post-overturn since team-level R5 now fires T1 at 50% under N=4):** Scout / `stack-detection` step-01-scan-filesystem.md §"If single service" auto-decide × Right to pause. Retrofit pattern: replace the silent auto-advance with an operator-visible confirmation prompt ("Detected single-service project (no monorepo manifests found). Proceed with project root as analysis scope? [Y/n] Or specify service root manually:"). Equivalent to R1-G1 multi-service prompt pattern; same mechanism, different branch.
+
+Other rights: 0 retrofits (no other right trips T1 under main audit reading; R7 reading-dependent — strict reading would add 3 R7 retrofits across Atlas/Coach/Scout, deferred to A41-clarified rubric per §6.2).
+
+*(R2 patch EC-R2-M3: earlier framing attributed "retrofit follows team-level T1 firing, not cell-level FAILs" to "A24 D5a precedent and oc-1-1 §3.5 D5a's reasoning" — the rule is A24-era only; oc-1-1 §3.5 D5a actually added cell-level retrofits per §9.1 #10 and #11. Misattribution corrected: rule cited as A24-only.)*
+
+### 6.2 Cross-team architectural-pattern observation (vs. A24 §6.2)
+
+A24 §6.2 surfaced a "Vortex-wide HC-schema-at-step-01 anti-pattern": 2 of 3 Vortex workflows (`assumption-mapping`, `hypothesis-engineering`) FAILed Right to pacing at step-01 because §3 Input Validation enumerated the full upstream HC schema (frontmatter + body sections) in a single operator-visible round.
+
+**A39 finding for Gyre (reading-dependent — patched per Round 1 review BH-M8):** under the broader §2.6 reading (charitable compound-grouping, used for headline per A24 §4.4 precedent), Gyre does NOT replicate the Vortex pattern. Under the strict sub-field reading, Gyre **does** replicate the pattern (Atlas + Coach + Scout all flip to FAIL on R7 → 75% fail rate, matching A24 Vortex's 75% pacing-FAIL pattern). The "does not replicate" framing in this section is therefore **conditional on reading choice**, not a robust cross-team conclusion. Of the 3 Gyre workflows that consume GC contracts at step-01:
+- Atlas (consumes GC1) — PASSes R7 under both readings (charitable: 1 novel concept; strict: 6-7 novel sub-field concepts — fails under strict). Atlas's "presents profile summary" is a display, not a schema-validation gate; it has no R7-pressure-equivalent of A24's `assumption-mapping` §3 Input Validation.
+- Lens (consumes GC2) — PASSes R7 under both readings (~2 novel concepts). Lens's "filter and group" is purely internal; the operator-visible Analysis Plan is compact.
+- Coach (consumes GC2 + GC3) — PASSes R7 under broader reading (charitable: 2 novel concepts). Coach's GC consumption is implicit (load + check existence); no schema enumeration in operator-visible content.
+
+**Cross-team hypothesis (NOT measured here, candidate for A26 expansion):** the Vortex HC-schema-at-step-01 pattern may be **Vortex-specific** (driven by the Discovery workflow design where step-01 is the contract-validation gate), not **convoke-wide**. Gyre's GC-receipt pattern is structurally different — workflows load the GC quietly and present a compact summary; the schema is not part of operator-facing content. If A26 (Vortex-wide HC-schema audit) ships, this Gyre datapoint should be cited as a cross-team baseline for what "non-pacing-stressed GC/HC consumption at step-01" looks like.
+
+**Honest limitation:** A39's headline R7 verdict is reading-dependent for Atlas and Coach. Under strict sub-field counting, Atlas + Coach + Scout all flip to FAIL on R7, and Gyre would replicate Vortex's pacing pattern at 75% fail rate (3/4). The reproducibility pass §7.1 below is the load-bearing test for which reading prevails — if the A10 cells include an R7 borderline and reviewers agree on charitable, the broader reading is validated; if they disagree, the report should note the unresolved ambiguity.
+
+### 6.3 Discovery vs. Production-readiness pacing structural difference
+
+A24 §6.3 confirmed (under Vortex N=4) that Discovery workflows have a class-level pacing pattern (75% step-01 surfaces FAIL). A39 finds Gyre does **not** show the same pattern at step-01. Possible structural explanation:
+- **Vortex (Discovery):** step-01 is the contract-validation gate (operator submits HC, system validates schema in operator-visible §3). Schema enumeration is the visible work.
+- **Gyre (Production-readiness analysis):** step-01 is the contract-loading gate (system loads GC silently, presents a compact summary). Schema is internal; visible work is the data summary.
+
+This is an **observation, not a methodology claim.** The Discovery/Production-readiness distinction may explain the Vortex/Gyre R7 asymmetry, OR A39's broader-reading scoring may be hiding strict-reading FAILs that would surface in a v3+ refresh. The observation is logged for Covenant v3 (Epic 2 Story 2.3 publication scope) consideration: if Convoke wants to claim "Discovery workflows pace differently than Production-readiness workflows," A26 + a Helm/Forge/Loom audit are needed to substantiate.
+
+### 6.4 T2 (systemic) trigger — out of scope (per AC1 + §1 non-scope)
+
+A39 adds 2 new Right-to-a-default FAILs (Scout R1, Coach R1). A rigorous T2 re-evaluation would mix A39's Gyre cells with A24's Vortex cells and oc-1-1's frozen non-Gyre/non-Vortex cells, which violates A24 Anti-Pattern #5 ("scope = Gyre-team-only"). **T2 is NOT re-evaluated in this report.** Any directional observation about post-A39 systemic Right-to-a-default compliance would mix scope, so no number is emitted here. Observation only: oc-1-1 baseline R1 fail rate was 38% (3/8). A39's 2 new R1 FAILs would mechanically raise the cross-portfolio R1 rate, but the calculation is methodologically invalid until a synchronized full-portfolio refresh.
+
+### 6.5 Covenant v3 audit baseline advances
+
+Per [convoke-epic-operator-covenant.md §Retrofit Trigger Rule](convoke-epic-operator-covenant.md): "Trigger evaluation re-runs after each audit refresh (v1 oc-1-1 = 2026-04-18 baseline; v2 post-IN-12 Vortex-focused re-audit; v3+ post future re-audits)."
+
+**This report is the v3 audit refresh (provisional under A10 failure — see §7.1; also subject to R2 overturn cascade per Coach R5 finding).** Epic 2 §Retrofit Trigger Rule baseline **should be updated provisionally only** (subject to (a) Epic 2 governance ratification; (b) A24 v2 ratification chain integrity; (c) A41 ships and a v4+ refresh achieves A10 clearance under the clarified rubric) to read:
+- v1 oc-1-1 (2026-04-18): Gyre N=1 (single skill: stack-detection), R1 FAIL + R5 FAIL on multi-service branch.
+- v2 A24 (2026-04-19, reproducibility-validated): Gyre row unchanged (A24 was Vortex-only).
+- **v3 A39 (2026-04-25, A10 NOT cleared per §7.1 — reproducibility-NOT-validated; corrected from earlier "reproducibility-validated" per R2 patch EC-R2-H1): Gyre N=4. T1 *would* fire (provisional) on TWO rights: Right to a default (2/4 fails — Scout multi-service + Coach Review Mode menu) AND Right to pause (2/4 fails post-R2 — Scout single-service auto-decide + Coach §4 dangling deferred-review prompt; Coach R5 verdict overturned 2026-04-25 in R2 per file evidence verification). 4 retrofit cells in proposed scope: R1-G1 + R1-G2 + R5-G1 + R5-G2. R7 verdict reading-dependent (charitable PASS / strict FAIL); broader reading used for headline per A24 precedent.**
+
+Epic 2 Story 2.3 Publication Gate precondition "all fails addressed or documented" (per oc-1-1 D3a + A40 amendment 2026-04-21) **should extend** to cover the 2 new Gyre R1 cells upon Epic 2 owner ratification of the v3 baseline. **A39's gate-counting-status is pending A41** (Publication Gate definitional rigor — defines "portfolio audit" granularity; A39 ships independent of A41 per A39 spec scope-note).
+
+### 6.6 Methodological observation: vacuous PASS pattern
+
+Atlas R1 + R5 and Lens R1 + R5 (4 cells total) scored **vacuous PASS** — step-01 has no operator-decision branch at which the right's PASS/FAIL test could fire. This pattern is **new in A39** relative to A24 (where every Vortex step-01 had at least one operator prompt — `assumption-mapping` "Please provide your hypothesis contracts", `empathy-map` "Please define your target user", `hypothesis-engineering` "Please provide your problem definition", lean-persona §8.7 various prompts).
+
+The pattern reflects **structural difference between Discovery workflows (Vortex) and Production-readiness workflows (Gyre)** — Discovery step-01 is operator-input-driven; Production-readiness step-01 is system-loading-driven. This has methodology implications:
+- **A28 Step Selection rule's "scope-to-single-step" rationale is weaker for system-loading step-01 surfaces** because R1/R5 cannot fire without expanding to step-02+. A future Gyre audit refresh that wants to test R1/R5 across the full surface should expand to ≥2 steps per A28 (logged as backlog intake — §9 ambiguity #5).
+- **Vacuous PASS is methodologically distinct from explicit PASS.** For Story 2.3 Publication Gate counting, vacuous PASS cells should arguably be flagged as "untested at step-01 scope" rather than counted as PASSing evidence. A41 (Publication Gate definitional rigor) should consider this distinction when defining "portfolio audit" granularity.
+
+---
+
+## 7. Reproducibility Gate — A10 GATE NOT CLEARED
+
+A10 (Compliance Checklist §Reproducibility gate for multi-skill audits) requires ≥ 3 cells with independent reviewer agreement at 100% threshold for v3+ audits. **Gate executed 2026-04-25; result: 1/3 = 33% agreement — BELOW A10 threshold.** A39's headline T1-FIRES verdict is therefore **provisional**, not non-provisional.
+
+**Effect on headline verdict:** T1-FIRES on Right to a default remains in the report as the main audit's reading, but is marked provisional throughout. §8.1 G1 reproducibility condition is **NOT satisfied**; §8.1 G2 independent FAIL-cell verification is **NOT satisfied** (the load-bearing R1 cell — Coach × Right to a default — produced 3 distinct readings across 3 reviewers, not even verdict concurrence). Downstream consumers (Epic 2 Story 2.1 retrofit scoping; Story 2.3 Publication Gate counting) must respect the provisional caveat.
+
+### 7.1 A10 Reproducibility Pass Results
+
+**Cell selection:** 3 cells per A10 composition rule (one expected-PASS, one expected-FAIL, one borderline). Reviewers were spawned as 2 independent LLM Agent subagents in parallel, blind to each other and to the main audit's verdicts. Both reviewers were given the same brief: methodology source-of-truth (oc-1-1 §2.3 / §2.4 / §2.6 + A24 §4.x precedent for compound-counting), the 3 cells to score, and explicit instruction not to consult the main audit or story spec.
+
+| # | Cell | Expected | Reviewer A | Reviewer B | Main audit | Agreement (A vs B) |
+|---|------|:---:|:---:|:---:|:---:|:---:|
+| 1 | Coach × Right to a default (load-bearing FAIL) | FAIL | **PASS** | **FAIL** | FAIL | ✗ |
+| 2 | Lens × Right to pacing (expected-PASS) | PASS | PASS | PASS | PASS | ✓ |
+| 3 | Scout × Right to pacing (borderline reading-dependent) | reading-dep | **PASS** (charitable) | **FAIL** (worst-case) | PASS (charitable) | ✗ |
+
+**Agreement metric (R2 simplified per AA-R2-M1 + EC-R2-M1 + BH-R2-H4 — earlier R1 patch P5 added two non-A10-grounded alternatives that were mathematically inconsistent and subtly weakened the A10-failure framing; reverted to A10-grounded metric only):**
+- **Pairwise A-vs-B agreement: 1/3 = 33%** (Cell 1 disagree, Cell 2 agree, Cell 3 disagree). This is the only A10-grounded metric per oc-1-1 §2.5: "Two independent LLM reviewers, blind to each other, scored one skill × one right" — A10 explicitly operationalizes blind A-vs-B agreement; the main audit is the verdict being verified, not a third reviewer eligible for concurrence-counting.
+
+**A10 GATE NOT CLEARED at 33% agreement, well below the 100% threshold for v3+ audits.** Path forward (A41 input): the gate-failure outcome is unambiguous; A41 should clarify what action follows from A10 failure (publish-with-caveat, defer-to-v4, mandate-external-review, etc.).
+
+**Notable disagreements:**
+
+- **Cell 1 — three distinct readings of "unresolvable-state branch" emerged from the same step file.**
+  - **Reviewer A (PASS):** read R1 as applying to the GC2-missing branch (`step-01-load-context.md:23-32`); concluded that "Activate Atlas / Full Analysis" remediation paths satisfy "proposed default" per the rubric's "either resolves with a documented default or presents one for operator acceptance" phrasing. Did not analyze the §5 Review Mode menu for R1 application.
+  - **Reviewer B (FAIL):** read R1 as applying to the same GC2-missing branch but concluded that the remediation paths are "next-action guidance, not fallback values" — the step STOPs without proposing a default value for the missing artifact. Cited the rubric's `skip` clarification: "skip is NOT a fallback value — it's an exit." Different mechanism than main audit, same verdict (FAIL).
+  - **Main audit (FAIL):** read R1 as applying to the §5 Review Mode menu (`step-01-load-context.md:65-75`); concluded the 4-option menu lacks a proposed default mode per oc-1-1 §8.5 Loom add-team R1 PASS pattern (which had explicit "Default suggestion: ..."). Different surface than either A or B.
+  - **Convergence:** 2 of 3 (B + main) agree on FAIL but for different mechanisms; A diverges to PASS. The disagreement is fundamentally about **what counts as an "unresolvable-state branch"** for R1 application: file-loading errors (A + B), enumerated-options menus (main audit), or both. This is exactly the rubric ambiguity §9 #4 flagged — A10 confirms it is operationally divisive.
+
+- **Cell 3 — charitable compound-counting vs strict worst-case path-counting on R7.**
+  - **Reviewer A (PASS):** applied charitable compound-grouping; treated the FINDINGS COMPILATION table as 1 compound concept (taxonomy of detection results), arriving at ~2 novel concepts (compound + Service Root for multi-service). Within ≤3 budget.
+  - **Reviewer B (FAIL):** applied worst-case multi-service path counting per oc-1-1 §2.2 worst-case rule; counted FINDINGS COMPILATION items individually (Observability + Cloud Provider + Communication = 3 novel) plus multi-service prompt (Service Root + Deployment Config = 2 novel) = 5 novel concepts. Exceeds 3-concept budget. Cited oc-1-1 §8.8 worst-case precedent for Gyre.
+  - **Convergence:** none. The disagreement is about **whether to apply charitable compound-grouping to a structured taxonomy (A's reading) or strict path-worst-case (B's reading)**. Both interpretations are defensible per oc-1-1 §2.6 (which is silent on compound treatment per §9 ambiguity #1) and oc-1-1 §2.2 (worst-case rule, applied differently by each reviewer). This is the rubric ambiguity §9 #1 flagged — A10 confirms it is operationally divisive *(R2 patch EC-R2-H2 corrected earlier "#1 + #3" to "#1 alone" — vacuous PASS (#3) is methodology-level, not A10-tested via Cell 3)*.
+
+- **Cell 2 — clean PASS agreement at low concept count.** Both reviewers PASSed Lens R7 with concept counts of 2-3 (Observability domain + Deployment domain + optional "Limited coverage"). The cell sits comfortably below the 3-concept budget under either reading; reviewer convergence here suggests R7 is reproducible **when the cell isn't borderline**. The other 2 cells were borderline; their lack of agreement reflects rubric ambiguity at the boundary, not reviewer error.
+
+**Honest limitations (per oc-1-1 §2.5 and A24 §7.1):**
+
+1. Both reviewers are LLMs with shared base training (same-model family). This A10 pass validates that **the rubric is operationally ambiguous for LLM reviewers on borderline cells** — not that it would be ambiguous for human reviewers (could be more so, could be less so). The structural limit persists.
+2. A10's threshold of 100% at N=3-4 is high. Even one disagreement on a borderline cell fails the gate. A39's 1/3 (or 2/3) agreement is below the threshold under either metric. Path forward (A41): clarify which agreement metric A10 governs.
+3. Only 3 cells were scored; the remaining 25 cells in the matrix were not independently scored. Stronger assurance would require a broader sample. A39 satisfies A10's minimum N=3 cell-selection requirement but does not satisfy the agreement-threshold requirement.
+4. Reviewers read the same methodology text but did not cross-check each other's evidence notes. The disagreement measures verdict concurrence, not evidence-note equivalence.
+
+**Alternative explanations for the divergence (added per Round 1 code review patch BH-H5 — earlier framing "rubric ambiguity not reviewer error" was self-serving and undefended):** the audit's headline claim is that the divergences are rubric-ambiguity-driven. Three alternative explanations are equally consistent with the observed data and should be tested explicitly rather than asserted away:
+
+- **(a) Reviewer scoping error.** Reviewer A scoped Cell 1 (Coach × R1) to the GC2-missing branch and did NOT analyze the §5 Review Mode menu where the main audit found FAIL. The brief instructed "score the cell" — it did NOT instruct "ignore §5". A could have included §5 and chose not to. This is reviewer-side surface-selection narrowness, not rubric ambiguity. **Counter-argument:** Reviewer B independently chose the same surface as A (file-loading branch) and arrived at FAIL via a different mechanism — converging on surface choice without prompting suggests the surface choice is rubric-natural, not reviewer-narrow. **Net assessment:** (a) is partially supported but B's independent surface convergence weakens the "narrowness" reading.
+
+- **(b) Reviewer rubric-application error.** Reviewer A may have misread the rubric (e.g., treating "next-action remediation" as "default-value proposal"). The rubric's `skip` clarification ("`skip` is NOT a fallback value — it's an exit") is on the same page Reviewer A read; A's verdict requires interpreting "Activate Atlas" remediation as a "default" despite the `skip` rejection establishing that exits don't count. **Counter-argument:** "Activate Atlas" is not literally `skip`; it's a documented action path. A could honestly read this as "presents [something] for operator acceptance" matching the PASS condition. **Net assessment:** (b) is plausible but not provable from the reviewer's brief output alone; would require interview-style follow-up to distinguish from (c).
+
+- **(c) Genuine rubric ambiguity** (audit's preferred reading). The R1 rubric's "unresolvable-state branch" admits multiple defensible scopes (file-loading vs decision-menu); the rubric does not adjudicate. **Supporting evidence:** §9 ambiguity #4 was logged at A39 spec authoring time (2026-04-25) before the A10 pass ran — i.e., the rubric ambiguity was identified in advance, then operationally confirmed by the A10 disagreement. This pre-registration weakly supports (c) over post-hoc rationalization.
+
+**Honest assessment (sharpened per R2 patch BH-R2-H5 — earlier R1 framing concluded "(c) most charitable" without genuinely testing (a) and (b)):** the A10 data alone CANNOT definitively distinguish (a)/(b)/(c). Distinguishing them would require additional data not collected in this audit:
+- To rule out (a): re-prompt Reviewer A with explicit "include §5 Review Mode menu in your scope" instruction and observe whether the verdict flips. Not done in this audit; A41 should specify whether v4+ A10 passes include such control prompts.
+- To rule out (b): cross-check Reviewer A's interpretation of "Activate Atlas / Full Analysis" remediation against the rubric's `skip` clarification via interview-style follow-up. Not operationalizable from blind-review brief output alone.
+- To support (c): the audit pre-registered §9 ambiguity #4 at A39 spec authoring time (2026-04-25) BEFORE the A10 pass ran. Pre-registration is weak evidence FOR (c) but does not rule out (a)/(b).
+
+**Headline verdict implication:** because (a)/(b)/(c) cannot be distinguished from the A10 data alone, the audit's headline FAIL on Coach R1 is provisional under ALL three readings — not just under (c). Earlier R1 framing ("most charitable to the rubric") was a non-falsifiable preference rather than a tested hypothesis; corrected here. A41 should design rubric clarifications that mechanically force convergence regardless of which explanation is correct (e.g., explicit "for R1 application, scope to ALL operator-facing decision branches in step-01, including enumerated-options menus that lack default-suggestions"), which would moot the (a)/(b)/(c) distinction entirely.
+
+**Implication for A39's headline verdict:** the T1-FIRES verdict on Right to a default in §3 / §5 / §6 is **provisional under A10 failure**. The verdict is preserved as the main audit's reading because it has internal consistency and reproducibility-tested support from Reviewer B (who agreed FAIL even via a different mechanism); but it cannot be cited as definitively reproducible. Downstream consumers (Story 2.1 retrofit scoping; Story 2.3 Publication Gate) must surface the provisional status when citing A39.
+
+**Path forward:** A41 (Publication Gate definitional rigor) is now load-bearing for A39's gate-counting-status — not just to define "portfolio audit" granularity, but to clarify the R1-rubric application (per §9 ambiguity #4) and the R7 charitable-vs-strict counting (per §9 ambiguity #1). The §9 ambiguities should be added as A41 inputs. A v4+ Gyre audit refresh after A41 ships would re-run A10 with the clarified rubric; clearance is not guaranteed (the gate-failure could equally indicate the rubric needs broader rework, not just clarification). *(Earlier "predictably achieve clearance" wording was over-claiming per R1 NIT-15; sharpened here.)*
+
+---
+
+## 8. Conflict-of-Interest Disclosure
+
+**Auditor-authorship status of the 4 step-01 files** (verified 2026-04-25 via `git log --follow` per file):
+
+| Workflow / step file | Original commit | Author | Material edits since |
+|---|---|---|---|
+| `stack-detection/steps/step-01-scan-filesystem.md` | `c252634f` 2026-03-21 | Amalik Amriou | None — single commit |
+| `model-generation/steps/step-01-load-profile.md` | `91f2c79d` 2026-03-21 | Amalik Amriou | None — single commit |
+| `gap-analysis/steps/step-01-load-manifest.md` | `1bfc5706` 2026-03-21 | Amalik Amriou | None — single commit |
+| `model-review/steps/step-01-load-context.md` | `5a9dcadb` 2026-03-21 | Amalik Amriou | None — single commit |
+
+**Auditor (Claude in this session) has not authored or edited any of the 4 step-01 files** — no auditor-authorship COI on workflow content. The auditor's only authorship contributions in this audit are: the A39 story spec ([oc-gyre-covenant-audit-a39.md](../implementation-artifacts/oc-gyre-covenant-audit-a39.md)) and this audit report. Both were authored in the same session as the audit execution.
+
+**Operator-authorship overlap (significant — disclosed):** all 4 step-01 files were authored by **Amalik (the operator directing this audit session)** on 2026-03-21 as part of the Gyre module Convoke 3.0 build-out. This is a **single-author, single-day authorship pattern** — Amalik wrote the entire Gyre operator-facing surface in one sitting. The operator is therefore the primary stakeholder in both the audit's findings and the underlying workflows. This is not a COI by the auditor, but it is an **operator-author COI** worth disclosing: a fully-honest external audit would surface authorship-bias risks (e.g., an author may be unconsciously biased toward reading their own surfaces as compliant). A39's COI mitigation strategy below addresses this through reviewer independence, not authorship distance.
+
+**Methodology-frame COI (acknowledged):** the auditor authored the A39 story spec earlier in the same session; the spec defined AC-level constraints (AC3 4-archetype declaration, AC4 step-01 scoping rationale, AC5 strict-binary scoring, AC10 A10 reproducibility threshold) that shaped this audit's frame. Same-session methodology-frame COI is the same shape A24 §8 disclosed.
+
+**COI mitigation status (escalated per Round 1 code review patch BH-H8 — earlier framing was disclosure-only without mitigation specification):**
+
+The audit has **two independent COI vectors**, only one of which has any mitigation in place:
+
+1. **Auditor-side COI (methodology-frame): partial mitigation in place.** §7.1 A10 pass spawned 2 LLM Agent subagents in fresh context, blind to the main audit's verdicts and to each other. **A10 outcome (1/3 pairwise / 2/3 verdict-concurrence agreement) does NOT clear the mitigation gate** — but the mitigation mechanism (blind sub-reviewers) is in place and produced a measurable signal (rubric ambiguity surfaced operationally). Path to clearance: A41 rubric clarifications + v4+ refresh achieving A10 clearance under the clarified rubric.
+
+2. **Operator-author COI (workflow content): NO mitigation in place.** All 4 step-01 files were authored by Amalik (operator) on 2026-03-21 in a single-author single-day session. The auditor (Claude) was directed by Amalik to audit Amalik's own workflow content in the same session that produced this report. The A10 sub-reviewers were also LLMs spawned within the same operator-directed session — they share the operator-context lineage and do NOT break the operator-author chain. **There is no external-reviewer mitigation for the operator-author COI.** This is a **structural COI**, not a footnote: an operator-author may be unconsciously biased toward reading their own workflow surfaces as compliant; an auditor working under that operator's direction inherits the bias gradient.
+
+**What WOULD satisfy the operator-author mitigation gate (none of these are in place; documented for A41 + future audit governance):**
+- **External-reviewer audit** — a non-Amalik-affiliated reviewer (human or independent LLM session) scores the same 28 cells and the verdicts are compared to A39's verdicts. Cell-level disagreement rate would measure the operator-author bias gradient.
+- **Authorship-blind audit** — auditor scores the cells without knowing who authored the workflow content. Difficult to operationalize given Convoke's small contributor base, but possible for individual cell sampling.
+- **Adversarial peer-review** — a non-Convoke practitioner of operator-experience design (e.g., from a separate project applying the Operator Covenant pattern) reviews the audit findings and challenges the verdicts.
+
+**A41 should specify** which mitigation type is required for v3+ Covenant audits before they count toward Story 2.3 Publication Gate clearance. As of 2026-04-25, A39 has **disclosure-only mitigation** (no external check). Until external-check mitigation is achieved, A39's findings should be cited internally with the operator-author COI caveat alongside the A10 caveat. *(R2 patch BH-R2-M1 removed earlier "tier-0 / tier-1+" vocabulary that was undefined; replaced with explicit mitigation-type names.)*
+
+### 8.1 Mitigation Gates — A10 GATE NOT CLEARED (status as of 2026-04-25)
+
+Following A24 §8.1 pattern. Because §7.1 reports A10 gate failure (1/3 agreement) AND §8 discloses operator-author + methodology-frame COIs, downstream actions that treat A39 findings as load-bearing SHOULD respect the provisional status.
+
+- **G1 — Epic 2 Story 2.1 retrofit scoping block: ✗ NOT SATISFIED.** §7.1 A10 pass returned 1/3 agreement, well below the 100% threshold for v3+ audits. The 2 proposed retrofit cells (R1-G1 Scout multi-service default-suggestion, R1-G2 Coach Review Mode default-suggestion) are **NOT** yet eligible for Epic 2 Story 2.1 retrofit commitments. Path to clearance: A41 (Publication Gate definitional rigor — including R1 rubric clarification per §9 ambiguity #4) ships → re-run A10 against the clarified rubric → if cleared at 100%, R1-G1 + R1-G2 add to retrofit scope.
+- **G2 — Independent FAIL cell verification: ✗ NOT SATISFIED.** Cell 1 (Coach × R1) was the load-bearing R1 FAIL cell; reviewers produced 3 distinct readings (PASS / FAIL-via-file-loading / FAIL-via-menu). Verdict concurrence not achieved. Scout × R1 was not directly re-scored in §7.1 (would have needed a 4th cell) but its structural parity with oc-1-1 §3.5 D5a's previously-validated Gyre R1 FAIL provides indirect support. **Coach × R1 verdict requires explicit re-verification post-A41-rubric-clarification before Story 2.1 commitment.**
+- **G3 — Rubric ambiguities stay intake-only: ✓ SATISFIED.** 5 ambiguities logged in §9; none resolved in-story. Per AC1 methodology-reuse-not-revision constraint.
+- **G4 — Carried-forward cells locked: ✓ SATISFIED.** A24 Vortex cells + oc-1-1 non-Gyre cells carry forward unchanged. A39's re-baselining of oc-1-1's single Gyre stack-detection cell is intentional (per §1 non-scope clause).
+
+**Gate-refinement candidates** identified during A39 execution + A10 outcome (logged for Epic 2 governance per A24 §8.1 IN-47 pattern):
+- (a) **Define "vacuous PASS" methodology status** — does a vacuous PASS cell count toward Story 2.3 Publication Gate evidence breadth, or does it require expansion to ≥2 steps? §9 ambiguity #3 + §6.6 surface this.
+- (b) **Clarify R1 rubric application to enumerated-options menus** — A10 §7.1 Cell 1 demonstrated that R1's "unresolvable-state branch" framing admits ≥3 distinct readings on the same step file. §9 ambiguity #4 must be A41-resolved before Story 2.1 commits to R1-G2 (Coach Review Mode menu retrofit).
+- (c) **Clarify R7 charitable-vs-strict counting and worst-case-path application** — A10 §7.1 Cell 3 demonstrated charitable-compound vs strict-worst-case readings give opposite verdicts on the same surface. §9 ambiguity #1 + #3 must be A41-resolved.
+- (d) **Discovery vs. Production-readiness archetype distinction** (per §6.3 + §6.6) — implications for A28 single-step rationale validity per archetype.
+
+These items are routed to A41 inputs (§9 ambiguities below + this §8.1 list); they are also candidates for backlog intake via the §11 close per AC11.
+
+**A39's Covenant v3 audit baseline advancement** described in §6.5 is **provisional pending A10 clearance** — it becomes authoritative only after A41 ships AND a v4+ refresh achieves A10 clearance under the clarified rubric.
+
+---
+
+## 9. Rubric Ambiguities Surfaced (Backlog Intake Candidates)
+
+Per AC1, rubric ambiguities go to the initiatives backlog, not resolved in-story. Logged here for the next triage pass (mirrors A24 §9 + oc-1-1 §10 patterns):
+
+1. **Compound-concept treatment for GC contract field shapes.** §4.2 R7 evidence note treats "GC1 field shape" as 1 compound concept (charitable). Under strict §2.6 sub-field counting, the 7 GC1 fields (primary_language, primary_framework, container_orchestration, ci_cd_platform, observability_tooling, cloud_provider, communication_protocol) count as 7 separate novel concepts. Same counting question A24 §9 ambiguity #1 raised for HC contracts. Both A24 and A39 used charitable reading; both noted FAIL alternative under strict reading. **Methodology-tension intake: §2.6 should add an explicit rule for "multi-field contract enumeration counts as N or as 1?" — or accept dual-reading framework as canonical.**
+
+2. **Compliance Checklist OC-R5 vs oc-1-1 §2.4 R5 strictness divergence.** Compliance Checklist OC-R5 requires a literal HALT marker. oc-1-1 §2.4 R5 accepts implicit wait per A24 lean-persona §8.7 precedent. A39 followed oc-1-1 §2.4 verbatim per AC1 — but the divergence means A28-A29-era audits use stricter R5 than oc-1-1-era audits. **Methodology-tension intake: which standard governs v3+ audits — oc-1-1 §2.4 R5 (per AC1) or Compliance Checklist OC-R5 (per Selection Discipline-era convention)? Resolution should clarify whether AC1 "verbatim" reuse extends to evidence-note rubric strictness or only to PASS/FAIL definitions.**
+
+3. **Vacuous PASS methodology status.** §4.5 Notes + §6.6 surface the vacuous-PASS pattern: 4 cells across Atlas + Lens scored PASS because step-01 has no operator-decision branch. This is structurally different from explicit PASS (where the right's test fires and produces PASS verdict). For Story 2.3 Publication Gate counting, vacuous PASS may need to be tracked separately. **Methodology-extension intake: A41 (Publication Gate definitional rigor) should consider whether vacuous PASS cells count as untested-at-scope vs PASSing-evidence, and whether v3+ audits should mandate ≥2 steps for system-loading step-01 surfaces (per A28 forward-only application).**
+
+4. **R1 rubric application to enumerated-options menus.** Coach §5 Review Mode menu (4 options: Review Model / Review Findings / Both / skip) was scored R1 = FAIL because no proposed default mode is offered. Strict reading: lack of default-suggestion = FAIL (per oc-1-1 §8.5 Loom add-team R1 PASS pattern, which had explicit "Default suggestion: ..."). Lenient reading: enumerated options each resolve cleanly = PASS (per oc-1-1 R1 rubric phrasing "every unresolvable branch either resolves with a documented default or presents one for operator acceptance" — a menu where every option resolves isn't an unresolvable branch). **Methodology-clarification intake: when does R1 fire on enumerated-options menus? At every menu without a default-suggestion (strict)? Only at menus where some options would lead to unresolvable downstream state (lenient)? oc-1-1 §8.5 Loom precedent suggests strict (since Loom's pattern menu had all-resolvable options but still received explicit default-suggestion). Triaging strict vs lenient is the per-cell judgment call this audit had to make.**
+
+5. **Discovery vs. Production-readiness archetype distinction (per §6.3 + §6.6).** A39 surfaces a possible structural distinction between Discovery workflows (Vortex: operator-input-driven step-01) and Production-readiness workflows (Gyre: system-loading step-01). The distinction has methodology implications (vacuous PASS frequency, A28 single-step rationale validity, R7 schema-receipt analog). **Methodology-extension intake: should §2 §Methodology section formally name this archetype distinction so future audits can scope step-selection rationale (A28) appropriately per archetype? E.g., "for system-loading step-01 surfaces, A28 single-step rationale is methodologically weaker; ≥2 steps default-required."**
+
+---
+
+## 10. Activity Log Update (AC11)
+
+Per AC11, the initiatives backlog A39 row is moved §2.3 Fast Lane (status `Ready for Dev`) → §2.5 Completed (status `done — provisional A10`). *(Lane label corrected from §2.4 per R2 patch EC-R2-M4 / AA-R2-H1 — A39 was Fast Lane RICE 2.1, not Initiative Lane.)* Activity-log row content (added 2026-04-25, updated post-R2):
+
+> **A39 — Gyre Covenant audit (shipped 2026-04-25; A10 GATE NOT CLEARED — provisional verdict per §7.1; R1+R2 code reviews applied; Coach R5 verdict overturned in R2 cascade).** Audited 4 Gyre workflows (Scout/stack-detection step-01, Atlas/model-generation step-01, Lens/gap-analysis step-01, Coach/model-review step-01) × 7 Operator Rights = 28 cells. **Provisional headline (post-R2):** T1 *would* fire (provisional) on TWO rights under main audit's reading: **Right to a default** at 50% compliance (2/4 — Scout multi-service branch + Coach Review Mode menu) AND **Right to pause** at 50% compliance (2/4 — Scout single-service auto-decide + Coach §4 dangling deferred-review prompt; Coach R5 overturned PASS → FAIL in R2 per file evidence verification EC-R2-M5). All 4 other rights compliant under main audit reading: R2 100% / R3 100% / R4 100% / R6 100% / R7 100% under broader §2.6 reading (reading-dependent — strict reading would also fire T1 on R7 per §6.2). **A10 reproducibility outcome: 1/3 pairwise agreement** (the only A10-grounded metric per oc-1-1 §2.5; R2 patch reverted earlier non-A10-grounded metrics) — Cell 1 Coach R1 produced 3 distinct readings; Cell 3 Scout R7 produced charitable-vs-worst-case split; only Cell 2 Lens R7 achieved verdict concurrence at PASS. **A10 GATE NOT CLEARED (well below 100% threshold). Headline verdicts therefore PROVISIONAL.** **Retrofit scope additions PROPOSED (NOT committed pending A10 clearance):** R1-G1 Scout multi-service default-suggestion + R1-G2 Coach Review Mode default-suggestion + R5-G1 Coach §4 dangling-prompt halt-and-wait + R5-G2 Scout single-service-confirm prompt = 4 candidate Epic 2 Story 2.1 retrofit cells (was 2 pre-R2; +2 post-R2 cascade). **Rubric ambiguities surfaced — A10-validated subset: #1 + #4** (compound-concept counting + R1 enumerated-options menus; both operationally divisive per A10 disagreement). **Methodology-level surfacing only: #2 + #3 + #5** (OC-R5 strictness divergence + vacuous-PASS status + Discovery vs Production-readiness archetype). All 5 logged as A41 inputs. **Gate-counting-status:** **PENDING A41 + v4+ A10 clearance** (gated more strictly than originally scoped — A10 failure adds rubric-clarification dependency on top of the prior "portfolio audit" granularity dependency; R2 overturn cascade adds R5 to retrofit scope). **COI:** all 4 step-01 files authored by operator (Amalik) 2026-03-21 — operator-author COI disclosed §8 (disclosure-only mitigation; A41 should specify external-check requirement); auditor (Claude) authored A39 spec + this report same session — methodology-frame COI disclosed §8.
+
+---
+
+**A39 formally closed (provisional)** — all 12 ACs procedurally satisfied; A10 reproducibility gate did NOT clear; headline verdict provisional; downstream commitments deferred pending A41 + v4+ refresh. Open follow-ups tracked in backlog intakes (to be assigned IN-XX numbers at §11 close per AC11).
