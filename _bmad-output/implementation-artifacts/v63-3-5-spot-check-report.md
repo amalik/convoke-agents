@@ -26,7 +26,9 @@ Per AC3 + Decision 2, spot-check skills are the 3 in `MANUAL_SMOKE_SKILLS` at `s
 
 Per-platform rubric inherited from EXP3 (2026-04-12 PASS): **persona present**, **framework-leak-free** (zero matches against `FORBIDDEN_STRINGS` from `scripts/portability/test-constants.js` — 17 entries at story-execute time), **ready-to-drop format** (Claude Code = SKILL.md with YAML frontmatter; Copilot = `copilot-instructions.md` with HTML comment header; Cursor = clean markdown without frontmatter).
 
-## §1 — Claude Code spot-checks (3 cells, recorded in v63-3-5-validation-report.md)
+## §1 — Claude Code spot-checks (3 cells, independently verified by spot-check author)
+
+The spot-check author independently verified the 3 Claude Code adapter files (validation report ticks are shown for reference only; per-cell evidence below is novel from this report — `validate-exports.js`'s auto-generated report does not capture file sizes or persona-anchor lines).
 
 | Skill | Adapter file | Size | YAML frontmatter | Persona section | Forbidden-string matches | Verdict |
 |---|---|---|---|---|---|---|
@@ -34,7 +36,7 @@ Per-platform rubric inherited from EXP3 (2026-04-12 PASS): **persona present**, 
 | Winston (`bmad-agent-architect`) | `adapters/claude-code/SKILL.md` | 2141B | ✓ PRESENT | ✓ `## You are Winston 🏗️` | 0 | **PASS** |
 | Murat (`bmad-tea`) | `adapters/claude-code/SKILL.md` | 4102B | ✓ PRESENT | ✓ `## You are Murat 🧪` | 0 | **PASS** |
 
-Auto-generated checkboxes ticked in [`v63-3-5-validation-report.md`](v63-3-5-validation-report.md) §"Manual Smoke Tests — Claude Code" with `[x] [VERIFIED structurally per AC3]` annotation. (Note: the auto-generated checkboxes' "Copied X to Y" / "Invoked skill" / "produces usable output" wording is more behaviorally aspirational than AC3's structural-only rubric requires — the inherited EXP3 rubric is structural; tick semantic = "structurally verified per Decision 2's per-platform rubric.")
+Auto-generated checkboxes in [`v63-3-5-validation-report.md`](v63-3-5-validation-report.md) §"Manual Smoke Tests — Claude Code" ticked with `[x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5]` annotation. The auto-report's checkbox text ("Copied X to Y" / "Invoked skill" / "produces usable output") is BEHAVIORAL — the annotation explicitly disambiguates that Story 3.5's verification is STRUCTURAL ONLY per Decision 2's per-platform rubric (persona present + framework-leak-free + ready-to-drop format). Behavioral smoke (actual copy + invoke + observe) was NOT performed in Story 3.5; deferred per R1-L4 to a future amendment of `validate-exports.js` template wording.
 
 ## §2 — Copilot spot-checks (3 cells)
 
