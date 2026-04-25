@@ -45,6 +45,21 @@ coverage/
 # Claude Code scratchpad (session-specific)
 .claude/
 
+# Exception: operator-tooling slash-command skills shipped via npm-pack must be tracked
+# (per package.json files[] entry; CI Test 17 in tests/unit/audit-skill-dirs.test.js
+# verifies these land in the shipped tarball). Un-gitignore via step-wise pattern as
+# Option A unblock 2026-04-25 — git cannot un-ignore a child of a fully-ignored parent
+# directory, so we must (a) un-ignore .claude/ (b) re-ignore .claude/skills/* contents
+# (c) un-ignore the two specific skills. Pending Option B architectural cleanup (see
+# I80 backlog row — move SKILL.md to _bmad/bme/ tracked location + add refresh-
+# installation.js copy step).
+!.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/bmad-audit-skill-dirs/
+!.claude/skills/bmad-register-skill/
+
 # Python
 __pycache__/
 *.py[cod]
