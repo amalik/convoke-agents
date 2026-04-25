@@ -274,6 +274,154 @@ Concept-category overlap for OC-R7 is measured separately; verdict-agreement is 
 
 ---
 
+## A41-Clarifications (Selection Discipline + COI Mitigation, post-A41+A42 ship)
+
+*(Heading renamed per R1 review BH-H1 — original `## Selection Discipline §A41-Clarifications` made this section appear to be a subsection of `## Selection Discipline` above, but it's structurally a sibling H2 section. New title makes the scope explicit: clarifications to Selection Discipline rules + new COI Mitigation Tier Taxonomy.)*
+
+*(Added 2026-04-25 via A41+A42 bundle ship. Resolves 5 HIGH + 4 MEDIUM findings from A40 R2 + 7 from A39 R2/R3. Forward-only application: v4+ audits use these clarifications; pre-v4 audits stay locked under G4 mitigation gate per their original methodology version. See [oc-publication-gate-rigor-a41-a42.md](../implementation-artifacts/oc-publication-gate-rigor-a41-a42.md) for full A41+A42 spec + 13 Pre-Author Decisions.)*
+
+### Version-pinning algorithm (anchors all forward-only rules)
+
+A41 introduces multiple forward-only rules (primary: §A41-1, §A41-4, §A41-6, §A41-8, §A41-13 — i.e., R1 enumerated-options strict, OC-R5 strictness convergence, A10 cell selection borderline, A28 v2 step selection, cell-mechanism naming stability). All use the same v3-vs-v4 cutover semantics:
+- **Version anchor:** the methodology revision number maintained in this Checklist's §Revisions section. "v3" = pre-A41 era (oc-1-1, A24, A39); "v4" = post-A41 era.
+- **Per-audit pin:** an audit's `created` date in frontmatter pins which methodology revision applies. Audit `created: 2026-04-25` runs under whichever revision is current at that date.
+- **"v4+" shorthand throughout:** means "audits with `created` ≥ A41 ship date".
+- **Mid-execution version bumps:** audits straddling a version bump (e.g., started under v3, A41 ships mid-audit) stay locked at the version current when execution started — version doesn't change mid-execution.
+
+### §A41-1 — R1 application to enumerated-options menus (clarifies OC-R1)
+
+OC-R1 fires on ALL operator-decision branches in audited step including enumerated-options menus that lack default-suggestions. The Loom add-team R1 PASS pattern ("Default suggestion: based on context, suggest the most likely value with reasoning") is the compliance pattern; absence of such a suggestion in any operator-decision branch = FAIL.
+
+- **Example FAIL:** Coach R1 in A39 §4.4 — `step-01-load-context.md:65-75` Review Mode menu lacks default-suggestion → FAIL.
+- **Example PASS:** Loom add-team R1 in oc-1-1 §8.5 — pattern menu has explicit default-suggestion → PASS.
+- **Operationally divisive history:** A39 §7.1 Cell 1 demonstrated 3 distinct reviewer readings of this rubric application; this clarification commits to the strict-per-Loom interpretation.
+
+### §A41-2 — Multi-field contract enumeration counting (clarifies §2.6 Novel-Concept Glossary)
+
+Multi-field contract enumerations (e.g., HC1/HC2/HC3 schema fields, GC1/GC2/GC3 contract fields) count as **1 compound concept if ≤3 visible sub-fields**; count as **N concepts if ≥4 visible sub-fields**. Hybrid rule resolves charitable-vs-strict ambiguity deterministically — reading is fixed by structure-count, not by reviewer preference.
+
+- **Example "N concepts":** A39 §4.2 Atlas R7 — GC1 Stack Profile has 7 sub-fields per `step-01-load-profile.md:24` (primary_language, primary_framework, container_orchestration, ci_cd_platform, observability_tooling, cloud_provider, communication_protocol). Under §A41-2 hybrid rule: 7 ≥ 4 → counts as 7 novel concepts → exceeds ≤3 budget → strict-FAIL. (At v3 era, A39 charitably scored as 1 compound concept = PASS; v4+ refresh would re-evaluate as FAIL under §A41-2.) *(Example corrected per R1 review EC-H1 — original example pinned PASS to a fabricated GC2/Lens R7 mapping that A39 §4.3 doesn't actually use; Lens R7 PASSes on "Limited coverage" + grouping-rules concepts, not on a GC2 sub-field count.)*
+- **Example "1 compound":** A hypothetical HC2 with 3 visible sub-fields (e.g., Problem Statement / Hypothesis / Riskiest Assumption) at step-01 → 3 ≤ 3 → counts as 1 compound concept. Under ≤3-concept budget, contributes 1 of 3 → does not alone trigger R7 FAIL.
+- **Operationally divisive history:** A39 §7.1 Cell 3 demonstrated charitable-vs-strict split on Scout R7 (5 vs 2 concept counts under different readings); this clarification commits to the structure-count rule.
+
+### §A41-3 — Vacuous-PASS methodology status (N_effective semantics)
+
+A **vacuous-PASS cell** = a cell where the operator-decision branch the rubric tests does NOT exist at the audited step. Vacuous-PASS cells are recorded honestly in evidence notes but DO NOT count toward Publication Gate evidence breadth.
+
+T1 trigger evaluation uses **N_effective = N_total − N_vacuous** (cells per right where the rubric could fire). Auditors record both N_total and N_effective in §5 row tables; T1 fires if `fails / N_effective > 30%` AND `N_effective ≥ 3`. If N_effective < 3 for a right, T1 evaluation is **deferred** for that (team × Right) cell-row pending audit-scope expansion to ≥2 steps.
+
+- **Example (deferred branch):** A39 §5 row R1 — N_total = 4 (Scout/Atlas/Lens/Coach); 2 cells vacuous (Atlas R1, Lens R1); N_effective = 2 < 3 floor → T1 evaluation **deferred** for R1 under N_effective semantics. *(Note: deferred ≠ FAIL ≠ PASS; the cell-row is structurally insufficient for T1 evaluation.)*
+- **Deferral-resolution mechanism** *(added per R2 review — original "expand audit scope to ≥2 steps" pointed at §A41-8 but §A41-8 doesn't define the mechanism for lifting N_effective from <3 to ≥3)*: to convert a deferred (team × Right) cell-row to evaluable, the audit scope must be expanded to additional steps that introduce **R-relevant operator-decision branches** at the previously-vacuous skills. Mechanism: (1) identify the deferred (team × Right) cell-row + the specific vacuous cells (e.g., A39 R1: Atlas R1 + Lens R1 vacuous); (2) for each vacuous skill, audit additional step files (step-02, step-03, ...) until ≥1 operator-decision branch is found that exposes the right's rubric (e.g., Atlas step-02 has a "review-mode-menu" branch → R1 fires); (3) re-evaluate the cell at the new step scope (Atlas R1 = PASS or FAIL based on the branch); (4) recompute N_effective for the cell-row; if N_effective ≥ 3, evaluate T1; if still N_effective < 3 after exhausting all step files, the cell-row stays deferred and is flagged in the audit report's §Implications + §9 ambiguities. **Important**: simply auditing more steps does NOT mechanically lift N_effective — only steps that introduce R-relevant operator-decision branches count. A workflow whose every step is data-loading (no operator decisions) cannot lift R1/R5 N_effective regardless of step count. This is the structural limit Production-readiness archetypes hit (see §A41-8); A28 v2's ≥2-steps default exists to maximize the chance of exposing R-relevant branches, not to guarantee it.
+- **Example (fires branch):** Hypothetical Vortex audit with 5 cells, 1 vacuous on R5 → N_effective = 4 ≥ 3; if 2 of 4 effective cells fail R5 → fail_rate = 50% > 30% → T1 fires on R5. The rule's both branches matter — N_effective deferral is the conservative fallback; T1-firing is still the load-bearing outcome when N_effective ≥ 3.
+- **A39's published verdicts stay locked at original N_total framing per G4 mitigation gate** — the N_effective re-read is a v4+ refresh outcome (**a NEW audit run from scratch under v4 rubric, NOT a re-scoring of A39's existing cells**). A39's R1 cell-row stays "T1 fires PROVISIONAL at 50%" in published form; v4+ refresh of Gyre would produce a separate matrix under N_effective semantics. *(Both-branches example added per R1 review EC-H2 — original example only showed deferred case, missing the load-bearing fires-at-N_effective-≥3 branch. Cell-mechanism naming stability across version cutover detailed in §A41-13.)*
+
+### §A41-4 — OC-R5 strictness convergence (clarifies OC-R5; forward-only)
+
+**v4+ audits use OC-R5 strict reading** (literal HALT marker required: `HALT for input.`, `Wait for user input.`, `WAIT for operator input` as standalone line near prompt). Pre-v4 audits (oc-1-1, A24, A39) used oc-1-1 §2.4 R5 lenient reading (implicit-wait accepted per oc-1-1 §8.7 lean-persona precedent reused by A24 §4.1+§4.2). Forward-only adoption per G4 mitigation gate; pre-v4 verdicts stay locked at original strictness.
+
+- **Example net-effect on A39:** under v4+ strict reading, the wait marker `Wait for user input.` at `step-01-load-context.md:77` (cited in A39 §4.4 Coach evidence note, not in §5 verdict table) is sufficient (literal); the §4 dangling-prompt FAIL stands either way. Net: v4+ adoption doesn't change A39 Coach R5 verdict (R2 cascade already accounted for the dangling-prompt; OC-R5 strictness convergence is forward-only methodology hardening). *(Citation location clarified per R1 review EC-H3 — A39 §5 is verdict table; wait marker line citation lives in A39 §4.4 evidence note.)*
+- **Hypothetical v3-vs-v4 verdict-difference example** *(added per R1 review AA-FIND-5 — original example showed "no change" case only)*: a future audit of a workflow whose step-01 has an implicit-wait pattern (e.g., "Please provide your input.") with no literal halt marker — under v3 lenient reading per oc-1-1 §8.7, this PASSes R5 (implicit wait accepted). Under v4+ strict reading per §A41-4, this FAILs R5 (no literal HALT marker). Forward-only adoption: v3 audits scoring this pattern stay PASS; v4+ audits score FAIL.
+
+### §A41-5 — "Reading-dependent" verdict (structurally distinct from forbidden "borderline")
+
+A "reading-dependent" verdict is structurally distinct from forbidden "borderline" partial-credit IF AND ONLY IF:
+
+1. **(a)** the audit explicitly commits to one reading for the headline verdict (default: charitable reading per A24 §4.4 Notes precedent);
+2. **(b)** the audit documents the alternative reading + alternative verdict in §Notes with explicit reasoning;
+3. **(c)** the audit logs the rubric ambiguity as a §9 backlog intake for future methodology resolution.
+
+All three conditions must hold; missing any = the verdict is forbidden borderline (not reading-dependent) and must be resolved binary.
+
+**Audit report structural requirement:** all v4+ Covenant audit reports MUST include a `§9 Rubric Ambiguities Surfaced` section (or equivalent named "ambiguity intake" section) — this is a Compliance Checklist requirement for the audit-report template, not just a convention. Pre-v4 reports (oc-1-1, A24, A39) are grandfathered (all three already have §9 by convention).
+
+- **Example compliant:** A39 §3 footnote ² (R7 reading-dependent) — meets (a) headline commits to charitable PASS per A24 precedent; (b) §4.5 Notes documents strict reading with FAIL alternative; (c) §9 ambiguity #1 logs the compound-counting question.
+
+### §A41-6 — A10 cell composition rule (forward-only)
+
+**v4+ A10 cell composition rule:** the 3-cell minimum must include:
+1. **One expected-PASS that is reading-dependent or borderline** (NOT a stable-PASS cell).
+2. **One expected-FAIL.**
+3. **One borderline cell.**
+
+Stable-PASS cells inflate agreement chance artificially and reduce gate informativeness. v3 audits that selected stable-PASS for the expected-PASS slot (e.g., A39 §7.1 Cell 2 Lens R7) are grandfathered, but v4+ refresh must adopt the borderline-required rule.
+
+**Escape clause:** if no reading-dependent or borderline cell exists in the audited matrix (e.g., a high-quality team where every cell is binary-clear), the auditor selects the closest-to-borderline expected-PASS cell + logs an A10 selection caveat in §7.1 Notes naming the absence of borderline cells as the reason. The gate still runs; informativeness is reduced but not blocked.
+
+- **Example:** A39 §7.1 selected Lens R7 as expected-PASS; reviewer agreement on Cell 2 was structurally guaranteed by selection bias. v4+ refresh of Gyre would select Atlas R7 (charitable PASS / strict FAIL) as expected-PASS to maximize informativeness.
+
+### §A41-7 — Implicit-wait + downstream-explicit-wait composition rule (clarifies OC-R5)
+
+Composition is valid ONLY IF downstream wait CONSUMES upstream prompt's response, where **consumes = wait halts on operator's specific response + branches workflow**. A wait that fires unconditionally regardless of the upstream prompt's response is NOT a consumption — the upstream prompt is dangling and triggers prompt-without-wait FAIL on the upstream prompt itself.
+
+- **Example FAIL:** A39 §4.4 Coach R5 (overturned in R2) — `step-01-load-context.md:60` deferred-review prompt + `:77` §5 wait. The §5 wait fires unconditionally regardless of the operator's yes/no answer to the §4 prompt; §5 does NOT consume the §4 response → no composition → §4 is dangling prompt-without-wait → R5 FAIL.
+
+### §A41-8 — A28 Step Selection v2 (forward-only; ≥2 steps default for Production-readiness archetypes)
+
+For system-loading step-01 surfaces (Production-readiness workflows: Gyre confirmed; Forge + Helm to be classified at first audit), single-step rationale is methodologically weaker; **≥2 steps default-required** unless operator opts into single-step for cross-audit comparability with prior single-step audit AND documents the archetype-distinction note in the audit's §1 Scope section. Discovery workflows (operator-input-driven step-01 — Vortex confirmed) retain A28 v1 single-step-with-rationale acceptance.
+
+- **Baseline exception:** A39 used step-01-only with cross-audit-comparability rationale (matches A24's step-01 scoping). A39 is **grandfathered** under A28 v1 (pre-A41 methodology); v4+ Gyre refresh adopts A28 v2 (≥2 steps default).
+
+### §A41-9 — Portfolio audit definition + cross-cutting exclusion
+
+A **portfolio audit** = a Covenant audit covering ≥1 team, with the team scope explicitly named in the audit report frontmatter or §1 scope section. Examples: A24 = Vortex portfolio audit (1 team); A39 = Gyre portfolio audit (1 team).
+
+**Cross-cutting vs team-scoped identification rule:**
+- An audit is **cross-cutting** if its frontmatter `scope` field lists ≥2 teams without team-by-team result tables (e.g., oc-1-1's matrix groups 8 skills across 4 archetypes without partitioning by team).
+- An audit is **team-scoped** if its §5 row table groups verdicts under exactly one team header (e.g., A24 §5 row "Vortex N=4"; A39 §5 row "Gyre N=4").
+
+**Cross-cutting audits are excluded from portfolio-count for Publication Gate evidence breadth** even if they cover ≥2 teams (per A40 Round 2 review BH-finding: counting cross-cutting trivially satisfies ≥2 portfolios + defeats the breadth-evidence purpose).
+
+**Note:** oc-1-1 supplies methodology source-of-truth (rubric definitions §2.3/§2.4/§2.6) but does NOT count toward Publication Gate's ≥2 portfolio-audit threshold — two distinct uses.
+
+### §A41-10 — COI Mitigation Tiers (graduated; Publication Gate eligibility)
+
+*(Note: §A41-7 also clarifies OC-R5, in addition to §A41-4. The two are independent: §A41-4 governs strictness threshold (literal vs lenient halt-marker requirement); §A41-7 governs compositional reasoning across upstream/downstream prompts. Both apply concurrently per R1 review BH-M2.)*
+
+Convoke audits acknowledge two structural COI vectors: (i) auditor-side methodology-frame COI (auditor authored the spec OR rubric); (ii) operator-author COI (operator authored content being audited). Mitigation tiers (graduated):
+
+- **Tier-0 (disclosure-only):** Auditor names operator-author overlap + methodology-frame overlap in §COI Disclosure. **Acceptable for internal-evidence use; NOT acceptable as Publication Gate clearance evidence.**
+- **Tier-1 (auditor-side blind sub-reviewers):** A10 reproducibility pass with ≥2 blind LLM sub-reviewers, gate-clearing outcome (100% pairwise agreement at N≥3). **Acceptable for Publication Gate IF gate clears; NOT acceptable if gate fails** (A39 case — Tier-1-attempted-but-failed).
+- **Tier-2 (external review):** Independent reviewer re-scores ≥3 cells with verdict-comparison. **Any ONE of the following options satisfies Tier-2:** (1) a different LLM model family (e.g., GPT-4 / Gemini / open-source) with ≥3-cell re-score; OR (2) a human peer reviewer with ≥3-cell re-score; OR (3) an adversarial peer-review from a non-Convoke practitioner of operator-experience design (e.g., from a separate project applying the Operator Covenant pattern) with ≥3-cell re-score. The "≥3 cells with verdict-comparison" requirement applies to whichever option is selected. **Acceptable for Publication Gate clearance regardless of A10 outcome** (A10 failure is informative methodology data, not blocking).
+
+**Path forward for v3 audits in provisional limbo (e.g., A39):** Tier-2 OR a v4+ refresh that achieves Tier-1 clearance under the A41-clarified rubric.
+
+### §A41-11 — Cascade termination (clarifies retrofit lifecycle)
+
+*(Added per R1 review BH-H4 + EC-H4 — Story 2.1 AC #4 originally cited "§A41-9" for cascade termination but §A41-9 is portfolio audit definition; the rule was authored in spec AC2 item 5 but never codified into a §A41-N subsection. Fixed here.)*
+
+The retrofit cycle (Story 2.1) ends when **no new T1-firing cells are introduced by the most recent retrofit**. Mechanically evaluable: after each retrofit batch, re-evaluate the audit matrix; if zero new (team × Right) cell-rows transition from PASS to T1-firing, the cycle terminates. Finite per audit matrix (worst case = N×7 cells per team; bounded).
+
+- **Example:** A39 R1-G1 (Scout multi-service) retrofit ships → re-audit Gyre matrix → no new T1-firing cells → cascade terminates for that retrofit. If R1-G1's fix accidentally flipped Coach R3 from PASS → FAIL (per-cell regression baseline per §A41-3 cascade-resolution clause), the cycle continues with an R3-G1 retrofit until cascade terminates.
+- **Cross-reference:** Epic Story 2.1 AC #4 (per-cell regression baseline) + AC #5 (cascade-clearance for Publication Gate).
+
+### §A41-12 — A29 single-skill exemption (clarifies §Skill Selection)
+
+*(Added per R1 review AA-FIND-1 — A29 single-skill exemption was authored in spec AC2 item 6 but silently dropped during execution; no §A41-N covered it. Fixed here.)*
+
+A portfolio audit may have **N=1** (single skill) if AND ONLY IF:
+
+1. **(a)** the team has only 1 operator-facing surface (the single skill IS the team's complete operator-visible interaction surface), OR
+2. **(b)** the audit is explicitly scoped as a **calibration-case audit** (oc-1-1 Migration/Portfolio pattern — auditing a known-violating skill to validate methodology, not to evaluate the team).
+
+Otherwise, **N≥3 floor applies** per A29 + §A41-3 N_effective rule (whichever is more restrictive).
+
+- **Example (a):** a hypothetical future BMAD-extension team with only one operator-facing workflow (e.g., a single-skill team) qualifies for N=1 audit; verdicts apply only to that skill.
+- **Example (b):** oc-1-1 Migration audit (calibration case) — N=1 acceptable because methodology validation is the purpose, not Migration's compliance.
+- **Cross-reference:** §A41-9 (portfolio audit definition); §A41-3 (N_effective semantics — applies AFTER A29 exemption check).
+- **Note vs §A41-9 cross-cutting exclusion:** the calibration-case exemption (b) is ALSO an exclusion from Publication Gate's ≥2-portfolio-audit count — calibration audits don't count toward breadth-evidence even if they have N=1 acceptable for methodology purposes. Two distinct uses.
+
+### §A41-13 — Cell-mechanism naming stability across version cutover (clarifies cell-centric retrofit semantics; extension of PAD 1)
+
+*(Added per R1 review BH-H3 + M7 — A39's R1-G1, R1-G2, R5-G1, R5-G2 cell-mechanism names referenced in Epic Story 2.1 ACs as load-bearing identifiers, but their T1-firing status changes between v3 (locked at N_total) and v4+ (re-evaluated under N_effective). Stability clarification needed. **PAD authority:** §A41-13 extends PAD 1 (cell-vs-right semantic) — it operationalizes the naming-stability semantics implicit in cell-centric framing. Per R2 review, explicitly tagged as PAD-1 extension rather than promoted to a 14th PAD.)*
+
+**Cell-mechanism names (e.g., R1-G1 = Scout multi-service mechanism; R5-G1 = Coach §4 dangling-prompt mechanism) are stable across methodology versions** as referents to specific operator-decision-branch mechanisms. They name the WHERE (which surface in which workflow), not the WHAT-VERDICT (PASS/FAIL/T1-firing).
+
+**T1-firing status of a named cell-mechanism is version-pinned** — may differ between v3-locked evaluation and v4+ refresh evaluation. Example: A39 R1-G1 fires T1 under v3 (N_total = 4, fail_rate = 50%); under v4+ refresh of Gyre with N_effective = 2 < 3 floor, R1-G1's containing cell-row would have T1 evaluation **deferred** (not "PASS", not "FAIL" — deferred per §A41-3). The mechanism still EXISTS at `step-01-scan-filesystem.md:122-135`; the rubric verdict for its containing cell-row is what changes.
+
+- **Implication for Epic Story 2.1 retrofit scope:** R1-G1, R1-G2, R5-G1, R5-G2 retrofit identities are stable; their inclusion in Story 2.1's retrofit-scope list is version-pinned to A39's v3 evaluation. A v4+ Gyre refresh would produce its own retrofit-scope list under v4 N_effective evaluation. The two scopes may overlap (likely will, since the underlying mechanisms persist) but are distinct artifacts.
+
+---
+
 ## Revisions
 
 Every revision records the change type so downstream consumers can detect rubric-version drift.
@@ -294,5 +442,6 @@ Every revision records the change type so downstream consumers can detect rubric
 | 2026-04-18 | rule-content-edit | **A15 shipped** — OC-R6 external-declared escape hatch. Added sixth Compliance Status value `N/A — external-declared (<tool>)`, applicable to OC-R6 only, for skills wrapping externally-owned CLIs (git, npm, docker, ...) whose stderr the skill cannot rewrite. Worst-case aggregation §gains an OC-R6 carve-out: Layer 3 excluded from aggregation when the declaration is used, with mandatory evidence-note preconditions (tool named, OC-R0 enumeration, L1+L2 independently PASS OC-R6). If L1 or L2 would FAIL, the cell is FAIL regardless — the carve-out does not mask skill-authored violations. Extends regex parser grammar and em-dash normalization anchor pattern. "No partial credit" note updated to reference three N/A variants. | A15 (backlog) |
 | 2026-04-20 | structural-rewrite + scope-rule-edit | **A28 + A29 shipped as a bundle** — former `## Reproducibility gate (multi-skill audits)` section promoted to `## Selection Discipline` parent with three subsections reflecting three orthogonal selection layers: §Skill Selection (A29, new), §Step Selection (A28, new), §Cell Selection (A10 content preserved verbatim under new header). A29 requires auditors to declare structural dimensions + classify each picked skill + declare selection intent (independent verification vs pattern verification) upfront; pattern-verification audits MUST label findings accordingly in their Executive Summary; mixed audits (pattern cluster + independent variation) must label which cells contribute to which claim. A28 requires ≥2 steps per picked skill OR documented single-step scoping rationale. Rationale (Winston consultation 2026-04-20): A24 (Vortex audit expansion, shipped 2026-04-19) was correctly motivated as a mixed audit — picks 1 and 3 (assumption-mapping + hypothesis-engineering) formed a pattern-verification cluster for the HC-contract-at-step-01 pattern; pick 2 (empathy-map, has template+validate scaffolding) provided the independent structural variation. A29 formalizes the vocabulary A24 exercised informally. Forward-only: A24's framing updated in Epic 2 Story 2.1 with explicit retroactive classification note; retrofit scope unchanged. Round 1 adversarial review caught 2 HIGH findings on the initial A24 re-labeling (mis-identified twins as picks 2+3 and flattened the mixed audit to pure pattern-verification); corrected by reading the A24 report directly before shipping. | A28 + A29 (backlog) |
 | 2026-04-20 | rule-content-edit | **A33 shipped** — §2.6 "Workflow-inherited concepts" extended to cover `workflow.md`. Four new paragraphs appended after the existing `step-t-02` example: (1) **Workflow.md as "earlier step"** — concepts introduced in `workflow.md` (§2.4 Layer 1) count as pre-existing for all step files within the same workflow; (2) **Scope: operator-visible only** — inheritance applies to operator-visible workflow.md content only, consistent with §"Operator-facing vs agent-facing text"; concepts in `MANDATORY EXECUTION RULES` / `YOUR ROLE:` agent-facing blocks are neither counted at Layer 1 nor inherited; (3) **Inheritance unconditional w.r.t. Layer 1 verdict** — even if workflow.md's own Layer 1 OC-R7 is FAIL, its operator-visible concepts are still pre-existing for step cells (§2.4 worst-case aggregation captures composition at skill level); (4) **Anti-escape-hatch clause** — the rule governs *re-introduction* not total budget; workflow.md's operator-visible content must still pass OC-R7 at Layer 1 under existing §2.6 rules, no new threshold introduced. Resolves §9 ambiguity #5 from the 2026-04-19 Vortex audit. Broader reading codified from natural reviewer behavior during the A24 A10 reproducibility gate (§7.1). Winston consultation 2026-04-20 rejected Option B (narrower reading). Round 1 adversarial review surfaced 2 intent-gap decisions (MANDATORY EXECUTION RULES scope; inheritance from a FAILing workflow.md) both pre-flagged as Ask-First in the shipping spec — operator resolved inline: scope = operator-visible only; inheritance = unconditional. 2 bad_spec findings also patched ("within the same workflow" qualifier restored; anti-escape-hatch clause grounded in existing §2.6 rules rather than implying a new threshold). | A33 (backlog) |
+| 2026-04-25 | structural-rewrite + scope-rule-edit + rule-add | **A41+A42 shipped (bundled) — methodology version cutover v3 → v4.** New `## A41-Clarifications` H2 section authored with 13 sub-subsections (§A41-1 through §A41-13) covering: §A41-1 R1 enumerated-options menus (strict per Loom precedent); §A41-2 multi-field contract counting hybrid rule (≤3 sub-fields = 1 compound, ≥4 = N concepts); §A41-3 vacuous-PASS N_effective semantics (excluded from Publication Gate breadth; T1 evaluation deferred if N_effective < 3); §A41-4 OC-R5 strictness convergence (forward-only — v4+ literal halt marker, pre-v4 lenient implicit-wait grandfathered per A24 §8.7); §A41-5 reading-dependent vs borderline distinction (structurally distinct IFF (a) headline commits, (b) §Notes documents alternative, (c) §9 ambiguity logged; v4+ audit reports must include §9 Rubric Ambiguities Surfaced section); §A41-6 A10 cell composition rule (expected-PASS must be reading-dependent or borderline, not stable-PASS; escape clause for matrices without borderline cells); §A41-7 implicit-wait + downstream-explicit-wait composition (valid only if downstream wait CONSUMES upstream prompt's response; Coach R5 dangling-prompt example); §A41-8 A28 v2 step selection (≥2 steps default for Production-readiness archetypes; A39 grandfathered under A28 v1); §A41-9 portfolio audit definition + cross-cutting exclusion (cross-cutting `convoke` portfolio excluded from ≥2-portfolio-audit threshold); §A41-10 COI Mitigation Tier Taxonomy (Tier-0 disclosure-only / Tier-1 blind-sub-reviewers / Tier-2 external-review with three OR-options); §A41-11 cascade termination (no new T1-firing cells introduced by most recent retrofit); §A41-12 A29 single-skill exemption (N=1 acceptable for single-surface teams or calibration-case audits); §A41-13 cell-mechanism naming stability across version cutover (mechanism names are stable referents; T1-firing status is version-pinned). Plus Version-pinning algorithm preamble (v3 = pre-A41 era; v4 = post-A41 era; per-audit pin via `created` date; mid-execution version bumps stay locked). 16-surface-point Epic refactor from skill-centric/right-centric to cell-centric retrofit semantics shipped in same patch. Forward-only application: pre-v4 audits (oc-1-1, A24, A39) stay locked under G4 mitigation gate; v4+ audits use these clarifications. Pre-execution review: V-pass (1 layer, 11 patches) + 3-layer adversarial review (BH+EC+AA, 13 HIGH + 12 MED + 5 LOW after dedup; ~22 patches applied + 2 new PADs added — PAD 12 COI tier taxonomy, PAD 13 A28 v2 — to authorize previously un-PAD'd methodology rules). Post-execution review: 3-layer R1 (BH+EC+AA, ~12 HIGH + ~12 MED + ~10 LOW after dedup; ~25 R1 patches applied including this §Revisions row, §A41-11 cascade termination, §A41-12 A29 single-skill exemption, §A41-13 cell-mechanism stability — plus heading rename, §A41-7+§A41-4 relationship note, example fixes for §A41-2/§A41-3/§A41-4, AC7 A39 NO CHANGE revert, Story 2.3 FR17 verbatim alignment, NFR8 TOC framing, sibling-pointer G4 definition links). | A41+A42 (backlog) |
 
 **Version discipline:** Schema_version in frontmatter is tied to structural breaking changes only (e.g., new required column added to the rules table). Content edits to existing rules go in Revisions without bumping schema_version.
