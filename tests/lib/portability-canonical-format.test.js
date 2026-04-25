@@ -151,8 +151,9 @@ describe('Canonical format specification (sp-2-1)', () => {
   });
 
   it('Test 4: canonical-example.md contains ZERO curly-brace placeholders', () => {
-    // Per AC #3: every {var-name} reference must be replaced with a [your X]
-    // square-bracket prompt during canonical export. The finalized example
+    // Per AC #3: every {var-name} reference must be replaced with a your-X
+    // hyphenated placeholder during canonical export (BUG-7 wording refinement
+    // 2026-04-25 — was [your X] bracket form pre-fix). The finalized example
     // must therefore contain no curly-brace placeholders at all.
     const placeholderRegex = /\{[\w-]+\}/g;
     const matches = canonicalExampleContent.match(placeholderRegex) || [];
