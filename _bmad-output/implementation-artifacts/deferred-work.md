@@ -5,6 +5,23 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of v63-3-4-dual-distribution-parity-verification (2026-04-25 R2)
+
+R2 review (3 layers) — 30 raw findings → 9 patches + 10 defers + 5 dismissed. Acceptance Auditor verdict: AC8 MET; all 16 R1 patches verified.
+
+- **R2-L1 — `canonicalIdForSkillRel` platform-naïve on Windows backslash separators** — marketplace.json is authored with forward slashes, practically unreachable today. Future cross-platform consideration if marketplace.json is ever generated on Windows.
+- **R2-L2 — `fs.copy` preserves symlinks (default `dereference: false`); BMAD's `installVerbatimSkills` follows symlinks** — no symlinks in current source tree under `_vortex/agents/`. If any Convoke skill ever contains a symlink, parity check sees byte-equal SKILL.md but structurally divergent neighbors. Fix path: `fs.copy(... { dereference: true })` to match BMAD.
+- **R2-L3 — Per-iteration `fs.copy(sandboxB, sandboxBPrime)` × 7 wastes ~350KB I/O in I4** — Edge Case Hunter VERIFIED runs in 33ms, well under AC6 budget. Mutation-restore in-place would be faster but introduces test-pollution risk; current approach is correct conservatively.
+- **R2-L4 — `cleanRel = skillRel.replace(/^\.\//, '')` duplicated 6+ times across 2 files** — DRY nit. Future fix: export `cleanSkillRel(rel)` helper from simulator.
+- **R2-L5 — `plugins[0].skills = ''` (empty string) classified as "missing or empty" instead of "not an array"** — `''.length === 0` makes first guard fire before validation loop. Misleading error class for non-array string input. Cosmetic.
+- **R2-L6 — `destDir` collision on duplicate canonicalIds: `skills: ['./a/foo', './b/foo']` → second entry silently overwrites first** — BMAD has same behavior; no current Convoke marketplace.json triggers it. Defense-in-depth via `seenCanonicalIds` Set would cost nothing.
+- **R2-L7 — `isExcluded` with `sourceDir='/'` produces over-exclusion** — Edge Case Hunter VERIFIED `path.relative('/', '/parent/node_modules/x.js') === 'parent/node_modules/x.js'` includes `/node_modules/` → excluded even though sourceRepo is rooted at `/`. Production simulator never passes `sourceDir = '/'` (always `path.join(sourceRepo, cleanRel)`); document the sharp edge.
+- **R2-L8 — `before()` failure cancels but doesn't name the culprit clearly** — node:test cancels every `it()` with generic "test did not finish before its parent and was cancelled". Diagnostic improvement: wrap each setup step in try/catch and re-throw with `[setup:refreshInstallation]` tag.
+- **R2-L9 — Test-count drift in spec** (Auditor F-1) — story L138 + R1 change-log claim post-R1 unit count is `1438→1443 (+5)`; actual is `1444` (+1 from a parallel post-R1 commit on main). Spec stale; gate still passes. Fix path: refresh count in story L138 next time the file is edited.
+- **R2-L10 — `canonicalIdForSkillRel` not used inside the simulator's own `marketplaceInstall`** (Auditor F-3). Sim line 142 still computes `path.basename(cleanRel)` inline. Same result as helper since `cleanRel` already strips `./`. DRY nit.
+
+---
+
 ## Deferred from: code review of v63-3-4-dual-distribution-parity-verification (2026-04-25 R1)
 
 R1 review (3 layers: Blind Hunter + Edge Case Hunter + Acceptance Auditor) — 39 raw findings → 16 patches + 14 defers + 5 dismissed.
