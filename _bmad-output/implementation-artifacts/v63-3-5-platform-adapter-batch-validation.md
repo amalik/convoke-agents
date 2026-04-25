@@ -9,7 +9,7 @@ epic: v63-epic-3
 
 # Story 3.5: Platform adapter batch validation
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -92,14 +92,15 @@ Per-platform rubric inherited from EXP3: persona present, framework-leak-free (n
   Today this prints `44`; AC1 asserts equality between exported count and this number.
 - Every skill subdir MUST have `instructions.md` + `README.md` + `adapters/{claude-code,copilot,cursor}/` populated (verified empirically — every probe skill had this shape).
 
-**AC2 — `validate-exports` passes structural validation with allowlist for ROOT-level issues.**
+**AC2 — `validate-exports` passes structural validation with allowlist for ROOT-level issues.** (DEVIATION: V-pass spec-rewrite claimed validator exits 0 even with issues; actual contract per `validate-exports.js:352` is exit 1 iff any issues, exit 0 iff zero. AC2 amended at dev-time to use allowlist semantics on issue contents, NOT exit code.)
 **Given** the AC1 staging dir
 **When** the operator runs `node scripts/portability/validate-exports.js --input _bmad-output/implementation-artifacts/v63-3-5-staging --report _bmad-output/implementation-artifacts/v63-3-5-validation-report.md`
 **Then**:
-- Exit code MUST be 0 (verified empirically — validator exits 0 even with issues; reports them).
-- `v63-3-5-validation-report.md` MUST be generated.
+- Exit code WILL be 1 (validator hard-fails on any issue; `validate-exports.js:352`). The 3 ROOT-level allowlisted issues drive exit=1; this is EXPECTED behavior given Decision 3.
+- `v63-3-5-validation-report.md` MUST be generated regardless of exit code.
 - The report's "Automated Structural Checks" table MUST contain ONLY the 3 ROOT-level allowlist entries: `ROOT/README.md missing catalog README`, `ROOT/LICENSE missing`, `ROOT/CONTRIBUTING.md missing`. Zero per-skill issues. Zero `instructions.md` issues. Zero forbidden-string matches in adapter content. (Empirical baseline: 3 ROOT issues, 0 per-skill issues.)
 - The report's "Pass/Fail" header MUST read `<N> passed, 0 failed` where `<N>` matches AC1's count.
+- **AC2 PASSES iff** (a) the report is generated AND (b) the issue list contains EXACTLY the 3 allowlisted ROOT entries AND (c) the per-skill issue count is zero AND (d) the Pass/Fail header shows `<N> passed, 0 failed`. Exit code is informational only; the issue-content allowlist is the load-bearing check.
 
 **AC3 — 9 manual spot-checks pass (3 skills × 3 platforms) per EXP3 rubric.**
 **Given** the AC1 staging dir contains the 3 `MANUAL_SMOKE_SKILLS` adapter trees
@@ -122,30 +123,30 @@ Per-platform rubric inherited from EXP3: persona present, framework-leak-free (n
 **Path safety analysis (per `path-safety-for-destructive-ops` rule):** Task 5.1's `rm -rf _bmad-output/implementation-artifacts/v63-3-5-staging` operates on a **hardcoded literal path under the project root** (no operator-supplied input; no user-derived path interpolation). Pre-deletion, Task 5.1 MUST: (a) `path.resolve` the literal to absolute, (b) verify the resolved path startsWith `<project-root>/_bmad-output/implementation-artifacts/`, (c) refuse if not. Even though the path is literal (lowest possible risk), the resolve+normalize+contains-check pattern documents the rule's letter and protects against future refactors that might templatize it.
 
 **AC5 — Validation gates green.**
-- [ ] 5.1 `npm test` baseline unchanged (story adds 0 new tests; existing portability tests at `tests/lib/portability-*.test.js` still pass).
-- [ ] 5.2 `npm run test:integration` baseline unchanged.
-- [ ] 5.3 `npm run lint` clean (no JS files touched).
-- [ ] 5.4 `git diff HEAD --stat` confirms AC4 scope (only the 3 new artifact files + sprint-status.yaml).
+- [x] 5.1 `npm test` baseline unchanged (story adds 0 new tests; existing portability tests at `tests/lib/portability-*.test.js` still pass).
+- [x] 5.2 `npm run test:integration` baseline unchanged.
+- [x] 5.3 `npm run lint` clean (no JS files touched).
+- [x] 5.4 `git diff HEAD --stat` confirms AC4 scope (only the 3 new artifact files + sprint-status.yaml).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0: Pre-flight gates.**
-  - [ ] 0.1 Confirm green baseline: `npm test 2>&1 | tail -3` AND `npm run test:integration 2>&1 | tail -3` BOTH show `pass N / fail 0`. Capture N values.
-  - [ ] 0.2 Verify Tier 1 unique-skill count via Convoke's own RFC-4180 manifest reader:
+- [x] **Task 0: Pre-flight gates.**
+  - [x] 0.1 Confirm green baseline: `npm test 2>&1 | tail -3` AND `npm run test:integration 2>&1 | tail -3` BOTH show `pass N / fail 0`. Capture N values.
+  - [x] 0.2 Verify Tier 1 unique-skill count via Convoke's own RFC-4180 manifest reader:
     ```
     node -e "const { readManifest } = require('./scripts/portability/manifest-csv'); const { rows, header } = readManifest('_bmad/_config/skill-manifest.csv'); const tierIdx = header.indexOf('tier'); const nameIdx = header.indexOf('name'); console.log('unique standalone:', new Set(rows.filter(r => r[tierIdx]==='standalone').map(r => r[nameIdx])).size)"
     ```
     Expected: `unique standalone: 44` (or current value). If wildly different from baseline, surface — manifest may have drifted.
-  - [ ] 0.3 Confirm scripts are invocable: `node scripts/portability/convoke-export.js --help; node scripts/portability/validate-exports.js --help`. Both exit 0 + print usage.
+  - [x] 0.3 Confirm scripts are invocable: `node scripts/portability/convoke-export.js --help; node scripts/portability/validate-exports.js --help`. Both exit 0 + print usage.
 
-- [ ] **Task 1: DEF-SPIKE — sanity-check existing infrastructure.**
-  - [ ] 1.1 **DS1: Tier 1 manifest stability.** Verify the manifest reader returns 44 (or current N) standalone unique names. Confirm `header.indexOf('tier') === 6` and `header.indexOf('name') === 1` (column positions used by Task 0.2). If positions changed since EXP3 (2026-04-12), the parser may need attention — surface.
-  - [ ] 1.2 **DS2: `MANUAL_SMOKE_SKILLS` are still standalone.** Read `scripts/portability/validate-exports.js:31-35`. For each (`bmad-brainstorming`, `bmad-agent-architect`, `bmad-tea`), verify:
+- [x] **Task 1: DEF-SPIKE — sanity-check existing infrastructure.**
+  - [x] 1.1 **DS1: Tier 1 manifest stability.** Verify the manifest reader returns 44 (or current N) standalone unique names. Confirm `header.indexOf('tier') === 6` and `header.indexOf('name') === 1` (column positions used by Task 0.2). If positions changed since EXP3 (2026-04-12), the parser may need attention — surface.
+  - [x] 1.2 **DS2: `MANUAL_SMOKE_SKILLS` are still standalone.** Read `scripts/portability/validate-exports.js:31-35`. For each (`bmad-brainstorming`, `bmad-agent-architect`, `bmad-tea`), verify:
     ```
     node -e "const { readManifest } = require('./scripts/portability/manifest-csv'); const { rows, header } = readManifest('_bmad/_config/skill-manifest.csv'); const tierIdx = header.indexOf('tier'); const nameIdx = header.indexOf('name'); ['bmad-brainstorming', 'bmad-agent-architect', 'bmad-tea'].forEach(n => { const r = rows.find(r => r[nameIdx]===n); console.log(n, r ? r[tierIdx] : 'MISSING'); })"
     ```
     All 3 MUST print `<name> standalone`. If any prints `MISSING` or a different tier, MANUAL_SMOKE_SKILLS has drifted — surface.
-  - [ ] 1.3 **DS3: single-skill smoke confirms no adapter-generator regression since EXP3.** Run:
+  - [x] 1.3 **DS3: single-skill smoke confirms no adapter-generator regression since EXP3.** Run:
     ```
     node scripts/portability/convoke-export.js bmad-brainstorming --output /tmp/v63-3-5-ds3
     ```
@@ -158,18 +159,18 @@ Per-platform rubric inherited from EXP3: persona present, framework-leak-free (n
     ```
     Then `rm -rf /tmp/v63-3-5-ds3`.
 
-- [ ] **Task 2: Run the batch export (AC1).**
-  - [ ] 2.1 Reset staging: `rm -rf _bmad-output/implementation-artifacts/v63-3-5-staging && mkdir -p _bmad-output/implementation-artifacts/v63-3-5-staging`. (Reset prevents stale skill subdirs from a prior failed run from inflating AC1's count assertion.)
-  - [ ] 2.2 Run: `node scripts/portability/convoke-export.js --tier 1 --output _bmad-output/implementation-artifacts/v63-3-5-staging 2>&1 | tee /tmp/v63-3-5-export-stdout.log`.
-  - [ ] 2.3 Assert AC1 contract:
+- [x] **Task 2: Run the batch export (AC1).**
+  - [x] 2.1 Reset staging: `rm -rf _bmad-output/implementation-artifacts/v63-3-5-staging && mkdir -p _bmad-output/implementation-artifacts/v63-3-5-staging`. (Reset prevents stale skill subdirs from a prior failed run from inflating AC1's count assertion.)
+  - [x] 2.2 Run: `node scripts/portability/convoke-export.js --tier 1 --output _bmad-output/implementation-artifacts/v63-3-5-staging 2>&1 | tee /tmp/v63-3-5-export-stdout.log`.
+  - [x] 2.3 Assert AC1 contract:
     - Exit 0 (`echo $?` immediately after).
     - Final line matches `/^Exported \d+ skills \(\d+ success, 0 failed, \d+ skipped\) — \d+ warnings total$/`.
     - Exported count `N` equals Task 0.2's unique-standalone count (`grep -oE "^Exported [0-9]+" /tmp/v63-3-5-export-stdout.log | tail -1 | awk '{print $2}'`).
-  - [ ] 2.4 Spot-check 1 skill's structure: `ls _bmad-output/implementation-artifacts/v63-3-5-staging/bmad-brainstorming/adapters/{claude-code,copilot,cursor}/` shows 1 file each.
+  - [x] 2.4 Spot-check 1 skill's structure: `ls _bmad-output/implementation-artifacts/v63-3-5-staging/bmad-brainstorming/adapters/{claude-code,copilot,cursor}/` shows 1 file each.
 
-- [ ] **Task 3: Run structural validation with ROOT allowlist (AC2).**
-  - [ ] 3.1 Run: `node scripts/portability/validate-exports.js --input _bmad-output/implementation-artifacts/v63-3-5-staging --report _bmad-output/implementation-artifacts/v63-3-5-validation-report.md 2>&1 | tee /tmp/v63-3-5-validate-stdout.log`.
-  - [ ] 3.2 Assert AC2 contract:
+- [x] **Task 3: Run structural validation with ROOT allowlist (AC2).**
+  - [x] 3.1 Run: `node scripts/portability/validate-exports.js --input _bmad-output/implementation-artifacts/v63-3-5-staging --report _bmad-output/implementation-artifacts/v63-3-5-validation-report.md 2>&1 | tee /tmp/v63-3-5-validate-stdout.log`.
+  - [x] 3.2 Assert AC2 contract:
     - Exit 0.
     - Report file generated at the expected path; non-empty; "Pass/Fail" header reads `<N> passed, 0 failed`.
     - Report's structural-checks table contains EXACTLY the 3 ROOT allowlist entries — NO per-skill issues:
@@ -177,34 +178,34 @@ Per-platform rubric inherited from EXP3: persona present, framework-leak-free (n
       grep -E "^\| (ROOT|[a-z])" _bmad-output/implementation-artifacts/v63-3-5-validation-report.md | grep -v "^| ROOT |"
       ```
       MUST return zero matches (any output = per-skill issue, AC2 fails).
-  - [ ] 3.3 If per-skill issues are reported, HALT + surface to user — defects are real and must be triaged before Story 3.5 ships.
+  - [x] 3.3 If per-skill issues are reported, HALT + surface to user — defects are real and must be triaged before Story 3.5 ships.
 
-- [ ] **Task 4: 9 manual spot-checks (AC3).**
-  - [ ] 4.1 **Claude Code (3 cells):** open `v63-3-5-validation-report.md`'s "Manual Smoke Tests — Claude Code" section. For each of Carson/Winston/Murat: read `<staging>/<skill>/adapters/claude-code/SKILL.md`; verify YAML frontmatter (`name:` + `description:`) + persona section + zero matches against `FORBIDDEN_STRINGS`:
+- [x] **Task 4: 9 manual spot-checks (AC3).**
+  - [x] 4.1 **Claude Code (3 cells):** open `v63-3-5-validation-report.md`'s "Manual Smoke Tests — Claude Code" section. For each of Carson/Winston/Murat: read `<staging>/<skill>/adapters/claude-code/SKILL.md`; verify YAML frontmatter (`name:` + `description:`) + persona section + zero matches against `FORBIDDEN_STRINGS`:
     ```
     node -e "console.log(require('./scripts/portability/test-constants').FORBIDDEN_STRINGS.join('\n'))" > /tmp/forbidden.txt
     grep -F -f /tmp/forbidden.txt _bmad-output/implementation-artifacts/v63-3-5-staging/bmad-brainstorming/adapters/claude-code/SKILL.md || echo "no forbidden"
     ```
     Tick the checkboxes in the report (use `[x]` to mark verified). Sample evidence cell verdict: "claude-code/SKILL.md (8211B): YAML frontmatter present at line 1; '## You are' persona at line 12; zero FORBIDDEN_STRINGS matches; PASS."
-  - [ ] 4.2 **Copilot + Cursor (6 cells):** author `v63-3-5-spot-check-report.md` with frontmatter (`artifact_type: validation-evidence`, `story: v63-3-5-platform-adapter-batch-validation`, `auto_smoke_for: claude-code`, `manual_smoke_for: copilot, cursor`, `created: <today>`) and a 3×2 verdict table (rows: skills; cols: copilot/cursor). For each of 6 cells:
+  - [x] 4.2 **Copilot + Cursor (6 cells):** author `v63-3-5-spot-check-report.md` with frontmatter (`artifact_type: validation-evidence`, `story: v63-3-5-platform-adapter-batch-validation`, `auto_smoke_for: claude-code`, `manual_smoke_for: copilot, cursor`, `created: <today>`) and a 3×2 verdict table (rows: skills; cols: copilot/cursor). For each of 6 cells:
     - **Copilot cell:** read `<staging>/<skill>/adapters/copilot/copilot-instructions.md`; verify HTML comment header `<!-- Skill: ... -->` present; persona + workflow present; zero `FORBIDDEN_STRINGS` matches.
     - **Cursor cell:** read `<staging>/<skill>/adapters/cursor/<skill>.md`; verify clean markdown (no YAML frontmatter); persona + workflow present; zero `FORBIDDEN_STRINGS` matches.
     Record verdict (PASS/FAIL/CAVEAT) + evidence (file path, byte size, first-50-byte sample, forbidden-string scan result).
-  - [ ] 4.3 If any cell FAILs, HALT — adapter regression vs EXP3; surface as Bug Lane item.
+  - [x] 4.3 If any cell FAILs, HALT — adapter regression vs EXP3; surface as Bug Lane item.
 
-- [ ] **Task 5: Tear down staging dir + path-safety analysis.**
-  - [ ] 5.1 Path-safety analysis: confirm `_bmad-output/implementation-artifacts/v63-3-5-staging` is a literal hardcoded path under the project root (verified at story-author time per AC4 path-safety section). Run resolve+normalize+contains-check:
+- [x] **Task 5: Tear down staging dir + path-safety analysis.**
+  - [x] 5.1 Path-safety analysis: confirm `_bmad-output/implementation-artifacts/v63-3-5-staging` is a literal hardcoded path under the project root (verified at story-author time per AC4 path-safety section). Run resolve+normalize+contains-check:
     ```
     node -e "const path = require('path'); const target = path.resolve('_bmad-output/implementation-artifacts/v63-3-5-staging'); const root = path.resolve('.'); if (!target.startsWith(root + '/')) { console.error('REFUSE: target outside project root:', target); process.exit(1); } console.log('OK to delete:', target)"
     ```
     Then: `rm -rf _bmad-output/implementation-artifacts/v63-3-5-staging`.
-  - [ ] 5.2 Append a "tear-down completed" line to `v63-3-5-spot-check-report.md` confirming the staging dir was removed + when. Evidence in the 2 reports references file paths + byte sizes captured pre-deletion — deletion doesn't lose evidence.
+  - [x] 5.2 Append a "tear-down completed" line to `v63-3-5-spot-check-report.md` confirming the staging dir was removed + when. Evidence in the 2 reports references file paths + byte sizes captured pre-deletion — deletion doesn't lose evidence.
 
-- [ ] **Task 6: Validation gates (AC5).**
-  - [ ] 6.1 `npm test` — baseline unchanged.
-  - [ ] 6.2 `npm run test:integration` — baseline unchanged.
-  - [ ] 6.3 `npm run lint` — clean (no JS files touched).
-  - [ ] 6.4 `git diff HEAD --stat` — confirms AC4 scope (3 new artifact files + sprint-status.yaml).
+- [x] **Task 6: Validation gates (AC5).**
+  - [x] 6.1 `npm test` — baseline unchanged.
+  - [x] 6.2 `npm run test:integration` — baseline unchanged.
+  - [x] 6.3 `npm run lint` — clean (no JS files touched).
+  - [x] 6.4 `git diff HEAD --stat` — confirms AC4 scope (3 new artifact files + sprint-status.yaml).
 
 ## Dev Notes
 
@@ -297,11 +298,25 @@ Per-platform rubric inherited from EXP3: persona present, framework-leak-free (n
 - `/tmp/v63-3-5-validate-stdout.log` (Task 3.1 — validate-exports stdout).
 
 **Completion Notes List:**
+- 2026-04-25 single-session execution: Tasks 0-6 + Step 9 all done; all 9 spot-checks PASS; all gates green.
+- DS1/DS2/DS3 all resolved inline via Bash verification (manifest stable at 44 unique standalone; column tier=index 6, name=index 1 unchanged; MANUAL_SMOKE_SKILLS all 3 standalone; single-skill smoke produced all 3 adapters non-zero).
+- Task 2 batch export: exit 0, terminal line matched regex, N=44=EXPECTED.
+- Task 3 validate-exports: substantive AC2 PASS (3 allowlisted ROOT issues + 0 per-skill issues + "44 passed, 0 failed" header). **AC2 EXIT-CODE DEVIATION:** validator hard-fails (exit 1) on any issues, NOT exit 0 as V-pass spec-rewrite claimed; spec amended inline with explicit deviation note. V-pass empirical claim was wrong because shell pipeline `$?` was reading `tail`'s exit, not `node`'s. Substantive criterion (allowlist semantics on issue contents) remains MET.
+- Task 4 spot-checks: 9/9 PASS structural verification per EXP3-inherited rubric. Auto-generated Claude-Code checkboxes ticked with `[x] [VERIFIED structurally per AC3]`; Catalog-Walkthrough checkboxes marked `[N/A — out of Story 3.5 AC3 scope]` (catalog tests require seed-catalog-repo flow).
+- Task 5 staging teardown: path-safety analysis ran cleanly (resolve+normalize+contains-check passed); deletion executed + verified absent.
+- Task 6 gates: unit 1445/0/1, integration 93/0/0, lint clean, scope = 4 expected files (2 modified + 2 untracked evidence).
+- Story 3.5 closes Epic 3: 4/5 → 5/5 stories shipped.
+
 **File List:**
+- `_bmad-output/implementation-artifacts/v63-3-5-validation-report.md` (NEW — auto-generated by validate-exports + manually annotated with [x] [VERIFIED] ticks for Claude Code section + [N/A] marks for Catalog Walkthrough)
+- `_bmad-output/implementation-artifacts/v63-3-5-spot-check-report.md` (NEW — operator-authored Copilot + Cursor evidence with frontmatter + per-cell verdict tables + Task 5 teardown evidence)
+- `_bmad-output/implementation-artifacts/v63-3-5-platform-adapter-batch-validation.md` (MODIFIED — Status review + AC2 deviation note + task ticks + Dev Agent Record + Change Log)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (MODIFIED — status in-progress → review + last_updated)
 
 ### Change Log
 
 | Date | Change | Reference |
 |------|--------|-----------|
+| 2026-04-25 | **Story 3.5 implementation completed via `/bmad-dev-story` — all 6 Tasks executed, all 5 ACs met, all gates green; 9/9 spot-checks PASS.** Single-session execution: Task 0 pre-flight (unit 1445/0/1 + integration 93/0/0 baselines green; manifest reads 44 unique standalone names; both portability scripts invocable); Task 1 DEF-SPIKEs DS1+DS2+DS3 all PASS inline (column ordering stable, MANUAL_SMOKE_SKILLS all 3 standalone, single-skill smoke produces all 3 adapters non-zero); Task 2 batch export (exit 0; terminal line matches regex; N=44=EXPECTED; sample structure correct); Task 3 validate-exports (substantive AC2 PASS — 3 allowlisted ROOT issues + 0 per-skill issues + "44 passed, 0 failed" header; **AC2 EXIT-CODE DEVIATION** noted inline + Dev Agent Record — V-pass spec-rewrite claimed validator exits 0 but actual exits 1 on any issues; substantive allowlist semantics remain MET; spec amended); Task 4 9 spot-checks (3 Claude Code via auto-report ticks + 6 Copilot/Cursor in operator-authored `v63-3-5-spot-check-report.md` — per-cell verdict tables with sizes/headers/persona/forbidden-string scans; ALL 9 PASS); Task 5 staging teardown (path-safety resolve+normalize+contains-check passed; rm -rf executed + verified absent); Task 6 validation gates (unit unchanged 1445/0/1, integration unchanged 93/0/0, lint clean, scope = 4 expected files). **Decision 1 v2 PROVEN:** all 44 unique standalone Tier 1 skills export cleanly across all 3 adapter platforms; 9 representative spot-checks confirm per-EXP3-rubric structural integrity (persona present, framework-leak-free, ready-to-drop format). **FR25 satisfied at the level that matters to users** ("Convoke ships everywhere" verified across batch beyond single-skill EXP3 result). **Story shape held:** zero production code; zero `_bmad/bme/` files touched; covenant-checklist N/A; honors derive-counts-from-source (all counts derived at runtime via manifest-csv.js readManifest) + path-safety-for-destructive-ops (Task 5.1 explicit analysis) + lint-passes-before-review + shared-test-constants (FORBIDDEN_STRINGS read at runtime from test-constants.js). **Test-count delta: 0** (procedural story; no new tests). Story status: in-progress → review. **Epic 3 status post-3.5: 5/5 stories shipped — EPIC 3 COMPLETE** (3.1 + 3.2 + 3.3 + 3.4 + 3.5 done). Convoke 4.0 publication gate's marketplace-distribution stream fully proven. Next: `/bmad-code-review` (recommended; minimal code surface — likely converges at R1; tip per workflow = use a different LLM than the one that implemented this story). | This file, `tests/integration/lib/marketplace-installer-sim.js` (no), `_bmad-output/implementation-artifacts/v63-3-5-validation-report.md`, `_bmad-output/implementation-artifacts/v63-3-5-spot-check-report.md`, [sprint-status.yaml](sprint-status.yaml) |
 | 2026-04-25 | **V-pass + empirical probe applied 22 improvements** (6 critical + 6 enhancement + 3 optimization + 4 LLM-opt → all addressed via spec-rewrite per operator option 0). V-pass surfaced 6 critical defects: **C1** (validate-exports.js requires ROOT-level catalog files convoke-export doesn't produce — empirical probe verified 3 ROOT issues but exit 0; AC2 rewritten to allowlist these 3 specific entries while requiring per-skill issues = 0); **C2** (README 80-line cap concern — empirical probe showed 0/44 exceeded; concern moot, verified inline); **C3** ("Tier 1 export complete" terminal line was hallucination — actual line is `Exported N skills (...) — W warnings total`; AC1 rewritten with regex match); **C4** (skill count "60" was wrong — manifest has 60 rows with tier=standalone but `convoke-export` dedupes to **44 unique names**; story rewritten to derive at runtime via `manifest-csv.js::readManifest`, never hardcoding); **C5** (DS2/DS3 "rename narrative" was fabricated — `bmad-cis-agent-brainstorming-coach` AND `bmad-brainstorming` BOTH exist as standalone in current manifest; rename narrative DROPPED; DS2/DS3 simplified); **C6** (Task 5.1 lacked path-safety analysis per project-context.md `path-safety-for-destructive-ops` rule — added explicit resolve+normalize+contains-check protocol). **Empirical probe ran live (2026-04-25):** `convoke-export --tier 1 --output /tmp/probe` → exit 0 + 44 skills + 400 warnings (Phase 6 catch-all noise per I50, non-blocking); `validate-exports --input /tmp/probe` → exit 0 + 3 ROOT issues + 0 per-skill issues + 44/44 passed in report's own framing. Probe destroyed post-measurement. **6 enhancements addressed:** E1 (FORBIDDEN_STRINGS reference reads test-constants.js at runtime, not stale subset); E2 (PR5 explicit caveat that adapter content is unchecked at per-skill level — manual spot-check is the only adapter evidence); E3 (PR3 confidence on adapter-generator regression detection narrowed — `tests/lib/` doesn't directly cover `generateAdapters` but indirect coverage exists; DS3 single-skill smoke is load-bearing); E4 (Task 2.1 now `rm -rf` before `mkdir -p` to prevent stale-skill-subdir count inflation); E5 (DS2 explicitly checks `row[tier-idx] === 'standalone'`, not just name presence); E6 (EXP3 reference path verified). **3 optimizations addressed:** O1 (sprint-status entry trimmed); O2 (AC4 still uses MUST-NOT list since whitelist would exclude legitimate sibling artifacts); O3 (staging dir kept under `_bmad-output/implementation-artifacts/` for namespace consistency, NOT default `./exported-skills/`). **4 LLM-opts addressed:** L1 (Decisions consolidated, no 4× repetition); L2 (procedural-verification mentioned 2× max); L3 (Change Log entries cleaner bullet structure); L4 (count derivation language consistent — "44 today; derived at runtime" not "currently 44"). **Final spec shape:** 5 ACs + **4 Decisions** (was 3; added D4 explicit no-new-code rule) + 6 Tasks + 3 DEF-SPIKEs (DS1/DS2/DS3 inline-resolvable per probe; DS3 still requires live smoke). **Story shape unchanged:** tests-only verification; no production code; no `_bmad/bme/` touched; covenant-checklist N/A. **Empirical baseline pinned in spec** at Story line ~57 — story is now grounded in observed tool behavior, not assumed. **V-pass ROI:** prevented 3 story-killing defects (C1 + C3 + C4 — author would have authored ACs against non-existent tool surfaces); pre-empted 3 task-design defects (C5 + C6 + E4) requiring operator recovery during /bmad-dev-story. Story remains ready-for-dev. | This file |
 | 2026-04-25 | Story created post-Story-3.4 close via `/bmad-create-story v63-3-5`. **5 ACs + 3 Decisions + 6 Tasks + 3 DEF-SPIKEs** covering FR25 platform adapter batch validation. Tests-only / procedural verification. Existing infrastructure (`convoke-export`, `validate-exports`, `generate-adapters`) is CONSUMED. Decision 1: Tier 1 batch = all standalone skills (initial spec said "60", corrected to 44 unique post-V-pass). Decision 2: spot-check skills = `MANUAL_SMOKE_SKILLS` (Carson + Winston + Murat) × 3 platforms = 9 manual cells. Decision 3: NO new code. EXP3 baseline (2026-04-12 PASS) defines per-adapter rubric. Story 3.5 closes Epic 3 (4/5 → 5/5). | [sprint-status.yaml](sprint-status.yaml) |
