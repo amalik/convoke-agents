@@ -127,18 +127,18 @@ Every Claude-specific construct in the source skill files gets stripped or rewri
 
 ### Config var substitutions
 
-When the source contains `{var-name}` references to runtime config values, replace each with a square-bracket prompt the user fills in themselves:
+When the source contains `{var-name}` references to runtime config values, replace each with a hyphenated `your-X` placeholder the user fills in themselves (single-token form so the string survives in code samples / file paths without escaping):
 
 | Source var | Replacement |
 |---|---|
-| `{user_name}` | `[your name]` |
-| `{communication_language}` | `[your preferred language]` |
-| `{document_output_language}` | `[your document language]` |
-| `{output_folder}` | `[your output folder]` |
-| `{planning_artifacts}` | `[your planning artifacts directory]` |
-| `{implementation_artifacts}` | `[your implementation artifacts directory]` |
+| `{user_name}` | `your-name` |
+| `{communication_language}` | `your-preferred-language` |
+| `{document_output_language}` | `your-document-language` |
+| `{output_folder}` | `your-output-folder` |
+| `{planning_artifacts}` | `your-planning-artifacts` |
+| `{implementation_artifacts}` | `your-implementation-artifacts` |
 
-After applying these substitutions the canonical output should contain **zero curly-brace placeholders**. Any `{var-name}` left in the output is a bug.
+Unmapped `{var-name}` references (catch-all) substitute to `your-project-context`. After applying these substitutions the canonical output should contain **zero curly-brace placeholders**. Any `{var-name}` left in the output is a bug. Any `[your X]` left from a Phase 6 substitution path (i.e., emitted by the export engine, not present in originally-literal source prose) is also a bug — though Phase 6 itself no longer emits this form post-BUG-7 (2026-04-25 wording refinement). Literal `[your X]` text appearing in source markdown prose (e.g., quoted documentation examples) passes through unchanged by design.
 
 ### Micro-file directive removals
 
