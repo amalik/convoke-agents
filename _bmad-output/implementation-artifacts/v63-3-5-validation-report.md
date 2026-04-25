@@ -23,24 +23,24 @@ Copy each skill into a clean project and invoke it. Verify persona behavior.
 
 ### Carson (bmad-brainstorming)
 
-- [x] [VERIFIED structurally per AC3] Copied `bmad-brainstorming/instructions.md` to `.claude/skills/bmad-brainstorming/SKILL.md`
-- [x] [VERIFIED structurally per AC3] Invoked skill — Carson introduces self as brainstorming facilitator
-- [x] [VERIFIED structurally per AC3] No references to `_bmad/`, `bmad-init`, or missing files
-- [x] [VERIFIED structurally per AC3] Skill produces usable output
+- [x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5] Copied `bmad-brainstorming/instructions.md` to `.claude/skills/bmad-brainstorming/SKILL.md`
+- [x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5] Invoked skill — Carson introduces self as brainstorming facilitator
+- [x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5] No references to `_bmad/`, `bmad-init`, or missing files
+- [x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5] Skill produces usable output
 
 ### Winston (bmad-agent-architect)
 
-- [x] [VERIFIED structurally per AC3] Copied `bmad-agent-architect/instructions.md` to `.claude/skills/bmad-agent-architect/SKILL.md`
-- [x] [VERIFIED structurally per AC3] Invoked skill — Winston introduces self as system architect
-- [x] [VERIFIED structurally per AC3] No references to `_bmad/`, `bmad-init`, or missing files
-- [x] [VERIFIED structurally per AC3] Skill produces usable output
+- [x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5] Copied `bmad-agent-architect/instructions.md` to `.claude/skills/bmad-agent-architect/SKILL.md`
+- [x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5] Invoked skill — Winston introduces self as system architect
+- [x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5] No references to `_bmad/`, `bmad-init`, or missing files
+- [x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5] Skill produces usable output
 
 ### Murat (bmad-tea)
 
-- [x] [VERIFIED structurally per AC3] Copied `bmad-tea/instructions.md` to `.claude/skills/bmad-tea/SKILL.md`
-- [x] [VERIFIED structurally per AC3] Invoked skill — Murat introduces self as test architect
-- [x] [VERIFIED structurally per AC3] No references to `_bmad/`, `bmad-init`, or missing files
-- [x] [VERIFIED structurally per AC3] Skill produces usable output
+- [x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5] Copied `bmad-tea/instructions.md` to `.claude/skills/bmad-tea/SKILL.md`
+- [x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5] Invoked skill — Murat introduces self as test architect
+- [x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5] No references to `_bmad/`, `bmad-init`, or missing files
+- [x] [STRUCTURAL ONLY — adapter file inspected; behavioral invocation NOT performed in Story 3.5] Skill produces usable output
 
 ---
 
