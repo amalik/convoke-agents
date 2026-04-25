@@ -47,6 +47,7 @@ export default [
     files: [
       "scripts/update/lib/utils.js",
       "scripts/install-vortex-agents.js",
+      "scripts/install-gyre-agents.js",
       "scripts/install-all-agents.js",
       "scripts/install-emma.js",
       "scripts/install-wade.js",
