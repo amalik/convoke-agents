@@ -23,10 +23,10 @@ describe('Fresh Install (refreshInstallation on empty project)', () => {
   it('creates agent files in the correct location', async () => {
     await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
 
-    const emmaPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/contextualization-expert.md');
-    const wadePath = path.join(tmpDir, '_bmad/bme/_vortex/agents/lean-experiments-specialist.md');
-    const islaPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/discovery-empathy-expert.md');
-    const maxPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/learning-decision-expert.md');
+    const emmaPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md');
+    const wadePath = path.join(tmpDir, '_bmad/bme/_vortex/agents/lean-experiments-specialist/SKILL.md');
+    const islaPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md');
+    const maxPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/learning-decision-expert/SKILL.md');
 
     assert.ok(fs.existsSync(emmaPath), 'Emma agent file should exist');
     assert.ok(fs.existsSync(wadePath), 'Wade agent file should exist');
@@ -109,7 +109,7 @@ describe('Fresh Install creates skill files', () => {
   it('skill files reference correct agent path', async () => {
     const skillPath = path.join(tmpDir, '.claude', 'skills', 'bmad-agent-bme-lean-experiments-specialist', 'SKILL.md');
     const content = fs.readFileSync(skillPath, 'utf8');
-    assert.ok(content.includes('_bmad/bme/_vortex/agents/lean-experiments-specialist.md'), 'should reference correct agent file');
+    assert.ok(content.includes('_bmad/bme/_vortex/agents/lean-experiments-specialist/SKILL.md'), 'should reference correct agent file');
   });
 
   it('is idempotent — running twice produces same result', async () => {
@@ -177,8 +177,8 @@ describe('Fresh Install agent content matches package source', () => {
   });
 
   it('installed Emma matches package source', async () => {
-    const srcPath = path.join(packageRoot, '_bmad/bme/_vortex/agents/contextualization-expert.md');
-    const dstPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/contextualization-expert.md');
+    const srcPath = path.join(packageRoot, '_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md');
+    const dstPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md');
 
     if (fs.existsSync(srcPath)) {
       const src = fs.readFileSync(srcPath, 'utf8');
@@ -188,8 +188,8 @@ describe('Fresh Install agent content matches package source', () => {
   });
 
   it('installed Wade matches package source', async () => {
-    const srcPath = path.join(packageRoot, '_bmad/bme/_vortex/agents/lean-experiments-specialist.md');
-    const dstPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/lean-experiments-specialist.md');
+    const srcPath = path.join(packageRoot, '_bmad/bme/_vortex/agents/lean-experiments-specialist/SKILL.md');
+    const dstPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/lean-experiments-specialist/SKILL.md');
 
     if (fs.existsSync(srcPath)) {
       const src = fs.readFileSync(srcPath, 'utf8');
@@ -199,8 +199,8 @@ describe('Fresh Install agent content matches package source', () => {
   });
 
   it('installed Isla matches package source', async () => {
-    const srcPath = path.join(packageRoot, '_bmad/bme/_vortex/agents/discovery-empathy-expert.md');
-    const dstPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/discovery-empathy-expert.md');
+    const srcPath = path.join(packageRoot, '_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md');
+    const dstPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md');
 
     if (fs.existsSync(srcPath)) {
       const src = fs.readFileSync(srcPath, 'utf8');
@@ -210,8 +210,8 @@ describe('Fresh Install agent content matches package source', () => {
   });
 
   it('installed Max matches package source', async () => {
-    const srcPath = path.join(packageRoot, '_bmad/bme/_vortex/agents/learning-decision-expert.md');
-    const dstPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/learning-decision-expert.md');
+    const srcPath = path.join(packageRoot, '_bmad/bme/_vortex/agents/learning-decision-expert/SKILL.md');
+    const dstPath = path.join(tmpDir, '_bmad/bme/_vortex/agents/learning-decision-expert/SKILL.md');
 
     if (fs.existsSync(srcPath)) {
       const src = fs.readFileSync(srcPath, 'utf8');
