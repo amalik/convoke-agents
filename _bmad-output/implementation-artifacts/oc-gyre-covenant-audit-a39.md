@@ -153,11 +153,87 @@ The 4 workflows cover 4 distinct structural archetypes (scan / generate / decide
 - **AA-M3 (vacuous-PASS framing in §1) — Partial-dismissed:** §1 already acknowledges vacuous PASS via the new §3 PASS taxonomy line (P8). Adding a §1-level note would duplicate; covered by P8 elsewhere.
 - **BH-L13 (§10 / §2.5 redundancy) — Dismissed:** §10 is the report's internal closure log; §2.5 is the backlog activity log. They're parallel records intentionally — A24 follows the same pattern. Maintenance cost is acceptable.
 
-### Convergence assessment (per `code-review-convergence` rule)
+### Convergence assessment (per `code-review-convergence` rule) — R1
 
 R1 surfaced 9 HIGH findings. Per rule: "5+ HIGH findings ⇒ Round 2 mandatory" applies to STRUCTURAL changes (new cells, new exports, major control-flow restructure). A39's R1 patches are **content-only** (no new audit cells, no verdict overturns, no §3 matrix changes, no §5 row recomputation, no methodology revision). Patches P1/P2/P9/P10 are framing tweaks; P4 is semantic clarification; P5/P6/P7 add explanatory paragraphs; P8 adds a PASS taxonomy line; P11 adds an exception note; P12-P17 are mechanical citation fixes.
 
-**Round 2 NOT auto-triggered.** Operator may invoke Round 2 explicitly if the 3 Decisions-Needed (DN1/DN2/DN3) require deeper reconciliation, but R1 patches alone bring the report to a self-consistent state suitable for §2.5 Completed status with provisional A10 caveat.
+**Round 2 NOT auto-triggered post-R1.** Operator invoked Round 2 explicitly to validate R1-patch-induced contradictions per A24 R2 precedent.
+
+## Review Findings (Round 2, 2026-04-25)
+
+**Legend:** Same as R1 — 3 layers (Blind Hunter + Edge Case Hunter + Acceptance Auditor) ran in parallel against the post-R1 audit report state.
+
+**R2 special focus:** A24 R2 precedent caught 5 HIGH findings caused BY R1 patches (e.g., R1 patches that fixed surface-level issues but missed body surfaces, or introduced new contradictions via expansion). Same pattern applied here.
+
+**R2 outcome:** ~11 HIGH findings (after dedup) + ~9 MEDIUM + ~6 LOW + 4 NIT. Most HIGH findings were R1-INDUCED incomplete-patch-propagation (P1, P9, P17 missed body surfaces). 3 R2-NEW findings: (a) Atlas R4 "all 7 fields" was load-layer not display-layer count; (b) §6.1 retrofit math silently dropped oc-1-1 R5 #11; (c) Coach R5 composition claim verifiably false — verdict overturn warranted.
+
+### R2 Patches (16) — applied this round
+
+**REVERT-style patches** (R1 over-engineering rolled back):
+- [x] **R2-P1 (AA-R2-M1 + EC-R2-M1 + BH-R2-H4)** — Drop "verdict-concurrence-with-main = 2/3" + "three-way unanimous = 1/3" alternative metrics from §7.1 + §1 + Status. Earlier R1 patch P5 added two non-A10-grounded metrics that subtly weakened the A10-failure framing; A10 explicitly operationalizes blind A-vs-B agreement only (per oc-1-1 §2.5). Reverted to single A10-grounded metric: 1/3 pairwise.
+- [x] **R2-P2 (BH-R2-M1)** — Drop "tier-0 / tier-1+" vocabulary from §8 COI mitigation section. Earlier R1 patch P7 introduced these terms but never defined them operationally; A41 cannot "specify which tier is required" if tiers themselves aren't enumerated. Replaced with explicit mitigation-type names ("disclosure-only", "external-reviewer audit", "authorship-blind audit", "adversarial peer-review") without tier numbering.
+- [x] **R2-P3 (BH-R2-H5)** — Sharpen P6 alternative-explanations honest-acknowledgment. Earlier R1 framing concluded "(c) most charitable" without testing (a) and (b); R2 honest assessment: (a)/(b)/(c) cannot be distinguished from A10 data alone, so headline FAIL on Coach R1 is provisional under ALL three readings.
+
+**SURFACE-COMPLETENESS patches** (R1 P1/P9/P17 missed surfaces):
+- [x] **R2-P4 (BH-R2-H1 + AA-R2-H1 + BH-R2-H2)** — §10 audit-report surface fixes: "T1 FIRES" → "T1 *would* fire (provisional)" (3 occurrences); "§2.4 Backlog" → "§2.3 Fast Lane" (lane label corrected); ambiguity bundling split — A10-validated (#1 + #4) vs methodology-level (#2 + #3 + #5) per BH-R2-H2.
+- [x] **R2-P5 (EC-R2-H1)** — §6.5 v3 baseline label: "reproducibility-validated" → "A10 NOT cleared per §7.1; reproducibility-NOT-validated" (direct contradiction of §7.1 was load-bearing).
+- [x] **R2-P6 (EC-R2-H2)** — §9 #3 cite swaps at 4 body surfaces (lines 110, 138, 191, 322): replaced #3 with #1 where R7 charitable/strict counting is the actual subject (#3 = vacuous PASS, NOT R7 counting). 1 over-replace caught and reverted at line 393 (vacuous-PASS context legitimately cites #3).
+- [x] **R2-P7 (BH-R2-H3)** — §1 mechanism qualifier on Coach R1: added "Coach Review Mode menu mechanism per main audit; A10 reviewers diverged on which surface applies — see §7.1".
+- [x] **R2-P8 (EC-R2-L1)** — §5 footnote ² provisional inline: "T1 FIRES under strict reading too" → noted as reading-dependent under §7.1 A10 outcome.
+- [x] **R2-P9 (BH-R2-M2)** — §5 cell summary post-R2: now mentions TWO bottlenecks (R1 + R5 post-overturn); also notes strict R7 reading would add R7 as third bottleneck; 100% compliance framing reframed as "4 other rights" not "5 other rights" (R5 no longer in compliant set).
+
+**MECHANICAL fixes:**
+- [x] **R2-P10 (EC-R2-M6)** — §4.2 Atlas R4: "all 7 GC1 fields" → "all 6 GC1 summary rows (compressed from 7 sub-fields per the load layer)". The display layer has 6 visible rows (Stack combines 2 sub-fields, Deployment combines 2 sub-fields), not 7.
+- [x] **R2-P11 (EC-R2-M4)** — §4.3 Lens R4 citation: :42 → :43 (P15 landed on section heading, not action sentence).
+- [x] **R2-P12 (EC-R2-M3)** — §6.1 misattribution corrected: "team-level T1 not cell-level" rule was attributed to "A24 D5a precedent and oc-1-1 §3.5 D5a's reasoning" — but oc-1-1 D5a actually added cell-level retrofits (#10, #11). Rule cited as A24-only.
+- [x] **R2-P13 (EC-R2-M2)** — §6.1 P4 retrofit math comprehensiveness: oc-1-1 R5 retrofit (#11) silently dropped pre-R2; post-R2-overturn, R5-G1 supersedes #11. Net delta in Gyre retrofits overall: +1 cell (R1-G2 net-new + R1-G1 supersedes #10 + R5-G1 supersedes #11; was claimed "+1 R1, 0 overall" pre-overturn — now correctly "+1 overall"). Also added R5-G2 Scout single-service auto-decide retrofit (R2 cascade adds Scout R5 to retrofit since team-level R5 now fires T1 at 50%).
+- [x] **R2-P14 (AA-R2-H2)** — A39-D1 deferred-work entry clarified: P16 condensation reduced Scout R5 from ~5 sentences to 3, NOT to ≤2 cap (entry text amended in deferred-work.md A39-D1).
+- [x] **R2-P15 (BH-R2-NIT-15)** — §7.1 path-forward: "predictably achieve clearance" → "clearance not guaranteed" (over-claim removed).
+- [x] **R2-P16 (AA-R2-H3)** — Move P11 Coach R5 secondary-surface paragraph from §4.4 R5 evidence cell to §4.5 Notes per AC6 separation-of-concerns ("methodology-application observations belong in §Notes, not in evidence cells"). Done as part of the Coach R5 verdict overturn (§4.4 R5 now contains the FAIL evidence; the methodology-application detail moved to §4.5).
+
+### R2 Verdict Overturn Cascade — Coach R5 PASS → FAIL (~6 cell-level edits)
+
+**Justification:** EC-R2-M5 verified that the deferred-review prompt at `step-01-load-context.md:60` is dangling — no halt marker, no yes/no branching, §5 wait at line 77 fires unconditionally regardless of yes/no answer to §4 prompt. P11's "implicit wait + downstream-explicit-wait composition" claim from R1 was structurally incorrect; the implicit-wait + downstream-explicit-wait precedent applies only to designs where the downstream wait CONSUMES the upstream prompt's response (lean-persona §8.7 pattern). Coach §4 → §5 doesn't have this consumption relationship. Per oc-1-1 §2.4 R5 strict reading, prompt-without-wait is canonical FAIL.
+
+**Cascade applied 2026-04-25 in same R2 round** (per `verify_external_identifiers` rule — when external file evidence disconfirms a claim, trust the evidence over the claim, even at the cost of a same-round verdict overturn):
+- §3 matrix Coach R5: ✅ → ❌ (with footnote ³ explaining the overturn)
+- §4.4 Coach R5 evidence: rewritten from PASS-with-composition-claim to FAIL-with-dangling-prompt evidence
+- §4.5 Notes: new entry "Coach R5 dangling-deferred-review-prompt — methodology-application observation post-R2 verdict overturn" (where the §4.4 secondary-surface paragraph moved per AC6)
+- §5 row R5: 1/4 → 2/4; 25% → 50% fail rate; "Does not fire" → "T1 fires PROVISIONAL"
+- §5 cell summary: now mentions TWO bottlenecks (R1 + R5)
+- §6.1: added R5-G1 Coach §4 dangling-prompt retrofit + R5-G2 Scout single-service auto-decide retrofit (Scout R5 was previously NOT retrofit-scoped because team-level R5 was at 25% pre-overturn; post-overturn at 50% it joins retrofit scope per consistency)
+- §6.5: v3 baseline updated to reflect TWO T1-firing rights
+- §10 activity log: rewritten to reflect post-R2 state
+- §1 headline: rewritten to lead with TWO T1-firing rights (R1 + R5)
+- PASS taxonomy: 25 → 24 PASS (3 → 4 FAIL); 18 explicit → 17 explicit
+
+### Decisions-Needed (R1 DN1/DN2/DN3 stand; R2 DN4 self-resolved via overturn)
+
+R1 DN1, DN2, DN3 are **unchanged post-R2** (still operator-decisions; no R2 patch resolved them):
+- **DN1 (AC10 framing)** — keep `[x]` checkbox + Review Findings explanation, OR rename to `[!]` "MET-with-failed-gate"? Recommendation unchanged: keep `[x]` + A41 should clarify whether AC10 means "executed" or "cleared".
+- **DN2 (AC7 doctor-pass)** — accept "spirit" reading? Recommendation unchanged: amend AC7 wording in future story-template update; A39's reading is operationally fine.
+- **DN3 (Scout R6 re-evaluation)** — re-evaluate or defer? Recommendation unchanged: defer to v4+ refresh (Acceptance Auditor R2 walked the file and confirmed deferral is honest — auto-decide is silent path commitment, not error state requiring R6 remediation).
+
+**R2 DN4 (Coach R5 overturn) — self-resolved via cascade.** Originally would have surfaced as a Decision-Needed, but file evidence was decisive (deferred-review prompt is verifiably dangling); per `verify_external_identifiers` rule, applied overturn directly rather than deferring. Documented for traceability.
+
+### R2 Defers (4 stand from R1; 0 added)
+
+A39-D1..D4 entries in deferred-work.md unchanged (R2 didn't sweep AC5 ≤2-sentence cap, didn't redo A10 cell selection, didn't re-evaluate Scout R6, didn't redefine "reading-dependent" partial-credit). All 4 remain A41 inputs.
+
+### R2 Convergence Assessment
+
+R2 surfaced 11 HIGH findings (after dedup). Per code-review-convergence rule: 5+ HIGH triggers Round 3 evaluation. Are R2 patches structural?
+
+**R2 patches are mostly content-only** (reverts + surface fixes + mechanical). The Coach R5 verdict overturn IS structurally significant (changes a verdict cell + cascades to §3/§5/§6.1/§10/§1) — this is the R2 equivalent of A24 R2's introduction of significant new control-flow. Per the spirit of A24's R2 convergence rule ("structural enough to warrant a fresh-eyes pass"), the Coach R5 cascade should get a focused Round 3 sanity check on the cascade only — not a full 3-layer re-review.
+
+**Round 3: minimal scope** — single Edge Case Hunter pass on the cascade, focused on:
+1. Verify R2-overturn math: §3 matrix Coach R5 = ❌ → §5 row R5: 2/4 fails → §5 row "T1 fires PROVISIONAL" → §6.1 R5-G1 + R5-G2 retrofit cells
+2. Verify §1 headline now reflects 2 T1-firing rights
+3. Verify §10 activity log post-R2 update is consistent with §3/§5/§6.1
+4. Verify the §4.5 Notes "Coach R5 dangling-deferred-review-prompt" entry doesn't conflict with the moved P11 paragraph
+5. Verify PASS taxonomy 17+4+3+4=28 still adds up
+
+If R3 surfaces 0 HIGH findings → R3 converges; A39 status moves to final `done (provisional A10) post-R3 sanity-check`. If R3 surfaces HIGH findings → assess scope-creep risk; possibly stop-and-defer rather than R4.
 
 ## Dev Notes
 
