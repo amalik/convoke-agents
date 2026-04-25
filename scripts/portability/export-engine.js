@@ -804,7 +804,9 @@ function extractWhatYouProduce(workflowContent, stepContents, skillRow) {
     const outputFile = pathsBlock[1].match(/[`*]?(\w*_output_file|\w*_artifact)[`*]?\s*=\s*[`]?([^`\n]+)[`]?/);
     if (outputFile) {
       const humanName = humanizeSkillName(skillRow.name).toLowerCase();
-      lines.push(`A markdown ${humanName} document at \`${outputFile[2].replace(/\{[\w_-]+\}/g, 'your-output-folder')}\`. The document captures the session output and is intentionally raw — value comes from quantity and diversity, not pre-curation.`);
+      // Handle both {var} and {{var}} forms — single-brace-only regex would match inner
+      // {date} of {{date}}, leaving residual `{your-output-folder}` for Phase 6 catch-all.
+      lines.push(`A markdown ${humanName} document at \`${outputFile[2].replace(/\{\{?[\w_-]+\}?\}/g, 'your-output-folder')}\`. The document captures the session output and is intentionally raw — value comes from quantity and diversity, not pre-curation.`);
       return lines.join('\n');
     }
   }
