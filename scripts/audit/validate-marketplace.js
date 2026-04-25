@@ -12,6 +12,11 @@
  *
  * Bin entry: `convoke-validate-marketplace` (see package.json).
  *
+ * Scope distinction (Story v63-3-2 AC7): this tool is marketplace-submission-
+ * scoped (the 7 Vortex paths from `marketplace.json.skills[]`). For full-tree
+ * runtime audit over ALL `.claude/skills/` directories, see
+ * `scripts/audit/audit-skill-dirs.js`.
+ *
  * Six checks (each returns `{passed, error?, warning?, info?}` — same shape
  * as Story 2.2's `checkBmmDependencies` findings):
  *   1. `validateMarketplaceJson` — file exists + parseable JSON.
