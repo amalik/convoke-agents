@@ -77,6 +77,11 @@ describe('Per-Skill README Generation (sp-3-2)', () => {
     const content = exportCarson();
     assert.ok(!content.includes('[your output folder]'));
     assert.ok(!content.includes('[your context]'));
+    assert.ok(!content.includes('[your name]'));
+    assert.ok(
+      content.includes('your-output-folder'),
+      'Phase 6 substitution must produce hyphenated form in README synthesis path'
+    );
   });
 
   // Batch test — shared run
