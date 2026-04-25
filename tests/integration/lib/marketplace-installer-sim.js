@@ -53,9 +53,14 @@ const PARITY_HINTS = Object.freeze({
 });
 
 /**
- * Format a hint with concrete context. Substitutes the {id} token if present.
- * @param {string} key - PARITY_HINTS key
- * @param {string} id - canonicalId or skillRel for context
+ * Format a hint with concrete context. Appends the context in parens to the
+ * hint template; returns the bare template if `id` is empty/falsy. There is
+ * no `{id}` token substitution — PARITY_HINTS templates are bare prose.
+ * @param {string} key - PARITY_HINTS key (one of: 'source-missing',
+ *   'npm-missing', 'marketplace-sim-missing', 'byte-diff'). Unknown keys
+ *   produce an empty template.
+ * @param {string} id - canonicalId / skillRel / freeform context to append
+ *   in parens. Empty string omits the parens entirely.
  * @returns {string}
  */
 function formatHint(key, id) {
@@ -124,10 +129,11 @@ async function marketplaceInstall(destRoot, { sourceRepo }) {
     throw new Error('marketplace.json regression: plugins[0].skills missing or empty');
   }
 
-  // R1-M12: validate every plugin's skills array, not just plugins[0]
+  // R1-M12 + R2-M7: validate every plugin's skills array, not just plugins[0],
+  // with null-safe access (plugins: [valid, null] would otherwise TypeError).
   for (let i = 0; i < manifest.plugins.length; i++) {
     const p = manifest.plugins[i];
-    if (p.skills !== undefined && !Array.isArray(p.skills)) {
+    if (p && p.skills !== undefined && !Array.isArray(p.skills)) {
       throw new Error(`marketplace.json regression: plugins[${i}].skills is not an array`);
     }
   }
@@ -135,12 +141,20 @@ async function marketplaceInstall(destRoot, { sourceRepo }) {
   const ideSkillsDir = path.join(destRoot, '.claude/skills');
 
   for (const plugin of manifest.plugins) {
-    if (!plugin.skills) continue;
+    if (!plugin || !plugin.skills) continue;
     for (const skillRel of plugin.skills) {
       const cleanRel = skillRel.replace(/^\.\//, '');
       const sourceDir = path.join(sourceRepo, cleanRel);
-      const canonicalId = path.basename(cleanRel);
+      const canonicalId = canonicalIdForSkillRel(skillRel);
       const destDir = path.join(ideSkillsDir, canonicalId);
+
+      // R2-H1: guard against destructive canonicalIds. `skills: ['./']` or
+      // `'.'` or `''` would yield canonicalId `''` → destDir === ideSkillsDir
+      // → fs.remove(ideSkillsDir) would clobber every previously-installed
+      // skill. Surface as source-missing rather than silently destroying.
+      if (!canonicalId || canonicalId === '.' || canonicalId === '/') {
+        throw new Error(formatHint('source-missing', `invalid canonicalId from skillRel: ${cleanRel}`));
+      }
 
       // R1-M4: verify sourceDir exists; surface a useful error not opaque ENOENT
       if (!(await fs.pathExists(sourceDir))) {
