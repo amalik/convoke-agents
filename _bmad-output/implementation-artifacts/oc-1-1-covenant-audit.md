@@ -2,6 +2,8 @@
 
 Status: done
 
+> **A41+A42 amendment marker (added 2026-04-25):** This spec's AC framing references original ≥50% bottleneck-rights threshold + skill-centric retrofit semantics. Both have been **superseded** by A41+A42 cell-centric refactor of P21 Epic 2 Story 2.1 (cell-mechanism distinct retrofits per A39 naming convention). This spec's shipped verdicts stay locked under G4 mitigation gate (forward-only methodology adoption — see A24 §8.1 + Compliance Checklist §A41-Clarifications) — forward-pointer only. See [P21 Epic 2 Story 2.1](../planning-artifacts/convoke-epic-operator-covenant.md) for the refactored ACs + [Compliance Checklist §A41-Clarifications](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md) for the cell-centric methodology rules.
+
 ## Story
 
 As a Convoke contributor earning external publishing rights for the Covenant,
