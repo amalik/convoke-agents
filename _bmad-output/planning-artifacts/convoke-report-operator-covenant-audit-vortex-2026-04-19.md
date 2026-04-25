@@ -7,6 +7,8 @@ schema_version: 1
 
 # Vortex Audit Expansion Report (A24 / IN-12)
 
+> **A41+A42 cross-reference (added 2026-04-25):** A24's §5 (team × Right) row table semantics + §6.1 retrofit cell language are the **primary precedent** for A41+A42's cell-centric refactor of P21 Epic 2 Story 2.1. A24 verdicts stay locked under G4 mitigation gate (forward-only methodology adoption — see A24 §8.1 + Compliance Checklist §A41-Clarifications). See [Compliance Checklist §A41-Clarifications](convoke-spec-covenant-compliance-checklist.md) for the operational definitions A41 codifies.
+
 **Scope:** Vortex-team expansion of the [2026-04-18 Covenant Audit](convoke-report-operator-covenant-audit-2026-04-18.md). Audits 3 additional Vortex workflows (`assumption-mapping`, `empathy-map`, `hypothesis-engineering`) under the locked oc-1-1 methodology to raise the Vortex team cell from N=1 to N=4, enabling T1 trigger evaluation per [convoke-epic-operator-covenant.md §Retrofit Trigger Rule](convoke-epic-operator-covenant.md).
 
 **Headline finding:** **T1 FIRES for Vortex × Right to pacing** (25% compliance, 1/4 skills PASS, N=4 ≥ 3 floor). Verdict is reproducibility-validated as of 2026-04-19 (§7.1 A10 pass, 3/3 = 100% reviewer agreement). The Vortex team systematically violates Right to pacing at step-01 of HC-contract-consuming workflows. Empathy-map is the sole Vortex PASS on pacing. All 6 other rights PASS at 100% (4/4) across Vortex — Right to pacing is the single concentrated bottleneck.
