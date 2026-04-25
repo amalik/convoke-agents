@@ -121,10 +121,12 @@ describe('convoke-doctor: empty agent files', () => {
       CURRENT_CONFIG_YAML,
       'utf8'
     );
-    // Create all 7 agent files, but make them empty (0 bytes)
-    const { AGENT_FILES } = require('../../scripts/update/lib/agent-registry');
-    for (const agent of AGENT_FILES) {
-      await fs.writeFile(path.join(agentsDir, agent), '', 'utf8');
+    // Create all 7 agent skill-dirs with empty SKILL.md (0 bytes) — post-Story-3.1 layout
+    const { AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
+    for (const id of AGENT_IDS) {
+      const agentDir = path.join(agentsDir, id);
+      await fs.ensureDir(agentDir);
+      await fs.writeFile(path.join(agentDir, 'SKILL.md'), '', 'utf8');
     }
   });
 
@@ -255,9 +257,11 @@ describe('convoke-doctor: excluded_agents (U8)', () => {
       'utf8'
     );
 
-    // Write agent files for all active agents (NOT the excluded one).
+    // Write agent skill-dirs for all active agents (NOT the excluded one) — post-Story-3.1 layout.
     for (const id of activeAgents) {
-      await fs.writeFile(path.join(vortexDir, 'agents', `${id}.md`), `# ${id}`, 'utf8');
+      const agentDir = path.join(vortexDir, 'agents', id);
+      await fs.ensureDir(agentDir);
+      await fs.writeFile(path.join(agentDir, 'SKILL.md'), `# ${id}`, 'utf8');
     }
 
     // Seed skill wrappers for active agents only.
@@ -318,7 +322,9 @@ describe('convoke-doctor: governance softWarning exit-code (Story v63-2-2 H1)', 
       'utf8'
     );
     for (const id of AGENT_IDS) {
-      await fs.writeFile(path.join(vortexDir, 'agents', `${id}.md`), `# ${id}`, 'utf8');
+      const agentDir = path.join(vortexDir, 'agents', id);
+      await fs.ensureDir(agentDir);
+      await fs.writeFile(path.join(agentDir, 'SKILL.md'), `# ${id}`, 'utf8');
     }
 
     // Skill wrappers for all expected agents (Vortex + Gyre + EXTRA_BME).
