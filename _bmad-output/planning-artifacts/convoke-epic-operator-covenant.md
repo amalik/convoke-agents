@@ -360,6 +360,8 @@ oc-2-1 retrofit is scoped when EITHER trigger fires:
 - **T1 (concentrated bottleneck):** Any (team × Right) cell measures < 70% compliance across ≥ 3 audited skills in that team. (The N ≥ 3 floor prevents single-sample tyranny — one low-compliance skill in a team is not a team-level bottleneck.)
 - **T2 (systemic bottleneck):** Overall audit compliance < 75%, OR any Right < 70% compliance averaged across all audited teams.
 
+**Threshold boundary semantics (A30, 2026-04-25):** All thresholds in T1 and T2 are strict less-than. Exactly 70% (or 75%) does NOT fire — a measurement must drop *below* the threshold to trigger. Example: at N=10 audited skills, 7/10 PASS = 70.0% does NOT fire T1; 6/10 = 60.0% fires. Rationale: at the boundary, evidence is ambiguous; below it, evidence is decisive.
+
 Retrofit scope = the (team × Right) cell(s) that tripped the trigger — not the full audit matrix. Rights are treated as peers; severity weighting applies to *scope sequencing within the triggered cells*, not to the trigger threshold itself.
 
 Trigger evaluation re-runs after each audit refresh (v1 oc-1-1 = 2026-04-18 baseline; v2 post-IN-12 Vortex-focused re-audit; v3+ post future re-audits).
@@ -441,7 +443,7 @@ So that Convoke's commitment to operator experience as a first-class architectur
 
 **Given** the Publication Gate is cleared (Story 2.1 complete for bottleneck rights with no regressions AND ≥2 audits covering distinct portfolios exist)
 **When** external publication proceeds
-**Then** the Covenant appears in the repository README as a dedicated section (primary channel); an accompanying blog post is optional and requires separate approval (secondary channel)
+**Then** the Covenant appears in the repository README as a dedicated section (primary channel); an accompanying blog post is optional and at operator discretion — no additional approval gate beyond the Publication Gate already cleared above (secondary channel) [Amended 2026-04-25 via A43: operator is the sole approval authority in Convoke's operating model; no second-party gate exists.]
 
 **Given** the publication
 **When** an external reader encounters the Covenant
