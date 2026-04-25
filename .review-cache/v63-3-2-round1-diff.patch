@@ -1,0 +1,1064 @@
+diff --git a/package.json b/package.json
+index 9bf45881..1734d32b 100644
+--- a/package.json
++++ b/package.json
+@@ -13,6 +13,7 @@
+     "_bmad/bme/_portability/",
+     "_bmad/bme/_team-factory/",
+     ".claude-plugin/",
++    ".claude/skills/bmad-audit-skill-dirs/",
+     "INSTALLATION.md",
+     "UPDATE-GUIDE.md",
+     "CHANGELOG.md",
+@@ -30,6 +31,7 @@
+     "convoke-doctor": "scripts/convoke-doctor.js",
+     "convoke-register-skill": "scripts/convoke-register-skill.js",
+     "convoke-validate-marketplace": "scripts/audit/validate-marketplace.js",
++    "convoke-audit-skill-dirs": "scripts/audit/audit-skill-dirs.js",
+     "convoke-migrate-artifacts": "scripts/migrate-artifacts.js",
+     "convoke-portfolio": "scripts/lib/portfolio/portfolio-engine.js",
+     "convoke-export": "scripts/portability/convoke-export.js"
+diff --git a/project-context.md b/project-context.md
+index ac77141d..04677fa9 100644
+--- a/project-context.md
++++ b/project-context.md
+@@ -251,4 +251,12 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
+ 
+ **Reviewing a PR that implements a backlog item.** Ask the author: did you run the staleness pre-flight? If the answer is no and the item was qualified more than 3 days before the PR opened (or a parallel-tracks event intervened), request a retroactive run and hold the review until it's clean.
+ 
+-**Forward-looking note.** This rule is the Phase 1 convention-test for a future `[P] Preflight` step file in `bmad-enhance-initiatives-backlog` (tracked as I62 in the lifecycle backlog, Blocked). I62 unblocks when **either**: (a) the rule is applied ≥ 3 times with ≥ 1 real-drift hit documented in the backlog Change Log, OR (b) 2 weeks elapse since this rule's ship date (2026-04-19) — evidence-freshness deadline to prevent Phase 1 rotting. Applications are recorded via Change Log entries of the form *"Staleness pre-flight run on item X: GREEN/YELLOW/RED"* — this is the verifiable substrate the I62 trigger counts. No applications logged = Phase 1 rotted; unblock on (b) path but revisit whether the rule itself needs reshaping.
+\ No newline at end of file
++**Forward-looking note.** This rule is the Phase 1 convention-test for a future `[P] Preflight` step file in `bmad-enhance-initiatives-backlog` (tracked as I62 in the lifecycle backlog, Blocked). I62 unblocks when **either**: (a) the rule is applied ≥ 3 times with ≥ 1 real-drift hit documented in the backlog Change Log, OR (b) 2 weeks elapse since this rule's ship date (2026-04-19) — evidence-freshness deadline to prevent Phase 1 rotting. Applications are recorded via Change Log entries of the form *"Staleness pre-flight run on item X: GREEN/YELLOW/RED"* — this is the verifiable substrate the I62 trigger counts. No applications logged = Phase 1 rotted; unblock on (b) path but revisit whether the rule itself needs reshaping.
++
++## preflight-soft-warn
++
++**Rule.** Runtime preflight checks (BMAD compatibility, environment sanity) emit yellow WARNINGs to stderr but exit 0 — never block the install/update flow. Operators see the WARNING but the operation continues.
++
++**Why.** Story v63-3-2 (FR23) shipped the first preflight in `scripts/update/lib/compat-preflight.js`. Detection is best-effort: Convoke is a *parallel* BMAD extension installed side-by-side, not a dependent — `node_modules/bmad-method/` is absent in the canonical Convoke dev tree, so the absent-package WARNING is the primary path that fires. False-positive hard-blocks would trap operators with legitimate non-standard installs (git-clone, monorepo, alternative distribution channels). Higher-fidelity gates ship in Story 3.3 (publish-gate) and Story 4.x (behavioral-equivalence) where the cost-benefit favors strict failure.
++
++**How to apply.** Future preflight helpers (e.g., environment-preflight, dependency-preflight) MUST follow the same contract: stderr WARNING + exit 0 pass-through; never `process.exit(non-zero)`; never `throw` to the caller. Use `chalk.yellow(...)` so WARNING text stays under non-TTY (chalk auto-disables colors only). Live smoke against the dev tree MUST emit the WARNING — silent green is a fixture-or-gate bug, not a success signal.
+diff --git a/scripts/install-gyre-agents.js b/scripts/install-gyre-agents.js
+index d3ac9feb..7e79f24b 100755
+--- a/scripts/install-gyre-agents.js
++++ b/scripts/install-gyre-agents.js
+@@ -4,6 +4,7 @@ const fs = require('fs-extra');
+ const path = require('path');
+ const { refreshInstallation } = require('./update/lib/refresh-installation');
+ const { findProjectRoot } = require('./update/lib/utils');
++const { runCompatPreflight } = require('./update/lib/compat-preflight');
+ const { GYRE_AGENTS } = require('./update/lib/agent-registry');
+ 
+ const BOLD = '\x1b[1m';
+@@ -121,6 +122,9 @@ async function main() {
+   try {
+     const projectRoot = findProjectRoot();
+ 
++    // Story v63-3-2 (FR23): runtime BMAD-version preflight (soft-warn only).
++    runCompatPreflight(projectRoot);
++
+     printBanner();
+     checkPrerequisites(projectRoot);
+     createOutputDirectory(projectRoot);
+diff --git a/scripts/install-vortex-agents.js b/scripts/install-vortex-agents.js
+index 3d48771d..e93632d3 100755
+--- a/scripts/install-vortex-agents.js
++++ b/scripts/install-vortex-agents.js
+@@ -4,6 +4,7 @@ const fs = require('fs-extra');
+ const path = require('path');
+ const { refreshInstallation } = require('./update/lib/refresh-installation');
+ const { findProjectRoot } = require('./update/lib/utils');
++const { runCompatPreflight } = require('./update/lib/compat-preflight');
+ const { AGENTS } = require('./update/lib/agent-registry');
+ 
+ const BOLD = '\x1b[1m';
+@@ -166,6 +167,10 @@ async function main() {
+     // Use findProjectRoot for existing projects, fall back to cwd for fresh installs
+     const projectRoot = findProjectRoot() || process.cwd();
+ 
++    // Story v63-3-2 (FR23): runtime BMAD-version preflight. Soft-warn only —
++    // emits stderr WARNING when BMAD < 6.3 or absent; never blocks install.
++    runCompatPreflight(projectRoot);
++
+     printBanner();
+     checkPrerequisites(projectRoot);
+     archiveDeprecatedWorkflows(projectRoot);
+diff --git a/scripts/update/convoke-update.js b/scripts/update/convoke-update.js
+index eb3251a8..bba6dd75 100755
+--- a/scripts/update/convoke-update.js
++++ b/scripts/update/convoke-update.js
+@@ -7,6 +7,7 @@ const migrationRunner = require('./lib/migration-runner');
+ const registry = require('./migrations/registry');
+ const { findProjectRoot } = require('./lib/utils');
+ const { readChangelogEntries } = require('./lib/changelog-reader');
++const { runCompatPreflight } = require('./lib/compat-preflight');
+ // Story v63-2-3: post-upgrade governance gate. `checkBmmDependencies` is
+ // lazy-required inside `_runPostUpgradeGate` (Round 1 R1-M2 fix) so a
+ // load-time error in convoke-doctor can't abort convoke-update startup, and
+@@ -233,6 +234,10 @@ async function main() {
+   console.log('');
+ 
+   const projectRoot = findProjectRoot();
++
++  // Story v63-3-2 (FR23): runtime BMAD-version preflight (soft-warn only).
++  if (projectRoot) runCompatPreflight(projectRoot);
++
+   const assessment = assessUpdate(projectRoot);
+ 
+   switch (assessment.action) {
+diff --git a/scripts/audit/audit-skill-dirs.js b/scripts/audit/audit-skill-dirs.js
+new file mode 100755
+index 00000000..816fcd79
+--- /dev/null
++++ b/scripts/audit/audit-skill-dirs.js
+@@ -0,0 +1,278 @@
++#!/usr/bin/env node
++
++'use strict';
++
++/**
++ * @module scripts/audit/audit-skill-dirs
++ *
++ * Story v63-3-2 (Epic 3 / NFR12 + NFR4): runtime audit over ALL
++ * `.claude/skills/` directories (~98 on a typical Convoke install).
++ * Verifies every skill dir has a `SKILL.md` with v6.3-compliant
++ * frontmatter (`name:` + `description:` non-empty strings).
++ *
++ * Distinct from `validate-marketplace.js`'s `auditSkillDirs`, which is
++ * marketplace-pre-submission-scoped (7 Vortex paths only). This tool is
++ * full-tree runtime validation; the two coexist as specialists.
++ *
++ * Bin entry: `convoke-audit-skill-dirs` (see package.json).
++ *
++ * Hardening (per Story 3.1 R1/R2 patterns + Story 2.x precedents):
++ *   - Pattern 1 module structure (shebang + `'use strict'` + `@module` +
++ *     `findProjectRoot()` + frozen `_internal`)
++ *   - Symlink-escape guard with strict `startsWith(rootWithSep)` (R2-H3)
++ *   - TOCTOU try/catch on lstatSync/realpathSync (R2-H2)
++ *   - SKILL.md size guard `>= SKILL_MD_MAX_BYTES` (R1-M2 + R2-L1
++ *     fix-forward — inclusive upper bound)
++ *   - Trim-reject for frontmatter `name`/`description` empty/whitespace
++ *     (R1-M6 + R2-M5)
++ *   - `--help` short-circuit wins over other parse errors (R2-M5)
++ *
++ * Exit codes: 0 all passed / 1 any hard failure / --dry-run always 0.
++ */
++
++const fs = require('fs-extra');
++const path = require('path');
++const yaml = require('js-yaml');
++const chalk = require('chalk');
++const { findProjectRoot } = require('../update/lib/utils');
++
++const SKILLS_REL = '.claude/skills';
++// Inclusive upper bound — Story 3.1 R2-L1 fix-forward. Realistic SKILL.md
++// is well under 100KB; anything ≥1MB is a red flag (DoS surface for
++// unbounded readFileSync).
++const SKILL_MD_MAX_BYTES = 1_000_000;
++
++// ─── Per-dir check ────────────────────────────────────────────────
++
++/**
++ * Audit a single skill directory.
++ * Returns `{passed, error?, info?}` per Story 2.2's `checkBmmDependencies` shape.
++ *
++ * @param {string} skillDirAbsPath - Absolute path to the candidate skill dir.
++ * @param {string} skillRel - Path relative to project root (for error messages).
++ * @param {string} rootWithSep - projectRoot + path.sep (for symlink containment).
++ */
++function checkSkillDir(skillDirAbsPath, skillRel, rootWithSep) {
++  const name = `skill dir: ${skillRel}`;
++
++  // Symlink-escape guard with TOCTOU try/catch.
++  try {
++    const lstat = fs.lstatSync(skillDirAbsPath);
++    if (lstat.isSymbolicLink()) {
++      const realDir = fs.realpathSync(skillDirAbsPath);
++      if (!realDir.startsWith(rootWithSep)) {
++        return {
++          name,
++          passed: false,
++          error: `symlink escapes project root: ${skillRel} → ${realDir}`,
++        };
++      }
++    }
++  } catch (err) {
++    return {
++      name,
++      passed: false,
++      error: `cannot stat path: ${skillRel} — ${(err && err.message) || String(err)}`,
++    };
++  }
++
++  if (!fs.statSync(skillDirAbsPath).isDirectory()) {
++    return { name, passed: false, error: `not a directory: ${skillRel}` };
++  }
++
++  const skillMdPath = path.join(skillDirAbsPath, 'SKILL.md');
++  if (!fs.existsSync(skillMdPath)) {
++    return { name, passed: false, error: `missing SKILL.md: ${skillRel}/SKILL.md` };
++  }
++
++  // Size guard (inclusive upper bound — R2-L1 fix-forward).
++  const skillMdStat = fs.statSync(skillMdPath);
++  if (skillMdStat.size >= SKILL_MD_MAX_BYTES) {
++    return {
++      name,
++      passed: false,
++      error: `SKILL.md exceeds ${SKILL_MD_MAX_BYTES} bytes (${skillMdStat.size}): ${skillRel}/SKILL.md`,
++    };
++  }
++
++  const content = fs.readFileSync(skillMdPath, 'utf8');
++  const fmMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
++  if (!fmMatch) {
++    return { name, passed: false, error: `missing frontmatter block: ${skillRel}/SKILL.md` };
++  }
++
++  let frontmatter;
++  try {
++    frontmatter = yaml.load(fmMatch[1]);
++  } catch (err) {
++    return {
++      name,
++      passed: false,
++      error: `invalid frontmatter YAML: ${skillRel}/SKILL.md — ${err.message}`,
++    };
++  }
++  if (!frontmatter || typeof frontmatter !== 'object') {
++    return { name, passed: false, error: `frontmatter not an object: ${skillRel}/SKILL.md` };
++  }
++
++  // Trim-reject empty/whitespace/literal-undefined for both required fields.
++  for (const field of ['name', 'description']) {
++    const v = frontmatter[field];
++    if (typeof v !== 'string' || v.trim() === '' || v === 'undefined' || v === 'null') {
++      return {
++        name,
++        passed: false,
++        error: `frontmatter '${field}' missing or invalid: ${skillRel}/SKILL.md`,
++      };
++    }
++  }
++
++  return { name, passed: true, info: `name=${frontmatter.name}` };
++}
++
++/**
++ * Walk `.claude/skills/` one level deep, audit each candidate dir.
++ * Skips non-directory entries (e.g., stray `.DS_Store`).
++ *
++ * @param {string} projectRoot
++ * @returns {{ findings: Array, scanned: number }}
++ */
++function auditAllSkillDirs(projectRoot) {
++  const skillsDir = path.join(projectRoot, SKILLS_REL);
++  const findings = [];
++
++  if (!fs.existsSync(skillsDir)) {
++    findings.push({
++      name: 'skills directory',
++      passed: true,
++      info: `no skills directory found at ${SKILLS_REL} (fresh install state)`,
++    });
++    return { findings, scanned: 0 };
++  }
++
++  const rootWithSep = projectRoot.endsWith(path.sep) ? projectRoot : projectRoot + path.sep;
++  const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
++
++  let scanned = 0;
++  for (const entry of entries) {
++    // Skip non-directory entries silently (stray .DS_Store, etc.).
++    if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
++    const skillRel = path.posix.join(SKILLS_REL, entry.name);
++    const skillAbs = path.join(skillsDir, entry.name);
++    findings.push(checkSkillDir(skillAbs, skillRel, rootWithSep));
++    scanned += 1;
++  }
++
++  return { findings, scanned };
++}
++
++// ─── Main dispatcher ─────────────────────────────────────────────
++
++function renderHelp() {
++  console.log('');
++  console.log(chalk.bold('convoke-audit-skill-dirs') + ' — runtime audit over all .claude/skills/ directories');
++  console.log('');
++  console.log('Usage:');
++  console.log('  convoke-audit-skill-dirs [options]');
++  console.log('');
++  console.log('Options:');
++  console.log('  --verbose, -v   Print per-dir pass/fail with info lines.');
++  console.log('  --dry-run       Run all checks; exit 0 regardless of outcome (preview mode).');
++  console.log('  --help, -h      Show this help.');
++  console.log('');
++  console.log('Distinct from `convoke-validate-marketplace`, which is marketplace-submission-scoped.');
++  console.log('');
++}
++
++function renderResults(findings, scanned, verbose) {
++  console.log('');
++  console.log(chalk.cyan.bold('Skill directory audit:'));
++  let hardFails = 0;
++  for (const f of findings) {
++    const fname = typeof f.name === 'string' ? f.name : '(unnamed)';
++    if (f.passed) {
++      // Special case: "skills directory" placeholder finding (fresh-install
++      // state — no `.claude/skills/` dir at all) always prints its info,
++      // even without --verbose, so the operator understands the zero-scan
++      // outcome.
++      if (fname === 'skills directory' && typeof f.info === 'string') {
++        console.log(chalk.gray(`  ${f.info}`));
++        continue;
++      }
++      if (verbose) {
++        console.log(chalk.green(`  ✓ ${fname}`));
++        if (typeof f.info === 'string' && f.info.length > 0) {
++          console.log(chalk.gray(`    ${f.info}`));
++        }
++      }
++    } else {
++      hardFails += 1;
++      console.log(chalk.red(`  ✗ ${fname}`));
++      if (typeof f.error === 'string' && f.error.length > 0) {
++        console.log(chalk.red(`    ${f.error}`));
++      }
++    }
++  }
++  console.log('');
++  if (hardFails === 0) {
++    console.log(chalk.green(`  ${scanned} skill dir(s) audited; all passed.`));
++  } else {
++    const passed = scanned - hardFails;
++    console.log(chalk.red(`  ${scanned} skill dir(s) audited; ${passed} passed; ${hardFails} failed.`));
++  }
++  console.log('');
++  return hardFails;
++}
++
++function parseArgs(argv) {
++  const flags = { verbose: false, dryRun: false, help: false };
++  // R2-M5 precedent: --help wins over other flag parse errors. Pre-scan first.
++  for (const a of argv) {
++    if (a === '--help' || a === '-h') {
++      flags.help = true;
++      return flags;
++    }
++  }
++  for (const a of argv) {
++    if (a === '--verbose' || a === '-v') flags.verbose = true;
++    else if (a === '--dry-run') flags.dryRun = true;
++  }
++  return flags;
++}
++
++function main(argv) {
++  const flags = parseArgs(argv);
++  if (flags.help) { renderHelp(); return 0; }
++
++  const projectRoot = findProjectRoot();
++  if (!projectRoot) {
++    console.log(chalk.red('  ✗ Not inside a Convoke project (no _bmad/ directory found).'));
++    console.log(chalk.gray('    Run: npx -p convoke-agents convoke-install'));
++    return 1;
++  }
++
++  const { findings, scanned } = auditAllSkillDirs(projectRoot);
++  const hardFails = renderResults(findings, scanned, flags.verbose);
++  if (flags.dryRun) return 0;
++  return hardFails > 0 ? 1 : 0;
++}
++
++// ─── Exports ─────────────────────────────────────────────────────
++
++module.exports = {
++  main,
++  auditAllSkillDirs,
++  // R2-L5 pattern (from Story 2.3): Object.freeze prevents test-order leaks.
++  _internal: Object.freeze({
++    parseArgs,
++    renderResults,
++    renderHelp,
++    checkSkillDir,
++    SKILLS_REL,
++    SKILL_MD_MAX_BYTES,
++  }),
++};
++
++if (require.main === module) {
++  process.exit(main(process.argv.slice(2)));
++}
+diff --git a/scripts/update/lib/compat-preflight.js b/scripts/update/lib/compat-preflight.js
+new file mode 100644
+index 00000000..312b6e2a
+--- /dev/null
++++ b/scripts/update/lib/compat-preflight.js
+@@ -0,0 +1,104 @@
++'use strict';
++
++/**
++ * @module scripts/update/lib/compat-preflight
++ *
++ * Story v63-3-2 (Epic 3 / FR23): runtime BMAD-version compatibility
++ * preflight check. Called from `convoke-install`, `convoke-install-gyre`,
++ * and `convoke-update` entry points BEFORE any filesystem writes.
++ *
++ * Detection strategy (Decision 1, pinned in story spec):
++ *   1. Read `node_modules/bmad-method/package.json` `version` field.
++ *   2. If `>= 6.3.0`: silent pass.
++ *   3. If `< 6.3.0`: yellow WARNING with version + upgrade hint; exit 0.
++ *   4. If absent / unparseable / missing version field: yellow WARNING
++ *      "BMAD core not detected" — exit 0 (best-effort detection).
++ *
++ * Critical caveat: Convoke does NOT depend on `bmad-method` in its own
++ * package.json (it's a parallel BMAD extension, not a dependent), so the
++ * absent-package WARNING is the ONLY path that fires on Convoke's own dev
++ * machine + most CI runners. Live smoke (Task 8.4) verifies the WARNING
++ * appears; mocked node_modules fixtures verify the version-present
++ * branches.
++ *
++ * Soft-warn design (Decision 3, pinned): preflight ALWAYS continues the
++ * install/update flow (exit 0 pass-through). FR23 says "emits version
++ * warning"; literal interpretation. False-positive hard-blocks would trap
++ * operators with legitimate non-standard installs. Harder gates ship in
++ * Story 3.3 (publish-gate) + Story 4.x (behavioral-equivalence).
++ */
++
++const fs = require('fs-extra');
++const path = require('path');
++const chalk = require('chalk');
++const { compareVersions } = require('./utils');
++
++const REQUIRED_BMAD_VERSION = '6.3.0';
++const BMAD_PACKAGE_NAME = 'bmad-method';
++
++/**
++ * Read the BMAD package.json and return the parsed `version` field.
++ * @param {string} projectRoot
++ * @returns {{ found: boolean, version?: string, reason?: string }}
++ */
++function _readBmadPackageJson(projectRoot) {
++  const pkgPath = path.join(projectRoot, 'node_modules', BMAD_PACKAGE_NAME, 'package.json');
++  if (!fs.existsSync(pkgPath)) {
++    return { found: false, reason: 'package not in node_modules' };
++  }
++  let parsed;
++  try {
++    parsed = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
++  } catch (err) {
++    return { found: false, reason: `package.json unparseable: ${err.message}` };
++  }
++  if (!parsed || typeof parsed !== 'object') {
++    return { found: false, reason: 'package.json is not an object' };
++  }
++  const v = parsed.version;
++  if (typeof v !== 'string' || v.trim() === '' || v === 'undefined' || v === 'null') {
++    return { found: false, reason: `version field invalid: ${JSON.stringify(v)}` };
++  }
++  return { found: true, version: v };
++}
++
++/**
++ * Run the FR23 preflight check. Side effect: writes WARNING to stderr
++ * when applicable. Returns metadata so callers can introspect (mostly
++ * for tests).
++ *
++ * @param {string} projectRoot
++ * @returns {{ detected: boolean, version: string|null, warning: string|null }}
++ */
++function runCompatPreflight(projectRoot) {
++  if (!projectRoot || typeof projectRoot !== 'string') {
++    throw new Error('runCompatPreflight: projectRoot must be a non-empty string');
++  }
++
++  const probe = _readBmadPackageJson(projectRoot);
++
++  if (!probe.found) {
++    const msg = `BMAD core not detected (${probe.reason}) — cannot verify v6.3 compatibility; proceeding anyway`;
++    process.stderr.write(chalk.yellow(`  ⚠ ${msg}\n`));
++    return { detected: false, version: null, warning: msg };
++  }
++
++  const cmp = compareVersions(probe.version, REQUIRED_BMAD_VERSION);
++  if (cmp >= 0) {
++    return { detected: true, version: probe.version, warning: null };
++  }
++
++  const msg = `BMAD ${probe.version} detected; Convoke 4.0 requires >= ${REQUIRED_BMAD_VERSION}. Upgrade BMAD core: npm install ${BMAD_PACKAGE_NAME}@latest`;
++  process.stderr.write(chalk.yellow(`  ⚠ ${msg}\n`));
++  return { detected: true, version: probe.version, warning: msg };
++}
++
++module.exports = {
++  runCompatPreflight,
++  REQUIRED_BMAD_VERSION,
++  BMAD_PACKAGE_NAME,
++  // R2-L5 pattern (from Story 2.3): Object.freeze prevents test-order leaks.
++  _internal: Object.freeze({
++    _readBmadPackageJson,
++  }),
++};
+diff --git a/tests/unit/audit-skill-dirs.test.js b/tests/unit/audit-skill-dirs.test.js
+new file mode 100644
+index 00000000..f1589807
+--- /dev/null
++++ b/tests/unit/audit-skill-dirs.test.js
+@@ -0,0 +1,343 @@
++'use strict';
++
++const { describe, it } = require('node:test');
++const assert = require('node:assert/strict');
++const path = require('path');
++const os = require('os');
++const fs = require('fs-extra');
++
++const {
++  PACKAGE_ROOT,
++  createTempDir,
++  runScript,
++} = require('../helpers');
++
++const SCRIPT_PATH = path.join(PACKAGE_ROOT, 'scripts/audit/audit-skill-dirs.js');
++
++// ─── Fixture helpers ──────────────────────────────────────────────
++
++const VALID_FRONTMATTER = '---\nname: example-skill\ndescription: example skill\n---\n\n# body\n';
++
++/**
++ * Seed a `.claude/skills/` tree with N valid skill dirs.
++ * Also creates `_bmad/` so findProjectRoot() succeeds.
++ */
++async function seedSkillsFixture(tmpDir, options = {}) {
++  const { skills = [], stripBmad = false } = options;
++  if (!stripBmad) {
++    await fs.ensureDir(path.join(tmpDir, '_bmad'));
++  }
++  for (const spec of skills) {
++    const skillDir = path.join(tmpDir, '.claude/skills', spec.name);
++    await fs.ensureDir(skillDir);
++    if (spec.skillMd !== undefined) {
++      await fs.writeFile(path.join(skillDir, 'SKILL.md'), spec.skillMd, 'utf8');
++    } else if (!spec.skipSkillMd) {
++      await fs.writeFile(path.join(skillDir, 'SKILL.md'), `---\nname: ${spec.name}\ndescription: t\n---\n# ${spec.name}\n`, 'utf8');
++    }
++  }
++}
++
++// ─── Tests ────────────────────────────────────────────────────────
++
++describe('audit-skill-dirs CLI (Story v63-3-2)', () => {
++
++  // ── Test 1: happy path — all dirs pass ──
++  it('valid fixture (5 dirs) → exit 0', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await seedSkillsFixture(tmpDir, {
++        skills: ['a', 'b', 'c', 'd', 'e'].map(n => ({ name: `skill-${n}` })),
++      });
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, ['--verbose'], { cwd: tmpDir });
++      assert.equal(exitCode, 0, `expected exit 0, got ${exitCode}. stdout:\n${stdout}`);
++      assert.ok(stdout.includes('5 skill dir(s) audited') && stdout.includes('all passed'),
++        `expected success summary; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 2: missing SKILL.md in one dir ──
++  it('missing SKILL.md in one dir → exit 1', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await seedSkillsFixture(tmpDir, {
++        skills: [
++          { name: 'skill-a' },
++          { name: 'skill-b' },
++          { name: 'skill-broken', skipSkillMd: true },
++        ],
++      });
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
++      assert.equal(exitCode, 1);
++      assert.ok(stdout.includes('missing SKILL.md') && stdout.includes('skill-broken'),
++        `expected missing-SKILL.md error; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 3: missing frontmatter block ──
++  it('SKILL.md without frontmatter block → exit 1', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await seedSkillsFixture(tmpDir, {
++        skills: [{ name: 'skill-noframe', skillMd: '# body without frontmatter\n' }],
++      });
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
++      assert.equal(exitCode, 1);
++      assert.ok(stdout.includes('missing frontmatter block'),
++        `expected missing-frontmatter error; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 4: frontmatter not parseable YAML ──
++  it('SKILL.md frontmatter with invalid YAML → exit 1', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await seedSkillsFixture(tmpDir, {
++        skills: [{ name: 'skill-badyaml', skillMd: '---\nname: [unclosed\n---\n# body\n' }],
++      });
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
++      assert.equal(exitCode, 1);
++      assert.ok(stdout.includes('invalid frontmatter YAML') && stdout.includes('skill-badyaml'),
++        `expected YAML error; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 5: frontmatter missing `name:` ──
++  it('SKILL.md frontmatter missing name: → exit 1', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await seedSkillsFixture(tmpDir, {
++        skills: [{ name: 'skill-noname', skillMd: '---\ndescription: only desc\n---\n# body\n' }],
++      });
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
++      assert.equal(exitCode, 1);
++      assert.ok(stdout.includes("frontmatter 'name'") && stdout.includes('skill-noname'),
++        `expected name-missing error; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 6: frontmatter missing `description:` ──
++  it('SKILL.md frontmatter missing description: → exit 1', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await seedSkillsFixture(tmpDir, {
++        skills: [{ name: 'skill-nodesc', skillMd: '---\nname: skill-nodesc\n---\n# body\n' }],
++      });
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
++      assert.equal(exitCode, 1);
++      assert.ok(stdout.includes("frontmatter 'description'") && stdout.includes('skill-nodesc'),
++        `expected description-missing error; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 7: --dry-run exits 0 even on failure ──
++  it('--dry-run preserves exit 0 on hard failures', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await seedSkillsFixture(tmpDir, {
++        skills: [{ name: 'skill-broken', skipSkillMd: true }],
++      });
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, ['--dry-run'], { cwd: tmpDir });
++      assert.equal(exitCode, 0, `--dry-run must exit 0; got ${exitCode}`);
++      assert.ok(stdout.includes('missing SKILL.md'), 'should still report the failure under --dry-run');
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 8: --verbose adds per-finding info ──
++  it('--verbose adds per-finding pass-line + info', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await seedSkillsFixture(tmpDir, {
++        skills: [{ name: 'skill-a' }, { name: 'skill-b' }],
++      });
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, ['--verbose'], { cwd: tmpDir });
++      assert.equal(exitCode, 0);
++      assert.ok(stdout.includes('skill dir: .claude/skills/skill-a') && stdout.includes('name=skill-a'),
++        `expected verbose info lines; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 9: --help wins over other parse errors ──
++  it('--help wins over unknown flags (R2-M5 pattern)', async () => {
++    const { exitCode, stdout } = await runScript(SCRIPT_PATH, ['--help', '--unknown-flag'], { cwd: PACKAGE_ROOT });
++    assert.equal(exitCode, 0);
++    assert.ok(stdout.includes('convoke-audit-skill-dirs') && stdout.includes('Usage:'),
++      `expected help text; got:\n${stdout}`);
++  });
++
++  // ── Test 10: SKILL.md ≥ 1MB → size-exceeded error ──
++  it('SKILL.md at/above SKILL_MD_MAX_BYTES → size-exceeded error (R2-L1 fix-forward inclusive)', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      const big = '---\nname: skill-big\ndescription: t\n---\n' + 'x'.repeat(1_000_001);
++      await seedSkillsFixture(tmpDir, {
++        skills: [{ name: 'skill-big', skillMd: big }, { name: 'skill-ok' }],
++      });
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
++      assert.equal(exitCode, 1);
++      assert.ok(stdout.includes('exceeds') && stdout.includes('skill-big'),
++        `expected size-exceeded error; got:\n${stdout}`);
++      // Iteration continues — skill-ok still audited.
++      assert.ok(stdout.includes('2 skill dir(s) audited'),
++        `expected both dirs in scan total; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 11: symlink escaping project root → rejection ──
++  it('symlink escaping project root → rejection (R2-H3 strict containment)', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    const externalDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-external-'));
++    try {
++      await fs.ensureDir(path.join(tmpDir, '_bmad'));
++      const skillsRoot = path.join(tmpDir, '.claude/skills');
++      await fs.ensureDir(skillsRoot);
++      // External target: a real directory outside tmpDir.
++      await fs.writeFile(path.join(externalDir, 'SKILL.md'), VALID_FRONTMATTER);
++      // Symlink inside .claude/skills/ pointing at the external dir.
++      await fs.symlink(externalDir, path.join(skillsRoot, 'skill-escape'));
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
++      assert.equal(exitCode, 1);
++      assert.ok(stdout.includes('symlink escapes project root') && stdout.includes('skill-escape'),
++        `expected symlink-escape error; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++      await fs.remove(externalDir);
++    }
++  });
++
++  // ── Test 12: broken symlink (ENOENT target) → clean error ──
++  it('symlink with broken target → clean stat error (R2-H2 TOCTOU)', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await fs.ensureDir(path.join(tmpDir, '_bmad'));
++      const skillsRoot = path.join(tmpDir, '.claude/skills');
++      await fs.ensureDir(skillsRoot);
++      await fs.symlink('/this/path/definitely/does/not/exist', path.join(skillsRoot, 'skill-dangle'));
++      // Plus one valid sibling so iteration continues.
++      const okDir = path.join(skillsRoot, 'skill-ok');
++      await fs.ensureDir(okDir);
++      await fs.writeFile(path.join(okDir, 'SKILL.md'), VALID_FRONTMATTER);
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
++      assert.equal(exitCode, 1);
++      assert.ok(stdout.includes('cannot stat path') && stdout.includes('skill-dangle'),
++        `expected stat error; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 13: --dry-run + --verbose combine ──
++  it('--dry-run + --verbose combine: verbose output + exit 0', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await seedSkillsFixture(tmpDir, {
++        skills: [{ name: 'skill-broken', skipSkillMd: true }, { name: 'skill-ok' }],
++      });
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, ['--dry-run', '--verbose'], { cwd: tmpDir });
++      assert.equal(exitCode, 0);
++      assert.ok(stdout.includes('missing SKILL.md') && stdout.includes('skill-broken'));
++      assert.ok(stdout.includes('skill dir: .claude/skills/skill-ok'));
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 14: empty .claude/skills/ → info, exit 0 ──
++  it('empty .claude/skills/ → info message, exit 0', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await fs.ensureDir(path.join(tmpDir, '_bmad'));
++      await fs.ensureDir(path.join(tmpDir, '.claude/skills'));
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
++      assert.equal(exitCode, 0);
++      assert.ok(stdout.includes('0 skill dir(s) audited'),
++        `expected zero-scan summary; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 15: non-directory entries skipped (.DS_Store etc.) ──
++  it('non-directory entries in .claude/skills/ are skipped', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await fs.ensureDir(path.join(tmpDir, '_bmad'));
++      const skillsRoot = path.join(tmpDir, '.claude/skills');
++      await fs.ensureDir(skillsRoot);
++      // Stray file at skills root.
++      await fs.writeFile(path.join(skillsRoot, '.DS_Store'), 'binary-junk\n');
++      // One real skill dir.
++      await seedSkillsFixture(tmpDir, { skills: [{ name: 'skill-real' }] });
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
++      assert.equal(exitCode, 0);
++      assert.ok(stdout.includes('1 skill dir(s) audited'),
++        `expected scan to skip stray file and audit only the real dir; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 16: .claude/skills/ does NOT exist → info, exit 0 ──
++  it('.claude/skills/ directory does not exist → info, exit 0 (fresh-install state)', async () => {
++    const tmpDir = await createTempDir('bmad-audit-');
++    try {
++      await fs.ensureDir(path.join(tmpDir, '_bmad'));
++      // Intentionally do NOT create .claude/skills/.
++      const { exitCode, stdout } = await runScript(SCRIPT_PATH, [], { cwd: tmpDir });
++      assert.equal(exitCode, 0,
++        `must exit 0 for missing .claude/skills/ — fresh install isn't audit-failable; got ${exitCode}\n${stdout}`);
++      assert.ok(stdout.includes('no skills directory found'),
++        `expected fresh-install info message; got:\n${stdout}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 17 (E3 npm-pack shipping check) ──
++  it('npm pack --dry-run ships audit-skill-dirs.js + compat-preflight.js + skill wrapper', () => {
++    const { execFileSync } = require('node:child_process');
++    let output;
++    try {
++      output = execFileSync('npm', ['pack', '--dry-run', '--json'], {
++        cwd: PACKAGE_ROOT,
++        encoding: 'utf8',
++        timeout: 60000,
++      });
++    } catch (err) {
++      console.error('[Test 17] npm pack --dry-run unavailable; skipping. Error:', err.message);
++      return;
++    }
++    const parsed = JSON.parse(output);
++    const files = (parsed[0] && parsed[0].files) || [];
++    const filePaths = files.map(f => f.path);
++    const expected = [
++      'scripts/audit/audit-skill-dirs.js',
++      'scripts/update/lib/compat-preflight.js',
++      '.claude/skills/bmad-audit-skill-dirs/SKILL.md',
++      '.claude/skills/bmad-audit-skill-dirs/workflow.md',
++    ];
++    for (const p of expected) {
++      assert.ok(filePaths.includes(p),
++        `${p} must be in shipped tarball — current files include: ${filePaths.filter(x => x.includes('audit') || x.includes('compat-preflight') || x.includes('bmad-audit-skill-dirs')).join(', ')}`);
++    }
++  });
++
++});
+diff --git a/tests/unit/compat-preflight.test.js b/tests/unit/compat-preflight.test.js
+new file mode 100644
+index 00000000..305e0633
+--- /dev/null
++++ b/tests/unit/compat-preflight.test.js
+@@ -0,0 +1,168 @@
++'use strict';
++
++const { describe, it } = require('node:test');
++const assert = require('node:assert/strict');
++const path = require('path');
++const fs = require('fs-extra');
++
++const { createTempDir } = require('../helpers');
++const { runCompatPreflight, _internal } = require('../../scripts/update/lib/compat-preflight');
++
++// ─── Fixture helpers ──────────────────────────────────────────────
++
++/**
++ * Seed `node_modules/bmad-method/package.json` with an arbitrary version.
++ * `version` may be undefined to emit a package.json without the field.
++ */
++async function seedBmadPackage(tmpDir, version, extra = {}) {
++  const pkgDir = path.join(tmpDir, 'node_modules/bmad-method');
++  await fs.ensureDir(pkgDir);
++  const pkg = { name: 'bmad-method', ...extra };
++  if (version !== undefined) pkg.version = version;
++  await fs.writeFile(path.join(pkgDir, 'package.json'), JSON.stringify(pkg, null, 2), 'utf8');
++}
++
++/**
++ * Capture stderr writes during a synchronous block.
++ */
++function captureStderr(fn) {
++  const original = process.stderr.write.bind(process.stderr);
++  let captured = '';
++  process.stderr.write = (chunk, encoding, cb) => {
++    captured += typeof chunk === 'string' ? chunk : chunk.toString(encoding || 'utf8');
++    if (typeof cb === 'function') cb();
++    return true;
++  };
++  try {
++    const result = fn();
++    return { result, stderr: captured };
++  } finally {
++    process.stderr.write = original;
++  }
++}
++
++// ─── Tests ────────────────────────────────────────────────────────
++
++describe('compat-preflight (Story v63-3-2)', () => {
++
++  // ── Test 1: BMAD 6.3.0 → silent pass ──
++  it('BMAD 6.3.0 detected → silent pass (no stderr output)', async () => {
++    const tmpDir = await createTempDir('bmad-pref-');
++    try {
++      await seedBmadPackage(tmpDir, '6.3.0');
++      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
++      assert.equal(result.detected, true);
++      assert.equal(result.version, '6.3.0');
++      assert.equal(result.warning, null);
++      assert.equal(stderr, '', `expected no stderr; got: ${JSON.stringify(stderr)}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 2: BMAD 6.4.0 → silent pass (semver-range accepted) ──
++  it('BMAD 6.4.0 detected → silent pass (later versions accepted)', async () => {
++    const tmpDir = await createTempDir('bmad-pref-');
++    try {
++      await seedBmadPackage(tmpDir, '6.4.0');
++      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
++      assert.equal(result.detected, true);
++      assert.equal(result.warning, null);
++      assert.equal(stderr, '');
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 3: BMAD 6.2.0 → WARNING ──
++  it('BMAD 6.2.0 detected → WARNING with version + upgrade hint', async () => {
++    const tmpDir = await createTempDir('bmad-pref-');
++    try {
++      await seedBmadPackage(tmpDir, '6.2.0');
++      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
++      assert.equal(result.detected, true);
++      assert.equal(result.version, '6.2.0');
++      assert.ok(result.warning && result.warning.includes('6.2.0'));
++      assert.ok(stderr.includes('6.2.0') && stderr.includes('6.3.0'),
++        `expected WARNING citing both versions; got: ${JSON.stringify(stderr)}`);
++      assert.ok(stderr.includes('npm install bmad-method@latest'),
++        `expected upgrade hint; got: ${JSON.stringify(stderr)}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 4: bmad-method missing → WARNING (the dev-machine path) ──
++  it('node_modules/bmad-method/ missing → "BMAD core not detected" WARNING', async () => {
++    const tmpDir = await createTempDir('bmad-pref-');
++    try {
++      // Do NOT seed bmad-method.
++      const { result, stderr } = captureStderr(() => runCompatPreflight(tmpDir));
++      assert.equal(result.detected, false);
++      assert.equal(result.version, null);
++      assert.ok(result.warning && result.warning.includes('not detected'));
++      assert.ok(stderr.includes('BMAD core not detected'),
++        `expected absent-package WARNING; got: ${JSON.stringify(stderr)}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 5: Non-TTY emits WARNING text ──
++  it('Non-TTY environment still emits WARNING text (chalk auto-disable, text stays)', async () => {
++    const tmpDir = await createTempDir('bmad-pref-');
++    try {
++      // captureStderr inherently runs without a TTY (we replace .write directly).
++      // Confirm WARNING substring appears regardless of color codes.
++      const { stderr } = captureStderr(() => runCompatPreflight(tmpDir));
++      assert.ok(stderr.includes('BMAD core not detected'),
++        `non-TTY still must surface the WARNING text; got: ${JSON.stringify(stderr)}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 6: invalid projectRoot → throws ──
++  it('runCompatPreflight called with invalid projectRoot → throws clean error', () => {
++    assert.throws(() => runCompatPreflight(''), /projectRoot must be a non-empty string/);
++    assert.throws(() => runCompatPreflight(null), /projectRoot must be a non-empty string/);
++    assert.throws(() => runCompatPreflight(undefined), /projectRoot must be a non-empty string/);
++    assert.throws(() => runCompatPreflight(42), /projectRoot must be a non-empty string/);
++  });
++
++  // ── Test 7: package.json present + parseable + missing version field ──
++  it('package.json missing version field → WARNING (R1-M6 pattern)', async () => {
++    const tmpDir = await createTempDir('bmad-pref-');
++    try {
++      await seedBmadPackage(tmpDir, undefined); // no version field
++      const probe = _internal._readBmadPackageJson(tmpDir);
++      assert.equal(probe.found, false);
++      assert.ok(probe.reason && probe.reason.includes('version field invalid'));
++      const { stderr } = captureStderr(() => runCompatPreflight(tmpDir));
++      assert.ok(stderr.includes('BMAD core not detected') && stderr.includes('version field invalid'),
++        `expected WARNING citing invalid version; got: ${JSON.stringify(stderr)}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++  // ── Test 8: non-string version field ──
++  it('package.json version is non-string (number, null, array) → WARNING', async () => {
++    const tmpDir = await createTempDir('bmad-pref-');
++    try {
++      // Cannot use seedBmadPackage's spread (it would reject non-string version
++      // because of how we call it); write directly.
++      const pkgDir = path.join(tmpDir, 'node_modules/bmad-method');
++      await fs.ensureDir(pkgDir);
++      await fs.writeFile(path.join(pkgDir, 'package.json'), JSON.stringify({ name: 'bmad-method', version: 42 }), 'utf8');
++      const probe = _internal._readBmadPackageJson(tmpDir);
++      assert.equal(probe.found, false);
++      const { stderr } = captureStderr(() => runCompatPreflight(tmpDir));
++      assert.ok(stderr.includes('BMAD core not detected'),
++        `expected WARNING for non-string version; got: ${JSON.stringify(stderr)}`);
++    } finally {
++      await fs.remove(tmpDir);
++    }
++  });
++
++});
+diff --git a/.claude/skills/bmad-audit-skill-dirs/SKILL.md b/.claude/skills/bmad-audit-skill-dirs/SKILL.md
+new file mode 100644
+index 00000000..c08a3f2a
+--- /dev/null
++++ b/.claude/skills/bmad-audit-skill-dirs/SKILL.md
+@@ -0,0 +1,6 @@
++---
++name: bmad-audit-skill-dirs
++description: 'Audit every .claude/skills/ directory for v6.3 SKILL.md compliance. Use when the user says "audit skill dirs", "check skill directories", "verify skills", "/bmad-audit-skill-dirs", or when troubleshooting an install where some skills do not activate.'
++---
++
++Follow the instructions in [workflow.md](workflow.md).
+diff --git a/.claude/skills/bmad-audit-skill-dirs/workflow.md b/.claude/skills/bmad-audit-skill-dirs/workflow.md
+new file mode 100644
+index 00000000..cf480ccd
+--- /dev/null
++++ b/.claude/skills/bmad-audit-skill-dirs/workflow.md
+@@ -0,0 +1,22 @@
++# Audit Skill Dirs Workflow
++
++**Goal:** Run `convoke-audit-skill-dirs` against the current project and surface results.
++
++**Your role:** Operator-tooling wrapper. Invoke the CLI, interpret exit code, and present findings clearly.
++
++## Steps
++
++1. Run `convoke-audit-skill-dirs --verbose` via Bash from the project root. Pipe stdout + stderr together so the operator sees everything.
++2. Inspect the exit code:
++   - **0:** All skill dirs passed v6.3 compliance check. Tell the operator how many were scanned and confirm the install looks healthy.
++   - **1:** One or more skill dirs failed. Surface the per-dir error messages verbatim — the CLI's per-finding output names which dirs broke and why. Suggest the operator inspect the offending `SKILL.md` file directly.
++3. If the operator wants more detail on a specific failure, read the named `SKILL.md` and explain what's missing or malformed (frontmatter block, required `name`/`description` fields, valid YAML, etc.).
++4. Common failure modes and their fixes:
++   - **Missing `SKILL.md`:** the dir was probably created manually; either add a v6.3-compliant SKILL.md or remove the dir.
++   - **Frontmatter missing `name:` / `description:`:** add the required YAML keys with non-empty string values.
++   - **YAML parse error:** check for unclosed brackets, unescaped colons, or stray Unicode.
++   - **Symlink escapes project root:** the dir is symlinked outside the project; remove the symlink or move the target into the project tree.
++   - **SKILL.md ≥ 1MB:** unusual; check if the file accidentally contains binary content or a vendored asset.
++5. After fixes, re-run the audit until exit code is 0.
++
++**Distinction from `convoke-validate-marketplace`:** this audit covers the full `.claude/skills/` runtime tree (typically ~98 dirs). `validate-marketplace` only audits the 7 Vortex paths listed in `marketplace.json` — pre-submission gate, narrower scope.
