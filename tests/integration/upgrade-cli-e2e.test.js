@@ -27,7 +27,7 @@ const yaml = require('js-yaml');
 const { runScript, PACKAGE_ROOT } = require('../helpers');
 const {
   AGENTS,
-  AGENT_FILES,
+  VORTEX_SKILL_PATHS,
   WORKFLOW_NAMES,
   GYRE_AGENTS,
   EXTRA_BME_AGENTS,
@@ -91,11 +91,11 @@ async function seedV17Install(tmpDir) {
 async function assertPostUpgradeState(tmpDir) {
   const vortexDir = path.join(tmpDir, '_bmad/bme/_vortex');
 
-  // Agent files — every canonical Vortex agent present.
-  for (const file of AGENT_FILES) {
+  // Agent skill-dirs — every canonical Vortex agent has <id>/SKILL.md present (post-Story-3.1 layout).
+  for (const skillPath of VORTEX_SKILL_PATHS) {
     assert.ok(
-      fs.existsSync(path.join(vortexDir, 'agents', file)),
-      `Vortex agent missing after upgrade: ${file}`
+      fs.existsSync(path.join(vortexDir, 'agents', skillPath)),
+      `Vortex agent missing after upgrade: ${skillPath}`
     );
   }
 
