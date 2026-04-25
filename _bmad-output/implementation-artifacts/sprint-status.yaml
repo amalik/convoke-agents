@@ -34,7 +34,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-23
-last_updated: 2026-04-25 (v63-3-3 Round 2 `/bmad-code-review` batch-applied 8 patches (1 HIGH + 6 MED + 1 main-drift annotation) + **resolved R2-DN1 via option 1: revert R1-M2 cross-file divergence regression** + flagged R2-A1 (A39 backlog + oc-gyre artifact must commit off-branch) + 2 defers + 0 dismissed. R2-H1 expanded pr-link.md `remote_verification_blob_shas` from 1-of-7 to all 7 Vortex agent SKILL.md SHAs. R2-DN1: R1-M2 broadened convoke.yaml description but failed to update marketplace.json — caught as AC1 cross-file violation; reverted; PR head `f45f2e11` → `8f59e9aa`; convoke.yaml blob reverted to original `ff4ee123`. R2 patches entirely editorial + evidence-strengthening + 1 fork-branch revert (no new code, no tests, no control-flow changes); **R3 NOT triggered per `code-review-convergence` rule**. M12a still MET via Path C; M12b still NONE_BY_RELEASE per OP-4. Story REMAINS `review` until R2-A1 operator-action lands → then `done`.)
+last_updated: 2026-04-25 (v63-3-3 review → DONE post-R2-A1 operator commits (A39 backlog + oc-gyre artifact committed off-branch). **Story 3.3 closed.** Epic 3 now 3/5 stories shipped (3.1 + 3.2 + 3.3 done; 3.4 + 3.5 backlog). M12a met via Path C; M12b NONE_BY_RELEASE per OP-4. PR #9 OPEN at upstream (head: 8f59e9aa). R3 NOT triggered (R2 patches were editorial + 1 fork-branch revert, no structural changes).) | Prior: Round 2 `/bmad-code-review` batch-applied 8 patches (1 HIGH + 6 MED + 1 main-drift annotation) + **resolved R2-DN1 via option 1: revert R1-M2 cross-file divergence regression** + flagged R2-A1 (A39 backlog + oc-gyre artifact must commit off-branch) + 2 defers + 0 dismissed. R2-H1 expanded pr-link.md `remote_verification_blob_shas` from 1-of-7 to all 7 Vortex agent SKILL.md SHAs. R2-DN1: R1-M2 broadened convoke.yaml description but failed to update marketplace.json — caught as AC1 cross-file violation; reverted; PR head `f45f2e11` → `8f59e9aa`; convoke.yaml blob reverted to original `ff4ee123`. R2 patches entirely editorial + evidence-strengthening + 1 fork-branch revert (no new code, no tests, no control-flow changes); **R3 NOT triggered per `code-review-convergence` rule**. M12a still MET via Path C; M12b still NONE_BY_RELEASE per OP-4. Story REMAINS `review` until R2-A1 operator-action lands → then `done`.)
 # 2026-04-09: sp-2-3-cli-entry-point moved backlog → ready-for-dev
 # 2026-04-10: sp-2-3-cli-entry-point moved ready-for-dev → done; sp-2-2 review → done
 # 2026-04-08: Epic 7 (Cross-Cutting Platform Debt) added — 4 stories closing 6 backlog items from ag-epic-6 retro
@@ -646,7 +646,7 @@ development_status:
   v63-epic-3: in-progress
   v63-3-1-create-and-validate-marketplace-metadata: done
   v63-3-2-compatibility-preflight-and-skill-dir-audit: done
-  v63-3-3-submit-marketplace-registry-pr: review
+  v63-3-3-submit-marketplace-registry-pr: done
   v63-3-4-dual-distribution-parity-verification: backlog
   v63-3-5-platform-adapter-batch-validation: backlog
   v63-epic-3-retrospective: optional
