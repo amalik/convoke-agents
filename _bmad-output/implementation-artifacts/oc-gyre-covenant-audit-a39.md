@@ -1,6 +1,6 @@
 # A39: Gyre Covenant Audit (IN-73)
 
-Status: **done (provisional A10) + R1 patches applied + R2 patches applied + Coach R5 verdict overturn cascade 2026-04-25** — Audit executed 2026-04-25; report at [convoke-report-operator-covenant-audit-gyre-2026-04-25.md](../planning-artifacts/convoke-report-operator-covenant-audit-gyre-2026-04-25.md). All 12 ACs procedurally satisfied (AC5 with deferred condensation per R1 finding AA-H1 — see Review Findings sections below). **A10 reproducibility gate did NOT clear (1/3 pairwise reviewer agreement; the only A10-grounded metric per R2 simplification of R1 patch P5).** Headline (post-R2): T1 *would* fire (provisional) on TWO rights — **Right to a default** at 50% (R1-G1 Scout multi-service + R1-G2 Coach Review Mode) AND **Right to pause** at 50% (R5-G1 Coach §4 dangling-prompt + R5-G2 Scout single-service auto-decide; Coach R5 verdict overturned PASS → FAIL in R2 per file evidence verification). 4 retrofit cells PROPOSED (was 2 pre-R2; +2 from cascade). **Round 1: 14 patches applied (content-only); convergence at R1.** **Round 2: 16 patches applied + Coach R5 verdict overturn cascade (~6 cell-level edits).** R2 surfaced incomplete R1 patch propagation (§10 surface fixes, §6.5 baseline label, §9 #3 cite swaps), R1 over-engineering reverts (P5 third metric, tier-0 vocabulary, P6 (c)-defense), 1 verdict overturn (Coach R5 dangling prompt). 4 R1 deferrals stand (logged as A39-D1..D4 in deferred-work.md); 3 R1 decisions stand (DN1/DN2/DN3 unchanged); R2 added DN4 (already resolved via overturn — no operator decision needed since file evidence was decisive). **Pending minimal R3** (single Edge Case Hunter on the R2 cascade only) to sanity-check downstream consistency before final convergence call.
+Status: **done (provisional A10) post-R3 sanity-check 2026-04-25** — Audit executed 2026-04-25; report at [convoke-report-operator-covenant-audit-gyre-2026-04-25.md](../planning-artifacts/convoke-report-operator-covenant-audit-gyre-2026-04-25.md). All 12 ACs procedurally satisfied (AC5 with deferred condensation per R1 finding AA-H1 — see Review Findings sections below). **A10 reproducibility gate did NOT clear (1/3 pairwise reviewer agreement; the only A10-grounded metric per R2 simplification of R1 patch P5).** Headline (post-R2 + R3): T1 *would* fire (provisional) on TWO rights — **Right to a default** at 50% (R1-G1 Scout multi-service + R1-G2 Coach Review Mode) AND **Right to pause** at 50% (R5-G1 Coach §4 dangling-prompt + R5-G2 Scout single-service auto-decide; Coach R5 verdict overturned PASS → FAIL in R2 per file evidence verification). 4 retrofit cells PROPOSED. **Code review history:** R1 (3 layers + triage 2026-04-25) = 14 patches content-only; R2 (3 layers + triage 2026-04-25) = 16 patches + Coach R5 verdict overturn cascade (~6 cell-level edits); R3 (minimal scope: single Edge Case Hunter on R2 cascade) = **1 patch (R2-P1 residual at §8 G1)** + **CONVERGED verdict** — all 12 cascade surfaces verified, all R2-P4..P9 surface-completeness verified, all R2-P1..P3 reverts verified (1 residual fixed), all R2-P10..P13 mechanical verified, PASS taxonomy 17+4+3+4=28 verified, internal consistency CONSISTENT across spec/§10/§1/backlog. R4 NOT recommended per R3 verdict. 4 R1 deferrals stand (A39-D1..D4 in deferred-work.md as A41 inputs); 3 R1 decisions stand (DN1/DN2/DN3 unchanged — recommendations in Review Findings sections); R2 DN4 self-resolved via Coach R5 overturn cascade. A39 ships in `done — provisional A10` state with full code-review traceability.
 
 **Epic:** [P21 Convoke Operator Covenant — Epic 2](../planning-artifacts/convoke-epic-operator-covenant.md) (input artifact for Story 2.3 Publication Gate coverage-breadth requirement, gate shipped 2026-04-21 as ✓A40)
 **Origin:** IN-73 — Party mode 2026-04-21 (John + Winston, P21 next-best-move discussion)
@@ -233,7 +233,41 @@ R2 surfaced 11 HIGH findings (after dedup). Per code-review-convergence rule: 5+
 4. Verify the §4.5 Notes "Coach R5 dangling-deferred-review-prompt" entry doesn't conflict with the moved P11 paragraph
 5. Verify PASS taxonomy 17+4+3+4=28 still adds up
 
-If R3 surfaces 0 HIGH findings → R3 converges; A39 status moves to final `done (provisional A10) post-R3 sanity-check`. If R3 surfaces HIGH findings → assess scope-creep risk; possibly stop-and-defer rather than R4.
+## Review Findings (Round 3, 2026-04-25 — minimal sanity-check)
+
+**Scope:** single Edge Case Hunter pass on the R2 cascade only — NOT a full re-review. Focused on 5 verification targets (cascade math, surface-completeness, reverts, mechanical fixes, internal consistency).
+
+**Outcome:** **CONVERGED with 1 LOW R2-P1 residual** (since fixed via R3 patch).
+
+### R3 Verification Results
+
+- **Cascade math (target #1, 12 surfaces):** ALL VERIFIED ✓
+  - §3 matrix Coach R5 = ❌³, §3 footer "4 FAILs / 24 PASSes / 0 N/A", §3 footnote ³ explanation present, §4.4 Coach R5 FAIL evidence with dangling-prompt mechanism, §4.5 Notes new entry "Coach R5 dangling-deferred-review-prompt", §5 row R5 = 2/4 = 50% T1 fires PROVISIONAL, §5 cell summary mentions TWO bottlenecks, PASS taxonomy 17+4+3+4=28, §6.1 R5-G1 + R5-G2 present, §6.5 v3 baseline reflects 2 T1-firing rights, §10 activity log post-R2, §1 headline leads with TWO rights.
+
+- **Surface-completeness (target #2, R2-P4..P9):** ALL PROPAGATED ✓
+  - §10 surface fixes (T1 FIRES → "T1 *would* fire"; §2.4 → §2.3; ambiguity bundling split), §6.5 baseline label (reproducibility-NOT-validated), §9 #3 cite swaps (line 118 footnote, line 321 §7.1 Cell 3), §1 mechanism qualifier (line 16 A10-disagreement note), §5 footnote ² provisional, §5 cell summary TWO-bottleneck framing.
+
+- **Reverts (target #3, R2-P1..P3):** R2-P1 had 1 RESIDUAL (now fixed via R3 patch); R2-P2 + R2-P3 REVERTED ✓
+  - **R3 patch (1):** §8 G1 line 374 still had "1/3 pairwise / 2/3 verdict-concurrence agreement" — R2-P1 missed this surface. Fixed: removed the stale 2/3 alternative metric; line now reads "1/3 pairwise agreement" only. *(One-line patch; sub-NIT scope; does not warrant R4.)*
+
+- **Mechanical fixes (target #4, R2-P10..P13):** ALL VERIFIED ✓
+  - Atlas R4 "all 6 GC1 summary rows (compressed from 7 sub-fields)", Lens R4 citation :43+:56, §6.1 misattribution corrected (A24 only, not oc-1-1), §6.1 retrofit math includes R5-G1 + R5-G2.
+
+- **Internal consistency (target #5):** CONSISTENT ✓ (spec/§10/§1/PASS-taxonomy/deferred-work all aligned post-R2; backlog ASSUMED-CONSISTENT pending verification — verified by R3 dev-agent post-fact via direct read).
+
+### R3 NEW findings (4 sub-NIT-class — NOT applied per code-review-convergence rule)
+
+R3 reviewer flagged 4 additional minor items, classified sub-NIT and not warranting R4:
+- §4.4 Coach R5 cite imprecision (line 63 is §5 header, menu body at 65) — not load-bearing
+- §1 line 26 self-referential "dilution → 25%" reframe paragraph slightly redundant with §4.5 Notes overturn entry
+- §6.1 line 231 patch-history narrative could be stripped post-cascade
+- §8 G1 R2-P1 residual (already fixed via R3 patch above)
+
+### R3 Convergence Verdict
+
+**CONVERGED.** R4 NOT recommended per R3 reviewer's own verdict ("no structural finding surfaced; the residuals are sub-NIT-class and addressable inline without re-review"). Total review history: R1 (14 patches) + R2 (16 patches + cascade) + R3 (1 patch) = 31 atomic edits across 3 review rounds. A39 ships in final state `done (provisional A10) post-R3 sanity-check 2026-04-25`.
+
+If R3 surfaces 0 HIGH findings → R3 converges; A39 status moves to final `done (provisional A10) post-R3 sanity-check`. If R3 surfaces HIGH findings → assess scope-creep risk; possibly stop-and-defer rather than R4. **Outcome: CONVERGED with 0 HIGH findings; status moved to final state.**
 
 ## Dev Notes
 
