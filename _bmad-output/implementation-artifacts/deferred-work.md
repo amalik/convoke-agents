@@ -5,6 +5,17 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of BUG-5 v3.0.x chain-walker fix (2026-04-25)
+
+Round 1 review (Blind + Edge Case + Acceptance) — 0 HIGH after triage; convergence at Round 1. 4 patches applied (backlog moves + comment/test description tightening). 4 items deferred:
+
+- **D-A1 — Broaden invariant test via `matchesVersionRange`** — MEDIUM. Current invariant in `tests/unit/registry.test.js` (`Registry invariants > at most one migration per fromVersion (BUG-5 guard)`) checks `fromVersion` string equality only. The actual collision class is "two MIGRATIONS entries match the same incoming user version via `matchesVersionRange`" — e.g., a future entry with `fromVersion: '3.0.0'` (exact) alongside an existing `fromVersion: '3.0.x'` (wildcard) would NOT collide on string equality but WOULD double-match. Currently no entries trigger this edge — all use `{major}.{minor}.x` form — but the invariant is narrower than the bug class. Fix path: derive a representative test version per entry (`'3.0.x'` → `'3.0.0'`), then for each pair assert `!matchesVersionRange(testVer_i, m_j.fromVersion) || i === j`. Defer reason: defensive against future entry shapes that don't exist today.
+- **D-A2 — `registry.MIGRATIONS` mutation safety in tests** — LOW. New invariant test iterates `registry.MIGRATIONS` (live array reference, not copy). A future test author who mutates it directly (instead of using `getAllMigrations()` which returns a copy) could break the invariant test order-dependently. Fix path: clone the array at test start. Defer reason: speculative; existing convention uses `getAllMigrations()`.
+- **D-A3 — Phantom `migration_history` reference for pre-shipped 3.0.x users** — LOW. After deleting `3.0.x-to-4.0.0.js` + its registry entry, any user config that recorded `'3.0.x-to-4.0.0'` in `migration_history` would have a phantom name with no live counterpart. No runtime crash today (`hasMigrationBeenApplied` does string-match only; `getMigrationsFor` no longer returns the name). Defer reason: v4.0 hasn't shipped — no real user has applied this migration. Revisit IF v4.0 release surfaces this OR a `migrate-history` cleanup utility is built.
+- **D-A4 — Comment-phrasing doc nits** — LOW. Blind Hunter cluster: "each minor that needs a direct path" is ambiguous (no documented criterion); test error message references `Array.find` while `getMigrationsFor` actually uses `for...of/break` (equivalent but imprecise); sibling comments in 3.1.x/3.2.x point to `3.3.x-to-4.0.0.js` for "the base module" but architectural rationale lives in `registry.js`. Fix path: future doc sweep. Defer reason: cosmetic; non-load-bearing.
+
+---
+
 ## Deferred from: code review of v63-3-1-create-and-validate-marketplace-metadata (2026-04-24)
 
 Round 1 code review added 13 `defer` items (5 MED + 7 LOW + 1 DRIFT):
@@ -568,3 +579,10 @@ F.2 unblocks when **all 3 portability tests pass standalone under
 - **R2-L3: R1-M3 unknown-flag check accepts positional args as "unknown flags"** — `scripts/audit/audit-skill-dirs.js:312-316`. `convoke-audit-skill-dirs /some/path` emits "Unknown flag(s): /some/path" — confusing if a future positional arg is added. No positionals today.
 - **R2-L4: `--help` short-circuit doesn't clear `flags.unknown`** — `scripts/audit/audit-skill-dirs.js:307-310`. Works today, fragile if reordered. Doc-comment-only fix is sufficient.
 - **R2-L5: `realPath?` field extends AC2 check-result shape** — `scripts/audit/audit-skill-dirs.js:49-54`. Already documented in JSDoc; the `?` form admits extension. No action needed.
+
+## Deferred from: code review of v63-3-3-submit-marketplace-registry-pr Round 1 (2026-04-25)
+
+- **R1-L1: `categories.yaml` SHA not pinned in validation log** — `_bmad-output/implementation-artifacts/v63-3-3-validation-log.md`. The slug-pair `business-and-strategy/product` was verified at Task 1.3 against current upstream state but no SHA snapshot was captured. Low-likelihood drift; cosmetic.
+- **R1-L2: `repository` URL normalization comment in `convoke.yaml`** — explicit `# normalized per AC1 — diverges from package.json git+/.git affixes` comment would forestall reviewer questions but isn't required. Cosmetic.
+- **R1-L3: Gate-2 timestamp prose clarification in validation log** — gate-2 entries at 09:22:00Z are post-PR-creation 09:21:04Z. Adds a note explaining "gate-2 is M12a aspiration evidence, not AC2 evidence; AC2 met at 09:09:03Z gate-1." Cosmetic — pre-empts a reviewer concern about evidence ordering.
+- **R1-L4: CodeRabbit auto-injected text in PR body** — bot appends bland AI summary to PR descriptions. Optional removal via `gh pr edit` if it dilutes the human description. Not in our control to suppress.
