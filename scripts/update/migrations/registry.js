@@ -79,7 +79,7 @@ const MIGRATIONS = [
     name: '3.0.x-to-3.1.0',
     fromVersion: '3.0.x',
     breaking: false,
-    description: 'Artifact governance: create or merge _bmad/_config/taxonomy.yaml (parallel entry for 3.0.x users)',
+    description: 'Artifact governance: create or merge _bmad/_config/taxonomy.yaml. Required hop for 3.0.x users — seeds taxonomy before chaining to 4.0 (no direct 3.0.x-to-4.0.0 entry; see comment below).',
     module: null
   },
   {
@@ -89,16 +89,12 @@ const MIGRATIONS = [
     description: 'v6.3 direct-load migration: rewrites 18 upstream-BMAD SKILL.md activation blocks from bmad-init invocation to v4 direct-YAML-load pattern. Marks bmad-init deprecated. Validates via convoke-doctor diff.',
     module: null
   },
-  // Parallel entry points for earlier 3.x users: all share the same module
-  // logic. matchesVersionRange requires `{major}.{minor}.x` form, so we ship
-  // one entry per prior 3.x minor line to guarantee every 3.x user reaches 4.0.
-  {
-    name: '3.0.x-to-4.0.0',
-    fromVersion: '3.0.x',
-    breaking: true,
-    description: 'v6.3 direct-load migration (parallel entry for 3.0.x users — same logic as 3.3.x-to-4.0.0).',
-    module: null
-  },
+  // Parallel entry points to 4.0.0 for 3.1.x and 3.2.x users (same module
+  // logic as 3.3.x-to-4.0.0). matchesVersionRange requires `{major}.{minor}.x`
+  // form, so each minor that needs a direct path to 4.0 ships its own entry.
+  // 3.0.x users do NOT have a direct entry — they reach 4.0 via the chain
+  // `3.0.x-to-3.1.0` → `3.1.x-to-4.0.0` so the taxonomy migration runs first.
+  // INVARIANT: at most one entry per `fromVersion` (enforced by registry.test.js).
   {
     name: '3.1.x-to-4.0.0',
     fromVersion: '3.1.x',
