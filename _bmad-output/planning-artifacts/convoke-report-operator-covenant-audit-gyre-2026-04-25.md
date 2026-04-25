@@ -7,6 +7,8 @@ schema_version: 1
 
 # Gyre Covenant Audit Report (A39 / IN-73)
 
+> **A41+A42 cross-reference (added 2026-04-25):** A39 cell-mechanism naming convention (R1-G1, R1-G2, R5-G1, R5-G2) is the **inheritance source** for A41+A42's cell-centric retrofit semantics. A39 stays in `done — provisional A10` status per PAD 4 forward-only application; A41 does NOT retroactively bless A39's Tier-1-attempted-but-failed mitigation. **Path to clearance for Gyre:** v4+ refresh under A41-clarified rubric (A41 §A41-1..§A41-10) achieving Tier-1 clearance (A10 100% pairwise agreement) OR Tier-2 external review per §A41-10. A39's published verdicts stay locked under G4 mitigation gate (forward-only methodology adoption — see A24 §8.1 + Compliance Checklist §A41-Clarifications).
+
 **Scope:** Gyre-team Operator Covenant audit — first audit of the Gyre team (4 agents × 1 representative workflow per agent × 7 Operator Rights = 28 cells) under the locked methodology (oc-1-1 §2.3 / §2.4 / §2.6 + A10 reproducibility gate + A28 Step Selection + A29 Skill Selection). Establishes Gyre's N=4 baseline for T1 trigger evaluation per [convoke-epic-operator-covenant.md §Retrofit Trigger Rule](convoke-epic-operator-covenant.md). Contributes the second team-audit input required for P21 Epic 2 Story 2.3 Publication Gate clearance per A40 amendment 2026-04-21 (gate-counting-status pending A41 definition of "portfolio audit" granularity).
 
 **Headline finding (PROVISIONAL — A10 gate FAILED, see §7.1; ALSO subject to R2 verdict-overturn cascade — see §4.4 Coach R5 + §4.5 Notes):** **T1 *would* fire for Gyre on TWO rights (provisional verdicts)** under the main audit's reading post-R2:
