@@ -147,11 +147,12 @@ describe('getMigrationsFor - chain traversal', () => {
     assert.deepEqual(names, ['2.0.x-to-3.1.0', '3.1.x-to-4.0.0']);
   });
 
-  it('chains from 3.0.4 through to 4.0.0 (parallel entry for 3.0.x users)', () => {
+  it('chains from 3.0.4 through to 4.0.0 (chain via 3.1.x for taxonomy)', () => {
     const migrations = registry.getMigrationsFor('3.0.4');
     const names = migrations.map(m => m.name);
-    // Walker finds `3.0.x-to-3.1.0` first (older entry wins), targets 3.1.0,
-    // then hits `3.1.x-to-4.0.0` added by Story 1A.4.
+    // 3.0.x users have no direct 3.0.x-to-4.0.0 entry (BUG-5 fix 2026-04-25 —
+    // see registry.js comment block). Walker enters via `3.0.x-to-3.1.0` to
+    // seed taxonomy, then chains forward to `3.1.x-to-4.0.0`.
     assert.deepEqual(names, ['3.0.x-to-3.1.0', '3.1.x-to-4.0.0']);
   });
 });
@@ -258,5 +259,25 @@ describe('hasMigrationBeenApplied', () => {
 
   it('returns false for migration not in history', async () => {
     assert.equal(registry.hasMigrationBeenApplied('1.1.x-to-1.3.0', configPath), false);
+  });
+});
+
+describe('Registry invariants', () => {
+  it('at most one migration per fromVersion (BUG-5 guard)', () => {
+    const byFromVersion = new Map();
+    for (const migration of registry.MIGRATIONS) {
+      const list = byFromVersion.get(migration.fromVersion) || [];
+      list.push(migration.name);
+      byFromVersion.set(migration.fromVersion, list);
+    }
+    const collisions = [...byFromVersion.entries()].filter(([, names]) => names.length > 1);
+    assert.deepEqual(
+      collisions,
+      [],
+      `MIGRATIONS contains multiple entries sharing a fromVersion: ${JSON.stringify(collisions)}. ` +
+        `getMigrationsFor uses Array.find for entry-point selection (registry.js: getMigrationsFor) — ` +
+        `colliding entries make chain selection registry-order-dependent and risk silent migration skips. ` +
+        `If two paths from the same version are needed, model the second as a chained hop, not a parallel entry.`
+    );
   });
 });
