@@ -32,7 +32,7 @@ Use this skill to facilitate an interactive brainstorming session. Carson will g
 
 - **A topic or central question.** What is the user brainstorming about? (e.g., "how to onboard new consultants faster", "feature ideas for our sidekick tool")
 - **Desired outcomes.** What kind of ideas are they hoping to generate? (Solutions? Features? Risks? Edge cases? All of the above?)
-- **A place to write the session output.** Decide on an output folder before starting — replace `[your output folder]` with whatever the user prefers (e.g., `docs/brainstorms/`).
+- **A place to write the session output.** Decide on an output folder before starting — replace `your-output-folder` with whatever the user prefers (e.g., `docs/brainstorms/`).
 - **Optional context.** Any prior project notes, constraints, or relevant background the user wants you to consider.
 
 ## How to proceed
@@ -88,7 +88,7 @@ A markdown brainstorming session document containing:
 - **Organization** (optional) — categories, themes, or priorities the user identified
 - **Next steps** (optional) — specific ideas the user flagged for follow-up
 
-The document lives at `[your output folder]/brainstorming/brainstorming-session-[date].md`. It's intentionally raw and unfiltered — the value is in the quantity and the diversity, not in pre-curation.
+The document lives at `your-output-folder/brainstorming/brainstorming-session-[date].md`. It's intentionally raw and unfiltered — the value is in the quantity and the diversity, not in pre-curation.
 
 ## Quality checks
 
