@@ -228,6 +228,55 @@ describe('marketplace-installer-sim: U3 — throws on malformed manifest', () =>
       await fs.remove(dest).catch(() => {});
     }
   });
+
+  // R2-H1 coverage: empty / '.' / '/' canonicalId would clobber .claude/skills/
+  // tree if not guarded; simulator throws "invalid canonicalId" before the
+  // destructive fs.remove(destDir).
+  it('throws on invalid canonicalIds (./, ., /) before fs.remove', async () => {
+    for (const badSkill of ['./', '.', '/']) {
+      const repo = await makeBadRepo('h1-' + badSkill.replace(/\W/g, '_'), {
+        plugins: [{ name: 'x', skills: [badSkill] }]
+      });
+      const dest = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-sim-r2h1-dest-'));
+      try {
+        await assert.rejects(
+          () => marketplaceInstall(dest, { sourceRepo: repo }),
+          /invalid canonicalId/,
+          `should reject skillRel="${badSkill}" with invalid-canonicalId hint`
+        );
+      } finally {
+        await fs.remove(repo).catch(() => {});
+        await fs.remove(dest).catch(() => {});
+      }
+    }
+  });
+
+  // R2-M7 coverage: plugins[i] === null must not crash the validation loop.
+  it('handles null plugin entries without TypeError', async () => {
+    // Build a fixture where plugins[0] is valid, plugins[1] is null. The
+    // simulator must skip null and still install plugins[0] cleanly.
+    const repo = await makeBadRepo('m7', {
+      plugins: [
+        { name: 'first', skills: ['./skill-one'] },
+        null
+      ]
+    });
+    // Materialize the source dir for plugins[0]'s declared path.
+    await fs.ensureDir(path.join(repo, 'skill-one'));
+    await fs.writeFile(path.join(repo, 'skill-one', 'SKILL.md'), '# stub', 'utf8');
+    const dest = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-sim-r2m7-dest-'));
+    try {
+      // Should NOT throw — null plugin is skipped, plugins[0] installs.
+      await marketplaceInstall(dest, { sourceRepo: repo });
+      assert.ok(
+        fs.existsSync(path.join(dest, '.claude/skills/skill-one/SKILL.md')),
+        'plugins[0] should still install when plugins[1] is null'
+      );
+    } finally {
+      await fs.remove(repo).catch(() => {});
+      await fs.remove(dest).catch(() => {});
+    }
+  });
 });
 
 describe('marketplace-installer-sim: exports', () => {
