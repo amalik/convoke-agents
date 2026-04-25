@@ -292,15 +292,6 @@ function buildReadme(skillRow, result, projectRoot) {
   // Strip HTML comments (developer docs in template, not user-facing)
   out = out.replace(/<!--[\s\S]*?-->/g, '');
 
-  // Clean up leaked engine placeholders from Phase 6 catch-all (all 6 mapped vars + catch-all)
-  out = out.replaceAll('[your output folder]', 'your-output-folder');
-  out = out.replaceAll('[your name]', 'your-name');
-  out = out.replaceAll('[your preferred language]', 'your-preferred-language');
-  out = out.replaceAll('[your document language]', 'your-document-language');
-  out = out.replaceAll('[your planning artifacts directory]', 'your-planning-artifacts');
-  out = out.replaceAll('[your implementation artifacts directory]', 'your-implementation-artifacts');
-  out = out.replaceAll('[your context]', 'your-project-context');
-
   // Collapse multiple blank lines and trim
   out = out.replace(/\n{3,}/g, '\n\n').trim() + '\n';
 
