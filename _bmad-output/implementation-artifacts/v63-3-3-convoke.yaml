@@ -1,0 +1,30 @@
+# Convoke registry submission for bmad-plugins-marketplace
+# Authored by Story v63-3-3. Schema source: bmad-code-org/bmad-plugins-marketplace/registry/registry-schema.yaml
+# Submission target: registry/community/convoke.yaml on the upstream marketplace repo.
+
+name: convoke-vortex
+display_name: "Convoke: Vortex Discovery Framework"
+code: bme
+description: "Vortex Framework — 7-stream product discovery for IT transformation consultants."
+repository: https://github.com/amalik/convoke-agents
+module_definition: _bmad/bme/_vortex/module.yaml
+npm_package: convoke-agents
+author: Amalik Amriou
+license: MIT
+default_selected: false
+type: community
+category: business-and-strategy
+subcategory: product
+keywords:
+  - bmad
+  - discovery
+  - vortex
+  - product-discovery
+  - innovation
+
+version: "4.0.0"
+approved_tag: v4.0.0
+approved_sha: null # TODO: pin to actual commit SHA when v4.0.0 is tagged
+trust_tier: unverified
+approved_date: "2026-04-25"
+reviewer: pending
