@@ -485,20 +485,21 @@ function applyTransformations(text, warnings, options = {}) {
     return result;
   }
   const configVarMap = {
-    user_name: '[your name]',
-    communication_language: '[your preferred language]',
-    document_output_language: '[your document language]',
-    output_folder: '[your output folder]',
-    planning_artifacts: '[your planning artifacts directory]',
-    implementation_artifacts: '[your implementation artifacts directory]',
+    user_name: 'your-name',
+    communication_language: 'your-preferred-language',
+    document_output_language: 'your-document-language',
+    output_folder: 'your-output-folder',
+    planning_artifacts: 'your-planning-artifacts',
+    implementation_artifacts: 'your-implementation-artifacts',
   };
-  for (const [varName, replacement] of Object.entries(configVarMap)) {
-    const re = new RegExp(`\\{${varName}\\}`, 'g');
-    result = result.replace(re, replacement);
-  }
-  // Also handle {{var}} double-brace forms
+  // Double-brace forms first: {{var}} → replacement. If single-brace ran first, it would match
+  // the inner {var} of {{var}}, leaving residual `{replacement}` which the catch-all then warns on.
   for (const [varName, replacement] of Object.entries(configVarMap)) {
     const re = new RegExp(`\\{\\{${varName}\\}\\}`, 'g');
+    result = result.replace(re, replacement);
+  }
+  for (const [varName, replacement] of Object.entries(configVarMap)) {
+    const re = new RegExp(`\\{${varName}\\}`, 'g');
     result = result.replace(re, replacement);
   }
 
@@ -513,7 +514,7 @@ function applyTransformations(text, warnings, options = {}) {
         message: `unmapped config var stripped via catch-all: {${varName}}`,
       });
     }
-    return '[your context]';
+    return 'your-project-context';
   });
 
   // Phase 7: Collapse whitespace
@@ -803,7 +804,7 @@ function extractWhatYouProduce(workflowContent, stepContents, skillRow) {
     const outputFile = pathsBlock[1].match(/[`*]?(\w*_output_file|\w*_artifact)[`*]?\s*=\s*[`]?([^`\n]+)[`]?/);
     if (outputFile) {
       const humanName = humanizeSkillName(skillRow.name).toLowerCase();
-      lines.push(`A markdown ${humanName} document at \`${outputFile[2].replace(/\{[\w_-]+\}/g, '[your output folder]')}\`. The document captures the session output and is intentionally raw — value comes from quantity and diversity, not pre-curation.`);
+      lines.push(`A markdown ${humanName} document at \`${outputFile[2].replace(/\{[\w_-]+\}/g, 'your-output-folder')}\`. The document captures the session output and is intentionally raw — value comes from quantity and diversity, not pre-curation.`);
       return lines.join('\n');
     }
   }
@@ -812,13 +813,13 @@ function extractWhatYouProduce(workflowContent, stepContents, skillRow) {
   const goalMatch = workflowContent.match(/\*\*Goal:\*\*\s+(.+?)(?:\n|$)/);
   if (goalMatch) {
     const humanName = humanizeSkillName(skillRow.name).toLowerCase();
-    lines.push(`A markdown document capturing ${goalMatch[1].toLowerCase().replace(/^[a-z]/, (c) => c)}. Lives at \`[your output folder]/${humanName.replace(/\s+/g, '-')}/[date].md\`.`);
+    lines.push(`A markdown document capturing ${goalMatch[1].toLowerCase().replace(/^[a-z]/, (c) => c)}. Lives at \`your-output-folder/${humanName.replace(/\s+/g, '-')}/[date].md\`.`);
     return lines.join('\n');
   }
 
   // Fallback
   const humanName = humanizeSkillName(skillRow.name).toLowerCase();
-  lines.push(`A markdown document at \`[your output folder]/${humanName.replace(/\s+/g, '-')}/[date].md\`.`);
+  lines.push(`A markdown document at \`your-output-folder/${humanName.replace(/\s+/g, '-')}/[date].md\`.`);
   return lines.join('\n');
 }
 
