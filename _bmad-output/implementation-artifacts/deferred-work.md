@@ -5,6 +5,27 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of v63-3-4-dual-distribution-parity-verification (2026-04-25 R1)
+
+R1 review (3 layers: Blind Hunter + Edge Case Hunter + Acceptance Auditor) — 39 raw findings → 16 patches + 14 defers + 5 dismissed.
+
+- **R1-L1 — U1 describe title hardcodes "7 paths"** — cosmetic; assertion correctly derives count from manifest. Future fix: drop count from title text.
+- **R1-L2 — `PACKAGE_ROOT` redefined in unit test instead of imported from `tests/helpers.js`** — duplicate computation, low impact. Future fix: import from helpers.
+- **R1-L3 — `.gitkeep` literal hardcoded in two places** (simulator filter + U2 assertion) — low; could centralize in `PARITY_EXCLUSIONS.exceptionBasenames`.
+- **R1-L4 — `src === sourceDir` exact-string compare brittle to `fs.copy` path normalization** — informational; if fs-extra ever normalizes paths (trailing slash, symlink resolution), the root-dir filter check breaks silently. Future fix: `path.resolve(src) === path.resolve(sourceDir)`.
+- **R1-L5 — DEBUG flag uses bare `===` instead of npm namespace-list parsing** — `DEBUG=convoke:parity,foo` wouldn't trigger debug output. Future fix: `process.env.DEBUG?.split(/[\s,]/).includes('convoke:parity')`.
+- **R1-L6 — Redundant filter logic** (`.bak` matches both dot rule + suffix rule when filename starts with `.`) — no functional bug.
+- **R1-L7 — No explicit timeout on async `before()` hooks** — `fs.copy` of full SKILL.md trees + `refreshInstallation` could hang on a wedged FS. node:test has implicit timeouts; low risk.
+- **R1-L8 — I4 cleanup `try/finally` fragile to future async refactor** — currently safe.
+- **R1-L9 — `Buffer.compare` directionality not surfaced in failure message** — cosmetic; future fix: include `${aBytes.length}B vs ${bBytes.length}B`.
+- **R1-L10 — Symlink handling: `fs.copy` default `dereference: false`** — informational; no symlinks in current source tree under `_vortex/agents/`.
+- **R1-L11 — `skills[]` traversal `..` would `path.basename` to a sibling-dir name + clobber** — `validate-marketplace.js` is the gate; defense-in-depth via `assert(!cleanRel.includes('..'))` would cost nothing.
+- **R1-L12 — I4 clones suite-level `sandboxB` rather than performing its own `marketplaceInstall(sandboxBPrime, …)`** — fragile to future test insertions that mutate `sandboxB` between I3 and I4. Currently safe.
+- **R1-L13 — Spec internal inconsistency** — Testing section L273 has stale baseline projection (5+3 tests) vs final actual (6+15). Doc nit.
+- **R1-L14 — Schema-guard duplicated** (simulator throws AND I1 asserts independently) — defense-in-depth, not defect.
+
+---
+
 ## Deferred from: V-pass of v63-3-4-dual-distribution-parity-verification (2026-04-25)
 
 V-pass (`/bmad-validate-create-story` fresh-context) batch-applied 26/26 findings inline. Two deferred follow-ups surfaced during V-pass that exceed Story 3.4's AC7 scope:
@@ -604,6 +625,12 @@ F.2 unblocks when **all 3 portability tests pass standalone under
 ## Deferred from: code review of A39 Gyre Covenant Audit Round 1 (2026-04-25)
 
 Round 1 review (3 layers: Blind Hunter + Edge Case Hunter + Acceptance Auditor) — 9 HIGH after dedup, 9 MEDIUM, 6 LOW, 4 NIT. 14 patches applied + 4 deferred + 3 dismissed + 3 decisions surfaced for operator. All patches content-only; per `code-review-convergence` rule, Round 2 NOT auto-triggered. Headline T1-FIRES verdict on Right to a default remains provisional under A10 failure.
+
+> **A41+A42 cross-reference (added 2026-04-25):** A41+A42 shipped 2026-04-25 ([oc-publication-gate-rigor-a41-a42.md](./oc-publication-gate-rigor-a41-a42.md)). Per A41 §A41-1..§A41-10, the following A39-D entry resolutions:
+> - **A39-D2** (reading-dependent partial-credit): RESOLVED by A41 §A41-5 (structurally distinct from forbidden borderline IF AND ONLY IF (a) headline commits, (b) §Notes documents alternative, (c) §9 ambiguity logged).
+> - **A39-D4** (A10 cell selection borderline): RESOLVED by A41 §A41-6 (expected-PASS must be reading-dependent or borderline; v3 stable-PASS picks grandfathered, v4+ refresh adopts borderline-required rule).
+> - **A39-D1** (≤2-sentence cap): **REMAINS OPEN** pending v4+ refresh — A41 did NOT add a methodology amendment for compound-mechanism cells exceeding 2 sentences with §Notes pointer convention. Sweep across 6 cells stays deferred.
+> - **A39-D3** (Scout R6 re-eval): **REMAINS OPEN** pending v4+ refresh — A41 did NOT add an OC-R6 application clarification for silent-decide branches.
 
 - **A39-D1 (AA-H1; clarified post-R2 per AA-R2-H2) — AC5 ≤2-sentence cap exceeded across ~6 cells** — Acceptance Auditor finding. Spec AC5: "≤ 2-sentence evidence note." Several §4 cells exceed: Scout R5 (~4-5 sentences pre-R1; reduced to **3 sentences post-R1 P16 — STILL over the ≤2 cap; did NOT reach it**, clarified post-R2), Scout R7 (~6 sentences charitable + strict + headline reasoning), Atlas R7 (~5 sentences), Coach R1 (~4 sentences), Coach R5 post-R2-overturn (~3-4 sentences for FAIL evidence + composition-rule pointer to §4.5), Scout R1 (~3 sentences). Sweep across all 6 cells would touch ~150 lines of evidence-note prose; high risk of introducing semantic drift while compressing. R1 P16 attempted Scout R5 inline condensation but reduced from ~5 to 3 sentences, NOT to the ≤2 cap — earlier framing implied P16 fixed Scout R5; corrected post-R2 to clarify partial-fix-only. Fix path: v4+ refresh applies the same condensation pattern OR a methodology amendment via A41 allows compound-mechanism cells to exceed 2 sentences with an explicit §Notes pointer convention. Defer reason: scope creep risk; A39 R1+R2 patches are mostly content-only (R2 added the Coach R5 verdict overturn but did not sweep evidence-cell length); bulk evidence-note rewrite across 6 cells crosses the structural-change threshold per code-review-convergence rule.
 - **A39-D2 (AA-H2) — "Reading-dependent" framing as partial-credit-shaped construct** — Acceptance Auditor finding. Spec AC5 mandates "no partial-credit language" + Anti-Pattern #4 forbids partial-credit language explicitly. Report repeatedly uses "reading-dependent verdict," "charitable PASS / strict FAIL," "borderline" (in §7.1 cell-selection table). This is a partial-credit-shaped construct in everything but name — it preserves both PASS and FAIL readings without binary commitment. **Counter-argument:** A24 §4.4 Notes used the same "reading-dependent" pattern and shipped clean; A39 inherits the precedent (charitable for headline + strict alternative in §Notes + ambiguity intake in §9). The A24 R2 review didn't flag this pattern — implying it's been operationally accepted. Defer reason: this is a methodology question for A41 — is "reading-dependent" verdict structurally distinct from forbidden "borderline" partial-credit, or is the precedent now in tension with the rubric's stated discipline? A41 should adjudicate (the "Selection Discipline" governance owns this).
