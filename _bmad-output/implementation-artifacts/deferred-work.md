@@ -586,3 +586,8 @@ F.2 unblocks when **all 3 portability tests pass standalone under
 - **R1-L2: `repository` URL normalization comment in `convoke.yaml`** — explicit `# normalized per AC1 — diverges from package.json git+/.git affixes` comment would forestall reviewer questions but isn't required. Cosmetic.
 - **R1-L3: Gate-2 timestamp prose clarification in validation log** — gate-2 entries at 09:22:00Z are post-PR-creation 09:21:04Z. Adds a note explaining "gate-2 is M12a aspiration evidence, not AC2 evidence; AC2 met at 09:09:03Z gate-1." Cosmetic — pre-empts a reviewer concern about evidence ordering.
 - **R1-L4: CodeRabbit auto-injected text in PR body** — bot appends bland AI summary to PR descriptions. Optional removal via `gh pr edit` if it dilutes the human description. Not in our control to suppress.
+
+## Deferred from: code review of v63-3-3-submit-marketplace-registry-pr Round 2 (2026-04-25)
+
+- **R2-L1: `code: bme` framing dissonance** — `_bmad-output/implementation-artifacts/v63-3-3-validation-log.md`. R1-M3 treats `code` as identity-defining (collision-check section); R1-H2 lists `code` under "5 optional fields included". Defensible per schema (it IS optional) but suggests evidence-stitching fatigue. Cosmetic.
+- **R2-L2: PR title direct verification** — `_bmad-output/implementation-artifacts/v63-3-3-pr-link.md` `pr_title` field. Title can be verified live via `gh pr view --json title`; not directly verifiable from inside the static diff. Cosmetic; not blocking.
