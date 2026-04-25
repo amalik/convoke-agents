@@ -181,4 +181,34 @@ describe('Export engine (sp-2-2)', () => {
       assert.notStrictEqual(result.sections[key], undefined);
     }
   });
+
+  it('Test 10: Phase 6 substitution-loop ordering invariant (BUG-7 R1 P5)', () => {
+    // Carson source contains 3× {{user_name}} double-brace patterns. The double-brace
+    // loop MUST run before the single-brace loop in export-engine.js Phase 6 — otherwise
+    // single-brace matches the inner {var} of {{var}} first, leaves residual `{your-name}`,
+    // and the catch-all then matches `your-name` (because `-` is in `[\w_-]+`) emitting
+    // a spurious 'unresolved-template-path' warning. This test locks the ordering.
+    const result = exportSkill('bmad-brainstorming', projectRoot);
+    // Substitution must produce hyphenated form for {{user_name}} occurrences
+    assert.ok(
+      result.instructions.includes('your-name'),
+      'configVarMap substitution must produce your-name from {{user_name}} patterns'
+    );
+    // No residual {your-X} brace artifacts (the loop-order failure mode)
+    const residual = result.instructions.match(/\{your-[\w-]+\}/g);
+    assert.strictEqual(
+      residual,
+      null,
+      `Phase 6 must not leave residual brace-wrapped your-X tokens; found: ${residual}`
+    );
+    // Catch-all must NOT have warned for any your-X residue (else loop reorder regressed)
+    const yourXWarnings = result.warnings.filter((w) =>
+      /unmapped config var stripped via catch-all: \{your-/.test(w.message || '')
+    );
+    assert.strictEqual(
+      yourXWarnings.length,
+      0,
+      `Catch-all must not warn for your-X residue; found: ${JSON.stringify(yourXWarnings)}`
+    );
+  });
 });
