@@ -79,9 +79,9 @@ Competitors (CrewAI, LangGraph, AutoGen, Agentic Mesh) compete on **capability d
 
 **Adoption (deferred):**
 
-- FR15 [Retrofit]: Skills identified in FR9 audit with highest violation counts are retrofitted to comply with the specific rights they violated
+- FR15 [Retrofit]: **T1-firing (team × Right) cells** identified in FR9+ audits are retrofitted at the specific cell-mechanism level (per A39 cell-naming convention: R1-G1 Scout multi-service, R1-G2 Coach Review Mode menu, R5-G1 Coach §4 dangling-prompt, R5-G2 Scout single-service auto-decide; etc.). NOT "fix everything that violates a given right" — retrofits are mechanism-distinct cell repairs. [Refactored 2026-04-25 via A41+A42: original "skills with highest violation counts" framing was skill-centric / right-centric and didn't survive the multi-team picture; cell-centric per A24 §5 team × Right row semantics + A39 cell-mechanism naming.]
 - FR16 [Enforcement]: Covenant Compliance Checklist is wired into the Loom Add Skill workflow (Phase 3 dependency) as a validation gate before skill generation completes
-- FR17 [Publication]: The Covenant is published as external positioning material (repository README section, blog post, or equivalent) with audit findings as credibility evidence. **Publication Gate:** Story 2.3 is blocked by BOTH (a) Story 2.1 completing retrofits of at least the rights scoring worst in the audit AND (b) at least two audits covering distinct portfolios. Publication requires internal compliance on bottleneck rights (you don't publish a covenant you can't keep) AND evidentiary breadth across portfolios (you don't publish a claim you can't back with evidence). **Operational definitions deferred:** what counts as a "portfolio audit", the reproducibility threshold, methodology-lock semantics, "no regressions" baseline, and cascade termination rules are scoped to follow-up work (A41). [Amended 2026-04-18, pre-mortem failure mode 5; coverage-breadth clause added 2026-04-21 via A40; operational definitions deferred to A41]
+- FR17 [Publication]: The Covenant is published as external positioning material (repository README section, blog post, or equivalent) with audit findings as credibility evidence. **Publication Gate:** Story 2.3 is blocked by BOTH (a) Story 2.1 completing retrofits of all T1-firing (team × Right) cells with no per-cell regressions AND (b) at least two portfolio audits covering distinct teams (per A41 §A41-9 cross-cutting exclusion rule), **each individually meeting COI mitigation Tier-2 OR Tier-1-with-clearance per A41 §A41-10**. Publication requires internal compliance on T1-firing cells (you don't publish a covenant you can't keep) AND evidentiary breadth across portfolios (you don't publish a claim you can't back with evidence) AND COI-mitigation rigor on each portfolio audit (per A41+A42 ship 2026-04-25 — Tier-0 disclosure-only is internal-evidence-only, not Publication Gate eligible). *(COI mitigation tier requirement added per R1 review AA-FIND-2 to align FR17 with Story 2.3 cleared/not-cleared ACs verbatim.)* **Operational definitions per A41** (shipped 2026-04-25); see [Compliance Checklist §A41-Clarifications](convoke-spec-covenant-compliance-checklist.md) for: portfolio audit definition (§A41-9), A10 reproducibility threshold (§A41-6), methodology-lock semantics (§A41 Version-pinning), "no regressions" baseline (per-cell, see Story 2.1 AC #4 below), cascade termination ("no new T1-firing cells introduced by retrofit"), A29 single-skill exemption, COI mitigation tier requirement (Tier-2 OR Tier-1-with-clearance per §A41-10). [Amended 2026-04-18, pre-mortem failure mode 5; coverage-breadth clause added 2026-04-21 via A40; operational definitions per A41 2026-04-25; refactored to cell-centric framing 2026-04-25 via A41+A42.]
 
 ### NonFunctional Requirements
 
@@ -92,7 +92,7 @@ Competitors (CrewAI, LangGraph, AutoGen, Agentic Mesh) compete on **capability d
 - NFR5 [Derivation integrity]: Every right must trivially derive from the axiom. If a right cannot be shown as a direct consequence of "the operator is the resolver," it is either rewritten or rejected.
 - NFR6 [Checklist machine-readability]: Checklist must be structured in a format that can be consumed by a future Loom validation gate (tabular, binary outcomes, stable rule IDs)
 - NFR7 [Self-compliance / dogfooding]: The Covenant document itself must comply with the 7 rights it defines (e.g., it must explain why each right exists, not silently omit rationale)
-- NFR8 [Bottleneck prioritization]: Retrofitting (FR15) prioritizes rights with highest violation counts from the audit, not uniform enforcement across all rights (Dr. Quinn's Theory of Constraints input)
+- NFR8 [T1-firing prioritization]: Retrofitting (FR15) prioritizes T1-firing (team × Right) cells from the audit; **cell-mechanism distinct retrofits even within the same right** (e.g., A39's R1-G1 Scout multi-service ≠ R1-G2 Coach Review Mode menu — both fire R1, but the retrofits are mechanism-specific). NOT uniform enforcement across all rights, NOT skill-by-skill blanket fixes. **Note on Theory of Constraints (Dr. Quinn) framing:** TOC bottleneck = the single constraint that limits throughput; T1-firing = a fail-rate threshold (>30% at N_effective ≥ 3). These are not literally equivalent — T1-firing cells are quality-gate failures, not necessarily throughput bottlenecks. The TOC-derived prioritization principle (focus retrofit work where the system is most constrained) is preserved; the cell-mechanism granularity is the cell-centric refinement. *(TOC divergence acknowledged per R1 review BH-M6.)*
 
 ### Additional Requirements
 
@@ -126,7 +126,7 @@ Each right in the Covenant must include:
 **Integration Dependencies:**
 
 - Future Loom Add Skill workflow (Phase 3) — Covenant Compliance Checklist becomes a validation gate input
-- Existing skills retrofit — scope determined by audit findings (FR8) and prioritized by violation frequency (NFR8)
+- Existing skills retrofit — scope determined by audit findings (FR8) and prioritized by T1-firing (team × Right) cell-mechanism (NFR8 + per A41 cell-centric refactor 2026-04-25)
 
 ### UX Design Requirements
 
@@ -187,21 +187,21 @@ All 17 FRs mapped. No orphans.
 **Goal:** The Covenant transitions from codified principle to enforced standard — retrofitted into existing skills, structurally gated for new skills, and published externally as Convoke's positioning wedge.
 
 **User outcomes:**
-- Existing skills with highest violation counts are brought into compliance
+- T1-firing (team × Right) cell-mechanisms are repaired across all audited portfolios (per A41 cell-centric framing; cell-mechanism distinct retrofits per A39 cell-naming convention)
 - The Loom Add Skill workflow automatically validates Covenant compliance for new skills
 - External audiences see Convoke's differentiating commitment (operator experience as first-class architectural concern) with credibility evidence — not aspirational claims
 
 **FRs covered:** FR15, FR16, FR17
 
 **Stories (deferred):**
-1. Retrofit highest-violation skills
+1. Retrofit T1-firing (team × Right) cells
 2. Wire Checklist into Loom Add Skill workflow (Phase 3 dependency)
 3. Publication strategy (gated)
 
 **Internal dependencies:**
 - Story 2.1 independent of others
 - Story 2.2 blocked by Phase 3 Add Skill workflow
-- **Publication Gate:** Story 2.3 blocked by BOTH (a) Story 2.1 completing retrofit of at least the rights scoring worst in the audit AND (b) at least two audits covering distinct portfolios. External publication requires internal compliance on bottleneck rights AND evidentiary breadth across portfolios. See FR17; operational definitions deferred to A41.
+- **Publication Gate:** Story 2.3 blocked by BOTH (a) Story 2.1 completing retrofit of all T1-firing (team × Right) cells AND (b) at least two portfolio audits covering distinct teams (per A41 §A41-9). External publication requires internal compliance on T1-firing cells AND evidentiary breadth across portfolios. See FR17; operational definitions per A41 (shipped 2026-04-25; see [Compliance Checklist §A41-Clarifications](convoke-spec-covenant-compliance-checklist.md)).
 
 **Standalone property:** Pure adoption work. Requires Epic 1 complete. Stories independently deliverable within Epic 2, subject to the Publication Gate.
 
@@ -243,7 +243,7 @@ So that the Covenant is built on verified evidence and the audit methodology is 
 
 **Given** a complete audit
 **When** results are tabulated
-**Then** a matrix exists (skill × right → pass/fail/evidence) and a summary ranks rights by violation frequency (bottleneck identification for NFR8)
+**Then** a matrix exists (skill × right → pass/fail/evidence) and a summary computes (team × Right) cell-row T1-firing verdicts per A30 threshold (`fail_rate > 30% at N ≥ 3` per A41 §A41-3 N_effective semantics; cell-mechanism identification for NFR8 retrofit prioritization). [Refactored 2026-04-25 via A41 cell-centric framing.]
 
 **Given** the audit report
 **When** saved
@@ -368,7 +368,7 @@ Trigger evaluation re-runs after each audit refresh (v1 oc-1-1 = 2026-04-18 base
 
 **v1 baseline result:** No trigger fires. Overall 82% (>75%); every Right ≥ 70%; no (team × Right) cell at N ≥ 3 measured < 70%. oc-2-1 correctly deferred — but Vortex sampled at N = 1 only, so T1 cannot yet be evaluated for Vortex specifically. IN-12 resolves that.
 
-**Supersedes** the original Story 2.1 AC framing ("rights violated by ≥ 50% of audited skills"), which was undersampled single-matrix-based and did not handle concentrated (team-level) bottlenecks. Retained Story 2.1 ACs below still apply to the *scope definition and regression testing* of the retrofit once a trigger fires.
+**Supersedes** the original Story 2.1 AC framing ("rights violated by ≥ 50% of audited skills"), which was undersampled single-matrix-based and did not handle concentrated (team-level) bottlenecks. Retained Story 2.1 ACs below still apply to the *scope definition and regression testing* of the retrofit once a trigger fires. **Further refactored 2026-04-25 via A41+A42 to cell-centric semantics**: ACs below are rewritten in terms of (team × Right) cell-mechanisms (per A39 cell-naming convention) rather than skill-by-skill or right-by-right framing; see [Compliance Checklist §A41-Clarifications](convoke-spec-covenant-compliance-checklist.md) for the cell-centric methodology rules.
 
 **A24 status under new Selection Discipline:** Under A29 (Skill Selection, shipped 2026-04-20), A24 is retroactively classified as a **mixed audit** — per A29 §4, mixed audits combine a pattern-verification cluster with one or more independent variations:
 
@@ -379,33 +379,35 @@ Retrofit scope is unchanged: R7-V1 + R7-V2 address the one shared pattern; empat
 
 The new Selection Discipline applies **forward-only**. A24 predates A29's declaration requirement; its intent is reconstructed here from the audit report's §2 rationale (which independently documented the twins-vs-variation selection logic) and §6.2 (which grouped twins' findings as a shared pattern). Independent verification of the broader Vortex-wide class claim is the scope of A26 (future Vortex-wide HC-schema pattern audit).
 
-### Story 2.1: Retrofit Highest-Violation Skills
+### Story 2.1: Retrofit T1-Firing Cells
 
-As an operator of existing Convoke skills whose rights are currently violated,
-I want skills identified as bottleneck violators in the audit to be retrofitted to comply with the specific rights they violate,
-So that the Covenant's claims have real backing before external publication, and operator experience improves where violations hurt most.
+*(Title refactored 2026-04-25 via A41+A42 cell-centric framing — was "Retrofit Highest-Violation Skills".)*
+
+As an operator of existing Convoke skills whose specific (team × Right) cells fire T1 in audits,
+I want T1-firing cells identified by audit to be retrofitted at the cell-mechanism level (per A39 cell-naming convention: R1-G1, R1-G2, R5-G1, R5-G2, etc.) — distinct retrofits even within the same right when the FAIL has multiple distinct mechanisms,
+So that the Covenant's claims have real backing before external publication, and operator experience improves where violations actually hurt — without over-fitting blanket "all skills violating right X" sweeps that miss mechanism-specific patterns.
 
 **Acceptance Criteria:**
 
-**Given** the Story 1.1 audit matrix
-**When** the bottleneck rights are identified
-**Then** all rights violated by ≥ 50% of audited skills (i.e., 2 or more of 4 skills violate it) are listed as bottleneck rights
+**Given** the Story 1.1 audit matrix (with §5 row table of (team × Right) cell-rows per A41 §A41-3 N_effective semantics)
+**When** the T1-firing cell-rows are identified per A30 threshold (`fail_rate > 30% at N_effective ≥ 3`)
+**Then** all (team × Right) cell-rows where T1 fires are listed as **T1-firing cells**, with cell-mechanisms named per A39 cell-naming convention (e.g., R1-G1 = Scout/stack-detection multi-service mechanism; R1-G2 = Coach/model-review Review Mode menu mechanism)
 
-**Given** the bottleneck rights
+**Given** the T1-firing cells
 **When** retrofit scope is defined
-**Then** it is the cross-product of bottleneck rights × the specific skills violating them
+**Then** it is the set of T1-firing cells × the specific cell-mechanisms violating them (per A39 cell-mechanism naming pattern). Cell-mechanism distinct retrofits even within the same right are SEPARATE retrofits (e.g., R1-G1 ≠ R1-G2 even though both fire R1). **Cell-mechanism naming stability across version cutover** per [Compliance Checklist §A41-13](convoke-spec-covenant-compliance-checklist.md): mechanism names are stable referents (R1-G1 names the WHERE, not the WHAT-VERDICT); T1-firing status is version-pinned (A39's R1-G1 fires T1 under v3 N_total framing; v4+ refresh under N_effective semantics may evaluate differently). *(Cross-ref added per R2 review — Epic Story 2.1 readers needed visibility into the version-pinning caveat.)*
 
-**Given** each violating skill
-**When** updated to comply with the targeted right
-**Then** it now passes the Checklist for that right (re-audit confirms)
+**Given** each T1-firing cell-mechanism
+**When** the cell-mechanism is updated to comply with the targeted (team × Right) cell-row's rubric criteria
+**Then** the cell now passes the Checklist for that right (re-audit confirms — at the specific mechanism, not blanket skill-level)
 
-**Given** each retrofitted skill
-**When** re-audited against ALL rights in the Checklist (not just the bottleneck targets)
-**Then** no previously-passing right regresses to failing; regressions block retrofit closure until resolved
+**Given** each retrofitted cell-mechanism
+**When** the audit matrix is re-evaluated against ALL (team × Right) cells in the Checklist (not just the T1-firing targets)
+**Then** **no previously-passing cell regresses to failing** (per-cell regression baseline per A41 cell-centric refactor — NOT per-skill or per-right — a retrofit fixing cell C1 must not flip cell C2 from PASS to FAIL anywhere in the audited matrix, regardless of which skill C2 belongs to); cell-level regressions block retrofit closure until resolved. **Cascade termination:** the retrofit cycle ends when no new T1-firing cells are introduced by the most recent retrofit (mechanically evaluable per [Compliance Checklist §A41-11 Cascade termination](convoke-spec-covenant-compliance-checklist.md); finite per audit matrix). *(Cross-reference corrected from §A41-9 → §A41-11 per R1 review BH-H4 + EC-H4 — §A41-9 is portfolio audit definition; cascade termination is §A41-11.)*
 
-**Given** the retrofits are complete for bottleneck rights with no regressions
+**Given** the retrofits are complete for all T1-firing cells with no per-cell regressions
 **When** the Publication Gate (FR17) is evaluated
-**Then** it unblocks Story 2.3 ONLY IF at least two audits covering distinct portfolios exist (operational definitions: A41); otherwise publication remains blocked on coverage-breadth evidence. Other non-bottleneck retrofits may continue but are not blockers for publication.
+**Then** it unblocks Story 2.3 ONLY IF at least two portfolio audits covering distinct teams exist (per A41 §A41-9 cross-cutting exclusion rule + COI mitigation Tier-2 OR Tier-1-with-clearance per §A41-10); otherwise publication remains blocked on coverage-breadth evidence OR COI mitigation insufficient. Non-T1-firing-cell retrofits may continue but are not blockers for publication.
 
 ### Story 2.2: Wire Checklist into Loom Add Skill Workflow
 
@@ -441,7 +443,7 @@ So that Convoke's commitment to operator experience as a first-class architectur
 
 **Acceptance Criteria:**
 
-**Given** the Publication Gate is cleared (Story 2.1 complete for bottleneck rights with no regressions AND ≥2 audits covering distinct portfolios exist)
+**Given** the Publication Gate is cleared (Story 2.1 complete for all T1-firing cells with no per-cell regressions AND ≥2 portfolio audits covering distinct teams exist per A41 §A41-9, **each individually meeting** COI mitigation Tier-2 OR Tier-1-with-clearance per §A41-10)
 **When** external publication proceeds
 **Then** the Covenant appears in the repository README as a dedicated section (primary channel); an accompanying blog post is optional and at operator discretion — no additional approval gate beyond the Publication Gate already cleared above (secondary channel) [Amended 2026-04-25 via A43: operator is the sole approval authority in Convoke's operating model; no second-party gate exists.]
 
@@ -453,6 +455,6 @@ So that Convoke's commitment to operator experience as a first-class architectur
 **When** readers see it
 **Then** every violating skill is named explicitly, every violated right is named by rule ID, and each row shows a remediation status (complete / in-progress / deferred) — no violations hidden or aggregated away
 
-**Given** the Publication Gate is NOT cleared (bottleneck rights still violated OR regressions present OR fewer than 2 distinct-portfolio audits exist)
+**Given** the Publication Gate is NOT cleared (T1-firing cells still violated OR per-cell regressions present OR fewer than 2 distinct-team portfolio audits exist OR any portfolio audit fails to **individually** meet COI mitigation tier requirement per A41 §A41-10)
 **When** external publication is attempted
 **Then** it does NOT proceed; internal use and internal references remain permitted, but external publication is blocked
