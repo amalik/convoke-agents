@@ -8,6 +8,8 @@ schema_version: 1
 
 # Convoke Operator Covenant — Audit Report
 
+> **A41+A42 amendment marker (added 2026-04-25):** This report's §7.1 Bottleneck analysis hardcodes the v1 ≥50% threshold and skill-centric "bottleneck rights" framing. Both have been **superseded** by A41+A42 cell-centric refactor: T1 trigger now operates on (team × Right) cell-rows per A30 threshold (`fail_rate > 30% at N_effective ≥ 3`); retrofit semantics are cell-mechanism distinct per A39 cell-naming convention. See [Compliance Checklist §A41-Clarifications](convoke-spec-covenant-compliance-checklist.md) for the cell-centric methodology rules + [P21 Epic 2 Story 2.1](convoke-epic-operator-covenant.md) for the refactored ACs. This report's published verdicts stay locked under G4 mitigation gate (forward-only methodology adoption — see A24 §8.1 + Compliance Checklist §A41-Clarifications) — no re-scoring, just forward-pointer.
+
 **Story:** oc-1-1-covenant-audit
 **Auditor:** Murat persona (Master Test Architect) via single LLM reviewer
 **Date:** 2026-04-18
