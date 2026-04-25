@@ -4,6 +4,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { refreshInstallation } = require('./update/lib/refresh-installation');
 const { findProjectRoot } = require('./update/lib/utils');
+const { runCompatPreflight } = require('./update/lib/compat-preflight');
 const { GYRE_AGENTS } = require('./update/lib/agent-registry');
 
 const BOLD = '\x1b[1m';
@@ -119,7 +120,17 @@ function printSuccess() {
 
 async function main() {
   try {
-    const projectRoot = findProjectRoot();
+    // Story v63-3-2 R2-H1: mirror install-vortex's `|| process.cwd()` pattern
+    // exactly. R1-H1's `if (projectRoot)` guard prevented `runCompatPreflight`
+    // from throwing, but the very next call `checkPrerequisites(projectRoot)`
+    // (line 32) does `path.join(projectRoot, '_bmad')` — which crashes with
+    // TypeError on null. The fresh-install case stayed broken; R1-H1 only
+    // moved the crash one line down. `|| process.cwd()` ensures projectRoot
+    // is always a string; preflight then degrades to absent-package WARNING
+    // gracefully via Decision 1's clause-4 fallback.
+    const projectRoot = findProjectRoot() || process.cwd();
+
+    runCompatPreflight(projectRoot);
 
     printBanner();
     checkPrerequisites(projectRoot);
