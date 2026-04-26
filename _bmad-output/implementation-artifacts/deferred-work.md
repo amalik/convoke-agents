@@ -5,6 +5,34 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: V-pass of v63-4-3 (caught Story 4.2 surface bug — 2026-04-26)
+
+V-pass on Story 4.3 caught a defect in already-shipped Story 4.2. Per Q2=A operator decision, defect routed to follow-up bug item rather than re-opening Story 4.2 R3 (which the convergence rule wouldn't have allowed anyway since R2 was additive).
+
+- **D-V42-R3-1 — Battery `--dry-run` exits 0 silently on missing recordings (should exit 5)** — `scripts/audit/pf1-validation-battery.js` `main()` loads agentRecordings BEFORE `if (args.dryRun)` check; when recordings missing, `loadAgentRecordings` throws `exitCode: 5` which propagates to outer catch that sets `process.exit(err.exitCode)`. Empirical V-pass result: `node scripts/audit/pf1-validation-battery.js --dry-run` with no recordings prints `Error: Recording missing: ...` then **exits 0** (not 5 as Story 4.2 Completion Notes claimed). Operator's dry-run smoke-check would silently pass. **Root cause:** likely the catch handler calling `process.exit(err.exitCode !== undefined ? err.exitCode : 99)` is correct, BUT main() returns before reaching the catch on the load-error path — need to investigate. **Fix scope:** ~5 LOC to add try/catch in main() around the up-front loadAgentRecordings calls + ensure dry-run error path exits 5. Plus a unit test asserting `node scripts/audit/pf1-validation-battery.js --dry-run` with empty fixture dirs exits 5. Story 4.3 Task 6.2 works around by checking stdout for `Error:` lines. → fix-needed bug for next Story 4.2 amendment OR consolidated v6.3 patch round.
+
+---
+
+## Deferred from: code review of v63-4-2-create-pf1-validation-battery-harness (2026-04-26 R1+R2)
+
+**R1+R2 review (3 layers each round) — convergence at R2.** R1: ~30 raw findings → 6 patches + 6 defers + 3 dismissed. R2: ~30 raw findings → 0 patches + 8 defers + 5 dismissed (all R2 HIGHs were false positives). **R3 NOT triggered** per `code-review-convergence` rule (R1 patches additive). 1 STORY-KILLER caught + fixed at R1: H1 PF1_PROMPTS-vs-parseRecording key mismatch would have silently substituted literal `"undefined"` into all 60 judge calls → false PASS gate verdict.
+
+- **D-V42-R1-1 — NFR3 retry-storm cumulative budget** (R1) — 60 calls × 3 attempts × 60s = 10800s vs NFR3=900s. Acknowledged in spec PR3. Mitigation: cumulative-time check + fail-fast OR Story 4.3 measures + reports.
+- **D-V42-R1-2 — `PF1_BATTERY_RESULTS_PATH` env-path validation** (R1) — env-overridable but no allowlist/sandbox. Operator-controlled trust boundary.
+- **D-V42-R1-3 — JUDGE_MODEL invariant test verifies equality but not validity** (R1) — Test 5 enforces 3 sources align; doesn't verify model exists in Anthropic catalog. Same class as Story 4.1 R1 dismissed.
+- **D-V42-R1-4 — EXDEV `renameSync` cross-volume safety** (R1) — same fs by construction; env-overridden RESULTS_PATH could theoretically cross fs.
+- **D-V42-R1-5 / D-V42-R2-8 — Test suite covers only structural happy paths** (R1+R2) — runJudgePairs/writeResults/loadAgentRecordings missing-file path/main untested. Story 4.3 will exercise live; deferred to Story 4.3 OR follow-up test-coverage sweep.
+- **D-V42-R1-6 — R1 minor LOWs bundle** (R1) — wall_clock_seconds rename + responses retention unbounded + frontmatter regex CRLF/BOM brittle + gate verdict ternary maps unknowns to FAIL + dead-code `?.` chain + dry-run prerequisite docstring + cross-recording structural mismatch fail-after-load + --verbose oversells + gate-boundary fractional-medians-2.5 ambiguity. Bundle for future polish PR.
+- **D-V42-R2-1 — `PF1_PROMPT_DESCRIPTIONS` map exported but unused** (R2 N1 + BH LOW) — declared for future Story 4.3 report rendering; either consume in writeResults per-prompt detail OR drop the export.
+- **D-V42-R2-2 — Tightened regex error message uninformative for descriptive-header recordings** (R2 N2) — `## Prompt 1 — description` rejected with "wrong section structure: got 0" (misleading). Improve to "header has trailing content (only `## Prompt N` allowed)". Story 4.3 author should be alerted.
+- **D-V42-R2-3 — P5 throws on first empty section** (R2 N3) — operator round-trips N times for N empties. Could collect all empties + report consolidated.
+- **D-V42-R2-4 — Single-char + zero-width-space bodies pass empty-check** (R2 N4 + BH MED) — operator-fault. Could add minimum-length sanity (e.g., ≥10 chars) but bound is arbitrary.
+- **D-V42-R2-5 — Test 11 doesn't verify body-to-key mapping** (R2 N5) — future regex bug swapping bodies between keys would silently pass. Mitigation: add marker strings to fixture.
+- **D-V42-R2-6 — R2 minor LOWs bundle** (R2 various) — markdown heading vs inline bold + reduce initializer style + template substitution duplication + API-key check fail-fast ordering + Test 7 trailing-newline gap + Test 13 prompt-pinning + dry-run validity scope + frontmatter snake_case mapping + computeGate tie-breaking + even-RUNS_PER_AGENT guard. Bundle for future polish PR.
+- **D-V42-R2-7 — Per-call `console.error` full-response dump unconditional** (R2 BH MED) — inherited Story 4.1 P7 pattern; design intent. Could gate behind `--verbose` for CI quietness.
+
+---
+
 ## Deferred from: code review of v63-4-1-create-pf1-judge-prompt-and-calibration-test (2026-04-26 R2)
 
 R2 review (3 layers: Blind Hunter + Edge Case Hunter + Acceptance Auditor R2 verdict ALL R1 PATCHES VERIFIED) — ~25 raw findings → 2 patches + 6 defers + 5 dismissed. **0 NEW HIGH findings post-triage** ⇒ R3 NOT required (additive R1 patches). Convergence reached at R2 per `code-review-convergence` rule.
