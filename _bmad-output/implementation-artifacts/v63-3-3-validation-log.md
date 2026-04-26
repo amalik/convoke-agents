@@ -1,4 +1,5 @@
 ---
+initiative: convoke
 artifact_type: validation-log
 story: v63-3-3-submit-marketplace-registry-pr
 gate_run_timestamp_utc: 2026-04-25T09:09:03Z
