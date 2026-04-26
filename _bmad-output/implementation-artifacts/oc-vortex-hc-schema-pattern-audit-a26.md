@@ -1,6 +1,6 @@
 # A26: Vortex-Wide HC-Schema-at-Step-01 Pattern Audit (IN-43)
 
-Status: **Draft 2026-04-25 — V-pass complete (13 patches applied) + PAD 2 ESCALATED → Option A (pre-exec adversarial layer added per V-pass P1 finding)** — ready for 3-layer pre-execution adversarial review
+Status: **done — Task 5 complete + A10 GATE CLEARED at 3/3 (100% pairwise reviewer agreement) 2026-04-26.** A24 §6.2 pattern claim CONFIRMED at cluster scale (9/9 R7 FAIL = 100%); mechanism narrowed to ≥2 sub-mechanisms (mechanism (i): HC-schema enumeration, 7/9; mechanism (ii): HC-reference + independent checklists, 2/9). Final report at [convoke-report-operator-covenant-audit-vortex-hc-cluster-2026-04-26.md](../planning-artifacts/convoke-report-operator-covenant-audit-vortex-hc-cluster-2026-04-26.md). New §9.6 ambiguity surfaced (OC-R5 strict-vs-lenient operationally divisive per A10 calibration signal — both blind reviewers defaulted to strict). A46 §A41-2 scope clarification shipped 2026-04-26 to formalize dossier §9.1 forward-propagation. Backlog row moved §2.3 Fast Lane → §2.5 Completed.
 
 **Epic:** [P21 Convoke Operator Covenant — Epic 2](../planning-artifacts/convoke-epic-operator-covenant.md) (input artifact for Story 2.1 retrofit catalog + Story 2.3 Publication Gate coverage breadth)
 **Origin:** IN-43 — A24 Round 1 Blind Hunter (2026-04-19) flagged "shared architectural pattern" claim as unsourced speculation; A26 is the systematic verification across the rest of the Vortex HC-consumer cluster.
