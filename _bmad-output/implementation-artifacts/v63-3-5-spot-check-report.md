@@ -1,4 +1,5 @@
 ---
+initiative: convoke
 artifact_type: validation-evidence
 story: v63-3-5-platform-adapter-batch-validation
 created: '2026-04-25'
