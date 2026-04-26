@@ -42,6 +42,9 @@ coverage/
 *.tmp
 .cache/
 
+# Code-review session scratch (raw findings, diff snapshots) — operator-discretionary
+.review-cache/
+
 # Claude Code scratchpad (session-specific)
 .claude/
 
