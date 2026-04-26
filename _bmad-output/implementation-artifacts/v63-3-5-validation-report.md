@@ -1,3 +1,9 @@
+---
+initiative: convoke
+artifact_type: validation-report
+story: v63-3-5-platform-adapter-batch-validation
+---
+
 # Export Validation Report
 
 **Date:** 2026-04-25
