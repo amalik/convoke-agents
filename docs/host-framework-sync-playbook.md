@@ -14,7 +14,7 @@ winston_signoff_status: pending
 >
 > This playbook is an OUTLINE shipped via [Story 5A.2](../_bmad-output/implementation-artifacts/v63-5a-2-create-strategic-adr-and-playbook-outline.md) (Convoke 4.0 Sprint 1). Sections (a) Release Class Definition, (b) Trigger Criteria, and (c) Workstream Template Outline ship complete. **Sections (d) Validation Battery Reference and (e) Known Pitfalls + Winston sign-off are pending [Story 5B.3](../_bmad-output/planning-artifacts/convoke-epic-bmad-v6.3-adoption.md#story-5b3-complete-playbook-and-ship-release-artifacts) (Sprint 5 close).**
 >
-> **DO NOT use this outline alone as a release template.** Release execution requires the completed playbook. Future maintainers attempting `host_framework_sync v6.4+` adoption MUST verify `winston_signoff_status: signed-off` in frontmatter (and absence of `<!-- TODO-5B3-* -->` markers) before proceeding.
+> **DO NOT use this outline alone as a release template.** Release execution requires the completed playbook. Future maintainers attempting `host_framework_sync v6.4+` adoption MUST verify `winston_signoff_status: signed-off` in frontmatter (and absence of HTML-comment hand-off markers — see Story 5B.3 hand-off pattern below) before proceeding.
 
 ---
 
@@ -145,7 +145,12 @@ If **≥2 boxes ticked**, this is a `host_framework_sync` release. If only **box
 
 **Winston sign-off:** PENDING ([Story 5B.3](../_bmad-output/planning-artifacts/convoke-epic-bmad-v6.3-adoption.md#story-5b3-complete-playbook-and-ship-release-artifacts) close).
 
-**Hand-off contract for Story 5B.3 author.** Run `grep -r "TODO-5B3" docs/` to surface all 3 pending blocks (sections d + e + sign-off). Complete each with the substantive content described above. Update frontmatter: `outline_complete: false` (full playbook, not outline) AND `winston_signoff_status: signed-off`. Remove the STATUS preamble at top + this sign-off pending notice once playbook is complete and signed.
+**Hand-off contract for Story 5B.3 author.** Active hand-off markers are HTML comments in the form `<!-- (todo-tag-prefix)-SECTION-D -->`, `<!-- (todo-tag-prefix)-SECTION-E -->`, `<!-- (todo-tag-prefix)-SIGNOFF -->` in this playbook, plus `<!-- (todo-tag-prefix)-CHANGELOG-SIGNOFF -->` in `CHANGELOG.md`. The actual prefix is `TODO` followed by a dash and `5B3` followed by a dash; this prose deliberately omits the literal prefix to keep the discovery `grep` clean (a maintainer running the recommended grep must see ONLY the live markers, not narrative references to them). Recommended discovery commands (run from repo root):
+
+- Sections d + e + Winston sign-off in this playbook: `grep -n 'SECTION-D:\|SECTION-E:\|SIGNOFF: Winston' docs/host-framework-sync-playbook.md`
+- Maintainer CHANGELOG sign-off: `grep -n 'CHANGELOG-SIGNOFF:' CHANGELOG.md`
+
+Complete each marker block with the substantive content described above (sections d + e + sign-off in this playbook + maintainer CHANGELOG sign-off in release commit message). Update frontmatter: `outline_complete: false` (full playbook, not outline) AND `winston_signoff_status: signed-off`. Remove the STATUS preamble at top + this sign-off pending notice once playbook is complete and signed.
 
 ---
 
