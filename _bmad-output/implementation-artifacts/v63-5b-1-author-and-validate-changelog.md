@@ -9,7 +9,7 @@ epic: v63-epic-5b
 
 # Story 5B.1: Author and validate CHANGELOG
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -160,41 +160,41 @@ Then run grep against `/tmp/v4.0-changelog-section.md`. Both forms acceptable (f
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0: Pre-flight gates.**
-  - [ ] 0.1 Confirm Sophia's announcement draft present at `_bmad-output/planning-artifacts/convoke-announcement-4.0-draft.md`; cliché list (8 phrases) + internalOnly regex extractable.
-  - [ ] 0.2 Confirm migration guide present at `docs/migration/3.x-to-4.0.md` (Story 1A.6 done; 43 LOC).
-  - [ ] 0.3 Confirm `CHANGELOG.md` at repo root has v3.3.0 entry + Story 1A.6 hand-off HTML comment near top.
-  - [ ] 0.4 Confirm `npm test` baseline 1492/1491/1/0.
+- [x] **Task 0: Pre-flight gates.**
+  - [x] 0.1 Sophia's announcement draft confirmed present + 8-phrase cliché list + internalOnly regex extracted.
+  - [x] 0.2 Migration guide confirmed at `docs/migration/3.x-to-4.0.md` (43 LOC, Story 1A.6 done).
+  - [x] 0.3 `CHANGELOG.md` confirmed has v3.3.0 entry + Story 1A.6 hand-off HTML comment at lines 8-10.
+  - [x] 0.4 `npm test` baseline 1492/1491/1/0 confirmed.
 
-- [ ] **Task 1: Read inputs (~10 min).**
-  - [ ] 1.1 Read announcement draft fully — capture mostHonestOneLineSummary verbatim, narrative flow, cliché list, internalOnly list.
-  - [ ] 1.2 Read migration guide briefly — confirm path + 1-line summary for Documentation subsection cite.
-  - [ ] 1.3 Skim Story 5A.1 Sprint 1 experiments artifact — confirm 3 PASS verdicts framing for behavioral-equivalence claim.
-  - [ ] 1.4 Skim sprint-status.yaml — confirm 21 shipped v6.3 stories + 2 release-time-deferred (4.3 + 4.5) for AC2 framing.
+- [x] **Task 1: Read inputs.**
+  - [x] 1.1 Announcement draft read; mostHonestOneLineSummary verbatim captured; Sophia narrative arc (6 elements) extracted.
+  - [x] 1.2 Migration guide read; "Run `convoke-update`. That's it." short-version confirmed.
+  - [x] 1.3 Sprint 1 experiments artifact already familiar from Story 5A.1; 3 PASS verdicts inform behavioral-equivalence framing.
+  - [x] 1.4 Sprint-status v6.3 stream confirmed: 21 shipped + 2 release-time-deferred + 1 in-progress (this story).
 
-- [ ] **Task 2: Author v4.0 CHANGELOG section (~30-45 min).**
-  - [ ] 2.1 Open `CHANGELOG.md`; locate Story 1A.6 hand-off HTML comment near top (lines 9-12 currently); REMOVE it.
-  - [ ] 2.2 Add `## [4.0.0] - YYYY-MM-DD` header above v3.3.0; populate date as placeholder (operator fills at release ship time per Decision 5).
-  - [ ] 2.3 Author 1-2 paragraphs of Sophia-voice prose AFTER `## [4.0.0]` header per Decision 1 + AC2; lead with mostHonestOneLineSummary verbatim per Decision 2 + AC1.
-  - [ ] 2.4 Add markdown link `[migration guide](docs/migration/3.x-to-4.0.md)` per Story 1A.6 AC5 + AC3 (operator chooses placement: prose OR Documentation subsection).
-  - [ ] 2.5 Author 4 Keep-a-Changelog subsections per Decision 3 + AC2 (**Added** / **Changed** / **Removed** / **Documentation**; optional **Fixed**). Each 3-7 bullets summarizing v6.3 stream user-impact in Sophia voice.
-  - [ ] 2.6 Add `<!-- TODO-5B3-CHANGELOG-SIGNOFF: maintainer sign-off line in release commit message per FR44 + M16 -->` marker near top of CHANGELOG.md per AC5 + Decision 5.
+- [x] **Task 2: Author v4.0 CHANGELOG section.**
+  - [x] 2.1 Story 1A.6 hand-off HTML comment removed from `CHANGELOG.md`.
+  - [x] 2.2 `## [4.0.0] - YYYY-MM-DD` header added above v3.3.0; date placeholder per Decision 5.
+  - [x] 2.3 Sophia-voice 3-paragraph prose lead authored: mostHonestOneLineSummary verbatim FIRST + maintenance framing + multi-channel install + single-command upgrade + behavioral-equivalence + "barely notice it" closing.
+  - [x] 2.4 Migration guide link `[migration guide](docs/migration/3.x-to-4.0.md)` added in prose lead (paragraph 2).
+  - [x] 2.5 4 Keep-a-Changelog subsections authored: **Added** (6 bullets) + **Changed** (3 bullets) + **Removed** (1 bullet) + **Documentation** (1 bullet — migration guide). Sophia voice; no internal artifact names (no PF1, no host_framework_sync, no ADR/playbook citations — those are internalOnly per FR43).
+  - [x] 2.6 `<!-- TODO-5B3-CHANGELOG-SIGNOFF -->` marker placed above v4.0 section per Decision 5 + EO-1 V-pass naming convention.
 
-- [ ] **Task 3: Run grep-tests + capture evidence (~10 min).**
-  - [ ] 3.1 Run FR42 cliché-list grep per Decision 4. Capture output verbatim.
-  - [ ] 3.2 Run FR43 `internalOnly` grep per Decision 4. Capture output verbatim.
-  - [ ] 3.3 If ANY violations in either grep, HALT — revise v4.0 section content; re-run greps until zero violations.
-  - [ ] 3.4 Author `_bmad-output/implementation-artifacts/v63-5b-1-grep-evidence.md` with 5-key frontmatter + body containing both commands + outputs + verdict line per AC4.
+- [x] **Task 3: Run grep-tests + capture evidence.**
+  - [x] 3.1 FR42 cliché-list grep run on v4.0 section (scope-narrowed via OS-1 sed-extraction): **zero matches** (exit code 1; expected).
+  - [x] 3.2 FR43 `internalOnly` grep run on v4.0 section: **zero matches** (exit code 1; expected).
+  - [x] 3.3 No violations — no HALT triggered.
+  - [x] 3.4 Evidence file authored at `_bmad-output/implementation-artifacts/v63-5b-1-grep-evidence.md` with 5-key frontmatter + Method/FR42/FR43/M16/Re-verification/Traceability sections per AC4.
 
-- [ ] **Task 4: Document maintainer sign-off process for Story 5B.3 hand-off (~5 min).**
-  - [ ] 4.1 In this story's Dev Notes (or as a separate paragraph in Completion Notes List), record the release-commit-message sign-off template: `Maintainer sign-off (CHANGELOG per FR44+M16): Amalik <YYYY-MM-DD>`.
-  - [ ] 4.2 Verify the `<!-- TODO-5B3-CHANGELOG-SIGNOFF -->` marker per Task 2.6 is in place — Story 5B.3 author runs `grep -r "TODO-5B3" CHANGELOG.md` to surface the pending sign-off.
+- [x] **Task 4: Document maintainer sign-off process for Story 5B.3 hand-off.**
+  - [x] 4.1 Sign-off template `Maintainer sign-off (CHANGELOG per FR44+M16): Amalik <YYYY-MM-DD>` documented in Dev Notes (already present in spec) + grep-evidence file's "Re-verification at release ship time" section + the TODO marker comment in CHANGELOG.md.
+  - [x] 4.2 `<!-- TODO-5B3-CHANGELOG-SIGNOFF -->` marker verified in place at top of CHANGELOG.md (above the `---` separator + `## [4.0.0]` header). Story 5B.3 author surfaces all 4 pending hand-off blocks via `grep -r "TODO-5B3" docs/ CHANGELOG.md`.
 
-- [ ] **Task 5: Validation gates (AC6).**
-  - [ ] 5.1 `npm test` — baseline 1492/1491/1/0 unchanged.
-  - [ ] 5.2 `npm run test:integration` — baseline 93/93/0 unchanged.
-  - [ ] 5.3 `npm run lint` — clean (no JS).
-  - [ ] 5.4 `git status --porcelain` — confirms AC7 scope: 2 NEW (story + grep-evidence) + 2 MODIFIED (CHANGELOG + sprint-status).
+- [x] **Task 5: Validation gates (AC6).**
+  - [x] 5.1 `npm test` — `tests 1492 / pass 1491 / skip 1 / fail 0` unchanged from baseline.
+  - [x] 5.2 `npm run test:integration` — `tests 93 / pass 93 / fail 0` unchanged.
+  - [x] 5.3 `npm run lint` — clean (EXIT=0; no JS files touched).
+  - [x] 5.4 `git status --porcelain` — scope verified: 2 MODIFIED (`CHANGELOG.md` + `sprint-status.yaml`) + 2 NEW untracked (this story file + `v63-5b-1-grep-evidence.md`). Story self-update at Step 9 keeps net scope as 2 NEW + 2 MODIFIED per AC7.
 
 ## Dev Notes
 
@@ -245,6 +245,8 @@ This line MUST appear in the release commit message body when Story 5B.3 ships v
 
 ## Change Log
 
+- 2026-04-27 — Story 5B.1 R1+R2 code-review converged via `/bmad-code-review`. **R1 batch-applied 6 patches + 0 deferred + 6 dismissed** (~14 raw → 6 net): **1 HIGH** (CR-H1 "What's New" surfacing bullet repeated v3.3.0 feature as new in v4.0 — Edge Hunter caught substantive content defect; bullet deleted from CHANGELOG v4.0 Added) + 4 MED (CR-M1 Removed bullet rephrase dropping "Deprecated and retired" muddled framing; CR-M2 explicit Changed↔Removed cross-reference for bmad-init / config-loading architectural shift; CR-M3 playbook prose rewrite to avoid TODO-5B3 grep false-positives — verified `grep -r "TODO-5B3"` returns exactly 4 hits post-patch, all live markers; CR-M4 behavioral equivalence wording softened "verifies" → "runs an empirical equivalence check" — acknowledges Story 4.3 release-time-deferred status) + 1 LOW (CR-L1 "Read three sentences" wording naturally removed via CR-H1 bullet deletion). All gates re-green: tests 1492/1491/1/0 unchanged + integration 93/93 + lint clean. Both grep-tests still PASS post-patches (FR42 + FR43 zero violations). v4.0 section line count: 34 → 33. **R2 mandatory per HIGH:** R2 batch-applied 1 patch + 2 deferred + 4 dismissed (~9 raw → 1 net): R2-M1 unanimous across all 3 layers (Auditor verdict ALL_R1_PATCHES_LANDED) — story spec self-update stale on bullet count ("Added 6" → "5" post-CR-H1) at 3 locations (Debug Log + Completion Notes + File List narrative) + R1 patch session annotated. 2 LOWs deferred as D-V5B1-R2-1..2 ("That's it." voice register tension; playbook prose fragility on future editor inlining). 4 dismissed: Blind R2-M1 (false positive — recommended grep commands DO work; markers contain colons; verified empirically); Edge R2-L2 (out of scope); Auditor R2-M2 (resolved by R2-M1 fix). **R3 NOT triggered** per `code-review-convergence` rule (R2 patches wording-only; no structural changes — third consecutive convergence-without-R3 in v6.3 stream after Stories 5A.2 + 5A.1). Final cumulative: 7 patches across 2 rounds (6 R1 + 1 R2). **All gates green:** tests 1492/1491/1/0 unchanged; integration 93/93 unchanged; lint clean. **Story 5B.3 hand-off contract verified:** `grep -r "TODO-5B3" docs/ CHANGELOG.md` returns exactly 4 hits (3 playbook markers + 1 CHANGELOG marker) — clean for Story 5B.3 author. **EPIC 5B: 1/3 stories shipped.** v6.3 progress: **22/29 stories shipped + 2 release-time-deferred** (Stories 4.3 + 4.5).
+- 2026-04-27 — Story 5B.1 dev-story executed via `/bmad-dev-story` (autonomous single-session). All 7 ACs MET (M16 PARTIAL per Decision 5 — sign-off-in-commit deferred to Story 5B.3); all 5 Tasks executed; all gates GREEN. **Final shape:** 2 NEW files (this story + grep-evidence) + 2 MODIFIED (CHANGELOG.md + sprint-status.yaml). **Test deltas:** unit 1492/1491/1/0 unchanged (pure docs; ZERO new tests); integration 93/93 unchanged; lint clean. **All 5 V-pass findings applied during authoring** (CM-1 dual-classification note via Decision 4; EO-1 marker name `TODO-5B3-CHANGELOG-SIGNOFF` parallel to 5A.2 family; OS-1 sed scope-narrowing helper used in grep tests). **All 5 Decisions honored.** **EXP3 broad-framing applied** (Bolder Move 3 absorbed into 4.0 per 2026-04-12 PASS) — v4.0 CHANGELOG uses broad install-method paragraph (BMAD plugin marketplace + Claude Code + Copilot + Cursor). **Story 5B.3 hand-off rigorous:** 4 pending blocks surfaced via `grep -r "TODO-5B3" docs/ CHANGELOG.md`. **First Epic 5B story shipped.** v6.3 progress: 21/29 shipped + 1 in review (Story 5B.1) + 2 release-time-deferred (Stories 4.3 + 4.5). Ready for `/bmad-code-review`.
 - 2026-04-27 — V-pass batch-applied **3 improvements** (1 critical + 1 enhancement + 1 optimization + 0 LLM-opt) via spec-rewrite. **Empirical probes 12/12 PASS** (1 caught defect lives in upstream source — Sophia's announcement draft enumeration is incomplete vs its own grep regex; spec inherits regex faithfully). **CM-1 V-pass:** Decision 4 dual-classification note added — `opinionated downstream` appears in BOTH FR42 cliché regex AND FR43 internalOnly regex (announcement draft enumeration lists 6 phrases but regex covers 7; spec preserves Sophia's regex faithfully + documents the dual-classification rationale). **EO-1 V-pass:** marker renamed `<!-- TODO-5B3-SIGNOFF-COMMIT -->` → `<!-- TODO-5B3-CHANGELOG-SIGNOFF -->` for parallel structure with Story 5A.2's family pattern (`-SECTION-D` / `-SECTION-E` / `-SIGNOFF` for playbook → adds `-CHANGELOG-SIGNOFF` for CHANGELOG; both share `TODO-5B3-` prefix so Story 5B.3 author runs `grep -r "TODO-5B3"` across `docs/` + `CHANGELOG.md` to surface 4 pending blocks total: 2 playbook sections + 1 Winston playbook sign-off + 1 maintainer CHANGELOG sign-off-in-commit). **OS-1 V-pass:** Decision 4 grep-scope-narrowing helper added — `sed -n '/^## \[4\.0\.0\]/,/^## \[3\.3\.0\]/p' CHANGELOG.md` extracts only the v4.0 section before grep, avoiding false positives from older entries; full-file grep also acceptable. **V-pass ROI:** prevented 1 upstream-source clarity gap (CM-1 dual-classification surfaced) + tightened 1 hand-off-discoverability convention (EO-1 marker-naming) + 1 grep-test ergonomics improvement (OS-1 scope-narrowing). Final spec: 7 ACs + 5 Decisions + 5 Tasks + 5 PR risks. Story remains ready-for-dev. Lower ROI than Story 4.3's 8/10 empirical-probe defect catch (clean spec — second consecutive 12/12 PASS with mostly-refinement findings); appropriate for pure-doc Sophia-fidelity story shape.
 - 2026-04-27 — Story 5B.1 created via `/bmad-create-story v63-5b-1`. **First Epic 5B story** — `v63-epic-5b` auto-transitions backlog → in-progress. 7 ACs + 5 Decisions + 5 Tasks + 5 PR risks. Pure documentation / Sophia-faithful authoring + grep-testable validation story. **Buildable now** (Sophia's announcement draft + cliché list + internalOnly regex + migration guide all canonical pre-shipped). 2 NEW files (story spec + grep-evidence) + 2 MODIFIED (CHANGELOG.md prepend v4.0 section + sprint-status.yaml). Decision 1: Sophia-faithful narrative flow per announcement draft. Decision 2: mostHonestOneLineSummary at TOP verbatim per FR41 (load-bearing per Story 5A.2 CR-M5 R1 precedent). Decision 3: Keep-a-Changelog Added/Changed/Removed/Documentation subsections summarizing v6.3 stream user-impact in Sophia voice (NOT story-by-story; no internal artifacts named per FR43). Decision 4: two grep-tests at story-close per FR42+FR43 + evidence captured at `v63-5b-1-grep-evidence.md`. Decision 5: maintainer sign-off (FR44) DEFERRED to Story 5B.3 release commit message per strict FR44 reading; M16 PARTIAL at story-close (CHANGELOG + grep-tests done; sign-off-in-commit pending Story 5B.3). Empirical probes 8/8 PASS at spec-author time. Inheritance: Story 5A.1+5A.2 pure-documentation shape; Story 5A.2 CR-M5 verbatim-framing precedent; Story 1A.6 hand-off comment + migration-guide link contract honored. v6.3 progress: 21/29 shipped + 3 ready (Stories 4.3 + 4.5 release-time-deferred; Story 5B.1 buildable-now). **Recommend V-pass** before dev-story given Sophia's voice + grep-test correctness + FR44 deferral framing + cliché-list completeness audit.
 
@@ -252,10 +254,33 @@ This line MUST appear in the release commit message body when Story 5B.3 ships v
 
 ### Agent Model Used
 
-(set at dev-story start)
+claude-opus-4-7 (1M context window, Claude Code CLI dev-story session 2026-04-27).
 
 ### Debug Log References
 
+- **Task 0 pre-flight gates (4/4 PASS):** Sophia's announcement draft + migration guide + CHANGELOG.md + npm test baseline all confirmed.
+- **Task 1 inputs read:** Announcement draft (mostHonestOneLineSummary verbatim + 6-element narrative arc); migration guide ("Run `convoke-update`. That's it."); Sprint 1 experiments familiar from Story 5A.1; sprint-status v6.3 stream (21 shipped + 2 release-time-deferred).
+- **Task 2 v4.0 CHANGELOG section authored:** initial 34 lines (post-R1: 33 lines after CR-H1 removed "What's New" surfacing bullet — see R1 patch session below); Story 1A.6 hand-off HTML comment removed; `## [4.0.0] - YYYY-MM-DD` header added; 3-paragraph Sophia-voice prose lead with mostHonestOneLineSummary verbatim FIRST per FR41 + Decision 2; 4 Keep-a-Changelog subsections (Added 5 bullets post-R1 / Changed 3 bullets / Removed 1 bullet / Documentation 1 bullet); migration guide link in prose (paragraph 2); `<!-- TODO-5B3-CHANGELOG-SIGNOFF -->` marker placed above v4.0 section per Decision 5 + EO-1 V-pass naming convention.
+- **Task 3 grep-tests:** sed-extracted v4.0 section to `/tmp/v4.0-changelog-section.md` (initially 34 lines; 33 post-R1 CR-H1); FR42 cliché regex returned exit 1 (zero matches both pre + post-R1); FR43 internalOnly regex returned exit 1 (zero matches both pre + post-R1); evidence file authored at `_bmad-output/implementation-artifacts/v63-5b-1-grep-evidence.md` with verbatim commands + outputs + verdict line + post-R1 line-count attribution.
+- **Task 4 sign-off documentation:** Template `Maintainer sign-off (CHANGELOG per FR44+M16): Amalik <YYYY-MM-DD>` documented in CHANGELOG.md TODO comment + grep-evidence "Re-verification" section. Story 5B.3 author runs `grep -r "TODO-5B3"` to surface 4 pending blocks (2 playbook sections + Winston playbook sign-off + maintainer CHANGELOG sign-off-in-commit).
+- **Task 5 validation gates (4/4 PASS):** unit 1492/1491/1/0 unchanged; integration 93/93 unchanged; lint clean (EXIT=0); scope verified.
+
 ### Completion Notes List
 
+- **All 7 ACs MET (with M16 PARTIAL per Decision 5).** AC1: v4.0 section exists at top of CHANGELOG.md with `## [4.0.0] - YYYY-MM-DD` header + mostHonestOneLineSummary verbatim FIRST + TODO-5B3-CHANGELOG-SIGNOFF marker. AC2: Sophia-flow narrative + 4 Keep-a-Changelog subsections summarizing v6.3 stream user-impact in user-facing voice. AC3: migration guide link present (paragraph 2 of prose lead). AC4: both grep-tests run + zero violations + evidence captured at v63-5b-1-grep-evidence.md. AC5: maintainer sign-off process documented (template + TODO marker for Story 5B.3 hand-off); FR44 sign-off-in-commit DEFERRED to Story 5B.3 release ship per Decision 5; **M16 PARTIAL at story-close** (3 of 4 criteria met: mostHonestOneLineSummary verbatim ✓ + Sophia section flow ✓ + zero grep violations ✓; sign-off-in-commit pending Story 5B.3). AC6: gates green. AC7: scope = 2 NEW + 2 MODIFIED.
+- **All 5 V-pass CMs/EOs/OSs applied during authoring** (not retroactively): CM-1 Decision 4 dual-classification note for `opinionated downstream`; EO-1 marker named `TODO-5B3-CHANGELOG-SIGNOFF` (parallel to Story 5A.2 family pattern; distinct from `TODO-5B3-SIGNOFF` which is Winston's playbook sign-off); OS-1 sed scope-narrowing helper used in grep tests (verified via /tmp/v4.0-changelog-section.md extraction).
+- **All 5 Decisions honored:** D1 Sophia-faithful narrative flow (announcement draft canonical voice, all 6 narrative elements present); D2 mostHonestOneLineSummary at TOP verbatim (character-identical, no paraphrasing — load-bearing per FR41 grep + Story 5A.2 CR-M5 R1 verbatim-framing precedent); D3 Keep-a-Changelog Added/Changed/Removed/Documentation (matches existing v3.3.0 format; Sophia voice user-facing summaries; NO internal artifact names per FR43); D4 two grep-tests at story-close + evidence captured (FR42+FR43+M16); D5 maintainer sign-off DEFERRED to Story 5B.3 release commit per FR44 strict reading.
+- **Pure documentation story-shape preserved.** ZERO code, ZERO tests, ZERO new dependencies. Test counts unchanged. Lint unchanged. ~1.5 hours operator-equivalent (most of which was matching Sophia's voice + verifying NO cliché/internalOnly bleed-through across 6 Added bullets + 3 Changed bullets).
+- **Story 5B.3 hand-off rigorous.** 4 pending blocks surfaced via `grep -r "TODO-5B3" docs/ CHANGELOG.md` at Story 5B.3 entry: 2 playbook sections (d + e) + Winston playbook sign-off + maintainer CHANGELOG sign-off-in-commit. Story 5B.3 also runs the FR42+FR43 grep tests one more time at release ship to verify no edits introduced violations + records the maintainer sign-off line in the release commit message.
+- **EXP3 broad-framing applied (not narrow fallback).** Sophia's draft offered narrow-framing fallback if EXP3 had failed; EXP3 PASSED 2026-04-12 (Bolder Move 3 absorbed into 4.0), so the v4.0 CHANGELOG uses the broad install-method paragraph (BMAD plugin marketplace + standalone Claude Code skill pack + Copilot adapter + Cursor adapter).
+- **First Epic 5B story shipped.** Closes Epic 5B's first slot (1/3 → review pending code-review close). v6.3 progress: 21 → 22/29 stories shipped on review-close.
+
 ### File List
+
+**NEW (2):**
+- `_bmad-output/implementation-artifacts/v63-5b-1-grep-evidence.md` (~95 lines; FR42+FR43 evidence with sed-helper + verbatim commands + zero-violations verdict + M16 PARTIAL framing)
+- `_bmad-output/implementation-artifacts/v63-5b-1-author-and-validate-changelog.md` (this story; created at story-creation, modified during V-pass + dev-story)
+
+**MODIFIED (2):**
+- `CHANGELOG.md` (Story 1A.6 hand-off HTML comment removed; `<!-- TODO-5B3-CHANGELOG-SIGNOFF -->` marker added near top; v4.0 section ~33 lines prepended above v3.3.0 — initial 34 lines, dropped 1 line via R1 CR-H1 patch removing "What's New" surfacing bullet)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (status transitions: backlog → ready-for-dev → in-progress → review; epic-5b backlog → in-progress; `last_updated` narrative)
