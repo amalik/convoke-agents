@@ -5,6 +5,15 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of v63-5b-1-author-and-validate-changelog (2026-04-27 R1+R2)
+
+R1+R2 review — R1 mandatory (8 patches across 3 layers); R2 mandatory per `code-review-convergence` rule (R1 had 1 HIGH); R2 converged with 1 patch (wording-only, no structural changes → R3 NOT triggered). Final cumulative: 7 patches (6 R1 + 1 R2) + 2 deferred + 9 dismissed (5 R1 + 4 R2 — multiple LOWs across both rounds).
+
+- **D-V5B1-R2-1 — "That's it." voice-register tension in Documentation bullet (Blind R2-L2)** — CHANGELOG Documentation bullet ends with "Run `convoke-update`. That's it." which has same too-glib voice as cliché-list watches for ("nothing flashy" was already on list). Not a cliché-regex hit (FR42 grep stays at zero); voice-drift only. **Fix scope:** ~1-line rewording in CHANGELOG.md to "One page; the upgrade is a single `convoke-update` invocation" for consistency with sibling bullet sobriety. → backlog (cosmetic; CHANGELOG ships with current voice; future amendment if Sophia or operator surfaces friction).
+- **D-V5B1-R2-2 — Playbook prose fragility on future editor inlining literal `TODO-5B3-` (Edge R2-L1)** — Story 5A.2's playbook prose at lines 148-153 currently uses `(todo-tag-prefix)-` placeholder pattern + recommended grep that uses narrower anchors (`SECTION-D:` etc.) — works correctly today (verified empirically: `grep -r "TODO-5B3"` returns exactly 4 hits, all live markers). However a future editor "simplifying" the prose to inline the literal `TODO-5B3-` prefix would re-introduce false-positive grep matches. **Fix scope:** add ~1-line HTML comment at line 148 warning future editors not to inline the literal prefix. → backlog (preventive ergonomic; not breaking).
+
+---
+
 ## Deferred from: code review of v63-5a-2-create-strategic-adr-and-playbook-outline (2026-04-27 R1)
 
 R1 review (3 layers — Auditor verdict ALL_AC_MET with 0 findings; Blind 12 + Edge 3 = 15 raw → 8 patches + 2 deferred + 5 dismissed). **R2 NOT triggered** per `code-review-convergence` rule (R1 had **0 HIGH** — second consecutive R1-only convergence in v6.3 stream after Story 5A.1; pure-docs minimal defect surface).
