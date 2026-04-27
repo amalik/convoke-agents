@@ -5,6 +5,15 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of v63-5a-2-create-strategic-adr-and-playbook-outline (2026-04-27 R1)
+
+R1 review (3 layers — Auditor verdict ALL_AC_MET with 0 findings; Blind 12 + Edge 3 = 15 raw → 8 patches + 2 deferred + 5 dismissed). **R2 NOT triggered** per `code-review-convergence` rule (R1 had **0 HIGH** — second consecutive R1-only convergence in v6.3 stream after Story 5A.1; pure-docs minimal defect surface).
+
+- **D-V5A2-R1-1 — `outline_complete` flag naming inverted at completion (Blind M3)** — frontmatter key flips from `outline_complete: true` (outline shipped) to `outline_complete: false` (full playbook ships) at Story 5B.3 close. The semantic reading is "this is no longer just an outline" but a reader encountering `false` may misread as "outline is incomplete." Decision call, not defect; revisit if friction surfaces. **Fix scope:** rename to `is_outline_only` (true=outline phase, false=complete) OR `playbook_phase: outline|complete` enum, ~5 LOC + Story 5B.3 spec amendment if pursued. → backlog if a future v4.x maintainer flags confusion.
+- **D-V5A2-R1-2 — "Winston (architect)" ambiguity in external-facing ADR (Blind L5)** — Winston is the BMAD architect persona; in the Convoke project context this is unambiguous, but `docs/adr/adr-bmad-coupling-v4.0.md` is ecosystem-facing where external readers may not have that context. Precedent ADR (`convoke-adr-repo-organization-conventions-2026-03-22.md`) also names "Winston (architect)" as Decision Maker; aligning with precedent over-rides external ambiguity concern. **Fix scope:** add a single-line glossary footnote in ADR ("Winston is Convoke's architect persona — see `_bmad/_vortex/agents/architect.md`") OR amend Decision Makers row to "Amalik (project lead) + Winston (architect persona)". ~2 LOC. → backlog if external-reader feedback surfaces.
+
+---
+
 ## Deferred from: code review of v63-5a-1-run-sprint-1-experiments-and-log-decisions (2026-04-27 R1)
 
 R1 review (3 layers — Auditor verdict ALL_AC_MET with 1 spec-internal-contradiction MED). 18 raw findings → 7 patches applied + 4 deferred + 3 dismissed. **R2 NOT triggered** per `code-review-convergence` rule (R1 had 0 HIGH). Cleanest review of v6.3 stream — pure docs minimal defect surface.
