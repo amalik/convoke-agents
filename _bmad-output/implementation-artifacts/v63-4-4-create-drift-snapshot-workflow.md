@@ -9,7 +9,7 @@ epic: v63-epic-4
 
 # Story 4.4: Create drift snapshot workflow
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -154,21 +154,21 @@ so that I have a human-reviewable retrospective observation surface (FR39) for u
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0: Pre-flight gates (no execution-precondition; this story is buildable now per "Why this story is BUILDABLE NOW" rationale).**
-  - [ ] 0.1 Confirm Story 4.2 status `done` in sprint-status.yaml + battery exports include `parseRecording`: `node -e "const b=require('./scripts/audit/pf1-validation-battery'); console.log(typeof b.parseRecording)"` should print `function`.
-  - [ ] 0.2 Confirm clean slate: `ls scripts/audit/drift-snapshot* tests/lib/drift-snapshot* tests/fixtures/drift-snapshot/ _bmad-output/implementation-artifacts/v63-4-4-* 2>/dev/null` — only this story file present.
-  - [ ] 0.3 Confirm `npm test` baseline (`tests 1468 / pass 1467 / skip 1 / fail 0`) before changes.
-  - [ ] 0.4 Confirm `npm run lint` clean before changes.
+- [x] **Task 0: Pre-flight gates (no execution-precondition; this story is buildable now per "Why this story is BUILDABLE NOW" rationale).**
+  - [x] 0.1 Confirm Story 4.2 status `done` in sprint-status.yaml + battery exports include `parseRecording`: `node -e "const b=require('./scripts/audit/pf1-validation-battery'); console.log(typeof b.parseRecording)"` should print `function`.
+  - [x] 0.2 Confirm clean slate: `ls scripts/audit/drift-snapshot* tests/lib/drift-snapshot* tests/fixtures/drift-snapshot/ _bmad-output/implementation-artifacts/v63-4-4-* 2>/dev/null` — only this story file present.
+  - [x] 0.3 Confirm `npm test` baseline (`tests 1468 / pass 1467 / skip 1 / fail 0`) before changes.
+  - [x] 0.4 Confirm `npm run lint` clean before changes.
 
-- [ ] **Task 1: Author 6 synthetic test fixtures at `tests/fixtures/drift-snapshot/` (~10 min).**
-  - [ ] 1.1 Create directory `tests/fixtures/drift-snapshot/`.
-  - [ ] 1.2 Create 3 baseline fixtures: `emma-baseline.md`, `john-baseline.md`, `winston-baseline.md`. Each follows Story 4.2's `tests/fixtures/pf1-battery/sample-baseline.md` shape: 2-line provenance HTML comments (NOT real recordings) + 4 sections with digit-only `## Prompt N` headers + ~3-5 lines of synthetic content per section. Content distinct per skill (emma talks about "context"; john about "PRD"; winston about "architecture") to make per-skill output recognizable in tests.
-  - [ ] 1.3 Create 3 post-migration fixtures: `emma-post.md`, `john-post.md`, `winston-post.md`. Same shape; content slightly varied (some prompts identical to baseline, some with single-line changes, some with multi-line rewrites — covers AC2 LCS edge cases: identical / disjoint / mixed).
-  - [ ] 1.4 Validate every fixture passes Story 4.2 `parseRecording`: `node -e "const b=require('./scripts/audit/pf1-validation-battery'); const fs=require('fs'); ['emma','john','winston'].forEach(s => ['baseline','post'].forEach(p => { const t=fs.readFileSync('tests/fixtures/drift-snapshot/'+s+'-'+p+'.md','utf8'); console.log(s+'-'+p, Object.keys(b.parseRecording(t))); }));"` — all 6 files print `[ 'Prompt 1', 'Prompt 2', 'Prompt 3', 'Prompt 4' ]`.
+- [x] **Task 1: Author 6 synthetic test fixtures at `tests/fixtures/drift-snapshot/` (~10 min).** [DEV-NOTE: fixtures use canonical manifest skill names per Decision 1 + Story 4.3 CM-3 — `bmad-agent-bme-contextualization-expert-baseline.md`, `bmad-agent-pm-baseline.md`, `bmad-agent-architect-baseline.md` — NOT short keys; this matches the `loadSkillRecording` filename contract.]
+  - [x] 1.1 Create directory `tests/fixtures/drift-snapshot/`.
+  - [x] 1.2 Create 3 baseline fixtures (canonical names): `bmad-agent-bme-contextualization-expert-baseline.md` (Emma), `bmad-agent-pm-baseline.md` (John), `bmad-agent-architect-baseline.md` (Winston). Each follows Story 4.2's `tests/fixtures/pf1-battery/sample-baseline.md` shape: 2-line provenance HTML comments + 4 sections with digit-only `## Prompt N` headers + ~3-5 lines of synthetic content per section.
+  - [x] 1.3 Create 3 post-migration fixtures (canonical names): `bmad-agent-bme-contextualization-expert-post.md`, `bmad-agent-pm-post.md`, `bmad-agent-architect-post.md`. John = no drift (identical baseline+post case); Emma = single-line word change + multi-line addition; Winston = multi-line rewrite + addition.
+  - [x] 1.4 Validated every fixture passes Story 4.2 `parseRecording` — all 6 files parsed to `["Prompt 1","Prompt 2","Prompt 3","Prompt 4"]`.
 
-- [ ] **Task 2: Author `tests/lib/drift-snapshot.test.js` (TDD — RED phase; ~30 min).**
-  - [ ] 2.1 Create test file. Use `node:test` + `node:assert/strict` (project convention per Story 4.2 R1+R2 close + C1 phantom-test resolution — **never Jest**, no Jest globals).
-  - [ ] 2.2 Tests (8-10 total, all structural — NO live execution):
+- [x] **Task 2: Author `tests/lib/drift-snapshot.test.js` (TDD — RED phase; ~30 min).**
+  - [x] 2.1 Create test file. Use `node:test` + `node:assert/strict` (project convention per Story 4.2 R1+R2 close + C1 phantom-test resolution — **never Jest**, no Jest globals).
+  - [x] 2.2 Tests (11 total, all structural — NO live execution):
     - **Test 1:** `scripts/audit/drift-snapshot.js` exists.
     - **Test 2:** Required exports present (per AC1): `DEFAULT_SKILLS`, `SKILL_DISPLAY`, `BASELINE_DIR_DEFAULT`, `POST_MIGRATION_DIR_DEFAULT`, `OUTPUT_PATH_DEFAULT`, `PROMPTS_PER_SKILL`, `lineDiff`, `renderSidebySide`, `renderSnapshot`, `loadSkillRecording`, `parseArgs`.
     - **Test 3:** `lineDiff` correctness — `lineDiff('a\nb\nc', 'a\nb\nc')` → all unchanged; `lineDiff('a\nb', 'c\nd')` → all removed/added; `lineDiff('a\nb\nc', 'a\nx\nc')` → unchanged-removed-added-unchanged (LCS).
@@ -180,23 +180,23 @@ so that I have a human-reviewable retrospective observation surface (FR39) for u
     - **Test 9:** `parseArgs` overrides — `['--skills', 'emma', '--output', '/tmp/x.md', '--date', '2026-04-26']` → expected shape.
     - **Test 10:** `--input-pre / --input-post` ad-hoc pair mode (AC4) — `parseArgs(['--input-pre', '/p/a.md', '--input-post', '/p/b.md'])` returns shape with `inputPre`, `inputPost` set + `skills` ignored or single-entry derived.
     - **Test 11 (OS-1 V-pass — NFR32 midnight-crossing guard):** invoke `renderSnapshot` twice WITHOUT `--date` arg (relying on default-to-today); use `globalThis.Date` mock or `process.env.DRIFT_SNAPSHOT_TODAY_OVERRIDE` (test-only escape hatch — see Task 3.8) to simulate two invocations spanning UTC midnight. Assert both invocations produce DIFFERENT frontmatter `created` values (proving the default-date path is non-deterministic across midnight) AND a third invocation with explicit `--date '2026-04-26'` produces deterministic output regardless. **Why this test:** at release time, operator could plausibly forget `--date` flag + run twice across midnight → frontmatter differs → silent NFR32 violation. Test makes the gap visible + forces protocol doc to mandate explicit `--date`.
-  - [ ] 2.3 Run `node --test tests/lib/drift-snapshot.test.js 2>&1 | tail -20` — expect ALL tests RED (script doesn't exist yet). Verifies tests are testing-something.
+  - [x] 2.3 Ran `node --test tests/lib/drift-snapshot.test.js` — confirmed ALL 11 tests RED with `MODULE_NOT_FOUND` for `drift-snapshot.js` (verifies tests are testing-something).
 
-- [ ] **Task 3: Author `scripts/audit/drift-snapshot.js` (GREEN phase; ~60 min for ~150-200 LOC).**
-  - [ ] 3.1 Module skeleton: shebang, strict mode, header docstring with exit codes (per AC1).
-  - [ ] 3.2 Constants: `DEFAULT_SKILLS`, `SKILL_DISPLAY` (mirror Story 4.2 `PF1_AGENTS` for the 3-skill subset; canonical names per Story 4.3 CM-3 fix), default paths.
-  - [ ] 3.3 Imports: `fs`, `path`, `parseRecording` from `./pf1-validation-battery` (Decision 2). Use `findProjectRoot` from `../update/lib/utils` (Decision 4 path safety).
-  - [ ] 3.4 Implement `lineDiff(a, b)` — LCS-based; pure; ~30 LOC. Algorithm: build LCS DP table; backtrack to emit `unchanged`/`removed`/`added` records (standard LCS-diff).
-  - [ ] 3.5 Implement `renderSidebySide(baselineSection, postSection)` — produces markdown table string per AC3. Two columns; rows = max(baselineLines, postLines); diff markers per `lineDiff` output; include "X lines changed of Y total" summary.
-  - [ ] 3.6 Implement `loadSkillRecording(skill, dir, suffix)` — reads `{dir}/{manifestSkill}-{suffix}.md` (canonical filename per Story 4.2 + 4.3 contracts).
-  - [ ] 3.7 Implement `renderSnapshot({skills, baselineDir, postDir, date})` — orchestrator: sort skills; for each, load baseline + post; `parseRecording` both; for each prompt (sorted), `renderSidebySide`; concatenate with frontmatter; return string.
-  - [ ] 3.8 Implement `parseArgs(argv)` — minimal arg parser supporting Decision 4 + AC4 flags. Default `--date` to `new Date().toISOString().slice(0, 10)`. **Test-only escape hatch (per Test 11):** if `process.env.DRIFT_SNAPSHOT_TODAY_OVERRIDE` is set, use that value instead of `new Date()` (allows OS-1 V-pass midnight-crossing test without mocking `Date`). NEVER documented as operator-facing; comment in code: "test-only — do not document publicly."
-  - [ ] 3.9 Implement `main()` — orchestrator: `parseArgs` → path-safety check (per AC5) → `renderSnapshot` (or AC4 ad-hoc pair branch) → atomic write (per AC5) → exit 0. Wrap in try/catch with exit-code dispatcher (`err.exitCode` pattern per Story 4.2 R1 CM-7).
-  - [ ] 3.10 Module guard: `if (require.main === module) main();`. All exports per AC1.
-  - [ ] 3.11 Run tests: `node --test tests/lib/drift-snapshot.test.js 2>&1 | tail -15` — expect all 10 GREEN.
+- [x] **Task 3: Author `scripts/audit/drift-snapshot.js` (GREEN phase; ~60 min for ~150-200 LOC).** [DEV-NOTE: actual ~280 LOC including ad-hoc pair mode + path-safety + atomic write + exit-code dispatcher.]
+  - [x] 3.1 Module skeleton: shebang, strict mode, header docstring with exit codes (per AC1).
+  - [x] 3.2 Constants: `DEFAULT_SKILLS`, `SKILL_DISPLAY` (mirrors Story 4.2 `PF1_AGENTS` for 5-skill set; canonical names per Story 4.3 CM-3 fix), default paths.
+  - [x] 3.3 Imports: `fs`, `path`, `parseRecording` from `./pf1-validation-battery` (Decision 2), `findProjectRoot` from `../update/lib/utils` (Decision 4 path safety).
+  - [x] 3.4 Implemented `lineDiff(a, b)` — LCS-based DP table + backtrack; pure; ~35 LOC.
+  - [x] 3.5 Implemented `renderSidebySide(baselineSection, postSection)` — markdown table; pipe-escaping for content; "X lines changed of Y total" summary.
+  - [x] 3.6 Implemented `loadSkillRecording(skill, dir, suffix)` — resolves `{dir}/{manifestSkill}-{suffix}.md` via `SKILL_DISPLAY[skill].manifestSkill` (or passthrough if not in map); throws `exitCode=2` on missing.
+  - [x] 3.7 Implemented `renderSnapshot({skills, baselineDir, postDir, date})` — orchestrator with sorted-skills iteration; 8-key frontmatter; per-skill section + 4 prompt subsections.
+  - [x] 3.8 Implemented `parseArgs(argv)` — minimal arg parser supporting all Decision 4 + AC4 flags. Default `--date` via `getTodayDate()` helper that honors `DRIFT_SNAPSHOT_TODAY_OVERRIDE` env (test-only escape hatch per OS-1 V-pass + Test 11).
+  - [x] 3.9 Implemented `main()` — `parseArgs` → `checkPathSafety` (AC5) → `renderSnapshot` OR `renderAdhocSnapshot` (AC4 branch) → `atomicWrite` (temp+rename per AC5) → `process.exit(0)`. Try/catch dispatcher with `err.exitCode` pattern (codes 0/1/2/3/4/5/99).
+  - [x] 3.10 Module guard `if (require.main === module) main();`. All 15 exports present after R2 (11 spec'd + `renderAdhocSnapshot` + `checkPathSafety` + `getTodayDate` + `resolveDefaultRelative` added in R2 for default-vs-cwd path resolution).
+  - [x] 3.11 Ran tests: 11/11 GREEN. Smoke-tested CLI end-to-end: `node scripts/audit/drift-snapshot.js --skills emma --baseline-dir tests/fixtures/drift-snapshot --post-dir tests/fixtures/drift-snapshot --date 2026-04-26 --output _bmad-output/implementation-artifacts/drift-smoke-test.md` → exit 0, output renders correctly. Path-safety check empirically rejected `/tmp/drift-smoke.md` with exit 4 (verifies AC5).
 
-- [ ] **Task 4: Author operator protocol doc (~15 min).**
-  - [ ] 4.1 Create `_bmad-output/implementation-artifacts/v63-4-4-drift-snapshot-protocol.md` (~30 lines):
+- [x] **Task 4: Author operator protocol doc (~15 min).**
+  - [x] 4.1 Created `_bmad-output/implementation-artifacts/v63-4-4-drift-snapshot-protocol.md` (~70 lines, slightly larger than spec's "~30 lines" estimate due to EO-2 V-pass concrete example + LL-1 explicit `--date` MANDATORY callout):
     - **When to run:** at release time, after Story 4.3 Task 5 (post-migration recordings captured) AND before Story 4.3 Task 7 (release record sign-off). Drift snapshot is a complement to the gate verdict, not a replacement.
     - **How to run (default 3-skill subset):** `node scripts/audit/drift-snapshot.js --date 2026-XX-XX --output _bmad-output/implementation-artifacts/v63-4-4-drift-snapshot-2026-XX-XX.md`. Pass explicit `--date` for filename + frontmatter consistency.
     - **How to run (5-agent expansion):** `node scripts/audit/drift-snapshot.js --skills emma,john,winston,carson,murat --date ... --output ...`.
@@ -210,10 +210,10 @@ so that I have a human-reviewable retrospective observation surface (FR39) for u
     - **What to do with output:** review side-by-side for unexpected behavioral changes; surface concerns in retrospective notes (Epic 4 retro or Story 5B.2). NOT a release-blocking gate (FR39 is observation, not gate).
     - **Determinism caveat:** byte-identical re-run requires same `--date` + same input files; if recordings amended (Story 4.3 re-record), regenerate snapshot.
     - **Cross-reference:** Story 4.3 release record (`v63-4-3-release-record-4.0.md`) should cite the snapshot artifact path under "Retrospective observations" section.
-  - [ ] 4.2 Validate doc renders cleanly (markdown lints; no broken links).
+  - [x] 4.2 Validated doc renders cleanly (markdown structure + cross-references).
 
-- [ ] **Task 5: Add `D-V44-1` to deferred-work.md (Decision 5 deferral; ~5 min).**
-  - [ ] 5.1 Append to `_bmad-output/implementation-artifacts/deferred-work.md` under "Deferred from: spec of v63-4-4-create-drift-snapshot-workflow (2026-04-26)":
+- [x] **Task 5: Add `D-V44-1` to deferred-work.md (Decision 5 deferral; ~5 min).**
+  - [x] 5.1 Appended D-V44-1 entry to `_bmad-output/implementation-artifacts/deferred-work.md` under new section "Deferred from: spec of v63-4-4-create-drift-snapshot-workflow (2026-04-26)":
     > **D-V44-1 — `/bmad-drift-snapshot` slash-command skill wrapper deferred per Decision 5** — Story 4.4 ships drift-snapshot as bare CLI per Story 4.2 PF1-tooling precedent (release-engineering tooling, not Convoke-user-facing). `slash-command-ux-for-user-facing-tools` rule technically applies but is overridden by precedent. **Trigger to lift deferral:** if a future v4.x retrospective surfaces operator friction with bare CLI invocation OR if Convoke users (not just maintainers) start needing drift-snapshot for their own skill development. **Fix scope:** ~50 LOC skill wrapper at `.claude/skills/bmad-drift-snapshot/SKILL.md` + workflow.md that delegates to `scripts/audit/drift-snapshot.js`. Time: ~30 min. → fast-lane Initiative-backlog item if triggered.
 
 - [ ] **Task 6: HALT for operator — release-time execution (deferred until Story 4.3 release-time recordings exist).**
@@ -222,11 +222,11 @@ so that I have a human-reviewable retrospective observation surface (FR39) for u
   - [ ] 6.3 Operator commits artifact alongside Story 4.3 release record.
   - [ ] 6.4 Operator reviews side-by-side, surfaces unexpected drift in retrospective notes.
 
-- [ ] **Task 7: Validation gates (AC6).**
-  - [ ] 7.1 `npm test 2>&1 | tail -5` — expected `tests 1477-1479 / pass +9-11 / skip 1 / fail 0` (8-10 NEW Story 4.4 tests).
-  - [ ] 7.2 `npm run test:integration 2>&1 | tail -5` — expected `tests 93 / pass 93 / fail 0` unchanged.
-  - [ ] 7.3 `npm run lint 2>&1 | tail -5` — clean; specifically `scripts/audit/drift-snapshot.js` + `tests/lib/drift-snapshot.test.js` zero warnings.
-  - [ ] 7.4 `git diff HEAD --stat` — confirms AC7 scope (5 NEW files + 3 modified).
+- [x] **Task 7: Validation gates (AC6).**
+  - [x] 7.1 `npm test` — post-R2: `tests 1492 / pass 1491 / skip 1 / fail 0` (+24 from baseline 1468; 11 tests at story-close + 8 R1 coverage tests + 5 R2 coverage tests).
+  - [x] 7.2 `npm run test:integration` — `tests 93 / pass 93 / fail 0` unchanged.
+  - [x] 7.3 `npm run lint` — clean; exit 0, zero warnings on `scripts/audit/drift-snapshot.js` + `tests/lib/drift-snapshot.test.js`.
+  - [x] 7.4 `git status --porcelain` — AC7 scope verified: 5 NEW files (drift-snapshot.js, drift-snapshot.test.js, 6 fixtures dir, drift-snapshot-protocol.md, this story file) + 2 MODIFIED (deferred-work.md D-V44-1, sprint-status.yaml). Pre-existing `convoke-note-initiative-lifecycle-backlog.md` modification is operator-territory (out of Story 4.4 scope; predates story start).
 
 ## Dev Notes
 
@@ -269,16 +269,49 @@ so that I have a human-reviewable retrospective observation surface (FR39) for u
 ## Change Log
 
 - 2026-04-26 — Story 4.4 created via `/bmad-create-story v63-4-4`. 7 ACs + 5 Decisions + 8 Tasks + 5 PR risks. Pure-function renderer + protocol; reuses Story 4.2 `parseRecording` + Story 4.3's PF1 recordings (release-time). Bare-CLI per Story 4.2 precedent (slash-command wrapper deferred as `D-V44-1`).
+- 2026-04-27 — Story 4.4 R1+R2 code-review converged via `/bmad-code-review`. **R1 batch-applied 14 patches + 5 deferred + 1 dismissed** (~31 raw → 14 net): 3 HIGH (CR-H1 parseArgs flag-without-value crash → exitCode=5; CR-H2 CRLF normalization for cross-platform NFR32; CR-H3 `fs.realpathSync` symlink defense in path-safety) + 8 MED (CR-M1 path-safety on read-paths; CR-M2 unknown skill-key validation; CR-M3 success → stdout per UNIX convention; CR-M4 lineDiff empty-string short-circuit; CR-M5 trailing-newline strip; CR-M6 Test 11 try/finally hygiene; CR-M7 renderAdhocSnapshot dual-name heading; CR-M8 skill dedup via Set; CR-M9 XOR validation on `--input-pre`/`--input-post`) + 3 LOW (CR-L2 backtick escape; CR-L3 Test 2 expanded to 14 exports; CR-L6 `--date` regex). Tests 12-19 added (+8). All gates green: 1487/1486/1/0. **R2 mandatory per convergence rule (R1 had HIGHs)**. **R2 batch-applied 10 patches + 4 deferred + 0 dismissed** (~16 raw → 10 net): 1 HIGH (R2-H1 findProjectRoot null-guard) + 6 MED (R2-M1 backtick HTML-entity escape — backslash escapes don't work inside CommonMark code spans; R2-M2 reject `--`-prefixed value — `--output --date` swallow; R2-M3 emit `skills:` as 2-entry list for mismatched ad-hoc filenames; Edge R2-M1 resolveDefaultRelative against findProjectRoot vs cwd; Edge R2-M2 `--date` semantic round-trip rejects `2026-13-32`; Edge R2-M4 sanitize ad-hoc filenames against `/^[A-Za-z0-9._-]+$/`) + 3 LOW (R2-L1 align +/- prefix with unchanged; Auditor R2-L1 Task 3.10 typo "13" → "15"; Auditor R2-L2 AC6.1 test count update). Tests 20-24 added (+5). **R3 NOT triggered** per convergence rule (R2 patches additive: guards/sanitizers/validators; no new files, no renamed functions, no fundamentally altered control flow). Final cumulative: 24 patches across 2 rounds (14 R1 + 10 R2) + 9 deferred (5 R1 + 4 R2). **All gates green:** unit 1492/1491/1/0 (+24 from baseline 1468; 11 + 8 R1 + 5 R2); integration 93/93 unchanged; lint clean. v6.3 progress: **19/29 stories shipped + 1 ready** (Story 4.3 release-time-deferred; Story 4.4 done).
+- 2026-04-27 — Story 4.4 dev-story executed via `/bmad-dev-story` (autonomous single-session). All 7 ACs MET; all 8 Tasks executed (Task 6 release-time-deferred per spec design — checkboxes intentionally unchecked at story-close, matching Story 4.3 pattern); all gates GREEN. **Final shape:** 5 NEW files (~280 LOC drift-snapshot.js + 11-test test file + 6 canonical-name fixtures + ~70-line protocol doc + this story file) + 2 MODIFIED (deferred-work.md D-V44-1, sprint-status.yaml). **Test deltas:** unit 1468 → 1479 (+11); integration 93/93 unchanged; lint clean. **Decision validations during dev:** D1 reuse (3-skill default + ad-hoc pair mode for non-PF1 skills); D2 parseRecording reused from Story 4.2 (no re-implementation); D3 inline LCS ~35 LOC (no new dep); D4 8-key frontmatter + sorted iteration + atomic temp-rename + DRIFT_SNAPSHOT_TODAY_OVERRIDE test-only escape hatch; D5 bare CLI (slash-command wrapper deferred as D-V44-1). **Smoke-test verified end-to-end** (Emma fixture pair → rendered side-by-side markdown with correct diff markers; path-safety check empirically rejected `/tmp` output with exit 4). **Test 11 OS-1 V-pass NFR32 midnight-crossing guard PASSES** — silent default-date failure mode is detectable. Ready for `/bmad-code-review`.
 - 2026-04-26 — V-pass batch-applied **6 improvements** (2 critical + 2 enhancement + 1 optimization + 1 LLM-opt) via spec-rewrite. **Empirical probes 14/15 PASS + 1 CAUGHT-DEFECT** (slash-command-ux deferral rationale gap — promoted to enhancement, not critical). **2 critical caught silent-failure-risk defects:** CM-1 (D-V42-R3-1 surface bug from Story 4.2 `--dry-run` silent-exit-0 — added release-time-conditional caveat in Upstream Dependencies; not a dev-story blocker since Story 4.4 unit tests use synthetic fixtures + don't invoke battery, but documented in case operator pipelines drift-snapshot AFTER battery dry-run); CM-2 (AC5 path-safety redundant `_bmad-output/` parenthetical removed — `_bmad-output/` IS under `findProjectRoot()`; tightens contract). Other improvements: EO-1 (Decision 5 deferral rationale grounded in operator/user distinction from Operator Covenant); EO-2 (Task 4.1 protocol doc — added concrete `bmad-enhance-initiatives-backlog` ad-hoc invocation example with parser-validation step); **OS-1 (Test 11 added — NFR32 midnight-crossing guard** — invokes renderer twice without `--date` to surface silent default-date non-determinism; new `process.env.DRIFT_SNAPSHOT_TODAY_OVERRIDE` test-only escape hatch in Task 3.8 enables test without mocking `Date`); LL-1 (`--date` rationale consolidated to Decision 4 with explicit "load-bearing arg per LL-1 V-pass" callout + cross-references; removed redundancy across Task 3.8 + Task 4.1). Test count delta: 8-10 → 9-11 (+1 Test 11). **Final spec:** 7 ACs + 5 Decisions + 8 Tasks + 5 PR risks + 9-11 unit tests. Story remains ready-for-dev. **V-pass ROI:** prevented 1 silent-failure-mode (Test 11 closes NFR32 default-date gap) + tightened 1 path-safety contract + grounded 2 design decisions in project axioms (Decision 5 + Decision 4 LL-1). Lower ROI than Story 4.3's 8/10 empirical-probe defect catch (greenfield + small surface = fewer defect vectors); but Test 11 is non-trivial — it surfaces a release-time silent-failure path the spec author missed (operator-forgets-`--date` flag scenario).
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
-(set at dev-story start)
+claude-opus-4-7 (1M context window, Claude Code CLI dev-story session 2026-04-26 → 2026-04-27).
 
 ### Debug Log References
 
+- **Task 0 pre-flight gates (4/4 PASS):** parseRecording importable (function); clean slate; npm test 1468/1467/1/0; lint clean.
+- **Task 1 fixtures:** Initially authored with short-name files (`emma-baseline.md` etc.); renamed via `mv` to canonical manifest skill names (`bmad-agent-bme-contextualization-expert-baseline.md` etc.) to match `loadSkillRecording` filename contract per Decision 1 + Story 4.3 CM-3. 6 fixtures total; all parser-validated `["Prompt 1","Prompt 2","Prompt 3","Prompt 4"]`.
+- **Task 2 RED phase:** All 11 tests failed with `MODULE_NOT_FOUND` for `drift-snapshot.js` — verifies tests are testing-something.
+- **Task 3 GREEN phase:** ~280 LOC actual (slightly above spec's 150-200 estimate due to ad-hoc pair mode + path-safety + atomic write + exit-code dispatcher being more substantive than the spec implied). 11/11 tests GREEN. Smoke-tested CLI end-to-end against fixture dir; rendered correctly with diff markers (` `/`-`/`+`); path-safety check empirically rejected `/tmp` output (exit 4).
+- **Task 7 validation gates (4/4 PASS):** unit 1479/1478/1/0 (+11); integration 93/93 unchanged; lint clean; scope verified.
+
 ### Completion Notes List
 
+- **All 7 ACs MET.** AC1 file + 14 exports (11 spec'd + `renderAdhocSnapshot` + `checkPathSafety` + `getTodayDate`); AC2 lineDiff LCS-correct + pure (Tests 3+4); AC3 renderSnapshot 8-key frontmatter + sorted iteration + byte-identical re-run (Tests 5+6+7); AC4 ad-hoc pair mode supported (Test 10); AC5 atomic write + path-safety check verified empirically; AC6 all gates green; AC7 scope discipline maintained.
+- **Test 11 (OS-1 V-pass NFR32 midnight-crossing guard) PASSES** — confirms the silent default-date failure mode is detectable. Operator-facing protocol doc (Task 4) MANDATES explicit `--date` to avoid hitting the failure path.
+- **Task 6 release-time-deferred per spec design** — checkboxes intentionally left unchecked at story-close per spec Task 6.1 ("Spec leaves checkbox unchecked at story-close"). Task 6 is a documentation of the future release-time activity, not a dev-story execution step. This is by spec design, not an oversight; matches Story 4.3's release-time-deferred task pattern.
+- **Decision 5 deferral logged:** D-V44-1 added to deferred-work.md (`/bmad-drift-snapshot` slash-command wrapper deferred per Story 4.2 PF1-tooling precedent grounded in Operator Covenant operator/user distinction).
+- **Code follows project conventions:** `node:test` + `node:assert/strict` (NEVER Jest per C1); `findProjectRoot` from utils (no `process.cwd()`); atomic temp-file-then-rename; exit-code dispatcher via `err.exitCode`; sorted iteration for determinism; pure functions where possible.
+- **Empirical inheritance from Story 4.2:** `parseRecording` import works as expected; digit-only `## Prompt N` header contract enforced; same atomic-write pattern.
+
 ### File List
+
+**NEW (5):**
+- `scripts/audit/drift-snapshot.js` (~280 LOC) — main renderer + CLI orchestration
+- `tests/lib/drift-snapshot.test.js` (11 structural tests)
+- `tests/fixtures/drift-snapshot/bmad-agent-bme-contextualization-expert-baseline.md`
+- `tests/fixtures/drift-snapshot/bmad-agent-bme-contextualization-expert-post.md`
+- `tests/fixtures/drift-snapshot/bmad-agent-pm-baseline.md`
+- `tests/fixtures/drift-snapshot/bmad-agent-pm-post.md`
+- `tests/fixtures/drift-snapshot/bmad-agent-architect-baseline.md`
+- `tests/fixtures/drift-snapshot/bmad-agent-architect-post.md`
+- `_bmad-output/implementation-artifacts/v63-4-4-drift-snapshot-protocol.md` (~70 lines, operator protocol)
+
+**MODIFIED (2):**
+- `_bmad-output/implementation-artifacts/deferred-work.md` (added D-V44-1 entry under new "Deferred from: spec of v63-4-4" section)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (status transitions + last_updated narrative; will become `review` at Step 9)
+
+**MODIFIED (this story file):**
+- `_bmad-output/implementation-artifacts/v63-4-4-create-drift-snapshot-workflow.md` (Tasks/Subtasks checkboxes [x], Status `review`, Dev Agent Record + File List + Change Log)
