@@ -5,6 +5,17 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of v63-5a-1-run-sprint-1-experiments-and-log-decisions (2026-04-27 R1)
+
+R1 review (3 layers — Auditor verdict ALL_AC_MET with 1 spec-internal-contradiction MED). 18 raw findings → 7 patches applied + 4 deferred + 3 dismissed. **R2 NOT triggered** per `code-review-convergence` rule (R1 had 0 HIGH). Cleanest review of v6.3 stream — pure docs minimal defect surface.
+
+- **D-V5A1-R1-1 — Tool field path abbreviation cosmetic (Blind L2)** — EXP1 design `Tool:` field at `convoke-note-sprint-1-experiments.md:21` reads `scripts/update/migrations/3.3.x-to-4.0.0.js (scripts/update/migrations/3.0.x-to-4.0.0.js + 3.1.x-to-4.0.0.js + 3.2.x-to-4.0.0.js thin wrappers extend chain coverage post-R1)`. Parenthetical mixes parallel-list with verb-phrase; first wrapper path repeated in full while next two abbreviated. Reads as hasty patch. **Fix scope:** ~5 LOC rewrite of the Tool: field for cleaner prose. → backlog (cosmetic; doesn't affect comprehension).
+- **D-V5A1-R1-2 — Verdict capitalization consistency in YAML mapping (Blind L4)** — `experiment_verdicts: {EXP1: PASS, EXP2: PASS, EXP3: PASS}` flattens prose-level qualifiers (PASS via Path C; PASS cited from standing artifact). Either encode qualifiers in YAML (e.g., `EXP1: {verdict: PASS, qualifier: binary}`) or accept the flattening (current state). **Fix scope:** schema decision + ~10 LOC if encoded. → backlog (taste call; current flat form is downstream-dashboard-friendly).
+- **D-V5A1-R1-3 — "sorted lexicographic" rationale strengthening (Blind L6)** — for the 3-key set EXP1/EXP2/EXP3, lexicographic + numeric + insertion order all collide identically. The OS-1 V-pass rationale ("sorted lexicographic for deterministic YAML") is correct but untestable from this artifact (would need a counter-example). **Fix scope:** ~5 LOC clarifying note in Decision 1 OR future-proof for >9 experiments scenario. → backlog (rationale strength; not a defect).
+- **D-V5A1-R1-4 — `experiment_verdicts` bare-word YAML 1.1 future-proofing (Edge L2)** — `{EXP1: PASS, ...}` parses correctly today (PASS is a string), but YAML 1.1 implicit typing rules would parse `Y`/`N`/`YES`/`NO`/`ON`/`OFF` as booleans if a future experiment yielded those values. **Fix scope:** quote scalar values (`{EXP1: "PASS"}`). → backlog (future-proof; not load-bearing today).
+
+---
+
 ## Deferred from: spec of v63-4-4-create-drift-snapshot-workflow (2026-04-26)
 
 Story 4.4 Decision 5 deferred slash-command-skill wrapper per Story 4.2 PF1-tooling precedent (release-engineering tooling, not Convoke-user-facing per Operator Covenant operator/user distinction).
