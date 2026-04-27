@@ -5,9 +5,39 @@ All notable changes to Convoke will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<!-- v4.0 migration-guide-link: when Story 5B.1 authors the 4.0 section, include:
-     "See [migration guide](docs/migration/3.x-to-4.0.md) for upgrade instructions."
-     Per Story v63-1a-6 AC5. -->
+<!-- TODO-5B3-CHANGELOG-SIGNOFF: maintainer sign-off line in release commit message per FR44 + M16. Template: `Maintainer sign-off (CHANGELOG per FR44+M16): Amalik <YYYY-MM-DD>`. Story 5B.3 release ship time. -->
+
+---
+
+## [4.0.0] - YYYY-MM-DD
+
+Convoke 4.0 is a maintenance release that keeps Convoke healthy as BMAD evolves and adds marketplace distribution for reach.
+
+We've spent the last few weeks making Convoke healthy enough to last — not adding new features, but making sure the agents you rely on keep working as BMAD evolves underneath them. You can now install Convoke through the BMAD plugin system, as a standalone Claude Code skill pack, or via adapters for GitHub Copilot and Cursor. For existing users, upgrading is a single command and auto-migration handles the rest. See the [migration guide](docs/migration/3.x-to-4.0.md) for the one-line upgrade instructions.
+
+One thing new in this release: we actually test whether your agents behave the same way after the upgrade, instead of assuming they do. If this release does its job, you'll barely notice it — which is the point.
+
+### Added
+
+- **Marketplace distribution** — Install Convoke through the BMAD community plugin marketplace alongside the framework itself. If you have colleagues who use BMAD but haven't tried Convoke, they can install it through the normal BMAD plugin system.
+- **Multi-platform adapters** — Drop-in agent skills for Claude Code (`.claude/skills/`), GitHub Copilot (`.github/copilot-instructions.md`), and Cursor (`.cursor/rules/`). Use Convoke agents on the platform you already work in, no Convoke runtime required.
+- **Behavioral equivalence validation** — Release gating runs an empirical equivalence check against your agents' baseline outputs before tagging the release. "It works" is a process claim, not a promise about every possible input — but at least it's a checked claim, not a guess.
+- **Single-command auto-migration** — `convoke-update` runs the upgrade and completes in under 60 seconds. Idempotent (safe to run twice) and resumable (if something interrupts, re-run picks up where it stopped).
+- **`convoke-doctor` dependency surfacing** — Health check now warns you when Convoke depends on something upstream that has changed shape. Silent breakage becomes visible breakage.
+
+### Changed
+
+- **BMAD compatibility updated to v6.3** — Convoke now tracks the latest BMAD release line. All your agents, skills, workflows, and existing config continue to work.
+- **Configuration loading** — Agents load configuration directly from `_bmad/{module}/config.yaml` at activation, replacing the prior `bmad-init` activation step (see Removed below). Auto-migrated; no manual changes needed.
+- **`convoke-export --quiet`** — Batch exports drop from 50 lines of stdout to 1-line summary in quiet mode. Failures still emit. Useful for CI pipelines.
+
+### Removed
+
+- **`bmad-init` skill** — Removed; the activation step it provided is now handled directly by the configuration loading change above. Auto-migration via `convoke-update` handles the transition for existing installs — no manual action needed.
+
+### Documentation
+
+- **Migration guide** at [`docs/migration/3.x-to-4.0.md`](docs/migration/3.x-to-4.0.md) — One page. The short version: run `convoke-update`. That's it.
 
 ---
 
