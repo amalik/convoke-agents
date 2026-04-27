@@ -12,7 +12,9 @@ schema_version: 1
 
 **Reading guide for future operators.** Before starting work on a new release (Sprint 0 of any future Convoke major), read this registry end-to-end. Each entry names a recurring failure mode with a concrete v6.3-instance citation and a recommended counter-pattern. The L1 falsification condition is "registry exists but is never consulted" — break the falsification by citing entries from this file in future retrospectives.
 
-**Initial population (v6.3-stream observations):** 10 anti-patterns. Sources: Epic 1A/2/3 retros + per-story V-pass + R1/R2 code-review findings + Story-level Decision-rationale archives + PRD seed examples per `innovation-novel-patterns.md:62` (the L1 hypothesis paragraph enumerating "first-class", "M18 masquerade", "silent reorder" seeds).
+**Initial population (v6.3-stream observations):** 10 anti-patterns (AP-1..AP-10), shipped at Story 5B.2 close. Sources: Epic 1A/2/3 retros + per-story V-pass + R1/R2 code-review findings + Story-level Decision-rationale archives + PRD seed examples per `innovation-novel-patterns.md:62` (the L1 hypothesis paragraph enumerating "first-class", "M18 masquerade", "silent reorder" seeds).
+
+**Mid-stream additions (v6.3-stream, post-5B.2):** AP-11 added at Story 5B.3 V-pass time (2026-04-27) after the count-drift pattern recurred on consecutive specs (5B.2 → 5B.3) — first instance of this registry self-extending within-stream per L1 hypothesis "Recurrence tracking" convention. Current count: **11 entries.** Future retrospectives extend further per the Maintenance + Reuse section below.
 
 ---
 
@@ -113,6 +115,19 @@ schema_version: 1
 **v6.3 instance:** Story 2.3 Legacy Test 9 passed via incidental substring match in unrelated output (caught R2-M2, test deleted). Story 2.4 Test 12 SIGINT test passed via Node's default signal behavior, never exercising the custom handler (caught R2-H2, test repurposed as R1-M8 non-TTY guard). Story 2.4 R1-H1 concurrency test STILL weak (`Promise.all` + `setTimeout(fn, 0)` is sequential on the event loop, not parallel — flagged as TI-5 deferred). Codified as Epic 2 retro PI-6.
 
 **Counter-pattern:** For tests that verify a specific CLI-emitted string, prefer AND-conjunction of multiple specific substrings (per Story 2.3 R2-M2 rewrite of Test 2). For tests that verify a specific side effect (byte-identical file post-cancel, specific exit code, file presence), prefer asserting on that side effect rather than on a stdout substring. Add to project anchor rules: substring-assertion CLI tests require multi-substring AND-conjunction OR side-effect assertion.
+
+---
+
+## AP-11: Count drift in cross-spec progress narratives
+
+**Description:** Sprint progress counts (e.g., "X/Y stories shipped") get authored by copying narrative from a prior spec without re-verifying against ground truth (`sprint-status.yaml`). The count goes stale — typically off-by-one — between when the prior spec was authored and when the new spec is authored, because intervening stories have shipped + status fields have changed. The drift then propagates: each new spec inherits the wrong count from the previous spec until someone empirically re-greps. Symptoms: numerator off-by-one (story-not-yet-shipped counted as shipped) OR denominator off-by-one (stale total story count from earlier sprint planning).
+
+**v6.3 instance:** Story 5B.1 spec used "22/29 stories" at creation (denominator 29 was wrong — actual 28 v63 stories total per `grep -cE "^  v63-[0-9]+[a-z]?-[0-9]+-" sprint-status.yaml`). Story 5B.2 R1 CR-H2 caught this and corrected to 22/28 at story-close. Story 5B.3 spec creation INHERITED the "23/28" count from Story 5B.2's close-time narrative (correct as a forward-looking close-time count) but applied it as a "story-creation" count — off-by-one again because Story 5B.3 wasn't shipped at creation (actual 22/28). Story 5B.3 V-pass CM-2 caught this same off-by-one pattern recurring on consecutive specs. Two empirical observations on the same pattern in 24 hours = registry candidate per L1 falsification clause.
+
+**Counter-pattern:** At each spec-author + close + V-pass time, RE-GREP `sprint-status.yaml` for the `: done` count rather than copying narrative from prior spec:
+- Total v63 stories: `grep -cE "^  v63-[0-9]+[a-z]?-[0-9]+-" _bmad-output/implementation-artifacts/sprint-status.yaml`
+- v63 stories done: `grep -cE "^  v63-[0-9]+[a-z]?-[0-9]+-.*: done$" _bmad-output/implementation-artifacts/sprint-status.yaml`
+Use the empirical-probe option-0 pattern (Epic 3 retro PI-8 / AP equivalent) — the V-pass MUST re-verify denominator + numerator counts via grep, never via narrative inheritance. Treat any "X/Y stories shipped" claim in a new spec as a count-drift candidate until empirically verified. **Discipline at spec-author time:** if you can't run the grep right now, write `XX/YY` placeholders + flag a TODO for the V-pass to fill in — narrative-inheritance is the failure mode this anti-pattern names.
 
 ---
 
