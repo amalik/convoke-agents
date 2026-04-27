@@ -5,6 +5,37 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: spec of v63-4-4-create-drift-snapshot-workflow (2026-04-26)
+
+Story 4.4 Decision 5 deferred slash-command-skill wrapper per Story 4.2 PF1-tooling precedent (release-engineering tooling, not Convoke-user-facing per Operator Covenant operator/user distinction).
+
+- **D-V44-1 — `/bmad-drift-snapshot` slash-command skill wrapper deferred per Story 4.4 Decision 5** — Story 4.4 ships drift-snapshot as bare CLI per Story 4.2 PF1-tooling precedent (release-engineering tooling, not Convoke-user-facing). `slash-command-ux-for-user-facing-tools` rule technically applies but is overridden by precedent grounded in Operator Covenant operator/user distinction. **Trigger to lift deferral:** if a future v4.x retrospective surfaces operator friction with bare CLI invocation OR if Convoke users (not just maintainers) start needing drift-snapshot for their own skill development. **Fix scope:** ~50 LOC skill wrapper at `.claude/skills/bmad-drift-snapshot/SKILL.md` + workflow.md that delegates to `scripts/audit/drift-snapshot.js`. Time: ~30 min. → fast-lane Initiative-backlog item if triggered.
+
+---
+
+## Deferred from: code review of v63-4-4-create-drift-snapshot-workflow (2026-04-27 R2)
+
+R2 review (3 layers — Auditor verdict ALL_R1_PATCHES_LANDED + NO NEW AC VIOLATIONS). Findings: 16 raw → 10 patches applied + 4 deferred. R3 NOT triggered per `code-review-convergence` rule (R2 patches additive: guards, sanitizers, validators; no new files, no renamed functions, no fundamentally altered control flow).
+
+- **D-V44-R2-1 — `lineDiff` builds full O(m·n) DP matrix with no upper bound (Blind R2-L2)** — large recordings (>500 lines × 4 prompts × 5 skills) materialize ~70 MB heap with no progress signal. Story 4.4 fixtures are small; release-time recordings via Story 4.3 typically <200 lines per prompt. **Fix scope:** ~10 LOC length-guard with stderr warning OR Hunt–Szymanski-style optimization. → backlog if real-recording perf surfaces friction.
+- **D-V44-R2-2 — `-pre.md` suffix accepted but never produced by canonical tooling (Blind R2-L3)** — `stripSuffix` regex includes `-pre.md` alongside `-baseline.md` / `-post.md`. Operator confusion potential between `-baseline.md` and `-pre.md`. **Fix scope:** ~2 LOC: drop `-pre\.md$` alternation OR document the alias in protocol. → backlog (UX nicety).
+- **D-V44-R2-3 — `--skills` case-sensitive error doesn't hint at case mismatch (Edge R2-L1)** — `--skills EMMA,JOHN` returns "unknown keys: EMMA, JOHN" without suggesting the correct case. **Fix scope:** ~10 LOC case-insensitive comparison fallback in error message: `(did you mean: emma, john?)`. → backlog (UX nicety).
+- **D-V44-R2-4 — Test 8 / DEFAULT_SKILLS literal-value test is now in place but other "deep-equal-itself" patterns may exist (Auditor R2-M1 follow-through)** — R2 Test 8 patch added literal assertion `['emma','john','winston']`. Sweep other tests for similar circular-reference patterns (e.g., constants compared to themselves). **Fix scope:** ~30 min test review + targeted patches as needed. → backlog (test-quality sweep candidate).
+
+---
+
+## Deferred from: code review of v63-4-4-create-drift-snapshot-workflow (2026-04-27 R1)
+
+R1 review (3 layers — Blind Hunter / Edge Case Hunter / Acceptance Auditor) — Auditor verdict ALL_AC_MET. Findings: 31 raw → 14 patches applied + 5 deferred + 1 dismissed. R2 mandatory per convergence rule (R1 had 3 HIGH).
+
+- **D-V44-R1-1 — `getTodayDate` uses UTC, not local time (CR-L1)** — `new Date().toISOString().slice(0, 10)` returns UTC date. Operator running at 9pm PDT on April 25 gets `2026-04-26` in artifact `created:` field — surprising for human reviewers. Documented as protocol-doc caveat at story-close (operator can pass explicit `--date` to control). Could switch to locale-aware date if friction surfaces. **Fix scope:** ~5 LOC in `getTodayDate()` to use `toLocaleDateString('sv-SE')` (Swedish locale gives ISO format) OR document UTC behavior in protocol. → backlog if friction surfaces.
+- **D-V44-R1-2 — No `--help`/`-h` handler; unknown flags silently ignored (CR-L4)** — `parseArgs` switch has no default case; `--help` does nothing and a default run executes. `--skil emma` (typo) silently runs default 3-skill set. Operator UX nice-to-have; not breaking. **Fix scope:** ~15 LOC for `--help` text + `default:` case rejecting unknown flags. → backlog if friction surfaces.
+- **D-V44-R1-3 — `atomicWrite` not atomic across concurrent invocations (CR-L5)** — `tmpPath = ${outputPath}.tmp` is fixed; two parallel runs race on the same tmp file. No concurrent invocations expected for release-time tool, but theoretically unsafe. **Fix scope:** ~3 LOC: `tmpPath = ${outputPath}.${process.pid}.tmp`. → backlog (low risk).
+- **D-V44-R1-4 — `atomicWrite` leaves stale `.tmp` on rename failure (CR-M10)** — try/catch maps any error to `exitCode=3`, doesn't clean up the leftover `.tmp` file on rename failure. Cosmetic; doesn't affect correctness. **Fix scope:** ~5 LOC try/catch around `renameSync` + `fs.unlinkSync(tmpPath)` in catch. → backlog (low risk).
+- **D-V44-R1-5 — Test coverage for `checkPathSafety` symlink rejection (CR-H3 follow-up)** — R1 patch added `fs.realpathSync` to defeat symlink escapes; no unit test verifies this empirically. Edge Case Hunter reproduced the bug live during R1; a regression test would prevent re-introduction. **Fix scope:** ~15 LOC test that creates a temp symlink under `_bmad-output/`, points it outside project, asserts `checkPathSafety` throws `exitCode=4`. Cross-platform symlink tests can be brittle (Windows requires admin); guard with `process.platform !== 'win32'` skip. → backlog or follow-up amendment.
+
+---
+
 ## Deferred from: V-pass of v63-4-3 (caught Story 4.2 surface bug — 2026-04-26)
 
 V-pass on Story 4.3 caught a defect in already-shipped Story 4.2. Per Q2=A operator decision, defect routed to follow-up bug item rather than re-opening Story 4.2 R3 (which the convergence rule wouldn't have allowed anyway since R2 was additive).
