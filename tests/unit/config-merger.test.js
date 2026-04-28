@@ -77,6 +77,48 @@ describe('validateConfig', () => {
     assert.ok(result.errors.some(e => e.includes('Invalid version format')));
   });
 
+  // Story v63-4-2b: regex extended to accept semver pre-release suffixes (e.g., 4.0.0-rc.1).
+  // Required for Convoke 4.0 RC release-engineering.
+  it('accepts semver pre-release version (e.g., 4.0.0-rc.1)', () => {
+    const config = {
+      submodule_name: 'v', description: 'd', module: 'm',
+      version: '4.0.0-rc.1', output_folder: 'o', agents: [], workflows: []
+    };
+    const result = configMerger.validateConfig(config);
+    assert.equal(result.valid, true);
+    assert.equal(result.errors.length, 0);
+  });
+
+  it('accepts semver pre-release version with alpha tag (e.g., 4.0.0-alpha.0)', () => {
+    const config = {
+      submodule_name: 'v', description: 'd', module: 'm',
+      version: '4.0.0-alpha.0', output_folder: 'o', agents: [], workflows: []
+    };
+    const result = configMerger.validateConfig(config);
+    assert.equal(result.valid, true);
+    assert.equal(result.errors.length, 0);
+  });
+
+  it('still rejects incomplete version (e.g., 4.0)', () => {
+    const config = {
+      submodule_name: 'v', description: 'd', module: 'm',
+      version: '4.0', output_folder: 'o', agents: [], workflows: []
+    };
+    const result = configMerger.validateConfig(config);
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some(e => e.includes('Invalid version format')));
+  });
+
+  it('still rejects version with too many parts (e.g., 4.0.0.0)', () => {
+    const config = {
+      submodule_name: 'v', description: 'd', module: 'm',
+      version: '4.0.0.0', output_folder: 'o', agents: [], workflows: []
+    };
+    const result = configMerger.validateConfig(config);
+    assert.equal(result.valid, false);
+    assert.ok(result.errors.some(e => e.includes('Invalid version format')));
+  });
+
   it('rejects non-array agents', () => {
     const config = {
       submodule_name: 'v', description: 'd', module: 'm',
