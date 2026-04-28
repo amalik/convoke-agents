@@ -209,7 +209,7 @@ const CONFIG_SCHEMA = [
   { field: 'description',   type: 'string', required: true },
   { field: 'module',        type: 'string', required: true },
   { field: 'version',       type: 'string', required: true,
-    validate: v => /^\d+\.\d+\.\d+$/.test(v) ? null : `Invalid version format: ${v} (expected x.x.x)` },
+    validate: v => /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(v) ? null : `Invalid version format: ${v} (expected semver x.x.x or x.x.x-prerelease)` },
   { field: 'output_folder', type: 'string', required: true },
   { field: 'agents',        type: 'array',  required: true, items: 'string' },
   { field: 'workflows',     type: 'array',  required: true, items: 'string' },
