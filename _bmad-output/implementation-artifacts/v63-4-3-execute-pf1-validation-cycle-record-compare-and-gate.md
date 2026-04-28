@@ -9,7 +9,7 @@ epic: v63-epic-4
 
 # Story 4.3: Execute PF1 validation cycle (record + compare + gate)
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
