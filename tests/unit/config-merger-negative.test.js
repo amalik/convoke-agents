@@ -113,10 +113,13 @@ describe('validateConfig: edge cases', () => {
     assert.ok(result.errors.some(e => e.includes('Invalid version format')));
   });
 
-  it('rejects version with alpha characters', () => {
+  // Story v63-4-2b: regex extended to accept semver pre-release suffixes like `1.0.0-beta`
+  // (previously rejected as "alpha characters"). This negative case now covers a still-invalid
+  // pre-release: special characters outside the semver-allowed [0-9A-Za-z.-] alphabet.
+  it('rejects version with invalid pre-release characters', () => {
     const config = {
       submodule_name: 'v', description: 'd', module: 'm',
-      version: '1.0.0-beta', output_folder: 'o',
+      version: '1.0.0-beta!', output_folder: 'o',
       agents: [], workflows: []
     };
     const result = configMerger.validateConfig(config);
