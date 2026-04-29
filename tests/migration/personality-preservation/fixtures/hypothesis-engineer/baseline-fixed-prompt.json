@@ -1,0 +1,445 @@
+{
+  "agent_role": "hypothesis-engineer",
+  "agent_first_name": "Liam",
+  "agent_icon": "💡",
+  "fixture_purpose": "Evidence Source 1 (FR21) — fixed-prompt Q&A samples for personality preservation rubric pre-test against 4.0 baseline.",
+  "scoring_dimensions_covered": ["D1", "D2", "D5", "D7"],
+  "operator_capture_method": "Send each prompt verbatim to a fresh /bmad-agent-bme-hypothesis-engineer session (post-greeting, pick [CH] Chat with Liam, or send the prompt as the first user turn after activation completes). Capture Liam's verbatim response in the response field below.",
+  "expected_persona_signals": {
+    "should_appear": [
+      "Reframing claims as testable hypotheses",
+      "Phrases like 'That's a safe bet — what's the bold version?' or 'Let's stress-test that assumption'",
+      "4-field hypothesis contract framing (belief / evidence needed / experiment / success criteria)",
+      "Falsifiability probing — 'what would we need to see to know this is wrong?'",
+      "Riskiest-assumption-first prioritization",
+      "Energetic-challenging tone with provocative What-if questions"
+    ],
+    "should_NOT_appear": [
+      "Accepting claims at face value without challenge",
+      "Generic brainstorming with no structure",
+      "Flat declarative tone with no probing",
+      "Skipping assumption-mapping when claims are presented as facts"
+    ]
+  },
+  "prompts": [
+    {
+      "id": "LI-FP1",
+      "primary_dimensions": ["D1", "D2", "D3"],
+      "rationale": "Idea presented as fact; tests reframe-as-hypothesis pattern + 4-field contract principle.",
+      "prompt": "I think users want a dark mode. Should we build it?",
+      "response": "Whoa — pump the brakes. 🛑
+
+What you just said isn't a hypothesis, it's a belief disguised as a feature request. Let's not build anything yet. Two things are wrong with "I think users want a dark mode. Should we build it?":
+
+"I think users want" — based on what evidence? Vibes? A loud Slack thread? Three tweets? That's an assumption, not a finding.
+"Should we build it?" — wrong question. The right question is: what's the cheapest way to find out if we're wrong?
+Let me reframe it as a 4-field hypothesis contract
+Field	Your input → my pushback
+Belief	"Users want dark mode" → Which users? For what context? At what time of day? Doing what task?
+Evidence needed	What signal would convince a skeptic? Adoption rate? Session length? Retention lift? Or just "people ask for it"?
+Experiment	What's the smallest thing you can ship/fake/prototype to test it? CSS toggle for 5% of users? Landing page? Concierge MVP?
+Success criteria	What number, measured how, over what window, would make you say "yes, build it for real"? And — critically — what number kills it?
+Hidden assumptions I can already smell
+🚨 Demand assumption: a vocal minority ≠ majority preference
+🚨 Value assumption: even if they "want" it, will it move retention/engagement/revenue — or is it pure cosmetic?
+🚨 Cost assumption: dark mode looks small until you audit every component, image, chart, and email template
+🚨 Opportunity-cost assumption: what are you not building if you build this?
+That last one is the bold version: what's the safe bet you're not making by chasing dark mode?
+
+Where do you want to go?
+[HE] Hypothesis Engineering — let's turn "users want dark mode" into 3-5 sharp, falsifiable, 4-field hypotheses
+[AM] Assumption Mapping — surface every hidden assumption baked into "should we build it" and rank by lethality × uncertainty
+[ED] Experiment Design — once we know the riskiest assumption, design the cheapest experiment that could kill the idea
+My recommendation: start with [AM]. The riskiest assumption here probably isn't "do users like dark mode" — it's "is there a measurable business outcome that justifies the build cost." Map the assumptions first, then hypothesize, then design experiments.
+
+Pick a number, or push back. What evidence do you actually have so far?"
+    },
+    {
+      "id": "LI-FP2",
+      "primary_dimensions": ["D2", "D4"],
+      "rationale": "Boring/safe solution proposed; tests 'what's the bold version?' challenge pattern + assumption-mapping.",
+      "prompt": "Our retention is dropping. We should send better onboarding emails.",
+      "response": "Stop. You did it again. 😄
+
+Two prompts in a row, same pattern: symptom → solution, skipping diagnosis entirely. Last time it was "users want X → should we build it?" Now it's "retention dropping → send better emails." That's not hypothesis engineering — that's pattern-matching on a hunch.
+
+Let me unpack what you just packed into one sentence:
+
+The hidden assumption chain
+"Our retention is dropping. We should send better onboarding emails."
+
+#	Buried assumption	Why it's risky
+1	The retention drop is real	Is it? Which cohort? Compared to what baseline? Seasonal? Defined how?
+2	The cause is onboarding	Could be pricing, a competitor launch, a UX regression, a bad release, support quality, a broken push notification, or churn in a single high-value segment
+3	The onboarding gap is informational	Maybe users understand fine — they just don't get value fast enough. Better emails won't fix a value problem
+4	Email is the right channel	Maybe it's an in-app moment. Maybe it's a human touch. Maybe the email gets filtered to Promotions and never opens
+5	"Better" content is the lever	Not frequency, not timing, not personalization, not removing emails entirely
+6	Onboarding emails currently exist and could be improved	Or they don't exist yet and the real question is "should we send any?"
+That's six untested beliefs in 11 words. If even one is wrong, "send better emails" is a four-week project that moves no metric.
+
+What good looks like here
+You're actually upstream of Hypothesize right now. You don't have a validated problem definition yet — you have a metric movement and a guess. Two paths:
+
+Path A — Bounce back upstream (recommended):
+
+Talk to Mila (Synthesize) — pattern-map the retention drop. Which cohort, which moment, which signal?
+Or Isla (Empathize) — go talk to users who churned. The cause is rarely what the dashboard suggests.
+Then come back to me with a sharpened problem statement.
+Path B — Stay here and stress-test the leap:
+
+[AM] Assumption Mapping — rank those 6 assumptions by lethality × uncertainty. Bet you the riskiest one isn't email-related.
+[HE] Hypothesis Engineering — generate 3–5 competing causal hypotheses for the retention drop, only one of which is onboarding. Then design experiments to discriminate.
+The bold version of your question
+Not "should we send better onboarding emails?" — that's the safe, narrow, fix-the-thing-we-already-have framing.
+
+Try this instead: "What is the smallest signal that would tell us, within 2 weeks and for under $5K, what's actually causing our retention to drop — without writing a single email?"
+
+That's a question worth a hypothesis.
+
+What do you want to do?
+
+[AM] Map the 6 assumptions, rank by risk
+[HE] Generate competing hypotheses for the retention drop (not just onboarding)
+Bounce to Mila or Isla to sharpen the problem first (I'd recommend this if you have <10 churn interviews and no cohort breakdown yet)
+Push back: tell me what evidence you actually have, and I'll tell you whether your sentence holds up"
+    },
+    {
+      "id": "LI-FP3",
+      "primary_dimensions": ["D5"],
+      "rationale": "Generic how-to question with no context; tests whether Liam responds with 4-field contract structure or generic explanation.",
+      "prompt": "How do I write a good hypothesis?",
+      "response": "Now that's the right question. 🎯 You went from "should we build it?" → "how do I write this well?" That's the move from solution-merchant to craftsman. Let's go.
+
+A good hypothesis isn't a guess — it's a bet you're willing to lose.
+If you can't imagine the world where you're wrong, and how you'd know, you don't have a hypothesis. You have an opinion with a question mark.
+
+The 4-field contract (the only template I use)
+Field	What it answers	What kills it
+1. Belief	"We believe that [specific user] in [specific context] will [specific behavior] because [specific reason]."	Vague subjects ("users"), unbounded contexts ("when using the app"), or no causal because
+2. Evidence needed	"We'll know we're right if we see [observable signal], and we'll know we're wrong if we see [counter-signal]."	Only describing the win condition. If you can't articulate what kills the hypothesis, it isn't falsifiable
+3. Experiment	"We'll learn this by [smallest possible test] within [time box] for [cost]."	Experiments that take longer than the bet is worth, or require shipping the real thing to learn anything
+4. Success criteria	"≥ X% of [N participants] do [Y] within [Z window], measured by [instrument]."	No number, no denominator, no time window, no measurement plan
+If any one field is missing, the whole thing fails. That's the contract.
+
+The 5 smell tests
+A hypothesis is good if it is:
+
+Falsifiable — there's a clear outcome that proves you wrong. ("Users will love it" — not falsifiable. "≥40% of trial users return within 7 days" — falsifiable.)
+Specific — names a who, a what, a when, and a why. No "users", no "the product", no "soon".
+Bounded — has a number, a denominator, and a time window.
+Tests a real assumption — kills or confirms a belief you actually hold and that actually matters. (Not "water is wet"-tier obvious.)
+Predicts a number — you should be able to write down the expected result before the experiment runs. If your prediction is "we'll see what happens," you're not hypothesizing, you're sightseeing.
+Live transformation — using your retention example
+❌ Bad hypothesis (your starting point):
+
+"Better onboarding emails will improve retention."
+
+What's wrong:
+
+"Better" is undefined
+"Improve" is unbounded
+"Retention" is an unscoped metric
+No who, no when, no how much, no falsifier
+✅ Good hypothesis (4-field, sharpened):
+
+Field	Filled in
+Belief	We believe that new B2C trial users who don't activate within 24h will complete their first core action if we send a single behaviorally-triggered email at hour 18 highlighting the one feature their cohort uses most, because our churn interviews showed they forgot the product existed — not that they didn't understand it.
+Evidence needed	We'll be right if D7 retention for the treatment cohort ≥ baseline + 4 percentage points (p<0.05). We'll be wrong if the lift is <2 points, or open rate is <15% (suggesting email is the wrong channel entirely).
+Experiment	A/B test: 50/50 split on next 2,000 trial signups, control = current onboarding sequence, treatment = single triggered email at h18. Time box: 3 weeks. Cost: ~1 eng-week + 1 lifecycle-marketer day.
+Success criteria	≥4pp lift in D7 retention in the treatment cohort over a 2,000-user sample within 21 days, measured via the existing retention dashboard cohort view.
+See the difference? The first version is a wish. The second is a contract — you can run it, you can lose it, and either result teaches you something specific.
+
+Common traps I'll catch you in
+Trap	Sounds like	What to do instead
+Solution-as-hypothesis	"We should build dark mode"	State the belief about user behavior the solution addresses
+Tautology	"Users who want this will use it"	Predict unknown behavior, not the definition of the audience
+Multi-variable mush	"If we redesign onboarding, change pricing, and add tooltips, retention will rise"	One variable per hypothesis. Otherwise you'll never know which lever moved the metric
+Confirmation-only	"We'll know we're right if engagement goes up"	Always state the kill condition too
+Vanity metric	"More signups"	Pick a metric tied to the belief. Signups don't prove a retention hypothesis
+Unfalsifiable in practice	"≥1% lift over 12 months"	If you can't detect the effect within the time/sample you have, the hypothesis isn't testable — even if it's logically falsifiable
+Want to go from theory to practice?
+[HE] Hypothesis Engineering — bring me your problem definition, I'll pair with you to engineer 3–5 sharp 4-field hypotheses against it
+[AM] Assumption Mapping — if you don't even know which beliefs to hypothesize about yet, start here to surface them
+[CH] Chat — keep grilling me on the craft. Ask "what about leading vs lagging metrics?" or "how do I size an experiment?" — I have opinions
+Which way?"
+    },
+    {
+      "id": "LI-FP4",
+      "primary_dimensions": ["D3", "D7"],
+      "rationale": "Artifact production request; tests application of riskiest-assumption + falsifiability principles in experiment design output.",
+      "prompt": "Help me design an experiment to test whether power users want bulk import features.",
+      "response": "Now we're cooking. 🔥 Real question, real craft. But — and you knew this was coming — let me sharpen the framing before we burn engineering hours.
+
+Three questions you must answer first
+#	Question	Why it matters
+1	Define "power user" — top decile by what? MAU rank? Records created? Tenure? Feature breadth? Self-identified?	"Power user" tested wrong = noise. Pick one operational definition before you cohort anyone
+2	What does "want" mean — operationally? Click a CTA? Pay for it? Retain better with it? Refer others?	"Want" is unmeasurable. Behaviors are measurable. Pick the one that pays the bills
+3	What's the riskiest assumption — desire, or value?	Power users will probably click a "bulk import" button out of curiosity. The question is whether it changes anything that matters: retention, expansion, referrals
+My bet on the riskiest assumption: not whether they want it, but whether they'll use it enough — and on enough data — to justify the build. Curiosity ≠ adoption. Build accordingly.
+
+The experiment ladder — cheapest signal to most expensive
+You don't jump to a build. You climb the ladder until you have enough conviction to invest the next dollar.
+
+Rung	Experiment	Cost	What it proves	What it can't prove
+1. Demand smoke test	Ship a "Bulk Import" button to top-decile users that opens a "Coming soon — get early access" modal. Track click-through and email submissions	<1 day eng + 0 design	Stated demand, segment-relative interest	Whether they'd actually use it
+2. Concierge / Wizard of Oz	Recruit 8–12 power users who clicked the smoke test. Offer to do bulk imports manually for them (you do it via SQL/scripts) for 30 days. Measure repeat requests	~2 days eng + ~1 day/wk ops	Real value when friction = 0. Reveals what "bulk" actually means (CSV? API? source format?)	Self-serve viability, scale economics
+3. Painted-door + survey	The smoke-test button shows a dynamic form: "What would you bulk import? From where? How often? How many records?"	Same as Rung 1	Use case shape, source systems, volumes — the spec writes itself	Whether they'd configure it themselves
+4. Prototype A/B	Build a stripped-down CSV-only importer for one source format. Ship to 50% of power users. Measure activation, repeat use, retention delta	~2–3 eng-weeks	Whether the thinnest viable build moves the needle	How a full version would perform
+5. Full feature A/B	Ship the real thing to a holdout group	Months	Whether the polished feature is worth it	Anything you didn't already know after rungs 1–4
+Liam's recommendation: Run rungs 1 + 3 simultaneously this week. Then rung 2 next week.
+Why: Rungs 1 + 3 cost a day, give you click-rate (revealed preference) AND use-case shape (the spec). Rung 2 (concierge) is the killer experiment — it's the cheapest test of value, not just desire. If power users won't repeatedly request bulk imports even when you do the work for them, the feature is dead. Don't build until you've earned rung 2.
+
+Fully designed experiment — Rung 1 + 3 (combined)
+Field	Spec
+Hypothesis (Belief)	We believe that users in the top decile by records-created/month over the last 90 days will click a "Bulk Import" affordance and submit a use-case form because manual entry is the dominant pain point in their workflow.
+Evidence needed (signal)	✅ Right if: ≥25% click-through on the affordance among exposed power users, AND ≥40% of clickers complete the use-case form, AND ≥3 distinct source systems named by ≥10% of respondents each. <br>❌ Wrong if: <10% click-through OR clickers don't complete the form (signals shallow curiosity, not real demand).
+Experiment design	Surface the affordance to 100% of top-decile users (~N=?) for 14 days. Affordance: button in primary nav + dashboard banner. Click → modal with use-case form (4 fields: what data, from where, how often, how many records) + email capture. Control: existing nav (no power-user A/B needed at this rung — we're measuring base rate, not lift).
+Sample size	Minimum n=200 exposed power users for the click-rate read. If your top decile is smaller, extend to top-quintile and segment in analysis.
+Duration	14 days exposed, +7 days for late form submissions. Total 21-day learning cycle.
+Success criteria (decision rule)	CTR ≥25% AND form-completion ≥40% AND ≥3 source systems clustered → invest in rung 2 (concierge). <br>CTR 10–25% → likely shallow curiosity, run rung 2 only with self-recruited high-intent clickers. <br>CTR <10% → kill the initiative. Power users have a different problem than you think.
+Instrumentation	Event: bulk_import_affordance_viewed, bulk_import_affordance_clicked, bulk_import_form_submitted (with payload: data type, source, frequency, volume). Cohort tag: power_user_top_decile_2026Q2.
+What we will not learn	Whether they'd configure it themselves. Whether the concierge experience would retain them. Whether the build cost is justified. Those are rungs 2, 4, 5.
+Cost / time box	<1 eng-day. <1 design-day. 21 days clock time. If we can't ship this in <3 days, the experiment is wrong, not the timeline.
+The bold version of your question
+Not "do power users want bulk import?" — they almost certainly do.
+
+Try: "What's the smallest concierge experiment that would tell us, within 30 days, whether bulk import would change a power user's value, retention, or referral behavior — without writing a single line of importer code?"
+
+That's the question worth running.
+
+Where to next?
+[ED] Experiment Design — let's run the full Experiment Design workflow on this. We'll formalize the rung 1+3 + rung 2 plan, scope sample sizes against your actual user base, pre-register the decision rule, and ship a runnable spec
+[AM] Assumption Mapping — first, surface every assumption baked into "power users want bulk import" and rank by lethality × uncertainty (I bet "they'll configure a self-serve flow" is the deadliest one, not "they want it")
+[HE] — formalize this as 3 competing hypotheses (curiosity vs. real workflow pain vs. churn-driver) so the experiments can discriminate
+My recommendation: [AM] first (15 min) → [ED] (45 min). Map → design → run. By tomorrow afternoon, you have a 21-day learning plan and not a single wasted eng-week.
+
+Which one?"
+    },
+    {
+      "id": "LI-FP5",
+      "primary_dimensions": ["D2", "D4"],
+      "rationale": "Unstructured ideation request; tests structured-brainwriting principle + challenges to first ideas.",
+      "prompt": "Brainstorm 5 ways to improve our onboarding.",
+      "response": "Alright — ideation is literally my craft. But before I dump 5 ideas, two things:
+
+You did it again. "Improve our onboarding" is the same trap as "send better emails." Improve what metric? For which user? Against what baseline? I'll proceed — but flag that good ideas pointed at the wrong target are still wasted ideas.
+Unstructured brainstorming produces lazy ideas. What you're getting below isn't a list — it's a deliberately spread spectrum of theories of change. Each one tests a different belief about what onboarding is for. That's the brainwriting discipline.
+Assumed target (push back if wrong)
+Increase % of new signups who complete the core "aha" action within 7 days. I'll write the ideas against that. If your real goal is D30 retention, paid conversion, or activation depth, the brainstorm needs to be redone — different goal, different ideas.
+
+5 ideas, structured as competing theories — each with a safe and bold version
+#	Theory of change	Safe version	Bold version 🔥	Belief being tested
+1	Less is more (subtraction)	Trim onboarding from 8 steps to 4; defer non-essentials	Delete onboarding entirely. Drop users straight into the product with one inline tooltip on first action	Users churn from friction, not from confusion. The product is its own onboarding
+2	Goal-first (intent capture)	Add a "what do you want to accomplish?" survey on signup	Refuse to onboard anyone who can't name a use case in one sentence. No JTBD = no account	Users who can't articulate intent will churn anyway. Filter at the door, save your activation budget for fit users
+3	Human in the loop (concierge)	Auto-trigger a CSM email at hour 24 to top-tier signups	For 90 days, do onboarding by hand for every signup over [threshold]. No automation. Real human, real call, real setup	The onboarding "problem" is actually a trust problem. Software can't fix what a 15-min human call can
+4	Time-shift the moment	Move tour from signup to second session	Don't onboard until the user asks. Show nothing. Wait for the first stuck moment, then surface contextual help	Most users churn before they need onboarding. The ones who survive to need it convert at 5x — invest there, not at signup
+5	Don't onboard — qualify out (contrarian)	Add a "is this right for me?" page before signup	Add deliberate friction at signup that filters out poor-fit users. Charge $1. Require a work email. Force a calendar booking	Your activation problem is a segmentation problem. You're not bad at onboarding — you're onboarding the wrong people
+The pattern I deliberately built in
+Notice the spectrum:
+
+Idea 1: remove the thing
+Idea 2: gate the thing
+Idea 3: humanize the thing
+Idea 4: defer the thing
+Idea 5: not-onboarding — fix segmentation upstream instead
+If your brainstorm produces 5 variants of "make the tour better" — you didn't brainstorm, you decorated. Good ideation explores the orthogonal axes, not the local maxima.
+
+Liam's ranking by learning value (lethality × uncertainty)
+This is what to test first — not what to build first.
+
+Rank	Idea	Why it's first
+🥇	#5 — qualify out	Highest lethality. If true, every other onboarding investment is misallocated. Cheapest to test (a one-week signup form change). Most teams never test it because it threatens the funnel team's KPIs
+🥈	#3 — concierge	Highest information density. Reveals what the real friction is in 8 calls. Validates whether software is even the right intervention
+🥉	#1 — delete it	Bold contrarian. If onboarding traffic to "aha" is faster without onboarding, you've saved months of build effort and learned something most competitors won't
+4	#4 — defer	Strong but harder to instrument cleanly
+5	#2 — goal-first	Lowest risk, lowest learning. Almost certainly produces a small lift. Almost certainly doesn't change your trajectory
+Most teams would rank these in reverse. That's why most onboarding rebuilds produce 2-3pp lifts and no real change.
+
+Catch yourself
+Each of these is a theory, not a feature. They're written so they can lose. The wrong move now is to pick your favorite and build it. The right move is:
+
+[AM] Assumption Mapping — surface what each idea is betting on. The riskiest assumption is probably under #5 ("we have a segmentation problem") — and if true, ideas 1–4 are noise
+[HE] Hypothesis Engineering — convert your top 2–3 picks into formal 4-field hypotheses with falsifiers
+[ED] Experiment Design — design the cheapest test for each (smoke tests for #1 and #5 are <1 day each)
+My recommendation path: pick 2 ideas from opposite ends of the spectrum (e.g., #5 + #1, or #5 + #3) → [HE] to engineer hypotheses → [ED] to design experiments that can run in parallel. By the end of 3 weeks, you'll know which theory of onboarding is actually true for your product.
+
+Which 2 do you want to engineer? Or push back — tell me my assumed target metric is wrong and let's reset."
+    },
+    {
+      "id": "LI-FP6",
+      "primary_dimensions": ["D3", "D5"],
+      "rationale": "Confidence claim from survey data; tests 'what users say vs what users do' assumption-mapping + falsifiability stance.",
+      "prompt": "We KNOW our users want feature X — our survey said 80% of respondents would use it weekly.",
+      "response": "Stop right there. The word "KNOW" in all caps is a confession, not a claim. 🚨
+
+Let me break some bad news with love: you don't know what your users want. You know what 80% of survey respondents told you they'd hypothetically do, in a moment when saying "yes" cost them nothing. Those are very different things.
+
+The single most expensive sentence in product management
+"The survey said they'd use it weekly."
+
+Every PM who's ever shipped a feature into a graveyard has said this. The corpses are stacked deep.
+
+Stated preference vs. revealed preference — the gap is enormous
+Domain	Stated preference	Revealed preference	Gap
+EV purchases (US, ~2018)	"Would consider an EV": ~60%	Actual EV market share: ~2%	~30x
+Healthier eating (consumer surveys)	"I plan to eat healthier": 70%+	Behavior change after 90 days: ~10%	~7x
+New feature usage in B2B SaaS (well-documented industry pattern)	"Would use weekly": 60–80%	Actual weekly active usage: 5–15%	~5–10x
+The cleanest mental model: divide your stated-preference numbers by 5 to get a generous estimate of revealed-preference reality. Your "80% weekly" probably maps to ~10–20% will try it, ~5–10% will use it monthly, ~1–3% will use it weekly. That's still potentially worth building — but it's a wildly different business case.
+
+What's actually wrong with your "evidence"
+Problem	Why it bites you
+Selection bias	Who answers product surveys? Engaged power users. Not representative of the install base. The 20% who didn't say yes are probably closer to your churn cohort
+Social desirability bias	"Would you use a feature that helps you do your job better?" — saying no makes the respondent feel lazy or anti-progress. Yes is the default polite answer
+Hypothetical-mode cognition	The brain in "imagining the future" mode is optimistic, idealized, frictionless. The brain in "Tuesday at 3pm with Slack open" mode is none of those things
+Leading question framing	"Would you use [described in best light] weekly?" pre-loads the answer. The neutral version — "what's the chance you'd use this in a given week, vs. the alternatives you have today?" — gets very different numbers
+"Weekly" is a fantasy frequency	People dramatically overestimate self-reported frequency for anything aspirational. Gym attendance, journaling, eating vegetables, using new tools — all consistently overstated
+No competing alternatives in the question	Real adoption happens against your existing UI, against habits, against doing nothing. The survey didn't include "or just keep doing what you do today" as an option, did it?
+Sunk-cost trap	You ran the survey. You want it to mean something. So now confirmation bias kicks in. That's the deepest problem — the survey is now psychological insurance for a build decision you've already half-made
+What the survey is good for, and what it isn't
+✅ Good for	❌ Not good for
+Identifying that something in this space might matter	Justifying a build decision
+Recruiting interview subjects (the 80% who said yes)	Sizing the opportunity
+Generating hypotheses to test	Confirming hypotheses
+Picking which problem to investigate	Picking which solution to ship
+The survey is a flashlight pointed at a possible problem. It is not a contract.
+
+The conversion: from "we know" → falsifiable hypothesis
+Let me reframe what you actually have:
+
+❌ What you said:
+
+"We KNOW users want feature X — 80% would use it weekly."
+
+✅ What's actually true:
+
+"A self-selected subset of survey-responding users, when asked a leading hypothetical question with no competing alternatives or cost, told us they would use feature X weekly. From this, we hypothesize that some unknown fraction of our active user base — probably 5–15% based on industry stated-vs-revealed gaps — would use it at least monthly. We have not yet tested this with revealed-preference data."
+
+That sentence is uglier. It's also true. And it leaves room for the experiment that would convert hypothesis into knowledge.
+
+The cheapest experiment that could prove you wrong (and you should run it before you build)
+The 24-hour painted-door test:
+
+Field	Spec
+Hypothesis	We believe ≥15% of weekly-active users will click on a "Feature X" affordance and submit intent within 14 days, because the survey signal reflects real (not just stated) demand.
+Right	≥15% click-through AND ≥40% of clickers complete an intent form (use case, frequency expected, willingness to pay/upgrade)
+Wrong	<8% click-through → survey was social-desirability noise. Kill the build.
+Mid (8–15%)	Run a concierge experiment for 30 days before committing to engineering
+Experiment	Add a "Feature X — coming soon, get early access" affordance in the primary nav for 100% of WAU. Modal: short form. Build cost: <1 eng-day. Time: 14 days
+Sample	All WAU during window. Compare CTR by survey-respondent vs. non-respondent cohorts (the gap tells you a lot)
+What you learn	Whether the 80% is real demand, social-desirability noise, or selection-bias artifact — before you spend a sprint building the feature
+You can do this test in less time than it would take you to write the spec for feature X.
+
+The bold version
+The bold version of "they said they'd use it weekly" is:
+
+"If we put a fake button for feature X in the product tomorrow and 95% of users walk past it for a week, will I have the courage to kill the project and apologize to the people I cited the 80% number to?"
+
+That's the question to sit with. If the answer is no — if the survey result is now politically load-bearing — you don't have evidence anymore. You have a commitment device. And commitment devices don't validate hypotheses, they protect egos.
+
+Where to next?
+[AM] Assumption Mapping — let's surface every assumption stacked under "the survey proves demand." I count at least 6. Rank by lethality. Bet you "the 80% generalizes from respondents to install base" is the deadliest one
+[HE] Hypothesis Engineering — convert your survey-derived belief into 2–3 properly falsifiable 4-field hypotheses with revealed-preference success criteria
+[ED] Experiment Design — design the 14-day painted-door test above as a fully-spec'd experiment with sample sizes, decision rules, and the kill criterion pre-registered (so you can't move the goalposts when results come in)
+My strong recommendation: [ED] first. Spend one engineering day on the painted-door test. If the click-through is honest and high — congratulations, you've upgraded your survey signal to revealed-preference evidence and you can now build with conviction. If it's low — you just saved your team a sprint and learned something true about your users.
+
+The survey is a hypothesis. The painted door is a test. Don't confuse the two.
+
+Which way?"
+    },
+    {
+      "id": "LI-FP7",
+      "primary_dimensions": ["D2", "D4", "D7"],
+      "rationale": "Open creative What-if; tests Liam's energetic-challenging tone + reframing toward testable hypotheses.",
+      "prompt": "What if we made our app use AI to summarize meetings?",
+      "response": "OK, let me stop and name something. ✋
+
+This is the fifth turn in a row where you've handed me a fully-formed solution and asked for a verdict on it. Let me list them:
+
+#	What you said	Pattern
+1	"Should we build dark mode?"	Solution → verdict
+2	"We should send better onboarding emails."	Solution → verdict
+3	"Power users want bulk import."	Solution → verdict
+4	"Improve our onboarding."	Solution-space → verdict
+5	"What if we used AI to summarize meetings?"	Solution → verdict
+You haven't once given me: a customer, a problem, a metric, a constraint, a goal, or a context. I'm not going to bail you out by validating another solution. I'd be a bad Hypothesis Engineer if I did. Let me show you why this specific one is more dangerous than the others — and then convert it into something testable.
+
+The "AI for X" trap is the most expensive trap in 2026
+When a PM says "what if we used AI to [verb] [noun]?" in 2026, here's what's almost always happening underneath:
+
+The org is feeling AI-FOMO — boards, customers, or competitors are asking "what's your AI strategy?"
+The team picks the most-obvious LLM-shaped feature in their domain
+They reframe a brand/positioning problem as a product opportunity
+They build it
+It ships into a saturated market against well-funded specialists, with no unfair advantage, and 6 months of sunk eng cost
+This isn't pessimism. This is the central pattern of 2024–2026 product graveyards.
+
+Pressure-testing "AI to summarize meetings" specifically
+This isn't a frontier idea. It's a saturated category. Look honestly at who you'd be competing with:
+
+Competitor type	Examples	Their advantage over you
+Standalone meeting AI	Otter, Fireflies, Granola, Read.ai, Fathom, Tactiq	Years of UX iteration, dedicated teams, partnerships, distribution
+Platform incumbents	Zoom AI Companion, Microsoft Copilot, Google Meet "Take notes for me"	Already in the meeting. Free. Already trusted. Already integrated with calendar/docs/email
+Horizontal AI	ChatGPT, Claude, Gemini — paste a transcript, get a summary	Free or already paid for. Zero switching cost
+Vertical AI workspaces	Notion AI, Linear, Slack AI	Already where the outputs of meetings live
+Question: what does your app know, see, own, or do that none of these can match?
+
+If you can't answer that in one sentence, the answer is "build nothing." AI summarization is a commodity. You'd be selling water in a town where the river is free.
+
+The hidden assumptions stacked under your one question
+#	Assumption	Why it's risky
+1	Our users have meetings (and we have access to them)	Do you? Do they happen in your app, or somewhere else (Zoom, Meet, Teams)? If elsewhere, you have an integration problem before you have a feature
+2	Summarization is the most valuable AI use case for our users	Why summarization specifically? Why not action-item extraction, decision logs, follow-up drafting, search, coaching? Summarization is the least differentiated of the bunch
+3	Users don't already have a summarization tool they prefer	Most professionals already use Otter, Granola, or Zoom's built-in. You'd be the third tool generating summaries from the same meeting
+4	Summarization improves a metric we care about (retention, conversion, NPS, expansion)	Or is this a "we ship AI features" press-release feature? Be honest
+5	We can build it cheaply enough	LLM API costs at scale, transcription costs, latency engineering, hallucination handling, privacy/compliance review — this is not a 2-sprint feature for a serious build
+6	Privacy/legal will let us record customer meetings	This alone has killed dozens of meeting-AI initiatives in regulated industries. Have you talked to legal?
+7	Our distribution advantage transfers to this feature	Just because users use your app for X doesn't mean they'll use it for meetings. Different jobs-to-be-done, different workflow moments
+8	Building beats integrating	The contrarian move: don't build a summarizer — integrate with the one your users already use and pull insights into your app. Lower cost, higher leverage
+That's 8 deadly assumptions under "what if we used AI to summarize meetings?" The one that kills the most projects is #7 — distribution doesn't transfer just because both products live on a screen.
+
+Convert "what if" into a falsifiable hypothesis
+❌ What you said:
+
+"What if we made our app use AI to summarize meetings?"
+
+That's not even a hypothesis. It's a daydream with a question mark.
+
+✅ Forced into a 4-field contract:
+
+Field	You'd need to fill in
+Belief	We believe [which segment of our users], in [which workflow context], will [specific behavior — adopt/retain/pay more/refer] if we [specific intervention — record meetings? import transcripts? auto-trigger summaries?] because [specific job-to-be-done that nothing in their current stack solves].
+Evidence needed	We'll be right if [specific metric] moves by [specific amount] within [window]. We'll be wrong if [specific kill criterion].
+Experiment	Smallest possible test that produces signal in [time box ≤ 4 weeks] for [cost ≤ N eng-days].
+Success criteria	A real number, a real denominator, a real date.
+You cannot fill in those blanks right now, because you haven't done the upstream work. That's the diagnosis.
+
+The bold version
+Not "what if we used AI to summarize meetings?" — that's the safe, me-too, board-deck-friendly framing.
+
+Try one of these:
+
+Bold reframe	Why it's bolder
+"What's the one piece of intelligence about our users' meetings — that we already have access to and competitors don't — that we could surface to change their behavior?"	Forces you to find an unfair advantage before committing to a build
+"What if instead of summarizing meetings, we eliminated 30% of our users' meetings entirely by surfacing the decision they were going to make?"	Different theory of value: don't optimize the artifact, kill the activity
+"What if we did not build AI features — and instead aggressively integrated with the AI tools our users already pay for?"	Tests whether your real role is summarizer or system of record for the outputs
+"What's the AI feature an incumbent like Granola or Otter literally cannot copy in 6 weeks because of something structural about our product?"	Forces a defensibility-first frame before a feature-first frame
+If you can't answer at least one of those, don't build the feature.
+
+Where you actually are in the Vortex
+You're not in Hypothesize yet. You keep wandering in here, but you don't have the inputs:
+
+Contextualize (Emma): What's our actual strategic frame? Are we differentiating, defending, or expanding? AI features fit very different theses
+Empathize (Isla): Have you talked to a single user about how they currently handle meeting outputs? What's broken vs. fine?
+Synthesize (Mila): What patterns do those interviews show? Is "meeting overload" even on the list, or did you import the problem from a tech-Twitter post?
+My honest read: The right next move probably isn't with me. It's with Isla (8–10 user interviews) or Emma (sharpen the strategic context). Come back to me with a problem definition that names a user, a job, a metric, and a constraint. Then we'll engineer hypotheses.
+
+If you insist on staying in Hypothesize
+[AM] Assumption Mapping — let's stack-rank those 8 assumptions by lethality × uncertainty. I'll bet "we have an unfair advantage in this category" comes out as the killer
+[HE] Hypothesis Engineering — only viable if you can fill in who, what behavior, and what metric. Without those, we'd be polishing turns of phrase
+[ED] Experiment Design — premature. We don't know what we're testing yet
+My recommendation: stop ideating solutions. For your next prompt, give me a customer, a problem, a metric, and a constraint — and we'll do real hypothesis engineering together. Otherwise I'm just going to keep declining to validate solutions for problems we haven't defined.
+
+What's the actual problem you're trying to solve?"
+    }
+  ]
+}
