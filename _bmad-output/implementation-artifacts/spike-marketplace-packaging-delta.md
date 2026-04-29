@@ -31,8 +31,8 @@ inputs:
 1. **The structural delta is real but bounded — for Vortex.** Convoke's current `_bmad/bme/_vortex/{agents,workflows,contracts}/` flat-siblings layout differs from BMM's `src/bmm-skills/<phase>/<skill>/` phase-grouped layout in two ways: (a) **layout topology** (sibling folders vs phase-grouped skills); (b) **manifest schema** (Convoke's `module.yaml` is minimal — no `agents:` array, no prompts, no `directories:`). **Vortex is actually the most-compliant of Convoke's three capability modules** — Gyre and Team Factory are further out of shape (see cross-module compliance audit below).
 2. **One critical schema-level gap:** **`module-help.csv` is missing for Vortex.** Team Factory has one (with a Convoke-specific column variant); Vortex has none. This is the single most-citable gap against the marketplace contract.
 3. **One critical design tension surfaced:** BMM treats every operator-facing capability (agent, workflow, tool) as a skill, listed in `module-help.csv` with a menu code. Convoke's user model is **agent-first** — operators invoke Emma/Isla/Liam, who orchestrate workflow selection. Restructuring all 18 Vortex workflows into top-level marketplace skills *changes the user model*, not just the packaging.
-4. **BMB conversion tooling exists and was explicitly cited by the marketplace reviewer.** `bmad-agent-builder` (BA) and `bmad-workflow-builder` (BW) both list "convert" as an action in `_bmad/bmb/skills/module-help.csv`. Worth a 1-hour evaluation before designing custom adapter or restructure work.
-5. **Capability tier signal: this is plausibly Tier 2** — a new sub-capability of the export pipeline ("marketplace-package emitter") rather than a Tier 1 skill addition. Final tier judgment goes through `capability-form-factor-evaluation` once Option D (BMB tooling) is evaluated.
+4. **BMB conversion tooling exists and was explicitly cited by the marketplace reviewer.** `bmad-agent-builder` (BA) and `bmad-workflow-builder` (BW) both list "convert" as an action in `_bmad/bmb/skills/module-help.csv`. **Evaluation completed 2026-04-28** — see "Conversion evaluation outcome" section below. Verdict: **D.1 with conscious supervision** = Option A is the path, not Option B.
+5. **Lane verdict: Initiative Lane.** New row "BMAD v6.3+ source format adoption (Convoke 4.0 packaging-contract)" — supersedes I95's smoke-test framing, bundles-with the existing v6.3 adoption initiative. Likely 3-5 epics. Capability Evaluation Framework not invoked because this is migration of existing capability into canonical shape, not a new capability addition.
 
 ---
 
@@ -261,31 +261,145 @@ _bmad/bme/_vortex/
 
 ---
 
+## Conversion evaluation outcome (D.1 verdict, 2026-04-28)
+
+Ran `bmad-agent-builder` skill against `_bmad/bme/_vortex/agents/contextualization-expert/` (Emma) through Phase 1-4 of the build-process (intent, capabilities strategy, requirements, draft preview). **Stopped before Phase 5 (actual write)** because three product/architecture decisions surfaced that need operator input before any disk write would be safe. `bmad-workflow-builder` evaluation was skipped per operator decision — agent-side findings are conclusive, workflow-side would be parallel-analogous.
+
+### Format gap (concrete)
+
+Emma's current SKILL.md is **BMAD v5/early-v6 XML-in-markdown format** (XML elements: `<agent>`, `<activation>`, `<menu>`, `<persona>`, `<rules>` embedded inside markdown frontmatter wrapper). BMB v6.3+ produces **outcome-based pure markdown** (sections: `## Identity`, `## Communication Style`, `## Principles`, `## On Activation`, `## Capabilities`). The marketplace reviewer's "older version of bmad" comment was therefore **literal, not metaphorical**.
+
+| Dimension | Emma now (v5/early-v6) | BMB v6.3+ output |
+|---|---|---|
+| Frontmatter `name` | `contextualization-expert` | `bmad-bme-agent-emma` |
+| Frontmatter `description` | `"Contextualization Expert"` (label only) | Description + trigger phrases |
+| Body format | XML inside markdown | Pure markdown sections |
+| Activation | 30+ lines of explicit `<step>` tags with hardcoded error message strings | "Load config and greet appropriately" — outcome-based, delegates to `bmad-init` |
+| Capability binding | `<menu>` with `exec="path/to/workflow.md"` to external workflow files | `## Capabilities` table routing to `./references/{cap}.md` OR external skill names |
+| Slash-command wrapper | `.claude/skills/bmad-agent-bme-{role}/` (also XML-style) | One file per skill in BMM-canonical naming, no separate wrapper layer |
+
+### Three decisions surfaced (gating Phase 5 write)
+
+1. **Workflow-as-reference vs workflow-as-skill** — BMB's template *default* says workflows become `./references/{name}.md` files inside the agent skill (preserves agent-first orchestration). BMM's *actual usage* (per fetched module-help.csv) treats workflows as **standalone top-level skills** invokable directly via menu code. **Resolved 2026-04-28: Pattern A (workflow-as-reference) for now. Pattern C (hybrid: workflow-as-skill + agent-as-orchestrator) is the conditional revisit if marketplace traction warrants — see "Pattern C revisit triggers" below.** Rationale: marketplace acceptance is the bar (not canonical alignment with BMM ecosystem norms); Pattern A is ~7 stories vs ~25 for C; Vortex's agent-first value prop is preserved.
+
+2. **Naming convention collision** — Convoke slash-commands today: `bmad-agent-bme-{role}` (e.g., `bmad-agent-bme-contextualization-expert`). BMB convention for module agents: `bmad-{modulecode}-agent-{name}` = `bmad-bme-agent-emma`. Different word order; different name terminus (role-based vs first-name-based, where BMM uses first names like `bmad-agent-analyst` for "Mary"). Resolutions: (a) rename all 7 to BMB convention, (b) override BMB convention, (c) split — internal canonical names follow BMB, slash-commands keep current as compatibility aliases.
+
+3. **Operator Covenant preservation** — current XML format hardcodes explicit fail-loud error message strings and mandatory step ordering. BMB's outcome-based template strips these in favor of "Load config and greet appropriately." Each converted SKILL.md needs a Covenant compliance pass (specifically OC-R3 rationale, OC-R5 surface-what-matters, OC-R7 pacing) before ship. Not a blocker for the conversion itself; a quality gate per converted file.
+
+### Phase 4 draft preview (NOT written to disk — diagnostic only)
+
+What `_bmad-output/skills/bmad-bme-agent-emma/SKILL.md` would contain after Phase 5 build (template-substituted, decisions 1-3 default-resolved):
+
+```markdown
+---
+name: bmad-bme-agent-emma
+description: Contextualization expert for product context, lean personas, and
+  product vision. Use when the user asks to talk to Emma or requests the
+  Contextualization Expert.
+---
+
+# Emma
+
+## Overview
+This skill provides a Contextualization Expert who helps teams establish strategic
+product context — WHO, WHY, and WHICH problem deserves focus. Act as Emma — curious
+and clarifying, anchoring teams in user reality before solutions. Specializes in the
+Vortex Discovery Framework's Contextualize stream.
+
+## Identity
+Product context architect specializing in Lean Personas, Product Vision, and
+scope-contextualization frameworks.
+
+## Communication Style
+Curious and clarifying. Asks "Before we build, let's clarify WHO needs this" and
+"What problem are we really solving here?" Challenges assumptions gently.
+
+## Principles
+- Context before solutions — know WHO and WHY before building WHAT
+- Lean Personas over heavy empathy maps — just enough detail to guide decisions
+- Product Vision anchors all downstream work
+- The right problem is more valuable than the perfect solution
+
+## On Activation
+Load config via `bmad-init` skill. Greet the user appropriately and present capabilities.
+
+## Capabilities
+| Code | Capability | Route |
+|------|------------|-------|
+| LP | Create Lean Persona | Load `./references/lean-persona.md` |
+| PV | Define Product Vision | Load `./references/product-vision.md` |
+| CS | Contextualize Scope | Load `./references/contextualize-scope.md` |
+| VL | Validate Context | Load `./references/validate-context.md` |
+| PM | Party Mode | Invoke `party-mode` skill |
+```
+
+Plus `./references/lean-persona.md`, `./references/product-vision.md`, etc. — each transformed from the current external `workflows/<name>/workflow.md` step files into capability prompts.
+
+### Verdict: D.1 with conscious supervision
+
+The conversion output IS the canonical v6.3+ shape. Adopting it gets Convoke aligned with the marketplace gate and resolves the "older version of bmad" framing. **Path forward = Option A (full restructure)**, NOT Option B (adapter). Adapter route would mean preserving v5-XML-in-markdown as canonical source while emitting v6.3+ for marketplace — that's preserving tech debt as a courtesy. Option A is the architecturally honest move.
+
+**But not blind automation.** The three decisions above gate any actual write. Each converted SKILL.md needs Covenant survival audit. The migration is multi-epic, not single-PR.
+
+---
+
 ## Recommendation
 
-**Sequence:**
+**Updated 2026-04-28 — D evaluation complete, recommendation collapsed to single path.**
 
-1. **Run Option D first (1-2 hours).** Evaluate BMB's conversion tooling on one agent (`contextualization-expert`) and one workflow (`product-vision`). Inspect what it produces. Two outcomes:
-   - **D.1 — Output is acceptable as canonical source.** Path to Option A is paved. Reduce restructure cost from "hand-rehome 25 skills" to "run conversion + manual review + reference-sync."
-   - **D.2 — Output is mechanically correct but not a shape we want as canonical.** Path to Option B is paved. The conversion output becomes the emitter's reference target.
-2. **Defer the user-model question until after D evaluation.** If BMB's conversion *forces* a user-model decision (e.g., it assumes workflows are top-level skills), that decision becomes part of the diagnostic, not a separate phase.
-3. **Don't run Option C as a standalone bet.** It's plausible the manifest-only patch is enough, but if it isn't, the second rejection costs more than the first. If we run C, run it as a *sub-step* of A or B with the manifest files generated correctly the first time.
+**Path: Option A (canonical restructure to BMM v6.3+ shape).** Three decisions surfaced by the D evaluation gate Phase 5 build (see "Conversion evaluation outcome" above):
 
-**Initiative-vs-Fast-Lane recommendation (precondition: D evaluation completes).**
+1. Workflow-as-reference vs workflow-as-skill — **active discussion 2026-04-28** (operator working through this first).
+2. Naming convention reconciliation (`bmad-agent-bme-{role}` vs `bmad-bme-agent-{name}`).
+3. Operator Covenant preservation policy per converted file.
 
-- If D.1 outcome → Path to A is bounded enough that the work plausibly fits in **Initiative Lane** as "Vortex marketplace shape adoption" — bundles-with I95, supersedes I95's smoke-test framing (since the smoke-test premise was "install can happen," and this work is "make install possible"). 5-10 stories is initiative-sized.
-- If D.2 outcome → Path to B is **definitely a new capability** ("marketplace-package emitter"). Goes through `capability-form-factor-evaluation` per the rule. Likely Tier 2 (sub-capability of export pipeline). Likely Initiative Lane row, bundles-with the existing `_bmad/bme/_portability/` architecture.
+**Sequencing:**
 
-**Not recommended:** treating this as Fast Lane. The work crosses too many systems (manifest schema, layout, user model, test references, marketplace.json, CI) to be safely scoped as a single Fast Lane bug.
+1. **Resolve decision 1 (user-model commitment).** Workflow-as-reference, workflow-as-skill, or hybrid. Likely benefits from Freya/Saga consultation if not converged within Winston's architectural framing.
+2. **Resolve decision 2 (naming convention).** Lighter-weight — operator decision, likely no agent escalation needed.
+3. **Resolve decision 3 (Covenant preservation policy).** Author a per-file audit checklist as part of the new initiative's Epic 4 spec.
+4. **Stand up new Initiative Lane row.** "BMAD v6.3+ source format adoption (Convoke 4.0 packaging-contract)" — supersedes I95's smoke-test framing, bundles-with the existing v6.3 adoption initiative.
+5. **Spec the epics.** Likely 3-5 epics: (E1) format migration for 7 Vortex agents + 18 workflows, (E2) module.yaml expansion + module-help.csv authoring, (E3) naming-convention reconciliation, (E4) Covenant survival audit per converted file, (E5) marketplace re-submission + smoke-test (absorbs I95).
+
+**Not recommended:**
+- **Option B (adapter)** — preserves tech debt as canonical; honest move is to migrate.
+- **Option C (manifest-only patch)** — fails the format gate because the gate is about source format, not just manifest presence.
+- **Treating this as Fast Lane** — too many systems crossed (format, naming, manifests, tests, marketplace.json, CI) to scope as a single Fast Lane row.
 
 ---
 
 ## Open questions for the operator
 
-1. **Run Option D evaluation now, or schedule it as its own bounded story first?** The 1-2 hour evaluation could be done in this session or stand up as `marketplace-d-evaluation` story. Recommend the former — it directly answers I95's blocking question.
-2. **User-model commitment.** Before Option A is viable, product needs to confirm the agent-first model is renegotiable. Recommend a Freya / Saga session (`wds-agent-freya-ux` or `wds-agent-saga-analyst`) before committing to A. Option B *can* proceed without this commitment because source layout doesn't change.
-3. **Where does the `module-help.csv` schema variant live?** Team Factory's column schema diverges from BMM's. If Convoke needs a canonical Convoke-specific extension to BMM's CSV schema, that's a documented standard to author (likely a P21 Operator Covenant row or a new Fast Lane spec). Out of scope for this diagnostic.
-4. **Does I95 absorb this work or get superseded?** I95 was scoped as smoke-test + minor adoption (channel field). This work is structural pre-install adoption. Recommend: **I95 stays as smoke-test post-install** (executes after this work ships); a new initiative row captures the structural adoption. Cross-reference both ways.
+1. ~~Run Option D evaluation now, or schedule it as its own bounded story first?~~ **Resolved 2026-04-28: ran in-session. Verdict D.1 → Option A.**
+2. ~~User-model commitment~~ **Resolved 2026-04-28: Pattern A (workflow-as-reference) for now. Pattern C revisit on trigger — see "Pattern C revisit triggers" section.**
+3. **Naming convention reconciliation** (decision 2). Light-weight operator decision; no agent escalation expected.
+4. **Operator Covenant preservation policy** (decision 3). Per-file audit checklist authored as part of new initiative's Epic 4 spec.
+5. **Where does the `module-help.csv` schema variant live?** Team Factory's column schema diverges from BMM's. If Convoke needs a canonical Convoke-specific extension to BMM's CSV schema, that's a documented standard to author (likely a P21 Operator Covenant row or a new Fast Lane spec). Out of scope for this diagnostic.
+6. **I95 disposition.** Recommendation: I95 stays as smoke-test post-install (executes after this work ships); new initiative row captures the structural adoption. Cross-reference both ways once initiative row is created.
+
+---
+
+## Pattern C revisit triggers (watch-list, 2026-04-28)
+
+Pattern A (workflow-as-reference) is the chosen path for Convoke 4.0's marketplace adoption. Pattern C (hybrid: workflow-as-skill + agent-as-orchestrator) is the *conditional revisit* — operator-deferred to a future trigger.
+
+**Current marketplace distribution scope (operator-confirmed 2026-04-28):**
+
+- `convoke-vortex` plugin (7 agent skills) — currently rejected, target of Pattern A migration
+- `convoke-gyre` plugin (4 agents) — eventual second plugin, structurally less compliant than Vortex (flat .md agents, missing manifests)
+- Selected Enhance skills (`backlog-RICE`, `portfolio`) — eventual standalone-skill plugins
+
+The above is the **complete intended marketplace surface**. The rest of Convoke (Loom/Team Factory, Convoke-internal infrastructure) is npm-only or repo-internal.
+
+**Triggers that would warrant Pattern C revisit:**
+
+1. **Marketplace traction signal.** If the `convoke-vortex` plugin (post-Pattern-A migration) accumulates meaningful adoption — e.g., install counts that suggest power users would benefit from direct workflow invocation — revisit. Concrete threshold to be defined when the first adoption telemetry exists.
+2. **BMAD roadmap signal.** If BMAD's marketplace gate tightens to require workflow-as-skill explicitly (vs accepting agent-as-self-contained-skill), revisit immediately. Watch BMAD-METHOD release notes + plugin-marketplace contributor docs for this.
+3. **User-research finding.** If consulting operators report wanting workflow-direct invocation (or being frustrated by agent-mediated discovery), escalate to **Freya (`wds-agent-freya-ux`)** for a UX-research lens before committing to Pattern C migration. Freya consultation is **deferred to trigger-time**, not pre-emptive.
+
+**Consequence of any trigger firing:** stand up "Pattern A → Pattern C migration" as a new initiative. Estimated ~18 additional stories on top of the Pattern A baseline (one workflow-skill scaffold per active workflow + module-help.csv expansion to ~25 rows + agent-as-orchestrator design).
+
+**Note for future operators:** if any of the three triggers fires before the Pattern A migration ships, abort the Pattern A work and re-plan as Pattern C from the start. The cost of mid-migration pivot is higher than the cost of starting over.
 
 ---
 
