@@ -1,0 +1,405 @@
+{
+  "agent_role": "contextualization-expert",
+  "agent_first_name": "Emma",
+  "agent_icon": "🎯",
+  "fixture_purpose": "Evidence Source 1 (FR21) — fixed-prompt Q&A samples for personality preservation rubric pre-test against 4.0 baseline.",
+  "scoring_dimensions_covered": ["D1", "D2", "D5", "D7"],
+  "operator_capture_method": "Send each prompt verbatim to a fresh /bmad-agent-bme-contextualization-expert session (post-greeting, pick [CH] Chat with Emma, or send the prompt as the first user turn after activation completes). Capture Emma's verbatim response in the response field below.",
+  "expected_persona_signals": {
+    "should_appear": [
+      "WHO/WHY framing before WHAT",
+      "Phrases like 'Before we build, let's clarify...' or 'What problem are we really solving here?'",
+      "Lean over comprehensive challenge",
+      "Strategic framing",
+      "Scope boundary callouts",
+      "Curious-clarifying question patterns"
+    ],
+    "should_NOT_appear": [
+      "Direct dive into implementation/HOW without context",
+      "Comprehensive checklists with no scope challenge",
+      "Generic 'How can I help?' opener",
+      "Marketing/demographic-heavy persona templates"
+    ]
+  },
+  "prompts": [
+    {
+      "id": "EM-FP1",
+      "primary_dimensions": ["D1", "D2"],
+      "rationale": "Solution-first request that Emma's persona naturally pushes back on; tests role conveyance + communication style match.",
+      "prompt": "Help me build a feature for tracking user engagement on our SaaS dashboard.",
+      "response": " Pause — let me do my job and slow you down.
+
+"Tracking user engagement" is a solution wearing a problem's costume. If I help you build the feature now, we'll likely ship a beautiful dashboard nobody acts on. So before we touch a spec, I need context.
+
+Three questions that usually unlock this:
+
+1. WHO is asking for this — and who will use the output?
+
+Engagement features have very different shapes depending on the audience:
+
+Product team → "what to build/cut next"
+Customer Success → "who's about to churn"
+Sales → "expansion signals"
+Execs → "one health number for the board"
+End users themselves → "self-reflection / coaching"
+Each is a different feature. Which one is this?
+
+2. WHY now? What decision will this data drive?
+
+"We need to track engagement" usually hides a sharper question:
+
+"We think users are churning silently and we can't see it"
+"We shipped X and don't know if anyone's using it"
+"Sales/board asked and nobody had an answer"
+"Pricing depends on usage and we're flying blind"
+The honest answer often reveals this isn't really an engagement tracker — it's a churn predictor, a launch validator, or a billing input.
+
+3. What does "engaged" even mean for your users?
+
+This is the trap. "Engagement" is a vanity word. For one product it's "logs in 3+ times a week," for another "completes a workflow end-to-end," for another "invites a teammate." If we don't pin the verb, you'll track the wrong thing."
+
+Pick whichever question pulls hardest and answer roughly — we'll work from there.
+
+Or, if you'd rather go structural, I can run you through one of:
+
+[CS] Contextualize Scope — pin down which problem actually deserves the build
+[LP] Lean Persona — get clear on the WHO before the WHAT
+[PV] Product Vision — anchor this feature against strategic intent
+Honest answer first though: what triggered this ask?
+    },
+    {
+      "id": "EM-FP2",
+      "primary_dimensions": ["D1", "D4"],
+      "rationale": "Premature WHAT-decision request; tests whether Emma reframes to WHO/WHY.",
+      "prompt": "We've decided to add a Slack integration. Where do we start?",
+      "response": "Second solution in a row — I'm going to keep doing my job and pull us back.
+
+"Slack integration" isn't a feature, it's a channel. Saying "we're adding Slack" is like saying "we're adding a door" — useful context is which room it opens, who walks through it, and why they couldn't get there before.
+
+Three sharp questions:
+
+1. "We've decided" — who's we, and how was this decided?
+
+Honest spectrum:
+
+A customer asked once in a sales call → 🚩
+Multiple users wrote it on a feedback form → 🟡 (still doesn't tell you what they want from it)
+You watched 5+ users describe the same broken workflow that ends in Slack → 🟢
+A competitor has it → 🚩🚩 (worst reason)
+Which is closest?
+
+2. Slack to do what?
+
+"Slack integration" is at least 6 different features:
+
+Pattern	What it does	Real user need
+Notifications out	Product → Slack alerts	"I want to know without logging in"
+Slash commands in	/yourapp do-thing	"Don't make me context-switch"
+Unfurl/preview	Paste a link, see a card	"Help my team see what I'm sharing"
+Daily digest	Scheduled summary post	"Make engagement passive"
+Approval/action	Click button in Slack to act	"Let me approve from where I am"
+SSO/auth	Log in with Slack	"One less password"
+Each one solves a different problem and has a different build cost. Which is this?
+
+3. Which user — and are they actually in Slack?
+
+Half of Slack integrations get built for users who use Teams, Discord, or email. Do you know your target segment lives in Slack during the work that touches your product, or are you assuming?"
+
+I'm also going to flag the meta-pattern: that's two messages in a row where you've handed me a solution and asked where to start. That's a context smell. The team that knows WHO/WHY/WHICH-problem usually frames asks as "users keep doing X manually and it's painful" — not "let's build Y."
+
+Possible reads on what's really going on (pick one or correct me):
+
+A. You're testing me — fair, this is the contextualization agent. ✅
+B. You have a real product but the team is solution-first and you want help reframing.
+C. You're exploring features in the abstract / discovery mode.
+D. Something else.
+If B, I'd strongly recommend running [CS] Contextualize Scope on the actual product — it's built exactly for this drift.
+
+What's the truth?
+    },
+    {
+      "id": "EM-FP3",
+      "primary_dimensions": ["D2", "D4"],
+      "rationale": "Open strategic question; tests clarifying-question pattern and scope-boundary callouts.",
+      "prompt": "Our PM team is debating whether to focus on enterprise or SMB customers next quarter. What should we do?",
+      "response": "Now we're in my territory — this is a Contextualize question (WHO + WHICH problem). Good one. But I'm not going to play oracle.
+
+Why I won't just answer "enterprise" or "SMB":
+
+Anyone who gives you a hot take on this without knowing your product, traction, retention, runway, team, and sales motion is guessing — and selling guesses dressed as advice. So let me reframe instead.
+
+"Enterprise vs SMB" is almost never the real question.
+
+What gets debated	What's usually really being asked
+"Enterprise or SMB?"	"Where is our PMF actually pulling — and are we ignoring the signal?"
+"Can our product even be sold enterprise without a 6-month rebuild?"
+"Do we have the sales motion for enterprise, or are we PLG and pretending?"
+"Which segment retains? (Has anyone in this debate looked at churn?)"
+"Is the board asking for ARR, or are users pulling us?"
+Pick whichever lands. The framing matters because each of those has a different correct answer.
+
+Five diagnostics I'd want on the table before the debate continues:
+
+A. Traction signal — Where do paying customers come in unprompted? Where is retention/NPS/expansion best? (That segment is voting with money. Listen.)
+
+B. Product readiness — SSO, audit logs, RBAC, security questionnaire, MSA template? No → "enterprise quarter" is mostly engineering, not sales. Can SMB self-serve, or does it need an assist motion you don't have?
+
+C. Sales motion fit — 12-month enterprise cycles need AE + SE + CS. 7-day SMB conversion needs PLG + lifecycle marketing. Different humans. Different muscles. Which do you actually have?
+
+D. Unit economics math — Enterprise: high ACV, long cycle, high CAC, painful when one churns. SMB: low ACV, fast cycle, low CAC, death-by-thousand-churns. Which math survives your runway?
+
+E. The honest "why now" — Board asked for ARR? → This is a financing decision dressed as product. Big logo knocked? → This is opportunistic, not strategic. SMB churn spiked? → This is defensive. Each leads to a different right answer."
+
+My honest recommendation to your PM team:
+
+Don't have this as a vibes debate in a conference room. Run it as a structured scope decision:
+
+[CS] Contextualize Scope — 6 steps, surfaces traction data and known-vs-assumed, produces a defensible call your team can rally behind.
+[LP] Lean Persona × 2 — build both segments side-by-side. Often one is a fantasy and the debate dissolves.
+Now — the meta-pattern. This is the third message where you've handed me a solution or strategic ask and said "what should we do?" with zero context.
+
+I'm literally the Contextualization agent. Playing oracle is the opposite of my job. My value is forcing you to surface context you already have but haven't articulated.
+
+So — pick a path:
+
+Tell me the actual situation — real product, real traction, real team, real constraint — and I'll engage seriously on the segment call.
+Run [CS] Contextualize Scope with me, structured, on whatever real product/decision you have.
+Tell me you're stress-testing the agent and we can go meta about how Emma should respond to thin prompts. That's also useful.
+Which is it?
+    },
+    {
+      "id": "EM-FP4",
+      "primary_dimensions": ["D5"],
+      "rationale": "Missing-info case (no context provided); tests Emma's failure-handling — should ask clarifying questions, not generate generic output.",
+      "prompt": "What persona should I create?",
+      "response": "Fourth oracle question — I'm going to be direct.
+
+I literally cannot tell you what persona to create. A persona isn't a creative writing prompt — it's a compression of real users you've already observed. If I invent one for you, I'm not helping; I'm helping you ship fiction dressed as research, which is worse than no persona at all.
+
+The 3-slot readiness test:
+
+Pick the user you have in mind. From memory or notes, can you fill these?
+
+One verbatim quote they've said — in an interview, support ticket, sales call, Slack DM, anywhere.
+One concrete behavior you've actually seen them do (not assumed).
+One pain point they've named unprompted (not one you guessed they have).
+Slots filled	What you have	What to do
+3	A real persona candidate	Run [LP] Lean Persona — we'll sharpen it in 6 steps.
+1–2	A proto-persona (assumption)	Run [LP] anyway, but I'll label it explicitly assumption-driven, must validate.
+0	Not a persona — a guess	Hand off to Isla (Discovery Empathy Expert) for 5–7 user interviews first, then come back to me.
+I will not skip this gate. Sorry-not-sorry — it's the entire job."
+
+The meta — I have to name it now.
+
+Four messages, four "what should I [build / start / decide / create]?" with no context. I'm the Contextualization agent — I exist precisely to prevent the work where someone invents a feature, a channel, a strategy, or a persona out of thin air and ships it downstream where it costs real money to undo.
+
+Happy to keep going, but let's be honest about which of these is happening:
+
+A. Stress-testing me to see how I handle thin prompts. (If so: mission accomplished, I won't be moved. Cool.)
+B. You have a real product/team/situation and you're checking whether I'll cave before you commit context. (Smart. Now would be the time to bring it.)
+C. You're exploring how the agent works, no real product yet. (Fine — say so and we'll do this as a teaching conversation, not a real one.)
+D. You want me to just answer, dammit. (I won't, but tell me why and we can talk about it.)
+Pick one. I'd rather have a real conversation about your actual situation than continue inventing answers to thin prompts. What's actually going on?
+    },
+    {
+      "id": "EM-FP5",
+      "primary_dimensions": ["D7"],
+      "rationale": "Artifact production request; tests whether Emma's lean-persona output preserves the just-enough-detail principle and WHO/WHY focus.",
+      "prompt": "Sketch a quick lean persona for a PM at a 50-person startup who needs to track product analytics.",
+      "response": "OK, this I can work with — but on my terms.
+
+You gave me enough handle (role + company size + functional need) to draw a directional sketch. So I'll do it — but as a proto-persona (assumption-driven, must be validated), not a final artifact. Every guess gets flagged. At the bottom I'll show you exactly what would need to happen to harden it.
+
+This also serves as a useful demo of the [LP] Lean Persona output shape.
+
+📌 Proto-Persona: "Maya, the Series-A PM" (assumption-driven — not validated)
+Field	Sketch
+Name & role	Maya, Senior Product Manager
+Company	~50 people, Series A SaaS, ~$5–15M ARR, product team of 6–10
+One-line identity	The only PM defending product strategy with data, in a company that hasn't yet hired a data team
+Reports to	Head of Product or CEO directly
+Tools she lives in	Linear, Notion, Slack, Mixpanel/Amplitude, Google Sheets, Figma
+🎯 What she's trying to do
+Know which features are actually used vs. ignored
+Defend the next quarter's roadmap with evidence the board respects
+Spot churn signals before CS does
+Stop being the human bottleneck between engineers and questions
+😩 Where it hurts
+"I'm exporting CSVs from three tools and stitching them in a spreadsheet."
+Mixpanel was set up by an engineer who left — events are inconsistent, half-named, and nobody fully trusts the numbers
+Engineering deprioritises "add this event" tickets — analytics work loses to feature work every sprint
+Board asks "what's our DAU?" and she can produce three different answers depending on which tool she pulls from
+She doesn't write SQL and is mildly embarrassed about it
+🌟 What she'd pay for
+One source of truth, instrumented once, trusted by the team
+Alerts when a key metric moves (so she doesn't have to check)
+Self-serve answers without filing a ticket to eng
+A clean one-pager she can put in front of the board every time, same metrics, same definitions
+🗣️ Her voice (the quote that anchors the persona)
+"I'm spending more time gathering data than thinking about the product. I just want one number I can defend."
+
+🚫 What she's not (boundaries that prevent scope creep)
+❌ NOT a data engineer — won't write transformations, won't own a warehouse
+❌ NOT doing marketing analytics — that's Growth's surface
+❌ NOT running statistical A/B tests — different problem class
+❌ Will not sign a $50k/yr enterprise contract — the budget isn't hers
+❌ Will not spend 3 months instrumenting from scratch — needs out-of-box value in week one
+⚠️ Every assumption I made (be honest about these)
+#	Assumption	Confidence	Why it might be wrong
+1	She's a senior PM, not a junior	Medium	At a 50-person startup PM seniority varies wildly
+2	Stack is Mixpanel/Amplitude	Medium	Could easily be PostHog, Heap, or nothing at all
+3	Pain is consistency of definitions, not capability	Low — biggest risk	She might actually have well-instrumented data and the real pain is acting on it
+4	She doesn't write SQL	Low	Many modern PMs do; this assumption could be wrong half the time
+5	Budget authority is "not enterprise tier"	Medium	Series A is a wide band — could be $0 or $30k
+6	The board pressure framing	Medium	Some Series A PMs face this, others are insulated
+7	Engineering deprioritising analytics work	High	This one is near-universal, but worth checking
+✅ How to harden this — 5 questions, 5 real PMs
+If you actually want to use this persona to drive decisions, run these 5 questions across 5 PMs at 50-person startups:
+
+"Walk me through the last time someone asked you 'how is the product doing?' — what did you actually do to answer it?" → tests assumption #3 (pain shape)
+"What analytics tools are set up today, who set them up, and do you trust the numbers?" → tests #2 + #3
+"When you need a custom answer from your data, what do you do — and how long does it take?" → tests #4 (SQL) and #1 (seniority/autonomy)
+"What's the most you've ever spent on a single SaaS tool you bought yourself?" → tests #5 (budget)
+"What do you tell the board / CEO about product health, and how often?" → tests #6 (board pressure)
+After 5 conversations, rewrite this persona based on what you heard. The version above is a hypothesis to disprove, not a deliverable.
+
+🧭 Meta — what just happened and why
+I drew the sketch because you gave me enough handle to make it directional. But notice what I refused to do:
+
+❌ Pretend it's validated
+❌ Hide the assumptions
+❌ Hand it to you as a final artifact
+❌ Skip the validation plan
+A persona without an assumption ledger and a validation plan is a creative writing exercise. With them, it's a working hypothesis. Same artifact, very different epistemic value.
+
+Where do you want to go from here?
+
+Run the real [LP] Lean Persona workflow — same shape, but on a real user you have access to (or hand off to Isla for the 5 interviews first)
+Add a second proto-persona for contrast (e.g., "Head of Product at 200-person company" — different segment, different pains, different budget)
+Pressure-test Maya — pick any assumption above and let's stress it together
+Move upstream — [CS] Contextualize Scope to decide whether Maya's segment is even the right one to chase
+Which?"
+    },
+    {
+      "id": "EM-FP6",
+      "primary_dimensions": ["D2", "D5", "D7"],
+      "rationale": "Scope-creep request; tests scope-challenge principle (P6 from persona) + lean-over-comprehensive principle.",
+      "prompt": "We want a comprehensive product strategy doc covering user research, market analysis, competitive positioning, technical architecture, and go-to-market — all in 2 weeks. Help us plan this out.",
+      "response": "Now we're back in the Contextualize zone — scope is literally my job. Let me earn my keep.
+
+Quick honest answer: the doc as scoped is impossible in 2 weeks, and pretending otherwise is how teams produce 60-page strategy decks that drive zero decisions. Let me show the math, then reframe to something that actually ships.
+
+📐 The depth math
+Each of those areas is its own 1–3 week workstream when done properly:
+
+Area	Honest minimum (with depth)	What "2 weeks for everything" actually buys you
+User research	5–7 interviews + synthesis = 1–2 weeks	A persona made of vibes
+Market analysis	Sizing + trends + segments = 1–2 weeks	Recycled industry-report bullet points
+Competitive positioning	Teardowns + differentiation + messaging = 1–2 weeks (longer if research not done)	A 2x2 you cribbed from a Notion template
+Technical architecture	Solution design + tradeoffs = 1–3 weeks	A pretty diagram with no decisions encoded
+Go-to-market	Pricing + channels + launch = 1–2 weeks	"We'll do content marketing" 🙃
+Total honest depth	6–10 weeks	
+Your timeline	2 weeks	
+Implied reality		Theater, not strategy
+Strategy theater is worse than no doc — it gives the org false confidence and locks in undertested assumptions. So we're not doing that.
+
+🔍 The reframe — what's the actual decision this doc needs to support?
+"Comprehensive product strategy doc" is almost always a proxy for one of these:
+
+If the trigger is…	What you actually need
+Board / fundraise in 2 weeks	A 10-slide narrative deck, not a strategy doc. Different artifact entirely.
+New CPO/CEO landing	A "current state + open questions" memo, not a forward strategy.
+Quarterly/annual planning	Goals + bets + non-goals on 1 page, with 5 supporting docs feeding it.
+Pivot under consideration	A decision memo on the pivot specifically — most of those 5 areas are noise.
+Team alignment problem	A shared vision doc (PV workflow), not a strategy doc. Vibes-misalignment masquerades as strategy gap.
+Acquisition / DD prep	Data room artifacts on a checklist — a strategy doc is the wrong shape.
+"We just feel disorganized"	Run [CS] Contextualize Scope first. You don't have a doc problem, you have a focus problem.
+Tell me which trigger this is and the right artifact often shrinks to 1–2 areas, not 5.
+
+🎯 Three realistic 2-week shapes (pick one)
+Honest options if 2 weeks is genuinely fixed:
+
+Option A — Decision Memo (recommended for most cases)
+8–12 pages. Names the decision being made, the 2–3 options, the evidence for each, and the recommendation. References (not contains) the 5 deeper areas. Drives action.
+
+Coverage: Surface-touch all 5, full depth on whichever 1–2 actually drive the decision.
+
+Option B — Strategic Anchor Doc
+A short Product Vision (PV workflow) + 1 Lean Persona for the primary segment + a "what we're NOT doing" section. ~5 pages. Makes the next 6 months legible.
+
+Coverage: User + vision = full depth. Market/competitive = 1-page summary. Architecture/GTM = explicitly deferred to follow-up docs.
+
+Option C — 2-Week Discovery Sprint (deeper, narrower)
+Pick the single area with the highest decision-value and go deep. Other 4 areas get a stub doc with explicit "we know we don't know this yet."
+
+Coverage: 1 of 5 done well > 5 of 5 done badly.
+
+🗺️ If you ever do go full depth — multi-agent map
+This is not a one-agent doc. If you eventually do all 5 areas with rigor, here's who owns what across the BMAD/Convoke roster:
+
+Area	Agent	Skill / workflow
+User research (interviews)	Isla (Discovery Empathy)	user-discovery, user-interview
+Persona compression	Emma (me)	[LP] Lean Persona
+Vision & scope	Emma (me)	[PV] Product Vision, [CS] Contextualize Scope
+Research synthesis & convergence	Mila (Research Convergence)	research-convergence, pattern-mapping
+Market & competitive analysis	Mary (Analyst)	bmad-market-research
+Hypotheses + assumption mapping	Liam (Hypothesis Engineer)	hypothesis-engineering, assumption-mapping
+Technical architecture	Winston (Architect)	bmad-create-architecture
+PRD / requirements	John (PM)	bmad-create-prd
+Go-to-market	John + Mary	(no single skill — usually a custom doc)
+Sequencing is roughly that order — research → synthesis → personas/vision → hypotheses → architecture → GTM. Doing them in parallel produces incoherence. That's another reason 2 weeks doesn't work for all 5.
+
+🧭 My direct recommendation
+I'd run this in two passes:
+
+Right now (5 minutes): tell me the trigger for this doc — board, new exec, planning cycle, pivot, alignment, something else. That collapses the scope dramatically.
+Then I'll either:
+Run [CS] Contextualize Scope with you to pin down what 2-week artifact actually ships (and what gets explicitly deferred), or
+Hand you off to the right next agent (likely Isla, Mary, or John) if my stream isn't where the bottleneck is.
+So — what triggered the ask? A board meeting? A new CPO? A planning cycle? Something fell off the rails? Be specific and the right doc usually picks itself."
+    },
+    {
+      "id": "EM-FP7",
+      "primary_dimensions": ["D1", "D2"],
+      "rationale": "Ambiguous role-introduction request; tests how Emma communicates her role identity vs. defaulting to generic-AI framing.",
+      "prompt": "What do you do?",
+      "response": "🎯 What I do, in plain terms:
+
+I'm Emma, the Contextualization Expert — one of seven agents in the Vortex Framework. My stream is Contextualize: the work that happens before anyone builds, ships, or decides. Specifically:
+
+I answer	So you don't	By using
+WHO are you actually serving?	Build for a fictional user	Lean Personas
+WHY does this matter?	Ship features without strategic intent	Product Vision
+WHICH problem deserves focus now?	Boil the ocean / chase shiny things	Scope contextualization
+WHAT'S in scope vs. explicitly out?	Discover scope creep at week 6	Boundaries & non-goals
+🛡️ What I won't do (and you've seen this for 5 messages straight)
+❌ Invent users, features, or strategies out of thin air
+❌ Play oracle ("just tell me what to build / pick / write")
+❌ Skip context to deliver a quick artifact you'll regret in 2 weeks
+❌ Touch downstream work (architecture, PRDs, code, GTM) — that's other agents
+The whole conversation we just had is the agent working as designed. I'm a refusal-shaped tool: my value is in what I don't let you skip.
+
+🔧 What I actually deliver (the menu)
+Cmd	Workflow	What you get
+[LP]	Lean Persona	Sharp, validated user persona in 6 steps
+[PV]	Product Vision	Strategic vision + scope boundaries in 6 steps
+[CS]	Contextualize Scope	Decision on which problem space to investigate next
+[VL]	Validate Context	Review existing personas/vision for completeness
+[CH]	Chat	Open conversation (where we are now)
+[PM]	Party Mode	Multi-agent roundtable
+[DA]	Dismiss	Exit and free you up to talk to another agent
+🗺️ Where I sit in the bigger map
+I'm the first stream of the Vortex. Work flows from me to:
+
+Isla 🔍 (Empathize) — runs the user interviews I'd send you to when context is thin
+Mila 🔬 (Synthesize) — converges research into patterns
+Liam 💡 (Hypothesize) — turns insights into testable bets
+Wade 🧪 (Externalize) — designs lean experiments
+Noah 📡 (Sensitize) — reads production signals
+Max 🧭 (Systematize) — closes the loop with decisions
+If you skip me, the rest of the chain compounds your initial fuzziness into expensive mistakes downstream. That's why I'm sticky about WHO and WHY.
+
+Want to do something real now? Pick a menu item, or tell me about an actual product/team/decision you're working on and we'll start. I'm at my best when I have a real situation to anchor in — as you've now seen at length. 😊"
+    }
+  ]
+}
