@@ -3,7 +3,7 @@ initiative: convoke
 artifact_type: spec
 qualifier: personality-preservation-rubric
 created: '2026-04-28'
-status: draft
+status: partially-calibrated
 schema_version: 1
 related_initiative: I97
 related_decision: ADR-003 (Verification Harness Architecture)
@@ -278,6 +278,17 @@ The rubric is designed to be a *template* whose dimensions and scale are reusabl
 
 ## Status
 
-**Status: draft.** Pre-test against 4.0 agents has not been run (operator time required, separable from rubric authoring per session scope decision 2026-04-28).
+**Status: partially-calibrated (2026-04-29).** Pre-test executed against Emma (contextualization-expert) + Liam (hypothesis-engineer) dissimilar pair per party-mode refinement. **All 14 cells (2 agents × 7 dimensions) scored 4 (Clearly Preserved) on first capture — zero refinement iterations required.** Rubric instrument validity confirmed: dimensions are well-defined, evidence sources are sufficient, per-agent fingerprints are accurate.
 
-**Status transition:** draft → calibrated when pre-test completes successfully (all 7 agents score 4 across 7 dimensions on baseline). At calibrated, rubric is ready for post-migration use during I97 E1+.
+**Status transition history:**
+- `draft → partially-calibrated`: 2026-04-29. Emma + Liam dissimilar pair pre-test pass.
+- `partially-calibrated → calibrated`: pending pre-test of remaining 5 Vortex agents (Isla, Mila, Wade, Noah, Max). Required before Story 1.x dev kicks off in I97 E1. Expected low-risk now that rubric instrument is validated.
+
+**Pre-test scoring sheet:** `_bmad-output/planning-artifacts/convoke-pretest-personality-rubric-scoring-sheet.md` (Emma + Liam grids + outcome block).
+**Pre-test fixtures:** `tests/migration/personality-preservation/fixtures/{contextualization-expert,hypothesis-engineer}/` (baseline-fixed-prompt.json + baseline-unscripted-scenario.md per agent).
+
+### Pre-test observations carried forward (not refinements)
+
+1. **Meta-pattern awareness** observed in both Emma + Liam (each agent names operator's solution-first pattern across multiple turns) — strong personality signal but not currently in rubric. Add as future enhancement at I98/I99 reuse if observed there too. Out of I97 scope.
+2. **Operator-preference signal vs. principle-violation signal** must be distinguished by reviewers during E1 post-migration scoring. A converted agent that delivers leaner output at operator's request without abandoning the underlying principle is preserved (D3 = 4); only abandonment of the principle itself is degradation.
+3. **Intellectual honesty as principle adherence (D3)** — observed in Liam scenario T6 (Bayesian discussion). A post-migration agent that refuses to concede valid scientific ground would *fail* D3, not exceed it. Reviewer cue for Story 2.7 (Liam conversion).
