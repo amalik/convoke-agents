@@ -738,3 +738,73 @@ development_status:
   mig-test-epic-1: done
   mig-test-1-1-replace-upgrade-test-count-assertions: done
   mig-test-epic-1-retrospective: optional
+
+  # ============================================================
+  # I97: BMAD V6.3+ SOURCE FORMAT ADOPTION (Convoke 4.0 packaging-contract)
+  # Epic file: convoke-epic-bmad-v63-source-format-adoption.md (status: ready-for-sprint)
+  # Origin: BMAD marketplace PR #9 rejection (2026-04-27); diagnostic
+  #   spike-marketplace-packaging-delta.md (2026-04-28); Pattern A chosen
+  #   (workflow-as-reference) per project_marketplace_structural_adoption.md
+  # Pre-test gate: COMPLETE 2026-04-29 (49/49 cells = 4 across both rounds, rubric calibrated)
+  # Migration order (per architecture §"Story Sequencing"):
+  #   Emma (POC) → Wade ‖ Mila → Isla ‖ Noah ‖ Max → Liam (HC-schema-heaviest, closes E2)
+  # E6 (Marketplace Acceptance) is TRICKLE epic — outside sprint cadence
+  #   (reviewer-cycle latency) — do not include in sprint capacity planning
+  # Distinct from prior `v63-` initiative (v6.3.0 adoption / 4.0.0 release).
+  # `i97-` prefix uses initiative-ID convention (precedents: p5-, lint-, mig-test-)
+  # 8 reviewer cues recorded in rubric §"Status" for E1+ post-migration scoring
+  # Added 2026-04-29 by Bob via bmad-sprint-planning workflow
+  # ============================================================
+
+  # Epic 1: Migration Foundation Ready (2 stories)
+  # Story 1.2 satisfied via rubric pre-test (Round 1 Emma+Liam + Round 2 remaining 5)
+  # — completed 2026-04-29 outside Bob CS; rubric `draft → calibrated`.
+  # Epic 1 in-progress because Story 1.2 done; Story 1.1 still backlog.
+  i97-epic-1: done
+  i97-1-1-migration-tooling-foundation-scaffolded: done
+  i97-1-2-personality-rubric-calibration-via-dissimilar-personality-pair: done
+  i97-epic-1-retrospective: optional
+
+  # Epic 2: Vortex Agent Conversions Complete (7 stories — atomic-by-agent commit per ADR-004)
+  # Branch: i97-{first-name}-conversion (one PR per agent)
+  # Sequence: 2.1 Emma POC (sets per-agent dev cycle) → 2.2 Wade ‖ 2.3 Mila →
+  #   2.4 Isla ‖ 2.5 Noah ‖ 2.6 Max → 2.7 Liam (HC-schema-heaviest, closes E2)
+  i97-epic-2: in-progress
+  i97-2-1-convert-emma-contextualization-expert-proof-of-concept: in-progress
+  i97-2-2-convert-wade-lean-experiments-specialist: backlog
+  i97-2-3-convert-mila-research-convergence-specialist: backlog
+  i97-2-4-convert-isla-discovery-empathy-expert: backlog
+  i97-2-5-convert-noah-production-intelligence-specialist: backlog
+  i97-2-6-convert-max-learning-decision-expert: backlog
+  i97-2-7-convert-liam-hypothesis-engineer-hc-schema-heaviest-closes-e2: backlog
+  i97-epic-2-retrospective: optional
+
+  # Epic 3: CI Gate Productionization (3 stories — parity + Covenant + reference integrity)
+  # Three verification harnesses per ADR-003 (parity, Covenant survival, personality preservation)
+  i97-epic-3: backlog
+  i97-3-1-ci-infrastructure-spike: backlog
+  i97-3-2-productionize-parity-covenant-gates: backlog
+  i97-3-3-productionize-reference-integrity-gate: backlog
+  i97-epic-3-retrospective: optional
+
+  # Epic 4: Operator Covenant Survival (2 stories)
+  # Story 4.1 authors per-Right matrix → ADR-005 status `proposed → accepted`
+  # Story 4.2 executes cell-level non-regression rule (NFR7) per ADR-005
+  i97-epic-4: backlog
+  i97-4-1-per-right-covenant-matrix-authoring: backlog
+  i97-4-2-covenant-cell-re-audit-execution: backlog
+  i97-epic-4-retrospective: optional
+
+  # Epic 5: Internal Release (4.1.0 to npm + GitHub) (2 stories)
+  # Operator-controllable; precedes E6 trickle
+  i97-epic-5: backlog
+  i97-5-1-4-1-0-release-tag-changelog-npm-publish: backlog
+  i97-5-2-github-4-1-0-release-notes-marketplace-json-verification: backlog
+  i97-epic-5-retrospective: optional
+
+  # Epic 6: Marketplace Acceptance (1 story — TRICKLE outside sprint cadence)
+  # Reviewer-dependent; absorbs I95 smoke-test scope per backlog re-scoping 2026-04-28
+  # Track separately from sprint capacity — single story, indeterminate timeline
+  i97-epic-6: backlog
+  i97-6-1-marketplace-re-submission-reviewer-cycle-i95-smoke-test-absorption: backlog
+  i97-epic-6-retrospective: optional
