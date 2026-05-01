@@ -214,7 +214,9 @@ The skill's standard categories (Data, Auth, API, Frontend, Infrastructure) are 
 - CI gate runs against full project tree; hook runs against staged files only — different scopes serve different purposes.
 - The script is the same; the invocation context differs.
 
-**Coverage** (per NFR10): test paths under `tests/`, slash-command wrappers under `.claude/skills/bmad-agent-bme-*/`, retrospective citations in `_bmad-output/implementation-artifacts/*-retro-*.md`, audit report citations in `_bmad-output/planning-artifacts/convoke-report-*-audit-*.md`, Compliance Checklist file references.
+**Coverage** (per NFR10): test markdown documentation under `tests/` (`.md` files only — see Story i97-1.1 Round 1 review decision D4 for narrowing rationale: NFR10's intent is documentation cross-references, not source-code string literals; `.js` test files contain markdown-link patterns inside fixture string data that produce false positives), slash-command wrappers under `.claude/skills/bmad-agent-bme-*/`, retrospective citations in `_bmad-output/implementation-artifacts/*-retro-*.md`, audit report citations in `_bmad-output/planning-artifacts/convoke-report-*-audit-*.md`, Compliance Checklist file references.
+
+**Filter:** refs containing `{{` or `}}` template placeholder syntax are skipped (Story i97-1.1 Round 1 review decision D5). These are template-engine syntax (e.g. `{{path}}` placeholders in `bmad-document-project/templates/`), not real references.
 
 **Affects:** FR24-25, NFR10-12.
 **Provided by Starter:** N/A.
