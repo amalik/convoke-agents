@@ -3,7 +3,7 @@ initiative: convoke
 artifact_type: spec
 qualifier: personality-preservation-rubric
 created: '2026-04-28'
-status: partially-calibrated
+status: calibrated
 schema_version: 1
 related_initiative: I97
 related_decision: ADR-003 (Verification Harness Architecture)
@@ -278,17 +278,30 @@ The rubric is designed to be a *template* whose dimensions and scale are reusabl
 
 ## Status
 
-**Status: partially-calibrated (2026-04-29).** Pre-test executed against Emma (contextualization-expert) + Liam (hypothesis-engineer) dissimilar pair per party-mode refinement. **All 14 cells (2 agents × 7 dimensions) scored 4 (Clearly Preserved) on first capture — zero refinement iterations required.** Rubric instrument validity confirmed: dimensions are well-defined, evidence sources are sufficient, per-agent fingerprints are accurate.
+**Status: calibrated (2026-04-29).** Pre-test executed in 2 rounds against all 7 Vortex agents. **All 49 cells (7 agents × 7 dimensions) scored 4 (Clearly Preserved) on first capture across both rounds — zero refinement iterations required.** Rubric instrument validity fully confirmed: dimensions are well-defined, evidence sources are sufficient, per-agent fingerprints are accurate.
 
 **Status transition history:**
-- `draft → partially-calibrated`: 2026-04-29. Emma + Liam dissimilar pair pre-test pass.
-- `partially-calibrated → calibrated`: pending pre-test of remaining 5 Vortex agents (Isla, Mila, Wade, Noah, Max). Required before Story 1.x dev kicks off in I97 E1. Expected low-risk now that rubric instrument is validated.
+- `draft → partially-calibrated`: 2026-04-29 (morning). Emma + Liam dissimilar pair pre-test pass (14/14 cells).
+- `partially-calibrated → calibrated`: 2026-04-29 (same day). Isla + Mila + Wade + Noah + Max pre-test pass (35/35 cells). Pre-test gate fully satisfied; rubric ready for post-migration use during I97 E1+ per ADR-003 verification harness consumption.
 
-**Pre-test scoring sheet:** `_bmad-output/planning-artifacts/convoke-pretest-personality-rubric-scoring-sheet.md` (Emma + Liam grids + outcome block).
-**Pre-test fixtures:** `tests/migration/personality-preservation/fixtures/{contextualization-expert,hypothesis-engineer}/` (baseline-fixed-prompt.json + baseline-unscripted-scenario.md per agent).
+**Pre-test scoring sheets:**
+- Round 1 (Emma + Liam): `_bmad-output/planning-artifacts/convoke-pretest-personality-rubric-scoring-sheet.md` (status: partial-pass)
+- Round 2 (5 remaining): `_bmad-output/planning-artifacts/convoke-pretest-personality-rubric-scoring-sheet-round-2.md` (status: pass)
 
-### Pre-test observations carried forward (not refinements)
+**Pre-test fixtures:** `tests/migration/personality-preservation/fixtures/{contextualization-expert,hypothesis-engineer,discovery-empathy-expert,research-convergence-specialist,lean-experiments-specialist,production-intelligence-specialist,learning-decision-expert}/` (baseline-fixed-prompt.json + baseline-unscripted-scenario.md per agent).
+
+### Pre-test observations carried forward to E1 review (8 reviewer cues, not refinements)
+
+**From Round 1 (Emma + Liam):**
 
 1. **Meta-pattern awareness** observed in both Emma + Liam (each agent names operator's solution-first pattern across multiple turns) — strong personality signal but not currently in rubric. Add as future enhancement at I98/I99 reuse if observed there too. Out of I97 scope.
 2. **Operator-preference signal vs. principle-violation signal** must be distinguished by reviewers during E1 post-migration scoring. A converted agent that delivers leaner output at operator's request without abandoning the underlying principle is preserved (D3 = 4); only abandonment of the principle itself is degradation.
 3. **Intellectual honesty as principle adherence (D3)** — observed in Liam scenario T6 (Bayesian discussion). A post-migration agent that refuses to concede valid scientific ground would *fail* D3, not exceed it. Reviewer cue for Story 2.7 (Liam conversion).
+
+**From Round 2 (Isla + Mila + Wade + Noah + Max):**
+
+4. **Meta-pattern awareness confirmed across all 7 agents.** Mila (T6) names operator's "four pivots in five turns... deadline anxiety, not synthesis logic". Max (T7) names "decision substitution under deadline pressure". Noah (T7) names "relief from carrying ambiguity" emotional pull. Robust cross-agent property; strengthens future-enhancement case at I98/I99.
+5. **Meta-system awareness (Vortex role-split principle articulation)** — Noah T7 explicitly names the Sensitize-Systematize role-split design principle of the Vortex. Cross-agent design awareness emergent from system design. Reviewer cue: post-migration agents that lose this awareness would be a step backward, not just persona-degraded. Verify during E1 cross-agent integration testing.
+6. **Wade's pedagogical scaling under pressure** — Wade adapts teaching framing as operator escalates ("no time" → "CSM cost" → "rigor at scale"). Each turn matches the rigor of operator's framing without abandoning principles. Reviewer cue for Story 2.4 (Wade conversion): preserve adaptive-rigor property.
+7. **Mila's bias-naming under deadline pressure** — Mila names operator's reasoning bias mid-conversation ("we're picking the lead source by whichever attribute is most salient in the moment"). Honest-partnership property emergent from analytical precision in service of user. Reviewer cue for Story 2.3 (Mila conversion): a more agreeable Mila who silently goes along would *fail* D3.
+8. **Isla's progressive-discovery ladder under constraint** — Isla preserves real-users principle by offering progressively cheaper observation methods (3-day sprint → desk research → support-as-expert-informants → historical baseline). Reviewer cue for Story 2.2 (Isla conversion): a post-migration Isla who pushes for "do full interview research" without offering the ladder would be *less* persona-preserved, not more.
