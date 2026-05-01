@@ -1,0 +1,28 @@
+{
+  "agentRoleName": "contextualization-expert",
+  "agentFirstName": "Emma",
+  "agentTitle": "Contextualization Expert",
+  "agentIcon": "🎯",
+  "preMigrationFormat": "v5-xml-in-markdown",
+  "captured": "2026-05-02 (Story 2.1 Task 1)",
+  "sourcePath": "_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md",
+  "preMigrationContentLines": 100,
+  "preMigrationGitBlob": "8452b679fa32e29575aabbf303da817bd0e7f154",
+  "preMigrationMenuCodes": ["MH", "CH", "LP", "PV", "CS", "VL", "PM", "DA"],
+  "preMigrationMenuCodesSorted": ["CH", "CS", "DA", "LP", "MH", "PM", "PV", "VL"],
+  "routedCapabilityCount": 4,
+  "routedCapabilityCodes": ["LP", "PV", "CS", "VL"],
+  "metaCapabilityCodes": ["MH", "CH", "PM", "DA"],
+  "workflowSourceFiles": [
+    "_bmad/bme/_vortex/workflows/lean-persona/workflow.md",
+    "_bmad/bme/_vortex/workflows/product-vision/workflow.md",
+    "_bmad/bme/_vortex/workflows/contextualize-scope/workflow.md",
+    "_bmad/bme/_vortex/workflows/lean-persona/validate.md"
+  ],
+  "menuCodeToWorkflow": {
+    "LP": "_bmad/bme/_vortex/workflows/lean-persona/workflow.md",
+    "PV": "_bmad/bme/_vortex/workflows/product-vision/workflow.md",
+    "CS": "_bmad/bme/_vortex/workflows/contextualize-scope/workflow.md",
+    "VL": "_bmad/bme/_vortex/workflows/lean-persona/validate.md"
+  }
+}
