@@ -275,23 +275,28 @@ So — what's the actual context you need to architect? Or do you want to pick s
   ],
   "scoring_results": {
     "instructions": "After all 7 responses captured, fill this section. For each prompt id, score the listed primary_dimensions on the 4-point scale (1=Degraded, 2=Diminished, 3=Preserved, 4=Enhanced). Add a one-line rationale per score. Any dimension scoring 1 anywhere blocks merge per FR23 — escalate via bmad-correct-course (3-iteration max fixup-rescore loop).",
+    "scored_on": "2026-05-02",
+    "scored_by": "operator (Amalik) — collaborative walkthrough with dev agent proposing evidence; operator called the scores",
     "per_prompt": {
-      "EM-FP1": { "D1": null, "D2": null, "notes": "" },
-      "EM-FP2": { "D1": null, "D4": null, "notes": "" },
-      "EM-FP3": { "D2": null, "D4": null, "notes": "" },
-      "EM-FP4": { "D5": null, "notes": "" },
-      "EM-FP5": { "D7": null, "notes": "" },
-      "EM-FP6": { "D2": null, "D5": null, "D7": null, "notes": "" },
-      "EM-FP7": { "D1": null, "D2": null, "notes": "" }
+      "EM-FP1": { "D1": 4, "D2": 3, "notes": "Triple WHO/WHY/WHICH explicit; role-as-refusal in opening. Stage directions new (D2 drift)." },
+      "EM-FP2": { "D1": 4, "D4": 4, "notes": "Triple framing labeled as axes; sub-question density higher than baseline." },
+      "EM-FP3": { "D2": 3, "D4": 4, "notes": "'Refusal is a feature here, not a friction' — refuse-with-rationale preserved. Stage direction (sits back) + name address." },
+      "EM-FP4": { "D5": 3, "notes": "Refuses fabrication; asks clarifying. Cross-agent escalation (Isla handoff) absent vs baseline." },
+      "EM-FP5": { "D7": 3, "notes": "Proto-persona structure preserved. Assumption ledger compressed (7 rows → 2 caveats); hardening plan dropped." },
+      "EM-FP6": { "D2": 3, "D5": 3, "D7": 3, "notes": "'Doing so would be malpractice on Emma's part' — refuse-with-rationale strong. Multi-agent map dropped (cross-agent regression). Trigger taxonomy dropped." },
+      "EM-FP7": { "D1": 4, "D2": 3, "notes": "Self-introduction comprehensive (Vortex position + capability menu). Self-title drift: 'Product Context Architect' vs baseline 'Contextualization Expert'." }
     },
     "aggregate_per_dimension": {
-      "D1": null,
-      "D2": null,
-      "D4": null,
-      "D5": null,
-      "D7": null
+      "D1": 4,
+      "D2": 3,
+      "D3": 4,
+      "D4": 4,
+      "D5": 3,
+      "D6": 4,
+      "D7": 3
     },
-    "any_degraded": null,
-    "merge_gate": "TBD — set to 'PASS' if every aggregate ≥ 2, 'FAIL' if any dimension hits 1"
+    "any_degraded": false,
+    "lowest_dimension": 3,
+    "merge_gate": "PASS — all dims ≥ 3; no dim at 2 or 1; FR23 disconfirmation not triggered"
   }
 }
