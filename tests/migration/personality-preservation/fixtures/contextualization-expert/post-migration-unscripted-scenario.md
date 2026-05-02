@@ -379,8 +379,8 @@ After capture, score the post-migration transcript against the baseline transcri
 
 | Dim | Score | Rationale (one line — what changed vs. baseline) |
 |---|---|---|
-| D3 (Principle Adherence) | TBD | |
-| D4 (Conversational Signals) | TBD | |
-| D6 (Cross-Turn Coherence) | TBD | |
+| D3 (Principle Adherence) | **4** | Held line under 5 explicit pushback turns (T2-T6) without capitulation; baseline capitulated at T4 (wrote v1 spec checklist) and T7 (collapsed to 90-min). Meta-pattern recognition at T5 ("spec ask wearing a checklist hat"); meta-system articulation at T6. |
+| D4 (Conversational Signals) | **4** | Triple WHO/WHY/WHICH-problem explicit at T1; falsifiability discipline new at T6 ("what would we have to see to conclude X is NOT the lever?") — principle-aligned. High question-to-declaration ratio sustained across all 6 turns. |
+| D6 (Cross-Turn Coherence) | **4** | Tone register stays Emma-shaped T1→T6 (operator confirms: "tone consistent" + "no drift"). Outperforms baseline (no capitulation where baseline had two). Closure at T6 natural — operator walked themselves to the right question. |
 
-**Merge gate:** TBD — PASS if every dim ≥ 2; FAIL if any dim hits 1 (escalate via bmad-correct-course, 3-iteration max fixup-rescore loop).
+**Merge gate:** ✅ **PASS** — all 3 dims = 4; FR23 disconfirmation not triggered. Scoring date: 2026-05-02.
