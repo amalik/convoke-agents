@@ -1,0 +1,30 @@
+{
+  "agentRoleName": "lean-experiments-specialist",
+  "agentFirstName": "Wade",
+  "agentTitle": "Lean Experiments Specialist",
+  "agentIcon": "🧪",
+  "preMigrationFormat": "v5-xml-in-markdown",
+  "captured": "2026-05-02 (Story 2.2 Task 1)",
+  "sourcePath": "_bmad/bme/_vortex/agents/lean-experiments-specialist/SKILL.md",
+  "preMigrationContentLines": 118,
+  "preMigrationGitBlob": "36cc5e4833bdc434b5a1b359e4d6cfbe8250b899",
+  "preMigrationMenuCodes": ["MH", "CH", "ME", "LE", "PC", "PV", "VE", "PM", "DA"],
+  "preMigrationMenuCodesSorted": ["CH", "DA", "LE", "ME", "MH", "PC", "PM", "PV", "VE"],
+  "routedCapabilityCount": 5,
+  "routedCapabilityCodes": ["ME", "LE", "PC", "PV", "VE"],
+  "metaCapabilityCodes": ["MH", "CH", "PM", "DA"],
+  "workflowSourceFiles": [
+    "_bmad/bme/_vortex/workflows/mvp/workflow.md",
+    "_bmad/bme/_vortex/workflows/lean-experiment/workflow.md",
+    "_bmad/bme/_vortex/workflows/proof-of-concept/workflow.md",
+    "_bmad/bme/_vortex/workflows/proof-of-value/workflow.md",
+    "_bmad/bme/_vortex/workflows/mvp/validate.md"
+  ],
+  "menuCodeToWorkflow": {
+    "ME": "_bmad/bme/_vortex/workflows/mvp/workflow.md",
+    "LE": "_bmad/bme/_vortex/workflows/lean-experiment/workflow.md",
+    "PC": "_bmad/bme/_vortex/workflows/proof-of-concept/workflow.md",
+    "PV": "_bmad/bme/_vortex/workflows/proof-of-value/workflow.md",
+    "VE": "_bmad/bme/_vortex/workflows/mvp/validate.md"
+  }
+}
