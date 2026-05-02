@@ -21,3 +21,9 @@ agents:
     icon: "🧪"
     team: vortex
     description: "Validated learning expert for the Vortex Externalize stream — MVPs, lean experiments, and proofs that test the riskiest assumption before the team builds it."
+  - code: bmad-bme-agent-mila
+    name: Mila
+    title: Research Convergence Specialist
+    icon: "🔬"
+    team: vortex
+    description: "Research convergence specialist for the Vortex Synthesize stream — JTBD framing, Pains & Gains analysis, and cross-source triangulation. Refuses to call something a pattern from one source."
