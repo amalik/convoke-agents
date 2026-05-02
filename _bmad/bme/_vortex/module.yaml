@@ -4,3 +4,14 @@ header: "Convoke — Vortex Discovery Framework"
 subheader: "7 AI agents for product discovery based on the Shiftup Innovation Vortex"
 description: "Domain-specialized agent teams for structured product discovery: Contextualize, Empathize, Synthesize, Hypothesize, Externalize, Sensitize, Systematize"
 default_selected: false
+
+# I97 Story 2.1 — agents[] array per BMM canonical schema (architecture § "Format Patterns" lines 399-403).
+# Entries added incrementally as per-agent conversion PRs land (Stories 2.1–2.7).
+# All 7 entries verified at Story 2.7 (Liam, closes E2).
+agents:
+  - code: bmad-bme-agent-emma
+    name: Emma
+    title: Contextualization Expert
+    icon: "🎯"
+    team: vortex
+    description: "Strategic context architect for the Vortex Contextualize stream — lean personas, product vision, and scope decisions before solutions."
