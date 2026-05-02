@@ -19,3 +19,5 @@ A single markdown document at `{output_folder}/validate-experiment-{source-slug}
 ## Activation
 
 Load this file when the parent agent's capability menu routes to `VE`. Then invoke the workflow at `_bmad/bme/_vortex/workflows/mvp/validate.md` (note: validation lives under `mvp/` directory but applies to experiment designs from `LE` as well — Pattern-C-friendly indirection). The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.
+
+**Workflow status (as of 2026-05-02):** the underlying step-file workflow at `mvp/validate.md` is a v1.2.0 placeholder rather than a fully-specified 6-step sequence. For now, Wade can still help via `[CH] Chat with Wade` to walk an experiment design through a rigor pass conversationally — surface the design, name its riskiest-assumption / threshold / decision-rule cells, and tighten any 🔴 vanity-or-vague findings in dialogue. The structured artifact-emitting form ships when the workflow is implemented; this is the OC-R3 disclosure (operator deserves to know what's promised vs what's implementable today).
