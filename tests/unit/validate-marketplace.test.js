@@ -325,18 +325,42 @@ describe('validate-marketplace CLI (Story v63-3-1)', () => {
     }
   });
 
-  // ── Test 13: frontmatter name matches directory basename (AC3 normalization) ──
-  it('AC3: migrated SKILL.md files in live repo have frontmatter name matching directory basename', async () => {
+  // ── Test 13: frontmatter name follows naming convention (AC3 normalization
+  // OR BMB canonical per I97 Story 2.x ADR-001 hybrid naming) ──
+  it('AC3: migrated SKILL.md files have frontmatter name matching directory basename OR BMB canonical (post-I97)', async () => {
     // Operates against the actual migrated repo — not a tmpDir fixture.
-    // This test LOCKS the normalization: name: <agent-id> (hyphenated) per AC3.
+    //
+    // Pre-I97 invariant (legacy): name == directory-basename (e.g., 'contextualization-expert')
+    // Post-I97 invariant per ADR-001 hybrid naming (Story 2.1+):
+    //   name == 'bmad-bme-agent-{firstName-lowercase}' (e.g., 'bmad-bme-agent-emma')
+    // The slash-command alias under .claude/skills/bmad-agent-bme-{role}/ keeps
+    // the role-based name (compat alias preserved per ADR-001).
+    //
+    // During the I97 migration window (Stories 2.1-2.7), some agents are
+    // converted (BMB canonical) and others not yet (legacy). This test
+    // accepts EITHER invariant — once Story 2.7 closes E2, all 7 agents
+    // will use BMB canonical and this test could be tightened.
+    //
+    // Source of truth for the firstName→agentId mapping: agent-registry.js
+    // AGENTS array. The test lazily resolves first-name from the registry.
+    const { AGENTS } = require('../../scripts/update/lib/agent-registry');
+    const agentIdToFirstName = Object.fromEntries(AGENTS.map(a => [a.id, a.name]));
+
     for (const agentId of AGENT_IDS) {
       const skillMdPath = path.join(PACKAGE_ROOT, '_bmad/bme/_vortex/agents', agentId, 'SKILL.md');
       const content = fs.readFileSync(skillMdPath, 'utf8');
       const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
       assert.ok(match, `frontmatter missing in ${agentId}/SKILL.md`);
       const fm = yaml.load(match[1]);
-      assert.equal(fm.name, agentId,
-        `frontmatter name must equal directory basename; ${agentId}/SKILL.md has name="${fm.name}"`);
+
+      const firstName = agentIdToFirstName[agentId];
+      const bmbCanonical = `bmad-bme-agent-${firstName.toLowerCase()}`;
+      const validNames = [agentId, bmbCanonical];
+
+      assert.ok(
+        validNames.includes(fm.name),
+        `frontmatter name must equal '${agentId}' (legacy) OR '${bmbCanonical}' (BMB canonical per ADR-001); ${agentId}/SKILL.md has name="${fm.name}"`,
+      );
     }
   });
 
