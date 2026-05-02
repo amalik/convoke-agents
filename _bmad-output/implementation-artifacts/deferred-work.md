@@ -5,6 +5,17 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of i97-2-2-convert-wade-lean-experiments-specialist (2026-05-02 R1)
+
+Round 1 review — Acceptance Auditor APPROVE 3 LOW · Blind Hunter CHANGES REQUESTED 5 HIGH/4 MED/3 LOW · Edge Case Hunter CHANGES REQUESTED 3 HIGH/2 MED. Triage: 3 dismissed, 5 decision-needed, 5 patch, 4 deferred (below).
+
+- **post-migration-fixed-prompt.json not strictly valid JSON** [`tests/migration/personality-preservation/fixtures/lean-experiments-specialist/post-migration-fixed-prompt.json`] — multi-line `"response"` strings contain literal unescaped newlines + `"`; `JSON.parse` fails. **Inherited convention from Emma's baseline-fixed-prompt.json** (and consequently from Story 2.1). Backlog candidate for one-time JSON-normalization across all personality fixtures (Emma + Wade baseline + Wade post-migration; Mila/Liam/Isla/Noah/Max baselines as their stories land). Risk: any future tool that `JSON.parse`s these fixtures will crash — currently nothing does. Not a Wade-specific regression.
+- **sprint-status hunk shows backlog→review skipping in-progress intermediate** [`_bmad-output/implementation-artifacts/sprint-status.yaml`] — git diff base for this review (`988ca92a`) was a merge commit; the `in-progress` flip happened in a commit before that base and isn't visible. Cosmetic git-history note only; sprint-status semantics are correct in working tree. Not actionable retroactively.
+- **test-fixture-isolation rule violated by Wade parity tests (inherited from Emma's Story 2.1 pattern)** [`tests/integration/vortex-parity.test.js:181-273` Wade describe-block] — Wade tests assert against live `_bmad/bme/_vortex/agents/lean-experiments-specialist/SKILL.md` and on-disk workflow source files; no `cwd: tmpDir` boundary fixture. Story 2.1 introduced the pattern; AC9 explicitly defers fixture-isolation hardening to Story 3.2 productionization. Same-shape violation will appear for Mila/Liam/Isla/Noah/Max as their describe-blocks are added; Story 3.2 should hoist live-tree access into a shared boundary fixture all 7 describe-blocks consume.
+- **Predecessor Round-2 reviewer cue contains "(sic — should read 2.2)" typo** [story 2.2 spec Dev Notes line 281] — typo lives in the upstream Round-2 reviewer cue, corrected inline rather than fixed at source. Out of Story 2.2 implementation scope; fix when whoever owns the rubric Round-2 cue file next touches it (no dedicated story warranted).
+
+---
+
 ## Deferred from: code review of v63-5b-1-author-and-validate-changelog (2026-04-27 R1+R2)
 
 R1+R2 review — R1 mandatory (8 patches across 3 layers); R2 mandatory per `code-review-convergence` rule (R1 had 1 HIGH); R2 converged with 1 patch (wording-only, no structural changes → R3 NOT triggered). Final cumulative: 7 patches (6 R1 + 1 R2) + 2 deferred + 9 dismissed (5 R1 + 4 R2 — multiple LOWs across both rounds).
