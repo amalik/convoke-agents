@@ -1,6 +1,6 @@
 # Story i97-2.1: Convert Emma (contextualization-expert) — Proof-of-Concept
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -402,6 +402,45 @@ Plus story-specific:
   - [ ] 12.2 All ACs (AC1–AC18) demonstrably satisfied
   - [ ] 12.3 Update sprint-status.yaml: `i97-2-1-convert-emma-contextualization-expert-proof-of-concept: in-progress → review`; `i97-epic-2: backlog → in-progress`
 
+### Review Findings (Round 1 — 2026-05-02)
+
+**Source:** `bmad-code-review` skill, 3 parallel adversarial reviewers (Blind Hunter / Edge Case Hunter / Acceptance Auditor). Total raised: 32. After dedupe + dismiss: 7 dismissed, 4 patch, 3 decision-needed, 18 deferred.
+
+**Decision-needed:**
+- [ ] [Review][Decision] I100 backlog row absence — Spec AC8 calls for I100 collision flag in PR description; backlog file not edited in this PR. Decide: add I100 row update to this PR, capture in PR description text only, or defer. ([source: Acceptance Auditor F1])
+- [ ] [Review][Decision] `refresh-installation.js` scope expansion authorization — Operator chose Option C 2026-05-02 (format-agnostic template fix). Reviewer flags this exceeds spec's atomic-by-agent boundary; a stricter reading of AC17 / Failure Mode 2 would have required `bmad-correct-course` escalation. Decide: accept operator decision-of-record as authorization, or retroactively log correct-course note. ([source: Acceptance Auditor F2])
+- [ ] [Review][Decision] AC14 audit citation N/A note — Spec AC14 calls for explicit "N/A — no Emma-specific line anchors found" note in PR description; not present. Decide: add to PR body, add to Dev Agent Record, or dismiss since `grep` evidence is in Task 9 commit. ([source: Acceptance Auditor F6])
+
+**Patch:**
+- [x] [Review][Patch] `module.yaml` description finalized — operator selected Draft A: `"Strategic context architect for the Vortex Contextualize stream — lean personas, product vision, and scope decisions before solutions."` Single-line scalar replaces the prior folded-scalar placeholder. [`_bmad/bme/_vortex/module.yaml:17`] ([source: Edge Case Hunter F11])
+- [x] [Review][Patch] R2-P4 regression test strengthened — reviewer's premise incorrect; existing Test 9 already catches the regression. Resolution: strengthened the test's comment to make the catch explicit (input has codes ONLY inside fence; result strictly requires fences-not-stripped behavior). [`tests/integration/vortex-parity.test.js:144-167`] ([source: Blind Hunter F5])
+- [x] [Review][Patch] D3/D6 aggregation methodology clarified — added "Aggregation methodology" paragraph to scoring report after per-dim summary table. [`convoke-report-personality-rubric-scoring-emma-conversion-2026-05-02.md`] ([source: Blind Hunter F9])
+- [x] [Review][Patch] Self-check Mode 2 claim reworded with explicit FR23 score threshold — "trigger threshold = any dim at 1 (Degraded) per FR23". [Dev Agent Record Completion Notes section] ([source: Blind Hunter F13])
+
+**Deferred (pre-existing pattern / Story 3.2 productionization scope / cross-story refactor):**
+- [x] [Review][Defer] `parity-harness.js` `extractV5MenuCodes` multi-`<menu>` and missing-`<menu>` edge cases — comment vs code mismatch; defer to Story 3.2 productionization [parity-harness.js:1045-1054] ([Blind F1, Edge F1])
+- [x] [Review][Defer] `parity-harness.js` format detection over-strips fences for v5 SKILL.md — `stripCodeRegions(rawContent)` before `<agent>` test misses fenced canonical structure; impacts un-converted agents only [parity-harness.js:941] ([Blind F2])
+- [x] [Review][Defer] `agentRoleName` regex restrictive whitelist (no underscore/uppercase) — current corpus fine [parity-harness.js:862] ([Blind F3])
+- [x] [Review][Defer] `runParityCheck` "not-yet-converted" label ambiguous (overloaded for missing-file vs unrecognized) — Story 3.2 productionization owns labels [parity-harness.js:946-1005] ([Blind F6])
+- [x] [Review][Defer] `stripCodeRegions` tab-indented blocks edge case — rare in current corpus [parity-harness.js:1149-1167] ([Blind F7])
+- [x] [Review][Defer] `module-help.csv` LF line endings + missing menu-code column population — schema TBD as more agents added; CSV schema choice (BMM canonical) per AC8 [module-help.csv] ([Blind F8, Edge F4])
+- [x] [Review][Defer] Sprint-status flipped to `review` in same workflow as authorship — process concern; project-wide pattern [sprint-status.yaml] ([Blind F10])
+- [x] [Review][Defer] `validate-marketplace.test.js` dual-name accept (legacy OR BMB canonical) + 3 sources of truth for canonical name — architectural during 2.1-2.7 migration window per ADR-001 hybrid naming [validate-marketplace.test.js:325-360] ([Blind F11, Edge F6, Edge F8])
+- [x] [Review][Defer] `runParityCheck` input handling asymmetry between v5/v63 branches — Story 3.2 [parity-harness.js:953,965] ([Blind F12])
+- [x] [Review][Defer] `extractV63MenuCodes` regex matches Code header column with separator-line variations — Story 3.2 productionization [parity-harness.js:1100-1103] ([Edge F3])
+- [x] [Review][Defer] `vortex-parity.test.js` `JSON.parse` outside `it()` blocks — fixture corruption hides per-test failure; Story 3.2 test-pattern hardening [vortex-parity.test.js:49] ([Edge F5])
+- [x] [Review][Defer] V63 menu-code regex over-matches continuation rows / `<br>` cells in tables — Story 3.2 [parity-harness.js:873] ([Edge F7])
+- [x] [Review][Defer] `references/validate-context.md` workflow path not validated by capability-prompt validator — could add validation step [validate-context.md] ([Edge F9])
+- [x] [Review][Defer] `runParityCheck` `tmpDir` contract not honored (JSDoc says accepted, code uses live PROJECT_ROOT) — Story 3.2 [parity-harness.js:894-897] ([Edge F10])
+- [x] [Review][Defer] `extractV63MenuCodes` strips fences BEFORE finding `## Capabilities` heading — fenced-Capabilities-heading edge case [parity-harness.js:1079-1085] ([Edge F12])
+- [x] [Review][Defer] `stripCodeRegions` first-line indented detection edge case [parity-harness.js:1149-1166] ([Edge F13])
+- [x] [Review][Defer] `vortex-parity.test.js` hardcodes "emma" rather than reading from fixture — Story 2.2 refactor opportunity when authoring per-agent describe blocks [vortex-parity.test.js:86] ([Edge F14])
+- [x] [Review][Defer] Untracked report files not validated by artifact-governance taxonomy test — separate artifact-governance scope [convoke-report-*.md] ([Edge F15])
+
+**Dismissed:** 7 — Blind Hunter F4 (regex `<r` self-corrected); Edge Case F2 (wrapper `<agent-activation>` directive is internal, not pointing at canonical section); Acceptance Auditor F3 (validate-marketplace relaxation atomic per NFR12), F4 (D5/D7 within FR23 threshold), F5 (D2 within spec letter), F7 (Covenant scaffolding-only per spec OR clause), F8 (OC-R3 operator-decision supersedes spec preferred resolution).
+
+**Final reviewer verdict (Acceptance Auditor):** SHIP-WITH-CAVEATS. All 18 ACs substantively satisfied. Hard gates pass: zero XML in SKILL.md, BMB-canonical naming, parity 9/9, lint clean, ref-integrity 75/0, personality lowest dim = 3 (FR23 not triggered).
+
 ## Dev Notes
 
 ### Relevant architecture patterns and constraints
@@ -529,19 +568,85 @@ Full list: rubric § "Status" of [`convoke-spec-personality-preservation-rubric.
 
 ### Agent Model Used
 
-_To be filled by dev agent_
+Amelia (dev) — Claude Opus 4.7 (1M context). Scoring walkthrough ran with operator (Amalik) calling each dimension score; same-LLM-as-implementation bias caveat documented in [scoring report](../planning-artifacts/convoke-report-personality-rubric-scoring-emma-conversion-2026-05-02.md).
 
 ### Debug Log References
 
-_To be filled by dev agent — capture pre-migration baselines, BMB output diffs, fixup actions, parity test runs, post-migration personality scoring, reference-integrity output, lint output_
+- Pre-migration menu codes captured at [contextualization-expert-baseline.json](../../tests/integration/fixtures/vortex-parity/contextualization-expert-baseline.json) — 8 codes (MH/CH/LP/PV/CS/VL/PM/DA), 4 routed (LP/PV/CS/VL), 4 workflow paths
+- **AC14 (audit citation refresh):** N/A — `grep -rE 'contextualization-expert/SKILL\.md#' _bmad-output/planning-artifacts/` returned zero Emma-specific anchor citations to refresh. AC14 satisfied by absence-of-target.
+- Fixup checklist 4 categories all PASS — see Task 3 commits
+- Parity tests: 9/9 pass for Emma ([vortex-parity.test.js](../../tests/integration/vortex-parity.test.js))
+- Post-migration personality scoring: lowest dim = 3 (Mostly Preserved); D1/D3/D4/D6 = 4; D2/D5/D7 = 3; FR23 disconfirmation NOT triggered
+- Reference integrity: 75 refs / 0 broken
+- Lint: 0 warnings on touched files
+- Unit tests: 681/682 pass (1 pre-existing skip, 0 fail)
+- Integration tests: 102/102 pass
 
 ### Completion Notes List
 
-_To be filled by dev agent — **especially the calibration data** (actual hours/days, surprises vs plan, recommendations for Stories 2.2-2.7)_
+**Calibration data for Stories 2.2-2.7:**
+
+**Effort vs estimate (Sprint 1, single story):**
+- Tasks 1-7 (capture baseline → conversion → fixup → capability prompts → manifests → wrapper → parity tests): ~1 working day actual
+- Tasks 8-11 (audit citations → ref-integrity/lint/regression → Covenant self-check → personality scoring): ~half a day actual (heavy operator-handoff at Task 8 personality capture)
+- Task 12 (DoD gate): ~1-2 hours
+- **Total: ~2 working days end-to-end** for the dev portion. Operator capture + scoring adds ~2 hours for Task 8.
+- Bob's 2-3x guidance for Sprint 1 was directionally right — actual was ~2x typical per-agent estimate.
+
+**What surprised me:**
+1. **Post-migration *outperforms* baseline on D6 (cross-turn coherence).** Baseline scenario had Emma capitulate at T4 (wrote v1 spec checklist) and T7 (collapsed to 90-min). Post-migration held the line through 5 pushback turns cleanly. Hypothesis: the v6.3+ `**CRITICAL Handling**` block ("DO NOT dive into a solution before WHO/WHY/WHICH-problem framing is established") is a stronger principle anchor than v5's step-counter activation.
+2. **Stage directions emerged as new persona behavior** post-migration (`*pauses*`, `*leans in*`, `*grins*`) — not in baseline, not in canonical SKILL.md. Voluntary embodiment from the v6.3+ outcome-based markdown. Affects D2 score (drift, not enhancement, since not documented in `## Communication Style`).
+3. **Wrapper template was misattributed.** During Story 2.1 Task 6, I (dev agent) edited Emma's slash-command wrapper to v6.3+ vocab. Tooling regenerated it back. I wrongly attributed this to an "operator revert" in the original Covenant self-check — the wrapper is gitignored and template-generated. Correction recorded in self-check 2026-05-02.
+4. **Cross-agent escalation regression** (D5/D7). Baseline EM-FP4 explicitly handed off to Isla; baseline EM-FP6 mapped Mary/John/Liam/Winston/Mila/Isla. Post-migration stays inside Emma's own LP/CS/PV/VL set. Aligns with rubric Round 2 reviewer cue #5. Carry-forward for Stories 2.2-2.7.
+
+**What took longer than estimated:**
+- Round 2 R2-P4 parity-harness regression (fence-stripping in `extractV5MenuCodes`) — caught at Task 1 implementation, not in Round 2 review. Same-LLM-as-implementation bias confirmed: Round 2 reviewers (Blind Hunter + Edge Case Hunter) didn't have project-context to catch this. **Recommendation for 2.2-2.7:** run parity-harness fixture extraction as part of Round 2 pre-dev review, not just after Task 1 implementation.
+
+**What was easier than estimated:**
+- Capability prompt authoring (4 × 21 lines). Pattern-C-friendly format compresses cleanly. Estimated 2 hr; actual ~45 min.
+
+**Recommendations for Stories 2.2-2.7:**
+1. **Explicitly score cross-agent escalation awareness during D5/D7 scoring.** Add a check: "does post-migration agent name/route to a sister agent when out-of-stream?" If 2+ agents fail this, escalate as systemic regression for I97 retro.
+2. **Run parity-harness fixture extraction as part of Round 2 pre-dev review.** Catches R2-P4-class regressions where Round 2 reviewers don't have project-context.
+3. **Track stage directions / emoji presence per agent.** If systematic across all 6 remaining conversions, log as v6.3+ format property; if agent-specific, log per-agent in Dev Agent Record.
+4. **Don't penalize lean-over-comprehensive compression as automatic D7 drift.** Post-migration Emma's leaner persona artifact is principle-aligned. Score against fingerprint, not baseline length.
+5. **Wrapper template fix already applied** (Story 2.1 scope-expansion). Stories 2.2-2.7 do NOT need to revisit `refresh-installation.js`. The template is now format-agnostic.
+6. **bmad-init walkthrough is the OC-R3 implementation** (operator decision Option A, 2026-05-02). Stories 2.2-2.7 use same delegation pattern; no per-agent fail-loud blocks needed.
+
+**Failure Handling Pattern modes encountered + resolutions:**
+- **Mode 2 (fixup misses persona drift; trigger threshold = any dim at 1 / Degraded per FR23):** None encountered. Lowest dim = 3 (Mostly Preserved); FR23 disconfirmation threshold not crossed.
+- **Mode 5 (operator unavailable for scoring):** N/A — operator available; scored 2026-05-02.
+- **Other modes:** None encountered.
+
+**Scope expansion in this PR (note in PR description):**
+- [refresh-installation.js](../../scripts/update/lib/refresh-installation.js) wrapper template updated to format-agnostic vocab (3 line changes across 3 template blocks). Justified because Emma's conversion surfaces the wrapper-template's stale `<activation>` reference; fixing in same PR closes OC-R5 cleanly. All 13 bme agent wrappers regenerate to format-agnostic vocab; Stories 2.2-2.7 do NOT need to revisit.
 
 ### File List
 
-_To be filled by dev agent — distinguishing new vs modified files; cite paths relative to repo root_
+**New files:**
+- [_bmad/bme/_vortex/agents/contextualization-expert/references/lean-persona.md](../../_bmad/bme/_vortex/agents/contextualization-expert/references/lean-persona.md) (capability prompt)
+- [_bmad/bme/_vortex/agents/contextualization-expert/references/product-vision.md](../../_bmad/bme/_vortex/agents/contextualization-expert/references/product-vision.md) (capability prompt)
+- [_bmad/bme/_vortex/agents/contextualization-expert/references/contextualize-scope.md](../../_bmad/bme/_vortex/agents/contextualization-expert/references/contextualize-scope.md) (capability prompt)
+- [_bmad/bme/_vortex/agents/contextualization-expert/references/validate-context.md](../../_bmad/bme/_vortex/agents/contextualization-expert/references/validate-context.md) (capability prompt)
+- [_bmad/bme/_vortex/module-help.csv](../../_bmad/bme/_vortex/module-help.csv) (manifest, BMM canonical schema)
+- [tests/integration/vortex-parity.test.js](../../tests/integration/vortex-parity.test.js) (parity tests for Emma + future agents)
+- [tests/integration/fixtures/vortex-parity/contextualization-expert-baseline.json](../../tests/integration/fixtures/vortex-parity/contextualization-expert-baseline.json) (parity baseline fixture)
+- [tests/migration/personality-preservation/fixtures/contextualization-expert/post-migration-fixed-prompt.json](../../tests/migration/personality-preservation/fixtures/contextualization-expert/post-migration-fixed-prompt.json) (post-migration capture + scores)
+- [tests/migration/personality-preservation/fixtures/contextualization-expert/post-migration-unscripted-scenario.md](../../tests/migration/personality-preservation/fixtures/contextualization-expert/post-migration-unscripted-scenario.md) (post-migration scenario + scores)
+- [_bmad-output/planning-artifacts/convoke-report-operator-covenant-self-check-emma-conversion-2026-05-02.md](../planning-artifacts/convoke-report-operator-covenant-self-check-emma-conversion-2026-05-02.md) (OC-R0..R7 self-check; both flags resolved)
+- [_bmad-output/planning-artifacts/convoke-report-personality-rubric-scoring-emma-conversion-2026-05-02.md](../planning-artifacts/convoke-report-personality-rubric-scoring-emma-conversion-2026-05-02.md) (full personality scoring sheet)
+
+**Modified files:**
+- [_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md](../../_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md) (v5 → v6.3+ conversion)
+- [_bmad/bme/_vortex/module.yaml](../../_bmad/bme/_vortex/module.yaml) (Emma `agents:` entry added)
+- [scripts/migration/format-conversion/parity-harness.js](../../scripts/migration/format-conversion/parity-harness.js) (R2-P4 fence-stripping regression fix in `extractV5MenuCodes`)
+- [tests/unit/validate-marketplace.test.js](../../tests/unit/validate-marketplace.test.js) (AC3 test updated to accept BMB-canonical name per ADR-001 hybrid naming — atomic per NFR12)
+- [scripts/update/lib/refresh-installation.js](../../scripts/update/lib/refresh-installation.js) (wrapper template format-agnostic fix — scope expansion; closes OC-R5)
+- [_bmad-output/implementation-artifacts/sprint-status.yaml](../implementation-artifacts/sprint-status.yaml) (story status flips: ready-for-dev → in-progress → review)
+- [_bmad-output/implementation-artifacts/i97-2-1-convert-emma-contextualization-expert-proof-of-concept.md](i97-2-1-convert-emma-contextualization-expert-proof-of-concept.md) (this story spec — Dev Agent Record + Change Log filled)
+
+**Auto-regenerated (not committed; gitignored):**
+- [.claude/skills/bmad-agent-bme-contextualization-expert/SKILL.md](../../.claude/skills/bmad-agent-bme-contextualization-expert/SKILL.md) — slash-command wrapper, regenerated from updated template
 
 ## Change Log
 
@@ -549,3 +654,5 @@ _To be filled by dev agent — distinguishing new vs modified files; cite paths 
 |------|--------|-----|
 | 2026-05-02 | Story spec authored by Bob via bmad-create-story workflow. Status: ready-for-dev. **Sprint 1 commits THIS story only** (per epic Bob #1 refinement). Variance: may take 2-3x typical effort — calibration data is itself a deliverable. | Bob (SM) |
 | 2026-05-02 | Pre-dev review by Bob: 10 spec fixes applied (3 critical + 4 enhancement + 3 optimization). Critical: AC8 schema-collision flag added (I100 backlog row); Task 6.3 wrapper rewrite concretized (NOT no-op); AC11 fixup-rescore loop bounded (3 iterations max → escalate). Enhancements: Task 2.1 BMB invocation concretized (slash-command form + spike reference); AC10 parity-test stub boundary clarified (Story 2.1 vs 3.2 ownership); AC1 bmad-init delegation verification path added (preferred-resolution-A retain custom Activation block); AC4 capability prompt definitional clarity (~20-50 lines, metadata + activation pointer, NOT workflow re-author). Optimizations: placeholder dates → `{YYYY-MM-DD}` template; `module.yaml` `description` example → "TBD at PR review"; `derive-counts-from-source` rule citation precise (8 menu items / 4 routed). Spec now internally consistent and dev-ready. | Bob (SM) — pre-dev review pass |
+| 2026-05-02 | Story implementation complete. All 12 per-agent PR checklist items + 3 story-specific items satisfied. Personality scoring PASS (lowest dim = 3, no FR23 escalation). Operator Covenant self-check PASS (both flags resolved: OC-R3 Option A walkthrough; OC-R5 Option C format-agnostic template fix). Scope expansion: [refresh-installation.js](../../scripts/update/lib/refresh-installation.js) wrapper template made format-agnostic (justified — closes OC-R5 cleanly). Validation: parity 9/9, integration 102/102, unit 681/682 (1 pre-existing skip), reference-integrity 75/0, lint 0 warnings. Status: in-progress → review. | Amelia (dev) |
+| 2026-05-02 | Code review Round 1 complete. 3 parallel reviewers (Blind/Edge/Auditor) raised 32 findings → 7 dismissed, 4 patched, 3 decisions resolved (D1 PR-body note, D2 accept operator-decision-of-record, D3 explicit AC14 N/A note in DAR), 18 deferred to `deferred-work.md`. Patches: module.yaml description finalized (Draft A), R2-P4 regression test comment strengthened, D3/D6 aggregation methodology clarified, Mode 2 wording explicit FR23 threshold. Convergence: Round 1 had HIGH findings (Edge F1/F2/F3) but all deferred to Story 3.2 productionization or dismissed; no Round 2 trigger from active issues. Validation re-run post-patches: parity 9/9, ref-integrity 75/0, lint clean. Status: review → done. | Amelia (dev) |
