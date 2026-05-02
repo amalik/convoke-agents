@@ -50,6 +50,13 @@ const WADE_FIXTURE_PATH = path.join(
   'lean-experiments-specialist-baseline.json',
 );
 
+const MILA_FIXTURE_PATH = path.join(
+  __dirname,
+  'fixtures',
+  'vortex-parity',
+  'research-convergence-specialist-baseline.json',
+);
+
 // ─── Per-agent test cases ────────────────────────────────────────────
 
 describe('vortex-parity — Emma (contextualization-expert)', () => {
