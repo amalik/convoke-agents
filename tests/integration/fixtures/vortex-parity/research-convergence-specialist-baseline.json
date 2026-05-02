@@ -1,0 +1,26 @@
+{
+  "agentRoleName": "research-convergence-specialist",
+  "agentFirstName": "Mila",
+  "agentTitle": "Research Convergence Specialist",
+  "agentIcon": "🔬",
+  "preMigrationFormat": "v5-xml-in-markdown",
+  "captured": "2026-05-02 (Story 2.3 Task 1)",
+  "sourcePath": "_bmad/bme/_vortex/agents/research-convergence-specialist/SKILL.md",
+  "preMigrationContentLines": 117,
+  "preMigrationGitBlob": "dd332ae9d3600056285f167d7875733ce1952685",
+  "preMigrationMenuCodes": ["MH", "CH", "RC", "PR", "PA", "PM", "DA"],
+  "preMigrationMenuCodesSorted": ["CH", "DA", "MH", "PA", "PM", "PR", "RC"],
+  "routedCapabilityCount": 3,
+  "routedCapabilityCodes": ["RC", "PR", "PA"],
+  "metaCapabilityCodes": ["MH", "CH", "PM", "DA"],
+  "workflowSourceFiles": [
+    "_bmad/bme/_vortex/workflows/research-convergence/workflow.md",
+    "_bmad/bme/_vortex/workflows/pivot-resynthesis/workflow.md",
+    "_bmad/bme/_vortex/workflows/pattern-mapping/workflow.md"
+  ],
+  "menuCodeToWorkflow": {
+    "RC": "_bmad/bme/_vortex/workflows/research-convergence/workflow.md",
+    "PR": "_bmad/bme/_vortex/workflows/pivot-resynthesis/workflow.md",
+    "PA": "_bmad/bme/_vortex/workflows/pattern-mapping/workflow.md"
+  }
+}
