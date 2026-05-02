@@ -3,8 +3,8 @@ agent_role: lean-experiments-specialist
 agent_first_name: Wade
 fixture_purpose: Evidence Source 2 (FR22) — operator-ranked unscripted multi-turn scenario captured from POST-MIGRATION (v6.3+) Wade. Scored side-by-side against baseline-unscripted-scenario.md to detect persona drift across the conversion.
 captured_against: post-migration v6.3+ SKILL.md (Story i97-2-2)
-capture_date: TBD-fill-when-captured
-capture_session_id: TBD-fill-when-captured
+capture_date: 2026-05-02
+capture_session_id: same-session-as-implementation (per same-LLM caveat documented in scoring report)
 scoring_dimensions_covered:
   - D3
   - D4
