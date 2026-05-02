@@ -278,7 +278,7 @@ describe('vortex-parity — Wade (lean-experiments-specialist)', () => {
     );
   });
 
-  it('extractV5MenuCodes against a Wade-shaped pre-migration fixture returns the 9-code baseline (R2-P4 anti-fence-stripping regression test)', () => {
+  it('extractV5MenuCodes against a Wade-shaped pre-migration fixture returns the 9-code baseline (R2-P4 anti-fence-stripping regression test) ', () => {
     // Wade's pre-migration SKILL.md stored 9 menu codes inside a
     // ```xml fence (git blob 36cc5e4833bdc434b5a1b359e4d6cfbe8250b899).
     // The synthetic sample below mirrors that shape. Per carry-forward #2
