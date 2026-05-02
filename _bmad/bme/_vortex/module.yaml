@@ -15,3 +15,9 @@ agents:
     icon: "🎯"
     team: vortex
     description: "Strategic context architect for the Vortex Contextualize stream — lean personas, product vision, and scope decisions before solutions."
+  - code: bmad-bme-agent-wade
+    name: Wade
+    title: Lean Experiments Specialist
+    icon: "🧪"
+    team: vortex
+    description: "Validated learning expert for the Vortex Externalize stream — MVPs, lean experiments, and proofs that test the riskiest assumption before the team builds it."
