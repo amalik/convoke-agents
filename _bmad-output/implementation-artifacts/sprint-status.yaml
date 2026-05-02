@@ -770,7 +770,7 @@ development_status:
   # Sequence: 2.1 Emma POC (sets per-agent dev cycle) → 2.2 Wade ‖ 2.3 Mila →
   #   2.4 Isla ‖ 2.5 Noah ‖ 2.6 Max → 2.7 Liam (HC-schema-heaviest, closes E2)
   i97-epic-2: in-progress
-  i97-2-1-convert-emma-contextualization-expert-proof-of-concept: in-progress
+  i97-2-1-convert-emma-contextualization-expert-proof-of-concept: done
   i97-2-2-convert-wade-lean-experiments-specialist: backlog
   i97-2-3-convert-mila-research-convergence-specialist: backlog
   i97-2-4-convert-isla-discovery-empathy-expert: backlog
