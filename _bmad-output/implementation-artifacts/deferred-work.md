@@ -877,3 +877,7 @@ Round 1 review (3 layers: Blind Hunter + Edge Case Hunter + Acceptance Auditor) 
 - **CR-i97-2-1-D16 (Edge LOW) — `stripCodeRegions` first-line indented detection edge case** [`parity-harness.js:1149-1166`] — `prevBlank=true` initial state means first-line 4-space indent treated as code. Defer reason: rare.
 - **CR-i97-2-1-D17 (Edge LOW) — `vortex-parity.test.js` hardcodes "emma" rather than reading from fixture** [`vortex-parity.test.js:86`] — Per-Emma test located in generic vortex-parity describe block; copy-paste for Story 2.2 invites drift. Defer reason: Story 2.2 will refactor when authoring per-agent describe blocks.
 - **CR-i97-2-1-D18 (Edge LOW) — Untracked report files not validated by artifact-governance taxonomy test** [`convoke-report-*.md`] — Report frontmatter schema not asserted by any CI test. Defer reason: separate artifact-governance scope.
+
+## Deferred from: code review of cov-1-1 (2026-05-03)
+
+- **CR-cov-1-1-D01 (Blind LOW) — sprint-status.yaml `last_updated` field structural cleanup** [`_bmad-output/implementation-artifacts/sprint-status.yaml:37`] — Field has grown into multi-paragraph prose embedded in a YAML scalar value across all stories. Risk of YAML parse issues if a future entry contains reserved characters; diffs are also harder to read. Defer reason: pre-existing pattern across all stories — out of scope for cov-1.1; warrants its own structural-cleanup story (e.g., promote to `last_updated_log:` list of structured entries with date + summary fields, keeping `last_updated` as a date-only scalar).
