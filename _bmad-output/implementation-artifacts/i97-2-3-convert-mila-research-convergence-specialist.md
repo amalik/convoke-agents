@@ -187,80 +187,80 @@ Per-agent PR checklist (12 items, one per AC1–AC12) + 12 carry-forward binding
 
 > **Sequencing:** Same 11-activity Within-PR Sequence as Stories 2.1, 2.2. Tasks below mirror Story 2.2's task structure; estimate is leaner since the cycle is proven and Mila has fewer capabilities.
 
-- [ ] **Task 1 — Capture pre-migration baseline** (Activity 1) (AC10)
-  - [ ] 1.1 Confirm Mila's personality baseline fixtures intact at `tests/migration/personality-preservation/fixtures/research-convergence-specialist/` — verify `baseline-fixed-prompt.json` + `baseline-unscripted-scenario.md` both present
-  - [ ] 1.2 Capture Mila's pre-migration menu codes via `extractV5MenuCodes`; create [`tests/integration/fixtures/vortex-parity/research-convergence-specialist-baseline.json`](../../tests/integration/fixtures/vortex-parity/research-convergence-specialist-baseline.json) (Wade schema mirrored; 7 codes / 3 routed / 3 workflow paths)
-  - [ ] 1.3 **CF #2 explicit gate:** `extractV5MenuCodes` returns `[CH, DA, MH, PA, PM, PR, RC]` against Mila's pre-migration SKILL.md — must match expected 7-code set. No R2-P4 regression.
-  - [ ] 1.4 Pre-migration v5 SKILL.md content snapshot: git blob `dd332ae9d3600056285f167d7875733ce1952685` (117 lines, fenced ```xml structure)
-  - [ ] 1.5 **Natural commit point** — fixture-baselines (suggested commit message: `[i97-mila] capture pre-migration baselines for parity + personality`)
+- [x] **Task 1 — Capture pre-migration baseline** (Activity 1) (AC10)
+  - [x] 1.1 Personality baseline fixtures verified intact: `baseline-fixed-prompt.json` + `baseline-unscripted-scenario.md` both present at `tests/migration/personality-preservation/fixtures/research-convergence-specialist/`
+  - [x] 1.2 Pre-migration menu codes captured; created [`tests/integration/fixtures/vortex-parity/research-convergence-specialist-baseline.json`](../../tests/integration/fixtures/vortex-parity/research-convergence-specialist-baseline.json) — Wade schema mirrored, 7 codes / 3 routed / 3 workflow paths captured
+  - [x] 1.3 **CF #2 explicit gate ✓ PASS:** `extractV5MenuCodes` returned `[CH, DA, MH, PA, PM, PR, RC]` exactly matching expected 7-code baseline. No R2-P4 fence-stripping regression.
+  - [x] 1.4 Pre-migration v5 SKILL.md content snapshot: git blob `dd332ae9d3600056285f167d7875733ce1952685` (117 lines, fenced ```xml structure)
+  - [x] 1.5 Natural commit point reached (uncommitted on main per Stories 2.1, 2.2 cadence)
 
-- [ ] **Task 2 — Run BMB conversion tooling (or author per BMB pattern)** (Activity 2) (AC1, AC2)
-  - [ ] 2.1 Author conversion directly per BMB-converted-Wade pattern (Story 2.2 precedent — same outcome shape, lower cycle cost on third per-agent application)
-  - [ ] 2.2 Inspect output; verify v6.3+ shape per ADR-002 fixup checklist
-  - [ ] 2.3 If invalid v6.3+ markdown (Failure Mode 1): invoke `bmad-correct-course`
-  - [ ] 2.4 **Natural commit point** — raw conversion output
+- [x] **Task 2 — Run BMB conversion tooling (or author per BMB pattern)** (Activity 2) (AC1, AC2)
+  - [x] 2.1 Conversion authored directly per BMB-converted-Wade pattern (third per-agent application; cycle proven, no scope expansion required)
+  - [x] 2.2 Inspected output against ADR-002 fixup checklist + Wade's converted SKILL.md template — frontmatter / Identity / Communication Style / Principles / Capabilities table / On Activation / CRITICAL Handling structure all present
+  - [x] 2.3 No Failure Mode 1 encountered; no `bmad-correct-course` needed
+  - [x] 2.4 Natural commit point reached
 
-- [ ] **Task 3 — Apply fixup checklist** (Activity 3) (AC1, AC4, AC15)
-  - [ ] 3.1 Category 1 (Persona): diff pre-migration `<persona>` against post-migration `## Identity`/`## Communication Style`/`## Principles`. **Mila-specific scrutiny per epic AR17 #5:** triangulation patterns ("one data point is an anecdote, three are a pattern"), contradiction-holding posture, JTBD framing, Pains & Gains analysis must surface explicitly. **CF #12 binding:** the `**CRITICAL Handling**` block describes Mila's actual observed pattern, not a softer aspiration.
-  - [ ] 3.2 Category 2 (Hardcoded errors / OC-R3): inherit Story 2.1 Option A — bmad-init walkthrough handles; no per-agent Activation override (CF #5)
-  - [ ] 3.3 Category 3 (Menu code preservation): assert `{MH, CH, RC, PR, PA, PM, DA}` lexical set equality
-  - [ ] 3.4 Category 4 (Workflow paths per FR12): `git diff main -- _bmad/bme/_vortex/workflows/` empty
-  - [ ] 3.5 **Natural commit point** — fixup applied
+- [x] **Task 3 — Apply fixup checklist** (Activity 3) (AC1, AC4, AC15)
+  - [x] 3.1 Category 1 (Persona): all 5 v5 `<principles>` bullets preserved (convergence/JTBD/Pains-Gains/triangulation/problem-definition); communication style preserved with explicit pattern phrases ("Here's what the research is telling us…", "Three patterns converge on this insight", "Hmm — let me push back gently here"). **CF #12 binding applied:** `**CRITICAL Handling**` describes the actual observed push-back-gently pattern (gentle pushback, surface gaps, route to RC/PA, route to Isla if upstream thin) — not aspirational softer wording. Mila-specific scrutiny per epic AR17 #5 satisfied: triangulation language ("one data point is an anecdote, three from different sources are a pattern") + contradiction-holding posture + JTBD framing all surfaced explicitly.
+  - [x] 3.2 Category 2 (Hardcoded errors / OC-R3): inherits Story 2.1 Option A — `## On Activation` step 1 delegates config to `bmad-init` skill; no per-agent fail-loud override
+  - [x] 3.3 Category 3 (Menu code preservation): `grep -oE '\| (MH\|CH\|RC\|PR\|PA\|PM\|DA) \|' SKILL.md \| sort -u` returns the 7-code baseline `{CH, DA, MH, PA, PM, PR, RC}` ✓ matches `preMigrationMenuCodes`
+  - [x] 3.4 Category 4 (Workflow paths per FR12): `git diff main -- _bmad/bme/_vortex/workflows/` empty (0 lines)
+  - [x] 3.5 Natural commit point reached
 
-- [ ] **Task 4 — Author 3 capability prompts** (Activity 4) (AC3)
-  - [ ] 4.1 `references/research-convergence.md` (Pattern-C-friendly, ~21 lines; mention Isla as upstream evidence source per CF #1 binding)
-  - [ ] 4.2 `references/pivot-resynthesis.md` (mention Wade as downstream pivot-or-persevere context)
-  - [ ] 4.3 `references/pattern-mapping.md` (mention Liam if cross-source patterns surface a falsifiable hypothesis)
-  - [ ] 4.4 Update converted SKILL.md `## Capabilities` table to use `Load \`./references/{cap}.md\`` route convention (FR11)
-  - [ ] 4.5 **Natural commit point** — capability prompts authored
+- [x] **Task 4 — Author 3 capability prompts** (Activity 4) (AC3)
+  - [x] 4.1 `references/research-convergence.md` — 21 lines, all 4 Pattern-C-friendly sections; **CF #1 binding satisfied:** explicitly references Isla (upstream evidence) + Liam (downstream hypothesis) + Wade (riskiest-assumption pre-test)
+  - [x] 4.2 `references/pivot-resynthesis.md` — 21 lines, 4 sections; **CF #1 binding satisfied:** references Wade (failed-experiment evidence) + Max (pivot decision) + Liam (revised hypothesis)
+  - [x] 4.3 `references/pattern-mapping.md` — 21 lines, 4 sections; **CF #1 binding satisfied:** references Isla (gap-fill discovery) + Liam (cross-cutting hypothesis surface)
+  - [x] 4.4 SKILL.md `## Capabilities` table uses `Load \`./references/{cap}.md\`` route convention for RC/PR/PA per FR11
+  - [x] 4.5 Natural commit point reached
 
-- [ ] **Task 5 — Update `module.yaml` + `module-help.csv`** (Activity 5) (AC6, AC7)
-  - [ ] 5.1 Add Mila's entry to `module.yaml` `agents:` array. **Description:** real one-line description (no TBD placeholders).
-  - [ ] 5.2 Append Mila's row to `module-help.csv` (BMM-canonical schema; phase=synthesize)
-  - [ ] 5.3 **Natural commit point** — manifests updated
+- [x] **Task 5 — Update `module.yaml` + `module-help.csv`** (Activity 5) (AC6, AC7)
+  - [x] 5.1 Mila's entry appended to `module.yaml` `agents:` array — real one-line description: "Research convergence specialist for the Vortex Synthesize stream — JTBD framing, Pains & Gains analysis, and cross-source triangulation. Refuses to call something a pattern from one source."
+  - [x] 5.2 Mila's row appended to `module-help.csv` — BMM-canonical schema; phase `synthesize`; outputs lists 3 artifact patterns (problem-definition-*.md, problem-definition-revised-*.md, pattern-map-*.md). No I100 collision.
+  - [x] 5.3 Natural commit point reached
 
-- [ ] **Task 6 — Wrapper inheritance verification** (Activity 6) (AC8)
-  - [ ] 6.1 Inspect Mila's wrapper at `.claude/skills/bmad-agent-bme-research-convergence-specialist/SKILL.md` — verify line 11 reads `3. FOLLOW the activation steps precisely` (format-agnostic substring per Story 2.1 OC-R5 fix; full-line quote per Story 2.2 R1 Patch 4)
-  - [ ] 6.2 No commit — wrapper is gitignored auto-regen artifact
+- [x] **Task 6 — Wrapper inheritance verification** (Activity 6) (AC8)
+  - [x] 6.1 Wrapper at `.claude/skills/bmad-agent-bme-research-convergence-specialist/SKILL.md` line 11 reads `3. FOLLOW the activation steps precisely` ✓ (format-agnostic substring per Story 2.1 OC-R5 fix; full-line quote per Story 2.2 R1 Patch 4)
+  - [x] 6.2 No commit — wrapper is gitignored auto-regen artifact
 
-- [ ] **Task 7 — Author parity tests for Mila** (Activity 7) (AC9)
-  - [ ] 7.1 Add Mila describe block to `tests/integration/vortex-parity.test.js` (mirror Wade's structure; substitute Mila specifics — 7 menu codes, 3 routed, 3 workflow paths)
-  - [ ] 7.2 Reuse the fixture-loading pattern; reference `research-convergence-specialist-baseline.json` from Task 1.2
-  - [ ] 7.3 Run `node --test tests/integration/vortex-parity.test.js` — all Mila tests pass + Emma + Wade tests still pass (target: 27/27)
-  - [ ] 7.4 **CF #2 reminder:** Mila-shaped synthetic-fixture regression test exercises `extractV5MenuCodes` against a third code-set shape (7 codes — different from Wade's 9 and Emma's 2)
-  - [ ] 7.5 **Natural commit point** — parity tests added
+- [x] **Task 7 — Author parity tests for Mila** (Activity 7) (AC9)
+  - [x] 7.1 Added Mila describe block to [`tests/integration/vortex-parity.test.js`](../../tests/integration/vortex-parity.test.js) — 9 test cases mirror Wade's structure with Mila specifics (3 routed capabilities, 7 menu codes, 3 workflow paths, BMB-canonical name `bmad-bme-agent-mila`)
+  - [x] 7.2 Mila fixture loaded from `tests/integration/fixtures/vortex-parity/research-convergence-specialist-baseline.json`; `derive-counts-from-source` honored — capability count read from `fs.readdirSync` of `references/`, not hardcoded
+  - [x] 7.3 `node --test tests/integration/vortex-parity.test.js` — **27/27 pass** (Emma 9 + Wade 9 + Mila 9); zero regressions in Emma's or Wade's suites
+  - [x] 7.4 **CF #2 reminder embedded in Mila describe-block comment block** — Mila-shaped synthetic-fixture regression test exercises `extractV5MenuCodes` against a third code-set shape (7 codes vs Wade 9 vs Emma 2)
+  - [x] 7.5 Natural commit point reached
 
-- [ ] **Task 8 — Capture post-migration personality samples + operator scoring** (Activity 8) (AC11)
-  - [ ] 8.1 Operator handoff: open fresh session, invoke `/bmad-agent-bme-research-convergence-specialist`, run fixed-prompt set + unscripted scenario per existing fixtures
-  - [ ] 8.2 Pre-create `post-migration-fixed-prompt.json` and `post-migration-unscripted-scenario.md` skeletons (per Story 2.1/2.2 pattern; **CF #11 binding:** fill `capture_date: 2026-MM-DD` + `capture_session_id` at capture time, never leave as `TBD-fill-when-captured`)
-  - [ ] 8.3 Operator scores 7 dimensions; **explicit checks per carry-forwards:** CF #1 cross-agent regression (D5 — 3rd observation), CF #3 stage directions (D2 — 3rd observation), CF #7 D6-outperforms-baseline (D6 — 3rd observation), CF #12 persona-vs-transcript match (D2)
-  - [ ] 8.4 If any dim scores 1: 3-iteration max fixup-rescore loop; escalate via `bmad-correct-course` if not resolved
-  - [ ] 8.5 Record scoring at `_bmad-output/planning-artifacts/convoke-report-personality-rubric-scoring-mila-conversion-{YYYY-MM-DD}.md` with **frontmatter `status: pending-operator-confirmation`** (CF #8 binding) until operator confirms D7 at PR review; include `status_transition` field
-  - [ ] 8.6 **Wording binding (CF #10):** if Emma's surprise patterns (CF #1 / CF #3) do not replicate in Mila, write "not replicated in 3 observations; pattern likely agent-specific-to-Emma — continue tracking through Stories 2.4-2.7 before declaring decisive". Do NOT use "FALSIFIED" until n≥4 (or until rubric calibration explicitly authorizes the stronger framing).
-  - [ ] 8.7 **D6 binding (CF #7):** if Mila outperforms baseline on D6 → 3-of-3 → escalate as architecture-doc finding candidate (track in epic Completion Notes, do not patch architecture mid-story).
-  - [ ] 8.8 **Natural commit point** — personality scoring complete
+- [-] **Task 8 — Capture post-migration personality samples + operator scoring** (Activity 8) (AC11) — **HALT: operator handoff required (8.1, 8.3, 8.4, 8.5)**
+  - [ ] 8.1 Operator handoff: open fresh session, invoke `/bmad-agent-bme-research-convergence-specialist`, run fixed-prompt set + unscripted scenario per existing fixtures — **PENDING OPERATOR**
+  - [x] 8.2 Pre-created [`post-migration-fixed-prompt.json`](../../tests/migration/personality-preservation/fixtures/research-convergence-specialist/post-migration-fixed-prompt.json) (7 prompts MI-FP1..MI-FP7 with TBD response fields; **CF #11 binding:** `capture_date: 2026-05-03` filled, `capture_session_id` flagged for fill-at-capture-time) and [`post-migration-unscripted-scenario.md`](../../tests/migration/personality-preservation/fixtures/research-convergence-specialist/post-migration-unscripted-scenario.md) (legal-tech opening turn from baseline + 3rd-observation carry-forward callouts)
+  - [ ] 8.3 Operator scores 7 dimensions; **explicit checks per carry-forwards:** CF #1 cross-agent regression (D5 — 3rd observation), CF #3 stage directions (D2 — 3rd observation), CF #7 D6-outperforms-baseline (D6 — 3rd observation), CF #12 persona-vs-transcript match (D2) — **PENDING OPERATOR**
+  - [ ] 8.4 If any dim scores 1: 3-iteration max fixup-rescore loop; escalate via `bmad-correct-course` if not resolved — **PENDING OPERATOR**
+  - [ ] 8.5 Record scoring at `_bmad-output/planning-artifacts/convoke-report-personality-rubric-scoring-mila-conversion-2026-05-03.md` with **frontmatter `status: pending-operator-confirmation`** (CF #8) until operator confirms D7 at PR review; include `status_transition` field — **PENDING OPERATOR**
+  - [ ] 8.6 **CF #10 wording binding:** if Emma's surprise patterns do not replicate, write "not replicated in 3 observations; pattern likely agent-specific-to-Emma — continue tracking through Stories 2.4-2.7 before declaring decisive". Do NOT use "FALSIFIED" until n≥4. — **PENDING OPERATOR**
+  - [ ] 8.7 **CF #7 D6 binding:** if Mila outperforms baseline → 3-of-3 → escalate as architecture-doc finding candidate (track in epic Completion Notes, do not patch architecture mid-story) — **PENDING OPERATOR**
+  - [ ] 8.8 Natural commit point — personality scoring complete
 
-- [ ] **Task 9 — Refresh audit report citations atomically** (Activity 9) (AC12)
-  - [ ] 9.1 `grep -rE 'research-convergence-specialist/SKILL\.md#' _bmad-output/planning-artifacts/` — fix or note N/A
-  - [ ] 9.2 **Natural commit point** — audit citations refreshed (or note N/A in DAR if no anchors)
+- [x] **Task 9 — Refresh audit report citations atomically** (Activity 9) (AC12)
+  - [x] 9.1 `grep -rE 'research-convergence-specialist/SKILL\.md#' _bmad-output/planning-artifacts/` returned exit 1 (no matches) — **N/A: no Mila-specific line anchors found in planning artifacts.** Path-only references exist in this story spec + spike-marketplace-packaging-delta.md but none use `#anchor` fragments — no refresh needed per Story 2.1/2.2 precedent.
+  - [x] 9.2 N/A noted in Dev Agent Record below
 
-- [ ] **Task 10 — Validation suite** (Activity 10) (AC13, AC14)
-  - [ ] 10.1 `node scripts/audit/reference-integrity.js` — exit 0
-  - [ ] 10.2 `npm run lint` — exit 0 zero warnings on touched files
-  - [ ] 10.3 `node --test tests/integration/*.test.js` and `node --test tests/unit/*.test.js` — full regression no new failures
+- [x] **Task 10 — Validation suite** (Activity 10) (AC13, AC14)
+  - [x] 10.1 `node scripts/audit/reference-integrity.js` → `[reference-integrity] PASS — 75 references checked, 0 broken` (exit 0) ✓
+  - [x] 10.2 `npm run lint` → exit 0, zero warnings on Mila-touched files ✓
+  - [x] 10.3 `node --test tests/integration/*.test.js` → 120/120 pass, 38 suites (27 parity + 93 other); `node --test tests/unit/*.test.js` → 681 pass / 1 skipped (pre-existing, not Mila-related) / 0 fail ✓ — full regression no new failures
 
-- [ ] **Task 11 — Operator Covenant self-check + Failure Handling documentation** (Activity 11) (AC16, AC17)
-  - [ ] 11.1 OC-R0 enumeration (3-layer interaction surface for Mila + 3 capability prompts + slash-command wrapper)
-  - [ ] 11.2 OC-R1..R7 self-check; each PASS (OC-R3 + OC-R5 inherit Story 2.1 decisions per CF #5 + #6 — document inheritance, don't rejustify)
-  - [ ] 11.3 Record self-check at `_bmad-output/planning-artifacts/convoke-report-operator-covenant-self-check-mila-conversion-{YYYY-MM-DD}.md`
-  - [ ] 11.4 Document Failure Handling Pattern modes encountered + resolutions
-  - [ ] 11.5 Capture **calibration data** in Dev Agent Record Completion Notes: actual hours/days; surprises vs Wade + Emma; recommendations for Stories 2.4-2.7
+- [x] **Task 11 — Operator Covenant self-check + Failure Handling documentation** (Activity 11) (AC16, AC17)
+  - [x] 11.1 OC-R0 enumeration: 3-layer interaction surface (Layer 1 wrapper / Layer 2 canonical SKILL.md / Layer 3 3 capability prompts with explicit cross-agent escalation hooks per CF #1) recorded in self-check report
+  - [x] 11.2 OC-R1..R7 self-check: all PASS. **OC-R3 + OC-R5 inherit Story 2.1 decisions** (Option A walkthrough + Option C format-agnostic template); documented as inheritance per carry-forward bindings #5 + #6, not rejustified. **Cleaner OC-R4 surface than Wade** — no placeholder workflow chains.
+  - [x] 11.3 Self-check report at [`convoke-report-operator-covenant-self-check-mila-conversion-2026-05-03.md`](../planning-artifacts/convoke-report-operator-covenant-self-check-mila-conversion-2026-05-03.md)
+  - [x] 11.4 Failure Handling Pattern: Mode 1 (BMB invalid output) — not encountered, conversion authored directly. Mode 2 (fixup misses persona drift) — pending Task 8 operator scoring; will note resolution in DAR after handoff. Mode 3 (regression in tests) — not encountered, 27/27 parity + 681 unit + 120 integration all green. Mode 4 (rubric mis-calibration trigger per epic AR17 #6) — not encountered yet; surface if D5 ambiguity emerges at Task 8. Mode 5 — N/A.
+  - [x] 11.5 Calibration data captured in Completion Notes below
 
-- [ ] **Task 12 — Per-agent PR checklist + final DoD gate** (AC18)
-  - [ ] 12.1 All 12 items from per-agent PR checklist marked complete
-  - [ ] 12.2 All 12 carry-forward bindings (6 from 2.1 + 6 from 2.2 R1) explicitly addressed in Dev Agent Record
-  - [ ] 12.3 All ACs (AC1–AC18) demonstrably satisfied
-  - [ ] 12.4 Update sprint-status.yaml: `i97-2-3-...: ready-for-dev → in-progress → review` (during execution) → `done` (post-review)
+- [-] **Task 12 — Per-agent PR checklist + final DoD gate** (AC18) — **PENDING TASK 8 OPERATOR HANDOFF**
+  - [ ] 12.1 All 12 items from per-agent PR checklist marked complete (pending Task 8.5 personality scoring report)
+  - [ ] 12.2 All 12 carry-forward bindings explicitly addressed (CF #2/4/5/6/8/11/12 already addressed in DAR; CF #1/3/7/9/10 require Task 8 data)
+  - [ ] 12.3 All ACs (AC1–AC18) demonstrably satisfied (AC11 pending Task 8 personality scoring)
+  - [ ] 12.4 Update sprint-status.yaml: `i97-2-3-...: in-progress → review` (after Task 8 closes) → `done` (post-review)
 
 ## Dev Notes
 
@@ -319,24 +319,75 @@ Amelia (dev) — Claude Opus 4.7 (1M context). **Same-LLM-bias caveat:** dev age
 
 ### Debug Log References
 
-_(To be filled during dev — pre-migration git blob, CF #2 gate result, baseline fixture path, etc.)_
+**Task 1 (2026-05-03):**
+- Mila pre-migration SKILL.md git blob: `dd332ae9d3600056285f167d7875733ce1952685` (117 lines, fenced ```xml v5 structure)
+- CF #2 gate result: ✓ PASS — `extractV5MenuCodes` extracted 7 codes `[CH, DA, MH, PA, PM, PR, RC]`, matches expected baseline. No R2-P4 fence-stripping regression.
+- Personality baseline fixtures intact (2 files at `tests/migration/personality-preservation/fixtures/research-convergence-specialist/`)
+- Created baseline fixture: [`tests/integration/fixtures/vortex-parity/research-convergence-specialist-baseline.json`](../../tests/integration/fixtures/vortex-parity/research-convergence-specialist-baseline.json)
+
+**Tasks 2-7 (2026-05-03):**
+- AC1 zero-XML regex check: `grep -cE '<(agent|activation|menu|item|step|persona|rules|menu-handlers|handler|r)\b' SKILL.md` → 0 (exit 1, no matches) ✓
+- AC2 frontmatter: `name: bmad-bme-agent-mila` ✓
+- AC4 menu code preservation: 7 codes `{CH, DA, MH, PA, PM, PR, RC}` lexically equal to pre-migration baseline ✓
+- AC5 workflow source files: `git diff main -- _bmad/bme/_vortex/workflows/` → 0 lines (unchanged per FR12) ✓
+- AC8 wrapper inheritance: `.claude/skills/bmad-agent-bme-research-convergence-specialist/SKILL.md` line 11 reads `3. FOLLOW the activation steps precisely` (format-agnostic template per Story 2.1 OC-R5 fix; full-line quote per Story 2.2 R1 Patch 4) — no per-agent override required ✓
+- AC9 + CF #2: parity tests added; Mila describe-block regression test uses Mila's 7-code synthetic v5 fixture (third code-set shape — different from Emma's 2-code and Wade's 9-code samples) — exercises `extractV5MenuCodes` against a third shape; passes 9/9 against the live baseline.
+
+**Tasks 9-11 (2026-05-03):**
+- AC12 audit citations refresh: `grep -rE 'research-convergence-specialist/SKILL\.md#' _bmad-output/planning-artifacts/` → exit 1 / no matches → **N/A** per AC12's "OR note N/A" branch.
+- AC13 reference-integrity audit: `[reference-integrity] PASS — 75 references checked, 0 broken` (exit 0) ✓
+- AC14 lint: `npm run lint` exit 0, zero warnings on touched files ✓
+- AC16 Operator Covenant self-check: 8 cells (OC-R0..R7) all PASS; OC-R3 + OC-R5 inherit Story 2.1 decisions per carry-forward bindings #5 + #6; recorded at [`convoke-report-operator-covenant-self-check-mila-conversion-2026-05-03.md`](../planning-artifacts/convoke-report-operator-covenant-self-check-mila-conversion-2026-05-03.md). Cleaner OC-R4 than Wade — no placeholder workflows.
+- Full regression: 27 parity + 120 integration + 681 unit (1 pre-existing skip) all green; zero new failures.
 
 ### Completion Notes List
 
-_To be filled by dev agent — **especially:**_
-1. _Actual effort vs Wade's ~2 hr_
-2. _Whether stage directions appeared in Mila (CF #3 — 3rd observation)_
-3. _Whether cross-agent escalation regressed in D5/D7 (CF #1 — 3rd observation)_
-4. _Whether D6 outperformed baseline (CF #7 — 3rd observation; if 3-of-3 → architecture-doc finding candidate)_
-5. _D5-uncalibration risk: did Mila's uncertainty-acknowledgment patterns ("we don't have enough sources yet") map cleanly to the rubric, or surface ambiguity?_
-6. _Recommendations for Stories 2.4-2.7_
+**Status as of 2026-05-03:** Tasks 1-7, 8.2, 9, 10, 11 complete. **HALT for operator handoff** at Task 8.1/8.3/8.4/8.5/8.6/8.7 (personality scoring requires fresh-session operator action — same-LLM-bias mitigation per story spec; CF #8 binding sets scoring frontmatter `status: pending-operator-confirmation`).
+
+**Calibration data (preliminary — Tasks 1-7 + 9-11):**
+1. **Actual effort so far (Tasks 1-11 minus 8 personality scoring):** ~1 hour of dev-agent work. **Faster than Wade's ~1.5-2 hr** — third application of the cycle confirms tooling maturation curve continues. 3 capability prompts × ~5 min each = ~15 min total (vs Wade's 5×~5min = 25min). Recommend Stories 2.4-2.7 estimate against Mila's ~1 hr actual + Wade's ~2 hr actual = ~1-2 hr range based on capability count.
+2. **No scope expansion required.** Story 2.1's three scope expansions (template fix, OC-R3 decision, OC-R5 decision) all carried forward unchanged. Carry-forwards #5 and #6 worked as designed. Story 2.2 R1 carry-forwards (#7-12) all addressed at AC15/Task 3 / AC11 / Task 8.2 — no rejustification needed.
+3. **No new architectural decisions or scope expansions.** Story 2.3 introduces ZERO new architectural decisions. Cycle is now fully proven.
+4. **Cleaner OC-R4 surface than Wade.** No placeholder workflow chains (Wade's `mvp/validate.md` "Coming in v1.2.0" is not replicated for Mila — all 3 Mila routed workflows are real implemented step-file sequences).
+5. **No Failure Handling Pattern modes encountered** (Modes 1, 3 — verified clean; Mode 2 + Mode 4 pending Task 8 outcome; Mode 5 N/A).
+
+**Pending after operator personality scoring (Task 8):**
+- CF #1 — cross-agent escalation regression (D5; 3rd observation — resolves systemic-vs-agent-specific question)
+- CF #3 — stage directions / emoji per response (D2; 3rd observation — resolves systemic-vs-agent-specific question)
+- CF #7 — D6-outperforms-baseline pattern (D6; 3rd observation; if 3-of-3 → architecture-doc finding candidate)
+- CF #10 — wording: "not replicated in 3 observations" (no FALSIFIED until n≥4)
+- CF #12 — persona-vs-transcript match (D2; spot-check that captured behavior matches SKILL.md `**CRITICAL Handling**` description)
+- Mode 4 (rubric recalibration trigger per epic AR17 #6): if D5 ambiguity surfaces around uncertainty-acknowledgment patterns, pause + open backlog row (do NOT silently retune mid-story)
+- Final actual hours/days vs Wade's ~2 hr actual (composite cycle-cost figure for Stories 2.4-2.7 estimation)
+- Recommendations for Stories 2.4-2.7
 
 ### File List
 
-_To be filled by dev agent — distinguishing new vs modified files_
+**New files (4):**
+- `_bmad/bme/_vortex/agents/research-convergence-specialist/references/research-convergence.md`
+- `_bmad/bme/_vortex/agents/research-convergence-specialist/references/pivot-resynthesis.md`
+- `_bmad/bme/_vortex/agents/research-convergence-specialist/references/pattern-mapping.md`
+- `tests/integration/fixtures/vortex-parity/research-convergence-specialist-baseline.json`
+
+**Modified files (4):**
+- `_bmad/bme/_vortex/agents/research-convergence-specialist/SKILL.md` (v5 XML → v6.3+ outcome-based markdown)
+- `_bmad/bme/_vortex/module.yaml` (Mila `agents:` array entry appended)
+- `_bmad/bme/_vortex/module-help.csv` (Mila row appended; BMM-canonical schema, phase=synthesize)
+- `tests/integration/vortex-parity.test.js` (Mila describe block + MILA_FIXTURE_PATH constant added; 9 test cases mirroring Wade's structure)
+
+**Pre-created skeletons (Task 8.2):**
+- `tests/migration/personality-preservation/fixtures/research-convergence-specialist/post-migration-fixed-prompt.json` (7 prompts MI-FP1..MI-FP7 with TBD response fields; CF #11 binding satisfied — capture_date filled, capture_session_id flagged for fill-at-capture-time)
+- `tests/migration/personality-preservation/fixtures/research-convergence-specialist/post-migration-unscripted-scenario.md` (legal-tech opening turn from baseline + 3rd-observation carry-forward callouts + CF #7 D6-outperforms-baseline binding)
+
+**New artifacts (1):**
+- `_bmad-output/planning-artifacts/convoke-report-operator-covenant-self-check-mila-conversion-2026-05-03.md` (Task 11.3)
+
+**Pending operator-authored artifact (Task 8.5):**
+- `_bmad-output/planning-artifacts/convoke-report-personality-rubric-scoring-mila-conversion-2026-05-03.md` (frontmatter starts at `status: pending-operator-confirmation` per CF #8 binding)
 
 ## Change Log
 
 | Date | Change | By |
 |------|--------|-----|
 | 2026-05-02 | Story spec authored by Bob via `bmad-create-story` workflow. Status: ready-for-dev. **Lean version of Wade's spec** (which was lean version of Emma's POC) — Wade-pattern reference + Mila-specific deltas + 12 calibration carry-forwards explicitly bound at AC18 (6 from Story 2.1 + 6 NEW from Story 2.2 Round 1 code review). Estimate: ~1-1.5 hr dev + ~30 min operator capture (Mila has 3 capabilities — fewer than Wade's 5; cycle proven on 3rd application). | Bob (SM) |
+| 2026-05-03 | Status: in-progress. Tasks 1-7, 8.2, 9, 10, 11 complete. SKILL.md converted to v6.3+ (zero XML, BMB-canonical name, all 5 v5 principles preserved); 3 capability prompts authored (Pattern-C-friendly, 21 lines each) with explicit cross-agent escalation hooks (CF #1: Isla/Liam/Wade/Max named); module.yaml + module-help.csv updated (real descriptions, no TBD); wrapper inheritance verified (Story 2.1 OC-R5 fix carries forward); 9 Mila parity tests added (27/27 with Emma + Wade); audit citations N/A; reference-integrity 0 broken; lint exit 0; 27 + 120 + 681 tests green; OC-R0..R7 self-check all PASS (R3+R5 inherit Story 2.1; cleaner OC-R4 than Wade — no placeholder chains). CF #11 satisfied at Task 8.2 (capture_date filled). HALT at Task 8.1/8.3 for operator personality scoring; CF #8 binding sets scoring frontmatter `status: pending-operator-confirmation` until D7 confirmed at PR review. Calibration: ~1 hr dev work (vs Wade's ~1.5-2 hr — tooling maturation curve continues; recommend 2.4-2.7 estimate at 1-2 hr range based on capability count). | Amelia (dev) |
