@@ -682,6 +682,8 @@ Operator-driven harnesses (used in E2) productionized into automated CI merge ga
 
 ### Story 3.1: CI Infrastructure Spike
 
+> **Note 2026-05-03 (operator option γ):** the **P0 activation contract sliver** (test-format-aware update for v5-XML vs v6.3-markdown agents) was absorbed early via [`i97-bug-1`](../implementation-artifacts/i97-bug-1-fix-p0-activation-defects.md) — surfaced during cov-1.1 implementation when the `coverage` job's P0 failures pre-dating cov-1.1 (75+ assertions across Emma + Wade) made waiting until Epic 3 untenable. Story 3.1 retains its **full parity / Covenant survival / reference-integrity gating scope**; only the P0 activation contract ships ahead of plan via the i97-bug-1 hotfix. When this spike runs, expect the P0 activation surface to be already format-aware; document and build on it rather than re-discovering it.
+
 As a Convoke maintainer,
 I want a 1-day spike on existing CI structure to identify reuse points and new-config surface,
 So that subsequent E3 stories estimate against actual findings rather than blind assumptions per Amelia #2.
