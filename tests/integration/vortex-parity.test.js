@@ -306,3 +306,127 @@ describe('vortex-parity — Wade (lean-experiments-specialist)', () => {
     assert.deepEqual([...codes].sort(), [...fixture.preMigrationMenuCodes].sort());
   });
 });
+
+describe('vortex-parity — Mila (research-convergence-specialist)', () => {
+  // Story 2.3 — third per-agent application of the parity harness.
+  // Calibration carry-forward #2 binding: extractV5MenuCodes was run
+  // against Mila's pre-migration SKILL.md fixture content during dev
+  // (Story 2.3 Task 1.3 — extracted [CH, DA, MH, PA, PM, PR, RC],
+  // matches the 7-code baseline). The Mila-shaped extractV5MenuCodes
+  // regression test below stands in for the live gate in CI and
+  // exercises a third code-set shape (7 codes) different from Emma's
+  // 2-code synthetic sample and Wade's 9-code synthetic sample.
+  const fixture = JSON.parse(fs.readFileSync(MILA_FIXTURE_PATH, 'utf8'));
+  const agentRoleName = fixture.agentRoleName;
+  const skillMdPath = path.join(PROJECT_ROOT, VORTEX_AGENTS_REL, agentRoleName, 'SKILL.md');
+  const referencesDir = path.join(PROJECT_ROOT, VORTEX_AGENTS_REL, agentRoleName, 'references');
+
+  it('post-migration SKILL.md exists at the canonical path', () => {
+    assert.equal(fs.existsSync(skillMdPath), true, `Expected ${skillMdPath} to exist after Story 2.3 conversion`);
+  });
+
+  it('post-migration SKILL.md contains zero v5 XML elements (FR1)', () => {
+    const content = fs.readFileSync(skillMdPath, 'utf8');
+    const xmlElementRe = /<(agent|activation|menu|item|step|persona|rules|menu-handlers|handler|r)\b/;
+    assert.equal(
+      xmlElementRe.test(content),
+      false,
+      `SKILL.md still contains v5 XML elements (matches /${xmlElementRe.source}/)`,
+    );
+  });
+
+  it('post-migration menu code set equals pre-migration baseline (FR13)', () => {
+    const content = fs.readFileSync(skillMdPath, 'utf8');
+    const postCodes = extractV63MenuCodes(content).sort();
+    const preCodes = [...fixture.preMigrationMenuCodes].sort();
+    assert.deepEqual(
+      postCodes,
+      preCodes,
+      `Menu codes drifted: pre=${JSON.stringify(preCodes)} post=${JSON.stringify(postCodes)}`,
+    );
+  });
+
+  it('frontmatter `name:` field equals BMB canonical bmad-bme-agent-mila (per ADR-001)', () => {
+    const content = fs.readFileSync(skillMdPath, 'utf8');
+    const nameMatch = content.match(/^name:\s*(\S+)\s*$/m);
+    assert.ok(nameMatch, 'SKILL.md frontmatter must have a name: field');
+    assert.equal(nameMatch[1], 'bmad-bme-agent-mila', `Expected BMB canonical name; got '${nameMatch[1]}'`);
+  });
+
+  it('references/ directory exists with one prompt per routed capability (FR9–11)', () => {
+    assert.equal(fs.existsSync(referencesDir), true, `Expected references/ directory at ${referencesDir}`);
+
+    // derive-counts-from-source: read the actual directory
+    const entries = fs.readdirSync(referencesDir).filter(e => e.endsWith('.md'));
+    const expectedRouted = fixture.routedCapabilityCodes.length; // 3 for Mila (RC/PR/PA)
+    assert.equal(
+      entries.length,
+      expectedRouted,
+      `Expected ${expectedRouted} capability prompts under references/; got ${entries.length}: ${JSON.stringify(entries)}`,
+    );
+  });
+
+  it('each capability prompt has the four Pattern-C-friendly sections (FR10/NFR16)', () => {
+    const requiredSections = ['## Identity', '## How It Works', '## Output Expectations', '## Activation'];
+    const entries = fs.readdirSync(referencesDir).filter(e => e.endsWith('.md'));
+    for (const entry of entries) {
+      const promptContent = fs.readFileSync(path.join(referencesDir, entry), 'utf8');
+      for (const section of requiredSections) {
+        assert.ok(
+          promptContent.includes(section),
+          `Capability prompt ${entry} missing required section '${section}'`,
+        );
+      }
+    }
+  });
+
+  it('workflow source files referenced from menu codes still exist (FR12)', () => {
+    for (const [code, workflowPath] of Object.entries(fixture.menuCodeToWorkflow)) {
+      const abs = path.join(PROJECT_ROOT, workflowPath);
+      assert.equal(
+        fs.existsSync(abs),
+        true,
+        `Workflow source for menu code ${code} not found at ${workflowPath}`,
+      );
+    }
+  });
+
+  it('runParityCheck returns documented shape with menuCodesEqual undefined-or-true', () => {
+    const result = runParityCheck({
+      projectRoot: PROJECT_ROOT,
+      agentRoleName,
+    });
+    assert.equal(result.postMigrationFile, 'found', 'Expected post-migration file detected');
+    assert.deepEqual(
+      [...result.postMigrationCodes].sort(),
+      [...fixture.preMigrationMenuCodes].sort(),
+      'runParityCheck postMigrationCodes drifted from baseline',
+    );
+  });
+
+  it('extractV5MenuCodes against a Mila-shaped pre-migration fixture returns the 7-code baseline (R2-P4 anti-fence-stripping regression test)', () => {
+    // Mila's pre-migration SKILL.md stored 7 menu codes inside a
+    // ```xml fence (git blob dd332ae9d3600056285f167d7875733ce1952685).
+    // The synthetic sample below mirrors that shape. Per carry-forward #2
+    // (Story 2.1 calibration), this regression test captures the live gate
+    // run during Story 2.3 dev (Task 1.3) so reviewers lacking
+    // project-context can re-verify R2-P4 fence-stripping has not silently
+    // returned. Mila's 7 codes (different from Emma's 8 / Wade's 9)
+    // exercise the extractor against a third code-set shape.
+    const v5Sample = `\`\`\`xml
+<agent name="Mila">
+  <menu>
+    <item cmd="MH">[MH] Redisplay Menu Help</item>
+    <item cmd="CH">[CH] Chat with Mila</item>
+    <item cmd="RC">[RC] Research Convergence</item>
+    <item cmd="PR">[PR] Pivot Resynthesis</item>
+    <item cmd="PA">[PA] Pattern Mapping</item>
+    <item cmd="PM">[PM] Start Party Mode</item>
+    <item cmd="DA">[DA] Dismiss Agent</item>
+  </menu>
+</agent>
+\`\`\``;
+    const codes = extractV5MenuCodes(v5Sample);
+    assert.deepEqual([...codes].sort(), [...fixture.preMigrationMenuCodes].sort());
+  });
+});
