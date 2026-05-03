@@ -1,6 +1,6 @@
 # Story cov-1.1: Close 0.48% functions coverage gap to restore green CI
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -70,7 +70,7 @@ The format-conversion exclude correctly removed 15 functions of test-infrastruct
 **AC1 — c8 `check-coverage` gate passes; coverage-job exit-0 partly conditional on parallel `i97-bug-1` hotfix.** *(Amended 2026-05-03 mid-implementation per Option A operator authorization — pre-existing P0 test failures in `tests/p0/p0-activation.test.js` discovered at Task 4.4. Scope-isolated to parallel I97 hotfix story; see Change Log entry "Option A operator authorization 2026-05-03". Original AC1 binding to "GitHub Actions coverage job exits 0" rewritten to bind cov-1.1 to its narrowed scope and explicitly identify the second cause as out-of-scope.)*
 **Given** the pre-fix baseline above (functions coverage 86.34% from CI; or 87.52% if the working-tree partial fix has been preserved)
 **When** the story is implemented
-**Then** local `npm run test:coverage` produces a c8 summary block with **no** `ERROR: Coverage for X does not meet global threshold` line — i.e., c8's `check-coverage` gate passes for all four metrics (statements, branches, functions, lines) at the configured thresholds in [.c8rc.json](../../.c8rc.json).
+**Then** local `npm run test:coverage` produces a c8 summary block with **no** `ERROR: Coverage for X does not meet global threshold` line — i.e., c8's `check-coverage` gate passes for all configured thresholds in [.c8rc.json](../../.c8rc.json) (`lines: 83`, `functions: 88`, `branches: 80`; statements has no explicit threshold and passes vacuously per c8 default).
 **And** the GitHub Actions `coverage` job for the cov-1.1 commit shows the same — c8 summary block free of `ERROR:` line — even if the job's overall exit status is still non-zero due to scope-excluded test failures (see scope-isolation clause below).
 **And** **scope-isolation clause:** the coverage-job's overall exit-0 outcome is conditional on a parallel I97 hotfix story (`i97-bug-1`, to be cut by SM after this story closes) addressing the pre-existing P0 test failures in [tests/p0/p0-activation.test.js](../../tests/p0/p0-activation.test.js) (75+ assertions across multiple converted Vortex agents — Emma, Mila, etc.). These failures pre-date cov-1.1 (verified in CI run #25277123569 log lines 5028–5210+) and are I97 conversion-artifact defects, not c8 hygiene. cov-1.1 satisfies its share of AC1 (c8 gate passing) when the c8 summary block is `ERROR:`-free; the full coverage-job-green outcome materializes when both cov-1.1 and i97-bug-1 land.
 **And** the test matrix jobs (`test (18)`, `test (20)`, `test (22)`) continue to be green (zero regressions in test suite — see NFR1 / AC4 / AC6).
@@ -118,7 +118,7 @@ The format-conversion exclude correctly removed 15 functions of test-infrastruct
 ## Scope Exclusions
 
 - **Broad audit-scripts and legacy-migrations classification.** Per epic FR6 and AC5 of this story — log as backlog, do NOT classify all unclassified files in this story's diff unless directly required to close AC1.
-- **Tightening other coverage thresholds** (statements 83 → ?, branches 80 → ?, lines 83 → ?). Currently passing; not in scope.
+- **Tightening other coverage thresholds** (`lines: 83 → ?`, `branches: 80 → ?`; or adding a `statements` threshold which c8 currently leaves at default 0). Currently passing; not in scope.
 - **Promoting CI runners off Node.js 20** (the deprecation warning fires on every run; not blocking until 2026-06-02). Backlog candidate only.
 - **Switching coverage tools or adding external reporters** (CodeCov, Coveralls). Not in scope.
 - **Pre-commit hooks for coverage.** Per `lint-epic-1` precedent — friction-adding local hooks deferred.
@@ -136,7 +136,7 @@ The format-conversion exclude correctly removed 15 functions of test-infrastruct
   - [x] 2.2. **Path 1 branch** executed:
     - [x] 2.2.1. Mechanical classification spot-check across all 8 audit scripts via `grep -rn "require.*['\"]\.\.*\/audit\/<name>" scripts/ index.js`: only `audit-bmm-dependencies.js` had production importers (`scripts/convoke-doctor.js:14`, 4 sites in `scripts/convoke-register-skill.js`). All other 7 audit scripts had ZERO production importers — confirmed operational-tooling. Full classification table in Dev Notes "Path Chosen" subsection.
     - [x] 2.2.2. Added single tooling file (`scripts/audit/pf1-judge-calibration.js`) to [.c8rc.json](../../.c8rc.json) `exclude` array. Did NOT exclude the other 6 confirmed-tooling files — they are minimum-diff scope-excluded and logged as I101 backlog candidate (see AC5).
-    - [x] 2.2.3. Re-ran `npm run test:coverage` — Functions: 90.12% (365/405). c8 `check-coverage` gate passes for all four metrics (statements 87.52%, branches 80.99%, functions 90.12%, lines 87.52%; all above their respective thresholds 83/80/88/83). No `ERROR: Coverage for X does not meet global threshold` line in output. Stopped after one addition per Task 2.2.3 ("stop as soon as functions ≥ 88%").
+    - [x] 2.2.3. Re-ran `npm run test:coverage` — Functions: 90.12% (365/405). c8 `check-coverage` gate passes for all configured thresholds: lines 87.52% ≥ 83, branches 80.99% ≥ 80, functions 90.12% ≥ 88. (Statements 87.52% — no explicit threshold; passes vacuously per c8 default.) No `ERROR: Coverage for X does not meet global threshold` line in output. Stopped after one addition per Task 2.2.3 ("stop as soon as functions ≥ 88%").
   - [ ] 2.3. **Path 2 branch** — not taken (Path 1 closed the gap with comfortable margin).
     - [ ] 2.3.1. — N/A
     - [ ] 2.3.2. — N/A
@@ -192,7 +192,7 @@ Net: Path 1 will likely close the gap by excluding 2-3 non-imported audit script
 
 ### Why the 88% threshold matters
 
-Per Murat (party-mode session 2026-05-03): "Don't pick C. Test infrastructure measuring its own coverage is a category error — c8 was never going to give you useful numbers on a Playwright-style harness wrapper. Option A is the honest fix." The threshold is a ratchet — once lowered, it tends to stay lowered. Path 3 is genuinely a fallback; the dev agent should burn ~30 min on Path 1 + Path 2 before invoking it.
+Per Murat (party-mode session 2026-05-03): "Don't pick C. Test infrastructure measuring its own coverage is a category error — c8 was never going to give you useful numbers on a Playwright-style harness wrapper. Option A is the honest fix." The threshold is a ratchet — once lowered, it tends to stay lowered. Path 3 is genuinely a fallback; per AC3's time budget, the dev agent should burn 30 min on Path 1 + 30 min on Path 2 (1 hour total) before invoking it.
 
 ### How to mechanically classify a script as tooling vs production-path
 
@@ -233,7 +233,7 @@ If any condition fails, the file is **production-path** and must be either teste
 - [project-context.md](../../project-context.md) — §Rule: code-review-convergence (do not reopen Story 2.1), §Rule: derive-counts-from-source (use runtime coverage output), §Rule: mechanical-research-enumeration (per-file classification check), §Rule: spec-verify-referenced-files (verified 2026-05-03), §Rule: lint-passes-before-review (Task 4.1), §Rule: test-fixture-isolation (if Path 2)
 - [convoke-note-initiative-lifecycle-backlog.md](../planning-artifacts/convoke-note-initiative-lifecycle-backlog.md) §2.3 Fast Lane — backlog candidate target (AC5)
 - [c8 documentation](https://github.com/bcoe/c8#readme) — `check-coverage`, `exclude` glob semantics
-- I97 Story 2.1 (Emma POC) — [convoke-report-operator-covenant-self-check-emma-conversion-2026-05-02.md](convoke-report-operator-covenant-self-check-emma-conversion-2026-05-02.md) — origin of the new harness scripts
+- I97 Story 2.1 (Emma POC) — [convoke-report-operator-covenant-self-check-emma-conversion-2026-05-02.md](../planning-artifacts/convoke-report-operator-covenant-self-check-emma-conversion-2026-05-02.md) — origin of the new harness scripts
 
 ## Dev Agent Record
 
@@ -265,7 +265,7 @@ claude-opus-4-7[1m] (Claude Opus 4.7, 1M context)
 - **Task 2.2 — Path 1 chosen (single-file exclude).** `scripts/audit/pf1-judge-calibration.js` excluded — operational tooling with zero production importers and 0/12 functions covered. Result: functions 87.52% → **90.12%** (365/405). Comfortable margin above 88% threshold; minimum-diff approach per Task 2.2.3.
 - **Task 2.2.1 — full audit-scripts classification table generated** (mechanical `grep -rn "require.*['\"]\.\.*\/audit\/<name>"` for all 8 audit scripts). Only `audit-bmm-dependencies.js` is production-path (5 import sites in `convoke-doctor.js` + `convoke-register-skill.js`). Remaining 6 confirmed-tooling files (`pf1-validation-battery`, `reference-integrity`, `audit-bmad-init-refs`, `drift-snapshot`, `validate-marketplace`, `audit-skill-dirs`) NOT excluded in this story per minimum-diff principle (Task 2.2.3 "stop as soon as functions ≥ 88%"). Logged as I101 for follow-on hygiene work.
 - **Task 4.4 — discovery: dual-cause CI red.** Local `npm run test:coverage` exits 1 even with c8 gate passing. Investigation surfaced ~75 P0 test failures pre-dating cov-1.1, present in CI run #25277123569. These are I97 conversion-artifact defects (e.g. Emma's converted XML missing `id` attribute, Mila's persona.role missing). HALT triggered; presented options to operator; Option A (story split + parallel `i97-bug-1` hotfix) authorized 2026-05-03.
-- **Task 5 — backlog candidates added.** I101 (audit-scripts/legacy-migrations classification, RICE 2.4) for AC5; U18 (Node 24 migration, RICE 4.5) for Task 5.3.
+- **Task 5 — backlog candidates added.** I101 (audit-scripts/legacy-migrations classification, RICE 2.4) for AC5; U19 (Node 24 CI action-runtime migration, RICE 4.5) for Task 5.3. *(U19 was originally appended as U18 but renumbered during R1 code-review per Patch P01 — existing U18 was already taken.)*
 - **Tasks 6 + 7.1 deferred to operator** per CLAUDE.md "NEVER commit unless explicitly asked" and lint-1-1 precedent.
 
 ### Path Chosen
@@ -291,15 +291,39 @@ claude-opus-4-7[1m] (Claude Opus 4.7, 1M context)
 
 ### Review Findings
 
-(To be filled after `bmad-code-review`.)
+**Round 1 — 2026-05-03.** 3-layer adversarial review (Blind Hunter + Edge Case Hunter + Acceptance Auditor). Triage: 1 decision-needed, 7 patch, 1 defer, 16 dismissed. No HIGH findings post-triage (auditor verdict CHANGES REQUESTED on backlog hygiene only — load-bearing AC1 verified live in CI run #25282010960).
+
+**Decision-needed:**
+
+- [x] [Review][Decision resolved] CR-cov-1-1-D01 (Edge HIGH) — `pf1-judge-calibration.js` exclude has cross-coupling within `scripts/audit/`. **Resolved 2026-05-03 by operator: option (c) — sharpen I101 backlog handoff.** Asymmetry preserved (cov-1.1 minimum-diff principle held); risk bounded (audit-tooling is operator-run; production importers route through `audit-bmm-dependencies.js` which IS measured). I101 description to be amended to explicitly call out the cross-coupling cluster (`pf1-judge-calibration` + `pf1-validation-battery` + their test files) as a unit-of-work for the followup story. See **CR-cov-1-1-P08** below for the patch action.
+
+**Patches:**
+
+- [x] [Review][Patch applied] CR-cov-1-1-P01 (Edge HIGH + Auditor CONCERN) — U18 backlog ID collision: existing U18 already taken by `--dry-run` UX hardening bundle for convoke-register-skill. Renumber the new Node.js 24 migration row to U19. [`convoke-note-initiative-lifecycle-backlog.md:526`]
+- [x] [Review][Patch applied] CR-cov-1-1-P02 (Edge HIGH) — Story References link to Emma POC report uses bare relative filename which resolves under `_bmad-output/implementation-artifacts/`, but the file lives under `_bmad-output/planning-artifacts/`. Rewrite the link target to `../planning-artifacts/convoke-report-operator-covenant-self-check-emma-conversion-2026-05-02.md`. [`cov-1-1-close-functions-coverage-gap.md:258`]
+- [x] [Review][Patch applied] CR-cov-1-1-P03 (Edge MED) — Story prose cites a non-existent `statements: 83` threshold three places: Scope Exclusions list, Path Chosen Task 2.2.3 evidence ("83/80/88/83"), AC1 amendment text ("all four metrics"). `.c8rc.json` only configures `lines: 83, functions: 88, branches: 80` — no `statements` (c8 default = 0). Fix wording to reflect the three actually-configured metrics; statements passes vacuously. [`cov-1-1-close-functions-coverage-gap.md:73, 121, 139`]
+- [x] [Review][Patch applied] CR-cov-1-1-P04 (Auditor MINOR) — Story File List omits the new epic file (`convoke-epic-restore-coverage-green-ci.md`) — diff creates 5 files but story File List enumerates only 4. [`cov-1-1-close-functions-coverage-gap.md` File List]
+- [x] [Review][Patch applied] CR-cov-1-1-P05 (Blind MED) — U19 entry (after P01 renumber) conflates GitHub Actions runtime deprecation (Node.js 20 → 24 for action JS runtime) with the package's Node-version test matrix (`[18, 20, 22]`). The two are independent; bundling could mislead an operator into dropping Node 18 from the matrix unnecessarily. Split scope or clarify in the entry. [`convoke-note-initiative-lifecycle-backlog.md:526`]
+- [x] [Review][Patch applied] CR-cov-1-1-P06 (Blind MED) — AC3 internal time-budget contradiction: AC3 line says "30 min Path 1 + 30 min Path 2 = 1 hour total before Path 3"; Dev Notes "Why the 88% threshold matters" says "burn ~30 min on Path 1 + Path 2 before invoking it". Pick one budget. [`cov-1-1-close-functions-coverage-gap.md:110, 217`]
+- [x] [Review][Patch applied] CR-cov-1-1-P07 (Blind LOW) — AC5 amend-clause states "if Path 1 was chosen and the dev agent already classified some of those files in this story's diff, the backlog entry is amended to note which files are already classified (no double-work)." I101 references the classification table by pointing at "story Dev Notes spot-check" but does not enumerate the 6 confirmed-tooling files in-row. Inline the file list (or anchor-link to the story Dev Notes section directly). [`convoke-note-initiative-lifecycle-backlog.md:527`]
+- [x] [Review][Patch applied] CR-cov-1-1-P08 (Edge HIGH, resolved from D01) — Amend I101 description in `convoke-note-initiative-lifecycle-backlog.md` to explicitly call out the **`pf1-judge-calibration` + `pf1-validation-battery` cross-coupling cluster** (including test files `tests/lib/pf1-validation-battery.test.js` and `tests/lib/pf1-judge-prompt.test.js`) as a unit-of-work for the followup story. The cluster should be classified-and-handled together (either symmetric exclude OR per-function unit tests OR a c8 ignore comment) rather than file-by-file. [`convoke-note-initiative-lifecycle-backlog.md:527`]
+
+**Deferred:**
+
+- [x] [Review][Defer] CR-cov-1-1-D01 (Blind LOW) — sprint-status.yaml `last_updated` field has grown into a multi-paragraph prose log embedded in a YAML scalar value. Risk of YAML parse issues if a future entry contains reserved characters; diffs are also harder to read. **Pre-existing pattern across all stories — out of scope for cov-1.1.** Logged to deferred-work.md for a future `last_updated_log:` structural-cleanup story.
+
+**Dismissed (16, summary):** AC1+AC6 amendment goalpost-moving (operator-authorized via Option A; documented in Change Log); glob vs literal-path c8 exclude mixing (empirically validated — exclude matched in CI run #25282010960 yielding 90.12% functions); AC1 "ERROR:" string-format dependency (already clarified by behavioral "i.e." clause in same AC); AC6 escape-hatch "or similar timeout-bounded tests" (operator-authorized scope); "8 consecutive failures" rough count (verified ~accurate); cov-epic-1-retrospective placeholder placement (matches lint-epic-1 / mig-test-epic-1 precedent); ESLint config-warning interpretation (verified actual ESLint output); epic Overview prose framing of reference-integrity (FR1 + per-file table separately accurate); pre-fix coverage covered-numerator-drop pedantry; Task 5.3 ratification governance (story-spec-authored task); audit-skill-dirs note tangent; .c8rc.json reformat-mixed-with-semantic-change; CI matrix Node-version pre-existing design; Path 1 prediction-vs-actual (story-authoring guidance); fresh post-amendment coverage run (CI #25282010960 satisfies the verification).
+
+**No Round 2 trigger:** zero HIGH findings post-triage (the 3 HIGH findings raised by Edge Case Hunter were classified — 1 to decision-needed [D01], 2 to patch [P01, P02]). Per `code-review-convergence` rule, Round 1 is the convergence point unless decision-needed resolution introduces structural changes.
 
 ### File List
 
-**Modified by this story (4 files, in scope):**
+**Modified by this story (5 files, in scope):**
 
 - `.c8rc.json` — added `scripts/audit/pf1-judge-calibration.js` to `exclude` array; reformatted array to multi-line for readability. Format-conversion exclude (from working tree at pickup) preserved per AC2.
-- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — appended I101 (audit-scripts classification, RICE 2.4) and U18 (Node 24 CI migration, RICE 4.5) to §2.3 Fast Lane.
-- `_bmad-output/implementation-artifacts/cov-1-1-close-functions-coverage-gap.md` — this story file (Status, AC1/AC6 amendments, Tasks/Subtasks checkboxes, Dev Agent Record, File List, Change Log).
+- `_bmad-output/planning-artifacts/convoke-epic-restore-coverage-green-ci.md` — **new** epic file (single-story mini-epic; lint-epic-1 / mig-test-epic-1 precedent). 6 FRs / 4 NFRs; references the cov-1.1 story.
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — appended I101 (audit-scripts classification, RICE 2.4) and U19 (Node 24 CI action-runtime migration, RICE 4.5) to §2.3 Fast Lane. *(Note: U19 was originally appended as U18 but renumbered during R1 code-review since U18 was already taken — see cov-1-1 R1 Patch P01.)*
+- `_bmad-output/implementation-artifacts/cov-1-1-close-functions-coverage-gap.md` — this story file (Status, AC1/AC6 amendments, Tasks/Subtasks checkboxes, Dev Agent Record, File List, Change Log, Review Findings).
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — status transition `ready-for-dev → in-progress → review` for `cov-1-1-close-functions-coverage-gap`; matching epic transition `cov-epic-1: in-progress`; `last_updated` chain extended at story authoring time.
 
 **Pre-existing in working tree at story pickup (already present, this story preserves them):**
@@ -312,5 +336,6 @@ claude-opus-4-7[1m] (Claude Opus 4.7, 1M context)
 
 ## Change Log
 
+- **2026-05-03 (Round 1 code review — V-pass+R1 only per `feedback_avoid_overcomplicating_audits`).** `/bmad-code-review` Round 1 executed with 3 parallel adversarial layers (Blind Hunter + Edge Case Hunter + Acceptance Auditor). Triage: **1 decision-needed (resolved 2026-05-03 by operator option (c) — sharpen I101 backlog handoff)**, **8 patches (all batch-applied)**, **1 defer (logged to deferred-work.md)**, **16 dismissed as noise / pre-existing / operator-resolved**. Auditor verdict: APPROVE on substantive ACs (AC1 verified live in CI #25282010960 c8 summary block free of `ERROR:` line, functions 90.12%); CHANGES REQUESTED on backlog hygiene (U18 ID collision, File List omission of epic file, fictional `statements: 83` threshold prose) — all addressed by patches P01–P08. Patches applied: (P01) U18→U19 renumber in backlog; (P02) Emma report relative-path fix in story References; (P03) drop fictional `statements: 83` threshold from 3 prose locations and align AC1 wording with actually-configured metrics; (P04) add new epic file to story File List; (P05) U19 entry scope-clarified to action-runtime-only (separate from package test-matrix); (P06) AC3 time-budget aligned at 60 min total (Dev Notes `~30 min` rephrased); (P07) I101 description inlines the 8-row classification table; (P08) I101 amended to call out `pf1-judge-calibration` ↔ `pf1-validation-battery` cross-coupling cluster as unit-of-work for followup. **R2 NOT triggered** per `code-review-convergence` rule + `feedback_avoid_overcomplicating_audits` — V-pass+R1 only; the 3 HIGH findings (D01, P01, P02) were resolved in-place; patches were content/governance fixes, no structural rewrites.
 - **2026-05-03 (Option A operator authorization — story-split scope amendment).** At Task 4.4 verification, discovered that `npm run test:coverage` exit code 1 had **two** causes, not one: (a) c8 functions threshold trip (cov-1.1's scope) and (b) ~75 pre-existing P0 test failures in [tests/p0/p0-activation.test.js](../../tests/p0/p0-activation.test.js) for Emma, Mila, and likely all converted Vortex agents. Verified pre-existence in CI run #25277123569 log lines 5028–5210+ — these are I97 conversion-artifact defects (e.g. Emma's converted XML missing `id` attribute), not c8 hygiene. HALT triggered per dev-story workflow Step 5; options presented to operator. **Operator (Amalik) selected Option A 2026-05-03:** narrow cov-1.1 to c8 hygiene only; cut a parallel I97 hotfix story (`i97-bug-1`) for the P0 test failures. AC1 amended in-place to bind cov-1.1 to "c8 summary block free of `ERROR:` line" (binary, single-cause) with explicit scope-isolation clause for the parallel hotfix; AC6 amended to scope-isolate Node-version-environmental timing failures. Both amendments preserve cov-1.1's narrowed-but-completable shape; full coverage-job-green outcome materializes when both stories ship.
 - **2026-05-03 (story authored).** Story authored by Bob (SM) via `bmad-create-story` workflow. Origin: party-mode session (Winston + Murat) diagnosed CI red since 2026-05-01T23:15:46Z; root cause = c8 include-glob caught I97 test infrastructure. Partial fix (`scripts/migration/format-conversion/**` exclude) already in working tree at story-authoring time, recovering 87.52% functions; this story closes the residual 0.48% gap to 88%.
