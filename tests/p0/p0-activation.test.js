@@ -8,6 +8,7 @@ const {
   loadAgentDefinition,
   validateActivation,
   assertFileExists,
+  MIN_NUMERIC_ACTIVATION_STEPS,
 } = require('./helpers');
 
 // ─── Dynamic Agent Activation Tests ─────────────────────────────
@@ -87,11 +88,12 @@ describe('P0 Activation: Agent Definition Files', () => {
         }
       });
 
-      it('activation has at least 7 numeric steps', () => {
+      it('activation has the format-appropriate floor of numeric steps', () => {
         const numericSteps = def.activationSteps.filter(s => /^\d+$/.test(s));
+        const minSteps = MIN_NUMERIC_ACTIVATION_STEPS[def.format] ?? 7;
         assert.ok(
-          numericSteps.length >= 7,
-          `${agent.name} (${agent.id}): expected at least 7 numeric activation steps, got ${numericSteps.length}`
+          numericSteps.length >= minSteps,
+          `${agent.name} (${agent.id}): expected at least ${minSteps} numeric activation steps for ${def.format} format, got ${numericSteps.length}`
         );
       });
 
