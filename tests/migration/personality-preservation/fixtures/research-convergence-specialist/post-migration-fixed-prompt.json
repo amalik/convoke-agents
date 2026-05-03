@@ -1,0 +1,89 @@
+{
+  "agent_role": "research-convergence-specialist",
+  "agent_first_name": "Mila",
+  "agent_icon": "🔬",
+  "fixture_purpose": "Evidence Source 1 (FR21) — fixed-prompt Q&A samples captured from POST-MIGRATION (v6.3+) Mila. Scored side-by-side against baseline-fixed-prompt.json to detect persona drift across the conversion.",
+  "captured_against": "post-migration v6.3+ SKILL.md (Story i97-2-3)",
+  "capture_date": "2026-05-03",
+  "capture_session_id": "TBD-fill-when-captured (per CF #11: fill at capture time, never leave as TBD; if same-session-as-implementation, write 'same-session-as-implementation per same-LLM caveat')",
+  "scoring_dimensions_covered": ["D1", "D2", "D5", "D7"],
+  "operator_capture_method": "Open a fresh session and invoke /bmad-agent-bme-research-convergence-specialist. After the greeting + menu, send each prompt below verbatim. The first prompt may need to be sent after picking [CH] Chat with Mila; subsequent prompts continue the same chat session. Paste Mila's verbatim response into the response field for each prompt. Do NOT edit, summarize, or clean up the responses — capture them as-is.",
+  "scoring_protocol": "After capture, score each post-migration response against its baseline twin (same id) on the relevant primary_dimensions using the calibrated rubric. Any dimension scoring 1 (Degraded) blocks merge per FR23. Any dimension at 2 = ship-with-note (operator judgment); ≥3 across all dims = auto-PASS. Per CF #8: scoring report frontmatter `status: pending-operator-confirmation` until operator confirms D7 sanity-check at PR review.",
+  "expected_persona_signals": {
+    "should_appear": [
+      "Convergence-discipline-with-warmth (push back gently, not refuse outright)",
+      "Phrases like 'Here's what the research is telling us...' / 'Three patterns converge on this insight' / 'Hmm — let me push back gently here'",
+      "'One data point is an anecdote, three from different sources are a pattern' framing",
+      "Cross-source triangulation tables (evidence layer × signal)",
+      "JTBD reframes (functional + emotional + social)",
+      "Pains & Gains analysis (tolerated today vs hired-for)",
+      "Verbatim anchors and named blindspots (which evidence layers are missing)",
+      "Holding contradictions in plain view rather than rushing to resolve them"
+    ],
+    "should_NOT_appear": [
+      "Calling a single-source claim a 'pattern' without pushback",
+      "Synthesizing problem definitions from imagined data when no evidence is provided",
+      "Premature convergence when sources contradict",
+      "Paraphrase without verbatim anchors",
+      "Refusing outright like Wade (Mila pushes back gently with warmth, not 'No / Hard no')"
+    ]
+  },
+  "carry_forward_observations": {
+    "stage_directions_carry_forward_3": "Track per-prompt whether Mila's post-migration responses introduce stage directions (e.g., *pauses*, *leans in*) that were not in baseline. This is the 3rd observation: Emma had them across all 7 EM-FP responses, Wade had zero. If Mila has them → 2-of-3 surface — re-flag as systemic. If Mila has zero → 2-of-3 absent — agent-specific-to-Emma reading hardens.",
+    "cross_agent_escalation_carry_forward_1": "Track in D5 whether Mila routes to OTHER agents (Isla for upstream evidence, Liam for hypothesis handoff, Wade for experiment design) vs. staying inside her own RC/PR/PA set. This is the 3rd observation: Emma regressed (no cross-agent map), Wade preserved (Isla + Liam routing). If Mila preserves → 2-of-3 preserved → agent-specific-to-Emma reading hardens. If Mila regresses → 2-of-3 regressed → re-flag as systemic.",
+    "d6_outperforms_baseline_carry_forward_7": "Track in D6 (cross-turn coherence) whether post-migration Mila outperforms baseline like Emma + Wade did. This is the 3rd observation. If Mila ALSO outperforms → 3-of-3 → escalate as architecture-doc finding candidate (v6.3+ format may have measurable cross-turn-coherence advantage over v5 step-counter activation). If Mila does NOT outperform → 2-of-3 → keep watching, possibly a same-LLM artifact rather than a format property.",
+    "persona_vs_transcript_match_carry_forward_12": "Spot-check whether Mila's actual responses match the SKILL.md `**CRITICAL Handling**` description (push back gently, surface gaps, route to RC/PA, route to Isla if upstream thin). If transcripts diverge — e.g., Mila refuses outright like Wade does, or capitulates instead of pushing back — adjust SKILL.md to match observed behavior, not the aspirational draft.",
+    "rubric_recalibration_trigger_epic_AR17_6": "Per epic AR17 #6: if D5 scoring surfaces ambiguity (especially around uncertainty-acknowledgment patterns: 'we don't have enough sources to triangulate yet'), pause + open a backlog row for rubric recalibration. Do NOT silently retune mid-story."
+  },
+  "prompts": [
+    {
+      "id": "MI-FP1",
+      "primary_dimensions": ["D1", "D2", "D3"],
+      "rationale": "Single-source pattern claim; tests cross-source triangulation principle + 'one data point is an anecdote' framing.",
+      "prompt": "We did 5 user interviews and they all said they want better notifications. Sounds like a pattern, right?",
+      "response": "TBD-fill-when-captured"
+    },
+    {
+      "id": "MI-FP2",
+      "primary_dimensions": ["D2", "D7"],
+      "rationale": "Synthesis request from raw data; tests JTBD framing + Pains & Gains analysis.",
+      "prompt": "Here's what came out of discovery: users say they're stressed about deadlines, they avoid the calendar feature, they switch to spreadsheets when projects get complex, and 3 of 8 mentioned 'I just want to feel in control'. What's the problem definition?",
+      "response": "TBD-fill-when-captured"
+    },
+    {
+      "id": "MI-FP3",
+      "primary_dimensions": ["D2", "D4"],
+      "rationale": "Conflicting sources case; tests holding contradictions vs forcing premature convergence.",
+      "prompt": "Sales says enterprise customers want more permissions controls. Support tickets show SMB users complaining about complexity. Survey says everyone wants 'simpler workflows'. Which is right?",
+      "response": "TBD-fill-when-captured"
+    },
+    {
+      "id": "MI-FP4",
+      "primary_dimensions": ["D5"],
+      "rationale": "Vague request with no source data; tests Mila's failure-handling — should ask what evidence exists, not synthesize from imagination.",
+      "prompt": "Help me write a problem statement for our product.",
+      "response": "TBD-fill-when-captured"
+    },
+    {
+      "id": "MI-FP5",
+      "primary_dimensions": ["D7"],
+      "rationale": "Artifact production with sufficient data; tests whether output uses JTBD framing + grounds in user language.",
+      "prompt": "Here's interview notes from 8 customers (SaaS PM tool). Three themes I noticed: (1) people complain that comments get lost, (2) several mentioned 'I never know if my teammate saw my update', (3) two cried during interviews when describing miscommunications causing missed deadlines. Synthesize this into a problem definition.",
+      "response": "TBD-fill-when-captured"
+    },
+    {
+      "id": "MI-FP6",
+      "primary_dimensions": ["D2", "D3"],
+      "rationale": "Pivot scenario; tests Pivot Resynthesis framing — re-synthesizing problem definition after failed experiments.",
+      "prompt": "We shipped the feature we thought solved the problem. It didn't move the metric. Now what?",
+      "response": "TBD-fill-when-captured"
+    },
+    {
+      "id": "MI-FP7",
+      "primary_dimensions": ["D2", "D4"],
+      "rationale": "Premature-pattern claim with weak triangulation; tests whether Mila pushes back on declaring convergence.",
+      "prompt": "I'm seeing the same theme in our last 3 NPS comments. That's a pattern, right?",
+      "response": "TBD-fill-when-captured"
+    }
+  ]
+}
