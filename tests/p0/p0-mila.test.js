@@ -11,6 +11,11 @@ const {
   AGENTS_DIR,
   WORKFLOWS_DIR,
   STEP_PATTERN,
+  extractExecPaths,
+  resolveExecPath,
+  countRules,
+  hasConfigErrorHandling,
+  fileMentions,
 } = require('./helpers');
 
 const MILA_ID = 'research-convergence-specialist';
@@ -27,25 +32,26 @@ describe('P0 Mila: Activation Sequence', () => {
     rawContent = fs.readFileSync(path.join(AGENTS_DIR, MILA_ID, 'SKILL.md'), 'utf8');
   });
 
-  it('persona role contains "Research Convergence"', () => {
+  it('agent file mentions self-description keyword "Research Convergence"', () => {
     assert.ok(
-      def.persona.role.includes('Research Convergence'),
-      `Mila (${MILA_ID}): persona role should contain "Research Convergence", got "${def.persona.role}"`
+      fileMentions(rawContent, 'Research Convergence'),
+      `Mila (${MILA_ID}): ${def.format} agent file should contain "Research Convergence" somewhere in its self-description`
     );
   });
 
-  it('persona identity references the Synthesize stream', () => {
+  it('agent file references the Synthesize stream', () => {
     assert.ok(
-      def.persona.identity.includes('Synthesize'),
-      `Mila (${MILA_ID}): persona identity should reference "Synthesize" stream`
+      fileMentions(rawContent, 'Synthesize'),
+      `Mila (${MILA_ID}): ${def.format} agent file should reference "Synthesize" stream`
     );
   });
 
-  it('persona communication_style contains characteristic phrase', () => {
-    const style = def.persona.communication_style;
+  it('agent file contains characteristic communication phrase', () => {
     assert.ok(
-      style.includes('what the research is telling us'),
-      `Mila (${MILA_ID}): communication_style should contain "what the research is telling us"`
+      fileMentions(rawContent, 'what the research is telling us') ||
+        fileMentions(rawContent, 'three sources') ||
+        fileMentions(rawContent, 'one data point is an anecdote'),
+      `Mila (${MILA_ID}): ${def.format} agent file should contain a characteristic Mila phrase ("what the research is telling us", "three sources", or "one data point is an anecdote")`
     );
   });
 
@@ -65,48 +71,34 @@ describe('P0 Mila: Activation Sequence', () => {
     }
   });
 
-  it('exec-path menu items reference existing files on disk', () => {
-    const execRegex = /<item\s[^>]*exec="([^"]+)"[^>]*>/g;
-    const execPaths = [];
-    let m;
-    while ((m = execRegex.exec(rawContent)) !== null) {
-      execPaths.push(m[1]);
-    }
+  it('capability-prompt files referenced from menu surface exist on disk', () => {
+    const execPaths = extractExecPaths(rawContent, def.format);
     assert.ok(
-      execPaths.length >= 4,
-      `Mila (${MILA_ID}): expected at least 4 exec paths, found ${execPaths.length}`
+      execPaths.length >= 3,
+      `Mila (${MILA_ID}): ${def.format} agent file expected at least 3 exec/capability paths, found ${execPaths.length}`
     );
+    const agentDir = path.join(AGENTS_DIR, MILA_ID);
     for (const execPath of execPaths) {
-      const resolved = execPath.replace(/\{project-root\}/g, PACKAGE_ROOT);
+      const resolved = resolveExecPath(execPath, agentDir, PACKAGE_ROOT);
       assert.ok(
         fs.existsSync(resolved),
-        `Mila (${MILA_ID}): exec path not found on disk: ${resolved}`
+        `Mila (${MILA_ID}): exec path not found on disk: ${resolved} (from "${execPath}")`
       );
     }
   });
 
-  it('activation step 2 references config.yaml loading with error handling', () => {
-    const step2Match = rawContent.match(/<step n="2">([\s\S]*?)<step n="3">/);
+  it('activation has config-error handling on step 2 (or v6.3 step-1 bmad-init delegation)', () => {
     assert.ok(
-      step2Match,
-      `Mila (${MILA_ID}): could not extract activation step 2 content`
-    );
-    assert.ok(
-      step2Match[1].includes('config.yaml'),
-      `Mila (${MILA_ID}): step 2 should reference "config.yaml" loading`
-    );
-    assert.ok(
-      step2Match[1].includes('Configuration Error'),
-      `Mila (${MILA_ID}): step 2 should contain "Configuration Error" handling`
+      hasConfigErrorHandling(def, rawContent),
+      `Mila (${MILA_ID}): ${def.format} agent file should have config-error handling — v5: <step n="2"> with "config.yaml" + "Configuration Error"; v6.3: step 1 with "**Load config via bmad-init"`
     );
   });
 
-  it('rules section has at least 5 rules', () => {
-    const ruleMatches = rawContent.match(/<r>/g);
-    const ruleCount = ruleMatches ? ruleMatches.length : 0;
+  it('principles/rules section has at least 5 entries', () => {
+    const ruleCount = countRules(def, rawContent);
     assert.ok(
       ruleCount >= 5,
-      `Mila (${MILA_ID}): expected at least 5 rules, found ${ruleCount}`
+      `Mila (${MILA_ID}): ${def.format} agent file expected at least 5 ${def.format === 'v5' ? '<r> rules' : '## Principles bullets'}, found ${ruleCount}`
     );
   });
 });
