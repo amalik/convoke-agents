@@ -65,16 +65,26 @@ function parseFrontmatter(content) {
 }
 
 /**
+ * Escape regex meta-characters so a heading string can be safely interpolated
+ * into a `RegExp` constructor literal. (i97-bug-1 R1 review fix.)
+ */
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Extract the body of a v6.3 markdown section by heading text.
  * Returns content from after `## {heading}` line to the next `## ` heading or EOF.
- * Returns null if heading not found.
+ * Returns null if the heading isn't found; returns an empty string if the
+ * heading is the very last line of the file.
  */
 function extractMarkdownSection(content, heading) {
-  const headingPattern = new RegExp(`^## ${heading}\\s*$`, 'm');
+  const headingPattern = new RegExp(`^## ${escapeRegex(heading)}\\s*$`, 'm');
   const start = content.search(headingPattern);
   if (start === -1) return null;
-  const afterHeading = content.indexOf('\n', start) + 1;
-  if (afterHeading === 0) return null;
+  const newlineIdx = content.indexOf('\n', start);
+  if (newlineIdx === -1) return ''; // heading is the literal final line; section body is empty
+  const afterHeading = newlineIdx + 1;
   const tail = content.slice(afterHeading);
   const nextHeadingMatch = tail.match(/^## /m);
   const end = nextHeadingMatch ? afterHeading + nextHeadingMatch.index : content.length;
@@ -219,7 +229,10 @@ function parseV63Definition(content, registryAgent) {
   if (activSection) {
     // Step 1 body: from "1." line to "2." line (or end of section)
     const step1Match = activSection.match(/^1\.([\s\S]*?)(?=^2\.|$(?![\s\S]))/m);
-    if (step1Match && step1Match[1].includes('bmad-init')) {
+    // Tighten: require structural marker (bold-prefixed "Load config via bmad-init")
+    // rather than bare substring, to avoid false positives on prose mentioning the
+    // string. (i97-bug-1 R1 review fix.) Verified canonical across Emma/Wade/Mila.
+    if (step1Match && /\*\*[^*]*Load config via `?bmad-init/i.test(step1Match[1])) {
       hasErrorHandling = true;
     }
     // Forward-compatibility: also accept explicit `Configuration Error` / `STOP` in step 2
@@ -262,7 +275,22 @@ function loadAgentDefinition(agentId) {
 
   const frontmatter = parseFrontmatter(content);
 
-  // Format-aware dispatch (i97-bug-1)
+  // Format-aware dispatch (i97-bug-1):
+  //
+  // The discriminator looks for `<agent\s+` (the v5 tag opener) anywhere in
+  // the file. v5 SKILL.md files wrap their agent definition in a ```xml code
+  // fence, so the tag appears inside fenced content; v6.3 files have NO XML
+  // anywhere (verified across Emma/Wade/Mila 2026-05-03 — `grep -c "<agent " *`
+  // returns 0 for v6.3 and 1 for v5).
+  //
+  // R1 review note (i97-bug-1): an earlier version of this discriminator
+  // stripped code fences first to avoid false-positives on v6.3 files that
+  // *cite* `<agent ...>` in a documentation example. That regressed because
+  // v5 files HAVE their real `<agent>` inside a fence — stripping fences
+  // misclassified all v5 agents as v6.3. The hypothetical false-positive
+  // (v6.3 file with fenced v5 example) is not present in any current SKILL.md
+  // and would be caught downstream by `parseV5Definition` finding no real
+  // `<role>`/`<step>` content. Keep the simple heuristic.
   const isV5 = /<agent\s+/.test(content);
   const format = isV5 ? 'v5' : 'v6.3';
   const formatSpecific = isV5
@@ -279,6 +307,115 @@ function loadAgentDefinition(agentId) {
 //   v5 (Isla, Noah, Max, Liam): 7+ numeric steps via XML
 //   v6.3 (Emma, Wade, Mila): exactly 3 top-level numbered items
 const MIN_NUMERIC_ACTIVATION_STEPS = Object.freeze({ v5: 7, 'v6.3': 3 });
+
+// ─── Format-Aware Per-Agent Test Helpers (i97-bug-1) ────────────
+//
+// The per-agent P0 test files (p0-emma.test.js, p0-wade.test.js, p0-mila.test.js)
+// were written against the v5 XML-in-markdown contract. The helpers below let
+// those tests express the same SEMANTIC contracts in a format-aware way:
+//
+//   - "agent self-describes with role keyword"  → search agent's full file content
+//   - "exec-paths reference existing files"     → v5: <item exec="..."> regex;
+//                                                  v6.3: ## Capabilities table
+//                                                        Skill column refs
+//   - "step 2 has config-error handling"        → v5: <step n="2"> body substring;
+//                                                  v6.3: hasErrorHandling field
+//                                                        (already format-aware)
+//   - "rules section has at least N rules"      → v5: count <r> tags;
+//                                                  v6.3: count ## Principles bullets
+
+/**
+ * Format-aware extraction of "executable paths" referenced from the agent's
+ * Capabilities/menu surface. Used for the "exec-path menu items reference
+ * existing files on disk" P0 contract.
+ *
+ * v5: regex on `<item ... exec="path/...">` attributes.
+ * v6.3: parse `## Capabilities` markdown table Skill column for canonical
+ *       `Load \`./references/<file>.md\`` references (the v6.3 convention
+ *       across Emma/Wade/Mila — verified 2026-05-03).
+ */
+function extractExecPaths(rawContent, format) {
+  const paths = [];
+  if (format === 'v5') {
+    const execRegex = /<item\s[^>]*exec="([^"]+)"[^>]*>/g;
+    let m;
+    while ((m = execRegex.exec(rawContent)) !== null) {
+      paths.push(m[1]);
+    }
+    return paths;
+  }
+  // v6.3
+  const capsSection = extractMarkdownSection(rawContent, 'Capabilities');
+  if (!capsSection) return paths;
+  // Each capability row: `| CODE | description | Load \`./references/<file>.md\` |`
+  // (The Skill column may also reference standalone skills like `bmad-party-mode`,
+  // which are NOT file-existence-checkable — only `./references/...` are.)
+  const refPattern = /Load `(\.\/references\/[^`]+)`/g;
+  let m;
+  while ((m = refPattern.exec(capsSection)) !== null) {
+    paths.push(m[1]);
+  }
+  return paths;
+}
+
+/**
+ * Resolve a v6.3 capability-prompt reference (e.g. `./references/lean-persona.md`)
+ * to an absolute filesystem path, given the agent's SKILL.md directory.
+ *
+ * v6.3 capability prompts are agent-relative (`./references/<file>.md` next to
+ * the agent's SKILL.md), unlike v5's project-root-relative `{project-root}/...`.
+ */
+function resolveExecPath(execPath, agentDir, packageRoot) {
+  if (execPath.startsWith('./')) {
+    return path.resolve(agentDir, execPath);
+  }
+  return execPath.replace(/\{project-root\}/g, packageRoot);
+}
+
+/**
+ * Format-aware "rules count" — v5 counts `<r>` tags; v6.3 counts the bullet
+ * items in the `## Principles` section.
+ */
+function countRules(def, rawContent) {
+  if (def.format === 'v5') {
+    const ruleMatches = rawContent.match(/<r>/g);
+    return ruleMatches ? ruleMatches.length : 0;
+  }
+  // v6.3
+  if (!def.persona.principles) return 0;
+  return def.persona.principles
+    .split('\n')
+    .filter(line => /^\s*[-*]\s/.test(line))
+    .length;
+}
+
+/**
+ * Format-aware "step 2 has config-error handling" — v5 inspects `<step n="2">`
+ * body; v6.3 uses the already-format-aware `def.hasErrorHandling` (which is
+ * true iff step 1 has the canonical `**Load config via bmad-init` marker, OR
+ * step 2 has explicit `Configuration Error` / `STOP` substring as fallback).
+ */
+function hasConfigErrorHandling(def, rawContent) {
+  if (def.format === 'v5') {
+    const step2Match = rawContent.match(/<step n="2">([\s\S]*?)<step n="3">/);
+    if (!step2Match) return false;
+    return step2Match[1].includes('config.yaml') && step2Match[1].includes('Configuration Error');
+  }
+  // v6.3 — use the field set by parseV63Definition
+  return def.hasErrorHandling;
+}
+
+/**
+ * Format-aware content search for an agent self-description keyword (e.g.,
+ * "Product Context Architect" for Emma). v5 agents carry these phrases inside
+ * a single `<role>` tag; v6.3 distributes the same descriptor across the H1
+ * heading, `## Overview`, `## Identity`, frontmatter description, etc. — so
+ * a presence-anywhere check on the full file content is the honest semantic
+ * test.
+ */
+function fileMentions(rawContent, keyword) {
+  return rawContent.includes(keyword);
+}
 
 // ─── Validation Functions ───────────────────────────────────────
 
@@ -486,6 +623,12 @@ module.exports = {
   MIN_NUMERIC_ACTIVATION_STEPS,
   discoverAgents,
   loadAgentDefinition,
+  extractMarkdownSection,
+  extractExecPaths,
+  resolveExecPath,
+  countRules,
+  hasConfigErrorHandling,
+  fileMentions,
   validateActivation,
   validateWorkflowStructure,
   assertAgentField,
