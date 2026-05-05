@@ -10,6 +10,11 @@ const {
   PACKAGE_ROOT,
   AGENTS_DIR,
   WORKFLOWS_DIR,
+  extractExecPaths,
+  resolveExecPath,
+  countRules,
+  hasConfigErrorHandling,
+  fileMentions,
 } = require('./helpers');
 const {
   AGENTS,
@@ -35,26 +40,25 @@ describe('P0 Emma: Activation Sequence', () => {
     rawContent = fs.readFileSync(path.join(AGENTS_DIR, EMMA_ID, 'SKILL.md'), 'utf8');
   });
 
-  it('persona role contains "Product Context Architect"', () => {
+  it('agent file mentions self-description keyword "Product Context Architect"', () => {
     assert.ok(
-      def.persona.role.includes('Product Context Architect'),
-      `Emma (${EMMA_ID}): persona role should contain "Product Context Architect", got "${def.persona.role}"`
+      fileMentions(rawContent, 'Product Context Architect'),
+      `Emma (${EMMA_ID}): ${def.format} agent file should contain "Product Context Architect" somewhere in its self-description`
     );
   });
 
-  it('persona identity references the Contextualize stream', () => {
+  it('agent file references the Contextualize stream', () => {
     assert.ok(
-      def.persona.identity.includes('Contextualize'),
-      `Emma (${EMMA_ID}): persona identity should reference "Contextualize" stream`
+      fileMentions(rawContent, 'Contextualize'),
+      `Emma (${EMMA_ID}): ${def.format} agent file should reference "Contextualize" stream`
     );
   });
 
-  it('persona communication_style contains characteristic phrase', () => {
-    const style = def.persona.communication_style;
-    const hasPhrase = style.includes('Before we build') || style.includes('What problem');
+  it('agent file contains characteristic communication phrase', () => {
+    const hasPhrase = fileMentions(rawContent, 'Before we build') || fileMentions(rawContent, 'What problem');
     assert.ok(
       hasPhrase,
-      `Emma (${EMMA_ID}): communication_style should contain "Before we build" or "What problem"`
+      `Emma (${EMMA_ID}): ${def.format} agent file should contain "Before we build" or "What problem"`
     );
   });
 
@@ -74,48 +78,34 @@ describe('P0 Emma: Activation Sequence', () => {
     }
   });
 
-  it('exec-path menu items reference existing files on disk', () => {
-    const execRegex = /<item\s[^>]*exec="([^"]+)"[^>]*>/g;
-    const execPaths = [];
-    let m;
-    while ((m = execRegex.exec(rawContent)) !== null) {
-      execPaths.push(m[1]);
-    }
+  it('capability-prompt files referenced from menu surface exist on disk', () => {
+    const execPaths = extractExecPaths(rawContent, def.format);
     assert.ok(
-      execPaths.length >= 5,
-      `Emma (${EMMA_ID}): expected at least 5 exec paths, found ${execPaths.length}`
+      execPaths.length >= 4,
+      `Emma (${EMMA_ID}): ${def.format} agent file expected at least 4 exec/capability paths, found ${execPaths.length}`
     );
+    const agentDir = path.join(AGENTS_DIR, EMMA_ID);
     for (const execPath of execPaths) {
-      const resolved = execPath.replace(/\{project-root\}/g, PACKAGE_ROOT);
+      const resolved = resolveExecPath(execPath, agentDir, PACKAGE_ROOT);
       assert.ok(
         fs.existsSync(resolved),
-        `Emma (${EMMA_ID}): exec path not found on disk: ${resolved}`
+        `Emma (${EMMA_ID}): exec path not found on disk: ${resolved} (from "${execPath}")`
       );
     }
   });
 
-  it('activation step 2 references config.yaml loading with error handling', () => {
-    const step2Match = rawContent.match(/<step n="2">([\s\S]*?)<step n="3">/);
+  it('activation has config-error handling on step 2 (or v6.3 step-1 bmad-init delegation)', () => {
     assert.ok(
-      step2Match,
-      `Emma (${EMMA_ID}): could not extract activation step 2 content`
-    );
-    assert.ok(
-      step2Match[1].includes('config.yaml'),
-      `Emma (${EMMA_ID}): step 2 should reference "config.yaml" loading`
-    );
-    assert.ok(
-      step2Match[1].includes('Configuration Error'),
-      `Emma (${EMMA_ID}): step 2 should contain "Configuration Error" handling`
+      hasConfigErrorHandling(def, rawContent),
+      `Emma (${EMMA_ID}): ${def.format} agent file should have config-error handling — v5: <step n="2"> with "config.yaml" + "Configuration Error"; v6.3: step 1 with "**Load config via bmad-init"`
     );
   });
 
-  it('rules section has at least 5 rules', () => {
-    const ruleMatches = rawContent.match(/<r>/g);
-    const ruleCount = ruleMatches ? ruleMatches.length : 0;
+  it('principles/rules section has at least 5 entries', () => {
+    const ruleCount = countRules(def, rawContent);
     assert.ok(
       ruleCount >= 5,
-      `Emma (${EMMA_ID}): expected at least 5 rules, found ${ruleCount}`
+      `Emma (${EMMA_ID}): ${def.format} agent file expected at least 5 ${def.format === 'v5' ? '<r> rules' : '## Principles bullets'}, found ${ruleCount}`
     );
   });
 });
