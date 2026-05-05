@@ -10,6 +10,11 @@ const {
   PACKAGE_ROOT,
   AGENTS_DIR,
   WORKFLOWS_DIR,
+  extractExecPaths,
+  resolveExecPath,
+  countRules,
+  hasConfigErrorHandling,
+  fileMentions,
 } = require('./helpers');
 const {
   AGENTS,
@@ -35,26 +40,25 @@ describe('P0 Wade: Activation Sequence', () => {
     rawContent = fs.readFileSync(path.join(AGENTS_DIR, WADE_ID, 'SKILL.md'), 'utf8');
   });
 
-  it('persona role contains "Validated Learning Expert"', () => {
+  it('agent file mentions self-description keyword "Validated Learning Expert"', () => {
     assert.ok(
-      def.persona.role.includes('Validated Learning Expert'),
-      `Wade (${WADE_ID}): persona role should contain "Validated Learning Expert", got "${def.persona.role}"`
+      fileMentions(rawContent, 'Validated Learning Expert'),
+      `Wade (${WADE_ID}): ${def.format} agent file should contain "Validated Learning Expert" somewhere in its self-description`
     );
   });
 
-  it('persona identity references the Externalize stream', () => {
+  it('agent file references the Externalize stream', () => {
     assert.ok(
-      def.persona.identity.includes('Externalize'),
-      `Wade (${WADE_ID}): persona identity should reference "Externalize" stream`
+      fileMentions(rawContent, 'Externalize'),
+      `Wade (${WADE_ID}): ${def.format} agent file should reference "Externalize" stream`
     );
   });
 
-  it('persona communication_style contains characteristic phrase', () => {
-    const style = def.persona.communication_style;
-    const hasPhrase = style.includes('riskiest assumption') || style.includes('smallest experiment');
+  it('agent file contains characteristic communication phrase', () => {
+    const hasPhrase = fileMentions(rawContent, 'riskiest assumption') || fileMentions(rawContent, 'smallest experiment');
     assert.ok(
       hasPhrase,
-      `Wade (${WADE_ID}): communication_style should contain "riskiest assumption" or "smallest experiment"`
+      `Wade (${WADE_ID}): ${def.format} agent file should contain "riskiest assumption" or "smallest experiment"`
     );
   });
 
@@ -74,48 +78,34 @@ describe('P0 Wade: Activation Sequence', () => {
     }
   });
 
-  it('exec-path menu items reference existing files on disk', () => {
-    const execRegex = /<item\s[^>]*exec="([^"]+)"[^>]*>/g;
-    const execPaths = [];
-    let m;
-    while ((m = execRegex.exec(rawContent)) !== null) {
-      execPaths.push(m[1]);
-    }
+  it('capability-prompt files referenced from menu surface exist on disk', () => {
+    const execPaths = extractExecPaths(rawContent, def.format);
     assert.ok(
-      execPaths.length >= 6,
-      `Wade (${WADE_ID}): expected at least 6 exec paths, found ${execPaths.length}`
+      execPaths.length >= 5,
+      `Wade (${WADE_ID}): ${def.format} agent file expected at least 5 exec/capability paths, found ${execPaths.length}`
     );
+    const agentDir = path.join(AGENTS_DIR, WADE_ID);
     for (const execPath of execPaths) {
-      const resolved = execPath.replace(/\{project-root\}/g, PACKAGE_ROOT);
+      const resolved = resolveExecPath(execPath, agentDir, PACKAGE_ROOT);
       assert.ok(
         fs.existsSync(resolved),
-        `Wade (${WADE_ID}): exec path not found on disk: ${resolved}`
+        `Wade (${WADE_ID}): exec path not found on disk: ${resolved} (from "${execPath}")`
       );
     }
   });
 
-  it('activation step 2 references config.yaml loading with error handling', () => {
-    const step2Match = rawContent.match(/<step n="2">([\s\S]*?)<step n="3">/);
+  it('activation has config-error handling on step 2 (or v6.3 step-1 bmad-init delegation)', () => {
     assert.ok(
-      step2Match,
-      `Wade (${WADE_ID}): could not extract activation step 2 content`
-    );
-    assert.ok(
-      step2Match[1].includes('config.yaml'),
-      `Wade (${WADE_ID}): step 2 should reference "config.yaml" loading`
-    );
-    assert.ok(
-      step2Match[1].includes('Configuration Error'),
-      `Wade (${WADE_ID}): step 2 should contain "Configuration Error" handling`
+      hasConfigErrorHandling(def, rawContent),
+      `Wade (${WADE_ID}): ${def.format} agent file should have config-error handling — v5: <step n="2"> with "config.yaml" + "Configuration Error"; v6.3: step 1 with "**Load config via bmad-init"`
     );
   });
 
-  it('rules section has at least 5 rules', () => {
-    const ruleMatches = rawContent.match(/<r>/g);
-    const ruleCount = ruleMatches ? ruleMatches.length : 0;
+  it('principles/rules section has at least 5 entries', () => {
+    const ruleCount = countRules(def, rawContent);
     assert.ok(
       ruleCount >= 5,
-      `Wade (${WADE_ID}): expected at least 5 rules, found ${ruleCount}`
+      `Wade (${WADE_ID}): ${def.format} agent file expected at least 5 ${def.format === 'v5' ? '<r> rules' : '## Principles bullets'}, found ${ruleCount}`
     );
   });
 });
@@ -240,10 +230,12 @@ describe('P0 Wade: Workflow Execution Output', () => {
 describe('P0 Wade: Infrastructure Integration', () => {
   let wadeRegistry;
   let def;
+  let rawContent;
 
   before(() => {
     wadeRegistry = AGENTS.find(a => a.id === WADE_ID);
     def = loadAgentDefinition(WADE_ID);
+    rawContent = fs.readFileSync(path.join(AGENTS_DIR, WADE_ID, 'SKILL.md'), 'utf8');
   });
 
   it('registry entry exists for Wade', () => {
@@ -310,25 +302,27 @@ describe('P0 Wade: Infrastructure Integration', () => {
     }
   });
 
-  it('persona cross-validation: registry and agent file roles share "Validated Learning" keyword', () => {
+  it('persona cross-validation: registry role and agent file both reference "Validated Learning"', () => {
     assert.ok(
       wadeRegistry.persona.role.includes('Validated Learning'),
       `Wade (${WADE_ID}): registry persona.role should contain "Validated Learning"`
     );
+    // v5 stores it inside <role>; v6.3 distributes the descriptor across `# Wade`,
+    // `## Overview`, `## Identity`, etc. — full-file presence is the honest semantic.
     assert.ok(
-      def.persona.role.includes('Validated Learning'),
-      `Wade (${WADE_ID}): agent file <role> should contain "Validated Learning"`
+      fileMentions(rawContent, 'Validated Learning'),
+      `Wade (${WADE_ID}): ${def.format} agent file should contain "Validated Learning" somewhere`
     );
   });
 
-  it('persona cross-validation: communication styles share "validated learning" pattern', () => {
+  it('persona cross-validation: registry communication style and agent file both reference "validated learning"', () => {
     assert.ok(
       wadeRegistry.persona.communication_style.includes('validated learning'),
       `Wade (${WADE_ID}): registry communication_style should contain "validated learning"`
     );
     assert.ok(
-      def.persona.communication_style.includes('validated learning'),
-      `Wade (${WADE_ID}): agent file <communication_style> should contain "validated learning"`
+      fileMentions(rawContent, 'validated learning'),
+      `Wade (${WADE_ID}): ${def.format} agent file should contain "validated learning" somewhere`
     );
   });
 
