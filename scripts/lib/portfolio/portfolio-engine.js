@@ -76,6 +76,13 @@ const STORY_PREFIX_MAP = Object.freeze({
   p3: 'convoke',     // Phase 3 — Convoke rename
   enh: 'enhance',    // Enhance module
   sp: 'convoke',     // Skill Portability — platform-level
+  lint: 'convoke',   // lint-epic-1 mini-epic — platform CI/DoD hygiene
+  cov: 'convoke',    // cov-epic-1 mini-epic — coverage threshold restoration
+  mig: 'convoke',    // mig-test-epic-1 mini-epic — migration test identity
+  i97: 'convoke',    // I97 BMAD v6.3+ source format adoption + i97-bug hotfixes
+  oc: 'convoke',     // Operator Covenant audit + tightening series
+  spec: 'convoke',   // standalone spec-* artifacts (covenant amendments, taxonomy, etc.)
+  ci: 'convoke',     // ci-hygiene-epic-1 mini-epic — pipefail + lint gate fidelity
 });
 
 /**
