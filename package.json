@@ -45,7 +45,7 @@
     "test:integration": "node scripts/test-runner.js tests/integration",
     "test:all": "npm test && npm run test:integration && npm run test:p0",
     "test:coverage": "c8 node scripts/test-runner.js tests/unit tests/team-factory tests/lib tests/integration tests/p0",
-    "lint": "eslint scripts/ index.js tests/",
+    "lint": "eslint --max-warnings 0 scripts/ index.js tests/",
     "docs:audit": "node scripts/docs-audit.js",
     "badges": "node scripts/generate-badges-json.js",
     "badges:check": "npm run badges && git diff --exit-code docs/badges.json",
