@@ -1,7 +1,7 @@
 ---
 initiative: convoke
 artifact_type: epic
-created: 2026-05-11T00:00:00.000Z
+created: 2026-05-25T00:00:00.000Z
 schema_version: 1
 status: active
 inputDocuments:
@@ -16,7 +16,7 @@ inputDocuments:
 
 ## Overview
 
-Single-story mini-epic bundling three convergent CI gate-fidelity fixes triaged together via the [2026-05-11 CI/CD review](../implementation-artifacts/sprint-status.yaml) (Winston Architect + Quinn QA, parallel dispatch). Mini-epic following the [`convoke-epic-i97-bug-fixes.md`](convoke-epic-i97-bug-fixes.md) + [`convoke-epic-restore-coverage-green-ci.md`](convoke-epic-restore-coverage-green-ci.md) + [`convoke-epic-lint-cleanup-dod-gate.md`](convoke-epic-lint-cleanup-dod-gate.md) precedent (cross-cutting, incident-driven, retrospective optional).
+Single-story mini-epic bundling three convergent CI gate-fidelity fixes triaged together via the [2026-05-25 CI/CD review](../implementation-artifacts/sprint-status.yaml) (Winston Architect + Quinn QA, parallel dispatch). Mini-epic following the [`convoke-epic-i97-bug-fixes.md`](convoke-epic-i97-bug-fixes.md) + [`convoke-epic-restore-coverage-green-ci.md`](convoke-epic-restore-coverage-green-ci.md) + [`convoke-epic-lint-cleanup-dod-gate.md`](convoke-epic-lint-cleanup-dod-gate.md) precedent (cross-cutting, incident-driven, retrospective optional).
 
 The three fixes are different layers of the same lesson — **gate text and gate behavior must agree** — surfaced by the same 2026-05-01 → 05 CI red incident:
 
@@ -25,9 +25,9 @@ The three fixes are different layers of the same lesson — **gate text and gate
 3. **I104 (`--max-warnings 0` on `npm run lint`)** — closes the rule↔gate disagreement where `project-context.md` `lint-passes-before-review` mandates zero warnings on touched files but CI's gate currently accepts warnings (`no-unused-vars` configured as `warn`).
 
 **Source documents:**
-- [convoke-note-initiative-lifecycle-backlog.md](convoke-note-initiative-lifecycle-backlog.md) §2.3 Fast Lane rows A47 (12.0), I103 (10.8), I104 (10.8) — added 2026-05-11 by Winston (qualifier).
+- [convoke-note-initiative-lifecycle-backlog.md](convoke-note-initiative-lifecycle-backlog.md) §2.3 Fast Lane rows A47 (12.0), I103 (10.8), I104 (10.8) — added 2026-05-25 by Winston (qualifier).
 - [session-retro-2026-05-05-cov-and-i97-bug.md](../implementation-artifacts/session-retro-2026-05-05-cov-and-i97-bug.md) AC-RETRO-1 — the unshipped forward-prevention rule.
-- [.github/workflows/ci.yml](../../.github/workflows/ci.yml) — currently no top-level `defaults:` block (verified 2026-05-11).
+- [.github/workflows/ci.yml](../../.github/workflows/ci.yml) — currently no top-level `defaults:` block (verified 2026-05-25).
 - [package.json](../../package.json) — `scripts.lint` currently `eslint scripts/ index.js tests/` without `--max-warnings 0`.
 - [project-context.md](../../project-context.md) — `lint-passes-before-review` rule lives at §lint-passes-before-review; `verification-pipefail` rule does not yet exist.
 
@@ -47,7 +47,7 @@ FR2: A top-level `defaults: run: shell: bash -eo pipefail {0}` block MUST be add
 
 FR3: The `lint` script in [package.json](../../package.json) MUST be amended to include `--max-warnings 0`, making any ESLint warning a non-zero-exit failure. *(Source: story AC3 — I104)*
 
-FR4: Post-implementation, `npm run lint` MUST exit 0 with zero warnings (verified clean at story authoring time, 2026-05-11). If a regression introduces warnings between authoring and dev pickup, the story MUST fix them in scope (small surface, OK to absorb). *(Source: story AC3 + cross-AC4)*
+FR4: Post-implementation, `npm run lint` MUST exit 0 with zero warnings (verified clean at story authoring time, 2026-05-25). If a regression introduces warnings between authoring and dev pickup, the story MUST fix them in scope (small surface, OK to absorb). *(Source: story AC3 + cross-AC4)*
 
 FR5: Post-implementation, the GitHub Actions `ci.yml` workflow MUST run green on the next push to `main`. The full job set (`lint`, `test×3`, `coverage`, `security`, `package-check`, `python-test`) must exit 0. *(Source: story AC4)*
 
@@ -59,7 +59,7 @@ NFR2: Full CI matrix MUST exit 0 (`lint` + `test (18|20|22)` + `python-test` + `
 
 NFR3: Story MUST be code-reviewed adversarially using `bmad-code-review`. Round 1 mandatory; Rounds 2/3 follow `code-review-convergence` bounds + `feedback_avoid_overcomplicating_audits` (V-pass+R1 only by default).
 
-NFR4: Scope discipline — any further CI hygiene fix not in the story's AC table at implementation time (e.g., the 12 other Fast Lane items triaged on 2026-05-11) MUST stay deferred to its own backlog row. **EXPLICITLY OUT OF SCOPE:** F1 (coverage job concern-split → I102), F5 (branch protection → I105), F6 (install-tarball smoke → T25), F7 (per-file coverage → T26), and the remaining 8 triaged items.
+NFR4: Scope discipline — any further CI hygiene fix not in the story's AC table at implementation time (e.g., the 12 other Fast Lane items triaged on 2026-05-25) MUST stay deferred to its own backlog row. **EXPLICITLY OUT OF SCOPE:** F1 (coverage job concern-split → I102), F5 (branch protection → I105), F6 (install-tarball smoke → T25), F7 (per-file coverage → T26), and the remaining 8 triaged items.
 
 NFR5: AC-RETRO-2 application — Task 1 baseline-capture commands MUST be the SAME commands the corresponding ACs verify against. Specifically: AC3 verifies `npm run lint` exit 0; Task 1 baseline MUST also run `npm run lint`, not a sub-command. AC4 verifies CI green on next push; Task 1 baseline captures the current `gh run list --workflow=ci.yml --limit 1` status.
 
@@ -70,9 +70,9 @@ NFR5: AC-RETRO-2 application — Task 1 baseline-capture commands MUST be the SA
 - **`covenant-compliance-for-convoke-skills`:** N/A — no `_bmad/bme/` content modified.
 - **`path-safety-for-destructive-ops`:** N/A — config edits only; no scripts that accept user paths or perform destructive operations are added or modified.
 - **`derive-counts-from-source`:** AC1 references the rule structure from existing project-context.md rules — dev agent should mechanically inspect adjacent rules at implementation time rather than hardcode counts.
-- **`spec-verify-referenced-files`:** Verified 2026-05-11 — `.github/workflows/ci.yml`, `package.json`, `project-context.md`, `session-retro-2026-05-05-cov-and-i97-bug.md` all exist in working tree.
+- **`spec-verify-referenced-files`:** Verified 2026-05-25 — `.github/workflows/ci.yml`, `package.json`, `project-context.md`, `session-retro-2026-05-05-cov-and-i97-bug.md` all exist in working tree.
 - **`lint-passes-before-review`:** `npm run lint` must exit 0 with zero warnings in modified files before `review`. With AC3's `--max-warnings 0` shipping this story, the gate becomes self-enforcing for any future story.
-- **`staleness-preflight-for-backlog-pickup`:** N/A by exemption — backlog rows A47/I103/I104 were qualified 2026-05-11 (today); fresh-work exemption applies (<3 days).
+- **`staleness-preflight-for-backlog-pickup`:** N/A by exemption — backlog rows A47/I103/I104 were qualified 2026-05-25 (today); fresh-work exemption applies (<3 days).
 
 ## Stories
 
@@ -93,6 +93,6 @@ NFR5: AC-RETRO-2 application — Task 1 baseline-capture commands MUST be the SA
 - **Required-status / branch-protection / notifications (I105).** Structural root cause of 4-day red invisibility; tracked separately at score 3.2.
 - **Install-tarball smoke (T25).** Highest-reach item (R:10); deserves its own story focus; tracked separately at score 8.0.
 - **Per-file coverage threshold (T26).** Surfaces known per-file gaps; tracked separately at score 2.1.
-- **Burn-in re-shape, matrix consistency, version-sync gate, badges.yml safety, python-test discovery, failure-artifact narrowing, self-dep, shared install artifact** — all 8 triaged 2026-05-11; each retains its own Fast Lane row.
+- **Burn-in re-shape, matrix consistency, version-sync gate, badges.yml safety, python-test discovery, failure-artifact narrowing, self-dep, shared install artifact** — all 8 triaged 2026-05-25; each retains its own Fast Lane row.
 - **AC-RETRO-2 codification (baseline-capture binds to AC command).** Applied in NFR5 of *this* epic as a one-off, but the broader codification into `bmad-create-story` template is a separate `bmad-create-story` workflow amendment — not in this CI-hygiene epic's scope. Log as backlog candidate if recurrence becomes friction.
 - **AC-RETRO-3 (I97 conversion ACs run full P0 surface).** Orthogonal; applies to I97 Epic 2 conversion stories, not CI hygiene.
