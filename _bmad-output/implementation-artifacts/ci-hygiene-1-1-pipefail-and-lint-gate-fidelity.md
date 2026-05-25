@@ -1,6 +1,6 @@
 # Story ci-hygiene-1.1: Add pipefail to CI workflow + `verification-pipefail` rule to project-context + lint `--max-warnings 0`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -133,6 +133,26 @@ defaults:
   - [x] 6.4. Update File List section of this story with every modified file
   - [ ] 6.5. Commit + push to a branch; open PR; observe CI run; verify all jobs exit `completed success` per AC4 — **operator action** (this story is `review` status pending push verification)
   - [ ] 6.6. After merge, observe the next `main` push run; verify same green outcome — **operator action** (post-merge verification)
+
+### Review Findings — R1 (2026-05-25)
+
+**0 `decision-needed` · 3 `patch` · 12 `defer` · 3 dismissed**
+
+- [x] [Review][Patch] AC1 — "HALT" qualifier missing from retro citation in Why section [`project-context.md`] — **APPLIED.** Added "The cov-1.1 Task 4.4 HALT was triggered when R1 code review independently re-ran the command..." to the Why section.
+- [x] [Review][Patch] AC1 — `cov-1-1` notation mismatch (should be `cov-1.1`) [`project-context.md`] — **APPLIED.** Corrected to `cov-1.1` in the Why section.
+- [x] [Review][Patch] AC1 — `${PIPESTATUS[0]}` is Bash-only; zsh equivalent not named [`project-context.md`] — **APPLIED.** Added `${pipestatus[0]}` (zsh) alongside `${PIPESTATUS[0]}` (Bash) in both the Statement and the How-to-apply authoring bullet.
+- [x] [Review][Defer] `burn-in` + `coverage` jobs have no `needs:` gate — run concurrently with lint/test [`.github/workflows/ci.yml`] — deferred, pre-existing CI structure (not changed by this diff; tracked in CI findings Fast Lane I103-adjacent items)
+- [x] [Review][Defer] `|| exit 1` in burn-in loop now doubly redundant under `pipefail` + `-e` [`.github/workflows/ci.yml` burn-in job] — deferred, pre-existing pattern; still safe; cosmetic dead code
+- [x] [Review][Defer] `security` job has no `needs:` clause — audit result appears before tests complete [`.github/workflows/ci.yml`] — deferred, pre-existing
+- [x] [Review][Defer] `node index.js` step has no assertion anchoring — passes trivially if index.js exits 0 doing nothing [`.github/workflows/ci.yml` package-check job] — deferred, pre-existing
+- [x] [Review][Defer] `pip install pytest pyyaml ruff` unpinned — supply-chain risk on Python deps [`.github/workflows/ci.yml` python-test job] — deferred, pre-existing; tracked in CI findings Fast Lane
+- [x] [Review][Defer] `bash -eo pipefail {0}` will fail silently if a `windows-latest` runner is ever added [`.github/workflows/ci.yml` defaults block] — deferred, future concern only; all runners currently ubuntu-latest
+- [x] [Review][Defer] `upload-artifact` uploads entire `tests/` directory on failure — includes source, not just output [`.github/workflows/ci.yml` test job] — deferred, pre-existing
+- [x] [Review][Defer] `i97` + `spec` prefix mappings have data-quality edge cases (`i97-bug` sub-prefix; `spec-skill-validator-team-factory` misrouted to `convoke` instead of `loom`) [`scripts/lib/portfolio/portfolio-engine.js`] — deferred, non-load-bearing metric; T29 covers the structural fix (test-fixture-isolation migration)
+- [x] [Review][Defer] Unattributed count threshold `< 20` is brittle — new unattributed files can silently accumulate [`tests/lib/portfolio-engine.test.js:512`] — deferred, pre-existing test design; T29 covers
+- [x] [Review][Defer] `tee pack-output.txt` step now fails on disk-full (new failure mode under pipefail, previously masked) [`.github/workflows/ci.yml` package-check job] — deferred, theoretical CI edge case
+- [x] [Review][Defer] `oc` prefix → `'convoke'` — could argue Operator Covenant (P21) warrants a more specific initiative label [`scripts/lib/portfolio/portfolio-engine.js:82`] — deferred, judgment call; `convoke` is correct (P21 is a platform-level initiative, not a separate team like `loom`/`enhance`)
+- [x] [Review][Defer] "Display-only pipes" scope exemption in verification-pipefail rule relies on author judgment; no mechanical check possible [`project-context.md`] — deferred, acceptable by-design ambiguity; rule intent is clear enough for the documented use cases
 
 ## Dev Notes
 
