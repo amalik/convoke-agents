@@ -5,6 +5,25 @@ real issues, but pre-existing or out of scope for the story under review.
 
 ---
 
+## Deferred from: code review of ci-hygiene-1-1-pipefail-and-lint-gate-fidelity (2026-05-25 R1)
+
+R1 review — 0 decision-needed · 3 patches · 12 deferred · 3 dismissed. **R2 NOT triggered** per `code-review-convergence` rule (R1 had 0 HIGH findings — convergence reached). Patches address: (1) "HALT" citation keyword, (2) `cov-1-1` vs `cov-1.1` notation, (3) `${PIPESTATUS[0]}` Bash-only zsh note.
+
+- **D-CI11-R1-1 — `burn-in` + `coverage` jobs have no `needs:` gate** [`.github/workflows/ci.yml`] — Both jobs run concurrently with `lint`/`test`, meaning burn-in and coverage can pass on broken code. Pre-existing CI structure unchanged by this diff. Tracked alongside the deferred CI findings (Fast Lane I103-adjacent, T27 burn-in reshape).
+- **D-CI11-R1-2 — `|| exit 1` in burn-in loop redundant under `-e -o pipefail`** [`.github/workflows/ci.yml` burn-in job] — The `npm test || exit 1` pattern was already redundant under `-e`; with pipefail added it becomes doubly so. Still safe. Pre-existing pattern.
+- **D-CI11-R1-3 — `security` job has no `needs:` clause** [`.github/workflows/ci.yml`] — Audit result appears in PR status feed before tests complete, which can mislead reviewers. `publish` gate is still safe (explicitly lists all jobs in `needs:`). Pre-existing.
+- **D-CI11-R1-4 — `node index.js` step has no assertion anchoring** [`.github/workflows/ci.yml` package-check job] — Passes trivially if `index.js` exits 0 without exercising any real logic. Pre-existing.
+- **D-CI11-R1-5 — `pip install pytest pyyaml ruff` unpinned** [`.github/workflows/ci.yml` python-test job] — No version pins on Python deps; a broken/malicious release on PyPI silently affects CI. Pre-existing supply-chain concern; tracked in CI findings Fast Lane.
+- **D-CI11-R1-6 — `bash -eo pipefail {0}` fails silently if `windows-latest` runner added** [`.github/workflows/ci.yml` defaults block] — The `defaults.run.shell` added by this story is workflow-global; a future Windows runner addition would break silently. Future concern only; all runners currently ubuntu-latest.
+- **D-CI11-R1-7 — `upload-artifact` uploads entire `tests/` source directory on failure** [`.github/workflows/ci.yml` test job] — Includes test source files rather than just output/logs. Should be narrowed to output directories. Pre-existing.
+- **D-CI11-R1-8 — `i97` + `spec` STORY_PREFIX_MAP data-quality edge cases** [`scripts/lib/portfolio/portfolio-engine.js`] — `i97` prefix collapses v6.3 adoption stories + i97-bug hotfixes; `spec` prefix may misroute `spec-skill-validator-team-factory` to `convoke` instead of `loom`. Non-load-bearing metric; T29 (test-fixture-isolation migration) covers the structural fix.
+- **D-CI11-R1-9 — Unattributed count threshold `< 20` is brittle** [`tests/lib/portfolio-engine.test.js:512`] — New unattributed files can silently accumulate until the threshold trips. Pre-existing test design; T29 covers.
+- **D-CI11-R1-10 — `tee pack-output.txt` disk-full failure mode under pipefail** [`.github/workflows/ci.yml` package-check job] — `npm pack --dry-run 2>&1 | tee pack-output.txt`: under pipefail, a `tee` write failure (disk full) will now fail the step. Previously masked. Theoretical CI edge case.
+- **D-CI11-R1-11 — `oc` prefix → `'convoke'` initiative-name specificity** [`scripts/lib/portfolio/portfolio-engine.js:82`] — Operator Covenant (P21) is a platform-level initiative; `convoke` is arguably correct. Judgment call — revisit if portfolio attribution precision becomes load-bearing.
+- **D-CI11-R1-12 — "Display-only pipes" exemption relies on author judgment** [`project-context.md` verification-pipefail rule] — No mechanical check possible for whether a pipe's exit code "gates Task completion." Acceptable by-design ambiguity; rule intent is sufficiently clear for documented use cases.
+
+---
+
 ## Deferred from: code review of i97-2-2-convert-wade-lean-experiments-specialist (2026-05-02 R1)
 
 Round 1 review — Acceptance Auditor APPROVE 3 LOW · Blind Hunter CHANGES REQUESTED 5 HIGH/4 MED/3 LOW · Edge Case Hunter CHANGES REQUESTED 3 HIGH/2 MED. Triage: 3 dismissed, 5 decision-needed, 5 patch, 4 deferred (below).
