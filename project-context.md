@@ -138,6 +138,23 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 
 ---
 
+## Rule: verification-pipefail
+
+**Statement.** Story Task verification commands that use shell pipes MUST either set `set -o pipefail` at the script level OR capture the upstream command's exit code via `${PIPESTATUS[0]}` (Bash) or the per-shell equivalent. The pattern `cmd | head/tail/grep ; echo $?` is **forbidden** in any verification context — it captures the rightmost command's exit code (which is always 0 for `head`/`tail` in normal operation), not the upstream command's actual exit code. The same rule applies to verification steps in CI workflow `run:` blocks (see GitHub Actions `defaults.run.shell: bash -eo pipefail {0}`).
+
+**Why.** Story `cov-1-1` Task 4.4 used `npm run test:coverage 2>&1 | tail -15; echo "EXIT: $?"` to verify the test suite. The `;` separator means `$?` captures `tail`'s exit code (always 0), not `npm run test:coverage`'s. The Task reported "EXIT: 0" while the actual exit was 1 with 12 P0 failures in `tests/p0/p0-{emma,wade,mila}.test.js`. The story was marked done on a false positive; Round 1 code review caught it only because R1 ran the same command independently with `set -o pipefail`, producing a different exit code. Scar-story documented in [session-retro-2026-05-05-cov-and-i97-bug.md](_bmad-output/implementation-artifacts/session-retro-2026-05-05-cov-and-i97-bug.md) §"What didn't go well" — `i97-bug-epic-1` was authored as the forward-going hotfix and the action item AC-RETRO-1 logged this `verification-pipefail` rule as required forward-prevention.
+
+**How to apply.**
+- **Authoring a Task verification command.** If the command pipes its output (e.g., to `tail`, `head`, `grep`, `awk`, `tee`), prefix with `set -o pipefail` for multi-command sequences OR use `${PIPESTATUS[0]}` for a single pipeline. Example: `set -o pipefail; npm run test:coverage 2>&1 | tail -15; echo "EXIT: $?"` — now `$?` is `npm`'s exit code. Or: `npm run test:coverage 2>&1 | tail -15; echo "EXIT: ${PIPESTATUS[0]}"` — explicit capture of the first pipeline element's exit code. Cite this `verification-pipefail` rule in the Task body so reviewers can verify the discipline was deliberate.
+- **Picking the form.** `set -o pipefail` is recommended when the Task runs multiple commands and you want any upstream failure to short-circuit. `${PIPESTATUS[0]}` is recommended for one-off pipelines where you need the exit code of a specific stage. Avoid relying on bare `$?` after any pipeline.
+- **CI workflow steps.** GitHub Actions' default `bash` invocation includes `-e` but not `-o pipefail`. Set `defaults.run.shell: bash -eo pipefail {0}` at the workflow top level (between `concurrency:` and `jobs:`) so every `run:` step inherits pipefail without per-step overrides.
+- **Reviewing a story spec.** Grep Task bodies for `| head`, `| tail`, `| grep`, `| awk` followed by `; echo $?`. Block at story authoring time if the rule isn't honored — the cost of catching this at authoring is seconds; the cost of catching it after a false-positive ship is hours of dual-cause diagnosis.
+- **Reviewing a PR.** If a story's Dev Agent Record cites a Task that piped a verification command, verify the `pipefail` discipline was followed. If not, the verification didn't actually verify what the AC claims.
+
+**Scope exemptions.** Display-only pipes (formatting output for human reading, where the upstream command's exit code doesn't gate Task completion) are exempt. The rule applies only to **verification** pipes — those whose exit code is what the Task or AC actually checks.
+
+---
+
 ## Rule: capability-form-factor-evaluation
 
 **Statement.** When a new capability enters the qualifying gate (§1.2 of the initiative lifecycle), and the question is "what form should this take?" — run it through the Capability Evaluation Framework decision tree before assigning a lane or committing to a form factor.
