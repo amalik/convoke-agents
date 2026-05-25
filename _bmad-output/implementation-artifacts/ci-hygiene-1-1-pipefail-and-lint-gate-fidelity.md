@@ -1,11 +1,11 @@
 # Story ci-hygiene-1.1: Add pipefail to CI workflow + `verification-pipefail` rule to project-context + lint `--max-warnings 0`
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
 **Epic:** [ci-hygiene-epic-1 — CI Hygiene: Pipefail & Lint Gate Fidelity](../planning-artifacts/convoke-epic-ci-hygiene.md) (cross-cutting CI gate-fidelity bundle; single-story mini-epic following `lint-epic-1` / `cov-epic-1` / `i97-bug-epic-1` precedent)
-**Origin:** [2026-05-11 CI/CD review](convoke-note-initiative-lifecycle-backlog.md) (Winston Architect + Quinn QA parallel dispatch) surfaced 15 findings; top 3 (A47, I103, I104) bundled here as the "30-min quick win" sequencing called out in the operator's review wrap.
+**Origin:** [2026-05-25 CI/CD review](convoke-note-initiative-lifecycle-backlog.md) (Winston Architect + Quinn QA parallel dispatch) surfaced 15 findings; top 3 (A47, I103, I104) bundled here as the "30-min quick win" sequencing called out in the operator's review wrap.
 **Sprint:** inline before next story authoring (so Mila's R1 review and any successor inherit the new pipefail rule)
 **Namespace decision:** No new skills or `_bmad/bme/` content. Work touches: (1) [project-context.md](../../project-context.md) (new rule), (2) [.github/workflows/ci.yml](../../.github/workflows/ci.yml) (one block addition), (3) [package.json](../../package.json) (one flag addition). The `namespace-decision-for-new-skills` rule from [project-context.md](../../project-context.md#rule-namespace-decision-for-new-skills) is N/A by construction. The `covenant-compliance-for-convoke-skills` rule is also N/A — no `_bmad/bme/` content touched.
 **Safety analysis (path-safety rule):** N/A — config edits only; no scripts that accept user paths or perform destructive operations are added or modified.
@@ -22,14 +22,14 @@ The [2026-05-05 session retrospective](session-retro-2026-05-05-cov-and-i97-bug.
 
 The retro logged **AC-RETRO-1** as the forward-prevention fix: codify a `verification-pipefail` rule in [project-context.md](../../project-context.md). The action item said "Bob (SM) on next story authoring; Pre-next-story" — and this *is* the next story authoring window.
 
-Independently, the [2026-05-11 CI/CD architectural review](convoke-note-initiative-lifecycle-backlog.md) (Winston + Quinn) surfaced two adjacent gaps:
+Independently, the [2026-05-25 CI/CD architectural review](convoke-note-initiative-lifecycle-backlog.md) (Winston + Quinn) surfaced two adjacent gaps:
 
 - **I103** — the same pipefail lesson at the **workflow** layer: GitHub Actions' default `bash` invocation includes `-e` but not `-o pipefail`, so any future piped `run:` step would silently lie regardless of the project-context rule. No current `ci.yml` step uses pipes, so blast radius is small — but one-line workflow hardening eliminates the latent class entirely.
 - **I104** — the **lint** gate doesn't enforce zero warnings: `package.json:48` runs `eslint scripts/ index.js tests/` without `--max-warnings 0`, so any future `no-unused-vars` warning (configured as `warn` in [eslint.config.mjs:30](../../eslint.config.mjs#L30)) slides through CI green. This contradicts the existing `lint-passes-before-review` rule which mandates zero warnings on touched files. Rule and gate currently disagree.
 
 All three fixes are different layers of the same lesson: **gate text and gate behavior must agree**. Bundling them here means one R1 review covers all three (the established `cov-1.1` / `lint-1.1` shape).
 
-**Current lint state (verified 2026-05-11 by `npm run lint`):** zero errors, zero warnings. AC3 is truly a one-flag addition with no remediation needed at authoring time. Dev agent re-verifies at implementation time.
+**Current lint state (verified 2026-05-25 by `npm run lint`):** zero errors, zero warnings. AC3 is truly a one-flag addition with no remediation needed at authoring time. Dev agent re-verifies at implementation time.
 
 ## Acceptance Criteria
 
@@ -43,7 +43,7 @@ All three fixes are different layers of the same lesson: **gate text and gate be
 **And** running `grep -c "verification-pipefail" project-context.md` returns **≥ 3** post-fix (rule title + `Why` reference + at least one `How to apply` occurrence)
 
 **AC2 — `defaults.run.shell: bash -eo pipefail {0}` added to [.github/workflows/ci.yml](../../.github/workflows/ci.yml).**
-**Given** the current `ci.yml` has no top-level `defaults:` block (verified 2026-05-11 — file has `name:` / `on:` / `concurrency:` / `jobs:` only)
+**Given** the current `ci.yml` has no top-level `defaults:` block (verified 2026-05-25 — file has `name:` / `on:` / `concurrency:` / `jobs:` only)
 **When** the story is implemented
 **Then** a top-level `defaults:` block is inserted between `concurrency:` (lines 10-12) and `jobs:` (line 14), matching this structure:
 ```yaml
@@ -55,11 +55,11 @@ defaults:
 **And** `gh workflow view ci.yml` or equivalent YAML parse succeeds (no syntax error introduced)
 
 **AC3 — `npm run lint` requires zero warnings.**
-**Given** [package.json:48](../../package.json#L48) currently reads `"lint": "eslint scripts/ index.js tests/"` and `npm run lint` exits 0 with zero warnings at story authoring (verified 2026-05-11)
+**Given** [package.json:48](../../package.json#L48) currently reads `"lint": "eslint scripts/ index.js tests/"` and `npm run lint` exits 0 with zero warnings at story authoring (verified 2026-05-25)
 **When** the story is implemented
 **Then** the `lint` script is amended to include `--max-warnings 0`: `"lint": "eslint --max-warnings 0 scripts/ index.js tests/"`
 **And** `npm run lint` continues to exit 0 (since baseline is already clean)
-**And** if a regression has introduced warnings between authoring (2026-05-11) and dev pickup, the dev agent fixes them in scope and notes them in Dev Notes; **stricter alternative:** if any warning surfaces, dev HALTs and asks operator before proceeding (per `feedback_avoid_overcomplicating_audits` — defer ambiguity to operator rather than scope-creep)
+**And** if a regression has introduced warnings between authoring (2026-05-25) and dev pickup, the dev agent fixes them in scope and notes them in Dev Notes; **stricter alternative:** if any warning surfaces, dev HALTs and asks operator before proceeding (per `feedback_avoid_overcomplicating_audits` — defer ambiguity to operator rather than scope-creep)
 
 **AC4 — Full CI green on the next push to `main` post-fix.**
 **Given** GitHub Actions `ci.yml` currently runs green (last verified 2026-05-07 run 25367777820)
@@ -70,7 +70,7 @@ defaults:
 
 ## Scope Exclusions
 
-- **The other 12 CI/CD review findings** triaged on 2026-05-11 (I102, I105, T25, T26, T27, T28, I106, I107, I108, I109, I110, I111). Each retains its own Fast Lane row; do not absorb here. Per epic NFR4.
+- **The other 12 CI/CD review findings** triaged on 2026-05-25 (I102, I105, T25, T26, T27, T28, I106, I107, I108, I109, I110, I111). Each retains its own Fast Lane row; do not absorb here. Per epic NFR4.
 - **Codifying AC-RETRO-2 (baseline-binds-to-AC) into `bmad-create-story` template.** This story *applies* AC-RETRO-2 in its Task 1 baseline-capture (per epic NFR5) but does NOT amend the `bmad-create-story` workflow template itself. That's a separate concern; log as backlog candidate if it recurs.
 - **AC-RETRO-3 (I97 conversion ACs run full P0 surface).** Orthogonal; applies to I97 Epic 2 conversion stories.
 - **Pre-commit hooks (husky, lefthook, etc.)** to enforce lint locally. Per `lint-epic-1` § Scope Exclusions precedent — CI enforcement + DoD + the new `verification-pipefail` rule are sufficient; local-hook friction is not warranted by current evidence.
@@ -78,53 +78,61 @@ defaults:
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Capture pre-fix baseline** (AC1, AC2, AC3, AC4; baselines bind to AC verification commands per epic NFR5)
-  - [ ] 1.1. AC1 baseline: `grep -c "verification-pipefail" project-context.md` → expected `0` (rule does not yet exist); record actual count in Dev Agent Record
-  - [ ] 1.2. AC2 baseline: `grep -nE "^defaults:" .github/workflows/ci.yml` → expected zero matches; record
-  - [ ] 1.3. AC3 baseline: `grep -E '"lint":\s*"[^"]*max-warnings' package.json` → expected zero matches; AND `npm run lint; echo "EXIT: ${PIPESTATUS[0]}"` → expected `EXIT: 0` with zero output (clean). If warnings have appeared since authoring, HALT and consult operator per Scope Exclusions clause
-  - [ ] 1.4. AC4 baseline: `gh run list --workflow=ci.yml --limit 1 --branch main` → expected `completed success`; record run ID
-  - [ ] 1.5. `git status` — confirm working tree matches expectations (clean except for any in-progress mini-epic spec/story file authoring artifacts)
+- [x] **Task 0 — UNPLANNED: Unblock pre-existing test-fixture-isolation fragility** (added at dev pickup 2026-05-25 per operator option A; see Change Log + Dev Notes)
+  - [x] 0.1. Diagnosed CI red on push #2 (run 26407985483): [tests/lib/portfolio-engine.test.js:512](../../tests/lib/portfolio-engine.test.js#L512) `assert.ok(result.summary.unattributed < 20)` failed at count=23 because story file `ci-hygiene-1-1-...` joined the unattributed list
+  - [x] 0.2. Root cause: `STORY_PREFIX_MAP` in [scripts/lib/portfolio/portfolio-engine.js:72-79](../../scripts/lib/portfolio/portfolio-engine.js#L72-L79) only had 6 prefixes (`ag`, `tf`, `p2`, `p3`, `enh`, `sp`) — missing all recent Convoke story prefixes (`lint`, `cov`, `mig`, `i97`, `oc`, `spec`, `ci`)
+  - [x] 0.3. Added 7 new prefix→initiative mappings to `STORY_PREFIX_MAP`. Drop: count 23 → 5 (well under threshold of 20)
+  - [x] 0.4. Verified failing test now passes: `node --test tests/lib/portfolio-engine.test.js` → 59/59 pass
+  - [x] 0.5. Logged underlying root cause as backlog item T29 (`tests/lib/portfolio-engine.test.js:512` test-fixture-isolation migration) per operator option C
+  - [x] 0.6. Logged incidental finding (portfolio engine reports 3 large planning-artifact files as "unreadable or empty" despite being readable) as I112
 
-- [ ] **Task 2 — Add `verification-pipefail` rule to project-context.md** (AC1)
-  - [ ] 2.1. Read [project-context.md](../../project-context.md) and locate the `lint-passes-before-review` rule (search anchor: `## Rule: lint-passes-before-review`). The new rule will be inserted immediately AFTER this rule's closing `---` separator (or before the next `## Rule:` heading)
-  - [ ] 2.2. Author the rule using the standard 3-section structure (**Statement**, **Why**, **How to apply**). Match tone/format of adjacent rules — citation-driven, no decorative emojis, link to the scar-story retro
-  - [ ] 2.3. Required content:
+- [x] **Task 1 — Capture pre-fix baseline** (AC1, AC2, AC3, AC4; baselines bind to AC verification commands per epic NFR5)
+  - [x] 1.1. AC1 baseline: `grep -c "verification-pipefail" project-context.md` → **0** (rule does not yet exist) — confirmed
+  - [x] 1.2. AC2 baseline: `grep -nE "^defaults:" .github/workflows/ci.yml` → **0 matches** — confirmed
+  - [x] 1.3. AC3 baseline: `grep -E '"lint":\s*"[^"]*max-warnings' package.json` → **0 matches**; `npm run lint` → **EXIT: 0** with zero warnings — confirmed
+  - [x] 1.4. AC4 baseline: `gh run list --workflow=ci.yml --limit 1 --branch main` → **FAILURE** (run 26407985483 from push #2 of this session — caused by Task 0 root cause; addressed by Task 0 fix). Pre-session baseline (run 25367777820 from 2026-05-07) was SUCCESS
+  - [x] 1.5. `git status` — confirmed working tree state at Task 0 pickup time
+
+- [x] **Task 2 — Add `verification-pipefail` rule to project-context.md** (AC1)
+  - [x] 2.1. Read [project-context.md](../../project-context.md) and locate the `lint-passes-before-review` rule (search anchor: `## Rule: lint-passes-before-review`). The new rule will be inserted immediately AFTER this rule's closing `---` separator (or before the next `## Rule:` heading)
+  - [x] 2.2. Author the rule using the standard 3-section structure (**Statement**, **Why**, **How to apply**). Match tone/format of adjacent rules — citation-driven, no decorative emojis, link to the scar-story retro
+  - [x] 2.3. Required content:
     - **Statement** — Story Task verification commands using shell pipes MUST use `set -o pipefail` OR capture the upstream exit code via `${PIPESTATUS[0]}` (or equivalent for the shell in use). The pattern `cmd | head/tail/grep ; echo $?` is **forbidden** because it captures the rightmost command's exit code (always 0 for `head`/`tail` in normal operation), not the upstream command's actual exit code
     - **Why** — Direct cite of the 2026-05-05 retro: `npm run test:coverage 2>&1 | tail -15; echo "EXIT: $?"` reported "EXIT: 0" while the actual exit was 1 with 12 P0 failures across `tests/p0/p0-{emma,wade,mila}.test.js`. R1 code review caught the false-positive by running the same command with `set -o pipefail`. Link to [session-retro-2026-05-05-cov-and-i97-bug.md](_bmad-output/implementation-artifacts/session-retro-2026-05-05-cov-and-i97-bug.md) §What didn't go well
     - **How to apply** — At story authoring time: any Task that pipes its verification command MUST prefix with `set -o pipefail` (Bash) or use `${PIPESTATUS[0]}` (Bash) or use the per-shell equivalent. At dev pickup time: re-verify the rule applies to any added commands. At code-review time (especially R1 Edge Case Hunter): grep Task bodies for `| head\|| tail\|| grep` patterns and block if the rule isn't honored
-  - [ ] 2.4. Save; re-read in editor; confirm tone consistency with adjacent rules
-  - [ ] 2.5. Verify AC1 acceptance: `grep -c "verification-pipefail" project-context.md` returns ≥ 3
+  - [x] 2.4. Save; re-read in editor; confirm tone consistency with adjacent rules
+  - [x] 2.5. Verify AC1 acceptance: `grep -c "verification-pipefail" project-context.md` returns ≥ 3
 
-- [ ] **Task 3 — Add `defaults.run.shell: bash -eo pipefail {0}` to ci.yml** (AC2)
-  - [ ] 3.1. Read [.github/workflows/ci.yml](../../.github/workflows/ci.yml) lines 1-14 to confirm insertion site (between `concurrency:` block and `jobs:` block)
-  - [ ] 3.2. Insert the block:
+- [x] **Task 3 — Add `defaults.run.shell: bash -eo pipefail {0}` to ci.yml** (AC2)
+  - [x] 3.1. Read [.github/workflows/ci.yml](../../.github/workflows/ci.yml) lines 1-14 to confirm insertion site (between `concurrency:` block and `jobs:` block)
+  - [x] 3.2. Insert the block:
     ```yaml
     defaults:
       run:
         shell: bash -eo pipefail {0}
     ```
     Placement: after line 12 (`  cancel-in-progress: true`), before line 14 (`jobs:`). Preserve surrounding blank line for readability
-  - [ ] 3.3. Verify YAML parse: `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))"` exits 0; or `gh workflow view ci.yml` succeeds against the local file's content (note: `gh workflow view` reads from remote — local parse is sufficient)
-  - [ ] 3.4. Confirm AC2 acceptance: `grep -A2 "^defaults:" .github/workflows/ci.yml` returns the 3-line block
+  - [x] 3.3. Verify YAML parse: `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))"` exits 0; or `gh workflow view ci.yml` succeeds against the local file's content (note: `gh workflow view` reads from remote — local parse is sufficient)
+  - [x] 3.4. Confirm AC2 acceptance: `grep -A2 "^defaults:" .github/workflows/ci.yml` returns the 3-line block
 
-- [ ] **Task 4 — Add `--max-warnings 0` to package.json lint script** (AC3)
-  - [ ] 4.1. Read [package.json](../../package.json) and locate the `"lint":` line (currently line 48: `"lint": "eslint scripts/ index.js tests/"`)
-  - [ ] 4.2. Edit to: `"lint": "eslint --max-warnings 0 scripts/ index.js tests/"`. Preserve quoting and surrounding JSON structure
-  - [ ] 4.3. Verify JSON parse: `node -e "JSON.parse(require('fs').readFileSync('package.json','utf-8'))"` exits 0
-  - [ ] 4.4. Run `npm run lint; echo "EXIT: ${PIPESTATUS[0]}"` → expected `EXIT: 0` (matches AC3 baseline). If non-zero, investigate: did a warning appear between authoring and now? Per Scope Exclusions, HALT and report to operator if any warning surfaces
+- [x] **Task 4 — Add `--max-warnings 0` to package.json lint script** (AC3)
+  - [x] 4.1. Read [package.json](../../package.json) and locate the `"lint":` line (currently line 48: `"lint": "eslint scripts/ index.js tests/"`)
+  - [x] 4.2. Edit to: `"lint": "eslint --max-warnings 0 scripts/ index.js tests/"`. Preserve quoting and surrounding JSON structure
+  - [x] 4.3. Verify JSON parse: `node -e "JSON.parse(require('fs').readFileSync('package.json','utf-8'))"` exits 0
+  - [x] 4.4. Run `npm run lint; echo "EXIT: ${PIPESTATUS[0]}"` → expected `EXIT: 0` (matches AC3 baseline). If non-zero, investigate: did a warning appear between authoring and now? Per Scope Exclusions, HALT and report to operator if any warning surfaces
 
-- [ ] **Task 5 — Cross-update sprint-status.yaml backlog row provenance** (epic-level housekeeping)
-  - [ ] 5.1. Update sprint-status.yaml: this story key (`ci-hygiene-1-1-pipefail-and-lint-gate-fidelity`) transitions from `ready-for-dev` → `in-progress` at dev pickup (handled by `bmad-dev-story` workflow automatically)
-  - [ ] 5.2. No manual edit needed to the lifecycle backlog (the qualified rows A47, I103, I104 stay in §2.3 with status `Backlog`; they transition to `Done` only when the story ships per existing convention — i.e., update at story `done` time, not in this task)
-  - [ ] 5.3. Skip if the dev-story workflow handles this automatically
+- [x] **Task 5 — Cross-update sprint-status.yaml backlog row provenance** (epic-level housekeeping)
+  - [x] 5.1. Update sprint-status.yaml: this story key (`ci-hygiene-1-1-pipefail-and-lint-gate-fidelity`) transitions from `ready-for-dev` → `in-progress` at dev pickup (handled by `bmad-dev-story` workflow automatically)
+  - [x] 5.2. No manual edit needed to the lifecycle backlog (the qualified rows A47, I103, I104 stay in §2.3 with status `Backlog`; they transition to `Done` only when the story ships per existing convention — i.e., update at story `done` time, not in this task)
+  - [x] 5.3. Skip if the dev-story workflow handles this automatically
 
-- [ ] **Task 6 — Final verification** (AC4)
-  - [ ] 6.1. `npm run lint` → exit 0, zero warnings (AC3 acceptance + regression guard for AC1/AC2 not breaking anything)
-  - [ ] 6.2. `npm test` → exit 0 (no regression — sanity check; this story does not touch test code)
-  - [ ] 6.3. `git diff --stat` → review the diff for scope creep. Expected files modified: exactly 3 (project-context.md + .github/workflows/ci.yml + package.json), plus the story file itself and sprint-status.yaml. Any other file in the diff = scope creep; halt and reconcile
-  - [ ] 6.4. Update File List section of this story with every modified file
-  - [ ] 6.5. Commit + push to a branch; open PR; observe CI run; verify all jobs exit `completed success` per AC4
-  - [ ] 6.6. After merge, observe the next `main` push run; verify same green outcome
+- [x] **Task 6 — Final verification** (AC4)
+  - [x] 6.1. `npm run lint` → exit 0, zero warnings (AC3 acceptance + regression guard for AC1/AC2 not breaking anything)
+  - [x] 6.2. `npm test` → exit 0 (no regression — sanity check; this story does not touch test code)
+  - [x] 6.3. `git diff --stat` → review the diff for scope creep. Expected files modified: exactly 3 (project-context.md + .github/workflows/ci.yml + package.json), plus the story file itself and sprint-status.yaml. Any other file in the diff = scope creep; halt and reconcile
+  - [x] 6.4. Update File List section of this story with every modified file
+  - [ ] 6.5. Commit + push to a branch; open PR; observe CI run; verify all jobs exit `completed success` per AC4 — **operator action** (this story is `review` status pending push verification)
+  - [ ] 6.6. After merge, observe the next `main` push run; verify same green outcome — **operator action** (post-merge verification)
 
 ## Dev Notes
 
@@ -165,9 +173,9 @@ Encoding the same lesson at all three layers means **no single layer alone is lo
 
 ### References
 
-- [convoke-note-initiative-lifecycle-backlog.md §2.3 Fast Lane](../planning-artifacts/convoke-note-initiative-lifecycle-backlog.md#23-fast-lane-quick-wins--spikes) — rows A47 (12.0), I103 (10.8), I104 (10.8) added 2026-05-11
+- [convoke-note-initiative-lifecycle-backlog.md §2.3 Fast Lane](../planning-artifacts/convoke-note-initiative-lifecycle-backlog.md#23-fast-lane-quick-wins--spikes) — rows A47 (12.0), I103 (10.8), I104 (10.8) added 2026-05-25
 - [session-retro-2026-05-05-cov-and-i97-bug.md](session-retro-2026-05-05-cov-and-i97-bug.md) — AC-RETRO-1 (the unshipped rule that AC1 ships), AC-RETRO-2 (applied here per epic NFR5)
-- [project-context.md](../../project-context.md) — §lint-passes-before-review (insertion neighbor for new rule), §code-review-convergence, §derive-counts-from-source, §spec-verify-referenced-files (verified 2026-05-11 — all 3 target files exist), §mechanical-research-enumeration (Task 1 baseline-capture commands are mechanical)
+- [project-context.md](../../project-context.md) — §lint-passes-before-review (insertion neighbor for new rule), §code-review-convergence, §derive-counts-from-source, §spec-verify-referenced-files (verified 2026-05-25 — all 3 target files exist), §mechanical-research-enumeration (Task 1 baseline-capture commands are mechanical)
 - [.github/workflows/ci.yml](../../.github/workflows/ci.yml) — current state (no `defaults:` block; lint job at L15-30 invokes `npm run lint`)
 - [package.json](../../package.json) — current `scripts.lint` at L48
 - [eslint.config.mjs](../../eslint.config.mjs) — `no-unused-vars: "warn"` at L30 explains why `--max-warnings 0` is the load-bearing flag
@@ -179,28 +187,56 @@ Encoding the same lesson at all three layers means **no single layer alone is lo
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.7 (1M context) — Winston (Architect) executing dev role per skill activation; story was authored by same persona earlier in the same session.
 
 ### Debug Log References
 
-{{debug_log_to_be_filled_by_dev_agent}}
+**Pre-fix baselines captured 2026-05-25 (Task 1):**
+- AC1: `grep -c "verification-pipefail" project-context.md` → **0** (rule absent — confirmed expected)
+- AC2: `grep -nE "^defaults:" .github/workflows/ci.yml` → **0 matches** (no top-level defaults block — confirmed expected)
+- AC3 (script): `grep -E '"lint":\s*"[^"]*max-warnings' package.json` → **0 matches** (flag absent — confirmed expected)
+- AC3 (exit): `npm run lint; echo "DIRECT EXIT: $?"` → `EXIT: 0` with zero stdout (clean — confirmed expected)
+- AC4: `gh run list --workflow=ci.yml --limit 1 --branch main` → **completed failure** on run 26407985483 (push #2 of this session). Pre-session baseline (2026-05-07 run 25367777820) was SUCCESS. The failure is what Task 0 addresses.
+
+**Post-fix verification (Task 6):**
+- AC1: `grep -c "verification-pipefail" project-context.md` → **3** (≥ 3 per AC1 spec)
+- AC2: `defaults: / run: / shell: bash -eo pipefail {0}` block at ci.yml:14-16; YAML parse OK
+- AC3: `npm run lint; echo "DIRECT EXIT: $?"` → `EXIT: 0` with `--max-warnings 0` active
+- Regression: `npm test` → **1510/1511 pass, 1 skipped, 0 fail** (1 skipped is pre-existing upstream-tracked)
+- Portfolio engine (Task 0 verification): unattributed count **23 → 5**; previously-failing `portfolio-engine.test.js` test now passes; full `npm test` 0-fail confirms no broader regression from STORY_PREFIX_MAP expansion
 
 ### Completion Notes List
 
-{{completion_notes_to_be_filled_by_dev_agent}}
+- **Task 0 (unplanned unblock) executed first per operator option A.** CI red on push #2 (run 26407985483) was caused by `tests/lib/portfolio-engine.test.js:512` (Story 6.3 AC2) which runs `generatePortfolio(projectRoot)` against the live repo and asserts `unattributed < 20`. The story file added in this session pushed count 22→23. Root cause: `STORY_PREFIX_MAP` in `scripts/lib/portfolio/portfolio-engine.js` only had 6 prefixes (`ag`, `tf`, `p2`, `p3`, `enh`, `sp`) — missing all 7 recent Convoke story prefixes (`lint`, `cov`, `mig`, `i97`, `oc`, `spec`, `ci`). Added them; count dropped 23 → 5; failing test passes; full suite remains green. **Scope guard:** this is a legitimate scope expansion under operator option A (not silent scope creep) — see Change Log entry 2026-05-25.
+- **Backlog tracking for Option C:** Logged T29 (`tests/lib/portfolio-engine.test.js:512` test-fixture-isolation migration, RICE 1.8) and I112 (portfolio engine "unreadable or empty" mis-categorization, RICE 0.3) as Fast Lane rows. T29 is the strategic fix the operator approved as a follow-up; the Task 0 STORY_PREFIX_MAP fix is the tactical unblock.
+- **Task 2 (verification-pipefail rule):** Added immediately after `lint-passes-before-review` rule (line 141) per epic NFR5 grouping ("process conventions grouped"). Rule uses standard 3-section structure (Statement / Why / How to apply) matching adjacent rules. References "verification-pipefail" in title + Why + How to apply (3 occurrences satisfying AC1 self-imposed threshold).
+- **Task 3 (workflow pipefail block):** Inserted `defaults: / run: / shell: bash -eo pipefail {0}` between `concurrency:` (line 12) and `jobs:` (now line 18) in `.github/workflows/ci.yml`. YAML parse verified via `python3 -c "import yaml; yaml.safe_load(...)"`. No per-step `shell:` override exists, so the workflow default propagates to all 7 jobs.
+- **Task 4 (lint `--max-warnings 0`):** Single-flag amendment to `package.json:48`. Lint exit remained 0 because the baseline was already clean (zero errors, zero warnings). If a regression introduces warnings in a future story, the gate will now properly fail.
+- **Date corrections applied across 4 files:** The triage and authoring earlier in this session used `2026-05-11` (incorrect — today is `2026-05-25` per system context). All 51 occurrences across `convoke-epic-ci-hygiene.md`, `ci-hygiene-1-1-pipefail-and-lint-gate-fidelity.md`, `convoke-note-initiative-lifecycle-backlog.md`, and `sprint-status.yaml` were corrected via `replace_all`.
 
 ### File List
 
-**Expected modified by this story (3 files in scope + 2 workflow-required):**
+**Modified by this story (in scope per AC1–AC3):**
 
-- `project-context.md` — new `verification-pipefail` rule (Task 2)
-- `.github/workflows/ci.yml` — new `defaults.run.shell` block (Task 3)
-- `package.json` — `--max-warnings 0` flag on lint script (Task 4)
-- `_bmad-output/implementation-artifacts/ci-hygiene-1-1-pipefail-and-lint-gate-fidelity.md` — this story file (Status, Tasks/Subtasks, Dev Agent Record, File List, Change Log)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — status transitions for ci-hygiene-1-1 and ci-hygiene-epic-1
+- `project-context.md` — new `verification-pipefail` rule between `lint-passes-before-review` (line 124) and `capability-form-factor-evaluation` (line 159 post-edit) — Task 2 (AC1)
+- `.github/workflows/ci.yml` — new `defaults.run.shell: bash -eo pipefail {0}` block at lines 14-16 — Task 3 (AC2)
+- `package.json` — `lint` script gained `--max-warnings 0` flag (line 48) — Task 4 (AC3)
 
-**Not expected to be modified (regression guard):** any file under `scripts/`, `tests/`, `_bmad/`, or `docs/`. If any of these appear in `git diff --stat`, halt and reconcile per Task 6.3.
+**Modified by this story (Task 0 unblock per operator option A):**
+
+- `scripts/lib/portfolio/portfolio-engine.js` — 7 new entries in `STORY_PREFIX_MAP` (lines 72-86) to attribute recent Convoke story prefixes (`lint`, `cov`, `mig`, `i97`, `oc`, `spec`, `ci` → `convoke`). Restores CI green from run 26407985483 failure. Task 0.
+
+**Modified by this story (workflow-required + operator option C + date correction):**
+
+- `_bmad-output/implementation-artifacts/ci-hygiene-1-1-pipefail-and-lint-gate-fidelity.md` — this story file (Status, Tasks/Subtasks, Dev Agent Record, File List, Change Log) + date correction (×9 occurrences)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — status transitions (ci-hygiene-1-1: ready-for-dev → in-progress → review; epic stays in-progress) + date correction (×3)
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — 2 new intake rows (IN-158 T29, IN-159 I112) + 2 new Fast Lane rows (T29 score 1.8, I112 score 0.3) per operator option C + date correction (×30)
+- `_bmad-output/planning-artifacts/convoke-epic-ci-hygiene.md` — date correction only (×9)
+
+**Not modified by this story (regression guard):** No file under `tests/` directly modified (the failing `portfolio-engine.test.js` now passes via the engine fix, not via test changes). No file under `_bmad/` or `docs/` modified.
 
 ## Change Log
 
-{{change_log_to_be_filled_by_dev_agent_and_reviewer}}
+- **2026-05-25 (dev completion)** — Implemented all 3 ACs (A47 + I103 + I104 backlog rows). Tasks 1–4 + Task 6 complete; Task 5 N/A (handled automatically by dev-story workflow); Task 6.5 + 6.6 are operator actions (commit/push/observe). Status: `review`. Full test suite 1510/1511 pass (1 skipped pre-existing), `npm run lint` exit 0, AC1 grep count = 3, AC2 YAML parse OK, AC3 lint flag active. Ready for `bmad-code-review` R1. Per `lint-1-1` precedent, R1 should use a different LLM than the implementer (Winston/Opus-4.7) — recommend Sonnet-4.6 or Haiku-4.5 for R1.
+- **2026-05-25 (Task 0 unplanned unblock — operator option A)** — Dev pickup discovered CI red on push #2 (run 26407985483) caused by `tests/lib/portfolio-engine.test.js:512` (Story 6.3 AC2) which violates `test-fixture-isolation`. Net-new story file pushed `unattributed` count from 22 → 23, breaking `assert.ok(unattributed < 20)`. Operator approved option A: minimal `STORY_PREFIX_MAP` expansion in `scripts/lib/portfolio/portfolio-engine.js` to attribute 7 recent Convoke story prefixes (`lint`, `cov`, `mig`, `i97`, `oc`, `spec`, `ci` → `convoke`). Drop: count 23 → 5. Failing test passes; full suite green. **Scope discipline:** this is a legitimate operator-approved scope expansion under option A. The underlying test fragility (the test should be fixture-based, not live-state based) is the operator option C followup — logged as backlog item T29 (RICE 1.8). Incidental engine bug (3 large planning-artifact files reported as "unreadable or empty" despite being readable) logged as backlog item I112 (RICE 0.3).
+- **2026-05-25 (date correction)** — All artifacts authored earlier in this session used `2026-05-11` as the date (incorrect — system context shows today is `2026-05-25`; operator returned from ~20 days away, not ~6 days). 51 occurrences of `2026-05-11` corrected across 4 files via `replace_all`. No semantic content change; only the date stamps.
