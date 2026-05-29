@@ -66,8 +66,8 @@ so that the M9 release-blocking gate has empirical PASS/INVESTIGATE/FAIL evidenc
 **Decision 1 — FM4-2 CLI scriptability spike runs FIRST as DS1 (Task 1; 30-min time-box).** **PASS criterion:** `claude -p "<prompt>"` (the actual flag per V-pass CM-1) accepts non-interactive input + captures agent's first persona-authored response to stdout. Specifically test: `echo "/<skill>" | claude -p "Activate the skill and respond with your activation greeting"` (or equivalent); verify output contains agent's persona text (e.g., Carson's "Hey Amalik! 🧠 Carson here..." pattern). **FAIL criteria:** any of (a) `-p` flag rejects slash-command dispatch from prompt body, (b) output mixes tool-trace with persona response unparseably, (c) capture isn't deterministic across runs. **Inversion handler:** spike outcome shapes Decision 2 path + total Story 4.3 time budget.
 
 **Decision 2 — Recording mechanism per FM4-2 outcome:**
-- **D2-A (FM4-2 PASS):** scripted via NEW `scripts/audit/pf1-record-agent.js` helper. CLI: `node scripts/audit/pf1-record-agent.js --phase baseline` OR `--phase post-migration`. Loops 5 agents × 4 prompts; invokes each via `claude -p`; captures stdout; writes to per-agent files. ~30 min wall-clock total.
-- **D2-B (FM4-2 FAIL):** manual capture. Operator opens 5 Claude Code sessions, invokes each prompt-sequence (4 per agent), copy-pastes responses into per-agent files. 4-8hr wall-clock realistic; multi-day if interruptions.
+- **D2-A (FM4-2 PASS — locked 2026-04-28):** scripted via NEW `scripts/audit/pf1-record-agent.js` helper. CLI: `node scripts/audit/pf1-record-agent.js --phase=baseline` OR `--phase=post-migration`. Loops **4 agents × 4 prompts (Path B+ scope 2026-05-29 — Decision 4 addendum)**; invokes each via `claude -p`; captures stdout; writes to per-agent files. v0 limitation: only Prompt 1 captures cleanly via single-shot `claude -p` (Prompts 2-4 require operator D2-B fill-in per protocol §5.1). ~10 min wall-clock for Prompt 1 sweep + ~2-3 hr operator for Prompts 2-4 = ~3 hr total per phase (was ~3 hr for original 5-agent scope; same cost since the dropped 4 BMAD agents are replaced by 3 new Convoke signal agents netting +75% signal density).
+- **D2-B (FM4-2 FAIL):** manual capture. Operator opens 4 Claude Code sessions, invokes each prompt-sequence (4 per agent), copy-pastes responses into per-agent files. 3-6hr wall-clock realistic; multi-day if interruptions [scaled down from original 4-8 hr 5-agent estimate].
 - **HEADER FORMAT CONTRACT (CM-6 — load-bearing):** ALL recording files MUST use **digit-only headers** `## Prompt 1`, `## Prompt 2`, `## Prompt 3`, `## Prompt 4` (no description trailers). Story 4.2 parser regex `/^## Prompt (\d+)\s*$/gm` REJECTS `## Prompt 1: Activation greeting + menu` (verified empirically); descriptions belong in body content or comments, NOT in headers. Operator pre-validates each file via Story 4.2's `parseRecording` before proceeding.
 
 **Decision 3 — Migration sandbox approach: `git worktree` (preferred per OS-1) OR `git stash`+checkout (fallback).** **Preferred (worktree):**
@@ -81,6 +81,22 @@ so that the M9 release-blocking gate has empirical PASS/INVESTIGATE/FAIL evidenc
 - Same protocol as original Story 4.3 draft; preserved as fallback if worktree unavailable
 
 **DS3 verifies:** `git tag -l 'v3*'` shows `v3.3.0` ✓ (V-pass confirmed); `git worktree --help` succeeds. **Inversion handler:** if both approaches fail (highly unlikely), fall back to two clean clones (manual sandbox setup beyond Story 4.3 scope; surface to operator).
+
+**Decision 4 ADDENDUM (2026-05-29 — Path B+ re-scope, Winston Architect, operator-confirmed):**
+
+The original PF1 spec listed 5 agents (1 Vortex Emma + 4 BMAD: John PM + Winston Architect + Carson Brainstorming + Murat TEA). Analysis at v63-4-3 resumption (2026-05-29) revealed 80% of test cost was control validation — "Convoke's migration shouldn't accidentally break BMAD agents." This control hypothesis is mechanically verifiable for ~$0 vs ~$1 LLM API + 2 hr operator time for the original 4-BMAD-agent LLM-judged variant.
+
+**Re-scope:** **4 PF1 agents (3 Vortex + 1 Gyre) + 1 mechanical install-scope check.**
+
+| Original (deprecated) | Path B+ (current) | Why |
+|----------------------|-------------------|-----|
+| 1 Vortex (Emma) | 3 Vortex (Emma + Wade + Liam) | More signal on actual format-conversion fidelity |
+| 4 BMAD (John, Winston, Carson, Murat) | 1 Gyre (Stack Detective) + `install-scope-check.js` | Replace BMAD-agent control with cross-Convoke-module control + mechanical scope assertion |
+| Total: 40 LLM calls + ~3 hr operator | Total: 32 LLM calls + ~3 hr operator + 30s mechanical check | 20% → 75% signal density; tighter blast-radius control |
+
+**Stage 4 gate (architecture arch:362) updated:** "median ≥ 4.0 average across **4 agents** AND no single agent median ≤ 2" (was "5 agents"). PASS criterion otherwise unchanged.
+
+**Replacement for BMAD-agent control validation:** `scripts/audit/install-scope-check.js` (authored 2026-05-29) asserts that Convoke's migration + install code writes only to scoped paths (`_bmad/bme/`, version metadata, Convoke output). Snapshot-based assertion catches new writes for review. Forbidden-pattern check on path expressions detects attempts to write to BMM/CIS/TEA/core/BMA/GDS/WDS/BMB paths.
 
 **Decision 4 — Release record at `_bmad-output/implementation-artifacts/v63-4-3-release-record-4.0.md`.** **Frontmatter (9 keys per CM-5 fix):** `initiative: convoke`, `artifact_type: release-record`, `release_target: 4.0.0`, `m9_pf1_gate: PASS|INVESTIGATE|FAIL` (per battery verdict), `m6_threshold_T: 4.0`, `pf1_battery_results_path: <path>`, `recording_method: scripted|manual` (D2-A or D2-B), `created: <YYYY-MM-DD>`, `signoff_by: amalik` + `baseline_commit: <sha>` + `post_migration_commit: <sha>` (10 keys total — provenance per EO-10). **Body:** gate verdict block + per-agent + per-prompt summary table + recording-method narrative + ship/don't-ship recommendation + operator sign-off line. M9 + M6 satisfied by frontmatter keys + body content. **Cross-reference (EO-4):** release record is SEPARATE from `convoke-announcement-4.0-draft.md`; the announcement consumes release-record's `m9_pf1_gate` field; release-record is the canonical M9+M6 evidence artifact.
 
@@ -105,23 +121,23 @@ so that the M9 release-blocking gate has empirical PASS/INVESTIGATE/FAIL evidenc
 - Decision 2 path resolved before Task 3 begins.
 - Time-box: 30 min hard cap; declare FAIL if exceeded.
 
-**AC2 — 5 baseline recordings captured from 3.x state, IMMEDIATELY before migration (FM4-4).**
+**AC2 — 4 baseline recordings captured from 3.x state, IMMEDIATELY before migration (FM4-4).** (Path B+ scope — Decision 4 addendum)
 **Given** Decision 2 path resolved + sandbox at 3.x state per Decision 3
 **When** baseline recording phase runs (Task 3)
 **Then**:
-- 5 files at `_bmad-output/pf1-baselines/{skill}-baseline.md` for: `bmad-agent-bme-contextualization-expert` (Emma), `bmad-agent-pm` (John), `bmad-agent-architect` (Winston), `bmad-cis-agent-brainstorming-coach` (Carson — **CM-3 fix: NOT `bmad-brainstorming` which is the brainstorming-method skill**), `bmad-tea` (Murat).
+- 4 files at `_bmad-output/pf1-baselines/{skill}-baseline.md` for: `bmad-agent-bme-contextualization-expert` (Emma — Vortex POC), `bmad-agent-bme-lean-experiments-specialist` (Wade — Vortex R2-converged), `bmad-agent-bme-hypothesis-engineer` (Liam — Vortex HC-schema-heaviest), `bmad-agent-bme-stack-detective` (Stack Detective — Gyre cross-module control).
 - Each file has 4 sections delimited by **digit-only `## Prompt N` headers** per Decision 2 HEADER FORMAT CONTRACT (CM-6 fix).
 - Each file's 1-line provenance comment: `<!-- Source: <skill> baseline captured <YYYY-MM-DD HH:MM> from convoke 3.x (commit <sha>) -->`.
 - **Baseline-staleness bound (EO-5):** captured ≤7 days before migration trigger (FM4-4 mitigation; arch says "IMMEDIATELY" — operator interprets as same-day-of-release-cut, never >7 days stale).
 - Files validate against Story 4.2's `parseRecording` (4 sections, exact `Prompt 1..Prompt 4` labels, no empty sections per R1 P5).
 
-**AC3 — Migration triggered + 5 post-migration recordings captured from 4.0 state.**
+**AC3 — Migration triggered + 4 post-migration recordings captured from 4.0 state.** (Path B+ scope — Decision 4 addendum)
 **Given** AC2 baselines complete + sandbox transitions to 4.0 state per Decision 3
 **When** migration trigger + post-migration recording phase runs (Tasks 4 + 5)
 **Then**:
 - Migration trigger documented: `git worktree remove ../convoke-3x` + use main checkout (worktree path) OR `git checkout main && git stash pop` (stash path); operator chooses per Decision 3.
-- **CM-2 fix:** the actual migration tooling is `scripts/update/migrations/3.x-to-4.0.js` (per arch), delivered by Story 1A.4 of v6.3 epic; NOT `scripts/update/convoke-update.js --apply` (no such flag). Verifying migration applied: `node scripts/update/convoke-version.js` should print 4.0 candidate version.
-- 5 files at `_bmad-output/pf1-post-migration/{skill}-post.md` for same 5 agents.
+- **CM-2 fix (D13 wording fix 2026-05-25):** migration via chain-walker per BUG-5 invariant. The 4.0-target chain is `3.0.x-to-3.1.0.js` → `3.1.x-to-4.0.0.js` (and `3.2.x-to-4.0.0.js`, `3.3.x-to-4.0.0.js` for direct hops). `registry.js` walker resolves. NOT `scripts/update/convoke-update.js --apply` (no such flag). Verifying migration applied: `node scripts/update/convoke-version.js` should print 4.0 candidate version.
+- 4 files at `_bmad-output/pf1-post-migration/{skill}-post.md` for same 4 agents (Emma + Wade + Liam + Stack Detective).
 - Same recording contract as AC2 (4 digit-only sections, parseRecording-validatable).
 - Provenance comment: `<!-- Source: <skill> post-migration captured <YYYY-MM-DD HH:MM> from convoke 4.0 (commit <sha>) -->`.
 - Same prompts asked to each agent as AC2 (per Story 4.2 PF1_PROMPTS — identical 4-prompt sequence; CRITICAL for valid pre/post comparison per arch:355).
@@ -154,10 +170,13 @@ so that the M9 release-blocking gate has empirical PASS/INVESTIGATE/FAIL evidenc
 **AC7 — Scope discipline.**
 - IN scope (NEW files):
   - This story file.
-  - `_bmad-output/implementation-artifacts/v63-4-3-fm4-2-spike-result.md` (Task 1 DS1 outcome).
-  - `_bmad-output/implementation-artifacts/v63-4-3-recording-protocol.md` (Task 2 — operator instructions for D2-A or D2-B).
-  - `_bmad-output/pf1-baselines/{5 files}` (Task 3 — 5 baseline recordings).
-  - `_bmad-output/pf1-post-migration/{5 files}` (Task 5 — 5 post-migration recordings).
+  - `_bmad-output/implementation-artifacts/v63-4-3-fm4-2-spike-result.md` (Task 1 DS1 outcome). ✅ shipped 2026-04-28
+  - `_bmad-output/implementation-artifacts/v63-4-3-recording-protocol.md` (Task 2 — operator instructions for D2-A or D2-B). ✅ shipped 2026-04-28; updated 2026-05-29 for Path B+ scope
+  - `_bmad-output/implementation-artifacts/v63-4-3-resumption-snapshot.md` (D14 backlog row — out-of-band state-snapshot). ✅ shipped 2026-05-26
+  - `scripts/audit/pf1-record-agent.js` (Task 1.5 D2-A automation helper per spike outline). ✅ shipped 2026-05-29
+  - `scripts/audit/install-scope-check.js` (Decision 4 addendum — Path B+ mechanical control). ✅ shipped 2026-05-29
+  - `_bmad-output/pf1-baselines/{4 files}` (Task 3 — 4 baseline recordings per Path B+ scope).
+  - `_bmad-output/pf1-post-migration/{4 files}` (Task 5 — 4 post-migration recordings per Path B+ scope).
   - `_bmad-output/implementation-artifacts/v63-4-3-battery-results-{date}.md` (Task 6 — battery output via env-overridden RESULTS_PATH).
   - `_bmad-output/implementation-artifacts/v63-4-3-release-record-4.0.md` (Task 7 — M9 + M6 release record).
   - **D2-A only:** `scripts/audit/pf1-record-agent.js` (FM4-2-conditional automation helper).
@@ -183,17 +202,14 @@ so that the M9 release-blocking gate has empirical PASS/INVESTIGATE/FAIL evidenc
     - **If ANY (a)/(b)/(c) fail:** HALT dev-story with explicit operator message: "Story 4.3 is a release-time activity. Preconditions not met: <list>. Resume Story 4.3 dev-story when v6.3 implementation complete + 4.0 candidate exists. Spec stays ready-for-dev."
   - [ ] 0.6 Confirm `ANTHROPIC_API_KEY` env availability for Task 6 (battery run). NOT required for Tasks 1-5; only Task 6+. If unset at Task 6, HALT.
 
-- [ ] **Task 1: DEF-SPIKE — FM4-2 CLI scriptability (DS1; PI-11 inversion handling; 30-min time-box).**
-  - [ ] 1.1 **DS1: FM4-2 spike with corrected CLI flag (CM-1 fix).** Test sequence:
-    1. `claude --help 2>&1 | grep -E '\-\-print|\-p'` — confirm `-p` / `--print` flag exists.
-    2. Try non-interactive Carson invocation: `echo "/bmad-cis-agent-brainstorming-coach" | claude -p "Activate the skill and respond with your activation greeting" 2>&1 | head -100`. **PASS criterion:** output contains Carson's persona greeting (regex match for "Carson" + emoji 🧠 + "brainstorming"). If output is empty / mixed with tool traces / doesn't include persona text, declare FAIL.
-    3. If step 2 PASSES: try Winston: `echo "/bmad-agent-architect" | claude -p "..." 2>&1 | head -100`. Repeat for 1 additional agent to verify reproducibility.
-    4. Time-box: 30 min hard cap per arch:372. If exceeded with no clear PASS, declare FAIL → D2-B path.
-  - [ ] 1.2 Author `_bmad-output/implementation-artifacts/v63-4-3-fm4-2-spike-result.md`: outcome (PASS/FAIL), CLI invocation verbatim, observed behavior (stdout/stderr samples truncated to first 500 chars), time taken, recommendation (D2-A or D2-B). **Inversion handler:** if FAIL but operator believes a different CLI invocation could PASS, document the alternative for future re-spike.
-  - [ ] 1.3 Surface DS1 outcome to operator before proceeding to Task 2.
+- [x] **Task 1: DEF-SPIKE — FM4-2 CLI scriptability (DS1; PI-11 inversion handling; 30-min time-box).** ✅ shipped 2026-04-28
+  - [x] 1.1 **DS1: FM4-2 spike with corrected CLI flag (CM-1 fix).** Spike refined the CLI form: working invocation is `claude -p --max-turns N "/<skill>"` (slash-command-as-prompt-arg). Stdin-pipe form `echo "/<skill>" \| claude -p "..."` FAILS with `Error: Reached max turns`. CM-1 refinement documented in spike result. Time taken: ~10 min (under 30-min cap). Outcome: **PASS** → Decision 2 path **D2-A**.
+  - [x] 1.2 Author `_bmad-output/implementation-artifacts/v63-4-3-fm4-2-spike-result.md`: ✅ shipped 2026-04-28 (7628 bytes). Outcome PASS, working CLI form verbatim, observed Carson + Winston reproducibility, recommendation D2-A.
+  - [x] 1.3 Surface DS1 outcome to operator before proceeding to Task 2. ✅ done (Task 2 artifact authored immediately after).
+  - [x] **1.5 (D2-A deliverable — added retroactively per spike Task 1.5 outline):** Author `scripts/audit/pf1-record-agent.js` to wrap `claude -p --max-turns N "/<skill>"` per spike-confirmed invariants. ✅ shipped 2026-05-29 (v0 — captures Prompt 1 reliably for all 5 agents; Prompts 2-4 left as placeholders per protocol §5.1 limitation, completed via D2-B manual workflow per agent). Lint clean; dry-run verified; module-exports for testability.
 
-- [ ] **Task 2: Author recording protocol document (~30 min).**
-  - [ ] 2.1 Create `_bmad-output/implementation-artifacts/v63-4-3-recording-protocol.md` based on DS1 outcome:
+- [x] **Task 2: Author recording protocol document (~30 min).** ✅ shipped 2026-04-28
+  - [x] 2.1 Create `_bmad-output/implementation-artifacts/v63-4-3-recording-protocol.md` based on DS1 outcome: ✅ shipped 2026-04-28 (15.7KB; covers all required elements per spec):
     - **HEADER FORMAT CONTRACT (load-bearing per Decision 2 + CM-6):** every recording file MUST use digit-only headers `## Prompt 1`, `## Prompt 2`, `## Prompt 3`, `## Prompt 4`. NO descriptions in headers (Story 4.2 parser regex `/^## Prompt (\d+)\s*$/gm` REJECTS `## Prompt 1: Activation greeting + menu`). Descriptions belong in Decision 4 spec body, NOT in recording headers.
     - **Per-prompt operator instructions** (D2-B manual; D2-A scripted automates these):
       - **Prompt 1 — Activation greeting + menu:** invoke `/<skill>` (e.g., `/bmad-cis-agent-brainstorming-coach` for Carson per CM-3 fix); capture the FIRST persona-authored natural-language turn (per Story 4.1 AC3 definition); STOP at next user-input boundary.
@@ -205,17 +221,17 @@ so that the M9 release-blocking gate has empirical PASS/INVESTIGATE/FAIL evidenc
       node -e "const b = require('./scripts/audit/pf1-validation-battery'); const fs = require('fs'); const text = fs.readFileSync('_bmad-output/pf1-baselines/<skill>-baseline.md', 'utf8'); console.log(b.parseRecording(text));"
       ```
       Must print `{ 'Prompt 1': '...', 'Prompt 2': '...', 'Prompt 3': '...', 'Prompt 4': '...' }`. If errors, fix headers/sections before proceeding.
-  - [ ] 2.2 Per-protocol inclusion: provenance-comment template + section-header template + parser-validity check command + correct-vs-incorrect header examples.
+  - [x] 2.2 Per-protocol inclusion: provenance-comment template + section-header template + parser-validity check command + correct-vs-incorrect header examples. ✅ all included in shipped artifact.
 
-- [ ] **Task 3: Capture 5 baseline recordings from 3.x state (HALT for operator action).**
+- [ ] **Task 3: Capture 4 baseline recordings from 3.x state (HALT for operator action).** (Path B+ scope — Decision 4 addendum, was 5 agents)
   - [ ] 3.1 Operator runs Decision 3 sandbox setup. **Preferred (worktree per OS-1):** `git worktree add ../convoke-3x v3.3.0` → `cd ../convoke-3x` (separate dir; current 4.0 stays intact). **Fallback (stash):** `git stash` → `git checkout v3.3.0`.
-  - [ ] 3.2 Operator captures recordings per Task 2 protocol. Per agent (using **canonical skill names per CM-3 fix**):
+  - [ ] 3.2 Operator captures recordings per Task 2 protocol. **4 agents (Path B+):**
     - Emma → `_bmad-output/pf1-baselines/bmad-agent-bme-contextualization-expert-baseline.md`
-    - John → `_bmad-output/pf1-baselines/bmad-agent-pm-baseline.md`
-    - Winston → `_bmad-output/pf1-baselines/bmad-agent-architect-baseline.md`
-    - Carson → `_bmad-output/pf1-baselines/bmad-cis-agent-brainstorming-coach-baseline.md` (**not bmad-brainstorming**)
-    - Murat → `_bmad-output/pf1-baselines/bmad-tea-baseline.md`
-  - [ ] 3.3 Operator validates EACH file via parser pre-validation command (Task 2.1). All 5 must show 4-key parse output.
+    - Wade → `_bmad-output/pf1-baselines/bmad-agent-bme-lean-experiments-specialist-baseline.md`
+    - Liam → `_bmad-output/pf1-baselines/bmad-agent-bme-hypothesis-engineer-baseline.md`
+    - Stack Detective → `_bmad-output/pf1-baselines/bmad-agent-bme-stack-detective-baseline.md`
+    - **Tool:** `node scripts/audit/pf1-record-agent.js --phase=baseline` (D2-A — Prompt 1 reliable; Prompts 2-4 D2-B fill-in per protocol §5.1).
+  - [ ] 3.3 Operator validates EACH file via parser pre-validation command (Task 2.1). All 4 must show 4-key parse output.
   - [ ] 3.4 Operator capture-time-stamps each file's provenance comment + records `baseline_commit: <sha>` for release record (EO-10).
   - [ ] 3.5 **HALT for operator** — dev-agent surfaces protocol + per-agent invocation list + STOPS until operator returns with completed + parser-validated recordings.
 
@@ -224,8 +240,8 @@ so that the M9 release-blocking gate has empirical PASS/INVESTIGATE/FAIL evidenc
   - [ ] 4.2 Operator verifies 4.0 install functional: `node scripts/update/convoke-version.js` should print `4.0.0` or `4.0.0-rc.X`. If broken, BLOCKING for Story 4.3 ship — surface to operator. **CM-2 fix:** the actual migration is delivered by `scripts/update/migrations/3.x-to-4.0.js` (per arch + Story 1A.4); `scripts/update/convoke-update.js` is the runner CLI but doesn't accept `--apply` flag (verified empirically: runs unconditionally + reports current version).
   - [ ] 4.3 Operator records `post_migration_commit: <sha>` for release record.
 
-- [ ] **Task 5: Capture 5 post-migration recordings from 4.0 state (HALT for operator action).**
-  - [ ] 5.1 Same protocol as Task 3 but writing to `_bmad-output/pf1-post-migration/{skill}-post.md` files.
+- [ ] **Task 5: Capture 4 post-migration recordings from 4.0 state (HALT for operator action).** (Path B+ scope — Decision 4 addendum, was 5 agents)
+  - [ ] 5.1 Same protocol as Task 3 but writing to `_bmad-output/pf1-post-migration/{skill}-post.md` files (4 agents per Path B+).
   - [ ] 5.2 Provenance: `<!-- Source: <skill> post-migration captured <YYYY-MM-DD HH:MM> from convoke 4.0 (commit <sha>) -->`.
   - [ ] 5.3 **CRITICAL:** same 4-prompt sequence per agent (must match baseline prompts EXACTLY for valid pre/post comparison; per arch:355).
   - [ ] 5.4 Operator validates files via parser pre-validation command.
@@ -248,10 +264,11 @@ so that the M9 release-blocking gate has empirical PASS/INVESTIGATE/FAIL evidenc
   - [ ] 7.4 Operator signs off: replaces `Signed off by: <name> on <date>` with actual values. **Anti-pattern guard:** do NOT sign off if gate verdict is INVESTIGATE or FAIL without root-cause-fix-and-re-run completed.
 
 - [ ] **Task 8: Validation gates (AC6).**
-  - [ ] 8.1 `npm test 2>&1 | tail -5` — expected `tests 1468 / pass 1467 / skip 1 / fail 0` unchanged.
-  - [ ] 8.2 `npm run test:integration 2>&1 | tail -5` — expected `tests 93 / pass 93 / fail 0` unchanged.
-  - [ ] 8.3 `npm run lint 2>&1 | tail -5` — clean.
-  - [ ] 8.4 `git diff HEAD --stat` — confirms AC7 scope (8-9 NEW files + 2 modified).
+  - [ ] 8.1 `set -o pipefail; npm test 2>&1 | tail -5; echo "EXIT: ${PIPESTATUS[0]}"` — baseline unchanged from current state (verification-pipefail rule).
+  - [ ] 8.2 `set -o pipefail; npm run test:integration 2>&1 | tail -5; echo "EXIT: ${PIPESTATUS[0]}"` — baseline unchanged.
+  - [ ] 8.3 `npm run lint` — clean (lint-1-1 + I104 `--max-warnings 0` active).
+  - [ ] 8.4 `git diff HEAD --stat` — confirms AC7 scope.
+  - [ ] **8.5 (Path B+ addition — Decision 4 addendum):** `node scripts/audit/install-scope-check.js` — PASS expected. This is the mechanical control validation that replaces the original 4-BMAD-agent LLM-judged control. Output: "✓ PASS — all 4 tracked files match snapshot + no scope violations." Exit code 0. If FAIL or snapshot mismatch surfaces, HALT and operator-reviews the new write site(s) before continuing.
 
 ## Dev Notes
 
@@ -297,19 +314,42 @@ so that the M9 release-blocking gate has empirical PASS/INVESTIGATE/FAIL evidenc
 
 ## Dev Agent Record
 
-(Populates during dev-story execution. Most tasks HALT for operator action.)
-
 ### Implementation Plan
 
-(populates during dev-story Step 5)
+**2026-04-28 (Tasks 1 + 2):** DEF-SPIKE outcome PASS — D2-A scripted path chosen. Spike refined CLI form from `echo "/<skill>" \| claude -p "..."` (FAILS) to `claude -p --max-turns N "/<skill>"` (WORKS). Recording protocol authored with operator-execution playbook for 5 agents × 4 prompts × 2 phases = 40 recordings target, parser contract (digit-only headers), pre-validation command per file, D2-A scripted + D2-B manual fallback paths.
+
+**2026-05-29 (Task 1.5 D2-A automation helper):** Authored `scripts/audit/pf1-record-agent.js` (Task 1 sub-deliverable per spike outline). v0 captures Prompt 1 reliably; leaves Prompts 2-4 as placeholders for operator D2-B fill-in per protocol §5.1 limitation. Pre-flight: checks `claude` CLI exists + `git rev-parse HEAD` works; uses `findProjectRoot()` per Convoke convention; exit codes 0-5+99 per Convoke convention; module exports for testability. Lint clean (`eslint --max-warnings 0`); dry-run verified discovers agents + commit SHA correctly. Status: ready for Task 3 operator pickup once Decision 3 sandbox (worktree at v3.3.0) is set up.
+
+**2026-05-29 (Decision 4 addendum — Path B+ re-scope, operator-confirmed):** Operator surfaced sharp question at resumption: "Why test BMAD agents when our migration shouldn't touch them?" Analysis revealed 80% of original spec's 5-agent test cost was BMAD-upstream control validation. Re-scoped to **4 agents (3 Vortex + 1 Gyre):** Emma + Wade + Liam (Vortex format-conversion signal) + Stack Detective (Gyre cross-Convoke-module control). BMAD-agent control validation replaced by mechanical `scripts/audit/install-scope-check.js` (snapshot-based assertion + forbidden-pattern check on path expressions). 7 files amended (2 scripts + 1 test + 2 spec docs + 1 protocol doc + 1 architecture footnote pending). PF1 test signal density: 20% → 75%. LLM call count: 40 → 32. Mechanical control runtime: ~30s vs original ~2 hr operator time + ~$1 API.
 
 ### Completion Notes
 
-(populates during dev-story Step 9)
+- **Task 1 done 2026-04-28** — DS1 spike PASS → D2-A path locked. Inversion handler NOT triggered (V-pass-anticipated `claude -p` flag was correct; only stdin-pipe-vs-prompt-arg form was a refinement). Hand-off to Task 2 clean.
+- **Task 2 done 2026-04-28** — Recording protocol covers all spec-required elements: provenance template, section header template, parser-validation command, correct/incorrect header examples, both D2-A and D2-B paths.
+- **Task 1.5 D2-A automation helper done 2026-05-29** — Per spike Task 1.5 outline, with v0 limitation: only Prompt 1 captured reliably (single-shot `claude -p` limitation). Operator completes Prompts 2-4 via D2-B per agent. Realistic wall-clock now: ~30 min D2-A Prompt-1 capture (10 agent calls × ~15s) + ~2-3 hours D2-B Prompt-2-4 completion (5 agents × 3 prompts × 5-8 min per response paste/validate) = ~3-4 hours total per phase. Could fall to ~30 min total per phase if a future v1 of the script bundles activation+capability prompts (per protocol §5.1 path (a) or (c) experimentation).
 
 ### File List
 
-(populates during dev-story Step 8)
+**Authored 2026-04-28 (Tasks 1 + 2):**
+- `_bmad-output/implementation-artifacts/v63-4-3-fm4-2-spike-result.md` (Task 1.2 deliverable)
+- `_bmad-output/implementation-artifacts/v63-4-3-recording-protocol.md` (Task 2.1 deliverable)
+
+**Authored 2026-05-29 (Task 1.5 D2-A automation helper):**
+- `scripts/audit/pf1-record-agent.js` (D2-A automation script per spike Task 1.5 outline)
+
+**Authored 2026-05-26 (out-of-band; D14 backlog row deliverable):**
+- `_bmad-output/implementation-artifacts/v63-4-3-resumption-snapshot.md` (state-snapshot for stalled-story resumption per D14 RICE 2.1 Fast Lane row; sibling to story spec; non-source-code; tracks how-to-resume rather than story-substance)
+
+**Authored 2026-05-29 (Decision 4 addendum — Path B+ re-scope):**
+- `scripts/audit/install-scope-check.js` (NEW) — mechanical control validation; snapshot-based write-op count + forbidden-pattern path check; replaces 4-BMAD-agent LLM-judged control
+
+**Modified 2026-05-29 (Decision 4 addendum — Path B+ re-scope):**
+- `scripts/audit/pf1-record-agent.js` — `PF1_AGENTS` constant: dropped John/Winston/Carson/Murat (BMAD); added Wade/Liam/Stack Detective (Convoke)
+- `scripts/audit/pf1-validation-battery.js` — `PF1_AGENTS` constant + 3 references ("5 agents" → "4 agents", "60 API calls" → "48 API calls")
+- `tests/lib/pf1-validation-battery.test.js` — Test 3 updated to assert 4-agent expected count + new skill mapping (Emma + Wade + Liam + StackDetective)
+- `_bmad-output/implementation-artifacts/v63-4-3-recording-protocol.md` — §1 agent table + §2 Prompts 2-4 tables updated to Path B+ 4-agent scope; frontmatter `updated: 2026-05-29` + `scope_revision: path-b-plus-2026-05-29` added; Path B+ rationale block at top
+- `_bmad-output/implementation-artifacts/v63-4-3-execute-pf1-validation-cycle-record-compare-and-gate.md` — Decision 2 wording updated; Decision 4 addendum inserted; AC2/AC3 agent lists updated; Task 3.2 + Task 5.1 paths updated; Task 8.5 install-scope-check added; this Dev Agent Record + File List
+- `_bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md` — Decision 4 footnote pending (see Path B+ in-spec addendum here as authoritative; arch footnote is informational)
 
 ## References
 
