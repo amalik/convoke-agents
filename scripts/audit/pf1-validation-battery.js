@@ -5,7 +5,7 @@
  * PF1 Validation Battery Harness
  *
  * Orchestrates the full PF1 behavioral-equivalence pipeline:
- *   5 agents × 4 prompts × RUNS_PER_AGENT (3) judge runs = 60 API calls per cycle.
+ *   4 agents × 4 prompts × RUNS_PER_AGENT (3) judge runs = 48 API calls per cycle.
  * Reads pre-recorded baseline + post-migration outputs, calls the calibration-passed judge,
  * aggregates per-agent + per-prompt scores, produces PASS/INVESTIGATE/FAIL verdict per
  * arch:362-368 gate logic. Writes results artifact at RESULTS_PATH.
@@ -45,12 +45,15 @@ const {
 
 const PROJECT_ROOT = findProjectRoot();
 
+// Story 4.3 Path B+ re-scope (Decision 4 addendum, 2026-05-29):
+//   3 Vortex (Emma + Wade + Liam) for format-conversion behavioral signal +
+//   1 Gyre (Stack Detective) for cross-Convoke-module control.
+//   BMAD-agent control validation replaced by mechanical install-scope-check.js.
 const PF1_AGENTS = [
-  { display: 'Emma', skill: 'bmad-agent-bme-contextualization-expert' },
-  { display: 'John', skill: 'bmad-agent-pm' },
-  { display: 'Winston', skill: 'bmad-agent-architect' },
-  { display: 'Carson', skill: 'bmad-cis-agent-brainstorming-coach' },
-  { display: 'Murat', skill: 'bmad-tea' },
+  { display: 'Emma',           skill: 'bmad-agent-bme-contextualization-expert' },        // Vortex POC (Story 2.1)
+  { display: 'Wade',           skill: 'bmad-agent-bme-lean-experiments-specialist' },     // Vortex R2-converged (Story 2.2)
+  { display: 'Liam',           skill: 'bmad-agent-bme-hypothesis-engineer' },             // Vortex HC-schema-heaviest (Story 2.7)
+  { display: 'StackDetective', skill: 'bmad-agent-bme-stack-detective' },                 // Gyre cross-module control
 ];
 
 // Labels MUST match `## Prompt N` header keys emitted by parseRecording (digit-only).
@@ -327,7 +330,7 @@ async function main() {
 
   const promptTemplate = loadPromptTemplate(PROMPT_PATH);
 
-  // Load all 5 agents' baseline + post-migration recordings up-front (fail fast on missing/malformed)
+  // Load all 4 agents' baseline + post-migration recordings up-front (fail fast on missing/malformed)
   const agentRecordings = {};
   for (const agent of PF1_AGENTS) {
     agentRecordings[agent.display] = loadAgentRecordings(agent, BASELINE_DIR, POST_MIGRATION_DIR);
