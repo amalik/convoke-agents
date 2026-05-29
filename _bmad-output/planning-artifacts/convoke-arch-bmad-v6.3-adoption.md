@@ -339,12 +339,14 @@ Priority: frontmatter > step-file code. If found via multiple methods, record on
 
 ### Decision 4: PF1 Behavioral Equivalence Validation (WR4)
 
+> **🔄 ADDENDUM 2026-05-29 (Path B+ re-scope — Winston Architect + operator Amalik):** Original 5-agent design (1 Vortex + 4 BMAD) re-scoped to **4 agents (3 Vortex + 1 Gyre)** + mechanical install-scope check. BMAD-agent control validation moved to `scripts/audit/install-scope-check.js`. Stage 1 agent list below shows ORIGINAL design; **current scope is locked at `v63-4-3-execute-pf1-validation-cycle-record-compare-and-gate.md` Decision 4 addendum** (Emma + Wade + Liam + Stack Detective). Stage 4 gate updated: "median ≥ 4.0 across **4 agents**" (was 5). 32 LLM calls per cycle (was 60). 75% signal density (was 20%). Pending future-arch-edit-window to fold this addendum into the body below.
+
 **Selected approach:** Option B — Recorded Replay with LLM-as-Judge comparison.
 
 **4-stage pipeline:**
 
 **Stage 1 — Baseline recording** (immediately before migration, same day — FM4-4):
-- 5 agents: Emma (Vortex/bme), John (BMM), Winston (BMM), Carson (CIS), Murat (TEA)
+- ~~5~~ **4** agents (Path B+ scope 2026-05-29; see addendum above): ~~Emma (Vortex/bme), John (BMM), Winston (BMM), Carson (CIS), Murat (TEA)~~ → **Emma + Wade + Liam (Vortex) + Stack Detective (Gyre)**
 - 4 prompts per agent (revised per FM4-3 — added deep workflow prompt):
   1. Agent activation greeting + menu
   2. First capability invocation
@@ -352,7 +354,7 @@ Priority: frontmatter > step-file code. If found via multiple methods, record on
   4. Multi-step workflow entry (deepest accessible without real data)
 - Save to `_bmad-output/pf1-baselines/{agent}-baseline.md`
 
-**Stage 2 — Post-migration recording:** Identical 4-prompt sequence on same 5 agents.
+**Stage 2 — Post-migration recording:** Identical 4-prompt sequence on same ~~5~~ **4** agents (per addendum above).
 
 **Stage 3 — LLM-as-Judge comparison:**
 - Standardized judge prompt (version-controlled at `scripts/audit/pf1-judge-prompt.md`)
@@ -363,7 +365,7 @@ Priority: frontmatter > step-file code. If found via multiple methods, record on
 
 | Condition | Result |
 |-----------|--------|
-| Median ≥ 4.0 average across 5 agents AND no single agent median ≤ 2 | **PASS** |
+| Median ≥ 4.0 average across ~~5~~ **4** agents AND no single agent median ≤ 2 | **PASS** (Path B+ 2026-05-29) |
 | Average ≥ 4.0 BUT one agent median ≤ 2 | **INVESTIGATE** — fix + retest |
 | Average < 4.0 | **FAIL** — investigate root cause |
 
