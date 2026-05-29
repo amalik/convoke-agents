@@ -3,16 +3,20 @@ initiative: convoke
 artifact_type: protocol
 qualifier: v63-4-3-recording-protocol
 created: '2026-04-28'
+updated: '2026-05-29'
 schema_version: 1
 parent_story: v63-4-3-execute-pf1-validation-cycle-record-compare-and-gate
 recording_method: D2-A (scripted) — fallback D2-B (manual) documented inline
+scope_revision: path-b-plus-2026-05-29
 ---
 
 # Story 4.3 — PF1 Recording Protocol (operator-execution playbook)
 
-**Goal:** capture 5 agents × 4 prompts × 2 phases (baseline + post-migration) = **40 recordings** in a parser-validatable format that Story 4.2's battery harness can consume.
+**🔄 2026-05-29 Path B+ re-scope (Decision 4 addendum):** Original spec listed 5 agents (1 Vortex + 4 BMAD). Re-scoped to **4 agents (3 Vortex + 1 Gyre)** to densify Convoke-conversion signal. BMAD-agent control validation moved to mechanical `scripts/audit/install-scope-check.js` (~$0 cost vs ~$1 LLM + 2 hr operator time). Agent table §1 below reflects new scope. Other protocol details (Prompts 2-4 contracts, parser invariants, D2-A/D2-B paths) unchanged.
 
-**Time-box:** ~30 min D2-A (scripted) / 4-8hr D2-B (manual) per Decision 5.
+**Goal:** capture **4 agents × 4 prompts × 2 phases (baseline + post-migration) = 32 recordings** in a parser-validatable format that Story 4.2's battery harness can consume.
+
+**Time-box:** ~25 min D2-A (scripted) / 3-6hr D2-B (manual) per Decision 5 [scaled down proportionally from original 5-agent estimate].
 
 **Parser contract (load-bearing):** every recording file MUST use **digit-only headers** `## Prompt 1`, `## Prompt 2`, `## Prompt 3`, `## Prompt 4` — NO description trailers. Story 4.2's parser regex `/^## Prompt (\d+)\s*$/gm` REJECTS `## Prompt 1: Activation greeting`. Description-aware text belongs in body content or comments, NOT headers.
 
@@ -30,17 +34,27 @@ Before starting either D2-A or D2-B path:
 
 ---
 
-## 1. The 5 PF1 agents (canonical skill IDs)
+## 1. The 4 PF1 agents (canonical skill IDs) — Path B+ scope 2026-05-29
 
-| # | Agent | Display Name | Skill ID (canonical) | Recording filename (baseline) | Recording filename (post-migration) |
-|---|-------|------|----------------------|------------------------------|-----|
-| 1 | Emma | Contextualization Expert | `bmad-agent-bme-contextualization-expert` | `_bmad-output/pf1-baselines/bmad-agent-bme-contextualization-expert-baseline.md` | `_bmad-output/pf1-post-migration/bmad-agent-bme-contextualization-expert-post.md` |
-| 2 | John | Product Manager | `bmad-agent-pm` | `_bmad-output/pf1-baselines/bmad-agent-pm-baseline.md` | `_bmad-output/pf1-post-migration/bmad-agent-pm-post.md` |
-| 3 | Winston | Architect | `bmad-agent-architect` | `_bmad-output/pf1-baselines/bmad-agent-architect-baseline.md` | `_bmad-output/pf1-post-migration/bmad-agent-architect-post.md` |
-| 4 | Carson | Brainstorming Coach | `bmad-cis-agent-brainstorming-coach` | `_bmad-output/pf1-baselines/bmad-cis-agent-brainstorming-coach-baseline.md` | `_bmad-output/pf1-post-migration/bmad-cis-agent-brainstorming-coach-post.md` |
-| 5 | Murat | Test Architect | `bmad-tea` | `_bmad-output/pf1-baselines/bmad-tea-baseline.md` | `_bmad-output/pf1-post-migration/bmad-tea-post.md` |
+| # | Agent | Display Name | Module | Type | Skill ID (canonical) | Recording filename (baseline) | Recording filename (post-migration) |
+|---|-------|--------------|--------|------|----------------------|------------------------------|-----|
+| 1 | Emma | Contextualization Expert | Vortex | Signal (POC ref) | `bmad-agent-bme-contextualization-expert` | `_bmad-output/pf1-baselines/bmad-agent-bme-contextualization-expert-baseline.md` | `_bmad-output/pf1-post-migration/bmad-agent-bme-contextualization-expert-post.md` |
+| 2 | Wade | Lean Experiments Specialist | Vortex | Signal (R2-converged conversion — Story 2.2) | `bmad-agent-bme-lean-experiments-specialist` | `_bmad-output/pf1-baselines/bmad-agent-bme-lean-experiments-specialist-baseline.md` | `_bmad-output/pf1-post-migration/bmad-agent-bme-lean-experiments-specialist-post.md` |
+| 3 | Liam | Hypothesis Engineer | Vortex | Signal (HC-schema-heaviest conversion — Story 2.7) | `bmad-agent-bme-hypothesis-engineer` | `_bmad-output/pf1-baselines/bmad-agent-bme-hypothesis-engineer-baseline.md` | `_bmad-output/pf1-post-migration/bmad-agent-bme-hypothesis-engineer-post.md` |
+| 4 | Stack Detective | Stack Detective | Gyre | Control (cross-Convoke-module) | `bmad-agent-bme-stack-detective` | `_bmad-output/pf1-baselines/bmad-agent-bme-stack-detective-baseline.md` | `_bmad-output/pf1-post-migration/bmad-agent-bme-stack-detective-post.md` |
 
-**CM-3 reminder:** Carson is `bmad-cis-agent-brainstorming-coach` (NOT `bmad-brainstorming`, which is the brainstorming-method skill).
+**Original-spec-deprecated agents (no longer in PF1 scope per Decision 4 addendum):**
+
+| ~~Agent~~ | ~~Skill ID~~ | Why dropped | Replacement |
+|-----------|--------------|-------------|-------------|
+| ~~John (PM)~~ | ~~`bmad-agent-pm`~~ | BMAD-upstream-owned; control validation now mechanical | `install-scope-check.js` |
+| ~~Winston (Architect)~~ | ~~`bmad-agent-architect`~~ | BMAD-upstream-owned; control validation now mechanical | `install-scope-check.js` |
+| ~~Carson (Brainstorming Coach)~~ | ~~`bmad-cis-agent-brainstorming-coach`~~ | CIS-upstream-owned; control validation now mechanical | `install-scope-check.js` |
+| ~~Murat (Test Architect)~~ | ~~`bmad-tea`~~ | TEA-upstream-owned; control validation now mechanical | `install-scope-check.js` |
+
+**Path B+ rationale:** Original spec's 5-agent design (1 Vortex Emma + 4 BMAD John/Winston/Carson/Murat) put 80% of test cost into control validation. Re-scope replaces the 4-BMAD-agent control with mechanical `scripts/audit/install-scope-check.js` (snapshot-based assertion that migration code's write ops stay within Convoke scope: `_bmad/bme/` + version metadata + Convoke output paths). Test signal density rises from 20% → 75%; total LLM call count drops 40 → 32.
+
+**CM-3 reminder (now N/A since Carson dropped, retained for historical clarity):** Carson's canonical skill ID was `bmad-cis-agent-brainstorming-coach` (NOT `bmad-brainstorming`, which is the brainstorming-method skill). Pre-existing Convoke users with Carson installed via CIS module will still have her, but PF1 no longer tests her under Path B+ scope.
 
 ---
 
@@ -52,21 +66,20 @@ Type the bare slash command:
 ```
 /<skill-id>
 ```
-Example for Carson: `/bmad-cis-agent-brainstorming-coach`
+Example for Emma: `/bmad-agent-bme-contextualization-expert`
 
 **Capture criteria:** the FIRST persona-authored natural-language turn (per Story 4.1 AC3). STOP at the first user-input boundary (i.e., when the agent waits for your input). Do NOT type a follow-up.
 
-**Prompt 2 — First capability invocation**
+**Prompt 2 — First capability invocation** (Path B+ scope 2026-05-29)
 
 Type the FIRST numbered/coded capability from the agent's menu (rendered in Prompt 1's response).
 
 | Agent | Expected Prompt 2 input |
 |-------|------------------------|
-| Emma | First capability code from her menu (e.g., `CC` or first listed code) |
-| John | `PRD` (or first listed code) |
-| Winston | `CA` (per Winston's Prompt 1 output observed in spike: "Guided workflow to document technical decisions") |
-| Carson | `BS` (per Carson's Prompt 1 output observed in spike: "Guide me through Brainstorming any topic") |
-| Murat | First capability code from her menu |
+| Emma | First capability code from her menu (operator discovers at activation time — likely `CC` or first listed code per Vortex Contextualize stream conventions) |
+| Wade | First capability code from his menu (likely `EX` or first listed; Vortex Externalize stream — Lean experiments specialist) |
+| Liam | First capability code from his menu (likely `HE` or first listed; Vortex Hypothesize stream — HC schema-heaviest agent) |
+| Stack Detective | First capability code from her menu (Gyre Readiness stream — operator discovers at activation time) |
 
 **Capture criteria:** the agent's response to the capability invocation (typically: skill activation + first instruction or first elicitation question). STOP at the next user-input boundary.
 
@@ -81,17 +94,16 @@ Can you walk me through the next step in more detail?
 
 **Capture criteria:** the agent's elaboration / continuation. STOP at next boundary.
 
-**Prompt 4 — Multi-step workflow entry**
+**Prompt 4 — Multi-step workflow entry** (Path B+ scope 2026-05-29)
 
 Invoke the agent's deepest workflow capability accessible without supplying real domain data. Use the same invocation per agent across both phases.
 
 | Agent | Suggested Prompt 4 input |
 |-------|--------------------------|
 | Emma | Workflow that doesn't need real customer data (capability that returns a template/guide rather than processing input) |
-| John | Workflow code that elicits a structure rather than user data |
-| Winston | `IR` (Implementation Readiness — works against existing repo state) |
-| Carson | `BS` continuation if not already triggered, or a meta-question about the brainstorming framework itself |
-| Murat | Test-strategy or framework-init capability that returns a template |
+| Wade | Hypothesis-falsification workflow or experiment-card capability (works against existing repo state / hypothesis fixtures) |
+| Liam | HC-schema-validator workflow or hypothesis-charter capability (deepest HC-schema interaction without supplying real PRD) |
+| Stack Detective | Stack-analysis or dependency-trace capability that returns a template/structure rather than analyzing real code |
 
 **Capture criteria:** the agent's first workflow-step response (typically: "Step 1 of N: ..." or first elicitation in the workflow's sequence). STOP at next boundary.
 
