@@ -52,15 +52,14 @@ describe('PF1 validation battery harness (Story 4.2 — structural-only)', () =>
     }
   });
 
-  it('Test 3: PF1_AGENTS has 5 entries matching Decision 3 (display + skill mapping)', () => {
+  it('Test 3: PF1_AGENTS has 4 entries matching Decision 4 addendum (Path B+ re-scope, 2026-05-29)', () => {
     const { PF1_AGENTS } = require(BATTERY_PATH);
-    assert.equal(PF1_AGENTS.length, 5);
+    assert.equal(PF1_AGENTS.length, 4);
     const expectedSkills = {
-      Emma: 'bmad-agent-bme-contextualization-expert',
-      John: 'bmad-agent-pm',
-      Winston: 'bmad-agent-architect',
-      Carson: 'bmad-cis-agent-brainstorming-coach',
-      Murat: 'bmad-tea',
+      Emma: 'bmad-agent-bme-contextualization-expert',                       // Vortex POC (Story 2.1)
+      Wade: 'bmad-agent-bme-lean-experiments-specialist',                    // Vortex R2-converged (Story 2.2)
+      Liam: 'bmad-agent-bme-hypothesis-engineer',                            // Vortex HC-schema-heaviest (Story 2.7)
+      StackDetective: 'bmad-agent-bme-stack-detective',                      // Gyre cross-module control
     };
     for (const a of PF1_AGENTS) {
       assert.ok(a.display, `agent missing display name: ${JSON.stringify(a)}`);
@@ -68,7 +67,7 @@ describe('PF1 validation battery harness (Story 4.2 — structural-only)', () =>
       assert.equal(
         a.skill,
         expectedSkills[a.display],
-        `Decision 3 mismatch for ${a.display}: expected ${expectedSkills[a.display]}, got ${a.skill}`
+        `Decision 4 addendum mismatch for ${a.display}: expected ${expectedSkills[a.display]}, got ${a.skill}`
       );
     }
   });
