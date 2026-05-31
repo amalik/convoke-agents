@@ -73,7 +73,12 @@ const PHASE_TO_SUFFIX = {
   'post-migration': 'post',
 };
 
-const DEFAULT_MAX_TURNS = Number(process.env.PF1_RECORD_MAX_TURNS) || 5;
+// Default bumped 5 → 10 after empirical finding 2026-05-31: v6.3+ outcome-based agents
+// (Emma + Wade in particular) require more activation turns than v5 XML format. v3.3.0
+// baseline succeeded at 5, but 4.0-rc.1 post-migration of Emma + Wade hit
+// "Reached max turns (5)" until bumped. Spike anticipated this ("may need adjustment for
+// deeper prompts"). Override via PF1_RECORD_MAX_TURNS env var if needed.
+const DEFAULT_MAX_TURNS = Number(process.env.PF1_RECORD_MAX_TURNS) || 10;
 const TIMEOUT_MS = Number(process.env.PF1_RECORD_TIMEOUT_MS) || 60000;
 
 // ===== Argument parsing =====
@@ -127,10 +132,14 @@ function ensureOutputDir(phaseDir) {
 
 function capturePrompt1(skillId, maxTurns) {
   const slashCommand = `/${skillId}`;
-  const result = spawnSync('claude', ['-p', '--max-turns', String(maxTurns), slashCommand], {
-    encoding: 'utf8',
-    timeout: TIMEOUT_MS,
-  });
+  // --setting-sources project,local scopes skill lookup to cwd `.claude/skills/`,
+  // preventing user-level wrappers from leaking into a worktree-scoped recording
+  // (verified 2026-05-31 by comparing v3.3.0 worktree Emma menu codes vs source file).
+  const result = spawnSync(
+    'claude',
+    ['-p', '--setting-sources', 'project,local', '--max-turns', String(maxTurns), slashCommand],
+    { encoding: 'utf8', timeout: TIMEOUT_MS },
+  );
   if (result.error) {
     throw new Error(`claude invocation failed: ${result.error.message}`);
   }
