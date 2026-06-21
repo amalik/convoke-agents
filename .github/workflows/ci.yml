@@ -126,12 +126,7 @@ jobs:
         run: npm ci
 
       - name: Security audit
-        # --audit-level=high: the only remaining advisory is a *moderate* js-yaml
-        # merge-key DoS (GHSA-h67p-54hq-rp68) reachable solely through gray-matter@4,
-        # which has no fixed upstream release and cannot be overridden (it calls the
-        # js-yaml 3.x safeLoad/safeDump APIs removed in 4.x). It parses frontmatter of
-        # trusted local markdown, not network input, so we gate on high/critical only.
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --omit=dev
 
   package-check:
     runs-on: ubuntu-latest
