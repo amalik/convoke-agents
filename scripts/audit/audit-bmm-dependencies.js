@@ -4,7 +4,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const crypto = require('crypto');
-const matter = require('gray-matter');
+const frontmatter = require('../lib/frontmatter');
 
 const { findProjectRoot } = require('../update/lib/utils');
 const {
@@ -406,7 +406,7 @@ function _parseFrontmatterDependencies(skillMdPath) {
   }
   let parsed;
   try {
-    parsed = matter(raw);
+    parsed = frontmatter.parse(raw);
   } catch (err) {
     console.warn(`[audit-bmm-dependencies] WARN: frontmatter parse failed for ${skillMdPath}: ${err.message}`);
     return [];
