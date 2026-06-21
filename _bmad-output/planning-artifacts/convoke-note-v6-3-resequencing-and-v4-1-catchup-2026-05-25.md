@@ -62,8 +62,11 @@ Recorded by Amalik (operator) 2026-05-25, on Winston's recommendation.
 | **E4** | **Release-channels adoption** (v6.4 — pin Convoke's BMAD floor at v6.3 stable; allow operators to opt into v6.7 separately) | Structural fix for N-cadence | Medium — installer + manifest changes |
 | **E5** | **`bmad-investigate` + `.decision-log` evaluation** (v6.7) | Optional capability gain — mirror, integrate, or pass | Spike each; commit only on positive |
 | **E6** | **Web Bundles v1.0.0 evaluation** (2026-05-25 today — Gemini Gems + ChatGPT Custom GPTs distribution surface for Vortex Standalone segment, ~40% per two-product framing) | Optional capability gain; possibly its own initiative if scope justifies | Spike first |
+| **E7** | **Activation-guardrails adoption as Covenant enforcement substrate** (v6.8 — adopt the `INCLUDE→READ→RUN→CHECK→FILTER→CD` guardrail pattern as the runtime mechanism that graduates OC-R5 (pause) from convention to enforced). Added 2026-06-20 — see [adr/v4-1/adr-001](adr/v4-1/adr-001-guardrails-covenant-enforcement.md) | Optional but high-leverage — strengthens the headline differentiator. **Gated** on the agent-internal-vs-operator-facing spike question | Spike first (binary gate), then bounded retrofit of existing `_bmad/bme/` skills |
 
-**Estimated total:** ~1 quarter of focused work, depending on E3/E5/E6 spike outcomes.
+**Estimated total:** ~1 quarter of focused work, depending on E3/E5/E6/E7 spike outcomes.
+
+> **Scope update 2026-06-20:** E7 added after analyzing **v6.8.0** (2026-05-25), which this note's original appendix did not cover (appendix stops at Web Bundles v1.0.0). See Appendix C below and [adr/v4-1/adr-001](adr/v4-1/adr-001-guardrails-covenant-enforcement.md).
 
 ## v4.0 ship-track (per F)
 
@@ -165,6 +168,19 @@ Recorded by Amalik (operator) 2026-05-25, on Winston's recommendation.
 
 **The rejection IS the structural spec for v4.1 E1.** No reply or counter-PR posted by Convoke side post-rejection. Closure is final until a new PR is opened with the restructured layout.
 
+## Appendix C — v6.8.0 impact analysis (added 2026-06-20)
+
+v6.8.0 (2026-05-25) released the same day as the Option F decision and was not in the original appendix (which stopped at Web Bundles v1.0.0). Upstream head as of 2026-06-20 remains v6.8.0 — nothing newer. Convoke (v6.3 baseline) is now **N-6** (v6.4, v6.5, v6.6, v6.7.0, v6.7.1, v6.8.0 ahead).
+
+| Change | Convoke impact | v4.1 epic |
+|--------|----------------|-----------|
+| **Strengthened activation guardrails across 23+ skills** — explicit prepend/append step naming + mandatory confirmation gates ("each step must run and be validated before the next activates"); kills agents short-circuiting `INCLUDE→READ→RUN→CHECK→FILTER→CD`, guessing variables, skipping append steps + `on_complete` hooks | **HIGH — intersects the Operator Covenant.** Orthogonal axis (agent↔author, not workflow↔operator) but reinforces OC-R5 (pause): guardrails are the enforcement layer that makes the Covenant's pause contract binding rather than conventional. **Not a competitor — an enforcement substrate.** Full analysis: [adr/v4-1/adr-001](adr/v4-1/adr-001-guardrails-covenant-enforcement.md) | **E7** |
+| `bmad-spec` skill — five-field kernel (Problem / Capabilities / Constraints / Non-goals / Success signal) → `SPEC.md`; eight-rule Spec Law; `sources:` tracking | MED — planning-artifact pattern Convoke could apply; unrelated to guardrails | E5 (fold in) |
+| `bmad-ux` two-file contract — `DESIGN.md` (visual tokens, Google Labs spec) + `EXPERIENCE.md` (behavior/IA/states/a11y, `{path.to.token}` refs) | LOW — WDS-adjacent; WDS is a parallel extension, NOT a Convoke module | — (awareness-only) |
+| Web Bundles formally bundled into v6.8.0 release | (already captured as E6 via the standalone Web Bundles v1.0.0 entry) | E6 |
+
+**Headline finding:** the guardrails do not threaten the Covenant differentiator — they are the runtime enforcement layer the Covenant has been assuming. Adopting them sharpens positioning ("guardrails make the agent obey; the Covenant makes the workflow accountable to the operator"). The one gate before adoption: confirm BMAD's confirmation gates are agent-internal, not operator-facing — an operator-facing gate adopted verbatim would itself violate OC-R7 (pacing). See ADR-001 for the binary spike.
+
 ## Provenance
 
 - **Backlog rows added 2026-05-25:** D13, D14, D15, D16 (Fast Lane, IN-160 → IN-163)
@@ -176,4 +192,5 @@ Recorded by Amalik (operator) 2026-05-25, on Winston's recommendation.
 
 ## Change Log
 
+- **2026-06-20** — v6.8.0 absorbed into scope (Winston/Architect, per operator Amalik). Added **E7** (activation-guardrails adoption as Covenant enforcement substrate) to the v4.1 scope table (6→7 epics), Appendix C (v6.8.0 impact), and authored [adr/v4-1/adr-001-guardrails-covenant-enforcement.md](adr/v4-1/adr-001-guardrails-covenant-enforcement.md). Trigger: CA session "look at the latest BMAD Method releases and see how it impacts Convoke." Finding: upstream guardrails are orthogonal to the Operator Covenant and reinforce OC-R5 — an enforcement layer, not a competitor. Upstream head confirmed at v6.8.0 (Convoke now N-6).
 - **2026-05-25** — Decision authored by Winston (Architect) per operator (Amalik) Option F selection. Captures: (a) F decision + rationale, (b) BMAD upstream impact analysis appendix (v6.4 → Web Bundles v1.0.0), (c) marketplace landscape spike findings, (d) PR #9 status correction (closed 2026-04-27), (e) v4.1 catch-up Initiative scope outline (6 epics, draft). Status: recorded. Sign-off: amalik 2026-05-25.
