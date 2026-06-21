@@ -6,6 +6,7 @@ stepsCompleted:
   - step-02c-executive-summary
   - step-03-success
   - step-04-journeys
+  - step-05-domain
 vision:
   posture: 'Offensive with a defensive floor'
   statement: 'Move Convoke from reactive catch-up firefighting to a managed downstream cadence, using the v6.4–v6.8 absorption as the vehicle to ship differentiated value'
