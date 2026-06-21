@@ -87,7 +87,6 @@
   "dependencies": {
     "chalk": "^4.1.2",
     "fs-extra": "^11.3.3",
-    "gray-matter": "^4.0.3",
     "js-yaml": "^4.2.0",
     "yaml": "^2.8.3"
   },
