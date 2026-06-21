@@ -4,6 +4,8 @@ stepsCompleted:
   - step-02-discovery
   - step-02b-vision
   - step-02c-executive-summary
+  - step-03-success
+  - step-04-journeys
 vision:
   posture: 'Offensive with a defensive floor'
   statement: 'Move Convoke from reactive catch-up firefighting to a managed downstream cadence, using the v6.4–v6.8 absorption as the vehicle to ship differentiated value'
@@ -74,3 +76,97 @@ One constraint governs the whole effort, and Convoke states it plainly — becau
 - **Domain:** Staying a faithful downstream of a fast-moving upstream framework (the N-cadence problem) → ecosystem conformance + distribution parity + operator-experience standards.
 - **Complexity:** Execution LOW→MEDIUM · Assurance MEDIUM · **Scope-uncertainty HIGH** (3 of 7 spike-gated; requires pre-registered go/no-go criteria) · Reversibility mixed (one-way E1/E4 vs two-way E3/E5/E6) · **Strategic-value** orthogonal to reversibility · **External-dependency** (E1 marketplace PR acceptance by `bmadcode` — unbounded-latency schedule risk, not assurance) · **Blast-radius** (E4/E2 touch shipped installs; E6 additive).
 - **Project Context:** Brownfield with active distribution channels (npm ~40% / marketplace ~60%, estimated); gated on I97/v4.0 ship (`depends: I97 close`).
+
+## Success Criteria
+
+### User Success
+- Operator can **pin their BMAD floor and opt into newer upstream independently** (E4).
+- Operator **never hits a silently-skipped activation step or pause point** (E7/OC-R5).
+- Standalone operator can obtain a **working Web Bundle** (E6) — **demand-pull gated** (MO6).
+
+### Business Success
+- **N-cadence = Convoke's declared BMAD *compat-floor*, not feature-parity.** Binding policy caps the lag at **≤N-3 (firm)**; the current N-6 gap closes toward **≤N-2 at ship (scope-dependent, ratified Step 8)**.
+- **Marketplace discoverability:** PR *submitted*; success = accepted **OR** BYO-URL fallback documented+verified. **BYO-URL is the accepted compat floor; marketplace (E1) is polish.**
+- **Operator Covenant compliance ≥ 82%**, measured by the **identical method as the baseline audit**.
+
+### Technical Success
+- **Floor capability proven (binary):** release-channels lets an operator absorb a *compat-only* upstream update with **zero Convoke code change**.
+- **v4.1 absorption effort captured as a baseline** (instrumented *during* this initiative) for future cadence comparison.
+- All 3 spike epics (E3/E5/E6): go/no-go criteria **pre-registered before execution**, resolved before commit.
+- **Blast-radius contained:** E4/E2 ship migrations + parity; E6 additive.
+- **E7 graduates OC-R5 to enforced** across **all `_bmad/bme/` pause-point skills (mechanically enumerated)**.
+
+### Measurable Outcomes
+
+| # | Outcome | Metric | Measurable when |
+|---|---|---|---|
+| MO1 | N-cadence committed | Binding policy caps compat-floor lag **≤N-3** (firm); at-ship gap → **≤N-2** (scope-dependent, Step 8). *N = compat-floor, not feature-parity* | Policy at ship; gap per scope |
+| MO2 | Floor capability proven | **Binary:** operator absorbs a compat-only upstream update with **0 Convoke code change** | At ship |
+| MO2b | Baseline captured | v4.1 absorption effort instrumented + recorded | During execution |
+| MO3 | E7 OC-R5 enforced | % of `_bmad/bme/` **pause-point skills (mechanically enumerated)** with self-confirm enforcement ≥ target | At ship |
+| MO4 | Covenant not regressed | Audit **≥ 82%, same method as baseline**; no individual Right drops | At ship |
+| MO5 | Marketplace conformance | PR submitted; accepted **OR** BYO-URL fallback documented+verified | Submitted at ship; acceptance external |
+| MO6 | E6 demand-gated | Lightweight signal (**≥N friction-log/operator requests**) gates spike; **no signal → defer to demand-pull, not kill** | At E6 spike (pre-commit) |
+| MO7 | Parity preserved | **0 operator-facing regressions** across defined classes (below), via PF1-style battery | At ship |
+| MO8 | Uncertainty retired | Go/no-go criteria **authored before** each spike runs; 3/3 resolved before commit | During execution |
+
+**Operator-facing regression classes (MO7):** ① persona/voice drift · ② menu-code changes · ③ output format/schema · ④ command/capability availability · ⑤ activation-sequence + `on_complete` hook execution. *(Skill set enumerated mechanically via `grep _bmad/bme/`.)*
+
+## Product Scope
+
+### MVP — Minimum Viable Product
+**E2 + E4 + E7** (floor + differentiator). *Assumption: BYO-URL is the accepted compat floor; marketplace (E1) is polish, not a faithfulness requirement.*
+
+### Growth Features (Post-MVP)
+**E1** (marketplace discoverability), **E6** (Web Bundles reach — demand-pull gated).
+
+### Vision (Future)
+**E3** (TOML collapsing wrapper patterns), **E5** (`bmad-investigate`/decision-log), automated drift-absorption at steady N-1.
+
+*Formal conformance-vs-all-seven scope decision ratified in Step 8 against the Measurable Outcomes above.*
+
+## User Journeys
+
+### Journey 1 — Priya, the BMAD-addon operator *(primary; happy path + set-and-forget variant)*
+**Opening:** Priya runs Convoke as a BMAD extension (~60% marketplace segment). Today she *dreads* Convoke updates — each might break against her team's BMAD version — so she pins old and falls behind.
+**Rising action:** v4.1 ships release-channels (E4). Priya pins her BMAD compat-floor and opts into v4.1 *deliberately*; the module-help schema rename (E2) applies via a clean migration.
+**Climax:** The update lands with zero surprises — she chose when, nothing broke.
+**Variant (set-and-forget):** Priya doesn't *want* to manage versions. She selects a sane **default channel** and lets Convoke track it automatically — currency-as-managed-default, not currency-as-chore.
+**Failure path:** If the E2 migration can't apply cleanly, Priya sees a Covenant-compliant next-action (OC-R6), not an error wall.
+**Resolution:** Updating is a decision *or* a sane default — never a gamble. → **Reveals: E4 release-channels + default channel, E2 migration+parity+failure messaging, E1 discoverability.**
+
+### Journey 2 — Samira, the Vortex Standalone operator *(secondary + signal-path sub-journey)*
+**Opening:** Samira uses Convoke's Vortex agents *outside* Claude Code (~40% standalone segment). She wants them as a ChatGPT Custom GPT for her non-technical team. Today: no path.
+**Rising action:** v4.1's E6 Web Bundles *(if demand-validated)* gives her a self-contained export.
+**Signal-path sub-journey:** Samira isn't in the dev loop and doesn't know the backlog exists. For demand-pull (MO6) to work, she needs a **low-friction, documented "request a bundle" path** that turns her need into a signal the maintainer can actually see — otherwise MO6 is unmeasurable for the very segment it serves.
+**Climax:** Her team uses Vortex discovery in a tool they already live in.
+**Resolution:** Convoke's value reaches beyond the dev-tool boundary. → **Reveals: E6 Web Bundles, demand-pull gate (MO6), reachable demand-signal channel.**
+
+### Journey 3 — The Covenant moment *(the differentiator)*
+**Opening:** Any operator runs a Convoke skill. Mid-workflow, the agent hits a decision it can't safely resolve alone.
+**Rising action:** *Pre-E7*, a flaky agent might short-circuit the pause, guess, and march on — the operator silently loses a decision. *Post-E7*, activation self-confirms every step executed, and the decision point **halts and waits**.
+**Climax:** The operator is handed the resolution — with context — exactly when it matters.
+**Resolution:** The operator *never silently loses control*. Operator-experience-as-architecture, made enforced. → **Reveals: E7 OC-R5 enforcement, the differentiator.**
+
+### Journey 4 — Amalik, the maintainer *(operations + breaking-change failure path)*
+**Opening:** Catching up to upstream is a multi-week fire drill — *this very N-6 absorption is the scar*.
+**Rising action:** Post-v4.1, the next upstream minor drops. With release-channels + the binding N-cadence policy, Amalik absorbs a *compat-only* update with **zero Convoke code change** (MO2), or a bounded, instrumented effort vs the captured v4.1 baseline (MO2b).
+**Failure path (breaking change):** When upstream ships a *breaking* change, "zero code change" does not apply. Release-channels must **distinguish compat-only vs breaking**, and the N-cadence policy must define a **breaking-change protocol**. Honest framing: the floor *reduces* heroics, it does not eliminate them.
+**Climax/Resolution:** Currency stops being heroic for the common case; the rare breaking case is bounded and pre-defined rather than improvised. → **Reveals: E4 compat-vs-breaking distinction + N-cadence breaking-change protocol, MO2/MO2b.**
+
+### Journey 5 — The lapsed/forked operator *(re-engagement; proof-of-thesis)*
+**Opening:** An operator pinned an ancient version or forked Convoke because a past update burned them. They no longer trust currency.
+**Rising action:** v4.1's whole thesis is "currency made safe." A documented **re-entry/migration path from an ancient pin or fork** lets them rejoin on a pinned floor, opting into newer upstream only when ready.
+**Climax:** The operator Convoke *lost* comes back — the strongest possible evidence the floor works.
+**Resolution:** Trust in currency is rebuildable. → **Reveals: fork/ancient-pin re-entry + migration path.**
+
+### Journey Requirements Summary
+| Journey | Epics exercised | Outcomes | New requirements surfaced |
+|---|---|---|---|
+| Priya (addon operator) | E4, E2, E1 | MO1, MO5, MO7 | E4 default channel; E2 failure messaging (OC-R6) |
+| Samira (standalone operator) | E6 | MO6 | Reachable demand-signal channel |
+| Covenant moment | E7 | MO3, MO4 | — |
+| Amalik (maintainer) | E4 + N-cadence policy | MO2, MO2b | Compat-vs-breaking distinction; breaking-change protocol |
+| Lapsed/forked operator | E4 + migration | (re-engagement) | Fork/ancient-pin re-entry path |
+
+*Coverage check: every epic appears in ≥1 journey; every journey grounds ≥1 Measurable Outcome or surfaces a concrete new requirement.*
