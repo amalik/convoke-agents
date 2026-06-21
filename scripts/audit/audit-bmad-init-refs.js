@@ -3,7 +3,7 @@
 
 const fs = require('fs-extra');
 const path = require('path');
-const matter = require('gray-matter');
+const frontmatter = require('../lib/frontmatter');
 
 const { findProjectRoot } = require('../update/lib/utils');
 
@@ -183,7 +183,7 @@ function _findSkillMdFiles(bmadRoot) {
 
 function _tryParseFrontmatter(raw) {
   try {
-    return matter(raw);
+    return frontmatter.parse(raw);
   } catch (_err) {
     return null;
   }
