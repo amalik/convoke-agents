@@ -98,7 +98,7 @@ One constraint governs the whole effort, and Convoke states it plainly — becau
 - **Operator Covenant compliance ≥ 82%**, measured by the **identical method as the baseline audit**.
 
 ### Technical Success
-- **Floor capability proven (binary):** release-channels lets an operator absorb a *compat-only* upstream update with **zero Convoke code change**.
+- **Floor capability proven (class-dependent):** release-channels lets an operator absorb a *declaration-only* upstream update with **zero Convoke source/logic change** (conformance-required is bounded/mechanical; breaking invokes the protocol — see the absorption ternary in the architecture).
 - **v4.1 absorption effort captured as a baseline** (instrumented *during* this initiative) for future cadence comparison.
 - All 3 spike epics (E3/E5/E6): go/no-go criteria **pre-registered before execution**, resolved before commit.
 - **Blast-radius contained:** E4/E2 ship migrations + parity; E6 additive.
@@ -109,7 +109,7 @@ One constraint governs the whole effort, and Convoke states it plainly — becau
 | # | Outcome | Metric | Measurable when |
 |---|---|---|---|
 | MO1 | N-cadence committed | Binding policy caps compat-floor lag **≤N-3** (firm); at-ship gap → **≤N-2** (scope-dependent). *N = compat-floor, not feature-parity* | Policy at ship; gap per scope |
-| MO2 | Floor capability proven | **Binary:** operator absorbs a compat-only upstream update with **0 Convoke code change** | At ship |
+| MO2 | Floor capability proven | **Class-dependent:** a *declaration-only* (Class A) upstream update absorbs with **0 Convoke source/logic change**; *conformance-required* (Class B) is bounded/mechanical; *breaking* (Class C) invokes the protocol | At ship |
 | MO2b | Baseline captured | v4.1 absorption effort instrumented + recorded | During execution |
 | MO3 | E7 OC-R5 enforced | % of `_bmad/bme/` **pause-point skills (mechanically enumerated)** with self-confirm enforcement ≥ target | At ship |
 | MO4 | Covenant not regressed | Audit **≥ 82%, same method as baseline**; no individual Right drops | At ship |
@@ -277,7 +277,7 @@ Convoke is **content (LLM-interpreted prompts) + Node.js update/migration/instal
 - **FR25:** The system validates a chosen channel/floor combination and warns or refuses on an incompatible selection.
 
 ### Upstream Absorption & Cadence *(E4 + N-cadence policy)*
-- **FR6:** The system can distinguish a compat-only upstream update from a breaking one.
+- **FR6:** The system can classify an upstream update as **declaration-only, conformance-required, or breaking** (the absorption ternary — see architecture; supersedes the original compat-only-vs-breaking binary).
 - **FR7:** An operator can absorb a compat-only upstream update with no Convoke code change.
 - **FR8:** The system applies a defined breaking-change protocol when an upstream change is breaking.
 - **FR9:** Convoke publishes a binding N-cadence policy declaring its maximum compat-floor lag.
@@ -326,7 +326,7 @@ Convoke is **content (LLM-interpreted prompts) + Node.js update/migration/instal
 - **NFR9 (Allowlist input validation):** channel/pin/CSV inputs validated against an **allowlist pattern** (semver/tag charset) — not merely "sanitized"; no arbitrary code or ref execution; CSV-injection prefix applied.
 
 ### Maintainability *(the floor-payback NFRs)*
-- **NFR10 (Currency cost):** after v4.1, a compat-only upstream update absorbs with **0 changes to Convoke source/logic** (manifest/lockfile version bumps excluded) (MO2); the v4.1 absorption effort is captured as a baseline in a **defined unit** (maintainer-hours + files-touched + story-count) for later comparison (MO2b).
+- **NFR10 (Currency cost, class-dependent):** after v4.1, a **declaration-only (Class A)** upstream update absorbs with **0 changes to Convoke source/logic** (manifest/lockfile version bumps excluded); **conformance-required (Class B)** absorbs with bounded, mechanical, migration-assisted content edits (cheap, not zero — e.g. E2 itself); **breaking (Class C)** invokes the breaking-change protocol (MO2). The v4.1 absorption effort is captured as a baseline in a **defined unit** (maintainer-hours + files-touched + story-count) for later comparison (MO2b).
 - **NFR11 (Covenant floor):** compliance ≥ 82% (baseline method); new `_bmad/bme/` skills **pass the covenant-compliance checklist = no FAIL cells** (N/A allowed with rationale) (FR26).
 
 ### Observability *(operational teeth for the "binding" policy)*
