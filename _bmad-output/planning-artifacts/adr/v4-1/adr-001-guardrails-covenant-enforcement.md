@@ -89,6 +89,28 @@ The spike MUST resolve this before any Convoke skill adopts the pattern. A wrong
 - **`bmad-spec` (five-field kernel: Problem / Capabilities / Constraints / Non-goals / Success signal).** A planning-artifact pattern unrelated to guardrails; folded into existing **E5** (pattern-evaluation epic alongside `bmad-investigate` / `.decision-log`), not this ADR.
 - **Two-file UX contract (DESIGN.md / EXPERIENCE.md).** WDS-adjacent; WDS is a parallel BMAD extension, not a Convoke module. Awareness-only.
 
+## Spike Resolution — 2026-06-21
+
+**Verdict: Option A (agent-internal). Gate CLEARED — adopt wholesale.**
+
+Investigation of the BMAD-METHOD source at the **v6.8.0** tag (identical guardrail text confirmed across 30 skill/agent files via grep) resolves the binary gate decisively in favor of **agent-internal self-confirmation**.
+
+**Canonical guardrail directive (verbatim** — e.g. `src/core-skills/bmad-spec/SKILL.md` and every persona agent):
+> "Activation is complete. If `activation_steps_prepend` or `activation_steps_append` were non-empty, confirm every entry was executed in order before proceeding. Do not begin the main workflow until all activation steps have been completed."
+
+The imperative — *"confirm every entry was executed"* — is retrospective agent self-verification aimed at the agent's own execution, not a prompt asking a human to approve. No "ask the user" / "wait for user" appears in the directive. The individual steps are pure agent-execution directives (`Step 2: Execute Prepend Steps — Execute each entry ... in order before proceeding`). The **only** literal human-input gate is the post-activation menu (`Stop and wait for input`) at Step 8 — *after* activation completes, and not per-step.
+
+**Consequences for E7:**
+
+1. **Adopt wholesale — no OC-R7 (pacing) risk.** The gate never surfaces operator-facing prompts, so the "wrapped adoption" contingency in the Decision section above is **moot**. The Decision's first branch ("if agent-internal → adopt wholesale") is the operative one.
+2. **Scope correction (load-bearing for the eventual implementer).** This ADR's framing slightly over-claimed that v6.8 guardrails "directly enforce OC-R5." The spike shows the v6.8 guardrail as-shipped enforces **activation-sequence** fidelity (persona adoption + prepend/append hooks + `on_complete`), **not** general mid-workflow step-skipping. The mechanism that stops an agent skipping a *mid-workflow* OC-R5 pause is the workflow's own `FORBIDDEN to load next step until user approves` + `HALT — wait for user` markers — which predate v6.8 and which Convoke already uses. So **E7 does not get a drop-in pause-enforcer from v6.8**; it gets the *discipline/pattern* (explicit step naming + agent self-confirmation + "do not proceed until complete").
+3. **E7's actual work, restated.** Extend the v6.8 self-confirmation discipline from activation steps to **OC-R5 decision-point pauses** — author Convoke skills so the agent explicitly self-confirms *"I reached the HALT marker and am waiting for the operator"* rather than trusting a passive marker the agent can short-circuit. OC-R5 still graduates from convention toward enforced, via an agent-internal self-check pattern proven upstream — but the graduation is **Convoke-authored extension work, not a drop-in of a v6.8 component.**
+
+**Evidence basis:** general-purpose research-agent investigation 2026-06-21 against `BMAD-METHOD@v6.8.0`; key files `src/core-skills/bmad-spec/SKILL.md`, `src/bmm-skills/3-solutioning/bmad-agent-architect/SKILL.md`, `src/bmm-skills/4-implementation/bmad-agent-dev/SKILL.md`, `src/bmm-skills/2-plan-workflows/bmad-prd/SKILL.md`, `CHANGELOG.md:27`.
+
 ## Change Log
+
+- **2026-06-21** — Spike resolved (Winston/Architect). Verdict **Option A (agent-internal)** → E7 gate cleared, adopt wholesale, no OC-R7 risk. Added scope correction: v6.8 guardrail enforces activation-sequence fidelity, not mid-workflow pause; E7 is Convoke-authored extension of the self-confirmation discipline to OC-R5 decision points, not a drop-in. Evidence from `BMAD-METHOD@v6.8.0` source investigation.
+- **2026-06-20** — Authored by Winston (Architect) per operator (Amalik) "ADR + E7" selection during a CA session triggered by "look at the latest BMAD Method releases and see how it impacts Convoke." Captures the orthogonal-axes finding, the OC-R5 enforcement opportunity, and the agent-internal-vs-operator-facing spike gate. Status: accepted. Sign-off: amalik 2026-06-20.
 
 - **2026-06-20** — Authored by Winston (Architect) per operator (Amalik) "ADR + E7" selection during a CA session triggered by "look at the latest BMAD Method releases and see how it impacts Convoke." Captures the orthogonal-axes finding, the OC-R5 enforcement opportunity, and the agent-internal-vs-operator-facing spike gate. Status: accepted. Sign-off: amalik 2026-06-20.
