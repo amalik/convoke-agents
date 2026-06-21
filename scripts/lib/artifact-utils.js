@@ -9,7 +9,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('js-yaml');
-const matter = require('gray-matter');
+const frontmatter = require('./frontmatter');
 const { execFileSync } = require('child_process');
 
 // --- Constants (extracted from archive.js) ---
@@ -218,7 +218,7 @@ function parseFrontmatter(fileContent) {
     throw new Error('parseFrontmatter expects a string. Ensure files are read with utf8 encoding.');
   }
   try {
-    const parsed = matter(fileContent);
+    const parsed = frontmatter.parse(fileContent);
     return { data: parsed.data, content: parsed.content };
   } catch (err) {
     throw new Error(`Failed to parse frontmatter: ${err.message}`, { cause: err });
@@ -235,7 +235,7 @@ function parseFrontmatter(fileContent) {
  * @returns {import('./types').InjectResult} Modified content + any detected conflicts
  */
 function injectFrontmatter(fileContent, newFields) {
-  const parsed = matter(fileContent);
+  const parsed = frontmatter.parse(fileContent);
   const conflicts = [];
 
   // Detect conflicts: existing field has different value than proposed
@@ -253,7 +253,7 @@ function injectFrontmatter(fileContent, newFields) {
   // This means existing values are preserved — newFields only fill gaps
   const merged = { ...newFields, ...parsed.data };
 
-  const content = matter.stringify(parsed.content, merged);
+  const content = frontmatter.stringify(parsed.content, merged);
   return { content, conflicts };
 }
 
@@ -552,7 +552,7 @@ function suggestInitiative(filename, dirName, fileContent, taxonomy, projectRoot
   let title = '';
   let firstLines;
   try {
-    const parsed = matter(fileContent);
+    const parsed = frontmatter.parse(fileContent);
     if (parsed.data && typeof parsed.data.title === 'string') {
       title = parsed.data.title;
     }
@@ -1506,7 +1506,7 @@ async function updateLinks(oldToNewMap, scopeDirs, projectRoot) {
     let fileLinks = 0;
 
     // Parse frontmatter to handle inputDocuments arrays
-    const parsed = matter(content);
+    const parsed = frontmatter.parse(content);
     let fmChanged = false;
     if (parsed.data && parsed.data.inputDocuments && Array.isArray(parsed.data.inputDocuments)) {
       parsed.data.inputDocuments = parsed.data.inputDocuments.map(doc => {
@@ -1525,7 +1525,7 @@ async function updateLinks(oldToNewMap, scopeDirs, projectRoot) {
 
     // Reassemble content if frontmatter changed
     if (fmChanged) {
-      content = matter.stringify(parsed.content, parsed.data);
+      content = frontmatter.stringify(parsed.content, parsed.data);
     }
 
     // Update markdown link patterns in body content
