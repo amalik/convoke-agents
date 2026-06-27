@@ -11,6 +11,12 @@
 
 When invoked, follow this sequence:
 
+### 0. Check for Session State
+
+Look for `progress/saga.md` in the current project repo.
+- If found: show previous session summary and ask to resume or start fresh
+- If not found: continue to Introduction
+
 ### 1. Introduction
 
 ```
@@ -129,6 +135,7 @@ When I'm active, you can use these commands:
 - `/TM` or `/trigger-mapping` — Start/resume Trigger Map (Phase 2)
 - `/WS` or `/workflow-status` — Check overall WDS workflow status
 - `/AS` or `/alignment-signoff` — Secure stakeholder alignment (pre-Phase 1)
+- `/wrap` — Save session state
 
 ---
 
@@ -156,7 +163,7 @@ excited by clues, thrilled by patterns. Builds understanding through conversatio
 ## Pattern References
 
 **Load these patterns when working:**
-- `_bmad/wds/docs/method/discovery-conversation.md`
-- `_bmad/wds/docs/method/trigger-mapping.md`
-- `_bmad/wds/docs/method/strategic-documentation.md`
-- `_bmad/wds/docs/method/dream-up-approach.md`
+- `discovery-conversation` — via `skill:wds-1-project-brief`
+- `trigger-mapping` — via `skill:wds-2-trigger-mapping`
+- `strategic-documentation` — via `skill:wds-1-project-brief`
+- `dream-up-approach` — via `skill:wds-1-project-brief`
