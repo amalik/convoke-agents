@@ -1,0 +1,40 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "index.js",
+    "scripts/install-vortex-agents.js",
+    "scripts/install-gyre-agents.js",
+    "scripts/install-all-agents.js",
+    "scripts/update/convoke-update.js",
+    "scripts/update/convoke-version.js",
+    "scripts/update/convoke-migrate.js",
+    "scripts/convoke-doctor.js",
+    "scripts/convoke-register-skill.js",
+    "scripts/audit/validate-marketplace.js",
+    "scripts/audit/audit-skill-dirs.js",
+    "scripts/migrate-artifacts.js",
+    "scripts/lib/portfolio/portfolio-engine.js",
+    "scripts/portability/convoke-export.js",
+    "scripts/postinstall.js",
+    "scripts/test-runner.js",
+    "scripts/docs-audit.js",
+    "scripts/generate-badges-json.js",
+    "scripts/archive.js",
+    "scripts/convoke-check.js",
+    "scripts/update/migrations/registry.js",
+    "tests/**/*.test.js"
+  ],
+  "project": [
+    "scripts/**/*.js",
+    "index.js",
+    "tests/**/*.js"
+  ],
+  "ignore": [
+    "exported-skills/**",
+    "coverage/**",
+    "_bmad/**",
+    "_bmad-output/**"
+  ],
+  "ignoreBinaries": ["c8"],
+  "ignoreDependencies": []
+}
