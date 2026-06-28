@@ -19,20 +19,70 @@ function getPackageVersion() {
 }
 
 /**
- * Compare two semantic version strings.
+ * Compare two semantic version strings, SemVer 2.0.0-aware.
+ *
+ * Numeric core (major.minor.patch) is compared first. When cores are equal,
+ * SemVer §11 precedence applies: a version WITH a pre-release ranks LOWER than
+ * the same version without one (e.g. `4.0.0-rc.1` < `4.0.0`), and two
+ * pre-releases compare identifier-by-identifier (numeric < alphanumeric).
+ * Build metadata (`+...`) is ignored per SemVer §10.
+ *
+ * NOTE: the prior implementation did `v.split('.').map(Number)`, so any
+ * pre-release suffix coerced to NaN and silently fell through to "equal" —
+ * which on the rc→final upgrade path made `convoke-update` read the upgrade as
+ * a downgrade and refuse (backlog U11 / audit HIGH-1). This is the fix.
+ *
  * @param {string} v1
  * @param {string} v2
  * @returns {number} -1 if v1 < v2, 0 if equal, 1 if v1 > v2
  */
 function compareVersions(v1, v2) {
-  const parts1 = v1.split('.').map(Number);
-  const parts2 = v2.split('.').map(Number);
+  const parse = (v) => {
+    const noBuild = String(v).split('+')[0]; // drop build metadata (SemVer §10)
+    const dash = noBuild.indexOf('-');
+    const core = (dash === -1 ? noBuild : noBuild.slice(0, dash)).split('.').map(Number);
+    const pre = dash === -1 ? '' : noBuild.slice(dash + 1);
+    return { core, pre };
+  };
+  const a = parse(v1);
+  const b = parse(v2);
 
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-    const p1 = parts1[i] || 0;
-    const p2 = parts2[i] || 0;
+  // 1. Compare numeric core, padding missing parts with 0.
+  for (let i = 0; i < Math.max(a.core.length, b.core.length); i++) {
+    const p1 = a.core[i] || 0;
+    const p2 = b.core[i] || 0;
     if (p1 < p2) return -1;
     if (p1 > p2) return 1;
+  }
+
+  // 2. Cores equal → SemVer §11 pre-release precedence.
+  // A version WITHOUT a pre-release outranks the same version WITH one.
+  if (!a.pre && !b.pre) return 0;
+  if (!a.pre) return 1;
+  if (!b.pre) return -1;
+
+  // 3. Both have pre-releases → compare dot-separated identifiers.
+  const ids1 = a.pre.split('.');
+  const ids2 = b.pre.split('.');
+  for (let i = 0; i < Math.max(ids1.length, ids2.length); i++) {
+    const x = ids1[i];
+    const y = ids2[i];
+    if (x === undefined) return -1; // fewer identifiers → lower precedence
+    if (y === undefined) return 1;
+    const xNum = /^\d+$/.test(x);
+    const yNum = /^\d+$/.test(y);
+    if (xNum && yNum) {
+      const d = Number(x) - Number(y);
+      if (d !== 0) return d < 0 ? -1 : 1;
+    } else if (xNum) {
+      return -1; // numeric identifiers rank below alphanumeric
+    } else if (yNum) {
+      return 1;
+    } else if (x < y) {
+      return -1;
+    } else if (x > y) {
+      return 1;
+    }
   }
 
   return 0;
