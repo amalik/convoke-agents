@@ -1,5 +1,16 @@
 'use strict';
 
+/*
+ * PROVENANCE (2026-06-28): NOT dead code, despite zero production consumers today.
+ * RESERVED for v4.1 Epic E4 "Managed Currency" — the read primitive for cadence
+ * state in _bmad/_config/cadence.yaml (AD1). Idle until v4.1, which is
+ * `depends: I97 close (v4.0 ship)`. See docs/codebase-audit-2026-06-27.md (#20).
+ * OPEN QUESTION OQ-1 (arch §AD1 / I113 backlog row): AD1 says cadence is "read via
+ * config-loader" but AD8 says only cadence-state.js touches the file, and this
+ * frozen API hardcodes the filename `config.yaml` — resolve at v4.1 sprint-planning
+ * before wiring (blocks E4 Story 1.1).
+ */
+
 const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('yaml');
