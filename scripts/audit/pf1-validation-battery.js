@@ -1,6 +1,16 @@
 #!/usr/bin/env node
 'use strict';
 
+/*
+ * PROVENANCE (2026-06-28): NOT dead code. Part of the PF1 battery — the v4.0
+ * behavioral-equivalence RELEASE gate (FR36-40; LLM-judge, drift threshold T).
+ * BLOCKED / mid-resumption (Story 4.3), not abandoned. Its gate evidence is
+ * genuinely unobtained: the I97 personality scoring (FR21-23) covers only 2 of
+ * PF1's 4 target agents and gates merge, not release. FINISH or formally waive
+ * the gate at the v4.0 release decision — do NOT archive. See
+ * docs/codebase-audit-2026-06-27.md.
+ */
+
 /**
  * PF1 Validation Battery Harness
  *
