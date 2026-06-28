@@ -1,6 +1,15 @@
 #!/usr/bin/env node
 'use strict';
 
+/*
+ * PROVENANCE (2026-06-28): salvageable, NOT dead code. A mechanical, $0,
+ * no-operator scope-leak guard (migration/install writes must stay inside
+ * Convoke-owned paths). Orphaned only because it was filed under the PF1
+ * battery — it is independent of PF1's fate. Recommended: promote to CI
+ * (npm test), and fix the comment/string false-positive in the write-op
+ * matcher as part of the salvage. See docs/codebase-audit-2026-06-27.md (#21, #31).
+ */
+
 /**
  * Install-Scope Check (PF1 mechanical control — Story 4.3 Path B+ re-scope)
  *
