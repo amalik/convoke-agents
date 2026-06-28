@@ -31,6 +31,31 @@ describe('compareVersions', () => {
     assert.equal(compareVersions('1.0', '1.0.0'), 0);
     assert.equal(compareVersions('1.0', '1.0.1'), -1);
   });
+
+  // SemVer §11 pre-release precedence — regression guard for backlog U11 /
+  // audit HIGH-1: the rc→final upgrade path must NOT read as a downgrade.
+  it('ranks a pre-release below its release (rc → final)', () => {
+    assert.equal(compareVersions('4.0.0-rc.1', '4.0.0'), -1);
+    assert.equal(compareVersions('4.0.0', '4.0.0-rc.1'), 1);
+    // the original IN-16 reproduction (previously coerced to 0):
+    assert.equal(compareVersions('1.0.4-alpha', '1.0.4'), -1);
+  });
+
+  it('orders two pre-releases by identifier (numeric)', () => {
+    assert.equal(compareVersions('4.0.0-rc.1', '4.0.0-rc.2'), -1);
+    assert.equal(compareVersions('4.0.0-rc.2', '4.0.0-rc.1'), 1);
+    assert.equal(compareVersions('4.0.0-rc.1', '4.0.0-rc.1'), 0);
+  });
+
+  it('orders pre-release identifiers per SemVer (numeric < alphanumeric, fewer < more)', () => {
+    assert.equal(compareVersions('1.0.0-1', '1.0.0-alpha'), -1); // numeric ranks below alphanumeric
+    assert.equal(compareVersions('1.0.0-alpha', '1.0.0-alpha.1'), -1); // fewer identifiers rank lower
+  });
+
+  it('ignores build metadata (SemVer §10)', () => {
+    assert.equal(compareVersions('1.0.0+build.5', '1.0.0'), 0);
+    assert.equal(compareVersions('4.0.0-rc.1+sha.abc', '4.0.0'), -1);
+  });
 });
 
 describe('getPackageVersion', () => {
