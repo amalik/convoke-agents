@@ -15,7 +15,7 @@ const { countUserDataFiles } = require('./utils');
  * @param {string} projectRoot - Absolute path to project root
  * @returns {Promise<object>} Backup metadata
  */
-async function createBackup(version, projectRoot) {
+async function createBackup(version, projectRoot, extraEntries = []) {
   const timestamp = Date.now();
   const backupDir = path.join(
     projectRoot,
@@ -31,26 +31,43 @@ async function createBackup(version, projectRoot) {
   // Create backup directory
   await fs.ensureDir(backupDir);
 
-  const filesToBackup = getFilesToBackup();
+  // Unify the fixed install-file set with any migration-declared write-set
+  // (BUG-8): dynamic entries are path-mirrored under tree/ so files sharing a
+  // basename (e.g. many SKILL.md) never collide in the flat backup dir.
+  const entries = _normalizeBackupEntries(getFilesToBackup(), extraEntries);
   const backedUpFiles = [];
+  const backupEntries = [];
 
-  // Copy each file/directory to backup
-  for (const file of filesToBackup) {
-    const sourcePath = path.join(projectRoot, file.path);
-
-    if (!fs.existsSync(sourcePath)) {
-      console.log(`  Skipping ${file.path} (does not exist)`);
+  for (const entry of entries) {
+    // delete-class: the migration CREATES this file, so there is nothing to
+    // copy now — record it so rollback can remove it (audit #3, e.g. the
+    // migration-state file).
+    if (entry.onRollback === 'delete') {
+      backupEntries.push({ relPath: entry.relPath, type: entry.type, onRollback: 'delete' });
       continue;
     }
 
-    const destPath = path.join(backupDir, file.name);
+    const sourcePath = path.join(projectRoot, entry.relPath);
+
+    if (!fs.existsSync(sourcePath)) {
+      console.log(`  Skipping ${entry.relPath} (does not exist)`);
+      continue;
+    }
+
+    const destPath = path.join(backupDir, entry.storedAt);
 
     try {
       await fs.copy(sourcePath, destPath);
-      backedUpFiles.push(file.path);
-      console.log(`  ✓ Backed up: ${file.path}`);
+      backedUpFiles.push(entry.relPath);
+      backupEntries.push({
+        relPath: entry.relPath,
+        type: entry.type,
+        onRollback: 'restore',
+        storedAt: entry.storedAt
+      });
+      console.log(`  ✓ Backed up: ${entry.relPath}`);
     } catch (error) {
-      console.error(`  ✗ Failed to backup ${file.path}:`, error.message);
+      console.error(`  ✗ Failed to backup ${entry.relPath}:`, error.message);
       throw error;
     }
   }
@@ -58,12 +75,14 @@ async function createBackup(version, projectRoot) {
   // Count user data files (for integrity check)
   const userDataCount = await countUserDataFiles(projectRoot);
 
-  // Create backup manifest
+  // Create backup manifest. `backup_entries` is the rollback source of truth
+  // (BUG-8); `files_backed_up` is retained for back-compat / logging.
   const manifest = {
     version,
     timestamp: new Date().toISOString(),
     timestampMs: timestamp,
     files_backed_up: backedUpFiles,
+    backup_entries: backupEntries,
     user_data_count: userDataCount,
     backup_dir: backupDir
   };
@@ -74,6 +93,36 @@ async function createBackup(version, projectRoot) {
   console.log(`  ✓ Backup complete: ${backedUpFiles.length} items backed up`);
 
   return manifest;
+}
+
+/**
+ * Normalize backup targets into one internal shape.
+ * Static install files keep their flat `storedAt` name (preserves the existing
+ * backup layout); migration-declared entries are path-mirrored under `tree/`
+ * so files that share a basename never clobber each other (BUG-8 hardening #1).
+ * @param {Array} staticFiles - from getFilesToBackup()
+ * @param {Array} extraEntries - [{ relPath, type?, onRollback? }] from a migration's getBackupManifest()
+ * @returns {Array} [{ relPath, type, onRollback, storedAt }]
+ */
+function _normalizeBackupEntries(staticFiles, extraEntries) {
+  const entries = staticFiles.map((f) => ({
+    relPath: f.path,
+    type: f.type,
+    onRollback: 'restore',
+    storedAt: f.name
+  }));
+
+  for (const e of extraEntries || []) {
+    const relPath = String(e.relPath).replace(/\\/g, '/');
+    entries.push({
+      relPath,
+      type: e.type || 'file',
+      onRollback: e.onRollback === 'delete' ? 'delete' : 'restore',
+      storedAt: `tree/${relPath}`
+    });
+  }
+
+  return entries;
 }
 
 /**
@@ -92,31 +141,68 @@ async function restoreBackup(backupMetadata, projectRoot) {
     throw new Error(`Backup directory not found: ${backupDir}`);
   }
 
-  const filesToRestore = getFilesToBackup();
+  // Manifest-driven (BUG-8): restore exactly what was backed up. Fall back to
+  // the legacy static list for backups created before backup_entries existed.
+  const entries = Array.isArray(backupMetadata.backup_entries)
+    ? backupMetadata.backup_entries
+    : getFilesToBackup().map((f) => ({
+        relPath: f.path, type: f.type, onRollback: 'restore', storedAt: f.name
+      }));
 
-  for (const file of filesToRestore) {
-    const sourcePath = path.join(backupDir, file.name);
+  // Best-effort (hardening #3): attempt every entry, collect failures, and
+  // throw an aggregated error at the end so one bad entry never strands the rest.
+  const failures = [];
+  const rootResolved = path.resolve(projectRoot);
 
-    if (!fs.existsSync(sourcePath)) {
-      console.log(`  Skipping ${file.name} (not in backup)`);
+  for (const entry of entries) {
+    const relPath = String(entry.relPath).replace(/\\/g, '/');
+    const destPath = path.resolve(projectRoot, relPath);
+
+    // path-safety: never touch anything outside projectRoot.
+    if (destPath !== rootResolved && !destPath.startsWith(rootResolved + path.sep)) {
+      console.error(`  ✗ Refusing ${relPath} — resolves outside project root`);
+      failures.push({ relPath, reason: 'escapes projectRoot' });
       continue;
     }
 
-    const destPath = path.join(projectRoot, file.path);
-
     try {
-      // Remove existing file/directory first
+      if (entry.onRollback === 'delete') {
+        // The migration created this file; rollback removes it (audit #3).
+        // Extra guard: only ever delete inside _bmad/_memory/.
+        if (!relPath.startsWith('_bmad/_memory/')) {
+          console.error(`  ✗ Refusing to delete ${relPath} — outside _bmad/_memory/`);
+          failures.push({ relPath, reason: 'delete target outside _memory' });
+          continue;
+        }
+        if (fs.existsSync(destPath)) {
+          await fs.remove(destPath);
+          console.log(`  ✓ Removed (rollback): ${relPath}`);
+        }
+        continue;
+      }
+
+      // restore-class
+      const sourcePath = path.join(backupDir, entry.storedAt);
+      if (!fs.existsSync(sourcePath)) {
+        console.log(`  Skipping ${relPath} (not in backup)`);
+        continue;
+      }
       if (fs.existsSync(destPath)) {
         await fs.remove(destPath);
       }
-
-      // Restore from backup
       await fs.copy(sourcePath, destPath);
-      console.log(`  ✓ Restored: ${file.path}`);
+      console.log(`  ✓ Restored: ${relPath}`);
     } catch (error) {
-      console.error(`  ✗ Failed to restore ${file.path}:`, error.message);
-      throw error;
+      console.error(`  ✗ Failed to restore ${relPath}:`, error.message);
+      failures.push({ relPath, reason: error.message });
     }
+  }
+
+  if (failures.length > 0) {
+    const list = failures.map((f) => `${f.relPath} (${f.reason})`).join(', ');
+    throw new Error(
+      `Restore incomplete — ${failures.length} entr${failures.length === 1 ? 'y' : 'ies'} not restored: ${list}`
+    );
   }
 
   console.log(`  ✓ Restoration complete`);
