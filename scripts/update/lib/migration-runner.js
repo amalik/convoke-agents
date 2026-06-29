@@ -81,9 +81,16 @@ async function runMigrations(fromVersion, options = {}) {
   const results = [];
 
   try {
-    // 3. Create backup
+    // 3. Create backup — include each migration's declared write-set (BUG-8)
+    // so rollback can restore the files the migration rewrites, not just the
+    // fixed Vortex set. Modules are already loaded by registry.getMigrationsFor().
     console.log(chalk.cyan('[1/5] Creating backup...'));
-    backupMetadata = await backupManager.createBackup(fromVersion, projectRoot);
+    const migrationBackupEntries = unappliedMigrations.flatMap((m) =>
+      m.module && typeof m.module.getBackupManifest === 'function'
+        ? m.module.getBackupManifest(projectRoot)
+        : []
+    );
+    backupMetadata = await backupManager.createBackup(fromVersion, projectRoot, migrationBackupEntries);
     console.log(chalk.green(`✓ Backup created: ${path.basename(backupMetadata.backup_dir)}`));
     console.log('');
 
