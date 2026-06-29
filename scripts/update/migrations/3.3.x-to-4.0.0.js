@@ -60,6 +60,24 @@ module.exports = {
     'from bmad-init invocation to v4 direct-YAML-load. Marks bmad-init deprecated. ' +
     'Validates via convoke-doctor diff.',
 
+  // BUG-8: declare this migration's rollback write-set so the runner backs it up
+  // BEFORE apply(). Derived from the SAME inventory CSV that _phase3 rewrites
+  // (single source — hardening #2), plus the bmad-init skill (phase 4, restore)
+  // and the migration-state file (phase 5 — delete-on-rollback, audit #3).
+  getBackupManifest(projectRoot) {
+    const entries = [];
+    const inventoryPath = path.join(projectRoot, INVENTORY_CSV_RELATIVE);
+    if (fs.existsSync(inventoryPath)) {
+      const rows = _parseInventoryCsv(fs.readFileSync(inventoryPath, 'utf8'));
+      for (const row of rows) {
+        entries.push({ relPath: row.file, type: 'file', onRollback: 'restore' });
+      }
+    }
+    entries.push({ relPath: BMAD_INIT_SKILL_MD_RELATIVE, type: 'file', onRollback: 'restore' });
+    entries.push({ relPath: STATE_FILE_RELATIVE, type: 'file', onRollback: 'delete' });
+    return entries;
+  },
+
   async preview(projectRoot) {
     // migration-runner.js calls preview() with no args per existing contract;
     // direct callers (tests, future tooling) may pass projectRoot for a
