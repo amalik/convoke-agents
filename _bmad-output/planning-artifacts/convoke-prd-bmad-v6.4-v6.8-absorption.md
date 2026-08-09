@@ -23,7 +23,7 @@ vision:
     reachExpansion: 'E6 Web Bundles — distribution reach, NOT a differentiator; demand-contingent (40% standalone segment is estimated, not measured); spike must gate on demand validation, not just technical feasibility'
   coreInsight: 'For a downstream framework, currency is not overhead — but winning means building the mechanism that makes currency cheap so it stops competing with differentiation'
   honestyCaveat: 'Offense and defense compete for constrained maintainer hours; the floor must demonstrably pay back within a stated horizon — which is why the conformance-only-vs-all-seven scope decision is deferred to Step 8 with success metrics'
-  whyNow: 'Upstream at N-6 (v6.8); gap threatens faithful-downstream credibility; spikes scoped; v4.0 about to ship → natural commitment-locking moment'
+  whyNow: 'Upstream at N-7 (v6.10, re-baselined 2026-08-09; was N-6/v6.8 at authoring); gap threatens faithful-downstream credibility; spikes scoped; v4.0 about to ship → natural commitment-locking moment'
   narrativeThread: 'The defensive floor earns the right to play offense'
 classification:
   projectType: 'Two-track versioned bundle — Conformance track (E1/E2/E4: forced, structural, one-way doors) + Capability track (E3/E5/E6: optional, spike-gated, two-way doors) + E7 (operator-experience enforcement; spike-cleared 2026-06-21, scoped)'
@@ -37,9 +37,15 @@ classification:
     externalDependency: 'E1 marketplace PR acceptance by bmadcode — unbounded-latency schedule risk, not assurance'
     blastRadius: 'Touches-shipped-installs (E4 release-channels, E2 schema) vs additive (E6 Web Bundles)'
   projectContext: 'Brownfield with active distribution channels (npm ~40% / marketplace ~60%, estimated); gated on I97/v4.0 ship (depends: I97 close)'
+absorption_window: 'v6.4–v6.10'
+window_amended: '2026-08-09'
+window_amendment_note: 'Filename qualifier `bmad-v6.4-v6.8-absorption` is retained pending a governed artifact-governance rename; `absorption_window` above is authoritative. Applies identically to the paired arch and epic artifacts.'
 openScopeDecisions:
+  - 'RESOLVED 2026-08-09: absorption window re-baselined v6.4–v6.8 → v6.4–v6.10 (narrow amendment, Option B). Trigger: upstream shipped v6.9.0 + v6.10.0 after the 2026-06-21 ratification, and the local dev tree has run BMAD 6.9.0 since 2026-06-27 — i.e. E2 was scoped to conform to a schema the maintainer was no longer running. Mechanical classification of the full v6.9+v6.10 delta returned Class A across the board (see "v6.9–v6.10 Delta Classification"), so MVP epic scope is UNCHANGED and the re-baseline costs ~0 implementation. What changes: the declared floor (needed for NFR2 ≤N-3 headroom), E5 shrinks (upstream retired bmad-investigate), and the delta becomes AD9 baseline entry #1 as a Class-A record.'
   - 'RESOLVED 2026-06-21 (Step 8): MVP = E2+E4+E7 (floor + differentiator). E1 = Phase 2 fast-follow (async marketplace submit; BYO-URL is MVP discoverability floor). E3/E5/E6 = Phase 3 / v4.2 (spike + demand-gated). Rationale: prove-payback-first; E7 is the offense that matters, E6 is demand-unvalidated reach, E1 has unbounded external-gatekeeper latency.'
 inputDocuments:
+  - _bmad-output/planning-artifacts/convoke-covenant-operator.md
+  - _bmad-output/planning-artifacts/convoke-spec-covenant-compliance-checklist.md
   - _bmad-output/planning-artifacts/convoke-note-v6-3-resequencing-and-v4-1-catchup-2026-05-25.md
   - _bmad-output/planning-artifacts/adr/v4-1/adr-001-guardrails-covenant-enforcement.md
   - _bmad-output/planning-artifacts/convoke-report-implementation-readiness-e7-decoupling-2026-06-21.md
@@ -55,16 +61,18 @@ created: '2026-06-21'
 schema_version: 1
 ---
 
-# Product Requirements Document - Convoke v4.1 (Upstream BMAD v6.4–v6.8 Absorption)
+# Product Requirements Document - Convoke v4.1 (Upstream BMAD Absorption)
 
 **Author:** Amalik
-**Date:** 2026-06-21
+**Date:** 2026-06-21 · **Window amended:** 2026-08-09
+
+> **Absorption window: v6.4 → v6.10.** Widened from v6.8 on 2026-08-09 (Option B, narrow re-baseline). The `v6.4-v6.8` filename qualifier is retained pending a governed rename; frontmatter `absorption_window` is authoritative. **MVP epic scope is unchanged** — the added v6.9+v6.10 delta classified Class A across the board. See *v6.9–v6.10 Delta Classification*.
 
 ## Executive Summary
 
-Every downstream framework extension faces an existential tension: **drift too far from its upstream and it becomes an unmaintained fork; chase every upstream release by hand and it never ships value of its own.** Convoke v4.1 resolves this tension structurally — absorbing upstream BMAD Method changes from **v6.4 through v6.8** not as a defensive scramble, but as the vehicle for shipping Convoke's own differentiated value.
+Every downstream framework extension faces an existential tension: **drift too far from its upstream and it becomes an unmaintained fork; chase every upstream release by hand and it never ships value of its own.** Convoke v4.1 resolves this tension structurally — absorbing upstream BMAD Method changes from **v6.4 through v6.10** not as a defensive scramble, but as the vehicle for shipping Convoke's own differentiated value.
 
-The bookkeeping: Convoke's baseline is BMAD v6.3; upstream head is v6.8.0, leaving Convoke six releases behind (**N-6**). v4.1 is a focused, time-bounded catch-up Initiative (backlog **I113**), committed under the 2026-05-25 **Option F** decision, and **gated on the v4.0 ship**.
+The bookkeeping: Convoke's declared product baseline is BMAD v6.3 (`compat-preflight.js` `REQUIRED_BMAD_VERSION`); upstream head is **v6.10.0**, leaving Convoke seven releases behind (**N-7**). *(Authored at N-6/v6.8; re-baselined 2026-08-09 when upstream shipped v6.9.0 and v6.10.0. A third version is in play and worth stating plainly: the maintainer's local dev tree has run BMAD **6.9.0** since 2026-06-27 — so the product baseline, the dev environment, and upstream head are three different numbers.)* v4.1 is a focused, time-bounded catch-up Initiative (backlog **I113**), committed under the 2026-05-25 **Option F** decision, and **gated on the v4.0 ship**.
 
 The strategic posture is **offensive with a defensive floor**. The *defensive floor* is twofold: **release-channels** (E4 — let operators pin Convoke's BMAD floor and opt into newer upstream separately) plus a **newly-established, binding N-cadence policy** — a v4.1 deliverable, not a pre-existing fact — committing Convoke to a defined lag behind upstream. Together they convert "staying current" from a recurring fire drill into a managed, structural capability. **That floor earns the right to play offense.**
 
@@ -75,6 +83,8 @@ The offense is two honestly-distinct payloads. **E7 — Operator Covenant enforc
 v4.1 is the release where Convoke proves it can be **both faithful and opinionated** — fully conformant to a fast-moving upstream *and* carrying differentiated value most downstreams never sustain. The core insight: **for a downstream framework, currency is not overhead — but winning means building the mechanism that makes currency cheap, so it stops competing with differentiation.** The release-channels-plus-policy floor is that mechanism; the Operator Covenant is the differentiation it protects.
 
 The work splits into two tracks with different commitment profiles. The **Conformance track** — marketplace structural adoption (E1), module-help schema rename (E2), release-channels (E4) — is forced, structural, largely one-way-door work Convoke must do to remain a faithful downstream. The **Capability track** — TOML customization (E3), `bmad-investigate`/decision-log evaluation (E5), Web Bundles (E6) — is optional, spike-gated, two-way-door work. **Reversibility and strategic-value are orthogonal:** E6 and E7 stay load-bearing for positioning even where reversible, and must not be cut merely because they are "optional."
+
+> **E5 amendment (2026-08-09).** Upstream **retired `bmad-investigate` in v6.10** with the published rationale *"reached identical conclusions at higher cost."* E5's `bmad-investigate` half is therefore **closed no-go by upstream evidence** — the spike was run for us, and the answer is negative. Only the `.decision-log` half of E5 survives to v4.2. This is scope subtraction at zero cost, and a small validation of the spike-gating discipline: the two-way door stayed closed until evidence arrived.
 
 One constraint governs the whole effort, and Convoke states it plainly — because honesty is the standard a Covenant-led product is held to: **offense and defense compete for constrained maintainer hours, so the defensive floor must demonstrably pay back within a stated horizon.** Judged against that constraint and the success metrics, v4.1's scope is resolved as a tight MVP — **E2+E4+E7 (the floor plus the differentiator)** — with marketplace discoverability (E1) as a Phase-2 fast-follow and the capability spikes (E3/E5/E6) deferred to v4.2. The full rationale and phasing are in *Project Scoping & Phased Development*.
 
@@ -93,7 +103,8 @@ One constraint governs the whole effort, and Convoke states it plainly — becau
 - Standalone operator can obtain a **working Web Bundle** (E6) — **demand-pull gated** (MO6).
 
 ### Business Success
-- **N-cadence = Convoke's declared BMAD *compat-floor*, not feature-parity.** Binding policy caps the lag at **≤N-3 (firm)**; the current N-6 gap closes toward **≤N-2 at ship** (scope-dependent; see *Project Scoping*).
+- **N-cadence = Convoke's declared BMAD *compat-floor*, not feature-parity.** Binding policy caps the lag at **≤N-3 (firm)**; the current N-7 gap closes toward **≤N-2 at ship** (scope-dependent; see *Project Scoping*).
+  - **Why the window had to widen (the NFR2 argument).** This is the structural reason the re-baseline was not optional. Absorbing only through v6.8 would set the floor at 6.8 while upstream already sits at 6.10 — **N-2 at best on ship day, and worse for every upstream release during the sprint.** A binding ≤N-3 policy would be at or through its cap the moment it was published. Absorbing through v6.10 sets the floor at 6.10, restoring real headroom under the cap. A cadence policy breached at birth is not a floor.
 - **Marketplace discoverability:** PR *submitted*; success = accepted **OR** BYO-URL fallback documented+verified. **BYO-URL is the accepted compat floor; marketplace (E1) is polish.**
 - **Operator Covenant compliance ≥ 82%**, measured by the **identical method as the baseline audit**.
 
@@ -152,7 +163,7 @@ One constraint governs the whole effort, and Convoke states it plainly — becau
 **Resolution:** The operator *never silently loses control*. Operator-experience-as-architecture, made enforced. → **Reveals: E7 OC-R5 enforcement, the differentiator.**
 
 ### Journey 4 — Amalik, the maintainer *(operations + breaking-change failure path)*
-**Opening:** Catching up to upstream is a multi-week fire drill — *this very N-6 absorption is the scar*.
+**Opening:** Catching up to upstream is a multi-week fire drill — *this very N-7 absorption is the scar* (and the fact that it grew from N-6 to N-7 mid-planning is the scar's sharpest edge).
 **Rising action:** Post-v4.1, the next upstream minor drops. With release-channels + the binding N-cadence policy, Amalik absorbs a *compat-only* update with **zero Convoke code change** (MO2), or a bounded, instrumented effort vs the captured v4.1 baseline (MO2b).
 **Failure path (breaking change):** When upstream ships a *breaking* change, "zero code change" does not apply. Release-channels must **distinguish compat-only vs breaking**, and the N-cadence policy must define a **breaking-change protocol**. Honest framing: the floor *reduces* heroics, it does not eliminate them.
 **Climax/Resolution:** Currency stops being heroic for the common case; the rare breaking case is bounded and pre-defined rather than improvised. → **Reveals: E4 compat-vs-breaking distinction + N-cadence breaking-change protocol, MO2/MO2b.**
@@ -180,7 +191,7 @@ Developer-tooling / framework-extension domain — **no regulatory compliance** 
 
 ### Ecosystem-Conformance Constraints *(the domain's "compliance")*
 - **Marketplace structural contract:** `skills/` at repo root + `module.yaml` + `module-help.csv`, per the PR #9 rejection spec (E1).
-- **Module-help schema conformance:** `after`/`before` → `preceded-by`/`followed-by`, per v6.7 (E2).
+- **Module-help schema conformance:** `after`/`before` → `preceded-by`/`followed-by`, per v6.7 (E2). **Mechanically verified 2026-08-09** (`mechanical-research-enumeration`): of the 10 `module-help.csv` files in the tree, exactly **one** is on the old `after`/`before` schema — `_bmad/bme/_vortex/module-help.csv`, Convoke-owned. FR11's premise holds. **But the same sweep surfaced a second Convoke-owned file that FR11 does not describe:** `_bmad/bme/_team-factory/module-help.csv` uses a *third*, non-conformant column set entirely (`module,phase,name,code,sequence,workflow-file,command,required,agent,options,description,output-location,outputs,` — note the trailing comma), which is neither the old schema nor the new one. It needs a **conversion**, not a rename. See E2 scope note.
 - **v6.3+ source format:** outcome-based markdown — already adopted in v4.0/I97; **must not regress**.
 - **Operator Covenant:** Convoke's self-imposed governance standard — compliance ≥ 82% baseline (E7, MO4).
 
@@ -220,16 +231,52 @@ Convoke is **content (LLM-interpreted prompts) + Node.js update/migration/instal
 
 ### Technical Architecture Considerations *(per epic)*
 - **E4 — Release-channels + N-cadence policy.** Channel model (`stable`/`next`/`pinned`); `--channel` / `--pin CODE=TAG` CLI surface **wrapped as a slash-command skill** (per `slash-command-ux` rule), not bare CLI; **default-channel selection** (Priya's set-and-forget); **compat-only-vs-breaking detection + breaking-change protocol** (Amalik's failure path); manifest changes; versions read via `getPackageVersion()` (no-hardcoded-versions). The **binding N-cadence policy** ships as a governed artifact with the breaking-change protocol defined.
-- **E2 — Module-help schema rename.** Mechanical `after`/`before` → `preceded-by`/`followed-by` in Convoke modules' `module-help.csv`; delta-only migration in `registry.js`; validation via `derive-counts-from-source`; blast-radius (touches shipped installs) → migration + parity.
+- **E2 — Module-help schema conformance.** Two distinct sub-surfaces, confirmed by source enumeration 2026-08-09 (**not** one, as originally scoped):
+  1. **Rename** — mechanical `after`/`before` → `preceded-by`/`followed-by` in `_bmad/bme/_vortex/module-help.csv` (the only file on the old schema).
+  2. **Conversion** — `_bmad/bme/_team-factory/module-help.csv` is on a third, non-conformant column set and needs restructuring to the canonical 13-column header (plus removal of its trailing comma). Higher risk than the rename: column semantics must be mapped, not renamed, so it carries its own parity check.
+
+  Delta-only migration in `registry.js`; validation via `derive-counts-from-source` (enumerate `module-help.csv` files, do not hardcode "1" or "2"); blast-radius (touches shipped installs) → migration + parity. *This sub-surface split predates v6.9/v6.10 and was missed at authoring; it is the only MVP scope growth from the 2026-08-09 amendment.*
 - **E1 — Marketplace structural restructure.** `skills/` at root + `module.yaml` + `module-help.csv` per PR #9 spec; **inherits I97's PRD + Arch + 5 ADRs**; `plugin_name` override (`convoke-agents` npm vs module code); **BYO-URL fallback path documented + verified** (MO5); **reachable demand-signal/"request" path** (Samira's sub-journey).
 - **E7 — Covenant enforcement.** Extend the v6.8 self-confirmation discipline to **OC-R5 pause points** across all `_bmad/bme/` pause-point skills (mechanically enumerated); per-skill retrofit; **`sequence-after: A8 Epic 1B`** to avoid double-touching activation sequences.
-- **E3/E5/E6 — Spike harnesses.** Each ships a technical probe + **pre-registered go/no-go** (MO8). E6 adds Web-Bundle export format (`SKILL.md` + `INSTRUCTIONS.md` ZIP) + the demand-signal channel; E5 evaluates `bmad-investigate`/`.decision-log`; E3 probes whether `_bmad/custom/` TOML collapses wrapper patterns.
+- **E3/E5/E6 — Spike harnesses.** Each ships a technical probe + **pre-registered go/no-go** (MO8). E6 adds Web-Bundle export format (`SKILL.md` + `INSTRUCTIONS.md` ZIP) + the demand-signal channel; **E5 evaluates `.decision-log` only** — its `bmad-investigate` half is closed no-go by upstream's v6.10 retirement (see E5 amendment above); E3 probes whether `_bmad/custom/` TOML collapses wrapper patterns.
 
 ### Implementation Considerations
 - **Reuse existing tooling:** `migration-runner`, `refresh-installation`, `validator` (agents/workflows/config/manifest), `config-merger` — migration files carry **delta logic only**.
 - **Architecture rules (project-context):** `no-hardcoded-versions`, `no-process-cwd-in-libs`, `slash-command-ux-for-user-facing-tools`, `covenant-compliance-for-convoke-skills`, **namespace-decision per story** (v4.1 touches both `_bmad/bme/` *and* `scripts/update/` + upstream-conformance surfaces — flag the boundary explicitly).
 - **Parity:** PF1-style battery for MO7; `test-fixture-isolation` for all new tests.
 - **Process discipline:** atomic-by-agent commits; `lint-passes-before-review`; `verification-pipefail`.
+
+## v6.9–v6.10 Delta Classification *(added 2026-08-09 with the window re-baseline)*
+
+The window widened from v6.8 to v6.10. Per **FR6** every upstream change must be classified into the absorption ternary before it can be scoped. Below is that classification, run against the source tree rather than against release notes — release notes state what upstream changed, not what Convoke is coupled to.
+
+**Result: Class A across the board.** No item in v6.9 or v6.10 forces a Convoke source or logic change. MVP epic scope is therefore unchanged by the re-baseline.
+
+| Upstream change | Rel | Class | Evidence (mechanically verified 2026-08-09) |
+|---|---|---|---|
+| `bmad-automator` deprecated → `bmad-loop` module | 6.10 | **A** | Zero references to either name anywhere in the tree. No coupling to break. |
+| `bmad-investigate` **retired** | 6.10 | **A** | Registered in 4 manifests (`skill-manifest.csv` ×1, `bmad-help.csv` ×1, `files-manifest.csv` ×3, `bmm/module-help.csv` ×1) — but all four are **BMAD-owned and installer-refreshed**, and `validator.js` asserts on **none** of them (0 grep hits). Convoke's own references are documentation-only (this PRD, ADR-001, two notes). |
+| `post-install-message` registry field | 6.10 | **A** | Zero occurrences in the tree; Convoke's `src/module.yaml` and `_bmad/bme/_vortex/module.yaml` do not use it. The field is **new, optional, and additive** — Convoke conforms by omission. *(Noted as an opportunity, not an obligation: it is a first-class slot for the `convoke-install-vortex` post-install instructions currently carried in prose. Route to E1/Epic 4 as a nice-to-have, not to E2.)* |
+| `sprint-status.yaml` gains `action_items` | 6.9 | **A** | Convoke's `sprint-status.yaml` has no `action_items` key, and the file is **generated and consumed by upstream-owned skills** (`bmad-sprint-planning`, `bmad-retrospective`), not by Convoke code. Affects the maintainer's dev process; does not touch the shipped product. |
+| New installer platform targets (hermes-agent, CodeWhale) | 6.9 | **A** *(capability gap logged)* | Upstream's installer target list does not bind Convoke's exporter. Convoke's `scripts/portability/generate-adapters.js` emits **copilot + cursor** adapters only. Conformance is unaffected — but for the ~40% standalone segment, target-coverage parity is a **capability** question. → v4.2, with an AD5 compat-surface-audit pass. |
+| `uv run` standardization (v7 breaking pre-announcement) | 6.9 | **A** *(watch)* | Convoke ships **zero** `.py` files and no `_bmad/bme/` skill invokes `python3`. Exposure is **inherited only** — agent activation calls BMAD-owned `_bmad/scripts/resolve_customization.py`. Action at v7: check `convoke-doctor` prerequisite docs. Nothing more. |
+| Canonical shared memlog (`src/scripts/memlog.py`) | 6.9 | **C-candidate**, opt-in | Not forced — Convoke is not coupled to it. But it is the one item with strategic weight: Vortex handoff contracts **HC1–HC10** and the initiative-lifecycle backlog *are* Convoke's working-memory substrate, and upstream now ships a canonical one. Sitting on it vs. competing with it is a deliberate architectural choice. → **new v4.2 spike**, logged so it is not lost. |
+| `bmad-architecture` rewrite (`ARCHITECTURE-SPINE.md` source of truth) | 6.9 | — *(capability)* | Convoke's `convoke-arch-*.md` artifacts are a different shape. Artifact-governance taxonomy may want a spine-shaped entry. → v4.2. |
+| `bmad-forge-idea`; party-mode custom parties + persistent memory + preloaded "Code Review Crew" | 6.9/6.10 | — *(overlap)* | **Positioning overlap, not code.** `bmad-forge-idea` overlaps Vortex Hypothesize/Externalize (Liam/Wade); the five-lens Code Review Crew overlaps Gyre's `review-coach` and the Covenant audit lenses. → run the **Capability Evaluation Framework** overlap analysis before v4.2 scoping (`capability-form-factor-evaluation` rule). |
+| Edge Case Hunter named-set generalization (+50–100% catch rate); deletion audit integrated | 6.10 | — *(process)* | Not absorption scope. But it **recalibrates `code-review-convergence`** in `project-context.md`: that rule's Round-1/Round-2 gate is tuned against observed finding volume (the Story 7.3 scar — 3 rounds, 30 findings). A materially sharper Round-1 hunter trips the "any HIGH → Round 2" gate more often. Rule still holds; its cost model shifts. |
+| `validate-skills` exempts deprecated skills from trigger-phrase check | 6.10 | **A** | Additive. Useful downstream for U15 (4.0 deprecation notices) — deprecated Convoke skills no longer need trigger phrases to pass validation. |
+
+### What this result means for the PRD's central bet
+
+MO2 claims a *declaration-only* upstream update absorbs with **zero Convoke source/logic change**, enabled by the data/logic separation constraint. The v6.9+v6.10 delta is the **first real-world test of that claim against releases Convoke did not plan for** — two full minors, ~20 discrete changes, arriving unannounced after the architecture was ratified. It absorbed at Class A with zero forced code change.
+
+That is genuine evidence, and it should be recorded as such — but it should be **weighted honestly**, because a Covenant-led product is held to that standard:
+
+- It is **n=1**, on a window that happened to contain no contract-bearing changes Convoke consumes. A single Class-A window does not establish that Class-A is the common case; it establishes that Class-A is *achievable* and that the classifier can *detect* it.
+- The result is partly **structural luck**: Convoke's parallel-install model (not a package dependency) and its zero-Python surface are what made `uv run` and the manifest churn inert. Those properties were not designed as currency insurance, though they function as it.
+- The honest reading is **"the bet survived its first unplanned test,"** not "currency is solved."
+
+**Therefore:** this delta is recorded as **AD9 baseline entry #1**, classified Class A, `files_touched: 0`, `effort:` classification-only. It is a legitimate MO2b data point and the first entry in the cadence baseline — which is precisely what AD9 exists to accumulate.
 
 ## Project Scoping & Phased Development
 
@@ -286,6 +333,7 @@ Convoke is **content (LLM-interpreted prompts) + Node.js update/migration/instal
 
 ### Schema Conformance & Migration *(E2)*
 - **FR11:** The system migrates Convoke modules' module-help schema to the v6.7 field convention (`after`/`before` → `preceded-by`/`followed-by`).
+- **FR11b:** The system converts Convoke module-help files that are on a **non-conformant column set** (neither the pre- nor the post-v6.7 schema) to the canonical 13-column header. *Distinct from FR11: a structural conversion with column-semantics mapping, not a field rename. Added 2026-08-09 — source enumeration found `_bmad/bme/_team-factory/module-help.csv` on a third column vocabulary (`module,phase,name,code,sequence,workflow-file,command,required,agent,options,description,output-location,outputs,`) that FR11 does not describe. Columns with no canonical target (`sequence`, `agent`, `options`) must be resolved explicitly, and a dropped column requires operator confirmation (OC-R5).*
 - **FR12:** An operator's installed Convoke is migrated to the new schema on update without manual edits.
 - **FR13:** When a migration cannot apply cleanly, the operator receives a next-action message, not a bare error *(OC-R6)*.
 - **FR14:** The system verifies behavioral parity across agents after a schema or channel change.
