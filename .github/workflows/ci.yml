@@ -164,15 +164,29 @@ jobs:
       - name: Lint Python files
         run: ruff check _bmad/ --config ruff.toml
 
+      # Enumerate mechanically rather than hardcoding paths: BMAD updates move,
+      # rename, and retire skill directories wholesale (a16fa340 .bak'd the entire
+      # BMB/core Python surface and relocated bmad-distillator under core/skills/),
+      # which turned a stale path list into `pytest: exit 4` for six weeks.
+      # See project-context.md rule `mechanical-research-enumeration`.
       - name: Run Python tests (BMB + Core)
         run: |
-          python -m pytest \
-            _bmad/bmb/skills/bmad-builder-setup/scripts/tests/test-merge-config.py \
-            _bmad/bmb/skills/bmad-builder-setup/scripts/tests/test-merge-help-csv.py \
-            _bmad/bmb/skills/bmad-builder-setup/scripts/tests/test-cleanup-legacy.py \
-            _bmad/core/bmad-init/scripts/tests/test_bmad_init.py \
-            _bmad/core/bmad-distillator/scripts/tests/test_analyze_sources.py \
-            -v
+          # read loop rather than `mapfile`: mapfile is a bash 4+ builtin, so it
+          # cannot be simulated locally on macOS (bash 3.2). Keep this step
+          # runnable on a dev machine — an unverifiable CI step is how this
+          # enumeration rotted unnoticed in the first place.
+          PY_TESTS=()
+          while IFS= read -r f; do PY_TESTS+=("$f"); done < <(
+            find _bmad -type f \( -name 'test_*.py' -o -name 'test-*.py' \) \
+              -not -path '*/node_modules/*' | sort
+          )
+          if [ "${#PY_TESTS[@]}" -eq 0 ]; then
+            echo "::error::No Python test files found under _bmad/ — enumeration is broken or the suite was retired wholesale."
+            exit 1
+          fi
+          echo "Discovered ${#PY_TESTS[@]} Python test file(s):"
+          printf '  %s\n' "${PY_TESTS[@]}"
+          python -m pytest "${PY_TESTS[@]}" -v
 
   publish:
     needs: [lint, test, python-test, coverage, security, package-check]
