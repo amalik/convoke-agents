@@ -1,35 +1,35 @@
 installation:
-  version: 6.9.0
+  version: 6.10.0
   installDate: 2026-02-01T22:14:37.688Z
-  lastUpdated: 2026-06-27T16:02:42.584Z
+  lastUpdated: 2026-08-09T09:09:08.745Z
 modules:
   - name: core
-    version: 6.9.0
+    version: 6.10.0
     installDate: 2026-02-01T22:14:36.715Z
-    lastUpdated: 2026-06-27T16:02:42.578Z
+    lastUpdated: 2026-08-09T09:09:08.741Z
     source: built-in
     npmPackage: null
     repoUrl: null
   - name: bmm
-    version: 6.9.0
+    version: 6.10.0
     installDate: 2026-02-01T22:14:33.310Z
-    lastUpdated: 2026-06-27T16:02:42.579Z
+    lastUpdated: 2026-08-09T09:09:08.741Z
     source: built-in
     npmPackage: null
     repoUrl: null
   - name: tea
-    version: v1.19.0
+    version: v1.21.7
     installDate: 2026-02-01T22:14:34.563Z
-    lastUpdated: 2026-06-27T16:02:42.580Z
+    lastUpdated: 2026-08-09T09:09:08.742Z
     source: external
     npmPackage: bmad-method-test-architecture-enterprise
     repoUrl: https://github.com/bmad-code-org/bmad-method-test-architecture-enterprise
     channel: stable
-    sha: 8734d51f24071ddbcb3617390b5fcddb4128ef77
+    sha: 2882e9c8972a94f48d5e848039eec435436f2459
   - name: cis
     version: v0.2.1
     installDate: 2026-02-01T22:14:35.584Z
-    lastUpdated: 2026-06-27T16:02:42.581Z
+    lastUpdated: 2026-08-09T09:09:08.743Z
     source: external
     npmPackage: bmad-creative-intelligence-suite
     repoUrl: https://github.com/bmad-code-org/bmad-module-creative-intelligence-suite
@@ -38,7 +38,7 @@ modules:
   - name: bmb
     version: v2.1.0
     installDate: 2026-02-01T22:14:36.685Z
-    lastUpdated: 2026-06-27T16:02:42.582Z
+    lastUpdated: 2026-08-09T09:09:08.744Z
     source: external
     npmPackage: bmad-builder
     repoUrl: https://github.com/bmad-code-org/bmad-builder
@@ -47,7 +47,7 @@ modules:
   - name: wds
     version: v0.4.3
     installDate: 2026-03-15T15:56:22.243Z
-    lastUpdated: 2026-06-27T16:02:42.584Z
+    lastUpdated: 2026-08-09T09:09:08.745Z
     source: external
     npmPackage: bmad-wds
     repoUrl: https://github.com/bmad-code-org/bmad-method-wds-expansion

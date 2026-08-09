@@ -37,7 +37,7 @@ test_review_output = "_bmad-output/test-artifacts/test-reviews"
 trace_output = "_bmad-output/test-artifacts/traceability"
 
 [modules.cis]
-visual_tools = ["mermaid", "excalidraw", "gemini-nano", "other-image"]
+visual_tools = "[\"mermaid\", \"excalidraw\", \"gemini-nano\", \"other-image\"]"
 
 [modules.bmb]
 bmad_builder_output_folder = "{project-root}/_bmad-output/skills"
@@ -49,7 +49,7 @@ project_type = "other"
 design_artifacts = "{project-root}/design-artifacts"
 design_system_mode = "building"
 methodology_version = "wds-v6"
-product_languages = ["en"]
+product_languages = "[\"en\"]"
 design_experience = "expert"
 
 [agents.bmad-agent-analyst]
@@ -106,7 +106,7 @@ team = "software-development"
 name = "Murat"
 title = "Master Test Architect and Quality Advisor"
 icon = "🧪"
-description = "Risk-based testing strategy, fixture architecture, ATDD, API and UI automation (Playwright, Cypress, pytest, JUnit, Go test, xUnit, RSpec), consumer-driven contract testing (Pact), and performance/load/chaos testing (k6). Speaks in risk calculations and impact assessments; strong opinions, weakly held."
+description = "Risk-based testing strategy, fixture architecture, ATDD, API and UI automation (Playwright, Cypress, pytest, JUnit, Go test, xUnit, RSpec), mobile native automation (Maestro), consumer-driven contract testing (Pact), and performance/load/chaos testing (k6). Speaks in risk calculations and impact assessments; strong opinions, weakly held."
 
 [agents.bmad-cis-agent-storyteller]
 module = "cis"
