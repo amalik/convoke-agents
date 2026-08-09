@@ -7,6 +7,8 @@ stepsCompleted:
 inputDocuments:
   - _bmad-output/planning-artifacts/convoke-prd-bmad-v6.4-v6.8-absorption.md
   - _bmad-output/planning-artifacts/convoke-arch-bmad-v6.4-v6.8-absorption.md
+  - _bmad-output/planning-artifacts/convoke-covenant-operator.md
+  - _bmad-output/planning-artifacts/convoke-spec-covenant-compliance-checklist.md
 initiative: convoke
 artifact_type: epic
 qualifier: bmad-v6.4-v6.8-absorption
@@ -15,16 +17,21 @@ related_prd: convoke-prd-bmad-v6.4-v6.8-absorption.md
 related_arch: convoke-arch-bmad-v6.4-v6.8-absorption.md
 status: complete
 epics: 4
-stories: 20
+stories: 21
 created: '2026-06-21'
+absorption_window: 'v6.4–v6.10'
+window_amended: '2026-08-09'
+window_amendment_note: 'Window re-baselined v6.8 → v6.10 (Option B). Net story delta +1 — and NOT from v6.9/v6.10, which classified Class A across the board. The added story (2.4) covers a pre-existing E2 gap found by source enumeration: a second Convoke-owned module-help.csv on a third, non-conformant schema. Filename qualifier retained pending a governed rename.'
 schema_version: 1
 ---
 
-# Convoke v4.1 (Upstream BMAD v6.4–v6.8 Absorption) - Epic Breakdown
+# Convoke v4.1 (Upstream BMAD Absorption) - Epic Breakdown
 
 ## Overview
 
 This document provides the epic and story breakdown for Convoke v4.1, decomposing the PRD requirements and Architecture decisions (AD1–AD9) into implementable stories. **Scope: MVP (E2+E4+E7) + Phase-2 (E1).** The v4.2 capability spikes (E3/E5/E6) are out of scope — their epics are authored when those spikes qualify. The whole initiative is `depends: I97 close (v4.0 ship)` — these epics are commitment-locking plan-ahead, not implementation-ready.
+
+> **Absorption window: v6.4 → v6.10** (widened from v6.8 on 2026-08-09). **Epic structure is unchanged; one story added.** The v6.9+v6.10 delta classified **Class A across the board** — no forced Convoke change, so it produced no stories. The single added story (**2.4**) closes a *pre-existing* E2 gap that source enumeration surfaced during the re-baseline: FR11 was scoped against one file, and there are two. **Story count 20 → 21.** Full classification in the PRD (*v6.9–v6.10 Delta Classification*).
 
 ## Requirements Inventory
 
@@ -48,6 +55,7 @@ This document provides the epic and story breakdown for Convoke v4.1, decomposin
 
 **Schema Conformance & Migration (E2)**
 - FR11: The system migrates Convoke modules' module-help schema to the v6.7 field convention (`after`/`before` → `preceded-by`/`followed-by`).
+- **FR11b** *(added 2026-08-09)*: The system converts Convoke module-help files that are on a **non-conformant column set** (neither the old nor the new schema) to the canonical 13-column header. Distinct from FR11: this is a structural conversion with column-semantics mapping, not a field rename.
 - FR12: An operator's installed Convoke is migrated to the new schema on update without manual edits.
 - FR13: When a migration cannot apply cleanly, the operator receives a next-action message, not a bare error (OC-R6).
 - FR14: The system verifies behavioral parity across agents after a schema or channel change.
@@ -109,11 +117,11 @@ None — no UI; Convoke is content + CLI/slash-command tooling.
 ### FR Coverage Map
 
 - FR1-10, FR23, FR24, FR25 → **Epic 1** (Managed Currency)
-- FR11-14 → **Epic 2** (Schema Conformance)
+- FR11, **FR11b**, FR12-14 → **Epic 2** (Schema Conformance)
 - FR15-18, FR26 → **Epic 3** (Enforced Covenant)
 - FR19-22 → **Epic 4** (Marketplace — Phase-2)
 
-*All 26 FRs mapped. Dependencies flow backward only. MVP = Epics 1-3; Phase-2 = Epic 4.*
+*All 27 FRs mapped (26 + FR11b added 2026-08-09). Dependencies flow backward only. MVP = Epics 1-3; Phase-2 = Epic 4.*
 
 ## Epic List
 
@@ -124,8 +132,9 @@ Operators gain control over their BMAD currency: pin a compat-floor, choose a ch
 
 ### Epic 2: Schema Conformance Absorption *(E2 — MVP)*
 Operators' installs stay conformant to upstream's v6.7 module-help schema — migrated cleanly, with behavioral-parity verification and Covenant-compliant (OC-R6) failure messaging.
-**FRs covered:** FR11, FR12, FR13, FR14
-**Dependency:** declares **Epic 1's AD3 migration-safety contract**. The first concrete **Class-B** absorption; captures the first baseline entry.
+**FRs covered:** FR11, **FR11b**, FR12, FR13, FR14
+**Dependency:** declares **Epic 1's AD3 migration-safety contract**. The first concrete **Class-B** absorption.
+**Amended 2026-08-09:** +1 story (2.4) for the non-conformant `_team-factory` file. **Baseline-entry note:** E2 is no longer the *first* AD9 baseline entry — the v6.8→v6.10 Class-A absorption is entry #1 (backfilled). E2 becomes the first **Class-B** entry, which is the more useful comparison anyway: MO2's class-dependent cost claim needs one of each.
 
 ### Epic 3: Enforced Operator Covenant *(E7 — MVP, the differentiator)*
 Operators never silently lose a decision: every Convoke skill halts at OC-R5 pause points and self-confirms each activation step; new `_bmad/bme/` skills cannot ship without enforcement.
@@ -162,7 +171,20 @@ So that all mutations are recoverable and cannot escape the project root.
 
 **Given** a migration that fails midway **When** it is re-run **Then** it converges to the target state (idempotent) **And** never leaves a partially-written install.
 **Given** a write targeting a path outside the project root **When** attempted **Then** it is refused (resolve+normalize+contains-check).
-**Note:** verify `migration-runner` is not forward-only at implementation; if it is, deliver the contract as a new opt-in component rather than modifying the runner.
+**Pre-flight (verified 2026-08-09, post-BUG-8 commit `cc685063`).** `migration-runner` is **not** forward-only — it runs lock → backup → apply deltas → refresh → validate-before-history-write → `restoreBackup()` on failure (two failure sites). **The "new opt-in component" branch of the original caveat is closed: AD3 extends the existing runner rather than introducing a parallel one.**
+
+Candidate existing pieces to **assess** at sprint-planning rather than rebuild:
+
+| AD3 component | Candidate in tree | Evidence |
+|---|---|---|
+| backup | `backup-manager.createBackup(version, projectRoot, extraEntries)` | BUG-8 added per-migration **declared write-set** merging so rollback restores what a migration rewrites, not just a static list (`migration-runner.js:84-85`) |
+| path-safety guard | `backup-manager._resolveContained()` | resolve + normalize + contains-check; already rejects Windows drive-letter and UNC forms `path.isAbsolute` misses on POSIX |
+| idempotency | Story **1A.5** (`v63-1a-5-migration-robustness-idempotency-resume-offline-lockfile`) — status `done` | sentinel-based checks at `3.3.x-to-4.0.0.js:35,364`; also `refresh-installation.js:265`, `taxonomy-merger.js:39` |
+| apply / verify / recover | `migration-runner` steps 4–6 + `restoreBackup()` | validation gated *before* history write, "so rollback stays clean" |
+
+**Not yet verified — do not treat the table as a scope decision.** These were identified by symbol/comment inspection, not by reading the designs. Whether they *satisfy* AD3's actual contract (**every** install-touching write routed through **one** wrapper) or merely overlap it is a code-reading task for sprint-planning. Classifying from surface evidence is the exact error this initiative's own AD2 guards against — `post-install-message` read as Class B from release notes and was Class A on inspection. Effort re-scoping belongs at sprint-planning, not here.
+
+**Stale-comment trap:** `scripts/update/migrations/3.3.x-to-4.0.0.js:22` still reads *"Idempotency/resume/lockfile/offline-safe concerns are DEFERRED to Story 1A.5"* (and `:167` similarly). **Story 1A.5 is `done`** — all of Epic 1A shipped. The comment predates its own resolution; don't let it re-open a closed question.
 
 ### Story 1.3: Pin a floor, select a channel, set a default *(bootstraps the `convoke-cadence` CLI)*
 
@@ -255,7 +277,15 @@ So that currency operations are conversational rather than bare CLI.
 
 Operators' installs stay conformant to upstream's v6.7 module-help schema. *(MVP. Declares Epic 1's AD3 migration-safety contract. The first concrete Class-B absorption.)*
 
-### Story 2.1: Module-help schema migration
+> **Scope correction 2026-08-09.** E2 was authored against **one** file. Source enumeration during the window re-baseline found **two** Convoke-owned `module-help.csv` files needing work, on **two different problems**:
+> | File | Current header | Problem | Story |
+> |---|---|---|---|
+> | `_bmad/bme/_vortex/module-help.csv` | `…,phase,after,before,required,…` | Old schema → **rename** two fields | 2.1 |
+> | `_bmad/bme/_team-factory/module-help.csv` | `module,phase,name,code,sequence,workflow-file,command,required,agent,options,description,output-location,outputs,` | **Third, non-conformant column set** (+ trailing comma) → **structural conversion** | **2.4 (new)** |
+>
+> *(All 8 other `module-help.csv` files in the tree are BMAD-owned and already on the canonical header.)* This gap predates v6.9/v6.10 — it was missable at authoring because the enumeration was scoped by expectation rather than by glob. It is a live instance of the `mechanical-research-enumeration` rule, and the reason story counts here are stated as derived, not asserted (`derive-counts-from-source`).
+
+### Story 2.1: Module-help schema migration *(rename)*
 
 As an operator,
 I want my installed Convoke migrated from the `after`/`before` module-help schema to the v6.7 `preceded-by`/`followed-by` convention on update, without manual edits,
@@ -264,6 +294,7 @@ So that Convoke stays conformant to upstream's schema.
 **Acceptance Criteria:**
 
 **Given** an install on the old schema **When** I update **Then** Convoke modules' `module-help.csv` is migrated to `preceded-by`/`followed-by` (FR11) **And** no manual edits are required (FR12) **And** the migration routes through Epic 1's AD3 safety contract.
+**Given** the migration runs **When** it selects target files **Then** the file set is **enumerated from the tree at runtime** (glob for `module-help.csv` under Convoke-owned paths), never hardcoded to a known filename or count (`derive-counts-from-source`).
 
 ### Story 2.2: OC-R6 failure messaging
 
@@ -284,11 +315,37 @@ So that the conformance absorption is proven safe and measurable.
 **Acceptance Criteria:**
 
 **Given** the schema migration applied **When** the parity battery runs across all in-scope agents (source-enumerated) **Then** zero operator-facing regressions across the 5 classes (FR14, NFR1, MO7).
-**Given** the absorption completes **When** logged **Then** it is the first baseline entry (MO2b).
+**Given** the absorption completes **When** logged **Then** it is the first **Class-B** baseline entry (MO2b). *(Amended 2026-08-09: entry #1 is the backfilled v6.8→v6.10 Class-A record; E2 is entry #2 and the first Class B. Having one of each is what makes MO2's class-dependent cost claim measurable rather than assertable.)*
+
+### Story 2.4: Non-conformant module-help conversion *(added 2026-08-09)*
+
+As an operator,
+I want the Convoke module-help file that uses a non-standard column set converted to the canonical schema,
+So that every Convoke module is readable by upstream's module-help tooling, not just the ones that happened to start conformant.
+
+**Context.** `_bmad/bme/_team-factory/module-help.csv` uses `module,phase,name,code,sequence,workflow-file,command,required,agent,options,description,output-location,outputs,` — a column set that is neither the pre-v6.7 nor the post-v6.7 schema, plus a trailing comma yielding a phantom 14th column. Story 2.1's field rename does not apply to it.
+
+**Why this is a separate story from 2.1.** Different operation, different risk. 2.1 renames two headers with a known 1:1 mapping. This story maps a **different column vocabulary** onto the canonical one — `name`→`display-name`, `code`→`menu-code`, `workflow-file`/`command`→`action`/`args`, `sequence`→ordering semantics with no canonical home, and `agent`/`options` with **no canonical target at all**. Bundling them would hide a semantic-mapping decision inside a mechanical rename.
+
+**Acceptance Criteria:**
+
+**Given** the non-conformant file **When** the conversion runs **Then** the output header matches the canonical 13-column set exactly (`module,skill,display-name,menu-code,description,action,args,phase,preceded-by,followed-by,required,output-location,outputs`) **And** the trailing comma / phantom column is removed (FR11b).
+
+**Given** source columns with **no canonical target** (`sequence`, `agent`, `options`) **When** the mapping is authored **Then** each is explicitly resolved as *mapped-to-X*, *folded-into-X*, or *dropped-with-rationale* — **and a dropped column requires the operator to confirm the loss** (OC-R5: the operator resolves what the migration cannot decide alone). A silent drop fails this AC.
+
+**Given** the conversion **When** it applies **Then** it routes through Epic 1's AD3 safety contract (backup → path-safety → idempotency → apply → verify/recover), identically to 2.1.
+
+**Given** the conversion completes **When** the parity battery runs **Then** Team Factory's operator-facing surface shows zero regressions across the 5 MO7 classes — **specifically menu-code availability**, since `code`→`menu-code` is a mapped column and class ② is menu-code changes.
+
+**Given** a mapping that cannot be applied cleanly **When** it fails **Then** the operator receives a next-action message (FR13/OC-R6), consistent with Story 2.2.
+
+**Risk note.** Higher blast-radius than 2.1 despite touching one file: a wrong column mapping silently changes what Team Factory presents to operators, and the failure mode is a *working but wrong* menu rather than a crash. The MO7 parity battery is the gate, not the test suite.
 
 ## Epic 3: Enforced Operator Covenant
 
 Operators never silently lose a decision. *(MVP, the differentiator. ⚠ `blocked-on: external Epic 1B` — v4.0.1 Amelia consolidation, specs unauthored. Recommend sequencing LAST among MVP epics OR a decoupling spike to confirm the 1B gate is hard vs soft.)*
+
+> **Normative reference (added 2026-08-09).** Every story in this epic is measured against [The Convoke Operator Covenant](convoke-covenant-operator.md) and its [Compliance Checklist](convoke-spec-covenant-compliance-checklist.md). Read both before implementing — not as a formality, but because **this epic has no independent definition of correctness**. "OC-R5" and the ≥ 82% floor in NFR11/FR18 are not defined in the PRD, the architecture, or this file; they live in the Covenant, and the 82% figure originates in its 2026-04-18 baseline audit (10 violations across 56 cells). A story implemented without the Covenant text is implemented against a standard the author has only inferred. This is also a hard requirement of `project-context.md`'s `covenant-compliance-for-convoke-skills` rule, which governs every `_bmad/bme/` change this epic makes.
 
 ### Story 3.1: Enumerate pause-point skills
 
