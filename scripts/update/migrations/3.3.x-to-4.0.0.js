@@ -69,7 +69,9 @@ module.exports = {
     const inventoryPath = path.join(projectRoot, INVENTORY_CSV_RELATIVE);
     if (fs.existsSync(inventoryPath)) {
       const rows = _parseInventoryCsv(fs.readFileSync(inventoryPath, 'utf8'));
-      for (const row of rows) {
+      // Same canonical selection _phase3 sweeps (shared _canonicalRows — Design D
+      // single-source; empty file cells are dropped in that shared helper).
+      for (const row of _canonicalRows(rows)) {
         entries.push({ relPath: row.file, type: 'file', onRollback: 'restore' });
       }
     }
@@ -283,9 +285,10 @@ function _phase3_sweepSkillMd(projectRoot) {
   const rows = _parseInventoryCsv(
     fs.readFileSync(path.join(projectRoot, INVENTORY_CSV_RELATIVE), 'utf8')
   );
-  const targets = rows.filter(r =>
-    r.candidate_status === 'canonical' && !state.modules_skipped.includes(r.module)
-  );
+  // Shared canonical selection (Design D single-source with getBackupManifest);
+  // _phase3 additionally drops modules skipped in phase 2 (runtime state the
+  // backup manifest can't know — over-inclusion there is a safe no-op restore).
+  const targets = _canonicalRows(rows).filter(r => !state.modules_skipped.includes(r.module));
 
   let filesRewritten = 0;
   for (const entry of targets) {
@@ -615,6 +618,16 @@ function _parseDoctorOutput(stdout) {
  */
 function _findingKey(finding) {
   return `${finding.name || ''}`;
+}
+
+// Single source for "which inventory rows are in scope" — shared by
+// _phase3_sweepSkillMd and getBackupManifest so the backup set and the sweep
+// set can never diverge on the canonical predicate (Design D / hardening #2).
+function _canonicalRows(rows) {
+  // Round-2 review: the `r.file` non-empty guard lives here (the shared source)
+  // so BOTH call sites are protected — a blank file cell would otherwise make
+  // _phase3 read the project root (EISDIR) and getBackupManifest emit relPath ''.
+  return rows.filter(r => r.candidate_status === 'canonical' && r.file);
 }
 
 function _parseInventoryCsv(csvText) {

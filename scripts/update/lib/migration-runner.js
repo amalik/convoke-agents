@@ -85,11 +85,23 @@ async function runMigrations(fromVersion, options = {}) {
     // so rollback can restore the files the migration rewrites, not just the
     // fixed Vortex set. Modules are already loaded by registry.getMigrationsFor().
     console.log(chalk.cyan('[1/5] Creating backup...'));
-    const migrationBackupEntries = unappliedMigrations.flatMap((m) =>
-      m.module && typeof m.module.getBackupManifest === 'function'
-        ? m.module.getBackupManifest(projectRoot)
-        : []
-    );
+    const migrationBackupEntries = unappliedMigrations.flatMap((m) => {
+      if (!m.module || typeof m.module.getBackupManifest !== 'function') return [];
+      try {
+        return m.module.getBackupManifest(projectRoot);
+      } catch (err) {
+        // Round-2 review: do NOT degrade-and-continue. If we can't determine
+        // what this migration will rewrite, we cannot guarantee a complete
+        // backup — and apply() may still mutate those files (a transient read
+        // error, or a resume where phase 2's CSV read is cached). Abort BEFORE
+        // backup + mutate; nothing has changed yet, so no rollback is needed.
+        throw new Error(
+          `Cannot determine backup scope for migration ${m.name}: ${err.message}. ` +
+          'Aborting before any files are modified.',
+          { cause: err }
+        );
+      }
+    });
     backupMetadata = await backupManager.createBackup(fromVersion, projectRoot, migrationBackupEntries);
     console.log(chalk.green(`✓ Backup created: ${path.basename(backupMetadata.backup_dir)}`));
     console.log('');

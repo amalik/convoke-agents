@@ -132,4 +132,110 @@ describe('3.3.x-to-4.0.0 getBackupManifest (BUG-8 hardening #2 — single source
     const after = migration.getBackupManifest(root).filter((e) => e.onRollback === 'restore').length;
     assert.equal(after, before + 1, 'a new inventory row must appear in the backup set');
   });
+
+  it('excludes non-canonical rows and empty file cells (Round-1 Fix B / Design D)', async () => {
+    await fs.outputFile(
+      path.join(root, '_bmad/_config/v6.3-migration-inventory.csv'),
+      HEADER + '\n' +
+        '_bmad/m/canon/SKILL.md,m,m,a,marker,canonical\n' +
+        '_bmad/m/cand/SKILL.md,m,m,b,marker,candidate\n' +   // non-canonical → excluded
+        ',m,m,c,marker,canonical\n'                          // empty file cell → excluded
+    );
+    const restorePaths = migration.getBackupManifest(root)
+      .filter((e) => e.onRollback === 'restore').map((e) => e.relPath);
+    assert.ok(restorePaths.includes('_bmad/m/canon/SKILL.md'));
+    assert.ok(!restorePaths.includes('_bmad/m/cand/SKILL.md'), 'non-canonical row must be excluded');
+    assert.ok(!restorePaths.includes(''), 'empty file cell must be excluded');
+  });
+});
+
+describe('backup-manager path-safety (BUG-8 Round-1 patches)', () => {
+  let root;
+  beforeEach(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), 'bug8-safe-'));
+    await fs.ensureDir(path.join(root, '_bmad-output'));
+  });
+  afterEach(async () => { await fs.remove(root); });
+
+  it('an empty relPath is never backed up and never deletes the project root (review HIGH)', async () => {
+    const keep = '_bmad/keep/SKILL.md';
+    await fs.outputFile(path.join(root, keep), 'KEEP');
+    const meta = await backupManager.createBackup('4.0.0', root, [
+      { relPath: '', type: 'file', onRollback: 'restore' },
+      { relPath: keep, type: 'file', onRollback: 'restore' }
+    ]);
+    assert.ok(!meta.backup_entries.some((e) => e.relPath === ''), 'empty relPath must not be recorded');
+    // Even a tampered manifest must be refused at restore — project root survives.
+    meta.backup_entries.push({ relPath: '', type: 'file', onRollback: 'restore', storedAt: 'tree/' });
+    await fs.outputFile(path.join(root, keep), 'REWRITTEN');
+    await assert.rejects(() => backupManager.restoreBackup(meta, root), /Restore incomplete/);
+    assert.equal(fs.existsSync(root), true, 'project root must still exist');
+    assert.equal(await fs.readFile(path.join(root, keep), 'utf8'), 'KEEP', 'safe entry still restored');
+  });
+
+  it('a `..`-escaping relPath is refused at backup and restore', async () => {
+    const meta = await backupManager.createBackup('4.0.0', root, [
+      { relPath: '../evil.txt', type: 'file', onRollback: 'restore' }
+    ]);
+    assert.ok(!meta.backup_entries.some((e) => e.relPath === '../evil.txt'), 'escaping entry not backed up');
+    meta.backup_entries.push({ relPath: '../evil.txt', type: 'file', onRollback: 'restore', storedAt: 'tree/../evil.txt' });
+    await assert.rejects(() => backupManager.restoreBackup(meta, root), /Restore incomplete/);
+  });
+
+  it('a delete-class relPath escaping _bmad/_memory via `..` is refused on the resolved path (review)', async () => {
+    await fs.outputFile(path.join(root, '_bmad/bme/_vortex/config.yaml'), 'keep me');
+    const meta = await backupManager.createBackup('4.0.0', root, []);
+    meta.backup_entries.push({ relPath: '_bmad/_memory/../bme/_vortex/config.yaml', type: 'file', onRollback: 'delete' });
+    await assert.rejects(() => backupManager.restoreBackup(meta, root), /Restore incomplete/);
+    assert.equal(
+      fs.existsSync(path.join(root, '_bmad/bme/_vortex/config.yaml')), true,
+      'must not delete outside _memory via a `..` bypass'
+    );
+  });
+
+  it('refuses a delete-class entry resolving to _bmad/_memory itself (Round-2)', async () => {
+    await fs.outputFile(path.join(root, '_bmad/_memory/keep.yaml'), 'keep');
+    const meta = await backupManager.createBackup('4.0.0', root, []);
+    meta.backup_entries.push({ relPath: '_bmad/_memory', type: 'file', onRollback: 'delete' });
+    await assert.rejects(() => backupManager.restoreBackup(meta, root), /Restore incomplete/);
+    assert.equal(fs.existsSync(path.join(root, '_bmad/_memory')), true, 'must not wipe the whole _memory dir');
+  });
+
+  it('a backup source (storedAt) that escapes the backup dir is refused (Round-2)', async () => {
+    const meta = await backupManager.createBackup('4.0.0', root, []);
+    meta.backup_entries.push({ relPath: '_bmad/x.txt', type: 'file', onRollback: 'restore', storedAt: 'tree/../../secret' });
+    await assert.rejects(() => backupManager.restoreBackup(meta, root), /Restore incomplete/);
+  });
+});
+
+describe('_phase3 sweep and getBackupManifest track the same inventory (BUG-8 Round-2 / AC3 both sides)', () => {
+  const REWRITABLE =
+    ['# A', '', '## On Activation', '', '1. **Load config via bmad-init skill**', '2. x', '', '## z'].join('\n') + '\n';
+  const STATE = 'phase3_files_done: []\nphase3_files_skipped: []\nmodules_skipped: []\n';
+  let dir;
+  const writeInv = (files) => fs.outputFile(
+    path.join(dir, '_bmad/_config/v6.3-migration-inventory.csv'),
+    'file,module_config_path,module,agent_name,pattern_matched,candidate_status\n' +
+      files.map((f) => `${f},m,m,a,marker,canonical`).join('\n') + '\n'
+  );
+  const setup = async (files) => {
+    await fs.outputFile(path.join(dir, '_bmad/_memory/migration-state-4.0.yaml'), STATE); // fresh state
+    await writeInv(files);
+    for (const f of files) await fs.outputFile(path.join(dir, f), REWRITABLE);
+  };
+  const bmeCount = () => migration.getBackupManifest(dir)
+    .filter((e) => e.onRollback === 'restore' && e.relPath.startsWith('_bmad/m/')).length;
+
+  beforeEach(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bug8-p3-')); });
+  afterEach(async () => { await fs.remove(dir); });
+
+  it('adding a canonical inventory row grows BOTH the sweep set and the backup set', async () => {
+    await setup(['_bmad/m/one/SKILL.md']);
+    assert.equal(migration._internal._phase3_sweepSkillMd(dir).filesRewritten, 1);
+    assert.equal(bmeCount(), 1);
+
+    await setup(['_bmad/m/one/SKILL.md', '_bmad/m/two/SKILL.md']);
+    assert.equal(migration._internal._phase3_sweepSkillMd(dir).filesRewritten, 2, '_phase3 sweep grew');
+    assert.equal(bmeCount(), 2, 'getBackupManifest grew');
+  });
 });

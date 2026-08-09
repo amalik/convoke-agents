@@ -39,6 +39,16 @@ async function createBackup(version, projectRoot, extraEntries = []) {
   const backupEntries = [];
 
   for (const entry of entries) {
+    // path-safety (BUG-8 review): reject empty / absolute / escaping / root-equal
+    // relPaths at BACKUP time too, so we never read outside the project, never
+    // write a `..` past the backup dir, and never record an unsafe entry to
+    // restore. `sourcePath` is the validated absolute path == projectRoot/relPath.
+    const sourcePath = _resolveContained(projectRoot, entry.relPath);
+    if (!sourcePath) {
+      console.warn(`  ⚠ Skipping unsafe backup entry: ${JSON.stringify(entry.relPath)}`);
+      continue;
+    }
+
     // delete-class: the migration CREATES this file, so there is nothing to
     // copy now — record it so rollback can remove it (audit #3, e.g. the
     // migration-state file).
@@ -46,8 +56,6 @@ async function createBackup(version, projectRoot, extraEntries = []) {
       backupEntries.push({ relPath: entry.relPath, type: entry.type, onRollback: 'delete' });
       continue;
     }
-
-    const sourcePath = path.join(projectRoot, entry.relPath);
 
     if (!fs.existsSync(sourcePath)) {
       console.log(`  Skipping ${entry.relPath} (does not exist)`);
@@ -113,7 +121,10 @@ function _normalizeBackupEntries(staticFiles, extraEntries) {
   }));
 
   for (const e of extraEntries || []) {
-    const relPath = String(e.relPath).replace(/\\/g, '/');
+    // Round-2 review: drop malformed entries rather than coerce a missing
+    // relPath to the literal string "undefined".
+    if (!e || typeof e.relPath !== 'string' || e.relPath.length === 0) continue;
+    const relPath = e.relPath.replace(/\\/g, '/');
     entries.push({
       relPath,
       type: e.type || 'file',
@@ -123,6 +134,30 @@ function _normalizeBackupEntries(staticFiles, extraEntries) {
   }
 
   return entries;
+}
+
+/**
+ * Resolve a relPath against projectRoot and confirm it stays strictly INSIDE
+ * the project (BUG-8 review). Returns the absolute dest path, or null if the
+ * relPath is empty, absolute, escapes via `..`, or equals the project root
+ * itself (an empty inventory cell yields relPath '' → would target the whole
+ * tree). One gate, used by both backup and restore, so the destructive paths
+ * can never read/write/delete outside the project.
+ * @param {string} projectRoot
+ * @param {string} relPath
+ * @returns {string|null} absolute contained path, or null if unsafe
+ */
+function _resolveContained(projectRoot, relPath) {
+  if (!relPath || typeof relPath !== 'string') return null;
+  const norm = relPath.replace(/\\/g, '/');
+  if (path.isAbsolute(norm) || path.isAbsolute(relPath)) return null;
+  // Round-2 review: reject Windows drive-letter / UNC forms that path.isAbsolute
+  // does not catch on POSIX (e.g. `C:\x` → `C:/x`, `\\server\share` → `//server`).
+  if (/^[A-Za-z]:/.test(norm) || norm.startsWith('//')) return null;
+  const rootResolved = path.resolve(projectRoot);
+  const dest = path.resolve(projectRoot, norm);
+  if (dest === rootResolved || !dest.startsWith(rootResolved + path.sep)) return null;
+  return dest;
 }
 
 /**
@@ -152,24 +187,29 @@ async function restoreBackup(backupMetadata, projectRoot) {
   // Best-effort (hardening #3): attempt every entry, collect failures, and
   // throw an aggregated error at the end so one bad entry never strands the rest.
   const failures = [];
-  const rootResolved = path.resolve(projectRoot);
+  const memRootResolved = path.resolve(projectRoot, '_bmad/_memory');
 
   for (const entry of entries) {
     const relPath = String(entry.relPath).replace(/\\/g, '/');
-    const destPath = path.resolve(projectRoot, relPath);
 
-    // path-safety: never touch anything outside projectRoot.
-    if (destPath !== rootResolved && !destPath.startsWith(rootResolved + path.sep)) {
-      console.error(`  ✗ Refusing ${relPath} — resolves outside project root`);
-      failures.push({ relPath, reason: 'escapes projectRoot' });
+    // path-safety (BUG-8 review): one containment gate — rejects empty,
+    // absolute, `..`-escaping, AND project-root-equal relPaths (the last would
+    // otherwise let an empty inventory cell delete the whole tree).
+    const destPath = _resolveContained(projectRoot, entry.relPath);
+    if (!destPath) {
+      console.error(`  ✗ Refusing ${JSON.stringify(entry.relPath)} — empty, absolute, or escapes project root`);
+      failures.push({ relPath, reason: 'unsafe path' });
       continue;
     }
 
     try {
       if (entry.onRollback === 'delete') {
         // The migration created this file; rollback removes it (audit #3).
-        // Extra guard: only ever delete inside _bmad/_memory/.
-        if (!relPath.startsWith('_bmad/_memory/')) {
+        // Guard on the RESOLVED path (not the raw string) so `_bmad/_memory/../x`
+        // cannot slip through: only ever delete inside _bmad/_memory/.
+        // Round-2 review: reject equality too — a delete entry resolving to
+        // `_bmad/_memory` itself must not wipe the whole memory dir, only leaves.
+        if (destPath === memRootResolved || !destPath.startsWith(memRootResolved + path.sep)) {
           console.error(`  ✗ Refusing to delete ${relPath} — outside _bmad/_memory/`);
           failures.push({ relPath, reason: 'delete target outside _memory' });
           continue;
@@ -181,8 +221,15 @@ async function restoreBackup(backupMetadata, projectRoot) {
         continue;
       }
 
-      // restore-class
-      const sourcePath = path.join(backupDir, entry.storedAt);
+      // restore-class. Round-2 review: validate the backup source stays inside
+      // the backup dir too (a tampered manifest with `storedAt: tree/../secret`
+      // must not copy out-of-backup content into a validated project path).
+      const sourcePath = _resolveContained(backupDir, entry.storedAt);
+      if (!sourcePath) {
+        console.error(`  ✗ Refusing backup source ${JSON.stringify(entry.storedAt)} — escapes backup dir`);
+        failures.push({ relPath, reason: 'backup source escapes backup dir' });
+        continue;
+      }
       if (!fs.existsSync(sourcePath)) {
         console.log(`  Skipping ${relPath} (not in backup)`);
         continue;

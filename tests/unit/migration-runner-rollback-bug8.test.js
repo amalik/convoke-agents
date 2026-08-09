@@ -76,6 +76,12 @@ describe('runMigrations rollback restores the migration write-set (BUG-8 / AC6)'
       false,
       'rollback must delete the migration-created state file (audit #3)'
     );
+
+    // AC5 observable (Round-2: assert the named predicate directly). Post-rollback
+    // the migration must see itself as pre-v4 again (state gone + canonical target
+    // restored) — _phase1_detect is the exact observable AC5 names.
+    const detect = migration._internal._phase1_detect(tmpDir);
+    assert.equal(detect.isPreV4, true, `post-rollback _phase1_detect.isPreV4 must be true (was: ${detect.reason})`);
   });
 
   it('guard: the migration genuinely rewrites the stub (so the AC6 restore is meaningful, not a false pass)', async () => {
@@ -107,5 +113,47 @@ describe('runMigrations rollback restores the migration write-set (BUG-8 / AC6)'
       restoreConsole();
       await fs.remove(dir);
     }
+  });
+});
+
+describe('runMigrations aborts (never degrades) when backup scope is undeterminable (BUG-8 Round-2)', () => {
+  let tmpDir, originalCwd;
+  const STUB2 = '_bmad/bmm/test-agent/SKILL.md';
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bug8-abort-'));
+    await createInstallation(tmpDir, '3.3.0');
+    // Malformed inventory (missing required columns) → getBackupManifest throws.
+    await fs.outputFile(path.join(tmpDir, '_bmad/_config/v6.3-migration-inventory.csv'), 'wrong,header\nx,y\n');
+    await fs.outputFile(path.join(tmpDir, STUB2), 'UNTOUCHED');
+    originalCwd = process.cwd();
+  });
+  after(async () => {
+    process.chdir(originalCwd);
+    restoreConsole();
+    await fs.remove(tmpDir);
+  });
+
+  it('throws before backup + mutation, leaving the target untouched (Fix-C Round-2)', async () => {
+    process.chdir(tmpDir);
+    silenceConsole();
+    let threw = false;
+    try {
+      await runMigrations('3.3.0');
+    } catch (e) {
+      threw = true;
+      assert.match(e.message, /Cannot determine backup scope/);
+    }
+    restoreConsole();
+    assert.ok(threw, 'runMigrations must abort (throw) rather than degrade-and-continue');
+    assert.equal(
+      await fs.readFile(path.join(tmpDir, STUB2), 'utf8'), 'UNTOUCHED',
+      'target must be untouched — abort happened before apply()'
+    );
+    // Round-3: prove the abort releases the migration lock (does not strand it).
+    assert.equal(
+      fs.existsSync(path.join(tmpDir, '_bmad-output/.migration-lock')), false,
+      'abort must release the migration lock'
+    );
   });
 });
