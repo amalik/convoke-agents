@@ -13,6 +13,8 @@ completedAt: '2026-06-21'
 prdReconciliationDONE:
   - 'RESOLVED 2026-06-21: ternary propagated to PRD FR6 (classify into 3), NFR10 (class-dependent currency cost), MO2 (class-dependent floor-payback), and Technical Success. PRD and architecture now consistent on the absorption ternary.'
 inputDocuments:
+  - _bmad-output/planning-artifacts/convoke-covenant-operator.md
+  - _bmad-output/planning-artifacts/convoke-spec-covenant-compliance-checklist.md
   - _bmad-output/planning-artifacts/convoke-prd-bmad-v6.4-v6.8-absorption.md
   - _bmad-output/planning-artifacts/adr/v4-1/adr-001-guardrails-covenant-enforcement.md
   - _bmad-output/planning-artifacts/convoke-arch-bmad-v63-source-format-adoption.md
@@ -20,7 +22,10 @@ inputDocuments:
   - project-context.md
   - _bmad-output/planning-artifacts/convoke-note-v6-3-resequencing-and-v4-1-catchup-2026-05-25.md
 workflowType: 'architecture'
-project_name: 'Convoke v4.1 (Upstream BMAD v6.4-v6.8 Absorption)'
+project_name: 'Convoke v4.1 (Upstream BMAD Absorption)'
+absorption_window: 'v6.4–v6.10'
+window_amended: '2026-08-09'
+window_amendment_note: 'Window re-baselined v6.8 → v6.10 (Option B). AD1–AD9 survive unchanged — the ternary absorbed the new delta without an architectural revision, which is the design working as intended. Filename qualifier retained pending a governed rename; `absorption_window` is authoritative.'
 user_name: 'Amalik'
 date: '2026-06-21'
 initiative: convoke
@@ -32,9 +37,11 @@ status: complete
 schema_version: 1
 ---
 
-# Architecture Decision Document — Convoke v4.1 (Upstream BMAD v6.4–v6.8 Absorption)
+# Architecture Decision Document — Convoke v4.1 (Upstream BMAD Absorption)
 
 _This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together._
+
+> **Absorption window: v6.4 → v6.10** (widened from v6.8 on 2026-08-09). **No architectural decision changed.** AD1–AD9 absorbed two unplanned upstream minors without revision — the ternary classified the entire delta as Class A, the schema locks held, and no new component was required. That is the strongest available evidence that the spine was cut at the right altitude. See *Ternary Applied — the v6.9/v6.10 Delta* below.
 
 ## Project Context Analysis
 
@@ -69,6 +76,34 @@ First-principles analysis established that "absorbing an upstream release" is **
 **The data/logic separation bet is sound but scoped to Class A:** channel/floor state lives in a config surface no logic reads as a constant (enabled by `no-hardcoded-versions`). It delivers 0-code-change for Class A; it does **not** make Class B free. The honest floor-payback claim is **class-dependent**, and the cadence engine must **classify into all three**.
 
 > **PRD reconciliation required (tracked in frontmatter):** NFR10 / FR6 / MO2 were written against the binary and must adopt the ternary before epics.
+
+### Ternary Applied — the v6.9/v6.10 Delta *(added 2026-08-09)*
+
+The window re-baseline (v6.8 → v6.10) is the ternary's **first application to upstream releases the architecture did not anticipate**. Full classification lives in the PRD (*v6.9–v6.10 Delta Classification*); the architecturally-relevant findings:
+
+**1. Class A held across ~20 discrete upstream changes — zero code change.** This validates the data/logic separation bet *within its declared scope*. Two structural properties did the work, and both were pre-existing rather than designed as currency insurance:
+- **Parallel-install, not package-dependency.** Upstream's installer changes (new platform targets, `uv` probe, module-picker churn) cannot reach Convoke because Convoke is not installed *through* them.
+- **Zero Python surface.** The v7 `uv run` pre-announcement — the delta's only pre-declared breaking change — has no Convoke attachment point. Exposure is inherited via BMAD-owned `resolve_customization.py` alone.
+
+  *Architectural note:* these are load-bearing for the Class-A claim but are **not currently expressed as constraints**. They are accidents that happen to hold. If Convoke ever adds a Python script or takes a package dependency on `bmad-method`, the Class-A rate degrades silently. **Recommend AD5 (compat-surface audit) assert both properties** so the invariant becomes checked rather than lucky.
+
+**2. AD2's classification burden is confirmed real, and the MVP design is confirmed adequate.** Reaching "Class A" required source-tree evidence, not release-note reading: `post-install-message` *looked* Class B from the notes and was Class A on inspection (field is optional, Convoke omits it); the `bmad-investigate` retirement *looked* Class B (registered in 4 manifests) and was Class A because `validator.js` asserts on none of them. **Both would have been over-classified from notes alone.** The MVP's assisted operator-declaration with safety asymmetry handled this correctly — conservative default, evidence to downgrade. It also sharpens the **contract-diff probe** (AD2's v4.1.x target): the probe must diff *what Convoke consumes*, not what upstream changed, or it will reproduce exactly these two false positives.
+
+**3. AD9 gets its first entry, and it is a Class-A record.**
+
+```yaml
+# AD9 baseline entry #1
+date:         2026-08-09
+from_version: 6.8.0
+to_version:   6.10.0
+class:        A            # declaration-only
+files_touched: 0
+effort:       classification-only   # no implementation
+```
+
+Recorded honestly, this is **n=1 on a favourable window** — it establishes Class-A is *achievable and detectable*, not that it is the common case. AD9 exists to accumulate exactly this kind of entry until the cadence-cost claim rests on a distribution rather than an anecdote.
+
+**4. One Class-C candidate is deferred, not absorbed.** Upstream's canonical shared memlog (`src/scripts/memlog.py`, v6.9) is not forced — Convoke has no coupling — but it occupies the same architectural role as Vortex's **HC1–HC10 handoff contracts** and the initiative-lifecycle backlog: durable working memory across agent boundaries. Adopting it, ignoring it, or bridging to it is a genuine architectural fork with a one-way-door flavour. **Not decided here.** → v4.2 spike, logged so the decision is made deliberately rather than by default.
 
 ### Technical Constraints & Dependencies
 - **Parallel-install model** — no `node_modules/bmad-method`; conformance is structural/contractual.
@@ -135,6 +170,8 @@ First-principles analysis established that "absorbing an upstream release" is **
 **Decision:** A CI check flagging version-specific assumptions in `_bmad/bme/` content (hardcoded BMAD-version strings, version-gated behavior). **Elevated from detect-only to gating the Class-A declaration-bump path** — a Class-A bump is blocked if the audit finds version-specific assumptions (which would make the bump a *latent Class-B*).
 **Rationale:** The architectural backstop against the dangerous misclassification (Class-B-read-as-A); catch-all-phase spot-check discipline for false positives. **Affects:** NFR10 precondition; ternary integrity.
 
+**Amendment 2026-08-09 — assert the two properties that make Class A possible.** The v6.9/v6.10 delta classified Class A largely because of two structural properties of Convoke that are currently *accidental*, not *asserted*: (a) Convoke installs **parallel to** BMAD and takes no package dependency on `bmad-method`; (b) Convoke ships **zero `.py` files** and no `_bmad/bme/` skill invokes `python3`. Together these made upstream's installer churn and the v7 `uv run` breaking pre-announcement inert. **Neither is enforced anywhere.** Add both as AD5 audit assertions, so that adding a Python script or a `bmad-method` dependency fails the compat-surface audit rather than silently degrading the Class-A rate. This is the cheapest available form of the invariant: the property already holds, so the assertion starts green and only ever fires on a real regression.
+
 ### AD6 — N-Cadence Policy + Observability
 **Decision:** The binding policy is a **governed markdown artifact** (like the Covenant) declaring `policy_cap` + the breaking-change protocol. Cap-breach (FR24) reads `cadence.yaml` lag vs cap at preflight → **soft-warn** (NFR5, never block). Observability (NFR12): a `convoke-cadence status` command reporting floor/cap/lag/last-absorption.
 **Rationale:** Policy-as-artifact gives "binding" a home; soft-warn gives teeth without blocking; status makes it observable. **Affects:** FR9, FR24, NFR5, NFR12.
@@ -150,6 +187,8 @@ First-principles analysis established that "absorbing an upstream release" is **
 ### AD9 — Baseline Capture Mechanism *(new — makes MO2b measurable)*
 **Decision:** Each absorption appends a **structured record** (class A/B/C, files-touched count, effort unit) to an absorption log. The v4.1 absorption itself is the first baseline entry (NFR10/MO2b).
 **Rationale:** Without a structured record, MO2 (floor pays back) and MO2b (baseline captured) are unmeasurable; this is the data substrate for the floor-payback regression gate (NFR13). **Affects:** FR10, MO2, MO2b, NFR10, NFR13.
+
+**Amendment 2026-08-09 — entry #1 exists and predates the implementation.** The v6.8 → v6.10 absorption is recorded as baseline entry #1 (Class A, `files_touched: 0`, `effort: classification-only`) *before* the log mechanism is built. Two consequences for implementation: (1) the log's first write must be a **backfill**, so the schema has to accept a historical entry rather than assuming append-at-time-of-absorption; (2) the schema's `effort` field needs a value for absorptions that involve **classification but no implementation** — the original design implicitly assumed effort meant "work done," and Class A's whole point is that there isn't any. Both are small, but they are the kind of assumption that only surfaces when a real entry arrives.
 
 ### Decision Impact Analysis
 - **Implementation sequence:** AD1 (state) → AD8 (locking) → AD3 (safety) → AD2 (classifier, MVP) + AD6 (policy/observability) + AD9 (baseline) → AD7 (slash surface) → AD4/AD5 (CI gates). AD4 (E7) `sequence-after` Epic 1B. Contract-diff probe (AD2 target) deferred to v4.1.x.
