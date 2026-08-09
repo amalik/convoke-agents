@@ -2,7 +2,7 @@
 
 const fs = require('fs-extra');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 const { toKebab, deriveWorkflowName } = require('../utils/naming-utils');
 
 /** @typedef {import('../types/factory-types')} Types */
@@ -286,7 +286,8 @@ async function validateSyntax(moduleBlock, prefix) {
     // Wrap the block in a module so require() can parse it
     const wrapped = `'use strict';\n${moduleBlock}\nmodule.exports = { ${buildExportNames(prefix).join(', ')} };\n`;
     await fs.writeFile(tmpFile, wrapped, 'utf8');
-    execSync(`node -e "require('${tmpFile.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')"`, { timeout: 5000, stdio: 'pipe' });
+    const res = spawnSync(process.execPath, ['-e', `require(${JSON.stringify(tmpFile)})`], { timeout: 5000, stdio: 'pipe' });
+    if (res.status !== 0) throw new Error(res.stderr ? res.stderr.toString().trim() : 'node exited with status ' + res.status);
     return null;
   } catch (err) {
     return `Staged block syntax validation failed: ${err.stderr ? err.stderr.toString().trim() : err.message}`;
@@ -303,8 +304,8 @@ async function validateSyntax(moduleBlock, prefix) {
 function checkDirtyTree(registryPath) {
   try {
     const cwd = path.dirname(registryPath);
-    const unstaged = execSync(`git diff --name-only -- "${registryPath}"`, { cwd, timeout: 5000, stdio: 'pipe' }).toString().trim();
-    const staged = execSync(`git diff --cached --name-only -- "${registryPath}"`, { cwd, timeout: 5000, stdio: 'pipe' }).toString().trim();
+    const unstaged = spawnSync('git', ['diff', '--name-only', '--', registryPath], { cwd, timeout: 5000, stdio: 'pipe' }).stdout.toString().trim();
+    const staged = spawnSync('git', ['diff', '--cached', '--name-only', '--', registryPath], { cwd, timeout: 5000, stdio: 'pipe' }).stdout.toString().trim();
     const allDiffs = [unstaged, staged].filter(Boolean).join('\n');
     return { dirty: allDiffs.length > 0, diff: allDiffs };
   } catch {
@@ -355,8 +356,8 @@ function applyInsertions(content, moduleBlock, exportNames) {
  */
 function verifyRequire(registryPath) {
   try {
-    const absPath = path.resolve(registryPath);
-    execSync(`node -e "require('${absPath.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')"`, { timeout: 5000, stdio: 'pipe' });
+    const res = spawnSync(process.execPath, ['-e', `require(${JSON.stringify(registryPath)})`], { timeout: 5000, stdio: 'pipe' });
+    if (res.status !== 0) throw { stderr: res.stderr };
     return null;
   } catch (err) {
     return `Post-write require() verification failed: ${err.stderr ? err.stderr.toString().trim() : err.message}`;
