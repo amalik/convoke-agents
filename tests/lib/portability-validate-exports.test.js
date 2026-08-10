@@ -10,6 +10,9 @@ const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
 
+const { vendoredContentSkipReason } = require('./portability-preconditions');
+const SKIP = vendoredContentSkipReason();
+
 // Story sp-4-2: End-to-End Validation
 //
 // Tests the validate-exports.js script against both a real seed output
@@ -25,7 +28,7 @@ function makeTmpDir() {
   return dir;
 }
 
-describe('Validate Exports (sp-4-2)', () => {
+describe('Validate Exports (sp-4-2)', { skip: SKIP }, () => {
   // Test 1: Full pipeline — seed then validate
   describe('Full pipeline validation', () => {
     let stagingDir, seedResult, validateResult;
