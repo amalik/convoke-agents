@@ -15,6 +15,9 @@ const { exportSkill, ALLOWED_WARNING_TYPES } = require('../../scripts/portabilit
 
 const { FORBIDDEN_STRINGS } = require('../../scripts/portability/test-constants');
 
+const { vendoredContentSkipReason } = require('./portability-preconditions');
+const SKIP = vendoredContentSkipReason();
+
 const REQUIRED_HEADING_PATTERNS = [
   /^# /m, // Title (any H1 — engine generates "# X with Y" or "# X")
   /^## You are /m,
@@ -97,7 +100,7 @@ function assertStructuralInvariants(result, expectedName, expectedIcon) {
   }
 }
 
-describe('Export engine (sp-2-2)', () => {
+describe('Export engine (sp-2-2)', { skip: SKIP }, () => {
   let projectRoot;
 
   before(() => {
