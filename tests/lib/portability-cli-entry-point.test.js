@@ -11,6 +11,9 @@ const { execSync, spawnSync } = require('child_process');
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
 
+const { vendoredContentSkipReason } = require('./portability-preconditions');
+const SKIP = vendoredContentSkipReason();
+
 // Story sp-2-3: CLI Entry Point
 //
 // Tests the convoke-export CLI by spawning it as a subprocess. All file
@@ -39,7 +42,7 @@ function cleanupTmpDir(dir) {
   }
 }
 
-describe('convoke-export CLI (sp-2-3)', () => {
+describe('convoke-export CLI (sp-2-3)', { skip: SKIP }, () => {
   let tmpDir;
 
   afterEach(() => {
@@ -188,7 +191,7 @@ describe('convoke-export CLI (sp-2-3)', () => {
 // I50: `--quiet` / `-q` flag — suppress per-skill success + skip lines, keep
 // failures (stderr) + the single-line summary. Useful for CI / scripted
 // pipelines. Deferred through 4 SP-Epic retros; resolved 2026-04-19.
-describe('convoke-export CLI — --quiet flag (I50)', () => {
+describe('convoke-export CLI — --quiet flag (I50)', { skip: SKIP }, () => {
   const tmpDirs = [];
   afterEach(() => {
     while (tmpDirs.length) cleanupTmpDir(tmpDirs.pop());
