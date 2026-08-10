@@ -110,7 +110,7 @@ Recorded honestly, this is **n=1 on a favourable window** — it establishes Cla
 - **`depends: I97/v4.0 ship`** — the whole initiative gates on it.
 - **Reuse existing tooling** — `migration-runner`, `refresh-installation`, `validator`, `config-merger`.
 - **project-context rules** — no-hardcoded-versions, no-process-cwd-in-libs, path-safety, slash-command-ux, covenant-compliance, namespace-decision.
-- **E7 retrofit `sequence-after` Epic 1B** (avoid double-touching activation sequences).
+- ~~**E7 retrofit `sequence-after` Epic 1B**~~ — **constraint LIFTED 2026-08-09** (decoupling spike: 1B gate is soft; 1B.3's `_bmad/bme/` grep already passes at 0 matches, so no double-touch is possible). E7 sequences normally.
 - **E1 inherits I97's 5 ADRs** (marketplace structure).
 
 ### Cross-Cutting Concerns Identified
@@ -146,10 +146,27 @@ Recorded honestly, this is **n=1 on a favourable window** — it establishes Cla
 - **Deferred:** contract-diff probe (AD2 target design → v4.1.x fast-follow); marketplace structural (E1 Phase-2, inherits I97 ADRs); E3/E5/E6 spikes (v4.2).
 
 ### AD1 — Cadence State Storage *(the NFR10 enabler)*
-**Decision:** Channel/floor/policy/cadence state lives in a dedicated config surface (`_bmad/_config/cadence.yaml`), read via the config-loader — **never hardcoded constants**. Fields: `channel`, `pinned_floor`, `declared_ceiling`, `policy_cap`, `last_absorption`.
+**Decision:** Channel/floor/policy/cadence state lives in a dedicated config surface (`_bmad/_config/cadence.yaml`), owned and read **exclusively by `cadence-state.js`** — **never hardcoded constants**. Fields: `channel`, `pinned_floor`, `declared_ceiling`, `policy_cap`, `last_absorption`.
 **Rationale:** This *is* the data/logic separation — the enabler of Class-A 0-code-change. **Affects:** FR1-4, FR9, FR24, NFR8, NFR10, NFR12.
 
-**⚠ Open Question (OQ-1, raised 2026-06-28 — resolve at sprint-planning, blocks E4 Story 1.1):** AD1 says cadence state is *"read via the config-loader,"* but AD8 / Component Boundaries assert *"only `cadence-state.js` reads/writes `cadence.yaml` — no other module touches the file directly."* These conflict on **who reads the file**. Compounding it: the existing frozen `config-loader.js` API hardcodes the filename `config.yaml` (`scripts/update/lib/config-loader.js:104`) and takes a module *directory* param, so it **cannot read `cadence.yaml` without a frozen-API spec amendment** (Story 1A.2 AC9). **Decision owed:** either **(a)** `cadence-state.js` owns I/O and *delegates* to config-loader's read internals (YAML parse + `_bmad/` traversal guard + `{project-root}` resolution) — keeps AD8's single-owner boundary intact, no frozen-API change; or **(b)** config-loader reads `cadence.yaml` directly — requires a spec amendment to parameterize the filename and a softening of AD8's "no other module" rule. *Recommendation leans (a).* Source: codebase audit 2026-06-28 — [`docs/codebase-audit-2026-06-27.md`](../../docs/codebase-audit-2026-06-27.md) finding #20.
+**✅ OQ-1 — RESOLVED 2026-08-09 (operator: Amalik; option (c)).** *Raised 2026-06-28; escalated by the 2026-08-09 IR run as M1 (resolve **before** sprint-planning — Story 1.1 is story 1 of 21 on the critical path and was not implementable as written).*
+
+**The contradiction.** AD1 originally said cadence state is *"read via the config-loader,"* while AD8 / Component Boundaries assert *"only `cadence-state.js` reads/writes `cadence.yaml` — no other module touches the file directly."* These conflicted on **who reads the file**.
+
+**Resolution — (c): `cadence-state.js` owns `cadence.yaml` outright; the `_bmad/` traversal guard is extracted into a shared helper.** AD1's wording is amended above to remove "read via the config-loader." `config-loader.js`'s public signature is **unchanged** — no Story 1A.2 AC9 amendment is required. The only shared code is the security-critical path guard, extracted from `config-loader.js` ([lines 108-122](../../scripts/update/lib/config-loader.js#L108-L122)) into a helper both modules call.
+
+**Why (c) over the originally-leaning (a) and the mechanically-simpler (b)** — two findings from the 2026-08-09 code re-read that the original framing did not have:
+
+1. **The "frozen API" is frozen over nobody.** `loadModuleConfig` has **zero production callers** — the only `scripts/` reference is the literal string `config-loader.js` inside a deprecation message at `scripts/update/migrations/3.3.x-to-4.0.0.js:42`; the sole caller is `tests/lib/config-loader.test.js`. (Consistent with its reserved-component status.) A frozen API protects consumers; there are none. So (b)'s headline cost was largely theoretical — it is a *spec* commitment, not a *compatibility* one.
+2. **(a) was not free, and its API shape does not fit.** `config-loader.js` exports only `loadModuleConfig`; the internals (a) proposed delegating to — traversal guard, `_resolveProjectRootPlaceholder`, legacy fallback — are all private, so (a) opens the module up regardless. Worse, `loadModuleConfig` takes a *module directory* and appends `config.yaml` (`scripts/update/lib/config-loader.js:115`); `loadModuleConfig(root, '_config')` therefore resolves to `_bmad/_config/config.yaml` — **the wrong file**. The API needed more than a filename parameter; its module-directory shape is a poor fit for a singleton state file.
+
+**The deciding argument — structural over conventional.** Under (b), once `loadModuleConfig` accepts a filename, *any* module can reach `cadence.yaml` through it, and AD8's single-owner rule survives only as convention. Convoke had a convention-based boundary fail on this exact date: the BMAD installer overwrote `_bmad/_config/skill-manifest.csv` at commit `a16fa340` (2026-06-27), stripping the four Convoke-owned columns (`install_to_bmad`, `tier`, `intent`, `dependencies`) and every Convoke-owned row — 54 test failures and six weeks of red CI, caught 2026-08-09. `cadence.yaml` is the same shape of asset: a file Convoke owns that other tooling has reason to read. (c) makes the boundary **impossible to cross** rather than **documented as not-to-be-crossed**.
+
+**Rule-of-Three note (deliberate override).** Extracting the guard at two consumers rather than three is intentional: a duplicated path-traversal guard does not decay into mere debt when copies drift — it decays into a vulnerability, present only in the copy nobody remembered to patch. Convoke's `path-safety-for-destructive-ops` rule governs the same class of check.
+
+**Implementation consequences** (for story-creation): one new shared guard helper (~20 lines, extracted not authored); `config-loader.js` refactored to call it (public signature untouched); `cadence-state.js` implements its own YAML read + `{project-root}` resolution against `_bmad/_config/cadence.yaml`. **AD8 is unchanged and now structurally true.**
+
+Source: codebase audit 2026-06-28 — [`docs/codebase-audit-2026-06-27.md`](../../docs/codebase-audit-2026-06-27.md) finding #20; resolution evidence 2026-08-09 (caller enumeration + API-shape re-read).
 
 ### AD2 — Absorption Classification *(the ternary engine)*
 **Decision (MVP):** **Assisted operator-declaration** of class A/B/C — the engine presents a classification checklist; the operator confirms (Covenant: operator is resolver). **Safety asymmetry:** when uncertain, default to the **more conservative** class; **under-classification requires an explicit operator override** (because under-classification = silent non-conformance, the dangerous error; over-classification is merely wasteful).
@@ -191,7 +208,7 @@ Recorded honestly, this is **n=1 on a favourable window** — it establishes Cla
 **Amendment 2026-08-09 — entry #1 exists and predates the implementation.** The v6.8 → v6.10 absorption is recorded as baseline entry #1 (Class A, `files_touched: 0`, `effort: classification-only`) *before* the log mechanism is built. Two consequences for implementation: (1) the log's first write must be a **backfill**, so the schema has to accept a historical entry rather than assuming append-at-time-of-absorption; (2) the schema's `effort` field needs a value for absorptions that involve **classification but no implementation** — the original design implicitly assumed effort meant "work done," and Class A's whole point is that there isn't any. Both are small, but they are the kind of assumption that only surfaces when a real entry arrives.
 
 ### Decision Impact Analysis
-- **Implementation sequence:** AD1 (state) → AD8 (locking) → AD3 (safety) → AD2 (classifier, MVP) + AD6 (policy/observability) + AD9 (baseline) → AD7 (slash surface) → AD4/AD5 (CI gates). AD4 (E7) `sequence-after` Epic 1B. Contract-diff probe (AD2 target) deferred to v4.1.x.
+- **Implementation sequence:** AD1 (state) → AD8 (locking) → AD3 (safety) → AD2 (classifier, MVP) + AD6 (policy/observability) + AD9 (baseline) → AD7 (slash surface) → AD4/AD5 (CI gates). ~~AD4 (E7) `sequence-after` Epic 1B.~~ **Lifted 2026-08-09 — 1B gate is soft (decoupling spike); AD4/E7 sequences normally.** Contract-diff probe (AD2 target) deferred to v4.1.x.
 - **Cross-component dependencies:** AD1 underpins all (state); AD8 guards AD1 writes; AD3 underpins all mutations; AD2 reads AD1+AD6 and is backstopped by AD5; AD4 consumes ADR-001; AD9 feeds NFR13's regression gate.
 
 ## Implementation Patterns & Consistency Rules
@@ -247,7 +264,7 @@ convoke-agents/                              # existing repo
 ├── _bmad/
 │   ├── _config/
 │   │   └── cadence.yaml                      # NEW  AD1 state surface
-│   └── bme/ … (pause-point skills)          # MODIFIED  E7 OC-R5 self-confirm retrofit (seq-after Epic 1B)
+│   └── bme/ … (pause-point skills)          # MODIFIED  E7 OC-R5 self-confirm retrofit (1B gate lifted 2026-08-09)
 ├── .claude/skills/bmad-cadence/             # NEW  AD7 slash-command skill (SKILL.md + workflow.md)
 ├── scripts/portability/test-constants.js    # MODIFIED  + class identifiers (shared constants)
 ├── tests/
@@ -315,5 +332,5 @@ Decisions complete, patterns enforceable, structure specific with full FR mappin
 ### Implementation Handoff
 - **AI agent guidelines:** follow AD1–AD9 and the consistency rules exactly; respect component boundaries; route all install-touching writes through the AD3 contract; all `cadence.yaml` access through `cadence-state.js` + AD8 lock.
 - **First implementation priority:** AD1 (`cadence-state.js` + `cadence.yaml` schema) + AD8 (advisory lock).
-- **Sequence:** AD1 → AD8 → AD3 → AD2+AD6+AD9 → AD7 → AD4/AD5 (E7 `sequence-after` Epic 1B).
+- **Sequence:** AD1 → AD8 → AD3 → AD2+AD6+AD9 → AD7 → AD4/AD5. *(E7's `sequence-after Epic 1B` constraint was lifted 2026-08-09 — decoupling spike found the gate soft.)*
 - **Gate before epics:** close the PRD reconciliation (ternary → NFR10/FR6/MO2).
