@@ -21,6 +21,9 @@ const CLI_PATH = path.join(projectRoot, 'scripts', 'portability', 'convoke-expor
 
 const { FORBIDDEN_STRINGS } = require('../../scripts/portability/test-constants');
 
+const { vendoredContentSkipReason } = require('./portability-preconditions');
+const SKIP = vendoredContentSkipReason();
+
 let tmpDir, cliResult, skillDirs;
 
 // Load manifest data once
@@ -59,7 +62,7 @@ after(() => {
   }
 });
 
-describe('Export All Tier 1 Skills (sp-2-4)', () => {
+describe('Export All Tier 1 Skills (sp-2-4)', { skip: SKIP }, () => {
   it('Test 1: full batch exits 0, directory count equals unique standalone count', () => {
     assert.equal(cliResult.status, 0);
     assert.equal(skillDirs.length, uniqueStandalone.length);
