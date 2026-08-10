@@ -8,6 +8,9 @@ const os = require('os');
 const path = require('path');
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
 const { writeManifest } = require('../../scripts/portability/manifest-csv');
+
+const { vendoredContentSkipReason } = require('./portability-preconditions');
+const SKIP = vendoredContentSkipReason();
 const {
   validate,
   HARD_FINDING_TYPES,
@@ -68,7 +71,7 @@ function hasFindingType(findings, type) {
   return findings.some((f) => f.type === type);
 }
 
-describe('Portability validator (sp-1-3)', () => {
+describe('Portability validator (sp-1-3)', { skip: SKIP }, () => {
   // P1 (sp-1-3 review): track every tmpdir setupFixture creates and remove
   // them in afterEach to prevent dev/CI machine pollution.
   const createdTmpDirs = [];
