@@ -9,6 +9,7 @@
     "tests/**",
     "node_modules/**",
     "scripts/migration/format-conversion/**",
-    "scripts/audit/pf1-judge-calibration.js"
+    "scripts/audit/pf1-judge-calibration.js",
+    "scripts/portability/**"
   ]
 }
