@@ -10,6 +10,9 @@ const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
 
+const { vendoredContentSkipReason } = require('./portability-preconditions');
+const SKIP = vendoredContentSkipReason();
+
 // Story sp-4-1: Seed Catalog Repository
 //
 // Runs the seed script once in beforeAll and validates the staging directory
@@ -43,7 +46,7 @@ after(() => {
   }
 });
 
-describe('Seed Catalog Repository (sp-4-1)', () => {
+describe('Seed Catalog Repository (sp-4-1)', { skip: SKIP }, () => {
   it('Test 1: seed script generates correct directory count and root README', () => {
     assert.equal(cliResult.status, 0);
     // Derive expected count from manifest instead of hardcoding
