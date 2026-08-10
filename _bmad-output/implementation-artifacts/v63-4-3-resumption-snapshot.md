@@ -26,14 +26,20 @@ purpose: reduce-context-rebuild-cost-on-stalled-story-pickup
 | 0 | Pre-flight gates + execution-precondition check | ✅ passed 2026-04-28 | (no artifact — gate-only) |
 | 1 | DEF-SPIKE FM4-2 — CLI scriptability | ✅ **PASS → D2-A** | [v63-4-3-fm4-2-spike-result.md](v63-4-3-fm4-2-spike-result.md) |
 | 2 | Author recording protocol | ✅ shipped 2026-04-28 | [v63-4-3-recording-protocol.md](v63-4-3-recording-protocol.md) |
-| **3** | **Capture 5 baseline recordings (3.x state)** | ⏳ **NEXT** | Target dir: `_bmad-output/pf1-baselines/` (5 `*-baseline.md` files) |
-| 4 | Trigger v4.0 migration on sandbox worktree | ⏳ pending | git worktree at v3.3.0 → run `convoke-update` to 4.0 |
-| 5 | Capture 5 post-migration recordings (4.0 state) | ⏳ pending | Target dir: `_bmad-output/pf1-post-migration/` (5 `*-post.md` files) |
-| 6 | Run battery harness (Story 4.2's `pf1-validation-battery.js`) | ⏳ pending | requires `ANTHROPIC_API_KEY` (set ✓ as of 2026-05-26) |
-| 7 | Author release record `v63-4-3-release-record-4.0.md` | ⏳ pending | Target file: `v63-4-3-release-record-4.0.md` |
+| 3 | Capture baseline recordings (3.x state) | ✅ **shipped 2026-05-31** | `_bmad-output/pf1-baselines/` — **4** `*-baseline.md` (Emma, Wade, Liam, Stack Detective) |
+| 4 | Trigger v4.0 migration on sandbox worktree | ✅ **done** (implied by Task 5 artifacts) | git worktree at v3.3.0 → `convoke-update` to 4.0 |
+| 5 | Capture post-migration recordings (4.0 state) | ✅ **shipped 2026-05-31** | `_bmad-output/pf1-post-migration/` — **4** `*-post.md` |
+| **6** | **Run battery harness (Story 4.2's `pf1-validation-battery.js`)** | ⏳ **NEXT** | requires `ANTHROPIC_API_KEY` — **verify it is exported before starting; it was NOT set in the 2026-08-10 pre-flight shell** |
+| 7 | Author release record `v63-4-3-release-record-4.0.md` | ⏳ pending | Target file: `v63-4-3-release-record-4.0.md` (confirmed absent 2026-08-10) |
 | 8 | Validation gates (lint + tests + scope check) | ⏳ pending | — |
 
-**Two artifacts are committed (Tasks 1 + 2). Two artifacts are missing-but-required (`scripts/audit/pf1-record-agent.js` + `v63-4-3-release-record-4.0.md`).**
+> **Snapshot refreshed 2026-08-10 after a staleness pre-flight (verdict YELLOW).** Tasks 3–5 shipped on 2026-05-31 — *after* this snapshot was written on 2026-05-26 — but the table still marked them pending, which is the exact failure this document exists to prevent. **Remaining work is Tasks 6–8, not 3–8.** The recorded inputs Task 6 consumes are already on disk.
+>
+> **Counts corrected 5 → 4.** The recording protocol re-scoped the roster to **4 PF1 agents (3 Vortex + 1 Gyre) + 1 mechanical `install-scope-check.js`**, striking John / Winston / Carson as BMAD-upstream-owned. This snapshot's original "5 recordings" wording predated that re-scope.
+>
+> **Why the re-scope now matters more than it did:** BMAD Update `a16fa340` (2026-06-27) deleted 78 upstream `SKILL.md` files from the repo. Had the roster still included Carson and Winston, their baselines would be unreproducible today. It doesn't — and none of the 4 Convoke agents actually recorded has changed since 2026-05-31 (latest source edit 2026-05-03), so **the existing baselines remain valid**.
+
+**Tasks 1 + 2 artifacts committed. `scripts/audit/pf1-record-agent.js` now EXISTS (was listed as missing here); `v63-4-3-release-record-4.0.md` remains the one missing-but-required artifact.**
 
 ## The gap: `scripts/audit/pf1-record-agent.js` (Task 1.5 D2-A deliverable)
 
