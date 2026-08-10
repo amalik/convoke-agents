@@ -29,14 +29,18 @@ const VALID_INTENTS = [
 // Canonical meta-platform skills (AC #7, adjusted during sp-1-2 implementation).
 //
 // AC #7 originally listed 6 skills including `bmad-agent-bme-team-factory`,
-// but that name lives in the AGENT manifest, not the skill manifest. The
-// effective meta-platform skill set is 5: init, help, party-mode,
-// builder-setup, agent-builder.
+// but that name lives in the AGENT manifest, not the skill manifest.
+//
+// This roster is a set of CANDIDATES, not an assertion that all of them exist —
+// see `presentIn()` below. Upstream churns this set: v6.3 retired `bmad-init`,
+// v6.10 renamed `bmad-builder-setup` -> `bmad-bmb-setup`. Both names are kept
+// here so the test keeps covering whichever the installed tree actually has.
 const META_PLATFORM_SKILLS = [
-  'bmad-init',
+  'bmad-init', // retired upstream in v6.3 — kept for older trees
   'bmad-help',
   'bmad-party-mode',
-  'bmad-builder-setup',
+  'bmad-builder-setup', // renamed upstream in v6.10 ->
+  'bmad-bmb-setup', //     ... this
   'bmad-agent-builder',
 ];
 
@@ -62,6 +66,28 @@ describe('Skill manifest classification (sp-1-2)', () => {
 
   // Helper: find a row by canonical name
   const findRow = (name) => rows.find((r) => r[nameIdx] === name);
+
+  // Helper: narrow a candidate roster to the skills the manifest actually has.
+  //
+  // Why this exists (project-context.md `derive-counts-from-source`): the spot-check
+  // rosters below name upstream-owned skills, and upstream retires, renames, and
+  // relocates them without notice — v6.3 retired `bmad-init`, v6.10 renamed
+  // `bmad-builder-setup`, and the BMM agent consolidation retired `bmad-agent-sm`,
+  // `bmad-agent-qa`, and `bmad-agent-quick-flow-solo-dev`. Asserting that a hardcoded
+  // roster is present makes a legitimate upstream retirement look like a Convoke
+  // regression, which is exactly what happened after the 2026-06-27 BMAD update.
+  //
+  // So: assert the CLASSIFICATION POLICY on the skills that exist, not the existence
+  // of a roster we do not own. The non-empty guard keeps the test from passing
+  // vacuously if the roster ever goes fully stale.
+  const presentIn = (names) => {
+    const found = names.filter((n) => findRow(n) !== undefined);
+    assert.ok(
+      found.length > 0,
+      `none of [${names.join(', ')}] exist in skill-manifest.csv — roster is fully stale, not merely drifted`
+    );
+    return found;
+  };
 
   it('Test 1: every data row has non-empty tier and non-empty intent', () => {
     assert.ok(rows.length > 0);
@@ -123,13 +149,11 @@ describe('Skill manifest classification (sp-1-2)', () => {
     }
   });
 
-  it('Test 4: all 5 canonical meta-platform skills are pipeline + meta-platform', () => {
-    for (const name of META_PLATFORM_SKILLS) {
+  it('Test 4: every canonical meta-platform skill present is pipeline + meta-platform', () => {
+    for (const name of presentIn(META_PLATFORM_SKILLS)) {
       const row = findRow(name);
-      assert.notStrictEqual(row, undefined);
-      if (!row) continue;
-      assert.equal(row[tierIdx], 'pipeline');
-      assert.equal(row[intentIdx], 'meta-platform');
+      assert.equal(row[tierIdx], 'pipeline', `${name} tier`);
+      assert.equal(row[intentIdx], 'meta-platform', `${name} intent`);
     }
   });
 
@@ -141,36 +165,37 @@ describe('Skill manifest classification (sp-1-2)', () => {
       'bmad-shard-doc': 'write-documentation',
       'bmad-index-docs': 'write-documentation',
     };
-    for (const [name, expectedIntent] of Object.entries(standaloneUtilities)) {
+    for (const name of presentIn(Object.keys(standaloneUtilities))) {
+      const expectedIntent = standaloneUtilities[name];
       const row = findRow(name);
-      assert.notStrictEqual(row, undefined);
-      if (!row) continue;
-      assert.equal(row[intentIdx], expectedIntent);
+      assert.equal(row[intentIdx], expectedIntent, `${name} intent`);
       assert.notStrictEqual(row[intentIdx], 'meta-platform');
-      assert.equal(row[tierIdx], 'standalone');
+      assert.equal(row[tierIdx], 'standalone', `${name} tier`);
     }
   });
 
   it('Test 6: persona-only bmad-agent-* skills are standalone with empty deps', () => {
     // Per sp-1-2 Task 3 enumerated table — these are menu wrappers, not pipelines.
     // Their dependencies column should be empty (menu options are not exporter deps).
+    //
+    // Candidates, not a required set (see `presentIn`). The BMM agent consolidation
+    // retired sm / qa / quick-flow-solo-dev into Amelia (`bmad-agent-dev`); they are
+    // kept here so the policy still gets checked on trees that predate that change.
     const personaAgents = [
       'bmad-agent-analyst',
       'bmad-agent-pm',
       'bmad-agent-architect',
       'bmad-agent-ux-designer',
       'bmad-agent-tech-writer',
-      'bmad-agent-sm',
       'bmad-agent-dev',
-      'bmad-agent-quick-flow-solo-dev',
-      'bmad-agent-qa',
+      'bmad-agent-sm', // retired upstream — consolidated into Amelia
+      'bmad-agent-quick-flow-solo-dev', // retired upstream — consolidated into Amelia
+      'bmad-agent-qa', // retired upstream — consolidated into Amelia
     ];
-    for (const name of personaAgents) {
+    for (const name of presentIn(personaAgents)) {
       const row = findRow(name);
-      assert.notStrictEqual(row, undefined);
-      if (!row) continue;
-      assert.equal(row[tierIdx], 'standalone');
-      assert.equal(row[depsIdx], '');
+      assert.equal(row[tierIdx], 'standalone', `${name} tier`);
+      assert.equal(row[depsIdx], '', `${name} deps`);
     }
   });
 });
