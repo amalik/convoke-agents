@@ -106,7 +106,7 @@ This document provides the epic and story breakdown for Convoke v4.1, decomposin
 - **AD7 Slash-command surface** — `bmad-cadence` skill wrapping `convoke-cadence` CLI (skill-wraps-tested-CLI pattern).
 - **AD8 Concurrency** — `cadence.yaml` writes use the `_withCsvLock` advisory-lock pattern.
 - **AD9 Baseline capture** — structured per-absorption record (class, files-touched, effort).
-- **Implementation sequence (from Architecture):** AD1 → AD8 → AD3 → AD2+AD6+AD9 → AD7 → AD4/AD5. **E7 (AD4) `sequence-after` Epic 1B.**
+- **Implementation sequence (from Architecture):** AD1 → AD8 → AD3 → AD2+AD6+AD9 → AD7 → AD4/AD5. ~~E7 (AD4) `sequence-after` Epic 1B.~~ **Constraint lifted 2026-08-09 — decoupling spike found the 1B gate soft; E7 sequences normally.**
 - **Schema/naming locks** (cadence.yaml fields; class identifiers `declaration-only`/`conformance-required`/`breaking` in shared constants; CLI `convoke-cadence`, skill `bmad-cadence`).
 - **Reuse:** `migration-runner`, `refresh-installation`, `validator`, `config-merger`, `_withCsvLock`, `test-constants.js`.
 
@@ -139,7 +139,7 @@ Operators' installs stay conformant to upstream's v6.7 module-help schema — mi
 ### Epic 3: Enforced Operator Covenant *(E7 — MVP, the differentiator)*
 Operators never silently lose a decision: every Convoke skill halts at OC-R5 pause points and self-confirms each activation step; new `_bmad/bme/` skills cannot ship without enforcement.
 **FRs covered:** FR15, FR16, FR17, FR18, FR26
-**⚠ Flag:** `blocked-on: external Epic 1B` (v4.0.1 Amelia consolidation — specs unauthored, deferred). `sequence-after` Epic 1B to avoid double-touching activation sequences. **Recommend: sequence E7 LAST among MVP epics, OR run a small decoupling spike** to confirm whether the 1B gate is hard or soft.
+**✅ Gate cleared 2026-08-09 — decoupling spike run; the Epic 1B gate is SOFT.** The `sequence-after Epic 1B` constraint existed to avoid double-touching `_bmad/bme/` activation sequences. Epic 1B's only story reaching into `_bmad/bme/` is 1B.3, whose acceptance grep (`Bob|Quinn|Barry` → zero) **already passes at 0 matches**, so 1B has no work there and cannot double-touch this epic's retrofit surface. **Sequence normally — the earlier "E7 LAST among MVP epics" recommendation is withdrawn.** Residual 1B work is one manifest (`_bmad/_config/agent-manifest.csv`, backlog I122), disjoint from this epic.
 
 ### Epic 4: Marketplace Discoverability *(E1 — Phase-2 fast-follow)*
 Operators discover and install Convoke via the marketplace (or the verified BYO-URL floor); standalone operators can signal demand for capabilities like Web Bundles.
@@ -153,13 +153,16 @@ Operators gain control over their BMAD currency and the defensive floor is estab
 ### Story 1.1: Cadence state with advisory-locked writes
 
 As the system,
-I want cadence state stored in `_bmad/_config/cadence.yaml` and read via the config-loader, with all writes serialized through an advisory lock,
+I want cadence state stored in `_bmad/_config/cadence.yaml` and read exclusively through `cadence-state.js`, with all writes serialized through an advisory lock,
 So that currency state is data (not logic) and safe under concurrent access.
+
+> **OQ-1 resolved 2026-08-09 (option (c)) — this story is now implementable.** AC1 previously required cadence fields to *"resolve via the config-loader,"* a path AD8 forbids and `loadModuleConfig`'s module-directory API cannot serve (it appends `config.yaml`, so it resolves to `_bmad/_config/config.yaml` — the wrong file). `cadence-state.js` now owns `cadence.yaml` I/O outright; only the `_bmad/` traversal guard is shared. See [arch §AD1](convoke-arch-bmad-v6.4-v6.8-absorption.md) for the full rationale. `config-loader.js`'s public signature is untouched — no Story 1A.2 AC9 amendment needed.
 
 **Acceptance Criteria:**
 
-**Given** a fresh install **When** cadence state is read **Then** `channel`, `pinned_floor`, `declared_ceiling`, `policy_cap`, and `last_absorption` resolve via the config-loader **And** no value is a hardcoded constant in source.
+**Given** a fresh install **When** cadence state is read **Then** `channel`, `pinned_floor`, `declared_ceiling`, `policy_cap`, and `last_absorption` resolve through `cadence-state.js` reading `_bmad/_config/cadence.yaml` **And** no value is a hardcoded constant in source.
 **Given** two processes writing `cadence.yaml` concurrently **When** they run **Then** writes serialize through the `_withCsvLock` advisory-lock pattern **And** neither read observes a torn file.
+**Given** the shared `_bmad/` traversal guard extracted from `config-loader.js` **When** `cadence-state.js` resolves a path **Then** it calls that shared guard **And** an attempted escape from `_bmad/` (absolute path or `..`) is rejected **And** `config-loader.js`'s exported signature is unchanged (AD8 boundary is structural, not conventional — see arch §AD1).
 
 ### Story 1.2: Migration-safety contract *(SHARED — Epic 2 depends on this)*
 
@@ -343,7 +346,11 @@ So that every Convoke module is readable by upstream's module-help tooling, not 
 
 ## Epic 3: Enforced Operator Covenant
 
-Operators never silently lose a decision. *(MVP, the differentiator. ⚠ `blocked-on: external Epic 1B` — v4.0.1 Amelia consolidation, specs unauthored. Recommend sequencing LAST among MVP epics OR a decoupling spike to confirm the 1B gate is hard vs soft.)*
+Operators never silently lose a decision. *(MVP, the differentiator.* ✅ **UNBLOCKED 2026-08-09 — decoupling spike run; the Epic 1B gate is SOFT. Sequence normally; no longer last among MVP epics.**)
+
+> **Decoupling spike result (2026-08-09).** The gate existed to prevent Epic 1B and this epic from *double-touching `_bmad/bme/` activation sequences*. Epic 1B's only story reaching into `_bmad/bme/` is **1B.3** ("cross-reference grep for Bob/Quinn/Barry → zero matches"), and **its acceptance criterion already passes**: `grep -rnwE "Bob|Quinn|Barry" _bmad/bme/` returns **0 matches**. With no work to do in `_bmad/bme/`, Epic 1B cannot double-touch what this epic retrofits. Residual 1B work is confined to `_bmad/_config/agent-manifest.csv` (3 stale rows) — a manifest, not an activation sequence, and disjoint from this epic's surface.
+>
+> Also established: Epic 1B is **largely already satisfied** by upstream absorption — the three deprecated agents (`bmad-agent-qa`/`-sm`/`-quick-flow-solo-dev`) are absent from both `_bmad/bmm/` and `.claude/skills/` (1B.1 removal ✓), Amelia is integrated at `.claude/skills/bmad-agent-dev/` (1B.2 ✓), and 1B.3 ✓. Only 1B.1's manifest half is outstanding. See backlog **D15** (rescoped) and **I122** (`agent-manifest.csv` rot).
 
 > **Normative reference (added 2026-08-09).** Every story in this epic is measured against [The Convoke Operator Covenant](convoke-covenant-operator.md) and its [Compliance Checklist](convoke-spec-covenant-compliance-checklist.md). Read both before implementing — not as a formality, but because **this epic has no independent definition of correctness**. "OC-R5" and the ≥ 82% floor in NFR11/FR18 are not defined in the PRD, the architecture, or this file; they live in the Covenant, and the 82% figure originates in its 2026-04-18 baseline audit (10 violations across 56 cells). A story implemented without the Covenant text is implemented against a standard the author has only inferred. This is also a hard requirement of `project-context.md`'s `covenant-compliance-for-convoke-skills` rule, which governs every `_bmad/bme/` change this epic makes.
 
