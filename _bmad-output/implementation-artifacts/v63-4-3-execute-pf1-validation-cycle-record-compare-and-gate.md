@@ -11,6 +11,15 @@ epic: v63-epic-4
 
 Status: in-progress
 
+> **Staleness pre-flight run 2026-08-10 — verdict 🟡 YELLOW; story is resumable at Task 6.** Two corrections applied to this spec, per `project-context.md` rule `staleness-preflight-for-backlog-pickup`:
+>
+> 1. **Code-anchor rot fixed (×7).** Every reference to `scripts/update/migrations/3.x-to-4.0.js` was corrected to **`3.3.x-to-4.0.0.js`** — the cited path never existed. This mattered operationally, not cosmetically: Task 0.5(c)'s verification command was `ls scripts/update/migrations/3.x-to-4.0.js`, which would have failed and HALTed the story on a false negative.
+> 2. **Execution precondition (b) is now SATISFIED.** This spec was authored against `package.json` = 3.3.0; it is now **`4.0.0-rc.1`**, so the 4.0-candidate gate that HALTs Task 0.5 passes. Precondition (a) — "~all 28 v6.3 stories shipped" — is still short (23/29 per the initiative record); confirm with the operator whether the remaining stories block *this* story or only the release.
+>
+> **State correction:** Tasks 3–5 shipped 2026-05-31, *after* the resumption snapshot was written, but that snapshot still marked them pending. **Remaining work is Tasks 6, 7, 8.** The 4 baselines and 4 post-migration recordings Task 6 consumes are on disk and still valid — none of the 4 recorded agents' source has changed since (latest edit 2026-05-03). See the refreshed [resumption snapshot](v63-4-3-resumption-snapshot.md).
+>
+> **Before starting Task 6:** export `ANTHROPIC_API_KEY` — it was **not set** in the pre-flight shell, and the battery requires it.
+
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
 **Epic:** [Epic 4 — Validated Behavioral Equivalence](../planning-artifacts/convoke-epic-bmad-v6.3-adoption.md#epic-4-validated-behavioral-equivalence)
@@ -19,14 +28,14 @@ Status: in-progress
 **NFR coverage:** NFR3 (PF1 ≤15 min per cycle — wall-clock measured here for first time), NFR21, NFR30.
 **Failure modes addressed:** FM4-1 (judge variance — battery's median-of-3 mitigates), FM4-2 (CLI scriptability — DS1 spike + Decision 2), FM4-3 (4 prompts include deep workflow per arch:351), FM4-4 (baselines-go-stale — record IMMEDIATELY before migration), FM7-2 mitigation INHERITED from Story 4.1 calibration evidence.
 
-**🚨 EXECUTION PRECONDITION (CM-7 finding):** Story 4.3 is a **release-time activity** that requires a 4.0 candidate to validate against. **Currently `package.json` says 3.3.0; v6.3 work is in progress (18/29 stories shipped)**. Story 4.3's spec can be authored + V-pass'd now, but the **dev-story execution must wait until**: (a) v6.3 implementation work is complete (Epic 1A 6/6 ✓ + Epic 2 4/4 ✓ + Epic 3 5/5 ✓ + Epic 4 ≥3/5 + Epic 5A/5B = ~all 28 v6.3 stories shipped), AND (b) `package.json` version bumped to `4.0.0-rc.X` or similar 4.0 candidate marker, AND (c) the `scripts/update/migrations/3.x-to-4.0.js` migration is implemented + tested per Story 1A.4. Sprint-status keeps `ready-for-dev` per operator decision (Q1=A); Task 0.5 precondition check HALTs dev-story if conditions not met.
+**🚨 EXECUTION PRECONDITION (CM-7 finding):** Story 4.3 is a **release-time activity** that requires a 4.0 candidate to validate against. **Currently `package.json` says 3.3.0; v6.3 work is in progress (18/29 stories shipped)**. Story 4.3's spec can be authored + V-pass'd now, but the **dev-story execution must wait until**: (a) v6.3 implementation work is complete (Epic 1A 6/6 ✓ + Epic 2 4/4 ✓ + Epic 3 5/5 ✓ + Epic 4 ≥3/5 + Epic 5A/5B = ~all 28 v6.3 stories shipped), AND (b) `package.json` version bumped to `4.0.0-rc.X` or similar 4.0 candidate marker, AND (c) the `scripts/update/migrations/3.3.x-to-4.0.0.js` migration is implemented + tested per Story 1A.4. Sprint-status keeps `ready-for-dev` per operator decision (Q1=A); Task 0.5 precondition check HALTs dev-story if conditions not met.
 
 **Why FM4-2 IS a blocker for Story 4.3 (in contrast to 4.1/4.2):** FM4-2 = "Claude Code CLI scriptability for non-interactive prompt input". Stories 4.1 + 4.2 only needed the **judge** (Anthropic SDK direct calls, FM4-2-independent). Story 4.3 needs **agent recording** — invoking Carson/Winston/etc. and capturing their outputs. **V-pass empirical preview (CM-1):** `claude -p` IS the non-interactive flag (NOT `--no-interactive`); `echo 'hi' | claude -p "say hello"` returned "Hello!" successfully → FM4-2 likely PASSES → D2-A scripted path viable (~30min total recording vs 4-8hr manual).
 
 **Upstream dependencies:**
 - **Story 4.1 (DONE)** — judge prompt + calibration evidence (median 5/2 zero-variance baseline).
 - **Story 4.2 (DONE; R1+R2-converged)** — battery harness at `scripts/audit/pf1-validation-battery.js` (13/13 unit tests pass; H1 story-killer caught + fixed). **Known surface bug (CM-4):** `--dry-run` exits 0 silently on missing recordings instead of exit 5 (Story 4.2 Completion Notes claim was wrong); routed to deferred-work as `D-V42-R3-1` for Story 4.2 follow-up amendment. Story 4.3 Task 6.2 works around by checking stdout for `Error:` lines, NOT just exit code.
-- **Migration tooling**: `scripts/update/migrations/3.x-to-4.0.js` per arch (delivered by Story 1A.4). NOT `scripts/update/convoke-update.js --apply` (CM-2 finding: `--apply` flag doesn't exist; convoke-update.js runs unconditionally + reports current version).
+- **Migration tooling**: `scripts/update/migrations/3.3.x-to-4.0.0.js` per arch (delivered by Story 1A.4). NOT `scripts/update/convoke-update.js --apply` (CM-2 finding: `--apply` flag doesn't exist; convoke-update.js runs unconditionally + reports current version).
 - **5 PF1 agents** all installed via `.claude/skills/<skill>/SKILL.md` (V-pass probe 5 confirmed all present).
 
 **Downstream consumers:**
@@ -51,7 +60,7 @@ so that the M9 release-blocking gate has empirical PASS/INVESTIGATE/FAIL evidenc
 | Stories 4.1 + 4.2 done + gates green | ✓ — `tests 1468 / pass 1467 / skip 1 / fail 0` | None |
 | Story 4.2 battery script importable | ✓ — 14 exports | None |
 | **`claude -p` IS the non-interactive flag** | ✓ — `echo 'hi' \| claude -p "say hello"` returned "Hello!" | **CM-1 fix:** Decision 1 + Task 1.1 use `claude -p`, not `--skill` / `--no-interactive` |
-| `scripts/update/convoke-update.js` actually-runnable | ⚠️ — runs unconditionally; says "Already up to date! (v3.3.0)"; **no `--apply` flag** | **CM-2 fix:** Task 4 references `scripts/update/migrations/3.x-to-4.0.js` per arch, not `convoke-update.js --apply` |
+| `scripts/update/convoke-update.js` actually-runnable | ⚠️ — runs unconditionally; says "Already up to date! (v3.3.0)"; **no `--apply` flag** | **CM-2 fix:** Task 4 references `scripts/update/migrations/3.3.x-to-4.0.0.js` per arch, not `convoke-update.js --apply` |
 | 5 PF1 agents installed via `.claude/skills/` | ✓ — all 5 SKILL.md files present | None |
 | **`v3.3.0` git tag exists** | ✓ — also `v3.0.0`, `v3.1.0`, `v3.2.0` | DS3 baseline tag confirmed |
 | Battery `--dry-run` exit code on missing recordings | ⚠️ — **exits 0 silently** (Story 4.2 surface bug — Completion Notes claim was wrong) | **CM-4 fix:** Task 6.2 checks stdout for `Error:` lines; bug routed to D-V42-R3-1 |
@@ -198,7 +207,7 @@ The original PF1 spec listed 5 agents (1 Vortex Emma + 4 BMAD: John PM + Winston
   - [ ] 0.5 **EXECUTION PRECONDITION CHECK (CM-7):** verify all of:
     - (a) v6.3 implementation work complete: `grep "v63-epic-1a:\|v63-epic-2:\|v63-epic-3:" _bmad-output/implementation-artifacts/sprint-status.yaml` should show all `done`. Plus Epic 4 stories 4.1 + 4.2 done; 4.4 + 4.5 status checked.
     - (b) `package.json` version is 4.0 candidate: `grep '"version":' package.json` should show `4.0.0` or `4.0.0-rc.X`.
-    - (c) `scripts/update/migrations/3.x-to-4.0.js` exists: `ls scripts/update/migrations/3.x-to-4.0.js` returns the path.
+    - (c) `scripts/update/migrations/3.3.x-to-4.0.0.js` exists: `ls scripts/update/migrations/3.3.x-to-4.0.0.js` returns the path.
     - **If ANY (a)/(b)/(c) fail:** HALT dev-story with explicit operator message: "Story 4.3 is a release-time activity. Preconditions not met: <list>. Resume Story 4.3 dev-story when v6.3 implementation complete + 4.0 candidate exists. Spec stays ready-for-dev."
   - [ ] 0.6 Confirm `ANTHROPIC_API_KEY` env availability for Task 6 (battery run). NOT required for Tasks 1-5; only Task 6+. If unset at Task 6, HALT.
 
@@ -237,7 +246,7 @@ The original PF1 spec listed 5 agents (1 Vortex Emma + 4 BMAD: John PM + Winston
 
 - [ ] **Task 4: Trigger v4.0 migration on sandbox (HALT for operator action).**
   - [ ] 4.1 Operator transitions sandbox to 4.0 state. **Worktree path:** `cd <main-checkout-path>` + `git worktree remove ../convoke-3x`. **Stash path:** `git checkout main && git stash pop` (resolve any conflicts manually).
-  - [ ] 4.2 Operator verifies 4.0 install functional: `node scripts/update/convoke-version.js` should print `4.0.0` or `4.0.0-rc.X`. If broken, BLOCKING for Story 4.3 ship — surface to operator. **CM-2 fix:** the actual migration is delivered by `scripts/update/migrations/3.x-to-4.0.js` (per arch + Story 1A.4); `scripts/update/convoke-update.js` is the runner CLI but doesn't accept `--apply` flag (verified empirically: runs unconditionally + reports current version).
+  - [ ] 4.2 Operator verifies 4.0 install functional: `node scripts/update/convoke-version.js` should print `4.0.0` or `4.0.0-rc.X`. If broken, BLOCKING for Story 4.3 ship — surface to operator. **CM-2 fix:** the actual migration is delivered by `scripts/update/migrations/3.3.x-to-4.0.0.js` (per arch + Story 1A.4); `scripts/update/convoke-update.js` is the runner CLI but doesn't accept `--apply` flag (verified empirically: runs unconditionally + reports current version).
   - [ ] 4.3 Operator records `post_migration_commit: <sha>` for release record.
 
 - [ ] **Task 5: Capture 4 post-migration recordings from 4.0 state (HALT for operator action).** (Path B+ scope — Decision 4 addendum, was 5 agents)
@@ -278,7 +287,7 @@ The original PF1 spec listed 5 agents (1 Vortex Emma + 4 BMAD: John PM + Winston
 - DON'T use descriptive headers like `## Prompt 1: Activation greeting + menu` — Story 4.2 parser REJECTS them (CM-6).
 - DON'T use `bmad-brainstorming` for Carson — that's the brainstorming-method skill; Carson is `bmad-cis-agent-brainstorming-coach` (CM-3).
 - DON'T use `claude --skill X --no-interactive` — neither flag exists; use `claude -p` (CM-1).
-- DON'T use `convoke-update.js --apply` — flag doesn't exist; reference `migrations/3.x-to-4.0.js` (CM-2).
+- DON'T use `convoke-update.js --apply` — flag doesn't exist; reference `migrations/3.3.x-to-4.0.0.js` (CM-2).
 - DON'T capture baselines AFTER migration trigger — defeats FM4-4 mitigation purpose.
 
 **External dependencies + risk (compact):**
@@ -360,7 +369,7 @@ The original PF1 spec listed 5 agents (1 Vortex Emma + 4 BMAD: John PM + Winston
 - Story 4.1 (R1+R2-converged) — `_bmad-output/implementation-artifacts/v63-4-1-create-pf1-judge-prompt-and-calibration-test.md`
 - Story 4.2 (R1+R2-converged) — `_bmad-output/implementation-artifacts/v63-4-2-create-pf1-validation-battery-harness.md`
 - Story 4.1 calibration evidence — `_bmad-output/implementation-artifacts/v63-4-1-judge-calibration-evidence.md`
-- `scripts/update/migrations/3.x-to-4.0.js` — actual migration tooling (per arch + Story 1A.4)
+- `scripts/update/migrations/3.3.x-to-4.0.0.js` — actual migration tooling (per arch + Story 1A.4)
 - `scripts/audit/pf1-validation-battery.js` — Story 4.2 harness (consumed by Task 6)
 - V-pass findings — `.review-cache/v63-4-3-vpass-findings.md` (session scratch; gitignored)
 - Deferred bug `D-V42-R3-1` (battery dry-run silent-failure) — `_bmad-output/implementation-artifacts/deferred-work.md`
