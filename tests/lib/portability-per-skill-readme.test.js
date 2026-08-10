@@ -10,6 +10,9 @@ const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
 
+const { vendoredContentSkipReason } = require('./portability-preconditions');
+const SKIP = vendoredContentSkipReason();
+
 // Story sp-3-2: Per-Skill README Generation
 //
 // Validates that exported READMEs are polished, under 80 lines, free of
@@ -34,7 +37,7 @@ function makeTmpDir() {
   return dir;
 }
 
-describe('Per-Skill README Generation (sp-3-2)', () => {
+describe('Per-Skill README Generation (sp-3-2)', { skip: SKIP }, () => {
   // Single-skill tests
   let singleTmpDir;
 
