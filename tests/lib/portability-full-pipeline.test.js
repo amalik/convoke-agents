@@ -11,6 +11,9 @@ const { spawnSync } = require('child_process');
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
 
+const { vendoredContentSkipReason } = require('./portability-preconditions');
+const SKIP = vendoredContentSkipReason();
+
 // Story sp-5-3: Full Pipeline — Export Tier 2 + Adapters + Catalog
 //
 // Runs the seed script once and validates the complete staging directory
@@ -58,7 +61,7 @@ after(() => {
   }
 });
 
-describe('Full Pipeline (sp-5-3)', () => {
+describe('Full Pipeline (sp-5-3)', { skip: SKIP }, () => {
   it('Test 1: seed produces correct skill dir count with adapters', () => {
     assert.equal(seedResult.status, 0);
     assert.equal(skillDirs.length, expectedCount);
