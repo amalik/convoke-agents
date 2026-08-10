@@ -47,9 +47,9 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 ### Requirements Overview
 
-**Functional Requirements (26, MVP + Phase-2)** cluster into subsystems:
+**Functional Requirements (27, MVP + Phase-2)** cluster into subsystems:
 - **Channel/Cadence engine** (FR1-5, FR24, FR25 + FR6-10): release-channel state, default-channel tracking, **ternary** absorption classification (see below), breaking-change protocol, N-cadence policy + cap-breach surfacing, baseline capture. *The novel subsystem.*
-- **Schema-migration engine** (FR11-14): module-help rename migration + failure messaging (OC-R6) + parity.
+- **Schema-migration engine** (FR11, **FR11b**, FR12-14): module-help **rename** migration (FR11) **and structural conversion** (FR11b) + failure messaging (OC-R6) + parity. *Two operations, not one: FR11 is a 1:1 field rename; FR11b maps a different column vocabulary onto the canonical 13-column header, where `sequence`/`agent`/`options` have no canonical target and a dropped column requires operator confirmation (OC-R5). Same component, materially different risk — a wrong mapping yields a working-but-wrong operator menu rather than a crash.*
 - **Covenant-enforcement layer** (FR15-18, FR26): OC-R5 runtime enforcement (per ADR-001) + authoring-time durability check.
 - **Compat-Surface Audit** (NFR10 precondition): verifies Convoke content is version-agnostic where it declares compat — turns *latent Class-B* changes into *caught* ones (see Foundational Bet).
 - **Observability/reporting** (NFR12): cadence state.
@@ -176,7 +176,7 @@ Source: codebase audit 2026-06-28 — [`docs/codebase-audit-2026-06-27.md`](../.
 ### AD3 — Migration-Safety Contract *(shared)*
 **Decision:** One safety contract — backup → path-safety guard (resolve+normalize+contains-check) → idempotency check → apply → verify/recover — through which **all** install-touching ops route (E2, E4 channel/breaking, FR23).
 **Caveat (verify first):** confirm `migration-runner` is not forward-only. If it has no rollback, the safety contract is a **new opt-in component** migrations call, **not** a modification of the runner (avoid destabilizing existing migrations).
-**Rationale:** One contract satisfies NFR4 + NFR7 across every mutation; reuses existing patterns where safe. **Affects:** FR11-14, FR23, NFR4, NFR6, NFR7.
+**Rationale:** One contract satisfies NFR4 + NFR7 across every mutation; reuses existing patterns where safe. **Affects:** FR11, **FR11b**, FR12-14, FR23, NFR4, NFR6, NFR7. *(FR11b routes through this contract identically to FR11 — see epics Story 2.4 AC3.)*
 
 ### AD4 — Covenant Enforcement Mechanism *(E7)*
 **Decision:** Per **ADR-001**, agent-internal self-confirmation extended to OC-R5 pause points (runtime). The authoring-time durability check (FR26) is CI-gated.
@@ -291,7 +291,7 @@ convoke-agents/                              # existing repo
 | FR6-8 (classification) | `cadence-engine.js` |
 | FR9, FR24 (policy/cap-breach) | `convoke-policy-n-cadence.md` + `cadence-engine.js` + preflight |
 | FR10 (baseline) | `absorption-log.js` |
-| FR11-14 (schema migration) | `migrations/<ver>-module-help-schema.js` + `migration-safety.js` |
+| FR11, **FR11b**, FR12-14 (schema migration) | `migrations/<ver>-module-help-schema.js` + `migration-safety.js` — FR11 rename; **FR11b structural conversion** (column-semantics mapping, OC-R5 gate on dropped columns) |
 | FR15-18, FR26 (Covenant) | `_bmad/bme/` retrofit + `validator.js` |
 | FR23 (re-entry) | `cadence-state.js` + `migration-safety.js` |
 | FR19-22 (marketplace) | **Phase-2** root restructure (deferred) |
