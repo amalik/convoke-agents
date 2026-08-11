@@ -56,15 +56,32 @@ function runScriptWithInput(script, args, input, opts = {}) {
 
     child.stdout.on('data', (data) => { stdout += data; });
     child.stderr.on('data', (data) => { stderr += data; });
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      resolve({ exitCode: code, stdout, stderr });
+
+    // The input is written on a fixed 200ms delay, but nothing guarantees the child is
+    // still alive by then: fast paths (notably `--dry-run`, which does no work) exit in
+    // well under 200ms. Writing to the closed stdin raises EPIPE as an UNCAUGHT
+    // exception, failing whichever test happens to be running — a load-dependent flake
+    // that fires on CI and rarely locally. Observed 2026-08-11 (CI run 31463798799,
+    // `does NOT render governance header in --dry-run mode`), and predicted by code
+    // review Round 2 as CR-r2-D04.
+    //
+    // EPIPE here is benign by construction: the child exited without needing the input,
+    // which is the scenario under test. Any other stdin error is still a real failure.
+    child.stdin.on('error', (err) => {
+      if (err.code !== 'EPIPE') throw err;
     });
 
-    setTimeout(() => {
+    const inputTimer = setTimeout(() => {
+      if (child.exitCode !== null || child.signalCode !== null || child.stdin.destroyed) return;
       child.stdin.write(input);
       child.stdin.end();
     }, 200);
+
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      clearTimeout(inputTimer);
+      resolve({ exitCode: code, stdout, stderr });
+    });
   });
 }
 
