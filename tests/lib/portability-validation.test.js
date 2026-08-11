@@ -10,7 +10,7 @@ const { findProjectRoot } = require('../../scripts/update/lib/utils');
 const { writeManifest } = require('../../scripts/portability/manifest-csv');
 
 const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason();
+const SKIP = vendoredContentSkipReason('Portability validator (sp-1-3) — Test 1 only (smoke); Tests 2-9 run');
 const {
   validate,
   HARD_FINDING_TYPES,
@@ -71,7 +71,11 @@ function hasFindingType(findings, type) {
   return findings.some((f) => f.type === type);
 }
 
-describe('Portability validator (sp-1-3)', { skip: SKIP }, () => {
+// NOT skipped at suite level: only Test 1 reads the real project root. Tests 2-9 build
+// synthetic manifests in isolated tmpdirs via setupFixture — already fixture-isolated,
+// and disabling them lost validator coverage ([MISSING]/[INVALID]/[BROKEN-DEP] finding
+// types) for a precondition they do not depend on. Code review 2026-08-10.
+describe('Portability validator (sp-1-3)', () => {
   // P1 (sp-1-3 review): track every tmpdir setupFixture creates and remove
   // them in afterEach to prevent dev/CI machine pollution.
   const createdTmpDirs = [];
@@ -95,7 +99,9 @@ describe('Portability validator (sp-1-3)', { skip: SKIP }, () => {
     return dir;
   };
 
-  it('Test 1: validator passes on the real skill-manifest.csv (smoke)', () => {
+  // The only test in this suite that reads the real repo — so the only one the
+  // vendored-content precondition applies to.
+  it('Test 1: validator passes on the real skill-manifest.csv (smoke)', { skip: SKIP }, () => {
     const realRoot = findProjectRoot();
     const { totalSkills, findings } = validate(realRoot);
     const errors = findings.filter((f) => HARD_FINDING_TYPES.has(f.type));

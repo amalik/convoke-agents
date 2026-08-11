@@ -175,18 +175,71 @@ jobs:
           # cannot be simulated locally on macOS (bash 3.2). Keep this step
           # runnable on a dev machine — an unverifiable CI step is how this
           # enumeration rotted unnoticed in the first place.
+          #
+          # `find`'s exit status is covered by the workflow-level `bash -eo pipefail`
+          # (see `defaults.run.shell`): in a pipeline, pipefail propagates a non-zero
+          # `find` and `-e` aborts the step. An earlier revision added an explicit
+          # `FIND_STATUS=$?` check here — it was DEAD CODE twice over: `$?` after a
+          # pipeline reports `sort`, not `find`, and pipefail had already aborted before
+          # the check could run. Removed rather than "fixed", because the correct
+          # behaviour was already in place; only the comment was wrong.
+          # (project-context.md `verification-pipefail`.)
+          #
+          # `*.bak/*` excludes .bak'd DIRECTORIES. It is deliberately not redundant with
+          # the name patterns: a16fa340 renamed .py files to .py.bak (which the patterns
+          # already miss), but a future update that .bak's a whole `tests/` directory
+          # would otherwise resurrect retired suites.
+          find _bmad -type f \
+            \( -name 'test_*.py' -o -name 'test-*.py' -o -name '*_test.py' \) \
+            -not -path '*/node_modules/*' \
+            -not -path '*/.venv/*' \
+            -not -path '*/__pycache__/*' \
+            -not -path '*/_archive/*' \
+            -not -path '*.bak/*' \
+            | sort > /tmp/py-tests.txt
+
           PY_TESTS=()
-          while IFS= read -r f; do PY_TESTS+=("$f"); done < <(
-            find _bmad -type f \( -name 'test_*.py' -o -name 'test-*.py' \) \
-              -not -path '*/node_modules/*' | sort
-          )
+          while IFS= read -r f; do PY_TESTS+=("$f"); done < /tmp/py-tests.txt
+
+          # Zero-floor guard, kept ALONGSIDE the baseline diff rather than replaced by it.
+          # The baseline is only as strong as its own contents, and its update procedure
+          # tells maintainers to delete lines. If it were ever emptied, `MISSING` and
+          # `EXTRA` would both be empty and `pytest "${PY_TESTS[@]}"` would expand to a
+          # bare `pytest` — which, with no pytest.ini/pyproject/setup.cfg in this repo,
+          # recurses the entire tree. Two lines to prevent that.
           if [ "${#PY_TESTS[@]}" -eq 0 ]; then
-            echo "::error::No Python test files found under _bmad/ — enumeration is broken or the suite was retired wholesale."
+            echo "::error::No Python test files discovered under _bmad/ — enumeration is broken."
             exit 1
           fi
+
           echo "Discovered ${#PY_TESTS[@]} Python test file(s):"
           printf '  %s\n' "${PY_TESTS[@]}"
-          python -m pytest "${PY_TESTS[@]}" -v
+
+          # A zero-floor guard only catches TOTAL annihilation. The regression that
+          # actually happened was 5 files -> 1, which passed silently. Diff discovery
+          # against the committed baseline so a PARTIAL collapse fails loudly.
+          grep -vE '^\s*(#|$)' .github/expected-python-tests.txt | sort > /tmp/py-expected.txt
+          MISSING=$(comm -23 /tmp/py-expected.txt /tmp/py-tests.txt)
+          if [ -n "$MISSING" ]; then
+            echo "::error::Expected Python test files were not discovered:"
+            echo "$MISSING" | sed 's/^/  /'
+            echo "If upstream legitimately retired them, remove them from .github/expected-python-tests.txt in the same commit, with the reason."
+            exit 1
+          fi
+          EXTRA=$(comm -13 /tmp/py-expected.txt /tmp/py-tests.txt)
+          if [ -n "$EXTRA" ]; then
+            echo "::warning::New Python test files discovered (not yet in the baseline):"
+            echo "$EXTRA" | sed 's/^/  /'
+          fi
+
+          # --import-mode=importlib: there is no __init__.py under _bmad/, so pytest's
+          # default prepend mode derives module names from basenames — two same-named
+          # files in different trees would collide with "import file mismatch" and fail
+          # collection on an error unrelated to any test. No such duplicate exists today
+          # (the second test_analyze_sources.py is a .py.bak the patterns never match);
+          # this is pre-emptive, because the tree already contains the .bak twin that a
+          # restore would activate.
+          python -m pytest --import-mode=importlib "${PY_TESTS[@]}" -v
 
   publish:
     needs: [lint, test, python-test, coverage, security, package-check]

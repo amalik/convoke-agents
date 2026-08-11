@@ -12,7 +12,7 @@ const { findProjectRoot } = require('../../scripts/update/lib/utils');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
 
 const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason();
+const SKIP = vendoredContentSkipReason('Full Pipeline (sp-5-3)');
 
 // Story sp-5-3: Full Pipeline — Export Tier 2 + Adapters + Catalog
 //
@@ -39,6 +39,12 @@ const expectedCount = [
 let tmpDir, seedResult, skillDirs;
 
 before(() => {
+  // Suite is disabled (see ./portability-preconditions.js). `describe(..., { skip })`
+  // does NOT suppress file-scope hooks, so without this early return the seed/export
+  // subprocesses below still run on every CI pass with no assertions consuming them —
+  // and any throw here fails the file despite the skip. Code review 2026-08-10 (HIGH).
+  if (SKIP) return;
+
   tmpDir = path.join(os.tmpdir(), `sp-5-3-${crypto.randomUUID()}`);
   seedResult = spawnSync('node', [SEED_PATH, '--output', tmpDir], {
     cwd: projectRoot,
@@ -56,6 +62,12 @@ before(() => {
 }, 60000);
 
 after(() => {
+  // Suite is disabled (see ./portability-preconditions.js). `describe(..., { skip })`
+  // does NOT suppress file-scope hooks, so without this early return the seed/export
+  // subprocesses below still run on every CI pass with no assertions consuming them —
+  // and any throw here fails the file despite the skip. Code review 2026-08-10 (HIGH).
+  if (SKIP) return;
+
   if (tmpDir && fs.existsSync(tmpDir)) {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

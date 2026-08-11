@@ -10,6 +10,9 @@ const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
 
+const { vendoredContentSkipReason } = require('./portability-preconditions');
+const SKIP = vendoredContentSkipReason('Platform Adapter Generation (sp-5-2)');
+
 // Story sp-5-2: Platform Adapter Generation
 //
 // Tests that exported skills include per-platform adapter files
@@ -24,7 +27,7 @@ function makeTmpDir() {
   return dir;
 }
 
-describe('Platform Adapter Generation (sp-5-2)', () => {
+describe('Platform Adapter Generation (sp-5-2)', { skip: SKIP }, () => {
   // Single-skill tests
   let singleTmpDir;
 

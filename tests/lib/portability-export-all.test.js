@@ -22,7 +22,7 @@ const CLI_PATH = path.join(projectRoot, 'scripts', 'portability', 'convoke-expor
 const { FORBIDDEN_STRINGS } = require('../../scripts/portability/test-constants');
 
 const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason();
+const SKIP = vendoredContentSkipReason('Export All Tier 1 Skills (sp-2-4)');
 
 let tmpDir, cliResult, skillDirs;
 
@@ -43,6 +43,12 @@ const displayNameIdx = agentHeader.indexOf('displayName');
 const namedPersonas = new Set(agentRows.map((r) => r[displayNameIdx]).filter(Boolean));
 
 before(() => {
+  // Suite is disabled (see ./portability-preconditions.js). `describe(..., { skip })`
+  // does NOT suppress file-scope hooks, so without this early return the seed/export
+  // subprocesses below still run on every CI pass with no assertions consuming them —
+  // and any throw here fails the file despite the skip. Code review 2026-08-10 (HIGH).
+  if (SKIP) return;
+
   tmpDir = path.join(os.tmpdir(), `sp-2-4-${crypto.randomUUID()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
   cliResult = spawnSync('node', [CLI_PATH, '--tier', '1', '--output', tmpDir], {
@@ -57,6 +63,12 @@ before(() => {
 }, 30000);
 
 after(() => {
+  // Suite is disabled (see ./portability-preconditions.js). `describe(..., { skip })`
+  // does NOT suppress file-scope hooks, so without this early return the seed/export
+  // subprocesses below still run on every CI pass with no assertions consuming them —
+  // and any throw here fails the file despite the skip. Code review 2026-08-10 (HIGH).
+  if (SKIP) return;
+
   if (tmpDir && fs.existsSync(tmpDir)) {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

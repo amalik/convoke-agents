@@ -12,7 +12,7 @@ const { findProjectRoot } = require('../../scripts/update/lib/utils');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
 
 const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason();
+const SKIP = vendoredContentSkipReason('convoke-export CLI (sp-2-3)');
 
 // Story sp-2-3: CLI Entry Point
 //

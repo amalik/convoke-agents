@@ -62,7 +62,10 @@ const STANDALONE_INTENT_HEADINGS = [
 
 const { FORBIDDEN_STRINGS } = require('../../scripts/portability/test-constants');
 
-describe('Catalog Generator (sp-3-1)', () => {
+const { vendoredContentSkipReason } = require('./portability-preconditions');
+const SKIP = vendoredContentSkipReason('Catalog Generator (sp-3-1)');
+
+describe('Catalog Generator (sp-3-1)', { skip: SKIP }, () => {
   let tmpFile;
 
   afterEach(() => {

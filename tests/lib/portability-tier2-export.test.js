@@ -10,7 +10,7 @@ const { exportSkill } = require('../../scripts/portability/export-engine');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
 
 const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason();
+const SKIP = vendoredContentSkipReason('Tier 2 Export (sp-5-1)');
 
 // Story sp-5-1: Template Inlining for Tier 2 Export
 //

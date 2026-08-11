@@ -11,7 +11,7 @@ const { spawnSync } = require('child_process');
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
 
 const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason();
+const SKIP = vendoredContentSkipReason('Per-Skill README Generation (sp-3-2)');
 
 // Story sp-3-2: Per-Skill README Generation
 //

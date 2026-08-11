@@ -1,0 +1,31 @@
+# Expected Python test files, one path per line (`#` comments and blanks ignored).
+#
+# WHY THIS FILE EXISTS
+# --------------------
+# The CI step enumerates Python tests with `find` instead of a hardcoded list, because
+# BMAD updates move, rename and retire skill directories wholesale — a stale hardcoded
+# list produced `pytest: exit 4` for six weeks (commit a16fa340, 2026-06-27).
+#
+# But mechanical discovery alone only detects TOTAL annihilation. Code review on
+# 2026-08-10 found the real regression it had already missed: discovery silently
+# collapsed from 5 files to 1 and CI reported green — a loud failure traded for a quiet
+# 80% coverage loss. This file is the baseline that makes a partial collapse loud.
+#
+# CI fails if any path listed here is NOT discovered. Extra discovered files are
+# reported but do not fail, so a new upstream suite is surfaced rather than blocked.
+#
+# HOW TO UPDATE
+# -------------
+# When upstream legitimately retires a test, delete its line here IN THE SAME COMMIT
+# that observes the retirement, with the reason in the commit message. Never edit this
+# file to make a red build green without establishing why the file disappeared.
+#
+# Retired 2026-06-27 by BMAD update a16fa340 (renamed to `*.py.bak` upstream, and their
+# implementation scripts retired with them — bmad-init and the BMB merge/cleanup
+# helpers no longer exist):
+#   _bmad/bmb/skills/bmad-builder-setup/scripts/tests/test-merge-config.py
+#   _bmad/bmb/skills/bmad-builder-setup/scripts/tests/test-merge-help-csv.py
+#   _bmad/bmb/skills/bmad-builder-setup/scripts/tests/test-cleanup-legacy.py
+#   _bmad/core/bmad-init/scripts/tests/test_bmad_init.py
+
+_bmad/core/skills/bmad-distillator/scripts/tests/test_analyze_sources.py

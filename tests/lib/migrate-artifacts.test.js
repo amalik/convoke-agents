@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it, before, beforeEach, afterEach } = require('node:test');
+const { describe, it, before, after, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { mock } = require('node:test');
 
@@ -16,7 +16,6 @@ const {
   DEFAULT_ARTIFACT_TYPES,
   VALID_DIR_PATTERN,
 } = require('../../scripts/migrate-artifacts');
-const { findProjectRoot } = require('../../scripts/update/lib/utils');
 const { generateManifest, formatManifest } = require('../../scripts/lib/artifact-utils');
 
 // --- parseArgs tests ---
@@ -287,18 +286,75 @@ describe('NFR22 taxonomy error handling', () => {
 // --- Dry-run integration ---
 
 describe('dry-run integration', () => {
-  let projectRoot;
+  // Runs against an ISOLATED FIXTURE, not the live repo (project-context.md
+  // `test-fixture-isolation`). Previously this suite called `findProjectRoot()` and
+  // scanned the real `_bmad-output/` tree — 157 artifact files and up to 50 git-context
+  // queries (the Story 6.2 cap). Runtime therefore scaled with repo growth, and under
+  // full-suite `c8` instrumentation it intermittently blew the 30s budget and failed
+  // `npm run test:coverage` while passing standalone. Backlog I124.
+  //
+  // Raising the timeout would have hidden the coupling; the fixture removes it, so
+  // runtime is constant regardless of how large the real repo gets.
+  const SAMPLES = path.join(__dirname, '..', 'fixtures', 'artifact-samples');
+  let tmpDir;
 
-  before(() => {
-    projectRoot = findProjectRoot();
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-i124-'));
+    await fs.ensureDir(path.join(tmpDir, '_bmad', '_config'));
+    bootstrapTaxonomy(tmpDir);
+
+    // Deal the shared samples across the three scanned dirs. `gyre-artifacts` gets the
+    // gyre-named ones so the include-scoping test below has real rows to assert on.
+    const samples = (await fs.readdir(SAMPLES)).filter((f) => f.endsWith('.md'));
+    const gyre = samples.filter((f) => f.includes('gyre'));
+    const vortex = samples.filter((f) => !gyre.includes(f)).slice(0, 3);
+    const planning = samples.filter((f) => !gyre.includes(f) && !vortex.includes(f));
+
+    for (const [dir, files] of [
+      ['planning-artifacts', planning],
+      ['vortex-artifacts', vortex],
+      ['gyre-artifacts', gyre],
+    ]) {
+      const dest = path.join(tmpDir, '_bmad-output', dir);
+      await fs.ensureDir(dest);
+      for (const f of files) await fs.copy(path.join(SAMPLES, f), path.join(dest, f));
+      // Pin the distribution. The buckets are derived by filename substring, so adding a
+      // sample could silently empty one and leave the multi-dir scoping test asserting on
+      // a single directory while still passing. Code review 2026-08-10.
+      assert.ok(files.length > 0, `fixture bucket '${dir}' is empty — scoping would not be exercised`);
+    }
+
+    // Restore collision coverage. `detectCollisions` + `suggestDifferentiator`
+    // (artifact-utils.js) were exercised only because the live tree happened to contain
+    // colliding names; the curated fixture produced `collisions.size === 0`, and nothing
+    // else in tests/ covers them (the other `detectCollisions` hits are Team Factory's
+    // unrelated function). Code review 2026-08-10.
+    //
+    // The collision is on the RENAME *target*, not the source name: `architecture-gyre.md`
+    // and `arch-gyre.md` both normalise to `planning-artifacts/gyre-arch.md`. Duplicating a
+    // file across directories does NOT collide (different targets), and the annotation loop
+    // only visits `action === 'RENAME'` entries — most samples resolve to AMBIGUOUS.
+    // Must land in the SAME directory as its twin — the rename target is dir-scoped, so a
+    // cross-directory duplicate does not collide. `architecture-gyre.md` sorts into the
+    // gyre bucket (substring match), so its collider goes there too.
+    assert.ok(gyre.includes('architecture-gyre.md'), 'collider twin missing from the gyre bucket');
+    await fs.copy(
+      path.join(SAMPLES, 'architecture-gyre.md'),
+      path.join(tmpDir, '_bmad-output', 'gyre-artifacts', 'arch-gyre.md')
+    );
   });
 
-  // 30-second timeout: real-repo dry-run does up to 50 git-context queries
-  // (Story 6.2 cap), which under load can exceed the default test budget.
-  // NFR2 says < 10s for 200 files; 30s gives 3x headroom for CI flake.
-  // node:test accepts an options object as the second argument to it().
-  it('generateManifest + formatManifest produces non-empty output', { timeout: 30000 }, async () => {
-    const manifest = await generateManifest(projectRoot, {
+  after(async () => {
+    // `tmpDir` is undefined if mkdtemp itself failed; fs.remove(undefined) throws a
+    // path-type error that masks the real cause. Code review 2026-08-10.
+    if (tmpDir) await fs.remove(tmpDir);
+  });
+
+  // 10s bound: the fixture removed the repo-size coupling, but not the hang class —
+  // node:test's default timeout is Infinity, so a blocking git call or slow copy would
+  // hang to the job limit instead of failing fast. Code review 2026-08-10.
+  it('generateManifest + formatManifest produces non-empty output', { timeout: 10000 }, async () => {
+    const manifest = await generateManifest(tmpDir, {
       includeDirs: DEFAULT_INCLUDE_DIRS,
       excludeDirs: ['_archive'],
     });
@@ -308,11 +364,33 @@ describe('dry-run integration', () => {
     assert.ok(manifest.summary.total > 0);
   });
 
-  it('--include with single dir restricts scope', { timeout: 30000 }, async () => {
-    const manifest = await generateManifest(projectRoot, {
+  it('collision detection + differentiator suggestion are exercised', { timeout: 10000 }, async () => {
+    const manifest = await generateManifest(tmpDir, {
+      includeDirs: DEFAULT_INCLUDE_DIRS,
+      excludeDirs: ['_archive'],
+    });
+    const collided = manifest.entries.filter((e) => e.collisionWith && e.collisionWith.length > 0);
+    // Guards the fixture's collider pair, not just the code path: if the naming rules
+    // change so `architecture-gyre.md` and `arch-gyre.md` no longer share a target, this
+    // fails rather than silently reverting to zero collision coverage.
+    assert.ok(
+      collided.length >= 2,
+      `expected the fixture's colliding pair to be annotated; got ${collided.length}`
+    );
+    for (const entry of collided) {
+      assert.equal(entry.action, 'RENAME');
+      assert.ok(entry.collisionWith.length > 0);
+    }
+  });
+
+  it('--include with single dir restricts scope', { timeout: 10000 }, async () => {
+    const manifest = await generateManifest(tmpDir, {
       includeDirs: ['gyre-artifacts'],
       excludeDirs: ['_archive'],
     });
+    // Guard against a vacuous pass: if the fixture ever stops yielding gyre rows,
+    // the per-entry loop below would assert nothing at all.
+    assert.ok(manifest.entries.length > 0, 'fixture produced no gyre-artifacts entries');
     for (const entry of manifest.entries) {
       assert.equal(entry.dir, 'gyre-artifacts');
     }

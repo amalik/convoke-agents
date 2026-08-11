@@ -4,6 +4,7 @@ const { describe, it, before } = require('node:test');
 const assert = require('node:assert/strict');
 
 const path = require('path');
+const { execFileSync } = require('child_process');
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
 
@@ -52,8 +53,16 @@ describe('Skill manifest classification (sp-1-2)', () => {
   let intentIdx;
   let depsIdx;
 
+  let trackedSkillDirs = [];
+
   before(() => {
     const projectRoot = findProjectRoot();
+    // Directories of every tracked skill, used to distinguish "upstream retired it"
+    // from "the manifest row went missing". Round 2.
+    trackedSkillDirs = execFileSync('git', ['ls-files'], { cwd: projectRoot, encoding: 'utf8' })
+      .split('\n')
+      .filter((f) => f.endsWith('/SKILL.md'))
+      .map((f) => path.dirname(f));
     const manifestPath = path.join(projectRoot, '_bmad', '_config', 'skill-manifest.csv');
     const manifest = readManifest(manifestPath);
     header = manifest.header;
@@ -78,15 +87,55 @@ describe('Skill manifest classification (sp-1-2)', () => {
   // regression, which is exactly what happened after the 2026-06-27 BMAD update.
   //
   // So: assert the CLASSIFICATION POLICY on the skills that exist, not the existence
-  // of a roster we do not own. The non-empty guard keeps the test from passing
-  // vacuously if the roster ever goes fully stale.
-  const presentIn = (names) => {
-    const found = names.filter((n) => findRow(n) !== undefined);
-    assert.ok(
-      found.length > 0,
-      `none of [${names.join(', ')}] exist in skill-manifest.csv — roster is fully stale, not merely drifted`
+  // of a roster we do not own.
+  //
+  // `expectedAbsent` pins WHICH roster members are allowed to be missing. Without it a
+  // `found.length > 0` check degrades an N-of-N assertion to 1-of-N: 8 of 9 persona
+  // agents could vanish and the test would still pass on the survivor, silently
+  // asserting policy on one row. That makes roster decay undetectable — the very thing
+  // this helper's comment argues against. Code review 2026-08-10.
+  const presentIn = (names, expectedAbsent = []) => {
+    // A name may only be excused if the skill is genuinely GONE — not merely missing
+    // from the manifest. Round 2 caught `bmad-distillator` listed as an upstream
+    // retirement while 7 of its files were still tracked (including SKILL.md, and the
+    // only Python test CI runs). That turned a real manifest gap into a permanent,
+    // test-enforced exemption — relocating the decay-blindness rather than removing it.
+    const stillOnDisk = expectedAbsent.filter(
+      (n) => trackedSkillDirs.some((d) => d.endsWith(`/${n}`))
     );
+    assert.deepEqual(
+      stillOnDisk,
+      [],
+      `${stillOnDisk.join(', ')} is listed as retired upstream, but its files are still tracked in git. ` +
+        `That is a MANIFEST GAP (skill exists, row missing), not a retirement — add the row to ` +
+        `skill-manifest.csv instead of excusing it here.`
+    );
+
+    const absent = names.filter((n) => findRow(n) === undefined);
+    const unexpected = absent.filter((n) => !expectedAbsent.includes(n));
+    assert.deepEqual(
+      unexpected,
+      [],
+      `roster decay: ${unexpected.join(', ')} disappeared from skill-manifest.csv without being declared ` +
+        `as a known upstream retirement. Either the row was wrongly deleted, or add it to this test's ` +
+        `expectedAbsent list in the same commit that observes the retirement.`
+    );
+    const reappeared = expectedAbsent.filter((n) => findRow(n) !== undefined);
+    assert.deepEqual(
+      reappeared,
+      [],
+      `${reappeared.join(', ')} is listed as retired upstream but is present again — remove it from expectedAbsent.`
+    );
+    const found = names.filter((n) => findRow(n) !== undefined);
+    assert.ok(found.length > 0, `entire roster [${names.join(', ')}] is absent`);
     return found;
+  };
+
+  // Known upstream retirements. Each entry is a claim that a specific skill is gone by
+  // upstream's choice — not that the roster may shrink arbitrarily.
+  const RETIRED = {
+    metaPlatform: ['bmad-init', 'bmad-builder-setup'],
+    personaAgents: ['bmad-agent-sm', 'bmad-agent-quick-flow-solo-dev', 'bmad-agent-qa'],
   };
 
   it('Test 1: every data row has non-empty tier and non-empty intent', () => {
@@ -150,7 +199,7 @@ describe('Skill manifest classification (sp-1-2)', () => {
   });
 
   it('Test 4: every canonical meta-platform skill present is pipeline + meta-platform', () => {
-    for (const name of presentIn(META_PLATFORM_SKILLS)) {
+    for (const name of presentIn(META_PLATFORM_SKILLS, RETIRED.metaPlatform)) {
       const row = findRow(name);
       assert.equal(row[tierIdx], 'pipeline', `${name} tier`);
       assert.equal(row[intentIdx], 'meta-platform', `${name} intent`);
@@ -192,7 +241,7 @@ describe('Skill manifest classification (sp-1-2)', () => {
       'bmad-agent-quick-flow-solo-dev', // retired upstream — consolidated into Amelia
       'bmad-agent-qa', // retired upstream — consolidated into Amelia
     ];
-    for (const name of presentIn(personaAgents)) {
+    for (const name of presentIn(personaAgents, RETIRED.personaAgents)) {
       const row = findRow(name);
       assert.equal(row[tierIdx], 'standalone', `${name} tier`);
       assert.equal(row[depsIdx], '', `${name} deps`);
