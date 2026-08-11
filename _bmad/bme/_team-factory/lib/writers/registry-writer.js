@@ -124,7 +124,17 @@ async function writeRegistryBlock(specData, registryPath, options = {}) {
  * @returns {string} - e.g. "TEST_TEAM"
  */
 function derivePrefix(teamNameKebab) {
-  return (teamNameKebab || '').replace(/^_/, '').replace(/-/g, '_').toUpperCase();
+  return (teamNameKebab || '')
+    .replace(/^_/, '')
+    .replace(/-/g, '_')
+    .toUpperCase()
+    // The result is interpolated directly into `const ${prefix}_AGENTS = [`, i.e. into an
+    // identifier position. Callers are expected to pass a toKebab()'d value, but this
+    // function is reachable with an arbitrary `specData.team_name_kebab`. Constraining to
+    // identifier characters keeps a malformed spec a validation error rather than a
+    // syntax break. (Lower severity than the icon/teamName holes: .toUpperCase() mangles
+    // any payload into non-callable identifiers.) Code review 2026-08-11.
+    .replace(/[^A-Z0-9_]/g, '');
 }
 
 /**
@@ -142,6 +152,17 @@ function buildWorkflowNames(specData) {
 
 /**
  * Escape single quotes in a string for JS string literal output.
+ * @param {string} str
+ * @returns {string}
+ */
+function sanitizeForComment(str) {
+  if (!str) return '';
+  return String(str).replace(/[\r\n\u2028\u2029]+/g, ' ');
+}
+
+/**
+ * Escape a value for embedding inside a single-quoted JS string literal.
+ * Order matters: backslashes first, then quotes, then line terminators.
  * @param {string} str
  * @returns {string}
  */
@@ -192,8 +213,14 @@ function buildModuleBlock(specData, prefix, teamName, workflowNames) {
 
   const lines = [];
 
-  // Section comment (padded to ~72 chars like Gyre)
-  const label = `── ${teamName} Module `;
+  // Section comment (padded to ~72 chars like Gyre).
+  // `teamName` is interpolated into a `//` line comment, so ANY newline in it escapes
+  // the comment and the remainder is executed as source. Verified end-to-end: a team
+  // name containing a newline returned success:true / errors:[] and wrote an executing
+  // payload permanently into agent-registry.js. escapeSingleQuotes is not usable here
+  // (its `\n` output is a string escape, meaningless inside a comment), so newlines are
+  // stripped outright. Code review 2026-08-11.
+  const label = `── ${sanitizeForComment(teamName)} Module `;
   const pad = Math.max(0, 72 - 3 - label.length);
   lines.push(`// ${label}${'─'.repeat(pad)}`);
 
@@ -201,7 +228,14 @@ function buildModuleBlock(specData, prefix, teamName, workflowNames) {
   lines.push(`const ${prefix}_AGENTS = [`);
   for (const agent of agents) {
     lines.push('  {');
-    lines.push(`    id: '${escapeSingleQuotes(agent.id)}', name: '${escapeSingleQuotes(agent.name)}', icon: '${agent.icon}',`);
+    // `icon` MUST go through escapeSingleQuotes like every sibling field. It was the
+    // one raw interpolation in this builder, and it was a remote-code-execution hole:
+    // an icon of `X', zz: require('fs').writeFileSync(...), yy: '` produces syntactically
+    // valid JS, passes validateSyntax with status 0, and is persisted to
+    // agent-registry.js — which is then require()d by refresh-installation, validator,
+    // convoke-doctor, the installer, index.js and migration-runner on every subsequent
+    // operation. Verified by execution, code review 2026-08-11.
+    lines.push(`    id: '${escapeSingleQuotes(agent.id)}', name: '${escapeSingleQuotes(agent.name)}', icon: '${escapeSingleQuotes(agent.icon)}',`);
     lines.push(`    title: '${escapeSingleQuotes(agent.title)}', stream: '${escapeSingleQuotes(agent.stream)}',`);
     lines.push('    persona: {');
     lines.push(`      role: '${escapeSingleQuotes(agent.persona.role)}',`);
@@ -223,7 +257,10 @@ function buildModuleBlock(specData, prefix, teamName, workflowNames) {
   lines.push('');
 
   // Derived lists
-  lines.push(`// Derived lists for ${teamName}`);
+  // Second comment interpolation of teamName — same newline-escape vector as the section
+  // comment above. Missed on the first pass of the 2026-08-11 fix and caught by the new
+  // regression test, which is the argument for writing it.
+  lines.push(`// Derived lists for ${sanitizeForComment(teamName)}`);
   lines.push(`const ${prefix}_AGENT_FILES = ${prefix}_AGENTS.map(a => \`\${a.id}.md\`);`);
   lines.push(`const ${prefix}_AGENT_IDS = ${prefix}_AGENTS.map(a => a.id);`);
   lines.push(`const ${prefix}_WORKFLOW_NAMES = ${prefix}_WORKFLOWS.map(w => w.name);`);
