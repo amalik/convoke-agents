@@ -2,7 +2,7 @@
 
 const fs = require('fs-extra');
 const path = require('path');
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const { toKebab, deriveWorkflowName } = require('../utils/naming-utils');
 
 /** @typedef {import('../types/factory-types')} Types */
@@ -311,6 +311,68 @@ function validateStaged(moduleBlock, prefix, currentContent) {
 }
 
 /**
+ * Run `node -e "require(<file>)"` WITHOUT a shell.
+ *
+ * The previous implementation built a shell command string and interpolated the path,
+ * escaping only backslashes and single quotes. Any path containing `"`, `$` or a backtick
+ * escaped that quoting and was executed by /bin/sh — verified live against HEAD on
+ * 2026-08-11 via `verifyRequire('.../reg.js$(touch marker)')`. `registryPath` is
+ * user-supplied through the `--registry-path` CLI flag, and `validateSyntax`'s path
+ * derives from `TMPDIR`. spawnSync with an argv array removes the shell entirely.
+ *
+ * `path.resolve` is applied to every path: `node -e "require('foo/bar.js')"` without a
+ * leading `./` is a PACKAGE specifier and fails MODULE_NOT_FOUND. For `verifyRequire`
+ * this preserves prior behaviour; for `validateSyntax` it is newly added (the old code
+ * did not resolve, so a relative TMPDIR produced a package specifier).
+ *
+ * Errors carry `stderr` so callers' `err.stderr ? ... : err.message` keep their messages —
+ * spawnSync populates res.stderr even when it sets res.error (ETIMEDOUT, ENOBUFS), but
+ * the error object has no .stderr of its own, unlike execSync's.
+ *
+ * @param {string} filePath
+ */
+function runNodeRequire(filePath) {
+  const absPath = path.resolve(filePath);
+  const res = spawnSync(process.execPath, ['-e', `require(${JSON.stringify(absPath)})`], {
+    timeout: 5000,
+    stdio: 'pipe',
+  });
+  if (res.error) {
+    if (res.stderr && res.stderr.length) res.error.stderr = res.stderr;
+    throw res.error;
+  }
+  // A signal kill (timeout, OOM killer, CI cgroup limit) yields status === null with no
+  // error. Treating null as a non-zero exit would roll back a correctly written file.
+  if (res.status === null) {
+    const err = new Error(`node was killed by signal ${res.signal || 'unknown'}`);
+    if (res.stderr && res.stderr.length) err.stderr = res.stderr;
+    throw err;
+  }
+  if (res.status !== 0) {
+    const err = new Error(`node exited with status ${res.status}`);
+    if (res.stderr && res.stderr.length) err.stderr = res.stderr;
+    throw err;
+  }
+}
+
+/**
+ * Run a `git diff`-family command without a shell; '' when git is unavailable or fails.
+ *
+ * Each call is isolated, so a failure of the `--cached` query no longer discards a
+ * successful unstaged result — under the previous single-try/two-execSync shape, one
+ * failing call sent both to the catch and reported a dirty tree as clean.
+ *
+ * @param {string[]} args
+ * @param {string} cwd
+ * @returns {string}
+ */
+function runGitDiff(args, cwd) {
+  const res = spawnSync('git', args, { cwd, timeout: 5000, stdio: 'pipe' });
+  if (res.error || res.status !== 0 || !res.stdout) return '';
+  return res.stdout.toString().trim();
+}
+
+/**
  * Validate staged block syntax by writing to temp file and require()ing it.
  * @param {string} moduleBlock
  * @param {string} prefix
@@ -323,7 +385,7 @@ async function validateSyntax(moduleBlock, prefix) {
     // Wrap the block in a module so require() can parse it
     const wrapped = `'use strict';\n${moduleBlock}\nmodule.exports = { ${buildExportNames(prefix).join(', ')} };\n`;
     await fs.writeFile(tmpFile, wrapped, 'utf8');
-    execSync(`node -e "require('${tmpFile.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')"`, { timeout: 5000, stdio: 'pipe' });
+    runNodeRequire(tmpFile);
     return null;
   } catch (err) {
     return `Staged block syntax validation failed: ${err.stderr ? err.stderr.toString().trim() : err.message}`;
@@ -340,8 +402,8 @@ async function validateSyntax(moduleBlock, prefix) {
 function checkDirtyTree(registryPath) {
   try {
     const cwd = path.dirname(registryPath);
-    const unstaged = execSync(`git diff --name-only -- "${registryPath}"`, { cwd, timeout: 5000, stdio: 'pipe' }).toString().trim();
-    const staged = execSync(`git diff --cached --name-only -- "${registryPath}"`, { cwd, timeout: 5000, stdio: 'pipe' }).toString().trim();
+    const unstaged = runGitDiff(['diff', '--name-only', '--', registryPath], cwd);
+    const staged = runGitDiff(['diff', '--cached', '--name-only', '--', registryPath], cwd);
     const allDiffs = [unstaged, staged].filter(Boolean).join('\n');
     return { dirty: allDiffs.length > 0, diff: allDiffs };
   } catch {
@@ -392,8 +454,7 @@ function applyInsertions(content, moduleBlock, exportNames) {
  */
 function verifyRequire(registryPath) {
   try {
-    const absPath = path.resolve(registryPath);
-    execSync(`node -e "require('${absPath.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')"`, { timeout: 5000, stdio: 'pipe' });
+    runNodeRequire(registryPath);
     return null;
   } catch (err) {
     return `Post-write require() verification failed: ${err.stderr ? err.stderr.toString().trim() : err.message}`;

@@ -138,7 +138,12 @@ async function appendAgentToBlock(teamNameKebab, newAgentData, registryPath, opt
 function formatAgentEntry(entry) {
   const lines = [];
   lines.push('  {');
-  lines.push(`    id: '${escapeSingleQuotes(entry.id)}', name: '${escapeSingleQuotes(entry.name)}', icon: '${entry.icon}',`);
+  // `icon` must be escaped like its seven siblings on this line. It was raw here even
+  // after the identical hole was fixed in registry-writer.js — the first fix treated a
+  // bug class as a line-level bug. Both writers target the same agent-registry.js, and
+  // this file's verify step is verifyRequire(), which require()s the file, so an injected
+  // payload is detonated by the safety check itself. Code review Round 2, 2026-08-11.
+  lines.push(`    id: '${escapeSingleQuotes(entry.id)}', name: '${escapeSingleQuotes(entry.name)}', icon: '${escapeSingleQuotes(entry.icon)}',`);
   lines.push(`    title: '${escapeSingleQuotes(entry.title)}', stream: '${escapeSingleQuotes(entry.stream)}',`);
   lines.push('    persona: {');
   lines.push(`      role: '${escapeSingleQuotes(entry.persona.role)}',`);
