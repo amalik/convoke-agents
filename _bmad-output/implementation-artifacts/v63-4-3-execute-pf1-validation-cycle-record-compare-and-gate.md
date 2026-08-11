@@ -19,6 +19,18 @@ Status: in-progress
 > **State correction:** Tasks 3–5 shipped 2026-05-31, *after* the resumption snapshot was written, but that snapshot still marked them pending. **Remaining work is Tasks 6, 7, 8.** The 4 baselines and 4 post-migration recordings Task 6 consumes are on disk and still valid — none of the 4 recorded agents' source has changed since (latest edit 2026-05-03). See the refreshed [resumption snapshot](v63-4-3-resumption-snapshot.md).
 >
 > **Before starting Task 6:** export `ANTHROPIC_API_KEY` — it was **not set** in the pre-flight shell, and the battery requires it.
+>
+> ### ⚖️ Operator ruling on execution precondition (a) — 2026-08-11 (Amalik)
+>
+> **Precondition (a) gates the RELEASE, not this story. Task 0.5 must NOT halt on it.**
+>
+> The spec requires *"~all 28 v6.3 stories shipped"*; the project is at **23/29**. Ruling: proceed with Tasks 6-8.
+>
+> **Rationale.** Task 6 compares recordings that are already on disk against a 4.0 candidate that has already been migrated — it does not require the remaining stories to exist. The story-count wording was a proxy written when `package.json` was still `3.3.0`; what it was actually protecting against (running PF1 with no 4.0 candidate to validate) is now satisfied on its own merits via precondition (b): `package.json` is `4.0.0-rc.1` and the `3.3.x-to-4.0.0.js` migration is applied. Discovering parity breakage now is materially cheaper than discovering it after six more stories land on top of it.
+>
+> **Binding condition — the verdict is PROVISIONAL.** The release record authored in Task 7 must state explicitly that the PF1 verdict was produced against a **23/29** baseline, and that it requires **re-confirmation if any remaining v6.3 story alters agent activation sequences, persona surface, menu codes, or output format** (i.e. any of the 5 MO7 regression classes). Re-confirmation is cheap — the recordings persist, so only Task 6 repeats.
+>
+> **Not a spec amendment.** The precondition text is left as written; this is an operator override recorded at the point of execution. Rewording (a) to state what it actually needs was considered and deliberately declined, to avoid a mid-flight spec edit.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
