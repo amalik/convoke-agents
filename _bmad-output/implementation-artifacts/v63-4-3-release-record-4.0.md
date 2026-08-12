@@ -6,8 +6,8 @@ m9_pf1_gate: WAIVED-PARTIAL-SCOPE
 m6_threshold_T: 4.0
 pf1_battery_results_path: null
 recording_method: 'D2-A scripted (`pf1-record-agent.js`, Prompt 1 only) — D2-B operator fill-in for Prompts 2-4 NOT performed'
-created: '2026-08-11'
-signoff_by: '<UNSIGNED — DRAFT FOR OPERATOR REVIEW>'
+created: '2026-08-12'
+signoff_by: 'Amalik (2026-08-12) — waiver accepted in-session; release claim confirmed scoped to activation-level equivalence'
 baseline_commit: 90bf3115
 post_migration_commit: e8676ffe
 schema_version: 1
@@ -15,19 +15,18 @@ schema_version: 1
 
 # Release Record — Convoke 4.0.0 · PF1 Behavioural-Equivalence Gate
 
-> ## ⚠️ DRAFT — NOT SIGNED, NOT A VERDICT
+> ## ✅ SIGNED — WAIVER ACCEPTED 2026-08-12
 >
-> This is a **shape-of-it draft** so the operator can see what a waiver reads like before
-> committing to one. **The battery has NOT been run.** No API calls have been made and no
-> judge verdict exists. `m9_pf1_gate: WAIVED-PARTIAL-SCOPE` is a *proposal*, not a result.
+> **The battery was NOT run.** No API calls were made; no judge verdict exists. This record
+> documents a deliberate operator waiver of the M9 gate at partial scope — it is not, and
+> must never be cited as, a PASS.
 >
-> Do not sign this, and do not treat it as evidence, unless the decision below is actually
-> taken. If instead the recordings get completed, **delete this file** and let Task 7
+> If the recordings are completed later, this record is superseded: delete it and let Task 7
 > author a real record from real battery output.
 
 ## M9 — PF1 gate verdict
 
-**Proposed: WAIVED at partial scope.** Not PASS. Not FAIL. The gate was not executed at
+**Decision (2026-08-12): WAIVED at partial scope.** Not PASS. Not FAIL. The gate was not executed at
 its designed strength, and this record says so rather than reporting a number.
 
 ### Why the battery was not run
@@ -133,14 +132,25 @@ decision that was taken.
 
 ## Operator sign-off
 
-**UNSIGNED.** Per Task 7.4's anti-pattern guard, this record must not be signed while the
-gate verdict is anything other than a genuine PASS from a completed run — and this is a
-waiver, not a verdict.
+**SIGNED 2026-08-12 by Amalik.** Task 7.4's anti-pattern guard forbids signing off an
+INVESTIGATE or FAIL verdict as though it were a pass. That guard is honoured here: this is
+explicitly **not** a verdict and **not** a PASS. It is a recorded decision to ship without
+the gate, with the accepted risk enumerated above.
 
 Signing this means accepting, on the record, that Convoke 4.0 ships without behavioural-
 equivalence evidence for capability invocation and multi-step workflows.
 
 ```
-Waived by: ____________________  on ____________
-Release claim confirmed scoped to activation-level equivalence: [ ] yes
+Waived by: Amalik                on 2026-08-12
+Release claim confirmed scoped to activation-level equivalence: [x] yes
 ```
+
+**What this signature accepts.** Convoke 4.0 ships without behavioural-equivalence evidence
+for capability invocation (MO7 ③/④) and multi-step workflow entry. The release claim is
+scoped to *activation-level* equivalence — "agents activate correctly after migration" —
+and must not be stated as "agents behave identically after migration" in the CHANGELOG,
+announcement, or migration guide.
+
+**Downstream obligation (Story 5B.1).** The CHANGELOG author must verify its equivalence
+wording against this scope before release. This is the one place the waiver can leak into a
+claim it does not support.
