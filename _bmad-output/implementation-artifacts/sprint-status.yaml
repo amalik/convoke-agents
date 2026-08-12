@@ -667,7 +667,7 @@ development_status:
   v63-4-1-create-pf1-judge-prompt-and-calibration-test: done
   v63-4-2-create-pf1-validation-battery-harness: done
   v63-4-2b-version-bump-and-test-surface-updates-for-4-0-rc-candidate: done
-  v63-4-3-execute-pf1-validation-cycle-record-compare-and-gate: in-progress
+  v63-4-3-execute-pf1-validation-cycle-record-compare-and-gate: review
   v63-4-4-create-drift-snapshot-workflow: done
   v63-4-5-n-1-external-user-validation-sprint-5: ready-for-dev
   v63-epic-4-retrospective: optional
