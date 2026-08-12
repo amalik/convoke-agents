@@ -9,7 +9,7 @@ epic: v63-epic-4
 
 # Story 4.3: Execute PF1 validation cycle (record + compare + gate)
 
-Status: in-progress
+Status: review (closed under operator waiver — Tasks 3/5/6 waived, NOT completed; see Change Log 2026-08-12)
 
 > **Staleness pre-flight run 2026-08-10 — verdict 🟡 YELLOW; story is resumable at Task 6.** Two corrections applied to this spec, per `project-context.md` rule `staleness-preflight-for-backlog-pickup`:
 >
@@ -212,16 +212,16 @@ The original PF1 spec listed 5 agents (1 Vortex Emma + 4 BMAD: John PM + Winston
 ## Tasks / Subtasks
 
 - [ ] **Task 0: Pre-flight gates + execution-precondition check (CM-7).**
-  - [ ] 0.1 Confirm Story 4.1 + 4.2 status `done` in sprint-status.yaml + their gates green (`npm test 2>&1 | tail -5` shows `tests 1468 / pass 1467 / skip 1 / fail 0`).
-  - [ ] 0.2 Verify Story 4.2 battery script importable: 14 exports per Story 4.2 R1+R2 close.
-  - [ ] 0.3 Verify clean slate: `ls _bmad-output/pf1-baselines/ _bmad-output/pf1-post-migration/ _bmad-output/implementation-artifacts/v63-4-3-* 2>/dev/null` — all absent except this story file.
-  - [ ] 0.4 Verify v3.3.0 tag exists: `git rev-parse v3.3.0 2>&1` returns sha. If error, surface — DS3 inversion (use last 3.x commit).
-  - [ ] 0.5 **EXECUTION PRECONDITION CHECK (CM-7):** verify all of:
+  - [x] 0.1 ✅ 2026-08-12 (both `done`) Confirm Story 4.1 + 4.2 status `done` in sprint-status.yaml + their gates green (`npm test 2>&1 | tail -5` shows `tests 1468 / pass 1467 / skip 1 / fail 0`).
+  - [x] 0.2 ✅ 2026-08-12 (exactly 14 exports) Verify Story 4.2 battery script importable: 14 exports per Story 4.2 R1+R2 close.
+  - [ ] 0.3 ❌ **N/A on resumption** — clean-slate gate is unsatisfiable once Tasks 3/5 have produced artifacts; not a failure. Verify clean slate: `ls _bmad-output/pf1-baselines/ _bmad-output/pf1-post-migration/ _bmad-output/implementation-artifacts/v63-4-3-* 2>/dev/null` — all absent except this story file.
+  - [x] 0.4 ✅ 2026-08-12 (`90bf3115`) Verify v3.3.0 tag exists: `git rev-parse v3.3.0 2>&1` returns sha. If error, surface — DS3 inversion (use last 3.x commit).
+  - [x] 0.5 ✅ 2026-08-12 — **(a) passes as operationally defined** (Epics 1A/2/3 `done`; 4.1/4.2/4.4 `done`; 4.5 checked); (b) `4.0.0-rc.1`; (c) migration present. **EXECUTION PRECONDITION CHECK (CM-7):** verify all of:
     - (a) v6.3 implementation work complete: `grep "v63-epic-1a:\|v63-epic-2:\|v63-epic-3:" _bmad-output/implementation-artifacts/sprint-status.yaml` should show all `done`. Plus Epic 4 stories 4.1 + 4.2 done; 4.4 + 4.5 status checked.
     - (b) `package.json` version is 4.0 candidate: `grep '"version":' package.json` should show `4.0.0` or `4.0.0-rc.X`.
     - (c) `scripts/update/migrations/3.3.x-to-4.0.0.js` exists: `ls scripts/update/migrations/3.3.x-to-4.0.0.js` returns the path.
     - **If ANY (a)/(b)/(c) fail:** HALT dev-story with explicit operator message: "Story 4.3 is a release-time activity. Preconditions not met: <list>. Resume Story 4.3 dev-story when v6.3 implementation complete + 4.0 candidate exists. Spec stays ready-for-dev."
-  - [ ] 0.6 Confirm `ANTHROPIC_API_KEY` env availability for Task 6 (battery run). NOT required for Tasks 1-5; only Task 6+. If unset at Task 6, HALT.
+  - [ ] 0.6 ⏸️ **MOOT — battery waived**, no API call made. Confirm `ANTHROPIC_API_KEY` env availability for Task 6 (battery run). NOT required for Tasks 1-5; only Task 6+. If unset at Task 6, HALT.
 
 - [x] **Task 1: DEF-SPIKE — FM4-2 CLI scriptability (DS1; PI-11 inversion handling; 30-min time-box).** ✅ shipped 2026-04-28
   - [x] 1.1 **DS1: FM4-2 spike with corrected CLI flag (CM-1 fix).** Spike refined the CLI form: working invocation is `claude -p --max-turns N "/<skill>"` (slash-command-as-prompt-arg). Stdin-pipe form `echo "/<skill>" \| claude -p "..."` FAILS with `Error: Reached max turns`. CM-1 refinement documented in spike result. Time taken: ~10 min (under 30-min cap). Outcome: **PASS** → Decision 2 path **D2-A**.
@@ -244,7 +244,7 @@ The original PF1 spec listed 5 agents (1 Vortex Emma + 4 BMAD: John PM + Winston
       Must print `{ 'Prompt 1': '...', 'Prompt 2': '...', 'Prompt 3': '...', 'Prompt 4': '...' }`. If errors, fix headers/sections before proceeding.
   - [x] 2.2 Per-protocol inclusion: provenance-comment template + section-header template + parser-validity check command + correct-vs-incorrect header examples. ✅ all included in shipped artifact.
 
-- [ ] **Task 3: Capture 4 baseline recordings from 3.x state (HALT for operator action).** (Path B+ scope — Decision 4 addendum, was 5 agents)
+- [ ] ⏸️ **WAIVED 2026-08-12 (operator decision — see Change Log; waived ≠ done, checkbox deliberately left unchecked)** **Task 3: Capture 4 baseline recordings from 3.x state (HALT for operator action).** (Path B+ scope — Decision 4 addendum, was 5 agents)
   - [ ] 3.1 Operator runs Decision 3 sandbox setup. **Preferred (worktree per OS-1):** `git worktree add ../convoke-3x v3.3.0` → `cd ../convoke-3x` (separate dir; current 4.0 stays intact). **Fallback (stash):** `git stash` → `git checkout v3.3.0`.
   - [ ] 3.2 Operator captures recordings per Task 2 protocol. **4 agents (Path B+):**
     - Emma → `_bmad-output/pf1-baselines/bmad-agent-bme-contextualization-expert-baseline.md`
@@ -261,14 +261,14 @@ The original PF1 spec listed 5 agents (1 Vortex Emma + 4 BMAD: John PM + Winston
   - [ ] 4.2 Operator verifies 4.0 install functional: `node scripts/update/convoke-version.js` should print `4.0.0` or `4.0.0-rc.X`. If broken, BLOCKING for Story 4.3 ship — surface to operator. **CM-2 fix:** the actual migration is delivered by `scripts/update/migrations/3.3.x-to-4.0.0.js` (per arch + Story 1A.4); `scripts/update/convoke-update.js` is the runner CLI but doesn't accept `--apply` flag (verified empirically: runs unconditionally + reports current version).
   - [ ] 4.3 Operator records `post_migration_commit: <sha>` for release record.
 
-- [ ] **Task 5: Capture 4 post-migration recordings from 4.0 state (HALT for operator action).** (Path B+ scope — Decision 4 addendum, was 5 agents)
+- [ ] ⏸️ **WAIVED 2026-08-12 (operator decision — see Change Log; waived ≠ done, checkbox deliberately left unchecked)** **Task 5: Capture 4 post-migration recordings from 4.0 state (HALT for operator action).** (Path B+ scope — Decision 4 addendum, was 5 agents)
   - [ ] 5.1 Same protocol as Task 3 but writing to `_bmad-output/pf1-post-migration/{skill}-post.md` files (4 agents per Path B+).
   - [ ] 5.2 Provenance: `<!-- Source: <skill> post-migration captured <YYYY-MM-DD HH:MM> from convoke 4.0 (commit <sha>) -->`.
   - [ ] 5.3 **CRITICAL:** same 4-prompt sequence per agent (must match baseline prompts EXACTLY for valid pre/post comparison; per arch:355).
   - [ ] 5.4 Operator validates files via parser pre-validation command.
   - [ ] 5.5 **HALT for operator** — same as Task 3.
 
-- [ ] **Task 6: Run battery harness (Story 4.2's script).**
+- [ ] ⏸️ **WAIVED 2026-08-12 (operator decision — see Change Log; waived ≠ done, checkbox deliberately left unchecked)** **Task 6: Run battery harness (Story 4.2's script).**
   - [ ] 6.1 Operator confirms `ANTHROPIC_API_KEY` set: `[ -n "$ANTHROPIC_API_KEY" ]`. If not, HALT.
   - [ ] 6.2 Operator runs `--dry-run` for structural validation: `node scripts/audit/pf1-validation-battery.js --dry-run 2>&1 | tee /tmp/dry-run-out.log`. **CM-4 fix (Story 4.2 surface bug workaround):** dry-run currently exits 0 silently on missing recordings. Operator MUST grep for error: `grep -E "^Error:" /tmp/dry-run-out.log` — if matches found, recordings malformed; fix Tasks 3 or 5 before proceeding. If no `Error:` lines, dry-run rendered all 20 prompt-pairs (~600 lines stdout); proceed to live run.
   - [ ] 6.3 Operator runs live battery with timestamped results: `PF1_BATTERY_RESULTS_PATH=_bmad-output/implementation-artifacts/v63-4-3-battery-results-$(date +%Y-%m-%d).md node scripts/audit/pf1-validation-battery.js --verbose 2>&1 | tee _bmad-output/implementation-artifacts/v63-4-3-battery-stdout-$(date +%Y-%m-%d).log`. Expected wall-clock: 5-10 min (per Story 4.2 PR3).
@@ -279,16 +279,16 @@ The original PF1 spec listed 5 agents (1 Vortex Emma + 4 BMAD: John PM + Winston
     - **Exit 3-5 / 99 (errors):** per Story 4.2 exit-code reference table; HALT + triage.
 
 - [ ] **Task 7: Author release record `v63-4-3-release-record-4.0.md` (~15 min).**
-  - [ ] 7.1 Create file at `_bmad-output/implementation-artifacts/v63-4-3-release-record-4.0.md` per Decision 4.
-  - [ ] 7.2 Frontmatter: copy gate verdict from battery results + fill all 9 keys (or 11 with optional commit-sha provenance).
-  - [ ] 7.3 Body sections per AC5 + Decision 4: M9 verdict, M6 T=4.0, per-agent summary table, recording-method narrative, ship recommendation, operator sign-off.
-  - [ ] 7.4 Operator signs off: replaces `Signed off by: <name> on <date>` with actual values. **Anti-pattern guard:** do NOT sign off if gate verdict is INVESTIGATE or FAIL without root-cause-fix-and-re-run completed.
+  - [x] 7.1 ✅ 2026-08-12 Create file at `_bmad-output/implementation-artifacts/v63-4-3-release-record-4.0.md` per Decision 4.
+  - [x] 7.2 ✅ 2026-08-12 (11/11 keys) Frontmatter: copy gate verdict from battery results + fill all 9 keys (or 11 with optional commit-sha provenance).
+  - [x] 7.3 ✅ 2026-08-12 Body sections per AC5 + Decision 4: M9 verdict, M6 T=4.0, per-agent summary table, recording-method narrative, ship recommendation, operator sign-off.
+  - [x] 7.4 ✅ 2026-08-12 (waiver, not a PASS) Operator signs off: replaces `Signed off by: <name> on <date>` with actual values. **Anti-pattern guard:** do NOT sign off if gate verdict is INVESTIGATE or FAIL without root-cause-fix-and-re-run completed.
 
 - [ ] **Task 8: Validation gates (AC6).**
-  - [ ] 8.1 `set -o pipefail; npm test 2>&1 | tail -5; echo "EXIT: ${PIPESTATUS[0]}"` — baseline unchanged from current state (verification-pipefail rule).
-  - [ ] 8.2 `set -o pipefail; npm run test:integration 2>&1 | tail -5; echo "EXIT: ${PIPESTATUS[0]}"` — baseline unchanged.
-  - [ ] 8.3 `npm run lint` — clean (lint-1-1 + I104 `--max-warnings 0` active).
-  - [ ] 8.4 `git diff HEAD --stat` — confirms AC7 scope.
+  - [x] 8.1 ✅ 2026-08-12 (1511/0) `set -o pipefail; npm test 2>&1 | tail -5; echo "EXIT: ${PIPESTATUS[0]}"` — baseline unchanged from current state (verification-pipefail rule).
+  - [x] 8.2 ✅ 2026-08-12 (exit 0) `set -o pipefail; npm run test:integration 2>&1 | tail -5; echo "EXIT: ${PIPESTATUS[0]}"` — baseline unchanged.
+  - [x] 8.3 ✅ 2026-08-12 (exit 0) `npm run lint` — clean (lint-1-1 + I104 `--max-warnings 0` active).
+  - [x] 8.4 ✅ 2026-08-12 (scope = release record only) `git diff HEAD --stat` — confirms AC7 scope.
   - [ ] **8.5 (Path B+ addition — Decision 4 addendum):** `node scripts/audit/install-scope-check.js` — PASS expected. This is the mechanical control validation that replaces the original 4-BMAD-agent LLM-judged control. Output: "✓ PASS — all 4 tracked files match snapshot + no scope violations." Exit code 0. If FAIL or snapshot mismatch surfaces, HALT and operator-reviews the new write site(s) before continuing.
 
 ## Dev Notes
@@ -330,10 +330,28 @@ The original PF1 spec listed 5 agents (1 Vortex Emma + 4 BMAD: John PM + Winston
 
 ## Change Log
 
+- **2026-08-12 — M9 PF1 gate WAIVED at partial scope by operator decision; Story 4.3 closes without running the battery.** Resumed via `/bmad-dev-story` (Amelia) after Winston's staleness pre-flight. Task 0 pre-flight re-run: 0.1 ✅ (4.1 + 4.2 `done`), 0.2 ✅ (battery exports exactly 14), 0.3 ❌ *expected* (clean-slate gate is unsatisfiable on resumption), 0.4 ✅ (`v3.3.0` = `90bf3115`), 0.5(a) ✅ **passes as operationally defined** (Epics 1A/2/3 all `done`; 4.1/4.2 `done`; 4.4 `done`; 4.5 status checked) — the "23/29 stories" shortfall is Epic **1B**, deliberately deferred to 4.0.1 under Path A, so the operator override obtained beforehand was belt-and-braces rather than necessary; 0.5(b) ✅ `4.0.0-rc.1`; 0.5(c) ✅ migration present. **Blocking discovery at Task 6 input-verification: the recordings are 25% complete.** All 8 files carry the literal placeholder `_(D2-B operator fill-in required — see recording-protocol.md §6.1 for manual workflow)_` for Prompts 2, 3 and 4 — byte-identical between baseline and post. Running the battery would have scored **24 of 32 judged pairs** as perfect equivalence on content never recorded, producing a **fabricated PASS on a release-blocking gate**. This is the tooling behaving as designed (`pf1-record-agent.js:168` documents the v0 Prompt-1-only limitation) and Decision 4 priced the manual half at ~2-3 hr/phase — that work was simply never performed. Structural checks all passed (8/8 parse 4/4 keys, provenance present, baseline↔post prompt sequences identical), which is exactly why this was found by reading content rather than by validation. **Operator chose to waive** rather than spend the ~6 hr or modify the shipped battery. Release record authored + signed: `v63-4-3-release-record-4.0.md`, `m9_pf1_gate: WAIVED-PARTIAL-SCOPE`, scope confirmed as activation-level equivalence, residual risk mapped to MO7 classes (③ and ④ uncovered). **Tasks 3, 5 and 6 remain UNCHECKED by design — waived is not done.** Gates green: `npm test` 1511/0, `test:integration` 0, `lint` 0.
 - 2026-04-26 — Story 4.3 created via `/bmad-create-story v63-4-3`. 7 ACs + 5 Decisions + 9 Tasks + 7 PR risks. Operator-execution-heavy procedural story.
 - 2026-04-26 — V-pass batch-applied **29 improvements** (7 critical + 10 enhancement + 5 optimization + 7 LLM-opt) via spec-rewrite. **Empirical probes 8/10 caught spec defects (highest-ROI V-pass to date)**: CM-1 `claude -p` is real flag (NOT `--skill`/`--no-interactive`); CM-2 `convoke-update.js --apply` flag doesn't exist + project IS at 3.3.0; CM-3 wrong Carson skill name; CM-4 battery `--dry-run` silently exits 0 on missing recordings (Story 4.2 surface bug — V-pass caught defect in just-shipped Story 4.2; routed to deferred-work `D-V42-R3-1` per Q2=A); CM-5 frontmatter count mismatch (8 vs 9); CM-6 descriptive-header recordings BREAK Story 4.2 parser; CM-7 Decision 3 sandbox INVERTED (project at 3.3.0; no 4.0 WIP yet — Story 4.3 is release-time activity per Q1=A: Task 0.5 precondition HALTs dev-story until 4.0 candidate exists). Plus enhancements: PI-11 inversion handlers; baseline-staleness ≤7-day bound; INVESTIGATE-blocks-ship per arch:367; commit-sha provenance in release record; HEADER FORMAT CONTRACT explicit; cross-reference release record vs convoke-announcement-4.0-draft.md; AC7 escape hatch for upstream-Story-4.1+4.2 defect surfacing. Optimizations: git worktree preferred over stash; per-task timestamping; pre-emptive validation helper. LLM-opt: Decision rationales consolidated; PR table-form; anti-patterns trimmed to top 5. **Final spec:** 7 ACs + 5 Decisions + 9 Tasks (Task 0 with new 0.5 precondition check) + 7 PR risks. Story remains ready-for-dev per Q1=A (operator-blocking-flag in Task 0.5; spec authored now, executed at release time). **V-pass ROI:** prevented 4 foundational story-killers (CM-1, CM-2, CM-3, CM-7) + 3 silent-failure defects (CM-4, CM-5, CM-6) — would have wasted 4-8hr operator time on D2-B fallback for wrong reason + corrupted recordings rejected by parser + invalid migration approach.
 
 ## Dev Agent Record
+
+### Completion Notes
+
+**2026-08-12 — Story closes under an operator waiver, NOT by task completion.**
+
+*Definition-of-Done deviation, stated plainly:* dev-story Step 9 requires every task marked `[x]`. **Tasks 3, 5 and 6 are not, and must not be.** They were waived by operator decision, and waived is not done — ticking them would misrepresent the evidence base of a release gate. This story therefore does **not** satisfy the standard DoD; it completes because the operator formally accepted shipping without the gate.
+
+*What was actually verified this session (all of it re-derived, none assumed):*
+- Recordings **structurally valid**: 8/8 parse to 4/4 keys via Story 4.2's `parseRecording`; provenance comments present with timestamps and commits (`90bf3115` baseline, `e8676ffe` post); baseline↔post prompt sequences match exactly.
+- Recordings **semantically 25% complete**: Prompt 1 real (933-1692 chars); Prompts 2-4 identical 87-byte placeholders in every file, both phases.
+- Battery cannot be scoped to Prompt 1 without editing shipped Story 4.2 code — `PF1_PROMPTS` is a fixed 4-element constant (`:72`) and `parseRecording` throws exit-5 unless it sees exactly 4 headers (`:106`). Only `--dry-run` and `--verbose` exist. That path was declined as scope creep into a `done` story.
+
+*Why no battery run:* 24 of 32 judged pairs would have compared a placeholder to itself. A fabricated PASS on the M9 release gate is worse than an honest waiver.
+
+*Carried obligation:* Story **5B.1** (CHANGELOG) must verify its equivalence wording against the waiver's scope — "agents activate correctly after migration" is supported; "agents behave identically" is not. That is the one place this waiver can leak into a claim it does not support.
+
+*Reversible:* if the ~6 hr D2-B fill-in is ever done, delete `v63-4-3-release-record-4.0.md` and let Task 7 author a real record from real battery output.
 
 ### Implementation Plan
 
