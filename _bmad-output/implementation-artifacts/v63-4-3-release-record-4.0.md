@@ -2,14 +2,16 @@
 initiative: convoke
 artifact_type: release-record
 release_target: 4.0.0
-m9_pf1_gate: NOT-RUN
-m9_gate_disposition: WAIVED-PARTIAL-SCOPE
+m9_pf1_gate: RETIRED
+m9_gate_disposition: 'Retired 2026-08-13 by ADR-001; replaced by agent-surface parity (PASS)'
+surface_parity_gate: PASS
+surface_parity_command: 'node scripts/audit/agent-surface-parity.js v3.3.0 HEAD'
 m6_threshold_T: 4.0
 pf1_battery_results_path: 'NONE — battery not executed; no results artifact exists'
 recording_method: manual
 recording_method_detail: 'D2-A scripted (`pf1-record-agent.js`) captured Prompt 1 only; the D2-B operator fill-in for Prompts 2-4 was never performed, so the corpus is 25% complete'
 created: '2026-08-13'
-signoff_by: 'UNSIGNED — pending operator decision (see §Decision required)'
+signoff_by: 'Amalik (2026-08-13) — M9 retired via ADR-001; release evidence is agent-surface parity, not behavioural equivalence'
 baseline_commit: 90bf3115
 post_migration_commit: e8676ffe
 provisional: true
@@ -20,11 +22,20 @@ schema_version: 1
 
 # Release Record — Convoke 4.0.0 · PF1 Behavioural-Equivalence Gate
 
-> ## ⚠️ UNSIGNED — the gate was NOT run, and the captured evidence cannot substitute for it
+> ## ✅ M9 RETIRED — release evidence is deterministic surface parity, not behavioural equivalence
 >
-> **No API call was ever made. No judge verdict exists.** This record states what is and is
-> not known. It must never be cited as a PASS, and — unlike its withdrawn v1 — it makes **no
-> claim of equivalence at any scope**.
+> **The PF1 battery was never run and never will be for 4.0.** M9 was retired on 2026-08-13 by
+> [ADR-001](../planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md) because the instrument
+> could not separate signal from noise — a control agent with byte-identical source produced
+> differing recordings.
+>
+> **Replacement evidence, verified:**
+> ```
+> $ node scripts/audit/agent-surface-parity.js v3.3.0 HEAD
+> ✓ PASS — 12 agents, menu codes and config-load preserved.   [exit 0]
+> ```
+> This proves the operator-facing **contract** is intact. It does **not** prove behavioural
+> equivalence, and Convoke 4.0 makes no such claim.
 
 ## Withdrawal of v1 (2026-08-13)
 
@@ -45,10 +56,11 @@ wrong, plainly:
 
 ## M9 — PF1 gate verdict
 
-**NOT RUN.** Not PASS, not FAIL, not INVESTIGATE. `m9_pf1_gate: NOT-RUN` is deliberately
-*outside* the `PASS|INVESTIGATE|FAIL` enum so that no consumer string-matching for a verdict
-can mistake this for one. The operator disposition is carried separately in
-`m9_gate_disposition`.
+**RETIRED — never run, and no longer required.** `m9_pf1_gate: RETIRED` is deliberately
+*outside* the `PASS|INVESTIGATE|FAIL` enum so no consumer string-matching for a verdict can
+mistake it for one. The release gate is now `surface_parity_gate: PASS`, carried as its own key.
+Story 4.5 and Story 5B.3 were amended to read the new key; as written they required
+`m9_pf1_gate: PASS`, which would have blocked the release permanently.
 
 ### Why the battery was not run
 
@@ -199,9 +211,12 @@ required.
 means repeat captures per phase are also needed to separate agent variance from migration
 effect. Without that, more prompts yield more unattributable differences.
 
-## Decision required
+## Decision taken (2026-08-13)
 
-This record is **unsigned**. v1 was signed, and review found that signing a
+**M9 retired via ADR-001, accepted by Amalik.** The options below were the choice; the first
+was declined, the third was taken. Retained so the reasoning stays legible.
+
+This record was **unsigned** until that decision. v1 was signed, and review found that signing a
 "waived" verdict evaded Task 7.4's guard rather than honouring it: AC4 defines the verdict
 domain exhaustively as `PASS|INVESTIGATE|FAIL`, EO-8 explicitly abolished operator-discretionary
 "ship-with-caveats", and INVESTIGATE — a *measured* adverse outcome — is barred from sign-off.
@@ -215,5 +230,10 @@ The operator's options, without a recommendation embedded in the artifact:
   it story-side — which is where a decision of this weight belongs.
 
 ```
-Decision: ____________________  by: ____________  on: ____________
+Decision: RETIRE M9 (ADR-001)   by: Amalik   on: 2026-08-13
 ```
+
+**What this signature accepts.** Convoke 4.0 ships with **contract parity verified** (12 agents,
+menu codes, config-load) and **no behavioural-equivalence claim**. Persona voice, output
+formatting and multi-step workflow behaviour are not gated — and were never actually gated, only
+claimed. User-facing copy was corrected on 2026-08-13 to match.
