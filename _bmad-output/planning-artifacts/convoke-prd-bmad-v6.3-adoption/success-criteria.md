@@ -52,7 +52,7 @@ Technical success requires all four workstreams to meet their individual complet
 | M6 | Architecture doc defines drift threshold T as a numeric value | New (G2) | Numeric literal present in NFR section |
 | M7 | IR gate run successfully against architecture doc before any epic implementation story starts (Sprint 1 experiments exempted) | New (G3) | Sprint 0 artifact records IR gate pass; dev story start dates all ≥ IR gate date |
 | M8 | Architecture doc delivered within budget — IR gate pass date ≤ CA start date + N days | OP-3 trip-wire | Date comparison; N defined in release plan |
-| M9 | PF1 validation battery PASSED (100% of inputs within drift threshold T; battery size per architecture NFR) | PF1 + M6 | Test record in release artifact; blocked on M6 |
+| ~~M9~~ **SUPERSEDED** | ~~PF1 validation battery PASSED~~ → **replaced by agent-surface parity PASS** (all agents present, menu codes preserved, config-load intact; `scripts/audit/agent-surface-parity.js`). Retired 2026-08-13 by [ADR-001](../adr/v63/adr-001-retire-m9-pf1-gate.md) — the PF1 instrument's noise exceeded its signal (control agent with unchanged source produced differing recordings). **No behavioural-equivalence claim is made for 4.0.** | parity check | `agent-surface-parity.js` exit 0, cited in release record |
 | M10 | 4/4 workstreams shipped OR deferral ≤1 with rationale+follow-up issue+owner+date | WS1–WS4 | CHANGELOG + backlog state |
 | M11 | Every deferred workstream has a corresponding backlog issue tagged `deferred-from-v4.0` with status `Backlog` | PR3-9 | Backlog query |
 | M12a | Marketplace PR open with complete registry metadata; passes PluginResolver validation | WS2 (ship-blocking) | GitHub PR link + validation log |
