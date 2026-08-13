@@ -366,10 +366,54 @@ function runNodeRequire(filePath) {
  * @param {string} cwd
  * @returns {string}
  */
+// Inherited git env must be neutralised everywhere. From a git hook, husky, or `rebase -x`,
+// GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE point at the OUTER repo and silently override `cwd`.
+function gitEnv() {
+  return { ...process.env, GIT_DIR: undefined, GIT_WORK_TREE: undefined, GIT_INDEX_FILE: undefined };
+}
+
+/**
+ * Is `cwd` inside a git work tree?
+ *
+ * This is the discriminator that lets the guard fail OPEN for the supported "not a git project"
+ * case while failing CLOSED on every real failure. Exit status alone cannot separate them —
+ * `git diff` outside a repo and `git diff --bogus` inside one BOTH exit 129 — and stderr text is
+ * locale- and version-dependent. `rev-parse --is-inside-work-tree` answers canonically and prints
+ * a non-localised `true`/`false`.
+ *
+ * @returns {boolean|null} true/false, or null when git itself could not be run (spawn error,
+ *   timeout) — which is NOT the same as "no repo" and must fail closed.
+ */
+function isInsideWorkTree(cwd) {
+  const res = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], {
+    cwd,
+    timeout: 5000,
+    stdio: 'pipe',
+    env: gitEnv(),
+  });
+  if (res.error) return null; // git missing / timed out — unknown, not "no repo"
+  if (res.status !== 0) return false; // git ran and said: not a work tree
+  return res.stdout.toString().trim() === 'true';
+}
+
 function runGitDiff(args, cwd) {
-  const res = spawnSync('git', args, { cwd, timeout: 5000, stdio: 'pipe' });
-  if (res.error || res.status !== 0 || !res.stdout) return '';
-  return res.stdout.toString().trim();
+  const res = spawnSync('git', args, {
+    cwd,
+    timeout: 5000,
+    stdio: 'pipe',
+    // Neutralise inherited git env. When team-factory runs from a git hook, husky, or
+    // `rebase -x`, GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE point at the OUTER repo and silently
+    // override `cwd` — the query then answers about the wrong tree and reports clean.
+    env: gitEnv(),
+  });
+  // Distinguish FAILURE from EMPTY. The previous version collapsed spawn error, timeout and
+  // every non-zero exit into '' — which the caller read as "no diff, safe to proceed". That is
+  // backwards for a guard whose only job is refusing to overwrite uncommitted work, and it was
+  // the actual bucket behind I127: fixing relative paths closed one door into it, not the door.
+  if (res.error || res.status !== 0 || !res.stdout) {
+    return { ok: false, out: '', reason: res.error ? res.error.code || res.error.message : `git exit ${res.status}` };
+  }
+  return { ok: true, out: res.stdout.toString().trim(), reason: null };
 }
 
 /**
@@ -408,14 +452,54 @@ function checkDirtyTree(registryPath) {
     // `{dirty:true}`. Consequence was silent: the guard at the call site is skipped and the
     // writer overwrites a file carrying uncommitted user edits. `runNodeRequire` already
     // resolved its path; this one did not, and the asymmetry is what hid it.
-    const absPath = path.resolve(registryPath);
+    if (typeof registryPath !== 'string' || !registryPath.trim()) {
+      return { dirty: true, diff: 'unverifiable path (non-string or empty) — refusing to treat as clean' };
+    }
+    // realpath so a symlink, or a symlinked path component, resolves to the file git actually
+    // tracks. Without it a link to a dirty file reported clean while the direct path reported
+    // dirty — the same file, two answers.
+    let absPath = path.resolve(registryPath);
+    try {
+      absPath = fs.realpathSync.native(absPath);
+    } catch {
+      // Target does not exist yet (new file) — resolved path is the best available answer.
+    }
     const cwd = path.dirname(absPath);
     // `--literal-pathspecs` so `*`, `?` or a leading `:` in a real path cannot be reinterpreted
     // as pathspec magic — a glob would report unrelated files, a `:` prefix errors to status 128
     // and folds into the same false-clean.
+    // Team Factory is supported in projects that are not git repositories at all — that is the
+    // original, deliberate fail-open contract ("if the file is not in a repo, proceed") and it
+    // stays. What changes is that it now applies ONLY to that case, established positively via
+    // rev-parse, rather than to every git failure indiscriminately.
+    const inWorkTree = isInsideWorkTree(cwd);
+    if (inWorkTree === false) {
+      return { dirty: false, diff: '' };
+    }
+    if (inWorkTree === null) {
+      // git could not be run at all — unknown, not "no repo". Do not treat as clean.
+      return { dirty: true, diff: 'unverifiable (git unavailable or timed out) — refusing to treat as clean' };
+    }
+
     const unstaged = runGitDiff(['--literal-pathspecs', 'diff', '--name-only', '--', absPath], cwd);
     const staged = runGitDiff(['--literal-pathspecs', 'diff', '--cached', '--name-only', '--', absPath], cwd);
-    const allDiffs = [unstaged, staged].filter(Boolean).join('\n');
+    // Untracked / gitignored files carry user content too and produce NO diff output. A freshly
+    // written config.yaml is untracked by definition, so the diff-only check reported it clean
+    // and the writer overwrote it.
+    const untracked = runGitDiff(['--literal-pathspecs', 'ls-files', '--others', '--', absPath], cwd);
+
+    // FAIL CLOSED. If any probe could not run, we do not know whether the file is dirty — and
+    // "don't know" must not read as "safe to overwrite".
+    const failed = [unstaged, staged, untracked].find((r) => !r.ok);
+    if (failed) {
+      return { dirty: true, diff: `unverifiable (${failed.reason}) — refusing to treat as clean` };
+    }
+
+    const allDiffs = [
+      ...new Set([unstaged.out, staged.out, untracked.out].filter(Boolean).join('\n').split('\n')),
+    ]
+      .filter(Boolean)
+      .join('\n');
     return { dirty: allDiffs.length > 0, diff: allDiffs };
   } catch {
     // If git is not available or file is not in a repo, proceed
