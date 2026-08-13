@@ -337,7 +337,30 @@ Priority: frontmatter > step-file code. If found via multiple methods, record on
 
 ---
 
-### Decision 4: PF1 Behavioral Equivalence Validation (WR4)
+### Decision 4: PF1 Behavioral Equivalence Validation (WR4) — ⛔ RETIRED 2026-08-13
+
+> **⛔ RETIRED by [ADR-001](adr/v63/adr-001-retire-m9-pf1-gate.md), accepted 2026-08-13.** The
+> whole of Decision 4 below — Option B recorded-replay with LLM-as-judge, the Stage 4 gate, the
+> INVESTIGATE/FAIL table — is **superseded**. Retained unedited because the reasoning is sound
+> for the problem it thought it had; what was wrong was the problem.
+>
+> **Why.** The Path B+ control agent introduced by the addendum below did its job and disproved
+> the method: `stack-detective` has **byte-identical source** across the two compared commits yet
+> produced substantially different recordings. With one capture per phase and `RUNS_PER_AGENT`
+> controlling only *judge* variance, agent run-to-run nondeterminism is confounded with migration
+> effect — and is at least as large. The instrument's noise exceeds its signal.
+>
+> **Replaced by** `scripts/audit/agent-surface-parity.js`: deterministic comparison of the
+> operator-facing contract (agents present, menu codes preserved, activation loads config) across
+> two git refs. 12 agents vs PF1's 4, seconds vs ~6 hr, no API key, CI-runnable, and verified to
+> fail correctly on synthetic breakage. It proves **contract parity, not behavioural equivalence**
+> — and the retired instrument could not prove the latter either.
+>
+> **PRD:** FR36-FR38 superseded by FR38a; M9 superseded. FR39 (drift snapshots, Story 4.4) and
+> FR40 (external validation, Story 4.5) are unaffected. **PF1 assets are retained, not deleted** —
+> see backlog I130 (harness defect: a partial corpus returns PASS regardless of real scores) and
+> I131 (repeat-capture methodology). I130 must be fixed regardless of retirement, because the
+> fabricated-PASS trigger is live today.
 
 > **🔄 ADDENDUM 2026-05-29 (Path B+ re-scope — Winston Architect + operator Amalik):** Original 5-agent design (1 Vortex + 4 BMAD) re-scoped to **4 agents (3 Vortex + 1 Gyre)** + mechanical install-scope check. BMAD-agent control validation moved to `scripts/audit/install-scope-check.js`. Stage 1 agent list below shows ORIGINAL design; **current scope is locked at `v63-4-3-execute-pf1-validation-cycle-record-compare-and-gate.md` Decision 4 addendum** (Emma + Wade + Liam + Stack Detective). Stage 4 gate updated: "median ≥ 4.0 across **4 agents**" (was 5). 32 LLM calls per cycle (was 60). 75% signal density (was 20%). Pending future-arch-edit-window to fold this addendum into the body below.
 
