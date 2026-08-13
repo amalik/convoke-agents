@@ -11,6 +11,20 @@ purpose: reduce-context-rebuild-cost-on-stalled-story-pickup
 
 # v63-4-3 PF1 Validation Cycle — Resumption Snapshot
 
+> ## 🛑 SUPERSEDED 2026-08-13 — DO NOT RESUME FROM THIS DOCUMENT
+>
+> This snapshot says Tasks 3-5 shipped and Task 6 is next with valid inputs on disk. **Both
+> claims are wrong**, and acting on them produces a fabricated PASS on the M9 release gate:
+>
+> - Tasks 3/5 captured **Prompt 1 only** — Prompts 2-4 in all 8 files are 87-byte placeholders.
+> - The corpus is **not valid**: the control agent `stack-detective` has byte-identical source
+>   across the two recorded commits yet differing recordings, so agent variance is uncontrolled
+>   (backlog **I131**).
+> - Running the battery on it yields **PASS regardless of the real scores** (backlog **I130**).
+>
+> This document twice asserted completeness inferred from file existence. Read the story file
+> and `v63-4-3-release-record-4.0.md` instead.
+
 **Status as of 2026-05-26:** Story `v63-4-3` was picked up 2026-04-28. Tasks 1 + 2 shipped artifacts. Tasks 3-8 pending. Story has been on long-pause for ~4 weeks; this doc captures the state-of-play so resumption costs minutes, not hours.
 
 **Backlog row:** [D14 (Fast Lane, RICE 2.1)](../planning-artifacts/convoke-note-initiative-lifecycle-backlog.md#23-fast-lane-quick-wins--spikes)
