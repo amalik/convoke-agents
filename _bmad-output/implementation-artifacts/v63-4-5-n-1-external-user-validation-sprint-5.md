@@ -19,7 +19,7 @@ Status: ready-for-dev
 **M coverage:** M17 (N=1 external non-maintainer user has run the upgrade and reported no issues — release record evidence).
 **Failure modes addressed:** none new. The story is the failure-mode coverage itself — N=1 catches issues that maintainer-only testing won't surface (assumed-context errors, cryptic CLI output, install-environment surprises).
 
-**🚨 EXECUTION PRECONDITION (release-time pattern per Story 4.3 CM-7):** Story 4.5 is a **release-time activity**. Spec authored now; dev-story execution waits until: (a) v6.3 implementation complete (all 28 stories shipped — currently 19/29 + 1 ready); (b) `package.json` is a 4.0 candidate (e.g., `4.0.0-rc.X`); (c) `scripts/update/migrations/3.x-to-4.0.js` exists + tested; (d) Story 4.3 PF1 gate verdict is **PASS** (recorded in `v63-4-3-release-record-4.0.md`); (e) Story 5B.1 CHANGELOG drafted. Sprint-status keeps `ready-for-dev` per Story 4.3 Q1=A precedent; Task 0.5 precondition check HALTs dev-story if conditions not met.
+**🚨 EXECUTION PRECONDITION (release-time pattern per Story 4.3 CM-7):** Story 4.5 is a **release-time activity**. Spec authored now; dev-story execution waits until: (a) v6.3 implementation complete (all 28 stories shipped — currently 19/29 + 1 ready); (b) `package.json` is a 4.0 candidate (e.g., `4.0.0-rc.X`); (c) `scripts/update/migrations/3.x-to-4.0.js` exists + tested; (d) ~~Story 4.3 PF1 gate verdict is **PASS**~~ → **AMENDED 2026-08-13 (ADR-001):** agent-surface parity check exits 0 and is cited in `v63-4-3-release-record-4.0.md`; the PF1 gate is retired; (e) Story 5B.1 CHANGELOG drafted. Sprint-status keeps `ready-for-dev` per Story 4.3 Q1=A precedent; Task 0.5 precondition check HALTs dev-story if conditions not met.
 
 **Why N=1 (not N=3, not N=10):** PR5-6 + epic-line 132 — "N=1 external user validation must be its own Sprint 5 story". Convoke ships solo + agent-assisted; recruiting larger external cohorts is out of scope. **N=1 is a floor**, not a ceiling — operator can recruit additional validators if available, but ≥1 is required for ship.
 
@@ -131,7 +131,7 @@ so that M17 + FR40 are satisfied with verifiable evidence + the operator has a f
 ## Tasks / Subtasks
 
 - [ ] **Task 0: Pre-flight gates + execution-precondition check.**
-  - [ ] 0.1 Confirm Story 4.3 status `done` + release record exists at `v63-4-3-release-record-4.0.md` with `m9_pf1_gate: PASS`.
+  - [ ] 0.1 **AMENDED 2026-08-13 by [ADR-001](../planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md).** ~~Confirm Story 4.3 status `done` + release record with `m9_pf1_gate: PASS`.~~ The M9 PF1 gate is **retired**; `m9_pf1_gate: PASS` can never be produced and this check would have HALTed the release permanently. **Replaced by:** confirm `node scripts/audit/agent-surface-parity.js <last-release-tag> HEAD` exits 0, and that `v63-4-3-release-record-4.0.md` cites that output. Story 4.3 closes as `descoped-by-ADR`, not `done` — do not gate on `done`.
   - [ ] 0.2 Confirm Story 5B.1 status `done` + CHANGELOG drafted (per arch:455 sequencing).
   - [ ] 0.3 Confirm `package.json` version is 4.0 candidate (e.g., `4.0.0-rc.X`).
   - [ ] 0.4 Confirm `scripts/update/migrations/3.x-to-4.0.js` exists + tested (per Story 1A.4).
