@@ -122,6 +122,24 @@ claim should read §Alternatives, where the honest path to it is priced.
 (repeat-capture methodology) is ever done, the harness is there — subject to **I130** being
 fixed first.
 
+> **Note added 2026-08-14 — backlog I131's quantification was RETRACTED; this ADR is unaffected.**
+> A follow-up analysis (2026-08-13) attempted to put numbers on the noise floor and was demolished
+> by review: its control was contaminated (the recorder loads a *generated*, gitignored wrapper
+> whose generator changed between the commits), its headline "orders agents backwards" claim was an
+> artifact of one metric, and its cost projection priced the wrong experiment. **None of that
+> reasoning appears in this ADR, and this ADR never depended on it.**
+>
+> What this ADR rests on is unchanged and was independently corroborated during that same review:
+> (a) the control agent's recordings diverge **at all** despite no source change — a qualitative
+> fact that survives the retraction; (b) the artifact is transparent markdown, so `git show`
+> answers the question exactly; (c) the deterministic replacement covers 12 agents in seconds
+> versus 4 at ~6 hr. Review independently measured **menu-code divergence of 0.000 across all four
+> PF1 agents** — the contract the replacement checks is demonstrably preserved.
+>
+> Do not cite I131's numbers anywhere. If a real noise-floor figure is ever wanted, the honest
+> price is a 25-capture control study over the five byte-identical agents, with the model and
+> temperature pinned — `pf1-record-agent.js` currently passes neither.
+
 ## Alternatives considered
 
 **A — Complete the recordings (~6 hr) and run the gate.** Rejected. I131 shows this produces
