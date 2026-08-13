@@ -401,9 +401,20 @@ async function validateSyntax(moduleBlock, prefix) {
  */
 function checkDirtyTree(registryPath) {
   try {
-    const cwd = path.dirname(registryPath);
-    const unstaged = runGitDiff(['diff', '--name-only', '--', registryPath], cwd);
-    const staged = runGitDiff(['diff', '--cached', '--name-only', '--', registryPath], cwd);
+    // Backlog I127. `cwd` is the file's OWN directory, so a RELATIVE registryPath was resolved
+    // by git against that directory — it looked for `<dirname>/<full-relative-path>`, which does
+    // not exist, and reported a genuinely-modified file as clean. Verified: with the file dirty,
+    // the relative form returned `{dirty:false}` while the absolute form correctly returned
+    // `{dirty:true}`. Consequence was silent: the guard at the call site is skipped and the
+    // writer overwrites a file carrying uncommitted user edits. `runNodeRequire` already
+    // resolved its path; this one did not, and the asymmetry is what hid it.
+    const absPath = path.resolve(registryPath);
+    const cwd = path.dirname(absPath);
+    // `--literal-pathspecs` so `*`, `?` or a leading `:` in a real path cannot be reinterpreted
+    // as pathspec magic — a glob would report unrelated files, a `:` prefix errors to status 128
+    // and folds into the same false-clean.
+    const unstaged = runGitDiff(['--literal-pathspecs', 'diff', '--name-only', '--', absPath], cwd);
+    const staged = runGitDiff(['--literal-pathspecs', 'diff', '--cached', '--name-only', '--', absPath], cwd);
     const allDiffs = [unstaged, staged].filter(Boolean).join('\n');
     return { dirty: allDiffs.length > 0, diff: allDiffs };
   } catch {
