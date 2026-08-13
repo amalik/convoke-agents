@@ -69,6 +69,11 @@ const PF1_AGENTS = [
 // Labels MUST match `## Prompt N` header keys emitted by parseRecording (digit-only).
 // Decision 4 descriptions live in spec §"Decision 4" — kept out of code to preserve
 // labels-used-as-keys symmetry with the parser. R1 P1 fix (H1 story-killer).
+// Marker written by `pf1-record-agent.js` for prompts it cannot capture automatically.
+// Matched loosely rather than by exact string so reformatting or a reworded protocol
+// reference cannot smuggle an unfilled section past the guard. See backlog I130.
+const UNFILLED_PLACEHOLDER = /D2-B operator fill-in required/i;
+
 const PF1_PROMPTS = ['Prompt 1', 'Prompt 2', 'Prompt 3', 'Prompt 4'];
 
 // Decision 4 descriptions (kept here for in-code reference + future report rendering).
@@ -132,6 +137,27 @@ function parseRecording(text) {
       throw Object.assign(
         new Error(
           `Recording has empty section: Prompt ${headers[i].num} contains only whitespace`
+        ),
+        { exitCode: 5 }
+      );
+    }
+    // Backlog I130. The guard above rejects EMPTY sections for exactly the right reason —
+    // "empty == empty → likely false PASS" — but the D2-B fill-in placeholder is 87 bytes and
+    // sailed straight through it. Verified live 2026-08-13: all 8 recordings on disk carried
+    // this marker in Prompts 2-4, byte-identical between baseline and post. Judging that corpus
+    // scores 12 of 16 pairs as perfect equivalence on content never recorded — and because
+    // `medianOf([P1,5,5,5])` averages the two middle values, three placeholder 5s force a
+    // median of 5 regardless of the one real score, so a partial corpus returns PASS even when
+    // the real prompt scores 1.
+    //
+    // An un-filled placeholder is not evidence. Reject it with the same exit code as empty.
+    if (UNFILLED_PLACEHOLDER.test(body)) {
+      throw Object.assign(
+        new Error(
+          `Recording has an UNFILLED placeholder: Prompt ${headers[i].num} still contains the ` +
+            `D2-B operator fill-in marker. This corpus is incomplete — judging it would compare ` +
+            `a placeholder against itself and report false equivalence. Complete the recording, ` +
+            `or exclude the agent. (Backlog I130.)`
         ),
         { exitCode: 5 }
       );
