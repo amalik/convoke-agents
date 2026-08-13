@@ -15,13 +15,13 @@ Convoke 4.0 is a maintenance release that keeps Convoke healthy as BMAD evolves 
 
 We've spent the last few weeks making Convoke healthy enough to last — not adding new features, but making sure the agents you rely on keep working as BMAD evolves underneath them. You can now install Convoke through the BMAD plugin system, as a standalone Claude Code skill pack, or via adapters for GitHub Copilot and Cursor. For existing users, upgrading is a single command and auto-migration handles the rest. See the [migration guide](docs/migration/3.x-to-4.0.md) for the one-line upgrade instructions.
 
-One thing new in this release: we actually test whether your agents behave the same way after the upgrade, instead of assuming they do. If this release does its job, you'll barely notice it — which is the point.
+If this release does its job, you'll barely notice it — which is the point.
 
 ### Added
 
 - **Marketplace distribution** — Install Convoke through the BMAD community plugin marketplace alongside the framework itself. If you have colleagues who use BMAD but haven't tried Convoke, they can install it through the normal BMAD plugin system.
 - **Multi-platform adapters** — Drop-in agent skills for Claude Code (`.claude/skills/`), GitHub Copilot (`.github/copilot-instructions.md`), and Cursor (`.cursor/rules/`). Use Convoke agents on the platform you already work in, no Convoke runtime required.
-- **Behavioral equivalence validation** — Release gating runs an empirical equivalence check against your agents' baseline outputs before tagging the release. "It works" is a process claim, not a promise about every possible input — but at least it's a checked claim, not a guess.
+- **Behavioral equivalence harness (built, not yet exercised at release scope)** — Convoke ships tooling to compare agent outputs before and after an upgrade (`convoke`'s PF1 battery). For 4.0 the gate was **waived**: only activation greetings were captured, and a control agent whose source did not change between the compared versions produced differing recordings — so the corpus measures agent run-to-run variance as much as any upgrade effect, and no equivalence claim is supported by it. The harness is real and the gate is not yet met; see `_bmad-output/implementation-artifacts/v63-4-3-release-record-4.0.md`.
 - **Single-command auto-migration** — `convoke-update` runs the upgrade and completes in under 60 seconds. Idempotent (safe to run twice) and resumable (if something interrupts, re-run picks up where it stopped).
 - **`convoke-doctor` dependency surfacing** — Health check now warns you when Convoke depends on something upstream that has changed shape. Silent breakage becomes visible breakage.
 
