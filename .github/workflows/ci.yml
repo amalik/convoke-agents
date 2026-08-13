@@ -111,6 +111,41 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
+  agent-surface-parity:
+    # Replaces the retired M9 PF1 behavioural-equivalence gate (ADR-001, 2026-08-13).
+    # PF1 required ~6 hr of manual capture per release and could not separate signal from
+    # noise; this runs in seconds on every push, covers 12 agents instead of 4, and fails
+    # loudly when an agent or menu code disappears.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Needs history + tags: the check compares the last release tag against HEAD, and
+          # the default shallow clone has neither.
+          fetch-depth: 0
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Agent surface parity vs last release tag
+        run: |
+          BASE=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
+          if [ -z "$BASE" ]; then
+            echo "::warning::No v* tag found — skipping parity check (nothing to compare against)."
+            exit 0
+          fi
+          echo "Comparing $BASE -> HEAD"
+          node scripts/audit/agent-surface-parity.js "$BASE" HEAD
+
+      - name: Install scope containment
+        run: node scripts/audit/install-scope-check.js
+
   security:
     runs-on: ubuntu-latest
     steps:
@@ -242,7 +277,7 @@ jobs:
           python -m pytest --import-mode=importlib "${PY_TESTS[@]}" -v
 
   publish:
-    needs: [lint, test, python-test, coverage, security, package-check]
+    needs: [lint, test, python-test, coverage, security, package-check, agent-surface-parity]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
