@@ -26,6 +26,14 @@ Status: ready-for-dev
 - Silent release commit without maintainer CHANGELOG sign-off (M16 + FR44 ship-blocking criterion).
 - Distribution-channel mismatch: npm publish must succeed AND GitHub release must reference the npm tarball + tag + match `marketplace.json` plugin metadata (FR46).
 
+> **⛔ GATE AMENDED 2026-08-13 by [ADR-001](../planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md).**
+> This story's precondition gate requires *"Story 4.3 PF1 cycle PASSES"* and *"M9 (PF1 PASS)"*.
+> **M9 is retired and no PF1 PASS will ever exist** — as written, this gate blocks the release
+> permanently. **Replaced by:** `node scripts/audit/agent-surface-parity.js <last-release-tag> HEAD`
+> exits 0 and is cited in the Story 4.3 release record. Story 4.3 closes as **`descoped-by-ADR`**,
+> not `done`; do not gate on `done`. Story 4.5 (N=1 external validation, FR40) is **unaffected**
+> and still required. Text below retained unedited for the record.
+
 **Why this story is RELEASE-TIME-DEFERRED (NOT buildable-now):** Per `success-criteria.md:9-15` (User Success) + `:34-41` (Technical Success) + arch:455 sequence: release ship requires M9 (PF1 PASS) + M17 (N=1 external user) + closed Stories 4.3 + 4.5. Stories 4.3 + 4.5 are themselves release-time-deferred (their specs exist ready-for-dev but execution requires real 4.0 candidate recordings). Story 5B.3 spec exists NOW (captures the full ship plan + 4 marker resolutions + tag/publish coordination); execution begins when (a) Story 4.3 PF1 cycle PASSES on real 4.0 baseline + post-migration recordings, (b) Story 4.5 N=1 cycle reports clean, (c) deferred-work.md sweep confirms zero release-blocking items, (d) Stories 1B.x deferral decision is made (per Epic 1A retro: 1B is deferrable; operator chooses ship-with or ship-without). Anti-pattern guard: spec MUST NOT mark this story executable until precondition gate is GREEN (4.3 PASS + 4.5 PASS + zero-blockers verified). Operator-managed gate at story pickup time.
 
 **Upstream dependencies:**
