@@ -19,7 +19,7 @@ status: draft
 
 ## The announcement
 
-The Convoke 4.0 release is live. We've spent the last few weeks making Convoke healthy enough to last — not adding new features, but making sure the agents you rely on keep working as BMAD evolves underneath them. You can now install Convoke through the BMAD plugin system, as a standalone Claude Code skill pack, or via adapters for Copilot and Cursor. For existing users, upgrading is a single command and auto-migration handles the rest. One thing new in this release: we actually test whether your agents behave the same way after the upgrade, instead of assuming they do. No more "it compiled, ship it." If this release does its job, you'll barely notice it — which is the point.
+The Convoke 4.0 release is live. We've spent the last few weeks making Convoke healthy enough to last — not adding new features, but making sure the agents you rely on keep working as BMAD evolves underneath them. You can now install Convoke through the BMAD plugin system, as a standalone Claude Code skill pack, or via adapters for Copilot and Cursor. For existing users, upgrading is a single command and auto-migration handles the rest. If this release does its job, you'll barely notice it — which is the point.
 
 ---
 
@@ -81,3 +81,15 @@ Before this announcement ships:
 - Validation report: [`convoke-report-prd-validation-bmad-v6.3-adoption.md`](convoke-report-prd-validation-bmad-v6.3-adoption.md)
 - PRD frontmatter source: `partyFindingsRound2.PR2-5`
 - Related FRs: FR41 (mostHonestOneLineSummary verbatim), FR42 (cliché grep test), FR43 (dual-framing vocabulary), FR44 (maintainer sign-off)
+
+---
+
+> **Claim guard (2026-08-13, code review).** An earlier draft of this announcement claimed
+> Convoke 4.0 "actually tests whether your agents behave the same way after the upgrade."
+> **Do not reinstate that line.** The PF1 behavioural-equivalence gate was **waived** for 4.0:
+> only activation greetings were captured, and a control agent whose source did not change
+> between the compared commits still produced differing recordings — so the corpus measures
+> agent run-to-run variance as much as any upgrade effect. This file is the canonical voice
+> source the CHANGELOG derives from, which is why the correction is pinned here and not only
+> downstream. See `_bmad-output/implementation-artifacts/v63-4-3-release-record-4.0.md`.
+
