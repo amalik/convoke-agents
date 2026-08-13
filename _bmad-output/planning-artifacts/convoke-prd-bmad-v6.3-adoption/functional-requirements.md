@@ -57,9 +57,20 @@
 
 ## Validation & Behavioral Equivalence
 
-- **FR36:** Convoke executes a pre-release agent behavioral equivalence validation battery (PF1) against representative inputs sampled from `_bmad-output/vortex-artifacts/`.
-- **FR37:** The validation battery compares pre-migration and post-migration agent outputs within a numerically-defined drift threshold T (defined in architecture NFRs).
-- **FR38:** A validation failure (drift beyond T on any input) blocks release progression.
+> **⛔ FR36-FR38 SUPERSEDED 2026-08-13 by [ADR-001](../adr/v63/adr-001-retire-m9-pf1-gate.md).**
+> Retained below, not deleted, so the original requirement stays legible next to why it changed.
+> **Reason:** the PF1 instrument cannot separate signal from noise on this material — the Path B+
+> control agent `stack-detective` had byte-identical source across the compared commits yet
+> produced differing recordings, so agent run-to-run variance is confounded with migration effect.
+> **Replaced by** deterministic agent-surface parity (`scripts/audit/agent-surface-parity.js`):
+> 12 agents, menu codes and config-load verified exactly, in seconds, no API key.
+> **Convoke 4.0 therefore ships without a behavioural-equivalence claim** — user-facing copy was
+> corrected accordingly. **FR39 and FR40 are unaffected and still stand.**
+
+- ~~**FR36:**~~ *(superseded)* Convoke executes a pre-release agent behavioral equivalence validation battery (PF1) against representative inputs sampled from `_bmad-output/vortex-artifacts/`.
+- ~~**FR37:**~~ *(superseded)* The validation battery compares pre-migration and post-migration agent outputs within a numerically-defined drift threshold T (defined in architecture NFRs).
+- ~~**FR38:**~~ *(superseded)* A validation failure (drift beyond T on any input) blocks release progression.
+- **FR38a** *(replaces FR36-FR38, ADR-001):* Convoke verifies **agent-surface parity** between the previous release tag and the release candidate — every agent still present, every menu code preserved, activation still loading config — deterministically and in CI. A parity break blocks release progression. This asserts contract parity, **not** behavioural equivalence.
 - **FR39:** The operator can capture pre/post skill output drift snapshots for 2–3 key skills (e.g., `bmad-enhance-initiatives-backlog`, a Vortex stream output, a PRD draft output) as a retrospective observation artifact.
 - **FR40:** An external non-maintainer user runs the upgrade on their own install and reports no issues before release. The external validation is logged in the release record.
 
