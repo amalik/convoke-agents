@@ -720,7 +720,7 @@ function checkBmmDependencies(projectRoot) {
       passed: false,
       softWarning: true,
       warning: 'bmm-dependencies.csv not found — governance registry has not been generated yet',
-      fix: 'Run: node scripts/audit/audit-bmm-dependencies.js',
+      fix: 'Run: npx -p convoke-agents convoke-audit-bmm-deps',
     }];
   }
 
@@ -734,7 +734,7 @@ function checkBmmDependencies(projectRoot) {
       passed: false,
       softWarning: true,
       warning: `scan failed: ${(err && err.message) || String(err)}`,
-      fix: 'Debug with: node scripts/audit/audit-bmm-dependencies.js --dry-run',
+      fix: 'Debug with: npx -p convoke-agents convoke-audit-bmm-deps --dry-run',
     }];
   }
 
@@ -808,7 +808,7 @@ function checkBmmDependencies(projectRoot) {
       passed: false,
       softWarning: true,
       warning: `${staleEntries.length} stale entries detected — likely systemic cause (empty .claude/skills/, wholesale migration, etc.)`,
-      fix: 'Run: node scripts/audit/audit-bmm-dependencies.js --dry-run to see individual drift entries; regenerate with: node scripts/audit/audit-bmm-dependencies.js',
+      fix: 'Run: npx -p convoke-agents convoke-audit-bmm-deps --dry-run to see individual drift entries; regenerate with: npx -p convoke-agents convoke-audit-bmm-deps',
     });
   } else {
     staleSkillGone.forEach(r => {
@@ -817,7 +817,7 @@ function checkBmmDependencies(projectRoot) {
         passed: false,
         softWarning: true,
         warning: `auto-scan row references skill directory '${r.skill_name}' which is not present on disk`,
-        fix: 'Remove the row or restore the skill; regenerate with: node scripts/audit/audit-bmm-dependencies.js',
+        fix: 'Remove the row or restore the skill; regenerate with: npx -p convoke-agents convoke-audit-bmm-deps',
       });
     });
     staleDepRemoved.forEach(r => {
@@ -826,7 +826,7 @@ function checkBmmDependencies(projectRoot) {
         passed: false,
         softWarning: true,
         warning: `auto-scan row for (${r.skill_name}, ${r.bmm_agent}, ${r.dependency_type}) no longer matches scan output`,
-        fix: 'Regenerate with: node scripts/audit/audit-bmm-dependencies.js',
+        fix: 'Regenerate with: npx -p convoke-agents convoke-audit-bmm-deps',
       });
     });
   }
@@ -838,7 +838,7 @@ function checkBmmDependencies(projectRoot) {
       passed: false,
       softWarning: true,
       warning: `${unregisteredCustom.length} custom skills detected that are not in the registry — future upgrades won't validate them`,
-      fix: 'Register each by adding a row to _bmad/_config/bmm-dependencies.csv, or regenerate auto-scan with: node scripts/audit/audit-bmm-dependencies.js',
+      fix: 'Register each by adding a row to _bmad/_config/bmm-dependencies.csv, or regenerate auto-scan with: npx -p convoke-agents convoke-audit-bmm-deps',
     });
   } else {
     unregisteredCustom.forEach(r => {
@@ -855,7 +855,7 @@ function checkBmmDependencies(projectRoot) {
           'Register this skill by adding a row to _bmad/_config/bmm-dependencies.csv:\n'
           + `  ${r.skill_name},${r.bmm_agent},${r.dependency_type},${r.source_module},your-email@example.com,<YYYY-MM-DD>\n`
           + '\nOr regenerate the auto-scan baseline with:\n'
-          + '  node scripts/audit/audit-bmm-dependencies.js',
+          + '  npx -p convoke-agents convoke-audit-bmm-deps',
       });
     });
   }
@@ -867,7 +867,7 @@ function checkBmmDependencies(projectRoot) {
       passed: false,
       softWarning: true,
       warning: `${missingScanTarget.length} registry rows reference skills not present on disk`,
-      fix: 'Either add the skills back or run: node scripts/audit/audit-bmm-dependencies.js to reconcile',
+      fix: 'Either add the skills back or run: npx -p convoke-agents convoke-audit-bmm-deps to reconcile',
     });
   } else {
     missingScanTarget.forEach(r => {
@@ -876,7 +876,7 @@ function checkBmmDependencies(projectRoot) {
         passed: false,
         softWarning: true,
         warning: `registry row references skill '${r.skill_name}' (${r.source_module}) which is not present on disk`,
-        fix: 'Either add the skill back or run: node scripts/audit/audit-bmm-dependencies.js to reconcile',
+        fix: 'Either add the skill back or run: npx -p convoke-agents convoke-audit-bmm-deps to reconcile',
       });
     });
   }
@@ -888,7 +888,7 @@ function checkBmmDependencies(projectRoot) {
       passed: false,
       softWarning: true,
       warning: `${scanVsCsvMismatch.length} first-party dependencies in scan output not reflected in registry`,
-      fix: 'Run: node scripts/audit/audit-bmm-dependencies.js to sync registry with current scan output',
+      fix: 'Run: npx -p convoke-agents convoke-audit-bmm-deps to sync registry with current scan output',
     });
   } else {
     scanVsCsvMismatch.forEach(r => {
@@ -897,7 +897,7 @@ function checkBmmDependencies(projectRoot) {
         passed: false,
         softWarning: true,
         warning: `first-party dependency (${r.skill_name}, ${r.bmm_agent}, ${r.dependency_type}) is in scan output but not the registry`,
-        fix: 'Run: node scripts/audit/audit-bmm-dependencies.js to sync',
+        fix: 'Run: npx -p convoke-agents convoke-audit-bmm-deps to sync',
       });
     });
   }
