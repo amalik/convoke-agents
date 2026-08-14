@@ -25,15 +25,34 @@ schema_version: 1
 > ## ✅ M9 RETIRED — release evidence is deterministic surface parity, not behavioural equivalence
 >
 > **The PF1 battery was never run and never will be for 4.0.** M9 was retired on 2026-08-13 by
-> [ADR-001](../planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md) because the instrument
-> could not separate signal from noise — a control agent with byte-identical source produced
-> differing recordings.
+> [ADR-001](../planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md). After 10 weeks the
+> corpus was 25% complete, with no noise floor (one capture per phase) and no clean control, and
+> the harness would have returned a fabricated PASS on it (backlog I130, since fixed).
 >
-> **Replacement evidence, verified:**
+> > **Corrected 2026-08-14.** This banner previously read "because the instrument could not
+> > separate signal from noise — a control agent with byte-identical source produced differing
+> > recordings." **That reasoning is withdrawn.** The control was contaminated: agents execute
+> > through a *generated, gitignored* wrapper whose generator changed between the two compared
+> > commits, so byte-identical **tracked** source did not mean the agent was unchanged. The
+> > retirement decision is unchanged; its basis is. See ADR-001 §1.
+>
+> **Replacement evidence, verified 2026-08-14 (re-run after the check was extended):**
 > ```
 > $ node scripts/audit/agent-surface-parity.js v3.3.0 HEAD
+> INFO   (wrapper): wrapper changed between v3.3.0 and HEAD:
+>          - 1. LOAD the FULL agent file from …/agents/${}.md
+>          - 3. FOLLOW every step in the <activation> section precisely   (x3)
+>          + 1. LOAD the FULL agent file from …/agents/${}/SKILL.md
+>          + 3. FOLLOW the activation steps precisely                     (x3)
 > ✓ PASS — 12 agents, menu codes and config-load preserved.   [exit 0]
 > ```
+> **Read the INFO block as part of the evidence, not as noise.** The generated wrapper — the file
+> agents actually execute — changed in two ways across 3.x → 4.0: the LOAD path moved to the
+> skill-dir form, and the activation instruction was reworded. This is disclosed rather than
+> buried because it is invisible to any diff of `agents/**`, and hiding there is precisely what
+> contaminated PF1's control. It is an *expected* consequence of the skill-dir migration, and the
+> operator-facing contract (agents present, menu codes, config load) is unaffected.
+>
 > This proves the operator-facing **contract** is intact. It does **not** prove behavioural
 > equivalence, and Convoke 4.0 makes no such claim.
 
