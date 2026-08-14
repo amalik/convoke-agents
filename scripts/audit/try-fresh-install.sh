@@ -48,20 +48,29 @@ TMP="$(mktemp -d)"
 LOG_DIR="${FRESH_INSTALL_LOG_DIR:-$REPO/.fresh-install-logs}"
 cleanup() {
   local rc=$?
+  # `set +e` for the whole body: a failing `mkdir` previously aborted the trap before
+  # `rm -rf "$TMP"`, leaking a full npm-installed project tree on every run whenever $LOG_DIR was
+  # unwritable. The trap must always reach its cleanup. (R3 review 2026-08-14.)
+  set +e
   if [ "$rc" -ne 0 ]; then
-    mkdir -p "$LOG_DIR"
-    # Copy whatever exists. `install.log` alone is NOT enough: on every exit-1 path the run got
-    # that far BECAUSE npm install succeeded, so install.log is the log of a successful install
-    # and says nothing about the defect. `run.log` is the actual transcript. (R2 review 2026-08-14.)
-    local copied=0
-    for f in run.log install.log; do
-      if [ -f "$TMP/$f" ]; then cp "$TMP/$f" "$LOG_DIR/$f" 2>/dev/null && copied=1; fi
-    done
+    local existed=0 copied=0
+    for f in run.log install.log; do [ -f "$TMP/$f" ] && existed=1; done
+    if [ "$existed" -eq 1 ]; then
+      mkdir -p "$LOG_DIR"
+      for f in run.log install.log; do
+        [ -f "$TMP/$f" ] && cp "$TMP/$f" "$LOG_DIR/$f" && copied=1
+      done
+    fi
+    # Distinguish "there was nothing to copy" from "there was, and copying FAILED". The previous
+    # version printed the former in both cases — telling the maintainer the run died before
+    # logging when in fact a complete transcript existed and the copy was denied. That is exactly
+    # the misdirection this block exists to prevent.
     if [ "$copied" -eq 1 ]; then
       echo "    diagnostics copied to $LOG_DIR"
+    elif [ "$existed" -eq 1 ]; then
+      echo "    WARNING: logs exist in $TMP but could not be copied to $LOG_DIR (permissions? disk?)"
+      [ "${KEEP:-0}" = "1" ] || echo "    re-run with KEEP=1 to stop the temp tree being deleted"
     else
-      # Do not claim to have copied something when nothing existed — an early exit-2 reaches the
-      # trap before any log is written, and the old unconditional message was simply false.
       echo "    (no diagnostics to copy — failed before any log was written)"
     fi
   fi
@@ -76,7 +85,12 @@ ENV_FAIL=2
 # Tee the whole transcript so the CI artifact carries the actual failure, not just install.log.
 # Stale logs from a previous local run are cleared first, so a preserved log is never mistaken
 # for this run's (R2 review 2026-08-14).
-rm -rf "$LOG_DIR"
+# Clear only the two files this script writes. `rm -rf "$LOG_DIR"` destroyed everything in a
+# caller-supplied directory — verified by review to wipe unrelated files when
+# FRESH_INSTALL_LOG_DIR pointed at a shared artifacts dir. That is a direct violation of the
+# repo's own `path-safety-for-destructive-ops` rule: never recursively delete a user-supplied
+# path. Clearing them prevents a stale log from a previous run being presented as this run's.
+rm -f "$LOG_DIR/run.log" "$LOG_DIR/install.log"
 exec > >(tee "$TMP/run.log") 2>&1
 
 echo "==> Packing the current working tree"
@@ -106,7 +120,13 @@ if ! npm install "$TARBALL" > "$TMP/install.log" 2>&1; then
   # dependency range as install failures — both are shippable PRODUCT defects (the I137 class),
   # and calling them "the registry" points the maintainer away from the cause. Only fall back to
   # ENV_FAIL when the log actually looks like a network/registry problem. (R2 review 2026-08-14.)
-  if grep -qiE 'ENOTFOUND|ETIMEDOUT|ECONNREFUSED|EAI_AGAIN|ERR_SOCKET|network|rate.?limit|E429|registry.*(unreachable|timeout)' "$TMP/install.log"; then
+  # Anchored to npm's actual error shape. The previous pattern matched the bare token `network`
+  # and `ERR_SOCKET` anywhere in the log, so a postinstall printing "failed to initialise network
+  # stack" — or a missing dependency named `@scope/network-utils` — was misfiled as an
+  # environment failure. npm's genuine network errors always carry `npm error network` or an
+  # `npm error code E<CODE>`. Widened at the same time to cover ENETUNREACH / ECONNRESET / E503 /
+  # TLS interception, which the old pattern missed entirely. (R3 review 2026-08-14.)
+  if grep -qiE 'npm error network|npm error code E(NOTFOUND|TIMEDOUT|CONNREFUSED|CONNRESET|AI_AGAIN|NETUNREACH|503|429)|socket hang up|UNABLE_TO_VERIFY_LEAF_SIGNATURE' "$TMP/install.log"; then
     echo "    [harness] npm install failed and the log looks like a network/registry problem:"
     sed 's/^/      /' "$TMP/install.log" | tail -20
     exit "$ENV_FAIL"
@@ -271,7 +291,14 @@ for BIN in $BINS; do
       catch { missing.push(spec); }
     }
     process.stdout.write(missing.join(" "));
-  ' "$ABS" 2>/dev/null)"
+  ' "$ABS" 2>&1)" || {
+    # FAIL CLOSED. This was `2>/dev/null` and an empty result is the PASS value, so any crash in
+    # the extractor silently reported "all bins ... requires resolve". That is the THIRD instance
+    # of this exact pattern in this file (see the `| tail -2` and `for`-list notes above) — which
+    # is why it is called out rather than quietly fixed. R3 review 2026-08-14.
+    echo "    FAILED: $BIN — dependency check could not run: $UNRESOLVED"
+    FAILED=1; continue
+  }
   if [ -n "$UNRESOLVED" ]; then
     echo "    FAILED: $BIN — $TARGET requires module(s) that did not ship: $UNRESOLVED"
     FAILED=1; continue
