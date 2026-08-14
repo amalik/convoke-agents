@@ -74,7 +74,16 @@ const TRACKED = [
   // is the same kind of write as the Enhance and Artifacts version stamps already counted here.
   // The checker independently reported "no scope violations"; only the count diverged, which is
   // this snapshot doing its job — a new write must be looked at, not waved through.
-  { file: 'scripts/update/lib/refresh-installation.js', expected: 9 },
+  // 9 -> 10 on 2026-08-14 (backlog I139). The added write seeds
+  // `<projectRoot>/_bmad/_config/skill-manifest.csv` when the project has none, so the shipped
+  // `convoke-export` bin has something to read — it previously failed with ENOENT for every new
+  // user. Reviewed before accepting: `_bmad/_config/` is shared project metadata Convoke already
+  // owns and writes (the Enhance/Artifacts registration blocks append to this very file, and
+  // taxonomy.yaml is seeded beside it). It is NOT one of the upstream-module paths this checker
+  // forbids — those are `_bmad/{bmm,cis,tea,bma,gds,bmb,wds,core}/`, and the write is guarded by
+  // an existence check so user state is never clobbered. The checker independently reported
+  // "no scope violations"; only the count moved.
+  { file: 'scripts/update/lib/refresh-installation.js', expected: 10 },
   { file: 'scripts/update/migrations/3.3.x-to-4.0.0.js', expected: 5 },
   { file: 'scripts/update/migrations/3.2.x-to-4.0.0.js', expected: 0 },
   { file: 'scripts/update/migrations/3.1.x-to-4.0.0.js', expected: 0 },
