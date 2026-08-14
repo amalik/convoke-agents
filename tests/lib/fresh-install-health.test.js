@@ -1,12 +1,16 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const yaml = require('js-yaml');
+const { execFileSync } = require('child_process');
 
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
+const { refreshInstallation } = require('../../scripts/update/lib/refresh-installation');
+const { checkModuleWorkflows, checkVersionConsistency } = require('../../scripts/convoke-doctor');
 
 const REPO_ROOT = findProjectRoot();
 
@@ -14,131 +18,220 @@ const REPO_ROOT = findProjectRoot();
 //
 // WHAT HAPPENED
 // -------------
-// Running an install-tarball smoke by hand (`npm pack` -> install into a fresh project ->
-// `convoke-install-vortex` -> `convoke-doctor`) showed that a SUCCESSFUL install of 4.0.0-rc.1
-// immediately failed its own health check with 3 errors and 2 warnings, one of which told the
+// An install-tarball smoke run by hand (`npm pack` -> install into a fresh project ->
+// `convoke-install-vortex` -> `convoke-doctor`) showed a SUCCESSFUL install of 4.0.0-rc.1
+// immediately failing its own health check with 3 errors and 2 warnings, one of which told the
 // user to run a command that does not exist in their project. The install worked; the product
 // said it didn't.
 //
-// These tests are deliberately CHEAP and STRUCTURAL. They do not pack or install anything —
-// they assert the invariants whose violation produced each failure, so they run in
-// milliseconds on every commit. The real end-to-end smoke is backlog T25; this is the fast
-// guard that catches the same three classes long before a release.
+// HOW THIS FILE WAS WRONG THE FIRST TIME (code review 2026-08-14) — read before editing
+// -------------------------------------------------------------------------------------
+// Two failure modes, both caught by review, both worth not repeating:
 //
-// They read the repo's own shipped configuration on purpose. That is repo-integrity checking,
-// the same category as portability-classification and portability-schema, not a
-// `test-fixture-isolation` violation: the subject under test IS this repository's package.
+// 1. SOURCE-TEXT ASSERTIONS. Two tests regex-matched `mergeTaxonomy(` and
+//    `scDoc.set('version', version)` in refresh-installation.js. Review defeated both by
+//    dead-branching the matched calls — `if (false) { await mergeTaxonomy(projectRoot); }` —
+//    leaving the text present while the behaviour was gone. Both production fixes fully
+//    disabled; all six tests still passed. Reproduced and confirmed before this rewrite.
+//    They tested that code was WRITTEN, not that it WORKS.
+//
+// 2. RE-IMPLEMENTED PRODUCTION LOGIC. The workflow test resolved object-form config entries via
+//    `wf.entry`. `checkModuleWorkflows` ignores `entry` and always uses
+//    `workflows/<name>/workflow.md`, so the test verified a rule production does not have — and
+//    passed while the real check failed.
+//
+// The fix for both: run the real `refreshInstallation()` into a temp project (~100 ms) and hand
+// the files it produces to the REAL doctor checks. Where a production predicate exists, call it
+// rather than restating it.
 
 describe('fresh-install health (I137)', () => {
-  /** Every `_bmad/bme/*` module config, as { name, dir, config }. */
-  function moduleConfigs() {
-    const bmeDir = path.join(REPO_ROOT, '_bmad', 'bme');
+  // One real install, shared across the assertions below.
+  let installDir;
+  let changes;
+
+  before(async () => {
+    installDir = fs.mkdtempSync(path.join(os.tmpdir(), 'i137-install-'));
+    changes = await refreshInstallation(installDir, { verbose: false, backupGuides: false });
+  });
+
+  after(() => {
+    if (installDir) fs.rmSync(installDir, { recursive: true, force: true });
+  });
+
+  /** Installed modules in the shape `convoke-doctor` builds them: { name, dir, config }. */
+  function installedModules(root) {
+    const bmeDir = path.join(root, '_bmad', 'bme');
+    if (!fs.existsSync(bmeDir)) return [];
     return fs
       .readdirSync(bmeDir, { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => ({ name: e.name, dir: path.join(bmeDir, e.name) }))
       .filter((m) => fs.existsSync(path.join(m.dir, 'config.yaml')))
-      .map((m) => ({ ...m, config: yaml.load(fs.readFileSync(path.join(m.dir, 'config.yaml'), 'utf8')) || {} }));
+      .map((m) => ({
+        ...m,
+        config: yaml.load(fs.readFileSync(path.join(m.dir, 'config.yaml'), 'utf8')) || {},
+      }));
   }
 
-  it('every workflow a module DECLARES has a workflow.md entry point', () => {
-    // The `add-team` failure. `_team-factory/config.yaml` declared `workflows: [add-team]`, the
-    // directory shipped with five step files, and `validator.js` requires
-    // `workflows/<name>/workflow.md` — which did not exist. Result on a clean install:
+  it('a fresh install produces modules at all', () => {
+    // Guard: every assertion below iterates installed modules. If the install silently produced
+    // nothing, they would all pass vacuously.
+    const mods = installedModules(installDir);
+    assert.ok(
+      mods.length > 0,
+      `refreshInstallation produced no modules. changes: ${changes.join(' | ')}`
+    );
+  });
+
+  it("the REAL doctor workflow check passes for every module a fresh install creates", () => {
+    // The `add-team` defect: `_team-factory/config.yaml` declared `workflows: [add-team]`, the
+    // directory shipped with five step files, and no `workflow.md` — which is what
+    // `checkModuleWorkflows` requires. A clean install reported:
     //   ✗ _team-factory workflows — Missing: add-team
-    // Derived from the configs rather than a hardcoded list, per `derive-counts-from-source`:
-    // a module that adds a workflow tomorrow is covered without editing this test.
-    // Two declaration shapes ship today and both are valid: a bare string (Vortex, Gyre,
-    // Team Factory) and an object carrying an explicit `entry` path (Enhance, Artifacts).
-    // An earlier version of this test assumed strings and crashed on the object form — which
-    // would have made it a test that fails for the wrong reason rather than one that finds
-    // anything.
-    const missing = [];
-    let checked = 0;
-    for (const mod of moduleConfigs()) {
-      for (const wf of mod.config.workflows || []) {
-        checked++;
-        const rel =
-          typeof wf === 'string'
-            ? path.join('workflows', wf, 'workflow.md')
-            : wf.entry || path.join('workflows', wf.name, 'workflow.md');
-        const label = typeof wf === 'string' ? wf : wf.name;
-        if (!fs.existsSync(path.join(mod.dir, rel))) missing.push(`${mod.name}/${label}`);
-      }
-    }
-    assert.ok(checked > 0, 'no declared workflows found — this test would pass vacuously');
+    const failures = installedModules(installDir)
+      .map((mod) => checkModuleWorkflows(mod))
+      .filter((r) => !r.passed)
+      .map((r) => `${r.name}: ${r.error}`);
     assert.deepEqual(
-      missing,
+      failures,
       [],
-      `declared workflow(s) have no workflow.md entry point, which fails convoke-doctor on a ` +
-        `clean install: ${missing.join(', ')}`
+      `convoke-doctor reports workflow failures on a CLEAN install:\n  ${failures.join('\n  ')}`
     );
   });
 
-  it('doctor never tells a user to run a repo-relative script path', () => {
-    // The unrunnable-remediation failure. Doctor emitted 12 `fix:` strings of the form
-    // `node scripts/audit/audit-bmm-dependencies.js`. That path exists in THIS repo and under
-    // the user's node_modules/, but not at the path printed — so every one of them was
-    // unrunnable advice. Same root cause as I135: our own layout assumed to be theirs.
-    // Remediation must be an installed bin, invoked via npx.
-    // Scans EVERY shipped script, not just convoke-doctor.js. The first version of this test
-    // checked doctor alone and passed while `convoke-update.js` still printed the same
-    // unrunnable command twice — caught only because an unrelated unit test failed. Remediation
-    // text is user-facing wherever it is printed from.
-    const scriptFiles = [];
-    (function walk(dir) {
-      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-        const full = path.join(dir, e.name);
-        if (e.isDirectory()) {
-          if (e.name !== 'node_modules') walk(full);
-        } else if (e.name.endsWith('.js')) scriptFiles.push(full);
-      }
-    })(path.join(REPO_ROOT, 'scripts'));
-
-    // Discriminator: flag a message only when it points at a script OTHER than the one printing
-    // it. A tool's own `Usage: node scripts/foo.js --bar` line is correct — that is genuinely how
-    // you invoke it from a checkout, and those tools (pf1-record-agent, reference-integrity,
-    // test-runner) are repo-internal and never run by an end user. What is never acceptable is
-    // one script telling a user to go and run a DIFFERENT repo-relative path.
-    const offenders = [];
-    for (const file of scriptFiles) {
-      const self = path.basename(file);
-      // Skip comment-only lines. Explanatory comments legitimately quote the OLD, unrunnable
-      // form when documenting why it was changed — this test flagged its own fix note otherwise.
-      const src = fs
-        .readFileSync(file, 'utf8')
-        .split('\n')
-        .filter((line) => {
-          const t = line.trim();
-          return !(t.startsWith('//') || t.startsWith('*') || t.startsWith('/*'));
-        })
-        .join('\n');
-      for (const m of src.matchAll(/['"`]([^'"`\n]*\bnode\s+scripts\/[^'"`\n]*)['"`]/g)) {
-        const text = m[1].trim();
-        const target = (text.match(/node\s+(scripts\/\S+)/) || [])[1] || '';
-        if (path.basename(target) === self) continue; // self-usage line
-        offenders.push(`${path.relative(REPO_ROOT, file)} -> ${target}`);
-      }
-    }
-    assert.deepEqual(
-      offenders,
-      [],
-      `convoke-doctor tells the user to run a path that does not exist in their project. Expose ` +
-        `the script as a bin and use "npx -p convoke-agents <bin>":\n  ${offenders.join('\n  ')}`
+  it('the REAL doctor version-consistency check passes on a fresh install', () => {
+    // `_team-factory` was the only module tree copied without a config version stamp, so a clean
+    // install of 4.0.0-rc.1 reported `_team-factory: 1.0.0` and told the user to immediately
+    // update. Asserted against the installed OUTPUT, so dead-branching the stamp fails this.
+    const result = checkVersionConsistency(installDir, installedModules(installDir));
+    assert.equal(
+      result.passed,
+      true,
+      `version consistency fails on a clean install: ${result.error}`
     );
   });
 
-  it('every bin referenced by a doctor remediation is actually declared in package.json', () => {
-    // Guards the fix above from being satisfied by naming a bin that does not exist.
-    const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
-    const doctor = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'convoke-doctor.js'), 'utf8');
-    const referenced = [...doctor.matchAll(/npx -p convoke-agents ([a-z0-9-]+)/g)].map((m) => m[1]);
-    assert.ok(referenced.length > 0, 'no npx remediations found — this test would pass vacuously');
-    const undeclared = [...new Set(referenced)].filter((b) => !pkg.bin[b]);
-    assert.deepEqual(undeclared, [], `doctor references undeclared bin(s): ${undeclared.join(', ')}`);
+  it('a fresh install creates the artifact taxonomy', () => {
+    // `mergeTaxonomy` was reachable only from two migrations. A fresh install runs no migrations,
+    // so taxonomy.yaml was never created and doctor reported `✗ Taxonomy: file exists`, with a
+    // fix telling the user to run an upgrade they had no reason to run.
+    const taxonomyPath = path.join(installDir, '_bmad', '_config', 'taxonomy.yaml');
+    assert.ok(fs.existsSync(taxonomyPath), 'taxonomy.yaml was not created by a fresh install');
+    const parsed = yaml.load(fs.readFileSync(taxonomyPath, 'utf8'));
+    assert.ok(parsed && parsed.initiatives, 'taxonomy.yaml exists but has no initiatives section');
+    assert.ok(
+      Array.isArray(parsed.initiatives.platform),
+      'taxonomy.yaml has no platform initiatives'
+    );
   });
 
-  it('every declared bin points at a file that exists and is executable as a CLI', () => {
+  describe('remediation text must be runnable in a user project', () => {
+    /**
+     * Strip comments while tracking string/template state, so a `//` INSIDE a string is not
+     * mistaken for a comment.
+     *
+     * The previous version filtered whole lines whose trimmed text began with `//`. Review found
+     * three ways past it: a multi-line template literal (the quoted-string regex could not span
+     * newlines), a comment-looking line that was really template content, and a message naming a
+     * script with the same basename in a different directory.
+     */
+    function stripComments(src) {
+      let out = '';
+      let i = 0;
+      const N = src.length;
+      while (i < N) {
+        const c = src[i];
+        if (c === '/' && src[i + 1] === '/') {
+          while (i < N && src[i] !== '\n') i++;
+          continue;
+        }
+        if (c === '/' && src[i + 1] === '*') {
+          i += 2;
+          while (i < N && !(src[i] === '*' && src[i + 1] === '/')) i++;
+          i += 2;
+          continue;
+        }
+        if (c === "'" || c === '"' || c === '`') {
+          const quote = c;
+          out += c;
+          i++;
+          while (i < N) {
+            if (src[i] === '\\') {
+              out += src[i] + (src[i + 1] || '');
+              i += 2;
+              continue;
+            }
+            out += src[i];
+            const done = src[i] === quote;
+            i++;
+            if (done) break;
+          }
+          continue;
+        }
+        out += c;
+        i++;
+      }
+      return out;
+    }
+
+    function shippedScripts() {
+      const found = [];
+      (function walk(dir) {
+        for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+          const full = path.join(dir, e.name);
+          if (e.isDirectory()) {
+            if (e.name !== 'node_modules') walk(full);
+          } else if (e.name.endsWith('.js')) found.push(full);
+        }
+      })(path.join(REPO_ROOT, 'scripts'));
+      return found;
+    }
+
+    it('no shipped script tells a user to run a repo-relative path to a DIFFERENT script', () => {
+      // 14 such strings shipped across convoke-doctor.js and convoke-update.js, all naming
+      // `node scripts/audit/audit-bmm-dependencies.js` — a path absent from a user's project.
+      //
+      // A tool's own `Usage: node scripts/foo.js` line is fine: that is genuinely how it is
+      // invoked from a checkout, and those tools are repo-internal. Comparison is on the FULL
+      // relative path, not the basename — a same-named script in another directory is a
+      // different script, and comparing basenames let that through.
+      const offenders = [];
+      for (const file of shippedScripts()) {
+        const selfRel = path.relative(REPO_ROOT, file);
+        const src = stripComments(fs.readFileSync(file, 'utf8'));
+        for (const m of src.matchAll(/\bnode\s+(scripts\/[A-Za-z0-9_./-]+\.js)/g)) {
+          if (m[1] === selfRel) continue; // self-usage
+          offenders.push(`${selfRel} -> ${m[1]}`);
+        }
+      }
+      assert.deepEqual(
+        offenders,
+        [],
+        `script(s) tell the user to run a path that does not exist in their project. Expose the ` +
+          `target as a bin and use "npx -p convoke-agents <bin>":\n  ${offenders.join('\n  ')}`
+      );
+    });
+
+    it('every bin referenced by ANY shipped script is declared in package.json', () => {
+      // Widened from convoke-doctor.js alone: the first version checked only doctor and passed
+      // while convoke-update.js printed the same unrunnable command twice.
+      const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+      const referenced = new Set();
+      for (const file of shippedScripts()) {
+        const src = stripComments(fs.readFileSync(file, 'utf8'));
+        for (const m of src.matchAll(/npx -p convoke-agents ([a-z0-9-]+)/g)) referenced.add(m[1]);
+      }
+      assert.ok(referenced.size > 0, 'no npx remediations found — this test would pass vacuously');
+      const undeclared = [...referenced].filter((b) => !pkg.bin[b]);
+      assert.deepEqual(
+        undeclared,
+        [],
+        `script(s) reference undeclared bin(s): ${undeclared.join(', ')}`
+      );
+    });
+  });
+
+  it('every declared bin exists, parses, and is a usable CLI', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
     const broken = [];
     for (const [name, rel] of Object.entries(pkg.bin)) {
@@ -148,62 +241,24 @@ describe('fresh-install health (I137)', () => {
         continue;
       }
       const src = fs.readFileSync(abs, 'utf8');
-      if (!src.startsWith('#!')) {
-        broken.push(`${name} -> ${rel} (no shebang)`);
-        continue;
+      if (!src.startsWith('#!')) broken.push(`${name} -> ${rel} (no shebang)`);
+      // Parse check. The previous version never parsed the file, so a bin with an outright
+      // syntax error — the most basic way to not be "usable as a CLI" — passed.
+      try {
+        execFileSync(process.execPath, ['--check', abs], { stdio: 'pipe' });
+      } catch (err) {
+        const first = String(err.stderr || err.message).split('\n').find((l) => l.trim()) || '';
+        broken.push(`${name} -> ${rel} (syntax error: ${first.trim()})`);
       }
-      // A `require.main === module` guard is required ONLY for a file that is also importable:
-      // without it, `require()`ing the module executes the CLI as a side effect. Pure entry
-      // points (install-vortex, convoke-version, ...) legitimately run at top level.
-      // An earlier version of this test demanded the guard unconditionally and reported five
-      // working bins as broken — all five were verified to launch correctly.
-      if (/module\.exports\s*=/.test(src) && !src.includes('require.main === module')) {
-        broken.push(`${name} -> ${rel} (exports a module but runs at top level — require() would execute the CLI)`);
+      // A `require.main === module` guard is needed ONLY for a file that is also importable —
+      // without it, `require()`ing the module runs the CLI as a side effect. Pure entry points
+      // legitimately run at top level, so demanding it unconditionally is wrong: an earlier
+      // version did, and reported five working bins as broken. `module.exports\b` rather than
+      // `module.exports\s*=` so partial exports (`module.exports.foo = ...`) are covered too.
+      if (/module\.exports\b/.test(src) && !src.includes('require.main === module')) {
+        broken.push(`${name} -> ${rel} (exports a module but runs at top level)`);
       }
     }
-    assert.deepEqual(broken, [], `declared bin(s) are not runnable:\n  ${broken.join('\n  ')}`);
-  });
-
-  it('the install path seeds the artifact taxonomy, not just the upgrade path', () => {
-    // `mergeTaxonomy` was reachable only from two migrations. A fresh install runs no
-    // migrations, so `_bmad/_config/taxonomy.yaml` was never created and doctor reported
-    //   ✗ Taxonomy: file exists
-    // with a fix that told the user to run an upgrade they had no reason to run.
-    const refresh = fs.readFileSync(
-      path.join(REPO_ROOT, 'scripts', 'update', 'lib', 'refresh-installation.js'),
-      'utf8'
-    );
-    assert.match(
-      refresh,
-      /mergeTaxonomy\s*\(/,
-      'refreshInstallation no longer seeds taxonomy.yaml — a clean install will fail convoke-doctor'
-    );
-  });
-
-  it('every shipped module config carries a version the installer will stamp', () => {
-    // `_team-factory` was copied wholesale without a version stamp, so a clean install of
-    // 4.0.0-rc.1 reported `_team-factory: 1.0.0` and told the user to immediately update.
-    // Assert the STAMPING SITE exists rather than the stamped values: the package's own
-    // config.yaml files legitimately ship a placeholder version, and it is the installer's
-    // job to overwrite it.
-    const refresh = fs.readFileSync(
-      path.join(REPO_ROOT, 'scripts', 'update', 'lib', 'refresh-installation.js'),
-      'utf8'
-    );
-    const standaloneBlock = refresh.slice(refresh.indexOf('Standalone bme submodule trees'));
-    assert.ok(
-      standaloneBlock.length > 0,
-      'standalone submodule copy block not found — this test needs updating, not deleting'
-    );
-    assert.match(
-      standaloneBlock.slice(0, 3000),
-      /scDoc\.set\('version', version\)|mergeConfig\(/,
-      'standalone bme submodules are copied without stamping config version — a clean install ' +
-        'will fail the doctor version-consistency check'
-    );
-    // Every module must at least DECLARE a version for the check to have something to stamp.
-    for (const mod of moduleConfigs()) {
-      assert.ok(mod.config.version, `${mod.name}/config.yaml has no version field`);
-    }
+    assert.deepEqual(broken, [], `declared bin(s) are not usable:\n  ${broken.join('\n  ')}`);
   });
 });
