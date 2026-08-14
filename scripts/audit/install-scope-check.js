@@ -67,7 +67,14 @@ const PROJECT_ROOT = findProjectRoot();
 //     rotation via tmpPath + renameSync). All visibly scoped. Verified 2026-05-29.
 //   - 3.1.x and 3.2.x: 0 (thin wrappers per BUG-5 chain-walker invariant — no direct writes).
 const TRACKED = [
-  { file: 'scripts/update/lib/refresh-installation.js', expected: 8 },
+  // 8 -> 9 on 2026-08-14 (backlog I137). The added write is the standalone-bme-submodule config
+  // version stamp: `fs.writeFileSync(destConfig, ...)` where
+  // `destConfig = <projectRoot>/_bmad/bme/<submodule>/config.yaml`. Reviewed before accepting —
+  // it writes inside the user's own project under `_bmad/bme/`, which is Convoke-owned scope, and
+  // is the same kind of write as the Enhance and Artifacts version stamps already counted here.
+  // The checker independently reported "no scope violations"; only the count diverged, which is
+  // this snapshot doing its job — a new write must be looked at, not waved through.
+  { file: 'scripts/update/lib/refresh-installation.js', expected: 9 },
   { file: 'scripts/update/migrations/3.3.x-to-4.0.0.js', expected: 5 },
   { file: 'scripts/update/migrations/3.2.x-to-4.0.0.js', expected: 0 },
   { file: 'scripts/update/migrations/3.1.x-to-4.0.0.js', expected: 0 },
