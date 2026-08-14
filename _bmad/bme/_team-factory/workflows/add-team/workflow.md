@@ -1,10 +1,9 @@
 ---
-name: add-team
-agent: team-factory
-title: Add Team
+workflow: add-team
+type: step-file
 description: Create a BMAD-compliant team module through guided architectural discovery, then generate and wire its files
-steps: 5
-implements: Team Factory Phase 1-2 (TF-FR1..TF-FR24)
+author: Team Factory (team-factory)
+version: 1.0.0
 ---
 
 # Add Team Workflow
