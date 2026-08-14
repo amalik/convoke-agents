@@ -183,6 +183,39 @@ jobs:
       - name: Check index.js runs
         run: node index.js
 
+  fresh-install:
+    # Backlog T25. Packs the tree, installs THAT TARBALL into a throwaway project, and runs what
+    # a new user runs: convoke-install-vortex, convoke-doctor, a real convoke-export, and a launch
+    # check on every declared bin.
+    #
+    # WHY A SEPARATE JOB FROM package-check. `package-check` runs `npm pack --dry-run` and
+    # `node index.js` from inside this repo, so it only ever proves the code works HERE. Three
+    # defects in one week passed the entire test suite and both of those checks:
+    #
+    #   I135  convoke-export resolved a packaged template from the USER's project root, so it
+    #         failed in every project except this one.
+    #   I137  a clean install failed its own convoke-doctor check with 3 errors, one of which
+    #         told the user to run a command that does not exist for them.
+    #   I139  convoke-export exited 4 on every fresh install — the manifest it reads never shipped.
+    #
+    # Each was found by packing and installing by hand. `--help` succeeded and doctor exited 0 for
+    # I139, so neither a launch smoke nor the health check would have caught it — only invoking
+    # real work did.
+    #
+    # No `npm ci`: the script needs no repo dependencies (verified against a clean clone). It is
+    # bash and ubuntu-only by design; Windows install behaviour is tracked separately as I128.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Fresh-install smoke (pack → install → doctor → export)
+        run: bash scripts/audit/try-fresh-install.sh
+
   python-test:
     runs-on: ubuntu-latest
     steps:
@@ -277,7 +310,7 @@ jobs:
           python -m pytest --import-mode=importlib "${PY_TESTS[@]}" -v
 
   publish:
-    needs: [lint, test, python-test, coverage, security, package-check, agent-surface-parity]
+    needs: [lint, test, python-test, coverage, security, package-check, agent-surface-parity, fresh-install]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
