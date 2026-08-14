@@ -9,7 +9,7 @@ epic: v63-epic-4
 
 # Story 4.3: Execute PF1 validation cycle (record + compare + gate)
 
-Status: in-progress (BLOCKED on operator decision — release-record v1 WITHDRAWN 2026-08-13 after adversarial review; gate NOT run; see release record §Decision required. `in-progress` chosen over `review` because 'implementation complete' is untrue, and the sprint-status vocabulary has no `blocked` value.)
+Status: descoped-by-ADR (closed 2026-08-14). The M9 PF1 gate this story exists to execute was RETIRED by ADR-001 (accepted 2026-08-13), not executed. The story is closed as a SCOPE decision, not as "attempted and failed" and not as `done` — the battery was never run. Release evidence is `surface_parity_gate: PASS` in `v63-4-3-release-record-4.0.md`. Downstream Stories 4.5 (Task 0.1) and 5B.3 (gate-1) were amended to read the new key and explicitly not to gate on `done`.
 
 > **Staleness pre-flight run 2026-08-10 — verdict 🟡 YELLOW; story is resumable at Task 6.** Two corrections applied to this spec, per `project-context.md` rule `staleness-preflight-for-backlog-pickup`:
 >
