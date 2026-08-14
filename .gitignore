@@ -71,3 +71,6 @@ __pycache__/
 venv/
 env/
 *.tgz
+
+# Diagnostics written by scripts/audit/try-fresh-install.sh on failure (T25)
+.fresh-install-logs/
