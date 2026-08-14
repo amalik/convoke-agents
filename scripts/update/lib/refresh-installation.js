@@ -501,7 +501,39 @@ async function refreshInstallation(projectRoot, options = {}) {
   // Only ever seeds when ABSENT. An existing manifest is user state — it may carry rows they
   // added — and is left untouched; the Enhance/Artifacts registration blocks below append to it.
   const skillManifestPath = path.join(projectRoot, '_bmad', '_config', 'skill-manifest.csv');
-  if (!fs.existsSync(skillManifestPath)) {
+  // Seed when the manifest is ABSENT **or UNUSABLE**, not merely absent.
+  //
+  // Code review 2026-08-14 asked whether "absent" was the right trigger. It was not, and the
+  // failure is worse than being stuck: `fs.existsSync` is true for a 0-byte file, so an empty or
+  // truncated manifest was never reseeded — and section 6c below then APPENDS the Enhance row to
+  // it. `readManifest` treats line 0 as the header, so that appended data row became the header:
+  // garbage columns, zero rows, and `convoke-export` throwing "not in the manifest" forever.
+  // Verified by execution before this guard was widened.
+  //
+  // Usable means: parses, and has the `path` column the exporter reads. A manifest that parses
+  // with a valid header is USER STATE and is never overwritten, however few rows it has.
+  let manifestUsable = false;
+  if (fs.existsSync(skillManifestPath)) {
+    try {
+      const { readManifest } = require('../../portability/manifest-csv');
+      const existing = readManifest(skillManifestPath);
+      manifestUsable = Array.isArray(existing.header) && existing.header.includes('path');
+    } catch {
+      manifestUsable = false; // unparseable — treat as unusable and reseed
+    }
+    if (!manifestUsable) {
+      const salvage = `${skillManifestPath}.corrupt-${version}`;
+      try {
+        // Never delete user data silently, even when it is unusable (path-safety rule).
+        fs.renameSync(skillManifestPath, salvage);
+        changes.push(`Unusable skill-manifest.csv set aside as ${path.basename(salvage)}`);
+        if (verbose) console.log(`    Unusable skill-manifest.csv → ${path.basename(salvage)}`);
+      } catch (err) {
+        console.warn(`    Warning: could not set aside unusable skill-manifest.csv: ${err.message}`);
+      }
+    }
+  }
+  if (!manifestUsable) {
     const packageManifest = path.join(packageRoot, '_bmad', '_config', 'skill-manifest.csv');
     if (fs.existsSync(packageManifest)) {
       try {
@@ -525,10 +557,27 @@ async function refreshInstallation(projectRoot, options = {}) {
         const rawLines = fs.readFileSync(packageManifest, 'utf8').split('\n');
         const headerLine = rawLines[0];
         const dataLines = rawLines.slice(1).filter((l) => l.trim());
+        const projectRootResolved = path.resolve(projectRoot);
         const kept = dataLines.filter((line) => {
           const cells = parseCsvRow(line);
           const rel = cells[pathIdx];
-          return rel && fs.existsSync(path.join(projectRoot, rel));
+          if (!rel) return false;
+          // Containment check before the existence check. `path.join` does NOT neutralise `..`,
+          // so a row with `../../etc/passwd` would resolve outside the project — and
+          // `export-engine.loadSkillSource` reads whatever `path` names straight into an exported
+          // bundle the user may share. Input is Convoke's own manifest today, so this is defence
+          // in depth rather than a live hole (code review 2026-08-14, LOW), but it is one line.
+          const abs = path.resolve(projectRootResolved, rel);
+          if (abs !== projectRootResolved && !abs.startsWith(projectRootResolved + path.sep)) {
+            return false;
+          }
+          // `isFile`, not `existsSync`: a directory satisfies existsSync but makes the exporter
+          // throw EISDIR later.
+          try {
+            return fs.statSync(abs).isFile();
+          } catch {
+            return false;
+          }
         });
         await fs.ensureDir(path.dirname(skillManifestPath));
         fs.writeFileSync(skillManifestPath, [headerLine, ...kept].join('\n') + '\n', 'utf8');
