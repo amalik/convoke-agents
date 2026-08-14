@@ -6,17 +6,24 @@
  * ---------------
  * Replaces the LLM-judged PF1 behavioural-equivalence gate (M9) for the operator-facing
  * surfaces that can be checked exactly. The PF1 battery asked "do agents behave the same?"
- * by recording activation transcripts and scoring them with an LLM judge. Three problems,
- * all established empirically on 2026-08-13:
+ * by recording activation transcripts and scoring them with an LLM judge. Three problems:
  *
- *   1. It measured noise. The Path B+ control agent `stack-detective` had BYTE-IDENTICAL
- *      source across the two compared commits, yet its recordings differed substantially
- *      (list -> table, title text, added prose). One capture per phase, no repeat-capture
- *      control, so agent run-to-run variance was confounded with migration effect and was
- *      evidently as large. Backlog I131.
+ *   1. After 10 weeks it had produced nothing interpretable. The protocol captures each
+ *      prompt ONCE per phase (`RUNS_PER_AGENT = 3` controls judge variance, not agent
+ *      variance), so there is no noise floor to judge any difference against — and the one
+ *      agent positioned to establish one, the Path B+ control `stack-detective`, turned out
+ *      to be contaminated. See ADR-001 §1.
  *   2. It cost ~6 hr of manual capture per cycle, forever.
  *   3. Convoke's agents are markdown in git. The behavioural question is downstream of a
- *      mechanical one that `git show` answers exactly, for free.
+ *      mechanical one that `git show` answers exactly, for free — PROVIDED the check reads
+ *      the whole executed surface (see `wrapperTemplates`).
+ *
+ * NOTE (2026-08-14): an earlier version of this header claimed PF1 "measured noise", citing
+ * `stack-detective`'s byte-identical source against differing recordings. That inference was
+ * WITHDRAWN — the agent executes through a generated, gitignored wrapper whose generator DID
+ * change between those commits, so the control was never a control. Backlog I131, which
+ * quantified it, is retracted; do not cite its numbers. The rewritten reasoning above does
+ * not depend on it.
  *
  * This tool answers the mechanical question. It does NOT claim to prove behavioural
  * equivalence — an LLM reading identical definitions can still phrase things differently,
@@ -45,6 +52,7 @@
 'use strict';
 
 const { execFileSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../update/lib/utils');
 
@@ -102,6 +110,55 @@ function loadsConfig(text) {
   return /config\.yaml|load.{0,20}config|config.{0,20}load/i.test(text);
 }
 
+const GENERATOR = 'scripts/update/lib/refresh-installation.js';
+const WRAPPER_BASELINE = '.github/expected-wrapper-template.txt';
+
+/**
+ * The static skeleton of every generated agent-wrapper template, at `ref`.
+ *
+ * WHY THIS EXISTS (ADR-001 §3, added 2026-08-14). An agent executes TWO files: the tracked
+ * `_bmad/bme/**\/agents/<id>.md`, and the generated `.claude/skills/<id>/SKILL.md` that wraps it.
+ * The wrapper is gitignored, so a diff of `agents/**` cannot see it — and a real, migration-caused
+ * instruction change hid there for 10 weeks, silently contaminating PF1's control agent and the
+ * argument this ADR was originally built on (`FOLLOW every step in the <activation> section
+ * precisely` -> `FOLLOW the activation steps precisely`).
+ *
+ * A parity gate that only read `agents/**` would inherit the exact blind spot it replaced. The
+ * wrapper's GENERATOR is tracked, so the surface is recoverable: extract the template literals and
+ * diff those.
+ *
+ * `${...}` interpolations are normalised away — they carry the per-agent id/name, which varies by
+ * agent and is already covered by the agent-level checks above. What is compared is the fixed
+ * instruction text every agent receives.
+ */
+function wrapperTemplates(projectRoot, ref) {
+  let src;
+  try {
+    src = git(projectRoot, ['show', `${ref}:${GENERATOR}`]);
+  } catch {
+    return [];
+  }
+  const templates = [];
+  const START = 'const content = `';
+  let i = src.indexOf(START);
+  while (i !== -1) {
+    // Walk to the closing backtick, honouring escapes and skipping over `${...}` spans so a
+    // backtick inside an interpolation cannot terminate the literal early.
+    let j = i + START.length;
+    let depth = 0;
+    for (; j < src.length; j++) {
+      const c = src[j];
+      if (c === '\\') { j++; continue; }
+      if (c === '$' && src[j + 1] === '{') { depth++; j++; continue; }
+      if (c === '}' && depth > 0) { depth--; continue; }
+      if (c === '`' && depth === 0) break;
+    }
+    templates.push(src.slice(i + START.length, j).replace(/\$\{[^}]*\}/g, '${}'));
+    i = src.indexOf(START, j);
+  }
+  return templates;
+}
+
 function compare(projectRoot, baseRef, headRef) {
   const base = agentFilesAt(projectRoot, baseRef);
   const head = agentFilesAt(projectRoot, headRef);
@@ -156,7 +213,75 @@ function compare(projectRoot, baseRef, headRef) {
     if (!base.has(id)) findings.push({ severity: 'INFO', id, detail: 'agent added' });
   }
 
+  // The generated wrapper is part of the executed surface (see wrapperTemplates).
+  const wBase = wrapperTemplates(projectRoot, baseRef);
+  const wHead = wrapperTemplates(projectRoot, headRef);
+  if (wBase.length === 0 || wHead.length === 0) {
+    // Fail loudly rather than silently reporting parity we did not check. If the generator is
+    // refactored so the templates no longer match, "found nothing" must not read as "nothing
+    // changed" — that is the exact false-negative this whole check exists to prevent.
+    findings.push({
+      severity: 'BROKEN',
+      id: '(wrapper)',
+      detail:
+        `wrapper templates could not be extracted (base ${wBase.length}, head ${wHead.length}) — ` +
+        `the extractor in agent-surface-parity.js needs updating for ${GENERATOR}`,
+    });
+  } else {
+    // Between two RELEASES the wrapper is expected to change — it did across 3.x -> 4.0. Diffing
+    // base->head would therefore leave this permanently red, and a gate nobody can get to green
+    // is a gate nobody reads. Compare HEAD against a COMMITTED baseline instead, the same shape
+    // as `.github/expected-python-tests.txt`: drift fails, and the fix is to acknowledge it by
+    // updating the baseline in the same commit. That way the check fires exactly when someone
+    // changes the executed surface WITHOUT noticing — the failure mode that actually occurred.
+    const current = wHead.join('\n~~~\n');
+    let baseline = null;
+    try {
+      baseline = fs.readFileSync(path.join(projectRoot, WRAPPER_BASELINE), 'utf8');
+    } catch {
+      /* absent — reported below */
+    }
+    if (baseline === null) {
+      findings.push({
+        severity: 'BROKEN',
+        id: '(wrapper)',
+        detail: `baseline ${WRAPPER_BASELINE} is missing — cannot verify the generated wrapper`,
+      });
+    } else if (baseline.trimEnd() !== current.trimEnd()) {
+      findings.push({
+        severity: 'BROKEN',
+        id: '(wrapper)',
+        detail:
+          `the generated agent wrapper changed and the baseline was not updated. Agents EXECUTE ` +
+          `through this file; it is gitignored, so no diff of agents/** can see it.\n` +
+          diffLines(baseline, current) +
+          `\n         If this change is intended, update ${WRAPPER_BASELINE} in the SAME commit ` +
+          `and say why in the message.`,
+      });
+    }
+    // Informational: what the operator-facing wrapper did between the two refs. Not a failure.
+    if (wBase.join('\n~~~\n') !== current) {
+      findings.push({
+        severity: 'INFO',
+        id: '(wrapper)',
+        detail: `wrapper changed between ${baseRef} and ${headRef}:\n${diffLines(wBase.join('\n'), wHead.join('\n'))}`,
+      });
+    }
+  }
+
   return { rows, findings };
+}
+
+/** Line-level diff, enough to show which instruction moved. */
+function diffLines(a, b) {
+  const A = a.split('\n');
+  const B = b.split('\n');
+  const setB = new Set(B);
+  const setA = new Set(A);
+  const out = [];
+  for (const l of A) if (!setB.has(l) && l.trim()) out.push(`           - ${l}`);
+  for (const l of B) if (!setA.has(l) && l.trim()) out.push(`           + ${l}`);
+  return out.join('\n');
 }
 
 function main(argv) {
