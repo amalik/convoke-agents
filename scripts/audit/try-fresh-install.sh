@@ -50,8 +50,20 @@ cleanup() {
   local rc=$?
   if [ "$rc" -ne 0 ]; then
     mkdir -p "$LOG_DIR"
-    [ -f "$TMP/install.log" ] && cp "$TMP/install.log" "$LOG_DIR/install.log" 2>/dev/null || true
-    echo "    diagnostics copied to $LOG_DIR"
+    # Copy whatever exists. `install.log` alone is NOT enough: on every exit-1 path the run got
+    # that far BECAUSE npm install succeeded, so install.log is the log of a successful install
+    # and says nothing about the defect. `run.log` is the actual transcript. (R2 review 2026-08-14.)
+    local copied=0
+    for f in run.log install.log; do
+      if [ -f "$TMP/$f" ]; then cp "$TMP/$f" "$LOG_DIR/$f" 2>/dev/null && copied=1; fi
+    done
+    if [ "$copied" -eq 1 ]; then
+      echo "    diagnostics copied to $LOG_DIR"
+    else
+      # Do not claim to have copied something when nothing existed — an early exit-2 reaches the
+      # trap before any log is written, and the old unconditional message was simply false.
+      echo "    (no diagnostics to copy — failed before any log was written)"
+    fi
   fi
   if [ "${KEEP:-0}" = "1" ]; then echo "kept: $TMP"; else rm -rf "$TMP"; fi
 }
@@ -60,6 +72,12 @@ trap cleanup EXIT
 # Exit codes are distinguished so CI (and a human) can tell "the package is broken" from
 # "the environment failed us". 2 = harness/environment problem, 1 = a real product defect.
 ENV_FAIL=2
+
+# Tee the whole transcript so the CI artifact carries the actual failure, not just install.log.
+# Stale logs from a previous local run are cleared first, so a preserved log is never mistaken
+# for this run's (R2 review 2026-08-14).
+rm -rf "$LOG_DIR"
+exec > >(tee "$TMP/run.log") 2>&1
 
 echo "==> Packing the current working tree"
 ( cd "$REPO" && npm pack --pack-destination "$TMP" >/dev/null )
@@ -84,9 +102,19 @@ npm init -y >/dev/null 2>&1
 # an offline runner produced a bare exit 1 with no diagnosis — on the job that gates `publish`.
 # This also surfaces `postinstall` output, which is genuinely the first thing a new user sees.
 if ! npm install "$TARBALL" > "$TMP/install.log" 2>&1; then
-  echo "    [harness] npm install failed — this is usually the registry, not your code:"
+  # Classify rather than assume. npm treats a non-zero `postinstall` and an unresolvable
+  # dependency range as install failures — both are shippable PRODUCT defects (the I137 class),
+  # and calling them "the registry" points the maintainer away from the cause. Only fall back to
+  # ENV_FAIL when the log actually looks like a network/registry problem. (R2 review 2026-08-14.)
+  if grep -qiE 'ENOTFOUND|ETIMEDOUT|ECONNREFUSED|EAI_AGAIN|ERR_SOCKET|network|rate.?limit|E429|registry.*(unreachable|timeout)' "$TMP/install.log"; then
+    echo "    [harness] npm install failed and the log looks like a network/registry problem:"
+    sed 's/^/      /' "$TMP/install.log" | tail -20
+    exit "$ENV_FAIL"
+  fi
+  echo "    npm install FAILED, and not for an obvious network reason — treating as a real defect"
+  echo "    (a bad dependency range or a crashing postinstall both land here):"
   sed 's/^/      /' "$TMP/install.log" | tail -20
-  exit "$ENV_FAIL"
+  exit 1
 fi
 echo "    installed into $TMP/proj"
 # postinstall cannot fail the install (scripts/postinstall.js swallows its own errors), so an
@@ -110,9 +138,15 @@ echo "    [doctor exit $DOCTOR]"
 
 echo
 echo "==> convoke-export   (a shipped bin doing real work, not just --help)"
-# Export EVERY skill the manifest offers, not just the first row. The previous version exported
-# `rows[0]`, so coverage silently shifted whenever the manifest was reordered and breakage in
-# rows 2..N went undetected. Capped to keep the job quick; the cap is reported, never silent.
+# Export the FIRST `MAX_EXPORTS` skills the manifest offers (default 5). The previous version
+# exported `rows[0]` only.
+#
+# BE HONEST ABOUT WHAT THIS COVERS: this is 5 of however many the manifest holds, and it is still
+# manifest-ORDER dependent — a reorder changes which 5 are covered. It narrows the hole rather
+# than closing it. An earlier draft of this comment claimed it exported "EVERY skill", which was
+# wrong and would have stopped a reader from adding real coverage (R2 review 2026-08-14).
+# Full-coverage export is deliberately not done here: it is O(minutes) on a job that gates
+# `publish`. Tracked in the backlog instead.
 MANIFEST="$TMP/proj/_bmad/_config/skill-manifest.csv"
 EXPORT=0
 if [ ! -f "$MANIFEST" ]; then
@@ -120,6 +154,16 @@ if [ ! -f "$MANIFEST" ]; then
   EXPORT=1
 else
   MAX_EXPORTS="${MAX_EXPORTS:-5}"
+  # Validate before use. `MAX_EXPORTS=0` or a non-numeric value yields an empty skill list, and
+  # the empty-list branch below then reports "skill-manifest.csv has a valid header but zero
+  # rows" — blaming the manifest for what is a bad argument. It fails CLOSED (verified: exit 1),
+  # so the gate is not silently disabled, but the diagnostic sends the reader to the wrong file.
+  # Same class as the bug this script's own history records: blaming convoke-export for the
+  # script's bad assumption. Found by self-check during R2, 2026-08-14.
+  if ! [ "$MAX_EXPORTS" -ge 1 ] 2>/dev/null; then
+    echo "    [harness] MAX_EXPORTS must be an integer >= 1 (got: '$MAX_EXPORTS')"
+    exit "$ENV_FAIL"
+  fi
   # A renamed/removed `canonicalId` column previously produced `rows[0][-1]` -> undefined ->
   # `process.stdout.write(undefined)` -> a raw TypeError that killed the script before any
   # verdict printed. Fail with a sentence instead.
@@ -140,10 +184,15 @@ else
     echo "    [skill-manifest.csv has a valid header but zero rows — nothing can be exported]"
     EXPORT=1
   else
+    # Guarded like its sibling above. Unguarded, a failure here died at exit 1 ("product defect")
+    # with no FAIL line printed at all — the asymmetry R2 review flagged.
     TOTAL="$(node -e '
       const { readManifest } = require(process.argv[2]);
       process.stdout.write(String(readManifest(process.argv[1]).rows.length));
-    ' "$MANIFEST" "$TMP/proj/node_modules/convoke-agents/scripts/portability/manifest-csv.js")"
+    ' "$MANIFEST" "$TMP/proj/node_modules/convoke-agents/scripts/portability/manifest-csv.js")" || {
+      echo "    [harness] could not count manifest rows"
+      exit "$ENV_FAIL"
+    }
     COUNT="$(echo "$SKILLS" | wc -w | tr -d ' ')"
     echo "    exporting $COUNT of $TOTAL skill(s) (cap MAX_EXPORTS=$MAX_EXPORTS)"
     for SKILL in $SKILLS; do
@@ -198,8 +247,37 @@ for BIN in $BINS; do
   if ! node --check "$ABS" >/dev/null 2>&1; then
     echo "    FAILED: $BIN — $TARGET does not parse"; FAILED=1; continue
   fi
+  # Parsing is not enough. `node --check` never resolves `require()`, so a bin whose dependency
+  # was not shipped parses cleanly and then throws MODULE_NOT_FOUND on the user's first run —
+  # which is I139's exact class, and reachable: `audit-bmm-dependencies.js` requires
+  # `../../_bmad/bme/_team-factory/lib/utils/csv-utils`, and `_bmad/bme/_team-factory/` is a
+  # SEPARATE `files:` entry from `scripts/`. Drop that one entry and the old check still said
+  # "all 14 bins present, shipped and parseable". Found by R2 review 2026-08-14.
+  #
+  # Resolve each require specifier instead of executing the file — running these would fire three
+  # installers for real, which is the mistake the previous version made.
+  UNRESOLVED="$(node -e '
+    const fs = require("fs"), path = require("path");
+    const file = process.argv[1];
+    const src = fs.readFileSync(file, "utf8");
+    const specs = new Set();
+    // Static literal requires only. A dynamic require (variable specifier) is skipped rather
+    // than guessed at — reporting a false missing dependency would be worse than missing one.
+    for (const m of src.matchAll(/\brequire\(\s*["\u0027]([^"\u0027]+)["\u0027]\s*\)/g)) specs.add(m[1]);
+    const missing = [];
+    for (const spec of specs) {
+      if (spec.startsWith("node:")) continue;
+      try { require.resolve(spec, { paths: [path.dirname(file)] }); }
+      catch { missing.push(spec); }
+    }
+    process.stdout.write(missing.join(" "));
+  ' "$ABS" 2>/dev/null)"
+  if [ -n "$UNRESOLVED" ]; then
+    echo "    FAILED: $BIN — $TARGET requires module(s) that did not ship: $UNRESOLVED"
+    FAILED=1; continue
+  fi
 done
-[ "$FAILED" -eq 0 ] && echo "    all $BIN_COUNT bins present, shipped and parseable"
+[ "$FAILED" -eq 0 ] && echo "    all $BIN_COUNT bins present, shipped, parseable, and their requires resolve"
 
 echo
 echo "========================================"
