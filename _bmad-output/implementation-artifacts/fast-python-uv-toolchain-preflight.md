@@ -1,6 +1,6 @@
 # Fast Story: Python 3.11+ / `uv` toolchain preflight (I131)
 
-**Status:** ready-for-dev · **Lane:** Fast (pending triage RICE) · **Source:** BMAD v6.11.0 impact analysis, 2026-08-11 (Winston) · **Backlog ID:** I131
+**Status:** ready-for-dev · **Lane:** Fast (pending triage RICE) · **Source:** BMAD v6.11.0 impact analysis, 2026-08-11 (Winston) · **Backlog ID:** I132  <!-- renumbered from I131 on 2026-08-14: collided with the PF1-methodology I131, which holds the backlog rows and is cited by ADR-001. This item has no backlog row, so it moved. -->
 
 ## Context
 
