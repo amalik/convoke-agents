@@ -1,6 +1,6 @@
-# Fast Story: Upstream skill-name staleness gate (I130)
+# Fast Story: Upstream skill-name staleness gate (I143)
 
-**Status:** ready-for-dev · **Lane:** Fast (pending triage RICE) · **Source:** BMAD v6.11.0 impact analysis, 2026-08-11 (Winston) · **Backlog ID:** I130
+**Status:** ready-for-dev · **Lane:** Fast (pending triage RICE) · **Source:** BMAD v6.11.0 impact analysis, 2026-08-11 (Winston) · **Backlog ID:** I143  <!-- renumbered from I130 on 2026-08-14: collided with the PF1 placeholder-guard I130 (✅ Done 2026-08-13). Same bad derivation that produced the I131→I132 collision — the authoring grep undercounted the I1xx space, which runs I100–I142. Backlog row now exists. -->
 
 ## Context
 
@@ -31,7 +31,13 @@ The defect is narrower: **staleness is invisible.** There is no gate, no expiry,
 
 **D2 — Detect by scanning source literals, not by refactoring the inline conditionals.** [`classifyIntent`](../../scripts/portability/classify-skills.js#L128-L228) mixes named collections with ~80 lines of inline string comparisons. Refactoring all of it into named constants would be cleaner long-term but touches live classification logic for no behavioral gain. Instead the gate **strips comments, then extracts `'bmad-*'` / `'wds-*'` string literals** from the source and validates them against the installed manifest. Zero risk to classification behavior. If the false-positive rate proves annoying in practice, the constants refactor becomes the follow-up — not the entry cost.
 
-**D3 — Comment-stripping is shared with the `install-scope-check` story.** [`fast-install-scope-check-ci-salvage.md`](fast-install-scope-check-ci-salvage.md) scope item 2 needs the same technique for the same reason (its `WRITE_OP_RE` counts matches inside comments and strings). Extract one helper both consume rather than writing it twice — this is the `shared-test-constants` rule applied to production helpers. Whichever story ships first owns the extraction; the second imports it.
+**D3 — Promote the existing `stripComments`; do not write a third one.** *(Amended 2026-08-14 — the original decision proposed extracting a fresh helper shared with the `install-scope-check` story. A hardened implementation already exists.)*
+
+[`tests/lib/fresh-install-health.test.js`:232](../../tests/lib/fresh-install-health.test.js#L232) already implements comment-stripping, and it is **battle-tested in exactly the way this story needs**: I139's R1 review found it treating `const sep = /\//;` as the start of a `//` comment and dropping the rest of the line — including a real offender — and fixed it with the standard preceding-token heuristic for regex literals. That fix carries its own regression test at [:321](../../tests/lib/fresh-install-health.test.js#L321) (*"stripComments does not let a regex literal hide an offender"*).
+
+Promote it from the test file into a shared module under `scripts/` and have this gate import it. [`fast-install-scope-check-ci-salvage.md`](fast-install-scope-check-ci-salvage.md) scope item 2 needs the identical technique for the identical reason (its `WRITE_OP_RE` counts matches inside comments and strings) and should import the same module — `shared-test-constants` applied to production helpers. Writing a fresh stripper would re-introduce a blind spot that has already been found and closed once, at review cost.
+
+**This raises the stakes on AC3.** The regex-literal blind spot is precisely a catch-all false-negative: an offender hidden by a mis-parsed comment boundary is a name the gate *fails to report*, which reads as clean. Carry the `:321` test forward against the promoted module rather than assuming the behaviour survives the move.
 
 **D4 — CI guard, not `convoke-doctor`.** The question "did upstream rename a skill under us?" is a **Convoke-maintainer** question, not an operator question. An operator cannot act on the answer — the fix is always a Convoke code change. Putting it in `convoke-doctor` would emit a warning the operator is powerless to resolve, which is an OC-R3 (rationale) failure. It belongs in CI, alongside [`install-scope-check.js`](../../scripts/audit/install-scope-check.js), which set this precedent.
 
@@ -49,7 +55,7 @@ The defect is narrower: **staleness is invisible.** There is no gate, no expiry,
    - Exit codes: `0` clean · `1` stale names found · `2` manifest missing/unreadable · `3` no source files matched (guards against a silently-empty scan passing as clean).
 2. **Wire into CI.** Add an npm script (suggest `audit:name-drift`) and a step in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). Honor the workflow-level `bash -eo pipefail` default (rule `verification-pipefail`).
 3. **Extract the comment-stripping helper** per D3, or import it if the sibling story landed first.
-4. **Do not fix the six stale names in this story.** The gate ships red on purpose — that is the acceptance evidence that it works. Pruning is I132's sibling item (renumbered 2026-08-14 from I131 — ID collision with the PF1-methodology item) (backlog item 3 in the v6.11 analysis) and should be a separate commit so the "gate catches real drift" signal stays legible in history.
+4. **Do not fix the stale names in this story.** The gate ships red on purpose — that is the acceptance evidence that it works. Pruning is **backlog I144**, which depends on this story and should be a separate commit so the "gate catches real drift" signal stays legible in history. *(Corrected 2026-08-14: this line previously pointed at I132, which is the Python/`uv` toolchain preflight — an unrelated item from the same analysis. Do not restate the stale-name count here either; I144 takes its list from this gate's output per `mechanical-research-enumeration`, since the Context table is a hand-audit and may be incomplete.)*
 
 ## Acceptance criteria
 
