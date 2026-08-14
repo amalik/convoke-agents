@@ -83,7 +83,14 @@ const TRACKED = [
   // forbids — those are `_bmad/{bmm,cis,tea,bma,gds,bmb,wds,core}/`, and the write is guarded by
   // an existence check so user state is never clobbered. The checker independently reported
   // "no scope violations"; only the count moved.
-  { file: 'scripts/update/lib/refresh-installation.js', expected: 10 },
+  // 10 -> 11 on 2026-08-14 (backlog I139, R1 review). The added write is the salvage rename of an
+  // UNUSABLE `<projectRoot>/_bmad/_config/skill-manifest.csv` to `.corrupt-<version>` before
+  // reseeding. Reviewed before accepting: it moves a file within the same Convoke-owned
+  // `_bmad/_config/` directory the seeding write already targets, touches none of the forbidden
+  // upstream paths, and exists specifically to avoid DELETING user data (path-safety rule) — the
+  // alternative was overwriting it in place. The checker independently reported "no scope
+  // violations"; only the count moved.
+  { file: 'scripts/update/lib/refresh-installation.js', expected: 11 },
   { file: 'scripts/update/migrations/3.3.x-to-4.0.0.js', expected: 5 },
   { file: 'scripts/update/migrations/3.2.x-to-4.0.0.js', expected: 0 },
   { file: 'scripts/update/migrations/3.1.x-to-4.0.0.js', expected: 0 },
