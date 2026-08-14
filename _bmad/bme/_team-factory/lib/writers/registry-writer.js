@@ -373,6 +373,26 @@ function gitEnv() {
 }
 
 /**
+ * Walk up from `startDir` looking for a `.git` entry.
+ *
+ * `fs.existsSync` is the RIGHT basis here, unusually for this repo: the question is literally
+ * "does this path exist on disk", not "is this tracked by git" (the distinction that caused the
+ * `.claude/skills` incident). `.git` is matched as a DIRENT of either kind — it is a plain file,
+ * not a directory, inside linked worktrees and submodules.
+ *
+ * @returns {boolean} true if any ancestor directory contains a `.git` entry.
+ */
+function hasGitAncestor(startDir) {
+  let dir = startDir;
+  for (;;) {
+    if (fs.existsSync(path.join(dir, '.git'))) return true;
+    const parent = path.dirname(dir);
+    if (parent === dir) return false; // reached filesystem root
+    dir = parent;
+  }
+}
+
+/**
  * Is `cwd` inside a git work tree?
  *
  * This is the discriminator that lets the guard fail OPEN for the supported "not a git project"
@@ -381,8 +401,17 @@ function gitEnv() {
  * locale- and version-dependent. `rev-parse --is-inside-work-tree` answers canonically and prints
  * a non-localised `true`/`false`.
  *
- * @returns {boolean|null} true/false, or null when git itself could not be run (spawn error,
- *   timeout) — which is NOT the same as "no repo" and must fail closed.
+ * NON-ZERO EXIT IS AMBIGUOUS, and an earlier version of this function got it wrong by treating
+ * it as "no repo". git aborts with the same shape (exit 128, empty stdout, only the stderr text
+ * differing) BEFORE it ever evaluates the work-tree question when it refuses to operate at all —
+ * most importantly `safe.directory` / "detected dubious ownership" (git >= 2.35.2), which fires
+ * routinely in containers and CI where the checkout is owned by a different UID. Folding that
+ * into "no repo" disabled this guard entirely in exactly those environments. Since stderr text is
+ * localised and cannot be matched on, discriminate on the filesystem instead: a `.git` entry in
+ * any ancestor means this IS a repo and git's refusal is an error → unknown → fail closed.
+ *
+ * @returns {boolean|null} true/false, or null when the answer is UNKNOWN (spawn error, timeout,
+ *   or a git refusal inside what is demonstrably a repo) — which must fail closed.
  */
 function isInsideWorkTree(cwd) {
   const res = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], {
@@ -392,7 +421,10 @@ function isInsideWorkTree(cwd) {
     env: gitEnv(),
   });
   if (res.error) return null; // git missing / timed out — unknown, not "no repo"
-  if (res.status !== 0) return false; // git ran and said: not a work tree
+  if (res.status !== 0) {
+    // Only a repo-free tree may fail open. A refusal inside a real repo is an error.
+    return hasGitAncestor(cwd) ? null : false;
+  }
   return res.stdout.toString().trim() === 'true';
 }
 
@@ -495,15 +527,44 @@ function checkDirtyTree(registryPath) {
       return { dirty: true, diff: `unverifiable (${failed.reason}) — refusing to treat as clean` };
     }
 
+    // `assume-unchanged` (tag `h`) and `skip-worktree` (tag `S`) tell git to STOP LOOKING at a
+    // tracked file. All three probes above then report nothing for a file full of uncommitted
+    // work: `diff` trusts the cached stat, and `ls-files --others` skips it because it is
+    // tracked. Verified — with either bit set, an edited file returned `{dirty:false}`.
+    //
+    // These bits are not exotic here: they are the standard trick for holding local edits to a
+    // config-like file without git nagging, and every file this guard protects (agent-registry.js,
+    // config.yaml, module-help.csv) is exactly that kind of file. Refuse rather than guess — git
+    // has explicitly disclaimed knowledge, so we have none either.
+    const marked = runGitDiff(['--literal-pathspecs', 'ls-files', '-v', '--', absPath], cwd);
+    // `ok:false` here means "no output", which for `ls-files -v` is the normal untracked case —
+    // already covered above. Only a successful read can carry a flag.
+    if (marked.ok) {
+      const flagged = marked.out
+        .split('\n')
+        .filter(Boolean)
+        // Format is `<tag><space><path>`. Lowercase tag = assume-unchanged; `S` = skip-worktree.
+        .filter((line) => /^([a-z]|S) /.test(line));
+      if (flagged.length > 0) {
+        return {
+          dirty: true,
+          diff: `unverifiable (assume-unchanged/skip-worktree set — git is not tracking edits to this file) — refusing to treat as clean`,
+        };
+      }
+    }
+
     const allDiffs = [
       ...new Set([unstaged.out, staged.out, untracked.out].filter(Boolean).join('\n').split('\n')),
     ]
       .filter(Boolean)
       .join('\n');
     return { dirty: allDiffs.length > 0, diff: allDiffs };
-  } catch {
-    // If git is not available or file is not in a repo, proceed
-    return { dirty: false, diff: '' };
+  } catch (err) {
+    // Was `return { dirty: false }` — "if git is not available or file is not in a repo,
+    // proceed". Both of those cases are now handled explicitly above, so anything reaching here
+    // is an UNEXPECTED throw, and a safety guard must not answer "safe" to a question it failed
+    // to evaluate. Kept rather than deleted: `find`ing it unreachable today is not a guarantee.
+    return { dirty: true, diff: `unverifiable (${err && err.message ? err.message : 'unexpected error'}) — refusing to treat as clean` };
   }
 }
 
