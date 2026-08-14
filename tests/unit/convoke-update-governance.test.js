@@ -324,7 +324,7 @@ describe('convoke-update governance gate (Story v63-2-3)', () => {
         `warning should carry the underlying error message; got:\n${combined}`,
       );
       assert.ok(
-        combined.includes('audit-bmm-dependencies.js --dry-run'),
+        combined.includes('convoke-audit-bmm-deps --dry-run'), // I137: was an unrunnable repo-relative path
         `warning should point at the debug command; got:\n${combined}`,
       );
     } finally {
