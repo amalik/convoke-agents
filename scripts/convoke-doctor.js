@@ -288,10 +288,14 @@ function checkModuleWorkflows(mod) {
   });
 
   if (missing.length > 0) {
+    // `missing` holds raw config entries, which come in two shapes — a bare string, or an object
+    // `{ name, entry, ... }`. Joining them directly printed `Missing: [object Object]` for the
+    // object form, i.e. the message named nothing. Found by code review 2026-08-14 (I137).
+    const missingNames = missing.map((w) => (typeof w === 'object' ? w.name : w));
     return {
       name: label,
       passed: false,
-      error: `Missing: ${missing.join(', ')}`,
+      error: `Missing: ${missingNames.join(', ')}`,
       fix: `Reinstall the ${mod.name} module`
     };
   }
@@ -1040,6 +1044,13 @@ module.exports = {
   loadSkillManifest,
   checkModuleSkillWrappers,
   checkBmmDependencies,
+  // Exposed for tests (I137): these two decide whether a CLEAN INSTALL reports itself broken,
+  // which is the defect class `tests/lib/fresh-install-health.test.js` guards. Asserting against
+  // the real functions matters here — an earlier version of that test re-implemented the workflow
+  // lookup and got it wrong (it honoured a config `entry` field that this code ignores), so it
+  // verified a rule production does not have.
+  checkModuleWorkflows,
+  checkVersionConsistency,
   // Exposed for tests: allow direct verification of the summary-mode threshold
   // without mutating a copy of the check function.
   BMM_DRIFT_SUMMARY_THRESHOLD,
