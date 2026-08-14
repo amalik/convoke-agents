@@ -233,7 +233,14 @@ async function _phase2_verifyConfigs(projectRoot) {
   if (!fs.existsSync(inventoryPath)) {
     throw new Error(
       `Migration aborted: inventory CSV not found at ${inventoryPath}. ` +
-      `Run 'node scripts/audit/audit-bmad-init-refs.js' to regenerate.`
+      // I137: previously said "Run 'node scripts/audit/audit-bmad-init-refs.js' to regenerate."
+      // This message is printed on a USER's machine during convoke-update. That path does not
+      // exist in their project, and regenerating the inventory is an authoring-time step they
+      // should never perform — the CSV ships with the package. A missing CSV is a packaging
+      // fault on our side, so say that instead of handing out an unrunnable instruction.
+      `This file ships with convoke-agents, so its absence means the installed package is ` +
+      `incomplete. Reinstall with 'npm install convoke-agents@latest' and, if it recurs, ` +
+      `please report it — regenerating it is not something you need to do.`
     );
   }
   const rows = _parseInventoryCsv(fs.readFileSync(inventoryPath, 'utf8'));
