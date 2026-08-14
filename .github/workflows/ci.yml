@@ -202,9 +202,22 @@ jobs:
     # I139, so neither a launch smoke nor the health check would have caught it — only invoking
     # real work did.
     #
-    # No `npm ci`: the script needs no repo dependencies (verified against a clean clone). It is
-    # bash and ubuntu-only by design; Windows install behaviour is tracked separately as I128.
+    # No `npm ci`: the script needs no repo dependencies (verified against a clean clone). NOTE
+    # this holds only while package.json has no `prepack`/`prepare` script — `npm pack` fires
+    # both. `prepublishOnly` (the one that exists) does NOT fire on pack. If you add `prepare`,
+    # this job needs `npm ci` or it breaks with a missing-devDependency error whose cause is a
+    # comment in another file.
+    #
+    # Bash and ubuntu-only by design; Windows install behaviour is tracked separately as I128.
+    # Node 20 only, against `engines: >=18` — install-time code has the narrowest version coverage
+    # in this workflow. Widening to the 18/20/22 matrix is tracked in the backlog rather than done
+    # here, because it triples the cost of the slowest-to-start job for a thin marginal return.
     runs-on: ubuntu-latest
+    # The critical path is an UNCACHED registry install (no `npm ci`, no `cache: 'npm'`), which is
+    # the most stall-prone step in the workflow. Without a ceiling a hang burns the 6-hour default
+    # while `concurrency.cancel-in-progress` holds the ref's group — the trail-erasing dynamic
+    # backlog I105 blames for a 4-day invisible red.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 
@@ -213,8 +226,22 @@ jobs:
         with:
           node-version: 20
 
+      # The script exits 2 for a harness/environment failure (registry blip, missing tarball) and
+      # 1 for a real product defect, so a red here is readable without opening the log.
       - name: Fresh-install smoke (pack → install → doctor → export)
         run: bash scripts/audit/try-fresh-install.sh
+
+      # This job fails on defects that BY CONSTRUCTION do not reproduce in-repo, and the script
+      # deletes its temp project on exit. Without this, a maintainer gets a bare exit code and
+      # `KEEP=1` is advice they cannot act on in CI.
+      - name: Upload install logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: fresh-install-logs
+          path: .fresh-install-logs/
+          retention-days: 14
+          if-no-files-found: ignore
 
   python-test:
     runs-on: ubuntu-latest
