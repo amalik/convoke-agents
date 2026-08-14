@@ -21,6 +21,10 @@
 #   - in-progress: Developer actively working on implementation
 #   - review: Implementation complete, ready for review
 #   - done: Story completed
+#   - descoped-by-ADR: Story closed by an accepted ADR that retired its objective. NOT 'done'
+#     (the work was never performed) and NOT 'blocked' (nothing is waiting). Added 2026-08-14
+#     for v63-4-3, whose M9 PF1 gate was retired by adr-001-retire-m9-pf1-gate.md. Downstream
+#     stories must gate on the replacement evidence key, never on `done`.
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
@@ -667,7 +671,7 @@ development_status:
   v63-4-1-create-pf1-judge-prompt-and-calibration-test: done
   v63-4-2-create-pf1-validation-battery-harness: done
   v63-4-2b-version-bump-and-test-surface-updates-for-4-0-rc-candidate: done
-  v63-4-3-execute-pf1-validation-cycle-record-compare-and-gate: in-progress
+  v63-4-3-execute-pf1-validation-cycle-record-compare-and-gate: descoped-by-ADR
   v63-4-4-create-drift-snapshot-workflow: done
   v63-4-5-n-1-external-user-validation-sprint-5: ready-for-dev
   v63-epic-4-retrospective: optional
