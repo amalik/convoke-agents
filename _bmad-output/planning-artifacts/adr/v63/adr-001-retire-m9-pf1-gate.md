@@ -121,9 +121,18 @@ names both.
 
 ## What this decision explicitly does NOT claim
 
-**Deterministic parity is not behavioural equivalence.** An LLM reading identical definitions
-can still phrase its greeting differently — that is precisely the variance the control agent
-exposed, and no static check measures it. This ADR asserts that:
+**Deterministic parity is not behavioural equivalence.** An LLM reading identical definitions can
+still phrase its greeting differently, and no static check measures that.
+
+> **Corrected 2026-08-14 (third pass).** This sentence previously continued "— that is precisely
+> the variance **the control agent exposed**". It cited the contaminated control as a live example
+> of definitional noise, which contradicts §1 and the paragraph below it, both of which establish
+> that the control's definitions were **not** identical. The claim above is a statement about how
+> LLMs work; it needs no evidence from this corpus, and the corpus does not supply any. Logged
+> here rather than silently deleted because this is the **third** time the same retracted framing
+> survived a correction pass — it is unusually good at hiding in subordinate clauses.
+
+This ADR asserts that:
 
 - the operator-facing **contract** (agents, menu codes, config loading) is verifiable exactly, and
 - the residual behavioural question **was not in fact measured by the retired instrument**, so
@@ -153,9 +162,14 @@ they were never actually gated, but the PRD claimed they would be. Anyone who va
 claim should read §Alternatives, where the honest path to it is priced.
 
 **Neutral.** The PF1 assets are not deleted. `pf1-validation-battery.js`, `pf1-record-agent.js`,
-`pf1-judge-calibration.js`, the judge prompt, and the 8 recordings remain. If backlog **I131**
-(repeat-capture methodology) is ever done, the harness is there — subject to **I130** being
-fixed first.
+`pf1-judge-calibration.js`, the judge prompt, and the 8 recordings remain. If a repeat-capture
+methodology is ever pursued, the harness is there, and **I130 is already fixed** (2026-08-13), so
+it will not fabricate a PASS on a partial corpus. Two caveats for whoever picks it up: the 8
+recordings are 25% filled and **cannot** be completed into evidence, because the corpus has no
+clean control (§1); and `pf1-record-agent.js` pins neither model nor seed, so any study must fix
+both and must diff the **generated wrapper**, not just the tracked agent source. *(This paragraph
+previously said "subject to I130 being fixed first" and cited backlog I131 as the follow-on work;
+I130 landed the same day, and I131 was retracted — corrected 2026-08-14.)*
 
 > **Note added 2026-08-14, corrected the same day — backlog I131 was RETRACTED, and this ADR was
 > NOT unaffected.**
@@ -226,9 +240,13 @@ Accepting this ADR requires:
    rather than completed.
 5. **Story 4.3 release record** — cite verified parity output in place of "nothing is known".
 6. **CI** — add `agent-surface-parity.js` to the pipeline (base ref = last release tag).
-7. **Backlog I130** — fix regardless. The fabricated-PASS trigger is live today: `parseRecording`
-   rejects only empty sections, and the 87-byte placeholder passes. Retiring the gate does not
-   disarm the harness.
+7. **Backlog I130 — DONE 2026-08-13, same day this ADR was written.** ~~The fabricated-PASS
+   trigger is live today: `parseRecording` rejects only empty sections, and the 87-byte
+   placeholder passes.~~ It was fixed 15 seconds after this ADR's first commit and the present
+   tense was never updated — corrected 2026-08-14 after review flagged it as stale. The
+   `UNFILLED_PLACEHOLDER` guard now rejects a partially-filled corpus with exit 5; verified by
+   executing `parseRecording` against all 8 live recordings, which throw rather than PASS.
+   Retiring the gate does not disarm the harness, which is why this was fixed regardless.
 
 ## Evidence appendix
 
