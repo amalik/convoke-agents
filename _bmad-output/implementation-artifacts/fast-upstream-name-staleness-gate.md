@@ -49,7 +49,7 @@ The defect is narrower: **staleness is invisible.** There is no gate, no expiry,
    - Exit codes: `0` clean · `1` stale names found · `2` manifest missing/unreadable · `3` no source files matched (guards against a silently-empty scan passing as clean).
 2. **Wire into CI.** Add an npm script (suggest `audit:name-drift`) and a step in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). Honor the workflow-level `bash -eo pipefail` default (rule `verification-pipefail`).
 3. **Extract the comment-stripping helper** per D3, or import it if the sibling story landed first.
-4. **Do not fix the six stale names in this story.** The gate ships red on purpose — that is the acceptance evidence that it works. Pruning is I131's sibling item (backlog item 3 in the v6.11 analysis) and should be a separate commit so the "gate catches real drift" signal stays legible in history.
+4. **Do not fix the six stale names in this story.** The gate ships red on purpose — that is the acceptance evidence that it works. Pruning is I132's sibling item (renumbered 2026-08-14 from I131 — ID collision with the PF1-methodology item) (backlog item 3 in the v6.11 analysis) and should be a separate commit so the "gate catches real drift" signal stays legible in history.
 
 ## Acceptance criteria
 
