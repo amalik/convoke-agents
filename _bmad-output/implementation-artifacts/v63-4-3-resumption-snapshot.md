@@ -17,9 +17,12 @@ purpose: reduce-context-rebuild-cost-on-stalled-story-pickup
 > claims are wrong**, and acting on them produces a fabricated PASS on the M9 release gate:
 >
 > - Tasks 3/5 captured **Prompt 1 only** — Prompts 2-4 in all 8 files are 87-byte placeholders.
-> - The corpus is **not valid**: the control agent `stack-detective` has byte-identical source
->   across the two recorded commits yet differing recordings, so agent variance is uncontrolled
->   (backlog **I131**).
+> - The corpus is **not valid**: each prompt is captured **once per phase**, so agent variance is
+>   uncontrolled and no difference is interpretable. *(Corrected 2026-08-14 — this bullet
+>   previously cited `stack-detective`'s byte-identical source against differing recordings as the
+>   evidence. That control was contaminated: the recorder loads the generated, gitignored wrapper,
+>   whose generator changed between the two commits. Backlog **I131**'s quantification is
+>   retracted; the once-per-phase design fact above stands on its own.)*
 > - Running the battery on it yields **PASS regardless of the real scores** (backlog **I130**).
 >
 > This document twice asserted completeness inferred from file existence. Read the story file
