@@ -12,6 +12,7 @@
     "_bmad/bme/_artifacts/",
     "_bmad/bme/_portability/",
     "_bmad/bme/_team-factory/",
+    "_bmad/_config/skill-manifest.csv",
     ".claude-plugin/",
     ".claude/skills/bmad-audit-skill-dirs/",
     "INSTALLATION.md",
