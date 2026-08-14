@@ -166,6 +166,59 @@ describe('fresh-install health (I137)', () => {
     );
   });
 
+  it('an UNUSABLE manifest is repaired, and a valid one is left alone', () => {
+    // Code review 2026-08-14 asked whether "absent" was the right seeding trigger. It was not,
+    // and the failure was worse than being stuck: `existsSync` is true for a 0-byte file, so an
+    // empty manifest was never reseeded — and the Enhance block then APPENDED a row to it, which
+    // `readManifest` read as the HEADER. Garbage columns, zero rows, convoke-export throwing
+    // forever. Verified before the guard was widened.
+    const { readManifest } = require('../../scripts/portability/manifest-csv');
+    const rel = path.join('_bmad', '_config', 'skill-manifest.csv');
+
+    const cases = [
+      ['empty', '', true],
+      ['garbage', 'not,a,manifest\njunk\n', true],
+      // A manifest that PARSES with a valid header is user state, however few rows it has.
+      ['header-only', '"canonicalId","name","description","module","path","install_to_bmad","tier","intent","dependencies"\n', false],
+    ];
+
+    for (const [label, seed, expectSalvage] of cases) {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), `i139-${label}-`));
+      try {
+        fs.mkdirSync(path.join(dir, '_bmad', '_config'), { recursive: true });
+        fs.writeFileSync(path.join(dir, rel), seed);
+        // Only the seeding block matters here, so drive it via the same entry point.
+        require('child_process').execFileSync(
+          process.execPath,
+          [
+            '-e',
+            `require(${JSON.stringify(path.join(REPO_ROOT, 'scripts/update/lib/refresh-installation.js'))})` +
+              `.refreshInstallation(${JSON.stringify(dir)},{verbose:false,backupGuides:false})` +
+              `.then(()=>process.exit(0),e=>{console.error(e);process.exit(1)})`,
+          ],
+          { stdio: 'pipe' }
+        );
+        const { header } = readManifest(path.join(dir, rel));
+        assert.ok(
+          header.includes('path'),
+          `${label}: manifest still has no usable header after refresh — convoke-export stays broken`
+        );
+        const salvaged = fs
+          .readdirSync(path.join(dir, '_bmad', '_config'))
+          .filter((f) => f.includes('.corrupt-'));
+        assert.equal(
+          salvaged.length > 0,
+          expectSalvage,
+          expectSalvage
+            ? `${label}: unusable manifest was replaced without being set aside (path-safety)`
+            : `${label}: a VALID manifest was clobbered — that is user state`
+        );
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
+
   describe('remediation text must be runnable in a user project', () => {
     /**
      * Strip comments while tracking string/template state, so a `//` INSIDE a string is not
@@ -180,8 +233,45 @@ describe('fresh-install health (I137)', () => {
       let out = '';
       let i = 0;
       const N = src.length;
+      // Distinguish a REGEX LITERAL from a comment or division. Code review 2026-08-14 showed
+      // `const sep = /\//;` was read as the start of a `//` comment, so everything after it on
+      // that line — INCLUDING a real `node scripts/x.js` offender — was silently dropped. The
+      // scanner hid exactly what it exists to find. Verified end-to-end before this fix.
+      //
+      // Standard heuristic: a `/` that follows an operator, an opening bracket, or nothing at all
+      // starts a regex; a `/` following a value (identifier, literal, closing bracket) is division.
+      const regexAllowedAfter = /[=(,:[!&|?{};+\-*%<>~^]$/;
+      const lastMeaningful = () => {
+        const t = out.replace(/\s+$/, '');
+        return t.length ? t[t.length - 1] : '';
+      };
       while (i < N) {
         const c = src[i];
+        // Regex literal — consume it whole (including escaped slashes and char classes) so its
+        // contents can never be mistaken for a comment, a string, or a path.
+        if (c === '/' && src[i + 1] !== '/' && src[i + 1] !== '*') {
+          const prev = lastMeaningful();
+          if (prev === '' || regexAllowedAfter.test(prev)) {
+            out += c;
+            i++;
+            let inClass = false;
+            while (i < N) {
+              if (src[i] === '\\') {
+                out += src[i] + (src[i + 1] || '');
+                i += 2;
+                continue;
+              }
+              if (src[i] === '[') inClass = true;
+              else if (src[i] === ']') inClass = false;
+              const done = src[i] === '/' && !inClass;
+              out += src[i];
+              i++;
+              if (done) break;
+              if (src[i - 1] === '\n') break; // unterminated — bail rather than run away
+            }
+            continue;
+          }
+        }
         if (c === '/' && src[i + 1] === '/') {
           while (i < N && src[i] !== '\n') i++;
           continue;
@@ -227,6 +317,27 @@ describe('fresh-install health (I137)', () => {
       })(path.join(REPO_ROOT, 'scripts'));
       return found;
     }
+
+    it('stripComments does not let a regex literal hide an offender', () => {
+      // The scanner's own blind spot, found by code review 2026-08-14: `const sep = /\\//;` was
+      // read as the start of a `//` comment, so the rest of that line — including a real
+      // `node scripts/x.js` string — was dropped. The scanner hid exactly what it exists to find.
+      const cases = [
+        ['escaped slash in regex', 'const sep = /\\//; log("node scripts/a.js");', true],
+        ['url regex', 'const u = /https:\\/\\//; log("node scripts/b.js");', true],
+        ['slash in char class', 'const c = /[/]/; log("node scripts/c.js");', true],
+        ['division, not regex', 'const d = a / b; log("node scripts/d.js");', true],
+        ['genuine line comment', '// node scripts/ignored.js', false],
+        ['genuine block comment', '/* node scripts/ignored.js */', false],
+      ];
+      for (const [label, src, shouldSurvive] of cases) {
+        assert.equal(
+          /node\s+scripts\//.test(stripComments(src)),
+          shouldSurvive,
+          `stripComments mishandled: ${label}`
+        );
+      }
+    });
 
     it('no shipped script tells a user to run a repo-relative path to a DIFFERENT script', () => {
       // 14 such strings shipped across convoke-doctor.js and convoke-update.js, all naming
