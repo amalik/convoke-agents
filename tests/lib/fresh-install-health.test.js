@@ -125,6 +125,47 @@ describe('fresh-install health (I137)', () => {
     );
   });
 
+  it('a fresh install seeds a usable skill-manifest.csv, and convoke-export works', () => {
+    // Backlog I139. `convoke-export` is a shipped bin that reads every skill's content from the
+    // `path` column of `_bmad/_config/skill-manifest.csv`. Nothing created that file and
+    // `_bmad/_config/` was not in package.json `files`, so on a clean install the bin failed
+    // outright with ENOENT — every export by every new user. It was invisible because doctor
+    // reported it only as a ⚠ and still exited 0, and `--help` succeeded.
+    const manifestPath = path.join(installDir, '_bmad', '_config', 'skill-manifest.csv');
+    assert.ok(fs.existsSync(manifestPath), 'a fresh install produced no skill-manifest.csv');
+
+    const { readManifest } = require('../../scripts/portability/manifest-csv');
+    const { header, rows } = readManifest(manifestPath);
+    assert.ok(rows.length > 0, 'seeded manifest has no rows — convoke-export would find nothing');
+
+    // Every row must resolve. The package manifest is a CANDIDATE list of 106 rows, only ~19 of
+    // which point at content Convoke ships; the rest are upstream BMAD modules the user may not
+    // have. Seeding it verbatim would recreate backlog I123's trap, where most paths resolved to
+    // nothing.
+    const pathIdx = header.indexOf('path');
+    const broken = rows
+      .map((r) => r[pathIdx])
+      .filter((rel) => !rel || !fs.existsSync(path.join(installDir, rel)));
+    assert.deepEqual(broken, [], `seeded manifest rows point at content that is not installed:\n  ${broken.join('\n  ')}`);
+
+    // No duplicates. Seeding re-serialised rows unquoted while the Enhance registration block
+    // dedups with a QUOTED substring match (`skCsv.includes('"' + id + '"')`), so it missed the
+    // seeded row and appended a second copy of bmad-enhance-initiatives-backlog. Found by reading
+    // a seeded manifest, not by a test — hence this assertion.
+    const idIdx = header.indexOf('canonicalId');
+    const ids = rows.map((r) => r[idIdx]);
+    const dupes = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+    assert.deepEqual(dupes, [], `seeded manifest has duplicate rows: ${dupes.join(', ')}`);
+
+    // The point of all of it: the shipped bin can actually export.
+    const { exportSkill } = require('../../scripts/portability/export-engine');
+    const result = exportSkill(ids[0], installDir);
+    assert.ok(
+      result && result.instructions && result.instructions.length > 0,
+      `convoke-export produced nothing for "${ids[0]}" on a clean install`
+    );
+  });
+
   describe('remediation text must be runnable in a user project', () => {
     /**
      * Strip comments while tracking string/template state, so a `//` INSIDE a string is not
