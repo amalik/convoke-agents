@@ -61,19 +61,36 @@ echo "    [doctor exit $DOCTOR]"
 
 echo
 echo "==> convoke-export   (a shipped bin doing real work, not just --help)"
-set +e
-npx --no-install convoke-export bmad-brainstorming --output "$TMP/proj/exported" 2>&1 | tail -2
-EXPORT=${PIPESTATUS[0]}
-set -e
+# Pick a skill the install actually provides, rather than hardcoding one.
+# The first version hardcoded `bmad-brainstorming`, which lives under `_bmad/core/` — an UPSTREAM
+# BMAD skill that Convoke does not ship. In a Convoke-only project it is legitimately absent, so
+# the script reported a failure that was really its own bad assumption. The manifest is the
+# authority on what this install can export.
+MANIFEST="$TMP/proj/_bmad/_config/skill-manifest.csv"
+if [ ! -f "$MANIFEST" ]; then
+  echo "    [no skill-manifest.csv — convoke-export cannot work at all]"
+  EXPORT=99
+else
+  SKILL="$(tail -n +2 "$MANIFEST" | head -1 | cut -d, -f1 | tr -d '\"')"
+  echo "    exporting: $SKILL"
+  set +e
+  npx --no-install convoke-export "$SKILL" --output "$TMP/proj/exported" 2>&1 | tail -2
+  EXPORT=${PIPESTATUS[0]}
+  set -e
+fi
 echo "    [export exit $EXPORT]"
 
 echo
 echo "==> Every declared bin launches"
 FAILED=0
 for BIN in $(node -e "console.log(Object.keys(require('$TMP/proj/node_modules/convoke-agents/package.json').bin).join(' '))"); do
-  npx --no-install "$BIN" --help >/dev/null 2>&1
+  # `|| STATUS=$?` rather than a bare call: under `set -e` a bin exiting 1 (a legitimate
+  # usage-error exit for `--help` on some of them) killed the script before it printed any
+  # verdict at all — it reported failure without ever saying why.
+  STATUS=0
+  npx --no-install "$BIN" --help >/dev/null 2>&1 || STATUS=$?
   # 0 = printed help, 1 = usage error; anything higher means it crashed on startup
-  if [ $? -gt 1 ]; then echo "    FAILED: $BIN"; FAILED=1; fi
+  if [ "$STATUS" -gt 1 ]; then echo "    FAILED: $BIN (exit $STATUS)"; FAILED=1; fi
 done
 [ "$FAILED" = "0" ] && echo "    all bins launch"
 
@@ -82,7 +99,8 @@ echo "========================================"
 if [ "$DOCTOR" -eq 0 ] && [ "$EXPORT" -eq 0 ] && [ "$FAILED" -eq 0 ]; then
   echo "PASS — a new user gets a working, self-consistent install."
   echo
-  echo "Note: convoke-doctor may still print ⚠ warnings (currently 2 — backlog I139)."
+  echo "Note: convoke-doctor may still print ⚠ warnings (currently 1 — bmm-dependencies,"
+  echo "a governance registry a user has legitimately not generated yet)."
   echo "Warnings are fine; hard failures are not. Exit 0 is the bar."
   exit 0
 fi
