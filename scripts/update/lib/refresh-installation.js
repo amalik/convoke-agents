@@ -190,7 +190,35 @@ async function refreshInstallation(projectRoot, options = {}) {
           await fs.remove(destDir);
         }
         await fs.copy(srcDir, destDir, { overwrite: true });
-        changes.push(`Refreshed standalone bme submodule: ${agent.submodule}`);
+        // Stamp the submodule config version to match the package, exactly as the Enhance and
+        // Artifacts blocks below do.
+        //
+        // Backlog I137. This was the ONLY module tree copied without its config being stamped —
+        // Vortex and Gyre go through `mergeConfig`, Enhance and Artifacts set it directly, and
+        // `_team-factory` did neither. The package ships `version: 1.0.0`, so a FRESH, SUCCESSFUL
+        // install immediately failed Convoke's own health check:
+        //
+        //   ✗ Version consistency — Package: 4.0.0-rc.1, _team-factory: 1.0.0
+        //     Fix: Run: npx -p convoke-agents convoke-update
+        //
+        // i.e. the first thing a new user was told after installing was to go and update.
+        //
+        // `doc.set` rather than `mergeConfig` is deliberate: mergeConfig's structural defaults are
+        // Vortex-specific (`submodule_name: '_vortex'`, Vortex agents/workflows), so it would seed
+        // the wrong values into any field a submodule config happens to omit.
+        const destConfig = path.join(destDir, 'config.yaml');
+        if (fs.existsSync(destConfig)) {
+          assertVersion(version, `standalone:${agent.submodule}`);
+          const scDoc = YAML.parseDocument(fs.readFileSync(destConfig, 'utf8'));
+          if (scDoc.errors && scDoc.errors.length > 0) {
+            throw new Error(
+              `Refresh: cannot parse ${agent.submodule} config.yaml: ${scDoc.errors[0].message}`
+            );
+          }
+          scDoc.set('version', version);
+          fs.writeFileSync(destConfig, scDoc.toString({ lineWidth: 0 }), 'utf8');
+        }
+        changes.push(`Refreshed standalone bme submodule: ${agent.submodule} (config v${version})`);
         if (verbose) console.log(`    Refreshed standalone bme submodule: ${agent.submodule}`);
       }
     }
@@ -930,6 +958,36 @@ prompts: []
       changes.push(`Created customize file: ${filename}`);
       if (verbose) console.log(`    Created customize file: ${filename}`);
     }
+  }
+
+  // Seed / merge the artifact-governance taxonomy.
+  //
+  // Backlog I137. `mergeTaxonomy` was reachable ONLY from the 2.0.x->3.1.0 and 3.0.x->3.1.0
+  // migrations. A fresh install runs no migrations, so `_bmad/_config/taxonomy.yaml` was never
+  // created and a clean install failed its own health check:
+  //
+  //   ✗ Taxonomy: file exists — taxonomy.yaml not found at _bmad/_config/taxonomy.yaml
+  //     Fix: Run convoke-migrate-artifacts or convoke-update to create it
+  //
+  // Taxonomy creation lived on the UPGRADE path but not the INSTALL path. Calling it here covers
+  // both: it is idempotent by construction — creates from platform defaults when absent, and
+  // otherwise merges while preserving the operator-managed `initiatives.user` list.
+  try {
+    const { mergeTaxonomy } = require('./taxonomy-merger');
+    const taxonomyResult = await mergeTaxonomy(projectRoot);
+    if (taxonomyResult.created) {
+      changes.push('Created _bmad/_config/taxonomy.yaml (platform defaults)');
+      if (verbose) console.log('    Created _bmad/_config/taxonomy.yaml');
+    } else if (taxonomyResult.merged) {
+      changes.push('Merged platform defaults into _bmad/_config/taxonomy.yaml');
+      if (verbose) console.log('    Merged _bmad/_config/taxonomy.yaml');
+    }
+  } catch (err) {
+    // Non-fatal: a broken taxonomy must not abort an otherwise-good install. `convoke-doctor`
+    // reports the missing file, which is the same signal the operator had before this call
+    // existed — so the worst case is the previous behaviour, not a failed install.
+    changes.push(`Warning: could not seed taxonomy.yaml (${err.message})`);
+    if (verbose) console.warn(`    Warning: could not seed taxonomy.yaml: ${err.message}`);
   }
 
   return changes;
