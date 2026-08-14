@@ -476,6 +476,76 @@ async function refreshInstallation(projectRoot, options = {}) {
     }
   }
 
+  // 2e. Seed skill-manifest.csv if the project has none.
+  //
+  // Backlog I139. `convoke-export` is a shipped bin that reads every skill's content from the
+  // `path` column of `_bmad/_config/skill-manifest.csv`. That file was never created by an
+  // install and `_bmad/_config/` was not in package.json `files`, so on a clean install the bin
+  // failed outright:
+  //
+  //   ❌ bmad-brainstorming — ENOENT: ... <project>/_bmad/_config/skill-manifest.csv
+  //
+  // Every export by every new user failed. `convoke-doctor` only ever reported it as a ⚠ and
+  // still exited 0, and `--help` succeeded, so both the health check and a launch smoke called
+  // the product healthy — it took invoking real work to see it.
+  //
+  // WHY FILTERED, NOT COPIED VERBATIM. The package's manifest is a CANDIDATE list of 106 rows,
+  // but only 19 point at content Convoke actually ships (`_bmad/bme/**`); the other 87 point at
+  // upstream BMAD modules (bmm, core, wds, tea, cis, bmb) that the user gets from BMAD itself,
+  // if they have it. Shipping all 106 verbatim would hand every user a manifest where most rows
+  // resolve to nothing — the exact trap backlog I123 documents, where 75 of 106 paths failed to
+  // resolve even inside this repo. Filtering on "does this path exist in the user's project"
+  // is ground truth: it keeps the Convoke rows always, and upstream rows exactly when the user
+  // has that content installed.
+  //
+  // Only ever seeds when ABSENT. An existing manifest is user state — it may carry rows they
+  // added — and is left untouched; the Enhance/Artifacts registration blocks below append to it.
+  const skillManifestPath = path.join(projectRoot, '_bmad', '_config', 'skill-manifest.csv');
+  if (!fs.existsSync(skillManifestPath)) {
+    const packageManifest = path.join(packageRoot, '_bmad', '_config', 'skill-manifest.csv');
+    if (fs.existsSync(packageManifest)) {
+      try {
+        const { parseCsvRow, readManifest } = require('../../portability/manifest-csv');
+        const { header } = readManifest(packageManifest);
+        const pathIdx = header.indexOf('path');
+        if (pathIdx < 0) throw new Error('package skill-manifest.csv has no `path` column');
+
+        // Filter the package manifest's RAW LINES rather than re-serialising parsed rows.
+        //
+        // `writeManifest` -> `formatCsvField` only quotes a field when it contains a comma, quote
+        // or newline, so re-serialising emitted bare `bmad-enhance-initiatives-backlog` where the
+        // source file has `"bmad-enhance-initiatives-backlog"`. Section 6c below decides whether
+        // to append that row with `skCsv.includes('"' + canonicalId + '"')` — a QUOTED substring
+        // match — which then missed the seeded row and appended a DUPLICATE. Caught by inspecting
+        // a seeded manifest, not by any test.
+        //
+        // Keeping the original lines byte-for-byte sidesteps it and preserves the file's existing
+        // quoting convention. (The substring-based dedup in 6c is fragile in its own right; that
+        // is pre-existing and left alone here.)
+        const rawLines = fs.readFileSync(packageManifest, 'utf8').split('\n');
+        const headerLine = rawLines[0];
+        const dataLines = rawLines.slice(1).filter((l) => l.trim());
+        const kept = dataLines.filter((line) => {
+          const cells = parseCsvRow(line);
+          const rel = cells[pathIdx];
+          return rel && fs.existsSync(path.join(projectRoot, rel));
+        });
+        await fs.ensureDir(path.dirname(skillManifestPath));
+        fs.writeFileSync(skillManifestPath, [headerLine, ...kept].join('\n') + '\n', 'utf8');
+        changes.push(
+          `Created _bmad/_config/skill-manifest.csv (${kept.length} of ${dataLines.length} skills — rows whose content is present)`
+        );
+        if (verbose) {
+          console.log(`    Created skill-manifest.csv (${kept.length}/${dataLines.length} skills present)`);
+        }
+      } catch (err) {
+        // Non-fatal: a failure here costs `convoke-export`, not the install. Not pushed into
+        // `changes` — convoke-update renders that array as green ticks.
+        console.warn(`    Warning: could not seed skill-manifest.csv: ${err.message}`);
+      }
+    }
+  }
+
   // 3. Update config.yaml (merge, preserving user prefs)
   const configPath = path.join(targetVortex, 'config.yaml');
   await fs.ensureDir(path.dirname(configPath));
