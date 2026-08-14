@@ -227,21 +227,30 @@ jobs:
           node-version: 20
 
       # The script exits 2 for a harness/environment failure (registry blip, missing tarball) and
-      # 1 for a real product defect, so a red here is readable without opening the log.
+      # 1 for a real product defect. NOTE the workflow cannot act on that distinction — `run:`
+      # collapses both into a failed step — so it is a signal for whoever reads the log, not an
+      # automated one. A transient registry failure therefore blocks a tag publish exactly as a
+      # real defect would, recoverable by re-running the job (R2 review 2026-08-14).
       - name: Fresh-install smoke (pack → install → doctor → export)
+        id: smoke
         run: bash scripts/audit/try-fresh-install.sh
 
       # This job fails on defects that BY CONSTRUCTION do not reproduce in-repo, and the script
       # deletes its temp project on exit. Without this, a maintainer gets a bare exit code and
       # `KEEP=1` is advice they cannot act on in CI.
+      # `!cancelled()` rather than `failure()`: a job that hits `timeout-minutes` counts as
+      # CANCELLED for step conditions, so `failure()` skips the upload in exactly the hang case
+      # where a partial log is most useful. `warn` rather than `ignore` so "we produced no logs"
+      # is visible in the run annotations instead of being indistinguishable from a broken path
+      # (R2 review 2026-08-14).
       - name: Upload install logs on failure
-        if: failure()
+        if: ${{ !cancelled() && (failure() || steps.smoke.outcome == 'failure') }}
         uses: actions/upload-artifact@v5
         with:
           name: fresh-install-logs
           path: .fresh-install-logs/
           retention-days: 14
-          if-no-files-found: ignore
+          if-no-files-found: warn
 
   python-test:
     runs-on: ubuntu-latest
