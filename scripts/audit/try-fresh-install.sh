@@ -71,7 +71,15 @@ if [ ! -f "$MANIFEST" ]; then
   echo "    [no skill-manifest.csv — convoke-export cannot work at all]"
   EXPORT=99
 else
-  SKILL="$(tail -n +2 "$MANIFEST" | head -1 | cut -d, -f1 | tr -d '\"')"
+  # `cut -d,` splits on EVERY comma, so a quoted first field containing a comma
+  # (`"foo, bar"`) yielded `foo` and this script would then blame convoke-export for its own
+  # parsing bug. Let node read the CSV properly instead. (Not triggered by today's ids, which are
+  # slugs — found by code review 2026-08-14.)
+  SKILL="$(node -e '
+    const {readManifest}=require(process.argv[2]);
+    const {header,rows}=readManifest(process.argv[1]);
+    process.stdout.write(rows.length ? rows[0][header.indexOf("canonicalId")] : "");
+  ' "$MANIFEST" "$TMP/proj/node_modules/convoke-agents/scripts/portability/manifest-csv.js")"
   echo "    exporting: $SKILL"
   set +e
   npx --no-install convoke-export "$SKILL" --output "$TMP/proj/exported" 2>&1 | tail -2
