@@ -36,30 +36,57 @@ Story 4.3 has attempted to execute this gate since 2026-04-28. It has never comp
 adversarial review layers examined the attempt on 2026-08-13 and established the following,
 all verified by execution:
 
-**1. The instrument cannot separate signal from noise.** Story 4.3's Decision 4 introduced
-`stack-detective` (Scout) as a control agent. Its source is **byte-identical** across the two
-recorded commits:
+**1. After 10 weeks the instrument has produced nothing interpretable, and its one control was
+contaminated.**
 
-```
-$ git diff 90bf3115 e8676ffe -- _bmad/bme/_gyre/agents/stack-detective.md
-(empty)
-```
+> **This section was rewritten on 2026-08-14.** It previously argued that the instrument *cannot
+> separate signal from noise*, on the evidence that the control agent `stack-detective` has
+> byte-identical source across the two recorded commits yet recordings that differ substantially —
+> concluding those differences were agent run-to-run nondeterminism, and therefore that noise ≥
+> signal. **That argument was wrong, and it was wrong in this ADR before backlog I131 ever restated
+> it.** `pf1-record-agent.js` records via `claude -p /<skill>`, which loads the **generated wrapper**
+> at `.claude/skills/<agent>/SKILL.md` — gitignored, produced by `refresh-installation.js`, and
+> outside every diff that was run. That generator changed between the two commits (`FOLLOW every
+> step in the <activation> section precisely` → `FOLLOW the activation steps precisely`, 3 sites).
+> **The control carried a real migration-caused instruction delta. It was not a control.** The
+> verification was done on what the repo *tracked*, not on what the agent *executed* — the same
+> `.claude/skills` gitignore trap that cost a day on 2026-08-10.
 
-Its baseline and post-migration recordings nonetheless differ substantially — numbered list →
-markdown table, "Stack Detective" → "Technology Stack Detective", added prose. The migration
-did not touch that agent, so those differences are **agent run-to-run nondeterminism**. The
-protocol captures each agent once per phase; `RUNS_PER_AGENT = 3` controls *judge* variance,
-not *agent* variance. Measurement noise is therefore at least as large as the effect being
-measured, in both directions. **The control did its job; its signal went unread for 10 weeks.**
+What can honestly be said is narrower, and sufficient:
+
+- The corpus is **25% complete** (Prompt 1 of 4) after 10 weeks, and Story 4.3 has not completed
+  since 2026-04-28.
+- The protocol captures each prompt **once per phase**; `RUNS_PER_AGENT = 3` controls *judge*
+  variance, not *agent* variance. There is therefore **no noise floor** against which any
+  cross-phase difference could be judged — not because noise is known to be large, but because it
+  has never been measured at all.
+- The one agent positioned to measure it was contaminated, so the corpus contains **no clean
+  control**.
+- `pf1-record-agent.js` passes no `--model` and no seed, so nothing recorded so far has a
+  controlled generator.
+
+This is a claim about the **state of the evidence**, not about the instrument's ceiling. A
+properly-run PF1 might well measure something. Nothing run so far has. The decision below rests on
+that, on cost, and on I130 — not on the retracted noise-floor argument.
 
 **2. The cost is structural, not incidental.** Decision 4 prices the manual capture half at
 ~2-3 hr per phase (~6 hr per cycle), recurring on every release. The scripted helper
 (`pf1-record-agent.js`) captures the activation greeting only, by design.
 
-**3. The question is answerable exactly, for free.** Convoke's agents are markdown tracked in
-git. "Did agent behaviour change?" is downstream of "did the agent definition change, and
-how?" — which `git show` answers deterministically. The full 3.3.0 → 4.0-rc agent-surface
-delta is 26 files / 531 insertions / 343 deletions, readable in twenty minutes.
+**3. The question is answerable exactly, for free — provided the whole executed surface is
+covered.** Convoke's agents are markdown, and "did agent behaviour change?" is downstream of "did
+the agent definition change, and how?" — which `git show` answers deterministically. The full
+3.3.0 → 4.0-rc agent-surface delta is 26 files / 531 insertions / 343 deletions, readable in
+twenty minutes.
+
+The contamination in §1 is the caveat that makes this precise. What an agent executes is **two**
+files: the tracked `_bmad/bme/**/agents/<id>.md`, and the generated `.claude/skills/<id>/SKILL.md`
+that wraps it. The second is gitignored, so it is invisible to a diff of tracked sources — which
+is exactly how a real instruction change slipped past every diff run in §1. But its **generator**
+(`refresh-installation.js`) *is* tracked, so the surface remains exactly answerable as long as the
+check covers the generator too. `agent-surface-parity.js` was extended to do so on 2026-08-14; a
+version of it that only diffed `agents/**` would have inherited the same blind spot it was built
+to replace.
 
 An LLM-judged equivalence gate is the right instrument when the artifact is opaque — a trained
 model, a compiled binary, a remote service. Convoke's agents are none of those. **PF1 imported
@@ -99,8 +126,16 @@ can still phrase its greeting differently — that is precisely the variance the
 exposed, and no static check measures it. This ADR asserts that:
 
 - the operator-facing **contract** (agents, menu codes, config loading) is verifiable exactly, and
-- the residual behavioural question is **not measurable by the retired instrument either**, so
-  retiring it forfeits no evidence Convoke actually had.
+- the residual behavioural question **was not in fact measured by the retired instrument**, so
+  retiring it forfeits no evidence Convoke actually had. (Weaker than the original wording, "not
+  measurable by the retired instrument either" — that overstated what §1 supports. A correctly-run
+  PF1 might measure it; the one that ran did not.)
+
+**Coverage is only as wide as the surface the check reads.** The drift that contaminated §1's
+control was real, migration-caused, and invisible to a diff of `agents/**` — because it lived in
+the generated wrapper. `agent-surface-parity.js` now diffs the wrapper generator as well, but the
+general lesson stands and applies to any future gate: **diff what the agent executes, not what the
+repo tracks.**
 
 Convoke 4.0 therefore ships **without** a behavioural-equivalence claim. User-facing copy was
 corrected accordingly on 2026-08-13 (`CHANGELOG.md`, `docs/migration/3.x-to-4.0.md`,
@@ -122,30 +157,48 @@ claim should read §Alternatives, where the honest path to it is priced.
 (repeat-capture methodology) is ever done, the harness is there — subject to **I130** being
 fixed first.
 
-> **Note added 2026-08-14 — backlog I131's quantification was RETRACTED; this ADR is unaffected.**
-> A follow-up analysis (2026-08-13) attempted to put numbers on the noise floor and was demolished
-> by review: its control was contaminated (the recorder loads a *generated*, gitignored wrapper
-> whose generator changed between the commits), its headline "orders agents backwards" claim was an
-> artifact of one metric, and its cost projection priced the wrong experiment. **None of that
-> reasoning appears in this ADR, and this ADR never depended on it.**
+> **Note added 2026-08-14, corrected the same day — backlog I131 was RETRACTED, and this ADR was
+> NOT unaffected.**
 >
-> What this ADR rests on is unchanged and was independently corroborated during that same review:
-> (a) the control agent's recordings diverge **at all** despite no source change — a qualitative
-> fact that survives the retraction; (b) the artifact is transparent markdown, so `git show`
-> answers the question exactly; (c) the deterministic replacement covers 12 agents in seconds
-> versus 4 at ~6 hr. Review independently measured **menu-code divergence of 0.000 across all four
-> PF1 agents** — the contract the replacement checks is demonstrably preserved.
+> A follow-up analysis (2026-08-13) attempted to put numbers on the noise floor and was demolished
+> by review: its control was contaminated, its headline "orders agents backwards" claim was an
+> artifact of one metric, and its cost projection priced the wrong experiment.
+>
+> **The first version of this note claimed "none of that reasoning appears in this ADR, and this
+> ADR never depended on it." That was false**, and a second review caught it within a day. The
+> contaminated-control argument was **this ADR's own Context §1** — I131 restated it, it did not
+> introduce it. The note also listed as a "surviving fact" that *the control agent's recordings
+> diverge despite no source change*, which the contamination finding in the very same paragraph
+> directly refutes: the generated wrapper **did** change. Retracting I131 while preserving its
+> central error in the document that retracts it is precisely the failure mode both retractions
+> exist to correct.
+>
+> **Context §1 and Alternatives §A have been rewritten accordingly.** The decision is unchanged;
+> its stated basis is not. What actually carries it:
+>
+> - the corpus is 25% complete after 10 weeks, with no noise floor and no clean control (§1);
+> - **I130** — a partially-complete corpus returns a fabricated PASS regardless of real scores;
+> - ~6 hr of manual capture per release, recurring (§2);
+> - the executed surface is exactly diffable once the generated wrapper's generator is covered (§3);
+> - the replacement covers 12 agents in seconds versus 4 at ~6 hr, verified to fail correctly.
+>
+> Independently re-measured during review: **menu codes preserved across all four PF1 agents** —
+> the contract the replacement checks is demonstrably intact.
 >
 > Do not cite I131's numbers anywhere. If a real noise-floor figure is ever wanted, the honest
 > price is a 25-capture control study over the five byte-identical agents, with the model and
-> temperature pinned — `pf1-record-agent.js` currently passes neither.
+> temperature pinned — `pf1-record-agent.js` currently passes neither, and any such study must
+> diff the **generated wrapper**, not just the tracked agent source.
 
 ## Alternatives considered
 
-**A — Complete the recordings (~6 hr) and run the gate.** Rejected. I131 shows this produces
-*more unattributable differences*, not evidence: without repeat captures per phase there is no
-noise floor to judge against. It also inherits I130, under which a partially-complete corpus
-returns PASS regardless of the real scores.
+**A — Complete the recordings (~6 hr) and run the gate.** Rejected. Completing Prompts 2-4 adds
+captures but not *interpretability*: the protocol still records each prompt once per phase, so
+there is still no noise floor to judge any difference against, and the corpus still contains no
+clean control (§1). It also inherits I130, under which a partially-complete corpus returns PASS
+regardless of the real scores. (This paragraph previously cited backlog **I131** as its authority;
+that analysis was retracted on 2026-08-14 and the citation is removed. The reasoning above stands
+on the protocol's own design, which is inspectable in `pf1-record-agent.js`, not on I131.)
 
 **B — Fix the methodology (repeat captures + I130 harness fix), then run.** Rejected *for 4.0*,
 retained as backlog I130/I131. It is the only path to a genuine behavioural claim, and if
@@ -181,7 +234,14 @@ Accepting this ADR requires:
 
 ```
 $ git diff 90bf3115 e8676ffe -- _bmad/bme/_gyre/agents/stack-detective.md
-(empty — control agent source unchanged, recordings differ anyway)
+(empty)
+  ^ This was read as "the control agent did not change". It does not show that, and the
+    inference was withdrawn on 2026-08-14. It shows only that the TRACKED source is identical.
+    The agent executes through a generated, gitignored wrapper whose generator DID change:
+
+$ git diff 90bf3115 e8676ffe -- scripts/update/lib/refresh-installation.js | grep '^[-+].*FOLLOW'
+-3. FOLLOW every step in the <activation> section precisely
++3. FOLLOW the activation steps precisely      (x3 sites)
 
 $ node scripts/audit/agent-surface-parity.js 90bf3115 e8676ffe
 ✓ PASS — 12 agents, menu codes and config-load preserved.   [exit 0]
