@@ -344,11 +344,21 @@ Priority: frontmatter > step-file code. If found via multiple methods, record on
 > INVESTIGATE/FAIL table — is **superseded**. Retained unedited because the reasoning is sound
 > for the problem it thought it had; what was wrong was the problem.
 >
-> **Why.** The Path B+ control agent introduced by the addendum below did its job and disproved
-> the method: `stack-detective` has **byte-identical source** across the two compared commits yet
-> produced substantially different recordings. With one capture per phase and `RUNS_PER_AGENT`
-> controlling only *judge* variance, agent run-to-run nondeterminism is confounded with migration
-> effect — and is at least as large. The instrument's noise exceeds its signal.
+> **Why.** *(Rewritten 2026-08-14 — see the correction note below.)* With one capture per phase and
+> `RUNS_PER_AGENT` controlling only *judge* variance, there is **no noise floor** against which any
+> baseline↔post difference could be judged, and the corpus contains **no clean control**. After 10
+> weeks it is 25% complete and has produced nothing interpretable.
+>
+> > **Correction, 2026-08-14.** This paragraph previously read: "The Path B+ control agent did its
+> > job and disproved the method: `stack-detective` has byte-identical source across the two
+> > compared commits yet produced substantially different recordings … agent run-to-run
+> > nondeterminism is confounded with migration effect — and is at least as large. The instrument's
+> > noise exceeds its signal." **That inference is withdrawn.** `pf1-record-agent.js` records via
+> > the *generated*, gitignored `.claude/skills/<agent>/SKILL.md`, whose generator
+> > (`refresh-installation.js`) changed between those commits at 3 sites. Byte-identical **tracked
+> > source** is not **no change**, so the control was contaminated and its divergence is not
+> > attributable to run-to-run variance. The retirement decision is unchanged (ADR-001); its stated
+> > basis is. Backlog I131's quantification of this is retracted — do not cite its numbers.
 >
 > **Replaced by** `scripts/audit/agent-surface-parity.js`: deterministic comparison of the
 > operator-facing contract (agents present, menu codes preserved, activation loads config) across
