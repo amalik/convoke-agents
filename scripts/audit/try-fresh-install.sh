@@ -5,113 +5,214 @@
 # Packs the CURRENT working tree, installs that tarball into a throwaway project, runs the
 # installer and the health check, and prints what a new user would see.
 #
-# WHY THIS EXISTS (backlog I137/T25)
-# ----------------------------------
+# WHY THIS EXISTS (backlog T25)
+# -----------------------------
 # `npm test` passing tells you the code works in THIS repo. It does not tell you the published
-# package works anywhere else — and twice in one week it didn't:
+# package works anywhere else — and three times in one week it didn't:
 #
 #   I135  `convoke-export` looked for a packaged template inside the USER's project, so it
 #         failed in every project except this one.
 #   I137  a clean install immediately failed its own `convoke-doctor` check with 3 errors, one
 #         of which told the user to run a command that does not exist for them.
+#   I139  `convoke-export` exited 4 on every fresh install — the manifest it reads never shipped.
 #
-# Both were invisible to the test suite and both were found by doing exactly what this script
-# does. Run it before any release.
+# All three were invisible to the test suite and all three were found by doing exactly what this
+# script does. Run it before any release. It also runs in CI as the `fresh-install` job.
 #
 # Safe: everything happens in a temp directory, which is removed on exit. Your repo is only read
 # (`npm pack`), never modified.
 #
 # Usage:  bash scripts/audit/try-fresh-install.sh
 #         KEEP=1 bash scripts/audit/try-fresh-install.sh    # keep the temp project to poke at
+#
+# CODE REVIEW 2026-08-14 — what was wrong with the first version, so it is not reintroduced:
+#   * The bin loop could not fail for a MISSING bin. Its guard was `[ $STATUS -gt 1 ]`, but a bin
+#     absent from the tarball makes `npx` exit 1 — so the exact defect class this script exists to
+#     catch passed as "all bins launch". Worse, it probed with `--help`, which three install
+#     scripts do not implement, so it EXECUTED the installers with output discarded.
+#   * `convoke-install-vortex` failing printed a message but did not affect the verdict.
+#   * `npm install` was silenced entirely, so a registry blip was indistinguishable from a code
+#     defect — on a job that gates `publish`.
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TMP="$(mktemp -d)"
-cleanup() { if [ "${KEEP:-0}" = "1" ]; then echo "kept: $TMP"; else rm -rf "$TMP"; fi; }
+
+# Preserve diagnostics before the temp tree is destroyed.
+#
+# The trap deletes $TMP on exit, and $TMP is a random mktemp path — so a CI artifact step
+# pointing at it would upload nothing, and `KEEP=1` is advice a maintainer cannot act on in CI.
+# On a NON-ZERO exit, copy the logs somewhere stable and predictable first. This job fails on
+# defects that by construction do not reproduce inside the repo, so the log is the whole story.
+LOG_DIR="${FRESH_INSTALL_LOG_DIR:-$REPO/.fresh-install-logs}"
+cleanup() {
+  local rc=$?
+  if [ "$rc" -ne 0 ]; then
+    mkdir -p "$LOG_DIR"
+    [ -f "$TMP/install.log" ] && cp "$TMP/install.log" "$LOG_DIR/install.log" 2>/dev/null || true
+    echo "    diagnostics copied to $LOG_DIR"
+  fi
+  if [ "${KEEP:-0}" = "1" ]; then echo "kept: $TMP"; else rm -rf "$TMP"; fi
+}
 trap cleanup EXIT
+
+# Exit codes are distinguished so CI (and a human) can tell "the package is broken" from
+# "the environment failed us". 2 = harness/environment problem, 1 = a real product defect.
+ENV_FAIL=2
 
 echo "==> Packing the current working tree"
 ( cd "$REPO" && npm pack --pack-destination "$TMP" >/dev/null )
-TARBALL="$(ls "$TMP"/convoke-agents-*.tgz)"
+# Count matches rather than assuming exactly one. A package rename (this repo has done one:
+# bmad-enhanced -> convoke-agents) makes the glob match zero and `ls` abort under `set -e`
+# immediately after a SUCCESSFUL pack, with no explanation.
+shopt -s nullglob
+TARBALLS=( "$TMP"/*.tgz )
+shopt -u nullglob
+if [ "${#TARBALLS[@]}" -ne 1 ]; then
+  echo "    [harness] expected exactly 1 tarball in $TMP, found ${#TARBALLS[@]}: ${TARBALLS[*]:-none}"
+  exit "$ENV_FAIL"
+fi
+TARBALL="${TARBALLS[0]}"
 echo "    $(basename "$TARBALL")  ($(du -h "$TARBALL" | cut -f1))"
 
 echo "==> Creating a throwaway project and installing the tarball"
 mkdir -p "$TMP/proj"
 cd "$TMP/proj"
 npm init -y >/dev/null 2>&1
-npm install "$TARBALL" >/dev/null 2>&1
+# Capture rather than discard. Silencing stdout AND stderr meant a registry blip, a rate limit or
+# an offline runner produced a bare exit 1 with no diagnosis — on the job that gates `publish`.
+# This also surfaces `postinstall` output, which is genuinely the first thing a new user sees.
+if ! npm install "$TARBALL" > "$TMP/install.log" 2>&1; then
+  echo "    [harness] npm install failed — this is usually the registry, not your code:"
+  sed 's/^/      /' "$TMP/install.log" | tail -20
+  exit "$ENV_FAIL"
+fi
 echo "    installed into $TMP/proj"
-
-echo
-echo "==> convoke-install-vortex   (what a new user runs first)"
-if npx --no-install convoke-install-vortex; then
-  echo "    [install exit 0]"
-else
-  echo "    [install FAILED — exit $?]"
+# postinstall cannot fail the install (scripts/postinstall.js swallows its own errors), so an
+# error there is invisible unless we look for it.
+if grep -qiE '^(npm )?(error|ERR!)|Error:' "$TMP/install.log"; then
+  echo "    ⚠ install log contains error text (postinstall?):"
+  grep -iE '^(npm )?(error|ERR!)|Error:' "$TMP/install.log" | head -5 | sed 's/^/      /'
 fi
 
 echo
+echo "==> convoke-install-vortex   (what a new user runs first)"
+INSTALL=0
+npx --no-install convoke-install-vortex || INSTALL=$?
+echo "    [install exit $INSTALL]"
+
+echo
 echo "==> convoke-doctor   (does the product think it is healthy?)"
-set +e
-npx --no-install convoke-doctor
-DOCTOR=$?
-set -e
+DOCTOR=0
+npx --no-install convoke-doctor || DOCTOR=$?
 echo "    [doctor exit $DOCTOR]"
 
 echo
 echo "==> convoke-export   (a shipped bin doing real work, not just --help)"
-# Pick a skill the install actually provides, rather than hardcoding one.
-# The first version hardcoded `bmad-brainstorming`, which lives under `_bmad/core/` — an UPSTREAM
-# BMAD skill that Convoke does not ship. In a Convoke-only project it is legitimately absent, so
-# the script reported a failure that was really its own bad assumption. The manifest is the
-# authority on what this install can export.
+# Export EVERY skill the manifest offers, not just the first row. The previous version exported
+# `rows[0]`, so coverage silently shifted whenever the manifest was reordered and breakage in
+# rows 2..N went undetected. Capped to keep the job quick; the cap is reported, never silent.
 MANIFEST="$TMP/proj/_bmad/_config/skill-manifest.csv"
+EXPORT=0
 if [ ! -f "$MANIFEST" ]; then
   echo "    [no skill-manifest.csv — convoke-export cannot work at all]"
-  EXPORT=99
+  EXPORT=1
 else
-  # `cut -d,` splits on EVERY comma, so a quoted first field containing a comma
-  # (`"foo, bar"`) yielded `foo` and this script would then blame convoke-export for its own
-  # parsing bug. Let node read the CSV properly instead. (Not triggered by today's ids, which are
-  # slugs — found by code review 2026-08-14.)
-  SKILL="$(node -e '
-    const {readManifest}=require(process.argv[2]);
-    const {header,rows}=readManifest(process.argv[1]);
-    process.stdout.write(rows.length ? rows[0][header.indexOf("canonicalId")] : "");
-  ' "$MANIFEST" "$TMP/proj/node_modules/convoke-agents/scripts/portability/manifest-csv.js")"
-  echo "    exporting: $SKILL"
-  set +e
-  npx --no-install convoke-export "$SKILL" --output "$TMP/proj/exported" 2>&1 | tail -2
-  EXPORT=${PIPESTATUS[0]}
-  set -e
+  MAX_EXPORTS="${MAX_EXPORTS:-5}"
+  # A renamed/removed `canonicalId` column previously produced `rows[0][-1]` -> undefined ->
+  # `process.stdout.write(undefined)` -> a raw TypeError that killed the script before any
+  # verdict printed. Fail with a sentence instead.
+  SKILLS="$(node -e '
+    const { readManifest } = require(process.argv[3]);
+    const { header, rows } = readManifest(process.argv[1]);
+    const idx = header.indexOf("canonicalId");
+    if (idx < 0) { console.error("manifest has no canonicalId column; header: " + header.join(",")); process.exit(3); }
+    const ids = rows.map((r) => r[idx]).filter(Boolean);
+    process.stdout.write(ids.slice(0, Number(process.argv[2])).join(" "));
+  ' "$MANIFEST" "$MAX_EXPORTS" "$TMP/proj/node_modules/convoke-agents/scripts/portability/manifest-csv.js")" || {
+    echo "    [harness] could not read the skill manifest (see message above)"
+    exit "$ENV_FAIL"
+  }
+  if [ -z "$SKILLS" ]; then
+    # A header-only manifest parses fine but offers nothing. Previously this passed an EMPTY
+    # argument to convoke-export and then blamed the exporter for the resulting failure.
+    echo "    [skill-manifest.csv has a valid header but zero rows — nothing can be exported]"
+    EXPORT=1
+  else
+    TOTAL="$(node -e '
+      const { readManifest } = require(process.argv[2]);
+      process.stdout.write(String(readManifest(process.argv[1]).rows.length));
+    ' "$MANIFEST" "$TMP/proj/node_modules/convoke-agents/scripts/portability/manifest-csv.js")"
+    COUNT="$(echo "$SKILLS" | wc -w | tr -d ' ')"
+    echo "    exporting $COUNT of $TOTAL skill(s) (cap MAX_EXPORTS=$MAX_EXPORTS)"
+    for SKILL in $SKILLS; do
+      STATUS=0
+      # Full output on failure — the previous `| tail -2` discarded the reason for a failure that
+      # by construction does not reproduce inside the repo.
+      OUT="$(npx --no-install convoke-export "$SKILL" --output "$TMP/proj/exported" 2>&1)" || STATUS=$?
+      if [ "$STATUS" -ne 0 ]; then
+        echo "    FAILED: $SKILL (exit $STATUS)"
+        echo "$OUT" | sed 's/^/      /'
+        EXPORT=1
+      fi
+    done
+    [ "$EXPORT" -eq 0 ] && echo "    all $COUNT export(s) succeeded"
+  fi
 fi
-echo "    [export exit $EXPORT]"
+echo "    [export status $EXPORT]"
 
 echo
-echo "==> Every declared bin launches"
+echo "==> Every declared bin is present and loadable"
+# REWRITTEN after code review. The old check ran `<bin> --help` and failed only on exit > 1.
+# Two defects: (a) a bin missing from the tarball makes npx exit 1, so the packaging regression
+# this script exists to catch was invisible; (b) install-vortex-agents, install-gyre-agents,
+# install-all-agents and convoke-doctor implement no --help at all, so the "launch check" was
+# really running the installers with their output thrown away.
+#
+# Check what actually matters for a packaged bin instead: the shim exists, its target file
+# shipped, and the file parses. No product code is executed.
+BIN_JSON="$TMP/proj/node_modules/convoke-agents/package.json"
+if [ ! -f "$BIN_JSON" ]; then
+  echo "    [harness] installed package.json not found at $BIN_JSON"
+  exit "$ENV_FAIL"
+fi
+# Assign first, then iterate. A failing command substitution inside a `for` list does NOT trip
+# `set -e`: the loop simply ran zero times and the check reported "all bins launch".
+BINS="$(node -e 'const b=require(process.argv[1]).bin||{};process.stdout.write(Object.keys(b).join(" "))' "$BIN_JSON")"
+if [ -z "$BINS" ]; then
+  echo "    [harness] installed package declares no bins — enumeration failed or bin{} is empty"
+  exit "$ENV_FAIL"
+fi
+BIN_COUNT="$(echo "$BINS" | wc -w | tr -d ' ')"
 FAILED=0
-for BIN in $(node -e "console.log(Object.keys(require('$TMP/proj/node_modules/convoke-agents/package.json').bin).join(' '))"); do
-  # `|| STATUS=$?` rather than a bare call: under `set -e` a bin exiting 1 (a legitimate
-  # usage-error exit for `--help` on some of them) killed the script before it printed any
-  # verdict at all — it reported failure without ever saying why.
-  STATUS=0
-  npx --no-install "$BIN" --help >/dev/null 2>&1 || STATUS=$?
-  # 0 = printed help, 1 = usage error; anything higher means it crashed on startup
-  if [ "$STATUS" -gt 1 ]; then echo "    FAILED: $BIN (exit $STATUS)"; FAILED=1; fi
+for BIN in $BINS; do
+  TARGET="$(node -e 'const b=require(process.argv[1]).bin;process.stdout.write(b[process.argv[2]]||"")' "$BIN_JSON" "$BIN")"
+  ABS="$TMP/proj/node_modules/convoke-agents/$TARGET"
+  if [ ! -x "$TMP/proj/node_modules/.bin/$BIN" ] && [ ! -e "$TMP/proj/node_modules/.bin/$BIN" ]; then
+    echo "    FAILED: $BIN — no shim in node_modules/.bin (npm did not link it)"; FAILED=1; continue
+  fi
+  if [ ! -f "$ABS" ]; then
+    echo "    FAILED: $BIN — target $TARGET did not ship in the tarball"; FAILED=1; continue
+  fi
+  if ! node --check "$ABS" >/dev/null 2>&1; then
+    echo "    FAILED: $BIN — $TARGET does not parse"; FAILED=1; continue
+  fi
 done
-[ "$FAILED" = "0" ] && echo "    all bins launch"
+[ "$FAILED" -eq 0 ] && echo "    all $BIN_COUNT bins present, shipped and parseable"
 
 echo
 echo "========================================"
-if [ "$DOCTOR" -eq 0 ] && [ "$EXPORT" -eq 0 ] && [ "$FAILED" -eq 0 ]; then
+if [ "$INSTALL" -eq 0 ] && [ "$DOCTOR" -eq 0 ] && [ "$EXPORT" -eq 0 ] && [ "$FAILED" -eq 0 ]; then
   echo "PASS — a new user gets a working, self-consistent install."
   echo
-  echo "Note: convoke-doctor may still print ⚠ warnings (currently 1 — bmm-dependencies,"
-  echo "a governance registry a user has legitimately not generated yet)."
-  echo "Warnings are fine; hard failures are not. Exit 0 is the bar."
+  echo "Note: convoke-doctor may still print ⚠ warnings. Warnings are fine; hard failures are"
+  echo "not. Exit 0 is the bar. (The count is deliberately not asserted here — a hardcoded"
+  echo "number rots, and a maintainer comparing output to a stale note chases phantoms.)"
   exit 0
 fi
-echo "FAIL — a new user would hit this. doctor=$DOCTOR export=$EXPORT bins_failed=$FAILED"
-echo "Re-run with KEEP=1 to inspect the project."
+echo "FAIL — a new user would hit this."
+echo "  install=$INSTALL doctor=$DOCTOR export=$EXPORT bins_failed=$FAILED"
+echo "Re-run locally with KEEP=1 to inspect the project. In CI, see the uploaded"
+echo "fresh-install-logs artifact."
 exit 1
