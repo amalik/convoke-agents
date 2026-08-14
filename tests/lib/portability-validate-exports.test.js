@@ -8,19 +8,18 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
-const { findProjectRoot } = require('../../scripts/update/lib/utils');
+const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
 
-const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason('Validate Exports (sp-4-2)');
 
 // Story sp-4-2: End-to-End Validation
 //
 // Tests the validate-exports.js script against both a real seed output
 // and planted-violation fixtures.
 
-const projectRoot = findProjectRoot();
-const SEED_PATH = path.join(projectRoot, 'scripts', 'portability', 'seed-catalog-repo.js');
-const VALIDATOR_PATH = path.join(projectRoot, 'scripts', 'portability', 'validate-exports.js');
+// Backlog I123: was the LIVE repo. Now a committed fixture (test-fixture-isolation).
+const projectRoot = FIXTURE_ROOT;
+const SEED_PATH = path.join(REPO_ROOT, 'scripts', 'portability', 'seed-catalog-repo.js');
+const VALIDATOR_PATH = path.join(REPO_ROOT, 'scripts', 'portability', 'validate-exports.js');
 
 function makeTmpDir() {
   const dir = path.join(os.tmpdir(), `sp-4-2-${crypto.randomUUID()}`);
@@ -28,7 +27,7 @@ function makeTmpDir() {
   return dir;
 }
 
-describe('Validate Exports (sp-4-2)', { skip: SKIP }, () => {
+describe('Validate Exports (sp-4-2)', () => {
   // Test 1: Full pipeline — seed then validate
   describe('Full pipeline validation', () => {
     let stagingDir, seedResult, validateResult;

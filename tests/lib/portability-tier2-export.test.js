@@ -5,22 +5,21 @@ const assert = require('node:assert/strict');
 
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { findProjectRoot } = require('../../scripts/update/lib/utils');
+const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
 const { exportSkill } = require('../../scripts/portability/export-engine');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
 
-const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason('Tier 2 Export (sp-5-1)');
 
 // Story sp-5-1: Template Inlining for Tier 2 Export
 //
 // Tests that light-deps skills export successfully with inlined templates,
 // companion-skill notes, and sidecar notes.
 
-const projectRoot = findProjectRoot();
-const CLI_PATH = path.join(projectRoot, 'scripts', 'portability', 'convoke-export.js');
+// Backlog I123: was the LIVE repo. Now a committed fixture (test-fixture-isolation).
+const projectRoot = FIXTURE_ROOT;
+const CLI_PATH = path.join(REPO_ROOT, 'scripts', 'portability', 'convoke-export.js');
 
-describe('Tier 2 Export (sp-5-1)', { skip: SKIP }, () => {
+describe('Tier 2 Export (sp-5-1)', () => {
   it('Test 1: bmad-create-prd exports successfully with Template section', () => {
     const result = exportSkill('bmad-create-prd', projectRoot);
     assert.notStrictEqual(result, undefined);

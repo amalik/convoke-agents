@@ -84,12 +84,24 @@ Before this announcement ships:
 
 ---
 
-> **Claim guard (2026-08-13, code review).** An earlier draft of this announcement claimed
-> Convoke 4.0 "actually tests whether your agents behave the same way after the upgrade."
-> **Do not reinstate that line.** The PF1 behavioural-equivalence gate was **waived** for 4.0:
-> only activation greetings were captured, and a control agent whose source did not change
-> between the compared commits still produced differing recordings — so the corpus measures
-> agent run-to-run variance as much as any upgrade effect. This file is the canonical voice
-> source the CHANGELOG derives from, which is why the correction is pinned here and not only
-> downstream. See `_bmad-output/implementation-artifacts/v63-4-3-release-record-4.0.md`.
+> **Claim guard (2026-08-13, corrected 2026-08-14).** An earlier draft of this announcement
+> claimed Convoke 4.0 "actually tests whether your agents behave the same way after the upgrade."
+> **Do not reinstate that line.**
+>
+> **What is true:** `scripts/audit/agent-surface-parity.js` runs on every commit and verifies that
+> no agent was removed, no menu code dropped, and activation still loads config — 12 agents, in
+> seconds. That is a **contract** check. It says nothing about whether an agent phrases its
+> response the same way, and no shipped tooling checks that.
+>
+> **Two corrections to the first version of this guard.** It said the PF1 gate was "waived"; it was
+> **retired**, by [ADR-001](adr/v63/adr-001-retire-m9-pf1-gate.md) — a waiver implies a standing
+> requirement nobody intends to meet. And it justified this by saying a control agent with
+> unchanged source produced differing recordings. **That reasoning was withdrawn:** agents execute
+> through a generated, gitignored wrapper whose generator *did* change between the compared
+> commits, so the control was contaminated and its divergence is not attributable to run-to-run
+> variance. Neither correction changes the copy rule above — only the reason behind it.
+>
+> This file is the canonical voice source the CHANGELOG derives from, which is why the correction
+> is pinned here and not only downstream. See
+> `_bmad-output/implementation-artifacts/v63-4-3-release-record-4.0.md`.
 

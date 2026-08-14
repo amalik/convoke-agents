@@ -8,10 +8,8 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
-const { findProjectRoot } = require('../../scripts/update/lib/utils');
+const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
 
-const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason('Per-Skill README Generation (sp-3-2)');
 
 // Story sp-3-2: Per-Skill README Generation
 //
@@ -19,8 +17,9 @@ const SKIP = vendoredContentSkipReason('Per-Skill README Generation (sp-3-2)');
 // HTML comments, include all 3 platform install sections, and contain
 // no leaked engine placeholders.
 
-const projectRoot = findProjectRoot();
-const CLI_PATH = path.join(projectRoot, 'scripts', 'portability', 'convoke-export.js');
+// Backlog I123: was the LIVE repo. Now a committed fixture (test-fixture-isolation).
+const projectRoot = FIXTURE_ROOT;
+const CLI_PATH = path.join(REPO_ROOT, 'scripts', 'portability', 'convoke-export.js');
 
 function runCli(args) {
   return spawnSync('node', [CLI_PATH, ...args], {
@@ -37,7 +36,7 @@ function makeTmpDir() {
   return dir;
 }
 
-describe('Per-Skill README Generation (sp-3-2)', { skip: SKIP }, () => {
+describe('Per-Skill README Generation (sp-3-2)', () => {
   // Single-skill tests
   let singleTmpDir;
 

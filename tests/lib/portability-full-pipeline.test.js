@@ -8,20 +8,19 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
-const { findProjectRoot } = require('../../scripts/update/lib/utils');
+const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
 
-const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason('Full Pipeline (sp-5-3)');
 
 // Story sp-5-3: Full Pipeline — Export Tier 2 + Adapters + Catalog
 //
 // Runs the seed script once and validates the complete staging directory
 // including Tier 2 skills, adapters, and catalog.
 
-const projectRoot = findProjectRoot();
-const SEED_PATH = path.join(projectRoot, 'scripts', 'portability', 'seed-catalog-repo.js');
-const VALIDATOR_PATH = path.join(projectRoot, 'scripts', 'portability', 'validate-exports.js');
+// Backlog I123: was the LIVE repo. Now a committed fixture (test-fixture-isolation).
+const projectRoot = FIXTURE_ROOT;
+const SEED_PATH = path.join(REPO_ROOT, 'scripts', 'portability', 'seed-catalog-repo.js');
+const VALIDATOR_PATH = path.join(REPO_ROOT, 'scripts', 'portability', 'validate-exports.js');
 
 // Derive expected count from manifest
 const manifestPath = path.join(projectRoot, '_bmad', '_config', 'skill-manifest.csv');
@@ -39,12 +38,6 @@ const expectedCount = [
 let tmpDir, seedResult, skillDirs;
 
 before(() => {
-  // Suite is disabled (see ./portability-preconditions.js). `describe(..., { skip })`
-  // does NOT suppress file-scope hooks, so without this early return the seed/export
-  // subprocesses below still run on every CI pass with no assertions consuming them —
-  // and any throw here fails the file despite the skip. Code review 2026-08-10 (HIGH).
-  if (SKIP) return;
-
   tmpDir = path.join(os.tmpdir(), `sp-5-3-${crypto.randomUUID()}`);
   seedResult = spawnSync('node', [SEED_PATH, '--output', tmpDir], {
     cwd: projectRoot,
@@ -62,18 +55,12 @@ before(() => {
 }, 60000);
 
 after(() => {
-  // Suite is disabled (see ./portability-preconditions.js). `describe(..., { skip })`
-  // does NOT suppress file-scope hooks, so without this early return the seed/export
-  // subprocesses below still run on every CI pass with no assertions consuming them —
-  // and any throw here fails the file despite the skip. Code review 2026-08-10 (HIGH).
-  if (SKIP) return;
-
   if (tmpDir && fs.existsSync(tmpDir)) {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
 
-describe('Full Pipeline (sp-5-3)', { skip: SKIP }, () => {
+describe('Full Pipeline (sp-5-3)', () => {
   it('Test 1: seed produces correct skill dir count with adapters', () => {
     assert.equal(seedResult.status, 0);
     assert.equal(skillDirs.length, expectedCount);

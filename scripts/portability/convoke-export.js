@@ -215,17 +215,28 @@ function makeReporter(opts = {}) {
 
 /**
  * Read the readme template once. Cached after first call.
+ *
+ * Resolved from `__dirname`, NOT from the user's project root.
+ *
+ * BUG (backlog I123, fixed 2026-08-14). This built the path as
+ * `<projectRoot>/scripts/portability/templates/readme-template.md`. `readme-template.md` is
+ * part of the SHIPPED package — it sits next to this file, and `scripts/` is in package.json
+ * `files` — so it exists in the Convoke repo but never in a user's project. `convoke-export`
+ * is a published bin whose entire purpose is to run in someone else's project, where it
+ * failed with:
+ *
+ *   ❌ bmad-brainstorming — ENOENT: ... <their-project>/scripts/portability/templates/readme-template.md
+ *
+ * It worked only when cwd happened to be this repo, which is why nothing noticed. The suites
+ * that would have caught it had been quarantined behind a vendored-content guard since
+ * 2026-06-27 and `scripts/portability/**` was dropped from the coverage gate — so a shipped
+ * binary was broken, untested, and invisible at the same time. `projectRoot` remains the right
+ * source for the user's DATA (manifests, skill content); it is never the source for our own code.
  */
 let _templateCache = null;
-function loadReadmeTemplate(projectRoot) {
+function loadReadmeTemplate() {
   if (_templateCache !== null) return _templateCache;
-  const tplPath = path.join(
-    projectRoot,
-    'scripts',
-    'portability',
-    'templates',
-    'readme-template.md'
-  );
+  const tplPath = path.join(__dirname, 'templates', 'readme-template.md');
   _templateCache = fs.readFileSync(tplPath, 'utf8');
   return _templateCache;
 }
@@ -236,8 +247,11 @@ function loadReadmeTemplate(projectRoot) {
  * cleans up leaked engine placeholders, and collapses whitespace.
  * Throws if any multi-word placeholder remains after substitution.
  */
-function buildReadme(skillRow, result, projectRoot) {
-  const template = loadReadmeTemplate(projectRoot);
+// `projectRoot` was dropped 2026-08-14: it existed only to locate the readme template, which
+// is now resolved from `__dirname` (see loadReadmeTemplate — that path was a real bug in the
+// shipped bin). Nothing else in here reads the project tree.
+function buildReadme(skillRow, result) {
+  const template = loadReadmeTemplate();
   const persona = result.persona || {};
 
   const displayName = humanizeSkillName(skillRow.name);
@@ -337,7 +351,7 @@ function runSingle(skillName, outputBase, dryRun, projectRoot, reporter) {
 
   let readme;
   try {
-    readme = buildReadme(skillRow, result, projectRoot);
+    readme = buildReadme(skillRow, result);
   } catch (err) {
     reporter.failure(skillName, err);
     return { ok: false, exitCode: EXIT_PARTIAL_FAILURE, error: err };

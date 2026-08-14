@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
-const { findProjectRoot } = require('../../scripts/update/lib/utils');
+const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
 
 // Story sp-3-1: Decision-Tree Catalog Generator
@@ -16,8 +16,9 @@ const { readManifest } = require('../../scripts/portability/manifest-csv');
 // Tests the catalog generator by running it as a subprocess and validating
 // the output structure, intent headings, tier badges, and content invariants.
 
-const projectRoot = findProjectRoot();
-const CLI_PATH = path.join(projectRoot, 'scripts', 'portability', 'catalog-generator.js');
+// Backlog I123: was the LIVE repo. Now a committed fixture (test-fixture-isolation).
+const projectRoot = FIXTURE_ROOT;
+const CLI_PATH = path.join(REPO_ROOT, 'scripts', 'portability', 'catalog-generator.js');
 
 function runCatalog(args = [], options = {}) {
   return spawnSync('node', [CLI_PATH, ...args], {
@@ -62,10 +63,8 @@ const STANDALONE_INTENT_HEADINGS = [
 
 const { FORBIDDEN_STRINGS } = require('../../scripts/portability/test-constants');
 
-const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason('Catalog Generator (sp-3-1)');
 
-describe('Catalog Generator (sp-3-1)', { skip: SKIP }, () => {
+describe('Catalog Generator (sp-3-1)', () => {
   let tmpFile;
 
   afterEach(() => {

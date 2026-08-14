@@ -21,7 +21,9 @@ If this release does its job, you'll barely notice it — which is the point.
 
 - **Marketplace distribution** — Install Convoke through the BMAD community plugin marketplace alongside the framework itself. If you have colleagues who use BMAD but haven't tried Convoke, they can install it through the normal BMAD plugin system.
 - **Multi-platform adapters** — Drop-in agent skills for Claude Code (`.claude/skills/`), GitHub Copilot (`.github/copilot-instructions.md`), and Cursor (`.cursor/rules/`). Use Convoke agents on the platform you already work in, no Convoke runtime required.
-- **Behavioral equivalence harness (built, not yet exercised at release scope)** — Convoke ships tooling to compare agent outputs before and after an upgrade (`convoke`'s PF1 battery). For 4.0 the gate was **waived**: only activation greetings were captured, and a control agent whose source did not change between the compared versions produced differing recordings — so the corpus measures agent run-to-run variance as much as any upgrade effect, and no equivalence claim is supported by it. The harness is real and the gate is not yet met; see `_bmad-output/implementation-artifacts/v63-4-3-release-record-4.0.md`.
+- **Agent surface parity check** — Convoke verifies, on every commit, that an upgrade did not remove an agent, drop a menu code, or stop loading your configuration. It compares the last release tag against the current tree and fails loudly if any of those change. This covers 12 agents in seconds.
+
+  **What it does not do:** it does not prove your agents *behave* identically. It proves the contract you interact with is unchanged — which agents exist, what you can ask them to do, and whether they still read your config. Convoke 4.0 makes no behavioural-equivalence claim. An earlier draft of this entry described a "behavioral equivalence harness" whose gate had been "waived"; that gate was **retired** rather than waived (see [ADR-001](_bmad-output/planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md)), and the reasoning given for it was later withdrawn as unsound. The parity check above is what actually runs.
 - **Single-command auto-migration** — `convoke-update` runs the upgrade and completes in under 60 seconds. Idempotent (safe to run twice) and resumable (if something interrupts, re-run picks up where it stopped).
 - **`convoke-doctor` dependency surfacing** — Health check now warns you when Convoke depends on something upstream that has changed shape. Silent breakage becomes visible breakage.
 
@@ -30,6 +32,19 @@ If this release does its job, you'll barely notice it — which is the point.
 - **BMAD compatibility updated to v6.3** — Convoke now tracks the latest BMAD release line. All your agents, skills, workflows, and existing config continue to work.
 - **Configuration loading** — Agents load configuration directly from `_bmad/{module}/config.yaml` at activation, replacing the prior `bmad-init` activation step (see Removed below). Auto-migrated; no manual changes needed.
 - **`convoke-export --quiet`** — Batch exports drop from 50 lines of stdout to 1-line summary in quiet mode. Failures still emit. Useful for CI pipelines.
+
+### Fixed
+
+- **`convoke-export` failed in every project except Convoke's own.** If you installed Convoke and ran `convoke-export` in your own repository, it exited with an error like:
+
+  ```
+  ❌ bmad-brainstorming — ENOENT: no such file or directory, open
+     '<your-project>/scripts/portability/templates/readme-template.md'
+  ```
+
+  The command looked for its README template inside *your* project instead of inside the installed package, so it only ever worked when run from a checkout of Convoke itself. Every export attempt from a normal install failed. This is fixed — no action needed beyond upgrading.
+
+  This shipped broken because the tests covering the export CLI had been disabled since June (an upstream BMAD update deleted content they depended on) and the exporter had been dropped from the coverage threshold at the same time, so nothing was watching it. Both have been reversed: the suites now run against a committed fixture that upstream changes cannot delete, and `scripts/portability/**` is back inside the coverage gate with the thresholds unchanged.
 
 ### Removed
 

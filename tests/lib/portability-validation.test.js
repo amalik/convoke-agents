@@ -6,11 +6,9 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { findProjectRoot } = require('../../scripts/update/lib/utils');
 const { writeManifest } = require('../../scripts/portability/manifest-csv');
 
-const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason('Portability validator (sp-1-3) — Test 1 only (smoke); Tests 2-9 run');
+const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
 const {
   validate,
   HARD_FINDING_TYPES,
@@ -99,18 +97,50 @@ describe('Portability validator (sp-1-3)', () => {
     return dir;
   };
 
-  // The only test in this suite that reads the real repo — so the only one the
-  // vendored-content precondition applies to.
-  it('Test 1: validator passes on the real skill-manifest.csv (smoke)', { skip: SKIP }, () => {
-    const realRoot = findProjectRoot();
-    const { totalSkills, findings } = validate(realRoot);
+  // Backlog I123. This was the one test here that read the real repo, and it sat SKIPPED behind
+  // the vendored-content guard for ~6 weeks — during which nothing checked the validator OR the
+  // manifest. Un-skipping it as written fails immediately: the real manifest has 4 genuine broken
+  // dependencies. Splitting it keeps both signals instead of trading one for the other.
+
+  it('Test 1a: validator runs clean on a complete, self-consistent manifest (fixture)', () => {
+    // Exercises the VALIDATOR against a dependency-closed corpus. If this fails, the validator
+    // is broken — not the repo.
+    const { totalSkills, findings } = validate(FIXTURE_ROOT);
     const errors = findings.filter((f) => HARD_FINDING_TYPES.has(f.type));
-    assert.ok(totalSkills > 0);
-    if (errors.length > 0) {
-      // Print for diagnostics if this ever fails
-      console.error('Real-manifest hard errors:', errors);
-    }
-    assert.deepEqual(errors, []);
+    assert.ok(totalSkills > 0, 'fixture manifest is empty — the assertion below would be vacuous');
+    assert.deepEqual(errors, [], `fixture should have no hard findings; got ${JSON.stringify(errors)}`);
+  });
+
+  it('Test 1b: the REAL manifest has no hard findings beyond the acknowledged baseline', () => {
+    // Ratchet, same shape as .github/expected-python-tests.txt and expected-wrapper-template.txt.
+    // A NEW broken dependency fails here. FIXING one also fails here, until its line is removed
+    // from the baseline — so the acknowledged list can only ever shrink.
+    const { totalSkills, findings } = validate(REPO_ROOT);
+    assert.ok(totalSkills > 0, 'real manifest is empty — cannot evaluate');
+
+    const actual = findings
+      .filter((f) => HARD_FINDING_TYPES.has(f.type))
+      .map((f) => `${f.type} ${f.skill}`)
+      .sort();
+    const expected = fs
+      .readFileSync(path.join(REPO_ROOT, '.github', 'expected-classification-findings.txt'), 'utf8')
+      .split('\n')
+      .filter((l) => l.trim() && !l.startsWith('#'))
+      .sort();
+
+    const appeared = actual.filter((a) => !expected.includes(a));
+    const resolved = expected.filter((e) => !actual.includes(e));
+    assert.deepEqual(
+      appeared,
+      [],
+      `NEW hard classification finding(s) — a skill dependency broke:\n  ${appeared.join('\n  ')}`
+    );
+    assert.deepEqual(
+      resolved,
+      [],
+      `Finding(s) fixed — delete them from .github/expected-classification-findings.txt in the ` +
+        `same commit:\n  ${resolved.join('\n  ')}`
+    );
   });
 
   it('Test 2: missing tier triggers [MISSING]', () => {

@@ -1,0 +1,15 @@
+# ACKNOWLEDGED hard classification findings in the REAL skill-manifest.csv.
+#
+# These are genuine broken dependencies. They were invisible for ~6 weeks: the test that
+# checks them (portability-validation Test 1) was quarantined behind the vendored-content
+# guard, so nothing reported them. Un-quarantining without this baseline would have meant
+# either a permanently red suite or silently dropping the check.
+#
+# A NEW hard finding fails the suite. Fixing one also fails it, until you delete its line
+# here — which is the point: the list must only ever shrink.
+#
+# Tracked as backlog I134. Do not add to this list to make a test pass.
+[BROKEN-DEP] bmad-check-implementation-readiness
+[BROKEN-DEP] bmad-create-epics-and-stories
+[BROKEN-DEP] wds-4-ux-design
+[BROKEN-DEP] wds-4-ux-design

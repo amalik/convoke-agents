@@ -8,19 +8,18 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { execSync, spawnSync } = require('child_process');
-const { findProjectRoot } = require('../../scripts/update/lib/utils');
+const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
 
-const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason('convoke-export CLI (sp-2-3)');
 
 // Story sp-2-3: CLI Entry Point
 //
 // Tests the convoke-export CLI by spawning it as a subprocess. All file
 // outputs go to per-test tmpdirs that are cleaned up afterEach.
 
-const projectRoot = findProjectRoot();
-const CLI_PATH = path.join(projectRoot, 'scripts', 'portability', 'convoke-export.js');
+// Backlog I123: was the LIVE repo. Now a committed fixture (test-fixture-isolation).
+const projectRoot = FIXTURE_ROOT;
+const CLI_PATH = path.join(REPO_ROOT, 'scripts', 'portability', 'convoke-export.js');
 
 function runCli(args, options = {}) {
   return spawnSync('node', [CLI_PATH, ...args], {
@@ -42,7 +41,7 @@ function cleanupTmpDir(dir) {
   }
 }
 
-describe('convoke-export CLI (sp-2-3)', { skip: SKIP }, () => {
+describe('convoke-export CLI (sp-2-3)', () => {
   let tmpDir;
 
   afterEach(() => {
@@ -191,7 +190,7 @@ describe('convoke-export CLI (sp-2-3)', { skip: SKIP }, () => {
 // I50: `--quiet` / `-q` flag — suppress per-skill success + skip lines, keep
 // failures (stderr) + the single-line summary. Useful for CI / scripted
 // pipelines. Deferred through 4 SP-Epic retros; resolved 2026-04-19.
-describe('convoke-export CLI — --quiet flag (I50)', { skip: SKIP }, () => {
+describe('convoke-export CLI — --quiet flag (I50)', () => {
   const tmpDirs = [];
   afterEach(() => {
     while (tmpDirs.length) cleanupTmpDir(tmpDirs.pop());

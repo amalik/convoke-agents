@@ -1,10 +1,12 @@
 'use strict';
 
-const { describe, it, before } = require('node:test');
+const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { execSync } = require('child_process');
-const { findProjectRoot } = require('../../scripts/update/lib/utils');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const { FIXTURE_ROOT } = require('./portability-fixture');
 const { exportSkill, ALLOWED_WARNING_TYPES } = require('../../scripts/portability/export-engine');
 
 // Story sp-2-2: Export Engine
@@ -15,8 +17,6 @@ const { exportSkill, ALLOWED_WARNING_TYPES } = require('../../scripts/portabilit
 
 const { FORBIDDEN_STRINGS } = require('../../scripts/portability/test-constants');
 
-const { vendoredContentSkipReason } = require('./portability-preconditions');
-const SKIP = vendoredContentSkipReason('Export engine (sp-2-2)');
 
 const REQUIRED_HEADING_PATTERNS = [
   /^# /m, // Title (any H1 — engine generates "# X with Y" or "# X")
@@ -100,12 +100,11 @@ function assertStructuralInvariants(result, expectedName, expectedIcon) {
   }
 }
 
-describe('Export engine (sp-2-2)', { skip: SKIP }, () => {
-  let projectRoot;
-
-  before(() => {
-    projectRoot = findProjectRoot();
-  });
+describe('Export engine (sp-2-2)', () => {
+  // Backlog I123: was `findProjectRoot()` inside a `before()`, i.e. the LIVE repo. An upstream
+  // BMAD update deleted the skill content it depended on and quarantined this whole suite for
+  // ~6 weeks. Now a committed fixture, per `test-fixture-isolation`.
+  const projectRoot = FIXTURE_ROOT;
 
   it('Test 1: bmad-brainstorming (Carson) satisfies all structural invariants', () => {
     const result = exportSkill('bmad-brainstorming', projectRoot);
@@ -136,21 +135,30 @@ describe('Export engine (sp-2-2)', { skip: SKIP }, () => {
     }, /not in the manifest/i);
   });
 
-  it('Test 6: engine is read-only (git status unchanged before/after)', () => {
-    let before;
-    try {
-      before = execSync('git status --porcelain', { cwd: projectRoot, encoding: 'utf8' });
-    } catch (_e) {
-      console.warn('skipping read-only test — git not available or not a repo');
-      return;
-    }
-    if (before.length > 0) {
-      console.warn('skipping read-only test — working tree has pre-existing changes');
-      return;
-    }
+  it('Test 6: engine is read-only (fixture tree byte-identical before/after)', () => {
+    // Was `git status --porcelain` against the live repo, wrapped in try/catch + two
+    // early-returns for "git unavailable" and "tree already dirty". Against the fixture that
+    // check is worse than useless: the fixture is not a git repo, so `git status` reports on
+    // the PARENT repo, and the "tree already dirty" guard silently returns during any session
+    // with uncommitted work — which is most of them. The test could pass without exercising
+    // anything. Hash the fixture tree instead: no early exit, and it fails if the engine
+    // writes so much as a byte.
+    const snapshot = () => {
+      const out = [];
+      const walk = (dir) => {
+        for (const e of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+          const full = path.join(dir, e.name);
+          if (e.isDirectory()) walk(full);
+          else out.push(`${path.relative(projectRoot, full)}:${crypto.createHash('sha256').update(fs.readFileSync(full)).digest('hex')}`);
+        }
+      };
+      walk(projectRoot);
+      return out.join('\n');
+    };
+    const before = snapshot();
+    assert.ok(before.length > 0, 'fixture tree is empty — the assertion below would be vacuous');
     exportSkill('bmad-brainstorming', projectRoot);
-    const after = execSync('git status --porcelain', { cwd: projectRoot, encoding: 'utf8' });
-    assert.equal(after, before);
+    assert.equal(snapshot(), before, 'exportSkill mutated the project tree — the engine must be read-only');
   });
 
   it('Test 7: Carson produces warnings.length <= 2 with allowed types only', () => {
