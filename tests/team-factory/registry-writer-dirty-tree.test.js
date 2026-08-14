@@ -186,19 +186,106 @@ describe('checkDirtyTree path resolution (I127)', () => {
   });
 
   it('is not fooled by an inherited GIT_DIR pointing at another repo', () => {
-    // From a git hook / husky / `rebase -x`, GIT_DIR points at the OUTER repo and overrides cwd.
+    // THIS TEST WAS VACUOUS until 2026-08-14 and is kept as a worked example of the failure mode.
+    //
+    // The original asserted that a DIRTY file still reported dirty with GIT_DIR spoofed. That
+    // cannot fail. When GIT_DIR is set but GIT_WORK_TREE is not, git falls back to `cwd` for the
+    // work tree — which is already correct here — so only the object database comes from the
+    // wrong repo. And because `makeRepo()` committed byte-identical content in both repos, a diff
+    // against the WRONG repo's blob still surfaced the real edit. It passed for a reason that had
+    // nothing to do with the fix. Proven by deleting gitEnv()'s neutralisation and watching it
+    // stay green.
+    //
+    // To discriminate, the wrong repo must give a DIFFERENT answer from the right one. So: commit
+    // DIFFERENT content at the same relative path in the other repo, and assert on a CLEAN file.
+    //   neutralised (correct) -> clean, because the real repo's blob matches the file
+    //   leaked GIT_DIR        -> dirty, because the other repo's blob does not
     const { dir, abs } = makeRepo();
     const other = makeRepo();
     created.push(dir, other.dir);
-    fs.appendFileSync(abs, '// uncommitted\n');
+    fs.writeFileSync(other.abs, 'module.exports = { DIFFERENT: true };\n');
+    git(other.dir, ['add', '-A']);
+    git(other.dir, ['commit', '-qm', 'divergent']);
+
     const saved = process.env.GIT_DIR;
     process.env.GIT_DIR = path.join(other.dir, '.git');
     try {
-      assert.equal(checkDirtyTree(abs).dirty, true, 'inherited GIT_DIR answered about the wrong tree');
+      assert.deepEqual(
+        checkDirtyTree(abs),
+        { dirty: false, diff: '' },
+        'inherited GIT_DIR leaked into the child — the guard answered about the wrong repo'
+      );
     } finally {
       if (saved === undefined) delete process.env.GIT_DIR;
       else process.env.GIT_DIR = saved;
     }
+  });
+
+  // NOT TESTED, deliberately: gitEnv() also clears GIT_WORK_TREE and GIT_INDEX_FILE, and no
+  // discriminating test for those two exists. Two attempts were written and both proved VACUOUS
+  // under mutation (neuter gitEnv(), test stays green):
+  //   - GIT_WORK_TREE alone: git ignores it without a paired GIT_DIR, so it has no effect at all.
+  //   - all three together: git then reports cwd as OUTSIDE the work tree, so `isInsideWorkTree`
+  //     returns false and the guard fails open to `{dirty:false}` — the same observable as the
+  //     correct answer, for an entirely different reason.
+  // Clearing them is retained as defence-in-depth, but it is UNVERIFIED and should not be counted
+  // as covered. The GIT_DIR test below is the real one.
+
+  it('refuses a file marked assume-unchanged (git stops reporting edits)', () => {
+    const { dir, abs } = makeRepo();
+    created.push(dir);
+    git(dir, ['update-index', '--assume-unchanged', abs]);
+    fs.appendFileSync(abs, '// uncommitted user work\n');
+    // Control: git itself is now blind, so all three diff probes legitimately see nothing.
+    assert.equal(execFileSync('git', ['diff', '--name-only', '--', abs], { cwd: dir }).toString().trim(), '');
+    assert.equal(checkDirtyTree(abs).dirty, true, 'assume-unchanged hid real uncommitted work');
+  });
+
+  it('refuses a file marked skip-worktree (the sparse-checkout idiom)', () => {
+    const { dir, abs } = makeRepo();
+    created.push(dir);
+    git(dir, ['update-index', '--skip-worktree', abs]);
+    fs.appendFileSync(abs, '// uncommitted user work\n');
+    assert.equal(checkDirtyTree(abs).dirty, true, 'skip-worktree hid real uncommitted work');
+  });
+
+  describe('git refusing to operate is NOT the same as "no repo"', () => {
+    // git >= 2.35.2 refuses a repo owned by another UID ("detected dubious ownership") with
+    // exit 128 and EMPTY stdout — byte-for-byte the same shape as a genuine non-repo, differing
+    // only in localised stderr text that cannot be matched on. Treating that as "no repo"
+    // disabled this guard outright in containers and CI. A stub `git` on PATH reproduces the
+    // shape deterministically, without needing another UID.
+    function withStubGit(fn) {
+      const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'stubgit-'));
+      fs.writeFileSync(path.join(bin, 'git'), '#!/bin/sh\nexit 128\n');
+      fs.chmodSync(path.join(bin, 'git'), 0o755);
+      const saved = process.env.PATH;
+      process.env.PATH = `${bin}:${saved}`;
+      try {
+        return fn();
+      } finally {
+        process.env.PATH = saved;
+        fs.rmSync(bin, { recursive: true, force: true });
+      }
+    }
+
+    it('fails CLOSED when git refuses inside a real repo', () => {
+      const { dir, abs } = makeRepo();
+      created.push(dir);
+      const result = withStubGit(() => checkDirtyTree(abs));
+      assert.equal(result.dirty, true, 'a git refusal inside a real repo was read as "clean"');
+      assert.match(result.diff, /unverifiable/);
+    });
+
+    it('still fails OPEN in a genuine non-git project', () => {
+      // The operator contract. The discriminator is the presence of a `.git` ancestor, so this
+      // must keep working even when git itself is telling us nothing.
+      const plain = fs.mkdtempSync(path.join(os.tmpdir(), 'i127-plain-'));
+      created.push(plain);
+      const f = path.join(plain, 'x.js');
+      fs.writeFileSync(f, 'x\n');
+      assert.deepEqual(withStubGit(() => checkDirtyTree(f)), { dirty: false, diff: '' });
+    });
   });
 
   it('returns clean outside a git repo rather than throwing', () => {
