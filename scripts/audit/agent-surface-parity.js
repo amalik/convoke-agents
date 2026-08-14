@@ -132,31 +132,87 @@ const WRAPPER_BASELINE = '.github/expected-wrapper-template.txt';
  * instruction text every agent receives.
  */
 function wrapperTemplates(projectRoot, ref) {
-  let src;
-  try {
-    src = git(projectRoot, ['show', `${ref}:${GENERATOR}`]);
-  } catch {
-    return [];
-  }
+  // `git()` signals failure by RETURNING null, it does not throw — so a try/catch here catches
+  // nothing and the next line dereferences null. Caught by the test below, 2026-08-14.
+  const src = git(projectRoot, ['show', `${ref}:${GENERATOR}`]);
+  if (!src) return []; // absent/unreadable generator — caller fails closed on an empty result
   const templates = [];
   const START = 'const content = `';
   let i = src.indexOf(START);
   while (i !== -1) {
-    // Walk to the closing backtick, honouring escapes and skipping over `${...}` spans so a
-    // backtick inside an interpolation cannot terminate the literal early.
-    let j = i + START.length;
-    let depth = 0;
-    for (; j < src.length; j++) {
-      const c = src[j];
-      if (c === '\\') { j++; continue; }
-      if (c === '$' && src[j + 1] === '{') { depth++; j++; continue; }
-      if (c === '}' && depth > 0) { depth--; continue; }
-      if (c === '`' && depth === 0) break;
-    }
-    templates.push(src.slice(i + START.length, j).replace(/\$\{[^}]*\}/g, '${}'));
-    i = src.indexOf(START, j);
+    const end = scanTemplate(src, i + START.length);
+    if (end === -1) return []; // unterminated — treat as extraction failure, which fails closed
+    templates.push(src.slice(i + START.length, end).replace(/\$\{[^}]*\}/g, '${}'));
+    i = src.indexOf(START, end);
   }
   return templates;
+}
+
+/**
+ * Index of the backtick closing the template literal that starts at `start`, or -1.
+ *
+ * An earlier version counted a single `depth` that incremented on `${` but decremented on ANY
+ * bare `}`. A brace from an object literal or block inside an interpolation — `${ {a:1}.a }` —
+ * therefore zeroed the depth early, and a subsequent backtick (a NESTED template literal, which
+ * is ordinary in generator code) was then misread as the closing one. The literal was silently
+ * TRUNCATED, so a real change in the discarded tail produced no finding at all: the gate went
+ * green while the wrapper had changed. That is the precise failure this check exists to prevent,
+ * reproduced inside the check itself. Found by review 2026-08-14; not live at the time — today's
+ * generator has no braces or backticks inside its interpolations — but one edit away from it.
+ *
+ * Tracking a context stack instead makes nesting explicit: template ⊃ interpolation ⊃ template.
+ * Quoted strings are skipped wholesale so a brace or backtick inside one cannot desync the count.
+ */
+function scanTemplate(src, start) {
+  const ctx = ['tpl']; // innermost context last
+  const braces = []; // unclosed `{` count for each open interpolation
+  for (let j = start; j < src.length; j++) {
+    const c = src[j];
+    if (c === '\\') {
+      j++; // escaped char, whatever it is
+      continue;
+    }
+    if (ctx[ctx.length - 1] === 'tpl') {
+      if (c === '`') {
+        ctx.pop();
+        if (ctx.length === 0) return j; // closed the outermost literal
+        continue;
+      }
+      if (c === '$' && src[j + 1] === '{') {
+        ctx.push('expr');
+        braces.push(1);
+        j++;
+      }
+      continue;
+    }
+    // inside ${ ... }
+    if (c === '`') {
+      ctx.push('tpl');
+      continue;
+    }
+    if (c === '{') {
+      braces[braces.length - 1]++;
+      continue;
+    }
+    if (c === '}') {
+      if (--braces[braces.length - 1] === 0) {
+        braces.pop();
+        ctx.pop();
+      }
+      continue;
+    }
+    if (c === "'" || c === '"') {
+      const quote = c;
+      for (j++; j < src.length; j++) {
+        if (src[j] === '\\') {
+          j++;
+          continue;
+        }
+        if (src[j] === quote) break;
+      }
+    }
+  }
+  return -1; // unterminated
 }
 
 function compare(projectRoot, baseRef, headRef) {
@@ -322,4 +378,12 @@ function main(argv) {
 
 if (require.main === module) process.exit(main(process.argv));
 
-module.exports = { agentFilesAt, menuCodes, loadsConfig, compare, _internal: { git } };
+module.exports = {
+  agentFilesAt,
+  menuCodes,
+  loadsConfig,
+  compare,
+  wrapperTemplates,
+  scanTemplate,
+  _internal: { git },
+};
