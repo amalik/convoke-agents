@@ -986,8 +986,11 @@ prompts: []
     // Non-fatal: a broken taxonomy must not abort an otherwise-good install. `convoke-doctor`
     // reports the missing file, which is the same signal the operator had before this call
     // existed — so the worst case is the previous behaviour, not a failed install.
-    changes.push(`Warning: could not seed taxonomy.yaml (${err.message})`);
-    if (verbose) console.warn(`    Warning: could not seed taxonomy.yaml: ${err.message}`);
+    // Deliberately NOT pushed into `changes`: convoke-update renders every entry of that array
+    // as `chalk.green('  ✓ ' + change)`, so a warning string there would print with a green tick
+    // — a failure disguised as a success. Code review 2026-08-14 (I137). Always warn, not just
+    // in verbose mode: this is the only signal the operator gets.
+    console.warn(`    Warning: could not seed taxonomy.yaml: ${err.message}`);
   }
 
   return changes;
