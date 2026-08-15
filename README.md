@@ -7,536 +7,170 @@
  ██║     ██║   ██║██║╚██╗██║╚██╗ ██╔╝██║   ██║██╔═██╗ ██╔══╝
  ╚██████╗╚██████╔╝██║ ╚████║ ╚████╔╝ ╚██████╔╝██║  ██╗███████╗
  ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝  ╚═══╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝
-                Agent teams for complex systems
+   Discover what has to be discovered. Ship what's ready to ship.
 ```
 
-[![Teams](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/docs/badges.json&query=$.teams&label=teams&color=blueviolet)](#teams)
-[![Agents](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/docs/badges.json&query=$.agents&label=agents&color=brightgreen)](docs/agents.md)
-[![Workflows](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/docs/badges.json&query=$.workflows&label=workflows&color=success)](docs/agents.md)
-[![Skills](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/docs/badges.json&query=$.skills&label=skills&color=orange)](_bmad/_config/skill-manifest.csv)
 [![Version](https://img.shields.io/npm/v/convoke-agents?color=blue&label=version)](https://www.npmjs.com/package/convoke-agents)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 </div>
 
-Convoke extends AI agents with two types of installable modules: **Teams** bring new agents for a domain, **Skills** add new capabilities to existing agents. Install them independently or combine them.
+**Convoke is built in [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD)'s format. Where BMAD Method is installed, it extends it. Where it isn't, it runs on its own.**
 
-> **Authoring a Convoke skill?** Required reading first: [The Convoke Operator Covenant](_bmad-output/planning-artifacts/convoke-covenant-operator.md) — one axiom and seven Operator Rights every Convoke skill must honor. The Covenant exists because operator-facing UX is an architectural concern in agent systems, not a styling concern; skills that violate it erode operator trust across the skill ecosystem, not just on their own surface.
+BMAD builds. Convoke covers the lifecycle either side of the build — deciding what deserves building before you start, and finding out whether what you shipped is actually fit to run. It installs as teams of specialist agents, plus skills that add capabilities to agents you already have.
 
-| Team | Domain |
-|------|--------|
-| **Vortex** | Product discovery — from user insight to evidence-based decisions |
-| **Gyre** | Production readiness — from stack detection to gap analysis |
-
-### What's New in 3.3
-
-- **Convoke Operator Covenant** — one axiom ("*the operator is the resolver*") and seven Operator Rights every Convoke skill must honor. Reproducibility-validated governance contract with a published baseline audit and Compliance Checklist.
-- **Opt out of agents you don't need** — new `excluded_agents: []` field in Vortex and Gyre configs; `convoke-update` honors exclusions end-to-end. Non-breaking.
-- **Update-time changelog surfacing** — `convoke-update` shows "What's New" before confirming the refresh.
-- See the [CHANGELOG](CHANGELOG.md) for the full release details
+Portability is a direction, not yet a destination. The export tooling takes a standalone BMAD skill anywhere; Convoke's own team agents are not there yet — see [Extending Convoke](#extending-convoke) for exactly where the line falls today.
 
 ---
 
-## Vortex — Product Discovery Team
+## The lifecycle
 
-**Specialist agents guide you from insight to evidence and back again — a continuous discovery loop, not a one-shot checklist**
-
-[![Agents](https://img.shields.io/badge/dynamic/yaml?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/_bmad/bme/_vortex/config.yaml&query=$.agents.length&label=agents&color=brightgreen)](docs/agents.md)
-[![Workflows](https://img.shields.io/badge/dynamic/yaml?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/_bmad/bme/_vortex/config.yaml&query=$.workflows.length&label=workflows&color=success)](docs/agents.md)
-
-Vortex guides you through seven discovery streams — from understanding your users to interpreting production signals — so you can make evidence-based decisions before, during, and after you build. Each stream builds on the previous one's findings, and when gaps appear, the system routes you back to fill them.
+Each stage is a job. Where Convoke has a team for the job, it's named underneath. Where it doesn't yet, the column is empty — that's the roadmap, drawn honestly.
 
 ```
-                         7 Streams · 7 Agents
-
-  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
-  │     Isla    │──▶│     Mila    │──▶│     Liam    │──▶│     Wade    │
-  │  Empathize  │   │ Synthesize  │   │ Hypothesize │   │ Externalize │
-  └─────────────┘   └─────────────┘   └─────────────┘   └─────────────┘
-         ▲                                                       │
-         │                                                       │
-         │                                                       ▼
-  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐            │
-  │     Emma    │◀──│     Max     │◀──│     Noah    │◀───────────┘
-  │Contextualize│   │ Systematize │   │  Sensitize  │
-  └─────────────┘   └─────────────┘   └─────────────┘
-         │                 │                 │
-         └─────────────────┴─────────────────┘
-          ▶ Start at Emma · back to any stream
+  ┌───────────┐ ┌───────────┐ ╔═══════════╗ ┌───────────┐ ┌ ─ ─ ─ ─ ┐
+  │ frame the │ │  decide   │ ║           ║ │  is it    │  capture   
+  │  problem  │▶│  what to  │▶║   build   ║▶│  fit to   │▶ what the  
+  │           │ │   build   │ ║           ║ │   ship?   │  system    
+  │           │ │           │ ║           ║ │           │  knows     
+  └───────────┘ └───────────┘ ╚═══════════╝ └───────────┘ └ ─ ─ ─ ─ ┘
+     Vortex        Vortex      BMAD Method       Gyre          —
 ```
 
-*Each workflow ends with a Compass routing to whichever stream needs attention — you can start or return to any agent.*
+| The job | Team |
+|---------|------|
+| Frame the right problem and understand the people who have it | **Vortex** |
+| Turn research into hypotheses, and hypotheses into experiments | **Vortex** |
+| Build it | *BMAD Method — not ours* |
+| Find out whether it's actually ready for production | **Gyre** |
+| Capture what an existing system already knows | — |
 
-| Agent | Stream | What they do |
-|-------|--------|-------------|
-| **Emma** 🎯 | Contextualize | Frame the right problem — personas, product vision, scope |
-| **Isla** 🔍 | Empathize | Understand users — empathy maps, interviews, discovery research |
-| **Mila** 🔬 | Synthesize | Converge research into clear problem definitions |
-| **Liam** 💡 | Hypothesize | Turn problems into testable hypotheses and experiments |
-| **Wade** 🧪 | Externalize | Test assumptions with MVPs, experiments, and prototypes |
-| **Noah** 📡 | Sensitize | Interpret production signals, user behavior, and engagement patterns |
-| **Max** 🧭 | Systematize | Capture learnings and decide: pivot, patch, or persevere |
+Convoke works standalone or as an extension — no BMAD Method installation is required either way.
 
-<details>
-<summary>22 Vortex Workflows</summary>
+---
 
-- Assumption Mapping
-- Behavior Analysis
-- Contextualize Scope
-- Empathy Map
-- Experiment Design
-- Hypothesis Engineering
-- Lean Experiment
-- Lean Persona
-- Learning Card
-- MVP
-- Pattern Mapping
-- Pivot Patch Persevere
-- Pivot Resynthesis
-- Product Vision
-- Production Monitoring
-- Proof of Concept
-- Proof of Value
-- Research Convergence
-- Signal Interpretation
-- User Discovery
-- User Interview
-- Vortex Navigation
+## Your first 15 minutes
 
-</details>
+1. **Install** — `npm install convoke-agents && npx -p convoke-agents convoke-install` (details in [INSTALLATION.md](INSTALLATION.md))
+2. **Personalize** — open `_bmad/bme/_vortex/config.yaml` (or `_bmad/bme/_gyre/config.yaml`) and replace `{user}` with your name, so agents know who they're talking to
+3. **Pick a starting point**
+   - **Vortex:** activate Emma → choose **Lean Persona** → follow the guided steps
+   - **Gyre:** activate Scout → choose **Full Analysis** → walk the pipeline
+4. **Find your artifact** — outputs land in `_bmad-output/vortex-artifacts/` or `.gyre/`
+5. **Follow the Compass** — every workflow ends by routing you to whichever agent should pick up next. You never have to guess what comes after.
 
-### What Agents Produce
+**How activation works.** Each agent is a markdown file containing a persona, a menu, and its workflow instructions. When Claude reads it, it adopts that expertise and shows you a numbered menu. In Claude Code, agents are slash commands (`/bmad-agent-bme-contextualization-expert` is Emma); in the terminal or on Claude.ai, paste the agent file into the conversation. Full list in the [Agent Guide](https://github.com/amalik/convoke-agents/blob/main/docs/agents.md).
 
-Here's a sample of real output from a busy parents meal planning project — each excerpt is from the [full 7-agent journey example](_bmad-output/journey-examples/busy-parents-7-agent-journey.md).
+Something not working? Run `npx -p convoke-agents convoke-doctor`, or check the [FAQ](https://github.com/amalik/convoke-agents/blob/main/docs/faq.md).
 
-#### Emma 🎯 Contextualize
+---
 
-Emma frames the right problem. Here's the Job-to-be-Done she produced:
+## Teams
+
+### Vortex — discovery
+
+Vortex takes you from "who are these users and what is actually wrong" to "here is what the evidence says we should do next" — a continuous loop, not a one-shot checklist. Each stream builds on the last, and when a gap appears the Compass routes you back to fill it.
+
+Emma 🎯 · Isla 🔍 · Mila 🔬 · Liam 💡 · Wade 🧪 · Noah 📡 · Max 🧭
 
 > **Job-to-be-Done:** Eliminate the daily 5:30 PM dinner decision so I can feed my family well without the mental load of planning, shopping, and deciding under time pressure.
 >
-> **Riskiest Assumptions:**
-> 1. Decision fatigue — not cooking skill or ingredient access — is the primary barrier to weeknight dinner success
-> 2. Parents would trust and act on an externally-provided dinner suggestion rather than needing to choose themselves
-> 3. "Good enough" nutrition is an acceptable standard — parents aren't seeking perfection, they're seeking relief from guilt
+> — Emma, framing the problem for a meal-planning product
 
-#### Liam 💡 Hypothesize
+[Emma's user guide](_bmad/bme/_vortex/guides/EMMA-USER-GUIDE.md) · [The full journey, every stream →](https://github.com/amalik/convoke-agents/blob/main/_bmad-output/journey-examples/busy-parents-7-agent-journey.md)
 
-Liam turns problems into testable ideas. Here's one of three hypotheses he produced:
+### Gyre — production readiness
 
-> **Hypothesis 1: The Pre-Commute Decision Eliminator**
+Gyre detects your stack, builds a capabilities model specific to it, and tells you what is missing. No generic checklists — it reads your filesystem and reports absences, then keeps the model current as you close them. Findings land in `.gyre/` as classifications and evidence summaries — never file contents or secrets, though evidence does name the files and modules a finding rests on. Committing the directory is the intended workflow.
+
+Scout 🔎 · Atlas 📐 · Lens 🔬 · Coach 🏋️
+
+> **DL-001 · reliability · blocker** — 46 Python files with local tests (pytest/unittest) exist across BMB and Core modules, but CI pipeline (ci.yml) only runs Node.js tests (npm test, npm run test:integration). Python test failures are completely invisible to CI […]
 >
-> We believe that busy parents will act on a single dinner suggestion delivered at 4:00 PM within 3 minutes because the decision burden — not cooking — is their primary barrier, and an earlier intervention catches them before the anxiety spiral begins.
->
-> **Riskiest Assumption:** Parents will trust and act on an automated suggestion without second-guessing. Research shows they want "someone to tell me what to make" — but "someone" may need to be a trusted person, not an algorithm.
+> — Lens, from Gyre's run against this repository. Since fixed: `ci.yml` now has a `python-test` job.
 
-#### Max 🧭 Systematize
-
-Max captures what you learned and decides what to do next:
-
-> **Recommendation: PATCH** (iterate on timing, don't pivot direction)
->
-> The core hypothesis is validated. The product direction (decision elimination via single suggestion) is correct. The timing mechanism needs refinement — shift from fixed 4:00 PM delivery to adaptive delivery based on each user's observed engagement pattern.
->
-> **Three Actions:**
-> 1. **Implement adaptive timing** — shift the push notification to match each user's observed engagement window.
-> 2. **Route to Isla for timing investigation** — qualitative research on why users engage at 3:15 PM. Is it anxiety relief, logistical planning, or habit?
-> 3. **Test willingness to pay immediately** — the mechanism works, but we have no commercial validation. Run a landing page test with pricing before further product investment.
-
-**[See the full 7-agent journey example →](_bmad-output/journey-examples/busy-parents-7-agent-journey.md)**
-
-For detailed workflow descriptions, see the [Agent Guide](docs/agents.md) and individual user guides: [Emma](_bmad/bme/_vortex/guides/EMMA-USER-GUIDE.md) | [Isla](_bmad/bme/_vortex/guides/ISLA-USER-GUIDE.md) | [Mila](_bmad/bme/_vortex/guides/MILA-USER-GUIDE.md) | [Liam](_bmad/bme/_vortex/guides/LIAM-USER-GUIDE.md) | [Wade](_bmad/bme/_vortex/guides/WADE-USER-GUIDE.md) | [Noah](_bmad/bme/_vortex/guides/NOAH-USER-GUIDE.md) | [Max](_bmad/bme/_vortex/guides/MAX-USER-GUIDE.md)
-
----
-
-## Gyre — Production Readiness Team
-
-**Specialist agents assess whether your project is ready to ship — detect your stack, model what "ready" means, find what's missing, and refine together**
-
-[![Agents](https://img.shields.io/badge/dynamic/yaml?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/_bmad/bme/_gyre/config.yaml&query=$.agents.length&label=agents&color=brightgreen)](docs/agents.md)
-[![Workflows](https://img.shields.io/badge/dynamic/yaml?url=https://raw.githubusercontent.com/amalik/convoke-agents/main/_bmad/bme/_gyre/config.yaml&query=$.workflows.length&label=workflows&color=success)](docs/agents.md)
-
-Most teams ship to production without knowing if they're actually ready — missing SLOs, incomplete observability, unreviewed deployment strategies. Gyre analyzes your project's filesystem, builds a capabilities model tailored to your specific tech stack, and surfaces what's absent. No generic checklists — every finding is contextual to your project.
-
-```
-                    4 Agents · 4 Contracts
-
-  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
-  │    Scout    │──▶│    Atlas    │──▶│    Lens     │──▶│    Coach    │
-  │   Detect    │   │   Model     │   │   Analyze   │   │   Review    │
-  │   Stack     │   │   Capabil.  │   │   Gaps      │   │   Refine    │
-  └─────────────┘   └──────▲──────┘   └─────────────┘   └──────┬──────┘
-                           │                                   │
-                           └────────────── GC4 ────────────────┘
-                                       feedback
-```
-
-*Linear pipeline with a feedback loop. Coach amendments feed back to Atlas — the model improves with every review.*
-
-| Agent | Role | What they do |
-|-------|------|-------------|
-| **Scout** 🔎 | Detect | Scan filesystem artifacts to classify your tech stack — language, containers, CI/CD, observability, cloud provider |
-| **Atlas** 📐 | Model | Generate a capabilities manifest using industry standards (DORA, OpenTelemetry, Google PRR) and web search |
-| **Lens** 🔬 | Analyze | Compare capabilities against what actually exists — surface absences, compound risks, severity-prioritized findings |
-| **Coach** 🏋️ | Review | Walk through findings conversationally — amend the model, capture feedback, track progress over time |
-
-<details>
-<summary>7 Gyre Workflows</summary>
-
-- Full Analysis (end-to-end pipeline)
-- Stack Detection
-- Model Generation
-- Gap Analysis
-- Model Review
-- Delta Report
-- Accuracy Validation
-
-</details>
-
-### What Gyre Produces
-
-Gyre writes structured artifacts to `.gyre/` in your project root — safe to commit, containing technology categories only (no file contents, paths, or secrets):
-
-- **Stack Profile** (`.gyre/stack-profile.yaml`) — classified tech stack with detection confidence
-- **Capabilities Manifest** (`.gyre/capabilities.yaml`) — 20+ capabilities across observability, deployment, reliability, and security
-- **Findings Report** (`.gyre/findings.yaml`) — absence-based findings tagged by severity, confidence, and source
-- **Feedback Log** (`.gyre/feedback.yaml`) — team amendments that persist and improve the model over time
-
-**Three modes:** *Crisis* (first run, full pipeline), *Anticipation* (re-analysis with cached model), *Regeneration* (fresh model rebuild).
-
-**Delta tracking:** Run Gyre after making improvements to see what you've resolved — findings are tagged [NEW], [CARRIED], or resolved.
-
-User guides: [Scout](_bmad/bme/_gyre/guides/SCOUT-USER-GUIDE.md) | [Atlas](_bmad/bme/_gyre/guides/ATLAS-USER-GUIDE.md) | [Lens](_bmad/bme/_gyre/guides/LENS-USER-GUIDE.md) | [Coach](_bmad/bme/_gyre/guides/COACH-USER-GUIDE.md)
+[The Gyre team guide](_bmad/bme/_gyre/guides/GYRE-TEAM-GUIDE.md) · [The findings file that quote came from →](https://github.com/amalik/convoke-agents/blob/main/.gyre/findings.yaml)
 
 ---
 
 ## Extending Convoke
 
-### Team Factory
+Teams do lifecycle jobs. These three do something different — they change what your agents can do, and how far they travel.
 
-Create fully-wired, BMAD-compliant teams through a guided workflow — zero post-creation fixes.
+**Enhance — skills for existing agents.** A skill adds a workflow without editing the agent that offers it. The first one is RICE-scored backlog management: run `/bmad-enhance-initiatives-backlog` directly. It also declares a menu patch for the PM agent, which lands only where that agent exists as a file — on BMAD v6.3+ layouts, where agents are skills rather than `.md` files, the slash command is the working path. The [Enhance Guide](_bmad/bme/_enhance/guides/ENHANCE-GUIDE.md) documents the pattern for writing your own.
 
-```
-/bmad-team-factory
-```
+**Portability — take skills elsewhere.** `npx -p convoke-agents convoke-export <skill>` turns a BMAD skill into a self-contained, LLM-agnostic instruction document, then writes adapters into the export target for Claude (`{target}/CLAUDE.md`), GitHub Copilot (`{target}/.github/copilot-instructions.md`) and Cursor (`{target}/.cursor/rules/`). Four skills drive it end to end: `bmad-export-skill`, `bmad-validate-exports`, `bmad-generate-catalog` and `bmad-seed-catalog`.
 
-The factory guides you through composition pattern selection (Independent or Sequential), agent scope definition with overlap detection, contract design, and integration wiring. Decision state is persisted as a spec file for resume and express mode. Output passes the same validation as native teams.
+Skills are classified by tier: **standalone** exports cleanly, **light-deps** carries dependency notes, **pipeline** is flagged non-portable. Where that leaves Convoke today, precisely: **all 12 Convoke agents are `pipeline`** — every Vortex and Gyre agent, and Team Factory. Exporting one emits *"Framework-only skill. This skill depends on the full Convoke installation and cannot run standalone. […]"* The exception is the Enhance backlog skill, classified `light-deps`, which does export. So what travels cleanly today is the upstream BMAD skill set plus that one — not the teams. Making the teams portable is roadmap, not a shipped feature.
 
-Three capabilities:
-- **Create Team** — build a new team from scratch with full integration
-- **Add Agent** — extend an existing team with a new agent
-- **Add Skill** — give an existing agent a new workflow
-
-### Portability — Export Skills Anywhere
-
-Take any BMAD skill and export it to a standalone, LLM-agnostic format that works outside Claude Code:
-
-```bash
-npx -p convoke-agents convoke-export bmad-brainstorming --output ./exported
-```
-
-The export engine transforms skill workflows into self-contained instruction documents, then generates platform-specific adapter files:
-
-| Platform | Adapter output (written inside the export target) |
-|----------|---------------|
-| Claude | `{target}/CLAUDE.md` commands |
-| GitHub Copilot | `{target}/.github/copilot-instructions.md` |
-| Cursor | `{target}/.cursor/rules/` |
-
-Skills are classified by tier: **standalone** skills export cleanly, **light-deps** skills include dependency notes, and **pipeline** skills (multi-step orchestration) are flagged as non-portable.
-
-Four skills support the workflow: `bmad-export-skill` (export), `bmad-validate-exports` (validate), `bmad-generate-catalog` (catalog README), `bmad-seed-catalog` (full catalog repo).
-
-### Enhance — Agent Skills
-
-Skills give existing agents new workflows — installed via menu patching, not agent modification. The first skill adds RICE-scored backlog management to the PM agent:
-
-```
-                    Initiatives Backlog
-
-  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
-  │  [T] Triage │   │  [R] Review │   │  [C] Create │
-  │  Ingest new │   │   Rescore   │   │  Bootstrap  │
-  │  findings   │   │  existing   │   │ from scratch│
-  └──────┬──────┘   └──────┬──────┘   └──────┬──────┘
-         │                 │                 │
-         ▼                 ▼                 ▼
-  ┌──────────────────────────────────────────────────┐
-  │          initiatives-backlog.md                  │
-  │   RICE-scored · Categorized · Change-tracked     │
-  └──────────────────────────────────────────────────┘
-```
-
-Activate from the PM agent menu or directly: `/bmad-enhance-initiatives-backlog`
-
-The [Enhance Guide](_bmad/bme/_enhance/guides/ENHANCE-GUIDE.md) documents the complete pattern for building your own skills.
+**Team Factory — build your own team.** `/bmad-agent-bme-team-factory` walks you through composition pattern, agent scope with overlap detection, contract design and integration wiring, and persists the decisions as a resumable spec. Output passes the same validation as the native teams. It can also add an agent to an existing team, or a skill to an existing agent.
 
 ---
 
-## Quick Start
-
-### Prerequisites
-
-- Node.js 18+ or Bun
-- Git
-- Claude Code or Claude.ai
-
-### Install
-
-**Everything (Vortex + Gyre):**
+## Install
 
 ```bash
 npm install convoke-agents@latest
 npx -p convoke-agents convoke-install
 ```
 
-**Vortex only:**
+That installs everything — both teams and the skill modules. `convoke-install-vortex` and `convoke-install-gyre` exist and currently do the same thing; per-team installation is not yet a real distinction.
+
+[INSTALLATION.md](INSTALLATION.md) covers prerequisites, what lands where, configuration, verification and troubleshooting.
+
+## Update
 
 ```bash
-npm install convoke-agents@latest
-npx -p convoke-agents convoke-install-vortex
+npm install convoke-agents@latest                  # fetch the new package first
+npx -p convoke-agents convoke-version              # what you have
+npx -p convoke-agents convoke-update --dry-run     # what would change
+npx -p convoke-agents convoke-update               # apply, with automatic backup
 ```
 
-**Gyre only:**
+The `@latest` is not decoration: where `convoke-agents` is already a recorded dependency, a bare `npm install convoke-agents` respects the range in your `package.json` and will not cross a major version boundary — it appears to succeed while keeping you on your current major. And skipping the install step means `convoke-update` refreshes your project from the package version you already have, so it reconciles your files rather than upgrading them.
 
-```bash
-npm install convoke-agents@latest
-npx -p convoke-agents convoke-install-gyre
-```
-
-Something not working? Run `npx -p convoke-agents convoke-doctor` or check the [FAQ](docs/faq.md).
-
-### Personalize
-
-Open `_bmad/bme/_vortex/config.yaml` (or `_bmad/bme/_gyre/config.yaml`) and replace `{user}` with your name. Agents use this to personalize their interactions.
-
-### Activate an Agent
-
-**Claude Code (skills)**
-
-```
-# Vortex
-/bmad-agent-bme-contextualization-expert          # Emma  🎯
-/bmad-agent-bme-discovery-empathy-expert          # Isla  🔍
-/bmad-agent-bme-research-convergence-specialist   # Mila  🔬
-/bmad-agent-bme-hypothesis-engineer               # Liam  💡
-/bmad-agent-bme-lean-experiments-specialist        # Wade  🧪
-/bmad-agent-bme-production-intelligence-specialist # Noah  📡
-/bmad-agent-bme-learning-decision-expert           # Max   🧭
-
-# Gyre
-/bmad-agent-bme-stack-detective                    # Scout 🔎
-/bmad-agent-bme-model-curator                      # Atlas 📐
-/bmad-agent-bme-readiness-analyst                  # Lens  🔬
-/bmad-agent-bme-review-coach                       # Coach 🏋️
-```
-
-**Claude Code (terminal) / Other AI assistants**
-
-```bash
-# Vortex
-cat _bmad/bme/_vortex/agents/contextualization-expert.md    # Emma  🎯
-# ... (see user guides for full list)
-
-# Gyre
-cat _bmad/bme/_gyre/agents/stack-detective.md               # Scout 🔎
-cat _bmad/bme/_gyre/agents/model-curator.md                 # Atlas 📐
-cat _bmad/bme/_gyre/agents/readiness-analyst.md             # Lens  🔬
-cat _bmad/bme/_gyre/agents/review-coach.md                  # Coach 🏋️
-```
-
-**Claude.ai** — Open any agent file and paste its contents into your conversation.
-
-**How activation works:** Each agent is a markdown file containing a full persona, menu system, and workflow instructions. When Claude reads the file, it adopts that agent's expertise and presents you with an interactive menu. Pick a workflow from the menu and follow the guided steps.
-
-### Your First 15 Minutes
-
-1. **Personalize** — edit the config.yaml for your chosen team and replace `{user}` with your name
-2. **Pick a starting point:**
-   - **Vortex:** Activate Emma → select **Lean Persona** from the menu → follow the guided steps
-   - **Gyre:** Activate Scout → select **Full Analysis** from the menu → walk through the pipeline
-3. **Find your artifact** — outputs are saved in `_bmad-output/vortex-artifacts/` or `.gyre/`
-4. **Follow the Compass** — each workflow ends with a routing suggestion for which agent to use next
-
-### What Gets Installed
-
-```
-your-project/
-├── _bmad/bme/
-│   ├── _vortex/              # Team: Product Discovery
-│   │   ├── agents/           # 7 agent definition files
-│   │   ├── workflows/        # 22 workflows
-│   │   ├── contracts/        # Handoff contracts (HC1-HC5 artifact, HC6-HC10 routing)
-│   │   ├── guides/           # User guides (all 7 agents)
-│   │   └── config.yaml       # Configuration
-│   ├── _gyre/                # Team: Production Readiness
-│   │   ├── agents/           # 4 agent definition files
-│   │   ├── workflows/        # 7 workflows
-│   │   ├── contracts/        # Artifact contract schemas (GC1-GC4)
-│   │   ├── guides/           # User guides (all 4 agents)
-│   │   └── config.yaml       # Configuration
-│   ├── _enhance/             # Skill: Agent Capability Upgrades
-│   │   ├── workflows/        # Skill workflows (initiatives-backlog)
-│   │   ├── extensions/       # Agent menu patch descriptors
-│   │   ├── guides/           # Module author guide
-│   │   └── config.yaml       # Configuration
-│   ├── _portability/         # Skill: Export skills to other platforms
-│   │   └── skills/           # Export, validate, catalog, seed workflows
-│   ├── _team-factory/        # Skill: Create new BMAD-compliant teams
-│   │   └── lib/              # Factory generators and validators
-│   └── _artifacts/           # Skill: Artifact governance & portfolio
-│       └── workflows/        # Migrate artifacts, portfolio status
-└── _bmad-output/
-    ├── vortex-artifacts/     # Vortex generated artifacts
-    └── gyre-artifacts/       # Gyre generated artifacts
-```
-
----
-
-## How It Fits with BMAD Core
-
-Convoke handles **discovery, validation, and readiness**. BMAD Core handles **implementation**.
-
-```
-Convoke Modules                            BMAD Core
-┌──────────────────────────────┐          ┌──────────────────────┐
-│ Teams                        │          │                      │
-│   Vortex (Product Discovery) │ ──────>  │ PM → Architect → Dev │
-│   Gyre (Prod. Readiness)     │ <──────  │ "Let's build it"     │
-│                              │          │                      │
-│ Skills                       │  signals │                      │
-│   Enhance (Agent Upgrades)   │ ──────>  │                      │
-│                              │          │                      │
-└──────────────────────────────┘          └──────────────────────┘
-```
-
-Teams and Skills are peer module types — both installable, both independent. Convoke works standalone or as an extension — no BMAD Method installation required.
-
----
-
-## Updating
-
-```bash
-npm install convoke-agents@latest         # Get the latest package
-npx -p convoke-agents convoke-version                       # Check current version
-npx -p convoke-agents convoke-update --dry-run              # Preview changes
-npx -p convoke-agents convoke-update                        # Apply update (auto-backup)
-npx -p convoke-agents convoke-doctor                        # Diagnose issues
-```
-
-Your data in `_bmad-output/` and `.gyre/` is never touched. Automatic backups are created before every update.
-
-> **Important:** `npm install convoke-agents` (without `@latest`) won't cross major version boundaries. If you're on v2.x, you must use `npm install convoke-agents@latest` to get v3.x.
-
-See [UPDATE-GUIDE.md](UPDATE-GUIDE.md) for migration paths and troubleshooting.
+Your artifacts in `_bmad-output/` and `.gyre/` are never touched. [UPDATE-GUIDE.md](UPDATE-GUIDE.md) covers migration paths and troubleshooting.
 
 ---
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Agent Guide](docs/agents.md) | Detailed agent descriptions, workflows, and positioning |
-| [BMAD Compatibility](docs/BMAD-METHOD-COMPATIBILITY.md) | Compatibility matrix with BMAD Method versions |
-| [Testing](docs/testing.md) | Automated test suite, CI pipeline, and agent test results |
-| [Development Guide](docs/development.md) | Architecture, building agents, and contributing |
-| [FAQ](docs/faq.md) | Common questions about the framework |
-| [CHANGELOG](CHANGELOG.md) | Complete version history |
-| [UPDATE-GUIDE](UPDATE-GUIDE.md) | Migration paths and update troubleshooting |
+| Document | What's in it |
+|----------|--------------|
+| [Installation](INSTALLATION.md) | Prerequisites, install options, configuration, troubleshooting |
+| [Update Guide](UPDATE-GUIDE.md) | Migration paths between versions |
+| [Changelog](CHANGELOG.md) | Complete release history |
+| [Agent Guide](https://github.com/amalik/convoke-agents/blob/main/docs/agents.md) | Every agent, workflow and handoff contract in detail |
+| [BMAD Compatibility](https://github.com/amalik/convoke-agents/blob/main/docs/BMAD-METHOD-COMPATIBILITY.md) | Which BMAD Method versions Convoke runs against |
+| [Testing](https://github.com/amalik/convoke-agents/blob/main/docs/testing.md) | Test suite, CI pipeline, agent test results |
+| [Development Guide](https://github.com/amalik/convoke-agents/blob/main/docs/development.md) | Architecture, building agents, contributing |
+| [FAQ](https://github.com/amalik/convoke-agents/blob/main/docs/faq.md) | Common questions |
 
----
-
-## Roadmap
-
-- **v1.x** — Vortex foundation: 7 agents, 22 workflows, update system, CI/CD
-- **v2.0** — Product renamed to Convoke. CLI commands: `convoke-*`. Package: `convoke-agents`
-- **v2.x** — Enhance module (Skills architecture, RICE initiatives-backlog), Gyre team (production readiness, 4 agents), Team Factory
-- **v3.x** — Artifact governance, portfolio intelligence, portability system (export to Claude/Copilot/Cursor), 1,123 tests
-- **Next** — Forge (domain knowledge extraction for enterprise brownfield engagements)
-- **Future** — Additional teams, Forge-Gyre integration, cross-team workflows
+> **Writing a Convoke skill?** Read [The Convoke Operator Covenant](https://github.com/amalik/convoke-agents/blob/main/_bmad-output/planning-artifacts/convoke-covenant-operator.md) first — one axiom and seven Operator Rights every Convoke skill honours. Operator-facing behaviour is an architectural concern in agent systems, not a styling one: a skill that violates the Covenant erodes trust across the whole ecosystem, not just its own surface.
 
 ---
 
 ## Contributing
 
-We welcome contributions in these areas:
+Contributions are welcome in these areas:
 
-- **Agents** — New domain-specialized agents, workflow improvements
-- **Teams** — New team modules via the Team Factory
-- **Testing** — Edge cases, performance testing
-- **Documentation** — Tutorials, translations, video walkthroughs
+- **Agents** — new domain specialists, workflow improvements
+- **Teams** — new team modules, built with the Team Factory
+- **Testing** — edge cases, performance
+- **Documentation** — tutorials, translations, walkthroughs
 
-**Have feedback?** Found a quality issue, want a missing capability, or have a general comment about an agent? Open an issue and select the **Agent/Workflow Feedback** template.
-
-See the [Development Guide](docs/development.md) for architecture details and agent development patterns.
-
----
+Found a quality issue with an agent, or want a capability that is not there? Open an issue and pick the **Agent/Workflow Feedback** template. Architecture and development patterns are in the [Development Guide](https://github.com/amalik/convoke-agents/blob/main/docs/development.md).
 
 ## License
 
-MIT License — see [LICENSE](LICENSE)
+MIT — see [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-- [BMAD Method v6.0.0](https://github.com/bmad-code-org) — Foundation for agent architecture
-- [Innovation Vortex](https://unfix.com/innovation-vortex) — Pattern from the [unFIX model](https://unfix.com/) by [Jurgen Appelo](https://jurgenappelo.com/)
-- Claude (Anthropic) — AI reasoning and agent development
-
-### Agents
-
-Every agent below contributed to the design, implementation, testing, or documentation of this release.
-
-**Core**
-- BMad Master 🧙 — Orchestration and agent coordination
-
-**BMM — BMAD Method Module**
-- Mary 📊 Analyst — Requirements analysis and product briefs
-- Winston 🏗️ Architect — Architecture decisions and technical design
-- Amelia 💻 Dev — Implementation and code delivery
-- John 📋 PM — Product management and PRD creation
-- Barry 🚀 Quick Flow — Rapid solo development
-- Quinn 🧪 QA — Quality assurance and test validation
-- Bob 🏃 SM — Sprint management and retrospectives
-- Paige 📚 Tech Writer — Documentation and editorial review
-- Sally 🎨 UX Designer — User experience design
-
-**BME — Vortex Pattern Agents**
-- Emma 🎯 Contextualize — Problem framing and product vision
-- Isla 🔍 Empathize — User research and empathy mapping
-- Mila 🔬 Synthesize — Research convergence and problem definition
-- Liam 💡 Hypothesize — Hypothesis engineering and assumption mapping
-- Wade 🧪 Externalize — Lean experiments and MVP testing
-- Noah 📡 Sensitize — Production intelligence and signal interpretation
-- Max 🧭 Systematize — Learning capture and pivot/persevere decisions
-
-**BME — Gyre Pattern Agents**
-- Scout 🔎 Stack Detective — Technology stack detection and classification
-- Atlas 📐 Model Curator — Contextual capabilities manifest generation
-- Lens 🔬 Readiness Analyst — Absence detection and cross-domain correlation
-- Coach 🏋️ Review Coach — Guided review, amendment, and feedback capture
-
-**CIS — Creative & Innovation Strategies**
-- Carson 🧠 Brainstorming Coach — Creative ideation facilitation
-- Dr. Quinn 🔬 Problem Solver — Systematic problem-solving
-- Maya 🎨 Design Thinking Coach — Human-centered design
-- Victor ⚡ Innovation Strategist — Business model innovation
-- Caravaggio 🎨 Presentation Master — Visual communication
-- Sophia 📖 Storyteller — Narrative and storytelling
-
-**BMB — BMAD Builder Module**
-- Bond 🤖 Agent Builder — Agent creation and configuration
-- Morgan 🏗️ Module Builder — Module architecture
-- Wendy 🔄 Workflow Builder — Workflow design and validation
-
-**TEA — Test Engineering & Architecture**
-- Murat 🧪 Test Architect — Test framework, CI pipeline, and quality gates
-
----
+Built on [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) and the [Innovation Vortex](https://unfix.com/innovation-vortex) from Jurgen Appelo's [unFIX model](https://unfix.com/). The agents that built this — and there were a lot of them — are named in [CREDITS.md](CREDITS.md).
 
 <div align="center">
 
-**Discover what has to be discovered. Ship what's ready to ship.**
-
-[Get Started](#quick-start) | [Agents](docs/agents.md) | [Docs](#documentation) | [Roadmap](#roadmap)
+[Get started](#your-first-15-minutes) · [The lifecycle](#the-lifecycle) · [Teams](#teams) · [Install](INSTALLATION.md) · [Update](UPDATE-GUIDE.md) · [Changelog](CHANGELOG.md)
 
 </div>

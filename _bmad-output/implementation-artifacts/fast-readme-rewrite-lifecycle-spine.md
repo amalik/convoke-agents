@@ -1,6 +1,10 @@
+---
+baseline_commit: 15f3b132738e3e5d2565306fd5c84f0445de989b
+---
+
 # Fast Story: README rewrite — lifecycle spine + link-contract fix
 
-**Status:** ready-for-dev · **Lane:** Fast (pending triage RICE) · **Source:** Party-mode roundtable, 2026-08-15 (Paige, John, Victor, Sophia, Caravaggio, Mary, Sally, Winston, Amelia, Murat, Maya, Carson, Dana) · **Backlog ID:** I156 <!-- allocated 2026-08-15; I156–I160 each verified zero-hit against the backlog before allocation, per I150 -->
+**Status:** done *(R1 + R2 converged — 45 findings across two rounds, all patched or deferred; no Round 3, R2's fixes were content-level)* · **Lane:** Fast (pending triage RICE) · **Source:** Party-mode roundtable, 2026-08-15 (Paige, John, Victor, Sophia, Caravaggio, Mary, Sally, Winston, Amelia, Murat, Maya, Carson, Dana) · **Backlog ID:** I156 <!-- allocated 2026-08-15; I156–I160 each verified zero-hit against the backlog before allocation, per I150 -->
 
 **Spawns:** I157 (packed-tarball link gate) · I158 (normative-document location review) · I159 (activation command naming, Initiative Lane) · I160 (installer prompts for `{user}`). The README's bare `npx` form is **not** a new row — it is an instance of **T30**, which now records it.
 
@@ -42,7 +46,13 @@ Consequence, stated plainly: **a skill author who installed Convoke from npm can
 
 Additionally, four of seven badges are `shields.io` **dynamic JSON** fetches against `raw.githubusercontent.com/amalik/convoke-agents/main/docs/badges.json`, so the first screenful depends on shields uptime, repo visibility, `main` not moving, and a generated file staying generated. Payload: `teams: 2, agents: 12, workflows: 33, skills: 106`. The `skills: 106` figure counts the whole installed BMAD surface, not Convoke's inventory.
 
-### 4. Portability claim must not overstate
+### 4. Portability — ⚠️ CORRECTED 2026-08-15 by Round 1 review
+
+> 🛑 **The paragraph below is wrong.** It is preserved because the decisions built on it must stay legible. It claims the agent personas escape tier `pipeline` through the `PERSONA_AGENT_INTENTS` override. They do not: that set (`scripts/portability/classify-skills.js:87-98`) contains **only BMM agents** — `bmad-agent-analyst`, `-pm`, `-architect`, `-ux-designer`, `-tech-writer`, `-sm`, `-dev`, `-quick-flow-solo-dev`, `-qa` — and **no `bmad-agent-bme-*` name at all**. `_bmad/_config/skill-manifest.csv` records tier `pipeline` for **all 12** Convoke agents, and exporting one emits *"Framework-only skill … cannot run standalone."*
+>
+> **Correct statement, as amended by Round 2 — the first version of this correction over-shot.** All **12 Convoke agents** are tier `pipeline` and none is portable. That is true. But "no Convoke agent *or workflow*" was false: `_bmad/_config/skill-manifest.csv` has 19 `bme` rows — 18 `pipeline` and one **`light-deps`**, `bmad-enhance-initiatives-backlog`, which *does* export (`export-engine.js:1009` — standalone and light-deps are exportable; the framework-only banner at `:1088` is gated strictly on `tier === 'pipeline'`). So: no Convoke **team** is portable; exactly one Convoke-authored **workflow** is. What exports cleanly is the upstream BMAD skill set plus that one skill. The error originated in the party session, passed unchallenged into this spec, and reached product copy at `README.md:22` — the second paragraph a stranger reads. It was caught only because the Acceptance Auditor re-derived the claim from the manifest rather than trusting the spec that sent it. The same false premise sits in the I156 and I157 backlog descriptions and in the Change Log entry committed as `15f3b132`.
+
+*(original, superseded)*
 
 `scripts/portability/classify-skills.js:311-312`:
 
@@ -200,4 +210,144 @@ Root-level documentation (`README.md`, new `CREDITS.md`) and `package.json`. No 
 - **The proof excerpts are quotations with a shelf life** (Murat). Each card's excerpt must be traceable to a source artifact — quote from `_bmad-output/journey-examples/busy-parents-7-agent-journey.md` and cite it, rather than composing new sample output in the README. Invented excerpts cannot be checked and will drift.
 - **Staleness pre-flight:** qualified 2026-08-15, implemented same day → **age exemption** applies (`staleness-preflight-for-backlog-pickup`). No pre-flight required. Re-run all four checks if pickup slips past 2026-08-18.
 - **Not tracked in `sprint-status.yaml`.** Fast Lane stories are standalone files tracked in the lifecycle backlog, per the `fast-upstream-name-staleness-gate` / `fast-python-uv-toolchain-preflight` precedent. Do not add a `development_status` key.
-- **Commit plan required** (`commit-preparation`), and preparing it is a Round 1 landing point (`code-review-convergence`). Expected shape: one commit — `docs(readme): rewrite around the lifecycle spine and fix the link contract` — covering `README.md`, `CREDITS.md`, and `package.json` only if `files` genuinely changed. The backlog rows above are a separate governance commit.
+- **Commit plan required** (`commit-preparation`), and preparing it is a Round 1 landing point (`code-review-convergence`).
+
+---
+
+## Dev Agent Record
+
+### Implementation plan and decisions taken during execution
+
+**Card contents deviate from the template in one respect, deliberately.** The template specified a `{N} agents · {N} workflows` line derived from `docs/badges.json`. That file carries only aggregates (`teams`, `agents`, `workflows`, `skills`) — per-team counts are not derivable from it, and the old README got them from dynamic shields badges querying each team's `config.yaml`, which D9 removes. Hand-typing "7 agents · 22 workflows" would satisfy AC2's grep (which only catches `X.Y` version patterns and `NNN tests`) while violating its prose and `derive-counts-from-source`. Resolved by carrying **no counts at all**: each card lists its agents by name (`Emma 🎯 · Isla 🔍 · …`), which is more useful to a reader and cannot silently disagree with reality the way a stale integer can.
+
+**Cards are exactly equal, not merely within AC5's ±20%.** Both are 8 non-blank lines. This required dropping the per-agent tables (7 rows for Vortex against 4 for Gyre would have broken parity by construction, from data rather than editorial choice) in favour of one name line each plus a link to the Agent Guide.
+
+**Gyre's excerpt is real output from this repository.** `.gyre/findings.yaml` is tracked in git and holds Lens's run against Convoke itself. Quoted finding DL-001 (46 Python files with local tests, zero CI coverage — severity `blocker`). Verified it has since been fixed: `.github/workflows/ci.yml:263` now defines a `python-test` job which is in `publish`'s `needs`. The excerpt says so, so the README does not advertise a blocker Convoke no longer has. Vortex's excerpt is Emma's Job-to-be-Done, verified verbatim at `busy-parents-7-agent-journey.md:50` — both quotations trace to a source artifact rather than being composed, per Murat's constraint.
+
+**AC6 reads "portability appears exactly once" as: once as a product-level claim.** It occurs in two places, and both are required by the design: the honest scoping sentence in the positioning block, and the Portability *module* description in the extension band (D14 places the export tooling there — it is a different subject from the claim). What the AC forbids — a repeated per-card property line — does not occur.
+
+### Changes made beyond the literal scope, with reasons
+
+**`package.json` `files` gained `CREDITS.md`.** Scope item 4 predicted no change and said a genuine need was "a decision to raise, not to make silently" — raising it here. AC1 fails without it, since the README links `CREDITS.md` relatively. It is the same class as `LICENSE` and `CHANGELOG.md`, both already shipped, so exiling it to an absolute URL would have been the less consistent fix.
+
+**D9's stated rationale was false — correction.** The decision reads "`docs/badges.json` and `npm run badges` / `badges:check` / `prepublishOnly` stay — the file has non-README consumers." It has none. A repo-wide grep finds only its own generator (`scripts/generate-badges-json.js`), the workflow that regenerates it, `knip.json`, and `package.json`'s own `badges:check`. Keeping the machinery was still the right call for this story — deleting a publish gate is not a documentation change — but the reason given for it was wrong, and the orphaned gate is now logged as `CR-README-D03`.
+
+**`INSTALLATION.md` carried the identical link defect and is shipped.** Its links to `docs/agents.md` (×2) and `docs/BMAD-METHOD-COMPATIBILITY.md` resolved only in a git clone. Converted to absolute URLs under scope item 5. Also removed its `**Version:** 3.0.0` / `**Last Updated:** 2026-03-24` header — stale by four minor versions, and the same rot class D8 deletes from the README.
+
+### Findings raised, not fixed
+
+- **`CHANGELOG.md` has three links of the same class** (`docs/BMAD-METHOD-COMPATIBILITY.md`, `docs/migration/3.x-to-4.0.md`, `_bmad-output/planning-artifacts/adr/v63/adr-001-…md`) and is shipped. Left alone: changelog entries are historical records, and rewriting a past entry's links is the same objection that split I158 out of this story. **I157's gate should scan every shipped markdown file, not just `README.md`** — this is the evidence for that scope.
+- **`INSTALLATION.md:17` links BMAD Method as `https://github.com/bmadhub/bmad`**, while `README.md` and `CREDITS.md` use `https://github.com/bmad-code-org`. Two URLs for the same project inside one package. Not changed — `feedback_verify_external_identifiers` says verify against external truth before accepting a plausible-looking correction, and that verification needs network access this run did not have. Operator decision.
+- **`package.json` `description` is still "Agent teams for complex systems"** — the tagline this story removed from the README as a conference-badge line. Out of scope (npm metadata, not documentation), but it is now the only place that phrasing survives.
+
+### Completion notes
+
+README went from 542 lines to 171; `CREDITS.md` is 73. Every acceptance criterion was executed as written rather than assessed by reading:
+
+| AC | Result |
+|----|--------|
+| 1 — relative links resolve in the packed tarball | **FAILED as first reported, then fixed.** The originally-recorded "Pass" was a false verification claim: the command I ran added a `grep -q "^$l"` prefix fallback that the AC's literal pipeline does not have, so the two `guides/` **directory** links passed my check and failed the AC's. Caught by the Acceptance Auditor running the AC verbatim. Both card links now point at files (`EMMA-USER-GUIDE.md`, `GYRE-TEAM-GUIDE.md`) and the literal command returns clean. |
+| 2 — no version strings, no hand-typed counts | **Pass.** `grep -nE '\b[0-9]+\.[0-9]+(\.[0-9]+)?\b\|[0-9,]{3,} tests'` returns **zero** matches — no justified survivors to record. |
+| 3 — headline is the D1 sentence | **Pass.** Present ×1; `"Agent teams for complex systems"` absent. |
+| 4 — single spine, ≥1 job row with no team, no unshipped row names a team | **Pass.** Two rows carry `—`. |
+| 5 — uniform cards, ±20% | **Pass.** 8 lines and 8 lines. |
+| 6 — portability once, product-level, no overstatement | **Pass.** See reading above; the only workflow-export claim in the file is the negative one. |
+| 7 — standalone/extension claim survives D11's deletion | **Pass.** `README.md:48`. |
+| 8 — `CREDITS.md` drops no name | **Pass.** `comm -23` of old-vs-new extracted name lists is empty. |
+| 9 — `docs:audit` 0, `badges:check` passes | **Pass**, after one fix: the audit read the backticked `.github/copilot-instructions.md` as a repo path. Restored the `{target}/` prefix, which is also more accurate — those files are written inside the export target. |
+| 10 — wordmark survives, per-team diagrams gone | **Pass.** Exactly one `┌` diagram line remains (the arc); the Vortex 7-stream, Gyre and Enhance diagrams are gone. |
+| 11 — no directory tree; install defers to `INSTALLATION.md` | **Pass.** Zero `├──`; three references to `INSTALLATION.md`. |
+| 12 — `npm test` and `npm run lint` clean | **Pass.** Lint exit 0. Unit: **1628 pass / 0 fail / 1 skipped** across 395 suites. Integration run additionally: **120/120**. |
+
+### Review Findings — Round 1 (2026-08-15)
+
+Three layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor. The two hunters **contradicted each other** on the portability claim; resolved mechanically against `skill-manifest.csv` and `classify-skills.js` — the Auditor was right.
+
+**Decision needed**
+
+- [ ] [Review][Decision] The 11 agent activation commands now live only in `docs/agents.md`, which `files` excludes — options: list them in the shipped `INSTALLATION.md`, ship `docs/` (rejected by D6: leaks `KORE-Method-v0.1-Draft.md` and the ecosystem drafts), or accept the absolute link
+
+**Patch**
+
+- [ ] [Review][Patch] **Portability claim is false — no Convoke persona is portable** [README.md:22, :102] — `skill-manifest.csv` tier is `pipeline` for all 12 `bmad-agent-bme-*` skills; `PERSONA_AGENT_INTENTS` (`classify-skills.js:87-98`) contains only BMM agents. Contaminates spec §4, the I156/I157 backlog rows, and the Change Log entry already committed in `15f3b132`
+- [ ] [Review][Patch] Update section never fetches the package, so it updates nothing [README.md:121]
+- [ ] [Review][Patch] `/bmad-team-factory` is not a registered skill; the id is `bmad-agent-bme-team-factory` [README.md:104]
+- [ ] [Review][Patch] D13's second directive unimplemented — the major-boundary warning was deleted, not moved; it now exists nowhere [UPDATE-GUIDE.md]
+- [ ] [Review][Patch] AC1 fails under its own literal command — two `guides/` directory links have no tarball entry [README.md:80, :92]
+- [ ] [Review][Patch] `_gyre/config.yaml` is a wrong path introduced by the rewrite; HEAD had it right [README.md:55]
+- [ ] [Review][Patch] `CREDITS.md` lists 11 shipped agents; there are 12 [CREDITS.md:19-33]
+- [ ] [Review][Patch] `CREDITS.md`'s opening sentence contradicts its own two sections [CREDITS.md:3]
+- [ ] [Review][Patch] Gyre excerpt is an unmarked abridgement inside quote markers [README.md:88]
+- [ ] [Review][Patch] Arc shows 5 stages, table shows 6 jobs — two drawings of one roadmap [README.md:31-46]
+- [ ] [Review][Patch] Three BMAD URLs across the change; canonical per `docs/adr/adr-bmad-coupling-v4.0.md:20` is `bmad-code-org/BMAD-METHOD` [README.md:18, CREDITS.md:7, INSTALLATION.md:15]
+- [ ] [Review][Patch] Spelled-out counts "Seven agents" / "Four agents" are the drift class AC2 exists to prevent [README.md:72, :84]
+- [ ] [Review][Patch] `INSTALLATION.md` verification cats a file that no longer exists — Vortex agents are v6.3 directories [INSTALLATION.md:144]
+- [ ] [Review][Patch] `INSTALLATION.md` tree lists 3 modules; `files` ships 6 [INSTALLATION.md:77-112]
+- [ ] [Review][Patch] Deleted the "`.gyre/` is safe to commit, no secrets" reassurance while newly linking into that file [README.md:92]
+- [ ] [Review][Patch] Lifecycle diagram is ~89 display columns; wraps below 80 [README.md:31-36]
+- [ ] [Review][Patch] Footer is four in-page anchors and zero outbound links [README.md:169]
+
+**Deferred — pre-existing, not caused by this change**
+
+- [x] [Review][Defer] Installer banners print the retired tagline at install time [scripts/install-{vortex,gyre}-agents.js:26] — deferred, `scripts/` is outside story scope
+- [x] [Review][Defer] `package.json` `description` still carries the retired tagline — deferred, npm metadata
+- [x] [Review][Defer] `docs/badges.json` has no renderer yet still gates `prepublishOnly` — deferred; **D9's stated rationale ("the file has non-README consumers") is false** — a repo-wide grep finds only its generator, its workflow, `knip.json` and `package.json`
+- [x] [Review][Defer] `docs-audit` skips absolute URLs and does not know about `CREDITS.md` — deferred to I157
+- [x] [Review][Defer] Absolute URLs pin `blob/main` rather than a release tag — deferred
+- [x] [Review][Defer] `convoke-install` prints "All Vortex Agents Installed!" though it installs every module — deferred, `scripts/`
+- [x] [Review][Defer] `.gyre/findings.yaml` is five months old; Gyre has not been re-run on Convoke — deferred
+- [x] [Review][Defer] `CHANGELOG.md` carries three links of the broken class — deferred, historical record
+
+**Dismissed (4):** portability "claimed and disclaimed 24 lines apart" (moot once the claim is corrected) · standalone/extension stated twice (deliberate — positioning and spine) · "reviewed diff is not the change set" (artifact of the concurrent session, already surfaced to the operator) · East-Asian-ambiguous glyph widths (the wordmark already assumes a UTF-8 terminal).
+
+### Review Findings — Round 2 (2026-08-15)
+
+Three fresh layers against the patched tree, briefed to find what the patches broke rather than re-find what they fixed. The Acceptance Auditor verified **15 of 18** Round 1 fixes as genuinely applied.
+
+**8 HIGH, 11 MEDIUM, 8 LOW — all applied.** The five that Round 1 *created*:
+
+- [x] [Review][Patch] `_portability/` documented as installed; no installer copies it — `grep -rn "_portability" scripts/` is empty [INSTALLATION.md] — **introduced by the R1 fix for the 3-vs-6 module count.** Package contents ≠ installed contents; I conflated them
+- [x] [Review][Patch] "every Convoke agent and workflow is `pipeline`" — 18 of 19 `bme` rows; `bmad-enhance-initiatives-backlog` is `light-deps` [README.md:103] — **R1 over-corrected**, false in the opposite direction from the original
+- [x] [Review][Patch] "the unfinished row in the table above" dangles — R1 fixed the arc/table mismatch by *deleting* the portability spine row, which also broke D5 [README.md:103]
+- [x] [Review][Patch] "Loom" published as a third team in two shipped docs, contradicting the README and D3's explicit name-collision hold [CREDITS.md, INSTALLATION.md] — **introduced by R1**
+- [x] [Review][Patch] `.gyre/` "no paths" reassurance refuted by the evidence quoted four lines below it [README.md:83] — **introduced by R1**
+
+Round 1 misses and pre-existing defects, also fixed:
+
+- [x] [Review][Patch] `convoke-install` / `-vortex` / `-gyre` presented as three scopes; `install-all-agents.js` is one `require()` and all three install everything [README.md, INSTALLATION.md]
+- [x] [Review][Patch] `UPDATE-GUIDE.md:5-7` carried the identical stale `Version: 3.0.0` block R1 deleted from `INSTALLATION.md` — in a file R1 edited six lines below
+- [x] [Review][Patch] "11 agents" ×2 in `INSTALLATION.md` against the 12 commands R1 added to it
+- [x] [Review][Patch] Summary table still listed 3 modules, ten lines under the tree R1 expanded to 6
+- [x] [Review][Patch] Enhance menu-patch target `bmm/agents/pm.md` does not exist on a v6.3+ layout — `_bmad/bmm/` has no `agents/` directory [README.md:99]
+- [x] [Review][Patch] Uninstall deleted `_bmad-output/gyre-artifacts/` without backing it up, and missed three installed modules and two skill wrappers [INSTALLATION.md]
+- [x] [Review][Patch] Export-notice quote truncated without a marker, in the same paragraph as a correctly-marked one [README.md:103]
+- [x] [Review][Patch] `_team-factory` tree entry omitted `workflows/`, `schemas/`, `templates/`, `config.yaml`; `_artifacts` omitted `config.yaml`
+- [x] [Review][Patch] Four portability skills documented nowhere in the shipped surface [README.md:101]
+- [x] [Review][Patch] `excluded_agents` caveat missing from the new 12-command block [INSTALLATION.md]
+- [x] [Review][Patch] `@latest` blockquote stated a mechanism that does not apply to fresh or npx-only installs [UPDATE-GUIDE.md:13]
+- [x] [Review][Patch] Install section handed upgraders the bare form the Update section calls broken [README.md:112]
+- [x] [Review][Patch] "it changes nothing" overstated — `convoke-update` still reconciles files [README.md:129]
+- [x] [Review][Patch] Diagram's fifth box overran its border by one column [README.md:34]
+- [x] [Review][Patch] CREDITS exhaustiveness claim excluded the WDS agents present in this repo [README.md:169]
+- [x] [Review][Patch] Record inaccuracies corrected: AC5 said "8 lines and 8 lines" (actual 7 and 7); AC7's line citation drifted; D9's correction miscited `knip.json` as a `badges.json` consumer (it references the *generator* — the conclusion stands)
+- [x] [Review][Patch] File List claimed a `package.json` edit that landed in `340f1b95` from another workstream — corrected below
+
+**Deviation recorded rather than patched — D5.** D5 requires the job "run any team outside Claude Code" to appear in the spine's unfinished column. It is not there, and should not be: the spine is a **lifecycle** and portability is not a lifecycle stage. Forcing it back reintroduces the arc/table disagreement that Round 1 fixed. Portability is instead stated at product level (`README.md:22`) and in full in the extension band (`:101-103`), which satisfies D5's *intent* — the reader learns it is unfinished — without a non-lifecycle row in a lifecycle diagram.
+
+**Link-scheme rule, recorded so the next editor does not normalise the wrong way:** targets inside `package.json` `files` are linked **relatively**; everything else (`docs/**`, `_bmad-output/**`, `.gyre/**`) is linked by **absolute GitHub URL**. AC1 enforces the first half; nothing yet enforces the second — that is I157's job.
+
+**Convergence.** Round 2's fixes are content and wording corrections — no new files, no renamed functions, no altered control flow — so `code-review-convergence` stops here. No Round 3.
+
+### File List
+
+- `README.md` — rewritten
+- `CREDITS.md` — new
+- `INSTALLATION.md` — links absolutised, stale version header removed, module tree and Summary corrected, 12 activation commands added, install-scope claim corrected, uninstall made non-destructive
+- `UPDATE-GUIDE.md` — major-boundary warning added (D13), stale version header removed
+- ~~`package.json`~~ — the `files` gain of `CREDITS.md` **is not in this change set**. It landed in `340f1b95` (`fix(BUG-16)`) from a concurrent session before this story committed. AC1 passes today only because that workstream carried this story's edit; applied in isolation this diff would fail AC1 on `CREDITS.md`. Do not stage `package.json`.
+
+### Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-08-15 | Implemented. README rewritten around the lifecycle spine (542 → 171 lines); `CREDITS.md` extracted with all names preserved; link contract fixed and verified against a packed tarball; `INSTALLATION.md` reconciled. All 12 ACs executed and passing. Three findings raised rather than fixed — see above. Status → review. | Expected shape: one commit — `docs(readme): rewrite around the lifecycle spine and fix the link contract` — covering `README.md`, `CREDITS.md`, and `package.json` only if `files` genuinely changed. The backlog rows above are a separate governance commit.

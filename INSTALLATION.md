@@ -2,9 +2,7 @@
 
 Complete guide to installing Convoke agent teams into your project.
 
-- **Package:** `convoke-agents`
-- **Version:** 3.0.0
-- **Last Updated:** 2026-03-24
+- **Package:** [`convoke-agents`](https://www.npmjs.com/package/convoke-agents)
 
 ---
 
@@ -14,7 +12,7 @@ Complete guide to installing Convoke agent teams into your project.
 - Git
 - Claude Code or Claude.ai
 
-Convoke works **standalone** or as an extension to [BMAD Method](https://github.com/bmadhub/bmad). No prior BMAD installation required.
+Convoke works **standalone** or as an extension to [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD). No prior BMAD installation required.
 
 ---
 
@@ -26,19 +24,9 @@ Convoke works **standalone** or as an extension to [BMAD Method](https://github.
 npm install convoke-agents && npx -p convoke-agents convoke-install
 ```
 
-All 11 agents (7 Vortex + 4 Gyre), the Enhance module, and all supporting files are installed and ready to use.
+Both teams (Vortex and Gyre), Team Factory, the Enhance and Artifacts modules, and all supporting files are installed and ready to use.
 
-**Vortex only** (product discovery):
-
-```bash
-npm install convoke-agents && npx -p convoke-agents convoke-install-vortex
-```
-
-**Gyre only** (production readiness):
-
-```bash
-npm install convoke-agents && npx -p convoke-agents convoke-install-gyre
-```
+> **On the per-team installers.** `convoke-install-vortex` and `convoke-install-gyre` exist, but they are **not currently scoped installs** — every entry point calls the same refresh routine and installs every module. Treat them as aliases for now; `excluded_agents` in each team's `config.yaml` is the supported way to opt out of agents you do not want.
 
 ---
 
@@ -91,10 +79,20 @@ your-project/
 │   │   ├── contracts/        # Artifact contract schemas (GC1-GC4)
 │   │   ├── guides/           # User guides (all 4 agents)
 │   │   └── config.yaml       # Configuration
-│   └── _enhance/             # Skill: Agent Capability Upgrades
-│       ├── workflows/        # Skill workflows (initiatives-backlog)
-│       ├── extensions/       # Agent menu patch descriptors
-│       ├── guides/           # Module author guide
+│   ├── _enhance/             # Skill: Agent Capability Upgrades
+│   │   ├── workflows/        # Skill workflows (initiatives-backlog)
+│   │   ├── extensions/       # Agent menu patch descriptors
+│   │   ├── guides/           # Module author guide
+│   │   └── config.yaml       # Configuration
+│   ├── _team-factory/        # Skill: Create new BMAD-compliant teams
+│   │   ├── agents/           # Team Factory agent
+│   │   ├── workflows/        # Factory workflows
+│   │   ├── schemas/          # Team/agent schemas
+│   │   ├── templates/        # Generation templates
+│   │   ├── lib/              # Factory generators and validators
+│   │   └── config.yaml       # Configuration
+│   └── _artifacts/           # Skill: Artifact governance & portfolio
+│       ├── workflows/        # Migrate artifacts, portfolio status
 │       └── config.yaml       # Configuration
 ├── .claude/skills/           # Claude Code skill wrappers (auto-generated)
 ├── _bmad/_config/
@@ -111,7 +109,11 @@ your-project/
 | **Vortex** | 7 agents, 22 workflows, 10 handoff contracts (HC1-HC5 artifact, HC6-HC10 routing), 7 user guides |
 | **Gyre** | 4 agents, 7 workflows, 4 contract schemas (GC1-GC4), 4 user guides |
 | **Enhance** | Skill workflows, menu patch descriptors, module author guide |
-| **Skills** | Claude Code skill wrappers in `.claude/skills/` for all 11 agents |
+| **Team Factory** | The factory agent, its workflows, schemas, templates and validators |
+| **Artifacts** | Artifact governance and portfolio workflows |
+| **Skills** | Claude Code skill wrappers in `.claude/skills/` for every installed agent |
+
+The `_portability/` module ships inside the npm package but is **not** copied into your project — `convoke-export` runs from the package itself, so there is nothing to install.
 
 ---
 
@@ -139,14 +141,37 @@ npx -p convoke-agents convoke-doctor
 
 Doctor validates all installed modules: agent files, skill wrappers, config files, and manifest entries — with actionable fix suggestions for each issue.
 
-Then activate an agent to confirm it works:
+Then activate an agent to confirm it works.
+
+**In Claude Code**, every agent is a slash command:
+
+```
+# Vortex — product discovery
+/bmad-agent-bme-contextualization-expert            # Emma  🎯  Contextualize
+/bmad-agent-bme-discovery-empathy-expert            # Isla  🔍  Empathize
+/bmad-agent-bme-research-convergence-specialist     # Mila  🔬  Synthesize
+/bmad-agent-bme-hypothesis-engineer                 # Liam  💡  Hypothesize
+/bmad-agent-bme-lean-experiments-specialist         # Wade  🧪  Externalize
+/bmad-agent-bme-production-intelligence-specialist  # Noah  📡  Sensitize
+/bmad-agent-bme-learning-decision-expert            # Max   🧭  Systematize
+
+# Gyre — production readiness
+/bmad-agent-bme-stack-detective                     # Scout 🔎  Detect
+/bmad-agent-bme-model-curator                       # Atlas 📐  Model
+/bmad-agent-bme-readiness-analyst                   # Lens  🔬  Analyze
+/bmad-agent-bme-review-coach                        # Coach 🏋️  Review
+
+# Team construction
+/bmad-agent-bme-team-factory                        # Team Factory 🏭
+```
+
+Agents listed in a team's `excluded_agents` config field get no skill wrapper, so their slash command will not resolve — that is the opt-out working as intended, not a broken install.
+
+**In a terminal, or on Claude.ai**, read the agent file into the conversation. Note that the two teams currently differ in layout — Vortex agents are directories, Gyre agents are flat files:
 
 ```bash
-# Vortex
-cat _bmad/bme/_vortex/agents/contextualization-expert.md    # Emma
-
-# Gyre
-cat _bmad/bme/_gyre/agents/stack-detective.md               # Scout
+cat _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md   # Emma
+cat _bmad/bme/_gyre/agents/stack-detective.md                    # Scout
 ```
 
 **Expected result:** The agent greets you by name and displays a numbered menu. If you see raw markdown instead, re-run `convoke-doctor` to diagnose.
@@ -205,7 +230,7 @@ Convoke works standalone — no BMAD Method installation is required.
 
 If the BMAD Method is already installed in your project, the installer detects it automatically and logs confirmation. Both packages coexist in the `_bmad/` directory without conflict.
 
-See [BMAD-METHOD-COMPATIBILITY.md](docs/BMAD-METHOD-COMPATIBILITY.md) for the full compatibility matrix.
+See [BMAD-METHOD-COMPATIBILITY.md](https://github.com/amalik/convoke-agents/blob/main/docs/BMAD-METHOD-COMPATIBILITY.md) for the full compatibility matrix.
 
 ---
 
@@ -218,7 +243,7 @@ See [BMAD-METHOD-COMPATIBILITY.md](docs/BMAD-METHOD-COMPATIBILITY.md) for the fu
 3. **Find your artifacts** — outputs are saved in `_bmad-output/vortex-artifacts/` or `.gyre/`
 4. **Check updates** — run `npx -p convoke-agents convoke-version` periodically
 
-See the [Agent Guide](docs/agents.md) for detailed workflow descriptions. User guides are available for all 11 agents in their respective `guides/` directories.
+See the [Agent Guide](https://github.com/amalik/convoke-agents/blob/main/docs/agents.md) for detailed workflow descriptions. User guides are available for the 11 team agents in their respective `guides/` directories; Team Factory is documented in its workflow rather than a user guide.
 
 ---
 
@@ -229,14 +254,18 @@ Convoke doesn't provide an uninstall command. To remove:
 ```bash
 # 1. Back up your generated artifacts first
 cp -r _bmad-output/vortex-artifacts/ ~/my-backup/
+cp -r _bmad-output/gyre-artifacts/ ~/my-backup/
 cp -r .gyre/ ~/my-backup/
 
 # 2. Remove agent files, workflows, and skills
 rm -rf _bmad/bme/_vortex/
 rm -rf _bmad/bme/_gyre/
 rm -rf _bmad/bme/_enhance/
+rm -rf _bmad/bme/_team-factory/
+rm -rf _bmad/bme/_artifacts/
 rm -rf .claude/skills/bmad-agent-bme-*/
 rm -rf .claude/skills/bmad-enhance-*/
+rm -rf .claude/skills/bmad-migrate-artifacts/ .claude/skills/bmad-portfolio-status/
 
 # 3. Remove generated artifacts
 rm -rf _bmad-output/vortex-artifacts/
@@ -250,4 +279,4 @@ Your BMAD Method files (if any) remain untouched.
 
 ---
 
-[Back to README](README.md) | [Update Guide](UPDATE-GUIDE.md) | [Agent Guide](docs/agents.md)
+[Back to README](README.md) | [Update Guide](UPDATE-GUIDE.md) | [Agent Guide](https://github.com/amalik/convoke-agents/blob/main/docs/agents.md)

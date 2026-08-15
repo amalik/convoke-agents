@@ -2,13 +2,13 @@
 
 How to update your Convoke installation to the latest version.
 
-- **Package:** `convoke-agents`
-- **Version:** 3.0.0
-- **Last Updated:** 2026-03-25
+- **Package:** [`convoke-agents`](https://www.npmjs.com/package/convoke-agents)
 
 ---
 
 ## Quick Update
+
+> **The `@latest` is mandatory, not stylistic.** If `convoke-agents` is already a recorded dependency — which it is for anyone updating rather than installing fresh — `npm install convoke-agents` respects the semver range in your `package.json` and **will not cross a major version boundary**. A project on 2.x stays on 2.x, a project on 3.x stays on 3.x, and the update appears to succeed while changing nothing. Always name the tag explicitly when moving between majors.
 
 ```bash
 # Update the package
