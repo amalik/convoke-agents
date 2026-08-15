@@ -106,6 +106,7 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 ## Rule: code-review-convergence
 
 **Statement.** Code reviews follow a bounded convergence rule:
+- **Round 1 fires automatically** when a change reaches a landing point, with no operator request required. The landing points are: a story moving to `review`, and — for Fast Lane / out-of-story work, which has no story status to move — **the moment a commit is prepared** (see `commit-preparation`). Waiting to be asked is a rule violation, not a default.
 - **Round 1** is mandatory.
 - **Round 2** is triggered only if Round 1 produces any HIGH-severity finding.
 - **Round 3** is triggered only if Round 2 introduces structural changes (new files, renamed functions, altered control flow) — not for wording fixes, comment edits, or cosmetic patches.
@@ -114,6 +115,7 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 **Why.** Story 7.3 went through 3 unbounded review rounds producing 30 findings. The unbounded "keep reviewing until clean" pattern wastes time and generates diminishing-return findings. Retrospective: ag-epic-7-retro-2026-04-10, Action Item #3.
 
 **How to apply.**
+- **Never wait for the operator to ask.** The failure mode this rule now guards against is not "too many rounds" (the original concern) but "zero rounds" — Fast Lane work shipping unreviewed because the operator was tired and nobody else was watching. If you are preparing a commit plan and no Round 1 has run on the changes it covers, run it first, or state explicitly in the plan that it was skipped and why.
 - When running `bmad-code-review`, track the current round number. The skill's step-04-present enforces the stopping criteria at the "Re-run code review" prompt.
 - If you're manually re-running a review, check whether the stopping criteria are met before proceeding.
 - If Round 2 produces only LOW/MEDIUM findings (no HIGH), stop — do not trigger Round 3.
@@ -277,3 +279,23 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 **Why.** Story v63-3-2 (FR23) shipped the first preflight in `scripts/update/lib/compat-preflight.js`. Detection is best-effort: Convoke is a *parallel* BMAD extension installed side-by-side, not a dependent — `node_modules/bmad-method/` is absent in the canonical Convoke dev tree, so the absent-package WARNING is the primary path that fires. False-positive hard-blocks would trap operators with legitimate non-standard installs (git-clone, monorepo, alternative distribution channels). Higher-fidelity gates ship in Story 3.3 (publish-gate) and Story 4.x (behavioral-equivalence) where the cost-benefit favors strict failure.
 
 **How to apply.** Future preflight helpers (e.g., environment-preflight, dependency-preflight) MUST follow the same contract: stderr WARNING + exit 0 pass-through; never `process.exit(non-zero)`; never `throw` to the caller. Use `chalk.yellow(...)` so WARNING text stays under non-TTY (chalk auto-disables colors only). Live smoke against the dev tree MUST emit the WARNING — silent green is a fixture-or-gate bug, not a success signal.
+
+---
+
+## Rule: commit-preparation
+
+**Statement.** The operator commits through GitHub Desktop and does not hand-author commits. Therefore the agent MUST produce an explicit **commit plan** for any change it makes, and the operator executes that plan rather than improvising. A commit plan is an ordered list of commits; each entry carries exactly three things:
+
+1. **Files** — the complete list to stage for that commit, and nothing else.
+2. **Summary** — one line, ≤ 72 chars, `<type>(<scope>): <intent>`. Types: `feat`, `fix`, `test`, `docs`, `refactor`, `chore`, `governance`. Scope is the story ID (`v63-4-5`), backlog ID (`T25`), or module (`doctor`). The summary states *intent*, never the filename.
+3. **Description** — why the change exists, what it affects, and the review status of the change (`Round 1: PASS` / `Round 1: findings applied` / `Round 1: skipped — <reason>`).
+
+**Never acceptable:** `Update <filename>` / `Create <filename>` as a summary. It carries zero intent and makes `git log` unreadable as a history of decisions.
+
+**Why.** Every commit in this repository as of 2026-08-15 is a single file with a GitHub-Desktop-default message. The consequence is not cosmetic: `scripts/lib/taxonomy-merger.js` and its test landed in two separate commits on 2026-08-15, violating the Phase 3 Epic 1 atomic-commit rule — not through carelessness but because file-by-file staging in a GUI makes atomic multi-file commits the harder path. A history of `Update X` cannot be bisected by intent, cannot be reviewed as a changeset, and cannot answer "why did this change?" for any future reader, human or agent.
+
+**How to apply.**
+- **Agent side.** After completing any change, emit the commit plan before the operator asks. Group by *logical change*, not by file — source and its test belong in one commit, a rename and its call sites belong in one commit. If a change genuinely splits into several commits, order them so each one leaves the tree green.
+- **Operator side.** In GitHub Desktop, check only the files listed for commit 1, paste Summary and Description, commit; then repeat for commit 2. Do not commit files the plan didn't list — an unlisted modified file means the plan is stale, so ask for a refresh.
+- **Review coupling.** A commit plan is a landing point per `code-review-convergence`. Preparing a plan without a Round 1 on the changes it covers is a rule violation; if review is deliberately skipped (e.g. a docs typo), say so in the Description rather than leaving it silent.
+- **Enforcement.** The commit-plan handoff is the *chokepoint* gate and only covers commits that pass through an agent session. The backstop that does not depend on operator or agent attention is the CI/doctor assertion — a story cannot reach `done` without a review record, and a commit touching `scripts/**/*.js` must touch its test or carry an explicit opt-out. Chokepoint catches the common path; CI catches the bypass.
