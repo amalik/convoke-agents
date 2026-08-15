@@ -1,6 +1,10 @@
 const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('js-yaml');
+// Comment-preserving writer (ag-7-1: I29), same convention as refresh-installation.js: js-yaml
+// for read-only parsing, the `yaml` package's Document API for any WRITE that must not destroy
+// operator comments.
+const YAML = require('yaml');
 
 /**
  * Platform-canonical taxonomy defaults.
@@ -119,12 +123,64 @@ async function mergeTaxonomy(projectRoot) {
     }
   }
 
-  // Write back if changes were made
+  // Write back if changes were made.
+  //
+  // Backlog I140. This used `TAXONOMY_HEADER + yaml.dump(existing)`, which reserialises from a
+  // plain object and therefore DISCARDS every comment the operator wrote. taxonomy.yaml
+  // explicitly invites operator edits — `initiatives.user` is documented as "Operator-managed.
+  // Add custom initiative IDs here" — so the content most likely to carry an explanatory comment
+  // is exactly the content this function rewrites.
+  //
+  // The exposure was widened by I137: before that, `mergeTaxonomy` was reachable only from the
+  // 2.0.x->3.1.0 and 3.0.x->3.1.0 migrations (twice, historically). It now runs at the end of
+  // every `refreshInstallation()`, so the loss fires on the first refresh after ANY release that
+  // adds a platform initiative, artifact type, or alias. Measured, not assumed: a steady-state
+  // refresh writes nothing at all (the guard below), so this is once-per-release, not every run.
+  //
+  // Mutating the parsed Document in place preserves the header, inline comments, key order, and
+  // the operator's formatting. The write remains guarded — no changes, no write, no churn.
   if (merged || promoted.length > 0) {
-    let output = TAXONOMY_HEADER + yaml.dump(existing, { lineWidth: -1 });
+    let output;
+    const doc = YAML.parseDocument(content);
+    if (doc.errors && doc.errors.length > 0) {
+      // Unparseable input already fell back to `existing = {}` above, so there are no comments
+      // to preserve and nothing to mutate in place. Reserialise, and re-add the header since the
+      // original content is being replaced wholesale.
+      output = TAXONOMY_HEADER + yaml.dump(existing, { lineWidth: -1 });
+    } else {
+      // Re-apply the same merge to the Document. Deriving it from `existing` rather than
+      // recomputing keeps one source of truth for what changed.
+      if (!doc.has('initiatives')) doc.set('initiatives', doc.createNode({ platform: [], user: [] }));
+      if (!doc.hasIn(['initiatives', 'platform'])) doc.setIn(['initiatives', 'platform'], doc.createNode([]));
+      if (!doc.hasIn(['initiatives', 'user'])) doc.setIn(['initiatives', 'user'], doc.createNode([]));
+      if (!doc.has('artifact_types')) doc.set('artifact_types', doc.createNode([]));
+      if (!doc.has('aliases')) doc.set('aliases', doc.createNode({}));
+
+      const docPlatform = doc.getIn(['initiatives', 'platform']).toJSON() || [];
+      for (const id of existing.initiatives.platform) {
+        if (!docPlatform.includes(id)) doc.addIn(['initiatives', 'platform'], id);
+      }
+      // Promotions REMOVE entries from user — walk backwards so indices stay valid.
+      const docUser = doc.getIn(['initiatives', 'user']);
+      const userJson = docUser.toJSON() || [];
+      for (let i = userJson.length - 1; i >= 0; i--) {
+        if (!existing.initiatives.user.includes(userJson[i])) doc.deleteIn(['initiatives', 'user', i]);
+      }
+      const docTypes = doc.get('artifact_types').toJSON() || [];
+      for (const t of existing.artifact_types) {
+        if (!docTypes.includes(t)) doc.addIn(['artifact_types'], t);
+      }
+      for (const [k, v] of Object.entries(existing.aliases)) {
+        if (!doc.hasIn(['aliases', k])) doc.setIn(['aliases', k], v);
+      }
+      // No TAXONOMY_HEADER here: the parsed document already carries the file's own leading
+      // comments. Prepending would duplicate the header on every merge.
+      output = doc.toString({ lineWidth: 0 });
+    }
 
     // Add promotion comments
     if (promoted.length > 0) {
+      if (!output.endsWith('\n')) output += '\n';
       for (const id of promoted) {
         output += `# ${id}: promoted from user section on ${date}\n`;
       }
