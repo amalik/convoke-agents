@@ -45,7 +45,18 @@ TMP="$(mktemp -d)"
 # pointing at it would upload nothing, and `KEEP=1` is advice a maintainer cannot act on in CI.
 # On a NON-ZERO exit, copy the logs somewhere stable and predictable first. This job fails on
 # defects that by construction do not reproduce inside the repo, so the log is the whole story.
+# Absolute, because the trap runs after the script has `cd`-ed into $TMP/proj. A RELATIVE
+# FRESH_INSTALL_LOG_DIR was cleared at the invocation cwd but written under $TMP/proj — which
+# `rm -rf "$TMP"` then destroyed, while the script printed "diagnostics copied". (Review 2026-08-15.)
 LOG_DIR="${FRESH_INSTALL_LOG_DIR:-$REPO/.fresh-install-logs}"
+case "$LOG_DIR" in /*) ;; *) LOG_DIR="$PWD/$LOG_DIR" ;; esac
+
+# Completion sentinel. On bash 3.2 (macOS default, and this script is documented as the
+# pre-release ritual) a `set -u` abort in a script that installs ANY exit trap exits **0** —
+# verified: no trap -> 1, any trap -> 0, even when the trap re-exits with the captured status.
+# A gate that reports PASS because it crashed is the worst failure this file can have, and it is
+# the fourth variant of the fail-open pattern found here. Guard on reaching the end, not on $?.
+COMPLETED=0
 cleanup() {
   local rc=$?
   # `set +e` for the whole body: a failing `mkdir` previously aborted the trap before
@@ -75,6 +86,11 @@ cleanup() {
     fi
   fi
   if [ "${KEEP:-0}" = "1" ]; then echo "kept: $TMP"; else rm -rf "$TMP"; fi
+  # See COMPLETED above: a status of 0 that did not come from reaching the end is a crash.
+  if [ "$rc" -eq 0 ] && [ "${COMPLETED:-0}" -ne 1 ]; then
+    echo "    ERROR: script aborted before completing — reporting failure rather than a false PASS"
+    exit 1
+  fi
 }
 trap cleanup EXIT
 
@@ -92,6 +108,13 @@ ENV_FAIL=2
 # path. Clearing them prevents a stale log from a previous run being presented as this run's.
 rm -f "$LOG_DIR/run.log" "$LOG_DIR/install.log"
 exec > >(tee "$TMP/run.log") 2>&1
+# KNOWN LIMITATION (review 2026-08-15): bash does not wait on process-substitution children, so
+# in principle the trap can `rm -rf "$TMP"` while tee still holds buffered output, making the
+# copy see nothing. Review reproduced this ONLY with an artificial near-instant exit; with
+# realistic timing (after npm pack + npm install) the transcript was complete in 40/40 runs.
+# Deliberately NOT "fixed": draining tee requires closing stdout and reopening it, and the
+# obvious reopen target (/dev/tty) does not exist on a CI runner — breaking all output to close
+# a race that does not reproduce is a bad trade. Tracked in the backlog instead.
 
 echo "==> Packing the current working tree"
 ( cd "$REPO" && npm pack --pack-destination "$TMP" >/dev/null )
@@ -126,7 +149,7 @@ if ! npm install "$TARBALL" > "$TMP/install.log" 2>&1; then
   # environment failure. npm's genuine network errors always carry `npm error network` or an
   # `npm error code E<CODE>`. Widened at the same time to cover ENETUNREACH / ECONNRESET / E503 /
   # TLS interception, which the old pattern missed entirely. (R3 review 2026-08-14.)
-  if grep -qiE 'npm error network|npm error code E(NOTFOUND|TIMEDOUT|CONNREFUSED|CONNRESET|AI_AGAIN|NETUNREACH|503|429)|socket hang up|UNABLE_TO_VERIFY_LEAF_SIGNATURE' "$TMP/install.log"; then
+  if grep -qiE 'npm (error|ERR!) network|npm (error|ERR!) code E(NOTFOUND|TIMEDOUT|CONNREFUSED|CONNRESET|AI_AGAIN|NETUNREACH|5[0-9][0-9]|429)|ERR_SOCKET|socket hang up|UNABLE_TO_VERIFY_LEAF_SIGNATURE' "$TMP/install.log"; then
     echo "    [harness] npm install failed and the log looks like a network/registry problem:"
     sed 's/^/      /' "$TMP/install.log" | tail -20
     exit "$ENV_FAIL"
@@ -258,8 +281,18 @@ FAILED=0
 for BIN in $BINS; do
   TARGET="$(node -e 'const b=require(process.argv[1]).bin;process.stdout.write(b[process.argv[2]]||"")' "$BIN_JSON" "$BIN")"
   ABS="$TMP/proj/node_modules/convoke-agents/$TARGET"
-  if [ ! -x "$TMP/proj/node_modules/.bin/$BIN" ] && [ ! -e "$TMP/proj/node_modules/.bin/$BIN" ]; then
-    echo "    FAILED: $BIN — no shim in node_modules/.bin (npm did not link it)"; FAILED=1; continue
+  # `-x` alone. This was `[ ! -x ] && [ ! -e ]`, and since -x implies -e the pair collapses to
+  # `[ ! -e ]` — so a shim that EXISTS but is not executable (bad mode in the tarball, a partial
+  # npm link) passed silently. That is the precise defect class this line exists to catch. The
+  # author verified the old boolean's behaviour and confirmed it "fires only when absent" without
+  # asking whether that was the right behaviour. (Review 2026-08-15.)
+  if [ ! -x "$TMP/proj/node_modules/.bin/$BIN" ]; then
+    if [ -e "$TMP/proj/node_modules/.bin/$BIN" ]; then
+      echo "    FAILED: $BIN — shim exists in node_modules/.bin but is not executable"
+    else
+      echo "    FAILED: $BIN — no shim in node_modules/.bin (npm did not link it)"
+    fi
+    FAILED=1; continue
   fi
   if [ ! -f "$ABS" ]; then
     echo "    FAILED: $BIN — target $TARGET did not ship in the tarball"; FAILED=1; continue
@@ -291,7 +324,13 @@ for BIN in $BINS; do
       catch { missing.push(spec); }
     }
     process.stdout.write(missing.join(" "));
-  ' "$ABS" 2>&1)" || {
+  ' "$ABS" 2>"$TMP/dep-check.err")" || {
+    # stderr goes to a FILE, not into $UNRESOLVED. It was `2>&1`, so on the SUCCESS path any
+    # chatter Node writes to stderr — an ExperimentalWarning, a DeprecationWarning, anything a
+    # future Node or a NODE_OPTIONS setting emits — landed in the variable, and the very next
+    # line treats non-empty as "modules did not ship". A green package would fail the publish
+    # gate citing a warning as a missing module. (Review 2026-08-15.)
+    UNRESOLVED="$(cat "$TMP/dep-check.err" 2>/dev/null)"
     # FAIL CLOSED. This was `2>/dev/null` and an empty result is the PASS value, so any crash in
     # the extractor silently reported "all bins ... requires resolve". That is the THIRD instance
     # of this exact pattern in this file (see the `| tail -2` and `for`-list notes above) — which
@@ -308,6 +347,10 @@ done
 
 echo
 echo "========================================"
+# Reaching the verdict means every check ran. See COMPLETED near the top: without this, a status
+# of 0 cannot be distinguished from a crash that bash reported as 0. Set BEFORE the verdict, not
+# inside the PASS branch, so an explicit exit 1/2 below is still a completed run.
+COMPLETED=1
 if [ "$INSTALL" -eq 0 ] && [ "$DOCTOR" -eq 0 ] && [ "$EXPORT" -eq 0 ] && [ "$FAILED" -eq 0 ]; then
   echo "PASS — a new user gets a working, self-consistent install."
   echo
