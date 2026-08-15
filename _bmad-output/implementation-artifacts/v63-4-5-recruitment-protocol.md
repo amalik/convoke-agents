@@ -3,10 +3,10 @@ initiative: convoke
 artifact_type: recruitment-protocol
 qualifier: v63-4-5-recruitment-protocol
 release_target: 4.0.0
-validator_handle: TBD
-validator_relationship: TBD
-recruitment_date: TBD
-session_date: TBD
+validator_handle: validator-01
+validator_relationship: fellow consultant
+recruitment_date: '2026-08-15'
+session_date: '2026-08-15'
 created: '2026-08-15'
 schema_version: 1
 epic: v63-epic-4

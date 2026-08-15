@@ -206,6 +206,28 @@ upgrading user by `convoke-update`), `docs/migration/3.x-to-4.0.md:42`, and
 where a durable claim-guard note is now pinned. v1 had routed this obligation to Story 5B.1,
 which closed on 2026-04-27 and could never have executed it.
 
+## N=1 External Validation
+
+Added 2026-08-15 by Story 4.5 (AC4). This is a body-only addition — Story 4.3's frontmatter
+contract is frozen and unchanged.
+
+See [`v63-4-5-n-1-external-validation-report.md`](v63-4-5-n-1-external-validation-report.md)
+for the full report (validator: `validator-01`; outcome: **REVIEW**).
+
+A non-maintainer ran `convoke-update` end to end on their own machine against an existing
+Convoke 3.3.0 install, upgrading to `4.0.0-rc.5`. Live observed session, ~2 minutes, **zero
+operator interventions**. Zero BLOCKER-tier findings, including the mandatory security
+category. One CONCERN — two non-blocking warnings appear on a healthy install, which the
+validator read as a failure signal — deferred to the backlog per Decision 5 and OP-2.
+
+**M17 satisfied.** Note the standing limitation recorded in the report: the validator is an
+expert user of BMAD and Convoke, which Decision 1 warns biases the result toward the
+maintainer baseline. This evidences that the upgrade *mechanics* work on an independent
+machine; it does not evidence that the experience is navigable by a newcomer.
+
+**This does not revive any equivalence claim.** N=1 is real-world upgrade experience, not
+behavioural equivalence — the gate this record retired remains retired per ADR-001.
+
 ## Known downstream blockers this record does not resolve
 
 1. **Story 4.5 Task 0.1** requires `m9_pf1_gate: PASS` **and** Story 4.3 status `done`. Neither
