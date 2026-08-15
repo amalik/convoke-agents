@@ -28,6 +28,7 @@ const path = require('path');
 const { findProjectRoot } = require('../update/lib/utils');
 const { exportSkill, humanizeSkillName } = require('./export-engine');
 const { readManifest } = require('./manifest-csv');
+const { stripHtmlComments } = require('../lib/sanitize');
 const { generateAdapters } = require('./generate-adapters');
 
 // =============================================================================
@@ -243,9 +244,10 @@ function loadReadmeTemplate() {
 
 /**
  * Build a per-skill README from manifest row + engine result.
- * Reads the template, substitutes placeholders, strips HTML comments,
+ * Reads the template, strips its HTML comments, substitutes placeholders,
  * cleans up leaked engine placeholders, and collapses whitespace.
- * Throws if any multi-word placeholder remains after substitution.
+ * Throws if a substituted value introduces an HTML comment marker, or if any
+ * multi-word placeholder remains after substitution.
  */
 // `projectRoot` was dropped 2026-08-14: it existed only to locate the readme template, which
 // is now resolved from `__dirname` (see loadReadmeTemplate — that path was a real bug in the
@@ -277,8 +279,17 @@ function buildReadme(skillRow, result) {
       ? bulletLines.join('\n')
       : '- See instructions.md for trigger conditions';
 
+  // Strip the template's developer comments BEFORE substituting anything into
+  // it. Doing it the other way round lets a `<!--` inside a substituted value
+  // pair with the *template's* next `-->` and delete everything between them —
+  // a skill description reading "hide text with <!-- in markdown" silently ate
+  // its own tail and the following template section, with no error raised and a
+  // mutilated README written to disk. Stripping first means user data can never
+  // form a comment span with template text. R1 review, issue #7.
+  const strippedTemplate = stripHtmlComments(template);
+
   // Substitute placeholders. Order matters where one token is a prefix of another.
-  let out = template;
+  let out = strippedTemplate;
   out = out.replaceAll('<Skill display name>', displayName);
   out = out.replaceAll('<persona name + icon>', nameWithIcon);
   out = out.replaceAll('<persona name>', persona.name || '');
@@ -293,18 +304,27 @@ function buildReadme(skillRow, result) {
   out = out.replaceAll('<tier>', skillRow.tier);
   out = out.replaceAll('<standalone | light-deps | pipeline>', skillRow.tier);
 
-  // Sanity check: verify no multi-word <placeholder> tokens remain BEFORE
-  // stripping HTML comments (comments contain < chars that are fine).
-  const checkContent = out.replace(/<!--[\s\S]*?-->/g, '');
-  const leftover = checkContent.match(/<[a-z][a-z\s-]{2,}[a-z]>/gi);
+  // The template is already comment-free, so any marker here came in through a
+  // substituted value. Refuse rather than strip: a complete comment would ship
+  // invisibly into a user-facing README, and a bare marker is worse — GitHub and
+  // npm render it by swallowing everything after it, so the README loses its
+  // tail with no error. This is also the caller-side residue check that
+  // `stripHtmlComments` documents as the caller's job. R1 review, issue #7.
+  if (out.includes('<!--')) {
+    throw new Error(
+      'README generation produced an HTML comment marker — a substituted value ' +
+      `for skill "${skillRow.name}" contains \`<!--\`. Shipping it would hide or ` +
+      'truncate content in the rendered README.'
+    );
+  }
+
+  // Sanity check: verify no multi-word <placeholder> tokens remain.
+  const leftover = out.match(/<[a-z][a-z\s-]{2,}[a-z]>/gi);
   if (leftover && leftover.length > 0) {
     throw new Error(
       `README generation left unsubstituted placeholders: ${leftover.join(', ')}`
     );
   }
-
-  // Strip HTML comments (developer docs in template, not user-facing)
-  out = out.replace(/<!--[\s\S]*?-->/g, '');
 
   // Collapse multiple blank lines and trim
   out = out.replace(/\n{3,}/g, '\n\n').trim() + '\n';

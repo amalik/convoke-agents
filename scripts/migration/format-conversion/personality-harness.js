@@ -38,6 +38,7 @@
 
 const fs = require('fs-extra');
 const path = require('path');
+const { escapeRegExp } = require('../../lib/sanitize');
 
 const FIXTURE_FIXED_PROMPT = 'baseline-fixed-prompt.json';
 const FIXTURE_UNSCRIPTED_SCENARIO = 'baseline-unscripted-scenario.md';
@@ -289,7 +290,7 @@ function extractPerAgentFingerprint(rubricContent, agentRoleName) {
   // before interpolation. Defends against future registry entries with
   // names containing regex meta-chars (e.g., a hypothetical 'A.J.' or a
   // hyphenated name) that would silently break the pattern.
-  const escapedFirstName = firstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escapedFirstName = escapeRegExp(firstName);
   const headerPattern = new RegExp(`^###\\s+${escapedFirstName}\\b[^\\n]*$`, 'm');
   const headerMatch = stripped.match(headerPattern);
   if (!headerMatch) return null;

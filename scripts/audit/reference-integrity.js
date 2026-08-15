@@ -455,6 +455,13 @@ function _expandGlobTail(currentDir, tailParts) {
 }
 
 function _globPartToRegex(globPart) {
+  // Do NOT replace this with `escapeRegExp` from scripts/lib/sanitize.js. The
+  // character class here deliberately omits `*`, because the next line turns
+  // `*` into the glob wildcard `.*`. The shared helper escapes `*` to `\*` and
+  // would break every glob. Ordering is also deliberate: `\` is escaped in the
+  // first pass, so the second pass cannot see backslashes it did not create.
+  // Flagged during the issue #7 consolidation, which converted five other
+  // call sites and left this one alone on purpose.
   const escaped = globPart
     .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
     .replace(/\*/g, '.*');

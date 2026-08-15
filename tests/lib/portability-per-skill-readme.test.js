@@ -149,3 +149,98 @@ describe('Per-Skill README Generation (sp-3-2)', () => {
     });
   });
 });
+
+// --- buildReadme: comment-marker handling (R1 review, issue #7) ---
+//
+// buildReadme used to substitute user data into the template and strip HTML
+// comments afterwards. A `<!--` inside any substituted value then paired with
+// the template's next `-->` and deleted everything between them — silently,
+// with a mutilated README written to disk and a success report. The template is
+// now stripped BEFORE substitution, so user data can never form a comment span
+// with template text, and a marker that arrives through a value is refused.
+
+describe('buildReadme — HTML comment markers in substituted values', () => {
+  const { buildReadme } = require('../../scripts/portability/convoke-export');
+
+  const skillRow = (over = {}) => ({
+    name: 'bmad-test-skill',
+    tier: 'standalone',
+    description: 'Does a useful thing for the operator.',
+    ...over
+  });
+
+  const result = (over = {}) => ({
+    persona: { name: 'Testy', icon: '🧪', communicationStyle: 'Terse.' },
+    sections: {
+      whatYouProduce: '## What you produce\n\nAn artifact.',
+      whenToUse: '- when testing'
+    },
+    ...over
+  });
+
+  // R3: asserting `!out.includes('<!--')` here would be tautological — the
+  // function throws on exactly that condition, so any returned value satisfies
+  // it. Assert on the template's actual comment TEXT instead, which is what
+  // "the template was stripped" really means.
+  it('produces a comment-free README on the clean path', () => {
+    const out = buildReadme(skillRow(), result());
+    assert.ok(out.includes('Does a useful thing'), 'description missing');
+    assert.ok(!out.includes('Catalog-facing README'), 'template comment body leaked');
+    assert.ok(!out.includes('Tier badge'), 'template comment body leaked');
+    assert.ok(out.includes('Testy'), 'persona missing');
+  });
+
+  // R3 raised this: legitimate prose containing an arrow must not be mistaken
+  // for a comment terminator. Verified by differential — a `-->` with no opener
+  // corrupts nothing under either ordering, so the correct assertion is that it
+  // passes through intact rather than that it throws.
+  it('passes a description containing a bare --> through untouched', () => {
+    const out = buildReadme(
+      skillRow({ description: 'Converts A --> B and reports the result.' }),
+      result()
+    );
+    assert.ok(out.includes('Converts A --> B'), `arrow text mangled: ${out.slice(0, 200)}`);
+    assert.ok(out.includes('How to use it'), 'content after the arrow was swallowed');
+  });
+
+  it('refuses a description carrying a bare comment marker', () => {
+    assert.throws(
+      () => buildReadme(skillRow({ description: 'hide text with <!-- in markdown' }), result()),
+      /HTML comment marker/
+    );
+  });
+
+  it('refuses a complete comment arriving through a substituted value', () => {
+    assert.throws(
+      () => buildReadme(skillRow({ description: 'text <!-- hidden --> more' }), result()),
+      /HTML comment marker/
+    );
+  });
+
+  it('names the offending skill in the error', () => {
+    assert.throws(
+      () => buildReadme(skillRow({ name: 'bmad-culprit', description: 'x <!-- y' }), result()),
+      /bmad-culprit/
+    );
+  });
+
+  // The corruption this guard replaces. Under the old substitute-then-strip
+  // ordering a description carrying `<!--` paired with the template's next
+  // `-->`, deleting everything between — verified by differential: the sentinel
+  // below was LOST from the output with no error raised. The assertion is that
+  // the failure is now loud, since a silent wrong answer is the thing that
+  // shipped mutilated READMEs.
+  it('fails loudly instead of silently swallowing content after a marker', () => {
+    const description = 'lead <!-- mid SENTINEL_TAIL';
+    let out = null;
+    let thrown = null;
+    try {
+      out = buildReadme(skillRow({ description }), result());
+    } catch (e) {
+      thrown = e;
+    }
+    assert.ok(thrown, `expected a throw; got ${out && out.length} bytes of output`);
+    assert.match(thrown.message, /HTML comment marker/);
+    assert.equal(out, null, 'no partial README may be returned');
+  });
+});

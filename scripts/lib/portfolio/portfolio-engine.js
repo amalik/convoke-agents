@@ -16,6 +16,7 @@ const {
   inferArtifactType,
   inferInitiative
 } = require('../artifact-utils');
+const { escapeRegExp } = require('../sanitize');
 const { findProjectRoot } = require('../../update/lib/utils');
 const { applyFrontmatterRule } = require('./rules/frontmatter-rule');
 const { applyArtifactChainRule } = require('./rules/artifact-chain-rule');
@@ -49,7 +50,7 @@ function _scanCorpus(corpus, taxonomy) {
   const candidates = [...allInitiatives, ...aliasKeys].sort((a, b) => b.length - a.length);
 
   for (const candidate of candidates) {
-    const escaped = candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escaped = escapeRegExp(candidate);
     const re = new RegExp(`(?:^|[^a-z0-9-])${escaped}(?:$|[^a-z0-9-])`, 'i');
     if (re.test(corpus)) {
       if (allInitiatives.includes(candidate)) return candidate;

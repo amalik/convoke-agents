@@ -399,6 +399,32 @@ describe('updateLinks', () => {
     assert.ok(content.includes('[section](gyre-prd.md#overview)'));
   });
 
+  // CodeQL js/incomplete-sanitization, issue #7. `oldName` is by construction a
+  // filename that failed NAMING_PATTERN, so metacharacters are exactly the
+  // population this path sees. A dot-only escape turned `(v2)` into a capture
+  // group: the pattern matched `reportv2.md` and missed the real file.
+  it('renames a filename containing regex metacharacters', async () => {
+    await fs.writeFile(
+      path.join(outputDir, 'referrer.md'),
+      'See [Report](report(v2).md) and [Decoy](reportv2.md).\n'
+    );
+    const { updateLinks } = require('../../scripts/lib/artifact-utils');
+    const map = new Map([['report(v2).md', 'report-v2.md']]);
+    await updateLinks(map, ['planning-artifacts'], tmpDir);
+    const content = fs.readFileSync(path.join(outputDir, 'referrer.md'), 'utf8');
+    assert.ok(content.includes('[Report](report-v2.md)'), `real file not renamed: ${content}`);
+    assert.ok(content.includes('[Decoy](reportv2.md)'), `decoy was rewritten: ${content}`);
+  });
+
+  it('does not throw on a filename with an unbalanced bracket', async () => {
+    await fs.writeFile(path.join(outputDir, 'referrer.md'), 'See [Draft](draft[1.md) here.\n');
+    const { updateLinks } = require('../../scripts/lib/artifact-utils');
+    const map = new Map([['draft[1.md', 'draft-1.md']]);
+    await updateLinks(map, ['planning-artifacts'], tmpDir);
+    const content = fs.readFileSync(path.join(outputDir, 'referrer.md'), 'utf8');
+    assert.ok(content.includes('[Draft](draft-1.md)'), `not renamed: ${content}`);
+  });
+
   it('frontmatter inputDocuments array entries updated', async () => {
     const fileContent = '---\ninputDocuments:\n  - prd-gyre.md\n  - architecture.md\n---\n# Content\n';
     await fs.writeFile(path.join(outputDir, 'referrer.md'), fileContent);

@@ -19,6 +19,7 @@
 const fs = require('fs');
 const path = require('path');
 const { readManifest } = require('./manifest-csv');
+const { escapeRegExp, escapeReplacement } = require('../lib/sanitize');
 
 // =============================================================================
 // CONSTANTS
@@ -1061,9 +1062,13 @@ function exportSkill(skillName, projectRoot, _options = {}) {
           if (line.includes(basename) || (line.includes('template') && line.includes('load'))) {
             // Only replace if the line looks like a template-loading directive
             if (/(?:load|read|use|initialize from|open)\b/i.test(line) && line.includes(basename)) {
+              // Both sides need escaping. `escapeRegExp` makes the pattern
+              // literal; without `escapeReplacement`, a template named
+              // `report$&.md` would re-inject the matched text through the
+              // live `$&` in the replacement string. R1 review, issue #7.
               return line.replace(
-                new RegExp(`[^\`]*${basename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\`]*`, 'i'),
-                `see the "Template: ${tpl.name}" section below`
+                new RegExp(`[^\`]*${escapeRegExp(basename)}[^\`]*`, 'i'),
+                escapeReplacement(`see the "Template: ${tpl.name}" section below`)
               );
             }
           }

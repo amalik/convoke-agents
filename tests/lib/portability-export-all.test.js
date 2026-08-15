@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
+const { stripHtmlComments } = require('../../scripts/lib/sanitize');
 
 // Story sp-2-4: Export All Tier 1 Skills
 //
@@ -132,8 +133,14 @@ describe('Export All Tier 1 Skills (sp-2-4)', () => {
       if (descSnippet && descSnippet.length > 10 && !content.includes(descSnippet)) {
         issues.push({ skill: dir, issue: `missing description snippet: "${descSnippet}..."` });
       }
-      // Check for leftover multi-word placeholders (strip HTML comments first)
-      const stripped = content.replace(/<!--[\s\S]*?-->/g, '');
+      // Check for leftover multi-word placeholders. The strip is identity today
+      // — `buildReadme` throws on any surviving `<!--`, so an exported README
+      // cannot carry a comment — and is kept as a regression tripwire on that
+      // guard rather than as an active filter. R3.
+      const stripped = stripHtmlComments(content);
+      if (stripped !== content) {
+        issues.push({ skill: dir, issue: 'exported README contained an HTML comment' });
+      }
       const leftover = stripped.match(/<[a-z][a-z\s-]{2,}[a-z]>/gi);
       if (leftover) {
         issues.push({ skill: dir, issue: `leftover placeholders: ${leftover.join(', ')}` });

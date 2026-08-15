@@ -5,6 +5,7 @@ const fs = require('fs');
 const assert = require('node:assert/strict');
 
 const { AGENTS, WORKFLOWS } = require('../../scripts/update/lib/agent-registry');
+const { escapeRegExp } = require('../../scripts/lib/sanitize');
 
 const PACKAGE_ROOT = path.join(__dirname, '..', '..');
 const VORTEX_DIR = path.join(PACKAGE_ROOT, '_bmad', 'bme', '_vortex');
@@ -67,9 +68,13 @@ function parseFrontmatter(content) {
 /**
  * Escape regex meta-characters so a heading string can be safely interpolated
  * into a `RegExp` constructor literal. (i97-bug-1 R1 review fix.)
+ *
+ * Delegates to the shared helper — this was one of two byte-identical copies
+ * left behind by the issue #7 consolidation, and duplicated escape sets are how
+ * the class regresses.
  */
 function escapeRegex(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return escapeRegExp(s);
 }
 
 /**

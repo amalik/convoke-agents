@@ -10,6 +10,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('js-yaml');
 const frontmatter = require('./frontmatter');
+const { escapeRegExp } = require('./sanitize');
 const { execFileSync } = require('child_process');
 
 // --- Constants (extracted from archive.js) ---
@@ -513,7 +514,7 @@ function _scanCorpusForInitiative(corpus, taxonomy) {
   const candidates = [...allInitiatives, ...aliasKeys].sort((a, b) => b.length - a.length);
 
   for (const candidate of candidates) {
-    const escaped = candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escaped = escapeRegExp(candidate);
     // Boundary class: not preceded/followed by [a-z0-9-]. Treats hyphen as word-internal,
     // so 'gyrescope' rejects (preceded by 'gyre' won't trigger; 'scope' = letter), 'pre-gyre'
     // also rejects (the leading 'pre-' counts as boundary since hyphen is in the class).
@@ -1530,8 +1531,14 @@ async function updateLinks(oldToNewMap, scopeDirs, projectRoot) {
 
     // Update markdown link patterns in body content
     for (const [oldName, newName] of oldToNewMap) {
-      // Escape dots for regex
-      const escaped = oldName.replace(/\./g, '\\.');
+      // Escape every metacharacter, not just dots. `oldName` is by construction
+      // a filename that failed NAMING_PATTERN — that is why it is being renamed
+      // — so it is exactly the population that carries `(`, `[`, `+` and the
+      // rest. A dot-only escape leaves `report(v2).md` as `report(v2)\.md`,
+      // where `(v2)` is a capture group: the pattern then matches `reportv2.md`
+      // and silently misses the real file. An unbalanced `[` throws outright.
+      // See CodeQL js/incomplete-sanitization, issue #7.
+      const escaped = escapeRegExp(oldName);
 
       // Patterns 1+2: [text](oldname.md) or [text](./oldname.md) with optional anchor
       const directPattern = new RegExp(

@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const { execSync, spawnSync } = require('child_process');
 const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
+const { stripHtmlComments } = require('../../scripts/lib/sanitize');
 
 
 // Story sp-2-3: CLI Entry Point
@@ -172,9 +173,14 @@ describe('convoke-export CLI (sp-2-3)', () => {
     const readmePath = path.join(tmpDir, 'bmad-brainstorming', 'README.md');
     const content = fs.readFileSync(readmePath, 'utf8');
 
-    // Strip HTML comments first (the template has explanatory comments
-    // containing < characters that would otherwise false-match).
-    const stripped = content.replace(/<!--[\s\S]*?-->/g, '');
+    // Belt-and-braces. `buildReadme` now strips the template before
+    // substitution and throws on any surviving `<!--`, so an exported README
+    // cannot contain a comment and this is an identity transform today. Kept as
+    // a second line of defence rather than an active filter — if it ever stops
+    // being identity, the export guard has regressed. R3 corrected the previous
+    // comment here, which claimed comments could still reach the output.
+    const stripped = stripHtmlComments(content);
+    assert.equal(stripped, content, 'exported README contained an HTML comment');
 
     assert.ok(content.includes('Carson'));
     assert.ok(content.includes('🧠'));
