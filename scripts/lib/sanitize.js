@@ -4,16 +4,27 @@
  * String sanitization helpers shared by the portability exporter and the
  * artifact governance tooling.
  *
- * Both functions replace a one-pass form that is defeated by its own output.
- * CodeQL flags the class as `js/incomplete-multi-character-sanitization` and
- * `js/incomplete-sanitization` (alerts 9-14, issue #7). Each helper documents
- * the concrete input that breaks the naive version, so the reason survives the
- * next person who thinks the extra machinery is redundant.
+ * Every helper here replaces a naive form that fails on real input.
+ * `stripHtmlComments` is defeated by its own output and needs a fixed-point
+ * loop; the other four fail by under-covering a character set — the escaper
+ * alert 10 flagged missed both `\` and `\r`. Different failure modes, same
+ * class:
+ * CodeQL flags it as `js/incomplete-multi-character-sanitization` and
+ * `js/incomplete-sanitization` (alerts 9-14, issue #7; BUG-12). Each
+ * documents the concrete input that breaks the naive version, so the reason
+ * survives the next person who thinks the extra machinery is redundant.
  *
- * Both reject non-string input rather than coercing it. These helpers decide
- * which file gets rewritten; `escapeRegExp(undefined)` silently building a
- * pattern that matches the literal text `undefined` is the kind of failure that
- * shows up later as a corrupted document, not as a stack trace.
+ * Two deliberate conventions, and they differ by group:
+ *
+ * - `stripHtmlComments`, `escapeRegExp` and `escapeReplacement` **reject**
+ *   non-string input. They decide which file gets rewritten, and
+ *   `escapeRegExp(undefined)` silently building a pattern matching the literal
+ *   text `undefined` is the kind of failure that surfaces later as a corrupted
+ *   document rather than a stack trace.
+ * - `escapeMarkdownTableCell` and `escapeMarkdownCodeSpanCell` **coerce**,
+ *   returning `''` for nullish. They render report cells where a missing
+ *   value is ordinary and an empty cell is the right answer; throwing would
+ *   turn a cosmetic hole into a failed report.
  *
  * @module sanitize
  */
@@ -164,10 +175,20 @@ function escapeReplacement(input) {
 /**
  * Escape a value for a **plain** (non-code-span) markdown table cell.
  *
- * Backslashes first. Escaping `|` inserts backslashes of its own, so the other
- * order doubles them and re-exposes the pipe: `a\|b` would become `a\\|b`,
- * where `\\` is a literal backslash and the `|` is a live cell delimiter again.
- * That is CodeQL alert 10.
+ * Backslashes first, because it yields the minimal canonical escaping — but NOT
+ * for the reason the first version of this comment gave. It claimed the wrong
+ * order "re-exposes the pipe as a live delimiter". R2 and R3 disproved that
+ * against GitHub's renderer over 492 cases: GFM escapes a pipe whenever a
+ * backslash immediately precedes it, with no run parity, so both orderings
+ * render identically. Backslash-first would additionally stay correct under a
+ * hypothetical run-parity renderer where pipe-first would not — unverified,
+ * since no reachable renderer behaves that way.
+ *
+ * The defect behind alert 10 — which reports only "does not escape backslash
+ * characters in the input" — is silent character LOSS, not a broken table.
+ * Without the backslash pass, `a\|b` renders as `a|b` and `a\\b` renders
+ * as `a\b` — the cell keeps its shape while quietly dropping a character from
+ * the operator's data. Verified via `POST /markdown`, mode=gfm.
  *
  * CR is collapsed alongside LF because CommonMark treats a bare `\r` as a line
  * ending, so it splits the row mid-cell exactly as `\n` does. Runs collapse to
@@ -195,8 +216,11 @@ function escapeMarkdownTableCell(s) {
  * escaper `a\b` and `a\|b` render correctly in 3-cell rows; with the plain
  * escaper they render `a\\b` and `a\\|b`. No renderer is installed in this
  * repo, so that check is NOT reproducible from the test suite — what the tests
- * pin is the escaper's output, not how a renderer treats it. Applying the plain one to a code span was an R1
- * regression during issue #7 — do not "simplify" these back into one function.
+ * pin is the escaper's output, not how a renderer treats it.
+ *
+ * Applying `escapeMarkdownTableCell` to a code span
+ * was an R1 regression during issue #7 — do not "simplify" these two back into
+ * one function.
  *
  * Not handled: a backtick in the value closes the span early. Skill names are
  * not validated to exclude one (nothing in `manifest-csv.js` constrains the

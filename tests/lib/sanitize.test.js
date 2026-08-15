@@ -197,21 +197,37 @@ describe('escapeReplacement', () => {
 // --- Markdown table-cell escapers (moved here from validate-classification.js
 // by BUG-12, which consolidated four divergent copies into one) ---
 //
-// R1 on that consolidation: promoting these to a shared module without tests at
-// the shared boundary left the ordering invariant pinned only transitively, via
-// whichever consumer happened to be tested. These are the direct tests.
+// R1 on that consolidation flagged that promoting these to a shared module left
+// them with no tests at the shared boundary. R2 on the tests that answered that
+// flag found the first attempt still let a non-global `replace` through — the
+// canonical form of the very CodeQL class this module exists to close. Every
+// fixture below therefore carries MULTIPLE occurrences of what it escapes.
+//
+// An earlier revision of this block carried a `cellDelims` helper that counted
+// a pipe as live unless preceded by an ODD number of backslashes. R2 disproved
+// it against GitHub's renderer: GFM escapes a pipe whenever it is IMMEDIATELY
+// preceded by a backslash, with no run parity, so `a\\|b` is one cell and the
+// helper predicted two. It also killed zero mutants that the string-equality
+// assertions did not already kill. Removed rather than corrected — asserting
+// the exact output string is both stronger and honest about what it models.
 
 describe('escapeMarkdownTableCell', () => {
-  const delims = (s) => s.split(/(?<!\\)\|/).length - 1;
-
-  it('escapes a pipe so it stops being a cell delimiter', () => {
-    assert.equal(escapeMarkdownTableCell('a|b'), 'a\\|b');
-    assert.equal(delims(`| ${escapeMarkdownTableCell('a|b')} |`), 2);
+  it('escapes EVERY pipe, not just the first', () => {
+    assert.equal(escapeMarkdownTableCell('a|b|c'), 'a\\|b\\|c');
   });
 
-  // The invariant the whole fix exists to protect (CodeQL alert 10): escaping
-  // `|` inserts backslashes, so escaping `\` afterwards would double the ones
-  // just added and hand the pipe back to the table parser.
+  it('escapes EVERY backslash, not just the first', () => {
+    assert.equal(escapeMarkdownTableCell('a\\b\\c'), 'a\\\\b\\\\c');
+  });
+
+  // Ordering is pinned, but NOT for the reason an earlier version of this
+  // comment gave. It said the wrong order hands the pipe back to the table
+  // parser; R2 and R3 disproved that against GitHub's renderer over 492
+  // cases — both orderings render identically, one cell, data intact.
+  // What alert 10 actually reports is a missing backslash pass, whose
+  // consequence is silent character loss (`a\|b` renders as `a|b`). This
+  // test pins the canonical output shape; see the rationale on
+  // escapeMarkdownTableCell in scripts/lib/sanitize.js.
   it('escapes backslashes BEFORE pipes, not after', () => {
     assert.equal(escapeMarkdownTableCell('a\\|b'), 'a\\\\\\|b');
 
@@ -221,17 +237,24 @@ describe('escapeMarkdownTableCell', () => {
       escapeMarkdownTableCell('a\\|b'),
       'fixture no longer distinguishes the two orderings'
     );
-    assert.equal(delims(`| ${escapeMarkdownTableCell('a\\|b')} |`), 2);
   });
 
-  it('collapses each newline run to a single space', () => {
-    assert.equal(escapeMarkdownTableCell('a\nb'), 'a b');
+  it('collapses each newline run to a single space, every run', () => {
+    assert.equal(escapeMarkdownTableCell('a\nb\nc'), 'a b c');
     assert.equal(escapeMarkdownTableCell('a\r\nb'), 'a b');
     assert.equal(escapeMarkdownTableCell('a\rb'), 'a b');
     // Runs collapse to ONE space. This differs from the pre-BUG-12
     // validate-classification copy, which emitted one space per newline.
     assert.equal(escapeMarkdownTableCell('a\n\nb'), 'a b');
     assert.equal(escapeMarkdownTableCell('a\r\n\r\nb'), 'a b');
+  });
+
+  it('handles pipes and newlines together', () => {
+    assert.equal(escapeMarkdownTableCell('a|b\nc|d'), 'a\\|b c\\|d');
+  });
+
+  it('leaves a backtick alone — plain cells are not code spans', () => {
+    assert.equal(escapeMarkdownTableCell('a`b`c'), 'a`b`c');
   });
 
   it('returns empty string for nullish, and stringifies everything else', () => {
@@ -244,11 +267,8 @@ describe('escapeMarkdownTableCell', () => {
 });
 
 describe('escapeMarkdownCodeSpanCell', () => {
-  const delims = (s) => s.split(/(?<!\\)\|/).length - 1;
-
-  it('escapes a pipe (GFM resolves \\| before the code span forms)', () => {
-    assert.equal(escapeMarkdownCodeSpanCell('a|b'), 'a\\|b');
-    assert.equal(delims(`| \`${escapeMarkdownCodeSpanCell('a|b')}\` |`), 2);
+  it('escapes EVERY pipe (GFM resolves \\| before the code span forms)', () => {
+    assert.equal(escapeMarkdownCodeSpanCell('a|b|c'), 'a\\|b\\|c');
   });
 
   // The distinction that makes two escapers necessary: backslash escapes are
@@ -256,26 +276,35 @@ describe('escapeMarkdownCodeSpanCell', () => {
   // source had one. Applying the plain escaper here was an R1 regression during
   // issue #7 — this test is what stops it coming back.
   it('does NOT escape backslashes, unlike the plain-cell escaper', () => {
-    assert.equal(escapeMarkdownCodeSpanCell('a\\b'), 'a\\b');
-    assert.equal(escapeMarkdownTableCell('a\\b'), 'a\\\\b');
-    assert.notEqual(escapeMarkdownCodeSpanCell('a\\b'), escapeMarkdownTableCell('a\\b'));
+    assert.equal(escapeMarkdownCodeSpanCell('a\\b\\c'), 'a\\b\\c');
+    assert.equal(escapeMarkdownTableCell('a\\b\\c'), 'a\\\\b\\\\c');
+    assert.notEqual(
+      escapeMarkdownCodeSpanCell('a\\b'),
+      escapeMarkdownTableCell('a\\b')
+    );
   });
 
   it('collapses newline runs like the plain escaper', () => {
-    assert.equal(escapeMarkdownCodeSpanCell('a\nb'), 'a b');
+    assert.equal(escapeMarkdownCodeSpanCell('a\nb\nc'), 'a b c');
     assert.equal(escapeMarkdownCodeSpanCell('a\rb'), 'a b');
     assert.equal(escapeMarkdownCodeSpanCell('a\n\nb'), 'a b');
   });
 
-  it('returns empty string for nullish', () => {
+  it('returns empty string for nullish, and stringifies everything else', () => {
     assert.equal(escapeMarkdownCodeSpanCell(null), '');
     assert.equal(escapeMarkdownCodeSpanCell(undefined), '');
     assert.equal(escapeMarkdownCodeSpanCell(0), '0');
+    assert.equal(escapeMarkdownCodeSpanCell(false), 'false');
+    assert.equal(escapeMarkdownCodeSpanCell(''), '');
   });
 
   // Known unguarded input, tracked as T34: a backtick closes the span early.
-  // Pinned so the gap is visible rather than forgotten.
-  it('does not (yet) guard a backtick — T34', () => {
+  // Pinned as a NORMAL assertion on purpose. R2 showed a `todo` variant can
+  // never signal — node:test keeps exit 0 for a failing todo — and that the
+  // inverted form let a strip-backticks implementation through unnoticed.
+  // This fails loudly when T34 lands, which is the right signal for a
+  // deliberate behaviour change.
+  it('passes a backtick through unescaped — T34 will change this', () => {
     assert.equal(escapeMarkdownCodeSpanCell('a`b'), 'a`b');
   });
 });
