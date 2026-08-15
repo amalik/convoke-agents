@@ -558,6 +558,6 @@ describe('convoke-portfolio CLI output (Story 6.3)', () => {
     const output = runCli([]);
     // Story 6.3 AC8: when attributableButUngoverned > 0, output mentions migration
     assert.ok(output.includes('files attributable to existing initiatives'));
-    assert.ok(output.includes('run convoke-migrate-artifacts to govern them'));
+    assert.ok(output.includes('run `npx -p convoke-agents convoke-migrate-artifacts` to govern them'));
   });
 });

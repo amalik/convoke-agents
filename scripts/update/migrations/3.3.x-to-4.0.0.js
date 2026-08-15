@@ -44,7 +44,7 @@ const DEPRECATION_BANNER =
 
 const V4_ACTIVATION_TEMPLATE = [
   '1. **Load config** — Read `{project-root}/_bmad/{module}/config.yaml` directly. Do NOT invoke the deprecated `bmad-init` skill.',
-  '   - If the config file is missing or unreadable, STOP and display: "Config error: `_bmad/{module}/config.yaml` could not be loaded. Run `convoke-install` to bootstrap."',
+  '   - If the config file is missing or unreadable, STOP and display: "Config error: `_bmad/{module}/config.yaml` could not be loaded. Run `npx -p convoke-agents convoke-install` to bootstrap."',
   '   - Store all fields as session variables: `{user_name}`, `{communication_language}`, plus any module-specific vars.',
   '   - VERIFY required fields (`user_name`, `communication_language`) are present; STOP with an error if any are missing.',
 ].join('\n');
@@ -163,7 +163,7 @@ function _previewActionsWithCount(count) {
   return [
     `Rewrite ${count} upstream-BMAD SKILL.md activation blocks using the v4 direct-YAML-load template (FM2-1 template-based, not substring replace)`,
     `Insert a deprecation banner at the top of ${BMAD_INIT_SKILL_MD_RELATIVE} (bmad-init is retained one-version for backwards-compat; removed in 4.1)`,
-    `Run convoke-doctor before + after and diff findings; new findings are reported as warnings (fail-soft per NFR9)`,
+    `Diff convoke-doctor findings before + after; new findings are reported as warnings (fail-soft per NFR9)`,
     `Write migration progress to ${STATE_FILE_RELATIVE} after each phase for basic resume safety (full resume/idempotency coverage lands in Story 1A.5)`,
   ];
 }

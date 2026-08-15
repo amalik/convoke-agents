@@ -717,7 +717,7 @@ async function main(argv) {
     // downstream parsers know the verification contract wasn't exercised.
     console.log(`REGISTERED: ${tripleKey}`);
     console.log(chalk.gray('  (post-write verification skipped under --yes)'));
-    console.log(chalk.gray('  Run `convoke-doctor` for a full governance health check.'));
+    console.log(chalk.gray('  Run `npx -p convoke-agents convoke-doctor` for a full governance health check.'));
     return 0;
   }
 
@@ -743,12 +743,12 @@ async function main(argv) {
     // Verification failure is fail-soft — the write itself succeeded. Do NOT
     // emit the REGISTERED: marker (R1-L8): LLM parsers keying on that string
     // should only see it when the row is both written AND verified.
-    console.log(chalk.gray('  Run `convoke-doctor` for a full governance health check.'));
+    console.log(chalk.gray('  Run `npx -p convoke-agents convoke-doctor` for a full governance health check.'));
     return 0;
   }
 
   console.log(`REGISTERED: ${tripleKey}`);
-  console.log(chalk.gray('  Run `convoke-doctor` for a full governance health check.'));
+  console.log(chalk.gray('  Run `npx -p convoke-agents convoke-doctor` for a full governance health check.'));
   return 0;
 }
 

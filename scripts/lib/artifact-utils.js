@@ -126,7 +126,7 @@ function readTaxonomy(projectRoot) {
   if (!fs.existsSync(configPath)) {
     throw new Error(
       `Taxonomy config not found at ${configPath}. ` +
-      'Run convoke-migrate-artifacts or convoke-update to create it.'
+      'Run: npx -p convoke-agents convoke-migrate-artifacts (or npx -p convoke-agents convoke-update) to create it.'
     );
   }
 

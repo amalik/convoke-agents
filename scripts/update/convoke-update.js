@@ -209,13 +209,13 @@ function _printPostUpgradeGate(findings) {
     console.log(chalk.green('  BMM registry consistent — no drift'));
   } else if (hardFailCount > 0 && softWarnCount > 0) {
     console.log(chalk.red(`  ${hardFailCount} issue(s) + ${softWarnCount} governance warning(s) surfaced`));
-    console.log(chalk.gray('  Run `convoke-doctor` for detailed governance checks.'));
+    console.log(chalk.gray('  Run `npx -p convoke-agents convoke-doctor` for detailed governance checks.'));
   } else if (hardFailCount > 0) {
     console.log(chalk.red(`  ${hardFailCount} issue(s) surfaced`));
-    console.log(chalk.gray('  Run `convoke-doctor` for detailed governance checks.'));
+    console.log(chalk.gray('  Run `npx -p convoke-agents convoke-doctor` for detailed governance checks.'));
   } else {
     console.log(chalk.yellow(`  ${softWarnCount} governance warning(s) surfaced (non-blocking)`));
-    console.log(chalk.gray('  Run `convoke-doctor` for detailed governance checks.'));
+    console.log(chalk.gray('  Run `npx -p convoke-agents convoke-doctor` for detailed governance checks.'));
   }
   console.log('');
 }

@@ -554,7 +554,7 @@ async function main() {
     if (result.summary.attributableButUngoverned > 0) {
       console.log(
         `${result.summary.attributableButUngoverned} files attributable to existing initiatives ` +
-        `but ungoverned — run convoke-migrate-artifacts to govern them`
+        `but ungoverned — run \`npx -p convoke-agents convoke-migrate-artifacts\` to govern them`
       );
     }
 

@@ -483,7 +483,7 @@ function checkModuleSkillWrappers(mod, projectRoot, manifestMap) {
       name: label,
       passed: false,
       error: failures.join('; '),
-      fix: 'Run convoke-update to regenerate skill wrappers'
+      fix: 'Run: npx -p convoke-agents convoke-update (regenerates skill wrappers)'
     };
   }
 
@@ -524,7 +524,7 @@ function checkAgentSkillWrappers(projectRoot, modules = []) {
       name: label,
       passed: false,
       error: failures.join('; '),
-      fix: 'Run convoke-update to regenerate agent skill wrappers'
+      fix: 'Run: npx -p convoke-agents convoke-update (regenerates agent skill wrappers)'
     };
   }
 
@@ -966,7 +966,7 @@ function checkTaxonomy(projectRoot) {
       name: 'Taxonomy: file exists',
       passed: false,
       warning: 'taxonomy.yaml not found at _bmad/_config/taxonomy.yaml',
-      fix: 'Run convoke-migrate-artifacts or convoke-update to create it'
+      fix: 'Run: npx -p convoke-agents convoke-migrate-artifacts (or npx -p convoke-agents convoke-update) to create it'
     });
     return results;
   }

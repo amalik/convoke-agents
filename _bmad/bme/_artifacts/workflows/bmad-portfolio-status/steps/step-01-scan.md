@@ -71,7 +71,7 @@ Display the raw stderr verbatim:
 > {raw stderr}
 > ```
 
-The engine produces clear errors (e.g. "taxonomy.yaml not found — run convoke-migrate-artifacts or convoke-update to create"). Do NOT swallow them or rephrase them.
+The engine produces clear errors (e.g. "taxonomy.yaml not found — Run: npx -p convoke-agents convoke-migrate-artifacts (or npx -p convoke-agents convoke-update) to create it"). Do NOT swallow them or rephrase them.
 
 Then HALT permanently — do NOT proceed to Step 2.
 
@@ -96,7 +96,7 @@ The output already contains all the lines that matter:
 - WIP radar line (if active initiatives exceed the threshold)
 - `Total: N artifacts | Governed: G | Ungoverned: U | Unattributed: X`
 - `Governance: G/T artifacts governed (P%)`
-- `N files attributable to existing initiatives but ungoverned — run convoke-migrate-artifacts to govern them` (if N > 0)
+- `N files attributable to existing initiatives but ungoverned — run `npx -p convoke-agents convoke-migrate-artifacts` to govern them` (if N > 0)
 - `N unattributed files (run with --show-unattributed to see details)` (if N > 0)
 
 Forward all of them. Do NOT filter or reformat.

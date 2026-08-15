@@ -274,7 +274,7 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
       assert.equal(exitCode, 0);
       // Success path renders the check hint when verification passed.
       assert.ok(
-        stdout.includes('Run `convoke-doctor`'),
+        stdout.includes('Run `npx -p convoke-agents convoke-doctor`'),
         `expected post-write verification success path; got:\n${stdout}`,
       );
       // Row present in CSV via direct intersection.

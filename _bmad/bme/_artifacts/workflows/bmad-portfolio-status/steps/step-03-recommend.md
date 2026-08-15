@@ -74,7 +74,7 @@ If found AND `P < 50`:
 
 **Rule 3 — Attributable but ungoverned**
 
-Look for a line matching: `N files attributable to existing initiatives but ungoverned — run convoke-migrate-artifacts to govern them`.
+Look for a line matching: `N files attributable to existing initiatives but ungoverned — run `npx -p convoke-agents convoke-migrate-artifacts` to govern them`.
 
 If found AND Rule 2 was NOT triggered:
 - Recommend: `"{N} files are attributable to existing initiatives but not yet governed. Run 'bmad-migrate-artifacts' to give them proper frontmatter."`
