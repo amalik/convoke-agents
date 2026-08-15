@@ -32,6 +32,10 @@ const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../update/lib/utils');
 const { readManifest } = require('./manifest-csv');
+const {
+  escapeMarkdownTableCell,
+  escapeMarkdownCodeSpanCell
+} = require('../lib/sanitize');
 
 // =============================================================================
 // CONSTANTS — must match scripts/portability/classify-skills.js
@@ -357,49 +361,6 @@ const HARD_FINDING_TYPES = new Set([
   '[BAD-CONFIG-DEP]',
   '[ORPHAN-DEP]',
 ]);
-
-/**
- * Escape a value for a plain (non-code-span) markdown table cell.
- *
- * Backslashes first. Escaping `|` inserts backslashes of its own, so doing it
- * the other way round doubles them and re-exposes the pipe: `a\|b` would become
- * `a\\|b`, where `\\` is a literal backslash and the `|` is once again a live
- * cell delimiter. See CodeQL js/incomplete-sanitization, issue #7.
- *
- * `\r` is flattened alongside `\n` — CommonMark treats a bare CR as a line
- * ending, so it splits the row mid-cell exactly as a newline would.
- */
-function escapeMarkdownTableCell(s) {
-  if (s == null) return '';
-  return String(s)
-    .replace(/\\/g, '\\\\')
-    .replace(/\|/g, '\\|')
-    .replace(/\r\n?|\n/g, ' ');
-}
-
-/**
- * Escape a value destined for a backtick code span inside a table cell.
- *
- * Code spans follow different rules from plain cells, so they need their own
- * escaper. `\|` still works, because GFM splits the row on pipes *before* the
- * span is formed — but ordinary backslash escapes are not processed inside a
- * code span, so doubling a backslash here renders two of them where the source
- * had one. Applying the plain escaper to the backticked column was an R1
- * regression (issue #7): a skill named `a\b` rendered as `a\\b`.
- *
- * A backtick in the value closes the span early: `bmad-a` + a stray backtick.
- * Not guarded here. R3 checked the claim an earlier version of this comment
- * made — that skill names are validated kebab-case — and it is false: nothing
- * in this file or `manifest-csv.js` constrains the `name` column, which is read
- * raw from CSV. Impact is cosmetic (the row keeps its three columns), so it is
- * a backlog item rather than a blocker, but it is unguarded, not impossible.
- */
-function escapeMarkdownCodeSpanCell(s) {
-  if (s == null) return '';
-  return String(s)
-    .replace(/\|/g, '\\|')
-    .replace(/\r\n?|\n/g, ' ');
-}
 
 function renderReport(date, totalSkills, status, findings) {
   const counts = Object.create(null);

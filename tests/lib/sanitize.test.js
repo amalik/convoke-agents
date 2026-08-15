@@ -7,6 +7,8 @@ const {
   stripHtmlComments,
   escapeRegExp,
   escapeReplacement,
+  escapeMarkdownTableCell,
+  escapeMarkdownCodeSpanCell,
   MAX_PASSES
 } = require('../../scripts/lib/sanitize');
 
@@ -189,5 +191,91 @@ describe('escapeReplacement', () => {
 
   it('throws rather than coercing non-string input', () => {
     assert.throws(() => escapeReplacement(null), TypeError);
+  });
+});
+
+// --- Markdown table-cell escapers (moved here from validate-classification.js
+// by BUG-12, which consolidated four divergent copies into one) ---
+//
+// R1 on that consolidation: promoting these to a shared module without tests at
+// the shared boundary left the ordering invariant pinned only transitively, via
+// whichever consumer happened to be tested. These are the direct tests.
+
+describe('escapeMarkdownTableCell', () => {
+  const delims = (s) => s.split(/(?<!\\)\|/).length - 1;
+
+  it('escapes a pipe so it stops being a cell delimiter', () => {
+    assert.equal(escapeMarkdownTableCell('a|b'), 'a\\|b');
+    assert.equal(delims(`| ${escapeMarkdownTableCell('a|b')} |`), 2);
+  });
+
+  // The invariant the whole fix exists to protect (CodeQL alert 10): escaping
+  // `|` inserts backslashes, so escaping `\` afterwards would double the ones
+  // just added and hand the pipe back to the table parser.
+  it('escapes backslashes BEFORE pipes, not after', () => {
+    assert.equal(escapeMarkdownTableCell('a\\|b'), 'a\\\\\\|b');
+
+    const wrongOrder = (s) => String(s).replace(/\|/g, '\\|').replace(/\\/g, '\\\\');
+    assert.notEqual(
+      wrongOrder('a\\|b'),
+      escapeMarkdownTableCell('a\\|b'),
+      'fixture no longer distinguishes the two orderings'
+    );
+    assert.equal(delims(`| ${escapeMarkdownTableCell('a\\|b')} |`), 2);
+  });
+
+  it('collapses each newline run to a single space', () => {
+    assert.equal(escapeMarkdownTableCell('a\nb'), 'a b');
+    assert.equal(escapeMarkdownTableCell('a\r\nb'), 'a b');
+    assert.equal(escapeMarkdownTableCell('a\rb'), 'a b');
+    // Runs collapse to ONE space. This differs from the pre-BUG-12
+    // validate-classification copy, which emitted one space per newline.
+    assert.equal(escapeMarkdownTableCell('a\n\nb'), 'a b');
+    assert.equal(escapeMarkdownTableCell('a\r\n\r\nb'), 'a b');
+  });
+
+  it('returns empty string for nullish, and stringifies everything else', () => {
+    assert.equal(escapeMarkdownTableCell(null), '');
+    assert.equal(escapeMarkdownTableCell(undefined), '');
+    assert.equal(escapeMarkdownTableCell(0), '0');
+    assert.equal(escapeMarkdownTableCell(false), 'false');
+    assert.equal(escapeMarkdownTableCell(''), '');
+  });
+});
+
+describe('escapeMarkdownCodeSpanCell', () => {
+  const delims = (s) => s.split(/(?<!\\)\|/).length - 1;
+
+  it('escapes a pipe (GFM resolves \\| before the code span forms)', () => {
+    assert.equal(escapeMarkdownCodeSpanCell('a|b'), 'a\\|b');
+    assert.equal(delims(`| \`${escapeMarkdownCodeSpanCell('a|b')}\` |`), 2);
+  });
+
+  // The distinction that makes two escapers necessary: backslash escapes are
+  // NOT processed inside a code span, so doubling one renders two where the
+  // source had one. Applying the plain escaper here was an R1 regression during
+  // issue #7 — this test is what stops it coming back.
+  it('does NOT escape backslashes, unlike the plain-cell escaper', () => {
+    assert.equal(escapeMarkdownCodeSpanCell('a\\b'), 'a\\b');
+    assert.equal(escapeMarkdownTableCell('a\\b'), 'a\\\\b');
+    assert.notEqual(escapeMarkdownCodeSpanCell('a\\b'), escapeMarkdownTableCell('a\\b'));
+  });
+
+  it('collapses newline runs like the plain escaper', () => {
+    assert.equal(escapeMarkdownCodeSpanCell('a\nb'), 'a b');
+    assert.equal(escapeMarkdownCodeSpanCell('a\rb'), 'a b');
+    assert.equal(escapeMarkdownCodeSpanCell('a\n\nb'), 'a b');
+  });
+
+  it('returns empty string for nullish', () => {
+    assert.equal(escapeMarkdownCodeSpanCell(null), '');
+    assert.equal(escapeMarkdownCodeSpanCell(undefined), '');
+    assert.equal(escapeMarkdownCodeSpanCell(0), '0');
+  });
+
+  // Known unguarded input, tracked as T34: a backtick closes the span early.
+  // Pinned so the gap is visible rather than forgotten.
+  it('does not (yet) guard a backtick — T34', () => {
+    assert.equal(escapeMarkdownCodeSpanCell('a`b'), 'a`b');
   });
 });

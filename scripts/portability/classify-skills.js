@@ -23,6 +23,10 @@ const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../update/lib/utils');
 const { readManifest, writeManifest } = require('./manifest-csv');
+const {
+  escapeMarkdownTableCell,
+  escapeMarkdownCodeSpanCell
+} = require('../lib/sanitize');
 
 // =============================================================================
 // CONSTANTS — locked classification rules from sp-1-2 spec (AC #7, Task 3)
@@ -463,7 +467,7 @@ function renderBorderlineMd(date, conflicts, ambiguous, misses) {
     for (const c of conflicts) {
       const existing = `tier=${c.existing.tier} intent=${c.existing.intent} deps=${c.existing.dependencies || '(empty)'}`;
       const proposed = `tier=${c.proposed.tier} intent=${c.proposed.intent} deps=${c.proposed.dependencies || '(empty)'}`;
-      lines.push(`| \`${c.name}\` | ${existing} | ${proposed} | ${c.reason} |`);
+      lines.push(`| \`${escapeMarkdownCodeSpanCell(c.name)}\` | ${escapeMarkdownTableCell(existing)} | ${escapeMarkdownTableCell(proposed)} | ${escapeMarkdownTableCell(c.reason)} |`);
     }
     lines.push('');
   }
@@ -475,7 +479,7 @@ function renderBorderlineMd(date, conflicts, ambiguous, misses) {
     lines.push('| Skill | Tier | Intent | Reason |');
     lines.push('|-------|------|--------|--------|');
     for (const a of ambiguous) {
-      lines.push(`| \`${a.name}\` | ${a.tier} | ${a.intent} | ${a.reason} |`);
+      lines.push(`| \`${escapeMarkdownCodeSpanCell(a.name)}\` | ${escapeMarkdownTableCell(a.tier)} | ${escapeMarkdownTableCell(a.intent)} | ${escapeMarkdownTableCell(a.reason)} |`);
     }
     lines.push('');
   }
@@ -487,7 +491,7 @@ function renderBorderlineMd(date, conflicts, ambiguous, misses) {
     lines.push('| Skill | Best guess | Confidence | Recommendation |');
     lines.push('|-------|-----------|------------|----------------|');
     for (const ms of misses) {
-      lines.push(`| \`${ms.name}\` | tier=${ms.tier} intent=${ms.intent} | low | Manual review needed |`);
+      lines.push(`| \`${escapeMarkdownCodeSpanCell(ms.name)}\` | ${escapeMarkdownTableCell(`tier=${ms.tier} intent=${ms.intent}`)} | low | Manual review needed |`);
     }
     lines.push('');
   }
@@ -635,6 +639,7 @@ if (require.main === module) {
 
 module.exports = {
   classifyIntent,
+  renderBorderlineMd,
   classifyTier,
   extractDependencies,
   classifyRow,

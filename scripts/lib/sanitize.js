@@ -161,9 +161,62 @@ function escapeReplacement(input) {
   return input.replace(/\$/g, '$$$$');
 }
 
+/**
+ * Escape a value for a **plain** (non-code-span) markdown table cell.
+ *
+ * Backslashes first. Escaping `|` inserts backslashes of its own, so the other
+ * order doubles them and re-exposes the pipe: `a\|b` would become `a\\|b`,
+ * where `\\` is a literal backslash and the `|` is a live cell delimiter again.
+ * That is CodeQL alert 10.
+ *
+ * CR is collapsed alongside LF because CommonMark treats a bare `\r` as a line
+ * ending, so it splits the row mid-cell exactly as `\n` does. Runs collapse to
+ * a single space rather than one space per character.
+ *
+ * @param {*} s - Any value; `null`/`undefined` become `''`.
+ * @returns {string} A value safe to place between `|` delimiters.
+ */
+function escapeMarkdownTableCell(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/\\/g, '\\\\')
+    .replace(/\|/g, '\\|')
+    .replace(/[\r\n]+/g, ' ');
+}
+
+/**
+ * Escape a value destined for a **backtick code span** inside a table cell.
+ *
+ * Code spans follow different rules, so they need their own escaper. `\|` still
+ * works, because GFM splits the row on pipes *before* the span is formed — but
+ * ordinary backslash escapes are not processed inside a code span, so doubling
+ * a backslash here renders two where the source had one. Checked once out of band against
+ * GitHub's own renderer (`POST /markdown`, mode=gfm) on 2026-08-15: with this
+ * escaper `a\b` and `a\|b` render correctly in 3-cell rows; with the plain
+ * escaper they render `a\\b` and `a\\|b`. No renderer is installed in this
+ * repo, so that check is NOT reproducible from the test suite — what the tests
+ * pin is the escaper's output, not how a renderer treats it. Applying the plain one to a code span was an R1
+ * regression during issue #7 — do not "simplify" these back into one function.
+ *
+ * Not handled: a backtick in the value closes the span early. Skill names are
+ * not validated to exclude one (nothing in `manifest-csv.js` constrains the
+ * `name` column), so this is unguarded rather than impossible — tracked as T34.
+ *
+ * @param {*} s - Any value; `null`/`undefined` become `''`.
+ * @returns {string} A value safe to place inside backticks between `|`.
+ */
+function escapeMarkdownCodeSpanCell(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/\|/g, '\\|')
+    .replace(/[\r\n]+/g, ' ');
+}
+
 module.exports = {
   stripHtmlComments,
   escapeRegExp,
   escapeReplacement,
+  escapeMarkdownTableCell,
+  escapeMarkdownCodeSpanCell,
   MAX_PASSES
 };

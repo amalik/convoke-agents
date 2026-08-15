@@ -4,9 +4,18 @@
  * @module markdown-formatter
  */
 
-/** Escape a value for safe markdown-table cell rendering: escape `\`, then `|`; collapse CR/LF to space. */
+const { escapeMarkdownTableCell } = require('../../sanitize');
+
+/**
+ * Escape a value for safe markdown-table cell rendering.
+ *
+ * Delegates to the shared escaper. This was one of four divergent copies before
+ * BUG-12 consolidated them; duplicated escape sets are how the class regresses
+ * (CodeQL `js/incomplete-sanitization`, issue #7 alert 10). Kept as a local
+ * alias so the three call sites below read unchanged.
+ */
 function escCell(v) {
-  return String(v ?? '').replace(/\\/g, '\\\\').replace(/[\r\n]+/g, ' ').replace(/\|/g, '\\|');
+  return escapeMarkdownTableCell(v);
 }
 
 /**
