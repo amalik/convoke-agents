@@ -85,7 +85,15 @@ async function mergeTaxonomy(projectRoot) {
     parseFailed = true;
   }
 
-  // Ensure structure
+  // Ensure structure.
+  //
+  // Coerce a non-object root first. `yaml.load('just a string')` returns a STRING, which is
+  // truthy, so `existing.initiatives = {}` was a silent no-op on a primitive and the next line
+  // dereferenced `undefined`. A sequence root (`- a`) has the same problem via an Array. Both
+  // are plausible for a truncated or half-written file — the most likely corruption there is.
+  // Pre-existing (the previous revision threw identically), fixed here because this function is
+  // being hardened. (Review 2026-08-15.)
+  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) existing = {};
   if (!existing.initiatives) existing.initiatives = {};
   if (!Array.isArray(existing.initiatives.platform)) existing.initiatives.platform = [];
   if (!Array.isArray(existing.initiatives.user)) existing.initiatives.user = [];
@@ -183,7 +191,12 @@ async function mergeTaxonomy(projectRoot) {
         types: doc.get('artifact_types', true),
         aliases: doc.get('aliases', true),
       };
+      // The ROOT must be a map. `doc.get`/`getIn` return `undefined` for every key when the
+      // root is a sequence or a scalar, so all five node checks passed and `shapeOk` was true —
+      // then `doc.set('initiatives', ...)` threw on a YAMLSeq. The gate written to catch bad
+      // shapes did not catch the shape it was written for. (Review 2026-08-15.)
       const shapeOk =
+        YAML.isMap(doc.contents) &&
         (!doc.errors || doc.errors.length === 0) &&
         isUsable(nodes.initiatives, 'map') &&
         isUsable(nodes.platform, 'seq') &&
@@ -235,15 +248,29 @@ async function mergeTaxonomy(projectRoot) {
       // a file you could not read is exactly what `path-safety-for-destructive-ops` exists to
       // prevent, and the same salvage convention is already used for an unusable
       // skill-manifest.csv. Preserve the original beside the repaired file. (Review 2026-08-15.)
-      if (parseFailed) {
-        const salvage = `${configPath}.unreadable-${new Date().toISOString().split('T')[0]}`;
-        try {
-          await fs.copy(configPath, salvage, { overwrite: true });
-          console.warn(`Warning: original taxonomy.yaml could not be parsed — preserved at ${path.basename(salvage)} before rewriting.`);
-        } catch (err) {
-          console.warn(`Warning: could not preserve the unreadable taxonomy.yaml (${err.message}); NOT overwriting it.`);
-          return { created: false, merged: false, promoted: [] };
-        }
+      // Salvage before ANY wholesale rewrite, not only when js-yaml failed.
+      //
+      // The fallback reserialises from `existing`, which the "Ensure structure" normaliser has
+      // already reset — so a READABLE file whose shape the in-place path declines (say
+      // `user: mine`, a missing `-`, the most plausible hand-edit slip) has that value written
+      // out of existence with `merged:true`, no warning, and no copy. Measured against the
+      // previous revision: the old code THREW there and the operator's value survived. This
+      // "fix" had turned a loud failure into silent data loss — strictly worse. (Review
+      // 2026-08-15.)
+      //
+      // Timestamped, not date-only: two unreadable states on the same day previously had the
+      // second salvage overwrite the first, destroying the only surviving copy of the original.
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const salvage = `${configPath}.superseded-${stamp}`;
+      try {
+        await fs.copy(configPath, salvage, { overwrite: false });
+        console.warn(
+          `Warning: taxonomy.yaml could not be updated in place (${parseFailed ? 'unparseable' : 'unexpected structure'}); ` +
+          `the original is preserved at ${path.basename(salvage)} and the file has been rewritten from platform defaults.`
+        );
+      } catch (err) {
+        console.warn(`Warning: could not preserve the existing taxonomy.yaml (${err.message}); NOT overwriting it.`);
+        return { created: false, merged: false, promoted: [], skipped: 'could-not-preserve-original' };
       }
       output = TAXONOMY_HEADER + yaml.dump(existing, { lineWidth: -1 });
     }
