@@ -11,6 +11,7 @@ const { writeManifest } = require('../../scripts/portability/manifest-csv');
 const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
 const {
   validate,
+  renderReport,
   HARD_FINDING_TYPES,
 } = require('../../scripts/portability/validate-classification');
 
@@ -245,5 +246,83 @@ describe('Portability validator (sp-1-3)', () => {
     validate(tmpRoot);
     const after = fs.readFileSync(manifestPath, 'utf8');
     assert.equal(after, before);
+  });
+});
+
+// --- Report rendering: table-cell escaping ---
+//
+// CodeQL js/incomplete-sanitization, issue #7. The escaper used to replace `|`
+// without first escaping `\`, so any backslash already in the text doubled into
+// a literal backslash and handed the pipe back to the table parser.
+
+describe('renderReport — markdown table-cell escaping', () => {
+  /** Extract the data rows of the first finding table (skip header + separator). */
+  function findingRows(report) {
+    return report
+      .split('\n')
+      .filter((l) => l.startsWith('| `bmad-'));
+  }
+
+  it('escapes a bare pipe so the row keeps its three columns', () => {
+    const report = renderReport('2026-08-15', 1, 'FAIL', [
+      { type: '[INVALID]', skill: 'bmad-x', detail: 'tier is a|b', recommendation: 'fix it' },
+    ]);
+    const [row] = findingRows(report);
+    assert.ok(row, 'no finding row rendered');
+    assert.ok(row.includes('a\\|b'), `pipe not escaped in ${JSON.stringify(row)}`);
+    // 3 columns => 4 unescaped delimiters.
+    assert.equal(row.replace(/\\\\/g, '').replace(/\\\|/g, '').split('|').length - 1, 4);
+  });
+
+  it('escapes a backslash before the pipe it precedes', () => {
+    const report = renderReport('2026-08-15', 1, 'FAIL', [
+      { type: '[INVALID]', skill: 'bmad-x', detail: 'path a\\|b', recommendation: 'fix it' },
+    ]);
+    const [row] = findingRows(report);
+    assert.ok(row, 'no finding row rendered');
+    assert.ok(row.includes('a\\\\\\|b'), `backslash not escaped in ${JSON.stringify(row)}`);
+    assert.equal(row.replace(/\\\\/g, '').replace(/\\\|/g, '').split('|').length - 1, 4);
+  });
+
+  // R1 regression: the skill column is wrapped in backticks, and markdown does
+  // not process backslash escapes inside a code span. Doubling the backslash
+  // there rendered `a\b` as `a\\b` — worse than before the escaper was touched.
+  it('does not double backslashes in the backticked skill column', () => {
+    const report = renderReport('2026-08-15', 1, 'FAIL', [
+      { type: '[INVALID]', skill: 'bmad-a\\b', detail: 'd', recommendation: 'r' },
+    ]);
+    const [row] = findingRows(report);
+    assert.ok(row.includes('`bmad-a\\b`'), `code span mangled in ${JSON.stringify(row)}`);
+    assert.ok(!row.includes('`bmad-a\\\\b`'), `backslash doubled in ${JSON.stringify(row)}`);
+  });
+
+  it('still escapes pipes inside the backticked skill column', () => {
+    const report = renderReport('2026-08-15', 1, 'FAIL', [
+      { type: '[INVALID]', skill: 'bmad-a|b', detail: 'd', recommendation: 'r' },
+    ]);
+    const [row] = findingRows(report);
+    assert.ok(row.includes('`bmad-a\\|b`'), `pipe not escaped in ${JSON.stringify(row)}`);
+    assert.equal(row.replace(/\\\\/g, '').replace(/\\\|/g, '').split('|').length - 1, 4);
+  });
+
+  it('flattens newlines so a cell cannot break the table', () => {
+    const report = renderReport('2026-08-15', 1, 'FAIL', [
+      { type: '[INVALID]', skill: 'bmad-x', detail: 'line1\nline2', recommendation: 'fix it' },
+    ]);
+    assert.equal(findingRows(report).length, 1);
+    assert.ok(findingRows(report)[0].includes('line1 line2'));
+  });
+
+  // R1: CommonMark treats a bare CR as a line ending, so it splits the row
+  // mid-cell exactly as `\n` would. Both columns and both escapers.
+  it('flattens carriage returns in every column', () => {
+    for (const [detail, label] of [['a\rb', 'CR'], ['a\r\nb', 'CRLF']]) {
+      const report = renderReport('2026-08-15', 1, 'FAIL', [
+        { type: '[INVALID]', skill: `bmad-x\ry`, detail, recommendation: 'r' },
+      ]);
+      const rows = findingRows(report);
+      assert.equal(rows.length, 1, `${label}: row split into ${rows.length}`);
+      assert.ok(!rows[0].includes('\r'), `${label}: raw CR survived in ${JSON.stringify(rows[0])}`);
+    }
   });
 });
