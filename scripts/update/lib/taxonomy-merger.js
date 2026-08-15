@@ -69,11 +69,20 @@ async function mergeTaxonomy(projectRoot) {
   // Read existing taxonomy (handle corrupt YAML gracefully, matching config-merger pattern)
   const content = await fs.readFile(configPath, 'utf8');
   let existing;
+  // Track the failure explicitly rather than re-deriving parseability later from a DIFFERENT
+  // parser. `YAML.parseDocument` is more permissive than js-yaml — an unknown local tag
+  // (`custom: !mytag foo`) makes js-yaml throw while parseDocument reports zero errors. Deriving
+  // "is this file OK?" from parseDocument therefore ran the in-place merge against
+  // `existing = {}`, and the promotion loop deleted every operator entry in `initiatives.user`
+  // as "not present in existing". Verified: `user: [my-precious-initiative]` -> `user: []`, with
+  // `promoted: []` so nothing recorded it. (Review 2026-08-15.)
+  let parseFailed = false;
   try {
     existing = yaml.load(content) || {};
   } catch {
     console.warn('Warning: taxonomy.yaml contains invalid YAML. Treating as empty and merging defaults.');
     existing = {};
+    parseFailed = true;
   }
 
   // Ensure structure
@@ -137,45 +146,106 @@ async function mergeTaxonomy(projectRoot) {
   // adds a platform initiative, artifact type, or alias. Measured, not assumed: a steady-state
   // refresh writes nothing at all (the guard below), so this is once-per-release, not every run.
   //
-  // Mutating the parsed Document in place preserves the header, inline comments, key order, and
-  // the operator's formatting. The write remains guarded — no changes, no write, no churn.
+  // Mutating the parsed Document in place preserves the header, inline and trailing comments,
+  // key order, flow-vs-block style, and unknown top-level keys. It does NOT preserve everything:
+  // indentation is reflowed to 2 spaces, CRLF becomes LF, and a BOM is stripped, because
+  // `doc.toString()` re-emits the whole document. Stated because an earlier version of this
+  // comment claimed formatting was preserved outright, which would mislead anyone diffing a
+  // 4-space or CRLF file. The write remains guarded — no changes, no write, no churn.
   if (merged || promoted.length > 0) {
-    let output;
-    const doc = YAML.parseDocument(content);
-    if (doc.errors && doc.errors.length > 0) {
-      // Unparseable input already fell back to `existing = {}` above, so there are no comments
-      // to preserve and nothing to mutate in place. Reserialise, and re-add the header since the
-      // original content is being replaced wholesale.
-      output = TAXONOMY_HEADER + yaml.dump(existing, { lineWidth: -1 });
-    } else {
-      // Re-apply the same merge to the Document. Deriving it from `existing` rather than
-      // recomputing keeps one source of truth for what changed.
-      if (!doc.has('initiatives')) doc.set('initiatives', doc.createNode({ platform: [], user: [] }));
-      if (!doc.hasIn(['initiatives', 'platform'])) doc.setIn(['initiatives', 'platform'], doc.createNode([]));
-      if (!doc.hasIn(['initiatives', 'user'])) doc.setIn(['initiatives', 'user'], doc.createNode([]));
-      if (!doc.has('artifact_types')) doc.set('artifact_types', doc.createNode([]));
-      if (!doc.has('aliases')) doc.set('aliases', doc.createNode({}));
+    let output = null;
 
-      const docPlatform = doc.getIn(['initiatives', 'platform']).toJSON() || [];
-      for (const id of existing.initiatives.platform) {
-        if (!docPlatform.includes(id)) doc.addIn(['initiatives', 'platform'], id);
+    // In-place mutation is only safe when the Document agrees with the normalised object.
+    //
+    // `has`/`hasIn` return TRUE for a key whose value is null or a scalar, so the original
+    // guards skipped the repair branch and then called `.toJSON()` on a Scalar. Five
+    // operator-plausible shapes threw — `user:` empty, `platform:` a scalar, `artifact_types:`
+    // empty, `initiatives:` empty, `aliases:` a list — every one of which the previous
+    // `yaml.dump(existing)` path handled correctly, because js-yaml normalisation repaired them.
+    // A throw here is caught by refreshInstallation, so the install "succeeds" while the taxonomy
+    // is NEVER merged again: future platform initiatives and artifact types silently never land.
+    // The two migration callers do not guard it at all. (Review 2026-08-15.)
+    //
+    // An ALIAS is excluded too: `user: *p` aliasing `platform` makes every platform id look
+    // promoted on every run, `deleteIn` removes nothing, and the file grows ~400 bytes per
+    // update forever (measured 858 -> 1259 -> 1659 across three runs).
+    const isUsable = (node, kind) =>
+      node === undefined ||
+      node === null ||
+      (kind === 'seq' ? YAML.isSeq(node) : YAML.isMap(node));
+
+    if (!parseFailed) {
+      const doc = YAML.parseDocument(content);
+      const nodes = {
+        initiatives: doc.get('initiatives', true),
+        platform: doc.getIn(['initiatives', 'platform'], true),
+        user: doc.getIn(['initiatives', 'user'], true),
+        types: doc.get('artifact_types', true),
+        aliases: doc.get('aliases', true),
+      };
+      const shapeOk =
+        (!doc.errors || doc.errors.length === 0) &&
+        isUsable(nodes.initiatives, 'map') &&
+        isUsable(nodes.platform, 'seq') &&
+        isUsable(nodes.user, 'seq') &&
+        isUsable(nodes.types, 'seq') &&
+        isUsable(nodes.aliases, 'map');
+
+      if (shapeOk) {
+        if (!YAML.isMap(nodes.initiatives)) doc.set('initiatives', doc.createNode({ platform: [], user: [] }));
+        if (!YAML.isSeq(doc.getIn(['initiatives', 'platform'], true))) doc.setIn(['initiatives', 'platform'], doc.createNode([]));
+        if (!YAML.isSeq(doc.getIn(['initiatives', 'user'], true))) doc.setIn(['initiatives', 'user'], doc.createNode([]));
+        if (!YAML.isSeq(doc.get('artifact_types', true))) doc.set('artifact_types', doc.createNode([]));
+        if (!YAML.isMap(doc.get('aliases', true))) doc.set('aliases', doc.createNode({}));
+
+        const docPlatform = doc.getIn(['initiatives', 'platform']).toJSON() || [];
+        for (const id of existing.initiatives.platform) {
+          if (!docPlatform.includes(id)) doc.addIn(['initiatives', 'platform'], id);
+        }
+        // Promotions REMOVE entries — walk backwards so indices stay valid. Only scalar entries
+        // are compared; a non-scalar entry cannot match `existing` by value and was previously
+        // deleted as if promoted.
+        const userJson = doc.getIn(['initiatives', 'user']).toJSON() || [];
+        for (let i = userJson.length - 1; i >= 0; i--) {
+          const v = userJson[i];
+          const comparable = v === null || typeof v !== 'object';
+          if (comparable && !existing.initiatives.user.includes(v)) doc.deleteIn(['initiatives', 'user', i]);
+        }
+        const docTypes = doc.get('artifact_types').toJSON() || [];
+        for (const t of existing.artifact_types) {
+          if (!docTypes.includes(t)) doc.addIn(['artifact_types'], t);
+        }
+        for (const [k, v] of Object.entries(existing.aliases)) {
+          if (!doc.hasIn(['aliases', k])) doc.setIn(['aliases', k], v);
+        }
+        // No TAXONOMY_HEADER: the parsed document already carries the file's leading comments.
+        output = doc.toString({ lineWidth: 0 });
       }
-      // Promotions REMOVE entries from user — walk backwards so indices stay valid.
-      const docUser = doc.getIn(['initiatives', 'user']);
-      const userJson = docUser.toJSON() || [];
-      for (let i = userJson.length - 1; i >= 0; i--) {
-        if (!existing.initiatives.user.includes(userJson[i])) doc.deleteIn(['initiatives', 'user', i]);
+    }
+
+    if (output === null) {
+      // Fallback: js-yaml could not read it, the Document has errors, or the shape is one the
+      // in-place path cannot safely edit. Reserialising from the normalised object REPAIRS the
+      // file — the behaviour that shipped before I140 — at the cost of comments.
+      //
+      // When js-yaml FAILED, `existing` is `{}`, so this rewrite discards whatever the operator
+      // had: a file with an unknown local tag (`custom: !mytag foo`) parses fine for
+      // parseDocument but throws for js-yaml, and its `initiatives.user` entries are simply
+      // gone. That is pre-existing behaviour, not introduced by I140 — but silently overwriting
+      // a file you could not read is exactly what `path-safety-for-destructive-ops` exists to
+      // prevent, and the same salvage convention is already used for an unusable
+      // skill-manifest.csv. Preserve the original beside the repaired file. (Review 2026-08-15.)
+      if (parseFailed) {
+        const salvage = `${configPath}.unreadable-${new Date().toISOString().split('T')[0]}`;
+        try {
+          await fs.copy(configPath, salvage, { overwrite: true });
+          console.warn(`Warning: original taxonomy.yaml could not be parsed — preserved at ${path.basename(salvage)} before rewriting.`);
+        } catch (err) {
+          console.warn(`Warning: could not preserve the unreadable taxonomy.yaml (${err.message}); NOT overwriting it.`);
+          return { created: false, merged: false, promoted: [] };
+        }
       }
-      const docTypes = doc.get('artifact_types').toJSON() || [];
-      for (const t of existing.artifact_types) {
-        if (!docTypes.includes(t)) doc.addIn(['artifact_types'], t);
-      }
-      for (const [k, v] of Object.entries(existing.aliases)) {
-        if (!doc.hasIn(['aliases', k])) doc.setIn(['aliases', k], v);
-      }
-      // No TAXONOMY_HEADER here: the parsed document already carries the file's own leading
-      // comments. Prepending would duplicate the header on every merge.
-      output = doc.toString({ lineWidth: 0 });
+      output = TAXONOMY_HEADER + yaml.dump(existing, { lineWidth: -1 });
     }
 
     // Add promotion comments
