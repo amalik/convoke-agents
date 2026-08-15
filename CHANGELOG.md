@@ -52,7 +52,7 @@ If this release does its job, you'll barely notice it — which is the point.
 
 ### Documentation
 
-- **Migration guide** at [`docs/migration/3.x-to-4.0.md`](docs/migration/3.x-to-4.0.md) — One page. The short version: run `convoke-update`. That's it.
+- **Migration guide** at [`docs/migration/3.x-to-4.0.md`](docs/migration/3.x-to-4.0.md) — One page. The short version: run `npx -p convoke-agents@latest convoke-update`. That's it.
 
 ---
 
