@@ -233,7 +233,7 @@ describe('convoke-update governance gate (Story v63-2-3)', () => {
 
   // ── AC7 case 6: governance link hint present when findings exist ──
 
-  it('includes the resolvable `npx -p convoke-agents convoke-doctor` hint when softWarnings are surfaced', async () => {
+  it('pins the convoke-doctor hint to the running version when softWarnings are surfaced', async () => {
     const tmpDir = await createTempDir('bmad-gov-');
     try {
       await createInstallation(tmpDir, FIXTURE_VERSION);
@@ -244,13 +244,13 @@ describe('convoke-update governance gate (Story v63-2-3)', () => {
       // is absent. Check both: if warning surfaced, hint must follow.
       if (stdout.includes('governance warning(s) surfaced')) {
         assert.ok(
-          stdout.includes('Run `npx -p convoke-agents convoke-doctor`'),
+          /Run `npx -p convoke-agents@[\w.-]+ convoke-doctor`/.test(stdout),
           `hint missing after governance warnings; got:\n${stdout}`,
         );
       } else {
         // All-clean — hint should NOT appear per AC5.
         assert.ok(
-          !stdout.includes('Run `npx -p convoke-agents convoke-doctor`'),
+          !/Run `npx -p convoke-agents@[\w.-]+ convoke-doctor`/.test(stdout),
           `hint must not appear on all-clean summary; got:\n${stdout}`,
         );
       }

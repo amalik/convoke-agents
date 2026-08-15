@@ -613,7 +613,7 @@ function checkVersionConsistency(projectRoot, modules) {
       name: 'Version consistency',
       passed: false,
       error: `Package: ${packageVersion}, ${mismatched.join(', ')}`,
-      fix: 'Run: npx -p convoke-agents convoke-update'
+      fix: `Run: npx -p convoke-agents@${packageVersion} convoke-update`
     };
   }
 

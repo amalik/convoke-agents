@@ -5,7 +5,7 @@ const chalk = require('chalk');
 const versionDetector = require('./lib/version-detector');
 const migrationRunner = require('./lib/migration-runner');
 const registry = require('./migrations/registry');
-const { findProjectRoot } = require('./lib/utils');
+const { findProjectRoot, getPackageVersion } = require('./lib/utils');
 const { readChangelogEntries } = require('./lib/changelog-reader');
 const { runCompatPreflight } = require('./lib/compat-preflight');
 // Story v63-2-3: post-upgrade governance gate. `checkBmmDependencies` is
@@ -209,13 +209,13 @@ function _printPostUpgradeGate(findings) {
     console.log(chalk.green('  BMM registry consistent — no drift'));
   } else if (hardFailCount > 0 && softWarnCount > 0) {
     console.log(chalk.red(`  ${hardFailCount} issue(s) + ${softWarnCount} governance warning(s) surfaced`));
-    console.log(chalk.gray('  Run `npx -p convoke-agents convoke-doctor` for detailed governance checks.'));
+    console.log(chalk.gray(`  Run \`npx -p convoke-agents@${getPackageVersion()} convoke-doctor\` for detailed governance checks.`));
   } else if (hardFailCount > 0) {
     console.log(chalk.red(`  ${hardFailCount} issue(s) surfaced`));
-    console.log(chalk.gray('  Run `npx -p convoke-agents convoke-doctor` for detailed governance checks.'));
+    console.log(chalk.gray(`  Run \`npx -p convoke-agents@${getPackageVersion()} convoke-doctor\` for detailed governance checks.`));
   } else {
     console.log(chalk.yellow(`  ${softWarnCount} governance warning(s) surfaced (non-blocking)`));
-    console.log(chalk.gray('  Run `npx -p convoke-agents convoke-doctor` for detailed governance checks.'));
+    console.log(chalk.gray(`  Run \`npx -p convoke-agents@${getPackageVersion()} convoke-doctor\` for detailed governance checks.`));
   }
   console.log('');
 }
