@@ -94,6 +94,89 @@ function makeVortexMod(projectRoot) {
 
 // === (a) Healthy install: all wrappers present ===
 
+// ── Backlog I40: a duplicate source path must not resolve silently ────────────────────────
+//
+// `loadSkillManifest` keys a Map by source path. Two rows claiming the same path used to
+// overwrite with no signal, so the manifest could be ambiguous and the operator never learn.
+// Not live today — the shipped manifest has 106 rows and 106 distinct paths — but demonstrably
+// reachable: the I139 seeding bug (fixed 2026-08-14) produced exactly that shape.
+//
+// Last-writer-wins is asserted deliberately. The backlog row's complaint is the SILENCE, not the
+// precedence, and changing which row wins would be an unevidenced behaviour change.
+describe('I40: duplicate source paths in skill-manifest.csv', () => {
+  let tmpDir;
+  let warnings;
+  let originalWarn;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-doctor-i40-'));
+    await fs.ensureDir(path.join(tmpDir, '_bmad/_config'));
+    warnings = [];
+    originalWarn = console.warn;
+    console.warn = (...args) => warnings.push(args.join(' '));
+  });
+
+  afterEach(async () => {
+    console.warn = originalWarn;
+    await fs.remove(tmpDir);
+  });
+
+  const write = (rows) =>
+    fs.writeFile(path.join(tmpDir, '_bmad/_config/skill-manifest.csv'), rows.join('\n') + '\n');
+
+  it('warns, names the conflict, and keeps last-writer-wins', async () => {
+    await write([
+      'canonicalId,name,description,module,path,install_to_bmad,tier,intent,dependencies',
+      'skill-a,a,"desc",bme,shared/path/SKILL.md,true,,,',
+      'skill-b,b,"desc",bme,shared/path/SKILL.md,true,,,',
+      'skill-c,c,"desc",bme,other/path/SKILL.md,true,,,',
+    ]);
+
+    const map = loadSkillManifest(tmpDir);
+
+    assert.equal(map.size, 2, 'the duplicate should collapse to one entry');
+    assert.equal(map.get('shared/path/SKILL.md'), 'skill-b', 'last-writer-wins must be preserved');
+
+    const text = warnings.join('\n');
+    assert.match(text, /duplicate source path/i, 'the collision was not reported at all');
+    assert.match(text, /shared\/path\/SKILL\.md/, 'the warning does not name the offending path');
+    assert.match(text, /skill-a/, 'the warning does not name the row that was overridden');
+    assert.match(text, /skill-b/, 'the warning does not name the row that won');
+  });
+
+  it('stays silent when a duplicate path maps to the SAME canonicalId', async () => {
+    // A row repeated verbatim is redundant, not ambiguous — warning would be noise.
+    await write([
+      'canonicalId,name,description,module,path,install_to_bmad,tier,intent,dependencies',
+      'skill-a,a,"desc",bme,shared/path/SKILL.md,true,,,',
+      'skill-a,a,"desc",bme,shared/path/SKILL.md,true,,,',
+    ]);
+
+    const map = loadSkillManifest(tmpDir);
+    assert.equal(map.get('shared/path/SKILL.md'), 'skill-a');
+    assert.equal(
+      warnings.filter((w) => /duplicate source path/i.test(w)).length,
+      0,
+      'an identical repeated row should not warn'
+    );
+  });
+
+  it('does not warn on a manifest with no duplicates', async () => {
+    await write([
+      'canonicalId,name,description,module,path,install_to_bmad,tier,intent,dependencies',
+      'skill-a,a,"desc",bme,a/SKILL.md,true,,,',
+      'skill-b,b,"desc",bme,b/SKILL.md,true,,,',
+    ]);
+
+    loadSkillManifest(tmpDir);
+    assert.equal(
+      warnings.filter((w) => /duplicate source path/i.test(w)).length,
+      0,
+      'clean manifest must not produce a duplicate warning'
+    );
+  });
+});
+
 describe('ag-7-2: checkModuleSkillWrappers — healthy install', () => {
   let tmpDir;
 
