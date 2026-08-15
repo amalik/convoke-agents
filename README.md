@@ -232,7 +232,7 @@ Three capabilities:
 Take any BMAD skill and export it to a standalone, LLM-agnostic format that works outside Claude Code:
 
 ```bash
-npx convoke-export bmad-brainstorming --output ./exported
+npx -p convoke-agents convoke-export bmad-brainstorming --output ./exported
 ```
 
 The export engine transforms skill workflows into self-contained instruction documents, then generates platform-specific adapter files:
@@ -287,24 +287,24 @@ The [Enhance Guide](_bmad/bme/_enhance/guides/ENHANCE-GUIDE.md) documents the co
 
 ```bash
 npm install convoke-agents@latest
-npx convoke-install
+npx -p convoke-agents convoke-install
 ```
 
 **Vortex only:**
 
 ```bash
 npm install convoke-agents@latest
-npx convoke-install-vortex
+npx -p convoke-agents convoke-install-vortex
 ```
 
 **Gyre only:**
 
 ```bash
 npm install convoke-agents@latest
-npx convoke-install-gyre
+npx -p convoke-agents convoke-install-gyre
 ```
 
-Something not working? Run `npx convoke-doctor` or check the [FAQ](docs/faq.md).
+Something not working? Run `npx -p convoke-agents convoke-doctor` or check the [FAQ](docs/faq.md).
 
 ### Personalize
 
@@ -418,10 +418,10 @@ Teams and Skills are peer module types — both installable, both independent. C
 
 ```bash
 npm install convoke-agents@latest         # Get the latest package
-npx convoke-version                       # Check current version
-npx convoke-update --dry-run              # Preview changes
-npx convoke-update                        # Apply update (auto-backup)
-npx convoke-doctor                        # Diagnose issues
+npx -p convoke-agents convoke-version                       # Check current version
+npx -p convoke-agents convoke-update --dry-run              # Preview changes
+npx -p convoke-agents convoke-update                        # Apply update (auto-backup)
+npx -p convoke-agents convoke-doctor                        # Diagnose issues
 ```
 
 Your data in `_bmad-output/` and `.gyre/` is never touched. Automatic backups are created before every update.

@@ -10,7 +10,7 @@
 
 ## Phase 1 — Discovery
 
-Run `convoke-doctor` to see whether any unregistered custom skills already exist:
+Run `npx -p convoke-agents convoke-doctor` to see whether any unregistered custom skills already exist:
 
 ```bash
 node scripts/convoke-doctor.js

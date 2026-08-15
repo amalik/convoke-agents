@@ -118,7 +118,7 @@ Display guidance:
 >
 > 1. **Review generated files** — Check agent personas, workflow steps, and contract schemas
 > 2. **Fill in domain content** — The factory created structural skeletons; add your domain expertise
-> 3. **Run `convoke-doctor`** — Verify the team passes framework-level validation
+> 3. **Run `npx -p convoke-agents convoke-doctor`** — Verify the team passes framework-level validation
 > 4. **Test with a real workflow** — Invoke one of your agents and run through a workflow
 > 5. **Iterate** — Use the factory's Add Agent (Phase 3) to extend your team later
 >

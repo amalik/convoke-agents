@@ -65,7 +65,7 @@ Verify that `_bmad/_config/taxonomy.yaml` exists. If it does NOT exist, display:
 
 > 🚨 **Taxonomy missing**
 >
-> The artifact governance taxonomy file is not yet bootstrapped. The portfolio engine requires it to attribute artifacts to initiatives. Run `bmad-migrate-artifacts` (or `convoke-update`) to create it.
+> The artifact governance taxonomy file is not yet bootstrapped. The portfolio engine requires it to attribute artifacts to initiatives. Run `bmad-migrate-artifacts` (or `npx -p convoke-agents convoke-update`) to create it.
 >
 > Once the taxonomy exists, run this skill again.
 

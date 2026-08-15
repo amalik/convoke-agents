@@ -33,15 +33,15 @@ Read Isla's agent file to activate her. This works in any environment:
 
 **Claude Code:**
 ```
-Read the file at _bmad/bme/_vortex/agents/discovery-empathy-expert.md
+Read the file at _bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md
 ```
 
 **Terminal:**
 ```bash
-cat _bmad/bme/_vortex/agents/discovery-empathy-expert.md
+cat _bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md
 ```
 
-**Claude.ai:** Copy the contents of `_bmad/bme/_vortex/agents/discovery-empathy-expert.md` and paste into the chat.
+**Claude.ai:** Copy the contents of `_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md` and paste into the chat.
 
 ---
 
@@ -168,14 +168,14 @@ Select **[CH] Chat** to discuss:
 
 **How to fix:**
 1. Check if `_bmad/bme/_vortex/config.yaml` exists
-2. If missing: `npx convoke-install-vortex`
+2. If missing: `npx -p convoke-agents convoke-install-vortex`
 
 ### Error: "Cannot load discovery workflow"
 
 **How to fix:**
 1. Check workflow files exist in `_bmad/bme/_vortex/workflows/`
-2. Run `npx convoke-doctor` to diagnose
-3. If missing: `npx convoke-install-vortex`
+2. Run `npx -p convoke-agents convoke-doctor` to diagnose
+3. If missing: `npx -p convoke-agents convoke-install-vortex`
 
 ---
 
