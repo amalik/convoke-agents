@@ -371,7 +371,7 @@ describe('fresh-install health (I137)', () => {
       const referenced = new Set();
       for (const file of shippedScripts()) {
         const src = stripComments(fs.readFileSync(file, 'utf8'));
-        for (const m of src.matchAll(/npx -p convoke-agents ([a-z0-9-]+)/g)) referenced.add(m[1]);
+        for (const m of src.matchAll(/npx -p convoke-agents(?:@(?:\$\{[^}]*\}|[\w.+-]+))? ([a-z0-9-]+)/g)) referenced.add(m[1]);
       }
       assert.ok(referenced.size > 0, 'no npx remediations found — this test would pass vacuously');
       const undeclared = [...referenced].filter((b) => !pkg.bin[b]);

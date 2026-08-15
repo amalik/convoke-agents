@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
+const PKG_VERSION = require('../../package.json').version;
 
 const {
   checkBmmDependencies,
@@ -68,7 +69,7 @@ describe('checkBmmDependencies — AC5 CSV-absent path', () => {
     // I137: previously asserted `node scripts/audit/audit-bmm-dependencies.js` — a path that does
     // NOT exist in a user's project, so this test was PINNING unrunnable advice. The script is now
     // exposed as the `convoke-audit-bmm-deps` bin and invoked via npx, like every other remediation.
-    assert.match(results[0].fix, /npx -p convoke-agents@[\w.-]+ convoke-audit-bmm-deps/);
+    assert.match(results[0].fix, new RegExp(`npx -p convoke-agents@${PKG_VERSION.replace(/[.+]/g, '\\$&')} convoke-audit-bmm-deps`));
     // AC3 fail-soft: no `error` field used for governance.
     assert.equal(results[0].error, undefined);
   });
@@ -165,7 +166,7 @@ describe('checkBmmDependencies — AC3/AC4 unregistered-custom-skill', () => {
     // I137: previously asserted `node scripts/audit/audit-bmm-dependencies.js` — a path that does
     // NOT exist in a user's project, so this test was PINNING unrunnable advice. The script is now
     // exposed as the `convoke-audit-bmm-deps` bin and invoked via npx, like every other remediation.
-    assert.match(unreg.fix, /\n {2}npx -p convoke-agents@[\w.-]+ convoke-audit-bmm-deps/);
+    assert.match(unreg.fix, new RegExp(`\\n {2}npx -p convoke-agents@${PKG_VERSION.replace(/[.+]/g, '\\$&')} convoke-audit-bmm-deps`));
   });
 });
 

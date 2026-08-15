@@ -244,7 +244,7 @@ async function main() {
     case 'no-project':
       console.log(chalk.red('Not in a Convoke project. Could not find _bmad/ directory.'));
       console.log('');
-      console.log('Run: ' + chalk.cyan('npx -p convoke-agents convoke-install'));
+      console.log('Run: ' + chalk.cyan(`npx -p convoke-agents@${getPackageVersion()} convoke-install`));
       console.log('');
       process.exit(1);
       break;
@@ -252,7 +252,7 @@ async function main() {
     case 'fresh':
       console.log(chalk.yellow('No previous installation detected.'));
       console.log('');
-      console.log('Run: ' + chalk.cyan('npx -p convoke-agents convoke-install'));
+      console.log('Run: ' + chalk.cyan(`npx -p convoke-agents@${getPackageVersion()} convoke-install`));
       console.log('');
       process.exit(0);
       break;
@@ -260,7 +260,7 @@ async function main() {
     case 'broken':
       console.log(chalk.red('Installation appears incomplete or corrupted.'));
       console.log('');
-      console.log('Recommend running: ' + chalk.cyan('npx -p convoke-agents convoke-install'));
+      console.log('Recommend running: ' + chalk.cyan(`npx -p convoke-agents@${getPackageVersion()} convoke-install`));
       console.log('');
       process.exit(1);
       break;
@@ -268,7 +268,7 @@ async function main() {
     case 'no-version':
       console.log(chalk.yellow('Could not detect current version.'));
       console.log('');
-      console.log('Run: ' + chalk.cyan('npx -p convoke-agents convoke-install'));
+      console.log('Run: ' + chalk.cyan(`npx -p convoke-agents@${getPackageVersion()} convoke-install`));
       console.log('');
       process.exit(0);
       break;
@@ -276,8 +276,13 @@ async function main() {
     case 'up-to-date':
       console.log(chalk.green(`✓ Already up to date! (v${assessment.currentVersion})`));
       console.log('');
+      // Deliberately names no dist-tag. `@latest` is wrong for anyone on a prerelease
+      // (it resolves to the last stable, which is behind them), and `@rc` is a no-op —
+      // this branch only fires when the operator is already at the version rc points to.
+      // Clearing the cache is the remedy that actually matches the diagnosis.
       console.log(chalk.gray('If you expected a newer version, npx may be serving a cached copy.'));
-      console.log(chalk.gray('Run: ') + chalk.cyan('npx -p convoke-agents@latest convoke-update'));
+      console.log(chalk.gray('Clear it and retry: ') + chalk.cyan('npm cache clean --force'));
+      console.log(chalk.gray('Then re-run with the version you want: ') + chalk.cyan('npx -p convoke-agents@<version> convoke-update'));
       console.log('');
       process.exit(0);
       break;
@@ -288,7 +293,13 @@ async function main() {
       console.log(`  Current version: ${assessment.currentVersion}`);
       console.log(`  Package version: ${assessment.targetVersion}`);
       console.log('');
-      console.log(chalk.gray('This usually means npx is serving a cached older package.'));
+      console.log(chalk.gray('This usually means npx is serving a cached older package,'));
+      console.log(chalk.gray('or an older Convoke is installed globally.'));
+      console.log(chalk.gray('Check for a shadowing global install: ') + chalk.cyan('npm ls -g --depth=0 convoke-agents'));
+      console.log('');
+      // Still names @latest — wrong on a prerelease channel. Tracked as BUG-9; naming the
+      // project's own version instead was tried and reverted (it may never have been
+      // published — ETARGET). Needs the T36 policy decision, not another guess.
       console.log(chalk.gray('Run: ') + chalk.cyan('npx -p convoke-agents@latest convoke-update'));
       console.log('');
       console.log(chalk.gray('If the issue persists, clear the cache and reinstall:'));

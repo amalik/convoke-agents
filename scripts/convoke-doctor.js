@@ -51,7 +51,7 @@ async function main() {
       name: 'Module discovery',
       passed: false,
       error: 'No modules found — expected config.yaml files in _bmad/bme/*/',
-      fix: 'Run: npx -p convoke-agents convoke-install'
+      fix: `Run: npx -p convoke-agents@${getPackageVersion()} convoke-install`
     });
     printResults(checks);
     process.exit(1);
@@ -148,6 +148,7 @@ function discoverModules(projectRoot) {
 }
 
 function checkProjectRoot(projectRoot) {
+  const pv = getPackageVersion();
   if (projectRoot) {
     return {
       name: 'Project root',
@@ -159,7 +160,7 @@ function checkProjectRoot(projectRoot) {
     name: 'Project root',
     passed: false,
     error: 'Could not find _bmad/ directory',
-    fix: 'Run this command from inside a Convoke project, or run: npx -p convoke-agents convoke-install'
+    fix: `Run this command from inside a Convoke project, or run: npx -p convoke-agents@${pv} convoke-install`
   };
 }
 
@@ -483,7 +484,7 @@ function checkModuleSkillWrappers(mod, projectRoot, manifestMap) {
       name: label,
       passed: false,
       error: failures.join('; '),
-      fix: 'Run: npx -p convoke-agents convoke-update (regenerates skill wrappers)'
+      fix: `Run: npx -p convoke-agents@${getPackageVersion()} convoke-update (regenerates skill wrappers)`
     };
   }
 
@@ -524,7 +525,7 @@ function checkAgentSkillWrappers(projectRoot, modules = []) {
       name: label,
       passed: false,
       error: failures.join('; '),
-      fix: 'Run: npx -p convoke-agents convoke-update (regenerates agent skill wrappers)'
+      fix: `Run: npx -p convoke-agents@${getPackageVersion()} convoke-update (regenerates agent skill wrappers)`
     };
   }
 
@@ -613,6 +614,11 @@ function checkVersionConsistency(projectRoot, modules) {
       name: 'Version consistency',
       passed: false,
       error: `Package: ${packageVersion}, ${mismatched.join(', ')}`,
+      // Pinned to the running build, which is by construction resolvable. Pinning to the
+      // higher of the two was tried and reverted: module versions come from on-disk YAML
+      // and may name a version that was never published (ETARGET). Resolving that — and
+      // the reverse-skew dead end it leaves — needs a registry check or fallback policy.
+      // Deferred to T36 rather than guessed at.
       fix: `Run: npx -p convoke-agents@${packageVersion} convoke-update`
     };
   }
@@ -969,7 +975,7 @@ function checkTaxonomy(projectRoot) {
       name: 'Taxonomy: file exists',
       passed: false,
       warning: 'taxonomy.yaml not found at _bmad/_config/taxonomy.yaml',
-      fix: 'Run: npx -p convoke-agents convoke-migrate-artifacts (or npx -p convoke-agents convoke-update) to create it'
+      fix: `Run: npx -p convoke-agents@${getPackageVersion()} convoke-migrate-artifacts (or npx -p convoke-agents@${getPackageVersion()} convoke-update) to create it`
     });
     return results;
   }

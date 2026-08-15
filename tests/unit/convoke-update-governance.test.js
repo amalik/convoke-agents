@@ -6,6 +6,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs-extra');
 const { spawn } = require('node:child_process');
+const PKG_VERSION = require('../../package.json').version;
 
 const {
   createTempDir,
@@ -244,13 +245,13 @@ describe('convoke-update governance gate (Story v63-2-3)', () => {
       // is absent. Check both: if warning surfaced, hint must follow.
       if (stdout.includes('governance warning(s) surfaced')) {
         assert.ok(
-          /Run `npx -p convoke-agents@[\w.-]+ convoke-doctor`/.test(stdout),
+          stdout.includes(`Run \`npx -p convoke-agents@${PKG_VERSION} convoke-doctor\``),
           `hint missing after governance warnings; got:\n${stdout}`,
         );
       } else {
         // All-clean — hint should NOT appear per AC5.
         assert.ok(
-          !/Run `npx -p convoke-agents@[\w.-]+ convoke-doctor`/.test(stdout),
+          !/Run `npx -p convoke-agents(@[\w.-]+)? convoke-doctor`/.test(stdout),
           `hint must not appear on all-clean summary; got:\n${stdout}`,
         );
       }

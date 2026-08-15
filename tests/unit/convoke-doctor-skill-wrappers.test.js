@@ -14,6 +14,7 @@ const fs = require('fs-extra');
 const os = require('os');
 
 const { loadSkillManifest, checkModuleSkillWrappers } = require('../../scripts/convoke-doctor');
+const PKG_VERSION = require('../../package.json').version;
 
 const ARTIFACTS_MANIFEST_ROWS = [
   'canonicalId,name,description,module,path,install_to_bmad,tier,intent,dependencies',
@@ -214,7 +215,7 @@ describe('ag-7-2: checkModuleSkillWrappers — missing Artifacts wrapper', () =>
     assert.equal(result.passed, false);
     assert.match(result.error, /Missing skill wrapper for bmad-migrate-artifacts/);
     assert.match(result.error, /\.claude\/skills\/bmad-migrate-artifacts\/SKILL\.md/);
-    assert.equal(result.fix, 'Run: npx -p convoke-agents convoke-update (regenerates skill wrappers)');
+    assert.equal(result.fix, `Run: npx -p convoke-agents@${PKG_VERSION} convoke-update (regenerates skill wrappers)`);
   });
 });
 
