@@ -240,7 +240,9 @@ describe('mergeTaxonomy', () => {
       await mergeTaxonomy(dir);
 
       const files = await fs.readdir(path.join(dir, '_bmad', '_config'));
-      const salvaged = files.filter((f) => f.includes('unreadable'));
+      // Renamed 'unreadable-' -> 'superseded-' 2026-08-15: the salvage now also covers a
+      // READABLE file whose shape the in-place path declines, so "unreadable" was no longer true.
+      const salvaged = files.filter((f) => f.includes('superseded'));
       assert.equal(salvaged.length, 1, `original was not preserved; files: ${files.join(', ')}`);
       const original = await fs.readFile(path.join(dir, '_bmad', '_config', salvaged[0]), 'utf8');
       assert.match(original, /my-precious/, 'the salvaged copy does not contain the operator data');
@@ -268,6 +270,86 @@ describe('mergeTaxonomy', () => {
         sizes.push((await fs.stat(file)).size);
       }
       assert.equal(sizes[1], sizes[2], `file is still growing across runs: ${sizes.join(' -> ')}`);
+    } finally {
+      await fs.remove(dir);
+    }
+  });
+
+  // ── Review 2026-08-15 (second round on this function) ────────────────────────────────
+  //
+  // The previous hardening introduced a WORSE failure than the one it fixed: for a readable file
+  // whose shape the in-place path declined (e.g. `user: mine` — a missing `-`), it fell back to
+  // reserialising from `existing`, which the normaliser had already reset. The operator's value
+  // was written out of existence with `merged:true`, no warning, no copy. The revision before it
+  // THREW there and the value survived. Loud failure -> silent data loss.
+
+  const SHAPE_CASES = {
+    'scalar user (missing dash)': 'initiatives:\n  platform: []\n  user: mine\nartifact_types: [prd]\naliases: {}\n',
+    'sequence at root': '- alpha\n- beta\n',
+    'scalar at root': 'just a string\n',
+    'empty file': '',
+    'comments only': '# only a comment\n',
+  };
+
+  for (const [label, content] of Object.entries(SHAPE_CASES)) {
+    it(`review: ${label} repairs without throwing`, async () => {
+      const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-tax-shape-'));
+      try {
+        await fs.ensureDir(path.join(dir, '_bmad', '_config'));
+        const file = path.join(dir, '_bmad', '_config', 'taxonomy.yaml');
+        await fs.writeFile(file, content, 'utf8');
+
+        await mergeTaxonomy(dir); // must not throw
+
+        const parsed = yaml.load(await fs.readFile(file, 'utf8'));
+        assert.ok(Array.isArray(parsed.initiatives.platform), 'file was not repaired to a usable shape');
+      } finally {
+        await fs.remove(dir);
+      }
+    });
+  }
+
+  it('review: a wholesale rewrite preserves the original beside it', async () => {
+    // The salvage was wired only to the js-yaml-failure path, not to the shape-decline path —
+    // which is the one that actually deletes READABLE operator data.
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-tax-salv-'));
+    try {
+      await fs.ensureDir(path.join(dir, '_bmad', '_config'));
+      const file = path.join(dir, '_bmad', '_config', 'taxonomy.yaml');
+      await fs.writeFile(file, 'initiatives:\n  platform: []\n  user: my-precious\nartifact_types: [prd]\naliases: {}\n', 'utf8');
+
+      await mergeTaxonomy(dir);
+
+      const files = await fs.readdir(path.join(dir, '_bmad', '_config'));
+      const salvaged = files.filter((f) => f.includes('superseded'));
+      assert.equal(salvaged.length, 1, `original not preserved; files: ${files.join(', ')}`);
+      const original = await fs.readFile(path.join(dir, '_bmad', '_config', salvaged[0]), 'utf8');
+      assert.match(original, /my-precious/, 'the salvaged copy lost the operator value');
+    } finally {
+      await fs.remove(dir);
+    }
+  });
+
+  it('review: two rewrites on the same day do not overwrite the first salvage', async () => {
+    // The salvage name was date-only with overwrite:true, so the second run destroyed the only
+    // surviving copy of the first original.
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-tax-coll-'));
+    try {
+      await fs.ensureDir(path.join(dir, '_bmad', '_config'));
+      const file = path.join(dir, '_bmad', '_config', 'taxonomy.yaml');
+      await fs.writeFile(file, 'initiatives:\n  platform: []\n  user: ORIGINAL-A\naliases: {}\n', 'utf8');
+      await mergeTaxonomy(dir);
+      await fs.writeFile(file, 'initiatives:\n  platform: []\n  user: SECOND-B\naliases: {}\n', 'utf8');
+      await mergeTaxonomy(dir);
+
+      const files = await fs.readdir(path.join(dir, '_bmad', '_config'));
+      const salvaged = files.filter((f) => f.includes('superseded'));
+      assert.equal(salvaged.length, 2, `expected 2 distinct salvages, got: ${salvaged.join(', ')}`);
+      const all = (
+        await Promise.all(salvaged.map((f) => fs.readFile(path.join(dir, '_bmad', '_config', f), 'utf8')))
+      ).join('\n');
+      assert.match(all, /ORIGINAL-A/, 'the first original was destroyed by the second run');
+      assert.match(all, /SECOND-B/);
     } finally {
       await fs.remove(dir);
     }
