@@ -11,6 +11,14 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege for GITHUB_TOKEN. Without this, every job inherits the
+# repository default scope, which is write-all on repos created before the
+# read-only default shipped. Nothing here needs more than checkout: `publish`
+# declares its own `id-token: write` for npm provenance and overrides this.
+# CodeQL actions/missing-workflow-permissions, issue #7.
+permissions:
+  contents: read
+
 defaults:
   run:
     shell: bash -eo pipefail {0}
