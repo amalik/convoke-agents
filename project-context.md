@@ -111,8 +111,11 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 - **Round 2** is triggered only if Round 1 produces any HIGH-severity finding.
 - **Round 3** is triggered only if Round 2 introduces structural changes (new files, renamed functions, altered control flow) — not for wording fixes, comment edits, or cosmetic patches.
 - **No Round 4.** If Round 3 still has issues, defer remaining findings to the backlog (via `bmad-enhance-initiatives-backlog` Triage mode) rather than running another review pass.
+- **The reviewed set must equal the committed set.** A round only covers the files that were in the diff handed to it. Before emitting a commit plan, assert that the set of files the review saw is the same set the plan stages. If they differ, either re-review the delta or say so explicitly in the commit Description — never let the earlier round's verdict silently extend to text it never saw.
 
 **Why.** Story 7.3 went through 3 unbounded review rounds producing 30 findings. The unbounded "keep reviewing until clean" pattern wastes time and generates diminishing-return findings. Retrospective: ag-epic-7-retro-2026-04-10, Action Item #3.
+
+**Why the set-equality clause.** Twice in the 2026-08-15 issue #7 / BUG-12 session, a review diff was built from a hand-typed file list, work continued, and the committed changeset ended up larger than the reviewed one — both times because a *test file* was written after the review was already in flight. The second instance shipped 89 unreviewed lines in commit `d9e15713` under a commit message reading "Round 1: no HIGH; 2 MEDIUM + 5 LOW applied or logged", which reads as covering what shipped. Reviewing that gap found a **HIGH**: the `/g` flag was unpinned on both escapers, so a non-global `replace` — the canonical form of the `js/incomplete-sanitization` class the commit existed to close — passed the suite while leaving every occurrence after the first unescaped. The gap was in tests written *in response to* a review finding, which is the easiest place to lose coverage and the least likely to be re-checked.
 
 **How to apply.**
 - **Never wait for the operator to ask.** The failure mode this rule now guards against is not "too many rounds" (the original concern) but "zero rounds" — Fast Lane work shipping unreviewed because the operator was tired and nobody else was watching. If you are preparing a commit plan and no Round 1 has run on the changes it covers, run it first, or state explicitly in the plan that it was skipped and why.
@@ -120,6 +123,16 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 - If you're manually re-running a review, check whether the stopping criteria are met before proceeding.
 - If Round 2 produces only LOW/MEDIUM findings (no HIGH), stop — do not trigger Round 3.
 - Remaining findings after the final allowed round go to the initiatives backlog as deferred items, not into another review cycle.
+- **Derive the review diff from git, never from memory.** Build it with `git diff HEAD --name-only` (or the equivalent for the chosen baseline) rather than typing the paths you believe you touched. Then, immediately before emitting the commit plan, run the equality check:
+
+  ```bash
+  diff <(grep '^diff --git' review.diff | sed 's|^diff --git a/||; s| b/.*||' | sort) \
+       <(git diff HEAD --name-only | sort)
+  ```
+
+  Empty output means the round covered everything the plan stages. Any output is the delta you must re-review or disclose. Costs one command; both 2026-08-15 gaps would have been caught by it.
+- **Applying a finding is not a reviewed change.** Remediation written after a round is unreviewed text by default. Small in-place fixes to what the round already saw are fine; *new* code or *new* tests are not, however directly they answer a finding. Note that the bound still applies — if no HIGH was found, this does not license another round; disclose in the Description instead.
+- **A verification that cannot fail is worse than none.** Both 2026-08-15 gaps had a sibling failure: a check that reported success without doing its work (a mutation harness whose `perl`/shell escaping silently no-op'd, and a test asserting the negation of its own function's exit condition). When a check is the evidence for a claim, prove it can fail — assert the mutation applied, or show the test red against the pre-fix code — before citing it.
 
 ---
 
