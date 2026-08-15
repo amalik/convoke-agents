@@ -353,14 +353,40 @@ function loadSkillManifest(projectRoot) {
       return map;
     }
 
-    // Parse data rows
+    // Parse data rows.
+    //
+    // Backlog I40: a duplicate `path` used to overwrite the earlier entry with no signal at all,
+    // so two manifest rows claiming the same source file resolved to whichever came last and the
+    // operator never learned the manifest was ambiguous. Not currently live — the shipped
+    // manifest has 106 rows and 106 distinct paths — but demonstrably reachable: the I139 seeding
+    // bug (fixed 2026-08-14) produced exactly this shape, two rows sharing
+    // `_bmad/bme/_enhance/workflows/initiatives-backlog/SKILL.md`.
+    //
+    // Last-writer-wins is PRESERVED deliberately. Changing which row wins is a behaviour change
+    // with no evidence behind it; the defect named in the backlog row is the silence, not the
+    // precedence. So: same resolution, but the operator is told.
+    const duplicatePaths = [];
     for (let i = 1; i < lines.length; i++) {
       const fields = parseCsvRow(lines[i]);
       if (fields.length <= Math.max(canonicalIdIdx, pathIdx)) continue;
       const canonicalId = fields[canonicalIdIdx];
       const sourcePath = fields[pathIdx];
       if (canonicalId && sourcePath) {
+        if (map.has(sourcePath) && map.get(sourcePath) !== canonicalId) {
+          duplicatePaths.push(`${sourcePath} (${map.get(sourcePath)} → ${canonicalId})`);
+        }
         map.set(sourcePath, canonicalId);
+      }
+    }
+    if (duplicatePaths.length > 0) {
+      console.warn(
+        chalk.yellow(
+          `  ⚠ skill-manifest.csv has ${duplicatePaths.length} duplicate source path(s); the last row wins:`
+        )
+      );
+      for (const d of duplicatePaths.slice(0, 5)) console.warn(chalk.yellow(`      ${d}`));
+      if (duplicatePaths.length > 5) {
+        console.warn(chalk.yellow(`      ... and ${duplicatePaths.length - 5} more`));
       }
     }
   } catch (err) {
