@@ -30,7 +30,7 @@ Satisfies AC1. Authored at release time per the Task 0.5 execution precondition.
 - *Rejected — tarball / `npm pack` handoff.* Works mechanically but bypasses the distribution channel under test, so a registry-specific failure (tag resolution, packaged-files omission, postinstall behaviour on a clean machine) would go undetected. That failure class is exactly what N=1 exists to catch.
 - *Rejected — install from git.* Same objection, plus it requires toolchain the validator profile does not assume.
 
-**Note the overlap with T25** (install-tarball smoke, Fast Lane, RICE 8.0): a human installing a published rc on a clean machine *is* the smoke test, run by a person. If the rc install surfaces a packaging defect, log it against T25 as well as this story.
+**Relationship to T25** (install-tarball smoke — **shipped 2026-08-14** as the `fresh-install` CI job in `.github/workflows/ci.yml`, gating `publish`): T25 packs the tree and installs *that tarball* into a throwaway project on every run, so packaging defects of the I135 class are already caught automatically. The N=1 session is the complement T25 cannot provide — a human reading the output. If the validator hits a packaging defect anyway, that is a T25 coverage gap and should be logged as one.
 
 ---
 
@@ -57,6 +57,10 @@ Adjust tone to the relationship; keep the three load-bearing pieces — **~1 hou
 ## Session setup checklist (confirm before the session)
 
 - [ ] 4.0 candidate reachable on the registry (prerequisite above) — **hard gate**.
+- [ ] **Validator is on the `rc`, and it is the copy that will actually run.** Confirmed 2026-08-15 that this is the single easiest way to lose a session. Have them run, in their project directory:
+      `npm install convoke-agents@rc && npx -p convoke-agents@rc convoke-version`
+      The reported package version **must** read `4.0.0-rc.1`. If it reports anything else, stop and resolve before the session — a stale global install (`npm ls -g --depth=0 convoke-agents`) will shadow the local one whenever a bare `convoke-update` is typed, and the resulting `⚠ DOWNGRADE DETECTED` error's own remediation points at `@latest`, which resolves to 3.3.0 and can never reach the candidate.
+- [ ] **Always invoke with `-p convoke-agents@rc`** during the session, never a bare `convoke-update`. The published migration guide says `@latest`, which is correct after ship and wrong for rc validation.
 - [ ] Validator's machine: Node ≥ 18, npm ≥ 9. Have them run `node -v && npm -v` in advance so a version problem doesn't burn session time.
 - [ ] Validator picks their starting state and says which: **fresh `npm install`** or an **existing Convoke 3.x install**. Both are in scope; record the choice.
 - [ ] Screen-share arranged, and confirm they're comfortable being observed and thinking aloud.
