@@ -20,7 +20,9 @@ Satisfies AC1. Authored at release time per the Task 0.5 execution precondition.
 
 ## ✅ Prerequisite — the 4.0 candidate must be reachable before recruiting
 
-**RESOLVED 2026-08-15.** `4.0.0-rc.1` published under the `rc` dist-tag. Verified: `dist-tags: { latest: 3.3.0, rc: 4.0.0-rc.1 }` — `convoke-agents@latest` still resolves to 3.3.0, so no existing user is exposed to the candidate; the validator installs with `npm install convoke-agents@rc`.
+**RESOLVED 2026-08-15.** The candidate is published under the `rc` dist-tag; `convoke-agents@latest` still resolves to 3.3.0, so no existing user is exposed. The validator installs with `npm install convoke-agents@rc`.
+
+**⚠ Republish after any fix.** `4.0.0-rc.1` was published at 08:51 and BUG-10 was fixed at 14:08 the same day, so rc.1 shipped *without* the fixes for BUG-10 (bare-command guidance) and BUG-11 (docs). A run against rc.1 reproduces both defects and proves nothing about the current tree. **Before recruiting, confirm the `rc` tag points at a build that contains every fix you expect the validator to exercise** — `npm view convoke-agents dist-tags` then verify the version, not just that a tag exists.
 
 *Original finding, retained because it is a real gap in the story's gate:* `package.json` read `4.0.0-rc.1` while npm published only to `3.3.0`. A validator following Decision 4 would have installed `@latest`, received 3.3.0, and `convoke-update` would have had nothing to do. **Task 0.3 verifies the version *string*, never that the candidate is *obtainable*** — worth fixing in the story's precondition list before this pattern repeats at 4.1.
 
@@ -59,7 +61,7 @@ Adjust tone to the relationship; keep the three load-bearing pieces — **~1 hou
 - [ ] 4.0 candidate reachable on the registry (prerequisite above) — **hard gate**.
 - [ ] **Validator is on the `rc`, and it is the copy that will actually run.** Confirmed 2026-08-15 that this is the single easiest way to lose a session. Have them run, in their project directory:
       `npm install convoke-agents@rc && npx -p convoke-agents@rc convoke-version`
-      The reported package version **must** read `4.0.0-rc.1`. If it reports anything else, stop and resolve before the session — a stale global install (`npm ls -g --depth=0 convoke-agents`) will shadow the local one whenever a bare `convoke-update` is typed, and the resulting `⚠ DOWNGRADE DETECTED` error's own remediation points at `@latest`, which resolves to 3.3.0 and can never reach the candidate.
+      The reported package version **must** match the rc you most recently published (`npm view convoke-agents dist-tags` to check). If it reports anything else — in particular an older rc — stop and resolve before the session. Two distinct causes produce this: a stale **global** install (`npm ls -g --depth=0 convoke-agents`) shadows the local copy whenever a bare command is typed, and its `⚠ DOWNGRADE DETECTED` remediation points at `@latest`, which resolves to 3.3.0 and can never reach the candidate; or the `rc` tag itself points at an **older build** that predates a fix you intended to test.
 - [ ] **Always invoke with `-p convoke-agents@rc`** during the session, never a bare `convoke-update`. The published migration guide says `@latest`, which is correct after ship and wrong for rc validation.
 - [ ] Validator's machine: Node ≥ 18, npm ≥ 9. Have them run `node -v && npm -v` in advance so a version problem doesn't burn session time.
 - [ ] Validator picks their starting state and says which: **fresh `npm install`** or an **existing Convoke 3.x install**. Both are in scope; record the choice.
