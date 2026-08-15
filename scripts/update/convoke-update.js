@@ -112,7 +112,7 @@ function _runPostUpgradeGate(projectRoot) {
     try {
       console.log('');
       console.log(chalk.yellow(`  ⚠ Governance gate: scan failed — ${(err && err.message) || String(err)}`));
-      console.log(chalk.gray('    Run: npx -p convoke-agents convoke-audit-bmm-deps --dry-run'));
+      console.log(chalk.gray(`    Run: npx -p convoke-agents@${getPackageVersion()} convoke-audit-bmm-deps --dry-run`));
       console.log('');
     } catch (_renderErr) {
       // Even the warning-render failed (stdout closed?). Nothing sensible we
@@ -137,7 +137,7 @@ function _printPostUpgradeGate(findings) {
   if (!Array.isArray(findings)) {
     console.log('');
     console.log(chalk.yellow(`  ⚠ Governance gate: contract drift — findings was ${findings === null ? 'null' : typeof findings}, expected array`));
-    console.log(chalk.gray('    Run: npx -p convoke-agents convoke-audit-bmm-deps --dry-run'));
+    console.log(chalk.gray(`    Run: npx -p convoke-agents@${getPackageVersion()} convoke-audit-bmm-deps --dry-run`));
     console.log('');
     return;
   }
