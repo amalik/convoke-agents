@@ -183,6 +183,96 @@ describe('mergeTaxonomy', () => {
     }
   });
 
+  // ── Review 2026-08-15: the I140 rewrite regressed on operator-plausible YAML ──────────
+  //
+  // Mutating a parsed Document assumed every key it touched resolved to a collection. `has`/
+  // `hasIn` return TRUE for a key holding null or a scalar, so the repair branch was skipped and
+  // `.toJSON()` was called on a Scalar. Five shapes threw that the previous `yaml.dump(existing)`
+  // path handled — js-yaml normalisation repaired them. The throw is caught by
+  // refreshInstallation, so an install "succeeds" while the taxonomy is never merged again.
+
+  const MALFORMED = {
+    'user held null': 'initiatives:\n  platform: [vortex]\n  user:\nartifact_types: [prd]\naliases: {}\n',
+    'platform a scalar': 'initiatives:\n  platform: vortex\n  user: [keep-me]\nartifact_types: [prd]\naliases: {}\n',
+    'artifact_types null': 'initiatives:\n  platform: [vortex]\n  user: [keep-me]\nartifact_types:\naliases: {}\n',
+    'initiatives null': 'initiatives:\nartifact_types: [prd]\naliases: {}\n',
+    'aliases a list': 'initiatives:\n  platform: [vortex]\n  user: [keep-me]\nartifact_types: [prd]\naliases:\n  - a\n',
+  };
+
+  for (const [label, content] of Object.entries(MALFORMED)) {
+    it(`I140 review: does not throw when ${label}`, async () => {
+      const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-tax-mal-'));
+      try {
+        await fs.ensureDir(path.join(dir, '_bmad', '_config'));
+        const file = path.join(dir, '_bmad', '_config', 'taxonomy.yaml');
+        await fs.writeFile(file, content, 'utf8');
+
+        await mergeTaxonomy(dir); // must not throw
+        const parsed = yaml.load(await fs.readFile(file, 'utf8'));
+        assert.ok(Array.isArray(parsed.initiatives.platform), 'platform was not repaired to a list');
+        assert.ok(Array.isArray(parsed.initiatives.user), 'user was not repaired to a list');
+        assert.ok(Array.isArray(parsed.artifact_types), 'artifact_types was not repaired to a list');
+        assert.equal(typeof parsed.aliases, 'object', 'aliases was not repaired to a map');
+        if (content.includes('keep-me')) {
+          assert.ok(parsed.initiatives.user.includes('keep-me'), 'operator entry was dropped during repair');
+        }
+      } finally {
+        await fs.remove(dir);
+      }
+    });
+  }
+
+  it('I140 review: an unreadable taxonomy.yaml is preserved, not silently overwritten', async () => {
+    // js-yaml throws on an unknown local tag while YAML.parseDocument reports no errors, so
+    // "is this file OK?" must not be re-derived from the more permissive parser. The rewrite
+    // discards operator content, so the original is salvaged beside it first
+    // (`path-safety-for-destructive-ops`).
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-tax-bad-'));
+    try {
+      await fs.ensureDir(path.join(dir, '_bmad', '_config'));
+      const file = path.join(dir, '_bmad', '_config', 'taxonomy.yaml');
+      await fs.writeFile(
+        file,
+        'initiatives:\n  platform: [vortex]\n  user: [my-precious]\nartifact_types: [prd]\naliases: {}\ncustom: !mytag foo\n',
+        'utf8'
+      );
+
+      await mergeTaxonomy(dir);
+
+      const files = await fs.readdir(path.join(dir, '_bmad', '_config'));
+      const salvaged = files.filter((f) => f.includes('unreadable'));
+      assert.equal(salvaged.length, 1, `original was not preserved; files: ${files.join(', ')}`);
+      const original = await fs.readFile(path.join(dir, '_bmad', '_config', salvaged[0]), 'utf8');
+      assert.match(original, /my-precious/, 'the salvaged copy does not contain the operator data');
+    } finally {
+      await fs.remove(dir);
+    }
+  });
+
+  it('I140 review: an aliased user list does not grow the file on every run', async () => {
+    // `user: *p` aliasing platform made every platform id look promoted on every run while
+    // deleteIn removed nothing — measured 858 -> 1259 -> 1659 bytes across three runs.
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-tax-alias-'));
+    try {
+      await fs.ensureDir(path.join(dir, '_bmad', '_config'));
+      const file = path.join(dir, '_bmad', '_config', 'taxonomy.yaml');
+      await fs.writeFile(
+        file,
+        'initiatives:\n  platform: &p [vortex]\n  user: *p\nartifact_types: [prd]\naliases: {}\n',
+        'utf8'
+      );
+
+      const sizes = [];
+      for (let i = 0; i < 3; i++) {
+        await mergeTaxonomy(dir);
+        sizes.push((await fs.stat(file)).size);
+      }
+      assert.equal(sizes[1], sizes[2], `file is still growing across runs: ${sizes.join(' -> ')}`);
+    } finally {
+      await fs.remove(dir);
+    }
+  });
+
   it('is idempotent — running twice produces same result', async () => {
     const idempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-idem-'));
     await fs.ensureDir(path.join(idempDir, '_bmad'));
