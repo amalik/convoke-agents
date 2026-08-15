@@ -18,11 +18,13 @@ Satisfies AC1. Authored at release time per the Task 0.5 execution precondition.
 
 ---
 
-## ⛔ Prerequisite — the 4.0 candidate must be reachable before recruiting
+## ✅ Prerequisite — the 4.0 candidate must be reachable before recruiting
 
-**Blocking as of 2026-08-15.** `package.json` is `4.0.0-rc.1`, but npm publishes only up to `3.3.0` with `dist-tags: { latest: 3.3.0 }`. A validator following Decision 4 would install `convoke-agents@latest`, receive 3.3.0, and `convoke-update` would have nothing to do. Task 0.3 verifies the version *string*; it does not verify the candidate is *obtainable*.
+**RESOLVED 2026-08-15.** `4.0.0-rc.1` published under the `rc` dist-tag. Verified: `dist-tags: { latest: 3.3.0, rc: 4.0.0-rc.1 }` — `convoke-agents@latest` still resolves to 3.3.0, so no existing user is exposed to the candidate; the validator installs with `npm install convoke-agents@rc`.
 
-**Resolve before Task 1.2 (operator decision — publishing is outward-facing):**
+*Original finding, retained because it is a real gap in the story's gate:* `package.json` read `4.0.0-rc.1` while npm published only to `3.3.0`. A validator following Decision 4 would have installed `@latest`, received 3.3.0, and `convoke-update` would have had nothing to do. **Task 0.3 verifies the version *string*, never that the candidate is *obtainable*** — worth fixing in the story's precondition list before this pattern repeats at 4.1.
+
+**Options considered (operator decision — publishing is outward-facing):**
 
 - **Recommended — publish `4.0.0-rc.1` under a non-default dist-tag** (`npm publish --tag rc`). `latest` stays at 3.3.0, so no existing user is exposed to the candidate, and the validator installs with `npm install convoke-agents@rc`. This is the only option that exercises the real registry upgrade path, which is what FR40 is about.
 - *Rejected — tarball / `npm pack` handoff.* Works mechanically but bypasses the distribution channel under test, so a registry-specific failure (tag resolution, packaged-files omission, postinstall behaviour on a clean machine) would go undetected. That failure class is exactly what N=1 exists to catch.
@@ -60,6 +62,20 @@ Adjust tone to the relationship; keep the three load-bearing pieces — **~1 hou
 - [ ] Screen-share arranged, and confirm they're comfortable being observed and thinking aloud.
 - [ ] Operator has `v63-4-5-session-log.md` open and ready to fill in real time.
 - [ ] Confirm the ask again on the day: install → `convoke-update` → verify with `convoke-doctor` and/or run one or two Vortex agents. **Out of scope:** PF1 battery, CHANGELOG review, or opinions on Convoke as a product. This tests the *upgrade experience*, nothing else.
+
+---
+
+## Expected output — recognise, do not explain
+
+A dry run of the full path (`@3.3.0` install → `convoke-install` → upgrade to `@rc` → `convoke-update` → `convoke-doctor`) was executed on 2026-08-15 in an isolated directory. Result: migration applied (`3.3.x-to-4.0.0` + `refresh-installation`), backup written, `convoke-update` exit 0, `convoke-doctor` 27 checks passed with zero hard failures.
+
+Three things surface that are **not defects**. Recognise them so you don't break observe-silence decoding them live — and do **not** pre-explain them to the validator, since their reaction to each is exactly the data this session exists to collect.
+
+1. **`⚠ BMAD core not detected (package not in node_modules)`** — the first line of `convoke-update` output. This is `preflight-soft-warn` behaving as specified (stderr warning, exit 0 pass-through). It will fire for essentially every validator, because a bare npm project has no BMAD installed alongside.
+2. **`⚠ BMM dependencies: registry present — bmm-dependencies.csv not found`** — appears **twice**, once in the post-upgrade governance check and again in `convoke-doctor`, each time directing them to run a further command. Non-blocking.
+3. **The label in (2) contradicts its own message** — it reads "registry present" while reporting the registry is absent. A careful validator may flag this, and they would be correct. Pre-classified as **CONCERN**, not BLOCKER; log to the Fast Lane rather than halting the session.
+
+If the validator hits anything *outside* this list, that is genuine signal — capture it verbatim.
 
 ---
 
