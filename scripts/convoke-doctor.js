@@ -365,7 +365,11 @@ function loadSkillManifest(projectRoot) {
     // Last-writer-wins is PRESERVED deliberately. Changing which row wins is a behaviour change
     // with no evidence behind it; the defect named in the backlog row is the silence, not the
     // precedence. So: same resolution, but the operator is told.
-    const duplicatePaths = [];
+    // Keyed by path so N rows on ONE path report ONE duplicate, not N-1. The array form said
+    // "11 duplicate source path(s)" for 12 rows sharing a single path, and listed a transitive
+    // chain (id0 → id1, id1 → id2, ...) sending the operator looking for 11 distinct problems.
+    // (Review 2026-08-15.)
+    const duplicatePaths = new Map();
     for (let i = 1; i < lines.length; i++) {
       const fields = parseCsvRow(lines[i]);
       if (fields.length <= Math.max(canonicalIdIdx, pathIdx)) continue;
@@ -373,20 +377,26 @@ function loadSkillManifest(projectRoot) {
       const sourcePath = fields[pathIdx];
       if (canonicalId && sourcePath) {
         if (map.has(sourcePath) && map.get(sourcePath) !== canonicalId) {
-          duplicatePaths.push(`${sourcePath} (${map.get(sourcePath)} → ${canonicalId})`);
+          const seen = duplicatePaths.get(sourcePath) || [map.get(sourcePath)];
+          seen.push(canonicalId);
+          duplicatePaths.set(sourcePath, seen);
         }
         map.set(sourcePath, canonicalId);
       }
     }
-    if (duplicatePaths.length > 0) {
+    if (duplicatePaths.size > 0) {
       console.warn(
         chalk.yellow(
-          `  ⚠ skill-manifest.csv has ${duplicatePaths.length} duplicate source path(s); the last row wins:`
+          `  ⚠ skill-manifest.csv has ${duplicatePaths.size} duplicate source path(s); the last row wins:`
         )
       );
-      for (const d of duplicatePaths.slice(0, 5)) console.warn(chalk.yellow(`      ${d}`));
-      if (duplicatePaths.length > 5) {
-        console.warn(chalk.yellow(`      ... and ${duplicatePaths.length - 5} more`));
+      let shown = 0;
+      for (const [dupPath, ids] of duplicatePaths) {
+        if (shown++ >= 5) break;
+        console.warn(chalk.yellow(`      ${dupPath} (${ids.join(' → ')})`));
+      }
+      if (duplicatePaths.size > 5) {
+        console.warn(chalk.yellow(`      ... and ${duplicatePaths.size - 5} more`));
       }
     }
   } catch (err) {
