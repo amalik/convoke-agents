@@ -295,6 +295,57 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 
 ---
 
+## Rule: backlog-write-discipline
+
+**Statement.** The lifecycle backlog's three lanes are sorted **at all times** — §2.2 Bug, §2.3 Fast and §2.4 Initiative each ordered per §"Lane Ordering" in [`backlog-format-spec.md`](_bmad/bme/_enhance/workflows/initiatives-backlog/templates/backlog-format-spec.md): live rows by composite score descending, then untriaged rows, then closed rows. Any writer who adds a lane row, edits a score, or flips a status is responsible for restoring that order **in the same edit** — whether or not the write went through `bmad-enhance-initiatives-backlog`. A row left where it landed is an incomplete edit, not a deferred chore.
+
+**Why.** The sort rule is not new and was never missing. It is stated four times in the format spec (once per lane plus a global tiebreak) and implemented in all three workflow write paths. The lanes were unsorted anyway, because **the workflow is not what writes to the backlog.** Of the four lane rows added on 2026-08-15, zero arrived through Triage: `T37` came in `73528ea6` (a BUG-12 *fix* commit), `BUG-17` and `BUG-18` in `c841fcd2` (a BUG-16 *fix* commit), `BUG-19` in `cc28ee5c` (a Story 4.5 *docs* commit). Two of them arrived malformed — 10 columns against an 11-column table — because no validation ran on a hand-edit. Restating the rule inside the skill would have changed nothing; the obligation has to sit where the hand-editors read, which is this file.
+
+The cost is not tidiness. Position is the first thing a reader uses to pick up work, so an unsorted lane misdirects. Measured 2026-08-16: the Bug Lane held a **closed** row scoring 17.1 at position 4, directly above `BUG-15` (17.9, Open) — the highest-scoring open item in the project, reading as fifth-most-important. That is the same class of harm as `BUG-8` sitting `Open` for six days after shipping: the table asserted something false and everyone downstream believed it.
+
+**How to apply.**
+
+- **Adding a lane row by hand.** Compute the RICE composite first, then insert at its sorted position — not at the top, not at the bottom. Copy the column layout from an adjacent row in the same table rather than from memory; that is what `BUG-17`/`BUG-18` got wrong.
+- **Flipping a status to closed.** Move the row below the live block in the same edit. A closed row that keeps its priority position is the failure mode above.
+- **Rescoring.** Re-place the row; a changed score with an unchanged position is a silent lie.
+- **Before emitting a commit plan that touches the backlog.** Run the check below and paste its result into the commit Description. It costs one command.
+- **Reviewing a diff that adds or edits a lane row.** Verify the position. If the row was appended to the end of a table that is not sorted ascending, block and cite this rule.
+- **Prefer the workflow when it fits.** `bmad-enhance-initiatives-backlog` Triage mode logs the intake, cross-references it, sorts, and writes the Change Log entry. A hand-edit does none of that for free. Use it for anything larger than a single row.
+
+**The check.** Escape-aware (`\|` inside a cell is content, not a delimiter) and start-anchored on the status cell (`P21`'s Stage contains the word "shipped" mid-cell while the item is live — matching anywhere gives a false positive). Exits non-zero on violation:
+
+```python
+python3 - <<'EOF'
+import re, sys
+p='_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md'
+L=open(p).read().split('\n'); D=re.compile(r'(?<!\\)\|')
+C=re.compile(r'^(Done|Closed|Shipped|Superseded|Rescoped|Absorbed|Invalid)\b', re.I)
+shut=lambda s:(lambda c: c.startswith('✅') or bool(C.match(c)))(s.strip().lstrip('*').strip())
+a={k:next(i for i,l in enumerate(L) if l.startswith(k)) for k in ['### 2.2','### 2.3','### 2.4','### 2.5']}
+bad=0
+for nm,x,y in [('Bug',a['### 2.2'],a['### 2.3']),('Fast',a['### 2.3'],a['### 2.4']),('Init',a['### 2.4'],a['### 2.5'])]:
+    prev=None
+    for i,l in enumerate(L[x:y], start=x):
+        if not l.startswith('|') or set(l.replace('|','').strip())<=set('-: '): continue
+        f=[t.strip() for t in D.split(l)[1:-1]]
+        if len(f)<9 or f[0]=='ID': continue
+        try: s=float(f[6])
+        except ValueError: continue
+        cl=shut(f[8])
+        if prev:
+            if not cl and prev[2]: print(f'{nm}: {f[0]} (live {s}) below closed {prev[0]} [clause 3]'); bad+=1
+            elif not cl and not prev[2] and s>prev[1]+1e-9: print(f'{nm}: {f[0]} ({s}) below {prev[0]} ({prev[1]}) [clause 1]'); bad+=1
+        prev=(f[0],s,cl)
+print('LANE ORDER: OK' if not bad else f'LANE ORDER: {bad} violation(s)'); sys.exit(1 if bad else 0)
+EOF
+```
+
+**Scope exemptions.** §2.1 Intakes are append-only and carry no score — they are never sorted. §2.5 sub-tables are append-only receipts and are never sorted. Untriaged lane rows (`?` for R/I/C/E, `—` for Score) have no sort key and park between the live and closed blocks per clause 2.
+
+**Forward-looking note.** The check above is an interim mechanism, not the fix. It only runs when someone remembers to run it, which is the same failure this rule exists to correct. The durable version is a shape-and-order assertion wired into `docs:audit` or `convoke-doctor` so that any writer is caught — tracked in the lifecycle backlog, qualified from `IN-188`. When that ships, this section reduces to a pointer.
+
+---
+
 ## Rule: commit-preparation
 
 **Statement.** The operator commits through GitHub Desktop and does not hand-author commits. Therefore the agent MUST produce an explicit **commit plan** for any change it makes, and the operator executes that plan rather than improvising. A commit plan is an ordered list of commits; each entry carries exactly three things:
