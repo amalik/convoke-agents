@@ -618,7 +618,7 @@ function checkVersionConsistency(projectRoot, modules) {
       // higher of the two was tried and reverted: module versions come from on-disk YAML
       // and may name a version that was never published (ETARGET). Resolving that — and
       // the reverse-skew dead end it leaves — needs a registry check or fallback policy.
-      // Deferred to T36 rather than guessed at.
+      // Deferred to T38 rather than guessed at.
       fix: `Run: npx -p convoke-agents@${packageVersion} convoke-update`
     };
   }

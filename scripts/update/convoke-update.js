@@ -276,13 +276,16 @@ async function main() {
     case 'up-to-date':
       console.log(chalk.green(`✓ Already up to date! (v${assessment.currentVersion})`));
       console.log('');
-      // Deliberately names no dist-tag. `@latest` is wrong for anyone on a prerelease
-      // (it resolves to the last stable, which is behind them), and `@rc` is a no-op —
-      // this branch only fires when the operator is already at the version rc points to.
-      // Clearing the cache is the remedy that actually matches the diagnosis.
-      console.log(chalk.gray('If you expected a newer version, npx may be serving a cached copy.'));
-      console.log(chalk.gray('Clear it and retry: ') + chalk.cyan('npm cache clean --force'));
-      console.log(chalk.gray('Then re-run with the version you want: ') + chalk.cyan('npx -p convoke-agents@<version> convoke-update'));
+      // Names no dist-tag on purpose: `@latest` is wrong for anyone on a prerelease (it
+      // resolves to the last stable, which is behind them) and `@rc` is a no-op here —
+      // this branch only fires when the operator already has the version rc points to.
+      // Every line below is a runnable command mapped to a real cause. An earlier
+      // revision printed `@<version>` as a fill-in; `<` is a shell redirect, so pasting
+      // it verbatim never reached npm.
+      console.log(chalk.gray('If you expected a newer version, one of these is usually why:'));
+      console.log(chalk.gray('  An older Convoke installed globally: ') + chalk.cyan('npm ls -g --depth=0 convoke-agents'));
+      console.log(chalk.gray('  npx serving a cached copy:           ') + chalk.cyan('npm cache clean --force'));
+      console.log(chalk.gray('  Checking what is actually published: ') + chalk.cyan('npm view convoke-agents dist-tags'));
       console.log('');
       process.exit(0);
       break;
@@ -299,7 +302,7 @@ async function main() {
       console.log('');
       // Still names @latest — wrong on a prerelease channel. Tracked as BUG-9; naming the
       // project's own version instead was tried and reverted (it may never have been
-      // published — ETARGET). Needs the T36 policy decision, not another guess.
+      // published — ETARGET). Needs the T38 policy decision, not another guess.
       console.log(chalk.gray('Run: ') + chalk.cyan('npx -p convoke-agents@latest convoke-update'));
       console.log('');
       console.log(chalk.gray('If the issue persists, clear the cache and reinstall:'));

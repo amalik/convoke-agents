@@ -381,6 +381,39 @@ describe('fresh-install health (I137)', () => {
         `script(s) reference undeclared bin(s): ${undeclared.join(', ')}`
       );
     });
+
+    it('the two operator-facing scripts emit no unpinned invocation (BUG-16 regression guard)', () => {
+      // BUG-16: `npx -p convoke-agents <bin>` with no version resolves the `latest` dist-tag,
+      // which is NOT the build the operator is running whenever their project is not on latest.
+      // Observed live: a project on 4.0.0-rc.2 followed that advice, got 3.3.0, and was told
+      // seven agents were missing and to reinstall the module.
+      //
+      // The sibling test above deliberately accepts both forms — it checks bin DECLARATION, so
+      // its `@...` group is optional. Nothing therefore held the pinning invariant, and the
+      // defect regressed twice across three review rounds while the suite stayed green.
+      //
+      // Scope is these two files ONLY, and that is honest rather than cautious: ~22 floating
+      // sites remain elsewhere (postinstall.js, convoke-version.js, convoke-migrate.js,
+      // convoke-register-skill.js, index.js). Widening this to the whole tree is T38, which
+      // replaces the hand-written strings with one helper. Until then this locks the two
+      // scripts an operator actually reads during an upgrade.
+      const PINNED_FILES = [
+        'scripts/update/convoke-update.js',
+        'scripts/convoke-doctor.js',
+      ];
+      const FLOATING = /npx -p convoke-agents +[a-z][a-z0-9-]*/g;
+      const offenders = [];
+      for (const rel of PINNED_FILES) {
+        const src = stripComments(fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8'));
+        for (const m of src.matchAll(FLOATING)) offenders.push(`${rel}: ${m[0]}`);
+      }
+      assert.deepEqual(
+        offenders,
+        [],
+        `unpinned invocation(s) — these resolve the \`latest\` dist-tag, not the running build. ` +
+          `Use \`npx -p convoke-agents@\${getPackageVersion()} <bin>\`:\n  ${offenders.join('\n  ')}`
+      );
+    });
   });
 
   it('every declared bin exists, parses, and is a usable CLI', () => {
