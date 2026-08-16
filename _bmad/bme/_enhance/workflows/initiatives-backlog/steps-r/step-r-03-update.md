@@ -1,6 +1,6 @@
 ---
 name: 'step-r-03-update'
-description: 'Apply rescores in-place to lane tables, re-sort touched lanes, update Change Log, present completion summary'
+description: 'Apply rescores in-place to lane tables, re-sort every lane per Lane Ordering, update Change Log, present completion summary'
 outputFile: '{planning_artifacts}/convoke-note-initiative-lifecycle-backlog.md'
 templateFile: '{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/templates/backlog-format-spec.md'
 workflowFile: '{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/workflow.md'
@@ -10,7 +10,7 @@ workflowFile: '{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/w
 
 ## STEP GOAL:
 
-Validate backlog structure, apply rescored items in-place in their lane tables (§2.2 Bug / §2.3 Fast / §2.4 Initiative), re-sort only the lanes that were touched, update the Change Log, and present a completion summary before returning to the T/R/C menu.
+Validate backlog structure, apply rescored items in-place in their lane tables (§2.2 Bug / §2.3 Fast / §2.4 Initiative), re-sort **all three lanes** per §"Lane Ordering" in the format spec, update the Change Log, and present a completion summary before returning to the T/R/C menu.
 
 ## MANDATORY EXECUTION RULES (READ FIRST):
 
@@ -25,15 +25,15 @@ Validate backlog structure, apply rescored items in-place in their lane tables (
 - ✅ Preserve all existing content outside of the rescored rows and the sort order of their lanes
 - ✅ **Part 1 (Lifecycle Process) must not be modified** — it's semi-static documentation
 - ✅ **§2.1 Intakes and §2.5 Absorbed must not be modified** — Review does not touch them
-- ✅ Re-sort only the touched lanes — untouched lanes keep their current row order
+- ✅ Re-sort **all three lanes** per §"Lane Ordering" — the invariant is that lanes are sorted at all times, not only after the session that touched them
 
 ### Step-Specific Rules:
-- 🎯 Focus on validation, safe in-place updates, lane-specific re-sort, and completion reporting
+- 🎯 Focus on validation, safe in-place updates, whole-backlog re-sort, and completion reporting
 - 🚫 FORBIDDEN to delete or add rows (add = Triage, remove = Absorb via separate flow)
 - 🚫 FORBIDDEN to modify items that were confirmed or skipped
 - 🚫 FORBIDDEN to change items' lane / portfolio / stage / status (Review only rescores RICE)
 - 🚫 FORBIDDEN to modify Part 1, §2.1, or §2.5
-- 💬 Approach: validate first, update rescored rows in-place, re-sort touched lanes, summarize
+- 💬 Approach: validate first, update rescored rows in-place, re-sort every lane, summarize what moved
 
 ## EXECUTION PROTOCOLS:
 - 🎯 Follow the MANDATORY SEQUENCE exactly
@@ -57,8 +57,9 @@ Load `{outputFile}` and validate per format spec:
 1. **Frontmatter present**
 2. **Part 1 anchor exists** (not inspected for content)
 3. **Part 2 H3 anchors** — `### 2.1` through `### 2.5` in correct order
-4. **Lane table column counts** — Bug (10), Fast (9), Initiative (10)
-5. **Change Log section** — `## Change Log` H2 exists
+4. **Lane table column counts** — read each expected count from `{templateFile}` (§"Pre-Write Validation" item 4) rather than from numbers written here. The counts previously hardcoded in this step were stale for months, so this check failed on every run and was waved through with `[Y] proceed anyway` — a validation that can only fail teaches the operator to bypass it. Split on unescaped delimiters only (`\|` is cell content, not a boundary)
+5. **Lane ordering** — §2.2, §2.3 and §2.4 each satisfy §"Lane Ordering" in `{templateFile}`
+6. **Change Log section** — `## Change Log` H2 exists
 
 If ALL checks pass, proceed to step 3.
 
@@ -93,16 +94,17 @@ For each item in `rescored_items`:
 - Confirmed and skipped items remain completely unchanged — no modification, no note.
 - Do NOT modify rows not in `rescored_items`.
 
-### 4. Re-Sort Touched Lanes
+### 4. Re-Sort Every Lane
 
-For each lane that had at least one rescored item:
+For **all three lanes** (§2.2, §2.3, §2.4) — not only the ones this session rescored:
 
 1. Collect all rows in that lane's table.
-2. Sort by composite RICE score **descending**.
-3. Tiebreak: (1) Confidence higher first, (2) insertion order newer first.
-4. Rewrite the lane's table body with the sorted rows.
+2. Order them per §"Lane Ordering" in `{templateFile}`: live rows by score descending, then untriaged rows, then closed rows; supersession pairs move as one unit.
+3. Tiebreak within clause 1: (1) Confidence higher first, (2) insertion order newer first.
+4. Rewrite the lane's table body with the ordered rows.
+5. **Report what moved** — name each relocated row by ID, score, and old→new position in the completion summary. Say when a row moved because it is closed, since that usually means a status was flipped without the lane being re-sorted.
 
-**Do NOT re-sort lanes that were not touched** — preserve their current order. This keeps `git diff` minimal for lanes the session didn't review.
+**This step previously re-sorted only the touched lanes**, to keep `git diff` minimal. That was the wrong trade. The lanes this session did not touch are the *likelier* place to find drift, because the dominant write path is hand-edits made outside this workflow during unrelated work — so a lane nobody reviewed is a lane nobody sorted. A quiet diff on an unsorted lane preserves a false priority order, and the position is what readers act on. Accept the diff.
 
 ### 5. Add Change Log Entry
 
@@ -133,7 +135,9 @@ After successful write, display:
 >
 > **Lanes re-sorted:** [list, e.g., "Fast Lane, Initiative Lane"]
 >
-> **Top 3 across touched lanes (post-sort):**
+> **Rows relocated by the re-sort:** [ID, score, old→new position — or "none"; flag any that moved because they are closed]
+>
+> **Top 3 across all lanes (post-sort):**
 > 1. [#ID] [title] — Score: [X.X] — Lane: [lane]
 > 2. [#ID] [title] — Score: [X.X] — Lane: [lane]
 > 3. [#ID] [title] — Score: [X.X] — Lane: [lane]
@@ -145,6 +149,6 @@ Then return to the T/R/C menu:
 Load, read the entire file, and execute `{workflowFile}`.
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS:
-### ✅ SUCCESS: Validation performed, only rescored items updated in-place with RICE changes, confirmed/skipped items untouched, only touched lanes re-sorted (untouched lanes preserved), Part 1 / §2.1 / §2.5 untouched, Change Log updated with per-lane counts, completion summary displayed, menu re-presented
-### ❌ SYSTEM FAILURE: Rows added or removed, items' lane/stage/status modified, Part 1 or §2.1 or §2.5 altered, untouched lanes re-sorted unnecessarily, Change Log missing lane breakdown, provenance added to confirmed/skipped items
+### ✅ SUCCESS: Validation performed, only rescored items updated in-place with RICE changes, confirmed/skipped items untouched, **all three lanes re-sorted per Lane Ordering with relocated rows reported**, Part 1 / §2.1 / §2.5 untouched, Change Log updated with per-lane counts, completion summary displayed, menu re-presented
+### ❌ SYSTEM FAILURE: Rows added or removed, items' lane/stage/status modified, Part 1 or §2.1 or §2.5 altered, **a lane left unsorted because this session did not rescore it**, rows relocated without being reported, Change Log missing lane breakdown, provenance added to confirmed/skipped items
 **Master Rule:** Skipping steps is FORBIDDEN.

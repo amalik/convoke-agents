@@ -110,7 +110,7 @@ The file uses this exact structure. Sections must appear in this order.
 - `Dependencies`: Comma-separated upstream item IDs (any lane). Use `—` when none. See Dependency Notation rules below.
 - `Linked Follow-up`: Reference to a Fast Lane or Initiative item if the bug spawned deeper work.
 
-**Sort:** Descending by composite Score. Dependencies do not affect sort — they are informational. The reader is responsible for noting when a high-RICE item is blocked.
+**Sort:** Per **Lane Ordering** below — the canonical contract, identical for all three lanes. Dependencies do not affect sort — they are informational. The reader is responsible for noting when a high-RICE item is blocked.
 
 ### §2.3 Fast Lane Table
 
@@ -127,7 +127,7 @@ The file uses this exact structure. Sections must appear in this order.
 - `Status`: `Backlog`, `In Story`, `In Sprint`, `Shipped`.
 - `Dependencies`: Comma-separated upstream item IDs (any lane). Use `—` when none. See Dependency Notation rules below.
 
-**Sort:** Descending by composite Score. Dependencies do not affect sort.
+**Sort:** Per **Lane Ordering** below. Dependencies do not affect sort.
 
 ### §2.4 Initiative Lane Table
 
@@ -153,7 +153,7 @@ The file uses this exact structure. Sections must appear in this order.
   - Combine with commas. Example: `D, P✓, A, IR, E`.
 - `Dependencies`: Comma-separated upstream item IDs (any lane). Use `—` when none. See Dependency Notation rules below.
 
-**Sort:** Descending by composite Score (same rule as Fast Lane). Dependencies do not affect sort.
+**Sort:** Per **Lane Ordering** below (same rule as every lane). Dependencies do not affect sort.
 
 ### §2.5 Absorbed / Archived Tables
 
@@ -214,9 +214,28 @@ Where Confidence is expressed as a decimal (e.g., 70% = 0.7).
 
 **Example:** R:8, I:3, C:70%, E:6 = (8 × 3 × 0.7) / 6 = 2.8
 
-**Sort order (within each lane):** Descending by composite score. Ties broken by:
-1. Confidence — higher first
-2. Insertion order — newer first
+**Sort order (within each lane):** see **Lane Ordering** below.
+
+---
+
+## Lane Ordering
+
+**Invariant: every lane is sorted at all times — not only immediately after a workflow run.** A row's position is the first thing a reader uses to decide what to pick up next. When position and score disagree, position wins in practice, and the wrong work gets done.
+
+Applies identically to **§2.2 Bug Lane**, **§2.3 Fast Lane** and **§2.4 Initiative Lane**. §2.1 Intakes are append-only and unordered (they carry no score). §2.5 sub-tables are append-only receipts and are never sorted.
+
+1. **Live rows first**, composite Score descending. Ties keep their prior relative order. *Live* = any row whose `Status` / `Stage` is not one of the closed values in clause 3.
+2. **Untriaged rows next** — rows carrying `?` for R/I/C/E and `—` for Score. They have no sort key, so they cannot participate in clause 1. They belong in §2.1 and are parked in the lane until triaged.
+3. **Closed rows last** — `Done`, `Closed`, `Shipped`, `Superseded`, `Rescoped`, `Absorbed`, `Invalid`, or any cell marked ✅. They stay in the lane for provenance but **must never occupy a priority position**. They need not be ordered among themselves.
+4. **Supersession pairs move as one unit.** Where a marker row is immediately followed by the original text under the same ID, the pair sorts on the original's score and stays adjacent.
+
+**Clause 3 is what a bare "descending by score" misses, and the gap is not hypothetical.** On 2026-08-16 the Bug Lane held a **closed** row scoring 17.1 at position 4, directly above the highest-scoring *open* bug in the project. Sorting on score alone reproduces that arrangement exactly — it was compliant with the old rule and still misled every reader.
+
+**Ties under clause 1.** Where prior relative order is unknown — a fresh mechanical re-sort, or a newly inserted row — break by (1) Confidence, higher first, then (2) insertion order, newer first.
+
+**Reading the lane.** Status is authoritative, position is derived. A row's rank is only as honest as its status cell, so a closed row whose status was never flipped will sit in a priority position until someone notices. That failure has recurred often enough to be expected rather than surprising.
+
+**Who this binds.** Every writer, not only this workflow. Rows added by hand during unrelated work are — measurably — the dominant write path and therefore the dominant source of drift: of the four lane rows added on 2026-08-15, **zero** arrived through Triage; they were written into the tables inside `fix(...)` and `docs(...)` commits, and two of them arrived malformed because no validation ran. The corresponding obligation on hand-editors is the `backlog-write-discipline` rule in `project-context.md`.
 
 ---
 
@@ -269,7 +288,7 @@ The qualifying gate (Vortex, John, or Winston) assigns each intake to one lane:
 
 1. Every extracted finding is logged to **§2.1 Intakes** first, with sequential `IN-{n}` ID.
 2. Optional in-session qualification: for each intake, the qualifier assigns lane + portfolio + RICE.
-3. Qualified intakes get a corresponding row appended to their lane's table (§2.2/2.3/2.4).
+3. Qualified intakes get a corresponding row appended to their lane's table (§2.2/2.3/2.4), after which **the lane is re-sorted per Lane Ordering**. Append is the write mechanism, never the final state.
 4. The intake row in §2.1 stays — it's the audit trail.
 5. A Change Log entry is added.
 
@@ -317,8 +336,11 @@ Before writing, the workflow must validate:
    - §2.5 sub-tables: 5 columns each
 5. **Change Log present** — `## Change Log` H2 exists.
 6. **No data loss** — Existing rows preserved; only the touched rows changed, only the touched lanes reordered.
+7. **Lane ordering** — §2.2, §2.3 and §2.4 each satisfy **Lane Ordering** above. Check every lane, not only the touched ones: drift arrives from writers outside this workflow, so an untouched lane is the *likelier* place to find it.
 
 If validation detects a structural mismatch, the user can proceed (Y) or abort (X).
+
+**Ordering violations are handled differently from the other six checks.** They are mechanically correctable, so the workflow re-sorts rather than prompting — but it must **report what moved**, naming each relocated row by ID, score, and old→new position. A verdict of "ordering violation" with no row named is not actionable, and silently re-sorting is worse: the operator loses the signal that something outside the workflow is writing to the file. Rows moved out of a priority position because they are closed (clause 3) should say so, since that usually means a status was flipped without the lane being re-sorted.
 
 ---
 

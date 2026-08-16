@@ -22,7 +22,7 @@ Validate backlog structure, log every finding (qualified or raw) as an **Intake*
 
 ### Role Reinforcement:
 - ✅ You are a **backlog operations specialist** — precise, non-destructive, append-only for lanes and intakes
-- ✅ Preserve all existing content — never delete, overwrite, or reorder existing rows outside the touched lane's sort update
+- ✅ Preserve all existing content — never delete or overwrite existing rows; re-ordering is required across every lane per §"Lane Ordering"
 - ✅ **Part 1 (Lifecycle Process) must not be modified** — it's semi-static documentation
 - ✅ Every qualified item generates **two** rows: one in §2.1 Intakes (audit trail) AND one in the assigned lane
 - ✅ All output must be standard markdown — no HTML, no proprietary syntax
@@ -61,13 +61,10 @@ Load `{outputFile}` (existing backlog) and validate structural integrity per for
    - `### 2.3 Fast Lane (Quick Wins + Spikes)`
    - `### 2.4 Initiative Lane`
    - `### 2.5 Absorbed / Archived`
-4. **Table column counts:**
-   - §2.1 Intakes: 5 columns (ID, Description, Source, Date, Raiser)
-   - §2.2 Bug Lane: 10 columns
-   - §2.3 Fast Lane: 9 columns
-   - §2.4 Initiative Lane: 10 columns
-5. **Change Log section** — `## Change Log` H2 exists with a table.
-6. **File missing guard** — If the backlog file does not exist, display: "No backlog file found at `{outputFile}`. Triage cannot create a new file — use Create mode [C] first." Then load workflow.md and return.
+4. **Table column counts** — read the expected count for each table from `{templateFile}` (§"Pre-Write Validation" item 4) rather than from a number written here. Counts have changed before (Dependencies added 2026-04-15) and the copies in these step files went stale for months, so the check failed on every run and was waved through with `[Y] proceed anyway`. A validation that can only fail teaches the operator to bypass it. Split rows on unescaped delimiters only — `\|` inside a cell is content, not a column boundary.
+5. **Lane ordering** — §2.2, §2.3 and §2.4 each satisfy §"Lane Ordering" in `{templateFile}`. Check all three lanes, not just the ones this session touches.
+6. **Change Log section** — `## Change Log` H2 exists with a table.
+7. **File missing guard** — If the backlog file does not exist, display: "No backlog file found at `{outputFile}`. Triage cannot create a new file — use Create mode [C] first." Then load workflow.md and return.
 
 If ALL checks pass, proceed directly to step 3 (Append Intakes).
 
@@ -112,9 +109,9 @@ For each item in `qualified_items` (i.e., findings routed to Bug / Fast / Initia
    - Fast Lane + Initiative Lane: single alpha prefix from a simple heuristic (U for Update, I for Infrastructure, T for Testing, A for Agent, D for Doc, P for Platform). If uncertain, use `Q-{n}` (for Qualified-uncategorized).
 3. **Append row** with the columns defined in the format spec for the target lane. Include the RICE score rationale as a tail note only if it aids future review (keep rows compact).
 4. **Cross-reference** — In the Intake row's Description cell (in §2.1), append ` → [laneID]` so intake→lane linkage is preserved.
-5. **Re-sort the touched lane's table by composite RICE score descending.** Tiebreak: Confidence higher first, then insertion order newer first.
+5. **Re-sort every lane** (§2.2, §2.3, §2.4) per §"Lane Ordering" in `{templateFile}` — live rows by score descending, then untriaged, then closed; supersession pairs move as one unit. Tiebreak within live rows: Confidence higher first, then insertion order newer first. Sort all three, not only the lane this session appended to: the dominant write path is hand-edits made outside this workflow, so a lane nobody triaged is a lane nobody sorted. Report any row that moved (ID, score, old→new position).
 
-**Never delete, overwrite, or reorder rows in lanes that were not touched this session.**
+**Never delete or overwrite rows in lanes that were not touched this session.** Re-ordering is the exception and is required: a lane may be re-sorted without being otherwise modified, because sort position is derived from the row's own score and status, not from this session's edits.
 
 ### 5. Add Change Log Entry
 
@@ -155,6 +152,6 @@ Then return to the T/R/C menu:
 Load, read the entire file, and execute `{workflowFile}`.
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS:
-### ✅ SUCCESS: Validation performed, every finding logged as an Intake (audit trail complete), qualified items appended to correct lanes with proper IDs, lanes re-sorted by RICE, Change Log updated with qualifier identity and counts, completion summary displayed, menu re-presented
+### ✅ SUCCESS: Validation performed, every finding logged as an Intake (audit trail complete), qualified items appended to correct lanes with proper IDs, **all three lanes re-sorted per Lane Ordering with relocated rows reported**, Change Log updated with qualifier identity and counts, completion summary displayed, menu re-presented
 ### ❌ SYSTEM FAILURE: Findings not logged as Intakes, qualified items written without the cross-reference in Intakes, Part 1 modified, existing rows deleted/reordered, Change Log missing the qualifier identity, dropped items lost without audit trail
 **Master Rule:** Skipping steps is FORBIDDEN.

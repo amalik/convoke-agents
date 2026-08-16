@@ -83,9 +83,9 @@ Load `{templateFile}` (rice-scoring-guide.md) and internalize:
 
 Parse tables from lane sections:
 
-- **§2.2 Bug Lane** — 10 columns: ID, Description, R, I, C, E, Score, Portfolio, Status, Linked Follow-up.
-- **§2.3 Fast Lane** — 9 columns: ID, Description, R, I, C, E, Score, Portfolio, Status.
-- **§2.4 Initiative Lane** — 10 columns: ID, Description, R, I, C, E, Score, Portfolio, Stage, Artifacts.
+Take each lane's column list from `{templateFile}`'s companion spec — `templates/backlog-format-spec.md`, §"Table Formats" — rather than from a list written here. The copies that used to sit in this step file went stale when the Dependencies column was added on 2026-04-15 and stayed wrong for months.
+
+Split rows on **unescaped** delimiters only: `\|` inside a cell is content, not a column boundary. A parser that splits on every pipe misreports correctly-escaped rows as malformed, which is how a shape check loses its readers.
 
 **Do NOT include** items from:
 - §2.1 Intakes (unqualified — no RICE)
