@@ -667,13 +667,13 @@ development_status:
 
   # Epic 4: Validated Behavioral Equivalence (5 stories, Sprint 4–5)
   # FRs: FR36–FR40, FR45–FR46. PF1 LLM-as-judge, T=4.0, N=1 external validation.
-  v63-epic-4: in-progress
+  v63-epic-4: done
   v63-4-1-create-pf1-judge-prompt-and-calibration-test: done
   v63-4-2-create-pf1-validation-battery-harness: done
   v63-4-2b-version-bump-and-test-surface-updates-for-4-0-rc-candidate: done
   v63-4-3-execute-pf1-validation-cycle-record-compare-and-gate: descoped-by-ADR
   v63-4-4-create-drift-snapshot-workflow: done
-  v63-4-5-n-1-external-user-validation-sprint-5: ready-for-dev
+  v63-4-5-n-1-external-user-validation-sprint-5: done
   v63-epic-4-retrospective: optional
 
   # Epic 5A: Sprint 1 Experiments & Strategic ADR (2 stories, Sprint 1)
