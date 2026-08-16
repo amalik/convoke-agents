@@ -5,11 +5,10 @@ All notable changes to Convoke will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<!-- TODO-5B3-CHANGELOG-SIGNOFF: maintainer sign-off line in release commit message per FR44 + M16. Template: `Maintainer sign-off (CHANGELOG per FR44+M16): Amalik <YYYY-MM-DD>`. Story 5B.3 release ship time. -->
 
 ---
 
-## [4.0.0] - YYYY-MM-DD
+## [4.0.0] - 2026-08-16
 
 Convoke 4.0 is a maintenance release that keeps Convoke healthy as BMAD evolves and adds marketplace distribution for reach.
 
@@ -53,6 +52,12 @@ If this release does its job, you'll barely notice it — which is the point.
 ### Documentation
 
 - **Migration guide** at [`docs/migration/3.x-to-4.0.md`](docs/migration/3.x-to-4.0.md) — One page. The short version: run `npx -p convoke-agents@latest convoke-update`. That's it.
+
+### Deferred from 4.0 → 4.0.1
+
+- **Removal of deprecated upstream agents and the upstream Amelia integration** (internally Epic 1B).
+  4.0 keeps `bmad-init` and the current agent set intact so the upgrade stays a single command with
+  nothing for you to reconcile. The cleanup lands in 4.0.1; no action is needed from you either way.
 
 ---
 

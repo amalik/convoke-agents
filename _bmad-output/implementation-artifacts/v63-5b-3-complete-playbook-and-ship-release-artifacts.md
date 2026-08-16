@@ -193,10 +193,10 @@ so that Convoke 4.0 ships publicly with verifiable artifact trail (M13 + M16 clo
 ## Tasks / Subtasks
 
 - [ ] **Task 0: Pre-flight gates (operator-managed at story pickup; HALT if any fail). LL-1 V-pass compression: 9 → 6 sub-tasks.**
-  - [ ] 0.1 Confirm Stories 4.3 + 4.5 status `done` in sprint-status.yaml with M9 + M17 PASS evidence in release record.
+  - [x] 0.1 **AMENDED 2026-08-16 by [ADR-001](../planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md), mirroring the identical amendment applied to Story 4.5 Task 0.1 on 2026-08-13.** ~~Confirm Stories 4.3 + 4.5 status `done` in sprint-status.yaml with M9 + M17 PASS evidence in release record.~~ The M9 PF1 gate is **retired**; `m9_pf1_gate: PASS` can never be produced, so this gate as written HALTs the release permanently — it is item #2 on the release record's own "Known downstream blockers" list. **Replaced by:** (a) Story 4.5 status `done` with M17 evidence — ✅ closed 2026-08-15, evidence at `v63-4-5-n-1-external-validation-report.md`; (b) Story 4.3 status `descoped-by-ADR` (**not** `done` — do not gate on `done`); (c) release record carries `surface_parity_gate: PASS` — ✅ re-verified 2026-08-15, `agent-surface-parity.js v3.3.0 HEAD` exits 0 over 12 agents.
   - [ ] 0.2 Confirm 4 TODO-5B3 hand-off markers present + Stories 5B.1/5B.2/5A.2 artifacts at canonical paths: run `grep -rn "TODO-5B3" docs/host-framework-sync-playbook.md CHANGELOG.md` → expect exactly 4 matches (3 playbook L123/L131/L144 + 1 CHANGELOG L8).
   - [ ] 0.3 Run `/bmad-enhance-initiatives-backlog` Triage mode (or grep `deferred-work.md`) — surface zero release-blocking items; route any blockers to operator before proceeding.
-  - [ ] 0.4 Operator decision (Decision 5): Stories 1B.x ship in 4.0 OR defer to 4.0.x/4.1? **CM-3 V-pass note:** 1B.x specs don't exist yet; ship-with requires bootstrapping `/bmad-create-story v63-1b-1/2/3` + V-pass + dev-story + code-review for each (~6-8 hours) BEFORE returning to Story 5B.3. Document decision in dev-story Debug Log References + corresponding CHANGELOG note + backlog entries if deferring.
+  - [x] 0.4 **DECIDED 2026-04-28 — DEFER.** Stories 1B.x ship in **4.0.1**, not 4.0 ("simple-and-fast" path lock). Their specs do not exist; bootstrapping them would add ~6-8 hours before returning here. To be recorded in the CHANGELOG deferral subsection at Task 6.5 and in the backlog. Original text: Operator decision (Decision 5): Stories 1B.x ship in 4.0 OR defer to 4.0.x/4.1? **CM-3 V-pass note:** 1B.x specs don't exist yet; ship-with requires bootstrapping `/bmad-create-story v63-1b-1/2/3` + V-pass + dev-story + code-review for each (~6-8 hours) BEFORE returning to Story 5B.3. Document decision in dev-story Debug Log References + corresponding CHANGELOG note + backlog entries if deferring.
   - [ ] 0.5 Confirm `npm test` baseline ≥ 1492/1491/1/0 + `npm run test:integration` ≥ 93/93/0 (re-probe; account for Stories 4.3 + 4.5 test additions if any).
   - [ ] 0.6 Mark v63-5b-3: ready-for-dev → in-progress in sprint-status.yaml.
 
@@ -269,7 +269,10 @@ so that Convoke 4.0 ships publicly with verifiable artifact trail (M13 + M16 clo
   - [ ] 8.5 Create v4.0.0 git tag: `git tag -a v4.0.0 -m "Convoke 4.0.0 release"`.
   - [ ] 8.6 Push commit + tag: `git push origin main && git push origin v4.0.0`.
 
-- [ ] **Task 9: npm publish (~5 min — operator interactive).**
+- [ ] **Task 9: publish — AMENDED 2026-08-16: publish via CI tag-push, not by hand.**
+  - **Why amended:** `.github/workflows/ci.yml:359` fires the `publish` job on any `refs/tags/v*` push and runs `npm publish --provenance --access public`. A manual publish would race or collide with it, and would bypass the eight gate jobs that job depends on — including `fresh-install` (T25). Every release candidate this week was hand-published and therefore ungated; that gap is logged as **T35**, and this release closes it.
+  - **Consequence:** pushing the `v4.0.0` tag *is* the publish. Do not run `npm publish` manually.
+  - **BUG-15 note:** that job passes no `--tag`, so npm applies `latest`. Correct for a stable 4.0.0. BUG-15 only bites when a *prerelease* is tagged — do not tag any future `-rc.N`.
   - [ ] 9.1 Run `npm publish convoke-agents@4.0.0` (operator completes 2FA).
   - [ ] 9.2 Verify `npm view convoke-agents@4.0.0` returns published metadata.
   - [ ] 9.3 Capture publish stdout in dev-story Debug Log References.

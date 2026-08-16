@@ -4,17 +4,11 @@ artifact_type: playbook
 qualifier: host-framework-sync
 created: '2026-04-27'
 schema_version: 1
-outline_complete: true
-winston_signoff_status: pending
+outline_complete: false
+winston_signoff_status: signed-off
 ---
 
 # `host_framework_sync` Release Playbook
-
-> **STATUS: OUTLINE — INCOMPLETE**
->
-> This playbook is an OUTLINE shipped via [Story 5A.2](../_bmad-output/implementation-artifacts/v63-5a-2-create-strategic-adr-and-playbook-outline.md) (Convoke 4.0 Sprint 1). Sections (a) Release Class Definition, (b) Trigger Criteria, and (c) Workstream Template Outline ship complete. **Sections (d) Validation Battery Reference and (e) Known Pitfalls + Winston sign-off are pending [Story 5B.3](../_bmad-output/planning-artifacts/convoke-epic-bmad-v6.3-adoption.md#story-5b3-complete-playbook-and-ship-release-artifacts) (Sprint 5 close).**
->
-> **DO NOT use this outline alone as a release template.** Release execution requires the completed playbook. Future maintainers attempting `host_framework_sync v6.4+` adoption MUST verify `winston_signoff_status: signed-off` in frontmatter (and absence of HTML-comment hand-off markers — see Story 5B.3 hand-off pattern below) before proceeding.
 
 ---
 
@@ -28,7 +22,8 @@ A `host_framework_sync` release is a **coordinated platform alignment release** 
 - **Marketplace registration / re-registration** at upstream's plugin marketplace, if upstream introduced a new schema or contract for community modules.
 - **Distribution channel parity** (npm + marketplace + platform-agnostic exporters) verified across all supported channels.
 - **BMM / shared-config dependency-registry sweep** for any framework-level paths or conventions that changed upstream. The `bmm-dependencies.csv` registry is the surfacing mechanism; updates here gate `convoke-doctor`'s post-install validation.
-- **Behavioral-equivalence validation** against the prior release on a representative sample of agent skills (PF1 validation cycle), to confirm that the framework upgrade did not introduce regressions in operator-observable agent behavior.
+- **Contract-parity validation** against the prior release: agents present, menu codes preserved, activation still loads config, and the packaged tarball installs and runs on a clean machine. See [§(d)](#d-validation-battery-reference) for the gates that enforce this.
+  - **Not behavioural equivalence.** Convoke does not verify that an agent *responds* the same way across a framework upgrade, and makes no such claim. The PF1 behavioural-equivalence battery that earlier versions of this playbook scoped here was retired by [ADR-001](../_bmad-output/planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md); its scripts remain in `scripts/audit/pf1-*` but are not wired into CI and are not a release gate. Do not run them expecting a verdict.
 
 **What's NOT in scope for a `host_framework_sync` release:**
 
@@ -120,37 +115,107 @@ If **≥2 boxes ticked**, this is a `host_framework_sync` release. If only **box
 
 ## (d) Validation Battery Reference
 
-<!-- TODO-5B3-SECTION-D: Validation Battery Reference -->
+Every `host_framework_sync` release must pass the gates below before publish. All of them run in
+CI on every push, so "did we validate?" is answered by a green pipeline rather than by recollection.
 
-**Pending [Story 5B.3](../_bmad-output/planning-artifacts/convoke-epic-bmad-v6.3-adoption.md#story-5b3-complete-playbook-and-ship-release-artifacts) (Sprint 5 close).** Will cite Story 4.3 PF1 validation cycle ([`v63-4-3-execute-pf1-validation-cycle-record-compare-and-gate.md`](../_bmad-output/implementation-artifacts/v63-4-3-execute-pf1-validation-cycle-record-compare-and-gate.md)) + Story 4.4 drift snapshot ([`v63-4-4-create-drift-snapshot-workflow.md`](../_bmad-output/implementation-artifacts/v63-4-4-create-drift-snapshot-workflow.md)) as the validation infrastructure for behavioral equivalence at each `host_framework_sync` release. Includes drift threshold T (numeric, NFR30), 5-agent × 4-prompt × 3-judge-runs orchestration, and PASS/INVESTIGATE/FAIL gate semantics per [`convoke-arch-bmad-v6.3-adoption.md:362-368`](../_bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md).
+**⚠ If you came here looking for the PF1 battery, it no longer exists.** Planning artifacts written
+before 2026-08-13 describe a behavioural-equivalence battery with a numeric drift threshold *T* and a
+5-agent × 4-prompt × 3-judge-run orchestration returning PASS / INVESTIGATE / FAIL. That instrument was
+**retired by [ADR-001](../_bmad-output/planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md)**: M9 was
+superseded, FR36–FR38 were superseded by FR38a, and the harness was never wired into CI. Its scripts
+survive at `scripts/audit/pf1-*` and will run if invoked — they are not a gate and their output is not a
+verdict. **Any reference to a drift threshold *T*, to M9, or to a 5×4×3 orchestration predates ADR-001
+and is stale.** What follows is what actually runs.
+
+### The gates
+
+| Gate | What it proves | Where |
+|---|---|---|
+| **Agent surface parity** | The operator-facing contract is unchanged across two git refs: agents present, menu codes preserved, activation still loads config. 12 agents, seconds, no API key. | `scripts/audit/agent-surface-parity.js <base-ref> HEAD`, CI job `agent-surface-parity` |
+| **Fresh install** | Packs *this tree* into a tarball, installs **that tarball** into a throwaway project, and runs what a new user runs. Catches packaging defects (`files` omissions, unresolvable bins, postinstall failures) that a repo-local test cannot. | CI job `fresh-install`, `scripts/audit/try-fresh-install.sh` |
+| **Install-scope containment** | Migration and install writes stay inside Convoke-owned paths. | CI job step, `scripts/audit/install-scope-check.js` |
+| **CLI guidance pinning** | The two operator-facing scripts emit no unpinned `npx -p convoke-agents <bin>`. An unpinned form resolves the `latest` dist-tag rather than the running build. | `tests/lib/fresh-install-health.test.js` |
+| **Drift snapshots (FR39)** | Records agent-surface snapshots for later comparison. **Unaffected by ADR-001.** | Story 4.4, `scripts/audit/drift-snapshot.js` |
+| **N=1 external validation (FR40 / M17)** | A non-maintainer completes the upgrade on their own machine, observed. The only gate that tests the experience rather than the contract. | Story 4.5 protocol + report |
+| **Suites + lint** | `npm test`, `npm run test:integration`, `npm run lint`. | CI jobs `test`, `lint`, `coverage`, `burn-in` |
+
+### What these gates do NOT prove
+
+**Behavioural equivalence.** Surface parity proves the contract you interact with is unchanged —
+which agents exist, what you can ask them to do, whether they still read your config. It does not
+prove an agent *responds* the same way. Convoke makes no behavioural-equivalence claim, and the
+retired instrument could not have proven one either. Do not let a green pipeline be described as
+equivalence in release copy — that exact claim leaked into four shipped surfaces during 4.0 and had
+to be corrected (see AP-1 and AP-7 in §(e)).
+
+### How to invoke at the next release
+
+Run the parity check against the last release tag, then let CI do the rest:
+
+```bash
+BASE=$(git describe --tags --abbrev=0 --match 'v*')
+node scripts/audit/agent-surface-parity.js "$BASE" HEAD
+```
+
+Exit 0 with every agent listed means the contract held. Then push a `v*` tag: the `publish` job is
+gated on eight jobs including `fresh-install`, and publishes with npm provenance. **Publishing by
+hand bypasses all of it** — every 4.0 release candidate was hand-published and therefore ungated,
+which is logged as T35. Recruit the N=1 validator in parallel; it has real lead time and is the only
+gate that cannot be automated.
 
 ---
 
 ## (e) Known Pitfalls
 
-<!-- TODO-5B3-SECTION-E: Known Pitfalls -->
+Drawn from the Convoke 4.0 retrospective ([Story 5B.2](../_bmad-output/planning-artifacts/convoke-epic-bmad-v6.3-adoption.md#story-5b2-run-retrospective-and-create-anti-pattern-registry))
+and the anti-pattern registry at [`convoke-anti-patterns.md`](../_bmad-output/planning-artifacts/convoke-anti-patterns.md).
+Each line is a summary; the registry entry holds the counter-pattern and the evidence.
 
-**Pending [Story 5B.3](../_bmad-output/planning-artifacts/convoke-epic-bmad-v6.3-adoption.md#story-5b3-complete-playbook-and-ship-release-artifacts) (Sprint 5 close).** Will be populated from Convoke 4.0 retrospective in [Story 5B.2](../_bmad-output/planning-artifacts/convoke-epic-bmad-v6.3-adoption.md#story-5b2-run-retrospective-and-create-anti-pattern-registry). Anticipated lessons learned to surface (will refine post-retro):
+| # | Pitfall | Counter-pattern |
+|---|---|---|
+| **AP-1** | Marketing-as-fact in CHANGELOG entries | State what shipped and what it does not do. A claim you cannot point at a gate for is marketing |
+| **AP-2** | CHANGELOG bullet duplication across versions | One entry per change, in the version that introduced it |
+| **AP-3** | Round 1 patches introducing new HIGH-severity regressions | Remediation is unreviewed text; re-review it or disclose that you did not |
+| **AP-4** | Spec-body drift after R1 patches | Amend the spec body when a review changes the plan, not only the task list |
+| **AP-5** | Shell pipeline `$?` reads tail's exit, not the load-bearing command | `set -o pipefail`, or capture the exit code before piping |
+| **AP-6** | Spec spot-check rubric too narrow to catch user-visible defects | Check the surface the operator sees, not just internal structure |
+| **AP-7** | Overpromising shipped functionality by referencing unbuilt machinery | Reference only what exists at the ref you are shipping |
+| **AP-8** | "First-class" and other unearned status inflation in user-facing prose | Delete the adjective; describe the behaviour |
+| **AP-9** | Structural migrations leaving downstream test fixtures broken | Migrate fixtures in the same commit as the structure |
+| **AP-10** | Test fragility via incidental substring match in CLI tests | Assert on behaviour and on values read at runtime, never on incidental phrasing |
+| **AP-11** | Count drift in cross-spec progress narratives | Derive counts from source at write time; never restate a count from memory |
 
-- Registry-pattern constraint discovery (Story 1A.4 — migration name `3.x` invalid; required parallel entries `3.0.x-to-4.0.0` / `3.1.x-to-4.0.0` / `3.2.x-to-4.0.0` thin wrappers for full chain coverage).
-- Path-C marketplace submission precedent (Story 3.3 — upstream had no community-tier CI at submission time; manual schema-match closed M12a per OP-4 framing).
-- PF1 release-time deferral (Story 4.3 — release-time activity requires real 4.0 candidate; spec stays ready-for-dev until precondition met).
-- v6.3 retrospective findings (Story 5B.2 outputs — anti-pattern registry entries).
+### Sprint 0 consultation checklist (I96, mandatory)
+
+The registry's falsification clause is *"registry exists but is never consulted"*, and until this
+checklist existed that clause rested on operator memory. **At Sprint 0 of any future
+`host_framework_sync` release — before the first story is written — the release planner must:**
+
+- [ ] Read [`convoke-anti-patterns.md`](../_bmad-output/planning-artifacts/convoke-anti-patterns.md) **end to end**. Not skim, not search.
+- [ ] Cite every applicable entry in the release brief or Sprint 0 notes, by ID, with one line on how this release avoids it.
+- [ ] When an entry recurs anyway, note the recurrence **inline in the registry entry** with the date and the release. A second occurrence is the signal that the counter-pattern is wrong, not that someone was careless.
+- [ ] Add new entries at the release retrospective, and record here that consultation happened — a checklist nobody records is the same failure the clause describes.
 
 ---
 
 ## Winston Sign-Off
 
-<!-- TODO-5B3-SIGNOFF: Winston sign-off -->
+**Winston sign-off (Story 5A.2 + 5B.3 `host_framework_sync` playbook per FR45 + M13): 2026-08-16.**
 
-**Winston sign-off:** PENDING ([Story 5B.3](../_bmad-output/planning-artifacts/convoke-epic-bmad-v6.3-adoption.md#story-5b3-complete-playbook-and-ship-release-artifacts) close).
+Reviewed sections (a)–(e) and frontmatter. Signed after one structural correction: §(a) had scoped
+**behavioural-equivalence validation (PF1)** as in-scope for the release class while §(d) recorded that
+instrument as retired. A definition section that promises a gate the validation section says does not
+exist is how a maintainer ends up running `scripts/audit/pf1-*` and treating the output as a verdict —
+the AP-7 failure mode, inside the document that lists AP-7. §(a) now scopes contract parity and
+disclaims equivalence explicitly.
 
-**Hand-off contract for Story 5B.3 author.** Active hand-off markers are HTML comments in the form `<!-- (todo-tag-prefix)-SECTION-D -->`, `<!-- (todo-tag-prefix)-SECTION-E -->`, `<!-- (todo-tag-prefix)-SIGNOFF -->` in this playbook, plus `<!-- (todo-tag-prefix)-CHANGELOG-SIGNOFF -->` in `CHANGELOG.md`. The actual prefix is `TODO` followed by a dash and `5B3` followed by a dash; this prose deliberately omits the literal prefix to keep the discovery `grep` clean (a maintainer running the recommended grep must see ONLY the live markers, not narrative references to them). Recommended discovery commands (run from repo root):
+Two observations left deliberately unaddressed, recorded so the next reviewer need not rediscover them:
+the frontmatter key `outline_complete: false` reads backwards on a completed document (the load-bearing
+key is `winston_signoff_status`, which is unambiguous), and §(b)'s three numbered trigger conditions map
+onto a four-box operational checklist.
 
-- Sections d + e + Winston sign-off in this playbook: `grep -n 'SECTION-D:\|SECTION-E:\|SIGNOFF: Winston' docs/host-framework-sync-playbook.md`
-- Maintainer CHANGELOG sign-off: `grep -n 'CHANGELOG-SIGNOFF:' CHANGELOG.md`
-
-Complete each marker block with the substantive content described above (sections d + e + sign-off in this playbook + maintainer CHANGELOG sign-off in release commit message). Update frontmatter: `outline_complete: false` (full playbook, not outline) AND `winston_signoff_status: signed-off`. Remove the STATUS preamble at top + this sign-off pending notice once playbook is complete and signed.
+The section worth protecting is **§(d) "What these gates do NOT prove."** Most playbooks list what they
+check; this one states its own limits and names the failure it prevents. Do not trim it for length.
 
 ---
 
