@@ -363,10 +363,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Use Node.js 20
+      # Node 24 (npm >= 11.5.1) is REQUIRED, not a preference. npm's OIDC *registry
+      # authentication* (`lib/utils/oidc.js`) first ships in npm 11.5.x. Node 20 bundles
+      # npm 10.8.2, where that file does not exist and `publish.js` contains zero oidc
+      # references — so with no token in the environment it publishes ANONYMOUSLY and the
+      # registry answers 404 (npm returns 404, not 403, for unauthorised writes; it hides
+      # package existence). That is exactly how 4.0.0 failed four times while appearing to
+      # work: provenance SIGNING is a separate, older feature (npm >= 9.5), so every run
+      # signed a Sigstore statement and looked authenticated right up to the write.
+      # If you pin Node down again, restore the token or this job publishes as nobody.
+      - name: Use Node.js 24
         uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
           registry-url: https://registry.npmjs.org
 
@@ -381,5 +390,22 @@ jobs:
       # over OIDC, which put 4.0.0 back on the token path — and npm is restricting tokens
       # that bypass 2FA (https://gh.io/npm-gat-bypass2fa-deprecation), so every token variant
       # failed with EOTP regardless of account or package mfa settings.
+      # BUG-15: this job fires on ANY `refs/tags/v*`, including `v4.1.0-rc.1`. `npm publish`
+      # with no `--tag` applies `latest`, which would hand every existing user a release
+      # candidate. Derive the tag from the version instead: prereleases (a `-` in the semver)
+      # go to `rc`, everything else to `latest`.
+      #
+      # `--loglevel verbose` is deliberate: npm's oidc() is written to never throw and logs
+      # every failure path at verbose/silly, so a trusted-publisher mismatch otherwise
+      # surfaces as a bare auth error. This job only runs on a tag push, so each diagnosis
+      # costs a tag delete-and-repush. Keep it until a green publish exists on a prerelease
+      # tag as well as a stable one.
       - name: Publish to npm
-        run: npm publish --provenance --access public
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          case "$VERSION" in
+            *-*) DIST_TAG=rc ;;
+            *)   DIST_TAG=latest ;;
+          esac
+          echo "Publishing $VERSION to dist-tag $DIST_TAG"
+          npm publish --provenance --access public --tag "$DIST_TAG" --loglevel verbose

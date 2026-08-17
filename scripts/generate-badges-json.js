@@ -4,7 +4,7 @@
  * Aggregate counts for the README header shields (teams / agents / workflows / skills).
  *
  * Run manually: npm run badges
- * Or before publishing (a future prepublishOnly hook can wire this in).
+ * Also runs from `prepublishOnly` via `badges:check` (package.json), which gates `npm publish`.
  *
  * Source of truth:
  * - teams: hardcoded set of domain multi-agent modules (Vortex, Gyre).
@@ -32,18 +32,31 @@ function readYaml(relPath) {
   return yaml.parse(fs.readFileSync(abs, 'utf8'));
 }
 
-function countList(obj, key) {
+// Absence is an error, not a zero. Previously a missing config was skipped and a missing
+// key counted as 0, so deleting `_vortex/config.yaml` produced `agents: 5` and exited 0 —
+// and `.github/workflows/badges.yml` then auto-committed that collapse to main with the
+// job green. Since the `generated` date was removed this file only moves on a count change,
+// so a silent collapse is now the ONLY thing that moves it. Fail loudly instead.
+// (Same class the python-test job already guards against with a discovery floor.)
+function countList(obj, key, moduleName) {
   const v = obj && obj[key];
-  return Array.isArray(v) ? v.length : 0;
+  // An ABSENT key is legitimate — `_artifacts` and `_enhance` are workflow-only modules and
+  // carry no `agents:`. A key that exists but is not a list is schema drift, and silently
+  // counting it as 0 is how a shape change becomes a wrong number nobody notices.
+  if (v === undefined) return 0;
+  if (!Array.isArray(v)) {
+    throw new Error(`_bmad/bme/${moduleName}/config.yaml: \`${key}\` is ${typeof v}, expected a list`);
+  }
+  return v.length;
 }
 
 let agents = 0;
 let workflows = 0;
 for (const m of AGGREGATE_MODULES) {
   const cfg = readYaml(`_bmad/bme/${m}/config.yaml`);
-  if (!cfg) continue;
-  agents += countList(cfg, 'agents');
-  workflows += countList(cfg, 'workflows');
+  if (!cfg) throw new Error(`missing required config: _bmad/bme/${m}/config.yaml`);
+  agents += countList(cfg, 'agents', m);
+  workflows += countList(cfg, 'workflows', m);
 }
 
 const manifestPath = path.join(repoRoot, '_bmad/_config/skill-manifest.csv');
@@ -51,6 +64,9 @@ const manifestLines = fs
   .readFileSync(manifestPath, 'utf8')
   .split('\n')
   .filter((l) => l.trim().length > 0);
+if (manifestLines.length < 2) {
+  throw new Error(`_bmad/_config/skill-manifest.csv has no rows (header only or empty) — refusing to write a negative skill count`);
+}
 const skills = manifestLines.length - 1; // minus header row
 
 // No `generated` timestamp. The file is compared with `git diff --exit-code` by both
