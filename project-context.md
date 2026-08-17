@@ -346,6 +346,37 @@ EOF
 
 ---
 
+## Rule: verification-must-be-falsifiable
+
+**Statement.** Before citing a check as evidence, establish that it could have said something else. Run it against a known-bad input, or mutate the thing it inspects and confirm it goes red. A check that cannot fail is not weak evidence — it is **no** evidence, and it is worse than none because it reads like proof.
+
+`verification-pipefail` is one instance of this defect. This rule is the general case, and it applies to **ad-hoc verification during work**, not only to checks cited in a review.
+
+**Why.** Four failures in three days, every one of which produced a confident wrong answer:
+
+| What was run | What it looked like | What it was |
+|---|---|---|
+| `npm run badges:check \| tail -8; echo $?` | `exit=0`, gate passes | `$?` was `tail`'s. True exit was 1; the gate was blocking the release |
+| `grep -c 'convoke-agents@${getPackageVersion()}' file` | `0` — "the fix isn't in the tarball" | `{}` is a grep interval expression. The fix *was* there; a false alarm was raised against a correct build |
+| `npx -p convoke-agents convoke-version` → `3.3.0` | "good, `-p` bypasses the stale global" | It did — and also served a version two releases old. Half the claim was verified, all of it was reported. This became BUG-16 |
+| Generator mutation harness, 4 cases | all `exit=1` — "guards work" | No `node_modules` in the scratch tree. All four died on `Cannot find module 'yaml'`. Nothing was tested |
+
+A fifth was caught only by luck: a backlog column-arity check that flagged 71 correct rows, which would have made the gate unreadable had it shipped.
+
+The common shape is not carelessness about shell syntax. It is **reading a check's output as evidence without ever seeing it produce the other answer.**
+
+**How to apply.**
+- **Before citing any check, show it red.** Mutate the input — inject the defect, delete the file, revert the fix — and confirm the check fails and names the right thing. Then restore and confirm it passes. Both directions, or it is not a check.
+- **A new gate is not shippable until it has failed once on purpose.** `backlog-integrity.js` was proven against the pushed commit that had actually lost the rows; `cli-guidance-check` (withdrawn) shipped twice matching nothing because that step was skipped.
+- **State the falsification in the commit Description**, per `commit-preparation` field 5. "Verified by execution" without naming the failing case is the phrasing this rule exists to catch — it appeared in three commit messages this week, none of which had run a negative case.
+- **Prefer a check that fires on the real artifact.** Verify the published tarball rather than the source, the emitted string rather than the code that emits it, the committed file rather than the working tree. Every failure above inspected a proxy.
+- **Scratch harnesses need their dependencies.** A mutation matrix where every case fails identically is testing your harness, not your code. If all rows of a matrix agree, suspect the harness first.
+- **Watch for the check that only ever passes.** If you cannot construct an input that makes it fail, it is asserting nothing — delete it or narrow it until it can.
+
+**Exception.** None. If a check genuinely cannot be falsified — a tautology, a count of itself — it must not be cited as evidence at all.
+
+---
+
 ## Rule: commit-preparation
 
 **Statement.** The operator commits through GitHub Desktop and does not hand-author commits. Therefore the agent MUST produce an explicit **commit plan** for any change it makes, and the operator executes that plan rather than improvising. A commit plan is an ordered list of commits; each entry carries exactly three things:
@@ -353,6 +384,8 @@ EOF
 1. **Files** — the complete list to stage for that commit, and nothing else.
 2. **Summary** — one line, ≤ 72 chars, `<type>(<scope>): <intent>`. Types: `feat`, `fix`, `test`, `docs`, `refactor`, `chore`, `governance`. Scope is the story ID (`v63-4-5`), backlog ID (`T25`), or module (`doctor`). The summary states *intent*, never the filename.
 3. **Description** — why the change exists, what it affects, and the review status of the change (`Round 1: PASS` / `Round 1: findings applied` / `Round 1: skipped — <reason>`).
+4. **Staged set** — the command that proves the staged set equals the Files list: `git diff --cached --name-only`. Run it *after* staging and *before* committing.
+5. **Falsifiable** — for every check the Description cites as evidence, one clause naming how it was shown able to fail. `lint 0` is not evidence unless lint can go red on this change; a new gate is not evidence until it has been run against a known-bad input. See `verification-must-be-falsifiable`.
 
 **Never acceptable:** `Update <filename>` / `Create <filename>` as a summary. It carries zero intent and makes `git log` unreadable as a history of decisions.
 
@@ -361,5 +394,9 @@ EOF
 **How to apply.**
 - **Agent side.** After completing any change, emit the commit plan before the operator asks. Group by *logical change*, not by file — source and its test belong in one commit, a rename and its call sites belong in one commit. If a change genuinely splits into several commits, order them so each one leaves the tree green.
 - **Operator side.** In GitHub Desktop, check only the files listed for commit 1, paste Summary and Description, commit; then repeat for commit 2. Do not commit files the plan didn't list — an unlisted modified file means the plan is stale, so ask for a refresh.
+- **⚠ Never instruct line-level staging on a MODIFIED line.** This is the most damaging instruction in this rule's history. A modified table row appears in the diff as `-old` followed by `+new`; staging the `-` side without the `+` side **deletes the row outright**, silently, with every check green. It has destroyed backlog records twice: `c841fcd2` dropped the BUG-16 row while shipping BUG-16's own fix, and `3a3de195` dropped T35 (an *open* risk item) and T39 while its message claimed to have repaired them. Both times the agent had instructed line-level staging because a concurrent session shared the file.
+  - **Prefer whole-file staging** whenever the only dirty hunks in that file are the agent's own. Check first with `git diff --name-only`; if a file is shared, say so explicitly rather than defaulting to line-level.
+  - **When line-level is genuinely unavoidable** (a file carrying two sessions' work), stage *whole hunks*, never individual lines, and verify before committing — `git diff --cached` must show both sides of every modified line.
+  - **Backstop.** `scripts/audit/backlog-integrity.js` runs in CI and fails on any `BUG-n`/`T-n` cited by a row that no longer has one. It catches the symptom after a push; the guidance above is what prevents it.
 - **Review coupling.** A commit plan is a landing point per `code-review-convergence`. Preparing a plan without a Round 1 on the changes it covers is a rule violation; if review is deliberately skipped (e.g. a docs typo), say so in the Description rather than leaving it silent.
 - **Enforcement.** The commit-plan handoff is the *chokepoint* gate and only covers commits that pass through an agent session. The backstop that does not depend on operator or agent attention is the CI/doctor assertion — a story cannot reach `done` without a review record, and a commit touching `scripts/**/*.js` must touch its test or carry an explicit opt-out. Chokepoint catches the common path; CI catches the bypass.
