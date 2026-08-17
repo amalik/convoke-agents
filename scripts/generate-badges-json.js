@@ -53,12 +53,17 @@ const manifestLines = fs
   .filter((l) => l.trim().length > 0);
 const skills = manifestLines.length - 1; // minus header row
 
+// No `generated` timestamp. The file is compared with `git diff --exit-code` by both
+// `badges:check` (which gates `npm publish` via prepublishOnly) and `.github/workflows/badges.yml`.
+// A date field makes those comparisons fire on a calendar roll rather than on a real change: it
+// aborted the 4.0.0 release publish a day after the badges were last committed, and forced a
+// no-op commit before every prior release candidate. Counts are the payload; nothing reads the
+// date. Backlog T39.
 const out = {
   teams: DOMAIN_TEAMS.length,
   agents,
   workflows,
   skills,
-  generated: new Date().toISOString().slice(0, 10),
 };
 
 const outDir = path.join(repoRoot, 'docs');
