@@ -685,10 +685,10 @@ development_status:
 
   # Epic 5B: Release Communication & Learning (3 stories, Sprint 5)
   # FRs: FR41–FR44, FR47–FR50. CHANGELOG, retrospective, anti-pattern registry, ship.
-  v63-epic-5b: in-progress
+  v63-epic-5b: done
   v63-5b-1-author-and-validate-changelog: done
   v63-5b-2-run-retrospective-and-create-anti-pattern-registry: done
-  v63-5b-3-complete-playbook-and-ship-release-artifacts: in-progress
+  v63-5b-3-complete-playbook-and-ship-release-artifacts: done
   v63-epic-5b-retrospective: optional
 
   # ============================================================
