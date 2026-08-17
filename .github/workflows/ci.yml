@@ -154,6 +154,12 @@ jobs:
       - name: Install scope containment
         run: node scripts/audit/install-scope-check.js
 
+      # Twice now a commit has deleted backlog rows while claiming to repair them (c841fcd2
+      # dropped BUG-16; 3a3de195 dropped T35 and T39, one of them an open risk item). Both
+      # times every check stayed green. Specified by BUG-16, built after the second occurrence.
+      - name: Backlog referential integrity
+        run: node scripts/audit/backlog-integrity.js
+
   security:
     runs-on: ubuntu-latest
     steps:
