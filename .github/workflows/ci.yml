@@ -373,7 +373,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Publishes via npm Trusted Publishing (OIDC), not a stored token. GitHub mints a
+      # short-lived identity from the `id-token: write` permission above; npm verifies it
+      # against the trusted-publisher entry registered for this repo + workflow.
+      #
+      # Deliberately NO `env: NODE_AUTH_TOKEN`. A token in the environment takes precedence
+      # over OIDC, which put 4.0.0 back on the token path — and npm is restricting tokens
+      # that bypass 2FA (https://gh.io/npm-gat-bypass2fa-deprecation), so every token variant
+      # failed with EOTP regardless of account or package mfa settings.
       - name: Publish to npm
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
