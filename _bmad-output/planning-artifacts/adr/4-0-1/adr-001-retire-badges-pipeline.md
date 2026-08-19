@@ -3,7 +3,7 @@ initiative: convoke
 artifact_type: adr
 qualifier: 4-0-1-retire-badges-pipeline
 created: '2026-08-19'
-status: proposed
+status: accepted
 schema_version: 1
 related_initiative: 4.0.1 (distribution integrity)
 related_decision: 'Epic convoke-epic-4-0-1-distribution-integrity.md — ADR-1; gates Stories 1.1a / 1.1b'
@@ -12,7 +12,7 @@ closes_if_accepted: 'T40; I108; CR-README-D03; retires FR6, FR7, FR8 (T41 f/g/h)
 
 # ADR-001: Retire the badges pipeline
 
-**Status:** **Proposed** (2026-08-19) — awaiting operator decision
+**Status:** **Accepted** (2026-08-19, Amalik) — option (a), retire
 **Initiative:** Convoke 4.0.1 — distribution integrity
 **Gates:** Epic 1, Stories 1.1a / 1.1b. Epic 1's story count is 7 or 8 depending on this ruling, so sprint planning cannot estimate it until this is accepted.
 
@@ -157,7 +157,27 @@ grep -n "generate-badges-json" knip.json
 
 ## Operator decision
 
-**Amalik — retire, keep-and-harden, or keep-the-file-drop-the-gate?**
+**Accepted 2026-08-19 (Amalik): option (a) — retire.**
 
-Recording the ruling here flips `status: proposed` → `accepted` (or `rejected`, with the chosen
-alternative named), and unblocks sprint planning for Epic 1.
+Options (b) and (c) were declined. The FY2027 counter-argument — that count shields are a cheap
+credibility signal for a product demonstrating scale to adopters — was weighed and rejected on the
+grounds that D9's original cull reason stands independently of its false premise: the first
+screenful depended on shields.io uptime, repository visibility, `main` not moving, and a generated
+file staying generated. Count badges for FY2027, if wanted, would be built differently; retiring
+does not foreclose them.
+
+**Effects, now binding on the epic:**
+
+- Story 1.1b struck. Story 1.1a renumbered **1.1**. Epic 1 = **7 stories**; the epic set = **15**.
+- **FR6, FR7 and FR8 retired**, not deferred. T41 drops from 8 findings to **5** — four HIGH, one MEDIUM.
+- T40, I108 and CR-README-D03 close against Story 1.1.
+- Epic 1 is unblocked for sprint planning on this axis. ADR-3 still gates Story 1.6.
+
+**Two follow-through items** surfaced by this ADR's "verify no other hook depends on it" check, now
+acceptance criteria on Story 1.1:
+
+1. `project-context.md:359` — the `verification-pipefail` rule's worked example is
+   `npm run badges:check | tail -8; echo $?`. It remains valid as a historical scar story, but must
+   say so once the script no longer exists.
+2. `.github/workflows/ci.yml:221` — the comment reading *"`prepublishOnly` (the one that exists)
+   does NOT fire on pack"* goes stale when the hook is removed.

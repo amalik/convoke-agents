@@ -3,8 +3,8 @@ initiative: convoke
 artifact_type: epic
 created: 2026-08-18T00:00:00.000Z
 schema_version: 1
-status: draft
-stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories']
+status: active
+stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories', 'step-04-final-validation']
 inputDocuments:
   - _bmad-output/planning-artifacts/convoke-note-4-0-1-scope-decisions.md
   - _bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md
@@ -28,6 +28,21 @@ requirements derive from the ratified
 [4.0.1 scope decisions](convoke-note-4-0-1-scope-decisions.md) and are traced to
 backlog rows with source-verified anchors.
 
+**Size, stated deliberately.** 15 stories and 3 ADRs — larger than the tiny meta-model
+baseline that follows it, which is one ADR, one name registry and one doctor check. That
+is on purpose: 4.0.1 pays down the release mechanism once so that the baseline, Forge, and
+every release after them are cheap. If that trade stops looking worth it, this is the
+paragraph to reread.
+
+**Version — `4.0.1`, a patch, decided 2026-08-19.** Story 2.6 makes four `_portability`
+skills reachable and Story 2.5 ships a file that was missing from the package, which reads
+like added functionality. It is not. Both are already declared — `_bmad/bme/_portability/`
+is in `files[]` and in the tarball an operator has already downloaded; `bmm-dependencies.csv`
+is read by shipped code. Nothing is added; delivery of what 4.0.0 already promised is
+repaired, which is the textbook patch. The self-consistency argument settles it: this epic's
+premise is that 4.0.0 shipped promises it did not keep, and a minor version would assert the
+opposite — that the promise is new. Not an ADR; a one-line call.
+
 **Spine.** *Nothing binds what is in the repository to what an operator actually gets.*
 Four instances were found by hand within two days, in three different directions
 (in-repo-not-in-tarball, in-tarball-no-install-path, declared-but-unwired). None was
@@ -40,7 +55,7 @@ Neither of these is implementable work, and each sat first in its epic — so bo
 stalled at story one waiting for a human ruling, and Epic 1's story count was a variable.
 Pulled out as ADRs; both epics then have a knowable shape end to end.
 
-**ADR-1 — Retire the badges pipeline, or keep and harden it?** *(was FR10 / T40)*
+**ADR-1 — Retire the badges pipeline, or keep and harden it?** *(was FR10 / T40)* — **ACCEPTED 2026-08-19: retire.** See [adr-001](adr/4-0-1/adr-001-retire-badges-pipeline.md). Story 1.1b struck; FR6–FR8 retired; Epic 1 = 7 stories.
 `prepublishOnly` is still `npm run badges:check`; T39 removed the date but left the gate.
 `docs/badges.json` has no consumer — the I156 rewrite removed the four dynamic shields,
 and a repo-wide grep finds only the generator, `badges.yml`, `knip.json` and
@@ -54,7 +69,7 @@ would then break the suite on deletion.
 normative required reading (`convoke-covenant-operator.md`, the Compliance Checklist,
 `project-context.md`) that lives in generated-artifact space and is not in the package.
 Options: move it into `files[]`, rewrite the links as absolute GitHub URLs, or drop them.
-**Unblocks:** FR12 may not be switched to blocking until this is ruled. A detector with
+**Unblocks:** FR12's checker is never wired into CI until this is ruled. A detector with
 no paired decision gets allowlisted the first time it goes red under release pressure —
 how the `pathContains` filter and the badges gate were each neutralised.
 
@@ -96,12 +111,12 @@ FR5:  The publish job MUST fetch the current `latest` from the registry and refu
       nowhere today, so the job has no knowledge of what `latest` currently is. Accepted
       trade-off: the publish job gains a dependency on registry availability; the story
       must state it rather than discover it.                                  [T41(e) MED]
-FR6:  The badge generator MUST fail rather than emit a zero/collapsed count when a
-      source collection is empty.               [T41(f) MED] [EXISTS ONLY IF ADR-1 = keep]
-FR7:  The manifest floor MUST reject implausible low counts, not only negative
-      ones.                                    [T41(g) MED] [EXISTS ONLY IF ADR-1 = keep]
-FR8:  The generator guards MUST carry committed tests; the mutation matrix was a
-      one-off with no artifact and it had a hole. [T41(h) MED] [EXISTS ONLY IF ADR-1 = keep]
+FR6:  RETIRED 2026-08-19 by ADR-001 (retire the badges pipeline). Was: the badge
+      generator must fail rather than emit a collapsed count.            [T41(f) MED]
+FR7:  RETIRED 2026-08-19 by ADR-001. Was: the manifest floor must reject implausible
+      low counts, not only negative ones.                                [T41(g) MED]
+FR8:  RETIRED 2026-08-19 by ADR-001. Was: the generator guards must carry committed
+      tests.                                                             [T41(h) MED]
 ```
 
 **Cluster 4.1 — Publish-path integrity.**
@@ -273,13 +288,13 @@ FR2  Epic 1 — assert npm >= 11.5.1 (OIDC floor); don't trust the runner toolca
 FR3  Epic 1 — fail when git tag and package.json version disagree
 FR4  Epic 1 — no unset _authToken in .npmrc masking an OIDC decline
 FR5  Epic 1 — fetch registry `latest`, refuse a semver-lower publish to it
-FR6  Epic 1 — generator must fail, not emit a collapsed count      [only if ADR-1 = keep]
-FR7  Epic 1 — manifest floor must reject implausible counts        [only if ADR-1 = keep]
-FR8  Epic 1 — committed tests for the generator guards             [only if ADR-1 = keep]
+FR6  RETIRED by ADR-001 — badges pipeline deleted, guards protect nothing
+FR7  RETIRED by ADR-001
+FR8  RETIRED by ADR-001
 FR9  Epic 1 — tag push is the only path to the registry
 FR19 Epic 1 — composed end-to-end rehearsal on v4.0.1-rc.0                        [LAST]
 FR11 Epic 2 — docs:audit runs in CI
-FR12 Epic 2 — resolve every DOCUMENTED reference inside the package  [ADR-2 gates blocking]
+FR12 Epic 2 — resolve every DOCUMENTED reference inside the package  [ADR-2 gates wiring]
 FR13 Epic 2 — installed tree carries every shipped _bmad/bme/* and every runtime-read
               file in files[]  — extends try-fresh-install.sh; absorbs I153
 FR14 Epic 2 — _portability reachable after install                     [turns FR13 green]
@@ -297,11 +312,12 @@ All 18 FRs mapped; FR10 and FR20 retired to ADR-1 and ADR-2. No orphans.
 Every Convoke release routes to the dist-tag it belongs on, comes from a committed tree,
 and fails loudly rather than silently when it cannot authenticate. No operator is ever
 downgraded by an upgrade.
-**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, FR19
+**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR9, FR19 (FR6–FR8 retired by ADR-001)
 **Gate:** 4.0.1 cannot ship until this epic completes (NFR1).
-**Blocked on:** ADR-1 (FR6/FR7/FR8 exist only if the ruling is *keep*) and ADR-3 (sets
-FR9's mechanism, and may find it is an npm account setting rather than a repo change).
-**Story order:** badges resolution → FR1 → FR5 → FR3 → FR2/FR4 → FR9 → **FR19 last**.
+**Blocked on:** ADR-3 (sets FR9's mechanism, and may find it is an npm account setting
+rather than a repo change). **ADR-1 accepted 2026-08-19 — retire**, so FR6–FR8 are retired
+and Epic 1 is 7 stories.
+**Story order:** retire the badges pipeline → FR1 → FR5 → FR3 → FR2/FR4 → FR9 → **FR19 last**.
 FR1 is deliberately alone and first after the badges call: it is a one-line change, it is
 locally testable, and NFR1's prerelease exemption depends on it — so it unblocks the
 rehearsal without waiting on FR5's registry call. Eight of these are edits to the same
@@ -314,13 +330,14 @@ inside it, every shipped skill tree has an install path that copies it, and the 
 does not crash on a name it has never seen. Checked by CI, not by someone happening to
 look.
 **FRs covered:** FR11, FR12, FR13, FR14, FR15, FR16, FR17, FR18 · **also closes:** I153
-**Blocked on:** ADR-2 — FR12 may not be switched to blocking until the Covenant's
+**Blocked on:** ADR-2 — FR12's checker is not wired into CI until the Covenant's
 location and the shipped-link policy are ruled.
 **Story order — red before green (NFR10):** FR11 → FR12's gate built and **observed
-failing**, merged non-blocking → the remaining shipped-link violations fixed under ADR-2's
-policy, then FR12 switched to blocking → FR13's harness extension built and **observed
-failing** → FR14 and FR18 as separate later stories that turn it green. FR16 is
-independent and may run in parallel.
+failing** but NOT wired into CI → the remaining shipped-link violations fixed under ADR-2's
+policy and the checker wired in blocking, same commit → FR13's assertion built and **observed
+failing**, also not wired in → FR18 then FR14 as separate later stories, the last of which
+turns it green and wires it in. FR16 and FR15 are independent and may run in parallel.
+Nothing is ever merged red: `fresh-install` gates every PR and every publish.
 **Two detection classes, deliberately distinct.** FR12 sees documented references; FR13
 sees what actually arrives on disk after an install. `bmm-dependencies.csv` is referenced
 by NO shipped markdown — it is read at runtime by `convoke-register-skill.js:376` and the
@@ -334,13 +351,13 @@ FR12 green; it does not.
 
 Every Convoke release routes to the dist-tag it belongs on, comes from a committed tree, and fails loudly rather than silently when it cannot authenticate. No operator is ever downgraded by an upgrade.
 
-**FRs:** FR1–FR9, FR19 · **NFRs:** NFR1, NFR2, NFR5, NFR7
-**Blocked on:** ADR-1 (determines whether Story 1.1b exists) · ADR-3 (sets Story 1.6's mechanism)
+**FRs:** FR1–FR5, FR9, FR19 (FR6–FR8 retired by ADR-001) · **NFRs:** NFR1, NFR2
+**Blocked on:** ADR-3 (sets Story 1.6's mechanism). **ADR-1 accepted 2026-08-19** — retire; Story 1.1b struck, FR6–FR8 retired, Epic 1 = 7 stories.
 **Gate:** 4.0.1 cannot ship until this epic completes.
 
-### Story 1.1a: Retire the badges publish gate
+### Story 1.1: Retire the badges pipeline
 
-*Implemented only if ADR-1 rules **retire**. Exactly one of 1.1a / 1.1b lands.*
+*Covers ADR-001, accepted 2026-08-19. Closes T40 (9.5), I108 (1.4) and CR-README-D03.*
 
 As a Convoke maintainer,
 I want the badges pipeline removed from the publish path,
@@ -349,36 +366,25 @@ So that a release is never blocked by a file no document consumes.
 **Acceptance Criteria:**
 
 **Given** `package.json` declares `prepublishOnly: npm run badges:check`
-**When** ADR-1 rules *retire*
+**When** this story completes
 **Then** `prepublishOnly` no longer invokes `badges:check`
+**And** if the key is left empty it is removed rather than left declaring nothing
 **And** `docs/badges.json`, `scripts/generate-badges-json.js`, `.github/workflows/badges.yml` and the `badges` / `badges:check` scripts are removed together, or the ADR records explicitly which are kept and why
 **And** `knip.json`'s entry for the generator is removed in the same commit
 **And** `CR-README-D03` (`deferred-work.md:957`) is marked resolved
+**And** T40 and I108 are closed in the backlog, each moved below its lane's live block with the lane-order check run in the same edit
 
-*(If ADR-1 rules retire, FR6–FR8 are struck at ADR time. That is the ADR's bookkeeping, not this story's acceptance criterion.)*
+**Given** `project-context.md:359` uses `npm run badges:check | tail -8; echo $?` as the worked example in the `verification-pipefail` rule
+**When** the script no longer exists
+**Then** the example is annotated as a historical scar story rather than a runnable command — it remains valid as history and must not be deleted
 
-### Story 1.1b: Harden the badge generator guards
+**Given** `.github/workflows/ci.yml:221` comments that *"`prepublishOnly` (the one that exists) does NOT fire on pack"*
+**When** the hook is removed
+**Then** that comment is corrected in the same commit
 
-*Implemented only if ADR-1 rules **keep**. Covers FR6, FR7, FR8.*
+### Story 1.1b: Harden the badge generator guards — STRUCK
 
-As a Convoke maintainer,
-I want the badge generator to fail rather than emit a collapsed count,
-So that a silently-wrong badge cannot be auto-committed to `main`.
-
-**Acceptance Criteria:**
-
-**Given** a module config whose agent list is empty (`agents: []`)
-**When** `npm run badges` runs
-**Then** it exits non-zero rather than writing `agents: 0`
-
-**Given** `skill-manifest.csv` truncated to 3 rows
-**When** `npm run badges` runs
-**Then** it exits non-zero — the current floor rejects only negative counts, and 3 rows yield `skills: 2` at exit 0
-
-**Given** the guards above
-**When** the test suite runs
-**Then** committed tests cover each guard
-**And** each test is demonstrated failing against the pre-guard generator, with the failure output recorded (NFR10)
+*Struck 2026-08-19 by [ADR-001](adr/4-0-1/adr-001-retire-badges-pipeline.md), which ruled **retire**. FR6, FR7 and FR8 are retired, not deferred: the guards protected the correctness of a generated file with no consumer, and the file is being deleted. Number not reused.*
 
 ### Story 1.2: Strip build metadata before the prerelease test
 
@@ -529,8 +535,9 @@ So that the release tag is not the first time these changes run together.
 Everything an operator installs resolves and works: every documented reference points inside the package, every shipped skill tree actually arrives on disk, and the exporter does not crash on a name it has never seen. Checked by CI, not by someone happening to look.
 
 **FRs:** FR11, FR12, FR13, FR14, FR15, FR16, FR17, FR18 · **also closes:** I153 · **NFRs:** NFR10 (load-bearing), NFR8
-**Blocked on:** ADR-2 (Covenant location + shipped-link policy) — gates Story 2.3 and the blocking flip in it.
-**Story order — red before green (NFR10):** 2.1 → 2.2 (gate observed failing, merged non-blocking) → 2.3 (policy applied, gate flipped to blocking) → 2.4 (harness extension observed failing) → 2.5 and 2.6 turn it green. **2.7 and 2.8 are independent** and may run at any point.
+**Blocked on:** ADR-2 (Covenant location + shipped-link policy) — gates Story 2.3, which is where the checker is wired in.
+**Story order — red before green (NFR10), and never merged red:** 2.1 → 2.2 (checker built, observed failing, NOT wired in) → 2.3 (policy applied, checker wired in blocking, same commit) → 2.4 (assertion built, observed failing, NOT wired in) → 2.5 (registry shipped) → 2.6 (`_portability` reachable + assertion wired in blocking, same commit). **2.7 and 2.8 are independent** and may run at any point.
+**Why nothing merges red.** `fresh-install` runs on push to `main` and every pull request, and the `publish` job `needs:` it. A gate merged in a failing state there blocks every PR and every release until its fix lands. NFR10 requires each gate *demonstrated* failing; it does not require it *merged* failing.
 
 ### Story 2.1: Run the docs audit in CI
 
@@ -552,7 +559,7 @@ So that a broken instruction in the docs is caught before it reaches me.
 
 ### Story 2.2: Assert every documented reference resolves inside the package
 
-*Covers FR12. Merged non-blocking; Story 2.3 flips it.*
+*Covers FR12. Delivers the checker and its red demonstration only — Story 2.3 wires it into CI. `continue-on-error` appears nowhere in this epic: a gate nobody watches is T32, the row this epic exists to close.*
 
 As a Convoke operator,
 I want every link in what I installed to point at something I have,
@@ -561,8 +568,9 @@ So that "required reading" is readable by someone who installed from npm.
 **Acceptance Criteria:**
 
 **Given** `scripts/audit/try-fresh-install.sh` already runs `npm pack` as its first step
-**When** this gate is added
-**Then** it lands in that harness rather than in a new CI job — a second job packing the same tarball is a parallel mechanism, the criticism this epic levels at grep-based detection
+**When** the checker is written
+**Then** it is written to run against that harness's packed tarball rather than packing its own — a second pack is a parallel mechanism, the criticism this epic levels at grep-based detection
+**And** it is NOT wired into CI by this story. `fresh-install` is one of the eight jobs the `publish` job `needs:`, so anything landing there blocks releases from the moment it merges — which `continue-on-error` cannot express inside a gating job, and which NFR10 forbids landing alongside its own first fix. Story 2.3 wires it in
 
 **Given** the packed tarball (455 files today)
 **When** the gate runs
@@ -572,17 +580,13 @@ So that "required reading" is readable by someone who installed from npm.
 **When** the gate first executes
 **Then** it is observed **failing**, with output recorded (NFR10), on at least: `_bmad/bme/README.md`'s three links to the Covenant, the Compliance Checklist and `project-context.md`; seven link instances in `scripts/migration/format-conversion/README.md`; and `CHANGELOG.md`'s link to `docs/migration/3.x-to-4.0.md`, since `docs/` is not in `files[]`
 
-**Given** ADR-2 has not yet ruled
-**When** the gate is merged
-**Then** it runs non-blocking (`continue-on-error`)
-
 **Given** this gate resolves documented references only
 **When** its scope is documented
 **Then** the story states explicitly that it CANNOT detect a file read at runtime but absent from the package — that class is Story 2.4's — so no one assumes coverage it does not have
 
-### Story 2.3: Apply the shipped-link policy and switch the gate to blocking
+### Story 2.3: Apply the shipped-link policy and wire the gate in, blocking
 
-*No FR of its own; it is what makes FR12 enforceable. Blocked on ADR-2.*
+*No FR of its own; it is what makes FR12 enforceable. Blocked on ADR-2 — which is a pre-epic decision, so the ruling exists before this story is picked up.*
 
 As a Convoke operator,
 I want the link gate actually enforced,
@@ -595,8 +599,8 @@ So that the next broken reference is caught by CI rather than by someone reading
 **Then** every violation Story 2.2 observed is resolved by applying that policy — including `scripts/migration/format-conversion/README.md` and `CHANGELOG.md`, not only the Covenant links
 
 **Given** all violations are resolved
-**When** the gate runs
-**Then** it passes, and `continue-on-error` is removed in the same commit
+**When** this story completes
+**Then** the checker from Story 2.2 is wired into `try-fresh-install.sh` as a blocking check, in the same commit that turns it green — it is never merged non-blocking. A gate that runs and nobody watches is T32, the row this epic exists to close
 
 **Given** an allowlist is proposed for any remaining violation
 **When** the story is reviewed
@@ -604,7 +608,7 @@ So that the next broken reference is caught by CI rather than by someone reading
 
 ### Story 2.4: Assert the installed tree carries what was shipped
 
-*Covers FR13; absorbs I153.*
+*Covers FR13; absorbs I153. Delivers the assertion and its red demonstration only — Story 2.6 wires it into the gating path, symmetric with 2.2 → 2.3.*
 
 As a Convoke operator,
 I want everything in the package to actually arrive when I install,
@@ -614,7 +618,8 @@ So that a file cannot ship and be unreachable at the same time.
 
 **Given** `scripts/audit/try-fresh-install.sh` already packs, installs, and runs doctor and export as the CI `fresh-install` job
 **When** this story completes
-**Then** the assertion is added there rather than in a new grep over `scripts/**` — grep is fragile against renames and dynamically built paths; an actual install is not
+**Then** the assertion is written against that harness rather than as a new grep over `scripts/**` — grep is fragile against renames and dynamically built paths; an actual install is not
+**And** it is NOT placed in the harness's failure path by this story. `fresh-install` runs on push to `main` and on every pull request, and the `publish` job `needs:` it — merging an assertion that is required to be red would block every PR and every release until Stories 2.5 and 2.6 land. Story 2.6 wires it in
 
 **Given** an installed package
 **When** the harness runs
@@ -626,8 +631,8 @@ So that a file cannot ship and be unreachable at the same time.
 **Then** the check walks the full dependency surface, and I153 is closed against this story
 
 **Given** the tree as it stands
-**When** the extended harness first runs
-**Then** it is observed **failing** on both `_bmad/bme/_portability/` and `_bmad/_config/bmm-dependencies.csv`, with output recorded (NFR10)
+**When** the assertion is run against it
+**Then** it is observed **failing** on both `_bmad/bme/_portability/` and `_bmad/_config/bmm-dependencies.csv`, with output recorded (NFR10) — demonstrated, not merged red
 
 ### Story 2.5: Close BUG-19 — ship the registry and fix the label that contradicts it
 
@@ -660,9 +665,9 @@ So that a healthy install does not warn me about a file that simply was not ship
 
 *The label still matters after the registry ships: the absent branch stops firing for npm-installed operators, but not for anyone whose registry has genuinely not been generated.*
 
-### Story 2.6: Make `_portability` reachable after install
+### Story 2.6: Make `_portability` reachable, and wire the installed-tree assertion in
 
-*Covers FR14. Turns Story 2.4's other finding green.*
+*Covers FR14. Turns Story 2.4's remaining finding green and, in the same commit, puts the assertion into the gating path — the last of the two fixes carries the wiring.*
 
 As a Convoke operator,
 I want the portability skills to be usable after I install,
@@ -677,7 +682,10 @@ So that a capability that ships is a capability I have.
 **Given** a fresh install
 **When** the portability skills are invoked
 **Then** they resolve
-**And** Story 2.4's assertion passes for this tree
+
+**Given** Story 2.5 has already shipped `bmm-dependencies.csv` and this story makes `_portability` reachable, so Story 2.4's assertion now has no findings
+**When** this story completes
+**Then** the assertion is wired into `try-fresh-install.sh`'s failure path, blocking, in the same commit that turns it green — never merged red into a job that gates every PR and every publish
 
 **Given** NFR6
 **When** any count of affected skills appears
