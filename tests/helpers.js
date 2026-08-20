@@ -76,7 +76,7 @@ function _listSurvivors(dir) {
   };
   walk(dir, '');
   if (found.length === 0) return '<nothing listed>';
-  return found.join(', ') + (truncated ? `, ... (capped at ${SURVIVOR_LIMIT})` : '');
+  return found.join(', ') + (truncated ? `, ... (listing stopped at ${SURVIVOR_LIMIT} entries)` : '');
 }
 
 /**
@@ -118,7 +118,14 @@ function _assertRemovableTempPath(dir) {
   } catch {
     // Non-existent or unreadable temp root — the raw value is still a usable prefix.
   }
-  const contained = [...roots].some((root) => resolved.startsWith(root.endsWith(path.sep) ? root : root + path.sep));
+  // Windows paths are case-insensitive, so a legitimate mkdtemp path whose case
+  // differs from os.tmpdir()'s would be REJECTED here — turning a safety guard
+  // into a teardown failure in every suite. Compare case-insensitively there only.
+  const norm = (value) => (process.platform === 'win32' ? value.toLowerCase() : value);
+  const contained = [...roots].some((root) => {
+    const prefix = root.endsWith(path.sep) ? root : root + path.sep;
+    return norm(resolved).startsWith(norm(prefix));
+  });
   if (!contained) {
     throw new Error(
       `removeTempDir refuses a path outside the OS temp directory (${os.tmpdir()}): ${resolved}`

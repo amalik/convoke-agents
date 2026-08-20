@@ -306,7 +306,13 @@ describe('removeTempDir — teardown survives a writer, and names it when it can
       } catch {
         // already removed
       }
-      nodeFs.rmSync(dir, { recursive: true, force: true });
+      try {
+        nodeFs.rmSync(dir, { recursive: true, force: true });
+      } catch {
+        // If the restore above failed for any reason other than ENOENT, this
+        // rm throws EACCES and would mask the AssertionError it is unwinding
+        // from. Leave the directory for the OS temp reaper instead.
+      }
     }
   });
 });
