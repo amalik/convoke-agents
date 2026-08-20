@@ -73,8 +73,7 @@ Options: move it into `files[]`, rewrite the links as absolute GitHub URLs, or d
 no paired decision gets allowlisted the first time it goes red under release pressure —
 how the `pathContains` filter and the badges gate were each neutralised.
 
-**ADR-3 — How is "tag-push is the only publish path" actually enforced?** *(gates FR9 /
-T35)* The backlog row offers three options and the epic must not choose inside an
+**ADR-3 — How is "tag-push is the only publish path" actually enforced?** *(gates FR9 / T35)* — **ACCEPTED 2026-08-20: option (a), an npm per-package setting.** Spike resolved: no repository change can enforce this. See [adr-003](adr/4-0-1/adr-003-publish-path-enforcement.md). Stories 1.6 and 1.7 transposed as a result. The backlog row offers three options and the epic must not choose inside an
 acceptance criterion: **(a)** make tag-push the only path and treat a laptop
 `npm publish` as an incident; **(b)** keep manual rc publishing but add a preflight that
 refuses on a dirty tree or unpushed `HEAD` and prints the built-from commit; **(c)**
@@ -314,10 +313,11 @@ and fails loudly rather than silently when it cannot authenticate. No operator i
 downgraded by an upgrade.
 **FRs covered:** FR1, FR2, FR3, FR4, FR5, FR9, FR19 (FR6–FR8 retired by ADR-001)
 **Gate:** 4.0.1 cannot ship until this epic completes (NFR1).
-**Blocked on:** ADR-3 (sets FR9's mechanism, and may find it is an npm account setting
-rather than a repo change). **ADR-1 accepted 2026-08-19 — retire**, so FR6–FR8 are retired
-and Epic 1 is 7 stories.
-**Story order:** retire the badges pipeline → FR1 → FR5 → FR3 → FR2/FR4 → FR9 → **FR19 last**.
+**Blocked on:** nothing — both ADRs gating this epic are accepted. **ADR-1 (2026-08-19)** retire,
+so FR6–FR8 are retired and Epic 1 is 7 stories. **ADR-3 (2026-08-20)** option (a): FR9 is enforced
+by the npm package setting *Require two-factor authentication and disallow tokens*, which is a
+registry configuration, not code — and it lands LAST, after the rehearsal proves the automatic path.
+**Story order:** retire the badges pipeline → FR1 → FR5 → FR3 → FR2/FR4 → **FR19 rehearsal → FR9 enforcement last** (transposed 2026-08-20 by ADR-003: prove the automatic path before switching off the manual one).
 FR1 is deliberately alone and first after the badges call: it is a one-line change, it is
 locally testable, and NFR1's prerelease exemption depends on it — so it unblocks the
 rehearsal without waiting on FR5's registry call. Eight of these are edits to the same
@@ -352,7 +352,7 @@ FR12 green; it does not.
 Every Convoke release routes to the dist-tag it belongs on, comes from a committed tree, and fails loudly rather than silently when it cannot authenticate. No operator is ever downgraded by an upgrade.
 
 **FRs:** FR1–FR5, FR9, FR19 (FR6–FR8 retired by ADR-001) · **NFRs:** NFR1, NFR2
-**Blocked on:** ADR-3 (sets Story 1.6's mechanism). **ADR-1 accepted 2026-08-19** — retire; Story 1.1b struck, FR6–FR8 retired, Epic 1 = 7 stories.
+**Blocked on:** nothing. **ADR-1 accepted 2026-08-19** (retire) and **ADR-3 accepted 2026-08-20** (option a — the publish path is enforced by an npm package setting, not code). **ADR-1** — retire; Story 1.1b struck, FR6–FR8 retired, Epic 1 = 7 stories.
 **Gate:** 4.0.1 cannot ship until this epic completes.
 
 ### Story 1.1: Retire the badges pipeline
@@ -479,34 +479,9 @@ So that a broken release never looks like a successful one.
 **Given** NFR2
 **Then** the story records its rehearsal strategy
 
-### Story 1.6: Bind a published artifact to a committed tree
+### Story 1.6: Rehearse the composed job before the release tag
 
-*Covers FR9. Mechanism selected by ADR-3.*
-
-As a Convoke operator,
-I want every published build traceable to a commit,
-So that testing against a published version tells me something true about the source.
-
-**Acceptance Criteria:**
-
-**Given** ADR-3 has ruled between options (a), (b) and (c)
-**When** this story is written
-**Then** it implements exactly one mechanism — the choice is not made inside this story
-
-**Given** a release published through the CI job
-**When** its npm metadata is inspected
-**Then** `dist.attestations` is non-null. 4.0.0 as shipped is `null`
-
-**Given** ADR-3's spike finds that "tag-push only" is an npm account setting rather than a repository change
-**When** that is the ruling
-**Then** the deliverable is the account configuration plus its documentation, and the AC is verified against the registry rather than against a file in this repository
-
-**Given** NFR2
-**Then** the story records its rehearsal strategy
-
-### Story 1.7: Rehearse the composed job before the release tag
-
-*Covers FR19. Last story in the epic.*
+*Covers FR19. Transposed with the former 1.6 on 2026-08-20 by [ADR-003](adr/4-0-1/adr-003-publish-path-enforcement.md): the rehearsal must prove the automatic path works BEFORE the manual path is switched off, or there is no way to ship at all.*
 
 As a Convoke maintainer,
 I want the whole publish job exercised once on a prerelease,
@@ -514,11 +489,15 @@ So that the release tag is not the first time these changes run together.
 
 **Acceptance Criteria:**
 
-**Given** Stories 1.1–1.6 are complete
+**Given** Stories 1.1–1.5 are complete
 **When** `package.json` is set to `4.0.1-rc.0` and tag `v4.0.1-rc.0` is pushed
 **Then** the job publishes to the `rc` dist-tag and not `latest`
 **And** `npm view convoke-agents dist-tags` shows `latest` unchanged
 **And** `dist.attestations` on the published prerelease is non-null
+
+**Given** the trusted-publisher configuration for `convoke-agents` was created on 2026-08-17, after npm's 20 May 2026 cutoff, so at least one allowed action had to be selected explicitly
+**When** this story starts
+**Then** it is verified FIRST that `npm publish` is among the selected allowed actions — inspectable via `npm trust github convoke-agents --file ci.yml --repo amalik/convoke-agents --dry-run`. If it is absent, the tag push fails at the write and the failure resembles the anonymous-publish 404 already diagnosed four times
 
 **Given** this is not a dry run
 **When** the story is planned
@@ -527,6 +506,37 @@ So that the release tag is not the first time these changes run together.
 **Given** NFR1's tag freeze
 **When** `v4.0.1-rc.0` is pushed
 **Then** it is permitted under NFR1's exemption, because Story 1.2 landed FR1 and a prerelease provably routes to `rc` — the exemption depends on FR1 alone, not on FR5
+
+### Story 1.7: Make the CI path the only path to the registry
+
+*Covers FR9 / T35. Mechanism set by [ADR-003](adr/4-0-1/adr-003-publish-path-enforcement.md), accepted 2026-08-20: option (a). **Last story in the epic** — it must not run before Story 1.6 is green.*
+
+As a Convoke operator,
+I want every published build to come from a committed tree by construction,
+So that testing against a published version tells me something true about the source.
+
+**Acceptance Criteria:**
+
+**Given** ADR-003 ruled option (a), and enforcement is an npm per-package setting rather than a repository change
+**When** this story completes
+**Then** **Require two-factor authentication and disallow tokens** is enabled at Package Settings → Publishing access for `convoke-agents`
+**And** the deliverable is that configuration plus its documentation — there is no code change, and the acceptance evidence is the registry's behaviour, not a file in this repository
+
+**Given** Story 1.6's rehearsal has published `4.0.1-rc.0` through the CI job with a non-null attestation
+**When** this story starts
+**Then** that evidence is confirmed first. Disabling the manual path before the automatic one is proven would leave no way to ship at all
+
+**Given** the setting removes the emergency escape hatch, and this project's publish job was broken as recently as 2026-08-17
+**When** this story completes
+**Then** a break-glass procedure is documented: where the setting lives, who can disable it, that any hand-publish performed while it is disabled is logged as an incident, and that it is re-enabled immediately afterwards. An escape hatch written down is a control; one rediscovered under pressure is the status quo
+
+**Given** a release published after this story
+**When** its npm metadata is inspected
+**Then** `dist.attestations` is non-null — 4.0.0 as shipped is `null`, which is the evidence it did not come through this path
+**And** T35 is closed against this story, with options (b) and (c) recorded as declined
+
+**Given** NFR2
+**Then** the story records its rehearsal strategy — noting that this change is not exercised by a CI run, so its verification is a registry-side check plus a deliberate negative test if one can be performed safely
 
 ---
 
