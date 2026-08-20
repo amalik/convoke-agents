@@ -112,3 +112,201 @@ describe('runScript return-shape contract (I64)', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// CI run 32115225495 — git-fixture teardown determinism.
+//
+// One test failed (`executeInjections > preserves existing frontmatter fields
+// (NFR20)`, tests/lib/migration-execution.test.js) and took three jobs red:
+// test(20), test(22) and coverage. Node 18 passed, so it is a race, not a defect.
+// The failure was in the afterEach hook, not the assertions:
+//   ENOTEMPTY: directory not empty, rmdir '/tmp/convoke-inject-XXXXXX/.git/objects'
+//
+// Two causes stacked. `git commit` forks a DETACHED
+// `git maintenance run --auto --no-quiet --detach` child that outlives the
+// parent execFileSync and keeps working inside .git/objects; and fs-extra's
+// remove() is fs.rm({recursive, force}) with maxRetries defaulted to 0, so the
+// first ENOTEMPTY is fatal with no retry.
+//
+// These tests lock both halves of the fix.
+// ---------------------------------------------------------------------------
+
+const { spawnSync } = require('node:child_process');
+const nodeFs = require('node:fs');
+
+const { PACKAGE_ROOT, initGitFixture, removeTempDir, removeTempDirSync } = require('../helpers');
+
+/**
+ * Commit a change in `dir` under GIT_TRACE and count the detached
+ * auto-maintenance spawns it produced.
+ *
+ * Asserts the commit actually succeeded first: a failed commit also yields a
+ * count of 0, which would make the whole assertion pass for the wrong reason.
+ */
+function maintenanceSpawnsOnCommit(dir, label) {
+  nodeFs.writeFileSync(path.join(dir, `${label}.md`), 'x\n');
+  const add = spawnSync('git', ['add', '-A'], { cwd: dir, encoding: 'utf8' });
+  assert.ok(!add.error, `git add could not spawn in ${label}: ${add.error && add.error.code}`);
+  assert.equal(add.status, 0, `git add failed in ${label}: ${add.stderr}`);
+  const res = spawnSync('git', ['commit', '-m', label], {
+    cwd: dir,
+    encoding: 'utf8',
+    env: { ...process.env, GIT_TRACE: '1' },
+  });
+  // A spawn failure leaves status null and stderr undefined, so asserting on
+  // status alone reports "git commit failed: undefined" and hides the ENOENT.
+  assert.ok(!res.error, `git commit could not spawn in ${label}: ${res.error && res.error.code}`);
+  assert.equal(res.status, 0, `git commit failed in ${label}: ${res.stderr}`);
+  return (res.stderr.match(/maintenance run --auto/g) || []).length;
+}
+
+/** Build a fixture repo the way this suite did BEFORE initGitFixture existed. */
+function legacyGitFixture(dir) {
+  nodeFs.mkdirSync(dir, { recursive: true });
+  for (const args of [['init', '-q'], ['config', 'user.email', 't@t'], ['config', 'user.name', 't']]) {
+    const r = spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
+    assert.equal(r.status, 0, `control setup failed: ${r.stderr}`);
+  }
+  return dir;
+}
+
+describe("initGitFixture — suppresses git's detached auto-maintenance child", () => {
+  let tmpDir;
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-gitfix-'));
+  });
+
+  after(async () => {
+    await removeTempDir(tmpDir);
+  });
+
+  it('a plain `git init` fixture DOES spawn the detached child, and initGitFixture does not', (t) => {
+    // Control: the fixture pattern used today at tests/lib/migration-execution.test.js:248
+    // and :509 — git init plus identity, nothing else.
+    const control = legacyGitFixture(path.join(tmpDir, 'control'));
+    const controlSpawns = maintenanceSpawnsOnCommit(control, 'control');
+
+    // If the control does not spawn, this git predates auto-maintenance (or it
+    // is disabled globally) and the assertion below would pass vacuously.
+    // Skip loudly rather than report coverage we did not get.
+    if (controlSpawns === 0) {
+      t.skip('this git does not run auto-maintenance after commit — nothing to suppress');
+      return;
+    }
+
+    const fixture = path.join(tmpDir, 'fixture');
+    nodeFs.mkdirSync(fixture);
+    initGitFixture(fixture);
+    const fixtureSpawns = maintenanceSpawnsOnCommit(fixture, 'fixture');
+
+    assert.equal(
+      fixtureSpawns,
+      0,
+      `initGitFixture must suppress the detached maintenance child; control spawned ${controlSpawns}, fixture spawned ${fixtureSpawns}`
+    );
+  });
+
+  it('suppression also covers a commit issued by other code in the same repo', (t) => {
+    // The code under test (scripts/lib/artifact-utils.js executeRenames /
+    // executeInjections) runs its OWN `git commit` inside the fixture. Only
+    // repo-local config reaches those; wrapping the test's own git calls would not.
+    //
+    // Same vacuity guard as the test above: without a control arm this asserts
+    // 0 == 0 on any git that never auto-maintains.
+    const control = legacyGitFixture(path.join(tmpDir, 'foreign-control'));
+    if (maintenanceSpawnsOnCommit(control, 'foreign-control') === 0) {
+      t.skip('this git does not run auto-maintenance after commit — nothing to suppress');
+      return;
+    }
+    const repo = path.join(tmpDir, 'foreign-caller');
+    nodeFs.mkdirSync(repo);
+    initGitFixture(repo);
+    maintenanceSpawnsOnCommit(repo, 'seed');
+    assert.equal(maintenanceSpawnsOnCommit(repo, 'foreign'), 0);
+  });
+});
+
+describe('initGitFixture — refuses a path that would touch the real repository', () => {
+  it('rejects falsy and relative paths rather than inheriting process.cwd()', () => {
+    // execFileSync with cwd:undefined runs in the developer's own repo, where
+    // `git config maintenance.auto false` would be a real, silent mutation.
+    assert.throws(() => initGitFixture(undefined), /absolute directory path/);
+    assert.throws(() => initGitFixture(''), /absolute directory path/);
+    assert.throws(() => initGitFixture('some/relative/dir'), /absolute directory path/);
+  });
+
+  it('rejects an absolute path that is not an existing directory', () => {
+    assert.throws(
+      () => initGitFixture(path.join(os.tmpdir(), 'convoke-not-there-77120')),
+      /existing directory/
+    );
+  });
+});
+
+describe('removeTempDir — teardown survives a writer, and names it when it cannot', () => {
+  it('removes a populated nested tree', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-rm-'));
+    await fs.ensureDir(path.join(dir, 'a', 'b', 'c'));
+    await fs.writeFile(path.join(dir, 'a', 'b', 'c', 'f.txt'), 'x');
+    await removeTempDir(dir);
+    assert.equal(nodeFs.existsSync(dir), false);
+  });
+
+  it('is a no-op on a falsy path or an already-removed directory', async () => {
+    await removeTempDir(undefined);
+    await removeTempDir(path.join(os.tmpdir(), 'convoke-never-existed-84213'));
+    removeTempDirSync(undefined);
+  });
+
+  it('refuses a path outside the OS temp directory, and any relative path', async () => {
+    // path-safety-for-destructive-ops: these removers are recursive+force.
+    await assert.rejects(() => removeTempDir(path.join(PACKAGE_ROOT, 'scripts')), /outside the OS temp directory/);
+    assert.throws(() => removeTempDirSync('relative/path'), /refuses a relative path/);
+    assert.throws(() => removeTempDirSync(os.tmpdir()), /outside the OS temp directory/);
+  });
+
+  it('names the surviving entries when removal cannot complete', (t) => {
+    // chmod 0500 on the TARGET (not its parent): the directory stays readable,
+    // so the survivors can be listed, but its contents cannot be unlinked —
+    // which reproduces ENOTEMPTY, the same error class as the CI failure.
+    // chmod on the parent instead yields EACCES with an empty listing, which
+    // would prove nothing.
+    // Windows has no getuid and ignores these mode bits; root bypasses them.
+    // Either way chmod cannot block the unlink, so the case is unreachable —
+    // skip loudly rather than report coverage that was never obtained.
+    if (process.platform === 'win32' || typeof process.getuid !== 'function') {
+      t.skip('platform does not enforce POSIX directory permissions');
+      return;
+    }
+    if (process.getuid() === 0) {
+      t.skip('running as root — chmod cannot block unlink, so this case is unreachable');
+      return;
+    }
+    const dir = nodeFs.mkdtempSync(path.join(os.tmpdir(), 'convoke-stuck-'));
+    nodeFs.writeFileSync(path.join(dir, 'stuck.txt'), 'x');
+    nodeFs.chmodSync(dir, 0o500);
+    try {
+      assert.throws(
+        () => removeTempDirSync(dir),
+        (err) => {
+          assert.ok(
+            err.message.includes('stuck.txt'),
+            `error must name the survivors so the next occurrence is diagnosable; got: ${err.message}`
+          );
+          return true;
+        }
+      );
+    } finally {
+      // Cleanup must never replace the assertion failure it is unwinding from:
+      // if the removal unexpectedly SUCCEEDED, `dir` is already gone and an
+      // unguarded chmod would throw ENOENT over the real AssertionError.
+      try {
+        nodeFs.chmodSync(dir, 0o700);
+      } catch {
+        // already removed
+      }
+      nodeFs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

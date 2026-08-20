@@ -9,6 +9,8 @@ const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
 
+const { initGitFixture, removeTempDir, removeTempDirSync } = require('../helpers');
+
 // --- Unit tests (mocked git) ---
 
 describe('ArtifactMigrationError', () => {
@@ -243,17 +245,16 @@ describe('executeRenames integration', () => {
     await fs.writeFile(path.join(outputDir, 'epic-forge-phase-a.md'), '# Epic Forge\n');
     await fs.writeFile(path.join(outputDir, 'brief-gyre-2026-03-19.md'), '# Brief\n');
 
-    // Initialize git repo and commit
+    // Initialize git repo and commit. initGitFixture also disables git's
+    // detached auto-maintenance child, which otherwise races the teardown below.
     const { execFileSync: exec } = require('child_process');
-    exec('git', ['init'], { cwd: tmpDir, stdio: 'pipe' });
-    exec('git', ['config', 'user.email', 'test@test.com'], { cwd: tmpDir, stdio: 'pipe' });
-    exec('git', ['config', 'user.name', 'Test'], { cwd: tmpDir, stdio: 'pipe' });
+    initGitFixture(tmpDir);
     exec('git', ['add', '-A'], { cwd: tmpDir, stdio: 'pipe' });
     exec('git', ['commit', '-m', 'initial commit'], { cwd: tmpDir, stdio: 'pipe' });
   });
 
   afterEach(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('renames files on disk and creates git commit', () => {
@@ -358,7 +359,7 @@ describe('updateLinks', () => {
   });
 
   afterEach(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('[text](old.md) -> [text](new.md) direct pattern', async () => {
@@ -504,15 +505,13 @@ describe('executeInjections', () => {
       'utf8',
     );
 
-    // Init git repo
-    const { execFileSync: exec } = require('child_process');
-    exec('git', ['init'], { cwd: tmpDir, stdio: 'pipe' });
-    exec('git', ['config', 'user.email', 'test@test.com'], { cwd: tmpDir, stdio: 'pipe' });
-    exec('git', ['config', 'user.name', 'Test'], { cwd: tmpDir, stdio: 'pipe' });
+    // Init git repo. initGitFixture also disables git's detached
+    // auto-maintenance child — the writer that took CI run 32115225495 red here.
+    initGitFixture(tmpDir);
   });
 
   afterEach(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('injects frontmatter into file with no existing frontmatter', async () => {
@@ -1011,7 +1010,7 @@ describe('loadResolutionMap', () => {
   });
 
   afterEach(() => {
-    if (tmpDir) fs.removeSync(tmpDir);
+    removeTempDirSync(tmpDir);
   });
 
   function writeFile(name, content) {
@@ -1352,7 +1351,7 @@ describe('supersedePreviousADR', () => {
   });
 
   afterEach(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('updates status from ACCEPTED to SUPERSEDED', () => {

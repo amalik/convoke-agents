@@ -4,7 +4,9 @@ const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
 const yaml = require('js-yaml');
-const { execFile } = require('node:child_process');
+const { execFile, execFileSync } = require('node:child_process');
+const nodeFs = require('node:fs');
+const nodeFsPromises = require('node:fs/promises');
 
 const { AGENT_IDS, WORKFLOW_NAMES } = require('../scripts/update/lib/agent-registry');
 const pkg = require('../package.json');
@@ -20,6 +22,200 @@ const PACKAGE_ROOT = path.join(__dirname, '..');
  */
 async function createTempDir(prefix = 'convoke-test-') {
   return fs.mkdtemp(path.join(os.tmpdir(), prefix));
+}
+
+/**
+ * Recursive-remove options used by both temp-dir removers.
+ *
+ * fs-extra's `remove()` is `fs.rm({ recursive, force })` with `maxRetries`
+ * DEFAULTED TO 0, so the first ENOTEMPTY is fatal. CI run 32115225495 lost
+ * three jobs (test(20), test(22), coverage) to exactly that, in an afterEach:
+ *
+ *   ENOTEMPTY: directory not empty, rmdir '/tmp/convoke-inject-XXXXXX/.git/objects'
+ *
+ * Node retries ENOTEMPTY/EBUSY/EPERM with a LINEAR backoff — `retryDelay`
+ * longer on each attempt — so 10 x 50ms is roughly a 2.75s tolerance window,
+ * not 500ms.
+ */
+const TEMP_RM_OPTS = { recursive: true, force: true, maxRetries: 10, retryDelay: 50 };
+
+/** Cap on entries named in a teardown-failure message. */
+const SURVIVOR_LIMIT = 40;
+
+/**
+ * List what is still inside `dir`, for a teardown-failure message.
+ *
+ * Hand-walked rather than `readdirSync(dir, { recursive: true })` because that
+ * option needs Node >= 20.1 and package.json declares `node: >=18.0.0` — CI
+ * still runs an 18 matrix leg.
+ *
+ * @param {string} dir
+ * @returns {string} Comma-joined relative paths, capped, or a reason it could not be read.
+ */
+function _listSurvivors(dir) {
+  const found = [];
+  // Tracked explicitly rather than inferred from `found.length === SURVIVOR_LIMIT`:
+  // a tree holding exactly SURVIVOR_LIMIT entries is complete, not truncated, and
+  // a listing that lies about being capped defeats the point of listing at all.
+  let truncated = false;
+  const walk = (current, rel) => {
+    if (found.length >= SURVIVOR_LIMIT) { truncated = true; return; }
+    let entries;
+    try {
+      entries = nodeFs.readdirSync(current, { withFileTypes: true });
+    } catch (err) {
+      found.push(`${rel || '.'} <unreadable: ${err.code || err.message}>`);
+      return;
+    }
+    for (const entry of entries) {
+      if (found.length >= SURVIVOR_LIMIT) { truncated = true; return; }
+      const relPath = rel ? `${rel}/${entry.name}` : entry.name;
+      found.push(relPath);
+      if (entry.isDirectory()) walk(path.join(current, entry.name), relPath);
+    }
+  };
+  walk(dir, '');
+  if (found.length === 0) return '<nothing listed>';
+  return found.join(', ') + (truncated ? `, ... (capped at ${SURVIVOR_LIMIT})` : '');
+}
+
+/**
+ * Annotate a teardown failure with what survived, then rethrow.
+ *
+ * The race this guards against is not reproducible on a developer machine —
+ * 300 local iterations of init + 2 commits + zero-retry rmSync produced zero
+ * failures. So the next occurrence has to arrive carrying its own diagnosis,
+ * or it costs another investigation to find out who the writer was.
+ */
+function _rethrowWithSurvivors(err, dir) {
+  err.message = `${err.message}\n  survivors under ${dir}: ${_listSurvivors(dir)}`;
+  throw err;
+}
+
+/**
+ * Refuse to recursively force-delete anything that is not under the OS temp dir.
+ *
+ * `project-context.md` rule `path-safety-for-destructive-ops`: a destructive op
+ * taking a caller-supplied path must resolve, normalise and contain-check it.
+ * These removers run `{ recursive: true, force: true }`, so an `undefined` that
+ * became `'undefined'`, a relative path, or a typo is one call away from deleting
+ * real work. Refusing costs nothing — every legitimate caller is a `mkdtemp` path.
+ *
+ * @param {string} dir
+ * @throws {Error} when `dir` is relative, or resolves outside (or exactly onto) the temp root.
+ */
+function _assertRemovableTempPath(dir) {
+  if (!path.isAbsolute(dir)) {
+    throw new Error(`removeTempDir refuses a relative path: ${JSON.stringify(dir)}`);
+  }
+  const resolved = path.resolve(dir);
+  // Both spellings of the temp root: macOS reports `/var/folders/...` from
+  // os.tmpdir() but `/private/var/folders/...` once realpath'd, and callers may
+  // hold either form.
+  const roots = new Set([os.tmpdir()]);
+  try {
+    roots.add(nodeFs.realpathSync(os.tmpdir()));
+  } catch {
+    // Non-existent or unreadable temp root — the raw value is still a usable prefix.
+  }
+  const contained = [...roots].some((root) => resolved.startsWith(root.endsWith(path.sep) ? root : root + path.sep));
+  if (!contained) {
+    throw new Error(
+      `removeTempDir refuses a path outside the OS temp directory (${os.tmpdir()}): ${resolved}`
+    );
+  }
+}
+
+/**
+ * Remove a temp directory, tolerating a concurrent writer.
+ *
+ * Use this in `afterEach`/`after` instead of `fs.remove(tmpDir)`.
+ *
+ * @param {string|undefined} dir - Absolute path; falsy is a no-op.
+ * @returns {Promise<void>}
+ */
+async function removeTempDir(dir) {
+  if (!dir) return;
+  _assertRemovableTempPath(dir);
+  try {
+    await nodeFsPromises.rm(dir, TEMP_RM_OPTS);
+  } catch (err) {
+    _rethrowWithSurvivors(err, dir);
+  }
+}
+
+/**
+ * Synchronous form of {@link removeTempDir}, for suites whose hooks are sync.
+ *
+ * @param {string|undefined} dir - Absolute path; falsy is a no-op.
+ * @returns {void}
+ */
+function removeTempDirSync(dir) {
+  if (!dir) return;
+  _assertRemovableTempPath(dir);
+  try {
+    nodeFs.rmSync(dir, TEMP_RM_OPTS);
+  } catch (err) {
+    _rethrowWithSurvivors(err, dir);
+  }
+}
+
+/**
+ * Initialise a git repo inside `dir` for use as a test fixture.
+ *
+ * WHY THIS EXISTS, AND WHY THE CONFIG IS REPO-LOCAL
+ * -------------------------------------------------
+ * `git commit` calls run_auto_maintenance(), which forks
+ * `git maintenance run --auto --no-quiet --detach` — a DETACHED child that
+ * outlives the parent execFileSync and keeps working inside `.git/objects`.
+ * That child is what races teardown. Confirmed with GIT_TRACE=1 (git 2.50.1),
+ * one commit per row:
+ *
+ *   (no config)              -> spawns the child
+ *   gc.auto=0                -> STILL SPAWNS. A decoy: it only makes the child
+ *                               decline to gc once it is already running in
+ *                               .git/objects. Do not use it for this.
+ *   maintenance.auto=false   -> no spawn
+ *
+ * Repo-local, not wrapped around the caller's own git invocations: the code
+ * under test (scripts/lib/artifact-utils.js — executeRenames, executeInjections)
+ * runs its OWN `git commit` inside this directory, and only repo-local config
+ * reaches those.
+ *
+ * @param {string} dir - Absolute path to an existing directory.
+ * @returns {string} `dir`, for chaining.
+ */
+function initGitFixture(dir) {
+  // Without this, a falsy or relative `dir` makes execFileSync inherit the
+  // process cwd — so `git config maintenance.auto false` would be written into
+  // the DEVELOPER'S OWN repository rather than a fixture.
+  if (!dir || !path.isAbsolute(dir)) {
+    throw new TypeError(
+      `initGitFixture requires an absolute directory path; got ${JSON.stringify(dir)}`
+    );
+  }
+  if (!nodeFs.existsSync(dir) || !nodeFs.statSync(dir).isDirectory()) {
+    throw new Error(`initGitFixture requires an existing directory; got ${dir}`);
+  }
+  const git = (args) => {
+    try {
+      return execFileSync('git', args, { cwd: dir, stdio: 'pipe' });
+    } catch (err) {
+      // execFileSync's default message is a bare "Command failed", which throws
+      // away the one thing that explains the failure.
+      const stderr = err.stderr ? String(err.stderr).trim() : '';
+      throw new Error(
+        `initGitFixture: \`git ${args.join(' ')}\` failed in ${dir}` +
+          (stderr ? `: ${stderr}` : ` (${err.code || err.message})`),
+        { cause: err }
+      );
+    }
+  };
+  git(['init', '-q']);
+  git(['config', 'user.email', 'test@test.com']);
+  git(['config', 'user.name', 'Test']);
+  git(['config', 'maintenance.auto', 'false']);
+  return dir;
 }
 
 // ─── Config Factories ────────────────────────────────────────────
@@ -207,6 +403,9 @@ function restoreConsole() {
 module.exports = {
   PACKAGE_ROOT,
   createTempDir,
+  removeTempDir,
+  removeTempDirSync,
+  initGitFixture,
   fullConfig,
   v1_0_x_config,
   v1_3_x_config,

@@ -960,3 +960,64 @@ Round 2 verified the RCE fixes and found the remediation had treated two bug *cl
 - **CR-README-D06 — `convoke-install` prints "All Vortex Agents Installed!" though it installs every module.** `scripts/install-vortex-agents.js:140-162`. Contradicts the team-parity argument (D4) on screen, at first run.
 - **CR-README-D07 — `.gyre/findings.yaml` is five months old (`updated: 2026-03-25`).** The README now links it as the sole external evidence Gyre works, and its `summary.blockers: 1` / `DL-001 severity: blocker` no longer reflect the repo. Re-run Gyre on Convoke.
 - **CR-README-D08 — `CHANGELOG.md` carries three links of the broken class** (`docs/BMAD-METHOD-COMPATIBILITY.md`, `docs/migration/3.x-to-4.0.md`, an ADR path) and is shipped. Left alone deliberately: rewriting a historical record's links is the objection that split I158 out of this story.
+
+## Deferred from: spec-ci-flake-git-fixture-teardown (2026-08-19)
+
+- source_spec: none
+  summary: Wire `tests/audit/` into the test runners — it is executed by no npm script and no CI job, so its 11 passing tests have never run in CI.
+  evidence: >
+    Split out of the CI-flake fix at step-01's multi-goal gate. `npm test`, `test:integration`,
+    `test:p0` and `test:coverage` between them cover `tests/unit`, `tests/team-factory`,
+    `tests/lib`, `tests/integration` and `tests/p0` — never `tests/audit`. The `agent-surface-parity`
+    CI job (`ci.yml:122`) runs the *script* `scripts/audit/agent-surface-parity.js`, not the test
+    file. Only `eslint` visits the directory. Run by hand, `tests/audit/agent-surface-parity.test.js`
+    passes 11/11; it was added 2026-08-14 in response to a Round 3 review that found a
+    silent-truncation defect in a safety-critical extractor, and has never gated anything.
+    Independently shippable, and it changes CI's gate surface — so it does not belong in a hotfix.
+    Two things to resolve when wiring it in: (1) `extracts THIS repo's real generator, and it
+    matches the committed baseline` asserts against the live repo tree, a `test-fixture-isolation`
+    violation that starts biting the moment the file runs in CI; (2) that file's own teardown
+    (`agent-surface-parity.test.js:32-34`, `fs.rmSync` with maxRetries defaulted to 0) shares the
+    exact defect this spec fixes, and its `git commit` fixtures spawn the same detached
+    `git maintenance` child — so it should adopt the `removeTempDir` / `initGitFixture` helpers at
+    the same time, or it will start flaking as soon as it is wired in.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ci-flake-git-fixture-teardown.md`
+  summary: Adopt `removeTempDir` across the remaining ~250 `mkdtemp` teardown sites in `tests/`, or the helper stays a two-caller curiosity.
+  evidence: >
+    Raised in the spec's Code Review Gauntlet by Winston, as another instance of the pattern he named
+    across sessions 4 and 5 — a thing exists in the repo and nothing binds it to the places that need it
+    (`_bmad/bme/README.md` links, `_portability`, `bmm-dependencies.csv`). The spec ships
+    `removeTempDir`/`removeTempDirSync` (recursive+force, `maxRetries: 10, retryDelay: 50`, listing
+    survivors on failure) but deliberately adopts it at only five sites; `grep -c mkdtemp tests/` returns
+    ~257. Every unswept site keeps fs-extra's zero-retry teardown and is one concurrent writer away from
+    the same `ENOTEMPTY`. Two ways to bind it, decide when picked up: a mechanical sweep, or an eslint
+    rule/DoD check that flags a bare `fs.remove`/`fs.rm` teardown on a `mkdtemp` path. The second is
+    cheaper to keep true over time. Note the sibling entry above — `tests/audit/` must adopt the helpers
+    when it is wired in, for the same reason.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ci-flake-git-fixture-teardown.md`
+  summary: Git test fixtures do not scrub ambient git environment/config, so a developer's global settings can hang or divert a fixture commit.
+  evidence: >
+    Edge Case Hunter finding, deferred as pre-existing rather than caused by this change — every
+    `git init` fixture in `tests/` has always behaved this way. `initGitFixture` sets identity and
+    `maintenance.auto` but inherits `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `commit.gpgsign`,
+    `core.hooksPath` and `init.templateDir` from the ambient environment and the user's global config.
+    Concrete failures: an exported `GIT_DIR` sends fixture commits into another repository;
+    `commit.gpgsign=true` globally makes the fixture commit block on a passphrase prompt or fail;
+    a global `core.hooksPath` runs the developer's own hooks inside a test. None of these affect CI
+    (clean runner, no global config), which is exactly why it will only ever be reported as
+    "the tests hang on my machine". Fix by passing an explicit scrubbed `env` and
+    `GIT_CONFIG_GLOBAL=/dev/null` / `GIT_CONFIG_SYSTEM=/dev/null` in `initGitFixture`.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ci-flake-git-fixture-teardown.md`
+  summary: On git older than 2.31 the teardown race is unsuppressed — `maintenance.auto` does not exist and the detached child comes from `gc --auto --detach` instead.
+  evidence: >
+    Edge Case Hunter finding. `git maintenance` arrived in 2.31; before that, `git commit` forked
+    `git gc --auto` detached via `gc.autoDetach` (default true). Git silently ignores unknown config
+    keys, so `maintenance.auto=false` is accepted and does nothing there. The regression tests do not
+    paper over this — both trace tests skip loudly when their control arm shows no spawn — but the
+    fixtures would still be exposed. Not a live risk: CI runs git 2.54.0 and the repo has no declared
+    git floor. If a floor is ever declared below 2.31, add `gc.autoDetach=false` (NOT `gc.auto=0`,
+    which is a proven no-op for this failure and is on the spec's Never list).
+
