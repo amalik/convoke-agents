@@ -896,8 +896,8 @@ development_status:
   # All three gating ADRs accepted: ADR-1 retire badges, ADR-2 shipped-link policy
   # (Covenant -> _bmad/bme/covenant/), ADR-3 publish path enforced at the registry.
   # Story 1.1b was STRUCK by ADR-1 and is deliberately absent.
-  dist-epic-1: backlog
-  dist-1-1-retire-the-badges-pipeline: backlog
+  dist-epic-1: in-progress
+  dist-1-1-retire-the-badges-pipeline: ready-for-dev
   dist-1-2-strip-build-metadata-before-the-prerelease-test: backlog
   dist-1-3-refuse-a-semver-lower-publish-to-latest: backlog
   dist-1-4-fail-when-the-tag-and-the-version-disagree: backlog
