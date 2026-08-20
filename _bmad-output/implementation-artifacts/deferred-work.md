@@ -1021,3 +1021,38 @@ Round 2 verified the RCE fixes and found the remediation had treated two bug *cl
     git floor. If a floor is ever declared below 2.31, add `gc.autoDetach=false` (NOT `gc.auto=0`,
     which is a proven no-op for this failure and is on the spec's Never list).
 
+- source_spec: `_bmad-output/implementation-artifacts/spec-ci-flake-git-fixture-teardown.md`
+  summary: `_assertRemovableTempPath` is a string-prefix check, so a symlinked component inside the temp root, or a pathological `TMPDIR`, can defeat it.
+  evidence: >
+    Round 2 findings, deferred as hardening rather than defects. The guard resolves and normalises but
+    does not `realpath` the path being removed, so `/tmp/link/sub` where `link` points outside the temp
+    root passes the prefix test; and if `TMPDIR` is set to `/` or to an ancestor of the repository, the
+    containment check matches everything and is silently a no-op. Neither is reachable from any current
+    caller — every one is a `mkdtemp` path under the real temp root — and fixing them means realpath-ing
+    the deepest existing ancestor plus rejecting temp roots that are filesystem roots or repo ancestors.
+    Worth doing if this helper is ever adopted beyond tests (see the sibling entry about the ~250
+    unswept `mkdtemp` sites), which is exactly when caller paths stop being trustworthy.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ci-flake-git-fixture-teardown.md`
+  summary: The trace regression tests count only the `maintenance run --auto` spelling, so on pre-2.31 git both arms skip and the suppression is untested rather than reported broken.
+  evidence: >
+    Round 2 finding, and the mirror of the already-logged pre-2.31 gap. The control arm makes the tests
+    fail-safe (they skip loudly rather than assert vacuously), so nothing lies — but the coverage is
+    simply absent on old git. If a git floor below 2.31 is ever declared, widen the control regex to
+    `/maintenance run --auto|gc --auto/` and add `gc.autoDetach=false` to `initGitFixture`. Related
+    Round 2 note: the "foreign caller" test still commits via the test's own `spawnSync`, so it does not
+    genuinely exercise a different caller — driving `executeInjections` from
+    `scripts/lib/artifact-utils.js` under `GIT_TRACE` would. The repo-local behaviour it asserts was
+    verified out-of-band from a separate node process during investigation.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-ci-flake-git-fixture-teardown.md`
+  summary: One `npm test` run out of five reported 1653 passing where the other four reported 1654, with zero failures throughout.
+  evidence: >
+    Observed 2026-08-19 while verifying this fix. Totals agreed at 1655 tests every time; the outlier run
+    had one test that was neither passed, failed nor skipped, implying a `cancelled`. The `cancelled` and
+    `todo` counters had been filtered out of that run's log by the grep used to capture it, so the cause
+    is unrecoverable. Four subsequent runs reconcile exactly (1654 pass + 1 skipped, 0 cancelled, 0 todo)
+    and no run has ever failed. Logged rather than chased because it is unreproduced — but it is the same
+    class of nondeterminism this spec exists to remove, so if `cancelled >= 1` is ever seen again, capture
+    the FULL counter block and the failing subtest before anything else.
+

@@ -2,7 +2,7 @@
 title: 'Make git-fixture teardown deterministic (CI flake, run 32115225495)'
 type: 'bugfix'
 created: '2026-08-19'
-status: 'in-review'
+status: 'done'
 baseline_commit: '03271c2c80daa0361d73b035f424ae68f0b52b75'
 review_loop_iteration: 0
 context: ['{project-root}/project-context.md']
@@ -116,6 +116,21 @@ the test itself. Do not delete the `GIT_TRACE` regression test as a tautology �
   `review-prompt-blind-hunter-ci-flake.md`. **Do not describe this change as having had a two-reviewer
   Round 1.**
 
+- **Round 2, 2026-08-20 — 12 findings; 3 applied, 1 refuted by measurement, 8 deferred.**
+  Triggered by Round 1's two HIGH findings, per `code-review-convergence`. Applied: the containment guard
+  compared paths case-sensitively, so on Windows a legitimate `mkdtemp` path could be *rejected* — a safety
+  guard turned into a teardown failure in every suite; the `chmod` test's `finally` still had an unguarded
+  `rmSync` able to mask the AssertionError it was unwinding from (the same masking bug Round 1 fixed one line
+  above); and `_listSurvivors` claimed "capped at 40" when the cap lands on an empty or unreadable directory,
+  which is unknowable — reworded to "listing stopped at 40 entries", which is merely true.
+  **Refuted:** the claim that mutating `err.message` leaves `err.stack` stale and so the survivor listing
+  never reaches CI. Measured instead of accepted — V8's `err.stack` is a lazy accessor that re-renders with
+  the updated message, and `node:test` prints the listing in full. Had this been taken on trust it would have
+  forced a needless rewrite of the error path.
+  **Round 3 is NOT triggered:** none of the three fixes is structural — a comparison helper, a `try/catch`,
+  and a string. No new files, no renamed functions, no altered control flow.
+  KEEP: refute-by-measurement before acting on a reviewer's claim about runtime behaviour.
+
 - **Process, 2026-08-19 — this section did not exist until now.** The spec was authored without the
   template's `## Spec Change Log` heading, so the first attempt to append the `chmod` entry above matched
   nothing and was silently lost; the run reported success from an unrelated statement in the same script.
@@ -160,3 +175,55 @@ re-exported `rm`/`rmSync` do forward options, as does `node:fs`; pick one and pa
 - `npm run lint` -- exit 0.
 - `for i in 1 2 3 4 5; do node --test tests/lib/migration-execution.test.js || break; done` -- 5 clean runs.
   Necessary, not sufficient: the defect only manifests on CI, so the last AC is what closes this.
+
+## Suggested Review Order
+
+**The writer — why the flake happened**
+
+- Start here: the knob table is the whole diagnosis, including why `gc.auto=0` is a decoy.
+  [`helpers.js:182`](../../tests/helpers.js#L182)
+
+- One line, repo-local so the code under test's own commits inherit it.
+  [`helpers.js:224`](../../tests/helpers.js#L224)
+
+- Guards the falsy path that would write that config into the developer's real repository.
+  [`helpers.js:195`](../../tests/helpers.js#L195)
+
+**Surviving the writer — the load-bearing half**
+
+- The retry window: linear backoff makes 10 x 50ms about 2.75s, not 500ms.
+  [`helpers.js:40`](../../tests/helpers.js#L40)
+
+- Containment before any recursive force-delete; `path-safety-for-destructive-ops`.
+  [`helpers.js:107`](../../tests/helpers.js#L107)
+
+- Rethrows naming what survived — the race is unreproducible, so it must self-diagnose.
+  [`helpers.js:55`](../../tests/helpers.js#L55)
+
+- The two removers themselves; everything above is why they look like this.
+  [`helpers.js:144`](../../tests/helpers.js#L144)
+
+**Adoption — the suite that went red**
+
+- `executeInjections`, the suite that failed CI run 32115225495.
+  [`migration-execution.test.js:510`](../../tests/lib/migration-execution.test.js#L510)
+
+- `executeRenames`, the other suite whose commits spawn the writer.
+  [`migration-execution.test.js:251`](../../tests/lib/migration-execution.test.js#L251)
+
+- The five teardowns; only two suites spawn the writer, all five had zero-retry removal.
+  [`migration-execution.test.js:257`](../../tests/lib/migration-execution.test.js#L257)
+
+**Tests**
+
+- The regression test. Its control arm is what stops it passing vacuously.
+  [`helpers.test.js:184`](../../tests/unit/helpers.test.js#L184)
+
+- Asserts the commit succeeded first: a failed commit also yields zero spawns.
+  [`helpers.test.js:146`](../../tests/unit/helpers.test.js#L146)
+
+- Both HIGH Round 1 findings, tested rather than merely guarded.
+  [`helpers.test.js:231`](../../tests/unit/helpers.test.js#L231)
+
+- chmod on the target, not the parent — the parent variant gives EACCES and an empty listing.
+  [`helpers.test.js:269`](../../tests/unit/helpers.test.js#L269)
