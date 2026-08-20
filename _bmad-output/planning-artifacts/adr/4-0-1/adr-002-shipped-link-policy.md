@@ -3,7 +3,7 @@ initiative: convoke
 artifact_type: adr
 qualifier: 4-0-1-shipped-link-policy
 created: '2026-08-19'
-status: proposed
+status: accepted
 schema_version: 1
 related_initiative: 4.0.1 (distribution integrity)
 related_decision: 'Epic convoke-epic-4-0-1-distribution-integrity.md — ADR-2; gates Story 2.3, and FR12 is not wired into CI until this is ruled'
@@ -12,7 +12,7 @@ related_findings: 'CR-README-D03, CR-README-D04, CR-README-D05; backlog I157'
 
 # ADR-002: The shipped-link policy, and where the Operator Covenant lives
 
-**Status:** **Proposed** (2026-08-19) — awaiting operator decision
+**Status:** **Accepted** (2026-08-20, Amalik) — option (d), resolved in three classes; the Covenant moves to source-owned space
 **Initiative:** Convoke 4.0.1 — distribution integrity
 **Gates:** Story 2.3. FR12's checker is built in Story 2.2 but not wired into CI until this is ruled.
 
@@ -169,8 +169,40 @@ import json,sys;print([p['path'] for p in json.load(sys.stdin)[0]['files'] if p[
 
 ## Operator decision
 
-**Amalik — accept (d) in three classes, or choose (a), (b) or (c)?**
+**Accepted 2026-08-20 (Amalik): option (d), in three classes. The Operator Covenant moves out of
+`_bmad-output/planning-artifacts/` into source-owned space.**
 
-The sub-decision inside (d) that most deserves your attention: **does the Operator Covenant move out
-of `_bmad-output/planning-artifacts/` into source-owned space?** That is a repository-shaped change
-with references across the tree, and it is the one this ADR most wants a yes or no on.
+Destination confirmed:
+
+```
+_bmad/bme/covenant/covenant-operator.md
+_bmad/bme/covenant/compliance-checklist.md
+```
+
+`_bmad/bme/` is Convoke's owned namespace, the Covenant governs `_bmad/bme/` skills specifically,
+and `files[]` already carries `_bmad/bme/*` module directories — so shipping it is one new allowlist
+entry consistent with what is already there.
+
+### The move is larger than a rename — enumerated, not estimated
+
+`grep -rl` for `convoke-covenant-operator|convoke-spec-covenant-compliance-checklist` returns
+**47 files**. Four are code or configuration rather than prose, and each fails differently if missed:
+
+| File | Why it matters |
+|---|---|
+| `_bmad/_config/taxonomy.yaml:56` | Names the Covenant *by filename* in the `covenant` artifact-type definition. Governance config, not documentation. |
+| `scripts/audit/reference-integrity.js` | The I97 FR24–25 mechanical reference-integrity check — the very tool that would report the move's own breakage. |
+| `scripts/migration/format-conversion/covenant-survival-harness.js` | Inside the tree Class 1 stops shipping; update or let it go with the exclusion, but decide rather than drift. |
+| `tests/lib/artifact-utils.test.js` | A test asserting against the current path. |
+
+### BUG-13 sits directly on this operation
+
+`updateLinks` (`scripts/lib/artifact-utils.js:1497`, called at `:1635`) is the governed-rename path
+and applies every map entry sequentially over the same buffer. Verified by execution: the chain
+`{a→b, b→c}` on `[A](a.md) and [B](b.md)` yields `[A](c.md) and [B](c.md)` — one link silently
+destroyed. This move is a **two-entry rename map across 47 files**.
+
+The specific corruption requires entry 1's *new* name to collide with entry 2's *old* name, which
+`covenant-operator.md` and `compliance-checklist.md` do not. **That is a reason to assert it, not to
+assume it.** BUG-13 is Open at 5.7 and outside 4.0.1's scope; the story carries the assertion
+instead.

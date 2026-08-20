@@ -64,8 +64,7 @@ and a repo-wide grep finds only the generator, `badges.yml`, `knip.json` and
 stories may be built into a file that is deleted a week later — and FR8's committed tests
 would then break the suite on deletion.
 
-**ADR-2 — Where does the Operator Covenant live, and what is the shipped-link policy?**
-*(was FR20)* FR12's first true positive is `_bmad/bme/README.md`'s three links to
+**ADR-2 — Where does the Operator Covenant live, and what is the shipped-link policy?** *(was FR20)* — **ACCEPTED 2026-08-20: option (d), three classes; the Covenant moves to `_bmad/bme/covenant/`.** See [adr-002](adr/4-0-1/adr-002-shipped-link-policy.md). FR12's first true positive is `_bmad/bme/README.md`'s three links to
 normative required reading (`convoke-covenant-operator.md`, the Compliance Checklist,
 `project-context.md`) that lives in generated-artifact space and is not in the package.
 Options: move it into `files[]`, rewrite the links as absolute GitHub URLs, or drop them.
@@ -330,8 +329,8 @@ inside it, every shipped skill tree has an install path that copies it, and the 
 does not crash on a name it has never seen. Checked by CI, not by someone happening to
 look.
 **FRs covered:** FR11, FR12, FR13, FR14, FR15, FR16, FR17, FR18 · **also closes:** I153
-**Blocked on:** ADR-2 — FR12's checker is not wired into CI until the Covenant's
-location and the shipped-link policy are ruled.
+**Blocked on:** nothing. **ADR-2 accepted 2026-08-20** — option (d): shrink the shipped surface,
+then rule the remainder in three classes. The Covenant moves to `_bmad/bme/covenant/`.
 **Story order — red before green (NFR10):** FR11 → FR12's gate built and **observed
 failing** but NOT wired into CI → the remaining shipped-link violations fixed under ADR-2's
 policy and the checker wired in blocking, same commit → FR13's assertion built and **observed
@@ -352,7 +351,7 @@ FR12 green; it does not.
 Every Convoke release routes to the dist-tag it belongs on, comes from a committed tree, and fails loudly rather than silently when it cannot authenticate. No operator is ever downgraded by an upgrade.
 
 **FRs:** FR1–FR5, FR9, FR19 (FR6–FR8 retired by ADR-001) · **NFRs:** NFR1, NFR2
-**Blocked on:** nothing. **ADR-1 accepted 2026-08-19** (retire) and **ADR-3 accepted 2026-08-20** (option a — the publish path is enforced by an npm package setting, not code). **ADR-1** — retire; Story 1.1b struck, FR6–FR8 retired, Epic 1 = 7 stories.
+**Blocked on:** nothing. **ADR-1 (2026-08-19)** — retire: Story 1.1b struck, FR6–FR8 retired, Epic 1 = 7 stories. **ADR-3 (2026-08-20)** — option (a): FR9 is enforced by an npm package setting rather than code, and lands last.
 **Gate:** 4.0.1 cannot ship until this epic completes.
 
 ### Story 1.1: Retire the badges pipeline
@@ -545,7 +544,7 @@ So that testing against a published version tells me something true about the so
 Everything an operator installs resolves and works: every documented reference points inside the package, every shipped skill tree actually arrives on disk, and the exporter does not crash on a name it has never seen. Checked by CI, not by someone happening to look.
 
 **FRs:** FR11, FR12, FR13, FR14, FR15, FR16, FR17, FR18 · **also closes:** I153 · **NFRs:** NFR10 (load-bearing), NFR8
-**Blocked on:** ADR-2 (Covenant location + shipped-link policy) — gates Story 2.3, which is where the checker is wired in.
+**Blocked on:** nothing — **ADR-2 accepted 2026-08-20** (option d, three classes; Covenant → `_bmad/bme/covenant/`). Story 2.3 carries the policy application and the wiring.
 **Story order — red before green (NFR10), and never merged red:** 2.1 → 2.2 (checker built, observed failing, NOT wired in) → 2.3 (policy applied, checker wired in blocking, same commit) → 2.4 (assertion built, observed failing, NOT wired in) → 2.5 (registry shipped) → 2.6 (`_portability` reachable + assertion wired in blocking, same commit). **2.7 and 2.8 are independent** and may run at any point.
 **Why nothing merges red.** `fresh-install` runs on push to `main` and every pull request, and the `publish` job `needs:` it. A gate merged in a failing state there blocks every PR and every release until its fix lands. NFR10 requires each gate *demonstrated* failing; it does not require it *merged* failing.
 
@@ -596,7 +595,7 @@ So that "required reading" is readable by someone who installed from npm.
 
 ### Story 2.3: Apply the shipped-link policy and wire the gate in, blocking
 
-*No FR of its own; it is what makes FR12 enforceable. Blocked on ADR-2 — which is a pre-epic decision, so the ruling exists before this story is picked up.*
+*No FR of its own; it is what makes FR12 enforceable. Scope set by [ADR-002](adr/4-0-1/adr-002-shipped-link-policy.md), accepted 2026-08-20 — option (d), three classes. **20 broken relative links across 4 files**, enumerated mechanically against the packed tarball.*
 
 As a Convoke operator,
 I want the link gate actually enforced,
@@ -604,17 +603,41 @@ So that the next broken reference is caught by CI rather than by someone reading
 
 **Acceptance Criteria:**
 
-**Given** ADR-2 has ruled on the Covenant's location and the shipped-link policy
+**Given** Class 1 — 13 of the 20 findings are in `scripts/migration/format-conversion/`, one-off i97 tooling that no `bin` references and that reaches the tarball only because `files[]` carries `scripts/` wholesale
 **When** this story completes
-**Then** every violation Story 2.2 observed is resolved by applying that policy — including `scripts/migration/format-conversion/README.md` and `CHANGELOG.md`, not only the Covenant links
+**Then** that directory is excluded from `files[]`, and no link in it is edited — the package boundary was misplaced, not the links
+**And** it is verified first that nothing in `scripts/update/**`, no bin, and no test resolves into that directory at runtime
 
-**Given** all violations are resolved
+**Given** Class 2 — the Covenant and the Compliance Checklist are normative required reading (`project-context.md:5`) living in generated-artifact space
+**When** this story completes
+**Then** both are moved to `_bmad/bme/covenant/covenant-operator.md` and `_bmad/bme/covenant/compliance-checklist.md`, and `_bmad/bme/covenant/` is added to `files[]`
+**And** all **47** referencing files are updated, enumerated by `grep -rl 'convoke-covenant-operator\|convoke-spec-covenant-compliance-checklist'` re-run at implementation time rather than trusting this count
+**And** the four non-prose references are handled explicitly: `_bmad/_config/taxonomy.yaml:56` (names the file in the `covenant` artifact-type definition), `scripts/audit/reference-integrity.js`, `scripts/migration/format-conversion/covenant-survival-harness.js` (or let it go with the Class 1 exclusion — decide, do not drift), and `tests/lib/artifact-utils.test.js`
+
+**Given** BUG-13 — `updateLinks` (`scripts/lib/artifact-utils.js:1497`, called at `:1635`) applies every rename-map entry sequentially over the same buffer, so an entry can rewrite text a previous entry produced
+**When** a two-entry rename map is applied across 47 files
+**Then** the story ASSERTS that neither new basename equals the other entry's old basename, and verifies the rewritten links by re-running the tarball checker — it does not assume the collision cannot occur. BUG-13 is Open (5.7) and out of scope for 4.0.1
+
+**Given** Class 3 — `CHANGELOG.md` carries 3 findings
+**When** this story completes
+**Then** `docs/migration/` is added to `files[]` — the migration guide is the single most useful link an upgrading npm reader can follow — and the ADR link plus `docs/BMAD-METHOD-COMPATIBILITY.md` are dropped from the shipped CHANGELOG or rendered as absolute URLs with CR-README-D05's instability accepted on the record
+
+**Given** `_bmad/bme/README.md` links `_bmad/bme/config.yaml`, which is not in `files[]` while the README itself is in the tarball
+**When** this story completes
+**Then** the asymmetry is resolved deliberately — ship the config or drop the link — rather than left inherited
+**And** its link to `project-context.md` becomes an absolute URL or is dropped: contributor governance is repository-only and, unlike the Covenant, is not required reading for a user
+
+**Given** all 20 findings are resolved
 **When** this story completes
 **Then** the checker from Story 2.2 is wired into `try-fresh-install.sh` as a blocking check, in the same commit that turns it green — it is never merged non-blocking. A gate that runs and nobody watches is T32, the row this epic exists to close
 
-**Given** an allowlist is proposed for any remaining violation
-**When** the story is reviewed
-**Then** each entry is justified in the story, or refused — a detector neutralised by its own first true positive is how the `pathContains` filter and the badges gate were each lost
+**Given** CR-README-D04 — `scripts/docs-audit.js`'s `checkBrokenLinks` skips `^https?://` entirely
+**When** any link is rewritten as an absolute URL
+**Then** either FR12's checker validates absolute URLs too, or the policy forbids them in shipped docs — converting a broken relative link into an unvalidated absolute one trades a detectable fault for an undetectable one
+
+**Given** the package shrinks
+**When** this story completes
+**Then** `agent-surface-parity` and `fresh-install` are both re-run, since both assert against the packed tree
 
 ### Story 2.4: Assert the installed tree carries what was shipped
 

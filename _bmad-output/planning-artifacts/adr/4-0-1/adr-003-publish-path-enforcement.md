@@ -61,7 +61,22 @@ publish` is among its selected allowed actions.** If it is not, the next tag pus
 write, and the failure will look like the anonymous-publish 404 this project has already spent four
 attempts diagnosing.
 
-**Tooling note.** `npm trust github` exists in the local npm 11.11.0 and accepts `--dry-run`:
+**3. Trusted publishing widens who can ship, and that is the point worth reading twice.**
+`npm trust github --dry-run`, run 2026-08-20, states it plainly:
+
+> *Anyone with GitHub repository write access can publish to `convoke-agents`*
+
+Publish authority moves from **whoever holds a token** to **whoever has repository write**. For a
+single-maintainer repository that is a narrowing, not a widening — the token was the looser
+credential. It is recorded because this ADR makes that path the *only* path: from acceptance onward,
+repository write access **is** publish access, and any future decision to add collaborators is also a
+decision about who can ship.
+
+**Tooling note.** `npm trust github` exists in the local npm 11.11.0 and accepts `--dry-run` — but it
+is a **create** command, not a read. Its dry-run output describes what it *would* establish and stops
+at *"Two-factor authentication is required for this operation"*; it never prints the existing
+configuration or its allowed actions. **Verifying the allowed-actions list is a UI step** — npmjs.com
+→ `convoke-agents` → Settings → Publishing access. Invocation, for reference:
 `npm trust github convoke-agents --file ci.yml --repo amalik/convoke-agents --dry-run`. Configuration
 is inspectable and scriptable, not UI-only. (Local `npm whoami` currently returns `E401`, so the
 current settings were not read for this ADR — verification is an operator step.)
