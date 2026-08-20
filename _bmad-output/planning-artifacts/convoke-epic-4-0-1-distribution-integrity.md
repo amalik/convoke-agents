@@ -373,6 +373,11 @@ So that a release is never blocked by a file no document consumes.
 **And** `CR-README-D03` (`deferred-work.md:957`) is marked resolved
 **And** T40 and I108 are closed in the backlog, each moved below its lane's live block with the lane-order check run in the same edit
 
+**Given** NFR2 — removing `prepublishOnly` is a publish-path change, and the publish job runs only on a `refs/tags/v*` push
+**When** the story records its rehearsal strategy
+**Then** it states that live verification is **deferred to Story 1.6's composed rehearsal**, and does not claim `npm publish --dry-run` as evidence — whether `--dry-run` fires lifecycle scripts is version-dependent and unverified. Locally verifiable instead: the three keys are absent and nothing invokes them
+*(Gap found by the 2026-08-20 story validation: every other publish-path story in this epic carried an NFR2 criterion and this one did not.)*
+
 **Given** `project-context.md:359` uses `npm run badges:check | tail -8; echo $?` as the worked example in the `verification-pipefail` rule
 **When** the script no longer exists
 **Then** the example is annotated as a historical scar story rather than a runnable command — it remains valid as history and must not be deleted
