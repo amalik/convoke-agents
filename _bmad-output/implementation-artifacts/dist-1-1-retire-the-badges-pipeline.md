@@ -4,7 +4,7 @@ baseline_commit: 567367700cc4743ca40b8fbecc013edb4de84ce1
 
 # Story 1.1: Retire the badges pipeline
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -122,6 +122,16 @@ Round 1 code review, 2026-08-21. Three layers (Blind Hunter, Edge Case Hunter, A
 **Round 3 is NOT triggered.** `code-review-convergence` reserves it for structural changes; every R2 fix is documentation. All three layers independently concurred.
 
 **Status stays `review` until the commit lands.** AC2, AC3 and AC6 each contain a clause that only a commit can discharge, so `done` is not yet earned.
+
+### AC6 — accepted by operator as met-by-substitute (2026-08-21)
+
+Commit `a9c94a15` landed the correct 13-file set, so AC2 and AC3 are satisfied in full. Its **Description is empty** (body = 1 byte; `LANE ORDER` appears 0 times in `git log -1 --format=%B`), so AC6's literal clause — "its output pasted into the commit Description" — is **not** met.
+
+**Accepted anyway, by operator decision, on this reasoning:** AC6's stated rationale is "an unrecorded check is an unfalsifiable claim". The check *is* recorded and immutable — the lane-order output sits in this file's `## Commit Plan` and Completion Notes, and this file is one of the 13 in `a9c94a15`. The evidence is in the commit; only its location differs from the AC's wording. Amending would require `push --force-with-lease` on `main`, rewriting published history and disrupting the triggered CI run, to relocate text that is already durably committed — disproportionate to the defect.
+
+**Verdict: DISPUTED-accepted.** Recorded rather than quietly marked MET, because substituting a check and declaring the AC satisfied is the exact pattern R1 and R2 each caught twice.
+
+**Carry-forward for the sibling stories (`dist-1-2` … `dist-1-7`):** any AC whose evidence must live in a commit Description is discharged in GitHub Desktop's *Description* box, which is separate from the summary field and easy to leave blank. Either write the evidence into the story file as the primary record and cite the commit, or verify the body is non-empty (`git log -1 --format=%b | wc -c`) before calling such an AC met. Same defect class as `CR-dist11-D03` (AC amendments with no witness outside the amended document).
 
 ## Commit Plan
 
