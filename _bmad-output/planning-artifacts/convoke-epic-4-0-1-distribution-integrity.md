@@ -56,7 +56,7 @@ stalled at story one waiting for a human ruling, and Epic 1's story count was a 
 Pulled out as ADRs; both epics then have a knowable shape end to end.
 
 **ADR-1 — Retire the badges pipeline, or keep and harden it?** *(was FR10 / T40)* — **ACCEPTED 2026-08-19: retire.** See [adr-001](adr/4-0-1/adr-001-retire-badges-pipeline.md). Story 1.1b struck; FR6–FR8 retired; Epic 1 = 7 stories.
-`prepublishOnly` is still `npm run badges:check`; T39 removed the date but left the gate.
+~~`prepublishOnly` is still `npm run badges:check`; T39 removed the date but left the gate.~~ **Executed 2026-08-21 by story `dist-1-1`:** the hook, the generator, `badges.yml` and `docs/badges.json` are all deleted.
 `docs/badges.json` has no consumer — the I156 rewrite removed the four dynamic shields,
 and a repo-wide grep finds only the generator, `badges.yml`, `knip.json` and
 `package.json`. Closes `CR-README-D03` (`deferred-work.md:957`) either way.
@@ -78,7 +78,7 @@ acceptance criterion: **(a)** make tag-push the only path and treat a laptop
 refuses on a dirty tree or unpushed `HEAD` and prints the built-from commit; **(c)**
 record the built-from commit in the package so a tester can report it.
 **Includes a spike:** option (a) may not be enforceable from this repository at all. The
-only local chokepoint is `prepublishOnly`, which ADR-1 may delete; the real enforcement
+only local chokepoint was `prepublishOnly`, which **ADR-1 deleted on 2026-08-21 (story `dist-1-1`) — there is now no local chokepoint at all**; the real enforcement
 point is likely npm's registry-side publishing settings (the publish job already cites
 `gh.io/npm-gat-bypass2fa-deprecation`). Determine whether (a) is a repo change or an npm
 account setting before writing the story.
@@ -90,7 +90,7 @@ compliance for external publication — this is a build-freshness gate.
 ### Functional Requirements
 
 **Gate — T41 (publish path; must clear before 4.0.1 can ship).**
-All eight execute only on a `refs/tags/v*` push; each gets one live rehearsal.
+All ~~eight~~ **five** (f/g/h retired 2026-08-21 by ADR-001) execute only on a `refs/tags/v*` push; each gets one live rehearsal.
 
 ```
 FR1:  The dist-tag derivation MUST ignore SemVer build metadata, so `4.0.0+sha.5114f85`
@@ -265,9 +265,14 @@ Derived from source, in the absence of an Architecture document:
 - `package.json` `files[]` is an explicit allowlist, not a glob. `_bmad/_config/` is
   represented by a single entry (`skill-manifest.csv`); adding a file to that directory
   does not ship it.
-- `.github/workflows/badges.yml` fires only on changes to `_bmad/bme/_*/config.yaml`,
+- ~~`.github/workflows/badges.yml` fires only on changes to `_bmad/bme/_*/config.yaml`,
   `_bmad/_config/skill-manifest.csv` or `scripts/generate-badges-json.js`, and
-  auto-commits with `[skip ci]`.
+  auto-commits with `[skip ci]`.~~ **No longer true as of 2026-08-21.** `badges.yml`,
+  `scripts/generate-badges-json.js` and `docs/badges.json` were deleted by Story 1.1
+  ([ADR-001](adr/4-0-1/adr-001-retire-badges-pipeline.md), option (a)). `.github/workflows/`
+  now contains only `ci.yml`, and the `[skip ci]` auto-commit-to-`main` path no longer exists.
+  Struck rather than deleted: Stories 1.2–1.7 are generated from this section, and the fact
+  that this path *used to* exist is part of why FR9 is scoped as it is.
 - 4.0.0 as published carries no provenance attestation and predates `3a3de195`; it is not
   reproducible from a tag. Nothing to undo — it is the baseline FR9 changes.
 
@@ -378,7 +383,7 @@ So that a release is never blocked by a file no document consumes.
 **Then** it states that live verification is **deferred to Story 1.6's composed rehearsal**, and does not claim `npm publish --dry-run` as evidence — whether `--dry-run` fires lifecycle scripts is version-dependent and unverified. Locally verifiable instead: the three keys are absent and nothing invokes them
 *(Gap found by the 2026-08-20 story validation: every other publish-path story in this epic carried an NFR2 criterion and this one did not.)*
 
-**Given** `project-context.md:359` uses `npm run badges:check | tail -8; echo $?` as the worked example in the `verification-pipefail` rule
+**Given** `project-context.md:359` uses `npm run badges:check | tail -8; echo $?` as row 1 of the evidence table in the `verification-must-be-falsifiable` rule
 **When** the script no longer exists
 **Then** the example is annotated as a historical scar story rather than a runnable command — it remains valid as history and must not be deleted
 

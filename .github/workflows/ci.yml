@@ -218,7 +218,7 @@ jobs:
     #
     # No `npm ci`: the script needs no repo dependencies (verified against a clean clone). NOTE
     # this holds only while package.json has no `prepack`/`prepare` script — `npm pack` fires
-    # both. `prepublishOnly` (the one that exists) does NOT fire on pack. If you add `prepare`,
+    # both. `postinstall` is the only hook left and does not fire on pack; `prepublishOnly` was removed with the badges pipeline (ADR-001/dist-1-1) and never fired on pack either. If you add `prepare`,
     # this job needs `npm ci` or it breaks with a missing-devDependency error whose cause is a
     # comment in another file.
     #

@@ -18,7 +18,6 @@
     "scripts/postinstall.js",
     "scripts/test-runner.js",
     "scripts/docs-audit.js",
-    "scripts/generate-badges-json.js",
     "scripts/archive.js",
     "scripts/convoke-check.js",
     "scripts/update/migrations/registry.js",

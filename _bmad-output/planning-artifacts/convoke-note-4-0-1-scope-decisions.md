@@ -3,6 +3,7 @@ initiative: convoke
 artifact_type: note
 qualifier: 4-0-1-scope-decisions
 created: '2026-08-18'
+updated: '2026-08-21'
 schema_version: 1
 status: active
 origin: party-mode-session-2026-08-16/18 (John, Winston, Amelia, Amalik)
@@ -55,7 +56,7 @@ job is to make that class mechanically detectable, not to fix four files.
 
 **T41** · R6 I3 C90% **E3** · score 5.4 · Open · `found-by: BUG-16 R2 2026-08-17`
 
-**Not a cluster and not a quick win.** Eight findings on `.github/workflows/ci.yml`'s
+**Not a cluster and not a quick win.** ~~Eight~~ **Five** findings (as of 2026-08-21) on `.github/workflows/ci.yml`'s
 `publish` job — a path that executes **only** on a `refs/tags/v*` push, so every fix
 gets exactly one live rehearsal and a wrong edit costs a tag delete-and-repush. It
 sits outside the six clusters and is priced at effort 3 deliberately, rather than
@@ -73,8 +74,11 @@ half its own acceptance text — "fail the job if the two disagree" was never bu
 `github.ref_name` appears nowhere, so tag and `package.json` version are fully
 decoupled; (d) `setup-node` writes `_authToken=${NODE_AUTH_TOKEN}` regardless, so an
 OIDC decline resurfaces as a *bad token* rather than *no token*.
-Four MEDIUM: (e) downgrade guard, (f) `agents: []` returns 0 silently, (g) manifest
-floor rejects only negative counts, (h) zero committed tests for the generator guards.
+~~Four~~ **One** MEDIUM: (e) downgrade guard. **(f), (g) and (h) were RETIRED 2026-08-21** by
+[ADR-001](adr/4-0-1/adr-001-retire-badges-pipeline.md) together with the badges pipeline — all three
+described guards inside `scripts/generate-badges-json.js`, which is deleted. Do **not** re-create the
+generator to harden them; story `dist-1-1` AC8 forbids it. The E3 pricing above still reflects the old
+8-finding scope and is pending recompute.
 
 **Story shape.** Its own story set, not a checklist. Each finding needs a stated
 rehearsal strategy given the one-shot constraint.
@@ -94,10 +98,12 @@ the count.
   hand-publishing was a workaround for a broken job; the job now works (Node 24 +
   Trusted Publishing), so "make tag-push the only publish path, treat a laptop
   `npm publish` as an incident" is enforceable for the first time.
-- **T40** · R5 I2 C95% E1 · 9.5 · Open — retire the badges pipeline, or at least stop
+- **T40** · R5 I2 C95% E1 · 9.5 · ✅ **Done 2026-08-21** — retire the badges pipeline, or at least stop
   it gating `npm publish`. It maintains a file with no consumer. Sibling of T39
   (shipped); closes `CR-README-D03` in `deferred-work.md:957`. **Deletes machinery
-  rather than adding any.**
+  rather than adding any.** Shipped by story `dist-1-1` per
+  [ADR-001](adr/4-0-1/adr-001-retire-badges-pipeline.md) option (a): generator, workflow and
+  generated file deleted; `badges`, `badges:check` and `prepublishOnly` removed from `package.json`.
 
 ### 4.2 Watch the audit that works — T32
 

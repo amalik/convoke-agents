@@ -363,6 +363,13 @@ EOF
 
 A fifth was caught only by luck: a backlog column-arity check that flagged 71 correct rows, which would have made the gate unreadable had it shipped.
 
+> **Historical record — do not "repair" these rows.** All four are real incidents and stay verbatim;
+> they are this rule's entire justification. Two of them now name a surface that no longer exists:
+> row 1's `npm run badges:check` and row 4's generator mutation harness both targeted the badges
+> pipeline, deleted by [ADR-001](_bmad-output/planning-artifacts/adr/4-0-1/adr-001-retire-badges-pipeline.md)
+> (story `dist-1-1`). What the rows document is the *reasoning* error, not the command — rewriting
+> them against a live command would destroy the evidence and teach nothing.
+
 The common shape is not carelessness about shell syntax. It is **reading a check's output as evidence without ever seeing it produce the other answer.**
 
 **How to apply.**
