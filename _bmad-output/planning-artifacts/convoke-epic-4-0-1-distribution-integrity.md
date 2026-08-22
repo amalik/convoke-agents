@@ -227,7 +227,11 @@ The four NFRs specific to this epic. Numbers are original; 3–7 and 9 were subt
 2026-08-19 and are not reused.
 
 ```
-NFR1: No `v*` tag may be pushed until FR1–FR8 clear. ~~(a), (c) and (e) each mis-route a
+NFR1: ~~No `v*` tag may be pushed until FR1–FR8 clear.~~ 🔓 **RETIRED 2026-08-22 by operator
+      decision.** Condition met: FR1–FR5 shipped, FR6–FR8 retired by ADR-001, T41 closed, and the
+      composed job proven live by `dist-1-6`. **Caution that survives the freeze:** the path to
+      `latest` has never executed — `dist-1-6` exercised four of five gates, FR5's downgrade
+      comparison takes its skip branch on a prerelease and first runs on a stable tag. ~~(a), (c) and (e) each mis-route a
       tagged publish.~~ **Amended 2026-08-22:** (a) fixed by `dist-1-2` (FR1), (e) fixed by
       `dist-1-3` (FR5); **Rehearsal COMPLETE 2026-08-22** (`dist-1-6`, run `32599414962`): the composed
       job published `4.0.1-rc.0` to `rc` with `latest` unchanged. **Both retirement preconditions

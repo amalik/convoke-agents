@@ -176,7 +176,19 @@ persona strings written by whoever builds it.
 
 ## 6. Constraints binding implementation
 
-1. **No `v*` tag may be pushed until T41 clears.** ~~Findings (a), (c) and (e) all
+1. ~~**No `v*` tag may be pushed until T41 clears.**~~ 🔓 **RETIRED 2026-08-22 by operator decision.**
+   Both preconditions were met and are recorded below: **T41 closed** (all five findings fixed across
+   `dist-1-2`/`1-3`/`1-4`/`1-5`) and **the composed job proven** (`dist-1-6`, run `32599414962` —
+   `4.0.1-rc.0` published to `rc`, `latest` unchanged, provenance present, all five gates observed).
+   **What this now permits:** a stable `v4.0.1` tag, which publishes to `latest` and reaches every
+   user. That path is guarded by the five gates but has **never run to `latest`** — `dist-1-6` proved
+   four of five, because a prerelease takes FR5's *skip* branch. **FR5's downgrade comparison first
+   executes on that stable tag.** Retiring the rule removes the freeze, not the caution.
+   *(Original text preserved above the strike. The rule stood through `dist-1-4` and `dist-1-5`, both
+   of which were corrected for instructing its retirement prematurely; `dist-1-6` recorded the
+   preconditions as met and left the decision to the operator, who took it on 2026-08-22.)*
+
+   ~~Superseded rule text:~~ **No `v*` tag may be pushed until T41 clears.** ~~Findings (a), (c) and (e) all
    mis-route a tagged publish.~~ **Amended 2026-08-22 (fourth amendment).** **Story 1.6's rehearsal is COMPLETE** — `convoke-agents@4.0.1-rc.0` published to the `rc` dist-tag via tag `v4.0.1-rc.0`, run `32599414962`, all five gates observed passing, `latest` unchanged at `4.0.0`, provenance attestation present. **Every precondition for retiring this rule is now met: T41 is closed AND the composed job is proven.** **The rule is still NOT retired — that is the operator's call, deliberately left open.** `dist-1-4` and `dist-1-5` were each corrected for instructing retirement; `dist-1-6` records the finding and stops there.
 
    **Amended 2026-08-22 (third amendment).** **T41 is now CLEAR — all five findings are
