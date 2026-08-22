@@ -4,7 +4,7 @@ baseline_commit: dd09d5457ca2b79fd3144cba739c1206f604ab81
 
 # Story 1.2: Strip build metadata before the prerelease test
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -77,7 +77,7 @@ so that a release I am meant to receive is not parked on `rc` where I never see 
   - [x] Write a `## Commit Plan` section **into this story file** before requesting review. Story 1.1's R2 HIGH was a commit plan that existed only as chat output and was ticked `[x]` anyway — an artifact that is not in the tree does not exist
   - [x] Name every file in one commit; `git add -A` so the index matches the plan
   - [x] Include the lane-order output, and a **test-touch opt-out**: this change edits a CI workflow with no test change. There is no test harness for `ci.yml` shell expressions; the four-case reproduction is the evidence. State this explicitly per `commit-preparation`
-  - [ ] **OPERATOR STEP, not a dev task — deliberately left unchecked.** GitHub Desktop's Description box is separate from the summary field; Story 1.1's AC6 was left undischarged because it was submitted empty. After committing, verify with `git log -1 --format=%b | wc -c`. *Un-ticked during R1: this had been marked `[x]` before any commit existed, so it certified a measurement of the PREVIOUS commit's body (468 bytes, `dd09d545`). Caught independently by two review layers.*
+  - [x] **OPERATOR STEP — discharged 2026-08-22 at commit `60909250`: body = 4669 bytes, carrying the Round 1 status line and the staged-set proof.** GitHub Desktop's Description box is separate from the summary field; Story 1.1's AC6 was left undischarged because it was submitted empty. After committing, verify with `git log -1 --format=%b | wc -c`. *Un-ticked during R1: this had been marked `[x]` before any commit existed, so it certified a measurement of the PREVIOUS commit's body (468 bytes, `dd09d545`). Caught independently by two review layers.*
 
 ### Review Findings — Round 1
 
@@ -405,6 +405,7 @@ With FR1 landed, NFR1's **EXEMPTION** activates: prerelease tags are permitted f
 
 | Date | Change |
 |---|---|
+| 2026-08-22 | **Committed as `60909250`** — 5 files, matching the plan. Task 7's operator step discharged: commit body is **4669 bytes** and carries both the `Round 1` status line and the `git diff --cached --name-only` staged-set proof, so the empty-Description failure that left Story 1.1's AC6 undischarged did not recur. Status → done |
 | 2026-08-22 | **Round 1 code review.** 3 layers, 0 failed, **6/6 ACs MET**, no defect in the one-line change. 21 raw → 14 after dedup, 2 dismissed. 1 decision resolved (operator ratified the `baseline_commit` rewrite; standing note: do not pre-stamp that field), **8 patches applied**, 5 deferred. The HIGH was a repeat of `dist-1-1`'s R2 root cause — `scope-decisions` §3 still listed T41 (a) as an open HIGH in the 4.0.1 release gate, and its "pending recompute" line was stale from my own 08-21 edit to that same file. Two layers independently caught a Task 7 subtask ticked for a post-commit check with nothing committed. The NFR1 unlock was overclaimed and is now stated precisely: prerelease routing is byte-identical pre/post fix, so the exemption is a policy gate, not a property this edit created. `npm test` closed green by two independent full-suite re-runs. AC5 DISPUTED-accepted at `numstat 3 3` (net-zero preserved, ADR-003's citation intact) |
 | 2026-08-22 | **Implemented.** `ci.yml:412` -> `case "${VERSION%%+*}"` (FR1). Verified across five derivation cases using the expression extracted from `ci.yml`, harness proven falsifiable; no tag pushed. AC5 held at `numstat 1 1`, so ADR-003's `ci.yml:417` citation stays valid. T41 finding (a) struck; (b)-(e) open, score unchanged. `baseline_commit` corrected `82456456` -> `dd09d545` at start (the original was pre-stamped during authoring). **`npm test` did not go green** — 3 load flakes + 1 known-I125 cancellation on a thrashing machine (load avg 17, 219M free RAM); all three failing files pass in isolation. Disclosed, not claimed as evidence. Status -> review |
 | 2026-08-21 | Story created by `bmad-create-story`. Fix verified working across all five derivation cases at story-creation time; `baseline_commit` recorded at `82456456`. Carries three traps surfaced by Story 1.1's R1+R2 code review: the commit plan must be a real artifact (R2 HIGH), the `ci.yml` edit must be net-zero lines or it breaks ADR-003's citation (R2 MEDIUM), and GitHub Desktop's Description box must be non-empty or the AC requiring it goes undischarged (R2 DISPUTED-accepted) |
