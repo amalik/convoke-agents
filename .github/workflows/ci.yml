@@ -538,14 +538,24 @@ jobs:
 
           # The environment outranks every npmrc, and ci.yml's own OIDC note warns that "a token
           # in the environment takes precedence over OIDC, which put 4.0.0 back on the token
-          # path". NODE_AUTH_TOKEN is the specific vector setup-node used, so it is asserted
-          # directly. RESIDUAL, disclosed: a hostile `npm_config_*` env var is NOT covered --
-          # `npm config ls -l` does not surface env-supplied credentials either (measured), so
-          # no cheap complete check exists. Tracked in the backlog rather than faked here.
+          # path". Two vectors, both asserted:
+          #   1. NODE_AUTH_TOKEN -- the specific variable setup-node exports.
+          #   2. any npm_config_* / NPM_CONFIG_* credential key. npm reads config from the
+          #      environment at HIGHER precedence than any npmrc, so a repo/org Variable or a
+          #      prior composite action can supply one invisibly to a file-based check.
+          # `npm config ls -l` does NOT surface env-supplied credentials (measured), which is
+          # why this greps the environment directly rather than asking npm.
           if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
             echo "FATAL: NODE_AUTH_TOKEN is set on the publish path." >&2
             echo "  A token in the environment takes precedence over OIDC. This job publishes" >&2
             echo "  via Trusted Publishing and must have no token at all." >&2
+            exit 1
+          fi
+          if env | grep -Eiq '^npm_config_.*(_auth|_authtoken|_password|username|certfile|keyfile)='; then
+            echo "FATAL: an npm_config_* credential is set in the environment." >&2
+            echo "  npm reads config from the environment above every npmrc, so this would take" >&2
+            echo "  precedence over OIDC -- the same token-path regression that broke 4.0.0." >&2
+            env | grep -Eio '^npm_config_[^=]*' | sed 's/^/    offending key: /' >&2
             exit 1
           fi
 
