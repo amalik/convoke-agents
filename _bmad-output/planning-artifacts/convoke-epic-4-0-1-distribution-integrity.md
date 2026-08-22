@@ -519,7 +519,7 @@ So that the release tag is not the first time these changes run together.
 
 **Given** the trusted-publisher configuration for `convoke-agents` was created on 2026-08-17, after npm's 20 May 2026 cutoff, so at least one allowed action had to be selected explicitly
 **When** this story starts
-**Then** it is verified FIRST that `npm publish` is among the selected allowed actions — inspectable via `npm trust github convoke-agents --file ci.yml --repo amalik/convoke-agents --dry-run`. If it is absent, the tag push fails at the write and the failure resembles the anonymous-publish 404 already diagnosed four times
+**Then** it is verified FIRST that `npm publish` is among the selected allowed actions — ~~inspectable via `npm trust github convoke-agents --file ci.yml --repo amalik/convoke-agents --dry-run`~~ **— corrected 2026-08-22: that is the `npm trust github` CREATE path and does not report allowed actions. The reader is `npm trust list`, which requires authentication (E401 otherwise). See `dist-1-6` AC1 for the three routes, including a free `workflow_dispatch` OIDC probe**. If it is absent, the tag push fails at the write and the failure resembles the anonymous-publish 404 already diagnosed four times
 
 **Given** this is not a dry run
 **When** the story is planned
