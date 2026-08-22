@@ -4,7 +4,7 @@ baseline_commit: 203a8668244e02020fd4818b973da93f9fd69e7f
 
 # Story 1.4: Fail when the tag and the version disagree
 
-Status: review
+Status: done
 
 <!-- baseline_commit deliberately ABSENT — it is `dev-story`'s field, stamped at implementation
      start. Pre-stamping it in dist-1-2 caused a rule deviation the operator had to ratify. -->
@@ -95,7 +95,7 @@ so that a release is identifiable from either side.
   - [x] Paste the lane-order output **into the commit Description**
   - [x] Test-touch opt-out: no harness exists for `ci.yml` shell logic and no test reads `ci.yml`
   - [x] Disclose any reviewed-set vs staged-set delta
-  - [ ] **OPERATOR STEP — leave unchecked until the commit exists.** Verify the Description landed: `git log -1 --format=%b | wc -c`
+  - [x] **OPERATOR STEP — discharged 2026-08-22 at commit `487c2df3`: body = 3586 bytes, carrying the Round 1 status, the NFR10 demonstration and the fail-open account.** Verify the Description landed: `git log -1 --format=%b | wc -c`
 
 ### Review Findings — Round 1
 
@@ -444,5 +444,6 @@ in the generated script), run against package.json temporarily set to
 
 | Date | Change |
 |---|---|
+| 2026-08-22 | **Round 1 complete; committed as `487c2df3`** (6 files). 3 layers, 0 failed; Auditor 9 MET / AC9 DISPUTED / AC11 NOT MET. **One FAIL OPEN:** build metadata was stripped from both operands before comparing, so `v4.0.1+abc123` and `4.0.1+def456` were declared equal and published — **the reasoning was the defect**, since FR1 strips one operand to *classify* while comparing requires not stripping both. **Two swept-sibling misses** (fourth consecutive story): the T41 row's own last sentence, and a HIGH count in the paragraph whose gate line had just been fixed. **AC9's transcript was not verbatim** — stub built and verified, output pasted from a hand-typed equivalent; re-run from the genuine extraction with the correction recorded inline. **The operator escalation was a false binary** — retiring the no-tag rule was never available (NFR1's condition is FR1–FR8, and Story 1.6 is the rehearsal it stages); both artifacts now say the rule STANDS. 6 patched, 5 deferred. No R2 (no HIGH survived). **CI and CodeQL both green** — CodeQL independently confirms AC4's injection claim. Status → done |
 | 2026-08-22 | **Story review before commit — 3 layers.** Verdict: shell check sound but scaffolding defective; corrected in place. **The drafted check committed the very defect AC5 forbids** — `${TAG_NAME:-}` guarded, `"$VERSION"` bare — and its regex admitted **9 invalid-semver shapes** while claiming to validate semver. Replaced with the official semver.org grammar, symmetric emptiness checks and an explicit `v*` assert (a no-`v` tag previously passed). **The metadata judgment call was CLOSED, not left open:** `semver.valid("4.0.1+sha")` is `4.0.1` and FR1/FR5 already strip it, so exact-match would have made one step contradict the next. **AC8's bucket criterion tested future stability instead of current accuracy** — it would have preserved `ci.yml:412`, already broken by `dist-1-3`'s concurrency block (case moved 412→419); both sites de-pinned. **AC11 predicted 3 (c) sites; there are 6**, including `scope-decisions:230`, an executable `# expect: no match` command this story inverts. **Task 7 pre-recorded "epic: nothing to change" while the epic asserts "ref_name is referenced nowhere today" twice** — the identical construction `dist-1-3` R1 logged in the same file. **Task 4 as written would have attempted a real `npm publish`.** Task 1's premise command was unrunnable and its expectation false (5 hits, 0 in `run:`). AC10's "no platform-dependent operator" claim was false — `[[ =~ ]]` is host `regcomp` |
 | 2026-08-22 | Story created by `bmad-create-story`. Check drafted and verified across 11 cases at authoring time, including the two input classes that made `dist-1-3` fail open (multi-line tag, multi-line version) and an injection-shaped tag. **AC5 added as a direct response to `dist-1-3`'s R1**: every input enumerated and validated to the same standard, since "validated one operand, left the sibling raw" is the defect that has survived every process gate in this epic. **AC4 covers script injection** — `${{ }}` must not enter a `run:` body; CodeQL scans this repo and `ci.yml` has no existing `env:` pattern, so this story sets it for Stories 1.5–1.7. One judgment call left explicitly open for the implementer: whether build metadata counts for tag/version identity. `baseline_commit` deliberately not pre-stamped |
