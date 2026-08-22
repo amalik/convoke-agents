@@ -89,7 +89,7 @@ compliance for external publication — this is a build-freshness gate.
 
 ### Functional Requirements
 
-**Gate — T41 (publish path; must clear before 4.0.1 can ship).**
+**Gate — T41 (publish path).** ✅ **CLEARED 2026-08-22** — all five findings fixed; no longer gates 4.0.1.
 All ~~eight~~ **five** (f/g/h retired 2026-08-21 by ADR-001) execute only on a `refs/tags/v*` push; each gets one live rehearsal.
 
 ```
@@ -139,8 +139,10 @@ FR9:  A published artifact MUST be traceable to a committed tree, by the mechani
 FR19: The composed publish job MUST be exercised end-to-end on a prerelease tag
       (`v4.0.1-rc.0`) before the release tag is pushed, and observed landing on `rc`.
       FR1-FR8 are eight edits to the same ~20 lines; each is rehearsable in isolation,
-      the resulting job is not, and the job is what ships. One run proves FR1, FR2, FR3,
-      FR4 and FR5 together.
+      the resulting job is not, and the job is what ships. ~~One run proves FR1, FR2, FR3,
+      FR4 and FR5 together.~~ **Amended 2026-08-22 after the rehearsal: it proved FOUR
+      of five.** A prerelease takes FR5's *skip* branch (`Downgrade guard: skipped (DIST_TAG=rc…)`),
+      so **FR5's downgrade comparison first executes on the eventual stable tag.**
       NOT a dry run — there is no `--dry-run` on this path. Because FR3 requires the tag
       to equal `package.json` version, the rehearsal requires committing
       `version: 4.0.1-rc.0` first, and it publishes a real prerelease that OVERWRITES the
@@ -235,10 +237,11 @@ NFR1: ~~No `v*` tag may be pushed until FR1–FR8 clear.~~ 🔓 **RETIRED 2026-0
       tagged publish.~~ **Amended 2026-08-22:** (a) fixed by `dist-1-2` (FR1), (e) fixed by
       `dist-1-3` (FR5); **Rehearsal COMPLETE 2026-08-22** (`dist-1-6`, run `32599414962`): the composed
       job published `4.0.1-rc.0` to `rc` with `latest` unchanged. **Both retirement preconditions
-      are now met — T41 closed and the job proven — and the rule is still NOT retired; that is an
-      operator decision.** (c) fixed by `dist-1-4`, (b) and (d) by `dist-1-5` — all
+      are now met — T41 closed and the job proven.** ~~and the rule is still NOT retired; that is an
+      operator decision.~~ *(superseded the same day: **the operator took that decision and the rule
+      is RETIRED** — see the head of NFR1.)* (c) fixed by `dist-1-4`, (b) and (d) by `dist-1-5` — all
       2026-08-22. T41 is CLEAR and this rule's condition ("until FR1–FR8 clear") is
-      SATISFIED. The rule is still NOT retired:** retirement cannot precede Story 1.6, the
+      SATISFIED. ~~The rule is still NOT retired:~~** *(superseded — RETIRED by operator decision 2026-08-22, see the head of NFR1)* retirement cannot precede Story 1.6, the
       composed live tag rehearsal it exists to stage. ~~its condition is "until
       FR1–FR8 clear", and FR2 and FR4 (T41 (b) and (d), both HIGH) have not.~~ Those two make a
       publish FAIL rather than land in the wrong place, which is why the rationale needed

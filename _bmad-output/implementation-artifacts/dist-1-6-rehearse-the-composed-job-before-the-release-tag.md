@@ -97,6 +97,22 @@ Every previous story in this epic changed a file and proved it locally. **This o
   - [x] `## Commit Plan` in this story file, all five `commit-preparation` fields — **and it is an ordered list of TWO commits, not one.** Commit 1 (Task 4): `package.json` **only**, pushed to `main` before any tag. Commit 2 (here): the story record and backlog receipts, written after the tag run. An earlier draft implied a single plan, which cannot satisfy `commit-preparation` field 4 — Tasks 5–8 all edit this story file *after* commit 1 is pushed
   - [x] **OPERATOR STEP — leave unchecked until the commit exists.** Verify with `git log -1 --format=%b | wc -c`
 
+## Commit Plan
+
+**Written retrospectively at review — and that is the finding.** Task 8's subtask *"`## Commit Plan` in this story file"* was ticked `[x]` while **no such section existed**. The plans were delivered conversationally and the commits were made from them, so the work is sound; the ticked box was not. Same defect `dist-1-1`'s R2 raised — a commit plan that lived only as chat output, ticked anyway — recurring in the story that quotes that lesson.
+
+**This story produced THREE commits, not one** — the two-commit structure Task 4 called for, plus a third for follow-ups:
+
+| # | Commit | Files | What |
+|---|---|---|---|
+| 1 | `9895760b` | `package.json` | `4.0.0` → `4.0.1-rc.0`, pushed to `main` to prove the eight prerequisite jobs before any tag existed |
+| 2 | `6ad8e1f6` | story, sprint-status, epic, scope-decisions | the rehearsal record — gate lines, before/after dist-tags, attestation |
+| 3 | `a7322e68` | scope-decisions, epic, backlog | T45 filed; the no-tag rule retired by operator decision |
+
+A **fourth** commit carries this review's corrections: this section, the AC5 evidence relabelling, the File List, the struck contradictions, and FR19's amendment.
+
+**Staged-set proof and lane-order output were produced per commit at the time, not retained here** — which is part of why the ticked box was wrong. `commit-preparation` field 4 wants that proof *in* the plan.
+
 ## Dev Notes
 
 ### What has never been tested
@@ -186,7 +202,7 @@ That is `NPMRC_CHECKED=0` — the credential **file scan inspected nothing in pr
 
 **The composed publish job ran for real and behaved correctly.**
 
-**AC5 — the five gates, verbatim from the live `publish` job (run `32599414962`):**
+**AC5 — the five gates, from the live `publish` job (run `32599414962`).** **NOT a contiguous transcript — corrected at review.** The first six lines ARE contiguous at log `:483-488`; the seventh (`npm notice Publishing to …`) is at `:975`, **487 lines and one live OIDC token exchange later**, after the 454-file tarball listing. Every string is real and character-exact, but an earlier version of this block called the selection "verbatim", which is the wrong word for a reordered filter. **Two notices were also dropped without ellipsis and are recorded here instead:** an npm policy notice that *"tokens that bypass 2FA are being restricted"* — landing directly on the authentication path this epic exists to harden — and `npm warn deprecated glob@10.5.0` from the publish job's own `npm ci`, which the `security` job cannot see because it runs `npm audit --omit=dev`.
 
 ```
 npm floor: 11.17.0 >= 11.5.1 -- OK
@@ -226,9 +242,12 @@ provenance: { predicateType: 'https://slsa.dev/provenance/v1' }
 **Modified — source & config (1)**
 - `package.json` — version `4.0.0` → `4.0.1-rc.0` *(commit 1, pushed to `main` before the tag)*
 
-**Modified — planning & tracking (2)**
+**Modified — planning & tracking (4)**
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — story status
 - `_bmad-output/implementation-artifacts/dist-1-6-rehearse-the-composed-job-before-the-release-tag.md` — this file
+- `_bmad-output/planning-artifacts/convoke-note-4-0-1-scope-decisions.md` — rehearsal recorded; §6 rule retired by operator decision
+- `_bmad-output/planning-artifacts/convoke-epic-4-0-1-distribution-integrity.md` — NFR1 same; FR19's "one run proves FR1–FR5" amended
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — T45 filed *(added at review: an earlier File List omitted all three)*
 
 **Created — not a file, but the durable artefact of this story**
 - `convoke-agents@4.0.1-rc.0` published to npm on the `rc` dist-tag, with provenance
@@ -238,6 +257,7 @@ provenance: { predicateType: 'https://slsa.dev/provenance/v1' }
 
 | Date | Change |
 |---|---|
+| 2026-08-23 | **Round 1 code review of the record (2 layers, claims-focused since the code surface is one line).** **The outward-facing facts all verified independently** — publish landed on `rc`, `latest` untouched at `4.0.0`, provenance real, and the five gate lines match the live log character-for-character. **The defects were all in the record.** (1) Task 8 was ticked for a `## Commit Plan` that **did not exist** — the `dist-1-1` R2 defect recurring in the story that quotes it; written retrospectively above. (2) **Both retirement records still asserted, in live text, that the rule was NOT retired** — I stacked amendments without striking the superseded ones, and one of my strikes was malformed (`~~**~~`) so it left the phrase live. (3) A **third** place still said T41 gates 4.0.1 (epic's gate heading). (4) **FR19 itself was never amended** — the epic still claimed one run proves FR1–FR5 when this story's own evidence shows four of five. (5) The AC5 evidence was labelled **verbatim** but splices log `:975` onto `:483-488` — 487 lines and a token exchange apart — and dropped a 2FA policy notice landing on the very auth path this epic hardens. (6) File List omitted three files. All corrected |
 | 2026-08-22 | **Third review — NOT READY; route (a1) DELETED.** All five HIGHs were in the `workflow_dispatch` OIDC probe, the one thing the second rewrite *invented* rather than fixed. **Measured and rejected:** npm Trusted Publishing binds an entry to `owner/repo` **plus the workflow filename** (`--file` is required), and the entry is registered for `ci.yml` — a probe in any other file is declined, reporting a broken precondition that is fine. `workflow_dispatch` also requires the file on `main`, which would have made task 1 an unmarked push to a shared branch. **I wrote that probe into the same AC that says "Measure, do not assume", from a review suggestion, without measuring it.** AC1 is now two honest routes: operator check, or HALT. **Review 3 confirmed the Review-2 fixes landed** — it extracted and ran AC6's harness itself. Four MEDIUMs folded in: `HOME` isolation misses `globalconfig`; AC6's happy path exercised gate 3's *empty* branch, not its scan (the exact shape `dist-1-5` R2 removed); the discriminator exits **1** with a 7-line stderr on the healthy path, so a bare capture under `set -e` aborts recovery; and this is **two commits, not one** |
 | 2026-08-22 | **Second review of the rebuild — 5 HIGH; rebuilt again.** The first review's six defects were confirmed fixed, but the **rebuild introduced new ones**. **AC6 was unsatisfiable for a second, different reason**: "extract ending before `npm publish`" truncates ~190 lines early — the first such *string* is inside an error message at `:472`, dropping gates 4 and 5 **while the sentinel still prints success**; and the happy path cannot pass at all because gate 3 resolves `~/.npmrc`, which holds a live credential. Now anchored, marker-asserted, and `HOME`-isolated. **AC9 was a false binary** — it had no state for *registry accepted, step went red*, the only path that permanently consumes a version; four states now, with `npm view …@4.0.1-rc.0 version` as the discriminator. **AC1 offered a one-click exit** ("or chooses not to") from its own precondition; (b) is now a HALT, and the review found a **third route neither the story nor R1 had**: a `workflow_dispatch` OIDC probe that enters a runner without spending a tag — I had read half of `dist-1-5` R2's sentence and treated "runner-only" as a dead end. **Both outward-facing pushes were the only unmarked tasks**; now OPERATOR STEPs, and Task 4 no longer consumes a commit plan Task 8 writes later. Also: the tag count said 5, the repo has 18 (`tail -5` reported as a full list), and the References carried the exact citation AC8's fix had corrected |
 | 2026-08-22 | **Story review before implementation — 2 layers. Verdict: NOT ready; rebuilt.** **7 HIGH + 2 unsatisfiable ACs.** **One instruction was dangerous:** AC6 said to extract the gate block and "confirm it reaches the publish line" with no truncation — the block's last line is a live `npm publish`, so following it would have published from the operator's laptop before AC1 and before any tag. **All three safety legs were broken:** AC1's inspector does not exist (`npm trust list` → E401 unauthenticated; the named command is the *create* path); AC6 could not run (`VERSION` is read from `package.json`, not injectable by env); AC9's rollback is unavailable (`npm whoami` exits 1, so `npm dist-tag add` needs a credential this machine lacks). **The risk statement was inflated** — a failed run burns a TAG, not a version, since `npm publish` is the last line after 5 gates and 8 jobs. **And the biggest miss was an omission:** `publish` needs **eight** prerequisite jobs, never mentioned, and pushing the version-bump commit to `main` runs all eight on the same SHA without publishing — a free full rehearsal the draft's flow actively skipped. Added as AC12. AC7's second option was impossible and AC8's citation was off by a clause |

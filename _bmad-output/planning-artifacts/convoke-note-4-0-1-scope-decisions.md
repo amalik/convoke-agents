@@ -189,11 +189,10 @@ persona strings written by whoever builds it.
    preconditions as met and left the decision to the operator, who took it on 2026-08-22.)*
 
    ~~Superseded rule text:~~ **No `v*` tag may be pushed until T41 clears.** ~~Findings (a), (c) and (e) all
-   mis-route a tagged publish.~~ **Amended 2026-08-22 (fourth amendment).** **Story 1.6's rehearsal is COMPLETE** — `convoke-agents@4.0.1-rc.0` published to the `rc` dist-tag via tag `v4.0.1-rc.0`, run `32599414962`, all five gates observed passing, `latest` unchanged at `4.0.0`, provenance attestation present. **Every precondition for retiring this rule is now met: T41 is closed AND the composed job is proven.** **The rule is still NOT retired — that is the operator's call, deliberately left open.** `dist-1-4` and `dist-1-5` were each corrected for instructing retirement; `dist-1-6` records the finding and stops there.
+   mis-route a tagged publish.~~ **Amended 2026-08-22 (fourth amendment).** **Story 1.6's rehearsal is COMPLETE** — `convoke-agents@4.0.1-rc.0` published to the `rc` dist-tag via tag `v4.0.1-rc.0`, run `32599414962`, all five gates observed passing, `latest` unchanged at `4.0.0`, provenance attestation present. **Every precondition for retiring this rule is now met: T41 is closed AND the composed job is proven.** **The rule was NOT retired by this story** — the finding was recorded and the decision left to the operator, who **took it the same day: the rule is RETIRED** (see the head of this rule). *(true when written; **the operator took that call the same day — see the retirement at the head of this rule**)* `dist-1-4` and `dist-1-5` were each corrected for instructing retirement; `dist-1-6` records the finding and stops there.
 
    **Amended 2026-08-22 (third amendment).** **T41 is now CLEAR — all five findings are
-   fixed** ((a) `dist-1-2`, (e) `dist-1-3`, (c) `dist-1-4`, (b) and (d) `dist-1-5`). **This
-   rule's CONDITION is therefore satisfied. The rule is NOT retired.** Retirement cannot
+   fixed** ((a) `dist-1-2`, (e) `dist-1-3`, (c) `dist-1-4`, (b) and (d) `dist-1-5`). ~~**This rule's CONDITION is therefore satisfied. The rule is NOT retired.**~~ *(true when written; superseded by the retirement above)* Retirement cannot
    precede **Story 1.6**, the composed live tag rehearsal this rule exists to stage —
    retiring it first would authorise the very push 1.6 is designed to control. `dist-1-5`
    deliberately did not retire it; an earlier draft of that story instructed retirement and
