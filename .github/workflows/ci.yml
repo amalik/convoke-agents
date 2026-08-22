@@ -363,6 +363,13 @@ jobs:
     needs: [lint, test, python-test, coverage, security, package-check, agent-surface-parity, fresh-install]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    # FR5/dist-1-3: a FIXED group name, deliberately not keyed to github.ref. The workflow-level
+    # concurrency group is per-ref, so two tags pushed together run concurrently, both read the
+    # pre-publish `latest`, both pass the downgrade guard, and the later-finishing one moves
+    # `latest` backwards. Serialising every publish closes that check-to-use window.
+    concurrency:
+      group: publish-npm
+      cancel-in-progress: false
     permissions:
       contents: read
       id-token: write
@@ -414,4 +421,75 @@ jobs:
             *)   DIST_TAG=latest ;;
           esac
           echo "Publishing $VERSION to dist-tag $DIST_TAG"
+
+          # FR5/dist-1-3: refuse a semver-lower publish to `latest`. Without this, a maintenance
+          # tag cut from an old branch (say v3.3.1) derives DIST_TAG=latest and downgrades every
+          # 4.0.0 user. Nothing here read the dist-tag before, so this is a deliberate NEW read of
+          # the registry. It fails CLOSED, matching the fresh-install job above: a transient
+          # registry failure blocks a tag publish exactly as a real defect would, recoverable by
+          # re-running. The one exception is E404 -- a package with nothing published yet has
+          # nothing to downgrade, and this repo has renamed its published package once already.
+          #
+          # Every validation below closes a hole that a review layer actually drove through an
+          # earlier draft. Do not "simplify" any of them:
+          #   - an unbound package name made `npm view ""` return a REAL package called
+          #     `undefined` (0.1.0) at exit 0, so the guard passed every downgrade;
+          #   - `case "$X" in [0-9]*.[0-9]*.[0-9]*)` is a GLOB, not semver -- it accepted
+          #     `1.2.3.4`, `1.2.3abc` and embedded newlines, which is why these are `[[ =~ ]]`;
+          #   - a multi-line `version` bypassed the guard entirely, so CAND is validated as
+          #     strictly as CURRENT;
+          #   - a multi-line registry reply is REFUSED, not `head -1`-ed: head took the FIRST
+          #     line, not the highest, and under `pipefail` it also SIGPIPEs npm on long replies;
+          #   - `tr -d '[:space:]'` welded `3.0.0 9.9.9` into `3.0.09.9.9`, so trimming is done
+          #     with parameter expansion instead;
+          #   - `sort -V` ranks 4.1.0 BELOW 4.1.0-rc.1, the reverse of SemVer, so a prerelease
+          #     on `latest` is refused by the shape check rather than compared wrongly.
+          #
+          # Verified locally on BSD/Apple sort 2.3. The runner uses GNU coreutils sort, a
+          # different filevercmp; the two agree on every case tested, but GNU behaviour is
+          # ASSUMED here and gets its live confirmation in Story 1.6's composed rehearsal.
+          if [ "$DIST_TAG" = "latest" ]; then
+            PKG=$(node -p "require('./package.json').name" 2>/dev/null) || PKG=""
+            case "$PKG" in ""|undefined) echo "FATAL: cannot determine package name." >&2; exit 1 ;; esac
+
+            CAND="${VERSION%%+*}"
+            if ! [[ "$CAND" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "FATAL: version '$VERSION' is not a plain X.Y.Z release; refusing." >&2; exit 1
+            fi
+
+            VIEW_ERR=$(mktemp) || { echo "FATAL: mktemp failed; cannot run the downgrade guard." >&2; exit 1; }
+            trap 'rm -f "$VIEW_ERR"' EXIT
+            GUARD_SKIP=""
+            if CURRENT=$(npm view "$PKG" dist-tags.latest --no-color 2>"$VIEW_ERR"); then :; else
+              if grep -qE 'E404|404 Not Found' "$VIEW_ERR"; then
+                echo "Downgrade guard: $PKG has no published version yet — nothing to downgrade."
+                GUARD_SKIP=1
+              else
+                echo "FATAL: could not reach the registry for $PKG." >&2
+                head -c 2000 "$VIEW_ERR" >&2; exit 1
+              fi
+            fi
+
+            if [ -z "$GUARD_SKIP" ]; then
+              if [ "$(printf '%s' "$CURRENT" | grep -c '')" -ne 1 ]; then
+                echo "FATAL: registry returned a multi-line 'latest' for $PKG; refusing to guess." >&2
+                printf '%s\n' "$CURRENT" | head -5 >&2; exit 1
+              fi
+              CURRENT="${CURRENT#"${CURRENT%%[![:space:]]*}"}"
+              CURRENT="${CURRENT%"${CURRENT##*[![:space:]]}"}"
+              CURRENT="${CURRENT%%+*}"
+              if ! [[ "$CURRENT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "FATAL: current 'latest' for $PKG is not a plain X.Y.Z release (got '$CURRENT')." >&2; exit 1
+              fi
+              LOWEST=$(printf '%s\n%s\n' "$CURRENT" "$CAND" | sort -V | head -1)
+              if [ "$CAND" != "$CURRENT" ] && [ "$LOWEST" = "$CAND" ]; then
+                echo "FATAL: refusing to publish $VERSION to 'latest' -- lower than current latest $CURRENT." >&2
+                exit 1
+              fi
+              echo "Downgrade guard: $CAND >= current latest $CURRENT -- OK"
+            fi
+          else
+            echo "Downgrade guard: skipped (DIST_TAG=$DIST_TAG, prerelease does not move 'latest')"
+          fi
+
           npm publish --provenance --access public --tag "$DIST_TAG" --loglevel verbose

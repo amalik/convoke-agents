@@ -105,8 +105,11 @@ FR4:  The job MUST NOT leave `_authToken=${NODE_AUTH_TOKEN}` unset in `.npmrc`, 
       OIDC decline surfaces as *no token* rather than *bad token*.            [T41(d) HIGH]
 FR5:  The publish job MUST fetch the current `latest` from the registry and refuse to
       publish a semver-lower version to it (a `3.3.1` would downgrade every 4.0.0 user).
-      A `package.json`-only check CANNOT satisfy this — `ci.yml` queries the registry
-      nowhere today, so the job has no knowledge of what `latest` currently is. Accepted
+      A `package.json`-only check CANNOT satisfy this — `ci.yml` ~~queries the registry
+      nowhere today~~ **read the `latest` dist-tag nowhere** (amended 2026-08-22: it always
+      transacted with the registry via `npm ci`/`npm publish`; the narrower claim is the true
+      one, and `dist-1-3` has now added the read), so the job had no knowledge of what
+      `latest` currently is. Accepted
       trade-off: the publish job gains a dependency on registry availability; the story
       must state it rather than discover it.                                  [T41(e) MED]
 FR6:  RETIRED 2026-08-19 by ADR-001 (retire the badges pipeline). Was: the badge
@@ -433,7 +436,7 @@ So that a `3.3.1` cannot downgrade me from 4.0.0.
 
 **Given** the job needs the current `latest`
 **When** it makes the comparison
-**Then** it fetches the value from the registry — a `package.json`-only check cannot decide this, because `ci.yml` queries the registry nowhere today
+**Then** it fetches the value from the registry — a `package.json`-only check cannot decide this, because `ci.yml` read the `latest` dist-tag nowhere before `dist-1-3` (amended 2026-08-22)
 
 **Given** the registry is unreachable
 **When** the comparison is attempted

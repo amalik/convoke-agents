@@ -40,7 +40,7 @@ on 2026-08-17, eight minutes after the tag job failed.
 
 ## Two corollaries the spike surfaced
 
-**1. `--provenance` at `ci.yml:417` is redundant, and it was actively misleading.**
+**1. `--provenance` in `ci.yml`'s `Publish to npm` step is redundant, and it was actively misleading.**
 npm's documentation is explicit: *"When you publish using trusted publishing from GitHub Actions or
 GitLab CI/CD, npm automatically generates and publishes provenance attestations for your package.
 This happens by default — you don't need to add the `--provenance` flag."*
@@ -131,7 +131,7 @@ control. An escape hatch you rediscover under pressure is the status quo.
 - Verify the trusted-publisher allowed-actions list includes `npm publish` **before** the rehearsal,
   not after.
 - T35 closes against Story 1.6. Its options (b) and (c) are declined on the record.
-- `--provenance` may be dropped from `ci.yml:417`; optional, and only inside a rehearsed change.
+- `--provenance` may be dropped from `ci.yml`'s `Publish to npm` step; optional, and only inside a rehearsed change.
 
 ## Consequences if rejected
 
@@ -182,3 +182,10 @@ Two things only you can do, in this order:
    is missing, the next tag push fails at the write regardless of this ADR.
 2. **Do not enable the setting yet.** It goes on after Story 1.7's rehearsal proves the automatic
    path works — otherwise there is no path at all.
+
+## Amendments
+
+| Date | By | Change |
+|---|---|---|
+| 2026-08-22 | `dist-1-1` R2 review | `--provenance at ci.yml:417` citation verified and preserved by reflowing that story's edit to net-zero lines. No text changed here. |
+| 2026-08-22 | `dist-1-3` (FR5) | Both `ci.yml:417` citations (§`:43`, §`:134`) **de-pinned** to "`ci.yml`'s `Publish to npm` step". `dist-1-3` inserts a downgrade guard before `npm publish`, moving that line `417 → 472`; re-pinning would have been broken again by Story 1.4, which edits the same block. **Factual pointer only — the decision, its options analysis and its consequences are unchanged.** Recorded here because this ADR is `Accepted` and previously carried no amendment trace, while sibling ADRs (`v4-1/adr-001`, `v63/adr-001`) do. |
