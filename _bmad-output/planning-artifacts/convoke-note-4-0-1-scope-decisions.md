@@ -66,8 +66,9 @@ being smuggled in as a seventh quick win.
 job. Finding **(e)** fires on precisely this release: a maintenance `3.3.1` has no
 hyphen, so `case *-*` routes it to `latest` and **downgrades every user from 4.0.0**.
 
-Four HIGH: (a) `case *-*` misclassifies build metadata, so `4.0.0+sha…` routes to
-`rc` and a stable release never reaches `latest`; (b) `node-version: 24` does not
+~~Four~~ **Three** HIGH remain. ~~(a) `case *-*` misclassifies build metadata, so `4.0.0+sha…` routes to
+`rc` and a stable release never reaches `latest`;~~ ✅ **(a) FIXED 2026-08-22 by story `dist-1-2`** (FR1) —
+`ci.yml:412` now reads `case "${VERSION%%+*}"`. (b) `node-version: 24` does not
 guarantee npm ≥ 11.5.1 — the OIDC floor — and works today by luck of the runner
 toolcache, regressing to a silent anonymous publish returning 404; (c) BUG-15 shipped
 half its own acceptance text — "fail the job if the two disagree" was never built and
@@ -77,8 +78,10 @@ OIDC decline resurfaces as a *bad token* rather than *no token*.
 ~~Four~~ **One** MEDIUM: (e) downgrade guard. **(f), (g) and (h) were RETIRED 2026-08-21** by
 [ADR-001](adr/4-0-1/adr-001-retire-badges-pipeline.md) together with the badges pipeline — all three
 described guards inside `scripts/generate-badges-json.js`, which is deleted. Do **not** re-create the
-generator to harden them; story `dist-1-1` AC8 forbids it. The E3 pricing above still reflects the old
-8-finding scope and is pending recompute.
+generator to harden them; story `dist-1-1` AC8 forbids it. ~~The E3 pricing above still reflects the old
+8-finding scope and is pending recompute.~~ **Recompute completed 2026-08-21: E3 / 5.4 re-affirmed, not raised** —
+the retired findings were MEDIUM generator work while all four HIGHs (and the one-live-rehearsal-per-fix cost that
+priced E3) survived. As of 2026-08-22, (a) is also fixed and E3/5.4 still stands for the remaining (b)–(e).
 
 **Story shape.** Its own story set, not a checklist. Each finding needs a stated
 rehearsal strategy given the one-shot constraint.
@@ -198,7 +201,7 @@ exemption. Verdicts are against source, not against rows.
 
 | Item | Verdict | Basis |
 |---|---|---|
-| BUG-15 | 🔴 **shipped** | `ci.yml:411-417` implements `case "$VERSION"` → `DIST_TAG` + `--tag "$DIST_TAG"`. Removed from scope. |
+| BUG-15 | 🔴 **shipped** | `ci.yml:411-417` implements the `DIST_TAG` derivation + `--tag "$DIST_TAG"`. Removed from scope. *(Basis updated 2026-08-22: the subject was `case "$VERSION"` when this verdict was written; `dist-1-2` changed it to `case "${VERSION%%+*}"` per FR1. A re-run of this pre-flight must grep the new form.)* |
 | T35 | 🟡 **re-scope** | Still Open; motivation changed now that the publish job works. |
 | T32 | 🟢 | `docs:audit` in `package.json:52`, in no workflow. |
 | I141 | 🟢 | In `files[]`; zero install-path references. |

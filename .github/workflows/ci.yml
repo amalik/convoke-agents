@@ -398,8 +398,8 @@ jobs:
       # failed with EOTP regardless of account or package mfa settings.
       # BUG-15: this job fires on ANY `refs/tags/v*`, including `v4.1.0-rc.1`. `npm publish`
       # with no `--tag` applies `latest`, which would hand every existing user a release
-      # candidate. Derive the tag from the version instead: prereleases (a `-` in the semver)
-      # go to `rc`, everything else to `latest`.
+      # candidate. Derive the tag from the version instead: a `-` in the semver AFTER stripping
+      # `+build` metadata means prerelease -> `rc`; all else -> `latest`. FR1/dist-1-2: keep the strip.
       #
       # `--loglevel verbose` is deliberate: npm's oidc() is written to never throw and logs
       # every failure path at verbose/silly, so a trusted-publisher mismatch otherwise
@@ -409,7 +409,7 @@ jobs:
       - name: Publish to npm
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          case "$VERSION" in
+          case "${VERSION%%+*}" in
             *-*) DIST_TAG=rc ;;
             *)   DIST_TAG=latest ;;
           esac
