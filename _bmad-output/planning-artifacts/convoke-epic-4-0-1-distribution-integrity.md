@@ -99,8 +99,8 @@ FR2:  The publish job MUST assert the resolved npm version is >= 11.5.1 (the OID
       registry-auth floor) and fail loudly if it is not, rather than depending on the
       runner toolcache.                                                       [T41(b) HIGH]
 FR3:  The publish job MUST fail when the pushed git tag and `package.json` version
-      disagree — BUG-15's unbuilt acceptance text; `github.ref_name` is referenced
-      nowhere today.                                                          [T41(c) HIGH]
+      disagree — BUG-15's unbuilt acceptance text; `github.ref_name` was referenced
+      ~~nowhere today~~ **nowhere until `dist-1-4` shipped FR3 on 2026-08-22**.                                                          [T41(c) HIGH]
 FR4:  The job MUST NOT leave `_authToken=${NODE_AUTH_TOKEN}` unset in `.npmrc`, so an
       OIDC decline surfaces as *no token* rather than *bad token*.            [T41(d) HIGH]
 FR5:  The publish job MUST fetch the current `latest` from the registry and refuse to
@@ -229,9 +229,13 @@ The four NFRs specific to this epic. Numbers are original; 3–7 and 9 were subt
 ```
 NFR1: No `v*` tag may be pushed until FR1–FR8 clear. ~~(a), (c) and (e) each mis-route a
       tagged publish.~~ **Amended 2026-08-22:** (a) fixed by `dist-1-2` (FR1), (e) fixed by
-      `dist-1-3` (FR5); **(c) still mis-routes a tagged publish** — tag and `package.json`
-      version remain fully decoupled — so this rule now rests on (c) alone, and `dist-1-4`
-      is what retires it. *(Missed by both prior sweeps: they amended the twin rule in
+      `dist-1-3` (FR5); **(c) fixed 2026-08-22 by `dist-1-4`** (FR3). **The rule's stated
+      mis-routing rationale is discharged, but the rule STANDS:** its condition is "until
+      FR1–FR8 clear", and FR2 and FR4 (T41 (b) and (d), both HIGH) have not. Those two make a
+      publish FAIL rather than land in the wrong place, which is why the rationale needed
+      restating — not why the rule could be dropped. Retirement would require amending this
+      condition clause and cannot precede Story 1.6, the composed live tag rehearsal this rule
+      exists to stage. *(Missed by both prior sweeps: they amended the twin rule in
       `convoke-note-4-0-1-scope-decisions.md` §6 and never this one.)* An rc needed before then is published by hand with `--tag rc`.
       EXEMPTION — the intent is *no tag that could reach `latest`*, not *no tag*. Once
       **FR1** lands, a prerelease tag provably routes to `rc`, so prerelease tags are
@@ -463,7 +467,7 @@ So that a release is identifiable from either side.
 **Given** tag `v4.0.1` and `package.json` version `4.1.0-rc.1`
 **When** the publish job runs
 **Then** it fails before `npm publish`, printing both values
-**And** `github.ref_name` is referenced in the job — it appears nowhere today, which is why BUG-15 shipped half its own acceptance text
+**And** `github.ref_name` is referenced in the job — ~~it appears nowhere today~~ **it did not until `dist-1-4` (2026-08-22)**, which is why BUG-15 shipped half its own acceptance text
 
 **Given** tag `v4.0.1` and version `4.0.1`
 **When** the job runs

@@ -66,15 +66,15 @@ being smuggled in as a seventh quick win.
 job. ~~Finding **(e)** fires on precisely this release: a maintenance `3.3.1` has no
 hyphen, so `case *-*` routes it to `latest` and **downgrades every user from 4.0.0**.~~
 ✅ **(e) FIXED 2026-08-22 by story `dist-1-3`** — the publish job now refuses a semver-lower
-publish to `latest`. The gate still holds on (b), (c) and (d), all HIGH.
+publish to `latest`. The gate still holds on **(b) and (d)**, both HIGH — *(c) fixed 2026-08-22 by `dist-1-4`.*
 
-~~Four~~ **Three** HIGH remain. ~~(a) `case *-*` misclassifies build metadata, so `4.0.0+sha…` routes to
+~~Four~~ ~~**Three**~~ **Two** HIGH remain (amended twice: (a) fixed 2026-08-22 by `dist-1-2`, (c) same day by `dist-1-4`). ~~(a) `case *-*` misclassifies build metadata, so `4.0.0+sha…` routes to
 `rc` and a stable release never reaches `latest`;~~ ✅ **(a) FIXED 2026-08-22 by story `dist-1-2`** (FR1) —
 `ci.yml`'s `Publish to npm` step now reads `case "${VERSION%%+*}"`. (b) `node-version: 24` does not
 guarantee npm ≥ 11.5.1 — the OIDC floor — and works today by luck of the runner
 toolcache, regressing to a silent anonymous publish returning 404; (c) BUG-15 shipped
 half its own acceptance text — "fail the job if the two disagree" was never built and
-`github.ref_name` appears nowhere, so tag and `package.json` version are fully
+~~`github.ref_name` appears nowhere~~ **(fixed 2026-08-22 by `dist-1-4`: it now reaches the publish step via `env:`)**, so tag and `package.json` version were fully
 decoupled; (d) `setup-node` writes `_authToken=${NODE_AUTH_TOKEN}` regardless, so an
 OIDC decline resurfaces as a *bad token* rather than *no token*.
 ~~Four~~ ~~**One** MEDIUM: (e) downgrade guard.~~ ✅ **(e) FIXED 2026-08-22 by `dist-1-3`. Zero MEDIUM remain.** **(f), (g) and (h) were RETIRED 2026-08-21** by
@@ -177,11 +177,20 @@ persona strings written by whoever builds it.
 ## 6. Constraints binding implementation
 
 1. **No `v*` tag may be pushed until T41 clears.** ~~Findings (a), (c) and (e) all
-   mis-route a tagged publish.~~ **Amended 2026-08-22:** (a) fixed by `dist-1-2`, (e) fixed by
-   `dist-1-3`; **(c) still mis-routes a tagged publish** — tag and `package.json` version are
-   fully decoupled — so the rule stands on (c) alone. Note NFR1's exemption: since FR1 landed, a
-   *prerelease* tag provably routes to `rc` and is permitted. If a release candidate is needed,
-   publish by hand with an explicit `--tag rc`.
+   mis-route a tagged publish.~~ **Amended 2026-08-22 (second amendment, same day):** (a) fixed by `dist-1-2`, (e) by
+   `dist-1-3`, **(c) by `dist-1-4`**. **The rule STANDS — only its stated rationale was stale.**
+   It reads *"(a), (c) and (e) each **mis-route** a tagged publish"*, and no remaining finding
+   mis-routes: (b) is a silent anonymous publish returning 404, (d) makes an OIDC decline surface
+   as *bad token* rather than *no token*. Both make a publish **fail**; neither makes it land in
+   the wrong place. **But the rule's condition is "until T41 clears", not "until mis-routing
+   clears"** — (b) and (d) are open and both HIGH, so the condition is unmet on its own terms.
+   **Retirement is a separate decision and cannot precede Story 1.6**, which is the composed live
+   tag rehearsal this rule exists to stage; retiring it first would authorise the very push 1.6
+   is designed to control. *(An earlier draft of this amendment offered "retire it" as a live
+   option. That was wrong on both counts and was corrected at R1.)*
+   NFR1's exemption is unaffected: since FR1 landed a *prerelease* tag provably routes to `rc` and
+   is permitted; an rc needed sooner is published by hand with an explicit `--tag rc`.
+
 2. **No line-level staging on the backlog.** `3a3de195` deleted the T35 and T39 rows
    while its message claimed to repair them: both rows were *modified*, so the diff
    carried `-old` and `+new`, and line-level staging took the `-` side. T35 — an open
@@ -217,7 +226,7 @@ exemption. Verdicts are against source, not against rows.
 **Gap found in the method, not the items.** The pre-flight verifies items already
 known; nothing in it asks what *entered* the lane since qualification. T41 and T40
 were both created on 2026-08-17 by the review rounds on the work under discussion, and
-the room re-derived T41(c) as a "new" finding before Amalik caught it. Logged as an
+the room re-derived T41(c) as a "new" finding *((c) shipped 2026-08-22 via `dist-1-4`)* before Amalik caught it. Logged as an
 intake against the rule; not fixed here.
 
 ---
@@ -227,7 +236,11 @@ intake against the rule; not fixed here.
 ```bash
 # Publish path (T41 (a)(c), BUG-15 as shipped)
 sed -n '405,420p' .github/workflows/ci.yml
-grep -n "github.ref_name" .github/workflows/ci.yml        # expect: no match — finding (c)
+grep -n "github.ref_name" .github/workflows/ci.yml        # expect: ONE match in the publish
+                                                          # step's env: block. Was "expect: no
+                                                          # match — finding (c)"; inverted
+                                                          # 2026-08-22 when dist-1-4 shipped FR3.
+                                                          # A no-match now means FR3 REGRESSED.
 
 # T32 — declared but unwired
 grep -n "docs:audit" .github/workflows/*.yml package.json

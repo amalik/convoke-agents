@@ -414,8 +414,63 @@ jobs:
       # costs a tag delete-and-repush. Keep it until a green publish exists on a prerelease
       # tag as well as a stable one.
       - name: Publish to npm
+        # FR3/dist-1-4: `github.ref_name` reaches the shell as an ENV VAR, never interpolated
+        # into the `run:` body. Splicing a context value into a shell script is the Actions
+        # code-injection pattern CodeQL scans for; via env: it arrives as data that can be
+        # quoted. This is the first env: block in this workflow -- Stories 1.5-1.7 copy it.
+        env:
+          TAG_NAME: ${{ github.ref_name }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
+
+          # FR3/dist-1-4: refuse to publish when the pushed tag does not name the version.
+          # T41(c): `github.ref_name` appeared NOWHERE in this file, so tag v4.0.1 could ship
+          # package.json 4.1.0-rc.1 -- BUG-15 shipped half its own acceptance text.
+          #
+          # Build metadata is NOT part of a release's identity: semver.valid("4.0.1+sha") is
+          # "4.0.1", and FR1 strips it three lines below for dist-tag routing. Comparing on a
+          # different basis here would make consecutive checks contradict each other.
+          #
+          # The strictness below is not decoration. A story-review layer defeated a laxer
+          # draft: `[0-9]*.[0-9]*.[0-9]*` as a `case` glob accepted `01.2.3`, `1.2.3-+`,
+          # `1.2.3+a+b` and `1.2.3-.`; `${TAG_NAME#v}` silently no-op'd on a tag with no `v`;
+          # and guarding TAG_NAME with `:-` while reading VERSION bare was the same asymmetry
+          # that made the FR5 guard fail open. Both operands are now validated identically.
+          SEMVER_RE='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+          if [ -z "${TAG_NAME:-}" ]; then
+            echo "FATAL: TAG_NAME is empty; cannot verify the tag matches the version." >&2; exit 1
+          fi
+          if [ -z "${VERSION:-}" ]; then
+            echo "FATAL: VERSION is empty; cannot verify the tag matches the version." >&2; exit 1
+          fi
+          case "$TAG_NAME" in
+            v*) ;;
+            *) echo "FATAL: tag '$TAG_NAME' is not v-prefixed; refusing." >&2; exit 1 ;;
+          esac
+          TAG="${TAG_NAME#v}"
+          if ! [[ "$TAG" =~ $SEMVER_RE ]]; then
+            echo "FATAL: tag '$TAG_NAME' does not name a valid semver release." >&2; exit 1
+          fi
+          if ! [[ "$VERSION" =~ $SEMVER_RE ]]; then
+            echo "FATAL: package.json version '$VERSION' is not valid semver." >&2; exit 1
+          fi
+          if [ "${TAG%%+*}" != "${VERSION%%+*}" ]; then
+            echo "FATAL: tag and version disagree -- tag '$TAG_NAME' names '${TAG%%+*}', package.json says '${VERSION%%+*}'." >&2
+            exit 1
+          fi
+          # Build metadata: FR1 strips it from ONE operand to CLASSIFY a version. Stripping it from
+          # BOTH to COMPARE them is a different act, and doing so blindly let `v4.0.1+abc123` publish
+          # `4.0.1+def456` while reporting agreement -- the tag naming one commit, the tarball another.
+          # Rule: if BOTH sides carry metadata it must match; if only one does, the tag still names the
+          # release and CI is free to stamp a build. Caught by the R1 edge-case layer.
+          case "$TAG:$VERSION" in
+            *+*:*+*)
+              if [ "$TAG" != "$VERSION" ]; then
+                echo "FATAL: tag and version carry different build metadata -- tag '$TAG_NAME', package.json '$VERSION'." >&2
+                exit 1
+              fi ;;
+          esac
+          echo "Tag/version check: tag $TAG_NAME matches package.json $VERSION -- OK"
           case "${VERSION%%+*}" in
             *-*) DIST_TAG=rc ;;
             *)   DIST_TAG=latest ;;
