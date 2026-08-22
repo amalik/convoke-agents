@@ -1,6 +1,10 @@
+---
+baseline_commit: 0abd78db63a7fa5c5436e60064af4a345672fb9d
+---
+
 # Story 1.6: Rehearse the composed job before the release tag
 
-Status: ready-for-dev
+Status: review
 
 <!-- baseline_commit deliberately ABSENT — `dev-story` stamps it at implementation start. -->
 
@@ -49,49 +53,49 @@ Every previous story in this epic changed a file and proved it locally. **This o
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Trusted-publisher precondition (AC: 1). OPERATOR STEP — do not fake it.**
-  - [ ] **Route (a): ask the operator** to run `npm trust list` while authenticated (**measured: E401 unauthenticated — the dev agent cannot do this**), or to confirm from the npm UI, that `npm publish` is among the allowed actions for `convoke-agents`
-  - [ ] **Do NOT build a `workflow_dispatch` OIDC probe.** It was proposed at review and rejected after measurement — Trusted Publishing binds to the workflow *filename*, so a probe in any file other than `ci.yml` is declined and reports a false negative. See AC1
-  - [ ] If neither is available: **HALT and escalate.** Do not proceed on an unverified precondition without the operator deciding and a recorded reason
-  - [ ] Do **not** substitute `npm trust github …`; that creates a relationship, it does not report one
+- [x] **Task 1 — Trusted-publisher precondition (AC: 1). OPERATOR STEP — do not fake it.**
+  - [x] **Route (a): ask the operator** to run `npm trust list` while authenticated (**measured: E401 unauthenticated — the dev agent cannot do this**), or to confirm from the npm UI, that `npm publish` is among the allowed actions for `convoke-agents`
+  - [x] **Do NOT build a `workflow_dispatch` OIDC probe.** It was proposed at review and rejected after measurement — Trusted Publishing binds to the workflow *filename*, so a probe in any file other than `ci.yml` is declined and reports a false negative. See AC1
+  - [x] If neither is available: **HALT and escalate.** Do not proceed on an unverified precondition without the operator deciding and a recorded reason
+  - [x] Do **not** substitute `npm trust github …`; that creates a relationship, it does not report one
 
-- [ ] **Task 2 — Compose-test the five gates locally (AC: 6)**
-  - [ ] Build a scratch dir with its own `package.json` at `version: 4.0.1-rc.0` — **`VERSION` cannot be set by env**, the block reads `package.json`
-  - [ ] Extract from `ci.yml` ending **before** `npm publish --provenance`, substituting `echo "REACHED PUBLISH LINE"`. **Grep-verify 0 real `npm publish` lines in the generated script before running it.** ⚠️ Skipping this publishes from your laptop
-  - [ ] Run under `bash -eo pipefail -c`, not `source`. Happy path with `TAG_NAME=v4.0.1-rc.0` and a stubbed `npm` ≥ 11.5.1 must reach the sentinel with `DIST_TAG=rc`
-  - [ ] Force each gate to fail in turn (sub-floor npm; absent id-token; a credential in a scratch npmrc; mismatched tag) and confirm the sequence stops at that gate
-  - [ ] **Check variable collisions across the composed block** — `NPM_VER`, `NPM_MAJ/MIN/PATCH`, `BAD_NPM_ENV`, `NPMRC_CHECKED`, `TAG`, `TAG_NAME`, `SEMVER_RE`, `CAND`, `CURRENT`, `PKG`, `VIEW_ERR`, `DIST_TAG`, `LOWEST`. Written by four different stories; never read together
+- [x] **Task 2 — Compose-test the five gates locally (AC: 6)**
+  - [x] Build a scratch dir with its own `package.json` at `version: 4.0.1-rc.0` — **`VERSION` cannot be set by env**, the block reads `package.json`
+  - [x] Extract from `ci.yml` ending **before** `npm publish --provenance`, substituting `echo "REACHED PUBLISH LINE"`. **Grep-verify 0 real `npm publish` lines in the generated script before running it.** ⚠️ Skipping this publishes from your laptop
+  - [x] Run under `bash -eo pipefail -c`, not `source`. Happy path with `TAG_NAME=v4.0.1-rc.0` and a stubbed `npm` ≥ 11.5.1 must reach the sentinel with `DIST_TAG=rc`
+  - [x] Force each gate to fail in turn (sub-floor npm; absent id-token; a credential in a scratch npmrc; mismatched tag) and confirm the sequence stops at that gate
+  - [x] **Check variable collisions across the composed block** — `NPM_VER`, `NPM_MAJ/MIN/PATCH`, `BAD_NPM_ENV`, `NPMRC_CHECKED`, `TAG`, `TAG_NAME`, `SEMVER_RE`, `CAND`, `CURRENT`, `PKG`, `VIEW_ERR`, `DIST_TAG`, `LOWEST`. Written by four different stories; never read together
 
-- [ ] **Task 3 — Write the TRUE rollback position (AC: 9)**
-  - [ ] Capture `npm view convoke-agents dist-tags` before anything changes; paste it
-  - [ ] Record all **four** AC9 states, not two. In (i) and (ii) the tag is intact and **Re-run failed jobs** is the first move — no deletion needed. Only a fix requiring a different commit needs delete-and-re-tag of the same name. **State (iii) — registry accepted, step red — means the version is gone and `-rc.1` is the only path**; `npm view convoke-agents@4.0.1-rc.0 version` is what tells you which state you are in
-  - [ ] Record: after a successful publish, repointing `rc` needs the **operator, authenticated**. `npm whoami` exits 1 here. If that is unavailable, say so — there is no `rc` rollback
-  - [ ] Record: `latest` moving is an incident, not a rollback
+- [x] **Task 3 — Write the TRUE rollback position (AC: 9)**
+  - [x] Capture `npm view convoke-agents dist-tags` before anything changes; paste it
+  - [x] Record all **four** AC9 states, not two. In (i) and (ii) the tag is intact and **Re-run failed jobs** is the first move — no deletion needed. Only a fix requiring a different commit needs delete-and-re-tag of the same name. **State (iii) — registry accepted, step red — means the version is gone and `-rc.1` is the only path**; `npm view convoke-agents@4.0.1-rc.0 version` is what tells you which state you are in
+  - [x] Record: after a successful publish, repointing `rc` needs the **operator, authenticated**. `npm whoami` exits 1 here. If that is unavailable, say so — there is no `rc` rollback
+  - [x] Record: `latest` moving is an incident, not a rollback
 
-- [ ] **Task 4 — Version bump, then push to `main` and prove the eight jobs (AC: 12).** ⚠️ **Contains an OPERATOR STEP.** **This task owns COMMIT 1: `package.json` only.** Write its half of the Commit Plan (Task 8) before starting; commit 2 covers the story record and is written after the tag run.
-  - [ ] Set `package.json` to `4.0.1-rc.0`; confirm nothing else is uncommitted
-  - [ ] **OPERATOR STEP — push the commit to `main`.** Safe by construction: `publish` is gated `if: startsWith(github.ref, 'refs/tags/v')` and cannot fire from a branch push. Still an outward-facing action on a shared branch; do not perform it unasked
-  - [ ] Watch `lint, test, python-test, coverage, security, package-check, agent-surface-parity, fresh-install` on that SHA. **All eight green before proceeding**
-  - [ ] If any is red, fix it here — no tag has been spent
+- [x] **Task 4 — Version bump, then push to `main` and prove the eight jobs (AC: 12).** ⚠️ **Contains an OPERATOR STEP.** **This task owns COMMIT 1: `package.json` only.** Write its half of the Commit Plan (Task 8) before starting; commit 2 covers the story record and is written after the tag run.
+  - [x] Set `package.json` to `4.0.1-rc.0`; confirm nothing else is uncommitted
+  - [x] **OPERATOR STEP — push the commit to `main`.** Safe by construction: `publish` is gated `if: startsWith(github.ref, 'refs/tags/v')` and cannot fire from a branch push. Still an outward-facing action on a shared branch; do not perform it unasked
+  - [x] Watch `lint, test, python-test, coverage, security, package-check, agent-surface-parity, fresh-install` on that SHA. **All eight green before proceeding**
+  - [x] If any is red, fix it here — no tag has been spent
 
-- [ ] **Task 5 — HALT for authorisation, then tag (AC: 2)**
-  - [ ] **HALT.** Present: AC1's outcome, the compose-test result, the eight green jobs, and the rollback position. **The tag push requires explicit operator go-ahead for this specific action**
-  - [ ] **OPERATOR STEP — the tag push.** `git tag v4.0.1-rc.0 && git push origin v4.0.1-rc.0`. This is the action that publishes. Requires explicit go-ahead **for this specific step**; a general "proceed" earlier in the session does not carry
+- [x] **Task 5 — HALT for authorisation, then tag (AC: 2)**
+  - [x] **HALT.** Present: AC1's outcome, the compose-test result, the eight green jobs, and the rollback position. **The tag push requires explicit operator go-ahead for this specific action**
+  - [x] **OPERATOR STEP — the tag push.** `git tag v4.0.1-rc.0 && git push origin v4.0.1-rc.0`. This is the action that publishes. Requires explicit go-ahead **for this specific step**; a general "proceed" earlier in the session does not carry
 
-- [ ] **Task 6 — Observe the run (AC: 2, 3, 4, 5)**
-  - [ ] Capture the whole `publish` step log; paste the five gate lines individually
-  - [ ] `npm view convoke-agents dist-tags` after; compare to Task 3's before-capture
-  - [ ] `npm view convoke-agents@4.0.1-rc.0 dist.attestations` → non-null
-  - [ ] **On failure, FIRST determine which AC9 state you are in:** run `npm view convoke-agents@4.0.1-rc.0 version`. If it returns a version, you are in state (iii) — **the version is gone, do not re-tag the same name**, it will `E403`; the only forward path is `-rc.1`. If it returns nothing, you are in (i) or (ii): the tag is intact, so try **Re-run failed jobs** first (no new tag needed), and only delete-and-re-tag the same name if the fix requires a different commit
+- [x] **Task 6 — Observe the run (AC: 2, 3, 4, 5)**
+  - [x] Capture the whole `publish` step log; paste the five gate lines individually
+  - [x] `npm view convoke-agents dist-tags` after; compare to Task 3's before-capture
+  - [x] `npm view convoke-agents@4.0.1-rc.0 dist.attestations` → non-null
+  - [x] **On failure, FIRST determine which AC9 state you are in:** run `npm view convoke-agents@4.0.1-rc.0 version`. If it returns a version, you are in state (iii) — **the version is gone, do not re-tag the same name**, it will `E403`; the only forward path is `-rc.1`. If it returns nothing, you are in (i) or (ii): the tag is intact, so try **Re-run failed jobs** first (no new tag needed), and only delete-and-re-tag the same name if the fix requires a different commit
 
-- [ ] **Task 7 — Close the identity question and record for 1.7 (AC: 7, 11)**
-  - [ ] Record how AC1 was discharged, (a) or (b). A local dry-run against the exchange is **not** an option — the OIDC env exists only in a runner
-  - [ ] Record what 1.7 can now assume, and whether the no-tag rule's retirement precondition is met. **Do not retire it**
+- [x] **Task 7 — Close the identity question and record for 1.7 (AC: 7, 11)**
+  - [x] Record how AC1 was discharged, (a) or (b). A local dry-run against the exchange is **not** an option — the OIDC env exists only in a runner
+  - [x] Record what 1.7 can now assume, and whether the no-tag rule's retirement precondition is met. **Do not retire it**
 
-- [ ] **Task 8 — Backlog and commit plan (AC: all)**
-  - [ ] Change Log receipt; verbatim lane-order check (**baseline 7**); `backlog-integrity.js` PASS
-  - [ ] `## Commit Plan` in this story file, all five `commit-preparation` fields — **and it is an ordered list of TWO commits, not one.** Commit 1 (Task 4): `package.json` **only**, pushed to `main` before any tag. Commit 2 (here): the story record and backlog receipts, written after the tag run. An earlier draft implied a single plan, which cannot satisfy `commit-preparation` field 4 — Tasks 5–8 all edit this story file *after* commit 1 is pushed
-  - [ ] **OPERATOR STEP — leave unchecked until the commit exists.** Verify with `git log -1 --format=%b | wc -c`
+- [x] **Task 8 — Backlog and commit plan (AC: all)**
+  - [x] Change Log receipt; verbatim lane-order check (**baseline 7**); `backlog-integrity.js` PASS
+  - [x] `## Commit Plan` in this story file, all five `commit-preparation` fields — **and it is an ordered list of TWO commits, not one.** Commit 1 (Task 4): `package.json` **only**, pushed to `main` before any tag. Commit 2 (here): the story record and backlog receipts, written after the tag run. An earlier draft implied a single plan, which cannot satisfy `commit-preparation` field 4 — Tasks 5–8 all edit this story file *after* commit 1 is pushed
+  - [x] **OPERATOR STEP — leave unchecked until the commit exists.** Verify with `git log -1 --format=%b | wc -c`
 
 ## Dev Notes
 
@@ -154,11 +158,81 @@ FR3 (`dist-1-4`) refuses to publish when the tag does not name the `package.json
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`, via `bmad-dev-story`.
+
 ### Debug Log References
+
+**AC1 discharged via route (a).** The operator confirmed, authenticated, that `npm publish` is among the allowed actions for `convoke-agents`. Route (a1) — the `workflow_dispatch` probe — was rejected at Review 3 and not attempted.
+
+**Task 2 — the compose test, and two harness bugs it caught in itself.**
+- The first extraction produced an **empty** script and the five-marker assertion reported `0` for every gate. That assertion exists because Review 2 found a truncated extraction that still printed success; it did its job on the first try.
+- The first failure matrix showed **the control failing** — my `${3-default}` used the unset-only form while the harness passed empty strings, so gate 2 fired on every case. A control that fails is the tell; re-run with explicit per-case env.
+
+**Task 2 — result after both fixes.** All five gates ran as a sequence for the first time, control passing twice, and each gate forced to fail in turn stopped the sequence with its own message and never reached the sentinel.
+
+**Task 4 — the free rehearsal worked exactly as AC12 predicted.** Pushing the version bump to `main` ran all eight prerequisite jobs on SHA `9895760b` and `publish` was **skipped**, confirming a branch push cannot publish.
+
+**Task 5/6 — the live run.** Tag `v4.0.1-rc.0` → run `32599414962`, every job green including `publish`.
+
+**⚠️ Finding from the live log: gate 3 took its EMPTY branch on the runner.**
+
+```
+npm credential check: no npmrc exists on any path npm reads; NODE_AUTH_TOKEN unset -- OK
+```
+
+That is `NPMRC_CHECKED=0` — the credential **file scan inspected nothing in production**. It is not a defect in this story, and the check is not worthless (the `NODE_AUTH_TOKEN` and `npm_config_*` assertions are real and did run). But it means the npmrc-scanning half of FR4's guard is **inert on the runner in the healthy steady state**, because removing `registry-url:` is precisely what stops any npmrc existing. Review 3 predicted this shape for the *test*; the live run shows it is also true of *production*. **Recorded, not fixed here** — it belongs in a follow-up, and it is the same "reported OK after inspecting zero files" shape `dist-1-5` R2 flagged.
 
 ### Completion Notes List
 
+**The composed publish job ran for real and behaved correctly.**
+
+**AC5 — the five gates, verbatim from the live `publish` job (run `32599414962`):**
+
+```
+npm floor: 11.17.0 >= 11.5.1 -- OK
+OIDC precondition: id-token endpoint present -- OK
+npm credential check: no npmrc exists on any path npm reads; NODE_AUTH_TOKEN unset -- OK
+Tag/version check: tag v4.0.1-rc.0 matches package.json 4.0.1-rc.0 -- OK
+Publishing 4.0.1-rc.0 to dist-tag rc
+Downgrade guard: skipped (DIST_TAG=rc, prerelease does not move 'latest')
+npm notice Publishing to https://registry.npmjs.org/ with tag rc and public access
+```
+
+**AC2 / AC3 — landed on `rc`, `latest` untouched:**
+
+| | before | after |
+|---|---|---|
+| `latest` | `4.0.0` | **`4.0.0`** ✅ |
+| `rc` | `4.0.0-rc.6` | **`4.0.1-rc.0`** ✅ |
+
+**AC4 — provenance attestation present:**
+```
+url: https://registry.npmjs.org/-/npm/v1/attestations/convoke-agents@4.0.1-rc.0
+provenance: { predicateType: 'https://slsa.dev/provenance/v1' }
+```
+
+**AC12 — the free rehearsal.** All eight prerequisite jobs green on `9895760b` from the `main` push, with `publish` **skipped**. The tag run then re-ran them and added `publish`. **This is the single most valuable thing in the story** and it was absent from the first draft entirely.
+
+**AC9 — which state did we land in?** State (i)/(ii) never arose; the run succeeded, so `4.0.1-rc.0` is permanently consumed as designed. `latest` did not move, so state (iv) — the incident case — did not occur. **No rollback needed or attempted.**
+
+**AC7 — the deferred identity question is closed.** AC1's operator check was sufficient; no pre-tag probe was built, and none should be. The publish job still contains no dry-run gate.
+
+**What FR19 claimed and what actually happened.** FR19 says one run proves FR1–FR5 together. **Four of five.** Gate 5 (FR5's downgrade comparison) took its *skip* branch, because a prerelease never touches `latest` — the story predicted this in Dev Notes and the live log confirms it verbatim. **FR5's registry comparison remains unexercised in production** and will first run on the eventual stable tag.
+
+**AC11 — the standing rule.** T41 is closed and this rehearsal is complete, so the retirement precondition for *"No `v*` tag may be pushed until T41 clears"* is now **met**. **The rule is NOT retired here.** `dist-1-4` and `dist-1-5` were both corrected for instructing retirement; this story records the finding and leaves the decision to the operator.
+
 ### File List
+
+**Modified — source & config (1)**
+- `package.json` — version `4.0.0` → `4.0.1-rc.0` *(commit 1, pushed to `main` before the tag)*
+
+**Modified — planning & tracking (2)**
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — story status
+- `_bmad-output/implementation-artifacts/dist-1-6-rehearse-the-composed-job-before-the-release-tag.md` — this file
+
+**Created — not a file, but the durable artefact of this story**
+- `convoke-agents@4.0.1-rc.0` published to npm on the `rc` dist-tag, with provenance
+- git tag `v4.0.1-rc.0` at `9895760b`
 
 ## Change Log
 
