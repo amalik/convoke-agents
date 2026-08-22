@@ -901,7 +901,7 @@ development_status:
   dist-1-2-strip-build-metadata-before-the-prerelease-test: done
   dist-1-3-refuse-a-semver-lower-publish-to-latest: done
   dist-1-4-fail-when-the-tag-and-the-version-disagree: done
-  dist-1-5-make-authentication-failure-loud: review
+  dist-1-5-make-authentication-failure-loud: done
   dist-1-6-rehearse-the-composed-job-before-the-release-tag: backlog
   dist-1-7-make-the-ci-path-the-only-path-to-the-registry: backlog
   dist-epic-1-retrospective: optional

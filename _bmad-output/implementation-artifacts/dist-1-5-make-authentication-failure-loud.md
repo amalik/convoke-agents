@@ -4,7 +4,7 @@ baseline_commit: 4180dd629903cb7d4e92c728e2319d69656aec5c
 
 # Story 1.5: Make authentication failure loud
 
-Status: review
+Status: done
 
 <!-- baseline_commit deliberately ABSENT — `dev-story` stamps it at implementation start. -->
 
@@ -90,7 +90,7 @@ so that a broken release never looks like a successful one.
   - [x] `## Commit Plan` **in this story file**, all five `commit-preparation` fields, lane-order output **in the Description**
   - [x] **Lead the Description with T41 closing** — the operational headline. **Do not claim the no-tag rule is retired or that Story 1.6 is unblocked**; both are false and an earlier draft of this story asserted them
   - [x] Disclose any reviewed-set vs staged-set delta
-  - [ ] **OPERATOR STEP — leave unchecked until the commit exists.** Then verify with `git log -1 --format=%b | wc -c`
+  - [x] **OPERATOR STEP — discharged 2026-08-22 at commit `ae914426`: body = 5443 bytes, carrying T41's closure, both review rounds and the disclosed residual.** Then verify with `git log -1 --format=%b | wc -c`
 
 ### Review Findings — Round 1
 
@@ -469,5 +469,6 @@ FR4, pre-fix tree: registry-url: present in HEAD -> that file WAS generated
 
 | Date | Change |
 |---|---|
+| 2026-08-22 | **R1 + R2 complete; committed as `ae914426`** (6 files). **T41 CLOSED — all five findings fixed.** R1 (3 layers) found the FR4 guard **inert in the exact state this change creates**, plus five more fail-opens. **R2 was run because R1's remediation contained new code** (`code-review-convergence`: applying a finding is not a reviewed change) and **found a release blocker** — the dry-run OIDC gate read `$DIST_TAG` 61 lines before assignment and was shipped without being executed once; its stated benefit was also false, since this job only fires on a pushed tag. Gate removed, deferred to Story 1.6. R2 also found the FR4 rewrite kept R1's shape (asserted clean after inspecting zero files). **T41(d)'s recorded mechanism corrected** — `setup-node` exports `NODE_AUTH_TOKEN='XXXXX-XXXXX-XXXXX-XXXXX'`, so the backlog's "literal 14-character string" was wrong twice over. Residual disclosed: `npm_config_*` env vars remain uncovered. **CI and CodeQL both green.** Status → done |
 | 2026-08-22 | **Story review before commit — 2 layers (adversarial, implementability).** Verdict: **NOT sound; amend before implementation.** Corrected in place. **Two BLOCKERs, both mine, both reproducing errors I had just fixed elsewhere:** (1) AC11/Task 7 instructed retiring the standing no-tag rule, which `scope-decisions:187-190` — text I wrote during `dist-1-4`'s R1 — says verbatim cannot precede Story 1.6; (2) the header and Dev Notes claimed this story unblocks Story 1.6, but epic `:528-530` says 1.6's rehearsal has been permitted under NFR1's exemption since FR1 landed in `dist-1-2`. **Three HIGHs:** AC5 declared a pre-publish identity assertion impossible — **npm's source refutes it**, `publish.js:141` calls `oidc()` unconditionally before every `dryRun` branch, so `npm publish --dry-run` performs the full exchange; the prescribed FR4 self-check (`npm config get ..._authToken`) is **impossible** — npm refuses protected values and exits 1 whether the placeholder is present or absent, and the obvious repair fails open; AC7 collided with AC3 for all three remedies. **AC4's premise was also wrong** — npm 11.11.0 is installed locally and its source settles remedy (a): `pickRegistry` takes the registry from npm's config, not `setup-node`, so dropping `registry-url:` leaves the OIDC audience and exchange URL identical |
 | 2026-08-22 | Story created by `bmad-create-story`. Two premises verified from primary sources at authoring time: the npm-floor arithmetic against `nodejs.org/dist/index.json` (**27** node 24.x lines, **exactly 8** below npm 11.5.1 — the backlog's claim is precise), and `npm whoami`'s exit code with no token (**1**). **AC5 is recorded as NOT satisfiable** — OIDC mints the credential during `publish`, so no pre-publish identity assertion exists; the epic asked for this to be checked first and the answer is no. Three FR4 remedies enumerated with their risks; **none pre-selected**, because none is locally verifiable and this path failed four times on 4.0.0. AC6 added for operand-validation symmetry (fourth consecutive story where R1 found that defect). **This story closes T41 entirely and retires the standing no-tag rule**, which `dist-1-4`'s R1 established could not be retired earlier — recorded as the epic's key state change. `baseline_commit` deliberately not pre-stamped |
