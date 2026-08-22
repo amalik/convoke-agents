@@ -1,6 +1,10 @@
+---
+baseline_commit: 4180dd629903cb7d4e92c728e2319d69656aec5c
+---
+
 # Story 1.5: Make authentication failure loud
 
-Status: ready-for-dev
+Status: review
 
 <!-- baseline_commit deliberately ABSENT — `dev-story` stamps it at implementation start. -->
 
@@ -16,7 +20,7 @@ so that a broken release never looks like a successful one.
 
 **Two claims an earlier draft of this story made are FALSE and were corrected at story review. Do not reintroduce them:**
 
-1. **This story does NOT unblock Story 1.6.** Story 1.6's own AC (epic `:526-528`) states its rehearsal *"is permitted under NFR1's exemption, because Story 1.2 landed FR1 and a prerelease provably routes to `rc` — the exemption depends on FR1 alone, not on FR5"*. **1.6 has been permitted since `dist-1-2`.** Nothing here gates it.
+1. **This story does NOT unblock Story 1.6.** Story 1.6's own AC (epic `:528-530`) states its rehearsal *"is permitted under NFR1's exemption, because Story 1.2 landed FR1 and a prerelease provably routes to `rc` — the exemption depends on FR1 alone, not on FR5"*. **1.6 has been permitted since `dist-1-2`.** Nothing here gates it.
 2. **This story does NOT retire the standing no-tag rule.** `convoke-note-4-0-1-scope-decisions.md:187-190` says verbatim: *"Retirement is a separate decision and **cannot precede Story 1.6**, which is the composed live tag rehearsal this rule exists to stage."* That text was written by `dist-1-4`'s R1 to correct this exact error. **Closing T41 satisfies the rule's condition; it does not authorise the retirement.** Record the state change and leave the rule standing.
 
 ## Acceptance Criteria
@@ -42,51 +46,234 @@ so that a broken release never looks like a successful one.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Confirm the premises (AC: 1, 3, 5)**
-  - [ ] Re-derive the npm-floor claim from source, not from this story: `curl -s https://nodejs.org/dist/index.json | python3 -c "…"`. If the numbers moved, the AC text needs amending before you code
-  - [ ] Confirm `NODE_AUTH_TOKEN` is genuinely unset in the job (`grep -n "NODE_AUTH_TOKEN" .github/workflows/ci.yml` → expect only comment lines around `:402`)
-  - [ ] Re-verify AC5's *positive*: read `lib/commands/publish.js` and confirm `await oidc(...)` still precedes every `dryRun` branch. Also confirm `npm whoami` with no token exits non-zero (true, but it does NOT imply no pre-publish check exists). **Use `; echo $?` on the bare command — do NOT pipe it.** An earlier check of exactly this during story authoring reported `exit 0` because it read `head`'s status (`verification-pipefail`)
+- [x] **Task 1 — Confirm the premises (AC: 1, 3, 5)**
+  - [x] Re-derive the npm-floor claim from source, not from this story: `curl -s https://nodejs.org/dist/index.json | python3 -c "…"`. If the numbers moved, the AC text needs amending before you code
+  - [x] Confirm `NODE_AUTH_TOKEN` is genuinely unset in the job (`grep -n "NODE_AUTH_TOKEN" .github/workflows/ci.yml` → expect only comment lines around `:402`)
+  - [x] Re-verify AC5's *positive*: read `lib/commands/publish.js` and confirm `await oidc(...)` still precedes every `dryRun` branch. Also confirm `npm whoami` with no token exits non-zero (true, but it does NOT imply no pre-publish check exists). **Use `; echo $?` on the bare command — do NOT pipe it.** An earlier check of exactly this during story authoring reported `exit 0` because it read `head`'s status (`verification-pipefail`)
 
-- [ ] **Task 2 — FR2: assert the npm floor (AC: 1, 2, 6)**
-  - [ ] Add the assertion to the publish job **before** the `Publish to npm` step's existing body, or as its own step before it
-  - [ ] Shape-validate `npm --version` output before comparing — do not feed raw command output to a version comparator (AC6)
-  - [ ] Compare with `sort -V` **or** an explicit numeric field compare. If `sort -V`: note `dist-1-3` had to disclose that local BSD sort ≠ runner GNU sort; a field compare avoids that gap entirely and is preferable here
-  - [ ] The failure message must name the floor (`11.5.1`), the observed version, and why it matters (OIDC registry auth)
+- [x] **Task 2 — FR2: assert the npm floor (AC: 1, 2, 6)**
+  - [x] Add the assertion to the publish job **before** the `Publish to npm` step's existing body, or as its own step before it
+  - [x] Shape-validate `npm --version` output before comparing — do not feed raw command output to a version comparator (AC6)
+  - [x] Compare with `sort -V` **or** an explicit numeric field compare. If `sort -V`: note `dist-1-3` had to disclose that local BSD sort ≠ runner GNU sort; a field compare avoids that gap entirely and is preferable here
+  - [x] The failure message must name the floor (`11.5.1`), the observed version, and why it matters (OIDC registry auth)
 
-- [ ] **Task 3 — FR4: remove the bogus `_authToken` (AC: 3, 4, 7)**
-  - [ ] Pick a remedy from Dev Notes and **record why**, including what you could not verify
-  - [ ] Whatever is chosen, prove the resulting `.npmrc`/userconfig no longer contains a literal `${NODE_AUTH_TOKEN}` — assert it in the job, so the fix is self-checking rather than trusting `setup-node`'s behaviour to stay put
-  - [ ] Amend the `ci.yml:379-387` OIDC comment if this changes what it describes. It records how 4.0.0 failed four times; keep that
+- [x] **Task 3 — FR4: remove the bogus `_authToken` (AC: 3, 4, 7)**
+  - [x] Pick a remedy from Dev Notes and **record why**, including what you could not verify
+  - [x] Whatever is chosen, prove the resulting `.npmrc`/userconfig no longer contains a literal `${NODE_AUTH_TOKEN}` — assert it in the job, so the fix is self-checking rather than trusting `setup-node`'s behaviour to stay put
+  - [x] Amend the `ci.yml:379-387` OIDC comment if this changes what it describes. It records how 4.0.0 failed four times; keep that
 
-- [ ] **Task 4 — Implement the pre-publish identity assertion (AC: 5, 10)**
-  - [ ] Ship assertion (i) at minimum: `ACTIONS_ID_TOKEN_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` non-empty. Zero cost, and it is the `id-token: write` precondition
-  - [ ] Prefer also (ii): `npm publish --dry-run --loglevel verbose` asserting the OIDC success line. **Assert on the log line, never on exit status** — `oidc()` never throws
-  - [ ] Record whether the exchange is rate-limited or single-use per workflow; if it is, (ii) may belong in Story 1.6 instead. That is the one open question here
+- [x] **Task 4 — Implement the pre-publish identity assertion (AC: 5, 10)**
+  - [x] Ship assertion (i) at minimum: `ACTIONS_ID_TOKEN_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` non-empty. Zero cost, and it is the `id-token: write` precondition
+  - [x] Prefer also (ii): `npm publish --dry-run --loglevel verbose` asserting the OIDC success line. **Assert on the log line, never on exit status** — `oidc()` never throws
+  - [x] Record whether the exchange is rate-limited or single-use per workflow; if it is, (ii) may belong in Story 1.6 instead. That is the one open question here
 
-- [ ] **Task 5 — Prove what can be proven (AC: 9, 10)**
-  - [ ] Extract each new block from `ci.yml` with `sed` and run via `bash -eo pipefail -c` — **not `source`**, they contain `exit 1`
-  - [ ] Table-drive the npm-version check: below floor, exactly floor, above floor, malformed output, empty output, multi-line output
-  - [ ] **Falsify each harness** — mutate the comparison and show it reports wrong answers
-  - [ ] NFR10 ×2: demonstrate FR2's gate failing, and FR4's assertion failing, each against the pre-fix condition. **Stub any `npm publish` before running a pre-fix block** — `dist-1-4`'s Task 4 as originally written would have attempted a real publish
+- [x] **Task 5 — Prove what can be proven (AC: 9, 10)**
+  - [x] Extract each new block from `ci.yml` with `sed` and run via `bash -eo pipefail -c` — **not `source`**, they contain `exit 1`
+  - [x] Table-drive the npm-version check: below floor, exactly floor, above floor, malformed output, empty output, multi-line output
+  - [x] **Falsify each harness** — mutate the comparison and show it reports wrong answers
+  - [x] NFR10 ×2: demonstrate FR2's gate failing, and FR4's assertion failing, each against the pre-fix condition. **Stub any `npm publish` before running a pre-fix block** — `dist-1-4`'s Task 4 as originally written would have attempted a real publish
 
-- [ ] **Task 6 — Regression gates (AC: 7)**
-  - [ ] `ci.yml` parses; `npm run lint` exits 0
-  - [ ] `npm test` — **check `uptime` first**; the suite is its own load generator
-  - [ ] `git diff HEAD -- .github/workflows/ci.yml` touches only intended lines
-  - [ ] **CodeQL must stay green after push.** If any new `${{ }}` is introduced it must live in `env:`, never in a `run:` body — `dist-1-4` established that pattern and CodeQL independently confirmed it
+- [x] **Task 6 — Regression gates (AC: 7)**
+  - [x] `ci.yml` parses; `npm run lint` exits 0
+  - [x] `npm test` — **check `uptime` first**; the suite is its own load generator
+  - [x] `git diff HEAD -- .github/workflows/ci.yml` touches only intended lines
+  - [x] **CodeQL must stay green after push.** If any new `${{ }}` is introduced it must live in `env:`, never in a `run:` body — `dist-1-4` established that pattern and CodeQL independently confirmed it
 
-- [ ] **Task 7 — Close T41 completely (AC: 11)**
-  - [ ] `grep -n "T41\|finding (b)\|finding (d)" -r _bmad-output/planning-artifacts/ _bmad-output/implementation-artifacts/ --include="*.md"` — **run the grep, do not work from a list.** `dist-1-4` predicted three sites and there were six
-  - [ ] Strike (b) and (d); flip T41's **status cell** to Done and relocate the row below the Fast Lane live block per `backlog-format-spec`
-  - [ ] Update the `scope-decisions` §6 rule and epic NFR1 to record that **their condition is now satisfied** and that retirement still awaits Story 1.6. **Do not retire them** — both artifacts say retirement cannot precede 1.6
-  - [ ] Backlog Change Log receipt with the **measured** evidence counts (`dist-1-3`'s receipt inflated 6 to 8)
-  - [ ] Verbatim lane-order check; **baseline is 7**. `backlog-integrity.js` PASS. File-level staging only
+- [x] **Task 7 — Close T41 completely (AC: 11)**
+  - [x] `grep -n "T41\|finding (b)\|finding (d)" -r _bmad-output/planning-artifacts/ _bmad-output/implementation-artifacts/ --include="*.md"` — **run the grep, do not work from a list.** `dist-1-4` predicted three sites and there were six
+  - [x] Strike (b) and (d); flip T41's **status cell** to Done and relocate the row below the Fast Lane live block per `backlog-format-spec`
+  - [x] Update the `scope-decisions` §6 rule and epic NFR1 to record that **their condition is now satisfied** and that retirement still awaits Story 1.6. **Do not retire them** — both artifacts say retirement cannot precede 1.6
+  - [x] Backlog Change Log receipt with the **measured** evidence counts (`dist-1-3`'s receipt inflated 6 to 8)
+  - [x] Verbatim lane-order check; **baseline is 7**. `backlog-integrity.js` PASS. File-level staging only
 
-- [ ] **Task 8 — Commit plan (AC: all)**
-  - [ ] `## Commit Plan` **in this story file**, all five `commit-preparation` fields, lane-order output **in the Description**
-  - [ ] **Lead the Description with T41 closing** — the operational headline. **Do not claim the no-tag rule is retired or that Story 1.6 is unblocked**; both are false and an earlier draft of this story asserted them
-  - [ ] Disclose any reviewed-set vs staged-set delta
+- [x] **Task 8 — Commit plan (AC: all)**
+  - [x] `## Commit Plan` **in this story file**, all five `commit-preparation` fields, lane-order output **in the Description**
+  - [x] **Lead the Description with T41 closing** — the operational headline. **Do not claim the no-tag rule is retired or that Story 1.6 is unblocked**; both are false and an earlier draft of this story asserted them
+  - [x] Disclose any reviewed-set vs staged-set delta
   - [ ] **OPERATOR STEP — leave unchecked until the commit exists.** Then verify with `git log -1 --format=%b | wc -c`
+
+### Review Findings — Round 1
+
+3 layers, 0 failed. Auditor: **6 MET, 2 DISPUTED, 3 NOT MET.** Two of the three gates I shipped were defective; one was **inert in the exact state my own change creates**. All fixed and re-verified.
+
+**FAIL OPEN — fixed**
+
+- [x] [Review][Patch] HIGH — **the FR4 credential guard was inert.** It checked only `$NPM_CONFIG_USERCONFIG`, and removing `registry-url:` is precisely what stops `setup-node` exporting that variable. So it took its `else` branch, printed `-- OK`, and **grepped nothing**. Reproduced: placeholder in `$HOME/.npmrc`, guard passes. Worse, project `./.npmrc` **outranks** user config and is not gitignored. Now checks every npmrc npm reads [.github/workflows/ci.yml]
+- [x] [Review][Patch] HIGH — **`grep -q` exit 2 read as "clean".** An unreadable npmrc was reported as *verified clean*, because `if grep -q` collapses "no match" (1) and "cannot read" (2). Unreadable candidates are now FATAL [.github/workflows/ci.yml]
+- [x] [Review][Patch] MEDIUM — a **prerelease npm below the floor passed**: `11.5.1-pre.0` scored as exactly `11.5.1` because the regex was start-anchored and `%%[!0-9]*` truncated at the first non-digit. That build predates the release shipping `oidc.js` — the gate green-lit the state it exists to block. Now requires a plain `X.Y.Z` [.github/workflows/ci.yml]
+- [x] [Review][Patch] MEDIUM — **multi-line `npm --version` was accepted on its first line**, silently. FR5 twenty lines below *refuses* multi-line input for exactly this reason; my own precedent, violated in the same file. Now refused [.github/workflows/ci.yml]
+- [x] [Review][Patch] MEDIUM — only `_authToken` was matched. `_auth`, `_password` and `username` authenticate identically and passed [.github/workflows/ci.yml]
+- [x] [Review][Patch] LOW — the OIDC check was presence-only; whitespace or `not-a-url` passed while minting nothing. Now shape-checked [.github/workflows/ci.yml]
+- [x] [Review][Patch] LOW — `[` overflows on a >19-digit component and all three comparisons evaluate false, concluding "above floor" from three errors. Components capped at 9 digits [.github/workflows/ci.yml]
+
+**FAIL CLOSED — fixed**
+
+- [x] [Review][Patch] MEDIUM — `grep -q '_authToken'` was an unanchored substring match, so a **comment** mentioning `_authToken` aborted a clean publish, at tag-push cost. Now anchored to a config-key line [.github/workflows/ci.yml]
+
+**The recorded mechanism was factually wrong — corrected in three artifacts**
+
+- [x] [Review][Patch] HIGH — **`NODE_AUTH_TOKEN` was never unset, and npm never sent a literal placeholder.** `setup-node`'s `src/authutil.ts:55-57` *exports* `NODE_AUTH_TOKEN='XXXXX-XXXXX-XXXXX-XXXXX'` when it is otherwise unset. So npm sent that 23-character dummy. T41(d) called it *"the literal 14-character string"* — the literal is **18** characters and never reached the wire. **I propagated that error from the backlog into `ci.yml`'s comment and, worse, into the guard's operator-facing failure message**, which told the operator to look for a string that is never on the wire. Corrected in `ci.yml` ×2 and in T41's row. The remedy is unaffected and better justified: `registry-url:` had **three** effects, not one, and removing it removes all three [.github/workflows/ci.yml, backlog T41]
+
+**The AC5(ii) scope call was wrong — the gate now ships**
+
+- [x] [Review][Patch] HIGH — I deferred the `npm publish --dry-run` OIDC gate because I could not establish whether the exchange is single-use. **npm's source settles it and I had already read the file:** `execWorkspaces` (`publish.js:50-60`) loops `#publish` per workspace and each call runs `oidc()`, so npm issues **N exchanges inside one `npm publish`**; `oidc.js` does a stateless GET with an `audience` param and a stateless POST — no nonce, no jti. Gate shipped, asserting on the **verbose log line, never exit status** (`oidc()` never throws, so `$?` would fail open). Residual disclosed in-file: server-side rate limiting cannot be excluded from source alone [.github/workflows/ci.yml]
+
+**Cross-artifact — the swept-sibling pattern, fifth consecutive story**
+
+- [x] [Review][Patch] HIGH — I flipped T41's status cell in the **backlog** and left its twin in `scope-decisions:57` reading `Open`, two lines under a heading I had just changed to `✅ CLEARED`. Also stale in the same section: the HIGH count, and findings **(b)** and **(d)** still written out un-struck [convoke-note-4-0-1-scope-decisions.md]
+- [x] [Review][Patch] HIGH — **three live pointers broken by this story's own edits.** `scope-decisions:235` is an *executable* `sed -n '405,420p' ci.yml` whose range my setup-node hunk shifted off the publish step entirely — and it is **not** of the form `ci.yml:NNN`, so the "unbanded" sweep I ran was still pattern-bound and could not see it. Plus my own References citing NFR10 at `:258` (now `:260`) and epic `:526-528` (now `:528-530`), both shifted by my own +2-line epic amendment [scope-decisions:235, story References]
+
+**Confirmed sound, recorded so it is not re-litigated:** the no-tag rule was **not** retired in either artifact; T41's row moved correctly with the row-ID multiset identical to HEAD; both NFR10 demonstrations reproduce; `registry-url:` removal is safe per `pickRegistry`; no variable shadows FR1/FR3/FR5; FR5's `trap` is installed after every new `exit 1`; leading zeros are not an octal hazard (`[` parses base 10).
+
+**No Round 2** — `code-review-convergence` triggers R2 only on a HIGH surviving triage; all were fixed here.
+
+### Review Findings — Round 2 (scoped)
+
+**Run because the R1 remediation contained new code, not in-place fixes** — `code-review-convergence`: *"Applying a finding is not a reviewed change… new code is not [covered], however directly it answers a finding."* The AC5(ii) dry-run gate was written after every R1 layer had finished, and **shipped with no test at all**, unlike every other gate in this story. 2 layers, scoped to the FR4 rewrite and the new gate. **It found a release blocker.**
+
+**The dry-run gate is REMOVED. Verdict: defer to Story 1.6.**
+
+- [x] [R2][Patch] **BLOCKER — the gate could never have passed.** It read `$DIST_TAG` at `:553`; the FR1 block assigns it at `:615`. It would have run `npm publish --tag ""`, 61 lines before the variable exists. **I shipped it without executing it once.**
+- [x] [R2][Patch] **Its stated benefit was false.** The in-file comment claimed it converts a post-tag failure into one "costing nothing". This job's `if:` is `startsWith(github.ref, 'refs/tags/v')` — **it only runs on a pushed tag, so the tag is already spent before any step executes.** There is no pre-tag moment in this job to protect. Second false mechanism claim in this story, same class as the `NODE_AUTH_TOKEN` one.
+- [x] [R2][Patch] **Marginal value over the id-token check already shipped is a better-worded error a few seconds earlier**, at the cost of a second live OIDC exchange on the path that failed four times. Removed, with the reasoning left in `ci.yml` so it is not re-attempted. **R1 was right that the exchange is not single-use; it was wrong to conclude the gate therefore belonged here.** The pre-tag rehearsal is Story 1.6's job (FR19), where a tag can be spent deliberately.
+
+**The FR4 rewrite kept an unearned claim — fixed**
+
+- [x] [R2][Patch] **`NPMRC_CHECKED=0` was reported as "none sets a credential".** In the healthy steady state — no `registry-url:`, so no userconfig, and this repo has no `.npmrc` — the guard inspected **zero files** and still asserted cleanliness. The rewrite removed R1's *cause* (single-path check) and kept its *shape*. Now reports what was actually inspected.
+- [x] [R2][Patch] **`certfile`+`keyfile` omitted.** `publish.js:144` treats `certfile && keyfile` as credentials identically to a token. Added.
+- [x] [R2][Patch] **CR-only line endings defeated the anchor.** npm's `ini` splits on `[\r\n]+`; `grep` splits on `\n` only, so a CR-only npmrc is a credential npm honours and the guard certified it clean. Now normalised with `tr` first.
+- [x] [R2][Patch] **Candidate paths were guesses.** `builtin` and `global` npmrc layers were never candidates and `$NPM_CONFIG_USERCONFIG` could duplicate `$HOME/.npmrc`. Paths now come from `npm config get`, deduped.
+- [x] [R2][Patch] **Environment credentials were invisible.** `NODE_AUTH_TOKEN` — the exact vector `setup-node` used, and the one `ci.yml`'s own OIDC note warns about — is now asserted unset directly.
+
+**Deferred, with the residual disclosed rather than faked**
+
+- [x] [R2][Defer] A hostile `npm_config_*` env var still outranks every npmrc and is not covered. The edge layer suggested asserting on `npm config ls -l` instead — **I measured it and it does not surface env-supplied credentials either**, so no cheap complete check exists. Disclosed in-file and here rather than papered over — deferred, needs a backlog row
+- [x] [R2][Defer] The guard now shells out to `npm config get` twice per run; measurable latency, no correctness impact — deferred, cosmetic
+
+**No Round 3.** `code-review-convergence` reserves it for structural changes; R2's remediation is one deletion and a hardened loop.
+
+## Commit Plan
+
+Written during implementation, rewritten after Rounds 1 and 2.
+
+**One commit, all 6 files.**
+
+```
+feat(dist-1-5): make authentication failure loud
+```
+
+**Files (6):**
+
+- `.github/workflows/ci.yml`
+- `_bmad-output/implementation-artifacts/dist-1-5-make-authentication-failure-loud.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/planning-artifacts/convoke-epic-4-0-1-distribution-integrity.md`
+- `_bmad-output/planning-artifacts/convoke-note-4-0-1-scope-decisions.md`
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md`
+
+**Description:**
+
+```text
+T41 IS CLOSED. All five BUG-16 R2 findings are fixed: (a) dist-1-2, (e)
+dist-1-3, (c) dist-1-4, and (b) and (d) here. The standing "No v* tag may be
+pushed until T41 clears" rule's CONDITION is now satisfied - the rule itself is
+NOT retired, because retirement cannot precede Story 1.6, the composed live tag
+rehearsal it exists to stage. This story does NOT unblock Story 1.6 either;
+1.6's rehearsal has been permitted under NFR1's exemption since FR1 landed.
+
+WHY: the publish job could publish as nobody and call it success. Both defects
+sit on the path where 4.0.0 failed four times while appearing to work.
+ - FR2/T41(b): node-version:24 with check-latest:false takes whatever the
+   toolcache holds, and 8 of the 27 released node 24.x lines bundle npm
+   11.3.0-11.4.2 (verified against nodejs.org/dist/index.json). Below npm
+   11.5.1 there is no lib/utils/oidc.js, publish is ANONYMOUS, and the registry
+   answers 404.
+ - FR4/T41(d): setup-node's registry-url: caused a credential placeholder to
+   reach npm, so an OIDC decline was reported as *bad token*, not *no token*.
+
+WHAT SHIPPED: registry-url: removed from setup-node, plus three assertions at
+the top of the publish step - npm floor by integer field compare; OIDC id-token
+endpoint present and shape-checked; no credential reaches npm from any npmrc
+npm reads, and NODE_AUTH_TOKEN unset.
+
+T41(d)'s RECORDED MECHANISM WAS WRONG and is corrected in ci.yml and in the
+backlog row. setup-node's src/authutil.ts:55-57 EXPORTS
+NODE_AUTH_TOKEN='XXXXX-XXXXX-XXXXX-XXXXX' when it is otherwise unset - so it
+was never unset, npm never sent an unexpanded literal, and the literal is 18
+characters, not the 14 T41 claimed. The operator-facing failure message
+previously told operators to grep for a string that never reaches the wire.
+The remedy is unaffected and better justified: registry-url: had three effects.
+
+WHY REMOVING registry-url IS SAFE, verified against npm 11.11.0's source:
+publish.js:139 takes the registry from pickRegistry(resolved, opts) - npm's own
+config, not the action. convoke-agents is unscoped with no publishConfig, so it
+falls to the default registry, and oidc.js derives its audience from that same
+value. Identical either way.
+
+REVIEW STATUS: Round 1 COMPLETE and Round 2 COMPLETE, all findings applied.
+
+ R1 (3 layers; auditor 6 MET / 2 DISPUTED / 3 NOT MET) found the FR4 guard was
+ INERT in the exact state this change creates - it checked only
+ $NPM_CONFIG_USERCONFIG, which removing registry-url: stops setup-node
+ exporting, so it printed OK and grepped nothing. Also: grep exit 2 read as
+ clean; a prerelease npm below the floor passed; multi-line npm --version was
+ accepted; only _authToken was matched; the OIDC check was presence-only.
+
+ R2 was run because R1's remediation contained NEW code, which
+ code-review-convergence says is unreviewed by default. It found a RELEASE
+ BLOCKER: the npm publish --dry-run OIDC gate added during R1 read $DIST_TAG 61
+ lines before the FR1 block assigns it, so it would have run
+ `npm publish --tag ""`. It was shipped without being executed once. Its stated
+ benefit was also false - this job only fires on refs/tags/v*, so the tag is
+ already spent and there is no pre-tag moment to protect. GATE REMOVED; the
+ pre-tag identity rehearsal belongs to Story 1.6 (FR19). R1 was right that the
+ OIDC exchange is not single-use; it was wrong to conclude the gate belonged
+ here.
+
+ R2 also found the FR4 rewrite had kept R1's shape while removing its cause:
+ with no userconfig and no repo .npmrc, it inspected ZERO files and still
+ asserted "none sets a credential". Now reports what was actually inspected,
+ covers certfile/keyfile, normalises CR-only line endings (npm's ini splits on
+ [\r\n]+, grep does not), derives paths from npm config get rather than
+ guessing, and asserts NODE_AUTH_TOKEN unset.
+
+RESIDUAL, disclosed not faked: a hostile npm_config_* env var outranks every
+npmrc and is not covered. `npm config ls -l` was measured and does not surface
+env-supplied credentials either, so no cheap complete check exists. Needs a
+backlog row.
+
+VERIFIED: every surviving gate driven from the block extracted out of ci.yml -
+10 scenarios plus the E5/E6/E7 regression set. Harness falsified by flipping
+the floor comparison. NFR10 demonstrated twice, once per gate, each against the
+pre-fix condition.
+
+TEST-TOUCH OPT-OUT: edits a CI workflow with no test change. No harness exists
+for ci.yml shell logic; scoped to *.js, no test reads ci.yml.
+
+TEST SUITE: green - 1655 tests / 1654 pass / 0 fail / 0 cancelled, exit 0.
+
+Staged set (git diff --cached --name-only), run after staging:
+  .github/workflows/ci.yml
+  _bmad-output/implementation-artifacts/dist-1-5-make-authentication-failure-loud.md
+  _bmad-output/implementation-artifacts/sprint-status.yaml
+  _bmad-output/planning-artifacts/convoke-epic-4-0-1-distribution-integrity.md
+  _bmad-output/planning-artifacts/convoke-note-4-0-1-scope-decisions.md
+  _bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md
+
+Lane-order check:
+Bug: BUG-19 (5.7) below BUG-17 (4.5) [clause 1]
+Bug: BUG-9 (live 7.2) below closed BUG-12 [clause 3]
+Fast: T35 (live 4.5) below closed T39 [clause 3]
+Fast: I105 (live 3.2) below closed I96 [clause 3]
+Fast: T37 (2.6) below T36 (2.4) [clause 1]
+Fast: T18 (2.7) below T37 (2.6) [clause 1]
+Init: I113 (1.5) below P2 (0.4) [clause 1]
+LANE ORDER: 7 violation(s)
+
+Unchanged at 7 violations; none introduced.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+```
 
 ## Dev Notes
 
@@ -159,12 +346,12 @@ An earlier draft listed the FR4 remedy choice as unprovable. **It is provable, a
 
 ### What this story actually changes, stated carefully
 
-Closing (b) and (d) closes **T41**, which **satisfies the condition** of *"No `v*` tag may be pushed until T41 clears"*. It does **not** retire that rule — `dist-1-4`'s R1 established, and both artifacts now state, that retirement cannot precede Story 1.6. And it does **not** unblock Story 1.6, whose rehearsal has been permitted under NFR1's exemption since FR1 landed in `dist-1-2` (epic `:526-528`). **The honest headline is: T41 closes, and the last precondition for retiring the freeze is met — with the retirement itself still awaiting 1.6.**
+Closing (b) and (d) closes **T41**, which **satisfies the condition** of *"No `v*` tag may be pushed until T41 clears"*. It does **not** retire that rule — `dist-1-4`'s R1 established, and both artifacts now state, that retirement cannot precede Story 1.6. And it does **not** unblock Story 1.6, whose rehearsal has been permitted under NFR1's exemption since FR1 landed in `dist-1-2` (epic `:528-530`). **The honest headline is: T41 closes, and the last precondition for retiring the freeze is met — with the retirement itself still awaiting 1.6.**
 
 ### Cross-story dependencies
 
 - **Independent of FR1/FR3/FR5** — different failure mode, different inputs.
-- **Story 1.6 does NOT depend on this one.** Its rehearsal is permitted under NFR1's exemption (FR1 alone), per epic `:526-528`. An earlier draft claimed otherwise.
+- **Story 1.6 does NOT depend on this one.** Its rehearsal is permitted under NFR1's exemption (FR1 alone), per epic `:528-530`. An earlier draft claimed otherwise.
 - **`ci.yml:379-387` is history, not commentary.** It explains four real failures. Amend if this story changes what it describes; do not delete.
 
 ### Project Structure Notes
@@ -182,8 +369,8 @@ Closing (b) and (d) closes **T41**, which **satisfies the condition** of *"No `v
 
 - [Source: _bmad-output/planning-artifacts/convoke-epic-4-0-1-distribution-integrity.md#Story 1.5] — acceptance criteria origin
 - [Source: _bmad-output/planning-artifacts/convoke-epic-4-0-1-distribution-integrity.md:98-105] — FR2 and FR4
-- [Source: _bmad-output/planning-artifacts/convoke-epic-4-0-1-distribution-integrity.md:230-243] — NFR1 and the no-tag rule this story retires
-- [Source: _bmad-output/planning-artifacts/convoke-epic-4-0-1-distribution-integrity.md:258-263] — NFR10, discharged twice by AC9
+- [Source: _bmad-output/planning-artifacts/convoke-epic-4-0-1-distribution-integrity.md:230-245] — NFR1 and the no-tag rule whose condition this story satisfies
+- [Source: _bmad-output/planning-artifacts/convoke-epic-4-0-1-distribution-integrity.md:260-265] — NFR10, discharged twice by AC9
 - [Source: .github/workflows/ci.yml:379-387] — the OIDC history block; load-bearing
 - [Source: _bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md] — T41 findings (b) and (d)
 - [Source: _bmad-output/planning-artifacts/convoke-note-4-0-1-scope-decisions.md] — §6 standing rule this story retires
@@ -194,15 +381,93 @@ Closing (b) and (d) closes **T41**, which **satisfies the condition** of *"No `v
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`, via `bmad-dev-story`.
+
 ### Debug Log References
+
+**Baseline.** `baseline_commit: 4180dd62`, stamped by `dev-story`.
+
+**Task 1 — all premises re-derived, none taken from the story.** `nodejs.org/dist/index.json`: **27** node 24.x releases, **exactly 8** below npm 11.5.1, newest `v24.19.0`→11.17.0 — **MATCH** with the AC. `NODE_AUTH_TOKEN` appears once, in the comment at `:402`. `publish.js:141` still calls `await oidc(...)` before every `dryRun` branch (`:158`, `:181`, `:187`). `npm whoami` with no token → exit 1 — checked **without a pipe**, per the story's own warning about the `exit 0` that a piped read produced during authoring.
+
+**Task 2 — FR2 uses an integer field compare, not `sort -V`.** Deliberate: `dist-1-3` had to disclose that its evidence came from BSD sort while the runner uses GNU sort. Integer compares have no such gap, so this story's verification basis is sound where its predecessor's was assumed.
+
+**Task 3 — FR4 remedy (a), chosen on evidence.** `registry-url:` removed from `setup-node`. Verified against npm 11.11.0's source that this cannot break OIDC: `publish.js:139` takes the registry from `npmFetch.pickRegistry(resolved, opts)` — npm's own config, not the action — `convoke-agents` is unscoped, `package.json` has no `publishConfig`, so `pickRegistry` falls to the default `https://registry.npmjs.org/`, and `oidc.js` derives its audience as `npm:${new URL(registry).hostname}` from that same value. **Audience and exchange URL are identical with or without the key.**
+
+**Task 3 — the self-check is file-based, and the alternative was proven impossible.** `npm config get //registry.npmjs.org/:_authToken` refuses protected keys and exits **1 whether the placeholder is present or absent** (measured both ways) — it cannot distinguish the two states, which is the only thing FR4's assertion needs to do. Under `set -e` it would kill the job on a correctly-fixed tree; the obvious repair reports "clean" unconditionally, **including on the pre-fix tree** — a fail-open guard. The file grep discriminates correctly in both directions.
+
+**Task 3 — ordering matters and is why the check sits where it does.** `oidc.js:143-144` does `config.set(authTokenKey, response.token, 'user')` on success, overwriting the placeholder at the same key in the same layer. A self-check running after the exchange would assert against a value OIDC had already replaced. It runs before.
+
+**Task 4 — AC5 ships assertion (i).** `ACTIONS_ID_TOKEN_REQUEST_URL`/`_TOKEN` non-empty. `oidc()` returns `undefined` without them and **never throws**, so absent this gate a missing `id-token: write` would surface only as a registry 404 — at tag-push cost. **Assertion (ii) (`npm publish --dry-run --loglevel verbose`) was NOT shipped**, and that is a deliberate scope call recorded in Completion Notes, not an oversight.
+
+**Task 5 — one harness was inert and it was caught.** The first extraction produced an **empty** script because the `grep` pattern did not match, and every scenario returned rc=0. An all-zero column on a table that contains deliberate failures is the tell. Re-extracted (42 lines, `ci.yml:446-487`) and re-run; the second table has the expected mix. **This is exactly the class `verification-must-be-falsifiable` exists for, and it very nearly read as a pass.**
+
+**Task 5 — `PIPESTATUS` bit again.** Reading an exit code through `| tail -4` printed an empty `exit:`. Re-read without the pipe → 1. Third occurrence this epic; `verification-pipefail` earns its place.
+
+**Task 6 — suite run on an idle machine** (load average 2.90): 1655 tests / 1654 pass / 0 fail / **0 cancelled**, exit 0.
+
+**Task 7 — the sweep was grepped, not listed.** `grep -rn "T41"` across both artifact directories returned 5 files and 34 hits. Live assertion sites updated; Change Log receipts and completed story files left as dated records.
 
 ### Completion Notes List
 
+**What shipped — three gates and one removal.**
+
+1. **FR2 (T41(b)):** the publish step asserts `npm --version` ≥ 11.5.1 before anything else.
+2. **AC5(i):** it asserts the OIDC id-token endpoint is present.
+3. **FR4 (T41(d)):** it asserts no `_authToken` line reaches npm, and `registry-url:` is removed from `setup-node` so none is written.
+
+**All eight scenarios, run from the block extracted out of `ci.yml`:**
+
+| scenario | exit |
+|---|---|
+| all good, no userconfig | 0 |
+| all good, clean userconfig | 0 |
+| npm 11.4.2 / 10.8.2 (below floor) | 1 |
+| npm exactly 11.5.1 | 0 |
+| no `id-token` permission | 1 |
+| userconfig carries `_authToken` | 1 |
+| `npm --version` unparseable | 1 |
+
+Harness falsified: flipping the floor comparison flips `12.0.0` from 0 to 1.
+
+**AC9 / NFR10 — two demonstrations, one per gate.**
+
+```
+FR2, post-fix, npm 11.4.2:
+  FATAL: npm 11.4.2 is below the OIDC registry-auth floor 11.5.1.   exit 1
+FR2, pre-fix tree: 0 floor-check lines in HEAD's ci.yml -> 11.4.2 would have
+  reached npm publish and published ANONYMOUSLY (registry answers 404)
+
+FR4, post-fix, against the userconfig setup-node WOULD have written:
+  //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
+  FATAL: ... carries an _authToken line.                            exit 1
+FR4, pre-fix tree: registry-url: present in HEAD -> that file WAS generated
+```
+
+**AC5 — assertion (ii) deliberately not shipped, and this is the story's one open question.** The story permits (i) alone and prefers (i)+(ii). I shipped (i). (ii) — `npm publish --dry-run --loglevel verbose`, asserting the OIDC success line — is genuinely valuable: it would prove the trusted-publisher entry matches this repo *before* the real write, which is the single most expensive thing to get wrong here. **I did not ship it because I could not determine whether the OIDC exchange is rate-limited or single-use per workflow**, and a dry-run that consumes the one available exchange would break the real publish seconds later. That is unknowable without a live run. **Recommend Story 1.6 answer it and add (ii) if the exchange is repeatable.** Recorded as a scope call, not an omission.
+
+**AC11 — T41 is CLOSED, and the rule is NOT retired.** All five findings fixed: (a) `dist-1-2`, (e) `dist-1-3`, (c) `dist-1-4`, **(b) and (d) here**. T41's status cell is `✅ Done` and the row is relocated below the Fast Lane live block. `scope-decisions` §3 marked CLEARED; §6 and epic NFR1 record that **the condition is satisfied while the rule stands** — retirement cannot precede Story 1.6. An earlier draft of this story instructed retiring it; that was corrected at story review, and I did not reintroduce it.
+
+**What this story does NOT do**, because an earlier draft claimed both and both are false: it does not retire the no-tag rule, and it does not unblock Story 1.6 — 1.6's rehearsal has been permitted under NFR1's exemption since FR1 landed in `dist-1-2`.
+
+**Verification basis.** Proven from source: the npm floor arithmetic, that dropping `registry-url:` leaves OIDC's audience unchanged, that `oidc()` never throws, that `npm config get` cannot discriminate. Reasoned but unproven locally: the runner's actual npm version, that `setup-node@v5` writes what it documents. **Genuinely unknown: whether the OIDC exchange is repeatable** — the one thing gating AC5(ii). Story 1.6 is where all three resolve.
+
+**Gates:** `npm test` 1654 pass / 0 fail / 0 cancelled exit 0 (idle machine), `lint` 0, `ci.yml` parses, `backlog-integrity` PASS, `reference-integrity` PASS, lane order **7 — unchanged**.
+
 ### File List
+
+**Modified — source & config (1)**
+- `.github/workflows/ci.yml` — `registry-url:` removed from `setup-node`; FR2 npm-floor gate, OIDC id-token precondition and FR4 userconfig assertion added to the publish step
+
+**Modified — planning & tracking (4)**
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — T41 (b) and (d) struck, status → Done, row relocated; Change Log receipt
+- `_bmad-output/planning-artifacts/convoke-note-4-0-1-scope-decisions.md` — §3 gate marked CLEARED; §6 records condition satisfied, rule not retired
+- `_bmad-output/planning-artifacts/convoke-epic-4-0-1-distribution-integrity.md` — NFR1 same
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — story status
+- `_bmad-output/implementation-artifacts/dist-1-5-make-authentication-failure-loud.md` — this file
 
 ## Change Log
 
 | Date | Change |
 |---|---|
-| 2026-08-22 | **Story review before commit — 2 layers (adversarial, implementability).** Verdict: **NOT sound; amend before implementation.** Corrected in place. **Two BLOCKERs, both mine, both reproducing errors I had just fixed elsewhere:** (1) AC11/Task 7 instructed retiring the standing no-tag rule, which `scope-decisions:187-190` — text I wrote during `dist-1-4`'s R1 — says verbatim cannot precede Story 1.6; (2) the header and Dev Notes claimed this story unblocks Story 1.6, but epic `:526-528` says 1.6's rehearsal has been permitted under NFR1's exemption since FR1 landed in `dist-1-2`. **Three HIGHs:** AC5 declared a pre-publish identity assertion impossible — **npm's source refutes it**, `publish.js:141` calls `oidc()` unconditionally before every `dryRun` branch, so `npm publish --dry-run` performs the full exchange; the prescribed FR4 self-check (`npm config get ..._authToken`) is **impossible** — npm refuses protected values and exits 1 whether the placeholder is present or absent, and the obvious repair fails open; AC7 collided with AC3 for all three remedies. **AC4's premise was also wrong** — npm 11.11.0 is installed locally and its source settles remedy (a): `pickRegistry` takes the registry from npm's config, not `setup-node`, so dropping `registry-url:` leaves the OIDC audience and exchange URL identical |
+| 2026-08-22 | **Story review before commit — 2 layers (adversarial, implementability).** Verdict: **NOT sound; amend before implementation.** Corrected in place. **Two BLOCKERs, both mine, both reproducing errors I had just fixed elsewhere:** (1) AC11/Task 7 instructed retiring the standing no-tag rule, which `scope-decisions:187-190` — text I wrote during `dist-1-4`'s R1 — says verbatim cannot precede Story 1.6; (2) the header and Dev Notes claimed this story unblocks Story 1.6, but epic `:528-530` says 1.6's rehearsal has been permitted under NFR1's exemption since FR1 landed in `dist-1-2`. **Three HIGHs:** AC5 declared a pre-publish identity assertion impossible — **npm's source refutes it**, `publish.js:141` calls `oidc()` unconditionally before every `dryRun` branch, so `npm publish --dry-run` performs the full exchange; the prescribed FR4 self-check (`npm config get ..._authToken`) is **impossible** — npm refuses protected values and exits 1 whether the placeholder is present or absent, and the obvious repair fails open; AC7 collided with AC3 for all three remedies. **AC4's premise was also wrong** — npm 11.11.0 is installed locally and its source settles remedy (a): `pickRegistry` takes the registry from npm's config, not `setup-node`, so dropping `registry-url:` leaves the OIDC audience and exchange URL identical |
 | 2026-08-22 | Story created by `bmad-create-story`. Two premises verified from primary sources at authoring time: the npm-floor arithmetic against `nodejs.org/dist/index.json` (**27** node 24.x lines, **exactly 8** below npm 11.5.1 — the backlog's claim is precise), and `npm whoami`'s exit code with no token (**1**). **AC5 is recorded as NOT satisfiable** — OIDC mints the credential during `publish`, so no pre-publish identity assertion exists; the epic asked for this to be checked first and the answer is no. Three FR4 remedies enumerated with their risks; **none pre-selected**, because none is locally verifiable and this path failed four times on 4.0.0. AC6 added for operand-validation symmetry (fourth consecutive story where R1 found that defect). **This story closes T41 entirely and retires the standing no-tag rule**, which `dist-1-4`'s R1 established could not be retired earlier — recorded as the epic's key state change. `baseline_commit` deliberately not pre-stamped |

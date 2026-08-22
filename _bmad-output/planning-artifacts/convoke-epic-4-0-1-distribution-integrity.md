@@ -229,9 +229,11 @@ The four NFRs specific to this epic. Numbers are original; 3–7 and 9 were subt
 ```
 NFR1: No `v*` tag may be pushed until FR1–FR8 clear. ~~(a), (c) and (e) each mis-route a
       tagged publish.~~ **Amended 2026-08-22:** (a) fixed by `dist-1-2` (FR1), (e) fixed by
-      `dist-1-3` (FR5); **(c) fixed 2026-08-22 by `dist-1-4`** (FR3). **The rule's stated
-      mis-routing rationale is discharged, but the rule STANDS:** its condition is "until
-      FR1–FR8 clear", and FR2 and FR4 (T41 (b) and (d), both HIGH) have not. Those two make a
+      `dist-1-3` (FR5); **(c) fixed by `dist-1-4`, (b) and (d) by `dist-1-5` — all
+      2026-08-22. T41 is CLEAR and this rule's condition ("until FR1–FR8 clear") is
+      SATISFIED. The rule is still NOT retired:** retirement cannot precede Story 1.6, the
+      composed live tag rehearsal it exists to stage. ~~its condition is "until
+      FR1–FR8 clear", and FR2 and FR4 (T41 (b) and (d), both HIGH) have not.~~ Those two make a
       publish FAIL rather than land in the wrong place, which is why the rationale needed
       restating — not why the rule could be dropped. Retirement would require amending this
       condition clause and cannot precede Story 1.6, the composed live tag rehearsal this rule

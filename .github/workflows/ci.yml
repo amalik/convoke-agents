@@ -390,7 +390,25 @@ jobs:
         with:
           node-version: 24
           cache: 'npm'
-          registry-url: https://registry.npmjs.org
+          # FR4/dist-1-5: `registry-url:` REMOVED deliberately. It did THREE things, and the
+          # mechanism recorded in T41(d) and in this story's first draft was wrong about all of
+          # them -- corrected here against setup-node's own source (src/authutil.ts, v5 tag):
+          #   1. wrote `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}` into a userconfig
+          #   2. exported NPM_CONFIG_USERCONFIG pointing at it            (authutil.ts:53)
+          #   3. exported NODE_AUTH_TOKEN='XXXXX-XXXXX-XXXXX-XXXXX'      (authutil.ts:55-57)
+          # (it also writes `always-auth=false`). So NODE_AUTH_TOKEN was NOT unset -- setup-node
+          # set it -- and npm did NOT send an unexpanded literal: it sent the 23-character dummy
+          # `XXXXX-XXXXX-XXXXX-XXXXX`. T41(d) called it "the literal 14-character string"; the
+          # literal is 18 characters and was never on the wire. The remedy is unchanged and is
+          # now MORE justified: removing the key removes all three effects and genuinely leaves
+          # NODE_AUTH_TOKEN unset. Verified against npm 11.11.0's source that this is safe:
+          # publish.js:139 takes the registry from `npmFetch.pickRegistry(resolved, opts)`, i.e.
+          # npm's own config, NOT from setup-node; convoke-agents is unscoped and package.json
+          # has no publishConfig, so pickRegistry falls through to the default
+          # https://registry.npmjs.org/, and oidc.js derives its audience as
+          # `npm:${new URL(registry).hostname}` from that same value. Audience and exchange URL
+          # are byte-identical with or without this key. The guard below asserts the outcome
+          # rather than trusting setup-node to keep behaving this way.
 
       - name: Install dependencies
         run: npm ci
@@ -422,6 +440,138 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
+
+          # FR2/dist-1-5: assert npm >= 11.5.1, the OIDC registry-auth floor. Below it,
+          # lib/utils/oidc.js does not exist, publish is ANONYMOUS, and the registry answers
+          # 404 -- exactly how 4.0.0 failed four times while appearing to work. setup-node
+          # defaults check-latest:false, so the toolcache decides which 24.x you get, and 8 of
+          # the 27 released node 24.x lines bundle npm 11.3.0-11.4.2 (verified against
+          # nodejs.org/dist/index.json). This worked by luck, not design.
+          #
+          # Multi-line output is REFUSED, not trimmed -- same standard FR5 applies to the
+          # registry reply below, and for the same reason. A prerelease (11.5.1-pre.0) is
+          # REFUSED too: it predates the release that first ships oidc.js, and truncating at
+          # the first non-digit would have scored it as exactly 11.5.1. Field-compared rather
+          # than `sort -V`: dist-1-3 had to disclose a BSD-vs-GNU sort basis gap; integers have
+          # none. Components are capped at 9 digits so `[` cannot overflow and silently pass.
+          NPM_VER_RAW=$(npm --version 2>/dev/null) || NPM_VER_RAW=""
+          if [ "$(printf '%s' "$NPM_VER_RAW" | grep -c '')" -ne 1 ]; then
+            echo "FATAL: npm --version returned ${NPM_VER_RAW:+multi-line }output; refusing to guess." >&2; exit 1
+          fi
+          NPM_VER="${NPM_VER_RAW#"${NPM_VER_RAW%%[![:space:]]*}"}"; NPM_VER="${NPM_VER%"${NPM_VER##*[![:space:]]}"}"
+          if ! [[ "$NPM_VER" =~ ^[0-9]{1,9}\.[0-9]{1,9}\.[0-9]{1,9}$ ]]; then
+            echo "FATAL: npm version '$NPM_VER_RAW' is not a plain X.Y.Z release." >&2
+            echo "  A prerelease such as 11.5.1-pre.0 predates the release shipping oidc.js." >&2
+            exit 1
+          fi
+          NPM_MAJ=${NPM_VER%%.*}; NPM_REST=${NPM_VER#*.}; NPM_MIN=${NPM_REST%%.*}; NPM_PATCH=${NPM_REST#*.}
+          if [ "$NPM_MAJ" -lt 11 ] \
+            || { [ "$NPM_MAJ" -eq 11 ] && [ "$NPM_MIN" -lt 5 ]; } \
+            || { [ "$NPM_MAJ" -eq 11 ] && [ "$NPM_MIN" -eq 5 ] && [ "$NPM_PATCH" -lt 1 ]; }; then
+            echo "FATAL: npm $NPM_VER is below the OIDC registry-auth floor 11.5.1." >&2
+            echo "  Below this floor npm publishes ANONYMOUSLY and the registry answers 404." >&2
+            exit 1
+          fi
+          echo "npm floor: $NPM_VER >= 11.5.1 -- OK"
+
+          # FR4/dist-1-5, part 1 -- the OIDC precondition. oidc.js returns undefined without
+          # these and NEVER throws, so a missing `id-token: write` would surface only as a 404
+          # at tag-push cost. Shape-checked, not merely present: a whitespace or malformed URL
+          # passes a bare -z test while minting no token at all.
+          if ! [[ "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" =~ ^https://[^[:space:]]+$ ]] \
+             || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN//[[:space:]]/}" ]; then
+            echo "FATAL: OIDC id-token endpoint is missing or malformed." >&2
+            echo "  Needs 'permissions: id-token: write'. npm's oidc() returns undefined" >&2
+            echo "  without it and never throws, so publish would proceed as nobody." >&2
+            exit 1
+          fi
+          echo "OIDC precondition: id-token endpoint present -- OK"
+
+          # FR4/dist-1-5, part 2 -- no credential may reach npm on this path.
+          #
+          # Checks EVERY npmrc npm reads, not just $NPM_CONFIG_USERCONFIG. An earlier draft
+          # checked only that one file -- and since FR4 removes `registry-url:`, setup-node no
+          # longer exports it, so the guard took its else branch, printed OK, and grepped
+          # nothing. It was inert in exactly the state this change creates. Project .npmrc
+          # OUTRANKS user config and is not gitignored, so it must be covered.
+          #
+          # Asserted against the FILES: `npm config get //registry.npmjs.org/:_authToken`
+          # refuses protected keys and exits 1 whether the value is present OR absent, so it
+          # cannot tell the two states apart -- the one thing this needs to do.
+          #
+          # Matches every credential spelling (_auth, _password, username all authenticate),
+          # anchored to a config-key line so a comment mentioning _authToken does not abort a
+          # clean publish. Unreadable candidates are FATAL, not skipped: `grep -q` returns 2
+          # for "cannot read" and an `if` collapses that to "no match", reporting an
+          # unreadable npmrc as verified-clean.
+          #
+          # Runs BEFORE the exchange: a successful oidc() does config.set() on the same key.
+          # Covers: certfile|keyfile too -- publish.js:144 treats `certfile && keyfile` as
+          # credentials exactly like a token. CR-only line endings are normalised first: npm's
+          # `ini` splits on [\r\n]+ while grep splits on \n only, so a CR-only npmrc is a
+          # credential npm honours and a bare grep would certify it clean. Paths come from npm
+          # itself, not guesses, and are deduped.
+          CRED_RE='^[[:space:]]*(//[^[:space:]]*:)?(_authToken|_auth|_password|username|certfile|keyfile)[[:space:]]*='
+          NPMRC_CHECKED=0
+          NPMRC_SEEN=""
+          for npmrc_candidate in \
+            "$(npm config get userconfig 2>/dev/null)" \
+            "$(npm config get globalconfig 2>/dev/null)" \
+            "${NPM_CONFIG_USERCONFIG:-}" "${NPM_CONFIG_GLOBALCONFIG:-}" \
+            "$HOME/.npmrc" "$PWD/.npmrc"; do
+            [ -n "$npmrc_candidate" ] && [ "$npmrc_candidate" != "undefined" ] || continue
+            [ -e "$npmrc_candidate" ] || continue
+            case ":$NPMRC_SEEN:" in *":$npmrc_candidate:"*) continue ;; esac
+            NPMRC_SEEN="$NPMRC_SEEN:$npmrc_candidate"
+            if [ ! -f "$npmrc_candidate" ] || [ ! -r "$npmrc_candidate" ]; then
+              echo "FATAL: npmrc candidate '$npmrc_candidate' exists but is not a readable file." >&2; exit 1
+            fi
+            if tr '\r' '\n' < "$npmrc_candidate" | grep -Eq "$CRED_RE"; then
+              echo "FATAL: '$npmrc_candidate' sets a credential key on the publish path." >&2
+              echo "  setup-node exports NODE_AUTH_TOKEN='XXXXX-XXXXX-XXXXX-XXXXX' when it is" >&2
+              echo "  otherwise unset (authutil.ts:55-57), so npm sends THAT dummy as a bearer" >&2
+              echo "  token and an OIDC decline is reported as *bad token*, not *no token*." >&2
+              exit 1
+            fi
+            NPMRC_CHECKED=$((NPMRC_CHECKED+1))
+          done
+
+          # The environment outranks every npmrc, and ci.yml's own OIDC note warns that "a token
+          # in the environment takes precedence over OIDC, which put 4.0.0 back on the token
+          # path". NODE_AUTH_TOKEN is the specific vector setup-node used, so it is asserted
+          # directly. RESIDUAL, disclosed: a hostile `npm_config_*` env var is NOT covered --
+          # `npm config ls -l` does not surface env-supplied credentials either (measured), so
+          # no cheap complete check exists. Tracked in the backlog rather than faked here.
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "FATAL: NODE_AUTH_TOKEN is set on the publish path." >&2
+            echo "  A token in the environment takes precedence over OIDC. This job publishes" >&2
+            echo "  via Trusted Publishing and must have no token at all." >&2
+            exit 1
+          fi
+
+          # Reports what was ACTUALLY inspected. An earlier version said "none sets a
+          # credential" after inspecting ZERO files -- the same unearned positive claim R1
+          # rejected one revision earlier, just with a different cause removed.
+          if [ "$NPMRC_CHECKED" -eq 0 ]; then
+            echo "npm credential check: no npmrc exists on any path npm reads; NODE_AUTH_TOKEN unset -- OK"
+          else
+            echo "npm credential check: $NPMRC_CHECKED npmrc file(s) inspected, none sets a credential; NODE_AUTH_TOKEN unset -- OK"
+          fi
+
+          # FR4/dist-1-5, part 3 -- a `npm publish --dry-run` OIDC gate was written here and
+          # REMOVED at Round 2. Recorded so it is not re-attempted without the context:
+          #   1. It read $DIST_TAG 61 lines before the FR1 block assigns it -- it would have
+          #      run `npm publish --tag ""`. It could never have passed.
+          #   2. Its stated benefit was false. This job only fires on `refs/tags/v*`, so the
+          #      tag is ALREADY SPENT before any step here runs. It could not have converted a
+          #      post-tag failure into a cheaper one; there is no pre-tag moment in this job.
+          #   3. Its marginal value over the id-token precondition above is a better-worded
+          #      error a few seconds earlier, at the cost of a second live OIDC exchange on
+          #      the path that failed four times.
+          # The pre-tag identity rehearsal belongs to Story 1.6 (FR19), which is where a tag
+          # can be spent deliberately. Story 1.5's R1 was right that the exchange is NOT
+          # single-use (execWorkspaces issues N per publish); it was wrong to conclude the
+          # gate therefore belonged here.
 
           # FR3/dist-1-4: refuse to publish when the pushed tag does not name the version.
           # T41(c): `github.ref_name` appeared NOWHERE in this file, so tag v4.0.1 could ship

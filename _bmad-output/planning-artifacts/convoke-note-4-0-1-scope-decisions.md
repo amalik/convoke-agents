@@ -52,9 +52,9 @@ job is to make that class mechanically detectable, not to fix four files.
 
 ---
 
-## 3. The gate — T41 (must clear before 4.0.1 ships)
+## 3. The gate — T41 ✅ **CLEARED 2026-08-22** (all 5 findings fixed)
 
-**T41** · R6 I3 C90% **E3** · score 5.4 · Open · `found-by: BUG-16 R2 2026-08-17`
+**T41** · R6 I3 C90% **E3** · score 5.4 · ✅ **Done 2026-08-22** · `found-by: BUG-16 R2 2026-08-17`
 
 **Not a cluster and not a quick win.** ~~Eight~~ **Five** findings (as of 2026-08-21) on `.github/workflows/ci.yml`'s
 `publish` job — a path that executes **only** on a `refs/tags/v*` push, so every fix
@@ -66,16 +66,16 @@ being smuggled in as a seventh quick win.
 job. ~~Finding **(e)** fires on precisely this release: a maintenance `3.3.1` has no
 hyphen, so `case *-*` routes it to `latest` and **downgrades every user from 4.0.0**.~~
 ✅ **(e) FIXED 2026-08-22 by story `dist-1-3`** — the publish job now refuses a semver-lower
-publish to `latest`. The gate still holds on **(b) and (d)**, both HIGH — *(c) fixed 2026-08-22 by `dist-1-4`.*
+publish to `latest`. ~~The gate still holds on **(b) and (d)**, both HIGH~~ — **the gate is CLEAR as of 2026-08-22:** (a) `dist-1-2`, (e) `dist-1-3`, (c) `dist-1-4`, **(b) and (d) `dist-1-5`**.
 
-~~Four~~ ~~**Three**~~ **Two** HIGH remain (amended twice: (a) fixed 2026-08-22 by `dist-1-2`, (c) same day by `dist-1-4`). ~~(a) `case *-*` misclassifies build metadata, so `4.0.0+sha…` routes to
+~~Four~~ ~~**Three**~~ ~~**Two**~~ **ZERO** HIGH remain — all five findings fixed 2026-08-22: (a) `dist-1-2`, (b) and (d) `dist-1-5`, (c) `dist-1-4`, (e) `dist-1-3`. ~~(a) `case *-*` misclassifies build metadata, so `4.0.0+sha…` routes to
 `rc` and a stable release never reaches `latest`;~~ ✅ **(a) FIXED 2026-08-22 by story `dist-1-2`** (FR1) —
-`ci.yml`'s `Publish to npm` step now reads `case "${VERSION%%+*}"`. (b) `node-version: 24` does not
+`ci.yml`'s `Publish to npm` step now reads `case "${VERSION%%+*}"`. ~~(b) `node-version: 24` does not
 guarantee npm ≥ 11.5.1 — the OIDC floor — and works today by luck of the runner
 toolcache, regressing to a silent anonymous publish returning 404; (c) BUG-15 shipped
 half its own acceptance text — "fail the job if the two disagree" was never built and
 ~~`github.ref_name` appears nowhere~~ **(fixed 2026-08-22 by `dist-1-4`: it now reaches the publish step via `env:`)**, so tag and `package.json` version were fully
-decoupled; (d) `setup-node` writes `_authToken=${NODE_AUTH_TOKEN}` regardless, so an
+decoupled; ~~(d) `setup-node` writes `_authToken=${NODE_AUTH_TOKEN}` regardless, so an
 OIDC decline resurfaces as a *bad token* rather than *no token*.
 ~~Four~~ ~~**One** MEDIUM: (e) downgrade guard.~~ ✅ **(e) FIXED 2026-08-22 by `dist-1-3`. Zero MEDIUM remain.** **(f), (g) and (h) were RETIRED 2026-08-21** by
 [ADR-001](adr/4-0-1/adr-001-retire-badges-pipeline.md) together with the badges pipeline — all three
@@ -177,19 +177,16 @@ persona strings written by whoever builds it.
 ## 6. Constraints binding implementation
 
 1. **No `v*` tag may be pushed until T41 clears.** ~~Findings (a), (c) and (e) all
-   mis-route a tagged publish.~~ **Amended 2026-08-22 (second amendment, same day):** (a) fixed by `dist-1-2`, (e) by
-   `dist-1-3`, **(c) by `dist-1-4`**. **The rule STANDS — only its stated rationale was stale.**
-   It reads *"(a), (c) and (e) each **mis-route** a tagged publish"*, and no remaining finding
-   mis-routes: (b) is a silent anonymous publish returning 404, (d) makes an OIDC decline surface
-   as *bad token* rather than *no token*. Both make a publish **fail**; neither makes it land in
-   the wrong place. **But the rule's condition is "until T41 clears", not "until mis-routing
-   clears"** — (b) and (d) are open and both HIGH, so the condition is unmet on its own terms.
-   **Retirement is a separate decision and cannot precede Story 1.6**, which is the composed live
-   tag rehearsal this rule exists to stage; retiring it first would authorise the very push 1.6
-   is designed to control. *(An earlier draft of this amendment offered "retire it" as a live
-   option. That was wrong on both counts and was corrected at R1.)*
-   NFR1's exemption is unaffected: since FR1 landed a *prerelease* tag provably routes to `rc` and
-   is permitted; an rc needed sooner is published by hand with an explicit `--tag rc`.
+   mis-route a tagged publish.~~ **Amended 2026-08-22 (third amendment).** **T41 is now CLEAR — all five findings are
+   fixed** ((a) `dist-1-2`, (e) `dist-1-3`, (c) `dist-1-4`, (b) and (d) `dist-1-5`). **This
+   rule's CONDITION is therefore satisfied. The rule is NOT retired.** Retirement cannot
+   precede **Story 1.6**, the composed live tag rehearsal this rule exists to stage —
+   retiring it first would authorise the very push 1.6 is designed to control. `dist-1-5`
+   deliberately did not retire it; an earlier draft of that story instructed retirement and
+   was corrected at story review. **Story 1.6 is now the only thing standing between this
+   rule and its retirement**, and 1.6's own rehearsal was already permitted under NFR1's
+   exemption (FR1 alone) — it never depended on this rule lifting.
+   *(Second amendment, superseded: (a)/(e)/(c) fixed, rule stood on (b) and (d).)*
 
 2. **No line-level staging on the backlog.** `3a3de195` deleted the T35 and T39 rows
    while its message claimed to repair them: both rows were *modified*, so the diff
@@ -235,7 +232,7 @@ intake against the rule; not fixed here.
 
 ```bash
 # Publish path (T41 (a)(c), BUG-15 as shipped)
-sed -n '405,420p' .github/workflows/ci.yml
+sed -n '434,450p' .github/workflows/ci.yml   # re-pinned 2026-08-22 (dist-1-5 shifted it)
 grep -n "github.ref_name" .github/workflows/ci.yml        # expect: ONE match in the publish
                                                           # step's env: block. Was "expect: no
                                                           # match — finding (c)"; inverted
