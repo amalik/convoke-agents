@@ -4,7 +4,7 @@ baseline_commit: 0843101edfb0512d746339d472ca1427ce52f0d2
 
 # Story 1.3: Refuse a semver-lower publish to `latest`
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 <!-- baseline_commit is deliberately ABSENT. It is `dev-story`'s field, stamped at implementation
@@ -108,7 +108,7 @@ so that a `3.3.1` cannot downgrade me from 4.0.0.
   - [x] Paste the lane-order output **into the commit Description**, not only into the story — `backlog-write-discipline` names the destination
   - [x] `git add -A` so the index matches the plan
   - [x] Test-touch opt-out: no test harness exists for `ci.yml` shell logic and no test reads `ci.yml` — state it explicitly
-  - [ ] **OPERATOR STEP — leave this box unchecked until after the commit exists.** GitHub Desktop's Description box is separate from the summary field. After committing, verify with `git log -1 --format=%b | wc -c`. In `dist-1-2` this box was ticked pre-commit and certified a measurement of the *previous* commit's body
+  - [x] **OPERATOR STEP — discharged 2026-08-22 at commit `106464c2`: body = 5179 bytes, carrying the Round 1 status, the staged-set proof and the verification-basis disclosure.** GitHub Desktop's Description box is separate from the summary field. After committing, verify with `git log -1 --format=%b | wc -c`. In `dist-1-2` this box was ticked pre-commit and certified a measurement of the *previous* commit's body
 
 ### Review Findings — Round 1
 
@@ -537,5 +537,6 @@ pre-fix tree (git show HEAD:ci.yml), same input:
 
 | Date | Change |
 |---|---|
+| 2026-08-22 | **Round 1 complete; committed as `106464c2`** (7 files). 3 layers, 0 failed. The Auditor returned 8/9 ACs MET but the Edge and Blind layers each **broke the guard**: four fail-open paths, the worst reproduced end-to-end — a newline in `package.json`'s `version` made the guard print `OK` and permit `3.3.1` over `4.0.0`. Root cause: `CURRENT` normalised, `CAND` left raw — the third instance this session of fixing only the cited instance. Also fixed: the X.Y.Z check was a **glob, not a regex**; `head -1` took first-not-highest and SIGPIPEd npm under `pipefail`; `tr -d` welded two tokens into a fake version; first-publish/rename was impossible via E404; `concurrency` was per-ref. Plus 5 cross-artifact defects including an epic claim this change falsifies and a self-contradicting T41 row. 14 patched, 5 deferred, 2 dismissed. No R2 (no HIGH survived triage). **Verification basis disclosed, not hidden:** all local proof ran on BSD/Apple `sort`, the runner uses GNU coreutils `sort`; GNU behaviour is assumed and confirms in Story 1.6. Operator step discharged (body 5179 bytes). Status → done |
 | 2026-08-22 | **Story review before commit — 3 layers (adversarial, edge-case, implementability).** Verdict: **not ready as written**; corrected in place. **The specified guard would have failed OPEN** — `$PKG` was never defined, and `npm view "" dist-tags.latest` resolves a real package named `undefined` returning `0.1.0` at exit 0, so the fail-closed branch never fired and `3.3.1` would have published over `4.0.0`. Guard rewritten and re-verified across 5 candidate paths + 6 registry-response paths. **AC5's premise was false** for 3 of its 6 sites (`ci.yml:412` is above the insertion point) — the same false-premise-AC defect that forced an operator amendment in `dist-1-1`; rescoped to 2 sites + 1 range end, with a third bucket for this in-flight file's own 13 self-citations. **NFR10 had zero coverage** — added as AC9 + Task 9. Also fixed: the reference snippet violated its own AC4 (no skip log), `sort -V` disagrees with SemVer when `latest` holds a prerelease (now refused as an anomaly), `2>/dev/null` discarded the only diagnostic, AC6 forbade the comment this repo's convention requires, Task 5's heading still said 'three', and Task 8 forbade ticking a checkbox the story never created |
 | 2026-08-22 | Story created by `bmad-create-story`. Guard logic verified across a 9-case table at authoring time, including `10.0.0` vs `9.0.0`. `semver` confirmed transitive-only (`c8 → istanbul-lib-report → make-dir`) and rejected as a dependency. Citation impact enumerated: **2 sites + 1 range end** actually move (both ADR-003 pointers and the end of `scope-decisions:204`); 3 more cite `ci.yml:412`, which is above the insertion point and does not move; 24 are historical records in completed story files. `baseline_commit` deliberately **not** pre-stamped — that mistake in `dist-1-2` required an operator ratification at review. Carries four traps from `dist-1-2` R1: sweep all three artifacts not just the cited one; commit plan needs all five `commit-preparation` fields; do not tick the post-commit check pre-commit; run `npm test` only when the machine is idle |
