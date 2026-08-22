@@ -551,11 +551,41 @@ jobs:
             echo "  via Trusted Publishing and must have no token at all." >&2
             exit 1
           fi
-          if env | grep -Eiq '^npm_config_.*(_auth|_authtoken|_password|username|certfile|keyfile)='; then
-            echo "FATAL: an npm_config_* credential is set in the environment." >&2
-            echo "  npm reads config from the environment above every npmrc, so this would take" >&2
-            echo "  precedence over OIDC -- the same token-path regression that broke 4.0.0." >&2
-            env | grep -Eio '^npm_config_[^=]*' | sed 's/^/    offending key: /' >&2
+          # Matches on the ENV-VAR NAME with structural rules, because npm authenticates on
+          # the RESOLVED config key and `#loadObject` runs `envReplace(key, this.env)` on every
+          # key (@npmcli/config/lib/index.js:586) -- so `${VAR}` inside a key is expanded AFTER
+          # any name-based regex has looked. Measured: `npm_config_//registry.npmjs.org/:${X}`
+          # with `X=_authToken` delivers a working token while a credential-word regex sees
+          # nothing. That vector is unbounded, so the rule is: reject any npm_config_* name that
+          # is REWRITABLE (`${`) or nerf-darted (`//`, `:`) as well as any credential spelling.
+          # Env outranks the user layer, so such a var shadows the token oidc() writes.
+          #
+          # Iterates NUL-framed names rather than grepping `env` output: `env` line-splits a
+          # multi-line VALUE, so a benign var containing a newline could forge a match and abort
+          # a release on a tag already spent. Measured before this was fixed.
+          BAD_NPM_ENV=""
+          while IFS= read -r -d '' npm_env_kv; do
+            npm_env_name=${npm_env_kv%%=*}
+            case $npm_env_name in [Nn][Pp][Mm]_[Cc][Oo][Nn][Ff][Ii][Gg]_*) ;; *) continue ;; esac
+            shopt -s nocasematch
+            if [[ $npm_env_name == *'${'* || $npm_env_name == *//* || $npm_env_name == *:* \
+               || $npm_env_name =~ (_auth|_password|username|certfile|keyfile) ]]; then
+              BAD_NPM_ENV="$BAD_NPM_ENV $npm_env_name"
+            fi
+            shopt -u nocasematch
+          done < <(env -0)
+          if [ -n "$BAD_NPM_ENV" ]; then
+            echo "FATAL: npm_config_* credential or rewritable key(s) in the environment:$BAD_NPM_ENV" >&2
+            echo "  npm reads config from the environment above every npmrc, so this takes" >&2
+            echo "  precedence over OIDC -- the token-path regression that broke 4.0.0." >&2
+            exit 1
+          fi
+          # Third vector: oidc.js:50 uses NPM_ID_TOKEN in place of the identity GitHub mints,
+          # so a supplied value performs the exchange against an attacker-chosen assertion.
+          # Neither of the checks above sees it.
+          if [ -n "${NPM_ID_TOKEN:-}" ]; then
+            echo "FATAL: NPM_ID_TOKEN is set on the publish path." >&2
+            echo "  It overrides the ID token GitHub mints for this workflow (oidc.js:50)." >&2
             exit 1
           fi
 
