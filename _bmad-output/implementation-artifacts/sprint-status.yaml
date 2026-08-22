@@ -900,7 +900,7 @@ development_status:
   dist-1-1-retire-the-badges-pipeline: done
   dist-1-2-strip-build-metadata-before-the-prerelease-test: done
   dist-1-3-refuse-a-semver-lower-publish-to-latest: done
-  dist-1-4-fail-when-the-tag-and-the-version-disagree: backlog
+  dist-1-4-fail-when-the-tag-and-the-version-disagree: ready-for-dev
   dist-1-5-make-authentication-failure-loud: backlog
   dist-1-6-rehearse-the-composed-job-before-the-release-tag: backlog
   dist-1-7-make-the-ci-path-the-only-path-to-the-registry: backlog

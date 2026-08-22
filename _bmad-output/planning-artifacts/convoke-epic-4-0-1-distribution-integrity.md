@@ -227,8 +227,12 @@ The four NFRs specific to this epic. Numbers are original; 3–7 and 9 were subt
 2026-08-19 and are not reused.
 
 ```
-NFR1: No `v*` tag may be pushed until FR1–FR8 clear. (a), (c) and (e) each mis-route a
-      tagged publish. An rc needed before then is published by hand with `--tag rc`.
+NFR1: No `v*` tag may be pushed until FR1–FR8 clear. ~~(a), (c) and (e) each mis-route a
+      tagged publish.~~ **Amended 2026-08-22:** (a) fixed by `dist-1-2` (FR1), (e) fixed by
+      `dist-1-3` (FR5); **(c) still mis-routes a tagged publish** — tag and `package.json`
+      version remain fully decoupled — so this rule now rests on (c) alone, and `dist-1-4`
+      is what retires it. *(Missed by both prior sweeps: they amended the twin rule in
+      `convoke-note-4-0-1-scope-decisions.md` §6 and never this one.)* An rc needed before then is published by hand with `--tag rc`.
       EXEMPTION — the intent is *no tag that could reach `latest`*, not *no tag*. Once
       **FR1** lands, a prerelease tag provably routes to `rc`, so prerelease tags are
       permitted from that point. FR19 is by construction the first tag allowed. Without

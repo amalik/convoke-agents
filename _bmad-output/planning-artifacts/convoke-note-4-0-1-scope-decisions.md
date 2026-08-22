@@ -70,7 +70,7 @@ publish to `latest`. The gate still holds on (b), (c) and (d), all HIGH.
 
 ~~Four~~ **Three** HIGH remain. ~~(a) `case *-*` misclassifies build metadata, so `4.0.0+sha…` routes to
 `rc` and a stable release never reaches `latest`;~~ ✅ **(a) FIXED 2026-08-22 by story `dist-1-2`** (FR1) —
-`ci.yml:412` now reads `case "${VERSION%%+*}"`. (b) `node-version: 24` does not
+`ci.yml`'s `Publish to npm` step now reads `case "${VERSION%%+*}"`. (b) `node-version: 24` does not
 guarantee npm ≥ 11.5.1 — the OIDC floor — and works today by luck of the runner
 toolcache, regressing to a silent anonymous publish returning 404; (c) BUG-15 shipped
 half its own acceptance text — "fail the job if the two disagree" was never built and
