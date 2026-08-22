@@ -339,7 +339,7 @@ Every Convoke release routes to the dist-tag it belongs on, comes from a committ
 and fails loudly rather than silently when it cannot authenticate. No operator is ever
 downgraded by an upgrade.
 **FRs covered:** FR1, FR2, FR3, FR4, FR5, FR9, FR19 (FR6–FR8 retired by ADR-001)
-**Gate:** 4.0.1 cannot ship until this epic completes (NFR1).
+**Gate:** 4.0.1 cannot ship until this epic completes. *(This gate previously cited NFR1, which was RETIRED 2026-08-22 -- see the head of NFR1. It now stands on the epic's own definition of done, not on the retired tag freeze.)*
 **Blocked on:** nothing — both ADRs gating this epic are accepted. **ADR-1 (2026-08-19)** retire,
 so FR6–FR8 are retired and Epic 1 is 7 stories. **ADR-3 (2026-08-20)** option (a): FR9 is enforced
 by the npm package setting *Require two-factor authentication and disallow tokens*, which is a

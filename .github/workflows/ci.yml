@@ -692,7 +692,9 @@ jobs:
           #
           # Verified locally on BSD/Apple sort 2.3. The runner uses GNU coreutils sort, a
           # different filevercmp; the two agree on every case tested, but GNU behaviour is
-          # ASSUMED here and gets its live confirmation in Story 1.6's composed rehearsal.
+          # ASSUMED here and is NOT confirmed by Story 1.6's rehearsal -- that run published a
+          # prerelease, so this block took its skip branch and 'sort -V' never executed on a
+          # runner at all. First live execution is the first stable tag. Tracked as T49.
           if [ "$DIST_TAG" = "latest" ]; then
             PKG=$(node -p "require('./package.json').name" 2>/dev/null) || PKG=""
             case "$PKG" in ""|undefined) echo "FATAL: cannot determine package name." >&2; exit 1 ;; esac

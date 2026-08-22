@@ -114,7 +114,7 @@ workflow does, there is no hand-publish fallback — the registry will refuse it
 has had a broken publish job **within the last four days**, that is not hypothetical.
 
 **Mitigation, which is part of the deliverable, not an afterthought:** the setting is reversible from
-the npm UI in under a minute. Story 1.6 must ship a documented break-glass procedure — where the
+the npm UI in under a minute. Story 1.7 must ship a documented break-glass procedure *(amended 2026-08-23: this read "Story 1.6"; the obligation belongs to the story that flips the registry setting, and the epic correctly places it in Story 1.7's ACs. Story 1.6 shipped without it, as intended.)* — where the
 setting lives, who can flip it, and the requirement that any hand-publish performed under it is
 logged as an incident and followed by re-enabling. An escape hatch you have written down is a
 control. An escape hatch you rediscover under pressure is the status quo.
