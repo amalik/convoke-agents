@@ -111,7 +111,10 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 - **Round 2** is triggered only if Round 1 produces any HIGH-severity finding.
 - **Round 3** is triggered only if Round 2 introduces structural changes (new files, renamed functions, altered control flow) — not for wording fixes, comment edits, or cosmetic patches.
 - **No Round 4.** If Round 3 still has issues, defer remaining findings to the backlog (via `bmad-enhance-initiatives-backlog` Triage mode) rather than running another review pass.
+- **Restructure, do not patch, when a round is correcting the previous round.** If a round's HIGH findings are predominantly defects in the *previous round's corrections* rather than in the work under review, the next action is to **change the instrument**, not to patch again. Two failed attempts at the same fix predict a third. This is a routing rule, not a stopping rule — it does not reduce review depth, it redirects it.
 - **The reviewed set must equal the committed set.** A round only covers the files that were in the diff handed to it. Before emitting a commit plan, assert that the set of files the review saw is the same set the plan stages. If they differ, either re-review the delta or say so explicitly in the commit Description — never let the earlier round's verdict silently extend to text it never saw.
+
+**Why the Round-4 cap was exceeded once, and what it taught.** `dist-1-7` ran a Round 4 at explicit operator request, against this rule's cap. It found **two HIGHs** — an unsatisfiable git gate and a banner that overclaimed in the opposite direction — so the cap's premise (diminishing returns) did not hold. The reason is diagnostic rather than exculpatory: rounds 2-4 were **fixing fixes**, not reviewing work, and each patch asserted a fresh unverified external claim (see `external-claims-must-be-executed-or-hedged`). The restructure-not-patch clause above exists to end that loop at Round 3 — when it was finally applied to ADR-003, a document-wide scope banner closed in one pass what four sentence-level sweeps could not. Do not read this as licence for Round 4; read it as the signal that Round 3 chose the wrong instrument.
 
 **Why.** Story 7.3 went through 3 unbounded review rounds producing 30 findings. The unbounded "keep reviewing until clean" pattern wastes time and generates diminishing-return findings. Retrospective: ag-epic-7-retro-2026-04-10, Action Item #3.
 
@@ -343,6 +346,37 @@ EOF
 **Scope exemptions.** §2.1 Intakes are append-only and carry no score — they are never sorted. §2.5 sub-tables are append-only receipts and are never sorted. Untriaged lane rows (`?` for R/I/C/E, `—` for Score) have no sort key and park between the live and closed blocks per clause 2.
 
 **Forward-looking note.** The check above is an interim mechanism, not the fix. It only runs when someone remembers to run it, which is the same failure this rule exists to correct. The durable version is a shape-and-order assertion wired into `docs:audit` or `convoke-doctor` so that any writer is caught — tracked in the lifecycle backlog, qualified from `IN-188`. When that ships, this section reduces to a pointer.
+
+---
+
+## Rule: external-claims-must-be-executed-or-hedged
+
+**Statement.** Any assertion about the behaviour of a system **outside this repository** — a registry, a package manager's internals, a third-party API, a CI runner environment, a hosted setting — must be one of:
+
+1. **Executed**, against the basis that will actually be used — not a fixture, not a different OS, not a summary — with the command and its output recorded; or
+2. **Quoted verbatim from primary source**, with the source identified (raw doc file, source code with file:line, live API response); or
+3. **Explicitly marked unverified**, naming what would settle it.
+
+A claim that is none of these does not enter a governed artifact — not an ADR, an epic, a story AC, a backlog row, or an operator runbook. **"I read the docs" is not execution, and a documentation summary is not the docs.**
+
+**Why.** `dist-epic-1` produced 36 correction rounds across 7 stories, and the defects sort almost perfectly along this line. Everything executable locally — gate composition, pack counts, lane order, backlog integrity — was correct on the first attempt. Every claim about npm's behaviour was wrong, unverifiable, or still open:
+
+| Claim | Outcome |
+|---|---|
+| `EPUBLISHCONFLICT` is npm's duplicate-version error | **False** — no thrower exists; it lives only in a formatter |
+| The 2FA setting makes hand-publishing impossible | **Inverted** — npm's wording is that a maintainer *"must publish interactively"* |
+| `git status --porcelain --ignored=matching` gates a clean tree | **Verified in a fixture**; returns 161 lines in this repo and can never pass |
+| BSD vs GNU `sort -V` agree | Disclosed, never closed; still unexecuted on a runner |
+| `auth-only` satisfies the package publishing policy | **Still unknown** — shipped as a recorded open risk |
+
+Each wrong claim generated its own correction round, and the corrections asserted *new* unverified claims in turn — ADR-003's central premise was swept four times before the approach itself had to change.
+
+**How to apply.**
+- Before writing an external fact into an artifact, ask: *did I run this, or did I read about it?* If read — quote the primary source and say so, or hedge.
+- Prefer **raw source** over rendered docs and over search summaries. Two summarisers disagreed about which npm 2FA option carried which sentence; fetching the raw `.mdx` settled it in one command.
+- When execution is impossible (a hosted setting with no read-back, an account state you cannot reach), say **"documented, not observed"** and name the observation that would close it. That phrasing is the deliverable — not a weaker version of one.
+- **Correcting an overclaim with an unhedged counter-claim is the same defect pointed the other way.** It happened here: "impossible" was replaced with "never removed", when the evidence supported only "documented, not observed".
+- **Reviewing a PR.** If a diff asserts external behaviour with no command, no quote, and no hedge, block and cite this rule.
 
 ---
 

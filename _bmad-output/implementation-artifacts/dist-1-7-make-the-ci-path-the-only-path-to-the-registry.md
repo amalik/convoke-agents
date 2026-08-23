@@ -4,7 +4,7 @@ baseline_commit: d4a8ba20e0eb02f23453ae305f3aa6f1bfae1bb4
 
 # Story 1.7: Make the CI path the only path to the registry
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
