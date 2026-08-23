@@ -8,6 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.1] - 2026-08-24
+
+Convoke 4.0.1 is a patch release about one thing: you can trust that what you install came from the source it claims to.
+
+4.0.0 shipped correctly, but not the way it was supposed to. Its automated publish failed four times while *appearing* to succeed — npm answers `404` rather than `403` for an unauthorised write, and provenance signing succeeded on every attempt, so each run looked authenticated right up to the moment it wasn't. The release went out by hand instead. Seven releases before it went out the same way, and one of those was packed from a working tree, so whatever was on disk at that moment shipped.
+
+Nothing in this release changes how Convoke behaves once installed. It changes what has to be true for a release to exist at all.
+
+### Changed
+
+- **Every release now carries a provenance attestation.** Published builds are signed by GitHub Actions and record the repository and commit they came from. You can verify this yourself: `npm view convoke-agents@<version> dist.attestations` returns a signed record for 4.0.1 and later, and is empty for 4.0.0 — which is how we know 4.0.0 did not come through the automated path.
+- **Hand-publishing is restricted at the registry.** `convoke-agents` now requires two-factor authentication and disallows tokens, so an automated credential cannot publish it. This is enforced by npm, not by a check in this repository that could be skipped.
+- **A release cannot silently move `latest` backwards.** Before publishing, the pipeline reads the current `latest` from the registry and refuses to overwrite it with a lower version. npm applies no such protection of its own; if this had existed in August, a mistaken tag could have replaced 4.0.0 with 3.3.1 and there would have been no way to undo it.
+- **A mismatched tag stops the release.** Publishing now requires the git tag and `package.json` to name the same version. Previously they were entirely independent.
+- **Authentication failure is loud.** The pipeline asserts it has a working publish identity *before* it tries to publish, rather than discovering the problem from a misleading `404` afterwards.
+
+### Fixed
+
+- Prerelease versions carrying build metadata (`4.0.1-rc.1+abc123`) were classified as stable releases and would have been published to `latest` instead of `rc`.
+- The badges pipeline, which auto-committed to `main` and had been failing silently, was retired rather than repaired.
+
+### Notes
+
+The publish pipeline was rehearsed end to end before this release: `4.0.1-rc.0` was published through it with a valid attestation, and the version comparison was exercised on a CI runner across ten cases without spending a release tag.
+
+Some parts are proven only by local fixtures rather than by a live run — specifically the registry read and its error handling, which execute for the first time on this release's own tag. That is recorded rather than glossed: if 4.0.1's publish fails, that is where to look.
+
+---
+
 ## [4.0.0] - 2026-08-16
 
 Convoke 4.0 is a maintenance release that keeps Convoke healthy as BMAD evolves and adds marketplace distribution for reach.
@@ -53,11 +82,14 @@ If this release does its job, you'll barely notice it — which is the point.
 
 - **Migration guide** at [`docs/migration/3.x-to-4.0.md`](docs/migration/3.x-to-4.0.md) — One page. The short version: run `npx -p convoke-agents@latest convoke-update`. That's it.
 
-### Deferred from 4.0 → 4.0.1
+### Deferred from 4.0
 
 - **Removal of deprecated upstream agents and the upstream Amelia integration** (internally Epic 1B).
   4.0 keeps `bmad-init` and the current agent set intact so the upgrade stays a single command with
-  nothing for you to reconcile. The cleanup lands in 4.0.1; no action is needed from you either way.
+  nothing for you to reconcile. No action is needed from you either way.
+
+  *Corrected 2026-08-24: this previously said the cleanup would land in 4.0.1. It did not — 4.0.1
+  is the publish-integrity release described above, and this work is still unscheduled.*
 
 ---
 

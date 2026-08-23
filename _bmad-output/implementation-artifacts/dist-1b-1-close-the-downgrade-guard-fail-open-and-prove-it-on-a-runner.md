@@ -4,7 +4,7 @@ baseline_commit: 02cb6d72794a300ca5af7495c5bb998f1327d134
 
 # Story 1b.1: Close the downgrade guard's fail-open and prove it on a runner
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
