@@ -430,10 +430,29 @@ Harmless on `main` (the later run supersedes and contains both commits); on a **
 mechanism can cancel a run already inside `npm publish`, which is one of the two paths into T47's
 moved-tag-on-a-red-run state. T48 is no longer theoretical -- evidence added to the row.
 
-**What is still NOT proven, stated plainly:** the *publish-path* call site executes only on a real
-stable tag. The dry job proves the shared script and the two callers' contract; it does not execute
-the registry read, the E404 anchor (no network in the script, by design), or `GUARD_SKIP`. Those
-remain fixture-proven. AC7b records this.
+**What is still NOT proven — updated 2026-08-24 after the v4.0.1 release, and NARROWER than it was.**
+`4.0.1` published through the pipeline (run `32671542491`, job `97273154780`). Verbatim gate output:
+
+```
+npm floor: 11.17.0 >= 11.5.1 -- OK
+OIDC precondition: id-token endpoint present -- OK
+npm credential check: no npmrc exists on any path npm reads; NODE_AUTH_TOKEN unset -- OK
+Downgrade guard: 4.0.1 >= current latest 4.0.0 -- OK
+```
+
+**Now runner-proven:** the registry pin (executed, did not FATAL), the live registry read, the
+comparison against a real `CURRENT`, and the **publish-path call site** — it produced the correct
+verdict on real operands, which the dry job's fixtures could not establish.
+
+**Still fixture-proven, and this is the correction that matters:** the **E404 anchor** and its **URL
+corroboration**. Both live in the `npm view` FAILURE branch. The read succeeded, so that branch was
+never taken — a healthy registry never takes it. An initial reading of this release claimed the
+anchor "ran". It did not. It will not be exercised on a runner until a release coincides with a
+registry that 404s, which is precisely the situation it exists for and precisely the situation
+nobody can schedule.
+
+**Also observed:** gate 3 reported the `NPMRC_CHECKED=0` branch again — the credential scan
+inspected zero files in production, exactly as **T45** describes. Two live publishes now confirm it.
 
 ### File List
 

@@ -333,3 +333,49 @@ describe('package.json files array', () => {
     );
   });
 });
+
+// T50: the dev-environment guard on the Vortex config stamp.
+//
+// This branch exists because refreshInstallation(PACKAGE_ROOT) — which several tests above call
+// deliberately, to exercise dev-environment skips — used to rewrite the repo's own shipped
+// _bmad/bme/_vortex/config.yaml. Every other module config write in that file was already guarded;
+// Vortex was not. Without a test, the guard could be removed and only a dirty git status would
+// tell you, which is exactly how it went unnoticed across seven releases.
+describe('Vortex config stamp — dev-environment guard (T50)', () => {
+  let t50Dir;
+
+  beforeEach(async () => {
+    t50Dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-t50-'));
+    await createValidInstallation(t50Dir);
+    silenceConsole();
+  });
+
+  afterEach(async () => {
+    restoreConsole();
+    await fs.remove(t50Dir);
+  });
+
+  it('skips the Vortex config stamp when source === destination', async () => {
+    const changes = await refreshInstallation(PACKAGE_ROOT, { backupGuides: false, verbose: false });
+    assert.ok(
+      changes.some((c) => c.includes('Skipped Vortex config stamp (dev environment')),
+      'dev-environment refresh must report the Vortex config stamp as skipped'
+    );
+    assert.ok(
+      !changes.some((c) => c.includes('Updated config.yaml to v')),
+      'dev-environment refresh must NOT report stamping the Vortex config'
+    );
+  });
+
+  it('still stamps the Vortex config for a real installation', async () => {
+    const changes = await refreshInstallation(t50Dir, { backupGuides: false, verbose: false });
+    assert.ok(
+      changes.some((c) => c.includes('Updated config.yaml to v')),
+      'a real install must still stamp the Vortex config — the guard is dev-only'
+    );
+    assert.ok(
+      !changes.some((c) => c.includes('Skipped Vortex config stamp')),
+      'a real install must not take the skip branch'
+    );
+  });
+});

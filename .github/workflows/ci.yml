@@ -160,6 +160,19 @@ jobs:
       - name: Backlog referential integrity
         run: node scripts/audit/backlog-integrity.js
 
+      - name: Documentation audit
+        # T32: `docs:audit` has existed and passed for months while running in no workflow.
+        # It was FAILING when discovered (8 broken paths across all 7 shipped Vortex user
+        # guides, every one pointing at the pre-v4 flat agent layout); the paths were fixed
+        # by hand and nothing has watched them since. A check that exists but is not enforced
+        # is indistinguishable from no check.
+        #
+        # Placed in this job deliberately: it is the audit aggregator (install-scope,
+        # backlog integrity) and it is in `publish.needs`, so a broken link in a SHIPPED user
+        # guide blocks a release. That is the intended severity — these files go in the tarball.
+        run: npm run docs:audit
+
+
   security:
     runs-on: ubuntu-latest
     steps:

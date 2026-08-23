@@ -596,19 +596,45 @@ async function refreshInstallation(projectRoot, options = {}) {
   }
 
   // 3. Update config.yaml (merge, preserving user prefs)
-  const configPath = path.join(targetVortex, 'config.yaml');
-  await fs.ensureDir(path.dirname(configPath));
+  //
+  // T50: guarded by `!isSameRoot`, like every other module config write in this file
+  // (Gyre, Enhance, Artifacts, standalone submodules). Vortex was the ONLY unguarded one,
+  // so in a dev tree — where packageRoot === projectRoot — a refresh rewrote the repo's own
+  // shipped `_bmad/bme/_vortex/config.yaml`.
+  //
+  // That is how the test suite dirtied a tracked file on every run. FIVE call sites pass
+  // PACKAGE_ROOT deliberately, to exercise the dev-environment skip branches, and this write sat
+  // outside those branches:
+  //   tests/unit/refresh-installation-enhance.test.js:76, :232, :302
+  //   tests/unit/refresh-installation-artifacts.test.js:74, :178
+  // The stamped value was then committed release after release under bare "Update config.yaml"
+  // commits — at least 3.2.0, 3.2.1, 3.3.0, 4.0.0-rc.1, 4.0.0-rc.2, 4.0.0-rc.5 and 4.0.0 (the
+  // list is what `git log -L` surfaces for the version line; earlier releases may also qualify).
+  // That history made the field look like it tracked the package version by design rather than
+  // by accident.
+  //
+  // A REAL installation is unaffected (projectRoot !== packageRoot): the stamp still runs and
+  // convoke-doctor's Version-consistency check still passes on the user's tree. A dev tree
+  // reports that check as failing either way — _gyre, _enhance, _artifacts and _team-factory
+  // all sit at template 1.0.0 there, by construction.
+  if (!isSameRoot) {
+    const configPath = path.join(targetVortex, 'config.yaml');
+    await fs.ensureDir(path.dirname(configPath));
 
-  const updates = {
-    agents: AGENT_IDS,
-    workflows: WORKFLOW_NAMES
-  };
+    const updates = {
+      agents: AGENT_IDS,
+      workflows: WORKFLOW_NAMES
+    };
 
-  assertVersion(version, 'config-merger:vortex'); // ag-7-1: defense-in-depth before mergeConfig
-  const merged = await configMerger.mergeConfig(configPath, version, updates);
-  await configMerger.writeConfig(configPath, merged);
-  changes.push(`Updated config.yaml to v${version}`);
-  if (verbose) console.log(`    Updated config.yaml to v${version}`);
+    assertVersion(version, 'config-merger:vortex'); // ag-7-1: defense-in-depth before mergeConfig
+    const merged = await configMerger.mergeConfig(configPath, version, updates);
+    await configMerger.writeConfig(configPath, merged);
+    changes.push(`Updated config.yaml to v${version}`);
+    if (verbose) console.log(`    Updated config.yaml to v${version}`);
+  } else {
+    changes.push('Skipped Vortex config stamp (dev environment — source is the installation)');
+    if (verbose) console.log('    Skipped Vortex config stamp (dev environment)');
+  }
 
   // 4. Regenerate agent manifest — replace only bme rows, preserve other modules
   const manifestPath = path.join(projectRoot, '_bmad', '_config', 'agent-manifest.csv');
