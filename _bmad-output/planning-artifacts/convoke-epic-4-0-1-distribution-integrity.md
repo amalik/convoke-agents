@@ -317,7 +317,9 @@ FR5  Epic 1 — fetch registry `latest`, refuse a semver-lower publish to it
 FR6  RETIRED by ADR-001 — badges pipeline deleted, guards protect nothing
 FR7  RETIRED by ADR-001
 FR8  RETIRED by ADR-001
-FR9  Epic 1 — tag push is the only path to the registry
+FR9  Epic 1 — tag push is the only AUTOMATED path to the registry
+     (title amended 2026-08-23: interactive publishing by a 2FA maintainer survives;
+      see the scope banner at the head of ADR-003)
 FR19 Epic 1 — composed end-to-end rehearsal on v4.0.1-rc.0                        [LAST]
 FR11 Epic 2 — docs:audit runs in CI
 FR12 Epic 2 — resolve every DOCUMENTED reference inside the package  [ADR-2 gates wiring]
@@ -541,6 +543,8 @@ So that the release tag is not the first time these changes run together.
 
 ### Story 1.7: Make the CI path the only path to the registry
 
+*(Title retained for traceability — `sprint-status.yaml` and the story filename key on it. Read "only path" as "only **automated** path": see the scope banner at the head of ADR-003 and correction 2 below.)*
+
 *Covers FR9 / T35. Mechanism set by [ADR-003](adr/4-0-1/adr-003-publish-path-enforcement.md), accepted 2026-08-20: option (a). **Last story in the epic** — it must not run before Story 1.6 is green.*
 
 As a Convoke operator,
@@ -569,6 +573,16 @@ So that testing against a published version tells me something true about the so
 
 **Given** NFR2
 **Then** the story records its rehearsal strategy — noting that this change is not exercised by a CI run, so its verification is a registry-side check plus a deliberate negative test if one can be performed safely
+
+> **AMENDED 2026-08-23 on completion of `dist-1-7`.** Four corrections, all disclosed in the story's Change Log:
+>
+> 1. **The setting was found ALREADY ENABLED.** These ACs assume the story turns it on; it did not have to. AC1 is satisfied by pre-existing configuration, and because npm exposes no audit surface for the setting, the date it was applied is **unrecoverable**. The deliverable was therefore documentation and records, as the first AC always said.
+> 2. **"Makes the CI path the only path" overstates it, and ADR-003 was amended to match.** npm's own wording for the chosen option is that a maintainer *"must publish interactively"* — it blocks **granular access tokens**, not people. The choice is still right (it closes the vector all seven hand-publishes used), but **T35 could not be closed as fully fixed**; it closed as *fixed-in-part* with the residual folded into T47, since no npm setting blocks a 2FA human and detection therefore replaces prevention.
+> 3. **The negative test was NOT performed, exercising this AC's own conditional.** A laptop publish probe was designed, reviewed and deleted: `publish.js:165-172` throws the duplicate-version error locally before any write, so it could never reach the policy; and its safety argument expired on the next planned action (bumping `package.json` to `4.0.1`), at which point it would have become a live hand-publish of a real version. Verification is the UI read-back plus the positive control — the next CI publish must still attest.
+>
+> 4. **The break-glass AC understated the procedure, and it is better than this epic assumed.** These ACs describe break-glass as *"who can disable it"*. There are two hatches and the epic's is the worse one. **Primary: publish interactively with 2FA** — permitted *while the restriction stays enabled*, so **no window opens and there is nothing to undo**. **Secondary: disable the setting** — the only one that opens a window, and therefore the fallback, not the default. **Both are gated on the same 2FA challenge**, so the secondary does not rescue the case its name implies; with one account and no org there is no second person either. Shipped in `docs/npm-publishing-access-playbook.md` §2. The primary hatch is **UNTESTED**: the account's 2FA mode is `auth-only`, and npm does not document whether a package-level policy overrides it, so whether the interactive route actually works has not been observed. Recorded as an open risk in the story's AC3.
+>
+> **Also closed here:** ADR-003's corollary 2, by direct observation — trusted publisher `amalik/convoke-agents`, workflow `ci.yml`, permitted action `npm publish`. The **workflow-filename binding** is now recorded in the operator playbook: a publish attempted from any other workflow file is declined.
 
 ---
 

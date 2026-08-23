@@ -1,6 +1,10 @@
+---
+baseline_commit: d4a8ba20e0eb02f23453ae305f3aa6f1bfae1bb4
+---
+
 # Story 1.7: Make the CI path the only path to the registry
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -184,26 +188,26 @@ reading the setting back.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Re-verify the precondition before touching anything (AC: 2)**
-  - [ ] Run both `npm view` commands from AC2. Record raw output in the Debug Log.
-  - [ ] **HALT if `4.0.1-rc.0` attestations are empty.** That would mean the CI path is not proven
+- [x] **Task 1 — Re-verify the precondition before touching anything (AC: 2)**
+  - [x] Run both `npm view` commands from AC2. Record raw output in the Debug Log.
+  - [x] **HALT if `4.0.1-rc.0` attestations are empty.** That would mean the CI path is not proven
         and this story must not proceed.
-  - [ ] Confirm `git status` is clean and `main` is in sync with origin.
+  - [x] Confirm `git status` is clean and `main` is in sync with origin.
 
-- [ ] **Task 2 — Confirm the 2FA mode still reads `auth-only` (AC: 3)**
-  - [ ] Run `npm profile get --json` and read the `tfa` field. Record it verbatim.
-  - [ ] **Expected:** `{'pending': None, 'mode': 'auth-only'}` (measured 2026-08-23).
-  - [ ] If it reads `auth-and-writes`, the AC3 open question is moot — record that and move on.
-  - [ ] **Do NOT change the account 2FA mode as part of this task.** It is account-wide and affects
+- [x] **Task 2 — Confirm the 2FA mode still reads `auth-only` (AC: 3)**
+  - [x] Run `npm profile get --json` and read the `tfa` field. Record it verbatim.
+  - [x] **Expected:** `{'pending': None, 'mode': 'auth-only'}` (measured 2026-08-23).
+  - [x] If it reads `auth-and-writes`, the AC3 open question is moot — record that and move on.
+  - [x] **Do NOT change the account 2FA mode as part of this task.** It is account-wide and affects
         every package the operator owns.
-  - [ ] **Carry AC3 forward as an open risk — nothing in this story can close it.** Record in the
+  - [x] **Carry AC3 forward as an open risk — nothing in this story can close it.** Record in the
         Completion Notes: the mode measured, that npm's docs do not state whether a package-level
         policy overrides account-level `auth-only`, and that AC4's primary break-glass therefore
         ships **untested**. Task 3 must reproduce that caveat in the playbook.
 
-- [ ] **Task 3 — Write the break-glass playbook (AC: 4)**
-  - [ ] Create `docs/npm-publishing-access-playbook.md`.
-  - [ ] Content, in this order: what the setting is and where it lives (npmjs.com →
+- [x] **Task 3 — Write the break-glass playbook (AC: 4)**
+  - [x] Create `docs/npm-publishing-access-playbook.md`.
+  - [x] Content, in this order: what the setting is and where it lives (npmjs.com →
         `convoke-agents` → Settings → Publishing access); who can change it (package owners /
         org admins); **primary break-glass** (interactive publish with 2FA, no setting change);
         **secondary break-glass** (disable the setting — with the explicit note that this opens a
@@ -213,14 +217,14 @@ reading the setting back.
         hand-publish is logged as a T35 instance with date, version and reason); and how to verify
         afterwards (`npm view convoke-agents@<v> dist.attestations` — a hand-published version
         will be empty, and that is the durable marker).
-  - [ ] Do **NOT** add the file to `USER_FACING_DOCS` in `scripts/docs-audit.js` — it is a
+  - [x] Do **NOT** add the file to `USER_FACING_DOCS` in `scripts/docs-audit.js` — it is a
         maintainer runbook, not shipped user documentation. `docs/` contributes **0 files** to the
         tarball (verified), so it is repo-only by construction.
-  - [ ] The playbook MUST also enumerate the **settings-modification surface** (Dev Notes §2b):
+  - [x] The playbook MUST also enumerate the **settings-modification surface** (Dev Notes §2b):
         `npm dist-tag`, `npm deprecate`, `npm owner` and `npm access` are all gated by this setting,
         and the CI trusted publisher **cannot** perform any of them. Anyone reaching for the T44
         repair or a rollback needs to know that before they need it.
-  - [ ] Verify links with the **scoped** invocation — the bare run does not walk `docs/` at all and
+  - [x] Verify links with the **scoped** invocation — the bare run does not walk `docs/` at all and
         would PASS after reading zero lines of the new file:
 
             node scripts/audit/reference-integrity.js --paths docs/npm-publishing-access-playbook.md
@@ -237,19 +241,21 @@ reading the setting back.
         **HALT if either fails.** Zero references means the gate read nothing. Task 4 is irreversible
         in practice and must not proceed on an unverified Task 3.
 
-- [ ] **Task 4 — OPERATOR STEP: enable the setting (AC: 1)**
-  - [ ] **Only after Tasks 1–3 are complete.**
-  - [ ] Present exact navigation: npmjs.com → `convoke-agents` → **Settings** →
+- [x] **Task 4 — OPERATOR STEP: enable the setting (AC: 1)**
+  - [x] **Only after Tasks 1–3 are complete.**
+  - [x] Present exact navigation: npmjs.com → `convoke-agents` → **Settings** →
         **Publishing access** → select **"Require two-factor authentication and disallow tokens"**
         → Save.
-  - [ ] **Record the BEFORE state first** — which of the two options is currently selected. There is
+  - [x] *(Executed as an inspection, not a change — the setting was already correct, so nothing was
+        clicked. The subtasks below are ticked as **verified**, not as **performed**.)*
+  - [x] **Record the BEFORE state first** — which of the two options is currently selected. There is
         no machine read-back (AC5), so this is the only rollback target that will ever exist.
-  - [ ] HALT and wait for the operator to confirm it is saved.
-  - [ ] **Record the AFTER state by reading the UI back**, not by assuming the click worked. This
+  - [x] HALT and wait for the operator to confirm it is saved.
+  - [x] **Record the AFTER state by reading the UI back**, not by assuming the click worked. This
         read-back is AC1's acceptance evidence.
 
-- [ ] **Task 5 — Record the rehearsal strategy; do NOT run a laptop publish probe (AC: 7)**
-  - [ ] **A negative test was designed, reviewed, and REMOVED. Do not reinstate it.** Three
+- [x] **Task 5 — Record the rehearsal strategy; do NOT run a laptop publish probe (AC: 7)**
+  - [x] **A negative test was designed, reviewed, and REMOVED. Do not reinstate it.** Three
         independent reasons, all measured against npm 11.11.0 — record them in the Debug Log so the
         next person does not rebuild it:
         1. **It cannot reach the policy.** `lib/commands/publish.js:165-172` reads the registry and
@@ -267,49 +273,52 @@ reading the setting back.
         3. **Its result would not discriminate.** A 403 is returned identically by a live policy, a
            token lacking publish scope, and a duplicate version. `npm whoami` proves only that the
            credential authenticates against a *read* endpoint.
-  - [ ] Record the rehearsal strategy in the Completion Notes: this change is registry-side, **no CI
+  - [x] Record the rehearsal strategy in the Completion Notes: this change is registry-side, **no CI
         run exercises it**, and no workflow input changed. Verification is AC1's UI read-back plus
         the positive control below.
-  - [ ] **Positive control (the falsifiable part).** State that the next CI publish must still
+  - [x] **Positive control (the falsifiable part).** State that the next CI publish must still
         succeed with a non-null `dist.attestations`. That is the assertion that the setting did not
         break the OIDC path. It is **not** satisfied within this story — name the release that will
         satisfy it.
-  - [ ] State plainly that the **negative direction is deliberately not exercised**, citing the
+  - [x] State plainly that the **negative direction is deliberately not exercised**, citing the
         epic's own conditional (*"if one can be performed safely"*). An undisclosed gap is a defect;
         a disclosed one is a decision.
 
-- [ ] **Task 6 — OPERATOR DECISION: T35's disposition (AC: 5)**
-  - [ ] Present the two defensible options and recommend one:
+- [x] **Task 6 — OPERATOR DECISION: T35's disposition (AC: 5)**
+  - [x] Present the two defensible options and recommend one:
         **(i)** Close T35 as *fixed-in-part*, with a successor row for the residual interactive
         vector; **(ii)** keep T35 open at a reduced score, annotated with what this story closed.
-  - [ ] Record options (b) and (c) as **declined**, with ADR-003's reasoning, either way.
-  - [ ] **Annotate T44 with the consequence this story creates.** T44's preferred remedy is option
+  - [x] Record options (b) and (c) as **declined**, with ADR-003's reasoning, either way.
+  - [x] **Annotate T44 with the consequence this story creates.** T44's preferred remedy is option
         (b), *"document the `npm dist-tag set` repair as the sanctioned path"*. After this story that
         repair cannot be run by a token and can never be run by CI — it requires an interactive
         session with a live OTP. T44 was written without that dependency; add it to the row.
-  - [ ] Apply the operator's choice to the backlog under `backlog-write-discipline`: run the
+  - [x] Apply the operator's choice to the backlog under `backlog-write-discipline`: run the
         lane-order check **before and after**, restore order in the same edit, and add a Change Log
         receipt. Do not leave a row where it lands.
 
-- [ ] **Task 7 — Amend ADR-003 (AC: 6, 8)**
-  - [ ] Add an entry to the existing **## Amendments** section (the section already exists — append,
+- [x] **Task 7 — Amend ADR-003 (AC: 6, 8)**
+  - [x] Add an entry to the existing **## Amendments** section (the section already exists — append,
         do not create a second one).
-  - [ ] Correct the "impossible" sentence in place with a dated marker. **Preserve the original
+  - [x] Correct the "impossible" sentence in place with a dated marker. **Preserve the original
         wording** — strike it or quote it, do not delete it. The ADR's decision is unchanged.
-  - [ ] Record AC8's resolution of corollary 2 in the same amendment — this is AC8's only task, and
+  - [x] Record AC8's resolution of corollary 2 in the same amendment — this is AC8's only task, and
         it closes by citing `4.0.1-rc.0`'s successful publish rather than by re-reading a setting.
-  - [ ] **Sweep the whole ADR for the same overclaim, do not patch one sentence.** Located
-        2026-08-23 — it appears in exactly **two** sections, not three: **Spike result** (`:30-32`,
+  - [x] **Sweep the whole ADR for the same overclaim, do not patch one sentence.** Located
+        2026-08-23 — it appears in **two** sections: *(**RETRACTED at code review** — the true
+        count is FOUR. This subtask's enumeration was wrong twice over and is preserved only to show
+        how: it greps remembered wording instead of the claim. Re-run it by reading the whole
+        document.)* **Spike result** (`:30-32`,
         *"the only way a version reaches the registry… stops being a discouraged practice and starts
         being impossible"*) and **Options** (`:87`, option (a) *"Makes the CI path the only path"*).
         Re-locate them by grep rather than by line number, which will have drifted; an amendment
         that fixes one instance leaves the document self-contradictory.
 
-- [ ] **Task 8 — Close out (AC: all)**
-  - [ ] Update the epic's Story 1.7 ACs to match the amendments in AC4/AC5/AC6, with dated markers.
-  - [ ] Write the **## Commit Plan** section per `commit-preparation`: Files, Summary
+- [x] **Task 8 — Close out (AC: all)**
+  - [x] Update the epic's Story 1.7 ACs to match the amendments in AC4/AC5/AC6, with dated markers.
+  - [x] Write the **## Commit Plan** section per `commit-preparation`: Files, Summary
         (`<type>(<scope>): <intent>`), Description, staged-set proof, and a falsifiable clause.
-  - [ ] Verify the committed set equals the reviewed set.
+  - [x] Verify the committed set equals the reviewed set.
 
 ## Dev Notes
 
@@ -353,8 +362,11 @@ closes the mechanism every observed incident actually used. What it leaves open 
 taken yet, which must now pass a live 2FA challenge and leaves an empty `dist.attestations` behind
 as a permanent marker.
 
-**Expect a visible side effect:** after Task 4, the operator's existing laptop token stops being
-able to publish `convoke-agents`. That is the intended outcome, not a regression. It does not affect
+**Expect a visible side effect:** with the setting in force, the operator's laptop token cannot
+publish `convoke-agents`. That is the intended outcome, not a regression. *(Written before
+implementation as a prediction about Task 4. It did not come true as phrased — the setting was
+already enabled, so Task 4 changed nothing and there was no observable transition. The steady state
+is as described; the moment never happened.)* It does not affect
 `npm install` or `npm view`, and it does not affect any other package — **but it does affect every
 other WRITE on this one.** See §2b, which is the part that is easy to miss.
 
@@ -474,11 +486,98 @@ exactly what Task 6 does. The story proceeds because the *mechanism* is still co
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`
+
 ### Debug Log References
+
+**Task 1 — precondition re-verified (AC2), 2026-08-23.** Not taken from the story file; re-run.
+```
+npm view convoke-agents@4.0.1-rc.0 dist.attestations
+  {"url":"https://registry.npmjs.org/-/npm/v1/attestations/convoke-agents@4.0.1-rc.0",
+   "provenance":{"predicateType":"https://slsa.dev/provenance/v1"}}
+npm view convoke-agents@4.0.0 dist.attestations
+  <empty>
+```
+The CI path is proven and the contrast holds. `git status` clean, 0 unpushed. **No HALT.**
+
+**Task 2 — 2FA mode (AC3), 2026-08-23.**
+```
+npm profile get --json  ->  tfa: {'pending': None, 'mode': 'auth-only'}
+```
+Still `auth-only`, so **AC3's open question applies**: npm does not document whether a package-level
+policy overrides account-level `auth-only`. AC4's primary break-glass therefore ships **UNTESTED**,
+and the playbook says so in §2. Account 2FA mode deliberately NOT changed — account-wide blast radius.
+
+**Task 3 — playbook written and gate run (AC4), 2026-08-23.**
+```
+node scripts/audit/reference-integrity.js --paths docs/npm-publishing-access-playbook.md
+  [reference-integrity] PASS — 6 references checked, 0 broken (scoped to docs/...)
+```
+Both required conditions met: no `target does not exist` warning, and **N=6 > 0**. The bare run
+would not have walked `docs/` at all, and the scoped run on a missing file returns
+`PASS — 0 references` exit 0 — which is why the count, not the phrase, is the criterion.
+Not added to `USER_FACING_DOCS` (0 hits). `docs/` still packs 0 of 454 files.
+
+**Tasks 4-8 — where their output lives, 2026-08-23.** These tasks produced records rather than
+commands, so their evidence is in the Completion Notes and in the amended artifacts themselves
+rather than here. Naming that explicitly because "no Debug Log entry" is otherwise indistinguishable
+from "task not performed":
+- **Task 4** (setting) → Completion Notes, AC1 paragraph. Operator UI read; no command exists.
+- **Task 5** (rehearsal strategy) → Completion Notes, AC7 paragraph. **The deleted probe was
+  deliberately not run** — the three measured reasons are in the task body and must not be
+  relitigated.
+- **Task 6** (T35 disposition) → the backlog diff: T35 closed + relocated, T47 absorbed, T44
+  amended, Change Log receipt. Lane order 7 → 6 measured before and after.
+- **Task 7** (ADR amendment) → the ADR diff. **Its first sweep was wrong** — it asserted "exactly
+  two sites, not three" and missed a paraphrase; corrected to three, then to four, and finally
+  **abandoned**. A fifth audit read all 209 ADR lines as a ledger and found **eleven** more sites
+  including the document title. Sentence-by-sentence patching was replaced by a **document-wide
+  scope banner**; no enumeration of sites is claimed anywhere.
+- **Task 8** (close-out) → the epic diff and the Commit Plan.
 
 ### Completion Notes List
 
+**AC1 — SATISFIED, but by pre-existing configuration, not by a change this story made.**
+Operator read the UI 2026-08-23: Publishing access was **already** set to the recommended option.
+Before state == after state; nothing was clicked. **This is a finding, not a formality** — the epic
+and ADR-003 both assume the story enables the setting, and the deliverable was therefore always
+documentation plus records. The control has been in place for some unknown period; it cannot be
+dated, because npm offers no machine read-back and no audit surface for it (AC5).
+
+**Reconciling that with T35.** Seven hand-publishes are on record, most recently `4.0.0` at 13:13 on
+2026-08-17 — eight minutes after the tag job failed. Trusted publishing was configured the same day
+(`e18a0cab`). The setting was therefore most plausibly applied *during or after* that configuration,
+i.e. after the last hand-publish, which is consistent with every observation available. **It cannot
+be proven**, and the story should not claim it: the honest statement is that the control is on now
+and its start date is unrecoverable.
+
+**Wording discrepancy, recorded and propagated.** npm's UI reads *"Require two-factor authentication
+and disallow **bypass 2fa** tokens (recommended)"*; npm's own documentation source still reads
+*"…and disallow tokens"*. Same option — the list has exactly two entries and only one is marked
+recommended. The playbook now tells operators to match on `(recommended)` rather than on a sentence
+npm has already changed once.
+
+**AC8 — upgraded from inference to direct observation.** The story closed corollary 2 by reasoning
+that `4.0.1-rc.0` published, therefore `npm publish` must be an allowed action. The operator read the
+configuration directly: trusted publisher `amalik/convoke-agents`, workflow **`ci.yml`**, permitted
+action **`npm publish`**. That also confirms the workflow-filename binding that `dist-1-6`'s review
+identified — a publish from any other workflow file would be declined.
+
+**AC7 / NFR2 — rehearsal strategy.** This change is registry-side; **no CI run exercises it** and no
+workflow input changed. Verification is (1) AC1's UI read-back, done, and (2) the positive control:
+the next CI publish must still succeed with a non-null `dist.attestations`. That will be the
+`v4.0.1` stable release. **The negative direction is deliberately not exercised**, per the epic's own
+conditional *"if one can be performed safely"* — the reasons are in Task 5 and must not be relitigated
+by rebuilding the probe.
+
 ### File List
+
+- `docs/npm-publishing-access-playbook.md` — NEW (Task 3)
+- `_bmad-output/implementation-artifacts/dist-1-7-make-the-ci-path-the-only-path-to-the-registry.md` — frontmatter, status, tasks, Dev Agent Record
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `dist-1-7` → `review`
+- `_bmad-output/planning-artifacts/adr/4-0-1/adr-003-publish-path-enforcement.md` — Task 7: document-wide scope banner + Amendments row; four sentence-strikes retained, labelled non-exhaustive
+- `_bmad-output/planning-artifacts/convoke-epic-4-0-1-distribution-integrity.md` — Task 8, Story 1.7 AC amendment block
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — Task 6: T35 closed + relocated, T47 absorbed residual, T44 amended, T41/T39 relocated, Change Log receipt
 
 ## Change Log
 
@@ -487,3 +586,72 @@ exactly what Task 6 does. The story proceeds because the *mechanism* is still co
 | 2026-08-23 | **Round 2 — 4 NEW HIGH findings, every one introduced by the Round-1 rebuild.** Applying findings creates unreviewed text, and this is what it produced. **The replacement link gate was the same T45 gate it replaced:** `--paths` echoes `(scoped to ...)` from the presence of the flag, not from reading anything, and `:303` turns a missing target into a *skip* — so run before the playbook exists it printed `PASS — 0 references checked` and exited 0, with the phrase the story required as proof. Verified by running it. The pass condition is now a **non-zero reference count plus the absence of the skip warning**, with a HALT. **Dev Notes §6 still credited the deleted probe** with catching exactly that defect — the highest-consequence leftover in the file, because a dev agent reading Notes before Tasks could have reconstructed the probe that Task 5 shows would publish an unattested `4.0.1`. **Dev Notes §4 still justified the version pin by that probe's dependency**, inverting the rebuilt Task 5's own reasoning. **And the rebuilt Task 5 re-used `EPUBLISHCONFLICT`** as its mechanism — the very code the same rebuild's Change Log proves has no thrower in npm; the real blocker is `publish.js:170-172`, cited correctly two lines earlier. Also fenced the banner's `npm access set mfa=` line with an explicit DO-NOT-RUN (it was the only fully formed registry-write command left in the file, sitting in the first screen, argued on *verifiability* rather than prohibition), gave Task 3 a HALT since it gates the irreversible Task 4, and propagated AC3's untested-break-glass caveat and AC4's shared-2FA-dependency into the tasks that were supposed to carry them. Six of R1's seven claimed fixes verified genuinely applied; the seventh was H1 |
 | 2026-08-23 | **Story review before implementation — 2 layers. Verdict: NOT READY; rebuilt.** **The negative test was deleted, not fixed.** It failed three ways at once, all measured against npm 11.11.0: `publish.js:165-172` throws the duplicate-version error **locally** before any write, so the probe could never reach the publishing-access policy it was written to test — a pass reported after testing nothing, the exact T45 shape Dev Notes §6 claims to design against; its `EPUBLISHCONFLICT` discriminator **has no thrower in npm at all**, existing only in a formatter; and its safety argument expired on the very next planned action — bumping `package.json` to `4.0.1`, which is unpublished, would have turned an inert probe into **a live laptop publish of a real version**, creating an unattested `4.0.1` and permanently blocking CI from ever releasing `v4.0.1`. Both review layers found that independently; it is the same class that got `dist-1-6`'s draft rejected. Removal is *aligned with* the epic, which says *"a deliberate negative test **if one can be performed safely**"* — a conditional the first draft silently dropped. **A whole surface was undisclosed:** `npm dist-tag`, `deprecate`, `owner` and `access` are all OTP-gated by this setting and a trusted publisher may only `npm publish`, so **T44's preferred remedy and `dist-1-6`'s AC9 rollback both now require an interactive session** — recorded in new Dev Notes §2b. **AC3 was unsatisfiable** (the task nominated to resolve it observed a disjoint thing) and is now a recorded open risk with the primary break-glass shipping UNTESTED; **AC4's two hatches share one 2FA dependency**, so the fallback does not cover the case it names; **AC5 cannot close at story close** and says so, since the setting has no machine read-back. Task 3's link check was itself a T45 gate — the bare `reference-integrity.js` does not walk `docs/` and would PASS having read zero lines; now scoped with `--paths` and required to echo the filename. **One reviewer finding was rejected on evidence:** H3 claimed AC6's quote was not verbatim and inverted a conditional; npm's raw doc source shows option 2 does say *"they must publish interactively"* — the reviewer had attributed option 1's conditional to option 2. AC6's thesis stands |
 | 2026-08-23 | Story created by `bmad-create-story`. **Three amendments to the epic's ACs, all disclosed rather than silent.** The epic's central mechanism is sound but its claim about that mechanism is not: ADR-003 says option (a) makes a laptop publish *impossible*, while npm's own documentation — checked verbatim on two current pages — says it makes it *interactive*, blocking granular access tokens only. That correction cascades: the break-glass procedure is **better** than the epic assumed (interactive 2FA publish needs no setting change, so no window opens), and T35's closure is **weaker** (the interactive vector survives), so its disposition became an explicit operator decision rather than an assertion. Added **AC3** — establish 2FA state *before* flipping the setting, since the corrected reading makes the human path load-bearing for break-glass. Added **AC6** (amend the ADR) and **AC8** (corollary 2 is resolved by observation: `4.0.1-rc.0` published, therefore `npm publish` is an allowed action). Precondition re-verified live: `4.0.0` attestations empty, `4.0.1-rc.0` non-null. Staleness pre-flight on T35 run — checks 1–3 GREEN, **check 4 RED** on the semantic anchor, routed to Task 6. Negative test specified against an already-published version so it cannot mutate the registry, with the failure mode named explicitly (`EPUBLISHCONFLICT` means the setting is NOT live) |
+
+## Commit Plan
+
+**Files (6)**
+
+```
+docs/npm-publishing-access-playbook.md                                           (NEW)
+_bmad-output/implementation-artifacts/dist-1-7-...-to-the-registry.md
+_bmad-output/implementation-artifacts/sprint-status.yaml
+_bmad-output/planning-artifacts/adr/4-0-1/adr-003-publish-path-enforcement.md
+_bmad-output/planning-artifacts/convoke-epic-4-0-1-distribution-integrity.md
+_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md
+```
+
+**Summary:** `feat(dist-1-7): make the CI path the enforced path to the registry`
+
+**Description:**
+
+> Closes FR9, the last story of Epic 1. Operator-action story: the deliverable is an npm
+> per-package setting plus its documentation. No code change.
+>
+> **The setting was found ALREADY ENABLED.** The epic and ADR-003 both assume this story turns it
+> on. AC1 is satisfied by pre-existing configuration, and npm exposes no audit surface for the
+> setting, so the date it was applied is unrecoverable — recorded as unknown rather than inferred.
+>
+> ADR-003's false premise is corrected by a **document-wide scope banner**, not by enumerating
+> sites. Four sweeps each claimed completeness and each missed instances — a fifth audit found
+> eleven more, including the title — so enumeration was abandoned as the wrong instrument. Four
+> sentences retain individual strikes and are explicitly labelled non-exhaustive. npm's wording for the option is that a maintainer *"must publish
+> interactively"* — it blocks granular access tokens, not people. The decision stands; the claim
+> did not. Corollary 2 closed by direct observation: trusted publisher `amalik/convoke-agents`,
+> workflow `ci.yml`, action `npm publish` — the workflow-filename binding is now in the playbook.
+>
+> T35 closed as fixed-in-part; residual folded into T47 rather than opened as a new row, because
+> no npm setting blocks a 2FA human and detection replaces prevention — a hand-published version
+> carries an empty `dist.attestations` permanently, which is how 4.0.0 is known to have bypassed
+> CI. Options (b) and (c) declined per ADR-003. T44 amended: its preferred `npm dist-tag` repair
+> now requires an interactive session, since this setting gates settings modification and a trusted
+> publisher may only `npm publish`.
+>
+> Gates: lane order 7 → 6 (one cleared, none introduced); `backlog-integrity.js` PASS 326 rows;
+> `reference-integrity --paths` 6 references on the new playbook; `npm run lint` exit 0;
+> `docs/` still packs 0 of 454 files.
+
+**Falsifiable clause:** ADR-003 carries a scope banner under its title containing the string
+`document-wide scope correction`, the banner states the interactive route is `documented, not
+observed`, and it records that the token-vector inference `cannot resolve which`. The playbook's
+break-glass carries three numbered preconditions, and check (2) is scoped to `require('./package.json').files`
+rather than the whole repo — run bare it reports ~161 ignored paths here and could never pass.
+
+*Two earlier versions of this clause were themselves defective and are recorded because the pattern
+matters more than the fix: the first counted unstruck occurrences of the word "impossible" — testing
+the word, not the claim, which is why four sweeps missed paraphrases; the second enumerated "all
+four sites" while the same file said no enumeration was claimed. This version asserts only the
+presence of specific strings and one scoping property, all checkable by grep.* T35's status cell starts `✅ Closed 2026-08-23`; T47 contains `ABSORBED
+2026-08-23`; T44 contains `AMENDED 2026-08-23`; the playbook's scoped link check reports
+**6 references, 0 broken** with no skip warning.
+
+*(An earlier wording claimed "**0** registry-write commands in the story file". That was false: two
+are present and deliberate — `npm access set mfa=…` at the banner and `npm profile enable-2fa
+auth-and-writes` in AC3, both quoted to explain a decision, the first explicitly fenced DO-NOT-RUN.
+The original check grepped only indented lines, so it measured a pattern chosen to match the claim
+rather than testing the claim. The honest, checkable assertion is: **every registry-write command in
+this file appears in prose as an explanation, none in an executable task step** — verified by
+inspecting all task blocks.)*
+
+**Rehearsal note (NFR2):** no CI run exercises this change — it is registry-side and no workflow
+input changed. CI will run on push and must stay green, but that is a regression check, not proof.
+The positive control is the next release: `v4.0.1` must publish with non-null `dist.attestations`.
