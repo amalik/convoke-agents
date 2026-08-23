@@ -84,6 +84,7 @@ const STORY_PREFIX_MAP = Object.freeze({
   oc: 'convoke',     // Operator Covenant audit + tightening series
   spec: 'convoke',   // standalone spec-* artifacts (covenant amendments, taxonomy, etc.)
   ci: 'convoke',     // ci-hygiene-epic-1 mini-epic — pipefail + lint gate fidelity
+  dist: 'convoke',   // dist-epic-1/1b — 4.0.1 distribution integrity (publish-path hardening)
 });
 
 /**

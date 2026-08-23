@@ -509,10 +509,26 @@ describe('Story 6.3 — portfolio attribution improvements', () => {
     assert.ok(result.summary.attributableButUngoverned > 0);
   });
 
-  it('unattributed count is well under 20 on the current repo (AC2)', async () => {
+  it('unattributed stays a small minority of the corpus (AC2)', async () => {
     const result = await generatePortfolio(projectRoot);
-    // Story 6.3 AC2: under 20 unattributed
-    assert.ok(result.summary.unattributed < 20);
+    const { unattributed, total } = result.summary;
+
+    // Story 6.3 AC2 was recorded as a RATIO, not a count. Its own completion note reads
+    // "baseline 111 unattributed -> 8 pure unattributed (down from 71% to 5%)"; "under 20"
+    // was the absolute proxy for ~5% of a ~160-file corpus at the time.
+    //
+    // The corpus has since roughly doubled (355 files, 2026-08-23) while the ratio held at
+    // ~5.6% -- so the magic number rotted while the property it stood for did not. Asserting
+    // the raw count made this fail for corpus GROWTH rather than attribution REGRESSION,
+    // which is the opposite of what AC2 cares about. Threshold is 10%: double what Story 6.3
+    // achieved, so a genuine regression still trips it (36+ unattributed at today's total).
+    // See `derive-counts-from-source` in project-context.md.
+    assert.ok(total > 0, 'portfolio must contain artifacts for the ratio to mean anything');
+    const ratio = unattributed / total;
+    assert.ok(
+      ratio < 0.10,
+      `unattributed ratio ${(ratio * 100).toFixed(1)}% (${unattributed}/${total}) exceeds 10%`
+    );
   });
 });
 
