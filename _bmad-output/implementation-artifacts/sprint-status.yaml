@@ -915,6 +915,9 @@ development_status:
   dist-2-7-escape-every-interpolated-regex-in-the-exporter: backlog
   dist-2-8-repair-the-broken-dependencies-in-the-shipped-manifest: backlog
   dist-epic-2-retrospective: optional
+  dist-epic-1b: in-progress
+  dist-1b-1-close-the-downgrade-guard-fail-open-and-prove-it-on-a-runner: ready-for-dev
+  dist-epic-1b-retrospective: optional
 
 action_items:
   - epic: v63-epic-5b
