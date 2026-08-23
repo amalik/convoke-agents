@@ -369,6 +369,10 @@ jobs:
   # read) -- the anchor is proven by fixture only, in the story's Task 2/3 record.
   downgrade-guard-dry:
     name: Downgrade guard (dry)
+    # NOT on tag pushes. The workflow's `on:` includes `tags: ['v*']`, and without this the dry
+    # job would run on a release tag -- where a red dry job would redden a run whose publish
+    # SUCCEEDED, feeding T47's "run status is not evidence of registry state".
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -382,12 +386,23 @@ jobs:
       - name: Exercise the comparison over a case matrix
         run: |
           fail=0
+          # $4 (optional): substring the failure MUST contain. Without it a case asserts only
+          # OK-vs-FATAL, and a FATAL reached via the wrong branch counts as a pass -- measured:
+          # with the shape checks reverted to their loose form, 4.01.0-vs-4.1.0 and
+          # 4.0.1-vs-4.1.00 still FATAL, via the DOWNGRADE branch, and sail through the very
+          # regression they exist to catch.
           run_case() {
-            want="$3"
+            want="$3"; because="${4:-}"
             if out=$(GUARD_CAND="$1" GUARD_CURRENT="$2" GUARD_PKG=convoke-agents \
                      ./scripts/ci/downgrade-guard.sh 2>&1); then got=OK; else got=FATAL; fi
             printf 'Downgrade guard (dry): %-9s vs %-9s -- %-5s (want %-5s)\n' "$1" "$2" "$got" "$want"
             if [ "$got" != "$want" ]; then echo "  MISMATCH: $out"; fail=1; fi
+            if [ -n "$because" ]; then
+              case "$out" in
+                *"$because"*) ;;
+                *) echo "  WRONG REASON: expected '$because', got: $out"; fail=1 ;;
+              esac
+            fi
           }
           run_case 4.0.0  4.0.0  OK
           run_case 4.0.1  4.0.0  OK
@@ -396,13 +411,28 @@ jobs:
           run_case 4.9.0  4.10.0 FATAL
           run_case 10.0.0 9.9.9  OK
           run_case 4.0.2  4.0.10 FATAL
+          # AC5's required zero-padded cases. These are the ONLY inputs on which BSD and GNU
+          # version-sort could disagree, so they are the only cases with information content
+          # about the runner. They must FATAL on the SHAPE CHECK, never reach `sort -V`.
+          run_case 4.01.0 4.1.0  FATAL "is not a plain X.Y.Z release"
+          run_case 4.0.1  04.0.0 FATAL "is not a plain X.Y.Z release"
+          run_case 4.0.1  4.1.00 FATAL "is not a plain X.Y.Z release"
           echo "--- contract checks ---"
-          if GUARD_CAND=4.0.1 GUARD_CURRENT="" ./scripts/ci/downgrade-guard.sh >/dev/null 2>&1; then
-            echo "MISMATCH: empty CURRENT should abort"; fail=1
-          else echo "empty CURRENT -- aborts, OK"; fi
-          if GUARD_CAND=4.0.1-rc.0 GUARD_CURRENT=4.0.0 ./scripts/ci/downgrade-guard.sh >/dev/null 2>&1; then
-            echo "MISMATCH: non-X.Y.Z CAND should abort"; fail=1
-          else echo "non-X.Y.Z CAND -- aborts, OK"; fi
+          # Assert the script is actually there. `if ! cmd` is true when the file is MISSING,
+          # so a bare non-zero-exit assertion below would pass on a deleted script.
+          test -x ./scripts/ci/downgrade-guard.sh || { echo "MISSING: downgrade-guard.sh"; fail=1; }
+          # Match on the MESSAGE, not merely on a non-zero exit -- otherwise these pass for any
+          # failure reason at all, including the script not existing.
+          out=$(GUARD_CAND=4.0.1 GUARD_CURRENT="" ./scripts/ci/downgrade-guard.sh 2>&1) || true
+          case "$out" in
+            *"returned an EMPTY 'latest'"*) echo "empty CURRENT -- aborts for the right reason, OK" ;;
+            *) echo "MISMATCH: empty CURRENT gave: $out"; fail=1 ;;
+          esac
+          out=$(GUARD_CAND=4.0.1-rc.0 GUARD_CURRENT=4.0.0 ./scripts/ci/downgrade-guard.sh 2>&1) || true
+          case "$out" in
+            *"is not a plain X.Y.Z release"*) echo "non-X.Y.Z CAND -- aborts for the right reason, OK" ;;
+            *) echo "MISMATCH: non-X.Y.Z CAND gave: $out"; fail=1 ;;
+          esac
           exit $fail
 
   publish:
@@ -742,12 +772,15 @@ jobs:
           #     digit runs numerically; that discriminates 'sort -V' from plain 'sort', not GNU
           #     from BSD. "Closing" the question on such a pair would prove nothing.
           #   - The two genuinely differ only on a numeric TIE, e.g. zero-padded 4.01.0 vs 4.1.0,
-          #     where each implementation applies its own tie-break. But gate 4's SEMVER_RE
-          #     rejects leading zeros before CAND is assigned (semver.valid('4.01.0') === null),
-          #     and the registry cannot hold a non-semver 'latest'.
-          # So on the input space this guard admits -- canonical, non-zero-padded X.Y.Z triples --
-          # the two implementations agree BY CONSTRUCTION. The SHAPE CHECKS below, not the sort,
-          # are what close this. Relaxing either shape check re-opens the question.
+          #     where each implementation applies its own tie-break.
+          # Those are excluded by the SHAPE CHECKS -- the one on CAND below, and the one on
+          # CURRENT inside downgrade-guard.sh. Both reject leading zeros.
+          #
+          # NOT by gate 4's SEMVER_RE, which an earlier version of this comment credited:
+          # SEMVER_RE constrains TAG/VERSION only. It never sees CURRENT, which arrives from the
+          # registry, and the downgrade-guard-dry caller has no SEMVER_RE upstream at all.
+          # So on the input space these checks admit -- canonical, non-zero-padded X.Y.Z triples --
+          # the two implementations agree BY CONSTRUCTION. Relaxing either shape check re-opens it.
             if [ "$DIST_TAG" = "latest" ]; then
               PKG=$(node -p "require('./package.json').name" 2>/dev/null) || PKG=""
               case "$PKG" in ""|undefined) echo "FATAL: cannot determine package name." >&2; exit 1 ;; esac
@@ -757,8 +790,26 @@ jobs:
               # check that lived only there would leave CAND unvalidated on exactly the path the
               # guard lets through. The script re-asserts it as a contract check on its own input.
               CAND="${VERSION%%+*}"
-              if ! [[ "$CAND" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              # Same regex as downgrade-guard.sh's: rejects LEADING ZEROS. The sort argument
+              # below depends on both operands being canonical, and this is CAND's only check
+              # on the E404 skip path, where the script is never called.
+              if ! [[ "$CAND" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
                 echo "FATAL: version '$VERSION' is not a plain X.Y.Z release; refusing." >&2; exit 1
+              fi
+
+              # T46 follow-up: a well-formed E404 proves "npm said 404", NOT "this package is
+              # unpublished". A misdirected or stale registry 404s for a package that IS published
+              # -- executed: `npm_config_registry=https://registry.npmjs.org/nope/ npm view
+              # convoke-agents dist-tags.latest` emits a textbook `npm error code E404` while
+              # `latest` is 4.0.0. Trusting it would skip the guard and let a downgrade through.
+              #
+              # A second probe does NOT discriminate (measured -- it 404s in both cases). What does
+              # is the RESOLVED REGISTRY, so pin it before the read and refuse to interpret any 404
+              # that did not come from the expected origin.
+              REGISTRY=$(npm config get registry)
+              if [ "$REGISTRY" != "https://registry.npmjs.org/" ]; then
+                echo "FATAL: unexpected registry '$REGISTRY'; refusing to interpret its responses." >&2
+                exit 1
               fi
 
               VIEW_ERR=$(mktemp) || { echo "FATAL: mktemp failed; cannot run the downgrade guard." >&2; exit 1; }
@@ -774,8 +825,16 @@ jobs:
                 # Gate 1 above enforces npm >= 11.5.1 on this job, so the dependency is satisfied
                 # here. The `downgrade-guard-dry` job does NOT exercise this branch at all -- it
                 # makes no network call -- so this anchor is proven by fixture only.
-                if grep -qE '^npm error code E404$' "$VIEW_ERR"; then
-                  echo "Downgrade guard: skipped -- registry returned E404 for $PKG, so it has no published version yet."
+                # npm URL-encodes the scope separator: @scope/name -> @scope%2fname. Measured.
+                # convoke-agents is unscoped today, but building the expected URL without this
+                # would make a first scoped publish FATAL with "could not reach the registry".
+                PKG_URL="${PKG//\//%2f}"
+                if grep -qE '^npm error code E404$' "$VIEW_ERR" \
+                   && grep -qF "404 Not Found - GET ${REGISTRY}${PKG_URL}" "$VIEW_ERR"; then
+                  # BOTH required: the error CODE line (not 404 noise inside another error), AND a
+                  # 404 whose URL is exactly <expected-registry><package> (not a sub-resource such
+                  # as /-/npm/v1/notifications, and not a misdirected path).
+                  echo "Downgrade guard: skipped -- $REGISTRY returned E404 for $PKG at its own URL, so it has no published version yet."
                   GUARD_SKIP=1
                 else
                   echo "FATAL: could not reach the registry for $PKG." >&2

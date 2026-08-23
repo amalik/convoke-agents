@@ -26,8 +26,11 @@ PKG="${GUARD_PKG:-the package}"
 # on the E404 skip path this script is never called, so a check that lived only
 # here would leave CAND unvalidated on exactly the path the guard lets through.
 # This is defence in depth on the script's contract, not the primary gate.
-if ! [[ "$GUARD_CAND" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "FATAL: GUARD_CAND '$GUARD_CAND' is not a plain X.Y.Z release." >&2
+# NOTE the regex: it rejects LEADING ZEROS, matching gate 4's SEMVER_RE. An earlier version
+# used ^[0-9]+\.[0-9]+\.[0-9]+$, which accepts 4.01.0 / 04.0.0 / 4.1.00 -- and the sort
+# justification below depends on those being excluded. See the comment at the comparison.
+if ! [[ "$GUARD_CAND" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+  echo "FATAL: GUARD_CAND '$GUARD_CAND' is not a plain X.Y.Z release (no leading zeros)." >&2
   exit 1
 fi
 
@@ -53,18 +56,26 @@ CURRENT="${GUARD_CURRENT#"${GUARD_CURRENT%%[![:space:]]*}"}"
 CURRENT="${CURRENT%"${CURRENT##*[![:space:]]}"}"
 CURRENT="${CURRENT%%+*}"
 
-if ! [[ "$CURRENT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+# CURRENT comes from the REGISTRY and meets no other validation anywhere -- gate 4's SEMVER_RE
+# constrains TAG/VERSION only. So this is the sole place a zero-padded or otherwise non-canonical
+# `latest` can be excluded, and the sort justification below relies on it doing so.
+if ! [[ "$CURRENT" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
   echo "FATAL: current 'latest' for $PKG is not a plain X.Y.Z release (got '$CURRENT')." >&2
   echo "       Repair: npm dist-tag add $PKG@<good-version> latest  (operator, interactive, needs 2FA)." >&2
   exit 1
 fi
 
 # --- the comparison -------------------------------------------------------
-# Both operands are forced through ^[0-9]+\.[0-9]+\.[0-9]+$ above. On that input
-# space BSD and GNU version-sort agree by construction: they differ only on ties
-# such as zero-padded components (4.01.0 vs 4.1.0), and ci.yml's SEMVER_RE rejects
-# leading zeros before CAND is ever assigned. The SHAPE CHECKS, not the sort, are
-# what close the BSD-vs-GNU question. Verified 2026-08-23.
+# Both operands are forced through ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ above --
+# canonical X.Y.Z with NO leading zeros. On that input space BSD and GNU version-sort agree by
+# construction: they differ only on numeric TIES such as zero-padded components (4.01.0 vs 4.1.0),
+# and both are now excluded HERE, by these checks, in this file.
+#
+# That matters because an earlier version of this comment credited gate 4's SEMVER_RE. SEMVER_RE
+# constrains TAG/VERSION only -- it never sees CURRENT, which arrives from the registry, and the
+# downgrade-guard-dry caller has no SEMVER_RE upstream at all. The argument was therefore true of
+# the publish path's CAND and false of everything else. Tightening the two regexes above is what
+# makes it true as stated. Relaxing either re-opens the BSD-vs-GNU question.
 LOWEST=$(printf '%s\n%s\n' "$CURRENT" "$GUARD_CAND" | sort -V | head -1)
 if [ "$GUARD_CAND" != "$CURRENT" ] && [ "$LOWEST" = "$GUARD_CAND" ]; then
   echo "FATAL: refusing to publish $GUARD_CAND to 'latest' -- lower than current latest $CURRENT." >&2

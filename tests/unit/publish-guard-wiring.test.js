@@ -1,0 +1,114 @@
+'use strict';
+const { test } = require('node:test');
+const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
+
+// Guards the seam the dist-1b-1 extraction created.
+//
+// The FR5 downgrade comparison used to live inline in the publish job; it now lives in
+// scripts/ci/downgrade-guard.sh and is called from two places. The `downgrade-guard-dry`
+// CI job exercises the SCRIPT, not the CALLER — so if a future edit deletes, comments out,
+// or `|| true`s the call in `publish`, the dry job stays green forever while the only
+// protection on the `latest` dist-tag is silently gone.
+//
+// These tests assert the caller, which nothing else does.
+
+const CI = fs.readFileSync(
+  path.join(__dirname, '..', '..', '.github', 'workflows', 'ci.yml'), 'utf8');
+
+// The publish job mentions `downgrade-guard.sh` in several COMMENTS as well as in the one
+// executable call. Every assertion below must anchor on the executable line; matching any
+// mention has silently broken this file's checks three times.
+function guardCallLine(block) {
+  const lines = block.split('\n').filter((l) => l.includes('downgrade-guard.sh') && !/^\s*#/.test(l));
+  assert.equal(lines.length, 1,
+    `expected exactly one executable reference to downgrade-guard.sh, found ${lines.length}`);
+  return lines[0];
+}
+
+function publishJobBlock() {
+  // The publish job runs from `  publish:` to the next top-level (2-space) job key.
+  const start = CI.indexOf('\n  publish:\n');
+  assert.ok(start !== -1, 'publish job not found in ci.yml');
+  const rest = CI.slice(start + 1);
+  const next = rest.search(/\n {2}[a-z0-9-]+:\n/);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+test('publish job invokes the shared downgrade guard', () => {
+  const block = publishJobBlock();
+  assert.match(block, /scripts\/ci\/downgrade-guard\.sh/,
+    'publish job no longer calls scripts/ci/downgrade-guard.sh — the latest dist-tag is unguarded');
+});
+
+test('publish job binds the guard operands by NAME, in the right direction', () => {
+  const block = publishJobBlock();
+  assert.match(block, /GUARD_CAND="\$CAND"/,
+    'GUARD_CAND must be bound to $CAND — a transposed binding inverts every verdict');
+  assert.match(block, /GUARD_CURRENT="\$CURRENT"/,
+    'GUARD_CURRENT must be bound to $CURRENT — a transposed binding inverts every verdict');
+});
+
+test('the guard call is not neutralised', () => {
+  const block = publishJobBlock();
+  const call = guardCallLine(block);
+  assert.ok(!/\|\|\s*true/.test(call), 'guard call must not be suffixed with || true');
+  assert.ok(!/^\s*[#]/.test(call), 'guard call must not be commented out');
+});
+
+test('the CAND shape check stays in the workflow, ahead of the registry read', () => {
+  const block = publishJobBlock();
+  const shape = block.indexOf('is not a plain X.Y.Z release; refusing');
+  const read = block.indexOf('npm view "$PKG" dist-tags.latest');
+  assert.ok(shape !== -1, 'CAND shape check missing from the publish job');
+  assert.ok(read !== -1, 'registry read missing from the publish job');
+  assert.ok(shape < read,
+    'CAND must be validated before the registry read — on the E404 skip path the script is never called');
+});
+
+test('the dry job cannot publish', () => {
+  const start = CI.indexOf('\n  downgrade-guard-dry:\n');
+  assert.ok(start !== -1, 'downgrade-guard-dry job not found');
+  const rest = CI.slice(start + 1);
+  const next = rest.search(/\n {2}[a-z0-9-]+:\n/);
+  const block = next === -1 ? rest : rest.slice(0, next);
+  assert.ok(!/id-token/.test(block), 'dry job must not request id-token');
+  assert.ok(!/npm publish/.test(block), 'dry job must not invoke npm publish');
+  const publishBlock = publishJobBlock();
+  const needs = publishBlock.match(/needs:\s*\[([^\]]*)\]/);
+  assert.ok(needs, 'publish job needs: not found');
+  assert.ok(!needs[1].includes('downgrade-guard-dry'),
+    'dry job must not gate publish — it is a signal, not a release gate');
+});
+
+test('the guard block runs BEFORE npm publish', () => {
+  const block = publishJobBlock();
+  const guard = block.indexOf(guardCallLine(block));      // the CALL, not a comment about it
+  const publishLine = block
+    .split('\n')
+    .find((l) => l.includes('npm publish --provenance') && !/^\s*#/.test(l));
+  assert.ok(publishLine, 'executable npm publish line not found');
+  const publish = block.indexOf(publishLine);
+  assert.ok(guard < publish,
+    'npm publish must come AFTER the downgrade guard — a guard that runs later guards nothing');
+});
+
+test('the guard block is reachable: it is gated on DIST_TAG = latest', () => {
+  const block = publishJobBlock();
+  assert.match(block, /if \[ "\$DIST_TAG" = "latest" \]; then/,
+    'the FR5 block must be gated on DIST_TAG = "latest" — any other literal makes it dead code');
+});
+
+test('DIST_TAG derivation still sends releases to latest and prereleases to rc', () => {
+  const block = publishJobBlock();
+  // case "${VERSION%%+*}" in *-*) DIST_TAG=rc ;; *) DIST_TAG=latest ;; esac
+  const m = block.match(/case "\$\{VERSION%%\+\*\}" in([\s\S]{0,200}?)esac/);
+  assert.ok(m, 'DIST_TAG derivation not found');
+  const body = m[1];
+  const rcIdx = body.indexOf('DIST_TAG=rc');
+  const latestIdx = body.indexOf('DIST_TAG=latest');
+  assert.ok(rcIdx !== -1 && latestIdx !== -1, 'both DIST_TAG arms must exist');
+  assert.ok(rcIdx < latestIdx,
+    'the *-* (prerelease) arm must set rc and come first — inverted, a prerelease would move latest');
+});
