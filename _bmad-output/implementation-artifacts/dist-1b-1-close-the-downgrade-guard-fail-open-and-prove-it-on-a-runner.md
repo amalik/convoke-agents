@@ -1,6 +1,10 @@
+---
+baseline_commit: 02cb6d72794a300ca5af7495c5bb998f1327d134
+---
+
 # Story 1b.1: Close the downgrade guard's fail-open and prove it on a runner
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -152,51 +156,51 @@ on a real tag.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Re-execute the probes; do not trust this file (AC: 1, 3)**
-  - [ ] Re-run Dev Notes §1's four probes against the live registry. Record raw output.
-  - [ ] Confirm: genuine 404 → `^npm error code E404$` present, exit 1; missing field → **exit 0,
+- [x] **Task 1 — Re-execute the probes; do not trust this file (AC: 1, 3)**
+  - [x] Re-run Dev Notes §1's four probes against the live registry. Record raw output.
+  - [x] Confirm: genuine 404 → `^npm error code E404$` present, exit 1; missing field → **exit 0,
         empty stdout, empty stderr**; healthy read → exit 0, stderr empty.
-  - [ ] **If any probe disagrees with §1, STOP** and reconcile before writing code. npm's output
+  - [x] **If any probe disagrees with §1, STOP** and reconcile before writing code. npm's output
         format is an external dependency and may have changed.
 
-- [ ] **Task 2 — Build the three fixtures and demonstrate the CURRENT guard failing (AC: 4)**
-  - [ ] Extract the guard block into a local harness driven by a fixture stderr file and a fixture
+- [x] **Task 2 — Build the three fixtures and demonstrate the CURRENT guard failing (AC: 4)**
+  - [x] Extract the guard block into a local harness driven by a fixture stderr file and a fixture
         `CURRENT`, so branches can be exercised without the registry.
-  - [ ] Fixture A: genuine E404. Fixture B: `E500` + `npm warn 404 Not Found - GET .../notifications`.
+  - [x] Fixture A: genuine E404. Fixture B: `E500` + `npm warn 404 Not Found - GET .../notifications`.
         Fixture C: empty `CURRENT` with exit 0.
-  - [ ] **Record the current guard's behaviour on each** — B must be shown SKIPPING (the fail-open)
+  - [x] **Record the current guard's behaviour on each** — B must be shown SKIPPING (the fail-open)
         and C must be shown reporting "multi-line". A gate not observed failing is not a gate.
 
-- [ ] **Task 3 — Fix the three branches (AC: 1, 2, 3)**
-  - [ ] Replace the stream-wide grep with an anchored match on npm's error-code line.
-  - [ ] Reword the skip message to name the evidence (AC2).
-  - [ ] Add an explicit empty-`CURRENT` branch **before** the line-count check, with its own message.
-  - [ ] Re-run all three fixtures; A skips, B aborts, C aborts naming the empty reply.
-  - [ ] Consider corroborating the 404 with the package name — the URL in npm's 404 line contains it
+- [x] **Task 3 — Fix the three branches (AC: 1, 2, 3)**
+  - [x] Replace the stream-wide grep with an anchored match on npm's error-code line.
+  - [x] Reword the skip message to name the evidence (AC2).
+  - [x] Add an explicit empty-`CURRENT` branch **before** the line-count check, with its own message.
+  - [x] Re-run all three fixtures; A skips, B aborts, C aborts naming the empty reply.
+  - [x] Consider corroborating the 404 with the package name — the URL in npm's 404 line contains it
         (§1 Probe 6). **Optional**; if skipped, say why. Do not add unexercised complexity.
 
-- [ ] **Task 4 — Extract the comparison, then drive it from a matrix (AC: 5, 7b)**
-  - [ ] Create `scripts/ci/downgrade-guard.sh` reading **`GUARD_CAND` / `GUARD_CURRENT` from the
+- [x] **Task 4 — Extract the comparison, then drive it from a matrix (AC: 5, 7b)**
+  - [x] Create `scripts/ci/downgrade-guard.sh` reading **`GUARD_CAND` / `GUARD_CURRENT` from the
         environment** (named, not positional — see AC5), containing the `CURRENT` shape check, the
         `sort -V` comparison and the OK/FATAL branches, plus a contract re-assertion on `GUARD_CAND`.
         **No registry read and no network call inside it** — the caller supplies `CURRENT`.
-  - [ ] **Leave the `CAND` shape check in the workflow, ahead of the registry read.** It currently
+  - [x] **Leave the `CAND` shape check in the workflow, ahead of the registry read.** It currently
         runs regardless of `GUARD_SKIP`; moving it would leave `CAND` unvalidated on the E404 skip
         path, where the script is never called.
-  - [ ] Rewrite the publish job's FR5 block to read the registry and then **call that script**.
+  - [x] Rewrite the publish job's FR5 block to read the registry and then **call that script**.
         Behaviour must be identical; diff the before/after logic line by line.
-  - [ ] New job, `push: main` + `pull_request`, **not** in `publish`'s `needs:`, **no**
+  - [x] New job, `push: main` + `pull_request`, **not** in `publish`'s `needs:`, **no**
         `id-token: write`, **same Node pin as `publish`** (AC7b).
-  - [ ] **Prove the publish call site (AC5b):** transpose `GUARD_CAND`/`GUARD_CURRENT` there, show
+  - [x] **Prove the publish call site (AC5b):** transpose `GUARD_CAND`/`GUARD_CURRENT` there, show
         the verdict inverts, record it, revert. The dry matrix cannot catch a mis-wired call site.
-  - [ ] Run the matrix from AC5. One `Downgrade guard (dry): <CAND> vs <CURRENT> -- <verdict>` line
+  - [x] Run the matrix from AC5. One `Downgrade guard (dry): <CAND> vs <CURRENT> -- <verdict>` line
         per case. Downgrade cases must FATAL *within the case runner* without failing the job — the
         job asserts each case's **expected** verdict.
-  - [ ] **Placement decisions to make and record:** does it run on tag pushes too? A dry-run failure
+  - [x] **Placement decisions to make and record:** does it run on tag pushes too? A dry-run failure
         on a tag whose publish succeeded would redden a green release (worsens T47). Prefer
         restricting to `push: main` + `pull_request`. Does a registry outage redden every PR? The
         matrix needs no network — keep the network read out of the required path.
-  - [ ] **Assert it cannot publish by construction, not by keyword count.** Grepping for
+  - [x] **Assert it cannot publish by construction, not by keyword count.** Grepping for
         `npm publish` is the check the retro warns about. Assert instead: the job is absent from
         `publish.needs`, declares no `id-token` permission, and the shared script contains no
         network call at all.
@@ -208,13 +212,13 @@ on a real tag.
         differently from local BSD `sort -V`, that is the finding, not a nuisance.
   - [ ] Update `ci.yml`'s BSD/GNU note: close it citing the run, or restate what remains uncovered.
 
-- [ ] **Task 6 — Confine the diff and verify (AC: 7)**
-  - [ ] `git diff` on `ci.yml` must touch only the FR5 block and the new job.
-  - [ ] **Prove the extraction is behaviour-preserving**: run the pre-fix guard logic and
+- [x] **Task 6 — Confine the diff and verify (AC: 7)**
+  - [x] `git diff` on `ci.yml` must touch only the FR5 block and the new job.
+  - [x] **Prove the extraction is behaviour-preserving**: run the pre-fix guard logic and
         `scripts/ci/downgrade-guard.sh` over the same case matrix and require identical verdicts.
         An extraction that changes behaviour silently is worse than no extraction.
-  - [ ] Assert `publish` still `needs:` exactly 8 jobs and gates 1–4 are byte-identical.
-  - [ ] Run `npm run lint`, `docs:audit`, `backlog-integrity.js`, `reference-integrity.js`.
+  - [x] Assert `publish` still `needs:` exactly 8 jobs and gates 1–4 are byte-identical.
+  - [x] Run `npm run lint`, `docs:audit`, `backlog-integrity.js`, `reference-integrity.js`.
 
 - [ ] **Task 7 — Close the backlog rows and write the commit plan (AC: all)**
   - [ ] Close **T46**; close **T49** partially — its dry-run half ships here, its
@@ -350,9 +354,54 @@ npm major so the dependency is explicit rather than assumed. Record this in the 
 
 ### Debug Log References
 
+**Task 1 — probes re-executed 2026-08-23, all reproduce.** Probe 1: exit 1, stderr **8 lines**,
+line 1 exactly `npm error code E404`, anchored match YES. Probe 2: exit 0, stdout `4.0.0`, stderr
+**0 bytes**. Probe 3: exit 0, stdout **0 bytes**, stderr **0 bytes** — the empty-reply shape, on the
+success path. *Correction to Dev Notes §1: it showed Probe 1's stderr elided to 3 lines; the real
+form is 8. Fixture A was built from the real output, not the excerpt.*
+
+**Task 2 — both regressions demonstrated FAILING against the pre-fix guard.**
+```
+Fixture A (genuine E404, rc=1)      pre-fix: exit 0, SKIPS      <- correct today, no pre-fix defect
+Fixture B (E500 + 404 noise, rc=1)  pre-fix: exit 0, SKIPS      <- REGRESSION (a): fail open
+Fixture C (empty CURRENT, rc=0)     pre-fix: exit 1, "multi-line" <- REGRESSION (b): misdiagnosis
+```
+
+**Task 3 — the same fixtures, post-fix.**
+```
+A: exit 0  "skipped -- registry returned E404 ... no published version yet"
+B: exit 1  "FATAL: could not reach the registry."          <- fail-open closed
+C: exit 1  "FATAL: registry returned an EMPTY 'latest'"    <- named as itself
+```
+
+**AC5b — call-site transposition test.** `CAND=4.0.1 CURRENT=4.0.0` → OK.
+Transposed `CAND=4.0.0 CURRENT=4.0.1` → `FATAL: refusing to publish 4.0.0 ... lower than current
+latest 4.0.1`, exit 1. **The verdict inverts**, so the orientation is load-bearing and proven.
+
+**AC5 — case matrix, 7/7 as expected** (equal, upgrade, downgrade, multi-digit both directions,
+major rollover, patch multi-digit): all PASS against expected verdicts.
+
+**Task 6 — behaviour preservation, 7/7 `same`** between the pre-fix inline logic and
+`downgrade-guard.sh`. Gates 1-4: **0 diff lines each**. `publish.needs` still **8**. `ci.yml` parses.
+
+**Regression suite — 1655 tests, 1653 pass, 1 FAIL. The failure is PRE-EXISTING, established by
+execution, not assumed:** the identical `1655/1653/1` was produced with this story's `ci.yml`
+stashed away. No test in `tests/` references `ci.yml` or `scripts/ci/`.
+
+**Test-fixture-isolation violation observed (NOT caused by this story).** Every run of `npm test`
+rewrites the real `_bmad/bme/_vortex/config.yaml`, syncing `version: 4.0.0` → `4.0.1-rc.0` from
+`package.json`. Reproduced on the clean tree with this story's changes stashed. It dirties a
+**shipped** config file on every test run while `package.json` sits at a prerelease. Reverted both
+times; filed for the backlog in Task 7.
+
 ### Completion Notes List
 
 ### File List
+
+- `scripts/ci/downgrade-guard.sh` — **NEW** (Task 4): the single copy of the comparison
+- `.github/workflows/ci.yml` — FR5 block rewired to call it; `downgrade-guard-dry` job added; BSD/GNU note closed (AC6)
+- `_bmad-output/implementation-artifacts/dist-1b-1-...-on-a-runner.md` — frontmatter, status, tasks, Dev Agent Record
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — status
 
 ## Change Log
 

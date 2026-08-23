@@ -359,6 +359,52 @@ jobs:
           # restore would activate.
           python -m pytest --import-mode=importlib "${PY_TESTS[@]}" -v
 
+  # T49(a): the FR5 comparison has never executed on a runner -- dist-1-6's rehearsal
+  # published a prerelease, so the guard took its skip branch. This job runs the SAME
+  # script the publish job calls, over a fixture matrix, on every push and PR.
+  #
+  # It cannot publish, by construction: it is absent from `publish.needs`, declares no
+  # `id-token` permission, and downgrade-guard.sh makes no network call of any kind.
+  # It does NOT exercise the E404 anchor (that needs npm's stderr, which needs a network
+  # read) -- the anchor is proven by fixture only, in the story's Task 2/3 record.
+  downgrade-guard-dry:
+    name: Downgrade guard (dry)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Parity with the publish job's toolchain, so the two callers of
+          # downgrade-guard.sh are not on divergent shells/coreutils.
+          node-version: '24'
+      - name: Exercise the comparison over a case matrix
+        run: |
+          fail=0
+          run_case() {
+            want="$3"
+            if out=$(GUARD_CAND="$1" GUARD_CURRENT="$2" GUARD_PKG=convoke-agents \
+                     ./scripts/ci/downgrade-guard.sh 2>&1); then got=OK; else got=FATAL; fi
+            printf 'Downgrade guard (dry): %-9s vs %-9s -- %-5s (want %-5s)\n' "$1" "$2" "$got" "$want"
+            if [ "$got" != "$want" ]; then echo "  MISMATCH: $out"; fail=1; fi
+          }
+          run_case 4.0.0  4.0.0  OK
+          run_case 4.0.1  4.0.0  OK
+          run_case 3.3.1  4.0.0  FATAL
+          run_case 4.10.0 4.9.0  OK
+          run_case 4.9.0  4.10.0 FATAL
+          run_case 10.0.0 9.9.9  OK
+          run_case 4.0.2  4.0.10 FATAL
+          echo "--- contract checks ---"
+          if GUARD_CAND=4.0.1 GUARD_CURRENT="" ./scripts/ci/downgrade-guard.sh >/dev/null 2>&1; then
+            echo "MISMATCH: empty CURRENT should abort"; fail=1
+          else echo "empty CURRENT -- aborts, OK"; fi
+          if GUARD_CAND=4.0.1-rc.0 GUARD_CURRENT=4.0.0 ./scripts/ci/downgrade-guard.sh >/dev/null 2>&1; then
+            echo "MISMATCH: non-X.Y.Z CAND should abort"; fail=1
+          else echo "non-X.Y.Z CAND -- aborts, OK"; fi
+          exit $fail
+
   publish:
     needs: [lint, test, python-test, coverage, security, package-check, agent-surface-parity, fresh-install]
     runs-on: ubuntu-latest
@@ -690,53 +736,62 @@ jobs:
           #   - `sort -V` ranks 4.1.0 BELOW 4.1.0-rc.1, the reverse of SemVer, so a prerelease
           #     on `latest` is refused by the shape check rather than compared wrongly.
           #
-          # Verified locally on BSD/Apple sort 2.3. The runner uses GNU coreutils sort, a
-          # different filevercmp; the two agree on every case tested, but GNU behaviour is
-          # ASSUMED here and is NOT confirmed by Story 1.6's rehearsal -- that run published a
-          # prerelease, so this block took its skip branch and 'sort -V' never executed on a
-          # runner at all. First live execution is the first stable tag. Tracked as T49.
-          if [ "$DIST_TAG" = "latest" ]; then
-            PKG=$(node -p "require('./package.json').name" 2>/dev/null) || PKG=""
-            case "$PKG" in ""|undefined) echo "FATAL: cannot determine package name." >&2; exit 1 ;; esac
+          # BSD-vs-GNU 'sort -V': RESOLVED 2026-08-23 by dist-1b-1 -- and NOT by a runner case,
+          # because no runner case can resolve it. Executed:
+          #   - 4.9.0 vs 4.10.0 yields 4.9.0 in BOTH input orders. Every version-sort compares
+          #     digit runs numerically; that discriminates 'sort -V' from plain 'sort', not GNU
+          #     from BSD. "Closing" the question on such a pair would prove nothing.
+          #   - The two genuinely differ only on a numeric TIE, e.g. zero-padded 4.01.0 vs 4.1.0,
+          #     where each implementation applies its own tie-break. But gate 4's SEMVER_RE
+          #     rejects leading zeros before CAND is assigned (semver.valid('4.01.0') === null),
+          #     and the registry cannot hold a non-semver 'latest'.
+          # So on the input space this guard admits -- canonical, non-zero-padded X.Y.Z triples --
+          # the two implementations agree BY CONSTRUCTION. The SHAPE CHECKS below, not the sort,
+          # are what close this. Relaxing either shape check re-opens the question.
+            if [ "$DIST_TAG" = "latest" ]; then
+              PKG=$(node -p "require('./package.json').name" 2>/dev/null) || PKG=""
+              case "$PKG" in ""|undefined) echo "FATAL: cannot determine package name." >&2; exit 1 ;; esac
 
-            CAND="${VERSION%%+*}"
-            if ! [[ "$CAND" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "FATAL: version '$VERSION' is not a plain X.Y.Z release; refusing." >&2; exit 1
-            fi
+              # CAND is validated HERE, before the registry read, and deliberately NOT inside
+              # downgrade-guard.sh: on the E404 skip path below the script is never called, so a
+              # check that lived only there would leave CAND unvalidated on exactly the path the
+              # guard lets through. The script re-asserts it as a contract check on its own input.
+              CAND="${VERSION%%+*}"
+              if ! [[ "$CAND" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "FATAL: version '$VERSION' is not a plain X.Y.Z release; refusing." >&2; exit 1
+              fi
 
-            VIEW_ERR=$(mktemp) || { echo "FATAL: mktemp failed; cannot run the downgrade guard." >&2; exit 1; }
-            trap 'rm -f "$VIEW_ERR"' EXIT
-            GUARD_SKIP=""
-            if CURRENT=$(npm view "$PKG" dist-tags.latest --no-color 2>"$VIEW_ERR"); then :; else
-              if grep -qE 'E404|404 Not Found' "$VIEW_ERR"; then
-                echo "Downgrade guard: $PKG has no published version yet — nothing to downgrade."
-                GUARD_SKIP=1
-              else
-                echo "FATAL: could not reach the registry for $PKG." >&2
-                head -c 2000 "$VIEW_ERR" >&2; exit 1
+              VIEW_ERR=$(mktemp) || { echo "FATAL: mktemp failed; cannot run the downgrade guard." >&2; exit 1; }
+              trap 'rm -f "$VIEW_ERR"' EXIT
+              GUARD_SKIP=""
+              if CURRENT=$(npm view "$PKG" dist-tags.latest --no-color 2>"$VIEW_ERR"); then :; else
+                # T46: this MUST anchor on npm's error-CODE line. A bare `grep 'E404|404 Not Found'`
+                # over the whole stream matches unrelated 404 noise -- e.g. an E500 payload carrying
+                # `npm warn 404 Not Found - GET .../-/npm/v1/notifications` -- and silently disables
+                # the only protection between a lower version and `latest`. Demonstrated failing.
+                #
+                # The anchor depends on npm >= 10's `npm error` prefix; npm 9 emits `npm ERR!`.
+                # Gate 1 above enforces npm >= 11.5.1 on this job, so the dependency is satisfied
+                # here. The `downgrade-guard-dry` job does NOT exercise this branch at all -- it
+                # makes no network call -- so this anchor is proven by fixture only.
+                if grep -qE '^npm error code E404$' "$VIEW_ERR"; then
+                  echo "Downgrade guard: skipped -- registry returned E404 for $PKG, so it has no published version yet."
+                  GUARD_SKIP=1
+                else
+                  echo "FATAL: could not reach the registry for $PKG." >&2
+                  head -c 2000 "$VIEW_ERR" >&2; exit 1
+                fi
               fi
-            fi
 
-            if [ -z "$GUARD_SKIP" ]; then
-              if [ "$(printf '%s' "$CURRENT" | grep -c '')" -ne 1 ]; then
-                echo "FATAL: registry returned a multi-line 'latest' for $PKG; refusing to guess." >&2
-                printf '%s\n' "$CURRENT" | head -5 >&2; exit 1
+              if [ -z "$GUARD_SKIP" ]; then
+                # ONE copy of the comparison, shared with the `downgrade-guard-dry` job.
+                # Inputs are NAMED, never positional: a transposed positional pair would invert
+                # every verdict silently while the dry matrix stayed green.
+                GUARD_CAND="$CAND" GUARD_CURRENT="$CURRENT" GUARD_PKG="$PKG" \
+                  ./scripts/ci/downgrade-guard.sh
               fi
-              CURRENT="${CURRENT#"${CURRENT%%[![:space:]]*}"}"
-              CURRENT="${CURRENT%"${CURRENT##*[![:space:]]}"}"
-              CURRENT="${CURRENT%%+*}"
-              if ! [[ "$CURRENT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                echo "FATAL: current 'latest' for $PKG is not a plain X.Y.Z release (got '$CURRENT')." >&2; exit 1
-              fi
-              LOWEST=$(printf '%s\n%s\n' "$CURRENT" "$CAND" | sort -V | head -1)
-              if [ "$CAND" != "$CURRENT" ] && [ "$LOWEST" = "$CAND" ]; then
-                echo "FATAL: refusing to publish $VERSION to 'latest' -- lower than current latest $CURRENT." >&2
-                exit 1
-              fi
-              echo "Downgrade guard: $CAND >= current latest $CURRENT -- OK"
+            else
+              echo "Downgrade guard: skipped (DIST_TAG=$DIST_TAG, prerelease does not move 'latest')"
             fi
-          else
-            echo "Downgrade guard: skipped (DIST_TAG=$DIST_TAG, prerelease does not move 'latest')"
-          fi
 
           npm publish --provenance --access public --tag "$DIST_TAG" --loglevel verbose

@@ -916,7 +916,7 @@ development_status:
   dist-2-8-repair-the-broken-dependencies-in-the-shipped-manifest: backlog
   dist-epic-2-retrospective: optional
   dist-epic-1b: in-progress
-  dist-1b-1-close-the-downgrade-guard-fail-open-and-prove-it-on-a-runner: ready-for-dev
+  dist-1b-1-close-the-downgrade-guard-fail-open-and-prove-it-on-a-runner: in-progress
   dist-epic-1b-retrospective: optional
 
 action_items:
