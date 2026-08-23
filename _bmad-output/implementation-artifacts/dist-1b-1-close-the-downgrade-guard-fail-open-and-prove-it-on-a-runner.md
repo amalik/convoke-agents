@@ -4,7 +4,7 @@ baseline_commit: 02cb6d72794a300ca5af7495c5bb998f1327d134
 
 # Story 1b.1: Close the downgrade guard's fail-open and prove it on a runner
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -205,12 +205,12 @@ on a real tag.
         `publish.needs`, declares no `id-token` permission, and the shared script contains no
         network call at all.
 
-- [ ] **Task 5 — Observe it on a runner and close or restate the `sort -V` note (AC: 5, 6)**
-  - [ ] Push to `main`; find the dry-run output in the run log. Record the run ID and the verbatim
+- [x] **Task 5 — Observe it on a runner and close or restate the `sort -V` note (AC: 5, 6)**
+  - [x] Push to `main`; find the dry-run output in the run log. Record the run ID and the verbatim
         `Downgrade guard (dry):` line.
-  - [ ] **This is the first execution of this comparison on GNU coreutils.** If it behaves
+  - [x] **This is the first execution of this comparison on GNU coreutils.** If it behaves
         differently from local BSD `sort -V`, that is the finding, not a nuisance.
-  - [ ] Update `ci.yml`'s BSD/GNU note: close it citing the run, or restate what remains uncovered.
+  - [x] Update `ci.yml`'s BSD/GNU note: close it citing the run, or restate what remains uncovered.
 
 - [x] **Task 6 — Confine the diff and verify (AC: 7)**
   - [x] `git diff` on `ci.yml` must touch only the FR5 block and the new job.
@@ -220,12 +220,12 @@ on a real tag.
   - [x] Assert `publish` still `needs:` exactly 8 jobs and gates 1–4 are byte-identical.
   - [x] Run `npm run lint`, `docs:audit`, `backlog-integrity.js`, `reference-integrity.js`.
 
-- [ ] **Task 7 — Close the backlog rows and write the commit plan (AC: all)**
-  - [ ] Close **T46**; close **T49** partially — its dry-run half ships here, its
+- [x] **Task 7 — Close the backlog rows and write the commit plan (AC: all)**
+  - [x] Close **T46**; close **T49** partially — its dry-run half ships here, its
         `package.json` bump does not. Record the split precisely rather than closing T49 whole.
-  - [ ] `backlog-write-discipline`: lane-order check before and after, restore order in the same
+  - [x] `backlog-write-discipline`: lane-order check before and after, restore order in the same
         edit, Change Log receipt.
-  - [ ] Write **## Commit Plan** per `commit-preparation`, with a falsifiable clause that asserts
+  - [x] Write **## Commit Plan** per `commit-preparation`, with a falsifiable clause that asserts
         *observed* facts (fixture outcomes, the runner log line), not counts of keywords.
 
 ## Dev Notes
@@ -396,12 +396,52 @@ times; filed for the backlog in Task 7.
 
 ### Completion Notes List
 
+**AC5 SATISFIED — the FR5 comparison executed on a GNU-coreutils runner for the first time.**
+Run `32659041872`, job `97242302031`, commit `fc59c190`. Environment: `ubuntu-24.04`,
+node `v24.19.0`, npm `11.17.0`, shell `/usr/bin/bash -eo pipefail`. Verbatim:
+
+```
+Downgrade guard (dry): 4.0.0     vs 4.0.0     -- OK    (want OK   )
+Downgrade guard (dry): 4.0.1     vs 4.0.0     -- OK    (want OK   )
+Downgrade guard (dry): 3.3.1     vs 4.0.0     -- FATAL (want FATAL)
+Downgrade guard (dry): 4.10.0    vs 4.9.0     -- OK    (want OK   )
+Downgrade guard (dry): 4.9.0     vs 4.10.0    -- FATAL (want FATAL)
+Downgrade guard (dry): 10.0.0    vs 9.9.9     -- OK    (want OK   )
+Downgrade guard (dry): 4.0.2     vs 4.0.10    -- FATAL (want FATAL)
+--- contract checks ---
+empty CURRENT -- aborts, OK
+non-X.Y.Z CAND -- aborts, OK
+```
+
+7/7 matrix + 2/2 contract checks, **identical to the local BSD results**. The job carried
+`Contents: read` only — no `id-token` — and is absent from `publish.needs`, so it could not publish.
+
+**AC6 — the BSD/GNU disclosure closes, with a caveat stated rather than buried.** GNU agreed with
+BSD on every case run. That **corroborates** the argument in `ci.yml`'s comment; it does not by
+itself prove it, because — as the comment records — none of these cases *could* have diverged: the
+pairs are canonical `X.Y.Z` triples, and the only genuinely free case (a zero-padded numeric tie)
+is unreachable because gate 4's `SEMVER_RE` rejects leading zeros. The closure rests on the shape
+checks; the runner run is confirmation that nothing unexpected happens on GNU.
+
+**T48 observed live, unprompted.** The push of `40461002` started run `32658994321`, which was
+**cancelled** when `fc59c190` arrived moments later — the workflow-level
+`concurrency: ci-${{ github.ref }}, cancel-in-progress: true` doing exactly what T48 describes.
+Harmless on `main` (the later run supersedes and contains both commits); on a **tag** the same
+mechanism can cancel a run already inside `npm publish`, which is one of the two paths into T47's
+moved-tag-on-a-red-run state. T48 is no longer theoretical -- evidence added to the row.
+
+**What is still NOT proven, stated plainly:** the *publish-path* call site executes only on a real
+stable tag. The dry job proves the shared script and the two callers' contract; it does not execute
+the registry read, the E404 anchor (no network in the script, by design), or `GUARD_SKIP`. Those
+remain fixture-proven. AC7b records this.
+
 ### File List
 
 - `scripts/ci/downgrade-guard.sh` — **NEW** (Task 4): the single copy of the comparison
 - `.github/workflows/ci.yml` — FR5 block rewired to call it; `downgrade-guard-dry` job added; BSD/GNU note closed (AC6)
 - `_bmad-output/implementation-artifacts/dist-1b-1-...-on-a-runner.md` — frontmatter, status, tasks, Dev Agent Record
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — status
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — T46 closed + relocated, T49 half-closed, T48 evidenced, Change Log receipt
 
 ## Change Log
 
