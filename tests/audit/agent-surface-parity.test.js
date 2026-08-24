@@ -7,6 +7,8 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
+const { initGitFixture, removeTempDirSync } = require('../helpers');
+
 const {
   menuCodes,
   scanTemplate,
@@ -30,7 +32,7 @@ const {
 
 const created = [];
 afterEach(() => {
-  while (created.length) fs.rmSync(created.pop(), { recursive: true, force: true });
+  while (created.length) removeTempDirSync(created.pop());
 });
 
 describe('scanTemplate — finds the end of a template literal', () => {
@@ -71,9 +73,7 @@ describe('wrapperTemplates — extracts the generated agent wrapper from its gen
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'asp-'));
     created.push(dir);
     const git = (args) => execFileSync('git', args, { cwd: dir, stdio: 'pipe' });
-    git(['init', '-q']);
-    git(['config', 'user.email', 't@t']);
-    git(['config', 'user.name', 't']);
+    initGitFixture(dir);
     fs.mkdirSync(path.join(dir, 'scripts/update/lib'), { recursive: true });
     // Deliberately uses the brace-plus-nested-backtick construct that broke the old scanner.
     const gen =
@@ -101,9 +101,7 @@ describe('wrapperTemplates — extracts the generated agent wrapper from its gen
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'asp-empty-'));
     created.push(dir);
     const git = (args) => execFileSync('git', args, { cwd: dir, stdio: 'pipe' });
-    git(['init', '-q']);
-    git(['config', 'user.email', 't@t']);
-    git(['config', 'user.name', 't']);
+    initGitFixture(dir);
     fs.writeFileSync(path.join(dir, 'README.md'), 'x\n');
     git(['add', '-A']);
     git(['commit', '-qm', 'init']);
@@ -114,6 +112,14 @@ describe('wrapperTemplates — extracts the generated agent wrapper from its gen
     // Guards the extractor against the generator being refactored out from under it. If this
     // fails, `.github/expected-wrapper-template.txt` and the extractor have drifted apart and
     // the CI gate is comparing something other than what it claims.
+    //
+    // DELIBERATE `test-fixture-isolation` EXCEPTION. This asserts against the live repo, which
+    // that rule forbids — but drift between the extractor and the committed baseline is the only
+    // thing it can be checked against, and the rule's own exception clause points such a check at
+    // a separate gate. It reads the tree at HEAD via git rather than the working tree, so it is
+    // unaffected by uncommitted work (verified: dirtying refresh-installation.js leaves it green).
+    // If it ever fails, the extractor and `.github/expected-wrapper-template.txt` have diverged —
+    // that is a real finding, not flake. Do not "fix" it by loosening the assertion.
     const repoRoot = path.resolve(__dirname, '../..');
     const templates = wrapperTemplates(repoRoot, 'HEAD');
     assert.ok(templates.length > 0, 'extractor no longer matches refresh-installation.js');
