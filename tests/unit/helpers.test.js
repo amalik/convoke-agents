@@ -157,7 +157,11 @@ function maintenanceSpawnsOnCommit(dir, label) {
   // status alone reports "git commit failed: undefined" and hides the ENOENT.
   assert.ok(!res.error, `git commit could not spawn in ${label}: ${res.error && res.error.code}`);
   assert.equal(res.status, 0, `git commit failed in ${label}: ${res.stderr}`);
-  return (res.stderr.match(/maintenance run --auto/g) || []).length;
+  // Both spellings: `git maintenance run --auto` on >= 2.31, `git gc --auto` before
+  // it. Grepping only the modern one makes the control arm read zero on exactly the
+  // git versions where the suppression is absent, so the vacuity guard would skip
+  // instead of failing.
+  return (res.stderr.match(/maintenance run --auto|gc --auto/g) || []).length;
 }
 
 /**
@@ -237,6 +241,52 @@ describe("initGitFixture — suppresses git's detached auto-maintenance child", 
     initGitFixture(repo);
     maintenanceSpawnsOnCommit(repo, 'seed');
     assert.equal(maintenanceSpawnsOnCommit(repo, 'foreign'), 0);
+  });
+});
+
+describe('initGitFixture — hermetic against hostile ambient git config', () => {
+  it('a global pre-commit hook and commit.gpgsign do not reach the fixture', () => {
+    // The failure this prevents never shows up on CI (clean runner, no global
+    // config). It shows up on a contributor's laptop as "the tests hang on my
+    // machine", which gets reported as flakiness and costs a day.
+    const root = nodeFs.mkdtempSync(path.join(os.tmpdir(), 'convoke-hostile-'));
+    const hooks = path.join(root, 'evil-hooks');
+    nodeFs.mkdirSync(hooks);
+    const hook = path.join(hooks, 'pre-commit');
+    nodeFs.writeFileSync(hook, '#!/bin/sh\necho "global hook ran" >&2\nexit 1\n');
+    nodeFs.chmodSync(hook, 0o755);
+    const hostileConfig = path.join(root, 'hostile-gitconfig');
+    nodeFs.writeFileSync(
+      hostileConfig,
+      `[core]\n\thooksPath = ${hooks}\n[commit]\n\tgpgsign = true\n`
+    );
+
+    const fixture = path.join(root, 'fixture');
+    nodeFs.mkdirSync(fixture);
+    const saved = process.env.GIT_CONFIG_GLOBAL;
+    process.env.GIT_CONFIG_GLOBAL = hostileConfig;
+    try {
+      initGitFixture(fixture);
+      nodeFs.writeFileSync(path.join(fixture, 'a.md'), 'x\n');
+      // Deliberately NOT routed through initGitFixture's scrubbed env — this is a
+      // caller's own commit, which is the case repo-local persistence has to cover.
+      const add = spawnSync('git', ['add', '-A'], { cwd: fixture, encoding: 'utf8' });
+      assert.equal(add.status, 0, `git add failed: ${add.stderr}`);
+      const commit = spawnSync('git', ['commit', '-m', 'hermetic'], { cwd: fixture, encoding: 'utf8' });
+      assert.equal(
+        commit.status,
+        0,
+        `a caller's commit must survive hostile ambient config; stderr: ${commit.stderr}`
+      );
+      assert.ok(
+        !/global hook ran/.test(commit.stderr),
+        'the ambient global pre-commit hook must not run inside a fixture'
+      );
+    } finally {
+      if (saved === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+      else process.env.GIT_CONFIG_GLOBAL = saved;
+      nodeFs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+    }
   });
 });
 

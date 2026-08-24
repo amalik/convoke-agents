@@ -210,9 +210,25 @@ function initGitFixture(dir) {
   if (!nodeFs.existsSync(dir) || !nodeFs.statSync(dir).isDirectory()) {
     throw new Error(`initGitFixture requires an existing directory; got ${dir}`);
   }
+  // Ambient git state is an input this fixture does not control — the
+  // `fixture-determinism` rule's environment axis. `GIT_DIR`/`GIT_WORK_TREE`
+  // would send `git init` somewhere else entirely, and a global
+  // `commit.gpgsign` / `core.hooksPath` / `init.templateDir` makes fixture
+  // commits hang on a passphrase or run the developer's own hooks. Point the
+  // global and system config files at paths inside the fixture that do not
+  // exist: git reads a missing config file as empty, which is portable in a way
+  // that /dev/null is not.
+  const hermeticEnv = { ...process.env };
+  for (const key of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY', 'GIT_COMMON_DIR']) {
+    delete hermeticEnv[key];
+  }
+  hermeticEnv.GIT_CONFIG_GLOBAL = path.join(dir, '.absent-global-gitconfig');
+  hermeticEnv.GIT_CONFIG_SYSTEM = path.join(dir, '.absent-system-gitconfig');
+  hermeticEnv.GIT_CONFIG_NOSYSTEM = '1';
+
   const git = (args) => {
     try {
-      return execFileSync('git', args, { cwd: dir, stdio: 'pipe' });
+      return execFileSync('git', args, { cwd: dir, stdio: 'pipe', env: hermeticEnv });
     } catch (err) {
       // execFileSync's default message is a bare "Command failed", which throws
       // away the one thing that explains the failure.
@@ -228,6 +244,17 @@ function initGitFixture(dir) {
   git(['config', 'user.email', 'test@test.com']);
   git(['config', 'user.name', 'Test']);
   git(['config', 'maintenance.auto', 'false']);
+  // `git maintenance` arrived in 2.31. Before it, `git commit` forked
+  // `git gc --auto` detached, gated only by gc.autoDetach — and git silently
+  // ignores unknown config keys, so maintenance.auto=false is accepted and inert
+  // there. This is NOT `gc.auto=0`, which was measured not to suppress the spawn
+  // on modern git; the two knobs are not interchangeable.
+  git(['config', 'gc.autoDetach', 'false']);
+  // The env scrub above only covers THIS function's own git calls. Callers run
+  // their own `git add`/`git commit` in this repo afterwards, so the settings
+  // that would break those are persisted repo-locally where callers inherit them.
+  git(['config', 'commit.gpgsign', 'false']);
+  git(['config', 'core.hooksPath', path.join(dir, '.absent-hooks')]);
   return dir;
 }
 
