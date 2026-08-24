@@ -17,7 +17,7 @@ const {
 } = require('../../scripts/docs-audit');
 
 const { AGENTS, WORKFLOWS, WORKFLOW_NAMES } = require('../../scripts/update/lib/agent-registry');
-const { runScript } = require('../helpers');
+const { runScript, removeTempDir } = require('../helpers');
 
 // === checkStaleReferences ===
 
@@ -127,7 +127,7 @@ describe('checkBrokenLinks', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('detects broken internal links', () => {
@@ -194,7 +194,7 @@ describe('checkBrokenPaths', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('detects broken backtick-wrapped paths', () => {
@@ -470,7 +470,7 @@ describe('runAudit', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('returns findings for docs with stale references', async () => {
@@ -520,7 +520,7 @@ describe('CLI exit codes', () => {
   });
 
   after(async () => {
-    await fs.remove(cliTmpDir);
+    await removeTempDir(cliTmpDir);
   });
 
   it('runs without crashing', async () => {

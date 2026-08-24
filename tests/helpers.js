@@ -160,7 +160,7 @@ async function removeTempDir(dir) {
  */
 function removeTempDirSync(dir) {
   if (!dir) return;
-  _assertTempPath(dir, 'removeTempDir');
+  _assertTempPath(dir, 'removeTempDirSync');
   try {
     nodeFs.rmSync(dir, TEMP_RM_OPTS);
   } catch (err) {

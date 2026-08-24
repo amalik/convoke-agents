@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
-const { runScript, PACKAGE_ROOT } = require('../helpers');
+const { runScript, PACKAGE_ROOT, removeTempDir } = require('../helpers');
 const pkg = require('../../package.json');
 
 const doctorScript = path.join(PACKAGE_ROOT, 'scripts/convoke-doctor.js');
@@ -25,7 +25,7 @@ describe('convoke-doctor: no project root', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('fails when no _bmad directory exists', async () => {
@@ -45,7 +45,7 @@ describe('convoke-doctor: missing config', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('fails when config.yaml is missing', async () => {
@@ -71,7 +71,7 @@ describe('convoke-doctor: invalid config YAML', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('reports YAML parse error', async () => {
@@ -97,7 +97,7 @@ describe('convoke-doctor: missing agent files', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('reports missing agent files', async () => {
@@ -131,7 +131,7 @@ describe('convoke-doctor: empty agent files', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('reports empty agent files', async () => {
@@ -164,7 +164,7 @@ describe('convoke-doctor: stale migration lock', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('reports stale migration lock', async () => {
@@ -192,7 +192,7 @@ describe('convoke-doctor: version mismatch', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('reports version inconsistency', async () => {
@@ -221,7 +221,7 @@ describe('convoke-doctor: corrupt migration lock', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('reports corrupt lock file', async () => {
@@ -282,7 +282,7 @@ describe('convoke-doctor: excluded_agents (U8)', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('surfaces the exclusion count and agent in the module agents info line', async () => {
@@ -360,7 +360,7 @@ describe('convoke-doctor: governance softWarning exit-code (Story v63-2-2 H1)', 
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('exits 0 when BMM registry is absent (softWarning only, no hard failures)', async () => {

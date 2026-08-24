@@ -9,6 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
+const { removeTempDirSync } = require('../helpers');
 
 
 // Story sp-4-2: End-to-End Validation
@@ -49,7 +50,7 @@ describe('Validate Exports (sp-4-2)', () => {
 
     after(() => {
       if (stagingDir && fs.existsSync(stagingDir)) {
-        fs.rmSync(stagingDir, { recursive: true, force: true });
+        removeTempDirSync(stagingDir);
       }
     });
 
@@ -77,7 +78,7 @@ describe('Validate Exports (sp-4-2)', () => {
 
     afterEach(() => {
       if (fixtureDir && fs.existsSync(fixtureDir)) {
-        fs.rmSync(fixtureDir, { recursive: true, force: true });
+        removeTempDirSync(fixtureDir);
       }
       fixtureDir = null;
     });

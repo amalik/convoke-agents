@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
-const { runScript, PACKAGE_ROOT, createValidInstallation } = require('../helpers');
+const { runScript, PACKAGE_ROOT, createValidInstallation, removeTempDir } = require('../helpers');
 const { AGENTS } = require('../../scripts/update/lib/agent-registry');
 
 // These tests exercise CLI entry points against an isolated fixture project.
@@ -24,7 +24,7 @@ before(async () => {
 });
 
 after(async () => {
-  if (fixtureDir) await fs.remove(fixtureDir);
+  if (fixtureDir) await removeTempDir(fixtureDir);
 });
 
 function run(script, args = []) {

@@ -11,7 +11,7 @@ const {
   canonicalIdForSkillRel,
   isExcluded
 } = require('./lib/marketplace-installer-sim');
-const { runScript, PACKAGE_ROOT } = require('../helpers');
+const { runScript, PACKAGE_ROOT, removeTempDir } = require('../helpers');
 
 // Read marketplace.json fresh (NOT via require()) per Story 3.4 V-pass E4 — Node
 // caches require() results; reading via fs.readFileSync prevents stale state if
@@ -172,10 +172,18 @@ describe('Dual-distribution parity (FR22)', () => {
   });
 
   after(async () => {
-    // R1-M5: cleanup nullity guards — if mkdtemp failed for either sandbox,
-    // fs.remove(undefined) would mask the original error.
-    if (sandboxA) await fs.remove(sandboxA).catch(() => {});
-    if (sandboxB) await fs.remove(sandboxB).catch(() => {});
+    // R1-M5 added nullity guards because `fs.remove(undefined)` would mask the
+    // original error when mkdtemp failed. `removeTempDir` no-ops on a falsy path,
+    // so the guards are obsolete — and the `.catch(() => {})` that came with them
+    // would now swallow the survivor listing, which is the one thing worth reading
+    // when a teardown fails.
+    // Both must be ATTEMPTED even if the first throws — sequential awaits are
+    // fail-fast, which would orphan sandboxB (a full install tree) permanently.
+    // allSettled keeps the survivor listing (unlike the .catch this replaced)
+    // while guaranteeing the second removal runs.
+    const results = await Promise.allSettled([removeTempDir(sandboxA), removeTempDir(sandboxB)]);
+    const failed = results.filter((r) => r.status === 'rejected');
+    if (failed.length) throw new AggregateError(failed.map((r) => r.reason), 'sandbox teardown failed');
   });
 
   // I1: Schema-guard pass.
@@ -266,7 +274,7 @@ describe('Dual-distribution parity (FR22)', () => {
           `drift assertion should fail with hint naming ${canonicalId}`
         );
       } finally {
-        await fs.remove(sandboxBPrime).catch(() => {});
+        await removeTempDir(sandboxBPrime);
       }
     }
   });

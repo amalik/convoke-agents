@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
+const { removeTempDir } = require('../helpers');
 
 const {
   writeRegistryBlock,
@@ -263,7 +264,7 @@ describe('writeRegistryBlock', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('happy path — inserts block, require() passes, exports updated', async () => {

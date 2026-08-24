@@ -22,6 +22,7 @@ const projectRoot = FIXTURE_ROOT;
 const CLI_PATH = path.join(REPO_ROOT, 'scripts', 'portability', 'convoke-export.js');
 
 const { FORBIDDEN_STRINGS } = require('../../scripts/portability/test-constants');
+const { removeTempDirSync } = require('../helpers');
 
 
 let tmpDir, cliResult, skillDirs;
@@ -58,7 +59,7 @@ before(() => {
 
 after(() => {
   if (tmpDir && fs.existsSync(tmpDir)) {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    removeTempDirSync(tmpDir);
   }
 });
 

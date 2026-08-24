@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
 const yaml = require('js-yaml');
-const { runScript, PACKAGE_ROOT } = require('../helpers');
+const { runScript, PACKAGE_ROOT, removeTempDir } = require('../helpers');
 const { AGENT_IDS, WORKFLOW_NAMES } = require('../../scripts/update/lib/agent-registry');
 
 const installerScript = path.join(PACKAGE_ROOT, 'scripts/install-vortex-agents.js');
@@ -21,7 +21,7 @@ describe('install-vortex-agents CLI E2E', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('completes without error on a fresh directory', async () => {

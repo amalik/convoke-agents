@@ -9,6 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
+const { removeTempDirSync } = require('../helpers');
 
 
 // Story sp-3-2: Per-Skill README Generation
@@ -42,7 +43,7 @@ describe('Per-Skill README Generation (sp-3-2)', () => {
 
   afterEach(() => {
     if (singleTmpDir && fs.existsSync(singleTmpDir)) {
-      fs.rmSync(singleTmpDir, { recursive: true, force: true });
+      removeTempDirSync(singleTmpDir);
     }
     singleTmpDir = null;
   });
@@ -107,7 +108,7 @@ describe('Per-Skill README Generation (sp-3-2)', () => {
 
     after(() => {
       if (batchTmpDir && fs.existsSync(batchTmpDir)) {
-        fs.rmSync(batchTmpDir, { recursive: true, force: true });
+        removeTempDirSync(batchTmpDir);
       }
     });
 

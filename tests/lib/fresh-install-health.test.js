@@ -11,6 +11,7 @@ const { execFileSync } = require('child_process');
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
 const { refreshInstallation } = require('../../scripts/update/lib/refresh-installation');
 const { checkModuleWorkflows, checkVersionConsistency } = require('../../scripts/convoke-doctor');
+const { removeTempDirSync } = require('../helpers');
 
 const REPO_ROOT = findProjectRoot();
 
@@ -55,7 +56,7 @@ describe('fresh-install health (I137)', () => {
   });
 
   after(() => {
-    if (installDir) fs.rmSync(installDir, { recursive: true, force: true });
+    if (installDir) removeTempDirSync(installDir);
   });
 
   /** Installed modules in the shape `convoke-doctor` builds them: { name, dir, config }. */
@@ -214,7 +215,7 @@ describe('fresh-install health (I137)', () => {
             : `${label}: a VALID manifest was clobbered — that is user state`
         );
       } finally {
-        fs.rmSync(dir, { recursive: true, force: true });
+        removeTempDirSync(dir);
       }
     }
   });

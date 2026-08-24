@@ -24,7 +24,7 @@ const fs = require('fs-extra');
 const os = require('os');
 const yaml = require('js-yaml');
 
-const { runScript, PACKAGE_ROOT } = require('../helpers');
+const { runScript, PACKAGE_ROOT, removeTempDir } = require('../helpers');
 const {
   AGENTS,
   VORTEX_SKILL_PATHS,
@@ -148,7 +148,7 @@ describe('convoke-update CLI end-to-end (T3) — v1.7.x fixture → current', ()
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('exits 0 when invoked with --yes against the seeded v1.7.x fixture', async () => {
@@ -183,7 +183,7 @@ describe('convoke-update CLI end-to-end (T3) — refresh-only path (already-curr
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('second invocation hits refresh-only or up-to-date path and still exits 0', async () => {

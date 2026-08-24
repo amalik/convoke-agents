@@ -41,7 +41,7 @@ describe('runScript return-shape contract (I64)', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('returns exitCode 0 + timedOut false + signal null for a clean exit', async () => {

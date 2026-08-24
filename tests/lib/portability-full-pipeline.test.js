@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
 const { readManifest } = require('../../scripts/portability/manifest-csv');
+const { removeTempDirSync } = require('../helpers');
 
 
 // Story sp-5-3: Full Pipeline — Export Tier 2 + Adapters + Catalog
@@ -56,7 +57,7 @@ before(() => {
 
 after(() => {
   if (tmpDir && fs.existsSync(tmpDir)) {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    removeTempDirSync(tmpDir);
   }
 });
 

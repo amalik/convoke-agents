@@ -9,6 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
+const { removeTempDirSync } = require('../helpers');
 
 
 // Story sp-5-2: Platform Adapter Generation
@@ -32,7 +33,7 @@ describe('Platform Adapter Generation (sp-5-2)', () => {
 
   afterEach(() => {
     if (singleTmpDir && fs.existsSync(singleTmpDir)) {
-      fs.rmSync(singleTmpDir, { recursive: true, force: true });
+      removeTempDirSync(singleTmpDir);
     }
     singleTmpDir = null;
   });
@@ -104,7 +105,7 @@ describe('Platform Adapter Generation (sp-5-2)', () => {
 
     after(() => {
       if (batchTmpDir && fs.existsSync(batchTmpDir)) {
-        fs.rmSync(batchTmpDir, { recursive: true, force: true });
+        removeTempDirSync(batchTmpDir);
       }
     });
 

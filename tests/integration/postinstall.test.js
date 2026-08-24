@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
 const yaml = require('js-yaml');
-const { runScript, PACKAGE_ROOT } = require('../helpers');
+const { runScript, PACKAGE_ROOT, removeTempDir } = require('../helpers');
 
 const postinstallScript = path.join(PACKAGE_ROOT, 'scripts/postinstall.js');
 
@@ -22,7 +22,7 @@ describe('postinstall: fresh project (no _bmad)', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('does not crash on fresh project', async () => {
@@ -61,7 +61,7 @@ describe('postinstall: up-to-date installation', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('reports up to date when versions match', async () => {
@@ -92,7 +92,7 @@ describe('postinstall: older installation detected', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('detects upgrade and suggests convoke-update', async () => {

@@ -9,6 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
+const { removeTempDirSync } = require('../helpers');
 
 
 // Story sp-4-1: Seed Catalog Repository
@@ -41,7 +42,7 @@ before(() => {
 
 after(() => {
   if (tmpDir && fs.existsSync(tmpDir)) {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    removeTempDirSync(tmpDir);
   }
 });
 

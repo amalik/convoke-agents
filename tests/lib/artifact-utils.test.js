@@ -3,6 +3,8 @@
 const { describe, it, before, beforeEach, after, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 
+const os = require('os');
+
 const { mockExecFileSync } = require('../mock-cp');
 
 const {
@@ -18,6 +20,7 @@ const {
 } = require('../../scripts/lib/artifact-utils');
 const path = require('path');
 const fs = require('fs-extra');
+const { removeTempDir } = require('../helpers');
 
 // --- parseFilename tests ---
 
@@ -269,9 +272,17 @@ describe('ensureCleanTree', () => {
 // --- scanArtifactDirs tests ---
 
 describe('scanArtifactDirs', () => {
-  const tmpDir = path.join(__dirname, '..', '..', '_test_tmp_scan');
+  // Was `path.join(__dirname, '..', '..', '_test_tmp_scan')` — a fixture in the REPO
+  // ROOT, which `test-fixture-isolation` forbids and which leaked into `git status`
+  // whenever teardown failed. A real temp dir also satisfies removeTempDir's
+  // containment guard, which is what caught it.
+  let tmpDir;
 
   before(async () => {
+    // Created HERE, not in the describe body: a describe callback runs at module
+    // load, so a filtered run (--test-name-pattern, .only) would create the dir
+    // and never reach after() to remove it.
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-scan-'));
     await fs.ensureDir(path.join(tmpDir, '_bmad-output', 'planning-artifacts'));
     await fs.writeFile(path.join(tmpDir, '_bmad-output', 'planning-artifacts', 'test-file.md'), '# test');
     await fs.ensureDir(path.join(tmpDir, '_bmad-output', '_archive'));
@@ -279,7 +290,7 @@ describe('scanArtifactDirs', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('scans specified directories', async () => {

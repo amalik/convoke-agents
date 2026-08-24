@@ -21,7 +21,7 @@ const YAML = require('yaml');
 const { refreshInstallation } = require('../../scripts/update/lib/refresh-installation');
 const { mergeConfig, writeConfig } = require('../../scripts/update/lib/config-merger');
 const { appendConfigAgent, appendConfigWorkflow } = require('../../_bmad/bme/_team-factory/lib/writers/config-appender');
-const { PACKAGE_ROOT, createValidInstallation, silenceConsole, restoreConsole } = require('../helpers');
+const { PACKAGE_ROOT, createValidInstallation, silenceConsole, restoreConsole, removeTempDir } = require('../helpers');
 
 const ARTIFACTS_COMMENT_NEEDLE = '# Workflows in this module are STANDALONE';
 
@@ -54,7 +54,7 @@ describe('ag-7-1: refreshInstallation preserves _artifacts comments', () => {
 
   afterEach(async () => {
     restoreConsole();
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('keeps the standalone:true documentation comment after version stamp', async () => {
@@ -89,7 +89,7 @@ describe('ag-7-1: refreshInstallation preserves _enhance comments (if any presen
 
   afterEach(async () => {
     restoreConsole();
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('preserves a documentation comment injected into the destination _enhance config before re-refresh', async () => {
@@ -164,7 +164,7 @@ describe('ag-7-1: config-merger.mergeConfig + writeConfig preserve comments', ()
 
   afterEach(async () => {
     restoreConsole();
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('preserves a documentation comment across the merge round-trip', async () => {
@@ -240,7 +240,7 @@ describe('ag-7-1: appendConfigAgent + appendConfigWorkflow preserve comments', (
 
   afterEach(async () => {
     restoreConsole();
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('preserves comments when appending an agent (closes I10)', async () => {
@@ -342,7 +342,7 @@ describe('ag-7-1: writeConfig self-heals when called with a bare object on an ex
 
   afterEach(async () => {
     restoreConsole();
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('preserves comments when a caller uses yaml.load + addMigrationHistory + writeConfig (migration-runner pattern)', async () => {

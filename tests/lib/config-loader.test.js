@@ -7,6 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { mockExecFileSync } = require('../mock-cp');
+const { removeTempDirSync } = require('../helpers');
 
 const LOADER_PATH = '../../scripts/update/lib/config-loader';
 
@@ -34,7 +35,7 @@ describe('loadModuleConfig — v4 load path (direct YAML)', () => {
   });
 
   afterEach(() => {
-    fs.removeSync(tmp);
+    removeTempDirSync(tmp);
   });
 
   it('returns the parsed config object when v4 config.yaml is present', () => {
@@ -189,7 +190,7 @@ describe('loadModuleConfig — v3 backwards-compat fallback (WR8)', () => {
   afterEach(() => {
     cpMock.restore();
     warnSpy.mock.restore();
-    fs.removeSync(tmp);
+    removeTempDirSync(tmp);
   });
 
   it('emits [DEPRECATED] warning and shells out to bmad_init.py when v4 config is absent but legacy dir exists', () => {
@@ -406,7 +407,7 @@ describe('loadModuleConfig — path traversal guard', () => {
   });
 
   afterEach(() => {
-    fs.removeSync(tmp);
+    removeTempDirSync(tmp);
   });
 
   it('rejects moduleConfigPath containing ".." that escapes _bmad/', () => {
@@ -452,7 +453,7 @@ describe('loadModuleConfig — additional YAML + behavior coverage', () => {
   });
 
   afterEach(() => {
-    fs.removeSync(tmp);
+    removeTempDirSync(tmp);
   });
 
   it('handles UTF-8 BOM prefix on config.yaml without error', () => {

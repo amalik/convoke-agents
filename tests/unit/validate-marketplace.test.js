@@ -7,12 +7,7 @@ const os = require('os');
 const fs = require('fs-extra');
 const yaml = require('js-yaml');
 
-const {
-  PACKAGE_ROOT,
-  createTempDir,
-  createInstallation,
-  runScript,
-} = require('../helpers');
+const { PACKAGE_ROOT, createTempDir, createInstallation, runScript, removeTempDir } = require('../helpers');
 
 const { AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
 const pkg = require('../../package.json');
@@ -543,7 +538,7 @@ describe('validate-marketplace CLI (Story v63-3-1)', () => {
     });
 
     after(async () => {
-      if (tmpDir) await fs.remove(tmpDir);
+      if (tmpDir) await removeTempDir(tmpDir);
     });
 
     // AC9 invariants (a/b/c/d): path-transition only — no backup-specific

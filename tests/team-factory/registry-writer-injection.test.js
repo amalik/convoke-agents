@@ -1,10 +1,11 @@
 'use strict';
 
-const { describe, it, afterEach } = require('node:test');
+const { describe, it, after, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { removeTempDirSync } = require('../helpers');
 
 const {
   buildModuleBlock,
@@ -34,6 +35,10 @@ const {
 // bugs invisible.
 
 const MARKER_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'tf-injection-'));
+
+// MARKER_DIR is module-scoped and was never removed — a guaranteed temp-dir leak
+// on every run, in a file whose subject is teardown hygiene.
+after(() => removeTempDirSync(MARKER_DIR));
 const marker = (name) => path.join(MARKER_DIR, name);
 
 /** Minimal spec shaped like the real caller's input. */
@@ -80,6 +85,11 @@ function hash(s) {
 describe('registry-writer injection regressions (code review 2026-08-11)', () => {
   afterEach(() => {
     for (const f of fs.readdirSync(MARKER_DIR)) {
+      // Not a temp-dir teardown: this deletes individual PWNED* marker FILES inside
+      // MARKER_DIR, non-recursively. removeTempDirSync would remove the whole
+      // directory, which the remaining tests still need.
+      // (no eslint-disable needed while this file is on the PENDING list; restore
+      // the directive when it is converted and removed from that list.)
       if (f.startsWith('PWNED')) fs.rmSync(path.join(MARKER_DIR, f), { force: true });
     }
   });
