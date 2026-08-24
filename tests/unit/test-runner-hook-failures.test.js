@@ -72,6 +72,38 @@ function noteRetained(res) {
 
 const GATE_MARKER = /TAP recorded \d+ failure/;
 
+/**
+ * Does THIS runtime actually have the blind spot?
+ *
+ * It is version-specific and the boundary is real: measured in CI, Node 18 and 20
+ * already exit non-zero on a describe-scoped `after()` failure, while Node 22 and 25
+ * exit 0. Asserting the gate fires on every runtime is asserting a premise that is
+ * false on half the support matrix — which is exactly how this suite went red on
+ * 18/20 while passing locally.
+ *
+ * Probed once against plain `node --test`, never assumed.
+ */
+let blindSpotCache = null;
+function runtimeHidesDescribeAfterFailure(dir) {
+  if (blindSpotCache !== null) return blindSpotCache;
+  const probe = path.join(dir, 'probe.test.js');
+  fs.writeFileSync(
+    probe,
+    `const { describe, it, after } = require('node:test');
+describe('probe', () => {
+  after(() => { throw new Error('probe teardown'); });
+  it('passes', () => {});
+});
+`
+  );
+  const env = { ...process.env };
+  delete env.NODE_TEST_CONTEXT;
+  delete env.NODE_V8_COVERAGE;
+  const res = spawnSync(process.execPath, ['--test', probe], { encoding: 'utf8', env, timeout: 60_000 });
+  blindSpotCache = res.status === 0;
+  return blindSpotCache;
+}
+
 describe('test-runner surfaces the hook failure node:test hides', () => {
   let tmpDir;
 
@@ -110,8 +142,14 @@ describe('boom', () => {
     );
     // Exactly 1, not merely non-zero: exit 2 (no files found) or 9 (bad option) would
     // satisfy a `notEqual(0)` while proving the gate had vanished.
-    assert.equal(res.status, 1, `expected the gate to exit 1\nstdout:\n${res.stdout}\nstderr:\n${res.stderr}`);
-    assert.match(res.stderr, GATE_MARKER, `the gate must say why it failed\nstderr:\n${res.stderr}`);
+    assert.equal(res.status, 1, `the run must fail either way\nstdout:\n${res.stdout}\nstderr:\n${res.stderr}`);
+    // The marker is only expected where the blind spot actually exists. On a runtime
+    // that fails natively the run is red either way, and asserting WHICH mechanism
+    // produced the failure would be a claim about node internals this suite cannot
+    // verify on the runtimes it has.
+    if (runtimeHidesDescribeAfterFailure(fixtureDir('probe'))) {
+      assert.match(res.stderr, GATE_MARKER, `the gate must say why it failed\nstderr:\n${res.stderr}`);
+    }
   });
 
   it('fails when the throwing after() is in a NESTED describe', (t) => {
@@ -129,7 +167,9 @@ describe('outer', () => { describe('inner', () => {
 `
     );
     assert.equal(res.status, 1, `nested after() must be caught\nstdout:\n${res.stdout}`);
-    assert.match(res.stderr, GATE_MARKER, 'exit 1 must come from the gate, not a fixture error');
+    if (runtimeHidesDescribeAfterFailure(fixtureDir('probe'))) {
+      assert.match(res.stderr, GATE_MARKER, 'exit 1 must come from the gate, not a fixture error');
+    }
   });
 
   it('does NOT fail a todo test whose body throws', (t) => {
@@ -182,7 +222,9 @@ describe('renders the # TODO badge', () => {
 `
     );
     assert.equal(res.status, 1, `a real failure must survive a name containing '# TODO'\nstdout:\n${res.stdout}`);
-    assert.match(res.stderr, GATE_MARKER, 'exit 1 must come from the gate, not a fixture error');
+    if (runtimeHidesDescribeAfterFailure(fixtureDir('probe'))) {
+      assert.match(res.stderr, GATE_MARKER, 'exit 1 must come from the gate, not a fixture error');
+    }
   });
 
   it('degrades without writing a stray file when the side channel cannot be created', (t) => {
@@ -285,7 +327,11 @@ describe('boom', () => {
 });
 `
     );
-    assert.equal(badRes.status, 1, `gate must fire\n${badRes.stdout}`);
+    assert.equal(badRes.status, 1, `the run must fail either way\n${badRes.stdout}`);
+    if (!runtimeHidesDescribeAfterFailure(fixtureDir('probe'))) {
+      // Node failed it natively; there is no retained report to assert on.
+      return;
+    }
     const retained = /full TAP report retained at: (.+)/.exec(badRes.stderr);
     assert.ok(retained, `the retained path must be printed\nstderr:\n${badRes.stderr}`);
     const kept = retained[1].trim();

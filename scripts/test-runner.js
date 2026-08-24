@@ -64,10 +64,15 @@ if (files.length === 0) {
 // NODE_V8_COVERAGE (set by c8 when wrapping this process) propagates via inherited
 // env to the child, which is how `npm run test:coverage` captures coverage across
 // the two-level spawn chain. Do not pass { env: ... } here without preserving it.
-// T66: node:test hides one specific teardown failure. A failing `afterEach` fails its
-// test and exits non-zero; a failing FILE-level `after` also exits non-zero. But an
-// `after` inside a `describe` does neither — it prints a `✖`, reports `fail 0`, and
-// exits 0. Measured on Node 25.8.1; the narrow scope is deliberate, not an approximation. A broken suite teardown therefore ships green, which is exactly how a real
+// T66: node:test hides one specific teardown failure, on SOME versions. A failing
+// `afterEach` fails its test and exits non-zero; a failing FILE-level `after` also
+// exits non-zero. But an `after` inside a `describe` prints a `✖`, reports `fail 0`,
+// and exits 0.
+//
+// The version boundary is real and was found the hard way, by CI: Node 18 and 20 fail
+// such a run natively; Node 22 and 25 do not. So this gate is a no-op on the older
+// legs and load-bearing on the newer ones — it must never assume which. That is why
+// it only consults the side channel when the child exited 0. A broken suite teardown therefore ships green, which is exactly how a real
 // regression survived three "green" verifications during T61.
 //
 // The TAP reporter DOES emit `not ok` for such a suite, so we run two reporters: the
