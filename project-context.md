@@ -362,7 +362,7 @@ The cost is not tidiness. Position is the first thing a reader uses to pick up w
 **How to apply.**
 
 - **Adding a lane row by hand.** Compute the RICE composite first, then insert at its sorted position — not at the top, not at the bottom. Copy the column layout from an adjacent row in the same table rather than from memory; that is what `BUG-17`/`BUG-18` got wrong.
-- **Flipping a status to closed.** Move the row below the live block in the same edit. A closed row that keeps its priority position is the failure mode above.
+- **Closing a row is a MOVE, not a status edit.** The row leaves its lane for §2.5 in the same edit that closes it — see "Closing a Row" in [`backlog-format-spec.md`](_bmad/bme/_enhance/workflows/initiatives-backlog/templates/backlog-format-spec.md). Demoting it to the bottom of the lane is the *superseded* rule; leaving it in the lane at all is now a detectable error rather than a judgement call about position.
 - **Rescoring.** Re-place the row; a changed score with an unchanged position is a silent lie.
 - **Before emitting a commit plan that touches the backlog.** Run the check below and paste its result into the commit Description. It costs one command.
 - **Reviewing a diff that adds or edits a lane row.** Verify the position. If the row was appended to the end of a table that is not sorted ascending, block and cite this rule.
@@ -389,14 +389,14 @@ for nm,x,y in [('Bug',a['### 2.2'],a['### 2.3']),('Fast',a['### 2.3'],a['### 2.4
         except ValueError: continue
         cl=shut(f[8])
         if prev:
-            if not cl and prev[2]: print(f'{nm}: {f[0]} (live {s}) below closed {prev[0]} [clause 3]'); bad+=1
-            elif not cl and not prev[2] and s>prev[1]+1e-9: print(f'{nm}: {f[0]} ({s}) below {prev[0]} ({prev[1]}) [clause 1]'); bad+=1
+            if not cl and not prev[2] and s>prev[1]+1e-9: print(f'{nm}: {f[0]} ({s}) below {prev[0]} ({prev[1]}) [clause 1]'); bad+=1
+        if cl: print(f'{nm}: {f[0]} is closed but still in the lane — move it to §2.5 [clause 3]'); bad+=1
         prev=(f[0],s,cl)
 print('LANE ORDER: OK' if not bad else f'LANE ORDER: {bad} violation(s)'); sys.exit(1 if bad else 0)
 EOF
 ```
 
-**Scope exemptions.** §2.1 Intakes are append-only and carry no score — they are never sorted. §2.5 sub-tables are append-only receipts and are never sorted. Untriaged lane rows (`?` for R/I/C/E, `—` for Score) have no sort key and park between the live and closed blocks per clause 2.
+**Scope exemptions.** §2.1 Intakes are append-only and carry no score — they are never sorted. §2.5 sub-tables are append-only receipts and are never sorted. Untriaged lane rows (`?` for R/I/C/E, `—` for Score) have no sort key and park after the live block per clause 2 — there is no closed block in a lane to park before, since clause 3 evicts closed rows to §2.5.
 
 **Forward-looking note.** The check above is an interim mechanism, not the fix. It only runs when someone remembers to run it, which is the same failure this rule exists to correct. The durable version is a shape-and-order assertion wired into `docs:audit` or `convoke-doctor` so that any writer is caught — tracked in the lifecycle backlog, qualified from `IN-188`. When that ships, this section reduces to a pointer.
 
