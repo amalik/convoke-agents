@@ -12,7 +12,7 @@ revised: '2026-08-24'
 # Backlog Cleanup — Draft Proposition
 
 **Status:** draft for Amalik's review. No edits made to the backlog.
-**Written:** 2026-08-17 · **Revised:** 2026-08-24 · **Author:** John (PM)
+**Written:** 2026-08-17 · **Revised:** 2026-08-24 (re-verified at `493dd2da`) · **Author:** John (PM)
 **Subject:** [convoke-note-initiative-lifecycle-backlog.md](../planning-artifacts/convoke-note-initiative-lifecycle-backlog.md)
 
 > **Revision note (2026-08-24).** Re-verified against HEAD after the 4.0.1
@@ -56,7 +56,7 @@ Fixing the sort without fixing the contradiction re-creates the mess next month.
 Figures are as of 2026-08-24; the 2026-08-17 reading is shown where it moved.
 
 ```
-File               1,145 lines · 588 KB · ~130k tokens   (was 1,116 / 543 KB)
+File               1,146 lines · 591 KB · ~130k tokens   (was 1,116 / 543 KB)
 §2.1 Intakes         188 rows   (append-only — correct by design)  unchanged
 §2.2 Bug              13 rows   →   7 live,  6 closed-in-lane      unchanged
 §2.3 Fast            239 rows   → 213 live, 26 closed-in-lane      (was 226 → 208 / 18)
