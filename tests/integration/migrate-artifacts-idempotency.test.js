@@ -20,6 +20,7 @@ const os = require('os');
 const { execFileSync } = require('child_process');
 
 const { runScript, PACKAGE_ROOT } = require('../helpers');
+const { initGitFixture, removeTempDir } = require('../helpers');
 
 const MIGRATE_SCRIPT = path.join(PACKAGE_ROOT, 'scripts/migrate-artifacts.js');
 
@@ -47,9 +48,7 @@ function git(cwd, args) {
 // planning artifact using the legacy `type-initiative` convention that the
 // migration should rewrite to `initiative-type`.
 async function seedProject(tmpDir) {
-  git(tmpDir, ['init', '-q']);
-  git(tmpDir, ['config', 'user.email', 'test@convoke.test']);
-  git(tmpDir, ['config', 'user.name', 'Convoke T4 Test']);
+  initGitFixture(tmpDir);
 
   // `findProjectRoot` walks up looking for a `_bmad/` dir — create it so the
   // CLI recognizes the tmp dir as a Convoke project.
@@ -126,7 +125,7 @@ describe('convoke-migrate CLI idempotency (T4)', () => {
   });
 
   after(async () => {
-    await fs.remove(tmpDir);
+    await removeTempDir(tmpDir);
   });
 
   it('first run renames ungoverned file and creates migration commits', async () => {

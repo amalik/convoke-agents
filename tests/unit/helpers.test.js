@@ -160,7 +160,20 @@ function maintenanceSpawnsOnCommit(dir, label) {
   return (res.stderr.match(/maintenance run --auto/g) || []).length;
 }
 
-/** Build a fixture repo the way this suite did BEFORE initGitFixture existed. */
+/**
+ * Build a fixture repo the way this suite did BEFORE initGitFixture existed.
+ *
+ * Deliberately leaves auto-maintenance ON — that is the whole point of a control
+ * arm. It therefore gets its OWN temp root, never the suite's shared tmpDir: a
+ * control repo's detached child is still writing after the test returns, and if
+ * it were inside the shared tree the suite's own after() would race it. That
+ * failure would read as a bug in removeTempDir rather than as this file
+ * manufacturing the defect it exists to detect.
+ *
+ * These control roots are deliberately NOT reaped: removing them is precisely
+ * the race, so the cure would be the disease. They are two-commit repos left to
+ * the OS temp reaper.
+ */
 function legacyGitFixture(dir) {
   nodeFs.mkdirSync(dir, { recursive: true });
   for (const args of [['init', '-q'], ['config', 'user.email', 't@t'], ['config', 'user.name', 't']]) {
@@ -184,7 +197,7 @@ describe("initGitFixture — suppresses git's detached auto-maintenance child", 
   it('a plain `git init` fixture DOES spawn the detached child, and initGitFixture does not', (t) => {
     // Control: the fixture pattern used today at tests/lib/migration-execution.test.js:248
     // and :509 — git init plus identity, nothing else.
-    const control = legacyGitFixture(path.join(tmpDir, 'control'));
+    const control = legacyGitFixture(path.join(nodeFs.mkdtempSync(path.join(os.tmpdir(), 'convoke-ctl-')), 'control'));
     const controlSpawns = maintenanceSpawnsOnCommit(control, 'control');
 
     // If the control does not spawn, this git predates auto-maintenance (or it
@@ -214,7 +227,7 @@ describe("initGitFixture — suppresses git's detached auto-maintenance child", 
     //
     // Same vacuity guard as the test above: without a control arm this asserts
     // 0 == 0 on any git that never auto-maintains.
-    const control = legacyGitFixture(path.join(tmpDir, 'foreign-control'));
+    const control = legacyGitFixture(path.join(nodeFs.mkdtempSync(path.join(os.tmpdir(), 'convoke-ctl-')), 'foreign-control'));
     if (maintenanceSpawnsOnCommit(control, 'foreign-control') === 0) {
       t.skip('this git does not run auto-maintenance after commit — nothing to suppress');
       return;
@@ -224,6 +237,37 @@ describe("initGitFixture — suppresses git's detached auto-maintenance child", 
     initGitFixture(repo);
     maintenanceSpawnsOnCommit(repo, 'seed');
     assert.equal(maintenanceSpawnsOnCommit(repo, 'foreign'), 0);
+  });
+});
+
+describe('removeTempDir — passes the retry options Node needs', () => {
+  // TEMP_RM_OPTS was previously unverified: the chmod test exercises the FAILURE
+  // path, and nothing exercised a retry. A behavioural retry test would need a
+  // real concurrent writer and a timing window — which would be a fresh instance
+  // of `fixture-determinism`, the rule this whole change exists to serve. So the
+  // boundary is drawn where responsibility actually sits: Node owns the retry
+  // loop; what is ours is passing the options and not swallowing the outcome.
+  it('invokes fs.rmSync with a non-zero maxRetries and retryDelay', (t) => {
+    const dir = nodeFs.mkdtempSync(path.join(os.tmpdir(), 'convoke-opts-'));
+    const calls = [];
+    t.mock.method(nodeFs, 'rmSync', (target, opts) => {
+      calls.push({ target, opts });
+    });
+    removeTempDirSync(dir);
+    assert.equal(calls.length, 1, 'removeTempDirSync must delegate to fs.rmSync exactly once');
+    const { opts } = calls[0];
+    assert.equal(opts.recursive, true);
+    assert.equal(opts.force, true);
+    assert.ok(
+      Number.isInteger(opts.maxRetries) && opts.maxRetries > 0,
+      `maxRetries must be a positive integer — 0 is the fs-extra default this fix exists to replace; got ${opts.maxRetries}`
+    );
+    assert.ok(
+      Number.isInteger(opts.retryDelay) && opts.retryDelay > 0,
+      `retryDelay must be a positive integer; got ${opts.retryDelay}`
+    );
+    t.mock.restoreAll();
+    nodeFs.rmSync(dir, { recursive: true, force: true });
   });
 });
 

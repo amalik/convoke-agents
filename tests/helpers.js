@@ -102,11 +102,12 @@ function _rethrowWithSurvivors(err, dir) {
  * real work. Refusing costs nothing — every legitimate caller is a `mkdtemp` path.
  *
  * @param {string} dir
+ * @param {string} caller - Name used in the error message.
  * @throws {Error} when `dir` is relative, or resolves outside (or exactly onto) the temp root.
  */
-function _assertRemovableTempPath(dir) {
+function _assertTempPath(dir, caller) {
   if (!path.isAbsolute(dir)) {
-    throw new Error(`removeTempDir refuses a relative path: ${JSON.stringify(dir)}`);
+    throw new Error(`${caller} refuses a relative path: ${JSON.stringify(dir)}`);
   }
   const resolved = path.resolve(dir);
   // Both spellings of the temp root: macOS reports `/var/folders/...` from
@@ -128,7 +129,7 @@ function _assertRemovableTempPath(dir) {
   });
   if (!contained) {
     throw new Error(
-      `removeTempDir refuses a path outside the OS temp directory (${os.tmpdir()}): ${resolved}`
+      `${caller} refuses a path outside the OS temp directory (${os.tmpdir()}): ${resolved}`
     );
   }
 }
@@ -143,7 +144,7 @@ function _assertRemovableTempPath(dir) {
  */
 async function removeTempDir(dir) {
   if (!dir) return;
-  _assertRemovableTempPath(dir);
+  _assertTempPath(dir, 'removeTempDir');
   try {
     await nodeFsPromises.rm(dir, TEMP_RM_OPTS);
   } catch (err) {
@@ -159,7 +160,7 @@ async function removeTempDir(dir) {
  */
 function removeTempDirSync(dir) {
   if (!dir) return;
-  _assertRemovableTempPath(dir);
+  _assertTempPath(dir, 'removeTempDir');
   try {
     nodeFs.rmSync(dir, TEMP_RM_OPTS);
   } catch (err) {
@@ -201,6 +202,11 @@ function initGitFixture(dir) {
       `initGitFixture requires an absolute directory path; got ${JSON.stringify(dir)}`
     );
   }
+  // Absolute-and-existing is NOT enough: `git init -q` on a directory that is
+  // already a repo exits 0, so initGitFixture(PACKAGE_ROOT) would quietly write
+  // `maintenance.auto=false` into the developer's own .git/config. Same temp-root
+  // containment the removers use — every legitimate fixture is a mkdtemp path.
+  _assertTempPath(dir, 'initGitFixture');
   if (!nodeFs.existsSync(dir) || !nodeFs.statSync(dir).isDirectory()) {
     throw new Error(`initGitFixture requires an existing directory; got ${dir}`);
   }

@@ -7,6 +7,7 @@ const fs = require('fs-extra');
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { initGitFixture, removeTempDirSync } = require('../helpers');
 const {
   inferArtifactType,
   inferInitiative,
@@ -344,9 +345,7 @@ describe('suggestInitiative', () => {
     // git-context branch (AC10(d)) that the original Test E missed.
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'suggest-git-'));
     try {
-      execFileSync('git', ['init', '-q'], { cwd: tmpDir });
-      execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: tmpDir });
-      execFileSync('git', ['config', 'user.name', 'test'], { cwd: tmpDir });
+      initGitFixture(tmpDir);
 
       const subDir = path.join(tmpDir, '_bmad-output', 'vortex-artifacts');
       fs.ensureDirSync(subDir);
@@ -363,7 +362,7 @@ describe('suggestInitiative', () => {
       assert.equal(result.source, 'git-context');
       assert.equal(result.confidence, 'low');
     } finally {
-      fs.removeSync(tmpDir);
+      removeTempDirSync(tmpDir);
     }
   });
 
@@ -429,9 +428,7 @@ describe('suggestInitiative', () => {
     // This is a regression guard for the cap logic itself, not a perf test.
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'suggest-cap-'));
     try {
-      execFileSync('git', ['init', '-q'], { cwd: tmpDir });
-      execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: tmpDir });
-      execFileSync('git', ['config', 'user.name', 'test'], { cwd: tmpDir });
+      initGitFixture(tmpDir);
 
       const subDir = path.join(tmpDir, '_bmad-output', 'vortex-artifacts');
       fs.ensureDirSync(subDir);
@@ -455,7 +452,7 @@ describe('suggestInitiative', () => {
         console.warn = origWarn;
       }
     } finally {
-      fs.removeSync(tmpDir);
+      removeTempDirSync(tmpDir);
     }
   });
 });

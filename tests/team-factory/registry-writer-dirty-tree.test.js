@@ -8,6 +8,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const { checkDirtyTree } = require('../../_bmad/bme/_team-factory/lib/writers/registry-writer');
+const { initGitFixture, removeTempDirSync } = require('../helpers');
 
 // Regression tests for backlog I127.
 //
@@ -35,9 +36,7 @@ function git(cwd, args) {
 /** A disposable git repo with one committed file. Returns { dir, rel, abs }. */
 function makeRepo() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'i127-'));
-  git(dir, ['init', '-q']);
-  git(dir, ['config', 'user.email', 't@t']);
-  git(dir, ['config', 'user.name', 't']);
+  initGitFixture(dir);
   const rel = path.join('nested', 'deep', 'registry.js');
   const abs = path.join(dir, rel);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
@@ -49,7 +48,7 @@ function makeRepo() {
 
 const created = [];
 afterEach(() => {
-  while (created.length) fs.rmSync(created.pop(), { recursive: true, force: true });
+  while (created.length) removeTempDirSync(created.pop());
 });
 
 describe('checkDirtyTree path resolution (I127)', () => {
