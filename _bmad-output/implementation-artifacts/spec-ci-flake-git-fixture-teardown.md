@@ -131,6 +131,20 @@ the test itself. Do not delete the `GIT_TRACE` regression test as a tautology �
   and a string. No new files, no renamed functions, no altered control flow.
   KEEP: refute-by-measurement before acting on a reviewer's claim about runtime behaviour.
 
+- **2026-08-24 — post-merge observation recorded; the last AC is closed.** The final acceptance criterion
+  could not be satisfied locally and was left for a reviewer to record. Evidence now spans four days and
+  21 CI runs since `f77cc584` landed on 2026-08-20: **19 success, 1 cancelled, 1 failure.** No run has
+  produced `ENOTEMPTY`, and `tests/helpers.js`, `tests/unit/helpers.test.js` and
+  `tests/lib/migration-execution.test.js` have not been touched since, so every one of those runs exercised
+  this fix unmodified. The single failure (`02cb6d72`, run 32651559683) is an unrelated defect —
+  `not ok 3 - unattributed count is well under 20 on the current repo (AC2)`, a test asserting against live
+  repo state, i.e. a `test-fixture-isolation` violation — fixed separately by `fc59c190`. The cancelled run
+  (`40461002`) was superseded, not failed.
+  **What this does and does not prove.** It is absence of recurrence, not proof of causation: the flake was
+  always intermittent, and Node 18 passed on the original failing run. What it does establish is that the
+  fix has not introduced a regression across 21 runs and four Node legs. If the flake ever returns, the
+  survivor listing in `removeTempDir` is what will name the writer.
+
 - **Process, 2026-08-19 — this section did not exist until now.** The spec was authored without the
   template's `## Spec Change Log` heading, so the first attempt to append the `chmod` entry above matched
   nothing and was silently lost; the run reported success from an unrelated statement in the same script.
