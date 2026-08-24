@@ -26,6 +26,59 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 
 ---
 
+## Rule: fixture-determinism
+
+**Statement.** A test must not assert on anything it does not control. If the asserted value can change
+without the code under test changing, the test is a clock, a race, or a census — not a test.
+
+**Operational check.** Before writing an assertion, name what determines the value. These axes each produce
+non-determinism and none is covered elsewhere in this file:
+
+- **Wall-clock time** — `new Date()` / `Date.now()` feeding date maths.
+- **Process lifetime you did not await** — a detached child or background writer still running after the
+  call that spawned it returned.
+- **A fixed delay** — `setTimeout`/`sleep` standing in for an event you could have awaited.
+- **Ambient environment** — inherited env vars, global config, the developer's own `git` settings.
+
+A fifth axis, **live repository state**, is owned in full by `test-fixture-isolation`; treat that rule as
+this one's filesystem case rather than repeating it here.
+
+**Why.** Five instances, each found separately, each fixed separately, none recognised at the time as the
+same defect:
+
+| | Uncontrolled input | How it surfaced | Already owned by |
+|---|---|---|---|
+| T12 | wall-clock | ±1 day flake across UTC midnight | — |
+| I131 | fixed delay | CI flake plus wasted seconds per suite | — |
+| I124 | live tree, timed | 30s timeout flake only under `c8` | `test-fixture-isolation` |
+| CI run 32115225495 | detached `git maintenance` child | `ENOTEMPTY` in teardown, three jobs red | — |
+| `02cb6d72` | live repo census | failed on corpus **growth**, not regression | `derive-counts-from-source` |
+
+Two of the five already had a rule and still recurred, because the rule named the *instance* and not the
+*class*. The other three had nothing. `fc59c190` states the cost best: *"the magic number rotted while the
+property it stood for did not."*
+
+**How to apply.**
+
+- **Pin the input rather than widen the tolerance.** A fixed offset instead of `new Date()`; a fixture tree
+  instead of a longer timeout; an awaited event instead of a sleep. Raising a limit hides the coupling and
+  the next person pays for it again.
+- **Remove the writer, then survive it.** Where concurrency is the input, suppress the source if you can
+  prove one exists, and make the failure self-diagnosing where you cannot — see `initGitFixture` and
+  `removeTempDir` in `tests/helpers.js`, whose failure message names what survived, precisely because the
+  race could not be reproduced locally.
+- **A guarded test that cannot run must say so** (`t.skip('reason')`). Silence reads as coverage. Proving the
+  guard itself can fail is `verification-must-be-falsifiable`, not this rule.
+- **Reviewing a PR.** If a diff adds an assertion whose value depends on any axis above, block and cite this
+  rule. Known trap: `runScriptWithInput` in `tests/unit/convoke-update.test.js` defaults `cwd` to
+  `PACKAGE_ROOT`, so omitting `cwd` silently opts into live repo state.
+
+**Exception.** A test whose *subject* is the non-deterministic thing — a clock helper, a retry policy, a
+concurrency primitive. Control the input explicitly (inject the clock, drive the scheduler); the subject
+being time does not license reading the real time.
+
+---
+
 ## Rule: no-hardcoded-versions
 
 **Statement.** Never hardcode version strings in source code. Always read via `getPackageVersion()` from `scripts/update/lib/utils.js`.
