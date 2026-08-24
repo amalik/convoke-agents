@@ -243,13 +243,61 @@ demonstration.
 
 ---
 
-## 7. What I need from you
+## 7. Decisions — RESOLVED 2026-08-24
 
-1. **Decision 1** — closed rows sweep to §2.5 (recommended), or stay in lane?
-2. **Decision 2** — sweep verbatim (a), summary + archive file (b, recommended), or defer (c)?
-3. **Decision 3** — age-out floor: 0.5, 1.0, or no age-out?
-4. Do you want the mechanical actions (1–5) in **one commit** or split per concern? My commit
-   plan follows your answer.
+Answered by Amalik, 2026-08-24.
+
+| # | Decision | Ruling |
+|---|----------|--------|
+| 1 | Where closed rows live | **Sweep all to §2.5.** Lane Ordering clause 3 is deleted from `backlog-format-spec.md`; the §2.5 transition in "Moving Items Between Sections" becomes the single rule. |
+| 2 | The prose problem | **Option (b) — summary + archive file.** §2.5 keeps a one-line summary per row; full post-mortems move to a sibling archive artifact, linked by ID. |
+| 3 | The cold tail | **No age-out for now — explicitly temporary.** The 85 sub-1.0 rows stay live. Filed as a backlog row so the decision returns rather than lapsing by silence. |
+| 4 | Commit granularity | Split per concern (default, unopposed). Each commit leaves the tree consistent. |
+
+**On Decision 3.** "Temporary" is doing real work in that sentence. A deferral that lives only
+in a chat transcript is indistinguishable from a decision never made — which is the exact
+failure mode §1 documents for IN-185 through IN-188, unqualified for nine days while their
+symptoms recurred. So the deferral gets a row of its own, and the 85 rows stay visible in the
+meantime.
+
+### Execution order — as run
+
+The order below is **not** the one first drafted here. Extraction showed why: the mechanical
+fixes had been listed before the sweep, but two of the six "sort violations" were live rows
+sitting under *closed* ones, and both dissolve the moment the closed rows leave the lane.
+Sorting first would have produced an arrangement the sweep immediately invalidated. Likewise
+`D14`'s malformed 2-column row and the `U10+P23+A8+A9` close are not separate fixes at all —
+under the amended spec they *are* closing moves, so they belong inside the sweep.
+
+1. **Spec amendment** — clause 3 rewritten to evict rather than demote; new §"Closing a Row"
+   binds status-edit + lane-delete + §2.5-append into one transition; both workflow step files
+   aligned so the tooling no longer instructs the opposite of the spec.
+2. **The sweep** — 34 closed rows out of the lanes, one-line receipts into §2.5, full closing
+   text into the archive artifact. Absorbs the `U10+P23+A8+A9` close, the `D14` marker row and
+   the `BUG-14` width defect, because each is a closing move rather than a repair.
+3. **Sort** — the residual ordering violations, now well-defined against lanes that contain
+   only live rows.
+4. **Qualification** — IN-185→T55, IN-186→T56, IN-187→T57, IN-188→T58, plus **T59** for the
+   Decision 3 deferral.
+5. **Reconciliation** — the two story files against `sprint-status.yaml`.
+
+Conservation was asserted after each stage: rows in equal rows out, and no description text
+was lost — only relocated.
+
+### Result
+
+| Check | Before | After |
+|---|---|---|
+| Closed rows in lanes | 32 | **0** |
+| Lane-order violations | 6 | **0** |
+| Rows at wrong column width | 2 | **0** |
+| §2.5 receipts | 72 | 104 |
+| Fast Lane live rows | 213 | 217 *(+5 qualified)* |
+| Backlog file size | 591 KB | **516 KB** |
+| `backlog-integrity` | PASS (331 rows) | PASS (336 rows) |
+
+`T57` — Review mode's pre-write validation, which has asserted the wrong column counts and
+failed on every run — scored 9.5 and is now the top row in the Fast Lane.
 
 ---
 
