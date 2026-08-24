@@ -20,6 +20,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { tapFailureLines, supportsReporters, SIDE_CHANNEL_PREFIX } = require('./lib/t66-gate');
 
 function walk(root) {
   const out = [];
@@ -75,23 +76,28 @@ if (files.length === 0) {
 // it only consults the side channel when the child exited 0. A broken suite teardown therefore ships green, which is exactly how a real
 // regression survived three "green" verifications during T61.
 //
-// The TAP reporter DOES emit `not ok` for such a suite, so we run two reporters: the
-// normal human one to stdout (unchanged output), and TAP to a side file we inspect.
-// `--test-reporter` landed in Node 18.15/19.6 while engines allows >=18.0.0, so the
-// side channel is skipped on older runtimes rather than crashing on an unknown flag.
-function supportsReporters() {
-  const [maj, min] = process.versions.node.split('.').map(Number);
-  // Backported to 18.15 and landed in 19.6 — so 19.0-19.5 does NOT have it, and a
-  // bare `maj > 18` would abort the entire suite on an unknown option there.
-  if (maj === 18) return min >= 15;
-  if (maj === 19) return min >= 6;
-  return maj > 19;
-}
+// The TAP reporter DOES emit `not ok` for such a suite, so we run two reporters: a
+// human one to stdout (pinned to `spec` — see below, this is a deliberate format
+// change, not a preservation), and TAP to a side file we inspect.
+
+/** Notes to repeat after the run, where they are actually read. */
+const deferredNotes = [];
 
 const args = ['--test'];
 let tapPath = null;
 let tapDir = null;
-if (supportsReporters()) {
+let reportersOk = false;
+let versionUnparseable = false;
+try {
+  reportersOk = supportsReporters();
+} catch (err) {
+  versionUnparseable = true;
+  // Degrade, do not abort: the gate is an add-on, and on 18.x/20.x node catches the
+  // defect natively anyway. Killing `npm test` over an unreadable version string
+  // would be a far worse outcome than running without the gate.
+  deferredNotes.push(`${err.message}; the T66 gate is off.`);
+}
+if (reportersOk) {
   // Private directory rather than a predictable filename: `convoke-test-runner-<pid>`
   // in a shared /tmp can already exist as a stale file, a symlink pointing elsewhere,
   // or another run's live file when two runners share a PID namespace.
@@ -104,9 +110,9 @@ if (supportsReporters()) {
     // writable tmpdir into a prerequisite for running the suite.
     tapDir = null;
     tapPath = null;
-    console.error(
-      `note: cannot create the T66 side channel (${err.code || err.message}); ` +
-        'describe-scoped after() hook failures will not be detected.'
+    deferredNotes.push(
+      `cannot create the T66 side channel (${err.code || err.message}); ` +
+        'describe-scoped after() hook failures were NOT detected.'
     );
   }
   // Specifying any reporter replaces node:test's defaults, so the human stream has
@@ -115,56 +121,55 @@ if (supportsReporters()) {
   // Node 25 piped emits spec), so CI logs currently change format across the matrix.
   // Pinning spec makes output identical on every leg. Nothing parses it — CI runs
   // `npm test` and uploads the output as an artifact.
+  args.push('--test-reporter', 'spec', '--test-reporter-destination', 'stdout');
   if (tapPath) {
-    args.push(
-      '--test-reporter', 'spec', '--test-reporter-destination', 'stdout',
-      '--test-reporter', 'tap', '--test-reporter-destination', tapPath
-    );
+    args.push('--test-reporter', 'tap', '--test-reporter-destination', tapPath);
   }
-} else {
-  console.error(
-    `note: node ${process.versions.node} predates --test-reporter; ` +
-      'suite-level after() hook failures cannot be detected (see T66).'
+} else if (!versionUnparseable) {
+  deferredNotes.push(
+    `node ${process.versions.node} predates --test-reporter (needs 18.15+ or 19.6+), ` +
+      'so the T66 gate is off. Believed harmless here: node fails a describe-scoped ' +
+      'after() throw natively on 18.x and 20.x, and the blind spot appears on 22+. ' +
+      'The 19.x range was never measured.'
   );
 }
 args.push(...files);
 
+// NOTE (T67 item b): a SIGINT/SIGTERM handler to reap the side channel was tried and
+// REVERTED. spawnSync blocks the event loop, so the handler can never run — but
+// registering it removes the default disposition, and a SIGTERM to this process is
+// then swallowed entirely (measured: exit 0 and the suite runs to completion, versus
+// 143 without). An un-killable test runner is worse than a leaked temp dir. Ctrl-C is
+// unaffected: it signals the process group, the child dies, and the result.signal
+// branch below handles it. The leak on a group-external kill remains open.
 const result = spawnSync(process.execPath, args, { stdio: 'inherit' });
 
-/** Read the TAP side channel, then remove it. Returns [] when unavailable. */
+/** Read the TAP side channel. Returns [] when there is no side channel to read. */
 function readTapFailures() {
   if (!tapPath) return [];
   try {
-    const raw = fs.readFileSync(tapPath, 'utf8');
-    // A completed TAP stream always ends with a `1..N` plan. Empty or truncated means
-    // the reporter never finished — unflushed stream, disk full, writer killed — and
-    // reading that as "no failures" is failing OPEN, which is the whole defect class.
-    if (!/^1\.\.\d+/m.test(raw)) {
-      console.error(
-        'T66 side channel is empty or truncated (no TAP plan) — treating as failure ' +
-          'rather than assuming the run was clean.'
-      );
-      return ['not ok - T66 side channel incomplete'];
-    }
-    return raw
-      .split('\n')
-      // A `# SKIP` / `# TODO` directive marks a pass in TAP semantics whatever the
-      // token, and node emits `not ok N - x # TODO` for a todo whose body throws.
-      //
-      // The ESCAPE check is what does the work, and it is sufficient on its own:
-      // node escapes any literal hash in a test name (and in a directive's reason) as
-      // `\#`, so an UNescaped `#` can only introduce a real directive. Anchoring to
-      // end-of-line was tried and is wrong — `{ todo: 'see issue #42' }` emits
-      // `not ok 1 - x # TODO see issue \#42`, whose trailing `\#` defeated the anchor
-      // and turned a legitimate todo into a failure.
-      .filter((line) => /^not ok /.test(line) && !/(?<!\\)#\s*(TODO|SKIP)\b/i.test(line));
+    return tapFailureLines(fs.readFileSync(tapPath, 'utf8'));
   } catch (err) {
-    // Fail CLOSED. Returning [] here would silently disable the guard, which is the
-    // exact failure mode T66 exists to remove: a check that reports success because
-    // it could not run.
+    // Fail CLOSED: returning [] would silently disable the guard — a check reporting
+    // success because it could not run.
     console.error(`T66 side channel unreadable (${err.code || err.message}) — treating as failure.`);
-    return ['not ok - T66 side channel unreadable'];
+    return [`${SIDE_CHANNEL_PREFIX} unreadable`];
   }
+}
+
+/**
+ * Exit, printing any deferred notes first.
+ *
+ * Notes previously printed on the normal path only, so a red run whose gate never ran
+ * lost the one line saying the gate never ran. Routing every post-spawn exit through
+ * here means a new exit path cannot silently drop them.
+ *
+ * @param {number} code
+ */
+function finish(code) {
+  cleanupTap();
+  for (const note of deferredNotes) console.error(`note: ${note}`);
+  process.exit(code);
 }
 
 /** Remove the private side-channel directory. Safe to call more than once. */
@@ -179,39 +184,52 @@ function cleanupTap() {
 
 // The spawn-level outcomes are checked FIRST: on a spawn error or a signal kill the
 // side channel is absent or half-written, and reading it there would replace a clear
-// diagnostic with a confusing one. Cleanup still runs on every path.
+// diagnostic with a confusing one. Cleanup runs on every path except a gate-fired one
+// with a readable report, which is retained on purpose.
 if (result.error) {
-  cleanupTap();
   console.error(`failed to spawn ${process.execPath}: ${result.error.message}`);
-  process.exit(1);
+  finish(1);
 }
 if (result.signal) {
-  cleanupTap();
   // POSIX convention: killed by signal N → exit 128 + N (SIGTERM=143, SIGKILL=137).
   // Preserves CI debug info vs. collapsing all signals to a bare 128.
-  process.exit(128 + (os.constants.signals[result.signal] ?? 0));
+  finish(128 + (os.constants.signals[result.signal] ?? 0));
 }
 
 if ((result.status ?? 1) !== 0) {
-  cleanupTap();
-  process.exit(result.status ?? 1);
+  finish(result.status ?? 1);
 }
 
 const tapFailures = readTapFailures();
 if (tapFailures.length > 0) {
   console.error(
-    `\nnode:test exited 0 but TAP recorded ${tapFailures.length} failure(s) (T66). ` +
-      'The known cause is an `after` hook inside a `describe`, but do not assume it — ' +
-      'the lines below are what the reporter actually said:'
+    `\nnode:test exited 0 but the T66 side channel reported ${tapFailures.length} problem(s). ` +
+      'Lines beginning `not ok` are verbatim from the TAP reporter (column-0 only, so ' +
+      'nested failures are not double-counted); lines beginning `not ok - T66` are this ' +
+      "runner's own, describing the side channel rather than a test. " +
+      'The known cause is an `after` hook inside a `describe`, but do not assume it:'
   );
   for (const line of tapFailures) console.error(`  ${line}`);
-  if (tapPath) {
+  // Do not advertise a report that could not be read — the unreadable path is exactly
+  // when the file is absent or unopenable, and pointing the operator at it wastes their
+  // time and leaks a stale dir for nothing.
+  // Any synthetic marker means the side channel itself is the problem — unreadable OR
+  // incomplete — so there is no report worth advertising or keeping. R3-6: keyed off
+  // the shared SIDE_CHANNEL_PREFIX rather than one message string, so editing a message
+  // (e.g. appending an errno) cannot silently invert this.
+  const reportUsable = tapFailures.every((l) => !l.startsWith(SIDE_CHANNEL_PREFIX));
+  if (reportUsable) {
     // Deliberately NOT reaped on this path: the TAP YAML block is the only record of
     // why the hook threw, and node:test printed nothing about it. Leaving it is the
     // point of the mechanism; a temp file is a small price for a debuggable failure.
     console.error(`\n  full TAP report retained at: ${tapPath}`);
+    console.error('  (not reaped automatically — delete it when you are done with it)');
   }
+  // Deliberately NOT finish(): that calls cleanupTap(), which would delete the report
+  // the line above advertised as retained. Notes are still printed, so a future note
+  // that can coexist with a live side channel cannot be silently dropped here.
+  for (const note of deferredNotes) console.error(`note: ${note}`);
+  if (!reportUsable) cleanupTap();
   process.exit(1);
 }
-cleanupTap();
-process.exit(result.status ?? 1);
+finish(result.status ?? 1);

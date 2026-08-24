@@ -22,16 +22,13 @@ const path = require('path');
 const { spawnSync } = require('node:child_process');
 
 const { removeTempDirSync } = require('../helpers');
+const { supportsReporters } = require('../../scripts/lib/t66-gate');
 
 const RUNNER = path.join(__dirname, '..', '..', 'scripts', 'test-runner.js');
 
-/** Mirrors supportsReporters() in the runner: 18.15+ or 19.6+. */
-function reportersAvailable() {
-  const [maj, min] = process.versions.node.split('.').map(Number);
-  if (maj === 18) return min >= 15;
-  if (maj === 19) return min >= 6;
-  return maj > 19;
-}
+// Imported, not re-implemented: a second copy that drifts in the permissive direction
+// silently converts this suite to t.skip and leaves the gate untested behind a green run.
+const reportersAvailable = supportsReporters;
 
 /**
  * Write a throwaway suite into its own directory and run the project runner over it.
@@ -70,7 +67,7 @@ function noteRetained(res) {
   if (m) retainedPaths.push(m[1].trim());
 }
 
-const GATE_MARKER = /TAP recorded \d+ failure/;
+const GATE_MARKER = /side channel reported \d+ problem/;
 
 /**
  * Does THIS runtime actually have the blind spot?
