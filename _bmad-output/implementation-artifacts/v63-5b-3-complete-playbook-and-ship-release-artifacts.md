@@ -9,7 +9,13 @@ epic: v63-epic-5b
 
 # Story 5B.3: Complete playbook and ship release artifacts
 
-Status: ready-for-dev
+Status: done
+
+> **Status reconciled 2026-08-24.** This file read `ready-for-dev` while
+> `sprint-status.yaml` recorded the story as `done` and its deliverables were verifiable on
+> disk and on npm. `sprint-status.yaml` is treated as authoritative for story state; this file
+> had simply never been flipped. Recorded rather than silently corrected, because two
+> disagreeing sources of truth is the finding — the flip is only its remedy.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
