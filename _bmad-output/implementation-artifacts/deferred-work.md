@@ -966,6 +966,7 @@ Round 2 verified the RCE fixes and found the remediation had treated two bug *cl
 
 - source_spec: none
   summary: Wire `tests/audit/` into the test runners — it is executed by no npm script and no CI job, so its 11 passing tests have never run in CI.
+  disposition: filed as T60 (Fast Lane, 8.1), 2026-08-24 — do not re-file
   evidence: >
     Split out of the CI-flake fix at step-01's multi-goal gate. `npm test`, `test:integration`,
     `test:p0` and `test:coverage` between them cover `tests/unit`, `tests/team-factory`,
@@ -985,6 +986,7 @@ Round 2 verified the RCE fixes and found the remediation had treated two bug *cl
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-ci-flake-git-fixture-teardown.md`
   summary: Adopt `removeTempDir` across the remaining ~250 `mkdtemp` teardown sites in `tests/`, or the helper stays a two-caller curiosity.
+  disposition: filed as T61 (Fast Lane, 1.6), 2026-08-24 — do not re-file
   evidence: >
     Raised in the spec's Code Review Gauntlet by Winston, as another instance of the pattern he named
     across sessions 4 and 5 — a thing exists in the repo and nothing binds it to the places that need it
@@ -999,6 +1001,7 @@ Round 2 verified the RCE fixes and found the remediation had treated two bug *cl
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-ci-flake-git-fixture-teardown.md`
   summary: Git test fixtures do not scrub ambient git environment/config, so a developer's global settings can hang or divert a fixture commit.
+  disposition: FIXED in ff23752c (T62) — env scrubbed and neutralising settings persisted repo-locally; do not re-file
   evidence: >
     Edge Case Hunter finding, deferred as pre-existing rather than caused by this change — every
     `git init` fixture in `tests/` has always behaved this way. `initGitFixture` sets identity and
@@ -1013,6 +1016,7 @@ Round 2 verified the RCE fixes and found the remediation had treated two bug *cl
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-ci-flake-git-fixture-teardown.md`
   summary: On git older than 2.31 the teardown race is unsuppressed — `maintenance.auto` does not exist and the detached child comes from `gc --auto --detach` instead.
+  disposition: FIXED in ff23752c (T62) — `gc.autoDetach=false` now set alongside `maintenance.auto`; do not re-file
   evidence: >
     Edge Case Hunter finding. `git maintenance` arrived in 2.31; before that, `git commit` forked
     `git gc --auto` detached via `gc.autoDetach` (default true). Git silently ignores unknown config
@@ -1024,6 +1028,7 @@ Round 2 verified the RCE fixes and found the remediation had treated two bug *cl
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-ci-flake-git-fixture-teardown.md`
   summary: `_assertRemovableTempPath` is a string-prefix check, so a symlinked component inside the temp root, or a pathological `TMPDIR`, can defeat it.
+  disposition: filed as T63 (Fast Lane, 1.6), 2026-08-24 — do not re-file. NOTE: the function is now `_assertTempPath(dir, caller)` and also guards `initGitFixture`
   evidence: >
     Round 2 findings, deferred as hardening rather than defects. The guard resolves and normalises but
     does not `realpath` the path being removed, so `/tmp/link/sub` where `link` points outside the temp
@@ -1036,6 +1041,7 @@ Round 2 verified the RCE fixes and found the remediation had treated two bug *cl
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-ci-flake-git-fixture-teardown.md`
   summary: The trace regression tests count only the `maintenance run --auto` spelling, so on pre-2.31 git both arms skip and the suppression is untested rather than reported broken.
+  disposition: FIXED in ff23752c (T62) — control regex widened to both spellings; do not re-file
   evidence: >
     Round 2 finding, and the mirror of the already-logged pre-2.31 gap. The control arm makes the tests
     fail-safe (they skip loudly rather than assert vacuously), so nothing lies — but the coverage is
@@ -1048,6 +1054,7 @@ Round 2 verified the RCE fixes and found the remediation had treated two bug *cl
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-ci-flake-git-fixture-teardown.md`
   summary: One `npm test` run out of five reported 1653 passing where the other four reported 1654, with zero failures throughout.
+  disposition: filed as intake IN-189, 2026-08-24 — do not re-file
   evidence: >
     Observed 2026-08-19 while verifying this fix. Totals agreed at 1655 tests every time; the outlier run
     had one test that was neither passed, failed nor skipped, implying a `cancelled`. The `cancelled` and
