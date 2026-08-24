@@ -175,6 +175,13 @@ Use H4 sub-headings to group:
 - Nothing disappears without a receipt.
 - Absorbed items must reference the target (epic file, larger initiative).
 - Completed items are append-only.
+- **`Description` is one line.** §2.5 is an index of receipts, read to answer "did this ship, and when?" — it is not where write-ups are read. Where the closing row carried substantive post-mortem prose, that text moves to the completed-work archive and the §2.5 cell links it by ID:
+
+  ```markdown
+  | BUG-16 | Floating `npx` tag served `latest`, not the running build — [post-mortem](convoke-note-backlog-completed-archive.md#bug-16) | 2026-08-15 | 17.1 | convoke |
+  ```
+
+- **The archive is append-only and never rewritten.** A post-mortem is evidence of what was understood at closing time. Correcting it later falsifies the record; append a dated addendum under the same anchor instead.
 
 ### Appendix Detail Format
 
@@ -226,14 +233,25 @@ Applies identically to **§2.2 Bug Lane**, **§2.3 Fast Lane** and **§2.4 Initi
 
 1. **Live rows first**, composite Score descending. Ties keep their prior relative order. *Live* = any row whose `Status` / `Stage` is not one of the closed values in clause 3.
 2. **Untriaged rows next** — rows carrying `?` for R/I/C/E and `—` for Score. They have no sort key, so they cannot participate in clause 1. They belong in §2.1 and are parked in the lane until triaged.
-3. **Closed rows last** — `Done`, `Closed`, `Shipped`, `Superseded`, `Rescoped`, `Absorbed`, `Invalid`, or any cell marked ✅. They stay in the lane for provenance but **must never occupy a priority position**. They need not be ordered among themselves.
-4. **Supersession pairs move as one unit.** Where a marker row is immediately followed by the original text under the same ID, the pair sorts on the original's score and stays adjacent.
+3. **Closed rows do not remain in a lane at all.** A row whose `Status` / `Stage` is `Done`, `Closed`, `Shipped`, `Superseded`, `Rescoped`, `Absorbed` or `Invalid`, or whose cell is marked ✅, **moves to §2.5 in the same edit that closes it**. Closing a row and leaving it in the lane is an incomplete edit, not a deferred chore — see **Closing a Row** below.
+4. **Supersession pairs move as one unit.** Where a marker row is immediately followed by the original text under the same ID, the pair travels together — sorting on the original's score while live, and moving to §2.5 together when closed.
 
-**Clause 3 is what a bare "descending by score" misses, and the gap is not hypothetical.** On 2026-08-16 the Bug Lane held a **closed** row scoring 17.1 at position 4, directly above the highest-scoring *open* bug in the project. Sorting on score alone reproduces that arrangement exactly — it was compliant with the old rule and still misled every reader.
+**Why clause 3 evicts rather than demotes.** Two readings of the earlier rule ran side by side for months and the file obeyed both, which is how the same work ended up filed two different ways: 32 closed rows parked in lanes against 66 in §2.5, as measured 2026-08-24. Demotion also failed on its own terms — on 2026-08-16 the Bug Lane held a **closed** row scoring 17.1 at position 4, directly above the highest-scoring *open* bug in the project, because a demotion rule only works if someone remembers to demote. Eviction has a property demotion lacks: a closed row in a lane is now a *detectable* error rather than a judgement call about position.
 
 **Ties under clause 1.** Where prior relative order is unknown — a fresh mechanical re-sort, or a newly inserted row — break by (1) Confidence, higher first, then (2) insertion order, newer first.
 
-**Reading the lane.** Status is authoritative, position is derived. A row's rank is only as honest as its status cell, so a closed row whose status was never flipped will sit in a priority position until someone notices. That failure has recurred often enough to be expected rather than surprising.
+**Reading the lane.** Status is authoritative, position is derived. A row's rank is only as honest as its status cell, so a row whose status was never flipped will sit in a priority position until someone notices. That failure has recurred often enough to be expected rather than surprising, and clause 3 does not cure it — a row that is *actually* done but still says `Open` looks identical to live work under any rule. What clause 3 removes is the second, compounding failure: the row that is correctly marked closed and still occupies a priority position.
+
+## Closing a Row
+
+Closing is a **move**, not a status edit. One transition, performed in a single edit:
+
+1. Set the `Status` / `Stage` cell to its closed value with the date.
+2. **Delete the row from its lane.**
+3. Append a row to the §2.5 sub-table — `Completed (shipped)` for finished work, `Absorbed into [target]` where another item took it over.
+4. Where the lane row carried substantive post-mortem prose, the §2.5 row carries a **one-line summary** and links the full text by ID into the completed-work archive. §2.5 is an index of receipts; it is not where write-ups are read.
+
+A row that satisfies (1) without (2) and (3) is the defect this section exists to prevent. If the tooling cannot perform the move, perform it by hand — do not leave the row behind as a marker of intent.
 
 **Who this binds.** Every writer, not only this workflow. Rows added by hand during unrelated work are — measurably — the dominant write path and therefore the dominant source of drift: of the four lane rows added on 2026-08-15, **zero** arrived through Triage; they were written into the tables inside `fix(...)` and `docs(...)` commits, and two of them arrived malformed because no validation ran. The corresponding obligation on hand-editors is the `backlog-write-discipline` rule in `project-context.md`.
 
@@ -315,7 +333,7 @@ The qualifying gate (Vortex, John, or Winston) assigns each intake to one lane:
 - **Bug → Fast Lane / Initiative (deeper rework):** Add row to target lane referencing the bug ID in `Linked Follow-up`.
 - **Fast Lane → Initiative (scope grew):** Move row, update ID prefix or keep original. Note in Change Log.
 - **Any → §2.5 Absorbed:** Move row to §2.5 with reference to absorbing target.
-- **Any → §2.5 Completed (shipped):** Move row to Completed sub-table with shipping date.
+- **Any → §2.5 Completed (shipped):** Move row to Completed sub-table with shipping date. This is the **only** destination for a closed row — see **Closing a Row** above. Removing it from the lane is part of the move, not a follow-up.
 
 Never delete a row outright — every removal becomes a §2.5 entry.
 
@@ -336,11 +354,11 @@ Before writing, the workflow must validate:
    - §2.5 sub-tables: 5 columns each
 5. **Change Log present** — `## Change Log` H2 exists.
 6. **No data loss** — Existing rows preserved; only the touched rows changed, only the touched lanes reordered.
-7. **Lane ordering** — §2.2, §2.3 and §2.4 each satisfy **Lane Ordering** above. Check every lane, not only the touched ones: drift arrives from writers outside this workflow, so an untouched lane is the *likelier* place to find it.
+7. **Lane ordering** — §2.2, §2.3 and §2.4 each satisfy **Lane Ordering** above, **and contain no closed row at all** (clause 3). Check every lane, not only the touched ones: drift arrives from writers outside this workflow, so an untouched lane is the *likelier* place to find it. A closed row found in a lane is a failed **Closing a Row** move — report the ID rather than silently sweeping it, since the §2.5 counterpart may or may not already exist and a blind sweep can duplicate it.
 
 If validation detects a structural mismatch, the user can proceed (Y) or abort (X).
 
-**Ordering violations are handled differently from the other six checks.** They are mechanically correctable, so the workflow re-sorts rather than prompting — but it must **report what moved**, naming each relocated row by ID, score, and old→new position. A verdict of "ordering violation" with no row named is not actionable, and silently re-sorting is worse: the operator loses the signal that something outside the workflow is writing to the file. Rows moved out of a priority position because they are closed (clause 3) should say so, since that usually means a status was flipped without the lane being re-sorted.
+**Ordering violations are handled differently from the other six checks.** They are mechanically correctable, so the workflow re-sorts rather than prompting — but it must **report what moved**, naming each relocated row by ID, score, and old→new position. A verdict of "ordering violation" with no row named is not actionable, and silently re-sorting is worse: the operator loses the signal that something outside the workflow is writing to the file. A closed row found in a lane is **not** an ordering violation and must not be re-sorted — it is an incomplete **Closing a Row** move, and the workflow reports it for the operator to complete rather than shuffling it downward.
 
 ---
 

@@ -99,10 +99,11 @@ For each item in `rescored_items`:
 For **all three lanes** (§2.2, §2.3, §2.4) — not only the ones this session rescored:
 
 1. Collect all rows in that lane's table.
-2. Order them per §"Lane Ordering" in `{templateFile}`: live rows by score descending, then untriaged rows, then closed rows; supersession pairs move as one unit.
+2. Order them per §"Lane Ordering" in `{templateFile}`: live rows by score descending, then untriaged rows; supersession pairs move as one unit. **A lane holds no closed rows** — clause 3 evicts them to §2.5 rather than demoting them.
 3. Tiebreak within clause 1: (1) Confidence higher first, (2) insertion order newer first.
 4. Rewrite the lane's table body with the ordered rows.
-5. **Report what moved** — name each relocated row by ID, score, and old→new position in the completion summary. Say when a row moved because it is closed, since that usually means a status was flipped without the lane being re-sorted.
+5. **Report what moved** — name each relocated row by ID, score, and old→new position in the completion summary.
+6. **Report any closed row found in a lane — do not sort it and do not sweep it.** It is an incomplete §"Closing a Row" move, not an ordering violation. Name the ID and leave it in place: its §2.5 counterpart may already exist, and a blind sweep duplicates the receipt. Completing the move is the operator's call.
 
 **This step previously re-sorted only the touched lanes**, to keep `git diff` minimal. That was the wrong trade. The lanes this session did not touch are the *likelier* place to find drift, because the dominant write path is hand-edits made outside this workflow during unrelated work — so a lane nobody reviewed is a lane nobody sorted. A quiet diff on an unsorted lane preserves a false priority order, and the position is what readers act on. Accept the diff.
 
