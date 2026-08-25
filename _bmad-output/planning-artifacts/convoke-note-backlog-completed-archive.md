@@ -428,3 +428,23 @@ The fix also closed a second instance of the same defect one layer down — a di
 
 ---
 
+## T69
+
+**Lane:** Fast Lane · **Filed:** 2026-08-25 · **Score:** 2.8 · **Portfolio:** convoke · **Status:** ✅ Done 2026-08-25
+
+**Receipt:** Lane rows carried no date, so the staleness rule's own 3-day trigger keyed on a value the file never recorded; an immutable `Filed` column now carries it, backfilled across all 245 live rows
+
+**Shipped as `22357866`.** `Filed` added to §2.2/§2.3/§2.4 with the spec's three column contracts amended in the same edit (11→12, 10→11, 11→12) — the T58 arity gate asserts every row against its own header, so a staged migration would have failed CI mid-way. **245 rows backfilled from 183 commits of file history, 0 unresolvable.**
+
+**Validated rather than assumed.** 100% coverage on a backfill is the shape of a bug, not a success, so it was checked against 11 independently-known filing dates: 11/11 agree, two cross-checked against commit messages that name the filing. An earlier reading — zero rows dating to the file's first commit — looked like the extractor silently matching nothing; it was correct. The file was created 2026-04-12 as a 3-row draft and Pass 2 landed the lane model on 04-15.
+
+**Semantics, documented in the spec:** `Filed` is the date a row entered its *lane*. For the April cohort that is Pass 2's reclassification, not when the item was first raised — earlier history lives in the superseded `convoke-note-initiatives-backlog.md`. Immutable: untouched by rescore, status change or re-sort. A `Touched` column was considered and rejected — it would churn on every edit and answer a question nobody asks.
+
+**Scope addition, declared at the time:** a `Filed` format assertion in `checkLaneShape`. Arity proves the cell exists, not that it holds a date; a blank or free-text cell passed every other check, and a date column nobody can trust is worse than none — the staleness rule would key its trigger on noise. Canaried on live data against a green baseline.
+
+**What it makes visible:** 157 of 245 live rows were filed in April, 16 in May, 2 in June, 70 in August. The cold tail is now legible without a git archaeology run, which is the argument T59 has been waiting on.
+
+**Lane rows carry no date, so "is this stale?" has no mechanical answer — 185 of 246 live rows measured 2026-08-25.** No qualification date, no last-touched date, nothing. Staleness can only be established by reading each row against source, which is what the 2026-08-24/25 audits had to do by hand across 59 rows to find 5 real hits. **Why it matters more than tidiness:** the `staleness-preflight-for-backlog-pickup` rule keys its entire trigger on *"qualified more than 3 calendar days ago"* — a date the file does not record. The rule has therefore never been mechanically enforceable; it fires only when a human remembers it. **Scope:** add a `Filed` column (date the row entered the lane) to §2.2/§2.3/§2.4, backfill from git where the row's introducing commit can be identified and `—` where it cannot — do not guess. `Filed` is immutable; a `Touched` column was considered and rejected as it would churn on every rescore. **This is a schema change across 246 rows, not an assertion**, which is why it is filed separately from T58 rather than bundled into it: T58 adds checks to an existing script, this rewrites every lane table and the format spec's three column contracts, and bundling would misprice both. Sequence after T58 so the new arity contract is asserted before the column is added, not after. **Enables:** a machine-checkable staleness gate, and the 7-day trigger on the rule's new Qualification-time arm.
+
+---
+
