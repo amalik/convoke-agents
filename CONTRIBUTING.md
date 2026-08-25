@@ -94,7 +94,7 @@ docs(backlog): run the P1+P2 staleness audit — 3 hits in 59 rows
 
 Types in use, in order of how often they appear in the history: `docs`, `fix`, `chore`, `governance`, `feat`, `ci`, `release`. The scope is a module, a subsystem, or a backlog ID.
 
-[`CHANGELOG.md`](CHANGELOG.md) follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). In practice the changelog is written at release time as a narrative — one release reads as one story — rather than accumulated per pull request. Describe the user-visible effect in your PR description; the maintainer folds it in at release. If you would rather add an entry yourself, say so in the PR and ask.
+[`CHANGELOG.md`](CHANGELOG.md) follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). **Do not add or edit `CHANGELOG.md` entries in a pull request.** The changelog is written at release time as a single narrative, so that one release reads as one story rather than as a pile of merges. Describe the user-visible effect of your change in the pull request description; the maintainer writes the entry at release.
 
 ---
 

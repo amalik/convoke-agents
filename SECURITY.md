@@ -26,7 +26,7 @@ Please include:
 - Steps to reproduce, ideally a minimal case
 - Any suggested fix, if you have one
 
-**What to expect:** an acknowledgement within 7 days, and an assessment within 14. If the report is accepted, you will be credited in the advisory and the changelog unless you ask not to be. If it is declined, you will be told why rather than left waiting.
+**What to expect:** an acknowledgement within 7 days, and an assessment within 21. If the report is accepted, you will be credited in the advisory and the changelog unless you ask not to be. If it is declined, you will be told why rather than left waiting.
 
 ## Scope
 
