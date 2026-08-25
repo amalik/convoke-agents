@@ -192,6 +192,26 @@ worked, and the distinction matters when reading §2.5, which is otherwise a rec
 - Age-out is a periodic operator decision, not an automatic sweep. Nothing should age a row out without
   someone choosing the floor.
 
+**After ANY bulk move — age-out, sweep, migration — run all three checks.** Not just the first.
+
+1. **Did exactly the intended rows leave?** Diff the lane row-ID sets before and after, and assert every
+   departure matches the criterion. A row leaving for an unrelated reason is invisible otherwise.
+2. **Do surviving rows reference the departed?** Scan every remaining `Dependencies` cell for IDs that
+   just left. Mark each hit — `I39 *(parked 2026-08-25)*` — or the row silently reads as blocked by work
+   that was actually deprioritised.
+3. **Are receipts 1:1 with archive entries?** Every §2.5 row that promises preserved text must have it.
+
+**Why all three, and why this is written down.** The 2026-08-25 age-out verified that all 85 departing
+descriptions survived byte-for-byte, and declared the move safe on that basis. Check 1 alone is
+structurally blind to what happens in the rows that *stay*: six surviving rows ended up depending on
+newly-parked work, and `backlog-integrity` stayed green throughout — correctly, because a parked row is
+still *defined* in §2.5, so the references resolved. Nothing was broken; six rows simply asserted
+something false about their own state, which is the failure this file exists to prevent. It was found
+only because the operator asked whether the change had been reviewed.
+
+The general form is worth carrying past this file: **a conservation check knows only about the things
+that moved.** Whatever the moved things were connected to needs its own check.
+
 **Rules:**
 - Nothing disappears without a receipt.
 - Absorbed items must reference the target (epic file, larger initiative).
