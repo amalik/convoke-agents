@@ -7,7 +7,7 @@
  ██║     ██║   ██║██║╚██╗██║╚██╗ ██╔╝██║   ██║██╔═██╗ ██╔══╝
  ╚██████╗╚██████╔╝██║ ╚████║ ╚████╔╝ ╚██████╔╝██║  ██╗███████╗
  ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝  ╚═══╝   ╚═════╝ ╚═╝  ╚═╝╚══════╝
-   Discover what has to be discovered. Ship what's ready to ship.
+      Extends BMAD Method across the product lifecycle
 ```
 
 [![Version](https://img.shields.io/npm/v/convoke-agents?color=blue&label=version)](https://www.npmjs.com/package/convoke-agents)
@@ -25,25 +25,19 @@ Portability is a direction, not yet a destination. The export tooling takes a st
 
 ## The lifecycle
 
-Each stage is a job. Where Convoke has a team for the job, it's named underneath. Where it doesn't yet, the column is empty — that's the roadmap, drawn honestly.
+Convoke's teams sit either side of the build. Where a team exists, it's named. Where one doesn't, the scope is mapped and not built.
 
 ```
-  ┌───────────┐ ┌───────────┐ ╔═══════════╗ ┌───────────┐ ┌ ─ ─ ─ ─ ┐
-  │ frame the │ │  decide   │ ║           ║ │  is it    │  capture   
-  │  problem  │▶│  what to  │▶║   build   ║▶│  fit to   │▶ what the  
-  │           │ │   build   │ ║           ║ │   ship?   │  system    
-  │           │ │           │ ║           ║ │           │  knows     
-  └───────────┘ └───────────┘ ╚═══════════╝ └───────────┘ └ ─ ─ ─ ─ ┘
-     Vortex        Vortex      BMAD Method       Gyre          —
+    Discovery       Design        Build       Readiness
+   ╔══════════╗  ┌──────────┐  ┌──────────┐  ╔══════════╗
+   ║  Vortex  ║  │   WDS    │  │   BMM    │  ║   Gyre   ║
+   ║ 7 agents ║  │          │  │   TEA    │  ║ 4 agents ║
+   ╚══════════╝  └──────────┘  └──────────┘  ╚══════════╝
+
+   ╚═╝ Convoke ships it      └─┘ BMAD Method ecosystem — not ours
 ```
 
-| The job | Team |
-|---------|------|
-| Frame the right problem and understand the people who have it | **Vortex** |
-| Turn research into hypotheses, and hypotheses into experiments | **Vortex** |
-| Build it | *BMAD Method — not ours* |
-| Find out whether it's actually ready for production | **Gyre** |
-| Capture what an existing system already knows | — |
+Strategy · Growth · Delivery · Security · Ops/Run · Sunset are mapped in the [lifecycle vision](https://github.com/amalik/convoke-agents/blob/main/docs/lifecycle-expansion-vision.md), not built.
 
 Convoke works standalone or as an extension — no BMAD Method installation is required either way.
 
@@ -165,6 +159,8 @@ MIT — see [LICENSE](LICENSE).
 Built on [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) and the [Innovation Vortex](https://unfix.com/innovation-vortex) from Jurgen Appelo's [unFIX model](https://unfix.com/). The agents that built this — and there were a lot of them — are named in [CREDITS.md](CREDITS.md).
 
 <div align="center">
+
+*Discover what has to be discovered. Ship what's ready to ship.*
 
 [Get started](#your-first-15-minutes) · [The lifecycle](#the-lifecycle) · [Teams](#teams) · [Install](INSTALLATION.md) · [Update](UPDATE-GUIDE.md) · [Changelog](CHANGELOG.md)
 
