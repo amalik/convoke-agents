@@ -279,7 +279,20 @@ function checkLaneShape(tables) {
           );
           continue;
         }
-        const raw = r.cells[si];
+        // T69: arity proves the Filed cell EXISTS; nothing proved it holds a date. An empty or
+      // free-text cell would pass every other check, and a date column nobody can trust is
+      // worse than no column — the staleness rule would key its trigger on noise.
+      const fi = columnIndex(t, 'Filed');
+      if (fi !== -1) {
+        const filed = String(r.cells[fi] || '').trim();
+        if (!/^(\d{4}-\d{2}-\d{2}|[—–-])$/.test(filed)) {
+          problems.push(
+            `filed date: ${r.id} (line ${r.line}) has Filed \`${filed}\` — expected YYYY-MM-DD or \`—\``,
+          );
+        }
+      }
+
+      const raw = r.cells[si];
         const score = numericCell(raw);
         if (!Number.isFinite(score)) {
           if (!/^[—–-]$/.test(String(raw).trim())) {

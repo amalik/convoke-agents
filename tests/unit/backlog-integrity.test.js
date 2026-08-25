@@ -424,3 +424,36 @@ describe('fences, lane cursor and score parsing (R2-MEDIUM)', () => {
     }
   });
 });
+
+
+describe('Filed column (T69)', () => {
+  const H = '| ID | Filed | Description | R | I | C | E | Score | Portfolio | Status |';
+  const S = '|----|-------|-------------|---|---|---|---|-------|-----------|--------|';
+  const row = (id, filed, score) => `| ${id} | ${filed} | d | 4 | 2 | 90% | 1 | ${score} | convoke | Open |`;
+  const lane = (...rows) => doc('### 2.2 Bug Lane', '', H, S, ...rows);
+
+  it('accepts an ISO date', () => {
+    assert.deepEqual(checkLaneShape(tablesOf(lane(row('BUG-1', '2026-08-15', '5.0')))), []);
+  });
+
+  it('accepts an em-dash for a row whose filing date cannot be established', () => {
+    assert.deepEqual(checkLaneShape(tablesOf(lane(row('BUG-1', '—', '5.0')))), []);
+  });
+
+  it('flags an EMPTY Filed cell — arity alone cannot catch this', () => {
+    const p = checkLaneShape(tablesOf(lane(row('BUG-1', '', '5.0'))));
+    assert.match(p[0], /filed date: BUG-1/);
+  });
+
+  it('flags free text in the Filed cell', () => {
+    const p = checkLaneShape(tablesOf(lane(row('BUG-1', 'last week', '5.0'))));
+    assert.match(p[0], /filed date/);
+  });
+
+  it('locates Score and Status by name despite the inserted column', () => {
+    // The whole point of the T58 name-based lookup: adding Filed must not shift what is read.
+    const p = checkLaneShape(tablesOf(lane(row('BUG-1', '2026-01-01', '2.0'), row('BUG-2', '2026-01-02', '8.0'))));
+    assert.equal(p.length, 1);
+    assert.match(p[0], /lane order: BUG-2/);
+  });
+});

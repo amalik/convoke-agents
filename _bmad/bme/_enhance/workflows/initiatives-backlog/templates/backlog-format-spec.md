@@ -96,12 +96,13 @@ The file uses this exact structure. Sections must appear in this order.
 ### §2.2 Bug Lane Table
 
 ```markdown
-| ID | Description | R | I | C | E | Score | Portfolio | Status | Dependencies | Linked Follow-up |
-|----|-------------|---|---|---|---|-------|-----------|--------|--------------|------------------|
+| ID | Filed | Description | R | I | C | E | Score | Portfolio | Status | Dependencies | Linked Follow-up |
+|----|-------|-------------|---|---|---|---|-------|-----------|--------|--------------|------------------|
 ```
 
 **Columns:**
 - `ID`: Bug-prefixed sequential — `BUG-{n}`.
+- `Filed`: `YYYY-MM-DD`, the date the row entered its lane, or `—` where it cannot be established from git. **Immutable** — it is not touched by a rescore, a status change or a re-sort. A `Touched` column was considered and rejected: it would churn on every edit and answer a question nobody asks. Note the semantics for the 2026-04-15 cohort: that is when Pass 2 reclassified those items into the three-lane model, not when the underlying item was first raised — earlier history lives in the superseded `convoke-note-initiatives-backlog.md`. Added by T69 (2026-08-25) because `staleness-preflight-for-backlog-pickup` keys its trigger on "qualified more than 3 calendar days ago", a date the file had never recorded, leaving the rule enforceable only by human memory.
 - `Description`: One-line summary of the broken behavior + intended fix scope.
 - `R`, `I`, `C`, `E`: RICE component scores. Impact often hardcoded high (2–3) when user-facing.
 - `Score`: Composite, one decimal place.
@@ -115,8 +116,8 @@ The file uses this exact structure. Sections must appear in this order.
 ### §2.3 Fast Lane Table
 
 ```markdown
-| ID | Description | R | I | C | E | Score | Portfolio | Status | Dependencies |
-|----|-------------|---|---|---|---|-------|-----------|--------|--------------|
+| ID | Filed | Description | R | I | C | E | Score | Portfolio | Status | Dependencies |
+|----|-------|-------------|---|---|---|---|-------|-----------|--------|--------------|
 ```
 
 **Columns:**
@@ -132,8 +133,8 @@ The file uses this exact structure. Sections must appear in this order.
 ### §2.4 Initiative Lane Table
 
 ```markdown
-| ID | Description | R | I | C | E | Score | Portfolio | Stage | Artifacts | Dependencies |
-|----|-------------|---|---|---|---|-------|-----------|-------|-----------|--------------|
+| ID | Filed | Description | R | I | C | E | Score | Portfolio | Stage | Artifacts | Dependencies |
+|----|-------|-------------|---|---|---|---|-------|-----------|-------|-----------|--------------|
 ```
 
 **Columns:**
@@ -348,9 +349,9 @@ Before writing, the workflow must validate:
 3. **Part 2 section anchors** — All five H3 sections (`### 2.1` through `### 2.5`) exist in correct order under `## Part 2: Backlog`.
 4. **Table column counts:**
    - §2.1 Intakes: 5 columns
-   - §2.2 Bug Lane: 11 columns (Dependencies column added 2026-04-15)
-   - §2.3 Fast Lane: 10 columns (Dependencies column added 2026-04-15)
-   - §2.4 Initiative Lane: 11 columns (Dependencies column added 2026-04-15)
+   - §2.2 Bug Lane: 12 columns (Dependencies 2026-04-15; Filed 2026-08-25)
+   - §2.3 Fast Lane: 11 columns (Dependencies 2026-04-15; Filed 2026-08-25)
+   - §2.4 Initiative Lane: 12 columns (Dependencies 2026-04-15; Filed 2026-08-25)
    - §2.5 sub-tables: 5 columns each
 5. **Change Log present** — `## Change Log` H2 exists.
 6. **No data loss** — Existing rows preserved; only the touched rows changed, only the touched lanes reordered.
