@@ -368,3 +368,19 @@ Rows arrive here only through the **Closing a Row** transition in
 
 ---
 
+## T57
+
+**Lane:** Fast Lane · **Score:** 9.5 · **Portfolio:** convoke · **Status:** ✅ Closed 2026-08-25 (invalid — already fixed)
+
+**Receipt:** Review mode's stale column counts — fixed 2026-08-16 by `69c0eba6`, nine days before this row was filed from an un-rechecked intake
+
+**This row should never have existed, and the reason is worth keeping.** IN-187 was filed describing a real defect: `step-r-01-load.md` hardcoded lane column counts of Bug 10 / Fast 9 / Initiative 10 against real tables of 11 / 10 / 11, so Review mode's pre-write validation failed on every run and was always bypassed. Commit `69c0eba6` (2026-08-16) fixed it — both step files now read the counts from `backlog-format-spec.md` §"Table Formats" rather than from a local copy, with the commit noting the copies "went stale when the Dependencies column was added on 2026-04-15 and stayed wrong for months." The intake was never updated.
+
+On 2026-08-24 the backlog cleanup qualified IN-187 into this row **without running check 1 against source**, scored it 9.5, and placed it at the top of the Fast Lane — where it was then twice reported to the operator as the highest-priority open item and as "the gate that would have caught the malformed rows." It had been fixed for over a week.
+
+**The methodological lesson, which generalises.** Check 1 of the staleness pre-flight greps commit history for the row's ID. That check is **structurally blind to any fix that predates the row**: no commit could mention `T57` because `T57` did not exist when the fix landed. A row qualified from an aged intake inherits the intake's staleness and passes every ID-based check. Qualification from an intake older than a few days therefore requires **source verification**, not commit-grep — the same standard the pre-flight demands before *implementing* a row, applied one step earlier, at the moment of filing.
+
+**Review mode's pre-write validation asserts column counts that have never matched the file, so it fails on every run and is always bypassed.** `step-r-01-load.md:86-88` and `step-r-03-update.md:60` assert Bug 10 / Fast 9 / Initiative 10. The real tables — and `backlog-format-spec.md` §Pre-Write Validation #4 — are **11 / 10 / 11**. A gate that fails unconditionally is a gate nobody reads; the operator learns to click past it, which is how malformed rows reach the file. One-line fix per site, but the value is in restoring a signal, not in the edit. Qualified from IN-187.
+
+---
+
