@@ -384,3 +384,27 @@ On 2026-08-24 the backlog cleanup qualified IN-187 into this row **without runni
 
 ---
 
+## BUG-13
+
+**Lane:** Bug Lane · **Score:** 5.7 · **Portfolio:** convoke · **Status:** ✅ Done 2026-08-25
+
+**Receipt:** `updateLinks` applied every rename entry over the same buffer, so a chained or swapped rename rewrote text a previous entry had just produced — destroying one of the two links
+
+**Fixed by `8f543cdc` — "rewrite each link once, not once per rename entry".** The loop was replaced with a single regex alternation over all old names, so the engine visits each position once and the callback resolves the name it actually matched. The map is a direct old→new mapping, not a chain to follow transitively, and that is now what the code implements.
+
+**Verified by execution at close, not from the commit message** (three isolated fixtures, one temp tree each — an earlier attempt ran them in a shared directory and the first rename contaminated the second, which read as a failure that was not there):
+
+| Case | Input | Pre-fix | Now |
+|---|---|---|---|
+| chain `{a→b, b→c}` | `[A](a.md) and [B](b.md)` | `[A](c.md) and [B](c.md)` — link to `b.md` destroyed | `[A](b.md) and [B](c.md)` ✓ |
+| swap `{a↔b}` | `[A](a.md) [B](b.md)` | `[A](a.md) [B](a.md)` | `[A](b.md) [B](a.md)` ✓ |
+| prefixes | `[A](./a.md) [B](../d/b.md)` | double-rewritten by the second pattern | `[A](./x.md) [B](../d/y.md)` ✓ |
+
+The fix also closed a second instance of the same defect one layer down — a direct/`./` pattern and a `../dir/` pattern had run in sequence over the same buffer — and declared a deliberate behaviour change: the rewrite no longer reaches into a `#fragment`, because a fragment is a heading slug, not a file path. Zero links of that shape exist in the corpus. 89 regression tests ship with it in `tests/lib/migration-execution.test.js`.
+
+**Never observed in production.** Renames have so far been one-shot, which is why a defect capable of silent data loss in governed artifact renames sat open from 2026-08-15 to 2026-08-25.
+
+**`updateLinks` corrupts chained and swapped renames — silent data loss in governed artifact renames.** `scripts/lib/artifact-utils.js:1533-1565` applies every map entry sequentially over the same buffer, so an entry can rewrite text a previous entry already produced. Verified by execution during issue #7 R1: chain `{'a.md'→'b.md', 'b.md'→'c.md'}` on `[A](a.md) and [B](b.md)` yields **`[A](c.md) and [B](c.md)`** — entry 1 rewrote `a.md`→`b.md`, entry 2 rewrote that same text again, so both links now point at one file and the link to `b.md` is destroyed. Swap `{'a.md'→'b.md', 'b.md'→'a.md'}` on `[A](a.md) [B](b.md)` yields **`[A](a.md) [B](a.md)`**. `executeInjections` guards only `oldBasename !== newBasename` per entry; nothing checks a new name against another entry's old name. Pre-existing — the loop structure is untouched by issue #7, which only replaced the escape on line 1541 — but the fixed line sits inside this loop, so the next reader will assume it was reviewed. No occurrence in the current corpus (renames have so far been one-shot), which is why it has never surfaced. **Fix:** single pass over a combined alternation, or a pre-check that `new Set(map.values())` is disjoint from `new Set(map.keys())`, refusing the batch if not.
+
+---
+
