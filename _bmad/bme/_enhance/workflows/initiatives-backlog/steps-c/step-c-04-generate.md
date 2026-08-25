@@ -1,6 +1,6 @@
 ---
 name: 'step-c-04-generate'
-description: 'Generate the complete lifecycle backlog file — frontmatter, Part 1 verbatim from process spec, Part 2 lanes populated from qualified + raw intakes, Appendix, Change Log'
+description: 'Generate the complete lifecycle backlog file — frontmatter, Part 1 as a pointer to the process spec, Part 2 lanes populated from qualified + raw intakes, Appendix, Change Log'
 outputFile: '{planning_artifacts}/convoke-note-initiative-lifecycle-backlog.md'
 templateFile: '{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/templates/backlog-format-spec.md'
 processFile: '{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/templates/lifecycle-process-spec.md'
@@ -13,7 +13,7 @@ workflowFile: '{project-root}/_bmad/bme/_enhance/workflows/initiatives-backlog/w
 
 Generate the complete lifecycle backlog file from scratch:
 - **Frontmatter** with correct artifact governance metadata
-- **Part 1: Lifecycle Process** copied verbatim from `lifecycle-process-spec.md`
+- **Part 1: Lifecycle Process** emitted as a POINTER to `lifecycle-process-spec.md`
 - **Part 2: Backlog** with §2.1 Intakes populated from all gathered intakes, and §2.2/2.3/2.4 populated from qualified items (if any). §2.5 Absorbed/Archived starts empty.
 - **Appendix: Initiative Details** (empty placeholder or populated for Initiative Lane items with detail)
 - **Change Log** with the creation entry
@@ -30,21 +30,21 @@ Present a completion summary and return to the T/R/C menu.
 
 ### Role Reinforcement:
 - ✅ You are a **backlog operations specialist** — precise, structured, format-compliant
-- ✅ Part 1 is **verbatim** from `{processFile}` — do not paraphrase, summarize, or edit
+- ✅ Part 1 is a **one-line pointer** to `{processFile}` — never the process text itself (T71). Do not paraphrase, summarize, or edit
 - ✅ All output must be standard markdown — no HTML, no proprietary syntax
 - ✅ Every intake logged, every qualified item in its lane, every decision traceable in the Change Log
 
 ### Step-Specific Rules:
-- 🎯 Focus on file generation, verbatim Part 1 emission, correct lane population, completion reporting
+- 🎯 Focus on file generation, Part 1 pointer emission, correct lane population, completion reporting
 - 🚫 FORBIDDEN to re-qualify items (step-c-03's job)
-- 🚫 FORBIDDEN to paraphrase or modify Part 1 content — emit the `lifecycle-process-spec.md` text verbatim
+- 🚫 FORBIDDEN to copy process text into Part 1 — emit a link to `lifecycle-process-spec.md` and nothing else
 - 🚫 FORBIDDEN to add items not in the gathered_intakes / qualified_items lists
 - 💬 Approach: assemble the complete file, verify structure, write, summarize, return to menu
 
 ## EXECUTION PROTOCOLS:
 - 🎯 Follow the MANDATORY SEQUENCE exactly
 - 📖 Load `{templateFile}` (backlog-format-spec.md) for exact structural requirements and table formats
-- 📖 Load `{processFile}` (lifecycle-process-spec.md) for the verbatim Part 1 text
+- 📖 `{processFile}` (lifecycle-process-spec.md) is the canonical process — link to it, do not inline it
 - 💾 Write to `{outputFile}` as a complete new file
 
 ## CONTEXT BOUNDARIES:
@@ -61,7 +61,7 @@ Present a completion summary and return to the T/R/C menu.
 
 Ensure `{templateFile}` (backlog-format-spec.md) and `{processFile}` (lifecycle-process-spec.md) are loaded.
 
-Identify in `{processFile}` the **verbatim Part 1 text**: everything after the `---` separator line, starting with `## Part 1: Lifecycle Process` through the end of §1.6.
+`{processFile}` holds the canonical process. Read it for context if you need it, but do NOT extract its text for emission — Part 1 in the output is a link to it (T71).
 
 ### 2. Generate Frontmatter
 
@@ -90,19 +90,23 @@ supersedes: convoke-note-initiatives-backlog.md
 **Status:** Draft (initial creation)
 ```
 
-### 4. Emit Part 1 Verbatim
+### 4. Emit the Part 1 Pointer
 
-Copy the Part 1 text from `{processFile}` verbatim into the new file. This includes:
+Emit the `## Part 1: Lifecycle Process` heading followed by a link to `{processFile}` — nothing more.
 
-- `## Part 1: Lifecycle Process` heading
-- `### 1.1 Intake`
-- `### 1.2 Qualifying Gate`
-- `### 1.3 Three Lanes` (with H4 subsections: Bug Lane, Fast Lane, Initiative Lane)
-- `### 1.4 Portfolio Attachment`
-- `### 1.5 Pipeline Stages (Evolvable)`
-- `### 1.6 RICE Scoring`
+```markdown
+## Part 1: Lifecycle Process
 
-**Do not paraphrase, summarize, reorder, or edit.** If any edit is desired, it must be made in `lifecycle-process-spec.md` first and migrated downstream.
+The lifecycle process — intake, the qualifying gate, the three lanes, portfolio attachment, pipeline
+stages and RICE scoring — is defined in
+[`lifecycle-process-spec.md`](../../_bmad/bme/_enhance/workflows/initiatives-backlog/templates/lifecycle-process-spec.md).
+
+It is deliberately **not** duplicated here. This file is the operational surface; the process it operates
+under is defined once, in one place. (T71, 2026-08-25 — the copy that used to sit here was 182 lines and
+nothing read it.)
+```
+
+Adjust the relative path to the output location if it differs.
 
 ### 5. Generate Part 2 Structure
 
@@ -211,7 +215,7 @@ If any Initiative Lane item warrants detail (has substantial scope notes from ga
 Write the assembled backlog to `{outputFile}`. The file must contain, in order:
 1. Frontmatter
 2. H1 title + metadata paragraph
-3. `## Part 1: Lifecycle Process` (verbatim from process spec)
+3. `## Part 1: Lifecycle Process` (pointer to the process spec — never the text)
 4. `## Part 2: Backlog` with §2.1 through §2.5
 5. `## Appendix: Initiative Details`
 6. `## Change Log`
@@ -254,6 +258,6 @@ Then return to the T/R/C menu:
 Load, read the entire file, and execute `{workflowFile}`.
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS:
-### ✅ SUCCESS: Complete file generated with correct frontmatter, verbatim Part 1 from process spec, all five §2.x H3 sections present with correct column counts, intakes logged with cross-references to lanes, qualified items placed in correct lanes and sorted by RICE, Appendix and Change Log present, post-write validation passes, completion summary displayed, menu re-presented
-### ❌ SYSTEM FAILURE: Part 1 paraphrased or modified, missing H3 sections, wrong column counts, intakes not cross-referenced to qualified lane items, items placed in wrong lane, file not validated after write, no completion summary, no return to menu
+### ✅ SUCCESS: Complete file generated with correct frontmatter, Part 1 as a pointer to the process spec, all five §2.x H3 sections present with correct column counts, intakes logged with cross-references to lanes, qualified items placed in correct lanes and sorted by RICE, Appendix and Change Log present, post-write validation passes, completion summary displayed, menu re-presented
+### ❌ SYSTEM FAILURE: process text written into Part 1 instead of a pointer, missing H3 sections, wrong column counts, intakes not cross-referenced to qualified lane items, items placed in wrong lane, file not validated after write, no completion summary, no return to menu
 **Master Rule:** Skipping steps is FORBIDDEN.

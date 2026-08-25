@@ -42,14 +42,7 @@ The file uses this exact structure. Sections must appear in this order.
 ```
 # Convoke Initiative Lifecycle & Backlog              (H1 — title)
 
-## Part 1: Lifecycle Process                           (H2 — process definition, semi-static)
-### 1.1 Intake                                         (H3)
-### 1.2 Qualifying Gate                                (H3)
-### 1.3 Three Lanes                                    (H3)
-####   Bug Lane / Fast Lane / Initiative Lane          (H4)
-### 1.4 Portfolio Attachment                           (H3)
-### 1.5 Pipeline Stages (Evolvable)                    (H3)
-### 1.6 RICE Scoring                                   (H3)
+## Part 1: Lifecycle Process                           (H2 — POINTER ONLY, see below)
 
 ## Part 2: Backlog                                     (H2 — operational data, mutates frequently)
 ### 2.1 Intakes (Unqualified)                          (H3)
@@ -65,7 +58,19 @@ The file uses this exact structure. Sections must appear in this order.
 ## Change Log                                          (H2 — operational history)
 ```
 
-**Part 1** is semi-static (the lifecycle process definition). The skill **must NOT regenerate or modify Part 1 contents** unless explicitly running Create mode. In Triage and Review modes, Part 1 is loaded for context but never written.
+**Part 1 is a pointer, not a copy** (T71, 2026-08-25). The canonical lifecycle process lives in
+`templates/lifecycle-process-spec.md` and nowhere else. The backlog carries the `## Part 1: Lifecycle
+Process` heading followed by a short link to it — the heading is retained because two step files assert
+the anchor exists, and because a reader arriving at the operational file should be told where the process
+is defined rather than left to guess.
+
+Until T71 the section held §1.1–§1.6 duplicated **verbatim** from that spec — 182 lines, ~15% of a file
+already too large for an agent to read in one pass, and a second copy of a definition that can drift from
+the first. Nothing operational read it: Triage and Review load the process from the spec file, not from
+the backlog.
+
+The skill **must NOT write process text into Part 1** in any mode. Create mode emits the pointer; Triage
+and Review leave it alone.
 
 **Part 2** is the operational surface — Triage adds rows, Review updates rows.
 
@@ -362,7 +367,7 @@ The qualifying gate (Vortex, John, or Winston) assigns each intake to one lane:
 ### Create Mode (steps-c)
 
 1. Detect existing file; warn before overwriting.
-2. Generate **Part 1** verbatim from `templates/lifecycle-process-spec.md` (canonical process definition).
+2. Emit the **Part 1 pointer** — the `## Part 1: Lifecycle Process` heading plus a one-line link to `templates/lifecycle-process-spec.md`. Do NOT copy the process text in; that duplication is what T71 removed.
 3. Initialize empty Part 2 tables.
 4. Optionally gather initial intakes (loop).
 5. Optionally qualify each intake into a lane.
@@ -385,7 +390,7 @@ Never delete a row outright — every removal becomes a §2.5 entry.
 Before writing, the workflow must validate:
 
 1. **Frontmatter present** — Required YAML block at top of file.
-2. **Part 1 unchanged** (Triage and Review modes only) — H2 `## Part 1: Lifecycle Process` content matches the loaded snapshot. If modified, warn before proceeding.
+2. **Part 1 unchanged** (Triage and Review modes only) — the H2 `## Part 1: Lifecycle Process` anchor exists and still contains only the pointer. Since T71 this is a two-line check rather than a 182-line snapshot comparison; if process text has reappeared there, someone has re-introduced the duplication.
 3. **Part 2 section anchors** — All five H3 sections (`### 2.1` through `### 2.5`) exist in correct order under `## Part 2: Backlog`.
 4. **Table column counts:**
    - §2.1 Intakes: 5 columns

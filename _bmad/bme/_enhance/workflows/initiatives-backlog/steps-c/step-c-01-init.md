@@ -26,7 +26,7 @@ Check whether a lifecycle backlog file already exists at the output location, wa
 - ✅ You are an **initialization specialist** — your job is to guard against accidental overwrites and prepare the session
 - ✅ Do not gather intakes, qualify items, or write the backlog file — those are later steps
 - ✅ The user must explicitly confirm before any existing file is overwritten
-- ✅ Load both the **format spec** (structure) and the **lifecycle process spec** (Part 1 verbatim content)
+- ✅ Load both the **format spec** (structure) and the **lifecycle process spec** (the canonical process — Part 1 links to it rather than copying it)
 
 ### Step-Specific Rules:
 - 🎯 Focus ONLY on existing file detection, overwrite confirmation, and template loading
@@ -38,7 +38,7 @@ Check whether a lifecycle backlog file already exists at the output location, wa
 ## EXECUTION PROTOCOLS:
 - 🎯 Follow the MANDATORY SEQUENCE exactly
 - 📖 Load `{templateFile}` (backlog-format-spec.md) — file structure and table formats
-- 📖 Load `{processFile}` (lifecycle-process-spec.md) — canonical Part 1 verbatim text for emission in step-c-04
+- 📖 Load `{processFile}` (lifecycle-process-spec.md) — the canonical process. Part 1 in the output is a POINTER to it, never a copy (T71). Step-c-04 emits the link
 
 ## CONTEXT BOUNDARIES:
 - Available context: Enhance config (loaded by workflow.md), existing backlog file (if present), both template files
@@ -77,15 +77,15 @@ Check if a backlog file exists at `{outputFile}`.
 
 Load `{templateFile}` (backlog-format-spec.md) and internalize:
 - **Frontmatter schema**
-- **Section hierarchy** — Part 1 (semi-static), Part 2 (lanes), Appendix, Change Log
+- **Section hierarchy** — Part 1 (pointer only), Part 2 (lanes), Appendix, Change Log
 - **Table formats** per lane
 - **Insertion rules** and **Pre-Write Validation** requirements
 
 ### 2. Load Lifecycle Process Spec
 
 Load `{processFile}` (lifecycle-process-spec.md) and internalize:
-- The **verbatim Part 1 content** (§1.1 through §1.6) — this is the canonical process definition that step-c-04 will emit exactly
-- Step-c-04 will copy this text verbatim into `## Part 1: Lifecycle Process` of the new backlog file
+- The process content (§1.1 through §1.6) stays in the spec file and is NOT emitted into the backlog — this is the canonical process definition that step-c-04 will emit exactly
+- Step-c-04 emits a LINK to this file under `## Part 1: Lifecycle Process` of the new backlog file
 
 ### 3. Confirm Session Ready
 
@@ -97,7 +97,7 @@ Display:
 >
 > **What will be created:**
 > - Frontmatter (initiative: convoke, artifact_type: note, ...)
-> - Part 1: Lifecycle Process (semi-static, from lifecycle-process-spec.md)
+> - Part 1: Lifecycle Process (pointer to lifecycle-process-spec.md)
 > - Part 2: Backlog (empty lane tables — §2.1 Intakes, §2.2 Bug, §2.3 Fast, §2.4 Initiative, §2.5 Absorbed/Archived)
 > - Appendix: Initiative Details (empty)
 > - Change Log (initial creation entry)

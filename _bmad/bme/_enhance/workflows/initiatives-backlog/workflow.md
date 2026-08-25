@@ -31,7 +31,7 @@ Loads the current backlog, lets you pick which lane(s) to walk (Bug / Fast / Ini
 - **When to use:** Periodically (monthly, after major milestones, or when an epic completes and changes adjacent effort)
 
 ### [C] Create — Bootstrap New Lifecycle Backlog
-Generates a new lifecycle backlog file from scratch: Part 1 (canonical lifecycle process) verbatim from template + empty Part 2 lanes. Optionally gather initial intakes and run the qualifying gate on them.
+Generates a new lifecycle backlog file from scratch: Part 1 as a pointer to the canonical lifecycle process + empty Part 2 lanes. Optionally gather initial intakes and run the qualifying gate on them.
 - **Steps:** Initialize & guard overwrite > Gather intakes (optional) > Qualify (optional) > Generate file
 - **When to use:** Starting a new project or creating a fresh backlog for a new domain. Existing Convoke backlog was bootstrapped on 2026-04-12.
 
@@ -40,7 +40,7 @@ Generates a new lifecycle backlog file from scratch: Part 1 (canonical lifecycle
 **Artifact:** `{planning_artifacts}/convoke-note-initiative-lifecycle-backlog.md`
 **Templates:**
 - `templates/backlog-format-spec.md` — canonical file structure and table formats
-- `templates/lifecycle-process-spec.md` — canonical Part 1 content (Create mode only)
+- `templates/lifecycle-process-spec.md` — the canonical lifecycle process. Part 1 in the output LINKS to this; it is never copied in (T71).
 - `templates/rice-scoring-guide.md` — RICE factor definitions and calibration examples
 
 ---
