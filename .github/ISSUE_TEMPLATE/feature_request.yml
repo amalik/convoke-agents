@@ -1,0 +1,58 @@
+name: "Feature request"
+description: "Suggest a capability Convoke does not have."
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Good requests describe a **problem you hit**, not just a feature you want. The problem is what lets a solution be judged — and sometimes produces a better one than the feature asked for.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: "What problem are you hitting?"
+      description: "What were you trying to do, and where did Convoke stop being able to help?"
+      placeholder: "When I ... I have to ... because Convoke has no way to ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: "What would you like Convoke to do?"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Area"
+      options:
+        - "A new agent or workflow"
+        - "A new team"
+        - "Installation, update, or diagnostics"
+        - "Export / portability"
+        - "Artifacts and portfolio management"
+        - "BMAD Method integration"
+        - "Documentation"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "What have you tried instead?"
+      description: "Workarounds, other tools, or a manual process. Knowing the cost of the workaround helps size the request."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: "Would you like to build it?"
+      description: "Entirely optional — a request is welcome either way. See [CONTRIBUTING.md](https://github.com/amalik/convoke-agents/blob/main/CONTRIBUTING.md)."
+      options:
+        - label: "I'd be willing to open a pull request for this"
+          required: false

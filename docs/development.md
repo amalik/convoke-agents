@@ -122,34 +122,8 @@ Convoke/
 
 ## Contributing
 
-### Areas of Contribution
-
-**Agents and Workflows:**
-- Workflow improvements and template enhancements for all 11 agents (7 Vortex + 4 Gyre)
-- New workflow variants and specialized templates
-
-**Testing:**
-- P0 test suites for Isla, Mila, Liam, Noah, and Max
-- Edge case and performance testing
-- Expanding coverage for known gaps (see [Testing](testing.md#known-coverage-gaps))
-
-**Documentation:**
-- Tutorials and video walkthroughs
-- Translation/internationalization
-
-**Integration:**
-- IDE plugins
-- Third-party tool integrations
-
-### Development Commands
-
-```bash
-npm test                 # Unit tests
-npm run test:integration # Integration tests
-npm run test:all         # All tests
-npm run test:coverage    # Coverage with thresholds
-npm run lint             # ESLint
-```
+Contribution areas, the CI gates, the binding rules in `project-context.md`, and how changes land are in
+[CONTRIBUTING.md](../CONTRIBUTING.md) — the single normative source. This guide covers architecture only.
 
 ---
 

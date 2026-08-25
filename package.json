@@ -21,6 +21,7 @@
     "CREDITS.md",
     "LICENSE",
     "README.md",
+    "SECURITY.md",
     "src/"
   ],
   "bin": {

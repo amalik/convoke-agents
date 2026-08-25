@@ -1,0 +1,97 @@
+name: "Bug report"
+description: "Something crashed, produced a wrong result, or does not work as documented."
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. If this is a **security vulnerability**, close this and use [private reporting](https://github.com/amalik/convoke-agents/security/advisories/new) instead.
+
+        Feedback on how an *agent* behaves — quality, a missing capability — belongs in the **Agent/Workflow Feedback** template. This one is for things that are broken.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Area"
+      description: "Where did this happen? Pick the closest — 'Not sure' is fine."
+      options:
+        - "Installation or update (convoke-install, convoke-update, convoke-migrate)"
+        - "Diagnostics (convoke-doctor, convoke-version, audit commands)"
+        - "Export / portability (convoke-export, catalog generation)"
+        - "Artifacts / portfolio (convoke-migrate-artifacts, convoke-portfolio)"
+        - "Team Factory"
+        - "A Vortex agent or workflow"
+        - "A Gyre agent or workflow"
+        - "An Enhance skill"
+        - "BMAD Method compatibility"
+        - "Documentation is wrong or out of date"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: "What happened"
+      description: "What you ran or did, and what you got. Paste the error and the command."
+      placeholder: |
+        $ npx -p convoke-agents convoke-doctor
+        ...
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "What you expected instead"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: "Steps to reproduce"
+      description: "Smallest sequence that shows the problem. If it only happens sometimes, say so — intermittent is still a report worth having."
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: input
+    id: convoke-version
+    attributes:
+      label: "Convoke version"
+      description: "`npx -p convoke-agents convoke-version`, or the version in your package.json."
+      placeholder: "4.0.1"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: "Node version and OS"
+      description: "`node --version`, plus your operating system."
+      placeholder: "Node 20.11.0, macOS 14.5"
+    validations:
+      required: true
+
+  - type: input
+    id: bmad-version
+    attributes:
+      label: "BMAD Method version, if installed"
+      description: "Leave blank if you run Convoke standalone."
+      placeholder: "6.10.0"
+    validations:
+      required: false
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: "Anything else"
+      description: "Logs, a workaround you found, or a guess at the cause."
+    validations:
+      required: false

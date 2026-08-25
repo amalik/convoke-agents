@@ -152,14 +152,9 @@ Your artifacts in `_bmad-output/` and `.gyre/` are never touched. [UPDATE-GUIDE.
 
 ## Contributing
 
-Contributions are welcome in these areas:
+Contributions are welcome — agents and workflows, new teams, tests, and documentation.
 
-- **Agents** — new domain specialists, workflow improvements
-- **Teams** — new team modules, built with the Team Factory
-- **Testing** — edge cases, performance
-- **Documentation** — tutorials, translations, walkthroughs
-
-Found a quality issue with an agent, or want a capability that is not there? Open an issue and pick the **Agent/Workflow Feedback** template. Architecture and development patterns are in the [Development Guide](https://github.com/amalik/convoke-agents/blob/main/docs/development.md).
+Start with [CONTRIBUTING.md](https://github.com/amalik/convoke-agents/blob/main/CONTRIBUTING.md): what to work on, the CI gates a change has to clear, and how changes land. Found a bug or want a capability that is not there? [Open an issue](https://github.com/amalik/convoke-agents/issues/new/choose). Security vulnerabilities go through [private reporting](https://github.com/amalik/convoke-agents/security/advisories/new), not the issue tracker.
 
 ## License
 
