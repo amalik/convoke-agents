@@ -42,7 +42,7 @@ Ten jobs run on a pull request. All of them must be green.
 | `lint` | `npm run lint` — ESLint at `--max-warnings 0`. Zero warnings, not zero errors. |
 | `test` | `npm test` and `npm run test:integration`, on Node 18, 20 and 22 |
 | `burn-in` | The same two suites, five times in a row. Pull requests only. Catches flakes. |
-| `coverage` | `npm run test:coverage` against thresholds |
+| `coverage` | `npm run test:coverage` — c8, against the thresholds in `.c8rc.json` (lines 83, branches 80) |
 | `agent-surface-parity` | Agent surface vs. the last `v*` tag, plus install-scope containment, backlog referential integrity, and `npm run docs:audit` |
 | `security` | `npm audit --omit=dev` |
 | `package-check` | `npm pack --dry-run` and `node index.js` |
@@ -92,9 +92,9 @@ fix(BUG-12): use the shared escapeRegExp for the version pattern
 docs(backlog): run the P1+P2 staleness audit — 3 hits in 59 rows
 ```
 
-Types in use: `feat`, `fix`, `docs`, `test`, `chore`, `refactor`, `governance`. The scope is a module, a subsystem, or a backlog ID.
+Types in use, in order of how often they appear in the history: `docs`, `fix`, `chore`, `governance`, `feat`, `ci`, `release`. The scope is a module, a subsystem, or a backlog ID.
 
-[`CHANGELOG.md`](CHANGELOG.md) follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). **Do not edit the changelog in a feature pull request** — entries are written at release time so that one release reads as one story. Describe the user-visible effect in your PR description and it will be picked up.
+[`CHANGELOG.md`](CHANGELOG.md) follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). In practice the changelog is written at release time as a narrative — one release reads as one story — rather than accumulated per pull request. Describe the user-visible effect in your PR description; the maintainer folds it in at release. If you would rather add an entry yourself, say so in the PR and ask.
 
 ---
 
