@@ -408,3 +408,23 @@ The fix also closed a second instance of the same defect one layer down — a di
 
 ---
 
+## T58
+
+**Lane:** Fast Lane · **Score:** 5.4 · **Portfolio:** convoke · **Status:** ✅ Done 2026-08-25
+
+**Receipt:** Nothing asserted the backlog's own table shape; `backlog-integrity.js` now runs four assertions — referential integrity, per-table arity, lane shape, and structure/coverage
+
+**Shipped as `3c605a37`.** Each table's column contract is read from its own header rather than a lane→width map — which is what makes it work where the first attempt was withdrawn at 71 false positives, since §2.5's sub-tables are separate tables rather than one lane of mixed width. `assertStructure` is a floor that does not depend on the parser being correct: before it, the gate printed `PASS — 0 lanes ordered and free of closed rows` and exited 0 on a file whose lanes were never checked.
+
+**Found three real defects in live data while being built:** `IN-80`'s unescaped pipe inside a code span (6 columns in a 5-column table, present since 2026-04-21); a blank line at §2.1 that terminated the Intakes table under GFM, leaving 21 rows rendering as a paragraph; and the author committing the same unescaped-pipe defect in the row written to describe it.
+
+**Review: three rounds, two adversarial layers each, HIGH in every round.** R1: 2 HIGH (silent truncation; a PASS line computed by a different code path than the scan). R2: 6 HIGH across both layers — two of them *inside the R1 remediation*, most sharply a coverage check that computed both sides with the parser's own predicate and therefore could not detect a classification bug by construction. R3 added structural floors on the principle that an imperfect parser is acceptable if its invariants are asserted independently of it. All eight R2 attack vectors verified closed by execution.
+
+**This parser is fenced in, not correct.** If it misbehaves again the honest move is a real markdown dependency — none is installed — not a fourth patch round. Precedent: BUG-10's guard was withdrawn for hand-rolling a lexer in regex.
+
+**Closing note on the close itself.** `3c605a37` changed **zero** lines of this row. The commit shipped the code and left the row `Backlog` at 5.4 — the third instance in one day of a fix landing without its close (the others: `8f543cdc`/BUG-13, and T70(b)), and the second by this author, who had passed a note to a sibling session that same day saying the close is part of the work. Nothing enforces the transition: the gate can check that a row *marked* closed has left its lane, and cannot check whether a row saying `Backlog` describes shipped work. **T55** — the missing `[K] Close/Correct` mode — is the actual fix and remains open at 3.6.
+
+**Nothing asserts the backlog's own table shape, so malformed rows survive until a human sweeps by hand.** Two classes observed: missing columns (`BUG-17`/`BUG-18` written with 10 of the Bug Lane's 11) and foreign-width rows (`BUG-14` carrying 11 columns inside the 5-column §2.5 Completed table — corrected in the 2026-08-24 sweep). `scripts/audit/backlog-integrity.js` runs in CI but asserts only that referenced `BUG-n`/`T-n` rows exist. The naive fix is wrong and was already tried: a per-lane arity check produced 71 false positives because §2.5 has sub-tables of differing width, and was removed before shipping. Needs a **per-table** contract. Extend the same script to cover (a) per-table arity, (b) lane ordering — the check is written and sits unused in `project-context.md` — and (c) the closed-row-in-lane assertion added by the 2026-08-24 spec amendment. Qualified from IN-188. **Sibling (2026-08-25):** **T69** adds a `Filed` date column — the schema change this rule's checks cannot supply. Sequence T58 first so the arity contract is asserted before a column is added to 246 rows, not after.
+
+---
+
