@@ -1,8 +1,8 @@
 # Lifecycle Process Specification
 
-Canonical text for **Part 1: Lifecycle Process** in the Convoke Initiative Lifecycle & Backlog file. Create mode emits this verbatim. Triage/Review modes load it for context but never modify it.
+Canonical text for **Part 1: Lifecycle Process**. **This file is the only copy** — since T71 (2026-08-25) the backlog's Part 1 is a pointer here, not a duplicate, so editing this file changes the process everywhere. Create mode emits a link to it. Triage/Review modes load it for context but never modify it.
 
-The text below the `---` marker is the verbatim Part 1 content. Do not edit it without coordinating with the lifecycle process governance — the same text appears in active backlog files and changing it requires migration.
+The text below the `---` marker is the canonical Part 1 content. Do not edit it without coordinating with the lifecycle process governance — the same text appears in active backlog files and changing it requires migration.
 
 ---
 
