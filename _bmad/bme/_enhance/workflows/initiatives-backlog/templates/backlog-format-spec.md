@@ -172,6 +172,26 @@ Use H4 sub-headings to group:
 |----|-------------|---------|-------|-----------|
 ```
 
+**Aged out (below the score floor):**
+```markdown
+| ID | Filed | Description | Score | Portfolio |
+|----|-------|-------------|-------|-----------|
+```
+
+A fifth sub-table, added by **T59** (2026-08-25). Rows here are **parked, not closed** — they were never
+worked, and the distinction matters when reading §2.5, which is otherwise a record of finished things.
+
+- **Floor: composite score below 1.0.** Score-only, deliberately. An age condition was considered and
+  rejected on measurement, not taste: at the 2026-08-25 age-out, 81 of the 85 candidates were already
+  90+ days old, so `score < 1.0 AND 90d+` would have moved four fewer rows for a two-condition rule.
+- **The full row text is preserved verbatim in the archive**, not summarised. An aged-out row's
+  description is the *specification* needed to reinstate it, unlike a completed row's closing note,
+  which is a narrative read once. Reinstating is a copy-back into the lane, not a rewrite.
+- **Reinstate freely.** A row aged out is a statement about its score at one moment, not a judgement
+  that it was wrong. If it becomes relevant, move it back and rescore.
+- Age-out is a periodic operator decision, not an automatic sweep. Nothing should age a row out without
+  someone choosing the floor.
+
 **Rules:**
 - Nothing disappears without a receipt.
 - Absorbed items must reference the target (epic file, larger initiative).

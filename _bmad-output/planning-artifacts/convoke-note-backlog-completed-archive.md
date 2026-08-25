@@ -448,3 +448,960 @@ The fix also closed a second instance of the same defect one layer down — a di
 
 ---
 
+
+<!-- Aged out 2026-08-25 under T59. These rows are PARKED, not completed: each description is the
+     specification needed to reinstate it, preserved verbatim. Reinstating one is a copy-back. -->
+
+
+## I151
+
+**Lane:** Fast Lane · **Filed:** 2026-08-15 · **Score:** 0.9 · **Portfolio:** enhance · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+*(Renumbered from I80 on 2026-08-14 — a PRE-EXISTING duplicate, undetected until a duplicate-ID check was run during T25 R2 preflight. Two unrelated items shared I80: this one and the `/bmad-register-skill` tracked-artifact gap. That one keeps the ID, having more inbound references. See I150.)* **`_warnings` rename in `loadSkillSource` masks unused-threaded-param bug** — `scripts/portability/export-engine.js:105` declares `loadSkillSource(skillRow, projectRoot, _warnings)`; caller line 1015 passes real `warnings` array expecting population, but function never pushes. `_`-rename satisfies ESLint and makes dead-code permanent. Either populate (surface missing-workflow.md) or remove the parameter from both sides.
+
+---
+
+
+## D12
+
+**Lane:** Fast Lane · **Filed:** 2026-04-24 · **Score:** 0.9 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Architecture doc Decision 1 vs Pattern 3 inconsistency** — Decision 1 sample uses `yaml.parse()`; Pattern 3 says `yaml.parseDocument()` for read-write. Sync Decision 1 sample to match Pattern 3 (and any I58 convergence outcome).
+
+---
+
+
+## T13
+
+**Lane:** Fast Lane · **Filed:** 2026-04-24 · **Score:** 0.9 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**FR18 + merge + dedup three-way integration test for BMM scanner** — fixture: manual row for `bmad-enhance-initiatives-backlog` + scan emits same (skill, agent) pair + 2 other skills; assert FR18 row pinned first, manual wins dedup.
+
+---
+
+
+## I1
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.9 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+NPM_TOKEN secret for CI publish [rescored 2026-04-19: 1.8→0.9]
+
+---
+
+
+## T9
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.9 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Migration idempotency — zero-ungoverned baseline test — append integration test to `tests/integration/migrate-artifacts-idempotency.test.js` exercising first-run no-op on a fixture with no ungoverned files. Locks the "already-clean project on first run" CLI path.
+
+---
+
+
+## D3
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.9 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+BMAD Core return arrow in diagram
+
+---
+
+
+## I10
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.9 · **Portfolio:** loom · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Config appender YAML comment preservation (Team Factory)
+
+---
+
+
+## I15
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.9 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`validateManifest` CSV parsing — replace substring matching
+
+---
+
+
+## I27
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.9 · **Portfolio:** enhance · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Portfolio skill — Option [4] empty-state messaging
+
+---
+
+
+## I52
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.9 · **Portfolio:** enhance · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Collision resolution flag for migration CLI
+
+---
+
+
+## I54
+
+**Lane:** Fast Lane · **Filed:** 2026-04-18 · **Score:** 0.9 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Refactor `DEFAULT_ARTIFACT_TYPES` to single source of truth (migrate-artifacts.js + taxonomy-merger.js + taxonomy.yaml)
+
+---
+
+
+## U11
+
+**Lane:** Fast Lane · **Filed:** 2026-04-18 · **Score:** 0.9 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`compareVersions` semver-aware pre-release handling — fix `Number('4-alpha')→0` coercion in `scripts/update/lib/utils.js:27-39`; proper tuple compare + pre-release identifier ordering per semver spec
+
+---
+
+
+## A11
+
+**Lane:** Fast Lane · **Filed:** 2026-04-18 · **Score:** 0.9 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Migration scar re-interpretation evidence grounding — locate scar-era retro/logs to anchor Right-to-next-action classification, or soften re-interpretation with evidence-limitation note
+
+---
+
+
+## I33
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.9 · **Portfolio:** enhance · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Workflow-name namespace collision risk (verbatim names)
+
+---
+
+
+## I39
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.9 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Non-atomic version stamp writes in `refresh-installation.js`
+
+---
+
+
+## A18
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.9 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+A15 OC-R0 format — propagate `(internal)/(external)` qualifier examples into §§3.x and §§8.x evidence-note templates in Compliance Checklist + audit report
+
+---
+
+
+## I111
+
+**Lane:** Fast Lane · **Filed:** 2026-05-25 · **Score:** 0.9 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Failure-artifact upload narrowing** — `ci.yml:62-66` uploads `tests/` wholesale on failure; the source is already in git and actual test output went to job log via `stdio: 'inherit'` in `scripts/test-runner.js:67`. Pure noise; 14-day retention × matrix(3) × failure rate. Either drop the upload step or narrow to genuine runtime artifacts (coverage report, JUnit XML).
+
+---
+
+
+## I75
+
+**Lane:** Fast Lane · **Filed:** 2026-04-24 · **Score:** 0.8 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Duplicate manual rows for same (skill, agent) pair silently preserved in BMM scanner** — add `manualPairSeen` Set tracking in `mergePreservingManual`; log `[warn] duplicate manual entry ...` and keep first row. Story 2.4 manual-registration workflow should also prevent at authoring time.
+
+---
+
+
+## I74
+
+**Lane:** Fast Lane · **Filed:** 2026-04-24 · **Score:** 0.8 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**ISO-8601 timestamp dates silently overwritten in BMM scanner** — `/^\d{4}-\d{2}-\d{2}$/` rejects full ISO timestamps; preserve-step discards date and restamps with today's, no warning. Widen regex OR log `[warn] malformed registered_date dropped: ...`.
+
+---
+
+
+## I2
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.8 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`gh auth` for CI release creation [rescored 2026-04-19: 2.4→0.8]
+
+---
+
+
+## T12
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.8 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`git-recency-rule` tests drift at UTC midnight — `tests/lib/portfolio-rules.test.js` uses `new Date().toISOString()` as mock return, making `daysSince` math ±1 day flaky across midnight. Fix: swap for a fixed `staleDays - 1` ago date in 2 test cases.
+
+---
+
+
+## A1
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.8 · **Portfolio:** vortex · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Add validate menu items to Wave 3 Vortex agents (Mila, Liam, Noah)
+
+---
+
+
+## A3
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.8 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Add `agentic` + `team-of-teams` npm keywords
+
+---
+
+
+## I6
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.8 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`--verbose` flag across all CLI commands
+
+---
+
+
+## T1
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.8 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`convoke-update.js` coverage to 80%+
+
+---
+
+
+## U2
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.8 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Validate migration modules at load time
+
+---
+
+
+## I17
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.8 · **Portfolio:** enhance · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`suggestDifferentiator` — support extensions beyond `.md`/`.yaml`
+
+---
+
+
+## I19
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.8 · **Portfolio:** enhance · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Share `_scanCorpus` between portfolio engine and migration suggester
+
+---
+
+
+## I41
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.8 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`convoke-doctor` `console.warn` breaks structured-output contract
+
+---
+
+
+## I56
+
+**Lane:** Fast Lane · **Filed:** 2026-04-18 · **Score:** 0.8 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Render `taxonomy.initiatives.user` in generated ADR — add a "User initiatives" line to `generateGovernanceADR` so operator-added initiatives appear in the governance artifact
+
+---
+
+
+## I90
+
+**Lane:** Fast Lane · **Filed:** 2026-04-25 · **Score:** 0.8 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`refreshInstallation` flat-cleanup runs in dev environment — cleanup loop at `refresh-installation.js:95-105` is OUTSIDE the `isSameRoot` guard; could wipe `<id>.md.bak` files in dev tree. Zero operator risk today. Fix: move inside `!isSameRoot` block.
+
+---
+
+
+## I119
+
+**Lane:** Fast Lane · **Filed:** 2026-08-09 · **Score:** 0.8 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Mirror new upstream platform targets (hermes-agent, CodeWhale) in the portability exporter.** `scripts/portability/generate-adapters.js` emits copilot + cursor adapters only; v6.9 added hermes-agent and CodeWhale (`.codewhale/skills/` project, `~/.codewhale/skills/` global) as installer targets. **Not a conformance obligation** — upstream's installer target list does not bind Convoke's exporter (Class A). It is a *capability* gap, and it lands on the ~40% Vortex Standalone segment for whom the portability layer is the product rather than a courtesy. Score reflects the narrow slice of that segment actually on these two platforms today — revisit if demand signal appears (MO6-style).
+
+---
+
+
+## A37
+
+**Lane:** Fast Lane · **Filed:** 2026-04-20 · **Score:** 0.7 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Step-01 `Read`s workflow.md and echoes concepts to operator — A33 ¶4 exempts "re-introduction in step-01" but is silent on the runtime-echo case. Is the echo a re-introduction (exempt) or a fresh Layer 2 introduction (counts toward budget)? Clarify in §2.6.
+
+---
+
+
+## I35
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.7 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Naive `split('\n')` CSV parsing — CRLF + quoted-newline edges
+
+---
+
+
+## I44
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.7 · **Portfolio:** gyre · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+No `validateGyreModule` function in validator.js
+
+---
+
+
+## A17
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.7 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+A10 3-cell gate scaling — add percentage floor or `≥3 OR ≥10% of matrix` rule so large audits aren't under-sampled
+
+---
+
+
+## A21
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.7 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+A15+A10 N/A-variant disagreement threshold — treat `external-declared` vs `out-of-scope` vs `FAIL` disagreement as reviewer-agreement failure, not just PASS/FAIL match
+
+---
+
+
+## T24
+
+**Lane:** Fast Lane · **Filed:** 2026-04-25 · **Score:** 0.7 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Test 16 doesn't verify `{project-root}` resolves at activation — verifies wrapper content but not end-to-end activation correctness. Fix: load SKILL.md target + assert minimal structure (e.g., presence of `description` frontmatter).
+
+---
+
+
+## I98
+
+**Lane:** Fast Lane · **Filed:** 2026-04-29 · **Score:** 0.7 · **Portfolio:** gyre · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Gyre marketplace structural compliance gap** — forward-looking; Gyre's 4 agents are flat `.md` files (not folder-per-agent), no `module.yaml`, no `module-help.csv`. Structurally MORE out-of-shape than Vortex on two axes (manifest absence + flat-vs-folder). Pattern A-equivalent migration needed when Gyre goes to marketplace (per spike's open product question). Tracks the gap so Pattern A learnings (from I97) transfer cleanly when triggered.
+
+---
+
+
+## I109
+
+**Lane:** Fast Lane · **Filed:** 2026-05-25 · **Score:** 0.7 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**`convoke-agents` self-dep in `package.json:89`** — `dependencies: { "convoke-agents": "^3.2.0" }` is a circular self-reference, likely artifact of the bmad-enhanced → convoke-agents rename. Resolves fine with `npm ci` but footgun: any operator unfamiliar with rename history sees circular self-dep. Either remove (after verifying no consumer code requires it) or add explanatory comment.
+
+---
+
+
+## I8
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.6 · **Portfolio:** loom · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Team Factory write verification — value correctness
+
+---
+
+
+## A34
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.6 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+A24 §8.1 Mitigation Gate refinement — 5 bundled sub-issues: (a) "independent reviewer" scope for G2 undefined; (b) G1 doesn't specify A10 cell-composition; (c) G2 subsumption by G1 is conditional; (d) no G5 for §4.2 empathy-map reading-dependent drift; (e) G1's scope is retrofit-only not v2 baseline.
+
+---
+
+
+## I91
+
+**Lane:** Fast Lane · **Filed:** 2026-04-25 · **Score:** 0.6 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Concurrent `refreshInstallation` race — parallel to Story 2.4 R1-H1; lockfile gap allows two simultaneous installs to corrupt state. Fix path: lockfile around installation phase (sibling to register-skill `_withCsvLock`).
+
+---
+
+
+## I57
+
+**Lane:** Fast Lane · **Filed:** 2026-04-18 · **Score:** 0.5 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Cross-module exclusion-ID validation for `excluded_agents` — `readExcludedAgents` + doctor warn when an ID doesn't match any known agent in any module's registry
+
+---
+
+
+## U3
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.5 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Robust version detection fallback
+
+---
+
+
+## I11
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.5 · **Portfolio:** loom · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Registry Fragment Architecture (D-Q6)
+
+---
+
+
+## I58
+
+**Lane:** Fast Lane · **Filed:** 2026-04-18 · **Score:** 0.5 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Unify YAML parser across `scripts/update/lib/`** — pick one of (`yaml` eemeli vs `js-yaml`) and converge: closes the js-yaml/`yaml` library split between `readExcludedAgents` (js-yaml), `mergeConfig` (yaml), and the new config-loader (yaml per audit). Eliminates filesystem/config state drift risk and removes the parser-asymmetry decision surface for future module additions. **Scope expanded 2026-04-23**: original IN-26 surface was `readExcludedAgents` ↔ `mergeConfig`; v63-1a-1 R1 (IN-101) surfaced same convergence question for the new config-loader — merged here.
+
+---
+
+
+## I13
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.5 · **Portfolio:** loom · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Team Factory Express Mode (pre-filled spec file input)
+
+---
+
+
+## I37
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.5 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Non-scalar/merge/anchor YAML keys crash `writeConfig` loop
+
+---
+
+
+## I46
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.5 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Version-stamp post-check absence in refresh
+
+---
+
+
+## T15
+
+**Lane:** Fast Lane · **Filed:** 2026-04-24 · **Score:** 0.4 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**`console.warn` spy try/catch wrap for failure-isolation in v3-fallback tests** — `beforeEach` throw poisons subsequent test files in same process; wrap setup in try/catch or use `t.mock`. Sibling pattern to T11 `cpMock?.restore()` defensive-chain rollout.
+
+---
+
+
+## T10
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.4 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+T4 test 4 variant — leave new ungoverned file uncommitted before migration run. Guards against scanner regression that would skip unstaged files; current test over-specifies git state by committing upfront.
+
+---
+
+
+## T2
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.4 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`convoke-version.js` coverage to 80%+
+
+---
+
+
+## I12
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.4 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Validator.js hardcoded to Vortex paths (make module-agnostic)
+
+---
+
+
+## I3
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.4 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+CSV parser library for manifest (replace regex)
+
+---
+
+
+## I24
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.4 · **Portfolio:** enhance · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Mock git in unit tests instead of bumping timeouts
+
+---
+
+
+## I47
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.35 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Doctor missing Enhance menu-patch check + parallel coverage consolidation
+
+---
+
+
+## I61
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.35 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Parser grammar § — formalize `Layers:` evidence-note prefix alongside Compliance Status cell grammar; gives Story 2.2 Loom parser a target
+
+---
+
+
+## I107
+
+**Lane:** Fast Lane · **Filed:** 2026-05-25 · **Score:** 0.35 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Shared install artifact across CI jobs** — `ci.yml` 7 jobs each do their own `actions/setup-node@v4` + `npm ci` (11 invocations per pipeline run). `cache: 'npm'` helps but coverage/lint/package-check/security each re-resolve ~30s. Tutorial-default shape. Add a `build` job that uploads `node_modules` artifact consumed by downstream jobs.
+
+---
+
+
+## T5
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.3 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Expand docs audit — tense consistency + prose patterns
+
+---
+
+
+## I38
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.3 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`mergeConfig` Document mutation not idempotent across writes
+
+---
+
+
+## I48
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.3 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Agent-manifest.csv doctor check + CSV-parse validator upgrade
+
+---
+
+
+## A4
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.3 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Fix temp dir prefix inconsistency (`bmad-` vs `convoke-`)
+
+---
+
+
+## I112
+
+**Lane:** Fast Lane · **Filed:** 2026-05-25 · **Score:** 0.3 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Portfolio engine "unreadable or empty" mis-categorization** — 3 large planning-artifact files (25-45KB) reported as "unreadable or empty" by `explainUnattributed` in [scripts/lib/portfolio/portfolio-engine.js:200-216](../../scripts/lib/portfolio/portfolio-engine.js#L200-L216). Files exist and are readable via `fs.readFileSync`. Bug likely in content-reading path upstream of `explainUnattributed` (passes empty content for some reason). Pre-existing; orthogonal to ci-hygiene-1-1; surfaced during CI red investigation.
+
+---
+
+
+## I158
+
+**Lane:** Fast Lane · **Filed:** 2026-08-15 · **Score:** 0.3 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Should `covenant`-type artifacts live in `_bmad-output/planning-artifacts/` at all?** Raised 2026-08-15 while scoping I156: the Operator Covenant is normative, required reading per `project-context.md`, and cited by `_bmad/bme/README.md`, `docs/README.md`, `CHANGELOG.md` and `README.md` — yet it sits in a directory whose contract is generated, disposable output. **Not a filing error:** `_bmad/_config/taxonomy.yaml:50-58` defines `covenant` as a first-class artifact *type* and places it there deliberately, authored by `oc-1-4-covenant-authoring`. So the question is whether the taxonomy is right, not whether the file is misplaced. **Blast radius if it moves:** 31 files reference the path, most of them historical planning/implementation artifacts that arguably should NOT be rewritten (frozen records), plus comment-level references at `tests/lib/artifact-utils.test.js:402` and `scripts/migration/format-conversion/covenant-survival-harness.js:42`. **Scored low on purpose** — the likely outcome is "the taxonomy was right and nothing moves", and C:60% carries that. Logged because the observation deserves a record, not because it should be worked. **Explicitly NOT a prerequisite for I156**, which fixes the reader-facing half (the required reading becomes openable from an npm install) without touching governance.
+
+---
+
+
+## U14
+
+**Lane:** Fast Lane · **Filed:** 2026-04-18 · **Score:** 0.25 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Honor `excluded_agents` in dev-mode (`isSameRoot`) skill wrapper generation loops — align with agent-file copy skip behavior
+
+---
+
+
+## I59
+
+**Lane:** Fast Lane · **Filed:** 2026-04-18 · **Score:** 0.25 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Dedup duplicate entries in `excluded_agents` using Set — consistent with `Set`-based dedup on `agents`
+
+---
+
+
+## I99
+
+**Lane:** Fast Lane · **Filed:** 2026-04-29 · **Score:** 0.25 · **Portfolio:** loom · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Team Factory marketplace structural compliance gap** — forward-looking, speculative. Single agent (`team-factory.md`) is flat `.md` file; no `module.yaml`; has `module-help.csv` but Convoke-variant schema (different columns from BMM canonical). Memory says Loom/Team Factory "out of marketplace, repo-internal only" — marketplace eligibility may never trigger. Tracked as backstop.
+
+---
+
+
+## A20
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.2 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+A5 retroactive-gap framing — add explicit "rule is prospective" statement to A5, OR add §6 note to v1 audit acknowledging sample-selection predates the rule
+
+---
+
+
+## T11
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.2 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`cpMock?.restore()` defensive-chain rollout across `afterEach` hooks — prevents secondary-throw in `afterEach` when `beforeEach` fails. Mechanical grep+touch pattern across `tests/lib/*` + `tests/unit/*` test files.
+
+---
+
+
+## U13
+
+**Lane:** Fast Lane · **Filed:** 2026-04-18 · **Score:** 0.2 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Extend `excluded_agents` support to `EXTRA_BME_AGENTS` (team-factory + other standalone bme agents) — add per-submodule exclusion plumbing in `refresh-installation` + doctor
+
+---
+
+
+## A2
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.2 · **Portfolio:** vortex · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Create `.agent.yaml` source files for Vortex agents
+
+---
+
+
+## I42
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.2 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`MERGED_DOC_SENTINEL` doesn't survive spread or JSON-serialize
+
+---
+
+
+## I53
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.2 · **Portfolio:** enhance · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Carry-forward: CRLF writeManifest + basename collision
+
+---
+
+
+## I55
+
+**Lane:** Fast Lane · **Filed:** 2026-04-18 · **Score:** 0.2 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Validate `taxonomy.initiatives.platform` + `artifact_types` non-empty in `readTaxonomy` — reject/warn on all-commented config before rendering degenerate ADR text
+
+---
+
+
+## D11
+
+**Lane:** Fast Lane · **Filed:** 2026-04-24 · **Score:** 0.15 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**PF1 migration-guide tense revisit at Epic 4 ship** — guide says "Convoke 4.0 validates agent output equivalence as part of release gating" but Epic 4 (PF1 validation battery) unshipped as of 1A.6 ship. Re-read at Epic 4 ship time; if Epic 4 still slipping, tighten to "will validate" or remove the bullet.
+
+---
+
+
+## A23
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.15 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+A10 misprediction + DISPUTED interaction — add one sentence to A10 covering auditor-predicted PASS → reviewers unanimously FAIL → DISPUTED-via-path-(b) re-run edge
+
+---
+
+
+## I45
+
+**Lane:** Fast Lane · **Filed:** 2026-04-15 · **Score:** 0.15 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Workflow-manifest CSV registration drift not validated
+
+---
+
+
+## D10
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.1 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Revisions table hygiene — split multi-patch rows to per-patch rows, or extract round-detail to a `revisions/` folder with pointer from the table
+
+---
+
+
+## A22
+
+**Lane:** Fast Lane · **Filed:** 2026-04-19 · **Score:** 0.1 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+`(external)/(internal)` OC-R0 tokens vs `external-declared` OC-R6 value — rename to `(owned)/(unowned)` OR document the collision in Parser grammar §
+
+---
+
+
+## U12
+
+**Lane:** Fast Lane · **Filed:** 2026-04-18 · **Score:** 0.1 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+Inject `excluded_agents` inline comment on pre-U8 config upgrade via `writeConfig` — operators upgrading see the field appear without context
+
+---
+
+
+## P25
+
+**Lane:** Initiative Lane · **Filed:** 2026-04-21 · **Score:** 0.7 · **Portfolio:** loom · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Team Factory Phase 3 — add-agent + add-skill extension workflows (TF-FR25 + TF-FR26)** — formalizes the trackable reference for P21 Story 2.2's blocker (previously informal "external Phase 3 Loom Add Skill" label). Per `_bmad/bme/_team-factory/workflows/step-00-route.md:42-48`, Phase 3 workflows are "not yet available"; Phase 1+2 (add-team) shipped via P14. Scope: 2 extension workflows + integration wiring + validation (estimated 5-7 stories from loom-epic.md TF-FR25/TF-FR26 definitions).
+
+---
+
+
+## P8
+
+**Lane:** Initiative Lane · **Filed:** 2026-04-15 · **Score:** 0.5 · **Portfolio:** helm · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Governance & Support skill set**
+
+---
+
+
+## P58
+
+**Lane:** Initiative Lane · **Filed:** 2026-06-28 · **Score:** 0.5 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Base-layer consolidation** — extract a kernel/base layer (`scripts/lib/`) to end multiple-sources-of-truth: agent roster ×3 (agent-registry/export-engine/classify-skills), install-layout paths ×10+, frontmatter parser bypassed ×15 (two YAML libs in parallel), kernel primitives misplaced in `update/lib/utils.js` (every subsystem reaches *up*), package self-location `../../../` chains. Post-4.0 debt-paydown; prevents the patch-at-call-site bug class (HIGH-1 was one instance). Coordinate with in-flight `frontmatter.js` rollout + v4.1 cadence/`paths.js` overlap (OQ-1). Brief: [convoke-brief-base-layer-consolidation.md](convoke-brief-base-layer-consolidation.md).
+
+---
+
+
+## P2
+
+**Lane:** Initiative Lane · **Filed:** 2026-04-15 · **Score:** 0.4 · **Portfolio:** convoke · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+
+**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+
+**Multi-module collaboration workflows (cross-team handoffs)**
+
+---
+
+## T59
+
+**Lane:** Fast Lane · **Filed:** 2026-08-24 · **Score:** 1.75 · **Portfolio:** convoke · **Status:** ✅ Done 2026-08-25
+
+**Receipt:** Cold-tail age-out decided and applied — score floor 1.0, 85 rows parked to §2.5
+
+**The deferral worked as intended, which is the point worth recording.** On 2026-08-24 the operator ruled "no age-out for now, but this is temporary", and this row existed so that the deferral would return as a decision rather than lapse by silence. It returned the next day and was decided on evidence the original deferral did not have: T69's `Filed` column made an age×score grid computable for the first time.
+
+**What the grid showed:** 173 of 244 live rows were 90+ days old, and 81 of the 85 rows below 1.0 were among them. That is why the floor is score-only — adding `AND 90d+` would have moved four fewer rows in exchange for a two-condition rule. The evidence argued for the simpler policy, not the cleverer one.
+
+**Applied:** 85 rows parked (81 Fast, 4 Initiative; scores 0.1–0.9). Live lane rows 244 → 159. Three rows filed within the previous month (I151, I119, I158) moved with them — low score is the criterion, not staleness, and conflating the two would have made the rule harder to apply.
+
+**Parked, not closed.** 15 KB of description preserved verbatim in this archive, verified byte-for-byte, so reinstatement is a copy-back rather than a rewrite.
+
+**Decide the cold-tail age-out policy — deferred 2026-08-24, deliberately temporary.** 85 live Fast Lane rows score below 1.0 and none moved in the nine days the backlog was under observation; they are ~36% of what a reader scrolls past to reach the working set. The 2026-08-24 cleanup proposed an age-out (row below a score floor and untouched for N months moves to §2.5 with an `Aged out` receipt — nothing deleted, reinstatement is one move). **Operator ruling: no age-out for now, but temporary.** This row exists so the deferral returns as a decision rather than lapsing by silence, which is precisely how IN-185 through IN-188 sat unqualified for nine days while their symptoms recurred. Open question is the floor: 0.5 moves ~45 rows, 1.0 moves 85.
+
+---
+
