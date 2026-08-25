@@ -1499,6 +1499,59 @@ async function updateLinks(oldToNewMap, scopeDirs, projectRoot) {
   let updatedFiles = 0;
   let updatedLinks = 0;
 
+  // Built once, not once per file — nothing here depends on the file. R1
+  // measured 8x on 500 renames x 400 files (49ms -> 6ms).
+  //
+  // Only the empty string is filtered. A non-string key falls through to
+  // `escapeRegExp`, which throws — that is deliberate and matches the policy
+  // `scripts/lib/sanitize.js` states for its helpers: reject rather than
+  // coerce, because a silently dropped rename surfaces later as a corrupted
+  // document instead of a stack trace. An earlier revision filtered on
+  // `typeof n === 'string'` and swallowed those type errors (R1).
+  //
+  // No sort. An earlier revision ordered longest-first as "belt-and-braces";
+  // R1 proved it dead across 200,000 randomised cases (zero divergences) and
+  // showed no test could defend it, because the `](`/`/` prefix and `)`/`#`
+  // suffix anchoring already prevents partial matches. Dead code carrying a
+  // confident comment is worse than no code.
+  const oldNames = [...oldToNewMap.keys()].filter((n) => n !== '');
+  const alternation = oldNames.length > 0 ? oldNames.map(escapeRegExp).join('|') : null;
+
+  // ONE pattern for all link shapes, and one pass over the buffer. BUG-13: the
+  // previous code looped the whole file once per map entry, so an entry could
+  // rewrite text a previous entry had just produced — chain
+  // {a.md->b.md, b.md->c.md} on `[A](a.md) and [B](b.md)` yielded
+  // `[A](c.md) and [B](c.md)`, destroying the link to b.md. The map is a direct
+  // old->new mapping, not a chain to follow transitively, so each link must be
+  // rewritten at most once using its OWN entry's target. A single alternation
+  // gives exactly that: the engine visits each position once and the callback
+  // looks up the name it actually matched.
+  //
+  // The same defect existed one layer down, between the two patterns this
+  // replaces: a direct/`./` pattern and a `../dir/` pattern ran in sequence
+  // over the same buffer, so `[A](./a.md)` was rewritten by the first and
+  // rewritten AGAIN by the second.
+  //
+  // Group 2 is a run of non-`)` non-`#` characters ending in `/` — the path
+  // prefix, covering `./`, `../dir/`, `dir/` and `/abs/`, undefined for a bare
+  // `name.md`. Excluding `#` is load-bearing: with `[^)]*` the greedy match
+  // crossed into the fragment and bound to the last `/` there, so
+  // `[t](a.md#see/b.md)` rewrote a token inside the anchor and left `a.md`
+  // dangling after its file had been renamed. Found by R1.
+  //
+  // DELIBERATE BEHAVIOUR CHANGE, declared rather than discovered: this also
+  // stops the rewrite reaching into the fragment at all. The pre-BUG-13 code
+  // turned `[t](a.md#see/b.md)` into `[t](A2.md#see/B2.md)`, editing the
+  // anchor as well as the filename. A fragment is a heading slug, not a file
+  // path — renaming a file on disk does not change any heading, so rewriting
+  // it produced an anchor pointing at a slug that never existed. Both forms
+  // rename the filename correctly; only the fragment differs. Zero links of
+  // this shape exist in the corpus (`](...#.../...)`: 0 matches across
+  // `_bmad-output`, `docs`, `README.md`), so nothing observable changes today.
+  const linkPattern = alternation
+    ? new RegExp(`(\\[[^\\]]*\\]\\()([^)#]*\\/)?(${alternation})(#[^)]*)?\\)`, 'g')
+    : null;
+
   for (const file of allFiles) {
     if (!file.fullPath.endsWith('.md')) continue;
 
@@ -1529,37 +1582,12 @@ async function updateLinks(oldToNewMap, scopeDirs, projectRoot) {
       content = frontmatter.stringify(parsed.content, parsed.data);
     }
 
-    // Update markdown link patterns in body content
-    for (const [oldName, newName] of oldToNewMap) {
-      // Escape every metacharacter, not just dots. `oldName` is by construction
-      // a filename that failed NAMING_PATTERN — that is why it is being renamed
-      // — so it is exactly the population that carries `(`, `[`, `+` and the
-      // rest. A dot-only escape leaves `report(v2).md` as `report(v2)\.md`,
-      // where `(v2)` is a capture group: the pattern then matches `reportv2.md`
-      // and silently misses the real file. An unbalanced `[` throws outright.
-      // See CodeQL js/incomplete-sanitization, issue #7.
-      const escaped = escapeRegExp(oldName);
-
-      // Patterns 1+2: [text](oldname.md) or [text](./oldname.md) with optional anchor
-      const directPattern = new RegExp(
-        `(\\[[^\\]]*\\]\\()(\\.\\/)?${escaped}(#[^)]*)?\\)`,
-        'g'
-      );
-
-      // Pattern 3: [text](../dir/oldname.md) with optional anchor — replace only the filename
-      const parentDirPattern = new RegExp(
-        `(\\[[^\\]]*\\]\\([^)]*\\/)${escaped}(#[^)]*)?\\)`,
-        'g'
-      );
-
+    // Update markdown link patterns in body content (see `linkPattern` above).
+    if (linkPattern) {
       let bodyChanges = 0;
-      content = content.replace(directPattern, (_m, prefix, dotSlash, anchor) => {
+      content = content.replace(linkPattern, (_m, prefix, pathPrefix, matched, anchor) => {
         bodyChanges++;
-        return `${prefix}${dotSlash || ''}${newName}${anchor || ''})`;
-      });
-      content = content.replace(parentDirPattern, (_m, prefix, anchor) => {
-        bodyChanges++;
-        return `${prefix}${newName}${anchor || ''})`;
+        return `${prefix}${pathPrefix || ''}${oldToNewMap.get(matched)}${anchor || ''})`;
       });
       fileLinks += bodyChanges;
     }

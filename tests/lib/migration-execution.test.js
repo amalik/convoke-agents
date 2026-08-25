@@ -426,6 +426,97 @@ describe('updateLinks', () => {
     assert.ok(content.includes('[Draft](draft-1.md)'), `not renamed: ${content}`);
   });
 
+  // --- BUG-13: every link is rewritten at most once ---
+  //
+  // The map is a direct old->new mapping, not a chain to follow transitively.
+  // The previous code looped the whole buffer once per map entry, so an entry
+  // could rewrite text a previous entry had just produced: chain
+  // {a.md->b.md, b.md->c.md} yielded `[A](c.md) and [B](c.md)`, destroying the
+  // link to b.md, and a swap collapsed both links onto one file. Silent — no
+  // error, no count anomaly.
+
+  it('chained renames rewrite each link once, with its own target', async () => {
+    await fs.writeFile(path.join(outputDir, 'r.md'), '[A](a.md) and [B](b.md)\n');
+    const { updateLinks } = require('../../scripts/lib/artifact-utils');
+    await updateLinks(new Map([['a.md', 'b.md'], ['b.md', 'c.md']]), ['planning-artifacts'], tmpDir);
+    const content = fs.readFileSync(path.join(outputDir, 'r.md'), 'utf8').trim();
+    assert.equal(content, '[A](b.md) and [B](c.md)');
+  });
+
+  it('swapped renames do not collapse onto one target', async () => {
+    await fs.writeFile(path.join(outputDir, 'r.md'), '[A](a.md) and [B](b.md)\n');
+    const { updateLinks } = require('../../scripts/lib/artifact-utils');
+    await updateLinks(new Map([['a.md', 'b.md'], ['b.md', 'a.md']]), ['planning-artifacts'], tmpDir);
+    const content = fs.readFileSync(path.join(outputDir, 'r.md'), 'utf8').trim();
+    assert.equal(content, '[A](b.md) and [B](a.md)');
+  });
+
+  // Found by the BUG-13 edge-case battery, not by the two cases the backlog row
+  // named: the direct and parent-dir patterns used to run as two sequential
+  // passes, so `./a.md` was rewritten by the first and rewritten AGAIN by the
+  // second. Same defect class, one layer down.
+  it('a ./ prefixed link is rewritten once, not once per pattern', async () => {
+    await fs.writeFile(path.join(outputDir, 'r.md'), '[A](./a.md) and [B](./b.md)\n');
+    const { updateLinks } = require('../../scripts/lib/artifact-utils');
+    const res = await updateLinks(new Map([['a.md', 'b.md'], ['b.md', 'c.md']]), ['planning-artifacts'], tmpDir);
+    const content = fs.readFileSync(path.join(outputDir, 'r.md'), 'utf8').trim();
+    assert.equal(content, '[A](./b.md) and [B](./c.md)');
+    assert.equal(res.updatedLinks, 2, 'a link counted twice means it was rewritten twice');
+  });
+
+  it('handles all three link shapes in one file under a chained map', async () => {
+    await fs.writeFile(path.join(outputDir, 'r.md'), '[A](a.md) [B](./b.md) [C](../x/a.md)\n');
+    const { updateLinks } = require('../../scripts/lib/artifact-utils');
+    await updateLinks(new Map([['a.md', 'b.md'], ['b.md', 'c.md']]), ['planning-artifacts'], tmpDir);
+    const content = fs.readFileSync(path.join(outputDir, 'r.md'), 'utf8').trim();
+    assert.equal(content, '[A](b.md) [B](./c.md) [C](../x/b.md)');
+  });
+
+  it('an empty map key does not rewrite every empty link', async () => {
+    await fs.writeFile(path.join(outputDir, 'r.md'), '[E]() and [A](a.md)\n');
+    const { updateLinks } = require('../../scripts/lib/artifact-utils');
+    await updateLinks(new Map([['', 'new.md'], ['a.md', 'z.md']]), ['planning-artifacts'], tmpDir);
+    const content = fs.readFileSync(path.join(outputDir, 'r.md'), 'utf8').trim();
+    assert.equal(content, '[E]() and [A](z.md)');
+  });
+
+  // R1 regression: a greedy `[^)]*\/` path prefix crossed `#` and bound to the
+  // last `/` inside the fragment, so the FILENAME was left untouched while a
+  // token in the anchor got rewritten — a dangling link reported as success.
+  it('renames the filename when the anchor contains a slash', async () => {
+    await fs.writeFile(path.join(outputDir, 'r.md'), '[t](a.md#see/b.md)\n');
+    const { updateLinks } = require('../../scripts/lib/artifact-utils');
+    await updateLinks(new Map([['a.md', 'A2.md'], ['b.md', 'B2.md']]), ['planning-artifacts'], tmpDir);
+    const content = fs.readFileSync(path.join(outputDir, 'r.md'), 'utf8').trim();
+    assert.match(content, /^\[t\]\(A2\.md#/, `filename left dangling: ${content}`);
+  });
+
+  // Declared behaviour change (see the note on `linkPattern`): the rewrite no
+  // longer reaches into the fragment. A fragment is a heading slug, not a file
+  // path, so the pre-BUG-13 output `[t](A2.md#see/B2.md)` pointed at an anchor
+  // that never existed. Zero links of this shape exist in the corpus.
+  it('leaves the anchor fragment untouched', async () => {
+    await fs.writeFile(path.join(outputDir, 'r.md'), '[t](a.md#see/b.md)\n');
+    const { updateLinks } = require('../../scripts/lib/artifact-utils');
+    await updateLinks(new Map([['a.md', 'A2.md'], ['b.md', 'B2.md']]), ['planning-artifacts'], tmpDir);
+    const content = fs.readFileSync(path.join(outputDir, 'r.md'), 'utf8').trim();
+    // Filename renamed, fragment verbatim. Pre-BUG-13 this was
+    // '[t](A2.md#see/B2.md)' — the anchor edited too.
+    assert.equal(content, '[t](A2.md#see/b.md)');
+  });
+
+  // R1: a non-string key must throw, not be silently dropped — the policy
+  // `scripts/lib/sanitize.js` states for its helpers. A dropped rename shows up
+  // later as a corrupted document instead of a stack trace.
+  it('throws on a non-string map key rather than skipping it', async () => {
+    await fs.writeFile(path.join(outputDir, 'r.md'), '[A](a.md)\n');
+    const { updateLinks } = require('../../scripts/lib/artifact-utils');
+    await assert.rejects(
+      () => updateLinks(new Map([[123, 'x.md']]), ['planning-artifacts'], tmpDir),
+      TypeError
+    );
+  });
+
   it('frontmatter inputDocuments array entries updated', async () => {
     const fileContent = '---\ninputDocuments:\n  - prd-gyre.md\n  - architecture.md\n---\n# Content\n';
     await fs.writeFile(path.join(outputDir, 'referrer.md'), fileContent);
