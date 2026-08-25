@@ -1071,3 +1071,33 @@ Round 2 verified the RCE fixes and found the remediation had treated two bug *cl
 - **CR-dist11-D02 — Amended AC5 hardcodes absolute packed-file counts.** AC5 now pins "455 → 454". Those integers are correct today and rot on the next `files[]` change; `dist-1-2` … `dist-1-7` are queued in the same in-progress epic. Mitigated because the AC also states the durable, count-independent form ("diff the sorted before/after lists and require a single line"), which is the check that actually fires. Deferred as adjacent to `derive-counts-from-source` rather than a breach of it.
 - **CR-dist11-D03 — AC amendments have no witness outside the amended document.** The only record of the "operator decision" that amended AC5 is text the implementing dev agent wrote into the file it was being judged against — no `bmad-correct-course` entry, no operator sign-off block, no epic-level change. Here the amendment was disclosed (AC text + inline marker + Debug Log + Change Log) and is provably forced by the tree, so nothing went wrong. The gap is that nothing in the artifact would have exposed it had it been neither. Candidate for a governance rule: an AC amended during implementation needs a witness outside the story file.
 - **CR-dist11-D04 — `docs/codebase-audit-2026-06-27.md` live findings cite the deleted generator.** Three mentions remain (`:126`, `:338`, `:341`). Leaving the dated snapshot alone is the right call, and no action is needed on the file itself. *(Do not cite `docs:audit` as evidence here: `docs/codebase-audit-2026-06-27.md` is not in `USER_FACING_DOCS` (`scripts/docs-audit.js`), so that check never opens the file and could not have said otherwise. The honest support is AC4's scoping plus the repo-wide grep.)* The residue worth recording: finding #27 is marked `🔴 Live — untracked` and finding #6 `🟢 In progress`, and both enumerate `generate-badges-json.js` as evidence — so two *live* findings now cite a path that no longer exists. The story's justification ("historical by construction, like a retro") is not the one that applies to a doc carrying live status markers.
+
+## Deferred from: code review of T58 (2026-08-25)
+
+Round 1 of `scripts/audit/backlog-integrity.js`, two adversarial layers (Blind Hunter, Edge Case
+Hunter). 11 findings patched; the 5 below were not, each for a stated reason.
+
+- **Closed-status vocabulary diverges from practice.** `isClosed` implements exactly the enum in
+  `backlog-format-spec.md` — `Done|Closed|Shipped|Superseded|Rescoped|Absorbed|Invalid`. Real usage
+  also contains `descoped-by-ADR`, and `Completed`/`Fixed`/`Resolved`/`Retired` are plausible.
+  Conversely `Rescoped` is in the closed list while rescoped rows here stay **live** (BUG-9, I133,
+  I157 all kept `Open`/`Qualified` on 2026-08-25 and recorded `rescoped-by:` in notes). The code is
+  faithful to the spec; changing either is a spec decision, not a patch. Not urgent — nothing fails
+  today — but one writer typing `Rescoped 4.75 → 1.9` into a Status cell produces a red build
+  demanding a live row be evicted.
+- **Referential integrity covers 2 of 7 ID prefixes.** `defined` collects
+  `BUG-|T|I|A|U|P|D` (348 rows); `referenced` collects only `BUG-|T` (89). **`I161` is cited three
+  times and has no row**, and the gate passes. One regex character would close it — but `I161` is
+  cited *because it was deliberately rejected as a duplicate*, so widening the pattern flags correct
+  prose. Needs a convention for citing a non-existent ID on purpose before the check can widen.
+- **No duplicate-ID assertion.** Backlog row **I150** already owns this and specifies the nuance
+  (flag only NON-adjacent duplicates; adjacent same-ID pairs are the deliberate supersession
+  pattern). `parseTables` now supplies `t.rows[].id` for free, so the check is ~5 lines — but it
+  belongs to I150, not to T58.
+- **`splitRow` cannot distinguish `\|` from `\\|`.** In GFM `\\|` is a literal backslash followed by a
+  real delimiter; the lookbehind merges those cells and would report a spurious arity failure. Not
+  reachable — no cell in the corpus ends in a backslash — and noted only because this diff makes
+  `\|` load-bearing via the IN-80 fix.
+- **Untriaged rows are not asserted to sit after the live block** (Lane Ordering clause 2). Already
+  filed as **T70(a)**; left there rather than duplicated here.
+
