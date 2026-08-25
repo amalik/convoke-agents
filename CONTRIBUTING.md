@@ -72,6 +72,7 @@ A red gate is a gate doing its job. If one fails for a reason you believe is unr
 | `no-process-cwd-in-libs` | Use `findProjectRoot()` or accept a `projectRoot` parameter. |
 | `derive-counts-from-source` | Compute counts from the source data. A magic number for something that can grow will rot silently. |
 | `lint-passes-before-review` | `npm run lint` exits 0 with zero warnings before a change is offered for review. |
+| `documentation-claims-must-be-derived` | Documenting how something works? Read the file that determines it. Do not write a policy that does not exist. |
 
 The full set — including the rules governing commits, reviews, and backlog writes — is in that file.
 
@@ -136,7 +137,7 @@ npm run docs:audit    # if you touched any documentation
 
 **Definition of Done:** `.claude/skills/bmad-dev-story/checklist.md`. Lint reports are a *required* input, not an optional one.
 
-**Rules you will be blocked on, by name:** `test-fixture-isolation`, `fixture-determinism`, `derive-counts-from-source`, `no-hardcoded-versions`, `no-process-cwd-in-libs`, `shared-test-constants`, `verification-must-be-falsifiable`, `external-claims-must-be-executed-or-hedged`.
+**Rules you will be blocked on, by name:** `test-fixture-isolation`, `fixture-determinism`, `derive-counts-from-source`, `no-hardcoded-versions`, `no-process-cwd-in-libs`, `shared-test-constants`, `verification-must-be-falsifiable`, `external-claims-must-be-executed-or-hedged`, `documentation-claims-must-be-derived`.
 
 **Review protocol:** `code-review-convergence`. Round 1 is mandatory and fires without being asked. Two clauses are worth internalising because both were written after they were violated: *the reviewed set must equal the committed set* — derive the diff from `git diff HEAD --name-only`, never from what you remember touching — and *applying a finding is not a reviewed change*, so new code or new tests written in response to a review are unreviewed by default.
 

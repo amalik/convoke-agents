@@ -455,6 +455,31 @@ Each wrong claim generated its own correction round, and the corrections asserte
 
 ---
 
+## Rule: documentation-claims-must-be-derived
+
+**Statement.** Any sentence in project documentation that asserts something about **this repository's own behaviour** — a command, a CI gate, a threshold, a convention, a policy — must be derived from the source that determines it, at the time of writing. Recalled, inferred, or pattern-matched claims do not enter documentation. A policy that does not exist yet is a **proposal**, not a fact, and must not be written in the indicative.
+
+**Operational check.** For each assertion in the diff, name the file that determines it and read it. Conventions come from `git log`, gates from `.github/workflows/`, thresholds from their config file, rules from this file. If no file determines the claim, it is not a fact about the system — get it ratified, then write it.
+
+**Why.** Commit `832a18db` (2026-08-25) added `CONTRIBUTING.md`, `SECURITY.md` and the GitHub templates. Five mechanical checks passed — `docs:audit`, `install-scope-check`, `backlog-integrity`, `lint`, `npm pack --dry-run` — and all 12 relative links plus 4 asserted paths resolved. It shipped with two defects, both inside the section that declares itself normative and says it overrides everything else in the file:
+
+| Claim written | Reality |
+|---|---|
+| Commit types are `feat, fix, docs, test, chore, refactor, governance` | `test` and `refactor` appear in **none** of the last 400 commits; `ci` and `release` are used and were omitted |
+| "Entries are written at release time" stated as established policy | **No such policy existed.** Inferred from how `CHANGELOG.md` reads, then published under the maintainer's authority |
+
+Three shell commands found both, after the commit was pushed. No gate could have: `docs:audit` walks the agent/workflow registry and checks link *shape*. Nothing in this repository has an opinion about whether a sentence is true.
+
+**How to apply.**
+- **"Shape passed" is not "content verified."** Link checkers, YAML parsers and pack listings verify shape only. When reporting verification of a documentation change, say which of the two you ran.
+- **For a documentation change, verifying the assertions substitutes for reviewing the diff.** It is the higher-yield pass, not a lighter one — a diff review reads prose for plausibility, which is exactly what a wrong-but-plausible claim survives.
+- **Do not invent policy while documenting it.** If the artifact needs a rule that does not exist, name it as an open decision and route it to the operator. If the ratified rule binds contributors or agents, it belongs in this file, not only in prose docs.
+- **Reviewing a PR.** If a docs diff asserts repository behaviour and the change shows no derivation — no command, no cited file — block and cite this rule.
+
+**Related, and deliberately distinct.** `derive-counts-from-source` covers counts; `spec-verify-referenced-files` covers whether a referenced file *exists*; `external-claims-must-be-executed-or-hedged` covers systems outside this repository. This rule covers claims about **this** repository that are neither counts nor paths — the ones that are true or false rather than present or absent.
+
+---
+
 ## Rule: verification-must-be-falsifiable
 
 **Statement.** Before citing a check as evidence, establish that it could have said something else. Run it against a known-bad input, or mutate the thing it inspects and confirm it goes red. A check that cannot fail is not weak evidence — it is **no** evidence, and it is worse than none because it reads like proof.
