@@ -32,10 +32,40 @@ const {
   EXTRA_BME_AGENTS,
 } = require('../update/lib/agent-registry');
 
-/** v6.1.0 manifest header. A manifest whose header matches neither limb of the
- *  schema predicate below is treated as legacy (10 columns, submodule at index 8). */
+/** v6.1.0 manifest header: 12 columns, module at index 9. */
 const V610_HEADER =
   'name,displayName,title,icon,capabilities,role,identity,communicationStyle,principles,module,path,canonicalId';
+
+/**
+ * Is this header the v6.1.0 schema (12 columns, module at index 9)?
+ *
+ * **Deliberately a two-state question, after a three-state version was reviewed and
+ * rejected.** Round 3 (2026-08-26) found that classifying an unrecognised header as
+ * `unusable` and regenerating from scratch DELETED every upstream row: measured, a
+ * manifest whose header line had been dropped went from 53 rows (18 bmm, 12 cis, 4
+ * wds, 3 bmb, 2 tea, 2 core, 12 bme) to 12, while the function still returned
+ * "other modules preserved" and `validateManifest` still reported pass. That is
+ * strictly worse than the duplication it was fixing — degraded data became deleted
+ * data — so the classifier is reverted rather than patched a fourth time.
+ *
+ * It also found that the `legacy` limb was invented: it was derived from this file's
+ * own `buildAgentRowLegacy` field list, and matches NONE of the three headers that
+ * have ever existed in this repository's history (62 manifest blobs across 21
+ * commits). The real legacy header would have been salvaged away — a working file
+ * renamed out from under the user.
+ *
+ * The correct fix is to classify by PARSE and required-column presence, the way
+ * `refresh-installation.js:518-522` does for skill-manifest.csv, and to carry
+ * preserved rows through the recovery path. That is a design change, not a predicate
+ * tweak, and it is filed as **T75** rather than attempted here — `code-review-convergence`
+ * caps at three rounds and forbids a fourth.
+ *
+ * @param {string} header
+ * @returns {boolean}
+ */
+function isV610Header(header) {
+  return header.startsWith('name,') || header.includes('canonicalId');
+}
 
 /** The string `refreshInstallation` pushes onto its `changes` array, returned so the
  *  caller can keep reporting the same message it always did. */
@@ -213,19 +243,15 @@ async function generateAgentManifest(projectRoot, options = {}) {
   let isV610 = true;
   let preservedRows = [];
 
-  // "Usable, not merely present." `fs.existsSync` is true for a 0-byte file, and a
-  // whitespace-only manifest trims to a single empty line — so the naive read yields
-  // `header = ''`, which trips neither limb of the schema predicate and silently
-  // selects the LEGACY branch. The file would then be rewritten as a blank header
-  // line followed by 10-column rows, and `readManifest` (which drops blank lines)
-  // would promote the first agent row to be the header: garbage columns, one agent
-  // lost, and `convoke-export` unable to match anything. Re-running cements it.
+  // The Round 1 fix, kept: `fs.existsSync` is true for a 0-byte file and a
+  // whitespace-only manifest trims to one empty line, so the naive read yields
+  // `header = ''`, which fails the v6.1.0 test and silently selects the LEGACY
+  // branch — writing a blank header above 10-column rows, after which `readManifest`
+  // promotes the first agent row to be the header and an agent disappears.
   //
-  // This is the same defect already found and fixed for skill-manifest.csv at
-  // refresh-installation.js:509-540; the extraction did not carry the lesson across,
-  // and Round 1's edge-case layer caught it. There is no data-loss tradeoff here:
-  // `header` is empty only when the entire file is whitespace, so treating it as
-  // absent discards nothing.
+  // Treating an EMPTY file as absent is safe by construction: there is no data to
+  // lose. Extending the same treatment to a non-empty corrupt file is NOT safe, and
+  // doing so was Round 3's HIGH — see `isV610Header` and T75.
   const existingRaw = fs.existsSync(manifestPath)
     ? (await fs.readFile(manifestPath, 'utf8')).trim()
     : '';
@@ -233,7 +259,7 @@ async function generateAgentManifest(projectRoot, options = {}) {
   if (existingRaw !== '') {
     const existing = existingRaw.split('\n');
     header = existing[0];
-    isV610 = header.startsWith('name,') || header.includes('canonicalId');
+    isV610 = isV610Header(header);
 
     preservedRows = existing.slice(1).filter(row => {
       if (!row.trim()) return false;
@@ -286,6 +312,8 @@ async function generateAgentManifest(projectRoot, options = {}) {
 
 module.exports = {
   generateAgentManifest,
+  isV610Header,
+  parseCSVRow,
   readExclusions,
   CHANGE_MESSAGE,
   SKIP_MESSAGE,

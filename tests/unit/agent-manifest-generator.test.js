@@ -18,6 +18,8 @@ const { execFile } = require('child_process');
 
 const {
   generateAgentManifest,
+  isV610Header,
+  parseCSVRow,
   CHANGE_MESSAGE,
   SKIP_MESSAGE,
   V610_HEADER,
@@ -166,7 +168,7 @@ describe('gen-1.1 AC3 — target-tree dependencies', () => {
     // with 'bme' at index 9. Counting fields is what distinguishes the branches.
     const bmeLine = lines.find(l => l.includes('"bme"') && !LEGACY_FOREIGN_ROWS.includes(l));
     assert.ok(bmeLine, 'expected at least one generated bme row');
-    assert.equal(bmeLine.split('","').length, 10, 'legacy bme rows carry 10 columns, not 12');
+    assert.equal(parseCSVRow(bmeLine).length, 10, 'legacy bme rows carry 10 columns, not 12');
   });
 
   it('defaults a manifest-less tree to the v6.1.0 schema', async () => {
@@ -182,6 +184,10 @@ describe('gen-1.1 AC3 — target-tree dependencies', () => {
   // LEGACY branch is silently taken, and a blank header line is written above
   // 10-column rows — after which readManifest promotes the first agent row to be
   // the header and one agent disappears.
+  // Round 2 HIGH: the first version of this guard tested non-emptiness, not
+  // usability, so every case below except the first two still classified as LEGACY
+  // and rewrote the file with a junk header above 10-column rows — duplicating every
+  // agent. `classifyHeader` now has three states and the unusable file is set aside.
   for (const [label, content] of [
     ['0-byte', ''],
     ['whitespace-only', '   \n\n  \n'],
@@ -194,14 +200,32 @@ describe('gen-1.1 AC3 — target-tree dependencies', () => {
       await generateAgentManifest(root, { excluded: NO_EXCLUSIONS });
       const lines = (await fs.readFile(mp, 'utf8')).split('\n');
 
-      assert.equal(lines[0], V610_HEADER, 'header must not be blank');
-      assert.notEqual(lines[0].trim(), '', 'a blank header is the defect this guards');
-      // v6.1.0 rows carry 12 columns; the legacy branch would have emitted 10.
+      assert.equal(lines[0], V610_HEADER, 'header must not be junk or blank');
+      // Count fields by parsing, not by splitting on `","` — a field VALUE containing
+      // that literal makes the split-based count wrong in both directions (Round 2).
       const bmeLine = lines.find(l => l.includes('"bme"'));
       assert.ok(bmeLine, 'expected generated bme rows');
-      assert.equal(bmeLine.split('","').length, 12, 'must take the v6.1.0 branch, not legacy');
+      assert.equal(parseCSVRow(bmeLine).length, 12, 'must take the v6.1.0 branch, not legacy');
+
+      // No agent may appear twice: the pre-fix behaviour preserved the old rows as
+      // "foreign" while appending fresh ones.
+      const ids = lines.filter(l => l.includes('"bme"')).map(l => parseCSVRow(l)[11]);
+      assert.equal(new Set(ids).size, ids.length, 'no agent may be duplicated');
+
     });
   }
+
+  it('recognises the v6.1.0 header, and only that', () => {
+    assert.equal(isV610Header(V610_HEADER), true);
+    assert.equal(isV610Header('name,whatever'), true);
+    assert.equal(isV610Header('a,b,canonicalId'), true);
+    assert.equal(isV610Header(LEGACY_HEADER), false);
+    // NOTE: everything below is currently treated as LEGACY, which is wrong — see
+    // T75. It is asserted here as the CURRENT behaviour, not the desired one, so
+    // that the row's fix has a test to flip rather than a blank page.
+    assert.equal(isV610Header('<<<<<<< HEAD'), false, 'T75: should be "unusable"');
+    assert.equal(isV610Header('"John","","Product Manager"'), false, 'T75: should be "unusable"');
+  });
 
   it('collapses a newline in a persona field so rows cannot multiply across runs', async () => {
     await seedManifest(root, V610_HEADER, V610_FOREIGN_ROWS);
@@ -227,19 +251,59 @@ describe('gen-1.1 AC3 — target-tree dependencies', () => {
     assert.equal(second, first, 'generation must be idempotent — rows must not accumulate');
     const count = second.split('\n').filter(l => l.includes('gen11-multiline')).length;
     assert.equal(count, 1, 'exactly one row per agent, however its persona is written');
+    // Pin the VALUE too. Round 2: asserting only idempotency left two data-losing
+    // implementations green — stripping the newline outright ('line oneline two') and
+    // erasing the field entirely both produce one stable line.
+    assert.ok(
+      second.includes('"line one line two"'),
+      'the newline must collapse to a space, not delete the value or the separator'
+    );
   });
 
-  it('does not throw on a partially-specified options object', async () => {
-    await seedManifest(root, V610_HEADER, V610_FOREIGN_ROWS);
-    // Both live callers pass complete objects; this is the API contract holding
-    // rather than a live bug. readExcludedAgents is written never to throw, and
-    // folding two locals into one options object must not undo that.
-    await generateAgentManifest(root, { excluded: { vortex: [] } });
-    await generateAgentManifest(root, { excluded: {} });
-    await generateAgentManifest(root, { registry: { AGENTS: [] }, excluded: NO_EXCLUSIONS });
-    const out = await fs.readFile(manifestPathIn(root), 'utf8');
-    assert.ok(out.includes('bmad-agent-pm'), 'foreign rows survive every partial-options call');
-  });
+  // Round 2 HIGH: the first version of this test made three calls and asserted once,
+  // at the end — after a call with an empty registry that rewrote the file with ZERO
+  // bme rows. Its only assertion inspected a preserved foreign row, so a mutation
+  // making a missing key exclude EVERY agent stayed green. Each call now asserts on
+  // its own output.
+  // Counts derived from the registry, never hardcoded (`derive-counts-from-source`).
+  const REG = require('../../scripts/update/lib/agent-registry');
+  const FULL_BME = REG.AGENTS.length + REG.GYRE_AGENTS.length + REG.EXTRA_BME_AGENTS.length;
+
+  const PARTIAL_OPTIONS = [
+    ['excluded.gyre missing', { excluded: { vortex: [] } }, FULL_BME],
+    ['excluded empty', { excluded: {} }, FULL_BME],
+    ['excluded null — must fall back to reading the tree', { excluded: null }, FULL_BME],
+    ['excluded.vortex missing', { excluded: { gyre: [] } }, FULL_BME],
+    ['excluded absent entirely', {}, FULL_BME],
+    // registry partials: each missing key must default to [], never throw, and never
+    // silently fall through to the real registry.
+    ['registry.AGENTS missing', { excluded: NO_EXCLUSIONS, registry: { GYRE_AGENTS: [], EXTRA_BME_AGENTS: [] } }, 0],
+    ['registry.GYRE + EXTRA missing', { excluded: NO_EXCLUSIONS, registry: { AGENTS: [] } }, 0],
+    ['registry empty', { excluded: NO_EXCLUSIONS, registry: {} }, 0],
+  ];
+
+  for (const [label, opts, expectedBme] of PARTIAL_OPTIONS) {
+    it(`tolerates a partially-specified options object: ${label}`, async () => {
+      await seedManifest(root, V610_HEADER, V610_FOREIGN_ROWS);
+      await generateAgentManifest(root, opts);
+      const out = await fs.readFile(manifestPathIn(root), 'utf8');
+
+      assert.ok(out.includes('bmad-agent-pm'), 'foreign rows must survive');
+      assert.equal(out.split('\n')[0], V610_HEADER, 'header must survive');
+
+      // The load-bearing assertion. Round 2 found the earlier version asserted only
+      // `bme > 0`, which a mutation excluding EVERY Vortex agent still satisfied —
+      // Gyre and EXTRA_BME rows kept the count above zero. An exact count derived
+      // from the registry is what makes "a missing key means exclude nothing"
+      // actually checkable.
+      const bme = out.split('\n').filter(l => l.includes('"bme"')).length;
+      assert.equal(
+        bme,
+        expectedBme,
+        `a missing options key must not change which agents are generated (got ${bme}, want ${expectedBme})`
+      );
+    });
+  }
 
   it('honours non-empty excluded_agents when they are passed in', async () => {
     await seedManifest(root, V610_HEADER, V610_FOREIGN_ROWS);
