@@ -7,7 +7,8 @@ status: active
 schema_version: 1
 related_adr: adr/knowledge-governance/adr-001-cleanup-scope.md
 related_story: fast-reference-graph-baseline
-baseline_commit: 87b87eaee36ea1f535c4aeb4668e153a952f2c0a
+baseline_commit: 2fc98395
+revision: 2
 ---
 
 # Reference-Graph Baseline — 2026-08-26
@@ -15,7 +16,25 @@ baseline_commit: 87b87eaee36ea1f535c4aeb4668e153a952f2c0a
 **Purpose.** Capture the state of the corpus reference graph *before* any document is renamed or moved, so that damage caused by a future rename is distinguishable from damage that already existed.
 
 **Command.** `npm run refs:audit` — [`scripts/audit/reference-integrity.js`](../../scripts/audit/reference-integrity.js), scope pinned in `package.json`.
-**Baseline commit.** `87b87eae`
+
+**Reproduction.** Requires the `refs:audit` script, which lands in the same commit as revision 2 of this report. Revision 1 named `87b87eae` as the baseline commit; that was wrong — the script did not exist there, so the documented reproduction was impossible. The corpus measured here is commit `2fc98395` plus that script.
+
+---
+
+## 0. Corrections in revision 2
+
+Revision 1 was reviewed on 2026-08-26 and four defects were confirmed. Recorded rather than silently repaired.
+
+| # | Defect | Effect |
+|---|---|---|
+| 1 | **Root scope enumerated 7 files; the root holds 9.** `CONTRIBUTING.md` and `SECURITY.md` were omitted — both present at the stated baseline commit, so they were missed, not newly added. `SECURITY.md` is in `files[]` and ships; two files that *were* in scope do not. | Coverage understated by 16 references. The AC3 falsification for the root could not have covered them. |
+| 2 | **The binding step-8 condition pointed at §5** (Known limitations) instead of §7 (the comparison set), in two places. | The one instruction the initiative depends on named the wrong section. |
+| 3 | **Reproduction impossible at the stated commit** — `refs:audit` did not exist at `87b87eae`. | Baseline unreproducible as documented. |
+| 4 | **"Counts derived by `find`" was false for the root row** — `find` yields 9, the report said 7. | A `derive-counts-from-source` violation inside a report that cites the rule. |
+
+**Root cause of 1 and 4 (the same defect).** The root file list was taken once early in the session and reused hours later without re-derivation. That is precisely the constant-that-rots failure `derive-counts-from-source` names. **Fixed structurally, not by editing the number**: the scope is now derived at run time — `--paths="…,$(ls *.md | paste -sd, -)"` — so a root document added tomorrow enters scope with no edit. §3 proves this by planting a *new* root file and confirming the derived glob discovers it.
+
+**What did not change: the broken count, the classification, and the verdicts.** The two missed files contribute 16 references, **all valid, none broken**. Totals moved from 2,695→2,712 checked; broken stayed at **657**.
 
 ---
 
@@ -23,17 +42,17 @@ baseline_commit: 87b87eaee36ea1f535c4aeb4668e153a952f2c0a
 
 **Abort condition 2 (link baseline bad → stop at "new documents only"): DID NOT FIRE — conditionally.**
 
-The graph carries **657 broken references out of 2695 checked (24.4%)**, which is severe on its face. It does not block the initiative for three reasons, each of which is a condition on how the work proceeds:
+The graph carries **657 broken references out of 2,712 checked (24.2%)**, severe on its face. It does not block the initiative, for three reasons, each a condition on how the work proceeds:
 
-1. **The operator-facing surfaces are clean.** `_bmad/bme/` (the shipped tree) reports **0 broken of 39**. The repository root reports **0 broken of 72**. All damage is interior to the artifact corpus.
-2. **Just over half is not damage at all.** 339 of 657 (51.6%) point at files that **exist** — they are written repo-root-relative from documents that do not live at the repository root. Nothing is missing; the link convention is wrong.
-3. **The baseline is now a diffable set, not a number.** §5 lists every broken reference. A post-rename run is compared against that set, never against zero.
+1. **The operator-facing surfaces are clean.** `_bmad/bme/` (the shipped tree) reports **0 broken of 39**. The repository root reports **0 broken of 88**. All damage is interior to the artifact corpus.
+2. **Just over half is not damage at all.** 339 of 657 (51.6%) point at files that **exist** — written repo-root-relative from documents that do not sit at the repository root. Nothing is missing; the link convention is wrong.
+3. **The baseline is a diffable set, not a number.** **§7** lists every broken reference. A post-rename run is compared against that set, never against zero.
 
-**Abort condition 3 (instrument cannot see both trees): DID NOT FIRE.** All four trees were proved reachable in both directions — see §3.
+**Abort condition 3 (instrument cannot see both trees): DID NOT FIRE.** All four trees proved reachable in both directions — §3.
 
 **Abort condition 1 (redundancy low → stop at staleness): NOT EVALUABLE by this story.** Redundancy is a content question; this story measured structure only. It remains open.
 
-> **The binding condition.** This checker **cannot ever return 0 on this corpus**, so it must not be wired as a binary CI gate. It is a **baseline-diff instrument**. Wiring it green-or-red would either block every build or require mass edits nobody has authorised.
+> **The binding condition.** This checker **cannot ever return 0 on this corpus**, so it must not be wired as a binary CI gate. It is a **baseline-diff instrument**: compare against **§7**. Wiring it green-or-red would either block every build or force mass edits nobody has authorised.
 
 ---
 
@@ -41,15 +60,15 @@ The graph carries **657 broken references out of 2695 checked (24.4%)**, which i
 
 | Tree | `.md` files | Refs checked | Broken | Exit |
 |---|---:|---:|---:|---:|
-| `_bmad-output/` | 1,155 | 2,402 | 612 | 1 |
+| `_bmad-output/` | 1,156 | 2,403 | 612 | 1 |
 | `_bmad/bme/` (**ships**) | 318 | 39 | **0** | 0 |
 | `docs/` | 17 | 182 | 45 | 1 |
-| Repository root | 7 | 72 | **0** | 0 |
-| **Corpus** | **1,497** | **2,695** | **657** | 1 |
+| Repository root | 9 | 88 | **0** | 0 |
+| **Corpus** | **1,500** | **2,712** | **657** | 1 |
 
-Per-tree broken counts sum to 657, matching the corpus run exactly — an independent cross-check that the scoped runs and the full run agree.
+Per-tree refs sum to 2,403 + 39 + 182 + 88 = **2,712**, and broken to **657** — both match the corpus run exactly. Independent cross-checks that the scoped runs and the full run agree.
 
-File counts derived by `find` in the same session, not asserted from a stored constant (`derive-counts-from-source`).
+All file counts derived by `find` / `ls` in the same session as the run. Revision 1 failed this for the root row; see §0.
 
 ### 2.1 A scope trap found before running
 
@@ -63,15 +82,15 @@ _bmad-output/planning-artifacts/convoke-report-*-audit-*.md
 _bmad-output/planning-artifacts/convoke-spec-covenant-compliance-checklist.md
 ```
 
-This is an I97 citation checker for retros and audit reports, **not** a corpus link checker. `docs/`, `_bmad/bme/`, the repository root and the bulk of both artifact directories fall outside it. A bare invocation would print `PASS` and mean very little.
+This is an I97 citation checker for retros and audit reports, **not** a corpus link checker. `docs/`, `_bmad/bme/`, the repository root and the bulk of both artifact directories fall outside it. A bare invocation prints `PASS` and means very little.
 
-`npm run refs:audit` therefore pins the ADR-001 scope explicitly via `--paths=`. **No source file was modified**; the walker already supports directory scopes.
+`npm run refs:audit` therefore pins the ADR-001 scope via `--paths=`. **No source file was modified**; the walker already supports directory scopes.
 
 ---
 
 ## 3. Falsification evidence (AC2)
 
-A checker's clean result is worthless until it has been seen to fail. This instrument's own history records patch **P6**, where a glob matched nothing and produced a silent pass.
+A clean result is worthless until the checker has been seen to fail. This instrument's own history records patch **P6**, where a glob matched nothing and produced a silent pass.
 
 A unique sentinel token was planted in each tree, the scoped check run, then the sentinel removed and the check re-run:
 
@@ -80,11 +99,13 @@ A unique sentinel token was planted in each tree, the scoped check run, then the
 | `_bmad-output/` | ✓ | ✓ |
 | `_bmad/bme/` | ✓ | ✓ |
 | `docs/` | ✓ | ✓ |
-| Repository root | ✓ | ✓ |
+| Repository root (**derived scope**) | ✓ | ✓ |
 
-Both directions, all four trees. The `_bmad/bme/` and root PASS results in §2 are therefore evidence of a clean tree, not of an unreached one.
+The root row is stronger in revision 2 than revision 1. Revision 1 planted the sentinel into an *enumerated* scope, which could only ever prove that a listed file is read. Revision 2 plants a **new root `.md` that appears in no list** and confirms the derived glob discovers it — proving the scope self-updates. Coverage of `CONTRIBUTING.md` and `SECURITY.md` was asserted explicitly in the same run.
 
-> **Harness note.** The first run of this demonstration reported a false negative on `_bmad-output/`. Cause: `printf … | grep -q` — `grep -q` exits on first match, `printf` dies with `EPIPE`, and `pipefail` propagated the harness's failure as the checker's. This is `verification-pipefail` occurring inside the falsification harness itself. The assertion was rewritten to pure shell pattern matching with no pipe. Recorded because the failure looked exactly like a real finding.
+Both directions, all four trees. The `_bmad/bme/` and root PASS results in §2 are therefore evidence of clean trees, not unreached ones.
+
+> **Harness note.** The first run of this demonstration reported a false negative on `_bmad-output/`. Cause: `printf … | grep -q` — `grep -q` exits on first match, `printf` dies with `EPIPE`, and `pipefail` propagated the harness's failure as the checker's. `verification-pipefail`, occurring inside the falsification harness itself. Rewritten to pure-shell pattern matching with no pipe. Recorded because it looked exactly like a real finding.
 
 ---
 
@@ -97,7 +118,13 @@ Every broken target was re-tested for existence **relative to the repository roo
 | **A — root-relative authoring** | 339 | 51.6% | Target exists. Link written as if the document sat at the repo root. Mechanically fixable. |
 | **B — target absent** | 318 | 48.4% | Target does not exist anywhere. Genuine dead reference. |
 
-Of class B: **243 point at `.md` documents**, 75 at non-markdown targets. Only the 243 document references interact with a rename at all.
+Of class B: **243 point at `.md` documents**, 75 at non-markdown targets. Only those 243 interact with a rename at all.
+
+**Adversarial checks on this split** (a misclassification here would change the §1 verdict):
+
+- **0 of 339** class-A links begin with `../`, `./` or `/` — all are plain root-relative, so root-resolution is the plausible author intent rather than a coincidence.
+- **4 of 339** class-A targets resolve to a directory rather than a file; a narrower sub-class, still existent.
+- 8 of 318 class-B targets match under an alternate prefix, on inspection mostly coincidental matches of `../../.claude/…` memory paths rather than real misclassification.
 
 ### 4.1 Class B by source area
 
@@ -108,9 +135,9 @@ Of class B: **243 point at `.md` documents**, 75 at non-markdown targets. Only t
 | `_bmad-output/planning-artifacts` | 42 |
 | `_bmad-output/vortex-artifacts` | 8 |
 
-`_bmad-output/_archive/` accounts for 139 of 318. Those are historical documents whose targets legitimately no longer exist; they should not be repaired and **any future gate must exclude `_archive/`**.
+`_bmad-output/_archive/` accounts for 139 of 318 — historical documents whose targets legitimately no longer exist. They should not be repaired, and **any future gate must exclude `_archive/`**.
 
-`docs/`, `drafts/` and `test-artifacts/` contribute **zero** class-B references — every break in those areas is class A.
+`docs/`, `drafts/` and `test-artifacts/` contribute **zero** class-B references; every break there is class A.
 
 ### 4.2 Concentration
 
@@ -129,30 +156,31 @@ Class-B breakage is not diffuse. Top sources:
 | `_bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md` | 10 |
 | `_bmad-output/implementation-artifacts/tf-2-6-bmb-delegation-artifact-generation.md` | 9 |
 
-All 45 `docs/` breaks originate in a single file, `docs/codebase-audit-2026-06-27.md`, and all 45 are class A. The other 16 files in `docs/` are clean.
+All 45 `docs/` breaks originate in one file, `docs/codebase-audit-2026-06-27.md`, and all 45 are class A. The other 16 files in `docs/` are clean.
 
 ---
 
 ## 5. Known limitations
 
 1. **This validates a git clone, not a shipped package.** `_bmad/bme/` passes here while I157 remains true — `_bmad/bme/README.md` links to files absent from `package.json` `files[]`. The checker resolves against the working tree, so it is **structurally incapable** of detecting the repo-versus-tarball class. A tarball-scoped link gate is a separate instrument.
-2. **Root scope is enumerated, not globbed.** The seven root `.md` files are listed literally in the npm script; a new root document is silently uncovered until added.
-3. **Anchors are not validated.** `_validateRef` strips `#fragment` and checks only the file. A link to `file.md#L99` passes if `file.md` exists.
+2. **Root scope is derived, but only for `.md` at depth 0.** `$(ls *.md)` picks up new root documents automatically (§0, §3) but not a root file with another extension, nor a new top-level *directory*. Adding a tree still requires editing the script.
+3. **Anchors are not validated.** `_validateRef` strips `#fragment` and checks only the file, so `file.md#L99` passes whenever `file.md` exists.
 4. **`_archive/` is included in this baseline** but should be excluded from any future gate (§4.1).
+5. **The report is inside its own corpus.** Its links are checked by the run it documents; the §7 appendix sits in code fences, which `_stripCodeRegions` blanks, so it does not contaminate the count.
 
 ---
 
 ## 6. What this unblocks
 
-- Step 8 (renaming existing documents) may proceed **provided** verification is a set-diff against §5, never a comparison to zero.
-- A future gate is a **diff instrument**, not a pass/fail check, and excludes `_archive/`.
-- Class A (339 refs) is a candidate mechanical fix, independent of the cleanup: rewriting root-relative links to correct relative paths would remove 52% of the noise and is separable work.
+- Step 8 (renaming existing documents) may proceed **provided** verification is a set-diff against **§7**, never a comparison to zero.
+- A future gate is a **diff instrument**, not pass/fail, and excludes `_archive/`.
+- Class A (339 refs) is a candidate mechanical fix independent of the cleanup: rewriting root-relative links to correct relative paths removes 52% of the noise and is separable work.
 
 ---
 
 ## 7. Appendix — the baseline set
 
-Every broken reference at commit `87b87eae`, as `source → target`. This is the comparison set.
+Every broken reference at the measured state. **This is the comparison set** referenced by §1 and §6.
 
 ### 7.1 Class B — target absent (318)
 
