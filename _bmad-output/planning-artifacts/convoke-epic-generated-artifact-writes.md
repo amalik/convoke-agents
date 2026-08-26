@@ -3,7 +3,7 @@ initiative: convoke
 artifact_type: epic
 created: 2026-08-25T00:00:00.000Z
 schema_version: 1
-status: active
+status: done
 inputDocuments:
   - _bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md
   - _bmad-output/implementation-artifacts/gen-1-1-extract-generated-artifact-writes-behind-a-deliberate-path.md
@@ -44,19 +44,34 @@ require.
 - The taxonomy write. `mergeTaxonomy` short-circuits on a steady-state merge and writes nothing —
   asserted by `tests/unit/taxonomy-merger.test.js` and confirmed by mtime. T54 originally named it;
   the claim was withdrawn 2026-08-24.
-- A CI gate on manifest-vs-registry drift. Deferred deliberately, and the guard strengthens the case
-  for it: once the write is guarded, drift becomes invisible to the two suites that read the real
-  manifest.
+- ~~A CI gate on manifest-vs-registry drift.~~ **No longer out of scope — shipped 2026-08-26 as Fast
+  Lane row T74**, a step in the `agent-surface-parity` job. Amended here as well as in §Stories
+  because gen-1.1's own AC1b established the discipline: fix the claim *in both places it is false*,
+  not just the one you happened to open. The original text read: *"Deferred deliberately, and the
+  guard strengthens the case for it: once the write is guarded, drift becomes invisible to the two
+  suites that read the real manifest."* That reasoning was correct and is what motivated T74.
+  **Note the gate's real scope**: it covers the 12 `bme` rows only. Loss of the manifest's upstream
+  rows remains undetectable and is filed as T78.
 - `bootstrapTaxonomy` consolidation.
 
 ## Stories
 
 | Story | Status | Summary |
 |---|---|---|
-| **gen-1.1** — Route the agent-manifest write through a deliberate path | ready-for-dev | Extract generation into one module, add a CLI entry, then guard the refresh-side write. 10 ACs, 9 tasks. |
+| **gen-1.1** — Route the agent-manifest write through a deliberate path | **done** (2026-08-26, `7b957dbf` + `cdaed0a0`) | Extract generation into one module, add a CLI entry, then guard the refresh-side write. 10 ACs, 9 tasks. Four spec review rounds and three implementation rounds; retro at [gen-epic-1-retro-2026-08-26.md](../implementation-artifacts/gen-epic-1-retro-2026-08-26.md). |
 
-There is no story 1.2. If the deferred CI drift gate is ever taken up, it belongs here as 1.2 rather
-than in the Fast Lane.
+There is no story 1.2, and there will not be one.
+
+**Amended 2026-08-26.** This paragraph used to read: *"If the deferred CI drift gate is ever taken up,
+it belongs here as 1.2 rather than in the Fast Lane."* That instruction was written before the epic
+closed. The gate was taken up as Fast Lane row **T74** and shipped the same day the epic reached
+`done`; honouring the original line would have meant reopening a closed epic to carry a three-line CI
+step. The Fast Lane is the right home for work of that size, and the epic stays closed.
+
+Recorded rather than quietly overwritten because the gen-epic-1 retrospective (§4.6) found that T74
+had been filed **against** this line by an agent that had read this document hours earlier — the same
+read-your-model-not-the-artifact failure the retro names as the epic's dominant pattern. The fix is
+the instruction changing, not the record of it.
 
 ## The decision this epic implements
 

@@ -1485,3 +1485,29 @@ The `excluded_agents` line is a shipped bug this fixed incidentally: before, an 
 
 ---
 
+## T74
+
+**Lane:** Fast Lane · **Filed:** 2026-08-26 · **Score:** 6.0 · **Portfolio:** convoke · **Status:** ✅ Done 2026-08-26
+
+**Receipt:** a CI step in the `agent-surface-parity` job regenerates the manifest and fails on drift. That job is in `publish.needs`, so a registry edit committed without `npm run generate:manifest` now blocks a release.
+
+**Filed and closed the same day, and it replaces something this project deliberately removed.** Until gen-1.1 (`7b957dbf`), every `npm test` run regenerated `agent-manifest.csv`, so a forgotten regeneration surfaced as a dirty tree. That accident was the only thing keeping the file in sync — and removing it was the entire point of gen-1.1. Round 1 of that story confirmed the exposure by execution rather than inference: delete one `bme` row and lint, install-scope-check, docs:audit, backlog-integrity and the full unit suite all stay green.
+
+**The gate covers 12 rows of 54, and the step is named accordingly.** `generateAgentManifest` reads the existing file for its header and its `preservedRows`, then writes them straight back — so the header and the 41 upstream rows are compared against themselves and can never differ. Measured: strip all 41, commit, run the step → **GREEN**. An earlier draft of the step was named "Agent manifest matches the registry", which overclaimed on the publish critical path. Renamed to "Agent manifest **bme rows** match the registry", with the limit and its reason in the step comment and a pointer to **T78**, which owns the undetectable half.
+
+**Three corrections came out of Round 1, and two were false claims I had written into the comment.**
+
+1. *"gen-1.1's spec rejected this command twice… it ran against a temp target it did not control."* Both halves wrong. It was proposed once (R2) and rejected once (R3), and R2's diff was scoped to the tracked path — the wrong root was the **generator's write target**, not the diff's subject. The real reason this entry is immune is different and now stated: `scripts/generate-manifest.js` derives its target from `path.resolve(__dirname, '..')`, so it can only ever write this repo's own manifest.
+2. `git diff --exit-code` compares worktree to **index**, not to HEAD — anything that stages the file makes it pass while real drift sits staged. Changed to `git diff HEAD`, and the hole is now part of the falsification: staged drift exits 1 where the bare form exited 0.
+3. Under `defaults.run.shell: bash -eo pipefail`, a failing `npm run generate:manifest` killed the step before the `::error::` could print — defeating the annotation's whole purpose. Both branches now annotate, and the message prints **before** the diff rather than under several KB of quoted persona prose.
+
+**Falsified against the step body extracted from the YAML, not a retyped copy:** clean tree → exit 0; an agent title edited in `agent-registry.js` without regenerating → exit 1 with the annotation; the same drift **staged** → exit 1; restored → exit 0.
+
+**Lane placement was an operator decision.** `convoke-epic-generated-artifact-writes.md` reserved this work as story 1.2 of `gen-epic-1`. The epic had already closed, so honouring that line meant reopening it to carry a three-line CI step. The operator chose to keep T74 in the Fast Lane and amend the epic; both the §Stories line and the §Scope "out of scope" bullet were amended, with the original text preserved in each — the "fix the claim in both places" discipline gen-1.1's AC1b established. Recorded in the gen-epic-1 retrospective, action item 3.
+
+**Original row text, verbatim:**
+
+> **Nothing keeps the tracked `agent-manifest.csv` in sync with the registry now that `npm test` no longer rewrites it.** Before `7b957dbf` (T54 / story `gen-1-1`), every `npm test` run regenerated the manifest, so a registry edit without a regeneration surfaced as a dirty tree. That accident was the de-facto gate; the story removed it deliberately and deferred the replacement in its §4. **Confirmed by execution during the story's Round 1 review, not inferred:** delete one `bme` row from `_bmad/_config/agent-manifest.csv` and `install-scope-check`, `docs:audit`, `backlog-integrity`, the unit suite and `refresh-installation-exclusions` all stay green. `validateManifest()` (`scripts/update/lib/validator.js:203`) would catch it, but runs only via `convoke-doctor`, which appears in `ci.yml` only inside comments. **Bounded blast radius, stated so this is not over-priced:** the manifest is NOT in the npm tarball (0 entries, `npm pack --dry-run`), so a stale copy never reaches a consumer — a consumer's manifest is generated at install. What rots is this repository's tracked copy and its in-repo readers (`scripts/portability/export-engine.js:154`, `tests/unit/team-factory-wiring.test.js`). **Fix is ~3 lines in the `audit` job:** `npm run generate:manifest && git diff --exit-code _bmad/_config/agent-manifest.csv`. Must be shown red before it is trusted (`verification-must-be-falsifiable`) — delete a `bme` row and confirm the job fails naming the file. **Effort scored conservatively at 1** (step + test + falsification) rather than 0.5; if the operator prices it at 0.5 the score is 12.0 and this tops the lane.
+
+---
+

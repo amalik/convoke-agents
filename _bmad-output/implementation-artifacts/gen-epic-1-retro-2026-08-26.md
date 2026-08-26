@@ -143,7 +143,7 @@ the Fast Lane hours after that document was read to write the story's References
 |---|---|---|---|---|
 | 1 | **Build the review-discipline backstop** — assert a story cannot reach `done` without a review record naming each round and outcome, and that a `scripts/**/*.js` commit touches a test or carries an explicit opt-out. Prove it red before trusting it. | dev | **T77 filed, 4.05** | A skipped mandatory round fails CI without a human asking |
 | 2 | **Correct `project-context.md:534`** — it asserted a gate that does not exist. | Amelia | ✅ **done** | The bullet states the backstop is absent and points at T77 |
-| 3 | **Resolve T74's lane against the epic's own instruction** — the epic says the drift gate belongs as story 1.2, not Fast Lane. | operator | open | T74 either moves to gen-epic-1 as 1.2, or the epic line is amended |
+| 3 | **Resolve T74's lane against the epic's own instruction** — the epic says the drift gate belongs as story 1.2, not Fast Lane. | operator | ✅ **done** 2026-08-26 | Operator chose: keep T74 in the Fast Lane and amend the epic. `convoke-epic-generated-artifact-writes.md` §Stories and §Scope both amended, with the original text preserved; the epic stays closed rather than reopening to carry a three-line CI step |
 | 4 | **Mutation harnesses must self-check** — verify the replacement landed, the module still loads, and failures are `AssertionError`s not crashes. | Amelia | ✅ recorded in `feedback_verification_basis` | No mutation result cited without those three checks |
 | 5 | **Sequence the follow-ups detection-first** — T76 before T74/T75. | operator | agreed | Fixing detection makes the other two falsifiable |
 

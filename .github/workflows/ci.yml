@@ -172,6 +172,49 @@ jobs:
         # guide blocks a release. That is the intended severity — these files go in the tarball.
         run: npm run docs:audit
 
+      - name: Agent manifest bme rows match the registry
+        # T74. Until story gen-1.1 (`7b957dbf`), every `npm test` run regenerated
+        # `_bmad/_config/agent-manifest.csv`, so a registry edit made without a
+        # regeneration showed up as a dirty working tree. That accident was the only
+        # thing keeping the tracked manifest in sync, and gen-1.1 removed it on
+        # purpose — the whole point of the story was that running the tests must not
+        # rewrite a tracked file. Its absence was confirmed by execution: delete one
+        # bme row and every other gate stays green.
+        #
+        # SCOPE — this covers the 12 `bme` rows ONLY, and the step name says so.
+        # `generateAgentManifest` reads the existing file for its header and its
+        # `preservedRows` (every row whose module column is not `bme`) and writes them
+        # straight back, so the header and the 41 upstream rows are compared against
+        # themselves and can never differ. Measured: strip all 41 upstream rows, commit,
+        # run this step -> GREEN. Detecting that loss needs a before/after count inside
+        # a refresh, not a regenerate-and-diff; it is filed as T78.
+        #
+        # Why `git diff` is honest here, stated precisely because an earlier version of
+        # this comment got it wrong: gen-1.1's spec proposed this command in its R2 and
+        # R3 rejected it — not because the diff's subject was wrong (R2 also diffed the
+        # tracked path) but because the GENERATOR could be pointed at another root,
+        # leaving the tracked file untouched and the diff green. That is impossible for
+        # this entry: `scripts/generate-manifest.js` derives its target from
+        # `path.resolve(__dirname, '..')`, so it can only ever write this repo's own
+        # manifest. Demonstrated red before being relied on — editing an agent's title
+        # in `agent-registry.js` without regenerating turns this step red.
+        run: |
+          if ! npm run generate:manifest; then
+            echo "::error::npm run generate:manifest failed — the manifest could not be regenerated, so drift could not be checked."
+            exit 1
+          fi
+          # `git diff HEAD`, not `git diff`: the bare form compares worktree to INDEX,
+          # so anything that stages the file would make this pass while real drift sits
+          # in the index.
+          if ! git diff HEAD --quiet -- _bmad/_config/agent-manifest.csv; then
+            echo "::error::agent-manifest.csv bme rows do not match agent-registry.js. Run 'npm run generate:manifest' and commit the result."
+            echo "--- drift ---"
+            git --no-pager diff HEAD --stat -- _bmad/_config/agent-manifest.csv
+            git --no-pager diff HEAD -- _bmad/_config/agent-manifest.csv
+            exit 1
+          fi
+          echo "agent-manifest.csv bme rows match the registry."
+
 
   security:
     runs-on: ubuntu-latest

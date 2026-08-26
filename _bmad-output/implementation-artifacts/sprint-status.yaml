@@ -930,7 +930,7 @@ action_items:
   - epic: gen-epic-1
     action: "Resolve T74's lane — convoke-epic-generated-artifact-writes.md:58 states the CI drift gate belongs here as story 1.2, not the Fast Lane"
     owner: "Amalik (Project Lead)"
-    status: open
+    status: done
   - epic: gen-epic-1
     action: "Sequence the manifest follow-ups detection-first: T76 before T74 and T75, so the other two become falsifiable"
     owner: "Amalik (Project Lead)"
