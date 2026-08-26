@@ -141,23 +141,25 @@ Two specific stopping triggers:
 | `docs/` | 17 | 182 | 45 |
 | Repository root | 9 | 88 | **0** |
 
-**AC5 verdicts.** Abort condition 2 (bad link baseline) **did not fire**, conditionally — the shipped surfaces are clean, 51.6% of breakage is a benign authoring-convention artifact, and the baseline is captured as a diffable set. Abort condition 3 (instrument blindness) **did not fire** — all four trees proved reachable red *and* green. Abort condition 1 (redundancy) is **not evaluable** by this story and stays open.
+**AC5 verdicts.** Abort condition 2 (bad link baseline) **did not fire** — the shipped surfaces are clean (0 broken in both), and the baseline is captured as a verified diffable set. The verdict rests on those two grounds alone; the "roughly half is benign" argument is corroborating only and is now marked advisory in the report. Abort condition 3 (instrument blindness) **did not fire** — all four trees proved reachable red *and* green. Abort condition 1 (redundancy) is **not evaluable** by this story and stays open.
 
 **Three findings beyond the ACs:**
 
 1. **`COVERAGE_SCOPES` is not corpus-wide.** The checker's default "full project scan" resolves to five I97-specific globs (retros, audit reports, one checklist, `tests/`, bme slash-commands). `docs/`, `_bmad/bme/`, the repo root and most of both artifact directories fall outside it — a bare run prints `PASS` and means little. Found by reading before running (Task 1), which is why Task 3 came before Task 4. `npm run refs:audit` pins the ADR-001 scope with `--paths=`; **no source file was modified.**
 
-2. **The breakage is 50.2% benign.** Every broken target was re-tested against the clean clone's root: 338 of 673 **exist** and are simply linked as if the document sat at the repo root. 335 are genuinely absent, and only 259 of those point at `.md` documents — the subset that interacts with a rename at all. `docs/` and `drafts/` contribute **zero** genuinely-absent references.
+2. **Roughly half the breakage is benign — advisory, not load-bearing.** Re-tested against the clean clone's root: **347 of 673 (51.6%) exist** and are simply linked as if the document sat at the repo root; **326** are genuinely absent, **256** of those pointing at `.md`. These figures were wrong in three consecutive revisions because the classifier is an uncommitted, untested script. The report marks the whole classification advisory and neither the verdict nor the comparison set depends on it. Committing the classifier as tested code is a separate row.
 
-3. **The checker cannot ever return 0 here, so it must not become a binary CI gate.** It is a baseline-diff instrument. A future gate must also exclude `_archive/`, which holds 139 of the 318 absent-target refs — historical documents whose targets legitimately no longer exist.
+3. **The checker cannot ever return 0 here, so it must not become a binary CI gate.** It is a baseline-diff instrument. A future gate must also exclude `_archive/`, which holds 139 of the 326 absent-target refs — historical documents whose targets legitimately no longer exist.
 
 **Post-review corrections (revisions 2 and 3).** Two review rounds, each finding real defects, sharing one root cause: **the measurement environment was never pinned.**
 
 *Round 1* — the root scope enumerated 7 files when the root holds 9; `CONTRIBUTING.md` and `SECURITY.md` were omitted, and both existed at the stated commit, so they were missed rather than newly added. Cause: a file list taken hours earlier and reused without re-derivation (`derive-counts-from-source`). Fixed by deriving the scope at run time.
 
-*Round 2* — the resulting count was still **machine-local**. A clean clone of the same commit with the same scope reports **673**, not 657: 16 references resolve only on the authoring machine, 9 into gitignored `.claude/skills/**` and 4 into `~/.claude/projects/…/memory/` outside the repository. A CI or fresh-clone set-diff would have shown 16 phantom new breaks — the exact defect this baseline exists to prevent, sitting inside the baseline. Fixed structurally: the baseline is now measured in a clean clone at a named commit, with the procedure documented in the report.
+*Round 2* — the resulting count was still **machine-local**. A clean clone of the same commit with the same scope reports **673**, not 657: 16 references (13 unique pairs) resolve only on the authoring machine — 12 into gitignored `.claude/skills/**`, 4 into `~/.claude/projects/…/memory/` outside the repository. A CI or fresh-clone set-diff would have shown 16 phantom new breaks — the exact defect this baseline exists to prevent, sitting inside the baseline. Fixed structurally: the baseline is now measured in a clean clone at a named commit, with the procedure documented in the report.
 
-Round 1 pinned *which files*; round 2 pinned *whose filesystem*. **Both shipped surfaces stayed clean at every revision, class A stayed just over half, and neither abort-condition verdict changed.**
+*Round 3* — eight further defects, the substantive one being that **9 repo-root-absolute refs (`/_bmad/…`) were misclassified**, because the classifier probed them against the filesystem root rather than the repo root. Worse, the adversarial check meant to catch exactly this ("0 class-A links begin with `/`") was **true by construction** — the bug guaranteed no such link could reach class A. A tautology presented as falsification evidence. Root cause: every classification figure was the output of an uncommitted, untested, re-authored script — an unwired instrument producing governed numbers, which is the defect class this initiative exists to close. Resolved by **demoting classification to advisory** and making §7 a single unclassified set, so no wrong label reaches the data step 8 diffs against.
+
+Round 1 pinned *which files*; round 2 pinned *whose filesystem*; round 3 removed a layer that should never have been load-bearing. **Both shipped surfaces stayed clean at every revision, class A stayed just over half, and neither abort-condition verdict changed.**
 
 **Limitation worth carrying forward:** this validates a git clone, not a shipped package. `_bmad/bme/` passes here while I157 remains true, because the checker resolves against the working tree. It is structurally incapable of detecting the repo-versus-tarball class.
 
@@ -172,7 +174,7 @@ Sentinels were planted in-tree to prove reachability and removed on every exit p
 | File | Change |
 |---|---|
 | `package.json` | Added `refs:audit` script with the ADR-001 scope pinned via `--paths=` |
-| `_bmad-output/planning-artifacts/convoke-report-reference-graph-baseline-2026-08-26.md` | **New.** Governed baseline report at revision 3, 888 lines, including the full 673-entry comparison set |
+| `_bmad-output/planning-artifacts/convoke-report-reference-graph-baseline-2026-08-26.md` | **New.** Governed baseline report at revision 4, 862 lines; §7 holds the 673-entry comparison set, verified byte-identical to a live clean-clone run |
 | `_bmad-output/implementation-artifacts/fast-reference-graph-baseline.md` | Story record: `baseline_commit`, task checkboxes, Dev Agent Record, File List, Change Log, Status |
 
 No existing document was renamed, moved, or edited. `scripts/audit/reference-integrity.js` was **read only**.
@@ -187,3 +189,4 @@ No existing document was renamed, moved, or edited. `scripts/audit/reference-int
 | 2026-08-26 | Implemented. Baseline captured; abort conditions 2 and 3 did not fire. Status → review. | Amelia (dev role) |
 | 2026-08-26 | Review round 1: 4 defects confirmed and fixed. Root scope was enumerated at 7 files against a real 9 — `CONTRIBUTING.md`/`SECURITY.md` omitted, both present at the stated baseline commit. Scope now **derived** at run time; step-8 pointer corrected §5→§7; reproduction commit corrected. Broken count, classification and verdicts unchanged. Report at revision 2. | Amelia (dev role) |
 | 2026-08-26 | Review round 2: 4 further defects. Count was machine-local — clean clone reports **673**, not 657 (16 refs into gitignored `.claude/skills/**` and out-of-repo memory paths). Baseline re-measured in a clean clone at `028424c2`; report at revision 3. Verdicts unchanged. | Amelia (dev role) |
+| 2026-08-26 | Review round 3: 8 defects. 9 repo-root-absolute refs misclassified (correct split 347/326), and the check meant to catch it was a tautology. Classification demoted to **advisory**; §7 now one unclassified set, verified byte-identical to a live run. Report at revision 4. Verdicts unchanged. | Amelia (dev role) |

@@ -9,16 +9,18 @@ related_adr: adr/knowledge-governance/adr-001-cleanup-scope.md
 related_story: fast-reference-graph-baseline
 baseline_commit: 028424c2
 measured_in: clean clone (see Reproduction)
-revision: 3
+revision: 4
 ---
 
 # Reference-Graph Baseline — 2026-08-26
 
-**Purpose.** Capture the state of the corpus reference graph *before* any document is renamed or moved, so damage caused by a future rename is distinguishable from damage that already existed.
+**Purpose.** Capture the corpus reference graph *before* any document is renamed or moved, so that damage caused by a future rename is distinguishable from damage that already existed.
+
+**The load-bearing content of this report is §2 (coverage), §6 (verdict) and §7 (the comparison set).** §5 is explicitly advisory and nothing downstream depends on it — see the note there.
 
 ## Reproduction — read before using these numbers
 
-**This baseline is measured in a clean clone, not a working tree.** The checker resolves references against the filesystem, so a developer tree resolves links that a fresh checkout cannot — installed skills, ignored directories, files outside the repository. Measuring in a dev tree produces a machine-local number that is useless for set-diff.
+**Measured in a clean clone, not a working tree.** The checker resolves references against the filesystem, so a developer tree resolves links a fresh checkout cannot — installed skills, ignored directories, files outside the repository. A dev-tree measurement is machine-local and useless for set-diff.
 
 ```sh
 git clone --local --no-hardlinks <repo> /tmp/refbase && cd /tmp/refbase
@@ -27,59 +29,54 @@ node <repo>/scripts/audit/reference-integrity.js \
   --paths="_bmad-output,_bmad/bme,docs,$(ls *.md | paste -sd, -)"
 ```
 
-`npm run refs:audit` runs the same scope **in the current tree** and is the right tool for a quick local check. It is **not** how this baseline was produced and its number will differ. The script requires the `package.json` entry that defines it; that entry is not yet committed (§0, defect 3).
+**Two caveats on that procedure, both real:**
+
+1. **The corpus is pinned; the instrument is not.** The checker is invoked from `<repo>`'s working tree because the clone has no `node_modules` and its own copy fails with `Cannot find module 'fs-extra'`. A future change to `reference-integrity.js` would silently reinterpret this baseline. Pinning both requires `npm ci` in the clone, or a vendored checker.
+2. **`npm run refs:audit` is not this procedure.** It runs the same scope in the *current* tree — right for a quick local check, wrong for producing or comparing a baseline. Its number will differ.
 
 ---
 
-## 0. Corrections — two review rounds
+## 0. Corrections — three review rounds
 
-Revision 1 and revision 2 were each reviewed and each was found defective. Both failures share one root cause, and it is recorded rather than quietly repaired.
+Each revision of this report was reviewed and each was found defective. Recorded rather than quietly repaired.
 
-> **Shared root cause: the measurement environment was never pinned.**
-> Revision 1 pinned nothing — it reused a root file list taken hours earlier (`derive-counts-from-source`).
-> Revision 2 pinned *which files* by deriving the list at run time, but still measured **my working tree**.
-> Revision 3 pins *whose filesystem* by measuring a clean clone at a named commit.
-> Each round fixed the layer above the real defect. This is the restructure `code-review-convergence` calls for after a round corrects a round.
+> **Rounds 1–2 shared a root cause: the measurement environment was never pinned.** Revision 1 pinned nothing. Revision 2 pinned *which files*, still measuring a developer tree. Revision 3 pinned *whose filesystem* by measuring a clean clone.
+>
+> **Round 3 exposed a different one: the numbers were outputs of unversioned code.** The class A/B classifier was a throwaway script, re-authored each revision, untested, uncommitted — an unwired instrument producing governed figures, which is the defect class this initiative exists to close. It was wrong in all three revisions. Revision 4 therefore **demotes classification to advisory** (§5) rather than fixing it a fourth time; committing it as tested code is separate work.
 
-### Round 1 findings (revision 1 → 2)
-
-| # | Defect | Effect |
+| Round | Defect | Resolution |
 |---|---|---|
-| 1 | Root scope enumerated 7 files; the root holds 9. `CONTRIBUTING.md`, `SECURITY.md` omitted — both present at the stated commit. `SECURITY.md` ships; two in-scope root files do not. | Coverage understated by 16 refs; root falsification could not cover them. |
-| 2 | The binding step-8 condition pointed at §5 (Known limitations) rather than §7 (the set), twice. | The one instruction the initiative depends on named the wrong section. |
-| 3 | Reproduction impossible at the stated commit — `refs:audit` did not exist there. | Baseline unreproducible as documented. |
-| 4 | "Counts derived by `find`" false for the root row. | A `derive-counts-from-source` violation inside a report citing the rule. |
+| 1 | Root scope enumerated 7 files; the root holds 9 (`CONTRIBUTING.md`, `SECURITY.md` omitted, both present at the stated commit; `SECURITY.md` ships). | Scope derived at run time. |
+| 1 | The binding step-8 condition pointed at Known limitations, not the comparison set, in two places. | Corrected. |
+| 1 | Reproduction impossible at the stated commit — `refs:audit` did not exist there. | **Resolved:** the `package.json` entry landed in `3e68bf65`, after being omitted from `2fc98395` and `028424c2`. The procedure above never depended on it. |
+| 1 | "Counts derived by `find`" false for the root row. | Corrected; counts re-derived in the clean clone. |
+| 2 | **The count was machine-local.** A clean clone reports **673**, not 657 — 16 references (13 unique pairs) resolve only on the authoring machine: 12 into gitignored `.claude/skills/**` (9 unique pairs), 4 into `~/.claude/projects/…/memory/` outside the repository. | Re-measured in a clean clone. **A CI set-diff would have shown 16 phantom breaks — the defect this baseline exists to prevent, inside the baseline.** |
+| 2 | `$(ls *.md)` derives from the working tree, so untracked root documents entered the comparison universe. | Addressed by the clean-clone procedure. |
+| 2 | §0 attributed the 2,695→2,712 delta to 16 refs; it is **17** — the 17th is the report's own self-inclusion, which also moved the `_bmad-output/` row. | Corrected. |
+| 3 | **9 repo-root-absolute refs (`/_bmad/…`) were misclassified.** The classifier probed them against the *filesystem* root instead of the repo root. Correct split is 347/326, not 338/335. | Corrected in §5, which is now advisory. |
+| 3 | **The adversarial check was a tautology** — "0 class-A links begin with `/`" was true *by construction*, because the bug above prevented any such link from reaching class A. A check that cannot fail is not evidence (`verification-must-be-falsifiable`). | Replaced with a probe that can fire in both directions (§5). |
+| 3 | The story contradicted the report it summarises (absent-ref count, benign percentage) and mis-stated the appendix length. | Story corrected alongside this revision. |
 
-### Round 2 findings (revision 2 → 3)
-
-| # | Defect | Effect |
-|---|---|---|
-| 5 | **The count was machine-local.** A clean clone of the same commit with the same scope reports **673**, not 657. 16 references (13 unique pairs) resolve only on the authoring machine: **9 into gitignored `.claude/skills/**`**, **4 into `~/.claude/projects/…/memory/*.md` outside the repository**. | A CI or fresh-clone set-diff against §7 would have shown 16 phantom new breaks. **The defect this baseline exists to prevent, present in the baseline itself.** |
-| 6 | `$(ls *.md)` derives from the working tree, so untracked root documents enter the comparison universe. | Set-diff was environment-dependent. Resolved by §Reproduction, not by reverting to an enumerated list. |
-| 7 | Reproduction paragraph claimed `refs:audit` "lands in the same commit as revision 2"; commit `028424c2` carries only the two `.md` files. | Still true at revision 3 — see below. |
-| 8 | §0 attributed the 2,695→2,712 delta to 16 refs; it is **17**. The 17th is the report's own self-inclusion, which also moved the `_bmad-output/` row 1,155/2,402 → 1,156/2,403. | Arithmetic understated by one; an uncredited row change. |
-
-**Defect 3/7 is not yet fixed and is not fixable from inside this document.** The `package.json` entry defining `refs:audit` has been omitted from two consecutive commits (`2fc98395`, `028424c2`). Until it lands, no commit in history can reproduce the command. The file is tracked, unignored, and carries no `assume-unchanged` flag — it is simply not being staged.
-
-**What survived all corrections:** both shipped surfaces are clean at every revision, class A remains just over half, and neither abort-condition verdict changed.
+**What held through every round:** the §7 comparison set has been verified byte-identical to a live clean-clone run; the coverage table in §2 has been independently reproduced twice; both shipped surfaces read **0** at every revision; and **neither abort-condition verdict has ever changed.**
 
 ---
 
 ## 1. Verdict — read this first
 
-**Abort condition 2 (link baseline bad → stop at "new documents only"): DID NOT FIRE — conditionally.**
+**Abort condition 2 (link baseline bad → stop at "new documents only"): DID NOT FIRE.**
 
-**673 broken references of 2,712 checked (24.8%)** — severe on its face. It does not block the initiative, for three reasons, each a condition on how the work proceeds:
+**673 broken references of 2,712 checked (24.8%)** — severe on its face. It does not block the initiative, on two independent grounds:
 
 1. **The operator-facing surfaces are clean.** `_bmad/bme/` (the shipped tree) reports **0 broken of 39**. The repository root reports **0 broken of 88**. All damage is interior to the artifact corpus.
-2. **Just over half is not damage.** 338 of 673 (50.2%) point at files that **exist** — written repo-root-relative from documents that do not sit at the repository root. Nothing missing; the link convention is wrong.
-3. **The baseline is a diffable set, not a number.** **§7** lists every broken reference, measured in a clean clone. Compare against that set, never against zero — and never against a dev-tree run.
+2. **The baseline is a diffable set, not a number.** **§7** lists every broken reference, measured in a clean clone. Compare against that set — never against zero, and never against a dev-tree run.
+
+> These two grounds are sufficient on their own. A third argument — that roughly half the breakage is a benign authoring convention rather than missing files — is **corroborating only** and lives in §5, because that figure has been wrong in three consecutive revisions. **The verdict does not rest on it.**
 
 **Abort condition 3 (instrument cannot see both trees): DID NOT FIRE.** All four trees reachable in both directions — §3.
 
 **Abort condition 1 (redundancy low → stop at staleness): NOT EVALUABLE.** Redundancy is a content question; this measured structure only. Open.
 
-> **The binding condition.** This checker **cannot return 0 on this corpus**, so it must never be a binary CI gate. It is a **baseline-diff instrument**: compare against **§7**, from a clean checkout. A green-or-red wiring would block every build or force mass edits nobody authorised.
+> **The binding condition.** This checker **cannot return 0 on this corpus**, so it must never be a binary CI gate. It is a **baseline-diff instrument**: compare against **§7**, from a clean checkout. Green-or-red wiring would block every build or force mass edits nobody authorised.
 
 ---
 
@@ -95,7 +92,7 @@ Measured in a clean clone at `028424c2`.
 | Repository root | 9 | 88 | **0** | 0 |
 | **Corpus** | **1,500** | **2,712** | **673** | 1 |
 
-Per-tree refs sum to 2,712 and broken to **673** — both match the corpus run. Counts derived by `find` / `ls` in the clean clone, in the same session as the run.
+Per-tree refs sum to 2,712 and broken to **673** — both match the corpus run. Counts derived by `find` / `ls` in the clean clone in the same session as the run. Re-running at `3e68bf65` yields 2,713 checked and the identical broken set: the publishing commit does not perturb its own baseline.
 
 ### 2.1 A scope trap found before running
 
@@ -113,7 +110,7 @@ An I97 citation checker for retros and audit reports — **not** a corpus link c
 
 ---
 
-## 3. Falsification evidence (AC2)
+## 3. Falsification evidence
 
 A clean result is worthless until the checker has been seen to fail. This instrument's own history records patch **P6**, where a glob matched nothing and produced a silent pass.
 
@@ -124,71 +121,53 @@ A clean result is worthless until the checker has been seen to fail. This instru
 | `docs/` | ✓ | ✓ |
 | Repository root (derived scope) | ✓ | ✓ |
 
-The root row plants a **new root `.md` present in no list** and confirms the derived glob discovers it — proving the scope self-updates, which an enumerated list cannot demonstrate. Coverage of `CONTRIBUTING.md` and `SECURITY.md` was asserted in the same run.
+The root row plants a **new root `.md` present in no list** and confirms the derived glob discovers it — proving the scope self-updates, which an enumerated list cannot demonstrate.
 
-> **Harness note.** The first run of this demonstration reported a false negative on `_bmad-output/`. Cause: `printf … | grep -q` — `grep -q` exits on first match, `printf` dies with `EPIPE`, `pipefail` propagated the harness's failure as the checker's. `verification-pipefail`, inside the falsification harness itself. Rewritten pipe-free. Recorded because it looked exactly like a real finding.
+> **Harness note.** The first run of this demonstration reported a false negative on `_bmad-output/`. Cause: `printf … | grep -q` — `grep -q` exits on first match, `printf` dies with `EPIPE`, and `pipefail` propagated the harness's failure as the checker's. `verification-pipefail`, inside the falsification harness itself. Rewritten pipe-free. Recorded because it looked exactly like a real finding.
 
 ---
 
-## 4. Classification of the 673 broken references
+## 4. Known limitations
 
-Every broken target re-tested for existence **relative to the clean clone's root**.
+1. **The result depends on the filesystem it runs against, not on the repository.** A dev tree resolves ignored and out-of-repo paths a fresh checkout cannot — the defect behind revisions 1 and 2. Any comparison against §7 must be made from a clean checkout.
+2. **The instrument is not pinned.** See Reproduction, caveat 1.
+3. **It validates a checkout, not a shipped package.** `_bmad/bme/` passes while I157 remains true — `_bmad/bme/README.md` links to files absent from `package.json` `files[]`. Structurally incapable of detecting the repo-versus-tarball class; a tarball-scoped gate is a separate instrument.
+4. **Committed documents cite gitignored paths.** **12 references across 9 unique pairs** point into `.claude/skills/**` — links no collaborator can follow. Separate from the rename question, and worth its own row.
+5. **Root scope covers `.md` at depth 0 only**, and `$(ls *.md | paste -sd, -)` is a POSIX shell-ism: on a non-POSIX shell the substitution yields nothing and the root is **silently dropped** while the summary banner still implies it was scanned. CI is Ubuntu, so this is latent rather than active.
+6. **Anchors are not validated.** `_validateRef` strips `#fragment`; `file.md#L99` passes whenever `file.md` exists.
+7. **`_archive/` is included here** but should be excluded from any future gate.
+8. **The report sits inside its own corpus.** Its links are checked by the run it documents; §7 is fenced and `_stripCodeRegions` blanks it, so it does not contaminate the count.
+
+---
+
+## 5. Advisory — the character of the breakage
+
+> **Advisory only. Not load-bearing.** This classification was wrong in revisions 1, 2 and 3, because it is produced by an ad-hoc script that is not committed, not tested, and re-authored each revision. It is retained because the shape is useful, and flagged because the figures should not be built upon. Committing the classifier as tested code is separate work; §1's verdict and §7's set do not depend on anything below.
+
+Each broken target re-tested for existence relative to the clean clone's root, honouring repo-root-absolute intent for refs beginning `/`:
 
 | Class | Count | Share | Meaning |
 |---|---:|---:|---|
-| **A — root-relative authoring** | 338 | 50.2% | Target exists. Link written as if the document sat at the repo root. Mechanically fixable. |
-| **B — target absent** | 335 | 49.8% | Target does not exist. Genuine dead reference. |
+| **A — root-relative authoring** | 347 | 51.6% | Target exists. Link written as if the document sat at the repo root. |
+| **B — target absent** | 326 | 48.4% | Target does not exist. Genuine dead reference. |
 
-Of class B, **259 point at `.md` documents**; 76 at non-markdown targets. Only those 259 interact with a rename.
+Of class B, **256 point at `.md` documents** — the only subset a rename interacts with.
 
-**Adversarial checks** (a misclassification here would move the §1 verdict):
+**Falsifiable probe** (replacing revision 3's tautology): refs beginning `/` appear in **both** classes — 9 in A, 23 in B. The classifier can therefore place them either way, so the split is not true by construction. Revision 3's check asserted that no class-A link began with `/`, which the misclassification bug guaranteed.
 
-- **0 of 338** class-A links begin with `../`, `./` or `/` — all plain root-relative, so root-resolution is plausible author intent, not coincidence.
-- **4 of 338** class-A targets resolve to a directory rather than a file.
-- The 16 machine-local references that inflated revisions 1–2 are class **B** here, correctly, because a clean clone cannot resolve them.
-
-### 4.1 Class B by source area
+### 5.1 Class B by source area
 
 | Area | Class-B refs |
 |---|---:|
-| `_bmad-output/implementation-artifacts` | 142 |
 | `_bmad-output/_archive` | 139 |
+| `_bmad-output/implementation-artifacts` | 133 |
 | `_bmad-output/planning-artifacts` | 43 |
 | `_bmad-output/vortex-artifacts` | 8 |
 | `_bmad-output/test-artifacts` | 3 |
 
-`_bmad-output/_archive/` holds 139 of 335 — historical documents whose targets legitimately no longer exist. They should not be repaired, and **any future gate must exclude `_archive/`**.
+`_bmad-output/_archive/` holds 139 of 326 — historical documents whose targets legitimately no longer exist. They should not be repaired, and any future gate must exclude `_archive/`.
 
-`docs/` and `drafts/` contribute **zero** class-B references; every break there is class A.
-
-### 4.2 Concentration
-
-| Source | Class-B refs |
-|---|---:|
-| `_bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md` | 34 |
-| `_bmad-output/_archive/exploratory/readme.md` | 27 |
-| `_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md` | 20 |
-| `_bmad-output/_archive/exploratory/readme-conflict-resolution.md` | 18 |
-| `_bmad-output/implementation-artifacts/tf-2-7-integration-wiring-config-csv-activation.md` | 13 |
-| `_bmad-output/_archive/exploratory/emma-reference-implementation-complete.md` | 12 |
-| `_bmad-output/_archive/exploratory/architectural-decision-record.md` | 11 |
-| `_bmad-output/_archive/exploratory/pivot-summary-2026-02-07.md` | 11 |
-| `_bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md` | 10 |
-| `_bmad-output/implementation-artifacts/tf-2-6-bmb-delegation-artifact-generation.md` | 9 |
-
-All 45 `docs/` breaks originate in one file, `docs/codebase-audit-2026-06-27.md`, and all 45 are class A. The other 16 files in `docs/` are clean.
-
----
-
-## 5. Known limitations
-
-1. **The result depends on the filesystem it runs against, not on the repository.** A dev tree resolves ignored and out-of-repo paths that a fresh checkout cannot — the defect that produced revisions 1 and 2. Any comparison against §7 must be made from a clean checkout.
-2. **It validates a checkout, not a shipped package.** `_bmad/bme/` passes while I157 remains true — `_bmad/bme/README.md` links to files absent from `package.json` `files[]`. Structurally incapable of detecting the repo-versus-tarball class; a tarball-scoped gate is a separate instrument.
-3. **Committed documents cite gitignored paths.** The 9 references into `.claude/skills/**` are links no collaborator can follow. Separate from the rename question, and worth its own row.
-4. **Root scope covers `.md` at depth 0 only.** A new root file with another extension, or a new top-level directory, still requires editing the scope.
-5. **Anchors are not validated.** `_validateRef` strips `#fragment`; `file.md#L99` passes whenever `file.md` exists.
-6. **`_archive/` is included here** but should be excluded from any future gate (§4.1).
-7. **The report sits inside its own corpus.** Its links are checked by the run it documents; the §7 appendix is fenced, and `_stripCodeRegions` blanks it, so it does not contaminate the count.
+All 45 `docs/` breaks originate in one file, `docs/codebase-audit-2026-06-27.md`. The other 16 files in `docs/` are clean.
 
 ---
 
@@ -196,15 +175,15 @@ All 45 `docs/` breaks originate in one file, `docs/codebase-audit-2026-06-27.md`
 
 - Step 8 (renaming existing documents) may proceed **provided** verification is a set-diff against **§7**, taken from a clean checkout, never a comparison to zero.
 - A future gate is a **diff instrument**, not pass/fail, and excludes `_archive/`.
-- Class A (338 refs) is a candidate mechanical fix independent of the cleanup: rewriting root-relative links removes 50% of the noise.
+- Rewriting root-relative links is a candidate mechanical fix independent of the cleanup, removing roughly half the noise. Scope it from a committed classifier, not from §5.
 
 ---
 
-## 7. Appendix — the baseline set
+## 7. The baseline set
 
-Every broken reference in a clean clone at `028424c2`. **This is the comparison set** referenced by §1 and §6.
+Every broken reference in a clean clone at `028424c2`, as `source → target`, sorted. **This is the comparison set** referenced by §1 and §6. It is deliberately unclassified: the labels in §5 are advisory, and no wrong label should reach the data step 8 diffs against.
 
-### 7.1 Class B — target absent (335)
+**673 entries.**
 
 ```
 _bmad-output/_archive/exploratory/align-command-prototype.md → ./baseartifact-contract-spec.md
@@ -335,43 +314,289 @@ _bmad-output/_archive/phase-2/WADE-FINAL-SUMMARY.md → ../../PROJECT-STATUS-UPD
 _bmad-output/_archive/phase-2/WADE-FINAL-SUMMARY.md → ../../WADE-DEVELOPMENT-PLAN.md
 _bmad-output/_archive/phase-2/WADE-FINAL-SUMMARY.md → ../../design-artifacts/WADE-USER-GUIDE.md
 _bmad-output/_archive/phase-2/WADE-FINAL-SUMMARY.md → ../../design-artifacts/WADE-USER-GUIDE.md
+_bmad-output/_archive/phase-2/p2-1-1-build-programmatic-docs-audit-tool.md → scripts/convoke-doctor.js
+_bmad-output/_archive/phase-2/p2-1-1-build-programmatic-docs-audit-tool.md → scripts/update/lib/utils.js
+_bmad-output/_archive/phase-2/p2-1-1-build-programmatic-docs-audit-tool.md → scripts/update/lib/validator.js
+_bmad-output/_archive/phase-2/p2-1-1-build-programmatic-docs-audit-tool.md → tests/helpers.js
 _bmad-output/_archive/phase-2/p2-5-5-structured-user-feedback-mechanism.md → link
 _bmad-output/_archive/phase-2/product-brief-BMAD-Enhanced-2026-02-01.md → ./baseartifact-contract-spec.md
 _bmad-output/_archive/phase-2/wade-live-test-results.md → ../../../_bmad/bme/_designos/agents/wireframe-designer.md
 _bmad-output/_archive/phase-2/wade-live-test-results.md → ../../WADE-DEVELOPMENT-PLAN.md
 _bmad-output/_archive/phase-2/wade-live-test-results.md → ../../design-artifacts/WADE-USER-GUIDE.md
 _bmad-output/_archive/releases/NPX-INSTALLATION-UPDATE.md → BMAD-METHOD-COMPATIBILITY.md
+_bmad-output/_archive/releases/NPX-INSTALLATION-UPDATE.md → INSTALLATION.md
+_bmad-output/_archive/releases/NPX-INSTALLATION-UPDATE.md → README.md
+_bmad-output/_archive/releases/NPX-INSTALLATION-UPDATE.md → scripts/install-all-agents.js
 _bmad-output/_archive/releases/NPX-INSTALLATION-UPDATE.md → scripts/install-emma.js
 _bmad-output/_archive/releases/NPX-INSTALLATION-UPDATE.md → scripts/install-wade.js
 _bmad-output/_archive/releases/PUBLISHING-COMPLETE.md → CREATE-RELEASE-GUIDE.md
+_bmad-output/_archive/releases/RELEASE-NOTES-v1.0.2-alpha.md → INSTALLATION.md
+_bmad-output/_archive/releases/RELEASE-NOTES-v1.0.2-alpha.md → README.md
 _bmad-output/_archive/releases/RELEASE-NOTES-v1.0.2-alpha.md → _bmad-output/design-artifacts/EMMA-USER-GUIDE.md
 _bmad-output/_archive/releases/RELEASE-NOTES-v1.0.2-alpha.md → _bmad-output/design-artifacts/WADE-USER-GUIDE.md
+_bmad-output/drafts/README-draft.md → CHANGELOG.md
+_bmad-output/drafts/README-draft.md → LICENSE
+_bmad-output/drafts/README-draft.md → UPDATE-GUIDE.md
+_bmad-output/drafts/README-draft.md → UPDATE-GUIDE.md
+_bmad-output/drafts/README-draft.md → _bmad-output/journey-examples/busy-parents-7-agent-journey.md
+_bmad-output/drafts/README-draft.md → _bmad-output/journey-examples/busy-parents-7-agent-journey.md
+_bmad-output/drafts/README-draft.md → _bmad/bme/_enhance/guides/ENHANCE-GUIDE.md
+_bmad-output/drafts/README-draft.md → _bmad/bme/_enhance/guides/ENHANCE-GUIDE.md
+_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/contracts/
+_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/EMMA-USER-GUIDE.md
+_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/ISLA-USER-GUIDE.md
+_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/LIAM-USER-GUIDE.md
+_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/MAX-USER-GUIDE.md
+_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/MILA-USER-GUIDE.md
+_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/NOAH-USER-GUIDE.md
+_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/WADE-USER-GUIDE.md
+_bmad-output/drafts/README-draft.md → docs/agents.md
+_bmad-output/drafts/README-draft.md → docs/agents.md
+_bmad-output/drafts/README-draft.md → docs/agents.md
+_bmad-output/drafts/README-draft.md → docs/development.md
+_bmad-output/drafts/README-draft.md → docs/development.md
+_bmad-output/drafts/README-draft.md → docs/faq.md
+_bmad-output/drafts/README-draft.md → docs/faq.md
+_bmad-output/drafts/README-draft.md → docs/testing.md
 _bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → .claude/skills/bmad-agent-bme-contextualization-expert/SKILL.md
 _bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad-output/planning-artifacts/arch-artifact-governance-portfolio.md
 _bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad-output/planning-artifacts/epic-artifact-governance-portfolio.md
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/_config/agent-manifest.csv
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/_config/agent-manifest.csv
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/_config/agent-manifest.csv
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/_config/agent-manifest.csv
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/bme/_team-factory/agents/team-factory.md
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/bme/_team-factory/agents/team-factory.md
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/agent-registry.js
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/validator.js
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/validator.js
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/validator.js
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → tests/lib/
 _bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → _bmad-output/planning-artifacts/arch-artifact-governance-portfolio.md
 _bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → _bmad-output/planning-artifacts/epic-artifact-governance-portfolio.md
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → scripts/lib/artifact-utils.js
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → scripts/lib/artifact-utils.js
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → scripts/lib/artifact-utils.js
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → scripts/lib/artifact-utils.js
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → scripts/lib/artifact-utils.js
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → scripts/lib/artifact-utils.js
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/inference.test.js
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/inference.test.js
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/inference.test.js
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/manifest.test.js
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/manifest.test.js
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/manifest.test.js
+_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/manifest.test.js
 _bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → _bmad-output/planning-artifacts/arch-artifact-governance-portfolio.md
 _bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → _bmad-output/planning-artifacts/epic-artifact-governance-portfolio.md
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/portfolio-engine.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/portfolio-engine.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/portfolio-engine.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/portfolio-engine.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/rules/artifact-chain-rule.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/rules/artifact-chain-rule.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/rules/artifact-chain-rule.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/rules/conflict-resolver.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/rules/conflict-resolver.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/rules/conflict-resolver.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → tests/lib/portfolio-engine.test.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → tests/lib/portfolio-engine.test.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → tests/lib/portfolio-engine.test.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → tests/lib/portfolio-rules.test.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → tests/lib/portfolio-rules.test.js
+_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → tests/lib/portfolio-rules.test.js
 _bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → .claude/skills/bmad-portfolio-status/workflow.md
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → _bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → _bmad/_config/skill-manifest.csv
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → _bmad/_config/skill-manifest.csv
 _bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → _bmad/bmm/2-plan-workflows/bmad-create-prd/
 _bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → _bmad/bmm/3-solutioning/bmad-create-epics-and-stories/
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → scripts/lib/artifact-utils.js
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → scripts/lib/artifact-utils.js
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → scripts/lib/artifact-utils.js
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → scripts/migrate-artifacts.js
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → scripts/migrate-artifacts.js
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → scripts/migrate-artifacts.js
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → tests/lib/manifest.test.js
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → tests/lib/manifest.test.js
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → tests/lib/migrate-artifacts.test.js
+_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → tests/lib/migrate-artifacts.test.js
 _bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md → .claude/skills/bmad-portfolio-status/workflow.md
+_bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md → _bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md
+_bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md → _bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md
+_bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md → _bmad/_config/skill-manifest.csv
+_bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md → _bmad/_config/skill-manifest.csv
 _bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md → _bmad/bmm/3-solutioning/bmad-create-epics-and-stories/
+_bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md → scripts/lib/portfolio/portfolio-engine.js
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → _bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → _bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → _bmad/bme/_artifacts/config.yaml
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → _bmad/bme/_artifacts/config.yaml
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → _bmad/bme/_artifacts/workflows/bmad-migrate-artifacts/
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → _bmad/bme/_artifacts/workflows/bmad-portfolio-status/
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/convoke-doctor.js
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/convoke-doctor.js
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/convoke-doctor.js#L159
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/convoke-doctor.js#L60-L65
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/refresh-installation.js#L595
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/validator.js
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/validator.js
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/validator.js
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → tests/unit/refresh-installation-enhance.test.js
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → tests/unit/validator.test.js
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → tests/unit/validator.test.js
+_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → tests/unit/validator.test.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad-output/implementation-artifacts/ag-epic-6-retro-2026-04-08.md
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad-output/implementation-artifacts/ag-epic-6-retro-2026-04-08.md
 _bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad-output/planning-artifacts/epic-7-platform-debt.md
 _bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad-output/planning-artifacts/initiatives-backlog.md
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad/bme/_artifacts/config.yaml
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad/bme/_team-factory/lib/writers/config-appender.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad/bme/_team-factory/lib/writers/config-appender.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad/bme/_team-factory/lib/writers/config-appender.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad/bme/_team-factory/lib/writers/config-appender.js#L126
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad/bme/_team-factory/lib/writers/config-appender.js#L48
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → package.json
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → package.json
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js#L240-L279
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js#L240-L303
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js#L251-L258
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js#L30
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/refresh-installation.js#L144-L152
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/refresh-installation.js#L251-L256
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/utils.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/utils.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/utils.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/utils.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/utils.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/utils.js#L101-L114
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/validator.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/team-factory/config-appender.test.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/refresh-installation-artifacts.test.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/utils.test.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/utils.test.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/utils.test.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/utils.test.js#L115
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/utils.test.js#L140-L160
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/yaml-comment-preservation.test.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/yaml-comment-preservation.test.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/yaml-comment-preservation.test.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/yaml-comment-preservation.test.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/yaml-comment-preservation.test.js
+_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/yaml-comment-preservation.test.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad-output/implementation-artifacts/ag-epic-6-retro-2026-04-08.md
 _bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad-output/planning-artifacts/epic-7-platform-debt.md
 _bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad-output/planning-artifacts/initiatives-backlog.md
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad/_config/skill-manifest.csv
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad/_config/skill-manifest.csv
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad/_config/skill-manifest.csv
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad/bme/_artifacts/config.yaml
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad/bme/_team-factory/lib/utils/csv-utils.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js#L236-L239
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js#L282-L298
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js#L367-L380
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js#L373-L377
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js#L55-L67
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js#L55-L67
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/update/lib/config-merger.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/update/lib/refresh-installation.js#L660
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/update/lib/refresh-installation.js#L705-L712
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/update/lib/validator.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/update/lib/validator.js#L482-L563
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → tests/unit/convoke-doctor-skill-wrappers.test.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → tests/unit/convoke-doctor-skill-wrappers.test.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → tests/unit/convoke-doctor-skill-wrappers.test.js
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → tests/unit/convoke-doctor-skill-wrappers.test.js#L264-L280
+_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → tests/unit/refresh-installation-artifacts.test.js
 _bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → ../planning-artifacts/audit-validator-refresh-contracts-2026-04-08.md
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/ag-epic-6-retro-2026-04-08.md
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/ag-epic-6-retro-2026-04-08.md
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/sprint-status.yaml
 _bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/planning-artifacts/epic-7-platform-debt.md
 _bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/planning-artifacts/epic-7-platform-debt.md
 _bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/planning-artifacts/initiatives-backlog.md
 _bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/planning-artifacts/initiatives-backlog.md
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad/_config/skill-manifest.csv
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → package.json#L44
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/convoke-doctor.js
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/convoke-doctor.js
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L172-L223
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L172-L223
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L247-L279
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L247-L279
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L343-L354
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L343-L354
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L359-L363
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L359-L363
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L38
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L632-L657
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L632-L657
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L658-L702
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L658-L702
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L704-L743
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L704-L743
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L96-L119
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L96-L119
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L96-L119
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L208-L225
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L208-L225
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L208-L225
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L374-L490
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L374-L490
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L491-L575
+_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L491-L575
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/implementation-artifacts/sprint-status.yaml
 _bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/planning-artifacts/audit-validator-refresh-contracts-2026-04-08.md
 _bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/planning-artifacts/audit-validator-refresh-contracts-2026-04-08.md
 _bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/planning-artifacts/epic-7-platform-debt.md
 _bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/planning-artifacts/epic-7-platform-debt.md
 _bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/planning-artifacts/initiatives-backlog.md
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L566-L581
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L566-L581
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L566-L581
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L566-L581
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L658-L743
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L660
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L718
+_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → tests/unit/refresh-installation-artifacts.test.js
+_bmad-output/implementation-artifacts/ci-hygiene-1-1-pipefail-and-lint-gate-fidelity.md → _bmad-output/implementation-artifacts/session-retro-2026-05-05-cov-and-i97-bug.md
 _bmad-output/implementation-artifacts/ci-hygiene-1-1-pipefail-and-lint-gate-fidelity.md → convoke-note-initiative-lifecycle-backlog.md
 _bmad-output/implementation-artifacts/ci-hygiene-1-1-pipefail-and-lint-gate-fidelity.md → convoke-note-initiative-lifecycle-backlog.md
 _bmad-output/implementation-artifacts/i97-1-1-migration-tooling-foundation-scaffolded.md → ../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/project_marketplace_structural_adoption.md
@@ -419,6 +644,16 @@ _bmad-output/implementation-artifacts/sp-5-3-export-tier-2-skills-and-update-cat
 _bmad-output/implementation-artifacts/sp-6-1-export-skill-wrapper.md → ../../.claude/skills/bmad-migrate-artifacts/
 _bmad-output/implementation-artifacts/sp-6-1-export-skill-wrapper.md → ../../.claude/skills/bmad-portfolio-status/
 _bmad-output/implementation-artifacts/sp-6-2-catalog-seed-skill-wrappers.md → ../../.claude/skills/bmad-export-skill/
+_bmad-output/implementation-artifacts/spec-bug-2-adr-idempotent-noop-commit.md → scripts/lib/artifact-utils.js#L2104
+_bmad-output/implementation-artifacts/spec-bug-2-adr-idempotent-noop-commit.md → scripts/migrate-artifacts.js#L380
+_bmad-output/implementation-artifacts/spec-bug-2-adr-idempotent-noop-commit.md → scripts/migrate-artifacts.js#L400
+_bmad-output/implementation-artifacts/spec-bug-2-adr-idempotent-noop-commit.md → scripts/migrate-artifacts.js#L402-L404
+_bmad-output/implementation-artifacts/spec-bug-7-export-placeholder-wording.md → scripts/portability/convoke-export.js#L295-L302
+_bmad-output/implementation-artifacts/spec-bug-7-export-placeholder-wording.md → scripts/portability/export-engine.js#L481-L517
+_bmad-output/implementation-artifacts/spec-bug-7-export-placeholder-wording.md → scripts/portability/export-engine.js#L507-L515
+_bmad-output/implementation-artifacts/spec-i20-portfolio-markdown-unattributed.md → scripts/lib/portfolio/portfolio-engine.js#L503-L504
+_bmad-output/implementation-artifacts/spec-i20-portfolio-markdown-unattributed.md → scripts/lib/portfolio/portfolio-engine.js#L528
+_bmad-output/implementation-artifacts/spec-i20-portfolio-markdown-unattributed.md → scripts/lib/portfolio/portfolio-engine.js#L528-L540
 _bmad-output/implementation-artifacts/tf-2-6-bmb-delegation-artifact-generation.md → /.claude/skills/bmad-team-factory/step-03-review.md
 _bmad-output/implementation-artifacts/tf-2-6-bmb-delegation-artifact-generation.md → /_bmad-output/implementation-artifacts/tf-2-5-decision-summary-spec-file-persistence.md
 _bmad-output/implementation-artifacts/tf-2-6-bmb-delegation-artifact-generation.md → /_bmad-output/planning-artifacts/architecture-reference-teams.md
@@ -441,6 +676,7 @@ _bmad-output/implementation-artifacts/tf-2-7-integration-wiring-config-csv-activ
 _bmad-output/implementation-artifacts/tf-2-7-integration-wiring-config-csv-activation.md → /_bmad/bme/_gyre/config.yaml
 _bmad-output/implementation-artifacts/tf-2-7-integration-wiring-config-csv-activation.md → /_bmad/bme/_vortex/config.yaml
 _bmad-output/implementation-artifacts/tf-2-7-integration-wiring-config-csv-activation.md → /_bmad/bmm/module-help.csv
+_bmad-output/implementation-artifacts/tf-2-7-integration-wiring-config-csv-activation.md → scripts/update/lib/agent-registry.js
 _bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md → /.claude/skills/bmad-team-factory/step-04-generate.md
 _bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md → /_bmad-output/implementation-artifacts/tf-2-7-integration-wiring-config-csv-activation.md
 _bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md → /_bmad-output/planning-artifacts/architecture-team-factory.md
@@ -451,7 +687,9 @@ _bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md →
 _bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md → /_bmad-output/planning-artifacts/architecture-team-factory.md
 _bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md → /_bmad-output/planning-artifacts/epic-team-factory.md
 _bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md → /_bmad/bme/_team-factory/lib/types/factory-types.js
+_bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md → scripts/update/lib/agent-registry.js
 _bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → .claude/skills/bmad-team-factory/workflow.md
+_bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → _bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md
 _bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → _bmad-output/planning-artifacts/architecture-team-factory.md
 _bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → _bmad-output/planning-artifacts/architecture-team-factory.md
 _bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → _bmad-output/planning-artifacts/architecture-team-factory.md
@@ -459,6 +697,20 @@ _bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recover
 _bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → _bmad-output/planning-artifacts/architecture-team-factory.md
 _bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → _bmad-output/planning-artifacts/architecture-team-factory.md
 _bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → _bmad-output/planning-artifacts/epic-team-factory.md
+_bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → _bmad/bme/_team-factory/lib/types/factory-types.js
+_bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → scripts/update/lib/agent-registry.js
+_bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → scripts/update/lib/validator.js
+_bmad-output/implementation-artifacts/v3.2.0-release-description.md → CHANGELOG.md
+_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#decision-1-config-loading-architecture-wr1--wr8
+_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#decision-1-config-loading-architecture-wr1--wr8
+_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#known-failure-modes--mitigations
+_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#known-failure-modes--mitigations
+_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#pattern-3-yaml-readwrite-safety
+_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#pattern-3-yaml-readwrite-safety
+_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-epic-bmad-v6.3-adoption.md
+_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-prd-bmad-v6.3-adoption/functional-requirements.md
+_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad/_config/taxonomy.yaml
+_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad/bme/config.yaml
 _bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad/bme/config.yaml:1-11
 _bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad/core/bmad-init/SKILL.md
 _bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad/core/bmad-init/resources/core-module.yaml
@@ -479,7 +731,10 @@ _bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-r
 _bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → convoke-epic-bmad-v6.3-adoption.md#epic-1a-seamless-config-migration
 _bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → convoke-epic-bmad-v6.3-adoption.md#story-1a2-create-config-loaderjs-with-direct-yaml-loading
 _bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → convoke-epic-bmad-v6.3-adoption.md#story-1a2-create-config-loaderjs-with-direct-yaml-loading
+_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → project-context.md
+_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → project-context.md
 _bmad-output/implementation-artifacts/v63-1a-2-create-config-loader-js-with-direct-yaml-loading.md → ../../_bmad/core/bmad-init/scripts/bmad_init.py
+_bmad-output/implementation-artifacts/v63-1a-2-create-config-loader-js-with-direct-yaml-loading.md → tests/mock-cp.js
 _bmad-output/implementation-artifacts/v63-1a-4-create-migration-script-3-x-to-4-0-js.md → ../../.claude/skills/bmad-dev-story/checklist.md
 _bmad-output/implementation-artifacts/v63-1a-6-author-migration-guide-standalone-deliverable.md → ../../_bmad/bmm/4-implementation/bmad-dev-story/checklist.md
 _bmad-output/implementation-artifacts/v63-2-1-create-bmm-dependency-scan-tool-and-registry.md → ../../.claude/skills/bmad-enhance-initiatives-backlog/SKILL.md
@@ -488,6 +743,7 @@ _bmad-output/implementation-artifacts/v63-2-4-custom-skill-registration-and-hone
 _bmad-output/implementation-artifacts/v63-2-4-custom-skill-registration-and-honest-warnings.md → ../../.claude/skills/bmad-migrate-artifacts/
 _bmad-output/implementation-artifacts/v63-4-4-drift-snapshot-protocol.md → epic-v63-4-retro-XXXX.md
 _bmad-output/implementation-artifacts/v63-4-4-drift-snapshot-protocol.md → v63-5b-2-retrospective-and-anti-pattern-registry.md
+_bmad-output/implementation-artifacts/v63-5b-1-author-and-validate-changelog.md → docs/migration/3.x-to-4.0.md
 _bmad-output/planning-artifacts/archive/convoke-prd-bmad-v6.3-adoption.md → convoke-note-initiatives-backlog.md
 _bmad-output/planning-artifacts/convoke-announcement-4.0-draft.md → convoke-prd-bmad-v6.3-adoption.md
 _bmad-output/planning-artifacts/convoke-epic-7-platform-debt.md → convoke-note-initiatives-backlog.md
@@ -531,299 +787,6 @@ _bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md → ../
 _bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md → ../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L314-L320
 _bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md → ../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L57-L64
 _bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md → ../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L85-L87
-_bmad-output/test-artifacts/2026-04-08-baseline-sweep.md → ../../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/MEMORY.md
-_bmad-output/test-artifacts/2026-04-08-party-mode-session-notes.md → ../../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/MEMORY.md
-_bmad-output/test-artifacts/2026-04-08-party-mode-session-notes.md → ../../.claude/skills/bmad-create-story/
-_bmad-output/vortex-artifacts/forge-decision-hc6-framework-2026-03-21.md → lean-persona-knowledge-holder-2026-03-21.md
-_bmad-output/vortex-artifacts/forge-decision-hc6-framework-2026-03-21.md → lean-persona-landing-consultant-2026-03-21.md
-_bmad-output/vortex-artifacts/forge-decision-hc6-framework-2026-03-21.md → scope-decision-forge-2026-03-21.md
-_bmad-output/vortex-artifacts/gyre-decision-hc6-framework-2026-03-21.md → lean-experiment-gyre-discovery-interviews-2026-03-20.md
-_bmad-output/vortex-artifacts/gyre-decision-hc6-framework-2026-03-21.md → lean-persona-compliance-officer-2026-03-21.md
-_bmad-output/vortex-artifacts/gyre-decision-hc6-framework-2026-03-21.md → lean-persona-engineering-lead-2026-03-21.md
-_bmad-output/vortex-artifacts/gyre-decision-hc6-framework-2026-03-21.md → lean-persona-sre-platform-engineer-2026-03-21.md
-_bmad-output/vortex-artifacts/gyre-decision-hc6-framework-2026-03-21.md → scope-decision-gyre-2026-03-21.md
-```
-
-### 7.2 Class A — root-relative authoring (338)
-
-```
-_bmad-output/_archive/phase-2/p2-1-1-build-programmatic-docs-audit-tool.md → scripts/convoke-doctor.js
-_bmad-output/_archive/phase-2/p2-1-1-build-programmatic-docs-audit-tool.md → scripts/update/lib/utils.js
-_bmad-output/_archive/phase-2/p2-1-1-build-programmatic-docs-audit-tool.md → scripts/update/lib/validator.js
-_bmad-output/_archive/phase-2/p2-1-1-build-programmatic-docs-audit-tool.md → tests/helpers.js
-_bmad-output/_archive/releases/NPX-INSTALLATION-UPDATE.md → INSTALLATION.md
-_bmad-output/_archive/releases/NPX-INSTALLATION-UPDATE.md → README.md
-_bmad-output/_archive/releases/NPX-INSTALLATION-UPDATE.md → scripts/install-all-agents.js
-_bmad-output/_archive/releases/RELEASE-NOTES-v1.0.2-alpha.md → INSTALLATION.md
-_bmad-output/_archive/releases/RELEASE-NOTES-v1.0.2-alpha.md → README.md
-_bmad-output/drafts/README-draft.md → CHANGELOG.md
-_bmad-output/drafts/README-draft.md → LICENSE
-_bmad-output/drafts/README-draft.md → UPDATE-GUIDE.md
-_bmad-output/drafts/README-draft.md → UPDATE-GUIDE.md
-_bmad-output/drafts/README-draft.md → _bmad-output/journey-examples/busy-parents-7-agent-journey.md
-_bmad-output/drafts/README-draft.md → _bmad-output/journey-examples/busy-parents-7-agent-journey.md
-_bmad-output/drafts/README-draft.md → _bmad/bme/_enhance/guides/ENHANCE-GUIDE.md
-_bmad-output/drafts/README-draft.md → _bmad/bme/_enhance/guides/ENHANCE-GUIDE.md
-_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/contracts/
-_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/EMMA-USER-GUIDE.md
-_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/ISLA-USER-GUIDE.md
-_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/LIAM-USER-GUIDE.md
-_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/MAX-USER-GUIDE.md
-_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/MILA-USER-GUIDE.md
-_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/NOAH-USER-GUIDE.md
-_bmad-output/drafts/README-draft.md → _bmad/bme/_vortex/guides/WADE-USER-GUIDE.md
-_bmad-output/drafts/README-draft.md → docs/agents.md
-_bmad-output/drafts/README-draft.md → docs/agents.md
-_bmad-output/drafts/README-draft.md → docs/agents.md
-_bmad-output/drafts/README-draft.md → docs/development.md
-_bmad-output/drafts/README-draft.md → docs/development.md
-_bmad-output/drafts/README-draft.md → docs/faq.md
-_bmad-output/drafts/README-draft.md → docs/faq.md
-_bmad-output/drafts/README-draft.md → docs/testing.md
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/_config/agent-manifest.csv
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/_config/agent-manifest.csv
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/_config/agent-manifest.csv
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/_config/agent-manifest.csv
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/bme/_team-factory/agents/team-factory.md
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/bme/_team-factory/agents/team-factory.md
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/agent-registry.js
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/validator.js
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/validator.js
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → scripts/update/lib/validator.js
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → tests/lib/
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → scripts/lib/artifact-utils.js
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → scripts/lib/artifact-utils.js
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → scripts/lib/artifact-utils.js
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → scripts/lib/artifact-utils.js
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → scripts/lib/artifact-utils.js
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → scripts/lib/artifact-utils.js
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/inference.test.js
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/inference.test.js
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/inference.test.js
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/manifest.test.js
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/manifest.test.js
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/manifest.test.js
-_bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → tests/lib/manifest.test.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/portfolio-engine.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/portfolio-engine.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/portfolio-engine.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/portfolio-engine.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/rules/artifact-chain-rule.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/rules/artifact-chain-rule.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/rules/artifact-chain-rule.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/rules/conflict-resolver.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/rules/conflict-resolver.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → scripts/lib/portfolio/rules/conflict-resolver.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → tests/lib/portfolio-engine.test.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → tests/lib/portfolio-engine.test.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → tests/lib/portfolio-engine.test.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → tests/lib/portfolio-rules.test.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → tests/lib/portfolio-rules.test.js
-_bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md → tests/lib/portfolio-rules.test.js
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → _bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → _bmad/_config/skill-manifest.csv
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → _bmad/_config/skill-manifest.csv
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → scripts/lib/artifact-utils.js
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → scripts/lib/artifact-utils.js
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → scripts/lib/artifact-utils.js
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → scripts/migrate-artifacts.js
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → scripts/migrate-artifacts.js
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → scripts/migrate-artifacts.js
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → tests/lib/manifest.test.js
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → tests/lib/manifest.test.js
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → tests/lib/migrate-artifacts.test.js
-_bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md → tests/lib/migrate-artifacts.test.js
-_bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md → _bmad-output/implementation-artifacts/ag-6-3-portfolio-attribution-improvements.md
-_bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md → _bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md
-_bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md → _bmad/_config/skill-manifest.csv
-_bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md → _bmad/_config/skill-manifest.csv
-_bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md → scripts/lib/portfolio/portfolio-engine.js
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → _bmad-output/implementation-artifacts/ag-6-4-migration-skill-wrapper.md
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → _bmad-output/implementation-artifacts/ag-6-5-portfolio-skill-wrapper.md
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → _bmad/bme/_artifacts/config.yaml
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → _bmad/bme/_artifacts/config.yaml
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → _bmad/bme/_artifacts/workflows/bmad-migrate-artifacts/
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → _bmad/bme/_artifacts/workflows/bmad-portfolio-status/
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/convoke-doctor.js
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/convoke-doctor.js
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/convoke-doctor.js#L159
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/convoke-doctor.js#L60-L65
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/refresh-installation.js#L595
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/validator.js
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/validator.js
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → scripts/update/lib/validator.js
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → tests/unit/refresh-installation-enhance.test.js
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → tests/unit/validator.test.js
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → tests/unit/validator.test.js
-_bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md → tests/unit/validator.test.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad-output/implementation-artifacts/ag-epic-6-retro-2026-04-08.md
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad-output/implementation-artifacts/ag-epic-6-retro-2026-04-08.md
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad/bme/_artifacts/config.yaml
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad/bme/_team-factory/lib/writers/config-appender.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad/bme/_team-factory/lib/writers/config-appender.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad/bme/_team-factory/lib/writers/config-appender.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad/bme/_team-factory/lib/writers/config-appender.js#L126
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → _bmad/bme/_team-factory/lib/writers/config-appender.js#L48
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → package.json
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → package.json
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js#L240-L279
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js#L240-L303
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js#L251-L258
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/config-merger.js#L30
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/refresh-installation.js#L144-L152
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/refresh-installation.js#L251-L256
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/utils.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/utils.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/utils.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/utils.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/utils.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/utils.js#L101-L114
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → scripts/update/lib/validator.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/team-factory/config-appender.test.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/refresh-installation-artifacts.test.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/utils.test.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/utils.test.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/utils.test.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/utils.test.js#L115
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/utils.test.js#L140-L160
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/yaml-comment-preservation.test.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/yaml-comment-preservation.test.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/yaml-comment-preservation.test.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/yaml-comment-preservation.test.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/yaml-comment-preservation.test.js
-_bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md → tests/unit/yaml-comment-preservation.test.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad-output/implementation-artifacts/ag-epic-6-retro-2026-04-08.md
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad/_config/skill-manifest.csv
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad/_config/skill-manifest.csv
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad/_config/skill-manifest.csv
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad/bme/_artifacts/config.yaml
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → _bmad/bme/_team-factory/lib/utils/csv-utils.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js#L236-L239
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js#L282-L298
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js#L367-L380
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js#L373-L377
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js#L55-L67
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/convoke-doctor.js#L55-L67
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/update/lib/config-merger.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/update/lib/refresh-installation.js#L660
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/update/lib/refresh-installation.js#L705-L712
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/update/lib/validator.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → scripts/update/lib/validator.js#L482-L563
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → tests/unit/convoke-doctor-skill-wrappers.test.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → tests/unit/convoke-doctor-skill-wrappers.test.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → tests/unit/convoke-doctor-skill-wrappers.test.js
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → tests/unit/convoke-doctor-skill-wrappers.test.js#L264-L280
-_bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md → tests/unit/refresh-installation-artifacts.test.js
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/ag-6-6-skill-registration-wiring.md
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/ag-epic-6-retro-2026-04-08.md
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/ag-epic-6-retro-2026-04-08.md
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad-output/implementation-artifacts/sprint-status.yaml
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → _bmad/_config/skill-manifest.csv
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → package.json#L44
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/convoke-doctor.js
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/convoke-doctor.js
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L172-L223
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L172-L223
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L247-L279
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L247-L279
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L343-L354
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L343-L354
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L359-L363
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L359-L363
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L38
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L632-L657
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L632-L657
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L658-L702
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L658-L702
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L704-L743
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L704-L743
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L96-L119
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L96-L119
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/refresh-installation.js#L96-L119
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L208-L225
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L208-L225
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L208-L225
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L374-L490
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L374-L490
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L491-L575
-_bmad-output/implementation-artifacts/ag-7-3-validator-refresh-contract-audit.md → scripts/update/lib/validator.js#L491-L575
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/implementation-artifacts/ag-7-1-version-stamp-safety-yaml-comments.md
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/implementation-artifacts/ag-7-2-doctor-skill-wrapper-validation.md
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → _bmad-output/implementation-artifacts/sprint-status.yaml
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L566-L581
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L566-L581
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L566-L581
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L566-L581
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L658-L743
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L660
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → scripts/update/lib/refresh-installation.js#L718
-_bmad-output/implementation-artifacts/ag-7-4-orphan-skill-wrapper-cleanup.md → tests/unit/refresh-installation-artifacts.test.js
-_bmad-output/implementation-artifacts/ci-hygiene-1-1-pipefail-and-lint-gate-fidelity.md → _bmad-output/implementation-artifacts/session-retro-2026-05-05-cov-and-i97-bug.md
-_bmad-output/implementation-artifacts/spec-bug-2-adr-idempotent-noop-commit.md → scripts/lib/artifact-utils.js#L2104
-_bmad-output/implementation-artifacts/spec-bug-2-adr-idempotent-noop-commit.md → scripts/migrate-artifacts.js#L380
-_bmad-output/implementation-artifacts/spec-bug-2-adr-idempotent-noop-commit.md → scripts/migrate-artifacts.js#L400
-_bmad-output/implementation-artifacts/spec-bug-2-adr-idempotent-noop-commit.md → scripts/migrate-artifacts.js#L402-L404
-_bmad-output/implementation-artifacts/spec-bug-7-export-placeholder-wording.md → scripts/portability/convoke-export.js#L295-L302
-_bmad-output/implementation-artifacts/spec-bug-7-export-placeholder-wording.md → scripts/portability/export-engine.js#L481-L517
-_bmad-output/implementation-artifacts/spec-bug-7-export-placeholder-wording.md → scripts/portability/export-engine.js#L507-L515
-_bmad-output/implementation-artifacts/spec-i20-portfolio-markdown-unattributed.md → scripts/lib/portfolio/portfolio-engine.js#L503-L504
-_bmad-output/implementation-artifacts/spec-i20-portfolio-markdown-unattributed.md → scripts/lib/portfolio/portfolio-engine.js#L528
-_bmad-output/implementation-artifacts/spec-i20-portfolio-markdown-unattributed.md → scripts/lib/portfolio/portfolio-engine.js#L528-L540
-_bmad-output/implementation-artifacts/tf-2-7-integration-wiring-config-csv-activation.md → scripts/update/lib/agent-registry.js
-_bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md → scripts/update/lib/agent-registry.js
-_bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → _bmad-output/implementation-artifacts/tf-2-8-registry-wiring-write-safety.md
-_bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → _bmad/bme/_team-factory/lib/types/factory-types.js
-_bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → scripts/update/lib/agent-registry.js
-_bmad-output/implementation-artifacts/tf-2-9-end-to-end-validation-error-recovery.md → scripts/update/lib/validator.js
-_bmad-output/implementation-artifacts/v3.2.0-release-description.md → CHANGELOG.md
-_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#decision-1-config-loading-architecture-wr1--wr8
-_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#decision-1-config-loading-architecture-wr1--wr8
-_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#known-failure-modes--mitigations
-_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#known-failure-modes--mitigations
-_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#pattern-3-yaml-readwrite-safety
-_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md#pattern-3-yaml-readwrite-safety
-_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-epic-bmad-v6.3-adoption.md
-_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad-output/planning-artifacts/convoke-prd-bmad-v6.3-adoption/functional-requirements.md
-_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad/_config/taxonomy.yaml
-_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → _bmad/bme/config.yaml
-_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → project-context.md
-_bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → project-context.md
-_bmad-output/implementation-artifacts/v63-1a-2-create-config-loader-js-with-direct-yaml-loading.md → tests/mock-cp.js
-_bmad-output/implementation-artifacts/v63-5b-1-author-and-validate-changelog.md → docs/migration/3.x-to-4.0.md
 _bmad-output/test-artifacts/2026-04-08-astonishment-report.md → scripts/lib/artifact-utils.js
 _bmad-output/test-artifacts/2026-04-08-astonishment-report.md → tests/lib/artifact-utils.test.js
 _bmad-output/test-artifacts/2026-04-08-astonishment-report.md → tests/lib/artifact-utils.test.js
@@ -836,10 +799,21 @@ _bmad-output/test-artifacts/2026-04-08-astonishment-report.md → tests/lib/port
 _bmad-output/test-artifacts/2026-04-08-astonishment-report.md → tests/lib/portfolio-engine.test.js#L59-L64
 _bmad-output/test-artifacts/2026-04-08-astonishment-report.md → tests/lib/portfolio-rules.test.js
 _bmad-output/test-artifacts/2026-04-08-astonishment-report.md → tests/lib/taxonomy.test.js
+_bmad-output/test-artifacts/2026-04-08-baseline-sweep.md → ../../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/MEMORY.md
 _bmad-output/test-artifacts/2026-04-08-baseline-sweep.md → tests/team-factory/registry-writer.test.js#L179
 _bmad-output/test-artifacts/2026-04-08-baseline-sweep.md → tests/team-factory/registry-writer.test.js#L179
 _bmad-output/test-artifacts/2026-04-08-baseline-sweep.md → tests/team-factory/registry-writer.test.js#L179
 _bmad-output/test-artifacts/2026-04-08-baseline-sweep.md → tests/team-factory/registry-writer.test.js#L179
+_bmad-output/test-artifacts/2026-04-08-party-mode-session-notes.md → ../../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/MEMORY.md
+_bmad-output/test-artifacts/2026-04-08-party-mode-session-notes.md → ../../.claude/skills/bmad-create-story/
+_bmad-output/vortex-artifacts/forge-decision-hc6-framework-2026-03-21.md → lean-persona-knowledge-holder-2026-03-21.md
+_bmad-output/vortex-artifacts/forge-decision-hc6-framework-2026-03-21.md → lean-persona-landing-consultant-2026-03-21.md
+_bmad-output/vortex-artifacts/forge-decision-hc6-framework-2026-03-21.md → scope-decision-forge-2026-03-21.md
+_bmad-output/vortex-artifacts/gyre-decision-hc6-framework-2026-03-21.md → lean-experiment-gyre-discovery-interviews-2026-03-20.md
+_bmad-output/vortex-artifacts/gyre-decision-hc6-framework-2026-03-21.md → lean-persona-compliance-officer-2026-03-21.md
+_bmad-output/vortex-artifacts/gyre-decision-hc6-framework-2026-03-21.md → lean-persona-engineering-lead-2026-03-21.md
+_bmad-output/vortex-artifacts/gyre-decision-hc6-framework-2026-03-21.md → lean-persona-sre-platform-engineer-2026-03-21.md
+_bmad-output/vortex-artifacts/gyre-decision-hc6-framework-2026-03-21.md → scope-decision-gyre-2026-03-21.md
 docs/codebase-audit-2026-06-27.md → scripts/archive.js#L246
 docs/codebase-audit-2026-06-27.md → scripts/audit/audit-bmad-init-refs.js#L112
 docs/codebase-audit-2026-06-27.md → scripts/audit/install-scope-check.js#L1
