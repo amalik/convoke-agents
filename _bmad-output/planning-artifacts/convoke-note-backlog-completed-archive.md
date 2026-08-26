@@ -1405,3 +1405,25 @@ Inject `excluded_agents` inline comment on pre-U8 config upgrade via `writeConfi
 
 ---
 
+## T71
+
+**Lane:** Fast Lane · **Filed:** 2026-08-25 · **Score:** 2.8 · **Portfolio:** convoke · **Status:** ✅ Done 2026-08-26
+
+**Receipt:** Part 1's 182 duplicated lines replaced by a pointer to `lifecycle-process-spec.md` — file 1,190 → 1,018 lines
+
+**Shipped in two commits: `87a86b72` (the rule) and `0e251551` (the data).**
+
+**Design change from what the row assumed.** The row said "remove Part 1"; the implementation kept the `## Part 1` heading as a pointer stub instead. `step-r-03` and `step-t-04` each assert the anchor exists and forbid modifying it — retaining the heading left all four assertions true and **unchanged**, cutting the blast radius from six files to five and turning Pre-Write Validation #2 from a 182-line snapshot comparison into a two-line check.
+
+**Two corrections came from outside this work, and both improved it.**
+
+*The sequencing was half wrong.* Splitting rule-before-data followed the clause-3 precedent and was right for `backlog-format-spec.md`, which grants *permissions* — a spec permitting a pointer harms nothing before one exists. It was wrong for the `lifecycle-process-spec.md` header, which makes a *claim of fact*: "this file is the only copy." That was false while 182 duplicated lines remained. A concurrent session caught it, reverted it in `95f35813`, and annotated this row. The header was re-applied in `0e251551`, where it became true. **A rule change may land ahead of the data it governs; a claim of fact may not.** Recorded in that header.
+
+*Mechanical replacement left four self-contradicting instructions* — "link to the `lifecycle-process-spec.md` text verbatim", "a pointer to the canonical process verbatim from template", and two more. Each read as a live instruction to do the opposite of the new rule. Found only by printing all 33 `Part 1` references and reading each end to end; one automated sweep missed them, another returned 14 false positives.
+
+**Verified with the T59 three-question check, applied to a section rather than rows:** Part 2 onwards byte-identical and the removed text confirmed still present in the spec source; the 13 surviving `§1.x` references are plain prose, and the pointer names all six sections so the hop is signposted; the "only copy" claim now holds. Gate 716 rows/14 tables → 694/10 — the four were Part 1's documentation tables, now in the spec file where they belong.
+
+**Part 1 is 180 lines of process text duplicated verbatim into the operational file, and removing it is a governed change, not a deletion.** `## Part 1: Lifecycle Process` (§1.1–§1.6) is a byte copy of `lifecycle-process-spec.md`, which the workflow already loads; keeping it in the backlog serves no operational purpose and is ~15% of a file too large for any agent to read in one pass. **Blast radius, measured — an earlier estimate of "minutes" was wrong:** `backlog-format-spec.md` mandates it in four places — §Document Structure lists §1.1–§1.6 as required (`:45`), §68 states Part 1 is semi-static and *"the skill must NOT regenerate or modify"* it, Create mode generates it verbatim (`:324`), and Pre-Write Validation #2 asserts it unchanged against a loaded snapshot (`:347`). Four workflow step files reference it (`workflow.md`, `step-c-01-init`, `step-c-04-generate`, `step-r-03-update`, `step-t-04-update`). So the change is: amend the spec's structure contract, its Create-mode step and its validation list; align the step files; then replace Part 1 in the backlog with a link. Same shape as the 2026-08-24 clause-3 amendment, which took a session. **Sequence after T69** — both restructure the same file, and doing them together doubles the re-verification surface for no gain. **Note:** the T58 gate's `assertStructure` requires only §2.1–§2.5, so it will not block this; the spec and the workflow will. **Unblocked 2026-08-25** — T69 shipped as `22357866`. **The spec header is pre-written and must land WITH the implementation, not before it:** a header declaring the split already done was committed 2026-08-25 in `5152fbea` (swept into an unrelated story commit) while this row was still `Backlog` and the backlog's Part 1 was still 184 duplicated lines. It told readers that editing `lifecycle-process-spec.md` changes the process everywhere — false until this ships. Reverted 2026-08-26; re-apply it as part of the change, not ahead of it.
+
+---
+
