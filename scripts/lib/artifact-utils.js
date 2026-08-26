@@ -1539,6 +1539,14 @@ async function updateLinks(oldToNewMap, scopeDirs, projectRoot) {
   // `[t](a.md#see/b.md)` rewrote a token inside the anchor and left `a.md`
   // dangling after its file had been renamed. Found by R1.
   //
+  // The converse, declared: a filename sitting AFTER a `#` is no longer matched
+  // at all. `[t](dir#1/a.md)` under {a.md->A.md} is now left untouched where the
+  // pre-BUG-13 code rewrote it. That is the RFC 3986 reading — the fragment
+  // starts at the first `#`, so there is no file component after it — and corpus
+  // incidence is zero (`grep -rIhoE '\]\([^)]*#[^)]*/[^)]*\)'` over the repo:
+  // 0 matches). Recorded because it is a silent skip with a zero count, not a
+  // failure, so nothing would surface it. Found by the BUG-13 remediation review.
+  //
   // DELIBERATE BEHAVIOUR CHANGE, declared rather than discovered: this also
   // stops the rewrite reaching into the fragment at all. The pre-BUG-13 code
   // turned `[t](a.md#see/b.md)` into `[t](A2.md#see/B2.md)`, editing the

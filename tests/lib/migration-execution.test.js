@@ -517,6 +517,36 @@ describe('updateLinks', () => {
     );
   });
 
+  // The `if (linkPattern)` guard added while fixing BUG-13's R1 findings was the
+  // newest control flow in this function and the one branch nothing defended:
+  // mutating it to `if (true)` left the whole suite green (89/89). It is not a
+  // defensive nicety. `String.prototype.replace(null, cb)` coerces the pattern
+  // to the literal string "null", and the callback then receives the match
+  // offset as `prefix` and the ENTIRE document as `pathPrefix` — so every
+  // document containing the word "null" is rewritten into garbage. Silent, and
+  // exactly the corruption class BUG-13 exists to prevent.
+  //
+  // Reachable: `executeInjections` builds the map only from entries where
+  // `oldBasename !== newBasename`, so a manifest of pure directory moves — or
+  // one with zero RENAME entries — yields an empty map and still calls this.
+  it('an empty rename map leaves a document containing the word "null" alone', async () => {
+    const body = 'alpha null omega\n\n[A](a.md)\n';
+    await fs.writeFile(path.join(outputDir, 'r.md'), body);
+    const { updateLinks } = require('../../scripts/lib/artifact-utils');
+    const res = await updateLinks(new Map(), ['planning-artifacts'], tmpDir);
+    assert.equal(fs.readFileSync(path.join(outputDir, 'r.md'), 'utf8'), body);
+    assert.deepEqual({ f: res.updatedFiles, l: res.updatedLinks }, { f: 0, l: 0 });
+  });
+
+  it('a map whose keys all filter out behaves like an empty map', async () => {
+    const body = 'null null null\n';
+    await fs.writeFile(path.join(outputDir, 'r.md'), body);
+    const { updateLinks } = require('../../scripts/lib/artifact-utils');
+    const res = await updateLinks(new Map([['', 'x.md']]), ['planning-artifacts'], tmpDir);
+    assert.equal(fs.readFileSync(path.join(outputDir, 'r.md'), 'utf8'), body);
+    assert.equal(res.updatedLinks, 0);
+  });
+
   it('frontmatter inputDocuments array entries updated', async () => {
     const fileContent = '---\ninputDocuments:\n  - prd-gyre.md\n  - architecture.md\n---\n# Content\n';
     await fs.writeFile(path.join(outputDir, 'referrer.md'), fileContent);
