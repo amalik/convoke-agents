@@ -186,21 +186,48 @@ jobs:
         # `preservedRows` (every row whose module column is not `bme`) and writes them
         # straight back, so the header and the 41 upstream rows are compared against
         # themselves and can never differ. Measured: strip all 41 upstream rows, commit,
-        # run this step -> GREEN. Detecting that loss needs a before/after count inside
-        # a refresh, not a regenerate-and-diff; it is filed as T78.
+        # run this step -> GREEN. Filed as T78.
+        #
+        # An earlier version of this comment said that detecting the loss "needs a
+        # before/after count inside a refresh, not a regenerate-and-diff". Round 2
+        # corrected that: the loss lands IN HEAD, so there is no before to compare
+        # against — a static floor (assert at least N non-bme rows, the shape
+        # scripts/audit/install-scope-check.js:93 already uses for write-op counts)
+        # would catch it in this same step. T78 should take that shape.
         #
         # Why `git diff` is honest here, stated precisely because an earlier version of
         # this comment got it wrong: gen-1.1's spec proposed this command in its R2 and
-        # R3 rejected it — not because the diff's subject was wrong (R2 also diffed the
-        # tracked path) but because the GENERATOR could be pointed at another root,
+        # R3 rejected it — not because the diff's subject was wrong but because the
+        # GENERATOR could be pointed at another root,
         # leaving the tracked file untouched and the diff green. That is impossible for
         # this entry: `scripts/generate-manifest.js` derives its target from
         # `path.resolve(__dirname, '..')`, so it can only ever write this repo's own
         # manifest. Demonstrated red before being relied on — editing an agent's title
         # in `agent-registry.js` without regenerating turns this step red.
         run: |
-          if ! npm run generate:manifest; then
+          # The manifest must be TRACKED. `git diff HEAD -- <path>` reports nothing for
+          # a path absent from HEAD, and the generator recreates the file — so a deleted
+          # or untracked manifest made this step print success while its own subject did
+          # not exist. Found by Round 2; inherited from the first draft, not introduced.
+          if ! git ls-files --error-unmatch -- _bmad/_config/agent-manifest.csv >/dev/null 2>&1; then
+            echo "::error::_bmad/_config/agent-manifest.csv is not tracked in HEAD. It is a committed, generated file — restore it and run 'npm run generate:manifest'."
+            exit 1
+          fi
+
+          if ! GEN_OUT=$(npm run generate:manifest 2>&1); then
+            echo "$GEN_OUT"
             echo "::error::npm run generate:manifest failed — the manifest could not be regenerated, so drift could not be checked."
+            exit 1
+          fi
+          echo "$GEN_OUT"
+
+          # Assert the generator actually WROTE. Exit code alone cannot distinguish
+          # "regenerated and matched" from "did not regenerate at all", which is the
+          # tautology class gen-1.1's spec rejected three times — and the shape is live
+          # in this codebase: agent-manifest-generator.js has a SKIP_MESSAGE branch that
+          # returns success without writing. Found by Round 2.
+          if ! printf '%s' "$GEN_OUT" | grep -q 'Regenerated agent-manifest.csv'; then
+            echo "::error::generate:manifest reported success without regenerating (no 'Regenerated agent-manifest.csv' in its output). The drift check would have been vacuous."
             exit 1
           fi
           # `git diff HEAD`, not `git diff`: the bare form compares worktree to INDEX,
