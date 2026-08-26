@@ -1,5 +1,6 @@
 ---
-baseline_commit: 87b87eaee36ea1f535c4aeb4668e153a952f2c0a
+baseline_commit: 028424c2
+measured_in: clean clone
 ---
 
 # Fast Story: Baseline the reference graph before any corpus rename
@@ -129,13 +130,13 @@ Two specific stopping triggers:
 
 ### Completion Notes
 
-**All six ACs satisfied.** The measurement ran; the corpus reference graph is now baselined at commit `87b87eae`.
+**All six ACs satisfied.** The corpus reference graph is baselined at commit `028424c2`, **measured in a clean clone** — see the report's Reproduction section for why a working-tree measurement is not usable.
 
-**Headline result: 657 broken references out of 2,712 checked (24.2%).**
+**Headline result: 673 broken references out of 2,712 checked (24.8%).**
 
 | Tree | `.md` files | Refs | Broken |
 |---|---:|---:|---:|
-| `_bmad-output/` | 1,156 | 2,403 | 612 |
+| `_bmad-output/` | 1,156 | 2,403 | 628 |
 | `_bmad/bme/` (ships) | 318 | 39 | **0** |
 | `docs/` | 17 | 182 | 45 |
 | Repository root | 9 | 88 | **0** |
@@ -146,11 +147,17 @@ Two specific stopping triggers:
 
 1. **`COVERAGE_SCOPES` is not corpus-wide.** The checker's default "full project scan" resolves to five I97-specific globs (retros, audit reports, one checklist, `tests/`, bme slash-commands). `docs/`, `_bmad/bme/`, the repo root and most of both artifact directories fall outside it — a bare run prints `PASS` and means little. Found by reading before running (Task 1), which is why Task 3 came before Task 4. `npm run refs:audit` pins the ADR-001 scope with `--paths=`; **no source file was modified.**
 
-2. **The breakage is 51.6% benign.** Every broken target was re-tested against the repository root: 339 of 657 **exist** and are simply linked as if the document sat at the repo root. Only 318 are genuinely absent, and only 243 of those point at `.md` documents — the subset that interacts with a rename at all. `docs/`, `drafts/` and `test-artifacts/` contribute **zero** genuinely-absent references.
+2. **The breakage is 50.2% benign.** Every broken target was re-tested against the clean clone's root: 338 of 673 **exist** and are simply linked as if the document sat at the repo root. 335 are genuinely absent, and only 259 of those point at `.md` documents — the subset that interacts with a rename at all. `docs/` and `drafts/` contribute **zero** genuinely-absent references.
 
 3. **The checker cannot ever return 0 here, so it must not become a binary CI gate.** It is a baseline-diff instrument. A future gate must also exclude `_archive/`, which holds 139 of the 318 absent-target refs — historical documents whose targets legitimately no longer exist.
 
-**Post-review correction (revision 2).** Review found the root scope enumerated 7 files when the root holds 9; `CONTRIBUTING.md` and `SECURITY.md` were omitted, and both existed at the stated baseline commit — so they were missed, not newly added. `SECURITY.md` ships via `files[]` while two in-scope root files do not. Root cause was reusing a file list taken hours earlier instead of re-deriving it — `derive-counts-from-source`, inside a report that cites the rule. Fixed structurally: the scope is now derived at run time, and the root falsification was re-proved by planting a **new** root file and confirming the derived glob discovers it. The 16 added references are all valid; **657 broken, the classification, and all verdicts are unchanged.**
+**Post-review corrections (revisions 2 and 3).** Two review rounds, each finding real defects, sharing one root cause: **the measurement environment was never pinned.**
+
+*Round 1* — the root scope enumerated 7 files when the root holds 9; `CONTRIBUTING.md` and `SECURITY.md` were omitted, and both existed at the stated commit, so they were missed rather than newly added. Cause: a file list taken hours earlier and reused without re-derivation (`derive-counts-from-source`). Fixed by deriving the scope at run time.
+
+*Round 2* — the resulting count was still **machine-local**. A clean clone of the same commit with the same scope reports **673**, not 657: 16 references resolve only on the authoring machine, 9 into gitignored `.claude/skills/**` and 4 into `~/.claude/projects/…/memory/` outside the repository. A CI or fresh-clone set-diff would have shown 16 phantom new breaks — the exact defect this baseline exists to prevent, sitting inside the baseline. Fixed structurally: the baseline is now measured in a clean clone at a named commit, with the procedure documented in the report.
+
+Round 1 pinned *which files*; round 2 pinned *whose filesystem*. **Both shipped surfaces stayed clean at every revision, class A stayed just over half, and neither abort-condition verdict changed.**
 
 **Limitation worth carrying forward:** this validates a git clone, not a shipped package. `_bmad/bme/` passes here while I157 remains true, because the checker resolves against the working tree. It is structurally incapable of detecting the repo-versus-tarball class.
 
@@ -165,7 +172,7 @@ Sentinels were planted in-tree to prove reachability and removed on every exit p
 | File | Change |
 |---|---|
 | `package.json` | Added `refs:audit` script with the ADR-001 scope pinned via `--paths=` |
-| `_bmad-output/planning-artifacts/convoke-report-reference-graph-baseline-2026-08-26.md` | **New.** Governed baseline report, 822 lines, including the full 657-entry comparison set |
+| `_bmad-output/planning-artifacts/convoke-report-reference-graph-baseline-2026-08-26.md` | **New.** Governed baseline report at revision 3, 888 lines, including the full 673-entry comparison set |
 | `_bmad-output/implementation-artifacts/fast-reference-graph-baseline.md` | Story record: `baseline_commit`, task checkboxes, Dev Agent Record, File List, Change Log, Status |
 
 No existing document was renamed, moved, or edited. `scripts/audit/reference-integrity.js` was **read only**.
@@ -177,5 +184,6 @@ No existing document was renamed, moved, or edited. `scripts/audit/reference-int
 | Date | Change | By |
 |------|--------|-----|
 | 2026-08-25 | Initial draft. Fast Lane spike, scoped to the link baseline only. | Winston (architect role) |
-| 2026-08-26 | Implemented. 657/2,712 broken refs baselined; abort conditions 2 and 3 did not fire. Status → review. | Amelia (dev role) |
-| 2026-08-26 | Code review: 4 defects confirmed and fixed. Root scope was enumerated at 7 files against a real 9 — `CONTRIBUTING.md`/`SECURITY.md` omitted, both present at the stated baseline commit. Scope now **derived** at run time; step-8 pointer corrected §5→§7; reproduction commit corrected. Broken count, classification and verdicts unchanged. Report at revision 2. | Amelia (dev role) |
+| 2026-08-26 | Implemented. Baseline captured; abort conditions 2 and 3 did not fire. Status → review. | Amelia (dev role) |
+| 2026-08-26 | Review round 1: 4 defects confirmed and fixed. Root scope was enumerated at 7 files against a real 9 — `CONTRIBUTING.md`/`SECURITY.md` omitted, both present at the stated baseline commit. Scope now **derived** at run time; step-8 pointer corrected §5→§7; reproduction commit corrected. Broken count, classification and verdicts unchanged. Report at revision 2. | Amelia (dev role) |
+| 2026-08-26 | Review round 2: 4 further defects. Count was machine-local — clean clone reports **673**, not 657 (16 refs into gitignored `.claude/skills/**` and out-of-repo memory paths). Baseline re-measured in a clean clone at `028424c2`; report at revision 3. Verdicts unchanged. | Amelia (dev role) |

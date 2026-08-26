@@ -7,34 +7,61 @@ status: active
 schema_version: 1
 related_adr: adr/knowledge-governance/adr-001-cleanup-scope.md
 related_story: fast-reference-graph-baseline
-baseline_commit: 2fc98395
-revision: 2
+baseline_commit: 028424c2
+measured_in: clean clone (see Reproduction)
+revision: 3
 ---
 
 # Reference-Graph Baseline — 2026-08-26
 
-**Purpose.** Capture the state of the corpus reference graph *before* any document is renamed or moved, so that damage caused by a future rename is distinguishable from damage that already existed.
+**Purpose.** Capture the state of the corpus reference graph *before* any document is renamed or moved, so damage caused by a future rename is distinguishable from damage that already existed.
 
-**Command.** `npm run refs:audit` — [`scripts/audit/reference-integrity.js`](../../scripts/audit/reference-integrity.js), scope pinned in `package.json`.
+## Reproduction — read before using these numbers
 
-**Reproduction.** Requires the `refs:audit` script, which lands in the same commit as revision 2 of this report. Revision 1 named `87b87eae` as the baseline commit; that was wrong — the script did not exist there, so the documented reproduction was impossible. The corpus measured here is commit `2fc98395` plus that script.
+**This baseline is measured in a clean clone, not a working tree.** The checker resolves references against the filesystem, so a developer tree resolves links that a fresh checkout cannot — installed skills, ignored directories, files outside the repository. Measuring in a dev tree produces a machine-local number that is useless for set-diff.
+
+```sh
+git clone --local --no-hardlinks <repo> /tmp/refbase && cd /tmp/refbase
+git checkout 028424c2
+node <repo>/scripts/audit/reference-integrity.js \
+  --paths="_bmad-output,_bmad/bme,docs,$(ls *.md | paste -sd, -)"
+```
+
+`npm run refs:audit` runs the same scope **in the current tree** and is the right tool for a quick local check. It is **not** how this baseline was produced and its number will differ. The script requires the `package.json` entry that defines it; that entry is not yet committed (§0, defect 3).
 
 ---
 
-## 0. Corrections in revision 2
+## 0. Corrections — two review rounds
 
-Revision 1 was reviewed on 2026-08-26 and four defects were confirmed. Recorded rather than silently repaired.
+Revision 1 and revision 2 were each reviewed and each was found defective. Both failures share one root cause, and it is recorded rather than quietly repaired.
+
+> **Shared root cause: the measurement environment was never pinned.**
+> Revision 1 pinned nothing — it reused a root file list taken hours earlier (`derive-counts-from-source`).
+> Revision 2 pinned *which files* by deriving the list at run time, but still measured **my working tree**.
+> Revision 3 pins *whose filesystem* by measuring a clean clone at a named commit.
+> Each round fixed the layer above the real defect. This is the restructure `code-review-convergence` calls for after a round corrects a round.
+
+### Round 1 findings (revision 1 → 2)
 
 | # | Defect | Effect |
 |---|---|---|
-| 1 | **Root scope enumerated 7 files; the root holds 9.** `CONTRIBUTING.md` and `SECURITY.md` were omitted — both present at the stated baseline commit, so they were missed, not newly added. `SECURITY.md` is in `files[]` and ships; two files that *were* in scope do not. | Coverage understated by 16 references. The AC3 falsification for the root could not have covered them. |
-| 2 | **The binding step-8 condition pointed at §5** (Known limitations) instead of §7 (the comparison set), in two places. | The one instruction the initiative depends on named the wrong section. |
-| 3 | **Reproduction impossible at the stated commit** — `refs:audit` did not exist at `87b87eae`. | Baseline unreproducible as documented. |
-| 4 | **"Counts derived by `find`" was false for the root row** — `find` yields 9, the report said 7. | A `derive-counts-from-source` violation inside a report that cites the rule. |
+| 1 | Root scope enumerated 7 files; the root holds 9. `CONTRIBUTING.md`, `SECURITY.md` omitted — both present at the stated commit. `SECURITY.md` ships; two in-scope root files do not. | Coverage understated by 16 refs; root falsification could not cover them. |
+| 2 | The binding step-8 condition pointed at §5 (Known limitations) rather than §7 (the set), twice. | The one instruction the initiative depends on named the wrong section. |
+| 3 | Reproduction impossible at the stated commit — `refs:audit` did not exist there. | Baseline unreproducible as documented. |
+| 4 | "Counts derived by `find`" false for the root row. | A `derive-counts-from-source` violation inside a report citing the rule. |
 
-**Root cause of 1 and 4 (the same defect).** The root file list was taken once early in the session and reused hours later without re-derivation. That is precisely the constant-that-rots failure `derive-counts-from-source` names. **Fixed structurally, not by editing the number**: the scope is now derived at run time — `--paths="…,$(ls *.md | paste -sd, -)"` — so a root document added tomorrow enters scope with no edit. §3 proves this by planting a *new* root file and confirming the derived glob discovers it.
+### Round 2 findings (revision 2 → 3)
 
-**What did not change: the broken count, the classification, and the verdicts.** The two missed files contribute 16 references, **all valid, none broken**. Totals moved from 2,695→2,712 checked; broken stayed at **657**.
+| # | Defect | Effect |
+|---|---|---|
+| 5 | **The count was machine-local.** A clean clone of the same commit with the same scope reports **673**, not 657. 16 references (13 unique pairs) resolve only on the authoring machine: **9 into gitignored `.claude/skills/**`**, **4 into `~/.claude/projects/…/memory/*.md` outside the repository**. | A CI or fresh-clone set-diff against §7 would have shown 16 phantom new breaks. **The defect this baseline exists to prevent, present in the baseline itself.** |
+| 6 | `$(ls *.md)` derives from the working tree, so untracked root documents enter the comparison universe. | Set-diff was environment-dependent. Resolved by §Reproduction, not by reverting to an enumerated list. |
+| 7 | Reproduction paragraph claimed `refs:audit` "lands in the same commit as revision 2"; commit `028424c2` carries only the two `.md` files. | Still true at revision 3 — see below. |
+| 8 | §0 attributed the 2,695→2,712 delta to 16 refs; it is **17**. The 17th is the report's own self-inclusion, which also moved the `_bmad-output/` row 1,155/2,402 → 1,156/2,403. | Arithmetic understated by one; an uncredited row change. |
+
+**Defect 3/7 is not yet fixed and is not fixable from inside this document.** The `package.json` entry defining `refs:audit` has been omitted from two consecutive commits (`2fc98395`, `028424c2`). Until it lands, no commit in history can reproduce the command. The file is tracked, unignored, and carries no `assume-unchanged` flag — it is simply not being staged.
+
+**What survived all corrections:** both shipped surfaces are clean at every revision, class A remains just over half, and neither abort-condition verdict changed.
 
 ---
 
@@ -42,33 +69,33 @@ Revision 1 was reviewed on 2026-08-26 and four defects were confirmed. Recorded 
 
 **Abort condition 2 (link baseline bad → stop at "new documents only"): DID NOT FIRE — conditionally.**
 
-The graph carries **657 broken references out of 2,712 checked (24.2%)**, severe on its face. It does not block the initiative, for three reasons, each a condition on how the work proceeds:
+**673 broken references of 2,712 checked (24.8%)** — severe on its face. It does not block the initiative, for three reasons, each a condition on how the work proceeds:
 
 1. **The operator-facing surfaces are clean.** `_bmad/bme/` (the shipped tree) reports **0 broken of 39**. The repository root reports **0 broken of 88**. All damage is interior to the artifact corpus.
-2. **Just over half is not damage at all.** 339 of 657 (51.6%) point at files that **exist** — written repo-root-relative from documents that do not sit at the repository root. Nothing is missing; the link convention is wrong.
-3. **The baseline is a diffable set, not a number.** **§7** lists every broken reference. A post-rename run is compared against that set, never against zero.
+2. **Just over half is not damage.** 338 of 673 (50.2%) point at files that **exist** — written repo-root-relative from documents that do not sit at the repository root. Nothing missing; the link convention is wrong.
+3. **The baseline is a diffable set, not a number.** **§7** lists every broken reference, measured in a clean clone. Compare against that set, never against zero — and never against a dev-tree run.
 
-**Abort condition 3 (instrument cannot see both trees): DID NOT FIRE.** All four trees proved reachable in both directions — §3.
+**Abort condition 3 (instrument cannot see both trees): DID NOT FIRE.** All four trees reachable in both directions — §3.
 
-**Abort condition 1 (redundancy low → stop at staleness): NOT EVALUABLE by this story.** Redundancy is a content question; this story measured structure only. It remains open.
+**Abort condition 1 (redundancy low → stop at staleness): NOT EVALUABLE.** Redundancy is a content question; this measured structure only. Open.
 
-> **The binding condition.** This checker **cannot ever return 0 on this corpus**, so it must not be wired as a binary CI gate. It is a **baseline-diff instrument**: compare against **§7**. Wiring it green-or-red would either block every build or force mass edits nobody has authorised.
+> **The binding condition.** This checker **cannot return 0 on this corpus**, so it must never be a binary CI gate. It is a **baseline-diff instrument**: compare against **§7**, from a clean checkout. A green-or-red wiring would block every build or force mass edits nobody authorised.
 
 ---
 
 ## 2. Coverage
 
+Measured in a clean clone at `028424c2`.
+
 | Tree | `.md` files | Refs checked | Broken | Exit |
 |---|---:|---:|---:|---:|
-| `_bmad-output/` | 1,156 | 2,403 | 612 | 1 |
+| `_bmad-output/` | 1,156 | 2,403 | 628 | 1 |
 | `_bmad/bme/` (**ships**) | 318 | 39 | **0** | 0 |
 | `docs/` | 17 | 182 | 45 | 1 |
 | Repository root | 9 | 88 | **0** | 0 |
-| **Corpus** | **1,500** | **2,712** | **657** | 1 |
+| **Corpus** | **1,500** | **2,712** | **673** | 1 |
 
-Per-tree refs sum to 2,403 + 39 + 182 + 88 = **2,712**, and broken to **657** — both match the corpus run exactly. Independent cross-checks that the scoped runs and the full run agree.
-
-All file counts derived by `find` / `ls` in the same session as the run. Revision 1 failed this for the root row; see §0.
+Per-tree refs sum to 2,712 and broken to **673** — both match the corpus run. Counts derived by `find` / `ls` in the clean clone, in the same session as the run.
 
 ### 2.1 A scope trap found before running
 
@@ -82,9 +109,7 @@ _bmad-output/planning-artifacts/convoke-report-*-audit-*.md
 _bmad-output/planning-artifacts/convoke-spec-covenant-compliance-checklist.md
 ```
 
-This is an I97 citation checker for retros and audit reports, **not** a corpus link checker. `docs/`, `_bmad/bme/`, the repository root and the bulk of both artifact directories fall outside it. A bare invocation prints `PASS` and means very little.
-
-`npm run refs:audit` therefore pins the ADR-001 scope via `--paths=`. **No source file was modified**; the walker already supports directory scopes.
+An I97 citation checker for retros and audit reports — **not** a corpus link checker. `docs/`, `_bmad/bme/`, the repository root and most of both artifact directories fall outside it; a bare invocation prints `PASS` and means very little. The scope is therefore passed explicitly. **No source file was modified.**
 
 ---
 
@@ -92,56 +117,51 @@ This is an I97 citation checker for retros and audit reports, **not** a corpus l
 
 A clean result is worthless until the checker has been seen to fail. This instrument's own history records patch **P6**, where a glob matched nothing and produced a silent pass.
 
-A unique sentinel token was planted in each tree, the scoped check run, then the sentinel removed and the check re-run:
-
 | Tree | RED (planted break reported, exit 1) | GREEN (token gone after removal) |
 |---|---|---|
 | `_bmad-output/` | ✓ | ✓ |
 | `_bmad/bme/` | ✓ | ✓ |
 | `docs/` | ✓ | ✓ |
-| Repository root (**derived scope**) | ✓ | ✓ |
+| Repository root (derived scope) | ✓ | ✓ |
 
-The root row is stronger in revision 2 than revision 1. Revision 1 planted the sentinel into an *enumerated* scope, which could only ever prove that a listed file is read. Revision 2 plants a **new root `.md` that appears in no list** and confirms the derived glob discovers it — proving the scope self-updates. Coverage of `CONTRIBUTING.md` and `SECURITY.md` was asserted explicitly in the same run.
+The root row plants a **new root `.md` present in no list** and confirms the derived glob discovers it — proving the scope self-updates, which an enumerated list cannot demonstrate. Coverage of `CONTRIBUTING.md` and `SECURITY.md` was asserted in the same run.
 
-Both directions, all four trees. The `_bmad/bme/` and root PASS results in §2 are therefore evidence of clean trees, not unreached ones.
-
-> **Harness note.** The first run of this demonstration reported a false negative on `_bmad-output/`. Cause: `printf … | grep -q` — `grep -q` exits on first match, `printf` dies with `EPIPE`, and `pipefail` propagated the harness's failure as the checker's. `verification-pipefail`, occurring inside the falsification harness itself. Rewritten to pure-shell pattern matching with no pipe. Recorded because it looked exactly like a real finding.
+> **Harness note.** The first run of this demonstration reported a false negative on `_bmad-output/`. Cause: `printf … | grep -q` — `grep -q` exits on first match, `printf` dies with `EPIPE`, `pipefail` propagated the harness's failure as the checker's. `verification-pipefail`, inside the falsification harness itself. Rewritten pipe-free. Recorded because it looked exactly like a real finding.
 
 ---
 
-## 4. Classification of the 657 broken references
+## 4. Classification of the 673 broken references
 
-Every broken target was re-tested for existence **relative to the repository root**.
+Every broken target re-tested for existence **relative to the clean clone's root**.
 
 | Class | Count | Share | Meaning |
 |---|---:|---:|---|
-| **A — root-relative authoring** | 339 | 51.6% | Target exists. Link written as if the document sat at the repo root. Mechanically fixable. |
-| **B — target absent** | 318 | 48.4% | Target does not exist anywhere. Genuine dead reference. |
+| **A — root-relative authoring** | 338 | 50.2% | Target exists. Link written as if the document sat at the repo root. Mechanically fixable. |
+| **B — target absent** | 335 | 49.8% | Target does not exist. Genuine dead reference. |
 
-Of class B: **243 point at `.md` documents**, 75 at non-markdown targets. Only those 243 interact with a rename at all.
+Of class B, **259 point at `.md` documents**; 76 at non-markdown targets. Only those 259 interact with a rename.
 
-**Adversarial checks on this split** (a misclassification here would change the §1 verdict):
+**Adversarial checks** (a misclassification here would move the §1 verdict):
 
-- **0 of 339** class-A links begin with `../`, `./` or `/` — all are plain root-relative, so root-resolution is the plausible author intent rather than a coincidence.
-- **4 of 339** class-A targets resolve to a directory rather than a file; a narrower sub-class, still existent.
-- 8 of 318 class-B targets match under an alternate prefix, on inspection mostly coincidental matches of `../../.claude/…` memory paths rather than real misclassification.
+- **0 of 338** class-A links begin with `../`, `./` or `/` — all plain root-relative, so root-resolution is plausible author intent, not coincidence.
+- **4 of 338** class-A targets resolve to a directory rather than a file.
+- The 16 machine-local references that inflated revisions 1–2 are class **B** here, correctly, because a clean clone cannot resolve them.
 
 ### 4.1 Class B by source area
 
 | Area | Class-B refs |
 |---|---:|
+| `_bmad-output/implementation-artifacts` | 142 |
 | `_bmad-output/_archive` | 139 |
-| `_bmad-output/implementation-artifacts` | 129 |
-| `_bmad-output/planning-artifacts` | 42 |
+| `_bmad-output/planning-artifacts` | 43 |
 | `_bmad-output/vortex-artifacts` | 8 |
+| `_bmad-output/test-artifacts` | 3 |
 
-`_bmad-output/_archive/` accounts for 139 of 318 — historical documents whose targets legitimately no longer exist. They should not be repaired, and **any future gate must exclude `_archive/`**.
+`_bmad-output/_archive/` holds 139 of 335 — historical documents whose targets legitimately no longer exist. They should not be repaired, and **any future gate must exclude `_archive/`**.
 
-`docs/`, `drafts/` and `test-artifacts/` contribute **zero** class-B references; every break there is class A.
+`docs/` and `drafts/` contribute **zero** class-B references; every break there is class A.
 
 ### 4.2 Concentration
-
-Class-B breakage is not diffuse. Top sources:
 
 | Source | Class-B refs |
 |---|---:|
@@ -162,27 +182,29 @@ All 45 `docs/` breaks originate in one file, `docs/codebase-audit-2026-06-27.md`
 
 ## 5. Known limitations
 
-1. **This validates a git clone, not a shipped package.** `_bmad/bme/` passes here while I157 remains true — `_bmad/bme/README.md` links to files absent from `package.json` `files[]`. The checker resolves against the working tree, so it is **structurally incapable** of detecting the repo-versus-tarball class. A tarball-scoped link gate is a separate instrument.
-2. **Root scope is derived, but only for `.md` at depth 0.** `$(ls *.md)` picks up new root documents automatically (§0, §3) but not a root file with another extension, nor a new top-level *directory*. Adding a tree still requires editing the script.
-3. **Anchors are not validated.** `_validateRef` strips `#fragment` and checks only the file, so `file.md#L99` passes whenever `file.md` exists.
-4. **`_archive/` is included in this baseline** but should be excluded from any future gate (§4.1).
-5. **The report is inside its own corpus.** Its links are checked by the run it documents; the §7 appendix sits in code fences, which `_stripCodeRegions` blanks, so it does not contaminate the count.
+1. **The result depends on the filesystem it runs against, not on the repository.** A dev tree resolves ignored and out-of-repo paths that a fresh checkout cannot — the defect that produced revisions 1 and 2. Any comparison against §7 must be made from a clean checkout.
+2. **It validates a checkout, not a shipped package.** `_bmad/bme/` passes while I157 remains true — `_bmad/bme/README.md` links to files absent from `package.json` `files[]`. Structurally incapable of detecting the repo-versus-tarball class; a tarball-scoped gate is a separate instrument.
+3. **Committed documents cite gitignored paths.** The 9 references into `.claude/skills/**` are links no collaborator can follow. Separate from the rename question, and worth its own row.
+4. **Root scope covers `.md` at depth 0 only.** A new root file with another extension, or a new top-level directory, still requires editing the scope.
+5. **Anchors are not validated.** `_validateRef` strips `#fragment`; `file.md#L99` passes whenever `file.md` exists.
+6. **`_archive/` is included here** but should be excluded from any future gate (§4.1).
+7. **The report sits inside its own corpus.** Its links are checked by the run it documents; the §7 appendix is fenced, and `_stripCodeRegions` blanks it, so it does not contaminate the count.
 
 ---
 
 ## 6. What this unblocks
 
-- Step 8 (renaming existing documents) may proceed **provided** verification is a set-diff against **§7**, never a comparison to zero.
+- Step 8 (renaming existing documents) may proceed **provided** verification is a set-diff against **§7**, taken from a clean checkout, never a comparison to zero.
 - A future gate is a **diff instrument**, not pass/fail, and excludes `_archive/`.
-- Class A (339 refs) is a candidate mechanical fix independent of the cleanup: rewriting root-relative links to correct relative paths removes 52% of the noise and is separable work.
+- Class A (338 refs) is a candidate mechanical fix independent of the cleanup: rewriting root-relative links removes 50% of the noise.
 
 ---
 
 ## 7. Appendix — the baseline set
 
-Every broken reference at the measured state. **This is the comparison set** referenced by §1 and §6.
+Every broken reference in a clean clone at `028424c2`. **This is the comparison set** referenced by §1 and §6.
 
-### 7.1 Class B — target absent (318)
+### 7.1 Class B — target absent (335)
 
 ```
 _bmad-output/_archive/exploratory/align-command-prototype.md → ./baseartifact-contract-spec.md
@@ -324,6 +346,7 @@ _bmad-output/_archive/releases/NPX-INSTALLATION-UPDATE.md → scripts/install-wa
 _bmad-output/_archive/releases/PUBLISHING-COMPLETE.md → CREATE-RELEASE-GUIDE.md
 _bmad-output/_archive/releases/RELEASE-NOTES-v1.0.2-alpha.md → _bmad-output/design-artifacts/EMMA-USER-GUIDE.md
 _bmad-output/_archive/releases/RELEASE-NOTES-v1.0.2-alpha.md → _bmad-output/design-artifacts/WADE-USER-GUIDE.md
+_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → .claude/skills/bmad-agent-bme-contextualization-expert/SKILL.md
 _bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad-output/planning-artifacts/arch-artifact-governance-portfolio.md
 _bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad-output/planning-artifacts/epic-artifact-governance-portfolio.md
 _bmad-output/implementation-artifacts/ag-6-2-migration-inference-improvements.md → _bmad-output/planning-artifacts/arch-artifact-governance-portfolio.md
@@ -353,8 +376,18 @@ _bmad-output/implementation-artifacts/ci-hygiene-1-1-pipefail-and-lint-gate-fide
 _bmad-output/implementation-artifacts/ci-hygiene-1-1-pipefail-and-lint-gate-fidelity.md → convoke-note-initiative-lifecycle-backlog.md
 _bmad-output/implementation-artifacts/i97-1-1-migration-tooling-foundation-scaffolded.md → ../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/project_marketplace_structural_adoption.md
 _bmad-output/implementation-artifacts/i97-1-1-migration-tooling-foundation-scaffolded.md → ../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/project_marketplace_structural_adoption.md
+_bmad-output/implementation-artifacts/i97-1-1-migration-tooling-foundation-scaffolded.md → ../../.claude/skills/bmad-agent-pm/SKILL.md
 _bmad-output/implementation-artifacts/i97-2-1-convert-emma-contextualization-expert-proof-of-concept.md → ../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/project_marketplace_structural_adoption.md
+_bmad-output/implementation-artifacts/i97-2-1-convert-emma-contextualization-expert-proof-of-concept.md → ../../.claude/skills/bmad-agent-bme-contextualization-expert/SKILL.md
+_bmad-output/implementation-artifacts/i97-2-1-convert-emma-contextualization-expert-proof-of-concept.md → ../../.claude/skills/bmad-agent-bme-contextualization-expert/SKILL.md
+_bmad-output/implementation-artifacts/i97-2-1-convert-emma-contextualization-expert-proof-of-concept.md → ../../.claude/skills/bmad-agent-pm/SKILL.md
+_bmad-output/implementation-artifacts/i97-2-2-convert-wade-lean-experiments-specialist.md → ../../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/project_i97_story_2_1_calibration.md
+_bmad-output/implementation-artifacts/i97-2-3-convert-mila-research-convergence-specialist.md → ../../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/project_i97_story_2_1_calibration.md
 _bmad-output/implementation-artifacts/i97-bug-1-fix-p0-activation-defects.md → ../planning-artifacts/spike-marketplace-packaging-delta.md
+_bmad-output/implementation-artifacts/lint-1-1-fix-ci-lint-and-add-dod-gate.md → ../../.claude/skills/bmad-dev-story/checklist.md
+_bmad-output/implementation-artifacts/lint-1-1-fix-ci-lint-and-add-dod-gate.md → ../../.claude/skills/bmad-dev-story/checklist.md
+_bmad-output/implementation-artifacts/lint-1-1-fix-ci-lint-and-add-dod-gate.md → ../../.claude/skills/bmad-dev-story/checklist.md#L47
+_bmad-output/implementation-artifacts/lint-1-1-fix-ci-lint-and-add-dod-gate.md → ../../.claude/skills/bmad-dev-story/checklist.md#L47
 _bmad-output/implementation-artifacts/lint-1-1-fix-ci-lint-and-add-dod-gate.md → ../../_bmad/bmm/4-implementation/bmad-dev-story/checklist.md
 _bmad-output/implementation-artifacts/oc-1-1-covenant-audit.md → ~/.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/project_operator_covenant.md
 _bmad-output/implementation-artifacts/oc-1-5-adoption-surface.md → path/to/convoke-covenant-operator.md
@@ -380,6 +413,7 @@ _bmad-output/implementation-artifacts/sp-4-1-create-and-seed-repository.md → .
 _bmad-output/implementation-artifacts/sp-4-1-create-and-seed-repository.md → ../planning-artifacts/vision-skill-portability.md
 _bmad-output/implementation-artifacts/sp-4-2-end-to-end-validation.md → ../planning-artifacts/epics-skill-portability.md
 _bmad-output/implementation-artifacts/sp-5-1-template-inlining-for-tier-2-export.md → ../planning-artifacts/epics-skill-portability.md
+_bmad-output/implementation-artifacts/sp-5-2-platform-adapter-generation.md → ../../.claude/skills/bmad-brainstorming/SKILL.md
 _bmad-output/implementation-artifacts/sp-5-2-platform-adapter-generation.md → ../planning-artifacts/epics-skill-portability.md
 _bmad-output/implementation-artifacts/sp-5-3-export-tier-2-skills-and-update-catalog.md → ../planning-artifacts/epics-skill-portability.md
 _bmad-output/implementation-artifacts/sp-6-1-export-skill-wrapper.md → ../../.claude/skills/bmad-migrate-artifacts/
@@ -446,6 +480,7 @@ _bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-r
 _bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → convoke-epic-bmad-v6.3-adoption.md#story-1a2-create-config-loaderjs-with-direct-yaml-loading
 _bmad-output/implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md → convoke-epic-bmad-v6.3-adoption.md#story-1a2-create-config-loaderjs-with-direct-yaml-loading
 _bmad-output/implementation-artifacts/v63-1a-2-create-config-loader-js-with-direct-yaml-loading.md → ../../_bmad/core/bmad-init/scripts/bmad_init.py
+_bmad-output/implementation-artifacts/v63-1a-4-create-migration-script-3-x-to-4-0-js.md → ../../.claude/skills/bmad-dev-story/checklist.md
 _bmad-output/implementation-artifacts/v63-1a-6-author-migration-guide-standalone-deliverable.md → ../../_bmad/bmm/4-implementation/bmad-dev-story/checklist.md
 _bmad-output/implementation-artifacts/v63-2-1-create-bmm-dependency-scan-tool-and-registry.md → ../../.claude/skills/bmad-enhance-initiatives-backlog/SKILL.md
 _bmad-output/implementation-artifacts/v63-2-1-create-bmm-dependency-scan-tool-and-registry.md → ../../tests/fixtures/bmm-dependencies
@@ -456,6 +491,7 @@ _bmad-output/implementation-artifacts/v63-4-4-drift-snapshot-protocol.md → v63
 _bmad-output/planning-artifacts/archive/convoke-prd-bmad-v6.3-adoption.md → convoke-note-initiatives-backlog.md
 _bmad-output/planning-artifacts/convoke-announcement-4.0-draft.md → convoke-prd-bmad-v6.3-adoption.md
 _bmad-output/planning-artifacts/convoke-epic-7-platform-debt.md → convoke-note-initiatives-backlog.md
+_bmad-output/planning-artifacts/convoke-epic-lint-cleanup-dod-gate.md → ../../.claude/skills/bmad-dev-story/checklist.md
 _bmad-output/planning-artifacts/convoke-migration-guide-3.x-to-4.0-draft.md → convoke-prd-bmad-v6.3-adoption.md
 _bmad-output/planning-artifacts/convoke-note-v6-3-resequencing-and-v4-1-catchup-2026-05-25.md → ../../../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/project_marketplace_structural_adoption.md
 _bmad-output/planning-artifacts/convoke-spec-baseartifact-contract.md → ./4-framework-comparison-matrix.md
@@ -495,6 +531,9 @@ _bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md → ../
 _bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md → ../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L314-L320
 _bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md → ../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L57-L64
 _bmad-output/planning-artifacts/convoke-spec-bmad-init-behavior-audit.md → ../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L85-L87
+_bmad-output/test-artifacts/2026-04-08-baseline-sweep.md → ../../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/MEMORY.md
+_bmad-output/test-artifacts/2026-04-08-party-mode-session-notes.md → ../../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/MEMORY.md
+_bmad-output/test-artifacts/2026-04-08-party-mode-session-notes.md → ../../.claude/skills/bmad-create-story/
 _bmad-output/vortex-artifacts/forge-decision-hc6-framework-2026-03-21.md → lean-persona-knowledge-holder-2026-03-21.md
 _bmad-output/vortex-artifacts/forge-decision-hc6-framework-2026-03-21.md → lean-persona-landing-consultant-2026-03-21.md
 _bmad-output/vortex-artifacts/forge-decision-hc6-framework-2026-03-21.md → scope-decision-forge-2026-03-21.md
@@ -505,7 +544,7 @@ _bmad-output/vortex-artifacts/gyre-decision-hc6-framework-2026-03-21.md → lean
 _bmad-output/vortex-artifacts/gyre-decision-hc6-framework-2026-03-21.md → scope-decision-gyre-2026-03-21.md
 ```
 
-### 7.2 Class A — root-relative authoring (339)
+### 7.2 Class A — root-relative authoring (338)
 
 ```
 _bmad-output/_archive/phase-2/p2-1-1-build-programmatic-docs-audit-tool.md → scripts/convoke-doctor.js
@@ -541,7 +580,6 @@ _bmad-output/drafts/README-draft.md → docs/development.md
 _bmad-output/drafts/README-draft.md → docs/faq.md
 _bmad-output/drafts/README-draft.md → docs/faq.md
 _bmad-output/drafts/README-draft.md → docs/testing.md
-_bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → .claude/skills/bmad-agent-bme-contextualization-expert/SKILL.md
 _bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/_config/agent-manifest.csv
 _bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/_config/agent-manifest.csv
 _bmad-output/implementation-artifacts/ag-6-1-wire-loom-master-agent.md → _bmad/_config/agent-manifest.csv
