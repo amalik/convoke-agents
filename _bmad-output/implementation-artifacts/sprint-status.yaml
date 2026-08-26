@@ -918,11 +918,23 @@ development_status:
   dist-epic-1b: done
   dist-1b-1-close-the-downgrade-guard-fail-open-and-prove-it-on-a-runner: done
   dist-epic-1b-retrospective: optional
-  gen-epic-1: in-progress
-  gen-1-1-extract-generated-artifact-writes-behind-a-deliberate-path: review
-  gen-epic-1-retrospective: optional
+  gen-epic-1: done
+  gen-1-1-extract-generated-artifact-writes-behind-a-deliberate-path: done
+  gen-epic-1-retrospective: done
 
 action_items:
+  - epic: gen-epic-1
+    action: "Build the review-discipline backstop project-context.md:534 claimed exists — a story cannot reach done without a review record; a scripts/**/*.js commit touches a test or carries an explicit opt-out. Filed as T77."
+    owner: "Amelia (Developer)"
+    status: open
+  - epic: gen-epic-1
+    action: "Resolve T74's lane — convoke-epic-generated-artifact-writes.md:58 states the CI drift gate belongs here as story 1.2, not the Fast Lane"
+    owner: "Amalik (Project Lead)"
+    status: open
+  - epic: gen-epic-1
+    action: "Sequence the manifest follow-ups detection-first: T76 before T74 and T75, so the other two become falsifiable"
+    owner: "Amalik (Project Lead)"
+    status: open
   - epic: v63-epic-5b
     action: "Use the I96 Sprint 0 checklist at v4.1 planning: read the anti-pattern registry end to end before the first story, cite applicable entries by ID"
     owner: "John (PM)"

@@ -3,7 +3,7 @@ baseline_commit: 9bae5b463923ad838e5c1f9ef7b03d154c39ed95
 ---
 # Story gen-1.1: Route the agent-manifest write through a deliberate path
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
