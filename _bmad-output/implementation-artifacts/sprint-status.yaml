@@ -919,7 +919,7 @@ development_status:
   dist-1b-1-close-the-downgrade-guard-fail-open-and-prove-it-on-a-runner: done
   dist-epic-1b-retrospective: optional
   gen-epic-1: in-progress
-  gen-1-1-extract-generated-artifact-writes-behind-a-deliberate-path: ready-for-dev
+  gen-1-1-extract-generated-artifact-writes-behind-a-deliberate-path: in-progress
   gen-epic-1-retrospective: optional
 
 action_items:

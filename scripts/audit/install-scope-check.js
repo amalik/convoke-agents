@@ -90,7 +90,24 @@ const TRACKED = [
   // upstream paths, and exists specifically to avoid DELETING user data (path-safety rule) — the
   // alternative was overwriting it in place. The checker independently reported "no scope
   // violations"; only the count moved.
-  { file: 'scripts/update/lib/refresh-installation.js', expected: 11 },
+  // 11 -> 10 on 2026-08-26 (story gen-1.1). No write was removed: the manifest write
+  // MOVED to scripts/lib/agent-manifest-generator.js, which is added below with the
+  // matching `expected: 1`. The two entries are one arithmetic unit — 11 = 10 + 1 —
+  // so a future diff that changes one without the other should be treated as a
+  // mistake, not a snapshot refresh. Derived, not recalled: counted with this file's
+  // own WRITE_OP_RE over the extracted range (639-794 pre-extraction), which held
+  // exactly one match, `fs.writeFile(manifestPath, …)`.
+  { file: 'scripts/update/lib/refresh-installation.js', expected: 10 },
+  // Added 2026-08-26 (story gen-1.1). This is the other half of the 11 -> 10 above.
+  // It is tracked rather than left alone because this checker inspects ONLY the files
+  // in this array and has no assertion for write ops in an untracked file — so
+  // extracting the write without adding the destination here would have re-greened CI
+  // while silently moving the manifest write outside the safety net entirely. The
+  // write is `fs.writeFile(manifestPath, …)` where
+  // `manifestPath = <projectRoot>/_bmad/_config/agent-manifest.csv`: Convoke-owned
+  // shared project metadata, the same target the entry above wrote for years, and
+  // none of the forbidden upstream `_bmad/{bmm,cis,tea,bma,gds,bmb,wds,core}/` paths.
+  { file: 'scripts/lib/agent-manifest-generator.js', expected: 1 },
   { file: 'scripts/update/migrations/3.3.x-to-4.0.0.js', expected: 5 },
   { file: 'scripts/update/migrations/3.2.x-to-4.0.0.js', expected: 0 },
   { file: 'scripts/update/migrations/3.1.x-to-4.0.0.js', expected: 0 },

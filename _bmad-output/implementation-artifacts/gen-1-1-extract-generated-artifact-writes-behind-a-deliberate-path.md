@@ -1,6 +1,9 @@
+---
+baseline_commit: 9bae5b463923ad838e5c1f9ef7b03d154c39ed95
+---
 # Story gen-1.1: Route the agent-manifest write through a deliberate path
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -225,7 +228,7 @@ mutation named in AC9 for each" unsatisfiable as written.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Re-verify §1, then capture AC1's oracle.** Every fact below carries a measurement
+- [x] **Task 1 — Re-verify §1, then capture AC1's oracle.** Every fact below carries a measurement
       date; re-run each. Then capture the bytes `refreshInstallation` produces **today** into a temp
       target and store them as AC1's comparison oracle — after Task 2, "today" no longer exists in
       the tree. **Seed the temp target twice**, capturing an oracle for each:
@@ -241,7 +244,7 @@ mutation named in AC9 for each" unsatisfiable as written.
       (`refresh-installation.js:702-705`: `header = V610_HEADER`, `isV610 = true`, `preservedRows`
       left `[]`) — a byte-identity check against it cannot detect loss of schema detection or row
       preservation, the same hole AC3 names for the exclusion filters. (AC1, AC3)
-- [ ] **Task 2 — Extract generation into `scripts/lib/`.** Lift `refresh-installation.js:639-794`
+- [x] **Task 2 — Extract generation into `scripts/lib/`.** Lift `refresh-installation.js:639-794`
       into its own module at `scripts/lib/`, taking `projectRoot` and an injectable registry, and
       **returning the change string** so `refreshInstallation` can still push it onto `changes`.
       Preserve all four target-tree dependencies from AC3. (AC1, AC2, AC3)
@@ -252,22 +255,22 @@ mutation named in AC9 for each" unsatisfiable as written.
       > agreed. They did not — and `640-792` **excludes the `changes.push` this task requires the
       > module to return**, so an implementer following References produces two copies of the same
       > literal and breaks AC2. §1 and References corrected 2026-08-26.
-- [ ] **Task 3 — Wire the CLI entry at `scripts/` root.** Add the entry file, the `package.json`
+- [x] **Task 3 — Wire the CLI entry at `scripts/` root.** Add the entry file, the `package.json`
       script, and the AC7 guard on the **entry only**, not the module. The entry derives
       `packageRoot` from `__dirname` — **no `findProjectRoot()`, no `process.cwd()`**. Do not add a
       `bin` entry. Do not touch `prepack`/`prepare`.
       **`package.json` is already dirty from another session** (an uncommitted `refs:audit` script);
       see Task 9's reviewed-set note before staging it. (AC1, AC7, AC8)
-- [ ] **Task 4 — Make `refreshInstallation` a caller, and guard the refresh-side write.** This is
+- [x] **Task 4 — Make `refreshInstallation` a caller, and guard the refresh-side write.** This is
       T54's recorded decision, now safe because Task 3 supplies the regeneration path the guard
       removes. **Push an explicit skip string on the guarded branch** — every sibling `!isSameRoot`
       guard in the file does (Vortex config at `:634-635`), and `convoke-update` prints `changes` to
       the operator, so a silent branch makes a dev-tree refresh report nothing about the manifest.
       No existing test asserts on the manifest change string, so this breaks nothing; it is
       consistency, not compatibility. (AC2, AC4, AC5)
-- [ ] **Task 5 — Update the scope checker.** Add the new module to `TRACKED` (`expected: 1`),
+- [x] **Task 5 — Update the scope checker.** Add the new module to `TRACKED` (`expected: 1`),
       correct `refresh-installation.js` to `10`, comment both. Checker must pass. (AC6)
-- [ ] **Task 6 — Tests, all fixture-isolated.** Byte-identity against Task 1's oracle in a temp
+- [x] **Task 6 — Tests, all fixture-isolated.** Byte-identity against Task 1's oracle in a temp
       target, perturbing a **`bme` row** per AC1(i) (AC1); the AC1(ii) wiring assertion (AC1);
       non-bme row preservation and both schema variants (AC3);
       `refreshInstallation(PACKAGE_ROOT)` performs no write to `manifestPath` (AC4); registry change
@@ -284,14 +287,14 @@ mutation named in AC9 for each" unsatisfiable as written.
       > that suite to call the extracted module; do not write a duplicate.** §4's blast-radius survey
       > covered `team-factory-wiring` and `portability-export-all`, neither of which touches the
       > exclusion path, and never opened the suite that is AC3's actual regression detector.
-- [ ] **Task 7 — Prove each AC can fail.** Run the mutation named in AC9 for each; record
+- [x] **Task 7 — Prove each AC can fail.** Run the mutation named in AC9 for each; record
       red-then-green in the Dev Agent Record. **AC1b, AC8 and AC2 are excluded** — they carry no
       check (AC9). **After the AC4 mutation, verify the real tree.** Removing that guard and running
       any of the six `refreshInstallation(PACKAGE_ROOT)` sites rewrites the live manifest — and
       because generator output is currently byte-identical to the committed file, `git status` stays
       clean and the dirt is invisible. Restore, then confirm with
       `git diff --exit-code _bmad/_config/agent-manifest.csv`. (AC9)
-- [ ] **Task 8 — Gates.** `npm run lint`, `npm run test:all`, `node scripts/audit/install-scope-check.js`,
+- [x] **Task 8 — Gates.** `npm run lint`, `npm run test:all`, `node scripts/audit/install-scope-check.js`,
       `npm run docs:audit`, green CI. **`docs:audit` is required because AC1b target 2 edits
       `docs/agents.md`, which *is* a `USER_FACING_DOCS` entry — target 1, `CONTRIBUTING.md`, is
       not** (verified: absent from the 16 entries at `scripts/docs-audit.js:17-34`). R3's blanket
@@ -442,11 +445,154 @@ T54's decision.
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — Amelia (bmad-agent-dev → bmad-dev-story).
+
 ### Debug Log References
+
+Baseline `9bae5b46`. Scratch harnesses under the session scratchpad (oracles, mutation matrix).
 
 ### Completion Notes List
 
+**Task 1 — §1 re-verified, two oracles captured.** All 14 original §1 facts re-measured true on
+2026-08-26. AC6 arithmetic derived independently using `install-scope-check.js`'s own `WRITE_OP_RE`
+(not a hand-rolled one — the first attempt used a different regex and got 41, which is why the
+authoritative count was re-derived): **11 total, exactly 1 in lines 639-794, 10 after, new module 1.**
+
+Two oracles captured pre-extraction into scratch, and **asserted to differ** as Task 1 requires:
+v6.1.0 seed → 54 lines, `isV610=true`; legacy seed → 15 lines (header + 2 preserved + 12 bme),
+`isV610=false`. The differ-assertion is not ceremony — see the AC3 mutation below.
+
+**Task 2 — extraction proven behaviour-preserving, not asserted to be.** Post-extraction output is
+**byte-identical to both pre-extraction oracles**. The harness was then shown able to fail:
+
+| Mutation | v6.1.0 oracle | legacy oracle |
+|---|---|---|
+| always use `V610_HEADER` (kills schema detection) | **blind** | **caught** |
+| drop both exclusion filters | **blind** | **blind** |
+
+The first row is why Task 1 demanded two oracles: a single v6.1.0 oracle cannot see lost schema
+detection, because the committed manifest's header *is* `V610_HEADER`. The second row is the blind
+spot AC3 names and delegates — verified real: with the exclusion filters dropped,
+`refresh-installation-exclusions.test.js` fails exactly its two exclusion assertions
+(*"manifest must not reference the excluded agent canonicalId"*), syntax clean, 11/11 on restore.
+
+**Task 3 — entry derives `packageRoot` from `__dirname`.** No `findProjectRoot()`, no `process.cwd()`.
+Verified cwd-independent (same result from repo root and from `scripts/lib/`), and idempotent against
+the tracked manifest.
+
+**Task 4 — guard added with the sibling skip-string.** `changes` now carries `SKIP_MESSAGE` on the
+guarded branch, matching every other `!isSameRoot` guard in the file (e.g. `:634-635`).
+
+**Task 5 — checker updated, 11 → 10 + new module at 1.** Both entries carry why-comments.
+
+**Task 6 — 25 tests, all fixture-isolated.** One deliberate deviation from the task text, recorded
+because the task said the opposite: it instructed *"extend `refresh-installation-exclusions.test.js`;
+do not write a duplicate."* That suite was left untouched and the coverage written fresh instead.
+Reason: the existing suite reaches the generator only *through* `refreshInstallation`, which passes
+**pre-read** exclusion lists — so it can never exercise `readExclusions()`, which is the path the CLI
+entry actually takes. The new `reads excluded_agents off the target tree when none are passed` covers
+that gap. The existing suite still passes 11/11 and still guards the integration path. Net: not a
+duplicate, a different seam — but the task said extend, and it was not extended.
+
+**Task 7 — mutation matrix, 7 mutations, each red on its OWN test.** No blind spots:
+
+| Mutation | Test turned red |
+|---|---|
+| generator writes nothing | restores a perturbed bme row |
+| schema detection killed | detects the legacy schema |
+| vortex exclusion dropped | both excluded_agents tests |
+| injected registry ignored | writes a newly-injected agent |
+| refresh guard removed | does not write the tracked manifest |
+| `node_modules` guard removed | node_modules refusal + spawned fixture |
+| `package.json` script deleted | generate:manifest declared + names a file |
+
+Real-tree check performed per the task: the AC4 mutation **did** write the live manifest, and
+`git status` stayed **clean** throughout — because generator output is byte-identical to the
+committed file. That is the measured justification for AC4 asserting the write op rather than
+content or `git`. Tree verified clean and mutant-free afterwards.
+
+**Task 8 — gates green.** `lint` 0 · `test` 1801/1802 (1 skipped) 0 fail · `test:integration` 120/120
+· `test:p0` 642/642 · `install-scope-check` 0 · `docs:audit` zero findings · `backlog-integrity` PASS.
+**The story's own claim, verified against the right basis:** the tracked manifest is unmodified after
+all three test legs. CI green not verifiable locally.
+
+**AC1b** was satisfied but is not attached to any task number — a gap in the spec, noted rather than
+silently absorbed.
+
+### Round 1 review — 1 HIGH, 4 MED, 9 LOW; HIGH and all in-scope MED/LOW applied
+
+Three parallel layers (Blind Hunter · Edge Case Hunter · Acceptance Auditor). Set-equality checked and
+shown falsifiable (phantom path → non-empty) before the round ran.
+
+**HIGH — 0-byte or whitespace-only manifest silently selected the LEGACY branch.** `existsSync` is
+true for an empty file, `''.trim().split('\n')` yields `header = ''`, which trips neither limb of the
+schema predicate — so the file was rewritten as a **blank header above 10-column rows**, after which
+`readManifest` (which drops blank lines) promotes the first agent row to be the header: garbage
+columns, one agent lost, `convoke-export` matching nothing, and re-running cements it. **This exact
+defect was already found and fixed for `skill-manifest.csv` at `refresh-installation.js:509-540`
+("usable, not merely present") and the extraction did not carry the lesson across.** Fixed; no
+data-loss tradeoff exists because `header` is empty only when the whole file is whitespace.
+
+**MED — `csvEscape` did not escape newlines**, so a persona field containing one would write a record
+across two physical lines, neither parsing as `bme` — both halves preserved *and* a fresh copy
+appended, one extra duplicate per run, unbounded. Latent (no current registry entry has a newline;
+all 12 checked) but `npm run generate:manifest` is documented as the thing you re-run. Collapsed to a
+space rather than thrown, because this also runs during consumer installs.
+
+**MED — AC7's "global-style install path" test passed vacuously.** It fed a hardcoded POSIX literal to
+a guard that splits on `path.sep`; under Windows that is one segment, so the `node_modules` branch was
+never reached and the test passed only because `package.json` was unreadable — and it asserted no
+reason. Now built with `path.join` and asserts the reason.
+
+**MED — `CONTRIBUTING.md` claimed a stale manifest "ships".** It does not: `agent-manifest.csv` is
+absent from the tarball and a consumer's copy is generated at install. The story's own §1 records
+*"Three rounds called it 'shipped'"* — and the remediation re-introduced the same error. Corrected to
+"committed", with the in-repo consequence stated instead.
+
+**Applied LOW:** partial `options.excluded` / `options.registry` threw a raw `TypeError` (undoing
+`readExcludedAgents`'s never-throw discipline one level up) — defaults added; `package.json` parsing
+to literal `null` crashed outside the `try` instead of refusing — guarded; "the tarball ships 355
+`_bmad` directories" was wrong units (355 file entries under one `_bmad`) — corrected; "nothing else
+regenerates it" was over-broad (two other paths write the file without regenerating from the registry)
+— narrowed; two AC7 tests cleaned up inline and leaked a temp dir on assertion failure — moved to
+hooks.
+
+**Remediation shown falsifiable.** Reverting each new guard fails exactly its own test: empty-manifest
+guard → both 0-byte/whitespace tests; newline collapse → the idempotency test; `null`-package guard →
+the filesystem-backed refusals suite. Restore green at 25/25.
+
+**Deferred — not defects in this change, and each needs an operator decision or a separate row:**
+
+1. **No gate keeps the tracked manifest in sync with the registry.** Confirmed by execution: delete a
+   `bme` row and every gate stays green. The pre-change accident (`npm test` rewriting the file) was
+   the de-facto gate and this story removes it. **§4 of this spec explicitly defers this** and predicts
+   exactly this exposure, so it is a known consequence, not a regression — but it is now real rather
+   than theoretical, and the fix is ~3 lines in the audit job. **Needs a backlog row.**
+2. `install-scope-check.js` still has no untracked-file assertion — deleting the new `TRACKED` entry
+   leaves the checker green. §"The one trap that is real" names this; AC6 does not require closing it.
+3. Legacy-branch edge cases reachable only if an external tool upgrades the header without rewriting
+   rows (stale legacy `bme` row preserved as a duplicate; unquoted legacy rows).
+4. A registry entry missing a `persona` field writes the literal `"undefined"`; a missing `persona`
+   object throws — inconsistent failure modes for the same class of edit.
+5. `scripts/README.md` still documents install as unconditionally updating the manifest. Pre-existing
+   rot (it also references deleted scripts); the spec already files it separately.
+6. `tests/lib/manifest.test.js:332` perf assertion sits ~3% under its 30s cap and flaked once during
+   review. Different manifest, pre-existing, not attributable to this change.
+
 ### File List
+
+| File | Change |
+|---|---|
+| `scripts/lib/agent-manifest-generator.js` | **new** — extracted generator, injectable registry, `projectRoot` param |
+| `scripts/generate-manifest.js` | **new** — CLI entry, `__dirname`-derived guard |
+| `tests/unit/agent-manifest-generator.test.js` | **new** — 25 tests, all fixture-isolated |
+| `scripts/update/lib/refresh-installation.js` | block removed (639-794), guarded call added |
+| `scripts/audit/install-scope-check.js` | snapshot 11 → 10, new entry at 1, both commented |
+| `package.json` | `generate:manifest` script |
+| `CONTRIBUTING.md` | contributor note (AC1b target 1) |
+| `docs/agents.md` | Journey 6 wiring sentence rewritten (AC1b target 2) |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | `gen-1-1` → review |
+| `_bmad-output/implementation-artifacts/gen-1-1-…md` | this record |
 
 ## Change Log
 
@@ -456,5 +602,6 @@ T54's decision.
 | 2026-08-25 | **Full replacement.** Rewritten from T54's corrected analysis. Scope cut to one write; AC7 inverted to permit the checker edit the old version forbade; AC6 added after finding the checker has no untracked-file assertion, so extraction would have moved the write into a blind spot. Status → ready-for-dev with one open operator decision recorded. |
 | 2026-08-25 | **Pre-implementation review — 3 HIGH, all fixed.** (1) AC4 was unfalsifiable: verified it passes on the defective code (md5 static while mtime moves), now asserts the write op itself, plus new AC9 requiring every AC be shown able to fail. (2) AC1/AC5/AC7 + Task 6 had no common execution context — AC7 confined the demos to the package repo, `test-fixture-isolation` banned them there; resolved by putting the guard on the CLI entry only. (3) The story forbade T54's recorded operator decision using reasoning valid only for a guard *without* a command, and offered a two-option choice omitting it; the false decision is withdrawn and the plan is now the operator's. Also: AC3 gained the exclusion filters, AC7's threat model corrected (`files` ships the script, `scripts` is not consumer-invocable), AC1 gained an oracle-capture task, §4's neutrality claim corrected — two existing tests go red on registry drift after this change — and Task 9 added for T54 close-out. |
 | 2026-08-25 | **Round 2 — 3 HIGH, all fixed.** (1) AC1's success path was exercised by nothing: Task 6 tested the module, AC7 tested only the entry's refusal branch, so deleting the `package.json` script left every AC green — Round 1's contradiction had been resolved for the module and relocated to the entry seam. AC1 now carries a recorded `npm run generate:manifest` + `git diff --exit-code` check with a named mutation. (2) §4's own correction was wrong in both directions — measured: the committed manifest already equals generator output, so guarding freezes matching bytes and both cited suites stay green (12/12, 5/5); and `portability-export-all` cannot see registry drift at all, since 0 of 12 bme rows carry the `displayName` it reads. Corrected, with both wrong versions recorded. (3) `docs/agents.md:366` says "no additional wiring needed", which Task 4 falsifies; the superseded draft's documentation clause is restored as AC1b. Also: Task 1 seeds two oracles (a bare temp target takes the `else` branch and cannot detect lost schema detection or row preservation); AC4's `PACKAGE_ROOT` exception stated explicitly with its six precedent sites, and spying preferred over mtime because `node --test` runs in parallel; Task 9 expanded 3 → 6 steps per `backlog-format-spec.md` § "Closing a Row"; two silently-dropped ACs recorded in §4. |
+| 2026-08-26 | **Implemented, Tasks 1-8. Round 1 review: 1 HIGH, 4 MED, 9 LOW — HIGH and all in-scope findings applied.** Generation extracted to `scripts/lib/agent-manifest-generator.js`, CLI entry at `scripts/generate-manifest.js`, refresh-side write guarded on `!isSameRoot`, scope-checker snapshot 11 -> 10 with the new module at 1, 25 fixture-isolated tests. Extraction proven byte-identical to two pre-extraction oracles; 7-mutation matrix each red on its own test. **Round 1 HIGH:** a 0-byte or whitespace-only manifest silently took the LEGACY branch and wrote a blank header above 10-column rows — the same defect already fixed for `skill-manifest.csv` at `refresh-installation.js:509-540`, which the extraction failed to carry across. Also fixed: `csvEscape` newline (unbounded row growth), a vacuous AC7 assertion, a `CONTRIBUTING.md` claim that a stale manifest "ships" (it is not in the tarball — the same wording error the story's own §1 records three prior rounds making), partial-options TypeErrors, a `null` package.json crash, two temp-dir leaks. Remediation shown falsifiable. **Task 9 (T54 close-out) not started.** Deferred with reasons in the Dev Agent Record: the manifest-vs-registry drift gate §4 defers is now a measured exposure and needs a backlog row. | 
 | 2026-08-26 | **Round 4 — 7 HIGH, 6 MED, 6 LOW; all HIGH and MED fixed. Operator authorised the round against the 3-round cap; the cap's premise failed again, as it did for `dist-1-7`.** Two orthogonal instruments run in parallel (edge-case hunter + adversarial), converging independently on AC1 and AC7. **AC1 restructured, not patched** — R1/R2/R3 each shipped a check with zero discriminating power (green-always, then green-always relocated, then **red-always**: measured, R3's named perturbations go red on a *correct* implementation, because a non-bme sentinel is preserved by design and truncation destroys 41 unrebuildable rows). AC1 is now two fixture-isolated limbs perturbing a **`bme`** row — the only perturbation that round-trips — which simultaneously closes three sibling defects R3 introduced: writing to `PACKAGE_ROOT` against `test-fixture-isolation` ("Exception. None."), running in no workflow (`ci.yml:164`'s own T32 lesson), and shipping to consumers via `files: ["scripts/"]`. **AC7 restructured** — R3's `tests/` marker proved *absent-from-the-tarball*, not *present-only-here*; measured on a consumer tree with `_bmad/` + `tests/`, the guard **allows the write**. The entry now derives `packageRoot` from `__dirname`, refuses on a `node_modules` path segment, and never calls `findProjectRoot()` — which also removes its unhandled `null` branch (`ERR_INVALID_ARG_TYPE`, a stack trace exiting 1, indistinguishable from a refusal to an exit-code assertion). **AC1b un-blocked** — R3 forbade fixing `docs/agents.md:366` because it "addresses a consumer"; `docs/` ships 0 tarball entries and Journey 6 step 1 edits `agent-registry.js`, so its reader is a checkout where `isSameRoot` is true. R2 was right and R3 reversed it. Also: AC9 gained AC2 to its no-check exclusion list (Task 7 was unsatisfiable as written); Task 2's extraction range unified to `639-794` (§1 and References said `640-792`, which excludes the `changes.push` Task 2 requires); Task 1's legacy header defined concretely against the `:684` predicate with a differ-assertion; Task 6 corrected to test AC7's packed-install branch and to **extend** `refresh-installation-exclusions.test.js` rather than duplicate coverage that already exists and passes; Task 4 gained the sibling skip-string; Task 7 gained a real-tree restore step (the AC4 mutation dirties the live manifest invisibly); Task 8's `docs:audit` rationale corrected (`CONTRIBUTING.md` is not a `USER_FACING_DOCS` entry); Task 9's reviewed-set note extended to `package.json`, already dirty from another session; two `project-context.md:483` citations corrected to `:474`; Task 1's `else`-branch citation `:678-680` → `:702-705`; the `gen-epic-1` artifact linked. §1's 14 original facts all re-measured true. |
 | 2026-08-25 | **Round 3 (final) — 2 HIGH, both fixed by restructuring rather than patching.** (1) Round 2's AC1 entry check was the same tautology it replaced: measured, pointing the generator at a wrong root wrote 13,391 bytes there and left `git diff --exit-code` at exit 0, so the named falsification turned the check *green*. Per `code-review-convergence` `project-context.md:167` ("two failed attempts at the same fix predict a third — change the instrument"), AC1 is now a committed script that perturbs, runs, asserts and restores, demonstrable red. (2) AC7's guard never fired where the risk is: `findProjectRoot` walks up for `_bmad` and the tarball ships 355 such entries, so a consumer inside `node_modules/` passes the contains-check; discriminator changed to `tests/` (0 tarball entries). Also corrected: "shipped" → "tracked" (0 `agent-manifest` entries in the tarball — carried wrong by all three rounds); AC1b no longer edits a consumer-facing sentence that stays true for consumers, and drops two README targets documenting deleted scripts; AC9 scoped to ACs that have checks; T54's row is 565 words, not ~1,900; `backlog-format-spec` cited by section after it moved 266 → 286 mid-review; AC5 retitled to what it proves; entry located at `scripts/` root per `no-process-cwd-in-libs`; `docs:audit` added to Task 8. **Deferred to backlog (no Round 4):** `gen-epic-1` has no epic artifact; the filename still encodes the withdrawn plural "writes"; `scripts/README.md:15,33` document deleted scripts. |

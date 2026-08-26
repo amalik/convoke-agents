@@ -76,6 +76,22 @@ A red gate is a gate doing its job. If one fails for a reason you believe is unr
 
 The full set — including the rules governing commits, reviews, and backlog writes — is in that file.
 
+**Adding or removing an agent?** `scripts/update/lib/agent-registry.js` is the single source of truth,
+but `_bmad/_config/agent-manifest.csv` is a tracked file generated from it, and generating it is a
+step you run on purpose:
+
+```bash
+npm run generate:manifest
+```
+
+Nothing else *regenerates it from the registry* in a checkout. The manifest write used to fire as a
+side effect of every installation refresh — including the ones the test suite performs, so `npm test`
+quietly rewrote a tracked file. That write is now guarded, which means a registry change you forget to
+regenerate gets **committed** as a manifest that no longer matches the registry. It is not published:
+`_bmad/_config/agent-manifest.csv` is absent from the npm tarball, and a consumer's copy is generated
+at install time. What goes stale is this repository's own tracked copy, and the in-repo readers of it.
+The command is the whole fix; run it in the same commit as the registry edit.
+
 ### 3. The Operator Covenant
 
 Anything you author under `_bmad/bme/` must honour [The Convoke Operator Covenant](_bmad-output/planning-artifacts/convoke-covenant-operator.md) — one axiom and seven Operator Rights — and self-check against the [Covenant Compliance Checklist](_bmad-output/planning-artifacts/convoke-spec-covenant-compliance-checklist.md).

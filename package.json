@@ -52,6 +52,7 @@
     "lint": "eslint --max-warnings 0 scripts/ index.js tests/",
     "docs:audit": "node scripts/docs-audit.js",
     "archive": "node scripts/archive.js",
+    "generate:manifest": "node scripts/generate-manifest.js",
     "refs:audit": "node scripts/audit/reference-integrity.js --paths=\"_bmad-output,_bmad/bme,docs,$(ls *.md | paste -sd, -)\"",
     "check": "node scripts/convoke-check.js"
   },

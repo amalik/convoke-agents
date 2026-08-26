@@ -10,6 +10,11 @@ const configMerger = require('./config-merger');
 // the Vortex copy loop iterates AGENT_IDS and handles skill-dir shape inline.
 // AGENT_FILES remains @deprecated in agent-registry for any external consumers.
 const { AGENTS, AGENT_IDS, WORKFLOW_NAMES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES, EXTRA_BME_AGENTS } = require('./agent-registry');
+const {
+  generateAgentManifest,
+  CHANGE_MESSAGE: MANIFEST_CHANGE_MESSAGE,
+  SKIP_MESSAGE: MANIFEST_SKIP_MESSAGE,
+} = require('../../lib/agent-manifest-generator');
 
 /**
  * Refresh Installation for Convoke
@@ -636,162 +641,30 @@ async function refreshInstallation(projectRoot, options = {}) {
     if (verbose) console.log('    Skipped Vortex config stamp (dev environment)');
   }
 
-  // 4. Regenerate agent manifest — replace only bme rows, preserve other modules
-  const manifestPath = path.join(projectRoot, '_bmad', '_config', 'agent-manifest.csv');
-  await fs.ensureDir(path.dirname(manifestPath));
-
-  function csvEscape(value) {
-    return `"${String(value).replace(/"/g, '""')}"`;
-  }
-
-  function parseCSVRow(row) {
-    const fields = [];
-    let current = '';
-    let inQuotes = false;
-    for (let i = 0; i < row.length; i++) {
-      const ch = row[i];
-      if (inQuotes) {
-        if (ch === '"' && row[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else if (ch === '"') {
-          inQuotes = false;
-        } else {
-          current += ch;
-        }
-      } else if (ch === '"') {
-        inQuotes = true;
-      } else if (ch === ',') {
-        fields.push(current);
-        current = '';
-      } else {
-        current += ch;
-      }
-    }
-    fields.push(current);
-    return fields;
-  }
-
-  const V610_HEADER = 'name,displayName,title,icon,capabilities,role,identity,communicationStyle,principles,module,path,canonicalId';
-  // Detect schema from existing manifest or default to v6.1.0
-  let header;
-  let isV610 = true;
-  let preservedRows = [];
-
-  if (fs.existsSync(manifestPath)) {
-    const existing = (await fs.readFile(manifestPath, 'utf8')).trim().split('\n');
-    header = existing[0];
-    isV610 = header.startsWith('name,') || header.includes('canonicalId');
-
-    // Filter out bme rows, preserve everything else
-    preservedRows = existing.slice(1).filter(row => {
-      if (!row.trim()) return false;
-      if (isV610) {
-        // v6.1.0: module is column 10 (index 9) — handle quoted CSV fields
-        const parsed = parseCSVRow(row);
-        if (!parsed || parsed.length < 10) return true;
-        return parsed[9] !== 'bme';
-      } else {
-        // Legacy: submodule is column 9 (index 8) — quoted CSV
-        const fields = row.match(/"([^"]*(?:""[^"]*)*)"/g);
-        if (!fields || fields.length < 9) return true;
-        const submodule = fields[8].replace(/^"|"$/g, '');
-        return submodule !== 'bme';
-      }
-    });
+  // 4. Regenerate agent manifest — replace only bme rows, preserve other modules.
+  // Story gen-1.1: lifted verbatim into scripts/lib/agent-manifest-generator.js so
+  // generation has a deliberate caller (`npm run generate:manifest`) instead of
+  // firing as a side effect of every refreshInstallation() the test suite makes.
+  // `excluded` is passed rather than re-read — both lists were already read at
+  // :47-50 for the copy loops.
+  // The write is guarded on `!isSameRoot` for the same reason every other write in
+  // this function is: when source and destination are the same tree, refreshing is
+  // rewriting our own tracked source. Six live callers pass PACKAGE_ROOT from the
+  // test suite, so before this guard `npm test` rewrote agent-manifest.csv. The
+  // regeneration a dev tree still needs comes from `npm run generate:manifest`
+  // (scripts/generate-manifest.js) — guard and command ship together by design;
+  // the guard alone would leave a checkout unable to rebuild the file.
+  if (!isSameRoot) {
+    changes.push(
+      await generateAgentManifest(projectRoot, {
+        excluded: { vortex: vortexExcluded, gyre: gyreExcluded },
+      })
+    );
+    if (verbose) console.log(`    ${MANIFEST_CHANGE_MESSAGE}`);
   } else {
-    header = V610_HEADER;
-    isV610 = true;
+    changes.push(MANIFEST_SKIP_MESSAGE);
+    if (verbose) console.log(`    ${MANIFEST_SKIP_MESSAGE}`);
   }
-
-  // Story v63-3-1: path shape depends on submodule. Vortex migrated to
-  // skill-dir convention (`<id>/SKILL.md`); Gyre and EXTRA_BME stay flat
-  // (`<id>.md`) per Decision 2. Single helper to avoid drift.
-  function _agentManifestPath(submodule, agentId) {
-    const isVortexSkillDir = submodule === '_vortex';
-    const leaf = isVortexSkillDir ? `${agentId}/SKILL.md` : `${agentId}.md`;
-    return `_bmad/bme/${submodule}/agents/${leaf}`;
-  }
-
-  // Build fresh bme rows matching the detected schema (Vortex + Gyre agents)
-  function buildAgentRow610(a, submodule) {
-    const p = a.persona;
-    return [
-      csvEscape(a.name),           // name
-      csvEscape(''),               // displayName
-      csvEscape(a.title),          // title
-      csvEscape(a.icon),           // icon
-      csvEscape(''),               // capabilities
-      csvEscape(p.role),           // role
-      csvEscape(p.identity),       // identity
-      csvEscape(p.communication_style), // communicationStyle
-      csvEscape(p.expertise),      // principles
-      csvEscape('bme'),            // module
-      csvEscape(_agentManifestPath(submodule, a.id)), // path
-      csvEscape(`bmad-agent-bme-${a.id}`), // canonicalId
-    ].join(',');
-  }
-
-  function buildAgentRowLegacy(a, submodule) {
-    const p = a.persona;
-    return [
-      a.id, a.name, a.title, a.icon,
-      p.role, p.identity, p.communication_style, p.expertise,
-      'bme', _agentManifestPath(submodule, a.id),
-    ].map(csvEscape).join(',');
-  }
-
-  // Row builder for standalone bme agents (e.g., team-factory) — submodule path differs from team agents
-  function buildExtraBmeAgentRow610(a) {
-    const p = a.persona;
-    return [
-      csvEscape(a.name),
-      csvEscape(''),
-      csvEscape(a.title),
-      csvEscape(a.icon),
-      csvEscape(''),
-      csvEscape(p.role),
-      csvEscape(p.identity),
-      csvEscape(p.communication_style),
-      csvEscape(p.expertise),
-      csvEscape('bme'),
-      csvEscape(_agentManifestPath(a.submodule, a.id)),
-      csvEscape(`bmad-agent-bme-${a.id}`),
-    ].join(',');
-  }
-
-  function buildExtraBmeAgentRowLegacy(a) {
-    const p = a.persona;
-    return [
-      a.id, a.name, a.title, a.icon,
-      p.role, p.identity, p.communication_style, p.expertise,
-      'bme', _agentManifestPath(a.submodule, a.id),
-    ].map(csvEscape).join(',');
-  }
-
-  // U8: filter out excluded agents so manifest rows don't point at wrappers the
-  // stale-cleanup loop (§6) just removed. Left in, rows become dangling pointers.
-  const activeVortexAgents = AGENTS.filter(a => !vortexExcluded.includes(a.id));
-  const activeGyreAgents = GYRE_AGENTS.filter(a => !gyreExcluded.includes(a.id));
-  let bmeRows;
-  if (isV610) {
-    bmeRows = [
-      ...activeVortexAgents.map(a => buildAgentRow610(a, '_vortex')),
-      ...activeGyreAgents.map(a => buildAgentRow610(a, '_gyre')),
-      ...EXTRA_BME_AGENTS.map(buildExtraBmeAgentRow610),
-    ];
-  } else {
-    bmeRows = [
-      ...activeVortexAgents.map(a => buildAgentRowLegacy(a, '_vortex')),
-      ...activeGyreAgents.map(a => buildAgentRowLegacy(a, '_gyre')),
-      ...EXTRA_BME_AGENTS.map(buildExtraBmeAgentRowLegacy),
-    ];
-  }
-
-  const allRows = [...preservedRows, ...bmeRows].join('\n') + '\n';
-  await fs.writeFile(manifestPath, header + '\n' + allRows, 'utf8');
-  changes.push('Regenerated agent-manifest.csv (bme rows updated, other modules preserved)');
-  if (verbose) console.log('    Regenerated agent-manifest.csv (bme rows updated, other modules preserved)');
 
   // 5. Copy user guides (with optional backup)
   const guidesSource = path.join(packageRoot, '_bmad', 'bme', '_vortex', 'guides');

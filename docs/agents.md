@@ -363,7 +363,20 @@ These journeys show how practitioners move through the Vortex in practice.
 3. **Workflows** — Workflow directories in `_bmad/bme/_vortex/workflows/` with step files (4-6 steps each, final step includes Compass routing)
 4. **User guide** — Guide in `_bmad/bme/_vortex/guides/` with examples and artifact templates
 
-The installer, validator, and doctor all read from the registry automatically — no additional wiring needed.
+The installer, validator, and doctor all read from the registry automatically.
+
+One step is not automatic. In a Convoke development checkout, regenerate the agent manifest after
+changing the registry:
+
+```bash
+npm run generate:manifest
+```
+
+`_bmad/_config/agent-manifest.csv` is a tracked file built from the registry. It used to be rewritten
+as a side effect of any installation refresh — including the ones `npm test` performs, which meant
+running the test suite modified a tracked file. That write is now guarded, so a checkout regenerates
+the manifest on purpose or not at all. Installing or updating Convoke in a *consumer* project still
+writes the manifest for you; this step applies only when the package is its own project.
 
 ### Journey 7: Reviewing Artifacts Across Streams
 
