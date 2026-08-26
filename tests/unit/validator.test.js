@@ -1,4 +1,4 @@
-const { describe, it, before, after } = require('node:test');
+const { describe, it, before, after, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs-extra');
@@ -196,12 +196,40 @@ describe('validateWorkflows', () => {
 
 describe('validateManifest', () => {
   let tmpDir;
+  const REG = require('../../scripts/update/lib/agent-registry');
+  const { V610_HEADER } = require('../../scripts/lib/agent-manifest-generator');
+  const { isManifestHeader } = require('../../scripts/update/lib/validator');
 
-  before(async () => {
+  // A realistic row: the `path` column is the anchor the validator uses, because it
+  // is the only column present in all three headers this repo has ever had.
+  function row(agentId, submodule, leaf = `${agentId}/SKILL.md`) {
+    return `"${agentId}","","T","i","","r","id","s","p","bme","_bmad/bme/${submodule}/agents/${leaf}","bmad-agent-bme-${agentId}"`;
+  }
+  function fullManifest(extraRows = [], omit = []) {
+    const rows = [
+      ...REG.AGENTS.filter(a => !omit.includes(a.id)).map(a => row(a.id, '_vortex')),
+      ...REG.GYRE_AGENTS.filter(a => !omit.includes(a.id)).map(a => row(a.id, '_gyre', `${a.id}.md`)),
+      ...REG.EXTRA_BME_AGENTS.filter(a => !omit.includes(a.id)).map(a => row(a.id, a.submodule, `${a.id}.md`)),
+    ];
+    return [V610_HEADER, ...rows, ...extraRows].join('\n') + '\n';
+  }
+  async function write(content) {
+    const mp = path.join(tmpDir, '_bmad/_config/agent-manifest.csv');
+    await fs.ensureDir(path.dirname(mp));
+    if (content === null) await fs.remove(mp);
+    else await fs.writeFile(mp, content, 'utf8');
+  }
+
+  beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-val-'));
+    // standalone bme agent files must exist on disk for validation to pass
+    for (const a of REG.EXTRA_BME_AGENTS) {
+      const f = path.join(tmpDir, '_bmad', 'bme', a.submodule, 'agents', `${a.id}.md`);
+      await fs.ensureDir(path.dirname(f));
+      await fs.writeFile(f, '# stub', 'utf8');
+    }
   });
-
-  after(async () => {
+  afterEach(async () => {
     await fs.remove(tmpDir);
   });
 
@@ -211,36 +239,161 @@ describe('validateManifest', () => {
     assert.ok(result.warning);
   });
 
-  it('fails when manifest is missing required agents', async () => {
-    const manifestDir = path.join(tmpDir, '_bmad/_config');
-    await fs.ensureDir(manifestDir);
-    await fs.writeFile(
-      path.join(manifestDir, 'agent-manifest.csv'),
-      '"agent_id"\n"some-other-agent"\n',
-      'utf8'
-    );
-
+  it('passes on a well-formed manifest', async () => {
+    await write(fullManifest());
     const result = await validateManifest(tmpDir);
-    assert.equal(result.passed, false);
-    assert.ok(result.error.includes('missing'));
+    assert.equal(result.passed, true, result.error || '');
   });
 
-  it('passes when manifest contains all agents', async () => {
-    const manifestPath = path.join(tmpDir, '_bmad/_config/agent-manifest.csv');
-    const { AGENT_IDS, EXTRA_BME_AGENTS } = require('../../scripts/update/lib/agent-registry');
-    const extraIds = EXTRA_BME_AGENTS.map(a => `bmad-agent-bme-${a.id}`);
-    const csvRows = ['"agent_id"', ...AGENT_IDS.map(id => `"${id}"`), ...extraIds.map(id => `"${id}"`)].join('\n') + '\n';
-    await fs.writeFile(manifestPath, csvRows, 'utf8');
+  it('fails when an agent row is missing', async () => {
+    await write(fullManifest([], [REG.AGENTS[0].id]));
+    const result = await validateManifest(tmpDir);
+    assert.equal(result.passed, false);
+    assert.match(result.error, new RegExp(REG.AGENTS[0].id));
+  });
 
-    // Standalone bme agent files must exist on disk for validation to pass
-    for (const a of EXTRA_BME_AGENTS) {
-      const agentFile = path.join(tmpDir, '_bmad', 'bme', a.submodule, 'agents', `${a.id}.md`);
-      await fs.ensureDir(path.dirname(agentFile));
-      await fs.writeFile(agentFile, '# stub', 'utf8');
+  // T76: GYRE_AGENT_IDS was never imported, so all four Gyre agents could vanish
+  // and the check still reported pass.
+  it('fails when a Gyre agent row is missing', async () => {
+    await write(fullManifest([], [REG.GYRE_AGENTS[0].id]));
+    const result = await validateManifest(tmpDir);
+    assert.equal(result.passed, false);
+    assert.match(result.error, new RegExp(REG.GYRE_AGENTS[0].id));
+  });
+
+  // T76: the old check was a raw substring test over the whole file, so IDs
+  // appearing anywhere — even in one prose line with no rows — satisfied it.
+  it('fails when the IDs appear only in prose, with no rows', async () => {
+    const ids = [...REG.AGENTS, ...REG.GYRE_AGENTS, ...REG.EXTRA_BME_AGENTS].map(a => a.id);
+    await write(`${V610_HEADER}\n"${ids.join(' ')}"\n`);
+    const result = await validateManifest(tmpDir);
+    assert.equal(result.passed, false);
+    assert.match(result.error, /missing/);
+  });
+
+  // Round 1 changed this from a failure to a warning. The check runs AFTER the
+  // generator, at migration-runner.js:146, where a failure throws and rolls the
+  // update back to the same file — reproducing the duplicate on every retry with no
+  // repair path. Reporting is the useful behaviour; failing wedges the consumer.
+  it('warns, but does not fail, on duplicate rows for the same agent', async () => {
+    await write(fullManifest([row(REG.AGENTS[0].id, '_vortex')]));
+    const result = await validateManifest(tmpDir);
+    assert.equal(result.passed, true, result.error || '');
+    assert.match(result.warning, /duplicate/i);
+    assert.match(result.warning, /2x/);
+  });
+
+  // The shape that made Round 1 call this CRITICAL: an upstream BMAD installer run
+  // (commit 0d2c15fc) wrote rows naming Convoke agents with a BLANK module column.
+  // The generator preserves those forever (module !== 'bme') and appends fresh ones.
+  // Counting by path alone made every one a duplicate; 7 of 23 historical manifests
+  // reproduce it. `isOwnedRow` requires the module column too, so they do not count.
+  it('does not count an upstream row with a blank module column as ours', async () => {
+    const id = REG.AGENTS[0].id;
+    const upstream = `"${id}","","T","i","","r","id","s","","","_bmad/bme/_vortex/agents/${id}/SKILL.md",""`;
+    await write(fullManifest([upstream]));
+    const result = await validateManifest(tmpDir);
+    assert.equal(result.passed, true, result.error || '');
+    assert.equal(result.warning, undefined, `expected no duplicate warning, got: ${result.warning}`);
+  });
+
+  // Also downgraded to a warning by Round 1. `generateAgentManifest` preserves
+  // `existing[0]` verbatim, so it cannot repair a lost header — failing here would
+  // block the consumer from ever updating again. T75 owns the repair.
+  it('warns, but does not fail, when the header is junk', async () => {
+    // The realistic shape: the generator has already run, so every agent row exists;
+    // what was lost is the header line, and an UPSTREAM row now sits at line 0.
+    // (Dropping an agent row instead would legitimately report that agent missing.)
+    const upstreamRow =
+      '"John","","Product Manager","P","","r","id","s","p","bmm","_bmad/bmm/agents/pm.md","bmad-agent-pm"';
+    await write([upstreamRow, ...fullManifest().split('\n').slice(1)].join('\n'));
+    const result = await validateManifest(tmpDir);
+    assert.equal(result.passed, true, result.error || '');
+    assert.match(result.warning, /header/i);
+  });
+
+  // Round 2 BLOCKING: line 0 was discarded unconditionally, even after being
+  // identified as NOT a header — so a real agent row was thrown away, reported
+  // missing, and the update rolled back. Reachable on an all-bme manifest (the
+  // Vortex Standalone shape) whose header was lost, in a tree where regeneration
+  // is skipped (isSameRoot).
+  it('does not discard line 0 when line 0 is not a header', async () => {
+    const rows = fullManifest().split('\n').slice(1).filter(l => l.trim());
+    await write(rows.join('\n') + '\n');
+    const result = await validateManifest(tmpDir);
+    assert.equal(result.passed, true, result.error || '');
+    assert.match(result.warning, /header/i);
+    assert.doesNotMatch(String(result.warning), /missing/i, 'no agent may be reported missing');
+  });
+
+  // Round 2: both clauses of isManifestHeader survived mutation, because the junk
+  // fixture failed BOTH independently. Pin them separately. The `_bmad/` clause is
+  // load-bearing: 110 of 638 real data rows across history contain "path".
+  it('pins each isManifestHeader clause independently', () => {
+    assert.equal(isManifestHeader('name,displayName,path'), true, 'a real header');
+    // has `path`, but also `_bmad/` -> a data row, not a header
+    assert.equal(
+      isManifestHeader('"Isla","","Discovery","d","","empathy mapping path","i","s","p","bme","_bmad/bme/_vortex/agents/x/SKILL.md","c"'),
+      false, 'the _bmad/ clause must reject a data row containing the word path'
+    );
+    // no `path` column at all -> not a header
+    assert.equal(isManifestHeader('name,displayName,title,icon'), false, 'the path clause must reject');
+    // Round 3: quote-stripping could only manufacture a match across a quote
+    // boundary, making a mangled data row look like a header.
+    assert.equal(isManifestHeader('pa"th,foo'), false, 'must not join across a quote boundary');
+    // Pin the case-fold, which nothing else covers.
+    assert.equal(isManifestHeader('Name,Path'), true, 'header matching is case-insensitive');
+  });
+
+  // All three headers this repository has ever written must stay valid: rejecting one
+  // would make every consumer on that schema warn forever.
+  it('recognises all three headers that exist in this repo history', () => {
+    for (const h of [
+      '"agent_id","name","title","icon","role","identity","communication_style","expertise","submodule","path"',
+      'name,displayName,title,icon,capabilities,role,identity,communicationStyle,principles,module,path,canonicalId',
+      'name,displayName,title,icon,role,identity,communicationStyle,principles,module,path',
+    ]) {
+      assert.equal(isManifestHeader(h), true, `must recognise: ${h.slice(0, 40)}`);
     }
+  });
+
+  it('fails on an empty manifest', async () => {
+    await write('   \n\n');
+    const result = await validateManifest(tmpDir);
+    assert.equal(result.passed, false);
+    assert.match(result.error, /empty/i);
+  });
+
+  // T76: the ONE state the old check rejected was a supported configuration — an
+  // operator opting an agent out via excluded_agents got doctor exit 1.
+  it('passes when an agent is legitimately excluded via excluded_agents', async () => {
+    const yaml = require('js-yaml');
+    const excludedId = REG.AGENTS[0].id;
+    const cfgDir = path.join(tmpDir, '_bmad', 'bme', '_vortex');
+    await fs.ensureDir(cfgDir);
+    await fs.writeFile(path.join(cfgDir, 'config.yaml'), yaml.dump({ excluded_agents: [excludedId] }), 'utf8');
+    await write(fullManifest([], [excludedId]));
 
     const result = await validateManifest(tmpDir);
-    assert.equal(result.passed, true);
+    assert.equal(result.passed, true, result.error || '');
+  });
+
+  // Older schemas are still in the field: 1.0.x consumers carry a quoted 10-column
+  // header, and 3.x consumers a 10-column unquoted one. Both must remain valid.
+  it('accepts the two historical headers, and the flat agent-file path shape', async () => {
+    for (const header of [
+      '"agent_id","name","title","icon","role","identity","communication_style","expertise","submodule","path"',
+      'name,displayName,title,icon,role,identity,communicationStyle,principles,module,path',
+    ]) {
+      const rows = [
+        ...REG.AGENTS.map(a => row(a.id, '_vortex', `${a.id}.md`)),
+        ...REG.GYRE_AGENTS.map(a => row(a.id, '_gyre', `${a.id}.md`)),
+        ...REG.EXTRA_BME_AGENTS.map(a => row(a.id, a.submodule, `${a.id}.md`)),
+      ];
+      await write([header, ...rows].join('\n') + '\n');
+      const result = await validateManifest(tmpDir);
+      assert.equal(result.passed, true, `${header.slice(0, 30)} → ${result.error}`);
+    }
   });
 });
 

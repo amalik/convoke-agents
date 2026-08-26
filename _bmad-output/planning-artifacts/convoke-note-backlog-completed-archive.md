@@ -1451,3 +1451,37 @@ Inject `excluded_agents` inline comment on pre-U8 config upgrade via `writeConfi
 
 ---
 
+## T76
+
+**Lane:** Fast Lane · **Filed:** 2026-08-26 · **Score:** 4.5 · **Portfolio:** convoke · **Status:** ✅ Done 2026-08-26 (partial — residue filed as T78)
+
+**Receipt:** `validateManifest` rewritten from a raw-substring check to a parse-based one: rows parsed, header recognised, one row asserted per **non-excluded** registry agent, duplicates reported, and Gyre validated for the first time.
+
+**Closed PARTIAL, deliberately, because the row's own headline example still reproduces.** T76 was titled around a manifest "missing 41 of its 53 rows". That shape still returns `passed: true` with no warning, and it always will: those are **upstream** rows (18 bmm, 12 cis, 4 wds, 3 bmb, 2 tea, 2 core) written by BMAD's installer, and Convoke cannot know how many a given project should have. Detecting their loss needs a before/after comparison inside a single refresh, not a validator. Filed as **T78**. Closing this row silently would have been the T70(b) pattern the project memory flags — a fix shipping while the row's own claim goes unchecked.
+
+**Two of the three named assertions became warnings, and that was the right call.** T76 asked to "reject duplicates" and "require a recognised header". Both now **report** instead of failing. The reason is that `validateManifest` runs at `migration-runner.js:146`, where a failed check `throw`s and rolls the update back to the same file — so failing on a state the generator cannot repair wedges the consumer permanently, with the next update reproducing it identically. Requirement changes get recorded, not absorbed into a close.
+
+**The row's reach premise was wrong and is corrected here.** T76 argued *"This is a live publish gate… `try-fresh-install.sh:179` runs `convoke-doctor`, `:354` gates on its exit code, and `fresh-install` is in `publish.needs`."* Measured 2026-08-26: **`convoke-doctor.js` contains zero references to `validator.js`** and never calls `validateManifest`; "Agent manifest" appears 0 times in a full fresh-install log. The only call sites are `migration-runner.js:146` and `:436` — the **`convoke-update` path**. The 4.5 score was priced on a gate this function is not in. That correction also inverts a gen-1-1 Round 1 finding *and* my own correction of it: the reviewer said doctor ran it only in comments, I "corrected" them to say it ran via the script, and both were wrong. Third consecutive error about the same reachability question, each made confidently.
+
+**What the work actually bought, measured:**
+
+| | Before | After |
+|---|---|---|
+| Rows parsed, or whole-file substring? | substring | parsed |
+| Gyre agents validated | **no** — `GYRE_AGENT_IDS` never imported | yes |
+| `excluded_agents` honoured | **no** — a legitimate opt-out FAILED and rolled back the update | yes |
+| IDs present only in prose | passed | fails |
+| Duplicate rows | passed silently | reported |
+| Lost header | passed silently | reported |
+| Empty file | passed | fails |
+
+The `excluded_agents` line is a shipped bug this fixed incidentally: before, an operator who opted an agent out had their `convoke-update` **rolled back**.
+
+**Three review rounds, and every one found a false-fail that would have wedged consumers.** R1: validator and generator disagreed on which rows are "ours" — the writer owns by module column, the reader counted by path — so rows the writer preserves as foreign counted as duplicates; **7 of 23 historical manifests reproduced it**. R2: the code identified line 0 as not-a-header, warned, then discarded it anyway, throwing away a real agent row and reporting it missing — the same wedge through a different door. R3: `.replace(/"/g,'')` was not normalisation and could only manufacture a header match across a quote boundary. Each fix was mutation-verified; the final state passes all 19 historical manifest blobs through the real update path with 0 failures.
+
+**Original row text, verbatim:**
+
+> **`validateManifest` is the only checker `agent-manifest.csv` has, it runs inside a publish gate, and it passes on every corrupt shape tested — including one missing 41 of its 53 rows.** `scripts/update/lib/validator.js:203-247` asserts one thing: that each Convoke agent ID appears **somewhere in the file as a raw substring** (`manifestContent.includes(id)`, `:223-224`). It never parses a row, never reads the header, never counts, and never looks at any module but its own. **Measured 2026-08-26, five shapes, all PASS:** (a) every non-bme row deleted — 53 rows → 12, losing 18 bmm / 12 cis / 4 wds / 3 bmb / 2 tea / 2 core; (b) every bme row duplicated; (c) header replaced with `<<<<<<< HEAD`; (d) all rows deleted and the IDs left in a single prose line; (e) **all four Gyre agents removed** — `GYRE_AGENT_IDS` is not even imported at `:10`, so Gyre is unvalidated entirely. **This is a live publish gate, not a dormant script.** `try-fresh-install.sh:179` runs `convoke-doctor`, `:354` gates on its exit code, and `fresh-install` is in `publish.needs` (`ci.yml:452`). A gen-1-1 Round 1 reviewer asserted doctor "appears in `ci.yml` only inside comments" — **that is wrong**, and the correction is why this row is scored for reach rather than filed as a curiosity. **Why now:** gen-1-1 removed the accident (`npm test` rewriting the manifest) that used to surface drift, and Round 3 found a candidate fix that deleted 41 rows *while this validator reported pass*. Detection and generation were both blind at once. **Fix:** parse rows rather than substring-match, assert one row per registry agent (`derive-counts-from-source`, not a magic number), reject duplicates, require a recognised header, import and check `GYRE_AGENT_IDS`, and prove each assertion red before trusting it. **Sequencing:** independent of T74 and T75 — this is the detection half, they are the generation half; fixing this first makes both of those falsifiable.
+
+---
+

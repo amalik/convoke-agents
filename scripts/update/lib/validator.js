@@ -7,7 +7,11 @@ const configMerger = require('./config-merger');
 const { countUserDataFiles } = require('./utils');
 // Story v63-3-1: AGENT_FILES dropped — validateAgentFiles now uses
 // VORTEX_SKILL_PATHS (lazy-required inside the function).
-const { AGENT_IDS, WORKFLOW_NAMES, WAVE3_WORKFLOW_NAMES, EXTRA_BME_AGENTS, EXTRA_BME_AGENT_IDS } = require('./agent-registry');
+const { WORKFLOW_NAMES, WAVE3_WORKFLOW_NAMES, AGENTS, GYRE_AGENTS, EXTRA_BME_AGENTS } = require('./agent-registry');
+// T76: the manifest parser and the exclusion reader are shared with the generator
+// rather than reimplemented. A validator that parses differently from the writer
+// cannot detect a writer bug — it detects a disagreement between two parsers.
+const { parseCSVRow, readExclusions } = require('../../lib/agent-manifest-generator');
 
 /**
  * Validator for Convoke
@@ -200,6 +204,77 @@ async function validateWorkflows(projectRoot) {
  * @param {string} projectRoot - Absolute path to project root
  * @returns {Promise<object>} Validation check result
  */
+/**
+ * Is this line a manifest header rather than a data row or junk?
+ *
+ * T76. Derived from every `agent-manifest.csv` header that has existed in this
+ * repository (19 commits, 3 distinct headers): all three name a `path` column, and
+ * none contains `_bmad/`. A data row promoted to line 0 — the failure mode that
+ * makes a corrupt manifest look healthy — always contains `_bmad/`, because the path
+ * column is where the agent file lives. Junk (`<<<<<<< HEAD`, prose) has neither.
+ *
+ * Deliberately permissive about column NAMES: pinning the exact header would reject
+ * the two older schemas that consumers upgrading from 1.0.x and 3.x still carry.
+ */
+function isManifestHeader(line) {
+  // No quote-stripping. Round 3: `.replace(/"/g,'')` was not normalisation — neither
+  // literal tested here contains a quote, so stripping cannot make a match appear
+  // that was absent, only create one ACROSS a quote boundary (`pa"th` -> `path`).
+  // Its sole possible effect was to make a mangled data row look like a header, which
+  // is the exact defect Round 2 closed. All three historical headers still match:
+  // the quoted one carries `"path"`, which contains `path`.
+  const normalised = line.toLowerCase();
+  return normalised.includes('path') && !normalised.includes('_bmad/');
+}
+
+/**
+ * Does this parsed row point at the given agent's file?
+ *
+ * Anchored on the `path` column, which is the only column present in all three
+ * historical schemas, and matched submodule- and leaf-agnostically: both
+ * `<id>.md` (121 occurrences in history) and `<id>/SKILL.md` (7) are legitimate,
+ * and the submodule has been renamed once (`_designos` -> `_vortex`).
+ */
+function rowNamesAgent(fields, agentId) {
+  return fields.some(f => f.includes(`/agents/${agentId}.md`) || f.includes(`/agents/${agentId}/`));
+}
+
+/**
+ * Is this a row the GENERATOR considers its own?
+ *
+ * **The reader must classify rows the same way the writer does, or the two disagree
+ * permanently.** Round 1 of T76 caught this: an earlier version counted any row whose
+ * path named an agent. `generateAgentManifest` instead keeps any row whose module
+ * column is not exactly `bme` and appends a fresh one — so a row naming a Convoke
+ * agent with a blank module column is **preserved forever by the writer and counted
+ * as a duplicate by the reader**. That shape is real: commit `0d2c15fc` (an upstream
+ * BMAD installer run) wrote 7 such rows, and 7 of the 23 manifest blobs in this
+ * repository's history reproduce it. Because a failed check throws at
+ * `migration-runner.js:146` and rolls the update back to the same file, the consumer
+ * would be wedged with no repair path.
+ *
+ * `fields.includes('bme')` rather than a fixed index: the module column sits at
+ * index 9 in the v6.1.0 schema and index 8 in both 10-column schemas.
+ */
+function isOwnedRow(fields, agentId) {
+  return rowNamesAgent(fields, agentId) && fields.includes('bme');
+}
+
+/**
+ * Validate the agent manifest.
+ *
+ * T76 rewrote this. The previous version asserted only that each Convoke agent ID
+ * appeared **somewhere in the file as a raw substring**. Measured 2026-08-26, it
+ * returned `passed: true` for a manifest missing 41 of its 53 rows, one with every
+ * bme row duplicated, one whose header was `<<<<<<< HEAD`, one containing no rows at
+ * all with the IDs in a single prose line, and one with all four Gyre agents absent
+ * (`GYRE_AGENT_IDS` was never imported). It also FAILED for a consumer who
+ * legitimately opted an agent out via `excluded_agents` — so the one state it did
+ * reject was a supported configuration.
+ *
+ * @param {string} projectRoot - Absolute path to project root
+ * @returns {Promise<object>} check result
+ */
 async function validateManifest(projectRoot) {
   const check = {
     name: 'Agent manifest',
@@ -217,16 +292,65 @@ async function validateManifest(projectRoot) {
       return check;
     }
 
-    const manifestContent = fs.readFileSync(manifestPath, 'utf8');
-
-    // Check for all Convoke agents (Vortex/Gyre IDs and standalone bme agents)
-    const missingFromManifest = AGENT_IDS.filter(id => !manifestContent.includes(id));
-    const missingExtras = EXTRA_BME_AGENT_IDS.filter(id => !manifestContent.includes(`bmad-agent-bme-${id}`));
-
-    const allMissing = [...missingFromManifest, ...missingExtras];
-    if (allMissing.length > 0) {
-      check.error = `Agent manifest missing: ${allMissing.join(', ')}`;
+    const raw = fs.readFileSync(manifestPath, 'utf8').trim();
+    if (raw === '') {
+      check.error = 'agent-manifest.csv is empty — run `npm run generate:manifest` (dev) or reinstall';
       return check;
+    }
+
+    const lines = raw.split('\n').filter(l => l.trim());
+
+    // An unrecognisable header is REPORTED, never failed. Failing here throws at
+    // migration-runner.js:146 and rolls the update back to the same broken file —
+    // and `generateAgentManifest` preserves `existing[0]` verbatim, so it cannot
+    // repair a lost header either. The consumer would be permanently unable to
+    // update, which is strictly worse than the corruption being reported. Same
+    // reasoning as `preflight-soft-warn`. Found by Round 1.
+    const warnings = [];
+    const hasHeader = isManifestHeader(lines[0]);
+    if (!hasHeader) {
+      warnings.push(
+        `header is unrecognisable (line 1 is: ${lines[0].slice(0, 80)}) — the header line was probably lost`
+      );
+    }
+
+    // Expected = every registry agent the operator has NOT opted out of. Derived from
+    // the registry, never a hardcoded count (`derive-counts-from-source`).
+    const excluded = readExclusions(projectRoot);
+    const expected = [
+      ...AGENTS.filter(a => !excluded.vortex.includes(a.id)),
+      ...GYRE_AGENTS.filter(a => !excluded.gyre.includes(a.id)),
+      ...EXTRA_BME_AGENTS,
+    ].map(a => a.id);
+
+    const counts = new Map(expected.map(id => [id, 0]));
+    // Skip line 0 only when it IS a header. Round 2: discarding it unconditionally
+    // after having just decided it is NOT a header throws away a real agent row —
+    // which then reports as `missing`, fails, and rolls the update back to the same
+    // file. That is the wedge the warning downgrade above exists to prevent, reached
+    // through the other door.
+    for (const row of lines.slice(hasHeader ? 1 : 0)) {
+      const fields = parseCSVRow(row);
+      for (const id of expected) {
+        if (isOwnedRow(fields, id)) counts.set(id, counts.get(id) + 1);
+      }
+    }
+
+    const missing = expected.filter(id => counts.get(id) === 0);
+    if (missing.length > 0) {
+      check.error = `Agent manifest missing: ${missing.join(', ')}`;
+      return check;
+    }
+
+    // Duplicates are REPORTED, never failed, for the same reason as the header: the
+    // update has already run the generator, so a duplicate here means the generator
+    // produced one (see T75). Throwing would roll back to the pre-update file and
+    // reproduce it on every subsequent attempt.
+    const duplicated = expected.filter(id => counts.get(id) > 1);
+    if (duplicated.length > 0) {
+      warnings.push(
+        `duplicate rows for: ${duplicated.map(id => `${id} (${counts.get(id)}x)`).join(', ')}`
+      );
     }
 
     // Confirm standalone bme agent files exist on disk
@@ -239,6 +363,7 @@ async function validateManifest(projectRoot) {
     }
 
     check.passed = true;
+    if (warnings.length > 0) check.warning = warnings.join('; ');
   } catch (error) {
     check.error = error.message;
   }
@@ -752,6 +877,9 @@ module.exports = {
   validateAgentFiles,
   validateWorkflows,
   validateManifest,
+  isManifestHeader,
+  rowNamesAgent,
+  isOwnedRow,
   validateUserDataIntegrity,
   validateDeprecatedWorkflows,
   validateWorkflowStepStructure,
