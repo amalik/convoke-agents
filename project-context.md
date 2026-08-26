@@ -390,37 +390,28 @@ The cost is not tidiness. Position is the first thing a reader uses to pick up w
 - **Reviewing a diff that adds or edits a lane row.** Verify the position. If the row was appended to the end of a table that is not sorted ascending, block and cite this rule.
 - **Prefer the workflow when it fits.** `bmad-enhance-initiatives-backlog` Triage mode logs the intake, cross-references it, sorts, and writes the Change Log entry. A hand-edit does none of that for free. Use it for anything larger than a single row.
 
-**The check.** Escape-aware (`\|` inside a cell is content, not a delimiter) and start-anchored on the status cell (`P21`'s Stage contains the word "shipped" mid-cell while the item is live — matching anywhere gives a false positive). Exits non-zero on violation:
+**The check — `node scripts/audit/backlog-integrity.js`.** Shipped by **T58** (2026-08-25) and wired
+into CI at `.github/workflows/ci.yml:161`, so it runs on every push whether or not anyone remembers
+it. Run it locally before emitting a commit plan that touches the backlog and paste the result into
+the Description.
 
-```python
-python3 - <<'EOF'
-import re, sys
-p='_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md'
-L=open(p).read().split('\n'); D=re.compile(r'(?<!\\)\|')
-C=re.compile(r'^(Done|Closed|Shipped|Superseded|Rescoped|Absorbed|Invalid)\b', re.I)
-shut=lambda s:(lambda c: c.startswith('✅') or bool(C.match(c)))(s.strip().lstrip('*').strip())
-a={k:next(i for i,l in enumerate(L) if l.startswith(k)) for k in ['### 2.2','### 2.3','### 2.4','### 2.5']}
-bad=0
-for nm,x,y in [('Bug',a['### 2.2'],a['### 2.3']),('Fast',a['### 2.3'],a['### 2.4']),('Init',a['### 2.4'],a['### 2.5'])]:
-    prev=None
-    for i,l in enumerate(L[x:y], start=x):
-        if not l.startswith('|') or set(l.replace('|','').strip())<=set('-: '): continue
-        f=[t.strip() for t in D.split(l)[1:-1]]
-        if len(f)<9 or f[0]=='ID': continue
-        try: s=float(f[6])
-        except ValueError: continue
-        cl=shut(f[8])
-        if prev:
-            if not cl and not prev[2] and s>prev[1]+1e-9: print(f'{nm}: {f[0]} ({s}) below {prev[0]} ({prev[1]}) [clause 1]'); bad+=1
-        if cl: print(f'{nm}: {f[0]} is closed but still in the lane — move it to §2.5 [clause 3]'); bad+=1
-        prev=(f[0],s,cl)
-print('LANE ORDER: OK' if not bad else f'LANE ORDER: {bad} violation(s)'); sys.exit(1 if bad else 0)
-EOF
-```
+It asserts four things; two of them are this rule: *lane shape* (lanes are score-ordered and hold no
+closed rows) covers clauses 1 and 3, alongside referential integrity, per-table arity, and structure
+and coverage. Verified by mutation 2026-08-26 — moving `T51` (7.65) below a 2.8 row and marking a
+lane row `✅ Done` in place were both caught, exit 1, with the offending ID and line named.
+
+> **An inline Python check used to live here and was deleted 2026-08-26 — do not restore it.** It
+> hardcoded column positions (`f[6]` for Score, `f[8]` for Status). When **T69** added the `Filed`
+> column the Fast Lane went from 10 fields to 11, and those indices silently became *E* and
+> *Portfolio*: the check reported **51 violations** against a correctly-sorted backlog, with scores
+> like `BUG-19 (2.0)` for a row scoring 5.7. Anyone following this rule got a wall of false failures
+> and either ignored the gate or "fixed" a lane that was already right. `backlog-integrity.js` reads
+> each table's own header, so it survived the same schema change untouched — which is the argument
+> for a script over a snippet, and an instance of `derive-counts-from-source`.
 
 **Scope exemptions.** §2.1 Intakes are append-only and carry no score — they are never sorted. §2.5 sub-tables are append-only receipts and are never sorted. Untriaged lane rows (`?` for R/I/C/E, `—` for Score) have no sort key and park after the live block per clause 2 — there is no closed block in a lane to park before, since clause 3 evicts closed rows to §2.5.
 
-**Forward-looking note.** The check above is an interim mechanism, not the fix. It only runs when someone remembers to run it, which is the same failure this rule exists to correct. The durable version is a shape-and-order assertion wired into `docs:audit` or `convoke-doctor` so that any writer is caught — tracked in the lifecycle backlog, qualified from `IN-188`. When that ships, this section reduces to a pointer.
+**Note.** This section *is* the pointer the previous version anticipated. It read: *"The durable version is a shape-and-order assertion wired into `docs:audit` or `convoke-doctor` so that any writer is caught — tracked in the lifecycle backlog, qualified from `IN-188`. When that ships, this section reduces to a pointer."* `IN-188` was qualified into **T58**, T58 shipped, and the section has been reduced accordingly.
 
 ---
 
