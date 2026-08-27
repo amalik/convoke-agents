@@ -1771,3 +1771,57 @@ above now dies, verified individually: `docs` in the verb set, substring matchin
 clean, dropping the hash, the constant line number, the missing overflow suffix, removing the `isLane`
 filter, removing the `ID_SHAPE` guard, case-insensitive pass 2, and removing the filename-prefix exclusion.
 The suite passes in a shallow clone and with no `.git` at all.
+
+---
+
+## I20
+
+**Portfolio markdown formatter — render `--show-unattributed`.**
+
+**Shipped 2026-04-20. Closed 2026-08-27 — the row was never flipped, and nothing noticed for four months.**
+
+**How it was found.** T79's owed-close scan shipped hours before this close and flagged I20 on its first
+run against the live backlog. Nobody had put this row on any list; no human review had surfaced it since
+April. It was found specifically by **pass 2**, the pre-convention fallback — `92d4506b Ship I20 —
+Portfolio markdown formatter renders --show-unattributed` carries no conventional verb, so the primary
+verb-and-scope matcher is structurally blind to it. Pass 2 existed only because R1 refused to accept the
+row's own stated scope (`fix|feat`) and asked what the check would miss. Without that finding, this row
+would still be open.
+
+**Verified by execution, not by the spec's self-description.** The spec reads `status: 'done'` with every
+task checked and two review rounds closed — which is exactly the kind of self-report this project has
+learned not to trust. All four acceptance criteria were re-run against current source:
+
+- the `## Unattributed Files (N)` section renders with the correct count and a `| Path | Reason |` table;
+- pipes in filesystem-derived strings are escaped — `docs/a\|b.md`, `no front\|matter` — which was the
+  HIGH markdown-injection finding from I20's own Round 1;
+- the section is suppressed when the list is empty **and** when the flag is absent;
+- a legacy no-options call still returns a string.
+
+All four hold. The work is genuinely complete; only the bookkeeping failed.
+
+**The three deferrals are not residue, and they are still live.** Each was marked *"pre-existing, out of
+scope for I20"* when filed in April, so none of them keeps this row open. But rather than trust that
+label at four months' distance, each was re-checked against source today:
+
+- **`--markdown` still emits non-markdown.** `portfolio-engine.js:605`, `:609` and `:642` write `WIP:`,
+  `Total:` and `--- Inference Trace ---` through `console.log` with no `useMarkdown` guard. Only the
+  unattributed detail block at `:626` is guarded, and that guard is I20's own work. Demonstrated:
+  `node scripts/lib/portfolio/portfolio-engine.js --markdown --show-unattributed` returns output
+  containing a plain-text `Total:` line, so the flag does not produce clean machine-consumable markdown.
+- **Section ordering still differs between the two paths.** Same root cause, same fix.
+- **Still no CLI-integration test for `--markdown --show-unattributed`.** Tests O and P exercise
+  `--show-unattributed` alone. The combination is untested end-to-end, and the original deferral notes
+  this is entangled with the live-repo dependency those tests already carry under
+  `test-fixture-isolation`.
+
+They remain in `deferred-work.md` pending an operator decision on whether to qualify them into a row.
+Filing has a real cost — the backlog aged out 85 rows below score 1.0 in August — and on the I20 scale
+(the row itself was 2.3) this work prices at roughly **1.4** (R=3, I=1, C=90%, E=2), which is close to
+that floor. Recorded here so the decision is made deliberately rather than by the deferral quietly
+staying invisible for another four months.
+
+**What this row is really evidence for.** T79 was argued for on six instances of a fix shipping without
+its close, every one found by a human happening to look. I20 is the seventh, it is four months old, and
+it is the first one no human found. The scan paid for itself on its first run — and it did so through
+the half of its design that came out of code review rather than out of the row.
