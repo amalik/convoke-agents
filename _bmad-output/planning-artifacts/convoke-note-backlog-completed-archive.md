@@ -1696,3 +1696,78 @@ non-ASCII `§` in the guard's citation emits byte-identical stderr under `LC_ALL
 `en_US.UTF-8`, no `.gitattributes` re-encodes it, and the file already carried non-ASCII before this
 change. No fix needed. Final mutation score **7 of 7**. Gates re-run after the fixes: unit 1836 pass /
 0 fail, lint 0, docs:audit 0, guard suite 15/15.
+
+---
+
+## T79
+
+**Nothing detected that a close was owed.**
+
+**Shipped 2026-08-27** as a warn-level scan inside `scripts/audit/backlog-integrity.js`.
+
+**What it does.** For every live lane row, scan commit subjects for a work verb naming that row —
+`fix(T51)`, `feat(T44)` — and report each hit as a close that may be due, naming the commits. It never
+contributes to the failing-problem set. That is not timidity: a fix legitimately precedes its close inside
+one session, and this runs in the same CI that would gate the very commit shipping the fix, so a hard
+failure would make the correct workflow impossible.
+
+**Verified against the real tree, not a fixture.** The scan independently re-found **T51** — one of the
+instances that motivated the row — and then, once pass 2 existed, **I20**: work that shipped in April 2026
+under `92d4506b Ship I20 — Portfolio markdown formatter`, whose row has sat in the Fast Lane as `Backlog`
+for four months. Nobody noticed until the check did. That is the row's own thesis, demonstrated on a case
+nobody had put on the list.
+
+**The `docs()` exclusion is the load-bearing part, and it is measured.** In this repo `docs(<ID>)` is the
+*closing* verb. Including it produces **five false positives** on this tree — T53, T75, T77, T78, T80 — every one a
+filing or recording commit. (An earlier count of six included T79, before this change closed it. The number
+moves as rows close, which is why the source comment says to re-measure rather than trust it.) A check with a 6-in-160 false-positive rate on a healthy file is a nag, and
+nags get ignored, which would have made the whole thing worse than nothing. The included set widens T79's
+specified `fix|feat` to the other work verbs, and that widening is recorded in the source as
+**precautionary rather than load-bearing**: measured on both the live file and the historical replay it
+found zero hits `fix|feat` did not. It is there because `87a86b72 governance(T71)` and
+`198deece test(BUG-13)` are real work commits under other verbs whose rows happen to already be closed.
+
+**It reports inability rather than cleanliness — the one design decision worth carrying forward.** The
+scan reads `git log`, and it lives in the `agent-surface-parity` job. That job sets `fetch-depth: 0`, but
+the comment above it says why: the *parity* step compares against the last release tag. Nothing about that
+justification mentions this scan. If the parity step is ever retired and the fetch-depth goes with it, a
+shallow clone yields zero subjects, zero hits, and a PASS — a check that cannot fail, inherited silently
+from someone else's requirement. So `gitSubjects` returns `inert: true` with a reason instead of an empty
+list, and the reporter prints a WARN saying the scan did not run. Verified against a genuine
+`git clone --depth 1`, not simulated. This is the same failure shape as the three found on 2026-08-25, and
+the first one caught *before* it shipped rather than after.
+
+**Row metadata corrected at close.** `Filed` read 2026-08-24 although the row landed in `10dec272` on
+08-27, and the description gave its instance window as *"between 2026-08-24 and 2026-08-24"* while citing
+commits spanning 08-25 to 08-27. Both are artefacts of a date confusion earlier in the same session.
+Noted rather than quietly repaired, because `Filed` is meant to be immutable and a silent edit to an
+immutable field is worse than a wrong value with a receipt.
+
+**Distinct from T55, which remains open.** T55 supplies a *mode* to perform a close. This detects that one
+is *due*. Shipping T55 alone would still never notice.
+
+**Two review rounds, and both earned their place.** R1 found **2 HIGH**. The first was a build-breaker of
+the most embarrassing kind: the tests read the *real* repo's git log, in a repo where only one CI job sets
+`fetch-depth: 0` — so the very change that added a shallow-clone guard to production would have failed CI's
+`test`, `burn-in` and `coverage` jobs. The design reasoning was right and was simply not applied to the
+tests. They are now hermetic: each case builds its own one-commit repository. The second HIGH was a test
+asserting a property nothing was going to violate (`check()` never calls this code) while the property it
+was named for — the gate exits 0 with warnings present — went unguarded; two mutations that would make an
+owed close fail the build survived the whole suite.
+
+R1 also found the check's first real false negative: **I20**. R2 then found seven more, including that
+a blank ID cell makes pass 2 build `new RegExp('\\b\\b')` — which matches at every word boundary — on the
+failure path, i.e. exactly the malformed documents most likely to contain one. And three output mutants
+survived: dropping the commit hash, hardcoding the row's line number, and dropping the `(+N more)` suffix.
+The line-number assertion had been `> 0`, which a hardcoded `line 1` satisfies.
+
+**Four of R2's findings were in the prose, not the code** — including this entry's own central claim (see
+the corrected paragraph above) and every number in one test comment. That is now **six** false-comment
+findings in one session. The pattern is stable enough to state as a rule: a factual claim in a comment or a
+closing note is a claim to *run*, and nothing runs it for you.
+
+**Gates at close:** backlog-integrity 0 (723 rows), unit 60/60 in this file, lint 0. Every mutant listed
+above now dies, verified individually: `docs` in the verb set, substring matching, collapsing `inert` into
+clean, dropping the hash, the constant line number, the missing overflow suffix, removing the `isLane`
+filter, removing the `ID_SHAPE` guard, case-insensitive pass 2, and removing the filename-prefix exclusion.
+The suite passes in a shallow clone and with no `.git` at all.
