@@ -22,7 +22,6 @@ artifact_type: arch
 qualifier: bmad-v6.3-adoption
 created: '2026-04-12'
 schema_version: 1
-status: draft
 project_name: BMAD-Enhanced
 user_name: Amalik
 date: '2026-04-12'

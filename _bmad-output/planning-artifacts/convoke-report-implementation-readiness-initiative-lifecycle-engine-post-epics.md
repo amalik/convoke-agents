@@ -22,7 +22,6 @@ qualifier: implementation-readiness-initiative-lifecycle-engine-post-epics
 project_name: 'Convoke — Initiative Lifecycle Engine (ILE-1)'
 user_name: 'Amalik'
 created: '2026-04-19'
-status: draft
 schema_version: 1
 ---
 
