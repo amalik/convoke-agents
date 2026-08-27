@@ -13,7 +13,6 @@ inputDocuments:
 initiative: convoke
 artifact_type: epic
 qualifier: bmad-v6.3-adoption
-status: draft
 created: '2026-04-12'
 schema_version: 1
 ---
