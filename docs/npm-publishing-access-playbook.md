@@ -160,7 +160,47 @@ are `npm publish` and `npm stage publish` — nothing else.
 
 ---
 
-## 5. Related
+## 5. The downgrade guard refused the publish
+
+`scripts/ci/downgrade-guard.sh` (FR5) runs inside the `publish` job and **refuses rather than guesses**
+whenever it cannot establish that the version being published is at least the registry's current
+`latest`. That is deliberate: `sort -V` ranks `4.1.0` *below* `4.1.0-rc.1`, the reverse of SemVer, so a
+guard that tried to compare its way through an unparseable or prerelease `latest` would be worse than
+one that stops.
+
+There is **no override** — no `workflow_dispatch` input, no environment variable, no `[skip-guard]`.
+That is a deliberate choice, not an oversight (see *Why there is no override* below). What follows is
+the sanctioned repair for each way it can refuse, so the procedure is written down rather than
+rediscovered under pressure.
+
+| `FATAL:` message begins | What it means | Repair |
+|---|---|---|
+| `GUARD_CAND '…' is not a plain X.Y.Z release` | The version being published is malformed or is a prerelease. This is a **repository** problem, not a registry one. | Fix `package.json` and the tag. Nothing to repair on npm. |
+| `registry returned an EMPTY 'latest'` | The package exists but has no `latest` dist-tag — `npm dist-tag rm`, or mid-replication. | `npm dist-tag add convoke-agents@<good-version> latest`, then re-run the job. **Interactive, needs 2FA** — see §4. |
+| `registry returned a multi-line 'latest'` | `npm view` returned something the guard will not parse. Usually a transient registry or network fault, occasionally a genuinely corrupted tag. | Re-run the job first — this is the one mode that is often transient. If it repeats, read the tag by hand (`npm view convoke-agents dist-tags`) and repair as above. |
+| `current 'latest' … is not a plain X.Y.Z release` | A prerelease or non-canonical version is parked on `latest` — e.g. `4.0.1-rc.0`. | `npm dist-tag add convoke-agents@<good-version> latest`, then re-run. **Interactive, needs 2FA.** |
+| `refusing to publish X to 'latest' — lower than current latest Y` | The version being published really is lower than `latest`. **The guard cannot tell an accidental downgrade from a deliberate repair of a corrupted `latest`, which is exactly why it stops and asks.** | Decide which value is wrong. If `Y` is legitimate, do not publish — fix the version being released. If `Y` is wrong (an accidental `999.0.0`, a mistaken `dist-tag set`), repair `latest` first, then re-run. |
+
+**Every repair route runs through `npm dist-tag add`, so every one of them inherits §4's dependency:**
+an interactive session with a live 2FA prompt. A token cannot do it and CI can never do it. Budget for
+a human at a terminal, not a re-run.
+
+### Why there is no override
+
+An override was considered and declined (backlog `T44`). A `workflow_dispatch` boolean the guard
+honoured would be genuinely useful — because `npm publish` sets `latest` as a side effect, the
+already-trusted CI path could then perform the repair itself, with no 2FA prompt. It was declined on
+cost, not on principle: `ci.yml` has no `workflow_dispatch` trigger at all, so adding the input means
+opening manual dispatch on the workflow that contains the `publish` job, then gating that surface so a
+dispatch cannot publish arbitrarily. That is a new and permanent security surface in exchange for a
+rare event that already requires a human.
+
+If the guard ever fires twice in one release cycle, revisit that trade — the calculation above assumes
+it is rare.
+
+---
+
+## 6. Related
 
 - [ADR-003 — publish-path enforcement](../_bmad-output/planning-artifacts/adr/4-0-1/adr-003-publish-path-enforcement.md)
   — why registry-side enforcement was chosen over a repository guard

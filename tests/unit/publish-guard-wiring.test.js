@@ -112,3 +112,72 @@ test('DIST_TAG derivation still sends releases to latest and prereleases to rc',
   assert.ok(rcIdx < latestIdx,
     'the *-* (prerelease) arm must set rc and come first — inverted, a prerelease would move latest');
 });
+
+// --- T44: the refusal messages are the deliverable ---------------------------
+//
+// The guard has no override by design, so its FATAL text IS the escape hatch:
+// it is the only thing standing between an operator and rediscovering the repair
+// under pressure. That makes the citation deletable-without-notice in exactly the
+// way a comment is, which is why it is asserted rather than trusted.
+//
+// These run the SCRIPT (no network, no credentials — that is what the dist-1b-1
+// extraction bought) across every refusal mode, and check two things per mode:
+// it exits non-zero, and it names the procedure.
+
+const { execFileSync } = require('node:child_process');
+const PLAYBOOK_DOC = 'docs/npm-publishing-access-playbook.md';
+const GUARD_SH = path.join(__dirname, '..', '..', 'scripts', 'ci', 'downgrade-guard.sh');
+
+function runGuard(cand, current) {
+  try {
+    const stdout = execFileSync('bash', [GUARD_SH], {
+      env: { ...process.env, GUARD_CAND: cand, GUARD_CURRENT: current, GUARD_PKG: 'convoke-agents' },
+      encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    return { code: 0, stderr: '', stdout };
+  } catch (err) {
+    return { code: err.status, stderr: err.stderr || '', stdout: err.stdout || '' };
+  }
+}
+
+// `cites` is false only for the malformed-CAND path: that one is a repository bug
+// (a bad package.json version), not an operator situation, and the playbook's own
+// table says there is nothing to repair on npm. Keeping it uncited preserves the
+// meaning of the citation everywhere else — "there is a procedure for this".
+const REFUSALS = [
+  { name: 'accidental or deliberate downgrade', cand: '4.0.0', current: '999.0.0', cites: true },
+  { name: 'empty latest', cand: '4.0.2', current: '', cites: true },
+  { name: 'prerelease parked on latest', cand: '4.0.2', current: '4.1.0-rc.1', cites: true },
+  { name: 'multi-line latest', cand: '4.0.2', current: '4.0.0\n4.0.1', cites: true },
+  { name: 'malformed candidate', cand: '4.0.1-rc.0', current: '4.0.0', cites: false },
+];
+
+for (const r of REFUSALS) {
+  test(`downgrade guard refuses and explains: ${r.name}`, () => {
+    const { code, stderr } = runGuard(r.cand, r.current);
+    assert.equal(code, 1, `expected refusal, got exit ${code}`);
+    assert.match(stderr, /^FATAL:/m, 'a refusal must announce itself as FATAL');
+    if (r.cites) {
+      assert.ok(stderr.includes(PLAYBOOK_DOC),
+        `refusal "${r.name}" no longer cites ${PLAYBOOK_DOC} — the documented repair is unreachable from the failure`);
+    }
+  });
+}
+
+test('the guard still passes when the candidate is not a downgrade', () => {
+  // Anchors the suite above: without this, deleting the comparison entirely would
+  // leave all five refusal tests passing on the input-validation branches alone.
+  const { code, stdout } = runGuard('4.0.2', '4.0.1');
+  assert.equal(code, 0, 'a legitimate release must not be refused');
+  assert.match(stdout, /OK/);
+});
+
+test('the cited playbook section exists', () => {
+  // The citation is worthless if it points at a heading that has been renamed.
+  const doc = fs.readFileSync(path.join(__dirname, '..', '..', PLAYBOOK_DOC), 'utf8');
+  assert.match(doc, /^## 5\. The downgrade guard refused the publish$/m,
+    'the guard cites §5 by number and title; the playbook no longer has that heading');
+  for (const mode of ['EMPTY', 'multi-line', 'lower than current latest']) {
+    assert.ok(doc.includes(mode), `playbook §5 no longer documents the "${mode}" refusal mode`);
+  }
+});

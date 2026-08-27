@@ -21,6 +21,10 @@ set -eo pipefail
 : "${GUARD_CURRENT?GUARD_CURRENT is required -- the registry current latest; may be empty}"
 PKG="${GUARD_PKG:-the package}"
 
+# Every FATAL path below cites this. T44: the guard has no override by design, so the
+# sanctioned repair for each refusal mode has to be written down somewhere findable.
+PLAYBOOK="docs/npm-publishing-access-playbook.md §5"
+
 # --- contract re-assertion on our own input -------------------------------
 # The WORKFLOW validates CAND before the registry read and must keep doing so:
 # on the E404 skip path this script is never called, so a check that lived only
@@ -43,12 +47,14 @@ if [ -z "$GUARD_CURRENT" ]; then
   echo "FATAL: registry returned an EMPTY 'latest' for $PKG." >&2
   echo "       The package exists but has no 'latest' dist-tag (npm dist-tag rm, or mid-replication)." >&2
   echo "       Repair: npm dist-tag add $PKG@<good-version> latest  (operator, interactive, needs 2FA)." >&2
+  echo "       Full procedure: ${PLAYBOOK}." >&2
   exit 1
 fi
 
 if [ "$(printf '%s' "$GUARD_CURRENT" | grep -c '')" -ne 1 ]; then
   echo "FATAL: registry returned a multi-line 'latest' for $PKG; refusing to guess." >&2
   printf '%s\n' "$GUARD_CURRENT" | head -5 >&2
+  echo "       Often transient -- re-run first. If it repeats, see ${PLAYBOOK}." >&2
   exit 1
 fi
 
@@ -62,6 +68,7 @@ CURRENT="${CURRENT%%+*}"
 if ! [[ "$CURRENT" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
   echo "FATAL: current 'latest' for $PKG is not a plain X.Y.Z release (got '$CURRENT')." >&2
   echo "       Repair: npm dist-tag add $PKG@<good-version> latest  (operator, interactive, needs 2FA)." >&2
+  echo "       Full procedure: ${PLAYBOOK}." >&2
   exit 1
 fi
 
@@ -79,6 +86,10 @@ fi
 LOWEST=$(printf '%s\n%s\n' "$CURRENT" "$GUARD_CAND" | sort -V | head -1)
 if [ "$GUARD_CAND" != "$CURRENT" ] && [ "$LOWEST" = "$GUARD_CAND" ]; then
   echo "FATAL: refusing to publish $GUARD_CAND to 'latest' -- lower than current latest $CURRENT." >&2
+  echo "       The guard cannot tell an accidental downgrade from a deliberate repair of a" >&2
+  echo "       corrupted 'latest', which is why it stops here. Decide which value is wrong:" >&2
+  echo "       if $CURRENT is legitimate, fix the version being released; if $CURRENT is wrong," >&2
+  echo "       repair 'latest' first, then re-run. There is no override -- see ${PLAYBOOK}." >&2
   exit 1
 fi
 
