@@ -1511,3 +1511,31 @@ The `excluded_agents` line is a shipped bug this fixed incidentally: before, an 
 
 ---
 
+
+## T51
+
+**Lane:** Fast Lane · **Score:** 7.65 · **Portfolio:** convoke · **Status:** ✅ Done 2026-08-27
+
+**Receipt:** Three governed artifacts were counted unattributed with reason `unreadable or empty` while reading perfectly. One `try` wrapped both `fs.readFileSync` and `parseFrontmatter`, so a duplicate `status:` key was reported as a filesystem fault.
+
+**Fixed by `9740d61d` (engine) and `08736661` + `78af4f6d` (data).** Read and parse are now caught separately: a parse failure reports `malformed frontmatter: <cause>` and a read failure still reports `unreadable or empty`. Both still skip fallback attribution.
+
+**The row's own diagnosis was wrong, and usefully so.** It suspected "a size cap, an encoding/BOM issue, or a swallowed exception in the reader". The reader was innocent — all three files read at 48/25/24 KB without error. The exception came from `parseFrontmatter` ("Map keys must be unique"). The message was wrong in the direction that hides the cause twice over: it sent the operator to the filesystem, and it concealed a real defect in the data that nothing else reported.
+
+| | Before | After |
+|---|---|---|
+| governed | 181 | **184** |
+| unattributed | 13 | **10** |
+| parse/read failures | 3 | **0** |
+
+**Provenance, corrected mid-review.** The close originally asserted the duplicate `status:` was appended by the governance migration. R1 disproved it: all three files carry both keys in their own creation commits (`dc5dcbfe`, `818bc1fb`, `de2057fa`, April 2026), `git log -S"status: draft"` returns only those commits, and `injectFrontmatter` round-trips through parse → merge → stringify and cannot emit a duplicate at all. The producer is recorded as unidentified rather than guessed at a second time.
+
+**Two further defects found by review, both closed here.** The flattened reason string was still unbounded — `.split('\n')[0]` is a no-op for YAML errors carrying no newline, and an unresolved-alias error quotes the offending token verbatim, so a 60 KB anchor produced a 60 KB reason and a 61 KB report; now bounded at 200 characters. And a truthy non-string `err.message` made `.replace` throw a `TypeError` inside the file loop, taking the whole portfolio run down; unreachable today because `parseFrontmatter` always wraps in `new Error(string)`, closed because the fix is one `String()` and the failure mode is total.
+
+**The guard's real scope, stated rather than assumed.** It sits *after* filename inference, so it suppresses only the fallback layers. A parse-failed file whose filename alone yields an initiative is still attributed — `arch-gyre-thing.md` files under gyre while declaring `initiative: helm`. The three T51 files escaped that only because their filenames infer nothing. Moving the guard above inference is a behaviour change beyond this fix and was not made.
+
+**Data half approved with P59 on the table.** P59 is Blocked on "one status axis, or three fields?" and holds that deciding a file's state *is* the migration. Operator approved 2026-08-27 on the distinction that this is a de-duplication rather than a vocabulary choice — both values were already in the file, and `completedAt` plus a fully-terminal `stepsCompleted` say which is real. P59's axis question is untouched and still open.
+
+**Review.** R1 independent: 3 HIGH, all fixed. R2 **self-executed** after four review agents died to environment errors mid-run; its mechanical checks pass (bounding probed across five error shapes, both R1 mutations killed by the new `chmod 000` fixture, comments re-verified against source), but its two open-ended checks — "any new unfalsifiable assertion" and "anything R1 missed entirely" — were not run independently. Recorded so the gap is visible rather than implied.
+
+**Gates at close:** 2586 tests 0 fail, lint 0, docs:audit 0, backlog-integrity 0, install-scope 0, coverage 87.01/82.07/89.65.
