@@ -7,7 +7,7 @@ status: active
 decision_status: accepted
 accepted: '2026-08-27'
 schema_version: 1
-related_initiative: Knowledge & Documentation Governance (ID unallocated — see Open Question OQ-0)
+related_initiative: 'P60 — Knowledge & Documentation Governance'
 related_decision: none
 related_epic: none
 supersedes: none
@@ -19,7 +19,7 @@ signoff_by: amalik
 
 **Status:** **ACCEPTED** (2026-08-27) — signed off by Amalik
 **Proposed:** 2026-08-25
-**Initiative:** Knowledge & Documentation Governance (unallocated)
+**Initiative:** Knowledge & Documentation Governance (**P60**)
 **Decision owner:** Amalik
 
 ---
@@ -108,7 +108,7 @@ Measuring both and mutating one resolves both failure modes at the cost of split
 
 These are deliberately *not* decided here. Each is a separate ADR, to be written before implementation begins.
 
-- **OQ-0 — Initiative ID.** Unallocated. The backlog had uncommitted working-tree edits at the time of writing, and this project's ID-allocation rule forbids allocating against a dirty backlog (four ID collisions, 2026-08-14, tracked as I150). **This ADR's directory, `adr/knowledge-governance/`, must be renamed to the allocated ID once the backlog is clean**, in keeping with the sibling directories `4-0-1/`, `i97/`, `v4-1/`, `v63/`.
+- **OQ-0 — Initiative ID. ✅ RESOLVED 2026-08-27.** Allocated **P60** (Initiative Lane, RICE 2.4). The backlog was verified clean and all candidate IDs grepped for collisions before allocation, per I150. This ADR's directory was renamed `adr/knowledge-governance/` → `adr/p60/` to match its siblings (`4-0-1/`, `i97/`, `v4-1/`, `v63/`), and the four inbound references were rewritten and re-verified with `refs:audit`.
 - **OQ-1 — Status axis.** One `status` field or three fields. The corpus carries 15 distinct values across three axes (lifecycle, verdict, gate); the shipped enum at `scripts/lib/artifact-utils.js:763` carries four, one of which (`validated`) is a verdict and one of which (`complete`, the corpus's most common value, 25 files) is absent and therefore illegal.
 - **OQ-2 — Object ontology.** Whether knowledge products (keyed by subject, having currency) and work receipts (keyed by work item, never stale) remain two models. `scripts/lib/portfolio/portfolio-engine.js:64` already assumes they do.
 - **OQ-3 — Where proposals live.** Whether unruled strategy drafts belong in `docs/` or in `planning-artifacts/` under a `draft` status.

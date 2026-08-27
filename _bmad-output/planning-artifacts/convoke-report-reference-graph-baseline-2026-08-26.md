@@ -5,7 +5,7 @@ qualifier: reference-graph-baseline
 created: '2026-08-26'
 status: active
 schema_version: 1
-related_adr: adr/knowledge-governance/adr-001-cleanup-scope.md
+related_adr: adr/p60/adr-001-cleanup-scope.md
 related_story: fast-reference-graph-baseline
 baseline_commit: 028424c2
 measured_in: clean clone (see Reproduction)

@@ -7,7 +7,7 @@ measured_in: clean clone
 
 **Status:** review · **Lane:** Fast (spike — time-boxed learning, uncertain outcome) · **Source:** Knowledge-governance survey, 2026-08-25 (party-mode roundtable) · **Backlog ID:** unallocated — allocate before starting, grepping the working tree first (I150)
 
-**Governed by:** [`adr-001-cleanup-scope.md`](../planning-artifacts/adr/knowledge-governance/adr-001-cleanup-scope.md) — *proposed, unsigned.* This story is implementable while that ADR is unsigned **only** because it mutates nothing. If the ADR's scope decision changes, AC3's coverage target changes with it and nothing else does.
+**Governed by:** [`adr-001-cleanup-scope.md`](../planning-artifacts/adr/p60/adr-001-cleanup-scope.md) — *proposed, unsigned.* This story is implementable while that ADR is unsigned **only** because it mutates nothing. If the ADR's scope decision changes, AC3's coverage target changes with it and nothing else does.
 
 ---
 
@@ -60,7 +60,7 @@ Introduce a reference that is known-broken — a fixture document, or a sentinel
 This must be shown **as part of the story's evidence**, not asserted. Per `verification-must-be-falsifiable` (`project-context.md`, "Exception. None."): a check whose failure mode has never been observed is not a check. Given P6's history, "it printed no findings" is not evidence of a clean corpus until this AC has been satisfied.
 
 **AC3 — Coverage is reported as a number, not assumed.**
-The run states **how many files it walked, per tree**. Per [ADR-001](../planning-artifacts/adr/knowledge-governance/adr-001-cleanup-scope.md), the analysis scope is `_bmad-output/` + `_bmad/bme/` + `docs/` + the repository root — approximately **1,470** markdown files (1,152 / 318 / 17 / 7 at the time of the survey).
+The run states **how many files it walked, per tree**. Per [ADR-001](../planning-artifacts/adr/p60/adr-001-cleanup-scope.md), the analysis scope is `_bmad-output/` + `_bmad/bme/` + `docs/` + the repository root — approximately **1,470** markdown files (1,152 / 318 / 17 / 7 at the time of the survey).
 
 Do **not** hardcode 1,470 as an assertion — `derive-counts-from-source` forbids a magic number that rots while the property it stands for does not. Assert the *property*: the walked count is within a sane band of an independently derived `find` count taken in the same run, and any tree reporting **zero** files is a failure, not a pass.
 
