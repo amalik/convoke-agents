@@ -1670,3 +1670,29 @@ A verification that pipes its subject into anything has stopped measuring the su
 **Gates at close:** guard suite 15/15 (up from 8), all three new pins mutation-verified — stripping the
 citation, renaming the playbook heading, and neutering the comparison each kill exactly one test.
 docs:audit 0, backlog-integrity 0.
+
+**Addendum 2026-08-27 — R1 ran after the close and found the mutation claim above overstated.**
+The entry says "all three new pins mutation-verified", which was true and also insufficient: R1 tested a
+fourth mutant the author had not thought to try — **changing the guard's citation from `§5` to `§9`** — and
+it **survived all 15 tests**. The suite asserted the playbook *path* in one place and the existence of a
+`## 5.` heading in another, and never tied the two together, so the number itself was unpinned. That is
+the same defect the entry congratulates the tests for preventing, one level up: this very change
+renumbered `## 5. Related` → `## 6. Related`, so the next section insert renumbers §5 too and a guard
+still citing §5 would send operators to whatever then occupies the slot, with the suite green. Fixed by
+asserting path-and-section as one string; the `§9` mutant now kills four tests.
+
+Two smaller R1 findings, both in text rather than logic. The playbook's table quoted the downgrade
+refusal with an **em dash** where the guard emits **two ASCII hyphens** — an operator pasting the
+backticked string into an Actions log search would have got zero hits from the one column headed
+*"`FATAL:` message begins"*. And the happy-path anchor's comment named the wrong mutant: deleting the
+comparison outright does *not* leave the refusal tests green (measured — it fails one), so the anchor's
+real value is against a comparison forced always-true, which the five refusal tests structurally cannot
+see. The test was right; the reason given for it was wrong. **Second comment-asserting-something-false
+finding in one session**, after T33's — both times the prose aged worse than the code it described,
+because nothing executes a comment.
+
+R1 also cleared, by measurement rather than argument, the risk the author considered most likely: the
+non-ASCII `§` in the guard's citation emits byte-identical stderr under `LC_ALL=C`, `LC_ALL=POSIX` and
+`en_US.UTF-8`, no `.gitattributes` re-encodes it, and the file already carried non-ASCII before this
+change. No fix needed. Final mutation score **7 of 7**. Gates re-run after the fixes: unit 1836 pass /
+0 fail, lint 0, docs:audit 0, guard suite 15/15.

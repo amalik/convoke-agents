@@ -126,6 +126,12 @@ test('DIST_TAG derivation still sends releases to latest and prereleases to rc',
 
 const { execFileSync } = require('node:child_process');
 const PLAYBOOK_DOC = 'docs/npm-publishing-access-playbook.md';
+// The SECTION NUMBER is load-bearing and must be asserted with the path, not apart
+// from it. Asserting the bare path leaves the guard free to cite any section: this
+// very change renumbered `## 5. Related` to `## 6. Related`, so the next insert
+// renumbers §5 too, and a guard still saying "§5" would point operators at whatever
+// then occupies the slot. Measured: citing `§9` passed all 15 tests before this.
+const PLAYBOOK_CITE = `${PLAYBOOK_DOC} \u00a75`;
 const GUARD_SH = path.join(__dirname, '..', '..', 'scripts', 'ci', 'downgrade-guard.sh');
 
 function runGuard(cand, current) {
@@ -158,15 +164,17 @@ for (const r of REFUSALS) {
     assert.equal(code, 1, `expected refusal, got exit ${code}`);
     assert.match(stderr, /^FATAL:/m, 'a refusal must announce itself as FATAL');
     if (r.cites) {
-      assert.ok(stderr.includes(PLAYBOOK_DOC),
-        `refusal "${r.name}" no longer cites ${PLAYBOOK_DOC} — the documented repair is unreachable from the failure`);
+      assert.ok(stderr.includes(PLAYBOOK_CITE),
+        `refusal "${r.name}" no longer cites ${PLAYBOOK_CITE} — the documented repair is unreachable from the failure`);
     }
   });
 }
 
 test('the guard still passes when the candidate is not a downgrade', () => {
-  // Anchors the suite above: without this, deleting the comparison entirely would
-  // leave all five refusal tests passing on the input-validation branches alone.
+  // Anchors the suite above. NOT against deleting the comparison — measured, that
+  // already fails the downgrade refusal test on its own. This catches the mutant the
+  // five refusal tests structurally cannot see: a comparison forced always-true, where
+  // every refusal still refuses and only a legitimate release proves the guard wrong.
   const { code, stdout } = runGuard('4.0.2', '4.0.1');
   assert.equal(code, 0, 'a legitimate release must not be refused');
   assert.match(stdout, /OK/);
