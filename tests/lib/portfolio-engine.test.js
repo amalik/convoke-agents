@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it, before } = require('node:test');
+const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 
 const { findProjectRoot } = require('../../scripts/update/lib/utils');
@@ -575,5 +575,133 @@ describe('convoke-portfolio CLI output (Story 6.3)', () => {
     // Story 6.3 AC8: when attributableButUngoverned > 0, output mentions migration
     assert.ok(output.includes('files attributable to existing initiatives'));
     assert.ok(output.includes('run `npx -p convoke-agents convoke-migrate-artifacts` to govern them'));
+  });
+});
+
+// --- T51: a parse failure must not be reported as a read failure ---
+//
+// One `try` used to wrap both `readFileSync` and `parseFrontmatter`, so a
+// duplicate YAML key produced `unreadable or empty` for a 48KB perfectly
+// readable file. Wrong in the direction that hides the cause: it sends the
+// operator to the filesystem for a defect that is in the frontmatter, and it
+// silently drops the file from governance accounting. Three governed artifacts
+// were affected (measured 2026-08-23, fixed 2026-08-27). The duplicates were
+// present in those files' own creation commits — an earlier version of this
+// note blamed the governance migration, which R1 disproved.
+
+describe('generatePortfolio — read vs parse failure (T51)', () => {
+  const fsx = require('fs-extra');
+  const os = require('os');
+  const pathMod = require('path');
+  const crypto = require('crypto');
+
+  /** Minimal isolated project: a taxonomy plus one planning-artifacts dir. */
+  function makeFixture(files) {
+    const root = pathMod.join(os.tmpdir(), 't51-' + crypto.randomUUID());
+    const cfg = pathMod.join(root, '_bmad', '_config');
+    const art = pathMod.join(root, '_bmad-output', 'planning-artifacts');
+    fsx.ensureDirSync(cfg);
+    fsx.ensureDirSync(art);
+    fsx.copyFileSync(
+      pathMod.join(projectRoot, '_bmad', '_config', 'taxonomy.yaml'),
+      pathMod.join(cfg, 'taxonomy.yaml')
+    );
+    for (const [name, body] of Object.entries(files)) {
+      fsx.writeFileSync(pathMod.join(art, name), body, 'utf8');
+    }
+    return root;
+  }
+
+  const DUPE = [
+    '---',
+    'initiative: convoke',
+    'artifact_type: arch',
+    'status: complete',
+    'status: draft',
+    '---',
+    '',
+    '# Body',
+    ''
+  ].join('\n');
+
+  const GOOD = DUPE.replace('status: draft\n', '');
+
+  it('a duplicate frontmatter key reports malformed frontmatter, not unreadable', async () => {
+    const root = makeFixture({ 'convoke-arch-dupe-key.md': DUPE });
+    try {
+      const res = await generatePortfolio(root);
+      const entry = (res.unattributedFiles || []).find(f => f.filename === 'convoke-arch-dupe-key.md');
+      assert.ok(entry, 'file should be unattributed — it cannot be parsed');
+      assert.match(entry.reason, /^malformed frontmatter: /, 'got: ' + entry.reason);
+      assert.doesNotMatch(entry.reason, /unreadable or empty/);
+      assert.equal(entry.reason.includes('\n'), false, 'reason must be a single line');
+    } finally {
+      fsx.removeSync(root);
+    }
+  });
+
+  it('a well-formed governed file is attributed and not reported at all', async () => {
+    const root = makeFixture({ 'convoke-arch-good.md': GOOD });
+    try {
+      const res = await generatePortfolio(root);
+      const entry = (res.unattributedFiles || []).find(f => f.filename === 'convoke-arch-good.md');
+      assert.equal(entry, undefined, 'a parseable governed file must not be unattributed');
+    } finally {
+      fsx.removeSync(root);
+    }
+  });
+});
+
+// --- T51 R1: the read-failure branch, which the split left undefended ---
+//
+// After the read/parse split, no engine-level test exercised `unreadable or
+// empty`. R1 proved it: mutating the guard to `else if (parseError)` — dropping
+// readFailed entirely, which reintroduces the phantom-attribution defect the
+// branch exists to prevent — left 61/61 green, as did replacing the string with
+// a sentinel. The only test using that string unit-tests `explainUnattributed`,
+// a different function that happens to return the same words.
+describe('generatePortfolio — unreadable file still reports a read failure (T51 R1)', () => {
+  const fsx = require('fs-extra');
+  const os = require('os');
+  const pathMod = require('path');
+  const crypto = require('crypto');
+
+  let root;
+  let skip = false;
+
+  before(() => {
+    root = pathMod.join(os.tmpdir(), 't51r1-' + crypto.randomUUID());
+    const cfg = pathMod.join(root, '_bmad', '_config');
+    const art = pathMod.join(root, '_bmad-output', 'planning-artifacts');
+    fsx.ensureDirSync(cfg);
+    fsx.ensureDirSync(art);
+    fsx.copyFileSync(
+      pathMod.join(projectRoot, '_bmad', '_config', 'taxonomy.yaml'),
+      pathMod.join(cfg, 'taxonomy.yaml')
+    );
+    const f = pathMod.join(art, 'convoke-arch-locked.md');
+    fsx.writeFileSync(f, '---\ninitiative: convoke\nartifact_type: arch\n---\n\n# body\n', 'utf8');
+    fsx.chmodSync(f, 0o000);
+    // Running as root defeats chmod; detect and skip rather than assert falsely.
+    try {
+      fsx.readFileSync(f, 'utf8');
+      skip = true;
+    } catch { /* expected: unreadable */ }
+  });
+
+  after(() => {
+    if (root && fsx.existsSync(root)) {
+      try { fsx.chmodSync(pathMod.join(root, '_bmad-output', 'planning-artifacts', 'convoke-arch-locked.md'), 0o644); } catch { /* already gone */ }
+      fsx.removeSync(root);
+    }
+  });
+
+  it('an unreadable file reports "unreadable or empty", not a parse failure', async (t) => {
+    if (skip) return t.skip('file is readable despite chmod 000 — running as root');
+    const res = await generatePortfolio(root);
+    const entry = (res.unattributedFiles || []).find(f => f.filename === 'convoke-arch-locked.md');
+    assert.ok(entry, 'an unreadable file must be reported, not silently attributed');
+    assert.equal(entry.reason, 'unreadable or empty');
+    assert.doesNotMatch(entry.reason, /malformed frontmatter/);
   });
 });

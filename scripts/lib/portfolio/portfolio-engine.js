@@ -277,17 +277,53 @@ async function generatePortfolio(projectRoot, options = {}) {
 
   for (const file of mdFiles) {
 
-    // Read frontmatter FIRST — governed files have authoritative metadata
+    // Read frontmatter FIRST — governed files have authoritative metadata.
+    //
+    // T51: read and parse are caught SEPARATELY. One `try` around both reported a
+    // parse failure as `unreadable or empty`, which was wrong in the direction that
+    // hides the cause: three 25-48KB governed artifacts read perfectly and threw on
+    // `parseFrontmatter` ("Map keys must be unique" — a duplicate `status:` key).
+    // The operator was sent to look at the filesystem for a defect in the frontmatter.
+    //
+    // Provenance, corrected by R1 — an earlier version of this comment blamed the
+    // governance migration. That is false and provably so: all three files carry both
+    // keys in their own creation commits (`818bc1fb`, `dc5dcbfe`, `de2057fa`, April
+    // 2026), `git log -S"status: draft"` returns only those commits, and
+    // `injectFrontmatter` round-trips through parse -> merge -> stringify, which
+    // cannot emit a duplicate key at all. The producer was an authoring workflow that
+    // concatenated a completion block with a governance block; it is not identified
+    // here rather than guessed at twice.
+    //
+    // Both cases still skip fallback attribution — a file we could not understand must
+    // not be attributed by filename guesswork — but they now say which happened.
+    //
+    // The three files were repaired in the same change by deleting the duplicate key,
+    // keeping `status: complete` (paired with `completedAt` and a fully-terminal
+    // `stepsCompleted`). Operator-approved 2026-08-27 with **P59** on the table:
+    // P59 is Blocked on "one status axis or three fields?" and holds that deciding a
+    // file's state IS the migration. This is a de-duplication, not a vocabulary
+    // choice — both values were already in the file — so P59's axis question is
+    // untouched and still open.
     let frontmatter = null;
     let content = '';
     let readFailed = false;
+    let parseError = null;
     try {
       content = fs.readFileSync(file.fullPath, 'utf8');
-      frontmatter = parseFrontmatter(content).data;
     } catch {
-      // Unreadable — treat as no frontmatter and skip fallback attribution
-      // (otherwise filename-prefix/story-prefix could silently attribute a file we never read)
       readFailed = true;
+    }
+    if (!readFailed) {
+      try {
+        frontmatter = parseFrontmatter(content).data;
+      } catch (err) {
+        // String() unconditionally: a truthy non-string `message` (a number, an object)
+        // would make the `.replace` below throw a TypeError inside the file loop and take
+        // the whole portfolio run down. `parseFrontmatter` always wraps in `new Error(string)`
+        // today, so this is a latent crash rather than a live one — closed because the fix
+        // is one call and the failure mode is total. R2.
+        parseError = String(err && err.message ? err.message : err);
+      }
     }
 
     // Strategy: frontmatter initiative is authoritative if present
@@ -313,13 +349,35 @@ async function generatePortfolio(projectRoot, options = {}) {
         artifactType = typeResult.type;
         isGoverned = false;
         ungoverned++;
-      } else if (readFailed) {
-        // Don't attempt fallback attribution on a file we couldn't read —
+      } else if (readFailed || parseError) {
+        // Don't attempt fallback attribution on a file we couldn't read or parse —
         // otherwise filename/story-prefix layers would silently produce a phantom attribution.
+        //
+        // SCOPE, precisely: this guard sits AFTER filename inference (above), so it only
+        // suppresses the *fallback* layers. A parse-failed file whose filename alone yields
+        // an initiative is still attributed and never appears here — verified by R1 with
+        // `arch-gyre-thing.md`, filed under gyre while declaring `initiative: helm`. The
+        // three T51 files escaped that only because their filenames infer nothing. Moving
+        // the guard above inference is a behaviour change beyond this fix; tracked separately.
+        // The reason distinguishes the two: a read failure is a filesystem problem, a parse
+        // failure is a defect in the file's own frontmatter and is actionable by editing it.
         unattributedFiles.push({
           filename: file.filename,
           dir: file.dir,
-          reason: 'unreadable or empty'
+          reason: readFailed
+            ? 'unreadable or empty'
+            // Flattened AND bounded. The YAML error embeds newlines and a source excerpt,
+            // which would break a one-line-per-file report — but splitting on newline is
+            // not enough: an unresolved-alias error quotes the offending token verbatim
+            // with no newline at all, so a 60KB anchor name produced a 60KB "reason" and a
+            // 61KB report (R1). Truncate as well as flatten. Trailing ':' is stripped
+            // because it introduced the excerpt that the split just removed.
+            : `malformed frontmatter: ${parseError
+                .replace(/^Failed to parse frontmatter:\s*/, '')
+                .split('\n')[0]
+                .trim()
+                .replace(/:$/, '')
+                .slice(0, 200) || 'no detail from parser'}`
         });
         continue;
       } else {
