@@ -3,20 +3,22 @@ initiative: convoke
 artifact_type: adr
 qualifier: knowledge-governance-cleanup-scope
 created: '2026-08-25'
-status: draft
-decision_status: proposed
+status: active
+decision_status: accepted
+accepted: '2026-08-27'
 schema_version: 1
 related_initiative: Knowledge & Documentation Governance (ID unallocated — see Open Question OQ-0)
 related_decision: none
 related_epic: none
 supersedes: none
 qualifier_role: winston-architect
-signoff_by: pending
+signoff_by: amalik
 ---
 
 # ADR-001: Cleanup Scope — Measure Both Trees, Mutate One
 
-**Status:** Proposed (2026-08-25) — awaiting operator signoff
+**Status:** **ACCEPTED** (2026-08-27) — signed off by Amalik
+**Proposed:** 2026-08-25
 **Initiative:** Knowledge & Documentation Governance (unallocated)
 **Decision owner:** Amalik
 
@@ -127,3 +129,14 @@ This is a deliberate, minimal demonstration of OQ-1's likely answer (lifecycle a
 | Date | Change | By |
 |------|--------|-----|
 | 2026-08-25 | Initial draft. Proposed, unsigned. | Winston (architect role) |
+| 2026-08-27 | **Accepted by Amalik as drafted.** No scope amendment applied — see the note below. `status` moves `draft` → `active` (lifecycle) and `decision_status` `proposed` → `accepted` (decision state), the two-axis split this ADR demonstrates. | Amalik |
+
+---
+
+## Post-acceptance note — one amendment NOT applied
+
+An amendment was proposed on 2026-08-26 and is **deliberately not folded into this signature**, because a signature should ratify what was reviewed rather than what was added afterwards.
+
+**Proposed:** add the `_bmad/_config/` registry layer (eight CSVs and two YAMLs, including `taxonomy.yaml`) to the §Decision "out of scope entirely" list as *analysed but not mutated*, on the grounds that story `gen-1.1` / T54 already owns `agent-manifest.csv` and is `ready-for-dev`.
+
+**Status:** open. If accepted it becomes ADR-001a or a revision here; until then this ADR is silent on that layer, which means the mutation boundary for `_bmad/_config/` is undefined. Worth settling before any work touches it.
