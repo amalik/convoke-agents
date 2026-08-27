@@ -59,6 +59,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const BACKLOG = '_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md';
 
@@ -406,6 +407,167 @@ function collectIds(rawText) {
   return { defined, referenced };
 }
 
+/**
+ * T79: detect that a CLOSE IS OWED — a row whose work has already shipped but whose
+ * row is still sitting in a lane.
+ *
+ * WHY THIS EXISTS
+ *   Six times between 2026-08-25 and 2026-08-27 a work commit landed and left its row
+ *   `Open`/`Backlog`: `8f543cdc` (BUG-13), `3c605a37` (T58), `9740d61d`+`78af4f6d` (T51),
+ *   plus T70(b), T57 and T69 caught mid-session. Every one was found by a human happening
+ *   to look. Two were left open by the agent who had, hours earlier, told a sibling session
+ *   that the close is part of the work — so exhortation demonstrably does not fix this.
+ *
+ * WARN, NEVER FAIL
+ *   A fix legitimately precedes its close within a session, and this check runs in the same
+ *   CI that would gate the very commit shipping the fix. A hard failure would make the
+ *   correct workflow impossible. This reports and exits 0; `main` never adds it to `problems`.
+ *
+ * VERBS
+ *   `docs(<ID>)` is excluded deliberately, and that exclusion is the load-bearing one: in this
+ *   repo `docs(...)` is the CLOSING verb. Measured against this tree — adding `docs` produces FIVE
+ *   false positives (T53, T75, T77, T78, T80), every one a filing or recording commit rather than
+ *   a fix, which would flag correctly-handled rows as owing a close. (`chore` adds none on its own;
+ *   an earlier version of this comment said "docs/chore" and cited six, counting T79 before this
+ *   change closed it. Both numbers move as rows close — re-measure, do not trust the figure.)
+ *
+ *   The included set widens T79's specified `fix|feat` to the other verbs that ship WORK. Stated
+ *   honestly: that widening is PRECAUTIONARY and there is NO baseline showing it helps — measured
+ *   on this tree, the wide set and `fix|feat` both find zero pass-1 hits, so "the wide set adds
+ *   nothing" and "neither finds anything" are the same observation. It is here because history
+ *   contains real work commits under other verbs — `87a86b72 governance(T71)` and
+ *   `198deece test(BUG-13)` — whose rows happen to be closed already.
+ */
+const WORK_VERBS = new Set(['fix', 'feat', 'perf', 'refactor', 'test', 'governance']);
+
+/**
+ * Read commit subjects, or explain why it could not.
+ *
+ * Returns `inert: true` rather than an empty list when history is unavailable. That distinction
+ * is the whole point: this check runs in the `agent-surface-parity` job, which sets
+ * `fetch-depth: 0` for the PARITY step's benefit, not for this one. If that is ever relaxed, a
+ * shallow clone yields zero subjects, zero hits and a silent clean bill of health — a check that
+ * cannot fail. Three of those shipped in this project in a single session on 2026-08-25.
+ */
+function gitSubjects(root) {
+  try {
+    const shallow = execFileSync('git', ['rev-parse', '--is-shallow-repository'], {
+      cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+    if (shallow === 'true') {
+      return { subjects: [], inert: true, reason: 'the clone is shallow, so most history is absent' };
+    }
+    const out = execFileSync('git', ['log', '--no-merges', '--pretty=%h %s'], {
+      cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const subjects = out.split('\n').filter(Boolean);
+    if (subjects.length === 0) {
+      return { subjects: [], inert: true, reason: 'git returned no commits' };
+    }
+    return { subjects, inert: false, reason: null };
+  } catch (err) {
+    // stderr is captured, not discarded: without it an empty repo reports "git is unavailable",
+    // whose real cause is "does not have any commits yet", and a bad cwd reports ENOENT as if the
+    // binary were missing. The safety property holds either way -- this is about the diagnosis
+    // being true, not about the branch being reached.
+    const stderr = err && err.stderr ? String(err.stderr).trim().split('\n')[0] : '';
+    const detail = stderr || (err && err.message ? String(err.message).split('\n')[0] : String(err));
+    return { subjects: [], inert: true, reason: `git log could not be read (${detail.slice(0, 140)})` };
+  }
+}
+
+function checkOwedCloses(tables, root) {
+  // Only rows whose first cell actually LOOKS like an ID. `r.id` is whatever sits in column 1,
+  // and a malformed row can leave it empty -- in which case pass 2 below builds `new RegExp('\\b\\b')`,
+  // which matches at every word boundary and reports one row as owed against the entire legacy
+  // history. This matters because `main()` runs the scan on its FAILURE path too, so the very
+  // documents most likely to contain a blank cell are the ones that reach here.
+  // Also the reason pass 2 can interpolate an id into a RegExp without escaping it.
+  const ID_SHAPE = /^[A-Za-z]+-?\d+$/;
+  const live = new Map();
+  for (const t of tables.filter((x) => x.isLane)) {
+    for (const r of t.rows) {
+      if (!ID_SHAPE.test(r.id) || live.has(r.id)) continue;
+      live.set(r.id, r);
+    }
+  }
+  const { subjects, inert, reason } = gitSubjects(root);
+  if (inert) return { warnings: [], inert, reason, liveCount: live.size, scanned: 0 };
+
+  // TWO PASSES, because the repo predates its own commit convention.
+  //
+  // Pass 1 -- conventional subjects. The verb carries the signal, so trust it and match the
+  // scope tokens exactly. Splitting is required (`fix(T50,T32)` is a real commit here) and
+  // exactness is required (a substring test lets `fix(T5)` claim T51; both IDs exist).
+  //
+  // Pass 2 -- subjects with NO conventional prefix at all. 3854 of this repo's 4042 subjects
+  // predate the convention, and for those there is no verb to read, so pass 1 is structurally
+  // blind to them. `92d4506b Ship I20 -- Portfolio markdown formatter` shipped I20's work in
+  // April; the row is still `Backlog` in the Fast Lane today and pass 1 cannot see it.
+  //
+  // Pass 2 falls back to a bare whole-word ID match, and is confined to non-conventional
+  // subjects for a measured reason: run over ALL subjects it produces 18 hits of which 17 are
+  // false -- `docs(backlog): file T42`, `chore(backlog): log BUG-9 and T30` -- because filing
+  // commits name rows too. Confined to legacy subjects it produces exactly ONE hit across 3854
+  // of them, and that hit is I20, the true positive. The confinement IS the precision.
+  const CONVENTIONAL = /^[a-z]+(\([^)]*\))?!?:/;
+  const hits = new Map();
+  const record = (id, hash, subject, pass) => {
+    if (!hits.has(id)) hits.set(id, []);
+    hits.get(id).push({ hash, subject, pass });
+  };
+  for (const line of subjects) {
+    const sp = line.indexOf(' ');
+    if (sp < 0) continue;
+    const hash = line.slice(0, sp);
+    const subject = line.slice(sp + 1);
+    const m = /^([a-z]+)\(([^)]*)\)!?:/.exec(subject);
+    if (m) {
+      if (!WORK_VERBS.has(m[1])) continue;
+      for (const tok of m[2].split(/[,\s]+/).filter(Boolean)) {
+        if (live.has(tok)) record(tok, hash, subject, 1);
+      }
+      continue;
+    }
+    if (CONVENTIONAL.test(subject)) continue; // conventional but scope-less: pass 1's business
+    for (const id of live.keys()) {
+      // Two constraints that are NOT decoration:
+      //
+      // CASE-SENSITIVE. Artifact filenames in this repo are ID-prefixed and lowercase --
+      // `p3-epic-4-retro-2026-03-07.md`, `i97-*`, `a39-*`. Measured: matching case-insensitively
+      // takes pass 2 from 1 hit to ~36, almost all of them a *different*, historical P3. A future
+      // edit adding `/i` to "make matching robust" would silently destroy this check's precision;
+      // a test pins it.
+      //
+      // NOT A FILENAME PREFIX. `\b` treats the hyphen in `P4-enhance-module-architecture.md` as a
+      // boundary, so a bare `\bP4\b` matches it. P4 sits in §2.5 today, but parked rows are
+      // reinstated by copy-back into a lane, and the day P4 comes back it would arrive with two
+      // false positives attached. Excluding `<ID>-<letter>` costs nothing real: measured, it drops
+      // P4's 2 false hits and keeps both of I20's true ones.
+      if (new RegExp(`\\b${id}\\b(?!-[A-Za-z])`).test(subject)) {
+        record(id, hash, subject, 2);
+      }
+    }
+  }
+
+  const warnings = [...hits.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([id, cs]) => {
+      const row = live.get(id);
+      // One constant for both, so the list and the count cannot disagree: deriving `more` from a
+      // separate literal let a widened slice show every commit while still claiming N withheld.
+      const SHOW = 2;
+      const shown = cs.slice(0, SHOW).map((c) => `${c.hash} ${c.subject}`).join('; ');
+      const more = cs.length > SHOW ? ` (+${cs.length - SHOW} more)` : '';
+      // Pass 2 is a bare name match on a pre-convention subject, so it is weaker evidence than
+      // a `fix(<ID>)` scope. Say so rather than presenting both at the same confidence.
+      const weak = cs.every((c) => c.pass === 2) ? ' [named in a pre-convention subject, verify by hand]' : '';
+      return `close may be owed: ${id} (line ${row.line}) is still in a lane, but ${cs.length} `
+        + `work commit(s) name it${weak} — ${shown}${more}`;
+    });
+  return { warnings, inert: false, reason: null, liveCount: live.size, scanned: subjects.length };
+}
+
 function check(text) {
   const problems = [];
   const { defined, referenced } = collectIds(text);
@@ -423,6 +585,41 @@ function check(text) {
   problems.push(...checkLaneShape(tables));
 
   return problems;
+}
+
+/**
+ * Print the T79 warnings. Called on BOTH the PASS and FAIL paths on purpose: an owed close is
+ * most likely precisely when something else about the file is also wrong, and reporting it only
+ * on the clean path would hide it exactly when it matters.
+ */
+function reportOwedCloses(tables, root) {
+  const { warnings, inert, reason, liveCount, scanned } = checkOwedCloses(tables, root);
+  if (inert) {
+    console.log('');
+    console.log(`  WARN — owed-close scan did not run: ${reason}.`);
+    console.log('         This is reported rather than skipped: with no history the scan finds');
+    console.log('         nothing and would otherwise read as a clean result. The job running this');
+    console.log('         needs `fetch-depth: 0`.');
+    return;
+  }
+  if (warnings.length === 0) {
+    // Print the denominators rather than staying silent. A silent clean run is byte-identical to
+    // a scan whose matcher has quietly stopped matching -- a regex edit, a WORK_VERBS typo, an
+    // `isLane` change -- and this project's own rule is that a check must be shown to be able to
+    // fail before it counts as evidence. The numbers are already computed; throwing them away was
+    // what made the two states indistinguishable.
+    console.log(`  owed-close scan: 0 across ${liveCount} live lane rows (${scanned} commits scanned).`);
+    return;
+  }
+  console.log('');
+  console.log(`  WARN — ${warnings.length} possible owed close(s) across ${liveCount} live lane rows `
+    + `(${scanned} commits scanned):`);
+  console.log('');
+  for (const w of warnings) console.log(`    ${w}`);
+  console.log('');
+  console.log('  A shipped fix does not close a row. Closing is a MOVE: flip the status, delete the');
+  console.log('  row from its lane, append a receipt to §2.5, and add a Change Log entry.');
+  console.log('  Warn-level by design — a fix may legitimately precede its close within a session.');
 }
 
 function main(root = path.resolve(__dirname, '..', '..')) {
@@ -451,6 +648,7 @@ function main(root = path.resolve(__dirname, '..', '..')) {
     // a truncated parse prints a PASS line identical to a clean one.
     console.log(`  PASS — ${scanned} rows walked across ${tables.length} tables; references resolve, `
       + `every row matches its own header, ${lanes} lanes ordered and free of closed rows.`);
+    reportOwedCloses(tables, root);
     return 0;
   }
   console.log(`  FAIL — ${problems.length} problem(s):`);
@@ -461,6 +659,7 @@ function main(root = path.resolve(__dirname, '..', '..')) {
   console.log('  `-` side of a MODIFIED row without its `+` side. Check `git diff` before committing.');
   console.log('  A closed row in a lane is an incomplete Closing a Row move: delete it from the lane');
   console.log('  and append its receipt to §2.5. Do not re-sort it downward.');
+  reportOwedCloses(parseTables(text).tables, root);
   return 1;
 }
 
@@ -478,4 +677,5 @@ module.exports = {
   BACKLOG, splitRow, isTableLine, isSeparator, isClosed, numericCell,
   parseTables, columnIndex, checkArity, checkLaneShape, checkCoverage, assertStructure, stripFences,
   REQUIRED_SECTIONS, LANE_SECTIONS, collectIds, check, main,
+  checkOwedCloses, gitSubjects, reportOwedCloses, WORK_VERBS,
 };

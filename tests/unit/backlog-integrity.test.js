@@ -17,6 +17,8 @@ const {
   splitRow,
   collectIds,
   check,
+  gitSubjects,
+  WORK_VERBS,
 } = require('../../scripts/audit/backlog-integrity');
 
 /** parseTables returns { tables, orphans }; most assertions only want the tables. */
@@ -455,5 +457,207 @@ describe('Filed column (T69)', () => {
     const p = checkLaneShape(tablesOf(lane(row('BUG-1', '2026-01-01', '2.0'), row('BUG-2', '2026-01-02', '8.0'))));
     assert.equal(p.length, 1);
     assert.match(p[0], /lane order: BUG-2/);
+  });
+});
+
+describe('T79 — owed-close detection', () => {
+  const { execFileSync } = require('child_process');
+
+  // HERMETIC BY CONSTRUCTION. The first version of these tests read the REAL repo's git log and
+  // asserted `inert === false`. That passes locally and fails in CI: `actions/checkout` defaults
+  // to `fetch-depth: 1`, and only the `agent-surface-parity` job overrides it — so the `test`,
+  // `burn-in` and `coverage` jobs all run against a shallow clone where the scan is correctly
+  // inert. The tests would have broken the build that shipped them. Each case now builds its own
+  // one-commit repository, which also makes the fixtures readable: the commit that should trigger
+  // a warning sits three lines from the assertion.
+  function runIn(subjects, doc) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bi-t79-'));
+    const git = (...args) => execFileSync('git', args, { cwd: dir, stdio: 'ignore' });
+    try {
+      git('init', '-q');
+      git('config', 'user.email', 't@example.invalid');
+      git('config', 'user.name', 'T79 fixture');
+      for (const subject of subjects) git('commit', '--allow-empty', '-q', '-m', subject);
+      fs.mkdirSync(path.dirname(path.join(dir, BACKLOG)), { recursive: true });
+      fs.writeFileSync(path.join(dir, BACKLOG), doc);
+      const log = console.log;
+      let out = '';
+      console.log = (...a) => { out += `${a.join(' ')}\n`; };
+      let code;
+      try { code = main(dir); } finally { console.log = log; }
+      return { code, out };
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  // APPEND to the Fast Lane, in validDoc's own 9-column shape, with descending scores below its
+  // existing 5.0 row. Getting either wrong makes main() fail on arity or lane order and the test
+  // then proves nothing about owed closes — which is exactly what happened on the first attempt.
+  const docWith = (ids) => validDoc().replace(
+    /(### 2\.3 [^\n]*\n\n\|[^\n]*\n\|[^\n]*\n(?:\|[^\n]*\n)*)/,
+    (m) => m + ids.map((id, i) => `| ${id} | d | 4 | 2 | 90% | 1 | ${(4 - i).toFixed(1)} | convoke | Open |\n`).join(''),
+  );
+
+  /** Put an ID in the §2.5 archive table instead of a lane, in that table's own 2-column shape. */
+  const docArchiving = (id) => validDoc().replace('| X1 | d |', `| X1 | d |\n| ${id} | d |`);
+
+  it('warns AND still exits 0 when a lane row already has a work commit', () => {
+    // The property that matters: warn-level. A fix legitimately precedes its close inside one
+    // session, and this gate runs in the CI that would block that very commit. The previous
+    // version of this test filtered check() for /owed/ — but check() never calls the owed-close
+    // code at all, so it passed no matter what main() did. Two mutations (process.exitCode = 1
+    // in the reporter; `return 1` in main's PASS branch) survived the whole suite.
+    const { code, out } = runIn(['fix(T42): ship the thing'], docWith(['T42']));
+    assert.match(out, /close may be owed: T42\b/);
+    assert.equal(code, 0, 'an owed close must never fail the build');
+    // The warning's payload is what makes it actionable, so assert the parts an operator uses:
+    // the abbreviated hash to check out, the subject to judge by, and the row's line number --
+    // their only pointer back into a 723-row file. R2 found all three unasserted.
+    assert.match(out, /ship the thing/, 'the warning must name the commit subject');
+    assert.match(out, /\b[0-9a-f]{7,40}\b ?fix\(T42\)/, 'the warning must carry the commit hash');
+    // Assert the line number equals where the row ACTUALLY sits. `> 0` was not enough --
+    // a hardcoded `line 1` satisfies it, and that mutant survived.
+    const doc = docWith(['T42']);
+    const expected = doc.split('\n').findIndex((l) => l.startsWith('| T42 |')) + 1;
+    assert.match(out, new RegExp(`close may be owed: T42 \\(line ${expected}\\)`),
+      `the warning must point at line ${expected}, the row's real position`);
+  });
+
+  it('caps the listed commits and says how many it withheld', () => {
+    // Three commits, two shown: the `(+1 more)` suffix is the only signal that the list is
+    // truncated. Without it an operator reads two commits as the whole story. Nothing asserted
+    // it, and dropping the suffix passed the entire suite.
+    const { out } = runIn(
+      ['fix(T42): one', 'fix(T42): two', 'fix(T42): three'],
+      docWith(['T42']),
+    );
+    assert.match(out, /3 work commit\(s\) name it/, 'the count must be the true total');
+    assert.match(out, /\(\+1 more\)/, 'a truncated commit list must say how many were withheld');
+  });
+
+  it('says nothing about a row whose only commits are filing commits', () => {
+    const { code, out } = runIn(['docs(T42): file the row'], docWith(['T42']));
+    assert.doesNotMatch(out, /close may be owed/);
+    assert.equal(code, 0);
+    // A clean scan must still prove it ran: silence is indistinguishable from a matcher that
+    // has quietly stopped matching.
+    assert.match(out, /owed-close scan: 0 across \d+ live lane rows \(\d+ commits scanned\)/);
+  });
+
+  it('excludes docs() — this repo closes rows with it', () => {
+    assert.equal(WORK_VERBS.has('docs'), false);
+    assert.equal(WORK_VERBS.has('chore'), false);
+    assert.equal(WORK_VERBS.has('fix'), true);
+    assert.equal(WORK_VERBS.has('feat'), true);
+  });
+
+  it('splits multi-scope commits and matches tokens whole', () => {
+    // `fix(T50,T32)` is a real subject in this repo. T5 must not be claimed by it.
+    const { out } = runIn(['fix(T50,T32): two rows at once'], docWith(['T5', 'T32']));
+    assert.match(out, /close may be owed: T32\b/);
+    assert.doesNotMatch(out, /close may be owed: T5\b/, 'a short ID was matched inside a longer one');
+  });
+
+  it('pass 2 sees a pre-convention subject that pass 1 is structurally blind to', () => {
+    // 3854 of this repo's 4042 subjects predate the commit convention; for those there is no
+    // verb to read. `92d4506b Ship I20 — Portfolio markdown formatter` is the live instance.
+    const { out } = runIn(['Ship T42 — the portfolio formatter'], docWith(['T42']));
+    assert.match(out, /close may be owed: T42\b/);
+    assert.match(out, /pre-convention subject/, 'a pass-2 hit must be marked as weaker evidence');
+  });
+
+  it('pass 2 does NOT fire on a SCOPE-LESS conventional subject naming a row', () => {
+    // The confinement IS the precision. Unconfined, a bare-ID scan gives 18 hits on the live
+    // file, 17 of them filing commits; confined to non-conventional subjects it gives 1.
+    //
+    // The subject here has no parenthesised scope on purpose. A scoped one like
+    // `docs(backlog): file T42` never reaches the CONVENTIONAL guard at all — it matches the
+    // scoped-verb regex and exits at the WORK_VERBS check, which the docs() test already covers.
+    // An earlier version of this test used a scoped subject and therefore passed with the guard
+    // deleted; mutation caught it. This is the only case that constrains the guard.
+    const { out } = runIn(['chore: file T42, T43 and T44 from the review'], docWith(['T42']));
+    assert.doesNotMatch(out, /close may be owed/,
+      'a conventional subject must be judged by its verb, never by bare ID matching');
+    // Anchor: without this the test also passes when the whole feature is deleted.
+    assert.match(out, /owed-close scan: 0 across/, 'the scan must have run at all');
+  });
+
+  it('ignores rows that have already been archived to §2.5', () => {
+    // Without the isLane filter the check inverts into pure noise: every closed row with a
+    // fix() commit is reported as owing a close. Measured on the live file: 1 warning becomes
+    // 23 across 535 "live" rows. (An earlier version of this comment said 0 -> 21/586; all three
+    // numbers were wrong, and R2 caught it. The baseline is 1, not 0, because the live file
+    // legitimately warns on I20 today.) No other test constrains the live-row set.
+    const { code, out } = runIn(['fix(T42): shipped and already closed'], docArchiving('T42'));
+    assert.equal(code, 0, 'the fixture itself must be a valid document');
+    assert.doesNotMatch(out, /close may be owed: T42\b/,
+      'an archived row is not a lane row and must never be reported as owing a close');
+    assert.match(out, /owed-close scan: 0 across/, 'the scan must have actually run over this doc');
+  });
+
+  it('a blank ID cell cannot turn pass 2 into a match-everything scan', () => {
+    // `r.id` is just column 1, and a malformed row leaves it ''. Pass 2 then builds
+    // `new RegExp('\\b' + '' + '\\b')` -- which matches at every word boundary, so ONE broken row
+    // reports itself as owed against the whole legacy history. It reaches here easily because
+    // main() runs this scan on its FAILURE path too, and a blank cell is exactly the kind of
+    // document that fails. Found by mutation-hunting after R1, not by R1.
+    const doc = docWith(['T42']).replace('| T42 | d |', '|  | d |');
+    const { out } = runIn(['Ship something from the archives'], doc);
+    assert.doesNotMatch(out, /close may be owed/,
+      'a row with no usable ID must be skipped, not matched against everything');
+    assert.match(out, /owed-close scan: 0 across/, 'the scan must have run at all');
+  });
+
+  it('pass 2 is case-sensitive, because artifact filenames are ID-prefixed and lowercase', () => {
+    // `p3-epic-4-retro-2026-03-07.md`, `i97-*`, `a39-*` are real files here, and their names reach
+    // commit subjects. Measured: matching case-insensitively takes pass 2 from 1 hit to ~36 on the
+    // live corpus, nearly all a DIFFERENT historical P3. Nothing else pins this, so a well-meant
+    // `/i` would quietly destroy the precision that makes the check usable.
+    const { out } = runIn(['Update t42-some-artifact.md and t42 notes'], docWith(['T42']));
+    assert.doesNotMatch(out, /close may be owed/,
+      'a lowercased ID in a filename must not be read as a citation of the row');
+    assert.match(out, /owed-close scan: 0 across/);
+  });
+
+  it('pass 2 ignores an ID used as a filename prefix', () => {
+    // `\b` treats the hyphen as a boundary, so a bare `\bP4\b` matches `P4-enhance-module.md`.
+    // P4 is parked in §2.5 today and parked rows are reinstated by copy-back, so the day it
+    // returns it would arrive with two false positives already attached.
+    const { out } = runIn(['Update T42-enhance-module-architecture.md'], docWith(['T42']));
+    assert.doesNotMatch(out, /close may be owed/,
+      'an ID followed by -<letter> is a filename prefix, not a citation');
+  });
+
+  it('reports inability to run rather than reporting clean', () => {
+    // The failure mode that matters most, and the reason the tests above build their own repo:
+    // with no history the scan finds nothing and would otherwise read as success.
+    const res = gitSubjects('/nonexistent-path-for-this-test');
+    assert.equal(res.inert, true);
+    assert.equal(res.subjects.length, 0);
+    assert.ok(res.reason && res.reason.length > 0, 'an inert scan must say why');
+  });
+
+  it('a shallow clone is reported, not silently clean', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bi-t79-shallow-'));
+    let srcDir = null;
+    try {
+      const src = fs.mkdtempSync(path.join(os.tmpdir(), 'bi-t79-src-'));
+      const git = (cwd, ...args) => execFileSync('git', args, { cwd, stdio: 'ignore' });
+      git(src, 'init', '-q');
+      git(src, 'config', 'user.email', 't@example.invalid');
+      git(src, 'config', 'user.name', 'T79 fixture');
+      git(src, 'commit', '--allow-empty', '-q', '-m', 'one');
+      git(src, 'commit', '--allow-empty', '-q', '-m', 'two');
+      execFileSync('git', ['clone', '--depth', '1', '-q', `file://${src}`, dir], { stdio: 'ignore' });
+      srcDir = src;
+      const res = gitSubjects(dir);
+      assert.equal(res.inert, true, 'a shallow clone must be inert, not empty-and-clean');
+      assert.match(res.reason, /shallow/);
+    } finally {
+      // Both dirs in the finally: an assertion failure above used to leak the source repo.
+      fs.rmSync(dir, { recursive: true, force: true });
+      if (srcDir) fs.rmSync(srcDir, { recursive: true, force: true });
+    }
   });
 });

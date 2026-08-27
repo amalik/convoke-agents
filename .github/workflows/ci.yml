@@ -157,6 +157,11 @@ jobs:
       # Twice now a commit has deleted backlog rows while claiming to repair them (c841fcd2
       # dropped BUG-16; 3a3de195 dropped T35 and T39, one of them an open risk item). Both
       # times every check stayed green. Specified by BUG-16, built after the second occurrence.
+      # T79 added a warn-level owed-close scan that reads `git log`. It is deliberately in
+      # THIS job because this job already has full history — but note the `fetch-depth: 0`
+      # above is justified by the PARITY step, not by this one. If that step ever goes away,
+      # keep the fetch-depth or this scan silently finds nothing. It reports when it cannot
+      # run rather than reporting clean, so the failure is visible either way.
       - name: Backlog referential integrity
         run: node scripts/audit/backlog-integrity.js
 
