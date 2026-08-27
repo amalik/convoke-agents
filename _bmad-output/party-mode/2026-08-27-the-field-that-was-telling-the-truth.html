@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Field That Was Telling the Truth</title>
+<style>
+:root{
+  --bg:#f7f5f0; --ink:#1a1a1a; --dim:#5f5b54; --rule:#ddd8ce;
+  --card:#fffdf8; --accent:#8c4a2f; --accent2:#2f5d62; --warn:#a3541f;
+  --win:#8c6a2f; --pm:#2f5d62; --dev:#3f6b45; --dead:#b03a2e;
+  --shadow:0 1px 0 rgba(0,0,0,.04),0 8px 28px -18px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#14151a;--ink:#ece8e0;--dim:#9b978e;--rule:#2b2d35;
+        --card:#1b1d24;--accent:#e08a5f;--accent2:#79bcc4;--warn:#e0a24a;
+        --win:#d8ab5c;--pm:#79bcc4;--dev:#7fbe8a;--dead:#e2705f;
+        --shadow:0 1px 0 rgba(255,255,255,.03),0 8px 28px -18px rgba(0,0,0,.9);}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.62 ui-serif,Georgia,"Iowan Old Style",serif;padding:0 20px 90px}
+.wrap{max-width:830px;margin:0 auto}
+header{padding:64px 0 34px;border-bottom:1px solid var(--rule);margin-bottom:12px}
+.kicker{font:600 11px/1 ui-sans-serif,system-ui;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--dim);margin:0 0 20px}
+h1{font-size:clamp(33px,6.2vw,53px);line-height:1.03;margin:0 0 16px;letter-spacing:-.02em}
+h1 em{font-style:italic;color:var(--accent)}
+.sub{color:var(--dim);font-size:17px;margin:0;max-width:58ch}
+h2{font:600 12px/1 ui-sans-serif,system-ui;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--dim);margin:56px 0 22px;padding-bottom:9px;border-bottom:1px solid var(--rule)}
+.cast{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:26px 0 6px}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:4px;
+  padding:14px 16px;box-shadow:var(--shadow)}
+.card .ico{font-size:22px;display:block;margin-bottom:6px}
+.card b{font:600 15px/1.3 ui-sans-serif,system-ui;display:block}
+.card span{display:block;font:400 11px/1.5 ui-sans-serif,system-ui;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--dim);margin-top:4px}
+.card p{margin:9px 0 0;font-size:13.5px;line-height:1.5;color:var(--dim)}
+.card.w{border-top:3px solid var(--win)}.card.j{border-top:3px solid var(--pm)}
+.card.a{border-top:3px solid var(--dev)}
+.turn{display:grid;grid-template-columns:126px 1fr;gap:18px;margin:0 0 24px;align-items:start}
+.who{font:600 13px/1.4 ui-sans-serif,system-ui;text-align:right;padding-top:3px}
+.who .ico{display:block;font-size:19px;margin-bottom:4px}
+.who .role{display:block;font-weight:400;font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--dim);margin-top:3px}
+.says{background:var(--card);border:1px solid var(--rule);border-left:2px solid var(--rule);
+  border-radius:3px;padding:14px 17px;box-shadow:var(--shadow)}
+.says p{margin:0 0 10px}.says p:last-child{margin:0}
+.w .says,.says.w{border-left-color:var(--win)}
+.j .says,.says.j{border-left-color:var(--pm)}
+.a .says,.says.a{border-left-color:var(--dev)}
+.stage{color:var(--dim);font-style:italic;font-size:14px;margin:20px 0 20px 144px}
+blockquote{margin:34px 0;padding:20px 24px;background:var(--card);
+  border:1px solid var(--rule);border-top:3px solid var(--accent);border-radius:3px;
+  font-size:19px;line-height:1.5;box-shadow:var(--shadow)}
+blockquote strong{color:var(--accent)}
+blockquote cite{display:block;font:400 12px/1 ui-sans-serif,system-ui;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim);margin-top:14px;font-style:normal}
+code,.mono{font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}
+code{background:rgba(140,74,47,.08);padding:1px 5px;border-radius:3px}
+@media (prefers-color-scheme:dark){code{background:rgba(224,138,95,.12)}}
+.grep{background:#101218;color:#d8e0e8;border-radius:5px;padding:16px 18px;margin:22px 0;
+  overflow-x:auto;box-shadow:var(--shadow);border:1px solid #23262f}
+.grep .p{color:#6f7b8a}.grep .g{color:#7fbe8a}.grep .r{color:#e2705f}.grep .y{color:#d8ab5c}
+.grep pre{margin:0;font:12.5px/1.75 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre}
+.cursor{display:inline-block;width:7px;height:14px;background:#7fbe8a;vertical-align:-2px;
+  animation:blink 1.15s steps(1,end) infinite}
+@keyframes blink{50%{opacity:0}}
+figure{margin:26px 0}
+figcaption{font:400 12.5px/1.55 ui-sans-serif,system-ui;color:var(--dim);margin-top:12px;text-align:center}
+svg{display:block;max-width:100%;height:auto;margin:0 auto}
+.draw{stroke-dasharray:210;stroke-dashoffset:210;animation:draw 1.5s ease-out .3s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.pop{opacity:0;animation:pop .5s ease-out forwards}
+@keyframes pop{to{opacity:1}}
+table{width:100%;border-collapse:collapse;font:14px/1.5 ui-sans-serif,system-ui;margin:10px 0}
+th{text-align:left;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--dim);border-bottom:1px solid var(--rule);padding:0 10px 8px 0;font-weight:600}
+td{padding:9px 10px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.no{color:var(--dead);font-weight:600}.yes{color:var(--dev);font-weight:600}
+.verdict{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px 0}
+@media(max-width:620px){.verdict{grid-template-columns:1fr}.turn{grid-template-columns:1fr}
+  .who{text-align:left}.stage{margin-left:0}}
+.vbox{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:16px 18px;
+  box-shadow:var(--shadow)}
+.vbox h3{font:600 10.5px/1 ui-sans-serif,system-ui;letter-spacing:.16em;text-transform:uppercase;
+  margin:0 0 12px;color:var(--dim)}
+.vbox.claim{border-top:3px solid var(--dim)}
+.vbox.truth{border-top:3px solid var(--dead)}
+.vbox p{margin:0 0 9px;font-size:14.5px;line-height:1.55}.vbox p:last-child{margin:0}
+footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--rule);
+  font:13px/1.7 ui-sans-serif,system-ui;color:var(--dim)}
+footer b{color:var(--ink)}
+.ledger{font:12.5px/1.8 ui-monospace,SFMono-Regular,Menlo,monospace;margin:14px 0 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="kicker">Party Mode · Session 8 · 2026-08-27 · Convoke</p>
+  <h1>The Field That Was <em>Telling the Truth</em></h1>
+  <p class="sub">A room convened to unblock Convoke 4.1, built an excellent case that its
+  blocker was stale bookkeeping, and was stopped by a single grep.</p>
+</header>
+
+<div class="cast">
+  <div class="card w"><span class="ico">🏗️</span><b>Winston</b><span>System Architect</span>
+    <p>Boring technology, trade-offs over verdicts. Drew one empty box and refused to fill it.</p></div>
+  <div class="card j"><span class="ico">📋</span><b>John</b><span>Product Manager</span>
+    <p>Jobs-to-be-Done. Short questions, sharper follow-ups. Said "bookkeeping" twice.</p></div>
+  <div class="card a"><span class="ico">💻</span><b>Amelia</b><span>Senior Software Engineer</span>
+    <p>Test-first, file paths or it didn't happen. Said "don't close it on a sentence" three times.</p></div>
+</div>
+
+<h2>I · The Opening Position</h2>
+
+<p>The session arrived with a conclusion already written, and a good one: <strong>I113 is fully
+planned — 27 FR, architecture READY, 4 epics, 21 stories — and its only dependency reads
+<code>depends: I97 close (v4.0 ship)</code>. v4.0 shipped. 4.0.1 is <code>latest</code> on npm.
+Therefore the gate is a row nobody flipped.</strong></p>
+
+<div class="turn j"><div class="who"><span class="ico">📋</span>John<span class="role">PM</span></div>
+<div class="says"><p>v4.0 shipped. 4.0.1 is <code>latest</code> on npm. Done, next.</p></div></div>
+
+<div class="turn w"><div class="who"><span class="ico">🏗️</span>Winston<span class="role">Architect</span></div>
+<div class="says"><p>Is it? I97 is line 425 of the same file. Read the status column out loud, Amelia.</p></div></div>
+
+<div class="turn a"><div class="who"><span class="ico">💻</span>Amelia<span class="role">Dev</span></div>
+<div class="says"><p><code>In Pipeline (PRD ✓; Arch ✓; Epics ✓; ready-for-sprint)</code>. Still in
+the Initiative Lane, so by the eviction rule it is not closed.</p></div></div>
+
+<p class="stage">Two gates written into one cell, disagreeing with each other. Nobody could say
+which one the row had meant.</p>
+
+<h2>II · The Case Against the Gate</h2>
+
+<p>It got stronger before it got weaker. Epic 1B — the supposed residue — turned out to have been
+<strong>rescoped eighteen days earlier</strong>, on 2026-08-09, in an archive entry that said in
+bold: <em>"Do not author 3 story specs."</em> The residual was one manifest file.</p>
+
+<div class="turn j"><div class="who"><span class="ico">📋</span>John<span class="role">PM</span></div>
+<div class="says"><p>So the decision was already taken, and the answer was <em>neither</em>. Your
+last session's highest-leverage recommendation is to hold a meeting about something you decided
+on the ninth.</p></div></div>
+
+<div class="turn w"><div class="who"><span class="ico">🏗️</span>Winston<span class="role">Architect</span></div>
+<div class="says"><p>Don't be smug, it's the more interesting failure. The rescope landed in the
+archive, in D15, in my epics file — and never in the row anyone reads first. That's a backlog where
+the truth and the index disagree.</p></div></div>
+
+<blockquote>Then the gate is <strong>real</strong>. <code>depends: I97 close</code> was never the
+stale field — it was the only line in this backlog telling the truth, and we spent an hour
+building a case that it was lying.
+<cite>Winston, after the grep</cite></blockquote>
+
+<h2>III · One Grep</h2>
+
+<div class="grep"><pre><span class="p">$</span> grep -rlE <span class="y">"&lt;agent |&lt;persona&gt;"</span> _bmad/bme/_vortex/agents/
+
+<span class="r">_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md</span>
+<span class="r">_bmad/bme/_vortex/agents/hypothesis-engineer/SKILL.md</span>
+<span class="r">_bmad/bme/_vortex/agents/production-intelligence-specialist/SKILL.md</span>
+<span class="r">_bmad/bme/_vortex/agents/learning-decision-expert/SKILL.md</span>
+<span class="p">#</span> <span class="g">four of seven still in v5 XML</span><span class="cursor"></span></pre></div>
+
+<figure>
+<svg viewBox="0 0 700 132" role="img" aria-label="Seven Vortex agents: three converted, four still in v5 XML">
+  <g font-family="ui-sans-serif,system-ui" font-size="11">
+    <g class="pop" style="animation-delay:.15s">
+      <circle cx="60" cy="46" r="21" fill="var(--dev)" opacity=".85"/>
+      <text x="60" y="50" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">E</text>
+      <text x="60" y="88" text-anchor="middle" fill="currentColor">Emma</text>
+      <text x="60" y="103" text-anchor="middle" fill="var(--dim)" font-size="9.5">v6.3</text></g>
+    <g class="pop" style="animation-delay:.3s">
+      <circle cx="150" cy="46" r="21" fill="var(--dev)" opacity=".85"/>
+      <text x="150" y="50" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">W</text>
+      <text x="150" y="88" text-anchor="middle" fill="currentColor">Wade</text>
+      <text x="150" y="103" text-anchor="middle" fill="var(--dim)" font-size="9.5">v6.3</text></g>
+    <g class="pop" style="animation-delay:.45s">
+      <circle cx="240" cy="46" r="21" fill="var(--dev)" opacity=".85"/>
+      <text x="240" y="50" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">M</text>
+      <text x="240" y="88" text-anchor="middle" fill="currentColor">Mila</text>
+      <text x="240" y="103" text-anchor="middle" fill="var(--dim)" font-size="9.5">v6.3 · story WIP</text></g>
+    <g class="pop" style="animation-delay:.7s">
+      <circle cx="360" cy="46" r="21" fill="none" stroke="var(--dead)" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="360" y="50" text-anchor="middle" fill="var(--dead)" font-size="12" font-weight="700">I</text>
+      <text x="360" y="88" text-anchor="middle" fill="currentColor">Isla</text>
+      <text x="360" y="103" text-anchor="middle" fill="var(--dead)" font-size="9.5">v5 XML</text></g>
+    <g class="pop" style="animation-delay:.85s">
+      <circle cx="450" cy="46" r="21" fill="none" stroke="var(--dead)" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="450" y="50" text-anchor="middle" fill="var(--dead)" font-size="12" font-weight="700">L</text>
+      <text x="450" y="88" text-anchor="middle" fill="currentColor">Liam</text>
+      <text x="450" y="103" text-anchor="middle" fill="var(--dead)" font-size="9.5">v5 XML</text></g>
+    <g class="pop" style="animation-delay:1s">
+      <circle cx="540" cy="46" r="21" fill="none" stroke="var(--dead)" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="540" y="50" text-anchor="middle" fill="var(--dead)" font-size="12" font-weight="700">N</text>
+      <text x="540" y="88" text-anchor="middle" fill="currentColor">Noah</text>
+      <text x="540" y="103" text-anchor="middle" fill="var(--dead)" font-size="9.5">v5 XML</text></g>
+    <g class="pop" style="animation-delay:1.15s">
+      <circle cx="630" cy="46" r="21" fill="none" stroke="var(--dead)" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="630" y="50" text-anchor="middle" fill="var(--dead)" font-size="12" font-weight="700">X</text>
+      <text x="630" y="88" text-anchor="middle" fill="currentColor">Max</text>
+      <text x="630" y="103" text-anchor="middle" fill="var(--dead)" font-size="9.5">v5 XML</text></g>
+  </g>
+  <line class="draw" x1="300" y1="16" x2="300" y2="118" stroke="var(--rule)" stroke-width="1.5"/>
+  <text x="300" y="128" text-anchor="middle" font-size="9.5" font-family="ui-sans-serif,system-ui"
+        letter-spacing="1.6" fill="var(--dim)">I97 EPIC 2 · 3 OF 7</text>
+</svg>
+<figcaption>Convoke <strong>4.0.0</strong> shipped 2026-08-17 and <strong>4.0.1</strong> on 2026-08-26
+with four of these still in the format the entire initiative existed to retire. No gate saw it.</figcaption>
+</figure>
+
+<div class="turn a"><div class="who"><span class="ico">💻</span>Amelia<span class="role">Dev</span></div>
+<div class="says"><p>Stop. I ran the E-by-E check before touching anything. It doesn't say what
+we thought.</p><p><strong>I97 Epic 2 is three of seven.</strong> And <code>i97-2-3</code> — Mila —
+still says <code>Status: in-progress</code>.</p></div></div>
+
+<div class="turn j"><div class="who"><span class="ico">📋</span>John<span class="role">PM</span></div>
+<div class="says"><p>…So "complete except Epic 1B" is wrong.</p></div></div>
+
+<div class="turn a"><div class="who"><span class="ico">💻</span>Amelia<span class="role">Dev</span></div>
+<div class="says"><p>It's wrong by four agents. Epic 1B was never the residue. Epic 1B was the
+<em>smallest</em> residue and it was the only one anybody had written down.</p></div></div>
+
+<div class="turn w"><div class="who"><span class="ico">🏗️</span>Winston<span class="role">Architect</span></div>
+<div class="says"><p>And v4.0 shipped anyway. We published 4.0.0, then 4.0.1, with four of the
+seven Vortex agents still in the format the entire initiative existed to retire.</p></div></div>
+
+<p class="stage">John, quietly, to himself: "I said it was bookkeeping. I said it twice."</p>
+
+<h2>IV · The Ledger</h2>
+
+<div class="verdict">
+  <div class="vbox claim"><h3>What was claimed</h3>
+    <p>I97 is complete except Epic 1B.</p>
+    <p>Three stories, no specs, no vehicle.</p>
+    <p>A decision is needed: descope by ADR, or spec it.</p>
+    <p>Then 4.1 is startable.</p></div>
+  <div class="vbox truth"><h3>What was true</h3>
+    <p>I97 Epic 2 is 3 of 7.</p>
+    <p>Epic 1B was rescoped on 2026-08-09; residual = I122.</p>
+    <p>The decision was already taken, and it was neither.</p>
+    <p>4.1 is <span class="no">blocked</span> — the gate is real.</p></div>
+</div>
+
+<table>
+  <tr><th>Claim</th><th>Verdict</th></tr>
+  <tr><td>I113 fully planned, MVP E2+E4+E7</td><td class="yes">confirmed</td></tr>
+  <tr><td>v4.0 shipped, 4.0.1 <code>latest</code></td><td class="yes">confirmed</td></tr>
+  <tr><td>Epic 1B = 3 stories needing specs</td><td class="no">superseded 2026-08-09</td></tr>
+  <tr><td>Epic 1B needs an ADR decision</td><td class="no">already decided</td></tr>
+  <tr><td>I97 blocks I113 only on paper</td><td class="no">the gate is real</td></tr>
+</table>
+
+<h2>V · What Was Filed</h2>
+
+<p><strong>T87</strong> — <em>nothing detects an initiative that ships with its epics incomplete.</em>
+Filed as the <strong>gate only</strong>: the four conversions are I97's own specced, queued stories,
+and duplicating them into a new row is the instance-vs-gate error BUG-9, I133 and I157 each made.
+In the same edit, I97's Stage cell was corrected to 3/7 and I113's dependency cell was rewritten to
+name the four agents instead of a parenthetical.</p>
+
+<blockquote>Something must compare an initiative's story statuses against a release before that
+release ships, or the next initiative ships half-done the same way.
+<cite>T87 · Fast Lane · 2.7</cite></blockquote>
+
+<h2>VI · Left On The Table</h2>
+
+<div class="turn j"><div class="who"><span class="ico">📋</span>John<span class="role">PM</span></div>
+<div class="says"><p>Epic 1 is <strong>ten of the twenty-one stories</strong>. Cadence state, a CLI,
+a channel selector, a ternary classifier. That is not absorbing an upstream release. That is
+building a product, filed under a maintenance initiative, at a RICE of 1.5.</p></div></div>
+
+<div class="turn w"><div class="who"><span class="ico">🏗️</span>Winston<span class="role">Architect</span></div>
+<div class="says"><p>Because doing E2 alone puts you right back here in three months. You'd be
+paying the catch-up tax again with no mechanism.</p></div></div>
+
+<p class="stage">Unresolved, deliberately. A 54-row manifest where nineteen names are duplicated
+and every sampled path is dead became Winston's best evidence — and John conceded the word
+"gold-plating" without conceding the number.</p>
+
+<footer>
+  <p><b>Session ledger</b> — nothing closed, nothing swept. The one action the session convened to
+  perform turned out to be the wrong one.</p>
+  <p class="ledger">
+  6800a0b2 &nbsp; governance(backlog): file T87 — 4.0 shipped with I97 Epic 2 at 3 of 7<br>
+  d653d541 &nbsp; docs(backlog): record that 6800a0b2 carries a memlog its message omits<br>
+  <br>
+  backlog-integrity &nbsp; <span style="color:var(--dev)">PASS</span> — 734 rows · 10 tables · 3 lanes ordered · owed-close 0
+  </p>
+  <p style="margin-top:22px">🏗️ Winston · 📋 John · 💻 Amelia &nbsp;—&nbsp; Convoke party mode, 27 August 2026.<br>
+  <em>A status cell is an artifact describing itself. "This blocker is stale" is a claim requiring
+  the same evidence as "this blocker is real".</em></p>
+</footer>
+
+</div>
+</body>
+</html>
