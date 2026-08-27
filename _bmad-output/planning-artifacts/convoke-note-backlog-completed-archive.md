@@ -1539,3 +1539,81 @@ The `excluded_agents` line is a shipped bug this fixed incidentally: before, an 
 **Review.** R1 independent: 3 HIGH, all fixed. R2 **self-executed** after four review agents died to environment errors mid-run; its mechanical checks pass (bounding probed across five error shapes, both R1 mutations killed by the new `chmod 000` fixture, comments re-verified against source), but its two open-ended checks — "any new unfalsifiable assertion" and "anything R1 missed entirely" — were not run independently. Recorded so the gap is visible rather than implied.
 
 **Gates at close:** 2586 tests 0 fail, lint 0, docs:audit 0, backlog-integrity 0, install-scope 0, coverage 87.01/82.07/89.65.
+
+---
+
+## T33
+
+**Unescaped interpolation in two `export-engine.js` RegExps.**
+
+**Closed 2026-08-27. Score rescored 7.2 → 1.9 at close.**
+
+**What the row claimed.** Two RegExp constructors in `scripts/portability/export-engine.js` interpolate a
+string without escaping it, both under the `u` flag — where an unmatched `{` or `[` is a *syntax error*, not a
+literal. Filed 2026-08-15 out of the issue #7 R1 review as a sibling of BUG-12, on the reading that a persona
+named `# Emma {V}` would throw and take the whole export down with it. Scored `R=4 I=2 C=90% E=1 → 7.2`, third
+in the Fast Lane.
+
+**What was actually true.** Neither site is reachable with a metacharacter, and only one of the two even has
+the `u` flag:
+
+- **`extractInlinePersona` (:311/:318).** The `name` it interpolates does not come from arbitrary text. It
+  comes from `/^#\s+([A-Z][a-zA-Z]+)\s*$/` — a letters-only capture, anchored at both ends. `# Emma {V}` does
+  not match that pattern at all, so `name` is `null` and the interpolating RegExp is never built. There is no
+  input to this function that yields a `name` containing a metacharacter.
+- **`extractSectionByHeading` (:390/:406).** Flags are `'mi'`, not `'u'`. Outside `u` mode an unmatched brace
+  is a literal and throws nothing. And all five callers pass hardcoded string literals — `'Identity'`,
+  `'Communication Style'`, `'Principles'`, `'Overview'`. No caller passes a variable.
+
+So the crash the row described cannot happen, on either site, by either mechanism.
+
+**What shipped anyway.** Both sites now wrap their interpolation in `escapeRegExp` from `scripts/lib/sanitize.js`.
+Kept rather than dropped because the helper already exists, the change is two lines, and this is the same
+defect class as CodeQL alerts 9 and 10 — the value is in removing the trap before some future caller widens
+the input, not in fixing a live failure. The honest framing is hardening, not a fix.
+
+**The tests are unusual and worth understanding before editing them.** Because the runtime path is
+unreachable, a test that feeds `# Emma {V}` through `extractInlinePersona` passes identically before and after
+the fix — it exercises the `name === null` branch, not the escaping. The suite therefore contains two
+**source-shape assertions** that read the file and assert `escapeRegExp` wraps the interpolation at each site.
+Those two are the only assertions in the file that discriminate pre-fix from post-fix code (verified: 2 failures
+against pre-fix, 0 after). It also **pins reachability** (built from the source text, not copied alongside it) — the letters-only capture pattern, and the
+literal-only caller list — so that if a later change makes either site reachable, the pins fail and whoever
+made it learns that the escaping now carries real weight. Delete the source-shape assertions and the suite
+silently stops testing the fix.
+
+**Rescore.** R 4 → 2, I 2 → 1, C 90% → 95%, E 1 (unchanged) → **1.9**. Reach and Impact fall because nothing
+is affected today; Confidence *rises* because the behaviour was measured by execution rather than inferred
+from reading. This lands just below T34 (2.7), which is the right neighbourhood — T34's hardening items are at
+least reachable.
+
+**Pattern.** Third row this week whose severity did not survive contact with the code, after BUG-14 (invalid)
+and T51 (real, but a different defect than the row described). All three were filed from review output that
+described a *shape* in the source without tracing whether any input could reach it. The Fast Lane's RICE order
+is only as good as the premises underneath it, and premises filed from static reading are the ones to distrust.
+See the `staleness-preflight-for-backlog-pickup` qualification-time arm — this is exactly the check it exists
+to force.
+
+**Review.** R1 independent: four findings, no HIGH, so no R2 under `code-review-convergence`. The finding
+worth carrying forward is the one I did not think to check: R1 asked whether `escapeRegExp` could itself
+*introduce* a crash at the `u`-flag site, since in `u` mode an identity escape on a non-syntax character
+(`\-`, `\/`, `\ `) is a SyntaxError. It cannot — the escaper touches exactly the 14 ECMAScript
+SyntaxCharacters and nothing else — but the fix was one careless character in `sanitize.js` away from turning
+an unreachable non-bug into a reachable crash on every export. A test now pins `escapeRegExp`'s output as valid
+under `u`; `sanitize.test.js` builds without the flag and would not have caught it.
+
+The other three were all in the work's own self-checks, which is the pattern worth noting:
+- The `:311` comment still asserted the live crash the investigation had already disproved, and misstated
+  parens/brackets as quiet mismatches when under `u` they throw. The one artifact a maintainer reads first was
+  the one still carrying the false premise. Rewritten.
+- The persona-name reachability pin held a **local copy** of the capture regex instead of reading source, so
+  widening the real capture would have left it green — the check shared nothing with the thing it checked.
+  Now built from the source text. Mutation-verified: widening the capture to `/^#\s+(.+?)\s*$/` kills it.
+- The caller pin's parser only matched a bare identifier as the first argument, so an *added* caller passing an
+  expression was invisible while the five literal calls kept the count green. Now asserts parsed-call count
+  equals raw-occurrence count, so divergence is the signal. Mutation-verified: a 6th non-literal caller kills it.
+One test was dropped as unfalsifiable (`escapeRegExp('Emma')` is a no-op on letters-only input).
+
+**Gates at close:** lint 0, docs:audit 0, backlog-integrity 0, unit 1829 pass / 0 fail, integration 120/120,
+p0 642/642. 16 tests in the T33 suite; 2 fail against pre-fix code and 0 after, and both repaired pins were
+mutation-verified rather than assumed.
