@@ -1617,3 +1617,56 @@ One test was dropped as unfalsifiable (`escapeRegExp('Emma')` is a no-op on lett
 **Gates at close:** lint 0, docs:audit 0, backlog-integrity 0, unit 1829 pass / 0 fail, integration 120/120,
 p0 642/642. 16 tests in the T33 suite; 2 fail against pre-fix code and 0 after, and both repaired pins were
 mutation-verified rather than assumed.
+
+---
+
+## T44
+
+**The FR5 downgrade guard had no override path and no written repair.**
+
+**Closed 2026-08-27 via option (b) — documentation, not code.**
+
+**What shipped.** A new §5 in `docs/npm-publishing-access-playbook.md`, *"The downgrade guard refused
+the publish"*, tabulating all five ways `scripts/ci/downgrade-guard.sh` can refuse, what each means, and
+the sanctioned repair for each — plus a *Why there is no override* subsection recording the declined
+option so the trade can be re-opened rather than re-derived. Every FATAL path in the guard now names its
+repair and cites that section. Three regression tests pin it: the citations, the heading it points at,
+and a happy-path anchor without which deleting the comparison outright would leave the five refusal
+tests passing on the input-validation branches alone.
+
+**The row talked itself out of the right answer, and that is the reusable part.** T44's 2026-08-23
+amendment established that `npm dist-tag` routes through `otplease()` and so needs an interactive session
+with a live 2FA prompt — a genuinely important finding, correctly reasoned. But it recorded that finding
+as *"option (b) now costs an interactive session"*, which reads as a strike against (b). It is not. That
+is the cost of **executing** the repair, never of **documenting** it — and "this repair needs a human at
+a terminal with 2FA, so budget for that rather than a re-run" is precisely the sentence an operator needs
+at 2am. The amendment discovered the most valuable content for the deliverable and filed it as an
+objection to the deliverable. ADR-003 `:175-176` had already stated the test the row failed to apply:
+*an escape hatch you have written down is a control; an escape hatch you rediscover under pressure is the
+status quo.*
+
+**Two of the five FATAL paths were already done.** `dist-1b-1` landed 2026-08-23 — one day after T44 was
+filed — extracted the guard out of `ci.yml` into its own script, and added repair text to the empty-latest
+and unparseable-latest branches. The row never knew, so it described work that was already 40% complete
+and priced it accordingly. The pickup pre-flight is what surfaced this; nothing else would have.
+
+**Option (a) was declined on cost, not on principle, and the argument for it is stronger than the row's.**
+T44 offered no reason to prefer (a) beyond generic escape-hatch value. The real argument — found during
+implementation and now recorded in the playbook — is that `npm publish` sets `latest` as a side effect, so
+an override would let the **already-trusted CI path** perform the repair itself with no 2FA prompt,
+whereas (b)'s repair always requires a human. That is a substantially better case for (a) than the row
+made. It still loses, because `ci.yml` has no `workflow_dispatch` trigger at all: adding the input means
+opening manual dispatch on the workflow that contains the `publish` job, then gating that surface so a
+dispatch cannot publish arbitrarily — a permanent new security surface for a rare event that already
+requires a human. E=1 was wrong for (a); it was right for (b). The playbook records the trade with a
+trigger for revisiting it: *if the guard ever fires twice in one release cycle, the "it is rare" premise
+has failed.*
+
+**One measurement error worth recording.** The first behaviour check of the new FATAL text reported
+`exit=0` on a path that must exit 1. The guard was fine; the check was `... | sed` followed by `$?`, which
+reads **sed's** status, not the guard's. Same family as the `${PIPESTATUS[0]}`-in-zsh trap from 2026-08-25.
+A verification that pipes its subject into anything has stopped measuring the subject.
+
+**Gates at close:** guard suite 15/15 (up from 8), all three new pins mutation-verified — stripping the
+citation, renaming the playbook heading, and neutering the comparison each kill exactly one test.
+docs:audit 0, backlog-integrity 0.
