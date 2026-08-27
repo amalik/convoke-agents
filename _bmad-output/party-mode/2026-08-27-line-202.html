@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Line 202 — Party Mode, 27 August 2026</title>
+<style>
+  :root{
+    --bg:#f6f3ec; --panel:#fffdf8; --ink:#1e1b16; --muted:#6b6355;
+    --rule:#ded6c6; --accentA:#1f7a4d; --accentJ:#a8601a; --accentW:#2a5d94;
+    --quote:#3a342b; --code-bg:#efe9dc; --shadow:rgba(40,32,20,.10);
+    --stamp:#a8321f;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#12141a; --panel:#181b23; --ink:#e8e4db; --muted:#9aa0ad;
+      --rule:#2a2f3b; --accentA:#4fd18b; --accentJ:#e0a252; --accentW:#7ab5ee;
+      --quote:#cfcabd; --code-bg:#10131a; --shadow:rgba(0,0,0,.45);
+      --stamp:#e2705c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12141a; --panel:#181b23; --ink:#e8e4db; --muted:#9aa0ad;
+    --rule:#2a2f3b; --accentA:#4fd18b; --accentJ:#e0a252; --accentW:#7ab5ee;
+    --quote:#cfcabd; --code-bg:#10131a; --shadow:rgba(0,0,0,.45);
+    --stamp:#e2705c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.65 ui-serif,Georgia,"Iowan Old Style",serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:48px 22px 80px}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em}
+  code{background:var(--code-bg);padding:.12em .38em;border-radius:4px}
+
+  /* ---------- header ---------- */
+  header{position:relative;text-align:center;padding-bottom:30px;margin-bottom:8px;border-bottom:1px solid var(--rule)}
+  .kicker{font:600 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+  h1{font-size:clamp(2.6rem,10vw,4.4rem);margin:.18em 0 .1em;letter-spacing:-.02em;line-height:.95}
+  .sub{color:var(--muted);font-style:italic;margin:0}
+  .stamp{
+    display:inline-block;margin-top:22px;padding:7px 16px;border:2px solid var(--stamp);color:var(--stamp);
+    border-radius:3px;transform:rotate(-1.6deg);
+    font:700 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;
+  }
+
+  /* ---------- cast ---------- */
+  .cast{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:34px 0 46px}
+  .who{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:16px 16px 14px;
+       box-shadow:0 1px 3px var(--shadow);border-top:3px solid var(--c)}
+  .who .ic{font-size:1.5rem;line-height:1}
+  .who h3{margin:.35em 0 .1em;font-size:1.08rem}
+  .who p{margin:0;color:var(--muted);font-size:.86rem;line-height:1.5}
+
+  /* ---------- acts ---------- */
+  .act{margin:0 0 46px}
+  .act > h2{
+    font:600 12px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 4px;
+  }
+  .act > h2 + .title{font-size:1.55rem;margin:0 0 18px;letter-spacing:-.01em;line-height:1.25}
+
+  .turn{display:flex;gap:13px;margin:0 0 15px;align-items:flex-start}
+  .turn .ic{font-size:1.12rem;flex:0 0 auto;margin-top:2px}
+  .turn .body{flex:1 1 auto;min-width:0}
+  .turn .nm{font:700 .8rem/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
+  .turn p{margin:.35em 0 0}
+  .stage{color:var(--muted);font-style:italic}
+
+  blockquote{
+    margin:26px 0;padding:18px 0 18px 22px;border-left:3px solid var(--c,var(--rule));
+    font-size:1.28rem;line-height:1.42;color:var(--quote);
+  }
+  blockquote cite{display:block;margin-top:.6em;font:600 .72rem/1 ui-sans-serif,system-ui,sans-serif;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-style:normal}
+
+  .evidence{
+    background:var(--code-bg);border:1px solid var(--rule);border-left:3px solid var(--c,var(--rule));
+    border-radius:0 8px 8px 0;padding:13px 16px;margin:18px 0;overflow-x:auto;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.82rem;line-height:1.55;
+  }
+  .evidence .p{color:var(--muted)}
+
+  figure{margin:30px 0;text-align:center}
+  figure svg{max-width:100%;height:auto}
+  figcaption{color:var(--muted);font-size:.82rem;font-style:italic;margin-top:10px}
+
+  .ledger{width:100%;border-collapse:collapse;margin:20px 0;font-size:.92rem}
+  .ledger th,.ledger td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+  .ledger th{font:700 .72rem/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .ledger td:first-child{white-space:nowrap;font-family:ui-monospace,Menlo,monospace;font-size:.84rem}
+
+  .tally{display:flex;gap:0;justify-content:center;align-items:stretch;margin:30px 0;flex-wrap:wrap}
+  .tally div{flex:1 1 150px;text-align:center;padding:18px 12px;border:1px solid var(--rule);background:var(--panel)}
+  .tally div:not(:last-child){border-right:none}
+  .tally .n{font-size:2.5rem;line-height:1;font-weight:700;letter-spacing:-.03em}
+  .tally .l{font:600 .68rem/1.4 ui-sans-serif,system-ui,sans-serif;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+  @media(max-width:520px){.tally div{border-right:1px solid var(--rule)!important;border-bottom:none}}
+
+  footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--rule);text-align:center;color:var(--muted);font-size:.82rem}
+  .draw{stroke-dasharray:520;stroke-dashoffset:520;animation:draw 2.1s ease-out .25s forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @media (prefers-reduced-motion:reduce){.draw{animation:none;stroke-dashoffset:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="kicker">Convoke &middot; Party Mode &middot; Session Eight</p>
+  <h1>Line&nbsp;202</h1>
+  <p class="sub">In which the top-scoring initiative on the board turns out to have been startable all along</p>
+  <div class="stamp">27 August 2026 &middot; no rows filed</div>
+</header>
+
+<div class="cast">
+  <div class="who" style="--c:var(--accentA)">
+    <div class="ic">💻</div><h3>Amelia</h3>
+    <p>Senior Software Engineer. Cites the line number. Ends every round by detonating a premise somebody was standing on.</p>
+  </div>
+  <div class="who" style="--c:var(--accentJ)">
+    <div class="ic">📋</div><h3>John</h3>
+    <p>Product Manager. Splits the topic before anyone can design. Two jobs wearing one word is his whole thesis.</p>
+  </div>
+  <div class="who" style="--c:var(--accentW)">
+    <div class="ic">🏗️</div><h3>Winston</h3>
+    <p>System Architect. Boring technology, trade-offs not verdicts. Spent the evening being out-argued by his own documents.</p>
+  </div>
+</div>
+
+<!-- ACT I -->
+<section class="act">
+  <h2>Act One</h2>
+  <p class="title">It names A39. By ID. As the example of what doesn&rsquo;t count.</p>
+
+  <div class="turn" style="--c:var(--accentJ)">
+    <div class="ic">📋</div><div class="body"><div class="nm">John</div>
+    <p>P21. Good. Then before anyone opens the epic file &mdash; what job are we doing tonight? &ldquo;Tackle P21&rdquo; is three different evenings.</p></div>
+  </div>
+  <div class="turn" style="--c:var(--accentA)">
+    <div class="ic">💻</div><div class="body"><div class="nm">Amelia</div>
+    <p><span class="stage">already typing.</span> John. Hold that. I pre-flighted it while you were framing.</p></div>
+  </div>
+
+  <p>T86 had been filed that same morning to correct P21&rsquo;s four-month-stale blocker claim. It said gate condition&nbsp;(b) &mdash; two team-scoped portfolio audits &mdash; was <strong>met</strong>. It had been read against <code>&sect;A41-9</code> alone.</p>
+
+  <div class="evidence" style="--c:var(--accentA)">
+<span class="p">convoke-epic-operator-covenant.md:84 &mdash; FR17</span>
+&hellip;at least two portfolio audits covering distinct teams,
+<strong>each individually meeting COI mitigation Tier-2 OR
+Tier-1-with-clearance per A41 &sect;A41-10</strong>
+
+<span class="p">convoke-spec-covenant-compliance-checklist.md &mdash; &sect;A41-10</span>
+Tier-1: acceptable for Publication Gate IF gate clears;
+<strong>NOT acceptable if gate fails (A39 case &mdash; Tier-1-attempted-but-failed)</strong>
+  </div>
+
+  <blockquote style="--c:var(--accentJ)">
+    So (a) and (b) aren&rsquo;t two blockers. They&rsquo;re one fact wearing two hats.
+    <cite>John</cite>
+  </blockquote>
+
+  <div class="turn" style="--c:var(--accentW)">
+    <div class="ic">🏗️</div><div class="body"><div class="nm">Winston</div>
+    <p>That&rsquo;s a good finding and I want to sit in it for a second, because I wrote a lot of that machinery and I did not see it. T86 was filed <em>this morning</em> to correct a stale blocker claim, and it introduced a new incorrect one in the same breath. That&rsquo;s what happens when the gate&rsquo;s definition lives in three files.</p></div>
+  </div>
+</section>
+
+<!-- ACT II -->
+<section class="act">
+  <h2>Act Two</h2>
+  <p class="title">The retrofit that was never blocked</p>
+
+  <div class="turn" style="--c:var(--accentA)">
+    <div class="ic">💻</div><div class="body"><div class="nm">Amelia</div>
+    <p><span class="stage">not done.</span> <code>sprint-status.yaml:509</code>.</p></div>
+  </div>
+
+  <div class="evidence" style="--c:var(--accentA)">oc-2-1-retrofit-bottleneck-skills: backlog</div>
+
+  <p>The Vortex audit had fired T1 on <em>Right to pacing</em> &mdash; 25% compliance &mdash; and unlike Gyre it <strong>cleared its reproducibility gate at 100%</strong> on 19 April. Non-provisional. Undisputed. Three retrofit cells.</p>
+  <p>Nothing had been retrofitted. The story had read <code>backlog</code> for four months while every conversation about the initiative was about the evidence dispute instead.</p>
+
+  <blockquote style="--c:var(--accentJ)">
+    &ldquo;Compliant&rdquo; was two jobs in one word. <strong>&ldquo;Blocked&rdquo; is two jobs in one word.</strong> Blocked-from-starting and blocked-from-finishing. P21 has been treated as the first for four months and it was only ever the second.
+    <cite>John</cite>
+  </blockquote>
+</section>
+
+<!-- ACT III -->
+<section class="act">
+  <h2>Act Three</h2>
+  <p class="title">&ldquo;Is it relevant to do that now?&rdquo;</p>
+
+  <div class="turn" style="--c:var(--accentJ)">
+    <div class="ic">📋</div><div class="body"><div class="nm">John</div>
+    <p><span class="stage">immediately.</span> No. And I&rsquo;ll go first because I&rsquo;m the one who&rsquo;s been loudest about this initiative. Publication has no customer and no date. Everything we spent the last hour on is governance serving governance. It&rsquo;s the most seductive kind of work because it <em>feels</em> rigorous.</p></div>
+  </div>
+  <div class="turn" style="--c:var(--accentA)">
+    <div class="ic">💻</div><div class="body"><div class="nm">Amelia</div>
+    <p>He&rsquo;s right and I can put a number on it.</p></div>
+  </div>
+
+  <div class="tally">
+    <div><div class="n" style="color:var(--accentJ)">11</div><div class="l">Methodology rows shipped</div></div>
+    <div><div class="n" style="color:var(--stamp)">0</div><div class="l">Retrofit cells shipped</div></div>
+    <div><div class="n" style="color:var(--accentA)">9/9</div><div class="l">HC-cluster fail rate</div></div>
+  </div>
+
+  <div class="turn" style="--c:var(--accentW)">
+    <div class="ic">🏗️</div><div class="body"><div class="nm">Winston</div>
+    <p><span class="stage">sits down.</span> That&rsquo;s a fair hit and I authored most of them.</p></div>
+  </div>
+
+  <p>And then the turn: the defect was still live in the working tree. <code>assumption-mapping/steps/step-01-setup.md</code> &sect;3 still recited the full HC3 schema &mdash; seven frontmatter fields, five body sections &mdash; before asking the operator a single question about their actual problem. Untouched since the audit. And A26 had since confirmed it at cluster scale: nine of nine, closable by <em>one shared template</em>.</p>
+
+  <blockquote style="--c:var(--accentW)">
+    &ldquo;Is P21 relevant now&rdquo; is the wrong question, because P21 is two things. The <em>gate</em> is governance serving governance. The <em>retrofit</em> isn&rsquo;t P21 at all &mdash; it&rsquo;s a product-quality defect on the surface most of your users touch. The Covenant <em>found</em> the bug. It doesn&rsquo;t have to own the fix.
+    <cite>Winston</cite>
+  </blockquote>
+</section>
+
+<!-- ACT IV -->
+<section class="act">
+  <h2>Act Four</h2>
+  <p class="title">Nobody read line 202</p>
+
+  <figure>
+    <svg viewBox="0 0 660 290" role="img" aria-label="Diagram: gate arms (a) and (b) both resolve to one Gyre COI fact, while Story 2.1 bypasses the gate entirely">
+      <defs>
+        <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+          <path d="M0,0 L7,3.2 L0,6.4 z" fill="currentColor"/>
+        </marker>
+      </defs>
+      <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" color="currentColor">
+        <!-- gate arms -->
+        <rect x="34" y="16" width="196" height="46" rx="7" fill="none" stroke="currentColor" stroke-opacity=".45"/>
+        <text x="132" y="35" text-anchor="middle" fill="currentColor" font-weight="700">arm (a)</text>
+        <text x="132" y="52" text-anchor="middle" fill="currentColor" opacity=".7">retrofit T1-firing cells</text>
+
+        <rect x="262" y="16" width="196" height="46" rx="7" fill="none" stroke="currentColor" stroke-opacity=".45"/>
+        <text x="360" y="35" text-anchor="middle" fill="currentColor" font-weight="700">arm (b)</text>
+        <text x="360" y="52" text-anchor="middle" fill="currentColor" opacity=".7">&ge;2 portfolio audits</text>
+
+        <path class="draw" d="M132,62 L132,104 L246,104 L246,128" fill="none" stroke="currentColor" stroke-width="1.6" stroke-opacity=".55" marker-end="url(#ah)"/>
+        <path class="draw" d="M360,62 L360,104 L246,104 L246,128" fill="none" stroke="currentColor" stroke-width="1.6" stroke-opacity=".55" marker-end="url(#ah)"/>
+
+        <rect x="120" y="132" width="252" height="50" rx="7" fill="none" stroke="#c2452f" stroke-width="1.8"/>
+        <text x="246" y="152" text-anchor="middle" fill="#c2452f" font-weight="700">A39 &middot; Tier-1 attempted, failed</text>
+        <text x="246" y="169" text-anchor="middle" fill="#c2452f" opacity=".85">33% agreement vs a 100% gate</text>
+
+        <path class="draw" d="M246,182 L246,220" fill="none" stroke="#c2452f" stroke-width="1.6" marker-end="url(#ah)"/>
+        <rect x="150" y="224" width="192" height="38" rx="7" fill="none" stroke="currentColor" stroke-opacity=".45"/>
+        <text x="246" y="248" text-anchor="middle" fill="currentColor" opacity=".8">Story 2.3 &mdash; blocked</text>
+
+        <!-- the bypass -->
+        <line x1="500" y1="20" x2="500" y2="262" stroke="currentColor" stroke-opacity=".2" stroke-dasharray="4 5"/>
+        <rect x="516" y="120" width="126" height="52" rx="7" fill="none" stroke="#2f8f5b" stroke-width="1.8"/>
+        <text x="579" y="141" text-anchor="middle" fill="#2f8f5b" font-weight="700">Story 2.1</text>
+        <text x="579" y="158" text-anchor="middle" fill="#2f8f5b" opacity=".85">independent</text>
+        <path class="draw" d="M579,120 L579,74" fill="none" stroke="#2f8f5b" stroke-width="1.6" marker-end="url(#ah)"/>
+        <text x="579" y="62" text-anchor="middle" fill="#2f8f5b" opacity=".8">startable since 19 Apr</text>
+        <text x="579" y="196" text-anchor="middle" fill="currentColor" opacity=".5" font-size="11">gate does not reach here</text>
+      </g>
+    </svg>
+    <figcaption>Both arms of the Publication Gate resolve to a single unresolved fact. Story 2.1 was never behind it.</figcaption>
+  </figure>
+
+  <div class="evidence" style="--c:var(--accentW)">
+<span class="p">convoke-epic-operator-covenant.md:202</span>
+- Story 2.1 independent of others
+  </div>
+
+  <div class="turn" style="--c:var(--accentW)">
+    <div class="ic">🏗️</div><div class="body"><div class="nm">Winston</div>
+    <p>The split John spent an hour arguing for was already written into the epic four months ago. Nobody read line 202.</p></div>
+  </div>
+  <div class="turn" style="--c:var(--accentJ)">
+    <div class="ic">📋</div><div class="body"><div class="nm">John</div>
+    <p><span class="stage">flat.</span> Position told us P21 was worth 9.0. Prose told us it was blocked. Neither told us <em>one of its three stories was startable the whole time.</em></p></div>
+  </div>
+</section>
+
+<!-- ACT V -->
+<section class="act">
+  <h2>Act Five</h2>
+  <p class="title">Four hours, and we filed nothing</p>
+
+  <table class="ledger">
+    <thead><tr><th>What</th><th>Where it went</th></tr></thead>
+    <tbody>
+      <tr><td>T86 &sect;(b)</td><td><strong>MET &rarr; NOT met</strong>, with the FR17 &divide; &sect;A41-10 reasoning written into the row</td></tr>
+      <tr><td>T86 option (iii)</td><td><strong>Invalid, withdrawn</strong> &mdash; the waiver <em>is</em> the gate failure</td></tr>
+      <tr><td>T86 option (iv)</td><td>Added: Tier-2 external review, three cells, not twenty-eight</td></tr>
+      <tr><td>P21 Stage</td><td>&ldquo;Epic 2 deferred&rdquo; &rarr; <strong>&ldquo;Story 2.1 STARTABLE&rdquo;</strong></td></tr>
+      <tr><td>P21 Deps</td><td>Rewritten; &sect;3 Appendix too &mdash; it had named blockers that were never Story 2.1&rsquo;s</td></tr>
+      <tr><td>New rows</td><td><strong>None.</strong> No ID allocated. Every correction landed on a row that already existed</td></tr>
+    </tbody>
+  </table>
+
+  <div class="evidence" style="--c:var(--accentA)">
+<span class="p">620f888f &mdash; docs(T86): correct condition (b) &mdash; the gate blocks 2.3, not Story 2.1</span>
+PASS &mdash; 735 rows walked across 10 tables; references resolve,
+       every row matches its own header, 3 lanes ordered.
+owed-close scan: 0 across 166 live lane rows.
+<span class="p">verified in a detached worktree at HEAD, not in the mixed working tree</span>
+  </div>
+
+  <blockquote style="--c:var(--accentW)">
+    That&rsquo;s not nothing. That&rsquo;s the anti-goal holding for the third session running.
+    <cite>Winston</cite>
+  </blockquote>
+
+  <div class="turn" style="--c:var(--accentA)">
+    <div class="ic">💻</div><div class="body"><div class="nm">Amelia</div>
+    <p><span class="stage">not looking up.</span> Four months and eleven days.</p></div>
+  </div>
+</section>
+
+<footer>
+  <p>Left on the table, deliberately unfiled: the author-time gate &mdash; so the next HC-consuming workflow can&rsquo;t ship the same anti-pattern. Winston would rather it waited until the retrofit says what the rule should be.</p>
+  <p style="margin-top:14px">💻 Amelia &nbsp;&middot;&nbsp; 📋 John &nbsp;&middot;&nbsp; 🏗️ Winston<br>Convoke Party Mode &middot; 27 August 2026</p>
+</footer>
+
+</div>
+</body>
+</html>
