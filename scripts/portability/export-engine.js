@@ -308,7 +308,19 @@ function extractInlinePersona(content) {
   if (!identity && !commStyle && !principles) return null;
 
   // Try to find an icon emoji near the name
-  const iconMatch = content.match(new RegExp(`#\\s+${name}\\s*([\\p{Emoji}])`, 'u'));
+  // T33, defensive — matching the `extractSectionByHeading` site below.
+  // `name` CANNOT contain a metacharacter today: it is captured by the
+  // letters-only `/^#\\s+([A-Z][a-zA-Z]+)\\s*$/` above, so `# Emma {V}` never
+  // matches, `name` stays null, and this function returns before reaching here.
+  // The escaping guards the day someone widens that capture — and under the `u`
+  // flag the stakes are real: `{`, `)`, and a lone `[` or `]` are hard
+  // SyntaxErrors, not lenient literals, so a widened capture would take the
+  // whole export down. `name` also flows into the returned persona object, so
+  // widening the capture needs its other consumers re-checked too, not just this
+  // line. Pinned by the reachability tests in the suite.
+  const iconMatch = content.match(
+    new RegExp(`#\\s+${escapeRegExp(name)}\\s*([\\p{Emoji}])`, 'u')
+  );
   const icon = iconMatch ? iconMatch[1] : '';
 
   return {
@@ -387,7 +399,17 @@ function synthesizePersonaFromWorkflow(skillName, skillContent, workflowContent,
  * Returns the content between `## <heading>` and the next `## ` heading.
  */
 function extractSectionByHeading(content, headingName) {
-  const re = new RegExp(`^##\\s+${headingName}\\s*$([\\s\\S]*?)(?=^##\\s|(?![\\s\\S]))`, 'mi');
+  // T33, defensive: every caller today passes a hardcoded literal ('Identity',
+  // 'Communication Style', 'Principles', 'Overview'), so no content-controlled
+  // string reaches this. Escaped anyway because the failure mode is silent — the
+  // flags here are `mi`, not `u`, so a brace does not throw; a heading like
+  // `Intro (v2)` instead compiles `(v2)` as a capture group, fails to match the
+  // real heading, and this function returns null. The caller reads that as
+  // "section absent" and drops it from the export with no error.
+  const re = new RegExp(
+    `^##\\s+${escapeRegExp(headingName)}\\s*$([\\s\\S]*?)(?=^##\\s|(?![\\s\\S]))`,
+    'mi'
+  );
   const m = content.match(re);
   if (!m) return null;
   return m[1].trim();

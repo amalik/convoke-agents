@@ -100,6 +100,15 @@ function assertStructuralInvariants(result, expectedName, expectedIcon) {
   }
 }
 
+
+/** Reads the engine's own source. Source-shape assertions below explain why. */
+function readEngineSource() {
+  return fs.readFileSync(
+    path.join(__dirname, '..', '..', 'scripts', 'portability', 'export-engine.js'),
+    'utf8'
+  );
+}
+
 describe('Export engine (sp-2-2)', () => {
   // Backlog I123: was `findProjectRoot()` inside a `before()`, i.e. the LIVE repo. An upstream
   // BMAD update deleted the skill content it depended on and quarantined this whole suite for
@@ -221,5 +230,106 @@ describe('Export engine (sp-2-2)', () => {
       0,
       `Catch-all must not warn for your-X residue; found: ${JSON.stringify(yourXWarnings)}`
     );
+  });
+});
+
+// --- T33: unescaped interpolation into constructed RegExps ---
+//
+// Two sites built a RegExp by interpolating a string without escaping it:
+// the persona-icon match (`u` flag) and `extractSectionByHeading` (`mi` flags).
+//
+// The backlog row claimed "a brace in a persona name crashes the export". That
+// premise is FALSE and was measured before this fix shipped: `extractInlinePersona`
+// derives the name from /^#\s+([A-Z][a-zA-Z]+)\s*$/, a letters-only capture, so
+// `# Emma {V}` does not match at all and no metacharacter can reach the RegExp;
+// and every caller of `extractSectionByHeading` passes a hardcoded literal.
+// Both sites are therefore DEFENSIVE — escaped because the helper exists and the
+// failure modes are ugly (a hard SyntaxError under `u`, a silent null under `mi`),
+// not because either is reachable today. These tests pin the escaping AND the
+// reachability facts, so a future widening of either input source is caught.
+
+describe('T33 — RegExp interpolation is escaped at both sites', () => {
+  const { escapeRegExp } = require('../../scripts/lib/sanitize');
+
+  it('escaping makes the u-flag icon pattern survive a brace', () => {
+    const raw = () => new RegExp(`#\\s+${'Emma {V}'}\\s*([\\p{Emoji}])`, 'u');
+    assert.throws(raw, SyntaxError, 'fixture no longer exercises the u-flag crash');
+    assert.doesNotThrow(
+      () => new RegExp(`#\\s+${escapeRegExp('Emma {V}')}\\s*([\\p{Emoji}])`, 'u')
+    );
+  });
+
+  it('escaping fixes the silent-null heading case under mi flags', () => {
+    const body = '## Intro (v2)\nreal body\n\n## Next\nother\n';
+    const build = (h) =>
+      new RegExp(`^##\\s+${h}\\s*$([\\s\\S]*?)(?=^##\\s|(?![\\s\\S]))`, 'mi');
+    assert.equal(body.match(build('Intro (v2)')), null, 'fixture no longer exercises the gap');
+    const m = body.match(build(escapeRegExp('Intro (v2)')));
+    assert.ok(m, 'escaped heading must match');
+    assert.equal(m[1].trim(), 'real body');
+  });
+
+  // Source-shape assertions, and the reason they are source-shape.
+  //
+  // The three tests above prove `escapeRegExp` solves the problem; they do NOT
+  // prove production uses it — verified: all of them pass against the pre-fix
+  // engine. That is the "check that cannot fail" class, and it is unavoidable at
+  // runtime here, because the finding IS that neither site is reachable with a
+  // metacharacter: the persona name is letters-only by construction and every
+  // heading caller passes a literal. With no way to drive hostile input through
+  // the real path, the honest discriminator is the shape of the call itself.
+  it('the icon RegExp interpolates through escapeRegExp', () => {
+    const src = readEngineSource();
+    assert.match(src, /new RegExp\(\s*`#\\\\s\+\$\{escapeRegExp\(name\)\}/,
+      'the u-flag icon pattern must escape `name`');
+    assert.doesNotMatch(src, /new RegExp\(`#\\\\s\+\$\{name\}/,
+      'raw `name` interpolation has come back');
+  });
+
+  it('extractSectionByHeading interpolates through escapeRegExp', () => {
+    const src = readEngineSource();
+    assert.match(src, /\$\{escapeRegExp\(headingName\)\}/,
+      'the heading pattern must escape `headingName`');
+    assert.doesNotMatch(src, /\^##\\\\s\+\$\{headingName\}/,
+      'raw `headingName` interpolation has come back');
+  });
+
+  // Reachability, pinned. If either assertion breaks, the sites stop being
+  // defensive and T33's original severity becomes real.
+  it('the persona-name regex still admits letters only', () => {
+    // Built FROM the source text, not copied alongside it. A local
+    // `const NAME_RE = /.../` would keep passing against its own fork after
+    // someone widened the real capture — the exact rot this pin exists to catch.
+    const src = readEngineSource();
+    const decl = src.match(/lines\[i\]\.match\((\/\^#.*?\/)\);/);
+    assert.ok(decl, 'the persona-name capture moved; this pin no longer reads it');
+    const NAME_RE = new RegExp(decl[1].slice(1, -1));
+    assert.match(decl[1], /\(\[A-Z\]\[a-zA-Z\]\+\)/,
+      'the capture is no longer letters-only — the RegExp sites are now reachable');
+    assert.equal(NAME_RE.exec('# Emma')[1], 'Emma');
+    for (const hostile of ['# Emma {V}', '# Emma (V)', '# Emma-Q', '# Emma.Q', '# Emma*']) {
+      assert.equal(NAME_RE.exec(hostile), null, `name regex admitted ${hostile}`);
+    }
+  });
+
+  it('every extractSectionByHeading caller still passes a literal', () => {
+    const src = readEngineSource();
+    // Exclude the definition line — `function extractSectionByHeading(content,
+    // headingName)` otherwise matches and its parameter reads as an argument.
+    const calls = [...src.matchAll(/(function\s+)?extractSectionByHeading\(\s*[A-Za-z_$][\w$]*\s*,\s*([^)]+)\)/g)]
+      .filter((m) => !m[1])
+      .map((m) => m[2].trim());
+    // Divergence is the signal: a call whose first argument is an expression
+    // rather than a bare identifier does not match the parser above and would
+    // otherwise slip through unexamined while the five literal calls keep the
+    // count green. Compare parsed calls against raw occurrences instead.
+    const raw = [...src.matchAll(/extractSectionByHeading\(/g)].length;
+    const defs = [...src.matchAll(/function\s+extractSectionByHeading\(/g)].length;
+    assert.equal(calls.length, raw - defs,
+      `${raw - defs - calls.length} call site(s) did not parse — the pin cannot see them`);
+    assert.ok(calls.length >= 5, `expected the known call sites, found ${calls.length}`);
+    for (const arg of calls) {
+      assert.match(arg, /^'[^']*'$/, `non-literal heading argument reaches the RegExp: ${arg}`);
+    }
   });
 });
