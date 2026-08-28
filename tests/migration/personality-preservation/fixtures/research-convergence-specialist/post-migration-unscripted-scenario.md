@@ -3,7 +3,7 @@ agent_role: research-convergence-specialist
 agent_first_name: Mila
 fixture_purpose: Evidence Source 2 (FR22) — operator-ranked unscripted multi-turn scenario captured from POST-MIGRATION (v6.3+) Mila. Scored side-by-side against baseline-unscripted-scenario.md to detect persona drift across the conversion.
 captured_against: post-migration v6.3+ SKILL.md (Story i97-2-3)
-capture_date: 2026-05-03
+capture_date: FILL-AT-CAPTURE  # pre-filled 2026-05-03 on a same-day-capture assumption that did not hold; write the REAL date at capture time (CF #11)
 capture_session_id: TBD-fill-when-captured (per CF #11 — fill at capture time, never leave as TBD; if same-session-as-implementation, write 'same-session-as-implementation per same-LLM caveat')
 scoring_dimensions_covered:
   - D3

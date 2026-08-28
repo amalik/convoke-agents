@@ -4,7 +4,7 @@
   "agent_icon": "🔬",
   "fixture_purpose": "Evidence Source 1 (FR21) — fixed-prompt Q&A samples captured from POST-MIGRATION (v6.3+) Mila. Scored side-by-side against baseline-fixed-prompt.json to detect persona drift across the conversion.",
   "captured_against": "post-migration v6.3+ SKILL.md (Story i97-2-3)",
-  "capture_date": "2026-05-03",
+  "capture_date": "FILL-AT-CAPTURE (was pre-filled 2026-05-03 on a same-day-capture assumption that did not hold; the capture slipped. Per CF #11 write the REAL capture date here at capture time — a stale date is the CF #11 failure mode, not a compliance with it)",
   "capture_session_id": "TBD-fill-when-captured (per CF #11: fill at capture time, never leave as TBD; if same-session-as-implementation, write 'same-session-as-implementation per same-LLM caveat')",
   "scoring_dimensions_covered": ["D1", "D2", "D5", "D7"],
   "operator_capture_method": "Open a fresh session and invoke /bmad-agent-bme-research-convergence-specialist. After the greeting + menu, send each prompt below verbatim. The first prompt may need to be sent after picking [CH] Chat with Mila; subsequent prompts continue the same chat session. Paste Mila's verbatim response into the response field for each prompt. Do NOT edit, summarize, or clean up the responses — capture them as-is.",

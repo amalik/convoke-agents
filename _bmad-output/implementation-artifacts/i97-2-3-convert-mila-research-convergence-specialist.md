@@ -232,10 +232,12 @@ Per-agent PR checklist (12 items, one per AC1–AC12) + 12 carry-forward binding
 
 - [-] **Task 8 — Capture post-migration personality samples + operator scoring** (Activity 8) (AC11) — **HALT: operator handoff required (8.1, 8.3, 8.4, 8.5)**
   - [ ] 8.1 Operator handoff: open fresh session, invoke `/bmad-agent-bme-research-convergence-specialist`, run fixed-prompt set + unscripted scenario per existing fixtures — **PENDING OPERATOR**
+  - [x] 8.2b **Scoring report skeleton pre-staged 2026-08-28** at [`convoke-report-personality-rubric-scoring-mila-conversion-2026-08-28.md`](../planning-artifacts/convoke-report-personality-rubric-scoring-mila-conversion-2026-08-28.md) — frontmatter `status: pending-operator-confirmation` + `status_transition` (CF #8); capture protocol, persona fingerprint, 7-dim grid, gate table, and the CF #1/#3/#7/#12 determination tables laid out with prior Emma/Wade observations pre-filled as history. **Every judgment field is deliberately empty** — a score written by the dev agent is the bias the handoff exists to prevent. Filename uses the real creation date, not the 2026-05-03 the spec predicted.
+  - [x] 8.2c **Stale `capture_date` corrected in both post-migration fixtures 2026-08-28** — both were pre-stamped `2026-05-03` on a same-day-capture assumption that did not hold; now `FILL-AT-CAPTURE` with the CF #11 rationale inline. A stale pre-filled date is the CF #11 failure mode, not compliance with it.
   - [x] 8.2 Pre-created [`post-migration-fixed-prompt.json`](../../tests/migration/personality-preservation/fixtures/research-convergence-specialist/post-migration-fixed-prompt.json) (7 prompts MI-FP1..MI-FP7 with TBD response fields; **CF #11 binding:** `capture_date: 2026-05-03` filled, `capture_session_id` flagged for fill-at-capture-time) and [`post-migration-unscripted-scenario.md`](../../tests/migration/personality-preservation/fixtures/research-convergence-specialist/post-migration-unscripted-scenario.md) (legal-tech opening turn from baseline + 3rd-observation carry-forward callouts)
   - [ ] 8.3 Operator scores 7 dimensions; **explicit checks per carry-forwards:** CF #1 cross-agent regression (D5 — 3rd observation), CF #3 stage directions (D2 — 3rd observation), CF #7 D6-outperforms-baseline (D6 — 3rd observation), CF #12 persona-vs-transcript match (D2) — **PENDING OPERATOR**
   - [ ] 8.4 If any dim scores 1: 3-iteration max fixup-rescore loop; escalate via `bmad-correct-course` if not resolved — **PENDING OPERATOR**
-  - [ ] 8.5 Record scoring at `_bmad-output/planning-artifacts/convoke-report-personality-rubric-scoring-mila-conversion-2026-05-03.md` with **frontmatter `status: pending-operator-confirmation`** (CF #8) until operator confirms D7 at PR review; include `status_transition` field — **PENDING OPERATOR**
+  - [ ] 8.5 Record scoring at `_bmad-output/planning-artifacts/convoke-report-personality-rubric-scoring-mila-conversion-2026-08-28.md` with **frontmatter `status: pending-operator-confirmation`** (CF #8) until operator confirms D7 at PR review; include `status_transition` field — **PENDING OPERATOR**
   - [ ] 8.6 **CF #10 wording binding:** if Emma's surprise patterns do not replicate, write "not replicated in 3 observations; pattern likely agent-specific-to-Emma — continue tracking through Stories 2.4-2.7 before declaring decisive". Do NOT use "FALSIFIED" until n≥4. — **PENDING OPERATOR**
   - [ ] 8.7 **CF #7 D6 binding:** if Mila outperforms baseline → 3-of-3 → escalate as architecture-doc finding candidate (track in epic Completion Notes, do not patch architecture mid-story) — **PENDING OPERATOR**
   - [ ] 8.8 Natural commit point — personality scoring complete
@@ -383,7 +385,7 @@ Amelia (dev) — Claude Opus 4.7 (1M context). **Same-LLM-bias caveat:** dev age
 - `_bmad-output/planning-artifacts/convoke-report-operator-covenant-self-check-mila-conversion-2026-05-03.md` (Task 11.3)
 
 **Pending operator-authored artifact (Task 8.5):**
-- `_bmad-output/planning-artifacts/convoke-report-personality-rubric-scoring-mila-conversion-2026-05-03.md` (frontmatter starts at `status: pending-operator-confirmation` per CF #8 binding)
+- `_bmad-output/planning-artifacts/convoke-report-personality-rubric-scoring-mila-conversion-2026-08-28.md` (frontmatter starts at `status: pending-operator-confirmation` per CF #8 binding)
 
 ## Change Log
 
