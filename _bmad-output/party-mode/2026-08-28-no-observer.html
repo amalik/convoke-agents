@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>No Observer</title>
+<style>
+/* dark-first: bare :root carries the full dark palette, light is the override */
+:root{
+  --ground:#10141a; --panel:#171d26; --panel2:#1d242f; --rule:#2a3341;
+  --ink:#dfe6ee; --dim:#7c8899; --faint:#4d5867;
+  --lamp:#e8a13c; --live:#5fb8a6; --dead:#c9564a; --cool:#6f9fd8;
+  --lampGlow:rgba(232,161,60,.16); --liveGlow:rgba(95,184,166,.14);
+  --shadow:0 1px 0 rgba(255,255,255,.03), 0 18px 40px -28px rgba(0,0,0,.95);
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --ground:#eef1f5; --panel:#ffffff; --panel2:#f5f7fa; --rule:#d5dce4;
+    --ink:#131922; --dim:#5c6774; --faint:#98a3b1;
+    --lamp:#a86713; --live:#1f7c6b; --dead:#a83a2f; --cool:#2f5f9e;
+    --lampGlow:rgba(168,103,19,.10); --liveGlow:rgba(31,124,107,.10);
+    --shadow:0 1px 0 rgba(255,255,255,.7), 0 14px 34px -26px rgba(16,24,40,.5);
+  }
+}
+:root[data-theme="light"]{
+  --ground:#eef1f5; --panel:#ffffff; --panel2:#f5f7fa; --rule:#d5dce4;
+  --ink:#131922; --dim:#5c6774; --faint:#98a3b1;
+  --lamp:#a86713; --live:#1f7c6b; --dead:#a83a2f; --cool:#2f5f9e;
+  --lampGlow:rgba(168,103,19,.10); --liveGlow:rgba(31,124,107,.10);
+  --shadow:0 1px 0 rgba(255,255,255,.7), 0 14px 34px -26px rgba(16,24,40,.5);
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font:15.5px/1.65 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding:0 20px 100px;
+}
+.wrap{max-width:880px;margin:0 auto}
+
+/* ---------- instrument labels ---------- */
+.lab{
+  font:600 10.5px/1 ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.2em; text-transform:uppercase; color:var(--dim);
+}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums}
+
+/* ---------- header ---------- */
+header{padding:62px 0 30px}
+.eyebrow{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;margin-bottom:26px}
+h1{
+  font-size:clamp(38px,8vw,72px); line-height:.96; margin:0 0 18px;
+  letter-spacing:-.035em; font-weight:640; text-wrap:balance;
+}
+h1 .b{color:var(--lamp)}
+.deck{
+  margin:0; max-width:60ch; color:var(--dim); font-size:17px; line-height:1.6;
+}
+.deck strong{color:var(--ink);font-weight:600}
+
+/* ---------- lamp row ---------- */
+.panel{
+  margin:34px 0 0; background:var(--panel); border:1px solid var(--rule);
+  border-radius:3px; box-shadow:var(--shadow); overflow:hidden;
+}
+.panel-hd{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:11px 16px;border-bottom:1px solid var(--rule);background:var(--panel2);
+  flex-wrap:wrap;
+}
+.lamps{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:1px;background:var(--rule)}
+.lamp{background:var(--panel);padding:15px 16px 16px;display:flex;flex-direction:column;gap:9px}
+.bulb{
+  width:11px;height:11px;border-radius:50%;background:var(--faint);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);flex:none;
+}
+.lamp.on-live .bulb{background:var(--live);box-shadow:0 0 0 4px var(--liveGlow),inset 0 0 0 1px rgba(0,0,0,.2)}
+.lamp.on-warn .bulb{background:var(--lamp);box-shadow:0 0 0 4px var(--lampGlow),inset 0 0 0 1px rgba(0,0,0,.2)}
+.lamp.dark .bulb{background:transparent;box-shadow:inset 0 0 0 1.5px var(--faint)}
+.lamp .row{display:flex;align-items:center;gap:9px}
+.lamp .val{font:600 15px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+.lamp.dark .val{color:var(--faint)}
+.lamp.on-live .val{color:var(--live)}
+.lamp.on-warn .val{color:var(--lamp)}
+.lamp .note{font-size:12px;line-height:1.4;color:var(--dim);margin:0}
+
+@media (prefers-reduced-motion:no-preference){
+  .lamp{animation:settle .5s ease-out backwards}
+  .lamp:nth-child(1){animation-delay:.05s}
+  .lamp:nth-child(2){animation-delay:.13s}
+  .lamp:nth-child(3){animation-delay:.21s}
+  .lamp:nth-child(4){animation-delay:.29s}
+  .lamp:nth-child(5){animation-delay:.37s}
+  @keyframes settle{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+}
+
+/* ---------- sections ---------- */
+section{margin:58px 0 0}
+h2{
+  font:600 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--dim);margin:0 0 20px;
+  padding-bottom:11px;border-bottom:1px solid var(--rule);
+}
+p{margin:0 0 16px;max-width:66ch}
+.dim{color:var(--dim)}
+
+/* ---------- transcript ---------- */
+.log{display:flex;flex-direction:column;gap:2px}
+.turn{
+  display:grid;grid-template-columns:minmax(0,164px) 1fr;gap:22px;
+  padding:16px 0;border-top:1px solid var(--rule);
+}
+.turn:first-child{border-top:0}
+.who{display:flex;flex-direction:column;gap:3px}
+.who .nm{display:flex;align-items:center;gap:8px;font-weight:640;font-size:14.5px}
+.who .ic{font-size:15px;line-height:1}
+.who .ti{font:500 10.5px/1.35 ui-sans-serif,system-ui,sans-serif;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--faint)}
+.turn p{margin:0 0 11px}
+.turn p:last-child{margin-bottom:0}
+.turn.j .nm{color:var(--cool)}
+.turn.w .nm{color:var(--lamp)}
+.turn.a .nm{color:var(--dead)}
+.turn.m .nm{color:var(--live)}
+.turn.l .nm{color:var(--ink)}
+.stage{color:var(--faint);font-style:italic}
+
+@media (max-width:640px){
+  .turn{grid-template-columns:1fr;gap:9px}
+  .who{flex-direction:row;align-items:baseline;gap:10px}
+}
+
+/* ---------- pull quote ---------- */
+blockquote{
+  margin:34px 0;padding:0 0 0 22px;border-left:2px solid var(--lamp);
+  font:italic 400 21px/1.45 ui-serif,Georgia,"Iowan Old Style",serif;
+  color:var(--ink);max-width:52ch;
+}
+blockquote cite{
+  display:block;margin-top:12px;font:600 10.5px/1 ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--dim);font-style:normal;
+}
+
+/* ---------- figure ---------- */
+figure{margin:0}
+.scroller{overflow-x:auto;background:var(--panel);border:1px solid var(--rule);
+  border-radius:3px;box-shadow:var(--shadow)}
+.scroller svg{display:block;min-width:660px;width:100%;height:auto}
+figcaption{margin-top:12px;font-size:13px;line-height:1.55;color:var(--dim);max-width:62ch}
+
+/* ---------- divergence ---------- */
+.diverge{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.ev{background:var(--panel);padding:15px 18px;display:grid;
+  grid-template-columns:104px 1fr auto;gap:18px;align-items:baseline}
+.ev .d{font:600 12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);font-variant-numeric:tabular-nums}
+.ev .t{font-size:14.5px;line-height:1.5}
+.ev .s{font:600 10.5px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.14em;
+  text-transform:uppercase;white-space:nowrap}
+.ev .s.ship{color:var(--live)}
+.ev .s.open{color:var(--lamp)}
+.ev code{font-size:12.5px}
+@media (max-width:640px){
+  .ev{grid-template-columns:1fr;gap:6px}
+  .ev .s{justify-self:start}
+}
+
+/* ---------- agent grid ---------- */
+.agents{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.ag{background:var(--panel);padding:14px 14px 15px;display:flex;flex-direction:column;gap:7px}
+.ag .n{font-weight:640;font-size:14.5px}
+.ag .f{font:600 10.5px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.13em;text-transform:uppercase}
+.ag.done .f{color:var(--live)}
+.ag.todo .f{color:var(--dead)}
+.ag .x{font-size:11.5px;line-height:1.4;color:var(--faint);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.885em;
+  background:var(--panel2);border:1px solid var(--rule);border-radius:2px;padding:.08em .34em}
+.turn code{background:transparent;border:0;padding:0;color:var(--dim)}
+
+/* ---------- outcome ---------- */
+.out{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.oc{background:var(--panel);padding:18px}
+.oc h3{margin:0 0 8px;font:640 15px/1.3 ui-sans-serif,system-ui,sans-serif}
+.oc h3 .id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--lamp)}
+.oc p{margin:0;font-size:13.5px;line-height:1.55;color:var(--dim)}
+
+footer{margin:70px 0 0;padding-top:24px;border-top:1px solid var(--rule);
+  display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:baseline}
+footer p{margin:0;font-size:13px;color:var(--faint);max-width:56ch}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">
+    <span class="lab">Convoke · Party Mode</span>
+    <span class="lab mono">2026-08-26 → 08-28</span>
+    <span class="lab">Five voices</span>
+  </div>
+  <h1>No <span class="b">Observer</span></h1>
+  <p class="deck">A room met to design a workflow that would keep Convoke compliant every time BMAD Method updates. It produced <strong>zero new scope</strong> — and that was the result, not the failure.</p>
+</header>
+
+<div class="panel" role="group" aria-label="Session instrument panel">
+  <div class="panel-hd">
+    <span class="lab">Checks referenced this session</span>
+    <span class="lab mono">3 lit · 1 amber · 1 dark</span>
+  </div>
+  <div class="lamps">
+    <div class="lamp dark">
+      <div class="row"><span class="bulb" aria-hidden="true"></span><span class="val">NO INPUT</span></div>
+      <span class="lab">compat-preflight</span>
+      <p class="note">Reaches for a path that is absent by design. Cannot fire.</p>
+    </div>
+    <div class="lamp dark">
+      <div class="row"><span class="bulb" aria-hidden="true"></span><span class="val">0 REFS</span></div>
+      <span class="lab">convoke-doctor</span>
+      <p class="note">1102 lines. Has never read the manifest that holds the answer.</p>
+    </div>
+    <div class="lamp on-warn">
+      <div class="row"><span class="bulb" aria-hidden="true"></span><span class="val">3 / 7</span></div>
+      <span class="lab">I97 · Epic 2</span>
+      <p class="note">Four agents still carry v5 XML. The release shipped anyway.</p>
+    </div>
+    <div class="lamp on-live">
+      <div class="row"><span class="bulb" aria-hidden="true"></span><span class="val">736</span></div>
+      <span class="lab">backlog-integrity</span>
+      <p class="note">Rows walked, 10 tables, 3 lanes ordered. PASS.</p>
+    </div>
+    <div class="lamp on-live">
+      <div class="row"><span class="bulb" aria-hidden="true"></span><span class="val">0 / 166</span></div>
+      <span class="lab">owed-close scan</span>
+      <p class="note">Shipped-but-open detector. Built by the other session.</p>
+    </div>
+  </div>
+</div>
+
+<section>
+  <h2>The room</h2>
+  <div class="log">
+
+    <div class="turn j">
+      <div class="who">
+        <span class="nm"><span class="ic" aria-hidden="true">📋</span>John</span>
+        <span class="ti">Product Manager</span>
+      </div>
+      <div>
+        <p>Before anyone designs anything — “compliant” with <em>what</em>? I count two jobs wearing one word.</p>
+        <p>Job one: <em>they didn't break us.</em> Cheap, scheduled, mechanical. Job two: <em>we absorbed what they added.</em> That's a PRD, an architecture doc, an epic. You've built that twice already, under two different filenames. Bundling them is how every upstream bump becomes a planning initiative.</p>
+      </div>
+    </div>
+
+    <div class="turn m">
+      <div class="who">
+        <span class="nm"><span class="ic" aria-hidden="true">🧪</span>Murat</span>
+        <span class="ti">Test Architect</span>
+      </div>
+      <div>
+        <p>And I'll price job two immediately: don't automate it. Seven minor versions of drift, zero incidents. Every delta in the sweep classified Class A. That's not a system screaming for a workflow — that's a system telling you the coupling is looser than you fear.</p>
+      </div>
+    </div>
+
+    <div class="turn l">
+      <div class="who">
+        <span class="nm"><span class="ic" aria-hidden="true">🔬</span>Lens</span>
+        <span class="ti">Readiness Analyst</span>
+      </div>
+      <div>
+        <p>You can't say zero. You can say <em>zero observed</em>, and I want the room to sit with the difference.</p>
+        <p>Nothing in this repository knows upstream exists. No workflow mentions it. The gap being seven versions wide was discovered because a human went and looked.</p>
+      </div>
+    </div>
+
+    <div class="turn a">
+      <div class="who">
+        <span class="nm"><span class="ic" aria-hidden="true">💻</span>Amelia</span>
+        <span class="ti">Senior Engineer</span>
+      </div>
+      <div>
+        <p>It's worse than absence. There's a check, and it is structurally incapable of firing.</p>
+        <p><code>compat-preflight.js:36</code> — <code>REQUIRED_BMAD_VERSION = '6.3.0'</code>. The file's own header admits Convoke doesn't depend on <code>bmad-method</code>, so the not-detected branch is the only one that can run here. No <code>node_modules/bmad-method</code>. Dependencies: chalk, fs-extra, js-yaml, yaml. That's it.</p>
+        <p>The check is real. Its inputs never arrive.</p>
+      </div>
+    </div>
+
+    <div class="turn m">
+      <div class="who">
+        <span class="nm"><span class="ic" aria-hidden="true">🧪</span>Murat</span>
+        <span class="ti">Test Architect</span>
+      </div>
+      <div>
+        <p><span class="stage">(pause)</span> Fine. That's a fair hit and I'm revising. A check that can't fail is worse than no check, because it launders as coverage.</p>
+      </div>
+    </div>
+
+    <div class="turn w">
+      <div class="who">
+        <span class="nm"><span class="ic" aria-hidden="true">🏗️</span>Winston</span>
+        <span class="ti">System Architect</span>
+      </div>
+      <div>
+        <p>I'll defend the classification, though. The ternary — declaration-only, conformance-required, breaking. That's the reusable asset.</p>
+      </div>
+    </div>
+
+    <div class="turn a">
+      <div class="who">
+        <span class="nm"><span class="ic" aria-hidden="true">💻</span>Amelia</span>
+        <span class="ti">Senior Engineer</span>
+      </div>
+      <div>
+        <p>It's reusable and it isn't automatable, and you're about to conflate those. Your own note says the delta was verified <em>mechanically, not from release notes</em> — because two changes both <em>looked</em> Class B from the changelog and were Class A in the source. So it's a diff harness with a human classifier bolted on top, not a classifier with a diff as evidence.</p>
+      </div>
+    </div>
+
+    <div class="turn w">
+      <div class="who">
+        <span class="nm"><span class="ic" aria-hidden="true">🏗️</span>Winston</span>
+        <span class="ti">System Architect</span>
+      </div>
+      <div>
+        <p>…that's the correction, yes. The ternary is the <em>output schema</em>, not the engine.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <h2>The mechanism</h2>
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 880 300" role="img" aria-labelledby="mechTitle mechDesc">
+        <title id="mechTitle">A compatibility check reaching for an absent input while the present one goes unread</title>
+        <desc id="mechDesc">compat-preflight probes node_modules for bmad-method and finds nothing. The BMAD manifest, which records version 6.10.0, sits unread. The declared floor stays at 6.3.0.</desc>
+
+        <!-- the checker -->
+        <rect x="26" y="112" width="176" height="70" rx="3" fill="var(--panel2)" stroke="var(--rule)"/>
+        <text x="114" y="140" text-anchor="middle" fill="var(--ink)" font-family="ui-monospace,Menlo,monospace" font-size="13" font-weight="600">compat-preflight</text>
+        <text x="114" y="160" text-anchor="middle" fill="var(--dim)" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10.5" letter-spacing="1.6">FLOOR 6.3.0</text>
+
+        <!-- probe 1: absent -->
+        <path d="M202 134 C 300 134, 330 62, 452 62" fill="none" stroke="var(--dead)" stroke-width="1.6" stroke-dasharray="5 5"/>
+        <g transform="translate(452,62)">
+          <circle r="13" fill="none" stroke="var(--dead)" stroke-width="1.6"/>
+          <path d="M-5 -5 L5 5 M5 -5 L-5 5" stroke="var(--dead)" stroke-width="1.8" stroke-linecap="round"/>
+        </g>
+        <text x="480" y="52" fill="var(--dead)" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10.5" font-weight="600" letter-spacing="1.6">ABSENT BY DESIGN</text>
+        <text x="480" y="72" fill="var(--dim)" font-family="ui-monospace,Menlo,monospace" font-size="12">node_modules/bmad-method/package.json</text>
+
+        <!-- probe 2: never drawn -->
+        <path d="M202 160 C 300 160, 330 214, 452 214" fill="none" stroke="var(--faint)" stroke-width="1.4" stroke-dasharray="2 7" opacity=".75"/>
+        <g transform="translate(452,214)">
+          <circle r="13" fill="none" stroke="var(--live)" stroke-width="1.6"/>
+          <circle r="4.5" fill="var(--live)"/>
+        </g>
+        <text x="480" y="204" fill="var(--live)" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10.5" font-weight="600" letter-spacing="1.6">PRESENT · UNREAD</text>
+        <text x="480" y="224" fill="var(--dim)" font-family="ui-monospace,Menlo,monospace" font-size="12">_bmad/_config/manifest.yaml</text>
+        <text x="480" y="243" fill="var(--ink)" font-family="ui-monospace,Menlo,monospace" font-size="12.5" font-weight="600">installation.version: 6.10.0</text>
+
+        <!-- the gap -->
+        <line x1="114" y1="196" x2="114" y2="268" stroke="var(--rule)" stroke-width="1"/>
+        <line x1="114" y1="264" x2="742" y2="264" stroke="var(--rule)" stroke-width="1"/>
+        <line x1="114" y1="258" x2="114" y2="270" stroke="var(--lamp)" stroke-width="2"/>
+        <line x1="742" y1="258" x2="742" y2="270" stroke="var(--lamp)" stroke-width="2"/>
+        <text x="428" y="286" text-anchor="middle" fill="var(--lamp)" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10.5" font-weight="600" letter-spacing="1.8">SEVEN MINOR VERSIONS · NOTHING MEASURES THIS</text>
+      </svg>
+    </div>
+    <figcaption>The check exists, is documented, and is restated in <code>project-context.md</code> as deliberate design. It still cannot fire — because both the code comment and the rule frame “not detected” as the primary path rather than as a check with no reachable input.</figcaption>
+  </figure>
+</section>
+
+<blockquote>
+  Zero incidents and no observer are the same observation. You cannot distinguish them.
+  <cite>Lens · Readiness Analyst</cite>
+</blockquote>
+
+<section>
+  <h2>The turn</h2>
+  <p>Then the dedupe check ran, and the evening inverted. The floor pin, the tripwire, the cadence status line, the ternary classifier — all of it already existed, fully specified, as <strong>v4.1 Epic 1: Managed Currency &amp; the Cadence Floor</strong>. Ten stories. MVP-scoped. Written two months earlier.</p>
+  <p class="dim">By Winston. Who re-derived it in the room, in almost the same words, without recognising it — down to the architecture note already arguing that the probe must diff <em>what Convoke consumes</em>, not what upstream changed.</p>
+
+  <div class="turn l" style="border-top:1px solid var(--rule);margin-top:26px">
+    <div class="who">
+      <span class="nm"><span class="ic" aria-hidden="true">🔬</span>Lens</span>
+      <span class="ti">Readiness Analyst</span>
+    </div>
+    <div>
+      <p>Five voices with different priors converged on a design that already existed, without seeing it. That's the epic being <em>validated</em>, not you being forgetful.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Then the operator caught the room</h2>
+  <p>“I thought 4.0 was shipped as we are at the 4.0.1 stage.” He was right, and the closing advice the room had just given — <em>ship 4.0</em> — was stale. What the correction opened was larger than what the party had built.</p>
+
+  <div class="diverge">
+    <div class="ev">
+      <span class="d">2026-08-17</span>
+      <span class="t"><code>v4.0.0</code> tagged</span>
+      <span class="s ship">Shipped</span>
+    </div>
+    <div class="ev">
+      <span class="d">2026-08-24</span>
+      <span class="t"><code>v4.0.1</code> published — npm <code>latest</code></span>
+      <span class="s ship">Shipped</span>
+    </div>
+    <div class="ev">
+      <span class="d">—</span>
+      <span class="t">I97, the initiative that release was named after</span>
+      <span class="s open">Never closed</span>
+    </div>
+  </div>
+
+  <p style="margin-top:22px">The gate read <code>depends: I97 close (v4.0 ship)</code> — two events welded into one label. It read as satisfied the moment the second one happened. Underneath it, Epic 2 was three of seven:</p>
+
+  <div class="agents">
+    <div class="ag done"><span class="n">Emma</span><span class="f">Converted</span><span class="x">0 xml</span></div>
+    <div class="ag done"><span class="n">Wade</span><span class="f">Converted</span><span class="x">0 xml</span></div>
+    <div class="ag done"><span class="n">Mila</span><span class="f">Converted</span><span class="x">0 xml</span></div>
+    <div class="ag todo"><span class="n">Isla</span><span class="f">v5 XML</span><span class="x">117 lines</span></div>
+    <div class="ag todo"><span class="n">Liam</span><span class="f">v5 XML</span><span class="x">117 lines</span></div>
+    <div class="ag todo"><span class="n">Noah</span><span class="f">v5 XML</span><span class="x">117 lines</span></div>
+    <div class="ag todo"><span class="n">Max</span><span class="f">v5 XML</span><span class="x">117 lines</span></div>
+  </div>
+
+  <p style="margin-top:22px" class="dim">Four files at exactly 117 lines each — the untouched shape. I97 wasn't blocking the release. The release routed around it, which is precisely why nobody noticed it was open: the thing it gated happened anyway.</p>
+</section>
+
+<section>
+  <h2>What was left standing</h2>
+  <div class="out">
+    <div class="oc">
+      <h3><span class="id">T73</span> — the instance</h3>
+      <p>A compatibility check whose input never arrives, in a tree seven minors off its own declared floor. Scored 3.2, priced for the instance only, and the row says so — so nobody re-prices it for the gate later.</p>
+    </div>
+    <div class="oc">
+      <h3><span class="id">T87</span> — the general case</h3>
+      <p>Nothing detects an initiative that ships with its epics incomplete. Reached independently by a parallel session, from the other direction, on the same day. Neither row subsumes the other.</p>
+    </div>
+    <div class="oc">
+      <h3><span class="id">T79</span> — the enforcer</h3>
+      <p>Six sessions of this room rediscovering enforcement-versus-declaration, and a detector for shipped-but-open rows finally shipped. Built somewhere else. It runs in the gate now: <span class="mono">0 across 166 live lane rows</span>.</p>
+    </div>
+  </div>
+</section>
+
+<blockquote>
+  The absence was never that nobody knew. It's that knowing had been filed as a refinement to a plan behind a gate.
+  <cite>Lens · closing the room</cite>
+</blockquote>
+
+<footer>
+  <p>Session held 2026-08-26 to 08-28. John, Winston, Amelia, Murat — and Lens, summoned in from Gyre, who is not in the default roster and will not be until the resolver can see the twelve <span class="mono">bme</span> agents. That was this room's very first finding, and it is still open.</p>
+  <p class="lab">Convoke · <span class="mono">_bmad-output/party-mode</span></p>
+</footer>
+
+</div>
+</body>
+</html>
