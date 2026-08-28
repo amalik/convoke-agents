@@ -6,8 +6,10 @@ description: "Domain-specialized agent teams for structured product discovery: C
 default_selected: false
 
 # I97 Story 2.1 — agents[] array per BMM canonical schema (architecture § "Format Patterns" lines 399-403).
-# Entries added incrementally as per-agent conversion PRs land (Stories 2.1–2.7).
-# All 7 entries verified at Story 2.7 (Liam, closes E2).
+# INCOMPLETE BY DESIGN. This list holds only the agents whose conversion has landed; it is NOT
+# the module's agent roster, which is 7. Each remaining conversion adds its own entry with the
+# PR (Isla 2.4, Noah 2.5, Max 2.6, Liam 2.7); Story 2.7 closes E2 and is where all seven get
+# verified together. Read the entries below for what is present — not this comment.
 agents:
   - code: bmad-bme-agent-emma
     name: Emma
