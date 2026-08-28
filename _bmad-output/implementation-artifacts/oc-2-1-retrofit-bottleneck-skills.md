@@ -1,6 +1,6 @@
 # Story 2.1: Retrofit T1-Firing Cells (Vortex × Right to pacing)
 
-Status: backlog — **story file is complete; blocked on T88.** See the banner below. Deviation from STATUS DEFINITIONS (`backlog` normally means "story only exists in epic file") follows the documented `tf-2-11` precedent of 2026-04-22: the file is ready, a gate makes it non-actionable, and `backlog` stops it auto-surfacing as the next `dev-story` pick. Promote to `ready-for-dev` when T88 closes.
+Status: ready-for-dev — **unblocked 2026-08-28 when T88 shipped.** AC0 satisfied: a fresh install now carries `_bmad/bme/_vortex/contracts/`, and 17 contract pointers across the installed workflow tree resolve with 0 dangling.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -8,13 +8,15 @@ Status: backlog — **story file is complete; blocked on T88.** See the banner b
 **Story key:** `oc-2-1-retrofit-bottleneck-skills`
 **Created:** 2026-08-28 · **Portfolio:** convoke · **Namespace:** `_bmad/bme/` (Convoke-owned)
 
-> ## ⛔ BLOCKED ON T88 — read before starting
+> ## ✅ T88 CLEARED — AC0 satisfied 2026-08-28
 >
-> **The retrofit design in this story is unsafe until T88 ships.** Proven 2026-08-28 by `scripts/audit/try-fresh-install.sh` (`KEEP=1`): a fresh 4.0.1 install contains only `agents/`, `config.yaml`, `guides/`, `workflows/` under `_bmad/bme/_vortex/`. **`contracts/` is never copied into an operator's project** — it exists only inside `node_modules/convoke-agents/`. 16 shipped step files already point at `{project-root}/_bmad/bme/_vortex/contracts/hc*N*-….md`, a path no operator has.
+> This story was blocked because its design routes the operator to `contracts/hc*N*-….md` and that directory was never copied into an operator project. **T88 fixed it** — `refresh-installation.js` phase 2b now copies `contracts/` and `examples/` into the operator project, remove-then-copy.
 >
-> This story's design replaces inline schema enumeration with **exactly that pointer**. Landing it before T88 would fix the pacing violation by making the schema unreachable — the Covenant failing on its own terms.
+> **Verified against a real packed install, not the unit suite:** a fresh install's `_bmad/bme/_vortex/` now carries `contracts/` and `examples/` alongside `agents/`, `config.yaml`, `guides/` and `workflows/`, and **17 contract pointers resolve, 0 dangling**. Re-run `bash scripts/audit/try-fresh-install.sh` if you want to see it yourself — Task 0 tells you what to look for.
 >
-> **Do not start Task 3 until T88 is closed.** If T88 is resolved by repointing references instead of copying `contracts/`, re-read §Resolved Design Decision — the retrofit shape changes with it.
+> **T88 was fixed by copying, not by repointing**, so §Resolved Design Decision stands unchanged: reference-instead-of-enumerate is now safe.
+>
+> **Task 3's location constraint STANDS — do not create `_bmad/bme/_vortex/templates/`.** An intermediate draft of T88 copied every entry at the Vortex root, which would have made that directory install. **Round 1 rejected that draft** and the shipped fix copies `contracts/` and `examples/` only. A root-level `templates/` is therefore still copied by nothing, exactly as §Hard structural constraint item 4 describes. The shared scaffold belongs inside a workflow directory, which is copied wholesale.
 
 > **Why this story exists now.** It has been startable since 2026-04-19 and nobody read the line that said so. `convoke-epic-operator-covenant.md:202` states **"Story 2.1 independent of others"**; the Publication Gate (FR17) blocks **Story 2.3 only**. P21's Stage cell said "Epic 2 deferred" for four months, naming blockers (`IN-12`, Loom Phase 3) that were never Story 2.1's. Corrected 2026-08-27 in `620f888f`; see **T86**.
 
@@ -83,7 +85,7 @@ Derived from [Epic Story 2.1 ACs](../planning-artifacts/convoke-epic-operator-co
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Confirm T88 is closed (AC: 0)** — *hard gate; everything below is void if this fails.*
+- [ ] **Task 0 — Re-confirm T88's fix in your own tree (AC: 0)** — *T88 shipped 2026-08-28; this is a re-check, not a gate.*
   - [ ] `bash scripts/audit/try-fresh-install.sh` → inspect the installed tree, confirm `_bmad/bme/_vortex/contracts/` exists.
   - [ ] If T88 shipped by repointing references rather than copying, STOP and re-read §Resolved Design Decision — the retrofit shape changes.
 
@@ -97,7 +99,7 @@ Derived from [Epic Story 2.1 ACs](../planning-artifacts/convoke-epic-operator-co
   - [ ] Confirm the constraint still holds: `ls _bmad/bme/_vortex/workflows/*/steps/*.md | wc -l` per workflow, and re-read `scripts/update/lib/validator.js:475-487`. If the cap has changed since 2026-08-28, re-open the decision.
 
 - [ ] **Task 3 — Author the shared scaffold (AC: 2, 4, 7)** — *location constrained, see §Hard structural constraint item 4*
-  - [ ] ⛔ **NOT** `_bmad/bme/_vortex/templates/` — that directory is never copied into an operator project. Place the scaffold inside a copied path, or land it as part of T88's copy-phase fix.
+  - [ ] ⛔ **NOT** `_bmad/bme/_vortex/templates/` — T88 shipped narrowed (`contracts/` + `examples/` only), so a root-level dir is still copied by nothing. Place the scaffold inside a workflow directory; verify with `try-fresh-install.sh` per Task 0.
   - [ ] Round 1 = receive the input (path or description). Round 2 = validate against the named contract schema.
   - [ ] Each round carries a `Concept count: N/3` footer. **Reuse the existing convention, do not invent one** — see `_bmad/bme/_team-factory/workflows/add-team/step-01-scope.md:104` and siblings.
   - [ ] Self-check against OC-R0..OC-R7 (AC7).
@@ -218,7 +220,7 @@ Current step counts:
 1. **Do not rename `step-01-*.md`.** P20 asserts the name, and every `workflow.md` loads it by path — `Load step: {project-root}/…/steps/step-01-setup.md` under `## INITIALIZATION` (e.g. hypothesis-engineering `workflow.md:52`). A rename breaks workflow startup **and** validation.
 2. **Do not add a step file to the three at cap.** `lean-experiment`, `proof-of-value` and `lean-persona` are already at 6. Adding a 7th fails P17. Those are exactly the two mechanism (ii) cells plus the carry-forward.
 3. **Therefore the retrofit is an IN-FILE round split, not a file split** — see §Resolved Design Decision.
-4. **⛔ `_bmad/bme/_vortex/templates/` is an invalid location — do not create it.** `refresh-installation.js` copies Vortex in four phases only: agents by `AGENT_IDS` (`:57`), workflow dirs by the **`WORKFLOW_NAMES` allowlist** (`:154-176`), `config.yaml` (`:603`), guides (`:669`). A new sibling directory under `_vortex/` is copied by **nothing** — it would ship in the npm tarball and never reach a project, exactly as `contracts/` and `examples/` do today. Gyre has an explicit contracts copy block at `:446-454`; Vortex has no equivalent. **The shared scaffold must live inside a workflow directory** (those are copied wholesale at `:161-169`), or T88 must add a copy phase that covers it. Verified against a real install, not against the copy logic alone.
+4. **⛔ `_bmad/bme/_vortex/templates/` is an invalid location — do not create it.** *(Re-confirmed 2026-08-28 after T88 shipped: an intermediate draft would have made it valid, but that draft was rejected at Round 1 and the shipped phase 2b copies `contracts/` + `examples/` only.)* `refresh-installation.js` copies Vortex in four phases only: agents by `AGENT_IDS` (`:57`), workflow dirs by the **`WORKFLOW_NAMES` allowlist** (`:154-176`), `config.yaml` (`:603`), guides (`:669`). A new sibling directory under `_vortex/` is copied by **nothing** — it would ship in the npm tarball and never reach a project, exactly as `contracts/` and `examples/` do today. Gyre has an explicit contracts copy block at `:446-454`; Vortex has no equivalent. **T88 added a copy phase (2b), but deliberately narrow** — `contracts/` and `examples/` only, after Round 1 rejected a copy-everything draft for exceeding scope and for putting the U8 opt-out at risk. A root-level `templates/` still ships to nobody. **The scaffold must live inside a workflow directory**, which is copied wholesale at `:161-169`. Verified against a real install, not against the copy logic alone.
 
 The A24 / oc-1-1 proposals (*"split step-01 into step-01a and step-01b"*) were written in April against a structure that cannot accept them. They describe the **intent** (two rounds), not the **mechanism**. Follow the intent.
 
