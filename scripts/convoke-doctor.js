@@ -765,7 +765,17 @@ function checkBmmDependencies(projectRoot) {
   // AC5: CSV absent → informational finding, no scan attempted.
   if (!fs.existsSync(csvAbs)) {
     return [{
-      name: 'BMM dependencies: registry present',
+      // BUG-19(a) / dist-2-5 FR17: this branch fires ONLY when the registry is
+      // absent, so it must name the problem — as its four sibling findings below
+      // do (`stale-autoscan`, `unregistered`, `missing-target`, `drift`). The
+      // former label `'registry present'` rendered as `⚠ BMM dependencies:
+      // registry present` directly above `bmm-dependencies.csv not found`. In the
+      // Story 4.5 N=1 external validation (2026-08-15) an expert validator read the
+      // warnings on a healthy install as evidence something was wrong; the report
+      // author separately noted this label asserts the opposite of its own
+      // message. Both are recorded there, from different observers. Label only —
+      // `softWarning` and the exit-0 pass-through are untouched per NFR8.
+      name: 'BMM dependencies: registry missing',
       passed: false,
       softWarning: true,
       warning: 'bmm-dependencies.csv not found — governance registry has not been generated yet',

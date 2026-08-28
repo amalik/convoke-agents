@@ -78,6 +78,32 @@ describe('checkBmmDependencies — AC5 CSV-absent path', () => {
     // AC3 fail-soft: no `error` field used for governance.
     assert.equal(results[0].error, undefined);
   });
+
+  // BUG-19(a) / dist-2-5 FR17: the label must agree with its own finding. This
+  // branch fires ONLY when the registry is absent, so a name asserting the
+  // registry is *present* states the opposite of everything else on the finding.
+  // Attribution, precisely: the Story 4.5 N=1 report (2026-08-15) records the
+  // validator reacting to the WARNINGS appearing on a healthy install; the
+  // label-contradicts-message observation is the report author's, and the
+  // recruitment protocol had pre-classified it as CONCERN before the session ran.
+  //
+  // Name and warning are asserted as ONE rendered string, not as halves in two
+  // assertions. Pinned separately they can drift back into contradiction while
+  // both stay green: that is the failure this test exists to prevent, so a
+  // half-assertion here would reproduce the very defect under repair. The
+  // NFR8 contract fields (`softWarning`, `passed`, `fix`) are already pinned by
+  // the AC5 test above and are deliberately not restated.
+  // Names the fields, not the rendering: `printResults` is not exercised here, so
+  // the ⚠ line an operator actually sees is covered by neither this test nor any other.
+  it('pairs a CSV-absent label with a message it does not contradict', async () => {
+    tmpRoot = await buildTmpProject([]);
+    const results = checkBmmDependencies(tmpRoot);
+    assert.equal(
+      `${results[0].name} — ${results[0].warning}`,
+      'BMM dependencies: registry missing — bmm-dependencies.csv not found'
+      + ' — governance registry has not been generated yet'
+    );
+  });
 });
 
 // --- AC3 Category 1: stale-autoscan ---
