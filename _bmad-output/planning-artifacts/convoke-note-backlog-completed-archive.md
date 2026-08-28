@@ -1865,4 +1865,6 @@ Full suite 1854 tests, 0 failures. The four new tests in `tests/unit/refresh-ins
 
 **Count corrections.** "16 shipped step files" is imprecise: 16 files **under `workflows/`** reference `contracts/`, of which 7 are `workflow.md` rather than step files; in the installed tree a 17th file matches (`guides/VORTEX-TEAM-GUIDE.md`, which does not itself install). Only 9 of the 16 use the `{project-root}/` prefix — the other 7 use a bare `_bmad/bme/...` path. Immaterial to the chosen fix, since a copy repairs both forms, but it would have broken the row's option (b): repointing by matching the `{project-root}` token would have missed 7 of 16.
 
+**The reviewed artifact was never committed.** R1 ran against the copy-everything draft, which existed only in the working tree; it was replaced before the first commit, so `git log -S"readdirSync(packageVortex)"` returns nothing on any branch. The findings above are stated in full precisely because the code they describe is not recoverable — do not go looking for it.
+
 **Still true and unchanged:** the defect was real and live in 4.0.1, `contracts/` genuinely never reached an operator project, and the fix is verified in a real install rather than only in the unit suite.
