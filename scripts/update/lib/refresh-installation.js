@@ -176,6 +176,49 @@ async function refreshInstallation(projectRoot, options = {}) {
     if (verbose) console.log('    Skipped workflow copy (dev environment)');
   }
 
+  // 2b. Vortex reference assets (T88)
+  //
+  // Phases 1 and 2 copy `agents/` (respecting the U8 excluded_agents opt-out) and the
+  // `workflows/` directories named in WORKFLOW_NAMES. `config.yaml` is merged at phase 3 and
+  // per-agent guides are copied at phase 5. Nothing copied `contracts/`, so 16 files under
+  // `workflows/` referenced `_bmad/bme/_vortex/contracts/hcN-*.md` — a path that existed only
+  // inside the installed package, never in the operator's project.
+  //
+  // Mirrors the Gyre contracts block below, with one deliberate difference: this removes the
+  // destination before copying. Phases 1, 2 and 2b1 all remove-then-copy so that files renamed
+  // or deleted upstream do not survive in the operator tree. That matters more here than
+  // elsewhere because the referring files cite schemas BY FILENAME — a superseded contract
+  // left behind sits beside its replacement indefinitely.
+  //
+  // Scope is deliberately the two package-owned reference directories and nothing else. An
+  // earlier draft copied every entry at the Vortex root; review rejected it on two grounds.
+  // (1) It exceeded what was diagnosed: `README.md`, `module.yaml` and `module-help.csv` have
+  // no shipped referent, and overwriting operator-editable files with no backup is a
+  // regression the guides phase avoids via `backupGuides`. (2) Excluding the phase-owned
+  // entries by name makes correctness depend on a denylist staying in sync with the phases
+  // above — and drift there would wholesale-copy an exclusion-aware subtree, restoring agent
+  // files an operator opted out of. Detecting the general class of "shipped document names a
+  // path the installer never creates" is T89's job, not this phase's.
+  const VORTEX_REFERENCE_DIRS = ['contracts', 'examples'];
+  if (!isSameRoot) {
+    for (const dir of VORTEX_REFERENCE_DIRS) {
+      const src = path.join(packageVortex, dir);
+      const dest = path.join(targetVortex, dir);
+      if (!fs.existsSync(src)) {
+        changes.push(`Vortex ${dir}/ not found in package — skipping`);
+        if (verbose) console.log(`    ⚠ Vortex ${dir}/ not found in package — skipping`);
+        continue;
+      }
+      if (fs.existsSync(dest)) await fs.remove(dest);
+      await fs.copy(src, dest, { overwrite: true });
+      changes.push(`Refreshed Vortex ${dir}`);
+      if (verbose) console.log(`    Refreshed Vortex ${dir}`);
+    }
+  } else {
+    changes.push('Skipped Vortex reference assets (dev environment — files already in place)');
+    if (verbose) console.log('    Skipped Vortex reference assets (dev environment)');
+  }
+
   // 2b1. Standalone bme submodule trees (e.g., _team-factory)
   // Each EXTRA_BME_AGENTS entry references a submodule directory under _bmad/bme/
   // that must be copied wholesale so the agent file, workflows, lib code, and config travel together.
