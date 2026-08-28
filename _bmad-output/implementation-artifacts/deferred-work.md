@@ -1101,3 +1101,13 @@ Hunter). 11 findings patched; the 5 below were not, each for a stated reason.
 - **Untriaged rows are not asserted to sit after the live block** (Lane Ordering clause 2). Already
   filed as **T70(a)**; left there rather than duplicated here.
 
+## Deferred from: code review of T88 (2026-08-28)
+
+Four findings from the T88 R1 review that are real but not caused by that change. Each was reproduced against a real install, not inferred.
+
+- **Gyre has T88's defect, un-fixed.** `_bmad/bme/_gyre/` ships `guides/` and `compass-routing-reference.md` in the package; a refreshed project receives neither (`README.md, agents, config.yaml, contracts, workflows` only). `_gyre/guides/GYRE-TEAM-GUIDE.md` and `_gyre/README.md` both reference the routing doc. The 2d block enumerates agents, workflows, contracts, config.yaml and README.md and stops there. Same shape as T88, one module over. **Deferred: T88 was scoped to Vortex; fixing Gyre in the same change would repeat the scope-creep R1 just rejected.**
+- **`_bmad/bme/_portability/` is shipped and installed by nothing.** It is listed in `package.json` `files`, and `grep -n "_portability" scripts/update/lib/refresh-installation.js` returns no hits. A refreshed project's `_bmad/bme/` contains `_artifacts, _enhance, _gyre, _team-factory, _vortex`. **Deferred: needs a decision on whether it is meant to install at all, which is not a code-review call.**
+- **`_bmad/bme/_vortex/guides/VORTEX-TEAM-GUIDE.md` never installs.** Phase 5 enumerates `{AGENT}-USER-GUIDE.md` across the seven Vortex agents; the team guide matches no agent name, so a real install's `guides/` holds exactly seven files. Phase 5 is itself an instance of T89's enumerating-omission class, and it is exempt from generic copying because it must honour the U8 excluded_agents opt-out. **Deferred: the fix interacts with U8 and deserves its own row.**
+- **`_bmad/bme/_vortex/module.yaml` declares 3 of 7 agents.** Its `agents:` list holds Emma, Wade and Mila directly beneath a comment reading "All 7 entries verified at Story 2.7". Either the manifest or its comment is wrong. Surfaced only because a draft of T88 would have shipped the file into operator projects; the narrowed version does not, so nothing consumes it today. **Deferred: a data defect in a file no installed code reads.**
+
+Related, not deferred: the general detector for "a shipped document names a `{project-root}` path the installer never creates" is already filed as **T89**. These four are instances; T89 is the gate.

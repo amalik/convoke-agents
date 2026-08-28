@@ -1825,3 +1825,44 @@ staying invisible for another four months.
 its close, every one found by a human happening to look. I20 is the seventh, it is four months old, and
 it is the first one no human found. The scan paid for itself on its first run — and it did so through
 the half of its design that came out of code review rather than out of the row.
+
+## T88
+
+**Vortex ships 16 pointers to a directory that never installs** — closed 2026-08-28, same session the code shipped.
+
+**What was wrong.** Every HC-consuming Vortex step file closes its schema section with `> For the full HC*N* schema reference, see \`{project-root}/_bmad/bme/_vortex/contracts/hc*N*-….md\``. `{project-root}` is the operator's project, and `contracts/` was never copied there — it existed only inside `node_modules/convoke-agents/`. Same for `compass-routing-reference.md`, which the **shipped** `guides/VORTEX-TEAM-GUIDE.md:435` points at. Six of the ten `_vortex` root entries never reached a user.
+
+**Cause.** `refresh-installation.js` copied Vortex in four phases — agents by `AGENT_IDS`, workflow dirs by the `WORKFLOW_NAMES` allowlist, `config.yaml` (merged), `guides/`. No phase copied anything else. **Vortex was the only bme module affected:** Gyre has an explicit contracts block, and `_team-factory` is copied wholesale (which is why *its* `templates/` directory ships and a hypothetical `_vortex/templates/` would not have).
+
+**Fix.** A new phase 2b, deliberately **generic rather than enumerated**: copy every Vortex root entry the earlier phases do not own. An allowlist would have fixed the symptom and reproduced the defect the first time someone added a directory — which `oc-2-1` was about to do. The exclusion set is exactly the four owned entries, `config.yaml` among them, because it is merged to preserve operator preferences and must never be clobbered here.
+
+**How it was verified, and why the unit tests were not enough.** The tests prove the function behaves; they cannot prove an operator gets the files. `scripts/audit/try-fresh-install.sh` was run before and after against a real packed install:
+
+- **before** — `_vortex/` held `agents`, `config.yaml`, `guides`, `workflows`. Nothing else.
+- **after** — all ten entries present; **17 contract pointers checked across the installed workflow tree, 0 dangling.**
+
+Full suite 1854 tests, 0 failures. The four new tests in `tests/unit/refresh-installation-vortex-assets.test.js` were **witnessed red before the fix** — three of four failed — per `verification-must-be-falsifiable`. One of them asserts the copy is *generic* by deriving the expected asset list from the package at runtime, so it fails if anyone reverts to enumeration; that is the test protecting `oc-2-1`.
+
+**How it was found.** By pre-flighting `oc-2-1`, not by any gate. The story's retrofit replaces inline schema enumeration with exactly this pointer, so the defect would have converted a bloated-but-complete step into a pointer to nothing — the Covenant failing on its own terms. Nothing detected it in four months: `npm test` cannot see it, `files-manifest.csv` tracks only `bme/config.yaml`, and **`try-fresh-install.sh` — the script written to catch precisely this class after I135 and I139 — exited 0 while shipping it**, because it asserts that bins load and `convoke-doctor` passes, never that a document's own paths resolve.
+
+**What is NOT closed.** **T89 remains open** and this fix does not close it. T89 is the detector for the class — a shipped document naming a `{project-root}` path the installer never creates — across the whole product. Phase 2b's generic shape lowers the recurrence risk for Vortex alone. `I135`, `I139` and `T88` are three instances; there is still nothing that would catch the fourth.
+
+**Scope note.** T88's row text said "add a Vortex contracts copy phase (+ `examples/`, same fate)". The measured picture was larger: six entries, of which two are provably user-facing (`contracts/`, referenced by 18 files; `compass-routing-reference.md`, referenced by a guide that ships). `README.md`, `examples/`, `module.yaml` and `module-help.csv` had no shipped referent and travel along because the fix is generic, not because they were diagnosed as broken.
+
+### Addendum — 2026-08-28, after Round 1 review
+
+**Three claims in the entry above were false, and the R1 review proved each.** Per the append-only rule they stand as written; this addendum corrects them.
+
+1. **"Vortex was the only bme module without its static assets" — false, three ways.** Verified against a real install: `_gyre/` ships `guides/` and `compass-routing-reference.md` in the package and installs neither, while `_gyre/guides/GYRE-TEAM-GUIDE.md` and `_gyre/README.md` both reference the routing doc. `_bmad/bme/_portability/` is in `package.json` `files` and is installed by nothing anywhere. Gyre was cited above as the *counter-example* and has the same defect. Both deferred — see `deferred-work.md`.
+2. **"`guides/VORTEX-TEAM-GUIDE.md` (which DOES ship)" — false.** Phase 5 enumerates `{AGENT}-USER-GUIDE.md` over the seven agents; the team guide matches no agent name and never installs. A real install's `_vortex/guides/` holds exactly seven files. That guide was half the justification for copying `compass-routing-reference.md`.
+3. **"One of them asserts the copy is generic … so it fails if anyone reverts to enumeration" — false.** Mutation-tested: replacing the `readdirSync` loop with a hardcoded six-element array left **all four tests passing**. The genericity property was never verified, and it was the sole justification for exceeding what the row asked for. This is `verification-must-be-falsifiable` violated by a claim *about* falsifiability.
+
+**The implementation was narrowed as a result.** R1 (Blind Hunter + Edge Case Hunter + Acceptance Auditor, three independent contexts) converged on the copy-everything shape being unauthorised scope: the row asked for option (a), a contracts mirror, and the deviation was argued in a code comment on **T89's** grounds — the gate the row had explicitly separated out. The shipped phase now copies `contracts/` and `examples/` only, via an explicit two-element list rather than a denylist. That removes at a stroke: the operator-editable overwrite with no backup (`README.md`, `module.yaml`, `module-help.csv`, `compass-routing-reference.md`), the dotfile leak, and the U8 hazard where denylist drift would have wholesale-copied an exclusion-aware subtree and restored agent files an operator opted out of.
+
+**One behaviour was kept beyond the Gyre precedent and is deliberate:** remove-then-copy. Gyre's block lacks it; phases 1, 2 and 2b1 all have it and comment why. Contracts are cited **by filename** from 16 files, so a schema renamed upstream would otherwise sit beside its replacement indefinitely. That case now has a test.
+
+**The tests were rewritten and are mutation-verified this time.** Three mutants — dropping remove-then-copy, dropping `examples`, and widening scope back to root files — each kill exactly one test. The suite also no longer relies on no-op setup: the previous version's `fs.remove()` calls deleted assets `createValidInstallation` never created, so all four tests exercised first-install only and the update path was untested. Every update-path test now refreshes once to establish state, mutates, then refreshes again. `removeTempDir` replaces `fs.remove` in teardown, per the CI failure helpers.js documents.
+
+**Count corrections.** "16 shipped step files" is imprecise: 16 files **under `workflows/`** reference `contracts/`, of which 7 are `workflow.md` rather than step files; in the installed tree a 17th file matches (`guides/VORTEX-TEAM-GUIDE.md`, which does not itself install). Only 9 of the 16 use the `{project-root}/` prefix — the other 7 use a bare `_bmad/bme/...` path. Immaterial to the chosen fix, since a copy repairs both forms, but it would have broken the row's option (b): repointing by matching the `{project-root}` token would have missed 7 of 16.
+
+**Still true and unchanged:** the defect was real and live in 4.0.1, `contracts/` genuinely never reached an operator project, and the fix is verified in a real install rather than only in the unit suite.
