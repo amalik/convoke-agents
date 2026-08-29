@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Position Seven — Party Mode, 2026-08-28</title>
+<style>
+  :root{
+    --bg:#0e1116; --bg2:#141922; --ink:#e6edf3; --dim:#8b98a8; --faint:#59657a;
+    --rule:#232b36; --w:#6ea8fe; --w2:#1d3557; --j:#f0a04b; --j2:#43301a;
+    --amalik:#7ee0a8; --red:#ef6461; --void:#2a1c1c;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,-apple-system,"Segoe UI",Inter,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(ellipse 80% 50% at 50% -10%, #1a2130 0%, transparent 70%);
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:0 22px 120px}
+
+  /* ---- hero ---- */
+  header{padding:88px 0 40px;text-align:center;position:relative}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
+  h1{font-size:clamp(38px,8vw,72px);line-height:.98;margin:.28em 0 .1em;font-weight:700;letter-spacing:-.03em}
+  h1 .num{
+    background:linear-gradient(120deg,var(--w),var(--j));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .sub{color:var(--dim);font-size:16.5px;max-width:56ch;margin:14px auto 0}
+  .stamp{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:26px}
+
+  /* ---- cast ---- */
+  .cast{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:44px 0 8px}
+  .card{
+    background:var(--bg2);border:1px solid var(--rule);border-radius:14px;
+    padding:16px 20px;min-width:236px;text-align:left;
+  }
+  .card .who{display:flex;align-items:center;gap:10px;font-weight:650;font-size:16px}
+  .card .em{font-size:20px}
+  .card p{margin:7px 0 0;color:var(--dim);font-size:13.5px;line-height:1.5}
+  .card.w{border-left:3px solid var(--w)} .card.j{border-left:3px solid var(--j)}
+
+  /* ---- section ---- */
+  h2{
+    font-size:12px;font-family:var(--mono);letter-spacing:.2em;text-transform:uppercase;
+    color:var(--faint);margin:76px 0 6px;padding-bottom:10px;border-bottom:1px solid var(--rule);
+  }
+  .lede{color:var(--dim);font-size:15px;margin:16px 0 26px}
+
+  /* ---- dialogue ---- */
+  .turn{display:grid;grid-template-columns:30px 1fr;gap:14px;margin:0 0 20px;align-items:start}
+  .turn .em{font-size:17px;line-height:1.7;text-align:center;opacity:.95}
+  .turn .body{border-left:2px solid var(--rule);padding-left:16px}
+  .turn.w .body{border-left-color:var(--w2)}
+  .turn.j .body{border-left-color:var(--j2)}
+  .turn.a .body{border-left-color:#1e3b2c}
+  .nm{font-weight:650;font-size:13px;letter-spacing:.02em;display:block;margin-bottom:2px}
+  .turn.w .nm{color:var(--w)} .turn.j .nm{color:var(--j)} .turn.a .nm{color:var(--amalik)}
+  .turn p{margin:0}
+  .stage{color:var(--faint);font-style:italic}
+  code{font-family:var(--mono);font-size:.87em;background:#1b212b;border:1px solid var(--rule);
+       padding:1px 5px;border-radius:5px;color:#cdd9e5;white-space:nowrap}
+
+  /* ---- pull quote ---- */
+  blockquote{
+    margin:38px 0;padding:26px 30px;border:1px solid var(--rule);border-radius:16px;
+    background:linear-gradient(180deg,#151b24,#11151c);position:relative;
+  }
+  blockquote p{margin:0;font-size:20px;line-height:1.45;font-weight:550;letter-spacing:-.01em}
+  blockquote cite{display:block;margin-top:12px;font-style:normal;font-family:var(--mono);
+                  font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+
+  /* ---- data blocks ---- */
+  figure{margin:34px 0;padding:24px;background:var(--bg2);border:1px solid var(--rule);border-radius:14px}
+  figcaption{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+             color:var(--faint);margin-bottom:18px}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .note{color:var(--dim);font-size:13px;margin:16px 0 0;line-height:1.55}
+
+  .bars{display:grid;gap:9px;font-family:var(--mono);font-size:12.5px}
+  .bar{display:grid;grid-template-columns:132px 1fr 46px;align-items:center;gap:12px}
+  .bar .t{color:var(--dim)}
+  .bar .track{height:20px;background:#1a212b;border-radius:5px;overflow:hidden}
+  .bar .fill{height:100%;border-radius:5px;transform-origin:left;animation:grow 1.1s cubic-bezier(.2,.8,.2,1) both}
+  .bar .v{text-align:right;color:var(--ink)}
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+  ol.next{counter-reset:s;list-style:none;padding:0;margin:22px 0 0}
+  ol.next li{counter-increment:s;position:relative;padding:14px 0 14px 46px;border-bottom:1px solid var(--rule)}
+  ol.next li::before{
+    content:counter(s);position:absolute;left:0;top:13px;width:28px;height:28px;border-radius:50%;
+    background:var(--bg2);border:1px solid var(--rule);color:var(--dim);
+    font-family:var(--mono);font-size:12px;display:grid;place-items:center;
+  }
+  ol.next li.hot::before{border-color:var(--red);color:var(--red)}
+  ol.next b{color:var(--ink)} ol.next span{color:var(--dim);font-size:14px;display:block;margin-top:3px}
+
+  footer{margin-top:80px;padding-top:26px;border-top:1px solid var(--rule);
+         color:var(--faint);font-family:var(--mono);font-size:11.5px;text-align:center;line-height:2}
+  @media (max-width:600px){
+    .bar{grid-template-columns:96px 1fr 40px;font-size:11px}
+    .turn{grid-template-columns:24px 1fr;gap:10px}
+    blockquote p{font-size:17px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Party Mode &middot; Session Ten</div>
+  <h1>Position <span class="num">Seven</span></h1>
+  <p class="sub">The night the room spent an hour inventing a product that had been
+     sitting in its own backlog, fully planned, since April.</p>
+  <div class="stamp">Convoke &middot; 2026-08-28 &rarr; 29 &middot; Winston &amp; John &middot; for Amalik</div>
+</header>
+
+<div class="cast">
+  <div class="card w"><div class="who"><span class="em">&#127959;&#65039;</span> Winston</div>
+    <p>System Architect. Boring technology, trade-offs over verdicts. Withdrew a true finding and had to take it back.</p></div>
+  <div class="card j"><div class="who"><span class="em">&#128203;</span> John</div>
+    <p>Product Manager. Short questions, sharper follow-ups. Spent the night refusing to let a description become a plan.</p></div>
+</div>
+
+<h2>I. The opening</h2>
+<p class="lede">Amalik walked in cold: <em>what&rsquo;s the most urgent thing to do now?</em></p>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p>Wrong question. &ldquo;Urgent&rdquo; is a word people use when they don&rsquo;t have a deadline. Who&rsquo;s waiting? Name them.</p></div></div>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p>That&rsquo;s a dodge and you know it. Urgency isn&rsquo;t only &ldquo;someone is waiting.&rdquo; It&rsquo;s also &ldquo;the cost of this goes up if I don&rsquo;t do it.&rdquo; Different clock, still a clock.</p></div></div>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p>Has it ever happened? <span class="stage">(Winston: no.)</span> Then it&rsquo;s not urgent, it&rsquo;s <em>armed</em>. Those are different words and I want you to use the right one.</p></div></div>
+
+<blockquote><p>There is no next publish. So nothing on this board has a clock on it &mdash; which means every ranking we do tonight is a ranking of <em>value</em>, not urgency, and we should stop pretending otherwise.</p>
+<cite>John, twenty minutes in</cite></blockquote>
+
+<h2>II. The promise printed in shipped code</h2>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p>You don&rsquo;t get to scope 4.1. Some of it is already scoped, and it&rsquo;s scoped in code that shipped. <code>config-loader.js:193</code>, live in the published package, prints verbatim: <em>&ldquo;Support for bmad-init is removed in Convoke 4.1.&rdquo;</em></p></div></div>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p>And the warning it depends on lives inside <code>_handleMissingConfig</code>. It only fires when config is <em>missing</em>. Every operator whose migration succeeded never entered that branch and never saw it. The deprecation notice reached exactly the people whose install was already broken.</p></div></div>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p>Ship U15 in 4.1 and you&rsquo;ve built a deprecation runway <em>inside the release that ends the runway</em>. That&rsquo;s not a warning, that&rsquo;s a eulogy.</p></div></div>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p><span class="stage">(stops)</span> &hellip;Say that again.</p></div></div>
+
+<h2>III. What the board actually said</h2>
+<p class="lede">Six clusters nobody had ever drawn. And then the numbers.</p>
+
+<figure>
+  <figcaption>The column named &ldquo;Dependencies&rdquo; &mdash; 172 live rows</figcaption>
+  <div class="bars">
+    <div class="bar"><span class="t">deferred-from:</span><span class="track"><span class="fill" style="width:100%;background:linear-gradient(90deg,#4a5568,#6b7a91);animation-delay:.05s"></span></span><span class="v">59</span></div>
+    <div class="bar"><span class="t">intake:</span><span class="track"><span class="fill" style="width:57.6%;background:linear-gradient(90deg,#42506b,#5f6f8d);animation-delay:.12s"></span></span><span class="v">34</span></div>
+    <div class="bar"><span class="t">related / bundles</span><span class="track"><span class="fill" style="width:74.6%;background:linear-gradient(90deg,#3e4a63,#586882);animation-delay:.19s"></span></span><span class="v">44</span></div>
+    <div class="bar"><span class="t">origin:</span><span class="track"><span class="fill" style="width:13.6%;background:linear-gradient(90deg,#39445a,#4d5a73);animation-delay:.26s"></span></span><span class="v">8</span></div>
+    <div class="bar"><span class="t">depends:</span><span class="track"><span class="fill" style="width:10.2%;background:linear-gradient(90deg,var(--j),#ffc98b);animation-delay:.33s"></span></span><span class="v">6</span></div>
+    <div class="bar"><span class="t">blocked-by:</span><span class="track"><span class="fill" style="width:1.4%;background:var(--red);animation-delay:.4s"></span></span><span class="v">0</span></div>
+  </div>
+  <p class="note">One hundred and one entries saying where a row came <em>from</em>. Six saying what it waits <em>on</em>.
+     <b>161 of 172 rows &mdash; 94% &mdash; carry no sequencing information at all.</b>
+     The field named for dependencies had been colonized by provenance.</p>
+</figure>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p>And <code>deferred-from:</code> at 59 is your &ldquo;we tackle one and create three.&rdquo; That&rsquo;s not a feeling, that&rsquo;s the top entry in the table. <b>The backlog is not a plan. It&rsquo;s review exhaust.</b></p></div></div>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p>And the skill we ship has three modes. <code>steps-c</code> create. <code>steps-r</code> rescore. <code>steps-t</code> triage. All three add or re-rank. <b>Not one of them finishes anything.</b></p></div></div>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p>So it grows by process and shrinks by decree. That&rsquo;s not a backlog, that&rsquo;s a landfill with a sorting policy.</p></div></div>
+
+<h2>IV. The gap</h2>
+
+<figure>
+  <figcaption>Commits per month &mdash; the four months Convoke went dark</figcaption>
+  <svg viewBox="0 0 720 230" role="img" aria-label="Commit histogram: February 885, March 1208, April 1397, May 154, June 54, July 0, August 390">
+    <defs>
+      <linearGradient id="g1" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0" stop-color="#1d3557"/><stop offset="1" stop-color="#6ea8fe"/>
+      </linearGradient>
+      <linearGradient id="g2" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0" stop-color="#43301a"/><stop offset="1" stop-color="#f0a04b"/>
+      </linearGradient>
+    </defs>
+    <line x1="0" y1="180" x2="720" y2="180" stroke="#232b36"/>
+    <g font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#59657a" text-anchor="middle">
+      <g>
+        <rect x="24"  y="66"  width="72" height="114" rx="4" fill="url(#g1)"/>
+        <text x="60"  y="196">FEB</text><text x="60"  y="58" fill="#8b98a8">885</text>
+      </g>
+      <g>
+        <rect x="120" y="25"  width="72" height="155" rx="4" fill="url(#g1)"/>
+        <text x="156" y="196">MAR</text><text x="156" y="17" fill="#8b98a8">1208</text>
+      </g>
+      <g>
+        <rect x="216" y="0"   width="72" height="180" rx="4" fill="url(#g1)"/>
+        <text x="252" y="196">APR</text><text x="252" y="-8" fill="#8b98a8">1397</text>
+      </g>
+      <g>
+        <rect x="312" y="160" width="72" height="20"  rx="4" fill="#3a4150"/>
+        <text x="348" y="196">MAY</text><text x="348" y="152" fill="#8b98a8">154</text>
+      </g>
+      <g>
+        <rect x="408" y="173" width="72" height="7"   rx="3" fill="#3a4150"/>
+        <text x="444" y="196">JUN</text><text x="444" y="165" fill="#8b98a8">54</text>
+      </g>
+      <g>
+        <rect x="504" y="150" width="72" height="30" rx="4" fill="none" stroke="#ef6461" stroke-dasharray="4 4" opacity=".85"/>
+        <text x="540" y="196" fill="#ef6461">JUL</text><text x="540" y="142" fill="#ef6461">0</text>
+      </g>
+      <g>
+        <rect x="600" y="130" width="72" height="50"  rx="4" fill="url(#g2)"/>
+        <text x="636" y="196">AUG</text><text x="636" y="122" fill="#8b98a8">390</text>
+      </g>
+    </g>
+    <g font-family="ui-monospace,Menlo,monospace" font-size="10.5" fill="#6ea8fe">
+      <line x1="252" y1="206" x2="252" y2="218" stroke="#6ea8fe" opacity=".5"/>
+      <text x="252" y="228" text-anchor="middle">ILE-1 planned &mdash; 18 April</text>
+    </g>
+  </svg>
+  <p class="note">The Initiative Lifecycle Engine was fully specified &mdash; brief, PRD, architecture, epics,
+     two passed readiness reviews &mdash; <b>two weeks before the lights went out.</b></p>
+</figure>
+
+<h2>V. Position seven</h2>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p>Six of the fifteen are past planning &mdash; and three of those six are blocked, each by a different kind of blocker: P21 on a decision, P59 on an operator call, P9 on an external gate. Three are actually startable. The <code>Stage</code> column answers your question by itself; there&rsquo;s no ranking to do. <span class="stage">(pause)</span> John. Read row seven.</p></div></div>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p><span class="stage">(reads)</span> &hellip;<b>ILE-1 &mdash; Initiative Lifecycle Engine.</b> Portfolio-as-Code. Rework of backlog, portfolio and governance skills into integrated lifecycle management. Filed 2026-04-15. Status <b>Ready for Sprint</b>. Brief, PRD, architecture, epics, implementation readiness <em>passed</em>.</p></div></div>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p>We spent the last hour deriving that from first principles. You ruled &ldquo;file it as thinking, not work.&rdquo;</p></div></div>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p>It&rsquo;s already filed. It&rsquo;s already <em>planned</em>. It has a passed readiness review. <span class="stage">(sets the sheet down)</span> Four sessions. This room has met four times. Nobody looked past the number once.</p></div></div>
+
+<blockquote><p>We prototyped a product that was sitting in the backlog waiting for a sprint. I want that in the record exactly like that.</p>
+<cite>John &middot; score 2.7 &middot; position 7 of 15</cite></blockquote>
+
+<h2>VI. The checkbox with your name on it</h2>
+
+<div class="turn a"><span class="em">&#127793;</span><div class="body"><span class="nm">Amalik</span>
+<p>I&rsquo;m just discovering <code>i97-2-3</code> wasn&rsquo;t finished. And I&rsquo;ve asked a dozen times what to do next without being informed of this forgotten story.</p></div></div>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p>Fifty tasks checked. Eleven open. <span class="stage">(long pause)</span> All eleven are Task 8. Every one tagged <b>PENDING OPERATOR</b>.</p></div></div>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p><span class="stage">(quietly)</span> So the story is 82% done, 117 days stalled, and blocked on the person who kept asking what to do next. The one piece of work waiting on you specifically is the one thing nothing ever told you about.</p></div></div>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p>There are two status systems and nothing joins them. The backlog&rsquo;s <code>Status</code> describes the <em>row</em>. The story file&rsquo;s <code>Status</code> describes the <em>work</em>. &ldquo;What next?&rdquo; queries the first. The board has a queue and an archive and <b>no in-progress column</b> &mdash; so a halted story is invisible to both. It didn&rsquo;t fall through a crack. There was no surface it could have appeared on.</p></div></div>
+
+<h2>VII. The recursion</h2>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p><span class="stage">(reading ILE-1&rsquo;s PRD, dated 18 April)</span> Success Criterion number one. <em>&ldquo;Context re-entry under 60 seconds. A team lead can re-enter any initiative &mdash; understand its stage, what&rsquo;s done, what&rsquo;s next, what&rsquo;s blocking &mdash; in under a minute.&rdquo;</em></p></div></div>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p>You&rsquo;ve just described the thing he asked for, in his words, from a document written four months ago.</p></div></div>
+
+<blockquote><p>ILE-1 was lost to the exact problem ILE-1 exists to solve.</p>
+<cite>Winston &middot; the finding of the night</cite></blockquote>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p>That&rsquo;s the most damning thing I&rsquo;ve heard in this room and it&rsquo;s also the strongest proof of the thesis. The product&rsquo;s own validation is that its absence swallowed it.</p></div></div>
+
+<h2>VIII. What we agreed</h2>
+
+<figure>
+  <figcaption>The order the filters go in</figcaption>
+  <svg viewBox="0 0 720 92" role="img" aria-label="Four filters: startable, still true, belongs to, then value">
+    <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#3d4757"/></marker></defs>
+    <g font-family="ui-monospace,Menlo,monospace" font-size="12">
+      <g><rect x="0"   y="24" width="150" height="44" rx="9" fill="#141922" stroke="#2e3a4d"/>
+         <text x="75"  y="43" fill="#6ea8fe" text-anchor="middle">1. Startable?</text>
+         <text x="75"  y="59" fill="#59657a" text-anchor="middle" font-size="10">15 &rarr; 3, free</text></g>
+      <line x1="156" y1="46" x2="184" y2="46" stroke="#3d4757" marker-end="url(#ar)"/>
+      <g><rect x="190" y="24" width="150" height="44" rx="9" fill="#141922" stroke="#2e3a4d"/>
+         <text x="265" y="43" fill="#6ea8fe" text-anchor="middle">2. Still true?</text>
+         <text x="265" y="59" fill="#59657a" text-anchor="middle" font-size="10">a flag, never a verdict</text></g>
+      <line x1="346" y1="46" x2="374" y2="46" stroke="#3d4757" marker-end="url(#ar)"/>
+      <g><rect x="380" y="24" width="150" height="44" rx="9" fill="#141922" stroke="#2e3a4d"/>
+         <text x="455" y="43" fill="#6ea8fe" text-anchor="middle">3. Belongs to?</text>
+         <text x="455" y="59" fill="#59657a" text-anchor="middle" font-size="10">the only new field</text></g>
+      <line x1="536" y1="46" x2="564" y2="46" stroke="#3d4757" marker-end="url(#ar)"/>
+      <g><rect x="570" y="24" width="150" height="44" rx="9" fill="#1a1712" stroke="#5a4526"/>
+         <text x="645" y="43" fill="#f0a04b" text-anchor="middle">4. RICE</text>
+         <text x="645" y="59" fill="#8a6c3f" text-anchor="middle" font-size="10">last. a tiebreaker.</text></g>
+    </g>
+  </svg>
+  <p class="note">And four blocker types, all four already live in the repo:
+     <b>operator</b> (i97-2-3 &mdash; you) &middot; <b>decision</b> (P21, since April) &middot;
+     <b>dependency</b> (P13 on P12) &middot; <b>external</b> (P9, Gate 1).
+     A thirty-minute task and a twelve-month wait had looked identical for four months.</p>
+</figure>
+
+<h2>IX. What&rsquo;s next</h2>
+<ol class="next">
+  <li class="hot"><b>i97-2-3, Task 8.</b> <span>Thirty minutes. Only you can do it. Mila flips to <code>done</code>; Epic 2 goes 3/7 &rarr; 4/7.</span></li>
+  <li><b>i97-2-4 &mdash; Isla.</b> <span>Authored during this very session. <code>ready-for-dev</code>. That&rsquo;s 5/7.</span></li>
+  <li><b>Decide <code>bmad-init</code> before the rc.</b> <span>Remove in 4.1 and pay it in the release notes, or carry it to 4.2. Not both.</span></li>
+  <li><b>The throwaway re-entry scan.</b> <span>Story files with <code>Status &ne; done</code>, plus age and blocker type. Delete it when ILE-1 lands.</span></li>
+  <li><b>Re-review ILE-1 before it becomes a sprint.</b> <span>E=8, dated 18 April, and the ground under it has moved.</span></li>
+  <li><b>P21 / T86.</b> <span>Four months owed. Not this week &mdash; but not four more months.</span></li>
+</ol>
+
+<blockquote><p>4.1 is one sentence. <em>All seven Vortex agents on the v6.3 format.</em> If anything else tries to get in, the answer is no.</p><cite>John, closing</cite></blockquote>
+
+<h2>X. For the record</h2>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p>Take it back. I withdrew a real finding because a green gate told me to &mdash; and that gate is blind to the class <em>by construction</em>. I had the measurement. I deferred to the instrument.</p></div></div>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p><span class="stage">(not unkindly)</span> That&rsquo;s the most useful mistake anyone&rsquo;s made tonight, and it happened forty minutes after you told him to trust filters over scores.</p></div></div>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p><span class="stage">(gathering the papers)</span> Four times tonight we split a decision cleanly instead of one of us folding. Once &mdash; on ILE-1 &mdash; we didn&rsquo;t split at all.</p></div></div>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p>Don&rsquo;t ruin it, Winston.</p></div></div>
+
+<div class="turn w"><span class="em">&#127959;&#65039;</span><div class="body"><span class="nm">Winston</span>
+<p>Habits are things you can point at twice.</p></div></div>
+
+<div class="turn j"><span class="em">&#128203;</span><div class="body"><span class="nm">John</span>
+<p><span class="stage">(standing)</span> &hellip;Fine. That one&rsquo;s yours.</p></div></div>
+
+<footer>
+  <div>&#127959;&#65039; Winston &nbsp;&middot;&nbsp; &#128203; John &nbsp;&middot;&nbsp; &#127793; Amalik</div>
+  <div>Party Mode &middot; Session Ten &middot; Convoke</div>
+  <div>2026-08-28 &rarr; 2026-08-29</div>
+</footer>
+
+</div>
+</body>
+</html>
