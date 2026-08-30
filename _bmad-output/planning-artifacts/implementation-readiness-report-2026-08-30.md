@@ -840,3 +840,48 @@ minor or currency-related — plus one systemic observation about status trackin
 **Method:** `bmad-check-implementation-readiness`, 6 steps, all findings verified against the
 working tree at `main` per `spec-verify-referenced-files` and `verification-must-be-falsifiable`.
 Commands and file:line anchors are recorded inline so every claim is independently re-runnable.
+
+---
+
+## Addendum — FINDING 12: Epic 2 is no longer a 4.0.1 epic
+
+Checked after the assessment closed, because it changes how the findings should be sequenced.
+
+```
+$ npm view convoke-agents dist-tags
+{ latest: '4.0.1', rc: '4.0.1-rc.0' }
+$ git tag --list "v4*"     →  v4.0.0, v4.0.1-rc.0, v4.0.1
+$ grep -m1 '"version"' package.json  →  "version": "4.0.1"
+```
+
+**4.0.1 is published and is `latest`.** Epic 1 completed and shipped it. The epic document is
+titled *"Convoke 4.0.1 — Epic Breakdown"* and its version reasoning ("Version — `4.0.1`, a
+patch, decided 2026-08-19") reads as though both epics ship together. That is no longer true,
+and nothing in the document says so.
+
+**Every Epic 2 defect is live in the published package right now:**
+
+| Defect | Operator impact on `latest` |
+|---|---|
+| FR18 — `bmm-dependencies.csv` absent from `files[]` (verified: 0 occurrences in `package.json`) | Every npm-installed operator gets a `convoke-doctor` warning on a healthy install |
+| FR14 — `_portability` unreachable | 4 skills ship in `files[]` and cannot be invoked by anyone |
+| FR15 — 4 broken manifest dependencies | A shipped manifest whose dependencies do not resolve |
+| FR16 — 2 unescaped regex sites | Latent; the persona-name crash path is already closed |
+
+Two consequences:
+
+1. **Epic 2 needs its own version call.** The same reasoning ADR-scale-decisions applied to
+   4.0.1 carries over unchanged — these are repairs of promises 4.0.0/4.0.1 already made, not
+   new functionality — so **4.0.2, a patch.** It should be stated in the epic rather than
+   inherited by assumption.
+2. **The release-pressure argument has inverted.** There is no deadline forcing Epic 2, which
+   removes the risk the epic worried about most (*"a detector… gets allowlisted the first time
+   it goes red under release pressure"*). But operator-visible harm is accruing on `latest`
+   today. That argues for shipping the cheap instance repairs quickly and taking time over the
+   gates — the opposite of the ordering the epic currently prescribes, and the reason for the
+   recommendation recorded below.
+
+**Sequencing note on NFR10.** Story 2.4's red demonstration is specified against *both*
+`_portability` and `bmm-dependencies.csv`. If FR18 is shipped first for operator relief, that
+demonstration drops to one finding. It still satisfies NFR10 — but Story 2.4 should be run
+*before* FR18 lands to preserve both, and 2.4 is already `ready-for-dev`.
