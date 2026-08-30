@@ -9,8 +9,22 @@
  * strings, and never writes anything. The CLI (sp-2-3) handles file output.
  *
  * Usage:
- *   const { exportSkill } = require('./scripts/portability/export-engine');
+ *   const { exportSkill } = require(`${projectRoot}/scripts/portability/export-engine`);
  *   const result = exportSkill('bmad-brainstorming', findProjectRoot());
+ *
+ * The example interpolates a root variable, and is deliberately NOT written with a plain
+ * quoted relative path. Two reasons, one of each kind.
+ *
+ * Correctness: the relative form resolves only for a caller already sitting at the project
+ * root — from this file's own directory it points at a path that does not exist.
+ *
+ * Mechanics: the fresh-install harness walks require specifiers transitively (story
+ * dist-2.4, closing I153) using a regex with no lexer, so a quoted specifier inside a
+ * COMMENT is indistinguishable from a real one and gets reported as a dependency that did
+ * not ship. It did exactly that to the `convoke-export` bin until this block was rewritten
+ * — and then a first attempt at this very warning reintroduced it, by quoting the shape it
+ * was warning about. Hence the prose. In any file reachable from a bin, keep documentation
+ * examples out of the quoted-specifier call form; interpolate, or describe it in words.
  *   // result = { instructions, persona, sections, warnings }
  */
 
