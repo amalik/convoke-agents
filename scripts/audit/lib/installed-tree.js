@@ -67,14 +67,24 @@ const RUNTIME_DATA_FILES = [
     file: '_bmad/_config/agent-manifest.csv',
     readSite: 'scripts/update/lib/validator.js:286',
     alsoRead: ['scripts/portability/export-engine.js:168'],
-    arrivesVia: 'scripts/lib/agent-manifest-generator.js:237',
+    // `:238` is the ensureDir on the destination, i.e. the first line that actually
+    // touches the path. `:237` — cited in the first draft — is only the path constant,
+    // which is a declaration, not a write. Review 2026-08-30.
+    arrivesVia: 'scripts/lib/agent-manifest-generator.js:238',
+    arrivesViaToken: 'ensureDir',
     why: 'the installer regenerates it during refresh, so a post-install absence means the regeneration step did not run.',
   },
   {
     file: '_bmad/_config/taxonomy.yaml',
     readSite: 'scripts/convoke-doctor.js:980',
     alsoRead: ['scripts/lib/artifact-utils.js:125'],
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:1040',
+    // `:1038` is the `mergeTaxonomy(projectRoot)` call that creates the file. The first
+    // draft cited `:1040`, which is the `changes.push('Created …taxonomy.yaml…')` LOG
+    // LINE inside `if (taxonomyResult.created)` — so the rot alarm passed merely because
+    // a string literal mentioned the basename. Deleting the real call and leaving the log
+    // would have kept it green. Review 2026-08-30.
+    arrivesVia: 'scripts/update/lib/refresh-installation.js:1038',
+    arrivesViaToken: 'mergeTaxonomy',
     why: 'a fresh install runs no migrations, so the installer seeds it directly; without it doctor fails its own Taxonomy checks.',
   },
   {
@@ -86,7 +96,13 @@ const RUNTIME_DATA_FILES = [
     // a declared list rather than a grep. The token is named so the rot alarm can still
     // check the citation instead of being weakened to accommodate it.
     token: 'BMM_DEPS_CSV_REL',
-    alsoRead: ['scripts/audit/audit-bmm-dependencies.js:34'],
+    // `:642` is the read (`path.join(projectRoot, OUTPUT_CSV_REL)` feeding
+    // `readExistingCsv`). The first draft cited `:34`, which is that script's OUTPUT path
+    // constant — the WRITE side. Citing a write as a read is exactly the confusion this
+    // manifest gives as its reason for refusing the grep, reproduced inside the manifest
+    // itself. Review 2026-08-30.
+    alsoRead: ['scripts/audit/audit-bmm-dependencies.js:642'],
+    alsoReadToken: 'OUTPUT_CSV_REL',
     arrivesVia: null,
     why:
       'NOTHING puts it in the project today — this is the FR13 red target. Its "must arrive" status is a ' +
@@ -97,12 +113,30 @@ const RUNTIME_DATA_FILES = [
 ];
 
 /** Wrapper-name rules, one per generator code path. See `declaredUnits`. */
+/**
+ * Wrapper-name rules, one per generator code path. See `declaredUnits`.
+ *
+ * `site` must name the LOOP OR GATE that emits the wrapper, and `anchor` is the text that
+ * line must still contain — checked by `tests/audit/installed-tree.test.js`. The first
+ * draft cited `:836`, `:862` and `:909`, which are a section comment, an `if` guard and
+ * another comment; the accompanying test asserted only that the file had that many lines,
+ * so nothing caught it. Both halves fixed 2026-08-30 after review.
+ *
+ * `derivedFrom` is honest about which basis each rule has. Four are read off the generator.
+ * `standaloneWorkflow` is NOT: there is no generic standalone-workflow generator — block 6d
+ * is `if (artifactsConfig && !isSameRoot)` over `artifactsConfig.workflows` and is
+ * `_artifacts`-specific. That rule is derived from ADR-004 C2 (declared ⇒ invocable) and
+ * applies to every arriving module ON PURPOSE, so that `dist-2-6` giving `_portability` a
+ * config with `standalone: true` workflows goes RED until the generator is extended to
+ * emit them. Demanding a wrapper nothing yet generates is the correct behaviour; claiming
+ * the rule was read off a generator was not.
+ */
 const WRAPPER_RULES = {
-  vortexAgent: { site: 'scripts/update/lib/refresh-installation.js:782', name: id => `bmad-agent-bme-${id}` },
-  gyreAgent: { site: 'scripts/update/lib/refresh-installation.js:811', name: id => `bmad-agent-bme-${id}` },
-  extraBmeAgent: { site: 'scripts/update/lib/refresh-installation.js:836', name: id => `bmad-agent-bme-${id}` },
-  enhanceWorkflow: { site: 'scripts/update/lib/refresh-installation.js:862', name: n => `bmad-enhance-${n}` },
-  standaloneWorkflow: { site: 'scripts/update/lib/refresh-installation.js:909', name: n => `${n}` },
+  vortexAgent:        { site: 'scripts/update/lib/refresh-installation.js:782', anchor: 'for (const agent of AGENTS)',            derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  gyreAgent:          { site: 'scripts/update/lib/refresh-installation.js:811', anchor: 'for (const agent of GYRE_AGENTS)',       derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  extraBmeAgent:      { site: 'scripts/update/lib/refresh-installation.js:837', anchor: 'for (const agent of EXTRA_BME_AGENTS)',  derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  enhanceWorkflow:    { site: 'scripts/update/lib/refresh-installation.js:863', anchor: 'enhanceConfig.workflows',               derivedFrom: 'generator', name: n => `bmad-enhance-${n}` },
+  standaloneWorkflow: { site: 'scripts/update/lib/refresh-installation.js:914', anchor: 'artifactsConfig.workflows',             derivedFrom: 'ADR-004 C2', name: n => `${n}` },
 };
 
 /** `_bmad/bme/*` entries in a `files[]` array, normalised to bare module names. */
@@ -112,7 +146,11 @@ function shippedBmeModules(files) {
   for (const entry of files) {
     if (typeof entry !== 'string') continue;
     const m = /^_bmad\/bme\/([^/]+)\/?$/.exec(entry.trim());
-    if (m) out.push(m[1]);
+    // A glob is npm-legal in `files[]` and would otherwise be treated as a module named
+    // `*`, producing `FAILED: _bmad/bme/*/ … did not arrive` on a legitimate packaging
+    // refactor. Skipped rather than guessed at; the zero-modules guard in the CLI then
+    // reports honestly that enumeration found nothing to check. Review 2026-08-30.
+    if (m && !/[*?[\]{}]/.test(m[1])) out.push(m[1]);
   }
   return out;
 }
@@ -159,21 +197,36 @@ function declaredUnits({ projectRoot, registry, arrived }) {
   const yaml = loadYaml();
   const present = new Set(arrived);
   const units = [];
+  const malformed = [];
 
+  // `honoursExclusions` mirrors the generator EXACTLY rather than applying a uniform rule.
+  // The Vortex loop (`:783`) and the Gyre loop (`:812`) skip excluded agents; the
+  // EXTRA_BME loop (`:837`) has no exclusion check at all and emits unconditionally.
+  // Filtering that bucket — as the first draft did — meant an `excluded_agents` entry in
+  // `_team-factory/config.yaml` would drop a wrapper from the CHECK that the installer
+  // still generates: a skew in the fail-open direction. Review 2026-08-30.
   const agentBuckets = [
-    { list: registry.AGENTS || [], module: () => '_vortex', rule: 'vortexAgent' },
-    { list: registry.GYRE_AGENTS || [], module: () => '_gyre', rule: 'gyreAgent' },
-    { list: registry.EXTRA_BME_AGENTS || [], module: a => a.submodule, rule: 'extraBmeAgent' },
+    { list: registry.AGENTS || [], module: () => '_vortex', rule: 'vortexAgent', honoursExclusions: true },
+    { list: registry.GYRE_AGENTS || [], module: () => '_gyre', rule: 'gyreAgent', honoursExclusions: true },
+    { list: registry.EXTRA_BME_AGENTS || [], module: a => a.submodule, rule: 'extraBmeAgent', honoursExclusions: false },
   ];
 
   for (const bucket of agentBuckets) {
     for (const agent of bucket.list) {
       const mod = bucket.module(agent);
+      // A registry entry whose `submodule` field is renamed or absent used to yield
+      // `present.has(undefined)` === false and vanish from the expectation set without a
+      // word — a shape change in the audited package quietly shrinking what is checked.
+      // Surfaced instead, and the CLI reports it. Review 2026-08-30.
+      if (mod === undefined || mod === null || mod === '') {
+        malformed.push({ id: agent.id, rule: bucket.rule, reason: 'registry entry declares no submodule' });
+        continue;
+      }
       // "declared by an ARRIVING module": a wrapper for an agent whose module never
       // landed would point at a file that is not there, so it is the module's absence
       // that is the finding — already reported by missingModules — not the wrapper's.
       if (!present.has(mod)) continue;
-      if (excludedAgents(projectRoot, mod, yaml).includes(agent.id)) continue;
+      if (bucket.honoursExclusions && excludedAgents(projectRoot, mod, yaml).includes(agent.id)) continue;
       units.push({
         name: WRAPPER_RULES[bucket.rule].name(agent.id),
         module: mod,
@@ -200,12 +253,33 @@ function declaredUnits({ projectRoot, registry, arrived }) {
     }
   }
 
-  return units;
+  // Deduplicate by wrapper name. Two modules declaring the same workflow name — or a
+  // workflow name colliding with `bmad-agent-bme-<id>` — produced the same FAILED line
+  // twice and inflated the clean-run summary's unit count. One wrapper path is one
+  // assertion. Review 2026-08-30.
+  const byName = new Map();
+  for (const u of units) if (!byName.has(u.name)) byName.set(u.name, u);
+  return { units: [...byName.values()], malformed };
 }
 
-/** Declared units with no generated `.claude/skills/<name>/SKILL.md` (ADR-004 C2). */
+/**
+ * Declared units with no usable `.claude/skills/<name>/SKILL.md` (ADR-004 C2).
+ *
+ * NON-EMPTY, not merely present. `fs.ensureDir` + a truncating `writeFile` that never
+ * completes leaves a 0-byte wrapper, and a 0-byte SKILL.md is not invocable — accepting it
+ * would be presence-checking again, one level down, which is the whole objection this
+ * module exists to answer. Review 2026-08-30.
+ */
 function missingWrappers(units, projectRoot) {
-  return units.filter(u => !isFile(path.join(projectRoot, '.claude', 'skills', u.name, 'SKILL.md')));
+  return units.filter(u => {
+    const p = path.join(projectRoot, '.claude', 'skills', u.name, 'SKILL.md');
+    try {
+      const st = fs.statSync(p);
+      return !st.isFile() || st.size === 0;
+    } catch {
+      return true;
+    }
+  });
 }
 
 /**
@@ -218,9 +292,13 @@ function missingWrappers(units, projectRoot) {
  * `agent-registry`) was entirely unchecked and that bin's gate was vacuous.
  *
  * BOUNDED DELIBERATELY. The extractor is a regex over raw text with NO LEXER, so a
- * commented-out or string-literal `require` reads as missing. That is latent today (no
- * bin has one) and is a separate I153 deferral, out of scope — but going transitive
- * would multiply its blast radius from 14 entry files to the whole graph. So only
+ * commented-out or string-literal `require` reads as missing. **Not latent in the tree —
+ * only latent on the bin graph.** An earlier version of this comment said "no bin has
+ * one", which was true of the 14 bin ENTRY files and misleading about everything else:
+ * `_bmad/bme/_team-factory/lib/writers/registry-writer.js:323` already carries a quoted
+ * require inside a comment, and is unreachable from a bin only by accident of the current
+ * import graph. One new relative import turns the `publish`-gating job red on a healthy
+ * package. Tracked as T101(b); corrected here 2026-08-30 after review. Only
  * RELATIVE specifiers (`./`, `../`) are followed; a bare package specifier is resolved
  * and then treated as a leaf. No AST library: `backlog-integrity.js` set the precedent
  * that a hand-rolled parser gets fenced in rather than extended.
@@ -229,8 +307,12 @@ function missingWrappers(units, projectRoot) {
  * @param {{maxFiles?: number}} [opts]
  * @returns {{missing: {spec: string, from: string}[], capHit: boolean, visited: number}}
  */
+/** Single home for the walk's file cap — the caller's error message reads it from here
+ *  rather than repeating the literal, which would let the two drift. Review 2026-08-30. */
+const DEFAULT_MAX_FILES = 500;
+
 function walkRequires(entryFile, opts = {}) {
-  const maxFiles = opts.maxFiles === undefined ? 500 : opts.maxFiles;
+  const maxFiles = opts.maxFiles === undefined ? DEFAULT_MAX_FILES : opts.maxFiles;
   const RE = /\brequire\(\s*["']([^"']+)["']\s*\)/g;
   const seen = new Set();
   const missing = new Map();
@@ -267,7 +349,10 @@ function walkRequires(entryFile, opts = {}) {
       try {
         resolved = require.resolve(spec, { paths: [path.dirname(file)] });
       } catch {
-        if (!missing.has(spec)) missing.set(spec, { spec, from: file });
+        // Keyed on spec+file, not spec alone. `./utils` unresolvable from two different
+        // directories is two defects, and reporting one hides the other.
+        const key = `${spec}\u0000${file}`;
+        if (!missing.has(key)) missing.set(key, { spec, from: file });
         continue;
       }
       if (spec.startsWith('./') || spec.startsWith('../')) queue.push(resolved);
@@ -338,6 +423,31 @@ function modulesWithoutConfig(arrived, projectRoot) {
   return arrived.filter(m => !isFile(path.join(projectRoot, '_bmad', 'bme', m, 'config.yaml')));
 }
 
+/**
+ * The same vacuity, one level down — modules that arrive, carry a `config.yaml`, and still
+ * declare nothing.
+ *
+ * `modulesWithoutConfig` closed only the MISSING-FILE form. Review 2026-08-30 measured the
+ * other form and it is not theoretical: a `config.yaml` containing just `version: 4.0.1`
+ * passes both the C1 file check and the parse check, contributes zero units, and the run
+ * reports `2 shipped bme module(s) arrived, 2 declared unit(s) resolve` — exit 0 — on a
+ * `_portability` holding four skills on disk that no operator can invoke. Identical
+ * consequence to the hole C1 was added for, so the same argument closes it.
+ *
+ * Operator-approved 2026-08-30 as a second scope addition beyond AC3 and beyond ADR-004 C1
+ * as written. **It constrains `dist-2-6`:** conforming `_portability` means its config must
+ * DECLARE the four skills, not merely exist.
+ *
+ * A module legitimately declaring nothing has no place in `files[]` under C3 — an
+ * operator-facing surface that nothing declares is unreachable by construction.
+ */
+function modulesDeclaringNothing(arrived, units, projectRoot) {
+  const declaring = new Set(units.map(u => u.module));
+  return arrived.filter(
+    m => isFile(path.join(projectRoot, '_bmad', 'bme', m, 'config.yaml')) && !declaring.has(m)
+  );
+}
+
 /** Modules whose config.yaml exists but does not parse — reported, never silent. */
 function unparsableConfigs(projectRoot, arrived) {
   const yaml = loadYaml();
@@ -356,6 +466,7 @@ function unparsableConfigs(projectRoot, arrived) {
 
 module.exports = {
   RUNTIME_DATA_FILES,
+  DEFAULT_MAX_FILES,
   WRAPPER_RULES,
   shippedBmeModules,
   missingModules,
@@ -363,6 +474,7 @@ module.exports = {
   declaredUnits,
   missingWrappers,
   modulesWithoutConfig,
+  modulesDeclaringNothing,
   unparsableConfigs,
   walkRequires,
 };
