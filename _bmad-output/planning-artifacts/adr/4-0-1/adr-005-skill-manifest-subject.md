@@ -3,18 +3,27 @@ initiative: convoke
 artifact_type: adr
 qualifier: 4-0-1-skill-manifest-subject
 created: '2026-08-30'
-status: accepted
+status: superseded-in-part
 schema_version: 1
 related_initiative: 4.0.1 (distribution integrity) — Epic 2, releasing as 4.0.2
 related_decision: 'Epic convoke-epic-4-0-1-distribution-integrity.md — ADR-5; gates Story 2.8, re-specifies FR15'
-closes_if_accepted: 'unblocks Story 2.8; re-specifies FR15; retires 4 lines of .github/expected-classification-findings.txt'
+closes_if_accepted: 'NOTHING — the 2026-08-30 correction re-opens this ruling; Story 2.8 is blocked again'
 ---
 
 # ADR-005: What `skill-manifest.csv` is a manifest *of*
 
-**Status:** **Accepted** (2026-08-30, Amalik) — the manifest describes an **installed project**
+**Status:** ⚠️ **SUPERSEDED IN PART — the ruling is RE-OPENED.** Accepted 2026-08-30 (Amalik) as
+"the manifest describes an installed project"; **corrected the same day** when its central evidential
+claim was found false. **Do not implement against the Recommendation or Consequences sections below.**
+See [the correction](#correction-2026-08-30--the-evidence-was-measured-against-the-wrong-basis) at the
+foot of this document, which is the operative text.
 **Initiative:** Convoke 4.0.1 — distribution integrity, Epic 2 (releases as 4.0.2)
-**Gates:** Story 2.8, which as written cannot be executed against the tree it targets. **Re-specifies:** FR15.
+**Gates:** Story 2.8, which remains **blocked**. **FR15's re-specification is withdrawn.**
+
+> **⚠️ Read the correction first.** The body below is preserved verbatim as the record of what was
+> ruled and why, per this project's practice of striking rather than silently replacing. Two of its
+> load-bearing claims are false: *"nothing was deleted"* and the implicit premise that
+> `.claude/skills/` is a tree CI can resolve against. It is gitignored.
 
 > **Namespace decision.** `_bmad/_config/skill-manifest.csv` is a Convoke-authored file in a
 > Convoke-owned config directory — it is not upstream BMAD's. Filed under `adr/4-0-1/` alongside
@@ -62,7 +71,9 @@ The correlation is total. The validator reports searching `_bmad/bmm/3-solutioni
 
 ### All four templates exist
 
-Checked individually, per the story's own AC, rather than inferred from the row note:
+> ⚠️ **FALSE AS STATED — see the correction.** The four files exist *on a working copy carrying a
+> full local install*. All four are **UNTRACKED** and sit under gitignored `.claude/skills/`. This
+> section asked "does it exist?" and never "is it tracked?".
 
 | skill | dependency | present at |
 |---|---|---|
@@ -71,8 +82,11 @@ Checked individually, per the story's own AC, rather than inferred from the row 
 | `wds-4-ux-design` | `../templates/page-specification.template.md` | `.claude/skills/wds-4-ux-design/templates/` ✓ |
 | `wds-4-ux-design` | `./templates/diagnostic-report-template.md` | `.claude/skills/wds-4-ux-design/templates/` ✓ |
 
-So the backlog row's hypothesis — *"consistent with upstream `a16fa340` deleting vendored content"* —
-is **disconfirmed**. Nothing was deleted. The content is where a generated wrapper puts it.
+~~So the backlog row's hypothesis — *"consistent with upstream `a16fa340` deleting vendored content"* —
+is **disconfirmed**. Nothing was deleted. The content is where a generated wrapper puts it.~~
+
+> ⚠️ **THIS IS THE ADR'S CENTRAL ERROR.** The backlog row was **right**. `a16fa340` deleted **1,227
+> files / 193,694 lines**, including **78 `_bmad/**/SKILL.md`**. See the correction at the foot.
 
 ### Why this needs an ADR rather than a judgement inside Story 2.8
 
@@ -192,3 +206,85 @@ was reverted so this ADR introduces no working-tree change beyond itself.*
 
 Story 2.8 is re-scoped to the classifier's resolution root plus baseline cleanup. No row of the
 shipped manifest is edited under this ruling.
+
+---
+
+## Correction 2026-08-30 — the evidence was measured against the wrong basis
+
+**This section supersedes the Recommendation, Consequences and Operator decision above.** It was
+written hours after the ruling, when authoring Story 2.8 surfaced
+`tests/lib/portability-fixture.js:11-19` — a committed file that already records what actually
+happened, and contradicts this ADR.
+
+### The two false claims
+
+**(1) "The backlog row's hypothesis … is disconfirmed. Nothing was deleted."** False. `a16fa340`
+deleted **1,227 files / 193,694 lines**, including **78 `_bmad/**/SKILL.md`**. The vendored upstream
+skill trees were genuinely removed. The backlog row was right and this ADR overturned it on a
+measurement that did not test the row's actual claim.
+
+**(2) The implicit premise that `.claude/skills/` is a resolvable root.** It is **gitignored**
+(`.gitignore:62` → `.claude/skills/*`), and **all four templates this ADR cited as "present on disk"
+are UNTRACKED**. Tracked `SKILL.md` files number **75** — 37 in `tests/fixtures`, 21 in `_bmad/core`,
+14 in `_bmad/bme`, **2 under `.claude/skills`**, 1 elsewhere.
+
+### Why the error happened, precisely
+
+The checks run for this ADR asked *"does the template exist?"* and *"does `.claude/skills/<id>/SKILL.md`
+exist?"* — both answered against a **working copy carrying a full local install**. Neither asked
+*"is it tracked?"*. Every measurement in the Evidence appendix is reproducible **on this machine and
+nowhere else**. `project-context.md`'s `verification-basis` rule names this exact failure: verify
+against the basis the claim is about. A claim about what a *repository* contains cannot be settled by
+`os.path.exists`. See `[[feedback_verification_basis]]`.
+
+### What this makes of the prescription
+
+**Unsafe, and worse than the state it replaced.** Pointing the classifier at `.claude/skills/` makes
+Test 1b's result a function of each developer's local install: green on a workstation with a full
+install, red or vacuous in a clean CI checkout. That trades four stable false positives for a
+non-deterministic gate.
+
+### What is actually true
+
+The `path` column is **repo-relative source, and was correct when authored**. `a16fa340` broke 75 rows
+by deleting content the repository **deliberately no longer vendors** — and it is not coming back.
+`portability-fixture.js:21-23` states the reason: *"Re-vendoring would have restored green and
+re-armed the identical failure on the next upstream update. A committed fixture cannot be deleted by
+an upstream commit, which is the whole point."*
+
+So the four `[BROKEN-DEP]` findings are **accurate reports about the repository** — those dependencies
+genuinely do not resolve in a clean checkout — but they are **not repairable**, because the content
+will not return. That is why Story 2.8 was unbuildable. The original diagnosis had the symptom right
+and the cause wrong; this ADR then had the cause wrong in the opposite direction.
+
+### The question this ADR should have asked
+
+Not *"what does the manifest describe?"* but **"what tree should Test 1b validate against?"** — and
+the project has already answered it everywhere else. Tests 1a and 2-9 validate against the committed
+fixture `tests/fixtures/portability-project/` (**31 rows, 31/31 resolving**). **Test 1b is the sole
+outlier pointing at `REPO_ROOT`.** The fixture carries `bmad-create-prd` — the one row that passes in
+the real repo — and **none of the three rows that produce findings**.
+
+### The re-opened ruling — three options, none yet chosen
+
+**(i) Scope Test 1b to rows whose `path` resolves.** The repository validates only what it actually
+ships; the 75 upstream rows are not its to answer for. **Requires a floor guard** — a scoping rule
+that can silently shrink to zero rows is a gate that passes by checking nothing, which is T32's shape.
+
+**(ii) Extend the fixture to cover the four rows and validate their deps there.** Consistent with how
+1a and 2-9 already work, and with the fixture's stated purpose. Costs committed fixture content.
+
+**(iii) Keep the baseline; accept the four as permanent acknowledged entries.** Status quo, honest,
+and closes I134 as *won't fix* rather than *fixed*. Cheapest; leaves a ratchet carrying four entries
+that can never shrink.
+
+**No recommendation is offered here.** The previous recommendation in this ADR was made on
+measurements that were never checked against the repository, and re-deciding from the same seat
+without that check having been fixed is how the first error propagated into a commit.
+
+### Blast radius of the error
+
+Governance text only — **no code, no test, no shipped file was changed** by the accepted ruling. What
+must be corrected: this ADR (done), the epic's **FR15 re-specification** and **Story 2.8 ACs** (both
+re-authored on the false cause), and the two memory files updated at the time. The commit that carried
+it is `88f0534b`.
