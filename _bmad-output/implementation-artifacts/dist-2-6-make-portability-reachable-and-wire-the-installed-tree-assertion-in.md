@@ -134,8 +134,10 @@ publish
 ADR-004's accepted question 3: a presence-only assertion goes **green** on a `_portability` tree
 that was copied but stays uninvocable, which is the precise defect this epic exists to catch and
 the failure `project-context.md` records twice from 2026-08-15
-**And** if Story 2.4 shipped its assertion worded against presence, this story amends it and
-says so explicitly in Completion Notes rather than layering a second check beside it
+**And** Story 2.4's AC3 was amended to invocability on 2026-08-30, so this story wires the
+assertion **unchanged** — verify that at pickup rather than assuming it. If 2.4 nonetheless
+shipped against presence, amend the shipped assertion here and say so in Completion Notes;
+never layer a second check beside it
 
 **AC9 — Every count is derived, not carried**
 
@@ -241,12 +243,12 @@ safe. `files[]` carries `_bmad/bme/_portability/` as a directory entry, so it ne
 - **Blocked on Story 2.4** — it builds the assertion this story wires in. 2.4 is `ready-for-dev`.
 - **Blocked on Story 2.5** — `bmm-dependencies.csv` must be in `files[]` first, or the assertion
   still has a finding and AC8 cannot land green.
-- **⚠️ Companion amendment owed to Story 2.4.** Its AC3 is worded against **presence** — *"fails
-  if any `_bmad/bme/*` entry in `files[]` is absent from the installed project tree"*. ADR-004's
-  accepted question 3 rules the assertion must check **invocability**. Either 2.4's AC3 is
-  amended before it is built (preferred — cheaper, and it keeps 2.4's red demonstration honest),
-  or this story amends the shipped assertion under AC8. **Do not let both happen and do not let
-  neither.**
+- **✅ Companion amendment to Story 2.4 — DONE 2026-08-30.** Its AC3 previously asserted
+  **presence** (*"fails if any `_bmad/bme/*` entry in `files[]` is absent from the installed
+  project tree"*); ADR-004's accepted question 3 rules the assertion must check **invocability**,
+  and 2.4's AC3, Dev Notes and change log were amended accordingly before it was built. **So AC8
+  wires the assertion unchanged.** Verify at pickup — if 2.4 shipped against presence anyway,
+  AC8 amends it here instead. Exactly one of those, never both.
 - **Independent of** 2.7 and 2.8, which may run at any point.
 
 ### References

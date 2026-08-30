@@ -160,7 +160,9 @@ FR12: CI MUST pack the tarball and resolve every relative link in every shipped 
       — it cannot see a file the code reads at runtime, which is FR13's class.
                                                                      [spine; absorbs I157]
 FR13: The installed tree MUST be asserted to carry every shipped `_bmad/bme/*` module and
-      every file in `files[]` that code reads at runtime. Implemented by extending
+      every file in `files[]` that code reads at runtime. **Refined 2026-08-30 by ADR-004
+      (question 3): "carry" means the module's declared units RESOLVE — a presence-only
+      assertion passes on a tree that arrived and cannot be invoked.** Implemented by extending
       `scripts/audit/try-fresh-install.sh` (already the CI `fresh-install` job), NOT by a
       new grep over `scripts/**` — grep is fragile against renames and dynamically built
       paths; an actual install is not. Absorbs **I153** (4.8), whose finding is that the
@@ -704,6 +706,7 @@ So that a file cannot ship and be unreachable at the same time.
 **Given** an installed package
 **When** the harness runs
 **Then** it fails if any shipped `_bmad/bme/*` module is absent from the installed tree
+**And** it fails if any operator-invocable unit declared by an arriving module does not resolve to a generated `.claude/skills/` wrapper — *amended 2026-08-30 per [ADR-004](adr/4-0-1/adr-004-bme-module-contract.md) question 3: presence alone goes **green** on a `_portability` tree that was copied but stays uninvocable, which is the defect I141 was filed for and the state this story's own red demonstration fires on*
 **And** it fails if any file in `files[]` that code reads at runtime is absent
 
 **Given** I153 — the harness's bin dependency check resolves only ONE hop, so most bins' real dependency surface is unchecked
@@ -786,7 +789,7 @@ So that a capability that ships is a capability I have.
 **Given** Stories 2.5 and 2.4 have landed and the assertion has no findings left
 **When** this story completes
 **Then** the assertion is wired into `try-fresh-install.sh`'s failure path, blocking, in the same commit that turns it green
-**And** it asserts **invocability** — that every declared unit resolves to a generated wrapper — not merely that the module directory arrived. Per ADR-004's accepted question 3, a presence-only assertion goes green on the exact defect it exists to catch. **This obliges an amendment to Story 2.4's AC3**, which is currently worded against presence
+**And** it asserts **invocability** — that every declared unit resolves to a generated wrapper — not merely that the module directory arrived. Per ADR-004's accepted question 3, a presence-only assertion goes green on the exact defect it exists to catch. **Story 2.4's AC3 was amended to this on 2026-08-30**, so this story wires the assertion unchanged; verify that before wiring rather than assuming it
 
 **Given** any count of affected skills, rows or modules appears
 **When** it appears

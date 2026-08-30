@@ -42,15 +42,28 @@ the new variable appears nowhere in that condition
 **And** the story states in its Completion Notes that this is deliberate and names Story 2.6 as
 the wiring story
 
-**AC3 — Every shipped `_bmad/bme/*` module arrives**
+**AC3 — Every shipped `_bmad/bme/*` module arrives *and is reachable***
+
+> **Amended 2026-08-30 per [ADR-004](../planning-artifacts/adr/4-0-1/adr-004-bme-module-contract.md),
+> accepted question 3.** This AC previously stopped at presence. Presence alone is **not** a
+> sufficient assertion, and the gap is not hypothetical: it is the exact defect this story's own
+> AC6 red demonstration fires on. See *Why presence is not enough* below.
 
 **Given** an installed package
 **When** the harness runs
 **Then** the check fails if any `_bmad/bme/*` entry in `files[]` is absent from the installed
 **project** tree
-**And** both counts (entries shipped, entries arriving) are derived at implementation time from
-`package.json` and from the installed tree — never carried forward as literals
-(`derive-counts-from-source`)
+**And** it **also** fails if any operator-invocable unit declared by an arriving module does not
+resolve to a generated `.claude/skills/<name>/SKILL.md` wrapper in the installed project. Per
+ADR-004's contract C2, a unit is declared either as an agent in `agent-registry.js` or as a
+`config.yaml` workflow carrying `standalone: true`; per C4, shipping is not installing and
+installing is not invoking
+**And** the declared set is **derived from the installed tree's module configs and the agent
+registry at runtime**, never snapshotted — a hardcoded list of expected wrappers goes stale the
+first time a module gains a workflow
+**And** all counts (entries shipped, entries arriving, units declared, wrappers resolving) are
+derived at implementation time from `package.json`, the module configs and the installed tree —
+never carried forward as literals (`derive-counts-from-source`)
 
 **AC4 — Every file the shipped code reads at runtime arrives**
 
@@ -247,6 +260,27 @@ one) and is a *separate* I153 deferral, explicitly **out of scope**. But going t
 its blast radius from 14 entry files to the whole graph. Bound it: follow **relative** specifiers
 only (`./`, `../`); treat bare package specifiers as leaves.
 
+### Why presence is not enough — read before implementing AC3
+
+A presence-only assertion would go **green** on a `_bmad/bme/_portability/` directory that was
+copied into the project but whose four skills remain uninvocable. That is not a corner case: it
+is precisely the state Story 2.6's *previous* draft would have produced, and it is the defect
+I141 was filed for.
+
+The failure reproduces in this repository right now, with no packaging involved. The source tree
+is present at `_bmad/bme/_portability/`, and all four skills — `bmad-export-skill`,
+`bmad-generate-catalog`, `bmad-seed-catalog`, `bmad-validate-exports` — are **absent** from this
+repo's own `.claude/skills/`. A directory-presence check run here would report PASS.
+
+The mechanism behind that, verified: `.claude/skills/` wrappers are *generated* from declarations
+(`refresh-installation.js:749`, `:810`, `:836`, `:909`), never copied. So "the module arrived"
+and "the operator can invoke it" are genuinely different assertions, and only the second is what
+FR13's story promises — *"a file cannot ship and be unreachable at the same time."*
+
+`project-context.md` records two 2026-08-15 instances of checks that reported success without
+doing their work. A gate that passes on the very defect it was built to catch is the third, and
+NFR10 exists to stop this story becoming it.
+
 ### Testing standards
 
 - `test-fixture-isolation`: any Node helper you add gets tests that run against a tmp fixture, never
@@ -268,7 +302,7 @@ only (`./`, `../`); treat bare package specifiers as leaves.
 |---|---|---|
 | `dist-2-2` / `dist-2-3` | backlog, unauthored | **2.3 rewrites `files[]`** — drops `scripts/migration/format-conversion/`, adds `_bmad/bme/covenant/` and `docs/migration/`, and wires the link checker into this same harness. Landing 2.4 first means the harness is edited twice and 2.3 must re-run against your check. Derive `files[]` at runtime, never snapshot it. |
 | `dist-2-5` | backlog | Consumes this story's red output. **FR18 must not land here** (NFR10). |
-| `dist-2-6` | backlog | Wires this check into the verdict and turns it green with FR14. |
+| `dist-2-6` | **re-authored 2026-08-30** | Wires this check into the verdict and turns it green with FR14. Its AC8 requires the assertion to test **invocability**, which is why AC3 above was amended. If AC3 ships as amended, 2.6 wires it unchanged; if it ships against presence only, 2.6 must amend the shipped assertion. **Exactly one of those must happen.** |
 | `I153` | Fast Lane, 4.8 | Closed by AC5. |
 | `BUG-19` | Bug Lane, 5.7 | Its remaining FR18 half is blocked until this story's red observation is recorded. |
 
@@ -312,6 +346,7 @@ matches scope tokens exactly against live row IDs, so `fix(I153)` warns until th
 | Date | Change |
 |---|---|
 | 2026-08-29 | Story created. FR13 wording ambiguity resolved (code → file, not `files[]` → disk); per-file `_config` copy path documented; out-of-order authoring flagged. |
+| 2026-08-30 | AC3 amended per ADR-004 (accepted question 3): the assertion now tests invocability — every declared unit resolves to a generated wrapper — not module-directory presence alone. Rationale added to Dev Notes; `dist-2-6` dependency row updated. |
 
 ## Dev Agent Record
 
