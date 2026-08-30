@@ -749,27 +749,48 @@ So that a healthy install does not warn me about a file that simply was not ship
 
 *Covers FR14. Turns Story 2.4's remaining finding green and, in the same commit, puts the assertion into the gating path — the last of the two fixes carries the wiring.*
 
+> **Re-authored 2026-08-30 against [ADR-004](adr/4-0-1/adr-004-bme-module-contract.md)** (accepted, option (a)). The prior ACs were mutually unsatisfiable: AC1 said copy the tree "by the same mechanism as the other `_bmad/bme/*` modules", AC2 said the skills then resolve. There is no single such mechanism — the only generic loop iterates `EXTRA_BME_AGENTS` and is agent-driven — and copying creates no wrapper under any of them. Full ACs in the story file; summarised here.
+
 As a Convoke operator,
 I want the portability skills to be usable after I install,
 So that a capability that ships is a capability I have.
 
-**Acceptance Criteria:**
+**Acceptance Criteria (summary — see `dist-2-6-*.md` for AC1-AC9 in full):**
 
-**Given** `_bmad/bme/_portability/` ships in `files[]` but is referenced nowhere in `scripts/update/lib/*.js` or `scripts/*.js`
-**When** an install or refresh runs
-**Then** the tree is copied into the project by the same mechanism as the other `_bmad/bme/*` modules
-
-**Given** a fresh install
-**When** the portability skills are invoked
-**Then** they resolve
-
-**Given** Story 2.5 has already shipped `bmm-dependencies.csv` and this story makes `_portability` reachable, so Story 2.4's assertion now has no findings
+**Given** `_bmad/bme/_portability/` carries only `skills/` — no `config.yaml`, no `workflows/` — while all five other bme modules carry `config.yaml` plus workflows and/or agents
 **When** this story completes
-**Then** the assertion is wired into `try-fresh-install.sh`'s failure path, blocking, in the same commit that turns it green — never merged red into a job that gates every PR and every publish
+**Then** the module conforms to ADR-004's contract: a `config.yaml` declaring the four skills as `standalone: true` workflows, and `skills/` renamed to `workflows/`
+**And** no new module shape is introduced — declaration mechanisms stay at two
 
-**Given** NFR6
-**When** any count of affected skills appears
-**Then** it is derived at implementation time, not carried forward as a literal
+**Given** each portability `SKILL.md` loads its workflow by a **relative** link while the generator copies `SKILL.md` alone
+**When** a wrapper is generated
+**Then** the four load directives are rewritten to the absolute `{project-root}` form the Artifacts skills already use
+
+**Given** `skill-manifest.csv` names the `skills/` path in four rows, and the classifier derives its resolution root from that column
+**When** the rename lands
+**Then** those rows move in the same commit, and no new `[BROKEN-DEP]` finding appears
+
+**Given** no install path reaches the module today
+**When** this story completes
+**Then** `refreshInstallation()` copies it and generates a wrapper per declared workflow, mirroring the Artifacts blocks, with the config `version` stamped per the I137 precedent
+**And** portability names join the orphan-cleanup union, so a wrapper cannot install and then vanish on the next refresh
+
+**Given** `INSTALLATION.md:116` states the module is "not copied into your project… there is nothing to install" — true of the bin, false of the skills
+**When** this story completes
+**Then** that sentence is corrected
+
+**Given** the defect reproduces in this repository, with all four skills absent from its own `.claude/skills/`
+**When** this story completes
+**Then** a fresh install is performed, four wrappers confirmed, and at least one skill invoked end-to-end — presence is necessary and not sufficient
+
+**Given** Stories 2.5 and 2.4 have landed and the assertion has no findings left
+**When** this story completes
+**Then** the assertion is wired into `try-fresh-install.sh`'s failure path, blocking, in the same commit that turns it green
+**And** it asserts **invocability** — that every declared unit resolves to a generated wrapper — not merely that the module directory arrived. Per ADR-004's accepted question 3, a presence-only assertion goes green on the exact defect it exists to catch. **This obliges an amendment to Story 2.4's AC3**, which is currently worded against presence
+
+**Given** any count of affected skills, rows or modules appears
+**When** it appears
+**Then** it is derived at implementation time (`derive-counts-from-source`). *The prior draft cited NFR6, which was subtracted 2026-08-19 and is not reused.*
 
 ### Story 2.7: Escape every interpolated regex in the exporter
 

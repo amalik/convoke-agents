@@ -3,7 +3,7 @@ initiative: convoke
 artifact_type: adr
 qualifier: 4-0-1-bme-module-contract
 created: '2026-08-30'
-status: proposed
+status: accepted
 schema_version: 1
 related_initiative: 4.0.1 (distribution integrity) — Epic 2, releasing as 4.0.2
 related_decision: 'Epic convoke-epic-4-0-1-distribution-integrity.md — ADR-4; gates Story 2.6, constrains Story 2.4'
@@ -12,7 +12,7 @@ closes_if_accepted: 'I141; unblocks FR14; re-specifies FR13'
 
 # ADR-004: What a `_bmad/bme/*` module is, and how `_portability` conforms
 
-**Status:** **Proposed** — awaiting operator decision
+**Status:** **Accepted** (2026-08-30, Amalik) — option (a), conform `_portability` to the contract
 **Initiative:** Convoke 4.0.1 — distribution integrity, Epic 2 (releases as 4.0.2; see Finding 12)
 **Gates:** Story 2.6, which is not implementable until this is ruled. **Constrains:** Story 2.4 — the assertion FR13 specifies goes green on the defect it exists to catch unless this contract defines what it asserts against.
 
@@ -164,11 +164,12 @@ grep -n "convoke-export" package.json    # bin -> scripts/portability/convoke-ex
 
 ## Operator decision
 
-_Pending._
+**Accepted 2026-08-30 (Amalik): option (a) — conform `_portability` to the contract.** Story 2.6 is re-authored against C1-C4.
 
-Four questions, in the order they matter:
+The three subsidiary questions, and how each was resolved:
 
-1. **(a), (b), (c) or (d)?**
-2. If (a): does `_portability` keep its own module directory, or is the ceremony disproportionate for four skills?
-3. **Does Story 2.4's assertion check invocability (C2) or presence (C4)?** This needs an answer under every option above, and it is the one that decides whether FR13's gate is worth building.
-4. Who rewrites `INSTALLATION.md:116` — this story, or Story 2.3, which is already editing shipped documentation?
+2. **`_portability` keeps its own module directory.** Implied by (a): the point of conforming is that the module becomes indistinguishable in shape from the other five, and folding it away (option (c)) would move files without settling the contract.
+3. **Story 2.4's assertion checks invocability (C2), not presence (C4).** Resolved per the recommendation, and it is the answer that carries the most weight — a presence-only gate goes green on the exact defect it was built to catch. **This obliges an amendment to Story 2.4's AC3, which is currently worded against presence.** See the companion note in Story 2.6's Cross-story dependencies.
+4. **Story 2.6 rewrites `INSTALLATION.md:116`.** It is the story that makes the sentence false, so it owns making it true again. Story 2.3 is already oversized (readiness Finding 7) and this is one sentence, not a link-policy question.
+
+> Questions 2-4 were resolved by the recommendation rather than answered individually at the point of acceptance. Each is a one-line reversal if wrong; question 3 is the one to challenge if any.
