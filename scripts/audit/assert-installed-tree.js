@@ -81,6 +81,7 @@ try {
   process.exit(2);
 }
 const {
+  setYamlResolutionRoot,
   RUNTIME_DATA_FILES,
   DEFAULT_MAX_FILES,
   shippedBmeModules,
@@ -127,6 +128,11 @@ function tree(projectRoot, packageRoot) {
   for (const [label, dir] of [['project', projectRoot], ['installed package', packageRoot]]) {
     if (!fs.existsSync(dir)) precondition(`${label} root does not exist: ${dir}`);
   }
+  // Before ANY config is parsed: resolve js-yaml out of the installed package, which carries
+  // it as a runtime dependency. The `fresh-install` job runs no `npm ci`, so `$REPO/node_modules`
+  // does not exist on the runner — this is what took main red in CI run 33323351907.
+  setYamlResolutionRoot(packageRoot);
+
   const pkgPath = path.join(packageRoot, 'package.json');
   let pkg;
   try {

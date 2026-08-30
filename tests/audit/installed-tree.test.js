@@ -583,6 +583,53 @@ describe('Round 3 — fail-open paths the restructure left open', () => {
   });
 });
 
+describe('the auditor runs where the CI job runs — no repo node_modules', () => {
+  // CI run 33323351907 took main red. `js-yaml` is a runtime dependency of convoke-agents, so
+  // a bare require finds it in $REPO/node_modules on any developer machine — but the
+  // `fresh-install` job deliberately runs NO `npm ci` ("the script needs no repo dependencies
+  // (verified against a clean clone)"), so on the runner there is no $REPO/node_modules and
+  // the auditor died mid-run. That is the "works in THIS repo" failure the whole harness
+  // exists to catch, committed inside the harness itself.
+  //
+  // This test reproduces the runner: the scripts are COPIED to a tree with no node_modules and
+  // executed from there, with js-yaml reachable only through the installed package root.
+  function isolatedRepo() {
+    const root = tmp('convoke-norepo-');
+    fs.mkdirSync(path.join(root, 'scripts', 'audit', 'lib'), { recursive: true });
+    fs.copyFileSync(CLI, path.join(root, 'scripts', 'audit', 'assert-installed-tree.js'));
+    fs.copyFileSync(
+      path.join(PACKAGE_ROOT, 'scripts', 'audit', 'lib', 'installed-tree.js'),
+      path.join(root, 'scripts', 'audit', 'lib', 'installed-tree.js')
+    );
+    assert.ok(!fs.existsSync(path.join(root, 'node_modules')), 'the fixture must have no repo deps');
+    return path.join(root, 'scripts', 'audit', 'assert-installed-tree.js');
+  }
+
+  it('resolves js-yaml from the installed package and completes the run', () => {
+    const { root, pkgRoot } = installedFixture();
+    // A real tarball install carries js-yaml under the package; mirror that.
+    fs.cpSync(
+      path.join(PACKAGE_ROOT, 'node_modules', 'js-yaml'),
+      path.join(pkgRoot, 'node_modules', 'js-yaml'),
+      { recursive: true }
+    );
+    write(path.join(root, '_bmad', 'bme', '_vortex', 'config.yaml'), 'version: 4.0.1\n');
+
+    const cli = isolatedRepo();
+    let res;
+    try {
+      const stdout = execFileSync(process.execPath, [cli, 'tree', root, pkgRoot], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+      res = { code: 0, stdout, stderr: '' };
+    } catch (err) {
+      res = { code: err.status, stdout: err.stdout || '', stderr: err.stderr || '' };
+    }
+    assert.doesNotMatch(res.stderr, /js-yaml could not be loaded/, res.stderr);
+    assert.doesNotMatch(res.stderr, /assertion crashed/, res.stderr);
+    assert.notEqual(res.code, 2, 'the run must complete, not abort as a harness failure');
+    assert.match(res.stdout, /_portability\/ is in files\[\] but did not arrive/);
+  });
+});
+
 describe('unparsableConfigs', () => {
   it('names a module whose config.yaml does not parse', () => {
     const root = tmp();

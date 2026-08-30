@@ -430,14 +430,50 @@ function real(p) {
 function isDir(p) { try { return fs.statSync(p).isDirectory(); } catch { return false; } }
 function isFile(p) { try { return fs.statSync(p).isFile(); } catch { return false; } }
 
+/**
+ * Where to resolve `js-yaml` from, newest first. Set by the CLI to the INSTALLED package root.
+ *
+ * WHY THIS EXISTS — CI run 33323351907, main went red. `js-yaml` is a runtime dependency of
+ * `convoke-agents`, so a bare `require` finds it in `$REPO/node_modules` on any developer
+ * machine. The `fresh-install` job runs **no `npm ci`** — deliberately, and its own comment
+ * says so: *"the script needs no repo dependencies (verified against a clean clone)"* — so on
+ * the runner `$REPO/node_modules` does not exist and the auditor died mid-run.
+ *
+ * That is the exact defect class this harness was built to catch, committed inside the
+ * harness: code that works in THIS repo and nowhere else. I135, I137 and I139 are the three
+ * recorded instances in `try-fresh-install.sh`'s header; this is a fourth, and the only one
+ * whose victim was the auditor rather than the product.
+ *
+ * The installed tree is the right source: `js-yaml` ships as a runtime dependency of the
+ * package under test, so it is present there by construction, and the harness already loads
+ * `manifest-csv.js` the same way. It is third-party code, not the artifact being audited, so
+ * this does not weaken the "run the auditor from the repo" rule the header states.
+ */
+let yamlRoots = [];
+
+/** Point yaml resolution at an installed package root. Call before any config is read. */
+function setYamlResolutionRoot(dir) {
+  yamlRoots = dir ? [dir] : [];
+}
+
 function loadYaml() {
+  // Installed tree first, then the ordinary require. The fallback is what keeps the unit
+  // tests and local runs working without a packageRoot.
+  if (yamlRoots.length) {
+    try {
+      return require(require.resolve('js-yaml', { paths: yamlRoots }));
+    } catch { /* fall through to the bare require below */ }
+  }
   try {
     return require('js-yaml');
   } catch (err) {
     // Fail LOUD. Returning a null parser here would make every config read come back
     // empty, every module declare nothing, and the wrapper check pass while asserting
     // nothing — the exact shape of the four fail-open defects this harness records.
-    throw new Error(`installed-tree: js-yaml is required but could not be loaded (${err.message})`, { cause: err });
+    throw new Error(
+      `installed-tree: js-yaml could not be loaded from ${yamlRoots.length ? yamlRoots.join(', ') + ' or ' : ''}the ordinary require path (${err.message})`,
+      { cause: err }
+    );
   }
 }
 
@@ -537,6 +573,7 @@ function unparsableConfigs(projectRoot, arrived) {
 }
 
 module.exports = {
+  setYamlResolutionRoot,
   RUNTIME_DATA_FILES,
   DEFAULT_MAX_FILES,
   WRAPPER_RULES,
