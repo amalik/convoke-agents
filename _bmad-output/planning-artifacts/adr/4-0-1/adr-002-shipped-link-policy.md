@@ -119,9 +119,10 @@ render them as absolute URLs accepting CR-README-D05's instability.
 **The resulting policy, which FR12 enforces:**
 
 > Every relative link in a shipped document must resolve inside the package. A document that needs
-> to cite repository-only material either does not ship, or cites it by absolute URL with that
-> choice recorded. Normative documents — anything `project-context.md` calls required reading —
-> ship.
+> to cite repository-only material either does not ship, or ~~cites it by absolute URL with that
+> choice recorded~~ **cites it as unlinked text** *(amended 2026-08-30 — absolute URLs are forbidden
+> in shipped docs; see the amendment at the foot of this ADR)*. Normative documents — anything
+> `project-context.md` calls required reading — ship.
 
 ## Consequences if accepted
 
@@ -131,8 +132,10 @@ render them as absolute URLs accepting CR-README-D05's instability.
   checklist, `_bmad/bme/README.md`, and any skill that cites it. Enumerate mechanically, not by memory.
 - **CR-README-D04 becomes load-bearing.** If any link is rewritten as absolute, `docs-audit.js`
   cannot see it. Either FR12's checker validates absolute URLs too, or the policy forbids them in
-  shipped docs. Recommend the former; note it lands in Story 2.1's or 2.2's scope, and that
-  `docs:audit` reporting "zero findings" today partly means it is not looking.
+  shipped docs. ~~Recommend the former; note it lands in Story 2.1's or 2.2's scope~~ — *superseded
+  2026-08-30 by the amendment below: the operator ruled the **latter**, and the recommendation for
+  the former was made before the affected sites were enumerated.* Note that `docs:audit` reporting
+  "zero findings" today partly means it is not looking.
 - Package shrinks. `agent-surface-parity` and `fresh-install` both assert against the packed tree —
   re-run both after the exclusion.
 
@@ -206,3 +209,53 @@ The specific corruption requires entry 1's *new* name to collide with entry 2's 
 `covenant-operator.md` and `compliance-checklist.md` do not. **That is a reason to assert it, not to
 assume it.** BUG-13 is Open at 5.7 and outside 4.0.1's scope; the story carries the assertion
 instead.
+
+---
+
+## Amendment, 2026-08-30 — the absolute-URL question, resolved
+
+This ADR left one question open (§"Consequences if accepted", CR-README-D04) and Story 2.3
+inherited it as a live AC: *"either FR12's checker validates absolute URLs too, or the policy
+forbids them in shipped docs."* It had to be settled **before Story 2.2 is built**, because it sets
+that checker's scope.
+
+**Accepted 2026-08-30 (Amalik): the policy FORBIDS absolute URLs in shipped docs.**
+
+### Why this was cheap, and why the original recommendation was wrong
+
+The body above recommended extending the checker. That recommendation was made **before the
+affected sites were enumerated**. Enumerated 2026-08-30, they are three — and every one already
+carries a "drop" alternative in Story 2.3's own ACs:
+
+| # | Site | Target | Disposition |
+|---|---|---|---|
+| 1 | `CHANGELOG.md:54` | `_bmad-output/planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md` | drop the link, keep the prose |
+| 2 | `CHANGELOG.md:1205` | `docs/BMAD-METHOD-COMPATIBILITY.md` | drop the link, keep the prose |
+| 3 | `_bmad/bme/README.md:34` | `../../project-context.md` | drop the link, keep the prose |
+
+Not candidates, and not to be confused with them: `CHANGELOG.md:44` and `:83` point at
+`docs/migration/3.x-to-4.0.md`, which this ADR already fixes by adding `docs/migration/` to
+`files[]`; `_bmad/bme/README.md:5`, `:35` and `:36` are Covenant links, fixed by the Class 2 move.
+
+**So the number of sites requiring an absolute URL, if the drop alternative is taken at all three,
+is zero.** Forbidding costs nothing. Extending the checker would add network I/O to a job inside
+`publish.needs` — a flaky external fetch would then block every PR and every release, which is a
+new failure mode bought for no benefit.
+
+### Rendering
+
+Drop the *link*, not the *reference*: render the target as an unlinked filename (backticked) so the
+historical record in `CHANGELOG.md` survives intact and no pointer ships that nothing can validate.
+Rewriting a historical changelog entry's prose is out of scope; only its link syntax changes.
+
+### What binds as a result
+
+- **FR12's checker does not resolve `^https?://`.** It is not in scope for Story 2.2, which keeps
+  that story to relative-link resolution against the packed tarball.
+- **The policy is a rule, not a one-off.** It belongs in `project-context.md` alongside the other
+  shipped-surface rules, so the next author does not re-introduce an absolute URL and pass CI.
+  *(Filing the rule is Story 2.3's bookkeeping; the ID is not allocated here.)*
+- **`docs-audit.js:190`'s `^https?://` skip is now correct rather than a gap.** Under this policy
+  there is nothing for it to skip in shipped docs. CR-README-D04 is closed as *policy*, not as code.
+- **Story 2.3's final AC is satisfied by construction** and should be rewritten from a fork
+  ("either … or …") into the ruling.

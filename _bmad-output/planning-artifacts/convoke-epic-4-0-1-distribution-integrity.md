@@ -180,10 +180,17 @@ FR14: `_bmad/bme/_portability/` MUST be reachable after install — it ships in 
 **Cluster 4.4 — Manifest truth.**
 
 ```
-FR15: The broken skill dependencies in the shipped `skill-manifest.csv` MUST be
-      repaired, with the count derived at implementation time rather than carried
-      forward as a literal.                                                   [I134]
+FR15: The classifier MUST resolve every manifest row's dependencies against a root
+      that exists for all 106 rows, so that a [BROKEN-DEP] finding means a broken
+      dependency. The set MUST be derived at implementation time rather than
+      carried forward as a literal.                                           [I134]
 ```
+
+*FR15 re-specified 2026-08-30 per [ADR-005](adr/4-0-1/adr-005-skill-manifest-subject.md), accepted
+option (a). Its prior wording — "the broken skill dependencies … MUST be repaired" — presumed
+defects that do not exist: all four `[BROKEN-DEP]` templates are present on disk, and all four
+findings come from rows whose `path` column names an install destination this repository does not
+have. Nothing in the shipped `.csv` is repaired under this ruling.*
 
 **Cluster 4.5 — Export robustness.** *(reassigned to Epic 2: a brace in a persona name
 crashing the export is not a truth-telling defect — it is "the thing that ships does not
@@ -361,8 +368,13 @@ inside it, every shipped skill tree has an install path that copies it, and the 
 does not crash on a name it has never seen. Checked by CI, not by someone happening to
 look.
 **FRs covered:** FR11, FR12, FR13, FR14, FR15, FR16, FR17, FR18 · **also closes:** I153
-**Blocked on:** nothing. **ADR-2 accepted 2026-08-20** — option (d): shrink the shipped surface,
-then rule the remainder in three classes. The Covenant moves to `_bmad/bme/covenant/`.
+**Blocked on:** nothing — all four gating rulings are accepted. **ADR-2 (2026-08-20)** — option (d):
+shrink the shipped surface, then rule the remainder in three classes; the Covenant moves to
+`_bmad/bme/covenant/`. **ADR-2's absolute-URL amendment (2026-08-30)** — forbidden in shipped docs,
+so FR12's checker does not resolve `^https?://` and Story 2.2's scope is fixed. **ADR-4 (2026-08-30)**
+— the `_bmad/bme/*` module contract; FR13 asserts invocability, not presence. **ADR-5 (2026-08-30)**
+— `skill-manifest.csv` describes an installed project, so FR15 is a classifier fix and no shipped
+`.csv` row is edited.
 **Story order — red before green (NFR10):** FR11 → FR12's gate built and **observed
 failing** but NOT wired into CI → the remaining shipped-link violations fixed under ADR-2's
 policy and the checker wired in blocking, same commit → FR13's assertion built and **observed
@@ -593,7 +605,7 @@ So that testing against a published version tells me something true about the so
 Everything an operator installs resolves and works: every documented reference points inside the package, every shipped skill tree actually arrives on disk, and the exporter does not crash on a name it has never seen. Checked by CI, not by someone happening to look.
 
 **FRs:** FR11, FR12, FR13, FR14, FR15, FR16, FR17, FR18 · **also closes:** I153 · **NFRs:** NFR10 (load-bearing), NFR8
-**Blocked on:** nothing — **ADR-2 accepted 2026-08-20** (option d, three classes; Covenant → `_bmad/bme/covenant/`). Story 2.3 carries the policy application and the wiring.
+**Blocked on:** nothing — all four gating rulings are accepted. **ADR-2** (2026-08-20, option d: three classes; Covenant → `_bmad/bme/covenant/`) — Story 2.3 carries the policy application and the wiring. **ADR-2's absolute-URL amendment** (2026-08-30) — forbidden in shipped docs; this fixes Story 2.2's scope and converts Story 2.3's last AC from a fork into a ruling. **[ADR-4](adr/4-0-1/adr-004-bme-module-contract.md)** (2026-08-30, option a) — FR13 asserts invocability. **[ADR-5](adr/4-0-1/adr-005-skill-manifest-subject.md)** (2026-08-30, option a) — `skill-manifest.csv` describes an installed project; Story 2.8 is re-authored as a classifier fix.
 **Story order — red before green (NFR10), and never merged red:** 2.1 → 2.2 (checker built, observed failing, NOT wired in) → 2.3 (policy applied, checker wired in blocking, same commit) → 2.4 (assertion built, observed failing, NOT wired in) → 2.5 (registry shipped) → 2.6 (`_portability` reachable + assertion wired in blocking, same commit). **2.7 and 2.8 are independent** and may run at any point.
 **Why nothing merges red.** `fresh-install` runs on push to `main` and every pull request, and the `publish` job `needs:` it. A gate merged in a failing state there blocks every PR and every release until its fix lands. NFR10 requires each gate *demonstrated* failing; it does not require it *merged* failing.
 
@@ -680,9 +692,11 @@ So that the next broken reference is caught by CI rather than by someone reading
 **When** this story completes
 **Then** the checker from Story 2.2 is wired into `try-fresh-install.sh` as a blocking check, in the same commit that turns it green — it is never merged non-blocking. A gate that runs and nobody watches is T32, the row this epic exists to close
 
-**Given** CR-README-D04 — `scripts/docs-audit.js`'s `checkBrokenLinks` skips `^https?://` entirely
-**When** any link is rewritten as an absolute URL
-**Then** either FR12's checker validates absolute URLs too, or the policy forbids them in shipped docs — converting a broken relative link into an unvalidated absolute one trades a detectable fault for an undetectable one
+**Given** CR-README-D04 — `scripts/docs-audit.js`'s `checkBrokenLinks` skips `^https?://` entirely (`docs-audit.js:190`)
+**When** a shipped document needs to cite repository-only material
+**Then** it cites it as **unlinked backticked text**, never as an absolute URL — *amended 2026-08-30 per [ADR-002's absolute-URL amendment](adr/4-0-1/adr-002-shipped-link-policy.md), accepted: the policy **forbids** absolute URLs in shipped docs. The prior AC posed a fork ("either … or"); it is now a ruling*
+**And** all three sites take the drop alternative, since enumeration showed **zero** sites actually require an absolute URL: `CHANGELOG.md:54` (the v63 ADR), `CHANGELOG.md:1205` (`docs/BMAD-METHOD-COMPATIBILITY.md`) and `_bmad/bme/README.md:34` (`project-context.md`). The prose stays; only the link syntax changes
+**And** FR12's checker does **not** resolve `^https?://` — keeping network I/O out of a job inside `publish.needs`, where a flaky external fetch would block every PR and every release
 
 **Given** the package shrinks
 **When** this story completes
@@ -817,28 +831,44 @@ So that authoring a new team does not crash the export in a way that surfaces no
 
 ### Story 2.8: Repair the broken dependencies in the shipped manifest
 
-*Covers FR15 / I134. Moved here from a former Epic 3 when that epic was subtracted — the manifest ships and its dependencies do not resolve, which is this epic's subject read literally.*
+*Covers FR15 / I134. Moved here from a former Epic 3 when that epic was subtracted — the manifest ships and its dependency check reports faults that are not there, which is this epic's subject read literally.*
+
+> **Re-authored 2026-08-30 against [ADR-005](adr/4-0-1/adr-005-skill-manifest-subject.md)** (accepted, option (a): `skill-manifest.csv` describes an **installed project**). The prior ACs were unexecutable. They offered "path corrected, or dependency dropped if the template is genuinely gone" — and the tree admits neither: **all four templates exist**, and all four findings come from rows whose `path` names an install destination this repository does not carry. The backlog row's hypothesis (*"consistent with upstream `a16fa340` deleting vendored content"*) is **disconfirmed**; nothing was deleted. This is a classifier defect, not a manifest defect.
 
 As a Convoke operator,
-I want the skill manifest's dependencies to resolve,
-So that a skill I invoke does not reach for a template that is not there.
+I want the manifest's dependency check to report real faults only,
+So that a red classification means a skill will actually reach for a template that is not there.
 
 **Acceptance Criteria:**
 
-**Given** the four `[BROKEN-DEP]` findings recorded in `.github/expected-classification-findings.txt` — `bmad-check-implementation-readiness` → `../templates/readiness-report-template.md`; `bmad-create-epics-and-stories` → `../templates/epics-template.md`; `wds-4-ux-design` → `../templates/page-specification.template.md` and `./templates/diagnostic-report-template.md`
-**When** this story runs
-**Then** each is individually confirmed and resolved — path corrected, or dependency dropped if the template is genuinely gone
-**And** the evidence for each is recorded separately. The row notes these are "consistent with upstream `a16fa340` deleting vendored content", but consistent is not confirmed
+**Given** `validate-classification.js:248` derives `skillDir = path.dirname(path.join(projectRoot, skillPath))` from the manifest's `path` column, and that column names an **install destination** — 75 of 106 rows resolve nowhere under `_bmad/`, while **all 106** resolve at `.claude/skills/<canonicalId>/SKILL.md`
+**When** this story completes
+**Then** the classifier resolves against a root that exists for every row, and the resolution rule is stated in the script's header comment rather than left to be re-derived
+**And** the row counts are derived at implementation time (`derive-counts-from-source`), not read from this document
+
+**Given** only **four** of the 106 rows carry a relative dependency at all, and the correlation is total — the 3 rows with a non-existent `path` produce all four findings; the 1 row with a resolvable `path` (`bmad-create-prd`) produces none
+**When** the fix lands
+**Then** that correlation is re-measured, not assumed from this text — if a fifth relative dep has appeared, or if any finding survives the root change, the ruling's premise has drifted and the story stops rather than deleting a baseline line
+
+**Given** NFR10, and that this story **removes** findings rather than adding a gate
+**When** the fixed classifier is accepted
+**Then** it is observed **failing** on a deliberately broken dependency introduced temporarily, with the output recorded — otherwise this trades four false positives for zero coverage, which is strictly worse than the state it replaces
+**And** that demonstration is the story's load-bearing evidence: a check that reports nothing is indistinguishable from a check that sees nothing
 
 **Given** the baseline file can only shrink
-**When** a dependency is fixed
-**Then** its line is deleted from `.github/expected-classification-findings.txt` in the same commit — Test 1b fails on any NEW finding and also fails on a FIXED one until its line is removed
+**When** the four findings stop firing
+**Then** their four lines are deleted from `.github/expected-classification-findings.txt` in the same commit — Test 1b fails on any NEW finding and also fails on a FIXED one until its line is removed
 **And** no line is ever ADDED to that file to make a test pass
+**And** the file's header comment, which asserts "These are genuine broken dependencies", is corrected or removed — it is the claim ADR-005 disproved, and leaving it behind re-seeds the wrong diagnosis
 
-**Given** NFR6
-**When** the set is enumerated
-**Then** it is derived from the manifest at implementation time, not from the count "four" in this document
+**Given** no row of the shipped `.csv` is edited under this ruling
+**When** this story completes
+**Then** the 4.0.2 tarball's `skill-manifest.csv` is verified byte-identical to 4.0.1's, so the story's blast radius is `scripts/` and `.github/` only
 
 **Given** `portability-validation` Test 1 was skipped from 2026-06-27 until I123 un-quarantined it on 2026-08-14 — so nothing checked the manifest for roughly six weeks
 **When** this story completes
 **Then** it confirms Test 1 is running rather than skipped
+
+**Given** Story 2.6 moves four `skill-manifest.csv` rows when `_portability/skills/` is renamed to `workflows/` (ADR-004)
+**When** either story lands second
+**Then** the classifier is re-run against the other's result — under ADR-005 those rows name install destinations, so the rename must be reflected in the destination path, and whichever lands first cannot assume the other's shape
