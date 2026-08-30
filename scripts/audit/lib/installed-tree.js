@@ -8,7 +8,9 @@
  * `node_modules/convoke-agents/`, and still never reach the project where the code
  * looks for it. `refresh-installation.js` copies `_bmad/_config/` PER NAMED FILE
  * (`:551`, `:585`), not as a directory, and `.claude/skills/` wrappers are GENERATED
- * from declarations (`:782`, `:811`, `:836`, `:862`, `:909`) — never copied.
+ * from declarations (`:782`, `:811`, `:837`, `:863`, `:914`) — never copied. Those numbers are
+ * re-derived and anchor-checked in WRAPPER_RULES below; this header carried the pre-correction
+ * set until Round 2, where three of the five pointed at comments and guards.
  *
  * So there are three distinct failures, and this module names all three:
  *
@@ -60,18 +62,22 @@ const RUNTIME_DATA_FILES = [
     file: '_bmad/_config/skill-manifest.csv',
     readSite: 'scripts/portability/convoke-export.js:360',
     alsoRead: ['scripts/portability/export-engine.js:98', 'scripts/convoke-doctor.js:322'],
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:551',
+    // `:585` opens the PACKAGE copy that seeds the project file; `:551` — cited until Round 2 —
+    // only declares the destination path, the same declaration-not-a-write defect corrected on
+    // the agent-manifest entry below. Missing this sibling is why the alarm is now an AND.
+    arrivesVia: 'scripts/update/lib/refresh-installation.js:585',
+    arrivesViaToken: 'packageManifest',
     why: 'convoke-export resolves every skill through it — absence is I139 exactly: the bin exits non-zero on a fresh install.',
   },
   {
     file: '_bmad/_config/agent-manifest.csv',
     readSite: 'scripts/update/lib/validator.js:286',
     alsoRead: ['scripts/portability/export-engine.js:168'],
-    // `:238` is the ensureDir on the destination, i.e. the first line that actually
-    // touches the path. `:237` — cited in the first draft — is only the path constant,
-    // which is a declaration, not a write. Review 2026-08-30.
-    arrivesVia: 'scripts/lib/agent-manifest-generator.js:238',
-    arrivesViaToken: 'ensureDir',
+    // `:308` is `fs.writeFile(manifestPath, …)` — the write itself. The first draft cited
+    // `:237`, which only DECLARES the destination path; deleting the write and leaving the
+    // declaration would have kept the rot alarm green. Review 2026-08-30.
+    arrivesVia: 'scripts/lib/agent-manifest-generator.js:308',
+    arrivesViaToken: 'fs.writeFile(manifestPath',
     why: 'the installer regenerates it during refresh, so a post-install absence means the regeneration step did not run.',
   },
   {
@@ -102,7 +108,10 @@ const RUNTIME_DATA_FILES = [
     // manifest gives as its reason for refusing the grep, reproduced inside the manifest
     // itself. Review 2026-08-30.
     alsoRead: ['scripts/audit/audit-bmm-dependencies.js:642'],
-    alsoReadToken: 'OUTPUT_CSV_REL',
+    // The token must DISCRIMINATE, not merely appear. `OUTPUT_CSV_REL` alone matched both
+    // `:642` (the read) and `:34` (the write-side declaration), so reverting to the wrong
+    // citation still passed. Anchored on the join that builds the read path instead.
+    alsoReadToken: 'path.join(projectRoot, OUTPUT_CSV_REL)',
     arrivesVia: null,
     why:
       'NOTHING puts it in the project today — this is the FR13 red target. Its "must arrive" status is a ' +
@@ -141,18 +150,41 @@ const WRAPPER_RULES = {
 
 /** `_bmad/bme/*` entries in a `files[]` array, normalised to bare module names. */
 function shippedBmeModules(files) {
-  if (!Array.isArray(files)) return [];
   const out = [];
+  const unresolvable = [];
+  if (!Array.isArray(files)) return Object.assign(out, { unresolvable });
   for (const entry of files) {
     if (typeof entry !== 'string') continue;
-    const m = /^_bmad\/bme\/([^/]+)\/?$/.exec(entry.trim());
-    // A glob is npm-legal in `files[]` and would otherwise be treated as a module named
-    // `*`, producing `FAILED: _bmad/bme/*/ … did not arrive` on a legitimate packaging
-    // refactor. Skipped rather than guessed at; the zero-modules guard in the CLI then
-    // reports honestly that enumeration found nothing to check. Review 2026-08-30.
-    if (m && !/[*?[\]{}]/.test(m[1])) out.push(m[1]);
+    const trimmed = entry.trim();
+    const m = /^_bmad\/bme\/([^/]+)\/?$/.exec(trimmed);
+    // A glob is npm-legal in `files[]` and cannot be resolved to a module name here. The
+    // first fix SKIPPED it — which silently shrank the expectation set, the precise
+    // damaged-input-reduces-coverage class this module exists to prevent, and Round 2 showed
+    // a run could then exit 0 having never looked at the globbed module. Reported instead.
+    // METACHARACTERS TESTED FIRST, on the whole entry. Testing them on `m[1]` meant the
+    // strict regex had to match before the glob could be reported — so only a glob in the
+    // LAST segment was caught, and `_bmad/bme/**/*` or `_bmad/bme/*/subdir/` fell through
+    // `if (!m) continue` and vanished with no diagnostic. Both Round 3 layers reproduced a
+    // run exiting 0 having never looked at the globbed module: the same silent
+    // coverage-shrink the `unresolvable` channel was added to close, through a shape the
+    // first fix did not see.
+    if (/[*?[\]{}!]/.test(trimmed)) { unresolvable.push(trimmed); continue; }
+    if (!m) continue;
+    out.push(m[1]);
   }
-  return out;
+  // DEDUPLICATED. `_bmad/bme/_portability/` and `_bmad/bme/_portability` both normalise to
+  // one module, and without this every per-module loop ran twice: the same `did not arrive`
+  // line printed twice, and the success line counted two modules where one exists. Round 3
+  // raised it as "exactly ONE mutually exclusive verdict per module is not exclusive".
+  //
+  // A consequence worth stating rather than leaving as a puzzle: with dedup in place,
+  // `declared.length` and `arrived.length` are necessarily equal wherever the success line
+  // prints, because any absent module emits a finding and suppresses that line. The CLI uses
+  // `arrived.length` there because it is what the sentence claims; no test can distinguish
+  // the two, and pretending otherwise would be a check that cannot fail.
+  const seen = new Set();
+  const deduped = out.filter(m => (seen.has(m) ? false : (seen.add(m), true)));
+  return Object.assign(deduped, { unresolvable });
 }
 
 /** Modules declared in `files[]` that never reached the project tree (ADR-004 C4). */
@@ -176,7 +208,7 @@ function missingRuntimeFiles(projectRoot, manifest = RUNTIME_DATA_FILES) {
  *
  * The rules below are the GENERATOR's rules, read off the five code paths that emit
  * wrappers, not ADR-004's prose. They differ in one place and it matters: ADR-004 C2 says
- * a workflow is declared by `standalone: true`, but the Enhance path (`:862`) emits a
+ * a workflow is declared by `standalone: true`, but the Enhance path (`:863`) emits a
  * wrapper for EVERY object-shaped workflow entry and `_enhance`'s sole entry carries no
  * `standalone` flag. Implementing C2 literally would leave `bmad-enhance-initiatives-backlog`
  * unchecked — a whole module's operator surface invisible to the gate. Recorded in the
@@ -198,6 +230,7 @@ function declaredUnits({ projectRoot, registry, arrived }) {
   const present = new Set(arrived);
   const units = [];
   const malformed = [];
+  const excludedCounts = new Map();
 
   // `honoursExclusions` mirrors the generator EXACTLY rather than applying a uniform rule.
   // The Vortex loop (`:783`) and the Gyre loop (`:812`) skip excluded agents; the
@@ -226,7 +259,10 @@ function declaredUnits({ projectRoot, registry, arrived }) {
       // landed would point at a file that is not there, so it is the module's absence
       // that is the finding — already reported by missingModules — not the wrapper's.
       if (!present.has(mod)) continue;
-      if (bucket.honoursExclusions && excludedAgents(projectRoot, mod, yaml).includes(agent.id)) continue;
+      if (bucket.honoursExclusions && excludedAgents(projectRoot, mod, yaml).includes(agent.id)) {
+        excludedCounts.set(mod, (excludedCounts.get(mod) || 0) + 1);
+        continue;
+      }
       units.push({
         name: WRAPPER_RULES[bucket.rule].name(agent.id),
         module: mod,
@@ -253,13 +289,34 @@ function declaredUnits({ projectRoot, registry, arrived }) {
     }
   }
 
-  // Deduplicate by wrapper name. Two modules declaring the same workflow name — or a
-  // workflow name colliding with `bmad-agent-bme-<id>` — produced the same FAILED line
-  // twice and inflated the clean-run summary's unit count. One wrapper path is one
-  // assertion. Review 2026-08-30.
+  // Per-module accounting, computed BEFORE dedup and BEFORE filtering, because callers need
+  // to tell these cases apart and Round 2 proved collapsing them produces FALSE findings:
+  //   declared — units this module contributed
+  //   excluded — units suppressed by the operator's `excluded_agents` opt-out
+  // declared 0 AND excluded 0 is genuine vacuity (ADR-004 C1 second form). declared 0 with
+  // excluded > 0 is a SUPPORTED configuration (`refresh-installation.js:48-51`), and calling
+  // it a packaging defect turns a correct install red — reproduced against a `_gyre` config
+  // excluding both its agents.
+  const byModule = {};
+  for (const m of arrived) byModule[m] = { declared: 0, excluded: 0 };
+  for (const u of units) if (byModule[u.module]) byModule[u.module].declared++;
+  for (const [mod, n] of excludedCounts) if (byModule[mod]) byModule[mod].excluded = n;
+
+  // Dedup by wrapper name — one wrapper path is one assertion. But a collision is itself a
+  // defect (two modules fighting over one `.claude/skills/` path), and the first draft hid
+  // it: dedup kept the first module and the loser then reported "declares no invocable unit".
+  // Surfaced as its own finding; `byModule` is computed pre-dedup so nothing is orphaned.
   const byName = new Map();
-  for (const u of units) if (!byName.has(u.name)) byName.set(u.name, u);
-  return { units: [...byName.values()], malformed };
+  const duplicates = [];
+  for (const u of units) {
+    const prev = byName.get(u.name);
+    if (prev) {
+      if (prev.module !== u.module) duplicates.push({ name: u.name, modules: [prev.module, u.module] });
+      continue;
+    }
+    byName.set(u.name, u);
+  }
+  return { units: [...byName.values()], malformed, byModule, duplicates };
 }
 
 /**
@@ -441,11 +498,26 @@ function modulesWithoutConfig(arrived, projectRoot) {
  * A module legitimately declaring nothing has no place in `files[]` under C3 — an
  * operator-facing surface that nothing declares is unreachable by construction.
  */
-function modulesDeclaringNothing(arrived, units, projectRoot) {
-  const declaring = new Set(units.map(u => u.module));
-  return arrived.filter(
-    m => isFile(path.join(projectRoot, '_bmad', 'bme', m, 'config.yaml')) && !declaring.has(m)
-  );
+function modulesDeclaringNothing(arrived, byModule, projectRoot) {
+  return arrived.filter(m => {
+    if (!isFile(path.join(projectRoot, '_bmad', 'bme', m, 'config.yaml'))) return false;
+    const acct = byModule && byModule[m];
+    if (!acct) return false;
+    // Excluded-by-operator is not vacuity, and an unparsable config is already reported by
+    // `unparsableConfigs` — reporting it here too gave two findings for one cause, the second
+    // untrue. Both carve-outs added after Round 2 reproduced them.
+    if (acct.excluded > 0) return false;
+    if (!configParses(projectRoot, m)) return false;
+    return acct.declared === 0;
+  });
+}
+
+/** Whether a module's config.yaml parses — keeps one cause to one finding. */
+function configParses(projectRoot, mod) {
+  const yaml = loadYaml();
+  const p = path.join(projectRoot, '_bmad', 'bme', mod, 'config.yaml');
+  if (!isFile(p)) return false;
+  try { yaml.load(fs.readFileSync(p, 'utf8')); return true; } catch { return false; }
 }
 
 /** Modules whose config.yaml exists but does not parse — reported, never silent. */
@@ -475,6 +547,7 @@ module.exports = {
   missingWrappers,
   modulesWithoutConfig,
   modulesDeclaringNothing,
+  configParses,
   unparsableConfigs,
   walkRequires,
 };

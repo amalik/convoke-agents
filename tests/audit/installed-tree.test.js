@@ -34,11 +34,49 @@ const {
   declaredUnits,
   missingWrappers,
   modulesWithoutConfig,
+  modulesDeclaringNothing,
   unparsableConfigs,
   walkRequires,
 } = require('../../scripts/audit/lib/installed-tree');
 
 const CLI = path.join(PACKAGE_ROOT, 'scripts', 'audit', 'assert-installed-tree.js');
+
+/**
+ * The citation predicate. Defined ONCE and used by both the rot alarms and the guards that
+ * prove those alarms discriminate.
+ *
+ * Round 2 found the previous arrangement failing in both directions. The alarm accepted
+ * `basename || token` — an OR — so a citation carrying a token was still satisfied by any
+ * line merely mentioning the file, and all three citations Round 1 had disproved passed when
+ * reverted. And the guard meant to prove the alarm worked never invoked it, so deleting the
+ * alarm's assertion left the suite fully green. An alarm and a guard that share no code
+ * cannot check each other.
+ *
+ * `anchor` is what the line MUST contain. When one is given it is authoritative — the
+ * basename is not an escape hatch, because the whole failure mode is a log line or a path
+ * declaration that mentions the file without being the read or the write.
+ */
+/**
+ * Run the citation alarm over {site, anchor} pairs; return those that failed.
+ *
+ * THE ALARM ITSELF, not a copy. The real citation tests and the guards that prove the alarm
+ * discriminates both call this, so a mutation weakening it breaks the guards too. Round 2
+ * caught the previous arrangement: the guard exercised its own inline logic while the alarm
+ * inlined separate assertions, so deleting the alarm's assertion left the suite fully green.
+ * An alarm and a guard that share no code cannot check each other — true twice in this file
+ * before it was true once.
+ */
+function auditCitations(pairs) {
+  return pairs.filter(({ site, anchor }) => !citationHolds(site, anchor));
+}
+
+function citationHolds(site, anchor) {
+  const [rel, lineNo] = site.split(':');
+  const abs = path.join(PACKAGE_ROOT, rel);
+  if (!fs.existsSync(abs)) return false;
+  const line = fs.readFileSync(abs, 'utf8').split('\n')[Number(lineNo) - 1];
+  return line !== undefined && line.includes(anchor);
+}
 
 const created = [];
 function tmp(prefix = 'convoke-tree-') {
@@ -76,11 +114,18 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
   // control: if someone moves the code that reads one of these files, the citation
   // stops resolving and this fails, rather than the manifest quietly going stale.
   it('every cited call site exists and that exact line still mentions the file', () => {
-    const sites = RUNTIME_DATA_FILES.flatMap(e =>
-      [e.readSite, ...(e.alsoRead || []), ...(e.arrivesVia ? [e.arrivesVia] : [])].map(s => ({ site: s, entry: e }))
-    );
+    // Each site carries the token that applies to IT, not a token pooled across the entry.
+    // Round 1 review found three citations pointing at something other than the read or
+    // write they claimed — a log line, an output-path constant on the WRITE side, and a
+    // destination declaration — all of which passed because the old check accepted any line
+    // merely mentioning the basename anywhere in the entry.
+    const sites = RUNTIME_DATA_FILES.flatMap(e => [
+      { site: e.readSite, entry: e, token: e.token },
+      ...(e.alsoRead || []).map(s => ({ site: s, entry: e, token: e.alsoReadToken })),
+      ...(e.arrivesVia ? [{ site: e.arrivesVia, entry: e, token: e.arrivesViaToken }] : []),
+    ]);
     assert.ok(sites.length >= RUNTIME_DATA_FILES.length);
-    for (const { site, entry } of sites) {
+    for (const { site, entry, token } of sites) {
       const [rel, lineNo] = site.split(':');
       const abs = path.join(PACKAGE_ROOT, rel);
       assert.ok(fs.existsSync(abs), `${site} — file no longer exists`);
@@ -90,24 +135,78 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
       // The basename, or the CONSTANT that holds it: convoke-doctor.js:763 reads
       // `path.join(projectRoot, BMM_DEPS_CSV_REL)`, so the filename is not on the line.
       // That indirection is precisely why AC4 is a declared list and not a grep.
-      const base = path.basename(entry.file);
-      assert.ok(
-        line.includes(base) || (entry.token && line.includes(entry.token)),
-        `${site} no longer mentions ${base}${entry.token ? ` nor ${entry.token}` : ''} — line reads: ${line.trim()}`
+      // AND, not OR. A declared token is authoritative: `refresh-installation.js:1040` is a
+      // `changes.push('Created …taxonomy.yaml…')` LOG line, so accepting the basename there
+      // let the exact wrong citation Round 1 disproved pass again.
+      const anchor = token || path.basename(entry.file);
+      assert.deepEqual(
+        auditCitations([{ site, anchor }]), [],
+        `${site} no longer contains ${anchor} — line reads: ${line.trim()}`
       );
     }
   });
 });
 
 describe('WRAPPER_RULES — the generator call sites this check mirrors', () => {
-  it('every rule cites a line in refresh-installation.js that is still there', () => {
+  // THIS TEST WAS THE STORY'S OWN FIFTH FAIL-OPEN, and it is worth recording why rather
+  // than quietly replacing it. The first version asserted only
+  // `lines[Number(lineNo) - 1] !== undefined` — i.e. that refresh-installation.js has at
+  // least N lines. Round 1 review proved it by mutation: rewriting the cited `:909` to `:1`
+  // left the suite at 31 pass / 0 fail. Three of the five citations were ALREADY wrong when
+  // it shipped (`:836` and `:909` were comments, `:862` was an `if` guard), and nothing
+  // caught them. A working content-checking alarm for RUNTIME_DATA_FILES sat twenty lines
+  // above it. Now it checks the anchor text, so a citation that drifts fails here.
+  it('every rule cites a line that still holds its generator', () => {
     for (const [rule, def] of Object.entries(WRAPPER_RULES)) {
       const [rel, lineNo] = def.site.split(':');
       const abs = path.join(PACKAGE_ROOT, rel);
       assert.ok(fs.existsSync(abs), `${rule}: ${def.site} — file gone`);
       const lines = fs.readFileSync(abs, 'utf8').split('\n');
-      assert.ok(lines[Number(lineNo) - 1] !== undefined, `${rule}: ${def.site} — past end of file`);
+      const line = lines[Number(lineNo) - 1];
+      assert.ok(line !== undefined, `${rule}: ${def.site} — past end of file`);
+      assert.deepEqual(auditCitations([{ site: def.site, anchor: def.anchor }]), [],
+        `${rule}: ${def.site} no longer contains "${def.anchor}" — line reads: ${line.trim()}`);
       assert.equal(typeof def.name, 'function');
+      assert.ok(['generator', 'ADR-004 C2'].includes(def.derivedFrom), `${rule}: unstated basis`);
+    }
+  });
+
+  // Guards that the alarm DISCRIMINATES, by running the same predicate the alarm runs
+  // against citations known to be wrong. The previous version of this test asserted facts
+  // about line 1 and never invoked the predicate at all, so deleting the alarm's assertion
+  // left the suite green — the Round 1 defect class reproduced one level up.
+  it('the citation predicate rejects the wrong lines, not just out-of-range ones', () => {
+    const { site, anchor } = WRAPPER_RULES.standaloneWorkflow;
+    assert.deepEqual(auditCitations([{ site, anchor }]), [], 'the real citation must hold, or the rest proves nothing');
+
+    // In range, exists, and wrong — a bounds check passes all of these.
+    const [rel] = site.split(':');
+    assert.equal(auditCitations([{ site: `${rel}:1`, anchor }]).length, 1, 'line 1 is in range and must still be rejected');
+    // `:913` is the `if (artifactsConfig && !isSameRoot)` GUARD immediately above the loop —
+    // the exact off-by-one this story shipped twice.
+    assert.equal(auditCitations([{ site: `${rel}:913`, anchor }]).length, 1, 'the guard line above the loop must be rejected');
+  });
+
+  // The same discrimination proof for the runtime-data manifest's alarm.
+  it('the manifest alarm rejects a log line that merely mentions the filename', () => {
+    const taxonomy = RUNTIME_DATA_FILES.find(e => e.file.endsWith('taxonomy.yaml'));
+    assert.deepEqual(auditCitations([{ site: taxonomy.arrivesVia, anchor: taxonomy.arrivesViaToken }]), [], 'the real citation must hold');
+    // `:1040` is `changes.push('Created _bmad/_config/taxonomy.yaml (platform defaults)')` —
+    // it names the file and does not create it. This is the citation Round 1 disproved and
+    // Round 2 found still passing.
+    assert.equal(
+      auditCitations([{ site: 'scripts/update/lib/refresh-installation.js:1040', anchor: taxonomy.arrivesViaToken }]).length, 1,
+      'a log line naming the file must not satisfy the alarm'
+    );
+  });
+
+  // The one rule that is NOT read off a generator, stated so the file cannot drift back to
+  // claiming otherwise. There is no generic standalone-workflow generator — block 6d is
+  // `if (artifactsConfig && !isSameRoot)` over `artifactsConfig.workflows`.
+  it('is explicit that standaloneWorkflow comes from ADR-004 C2, not from a generator', () => {
+    assert.equal(WRAPPER_RULES.standaloneWorkflow.derivedFrom, 'ADR-004 C2');
+    for (const k of ['vortexAgent', 'gyreAgent', 'extraBmeAgent', 'enhanceWorkflow']) {
+      assert.equal(WRAPPER_RULES[k].derivedFrom, 'generator', `${k} should be generator-derived`);
     }
   });
 
@@ -122,14 +221,15 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
 
 describe('shippedBmeModules', () => {
   it('extracts bme module names and ignores everything else', () => {
+    // Spread: the return is an array carrying an `unresolvable` side-channel.
     assert.deepEqual(
-      shippedBmeModules(['index.js', 'scripts/', '_bmad/bme/_vortex/', '_bmad/bme/_portability/', '_bmad/_config/skill-manifest.csv']),
+      [...shippedBmeModules(['index.js', 'scripts/', '_bmad/bme/_vortex/', '_bmad/bme/_portability/', '_bmad/_config/skill-manifest.csv'])],
       ['_vortex', '_portability']
     );
   });
   it('is not fooled by a nested path or a non-array', () => {
-    assert.deepEqual(shippedBmeModules(['_bmad/bme/_vortex/agents/']), []);
-    assert.deepEqual(shippedBmeModules(undefined), []);
+    assert.deepEqual([...shippedBmeModules(['_bmad/bme/_vortex/agents/'])], []);
+    assert.deepEqual([...shippedBmeModules(undefined)], []);
   });
 });
 
@@ -184,12 +284,12 @@ describe('declaredUnits', () => {
 
   it('derives agents, honours excluded_agents, and skips string-shaped workflows', () => {
     const root = moduleFixture();
-    const names = declaredUnits({ projectRoot: root, registry: REGISTRY, arrived }).map(u => u.name).sort();
+    const names = declaredUnits({ projectRoot: root, registry: REGISTRY, arrived }).units.map(u => u.name).sort();
     assert.deepEqual(names, [
       'bmad-agent-bme-emma',
       'bmad-agent-bme-isla',
       'bmad-agent-bme-stack-detective',   // review-coach is excluded in _gyre's config
-      'bmad-agent-bme-team-factory',
+      'bmad-agent-bme-team-factory',      // EXTRA_BME honours NO exclusions — see below
       'bmad-enhance-initiatives-backlog', // no standalone flag — the Enhance path emits anyway
       'bmad-portfolio-status',            // standalone: true, name used verbatim
     ]);
@@ -202,7 +302,7 @@ describe('declaredUnits', () => {
   it('ignores agents whose module did not arrive', () => {
     const root = moduleFixture();
     fs.rmSync(path.join(root, '_bmad', 'bme', '_gyre'), { recursive: true, force: true });
-    const names = declaredUnits({ projectRoot: root, registry: REGISTRY, arrived: arrived.filter(m => m !== '_gyre') }).map(u => u.name);
+    const names = declaredUnits({ projectRoot: root, registry: REGISTRY, arrived: arrived.filter(m => m !== '_gyre') }).units.map(u => u.name);
     assert.ok(!names.includes('bmad-agent-bme-stack-detective'));
     assert.ok(names.includes('bmad-agent-bme-emma'));
   });
@@ -216,7 +316,7 @@ describe('declaredUnits', () => {
       path.join(root, '_bmad', 'bme', '_portability', 'config.yaml'),
       'version: 4.0.1\nworkflows:\n  - name: bmad-export-skill\n    standalone: true\n  - name: bmad-seed-catalog\n    standalone: true\n'
     );
-    const names = declaredUnits({ projectRoot: root, registry: REGISTRY, arrived: [...arrived, '_portability'] }).map(u => u.name);
+    const names = declaredUnits({ projectRoot: root, registry: REGISTRY, arrived: [...arrived, '_portability'] }).units.map(u => u.name);
     assert.ok(names.includes('bmad-export-skill'));
     assert.ok(names.includes('bmad-seed-catalog'));
   });
@@ -259,6 +359,227 @@ describe('modulesWithoutConfig — ADR-004 C1', () => {
     const r = runCli(['tree', root, pkgRoot]);
     assert.equal(r.code, 1, 'a module that declares nothing must not pass by vacuity');
     assert.match(r.stdout, /_portability\/ arrived but carries no config\.yaml \(ADR-004 C1\)/);
+  });
+});
+
+describe('modulesDeclaringNothing — the second form of the C1 vacuity', () => {
+  // Round 1 review MEASURED this: `config.yaml` holding only `version: 4.0.1` passed the
+  // file check, the parse check, and contributed zero units — so the wrapper pass had
+  // nothing to check and the run reported `exit 0` on a `_portability` with four skills on
+  // disk that no operator can invoke. Identical consequence to the hole C1 was added for.
+  it('flags a module that has a config.yaml but declares nothing', () => {
+    const root = tmp();
+    write(path.join(root, '_bmad', 'bme', '_portability', 'config.yaml'), 'version: 4.0.1\n');
+    const byModule = { _portability: { declared: 0, excluded: 0 } };
+    assert.deepEqual(modulesDeclaringNothing(['_portability'], byModule, root), ['_portability']);
+  });
+
+  it('stays quiet once the module declares a unit', () => {
+    const root = tmp();
+    write(path.join(root, '_bmad', 'bme', '_portability', 'config.yaml'), 'version: 4.0.1\n');
+    assert.deepEqual(modulesDeclaringNothing(['_portability'], { _portability: { declared: 1, excluded: 0 } }, root), []);
+  });
+
+  // Round 2: a supported operator opt-out was being reported as a packaging defect.
+  it('does NOT fire when the module declared nothing because the operator excluded everything', () => {
+    const root = tmp();
+    write(path.join(root, '_bmad', 'bme', '_gyre', 'config.yaml'), 'version: 4.0.1\nexcluded_agents:\n  - review-coach\n');
+    assert.deepEqual(modulesDeclaringNothing(['_gyre'], { _gyre: { declared: 0, excluded: 2 } }, root), []);
+  });
+
+  // Round 2: an unparsable config produced TWO findings, the second of them untrue.
+  it('leaves an unparsable config to unparsableConfigs rather than reporting it twice', () => {
+    const root = tmp();
+    write(path.join(root, '_bmad', 'bme', '_broken', 'config.yaml'), 'a:\n  - b\n c: [unclosed\n');
+    assert.deepEqual(modulesDeclaringNothing(['_broken'], { _broken: { declared: 0, excluded: 0 } }, root), []);
+    assert.equal(unparsableConfigs(root, ['_broken']).length, 1);
+  });
+
+  it('does not double-report a module that has no config at all', () => {
+    const root = tmp();
+    fs.mkdirSync(path.join(root, '_bmad', 'bme', '_portability'), { recursive: true });
+    assert.deepEqual(modulesDeclaringNothing(['_portability'], { _portability: { declared: 0, excluded: 0 } }, root), []);
+    assert.deepEqual(modulesWithoutConfig(['_portability'], root), ['_portability']);
+  });
+
+  it('the CLI refuses the empty-config tree that used to exit 0', () => {
+    const { root, pkgRoot } = installedFixture();
+    write(path.join(root, '_bmad', 'bme', '_portability', 'config.yaml'), 'version: 4.0.1\n');
+    const r = runCli(['tree', root, pkgRoot]);
+    assert.equal(r.code, 1, 'this exact tree exited 0 before Round 1');
+    assert.match(r.stdout, /_portability\/ arrived and carries a config\.yaml but declares no invocable unit/);
+  });
+});
+
+describe('zero units — a packaging regression is not an environment failure', () => {
+  // All three review layers raised this. When NO module arrives, the run printed the
+  // correct FAILED lines and then exited 2 (`ENV_FAIL`), so the maximal product defect this
+  // check exists to catch was filed as "the environment failed us" — and, in the harness,
+  // aborted before `COMPLETED=1` so the verdict never printed.
+  it('exits 1, not 2, when the units are zero BECAUSE no module arrived', () => {
+    const { root, pkgRoot } = installedFixture();
+    fs.rmSync(path.join(root, '_bmad', 'bme', '_vortex'), { recursive: true, force: true });
+    const r = runCli(['tree', root, pkgRoot]);
+    assert.equal(r.code, 1, 'a total arrival failure is a product defect');
+    assert.match(r.stdout, /_bmad\/bme\/_vortex\/ is in files\[\] but did not arrive/);
+    assert.doesNotMatch(r.stderr, /derivation failed/);
+  });
+
+  // REPLACED after Round 2. This case previously asserted exit 2 with EMPTY stdout — which
+  // was the bug: the ADR-004 C1 second-form check sat below the early return and could never
+  // run in the one situation it was added for. Exit 2 is now reserved for PHASE 1, where no
+  // finding can yet have been gathered.
+  it('exits 1 and names every vacuous module, instead of exiting 2 with nothing printed', () => {
+    const { root, pkgRoot } = installedFixture();
+    write(path.join(pkgRoot, 'scripts', 'update', 'lib', 'agent-registry.js'),
+      'module.exports = { AGENTS: [], GYRE_AGENTS: [], EXTRA_BME_AGENTS: [] };\n');
+    write(path.join(root, '_bmad', 'bme', '_portability', 'config.yaml'), 'version: 4.0.1\n');
+    const r = runCli(['tree', root, pkgRoot]);
+    assert.equal(r.code, 1, 'a tree full of unreachable modules is a product defect');
+    assert.match(r.stdout, /_vortex\/ arrived and carries a config\.yaml but declares no invocable unit/);
+    assert.match(r.stdout, /_portability\/ arrived and carries a config\.yaml but declares no invocable unit/);
+  });
+
+  // Round 2: `scripts/` is in files[], so a registry that did not ship is a PRODUCT defect.
+  // It previously exited 2, discarding findings already gathered.
+  it('reports an unloadable shipped registry as a finding, keeping the other findings', () => {
+    const { root, pkgRoot } = installedFixture();
+    fs.rmSync(path.join(pkgRoot, 'scripts', 'update', 'lib', 'agent-registry.js'), { force: true });
+    const r = runCli(['tree', root, pkgRoot]);
+    assert.equal(r.code, 1);
+    assert.match(r.stdout, /the shipped agent registry did not load/);
+    assert.match(r.stdout, /_portability\/ is in files\[\] but did not arrive/, 'earlier findings must survive');
+  });
+});
+
+describe('exclusions mirror the generator rather than a uniform rule', () => {
+  // The generator excludes for Vortex (:783) and Gyre (:812) and NOT for EXTRA_BME (:837).
+  // Filtering that bucket dropped a wrapper from the CHECK that the installer still emits.
+  it('does NOT honour excluded_agents for the EXTRA_BME bucket', () => {
+    const root = moduleFixture();
+    write(path.join(root, '_bmad', 'bme', '_team-factory', 'config.yaml'),
+      'version: 4.0.1\nexcluded_agents:\n  - team-factory\nworkflows:\n  - add-team\n');
+    const { units } = declaredUnits({
+      projectRoot: root, registry: REGISTRY,
+      arrived: ['_vortex', '_gyre', '_enhance', '_artifacts', '_team-factory'],
+    });
+    assert.ok(units.map(u => u.name).includes('bmad-agent-bme-team-factory'),
+      'the installer generates this wrapper regardless of excluded_agents, so the check must assert it');
+  });
+
+  it('reports a registry entry with no submodule instead of dropping it', () => {
+    const root = moduleFixture();
+    const { units, malformed } = declaredUnits({
+      projectRoot: root,
+      registry: { AGENTS: [], GYRE_AGENTS: [], EXTRA_BME_AGENTS: [{ id: 'orphan' }] },
+      arrived: ['_vortex'],
+    });
+    assert.equal(units.filter(u => u.name.includes('orphan')).length, 0);
+    assert.equal(malformed.length, 1);
+    assert.equal(malformed[0].id, 'orphan');
+  });
+});
+
+describe('wrapper and unit hygiene', () => {
+  it('a zero-byte SKILL.md is not a wrapper', () => {
+    const root = tmp();
+    const units = [{ name: 'bmad-agent-bme-emma', module: '_vortex', rule: 'v', site: 'x:1' }];
+    write(path.join(root, '.claude', 'skills', 'bmad-agent-bme-emma', 'SKILL.md'), '');
+    assert.equal(missingWrappers(units, root).length, 1, 'an empty file is not invocable');
+    write(path.join(root, '.claude', 'skills', 'bmad-agent-bme-emma', 'SKILL.md'), '---\n');
+    assert.equal(missingWrappers(units, root).length, 0);
+  });
+
+  it('deduplicates units by wrapper name so one path is one assertion', () => {
+    const root = moduleFixture();
+    // Two modules declaring the same workflow name.
+    write(path.join(root, '_bmad', 'bme', '_portability', 'config.yaml'),
+      'version: 4.0.1\nworkflows:\n  - name: bmad-portfolio-status\n    standalone: true\n');
+    const { units } = declaredUnits({
+      projectRoot: root, registry: REGISTRY,
+      arrived: ['_vortex', '_gyre', '_enhance', '_artifacts', '_team-factory', '_portability'],
+    });
+    const names = units.map(u => u.name);
+    assert.equal(new Set(names).size, names.length, 'no duplicate wrapper names');
+  });
+
+  // Round 2: silently skipping shrank the expectation set with no diagnostic, so a run could
+  // exit 0 having never looked at the globbed module.
+  it('reports a glob entry rather than silently dropping it', () => {
+    const r = shippedBmeModules(['_bmad/bme/*/', '_bmad/bme/_vortex/']);
+    assert.deepEqual([...r], ['_vortex']);
+    assert.deepEqual(r.unresolvable, ['_bmad/bme/*/']);
+  });
+});
+
+describe('walkRequires reports WHICH file needs a missing specifier', () => {
+  it('carries `from`, and treats the same specifier from two directories as two defects', () => {
+    const root = tmp();
+    write(path.join(root, 'entry.js'), 'require("./a");require("./sub/b");\n');
+    write(path.join(root, 'a.js'), 'require("./gone");\n');
+    write(path.join(root, 'sub', 'b.js'), 'require("./gone");\n');
+    const res = walkRequires(path.join(root, 'entry.js'));
+    assert.equal(res.missing.length, 2, 'same spec, different directories, two real defects');
+    const froms = res.missing.map(m => path.basename(m.from)).sort();
+    assert.deepEqual(froms, ['a.js', 'b.js']);
+  });
+});
+
+describe('Round 3 — fail-open paths the restructure left open', () => {
+  // Each of these was reproduced by a review layer against the shipped code, and each is a
+  // check that reported less than it found, or reported health it had not established.
+
+  it('a crash in phases 2-4 still emits the findings gathered before it', () => {
+    const { root, pkgRoot } = installedFixture();
+    // A legal-JS registry with a non-iterable AGENTS — `|| []` only rescues falsy values.
+    write(path.join(pkgRoot, 'scripts', 'update', 'lib', 'agent-registry.js'),
+      'module.exports = { AGENTS: { emma: {} }, GYRE_AGENTS: [], EXTRA_BME_AGENTS: [] };\n');
+    const r = runCli(['tree', root, pkgRoot]);
+    assert.equal(r.code, 2, 'a crash means the run was incomplete');
+    assert.match(r.stdout, /_portability\/ is in files\[\] but did not arrive/,
+      'the finding gathered before the crash must survive it');
+  });
+
+  it('the operator excluded_agents opt-out is not reported as a defect', () => {
+    const { root, pkgRoot } = installedFixture();
+    write(path.join(pkgRoot, 'package.json'),
+      JSON.stringify({ name: 'convoke-agents', files: ['_bmad/bme/_vortex/'] }));
+    write(path.join(root, '_bmad', 'bme', '_vortex', 'config.yaml'),
+      'version: 4.0.1\nexcluded_agents:\n  - emma\n');
+    const r = runCli(['tree', root, pkgRoot]);
+    assert.equal(r.code, 0, r.stdout + r.stderr);
+    assert.doesNotMatch(r.stdout, /derivation/, 'the deleted zero-unit alarm must not come back');
+  });
+
+  it('reports a multi-segment glob rather than dropping it', () => {
+    const r = shippedBmeModules(['_bmad/bme/_vortex/', '_bmad/bme/**/*', '_bmad/bme/*/subdir/']);
+    assert.deepEqual([...r], ['_vortex']);
+    assert.deepEqual(r.unresolvable, ['_bmad/bme/**/*', '_bmad/bme/*/subdir/'],
+      'a glob outside the last segment used to vanish with no diagnostic');
+  });
+
+  it('a duplicated files[] entry yields one module, not two verdicts', () => {
+    const r = shippedBmeModules(['_bmad/bme/_portability/', '_bmad/bme/_portability', '_bmad/bme/_vortex/']);
+    assert.deepEqual([...r], ['_portability', '_vortex']);
+  });
+
+  it('a duplicated files[] entry does not double-report an absent module', () => {
+    const { root, pkgRoot } = installedFixture();
+    write(path.join(pkgRoot, 'package.json'), JSON.stringify({
+      name: 'convoke-agents', files: ['_bmad/bme/_vortex/', '_bmad/bme/_portability/', '_bmad/bme/_portability'],
+    }));
+    const r = runCli(['tree', root, pkgRoot]);
+    const lines = r.stdout.split('\n').filter(l => l.includes('_portability/ is in files[] but did not arrive'));
+    assert.equal(lines.length, 1, 'one module, one verdict');
+  });
+
+  it('the success line counts modules that ARRIVED, not modules declared', () => {
+    const { root, pkgRoot } = installedFixture();
+    write(path.join(pkgRoot, 'package.json'),
+      JSON.stringify({ name: 'convoke-agents', files: ['_bmad/bme/_vortex/'] }));
+    write(path.join(root, '_bmad', 'bme', '_vortex', 'config.yaml'), 'version: 4.0.1\nexcluded_agents:\n  - emma\n');
+    const r = runCli(['tree', root, pkgRoot]);
+    assert.match(r.stdout, /^\s*1 shipped bme module\(s\) arrived/m);
   });
 });
 
@@ -380,19 +701,27 @@ describe('assert-installed-tree CLI', () => {
   // has nothing to do with what it claims to measure.
   it('exits 0 on a tree where everything arrived', () => {
     const { root, pkgRoot } = installedFixture();
-    // A conforming module: present AND carrying a config.yaml (ADR-004 C1).
-    write(path.join(root, '_bmad', 'bme', '_portability', 'config.yaml'), 'version: 4.0.1\n');
+    // A conforming module under BOTH forms of C1: it carries a config.yaml AND that config
+    // declares an invocable unit, whose wrapper then has to exist. A config holding only
+    // `version:` is the vacuity the second form closes — see the C1 suite above.
+    write(
+      path.join(root, '_bmad', 'bme', '_portability', 'config.yaml'),
+      'version: 4.0.1\nworkflows:\n  - name: bmad-export-skill\n    standalone: true\n'
+    );
+    write(path.join(root, '.claude', 'skills', 'bmad-export-skill', 'SKILL.md'), '---\n');
     const r = runCli(['tree', root, pkgRoot]);
     assert.equal(r.code, 0, r.stdout + r.stderr);
-    assert.match(r.stdout, /2 shipped bme module\(s\) arrived, 1 declared unit\(s\) resolve/);
+    assert.match(r.stdout, /2 shipped bme module\(s\) arrived, 2 declared unit\(s\) resolve/);
   });
 
-  it('exits 2 — not 0 — when files[] declares no bme modules', () => {
+  // Was exit 2. `files[]` losing its bme entries is the packaging regression this check
+  // exists for — a finding about the artifact, not the instrument failing to start.
+  it('exits 1 when files[] declares no bme modules — that is the regression, not a harness fault', () => {
     const { root, pkgRoot } = installedFixture();
     write(path.join(pkgRoot, 'package.json'), JSON.stringify({ name: 'convoke-agents', files: ['index.js'] }));
     const r = runCli(['tree', root, pkgRoot]);
-    assert.equal(r.code, 2);
-    assert.match(r.stderr, /declares no _bmad\/bme\/\* entries/);
+    assert.equal(r.code, 1);
+    assert.match(r.stdout, /declares no _bmad\/bme\/\* entries in files\[\]/);
   });
 
   it('exits 2 on bad arguments and on a project root that does not exist', () => {
@@ -408,7 +737,11 @@ describe('assert-installed-tree CLI', () => {
     write(path.join(root, 'a.js'), 'require("./gone");\n');
     const ok = runCli(['requires', path.join(root, 'entry.js')]);
     assert.equal(ok.code, 0);
-    assert.equal(ok.stdout.trim(), './gone');
+    // `from` is part of the contract now: across a transitive walk a bare `./gone` does not
+    // say which of up to 500 files needs it. The old one-hop check could omit it honestly.
+    assert.match(ok.stdout.trim(), /^\.\/gone \(from .*a\.js\)$/);
+    // Outside an installed package the path stays absolute — no cwd dependence either way.
+    assert.ok(path.isAbsolute(ok.stdout.trim().replace(/^.*\(from /, '').replace(/\)$/, '')));
     const capped = runCli(['requires', path.join(root, 'entry.js'), '1']);
     assert.equal(capped.code, 2);
     assert.match(capped.stderr, /hit its 1-file cap/);

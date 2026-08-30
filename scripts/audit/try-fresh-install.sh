@@ -374,10 +374,25 @@ echo "==> Everything shipped arrives in the project, and every declared unit is 
 # auditor loaded out of the tree it is auditing cannot report that tree as broken.
 TREE=0
 node "$REPO/scripts/audit/assert-installed-tree.js" tree "$TMP/proj" "$TMP/proj/node_modules/convoke-agents" || TREE=$?
-# 2 is the assertion saying it could not run — never conflated with 0. Four separate
-# defects in this file's history reported success because a check could not run.
-if [ "$TREE" -eq 2 ]; then
-  echo "    [harness] the installed-tree assertion could not run (see message above)"
+# 0 = clean, 1 = findings printed. ANY OTHER CODE means the assertion did not run, and
+# that includes codes it never chose: 127 (node absent from PATH), 126 (not executable),
+# 128+N (killed by a signal), or a startup abort from NODE_OPTIONS. An earlier version
+# tested `-eq 2` only, so those printed `[installed-tree status 127]` with no FAILED lines
+# above them and the run walked on to PASS — a check reporting health because it never
+# executed, which is the fifth variant of the pattern this file's header documents four of.
+# Review 2026-08-30.
+#
+# NOTE ON AC2. This `exit` IS a failure path, which AC2 words as forbidden, and the AC's own
+# verification cannot see it: that grep watches the verdict CONDITION for the four status
+# variables and says nothing about an `exit` added above it. (Writing the pattern out here
+# in full would itself match it — which is the tidiest available proof that the check tests
+# the wrong thing.) Kept deliberately by operator ruling 2026-08-30: a check
+# that cannot run must not let the harness report health. It fires only on a broken
+# ASSERTION, never on a product defect — the zero-unit branch in assert-installed-tree.js
+# distinguishes "modules missing" (exit 1, a real defect) from "modules arrived but nothing
+# derived" (exit 2, the derivation broke).
+if [ "$TREE" -ne 0 ] && [ "$TREE" -ne 1 ]; then
+  echo "    [harness] the installed-tree assertion could not run (exit $TREE — see message above)"
   exit "$ENV_FAIL"
 fi
 echo "    [installed-tree status $TREE]"
