@@ -309,22 +309,22 @@ for BIN in $BINS; do
   #
   # Resolve each require specifier instead of executing the file — running these would fire three
   # installers for real, which is the mistake the previous version made.
-  UNRESOLVED="$(node -e '
-    const fs = require("fs"), path = require("path");
-    const file = process.argv[1];
-    const src = fs.readFileSync(file, "utf8");
-    const specs = new Set();
-    // Static literal requires only. A dynamic require (variable specifier) is skipped rather
-    // than guessed at — reporting a false missing dependency would be worse than missing one.
-    for (const m of src.matchAll(/\brequire\(\s*["\u0027]([^"\u0027]+)["\u0027]\s*\)/g)) specs.add(m[1]);
-    const missing = [];
-    for (const spec of specs) {
-      if (spec.startsWith("node:")) continue;
-      try { require.resolve(spec, { paths: [path.dirname(file)] }); }
-      catch { missing.push(spec); }
-    }
-    process.stdout.write(missing.join(" "));
-  ' "$ABS" 2>"$TMP/dep-check.err")" || {
+  # I153, closed by story dist-2.4. This USED to be an inline extractor that read the bin
+  # ENTRY FILE, regex-matched its literal `require()` calls, resolved each one — and never
+  # opened what it resolved. One hop. Measured: `scripts/install-all-agents.js` (bin
+  # `convoke-install`) contains exactly ONE require, so its real surface — fs-extra,
+  # refresh-installation, compat-preflight, agent-registry — was entirely unchecked and
+  # that bin's gate was vacuous. The I139 canary passed only by coincidence: `csv-utils`
+  # happens to be required at a bin entry file as well as one hop down, so an ordinary
+  # refactor hoisting that require into a helper would have made the regression
+  # undetectable with nothing going red.
+  #
+  # Now a transitive worklist (scripts/audit/lib/installed-tree.js). Still a regex, still
+  # no lexer, and deliberately bounded: only RELATIVE specifiers are followed, so a
+  # commented-out require inside a third-party package cannot be reported as missing.
+  # Cycles terminate on a realpath-keyed visited set; hitting the file cap exits 2 and
+  # lands in the fail-closed branch below rather than reporting a clean walk.
+  UNRESOLVED="$(node "$REPO/scripts/audit/assert-installed-tree.js" requires "$ABS" 2>"$TMP/dep-check.err")" || {
     # stderr goes to a FILE, not into $UNRESOLVED. It was `2>&1`, so on the SUCCESS path any
     # chatter Node writes to stderr — an ExperimentalWarning, a DeprecationWarning, anything a
     # future Node or a NODE_OPTIONS setting emits — landed in the variable, and the very next
@@ -344,6 +344,43 @@ for BIN in $BINS; do
   fi
 done
 [ "$FAILED" -eq 0 ] && echo "    all $BIN_COUNT bins present, shipped, parseable, and their requires resolve"
+
+echo
+echo "==> Everything shipped arrives in the project, and every declared unit is invocable"
+# Story dist-2.4 (FR13). Three failures none of the checks above can see, because every
+# one of them stops at `node_modules/convoke-agents/` — which is all `files[]` buys you:
+#
+#   1. a `_bmad/bme/*` entry in `files[]` never reaches the PROJECT. `_portability` is in
+#      `files[]` and no install path copies it; the only generic module loop iterates
+#      EXTRA_BME_AGENTS, so a module with no agent entry is never visited.
+#   2. a module arrives but its declared units are not invocable. `.claude/skills/`
+#      wrappers are GENERATED from declarations, never copied, so "the directory is there"
+#      and "the operator can run it" are different assertions — and only the second is what
+#      this file's own premise promises. A presence-only check goes green on precisely the
+#      defect I141 was filed for. See ADR-004 (bme module contract), accepted question 3.
+#   3. a data file the shipped code READS at runtime never reaches the project, because
+#      `_bmad/_config/` is copied PER NAMED FILE (refresh-installation.js:551, :585), not
+#      as a directory. So a file can be in `files[]`, arrive in node_modules, and still be
+#      absent from where the code looks for it.
+#
+# DELIBERATELY NOT IN THE VERDICT AT THE `if` BELOW. NFR10 requires a gate to be
+# DEMONSTRATED failing before it is trusted, and this job gates `publish` on every push and
+# every PR — a gate merged red blocks the repository until its fix lands. Story dist-2.6
+# adds $TREE to that condition in the same commit that turns it green. A check that prints
+# FAILED and exits 0 is uncomfortable on purpose. If you are reading this after 2.6 shipped
+# and $TREE still appears nowhere in the verdict, that is the bug.
+#
+# Run from $REPO, not from the installed copy. `scripts/` ships, so both exist — but an
+# auditor loaded out of the tree it is auditing cannot report that tree as broken.
+TREE=0
+node "$REPO/scripts/audit/assert-installed-tree.js" tree "$TMP/proj" "$TMP/proj/node_modules/convoke-agents" || TREE=$?
+# 2 is the assertion saying it could not run — never conflated with 0. Four separate
+# defects in this file's history reported success because a check could not run.
+if [ "$TREE" -eq 2 ]; then
+  echo "    [harness] the installed-tree assertion could not run (see message above)"
+  exit "$ENV_FAIL"
+fi
+echo "    [installed-tree status $TREE]"
 
 echo
 echo "========================================"
