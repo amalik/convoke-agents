@@ -500,12 +500,50 @@ The common shape is not carelessness about shell syntax. It is **reading a check
 **How to apply.**
 - **Before citing any check, show it red.** Mutate the input — inject the defect, delete the file, revert the fix — and confirm the check fails and names the right thing. Then restore and confirm it passes. Both directions, or it is not a check.
 - **A new gate is not shippable until it has failed once on purpose.** `backlog-integrity.js` was proven against the pushed commit that had actually lost the rows; `cli-guidance-check` (withdrawn) shipped twice matching nothing because that step was skipped.
-- **State the falsification in the commit Description**, per `commit-preparation` field 5. "Verified by execution" without naming the failing case is the phrasing this rule exists to catch — it appeared in three commit messages this week, none of which had run a negative case.
+- **State the falsification in the commit Description**, per `commit-preparation` field 5. "Verified by execution" without naming the failing case is the phrasing this rule exists to catch — it appeared in three commit messages this week, none of which had run a negative case. Where the claim is about what the CODE guarantees rather than about a check you ran, `verification-claims-must-name-their-evidence` is the governing rule.
 - **Prefer a check that fires on the real artifact.** Verify the published tarball rather than the source, the emitted string rather than the code that emits it, the committed file rather than the working tree. Every failure above inspected a proxy.
 - **Scratch harnesses need their dependencies.** A mutation matrix where every case fails identically is testing your harness, not your code. If all rows of a matrix agree, suspect the harness first.
 - **Watch for the check that only ever passes.** If you cannot construct an input that makes it fail, it is asserting nothing — delete it or narrow it until it can.
 
 **Exception.** None. If a check genuinely cannot be falsified — a tautology, a count of itself — it must not be cited as evidence at all.
+
+---
+
+## Rule: verification-claims-must-name-their-evidence
+
+**Statement.** Any sentence asserting that the code *guarantees*, *proves*, *checks*, *cannot do*, or *is independent of* something must name the thing that makes it true — a `file:line` that implements it, or a command whose output demonstrates it. This binds comments, spec text, acceptance criteria and test names, not only commit messages. A claim of this shape with no pointer is a **plan**, not a description, and must be written as one.
+
+**Operational check.** For each such sentence in the diff, answer: *which line of code does this, and what would I run to see it fail?* If the answer is "I did it in a shell once", the sentence is false — the shell is not the artifact. If the answer is "the mutation kills it", name **which assertion** goes red, because a mutation can die on an unrelated one.
+
+There is deliberately **no grep here.** The obvious one — `cannot|never|always|guarantee|proves|independent of` over added comment lines — returns 30 hits on the T103 diff, nearly all legitimate history prose. Per `catch-all-phase-review` that false-positive rate disqualifies it, and a gate nobody trusts is worse than an explicit human step.
+
+**Why.** T103 (`f192117a` → `810f1788`) ran three adversarial review rounds plus a delta review of the remediation: eight HIGH findings. Seven distinct false claims about the code's own correctness apparatus were found, and **three of them were introduced by corrections written to fix earlier ones**:
+
+| Claim written | Where | Reality |
+|---|---|---|
+| "the caller cross-checks the two counts against an independently-derived total" | code comment | No such computation was ever written. It was run once in a shell, then described as if the code did it |
+| "Assumptions audited — **do not re-derive in review**" | spec Design Notes | The assumption it protected was false on the tree that day. Both reviewers found the blocker only by ignoring the instruction |
+| "the mutation … makes the message appear and kills it" | test comment | The kill came from an unrelated arithmetic assertion. The guard it claimed to prove had **zero** coverage — removing it survived the suite |
+| "blind to the block bound" / "counts every line ANYWHERE in the file" | 2 comments + 1 AC | Gated entirely on `inBlock`; not blind to it, and not file-wide |
+| "cannot detect one that never opened" | correction to the above | It detects exactly that, loudly |
+| "real sibling keys in this file carry underscores" | correction to the above | `generated:` and `project:` carry none and do match; safety came from ordering |
+| verb distribution "on story-shaped scopes" | code comment + spec | Measured over the story **+ epic** population; the story-only figures differ |
+
+The cost is not tidiness. The first row is why a second silent data-loss path survived a whole round: the remedy for the *class* was written into a comment claiming it had been implemented, so nobody built it, and one de-indented key went on discarding **302 of 451** keys while printing a clean result and exiting 0.
+
+**None of these was caught by a test, by `lint`, by CI, or by the mutation matrix** — every one of those instruments reads code, and a comment is not code. Only an adversarial reader caught them, which is why this is a rule about writing rather than a check.
+
+**How to apply.**
+- **Point at it or don't claim it.** "Cross-checked against an independent count" needs the line that computes it. If you cannot cite one, write *"not cross-checked"* — that phrasing is the deliverable, not a weaker version of one.
+- **Negative claims are the dangerous ones.** "This cannot happen", "it cannot detect X" invite the reader to stop looking. Run the negative case before writing it; two of the rows above are negative claims that were simply false.
+- **Never instruct a reviewer not to verify something.** *"Do not re-derive in review"* manufactures the blind spot it sits in front of. If a figure is expensive to re-derive, record the command instead so re-deriving is cheap.
+- **When a fix is defended by a mutation, name the assertion.** "M6 kills it" is insufficient; "M6 turns `it('…')` red on its second assertion" is checkable.
+- **Correcting a false claim is where the next one gets written.** Three of the seven arrived that way. Re-run the check *after* editing the sentence, against the sentence you actually wrote.
+- **Reviewing a PR.** For every sentence asserting a guarantee, ask for the `file:line` or the command. If the author cannot produce one, the claim is the finding — regardless of whether the code is correct.
+
+**Related, and deliberately distinct.** `verification-must-be-falsifiable` governs a check you **ran** and cite as evidence — show it can fail. `documentation-claims-must-be-derived` governs claims about repository behaviour in documentation. `external-claims-must-be-executed-or-hedged` governs systems outside this repo. All three assume the thing being described **exists**. This rule covers the case those three cannot see: a sentence describing the code's own correctness apparatus when that apparatus is absent, weaker than stated, or credited to the wrong assertion.
+
+**Exception.** Prose that records *history* or *intent* rather than a present property — "this exists because `c841fcd2` deleted the BUG-16 row" — is exempt, and this file depends on such prose. The test is tense and mood: a claim about what the code **does now** needs a pointer; a claim about what happened does not.
 
 ---
 
