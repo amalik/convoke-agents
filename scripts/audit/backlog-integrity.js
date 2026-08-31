@@ -518,8 +518,11 @@ function gitSubjects(root) {
  *
  * WHAT THIS DOES NOT GUARANTEE -- stated because an earlier version of this comment claimed it
  * did. The residue predicate runs in the `!inBlock` branch and shares `inBlock` with the parse,
- * so it is NOT independent of the bound; it detects a bound that closed too EARLY (keys left
- * stranded after it) and cannot detect one that never opened or closed too late. It also keys
+ * so it is NOT independent of the bound. It detects a bound that closed too EARLY, and also one
+ * that never opened at all (every key then falls into the residue) -- an earlier version of this
+ * sentence claimed the latter was undetectable, which is false and was measured. What it cannot
+ * detect is a bound that closed too LATE, since those lines are inside the block by definition.
+ * It also keys
  * on the lowercase-slug shape real story keys have, so a de-indented `Dist-2-5-x:` or
  * `dist_2_5_x:` is still dropped without trace. Narrow in practice, not nothing.
  */
@@ -561,8 +564,14 @@ function parseStoryStatuses(text) {
       // predicate below requires two-space indent, so it could match nothing. De-indenting the
       // LAST key of the block therefore lost it with every bucket empty and the arithmetic
       // still balancing -- exactly the hand-edit the comment above calls most likely, and the
-      // one input this whole mechanism exists to catch. Real sibling keys in this file
-      // (`action_items:`, `last_updated:`) carry underscores, which the slug class excludes.
+      // one input this whole mechanism exists to catch.
+      //
+      // FALSE-POSITIVE EXPOSURE, MEASURED. `action_items:` and `last_updated:` are excluded by
+      // the underscore and by needing a value, but `generated:` and `project:` are neither, and
+      // both match this predicate. They are safe ONLY because they sit above `development_status:`
+      // and so are never reached with the block open -- safety by ordering, not by the slug
+      // class. Move either below the block, or add an underscore-free sibling, and the gate
+      // reports it as a lost story key. Tracked in deferred-work.
       if (/^[a-z0-9-]+: *\S/.test(line)) outsideBlock.push({ line: idx + 1, text: line.trim() });
       inBlock = /^development_status:\s*$/.test(line);
       return;
@@ -636,7 +645,7 @@ function storyId(key) {
 }
 
 /**
- * Read the story statuses, or explain why it could not. 
+ * Read the story statuses, or explain why it could not.
  *
  * Mirrors `gitSubjects`' contract for the same reason: a missing file yields zero rows, zero
  * hits and a silent clean bill of health. `inert` is the difference between "nothing diverges"
@@ -682,6 +691,21 @@ function readSprintStatus(root) {
  * names `fca40f62 governance(T99)` as one that was manufactured exactly that way.
  */
 const STORY_VERBS = new Set(['fix', 'feat']);
+
+/**
+ * How a skip bucket is described. ONE source for both output channels.
+ *
+ * `superseded` is not a coverage hole: the later value WAS scanned, and last-write-wins is
+ * correct YAML semantics. The first fix for that corrected the console line and left the CI
+ * annotation -- the noisier channel, and the one a human reads in the PR UI rather than in log
+ * scrollback -- still saying "not scanned". Two templates for one fact is how that happened, so
+ * there is now one.
+ */
+function bucketLabel(name) {
+  return name === 'superseded'
+    ? 'superseded — the later value was scanned instead'
+    : `${name} — NOT scanned, so no divergence could be found for them`;
+}
 
 /** Percent-escape a GitHub Actions workflow-command payload. The payload is a commit subject. */
 function escapeAnnotation(s) {
@@ -996,13 +1020,7 @@ function reportStoryDivergences(res) {
     // warning into hundreds of lines of CI log, burying it.
     for (const [name, entries] of named) {
       console.log('');
-      // `superseded` is not a coverage hole: the later value WAS scanned, and last-write-wins
-      // is correct YAML semantics. Labelling it "NOT scanned" reported a correct dedup as a
-      // defect, which is the false-positive class that gets a warn-level gate ignored.
-      const why = name === 'superseded'
-        ? 'superseded — the later value was scanned instead'
-        : `${name} — NOT scanned, so no divergence could be found for them`;
-      console.log(`  ${entries.length} key(s) ${why}:`);
+      console.log(`  ${entries.length} key(s) ${bucketLabel(name)}:`);
       for (const e of entries.slice(0, SHOW_KEYS)) console.log(`    ${e}`);
       if (entries.length > SHOW_KEYS) console.log(`    (+${entries.length - SHOW_KEYS} more)`);
     }
@@ -1022,7 +1040,7 @@ function reportStoryDivergences(res) {
     // is unavailable.
     console.log(`  story-status scan: ${denom} read but NOT compared — no commit history.`);
     printNamed();
-    annotate(named.map(([n, v]) => `${v.length} sprint-status key(s) ${n} — not scanned`)
+    annotate(named.map(([n, v]) => `${v.length} sprint-status key(s) ${bucketLabel(n)}`)
       .concat(balanced ? [] : ['sprint-status key accounting does not reconcile — figures unreliable']));
     return;
   }
@@ -1058,7 +1076,7 @@ function reportStoryDivergences(res) {
   // the log. This repo already annotates elsewhere (`ci.yml:148`, `ci.yml:437`). Env-guarded so
   // local and fixture output are unchanged, and story-only so the lane block stays identical.
   annotate(storyWarnings.slice(0, SHOW_KEYS).concat(
-    named.map(([n, v]) => `${v.length} sprint-status key(s) ${n} — not scanned`),
+    named.map(([n, v]) => `${v.length} sprint-status key(s) ${bucketLabel(n)}`),
     balanced ? [] : ['sprint-status key accounting does not reconcile — figures unreliable'],
   ));
 }
@@ -1120,4 +1138,5 @@ module.exports = {
   REQUIRED_SECTIONS, LANE_SECTIONS, collectIds, check, main,
   checkOwedCloses, gitSubjects, reportOwedCloses, WORK_VERBS,
   SPRINT_STATUS, parseStoryStatuses, storyId, readSprintStatus, STORY_VERBS, escapeAnnotation,
+  bucketLabel, reportStoryDivergences,
 };

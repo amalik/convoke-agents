@@ -1147,3 +1147,7 @@ T79 (`backlog-integrity.js` owed-close scan) shipped 2026-08-27 in `dac6cb23` (`
 - source_spec: `_bmad-output/implementation-artifacts/spec-t103-sprint-status-owed-close.md`
   summary: `epic` is the only population exit that is counted but never named, so an epic-guard regression shows only as a shifted count with no baseline to compare against.
   evidence: Round 3. All 38 epic-kind keys on the live tree are genuine today, so no misclassification exists; the observability gap is the finding. Naming 38 keys on every run would be noise, so the fix is not obvious and was not attempted at the round cap.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-t103-sprint-status-owed-close.md`
+  summary: `generated:` and `project:` in sprint-status.yaml match the outside-the-block residue predicate and would be reported as lost story keys if either moved below `development_status:` or a similar underscore-free sibling were added.
+  evidence: Delta review 2026-08-31, reproduced — both yield an outsideBlock entry when placed after the block. Safe today purely because they sit above line 147; the safety is ordering, not the slug class, and the code comment now says so rather than claiming the class excludes real siblings.

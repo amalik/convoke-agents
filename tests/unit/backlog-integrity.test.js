@@ -23,6 +23,8 @@ const {
   storyId,
   STORY_VERBS,
   escapeAnnotation,
+  bucketLabel,
+  reportStoryDivergences,
 } = require('../../scripts/audit/backlog-integrity');
 
 // GITHUB_ACTIONS is neutralised for the WHOLE FILE, not just inside `runIn`.
@@ -929,8 +931,10 @@ describe('T79 — owed-close detection', () => {
       // the live tree 302 of 451 keys vanished with every bucket printing 0 and exit 0 — taking
       // the only true positive with them. Enumerating drop paths one at a time was the wrong
       // instrument: each fix covered its instance and the next level up stayed open. So the
-      // parser now counts every story-key-shaped line ANYWHERE in the file, by a predicate
-      // blind to the block bound, and anything found outside is reported.
+      // parser now collects every story-key-shaped line the block bound did NOT cover and
+      // reports it, so a truncation surfaces as stranded keys instead of a shorter clean count.
+      // (This sentence previously repeated the "blind to the block bound" claim that was struck
+      // from the script — it is gated on `inBlock` and is not blind to it.)
       const doc = [
         'development_status:', '  a-1-2-x: backlog', '',
         'stray-top-level-key: oops', '  b-3-4-y: backlog', '  c-5-6-z: backlog', '',
@@ -1024,7 +1028,8 @@ describe('T79 — owed-close detection', () => {
       assert.match(missing, /^::warning::story-status scan did not run/m);
       const skipped = runIn(['chore: unrelated'], validDoc(), sprint('a-1-2-x: 2026-08-30'),
         { githubActions: true }).out;
-      assert.match(skipped, /^::warning::1 sprint-status key\(s\) unrecognized — not scanned/m);
+      assert.match(skipped, /^::warning::1 sprint-status key\(s\) unrecognized — NOT scanned/m,
+        'the annotation and the console line must use the same label');
     });
 
 
@@ -1055,10 +1060,12 @@ describe('T79 — owed-close detection', () => {
       // first, so an imbalance with no buckets and no divergence printed a tidy denominator.
       // Today the arithmetic is algebraically forced to balance, so this asserts the ABSENCE —
       // and the mutation that adds an uncounted exit makes the message appear and kills it.
-      // `wontfix` is deliberately an unfamiliar status: it must be counted as live, so that a
-      // future exit added without a counter produces a real imbalance here. That is what makes
-      // the RECONCILIATION FAILED path falsifiable — the mutation "introduce an uncounted exit"
-      // turns this fixture red. Without such a fixture the check could never fire at all.
+      // `wontfix` is deliberately an unfamiliar status: it must be counted as live, so an exit
+      // added later without a counter produces a real imbalance here. NOTE what this does and
+      // does not prove: the uncounted-exit mutation kills this case on the ARITHMETIC string
+      // below, not on the RECONCILIATION line — an earlier version of this comment claimed
+      // otherwise. The guard that decides whether that line prints is covered separately, by
+      // driving the reporter with fabricated figures.
       const { out } = runIn(['chore: unrelated'], validDoc(),
         sprint('a-1-2-x: backlog', 'b-3-4-y: done', 'c-epic-1: optional', 'd-7-8-z: wontfix'));
       assert.doesNotMatch(out, /RECONCILIATION FAILED/);
@@ -1068,9 +1075,16 @@ describe('T79 — owed-close detection', () => {
     it('does not call a superseded duplicate a coverage hole', () => {
       // Last-write-wins is correct YAML semantics; the later value WAS scanned. Reporting it as
       // "NOT scanned" turns a correct dedup into a false alarm.
-      const { out } = runIn(['chore: unrelated'], validDoc(), sprint('a-1-2-x: backlog', 'a-1-2-x: done'));
+      // Asserted on BOTH channels. The first fix corrected the console line and left the CI
+      // annotation still calling a correct dedup "not scanned", and the test could not see it
+      // because it never set githubActions — blind by construction.
+      const { out } = runIn(['chore: unrelated'], validDoc(),
+        sprint('a-1-2-x: backlog', 'a-1-2-x: done'), { githubActions: true });
       assert.match(out, /superseded — the later value was scanned instead/);
       assert.doesNotMatch(out, /superseded — NOT scanned/);
+      assert.doesNotMatch(out, /^::warning::.*superseded — NOT scanned/m,
+        'the annotation is the noisier channel and must not carry the claim either');
+      assert.match(out, /^::warning::1 sprint-status key\(s\) superseded — the later value was scanned/m);
     });
 
     it('accepts a tab between the colon and the status', () => {
@@ -1096,6 +1110,47 @@ describe('T79 — owed-close detection', () => {
       assert.match(out, /\(\+3 more\)/);
       assert.equal((out.match(/^::warning::status divergence:/gm) || []).length, 10,
         'annotations capped too — they are the noisier channel');
+    });
+
+    it('prints RECONCILIATION FAILED even when nothing else is loud', () => {
+      // The `&& balanced` guard shipped with ZERO coverage: removing it survived the whole
+      // suite. The test named for it asserted the arithmetic string, which fires identically
+      // with or without the guard — so the mutation died on an unrelated assertion and the fix
+      // itself was never constrained. No input can produce an imbalance (the sum is
+      // algebraically forced), so the reporter is driven directly with fabricated figures:
+      // 5 read against exits summing to 2, no warnings, every bucket empty — precisely the
+      // state the guard exists for.
+      const res = {
+        inert: false, storyInert: false, storyReason: null,
+        storyWarnings: [], storyLiveCount: 1, storyRead: 5, storyDone: 1, storyEpic: 0,
+        storySkipped: {
+          'outside the block': [], unrecognized: [], superseded: [], unparseable: [], collapsed: [],
+        },
+      };
+      const log = console.log;
+      let out = '';
+      console.log = (...a) => { out += `${a.join(' ')}\n`; };
+      try { reportStoryDivergences(res); } finally { console.log = log; }
+      assert.match(out, /RECONCILIATION FAILED/,
+        'an imbalance with no warnings and no buckets must still be reported');
+      // And the balanced case must stay quiet, or the assertion above proves nothing.
+      let clean = '';
+      console.log = (...a) => { clean += `${a.join(' ')}\n`; };
+      try { reportStoryDivergences({ ...res, storyRead: 2 }); } finally { console.log = log; }
+      assert.doesNotMatch(clean, /RECONCILIATION FAILED/);
+    });
+
+    it('names every skip bucket the same way in both output channels', () => {
+      assert.equal(bucketLabel('superseded'), 'superseded — the later value was scanned instead');
+      assert.match(bucketLabel('unrecognized'), /NOT scanned/);
+      assert.match(bucketLabel('outside the block'), /NOT scanned/);
+    });
+
+    it('tolerates a trailing tab after the status', () => {
+      // The trailing half of the `[ \t]*$` tolerance was dead — reverting only it survived.
+      const doc = ['development_status:', '  a-1-2-x: backlog\t', ''].join('\n');
+      const { out } = runIn(['fix(a-1-2): ship it'], validDoc(), doc);
+      assert.match(out, /status divergence: a-1-2\b/);
     });
 
     it('parseStoryStatuses and storyId are pure and independently checkable', () => {
