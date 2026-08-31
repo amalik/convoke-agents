@@ -3,20 +3,22 @@ initiative: convoke
 artifact_type: adr
 qualifier: knowledge-governance-status-axis
 created: '2026-08-30'
-status: draft
-decision_status: proposed
+status: active
+decision_status: accepted
+accepted: '2026-08-31'
 schema_version: 1
 related_initiative: 'P60 — Knowledge & Documentation Governance'
 related_decision: 'ADR-001 (OQ-1)'
 related_epic: none
 supersedes: none
 qualifier_role: winston-architect
-signoff_by: pending
+signoff_by: amalik
 ---
 
 # ADR-002: The Status Axis — Status Is Evidence, Not an Assertion
 
-**Status:** **PROPOSED** (2026-08-30) — awaiting sign-off
+**Status:** **ACCEPTED** (2026-08-31) — signed off by Amalik
+**Proposed:** 2026-08-30
 **Initiative:** Knowledge & Documentation Governance (**P60**)
 **Decision owner:** Amalik
 **Resolves:** ADR-001 open question **OQ-1**
@@ -151,3 +153,4 @@ This is the deciding structural point, and it is the same argument that settled 
 | Date | Change | By |
 |------|--------|-----|
 | 2026-08-30 | Initial draft. Proposed, unsigned. Resolves ADR-001 OQ-1 on the operator's ruling that status is engine evidence. | Winston (architect role) |
+| 2026-08-31 | **Accepted by Amalik as drafted.** No amendment applied. The substantive ruling was made 2026-08-30 (status is engine evidence); this entry records the signature. `status` moves `draft` → `active` and `decision_status` `proposed` → `accepted` — the two-axis split this ADR decides, applied to itself. | Amalik |
