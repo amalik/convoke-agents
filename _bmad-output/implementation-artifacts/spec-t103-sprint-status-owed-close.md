@@ -51,7 +51,7 @@ context:
 | Unparseable key | a non-epic key yielding no ID, e.g. `i97-bug-1-…` | counted and reported as unparseable, never silently skipped | reported, exit 0 |
 | Comment in block | `  # Epic 1: …` at story indent | not a key — `#` is outside the key charset | N/A |
 | Over-long comment | the 101,804-char line 44, above the block | never reached — out of bound | N/A |
-| Sibling block | `key: value` under `action_items:` | ignored — bound stops at the next 0-indent key | N/A |
+| Sibling block | `key: value` under `action_items:` | **reported as outside the block** — never scanned, but never silently dropped either | reported, exit 0 |
 | CI annotation | `GITHUB_ACTIONS=true` + a divergence | additionally emits `::warning::` so it surfaces as a run annotation | N/A |
 | Missing file | no `sprint-status.yaml` | WARN naming the file and why the scan did not run | reported, exit 0 |
 | Shallow clone | no history | existing inert WARN covers both sources | reported, exit 0 |
@@ -134,6 +134,14 @@ context:
 *Three MEDIUM, all corrections that introduced new false claims.* *"cannot detect a bound that never opened"* — it detects exactly that, loudly, measured. *"Real sibling keys in this file carry underscores"* — `generated:` and `project:` carry neither underscore nor exemption and do match the predicate; they are safe only because they sit above the block, i.e. safety by ordering, now stated and filed. And the fifth uncorrected instance of the struck *"blind to the block bound"* claim, surviving in a test comment.
 
 *The pattern, named.* Across four review passes the worst finding was prose every single time — never a failing test, never broken logic. Assertions about verification are the specific weak point: three separate times a check was described as proving something it could not. Tests catch code; only an adversarial reader catches a sentence.
+
+**2026-08-31 — frozen matrix amended by operator ruling (Amalik).**
+
+*The conflict.* The frozen I/O matrix said a `key: value` line under `action_items:` is *ignored*. The shipped conservation law reports it as `outside the block`. Both defensible; not both true.
+
+*Ruling: amend the row, keep the conservation law whole.* The property that a key can never vanish silently is what three adversarial rounds were spent buying — two of the six HIGH findings in those rounds were exactly that failure — and carving a sibling-block exception into it re-opens the class. The cost is a possible false positive: a named line a reader dismisses in seconds, against a silent loss nobody sees. Rejected alternative: scoping the residue to the block's own span, which means tracking which top-level key you are under, i.e. the beginning of a YAML parser, and `8c5de2f8`/T104 is the standing argument against that direction. Also rejected: requiring the stranded key to derive a story ID — `fake-2-2-not-a-story` derives cleanly, so it narrows the population without fixing the cited case. It looks like a fix and is not.
+
+*Latency was never the argument.* `action_items:` is a list-of-maps today, so nothing fires; that is protection by data shape, not by design, and `bmad-sprint-planning` owns the generator that could change it.
 
 ## Design Notes
 

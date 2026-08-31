@@ -847,13 +847,23 @@ describe('T79 — owed-close detection', () => {
       assert.doesNotMatch(out, /RECONCILIATION FAILED/, 'and the arithmetic still balances');
     });
 
-    it('stops at the next zero-indent key, so a sibling block is out of scope', () => {
+    it('does not SCAN a sibling block, but does REPORT its keys as stranded', () => {
+      // Operator ruling 2026-08-31, and the frozen I/O matrix row was amended to match. The
+      // conservation law is kept whole rather than carving a sibling-block exception into it:
+      // two of the six HIGH findings across three rounds were keys vanishing silently, and an
+      // exception re-opens that class. A named line a reader dismisses in seconds is the
+      // cheaper error than a loss nobody sees.
+      //
+      // Both halves are asserted. Without the first the bound is not doing its job; without the
+      // second the key would be dropped exactly as it was before the law existed.
       const doc = [
         'development_status:', '  real-1-1-a-story: done', '',
         'action_items:', '  fake-2-2-not-a-story: backlog', '',
       ].join('\n');
       const { out } = runIn(['fix(fake-2-2): ship it'], validDoc(), doc);
       assert.doesNotMatch(out, /status divergence/, 'keys under action_items: must not be scanned');
+      assert.match(out, /1 key\(s\) outside the block/, 'but they must not be silently dropped');
+      assert.match(out, /fake-2-2-not-a-story: backlog/, 'and must be named');
       assert.match(out, /0 live stories/, 'the scan must have run at all');
     });
 

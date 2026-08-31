@@ -1141,7 +1141,7 @@ T79 (`backlog-integrity.js` owed-close scan) shipped 2026-08-27 in `dac6cb23` (`
   evidence: Round 3 adversarial review, verified. Narrow because real story keys are lowercase slugs, but it means "a truncated parse is loud whatever truncated it" would be an overclaim — the code comment now states the limit explicitly instead.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-t103-sprint-status-owed-close.md`
-  summary: a two-space scalar key under a sibling top-level block is now reported as stranded, contradicting the frozen I/O matrix row that says keys under `action_items:` are ignored.
+  summary: *(resolved 2026-08-31 — operator ruling: the frozen matrix row was amended to say "reported as outside the block"; the conservation law stands unchanged.)* a two-space scalar key under a sibling top-level block is now reported as stranded, contradicting the frozen I/O matrix row that says keys under `action_items:` are ignored.
   evidence: Round 3, reproduced — `action_items:` followed by `  fake-2-2-not-a-story: backlog` yields one outside-the-block entry. Latent today only because `action_items:` is a list-of-maps, i.e. protected by data shape rather than design. Resolving it means choosing between the conservation law and a frozen matrix row, which is an operator decision.
 
 - source_spec: `_bmad-output/implementation-artifacts/spec-t103-sprint-status-owed-close.md`
