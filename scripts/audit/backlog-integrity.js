@@ -62,6 +62,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const BACKLOG = '_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md';
+const SPRINT_STATUS = '_bmad-output/implementation-artifacts/sprint-status.yaml';
 
 /** Split a markdown table row on unescaped pipes. `\|` inside code spans is content. */
 function splitRow(line) {
@@ -476,6 +477,217 @@ function gitSubjects(root) {
   }
 }
 
+/**
+ * T103: the SECOND SOURCE. Story status lives in `sprint-status.yaml`, which no gate read.
+ *
+ * WHY THIS EXISTS
+ *   T79 gave the project an owed-close scan over LANE ROWS. Stories are tracked in a different
+ *   file, so a story whose work ships stays `backlog` with nothing watching. Measured
+ *   2026-08-30 by the `dist-epic-2` readiness assessment: `dist-2-1` and `dist-2-5` both read
+ *   `backlog` while their work had landed. Both were found by a human reading the file, not by
+ *   a gate — without that pass Epic 2 would have been picked up with two phantom stories.
+ *
+ * WHY NO YAML PARSER
+ *   This script requires only `fs`, `path` and `child_process` — zero third-party deps in a
+ *   CI-blocking audit. `8c5de2f8` had just finished fixing that exact class for `dist-2-4`,
+ *   where a `js-yaml` require resolved on every developer machine and did not exist on the
+ *   `fresh-install` runner (T104).
+ *
+ * EVERY IN-BLOCK LINE LANDS IN EXACTLY ONE BUCKET, AND THAT IS THE WHOLE POINT.
+ *   The first version of this function returned only the lines it understood. Anything else --
+ *   a key whose value fell outside the charset -- was dropped before any counter could see it,
+ *   so it was neither scanned nor reported. That was live, not theoretical: line 689 reads
+ *   `v63-4-3-...: descoped-by-ADR`, and uppercase `ADR` fails `[a-z-]+`. 451 candidate lines
+ *   parsed to 450 rows, and the scan printed `93 live stories (0 key(s) unparseable)` over a
+ *   story it had silently lost. Both Round 1 reviewers found it independently.
+ *
+ *   So: blank and comment lines are ignored, matched lines become `rows`, and EVERYTHING ELSE
+ *   becomes `unrecognized`.
+ *
+ * AND A CONSERVATION LAW OVER THE WHOLE FILE, WHICH IS THE ACTUAL INSTRUMENT.
+ *   Round 1 fixed the line-level drop. Round 2 then found the SAME defect one level up: a
+ *   single de-indented key closes the block permanently, and `inBlock` never re-opens, so on
+ *   this tree 302 of 451 keys vanished -- every bucket printing 0, exit 0, and the one true
+ *   positive gone. De-indenting a line is the likeliest hand-edit error in a 987-line YAML
+ *   file that humans flip statuses in by hand.
+ *
+ *   Enumerating drop paths one at a time is the wrong instrument: each fix covers the instance
+ *   and the next level up stays open. So every line that has the shape of a story key, and that
+ *   the block bound did NOT cover, is collected into `outsideBlock` and reported. A truncation
+ *   therefore surfaces as a pile of stranded keys instead of a shorter clean-looking count.
+ *
+ * WHAT THIS DOES NOT GUARANTEE -- stated because an earlier version of this comment claimed it
+ * did. The residue predicate runs in the `!inBlock` branch and shares `inBlock` with the parse,
+ * so it is NOT independent of the bound; it detects a bound that closed too EARLY (keys left
+ * stranded after it) and cannot detect one that never opened or closed too late. It also keys
+ * on the lowercase-slug shape real story keys have, so a de-indented `Dist-2-5-x:` or
+ * `dist_2_5_x:` is still dropped without trace. Narrow in practice, not nothing.
+ */
+function parseStoryStatuses(text) {
+  // Split on CRLF as well as LF. `\r` survives `/^...$/` in the key regex but not in the block
+  // opener, so a Windows checkout previously opened the block and then matched no key at all --
+  // reporting "yielded no entries", which names the wrong cause. There is no `.gitattributes`
+  // in this repo, so `core.autocrlf=true` reaches it.
+  // Sole-CR is included: a classic-Mac or mangled file would otherwise collapse to one line,
+  // opening no block and losing every key at once.
+  const lines = String(text).split(/\r\n|\n|\r/);
+  const rows = [];
+  const unrecognized = [];
+  const outsideBlock = [];
+  let inBlock = false;
+  lines.forEach((line, idx) => {
+    if (!inBlock) {
+      if (/^development_status:\s*$/.test(line)) inBlock = true;
+      // The residue. A LOOSER predicate than the row regex below, so a key the row regex would
+      // have rejected is still seen. It runs only while the block is closed, which is the whole
+      // of what it can detect: keys stranded by a bound that ended too early. Anything shaped
+      // like a story key at story indent belongs inside the block, so finding one here means
+      // the parse stopped somewhere it should not have.
+      else if (/^ {2}[a-z0-9-]+: *\S/.test(line)) outsideBlock.push({ line: idx + 1, text: line.trim() });
+      return;
+    }
+    // The bound: the next key at zero indent closes the block, which is what keeps
+    // `action_items:` out of scope. Blank lines and comments do not close it -- both are
+    // ordinary YAML, and closing on them would truncate the scan silently.
+    //
+    // A second `development_status:` RE-OPENS rather than closing. Reached only on malformed
+    // input -- a duplicate top-level key -- but the previous form consumed that line as a
+    // closer and then never re-entered, so every key below it vanished with no bucket and no
+    // trace, printing a clean denominator. That is the exact silent-drop class this function
+    // exists to prevent, one level up from where it was fixed.
+    if (/^[^\s#]/.test(line)) {
+      // THE CLOSING LINE ITSELF IS ACCOUNTED FOR. The conservation law had a blind spot at its
+      // own boundary: a story key that loses its indent is consumed here, and the residue
+      // predicate below requires two-space indent, so it could match nothing. De-indenting the
+      // LAST key of the block therefore lost it with every bucket empty and the arithmetic
+      // still balancing -- exactly the hand-edit the comment above calls most likely, and the
+      // one input this whole mechanism exists to catch. Real sibling keys in this file
+      // (`action_items:`, `last_updated:`) carry underscores, which the slug class excludes.
+      if (/^[a-z0-9-]+: *\S/.test(line)) outsideBlock.push({ line: idx + 1, text: line.trim() });
+      inBlock = /^development_status:\s*$/.test(line);
+      return;
+    }
+    if (!line.trim()) return;
+    if (/^\s*#/.test(line)) return;
+    // Two-space indent is the story level. The VALUE charset is deliberately structural (a bare
+    // scalar token) rather than a list of the status words we happen to know: `[a-z-]+` was an
+    // allowlist wearing a regex, and the frozen rule is that the live set is an EXCLUSION. It
+    // cost a real story -- line 689's `descoped-by-ADR` failed on the uppercase `ADR` and left
+    // the population without a trace. Quoted values, nested maps and trailing comments still
+    // fall through to `unrecognized`, which is what that bucket is for: structural surprises,
+    // not unfamiliar vocabulary.
+    // The value must START WITH A LETTER. Widening the charset to stop rejecting
+    // `descoped-by-ADR` also began admitting `2026-08-30`, `1.5`, `0`, `-` and `.` as statuses,
+    // any of which would make a key "live" on a value that is not a status word at all. A
+    // leading-letter rule keeps every real status and sends the rest to `unrecognized`, where
+    // it is named rather than silently believed. Trailing spaces are tolerated: a status is not
+    // less terminal for having one, and treating `done ` as a coverage hole is a false alarm.
+    const m = /^ {2}([a-z0-9-]+):[ \t]*([A-Za-z][A-Za-z0-9_.-]*)[ \t]*$/.exec(line);
+    if (m) rows.push({ line: idx + 1, key: m[1], status: m[2] });
+    else unrecognized.push({ line: idx + 1, text: line.trim() });
+  });
+  return { rows, unrecognized, outsideBlock };
+}
+
+/** A story-number segment: `2`, `5`, `1b`. The trailing letter is real -- `v63-1b-1` ships. */
+const STORY_SEGMENT = /^\d+[a-z]*$/;
+
+/**
+ * Guard for a DERIVED story id. Deliberately separate from `checkOwedCloses`' lane `ID_SHAPE`,
+ * which is load-bearing against blank cells and must not be widened to admit `dist-2-5`.
+ */
+const STORY_ID_SHAPE = /^(?:[a-z][a-z0-9]*-)*\d+[a-z]*-\d+[a-z]*$/;
+
+/**
+ * Map a `development_status` key to the id a commit would scope itself with.
+ *
+ * The key is a full slug and the scope is its prefix: `dist-2-5-close-bug-19-...` is scoped
+ * `fix(dist-2-5)`. Verified against history -- 18 story-shaped scope tokens across 4105
+ * commits, zero of which match no derived key.
+ *
+ * RETURNS A DISCRIMINATED RESULT, NOT A BARE `null`, so a deliberate skip and a coverage hole
+ * are never confused. `i97-bug-1-fix-p0-activation-defects` is a real key that yields no id
+ * (`bug` sits where a number must be); it is `done` today, but the caller names it either way.
+ */
+function storyId(key) {
+  const seg = String(key).split('-');
+  for (let i = 0; i < seg.length; i += 1) {
+    // Epics are excluded by operator decision (Amalik, 2026-08-30): an epic key is
+    // `in-progress` BY DEFINITION while its stories ship, so warning on it is noise by
+    // construction. Measured before the decision: including them made `dist-epic-2` warn 3x.
+    //
+    // `epic` must be FOLLOWED BY A NUMBER to count. A bare segment test would swallow a story
+    // whose name merely contains the word -- `x-epic-flow-1-2` -- and, unlike `unparseable`,
+    // the epic path is a silent skip by design, so there would be no trace of the loss.
+    //
+    // `epic` counts only when followed by a number AND NOT by a second one. `dist-epic-2` is an
+    // epic; `x-epic-1-2` and `dist-epic-2-1-a-story` carry a full story pair and are stories.
+    // Without the second clause both were swallowed by the epic path -- which, unlike
+    // `unparseable`, is a silent skip by design, so the loss left no trace anywhere.
+    if (seg[i] === 'epic'
+      && STORY_SEGMENT.test(seg[i + 1] || '')
+      && !STORY_SEGMENT.test(seg[i + 2] || '')) return { kind: 'epic' };
+    if (STORY_SEGMENT.test(seg[i]) && STORY_SEGMENT.test(seg[i + 1] || '')) {
+      const id = seg.slice(0, i + 2).join('-');
+      return STORY_ID_SHAPE.test(id) ? { kind: 'story', id } : { kind: 'unparseable' };
+    }
+  }
+  return { kind: 'unparseable' };
+}
+
+/**
+ * Read the story statuses, or explain why it could not. 
+ *
+ * Mirrors `gitSubjects`' contract for the same reason: a missing file yields zero rows, zero
+ * hits and a silent clean bill of health. `inert` is the difference between "nothing diverges"
+ * and "nothing was looked at".
+ */
+function readSprintStatus(root) {
+  let text;
+  try {
+    text = fs.readFileSync(path.join(root, SPRINT_STATUS), 'utf8');
+  } catch (err) {
+    const detail = err && err.message ? String(err.message).split('\n')[0] : String(err);
+    return {
+      rows: [], unrecognized: [], outsideBlock: [], inert: true,
+      reason: `${SPRINT_STATUS} could not be read (${detail.slice(0, 140)})`,
+    };
+  }
+  const { rows, unrecognized, outsideBlock } = parseStoryStatuses(text);
+  if (rows.length === 0 && unrecognized.length === 0 && outsideBlock.length === 0) {
+    return {
+      rows: [], unrecognized: [], outsideBlock: [], inert: true,
+      reason: `${SPRINT_STATUS} yielded no \`development_status:\` entries`,
+    };
+  }
+  return { rows, unrecognized, outsideBlock, inert: false, reason: null };
+}
+
+/**
+ * The story pass matches a NARROWER verb set than the lane pass, and the narrowing is measured.
+ *
+ * `WORK_VERBS` is precautionary and says so. For stories there is a baseline. Classified by
+ * `storyId` below -- i.e. the population this pass actually scans, epics excluded -- the
+ * story-scoped subjects across 4105 commits carry `docs` 37, `fix` 10, `feat` 8,
+ * `governance` 1, `chore` 1, `revert` 0. (Including epic-scoped commits gives docs 41,
+ * governance 4, revert 1; that is a different population and the earlier figures here quoted it
+ * by mistake.) The only hit the wide set adds is
+ * `5fae72ae governance(dist-2-8): retract ADR-005`, a retraction rather than a ship.
+ *
+ * That matters more here than elsewhere, because THIS gate's failure mode is being ignored. It
+ * is warn-level inside a job that passes; one unactionable warning is what turns the scan into
+ * wallpaper, and it dilutes T79's four lane warnings alongside. The same reasoning is already
+ * in this repo's history: `51f6f21c` was deliberately scoped `governance(backlog)` rather than
+ * `governance(T103)` so it would not manufacture a false positive against its own row, and it
+ * names `fca40f62 governance(T99)` as one that was manufactured exactly that way.
+ */
+const STORY_VERBS = new Set(['fix', 'feat']);
+
+/** Percent-escape a GitHub Actions workflow-command payload. The payload is a commit subject. */
+function escapeAnnotation(s) {
+  return String(s).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+}
+
 function checkOwedCloses(tables, root) {
   // Only rows whose first cell actually LOOKS like an ID. `r.id` is whatever sits in column 1,
   // and a malformed row can leave it empty -- in which case pass 2 below builds `new RegExp('\\b\\b')`,
@@ -491,8 +703,65 @@ function checkOwedCloses(tables, root) {
       live.set(r.id, r);
     }
   }
+  // T103's second population. Built BEFORE the git read so a missing sprint-status.yaml is
+  // reported as its own failure rather than being masked by an inert git one.
+  const sprint = readSprintStatus(root);
+  const storyLive = new Map();
+  // Every key that did NOT enter the live set, and why. Named rather than counted: a bare
+  // number leaves the reader hand-scanning a 987-line file, which is not an actionable finding.
+  const storySkipped = {
+    'outside the block': sprint.outsideBlock.map((u) => `${SPRINT_STATUS}:${u.line} \`${u.text}\``),
+    unrecognized: sprint.unrecognized.map((u) => `${SPRINT_STATUS}:${u.line} \`${u.text}\``),
+    superseded: [],
+    unparseable: [],
+    collapsed: [],
+  };
+  // Last write wins, matching YAML: a duplicated key's effective value is the last one. First-
+  // wins would warn on a story the file has already reconciled.
+  //
+  // The superseded row is RECORDED, not merely overwritten. `keys read` counts raw lines, so a
+  // dedup that reports nothing makes the denominator overcount by exactly the rows it dropped
+  // -- the same accounting hole as an unbucketed line, arriving one step later.
+  // Counted, not bucketed: `done` and `epic` are legitimate exits, but 319 + 38 keys leaving
+  // the population with no trace made 357 of 451 unaccounted for in a denominator that read
+  // clean. With them present the arithmetic reconciles, so an epic-guard regression that
+  // reclassifies real stories shows up as a shifted count instead of a quiet shrink.
+  let storyDone = 0;
+  let storyEpic = 0;
+  const byKey = new Map();
+  for (const r of sprint.rows) {
+    if (byKey.has(r.key)) storySkipped.superseded.push(`${r.key} (line ${byKey.get(r.key).line}, superseded by line ${r.line})`);
+    byKey.set(r.key, r);
+  }
+  for (const r of byKey.values()) {
+    // LIVE IS EVERY STATUS EXCEPT `done` -- an exclusion, never an allowlist. `review` appears
+    // 120 times in this file's history and is absent from it today; an allowlist of the four
+    // statuses currently present would go silent on exactly the ship-to-close window this scan
+    // watches, while the denominator kept reading healthy.
+    //
+    // Compared case-INSENSITIVELY. The widened value charset admits `Done` and `DONE`, and an
+    // exact match would report a finished story as diverging -- a false positive, which for a
+    // warn-level gate is the failure that gets it ignored.
+    if (r.status.toLowerCase() === 'done') { storyDone += 1; continue; }
+    const d = storyId(r.key);
+    if (d.kind === 'epic') { storyEpic += 1; continue; }
+    if (d.kind === 'unparseable') { storySkipped.unparseable.push(`${r.key} (line ${r.line})`); continue; }
+    if (storyLive.has(d.id)) {
+      storySkipped.collapsed.push(`${r.key} (line ${r.line}) → ${d.id}, already taken`);
+      continue;
+    }
+    storyLive.set(d.id, r);
+  }
+
   const { subjects, inert, reason } = gitSubjects(root);
-  if (inert) return { warnings: [], inert, reason, liveCount: live.size, scanned: 0 };
+  if (inert) {
+    return {
+      warnings: [], inert, reason, liveCount: live.size, scanned: 0,
+      storyWarnings: [], storyLiveCount: storyLive.size, storySkipped,
+      storyRead: sprint.rows.length, storyDone, storyEpic,
+      storyInert: sprint.inert, storyReason: sprint.reason,
+    };
+  }
 
   // TWO PASSES, because the repo predates its own commit convention.
   //
@@ -516,6 +785,11 @@ function checkOwedCloses(tables, root) {
     if (!hits.has(id)) hits.set(id, []);
     hits.get(id).push({ hash, subject, pass });
   };
+  const storyHits = new Map();
+  const recordStory = (id, hash, subject) => {
+    if (!storyHits.has(id)) storyHits.set(id, []);
+    storyHits.get(id).push({ hash, subject });
+  };
   for (const line of subjects) {
     const sp = line.indexOf(' ');
     if (sp < 0) continue;
@@ -523,9 +797,18 @@ function checkOwedCloses(tables, root) {
     const subject = line.slice(sp + 1);
     const m = /^([a-z]+)\(([^)]*)\)!?:/.exec(subject);
     if (m) {
-      if (!WORK_VERBS.has(m[1])) continue;
-      for (const tok of m[2].split(/[,\s]+/).filter(Boolean)) {
-        if (live.has(tok)) record(tok, hash, subject, 1);
+      const toks = m[2].split(/[,\s]+/).filter(Boolean);
+      if (WORK_VERBS.has(m[1])) {
+        for (const tok of toks) if (live.has(tok)) record(tok, hash, subject, 1);
+      }
+      // Stories share the parse and the exact-token rule, but NOT the verb set, and they never
+      // reach pass 2 below. Pass 2's bare whole-word match is confined to pre-convention
+      // subjects for a measured precision reason; stories postdate the convention entirely, so
+      // it would buy nothing and cost plenty -- the slug `dist-2-5-close-bug-19-...` literally
+      // contains `bug-19`, and a loose tokenizer would cross-contaminate it with the BUG-19
+      // lane row.
+      if (STORY_VERBS.has(m[1])) {
+        for (const tok of toks) if (storyLive.has(tok)) recordStory(tok, hash, subject);
       }
       continue;
     }
@@ -565,7 +848,30 @@ function checkOwedCloses(tables, root) {
       return `close may be owed: ${id} (line ${row.line}) is still in a lane, but ${cs.length} `
         + `work commit(s) name it${weak} — ${shown}${more}`;
     });
-  return { warnings, inert: false, reason: null, liveCount: live.size, scanned: subjects.length };
+
+  // Phrased as DIVERGENCE, deliberately -- never as "a close is owed". The scan compares a
+  // status against history; it cannot tell whether the work is finished. `dist-2-5` is the
+  // worked example: it merged FR17 and FR18 so one story would close BUG-19, only FR17 shipped,
+  // and the correct response there is RE-SCOPE, not close. Asserting a close would be wrong
+  // advice delivered confidently. Mirrors T79's footer, which already declines to assert that a
+  // fix closes a row.
+  const storyWarnings = [...storyHits.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([id, cs]) => {
+      const row = storyLive.get(id);
+      const SHOW = 2;
+      const shown = cs.slice(0, SHOW).map((c) => `${c.hash} ${c.subject}`).join('; ');
+      const more = cs.length > SHOW ? ` (+${cs.length - SHOW} more)` : '';
+      return `status divergence: ${id} (${SPRINT_STATUS}:${row.line}) reads \`${row.status}\`, `
+        + `but ${cs.length} work commit(s) name it — ${shown}${more}`;
+    });
+
+  return {
+    warnings, inert: false, reason: null, liveCount: live.size, scanned: subjects.length,
+    storyWarnings, storyLiveCount: storyLive.size, storySkipped,
+    storyRead: sprint.rows.length, storyDone, storyEpic,
+    storyInert: sprint.inert, storyReason: sprint.reason,
+  };
 }
 
 function check(text) {
@@ -593,7 +899,17 @@ function check(text) {
  * on the clean path would hide it exactly when it matters.
  */
 function reportOwedCloses(tables, root) {
-  const { warnings, inert, reason, liveCount, scanned } = checkOwedCloses(tables, root);
+  const res = checkOwedCloses(tables, root);
+  reportLaneOwedCloses(res);
+  reportStoryDivergences(res);
+}
+
+/**
+ * T79's lane block. Kept BYTE-IDENTICAL while T103 was added around it — the story source is a
+ * second population feeding the same scanner, not a change to what the lane scan says. Any edit
+ * here is a change to a shipped output that other readers, and tests, pin.
+ */
+function reportLaneOwedCloses({ warnings, inert, reason, liveCount, scanned }) {
   if (inert) {
     console.log('');
     console.log(`  WARN — owed-close scan did not run: ${reason}.`);
@@ -620,6 +936,131 @@ function reportOwedCloses(tables, root) {
   console.log('  A shipped fix does not close a row. Closing is a MOVE: flip the status, delete the');
   console.log('  row from its lane, append a receipt to §2.5, and add a Change Log entry.');
   console.log('  Warn-level by design — a fix may legitimately precede its close within a session.');
+}
+
+/**
+ * T103's story block. Printed AFTER the lane block and separately from it, so the lane output
+ * stays byte-identical and a reader can tell the two sources apart.
+ */
+function reportStoryDivergences(res) {
+  const {
+    inert, storyWarnings, storyLiveCount, storySkipped, storyRead, storyDone, storyEpic,
+    storyInert, storyReason,
+  } = res;
+  // Surfacing is env-guarded so local and fixture output are unchanged, and story-only so the
+  // lane block stays byte-identical. It covers the SILENT states too, not just the loud one:
+  // "the file could not be read" and "N keys were not scanned" need a reader's attention more
+  // than a divergence does, because nothing else in a green job hints at them.
+  const annotate = (msgs) => {
+    if (process.env.GITHUB_ACTIONS !== 'true') return;
+    for (const m of msgs) console.log(`::warning::${escapeAnnotation(m)}`);
+  };
+
+  if (storyInert) {
+    console.log('');
+    console.log(`  WARN — story-status scan did not run: ${storyReason}.`);
+    console.log('         Reported rather than skipped: with no story statuses the scan finds');
+    console.log('         nothing and would otherwise read as a clean result.');
+    annotate([`story-status scan did not run: ${storyReason}`]);
+    return;
+  }
+  // Every skip bucket is counted in the denominator and NAMED when non-empty. A key that left
+  // the population silently is the defect Round 1 found live on this tree; a bare count is
+  // barely better, since it leaves the reader scanning a 987-line file to find which key.
+  const skips = [
+    ['outside the block', storySkipped['outside the block']],
+    ['unrecognized', storySkipped.unrecognized],
+    ['superseded', storySkipped.superseded],
+    ['unparseable', storySkipped.unparseable],
+    ['collapsed', storySkipped.collapsed],
+  ];
+  // The arithmetic is printed so it can be RECONCILED, not just read. Every key read leaves the
+  // population through exactly one exit: live, done, epic, or a named bucket. Round 2 found 357
+  // of 451 keys exiting untracked, which is what let a truncated parse look healthy.
+  //
+  // HONEST SCOPE: over any possible INPUT this sum is forced true -- `rows.length` is
+  // `superseded + byKey.size`, and the loop below partitions `byKey` into exactly these exits.
+  // So it cannot catch a truncated parse; `outsideBlock` is what catches that. What it does
+  // catch is a FUTURE EDIT adding an exit with no counter, which is how the 357 went missing in
+  // the first place. Proven by mutation: inserting one uncounted `continue` turns it red.
+  const denom = `${storyLiveCount} live stories (${storyRead} keys read = ${storyLiveCount} live `
+    + `+ ${storyDone} done + ${storyEpic} epic + ${storySkipped.superseded.length} superseded `
+    + `+ ${storySkipped.unparseable.length} unparseable + ${storySkipped.collapsed.length} collapsed)`;
+  const balanced = storyRead === storyLiveCount + storyDone + storyEpic
+    + storySkipped.superseded.length + storySkipped.unparseable.length + storySkipped.collapsed.length;
+  const named = skips.filter(([, v]) => v.length > 0);
+  const SHOW_KEYS = 10;
+  const printNamed = () => {
+    // Capped for the same reason the commit list at the top of this file is capped: if the file
+    // is ever re-indented wholesale, every line lands in a bucket and an uncapped loop turns one
+    // warning into hundreds of lines of CI log, burying it.
+    for (const [name, entries] of named) {
+      console.log('');
+      // `superseded` is not a coverage hole: the later value WAS scanned, and last-write-wins
+      // is correct YAML semantics. Labelling it "NOT scanned" reported a correct dedup as a
+      // defect, which is the false-positive class that gets a warn-level gate ignored.
+      const why = name === 'superseded'
+        ? 'superseded — the later value was scanned instead'
+        : `${name} — NOT scanned, so no divergence could be found for them`;
+      console.log(`  ${entries.length} key(s) ${why}:`);
+      for (const e of entries.slice(0, SHOW_KEYS)) console.log(`    ${e}`);
+      if (entries.length > SHOW_KEYS) console.log(`    (+${entries.length - SHOW_KEYS} more)`);
+    }
+    if (!balanced) {
+      console.log('');
+      console.log('  RECONCILIATION FAILED — keys read do not equal the sum of their exits. Some');
+      console.log('  key left the population by a path with no counter, which means this code has');
+      console.log('  an exit nobody is counting. Treat the figures above as unreliable.');
+    }
+  };
+
+  if (inert) {
+    // git is what is missing and the lane block has already named it -- but staying silent here
+    // would hide that a whole population WAS read and never compared, which reads as "no
+    // stories diverge". The skip buckets are still reported: whether a key was recognised is a
+    // property of the yaml alone, and a coverage hole does not stop being one because history
+    // is unavailable.
+    console.log(`  story-status scan: ${denom} read but NOT compared — no commit history.`);
+    printNamed();
+    annotate(named.map(([n, v]) => `${v.length} sprint-status key(s) ${n} — not scanned`)
+      .concat(balanced ? [] : ['sprint-status key accounting does not reconcile — figures unreliable']));
+    return;
+  }
+
+  // `balanced` is part of the condition. Without it the early return fired first and the
+  // RECONCILIATION FAILED line was unreachable in precisely the state it exists for: an
+  // imbalance with every bucket empty and no divergence, which is what a clean-looking output
+  // over unscanned data looks like.
+  if (storyWarnings.length === 0 && named.length === 0 && balanced) {
+    console.log(`  story-status scan: 0 across ${denom}.`);
+    return;
+  }
+  console.log('');
+  if (storyWarnings.length > 0) {
+    console.log(`  WARN — ${storyWarnings.length} story status(es) diverge from history, across ${denom}:`);
+    console.log('');
+    // Capped like the skip lists, and for the same reason: a mass status reset would otherwise
+    // turn one warning into hundreds of log lines and hundreds of CI annotations, burying it.
+    for (const w of storyWarnings.slice(0, SHOW_KEYS)) console.log(`    ${w}`);
+    if (storyWarnings.length > SHOW_KEYS) console.log(`    (+${storyWarnings.length - SHOW_KEYS} more)`);
+    console.log('');
+    console.log('  This detects DIVERGENCE, not completion: the status and the commit disagree. The');
+    console.log('  resolution — close, re-scope, or split — is yours. A story that merged two');
+    console.log('  requirements can legitimately have shipped only one, in which case re-scoping is');
+    console.log('  correct and closing is wrong.');
+    console.log('  Warn-level by design — a fix may legitimately precede its status flip.');
+  } else {
+    console.log(`  story-status scan: 0 across ${denom}.`);
+  }
+  printNamed();
+
+  // Without this the finding lives in a passing job's stdout, read only by someone who opens
+  // the log. This repo already annotates elsewhere (`ci.yml:148`, `ci.yml:437`). Env-guarded so
+  // local and fixture output are unchanged, and story-only so the lane block stays identical.
+  annotate(storyWarnings.slice(0, SHOW_KEYS).concat(
+    named.map(([n, v]) => `${v.length} sprint-status key(s) ${n} — not scanned`),
+    balanced ? [] : ['sprint-status key accounting does not reconcile — figures unreliable'],
+  ));
 }
 
 function main(root = path.resolve(__dirname, '..', '..')) {
@@ -678,4 +1119,5 @@ module.exports = {
   parseTables, columnIndex, checkArity, checkLaneShape, checkCoverage, assertStructure, stripFences,
   REQUIRED_SECTIONS, LANE_SECTIONS, collectIds, check, main,
   checkOwedCloses, gitSubjects, reportOwedCloses, WORK_VERBS,
+  SPRINT_STATUS, parseStoryStatuses, storyId, readSprintStatus, STORY_VERBS, escapeAnnotation,
 };

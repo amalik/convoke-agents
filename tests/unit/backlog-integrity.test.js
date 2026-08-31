@@ -1,4 +1,4 @@
-const { describe, it } = require('node:test');
+const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('path');
 
@@ -19,7 +19,27 @@ const {
   check,
   gitSubjects,
   WORK_VERBS,
+  parseStoryStatuses,
+  storyId,
+  STORY_VERBS,
+  escapeAnnotation,
 } = require('../../scripts/audit/backlog-integrity');
+
+// GITHUB_ACTIONS is neutralised for the WHOLE FILE, not just inside `runIn`.
+//
+// The reporter emits an extra annotation line per finding when that variable is set, and
+// GitHub Actions always sets it — a test counting occurrences of a message therefore passed
+// locally and failed on every CI job. `runIn` owns the variable for its own cases, but two
+// other harnesses call `main()` directly and would still read the ambient value; today they
+// happen to exit on an inert branch before the annotation, which is a coupling between test
+// env hygiene and branch ordering in production code. This makes the whole file deterministic
+// regardless. `fixture-determinism` names inherited env as one of its non-determinism axes.
+const AMBIENT_GITHUB_ACTIONS = process.env.GITHUB_ACTIONS;
+before(() => { delete process.env.GITHUB_ACTIONS; });
+after(() => {
+  if (AMBIENT_GITHUB_ACTIONS === undefined) delete process.env.GITHUB_ACTIONS;
+  else process.env.GITHUB_ACTIONS = AMBIENT_GITHUB_ACTIONS;
+});
 
 /** parseTables returns { tables, orphans }; most assertions only want the tables. */
 const tablesOf = (text) => parseTables(text).tables;
@@ -296,7 +316,7 @@ describe('exported helpers', () => {
  */
 const fs = require('fs');
 const os = require('os');
-const { BACKLOG } = require('../../scripts/audit/backlog-integrity');
+const { BACKLOG, SPRINT_STATUS } = require('../../scripts/audit/backlog-integrity');
 
 
 /** Run main() against a throwaway tree — never against the live repo (test-fixture-isolation). */
@@ -470,16 +490,36 @@ describe('T79 — owed-close detection', () => {
   // inert. The tests would have broken the build that shipped them. Each case now builds its own
   // one-commit repository, which also makes the fixtures readable: the commit that should trigger
   // a warning sits three lines from the assertion.
-  function runIn(subjects, doc) {
+  // T103 default: a structurally valid sprint-status carrying one `done` story and nothing
+  // live, so the twelve T79 cases below exercise the LANE scan against a quiet story scan
+  // rather than against its inert branch. Cases wanting the file absent pass `null`.
+  const QUIET_SPRINT = ['development_status:', '  quiet-9-9-nothing-to-see: done', ''].join('\n');
+
+  // GITHUB_ACTIONS IS NEUTRALISED FOR EVERY CASE THAT DOES NOT ASK FOR IT.
+  //
+  // The reporter emits an extra `::warning::` line per divergence when that variable is set,
+  // and GitHub Actions always sets it. A test counting occurrences of `status divergence:`
+  // therefore passed locally and failed on every CI job running `npm test` — Node 18/20/22 at
+  // `ci.yml:65` plus burn-in at `:100`, red simultaneously. `fixture-determinism` names
+  // inherited env as one of its four non-determinism axes; this is that axis, and the fixture
+  // has to own the variable rather than read whatever the runner happens to export.
+  function runIn(subjects, doc, sprint = QUIET_SPRINT, { githubActions = false } = {}) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bi-t79-'));
     const git = (...args) => execFileSync('git', args, { cwd: dir, stdio: 'ignore' });
+    const prevGa = process.env.GITHUB_ACTIONS;
     try {
+      if (githubActions) process.env.GITHUB_ACTIONS = 'true';
+      else delete process.env.GITHUB_ACTIONS;
       git('init', '-q');
       git('config', 'user.email', 't@example.invalid');
       git('config', 'user.name', 'T79 fixture');
       for (const subject of subjects) git('commit', '--allow-empty', '-q', '-m', subject);
       fs.mkdirSync(path.dirname(path.join(dir, BACKLOG)), { recursive: true });
       fs.writeFileSync(path.join(dir, BACKLOG), doc);
+      if (sprint !== null) {
+        fs.mkdirSync(path.dirname(path.join(dir, SPRINT_STATUS)), { recursive: true });
+        fs.writeFileSync(path.join(dir, SPRINT_STATUS), sprint);
+      }
       const log = console.log;
       let out = '';
       console.log = (...a) => { out += `${a.join(' ')}\n`; };
@@ -487,6 +527,8 @@ describe('T79 — owed-close detection', () => {
       try { code = main(dir); } finally { console.log = log; }
       return { code, out };
     } finally {
+      if (prevGa === undefined) delete process.env.GITHUB_ACTIONS;
+      else process.env.GITHUB_ACTIONS = prevGa;
       fs.rmSync(dir, { recursive: true, force: true });
     }
   }
@@ -659,5 +701,422 @@ describe('T79 — owed-close detection', () => {
       fs.rmSync(dir, { recursive: true, force: true });
       if (srcDir) fs.rmSync(srcDir, { recursive: true, force: true });
     }
+  });
+
+  // T103 nests here deliberately: it is a second SOURCE feeding T79's scanner, not a second
+  // scanner, and it reuses `runIn` so both populations can be exercised in one fixture tree.
+  describe('T103 — story-status divergence, with sprint-status.yaml as a second source', () => {
+    /** A `development_status:` block. The two-space indent IS the story level. */
+    const sprint = (...keys) => ['development_status:', ...keys.map((k) => `  ${k}`), ''].join('\n');
+
+    it('warns when a live story is named by a fix() commit, and still exits 0', () => {
+      const { code, out } = runIn(
+        ['fix(dist-2-5): make the registry label agree with its own finding'],
+        validDoc(),
+        sprint('dist-2-5-close-bug-19-and-the-label: backlog'),
+      );
+      assert.equal(code, 0, 'a divergence must never fail the build');
+      assert.match(out, /status divergence: dist-2-5\b/);
+      assert.match(out, /reads `backlog`/, 'the warning must name the status it disagrees with');
+      assert.match(out, /make the registry label agree/, 'the warning must name the commit subject');
+      assert.match(out, /\b[0-9a-f]{7,40}\b fix\(dist-2-5\)/, 'the warning must carry the commit hash');
+      // The line number is the reader's only pointer into a 950-line file. `> 0` is not enough:
+      // a hardcoded `:1` satisfies that and tells them nothing.
+      assert.match(out, /sprint-status\.yaml:2\b/, "the warning must point at the key's real line");
+    });
+
+    it('says nothing once the story is reconciled to done', () => {
+      const { out } = runIn(
+        ['fix(dist-2-5): ship it'], validDoc(),
+        sprint('dist-2-5-close-bug-19-and-the-label: done'),
+      );
+      assert.doesNotMatch(out, /status divergence/);
+      // A clean scan must still prove it ran; silence is indistinguishable from a matcher that
+      // has quietly stopped matching. Same reasoning as T79's denominators.
+      assert.match(out, /story-status scan: 0 across 0 live stories \(1 keys read = 0 live \+ 1 done/);
+    });
+
+    it('treats an UNFAMILIAR status as live — the charset must not become an allowlist', () => {
+      // The defect Round 1 found live: `sprint-status.yaml:689` reads `descoped-by-ADR`, and a
+      // value charset of `[a-z-]+` rejected the uppercase `ADR`, dropping the line before any
+      // counter could see it. The frozen rule is that the live set is an EXCLUSION — only
+      // `done` is terminal — so an unrecognised status word must still be watched.
+      const { out } = runIn(
+        ['fix(v63-4-3): ship it'], validDoc(),
+        sprint('v63-4-3-execute-pf1-validation: descoped-by-ADR'),
+      );
+      assert.match(out, /status divergence: v63-4-3\b/);
+      assert.match(out, /reads `descoped-by-ADR`/);
+      assert.match(out, /1 live stories/, 'it must be IN the population, not merely named as lost');
+    });
+
+    it('treats `review` as live too', () => {
+      // 120 occurrences in this file's history, zero today. An allowlist of the statuses
+      // currently present passes every other case here and goes silent on exactly the
+      // ship-to-close window the scan exists to watch.
+      const { out } = runIn(['feat(foo-1-2): ship it'], validDoc(), sprint('foo-1-2-a-story: review'));
+      assert.match(out, /status divergence: foo-1-2\b/);
+      assert.match(out, /reads `review`/);
+    });
+
+    it('every in-block line lands in exactly one bucket — nothing is dropped', () => {
+      // The general form of the Round 1 blocker. A quoted value is structurally surprising and
+      // belongs in `unrecognized`; what must never happen is a line reaching neither bucket.
+      const { out } = runIn(['chore: unrelated'], validDoc(), sprint('a-1-2-x: "backlog"', 'b-3-4-y: done'));
+      assert.match(out, /1 key\(s\) unrecognized/, 'the odd line must be surfaced');
+      assert.match(out, /a-1-2-x: "backlog"/, 'and it must be NAMED, not merely counted');
+      assert.match(out, /1 keys read = 0 live \+ 1 done/, 'the parsed key is still accounted for');
+    });
+
+    it('parses a CRLF checkout instead of reporting an empty block', () => {
+      // No .gitattributes in this repo, so `core.autocrlf=true` produces this. `\r` survives
+      // `$` in the key regex but not in the block opener, so a `split(String.fromCharCode(10))`
+      // implementation opens the block and then matches nothing — reporting "yielded no
+      // entries", which names the wrong cause.
+      const crlf = ['development_status:', '  a-1-2-x: backlog', ''].join('\r\n');
+      const { out } = runIn(['fix(a-1-2): ship it'], validDoc(), crlf);
+      assert.match(out, /status divergence: a-1-2\b/);
+      assert.doesNotMatch(out, /yielded no/, 'a CRLF file is not an empty one');
+    });
+
+    it('ignores epic-level keys even under a verb that WOULD otherwise match', () => {
+      // The verb is deliberately `feat`, not the `governance` the live tree happens to carry:
+      // under a non-matching verb this case passes with epic-exclusion deleted, proving nothing.
+      const { out } = runIn(
+        ['feat(dist-epic-2): ship a story inside the epic'], validDoc(),
+        sprint('dist-epic-2: in-progress', 'dist-epic-2-retrospective: optional'),
+      );
+      assert.doesNotMatch(out, /status divergence/,
+        'an epic is in-progress by definition while its stories ship');
+      assert.match(out, /0 live stories/, 'the scan must have run at all');
+    });
+
+    it('does not mistake a story whose NAME contains "epic" for an epic', () => {
+      // `epic` must be followed by a number to count. A bare segment test swallows this key,
+      // and unlike `unparseable` the epic path is a silent skip by design — no trace at all.
+      const { out } = runIn(['fix(x-epic-flow-1-2): ship it'], validDoc(),
+        sprint('x-epic-flow-1-2-a-story: backlog'));
+      assert.match(out, /status divergence: x-epic-flow-1-2\b/);
+    });
+
+    it('matches fix|feat only — governance() and docs() name a story without shipping it', () => {
+      const live = sprint('dist-2-8-repair-the-manifest: backlog');
+      assert.doesNotMatch(runIn(['governance(dist-2-8): retract ADR-005'], validDoc(), live).out,
+        /status divergence/, 'a retraction names the story but does not ship it');
+      assert.doesNotMatch(runIn(['docs(dist-2-8): file the row'], validDoc(), live).out,
+        /status divergence/, 'docs() is this repo’s closing verb');
+      // Anchor: without this the case also passes when the entire story pass is deleted.
+      assert.match(runIn(['fix(dist-2-8): ship it'], validDoc(), live).out, /status divergence: dist-2-8\b/,
+        'the same fixture under fix() must warn, or the two assertions above prove nothing');
+    });
+
+    it('names a key it cannot derive an id for, rather than dropping it', () => {
+      // `i97-bug-1-fix-p0-activation-defects` is a real key of this shape: `bug` sits where a
+      // number must be, so no id can be derived.
+      const { out } = runIn(['chore: unrelated'], validDoc(),
+        sprint('i97-bug-1-fix-p0-activation-defects: backlog'));
+      assert.match(out, /1 key\(s\) unparseable/);
+      assert.match(out, /i97-bug-1-fix-p0-activation-defects/, 'the key must be named');
+    });
+
+    it('takes the LAST value for a duplicated key, as YAML does', () => {
+      // First-wins would warn on a story the file has already reconciled.
+      const { out } = runIn(['fix(a-1-2): ship it'], validDoc(),
+        sprint('a-1-2-x: backlog', 'a-1-2-x: done'));
+      assert.doesNotMatch(out, /status divergence/, "YAML's effective value here is `done`");
+    });
+
+    it('names two live keys that collapse onto one story id', () => {
+      const { out } = runIn(['chore: unrelated'], validDoc(),
+        sprint('a-1-2-first: backlog', 'a-1-2-second: backlog'));
+      assert.match(out, /1 key\(s\) collapsed/);
+      assert.match(out, /a-1-2-second/, 'the shadowed key must be named, not silently lost');
+    });
+
+    it('does not read a comment inside the block as a key', () => {
+      const { out } = runIn(
+        ['fix(dist-2-5): ship it'], validDoc(),
+        sprint('# Epic 2: dist-2-5-close-bug-19: backlog', 'dist-2-5-real-key: done'),
+      );
+      assert.doesNotMatch(out, /status divergence/, 'a `#` line is a comment, not a key');
+      // Anchored on the NAMED-bucket heading, not the bare word: the denominator always carries
+      // `0 unrecognized`, so a loose /unrecognized/ can never fail and asserts nothing.
+      assert.doesNotMatch(out, /key\(s\) unrecognized/, 'nor is it an unrecognised line');
+      assert.doesNotMatch(out, /RECONCILIATION FAILED/, 'and the arithmetic still balances');
+    });
+
+    it('stops at the next zero-indent key, so a sibling block is out of scope', () => {
+      const doc = [
+        'development_status:', '  real-1-1-a-story: done', '',
+        'action_items:', '  fake-2-2-not-a-story: backlog', '',
+      ].join('\n');
+      const { out } = runIn(['fix(fake-2-2): ship it'], validDoc(), doc);
+      assert.doesNotMatch(out, /status divergence/, 'keys under action_items: must not be scanned');
+      assert.match(out, /0 live stories/, 'the scan must have run at all');
+    });
+
+    it('reports a missing sprint-status.yaml rather than reporting clean', () => {
+      const { code, out } = runIn(['fix(dist-2-5): ship it'], validDoc(), null);
+      assert.equal(code, 0);
+      assert.match(out, /story-status scan did not run/);
+      assert.match(out, /sprint-status\.yaml could not be read/);
+      assert.doesNotMatch(out, /story-status scan: 0 across/,
+        'a file that was never read must not print a clean denominator');
+    });
+
+    it('says stories were read but NOT compared when history is unavailable', () => {
+      // Otherwise a whole population is loaded, never checked, and the silence reads as
+      // "no stories diverge" — the failure mode gitSubjects` own inert branch exists to avoid.
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bi-t103-nogit-'));
+      try {
+        fs.mkdirSync(path.dirname(path.join(dir, BACKLOG)), { recursive: true });
+        fs.writeFileSync(path.join(dir, BACKLOG), validDoc());
+        fs.mkdirSync(path.dirname(path.join(dir, SPRINT_STATUS)), { recursive: true });
+        fs.writeFileSync(path.join(dir, SPRINT_STATUS), sprint('a-1-2-x: backlog'));
+        const log = console.log;
+        let out = '';
+        console.log = (...a) => { out += `${a.join(' ')}\n`; };
+        try { main(dir); } finally { console.log = log; }
+        assert.match(out, /owed-close scan did not run/, 'the lane block must report the git failure');
+        assert.match(out, /1 live stories .*read but NOT compared/,
+          'the story population must not be silently discarded');
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    it('emits an escaped CI annotation only under GITHUB_ACTIONS', () => {
+      const args = [['fix(dist-2-5): ship it'], validDoc(), sprint('dist-2-5-a-story: backlog')];
+      assert.doesNotMatch(runIn(...args).out, /^::warning::/m, 'a local run must not annotate');
+      const on = runIn(...args, { githubActions: true }).out;
+      assert.match(on, /^::warning::status divergence: dist-2-5\b/m);
+      // The payload is an arbitrary commit subject, and `%` is the Actions escape character.
+      assert.equal(escapeAnnotation('100% \r\n done'), '100%25 %0D%0A done');
+      const pct = runIn(['fix(dist-2-5): ship 100% of it'], validDoc(),
+        sprint('dist-2-5-a-story: backlog'), { githubActions: true }).out;
+      assert.match(pct, /100%25 of it/, 'a literal % in a subject must be percent-escaped');
+    });
+
+    it('passes with GITHUB_ACTIONS set in the ambient environment', () => {
+      // The regression that reddened four CI jobs: the count-pinning case below inherited the
+      // runner's own GITHUB_ACTIONS and saw the annotation line as a second divergence.
+      const prev = process.env.GITHUB_ACTIONS;
+      try {
+        process.env.GITHUB_ACTIONS = 'true';
+        const { out } = runIn(['fix(dist-2-5): ship it'], validDoc(), sprint('dist-2-5-a-story: backlog'));
+        assert.equal((out.match(/status divergence:/g) || []).length, 1,
+          'runIn must own the variable rather than inherit it');
+      } finally {
+        if (prev === undefined) delete process.env.GITHUB_ACTIONS;
+        else process.env.GITHUB_ACTIONS = prev;
+      }
+    });
+
+    it('leaves the lane scan untouched when both sources are live at once', () => {
+      const { out } = runIn(
+        ['fix(T42): ship the row', 'fix(dist-2-5): ship the story'],
+        docWith(['T42']),
+        sprint('dist-2-5-a-story: backlog'),
+      );
+      assert.equal((out.match(/close may be owed:/g) || []).length, 1, 'exactly one lane warning');
+      assert.match(out, /close may be owed: T42 \(line \d+\) is still in a lane, but 1 work commit\(s\) name it/);
+      assert.equal((out.match(/status divergence:/g) || []).length, 1, 'exactly one story warning');
+    });
+
+
+    it('reports keys OUTSIDE the block — the conservation law, not another drop-path patch', () => {
+      // Round 2's blocker. One de-indented key closes the block and it never re-opens, so on
+      // the live tree 302 of 451 keys vanished with every bucket printing 0 and exit 0 — taking
+      // the only true positive with them. Enumerating drop paths one at a time was the wrong
+      // instrument: each fix covered its instance and the next level up stayed open. So the
+      // parser now counts every story-key-shaped line ANYWHERE in the file, by a predicate
+      // blind to the block bound, and anything found outside is reported.
+      const doc = [
+        'development_status:', '  a-1-2-x: backlog', '',
+        'stray-top-level-key: oops', '  b-3-4-y: backlog', '  c-5-6-z: backlog', '',
+      ].join('\n');
+      const { code, out } = runIn(['fix(b-3-4): ship it'], validDoc(), doc);
+      assert.equal(code, 0);
+      // Three, not two: the closing line `stray-top-level-key: oops` is itself slug-shaped and
+      // is now counted, which is the Round 3 fix. Over-reporting here is the safe direction —
+      // a named line a reader can dismiss beats a key that vanishes.
+      assert.match(out, /3 key\(s\) outside the block/, 'the truncation must be LOUD, not clean');
+      assert.match(out, /b-3-4-y: backlog/, 'and the lost keys must be named');
+      assert.doesNotMatch(out, /status divergence/, 'the key was never scanned, so nothing is claimed about it');
+    });
+
+    it('prints an arithmetic that reconciles, so a key cannot exit uncounted', () => {
+      // 357 of 451 keys used to leave the population untracked (319 done + 38 epic), which is
+      // what let a truncated parse look healthy. Every exit is now a term in the sum.
+      const { out } = runIn(['chore: unrelated'], validDoc(),
+        sprint('a-1-2-x: backlog', 'b-3-4-y: done', 'c-epic-1: in-progress'));
+      assert.match(out, /3 keys read = 1 live \+ 1 done \+ 1 epic \+ 0 superseded \+ 0 unparseable \+ 0 collapsed/);
+      assert.doesNotMatch(out, /RECONCILIATION FAILED/);
+    });
+
+    it('treats a capitalised terminal status as done, not as a divergence', () => {
+      // Widening the charset to admit `descoped-by-ADR` also began admitting `Done`, and an
+      // exact-match terminal test would warn on a finished story — a false positive, which for
+      // a warn-level gate is the failure that gets it ignored.
+      const { out } = runIn(['fix(a-1-2): ship it'], validDoc(), sprint('a-1-2-x: Done'));
+      assert.doesNotMatch(out, /status divergence/);
+      assert.match(out, /1 done/);
+    });
+
+    it('sends a non-word scalar to unrecognized rather than believing it is a status', () => {
+      const { out } = runIn(['chore: unrelated'], validDoc(), sprint('a-1-2-x: 2026-08-30'));
+      assert.match(out, /1 key\(s\) unrecognized/, 'a date is not a status');
+      assert.match(out, /0 live/, 'and it must not make the key live');
+    });
+
+    it('tolerates trailing whitespace after a valid status', () => {
+      const { out } = runIn(['fix(a-1-2): ship it'], validDoc(),
+        ['development_status:', '  a-1-2-x: done ', ''].join('\n'));
+      assert.doesNotMatch(out, /unrecognized/, 'a status is not less terminal for having a trailing space');
+      assert.doesNotMatch(out, /status divergence/);
+    });
+
+    it('does not swallow a story that carries a full pair after an epic segment', () => {
+      // The Round 1 epic fix stopped `x-epic-flow-1-2` but not `x-epic-1-2`. `epic` counts only
+      // when followed by a number AND not by a second one.
+      assert.deepEqual(storyId('x-epic-1-2'), { kind: 'story', id: 'x-epic-1-2' });
+      assert.deepEqual(storyId('dist-epic-2-1-a-story'), { kind: 'story', id: 'dist-epic-2-1' });
+      assert.deepEqual(storyId('dist-epic-2'), { kind: 'epic' }, 'a real epic key still reads as one');
+    });
+
+    it('names a superseded duplicate rather than letting the denominator overcount', () => {
+      const { out } = runIn(['chore: unrelated'], validDoc(),
+        sprint('a-1-2-x: backlog', 'a-1-2-x: done'));
+      assert.match(out, /1 key\(s\) superseded/);
+      assert.match(out, /2 keys read = 0 live \+ 1 done \+ 0 epic \+ 1 superseded/,
+        'the raw read count must still reconcile against the dedup');
+    });
+
+    it('caps a long skip list so one warning cannot become hundreds of log lines', () => {
+      const many = Array.from({ length: 14 }, (_, i) => `k-${i + 1}-1-x: 2026-08-30`);
+      const { out } = runIn(['chore: unrelated'], validDoc(), sprint(...many));
+      assert.match(out, /14 key\(s\) unrecognized/, 'the true total is still reported');
+      assert.match(out, /\(\+4 more\)/, 'and the withheld count is stated');
+      // Count the LISTED entries. Asserting only on `(+4 more)` cannot detect an uncapped
+      // listing, because the summary line prints either way — mutation caught that.
+      assert.equal((out.match(/^ {4}.*sprint-status\.yaml:\d+ `k-/gm) || []).length, 10,
+        'at most ten keys may be listed, however many were skipped');
+    });
+
+    it('re-opens the block on a duplicate development_status: key', () => {
+      // Reached only on malformed input, but the previous form consumed that line as a closer
+      // and never re-entered — so every key below vanished with no bucket and no trace, which
+      // is the silent-drop class this whole area exists to prevent.
+      const doc = [
+        'development_status:', '  a-1-2-x: done', 'development_status:', '  b-3-4-y: backlog', '',
+      ].join('\n');
+      const { out } = runIn(['fix(b-3-4): ship it'], validDoc(), doc);
+      assert.match(out, /status divergence: b-3-4\b/, 'keys after the second opener must be scanned');
+      assert.match(out, /2 keys read/, 'and counted');
+      assert.doesNotMatch(out, /outside the block/, 'they are inside a block, not stranded');
+    });
+
+    it('annotates the SILENT states too, not only the loud one', () => {
+      // The rationale for annotating — a finding buried in a passing job's log — applies with
+      // more force to "the file could not be read" and "N keys were not scanned" than to a
+      // divergence, yet only the divergence was surfaced.
+      const missing = runIn(['fix(a-1-2): ship it'], validDoc(), null, { githubActions: true }).out;
+      assert.match(missing, /^::warning::story-status scan did not run/m);
+      const skipped = runIn(['chore: unrelated'], validDoc(), sprint('a-1-2-x: 2026-08-30'),
+        { githubActions: true }).out;
+      assert.match(skipped, /^::warning::1 sprint-status key\(s\) unrecognized — not scanned/m);
+    });
+
+
+    it('accounts for a de-indented key on the block-closing line itself', () => {
+      // Round 3's hole in the conservation law, at its own boundary: the closing line is
+      // consumed by the bound before any bucket sees it, and the residue predicate needs a
+      // two-space indent, so de-indenting the LAST key of the block lost it with every bucket
+      // empty and the arithmetic still balancing. Reproduced on the live tree.
+      const doc = ['development_status:', '  a-1-2-x: done', 'b-3-4-y: backlog', ''].join('\n');
+      const { code, out } = runIn(['fix(b-3-4): ship it'], validDoc(), doc);
+      assert.equal(code, 0);
+      assert.match(out, /1 key\(s\) outside the block/, 'the closing line must be counted, not consumed');
+      assert.match(out, /b-3-4-y: backlog/, 'and named');
+    });
+
+    it('does not mistake a real sibling top-level key for a lost story key', () => {
+      // The residue predicate must not fire on `action_items:` — the slug class excludes the
+      // underscore, which is what keeps this file's real siblings out of the bucket.
+      const doc = [
+        'development_status:', '  a-1-2-x: done', '', 'action_items:', '  - epic: gen-epic-1', '',
+      ].join('\n');
+      const { out } = runIn(['chore: unrelated'], validDoc(), doc);
+      assert.doesNotMatch(out, /outside the block/, 'a legitimate sibling key is not a lost story');
+    });
+
+    it('keeps the reconciliation report reachable when every bucket is empty', () => {
+      // The check was dead in exactly the state it guards: the clean-looking early return fired
+      // first, so an imbalance with no buckets and no divergence printed a tidy denominator.
+      // Today the arithmetic is algebraically forced to balance, so this asserts the ABSENCE —
+      // and the mutation that adds an uncounted exit makes the message appear and kills it.
+      // `wontfix` is deliberately an unfamiliar status: it must be counted as live, so that a
+      // future exit added without a counter produces a real imbalance here. That is what makes
+      // the RECONCILIATION FAILED path falsifiable — the mutation "introduce an uncounted exit"
+      // turns this fixture red. Without such a fixture the check could never fire at all.
+      const { out } = runIn(['chore: unrelated'], validDoc(),
+        sprint('a-1-2-x: backlog', 'b-3-4-y: done', 'c-epic-1: optional', 'd-7-8-z: wontfix'));
+      assert.doesNotMatch(out, /RECONCILIATION FAILED/);
+      assert.match(out, /4 keys read = 2 live \+ 1 done \+ 1 epic/);
+    });
+
+    it('does not call a superseded duplicate a coverage hole', () => {
+      // Last-write-wins is correct YAML semantics; the later value WAS scanned. Reporting it as
+      // "NOT scanned" turns a correct dedup into a false alarm.
+      const { out } = runIn(['chore: unrelated'], validDoc(), sprint('a-1-2-x: backlog', 'a-1-2-x: done'));
+      assert.match(out, /superseded — the later value was scanned instead/);
+      assert.doesNotMatch(out, /superseded — NOT scanned/);
+    });
+
+    it('accepts a tab between the colon and the status', () => {
+      const doc = ['development_status:', '  a-1-2-x:\tbacklog', ''].join('\n');
+      const { out } = runIn(['fix(a-1-2): ship it'], validDoc(), doc);
+      assert.match(out, /status divergence: a-1-2\b/, 'a tab is whitespace, not a malformed line');
+    });
+
+    it('parses a sole-CR file instead of collapsing it into one line', () => {
+      const cr = 'development_status:\r  a-1-2-x: backlog\r  b-3-4-y: done\r';
+      const { out } = runIn(['fix(a-1-2): ship it'], validDoc(), cr);
+      assert.match(out, /status divergence: a-1-2\b/);
+      assert.match(out, /2 keys read/, 'both keys must survive the split');
+    });
+
+    it('caps the divergence listing as well as the skip listing', () => {
+      // A mass status reset would otherwise emit hundreds of lines and hundreds of annotations.
+      const keys = Array.from({ length: 13 }, (_, i) => `d-${i + 1}-1-x: backlog`);
+      const subjects = Array.from({ length: 13 }, (_, i) => `fix(d-${i + 1}-1): ship it`);
+      const { out } = runIn(subjects, validDoc(), sprint(...keys), { githubActions: true });
+      assert.match(out, /13 story status\(es\) diverge/, 'the true total is reported');
+      assert.equal((out.match(/^ {4}status divergence:/gm) || []).length, 10, 'listing capped at ten');
+      assert.match(out, /\(\+3 more\)/);
+      assert.equal((out.match(/^::warning::status divergence:/gm) || []).length, 10,
+        'annotations capped too — they are the noisier channel');
+    });
+
+    it('parseStoryStatuses and storyId are pure and independently checkable', () => {
+      const parsed = parseStoryStatuses(
+        ['development_status:', '  a-1-2-x: backlog', '  junk here', 'other:', '  b-3-4-y: done'].join('\n'),
+      );
+      assert.deepEqual(parsed.rows, [{ line: 2, key: 'a-1-2-x', status: 'backlog' }]);
+      assert.deepEqual(parsed.unrecognized, [{ line: 3, text: 'junk here' }]);
+      assert.deepEqual(storyId('dist-2-5-close-bug-19'), { kind: 'story', id: 'dist-2-5' });
+      // The trailing letter is real: `v63-1b-1` ships, and a digits-only rule made three live
+      // stories invisible when this was first measured.
+      assert.deepEqual(storyId('v63-1b-1-remove-agents'), { kind: 'story', id: 'v63-1b-1' });
+      assert.deepEqual(storyId('1-1-expand-agent-registry'), { kind: 'story', id: '1-1' });
+      assert.deepEqual(storyId('dist-epic-2'), { kind: 'epic' });
+      assert.deepEqual(storyId('dist-epic-2-retrospective'), { kind: 'epic' });
+      assert.deepEqual(storyId('x-epic-flow-1-2-y'), { kind: 'story', id: 'x-epic-flow-1-2' });
+      assert.deepEqual(storyId('i97-bug-1-fix-p0'), { kind: 'unparseable' });
+      assert.equal(STORY_VERBS.has('fix'), true);
+      assert.equal(STORY_VERBS.has('feat'), true);
+      assert.equal(STORY_VERBS.has('governance'), false, 'the story pass is narrower than WORK_VERBS');
+      assert.equal(WORK_VERBS.has('governance'), true, 'and the lane pass is deliberately not narrowed');
+    });
   });
 });

@@ -1126,3 +1126,24 @@ T79 (`backlog-integrity.js` owed-close scan) shipped 2026-08-27 in `dac6cb23` (`
 - **Measured, not assumed — and the measurement contradicted the first remedy drafted for this note.** Across all history there are **25 `governance()` commits**: 14 scoped `backlog`, 3 `dist-epic-2`, and only **4 scoped to a lane row ID** — `I113` ×2 (both mine, 2026-08-30), `T71` (`87a86b72`, "make Part 1 a pointer, not a duplicated copy"), `I156` (`15f3b132`, "triage README rewrite into the lifecycle backlog"). **All four are annotations. Not one is a close.** The draft note had claimed the opposite — that scope distinguishes closing from annotating, citing `2c8999ce governance(backlog): close I153` — which is `backlog`-scoped and therefore says nothing about the ID-scoped case. The claim was wrong and was caught only by running the count.
 - **Why T71 and I156 never warned is incidental, not a discrimination the check made.** Both rows had already moved to §2.5 by the time the scan existed, and T79 only warns for rows still in a lane. So the true independent sample is 3 occasions, not 4, and the check has been silent on two of them for reasons unrelated to their content.
 - **What a fix would have to key on, if one is ever warranted.** On the evidence to date `governance(<row-ID>)` has never once meant "this row's work shipped", so excluding that shape from pass 1 would have cost nothing and prevented this warning. That is a defensible rule at N=3 and a premature one at N=1 — which is the whole reason this is a note and not a row. The `docs()` exclusion is not a precedent to copy: `docs()` was excluded because it is purely this repo's *closing* verb, i.e. the inverse property, measured at ~5 false positives if included.
+
+## Deferred from: code review of T103 (2026-08-30)
+- source_spec: `_bmad-output/implementation-artifacts/spec-t103-sprint-status-owed-close.md`
+  summary: sprint-status last-write-wins is computed across parsed rows only, so if a key's final occurrence is unrecognized an earlier `done` value wins and the scan's conclusion can contradict YAML's.
+  evidence: Verified in Round 2 — `a: done` followed by `a: "backlog"` yields `0 live stories` while YAML's effective value is `backlog`. Not silent (the line is named in the unrecognized bucket) and reachable only through malformed YAML, so deferred rather than fixed.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-t103-sprint-status-owed-close.md`
+  summary: a `done` sprint-status key and a live key that derive the same story id are treated independently, so the live one can warn while another key marks that id done.
+  evidence: Raised by the Round 2 edge-case pass and confirmed reachable. Left open because the semantics are genuinely ambiguous — two keys sharing an id prefix may be two stories or one — and picking a rule needs an operator decision, not a patch.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-t103-sprint-status-owed-close.md`
+  summary: the outside-the-block residue predicate keys on the lowercase-slug shape, so a de-indented key with uppercase or underscores (`Dist-2-5-x:`, `dist_2_5_x:`) is still dropped with no trace.
+  evidence: Round 3 adversarial review, verified. Narrow because real story keys are lowercase slugs, but it means "a truncated parse is loud whatever truncated it" would be an overclaim — the code comment now states the limit explicitly instead.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-t103-sprint-status-owed-close.md`
+  summary: a two-space scalar key under a sibling top-level block is now reported as stranded, contradicting the frozen I/O matrix row that says keys under `action_items:` are ignored.
+  evidence: Round 3, reproduced — `action_items:` followed by `  fake-2-2-not-a-story: backlog` yields one outside-the-block entry. Latent today only because `action_items:` is a list-of-maps, i.e. protected by data shape rather than design. Resolving it means choosing between the conservation law and a frozen matrix row, which is an operator decision.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-t103-sprint-status-owed-close.md`
+  summary: `epic` is the only population exit that is counted but never named, so an epic-guard regression shows only as a shifted count with no baseline to compare against.
+  evidence: Round 3. All 38 epic-kind keys on the live tree are genuine today, so no misclassification exists; the observability gap is the finding. Naming 38 keys on every run would be noise, so the fix is not obvious and was not attempted at the round cap.
