@@ -341,7 +341,7 @@ NFR10 exists to stop this story becoming it.
 
 | Story | Status | Relationship |
 |---|---|---|
-| `dist-2-2` / `dist-2-3` | backlog, unauthored | **2.3 rewrites `files[]`** — drops `scripts/migration/format-conversion/`, adds `_bmad/bme/covenant/` and `docs/migration/`, and wires the link checker into this same harness. Landing 2.4 first means the harness is edited twice and 2.3 must re-run against your check. Derive `files[]` at runtime, never snapshot it. |
+| `dist-2-2` / `dist-2-3a` / `dist-2-3b` / `dist-2-3c` | authored 2026-08-31, all `ready-for-dev` | **2.3 was SPLIT into three, one per ADR-002 class**, and all three rewrite `files[]`: 2.3a drops `scripts/migration/format-conversion/`, 2.3b adds `_bmad/bme/covenant/`, 2.3c adds `docs/migration/`. 2.3c also wires the link checker into **this same harness**. This story shipped first, so the harness is edited again by each of them and each must re-run against this check. **Derive `files[]` at runtime, never snapshot it** — that instruction is now load-bearing three times over. |
 | `dist-2-5` | backlog | Consumes this story's red output. **FR18 must not land here** (NFR10). |
 | `dist-2-6` | **re-authored 2026-08-30** | Wires this check into the verdict and turns it green with FR14. Its AC8 requires the assertion to test **invocability**, which is why AC3 above was amended. If AC3 ships as amended, 2.6 wires it unchanged; if it ships against presence only, 2.6 must amend the shipped assertion. **Exactly one of those must happen.** |
 | `I153` | Fast Lane, 4.8 | Closed by AC5. |

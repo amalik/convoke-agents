@@ -642,53 +642,29 @@ So that "required reading" is readable by someone who installed from npm.
 **When** its scope is documented
 **Then** the story states explicitly that it CANNOT detect a file read at runtime but absent from the package — that class is Story 2.4's — so no one assumes coverage it does not have
 
-### Story 2.3: Apply the shipped-link policy and wire the gate in, blocking
+### Stories 2.3a / 2.3b / 2.3c: Apply the shipped-link policy, then wire the gate in
 
-*No FR of its own; it is what makes FR12 enforceable. Scope set by [ADR-002](adr/4-0-1/adr-002-shipped-link-policy.md), accepted 2026-08-20 — option (d), three classes. **20 broken relative links across 4 files**, enumerated mechanically against the packed tarball.*
+*No FR of their own; together they are what makes FR12 enforceable. Scope set by [ADR-002](adr/4-0-1/adr-002-shipped-link-policy.md) — option (d), three classes — with its four open either/ors settled 2026-08-31 by **Amendments 1 and 2**.*
 
-As a Convoke operator,
-I want the link gate actually enforced,
-So that the next broken reference is caught by CI rather than by someone reading carefully.
+> **SPLIT 2026-08-31 into three stories** (readiness Finding 7). The single story bundled six independently-risky workstreams — a package-boundary change, a 54-file move over a rename path with a proven corruption mode (BUG-13), a CHANGELOG policy, a README asymmetry, four undecided policy questions, and the gate wiring — behind one gate-wiring step that could not proceed until every one of them succeeded. The seam is **one story per ADR-002 class**, with the wiring attached to the last.
+>
+> **Count corrected.** ADR-002 records "20 broken relative links across 4 files". Measured against a real `npm pack` of `4.0.1` on 2026-08-31: **27 across 4 files** — fence- and code-span-aware. A naive scan reports 29 across 6, because two of them are markdown *examples* inside fenced blocks. Both prior figures are wrong in opposite directions and the whole discrepancy is fence handling; see Story 2.2's AC4.
 
-**Acceptance Criteria:**
+**Finding trajectory — derive each number at implementation time:**
 
-**Given** Class 1 — 13 of the 20 findings are in `scripts/migration/format-conversion/`, one-off i97 tooling that no `bin` references and that reaches the tarball only because `files[]` carries `scripts/` wholesale
-**When** this story completes
-**Then** that directory is excluded from `files[]`, and no link in it is edited — the package boundary was misplaced, not the links
-**And** it is verified first that nothing in `scripts/update/**`, no bin, and no test resolves into that directory at runtime
+```
+2.2 red demonstration   27  across 4 files
+after 2.3a (Class 1)     9  (-18)  scripts/migration/format-conversion/{README.md,fixup-checklist.md}
+after 2.3b (Class 2)     4  (-5)   _bmad/bme/README.md
+after 2.3c (Class 3)     0  (-4)   CHANGELOG.md          <- gate wired here
+```
 
-**Given** Class 2 — the Covenant and the Compliance Checklist are normative required reading (`project-context.md:5`) living in generated-artifact space
-**When** this story completes
-**Then** both are moved to `_bmad/bme/covenant/covenant-operator.md` and `_bmad/bme/covenant/compliance-checklist.md`, and `_bmad/bme/covenant/` is added to `files[]`
-**And** all **47** referencing files are updated, enumerated by `grep -rl 'convoke-covenant-operator\|convoke-spec-covenant-compliance-checklist'` re-run at implementation time rather than trusting this count
-**And** the four non-prose references are handled explicitly: `_bmad/_config/taxonomy.yaml:56` (names the file in the `covenant` artifact-type definition), `scripts/audit/reference-integrity.js`, `scripts/migration/format-conversion/covenant-survival-harness.js` — **update it** (settled 2026-08-31, Amendment 2(3): the reference is a comment citation, not a resolved path, so nothing breaks if missed — but I97 Epic 2 is 2/7 done with five conversions still to run through that directory, so it is live tooling, not finished tooling), and `tests/lib/artifact-utils.test.js`
+**Story 2.3a — Exclude the conversion tooling from the package.** Class 1, 18 of 27. The directory reaches the tarball only because `files[]` carries `scripts/` wholesale; the boundary was misplaced, not the links, so **no link inside it is edited**. Verify by execution that no bin, nothing under `scripts/update/**`, and no test resolves into it — reusing `assert-installed-tree.js` rather than writing a second walker. **It stays in the repository and stays maintained:** ADR-002 calls it "one-off i97 tooling", which is true of its purpose and misleading about its state — I97 Epic 2 is **2 of 7** done, with five conversions still to run through it (Amendment 2(3)).
 
-**Given** BUG-13 — `updateLinks` (`scripts/lib/artifact-utils.js:1497`, called at `:1635`) applies every rename-map entry sequentially over the same buffer, so an entry can rewrite text a previous entry produced
-**When** a two-entry rename map is applied across 47 files
-**Then** the story ASSERTS that neither new basename equals the other entry's old basename, and verifies the rewritten links by re-running the tarball checker — it does not assume the collision cannot occur. BUG-13 is Open (5.7) and out of scope for 4.0.1
+**Story 2.3b — Move the Covenant into source-owned space.** Class 2, 5 of 27. The move ADR-002's operator decision named, to `_bmad/bme/covenant/`, plus one new `files[]` entry. **Reference count 47 (2026-08-20) → 53 (08-30) → 54 (08-31)** — roughly one per day, because ordinary planning work keeps citing it, so this story gets monotonically more expensive and should be sequenced early. BUG-13's sequential rename-map collision is **asserted against**, not assumed away, and the rewrite verified by re-running 2.2's checker. The README's other two links are settled: `project-context.md` becomes a validated absolute URL; the `./config.yaml` link is **dropped and the file not shipped**, because it is a generated installer artifact carrying user-specific values (Amendment 2(1)). **This story is also the first real exercise of Story 2.2's absolute-URL clause** — the Covenant is one of the ten self-referential URLs shipping today, and this story moves its target.
 
-**Given** Class 3 — `CHANGELOG.md` carries 3 findings
-**When** this story completes
-**Then** `docs/migration/` is added to `files[]` — the migration guide is the single most useful link an upgrading npm reader can follow — and the ADR link plus `docs/BMAD-METHOD-COMPATIBILITY.md` are **rendered as self-referential absolute URLs**, which [ADR-002 Amendment 1](adr/4-0-1/adr-002-shipped-link-policy.md) now validates by path resolution. *(Settled 2026-08-31, Amendment 2(2); all three paths verified to resolve.)*
+**Story 2.3c — Settle the CHANGELOG links and wire the gate in, blocking.** Class 3, the last 4, plus the wiring. `docs/migration/` is added to `files[]`; the ADR link and `docs/BMAD-METHOD-COMPATIBILITY.md` become absolute URLs, which Amendment 1 now **validates** — which is what removed the only objection to that option (Amendment 2(2)). **AC3 is a stop-gate:** the checker must be observed reporting **zero** findings, with output recorded, *before* the wiring diff is written; `fresh-install` gates every PR and `publish` needs it, so wiring while any class is incomplete blocks the repository. Then the gate is proven able to fail — plant a broken link, observe non-zero, restore, observe zero.
 
-**Given** `_bmad/bme/README.md` links `_bmad/bme/config.yaml`, which is not in `files[]` while the README itself is in the tarball
-**When** this story completes
-**Then** the link is **dropped and the config is NOT shipped** — `_bmad/bme/config.yaml` is a generated installer artifact carrying user-specific values (`user_name: Amalik`, `project_name: BMAD-Enhanced`), so shipping it would place one operator's config in every package. *(Settled 2026-08-31, Amendment 2(1).)*
-**And** its link to `project-context.md` becomes a **self-referential absolute URL**, validated by Amendment 1: contributor governance is repository-only and, unlike the Covenant, is not required reading for a user
-
-**Given** all 20 findings are resolved
-**When** this story completes
-**Then** the checker from Story 2.2 is wired into `try-fresh-install.sh` as a blocking check, in the same commit that turns it green — it is never merged non-blocking. A gate that runs and nobody watches is T32, the row this epic exists to close
-
-**Given** CR-README-D04 — `scripts/docs-audit.js`'s `checkBrokenLinks` skips `^https?://` entirely
-**When** any link is rewritten as an absolute URL
-**Then** FR12's checker validates the **self-referential** subset — `https://github.com/amalik/convoke-agents/blob/main/<path>` — by resolving `<path>` against the repository, while external absolute URLs stay permitted and unvalidated. *(Settled 2026-08-31 by [ADR-002 Amendment 1](adr/4-0-1/adr-002-shipped-link-policy.md). Scope this into **Story 2.2**, which writes the checker — not here, where it would arrive as rework.)*
-**And** the story records that CR-README-D04 **narrows rather than closes**: external URLs remain unvalidated by design
-**And** the 10 self-referential paths shipping today all resolve, so the checker goes in green — one of them is the Covenant, which Class 2 moves, so this check is what catches that move breaking its own link
-
-**Given** the package shrinks
-**When** this story completes
-**Then** `agent-surface-parity` and `fresh-install` are both re-run, since both assert against the packed tree
 
 ### Story 2.4: Assert the installed tree carries what was shipped
 
