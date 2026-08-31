@@ -661,7 +661,7 @@ So that the next broken reference is caught by CI rather than by someone reading
 **When** this story completes
 **Then** both are moved to `_bmad/bme/covenant/covenant-operator.md` and `_bmad/bme/covenant/compliance-checklist.md`, and `_bmad/bme/covenant/` is added to `files[]`
 **And** all **47** referencing files are updated, enumerated by `grep -rl 'convoke-covenant-operator\|convoke-spec-covenant-compliance-checklist'` re-run at implementation time rather than trusting this count
-**And** the four non-prose references are handled explicitly: `_bmad/_config/taxonomy.yaml:56` (names the file in the `covenant` artifact-type definition), `scripts/audit/reference-integrity.js`, `scripts/migration/format-conversion/covenant-survival-harness.js` (or let it go with the Class 1 exclusion — decide, do not drift), and `tests/lib/artifact-utils.test.js`
+**And** the four non-prose references are handled explicitly: `_bmad/_config/taxonomy.yaml:56` (names the file in the `covenant` artifact-type definition), `scripts/audit/reference-integrity.js`, `scripts/migration/format-conversion/covenant-survival-harness.js` — **update it** (settled 2026-08-31, Amendment 2(3): the reference is a comment citation, not a resolved path, so nothing breaks if missed — but I97 Epic 2 is 2/7 done with five conversions still to run through that directory, so it is live tooling, not finished tooling), and `tests/lib/artifact-utils.test.js`
 
 **Given** BUG-13 — `updateLinks` (`scripts/lib/artifact-utils.js:1497`, called at `:1635`) applies every rename-map entry sequentially over the same buffer, so an entry can rewrite text a previous entry produced
 **When** a two-entry rename map is applied across 47 files
@@ -669,12 +669,12 @@ So that the next broken reference is caught by CI rather than by someone reading
 
 **Given** Class 3 — `CHANGELOG.md` carries 3 findings
 **When** this story completes
-**Then** `docs/migration/` is added to `files[]` — the migration guide is the single most useful link an upgrading npm reader can follow — and the ADR link plus `docs/BMAD-METHOD-COMPATIBILITY.md` are dropped from the shipped CHANGELOG or rendered as absolute URLs with CR-README-D05's instability accepted on the record
+**Then** `docs/migration/` is added to `files[]` — the migration guide is the single most useful link an upgrading npm reader can follow — and the ADR link plus `docs/BMAD-METHOD-COMPATIBILITY.md` are **rendered as self-referential absolute URLs**, which [ADR-002 Amendment 1](adr/4-0-1/adr-002-shipped-link-policy.md) now validates by path resolution. *(Settled 2026-08-31, Amendment 2(2); all three paths verified to resolve.)*
 
 **Given** `_bmad/bme/README.md` links `_bmad/bme/config.yaml`, which is not in `files[]` while the README itself is in the tarball
 **When** this story completes
-**Then** the asymmetry is resolved deliberately — ship the config or drop the link — rather than left inherited
-**And** its link to `project-context.md` becomes an absolute URL or is dropped: contributor governance is repository-only and, unlike the Covenant, is not required reading for a user
+**Then** the link is **dropped and the config is NOT shipped** — `_bmad/bme/config.yaml` is a generated installer artifact carrying user-specific values (`user_name: Amalik`, `project_name: BMAD-Enhanced`), so shipping it would place one operator's config in every package. *(Settled 2026-08-31, Amendment 2(1).)*
+**And** its link to `project-context.md` becomes a **self-referential absolute URL**, validated by Amendment 1: contributor governance is repository-only and, unlike the Covenant, is not required reading for a user
 
 **Given** all 20 findings are resolved
 **When** this story completes
@@ -682,7 +682,9 @@ So that the next broken reference is caught by CI rather than by someone reading
 
 **Given** CR-README-D04 — `scripts/docs-audit.js`'s `checkBrokenLinks` skips `^https?://` entirely
 **When** any link is rewritten as an absolute URL
-**Then** either FR12's checker validates absolute URLs too, or the policy forbids them in shipped docs — converting a broken relative link into an unvalidated absolute one trades a detectable fault for an undetectable one
+**Then** FR12's checker validates the **self-referential** subset — `https://github.com/amalik/convoke-agents/blob/main/<path>` — by resolving `<path>` against the repository, while external absolute URLs stay permitted and unvalidated. *(Settled 2026-08-31 by [ADR-002 Amendment 1](adr/4-0-1/adr-002-shipped-link-policy.md). Scope this into **Story 2.2**, which writes the checker — not here, where it would arrive as rework.)*
+**And** the story records that CR-README-D04 **narrows rather than closes**: external URLs remain unvalidated by design
+**And** the 10 self-referential paths shipping today all resolve, so the checker goes in green — one of them is the Covenant, which Class 2 moves, so this check is what catches that move breaking its own link
 
 **Given** the package shrinks
 **When** this story completes
@@ -815,30 +817,39 @@ So that authoring a new team does not crash the export in a way that surfaces no
 **Then** it completes without throwing
 **And** a committed test covers that input, demonstrated failing against the pre-fix code
 
-### Story 2.8: Repair the broken dependencies in the shipped manifest
+### Story 2.8: Validate the manifest set that actually seeds
 
-*Covers FR15 / I134. Moved here from a former Epic 3 when that epic was subtracted — the manifest ships and its dependencies do not resolve, which is this epic's subject read literally.*
+*Covers FR15 / I134 — **rescoped 2026-08-31**. Was "Repair the broken dependencies in the shipped manifest"; that premise is refuted and its ACs asked for work that cannot be done. Story file renamed accordingly.*
 
-As a Convoke operator,
-I want the skill manifest's dependencies to resolve,
-So that a skill I invoke does not reach for a template that is not there.
+> **Why the rescope.** The four `[BROKEN-DEP]` findings are accurate and **unrepairable**: upstream `a16fa340` deleted Convoke's vendored copy of upstream skill content (1,227 files changed, tracked `SKILL.md` 122 → 44), and the surviving copies live only in **gitignored** `.claude/skills/`. Repointing `path` at those copies was done 2026-08-10 (`4ed770a0`) and reverted within the hour (`8f2fbda0`) because it "produces a false green". `convoke-note-backlog-completed-archive.md:355` closed this on 2026-08-15 as NOT A DEFECT and was kept as a warning — *"this trap has now caught three attempts"*. The 2026-08-30 readiness assessment was the next attempt; `55506ea8` doubted the premise and `075651e5` reverted the ADR written to answer an already-answered question. **The real question was never how to repair the deps — it is what tree the check validates.** Operator ruling 2026-08-31: the tree an operator gets.
 
-**Acceptance Criteria:**
+As a Convoke maintainer,
+I want the classification ratchet to check the manifest rows an operator actually receives,
+So that a green check means something and a red one is repairable.
 
-**Given** the four `[BROKEN-DEP]` findings recorded in `.github/expected-classification-findings.txt` — `bmad-check-implementation-readiness` → `../templates/readiness-report-template.md`; `bmad-create-epics-and-stories` → `../templates/epics-template.md`; `wds-4-ux-design` → `../templates/page-specification.template.md` and `./templates/diagnostic-report-template.md`
-**When** this story runs
-**Then** each is individually confirmed and resolved — path corrected, or dependency dropped if the template is genuinely gone
-**And** the evidence for each is recorded separately. The row notes these are "consistent with upstream `a16fa340` deleting vendored content", but consistent is not confirmed
+**Acceptance Criteria (summary — see `dist-2-8-validate-the-manifest-set-that-actually-seeds.md` for AC1-AC5 in full):**
 
-**Given** the baseline file can only shrink
-**When** a dependency is fixed
-**Then** its line is deleted from `.github/expected-classification-findings.txt` in the same commit — Test 1b fails on any NEW finding and also fails on a FIXED one until its line is removed
-**And** no line is ever ADDED to that file to make a test pass
-
-**Given** NFR6
-**When** the set is enumerated
-**Then** it is derived from the manifest at implementation time, not from the count "four" in this document
-
-**Given** `portability-validation` Test 1 was skipped from 2026-06-27 until I123 un-quarantined it on 2026-08-14 — so nothing checked the manifest for roughly six weeks
+**Given** `refresh-installation.js:529-540` documents the shipped manifest as a **CANDIDATE list** (I139) and seeds a set **filtered by path existence**, printing the count to the operator at `:588`
 **When** this story completes
-**Then** it confirms Test 1 is running rather than skipped
+**Then** Test 1b validates that filtered set rather than the raw 106-row file, using the **installer's own predicate** rather than a reimplementation
+**And** Test 1a is untouched — it exercises the validator against the dependency-closed fixture and answers a different question
+
+**Given** all four `[BROKEN-DEP]` findings sit on rows whose `path` does not resolve, so none of them ever seeds
+**When** Test 1b validates the filtered set
+**Then** those findings are no longer reported and their lines are deleted from `.github/expected-classification-findings.txt`
+**And** the file is **kept, not deleted** — an empty baseline is the goal state; a missing baseline is a removed gate, and the ratchet must still fail on any new hard finding against a seeding row
+
+**Given** filtering is precisely the operation that could reduce the validated set to nothing
+**When** Test 1b runs
+**Then** it asserts a **floor** on the filtered count, not merely non-zero — measured at **31** rows today (`core` 11, `bmm` 1, `bme` 19), re-derived at implementation time
+
+**Given** this story **reduces** what Test 1b examines in a clean checkout, from 106 candidate rows to ~31
+**When** this story completes
+**Then** the loss is recorded at the test: a broken dependency on a **non-seeding** upstream row will no longer be caught in CI
+**And** so is why it is acceptable — those rows' content is gitignored, so CI could never validate them; the coverage given up was already unreachable
+**And** so is the mitigation — Test 1a's fixture is where upstream-shaped coverage gets added back
+
+**Given** the repoint trap has caught three attempts and lives only in an archive
+**When** this story completes
+**Then** a comment at Test 1b names the trap, both commits and the archive line, so the next reader meets the warning where the temptation is
+**And** no manifest `path` cell is edited by this story

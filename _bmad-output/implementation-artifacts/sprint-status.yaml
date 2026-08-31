@@ -924,7 +924,7 @@ development_status:
   dist-2-5-close-bug-19-ship-the-registry-and-fix-the-label-that-contradicts-it: backlog
   dist-2-6-make-portability-reachable-and-wire-the-installed-tree-assertion-in: ready-for-dev
   dist-2-7-escape-every-interpolated-regex-in-the-exporter: backlog
-  dist-2-8-repair-the-broken-dependencies-in-the-shipped-manifest: backlog
+  dist-2-8-validate-the-manifest-set-that-actually-seeds: ready-for-dev
   dist-epic-2-retrospective: optional
   dist-epic-1b: done
   dist-1b-1-close-the-downgrade-guard-fail-open-and-prove-it-on-a-runner: done
