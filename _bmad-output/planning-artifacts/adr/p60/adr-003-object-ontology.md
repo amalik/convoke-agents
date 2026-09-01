@@ -77,6 +77,18 @@ Governance coverage tracks migration-tool scope. The one directory the migrator 
 
 *Method note: an earlier attempt at these figures returned 0% because the harness read `parseFrontmatter`'s return object directly instead of its `.data` property. The table above uses `.data`. Both the engine's own run and this measurement are reproducible with the commands cited.*
 
+*Second method note, added 2026-09-01 (T109). The file counts in the table above were enumerated
+**recursively**; the shipped scanner they are attributed to was **not**. `scanArtifactDirs`
+(`artifact-utils.js`) did a single `readdir` and dropped every non-file entry, so at the time this
+ADR was written `portfolio-engine.js` saw **111** files in `planning-artifacts`, not 140 — the
+30-file gap being this ADR's own directory (`adr/**`, 15 files) and the sharded PRD (14 files). The
+governance **test** cited at `:333` was applied correctly; only the enumeration differed. **The
+recursive figures are the truthful ones and the table stands unchanged.** The instrument was the
+thing that was wrong, and it was fixed by BUG-21 / story `scan-1-1` on 2026-09-01, after which the
+engine reports 141 for that directory and 16 ADRs where it had reported 1. Figures either side of
+that commit are not comparable — see
+[`scan-1-1-instrument-figures-before-after-2026-09-01.md`](../../../implementation-artifacts/scan-1-1-instrument-figures-before-after-2026-09-01.md).*
+
 ---
 
 ## Decision

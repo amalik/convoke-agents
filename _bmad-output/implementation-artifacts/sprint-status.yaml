@@ -935,7 +935,7 @@ development_status:
   gen-1-1-extract-generated-artifact-writes-behind-a-deliberate-path: done
   gen-epic-1-retrospective: done
   scan-epic-1: in-progress
-  scan-1-1-make-the-artifact-scanner-see-subdirectories: ready-for-dev
+  scan-1-1-make-the-artifact-scanner-see-subdirectories: review
   scan-epic-1-retrospective: optional
 
 action_items:

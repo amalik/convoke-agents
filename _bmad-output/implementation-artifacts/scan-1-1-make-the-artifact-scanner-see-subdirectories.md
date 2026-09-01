@@ -1,6 +1,10 @@
+---
+baseline_commit: 98c8503c10cd04f59e214af6d56dc441129c8b19
+---
+
 # Story 1.1: Make the artifact scanner see subdirectories
 
-Status: ready-for-dev
+Status: review
 
 <!-- baseline_commit deliberately ABSENT — it is `dev-story`'s field, stamped at implementation start. -->
 
@@ -164,30 +168,30 @@ engine sees 111
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Prove it red (AC1)**
-  - [ ] Add a nested fixture to the existing `scanArtifactDirs` describe block in
+- [x] **Task 1 — Prove it red (AC1)**
+  - [x] Add a nested fixture to the existing `scanArtifactDirs` describe block in
         `tests/lib/artifact-utils.test.js:274` — extend the `before()` hook, do **not** build a
         second fixture tree
-  - [ ] Run it against unfixed code, capture the failure output into the Dev Agent Record
-- [ ] **Task 2 — Make the scanner recursive (AC2, AC3)**
-  - [ ] Rewrite the loop in `scripts/lib/artifact-utils.js:91-113` to walk depth-first
-  - [ ] Add `relPath`; leave `filename`, `dir`, `fullPath` semantics untouched
-  - [ ] Update the JSDoc `@returns` at `:88` to declare the new field
-  - [ ] Skip dot-entries at every level
-- [ ] **Task 3 — Guard the destructive consumer (AC4)**
-  - [ ] Constrain `groupByKey` / its caller in `scripts/archive.js:28-37, 104-113` to same-parent grouping
-  - [ ] Add the non-grouping test
-  - [ ] Re-read `archive.js`'s `--apply` path and confirm no other place assumes flatness
-- [ ] **Task 4 — Before/after diff (AC5)**
-  - [ ] Capture BEFORE figures at `HEAD~` (stash or worktree — do not hand-transcribe)
-  - [ ] Capture AFTER figures
-  - [ ] Write `scan-1-1-instrument-figures-before-after-2026-09-01.md`
-- [ ] **Task 5 — Consumers and suite (AC6)**
-  - [ ] Read all four call sites before deciding nothing else changes:
+  - [x] Run it against unfixed code, capture the failure output into the Dev Agent Record
+- [x] **Task 2 — Make the scanner recursive (AC2, AC3)**
+  - [x] Rewrite the loop in `scripts/lib/artifact-utils.js:91-113` to walk depth-first
+  - [x] Add `relPath`; leave `filename`, `dir`, `fullPath` semantics untouched
+  - [x] Update the JSDoc `@returns` at `:88` to declare the new field
+  - [x] Skip dot-entries at every level
+- [x] **Task 3 — Guard the destructive consumer (AC4)**
+  - [x] Constrain `groupByKey` / its caller in `scripts/archive.js:28-37, 104-113` to same-parent grouping
+  - [x] Add the non-grouping test
+  - [x] Re-read `archive.js`'s `--apply` path and confirm no other place assumes flatness
+- [x] **Task 4 — Before/after diff (AC5)**
+  - [x] Capture BEFORE figures at `HEAD~` (stash or worktree — do not hand-transcribe)
+  - [x] Capture AFTER figures
+  - [x] Write `scan-1-1-instrument-figures-before-after-2026-09-01.md`
+- [x] **Task 5 — Consumers and suite (AC6)**
+  - [x] Read all four call sites before deciding nothing else changes:
         `archive.js:104`, `artifact-utils.js:1202`, `artifact-utils.js:1498`, `portfolio-engine.js:267`
-  - [ ] `npm run lint` clean, then full suite green
-- [ ] **Task 6 — T109 (AC7)**
-- [ ] **Task 7 — Close BUG-21** per §*Closing a Row*: flip status, delete from §2.2, append receipt
+  - [x] `npm run lint` clean, then full suite green
+- [x] **Task 6 — T109 (AC7)**
+- [x] **Task 7 — Close BUG-21** per §*Closing a Row*: flip status, delete from §2.2, append receipt
       to §2.5, add a Change Log entry. Run `node scripts/audit/backlog-integrity.js` — it must PASS.
 
 ---
@@ -262,8 +266,187 @@ already imported.
 
 ### Agent Model Used
 
+claude-opus-5[1m]
+
 ### Debug Log References
+
+**RED, captured before any production line changed (AC1).** `node --test --test-name-pattern "scanArtifactDirs"`
+against unfixed code — 3 of 4 new assertions failed:
+
+```
+✖ scans specified directories            actual: undefined, expected: 'test-file.md'   (relPath absent)
+✖ descends into subdirectories at unbounded depth
+      AssertionError: a file two levels deep must be returned
+✖ returns every non-dotted file in the tree and nothing else
+      actual:   [ 'test-file.md' ]
+      expected: [ 'adr-003-nested.md', 'test-file.md' ]
+```
+
+**AC4's guard mutation-proven.** The same-parent key was reverted to `f.baseName` and the suite re-run:
+
+```
+with guard REMOVED:
+  ✖ does not group same-named dated files across directories
+  ✔ still supersedes within a single directory
+  ✔ moves nothing in dry-run
+```
+
+One test red, the other green — the guard is load-bearing and did not disable supersession
+altogether, which is the failure mode a naive fix produces. Guard restored.
+
+**Final:** `npm run lint` clean (`--max-warnings 0`). `npm test` → 1958 tests, **1957 pass, 0 fail**,
+1 skipped (pre-existing).
 
 ### Completion Notes List
 
+**The fix.** `scanArtifactDirs` walks depth-first, sorted at each level so the returned order stays
+deterministic. `dir` is unchanged — the top-level include directory — and a new `relPath` carries
+location. Dot-prefixed entries are skipped at *every* level; pre-fix that check only ever ran
+against top-level names because the walk never went deeper.
+
+**Why `dir` was not changed, and it was the right call.** Both hazards named in the story turned out
+to be real in the code, and one was worse than the story described: `archive.js` did not merely
+group by `dir`, it **rebuilt the source path** as `path.join(fullDir, filename)` and ignored
+`fullPath` entirely. For a nested dated file that names a path which does not exist — or, worse, a
+different file that happens to share the basename. Fixed in both the supersession and the rename
+branches; `fullDir` became unused and was removed.
+
+**AC6 — `updateLinks`' widened blast radius, stated rather than shipped unremarked.** `updateLinks`
+rewrites links across everything the scanner returns, so it now also rewrites links inside the 15
+ADRs and the 14 sharded-PRD parts. **This is intended.** Those files carry real cross-references and
+were previously skipped by every rename, which means any historical rename silently left them
+dangling — a contributor to the corpus's 673 broken references. Nothing in this story performs a
+rename, so no link was rewritten by it.
+
+**Two collateral finds, neither absorbed silently.**
+1. `excludes _archive by default` asserted `results.length === 1`. That is a census, not a test — it
+   failed the moment the fixture grew. Converted to property assertions (`derive-counts-from-source`).
+2. `tests/audit/installed-tree.test.js`'s **rot alarm fired correctly**: the curated citation
+   `scripts/lib/artifact-utils.js:125` no longer pointed at the `taxonomy.yaml` read after the
+   rewrite added 29 lines above it. Verified via `git show HEAD:` that it is the *same statement*
+   moved to `:154`, not a changed one, and updated the citation. The compensating control worked
+   exactly as its comment says it should.
+
+**Measured effect (AC5).** `planning-artifacts` 111 → 141 files; ADRs **1 → 16**; governed 186 → 201;
+ungoverned 182 → 196; coverage **48.95% → 48.43%**; migrate scope 144 → 174; `archive.js` dry-run plan
+byte-identical before and after. **Coverage fell, and that is the correct direction** — the metric
+was reporting 48.95% over a corpus it could not fully see. The `portfolio.total` delta of +35 is
+fully accounted for: +30 `planning-artifacts`, +5 `exp3-smoke-test/`, the only other directory with
+nested non-dotted files. Full record in
+`scan-1-1-instrument-figures-before-after-2026-09-01.md`, which carries the discontinuity warning.
+
+**AC7 discharged.** ADR-003 gains a dated second method note: its recursive enumeration was the
+truthful one, the instrument was wrong, the table stands unchanged. T109 closed on that basis.
+BUG-21 closed. Both rows MOVED to §2.5 per Closing a Row, with a Change Log entry;
+`backlog-integrity.js` PASS (779 rows, 10 tables).
+
+**Newly surfaced by the fix — NOT ruled here, flagged for the operator.**
+`planning-artifacts/archive/convoke-prd-bmad-v6.3-adoption.md` has malformed frontmatter (bad
+indentation of a mapping entry, 412:42). It has been unreadable for as long as it has existed and
+nothing reported it, because nothing could see it. It also sits in a **second archive** nested inside
+a scanned directory — `excludeDirs` matches top-level include-dir names only, so `_archive/` is
+skipped and `planning-artifacts/archive/` is not. AC2 fixes the `excludeDirs` contract as unchanged,
+so this ships as-is rather than being widened mid-implementation. **P59 already records the
+underlying problem** (*"`archived` became a PLACE not a STATE: two archives"*) and this is its first
+visible instance; whether an archived document belongs in the governance denominator is **OQ-4**.
+
+**Not done, deliberately.** No file moved or renamed. No backfill. No `taxonomy.yaml` class field
+(ADR-003 D2, separate story). `EXCLUDE_DIRS` untouched.
+
 ### File List
+
+| File | Change |
+|---|---|
+| `scripts/lib/artifact-utils.js` | MODIFIED — `scanArtifactDirs` recurses; `relPath` added; JSDoc rewritten |
+| `scripts/archive.js` | MODIFIED — same-parent supersession guard; `from` uses `fullPath` in both the archive and rename branches; unused `fullDir` removed |
+| `scripts/audit/lib/installed-tree.js` | MODIFIED — stale citation `artifact-utils.js:125` → `:154` |
+| `tests/lib/artifact-utils.test.js` | MODIFIED — nested + dotted fixture; 3 new tests; census assertion converted to property assertions |
+| `tests/integration/archive-nested-supersession.test.js` | NEW — AC4, 3 tests, dry-run only |
+| `_bmad-output/implementation-artifacts/scan-1-1-instrument-figures-before-after-2026-09-01.md` | NEW — AC5 record |
+| `_bmad-output/planning-artifacts/adr/p60/adr-003-object-ontology.md` | MODIFIED — second method note (AC7) |
+| `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` | MODIFIED — BUG-21 + T109 closed to §2.5, Change Log entry |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | MODIFIED — story status |
+| `tests/lib/manifest.test.js` | MODIFIED — 2 tests for nested `oldPath`/`newPath` and the flat fallback (R1 #1) |
+| `_bmad-output/implementation-artifacts/scan-1-1-make-the-artifact-scanner-see-subdirectories.md` | MODIFIED — this record |
+
+## Senior Developer Review (AI)
+
+**Reviewed:** 2026-09-01 · **Rounds:** 2 (converged) · **Outcome:** Changes Requested → all applied
+**Diff:** uncommitted working tree, 11 files. **Set-equality check run** (`code-review-convergence`):
+reviewed set == committed set, empty diff.
+
+### Round 1 — 1 HIGH, 1 MEDIUM, 3 LOW (4 dismissed)
+
+- [x] **HIGH #1 — `migrate-artifacts` carried the same path-reconstruction defect this story fixed
+  in `archive.js`.** `artifact-utils.js` built `oldPath` and `newPath` as `` `${dir}/${filename}` ``,
+  flattening every nested file. Demonstrated: the dry-run printed
+  `planning-artifacts/adr-001-retire-badges-pipeline.md`, which does not exist — the file is at
+  `planning-artifacts/adr/4-0-1/`. Those strings are not labels: `oldPath` is rejoined to read the
+  file (`:1258`) and as the **`git mv` SOURCE** (`:1427`), and `newPath` is its destination, so a
+  name fix would have lifted an ADR out of its initiative folder. Latent today — all 30 nested files
+  return `AMBIGUOUS` with `newPath: null`, `Rename: 0`/`Conflict: 0` verified both sides — and live
+  the moment an operator resolves one via `--resolution-file`, whose documented `"dir/file.md"` key
+  named non-existent paths for all 30. **Fixed:** both now carry the subdirectory, POSIX-separated,
+  with a `relPath || filename` fallback so every hand-built `fileInfo` keeps the flat contract.
+  *This is the finding that justified the round: AC3 named the defect class and I fixed one of its
+  two instances.*
+- [x] **MEDIUM #2 — the recursion introduced a new crash path.** `fs.stat` follows symlinks;
+  pre-recursion a symlinked directory failed `isFile()` and was skipped harmlessly. Executed against
+  a fixture with a link to an ancestor: **`THREW: ELOOP`** — out of the scanner and therefore out of
+  every governance instrument. A non-looping link is quieter and worse: its files count twice.
+  **Fixed** with `fs.readdir(..., { withFileTypes: true })`; `Dirent` classifies with lstat
+  semantics, so symlinks are skipped, restoring the pre-recursion property and dropping a per-entry
+  `fs.stat`.
+- [x] **LOW #3 — `originalDir` used `path.join`**, so Windows backslashes would land inside a
+  markdown table cell in the archive `INDEX`. **Fixed:** POSIX-joined.
+- [x] **LOW #5 — the walk comment overstated continuity.** Order is deterministic, but the
+  *sequence* changed: nested entries interleave alphabetically with top-level ones. No consumer
+  orders on it (all four checked). **Fixed:** comment now says so plainly.
+- [ ] **LOW #4 — `archive.js --rename` convention warnings 358 → 373.** `Files to rename: 0` both
+  sides, so nothing destructive changed; the 15 new warnings correctly name files that lack category
+  prefixes. **Deferred** as reporting noise, not a defect.
+
+**Dismissed (4):** duplicate `adr-001` basenames colliding in `groupByKey` (the parent-dir key
+separates them); recursion depth (corpus max is 3); `parseFilename` spread clobbering `parentRel`
+(no key overlap); `EXCLUDE_DIRS` not matching nested `planning-artifacts/archive/` — already recorded
+above as OQ-4 territory, deliberately unruled, so not a review finding.
+
+### Round 2 — 0 HIGH, 2 LOW
+
+Triggered by Round 1's HIGH, and scoped to the patches **plus the three tests written to answer
+them**, which `code-review-convergence` classifies as unreviewed text by default.
+
+- **LOW** — the symlink test early-returns on `EPERM`/`ENOSYS`, a vacuous pass on Windows without
+  developer mode. All 8 CI jobs are `ubuntu-latest`, so the guard is always exercised where it runs.
+  Accepted.
+- **LOW** — the `installed-tree` rot-alarm citation moved twice in one story (`:125` → `:154` →
+  `:164`). Both were pure line shifts, each confirmed against `git show HEAD:` to be the same
+  statement relocated. Line-fragile by design; recorded, no action.
+
+**Confirmed as an improvement rather than a risk:** `detectCollisions` keys on `newPath`, so two
+documents with the same canonical name in different folders no longer collide falsely.
+
+**Convergence:** Round 2 produced no HIGH and introduced no structural change, so Round 3 is not
+triggered. Review closed at Round 2.
+
+### Both patches are mutation-proven
+
+| Mutant | Killed by | Other tests |
+|---|---|---|
+| `oldPath`/`newPath` flattened again | *preserves the subdirectory…* | *falls back to filename* stays green |
+| `withFileTypes` → `fs.stat` | *does not follow symlinked directories* | — |
+
+Neither guard is a check that cannot fail (`verification-must-be-falsifiable`).
+
+### Post-review gates
+
+`npm run lint` clean · `npm test` **1961 tests, 1960 pass, 0 fail**, 1 skipped ·
+`backlog-integrity.js` PASS (779 rows, 10 tables) · `archive.js` dry-run clean ·
+instrument figures unchanged by the patches (141 files, 16 ADRs, 48.43%).
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-09-01 | Code review Rounds 1-2, converged. R1: 1 HIGH (migrate-artifacts carried the same path-flattening defect — `git mv` source/destination), 1 MEDIUM (symlink recursion threw ELOOP), 3 LOW; 4 applied, 1 deferred. R2: 0 HIGH, closed. Both patches mutation-proven. 1960 tests pass. |
+| 2026-09-01 | Story implemented. Scanner recurses (BUG-21); `archive.js` guarded against cross-directory supersession and two path reconstructions fixed; before/after instrument figures recorded; ADR-003 method note appended; BUG-21 and T109 closed. 1957 tests pass, 0 fail, lint clean. |
