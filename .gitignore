@@ -74,3 +74,7 @@ env/
 
 # Diagnostics written by scripts/audit/try-fresh-install.sh on failure (T25)
 .fresh-install-logs/
+
+# Runtime state written by convoke-update (scripts/update/lib/backup-manager.js).
+# Recreated locally on demand — machine state, not repository content.
+_bmad-output/.backups/
