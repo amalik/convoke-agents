@@ -3,19 +3,22 @@ initiative: convoke
 artifact_type: adr
 qualifier: knowledge-governance-proposal-location
 created: '2026-09-01'
-status: draft
-decision_status: proposed
+status: active
+decision_status: accepted
+accepted: '2026-09-01'
 schema_version: 1
 related_initiative: 'P60 — Knowledge & Documentation Governance'
 related_decision: 'ADR-001 (OQ-3); ADR-002; ADR-003; ADR-004'
 related_epic: none
 supersedes: none
 qualifier_role: winston-architect
+signoff_by: amalik
 ---
 
 # ADR-005: Proposal Location — Draft Is a Status, Audience Decides the Tree
 
-**Status:** **PROPOSED** (2026-09-01)
+**Status:** **ACCEPTED** (2026-09-01) — signed off by Amalik
+**Proposed:** 2026-09-01
 **Initiative:** Knowledge & Documentation Governance (**P60**)
 **Decision owner:** Amalik
 **Resolves:** ADR-001 open question **OQ-3** — the last question blocking P60
@@ -92,7 +95,7 @@ explicitly — so the heading is the error. Recorded here rather than fixed sile
 
 ## Decision
 
-**Proposed: `draft` is a status, never a location. The tree is chosen by audience, not by maturity.
+**Decided: `draft` is a status, never a location. The tree is chosen by audience, not by maturity.
 `drafts/` and `draft-proposals/` are dissolved.**
 
 **D1 — `draft` is a status, not a place.** This is ADR-004's own test applied to the opposite case, and
