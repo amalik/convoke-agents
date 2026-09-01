@@ -25,11 +25,17 @@ const SKIP_ROOT = ['.backups', '.logs', '_archive', ...SCAN_DIRS,
   'brainstorming', 'design-artifacts', 'journey-examples',
   'project-documentation', 'test-artifacts'];
 
+// Keyed on the immediate parent directory as well as the basename (BUG-21). Supersession
+// MOVES the older file, and `groupByKey` has no notion of depth — once `scanArtifactDirs`
+// started recursing, two same-named dated files in different subdirectories would have grouped
+// as versions of each other and one would have been archived. Nothing in `planning-artifacts`
+// subdirectories is dated today, so the hazard was latent, not live; it is guarded rather than
+// measured away, because this is a destructive operation.
 function groupByKey(files) {
   const groups = {};
   for (const f of files) {
     if (!f.isDated) continue;
-    const key = f.baseName;
+    const key = `${f.parentRel || '.'}/${f.baseName}`;
     if (!groups[key]) groups[key] = [];
     groups[key].push(f);
   }
@@ -106,11 +112,15 @@ Dry-run by default — shows what would happen without changing anything.
   const filesByDir = {};
   for (const f of scannedFiles) {
     if (!filesByDir[f.dir]) filesByDir[f.dir] = [];
-    filesByDir[f.dir].push({ ...parseFilename(f.filename), dir: f.dir, fullPath: f.fullPath });
+    // `parentRel` is the directory holding the file, relative to the include dir — '.' for a
+    // top-level file. It is what keeps supersession from crossing directories.
+    const parentRel = path.dirname(f.relPath);
+    filesByDir[f.dir].push({
+      ...parseFilename(f.filename), dir: f.dir, relPath: f.relPath, parentRel, fullPath: f.fullPath
+    });
   }
 
   for (const dir of SCAN_DIRS) {
-    const fullDir = path.join(outputDir, dir);
     const files = filesByDir[dir] || [];
 
     // Find superseded versions
@@ -124,8 +134,15 @@ Dry-run by default — shows what would happen without changing anything.
       for (const old of older) {
         actions.archive.push({
           filename: old.filename,
-          originalDir: dir,
-          from: path.join(fullDir, old.filename),
+          // `relPath`, not `filename`: a nested file's real location. Rebuilding the source as
+          // `fullDir + filename` pointed at a path that does not exist — or, worse, at a
+          // different file that happened to share the basename.
+          // POSIX-joined: this string is rendered into a markdown table cell in the archive
+          // INDEX, where a Windows backslash would read as an escape. R1 finding #3.
+          originalDir: old.parentRel && old.parentRel !== '.'
+            ? `${dir}/${old.parentRel.split(path.sep).join('/')}`
+            : dir,
+          from: old.fullPath,
           to: path.join(archiveDir, 'superseded', old.filename),
           reason: `Superseded by ${newest.filename}`
         });
@@ -146,8 +163,8 @@ Dry-run by default — shows what would happen without changing anything.
             filename: f.filename,
             newName,
             dir,
-            from: path.join(fullDir, f.filename),
-            to: path.join(fullDir, newName)
+            from: f.fullPath,
+            to: path.join(path.dirname(f.fullPath), newName)
           });
         }
         if (!NAMING_PATTERN.test(f.filename) && !f.isUppercase) {
