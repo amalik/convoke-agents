@@ -31,7 +31,7 @@ Two things are wrong with that framing, and correcting them is what makes the qu
 
 ### 1. The cited assumption is not an ontological one
 
-`portfolio-engine.js:62-68` is a doc comment on `STORY_PREFIX_MAP`. It states that story files use compact filename prefixes and live in `implementation-artifacts/`. That is a **filing convention**, not a data model.
+`portfolio-engine.js:63-68` is a doc comment on `STORY_PREFIX_MAP`. It states that story files use compact filename prefixes and live in `implementation-artifacts/`. That is a **filing convention**, not a data model.
 
 ### 2. The two models do not exist in code
 
@@ -126,14 +126,100 @@ Governance coverage tracks migration-tool scope. The one directory the migrator 
 
 ## Open questions
 
-- **OQ-2a — Which of the 23 `artifact_types` are receipts.** A one-time classification; should be ruled with the type list in front of the operator, not inferred here.
+- **OQ-2a — ✅ RESOLVED 2026-08-31** (operator: Amalik). See §Amendment 1 below.
 - **OQ-2b — Whether coverage reports one figure or two** (D3 permits either).
 - **Whether `EXCLUDE_DIRS` survives** as a separate concept once class is explicit, or collapses into it.
 
 ---
+
+
+---
+
+## Amendment 1 — OQ-2a resolved (2026-08-31)
+
+**Ruled by Amalik on measured evidence, not on the type names.**
+
+### The measurement
+
+Directory placement predicts class for 41 of 43 types in use. Fifteen sit at 96–100% in
+`implementation-artifacts` (`story` 27, `retrospective` 8, `validation-evidence` 2, `protocol` 2, and
+eleven singletons); twenty-six sit at 0% (`epic` 20, `adr` 19, `arch` 10, `prd` 8, `decision` 5,
+`persona` 5, and twenty more). Only `report` (23) and `note` (20) were mixed.
+
+Reproduce by reading `artifact_type` from frontmatter (`parseFrontmatter(...).data`) across
+`implementation-artifacts`, `planning-artifacts`, `vortex-artifacts` and `gyre-artifacts`, excluding
+`_archive`.
+
+### R1 — The two mixed types
+
+**`report` is a receipt. `note` is a product.**
+
+A readiness report assesses a state that existed on a day; it becomes historical rather than
+out-of-date, which is the receipt definition. `note` covers spike findings, announcement drafts and
+decision notes — subject-keyed documents that can go stale.
+
+A date in the filename was tested as a discriminator and **rejected**:
+`convoke-report-implementation-readiness-*` appears both dated and undated for the same kind of
+artifact, so the date is naming drift, not a semantic signal.
+
+### R2 — The 20 undeclared types are normalized, not declared
+
+The taxonomy declares 23 types; the corpus uses **43**. The 20 undeclared cover 30 files, 14 of them
+singletons, and include near-synonyms (`retro`/`retrospective`; four `validation-*` variants). They
+fold into declared types rather than doubling `taxonomy.yaml`.
+
+**A correction applied while writing this amendment.** The normalization map proposed at ruling time
+sent `pr-link`, `release-record`, `state-snapshot` and `session-log` to `note`. That is wrong under
+R1: those four are 100% `implementation-artifacts` and receipt-shaped, and R1 makes `note` a product.
+They go to `report`. The two rulings were taken in one sitting and the map predated the first of them.
+
+| Undeclared type | Files | → | Class |
+|---|---|---|---|
+| `retrospective`, `retro` | 9 | `report` | receipt |
+| `validation-evidence`, `validation-log`, `validation-report`, `external-validation-report`, `evidence` | 6 | `report` | receipt |
+| `pr-link`, `release-record`, `state-snapshot`, `session-log`, `spike-result` | 5 | `report` | receipt |
+| `implementation-readiness-report`, `implementation-readiness-memo` | 2 | `report` | receipt |
+| `protocol`, `recruitment-protocol` | 3 | `spec` | product |
+| `pretest-scoring-sheet` | 2 | `spec` | product |
+| `decision-note` | 1 | `decision` | product |
+| `registry`, `distillate` | 2 | `note` | product |
+
+### R3 — Resulting class assignment over the 23 declared types
+
+**Receipts:** `story`, `report`.
+**Products:** the remaining 21.
+
+The split is deliberately small. A receipt is a record of a work event; nearly every other type names
+a subject that can go out of date.
+
+### Why the edge cases matter — D1 vindicated
+
+`implementation-readiness-report` and `implementation-readiness-memo` are point-in-time assessments
+that live in `planning-artifacts` at 0% `impl`. `sprint` reads 0% `impl`, yet `sprint-status.yaml`
+sits in `implementation-artifacts` and is keyed by work item (uncounted above: the census is `.md`
+only).
+
+In both cases **location says product and nature says receipt.** Had ADR-003 taken Alternative C —
+directory-as-class — these would have been misfiled by construction. They are the strongest argument
+on record for **D1**, that class is a property of the artifact.
+
+### Residual — not decided here
+
+- **`sprint`** is classified `product` above on its `.md` evidence alone, which the `sprint-status.yaml`
+  counter-example undercuts. It is the one assignment in R3 that should be revisited when the class
+  field is implemented, and it is called out rather than quietly resolved.
+- **The 30-file normalization is work, not a ruling.** R2 fixes the destination; executing it is a
+  frontmatter migration that belongs in a story or lane row, with the singleton judgement calls
+  (`registry`, `distillate`, `protocol`) reviewable there rather than settled by this amendment.
+- **OQ-2b** (one coverage figure or two) remains open.
+
+**This amendment does not sign the ADR.** D1–D5 remain `proposed`; OQ-2a is ruled, the decision it
+sits inside is not.
+
 
 ## Change log
 
 | Date | Change | By |
 |------|--------|-----|
 | 2026-08-31 | Initial draft. Proposed, unsigned. Reframes OQ-2: the two models were never implemented; the distinction exists as three inconsistent directory scopes. | Winston (architect role) |
+| 2026-08-31 | **Amendment 1 — OQ-2a resolved** by Amalik: `report`=receipt, `note`=product; the 20 undeclared types normalize into declared ones rather than being declared. Corrects the ruling-time map, which sent four receipt-shaped types to `note` before `note` was ruled a product. D1–D5 remain proposed. | Winston (architect role) |
