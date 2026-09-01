@@ -3,20 +3,22 @@ initiative: convoke
 artifact_type: adr
 qualifier: knowledge-governance-object-ontology
 created: '2026-08-31'
-status: draft
-decision_status: proposed
+status: active
+decision_status: accepted
+accepted: '2026-08-31'
 schema_version: 1
 related_initiative: 'P60 — Knowledge & Documentation Governance'
 related_decision: 'ADR-001 (OQ-2); ADR-002'
 related_epic: none
 supersedes: none
 qualifier_role: winston-architect
-signoff_by: pending
+signoff_by: amalik
 ---
 
 # ADR-003: Object Ontology — Work Receipts Are a Class, Declared Once
 
-**Status:** **PROPOSED** (2026-08-31) — awaiting sign-off
+**Status:** **ACCEPTED** (2026-08-31) — signed off by Amalik
+**Proposed:** 2026-08-31
 **Initiative:** Knowledge & Documentation Governance (**P60**)
 **Decision owner:** Amalik
 **Resolves:** ADR-001 open question **OQ-2**
@@ -79,7 +81,7 @@ Governance coverage tracks migration-tool scope. The one directory the migrator 
 
 ## Decision
 
-**Proposed: work receipts are an explicit artifact class, declared once in `taxonomy.yaml`, read by every instrument that scopes the corpus. Receipts are exempt from governance-metadata expectations and from the coverage denominator; they remain in scope for archival and for activity inference.**
+**Decided: work receipts are an explicit artifact class, declared once in `taxonomy.yaml`, read by every instrument that scopes the corpus. Receipts are exempt from governance-metadata expectations and from the coverage denominator; they remain in scope for archival and for activity inference.**
 
 **D1 — The class is a property of the artifact, not of its directory.** `taxonomy.yaml` gains a class per `artifact_type` (`product` | `receipt`). Directory location stops being the carrier of the distinction.
 
@@ -213,8 +215,10 @@ on record for **D1**, that class is a property of the artifact.
   (`registry`, `distillate`, `protocol`) reviewable there rather than settled by this amendment.
 - **OQ-2b** (one coverage figure or two) remains open.
 
-**This amendment does not sign the ADR.** D1–D5 remain `proposed`; OQ-2a is ruled, the decision it
-sits inside is not.
+**Note on sequence.** This amendment was written while D1–D5 were still `proposed`, and said so: OQ-2a
+was ruled before the decision it sits inside. Both were signed the same day — see the Change log. The
+ordering is recorded rather than tidied away, because the classification in R1–R3 stands on its own
+measured evidence and did not depend on D1–D5 being accepted.
 
 
 ## Change log
@@ -223,3 +227,4 @@ sits inside is not.
 |------|--------|-----|
 | 2026-08-31 | Initial draft. Proposed, unsigned. Reframes OQ-2: the two models were never implemented; the distinction exists as three inconsistent directory scopes. | Winston (architect role) |
 | 2026-08-31 | **Amendment 1 — OQ-2a resolved** by Amalik: `report`=receipt, `note`=product; the 20 undeclared types normalize into declared ones rather than being declared. Corrects the ruling-time map, which sent four receipt-shaped types to `note` before `note` was ruled a product. D1–D5 remain proposed. | Winston (architect role) |
+| 2026-08-31 | **Accepted by Amalik.** D1–D5 signed as drafted, no amendment to the decision. `status` `draft` → `active`, `decision_status` `proposed` → `accepted` — the two-axis split ADR-002 decides, applied here. OQ-2b and the residuals in Amendment 1 remain open; an accepted ADR with open questions follows ADR-001's precedent. | Amalik |
