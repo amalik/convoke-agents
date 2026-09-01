@@ -287,6 +287,25 @@ describe('scanArtifactDirs', () => {
     await fs.writeFile(path.join(tmpDir, '_bmad-output', 'planning-artifacts', 'test-file.md'), '# test');
     await fs.ensureDir(path.join(tmpDir, '_bmad-output', '_archive'));
     await fs.writeFile(path.join(tmpDir, '_bmad-output', '_archive', 'archived.md'), '# archived');
+
+    // BUG-21 fixture: the corpus nests. `planning-artifacts/adr/<initiative>/` holds 15 of the
+    // 16 ADRs and `convoke-prd-.../` holds a 14-file sharded PRD, none of which the scanner
+    // returned. Two levels deep, plus a dotted entry at depth 1 and a dotted DIRECTORY, because
+    // the pre-fix skip only ever ran against top-level names.
+    await fs.ensureDir(path.join(tmpDir, '_bmad-output', 'planning-artifacts', 'adr', 'p60'));
+    await fs.writeFile(
+      path.join(tmpDir, '_bmad-output', 'planning-artifacts', 'adr', 'p60', 'adr-003-nested.md'),
+      '# nested adr'
+    );
+    await fs.writeFile(
+      path.join(tmpDir, '_bmad-output', 'planning-artifacts', 'adr', '.hidden-nested.md'),
+      '# hidden'
+    );
+    await fs.ensureDir(path.join(tmpDir, '_bmad-output', 'planning-artifacts', '.hidden-dir'));
+    await fs.writeFile(
+      path.join(tmpDir, '_bmad-output', 'planning-artifacts', '.hidden-dir', 'buried.md'),
+      '# should never be returned'
+    );
   });
 
   after(async () => {
@@ -295,14 +314,74 @@ describe('scanArtifactDirs', () => {
 
   it('scans specified directories', async () => {
     const results = await scanArtifactDirs(tmpDir, ['planning-artifacts']);
-    assert.equal(results.length, 1);
-    assert.equal(results[0].filename, 'test-file.md');
-    assert.equal(results[0].dir, 'planning-artifacts');
+    const top = results.find(r => r.filename === 'test-file.md');
+    assert.ok(top, 'top-level file must still be returned');
+    assert.equal(top.dir, 'planning-artifacts');
+    assert.equal(top.relPath, 'test-file.md', 'relPath of a top-level file is its basename');
+  });
+
+  // BUG-21. Pre-fix this returned 1 file: `scanArtifactDirs` did one readdir and dropped every
+  // entry failing `stat.isFile()`, so `adr/` died at the isFile check and nothing below it was
+  // ever reached.
+  it('descends into subdirectories at unbounded depth', async () => {
+    const results = await scanArtifactDirs(tmpDir, ['planning-artifacts']);
+    const nested = results.find(r => r.filename === 'adr-003-nested.md');
+    assert.ok(nested, 'a file two levels deep must be returned');
+    assert.equal(nested.dir, 'planning-artifacts',
+      'dir stays the top-level include dir — portfolio-engine keys folder-default attribution ' +
+      'off it and archive.js rebuilds a filesystem path from it');
+    assert.equal(nested.relPath, path.join('adr', 'p60', 'adr-003-nested.md'));
+    assert.equal(nested.fullPath,
+      path.join(tmpDir, '_bmad-output', 'planning-artifacts', 'adr', 'p60', 'adr-003-nested.md'));
+  });
+
+  it('skips dot-prefixed files and directories at every level', async () => {
+    const results = await scanArtifactDirs(tmpDir, ['planning-artifacts']);
+    const names = results.map(r => r.filename);
+    assert.ok(!names.includes('.hidden-nested.md'), 'dotted file below the top level is skipped');
+    assert.ok(!names.includes('buried.md'), 'nothing inside a dotted directory is returned');
+  });
+
+  // R1 finding #2. `fs.stat` follows symlinks; `Dirent` does not. With stat, a link to an
+  // ancestor threw ELOOP out of the scanner — and out of every instrument that calls it.
+  // Pre-recursion this was safe by accident: a symlinked directory failed `isFile()`.
+  it('does not follow symlinked directories', async function () {
+    const linkDir = path.join(tmpDir, '_bmad-output', 'planning-artifacts', 'loop');
+    try {
+      await fs.symlink(path.join(tmpDir, '_bmad-output', 'planning-artifacts'), linkDir, 'dir');
+    } catch (err) {
+      // Windows without developer mode cannot create symlinks; the guard is still correct
+      // there because Dirent classification is platform-independent.
+      if (err.code === 'EPERM' || err.code === 'ENOSYS') return;
+      throw err;
+    }
+    try {
+      const results = await scanArtifactDirs(tmpDir, ['planning-artifacts']);
+      assert.ok(
+        !results.some(r => r.relPath.split(path.sep).includes('loop')),
+        'nothing reached through the symlink may appear in results'
+      );
+      // The real point: this resolves at all. Pre-patch it threw ELOOP.
+      assert.ok(results.some(r => r.filename === 'test-file.md'));
+    } finally {
+      await fs.remove(linkDir);
+    }
+  });
+
+  it('returns every non-dotted file in the tree and nothing else', async () => {
+    const results = await scanArtifactDirs(tmpDir, ['planning-artifacts']);
+    // Derived from the fixture, not hardcoded: derive-counts-from-source.
+    const expected = ['adr-003-nested.md', 'test-file.md'];
+    assert.deepEqual(results.map(r => r.filename).sort(), expected);
   });
 
   it('excludes _archive by default', async () => {
     const results = await scanArtifactDirs(tmpDir, ['planning-artifacts', '_archive']);
-    assert.equal(results.length, 1); // only planning-artifacts, _archive excluded
+    // Asserts the property, not a count. The count was `1` until BUG-21's fixture grew the
+    // tree — a census, not a test (`derive-counts-from-source`).
+    assert.ok(!results.some(r => r.dir === '_archive'), '_archive must not appear in results');
+    assert.ok(!results.some(r => r.filename === 'archived.md'), 'archived file must not be returned');
+    assert.ok(results.some(r => r.dir === 'planning-artifacts'), 'planning-artifacts is still scanned');
   });
 
   it('handles non-existent directories gracefully', async () => {

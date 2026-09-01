@@ -129,6 +129,40 @@ describe('buildManifestEntry', () => {
     assert.equal(entry.newPath, 'planning-artifacts/gyre-prd.md');
   });
 
+  // R1 finding #1. `oldPath` is not a label — it is rejoined into a filesystem path to READ
+  // the file and, on `--apply`, as the `git mv` SOURCE. Built as `dir/filename` it flattened
+  // every nested file: the six `adr-001-*.md` live in six different folders, and the path
+  // named by a flattened entry either does not exist or belongs to another document.
+  // `newPath` had the mirrored fault — a name fix would have lifted an ADR out of its
+  // initiative folder into `planning-artifacts/`.
+  it('preserves the subdirectory in oldPath and newPath for a nested file', async () => {
+    const fileInfo = {
+      filename: 'prd-gyre.md',
+      dir: 'planning-artifacts',
+      relPath: path.join('adr', 'p60', 'prd-gyre.md'),
+      fullPath: path.join(fixtureDir, 'governed-gyre-prd.md'),
+    };
+    const entry = await buildManifestEntry(fileInfo, taxonomy, projectRoot);
+    assert.equal(entry.action, 'RENAME');
+    assert.equal(entry.oldPath, 'planning-artifacts/adr/p60/prd-gyre.md',
+      'oldPath must name where the file actually is');
+    assert.equal(entry.newPath, 'planning-artifacts/adr/p60/gyre-prd.md',
+      'a rename is a rename, not a relocation — the file keeps its directory');
+  });
+
+  it('falls back to filename when a caller supplies no relPath', async () => {
+    // Every pre-existing caller and test hand-builds fileInfo without relPath; the flat
+    // contract must survive unchanged.
+    const fileInfo = {
+      filename: 'prd-gyre.md',
+      dir: 'planning-artifacts',
+      fullPath: path.join(fixtureDir, 'governed-gyre-prd.md'),
+    };
+    const entry = await buildManifestEntry(fileInfo, taxonomy, projectRoot);
+    assert.equal(entry.oldPath, 'planning-artifacts/prd-gyre.md');
+    assert.equal(entry.newPath, 'planning-artifacts/gyre-prd.md');
+  });
+
   it('fully-governed + filename matches governance convention -> action SKIP', async () => {
     // gyre-prd.md fixture has initiative:gyre frontmatter AND filename matches convention
     // inferArtifactType('gyre-prd.md') won't match type at start (gyre is initiative, not type)

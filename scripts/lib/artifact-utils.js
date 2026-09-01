@@ -83,14 +83,61 @@ function toLowerKebab(filename) {
 /**
  * Scan artifact directories and return file inventory.
  *
+ * Recurses to unbounded depth (BUG-21). Before that fix this did a single `readdir` and
+ * dropped every entry failing `isFile()`, so a subdirectory terminated the walk: the 15 ADRs
+ * under `planning-artifacts/adr/**` and the 14-file sharded PRD were invisible to all three
+ * governance instruments. The failure was silent AND flattering — hiding ungoverned files
+ * removes them from the coverage denominator, so the metric improved as documents vanished.
+ *
+ * `dir` is deliberately the top-level include directory, never the nested path. Two consumers
+ * depend on that: `portfolio-engine.js` keys `PORTFOLIO_FOLDER_DEFAULT_MAP` and its `parent-dir`
+ * attribution step off `fileInfo.dir`, and `archive.js` both groups by it and rebuilds a
+ * filesystem path from it with `path.join(outputDir, dir)`. Use `relPath` for location.
+ *
  * @param {string} projectRoot - Absolute path to project root
  * @param {string[]} includeDirs - Directory names to scan (relative to _bmad-output/)
  * @param {string[]} [excludeDirs=['_archive']] - Directory names to exclude from results
- * @returns {Promise<Array<{filename: string, dir: string, fullPath: string}>>}
+ * @returns {Promise<Array<{filename: string, dir: string, relPath: string, fullPath: string}>>}
+ *   `filename` is the basename; `dir` the top-level include directory; `relPath` the path
+ *   relative to that directory (equal to `filename` for a top-level file).
  */
 async function scanArtifactDirs(projectRoot, includeDirs, excludeDirs = ['_archive']) {
   const outputDir = path.join(projectRoot, '_bmad-output');
   const results = [];
+
+  // Depth-first, sorted at each level, so the walk is reproducible run to run
+  // (`fixture-determinism`). Note the SEQUENCE differs from the pre-recursion version:
+  // nested entries now interleave alphabetically with top-level ones. No consumer orders
+  // on it — all four were checked — but do not assume the old sequence.
+  //
+  // `withFileTypes` is load-bearing, not a micro-optimisation. `Dirent` classifies with
+  // lstat semantics, so a symlink is neither `isDirectory()` nor `isFile()` and is skipped.
+  // With `fs.stat` the walk FOLLOWED symlinked directories: a link to an ancestor threw
+  // ELOOP out of every governance instrument, and a link to a real tree counted its files
+  // twice. Pre-recursion, symlinked directories failed the `isFile()` check harmlessly —
+  // this keeps that property instead of quietly widening it. R1 finding #2.
+  async function walk(absDir, dir, relDir) {
+    const entries = (await fs.readdir(absDir, { withFileTypes: true }))
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    for (const entry of entries) {
+      const name = entry.name;
+      // Applied at EVERY level, not just the top: `.hidden/` and `.hidden.md` are skipped
+      // wherever they appear. Pre-fix this ran only against top-level names because the walk
+      // never went deeper.
+      if (name.startsWith('.')) continue;
+
+      const fullPath = path.join(absDir, name);
+      const relPath = relDir ? path.join(relDir, name) : name;
+
+      if (entry.isDirectory()) {
+        await walk(fullPath, dir, relPath);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+
+      results.push({ filename: name, dir, relPath, fullPath });
+    }
+  }
 
   for (const dir of includeDirs) {
     if (excludeDirs.includes(dir)) continue;
@@ -98,15 +145,7 @@ async function scanArtifactDirs(projectRoot, includeDirs, excludeDirs = ['_archi
     const fullDir = path.join(outputDir, dir);
     if (!await fs.pathExists(fullDir)) continue;
 
-    const files = (await fs.readdir(fullDir)).sort();
-    for (const filename of files) {
-      if (filename.startsWith('.')) continue;
-      const fullPath = path.join(fullDir, filename);
-      const stat = await fs.stat(fullPath);
-      if (!stat.isFile()) continue;
-
-      results.push({ filename, dir, fullPath });
-    }
+    await walk(fullDir, dir, '');
   }
 
   return results;
@@ -925,8 +964,20 @@ async function getCrossReferences(targetFilename, scopeFiles, _projectRoot) {
  * @returns {Promise<import('./types').ManifestEntry>}
  */
 async function buildManifestEntry(fileInfo, taxonomy, projectRoot) {
-  const { filename, dir, fullPath } = fileInfo;
-  const oldPath = `${dir}/${filename}`;
+  const { filename, dir, relPath, fullPath } = fileInfo;
+  // `relPath`, not `filename`. `oldPath` is not a label: it is rejoined into a real
+  // filesystem path at `:1258` (read) and at `:1427` (`git mv` SOURCE), so flattening a
+  // nested file here names a path that does not exist — or a different file sharing the
+  // basename. Six ADRs are named `adr-001-*`. R1 finding #1; same defect class as the one
+  // `archive.js` carried.
+  //
+  // POSIX separators throughout, because downstream splits `oldPath` on '/' (`:1263`) and
+  // `path.join` normalizes either form when rebuilding an absolute path. `relPath` falls
+  // back to `filename` for any caller that hand-builds a fileInfo without it.
+  const relPosix = String(relPath || filename).split(path.sep).join('/');
+  const lastSlash = relPosix.lastIndexOf('/');
+  const parentPosix = lastSlash === -1 ? '' : relPosix.slice(0, lastSlash);
+  const oldPath = `${dir}/${relPosix}`;
 
   // Only process markdown files — YAML and other files are not migration targets
   if (!filename.endsWith('.md')) {
@@ -1015,7 +1066,10 @@ async function buildManifestEntry(fileInfo, taxonomy, projectRoot) {
     // generateNewFilename failed — treat as ambiguous rather than aborting the entire manifest
     return { ...base, newPath: null, action: 'AMBIGUOUS' };
   }
-  const newPath = `${dir}/${newFilename}`;
+  // Renaming is a rename, never a relocation: a nested file keeps its directory. Building
+  // this as `${dir}/${newFilename}` would have made `git mv` lift an ADR out of
+  // `adr/<initiative>/` into `planning-artifacts/` as a side effect of a name fix.
+  const newPath = parentPosix ? `${dir}/${parentPosix}/${newFilename}` : `${dir}/${newFilename}`;
 
   if (govState.state === 'fully-governed') {
     if (filename === newFilename) {
