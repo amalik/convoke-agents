@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>One of Sixteen — Party Mode, 2026-09-01</title>
+<style>
+  :root{
+    --bg:#0d1014; --bg2:#141a21; --ink:#e8eef4; --dim:#8b98a8; --faint:#5a6678;
+    --rule:#212932; --paige:#c792ea; --john:#f0a04b; --winston:#6ea8fe;
+    --mary:#7ee0a8; --amelia:#ff7b72; --amalik:#ffd166;
+    --dead:#2a2f38; --live:#ffd166;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,-apple-system,"Segoe UI",Inter,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(ellipse 80% 45% at 50% -8%, #171f2b 0%, transparent 70%);
+  }
+  .wrap{max-width:840px;margin:0 auto;padding:0 22px 120px}
+  a{color:var(--winston)}
+
+  header{padding:92px 0 30px;text-align:center}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--faint)}
+  h1{font-size:clamp(40px,9vw,80px);line-height:.95;margin:.24em 0 .16em;font-weight:700;letter-spacing:-.035em}
+  h1 em{font-style:normal;background:linear-gradient(115deg,var(--live),var(--amelia));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--dim);max-width:600px;margin:0 auto;font-size:17px}
+
+  /* ---- ADR grid ---- */
+  .adrbox{margin:52px 0 16px;padding:34px 26px 26px;background:var(--bg2);
+    border:1px solid var(--rule);border-radius:14px;text-align:center}
+  .adrgrid{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin:0 0 22px}
+  .adr{width:38px;height:50px;border-radius:4px;background:var(--dead);
+    border:1px solid #333a45;position:relative;opacity:.5}
+  .adr.lit{background:linear-gradient(160deg,#3a2f12,#6b5316);border-color:var(--live);opacity:1;
+    box-shadow:0 0 22px rgba(255,209,102,.35);animation:pulse 3.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 18px rgba(255,209,102,.28)}50%{box-shadow:0 0 30px rgba(255,209,102,.5)}}
+  .adrcap{font-family:var(--mono);font-size:12px;color:var(--faint);letter-spacing:.05em}
+  .adrcap b{color:var(--live);font-weight:600}
+
+  /* ---- bars ---- */
+  .bars{margin:44px 0;padding:30px 26px;background:var(--bg2);border:1px solid var(--rule);border-radius:14px}
+  .bars h3{margin:0 0 4px;font-size:15px;letter-spacing:.02em}
+  .bars .note{color:var(--faint);font-size:13px;margin:0 0 24px;font-family:var(--mono)}
+  .bar{display:grid;grid-template-columns:200px 1fr 62px;gap:12px;align-items:center;margin:9px 0;
+    font-family:var(--mono);font-size:12.5px}
+  .bar .nm{color:var(--dim);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar .tr{background:#181e26;border-radius:3px;height:20px;overflow:hidden}
+  .bar .fl{height:100%;border-radius:3px;background:linear-gradient(90deg,#2c3644,#3d4b5e);
+    animation:grow 1.3s cubic-bezier(.2,.8,.2,1) both}
+  .bar.hot .fl{background:linear-gradient(90deg,#7a2f2c,var(--amelia))}
+  .bar.hot .nm{color:var(--amelia)}
+  .bar .vl{color:var(--faint);text-align:right}
+  .bar.hot .vl{color:var(--amelia)}
+  @keyframes grow{from{width:0 !important}}
+
+  /* ---- dialogue ---- */
+  h2{font-size:13px;font-family:var(--mono);letter-spacing:.2em;text-transform:uppercase;
+    color:var(--faint);margin:70px 0 22px;padding-bottom:11px;border-bottom:1px solid var(--rule)}
+  .turn{display:grid;grid-template-columns:34px 1fr;gap:15px;margin:0 0 26px}
+  .av{font-size:21px;line-height:1.3;text-align:center;user-select:none}
+  .who{font-family:var(--mono);font-size:11.5px;letter-spacing:.11em;text-transform:uppercase;
+    margin-bottom:5px;font-weight:600}
+  .paige .who{color:var(--paige)} .john .who{color:var(--john)}
+  .winston .who{color:var(--winston)} .mary .who{color:var(--mary)}
+  .amelia .who{color:var(--amelia)} .amalik .who{color:var(--amalik)}
+  .said{color:#d5dde6}
+  .said code{font-family:var(--mono);font-size:.88em;background:#1b222b;padding:1.5px 5px;
+    border-radius:3px;color:#b9c6d4}
+  .stage{color:var(--faint);font-style:italic;font-size:14px;margin:0 0 24px 49px}
+  blockquote{margin:26px 0 26px 49px;padding:2px 0 2px 18px;border-left:2px solid var(--rule);
+    color:var(--dim);font-size:15px}
+
+  .pull{margin:56px 0;padding:38px 30px;text-align:center;background:
+    linear-gradient(160deg,rgba(255,123,114,.07),rgba(255,209,102,.05));
+    border:1px solid #33272a;border-radius:14px}
+  .pull p{font-size:clamp(20px,3.6vw,28px);line-height:1.3;margin:0;font-weight:600;letter-spacing:-.015em}
+  .pull .attr{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--faint);margin-top:18px}
+
+  table{width:100%;border-collapse:collapse;margin:26px 0;font-size:14px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  td code{font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+  .ok{color:var(--mary)} .no{color:var(--amelia)}
+
+  footer{margin-top:84px;padding-top:30px;border-top:1px solid var(--rule);
+    text-align:center;color:var(--faint);font-size:13px;font-family:var(--mono);line-height:2}
+  .cast{display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:center;margin-bottom:24px;
+    font-family:var(--mono);font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Party Mode · Session 11 · 2026-09-01</div>
+  <h1>One of <em>Sixteen</em></h1>
+  <p class="sub">Amalik asked for a tidier repository. The room deleted 588 files,
+  and then found the instrument that had been reporting good news by looking away.</p>
+</header>
+
+<div class="adrbox">
+  <div class="adrgrid">
+    <div class="adr lit"></div>
+    <div class="adr"></div><div class="adr"></div><div class="adr"></div><div class="adr"></div>
+    <div class="adr"></div><div class="adr"></div><div class="adr"></div><div class="adr"></div>
+    <div class="adr"></div><div class="adr"></div><div class="adr"></div><div class="adr"></div>
+    <div class="adr"></div><div class="adr"></div><div class="adr"></div>
+  </div>
+  <p class="adrcap">Architecture Decision Records in the corpus: <b>16</b>.
+  Visible to the governance engine: <b>1</b>.</p>
+</div>
+
+<blockquote>
+The fifteen it cannot see include <strong>ADR-002</strong> and <strong>ADR-003</strong> —
+signed this week, ruling on the coverage metric that cannot see them.
+</blockquote>
+
+<h2>The directory nobody listed</h2>
+
+<div class="bars">
+  <h3>Tracked files under <code>_bmad-output/</code></h3>
+  <p class="note">measured 2026-09-01, before the first commit</p>
+  <div class="bar hot"><div class="nm">.backups/</div><div class="tr"><div class="fl" style="width:100%"></div></div><div class="vl">588</div></div>
+  <div class="bar"><div class="nm">implementation-artifacts/</div><div class="tr"><div class="fl" style="width:38.8%"></div></div><div class="vl">228</div></div>
+  <div class="bar"><div class="nm">_archive/</div><div class="tr"><div class="fl" style="width:31.1%"></div></div><div class="vl">183</div></div>
+  <div class="bar"><div class="nm">planning-artifacts/</div><div class="tr"><div class="fl" style="width:24%"></div></div><div class="vl">141</div></div>
+  <div class="bar"><div class="nm">vortex-artifacts/</div><div class="tr"><div class="fl" style="width:5.4%"></div></div><div class="vl">32</div></div>
+  <p class="note" style="margin:22px 0 0">
+  three identical <code>convoke-update</code> snapshots of <b>v1.5.2</b> — the product is 4.0.1 —
+  taken 73 and 78 seconds apart on 2026-03-07, byte-identical but for a timestamp</p>
+</div>
+
+<div class="turn paige">
+  <div class="av">📚</div>
+  <div><div class="who">Paige · Technical Writer</div>
+  <div class="said">There is exactly one index in the entire output corpus. It's
+  <code>_archive/INDEX.md</code>. Two hundred forty-four lines, 179 files, a reason column for
+  every entry. It is, honestly, excellent.</div></div>
+</div>
+<div class="turn mary">
+  <div class="av">📊</div>
+  <div><div class="who">Mary · Business Analyst</div>
+  <div class="said">You built a card catalogue for the room you're not supposed to enter.</div></div>
+</div>
+
+<h2>Where it turned</h2>
+
+<div class="turn amalik">
+  <div class="av">🟢</div>
+  <div><div class="who">Amalik</div>
+  <div class="said">I don't want to reinvent what we thought about a few days ago. I was just
+  wondering if we could make the repository look a bit more tidy until we implement
+  what we've planned.</div></div>
+</div>
+<p class="stage">The room had spent four turns designing a folder taxonomy nobody had asked for.</p>
+<div class="turn john">
+  <div class="av">📋</div>
+  <div><div class="who">John · Product Manager</div>
+  <div class="said">Then stop, everyone. He didn't ask us to rule OQ-4. Different question,
+  much smaller, and we were four turns into answering the wrong one.</div></div>
+</div>
+<div class="turn amelia">
+  <div class="av">💻</div>
+  <div><div class="who">Amelia · Senior Engineer</div>
+  <div class="said">Then I have to correct something first, and it's Paige's opening.
+  Those three empty documentation folders — <code>tracked = 0</code>, <code>on disk = 0</code>.
+  They are not in the repository. You measured with <code>ls</code>.</div></div>
+</div>
+<div class="turn paige">
+  <div class="av">📚</div>
+  <div><div class="who">Paige</div>
+  <div class="said">Then I'll take it, and I'll take it fully. The best thing I said tonight
+  was Winston's axis, and the first thing I said was noise.</div></div>
+</div>
+
+<h2>The blindness</h2>
+
+<div class="turn amelia">
+  <div class="av">💻</div>
+  <div><div class="who">Amelia</div>
+  <div class="said">I ran it rather than reading it. The scanner sees <code>111</code> files
+  in <code>planning-artifacts</code>. There are 141. ADR files seen: <strong>one</strong>.</div></div>
+</div>
+<div class="turn winston">
+  <div class="av">🏗️</div>
+  <div><div class="who">Winston · System Architect</div>
+  <div class="said">P60's OQ-0. <em>"Rename ADR dir to <code>p60/</code>."</em>
+  We foldered the ADRs and blinded the engine to them.</div></div>
+</div>
+<div class="turn mary">
+  <div class="av">📊</div>
+  <div><div class="who">Mary</div>
+  <div class="said">And here's why nobody noticed. Hiding files doesn't make coverage look
+  worse. It makes it look <em>better</em> — you removed ungoverned files from the denominator.
+  The instrument reported an improvement.</div></div>
+</div>
+
+<div class="pull">
+  <p>A blindness that flatters the metric<br>has no failure signal.</p>
+  <div class="attr">BUG-21 · filed 2026-09-01 · score 5.7</div>
+</div>
+
+<h2>What actually shipped</h2>
+
+<table>
+  <tr><th>Commit</th><th>Effect</th></tr>
+  <tr><td><code>ac47c202</code></td><td><span class="no">588 files, 48,933 lines, 3.2 MB deleted</span> — and gitignored, so they cannot return</td></tr>
+  <tr><td><code>bbd28df1</code></td><td>The ADR tree diagram at line 111 stops modelling runtime state as repository structure</td></tr>
+  <tr><td><code>73c5f978</code></td><td>P59 flipped <code>Blocked</code> → <code>Qualified</code>; its blocker had been ruled two days earlier</td></tr>
+  <tr><td><code>befedabb</code></td><td><span class="ok">BUG-21 + T109 filed</span> — the scanner, and the signed ADR whose table it cannot produce</td></tr>
+</table>
+
+<blockquote>
+Nothing was moved. Nothing was renamed. The 226 closed stories are where they were,
+and <strong>OQ-4 is still Amalik's to rule</strong> — which was the whole point of the fence.
+</blockquote>
+
+<h2>The last exchange</h2>
+
+<div class="turn mary">
+  <div class="av">📊</div>
+  <div><div class="who">Mary</div>
+  <div class="said">So the check that catches dangling references works, and the check that
+  would have caught fifteen invisible ADRs doesn't exist. That's the shape of the whole evening.</div></div>
+</div>
+<div class="turn winston">
+  <div class="av">🏗️</div>
+  <div><div class="who">Winston</div>
+  <div class="said">It's the shape of every evening in here.</div></div>
+</div>
+<p class="stage">Two sessions running that ended in commits instead of an epic.</p>
+<div class="turn john">
+  <div class="av">📋</div>
+  <div><div class="who">John</div>
+  <div class="said">Say that's a habit and I'll allow it.</div></div>
+</div>
+<div class="turn winston">
+  <div class="av">🏗️</div>
+  <div><div class="who">Winston</div>
+  <div class="said">Habits are things you can point at twice.</div></div>
+</div>
+
+<footer>
+  <div class="cast">
+    <span>📚 Paige</span><span>📋 John</span><span>🏗️ Winston</span>
+    <span>📊 Mary</span><span>💻 Amelia</span>
+  </div>
+  588 files removed · 16 ADRs, 1 visible · 2 rows filed<br>
+  Convoke · Party Mode · Session 11 · 2026-09-01
+</footer>
+
+</div>
+</body>
+</html>
