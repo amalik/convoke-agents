@@ -108,8 +108,8 @@ _bmad-output/
 │   ├── forge/
 │   ├── releases/              # Old release notes, publication records
 │   └── exploratory/           # One-off analyses, comparisons, brainstorms
-├── .backups/                  # Stays as-is (system-managed)
-└── .logs/                     # Stays as-is (system-managed)
+├── .backups/                  # Gitignored runtime state (convoke-update) — not tracked
+└── .logs/                     # Gitignored runtime state — not tracked
 ```
 
 **Archive criteria — MOVE when:**
