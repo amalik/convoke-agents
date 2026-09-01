@@ -4,7 +4,7 @@ baseline_commit: 98c8503c10cd04f59e214af6d56dc441129c8b19
 
 # Story 1.1: Make the artifact scanner see subdirectories
 
-Status: review
+Status: done
 
 <!-- baseline_commit deliberately ABSENT — it is `dev-story`'s field, stamped at implementation start. -->
 
@@ -448,5 +448,6 @@ instrument figures unchanged by the patches (141 files, 16 ADRs, 48.43%).
 
 | Date | Change |
 |---|---|
+| 2026-09-01 | Story closed `done` by operator. Epic `scan-epic-1` closed with it (single-story mini-epic). |
 | 2026-09-01 | Code review Rounds 1-2, converged. R1: 1 HIGH (migrate-artifacts carried the same path-flattening defect — `git mv` source/destination), 1 MEDIUM (symlink recursion threw ELOOP), 3 LOW; 4 applied, 1 deferred. R2: 0 HIGH, closed. Both patches mutation-proven. 1960 tests pass. |
 | 2026-09-01 | Story implemented. Scanner recurses (BUG-21); `archive.js` guarded against cross-directory supersession and two path reconstructions fixed; before/after instrument figures recorded; ADR-003 method note appended; BUG-21 and T109 closed. 1957 tests pass, 0 fail, lint clean. |

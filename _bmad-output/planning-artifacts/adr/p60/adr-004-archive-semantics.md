@@ -3,19 +3,22 @@ initiative: convoke
 artifact_type: adr
 qualifier: knowledge-governance-archive-semantics
 created: '2026-09-01'
-status: draft
-decision_status: proposed
+status: active
+decision_status: accepted
+accepted: '2026-09-01'
 schema_version: 1
 related_initiative: 'P60 — Knowledge & Documentation Governance'
 related_decision: 'ADR-001 (OQ-4); ADR-002; ADR-003'
 related_epic: none
 supersedes: none
 qualifier_role: winston-architect
+signoff_by: amalik
 ---
 
 # ADR-004: Archive Semantics — Archived Is a Place, and There Must Be One of Them
 
-**Status:** **PROPOSED** (2026-09-01)
+**Status:** **ACCEPTED** (2026-09-01) — signed off by Amalik
+**Proposed:** 2026-09-01
 **Initiative:** Knowledge & Documentation Governance (**P60**)
 **Decision owner:** Amalik
 **Resolves:** ADR-001 open question **OQ-4**
@@ -113,7 +116,7 @@ is not one place, and nothing could tell.
 
 ## Decision
 
-**Proposed: `archived` is a place. `_archive/` survives as a directory and becomes the only one. `status`
+**Decided: `archived` is a place. `_archive/` survives as a directory and becomes the only one. `status`
 gains no `archived` value and no file is backfilled. The archive index remains the state record.**
 
 **D1 — Archived is a place, not a status value.** No `archived` is added to either vocabulary. The
