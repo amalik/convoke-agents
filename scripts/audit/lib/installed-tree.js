@@ -83,7 +83,7 @@ const RUNTIME_DATA_FILES = [
   {
     file: '_bmad/_config/taxonomy.yaml',
     readSite: 'scripts/convoke-doctor.js:980',
-    alsoRead: ['scripts/lib/artifact-utils.js:125'],
+    alsoRead: ['scripts/lib/artifact-utils.js:164'],
     // `:1038` is the `mergeTaxonomy(projectRoot)` call that creates the file. The first
     // draft cited `:1040`, which is the `changes.push('Created …taxonomy.yaml…')` LOG
     // LINE inside `if (taxonomyResult.created)` — so the rot alarm passed merely because
