@@ -97,7 +97,24 @@ const TRACKED = [
   // mistake, not a snapshot refresh. Derived, not recalled: counted with this file's
   // own WRITE_OP_RE over the extracted range (639-794 pre-extraction), which held
   // exactly one match, `fs.writeFile(manifestPath, …)`.
-  { file: 'scripts/update/lib/refresh-installation.js', expected: 10 },
+  // 10 -> 13 on 2026-09-02 (story dist-2-5, Round 2 review). The three added ops are ONE
+  // atomic create-if-absent for `<projectRoot>/_bmad/_config/bmm-dependencies.csv`:
+  // `writeFileSync` to a sibling temp, `linkSync` to publish it (fails EEXIST if the
+  // registry already exists — that is the safety property, not the `lstat` above it), and
+  // `unlinkSync` to reclaim the temp name. Reviewed before accepting: `_bmad/_config/` is
+  // shared project metadata Convoke already owns and writes — the skill-manifest seed two
+  // comments above targets the same directory — and none of the three touches the forbidden
+  // upstream `_bmad/{bmm,cis,tea,bma,gds,bmb,wds,core}/` paths.
+  //
+  // WHY THE COUNT MOVED TWICE. An earlier revision of this same story delegated the write to
+  // `_atomicWrite` in `scripts/audit/audit-bmm-dependencies.js`, which returned this count to
+  // 10 and turned the gate GREEN — not because the write was safe, but because this checker
+  // inspects only the files in this array and counts only literal `fs.*` calls. Round 2
+  // reproduced a NEW write from this file into `_bmad/core/` passing green under that shape.
+  // Re-greening by relocation is precisely the fail-open the `gen-1.1` note above describes,
+  // so the primitives were brought back inline where they are counted. Derived, not recalled:
+  // counted with this file's own WRITE_OP_RE.
+  { file: 'scripts/update/lib/refresh-installation.js', expected: 13 },
   // Added 2026-08-26 (story gen-1.1). This is the other half of the 11 -> 10 above.
   // It is tracked rather than left alone because this checker inspects ONLY the files
   // in this array and has no assertion for write ops in an untracked file — so
@@ -108,6 +125,18 @@ const TRACKED = [
   // shared project metadata, the same target the entry above wrote for years, and
   // none of the forbidden upstream `_bmad/{bmm,cis,tea,bma,gds,bmb,wds,core}/` paths.
   { file: 'scripts/lib/agent-manifest-generator.js', expected: 1 },
+  // Added 2026-09-01, rationale corrected 2026-09-02 (story dist-2-5, Rounds 1-2). This
+  // file owns `_atomicWrite`, which writes into the OPERATOR'S project whenever
+  // `convoke-audit-bmm-deps` regenerates `_bmad/_config/bmm-dependencies.csv` — a write path
+  // that was never tracked here. It was found only because dist-2-5 briefly routed the
+  // installer's seed through it; that delegation has since been reverted (see the note on
+  // `refresh-installation.js` above), but the entry stays, because the CLI write it guards is
+  // real and predates this story. Reviewed before accepting: all three ops are `_atomicWrite`'s
+  // own temp-file dance — `writeFileSync` to `<target>.tmp-…`, `renameSync` onto the target,
+  // `unlinkSync` cleanup — all inside the directory the caller names, none touching the
+  // forbidden upstream paths. Derived, not recalled: counted with this file's own WRITE_OP_RE,
+  // which matches at exactly :601, :608 and :612.
+  { file: 'scripts/audit/audit-bmm-dependencies.js', expected: 3 },
   { file: 'scripts/update/migrations/3.3.x-to-4.0.0.js', expected: 5 },
   { file: 'scripts/update/migrations/3.2.x-to-4.0.0.js', expected: 0 },
   { file: 'scripts/update/migrations/3.1.x-to-4.0.0.js', expected: 0 },
@@ -129,7 +158,13 @@ const FORBIDDEN_PATTERNS = [
 ];
 
 // ===== Write-op regex =====
-const WRITE_OP_RE = /fs\.(writeFileSync|writeFile|copyFileSync|copyFile|cpSync|cp|rmSync|rm|unlinkSync|unlink|renameSync|rename|mkdirSync|mkdir)\b/g;
+// `linkSync`/`link` added 2026-09-02 (story dist-2-5, Round 2). `refresh-installation.js`
+// now uses `writeFileSync` + `linkSync` + `unlinkSync` as an atomic create-if-absent for the
+// BMM registry, and `linkSync` creates a name at the destination exactly as `renameSync`
+// does — an op this list already counts. Omitting it would have left one third of that
+// sequence, the part that actually publishes the file, invisible to this checker. Verified
+// before adding that no tracked file used `fs.link*`, so no existing snapshot shifted.
+const WRITE_OP_RE = /fs\.(writeFileSync|writeFile|copyFileSync|copyFile|cpSync|cp|rmSync|rm|unlinkSync|unlink|renameSync|rename|mkdirSync|mkdir|linkSync|link)\b/g;
 
 // ===== Helpers =====
 

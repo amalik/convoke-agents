@@ -112,12 +112,27 @@ const RUNTIME_DATA_FILES = [
     // `:642` (the read) and `:34` (the write-side declaration), so reverting to the wrong
     // citation still passed. Anchored on the join that builds the read path instead.
     alsoReadToken: 'path.join(projectRoot, OUTPUT_CSV_REL)',
-    arrivesVia: null,
+    // dist-2-5 (2026-09-01, corrected 2026-09-02) RE-BASED THIS ENTRY, as the note below
+    // predicted it might. The installer now CREATES the registry EMPTY — the schema, never a
+    // row — see `seedBmmDependencies`. Two other shapes were measured and rejected: copying
+    // the package's registry replaces `registry missing` with `[stale:skill-gone]`, since its
+    // only row names a skill directory no install path creates; and seeding a project SCAN
+    // stamps the operator's own skills with the reserved `auto-scan` marker, which breaks
+    // `convoke-register-skill` and blinds the doctor's `unregistered-custom-skill` category.
+    // The entry STAYS in the manifest: the file must still arrive, and `missingRuntimeFiles`
+    // tests project presence, which a created file satisfies exactly as a copied one would.
+    arrivesVia: 'scripts/update/lib/refresh-installation.js:1061',
+    // Discriminates the CALL from the declaration at :1201 and the export at :1261, both of
+    // which contain the bare identifier but not this token. The dist-2-4 review's lesson is
+    // that a token which merely appears does not prove a citation — and the previous two
+    // revisions of this very comment cited the wrong lines while making that argument, which
+    // is why the rot alarm checks the `arrivesVia` line rather than trusting the prose.
+    arrivesViaToken: 'seedBmmDependencies(projectRoot, {',
     why:
-      'NOTHING puts it in the project today — this is the FR13 red target. Its "must arrive" status is a ' +
-      'DECISION Story 2.5 made, not a property of the code: convoke-doctor treats absence as a soft ' +
-      'governance warning by design. If 2.5 revisits that, this entry leaves the manifest and the ' +
-      'dist-2-4 red demonstration must be re-based.',
+      'convoke-doctor reads it at :763 and treats absence as a soft governance warning (BUG-19). ' +
+      'dist-2-5 creates it at install time as an EMPTY registry — the schema, never a row — so a ' +
+      'clean install reports `registry consistent` instead of warning about a file nothing ever ' +
+      'created, while the doctor keeps detecting genuinely unregistered custom skills.',
   },
 ];
 

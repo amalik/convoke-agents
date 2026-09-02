@@ -35,10 +35,19 @@ async function seedFixture(tmpDir, { csvContents = null, skillNames = ['my-custo
   await createInstallation(tmpDir, pkg.version);
 
   // Step 2: CSV pre-state.
+  //
+  // `createInstallation` runs `refreshInstallation`, which since dist-2-5 SEEDS
+  // `_bmad/_config/bmm-dependencies.csv` (BUG-19). So `csvContents: null` must now
+  // actively remove it rather than merely decline to write one — otherwise the
+  // CSV-absent bootstrap case below asserts a precondition the installer has already
+  // falsified. Measured: it fails loudly (1 test red), not silently — but it fails for the
+  // wrong reason, asserting a precondition rather than the bootstrap path it names.
   const csvPath = path.join(tmpDir, CSV_REL);
   await fs.ensureDir(path.dirname(csvPath));
   if (csvContents !== null) {
     await fs.writeFile(csvPath, csvContents, 'utf8');
+  } else {
+    await fs.remove(csvPath);
   }
 
   // Step 3: dummy skill dirs for validation path.

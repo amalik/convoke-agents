@@ -146,16 +146,33 @@ describe('convoke-update governance gate (Story v63-2-3)', () => {
     }
   });
 
-  // ── AC7 case 2: softWarning path (CSV absent — fresh fixture) ──
+  // ── AC7 case 2: softWarning path (registry DRIFT — see note) ──
 
-  it('emits yellow ⚠ when bmm-dependencies.csv is absent post-upgrade (softWarning)', async () => {
+  it('emits yellow ⚠ for a governance softWarning post-upgrade without escalating exit code (NFR9)', async () => {
     const tmpDir = await createTempDir('bmad-gov-');
     try {
       await createInstallation(tmpDir, FIXTURE_VERSION);
-      // createInstallation creates an _bmad/ tree but does NOT create
-      // _bmad/_config/bmm-dependencies.csv — that's Story 2.1's artifact,
-      // absent in pre-4.0 fixtures. The gate should emit the "registry not
-      // found" softWarning and exit 0.
+      // RE-BASED BY dist-2-5 (BUG-19), and the reason matters more than the edit.
+      //
+      // This case used to reach its softWarning by leaving the registry ABSENT, with
+      // the comment "createInstallation does NOT create bmm-dependencies.csv". Since
+      // dist-2-5 the installer SEEDS it, so absence is no longer reachable after any
+      // install or update — which is the whole point of BUG-19. Asserting the old text
+      // would be asserting the defect.
+      //
+      // NFR9 is the property under test — a softWarning must not escalate the exit code
+      // — not the particular finding that carries it. So the vehicle is re-based onto a
+      // finding that IS still reachable: a stale `auto-scan` row naming a skill directory
+      // that does not exist, which `checkBmmDependencies` Category 1 reports. The seed
+      // survives `refreshInstallation`, which only ever writes the registry when absent.
+      const csvAbs = path.join(tmpDir, '_bmad', '_config', 'bmm-dependencies.csv');
+      await fs.ensureDir(path.dirname(csvAbs));
+      await fs.writeFile(
+        csvAbs,
+        'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date\n'
+        + 'ghost-skill,bmad-agent-pm,code-reference,bmm,auto-scan,2026-09-01\n',
+        'utf8',
+      );
       const { exitCode, stdout } = await runScriptWithInput(
         SCRIPT_PATH, ['--yes'], '', { cwd: tmpDir }
       );
@@ -164,14 +181,13 @@ describe('convoke-update governance gate (Story v63-2-3)', () => {
         stdout.includes('Post-upgrade governance check:'),
         `expected governance header; got:\n${stdout}`,
       );
-      // R2-M2: tightened from a permissive 3-way || (previous `'governance
-      // warning'` alternative matched the summary-line wording regardless of
-      // which finding surfaced — allowed false-positive greens). Now assert
-      // the specific CSV-absent text that only Story 2.2's registry-missing
-      // finding can emit.
+      // R2-M2's discipline is preserved: assert text that ONLY the intended finding can
+      // emit, never a summary-line wording that any warning would match. The Category 1
+      // finding names the missing directory verbatim, so `ghost-skill` — a name seeded by
+      // this test and present in no other code path — is the discriminating token.
       assert.ok(
-        stdout.includes('bmm-dependencies.csv') && stdout.includes('not found'),
-        `expected specific CSV-absent softWarning (bmm-dependencies.csv + "not found"); got:\n${stdout}`,
+        stdout.includes('ghost-skill') && stdout.includes('stale'),
+        `expected the stale-autoscan softWarning naming ghost-skill; got:\n${stdout}`,
       );
     } finally {
       await fs.remove(tmpDir);

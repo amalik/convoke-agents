@@ -1054,6 +1054,23 @@ prompts: []
     console.warn(`    Warning: could not seed taxonomy.yaml: ${err.message}`);
   }
 
+  // dist-2-5 / BUG-19: create the BMM governance registry so the doctor stops reporting a
+  // file nothing ever made. Header only — see `seedBmmDependencies` for why seeding SCAN
+  // ROWS here is wrong, and what it broke when it was tried.
+  try {
+    const depsResult = seedBmmDependencies(projectRoot, { isSameRoot, verbose });
+    if (depsResult.seeded) {
+      changes.push('Created _bmad/_config/bmm-dependencies.csv (empty registry)');
+    }
+  } catch (err) {
+    // Non-fatal, for the same reason the taxonomy seed above is non-fatal: a failed seed
+    // must not abort an otherwise-good install. The worst case is the pre-dist-2-5
+    // behaviour — doctor reports the registry missing and names the command that fixes it.
+    // Deliberately NOT pushed into `changes`: convoke-update renders every entry there with
+    // a green tick, so a warning string would print as a success.
+    console.warn(`    Warning: could not seed bmm-dependencies.csv: ${err.message}`);
+  }
+
   return changes;
 }
 
@@ -1121,4 +1138,124 @@ function cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifact
   return changes;
 }
 
-module.exports = { refreshInstallation, cleanupOrphanWorkflowWrappers };
+/**
+ * Create an EMPTY BMM governance registry in the operator's project (dist-2-5 / BUG-19).
+ *
+ * `convoke-doctor` reads `path.join(projectRoot, '_bmad/_config/bmm-dependencies.csv')`
+ * (`convoke-doctor.js:763`). Nothing created it, so every npm-installed operator saw
+ * `⚠ BMM dependencies: registry missing` on an otherwise healthy install.
+ *
+ * HEADER ONLY — THE SCHEMA, NEVER A ROW. Two implementations were rejected by measurement
+ * before this one, and both failure modes are guarded by tests in
+ * `tests/unit/refresh-installation-bmm-deps.test.js`:
+ *
+ *   1. Shipping the package's registry in `files[]` and copying it (the story's original
+ *      prescription) replaces `registry missing` with `[stale:skill-gone]` — its sole row
+ *      names a skill directory that reaches no user project.
+ *   2. Seeding `scanBmmDependencies(projectRoot)` output — which looks right, since it is
+ *      what the doctor's `fix:` line tells the OPERATOR to run — stamps the operator's own
+ *      custom skills `registered_by: auto-scan`, a RESERVED marker
+ *      (`convoke-register-skill.js:33`). That makes `convoke-register-skill` hard-fail
+ *      `exit 1` on the exact path it exists to serve, and permanently blinds the doctor's
+ *      `unregistered-custom-skill` category, so it reports `✓ registry consistent` over a
+ *      tree nobody governed.
+ *
+ * An empty registry claims nothing. A project with no BMM-dependent skills reports
+ * `registry consistent — 0 auto-scan + 0 manual rows`, which is accurate. A project that
+ * HAS unregistered skills keeps getting `unregistered-custom-skill`, which is also
+ * accurate; silencing that was never in BUG-19's scope. (BUG-20 is the separate question of whether
+ * an EXPECTED absence — `compat-preflight`'s `BMAD core not detected` — should warn at all; an
+ * unregistered custom skill is not that case, and is not in BUG-20's scope.)
+ *
+ * WRITTEN INLINE, AND NOT VIA `_atomicWrite`, FOR A REASON THAT IS NOT STYLE. An earlier
+ * revision delegated to `audit-bmm-dependencies.js`'s `_atomicWrite`. Round 2 showed that
+ * delegating moved the write out of `install-scope-check.js`'s counted unit — its
+ * `WRITE_OP_RE` matches literal `fs.*` calls per file — so a NEW write from this file into
+ * the forbidden `_bmad/core/` passed the gate GREEN. Reproduced. Keeping the primitives
+ * here keeps them counted, which is the whole point of that snapshot.
+ *
+ * `writeFileSync` + `linkSync` + `unlinkSync`, in that order, is atomic create-if-absent:
+ *   - the content is fully written to a sibling temp file BEFORE the target name exists,
+ *     so no reader can observe a torn registry (a torn file would be PERMANENT here, since
+ *     this function only writes when the target is absent, and `mergePreservingManual`
+ *     preserves a fragment row as `manual` so even `convoke-audit-bmm-deps` cannot heal it);
+ *   - `linkSync` fails `EEXIST` if the target exists, atomically. That closes the
+ *     check-then-act window `lstat` alone leaves open — Round 2 measured 6-10 ms, and
+ *     demonstrated a concurrent `convoke-register-skill` commit being silently destroyed by
+ *     a `renameSync` that overwrites unconditionally.
+ *
+ * The `lstat` below is a fast path and a clearer `reason` code, NOT the safety property;
+ * `linkSync`'s `EEXIST` is what actually makes this safe. Note it is `lstat`, not
+ * `existsSync`: `existsSync` follows symlinks and reports a dangling one as absent.
+ *
+ * On a filesystem without hard-link support the `linkSync` throws, the caller warns, and the
+ * operator lands back in the documented pre-dist-2-5 state — degraded, never broken.
+ *
+ * Only ever seeds when ABSENT. An existing registry is user state: it carries manually
+ * registered rows no scan can reproduce.
+ *
+ * @param {string} projectRoot - Absolute path to the operator's project.
+ * @param {{isSameRoot?: boolean, verbose?: boolean}} [opts]
+ * @returns {{seeded: boolean, reason: string}}
+ */
+function seedBmmDependencies(projectRoot, opts = {}) {
+  const { isSameRoot = false, verbose = false } = opts;
+
+  // Guarded like every other write in this file. In dev mode the project IS the package,
+  // and rewriting the repository's own tracked registry during a refresh would turn a
+  // read-only dev refresh into a source edit.
+  if (isSameRoot) return { seeded: false, reason: 'same-root' };
+
+  const depsAbs = path.join(projectRoot, '_bmad', '_config', 'bmm-dependencies.csv');
+
+  let present = true;
+  try {
+    fs.lstatSync(depsAbs);
+  } catch (err) {
+    if (err.code === 'ENOENT') present = false;
+    else throw err;
+  }
+  if (present) return { seeded: false, reason: 'exists' };
+
+  const { renderCsv } = require('../../audit/audit-bmm-dependencies');
+
+  fs.ensureDirSync(path.dirname(depsAbs));
+  // Sibling of the target by construction, so `linkSync` never crosses a filesystem.
+  const tmpAbs = `${depsAbs}.tmp-${process.pid}-${Date.now()}`;
+  let seeded = false;
+  // The content write is INSIDE the try so the `finally` reclaims the temp on every path.
+  // Round 3 measured the alternative: with the write outside, a SHORT write — ENOSPC, EDQUOT,
+  // EIO, all of which create the file and then throw part-way — escaped before the reclaim and
+  // stranded one stray per attempt, which `.gitignore`'s `*.tmp` does not match and the
+  // operator therefore sees in `git status`. The helper this code replaced (`_atomicWrite`)
+  // guards the same hazard with a `tmpCreated` flag; an inline copy that is less careful than
+  // the thing it replaced is not a simplification.
+  try {
+    // `renderCsv([])` is exactly the header the doctor's reader expects, derived from that
+    // module's own CSV_HEADER_FIELDS rather than restated here, so a schema change cannot
+    // leave this seed writing a stale header (`derive-counts-from-source`). Verified
+    // byte-identical to what `convoke-audit-bmm-deps` generates for an empty project, so a
+    // freshly seeded install does not trip `--verify-only` drift.
+    //
+    // It is written to the TEMP name, never to `depsAbs`. That is the atomicity property:
+    // the published name only ever comes into existence via `linkSync`, already complete.
+    fs.writeFileSync(tmpAbs, renderCsv([]), 'utf8');
+    fs.linkSync(tmpAbs, depsAbs);
+    seeded = true;
+  } catch (err) {
+    // Someone created the registry while we were writing the temp file — their content
+    // wins. This is the race arm, and losing it is the CORRECT outcome: a concurrent
+    // `convoke-register-skill` has real rows, and this function only ever had a header.
+    if (err.code !== 'EEXIST') throw err;
+  } finally {
+    // Reclaim the temp name on every path — success, EEXIST, and any throw from either the
+    // write or the link. This is only true because the write is inside the try above.
+    try { fs.unlinkSync(tmpAbs); } catch { /* never created, or already consumed */ }
+  }
+
+  if (!seeded) return { seeded: false, reason: 'exists' };
+  if (verbose) console.log('    Created _bmad/_config/bmm-dependencies.csv (empty registry)');
+  return { seeded: true, reason: 'created' };
+}
+
+module.exports = { refreshInstallation, cleanupOrphanWorkflowWrappers, seedBmmDependencies };
