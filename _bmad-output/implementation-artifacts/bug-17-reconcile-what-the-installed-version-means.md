@@ -3,7 +3,7 @@ baseline_commit: d13e77529d3ba889a4a1e2aafa30b3c07075b595
 ---
 # Bug Story (BUG-17): Make the update gate see what the doctor sees
 
-Status: review
+Status: done
 
 **Lane:** Bug (BUG-17, RICE 4.5) · **Standalone** — not part of `dist-epic-2`, whose spine is
 link/manifest integrity; this is update-path integrity.
@@ -155,6 +155,7 @@ Body: the reproduction and its mutation check, the byte-identical doctor output,
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | **Closed by operator review (Amalik) — `review` → `done`.** `scripts/lib/bme-modules.js` read and accepted, including its SCOPE note, which is the boundary the next person will trust. Worth recording that the operator read was the ONLY review in this story not performed by the implementing agent or an agent it briefed: three adversarial rounds plus a narrow pass raised 30+ findings, and every one of those reviewers was working from my framing. The residue is filed as **T114** (the rule the whole exercise was circling — no finding may advise a command that cannot change the thing it is about; reproducible with `node scripts/convoke-doctor.js` in this repo), **T115**, **T116**, **T117**, **T118**. |
 | 2026-09-02 | **Narrow review pass over `scripts/lib/bme-modules.js` — four findings, all fixed in `a0539c83`.** The file was rewritten after Round 3, so no round had reviewed its shipped form. It had dropped `convoke-doctor`'s `version \|\| installed_version` fallback, recreating BUG-17's symptom inside its own fix — a hazard an earlier revision of this story had named verbatim in AC1 before the rewrite discarded both the AC and the code. Restored to exact parity with a regression test. Also: a swallowed `require` failure that turned a skewed tree into `✓ Already up to date!`, a header comment overclaiming single-sourcing, and a `Behind:` label on a `divergent` module. Gates after: `npm test` 1981/1980/1 skip, `npm run test:integration` 124/124, lint clean. |
 | 2026-09-02 | Authored, implemented, reviewed in three adversarial rounds, then **reduced**. The widened design from Rounds 1-2 was reverted rather than patched a fourth time, per `code-review-convergence`'s restructure-do-not-patch clause. This document was rewritten from scratch: earlier revisions had accumulated false statements across amendments, and an automated citation edit had mangled several sentences. Residue filed as T114/T115/T116. |
 

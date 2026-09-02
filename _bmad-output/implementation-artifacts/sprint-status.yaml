@@ -942,7 +942,7 @@ development_status:
   # Deliberately NOT filed into dist-epic-2 (link/manifest integrity); this is update-path
   # integrity. Authority is ADR-004 C1; no ADR authored. Pre-flight 2026-09-02 = YELLOW, row
   # refreshed before authoring — see the backlog Change Log entry of that date.
-  bug-17-reconcile-what-the-installed-version-means: review
+  bug-17-reconcile-what-the-installed-version-means: done
 
 action_items:
   - epic: gen-epic-1
