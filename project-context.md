@@ -477,7 +477,7 @@ Three shell commands found both, after the commit was pushed. No gate could have
 
 `verification-pipefail` is one instance of this defect. This rule is the general case, and it applies to **ad-hoc verification during work**, not only to checks cited in a review.
 
-**Why.** Four failures in three days, every one of which produced a confident wrong answer:
+**Why.** Five failures, every one of which produced a confident wrong answer. The first four fell in three days; the fifth is from `dist-2-5` (2026-09-02) and is the same error one level in — see below:
 
 | What was run | What it looked like | What it was |
 |---|---|---|
@@ -485,8 +485,9 @@ Three shell commands found both, after the commit was pushed. No gate could have
 | `grep -c 'convoke-agents@${getPackageVersion()}' file` | `0` — "the fix isn't in the tarball" | `{}` is a grep interval expression. The fix *was* there; a false alarm was raised against a correct build |
 | `npx -p convoke-agents convoke-version` → `3.3.0` | "good, `-p` bypasses the stale global" | It did — and also served a version two releases old. Half the claim was verified, all of it was reported. This became BUG-16 |
 | Generator mutation harness, 4 cases | all `exit=1` — "guards work" | No `node_modules` in the scratch tree. All four died on `Cannot find module 'yaml'`. Nothing was tested |
+| `node --test <file>` after a mutation → `ℹ pass 8 / fail 1` | "the mutant is caught; the suite guards this" | Something failed; not the thing claimed. The atomicity test survived every mutant — the *race* test died each time. Reported as mutation-verified twice, in two successive review rounds (`dist-2-5`, 2026-09-02) |
 
-A fifth was caught only by luck: a backlog column-arity check that flagged 71 correct rows, which would have made the gate unreadable had it shipped.
+A sixth was caught only by luck: a backlog column-arity check that flagged 71 correct rows, which would have made the gate unreadable had it shipped.
 
 > **Historical record — do not "repair" these rows.** All four are real incidents and stay verbatim;
 > they are this rule's entire justification. Two of them now name a surface that no longer exists:
@@ -495,10 +496,14 @@ A fifth was caught only by luck: a backlog column-arity check that flagged 71 co
 > (story `dist-1-1`). What the rows document is the *reasoning* error, not the command — rewriting
 > them against a live command would destroy the evidence and teach nothing.
 
-The common shape is not carelessness about shell syntax. It is **reading a check's output as evidence without ever seeing it produce the other answer.**
+The common shape is not carelessness about shell syntax. It is **reading a check's output as evidence without ever seeing it produce the other answer.** The **last** row is that error one level in: the check *did* produce the other answer, and the other answer was never read. A count is not an attribution.
 
 **How to apply.**
 - **Before citing any check, show it red.** Mutate the input — inject the defect, delete the file, revert the fix — and confirm the check fails and names the right thing. Then restore and confirm it passes. Both directions, or it is not a check.
+- **When the check is a SUITE, name the assertion that died — a pass/fail count is not evidence.** `fail 1` says something broke; it does not say *what*, and the difference is the whole claim. Run the mutant with the failing test names visible (`node --test … | grep '^  ✖'`, or `--test-name-pattern` to isolate) and record **mutant → test** as a table, not a tally. Two consequences follow, and both have bitten:
+  - **A test that no mutant uniquely kills is not proven to guard anything.** In `dist-2-5` two successive versions of an atomicity test passed against a zero-atomicity implementation; each time a sibling test absorbed the mutant and the count read `fail 1`. The phantom survived a review round *because the evidence for it was a number*.
+  - **Choose mutants that target one property each.** A mutant that breaks several properties at once cannot distinguish a load-bearing test from a bystander. Aim for a battery where every test is the sole executioner of at least one mutant; a test that never is should be deleted or rewritten, because nothing would notice its removal.
+- **The mutant must be the defect you are claiming to guard against, not merely *a* defect.** "Delete the call" is a weaker mutant than "replace the call with the wrong-but-plausible alternative": the first is caught by anything downstream, the second is what a future maintainer actually writes. `dist-2-5`'s decisive mutant was not *remove the atomic write* but *write the same bytes to the published name instead of the temp* — the shape of an innocent refactor.
 - **A new gate is not shippable until it has failed once on purpose.** `backlog-integrity.js` was proven against the pushed commit that had actually lost the rows; `cli-guidance-check` (withdrawn) shipped twice matching nothing because that step was skipped.
 - **State the falsification in the commit Description**, per `commit-preparation` field 5. "Verified by execution" without naming the failing case is the phrasing this rule exists to catch — it appeared in three commit messages this week, none of which had run a negative case. Where the claim is about what the CODE guarantees rather than about a check you ran, `verification-claims-must-name-their-evidence` is the governing rule.
 - **Prefer a check that fires on the real artifact.** Verify the published tarball rather than the source, the emitted string rather than the code that emits it, the committed file rather than the working tree. Every failure above inspected a proxy.
