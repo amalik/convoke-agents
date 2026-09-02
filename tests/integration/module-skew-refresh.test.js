@@ -53,7 +53,8 @@ describe('BUG-17 — the refresh repairs the skew it was routed for', () => {
     assert.equal(exitCode, 0, stdout);
     // The plan must not render `From: 4.0.1 / To: 4.0.1` in red-to-green, which reads as a
     // bug in the tool: on this path currentVersion === targetVersion.
-    assert.match(stdout, /Behind:\s+_gyre: 1\.0\.0/);
+    assert.match(stdout, /Skewed:\s+_gyre: 1\.0\.0 \(behind\)/,
+      'the plan names the modules and their state — `behind` and `divergent` are not the same thing');
     assert.deepEqual(detectRepairableSkew(tmpDir), [],
       'the refresh ran but did not re-stamp');
   });

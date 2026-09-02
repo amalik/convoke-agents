@@ -15,8 +15,12 @@ const { getPackageVersion, compareVersions } = require('../update/lib/utils');
  * `assessUpdate` returned `up-to-date` and exited before `refreshInstallation` — which has
  * stamped every module since `ag-7-1` — was ever reached.
  *
- * The two sides now enumerate from one definition and compare with one function. That is the
- * whole of this module's job.
+ * This module gives the GATE an enumeration equivalent to doctor's, and a comparison that is a
+ * strict superset of it. It is deliberately NOT single-sourced: `convoke-doctor` keeps its own
+ * `discoverModules` and its own `!==` compare, because this change was required to leave doctor
+ * byte-identical. So the two copies are pinned by tests and by review, not by construction — and
+ * the version-key read below must match doctor's exactly or the drift is BUG-17 again. An earlier
+ * revision of this file read only `.version` and reproduced precisely that.
  *
  * SCOPE — read this before extending. Three review rounds established that widening this file
  * to classify every version shape and to decide what doctor should advise is a substantially
@@ -30,6 +34,8 @@ const { getPackageVersion, compareVersions } = require('../update/lib/utils');
  *   - unorderable versions (`main`, `v4.0.1`, the number `4`) — BUG-18, and T116 for the
  *     unhandled `TypeError` a numeric `_vortex` version produces in `isBreakingChange`
  *   - modules ahead of the package — T38
+ *
+ * Everything else IS handled here, and the version-key read must stay in lockstep with doctor's.
  *
  * Doctor's reporting is deliberately unchanged by this file. It already reported the skew
  * correctly; the defect was that no command acted on it.
@@ -78,14 +84,18 @@ function discoverModules(projectRoot) {
  * they copy from. Requiring lazily so a broken install cannot take down the caller.
  */
 function isManagedByInstaller(name) {
-  let declared;
-  try {
-    ({ STAMPABLE_MODULES: declared } = require('../update/lib/refresh-installation'));
-  } catch {
-    return false;
+  // Deliberately NOT wrapped in a try/catch. Swallowing a load failure here made every module
+  // look unmanaged, so `assessUpdate` returned `up-to-date` and the CLI reported a skewed tree as
+  // healthy — a silent green, which is the house's named failure mode ("what does it do when it
+  // cannot tell?"). The failure is not survivable in any case: `refresh-installation` is a hard
+  // dependency of `runRefreshOnly`, the path this routes TO. Better loud than masked.
+  const { STAMPABLE_MODULES: declared } = require('../update/lib/refresh-installation');
+  if (!Array.isArray(declared)) {
+    throw new Error('refresh-installation did not export STAMPABLE_MODULES (wiring bug, not a skew result)');
   }
-  return Array.isArray(declared)
-    && declared.includes(name)
+  // `declared.includes(name)` is evaluated BEFORE the join, which is what makes a name containing
+  // `..` or `/` safe. Do not reorder these clauses for readability.
+  return declared.includes(name)
     && fs.existsSync(path.join(PACKAGE_ROOT, '_bmad', 'bme', name));
 }
 
@@ -111,7 +121,11 @@ function detectRepairableSkew(projectRoot, opts = {}) {
     if (!mod.config) continue;
     if (!isManagedByInstaller(mod.name)) continue;
 
-    const raw = mod.config.version;
+    // MUST stay identical to convoke-doctor's read (`version || installed_version`). Reading only
+    // `.version` leaves a module declaring `installed_version` visible to doctor and invisible to
+    // this gate — doctor reports skew, `convoke-update` says up-to-date, and a refresh would have
+    // repaired it. That is BUG-17's symptom exactly, and it shipped in the first cut of this file.
+    const raw = mod.config.version || mod.config.installed_version;
     if (typeof raw !== 'string' || !/^\d+\.\d+\.\d+(?:[-+].*)?$/.test(raw)) continue;
 
     const cmp = compareVersions(raw, packageVersion);

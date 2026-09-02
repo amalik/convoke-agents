@@ -345,7 +345,9 @@ async function main() {
     console.log(chalk.cyan('Update Plan:'));
     if (skewOnly) {
       console.log(`  Package: ${chalk.green(assessment.targetVersion)}`);
-      console.log(`  Behind:  ${chalk.red(assessment.skew.map(m => `${m.name}: ${m.version}`).join(', '))}`);
+      // Label from the module's own state: `4.0.1+abc` is not BEHIND `4.0.1`, it is divergent
+      // (equal precedence, different string). A refresh re-stamps both; the word must still be true.
+      console.log(`  Skewed:  ${chalk.red(assessment.skew.map(m => `${m.name}: ${m.version} (${m.state})`).join(', '))}`);
       console.log('');
       console.log(chalk.cyan('Vortex is current; these modules are not. Refreshing re-stamps them.'));
     } else {

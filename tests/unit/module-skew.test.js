@@ -68,6 +68,22 @@ describe('BUG-17 — the update gate sees what doctor sees', () => {
     } finally { await removeTempDir(dir); }
   });
 
+  it('reads installed_version, exactly as convoke-doctor does', async () => {
+    // Doctor reads `version || installed_version`. The first cut of bme-modules read only
+    // `.version`, so a module declaring `installed_version` was visible to doctor and invisible
+    // to this gate: doctor reported skew, `convoke-update` said up-to-date, and a refresh would
+    // have repaired it. BUG-17's symptom, latent inside BUG-17's own fix. Found by the narrow
+    // review pass at 90ca7de0. Nothing in the repo writes the key today — this pins the parity
+    // so the drift cannot come back silently if something starts to.
+    const dir = await fixture({ _gyre: 'installed_version: 1.0.0\n' });
+    try {
+      const assessment = assessUpdate(dir);
+      assert.equal(assessment.action, 'refresh-only',
+        'doctor sees this module; the gate must see it too');
+      assert.deepEqual(assessment.skew.map(m => m.name), ['_gyre']);
+    } finally { await removeTempDir(dir); }
+  });
+
   it('a fully current install is still reported current', async () => {
     const dir = await fixture({ _gyre: at(PKG) });
     try {
