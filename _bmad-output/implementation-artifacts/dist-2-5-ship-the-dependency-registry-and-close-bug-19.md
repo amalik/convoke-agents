@@ -3,7 +3,7 @@ baseline_commit: be98b8ab6eddf3f05cf17db1ffbfaf9d119778fd
 ---
 # Story 2.5: Ship the dependency registry and close BUG-19
 
-Status: review
+Status: done
 
 <!-- baseline_commit deliberately ABSENT — stamped by dev-story at implementation start. -->
 
@@ -255,10 +255,14 @@ not the path rule, since `FORBIDDEN_PATTERNS` matches literal `/_bmad/core/` sub
 cannot count, because no fs-extra helper is in its alternation. That gap predates this story and is
 deferred to the backlog rather than widened here.
 
-**6. AC6's third bullet is NOT met, and saying otherwise would be the defect this story is about.**
-The `sprint-status.yaml` divergence warn still names `dist-2-5` — it is a function of status
-`review`, and clears on the operator's flip to `done`. My earlier record listed the three
-owed-close warns as though they were the whole output; they were not.
+**6. AC6's third bullet — unmet while this was written, SATISFIED 2026-09-02.**
+The `sprint-status.yaml` divergence warn named `dist-2-5` for as long as the story sat at `review`;
+it is a function of that status, not of the code. On the operator's flip to `done` (2026-09-02,
+after CI went green on `c52e9fe0`, whose tree is byte-identical to `529c6969` over `scripts/` and
+`tests/`) `backlog-integrity.js` emits **no divergence block at all**. All three AC6 bullets now
+hold. Recorded forward rather than rewritten: the paragraph above stated the truth at the time, and
+my earlier record had listed the three owed-close warns as though they were the whole output — they
+were not, which is the error worth keeping visible.
 
 **7. AC5 untouched.** `scripts/convoke-doctor.js` has **no** diff. `softWarning: true`, the exit-0
 pass-through, the `npx -p convoke-agents@${pv}` pinning and the FR17 label from `21ae3105` are all
@@ -314,6 +318,7 @@ skip**.
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | **Flipped to `done` by the operator.** Decision evidence beyond the local gates: CI green on `c52e9fe0` across `fresh-install`, `agent-surface-parity` (which carries `install-scope-check`), `package-check`, `lint`, `coverage`, `security` and `test` on Node 18/20/22, with `publish` correctly skipped (no `v*` tag). `fresh-install` is the material one — it runs no `npm ci` and catches the *works in this repo and nowhere else* class (I135/I137/I139) that a local run cannot. **A Round 4 was considered and declined:** the unreviewed surface was ~40 lines (one moved statement, one new test), the residual risk is a regression guard that might not guard rather than a shipped defect, and product behaviour was separately verified across four install states on a packed tarball. **Carried risk, stated:** CI is ubuntu-only (T106) and nothing exercises `linkSync` on Windows filesystems. AC6's divergence warn cleared on this flip. |
 | 2026-09-02 | **Round 3 (final round): 3 HIGH, 3 MEDIUM, 5 LOW — again including defects in the previous round's corrections.** (a) The *replacement* atomicity test still could not fail: its mock threw before writing, which a zero-atomicity implementation also satisfies. Rewritten a third time to assert that content never reaches the published name; killed by two mutants that previously passed. (b) The temp write sat outside its own `try`/`finally`, so a short write stranded one stray per attempt — the exact outcome its comment claimed to prevent; moved inside, and the reclaim assertion made load-bearing. (c) Both BACKLOG entries still described the reverted `_atomicWrite` delegation as shipped and repeated an `lstat` rationale the story had retracted; corrected. Also: two more wrong line citations, inside the comment arguing that citations must be proven. **No Round 4 per `code-review-convergence`** — these fixes are unreviewed and disclosed as such; the `ensureDirSync` scope-gate gap and the `convoke-audit-bmm-deps` fix-line trap are deferred to the backlog. |
 | 2026-09-02 | **Round 2 review (3 layers): 3 HIGH, 4 MEDIUM, 4 LOW — and the HIGHs were defects in ROUND 1'S OWN CORRECTIONS**, which is `code-review-convergence`'s restructure trigger, so the write mechanism was changed rather than patched a third time. (a) The `install-scope-check.js` entry Round 1 added did **not** restore the signal — delegating to `_atomicWrite` moved the write out of the checker's counted unit, and a new write into the forbidden `_bmad/core/` passed GREEN; reproduced. (b) The `writes atomically` test **could not fail** — swapping `_atomicWrite` for a plain write left it green, so the dependency had zero coverage. (c) The TOCTOU race I reported as *dissolved* had not dissolved; a concurrent `convoke-register-skill` commit was destroyed inside a measured 6-10 ms window. **Restructured:** the atomic write is now INLINE — `writeFileSync` to a sibling temp, `linkSync` to publish (fails `EEXIST` atomically, closing the race), `unlinkSync` to reclaim — so all three ops are literal `fs.*` calls the checker counts (snapshot 10 → 13), `linkSync`/`link` added to `WRITE_OP_RE`, and the atomicity property was given a new test — **which Round 3 then proved still could not fail; see the row above.** Comment-vs-code divergences in `installed-tree.js` and the story record corrected. |
 | 2026-09-01 | **Round 1 review (3 layers): 3 HIGH, 3 MEDIUM, 6 LOW.** Restructured rather than patched. Scan-seeding replaced with a HEADER-ONLY registry — the scan variant auto-registered operators' own skills under the reserved `auto-scan` marker, breaking `convoke-register-skill` and suppressing the doctor's unregistered-skill detection. Added `_atomicWrite` (a torn registry was permanent and unhealable), `lstat` (a dangling symlink made the installer write outside the project), and tracked `audit-bmm-dependencies.js` in `install-scope-check.js` (the gate had gone green by invisibility). AC6's divergence bullet recorded as unmet. |
