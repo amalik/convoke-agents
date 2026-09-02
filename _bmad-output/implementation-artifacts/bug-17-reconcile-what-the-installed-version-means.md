@@ -62,6 +62,15 @@ read alone, and `convoke-update.js:277` then prints `✓ Already up to date!` an
 **And** the red demonstration is performed and recorded: an isolated fixture with `_vortex` at the package
 version and `_gyre` behind **reproduces `up-to-date` before the change** and yields `refresh-only` after —
 NFR10. A test that only asserts the post-state proves nothing about the bug
+**And** the operator-facing banner is corrected for this path. `refresh-only` prints an Update Plan at
+`convoke-update.js:326-328` reading `From: <red current>` / `To: <green target>`, written for a version
+*change*. On the skew path `currentVersion === targetVersion`, so it renders `From: 4.0.1 / To: 4.0.1` in
+red-to-green, which reads as a bug in the tool. The skew path must say what it is actually doing — naming
+the skewed modules — rather than reusing the upgrade banner.
+**And** the defect is presentational ONLY, verified 2026-09-02 rather than assumed: `printChangelog`
+early-returns on zero entries (`:477`) so it prints nothing; `runRefreshOnly(currentVersion)` (`:357`) and
+`_runPostUpgradeGate` (`:375`) are both safe when the versions are equal. Do not widen this AC into a
+refactor of the refresh path
 
 **AC4 — Doctor's finding splits, and only the actionable half keeps the advice**
 
@@ -79,8 +88,8 @@ reverted on ETARGET — is **preserved**, not deleted as stale; it is the reason
 
 **AC5 — A dev tree does not become a NEW dead loop**
 
-**Given** every write in `refreshInstallation` is guarded on `!isSameRoot` (`:46`) — Vortex config `:667`,
-Enhance `:307-312`, Artifacts `:414-421`, Gyre `:504-512`, standalone submodules `:241-269` — so when
+**Given** every write in `refreshInstallation` is guarded on `!isSameRoot` (`:46`) — Vortex config `:668-681`,
+Enhance `:307-312`, Artifacts `:414-422`, Gyre `:504-512`, standalone submodules `:241-269` — so when
 `packageRoot === projectRoot` a refresh stamps **nothing**
 **When** a checkout has `_vortex` at the package version and the other modules at template `1.0.0`
 **Then** routing it to `refresh-only` must **not** print success: after the refresh, skew is re-checked, and
@@ -133,7 +142,7 @@ all in the same edit
 
 The row's own **Fix direction** said a fix must make *"`convoke-update` refresh them all."* That work
 **already shipped** under `ag-7-1`. `refreshInstallation` stamps Enhance (`:307-312`), Artifacts
-(`:414-421`), Gyre (`:504-512`) and standalone submodules (`:241-269`), and says so in a comment at
+(`:414-422`), Gyre (`:504-512`) and standalone submodules (`:241-269`), and says so in a comment at
 `:664-666`.
 
 A dev agent handed the unrefreshed row would have built the repair path a **second time** and left the
@@ -175,7 +184,7 @@ second, separate question (`detectModuleSkew`) that only `assessUpdate` asks.
 - `scripts/update/lib/version-detector.js:27` — the single-path read; the defect
 - `scripts/update/convoke-update.js:52-54`, `:277`, `:512` — the gate, the message, the export
 - `scripts/convoke-doctor.js:117-148`, `:600-631`, `:617-621`, `:622`, `:1108`
-- `scripts/update/lib/refresh-installation.js:46`, `:241-269`, `:307-312`, `:414-421`, `:504-512`, `:664-667`
+- `scripts/update/lib/refresh-installation.js:46`, `:241-269`, `:307-312`, `:414-422`, `:504-512`, `:664-666`, `:668-681`
 - ADR-004 C1 — modules are lock-step with the package by contract
 - `project-context.md` — `test-fixture-isolation`, `verification-must-be-falsifiable`, `backlog-write-discipline`
 
@@ -198,6 +207,7 @@ fixture output showing skew reported rather than success, `npm test` and `npm ru
 | Date | Change |
 |---|---|
 | 2026-09-02 | Authored standalone after a YELLOW staleness pre-flight refreshed the BUG-17 row. Design ruled option (c) by the operator; no ADR (ADR-004 C1 is the authority). AC5 added from a hazard found during design, not present in the backlog row. |
+| 2026-09-02 | **Round 1 review — 0 HIGH, 2 MEDIUM, 1 LOW, all applied. No Round 2.** Fired late: the rule makes commit-preparation the landing point for out-of-story work and Round 1 did not run before `c1cacde9`, so this covers text already pushed. **M1** AC5 cited the Vortex config write as `:667`, which is a comment line — the `!isSameRoot` guard is `:668` and the block runs to `:681`; corrected. **M2** the `refresh-only` banner at `convoke-update.js:326-328` is written for a version change and this path has none, so a skewed install would render `From: 4.0.1 / To: 4.0.1` red-to-green; a clause was added to AC3 requiring the skew path to name the skewed modules instead. **M2 was itself overstated on first writing and corrected in the same pass** — it claimed an empty changelog section would render, but `printChangelog` early-returns at `:477`; the rest of the refresh path (`runRefreshOnly`, `_runPostUpgradeGate`) was then walked and is safe on equal versions, so the AC is scoped to presentation and explicitly forbids widening. Third missed branch of the session, which is the argument for an edge-case pass over a cynical one. **A fourth citation error was made and caught inside this very correction** — `_runPostUpgradeGate` was first cited as `:374`, a comment line, with the call at `:375`: the identical off-by-one as M1, committed while documenting M1. Every citation in this story has now been resolved by script rather than by reading, because reading is measurably where this fails. **L1** the Artifacts stamp range stopped one line short of its own `writeFileSync` (`:414-421` → `:414-422`). All 23 line citations were re-resolved against HEAD by script; 3 were wrong, the same first-pass citation-error rate `dist-2-4` recorded. |
 
 ---
 
