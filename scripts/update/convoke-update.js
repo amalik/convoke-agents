@@ -7,6 +7,12 @@ const migrationRunner = require('./lib/migration-runner');
 const registry = require('./migrations/registry');
 const { findProjectRoot, getPackageVersion } = require('./lib/utils');
 const { readChangelogEntries } = require('./lib/changelog-reader');
+// BUG-17: `getCurrentVersion()` reads only `_bmad/bme/_vortex/config.yaml`, while
+// `convoke-doctor` checks every `_bmad/bme/*` module. Sibling skew therefore reported
+// forever and this gate exited before `refreshInstallation` — which stamps every module —
+// was reached. `getCurrentVersion()` keeps its scalar contract (it feeds the migration
+// registry, which keys off Vortex's history); this is a separate question, asked here only.
+const { detectRepairableSkew } = require('../lib/bme-modules');
 const { runCompatPreflight } = require('./lib/compat-preflight');
 // Story v63-2-3: post-upgrade governance gate. `checkBmmDependencies` is
 // lazy-required inside `_runPostUpgradeGate` (Round 1 R1-M2 fix) so a
@@ -50,6 +56,13 @@ function assessUpdate(projectRoot) {
   const migrationPath = versionDetector.getMigrationPath(currentVersion, targetVersion);
 
   if (migrationPath.type === 'up-to-date') {
+    // Vortex being current does not mean the installation is. Only modules a refresh can
+    // actually re-stamp are routed here; everything else doctor already reports and this
+    // change deliberately does not touch (see the SCOPE note in scripts/lib/bme-modules.js).
+    const skew = detectRepairableSkew(projectRoot);
+    if (skew.length > 0) {
+      return { action: 'refresh-only', currentVersion, targetVersion, skew };
+    }
     return { action: 'up-to-date', currentVersion, targetVersion };
   }
 
@@ -323,11 +336,24 @@ async function main() {
 
   // Refresh-only: no migration deltas, just update files to latest version
   if (assessment.action === 'refresh-only') {
+    // On the skew path currentVersion === targetVersion, so the upgrade banner would render
+    // `From: 4.0.1 / To: 4.0.1` in red-to-green and read as a bug in the tool. Say what is
+    // actually being done: which modules disagree, and that a refresh re-stamps them.
+    const skewOnly = assessment.skew && assessment.skew.length > 0
+      && assessment.currentVersion === assessment.targetVersion;
+
     console.log(chalk.cyan('Update Plan:'));
-    console.log(`  From: ${chalk.red(assessment.currentVersion)}`);
-    console.log(`  To:   ${chalk.green(assessment.targetVersion)}`);
-    console.log('');
-    console.log(chalk.cyan('No migration deltas needed — refreshing installation files.'));
+    if (skewOnly) {
+      console.log(`  Package: ${chalk.green(assessment.targetVersion)}`);
+      console.log(`  Behind:  ${chalk.red(assessment.skew.map(m => `${m.name}: ${m.version}`).join(', '))}`);
+      console.log('');
+      console.log(chalk.cyan('Vortex is current; these modules are not. Refreshing re-stamps them.'));
+    } else {
+      console.log(`  From: ${chalk.red(assessment.currentVersion)}`);
+      console.log(`  To:   ${chalk.green(assessment.targetVersion)}`);
+      console.log('');
+      console.log(chalk.cyan('No migration deltas needed — refreshing installation files.'));
+    }
     console.log('');
 
     printChangelog(assessment.currentVersion, assessment.targetVersion);

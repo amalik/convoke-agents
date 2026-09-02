@@ -1258,4 +1258,31 @@ function seedBmmDependencies(projectRoot, opts = {}) {
   return { seeded: true, reason: 'created' };
 }
 
-module.exports = { refreshInstallation, cleanupOrphanWorkflowWrappers, seedBmmDependencies };
+/**
+ * The `_bmad/bme/*` modules this file has a version-stamping path for.
+ *
+ * BUG-17: `scripts/lib/bme-modules.js` must know what a refresh can actually change, or it
+ * routes `convoke-update` to a refresh that takes the lock, cuts a backup and stamps nothing.
+ * Declared here, beside the stamp sites, and imported there — a second hardcoded list would be
+ * the two-callers-disagree defect BUG-17 exists to remove, reproduced inside its own fix.
+ *
+ * The stamp sites are the `configMerger.mergeConfig` call for Vortex, the `ecDoc.set('version')`
+ * write for Enhance, `acDoc.set('version')` for Artifacts, the Gyre `mergeConfig` call, and the
+ * `scDoc.set('version')` write in the `EXTRA_BME_AGENTS` loop. Named by symbol on purpose: line
+ * numbers in this file are not gate-checked, and every attempt to keep them current during
+ * BUG-17 rotted within the hour.
+ */
+const STAMPABLE_MODULES = Object.freeze([
+  '_vortex',
+  '_enhance',
+  '_artifacts',
+  '_gyre',
+  ...new Set(EXTRA_BME_AGENTS.map(a => a.submodule)),
+]);
+
+module.exports = {
+  refreshInstallation,
+  cleanupOrphanWorkflowWrappers,
+  seedBmmDependencies,
+  STAMPABLE_MODULES,
+};
