@@ -24,7 +24,7 @@ fixes it. **Only the gate is wrong; the repair already exists.**
 
 ## Acceptance Criteria
 
-**AC1 — The two sides enumerate modules from ONE definition**
+**AC1 — The two sides enumerate modules from ONE definition AND compare them the same way**
 
 **Given** `discoverModules` is private to `convoke-doctor.js:117-148` and nothing else can see it, while
 `getCurrentVersion()` at `version-detector.js:27` hardcodes a single path —
@@ -35,7 +35,19 @@ fixes it. **Only the gate is wrong; the repair already exists.**
 **And** the story states plainly **why Rule of Three is overridden here at instance two**: the defect
 *is* two sides enumerating different module sets, so a second copy would reproduce BUG-17 the next time
 one copy learns about a directory the other does not. This is a correctness invariant, not DRY.
-**And** doctor's behaviour is unchanged by the extraction — the function moves, it does not change
+**And** the two sides also share the **comparison**, not only the module set. This is the finding that nearly
+rebuilt BUG-17 inside its own fix, and it is confirmed by execution rather than argued:
+`compareVersions('4.0.1+abc', '4.0.1')` returns **0** (build metadata dropped, SemVer §10) while doctor's
+`installedVersion !== packageVersion` (`convoke-doctor.js:607`) returns **true**. A module stamped
+`4.0.1+abc` against package `4.0.1` would therefore make doctor report skew while `assessUpdate` finds none
+and returns `up-to-date` — **BUG-17 verbatim, rebuilt inside the fix for BUG-17**. Sharing the module set
+closes one half of the disagreement; the comparator is the other half
+**And** the resolution keeps doctor's sensitivity rather than weakening it: `detectModuleSkew` returns a
+**third bucket**, `divergent` — same precedence under `compareVersions` but a different version string.
+Divergent modules are re-stampable by `refreshInstallation` exactly like behind ones, so they route WITH
+`behind`. Narrowing doctor to `compareVersions(...) !== 0` instead would silently stop reporting a real drift
+class, which is the opposite of this story
+**And** doctor's module-set behaviour is unchanged by the extraction — the function moves, it does not change
 
 **AC2 — Skew is detected WITHOUT widening `getCurrentVersion()`**
 
@@ -45,11 +57,24 @@ migration history, so a min-across-modules value would feed the migration regist
 built to receive
 **When** this story completes
 **Then** `getCurrentVersion()` still returns Vortex's version, unchanged, and no caller is touched
-**And** a **new** `detectModuleSkew(projectRoot)` returns `{ behind: [{name, version}], ahead: [{name, version}] }`
-against `getPackageVersion()`, classified with the existing `compareVersions()`
-**And** a module whose `config.yaml` is absent, unparseable, or carries a non-string / non-semver `version`
-is **not** silently coerced into either bucket — it is reported separately or omitted, never counted as
-"behind" (this is BUG-18's territory; do not fix BUG-18 here, but do not create it either)
+**And** a **new** `detectModuleSkew(projectRoot)` returns
+`{ behind: [{name, version}], ahead: [{name, version}], divergent: [{name, version}] }` against
+`getPackageVersion()`, classified with the existing `compareVersions()` plus the string check that defines
+`divergent` (AC1)
+**And** it reads the version with the **same fallback doctor uses** — `mod.config.version ||
+mod.config.installed_version` (`convoke-doctor.js:606`). Reading only `.version` would leave a module that
+declares `installed_version` visible to doctor and invisible to update: the same disagreement, a third time
+**And** `_vortex` is **excluded** from all three buckets. `getCurrentVersion()` already owns it and
+`assessUpdate` has already branched on it before skew is consulted, so including it would double-route the
+same module through two independent paths
+**And** a module whose `config.yaml` is **unparseable** (`mod.config === null`) or carries a non-string /
+non-semver `version` is **not** silently coerced into any bucket — it is omitted, never counted as "behind"
+(this is BUG-18's territory; do not fix BUG-18 here, but do not create it either)
+**And** a module directory with **no `config.yaml` at all** — `_portability`'s exact shape today — is
+invisible to `discoverModules` by construction (`convoke-doctor.js:127`) and stays that way. An earlier
+draft of this AC offered "reported separately", which AC1 makes unreachable: reporting it would require
+changing `discoverModules`, which AC1 forbids. Detecting that class is **ADR-004 C1's** job — a module in
+`files[]` MUST carry a stamped `config.yaml` — not this story's
 
 **AC3 — A behind-skewed install stops reporting "up to date" — the close**
 
@@ -67,6 +92,9 @@ NFR10. A test that only asserts the post-state proves nothing about the bug
 *change*. On the skew path `currentVersion === targetVersion`, so it renders `From: 4.0.1 / To: 4.0.1` in
 red-to-green, which reads as a bug in the tool. The skew path must say what it is actually doing — naming
 the skewed modules — rather than reusing the upgrade banner.
+**And** `--dry-run` on the skew path exits at `convoke-update.js:338`, **before** the refresh and therefore
+before AC5's re-check. The dry-run output must name the skewed modules it would re-stamp, and must not imply
+a repair that AC5 shows a same-root tree will not perform
 **And** the defect is presentational ONLY, verified 2026-09-02 rather than assumed: `printChangelog`
 early-returns on zero entries (`:477`) so it prints nothing; `runRefreshOnly(currentVersion)` (`:357`) and
 `_runPostUpgradeGate` (`:375`) are both safe when the versions are equal. Do not widen this AC into a
@@ -83,8 +111,16 @@ that is a confirmed no-op for behind-skew today and an E404 for ahead-skew
 because a module ahead of the package names a version that may never have been published
 **And** the existing comment at `:617-621` — recording that pinning to the higher version was tried and
 reverted on ETARGET — is **preserved**, not deleted as stale; it is the reason ahead-skew is excluded
-**And** ahead-skew is explicitly **out of scope** and stays with **T38**, which is
-`blocked-until: issue #7 session lands`. Bundling it would import that block into this row
+**And** the ahead finding declares whether it sets `softWarning: true`. Doctor's exit gate
+(`convoke-doctor.js:109`) counts any `passed: false` without `softWarning` as a hard failure, so an
+ahead-only install would exit 1 **permanently on a state with no available fix**, T38 being blocked. Ruling:
+soft-warn it — NFR9's fail-soft contract exists for exactly this shape
+**And** the both-buckets case is routed explicitly: when behind and ahead are BOTH non-empty, refresh repairs
+behind and ahead survives. The behind finding must not claim a full repair, or the operator runs the advised
+fix, sees doctor still red, and concludes the fix did nothing — the BUG-17 experience, one layer up
+**And** ahead-skew is explicitly **out of scope** for repair and stays with **T38**, which is
+`blocked-until: issue #7 session lands`. Bundling its *fix* would import that block into this row; splitting
+its *reporting* here does not
 
 **AC5 — A dev tree does not become a NEW dead loop**
 
@@ -95,6 +131,12 @@ Enhance `:307-312`, Artifacts `:414-422`, Gyre `:504-512`, standalone submodules
 **Then** routing it to `refresh-only` must **not** print success: after the refresh, skew is re-checked, and
 surviving skew is reported as a distinct finding naming the surviving modules and the reason
 (`source tree is the installation`)
+**And** the banner to gate is named, not left to judgement: `✓ Update completed successfully!` at
+`convoke-update.js:360`. A re-check added *after* that line prints success and then contradicts it
+**And** the re-check sits **after `result` inside the `try`**, never in the `catch` at `:369-371` — a refresh
+that threw leaves a half-stamped tree, and skew measured there is noise, not a finding
+**And** the exit code is specified: `convoke-update.js:377` exits 0 unconditionally today. On surviving skew
+it must exit non-zero, or CI and scripts read success while the install stays unrepaired
 **And** the story states plainly that **AC3 without AC5 reproduces BUG-17 through a different door** —
 skew detected → refresh → nothing stamped → skew detected → forever
 **And** the test asserts skew is **GONE** after refresh in a real fixture, and **reported** after refresh in a
@@ -126,11 +168,17 @@ all in the same edit
 ## Tasks / Subtasks
 
 - [ ] **T1** — Extract `discoverModules` verbatim to `scripts/lib/bme-modules.js`; import in doctor and version-detector (AC1)
-- [ ] **T2** — Add `detectModuleSkew(projectRoot)`; leave `getCurrentVersion()` untouched (AC2)
+- [ ] **T2** — Add `detectModuleSkew(projectRoot)` returning behind/ahead/**divergent**, sharing doctor's version-key
+  fallback and excluding `_vortex`; leave `getCurrentVersion()` untouched (AC1, AC2)
+- [ ] **T2b** — Prove the comparator divergence closes: `4.0.1+abc` against package `4.0.1` must route to refresh,
+  not to `up-to-date`. This is the case that would have rebuilt BUG-17 inside its own fix (AC1)
 - [ ] **T3** — Record the RED: fixture reproduces `up-to-date` on behind-skew, BEFORE any fix (AC3, NFR10)
 - [ ] **T4** — Branch `assessUpdate` on skew after the up-to-date verdict (AC3)
 - [ ] **T5** — Split `checkVersionConsistency` into behind/ahead findings; preserve the `:617-621` comment (AC4)
-- [ ] **T6** — Post-refresh skew re-check in `convoke-update`; same-root fixture proves it reports rather than succeeds (AC5)
+- [ ] **T6** — Post-refresh skew re-check in `convoke-update`, placed after `result` inside the `try`, gating the
+  `:360` success banner and the `:377` exit code; same-root fixture proves it reports rather than succeeds (AC5)
+- [ ] **T6b** — Route the ahead-only case to `softWarning: true`, and the both-buckets case to a behind finding that
+  does not claim a full repair (AC4)
 - [ ] **T7** — Tests, isolated fixtures, both directions (AC6)
 - [ ] **T8** — Close BUG-17 as a move; run `backlog-integrity.js` (AC7)
 
@@ -207,6 +255,7 @@ fixture output showing skew reported rather than success, `npm test` and `npm ru
 | Date | Change |
 |---|---|
 | 2026-09-02 | Authored standalone after a YELLOW staleness pre-flight refreshed the BUG-17 row. Design ruled option (c) by the operator; no ADR (ADR-004 C1 is the authority). AC5 added from a hazard found during design, not present in the backlog row. |
+| 2026-09-02 | **Edge-case pass (`bmad-review-edge-case-hunter`) — 10 unhandled paths, all folded into the ACs.** Run on the committed story at `249c04f9`, after Round 1, because every defect found in this design so far had been a missed branch rather than a wrong opinion. **The first finding nearly rebuilt BUG-17 inside its own fix and is confirmed by execution, not argument:** AC2 specified classifying with `compareVersions()`, doctor compares with `!==` on strings, and `compareVersions('4.0.1+abc','4.0.1')` returns **0** while the string compare returns **true** — so a module stamped with build metadata would make doctor report skew while `assessUpdate` found none and returned `up-to-date`. AC1 shared the module *set* between the two sides and said nothing about the *comparator*; sharing one without the other closes half the disagreement. Resolved by adding a third bucket, `divergent` (equal precedence, different string), routed with `behind` — which keeps doctor's sensitivity instead of narrowing doctor to match the weaker comparison. Two further findings were the same class: the `installed_version` fallback key doctor reads at `:606`, and an AC1/AC2 contradiction where AC2 promised to report a module with no `config.yaml` — `_portability`'s shape today — that AC1's no-change constraint makes unreachable (resolved to ADR-004 C1's territory, not this story's). The remaining seven were branch gaps now specified: `_vortex`'s exclusion from the skew set, the `:360` success banner, the `:377` exit code, re-check placement relative to the `:369-371` catch, `--dry-run` exiting at `:338` before the re-check, ahead-only needing `softWarning` or doctor exits 1 forever on an unfixable state, and the both-buckets case where a behind repair must not claim to have fixed everything. Tasks T2b and T6b added. No Round 2 — this was a method pass, not a severity pass. |
 | 2026-09-02 | **Round 1 review — 0 HIGH, 2 MEDIUM, 1 LOW, all applied. No Round 2.** Fired late: the rule makes commit-preparation the landing point for out-of-story work and Round 1 did not run before `c1cacde9`, so this covers text already pushed. **M1** AC5 cited the Vortex config write as `:667`, which is a comment line — the `!isSameRoot` guard is `:668` and the block runs to `:681`; corrected. **M2** the `refresh-only` banner at `convoke-update.js:326-328` is written for a version change and this path has none, so a skewed install would render `From: 4.0.1 / To: 4.0.1` red-to-green; a clause was added to AC3 requiring the skew path to name the skewed modules instead. **M2 was itself overstated on first writing and corrected in the same pass** — it claimed an empty changelog section would render, but `printChangelog` early-returns at `:477`; the rest of the refresh path (`runRefreshOnly`, `_runPostUpgradeGate`) was then walked and is safe on equal versions, so the AC is scoped to presentation and explicitly forbids widening. Third missed branch of the session, which is the argument for an edge-case pass over a cynical one. **A fourth citation error was made and caught inside this very correction** — `_runPostUpgradeGate` was first cited as `:374`, a comment line, with the call at `:375`: the identical off-by-one as M1, committed while documenting M1. Every citation in this story has now been resolved by script rather than by reading, because reading is measurably where this fails. **L1** the Artifacts stamp range stopped one line short of its own `writeFileSync` (`:414-421` → `:414-422`). All 23 line citations were re-resolved against HEAD by script; 3 were wrong, the same first-pass citation-error rate `dist-2-4` recorded. |
 
 ---
