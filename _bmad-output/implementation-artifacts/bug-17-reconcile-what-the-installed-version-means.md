@@ -155,6 +155,7 @@ Body: the reproduction and its mutation check, the byte-identical doctor output,
 
 | Date | Change |
 |---|---|
+| 2026-09-02 | **Narrow review pass over `scripts/lib/bme-modules.js` — four findings, all fixed in `a0539c83`.** The file was rewritten after Round 3, so no round had reviewed its shipped form. It had dropped `convoke-doctor`'s `version \|\| installed_version` fallback, recreating BUG-17's symptom inside its own fix — a hazard an earlier revision of this story had named verbatim in AC1 before the rewrite discarded both the AC and the code. Restored to exact parity with a regression test. Also: a swallowed `require` failure that turned a skewed tree into `✓ Already up to date!`, a header comment overclaiming single-sourcing, and a `Behind:` label on a `divergent` module. Gates after: `npm test` 1981/1980/1 skip, `npm run test:integration` 124/124, lint clean. |
 | 2026-09-02 | Authored, implemented, reviewed in three adversarial rounds, then **reduced**. The widened design from Rounds 1-2 was reverted rather than patched a fourth time, per `code-review-convergence`'s restructure-do-not-patch clause. This document was rewritten from scratch: earlier revisions had accumulated false statements across amendments, and an automated citation edit had mangled several sentences. Residue filed as T114/T115/T116. |
 
 ---
