@@ -937,6 +937,12 @@ development_status:
   scan-epic-1: done
   scan-1-1-make-the-artifact-scanner-see-subdirectories: done
   scan-epic-1-retrospective: optional
+  # --- Standalone Bug Lane story (added 2026-09-02, no epic) ---
+  # BUG-17: convoke-doctor and convoke-update disagree about what "the installed version" is.
+  # Deliberately NOT filed into dist-epic-2 (link/manifest integrity); this is update-path
+  # integrity. Authority is ADR-004 C1; no ADR authored. Pre-flight 2026-09-02 = YELLOW, row
+  # refreshed before authoring — see the backlog Change Log entry of that date.
+  bug-17-reconcile-what-the-installed-version-means: ready-for-dev
 
 action_items:
   - epic: gen-epic-1
