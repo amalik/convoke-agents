@@ -10,7 +10,7 @@ const { createValidInstallation, silenceConsole, restoreConsole } = require('../
 // dist-2-5 / BUG-19 — the governance registry must ARRIVE in the user's project.
 //
 // `convoke-doctor` reads `path.join(projectRoot, '_bmad/_config/bmm-dependencies.csv')`
-// (convoke-doctor.js:763). Nothing put it there, so every npm-installed operator saw
+// (convoke-doctor.js:797). Nothing put it there, so every npm-installed operator saw
 // `⚠ BMM dependencies: registry missing` on an otherwise healthy install.
 //
 // THE REGISTRY IS SEEDED EMPTY, AND BOTH REJECTED ALTERNATIVES ARE GUARDED BELOW.

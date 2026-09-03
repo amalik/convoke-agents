@@ -38,7 +38,7 @@ const path = require('path');
  * The obvious mechanisation — `grep -rn "path.join(projectRoot" scripts/` — was tried
  * and measured on 2026-08-29: 135 sites, no way to tell a read from a write, many
  * paths built from variables, several of them directories, and decisively it CANNOT
- * SEE the one entry this check is required to fire on: `convoke-doctor.js:763` reads
+ * SEE the one entry this check is required to fire on: `convoke-doctor.js:797` reads
  * `path.join(projectRoot, BMM_DEPS_CSV_REL)`, so the filename lives in a constant and
  * a static extractor yields no filename. A check built that way could not satisfy its
  * own acceptance criterion.
@@ -61,7 +61,7 @@ const RUNTIME_DATA_FILES = [
   {
     file: '_bmad/_config/skill-manifest.csv',
     readSite: 'scripts/portability/convoke-export.js:360',
-    alsoRead: ['scripts/portability/export-engine.js:98', 'scripts/convoke-doctor.js:322'],
+    alsoRead: ['scripts/portability/export-engine.js:98', 'scripts/convoke-doctor.js:326'],
     // `:585` opens the PACKAGE copy that seeds the project file; `:551` — cited until Round 2 —
     // only declares the destination path, the same declaration-not-a-write defect corrected on
     // the agent-manifest entry below. Missing this sibling is why the alarm is now an AND.
@@ -82,7 +82,7 @@ const RUNTIME_DATA_FILES = [
   },
   {
     file: '_bmad/_config/taxonomy.yaml',
-    readSite: 'scripts/convoke-doctor.js:980',
+    readSite: 'scripts/convoke-doctor.js:1014',
     alsoRead: ['scripts/lib/artifact-utils.js:164'],
     // `:1038` is the `mergeTaxonomy(projectRoot)` call that creates the file. The first
     // draft cited `:1040`, which is the `changes.push('Created …taxonomy.yaml…')` LOG
@@ -95,7 +95,7 @@ const RUNTIME_DATA_FILES = [
   },
   {
     file: '_bmad/_config/bmm-dependencies.csv',
-    readSite: 'scripts/convoke-doctor.js:763',
+    readSite: 'scripts/convoke-doctor.js:797',
     // The read site does not spell the filename: it reads `path.join(projectRoot,
     // BMM_DEPS_CSV_REL)`. That indirection is the single most important fact about this
     // entry — it is why no static extractor can find this file, and therefore why AC4 is

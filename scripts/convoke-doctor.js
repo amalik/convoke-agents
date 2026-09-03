@@ -6,6 +6,10 @@ const chalk = require('chalk');
 const yaml = require('js-yaml');
 const { findProjectRoot, getPackageVersion } = require('./update/lib/utils');
 const { AGENTS, GYRE_AGENTS, EXTRA_BME_AGENTS } = require('./update/lib/agent-registry');
+// T114: whether a version stamp can change in THIS tree. Only the config writes in
+// `refreshInstallation` are guarded on it — skill wrappers and taxonomy still run — so this
+// governs the version finding below and nothing else. See its docstring before reusing it.
+const { isSourceCheckout } = require('./update/lib/refresh-installation');
 const {
   scanBmmDependencies,
   readExistingCsv,
@@ -484,7 +488,22 @@ function checkModuleSkillWrappers(mod, projectRoot, manifestMap) {
       name: label,
       passed: false,
       error: failures.join('; '),
-      fix: `Run: npx -p convoke-agents@${getPackageVersion()} convoke-update (regenerates skill wrappers)`
+      // T114: module WORKFLOW wrappers are generated only when `!isSameRoot` — the refresh
+      // reports `Skipped Artifacts skill wrapper generation (dev environment …)` in its own
+      // words. So in the package's own checkout this advice cannot produce the wrappers.
+      //
+      // Agent wrappers are NOT guarded and are a different check; do not widen this. I got that
+      // distinction wrong once by measuring one class and generalising — the mapping is pinned by
+      // `tests/unit/module-skew.test.js`, which asserts against the refresh's own change list
+      // rather than against a reading of the guards.
+      ...(isSourceCheckout(projectRoot)
+        ? {
+          passed: false,
+          softWarning: true,
+          fix: 'No action. Module workflow wrappers are not generated in the source checkout; '
+            + 'install into a separate project directory to verify them'
+        }
+        : { fix: `Run: npx -p convoke-agents@${getPackageVersion()} convoke-update (regenerates skill wrappers)` })
     };
   }
 
@@ -610,6 +629,21 @@ function checkVersionConsistency(projectRoot, modules) {
   }
 
   if (mismatched.length > 0) {
+    // T114: in the package's own checkout `refreshInstallation` skips every config write, so the
+    // advice below cannot change these values. Reproduced by running this command in the repo:
+    // doctor reported five modules and prescribed an update that stamps nothing. The mismatch is
+    // real and still worth reporting — it is the fix line that was false.
+    if (isSourceCheckout(projectRoot)) {
+      return {
+        name: 'Version consistency',
+        passed: false,
+        softWarning: true,
+        warning: `Package: ${packageVersion}, ${mismatched.join(', ')} — expected in the source `
+          + 'checkout: convoke-update skips every config write when the package IS the project, '
+          + 'so these versions cannot change here.',
+        fix: 'No action. To see the real versions, install into a separate project directory'
+      };
+    }
     return {
       name: 'Version consistency',
       passed: false,

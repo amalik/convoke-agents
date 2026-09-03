@@ -59,3 +59,55 @@ describe('BUG-17 — the refresh repairs the skew it was routed for', () => {
       'the refresh ran but did not re-stamp');
   });
 });
+
+/**
+ * T114 — the mapping from "doctor finding" to "does its remedy actually run here?" is asserted
+ * against `refreshInstallation`'s OWN change list, not against a reading of its guards.
+ *
+ * This exists because the mapping was got wrong once: measuring that agent skill wrappers are
+ * generated in a source checkout, I generalised to all wrappers and cleared two findings that were
+ * in fact broken. Doctor's output disagreed with my table, which is the only reason it surfaced.
+ *
+ * If someone adds or removes an `isSameRoot` guard, this fails — which is the whole point. T119
+ * proposes replacing the mapping entirely by having doctor read these strings directly.
+ */
+describe('T114 — the guarded/unguarded split, pinned to what the refresh reports', () => {
+  let changes;
+
+  before(async () => {
+    // Safe against PACKAGE_ROOT precisely because every write is guarded when packageRoot ===
+    // projectRoot; that is the property under test. Established pattern — see tests/helpers.js.
+    const { refreshInstallation } = require('../../scripts/update/lib/refresh-installation');
+    changes = await refreshInstallation(PACKAGE_ROOT, { backupGuides: false, verbose: false });
+  });
+
+  it('module workflow wrappers are SKIPPED, so advising an update for them is false', () => {
+    const skipped = changes.filter(c => /^Skipped/.test(c));
+    assert.ok(
+      skipped.some(c => /Artifacts skill wrapper generation/.test(c)),
+      `expected Artifacts wrapper generation to be skipped; got:\n${skipped.join('\n')}`
+    );
+    assert.ok(
+      skipped.some(c => /Enhance skill registration/.test(c)),
+      `expected Enhance skill registration to be skipped; got:\n${skipped.join('\n')}`
+    );
+  });
+
+  it('agent skill wrappers are NOT skipped, so their advice stays a hard failure', () => {
+    assert.ok(
+      changes.some(c => /^Refreshed skill: bmad-agent-bme-/.test(c)),
+      'agent wrappers ARE regenerated in a source checkout — do not suppress their advice'
+    );
+    assert.ok(
+      !changes.some(c => /^Skipped.*agent skill wrapper/i.test(c)),
+      'if this starts being skipped, checkAgentSkillWrappers needs the T114 treatment too'
+    );
+  });
+
+  it('config stamping is skipped — the original T114 case', () => {
+    assert.ok(
+      changes.some(c => /Skipped Vortex config stamp/.test(c)),
+      'the version finding is suppressed on the strength of this'
+    );
+  });
+});

@@ -1142,7 +1142,7 @@ function cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifact
  * Create an EMPTY BMM governance registry in the operator's project (dist-2-5 / BUG-19).
  *
  * `convoke-doctor` reads `path.join(projectRoot, '_bmad/_config/bmm-dependencies.csv')`
- * (`convoke-doctor.js:763`). Nothing created it, so every npm-installed operator saw
+ * (`convoke-doctor.js:797`). Nothing created it, so every npm-installed operator saw
  * `⚠ BMM dependencies: registry missing` on an otherwise healthy install.
  *
  * HEADER ONLY — THE SCHEMA, NEVER A ROW. Two implementations were rejected by measurement
@@ -1272,6 +1272,28 @@ function seedBmmDependencies(projectRoot, opts = {}) {
  * numbers in this file are not gate-checked, and every attempt to keep them current during
  * BUG-17 rotted within the hour.
  */
+/**
+ * Is `projectRoot` the package's own source tree?
+ *
+ * `refreshInstallation` computes this same equality internally (`isSameRoot`) and skips every
+ * config write when it holds — a refresh in a checkout stamps nothing. T114: `convoke-doctor`
+ * advised `convoke-update` for module skew in exactly that tree, and the update reported success
+ * having changed nothing. The deciding condition was computable all along; nothing consulted it.
+ *
+ * Exported from HERE because this is the file whose behaviour depends on it. A second copy of the
+ * equality elsewhere would be the two-callers-disagree defect BUG-17 spent three review rounds on.
+ *
+ * NOTE, and it is the reason T114 is narrower than it first looked: only the config writes are
+ * guarded. Skill-wrapper generation and taxonomy seeding run in a source checkout too — measured,
+ * 12 of 27 actions still performed. So this predicate answers "will the VERSION STAMP change?",
+ * not "is convoke-update useless here?" Do not widen its use without measuring the operation you
+ * are widening it to.
+ */
+function isSourceCheckout(projectRoot) {
+  if (!projectRoot) return false;
+  return path.resolve(path.join(__dirname, '..', '..', '..')) === path.resolve(projectRoot);
+}
+
 const STAMPABLE_MODULES = Object.freeze([
   '_vortex',
   '_enhance',
@@ -1285,4 +1307,5 @@ module.exports = {
   cleanupOrphanWorkflowWrappers,
   seedBmmDependencies,
   STAMPABLE_MODULES,
+  isSourceCheckout,
 };

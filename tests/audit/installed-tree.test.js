@@ -132,7 +132,7 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
       const lines = fs.readFileSync(abs, 'utf8').split('\n');
       const line = lines[Number(lineNo) - 1];
       assert.ok(line !== undefined, `${site} — file has only ${lines.length} lines`);
-      // The basename, or the CONSTANT that holds it: convoke-doctor.js:763 reads
+      // The basename, or the CONSTANT that holds it: convoke-doctor.js:797 reads
       // `path.join(projectRoot, BMM_DEPS_CSV_REL)`, so the filename is not on the line.
       // That indirection is precisely why AC4 is a declared list and not a grep.
       // AND, not OR. A declared token is authoritative: `refresh-installation.js:1040` is a
