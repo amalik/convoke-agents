@@ -34,61 +34,47 @@ Results from the failed experiment — what was tested, what happened, what was 
 **Prior Problem Definition (optional):**
 If you have the original HC2 problem definition from before the experiment, it provides the JTBD baseline for re-framing.
 
-### 3. Validate Your Artifacts
-
-**HC1 Empathy Artifacts — Frontmatter Check:**
-- `contract: HC1`
-- `type: artifact`
-- `source_agent` (e.g., `isla`)
-- `source_workflow` (e.g., `empathy-map`, `user-interview`, `user-discovery`)
-- `target_agents` (should include `mila`)
-- `input_artifacts`
-- `created` (YYYY-MM-DD)
-
-**HC1 Body Sections:**
-- Executive Summary
-- Research Context
-- Synthesized Insights
-- Key Themes
-- Pain Points
-- Desired Gains
-- Recommendations
-
-Reference: `{project-root}/_bmad/bme/_vortex/contracts/hc1-empathy-artifacts.md`
-
-**HC4 Experiment Context — Frontmatter Check:**
-- `contract: HC4`
-- `type: artifact`
-- `source_agent` (e.g., `wade`)
-- `source_workflow` (e.g., `lean-experiment`, `proof-of-concept`)
-- `target_agents`
-- `input_artifacts`
-- `created` (YYYY-MM-DD)
-
-**HC4 Body Sections:**
-- Experiment Summary
-- Hypothesis Tested
-- Experiment Method
-- Pre-Defined Success Criteria
-- Confirmed/Rejected Hypotheses
-- Strategic Context
-- Production Readiness (if experiment graduated to production)
-
-Reference: `{project-root}/_bmad/bme/_vortex/contracts/hc4-experiment-context.md`
-
-### 4. Non-Conforming Input
-
-If your artifacts don't perfectly match the HC1 or HC4 schemas, we don't reject them — the data shows that real-world research rarely arrives in perfect format. Instead, note which sections are present and which are missing. We'll work with what you have and guide you to fill gaps where needed.
+**If your artifacts are non-conforming:** If your artifacts don't perfectly match the HC1 or HC4 schemas, we don't reject them — the data shows that real-world research rarely arrives in perfect format. Instead, note which sections are present and which are missing. We'll work with what you have and guide you to fill gaps where needed.
 
 The critical information for pivot resynthesis is:
 - From HC1: What pains and gains did the original research identify?
 - From HC4: What was tested? What failed? What did we learn?
 
+Concept count: 2/3 (prior problem definition as optional baseline, non-conforming input accepted)
+
+**Your turn — I'll wait here.** Tell me what HC1 research and what experiment evidence you have — and the prior HC2 if you kept it, because without it we lose the JTBD baseline the re-framing is measured against.
+
+Wait for user input.
+
+### 3. Validate Your Research
+
+*First I'll check your original research against its contract and tell you what's present and what's missing.*
+
+> The full HC1 schema lives at `{project-root}/_bmad/bme/_vortex/contracts/hc1-empathy-artifacts.md`.
+> You don't need to read it — I will.
+
+Concept count: 1/3 (HC1 schema validation)
+
+**Your turn — I'll wait here.** Confirm what still holds in that research, or flag anything the failed experiment has since called into question — what survives here is what the revised problem definition gets built on.
+
+Wait for user input.
+
+### 4. Validate Your Experiment Evidence
+
+*Then I'll do the same for the experiment evidence — what was tested, what failed, and what it taught us.*
+
+> The full HC4 schema lives at `{project-root}/_bmad/bme/_vortex/contracts/hc4-experiment-context.md`.
+> You don't need to read it — I will.
+
+Concept count: 1/3 (HC4 schema validation)
+
 ---
 
 ## Your Turn
 
-Walk me through your artifacts. What HC1 research do you have, and what experiment evidence are you bringing to the table? The data shows that the most effective pivots happen when we lay all the evidence side by side.
+I'll lay both sides out together — what the original research still supports, and what the experiment disproved. The data shows the most effective pivots happen when all the evidence sits side by side. Say go when you're ready to re-frame.
+
+Wait for user input.
 
 ## Next Step
 

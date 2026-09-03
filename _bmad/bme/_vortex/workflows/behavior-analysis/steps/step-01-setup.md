@@ -24,34 +24,24 @@ You can also bring **any well-formed experiment summary** — Noah accepts input
 
 ### 2. Provide Your Input
 
-Please provide the file path or describe the experiment context and the behavior you want to analyze. For example:
+Please provide the file path or describe the experiment context. For example:
 - `_bmad-output/vortex-artifacts/hc4-experiment-context-2026-02-25.md`
 - Or: "I have experiment results and I'm seeing unexpected user behavior in production"
 
+**If your input is non-conforming:** That's fine — we don't reject experiment context. I'll guide you to identify which elements are present and which gaps we need to work around during behavior analysis. The more complete the experiment context, the sharper the baseline comparison. But even partial context is better than none — here's what we're seeing in context with whatever you can provide.
+
+Concept count: 2/3 (Wade's experimentation workflows as sources, non-Vortex input accepted)
+
+**Your turn — I'll wait here.** Give me the path, or just describe the experiment you ran — without that baseline, the behaviour you are seeing is indistinguishable from noise.
+
+Wait for user input.
+
 ### 3. Input Validation
 
-I'll check your artifact against the HC4 schema to assess readiness:
+*Once you've given me that, I'll check your artifact against the HC4 schema and tell you what's present and what's missing.*
 
-**HC4 Frontmatter Check:**
-- `contract: HC4`
-- `type: artifact`
-- `source_agent` (who produced it)
-- `source_workflow` (which workflow)
-- `target_agents: [noah]`
-- `input_artifacts` (upstream references)
-- `created` (date)
-
-**HC4 Body Section Check:**
-- Experiment Summary (Name, Description, Type, Duration, Graduation Status)
-- Hypothesis Tested (Statement, Riskiest Assumption, Expected Outcome, Target Behavior Change)
-- Experiment Method (Method Type, Sample Size, Planned Duration)
-- Pre-Defined Success Criteria (Metric, Target Threshold, Actual Result, Met?)
-- Additional Results (optional — Quantitative Metrics, Qualitative Results)
-- Confirmed/Rejected Hypotheses (Status, Assumption Status, Core Learning)
-- Strategic Context (Vortex Stream, Assumption Tested, Decision It Informs, Implications)
-- Production Readiness (Metrics to Monitor, Expected Production Behavior, Signal Thresholds)
-
-**If your input is non-conforming:** That's fine — we don't reject experiment context. I'll guide you to identify which elements are present and which gaps we need to work around during behavior analysis. The more complete the experiment context, the sharper the baseline comparison. But even partial context is better than none — here's what we're seeing in context with whatever you can provide.
+> The full HC4 schema lives at `{project-root}/_bmad/bme/_vortex/contracts/hc4-experiment-context.md`.
+> You don't need to read it — I will.
 
 ### 4. Describe the Behavior You're Observing
 
@@ -66,13 +56,15 @@ While I validate your experiment context, describe the production behavior that 
 
 This gives us the raw observation that we'll compare against experiment baselines in Step 2.
 
-> For the full HC4 schema reference, see `{project-root}/_bmad/bme/_vortex/contracts/hc4-experiment-context.md`
+Concept count: 2/3 (HC4 schema validation, behavior observation form)
 
 ---
 
 ## Your Turn
 
-Please provide your experiment context and describe the behavior you're observing. I'll validate the experiment input and we'll proceed to establishing baselines for comparison.
+I'll tell you what the check found, then ask you to describe the behaviour you're observing so we can compare it against the experiment's baseline. Fill any gap you want to fix now, or say go.
+
+Wait for user input.
 
 ## Next Step
 

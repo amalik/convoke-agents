@@ -37,28 +37,30 @@ Please provide file paths or describe each experiment context. For example:
 - `_bmad-output/vortex-artifacts/hc4-experiment-beta-2026-02-22.md`
 - Or: "I have three experiments running — onboarding flow, pricing page, and search redesign"
 
+**If any input is non-conforming:** That's fine — we don't reject experiment context. I'll guide you to identify which elements are present and which gaps we need to work around for each experiment. The more complete the experiment contexts, the sharper the portfolio monitoring. But even partial context is better than none — here's what we're seeing in context with whatever you can provide.
+
+Concept count: 3/3 (Wade's experimentation workflows as sources, non-Vortex input accepted, multi-experiment input)
+
+**Your turn — I'll wait here.** Give me the paths, or just name the experiments — each one needs its own baseline, because a signal that is alarming for one experiment is exactly what another one predicted.
+
+Wait for user input.
+
 ### 3. Per-Experiment Input Validation
 
-I'll check each artifact against the HC4 schema to assess readiness:
+*I'll check each experiment context against the HC4 schema, one at a time, and tell you what's present and what's missing.*
 
-**HC4 Frontmatter Check (per experiment):**
-- `contract: HC4`
-- `type: artifact`
-- `source_agent` (who produced it)
-- `source_workflow` (which workflow)
-- `target_agents: [noah]`
-- `input_artifacts` (upstream references)
-- `created` (date)
+> The full HC4 schema lives at `{project-root}/_bmad/bme/_vortex/contracts/hc4-experiment-context.md`.
+> You don't need to read it — I will.
 
-**HC4 Body Section Check (per experiment):**
-- Experiment Summary (Name, Description, Type, Duration, Graduation Status)
-- Hypothesis Tested (Statement, Riskiest Assumption, Expected Outcome, Target Behavior Change)
-- Experiment Method (Method Type, Sample Size, Planned Duration)
-- Pre-Defined Success Criteria (Metric, Target Threshold, Actual Result, Met?)
-- Additional Results (optional — Quantitative Metrics, Qualitative Results)
-- Confirmed/Rejected Hypotheses (Status, Assumption Status, Core Learning)
-- Strategic Context (Vortex Stream, Assumption Tested, Decision It Informs, Implications)
-- Production Readiness (Metrics to Monitor, Expected Production Behavior, Signal Thresholds)
+Concept count: 1/3 (per-experiment schema validation)
+
+**Your turn — I'll wait here.** Fill any per-experiment gap you want to close now — an experiment that stays thin here is one whose signals we cannot classify later.
+
+Wait for user input.
+
+### 4. Portfolio Readiness
+
+*Then I'll roll the per-experiment results up so you can see the portfolio in one view.*
 
 **Portfolio Validation Summary:**
 
@@ -67,15 +69,15 @@ I'll check each artifact against the HC4 schema to assess readiness:
 | 1 | *name* | Yes / Partial / No | *list* | Ready / Needs Attention |
 | 2 | *name* | Yes / Partial / No | *list* | Ready / Needs Attention |
 
-**If any input is non-conforming:** That's fine — we don't reject experiment context. I'll guide you to identify which elements are present and which gaps we need to work around for each experiment. The more complete the experiment contexts, the sharper the portfolio monitoring. But even partial context is better than none — here's what we're seeing in context with whatever you can provide.
-
-> For the full HC4 schema reference, see `{project-root}/_bmad/bme/_vortex/contracts/hc4-experiment-context.md`
+Concept count: 1/3 (portfolio readiness summary)
 
 ---
 
 ## Your Turn
 
-Please provide your experiment contexts — file paths, descriptions, or both. I'll validate each input and we'll proceed to assembling the portfolio.
+I'll show you the portfolio table — which experiments are ready, which need attention, and what's missing from each. Say go when you're ready to assemble the portfolio and map baselines.
+
+Wait for user input.
 
 ## Next Step
 

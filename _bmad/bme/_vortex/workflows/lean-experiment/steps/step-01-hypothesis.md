@@ -18,38 +18,45 @@ Experiments without hypotheses produce data without direction. You'll measure th
 
 Wade expects a hypothesis — ideally from Liam's hypothesis-engineering workflow as an HC3-compliant artifact:
 - **HC3 Hypothesis Contract** (from Liam's `hypothesis-engineering` workflow)
-- **HC3 with Assumption Risk Map** showing which assumptions to test first
+- **Enriched HC3** (from Liam's `assumption-mapping` workflow)
 
-You can also bring **any well-formed hypothesis** — Wade accepts input from outside the Vortex pattern. It doesn't have to be HC3-compliant, but having a structured hypothesis with an explicit riskiest assumption makes experiment design dramatically stronger.
+You can also bring **any well-formed hypothesis** — Wade accepts input from outside the Vortex pattern. It doesn't have to be HC3-compliant, but a structured, falsifiable hypothesis makes experiment design dramatically stronger.
 
 ### 2. Provide Your Input
 
 Please provide the file path or describe the hypothesis you want to test. For example:
 - `_bmad-output/vortex-artifacts/hc3-hypothesis-contract-2026-03-01.md`
-- Or: "I believe that [users] will [behavior] because [rationale], and the riskiest assumption is [assumption]"
+- Or: "I believe that [users] will [behavior] because [rationale]"
+
+**If your input is incomplete:** That's okay — we'll work through the gaps. But let's be honest about what we know vs. what we're assuming. The experiment will only be as strong as the hypothesis driving it.
+
+Concept count: 3/3 (falsifiability, HC3 hypothesis contract, non-Vortex input accepted)
+
+**Your turn — I'll wait here.** Give me the path, or just state the hypothesis — if you cannot describe a result that would prove it wrong, the experiment we design will produce data without direction.
+
+Wait for user input.
 
 ### 3. Input Validation
 
-I'll check your hypothesis for experiment-readiness:
+*Once you've given me that, I'll check your hypothesis for experiment-readiness and tell you what's present and what's missing.*
 
-**Hypothesis Statement Check:**
-- [ ] States what you believe will happen (expected outcome)
-- [ ] Identifies a specific behavior change you expect to observe
-- [ ] Provides rationale grounded in evidence (not intuition)
-- [ ] Names the riskiest assumption — the one thing that could kill this
+> The fields a well-formed hypothesis carries are set out in `{project-root}/_bmad/bme/_vortex/contracts/hc3-hypothesis-contract.md`.
+> You don't need to read it — I will.
 
 **Falsifiability Check:**
 - [ ] Can you describe a result that would prove this hypothesis wrong?
 - [ ] Are the expected outcomes specific enough that two people would agree on success vs. failure?
 - [ ] Is the riskiest assumption something you can actually observe or measure?
 
-**If your input is incomplete:** That's okay — we'll work through the gaps. But let's be honest about what we know vs. what we're assuming. The experiment will only be as strong as the hypothesis driving it.
+Concept count: 1/3 (experiment-readiness check)
 
 ---
 
 ## Your Turn
 
-Please provide your hypothesis — file path, description, or both. I'll validate it and we'll proceed to designing the experiment.
+I'll tell you what the check found — whether the hypothesis is falsifiable as written, and which parts need sharpening. Fix any gap you want to fix now, or say go and we'll design the experiment.
+
+Wait for user input.
 
 ## Next Step
 

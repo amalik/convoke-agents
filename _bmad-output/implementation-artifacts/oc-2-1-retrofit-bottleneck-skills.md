@@ -1,6 +1,6 @@
 # Story 2.1: Retrofit T1-Firing Cells (Vortex × Right to pacing)
 
-Status: ready-for-dev — **unblocked 2026-08-28 when T88 shipped.** AC0 satisfied: a fresh install now carries `_bmad/bme/_vortex/contracts/`, and 17 contract pointers across the installed workflow tree resolve with 0 dangling.
+Status: review — **implemented 2026-09-03; Round 1 run and applied. Round 2 owed (Round 1 found HIGH).** Unblocked 2026-08-28 when T88 shipped. AC0 satisfied: a fresh install now carries `_bmad/bme/_vortex/contracts/`, and 17 contract pointers across the installed workflow tree resolve with 0 dangling.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -85,44 +85,44 @@ Derived from [Epic Story 2.1 ACs](../planning-artifacts/convoke-epic-operator-co
 
 ## Tasks / Subtasks
 
-- [ ] **Task 0 — Re-confirm T88's fix in your own tree (AC: 0)** — *T88 shipped 2026-08-28; this is a re-check, not a gate.*
-  - [ ] `bash scripts/audit/try-fresh-install.sh` → inspect the installed tree, confirm `_bmad/bme/_vortex/contracts/` exists.
-  - [ ] If T88 shipped by repointing references rather than copying, STOP and re-read §Resolved Design Decision — the retrofit shape changes.
+- [x] **Task 0 — Re-confirm T88's fix in your own tree (AC: 0)** — *T88 shipped 2026-08-28; this is a re-check, not a gate.*
+  - [x] `bash scripts/audit/try-fresh-install.sh` → inspect the installed tree, confirm `_bmad/bme/_vortex/contracts/` exists.
+  - [x] If T88 shipped by repointing references rather than copying, STOP and re-read §Resolved Design Decision — the retrofit shape changes.
 
-- [ ] **Task 1 — Read before writing (AC: 1, 5)**
-  - [ ] Read all 12 target step files in full (paths in §Cell Catalog). Do not skim.
-  - [ ] For each, record: which section carries the schema enumeration, what the fallback sentence is (R1 evidence), where the wait marker is (R5 evidence), what the `## Next Step` pointer says.
-  - [ ] ⚠️ The enumeration section heading is **not uniform**: `### 3. Input Validation` (6 files), `### 3. Input Assessment` (pattern-mapping), `### 3. Validate Your Artifacts` (pivot-resynthesis), `### 3. Per-Experiment Input Validation` (production-monitoring). A blind find/replace misses 3 of 7.
+- [x] **Task 1 — Read before writing (AC: 1, 5)**
+  - [x] Read all 12 target step files in full (paths in §Cell Catalog). Do not skim.
+  - [x] For each, record: which section carries the schema enumeration, what the fallback sentence is (R1 evidence), where the wait marker is (R5 evidence), what the `## Next Step` pointer says.
+  - [x] ⚠️ The enumeration section heading is **not uniform**: `### 3. Input Validation` (6 files), `### 3. Input Assessment` (pattern-mapping), `### 3. Validate Your Artifacts` (pivot-resynthesis), `### 3. Per-Experiment Input Validation` (production-monitoring). A blind find/replace misses 3 of 7.
 
-- [ ] **Task 2 — Verify the structural constraint still holds (AC: 2)**
-  - [ ] **Already settled — see §Resolved Design Decision.** Read it before writing anything; it is settled by `validator.js` P17/P20, not by taste.
-  - [ ] Confirm the constraint still holds: `ls _bmad/bme/_vortex/workflows/*/steps/*.md | wc -l` per workflow, and re-read `scripts/update/lib/validator.js:475-487`. If the cap has changed since 2026-08-28, re-open the decision.
+- [x] **Task 2 — Verify the structural constraint still holds (AC: 2)**
+  - [x] **Already settled — see §Resolved Design Decision.** Read it before writing anything; it is settled by `validator.js` P17/P20, not by taste.
+  - [x] Confirm the constraint still holds: `ls _bmad/bme/_vortex/workflows/*/steps/*.md | wc -l` per workflow, and re-read `scripts/update/lib/validator.js:475-487`. If the cap has changed since 2026-08-28, re-open the decision.
 
-- [ ] **Task 3 — Author the shared scaffold (AC: 2, 4, 7)** — *location constrained, see §Hard structural constraint item 4*
-  - [ ] ⛔ **NOT** `_bmad/bme/_vortex/templates/` — T88 shipped narrowed (`contracts/` + `examples/` only), so a root-level dir is still copied by nothing. Place the scaffold inside a workflow directory; verify with `try-fresh-install.sh` per Task 0.
-  - [ ] Round 1 = receive the input (path or description). Round 2 = validate against the named contract schema.
-  - [ ] Each round carries a `Concept count: N/3` footer. **Reuse the existing convention, do not invent one** — see `_bmad/bme/_team-factory/workflows/add-team/step-01-scope.md:104` and siblings.
-  - [ ] Self-check against OC-R0..OC-R7 (AC7).
+- [x] **Task 3 — Author the shared scaffold (AC: 2, 4, 7)** — *location constrained, see §Hard structural constraint item 4*
+  - [x] ⛔ **NOT** `_bmad/bme/_vortex/templates/` — T88 shipped narrowed (`contracts/` + `examples/` only), so a root-level dir is still copied by nothing. Place the scaffold inside a workflow directory; verify with `try-fresh-install.sh` per Task 0.
+  - [x] Round 1 = receive the input (path or description). Round 2 = validate against the named contract schema.
+  - [x] Each round carries a `Concept count: N/3` footer. **Reuse the existing convention, do not invent one** — see `_bmad/bme/_team-factory/workflows/add-team/step-01-scope.md:104` and siblings.
+  - [x] Self-check against OC-R0..OC-R7 (AC7).
 
-- [ ] **Task 4 — Apply to the 9 mechanism (i) cells (AC: 2, 4, 5)**
-  - [ ] `R7-V1` assumption-mapping · `R7-V2` hypothesis-engineering · `R7-V3` behavior-analysis · `R7-V4` experiment-design · `R7-V6` pattern-mapping · `R7-V10` research-convergence · `R7-V11` signal-interpretation — straight parametrization.
-  - [ ] `R7-V7` pivot-resynthesis — **dual-schema variant** (HC1 + HC4 as separate sub-rounds).
-  - [ ] `R7-V8` production-monitoring — **portfolio-iteration variant** (HC4 per-experiment sub-rounds).
-  - [ ] For each: preserve the non-conforming fallback sentence verbatim (R1) and the wait marker (R5). **Do NOT rename the file, add a step file, or touch `## Next Step` / `## Steps Overview` / `Load step:`** — see §Hard structural constraint.
+- [x] **Task 4 — Apply to the 9 mechanism (i) cells (AC: 2, 4, 5)**
+  - [x] `R7-V1` assumption-mapping · `R7-V2` hypothesis-engineering · `R7-V3` behavior-analysis · `R7-V4` experiment-design · `R7-V6` pattern-mapping · `R7-V10` research-convergence · `R7-V11` signal-interpretation — straight parametrization.
+  - [x] `R7-V7` pivot-resynthesis — **dual-schema variant** (HC1 + HC4 as separate sub-rounds).
+  - [x] `R7-V8` production-monitoring — **portfolio-iteration variant** (HC4 per-experiment sub-rounds).
+  - [x] For each: preserve the non-conforming fallback sentence verbatim (R1) and the wait marker (R5). **Do NOT rename the file, add a step file, or touch `## Next Step` / `## Steps Overview` / `Load step:`** — see §Hard structural constraint.
 
-- [ ] **Task 5 — Patch the 2 mechanism (ii) cells (AC: 3, 4, 5)**
-  - [ ] `R7-V5` lean-experiment `step-01-hypothesis.md` — split Hypothesis Statement Check + Falsifiability Check across ≥2 sub-rounds.
-  - [ ] `R7-V9` proof-of-value `step-01-value-hypothesis.md` — split Value Hypothesis Canvas + Riskiest Value Assumption + sentence template across ≥3 sub-rounds.
+- [x] **Task 5 — Patch the 2 mechanism (ii) cells (AC: 3, 4, 5)**
+  - [x] `R7-V5` lean-experiment `step-01-hypothesis.md` — split Hypothesis Statement Check + Falsifiability Check across ≥2 sub-rounds.
+  - [x] `R7-V9` proof-of-value `step-01-value-hypothesis.md` — split Value Hypothesis Canvas + Riskiest Value Assumption + sentence template across ≥3 sub-rounds.
 
-- [ ] **Task 6 — Re-score and prove no regression (AC: 4, 5, 6)**
-  - [ ] Re-score OC-R7 on all 11 cells under v5.1. Record counts.
-  - [ ] Re-score **R1–R6** on all 9 HC-cluster workflows + the 2 A24 workflows. Any PASS→FAIL blocks closure.
-  - [ ] Confirm no new T1-firing cell was introduced.
+- [x] **Task 6 — Re-score and prove no regression (AC: 4, 5, 6)**
+  - [x] Re-score OC-R7 on all 11 cells under v5.1. Record counts.
+  - [x] Re-score **R1–R6** on all 9 HC-cluster workflows + the 2 A24 workflows. Any PASS→FAIL blocks closure.
+  - [x] Confirm no new T1-firing cell was introduced.
 
-- [ ] **Task 7 — Decide #4 lean-persona (AC: 8)**
+- [x] **Task 7 — Decide #4 lean-persona (AC: 8)**
 
-- [ ] **Task 8 — Close the row and the story in the same session**
-  - [ ] Update `sprint-status.yaml`. Per `project-context.md` and the T55/T79 lesson: **a fix is not a close.** `backlog-integrity.js`'s owed-close scan will flag a `fix(oc-2-1)` commit against an unclosed row.
+- [x] **Task 8 — Close the row and the story in the same session**
+  - [x] Update `sprint-status.yaml`. Per `project-context.md` and the T55/T79 lesson: **a fix is not a close.** `backlog-integrity.js`'s owed-close scan will flag a `fix(oc-2-1)` commit against an unclosed row.
 
 ---
 
@@ -328,8 +328,97 @@ The shared scaffold holds **the invariant scaffold only** — round split, foote
 
 ### Agent Model Used
 
+Amelia (bmad-agent-dev) on claude-opus-5[1m], 2026-09-03.
+
 ### Debug Log References
+
+- Staleness pre-flight on P21: **GREEN** (Change Log entry 2026-09-03). Five stale citations corrected first in the same session — P21's Stage cell and T86 both asserted `oc-2-1` reads `backlog` at `sprint-status.yaml:509`; it reads `ready-for-dev` at `:520`.
+- AC0 re-verified against a real packed install, not the copy logic: `contracts/` present with all 5 HC files; **17 pointer occurrences across 16 files, 0 dangling** — matching the story's claim exactly.
+- **A `git stash`/`pop` round-trip in this session raced with an operator commit and had to be undone.** I used a stash to measure the contract-pointer count before vs after. `b787d28a` (T120 `parseVersion`, authored by the operator) landed between the stash and the pop, so the pop restored the stale pre-commit copy of `scripts/update/lib/utils.js` and `scripts/lib/bme-modules.js` as a **staged revert of that commit**. No operator work was lost — it was safe in `b787d28a` — and both files were restored with `git restore --staged --worktree`, `parseVersion` verified present again. **All gates below were re-run afterwards** against the corrected tree; the numbers are identical. Lesson: do not `git stash` in this repo, the operator commits concurrently from GitHub Desktop.
+- `_portability` FAILED / `[installed-tree status 1]` appears in both harness runs. **Pre-existing and deliberate** — `$TREE` is held out of the verdict until `dist-2-6` wires it in, and 2.6 is still `ready-for-dev`. Not caused by this story.
 
 ### Completion Notes List
 
+**Scope delivered: 12 files, not 11.** The 11 T1-firing cells plus the AC8 carry-forward (#4 `lean-persona`), which was retrofitted rather than deferred — oc-1-1 §9.1 already specified the exact split, so no design invention was needed, and shipping a pacing violation inside the release that publishes a covenant about pacing is the self-compliance problem AC7 exists to prevent.
+
+**The scaffold is repo-only, by operator ruling.** `docs/vortex-step-01-round-split-scaffold.md` is deliberately outside `files[]`. The option space was closed by measurement, not preference: `steps/` is out because `validator.js:473` counts *every* `.md` there against the P17 4–6 cap; a new workflow directory is out because `WORKFLOW_NAMES` derives from the `WORKFLOWS` registry (`agent-registry.js:140`) and would inherit the same cap plus operator visibility; `_vortex/templates/` is copied by nothing; `guides/` is operator-facing and backed up on refresh; `examples/` holds operator-facing HC samples. Since nothing loads the scaffold at runtime it names no `{project-root}` path, so T89's class does not apply. **Verified it does not ship** — 0 copies in the packed tarball.
+
+**What actually collapses the concept count is the reference, not the split.** §A41-2 counts *visible* sub-fields, so pointing at the contract file leaves none to count. `behavior-analysis` §3 was 7 frontmatter + 8 body = **15 concepts in one round** against a budget of 3. Both halves are required: referencing alone still overspends in §1+§2, and splitting alone leaves 15 concepts in round two.
+
+**Three round-1 overspends were found by counting rather than assumed away.** `assumption-mapping` §1 carried a 4-field contract enumeration (4 ≥ 4 → 4 concepts under §A41-2) and `lean-experiment` §1 introduced `Assumption Risk Map` as a fourth concept; `proof-of-value` §1 described three sources individually, which is N not 1 compound under A46(d). All three were compressed to graph-position references.
+
+**R5 was the real hazard, and the pre-existing state was worse than the story implied.** Vortex carries **zero** literal halt markers anywhere — no `HALT`, no `Wait for user input.`, no `MANDATORY EXECUTION RULES` block — so R5 passed only under the lenient reading A26 committed. The retrofit adds **14** new operator decision points. Operator ruled to add literal markers. Marking only the new boundaries would have achieved nothing, because R5 fails a cell on *any* unmarked boundary, so **all 28** boundaries were marked (16 new + 12 pre-existing `## Your Turn`). The markers are agent-facing, so they cost nothing against the R7 budget. **This does not re-score A26** — that stays a separate scope decision.
+
+**AC5 re-score result: no regression.** R1 fallbacks preserved by extraction rather than retyping (9 bold sentences + `pivot-resynthesis` §4). `proof-of-value` has no bold fallback sentence — verified against `HEAD` that it had none before either. **Round 1 corrected the reasoning:** A26 §4.7 anchors its `Right to a default — PASS` on the value-hypothesis statement template, not on a fallback sentence, so the cell was originally cleared against the wrong evidence. That surface survives, so the verdict holds; the justification did not. R2/R4/R6 surfaces untouched. R3 verified per round: every round 1 carries a consequence sentence; one thin boundary at `proof-of-value` §4 was given one. Contract-pointer count unchanged — measured as occurrences of the `_vortex/contracts` path across `_bmad/bme/_vortex/`, before and after. (The **17 across 16 files** in the Debug Log is a narrower measure: occurrences of an `hcN-*.md` filename in the installed tree. Two numbers, two methods — stated here because the first draft gave both for what read as one measure.)
+
+**AC6 cascade termination:** no round exceeds 3/3, so no new T1-firing cell is introduced.
+
+**Open question for the operator, corrected at Round 1:** A26 §10 does contradict itself, but not as the story first said. §10 reads *"mechanism (i): 9 (A26) + 2 (A24) = 11 … Plus #4 lean-persona = 14 total"*; A26 actually contributes **7** mechanism (i) cells (`:217`, `:227`), so §10 double-counts its own two mechanism (ii) cells into the mechanism (i) bucket, giving 11 and 14 where §6/§8 give 9 and 12. The implementation's 12 is right; the earlier framing pointed at the wrong contradiction. Amending a shipped audit is a governance action, not a dev action.
+
+**A second question this session surfaced:** A26 is dated 2026-04-26, which is *after* A41 (2026-04-25), so §A41-4 makes it a v4+ audit that should have used the **strict** R5 reading and scored R5 FAIL across all nine cells. It records R1–R6 PASS at 100%. Either A26 mis-applied the rubric or it made an undocumented lenient commitment. Not filed — it is an evidence-standards question of the same family as T86.
+
+### Review Findings — Round 1 (2026-09-03)
+
+Three layers launched in parallel. **Two completed — Blind Hunter and Edge Case Hunter. The Acceptance Auditor FAILED twice**, both times an API error from the machine sleeping mid-response, so that layer is missing and its AC-by-AC verdict table does not exist. This is a real coverage gap, not a clean bill. Every finding acted on below was reproduced against the tree before being accepted.
+
+**Verdict: RED.** 8 HIGH, ~8 MEDIUM — Round 2 is triggered per `code-review-convergence`.
+
+**HIGH — fixed**
+
+1. **`## Your Turn` re-asked for round-1 input in all 12 files.** Preserved verbatim as R1/R5 evidence, it still said *"Please provide your hypothesis contracts"* after round 2 had already validated them. Verbatim preservation is exactly what made it wrong once a halt was inserted upstream. Every `## Your Turn` now closes its final round by reporting what the check found.
+2. **`proof-of-value`'s final ask collapsed its own 4-round split** — it instructed all four deliverables at once, as the file's last and most authoritative line.
+3. **The same four HC3 fields were counted two ways in one change set.** `lean-experiment` §3's checklist was footered `1/3` as a §2.6 category checklist while the identical four-field list was deleted from `assumption-mapping` §1 because §A41-2 makes it 4. §3 now references the HC3 contract like every other cell, and the file collapses from 3 rounds to 2.
+4. **No round-1 footer counted the file preamble.** Round 1 begins at `# Step 1:` and includes `## Why This Matters`; A26 scored the budget *atop step-prose*. All recounted. Most preambles restate `workflow.md` vocabulary and cost nothing, but `hypothesis-engineering` and `signal-interpretation` each gained one (now 3/3) and `lean-experiment` hit **4/3** — its `workflow.md` is a single line, so "falsifiable bet" is novel.
+5. **The R1 fallback had moved behind the round-1 boundary**, so an operator with informal notes never saw that non-conforming input is welcome at the moment they decided what to hand over. It now sits ahead of the halt in all 11 files that have one.
+6. **`pivot-resynthesis` and `production-monitoring` never got the sub-rounds their catalog entries and this story's own scaffold prescribe.** Both are now 3 rounds.
+
+**HIGH — deferred to `deferred-work.md` with rationale**
+
+7. **The 16 new operator-decision branches propose no default (OC-R1)**, and the split un-vacuums two cells A26 scored `N/A — vacuous` precisely because step-01 had no decision branch. Choosing a sensible default per boundary is a design question, not a patch.
+8. **AC6 cascade was evaluated only inside the 12 changed files.** Concepts removed from `experiment-design` and `assumption-mapping` step-01 now arrive novel in step-02. Verified against source.
+
+Neither has a lane row: `feedback_backlog_id_allocation` forbids allocating an ID while the backlog has uncommitted edits, and a sibling session was paused. **Both need qualifying once this commit lands.**
+
+**MEDIUM — record defects, all fixed**
+
+- Marker arithmetic said 25 (14+11); actual **28 (16+12)** — never updated after `lean-persona` was added.
+- **Citation rot introduced by this session's own correction.** The Change Log's whole subject is fixing a stale `sprint-status.yaml:509` citation — and the same session's sprint-status edit moved the key, so the correction cited a line that no longer held. Fixed by removing line numbers and citing the key by name.
+- Two numbers (17, 19) for what read as one pointer-count measure.
+- "Two round-1 overspends" followed by three.
+- The A26 §10 open question pointed at the wrong contradiction.
+- `proof-of-value`'s R1 was cleared against the wrong evidence surface.
+- 11 halts lacked the consequence clause the scaffold makes mandatory while the record claimed all had one. All 16 now carry one.
+- Scaffold citation drift (`validator.js` P17/P20, `agent-registry.js` path) and no `lean-persona` row. Fixed, and finding 4's preamble rule is now written into the scaffold.
+
+**LOW** — the scaffold is untracked and must be explicitly `git add`ed or a `git add -u` commit drops it silently.
+
 ### File List
+
+| File | Change |
+|---|---|
+| `docs/vortex-step-01-round-split-scaffold.md` | **new** — the shared scaffold (not shipped) |
+| `_bmad/bme/_vortex/workflows/assumption-mapping/steps/step-01-setup.md` | `R7-V1` — 2 rounds |
+| `_bmad/bme/_vortex/workflows/hypothesis-engineering/steps/step-01-setup.md` | `R7-V2` — 2 rounds |
+| `_bmad/bme/_vortex/workflows/behavior-analysis/steps/step-01-setup.md` | `R7-V3` — 2 rounds |
+| `_bmad/bme/_vortex/workflows/experiment-design/steps/step-01-setup.md` | `R7-V4` — 2 rounds |
+| `_bmad/bme/_vortex/workflows/lean-experiment/steps/step-01-hypothesis.md` | `R7-V5` — 2 rounds (mechanism ii; §3 now references HC3) |
+| `_bmad/bme/_vortex/workflows/pattern-mapping/steps/step-01-setup.md` | `R7-V6` — 2 rounds, dual-mode |
+| `_bmad/bme/_vortex/workflows/pivot-resynthesis/steps/step-01-setup.md` | `R7-V7` — 3 rounds, one per contract |
+| `_bmad/bme/_vortex/workflows/production-monitoring/steps/step-01-setup.md` | `R7-V8` — 3 rounds, per-experiment then roll-up |
+| `_bmad/bme/_vortex/workflows/proof-of-value/steps/step-01-value-hypothesis.md` | `R7-V9` — 4 rounds (mechanism ii) |
+| `_bmad/bme/_vortex/workflows/research-convergence/steps/step-01-setup.md` | `R7-V10` — 2 rounds |
+| `_bmad/bme/_vortex/workflows/signal-interpretation/steps/step-01-setup.md` | `R7-V11` — 2 rounds |
+| `_bmad/bme/_vortex/workflows/lean-persona/steps/step-01-define-job.md` | `#4` carry-forward — 2 rounds |
+| `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` | pre-flight corrections + Change Log |
+
+### Gates
+
+Re-run after Round 1 remediation, against the corrected tree.
+
+- lint **0/0**
+- `npm test` **1981 tests / 1980 pass / 0 fail / 0 cancelled / 1 pre-existing skip**. *One earlier run of this same tree reported `pass 1979` with `fail 0` and one test unaccounted for — a transient from the machine sleeping mid-run, the same cause that killed the Acceptance Auditor twice. Re-run clean and consistent; recorded rather than hidden.*
+- `docs:audit` **0 findings**
+- `backlog-integrity.js` **PASS** (802 rows, 10 tables, 3 lanes ordered)
+- `try-fresh-install.sh` **PASS** — all 12 retrofitted files present in the operator project, scaffold absent from the tarball, contract references resolve 0 dangling
+- **AC2 uniformity re-verified after remediation:** all 7 template cells carry the same elements in the same order (fallback → round-1 footer → halt → §3), 1 each.
+- **Round 1: run, RED, remediated. Round 2: OWED.** The Acceptance Auditor layer never completed, so AC-by-AC coverage is incomplete.

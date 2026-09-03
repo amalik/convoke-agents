@@ -26,6 +26,12 @@ Be specific. Not "manage finances" but "ensure I don't overspend on discretionar
 ### 2. Give this persona a name
 A simple identifier (e.g., "Budget-Conscious Parent", "Efficiency-Driven PM"). This is for reference, not a demographic label.
 
+Concept count: 2/3 (job-to-be-done, persona name)
+
+**Your turn — I'll wait here.** Give me the job and a name for it — if the job is still phrased as a demographic rather than a behaviour, everything downstream inherits that and the persona stops being lean.
+
+Wait for user input.
+
 ### 3. How often does this job occur?
 - Daily? Weekly? Monthly? Annually?
 - Is it predictable or unpredictable?
@@ -57,6 +63,8 @@ Why does it matter to them?
 - Survey of 200 remote managers (68% cited "too many meetings" as top frustration)
 - HYPOTHESIS: We believe eliminating daily standups would improve team productivity
 
+Concept count: 3/3 (job frequency, job importance, evidence basis — the worked example and the hypothesis-marking note illustrate these rather than adding to them)
+
 ---
 
 ## Your Turn
@@ -64,6 +72,8 @@ Why does it matter to them?
 Please define the job-to-be-done using the structure above.
 
 **Important:** If you're working from a hypothesis (not validated research), clearly mark assumptions. Every assumption needs a plan to validate it.
+
+Wait for user input.
 
 ## Next Step
 

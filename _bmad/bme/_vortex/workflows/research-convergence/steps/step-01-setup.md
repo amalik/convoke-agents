@@ -30,37 +30,30 @@ Please provide the file paths or describe the artifacts you want to synthesize. 
 - `_bmad-output/vortex-artifacts/hc1-interview-synthesis-2026-02-21.md`
 - Or: "I have interview notes in a Google Doc and survey results in a spreadsheet"
 
-### 3. Input Validation
-
-I'll check each artifact against the HC1 schema to assess readiness:
-
-**HC1 Frontmatter Check:**
-- `contract: HC1`
-- `type: artifact`
-- `source_agent` (who produced it)
-- `source_workflow` (which workflow)
-- `target_agents: [mila]`
-- `input_artifacts` (upstream references)
-- `created` (date)
-
-**HC1 Body Section Check:**
-- Executive Summary
-- Research Context
-- Synthesized Insights
-- Key Themes
-- Pain Points
-- Desired Gains
-- Recommendations
-
 **If artifacts are non-conforming:** That's okay — we don't reject research. I'll guide you to identify which sections are present and which gaps we need to work around during synthesis. The data shows that even partial research can produce useful convergence when we're explicit about what evidence we have and what we're missing.
 
-> For the full HC1 schema reference, see `{project-root}/_bmad/bme/_vortex/contracts/hc1-empathy-artifacts.md`
+Concept count: 2/3 (Isla's research workflows as sources, non-Vortex input accepted)
+
+**Your turn — I'll wait here.** List the paths, or just describe the research — the quality of the problem definition is bounded by what you bring here, so it is worth naming the thin sources too.
+
+Wait for user input.
+
+### 3. Input Validation
+
+*Once you've given me that, I'll check each artifact against the HC1 schema and tell you what's present and what's missing.*
+
+> The full HC1 schema lives at `{project-root}/_bmad/bme/_vortex/contracts/hc1-empathy-artifacts.md`.
+> You don't need to read it — I will.
+
+Concept count: 2/3 (schema validation, readiness assessment)
 
 ---
 
 ## Your Turn
 
-Please list your input artifacts — file paths, descriptions, or both. I'll validate them and we'll proceed to analysis.
+I'll tell you what the check found — which sections are present, which are missing, and what we can work around. Fill any gap you want to fix now, or say go and we'll move to analysis.
+
+Wait for user input.
 
 ## Next Step
 

@@ -29,35 +29,30 @@ Please provide the file path or describe the hypothesis contract you want to des
 - `_bmad-output/vortex-artifacts/hc3-experiment-design-2026-02-25.md` (if re-designing)
 - Or: "I have a hypothesis about user onboarding that I want to test"
 
-### 3. Input Validation
-
-I'll check your artifact against the HC3 schema to assess readiness:
-
-**HC3 Frontmatter Check:**
-- `contract: HC3`
-- `type: artifact`
-- `source_agent` (who produced it)
-- `source_workflow` (which workflow)
-- `target_agents: [wade]`
-- `input_artifacts` (upstream references)
-- `created` (date)
-
-**HC3 Body Section Check:**
-- Problem Context (Problem Statement, JTBD Reference, Key Pains Targeted)
-- Hypothesis Contracts (1-3 in 4-field format: Expected Outcome, Target Behavior Change, Rationale, Riskiest Assumption)
-- Assumption Risk Map (Lethality × Uncertainty classifications)
-- Recommended Testing Order (prioritized assumptions)
-- Flagged Concerns (optional — routing signals)
-
 **If your input is non-conforming:** That's okay — we don't reject hypotheses. I'll guide you to identify which elements are present and which gaps we need to work around during experiment design. But the sharper your hypothesis contract, the better your experiment will be. If you can't prove it wrong, it's not a hypothesis — and if you can't describe what you're testing, you're not ready to design an experiment.
 
-> For the full HC3 schema reference, see `{project-root}/_bmad/bme/_vortex/contracts/hc3-hypothesis-contract.md`
+Concept count: 2/3 (hypothesis-engineering and assumption-mapping as sources, non-Vortex input accepted)
+
+**Your turn — I'll wait here.** Give me the path, or just describe the hypothesis — if the riskiest assumption is not clearly identified, we will design a rigorous experiment that tests the wrong thing.
+
+Wait for user input.
+
+### 3. Input Validation
+
+*Once you've given me that, I'll check your artifact against the HC3 schema and tell you what's present and what's missing.*
+
+> The full HC3 schema lives at `{project-root}/_bmad/bme/_vortex/contracts/hc3-hypothesis-contract.md`.
+> You don't need to read it — I will.
+
+Concept count: 2/3 (schema validation, readiness assessment)
 
 ---
 
 ## Your Turn
 
-Please provide your hypothesis contract — file path, description, or both. I'll validate it and we'll proceed to identifying your experiment targets.
+I'll tell you what the check found — which elements are present, which are missing, and what we can work around. Fill any gap you want to fix now, or say go and we'll identify your experiment targets.
+
+Wait for user input.
 
 ## Next Step
 

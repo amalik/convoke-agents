@@ -28,36 +28,30 @@ Please provide the file path or describe the problem definition you want to engi
 - `_bmad-output/vortex-artifacts/hc2-problem-definition-2026-02-25.md`
 - Or: "I have a problem statement and some user research findings I'd like to use"
 
-### 3. Input Validation
-
-I'll check your artifact against the HC2 schema to assess readiness:
-
-**HC2 Frontmatter Check:**
-- `contract: HC2`
-- `type: artifact`
-- `source_agent` (who produced it)
-- `source_workflow` (which workflow)
-- `target_agents: [liam]`
-- `input_artifacts` (upstream references)
-- `created` (date)
-
-**HC2 Body Section Check:**
-- Converged Problem Statement (Problem Statement, Confidence, Scope)
-- Jobs-to-be-Done (Primary JTBD + Functional/Emotional/Social Jobs)
-- Pains (prioritized list with evidence sources)
-- Gains (prioritized list with evidence sources)
-- Evidence Summary (artifacts analyzed, convergence assessment, gaps)
-- Assumptions (with basis and risk if wrong)
-
 **If your input is non-conforming:** That's okay — we don't reject problem definitions. I'll guide you to identify which elements are present and which gaps we need to work around during hypothesis engineering. But let's stress-test what we have: the stronger the problem definition, the sharper the hypotheses.
 
-> For the full HC2 schema reference, see `{project-root}/_bmad/bme/_vortex/contracts/hc2-problem-definition.md`
+Concept count: 3/3 (falsifiability, research-convergence and pivot-resynthesis as sources, non-Vortex input accepted)
+
+**Your turn — I'll wait here.** Give me the path, or just describe the problem definition — a vague problem produces vague hypotheses, and we would not find that out until the experiment failed to mean anything.
+
+Wait for user input.
+
+### 3. Input Validation
+
+*Once you've given me that, I'll check your artifact against the HC2 schema and tell you what's present and what's missing.*
+
+> The full HC2 schema lives at `{project-root}/_bmad/bme/_vortex/contracts/hc2-problem-definition.md`.
+> You don't need to read it — I will.
+
+Concept count: 2/3 (schema validation, readiness assessment)
 
 ---
 
 ## Your Turn
 
-Please provide your problem definition — file path, description, or both. I'll validate it and we'll proceed to unpacking the opportunity space.
+I'll tell you what the check found — which elements are present, which are missing, and what we can work around. Fill any gap you want to fix now, or say go and we'll unpack the opportunity space.
+
+Wait for user input.
 
 ## Next Step
 

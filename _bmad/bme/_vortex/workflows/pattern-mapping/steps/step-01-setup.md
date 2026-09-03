@@ -53,29 +53,22 @@ Please provide the file paths or describe the artifacts you want to analyze. For
 - `_bmad-output/vortex-artifacts/hc1-interview-synthesis-2026-02-21.md`
 - Or: "I have interview notes and survey results from an external tool"
 
+**If artifacts are non-conforming:** That's okay — we don't reject research. I'll note which sections are present and which are missing, then ask clarification questions to fill gaps. The data shows that even partial research reveals patterns when we're explicit about what evidence we have and what we're working without.
+
+Concept count: 3/3 (JTBD framing, Pains & Gains analysis, non-Vortex research accepted)
+
+**Your turn — I'll wait here.** List the paths, or just describe the research — one data point is an anecdote, so bringing thin sources is still worth doing as long as we name them as thin.
+
+Wait for user input.
+
 ### 3. Input Assessment
 
-I'll assess each artifact using the appropriate mode:
+*Once you've listed them, I'll assess each artifact using the mode that fits it.*
 
 **For HC1-conforming artifacts — schema validation:**
 
-*Frontmatter check:*
-- `contract: HC1`
-- `type: artifact`
-- `source_agent` (who produced it)
-- `source_workflow` (which workflow)
-- `target_agents` includes `mila`
-- `input_artifacts` (upstream references)
-- `created` (date)
-
-*Body section check:*
-- Executive Summary
-- Research Context
-- Synthesized Insights
-- Key Themes
-- Pain Points
-- Desired Gains
-- Recommendations
+> The full HC1 schema lives at `{project-root}/_bmad/bme/_vortex/contracts/hc1-empathy-artifacts.md`.
+> You don't need to read it — I will.
 
 **For non-HC1 research — structural clarity assessment:**
 
@@ -85,15 +78,15 @@ I'll check for minimal structure without rejecting:
 - **Findings** — key discoveries
 - **Evidence summary** — how strong is the data
 
-**If artifacts are non-conforming:** That's okay — we don't reject research. I'll note which sections are present and which are missing, then ask clarification questions to fill gaps. The data shows that even partial research reveals patterns when we're explicit about what evidence we have and what we're working without.
-
-> For the full HC1 schema reference, see `{project-root}/_bmad/bme/_vortex/contracts/hc1-empathy-artifacts.md`
+Concept count: 2/3 (HC1 schema validation, structural clarity assessment)
 
 ---
 
 ## Your Turn
 
-Please list your input artifacts — file paths, descriptions, or both. I'll assess them and we'll proceed to loading and analysis.
+I'll tell you what each artifact brought — which are HC1-conforming, which I assessed structurally, and where the gaps are. Fill any gap you want to fix now, or say go and we'll load them for analysis.
+
+Wait for user input.
 
 ## Next Step
 
