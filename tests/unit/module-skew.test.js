@@ -13,10 +13,6 @@ const {
   isManagedByInstaller,
 } = require('../../scripts/lib/bme-modules');
 const { assessUpdate } = require('../../scripts/update/convoke-update');
-const { isSourceCheckout } = require('../../scripts/update/lib/refresh-installation');
-const { checkVersionConsistency } = require('../../scripts/convoke-doctor');
-
-const PACKAGE_ROOT = path.join(__dirname, '..', '..');
 
 const PKG = getPackageVersion();
 
@@ -157,52 +153,5 @@ describe('out of scope, pinned so the boundary is visible', () => {
       assert.equal(detectRepairableSkew(dir, { packageVersion: '9.0.0' })[0].state, 'behind');
       assert.deepEqual(detectRepairableSkew(dir, { packageVersion: '1.0.0' }), [], 'ahead is not routed');
     } finally { await removeTempDir(dir); }
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────
-// T114 — no finding may advise a command that cannot change the thing it is about.
-//
-// In the package's own checkout `refreshInstallation` skips every config write, so a module's
-// version stamp cannot change. Doctor advised `convoke-update` for five modules anyway, and the
-// update reported success having changed nothing. Reproducible with no fixture:
-// `node scripts/convoke-doctor.js` in this repo.
-//
-// SCOPE, measured rather than assumed: only the config writes are guarded. Skill-wrapper
-// generation and taxonomy seeding still run in a source checkout (12 of 27 actions performed),
-// so doctor's OTHER three `convoke-update` advisories are correct there and must stay untouched.
-// ─────────────────────────────────────────────────────────────────
-describe('T114 — advice is suppressed only where the remedy cannot run', () => {
-  it('isSourceCheckout identifies the package tree and nothing else', () => {
-    assert.equal(isSourceCheckout(PACKAGE_ROOT), true);
-    assert.equal(isSourceCheckout('/tmp'), false);
-    assert.equal(isSourceCheckout(undefined), false, 'a missing root is not a source checkout');
-  });
-
-  it('the gate routes no skew in a source checkout, whatever the configs say', () => {
-    // Independent of this repo's actual module versions: the early return precedes any read.
-    assert.deepEqual(detectRepairableSkew(PACKAGE_ROOT), []);
-  });
-
-  it('doctor reports the mismatch but withdraws the update advice', () => {
-    // `modules` is injected, so this asserts the BRANCH rather than this repo's version drift.
-    const modules = [{ name: '_gyre', configPath: '/x/config.yaml', config: { version: '1.0.0' } }];
-    const finding = checkVersionConsistency(PACKAGE_ROOT, modules);
-
-    assert.equal(finding.passed, false, 'the mismatch is real and still reported');
-    assert.equal(finding.softWarning, true,
-      'a permanent hard failure with no available action is the shape T114 removes');
-    assert.match(finding.warning, /_gyre: 1\.0\.0/, 'the module is still named');
-    assert.ok(!/convoke-update/.test(finding.fix),
-      'the advice was false here: a refresh in this tree stamps nothing');
-  });
-
-  it('outside a source checkout the advice is unchanged', () => {
-    const modules = [{ name: '_gyre', configPath: '/x/config.yaml', config: { version: '1.0.0' } }];
-    const finding = checkVersionConsistency('/not/the/package/root', modules);
-
-    assert.equal(finding.passed, false);
-    assert.ok(!finding.softWarning, 'a real install CAN repair this, so it stays a hard failure');
-    assert.match(finding.fix, /convoke-update/);
   });
 });

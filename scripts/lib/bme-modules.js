@@ -27,8 +27,8 @@ const { getPackageVersion, compareVersions } = require('../update/lib/utils');
  * larger problem than the one BUG-17 reports, and three attempts at it failed. What is NOT
  * handled here, each with a backlog row and a reproduction:
  *
- *   - ~~a source checkout~~ — HANDLED as of T114: `detectRepairableSkew` returns nothing there,
- *     because no config write happens and so no version stamp can change
+ *   - a source checkout (`packageRoot === projectRoot`), where every config write in
+ *     `refreshInstallation` is skipped, so nothing here is repairable in practice — T114
  *   - `assessUpdate`'s earlier exits (`no-project`, `fresh`, `broken`, `no-version`,
  *     `downgrade`), which refuse before skew is ever consulted — T115
  *   - unorderable versions (`main`, `v4.0.1`, the number `4`) — BUG-18, and T116 for the
@@ -113,13 +113,6 @@ function isManagedByInstaller(name) {
  * @returns {Array<{name, version, state}>}
  */
 function detectRepairableSkew(projectRoot, opts = {}) {
-  // T114: in the package's own source tree every config write is skipped, so no module's version
-  // stamp can change and nothing here is repairable. Routing to a refresh anyway made the CLI
-  // take the lock, cut a backup and report success having changed nothing. Read from the file
-  // that owns the condition rather than recomputing the equality here.
-  const { isSourceCheckout } = require('../update/lib/refresh-installation');
-  if (isSourceCheckout(projectRoot)) return [];
-
   const packageVersion = opts.packageVersion || getPackageVersion();
   const out = [];
 
