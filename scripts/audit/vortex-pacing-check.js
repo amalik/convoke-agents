@@ -36,6 +36,17 @@
  * deleted. So this stays a stderr WARNING with exit 0 contribution, per the `preflight-soft-warn`
  * convention — a prompt to check by hand, never an assertion.
  *
+ * NOT WIRED INTO CI — DELIBERATELY. It was, for one commit. Round 3 then proved it reports PASS
+ * on all three regressions it exists to catch, because it lets files self-nominate into its scope:
+ * delete a file's footers and it silently drops out of the checked set; collapse a file from two
+ * rounds to one by removing halt, footer and marker together and the three counts fall together
+ * and still agree; rewrite the denominator to `5/5` and the budget check stops matching. All three
+ * observed at exit 0. A gate in `publish.needs` that certifies seven properties it does not enforce
+ * is worse than no gate, so it was unwired rather than left to mislead. **T121** carries the
+ * rebuild: files must not self-nominate (in scope if a file carries ANY of halt/marker/footer),
+ * in-scope files need >= 2 rounds, and an explicit expected set so a dropped file is a visible
+ * diff. Until then this is a local convenience — `npm run audit:pacing` — and nothing more.
+ *
  * Exit 0 = clean, 1 = findings. Run: node scripts/audit/vortex-pacing-check.js
  */
 'use strict';

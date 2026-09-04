@@ -122,7 +122,7 @@ strict reading are different jobs; the second is a scope decision, not an implem
 
 ## Must survive verbatim
 
-Four things carry audit evidence for rights other than R7. **Two of them survive by wording, not by position** — Round 1 of this story moved the fallback and rewrote the `## Your Turn` prose, and this table was left describing the old shape for a full review round. Changing them trades an R7 fix for an
+Four things carry audit evidence for rights other than R7. **They do not all survive the same way, and the heading above is loose** — the fallback survives by *wording* (it moved), the `## Your Turn` boundary survives by *heading* (its prose is rewritten), and only the marker and the `## Next Step` block survive verbatim. Round 1 moved the fallback and rewrote that prose while this table went on describing the old shape for a full review round; Round 2's correction to that then misdescribed it again. Treat the *Where* column as authoritative, not this heading. Changing them trades an R7 fix for an
 R1 or R5 regression, and **AC5 makes that a blocking, per-cell defect**: R1–R6 currently PASS at
 100% across all nine HC-cluster workflows, so every one of them is a regression surface.
 

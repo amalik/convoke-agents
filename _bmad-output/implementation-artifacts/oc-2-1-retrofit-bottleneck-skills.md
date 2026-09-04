@@ -1,6 +1,6 @@
 # Story 2.1: Retrofit T1-Firing Cells (Vortex × Right to pacing)
 
-Status: review — **implemented 2026-09-03; Rounds 1 and 2 run and applied (2026-09-04). Round 3 owed — Round 2's remediation added a script and a CI step, which is the structural trigger.** Unblocked 2026-08-28 when T88 shipped. AC0 satisfied: a fresh install now carries `_bmad/bme/_vortex/contracts/`, and 17 contract pointers across the installed workflow tree resolve with 0 dangling.
+Status: review — **implemented 2026-09-03; Rounds 1, 2 and 3 run (2026-09-04). Round 3 was the last allowed round; its residue is filed as T121-T123 and in `deferred-work.md`, not fixed here.** Unblocked 2026-08-28 when T88 shipped. AC0 satisfied: a fresh install now carries `_bmad/bme/_vortex/contracts/`, and 17 contract pointers across the installed workflow tree resolve with 0 dangling.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -369,7 +369,7 @@ Three layers launched in parallel. **Two completed — Blind Hunter and Edge Cas
 2. **`proof-of-value`'s final ask collapsed its own 4-round split** — it instructed all four deliverables at once, as the file's last and most authoritative line.
 3. **The same four HC3 fields were counted two ways in one change set.** `lean-experiment` §3's checklist was footered `1/3` as a §2.6 category checklist while the identical four-field list was deleted from `assumption-mapping` §1 because §A41-2 makes it 4. §3 now references the HC3 contract like every other cell, and the file collapses from 3 rounds to 2.
 4. **No round-1 footer counted the file preamble.** Round 1 begins at `# Step 1:` and includes `## Why This Matters`; A26 scored the budget *atop step-prose*. All recounted. Most preambles restate `workflow.md` vocabulary and cost nothing, but `hypothesis-engineering` and `signal-interpretation` each gained one (now 3/3) and `lean-experiment` hit **4/3** — its `workflow.md` is a single line, so "falsifiable bet" is novel.
-5. **The R1 fallback had moved behind the round-1 boundary**, so an operator with informal notes never saw that non-conforming input is welcome at the moment they decided what to hand over. It now sits ahead of the halt in all 11 files that have one.
+5. **The R1 fallback had moved behind the round-1 boundary**, so an operator with informal notes never saw that non-conforming input is welcome at the moment they decided what to hand over. It now sits ahead of the halt in all **10** files that have one — `proof-of-value` and `lean-persona` have no fallback sentence at all. *(Corrected at Round 3: this read "11" through two review rounds, contradicting this document's own arithmetic — 9 bold sentences plus `pivot-resynthesis` §4 — three paragraphs earlier.)*
 6. **`pivot-resynthesis` and `production-monitoring` never got the sub-rounds their catalog entries and this story's own scaffold prescribe.** Both are now 3 rounds.
 
 **HIGH — deferred to `deferred-work.md` with rationale**
@@ -438,6 +438,43 @@ AC0 PASS · AC1 PASS *(the 12th file is licensed by AC8, with the audit citation
 
 **Deferred, unchanged from Round 1** — the OC-R1 defaults at the new decision branches, and the AC6 cascade into step-02. Both in `deferred-work.md`; both still need lane rows.
 
+### Review Findings — Round 3 (2026-09-04)
+
+The last allowed round per `code-review-convergence`, so its residue is **filed, not fixed**. Two layers: one aimed entirely at the new gate, one at the content fixes and the record. The gate layer executed every bypass it reports; I reproduced the three decisive ones independently against a copy of the tree before accepting them.
+
+**The headline: the gate shipped at Round 2 is decorative, and it was in `publish.needs`.**
+
+`scripts/audit/vortex-pacing-check.js` returns **exit 0 with a PASS banner** on all three regressions it exists to catch:
+
+| Edit | Observed |
+|---|---|
+| Delete both `Concept count:` footers from a step file | PASS — silently drops from 12 files to 11 |
+| Collapse a file from 2 rounds to 1 (halt + footer + marker together) | PASS — *"12 files; rounds, markers and footers agree"* |
+| Rewrite the denominator to `5/5` | PASS — *"none over budget"* |
+
+The cause is that files **self-nominate** into scope: `:101` skips any file where `Concept count:` does not match, so the single edit the gate exists to detect is the edit that removes a file from the audit. `rounds` is derived from `halts` (`:108`), so dropping a halt with its footer and marker keeps all three counts agreeing at 1. And `FOOTER` hardcodes `/3` (`:49`), so the budget check only fires for an author who self-reports a violation against the correct budget.
+
+It is porous in smaller ways too — `ENUM` misses `HC10 `, `*` bullets, a blank line before the list, and any `*` in the label; `FALLBACK` is a closed four-phrase allowlist that compares only the first fallback to the first halt; `namedConcepts` splits on commas, so one comma-bearing concept inflates a count undetected, while a legitimate `(HC1)` in a footer causes a **false FAIL**.
+
+Root cause, and it is the honest one: **it was mutation-tested only against the five defects that already existed**, so it detects exactly those five and is porous to their neighbours. The header I wrote for it lectures about this repo's four documented cases of gates reporting health while inert. It was the fifth.
+
+**Operator ruling: unwire it rather than patch it.** No fourth fix pass, and a gate certifying seven properties it does not enforce is worse than no gate. The CI step is removed; `npm run audit:pacing` survives as a local convenience; the file's header now says plainly that it does not gate anything and why. **T121** carries the rebuild — files must not self-nominate, in-scope files need ≥ 2 rounds, and an explicit expected set so a dropped file is a visible diff. Worth noting: the repo has **22** `step-01-*.md` files, the gate inspects 12, and nothing anywhere recorded that 12 was the expected number.
+
+**Content layer**
+
+Round 2's fixes **1, 2 and 6 are clean**, independently re-derived — including that `riskiest assumption` is now genuinely elicited before step-02 needs it, and that "four downstream steps" is exact. Fix 4 reads correctly and keeps the R1 meaning, but resolved the doubled conditional by deleting words from the *original* sentence, so this story's thrice-repeated "preserved verbatim / by extraction" claim is no longer true for `pivot-resynthesis`. Fix 5 is half clean: `:34` is accurate, `:54` promises a hard requirement (*"a blank Willingness-to-Pay row is the one gap that makes the rest unfalsifiable"*) that the canvas row it cites explicitly permits to be blank.
+
+**Filed, not fixed**
+
+- **T121** — the gate (above).
+- **T122** — no OC-R1 default at the 16 new decision branches; also un-vacuums two cells A26 scored `N/A — vacuous`. Deferred at the Round 1 cap, now qualified.
+- **T123** — the AC6 cascade into step-02. The Round 2 acceptance audit returned **AC6 FAIL** on it.
+- **`deferred-work.md`** — the scaffold/tree divergence, now in its fourth consecutive round, and the `readiness assessment` footer divergence: five files count it for a §3 whose body is identical to two files that do not. AC2 calls divergence a defect; the gate's check 2 counts names rather than introductions, so it is structurally blind to it.
+
+**One self-inflicted defect, recorded rather than quietly repaired.** The edit that added this Round 3 section used a non-greedy `.*?` under `re.S` anchored at `### Gates`, which swallowed the entire Gates block and replaced it with its one-line trailer. It was caught only because a later edit to a line inside that block failed to match. The section below was reconstructed from `HEAD` and re-applied, so it is a restoration rather than a continuously maintained record. That is the third time in this story a scripted edit has damaged something adjacent to its target.
+
+**Corrected here as record hygiene, not as a fix pass:** the "all 11 files that have one" miscount (it is 10, and this document's own arithmetic said so — a fourth uncorrected miscount, surviving two review rounds); the File List, which omitted `sprint-status.yaml` and this story file while crediting a file changed by a different commit; and the scaffold sentence written at Round 2 to record the drift, which contradicted its own table in its first clause.
+
 ### File List
 
 | File | Change |
@@ -455,7 +492,9 @@ AC0 PASS · AC1 PASS *(the 12th file is licensed by AC8, with the audit citation
 | `_bmad/bme/_vortex/workflows/research-convergence/steps/step-01-setup.md` | `R7-V10` — 2 rounds |
 | `_bmad/bme/_vortex/workflows/signal-interpretation/steps/step-01-setup.md` | `R7-V11` — 2 rounds |
 | `_bmad/bme/_vortex/workflows/lean-persona/steps/step-01-define-job.md` | `#4` carry-forward — 2 rounds |
-| `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` | pre-flight corrections + Change Log |
+| `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` | pre-flight corrections + Change Log *(changed by `ae180363`, the separate governance commit, and again at R3 to file T121-T123)* |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | Task 8's deliverable — touched by both story commits *(omitted from this table until Round 3)* |
+| `_bmad-output/implementation-artifacts/oc-2-1-retrofit-bottleneck-skills.md` | this story file |
 | `scripts/audit/vortex-pacing-check.js` | **new (R2)** — makes the pacing footers falsifiable |
 | `package.json` | **(R2)** — `npm run audit:pacing` |
 | `.github/workflows/ci.yml` | **(R2)** — the gate runs on every push |
@@ -463,13 +502,13 @@ AC0 PASS · AC1 PASS *(the 12th file is licensed by AC8, with the audit citation
 
 ### Gates
 
-Re-run after Round 2 remediation.
+Re-run after Round 3.
 
 - lint **0/0**
 - `docs:audit` **0 findings**
-- `npm run audit:pacing` **PASS** — 12 retrofitted files; rounds, markers and footers agree, every footer's number matches the concepts it names, none over budget, no schema enumeration reintroduced, every fallback ahead of its boundary, every step-02 pointer resolves. **Demonstrated failing by mutation on all five classes before being wired in.**
-- `backlog-integrity.js` **PASS** (802 rows, 10 tables, 3 lanes ordered)
-- `npm test` **exit 0 — 1981 tests / 1980 pass / 0 fail / 0 cancelled / 1 pre-existing skip.** Obtained on the fourth attempt; see the note below, which is kept because the three preceding runs disagreed with it.
+- `npm run audit:pacing` **PASS — and that PASS is worth very little**, which is Round 3's finding and why the check no longer runs in CI. It is green on all three regressions it exists to catch. See T121.
+- `backlog-integrity.js` **PASS** (806 rows after filing T121-T123, 10 tables, 3 lanes ordered)
+- `npm test` **exit 0 — 1981 tests / 1980 pass / 0 fail / 0 cancelled / 1 pre-existing skip.** Clean on the first attempt at Round 3, with `load average` down to 6.4 from ~9. At Round 2 the same result took four attempts; the note below is kept because those three disagreeing runs are the reason a single green run on this host is worth little.
 
 **On the test suite, stated plainly rather than rounded to green.** Three full runs today returned `1980 pass / 0 fail`, `1979 pass / 0 fail`, and then `1975 pass / 5 fail`. The five failures were chased rather than assumed:
 
@@ -479,4 +518,4 @@ Re-run after Round 2 remediation.
 
 **A clean run was eventually obtained (exit 0, 1980 pass, 0 fail), which is the result of record.** The note above is kept rather than deleted because three earlier runs of this same tree disagreed, and a reader who saw only the green run would not know how little a single passing run is worth on this host. **No regression is evidenced, and none of the five transient failures touches a surface this story changed** (markdown step files, `docs/`, a new audit script, one `package.json` script line, one CI step). `generateManifest` at 6.2 s against a 10 s budget is the measurement that settles it. CI on a clean runner remains the real arbiter — load average was ~9 throughout and the host has 51 days uptime.
 
-- **Rounds 1 and 2: run, both RED, both remediated. Round 3: OWED** — Round 2's remediation added `scripts/audit/vortex-pacing-check.js`, a `package.json` script and a CI step, and `code-review-convergence` triggers R3 on structural changes. R3 is the last allowed round; anything it finds goes to the backlog.
+- **Rounds 1, 2 and 3: run. All three RED.** Rounds 1 and 2 were remediated; **Round 3's residue is filed as T121-T123 and in `deferred-work.md`, per `code-review-convergence`'s no-fourth-round rule.** The Round 2 gate was unwired from CI rather than patched.
