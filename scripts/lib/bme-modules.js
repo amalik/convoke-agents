@@ -4,7 +4,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('js-yaml');
 
-const { getPackageVersion, compareVersions, parseVersion } = require('../update/lib/utils');
+const { getPackageVersion, compareVersions } = require('../update/lib/utils');
 
 /**
  * Shared enumeration of `_bmad/bme/*` modules, and the skew `convoke-update` can repair.
@@ -125,18 +125,8 @@ function detectRepairableSkew(projectRoot, opts = {}) {
     // `.version` leaves a module declaring `installed_version` visible to doctor and invisible to
     // this gate — doctor reports skew, `convoke-update` says up-to-date, and a refresh would have
     // repaired it. That is BUG-17's symptom exactly, and it shipped in the first cut of this file.
-    // The `|| installed_version` fallback must match convoke-doctor's read exactly.
-    // Dropping it recreated BUG-17's symptom inside BUG-17's own fix; see a0539c83.
-    const declared = mod.config.version || mod.config.installed_version;
-    // T120: was a locally-written regex here. BUG-17 had to invent this same test twice
-    // across three review rounds, which is the argument for one shared read-side check.
-    // NOTE this is slightly LOOSER than the regex it replaces: `parseVersion` accepts a
-    // 1- or 2-part version (`1.0`), which `compareVersions` pads and orders, and which
-    // `tests/unit/utils.test.js` pins as orderable. Such a module is now routed rather
-    // than skipped — correct, since it genuinely is behind.
-    const parsed = parseVersion(declared);
-    if (!parsed.ok) continue;
-    const raw = parsed.version;
+    const raw = mod.config.version || mod.config.installed_version;
+    if (typeof raw !== 'string' || !/^\d+\.\d+\.\d+(?:[-+].*)?$/.test(raw)) continue;
 
     const cmp = compareVersions(raw, packageVersion);
     if (cmp > 0) continue;                        // ahead — T38

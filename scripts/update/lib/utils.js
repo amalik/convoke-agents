@@ -36,43 +36,6 @@ function getPackageVersion() {
  * @param {string} v2
  * @returns {number} -1 if v1 < v2, 0 if equal, 1 if v1 > v2
  */
-/**
- * Can this value be ordered by `compareVersions`, and is it the right shape?
- *
- * T120: config values are validated on WRITE (`config-merger.js` enforces a semver
- * pattern) and never on READ, so anything a hand-edit, a foreign tool or an older
- * install leaves on disk flows straight into comparison — and `compareVersions`
- * ORDERS it rather than refusing. Measured: `compareVersions('main', '4.0.1')` is -1
- * and `compareVersions('v3.1.0', '4.0.1')` is -1, so both read as merely older. The
- * `v`-prefix is a very common convention, which makes that the likely case.
- *
- * This is a READ-BOUNDARY check. `compareVersions` keeps its numeric contract on
- * purpose: seven call sites depend on it, and `tests/unit/utils.test.js` deliberately
- * pins `compareVersions('1.0', '1.0.0') === 0` — a short numeric version is padded,
- * not unreadable. Refusing inside the comparator would be a contract change against a
- * pinned expectation; validating where values ENTER is what T120 asks for.
- *
- * Not to be confused with `compat-preflight.js`'s local strip-and-check, which is
- * NORMALISATION for a gate — it deliberately reduces `6.3.0-rc.1` to `6.3.0` and warns.
- * Different job; leave it alone.
- *
- * @param {*} value - whatever was read from disk
- * @returns {{ok: true, version: string} | {ok: false, reason: string}}
- */
-function parseVersion(value) {
-  if (typeof value !== 'string') {
-    // js-yaml turns `version: 4.0` into the NUMBER 4 and `version: true` into a boolean.
-    return { ok: false, reason: `expected a string, got ${typeof value} (${JSON.stringify(value)})` };
-  }
-  const trimmed = value.trim();
-  if (trimmed === '') return { ok: false, reason: 'empty' };
-  // 1-3 numeric parts, matching what compareVersions pads; optional prerelease/build.
-  if (!/^\d+(\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(trimmed)) {
-    return { ok: false, reason: `not an orderable version: ${JSON.stringify(value)}` };
-  }
-  return { ok: true, version: trimmed };
-}
-
 function compareVersions(v1, v2) {
   const parse = (v) => {
     const noBuild = String(v).split('+')[0]; // drop build metadata (SemVer §10)
@@ -203,7 +166,6 @@ function assertVersion(version, callSite) {
 module.exports = {
   getPackageVersion,
   compareVersions,
-  parseVersion,
   countUserDataFiles,
   findProjectRoot,
   assertVersion
