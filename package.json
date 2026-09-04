@@ -51,6 +51,7 @@
     "test:coverage": "c8 node scripts/test-runner.js tests/unit tests/team-factory tests/lib tests/integration tests/p0 tests/audit",
     "lint": "eslint --max-warnings 0 scripts/ index.js tests/",
     "docs:audit": "node scripts/docs-audit.js",
+    "audit:pacing": "node scripts/audit/vortex-pacing-check.js",
     "archive": "node scripts/archive.js",
     "generate:manifest": "node scripts/generate-manifest.js",
     "refs:audit": "node scripts/audit/reference-integrity.js --paths=\"_bmad-output,_bmad/bme,docs,$(ls *.md | paste -sd, -)\"",

@@ -31,7 +31,7 @@ Please provide the file path or describe the technical validation context you wa
 
 Concept count: 3/3 (technical feasibility as the prerequisite, upstream contracts as sources, non-Vortex input accepted)
 
-**Your turn — I'll wait here.** Give me the path, or just describe what you've already proven you can build.
+**Your turn — I'll wait here.** Give me the path, or just describe what you've already proven you can build — this workflow tests whether it *should* be built, so if feasibility is still open we would be validating demand for something that may not ship.
 
 Wait for user input.
 
@@ -51,7 +51,7 @@ Complete the Value Hypothesis Canvas:
 
 Concept count: 1/3 (value hypothesis canvas)
 
-**Your turn — I'll wait here.** Fill in the canvas — rough answers are fine, we sharpen them together.
+**Your turn — I'll wait here.** Fill in the canvas — rough answers are fine, we sharpen them together, but a blank Willingness-to-Pay row is the one gap that makes the rest of the business case unfalsifiable.
 
 Wait for user input.
 

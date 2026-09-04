@@ -58,6 +58,8 @@ Everything in `<angle brackets>` is per-workflow. Everything else is fixed.
 
 <prose: ask for the path or a description, with 1-3 concrete examples.>
 
+**If your input is non-conforming:** <PRESERVED VERBATIM FROM THE EXISTING FILE>
+
 Concept count: N/3 (<named concepts>)
 
 **Your turn — I'll wait here.** <one sentence restating what to hand over,
@@ -74,15 +76,15 @@ present and what's missing.*
 > `{project-root}/_bmad/bme/_vortex/contracts/<hcN-name>.md`.
 > You don't need to read it — I will.
 
-**If your input is non-conforming:** <PRESERVED VERBATIM FROM THE EXISTING FILE>
-
 Concept count: N/3 (<named concepts>)
 
 ---
 
 ## Your Turn
 
-<PRESERVED VERBATIM — this is the round-2 boundary>
+<REWRITTEN — this closes the FINAL round. It must report what the validation found and
+hand control back; it must NOT re-ask for the input round 1 already collected. The heading
+survives (R5 evidence); the prose under it does not.>
 
 Wait for user input.
 
@@ -120,14 +122,14 @@ strict reading are different jobs; the second is a scope decision, not an implem
 
 ## Must survive verbatim
 
-Three things carry audit evidence for rights other than R7. Changing them trades an R7 fix for an
+Four things carry audit evidence for rights other than R7. **Two of them survive by wording, not by position** — Round 1 of this story moved the fallback and rewrote the `## Your Turn` prose, and this table was left describing the old shape for a full review round. Changing them trades an R7 fix for an
 R1 or R5 regression, and **AC5 makes that a blocking, per-cell defect**: R1–R6 currently PASS at
 100% across all nine HC-cluster workflows, so every one of them is a regression surface.
 
 | What | Right | Where |
 |---|---|---|
-| The `**If your input is non-conforming:**` sentence | **R1** — right to a fallback | end of §3 |
-| The `## Your Turn` heading and its prose | **R5** — right to an explicit wait | after §3 |
+| The `**If your input is non-conforming:**` sentence *(wording only)* | **R1** — right to a fallback | **in §2, ahead of the round-1 halt** — it is useless behind the boundary, where the operator has already had to decide what to hand over |
+| The `## Your Turn` **heading** — its prose is rewritten, not preserved | **R5** — right to an explicit wait | after the last numbered section |
 | A literal `Wait for user input.` line at **every** boundary | **R5** under the strict reading | after each halt |
 | The `## Next Step` block and its `step-02` path | — | end of file |
 

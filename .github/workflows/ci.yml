@@ -177,6 +177,28 @@ jobs:
         # guide blocks a release. That is the intended severity — these files go in the tarball.
         run: npm run docs:audit
 
+      - name: Vortex pacing footers
+        # oc-2-1. The OC-R7 `Concept count: N/3` footers in the Vortex step-01 files are a human
+        # judgement under a rubric with inheritance, so nothing could check them — and they were
+        # wrong twice in a row: once as authored, once after a full review round recounted every
+        # one of them. `code-review-convergence` calls two failed attempts at the same fix a
+        # restructure signal, and this check is that restructure.
+        #
+        # It does not compute the count (semantic, and a script cannot). It asserts what IS
+        # mechanical and was individually a real defect in this story: rounds == footers ==
+        # literal halt markers, each footer's number matching the concepts it names, nothing over
+        # budget, no contract-schema enumeration reintroduced, the fallback sentence ahead of its
+        # boundary rather than behind it, and every `## Next Step` pointer resolving.
+        #
+        # Its inheritance check is a stderr WARNING that never affects the exit code, per the
+        # `preflight-soft-warn` convention — as a hard gate it produced 13 findings that were
+        # mostly false and missed the one defect it was written for.
+        #
+        # Verified by mutation before wiring: over-budget footer, count disagreeing with its own
+        # list, a dropped halt marker, a fallback moved behind the boundary, and a restored schema
+        # enumeration each produce exit 1; the unmutated tree exits 0.
+        run: npm run audit:pacing
+
       - name: Agent manifest bme rows match the registry
         # T74. Until story gen-1.1 (`7b957dbf`), every `npm test` run regenerated
         # `_bmad/_config/agent-manifest.csv`, so a registry edit made without a

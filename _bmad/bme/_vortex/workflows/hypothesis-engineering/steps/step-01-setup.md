@@ -30,7 +30,7 @@ Please provide the file path or describe the problem definition you want to engi
 
 **If your input is non-conforming:** That's okay — we don't reject problem definitions. I'll guide you to identify which elements are present and which gaps we need to work around during hypothesis engineering. But let's stress-test what we have: the stronger the problem definition, the sharper the hypotheses.
 
-Concept count: 3/3 (falsifiability, research-convergence and pivot-resynthesis as sources, non-Vortex input accepted)
+Concept count: 2/3 (research-convergence and pivot-resynthesis as sources, non-Vortex input accepted)
 
 **Your turn — I'll wait here.** Give me the path, or just describe the problem definition — a vague problem produces vague hypotheses, and we would not find that out until the experiment failed to mean anything.
 

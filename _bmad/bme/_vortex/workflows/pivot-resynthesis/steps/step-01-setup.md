@@ -34,7 +34,7 @@ Results from the failed experiment — what was tested, what happened, what was 
 **Prior Problem Definition (optional):**
 If you have the original HC2 problem definition from before the experiment, it provides the JTBD baseline for re-framing.
 
-**If your artifacts are non-conforming:** If your artifacts don't perfectly match the HC1 or HC4 schemas, we don't reject them — the data shows that real-world research rarely arrives in perfect format. Instead, note which sections are present and which are missing. We'll work with what you have and guide you to fill gaps where needed.
+**If your artifacts are non-conforming:** We don't reject them — the data shows that real-world research rarely arrives in perfect format. Instead, note which sections are present and which are missing. We'll work with what you have and guide you to fill gaps where needed.
 
 The critical information for pivot resynthesis is:
 - From HC1: What pains and gains did the original research identify?

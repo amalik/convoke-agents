@@ -43,18 +43,20 @@ Wait for user input.
 > The fields a well-formed hypothesis carries are set out in `{project-root}/_bmad/bme/_vortex/contracts/hc3-hypothesis-contract.md`.
 > You don't need to read it — I will.
 
+I also need one thing the contract cannot infer for you: **your riskiest assumption** — the single belief that, if it turned out to be wrong, would kill this hypothesis outright. Every later step depends on it, and it is a required field of the experiment context this workflow produces.
+
 **Falsifiability Check:**
 - [ ] Can you describe a result that would prove this hypothesis wrong?
 - [ ] Are the expected outcomes specific enough that two people would agree on success vs. failure?
 - [ ] Is the riskiest assumption something you can actually observe or measure?
 
-Concept count: 1/3 (experiment-readiness check)
+Concept count: 2/3 (experiment-readiness check, riskiest assumption)
 
 ---
 
 ## Your Turn
 
-I'll tell you what the check found — whether the hypothesis is falsifiable as written, and which parts need sharpening. Fix any gap you want to fix now, or say go and we'll design the experiment.
+Name your riskiest assumption, and I'll tell you what the check found — whether the hypothesis is falsifiable as written and which parts need sharpening. Without that assumption named, the experiment we design in Step 2 has nothing to target.
 
 Wait for user input.
 

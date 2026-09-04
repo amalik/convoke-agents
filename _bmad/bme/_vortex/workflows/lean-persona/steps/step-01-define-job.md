@@ -69,7 +69,7 @@ Concept count: 3/3 (job frequency, job importance, evidence basis — the worked
 
 ## Your Turn
 
-Please define the job-to-be-done using the structure above.
+Now characterize it: how often the job comes up, how much it matters, and what evidence you have.
 
 **Important:** If you're working from a hypothesis (not validated research), clearly mark assumptions. Every assumption needs a plan to validate it.
 

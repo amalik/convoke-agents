@@ -1,6 +1,6 @@
 # Story 2.1: Retrofit T1-Firing Cells (Vortex × Right to pacing)
 
-Status: review — **implemented 2026-09-03; Round 1 run and applied. Round 2 owed (Round 1 found HIGH).** Unblocked 2026-08-28 when T88 shipped. AC0 satisfied: a fresh install now carries `_bmad/bme/_vortex/contracts/`, and 17 contract pointers across the installed workflow tree resolve with 0 dangling.
+Status: review — **implemented 2026-09-03; Rounds 1 and 2 run and applied (2026-09-04). Round 3 owed — Round 2's remediation added a script and a CI step, which is the structural trigger.** Unblocked 2026-08-28 when T88 shipped. AC0 satisfied: a fresh install now carries `_bmad/bme/_vortex/contracts/`, and 17 contract pointers across the installed workflow tree resolve with 0 dangling.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -392,6 +392,52 @@ Neither has a lane row: `feedback_backlog_id_allocation` forbids allocating an I
 
 **LOW** — the scaffold is untracked and must be explicitly `git add`ed or a `git add -u` commit drops it silently.
 
+### Review Findings — Round 2 (2026-09-04)
+
+Run against the shipped commit `8778df1e` after Round 1's fixes were committed and pushed. Two layers: an adversarial pass aimed squarely at Round 1's own corrections, and the **Acceptance Auditor that failed twice in Round 1** — it completed this time, so the AC coverage gap is closed.
+
+**Verdict: RED, and the pattern held — most findings were defects in Round 1's corrections, not in the original work.** This is the third story running where Round 2 found that.
+
+**Functional defects introduced by Round 1 — fixed**
+
+1. **`lean-experiment` was left referring to a concept it no longer collects.** Fixing the double-count, Round 1 deleted every introduction of `riskiest assumption` — §1's clause, §2's example template, and the checklist item — but left §3 asking *"Is **the** riskiest assumption something you can actually observe or measure?"*, a definite article pointing at nothing. Its `workflow.md` never mentions it (0 hits), **four downstream steps consume it**, and `contracts/hc4-experiment-context.md:56` marks `Riskiest Assumption` **Required** in the artifact this workflow emits. The workflow walked to a mandatory output field it never asked for. **Fixed by eliciting it explicitly in round 2**, which also keeps round 1 at 3/3.
+2. **`behavior-analysis`'s rewritten `## Your Turn` made §4 optional** ("or say go") when `steps/step-02-context.md` formalizes "the behavior observation *from Step 1*". Round 1 removed the only mandatory phrasing in the file. **Fixed.**
+3. **`lean-persona`'s `## Your Turn` was never rewritten** — Round 1's "all 12 files" was false; it still asked round 1's question at the round-2 boundary. **Fixed.**
+4. **`pivot-resynthesis` gained a doubled conditional** — *"If your artifacts are non-conforming: If your artifacts don't perfectly match…"* — when the old §4 body was folded behind the standard bold lead-in. **Fixed.**
+5. **`proof-of-value:34` and `:54` had no consequence clause** while the record claimed all 16 halts did. The check that "verified" this matched the em-dash **inside the halt marker itself** — a test that could not fail, which is precisely what `verification-must-be-falsifiable` forbids. **Both fixed.**
+6. **The scaffold still described the pre-Round-1 design.** It placed the fallback in §3 (`:77`, and "end of §3" in the Must-survive table) and marked `## Your Turn` prose `PRESERVED VERBATIM` — while Round 1 had moved the fallback to §2 in 10 files and rewritten that prose in 11. The document declares itself *normative*, so the next contributor following it would have re-created both defects Round 1 had just fixed. **Resynced**, with the drift itself recorded in the table.
+7. **`hypothesis-engineering`'s recount to 3/3 was wrong in the inflating direction** — its `workflow.md` says "falsifiable hypotheses … prove wrong" and "if you can't prove it wrong, it's not a hypothesis", so the concept is inherited. **Back to 2/3.**
+
+**The restructure — why the footers stopped being patched**
+
+The concept counts have now been wrong **twice running**: as authored, and again after Round 1 recounted every one of them. `code-review-convergence` calls two failed attempts at the same fix a restructure signal, and the operator ruled to restructure rather than attempt a third hand-recount.
+
+Root cause: `Concept count: N/3` is a human judgement under a rubric with inheritance. Nothing could check it, so it kept being wrong while reading as authoritative — a direct collision with `derive-counts-from-source`.
+
+**`scripts/audit/vortex-pacing-check.js`** (new, wired as `npm run audit:pacing` and into CI beside `backlog-integrity` and `docs:audit`) does not compute the count — that is semantic and a script cannot do it. It asserts the properties that *are* mechanical, each of which was individually a real defect in this story:
+
+| # | Assertion | The defect it would have caught |
+|---|---|---|
+| 1 | rounds == footers == literal halt markers | the 25-vs-28 marker drift after `lean-persona` was added |
+| 2 | a footer's number equals the concepts it names | a count nobody could tie to a list |
+| 3 | no footer over 3/3 | the budget itself |
+| 4 | *(advisory warning only)* a named concept that may be inherited | — |
+| 5 | no contract-schema enumeration of 4+ rows | the construct that fired T1 |
+| 6 | the fallback precedes the first halt | Round 1 HIGH-5 |
+| 7 | every `## Next Step` pointer resolves | — |
+
+**Check 4 is a warning and not a failure, deliberately.** As a hard gate it produced 13 findings that were mostly false — "HC4 schema validation" matches because `HC4`, `schema` and `validation` each appear somewhere in `workflow.md` — and it **missed the one defect it was written for**, because the footer says `falsifiability` and `workflow.md` says `falsifiable`. A gate that fires on healthy cases and stays silent on the sick one gets ignored, or worse, obeyed. `project-context.md` records the inline backlog check that reported 51 violations against a correctly-sorted backlog and had to be deleted; this is the same shape. It stays a stderr WARNING per the `preflight-soft-warn` convention.
+
+**Verified by mutation before wiring**, per NFR10 — an unfalsified gate proves nothing. Five mutations each produce exit 1 and the unmutated tree exits 0: an over-budget footer, a count disagreeing with its own list, a dropped halt marker, a fallback moved behind its boundary, and a restored schema enumeration.
+
+**What the checker still cannot see** — and this is the honest limit: it cannot tell you a footer *omitted* a concept that is genuinely novel. Round 2 argues `pattern-mapping` is at ≥5/3 on that basis (an uncounted mental-model framing plus the Isla source workflows every sibling file counts), and `assumption-mapping`/`signal-interpretation` at 4/3. Those readings are contestable — the auditor recorded them as such — and no mechanical check can settle them. They remain open.
+
+**Acceptance audit (the layer missing from Round 1)**
+
+AC0 PASS · AC1 PASS *(the 12th file is licensed by AC8, with the audit citation AC1 demands)* · AC2 PARTIAL · AC3 PASS · AC4 PARTIAL · AC5 PARTIAL · **AC6 FAIL** *(the deferred step-02 cascade — a verified breach, deferred rather than closed)* · AC7 PARTIAL *(OC-R0's surface enumeration was never recorded, and Task 3's "place the scaffold inside a workflow directory" is ticked while the operator ruled it into `docs/`)* · AC8 PASS.
+
+**Deferred, unchanged from Round 1** — the OC-R1 defaults at the new decision branches, and the AC6 cascade into step-02. Both in `deferred-work.md`; both still need lane rows.
+
 ### File List
 
 | File | Change |
@@ -410,15 +456,27 @@ Neither has a lane row: `feedback_backlog_id_allocation` forbids allocating an I
 | `_bmad/bme/_vortex/workflows/signal-interpretation/steps/step-01-setup.md` | `R7-V11` — 2 rounds |
 | `_bmad/bme/_vortex/workflows/lean-persona/steps/step-01-define-job.md` | `#4` carry-forward — 2 rounds |
 | `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` | pre-flight corrections + Change Log |
+| `scripts/audit/vortex-pacing-check.js` | **new (R2)** — makes the pacing footers falsifiable |
+| `package.json` | **(R2)** — `npm run audit:pacing` |
+| `.github/workflows/ci.yml` | **(R2)** — the gate runs on every push |
+| `_bmad-output/implementation-artifacts/deferred-work.md` | the two deferred HIGH findings |
 
 ### Gates
 
-Re-run after Round 1 remediation, against the corrected tree.
+Re-run after Round 2 remediation.
 
 - lint **0/0**
-- `npm test` **1981 tests / 1980 pass / 0 fail / 0 cancelled / 1 pre-existing skip**. *One earlier run of this same tree reported `pass 1979` with `fail 0` and one test unaccounted for — a transient from the machine sleeping mid-run, the same cause that killed the Acceptance Auditor twice. Re-run clean and consistent; recorded rather than hidden.*
 - `docs:audit` **0 findings**
+- `npm run audit:pacing` **PASS** — 12 retrofitted files; rounds, markers and footers agree, every footer's number matches the concepts it names, none over budget, no schema enumeration reintroduced, every fallback ahead of its boundary, every step-02 pointer resolves. **Demonstrated failing by mutation on all five classes before being wired in.**
 - `backlog-integrity.js` **PASS** (802 rows, 10 tables, 3 lanes ordered)
-- `try-fresh-install.sh` **PASS** — all 12 retrofitted files present in the operator project, scaffold absent from the tarball, contract references resolve 0 dangling
-- **AC2 uniformity re-verified after remediation:** all 7 template cells carry the same elements in the same order (fallback → round-1 footer → halt → §3), 1 each.
-- **Round 1: run, RED, remediated. Round 2: OWED.** The Acceptance Auditor layer never completed, so AC-by-AC coverage is incomplete.
+- `npm test` **exit 0 — 1981 tests / 1980 pass / 0 fail / 0 cancelled / 1 pre-existing skip.** Obtained on the fourth attempt; see the note below, which is kept because the three preceding runs disagreed with it.
+
+**On the test suite, stated plainly rather than rounded to green.** Three full runs today returned `1980 pass / 0 fail`, `1979 pass / 0 fail`, and then `1975 pass / 5 fail`. The five failures were chased rather than assumed:
+
+- Four of the five (`convoke-update` CLI, migration rollback BUG-8/AC6, the test-runner hook guard, `validate-marketplace`) **pass in isolation — `fail 0`.**
+- The fifth is `performance: full manifest generation within budget (NFR2)`, a pure timing assertion. Measured `generateManifest` directly three times: **1,039,031 ms, 1,271,619 ms, then 6,211 ms.** The budget is 10,000 ms with 30,000 ms headroom. The third run caught the machine awake; the first two are wall-clock during suspension.
+- Corroborating: sibling tests in the same run reported durations of 17 and 34 *minutes* for work that normally takes milliseconds, `load average` was 8.7–9.3, and the host has 51 days uptime. The same suspension killed the Round 1 Acceptance Auditor twice.
+
+**A clean run was eventually obtained (exit 0, 1980 pass, 0 fail), which is the result of record.** The note above is kept rather than deleted because three earlier runs of this same tree disagreed, and a reader who saw only the green run would not know how little a single passing run is worth on this host. **No regression is evidenced, and none of the five transient failures touches a surface this story changed** (markdown step files, `docs/`, a new audit script, one `package.json` script line, one CI step). `generateManifest` at 6.2 s against a 10 s budget is the measurement that settles it. CI on a clean runner remains the real arbiter — load average was ~9 throughout and the host has 51 days uptime.
+
+- **Rounds 1 and 2: run, both RED, both remediated. Round 3: OWED** — Round 2's remediation added `scripts/audit/vortex-pacing-check.js`, a `package.json` script and a CI step, and `code-review-convergence` triggers R3 on structural changes. R3 is the last allowed round; anything it finds goes to the backlog.

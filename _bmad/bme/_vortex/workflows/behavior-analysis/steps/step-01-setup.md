@@ -62,7 +62,7 @@ Concept count: 2/3 (HC4 schema validation, behavior observation form)
 
 ## Your Turn
 
-I'll tell you what the check found, then ask you to describe the behaviour you're observing so we can compare it against the experiment's baseline. Fill any gap you want to fix now, or say go.
+I'll tell you what the check found. Then describe the behaviour you're observing, using the table above — Step 2 formalizes that observation, so it is not optional; without it there is nothing to compare against the baseline.
 
 Wait for user input.
 
