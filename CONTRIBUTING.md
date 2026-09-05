@@ -43,7 +43,7 @@ Ten jobs run on a pull request. All of them must be green.
 | `test` | `npm test` and `npm run test:integration`, on Node 18, 20 and 22 |
 | `burn-in` | The same two suites, five times in a row. Pull requests only. Catches flakes. |
 | `coverage` | `npm run test:coverage` — c8, against the thresholds in `.c8rc.json` (lines 83, branches 80) |
-| `agent-surface-parity` | Agent surface vs. the last `v*` tag, plus install-scope containment, backlog referential integrity, and `npm run docs:audit` |
+| `agent-surface-parity` | Agent surface vs. the last `v*` tag, plus install-scope containment, backlog referential integrity, skill-manifest integrity, `npm run docs:audit`, and the agent-manifest/registry row check |
 | `security` | `npm audit --omit=dev` |
 | `package-check` | `npm pack --dry-run` and `node index.js` |
 | `fresh-install` | `scripts/audit/try-fresh-install.sh` — pack, install, doctor, export |

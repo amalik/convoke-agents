@@ -165,6 +165,24 @@ jobs:
       - name: Backlog referential integrity
         run: node scripts/audit/backlog-integrity.js
 
+      - name: Skill manifest integrity
+        # Promoted out of `tests/lib/portability-classification.test.js` on 2026-09-05. It
+        # was a lint over a tracked governance artifact (`skill-manifest.csv`) living in
+        # `tests/`, where it read the live tree via `findProjectRoot()` + `git ls-files` and
+        # violated `test-fixture-isolation`. Moving it here keeps the live read — which is
+        # its whole job — and lets `tests/audit/skill-manifest-integrity.test.js` cover the
+        # pure logic against fixtures instead.
+        #
+        # In THIS job because it is the audit aggregator, NOT because it needs history:
+        # `git ls-files` reads the index, so a depth-1 checkout enumerates exactly the same
+        # tracked files (verified 2026-09-05 against a real --depth 1 clone: both list an
+        # identical set of tracked SKILL.md paths). Stated explicitly because the
+        # `fetch-depth: 0` above is justified by the PARITY step alone, and an earlier draft
+        # of this comment wrongly claimed a second dependency on it. No filtered count is
+        # quoted here on purpose — two successive drafts quoted one that had already rotted
+        # (`derive-counts-from-source`); the script prints the live figure itself.
+        run: node scripts/audit/skill-manifest-integrity.js
+
       - name: Documentation audit
         # T32: `docs:audit` has existed and passed for months while running in no workflow.
         # It was FAILING when discovered (8 broken paths across all 7 shipped Vortex user
