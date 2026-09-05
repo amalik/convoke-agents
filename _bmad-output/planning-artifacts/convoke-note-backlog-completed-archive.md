@@ -873,9 +873,9 @@ Test 16 doesn't verify `{project-root}` resolves at activation — verifies wrap
 
 ## I98
 
-**Lane:** Fast Lane · **Filed:** 2026-04-29 · **Score:** 0.7 · **Portfolio:** gyre · **Status:** Aged out 2026-08-25 (T59, score floor 1.0)
+**Lane:** Fast Lane · **Filed:** 2026-04-29 · **Score:** 0.7 · **Portfolio:** gyre · **Status:** **REINSTATED 2026-09-05** to §2.3 Fast Lane, rescored 0.7 → 2.4 (was: aged out 2026-08-25, T59, score floor 1.0)
 
-**Parked, not closed.** Below the 1.0 floor at the 2026-08-25 age-out. Full text preserved verbatim so reinstatement is a copy-back into its lane.
+**No longer parked — reinstated 2026-09-05.** The premise changed, not just the score: this row's Reach was gated on a future marketplace submission, and the operator reported that users reach Gyre *today* by hand-wiring agent paths. Live row and current text are in §2.3 of the backlog; the text below is the historical record as parked.
 
 **Gyre marketplace structural compliance gap** — forward-looking; Gyre's 4 agents are flat `.md` files (not folder-per-agent), no `module.yaml`, no `module-help.csv`. Structurally MORE out-of-shape than Vortex on two axes (manifest absence + flat-vs-folder). Pattern A-equivalent migration needed when Gyre goes to marketplace (per spike's open product question). Tracks the gap so Pattern A learnings (from I97) transfer cleanly when triggered.
 
