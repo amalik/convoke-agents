@@ -183,6 +183,31 @@ jobs:
         # (`derive-counts-from-source`); the script prints the live figure itself.
         run: node scripts/audit/skill-manifest-integrity.js
 
+      - name: Name-registry integrity
+        # T124, deliverable 3 of the meta-model baseline. Lints
+        # `_bmad/bme/_config/name-registry.csv`, which ADR-001 (accepted 2026-09-05) makes
+        # the declaration point for team and agent names, tier and status. Four assertions:
+        # names unique within kind, agent rows resolve to a tracked source, converted agents
+        # BMB-canonical per I97 architecture D1, and the registry agrees with
+        # `agent-registry.js` — the drift invariant, since that file already calls itself the
+        # single source of truth for agents and the registry is a second list of them.
+        #
+        # In THIS job because it is the audit aggregator, NOT because it needs history —
+        # the same correction the step above carries. A2 uses `git ls-files _bmad/bme`,
+        # which reads the INDEX, so a depth-1 checkout enumerates the identical set
+        # (verified 2026-09-06: 356 files either way). An earlier draft of this comment
+        # claimed a `fetch-depth: 0` dependency, re-introducing the exact false claim the
+        # neighbouring step was rewritten to kill.
+        #
+        # A2 asserts TRACKED, not merely present: an untracked local file satisfies a
+        # developer and vanishes in CI, so `existsSync` would let the two environments
+        # disagree. An empty enumeration exits 1 as a failure to run, never a clean tree.
+        #
+        # It does NOT read `.claude/skills/`, which `.gitignore:62` ignores — a check over an
+        # ignored path passes vacuously in CI. The wrappers are generated at install time and
+        # `convoke-doctor.js:92` already checks them there.
+        run: node scripts/audit/name-registry-integrity.js
+
       - name: Documentation audit
         # T32: `docs:audit` has existed and passed for months while running in no workflow.
         # It was FAILING when discovered (8 broken paths across all 7 shipped Vortex user
