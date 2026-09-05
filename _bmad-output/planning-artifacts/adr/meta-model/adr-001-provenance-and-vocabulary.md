@@ -4,19 +4,21 @@ artifact_type: adr
 qualifier: meta-model-provenance-and-vocabulary
 created: '2026-09-05'
 status: active
-decision_status: proposed
+decision_status: accepted
+accepted: '2026-09-05'
 schema_version: 1
 related_initiative: 'Meta-model baseline (ratified 2026-08-15)'
 related_decision: 'ADR-002 (status axis); ADR-003 (object ontology)'
 related_epic: none
 supersedes: none
 qualifier_role: operator-authored
-signoff_by: pending
+signoff_by: amalik
 ---
 
 # ADR-001: Provenance Tiers and the Product-Structure Vocabulary
 
-**Status:** **PROPOSED** (2026-09-05) — awaiting sign-off by Amalik
+**Status:** **ACCEPTED** (2026-09-05) — signed off by Amalik
+**Proposed:** 2026-09-05
 **Initiative:** Meta-model baseline — deliverable 1 of 3 (ratified 2026-08-15)
 **Decision owner:** Amalik
 **Resolves:** the baseline memo's two named gaps — no provenance axis, and an object vocabulary of ~13 words
@@ -150,11 +152,83 @@ not to achieve uniformity.
 
 ## Open questions
 
-**OQ-1 — `submodule` (119 uses) and `pack` (36).** Fold into `module`, or retain? Low usage, cheap either
-way, not ruled here.
+**OQ-1 — `submodule` and `pack`.** ✅ **RESOLVED 2026-09-05** (operator: Amalik). See §Amendment 1.
 
-**OQ-2 — What is the graduation gate, concretely?** D8 rules that movement between tiers exists; its
-criteria are unruled. Forge's Gate 1 is the first case that will need them.
+**OQ-2 — What is the graduation gate, concretely?** ✅ **RULED DEFERRED 2026-09-05** (operator: Amalik) —
+deferred by method, not by neglect. See §Amendment 1.
 
-**OQ-3 — Does `_team-factory` get renamed to `_loom`?** Under D2 the three names are legitimately allowed to
-differ, so the mismatch is no longer an error. Whether it remains *desirable* is a separate call.
+**OQ-3 — Does `_team-factory` get renamed to `_loom`?** ✅ **RESOLVED 2026-09-05** (operator: Amalik):
+no, and not on D2's grounds. See §Amendment 1.
+
+---
+
+## Amendment 1 — OQ-1, OQ-2 and OQ-3 (2026-09-05)
+
+**Ruled by Amalik the same day the ADR was signed, on measured usage rather than on the word counts that
+raised the questions.**
+
+### R1 — `submodule` folds into `module`; `pack` was never a competitor
+
+**`submodule` (119 uses) is not a distinct object.** `scripts/update/lib/agent-registry.js:220` documents
+the field as *"submodule: directory under `_bmad/bme/` (e.g., `'_team-factory'`)"* — which is **D2's
+definition of `module`, word for word**. It names a *containment relationship*, a module seen as a child
+of `bme`, not a second kind of thing.
+
+**It folds in prose only.** `submodule` is a live schema field (`agent-registry.js:231`, read as
+`agent.submodule` by `refresh-installation` and `convoke-doctor`). Renaming that identifier is churn
+against the install path with no behavioural gain. The ruling is: do not use `submodule` in new
+documents, specs or stories; leave the field and its existing call sites alone; run no sweep.
+
+**`pack` (36 uses) is retained, and the count that raised the question was wrong.** Reading the uses
+rather than the grep, they are two senses, neither an object word competing with the six: `npm pack` —
+a verb — and "skill pack", a *distribution unit*, a thing you install rather than a thing inside the
+product. **A correction applied while writing this amendment:** the 36 was produced by substring
+matching and is substantially a false positive of the measurement, not evidence of vocabulary excess.
+No cut, no ratification needed.
+
+### R2 — The graduation gate is deferred by method
+
+D8 rules that movement between tiers happens through an explicit gate. **What that gate contains is
+deliberately not ruled here, and the reason is the method rather than the budget.**
+
+A gate already exists for the first case. Forge's Gate 1
+([`forge-decision-hc6-framework-2026-03-21.md:66`](../../../vortex-artifacts/forge-decision-hc6-framework-2026-03-21.md))
+carries a stated purpose, three primary metrics with targets, guardrail metrics, and a pre-registered
+decision matrix (Full Persevere / Partial Persevere / Patch / Pivot). It is better specified than a
+general rule written today could be.
+
+**Ruling a general gate now would mean designing for a case that has not run.** ADR-002 and ADR-003 are
+both strong because they measured first and ruled second; this is the one place in the baseline where a
+ruling would have to guess instead. So: **the first instance produces the rule, not the reverse.** Run
+Forge's Gate 1, then record the template it produced as a further amendment.
+
+This converts OQ-2 from a loose end into a stated method. It remains answerable, and it is not blocking:
+nothing in D1–D8 or in the baseline's third deliverable depends on it.
+
+### R3 — `_team-factory` is not renamed, and D2 is not the reason
+
+Under D2 the mismatch — directory `_team-factory`, portfolio `loom`, team "Loom" — is no longer an
+error, since the three are separate objects and may legitimately differ. **That permits the rename; it
+does not motivate it.** The reason not to rename is different and stronger:
+
+**`loom` has two live definitions and the collision is unresolved.** `taxonomy.yaml` and §1.4 define it
+as "Orchestration / Team Factory" (built, one agent); the ecosystem roster defines Loom as a *proposed*
+four-agent human-agent orchestration team. `_bmad/bme/_config/name-registry.csv` records this as
+requiring an operator ruling and it has not been given.
+
+**Renaming a directory to a contested name makes the collision harder to undo**, and I159's evidence is
+direct: renaming an installed surface is breaking for existing operators and needs a deprecation window,
+not a `git mv`. `_team-factory` is meanwhile accurate for what is there — one agent that builds teams.
+
+**Ruling: keep `_team-factory`. Rule what Loom is first;** the directory name is downstream of that
+question and costs nothing to defer.
+
+---
+
+## Change log
+
+| Date | Change | By |
+|------|--------|-----|
+| 2026-09-05 | Initial draft. Context measured; D1–D8 are the operator's rulings, taken as eight answered questions rather than drafted for review. `decision_status: proposed`. | Claude (write-up) |
+| 2026-09-05 | **Accepted by Amalik.** D6 and D7 confirmed explicitly after a full read — D6's practice row was the one cell filled from an ambiguous answer, D7 states a rule Convoke deliberately does not enforce. `decision_status` `proposed` → `accepted`. OQ-1/2/3 open at signing. | Amalik |
+| 2026-09-05 | **Amendment 1 — OQ-1, OQ-2, OQ-3.** `submodule` folds into `module` in prose only, schema field untouched; `pack` retained, its count corrected as a substring false positive. The graduation gate is deferred by method — the first instance produces the rule. `_team-factory` is not renamed, because `loom` is contested rather than because D2 permits the mismatch. D1–D8 unchanged. | Amalik |
