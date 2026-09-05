@@ -23,9 +23,9 @@ inputDocuments:
   - _bmad-output/planning-artifacts/convoke-note-v6-3-resequencing-and-v4-1-catchup-2026-05-25.md
 workflowType: 'architecture'
 project_name: 'Convoke v4.1 (Upstream BMAD Absorption)'
-absorption_window: 'v6.4–v6.10'
-window_amended: '2026-08-09'
-window_amendment_note: 'Window re-baselined v6.8 → v6.10 (Option B). AD1–AD9 survive unchanged — the ternary absorbed the new delta without an architectural revision, which is the design working as intended. Filename qualifier retained pending a governed rename; `absorption_window` is authoritative.'
+absorption_window: 'v6.4–v6.12'
+window_amended: '2026-09-05'
+window_amendment_note: 'Window re-baselined a SECOND time, v6.10 → v6.12 (2026-09-05, Option B). AD1–AD9 again survive unchanged — four upstream minors now absorbed with no architectural revision, this time including a directory restructure and four unshimmed skill retirements. Filename qualifier understates the window by four minor versions; retained pending the governed rename (backlog I121). `absorption_window` is authoritative.'
 user_name: 'Amalik'
 date: '2026-06-21'
 initiative: convoke
@@ -41,7 +41,7 @@ schema_version: 1
 
 _This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together._
 
-> **Absorption window: v6.4 → v6.10** (widened from v6.8 on 2026-08-09). **No architectural decision changed.** AD1–AD9 absorbed two unplanned upstream minors without revision — the ternary classified the entire delta as Class A, the schema locks held, and no new component was required. That is the strongest available evidence that the spine was cut at the right altitude. See *Ternary Applied — the v6.9/v6.10 Delta* below.
+> **Absorption window: v6.4 → v6.12** (widened from v6.8 on 2026-08-09, and from v6.10 on 2026-09-05). **No architectural decision changed, twice.** AD1–AD9 have now absorbed **four** unplanned upstream minors without revision — the ternary classified both deltas as Class A, the schema locks held, and no new component was required. The second window is the stronger test: it contained a four-way restructure of `src/bmm-skills/` and four unshimmed skill retirements, and still forced nothing. See *Ternary Applied — the v6.9/v6.10 Delta* and *Ternary Applied — the v6.11/v6.12 Delta* below.
 
 ## Project Context Analysis
 
@@ -104,6 +104,32 @@ effort:       classification-only   # no implementation
 Recorded honestly, this is **n=1 on a favourable window** — it establishes Class-A is *achievable and detectable*, not that it is the common case. AD9 exists to accumulate exactly this kind of entry until the cadence-cost claim rests on a distribution rather than an anecdote.
 
 **4. One Class-C candidate is deferred, not absorbed.** Upstream's canonical shared memlog (`src/scripts/memlog.py`, v6.9) is not forced — Convoke has no coupling — but it occupies the same architectural role as Vortex's **HC1–HC10 handoff contracts** and the initiative-lifecycle backlog: durable working memory across agent boundaries. Adopting it, ignoring it, or bridging to it is a genuine architectural fork with a one-way-door flavour. **Not decided here.** → v4.2 spike, logged so the decision is made deliberately rather than by default.
+
+### Ternary Applied — the v6.11/v6.12 Delta *(added 2026-09-05)*
+
+Second unplanned re-baseline, same method: classified against the source tree (`git diff v6.10.0 v6.12.0` over a real upstream clone), not the release notes. **Class A across the board**, no forced Convoke change, no story added. The full per-item table lives in the PRD (*v6.11–v6.12 Delta Classification*); what follows is the architectural read.
+
+**1. The spine held against a structurally harder window.** v6.9/v6.10 was a favourable test — it contained no contract-bearing changes at all. v6.11/v6.12 restructured `src/bmm-skills/` four ways (`1-analysis`/`2-plan-workflows`/`3-solutioning`/`4-implementation` → `agents`/`plan`/`ship`/`v6-shims`) and retired four skills with **no shim**. Both are the shape that should force downstream work. Neither did, and AD1–AD9 needed no revision. That is a materially stronger version of the 2026-08-09 claim — though it should be recorded that the restructure was *designed* to be inert: upstream's `v6-shims/README.md` states the folder is grouping only and changes no installed path or skill ID, and 14 deprecated IDs keep working until v7. The spine was not tested against a hostile upstream; it was tested against a careful one.
+
+**2. Class A here rests on two properties, and only one of them is designed.** Convoke's references to upstream skill names are **dispatch rules, not assertions** — name-keyed lookup tables in `classify-skills.js` that simply stop firing, with `validator.js` asserting on none of them. That is a real design property and worth protecting. The second property is closer to luck: `classify-skills.js` reads and rewrites manifest rows **in place and never deletes them**, so an upstream retirement cannot silently drop a row. Nothing asserts that invariant. **Recommend AD5's compat-surface audit assert the no-row-deletion property**, on the same reasoning as the 2026-08-09 amendment: the property already holds, so the assertion starts green and only ever fires on a real regression.
+
+**3. AD9 gets its second entry, and it is the one that makes the mechanism useful.**
+
+```yaml
+# AD9 baseline entry #2
+date:         2026-09-05
+from_version: 6.10.0
+to_version:   6.12.0
+class:        A            # declaration-only
+files_touched: 0
+effort:       classification-only   # no implementation; one session
+```
+
+Two entries is not yet a distribution, but it is the first point at which AD9 can be read as a *series* rather than an anecdote — both Class A, both zero files touched, the second on a harder window. Weighted honestly: this establishes the cheap-currency bet is **holding**, not proven. Both classifications were performed by the same person using the same method, which is a correlated-error risk the contract-diff probe (AD2's v4.1.x target) exists to reduce.
+
+**4. The consequence for Epic 1 is a weakening case, and that should be recorded rather than resisted.** MO2's claim is that declaration-only updates absorb at zero cost. Two consecutive confirmations mean the *manual* path is cheap — which is evidence **against** urgency for the 10-story Managed Currency engine, not for it. The MVP's assisted operator-declaration handled both windows correctly at roughly one session each. **The trigger for re-opening Epic 1 is a Class B/C window, or a classification pass that costs materially more than one session** — not the accumulation of further cheap ones. Recorded here because the natural bias is to build the machine that measures a cost the measurements keep showing to be low.
+
+**5. One inherited exposure sharpened.** Upstream refactored `resolve_customization.py` to import a new sibling `config_utils.py`, and added PEP 723 `requires-python >=3.11`. The CLI contract (`--skill`, `--key`) is preserved and Convoke still ships zero `.py` files, so AD5's property (b) is intact and the class is unaffected. But **agent activation now depends on two co-located BMAD-owned files where it depended on one**, which widens the blast radius of a partial refresh for every agent including Convoke's. This is the operator-environment axis the 2026-08-14 AD5 clarification separated out — it belongs to backlog **I132**'s preflight soft-warn, not to the compat-surface audit.
 
 ### Technical Constraints & Dependencies
 - **Parallel-install model** — no `node_modules/bmad-method`; conformance is structural/contractual.

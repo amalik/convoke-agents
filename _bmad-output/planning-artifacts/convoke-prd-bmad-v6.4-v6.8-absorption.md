@@ -37,9 +37,9 @@ classification:
     externalDependency: 'E1 marketplace PR acceptance by bmadcode — unbounded-latency schedule risk, not assurance'
     blastRadius: 'Touches-shipped-installs (E4 release-channels, E2 schema) vs additive (E6 Web Bundles)'
   projectContext: 'Brownfield with active distribution channels (npm ~40% / marketplace ~60%, estimated); gated on I97/v4.0 ship (depends: I97 close)'
-absorption_window: 'v6.4–v6.10'
-window_amended: '2026-08-09'
-window_amendment_note: 'Filename qualifier `bmad-v6.4-v6.8-absorption` is retained pending a governed artifact-governance rename; `absorption_window` above is authoritative. Applies identically to the paired arch and epic artifacts.'
+absorption_window: 'v6.4–v6.12'
+window_amended: '2026-09-05'
+window_amendment_note: 'Re-baselined a SECOND time, v6.10 → v6.12 (2026-09-05), on the same Option-B narrow basis. Delta classified Class A across the board; MVP epic scope unchanged and no story added. Filename qualifier `bmad-v6.4-v6.8-absorption` now understates the window by FOUR minor versions and is retained only pending the governed rename tracked as backlog I121; `absorption_window` above is authoritative. Applies identically to the paired arch and epic artifacts.'
 openScopeDecisions:
   - 'RESOLVED 2026-08-09: absorption window re-baselined v6.4–v6.8 → v6.4–v6.10 (narrow amendment, Option B). Trigger: upstream shipped v6.9.0 + v6.10.0 after the 2026-06-21 ratification, and the local dev tree has run BMAD 6.9.0 since 2026-06-27 — i.e. E2 was scoped to conform to a schema the maintainer was no longer running. Mechanical classification of the full v6.9+v6.10 delta returned Class A across the board (see "v6.9–v6.10 Delta Classification"), so MVP epic scope is UNCHANGED and the re-baseline costs ~0 implementation. What changes: the declared floor (needed for NFR2 ≤N-3 headroom), E5 shrinks (upstream retired bmad-investigate), and the delta becomes AD9 baseline entry #1 as a Class-A record.'
   - 'RESOLVED 2026-06-21 (Step 8): MVP = E2+E4+E7 (floor + differentiator). E1 = Phase 2 fast-follow (async marketplace submit; BYO-URL is MVP discoverability floor). E3/E5/E6 = Phase 3 / v4.2 (spike + demand-gated). Rationale: prove-payback-first; E7 is the offense that matters, E6 is demand-unvalidated reach, E1 has unbounded external-gatekeeper latency.'
@@ -66,7 +66,7 @@ schema_version: 1
 **Author:** Amalik
 **Date:** 2026-06-21 · **Window amended:** 2026-08-09
 
-> **Absorption window: v6.4 → v6.10.** Widened from v6.8 on 2026-08-09 (Option B, narrow re-baseline). The `v6.4-v6.8` filename qualifier is retained pending a governed rename; frontmatter `absorption_window` is authoritative. **MVP epic scope is unchanged** — the added v6.9+v6.10 delta classified Class A across the board. See *v6.9–v6.10 Delta Classification*.
+> **Absorption window: v6.4 → v6.12.** Widened from v6.8 on 2026-08-09 and again from v6.10 on 2026-09-05 (Option B, narrow re-baseline, both times). The `v6.4-v6.8` filename qualifier now understates the window by four minor versions and is retained only pending the governed rename (backlog **I121**); frontmatter `absorption_window` is authoritative. **MVP epic scope is unchanged** — both added deltas classified Class A across the board. See *v6.9–v6.10 Delta Classification* and *v6.11–v6.12 Delta Classification*.
 
 ## Executive Summary
 
@@ -277,6 +277,33 @@ That is genuine evidence, and it should be recorded as such — but it should be
 - The honest reading is **"the bet survived its first unplanned test,"** not "currency is solved."
 
 **Therefore:** this delta is recorded as **AD9 baseline entry #1**, classified Class A, `files_touched: 0`, `effort:` classification-only. It is a legitimate MO2b data point and the first entry in the cadence baseline — which is precisely what AD9 exists to accumulate.
+
+## v6.11–v6.12 Delta Classification *(added 2026-09-05 with the second window re-baseline)*
+
+The window widened from v6.10 to v6.12. Per **FR6** every upstream change must be classified into the absorption ternary before it can be scoped. The classification below was run against the **source tree** — `git diff v6.10.0 v6.12.0` over a real clone of `bmad-code-org/BMAD-METHOD` — and deliberately **not** against the release notes, per the finding recorded in the v6.9–v6.10 pass: release notes state what upstream changed, not what Convoke is coupled to.
+
+Raw delta: **651 files, +28,625 / −26,230**. The great majority is documentation, i18n and website; the load-bearing churn is in `src/bmm-skills/`, `src/core-skills/`, `src/scripts/` and `tools/installer/`.
+
+**Result: Class A across the board.** No item in v6.11 or v6.12 forces a Convoke source or logic change. MVP epic scope is unchanged, and unlike the previous re-baseline this one adds **no** story.
+
+| Upstream change | Class | Evidence (mechanically verified 2026-09-05) |
+|---|---|---|
+| `src/bmm-skills/` restructured: `1-analysis` / `2-plan-workflows` / `3-solutioning` / `4-implementation` → `agents` / `plan` / `ship` / `v6-shims` | **A** | **Changes no installed path and no skill ID.** Upstream's own `v6-shims/README.md` states it: *"The folder is grouping only: the installer discovers skills recursively and installs each one under its own `name`, so nesting here does not change any installed path or skill ID."* Independently, Convoke references those source paths only in `_bmad/_config/*.csv` (BMAD-owned, installer-refreshed) and in `tests/fixtures/portability-project/`, a frozen fixture upstream churn cannot reach. No Convoke source resolves them. |
+| **Four skills retired outright, with NO shim** — unlike the 14 deprecated IDs in `v6-shims/`: `bmad-check-implementation-readiness`, `bmad-agent-tech-writer`, `bmad-index-docs`, `bmad-shard-doc` | **A** | Convoke's references are name-keyed lookup tables in `scripts/portability/classify-skills.js` — dispatch rules that simply stop firing — plus one comment in `scripts/audit/audit-bmm-dependencies.js`. `scripts/update/lib/validator.js` asserts on none of them (0 grep hits). Crucially, `classify-skills.js` **reads and rewrites manifest rows in place and never deletes them** (`:521`→`:621`), so the retirements do not silently drop rows. `bmad-index-docs` and `bmad-shard-doc` are additionally **vendored** by Convoke under `_bmad/core/skills/` and `_bmad/core/tasks/`, so they remain part of the shipped product regardless of upstream. |
+| `resolve_customization.py` refactored → `from config_utils import …` (new sibling module) + PEP 723 `requires-python >=3.11` | **A** *(inherited exposure — watch)* | CLI contract preserved (`--skill`, `--key` both intact). The script is BMAD-owned in `_bmad/scripts/`, installer-refreshed, and Convoke ships zero `.py` files, so AD5's property (b) holds. **But activation now requires TWO co-located files where it required one** — a partial refresh breaks every agent activation, Convoke's included. This is an operator-environment concern, not a Convoke code change: it strengthens the case for backlog **I132**'s preflight soft-warn rather than changing the class. |
+| **Eight skill names added** (count 46 → 50) — but **four are shimmed replacements, not net-new**: `bmad-build` ← `bmad-quick-dev`, `bmad-build-auto` ← `bmad-dev-auto`, `bmad-walkthrough` ← `bmad-checkpoint-preview`, and `bmad-deep-recon` ← the three `bmad-*-research` skills consolidated. Genuinely new: `bmad-editorial-review`, `bmad-project-context`, `bmad-review`, `bmad-review-verification-gap`. | **A** *(capability overlap → v4.2)* | **Zero exact-name collisions** in the Convoke tree. Recorded because a first substring pass reported 14 — every one an artefact of `bmad-review` ⊂ `bmad-review-edge-case-hunter`, `bmad-build` ⊂ `bmad-workflow-builder`. The old IDs all keep working via `v6-shims/`, which upstream commits to shipping by default until v7 (*"Removal rides the v7 cut — never a 6.x minor"*) — so this is additive for any consumer, Convoke included. Positioning overlap remains, and it is a capability question rather than a conformance one: `bmad-project-context` against `bmad-generate-project-context` + `project-context.md`; `bmad-review` / `bmad-review-verification-gap` / `bmad-deep-recon` against Gyre's `review-coach` and `code-review-convergence`. → run the Capability Evaluation Framework overlap analysis at v4.2 scoping (`capability-form-factor-evaluation`). |
+| `module-help.csv` schema | **A** | **Header unchanged** at both tags — the same 13 columns in `src/bmm-skills/` and `src/core-skills/`. **E2's migration target is therefore stable**: Stories 2.1 and 2.4 do not move. |
+| Installer: `shim-policy.js` and `modules/git-env.js` new; `uv-check.js`, `manifest.js`, `manifest-generator.js`, `core/installer.js` modified | **A** | Upstream-owned install machinery. AD5 property (a) — parallel install, no package dependency on `bmad-method` — continues to hold, so installer churn is inert for Convoke. |
+
+### What this result means for the PRD's central bet
+
+This is **AD9 baseline entry #2**, and it is the second consecutive Class-A window. Two things make it a *stronger* test than the v6.9–v6.10 window, and one thing keeps it from being decisive:
+
+- **It contained structural churn, not just additive change.** A four-way directory restructure of `src/bmm-skills/` and four unshimmed skill retirements are exactly the shape that should force downstream work. Neither did. The v6.9–v6.10 window, by contrast, contained no contract-bearing changes at all.
+- **The property doing the work is now identifiable.** Class A here rests on two structural facts: Convoke's references to upstream skill names are *dispatch rules* rather than *assertions*, and `classify-skills.js` never deletes manifest rows. The first is a design property worth protecting; the second is closer to luck, and AD5's audit assertions should cover it.
+- **It is still n=2, and both windows were classified by the same person using the same method.** Two Class-A results establish that the cheap-currency bet is *holding*, not that it is proven. The honest reading is unchanged from 2026-08-09: **the bet has now survived two unplanned tests.**
+
+**Consequence for Epic 1 (Managed Currency).** The MVP's assisted operator-declaration remains adequate, and the case for building the *automated* classifier weakens with each cheap window. Two data points do not yet justify the 10-story engine; the trigger for re-opening it is a Class B/C window or a classification pass that costs materially more than one session. Recorded here so the decision rests on the accumulating distribution AD9 exists to build, rather than on appetite.
 
 ## Project Scoping & Phased Development
 

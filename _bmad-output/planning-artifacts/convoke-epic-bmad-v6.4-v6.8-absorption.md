@@ -19,9 +19,9 @@ status: complete
 epics: 4
 stories: 21
 created: '2026-06-21'
-absorption_window: 'v6.4–v6.10'
-window_amended: '2026-08-09'
-window_amendment_note: 'Window re-baselined v6.8 → v6.10 (Option B). Net story delta +1 — and NOT from v6.9/v6.10, which classified Class A across the board. The added story (2.4) covers a pre-existing E2 gap found by source enumeration: a second Convoke-owned module-help.csv on a third, non-conformant schema. Filename qualifier retained pending a governed rename.'
+absorption_window: 'v6.4–v6.12'
+window_amended: '2026-09-05'
+window_amendment_note: 'Window re-baselined a SECOND time, v6.10 → v6.12 (2026-09-05, Option B). Net story delta ZERO — the v6.11/v6.12 delta classified Class A across the board and produced no story, unlike the 2026-08-09 re-baseline whose +1 (story 2.4) came from a pre-existing E2 gap rather than from the delta itself. Epic structure and story count unchanged at 4/21. E2 is additionally CONFIRMED stable: the module-help.csv header is byte-identical at v6.10.0 and v6.12.0, so stories 2.1 and 2.4 do not move. Filename qualifier understates the window by four minor versions; retained pending the governed rename (backlog I121).'
 schema_version: 1
 ---
 
@@ -31,7 +31,7 @@ schema_version: 1
 
 This document provides the epic and story breakdown for Convoke v4.1, decomposing the PRD requirements and Architecture decisions (AD1–AD9) into implementable stories. **Scope: MVP (E2+E4+E7) + Phase-2 (E1).** The v4.2 capability spikes (E3/E5/E6) are out of scope — their epics are authored when those spikes qualify. The whole initiative is `depends: I97 close (v4.0 ship)` — these epics are commitment-locking plan-ahead, not implementation-ready.
 
-> **Absorption window: v6.4 → v6.10** (widened from v6.8 on 2026-08-09). **Epic structure is unchanged; one story added.** The v6.9+v6.10 delta classified **Class A across the board** — no forced Convoke change, so it produced no stories. The single added story (**2.4**) closes a *pre-existing* E2 gap that source enumeration surfaced during the re-baseline: FR11 was scoped against one file, and there are two. **Story count 20 → 21.** Full classification in the PRD (*v6.9–v6.10 Delta Classification*).
+> **Absorption window: v6.4 → v6.12** (widened from v6.8 on 2026-08-09, and from v6.10 on 2026-09-05). **Epic structure is unchanged; one story added, in the first re-baseline only.** Both added deltas classified **Class A across the board** — no forced Convoke change, so neither produced stories. The single added story (**2.4**) closes a *pre-existing* E2 gap that source enumeration surfaced during the 2026-08-09 re-baseline: FR11 was scoped against one file, and there are two. **Story count 20 → 21, and unchanged since.** The 2026-09-05 re-baseline additionally **confirms E2's target is stable** — the `module-help.csv` header is byte-identical at v6.10.0 and v6.12.0, so stories 2.1 and 2.4 stand as written. Full classifications in the PRD (*v6.9–v6.10* and *v6.11–v6.12 Delta Classification*).
 
 ## Requirements Inventory
 
