@@ -123,11 +123,17 @@ Every initiative attaches to a portfolio item. The portfolio item answers: "whic
 | convoke | Core platform, CLI, update system, meta-infrastructure |
 | vortex | Discovery team (7 agents, Shiftup Innovation Vortex) |
 | gyre | Readiness team (contextual assessment) |
-| forge | Knowledge extraction team (brownfield capture) |
+| forge | Knowledge capture team — explicit and implicit knowledge (not field-bounded) |
 | bmm | Build module (upstream BMAD agents, workflows) |
 | enhance | Skills module (workflow extensions on existing agents) |
 | loom | Orchestration / Team Factory |
-| helm | Strategic governance |
+| helm | Steering — portfolio, WIP and lifecycle governance |
+
+**Name authority.** Team and agent names, their tier and their status (shipped / in-dev / proposed /
+reserved) are declared once in [`_bmad/bme/_config/name-registry.csv`](../../../../_config/name-registry.csv).
+The table above is the *portfolio* view of that registry; where the two disagree, the registry wins.
+Two rulings recorded there and applied above (2026-09-05): `helm` is **steering**, never "strategy";
+`forge` is scoped by **explicit vs implicit** knowledge, not brownfield vs greenfield.
 
 **Taxonomy growth rule:**
 
