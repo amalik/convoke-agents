@@ -4,7 +4,7 @@ baseline_commit: cdd9cf88ff03f010a5bf32bbddb132d718cb718b
 
 # Story 2.2: Assert every documented reference resolves inside the package
 
-Status: review
+Status: done
 
 <!-- baseline_commit deliberately ABSENT — it is `dev-story`'s field, stamped at implementation start. -->
 
@@ -334,6 +334,7 @@ deliberately outside the verdict with 2.3c named as the wiring story.
 | 2026-09-06 | Round 1: 12 patched, 5 deferred; 2 HIGH. Committed as `c848c45d`. |
 | 2026-09-06 | Round 2: 4 HIGH, 11 MEDIUM — **predominantly defects in Round 1's own corrections**, which fired `code-review-convergence`'s restructure clause. Four instruments changed rather than patched again: markdown ambition narrowed (blockquote handling reverted, operator ruling), URL handling rebuilt on `new URL()`, CLI findings now outrank cannot-run, evidence numbers emitted via `--json` instead of transcribed. 13 patched, 5 deferred. Count unchanged at 28/5. **Round 3 triggered** — Round 2 made structural changes. |
 | 2026-09-06 | Round 3 (final): 6 HIGH, ~13 MEDIUM, ~8 LOW. Diagnosis: the AC5 half was over-built in Round 2 — shorthands, ports, multi-segment repos, none specified by AC5, each a way to return a confident wrong answer that passes the fail-closed guard. Instrument change was a **deletion**, narrowing to what AC5 specifies. Post-scan cannot-run made structurally unable to discard findings. All mutant identifiers purged from the record; matrix re-keyed on (edit → test). 11 patched, 8 deferred. Count unchanged at 28/5. **Round cap reached — no Round 4.** |
+| 2026-09-06 | Shipped as `c848c45d` + `eceb47b6`; CI green on both. Status → `done` (operator, 2026-09-06). All 7 ACs met — AC4 partially, by ruling, recorded in its own section. 36 findings patched across three rounds, 18 deferred to the backlog with measurements. Round 3's remediation remains unreviewed by rule; the convergence cap is deliberate, and re-reviewing that delta belongs to whoever picks up 2.3c. |
 
 ---
 
