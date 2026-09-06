@@ -1225,3 +1225,14 @@ All three items below are pre-existing or policy calls, not defects introduced b
 - source_spec: `scripts/audit/name-registry-integrity.js` (T124, Fast Lane — no spec file)
   summary: `code` uniqueness is enforced globally while name uniqueness is enforced within-kind, with no declared-collision escape hatch for codes — stricter than A1's stated contract, and undocumented.
   evidence: Round 2 Blind Hunter, verified. `checkUniqueness` keys names on `kind + name` but codes on the bare code. Today every code belongs to a team row so the difference is invisible; the day an agent carries a code, the two rules disagree with nothing stating which is intended. Left as-is deliberately: three-letter handles are the most collision-prone identifiers in the file and the stricter reading is the safer default, but it should be a stated position rather than an accident of implementation.
+
+## Deferred from: code review of dist-2-2 (2026-09-06)
+
+All five are real and reproduced against running code; none is reachable on the corpus shipped
+today, and each carries the measurement that says so. Source: Edge Case Hunter, Round 1.
+
+- **`blob/<ref>/` assumes a single-segment git ref.** `https://github.com/<owner>/<repo>/blob/release/4.0/docs/a.md` resolves as `4.0/docs/a.md` and reports a valid link as broken. Zero self-referential URLs use a slashed ref today. A correct fix needs the repository's branch list — the split is not recoverable from the URL alone. [scripts/audit/lib/shipped-links.js, `classify`]
+- **A fence-shaped line indented 4+ spaces opens a fence that was never open.** CommonMark makes that an indented code block. An odd number of them inverts fence state for the rest of the file — the same damage `^`-anchoring causes, from the other direction. Zero occurrences today (`grep -rhE '^ {4,}(```|~~~)' --include='*.md'` over the packed tarball → 0). Bounding the indent at 3 would reintroduce the AC4 miss for fences nested in list items, so this needs list-context tracking, not a tighter regex. The unterminated-fence finding is the tripwire meanwhile. [`FENCE_RE`]
+- **Inline code spans that cross a line boundary are not recognised.** `stripInlineCode` is per-line, so ``` `code\n[link](nope.md)` ``` reports a false positive. Documented scope limit. [`stripInlineCode`]
+- **A backslash-escaped backtick opens a code span.** CommonMark treats `\`` as a literal that opens nothing; here it can mask a real broken link, i.e. a missed finding. [`stripInlineCode`]
+- **`.markdown` files and symlinked `.md` files are never scanned.** `Dirent.isFile()` and `isDirectory()` are both false for a symlink, and the extension filter is a literal `.md`. AC3 scopes the corpus to `.md`; zero of either ship today. Silent omission from the denominator if that changes. [`markdownFiles`]

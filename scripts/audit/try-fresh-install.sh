@@ -398,6 +398,59 @@ fi
 echo "    [installed-tree status $TREE]"
 
 echo
+echo "==> Every documented reference resolves inside the package"
+# Story dist-2.2 (FR12). A different class from every check above, and from the installed-tree
+# assertion immediately before it. Those ask "did the bytes arrive?"; this asks "does the prose
+# that arrived still make sense?" — every relative markdown link in every shipped `.md`, plus
+# the SELF-REFERENTIAL subset of absolute URLs (ADR-002 Amendment 1). `files[]` decides what
+# ships; nothing until now decided whether the documents that shipped still point at anything.
+# The failure it catches is small and constant: an operator opens what they installed, follows a
+# link marked "required reading", and it is not there.
+#
+# NO SECOND PACK, NO SECOND EXTRACT (AC1). It reads $TMP/proj/node_modules/convoke-agents —
+# the tarball this script packed at line 1 and npm extracted at the install step above. Packing
+# again would interrogate a different artifact, which is the criticism this epic levels at
+# grep-based detection.
+#
+# TWO ROOTS, deliberately different. Relative links resolve inside the PACKAGE; self-referential
+# `blob/<ref>/` URLs resolve against the REPO, because such a URL names content on the default
+# branch and `docs/` is in the repository but not in `files[]`. All ten shipping today point
+# there, so conflating the roots would turn ten correct links into ten findings.
+#
+# DELIBERATELY NOT IN THE VERDICT AT THE `if` BELOW (AC2, NFR10). This job gates `publish` on
+# every push and every PR, and the gate is RED today. Wiring it here would block the repository
+# until its remedies land. Story dist-2.3c adds $LINKS to that condition in the same commit that
+# turns it green. A check that prints FAILED and exits 0 is uncomfortable on purpose. If you are
+# reading this after 2.3c shipped and $LINKS still appears nowhere in the verdict, that is the bug.
+#
+# No finding count is written here on purpose: 2.3a/2.3b/2.3c exist to drive it to zero, so any
+# number in this comment is stale within three stories and sends a maintainer chasing phantoms.
+# Run the script to see the current figure. One caveat that does NOT expire and is easy to miss:
+# not every finding belongs to one of ADR-002's three classes, so 2.3a+2.3b+2.3c is not by itself
+# proof the gate is green. Check before wiring it in blocking.
+#
+# Run from $REPO, not from the installed copy: an auditor loaded out of the tree it is auditing
+# cannot report that tree as broken.
+LINKS=0
+node "$REPO/scripts/audit/assert-shipped-links.js" "$TMP/proj/node_modules/convoke-agents" "$REPO" || LINKS=$?
+# 0 = clean, 1 = findings printed. ANY OTHER CODE means the assertion did not run — including
+# codes it never chose: 127 (node absent), 126 (not executable), 128+N (signal), a NODE_OPTIONS
+# startup abort. Treating those as "findings" would be a false defect report; treating them as
+# clean is the fail-open pattern this file's header documents five variants of.
+#
+# NOTE ON AC2, carried over in kind from the installed-tree block above: this `exit` IS a
+# failure path, which AC2 words as forbidden, and AC2's own verification cannot see it — that
+# check watches the verdict CONDITION for the status variables and says nothing about an `exit`
+# above it. Kept for the same reason and under the same ruling: a check that cannot RUN must not
+# let the harness report health. It fires only on a broken ASSERTION, never on a product defect,
+# because findings are exit 1 and land in the `-ne 1` escape above.
+if [ "$LINKS" -ne 0 ] && [ "$LINKS" -ne 1 ]; then
+  echo "    [harness] the shipped-link assertion could not run (exit $LINKS — see message above)"
+  exit "$ENV_FAIL"
+fi
+echo "    [shipped-links status $LINKS]"
+
+echo
 echo "========================================"
 # Reaching the verdict means every check ran. See COMPLETED near the top: without this, a status
 # of 0 cannot be distinguished from a crash that bash reported as 0. Set BEFORE the verdict, not
