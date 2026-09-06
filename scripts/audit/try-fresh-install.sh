@@ -442,8 +442,16 @@ node "$REPO/scripts/audit/assert-shipped-links.js" "$TMP/proj/node_modules/convo
 # failure path, which AC2 words as forbidden, and AC2's own verification cannot see it — that
 # check watches the verdict CONDITION for the status variables and says nothing about an `exit`
 # above it. Kept for the same reason and under the same ruling: a check that cannot RUN must not
-# let the harness report health. It fires only on a broken ASSERTION, never on a product defect,
-# because findings are exit 1 and land in the `-ne 1` escape above.
+# let the harness report health.
+#
+# AN EARLIER VERSION OF THIS COMMENT CLAIMED IT "fires only on a broken ASSERTION, never on a
+# product defect". That was false and Round 2 caught it. Findings are exit 1 and do land in the
+# `-ne 1` escape — but the checker also exits 2 when the package contains NO markdown at all and
+# when its `package.json` declares no parsable `repository.url`, and both of those are packaging
+# regressions, i.e. product defects. Each would take this job down as ENV_FAIL rather than
+# surface as a finding. That is a deliberate trade — those two states make the assertion
+# meaningless, so reporting a clean scan would be worse — but it is NOT the narrow "only a broken
+# assertion" the old sentence promised, and 2.3c should weigh it when wiring this in blocking.
 if [ "$LINKS" -ne 0 ] && [ "$LINKS" -ne 1 ]; then
   echo "    [harness] the shipped-link assertion could not run (exit $LINKS — see message above)"
   exit "$ENV_FAIL"

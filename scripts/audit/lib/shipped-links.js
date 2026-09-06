@@ -20,10 +20,13 @@
  * to zero, so any number written into this comment is wrong within three stories, and a
  * maintainer comparing output against a stale note chases phantoms. What is stable is the
  * PROPERTY: the difference between a naive scan and this one is exactly the markdown EXAMPLES
- * that shipped documentation contains. Re-derive both sides with
- * `node scripts/audit/assert-shipped-links.js <packageRoot> <repoRoot>` against a scan with
- * `FENCE_RE`/`stripInlineCode` disabled; the story's Completion Notes record the figures as
- * measured on 2026-09-06, with their date attached.
+ * that shipped documentation contains.
+ *
+ * To re-derive the current figure:
+ *   node scripts/audit/assert-shipped-links.js <packageRoot> <repoRoot> --json
+ * To re-derive the NAIVE side there is no flag — you must edit this file (neutralise `FENCE_RE`
+ * and make `stripInlineCode` return its argument) and re-run. Said plainly because an earlier
+ * version of this comment gave a command as though a switch existed.
  *
  * `isFenceLine` is not anchored at `^` for the same reason. The example in
  * `_bmad/bme/_enhance/.../backlog-format-spec.md` opens its fence with two leading spaces
@@ -40,6 +43,36 @@
  *     whether a heading exists is out of scope and deliberately so.
  *   * EXTERNAL absolute URLs are permitted and NOT validated. CR-README-D04 narrows this rather
  *     than closing it: only the SELF-REFERENTIAL subset is resolved (ADR-002 Amendment 1).
+ *   * BLOCKQUOTED CONSTRUCTS ARE NOT UNDERSTOOD. `> \x60\x60\x60` does not open a fence here, so links
+ *     inside a blockquoted markdown EXAMPLE are reported as findings. This is the AC4
+ *     false-positive class, surviving in one specific shape, and it is a DELIBERATE scope limit
+ *     rather than an oversight: handling it was attempted and reverted. Tracking blockquote
+ *     state without tracking block structure generally produced two worse defects than the one
+ *     it fixed — a fence opened inside a quote stayed open across ordinary prose and silently
+ *     swallowed real links, and a quoted line inside a real fence closed it early. Both were
+ *     fail-open. Zero shipped `.md` files contain a link inside a blockquoted fence today
+ *     (measured 2026-09-06: 5 files have blockquoted fences, none holds a link), so the limit
+ *     costs nothing now and the honest narrow scanner is preferable to a half-parser.
+ *     Closing this properly needs a real CommonMark parser; that is a backlog item, and the
+ *     decision point is when story 2.3c makes this gate blocking.
+ *   * HTML is not markdown here: a relative `<a href>` or `<img src>` is NOT checked, and a link
+ *     inside an `<!-- HTML comment -->` IS reported. Zero shipped files hit either today.
+ *   * Inline code spans are matched per LINE, so a span wrapping a newline is not masked.
+ *   * A MULTI-SEGMENT GIT REF in a self-referential URL yields a WRONG path, not a skip.
+ *     `.../blob/feature/x/docs/a.md` is read as ref `feature`, path `x/docs/a.md`, and reports a
+ *     valid link as broken. The split is not recoverable from the URL alone — it needs the
+ *     repository's branch list. Zero shipped links use a slashed ref. This bullet exists because
+ *     `selfReferentialPath` used to say "see SCOPE" about it while SCOPE said nothing.
+ *   * ONLY `<owner>/<repo>` IS ACCEPTED as a repository identity. A GitLab subgroup path is
+ *     refused rather than guessed, because from the URL alone it is indistinguishable from a
+ *     misparse that swallows trailing segments.
+ *   * SYMLINKS ARE HANDLED INCONSISTENTLY, stated rather than left to be discovered. A symlinked
+ *     `.md` file is silently dropped from the corpus (`readdirSync` reports it as neither file
+ *     nor directory), so its own links are checked by nobody; a link INTO a symlinked directory
+ *     is resolved and containment-checked. Zero symlinks ship today.
+ *   * A `..` traversing a symlinked directory can still escape: `path.resolve` collapses the
+ *     `..` textually before `resolvesInside` ever sees the symlinked component. The realpath
+ *     check catches the direct form, not this one.
  *   * It cannot see a file that shipped code READS AT RUNTIME but that no markdown mentions.
  *     That class belongs to `assert-installed-tree.js` (story dist-2.4, shipped). The two are
  *     siblings, not substitutes: this one sees documented references, that one sees arrivals.
@@ -62,24 +95,17 @@ const path = require('path');
  * file — the same damage the header attributes to `^`-anchoring, from the other direction.
  * Measured 2026-09-06: zero shipped `.md` files contain a fence-shaped line indented 4+ spaces
  * (`grep -rhE '^ {4,}(\x60\x60\x60|~~~)' --include='*.md'` over the packed tarball → 0), so the
- * trade is currently free. `unterminatedFenceAt` below is the tripwire if that changes: state
- * inversion of this kind almost always leaves a fence open at EOF.
+ * trade is currently free.
+ *
+ * `unterminatedFenceAt` IS ONLY A PARTIAL TRIPWIRE, and an earlier version of this sentence
+ * overstated it as covering the case ("state inversion of this kind almost always leaves a fence
+ * open at EOF"). It covers an ODD number of stray fence-shaped lines. An EVEN number rebalances
+ * the state, so links between them are silently unscanned and `unterminatedFenceAt` stays 0.
+ * Demonstrated in review against a document showing the fence delimiter literally twice. The
+ * real fix is a CommonMark parser; until then this limit is documented rather than guarded.
  */
 const FENCE_RE = /^(\s*)(`{3,}|~{3,})(.*)$/;
 
-/**
- * A leading blockquote marker, stripped before fence detection AND link extraction.
- *
- * Without this, `> \x60\x60\x60` is not a fence, so every link in a blockquoted example is
- * reported as a finding — the identical false-positive class AC4 exists to prevent, differing
- * only in how the example is marked up. Five shipped files contain blockquoted fences today
- * (measured 2026-09-06); none currently holds a link, which is why the gate was not already
- * accusing them and why this was latent rather than loud.
- *
- * Stripping applies to link extraction too, deliberately: a link inside a blockquote is a real
- * link and must still resolve.
- */
-const BLOCKQUOTE_RE = /^[ \t]*(?:>[ \t]?)+/;
 
 /** Anything with a scheme is absolute. `mailto:`, `https:`, `file:` all land here. */
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
@@ -162,56 +188,141 @@ function parseTarget(raw) {
 }
 
 /**
- * Derive the self-referential URL prefix from a package's `repository.url`.
+ * Identify the repository a `repository.url` names, as structured data.
  *
- * DATA, NEVER A LITERAL. `verify-external-identifiers`: a hardcoded `github.com/amalik/...`
- * would keep matching after a rename or a fork, so the checker would go on validating paths
- * against a repository that is no longer this one. Returning `null` for an unparsable url is
- * deliberate — an empty prefix would make EVERY absolute URL self-referential and the gate
- * would start reporting external links as broken.
+ * NARROWED IN ROUND 3, BY DELETION. Rounds 1-3 each found HIGH defects here and nowhere else in
+ * comparable density, and the diagnosis was that this function was doing far more than AC5 asks.
+ * AC5 requires one thing: resolve `https://<forge>/<owner>/<repo>/blob/<ref>/<path>` for the
+ * package being audited. Round 2 additionally built npm bare shorthands, transport ports and
+ * multi-segment repository paths — none specified, none used by this package, and each one a
+ * fresh way to return a CONFIDENT WRONG ANSWER. Three examples, all real, all removed:
  *
- * @param {string} repositoryUrl e.g. `git+https://github.com/owner/repo.git`
- * @returns {string|null} e.g. `https://github.com/owner/repo/`
+ *   `../owner-repo`     -> {owner: '..',  repo: 'owner-repo'}   the bare `owner/repo` shorthand
+ *   `not-a-url/at-all`  -> {owner: 'not-a-url', repo: 'at-all'} matched ANY two-segment string
+ *   `ssh://h:2222/o/r`  -> port 2222, which then made every https link fail the port comparison
+ *
+ * Each produced a NON-NULL identity, so `assert-shipped-links.js`'s fail-closed
+ * "no parsable repository.url" guard passed, and AC5 then silently validated nothing while the
+ * run printed a clean verdict. A wrong answer that passes a fail-closed guard is worse than no
+ * answer, which is the whole reason that guard exists.
+ *
+ * What is accepted now, and nothing else:
+ *   - a URL with an explicit scheme (`https`, `http`, `git+https`, `git`, `ssh`) whose path is
+ *     EXACTLY two segments, `<owner>/<repo>`
+ *   - scp syntax `git@host:owner/repo(.git)`, path exactly two segments
+ *   - npm's PREFIXED shorthands `github:`/`gitlab:`/`bitbucket:` — the prefix is required,
+ *     because it is what distinguishes a repository reference from an arbitrary string
+ * Anything else returns null, the CLI exits 2, and the harness reports that it could not run.
+ * That is the correct direction for a gate: refuse rather than guess.
+ *
+ * NO PORT. A transport port on an `ssh://` or `git://` remote has no relation to the web UI a
+ * `blob` link is written against, so carrying it into the identity disabled AC5 for the whole
+ * run. Hosts are compared without one.
+ *
+ * @param {string} repositoryUrl
+ * @returns {{host: string, owner: string, repo: string}|null} null when not confidently parsable
  */
-function selfRefPrefix(repositoryUrl) {
+function repositoryIdentity(repositoryUrl) {
   if (!repositoryUrl || typeof repositoryUrl !== 'string') return null;
-  let url = repositoryUrl.trim();
+  // A `#committish` is legal in a git url and never part of the repository path. Stripped FIRST,
+  // before any shape is matched: ordered after the shorthand branch, it made `github:o/r#v1`
+  // (a form npm documents) fail to parse at all.
+  let url = repositoryUrl.trim().replace(/#.*$/, '');
+  if (!url) return null;
 
-  // npm's documented shorthands. Rejecting these made `selfRefPrefix` return null, which the CLI
-  // turns into exit 2 — and exit 2 aborts the whole `fresh-install` job. A package declaring its
-  // repository in a form npm itself documents must not take the harness down.
-  const short = /^(github|gitlab|bitbucket):([^/#?]+)\/([^/#?]+?)(?:\.git)?$/.exec(url);
-  if (short) {
-    const host = { github: 'github.com', gitlab: 'gitlab.com', bitbucket: 'bitbucket.org' }[short[1]];
-    return `https://${host}/${short[2]}/${short[3]}/`;
+  const ok = (host, owner, repo) => {
+    // `.` and `..` are path traversal, not repository names, and reached this far as owners.
+    const bad = x => !x || x === '.' || x === '..' || x.includes('/');
+    if (!host || !host.includes('.') || bad(owner) || bad(repo)) return null;
+    return { host: host.toLowerCase().replace(/^www\./, ''), owner, repo };
+  };
+
+  const HOSTS = { github: 'github.com', gitlab: 'gitlab.com', bitbucket: 'bitbucket.org' };
+  const short = /^(github|gitlab|bitbucket):([^/:@\s]+)\/([^/:@\s]+?)(?:\.git)?$/.exec(url);
+  if (short) return ok(HOSTS[short[1]], short[2], short[3]);
+
+  if (!url.includes('://')) {
+    // scp syntax `git@host:owner/repo.git`. `new URL()` cannot parse it.
+    const scp = /^(?:git\+)?git@([^:/\s]+):(.+?)(?:\.git)?\/?$/.exec(url);
+    if (!scp) return null;
+    const parts = scp[2].split('/').filter(Boolean);
+    if (parts.length !== 2) return null; // exactly owner/repo; `22/owner/repo` read 22 as the owner
+    return ok(scp[1], parts[0], parts[1]);
   }
 
-  // A `#committish` suffix is legal in a git url and is NOT part of the repository path.
-  // Left on, it produced a truthy-but-wrong prefix (`https://host/o/r.git#v4.0.1/`) which matches
-  // no real URL — so AC5 silently evaluated nothing while the run still reported a clean verdict.
-  // Only `null` fails closed at the CLI, so a wrong-but-truthy prefix was the worst outcome here.
-  url = url.replace(/#.*$/, '');
-
-  const m = /^(?:git\+)?(?:https?:\/\/|ssh:\/\/git@|git@)([^/:@]+)(?::\d+)?[/:]([^/]+)\/(.+?)(?:\.git)?\/?$/
-    .exec(url);
-  if (!m) return null;
-  const [, host, owner, repo] = m;
-  if (!host.includes('.') || !owner || !repo) return null;
-  // The repo segment is one path segment and carries no url punctuation. Anything else means the
-  // parse went wrong, and a wrong prefix is worse than none.
-  if (/[/#?]/.test(repo) || /[#?]/.test(owner)) return null;
-  return `https://${host}/${owner}/${repo}/`;
+  try {
+    const u = new URL(url.replace(/^git\+/, '').replace(/^(?:git|ssh):\/\//, 'https://'));
+    const parts = u.pathname.replace(/\.git$/, '').split('/').filter(Boolean).map(decodeURIComponentSafe);
+    // EXACTLY two. Unbounded, this swallowed `/tree/main/packages/x` into `repo` and produced a
+    // prefix that matched nothing, disabling AC5 while looking healthy.
+    if (parts.length !== 2) return null;
+    return ok(u.hostname, parts[0], parts[1]);
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Normalise an absolute URL for prefix comparison: scheme and `www.` are not identity.
+ * The prefix form, kept because the CLI prints it and a reader wants to see what was matched.
+ * Derived from {@link repositoryIdentity}, never parsed independently — two parsers disagreeing
+ * is how the string-comparison defects survived three rounds.
  *
- * `http://github.com/o/r/blob/main/x` and `https://www.github.com/o/r/blob/main/x` both name a
- * file in this repository. Compared verbatim against a prefix that is always `https://<host>/`,
- * both classified as external and went unvalidated — a silent hole in AC5 rather than a finding.
+ * @param {string} repositoryUrl
+ * @returns {string|null}
  */
-function normalizeUrl(u) {
-  return u.replace(/^http:\/\//i, 'https://').replace(/^(https:\/\/)www\./i, '$1');
+function selfRefPrefix(repositoryUrl) {
+  const id = repositoryIdentity(repositoryUrl);
+  return id ? `https://${id.host}/${id.owner}/${id.repo}/` : null;
+}
+
+/**
+ * The file-viewing URL layouts this understands, per forge. Table rather than a regex so that
+ * adding a forge is a data change with a test beside it, and so that what is NOT supported is
+ * visible. Each entry maps the segments following `<owner>/<repo>/` to the repository path.
+ */
+const FORGE_LAYOUTS = [
+  // GitHub / Gitea / Forgejo:            /<owner>/<repo>/blob/<ref>/<path>
+  rest => (['blob', 'tree', 'raw'].includes(rest[0]) ? rest.slice(2) : null),
+  // GitLab:                              /<owner>/<repo>/-/blob/<ref>/<path>
+  rest => (rest[0] === '-' && ['blob', 'tree', 'raw'].includes(rest[1]) ? rest.slice(3) : null),
+  // Bitbucket:                           /<owner>/<repo>/src/<ref>/<path>
+  rest => (rest[0] === 'src' ? rest.slice(2) : null),
+];
+
+/**
+ * Does `target` name a file in the repository `id` describes, and if so which path?
+ *
+ * Host, owner and repo are compared case-insensitively (URL semantics; and GitHub, GitLab and
+ * Bitbucket all treat owner/repo case-insensitively). The PATH is compared case-sensitively,
+ * because a path inside a git repository is.
+ *
+ * @param {string} target an absolute URL
+ * @param {{host: string, owner: string, repo: string}} id
+ * @returns {string|null} the repository-relative path, or null when this is not a file reference
+ */
+function selfReferentialPath(target, id) {
+  let u;
+  try { u = new URL(target); } catch { return null; }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+  if (u.hostname.replace(/^www\./i, '').toLowerCase() !== id.host) return null;
+
+  const parts = u.pathname.split('/').filter(Boolean).map(decodeURIComponentSafe);
+  if (parts.length < 2) return null;
+  if (parts[0].toLowerCase() !== id.owner.toLowerCase()) return null;
+  if (parts[1].toLowerCase() !== id.repo.toLowerCase()) return null;
+
+  const rest = parts.slice(2);
+  for (const layout of FORGE_LAYOUTS) {
+    const segs = layout(rest);
+    // `segs` may legitimately be an empty array (a link to the ref root); require a real path.
+    if (segs && segs.length) return segs.join('/');
+  }
+  // Not a file-viewing URL: `/issues`, `/security/advisories/new`, the repository root.
+  return null;
+}
+
+function decodeURIComponentSafe(x) {
+  try { return decodeURIComponent(x); } catch { return x; }
 }
 
 /**
@@ -228,9 +339,7 @@ function extractLinks(content) {
   let fenceOpenedAt = 0;
 
   for (let i = 0; i < lines.length; i++) {
-    // Blockquote markers are stripped before BOTH fence detection and link extraction, so a
-    // blockquoted example is skipped like any other and a blockquoted real link still resolves.
-    const line = lines[i].replace(BLOCKQUOTE_RE, '');
+    const line = lines[i];
     const m = FENCE_RE.exec(line);
 
     if (fence) {
@@ -266,24 +375,19 @@ function extractLinks(content) {
  * Decide what a target is and, for the two resolvable kinds, what to resolve.
  *
  * @param {string} target raw target text
- * @param {string|null} prefix from {@link selfRefPrefix}
+ * @param {object|null} identity from {@link repositoryIdentity}
  * @returns {{kind: 'skip'|'relative'|'selfref', path?: string}}
  */
-function classify(target, prefix) {
+function classify(target, identity) {
   const { path: p } = parseTarget(target);
   if (!p) return { kind: 'skip' };            // anchor-only or empty
   if (p.startsWith('//')) return { kind: 'skip' }; // protocol-relative: external
 
   if (SCHEME_RE.test(p)) {
-    if (!prefix) return { kind: 'skip' };
-    const np = normalizeUrl(p);
-    if (!np.startsWith(normalizeUrl(prefix))) return { kind: 'skip' }; // external, unvalidated
-    // Only a file-viewing URL names a path. `/issues`, `/security/advisories/new` and the
-    // repository root are repository URLs, not file references, and have nothing to resolve.
-    const rest = np.slice(normalizeUrl(prefix).length);
-    const blob = /^(?:blob|tree|raw)\/[^/]+\/(.+)$/.exec(rest);
-    if (!blob) return { kind: 'skip' };
-    return { kind: 'selfref', path: blob[1] };
+    if (!identity) return { kind: 'skip' };
+    const repoPath = selfReferentialPath(p, identity);
+    if (!repoPath) return { kind: 'skip' }; // external, or not a file reference: unvalidated
+    return { kind: 'selfref', path: repoPath };
   }
 
   // A leading `/` is root-relative in a rendered site but meaningless in a tarball. Resolving
@@ -331,14 +435,21 @@ function markdownFiles(root) {
  * Either way the comparison is by path SEGMENT, never `rel.startsWith('..')`, which cannot tell
  * the escape `../x` from a shipped file legitimately named `..gitkeep-notes.md`.
  *
+ * RETURNS A STATUS, NOT A BOOLEAN, and that is deliberate. A first attempt at the unresolvable
+ * case returned the STRING 'unresolvable' from a function every call site tested with `!`, which
+ * is truthy — so the error path silently became the PASS path. Three characters, fail-open, in the
+ * middle of a review round about fail-open. A three-valued result forces each caller to say what
+ * it means; a boolean plus a sentinel does not.
+ *
  * @param {string} root
  * @param {string} abs
  * @param {Map<string, Set<string>>} dirCache
+ * @returns {'ok'|'missing'|'unresolvable'}
  */
 function resolvesInside(root, abs, dirCache) {
   const rel = path.relative(root, abs);
-  if (path.isAbsolute(rel)) return false;
-  if (rel === '') return true;
+  if (path.isAbsolute(rel)) return 'missing';
+  if (rel === '') return 'ok';
   const segments = rel.split(path.sep);
   // REDUNDANT TODAY, AND SAID SO RATHER THAN IMPLIED. The segment walk below already rejects an
   // escape, because `..` is never returned by `readdirSync`. Mutation-verified 2026-09-06:
@@ -346,20 +457,42 @@ function resolvesInside(root, abs, dirCache) {
   // not be described as if it were. It is kept as the explicit statement of intent, so the
   // property does not rest on a readdir implementation detail that a future rewrite of the walk
   // could quietly drop. Compared by SEGMENT, not by `rel.startsWith('..')`, which cannot tell the
-  // escape `../x` from a shipped file legitimately named `..gitkeep-notes.md` (that distinction
-  // IS load-bearing — mutant M14 turns the `..gitkeep-notes.md` test red).
-  if (segments[0] === '..') return false;
+  // escape `../x` from a shipped file legitimately named `..gitkeep-notes.md`. That distinction
+  // IS load-bearing, and the test named 'accepts a shipped file whose name merely begins with
+  // dots' is what proves it: swapping this line for `rel.startsWith('..')` turns that test red.
+  // (An earlier version cited a numbered mutant here. That number was defined in no artifact in
+  // the repository, and the harness that produced it is not committed — a pointer to nothing
+  // reads as evidence and is worse than no pointer. Cite the test; it is in the repo.)
+  if (segments[0] === '..') return 'missing';
   let cur = root;
   for (const seg of segments) {
     let entries = dirCache.get(cur);
     if (!entries) {
-      try { entries = new Set(fs.readdirSync(cur)); } catch { return false; }
+      try { entries = new Set(fs.readdirSync(cur)); } catch { return 'missing'; }
       dirCache.set(cur, entries);
     }
-    if (!entries.has(seg)) return false; // absent, or present only under a different case
+    if (!entries.has(seg)) return 'missing'; // absent, or present only under a different case
     cur = path.join(cur, seg);
   }
-  return true;
+  // SYMLINKS DEFEAT A LEXICAL CONTAINMENT CHECK, and Round 2 demonstrated it: a directory inside
+  // the package symlinked to somewhere outside it makes `sub/secret.md` walk cleanly, because
+  // `readdirSync` follows the link and `path.resolve` only normalises `..` textually. Resolving
+  // both sides and re-testing containment is the only check that survives that. Kept AFTER the
+  // walk, not instead of it, because `realpathSync` is case-normalising on macOS and would undo
+  // the case-exactness the walk exists to enforce.
+  try {
+    const realRoot = fs.realpathSync(root);
+    const realAbs = fs.realpathSync(abs);
+    const realRel = path.relative(realRoot, realAbs);
+    if (path.isAbsolute(realRel) || realRel.split(path.sep)[0] === '..') return 'missing';
+  } catch {
+    // It was listed a moment ago. A broken symlink, an EACCES on an intermediate directory or a
+    // deletion between the walk and here all land here. Fail closed — but the CALLER must not
+    // then report "not in the package", which is a claim this code did not establish; see the
+    // `unresolvable` reason at the call site.
+    return 'unresolvable';
+  }
+  return 'ok';
 }
 
 /**
@@ -373,7 +506,8 @@ function resolvesInside(root, abs, dirCache) {
  * @param {string} opts.packageRoot the extracted package (npm's `node_modules/<name>`)
  * @param {string} opts.repoRoot    the repository, for self-referential URLs (AC5)
  * @param {string} [opts.repositoryUrl] override; otherwise read from the SHIPPED package.json
- * @returns {{findings: Array, mdCount: number, fileCount: number, prefix: string|null, linkCount: number}}
+ * @returns {{findings: Array, mdCount: number, prefix: string|null, linkCount: number,
+ *   relativeCount: number, selfRefCount: number, skippedCount: number, uniqueSelfRefPaths: number}}
  */
 function scanPackage({ packageRoot, repoRoot, repositoryUrl }) {
   let url = repositoryUrl;
@@ -382,11 +516,16 @@ function scanPackage({ packageRoot, repoRoot, repositoryUrl }) {
     const raw = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
     url = raw && raw.repository && (typeof raw.repository === 'string' ? raw.repository : raw.repository.url);
   }
+  const identity = repositoryIdentity(url);
   const prefix = selfRefPrefix(url);
 
   const mdFiles = markdownFiles(packageRoot);
   const findings = [];
   let linkCount = 0;
+  let relativeCount = 0;
+  let selfRefCount = 0;
+  let skippedCount = 0;
+  const selfRefPaths = new Set();
   // One `readdirSync` per directory, shared across every link. Two caches, because the package
   // and the repository are different trees and a path means a different thing in each.
   const pkgDirs = new Map();
@@ -407,37 +546,55 @@ function scanPackage({ packageRoot, repoRoot, repositoryUrl }) {
     }
 
     for (const { line, target } of links) {
-      const c = classify(target, prefix);
-      if (c.kind === 'skip') continue;
+      const c = classify(target, identity);
+      if (c.kind === 'skip') { skippedCount++; continue; }
       linkCount++;
+      if (c.kind === 'relative') relativeCount++;
+      else { selfRefCount++; selfRefPaths.add(c.path); }
 
       if (c.kind === 'relative') {
-        if (!resolvesInside(packageRoot, path.resolve(dir, c.path), pkgDirs)) {
-          findings.push({ file: rel, line, target, kind: 'relative', reason: 'target is not in the package' });
+        const st = resolvesInside(packageRoot, path.resolve(dir, c.path), pkgDirs);
+        if (st !== 'ok') {
+          findings.push({
+            file: rel, line, target, kind: 'relative',
+            reason: st === 'unresolvable'
+              ? 'target could not be resolved (broken link, permissions, or a race)'
+              : 'target is not in the package',
+          });
         }
         continue;
       }
       // selfref — resolved against the REPOSITORY. A `blob/main/` URL names repository
       // content on the default branch, which is a different set from what ships.
-      if (!resolvesInside(repoRoot, path.resolve(repoRoot, c.path), repoDirs)) {
-        findings.push({ file: rel, line, target, kind: 'selfref', reason: 'target is not in the repository' });
+      const st = resolvesInside(repoRoot, path.resolve(repoRoot, c.path), repoDirs);
+      if (st !== 'ok') {
+        findings.push({
+          file: rel, line, target, kind: 'selfref',
+          reason: st === 'unresolvable'
+            ? 'target could not be resolved (broken link, permissions, or a race)'
+            : 'target is not in the repository',
+        });
       }
     }
   }
 
   findings.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line || a.target.localeCompare(b.target));
-  return { findings, mdCount: mdFiles.length, prefix, linkCount };
+  return {
+    findings, mdCount: mdFiles.length, prefix, linkCount,
+    relativeCount, selfRefCount, skippedCount, uniqueSelfRefPaths: selfRefPaths.size,
+  };
 }
 
 module.exports = {
   FENCE_RE,
-  BLOCKQUOTE_RE,
-  normalizeUrl,
   stripInlineCode,
   parseTarget,
+  repositoryIdentity,
   selfRefPrefix,
+  selfReferentialPath,
   extractLinks,
   classify,
   markdownFiles,
+  resolvesInside,
   scanPackage,
 };

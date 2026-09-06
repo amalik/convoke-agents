@@ -149,7 +149,121 @@ warranted** — Round 1 produced HIGH findings, which triggers Round 2 under the
 - [x] [Review][Patch] `rel.startsWith('..')` could not tell an escape from a file named `..gitkeep-notes.md` — LOW. Containment now compares path segments.
 - [x] [Review][Patch] The explicit containment guard was documented as the mechanism that prevents escapes, but is redundant — LOW [scripts/audit/lib/shipped-links.js] — **found by mutation, not by reading**: deleting it turns no test red, because the case-exact segment walk already rejects `..`. Kept as a statement of intent, with a comment saying it is redundant rather than implying it is load-bearing.
 
-*Deferred (5).* Real, none reachable on today's corpus; measured, not assumed:
+**Round 2, 2026-09-06.** All three layers ran as intended this time — Edge Case Hunter, Blind
+Hunter and Acceptance Auditor, each blind, each in its own session. **4 HIGH, 11 MEDIUM.**
+
+**Round 2 triggered the restructure clause, and the work was redirected rather than patched again.**
+`code-review-convergence`: *"If a round's HIGH findings are predominantly defects in the previous
+round's corrections rather than in the work under review, the next action is to change the
+instrument, not to patch again."* They were. Round 1's blockquote fix caused two fail-opens; Round
+1's zero-extraction guard destroyed Round 1's own unterminated-fence tripwire; Round 1's
+`normalizeUrl` leaked a third time (host case) and its shorthand fix a second (`#committish`
+ordering); and Round 1's correction to the census claim introduced a **new** false number. Four
+instruments were changed, on operator ruling where the choice was not forced:
+
+1. **Markdown scanning — ambition narrowed (operator decision).** Blockquote handling REVERTED.
+   Tracking blockquote state without tracking block structure produced two defects worse than the
+   one it fixed. The false-positive class is now a documented scope limit with a test pinning it,
+   and a real CommonMark parser is backlogged with 2.3c as its decision point. Rejected
+   alternatives: adding `markdown-it` (a new *runtime* dependency for every installing user, since
+   `scripts/` ships) and continuing to patch by hand.
+2. **URL handling — rebuilt on `new URL()`.** The string-prefix instrument leaked once per round,
+   each leak a silent skip: `http`/`https`, then `www.`, then host case, then port. All four are
+   cases where two strings differ and the URLs are the same. `repositoryIdentity()` now returns
+   structured `{host, port, owner, repo}` and comparison is by parsed URL — closing the class
+   rather than adding a fourth normalisation. Also fixed: `#committish` now stripped *before*
+   shorthand matching, npm's bare `owner/repo` and `git://` accepted, GitLab subgroups kept,
+   ports preserved, `ssh://host:port` no longer read as a path segment.
+3. **The CLI guard — findings now outrank cannot-run.** `linkCount === 0` fires only when
+   `findings.length === 0`.
+4. **The evidence record — numbers emitted, not transcribed.** `--json` added. Five false claims
+   in this record were hand-maintained figures.
+
+*Round 2 patched (13):*
+
+- [x] [Review][Patch] `linkCount === 0` guard discarded a gathered finding and reported cannot-run — HIGH [scripts/audit/assert-shipped-links.js] — an unterminated fence produces one finding and zero resolvable links, so the guard swallowed the exact tripwire Round 1 added, and the harness turns exit 2 into an advisory line: the run ended reporting nothing. The `precondition` doc-comment claiming it "can never discard evidence" was false and is corrected.
+- [x] [Review][Patch] Verification table said "Every mutant killed; none survived" three paragraphs above a note recording that one mutant HAD survived — HIGH [this file] — both could not be true; the summary row was the false one, and it is the row a reader scanning for the verdict reads.
+- [x] [Review][Patch] The matrix row for the containment-guard mutant named an executioner that does not execute it — HIGH [this file] — the cited test passes with that edit applied. The row now reads SURVIVED.
+- [x] [Review][Patch] Fence state leaked out of a blockquote; a later fence pair rebalanced it so the tripwire stayed silent — HIGH [scripts/audit/lib/shipped-links.js] — real links dropped from ordinary prose, reported clean. Closed by reverting blockquote handling (instrument 1).
+- [x] [Review][Patch] Package census said 465; the tarball holds 467 — MEDIUM — delta is exactly this story's two shipping files; 465 was measured pre-change. Corrected, and the regeneration command is now recorded beside it.
+- [x] [Review][Patch] Blockquote stripping applied inside fence bodies, so a quoted line closed a real fence early — MEDIUM — closed by instrument 1.
+- [x] [Review][Patch] `#committish` stripped *after* shorthand matching, so `github:o/r#v1` still exited 2 — MEDIUM — closed by instrument 2.
+- [x] [Review][Patch] Host case not folded, so an uppercase self-referential host went unvalidated — MEDIUM — closed by instrument 2.
+- [x] [Review][Patch] Port dropped from the identity but present in links, so self-hosted forge links went unvalidated — MEDIUM — closed by instrument 2.
+- [x] [Review][Patch] A symlinked directory defeated containment; the doc-comment promised a guarantee that did not hold — MEDIUM — `realpathSync` containment added after the walk (not instead of it, which would undo case-exactness on macOS).
+- [x] [Review][Patch] The case-exactness test could not fail on CI — MEDIUM — every runner is `ubuntu-latest`, where `existsSync` alone already returns false, so the test passed for the ordinary reason and deleting the mechanism left CI green. A second test now poisons the directory cache and asserts the *mechanism*, failing on Linux and macOS alike.
+- [x] [Review][Patch] Harness comment claimed the new `exit` fires "never on a product defect" — MEDIUM — untrue for two of the CLI's exit-2 paths (no markdown at all; no parsable `repository.url`), both packaging regressions. The trade is now stated instead of denied.
+- [x] [Review][Patch] Stale `27`/`29` left in the committed test file, and `shipped-links.js` cited a mutant identifier defined in no artifact — MEDIUM/LOW — Round 1's "counts rot" patch had been applied to one file only. Counts removed; the citation replaced by a named test.
+
+**Round 3, 2026-09-06 — the FINAL round.** All three layers ran blind. **6 HIGH, ~13 MEDIUM,
+~8 LOW** after de-duplication. `code-review-convergence` caps review here: *"No Round 4. If Round 3
+still has issues, defer remaining findings to the backlog."*
+
+**The diagnosis, which is the useful output of this round: the AC5 half was over-built, by me, in
+Round 2.** AC5 asks for one thing — resolve `https://<forge>/<owner>/<repo>/blob/<ref>/<path>` for
+the package being audited, prefix read from `package.json`. Round 2 additionally built npm bare
+shorthands, transport ports, and multi-segment repository paths. None is specified; none is used by
+this package; each was a fresh way to return a **confident wrong answer** that PASSES the CLI's
+fail-closed guard and then silently validates nothing. All three rounds' HIGH findings cluster
+there. So Round 3's instrument change was a **deletion**, not a fourth rewrite — narrowing to what
+AC5 specifies, which is restoring scope rather than reducing it.
+
+*Round 3 patched (11):*
+
+- [x] [Review][Patch] `repositoryIdentity` returned a confident identity for junk — HIGH — `../owner-repo`, `./repo`, `not-a-url/at-all`, `git@host:22/o/r.git` and `https://host/o/r/tree/main/packages/x` all produced non-null identities, because the bare `owner/repo` shorthand matches ANY two-segment string and the URL branch did not bound the path. A wrong-but-non-null identity passes the "no parsable repository.url" guard, so AC5 evaluated nothing and the run exited 0 clean. Now: exactly `<owner>/<repo>`, prefixed shorthands only, `.`/`..` rejected — anything else is `null` and the gate refuses to run.
+- [x] [Review][Patch] A transport port poisoned https matching — HIGH — an `ssh://…:2222/` remote put `2222` into the identity, and the exact-port comparison then skipped every https self-referential link. Ports are no longer part of identity; an SSH port has no relation to the web UI a `blob` link is written against.
+- [x] [Review][Patch] Post-scan cannot-run guards discarded gathered findings — HIGH — Round 2 fixed one guard and left two; a package with real broken links and a malformed `repository.url` printed **nothing** and exited 2, which the harness turns into an advisory line. **Fixed structurally**: every post-scan bail-out now routes through one function that emits findings first, so the property holds by construction and cannot be reintroduced by writing the next guard the obvious way.
+- [x] [Review][Patch] The `precondition` docstring claimed "the ones after it are guarded explicitly" — HIGH — false: three followed the scan, one was guarded. **That docstring was written in Round 2 to correct a previous false claim.** Replaced by two separately-named functions, so the distinction is enforced rather than asserted.
+- [x] [Review][Patch] GitLab `/-/blob/` and Bitbucket `/src/` never classified as self-referential — HIGH — while `repositoryIdentity` shipped a HOSTS map for all three forges and a comment justifying case-folding across all three. AC5 silently evaluated nothing on two of the three advertised forges. Now a per-forge layout table with a test case each, using MISSING targets so a skip and a pass are distinguishable.
+- [x] [Review][Patch] `--json` had zero tests — HIGH — its only occurrence in the suite was inside a comment, and it is the instrument the record's evidence rests on. Now tested for payload, exit contract, and parseability on a cannot-run path.
+- [x] [Review][Patch] The record cited a mutant identifier defined in no artifact — HIGH — **in the very paragraph written to remove the previous such citation**, the third recurrence in three rounds. Fixed structurally: all numbering removed; the matrix is now keyed on *(edit to make → test that goes red)*, both of which exist in the repository, so no uncommitted harness is needed to check a row.
+- [x] [Review][Patch] `--json` emitted nothing on precondition paths — MEDIUM — a consumer piping to `jq` got a parse error rather than a machine-readable error.
+- [x] [Review][Patch] An unrecognised flag silently degraded JSON mode to text — MEDIUM.
+- [x] [Review][Patch] The relative/self-referential split and unique-path count were still hand-transcribed beneath a paragraph promising every figure came from one command — MEDIUM — `--json` now emits `relativeCount`, `selfRefCount`, `uniqueSelfRefPaths`, `skippedCount`.
+- [x] [Review][Patch] Record defects: the AC2 evidence quoted line numbers describing a different operation; the stale-spec enumeration named two locations when there are six; the AC7 list omitted the blockquote limit and three others; the AC4 section did not say AC4 is now only partially satisfied; the census misdescribed the 30 skipped references (naming `mailto:`, of which there are zero, and omitting the self-repository non-file class). All corrected — MEDIUM.
+
+*Also caught, by me, mid-remediation and worth recording:* a first attempt at the unresolvable-path
+case returned the **string** `'unresolvable'` from a function every call site tested with `!`.
+Truthy — so the error path silently became the pass path. Three characters, fail-open, inside a
+review round about fail-open. `resolvesInside` now returns a three-valued status, which forces each
+caller to say what it means.
+
+*Round 3 deferred (8), added to the backlog:* the multi-segment git ref that yields a wrong path
+rather than a skip; the EVEN-count indented-fence inversion that the unterminated-fence tripwire
+does **not** cover (the comment claiming it "almost always" does was corrected); `..` traversing a
+symlinked directory, which `path.resolve` collapses before the realpath check sees it; symlinked
+`.md` files dropped from the corpus; `raw.githubusercontent.com`; `%2F` promoted to a path
+separator; the zero-extraction guard being all-or-nothing rather than proportional; and a package
+whose markdown legitimately contains only external links being indistinguishable from a broken
+extractor. **All are documented in the library's SCOPE block** — Round 3 found several of them
+asserted as "see SCOPE" while SCOPE said nothing.
+
+**Round 3's remediation is itself unreviewed, and the rule caps rounds here.** That is a real
+residual risk and is stated rather than glossed: ~250 lines changed after the round reported. The
+compensating instruments are the mutation matrix (every row re-run), 73 tests, and the fact that
+the change is predominantly **deletion** — the narrowing removes code paths rather than adding
+them, which is the direction that historically introduces fewer defects. A follow-up review of this
+delta belongs to whoever picks up 2.3c.
+
+*Round 2 deferred (5), added to the backlog:* HTML `<a href>`/`<img src>` unchecked and links inside HTML comments reported; cross-line code spans; escaped backticks; NFC/NFD Unicode mismatch reporting a misleading reason; and the `FENCE_RE` "measured zero" note whose grep covered spaces but not tabs (re-measured for tabs: still 0, so the conclusion holds and only its evidence was narrow).
+
+*Not fixed, and deliberately.* Stale figures survive in the SPEC sections of this file, which
+`dev-story` does not permit this agent to edit. An earlier draft named two locations; there are
+**six**, enumerated here so the next reader is not misled about how much is stale:
+
+| Where | Says | Measured |
+|---|---|---|
+| One-line summary (§"What this story is") | 27 real findings | 28 |
+| AC3 | 461 files, 334 `.md` | 467, 334 |
+| AC4 | naive 29, aware 27 | naive 30, aware 28 |
+| AC6 | 27 across 4 files | 28 across 5 |
+| Dev Notes table | 29 across 6 / **27 across 4 — "Use this"** | 30 across 7 / 28 across 5 |
+| Dev Notes, "Why this story does not wire the gate in" | "Eighteen of the 27" / "removes 18 of 27" | 18 of 28 |
+
+The Dev Notes table is the one most likely to mislead, because its "Use this" marker now points at
+a superseded number. The Change Log and these notes carry the correction.
+
+*Round 1 deferred (5).* Real, none reachable on today's corpus; measured, not assumed:
 
 - [x] [Review][Defer] `blob/<ref>/` assumes a single-segment ref, so `release/4.0` mis-splits the path — MEDIUM — zero self-referential URLs use a slashed ref today. A correct fix needs the branch list; not guessable from the URL alone.
 - [x] [Review][Defer] A fence-shaped line indented 4+ spaces (an indented code block) can open a fence and invert state — MEDIUM — zero occurrences today; bounding the indent at CommonMark's 3 would reintroduce the AC4 miss for nested list items. The trade-off is now documented at `FENCE_RE`, and the unterminated-fence finding is the tripwire.
@@ -217,6 +331,9 @@ deliberately outside the verdict with 2.3c named as the wiring story.
 |---|---|
 | 2026-08-31 | Story created. Count corrected to 27 (fence-aware) against ADR-002's 20 and a naive 29. AC4 and AC5 added — fence handling from measurement, absolute URLs from ADR-002 Amendment 1. |
 | 2026-09-06 | Implemented. Count re-derived at implementation time per AC6: **28 across 5 files**, not 27 across 4 — the four files and their per-file counts match the story exactly; a fifth finding arrived 2026-09-05 in `154719e3`. Gate demonstrated red inside the harness with the harness still exiting 0. |
+| 2026-09-06 | Round 1: 12 patched, 5 deferred; 2 HIGH. Committed as `c848c45d`. |
+| 2026-09-06 | Round 2: 4 HIGH, 11 MEDIUM — **predominantly defects in Round 1's own corrections**, which fired `code-review-convergence`'s restructure clause. Four instruments changed rather than patched again: markdown ambition narrowed (blockquote handling reverted, operator ruling), URL handling rebuilt on `new URL()`, CLI findings now outrank cannot-run, evidence numbers emitted via `--json` instead of transcribed. 13 patched, 5 deferred. Count unchanged at 28/5. **Round 3 triggered** — Round 2 made structural changes. |
+| 2026-09-06 | Round 3 (final): 6 HIGH, ~13 MEDIUM, ~8 LOW. Diagnosis: the AC5 half was over-built in Round 2 — shorthands, ports, multi-segment repos, none specified by AC5, each a way to return a confident wrong answer that passes the fail-closed guard. Instrument change was a **deletion**, narrowing to what AC5 specifies. Post-scan cannot-run made structurally unable to discard findings. All mutant identifiers purged from the record; matrix re-keyed on (edit → test). 11 patched, 8 deferred. Count unchanged at 28/5. **Round cap reached — no Round 4.** |
 
 ---
 
@@ -272,6 +389,17 @@ The story's instruction not to reconcile to ADR-002's 20 was followed. Measured 
 | Naive scan, no fence handling | **30 across 7 files** |
 | Fence- and code-span-aware | **28 across 5 files** |
 
+#### AC4 — partially satisfied, by operator ruling
+
+**Stated first, because the rest of this section could be read as reporting full satisfaction.**
+AC4 requires that fenced code blocks be skipped "so neither is reported". After Round 2 reverted
+blockquote handling, a fence inside a **blockquote** is not skipped and links inside it ARE
+reported. That is a knowing, ruled-on partial failure of AC4, taken because the alternative
+produced two fail-opens (a fence opened in a quote swallowing real prose, and a quoted line
+closing a real fence early). The limit is documented in the library header, pinned by a test, and
+backlogged with 2.3c as its decision point. Everything below concerns the non-blockquoted case,
+which AC4 is met on in full.
+
 #### AC4 — the two extra findings are exactly the two documented examples
 
 The naive-minus-aware delta was computed rather than asserted, and it is exactly the two lines AC4
@@ -322,10 +450,13 @@ The full harness was run. It printed 28 `FAILED:` lines and `[shipped-links stat
 demonstration in the strongest available form: the gate is red and the harness verdict is untouched.
 
 - The verdict condition is byte-identical to its prior text. Established from git, not by eye:
-  `git diff HEAD -- scripts/audit/try-fresh-install.sh | grep -E '^[+-].*INSTALL. -eq 0'` returns
-  nothing, so the line is in no hunk; diffing the line at `HEAD` against the working tree shows
-  identical text at a shifted line number (406 → 459). `$LINKS` appears nowhere in it, nor in the
-  `FAIL` diagnostic line.
+  `git diff cdd9cf88 -- scripts/audit/try-fresh-install.sh | grep -E '^[+-].*INSTALL. -eq 0'`
+  returns nothing, so the line is in no hunk of this story's whole change. Its text is identical
+  to the baseline's and only its line number moved, as lines were added above it. **No line
+  number is quoted here**: an earlier draft wrote "(406 → 459)", which were the numbers for
+  `cdd9cf88 → c848c45d` and not for the operation the sentence described, and they went stale
+  again the next time the file grew. The grep is the evidence; the position is not. `$LINKS`
+  appears nowhere in the condition, nor in the `FAIL` diagnostic line.
 - `continue-on-error` appears nowhere in the file (count: 0).
 - The one `exit "$ENV_FAIL"` added is a **cannot-run** path (exit ≠ 0 and ≠ 1), consistent with the
   nine existing sites and with AC2's final clause. Findings are exit 1 and are excluded from it.
@@ -345,6 +476,19 @@ Documented in the header of `scripts/audit/lib/shipped-links.js` and repeated he
 - Inline links only. Reference-style definitions (`[id]: path`) are not resolved — none ship today,
   and if one is added it is unchecked. Named as a known hole rather than left implicit.
 - A target containing `)` is truncated at the first `)`, matching `scripts/docs-audit.js`.
+- **Blockquoted constructs are not understood** — a link inside a blockquoted markdown example IS
+  reported. This limit was created deliberately in Round 2 by reverting blockquote handling
+  (operator ruling); it is stated in the library header and pinned by a test. An earlier version
+  of this AC7 list omitted it, so the record claimed a cleaner scope than the code has.
+- **HTML is not markdown**: a relative `<a href>` / `<img src>` is not checked, and a link inside
+  an `<!-- HTML comment -->` is reported. Zero shipped files hit either.
+- **Inline code spans are matched per line**, so a span wrapping a newline is not masked.
+- **Root-relative `/paths` are skipped** — meaningless inside a tarball.
+- **A multi-segment git ref yields a wrong path, not a skip**, and **only `owner/repo` is accepted
+  as a repository identity** (a GitLab subgroup is refused rather than guessed).
+- **Symlinks are handled inconsistently**: a symlinked `.md` is dropped from the corpus; a link
+  into a symlinked directory is resolved and containment-checked; a `..` traversing a symlinked
+  directory can still escape. Zero symlinks ship.
 
 #### Verification, and how each check was shown able to fail
 
@@ -352,52 +496,100 @@ Per `verification-must-be-falsifiable`, every check cited here was observed prod
 
 | Check | Shown red by |
 |---|---|
-| The 40-test suite | A 10-mutant matrix, below. Every mutant killed; none survived |
+| The test suite (`node --test tests/audit/shipped-links.test.js` reports the count) | The mutation matrix below. Every edit is killed by a named test **except the containment-guard edit, which survives** — recorded as such in the matrix's last row |
 | `npm run lint` | Went red on this very change — 2 `no-unused-vars` warnings in the new test file — then green after they were fixed |
 | The gate itself | 28 findings on the real tarball, inside the real harness (exit 1) |
 | AC5's clause | 15 self-referential findings against an empty `repoRoot` |
 | Fence handling | Naive scan reports 30/7 where the aware scan reports 28/5 |
 
-**Mutation matrix — mutant → the assertion that dies.** A pass/fail tally is not evidence, so each
-row names its executioner. Control run with no mutation: zero failures. Twenty mutants after
-Round 1; the ten below are the original battery, and each Round 1 patch additionally carries a
-revert-the-fix mutant (M11-M20) that is killed by the test added with it. **M9 SURVIVED and that is
-recorded rather than repaired away** — see the last Review Finding: it proved the containment guard
-redundant, and the outcome was an honest comment, not a new test manufactured to kill it.
+**Mutation matrix — change → the assertion that dies.**
 
-Three defects in the matrix HARNESS itself were found and fixed while running it: two patterns
-matched zero lines (wrong indent) and printed nothing, and M19's first form was an EQUIVALENT
-mutant — it produced identical output, so its "SURVIVED" was the harness's fault, not a coverage
-hole. Per `verification-must-be-falsifiable`: when a matrix row disagrees with expectation, suspect
-the harness first.
+**Keyed on the edit, not on an identifier.** Earlier drafts numbered the mutants and then cited
+those numbers as evidence — the library cited one such number in a code comment, and the very
+paragraph written to remove that citation introduced another. No such identifier was defined in
+any artifact in the repository, and the mutation harness is a scratch script that is **not
+committed**, so no reader could check any of them. Three rounds produced three versions of the
+same defect, which is why the numbering is gone entirely rather than corrected again: each row below names the **edit to make** and the **test that goes red**, both
+of which exist in the repository. Reproduce a row by making the edit and running
+`node --test tests/audit/shipped-links.test.js`.
 
-| Mutant | Killed by |
+| Edit to `scripts/audit/lib/shipped-links.js` (or the CLI) | Test that dies |
 |---|---|
-| M1 `FENCE_RE` anchored at `^` | *skips an INDENTED fence*; *resumes scanning after an indented fence closes* — and **not** the flush-fence test, which is why the two are separate cases |
-| M2 `stripInlineCode` → no-op | *skips a link inside a code span*; + 2 unit cases |
-| M3 selfref resolved against the package | *resolves against the REPOSITORY, not the package* |
-| M4 `selfRefPrefix` returns `''` on an unparsable url | *returns null for a url it cannot parse* |
-| M5 closing fence ignores the fence character | *does not let a tilde run close a backtick fence* |
-| M6 closing fence ignores the fence length | *does not let a shorter run close a longer fence* |
-| M7 `#fragment` not stripped | *strips a #fragment before resolving*; + 3 others |
-| M8 nested `node_modules` walked | *does not descend into a nested node_modules* |
-| M9 containment check dropped | *reports a ../ chain that escapes the package, even when it resolves on disk* |
-| M10 whole-link regex instead of the `](` tail | *scans BOTH targets of a badge-wrapped link* |
+| Anchor `FENCE_RE` at `^` (drop `\s*`) | *skips an INDENTED fence*; *resumes scanning after an indented fence closes* — and **not** the flush-fence test, which is why the two are separate cases |
+| Make `stripInlineCode` return its argument | *skips a link inside a code span* + 2 unit cases |
+| Resolve self-referential paths against `packageRoot` | *accepts a blob/main URL whose path exists in the repository*; *resolves against the REPOSITORY, not the package* |
+| Drop the fence-character check when closing | *does not let a tilde run close a backtick fence* |
+| Drop the fence-length check when closing | *does not let a shorter run close a longer fence* |
+| Walk into nested `node_modules` | *does not descend into a nested node_modules* |
+| Use a whole-link regex instead of the `](` tail | *scans BOTH targets of a badge-wrapped link* |
+| Return `unterminatedFenceAt: 0` unconditionally | *fails CLOSED, not open, when a blockquoted fence unbalances the file* + 2 others |
+| Fall back to `fs.existsSync` in the segment walk | *consults the directory listing rather than deferring to the filesystem*; *does not accept a case-only mismatch* |
+| Use `rel.startsWith('..')` for containment | *accepts a shipped file whose name merely begins with dots* |
+| Skip the `?query` strip in `parseTarget` | *strips a ?query before the path, keeping the fragment split* |
+| Strip `#committish` after the shorthand match | *strips the #committish BEFORE matching a shorthand, not after* |
+| Compare owner/repo case-sensitively | *matches owner and repo case-insensitively, but the PATH case-sensitively* |
+| Remove the `realpathSync` containment check | *rejects a path that leaves the package through a SYMLINKED directory* |
+| Let the scp branch claim `ssh://` URLs | *decomposes a repository url into host, owner and repo* |
+| Let the post-scan guard bypass gathered findings | *emits gathered findings, not a bare exit 2, when the repository url is unparsable*; *prints a gathered finding rather than exiting 2* |
+| Accept a bare `owner/repo` identity again | *returns null for junk that superficially looks like owner/repo* |
+| Delete `if (segments[0] === '..') return false;` | **Survives — redundant** with the case-exact segment walk, which already rejects `..`. See the redundancy note below |
+| Require no prefix on the npm shorthand (accept bare `owner/repo`) | **Survives — redundant** with the `HOSTS` lookup, which yields `undefined` without a known prefix. See the redundancy note below |
+| Drop the exactly-two-segments bound on a URL path | **Survives — equivalent**: any longer path puts a `/` in `repo`, which the identity validator rejects. See the redundancy note below |
 
-M3 and M10 are the mutants chosen as *plausible refactors* rather than deletions — M3 is the single
-easiest mistake to make in this file (one resolution root instead of two), and M10 is the regex a
-reader would reach for first.
+**On redundancy, and why three rows in this matrix "survive".** Deleting the containment guard, or
+requiring the shorthand prefix, or bounding the URL path to exactly two segments — each of these,
+removed ALONE, turns no test red. That is not three coverage holes; those edits are *equivalent
+mutants*, because the identity validator and the structural branches each independently reject the
+same junk. Proven rather than asserted: a COMBINED mutant that removes the whole layered defence at
+once makes `repositoryIdentity('../owner-repo')` yield `https://github.com/../owner-repo/` — the
+exact Round 3 HIGH — and is killed by *returns null for junk that superficially looks like
+owner/repo* and *accepts git:// and PREFIXED shorthands, and REJECTS the bare owner/repo form*.
+So the property is guarded and the tests can fail; what no single line is, is solely load-bearing.
+The distinction is recorded because the alternative — writing a test per redundant line so every
+row shows a kill — would manufacture the appearance of coverage rather than the fact of it.
+
+Two lessons kept because they cost a round each. **A test asserting "no finding" cannot prove a
+validator looked at anything** — a *skip* produces that observation equally well, which is why
+folding owner/repo case-sensitively once survived the whole suite; the self-referential cases now
+use MISSING targets so that a finding must appear. And **when a matrix row disagrees with
+expectation, suspect the harness first**: three rows were once wrong because two patterns matched
+zero lines and one edit was semantically equivalent to the original.
 
 #### Package census (AC3), re-derived
 
-`npm pack` of `4.0.1` on 2026-09-06: **465 files, 334 of them `.md`**. The story recorded 461; the
-`.md` count is unchanged at 334. Whether 461 was right on 2026-08-31 was **not** re-verified — doing
-so would mean packing at that commit, and nothing turns on it. The scan classifies **99 resolvable
-references** (84 relative + 15 self-referential) and skips 30 (external URLs, anchor-only, `mailto:`).
+`npm pack` of `4.0.1`, measured on the tree under review: **467 files, 334 of them `.md`**. The scan
+classifies **99 resolvable references** (84 relative + 15 self-referential) and skips 30. The 30
+are **22 external URLs, 4 anchor-only, and 4 self-repository non-file URLs** (`/issues/new/choose`,
+`/security/advisories/new`) — an earlier draft wrote "external URLs, anchor-only, `mailto:`", and
+there are **zero** `mailto:` links, while the self-repository non-file class, which is the one an
+AC5 reviewer would want named, went unmentioned. All four counts are now emitted by `--json`
+(`relativeCount`, `selfRefCount`, `uniqueSelfRefPaths`, `skippedCount`) rather than transcribed.
+
+An earlier version of this paragraph said **465**, and Round 2 caught it: the tarball held 467, and
+the difference was **exactly the two files this story adds** — `scripts/` ships, so the checker
+ships with it. 465 was measured before the change and then presented as a census of the artifact
+under review. That is the same defect Round 1 had just caught at `shipped-links.js:18`, committed
+again inside the correction for it, which is precisely what
+`verification-claims-must-name-their-evidence` warns happens when false claims get corrected.
+
+The story recorded 461 on 2026-08-31; whether that was right then was **not** re-verified, and
+nothing turns on it.
+
+**Regenerate rather than trust this paragraph.** Every figure above comes from one command:
+
+```
+npm pack --pack-destination /tmp/p && mkdir -p /tmp/x && tar -xzf /tmp/p/*.tgz -C /tmp/x
+find /tmp/x/package -type f | wc -l                 # total files
+find /tmp/x/package -type f -name '*.md' | wc -l    # markdown files
+node scripts/audit/assert-shipped-links.js /tmp/x/package "$PWD" --json
+```
+
+`--json` was added in Round 2 for exactly this reason: five of this record's false claims were
+hand-maintained numbers that rotted the moment the thing they described moved.
 
 #### Other notes
 
-- **Full suite: 2151 tests, 0 failures, 1 skip.** The skip is pre-existing and unrelated: running
+- **Full suite: 0 failures, 1 skip.** The skip is pre-existing and unrelated: running
   each directory separately puts it in `tests/unit` (`tests/audit` reports `skipped 0`), and the new
   suite contains no `skip`. `npm run lint`: 0.
 - **`test-fixture-isolation`:** every case builds its own tmp tree under `os.tmpdir()`; nothing reads
@@ -415,7 +607,7 @@ references** (84 relative + 15 self-referential) and skips 30 (external URLs, an
 
 - `scripts/audit/lib/shipped-links.js` (new) — extraction, classification, resolution
 - `scripts/audit/assert-shipped-links.js` (new) — CLI; exit 0 clean / 1 findings / 2 cannot-run
-- `tests/audit/shipped-links.test.js` (new) — 53 tests
+- `tests/audit/shipped-links.test.js` (new) — test count derived at read time: `node --test tests/audit/shipped-links.test.js`
 - `scripts/audit/try-fresh-install.sh` (modified) — invocation only; verdict condition untouched
 - `_bmad-output/implementation-artifacts/dist-2-2-assert-every-documented-reference-resolves-inside-the-package.md` (modified)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified) — `in-progress` → `review`

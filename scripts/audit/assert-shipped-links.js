@@ -58,7 +58,7 @@ try {
 }
 const { scanPackage } = lib;
 
-const USAGE = 'usage: assert-shipped-links.js <packageRoot> <repoRoot>';
+const USAGE = 'usage: assert-shipped-links.js <packageRoot> <repoRoot> [--json]';
 
 /** Buffered so nothing is emitted until the run decides its verdict. */
 const out = [];
@@ -75,10 +75,54 @@ function finish(code) {
   process.exit(code);
 }
 
-/** Cannot-run. Exit 2 with no findings gathered, so it can never discard evidence. */
+/**
+ * Cannot-run BEFORE the scan: exit 2. Nothing has been gathered yet, so nothing can be lost.
+ *
+ * Use {@link cannotRunAfterScan} once `scanPackage` has returned. The distinction is enforced by
+ * having two functions rather than by a comment claiming it, because the comment has now been
+ * wrong twice. Round 2 rewrote this docstring to correct a false claim and wrote another
+ * ("the ones after it are guarded explicitly") that was false in the same way: three preconditions
+ * followed the scan and exactly one was guarded. A property asserted in prose is a property
+ * nobody checks.
+ */
 function precondition(msg) {
   try { fs.writeSync(2, `[harness] ${msg}\n`); } catch { /* ignore */ }
   process.exit(2);
+}
+
+/**
+ * Cannot-run AFTER the scan: emit whatever was gathered, then decide.
+ *
+ * THE SINGLE PATH FOR EVERY POST-SCAN BAIL-OUT, and the reason it exists is structural rather
+ * than stylistic. `res.findings` is fully populated by the time any of these conditions can be
+ * tested, so an unqualified `precondition()` here silently throws real defects away — and the
+ * harness turns exit 2 into an advisory line, so the run then reports NOTHING. Round 2 found that
+ * on one guard and fixed that one guard; Round 3 found it alive in the sibling. Routing all of
+ * them through one function makes "a cannot-run never outranks evidence in hand" true by
+ * construction, so no future guard can reintroduce it by being written the obvious way.
+ *
+ * Findings win: they are a real answer about the artifact. The cannot-run reason is still printed,
+ * so the operator learns the scan was also incomplete.
+ *
+ * @param {Array} findings gathered so far
+ * @param {string} msg why the assertion cannot complete
+ * @param {boolean} json emit machine-readable output
+ */
+function cannotRunAfterScan(findings, msg, json) {
+  if (findings.length) {
+    if (json) out.push(JSON.stringify({ incomplete: msg, findingCount: findings.length, findings }, null, 2));
+    else {
+      for (const f of findings) out.push(`    FAILED: ${f.file}:${f.line} -> ${f.target} (${f.reason})`);
+      out.push(`    NOTE: the scan was also incomplete — ${msg}`);
+    }
+    finish(1);
+  }
+  if (json) {
+    // A consumer piping to `jq` must get a parseable error, not "unexpected end of input".
+    out.push(JSON.stringify({ error: msg }, null, 2));
+    finish(2);
+  }
+  precondition(msg);
 }
 
 function isDir(p) {
@@ -86,7 +130,20 @@ function isDir(p) {
 }
 
 function main() {
-  const [packageRoot, repoRoot] = process.argv.slice(2);
+  // `--json` exists so the review record's evidence numbers are EMITTED, never transcribed.
+  // Several false claims in this change's own record were hand-maintained figures that rotted the
+  // moment the thing they described moved — a file census, a test count, a mutation verdict. A
+  // number a reviewer can regenerate in one command is checkable; a number retyped into prose is
+  // a claim. (No such figure is quoted HERE, deliberately: a literal count in shipped code is the
+  // same defect one level down, and this file carried two of them until Round 3.)
+  const args = process.argv.slice(2);
+  const json = args.includes('--json');
+  const positional = args.filter(a => !a.startsWith('--'));
+  // An unrecognised flag must not silently degrade JSON mode to text: a caller piping to `jq`
+  // would get a parse error instead of a verdict. Typos belong on the cannot-run side.
+  const unknown = args.filter(a => a.startsWith('--') && a !== '--json');
+  if (unknown.length) precondition(`unrecognised option(s): ${unknown.join(' ')}\n${USAGE}`);
+  const [packageRoot, repoRoot] = positional;
   if (!packageRoot || !repoRoot) precondition(USAGE);
   if (!isDir(packageRoot)) precondition(`package root is not a directory: ${packageRoot}`);
   if (!isDir(repoRoot)) precondition(`repository root is not a directory: ${repoRoot}`);
@@ -98,17 +155,19 @@ function main() {
   try {
     res = scanPackage({ packageRoot, repoRoot });
   } catch (err) {
-    precondition(`the scan could not complete: ${err && err.message}`);
+    precondition(`the scan could not complete: ${err && err.message}`); // nothing gathered: res is unset
   }
 
   // FAIL CLOSED ON A MISSING PREFIX. Without it, AC5 silently evaluates nothing while the run
   // still reports a clean verdict for the relative links — a gate that half-ran and said PASS.
   if (!res.prefix) {
-    precondition('package.json declares no parsable repository.url — self-referential URLs (AC5) cannot be resolved');
+    cannotRunAfterScan(res.findings,
+      'package.json declares no parsable repository.url — self-referential URLs (AC5) cannot be resolved', json);
   }
   // A package with no markdown means the walk found nothing, not that everything resolves.
   if (res.mdCount === 0) {
-    precondition(`no markdown files found under ${packageRoot} — the scan cannot have checked anything`);
+    cannotRunAfterScan(res.findings,
+      `no markdown files found under ${packageRoot} — the scan cannot have checked anything`, json);
   }
   // THE SAME GUARD ONE LEVEL IN, and the one that was missing. Markdown was found and NOTHING was
   // extracted from it: every link was skipped, or the extractor broke. Either way the exit-0 that
@@ -116,15 +175,43 @@ function main() {
   // shape this harness's header documents five variants of, and the sixth would have been mine.
   // Falsified by construction: a single unclosed fence at the top of one file produced
   // `scanned 2 markdown file(s), 0 resolvable reference(s)` and exit 0 before this guard existed.
+  //
+  // `res.findings.length === 0` IS PART OF THE CONDITION, and its absence was a Round 2 HIGH.
+  // Findings are gathered BEFORE this point, so an unqualified guard discarded them: a package
+  // whose only markdown opens a fence and never closes it produces exactly one finding — the
+  // unterminated-fence tripwire Round 1 added for this very case — zero resolvable links, and
+  // then exited 2 printing only "ZERO resolvable references", swallowing the finding it had
+  // already made. The harness turns exit 2 into an advisory line, so the run ended reporting
+  // nothing at all. A cannot-run must never outrank evidence already in hand.
   if (res.linkCount === 0) {
-    precondition(
+    cannotRunAfterScan(res.findings,
       `${res.mdCount} markdown file(s) scanned but ZERO resolvable references extracted — ` +
-      'the extractor is broken or every link was skipped; refusing to report a clean scan',
-    );
+      'the extractor is broken or every link was skipped; refusing to report a clean scan', json);
   }
 
   const byFile = new Map();
   for (const f of res.findings) byFile.set(f.file, (byFile.get(f.file) || 0) + 1);
+
+  if (json) {
+    out.push(JSON.stringify({
+      packageRoot,
+      mdCount: res.mdCount,
+      linkCount: res.linkCount,
+      // The relative/self-referential split and the unique self-referential path count are part
+      // of the record's evidence, so they are EMITTED. Round 3 found them still hand-transcribed
+      // beneath a paragraph promising every figure came from this command.
+      relativeCount: res.relativeCount,
+      selfRefCount: res.selfRefCount,
+      uniqueSelfRefPaths: res.uniqueSelfRefPaths,
+      skippedCount: res.skippedCount,
+      prefix: res.prefix,
+      findingCount: res.findings.length,
+      fileCount: byFile.size,
+      byFile: Object.fromEntries([...byFile.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))),
+      findings: res.findings,
+    }, null, 2));
+    finish(res.findings.length ? 1 : 0);
+  }
 
   for (const f of res.findings) {
     out.push(`    FAILED: ${f.file}:${f.line} -> ${f.target} (${f.reason})`);

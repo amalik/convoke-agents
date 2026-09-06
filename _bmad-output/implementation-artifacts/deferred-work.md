@@ -1236,3 +1236,26 @@ today, and each carries the measurement that says so. Source: Edge Case Hunter, 
 - **Inline code spans that cross a line boundary are not recognised.** `stripInlineCode` is per-line, so ``` `code\n[link](nope.md)` ``` reports a false positive. Documented scope limit. [`stripInlineCode`]
 - **A backslash-escaped backtick opens a code span.** CommonMark treats `\`` as a literal that opens nothing; here it can mask a real broken link, i.e. a missed finding. [`stripInlineCode`]
 - **`.markdown` files and symlinked `.md` files are never scanned.** `Dirent.isFile()` and `isDirectory()` are both false for a symlink, and the extension filter is a literal `.md`. AC3 scopes the corpus to `.md`; zero of either ship today. Silent omission from the denominator if that changes. [`markdownFiles`]
+
+## Deferred from: code review of dist-2-2, Round 2 (2026-09-06)
+
+- **A real CommonMark parser for the shipped-link scanner.** The hand-rolled scanner is deliberately narrow after Round 2: blockquoted constructs are not understood, so a link inside a blockquoted markdown example is reported as a finding. Handling it without full block-structure tracking was attempted and reverted — it produced two fail-opens worse than the false positive. Zero shipped files hit this today. **Decision point: story dist-2-3c, when this gate becomes blocking.** Adding `markdown-it` would close fences, blockquotes, code spans, HTML comments and tabs by construction, at the cost of a new runtime dependency for every installing user (`scripts/` ships). [scripts/audit/lib/shipped-links.js]
+- **HTML is not markdown.** A relative `<a href>` or `<img src>` is never checked, and a link inside an `<!-- HTML comment -->` IS reported as a finding. Zero shipped files hit either today. Same parser decision as above.
+- **Inline code spans wrapping a line boundary are not masked** — `stripInlineCode` is per-line, so a span crossing a newline yields a false positive.
+- **A backslash-escaped backtick opens a code span** and can mask a real broken link — a missed finding, not a false one.
+- **Unicode NFC/NFD mismatch reports a present file as absent** with the reason "target is not in the package", which names the wrong cause. The directory-listing comparison is byte-wise.
+
+## Deferred from: code review of dist-2-2, Round 3 (2026-09-06)
+
+Round 3 is the final round under `code-review-convergence`. All of the below are real, reproduced,
+and documented in the SCOPE block of `scripts/audit/lib/shipped-links.js`. None fires on the corpus
+shipped today; each was measured, not assumed.
+
+- **A multi-segment git ref yields a WRONG repository path, not a skip.** `.../blob/feature/x/docs/a.md` is read as ref `feature`, path `x/docs/a.md`, reporting a valid link as broken. Not recoverable from the URL alone — needs the repository's branch list. Zero shipped links use a slashed ref.
+- **An EVEN number of stray fence-shaped lines inverts fence state silently.** The `unterminatedFenceAt` tripwire covers only an ODD count; an even count rebalances and links between them go unscanned with no signal. The comment claiming the tripwire "almost always" covers this was corrected in Round 3. Real fix is a CommonMark parser (see the Round 2 entry).
+- **`..` traversing a symlinked directory escapes containment.** `path.resolve` collapses the `..` textually before `resolvesInside` sees the symlinked component, so the `realpathSync` check never gets it. The direct form (`sub/link/secret.md`) IS caught. Zero symlinks ship.
+- **Symlinked `.md` files are dropped from the corpus.** `readdirSync(..., {withFileTypes:true})` reports a symlink as neither file nor directory, so a shipped doc that is a symlink has its own links checked by nobody — and it is silently absent from the denominator.
+- **`raw.githubusercontent.com` URLs are not recognised as self-referential** — a different host, so they skip. Self-referential in substance.
+- **`%2F` is percent-decoded into a path separator**, so a file legitimately named with an encoded slash resolves as two segments.
+- **The zero-extraction guard is all-or-nothing.** One resolvable link anywhere licenses a clean verdict for the whole corpus; a fence-state inversion in 200 of 201 files still exits 0. A proportional signal (links-per-md floor, or a per-file zero-link census) is what the guard's framing implies.
+- **A package whose markdown legitimately contains only external links is indistinguishable from a broken extractor** — both exit 2, and the harness turns exit 2 into an advisory line.

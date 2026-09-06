@@ -15,7 +15,7 @@
  * The indented-fence case is not decoration. The first measurement written for this story used
  * a fence matcher anchored at `^`, misread the fence state for the remainder of
  * `backlog-format-spec.md`, and classified a documented markdown EXAMPLE as a real finding —
- * inflating the count from 27 to 29. Indented and flush fences are therefore separate tests,
+ * inflating the count. Indented and flush fences are therefore separate tests,
  * so that a `^`-anchored regression kills exactly one of them and names itself.
  *
  * `test-fixture-isolation`: every case builds its own tmp tree under os.tmpdir(). Nothing here
@@ -35,6 +35,9 @@ const {
   stripInlineCode,
   parseTarget,
   selfRefPrefix,
+  repositoryIdentity,
+  resolvesInside,
+  classify,
   scanPackage,
 } = require('../../scripts/audit/lib/shipped-links');
 
@@ -166,8 +169,45 @@ describe('selfRefPrefix', () => {
     assert.equal(selfRefPrefix('gitlab:acme/widget'), 'https://gitlab.com/acme/widget/');
   });
 
-  it('accepts an ssh remote carrying a port', () => {
+  it('DROPS a transport port from the identity', () => {
+    // Reversed in Round 3, and the reversal is the point. Round 2 kept the port on the reasoning
+    // that a self-hosted forge carries one. But an `ssh://` or `git://` port is a TRANSPORT port
+    // and has no relation to the web UI a `blob` link is written against, so keeping it made the
+    // exact-port comparison reject every https self-referential link — silently disabling AC5 for
+    // the whole run while the prefix still looked plausible. Hosts are compared without one.
     assert.equal(selfRefPrefix('ssh://git@host.io:2222/acme/widget.git'), 'https://host.io/acme/widget/');
+  });
+
+  it('strips the #committish BEFORE matching a shorthand, not after', () => {
+    // Ordered the other way, `github:owner/repo#v1` — a form npm documents — returned null,
+    // which the CLI turns into exit 2 and the harness turns into ENV_FAIL for the whole job.
+    assert.equal(selfRefPrefix('github:acme/widget#v1'), 'https://github.com/acme/widget/');
+  });
+
+  it('accepts git:// and PREFIXED shorthands, and REJECTS the bare owner/repo form', () => {
+    assert.equal(selfRefPrefix('git://github.com/acme/widget.git'), 'https://github.com/acme/widget/');
+    assert.equal(selfRefPrefix('github:acme/widget'), 'https://github.com/acme/widget/');
+    // The bare form was accepted in Round 2 and removed in Round 3. `owner/repo` is not a test
+    // for a repository reference — it matches ANY two-segment string, so `../owner-repo` and
+    // `not-a-url/at-all` both produced confident identities, and a confident wrong identity
+    // PASSES the CLI's fail-closed "no parsable repository.url" guard. AC5 then validated
+    // nothing while the run printed a clean verdict. Refusing to guess is the correct direction.
+    assert.equal(selfRefPrefix('acme/widget'), null);
+  });
+
+  it('returns null for junk that superficially looks like owner/repo', () => {
+    for (const junk of ['../owner-repo', './repo', 'not-a-url/at-all', 'git@github.com:22/o/r.git',
+      'https://github.com/owner/repo/tree/main/packages/x']) {
+      assert.equal(selfRefPrefix(junk), null, junk);
+    }
+  });
+
+  it('rejects a path that is not exactly owner/repo', () => {
+    // Round 2 allowed a multi-segment repo to support GitLab subgroups. Unbounded, that also
+    // swallowed `/tree/main/packages/x` into `repo` and yielded a prefix matching nothing. The
+    // two cases are indistinguishable from the URL alone, so the gate refuses both. A subgroup
+    // repository is a documented limitation, not a silent misparse.
+    assert.equal(selfRefPrefix('https://gitlab.com/grp/sub/widget.git'), null);
   });
 
   it('returns null for a url it cannot parse, rather than a prefix that matches everything', () => {
@@ -175,6 +215,59 @@ describe('selfRefPrefix', () => {
     // start failing on external links. Fail closed at the caller instead.
     assert.equal(selfRefPrefix(''), null);
     assert.equal(selfRefPrefix('not a url'), null);
+  });
+});
+
+// ─── repositoryIdentity / classify, directly ─────────────────────
+
+describe('repositoryIdentity and classify, exercised directly', () => {
+  // Round 2 found these reachable only through fixtures, which is how the host-case hole went
+  // uncovered: a function tested only via its caller is tested only where the caller happens
+  // to go. Both are exported, so both are tested.
+
+  it('decomposes a repository url into host, owner and repo — and nothing else', () => {
+    assert.deepEqual(repositoryIdentity('git+https://github.com/acme/widget.git'),
+      { host: 'github.com', owner: 'acme', repo: 'widget' });
+    assert.deepEqual(repositoryIdentity('ssh://git@host.io:2222/acme/widget.git'),
+      { host: 'host.io', owner: 'acme', repo: 'widget' }, 'transport port is not identity');
+    assert.deepEqual(repositoryIdentity('git@github.com:acme/widget.git'),
+      { host: 'github.com', owner: 'acme', repo: 'widget' });
+  });
+
+  it('returns null rather than a partial identity for junk', () => {
+    for (const bad of ['', 'not a url', 'https://github.com/onlyowner']) {
+      assert.equal(repositoryIdentity(bad), null, bad || '(empty)');
+    }
+  });
+
+  const ID = { host: 'github.com', port: '', owner: 'acme', repo: 'widget' };
+
+  it('classifies the kinds it must resolve, and skips the rest', () => {
+    assert.deepEqual(classify('docs/a.md', ID), { kind: 'relative', path: 'docs/a.md' });
+    assert.deepEqual(classify('https://github.com/acme/widget/blob/main/docs/a.md', ID),
+      { kind: 'selfref', path: 'docs/a.md' });
+    for (const skip of [
+      '#anchor-only',
+      'mailto:a@b.c',
+      'https://example.com/x.md',                        // external
+      'https://github.com/acme/widget/issues/new/choose', // repo URL, not a file reference
+      'https://github.com/acme/widget',                   // repository root
+      '//cdn.example.com/x.md',                           // protocol-relative
+      '/root-relative.md',                                // meaningless in a tarball
+      '',
+    ]) {
+      assert.equal(classify(skip, ID).kind, 'skip', skip || '(empty)');
+    }
+  });
+
+  it('skips every absolute URL when the identity is unknown', () => {
+    // Fail-closed direction: no identity must mean "do not validate", never "match everything".
+    assert.equal(classify('https://github.com/acme/widget/blob/main/docs/a.md', null).kind, 'skip');
+  });
+
+  it('decodes a percent-encoded path segment in a self-referential URL', () => {
+    assert.deepEqual(classify('https://github.com/acme/widget/blob/main/docs/a%20b.md', ID),
+      { kind: 'selfref', path: 'docs/a b.md' });
   });
 });
 
@@ -191,7 +284,9 @@ describe('fenced code blocks are skipped', () => {
 
   it('skips an INDENTED fence — and reports the same link outside one', () => {
     // Two leading spaces, the shape in backlog-format-spec.md:227 that a `^`-anchored
-    // fence matcher misreads. The whole 29-vs-27 discrepancy is this case.
+    // fence matcher misreads. The whole naive-vs-fence-aware discrepancy is this case.
+    // No absolute counts here on purpose: 2.3a/b/c drive them to zero. Regenerate with
+    // `node scripts/audit/assert-shipped-links.js <packageRoot> <repoRoot> --json`.
     const fenced = tmpPackage({ 'a.md': 'text\n\n  ```\n  [x](nowhere.md)\n  ```\n' });
     assert.deepEqual(scan(fenced), [], 'a link inside an indented fence was reported');
 
@@ -294,6 +389,20 @@ describe('relative links resolve inside the package', () => {
     assert.deepEqual(scan(inner), ['a.md:1 ../neighbour.md']);
   });
 
+  it('consults the directory listing rather than deferring to the filesystem', () => {
+    // THE CASE-EXACTNESS TEST BELOW CANNOT FAIL ON CI. Every runner is ubuntu-latest, whose
+    // filesystem is case-sensitive, so `existsSync` alone already returns false and the test
+    // passes for the ordinary reason — Round 2's point. This one is falsifiable everywhere:
+    // it asserts the mechanism, by giving `resolvesInside` a poisoned directory cache. If the
+    // implementation stops consulting the listing, this goes red on Linux and on macOS alike.
+    const pkg = tmpPackage({ 'a.md': '[x](b.md)\n', 'b.md': '' });
+    const poisoned = new Map([[pkg, new Set([])]]); // listing claims the directory is empty
+    assert.equal(resolvesInside(pkg, path.join(pkg, 'b.md'), poisoned), 'missing',
+      'resolution ignored the directory listing and went straight to the filesystem');
+    assert.equal(resolvesInside(pkg, path.join(pkg, 'b.md'), new Map()), 'ok',
+      'negative control: with a real listing the same path resolves');
+  });
+
   it('does not accept a case-only mismatch', () => {
     // macOS/APFS is case-insensitive, so `existsSync` says yes and the link 404s for every Linux
     // consumer of the tarball. A gate that defers to the auditor's filesystem cannot report what
@@ -301,6 +410,31 @@ describe('relative links resolve inside the package', () => {
     // reason, so the case holds either way.
     const pkg = tmpPackage({ 'a.md': '[home](Readme.md)\n', 'README.md': '' });
     assert.deepEqual(scan(pkg), ['a.md:1 Readme.md']);
+  });
+
+  it('rejects a path that leaves the package through a SYMLINKED directory', (t) => {
+    // A lexical containment check cannot see this: readdirSync follows the link, and
+    // path.resolve normalises `..` textually, so `sub/secret.md` walks cleanly while the file
+    // is outside the package. Round 2 demonstrated it against the previous implementation.
+    const outer = fs.mkdtempSync(path.join(os.tmpdir(), 'convoke-links-sym-'));
+    trash.push(outer);
+    fs.mkdirSync(path.join(outer, 'outside'));
+    fs.writeFileSync(path.join(outer, 'outside', 'secret.md'), '');
+    const inner = path.join(outer, 'pkg');
+    fs.mkdirSync(inner);
+    fs.writeFileSync(path.join(inner, 'package.json'), JSON.stringify({ name: 'w', version: '0.0.0', repository: { url: REPO_URL } }));
+    fs.writeFileSync(path.join(inner, 'a.md'), '[x](sub/secret.md)\n');
+    try {
+      fs.symlinkSync(path.join(outer, 'outside'), path.join(inner, 'sub'), 'dir');
+    } catch {
+      // A bare `return` here reported green on any platform that refuses symlinks, with nothing
+      // distinguishing "verified" from "never ran" — silence reading as coverage, which is the
+      // class this suite's header exists to prevent. `t.skip` says so out loud.
+      t.skip('this filesystem or platform does not support symlinks');
+      return;
+    }
+    assert.equal(fs.existsSync(path.join(inner, 'sub', 'secret.md')), true, 'precondition: it resolves on disk');
+    assert.deepEqual(scan(inner), ['a.md:1 sub/secret.md']);
   });
 
   it('accepts a shipped file whose name merely begins with dots', () => {
@@ -360,6 +494,52 @@ describe('self-referential absolute URLs (ADR-002 Amendment 1)', () => {
     assert.deepEqual(scan(pkg, tmpRepo([])), []);
   });
 
+  it('matches the host case-insensitively, as URL semantics require', () => {
+    // Hosts are case-insensitive. Compared as strings against a lowercased prefix, an
+    // uppercase host classified as external and AC5 evaluated nothing for it.
+    const url = 'https://GitHub.com/acme/widget/blob/main/docs/gone.md';
+    const pkg = tmpPackage({ 'a.md': `[x](${url})\n` });
+    assert.deepEqual(scan(pkg, tmpRepo(['docs/live.md'])), [`a.md:1 ${url}`]);
+  });
+
+  it('matches owner and repo case-insensitively, but the PATH case-sensitively', () => {
+    // GitHub/GitLab/Bitbucket treat owner and repo case-insensitively; a path inside a git
+    // repository is case-sensitive, so the two halves must not be folded the same way.
+    //
+    // THE OWNER/REPO CASE IS ASSERTED WITH A *MISSING* TARGET, DELIBERATELY. An earlier version
+    // used a target that exists and asserted "no finding" — which a checker that SKIPPED the URL
+    // produces just as well as one that validated it. Mutation proved it: folding owner/repo
+    // case-sensitively survived the suite, because skip and pass are the same observation. For a
+    // validator, only a finding that APPEARS demonstrates the link was looked at.
+    const mixedCase = 'https://github.com/Acme/Widget/blob/main/docs/gone.md';
+    assert.deepEqual(scan(tmpPackage({ 'a.md': `[x](${mixedCase})\n` }), tmpRepo(['docs/live.md'])),
+      [`a.md:1 ${mixedCase}`], 'a mixed-case owner/repo must still be VALIDATED, not skipped');
+
+    const resolves = 'https://github.com/Acme/Widget/blob/main/docs/live.md';
+    assert.deepEqual(scan(tmpPackage({ 'a.md': `[x](${resolves})\n` }), tmpRepo(['docs/live.md'])), [],
+      'and when it resolves, it passes');
+
+    const wrongPathCase = 'https://github.com/acme/widget/blob/main/docs/LIVE.md';
+    assert.deepEqual(scan(tmpPackage({ 'a.md': `[x](${wrongPathCase})\n` }), tmpRepo(['docs/live.md'])),
+      [`a.md:1 ${wrongPathCase}`], 'the PATH is case-sensitive');
+  });
+
+  it('resolves the file-viewing layout of each supported forge', () => {
+    // A table, because Round 3 found GitLab and Bitbucket links silently unvalidated while the
+    // code advertised all three forges — and `selfReferentialPath` was reachable only through
+    // fixtures, which is exactly how that stayed invisible. Each case uses a MISSING target, so
+    // a skip and a pass are distinguishable.
+    const cases = [
+      ['https://github.com/acme/widget.git', 'https://github.com/acme/widget/blob/main/docs/gone.md'],
+      ['https://gitlab.com/acme/widget.git', 'https://gitlab.com/acme/widget/-/blob/main/docs/gone.md'],
+      ['https://bitbucket.org/acme/widget.git', 'https://bitbucket.org/acme/widget/src/main/docs/gone.md'],
+    ];
+    for (const [repositoryUrl, url] of cases) {
+      const pkg = tmpPackage({ 'a.md': `[x](${url})\n` }, { repositoryUrl });
+      assert.deepEqual(scan(pkg, tmpRepo(['docs/live.md'])), [`a.md:1 ${url}`], url);
+    }
+  });
+
   it('validates the http:// and www. variants of the same repository', () => {
     // Both name a file in this repository. Compared verbatim against a prefix that is always
     // `https://<host>/`, both classified as external and went silently unvalidated.
@@ -383,25 +563,34 @@ describe('self-referential absolute URLs (ADR-002 Amendment 1)', () => {
   });
 });
 
-// ─── Blockquoted examples (AC4, same class) ──────────────────────
+// ─── Blockquoted constructs: a DOCUMENTED limit, pinned ──────────
 
-describe('blockquoted fences are skipped', () => {
-  it('skips a fence inside a blockquote — and reports the same link outside one', () => {
-    // `> ```` is not matched by a fence pattern that allows only whitespace before the run, so
-    // every link in a blockquoted example became a finding — the identical false-positive class
-    // AC4 exists to prevent, differing only in how the example is marked up.
-    const quoted = tmpPackage({ 'a.md': '> ```\n> [x](nowhere.md)\n> ```\n' });
-    assert.deepEqual(scan(quoted), [], 'a link inside a blockquoted fence was reported');
-
-    const bare = tmpPackage({ 'a.md': '[x](nowhere.md)\n' });
-    assert.deepEqual(scan(bare), ['a.md:1 nowhere.md'], 'negative control');
+describe('blockquoted fences are a known, documented limit', () => {
+  it('reports a link inside a blockquoted fence — pinning the scope limit, not endorsing it', () => {
+    // Handling this was attempted in Round 1 and REVERTED: tracking blockquote state without
+    // tracking block structure produced two fail-open defects worse than this false positive —
+    // a fence opened inside a quote stayed open across ordinary prose and swallowed real links,
+    // and a quoted line inside a real fence closed it early. This test exists so the limit is
+    // visible and cannot regress silently; if a real CommonMark parser ever lands, it SHOULD go
+    // red, and the correct response is to invert it.
+    const pkg = tmpPackage({ 'a.md': '> ```\n> [x](nowhere.md)\n> ```\n' });
+    assert.deepEqual(scan(pkg), ['a.md:2 nowhere.md']);
   });
 
-  it('still resolves a REAL link that happens to sit in a blockquote', () => {
-    // The skip must be about the fence, not about the blockquote. Stripping the marker without
-    // this case would be indistinguishable from ignoring blockquoted prose entirely.
+  it('resolves a real link inside a blockquote', () => {
     const pkg = tmpPackage({ 'a.md': '> see [x](missing.md)\n' });
     assert.deepEqual(scan(pkg), ['a.md:1 missing.md']);
+  });
+
+  it('fails CLOSED, not open, when a blockquoted fence unbalances the file', () => {
+    // The reverted fix turned this shape into a silent fail-OPEN: `> ```` opened a fence that
+    // stayed open across ordinary prose, `one.md` vanished, and `unterminatedFenceAt` stayed 0
+    // because a later fence rebalanced the count. Narrow-and-honest behaves differently: `>` is
+    // not a fence, so `one.md` is found; the later lone fence leaves the file unbalanced; and
+    // the tripwire reports it. `two.md` is still unscanned — but the run SAYS SO rather than
+    // reporting a clean file. That distinction is the whole point of the tripwire.
+    const pkg = tmpPackage({ 'a.md': '> ```\n[a](one.md)\n```\n[b](two.md)\n' });
+    assert.deepEqual(scan(pkg), ['a.md:2 one.md', 'a.md:3 (code fence)']);
   });
 });
 
@@ -476,6 +665,63 @@ describe('assert-shipped-links.js CLI', () => {
     const r = run([pkg, tmpRepo([])]);
     assert.equal(r.status, 2);
     assert.match(r.stderr, /ZERO resolvable references/);
+  });
+
+  it('prints a gathered finding rather than exiting 2, when zero links were resolvable', () => {
+    // Round 2 HIGH. The unterminated-fence tripwire produces a finding AND zero resolvable
+    // links, so an unqualified zero-extraction guard swallowed the very evidence Round 1 added.
+    const pkg = tmpPackage({ 'README.md': '# T\n\n```\nnot closed\n' });
+    const r = run([pkg, tmpRepo([])]);
+    assert.equal(r.status, 1, 'a gathered finding must outrank the cannot-run guard');
+    assert.match(r.stdout, /README\.md:3 -> \(code fence\)/);
+  });
+
+  it('emits gathered findings, not a bare exit 2, when the repository url is unparsable', () => {
+    // Round 3 HIGH. The `!prefix` guard sat after the scan and was unqualified, so a package with
+    // real broken links and a malformed `repository.url` printed NOTHING and exited 2 — which the
+    // harness turns into an advisory line, so the run reported nothing at all. Round 2 fixed the
+    // sibling guard only; every post-scan bail-out now routes through one function.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'convoke-links-badrepo-'));
+    trash.push(root);
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'w', version: '0.0.0', repository: { url: 'not a url' } }));
+    fs.writeFileSync(path.join(root, 'a.md'), '[a](gone1.md)\n[b](gone2.md)\n');
+    const r = run([root, os.tmpdir()]);
+    assert.equal(r.status, 1, 'findings must outrank the cannot-run guard');
+    assert.match(r.stdout, /gone1\.md/);
+    assert.match(r.stdout, /gone2\.md/);
+    assert.match(r.stdout, /scan was also incomplete/, 'and the incompleteness must still be reported');
+  });
+
+  it('--json emits a parseable payload carrying the evidence split', () => {
+    // `--json` is what makes the review record's numbers regenerable rather than transcribed, and
+    // Round 3 found it with zero tests — its only occurrence in this suite was inside a comment.
+    const pkg = tmpPackage({ 'a.md': '[x](b.md)\n[y](gone.md)\n[z](https://example.com/e.md)\n', 'b.md': '' });
+    const r = run([pkg, tmpRepo([]), '--json']);
+    assert.equal(r.status, 1);
+    const d = JSON.parse(r.stdout);
+    assert.equal(d.findingCount, 1);
+    assert.equal(d.relativeCount, 2);
+    assert.equal(d.selfRefCount, 0);
+    assert.equal(d.skippedCount, 1, 'the external URL is skipped');
+    assert.equal(d.mdCount, 2);
+    assert.equal(d.findings[0].target, 'gone.md');
+  });
+
+  it('--json stays parseable on a cannot-run path', () => {
+    // A consumer piping to `jq` must get a machine-readable error, not "unexpected end of input".
+    const pkg = tmpPackage({ 'a.md': 'only [external](https://example.com/x) links\n' });
+    const r = run([pkg, tmpRepo([]), '--json']);
+    assert.equal(r.status, 2);
+    assert.match(JSON.parse(r.stdout).error, /ZERO resolvable references/);
+  });
+
+  it('rejects an unrecognised option instead of silently running in text mode', () => {
+    // `--jsno` previously ran in text mode and exited 0/1, so a caller expecting JSON got a parse
+    // error rather than a verdict. A typo belongs on the cannot-run side of the contract.
+    const pkg = tmpPackage({ 'a.md': '[x](b.md)\n', 'b.md': '' });
+    const r = run([pkg, tmpRepo([]), '--jsno']);
+    assert.equal(r.status, 2);
+    assert.match(r.stderr, /unrecognised option/);
   });
 
   it('exits 2 with no arguments', () => {
