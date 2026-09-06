@@ -4,7 +4,7 @@ baseline_commit: 2f793c856749db9b7c0bbe54ee1eb1e5e74e52a4
 
 # Story 2.3a: Exclude the conversion tooling from the package
 
-Status: review
+Status: done
 
 <!-- baseline_commit deliberately ABSENT — stamped by dev-story at implementation start. -->
 
@@ -126,6 +126,7 @@ tarball file count, and both re-run gates.
 | Date | Change |
 |---|---|
 | 2026-08-31 | Split from Story 2.3. AC3 added — ADR-002's "one-off tooling" premise is stale; I97 Epic 2 is 2/7 with five conversions still to run. |
+| 2026-09-06 | Shipped as `b4bce418`; CI green. Status → `done`. Mechanism is a `.npmignore` inside the directory — `files[]` byte-identical to baseline, and `installed-tree.js` + its tests reverted to baseline after four failed attempts at parsing npm glob semantics by hand. Three deviations from the ACs as written are disclosed in the notes. Two backlog items filed. |
 | 2026-09-06 | Round 1: 2 HIGH, 6 MEDIUM, 5 LOW — every number re-derived correct, defects entirely in the claims. 11 patched, 1 filed to backlog. The guard scoping needed a second attempt: the first keyed on a substring and was wrong in both directions. |
 | 2026-09-06 | Implemented. 18 findings removed exactly as specified; **10 remain, not 9** — the spec was written against 27, and `dist-2-2` re-derived 28. Census 467 → 460 files, 334 → 332 `.md`. Required a scoping fix to `shippedBmeModules` (dist-2-4's code), which reported the negation as an unresolvable `files[]` entry. |
 
