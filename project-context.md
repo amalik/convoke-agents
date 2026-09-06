@@ -6,6 +6,38 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 
 ---
 
+## Rule: team-expansion-freeze
+
+**Statement.** No new Convoke team is built until **4.0.2 ships `dist-epic-2`**. Repackaging or
+completing an EXISTING team (Gyre's manifests, I97's remaining agent conversions) is not covered by this
+freeze; only adding a team that does not exist is.
+
+**Why.** The freeze is real and has been in force since roughly April 2026, but it existed only as a
+disposition — "augment the product surface on sound bases" — with no test for when the bases are sound
+enough. A foundation programme with no completion criterion does not complete: it keeps generating its
+own successor work, which is how 189 intakes accumulated and how a ratified three-deliverable plan stayed
+invisible for three weeks. Naming a version turns a thing that was happening by default into a decision
+with an exit.
+
+**Why 4.0.2 specifically.** Epic 1 of 4.0.1 is complete and the publish path is enforced through CI, so
+the distribution work is most of the way done; `dist-epic-2`'s defects are live on `latest` today. That
+makes it both the honest remainder of "sound bases" and a dated, checkable event rather than a judgement
+call.
+
+**How to apply.**
+
+- **Picking up work.** If a candidate would create a new team directory under `_bmad/bme/`, it is behind
+  this freeze regardless of its RICE score. Say so in the row rather than starting it.
+- **Forge (P9).** It is the first team out of the freeze by the 2026-08-15 baseline sequence, and its own
+  Gate 1 additionally requires an external engagement. Both conditions must clear.
+- **Lifting it.** When 4.0.2 publishes, delete this rule in the same commit that records the lift. A rule
+  that outlives its condition becomes the next undated freeze.
+
+**Exception.** None by default. Lifting early is an operator decision that must be recorded as one — the
+absence of such a record is what this rule exists to prevent.
+
+---
+
 ## Rule: test-fixture-isolation
 
 **Statement.** Tests that invoke a CLI script via `runScript(...)` or scan the project tree via `findProjectRoot()` / `runAudit()` / similar **must** run against an isolated fixture directory, never against `PACKAGE_ROOT`.
