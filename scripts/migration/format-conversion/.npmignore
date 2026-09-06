@@ -1,0 +1,16 @@
+# Story dist-2.3a. This directory is i97 agent-conversion tooling: a contributor runs it from the
+# repository, an operator has no use for it, and shipping it put 18 links into the package that an
+# operator cannot follow, because they point at repository-only paths.
+#
+# WHY HERE AND NOT A `!` NEGATION IN package.json `files[]`. Both work. The negation puts a glob
+# metacharacter into `files[]`, and `scripts/audit/lib/installed-tree.js` reads that array to build
+# the expected set of `_bmad/bme/*` modules. Teaching it to tell a harmless negation from a pattern
+# that shrinks that set means re-deriving npm's glob semantics by hand; four attempts were written
+# and adversarial review broke every one — the last with `scripts/../_bmad/bme/_ghost`, which npm
+# resolves and ships. Excluding from inside the directory needs no pattern in `files[]` at all, so
+# that whole class of interaction does not arise. (A root `.npmignore` does NOT work when `files[]`
+# is present — verified; it must live here.)
+#
+# NOT DELETED, and must not be: I97 Epic 2 is 2 of 7 done, so five agent conversions still run
+# through this tooling. Removing it from the PACKAGE is not removing it from the repository.
+*
