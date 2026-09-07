@@ -437,6 +437,34 @@ function extractSectionByHeading(content, headingName) {
  * Apply all transformation rules in order. Pure functional, no side effects
  * except optional warning emission.
  */
+/**
+ * Config placeholder substitutions applied by `applyTransformations`.
+ *
+ * HOISTED TO MODULE SCOPE AND EXPORTED FOR TESTING (story dist-2-7, Round 1). Every value is a
+ * static literal with no dependency on the enclosing function's arguments, so moving it out is
+ * behaviour-preserving — it is constructed once instead of per call.
+ *
+ * The reason it moved is the interesting part. The reachability pin in
+ * `tests/lib/portability-export-engine.test.js` has to prove that no key here can carry a regex
+ * metacharacter, because that claim is the entire basis for calling the escaping in
+ * `applyTransformations` hardening rather than a fix. While this object was function-local, the
+ * only way to check it was to PARSE THE SOURCE TEXT — and a source parser has to be taught every
+ * key syntax JavaScript allows. Two attempts were made: bare identifiers, then quoted forms. Review
+ * then defeated the second with computed keys, backtick keys, escaped quotes inside quoted keys,
+ * empty-string keys, spread syntax and post-declaration mutation. Each fix was one syntactic step
+ * behind the next bypass, which is `code-review-convergence`'s "two failed attempts predict a
+ * third". Exporting the object lets the test read `Object.keys` of the real thing, which is true
+ * by construction for every syntax at once and cannot rot.
+ */
+const CONFIG_VAR_MAP = {
+  user_name: 'your-name',
+  communication_language: 'your-preferred-language',
+  document_output_language: 'your-document-language',
+  output_folder: 'your-output-folder',
+  planning_artifacts: 'your-planning-artifacts',
+  implementation_artifacts: 'your-implementation-artifacts',
+};
+
 function applyTransformations(text, warnings, options = {}) {
   let result = text;
 
@@ -521,27 +549,28 @@ function applyTransformations(text, warnings, options = {}) {
     result = result.replace(/\n{3,}/g, '\n\n').trim();
     return result;
   }
-  const configVarMap = {
-    user_name: 'your-name',
-    communication_language: 'your-preferred-language',
-    document_output_language: 'your-document-language',
-    output_folder: 'your-output-folder',
-    planning_artifacts: 'your-planning-artifacts',
-    implementation_artifacts: 'your-implementation-artifacts',
-  };
+  // dist-2-7, defensive — matching the two T33 sites above. `CONFIG_VAR_MAP` (module scope) holds
+  // six keys, all /^[a-z_]+$/. No metacharacter can reach these RegExps today, so nothing here
+  // fixes a crash. FR16 requires the escape anyway, ruled 2026-09-07: "every interpolation is
+  // escaped" is a rule a grep can confirm, while "every one except the provably-safe ones" needs a
+  // per-site safety argument that expires silently the day a key gains a `.` or a `-`. The
+  // reachability claim is PINNED by a test reading the exported object — not left to this comment,
+  // and not parsed out of this source. See the dist-2-7 block in
+  // tests/lib/portability-export-engine.test.js.
+  //
   // Double-brace forms first: {{var}} → replacement. If single-brace ran first, it would match
   // the inner {var} of {{var}}, leaving residual `{replacement}` which the catch-all then warns on.
-  for (const [varName, replacement] of Object.entries(configVarMap)) {
-    const re = new RegExp(`\\{\\{${varName}\\}\\}`, 'g');
+  for (const [varName, replacement] of Object.entries(CONFIG_VAR_MAP)) {
+    const re = new RegExp(`\\{\\{${escapeRegExp(varName)}\\}\\}`, 'g');
     result = result.replace(re, replacement);
   }
-  for (const [varName, replacement] of Object.entries(configVarMap)) {
-    const re = new RegExp(`\\{${varName}\\}`, 'g');
+  for (const [varName, replacement] of Object.entries(CONFIG_VAR_MAP)) {
+    const re = new RegExp(`\\{${escapeRegExp(varName)}\\}`, 'g');
     result = result.replace(re, replacement);
   }
 
   // Strip any remaining {var} placeholders that weren't in the config map (avoid leakage).
-  // Emit a warning per unique unmapped var so typos in configVarMap don't go silent.
+  // Emit a warning per unique unmapped var so typos in CONFIG_VAR_MAP don't go silent.
   const unmappedSeen = new Set();
   result = result.replace(/\{\{?([\w_-]+)\}?\}/g, (_match, varName) => {
     if (warnings && !unmappedSeen.has(varName)) {
@@ -1183,6 +1212,7 @@ function exportSkill(skillName, projectRoot, _options = {}) {
 module.exports = {
   exportSkill,
   // Internal helpers exported for testing
+  CONFIG_VAR_MAP,
   loadSkillRow,
   loadSkillSource,
   loadPersona,

@@ -333,3 +333,90 @@ describe('T33 — RegExp interpolation is escaped at both sites', () => {
     }
   });
 });
+
+// --- dist-2-7: the last two unescaped interpolations (FR16) ---
+//
+// `applyTransformations` builds `{{var}}` and `{var}` matchers by interpolating `varName` from
+// `Object.entries(CONFIG_VAR_MAP)`. FR16 requires EVERY interpolated RegExp in this file to escape
+// its value, and the 2026-09-07 operator ruling confirmed that includes provably-safe sites.
+//
+// NOTHING CRASHES HERE, and saying otherwise would repeat the overclaim T33 was rescored 7.2 -> 1.9
+// for. `configVarMap` is a hardcoded literal whose six keys are all /^[a-z_]+$/, referenced only by
+// its own declaration and the two loops. The escape is uniformity: "every interpolation is escaped"
+// is a rule a grep can confirm, while "every one except the safe ones" needs a per-site argument
+// that expires silently the day a key gains a `.` or a `-`.
+//
+// Three categories, mirroring the T33 block above, for the reasons stated there.
+
+describe('dist-2-7 — CONFIG_VAR_MAP interpolation is escaped', () => {
+  const { escapeRegExp } = require('../../scripts/lib/sanitize');
+
+  // 1. ISOLATION. Proves escapeRegExp fixes the construct. Passes against pre-fix code, so it is
+  //    NOT the discriminator — same caveat T33 records about its own isolation tests.
+  it('escaping makes a metacharacter key match literally', () => {
+    const body = 'a {{a.c}} b';
+    const raw = new RegExp(`\\{\\{${'a.c'}\\}\\}`, 'g');
+    const esc = new RegExp(`\\{\\{${escapeRegExp('a.c')}\\}\\}`, 'g');
+    assert.equal('a {{abc}} b'.replace(raw, 'X'), 'a X b', 'fixture no longer exercises the gap');
+    assert.equal('a {{abc}} b'.replace(esc, 'X'), 'a {{abc}} b', 'escaped form must not match abc');
+    assert.equal(body.replace(esc, 'X'), 'a X b', 'escaped form must match the literal key');
+  });
+
+  // 2. SOURCE SHAPE. This is the half that fails on a revert.
+  // THE IDENTIFIER IS CAPTURED FROM THE LOOP, NOT ASSUMED. An earlier version of these assertions
+  // matched the literal `varName`, which false-failed on a harmless rename; the fix for that
+  // matched ANY identifier, which then could not tell `escapeRegExp(varName)` from
+  // `escapeRegExp(replacement)` — the wrong half of the same destructured pair, a real regression
+  // that leaves the key raw. Delta review proved it: that mutation kept these tests green and was
+  // caught only by an unrelated functional test. So the loop header is parsed for the KEY binding
+  // and the same identifier is then required inside the RegExp — rename-tolerant and
+  // wrong-identifier-proof at once. `\s*` after `new RegExp(` keeps the line-wrap tolerance the
+  // sibling T33 assertion already has.
+
+  /** The key binding from `for (const [key, value] of Object.entries(CONFIG_VAR_MAP))`. */
+  function loopKeyBinding(src) {
+    const m = src.match(
+      /for \(const \[([A-Za-z_$][\w$]*), *([A-Za-z_$][\w$]*)\] of Object\.entries\(CONFIG_VAR_MAP\)\)/
+    );
+    assert.ok(m, 'the CONFIG_VAR_MAP loop header was not found — it may have been restructured');
+    return { key: m[1], value: m[2] };
+  }
+  it('the double-brace matcher escapes THE KEY, not merely some identifier', () => {
+    const src = readEngineSource();
+    const { key } = loopKeyBinding(src);
+    assert.match(src, new RegExp(`new RegExp\\(\\s*\`\\\\\\\\\\{\\\\\\\\\\{\\$\\{escapeRegExp\\(${key}\\)\\}`),
+      `the {{var}} matcher must escape \`${key}\`, the key bound by the loop`);
+    assert.doesNotMatch(src, /new RegExp\(\s*`\\\\\{\\\\\{\$\{[A-Za-z_$][\w$]*\}/,
+      'a raw interpolation has come back in the double-brace matcher');
+  });
+
+  it('the single-brace matcher escapes THE KEY, not merely some identifier', () => {
+    const src = readEngineSource();
+    const { key } = loopKeyBinding(src);
+    assert.match(src, new RegExp(`new RegExp\\(\\s*\`\\\\\\\\\\{\\$\\{escapeRegExp\\(${key}\\)\\}\\\\\\\\\\}\``),
+      `the {var} matcher must escape \`${key}\`, the key bound by the loop`);
+    assert.doesNotMatch(src, /new RegExp\(\s*`\\\\\{\$\{[A-Za-z_$][\w$]*\}\\\\\}`/,
+      'a raw interpolation has come back in the single-brace matcher');
+  });
+
+  // 3. REACHABILITY PIN. The ruling rests on the map being closed; this is what enforces it.
+  //
+  //    READS THE REAL OBJECT. Two earlier versions parsed the source text of the object literal —
+  //    first bare identifiers, then quoted forms too. Round 1 review defeated the second with
+  //    computed keys (`[k]:`), backtick keys, escaped quotes inside quoted keys, empty-string
+  //    keys, spread syntax, and a plain post-declaration `MAP['bad.key'] = …` that
+  //    `Object.entries` picks up at runtime and a source parser never sees. Each patch was one
+  //    syntactic step behind the next bypass, which is exactly the "two failed attempts predict a
+  //    third" clause in `code-review-convergence`. So the instrument changed instead: the map was
+  //    hoisted to module scope and exported, and this reads `Object.keys` of the actual object.
+  //    That is true by construction for every key syntax at once, and cannot rot.
+  it('every CONFIG_VAR_MAP key is still metacharacter-free', () => {
+    const { CONFIG_VAR_MAP } = require('../../scripts/portability/export-engine');
+    const keys = Object.keys(CONFIG_VAR_MAP);
+    assert.ok(keys.length >= 6, `expected the known keys, found ${keys.length}`);
+    for (const k of keys) {
+      assert.match(k, /^[a-z_]+$/,
+        `CONFIG_VAR_MAP key "${k}" can reach a RegExp — the safety argument in dist-2-7 no longer holds`);
+    }
+  });
+});
