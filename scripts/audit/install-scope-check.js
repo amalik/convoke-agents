@@ -114,7 +114,25 @@ const TRACKED = [
   // Re-greening by relocation is precisely the fail-open the `gen-1.1` note above describes,
   // so the primitives were brought back inline where they are counted. Derived, not recalled:
   // counted with this file's own WRITE_OP_RE.
-  { file: 'scripts/update/lib/refresh-installation.js', expected: 13 },
+  // 13 -> 14 on 2026-09-07 (story dist-2-6). The module-copy block that makes
+  // `_bmad/bme/_portability/` reachable. Reviewed before accepting: every write in the two new
+  // blocks targets `path.join(projectRoot, '_bmad', 'bme', '_portability')` or `skillsDir`
+  // (`<projectRoot>/.claude/skills/`), byte-for-byte the same destinations and the same
+  // remove-then-copy shape as the Artifacts block directly above it. The checker independently
+  // reported "no scope violations"; only the count moved.
+  //
+  // THE COUNT MOVED BY ONE AND THE CHANGE ADDED SIX WRITES. This is T111, and it is worth
+  // stating here rather than only in the backlog, because a snapshot that reads 13 -> 14 for a
+  // change that copies an entire module tree into the operator's project is false comfort of
+  // exactly the kind the `gen-1.1` and `dist-2-5` notes above describe. `WRITE_OP_RE` enumerates
+  // literal `fs.*` primitives; the new blocks use fs-extra's `fs.copy`, `fs.remove` and
+  // `fs.ensureDir`, none of which it matches. Only the version stamp's `fs.writeFileSync` is
+  // visible. So the ONE write this gate can see is the least consequential of the six, and the
+  // `fs.remove(targetPortability)` that DELETES a directory in the operator's project before
+  // copying is invisible to a control whose stated purpose is seeing writes into that project.
+  // Not fixed here: widening the regex changes every count in this array at once and belongs to
+  // T111, not to a story about portability.
+  { file: 'scripts/update/lib/refresh-installation.js', expected: 14 },
   // Added 2026-08-26 (story gen-1.1). This is the other half of the 11 -> 10 above.
   // It is tracked rather than left alone because this checker inspects ONLY the files
   // in this array and has no assertion for write ops in an untracked file — so
