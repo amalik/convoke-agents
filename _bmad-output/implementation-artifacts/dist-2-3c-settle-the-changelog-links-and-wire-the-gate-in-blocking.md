@@ -204,7 +204,7 @@ and that is worth understanding before wiring.
 - `scripts/audit/try-fresh-install.sh` — verdict condition; see `dist-2-4` for the ENV_FAIL convention
 - [ADR-002](../planning-artifacts/adr/4-0-1/adr-002-shipped-link-policy.md) **Amendment 3(1)** — why the registry does not ship, and what the ruling leaves to the meta-model baseline
 - [ADR-004](../planning-artifacts/adr/4-0-1/adr-004-bme-module-contract.md) C2 — why `scripts/audit/name-registry-integrity.js` shipping while its input does not is not an FR13 breach
-- T32 — the row this epic exists to close: a check that exists but is not enforced
+- T32 — the **exemplar** of the class this epic addresses: a check that exists but is not enforced. **Already closed 2026-08-24 by `4556f4f0`** (that was `npm run docs:audit`). This story closes another *instance* of the class, which has no row of its own — it does not close T32. The original wording here read "the row this epic exists to close", which was taken at face value and propagated a false closure claim into two shipped files; corrected 2026-09-07.
 
 ---
 
@@ -223,6 +223,7 @@ demonstration from AC5, the derived trajectory, and both packed-gate re-runs.
 
 | Date | Change |
 |---|---|
+| 2026-09-07 | **Correction after `018ec89e` landed: this story does NOT close T32, and said it did in two shipped files.** T32 was closed **2026-08-24 by `4556f4f0`** — it was `npm run docs:audit` wired into CI, a different check. T32 is the *exemplar* of the class *a check that exists but is not enforced*; FR12's checker is another instance of that class and has no backlog row of its own. Corrected in `assert-shipped-links.js`, `try-fresh-install.sh`, this record, and the References line that caused it — which read *"the row this epic exists to close"* and was taken at face value instead of opened. `documentation-claims-must-be-derived`. **Not caught by either review pass**: Blind Hunter verified many claims but not this one, and the Acceptance Auditor audits against the spec, which is where the wrong premise lived. The phrase never reached `018ec89e`'s commit message, so only the source files and this record needed correcting. |
 | 2026-09-07 | **Delta review of the Round 1 remediation — 4 more patches, 2 more defers.** Run because the set-equality clause of `code-review-convergence` failed: `scripts/audit/assert-shipped-links.js` had entered the change set and was never in the reviewed diff, so the fix Round 1 prompted had itself had zero review. Not a Round 2 (no HIGH) — this completes Round 1's coverage. Two findings were **wrong claims this story wrote or worsened**: the "ten self-referential links" figure in both gate files measured **21/15 today and 18/13 at baseline**, so it was already false before this story and staler after — `derive-counts-from-source`, in a file whose own text warns against literal counts; and the NFR10 gloss "a gate and its first fix never land together" is the **opposite** of the epic's NFR10 and was contradicted by the very clause it introduced. Also corrected: exit 1 does not imply a complete scan (`cannotRunAfterScan` returns it for findings-plus-incomplete), and "shipped" was used for a third meaning inside the docstring that exists to keep that word precise. Gates re-run: shipped-links 0/exit 0, harness PASS/exit 0, 2190 tests 0 fail, lint clean, backlog-integrity PASS. |
 | 2026-09-07 | **Round 1 review — 3 layers as independent subagents, 3 patches applied, 2 deferred, 6 dismissed.** All three patches were defects the author did not see. (1) `docs/.npmignore`'s `README.md` was **unanchored**, so it excluded at any depth and would have silently dropped a future `docs/migration/README.md` — found independently by two layers, both by reproducing it. Anchored to `/README.md`; verified both directions. (2) `assert-shipped-links.js`'s module docstring still read *"NOT IN THE VERDICT... it is red today... READ THIS BEFORE PICKING UP 2.3c"* — this story rewrote that claim in `try-fresh-install.sh` and **missed the twin copy in the file the gate actually calls**, which is the exact doc-rot class the epic exists to close. (3) Story frontmatter contradicted a leftover HTML comment claiming `baseline_commit` was absent. Acceptance Auditor found **zero AC violations** and independently reproduced every falsifiable claim in the Dev Agent Record, including both self-reported deviations. Per `code-review-convergence`, **Round 2 not triggered** — 0 HIGH after triage, and all three patches are content-only. Gates re-run after patching: shipped-links 0/exit 0, harness PASS/exit 0, 2190 tests 0 fail, lint clean. |
 | 2026-09-07 | **Implemented.** Findings 5 -> 0; gate wired blocking at `try-fresh-install.sh:479`; T32 closed. Two deviations from the story as written, both disclosed rather than reframed. (1) **AC1 created a finding class the story did not anticipate** — adding `docs/migration/` to `files[]` also ships `docs/README.md` and its 7 repository-only links, because npm keeps `README.md` in any directory it walks; the named-file form was tried and does not avoid it. Fixed with `docs/.npmignore`, the mechanism `dist-2-3a` established, plus 7 tests. AC3's escape clause did not apply: no sibling owns a class this story's own AC1 created (ADR-002 Amendment 3(2)). (2) **AC6's premise is false** — FR13 is NOT enforced; `$TREE` is absent from the verdict by design until `dist-2-6`, observed in this story's green run as `[installed-tree status 1]` alongside `PASS`. The note AC6 asked for would have been a false claim, so the accurate one was written instead. |
@@ -354,8 +355,22 @@ other — this checker cannot see a file read at runtime but absent from the pac
 assertion cannot see a broken link. `_bmad/bme/_portability/` is the live demonstration: it ships,
 it does not install, and the link checker has nothing to say about it.
 
-**T32 is closed.** The row this epic exists to close was *a check that exists but is not enforced*.
-It is enforced.
+**NOT T32 — corrected 2026-09-07, after `018ec89e` had landed.** This section originally read
+*"T32 is closed. The row this epic exists to close was a check that exists but is not enforced. It
+is enforced."* **T32 was already closed on 2026-08-24 by `4556f4f0`**, and it was `npm run
+docs:audit` wired into the `agent-surface-parity` job — a different check, closed two weeks before
+this story began.
+
+What is true: T32 is the **exemplar** of the class *a check that exists but is not enforced*. FR12's
+checker was another instance of that class, and it had **no backlog row of its own**. This story
+closes the instance, not the row.
+
+The error came from reading this story's own References line — *"T32 — the row this epic exists to
+close"* — at face value instead of opening the row. `documentation-claims-must-be-derived`, and
+`verification-basis`: an artifact's self-description is not evidence about a different artifact.
+Neither review pass caught it. Blind Hunter verified many factual claims but not this one, and the
+Acceptance Auditor audits against the spec, which is where the wrong premise lives. It reached two
+shipped source files before a status check on the row surfaced it.
 
 **Gates, all run against this change.**
 

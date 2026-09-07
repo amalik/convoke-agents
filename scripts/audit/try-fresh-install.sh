@@ -427,7 +427,13 @@ echo "==> Every documented reference resolves inside the package"
 # Before that it
 # printed FAILED and exited 0 through 2.3a, 2.3b and 2.3c, deliberately, because this job gates
 # `publish` on every push and PR and wiring a red gate blocks the repository. It is green now, so
-# that reasoning has expired — $LINKS belongs in the `if` below and T32 is closed.
+# that reasoning has expired — $LINKS belongs in the `if` below.
+#
+# NOT T32. An earlier version of this line said "and T32 is closed". It is not: T32 was closed
+# 2026-08-24 by `4556f4f0` and it was `npm run docs:audit`, a different check. T32 is the EXEMPLAR
+# of the class ("a check that exists but is not enforced"); this gate is another instance of it,
+# with no backlog row of its own. The claim came from taking story dist-2.3c's References line at
+# face value rather than reading the row — `documentation-claims-must-be-derived`.
 #
 # No finding count is written here on purpose: any number in this comment is stale within a
 # story and sends a maintainer chasing phantoms. Run the script to see the current figure.

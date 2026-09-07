@@ -47,7 +47,14 @@
  *
  * Through 2.3a, 2.3b and 2.3c this printed FAILED and exited 0 on purpose,
  * because the job gates `publish` on every push and PR and a red gate blocks the repository. That
- * period is over. A finding here now fails the build, which is the point — T32 is closed.
+ * period is over. A finding here now fails the build, which is the point.
+ *
+ * NOT T32. An earlier version of this line said "T32 is closed". It is not closed by this — T32 was
+ * closed 2026-08-24 by `4556f4f0`, and it was `npm run docs:audit`, a different check. T32 is the
+ * EXEMPLAR of the class ("a check that exists but is not enforced"); this gate is another instance
+ * of the same class, and it has no backlog row of its own. The wrong claim came from reading story
+ * dist-2.3c's References line at face value instead of checking the row — `documentation-claims-
+ * must-be-derived`, in a file whose whole subject is claims that no longer match the code.
  *
  * THE LESSON FROM 2.3a/b/c, which outlived them: not every finding maps to one of ADR-002's three
  * classes. Two did not. `lifecycle-process-spec.md` pointed at `_bmad/bme/_config/name-registry.csv`
