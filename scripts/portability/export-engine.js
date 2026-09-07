@@ -558,15 +558,25 @@ function applyTransformations(text, warnings, options = {}) {
   // and not parsed out of this source. See the dist-2-7 block in
   // tests/lib/portability-export-engine.test.js.
   //
+  // BOTH SIDES ARE ESCAPED, ruled 2026-09-07 — the symmetric question FR16 left open. Escaping the
+  // pattern is half the job: `$&`, `` $` ``, `$'` and `$1` are live in a `replace()` REPLACEMENT
+  // string, so a value containing `$&` would re-inject the matched text. The precedent is in this
+  // file already, added by a review finding — see the `escapeReplacement` call in the
+  // template-directive rewrite below, whose comment says "Both sides need escaping". Ruling
+  // otherwise would have left one file with two rules for one construct, which is exactly what the
+  // FR16 ruling refused. Unreachable today for the same reason the keys are: all six values are
+  // hardcoded literals with no `$`. Escaped anyway, and therefore needing no reachability pin of
+  // its own — an unconditional escape has no safety argument to keep true.
+  //
   // Double-brace forms first: {{var}} → replacement. If single-brace ran first, it would match
   // the inner {var} of {{var}}, leaving residual `{replacement}` which the catch-all then warns on.
   for (const [varName, replacement] of Object.entries(CONFIG_VAR_MAP)) {
     const re = new RegExp(`\\{\\{${escapeRegExp(varName)}\\}\\}`, 'g');
-    result = result.replace(re, replacement);
+    result = result.replace(re, escapeReplacement(replacement));
   }
   for (const [varName, replacement] of Object.entries(CONFIG_VAR_MAP)) {
     const re = new RegExp(`\\{${escapeRegExp(varName)}\\}`, 'g');
-    result = result.replace(re, replacement);
+    result = result.replace(re, escapeReplacement(replacement));
   }
 
   // Strip any remaining {var} placeholders that weren't in the config map (avoid leakage).

@@ -349,7 +349,7 @@ describe('T33 — RegExp interpolation is escaped at both sites', () => {
 // Three categories, mirroring the T33 block above, for the reasons stated there.
 
 describe('dist-2-7 — CONFIG_VAR_MAP interpolation is escaped', () => {
-  const { escapeRegExp } = require('../../scripts/lib/sanitize');
+  const { escapeRegExp, escapeReplacement } = require('../../scripts/lib/sanitize');
 
   // 1. ISOLATION. Proves escapeRegExp fixes the construct. Passes against pre-fix code, so it is
   //    NOT the discriminator — same caveat T33 records about its own isolation tests.
@@ -397,6 +397,34 @@ describe('dist-2-7 — CONFIG_VAR_MAP interpolation is escaped', () => {
       `the {var} matcher must escape \`${key}\`, the key bound by the loop`);
     assert.doesNotMatch(src, /new RegExp\(\s*`\\\\\{\$\{[A-Za-z_$][\w$]*\}\\\\\}`/,
       'a raw interpolation has come back in the single-brace matcher');
+  });
+
+  // 2b. THE REPLACEMENT SIDE, ruled 2026-09-07 as FR16's symmetric question.
+  //     Escaping the pattern is half the job: `$&`, `` $` ``, `$'` and `$1` are live in a
+  //     replacement string. Unreachable today (all six values are hardcoded literals with no `$`)
+  //     and escaped anyway, for the same reason the pattern side is — so no reachability pin is
+  //     needed here: an unconditional escape has no safety argument to keep true.
+  it('escaping the replacement stops $& re-injecting the match', () => {
+    const raw = 'x{{k}}y'.replace(/\{\{k\}\}/g, 'A$&B');
+    const esc = 'x{{k}}y'.replace(/\{\{k\}\}/g, escapeReplacement('A$&B'));
+    assert.equal(raw, 'xA{{k}}By', 'fixture no longer exercises $& re-injection');
+    assert.equal(esc, 'xA$&By', 'escaped replacement must insert the literal text');
+  });
+
+  // WHAT THIS GUARANTEES, precisely: that the two known `result.replace(re, …)` call sites stay
+  // escaped and keep using the loop's own value binding. It is scoped to that literal call shape,
+  // matching the convention of the T33 block above — a future call written against a different
+  // receiver (`text.replace(re, …)`) would be invisible to it. Named because the test's title
+  // could otherwise be read as a whole-function guarantee, which it is not.
+  it('both loops escape THE VALUE, not merely some identifier', () => {
+    const src = readEngineSource();
+    const { value } = loopKeyBinding(src);
+    const calls = [...src.matchAll(/result\.replace\(re, *([^)]*\)?[^)]*)\)/g)].map((m) => m[1]);
+    assert.equal(calls.length, 2, `expected the two config-var replace calls, found ${calls.length}`);
+    for (const c of calls) {
+      assert.equal(c, `escapeReplacement(${value})`,
+        `replacement must be escaped and must be the loop's value binding, got: ${c}`);
+    }
   });
 
   // 3. REACHABILITY PIN. The ruling rests on the map being closed; this is what enforces it.
