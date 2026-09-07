@@ -929,7 +929,7 @@ development_status:
   dist-2-5-ship-the-dependency-registry-and-close-bug-19: done
   dist-2-6-make-portability-reachable-and-wire-the-installed-tree-assertion-in: done
   dist-2-7-escape-every-interpolated-regex-in-the-exporter: done
-  dist-2-8-validate-the-manifest-set-that-actually-seeds: ready-for-dev
+  dist-2-8-validate-the-manifest-set-that-actually-seeds: review
   dist-epic-2-retrospective: optional
   dist-epic-1b: done
   dist-1b-1-close-the-downgrade-guard-fail-open-and-prove-it-on-a-runner: done

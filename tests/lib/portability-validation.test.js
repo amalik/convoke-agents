@@ -9,6 +9,7 @@ const path = require('path');
 const { writeManifest } = require('../../scripts/portability/manifest-csv');
 
 const { FIXTURE_ROOT, REPO_ROOT } = require('./portability-fixture');
+const { manifestRowSeeds } = require('../../scripts/update/lib/refresh-installation');
 const {
   validate,
   renderReport,
@@ -112,21 +113,89 @@ describe('Portability validator (sp-1-3)', () => {
     assert.deepEqual(errors, [], `fixture should have no hard findings; got ${JSON.stringify(errors)}`);
   });
 
-  it('Test 1b: the REAL manifest has no hard findings beyond the acknowledged baseline', () => {
+  it('Test 1b: the SEEDING manifest has no hard findings beyond the acknowledged baseline', () => {
     // Ratchet, same shape as .github/expected-python-tests.txt and expected-wrapper-template.txt.
     // A NEW broken dependency fails here. FIXING one also fails here, until its line is removed
     // from the baseline — so the acknowledged list can only ever shrink.
-    const { totalSkills, findings } = validate(REPO_ROOT);
-    assert.ok(totalSkills > 0, 'real manifest is empty — cannot evaluate');
+    // dist-2-8: validate the set that SEEDS, not the 106-row candidate list.
+    //
+    // WHY. `refresh-installation.js` documents the shipped manifest as a CANDIDATE list and seeds a
+    // set filtered by path existence, printing `Created skill-manifest.csv (N/106 skills present)`.
+    // Validating all 106 asked a question no operator's tree answers: 75 rows point at upstream
+    // BMAD content that this repo deleted in `a16fa340`, so they can never resolve in CI, and the
+    // findings they produced were accurate but unrepairable.
+    //
+    // ⚠ THE TRAP, AND IT HAS CAUGHT FOUR ATTEMPTS. The fix that suggests itself — repoint those
+    // `path` cells at `.claude/skills/<id>/SKILL.md`, where the content genuinely is — was made on
+    // 2026-08-10 in `4ed770a0` and reverted within the hour in `8f2fbda0`, because
+    // `.claude/skills/` is gitignored (`.gitignore:62`): it passes on a developer machine with
+    // BMAD installed and hollows out in a clean checkout. **It produces a false green.** The
+    // closed row at `convoke-note-backlog-completed-archive.md:355` is kept expressly as this
+    // warning; read it before touching any `path` cell. This story edits none.
+    //
+    // THE PREDICATE IS THE INSTALLER'S OWN, imported rather than reimplemented. A second copy
+    // would let the test and the installer drift into disagreeing about what ships — a ratchet
+    // confident about the wrong tree, which is worse than no ratchet.
+    //
+    // WHAT THIS GIVES UP, stated rather than discovered later: a genuinely broken dependency on a
+    // NON-SEEDING upstream row is no longer caught here. That coverage was already unreachable —
+    // CI cannot see gitignored content — and every finding it produced was unrepairable. Test 1a's
+    // fixture is where upstream-shaped rows get real coverage; extend the fixture to add it back.
+    //
+    // A SECOND, DISTINCT GAP, named because Round 1 found the sentence above implies it without
+    // saying it: nothing here checks whether a SEEDING row's bare-name dependency points at a row
+    // that also seeds. Two do today — `bmad-help` -> `bmad-quick-dev` and `bmad-migrate-artifacts`
+    // -> `bmad-create-epics-and-stories`, both `bmm` rows the installer never seeds by design.
+    // `[ORPHAN-DEP]` cannot cover it (it is a typo check against the manifest's vocabulary, and
+    // both targets are correctly-spelled real rows) and `[BROKEN-DEP]` cannot either (it checks
+    // path-shaped deps). Closing it needs a NEW finding type, not a redefinition of an existing
+    // one — filed rather than improvised here. This gap predates this story: the vocabulary was
+    // already derived from all rows before the filter existed.
+    const { totalSkills, findings } = validate(REPO_ROOT, {
+      rowFilter: (row, header) => manifestRowSeeds(row[header.indexOf('path')], REPO_ROOT),
+    });
+
+    // NON-VACUITY FLOOR, not merely non-zero. Filtering is precisely the operation that can reduce
+    // the validated set to nothing, and this repository has shipped checks that reported success
+    // while doing no work. Measured 2026-09-07: **31 of 106 rows seed — `core` 11, `bmm` 1,
+    // `bme` 19**, grouped by the manifest's own `module` column.
+    //
+    // (An earlier draft of this comment said `core` 12 / `bme` 19 and asserted the story's figure
+    // was wrong. It was not. That grouping came from the path's second segment, a different basis:
+    // `bmad-create-prd` has `path` under `_bmad/core/` but `module` `bmm`. Correcting a right
+    // number with a wrong one, by silently changing the basis, is `verification-basis` failing in
+    // the direction that looks like diligence. Round 1 caught it.)
+    //
+    // The floor is deliberately below the measurement so ordinary churn does not trip it, but it
+    // is NOT derived from a structural minimum — a legitimate consolidation of several `bme`
+    // skills could trip it and force a bump alongside an unrelated refactor. Known trade.
+    assert.ok(totalSkills > 0, 'seeding manifest is empty — cannot evaluate');
+    assert.ok(
+      totalSkills >= 25,
+      `seeding set collapsed to ${totalSkills} rows (expected ~31) — the filter is too aggressive ` +
+        `or the tree changed shape; a small set here would pass vacuously`
+    );
 
     const actual = findings
       .filter((f) => HARD_FINDING_TYPES.has(f.type))
       .map((f) => `${f.type} ${f.skill}`)
       .sort();
+    // The file's own header says "a missing baseline is a removed gate". Nothing enforced that —
+    // a deleted file produced a raw ENOENT stack rather than the diagnostic the header promises.
+    // Now it does. Lines are trimmed before use: the file is comment-only today, so a stray
+    // leading space before a `#` would otherwise become a phantom expected finding, and trailing
+    // whitespace on a real line would make it read as both appeared AND resolved. (Round 1.)
+    const baselinePath = path.join(REPO_ROOT, '.github', 'expected-classification-findings.txt');
+    assert.ok(
+      fs.existsSync(baselinePath),
+      'baseline file is missing — that is a REMOVED GATE, not an empty baseline. Restore it; an ' +
+        'empty file is the goal state and is what this check expects.'
+    );
     const expected = fs
-      .readFileSync(path.join(REPO_ROOT, '.github', 'expected-classification-findings.txt'), 'utf8')
+      .readFileSync(baselinePath, 'utf8')
       .split('\n')
-      .filter((l) => l.trim() && !l.startsWith('#'))
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith('#'))
       .sort();
 
     const appeared = actual.filter((a) => !expected.includes(a));

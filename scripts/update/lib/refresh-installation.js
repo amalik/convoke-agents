@@ -668,24 +668,7 @@ async function refreshInstallation(projectRoot, options = {}) {
         const projectRootResolved = path.resolve(projectRoot);
         const kept = dataLines.filter((line) => {
           const cells = parseCsvRow(line);
-          const rel = cells[pathIdx];
-          if (!rel) return false;
-          // Containment check before the existence check. `path.join` does NOT neutralise `..`,
-          // so a row with `../../etc/passwd` would resolve outside the project — and
-          // `export-engine.loadSkillSource` reads whatever `path` names straight into an exported
-          // bundle the user may share. Input is Convoke's own manifest today, so this is defence
-          // in depth rather than a live hole (code review 2026-08-14, LOW), but it is one line.
-          const abs = path.resolve(projectRootResolved, rel);
-          if (abs !== projectRootResolved && !abs.startsWith(projectRootResolved + path.sep)) {
-            return false;
-          }
-          // `isFile`, not `existsSync`: a directory satisfies existsSync but makes the exporter
-          // throw EISDIR later.
-          try {
-            return fs.statSync(abs).isFile();
-          } catch {
-            return false;
-          }
+          return manifestRowSeeds(cells[pathIdx], projectRootResolved);
         });
         await fs.ensureDir(path.dirname(skillManifestPath));
         fs.writeFileSync(skillManifestPath, [headerLine, ...kept].join('\n') + '\n', 'utf8');
@@ -1198,6 +1181,59 @@ prompts: []
  * @param {boolean} [options.verbose] - Log each action
  * @returns {Array<string>} Changes array entries for removed orphans
  */
+/**
+ * Does one manifest row's `path` seed into a project rooted at `projectRootResolved`?
+ *
+ * THE SEEDING PREDICATE, and the single definition of it. The package's `skill-manifest.csv` is a
+ * CANDIDATE list — see the long comment at the seeding block above — and this is the filter that
+ * turns candidates into the set an operator actually receives.
+ *
+ * EXTRACTED AND EXPORTED BY STORY dist-2-8 so the classification ratchet can validate the same set
+ * the installer seeds, using this function rather than a reimplementation of it. A second copy
+ * would let the test and the installer drift into disagreeing about what ships, which is precisely
+ * the failure the ratchet exists to detect — a check that is confident about the wrong tree.
+ *
+ * Two guards, both deliberate and both load-bearing:
+ *  - **Containment before existence.** `path.join` does NOT neutralise `..`, so a row naming
+ *    `../../etc/passwd` would resolve outside the project — and `export-engine.loadSkillSource`
+ *    reads whatever `path` names straight into an exported bundle the user may share. The input is
+ *    Convoke's own manifest today, so this is defence in depth rather than a live hole (code
+ *    review 2026-08-14, LOW).
+ *  - **`isFile`, not `existsSync`.** A directory satisfies `existsSync` and then makes the
+ *    exporter throw EISDIR later.
+ *
+ * WHAT THE GUARDS DO **NOT** COVER, listed because this function is now exported and read by a
+ * test as well as the installer, and an undisclosed limit in a shared predicate is worse than one
+ * in a private block (Round 1 review, dist-2-8):
+ *  - **Symlinks.** Containment is LEXICAL: `path.resolve` collapses `..` textually, and `statSync`
+ *    then FOLLOWS symlinks. A `path` cell naming a symlink that sits inside the project but points
+ *    outside it passes both guards — reproduced by review against `/etc/passwd`. A `realpathSync`
+ *    check would close it. Not closed here because the manifest is first-party content today and
+ *    this story did not open that question; it is the same symlink-containment class already filed
+ *    from `dist-2-2` Round 3 against `shipped-links.js`, and belongs with it.
+ *  - **Case sensitivity.** A mis-cased `path` seeds on a case-insensitive filesystem (macOS,
+ *    Windows) and does not on a case-sensitive CI runner, so the predicate can disagree between a
+ *    developer's machine and CI.
+ *
+ * @param {string|undefined} rel - the row's `path` cell, relative to the project root
+ * @param {string} projectRootResolved - an already-`path.resolve`d project root
+ * @returns {boolean} true when the row's content is present and inside the project
+ */
+function manifestRowSeeds(rel, projectRootResolved) {
+  // `typeof`, not just falsy: a truthy non-string (a number, an object from a malformed parse)
+  // makes `path.resolve` throw a TypeError, and this runs outside the caller's try/catch. Round 1.
+  if (typeof rel !== 'string' || !rel) return false;
+  const abs = path.resolve(projectRootResolved, rel);
+  if (abs !== projectRootResolved && !abs.startsWith(projectRootResolved + path.sep)) {
+    return false;
+  }
+  try {
+    return fs.statSync(abs).isFile();
+  } catch {
+    return false;
+  }
+}
+
 function cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatimNames, options = {}) {
   // Deliberately synchronous (fs.removeSync / fs.readdirSync) — the function returns
   // Array<string>, not a Promise. The sync pattern keeps the contract simple for both
@@ -1390,6 +1426,7 @@ const STAMPABLE_MODULES = Object.freeze([
 module.exports = {
   refreshInstallation,
   cleanupOrphanWorkflowWrappers,
+  manifestRowSeeds,
   seedBmmDependencies,
   STAMPABLE_MODULES,
 };

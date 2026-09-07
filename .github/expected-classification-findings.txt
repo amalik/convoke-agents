@@ -1,15 +1,23 @@
-# ACKNOWLEDGED hard classification findings in the REAL skill-manifest.csv.
+# ACKNOWLEDGED hard classification findings in the SEEDING skill-manifest.csv.
 #
-# These are genuine broken dependencies. They were invisible for ~6 weeks: the test that
-# checks them (portability-validation Test 1) was quarantined behind the vendored-content
-# guard, so nothing reported them. Un-quarantining without this baseline would have meant
-# either a permanently red suite or silently dropping the check.
+# THIS FILE IS DELIBERATELY EMPTY, AND MUST BE KEPT. An empty baseline is the goal state; a
+# missing baseline is a removed gate. Test 1b in tests/lib/portability-validation.test.js reads
+# it, and a NEW hard finding against a seeding row fails the suite.
 #
-# A NEW hard finding fails the suite. Fixing one also fails it, until you delete its line
-# here — which is the point: the list must only ever shrink.
+# WHY IT EMPTIED (story dist-2-8, 2026-09-07). It previously held four [BROKEN-DEP] rows —
+# bmad-check-implementation-readiness, bmad-create-epics-and-stories and wds-4-ux-design twice.
+# All four were ACCURATE and none was repairable: they sit on rows whose `path` does not resolve,
+# so none of them ever seeds into an operator's project. Test 1b now validates the set the
+# installer actually seeds (filtered by path existence, using the installer's own exported
+# predicate), so those four fall out legitimately rather than being deleted to make a test pass.
 #
-# Tracked as backlog I134. Do not add to this list to make a test pass.
-[BROKEN-DEP] bmad-check-implementation-readiness
-[BROKEN-DEP] bmad-create-epics-and-stories
-[BROKEN-DEP] wds-4-ux-design
-[BROKEN-DEP] wds-4-ux-design
+# ⚠ DO NOT "FIX" A FINDING BY REPOINTING A MANIFEST `path` AT `.claude/skills/...`. That was done
+# on 2026-08-10 (4ed770a0) and reverted within the hour (8f2fbda0): those paths are gitignored,
+# so it passes on a developer machine and hollows out in a clean checkout — a false green. The
+# trap has caught four attempts; see convoke-note-backlog-completed-archive.md:355.
+#
+# A NEW hard finding fails the suite. Fixing one also fails it, until you delete its line here —
+# which is the point: the list must only ever shrink.
+#
+# Tracked as backlog I134, closed by dist-2-8 as PREMISE REFUTED / CHECK RESCOPED — not as
+# "dependencies repaired", which was never possible. Do not add to this list to make a test pass.

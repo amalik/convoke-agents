@@ -423,9 +423,20 @@ function renderReport(date, totalSkills, status, findings) {
 // MAIN
 // =============================================================================
 
-function validate(projectRoot) {
+/**
+ * @param {string} projectRoot
+ * @param {object} [options]
+ * @param {(row: string[], header: string[]) => boolean} [options.rowFilter] - narrow the validated
+ *   set. Dependency paths still resolve against `projectRoot`, so the tree is real; only the ROWS
+ *   under consideration change. Added by story dist-2-8 so the ratchet can validate the set the
+ *   installer actually seeds rather than the full candidate list. Omitted, every row is validated,
+ *   which is the pre-existing behaviour every other caller relies on.
+ */
+function validate(projectRoot, options = {}) {
+  const { rowFilter } = options;
   const manifestPath = path.join(projectRoot, '_bmad', '_config', 'skill-manifest.csv');
-  const { header, rows } = readManifest(manifestPath);
+  const { header, rows: allRows } = readManifest(manifestPath);
+  const rows = rowFilter ? allRows.filter((r) => rowFilter(r, header)) : allRows;
 
   const tierIdx = header.indexOf('tier');
   const intentIdx = header.indexOf('intent');
@@ -437,7 +448,17 @@ function validate(projectRoot) {
   }
 
   const nameIdx = header.indexOf('name');
-  const validSkillNames = new Set(rows.map((r) => r[nameIdx]));
+  // VOCABULARY COMES FROM THE FULL MANIFEST, NOT THE FILTERED SET — and this is not an oversight.
+  // `[ORPHAN-DEP]` is defined at the top of this file as "bare skill-name dep not in manifest": a
+  // TYPO check against the manifest's vocabulary. Deriving it from a filtered set silently changes
+  // the question to "not in the SEEDING set", which is a different check and reports rows that are
+  // spelled correctly and genuinely exist. Measured while building dist-2-8's filter: doing so
+  // produced two findings — `bmad-help` -> `bmad-quick-dev` and `bmad-migrate-artifacts` ->
+  // `bmad-create-epics-and-stories` — where both dependency targets ARE real manifest rows that
+  // simply do not resolve in THIS repo, because upstream content was deleted here by `a16fa340`.
+  // In an operator's project with BMAD installed they resolve and seed normally. So the filter
+  // narrows WHICH ROWS are examined; it must not narrow what counts as a known skill name.
+  const validSkillNames = new Set(allRows.map((r) => r[nameIdx]));
 
   const findings = [];
   for (const row of rows) {

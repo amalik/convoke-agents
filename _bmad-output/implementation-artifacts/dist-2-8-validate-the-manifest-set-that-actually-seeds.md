@@ -1,8 +1,10 @@
+---
+baseline_commit: 82a14e67424c1600c62ab0146771c9dfa9ef102d
+---
+
 # Story 2.8: Validate the manifest set that actually seeds
 
-Status: ready-for-dev
-
-<!-- baseline_commit deliberately ABSENT — it is `dev-story`'s field, stamped at implementation start. -->
+Status: review
 
 > **Re-authored 2026-08-31. The previous story — "Repair the broken dependencies in the shipped
 > manifest" — rested on a premise that is refuted, and its acceptance criteria asked for work that
@@ -89,12 +91,29 @@ temptation is rather than only in an archive they have no reason to open
 
 ## Tasks / Subtasks
 
-- [ ] **T1 — Locate and reuse the installer's filter predicate** (`refresh-installation.js:529-540`); export it if it is inline, so test and installer share one definition
-- [ ] **T2 — Repoint Test 1b at the filtered set** (`tests/lib/portability-validation.test.js:117-146`); leave Test 1a alone
-- [ ] **T3 — Non-vacuity floor** (AC3), derived at implementation time
-- [ ] **T4 — Empty the baseline**, keep the file, confirm the ratchet still fires by planting a synthetic broken dep on a *seeding* row and observing red, then removing it
-- [ ] **T5 — Comments** recording the coverage trade (AC4) and the trap (AC5)
-- [ ] **T6 — Close I134** against this story in the same session the code ships, with the row reflecting *premise refuted / check rescoped*, not *dependencies repaired*
+- [x] **T1 — Locate and reuse the installer's filter predicate** (`refresh-installation.js:529-540`); export it if it is inline, so test and installer share one definition
+- [x] **T2 — Repoint Test 1b at the filtered set** (`tests/lib/portability-validation.test.js:117-146`); leave Test 1a alone
+- [x] **T3 — Non-vacuity floor** (AC3), derived at implementation time
+- [x] **T4 — Empty the baseline**, keep the file, confirm the ratchet still fires by planting a synthetic broken dep on a *seeding* row and observing red, then removing it
+- [x] **T5 — Comments** recording the coverage trade (AC4) and the trap (AC5)
+- [x] **T6 — Close I134** against this story in the same session the code ships, with the row reflecting *premise refuted / check rescoped*, not *dependencies repaired*
+
+### Review Findings
+
+Round 1 — Blind Hunter, Edge Case Hunter and Acceptance Auditor as independent `claude-sonnet-5`
+subagents. 16 raw, 11 after dedup: **0 decision-needed, 7 patch, 4 defer.** No HIGH.
+
+- [x] **[Review][Patch] My "correction" of the story's module split was wrong, and had reached four places** [4 files] — **the headline.** I recorded `core` 12 / `bme` 19 and asserted the story's `core 11, bmm 1, bme 19` was mistaken. The story was right. I grouped by the second **path segment**; it grouped by the manifest's **`module` column**, and they differ on exactly one row (`bmad-create-prd`: path under `_bmad/core/`, module `bmm`). Same 31 rows, different basis. `verification-basis` failing in the direction that looks like diligence — I did re-derive, against the wrong basis. Corrected in the shipped test comment, this record, the Change Log and the I134 receipt, each keeping the wrong figure visible as history.
+- [x] **[Review][Patch] `manifestRowSeeds` does not disclose that containment is lexical, so a symlink escapes it** [scripts/update/lib/refresh-installation.js] — Blind Hunter reproduced it against `/etc/passwd`: `path.resolve` collapses `..` textually and `statSync` follows symlinks. Pre-existing behaviour, but the docblock advertised two guards and named no limits, and the function is now **exported and read by a test** — an undisclosed limit in a shared predicate is worse than one in a private block. Limits documented; the fix belongs with the symlink-containment class already filed from `dist-2-2` Round 3.
+- [x] **[Review][Patch] A truthy non-string `rel` threw out of the predicate** [same] — `if (!rel)` catches empty and undefined but not a number or object, and `path.resolve` then throws a TypeError outside the caller's try/catch. Now `typeof`-guarded; verified against `42`, `{}`, `null`, `undefined`, `''`.
+- [x] **[Review][Patch] The baseline file's own "a missing baseline is a removed gate" claim was enforced by nothing** [tests/lib/portability-validation.test.js] — deleting it produced a raw ENOENT stack, not the diagnostic the header promises. Now asserted explicitly.
+- [x] **[Review][Patch] Baseline parsing was whitespace-fragile** [same] — a leading space before `#` made a comment into a phantom expected finding; trailing whitespace made a real line read as both appeared AND resolved. Lines are trimmed before use. Matters more now the file is comment-only.
+- [x] **[Review][Patch] AC4's coverage-trade comment implied a second gap without naming it** [same] — nothing checks whether a SEEDING row's bare-name dependency points at a row that also seeds. Named explicitly, with both live examples and why neither existing finding type can cover it.
+- [x] **[Review][Patch] "35 installer tests green" was unreproducible as written** [this record] — both Blind Hunter and the Auditor tried and failed to reconstruct which files it meant. Now names them.
+
+**Deferred (4), in `deferred-work.md`:** Test 1b's flakiness under the parallel suite (a false red in 1 of 4 runs — the only test validating against live `REPO_ROOT`); the missing finding type for seeding-row-depends-on-non-seeding-row; the floor's arbitrariness; and `rowFilter` aborting the run where the loop beneath it degrades gracefully.
+
+**What Round 1 verified clean, having been told to doubt it:** the trap was not walked into (`skill-manifest.csv` appears nowhere in the diff); the extraction is behaviour-preserving, verified against the pre-extraction block on adversarial inputs; `validate()`'s default path is byte-identical for all ten other callers; the vocabulary asymmetry is correctly reasoned, with the `.claude/skills/` claim independently checked rather than taken on faith; all seven re-derived citations are exact; the ratchet fires on a live plant; and every gate figure reproduced. **Blind Hunter independently hit the same vacuous-plant trap I did** — its first plant silently failed on CRLF line endings — and caught it the same way, by grepping for the planted string before trusting the run.
 
 ---
 
@@ -180,11 +199,127 @@ demonstration from T4, and I134's close as *premise refuted* rather than *repair
 
 | Date | Change |
 |---|---|
+| 2026-09-07 | **Implemented. All 5 ACs met; I134 closed as premise refuted.** Test 1b now validates the **31 of 106** rows that seed (`core` 11, `bmm` 1, `bme` 19 — the story's figure, which was correct; my first "correction" of it was wrong and Round 1 disproved it), using the installer's **exported** predicate rather than a copy. Baseline emptied 4 → 0, file kept, ratchet re-proven live by planting a broken dep on a seeding row. **No `path` cell edited** — the trap that has caught four attempts is now documented at the test with both commit SHAs. **Two things caught by measuring rather than reasoning:** filtering the row set also filtered `[ORPHAN-DEP]`'s vocabulary, silently changing a typo check into a seeding check and producing two spurious findings — reverted once the finding type's own definition was read; and my first ratchet falsification passed vacuously because the planting script had thrown, caught only by verifying the fixture landed. |
 | 2026-08-31 | Re-authored and renamed from `dist-2-8-repair-the-broken-dependencies-in-the-shipped-manifest`. Old ACs asked for a repair that cannot be performed; premise refuted by archive:355. Rescoped to what Test 1b validates, per operator ruling (option 2, filtered/seeding set). |
 
 ---
 
 ## Dev Agent Record
+
+### Agent Model Used
+
+claude-opus-5[1m]
+
+### Completion Notes List
+
+**AC1 — the seeding set, via the installer's own predicate.** *(Installer regression check: the 35
+figure below is `node --test` over `refresh-installation-bmm-deps`, `-artifacts` and `-portability`
+— named because two Round 1 reviewers independently could not reconstruct which files it meant.)* The filter was inline in
+`refreshInstallation`; it is now `manifestRowSeeds(rel, projectRootResolved)`, exported, and the
+installer calls it. `validate()` gained an optional `rowFilter`, so dependency paths still resolve
+against the real tree and only the examined ROWS narrow. Test 1b passes the exported predicate —
+never a reimplementation, which is what AC1 forbids and what would let the test and installer drift
+into disagreeing about what ships. The extraction is behaviour-preserving: 35 installer tests green,
+and the predicate still yields the same 31 rows.
+
+**AC1 — Test 1a untouched**, as required. It answers a different question against the fixture.
+
+**AC2 — the baseline emptied, and the file was kept.** **4** lines removed, derived. All four sat on
+rows whose `path` does not resolve, so none ever seeds. The file now carries only its header
+comment, which states that an empty baseline is the goal state and a missing one is a removed gate.
+
+**AC3 — non-vacuity floor.** `totalSkills >= 25` against a measured **31**, plus the `> 0` guard.
+Set below the measurement so ordinary churn does not trip it, high enough that a filter collapsing
+to a handful fails loudly.
+
+**COUNTS RE-DERIVED — AND MY FIRST "CORRECTION" WAS ITSELF WRONG, WHICH IS THE MORE USEFUL RESULT.**
+Measured 2026-09-07: **31 of 106 rows seed — `core` 11, `bmm` 1, `bme` 19**, which is exactly what
+the story's Dev Notes said. It was right.
+
+I had recorded `core` 12 / `bme` 19 and stated the story was wrong. It was not: I grouped by the
+**second path segment** while the story grouped by the manifest's own **`module` column**, and the
+two disagree on exactly one row — `bmad-create-prd`, whose `path` is under `_bmad/core/` but whose
+`module` is `bmm`. Same 31 rows, different basis, and I asserted a correct figure was mistaken.
+
+That is `verification-basis` failing in the direction that looks like diligence: I re-derived, as
+the story told me to, but against a basis the claim was not about. **The false correction reached
+four places** — a shipped code comment in `tests/lib/portability-validation.test.js`, this record,
+the story Change Log, and the I134 receipt in the backlog — before Round 1's Acceptance Auditor
+reproduced the real split and disproved it. All four are corrected.
+
+**A DESIGN DECISION I GOT WRONG AND CAUGHT BY MEASURING.** My first implementation derived
+`validSkillNames` from the FILTERED rows, reasoning that a dependency on a non-seeding row is
+genuinely absent from the operator's project. That produced **two new `[ORPHAN-DEP]` findings** —
+`bmad-help` → `bmad-quick-dev`, and `bmad-migrate-artifacts` → `bmad-create-epics-and-stories` —
+which would have contradicted AC2's "the baseline empties". Rather than add them to the baseline or
+argue, I checked what the finding type is defined to mean. This file's own header says
+`[ORPHAN-DEP] bare skill-name dep **not in manifest**`, and the report calls it *"Skill-name
+dependencies that don't exist in the manifest"*: a **typo check against the manifest's vocabulary**.
+Both targets ARE real manifest rows; they merely fail to resolve *in this repo*, because upstream
+content was deleted here by `a16fa340` — in an operator's project with BMAD installed they resolve
+and seed normally. Filtering the vocabulary silently redefined the check. **The filter narrows which
+rows are examined; it must not narrow what counts as a known skill name.** Reverted, with the
+reasoning recorded at the code. Findings then went to zero, as AC2 predicted.
+
+**AC4 — the coverage trade is stated at the test**, not left to be discovered: a genuinely broken
+dependency on a NON-seeding upstream row is no longer caught here; that coverage was already
+unreachable because CI cannot see gitignored content; Test 1a's fixture is the place to add it back.
+
+**AC5 — the trap is documented at the code.** Test 1b's comment names `4ed770a0`, `8f2fbda0`,
+`.gitignore:62` and `convoke-note-backlog-completed-archive.md:355`, and says plainly that
+repointing `path` at `.claude/skills/` produces a false green. **No manifest `path` cell was edited
+by this story** — verified: the only manifest change in the diff is none.
+
+**T4 — the ratchet was re-proven live, and my first attempt at proving it was itself broken.**
+A broken dependency was planted on a row that DOES seed:
+
+```
+PLANTED on seeding row: bmad-advanced-elicitation
+  occurrences in file: 1          <- fixture VERIFIED before running
+  15 pass, 1 fail — "NEW hard classification finding(s) — a skill dependency broke"
+restored: 16 pass, 0 fail; manifest byte-identical
+```
+
+**The first attempt reported a clean pass and meant nothing** — the planting script threw on a
+header parse, so nothing was planted, and the green was vacuous. It was caught only by checking that
+the plant had landed. This is `dist-2-7`'s lesson arriving one story later: *a falsification that
+does not verify its own fixture is itself a check that cannot fail.* The verification step above is
+now part of the demonstration, not an afterthought.
+
+**Citation alarm fired again, and correctly.** Extracting the predicate shifted
+`refresh-installation.js`, so seven line citations in `scripts/audit/lib/installed-tree.js` went
+stale and the alarm failed the suite. All seven re-derived mechanically — no offsets computed, each
+looked up by anchor.
+
+**The CLI is unchanged and is not a gate.** `node scripts/portability/validate-classification.js`
+still reports the full 106 rows and 4 errors, because `main()` calls `validate(projectRoot)` with no
+options and the new parameter defaults to the previous behaviour. Verified it appears in neither
+`.github/workflows/ci.yml` nor any npm script. Noting the resulting asymmetry deliberately: the CLI
+now says FAIL while CI says green, and a developer running it by hand could reasonably be confused.
+
+**Gates, each run against this change.**
+
+```
+npm test                 2216 tests, 2215 pass, 0 fail, 1 pre-existing skip
+lint                     clean (eslint --max-warnings 0)
+docs:audit               zero findings
+backlog-integrity        PASS — 816 rows (815 + I134's receipt)
+agent-surface-parity     PASS (vs v4.0.1, the tag CI uses)
+install-scope-check      PASS
+skill-manifest-integrity PASS
+```
+
+### File List
+
+**Modified**
+- `scripts/update/lib/refresh-installation.js` — seeding predicate extracted to `manifestRowSeeds` and exported; installer calls it
+- `scripts/portability/validate-classification.js` — optional `rowFilter`; vocabulary explicitly kept at the full manifest
+- `scripts/audit/lib/installed-tree.js` — seven line citations re-derived after the extraction shifted the file
+- `tests/lib/portability-validation.test.js` — Test 1b repointed at the seeding set, floor, coverage-trade and trap comments
+- `.github/expected-classification-findings.txt` — emptied to zero findings, file kept, header rewritten
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — I134 closed as premise refuted; Change Log entry
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — status transitions
+- `_bmad-output/implementation-artifacts/dist-2-8-validate-the-manifest-set-that-actually-seeds.md` — this record
 
 ### Agent Model Used
 
