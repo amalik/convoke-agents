@@ -4,7 +4,7 @@ baseline_commit: 716dce4cd285f443120318cbd0e409ab5582ddcf
 
 # Story 2.3b: Move the Covenant into source-owned space
 
-Status: review
+Status: done
 
 <!-- baseline_commit is stamped in the frontmatter above by dev-story at implementation start. -->
 
@@ -166,6 +166,7 @@ finding count before and after, and all four gate results.
 
 | Date | Change |
 |---|---|
+| 2026-09-07 | Shipped as `28cbf81c`; CI green. Both moves recorded by git as renames (R099/R098), so history follows. Status → `done`. Three deviations from the ACs as written are disclosed in the notes (AC1's `files[]` form, AC2's record-prose exclusions, AC3's absent standing check). Three items filed to the backlog. Rounds 1-3 complete; cap reached. |
 | 2026-09-07 | Implemented. Findings **10 → 5 across 2 files**; `_bmad/bme/README.md` at **0** (AC4). Reference count re-derived: **58** files carried the old names at the baseline, **37** still do, so 21 were fully cleaned; 33 files had reference changes. AC1 deviation: shipped as two named FILE entries, not a directory entry — a `_bmad/bme/<name>/` entry is read as a MODULE. Two verbatim records and ADR-002 excluded from the rewrite. Two Checklist outbound links converted to absolute URLs — a case the spec did not enumerate. |
 | 2026-08-31 | Split from Story 2.3. AC4 settled per ADR-002 Amendment 2(1); AC5 added — the Covenant is one of the ten self-referential absolute URLs, so this story is the first real exercise of 2.2's AC5. Count refreshed 47 → 54. |
 
