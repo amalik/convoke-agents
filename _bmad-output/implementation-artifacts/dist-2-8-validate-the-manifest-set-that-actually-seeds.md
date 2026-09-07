@@ -4,7 +4,7 @@ baseline_commit: 82a14e67424c1600c62ab0146771c9dfa9ef102d
 
 # Story 2.8: Validate the manifest set that actually seeds
 
-Status: review
+Status: done
 
 > **Re-authored 2026-08-31. The previous story — "Repair the broken dependencies in the shipped
 > manifest" — rested on a premise that is refuted, and its acceptance criteria asked for work that
@@ -199,6 +199,7 @@ demonstration from T4, and I134's close as *premise refuted* rather than *repair
 
 | Date | Change |
 |---|---|
+| 2026-09-07 | **Closed. CI green on `17f0cedc`** (`agent-surface-parity`, `fresh-install` and all three Node versions success). The ratchet now checks the rows an operator actually receives — **31 of 106**, filtered by the installer's own exported predicate — so a green means something and a red is repairable. Baseline 4 → 0, file kept, ratchet re-proven live. **I134 closed as premise refuted**, not repaired. **The trap held: no `path` cell edited**, verified against the commit. Round 1: 7 patches, 4 defers, 0 HIGH — three of the seven were false claims in this record, the sharpest being a "correction" of a figure that was already right. 4 items deferred, including Test 1b's pre-existing flakiness under the parallel suite. |
 | 2026-09-07 | **Implemented. All 5 ACs met; I134 closed as premise refuted.** Test 1b now validates the **31 of 106** rows that seed (`core` 11, `bmm` 1, `bme` 19 — the story's figure, which was correct; my first "correction" of it was wrong and Round 1 disproved it), using the installer's **exported** predicate rather than a copy. Baseline emptied 4 → 0, file kept, ratchet re-proven live by planting a broken dep on a seeding row. **No `path` cell edited** — the trap that has caught four attempts is now documented at the test with both commit SHAs. **Two things caught by measuring rather than reasoning:** filtering the row set also filtered `[ORPHAN-DEP]`'s vocabulary, silently changing a typo check into a seeding check and producing two spurious findings — reverted once the finding type's own definition was read; and my first ratchet falsification passed vacuously because the planting script had thrown, caught only by verifying the fixture landed. |
 | 2026-08-31 | Re-authored and renamed from `dist-2-8-repair-the-broken-dependencies-in-the-shipped-manifest`. Old ACs asked for a repair that cannot be performed; premise refuted by archive:355. Rescoped to what Test 1b validates, per operator ruling (option 2, filtered/seeding set). |
 

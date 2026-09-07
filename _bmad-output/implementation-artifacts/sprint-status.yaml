@@ -919,7 +919,7 @@ development_status:
   dist-1-6-rehearse-the-composed-job-before-the-release-tag: done
   dist-1-7-make-the-ci-path-the-only-path-to-the-registry: done
   dist-epic-1-retrospective: done
-  dist-epic-2: in-progress
+  dist-epic-2: done
   dist-2-1-run-the-docs-audit-in-ci: done
   dist-2-2-assert-every-documented-reference-resolves-inside-the-package: done
   dist-2-3a-exclude-the-conversion-tooling-from-the-package: done
@@ -929,7 +929,7 @@ development_status:
   dist-2-5-ship-the-dependency-registry-and-close-bug-19: done
   dist-2-6-make-portability-reachable-and-wire-the-installed-tree-assertion-in: done
   dist-2-7-escape-every-interpolated-regex-in-the-exporter: done
-  dist-2-8-validate-the-manifest-set-that-actually-seeds: review
+  dist-2-8-validate-the-manifest-set-that-actually-seeds: done
   dist-epic-2-retrospective: optional
   dist-epic-1b: done
   dist-1b-1-close-the-downgrade-guard-fail-open-and-prove-it-on-a-runner: done
