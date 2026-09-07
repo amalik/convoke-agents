@@ -489,7 +489,7 @@ describe('validateFrontmatterSchema', () => {
 
   it('accepts covenant artifact_type when present in taxonomy', () => {
     // When taxonomy includes 'covenant', files with artifact_type: covenant must validate.
-    // Covers the consumer path exercised by files like convoke-covenant-operator.md.
+    // Covers the consumer path exercised by files like covenant-operator.md.
     const taxonomyWithCovenant = { ...taxonomy, artifact_types: [...taxonomy.artifact_types, 'covenant'] };
     const result = validateFrontmatterSchema({ ...validFields, artifact_type: 'covenant' }, taxonomyWithCovenant);
     assert.equal(result.valid, true);

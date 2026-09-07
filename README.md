@@ -140,7 +140,7 @@ Your artifacts in `_bmad-output/` and `.gyre/` are never touched. [UPDATE-GUIDE.
 | [Development Guide](https://github.com/amalik/convoke-agents/blob/main/docs/development.md) | Architecture, building agents, contributing |
 | [FAQ](https://github.com/amalik/convoke-agents/blob/main/docs/faq.md) | Common questions |
 
-> **Writing a Convoke skill?** Read [The Convoke Operator Covenant](https://github.com/amalik/convoke-agents/blob/main/_bmad-output/planning-artifacts/convoke-covenant-operator.md) first — one axiom and seven Operator Rights every Convoke skill honours. Operator-facing behaviour is an architectural concern in agent systems, not a styling one: a skill that violates the Covenant erodes trust across the whole ecosystem, not just its own surface.
+> **Writing a Convoke skill?** Read [The Convoke Operator Covenant](https://github.com/amalik/convoke-agents/blob/main/_bmad/bme/covenant/covenant-operator.md) first — one axiom and seven Operator Rights every Convoke skill honours. Operator-facing behaviour is an architectural concern in agent systems, not a styling one: a skill that violates the Covenant erodes trust across the whole ecosystem, not just its own surface.
 
 ---
 

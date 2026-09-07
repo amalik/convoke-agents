@@ -53,8 +53,19 @@ artifact_types:
   #   (2) Compliance with the document is testable/auditable against explicit criteria
   # Distinct from 'spec' (implementation-focused) in metabolic rate and audience:
   # covenants evolve slowly as principles; specs evolve tactically with code.
-  # First planned example: the Convoke Operator Covenant (convoke-covenant-operator.md),
-  # to be authored in oc-1-4-covenant-authoring. Until then, this type has no files.
+  # The Convoke Operator Covenant is the example. It WAS authored (oc-1-4) and it now lives in
+  # source-owned space at `_bmad/bme/covenant/covenant-operator.md` — story dist-2.3b. It is in
+  # `files[]`, so it reaches the published package; it does NOT yet reach an installed project,
+  # because no install path copies it. That is the same gap `_bmad/bme/_portability/` has and is
+  # dist-2.6's scope. (An earlier version of this comment said "where it ships to operators",
+  # which overstated it: the tarball is not the operator's project.)
+  # The Covenant is therefore no longer inside the directories the artifact scanner walks
+  # (`planning-artifacts`, `vortex-artifacts`, `gyre-artifacts`; see artifact-utils.js
+  # `includeDirs`), so no scanned file carries `artifact_type: covenant` today. The moved file
+  # keeps its frontmatter: per ADR-003 the class is a property of the artifact, not of the
+  # directory. An earlier version of this comment said the Covenant was "to be authored" and that
+  # "until then, this type has no files" — the first half was stale from oc-1-4, and the second is
+  # now true again for an entirely different reason.
   - covenant
 
 # Historical name aliases (migration-only)

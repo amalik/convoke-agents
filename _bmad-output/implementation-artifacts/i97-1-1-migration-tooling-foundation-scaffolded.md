@@ -89,7 +89,7 @@ so that per-agent conversions in Epic 2 have the harness infrastructure and veri
 - Slash-command wrappers under [`.claude/skills/bmad-agent-bme-*/`](../../.claude/skills/)
 - Retrospective citations in `_bmad-output/implementation-artifacts/*-retro-*.md`
 - Audit report citations in `_bmad-output/planning-artifacts/convoke-report-*-audit-*.md`
-- Compliance Checklist file references in [`convoke-spec-covenant-compliance-checklist.md`](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md)
+- Compliance Checklist file references in [`convoke-spec-covenant-compliance-checklist.md`](../../_bmad/bme/covenant/compliance-checklist.md)
 
 **And** the script uses **mechanical research enumeration** per `mechanical-research-enumeration` rule (project-context.md): `grep -r` / Node `glob` patterns, NOT eyeballing or LLM inference. Implementation MAY shell out to `git grep` or `grep -rE` if that's faster than a pure-Node implementation; the operative constraint is determinism.
 

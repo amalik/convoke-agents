@@ -16,12 +16,12 @@
 
 ## Methodology applied
 
-- **Rubric:** OC-R7 Right to pacing — ≤3 novel concepts per interaction round (per [Covenant §6.7](../planning-artifacts/convoke-covenant-operator.md), [Compliance Checklist §2.6 Novel-Concept Glossary](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md)).
+- **Rubric:** OC-R7 Right to pacing — ≤3 novel concepts per interaction round (per [Covenant §6.7](../../_bmad/bme/covenant/covenant-operator.md), [Compliance Checklist §2.6 Novel-Concept Glossary](../../_bmad/bme/covenant/compliance-checklist.md)).
 - **§A41-2 hybrid counting (scope-tightened post-pre-exec):** multi-field contract enumerations (HC1/HC2/HC3 schema fields, GC contract sub-fields per stated examples) count as **1 compound concept if ≤3 visible sub-fields**, **N concepts if ≥4 visible sub-fields**. **Pre-exec review patch (Edge Case Hunter C1+C2 + Blind Hunter H2 convergent):** §A41-2 is restricted to its stated domain. Markdown tables (e.g., Cell A's Behavior observation table), category checklists (e.g., Cell C's Riskiest Value Assumption 5-checkbox), sentence-template placeholders (e.g., Cell C's "We believe that..." template), and cross-workflow named references (e.g., Cell A's "Wade's lean-experiment / proof-of-concept / proof-of-value / mvp") are **NOT counted via §A41-2** — they fall under §2.6 general novel-concept counting (each visibly-enumerated structure as 1 compound concept charitably, or N concepts strictly under §2.6's "novel concept" rubric). §A41-2 scope-clarification logged as §9 ambiguity #1 for forward-only methodology amendment.
 - **§A41-3 vacuous-PASS:** none of the 3 cells are vacuous — all 3 step-01 surfaces have an operator-decision branch where R7 can fire (operator is asked to provide HC artifact + complete validation/canvas/checklist).
 - **§A41-5 reading-dependent:** verdicts below commit to the strict reading for the headline; charitable readings noted as alternative + logged in §9 Rubric Ambiguities Surfaced.
 - **Evidence-note format:** ≤2 sentences, `file:line` citations, names-not-numbers (per A26 AC2 + A24 §4.1 precedent).
-- **Concept budget exclusions:** Covenant glossary terms (operator, default, override, scope, etc. per [Covenant §3](../planning-artifacts/convoke-covenant-operator.md)) excluded; HC-schema names + Convoke-internal validation enumerations counted as novel.
+- **Concept budget exclusions:** Covenant glossary terms (operator, default, override, scope, etc. per [Covenant §3](../../_bmad/bme/covenant/covenant-operator.md)) excluded; HC-schema names + Convoke-internal validation enumerations counted as novel.
 
 ## Pre-staged AC3 disclaimer (for Task 5 final report Executive Summary §1)
 

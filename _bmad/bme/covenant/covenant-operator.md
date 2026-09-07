@@ -191,7 +191,7 @@ If a future right is proposed for the Covenant, it must be shown as a direct con
 
 ## 8. How to Comply
 
-Convoke skills are audited against the Compliance Checklist (`convoke-spec-covenant-compliance-checklist.md`). The Checklist is the operational instrument; this Covenant is the principle. Together they form the standard:
+Convoke skills are audited against the Compliance Checklist (`compliance-checklist.md`). The Checklist is the operational instrument; this Covenant is the principle. Together they form the standard:
 
 - **Contributors:** read this Covenant before authoring a new skill. Apply the Checklist's questions as you design each interaction.
 - **Reviewers:** use the Checklist as your audit instrument. Reach for this Covenant when a rule's intent is unclear.

@@ -39,8 +39,8 @@
 
 const fs = require('fs-extra');
 
-// Operator Rights enumerated. Source of truth: convoke-covenant-operator.md
-// + convoke-spec-covenant-compliance-checklist.md. Frozen so consumers
+// Operator Rights enumerated. Source of truth: _bmad/bme/covenant/covenant-operator.md
+// + _bmad/bme/covenant/compliance-checklist.md. Frozen so consumers
 // can't mutate (Round 2 review patch R2-P9 — consistency with sibling
 // ROLE_TO_FIRSTNAME_REGISTRY in personality-harness).
 const OPERATOR_RIGHTS = Object.freeze(['OC-R1', 'OC-R2', 'OC-R3', 'OC-R4', 'OC-R5', 'OC-R6', 'OC-R7']);

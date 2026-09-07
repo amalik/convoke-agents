@@ -73,7 +73,7 @@ Derived from [Epic Story 2.1 ACs](../planning-artifacts/convoke-epic-operator-co
 **AC7 — Covenant self-compliance.**
 *Given* the new `step-01-receive-contract.md` lands under `_bmad/bme/` (Convoke's owned namespace)
 *When* it is authored
-*Then* the author has read [The Convoke Operator Covenant](../planning-artifacts/convoke-covenant-operator.md) and self-checked the deliverable against the [Compliance Checklist](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md) OC-R0..OC-R7, per `project-context.md` rule `covenant-compliance-for-convoke-skills`. OC-R0's enumeration precondition is satisfied first.
+*Then* the author has read [The Convoke Operator Covenant](../../_bmad/bme/covenant/covenant-operator.md) and self-checked the deliverable against the [Compliance Checklist](../../_bmad/bme/covenant/compliance-checklist.md) OC-R0..OC-R7, per `project-context.md` rule `covenant-compliance-for-convoke-skills`. OC-R0's enumeration precondition is satisfied first.
 *This is not ceremony:* the artifact whose purpose is fixing a Covenant violation must not itself violate the Covenant.
 
 **AC8 — Non-blocking carry-forward is declared, not silently dropped.**
@@ -317,8 +317,8 @@ The shared scaffold holds **the invariant scaffold only** — round split, foote
 - [A24 Vortex audit §6.1 retrofit scope, §6.2 pattern, §7.1 A10 cleared 100%](../planning-artifacts/convoke-report-operator-covenant-audit-vortex-2026-04-19.md)
 - [A26 HC-cluster audit §4 per-cell evidence, §10 retrofit catalog *(see correction)*](../planning-artifacts/convoke-report-operator-covenant-audit-vortex-hc-cluster-2026-04-26.md)
 - [oc-1-1 baseline audit §9.1 retrofit #4, §9.2 `Concept count` pattern](../planning-artifacts/convoke-report-operator-covenant-audit-2026-04-18.md)
-- [Compliance Checklist — OC-R7, Novel-Concept Glossary, §A41-2/-5/-13/-14](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md)
-- [The Convoke Operator Covenant](../planning-artifacts/convoke-covenant-operator.md)
+- [Compliance Checklist — OC-R7, Novel-Concept Glossary, §A41-2/-5/-13/-14](../../_bmad/bme/covenant/compliance-checklist.md)
+- [The Convoke Operator Covenant](../../_bmad/bme/covenant/covenant-operator.md)
 - [T86 + P21 rows — corrected blocker reading](../planning-artifacts/convoke-note-initiative-lifecycle-backlog.md)
 - `project-context.md` — namespace, covenant-compliance, fixture-isolation, falsifiability rules
 

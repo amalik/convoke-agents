@@ -923,7 +923,7 @@ development_status:
   dist-2-1-run-the-docs-audit-in-ci: done
   dist-2-2-assert-every-documented-reference-resolves-inside-the-package: done
   dist-2-3a-exclude-the-conversion-tooling-from-the-package: done
-  dist-2-3b-move-the-covenant-into-source-owned-space: ready-for-dev
+  dist-2-3b-move-the-covenant-into-source-owned-space: review
   dist-2-3c-settle-the-changelog-links-and-wire-the-gate-in-blocking: ready-for-dev
   dist-2-4-assert-the-installed-tree-carries-what-was-shipped: done
   dist-2-5-ship-the-dependency-registry-and-close-bug-19: done

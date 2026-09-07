@@ -20,8 +20,8 @@ schema_version: 1
 |-------|-------|--------|-------------|
 | oc-1-1 | Covenant Audit | done | [convoke-report-operator-covenant-audit-2026-04-18.md](../planning-artifacts/convoke-report-operator-covenant-audit-2026-04-18.md) — 46/56 cells PASS (82% compliance), no bottleneck |
 | oc-1-2 | Taxonomy Extension | done | `covenant` added to `taxonomy.yaml`; `DEFAULT_ARTIFACT_TYPES` updated in merger + migrator |
-| oc-1-3 | Checklist Derivation | done | [convoke-spec-covenant-compliance-checklist.md](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md) — OC-R0 through OC-R7, 3-layer audit scope, parser grammar, 6 status values |
-| oc-1-4 | Covenant Authoring | done | [convoke-covenant-operator.md](../planning-artifacts/convoke-covenant-operator.md) — axiom, 11-term vocabulary, §6 Seven Operator Rights, compliance protocol |
+| oc-1-3 | Checklist Derivation | done | [convoke-spec-covenant-compliance-checklist.md](../../_bmad/bme/covenant/compliance-checklist.md) — OC-R0 through OC-R7, 3-layer audit scope, parser grammar, 6 status values |
+| oc-1-4 | Covenant Authoring | done | [convoke-covenant-operator.md](../../_bmad/bme/covenant/covenant-operator.md) — axiom, 11-term vocabulary, §6 Seven Operator Rights, compliance protocol |
 | oc-1-5 | Adoption Surface | done | 3-of-4 discovery-path coverage: repo README + new bme/README + project-context.md |
 
 **Delivery metrics:**
@@ -177,6 +177,6 @@ One notable reframe: Epic 2's oc-2-1 retrofit was scoped assuming oc-1-1 would f
 
 - Epic file: [convoke-epic-operator-covenant.md](../planning-artifacts/convoke-epic-operator-covenant.md)
 - Stories: [oc-1-1](oc-1-1-covenant-audit.md), [oc-1-2](oc-1-2-taxonomy-extension.md), [oc-1-3](oc-1-3-checklist-derivation.md), [oc-1-4](oc-1-4-covenant-authoring.md), [oc-1-5](oc-1-5-adoption-surface.md)
-- Deliverables: [audit report](../planning-artifacts/convoke-report-operator-covenant-audit-2026-04-18.md), [Checklist](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md), [Covenant](../planning-artifacts/convoke-covenant-operator.md)
+- Deliverables: [audit report](../planning-artifacts/convoke-report-operator-covenant-audit-2026-04-18.md), [Checklist](../../_bmad/bme/covenant/compliance-checklist.md), [Covenant](../../_bmad/bme/covenant/covenant-operator.md)
 - Deferred findings: [deferred-work.md](deferred-work.md) (oc-1-5 section) + initiatives backlog IN-12 through IN-23
 - Project rules applied: [project-context.md](../../project-context.md) — notably `code-review-convergence`, `namespace-decision-for-new-skills`, `covenant-compliance-for-convoke-skills` (new this epic)

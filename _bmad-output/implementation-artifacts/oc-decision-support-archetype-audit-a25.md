@@ -35,7 +35,7 @@ A25's purpose is to *break the single-sample-with-COI dependency* in oc-1-1's de
 
 ## Acceptance Criteria
 
-**AC1 — Methodology reuse, not revision.** The audit applies §2.3 scoring scheme (strict binary PASS/FAIL, no partial credit) + §2.4 per-right rubric + §2.6 novel-concept glossary from [convoke-report-operator-covenant-audit-2026-04-18.md](../planning-artifacts/convoke-report-operator-covenant-audit-2026-04-18.md) verbatim, **plus** the A41-Clarifications (§A41-1..§A41-13) from [convoke-spec-covenant-compliance-checklist.md](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md). If a rubric ambiguity surfaces, it is recorded as a backlog intake (not resolved in-story). Same constraint A24 + A39 carried.
+**AC1 — Methodology reuse, not revision.** The audit applies §2.3 scoring scheme (strict binary PASS/FAIL, no partial credit) + §2.4 per-right rubric + §2.6 novel-concept glossary from [convoke-report-operator-covenant-audit-2026-04-18.md](../planning-artifacts/convoke-report-operator-covenant-audit-2026-04-18.md) verbatim, **plus** the A41-Clarifications (§A41-1..§A41-13) from [convoke-spec-covenant-compliance-checklist.md](../../_bmad/bme/covenant/compliance-checklist.md). If a rubric ambiguity surfaces, it is recorded as a backlog intake (not resolved in-story). Same constraint A24 + A39 carried.
 
 **AC2 — Audit findings reference rights by name** (e.g., "Right to pacing"), not number — same rule as oc-1-1 AC #2 and A24/A39 AC #2.
 

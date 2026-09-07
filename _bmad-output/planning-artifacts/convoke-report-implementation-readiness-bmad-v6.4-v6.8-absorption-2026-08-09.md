@@ -276,7 +276,7 @@ No UI is implied anywhere. The N/A declaration is honest, not an omission.
 
 A naive readiness check would score this chain "missing UX documentation." That would be wrong, and the reason is worth recording.
 
-Convoke's operator-experience specification is **[The Convoke Operator Covenant](convoke-covenant-operator.md)** (17 KB — one axiom, *"the operator is the resolver"*, plus seven Operator Rights) and its **[Compliance Checklist](convoke-spec-covenant-compliance-checklist.md)** (101 KB). Together they specify how every Convoke skill must behave toward the human at defaults, pauses, rationale, errors, and pacing — which is precisely what a UX specification does for a graphical product.
+Convoke's operator-experience specification is **[The Convoke Operator Covenant](../../_bmad/bme/covenant/covenant-operator.md)** (17 KB — one axiom, *"the operator is the resolver"*, plus seven Operator Rights) and its **[Compliance Checklist](../../_bmad/bme/covenant/compliance-checklist.md)** (101 KB). Together they specify how every Convoke skill must behave toward the human at defaults, pauses, rationale, errors, and pacing — which is precisely what a UX specification does for a graphical product.
 
 It is arguably a **stronger** artifact than a conventional UX deck, because it is **auditable and measurable**: NFR11 sets a floor (≥ 82%, baseline method), MO3 measures OC-R5 enforcement coverage, MO4 guards against regression, and the 2026-04-18 baseline audit scored 10 violations across 56 cells. A wireframe deck cannot be re-run as a gate; this can.
 

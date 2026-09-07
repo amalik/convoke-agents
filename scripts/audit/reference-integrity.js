@@ -43,8 +43,7 @@
  *   4. Audit report citations in `_bmad-output/planning-artifacts/
  *      convoke-report-*-audit-*.md`
  *   5. Compliance Checklist file references in
- *      `_bmad-output/planning-artifacts/convoke-spec-covenant-compliance-
- *      checklist.md`
+ *      `_bmad/bme/covenant/compliance-checklist.md`
  *
  * **`{{...}}` template-placeholder filter** (formalized in AC4 amendment
  * per Round 1 review decision D5): refs containing `{{` or `}}` are
@@ -83,7 +82,7 @@ const COVERAGE_SCOPES = {
   },
   complianceChecklist: {
     description: 'Compliance Checklist file references',
-    globs: ['_bmad-output/planning-artifacts/convoke-spec-covenant-compliance-checklist.md'],
+    globs: ['_bmad/bme/covenant/compliance-checklist.md'],
   },
 };
 

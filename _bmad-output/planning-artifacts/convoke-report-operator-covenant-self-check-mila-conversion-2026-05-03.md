@@ -24,8 +24,8 @@ predecessor: convoke-report-operator-covenant-self-check-wade-conversion-2026-05
 - `.claude/skills/bmad-agent-bme-research-convergence-specialist/SKILL.md` (alias wrapper — gitignored auto-regen artifact, format-agnostic per Story 2.1 fix)
 
 **Reference documents:**
-- [Operator Covenant](convoke-covenant-operator.md) — one axiom + 7 Operator Rights (OC-R1..R7)
-- [Compliance Checklist](convoke-spec-covenant-compliance-checklist.md) — per-Right checks
+- [Operator Covenant](../../_bmad/bme/covenant/covenant-operator.md) — one axiom + 7 Operator Rights (OC-R1..R7)
+- [Compliance Checklist](../../_bmad/bme/covenant/compliance-checklist.md) — per-Right checks
 - [Story 2.1 Operator Covenant Self-Check](convoke-report-operator-covenant-self-check-emma-conversion-2026-05-02.md) — original predecessor, OC-R3 + OC-R5 inheritance source
 - [Story 2.2 Operator Covenant Self-Check](convoke-report-operator-covenant-self-check-wade-conversion-2026-05-02.md) — recent predecessor, no new flags raised
 

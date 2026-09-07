@@ -152,13 +152,13 @@ Dismissed (noise): 5 findings (rescore-history meta, ship-count arithmetic — a
 **The §2.6 rule amendment (load-bearing — read first)**
 
 - Entry point: the four new paragraphs canonicalizing the broader reading + scope + inheritance + anti-escape-hatch.
-  [`convoke-spec-covenant-compliance-checklist.md:120`](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md#L120)
+  [`convoke-spec-covenant-compliance-checklist.md:120`](../../_bmad/bme/covenant/compliance-checklist.md#L120)
 
 - Cross-reference target for the Scope paragraph — confirms §"Operator-facing vs agent-facing text" rule is consistent.
-  [`convoke-spec-covenant-compliance-checklist.md:173`](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md#L173)
+  [`convoke-spec-covenant-compliance-checklist.md:173`](../../_bmad/bme/covenant/compliance-checklist.md#L173)
 
 - Revisions table row — 4-paragraph description + Winston rationale + Round 1 review summary.
-  [`convoke-spec-covenant-compliance-checklist.md:296`](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md#L296)
+  [`convoke-spec-covenant-compliance-checklist.md:296`](../../_bmad/bme/covenant/compliance-checklist.md#L296)
 
 **Ambiguity resolution propagation**
 

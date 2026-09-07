@@ -264,7 +264,7 @@ grep -rE '_bmad/bme/_vortex/agents/contextualization-expert/SKILL\.md#' _bmad-ou
 
 ### AC16 — Operator Covenant compliance (per `covenant-compliance-for-convoke-skills` rule)
 
-**Given** Emma is a `_bmad/bme/` skill — per the `covenant-compliance-for-convoke-skills` rule (project-context.md), the [Operator Covenant](../planning-artifacts/convoke-covenant-operator.md) and [Compliance Checklist](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md) MUST be self-checked before marking the story `review`
+**Given** Emma is a `_bmad/bme/` skill — per the `covenant-compliance-for-convoke-skills` rule (project-context.md), the [Operator Covenant](../../_bmad/bme/covenant/covenant-operator.md) and [Compliance Checklist](../../_bmad/bme/covenant/compliance-checklist.md) MUST be self-checked before marking the story `review`
 **When** I work through the OC-R0 enumeration precondition + OC-R1 through OC-R7 against Emma's converted SKILL.md + 4 capability prompts + slash-command wrapper update
 **Then** every Right either PASSes or has a declared N/A variant with rationale documented in the PR description (or a linked compliance-check artifact at `_bmad-output/planning-artifacts/convoke-report-operator-covenant-self-check-emma-conversion-{YYYY-MM-DD}.md`).
 
@@ -477,7 +477,7 @@ Plus story-specific:
 
 ### Project-context.md rules — load-bearing for Emma's conversion
 
-- **`covenant-compliance-for-convoke-skills`** (mandatory — Emma is `_bmad/bme/`): Read [Operator Covenant](../planning-artifacts/convoke-covenant-operator.md) before authoring; self-check against [Compliance Checklist](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md); PASS or N/A every Right with rationale (AC16).
+- **`covenant-compliance-for-convoke-skills`** (mandatory — Emma is `_bmad/bme/`): Read [Operator Covenant](../../_bmad/bme/covenant/covenant-operator.md) before authoring; self-check against [Compliance Checklist](../../_bmad/bme/covenant/compliance-checklist.md); PASS or N/A every Right with rationale (AC16).
 - **`namespace-decision-for-new-skills`**: Story header above documents the namespace decision; no further action unless dev surfaces a mixed-namespace concern.
 - **`test-fixture-isolation`** (NFR4): all parity tests use `setupTmpDir` + `setupIsolatedInstall` (Story 1.1 helpers).
 - **`mechanical-research-enumeration`**: when listing menu codes / workflow paths / cited refs, use `grep` / `extractV5MenuCodes` / `extractV63MenuCodes` — never eyeball.
@@ -556,7 +556,7 @@ Full list: rubric § "Status" of [`convoke-spec-personality-preservation-rubric.
 - [`convoke-prd-bmad-v63-source-format-adoption.md`](../planning-artifacts/convoke-prd-bmad-v63-source-format-adoption.md) — primary FRs (FR1-25 mostly applicable; FR26-32 for E5/E6)
 - [`convoke-arch-bmad-v63-source-format-adoption.md`](../planning-artifacts/convoke-arch-bmad-v63-source-format-adoption.md) § Process Patterns (lines 438-468) + § Format Patterns (lines 375-407) + § Decision D1/D2/D3/D4/D5
 - [ADR-001](../planning-artifacts/adr/i97/adr-001-naming-convention-reconciliation.md), [ADR-002](../planning-artifacts/adr/i97/adr-002-conversion-tooling-architecture.md), [ADR-003](../planning-artifacts/adr/i97/adr-003-verification-harness-architecture.md), [ADR-004](../planning-artifacts/adr/i97/adr-004-atomic-by-agent-commit-and-tooling-namespace.md), [ADR-005](../planning-artifacts/adr/i97/adr-005-covenant-baseline-validity-policy.md)
-- [Operator Covenant](../planning-artifacts/convoke-covenant-operator.md) + [Compliance Checklist](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md) — load-bearing per `covenant-compliance-for-convoke-skills` rule
+- [Operator Covenant](../../_bmad/bme/covenant/covenant-operator.md) + [Compliance Checklist](../../_bmad/bme/covenant/compliance-checklist.md) — load-bearing per `covenant-compliance-for-convoke-skills` rule
 - [Personality rubric](../planning-artifacts/convoke-spec-personality-preservation-rubric.md) (status: calibrated) + Round 1/2 scoring sheets — consumed by AC11
 - Story 1.1 deliverables: [harness suite](../../scripts/migration/format-conversion/) + [reference-integrity](../../scripts/audit/reference-integrity.js) + [load-test pattern](../../tests/lib/format-conversion-load.test.js)
 - Story 1.2 deliverables: [Emma's baselines](../../tests/migration/personality-preservation/fixtures/contextualization-expert/) + [Liam's baselines](../../tests/migration/personality-preservation/fixtures/hypothesis-engineer/) (latter not used here but available as reference)

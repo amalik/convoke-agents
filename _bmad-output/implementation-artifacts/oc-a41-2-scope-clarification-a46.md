@@ -6,7 +6,7 @@ Status: **done — R1 convergence 2026-04-26** (V-pass 3 patches + R1 4 patches 
 **Origin:** IN-83 — A26 pre-execution 3-layer review 2026-04-26 found §A41-2 was being applied beyond its stated example domain (HC/GC contract schemas) to markdown tables, category checklists, sentence templates, and cross-workflow named references. A26 dossier was patched to restrict §A41-2 to stated scope, with §9.1 forward-propagation note flagging the need for a formal Compliance Checklist amendment. A46 is that amendment.
 **Sprint:** Parallel to v6.3.3+v6.3.4 Marketplace work — pure markdown spec/methodology work; zero code-collision surface
 **Methodology version cutover:** v5 → v5.1 (incremental clarification within v5 era; not a major version bump because no new rule introduced — existing rule made explicit)
-**Namespace decision:** No new skills or `_bmad/bme/` content. Single-paragraph amendment to existing [Compliance Checklist §A41-2](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md). Rule `namespace-decision-for-new-skills` N/A by construction.
+**Namespace decision:** No new skills or `_bmad/bme/` content. Single-paragraph amendment to existing [Compliance Checklist §A41-2](../../_bmad/bme/covenant/compliance-checklist.md). Rule `namespace-decision-for-new-skills` N/A by construction.
 **Safety analysis (path-safety rule):** N/A — no scripts, no destructive operations. Pure markdown editing.
 
 ## Story
@@ -146,7 +146,7 @@ _bmad-output/
 
 | Artifact | Purpose | Location |
 |---|---|---|
-| Compliance Checklist §A41-2 (current) | Source rule being amended | [convoke-spec-covenant-compliance-checklist.md](../planning-artifacts/convoke-spec-covenant-compliance-checklist.md) line 303-308 |
+| Compliance Checklist §A41-2 (current) | Source rule being amended | [convoke-spec-covenant-compliance-checklist.md](../../_bmad/bme/covenant/compliance-checklist.md) line 303-308 |
 | A41+A42 spec | §A41-2 origin (R1+R2+R3 rounds) | [oc-publication-gate-rigor-a41-a42.md](./oc-publication-gate-rigor-a41-a42.md) |
 | A26 pre-exec dossier §9.1 | Forward-propagation note triggering A46 | [oc-vortex-hc-schema-pattern-audit-a26-sample-cells.md](./oc-vortex-hc-schema-pattern-audit-a26-sample-cells.md) §9.1 |
 | A26 spec | Downstream consumer (locked at v5.0 per PAD 1) | [oc-vortex-hc-schema-pattern-audit-a26.md](./oc-vortex-hc-schema-pattern-audit-a26.md) |

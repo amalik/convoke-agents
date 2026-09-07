@@ -21,8 +21,8 @@ related_story: i97-2-1
 - `.claude/skills/bmad-agent-bme-contextualization-expert/SKILL.md` (alias wrapper) — **flagged: operator-reverted post-conversion; see OC-R3 + OC-R5 sections below**
 
 **Reference documents:**
-- [Operator Covenant](convoke-covenant-operator.md) — one axiom + 7 Operator Rights (OC-R1..R7)
-- [Compliance Checklist](convoke-spec-covenant-compliance-checklist.md) — per-Right checks
+- [Operator Covenant](../../_bmad/bme/covenant/covenant-operator.md) — one axiom + 7 Operator Rights (OC-R1..R7)
+- [Compliance Checklist](../../_bmad/bme/covenant/compliance-checklist.md) — per-Right checks
 
 ## OC-R0 — Enumeration precondition
 

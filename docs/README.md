@@ -2,7 +2,7 @@
 
 Contributor-facing documentation for Convoke. This directory holds reference material — theoretical foundations, development guides, test infrastructure, compatibility notes, and FAQs. Operator-facing docs (the Covenant, per-agent guides shipped inside `_bmad/bme/`) live alongside their code.
 
-> **Authoring, reviewing, or extending a Convoke skill, workflow, or agent?** Required reading: [The Convoke Operator Covenant](../_bmad-output/planning-artifacts/convoke-covenant-operator.md) — one axiom ("the operator is the resolver") and the Operator Rights every Convoke skill must honor. Self-check against the [Covenant Compliance Checklist](../_bmad-output/planning-artifacts/convoke-spec-covenant-compliance-checklist.md) before marking stories ready-for-review. Reviewers use the same Checklist; sprint planners consult it when scoping new work. The Covenant is what makes a `_bmad/bme/` skill a *Convoke* skill rather than a generic one.
+> **Authoring, reviewing, or extending a Convoke skill, workflow, or agent?** Required reading: [The Convoke Operator Covenant](../_bmad/bme/covenant/covenant-operator.md) — one axiom ("the operator is the resolver") and the Operator Rights every Convoke skill must honor. Self-check against the [Covenant Compliance Checklist](../_bmad/bme/covenant/compliance-checklist.md) before marking stories ready-for-review. Reviewers use the same Checklist; sprint planners consult it when scoping new work. The Covenant is what makes a `_bmad/bme/` skill a *Convoke* skill rather than a generic one.
 
 ## Contents
 

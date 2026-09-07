@@ -94,7 +94,7 @@ The command is the whole fix; run it in the same commit as the registry edit.
 
 ### 3. The Operator Covenant
 
-Anything you author under `_bmad/bme/` must honour [The Convoke Operator Covenant](_bmad-output/planning-artifacts/convoke-covenant-operator.md) — one axiom and seven Operator Rights — and self-check against the [Covenant Compliance Checklist](_bmad-output/planning-artifacts/convoke-spec-covenant-compliance-checklist.md).
+Anything you author under `_bmad/bme/` must honour [The Convoke Operator Covenant](_bmad/bme/covenant/covenant-operator.md) — one axiom and seven Operator Rights — and self-check against the [Covenant Compliance Checklist](_bmad/bme/covenant/compliance-checklist.md).
 
 This is an architectural requirement, not a styling one. Operator-facing behaviour is what makes a `_bmad/bme/` skill a *Convoke* skill rather than a generic one, and a violation erodes trust across the ecosystem rather than just its own surface.
 
