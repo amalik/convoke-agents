@@ -325,3 +325,219 @@ directory, and the harness is cited by `i97-2-1`'s story file and by the module'
 Excluding the directory from `files[]` remains correct — an operator has no use for it. **That an
 operator does not need it does not mean a contributor does not.** Update the citation; it is one
 string in live tooling.
+
+### Amendment 3 — the findings the three classes did not cover (2026-09-07, Amalik)
+
+ADR-002 enumerated **20** findings on 2026-08-19 and sorted them into three classes. The corpus has
+moved since. Story 2.2 re-derived **27** on 2026-08-31 (fence-aware; a naive scan double-counts
+fenced examples at 29), and `dist-2-3b` (`28cbf81c`) took it from **10 across 3 files to 5 across 2**.
+Re-derived against the committed tree, 2026-09-07:
+
+```
+npm pack && node scripts/audit/assert-shipped-links.js <tarball>/package .
+    4  CHANGELOG.md                                     <- dist-2-3c AC1/AC2
+    1  _bmad/bme/_enhance/.../lifecycle-process-spec.md <- ruled in (1) below
+```
+
+Four of the five have an owning story. **The fifth does not, and belongs to none of this ADR's three
+classes.** It is ruled in (1).
+
+*The off-by-one is not an error, and is worth stating so nobody hunts it.* `dist-2-3c`'s Dev Notes
+put the count at **9** after Class 1; `28cbf81c` reports starting from **10**. The difference is the
+finding ruled in (1), which landed in `154719e3` on 2026-09-05 — after `dist-2-3a` and before
+`dist-2-3b`. `9 + 1 = 10`. The trajectory table was right when written and the corpus moved under it.
+
+Rulings (2) and (3) record decisions `dist-2-3b` made correctly during implementation without an
+acceptance criterion or an ADR clause authorising them. They are written down because a fix that
+depended on the implementer noticing is not a policy.
+
+All three are ruled here rather than left to `dist-2-3c`'s AC3, whose T4 reads *"Stop here if
+non-zero"*: an unowned finding does not delay a wiring step, it blocks the epic.
+
+---
+
+**(1) `lifecycle-process-spec.md` → `name-registry.csv` — DO NOT SHIP `_bmad/bme/_config/`. Render the link as a self-referential absolute URL.**
+
+`_bmad/bme/_enhance/workflows/initiatives-backlog/templates/lifecycle-process-spec.md:133` cites
+`_bmad/bme/_config/name-registry.csv` as the **name authority** — *"where the two disagree, the
+registry wins."* The source ships (`_bmad/bme/_enhance/` is in `files[]`); the target does not
+(`files[]` carries `_bmad/_config/skill-manifest.csv` — one named file in a different directory).
+It landed 2026-09-05 in `154719e3`, sixteen days after this ADR enumerated its classes and five days
+after Amendments 1 and 2, so it is genuinely new work and not a missed case.
+
+**Ruled against this ADR's own policy test**, which turns on `project-context.md`:
+
+> *Normative documents — anything `project-context.md` calls required reading — ship.*
+
+`project-context.md` names the Covenant and the Compliance Checklist. It does not name the name
+registry; `grep -n "name-registry" project-context.md` returns nothing. The registry is not
+required reading, and its content settles the question on its own terms — it is a
+development-state inventory, not operator reference:
+
+```csv
+team,gyre,GYR,"Operational readiness",convoke,in-dev,both,,"4 agents, 7 workflows; NO module.yaml
+and NO module-help.csv, so it cannot be packaged. Reached today by operators hand-wiring agent
+paths (revealed demand, see I98)"
+```
+
+Shipping that puts Convoke's unbuilt-roadmap notes, I-numbers and packaging defects into every
+published package — the same objection that settled Amendment 2(1) against shipping `config.yaml`.
+
+**Exactly one shipped document cites the registry**, so the fix is one link, not a policy:
+
+```
+git grep -ln "name-registry.csv" -- '_bmad/bme' scripts README.md
+    _bmad/bme/_enhance/workflows/initiatives-backlog/templates/lifecycle-process-spec.md
+    scripts/audit/assert-shipped-links.js          (the checker's own header)
+    scripts/audit/name-registry-integrity.js       (the audit; see below)
+```
+
+*Check before ruling, and it passes:* `scripts/` ships, so
+`scripts/audit/name-registry-integrity.js` is in the tarball and reads a file that is not. That is
+**not** an FR13 breach. It has no `bin` entry and no npm script; its only invocation is
+`.github/workflows/ci.yml:209`. Under **ADR-004 C2** an operator-invocable unit must be declared as
+an agent in `agent-registry.js` or as a `config.yaml` workflow with `standalone: true`, and this is
+neither — so FR13, which asserts **invocability rather than presence**, does not reach it. Recorded
+because the reverse conclusion is the obvious one and it is wrong.
+
+***Ships* is not *installs*, and this ruling only touches the first.** `28cbf81c` measured the
+distinction on the Covenant itself: *"the Covenant reaches the package and NOT an installed project
+— no install path copies it, the same gap `_bmad/bme/_portability/` has. `dist-2-6`'s scope; filed."*
+FR12 asks whether a shipped document's links resolve inside the **package**; whether the package's
+contents reach an operator's **project** is FR13's question and `dist-2-6`'s work. The registry does
+not ship, so it is outside both — but an absolute URL is not a substitute for an install path, and
+nothing here should be read as saying otherwise.
+
+**What this ruling deliberately does NOT decide.** The backlog records an open operator decision —
+*"whether [the registry] ships to operators … also determines whether the baseline's third
+deliverable is CI-only or CI + doctor."* That question belongs to the meta-model baseline, not to a
+link policy. This amendment rules only that the registry **does not ship today**, which is the
+answer the link needs. If the baseline later rules that it ships, the absolute URL becomes a
+relative one and Amendment 1's checker is what will notice.
+
+---
+
+**(2) `compliance-checklist.md`'s two outbound citations — SELF-REFERENTIAL ABSOLUTE URLs. A correction to Class 2's framing, ruled after the fact.**
+
+*Recorded rather than prescribed.* `dist-2-3b` reached this answer during implementation, logged it
+in its Change Log as *"a case the spec did not enumerate"*, and shipped it. **Verified in the
+committed tree:** both citations now read
+`https://github.com/amalik/convoke-agents/blob/main/_bmad-output/implementation-artifacts/…`, the
+self-referential form Amendment 1 validates.
+
+**It appears in no permanent record.** `28cbf81c`'s message does not mention it — the message covers
+the move, the AC1 deviation and the reference-rewrite discipline, all correctly, but the one decision
+with no ADR clause behind it is the one that reached only a story file. That is why this ruling
+exists: the edits are right, and nothing states why they were allowed.
+
+Class 2 was written as a move plus a rewrite of *"every reference"* — meaning every reference **to**
+the Covenant, of which the story derives ~54. It says nothing about the links **out of** the two
+documents being moved, and Story 2.3b's AC4 scopes its zero-findings clause to `_bmad/bme/README.md`
+alone. So the move creates two findings that no acceptance criterion owns:
+
+```
+_bmad/bme/covenant/compliance-checklist.md:285 -> ../implementation-artifacts/oc-publication-gate-rigor-a41-a42.md
+_bmad/bme/covenant/compliance-checklist.md:453 -> ../implementation-artifacts/oc-layer1-operator-facing-rework-a44.md
+```
+
+**Both were valid before the move and are broken by it.** From
+`_bmad-output/planning-artifacts/`, `../implementation-artifacts/` resolved correctly. From
+`_bmad/bme/covenant/` it resolves to `_bmad/bme/implementation-artifacts/`, which does not exist.
+This is a regression the move introduces, not inherited debt — the distinction matters, because
+Class 2's stated purpose is to *stop* shipping links into space the operator never receives.
+
+`covenant-operator.md` carries **zero** relative links and needs no treatment. Two files moved; one
+is affected.
+
+**Both are provenance citations, not functional dependencies** — the same shape Amendment 2(3)
+corrected in `covenant-survival-harness.js`:
+
+> *"See `oc-publication-gate-rigor-a41-a42.md` for full A41+A42 spec + 13 Pre-Author Decisions."*
+> *"…see `oc-layer1-operator-facing-rework-a44.md` for full evidence trail."*
+
+*(Link syntax deliberately reduced to code spans here: written as `[text](…)` with an elided target,
+the quotation is itself parsed as a broken reference by `reference-integrity.js` — which this
+amendment introduced and then had to fix. An illustration of its own rule, at the ADR's expense.)*
+
+Nothing breaks if they are dropped. They are kept as absolute URLs anyway, because an author
+self-checking against a forward-only, version-pinned methodology has a real reason to reach the
+evidence trail behind a rule, and **Amendment 1 now validates the self-referential form** — so this
+does not trade a detectable fault for an undetectable one. Story files are repository-only by
+construction and will not ship; there is no third option here.
+
+**The durable rule, which is the more useful output.** This case is only visible because the checker
+existed before the move. State it so the next move does not need the checker to find it:
+
+> **A document entering shipped space brings its own outbound links with it.** When a file is added
+> to `files[]` — by a move, a new `files[]` entry, or a directory that grows a file — its relative
+> links are re-derived against the new location, not assumed to have survived. The story that moves
+> it owns them.
+
+**Consequence for Story 2.3b: none — do not retrofit an AC.** The gap was real: AC4's *"contributes
+zero findings"* clause is scoped to `_bmad/bme/README.md` and never covered the two files AC1 moves,
+so the story could have passed all six ACs and handed `dist-2-3c` two findings that halt it at T4.
+It did not, because the implementer caught it. Writing the AC now would document work already done
+and claim foresight the spec did not have. The Change Log entry is the honest record; **this rule is
+the fix**, and it applies to the next move, not to this one.
+
+---
+
+**(3) Class 2's `files[]` instruction was not followable as written. Two named FILE entries, not a directory entry.**
+
+*Recorded, like (2), after the fact — but `28cbf81c` already states the deviation and its cost, so
+this ruling adds only what a commit cannot say about the ADR it is implementing.* Class 2 says
+*"Move both to a source-owned path (e.g. `_bmad/bme/covenant/`), add that path to `files[]`."*
+`dist-2-3b` shipped two named file entries instead. **The deviation is correct and this ADR's
+instruction was wrong**, because ADR-004 defined the `_bmad/bme/*` module contract after this ADR
+was accepted:
+
+```js
+// scripts/audit/lib/installed-tree.js:174
+const m = /^_bmad\/bme\/([^/]+)\/?$/.exec(trimmed);
+```
+
+A `files[]` entry of `_bmad/bme/covenant/` matches that pattern and registers a **module** named
+`covenant` — which `assert-installed-tree.js` would then hold to the module contract it cannot
+meet: no `config.yaml`, no declared units, no wrappers. A directory of two normative documents is
+not a module. The two-file form does not match the pattern (a second `/`), so it ships the
+documents without inventing a module.
+
+`28cbf81c` discloses the cost rather than glossing it: *"arriving in a project is what this story
+wants, and the named-file form is what makes its absence invisible to that gate."* The two-file form
+buys correct packaging and pays for it in coverage — `assert-installed-tree.js` will not notice if
+the Covenant fails to arrive. That is `dist-2-6`'s to close, and it is filed.
+
+**The general point, which is this ADR's to make and not the commit's:** ADR-002 was accepted
+2026-08-20; ADR-004 defined the module contract afterwards. A Class 2 instruction that read as a
+packaging detail became a contract violation with nobody editing either document. **An accepted
+ADR's worked example is not load-bearing** — later ADRs can invalidate it silently, and the
+implementer holding both is the one positioned to notice. Class 2's *"e.g."* is hereby a sketch.
+
+---
+
+**Finding trajectory, corrected.** `dist-2-3c`'s Dev Notes project `27 -> 9 -> 4 -> 0`. Re-derived
+against the committed tree on 2026-09-07, with `28cbf81c`'s own before/after in the middle column:
+
+```
+2.2 red demonstration      27
+after 2.3a (Class 1)        9
+ + 154719e3 (2026-09-05)   10   <- the finding ruled in (1) arrives between the two stories
+after 2.3b (Class 2)        5   <- 28cbf81c: "10 across 3 files -> 5 across 2"
+after 2.3c AC1+AC2          1   <- NOT zero
+after ruling (1)            0   <- gate wired here
+```
+
+Ruling (1) is one link in a file no story touches. It has no upstream owner and `dist-2-3c` is the
+last story in the epic, so it is adopted there as **AC2b** — a one-line edit that does not justify a
+fourth sibling. Without it, 2.3c halts at its own T4 and the epic stops on a finding nobody owns.
+
+---
+
+**A note on how all three of these were found.** None came from a review of the story that caused
+them. (1) surfaced in `dist-2-3a`'s Round 1 as epic residue and sat in `deferred-work.md` with no
+owner for a day. (2) and (3) were found by the implementer mid-story, with no criterion asking for
+either. The common factor is that the checker existed before the changes did — Story 2.2 built it
+and deliberately did not wire it, which is the only reason a finding that belongs to no class was
+visible at all. **That is the argument for `dist-2-3c` finishing the job**: after it wires, this
+class of drift is caught by CI on the commit that introduces it, rather than by whoever happens to
+re-derive the count.

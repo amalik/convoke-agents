@@ -46,6 +46,22 @@ now makes them **validated** rather than unchecked
 2026-08-31
 **And** `CHANGELOG.md` then contributes **zero** findings, derived
 
+**AC2b — The name-registry citation, per ADR-002 Amendment 3(1)**
+
+**Given** `_bmad/bme/_enhance/workflows/initiatives-backlog/templates/lifecycle-process-spec.md:133`
+cites `_bmad/bme/_config/name-registry.csv` as the **name authority** — *"where the two disagree,
+the registry wins"* — and the source ships while the target does not
+**And** it arrived 2026-09-05 in `154719e3`, after ADR-002 drew its three classes, so it belongs to
+none of them and to no sibling story
+**When** this story completes
+**Then** `_bmad/bme/_config/` is **NOT** added to `files[]` — Amendment 3(1) rules the registry a
+development-state inventory, not operator reference, and it fails this ADR's own
+`project-context.md` required-reading test
+**And** the link is rendered as a self-referential absolute URL
+(`https://github.com/amalik/convoke-agents/blob/main/_bmad/bme/_config/name-registry.csv`),
+validated by Story 2.2's AC5 clause rather than by eye
+**And** `lifecycle-process-spec.md` then contributes **zero** findings, derived
+
 **AC3 — Zero findings before the gate is wired**
 
 **Given** NFR10 forbids a gate and its first fix landing together, and `fresh-install` gates every
@@ -93,6 +109,7 @@ and that assertion cannot see a broken link. Neither subsumes the other
 - [ ] **T1** — Confirm `dist-2-3a` and `dist-2-3b` have landed
 - [ ] **T2** — Add `docs/migration/` to `files[]` (AC1)
 - [ ] **T3** — Rewrite the two CHANGELOG links as absolute (AC2)
+- [ ] **T3a** — Rewrite the `lifecycle-process-spec.md:133` citation as an absolute URL (AC2b)
 - [ ] **T4** — Re-pack; run the checker; record **zero** (AC3). **Stop here if non-zero**
 - [ ] **T5** — Wire into the verdict, blocking (AC4)
 - [ ] **T6** — Plant-and-restore falsifiability demonstration (AC5)
@@ -114,11 +131,21 @@ AC3 exists so that is discovered by a check, not by a blocked repository.
 ### Expected finding trajectory
 
 ```
-2.2 red demonstration     27  across 4 files
-after 2.3a (Class 1)       9  (-18)
-after 2.3b (Class 2)       4  (-5)
-after 2.3c AC1+AC2         0  (-4)   <- gate wired here
+2.2 red demonstration      27
+after 2.3a (Class 1)        9
+ + 154719e3 (2026-09-05)   10   <- AC2b's finding arrives BETWEEN 2.3a and 2.3b
+after 2.3b (Class 2)        5   <- 28cbf81c: "10 across 3 files -> 5 across 2"
+after 2.3c AC1+AC2          1   <- NOT zero
+after AC2b                  0   <- gate wired here
 ```
+
+**The `9 -> 10` step is not an error.** The original table put Class 1's residue at 9; `28cbf81c`
+reports starting from 10. The extra finding is AC2b's, which landed in `154719e3` on 2026-09-05 —
+after `dist-2-3a` and before `dist-2-3b`.
+
+**Measured 2026-09-07** against the committed tree at `5b974787`: `npm pack && node
+scripts/audit/assert-shipped-links.js <tarball>/package .` -> `5 finding(s) across 2 file(s)` — 4
+`CHANGELOG.md`, 1 `lifecycle-process-spec.md`.
 
 Derive each number at implementation time. If the trajectory does not match, something else changed
 and that is worth understanding before wiring.
@@ -130,11 +157,14 @@ and that is worth understanding before wiring.
 | `dist-2-2` | **Blocking.** Builds the checker |
 | `dist-2-3a`, `dist-2-3b` | **Blocking.** Must both land first (AC3) |
 | `dist-2-4` | Shipped. Its assertion is already wired; this completes the pair |
+| *(none)* | **AC2b has no upstream story.** Epic residue, adopted here because this is the last story in the epic and the gate cannot be wired around it |
 
 ### References
 
 - [ADR-002](../planning-artifacts/adr/4-0-1/adr-002-shipped-link-policy.md) Class 3; **Amendment 1**; **Amendment 2(2)**
 - `scripts/audit/try-fresh-install.sh` — verdict condition; see `dist-2-4` for the ENV_FAIL convention
+- [ADR-002](../planning-artifacts/adr/4-0-1/adr-002-shipped-link-policy.md) **Amendment 3(1)** — why the registry does not ship, and what the ruling leaves to the meta-model baseline
+- [ADR-004](../planning-artifacts/adr/4-0-1/adr-004-bme-module-contract.md) C2 — why `scripts/audit/name-registry-integrity.js` shipping while its input does not is not an FR13 breach
 - T32 — the row this epic exists to close: a check that exists but is not enforced
 
 ---
@@ -154,6 +184,7 @@ demonstration from AC5, the derived trajectory, and both packed-gate re-runs.
 
 | Date | Change |
 |---|---|
+| 2026-09-07 | **AC2b added, with T3a.** A shipped-link finding that arrived in `154719e3` (2026-09-05) after ADR-002 drew its classes had no owning story and no backlog row; ADR-002 **Amendment 3(1)** rules it and this story adopts it, because AC3's *"Stop here if non-zero"* makes an unowned finding an epic blocker rather than a wiring delay. Trajectory table corrected against the committed tree — AC1+AC2 leave **1**, not 0, and the `9 -> 10` step is the new finding, not an error. |
 | 2026-08-31 | Split from Story 2.3. AC2 settled per ADR-002 Amendment 2(2); AC3 added as an explicit stop-gate before wiring; AC5 added from the harness's fail-open history. |
 
 ---
