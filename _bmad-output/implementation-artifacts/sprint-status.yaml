@@ -927,7 +927,7 @@ development_status:
   dist-2-3c-settle-the-changelog-links-and-wire-the-gate-in-blocking: done
   dist-2-4-assert-the-installed-tree-carries-what-was-shipped: done
   dist-2-5-ship-the-dependency-registry-and-close-bug-19: done
-  dist-2-6-make-portability-reachable-and-wire-the-installed-tree-assertion-in: review
+  dist-2-6-make-portability-reachable-and-wire-the-installed-tree-assertion-in: done
   dist-2-7-escape-every-interpolated-regex-in-the-exporter: backlog
   dist-2-8-validate-the-manifest-set-that-actually-seeds: ready-for-dev
   dist-epic-2-retrospective: optional
