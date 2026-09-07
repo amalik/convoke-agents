@@ -414,20 +414,30 @@ echo "==> Every documented reference resolves inside the package"
 #
 # TWO ROOTS, deliberately different. Relative links resolve inside the PACKAGE; self-referential
 # `blob/<ref>/` URLs resolve against the REPO, because such a URL names content on the default
-# branch and `docs/` is in the repository but not in `files[]`. All ten shipping today point
-# there, so conflating the roots would turn ten correct links into ten findings.
+# branch and `docs/` is in the repository but not in `files[]`. Every self-referential URL shipping
+# today points there, so conflating the roots would turn every correct link into a finding.
+# NO COUNT HERE ON PURPOSE (`derive-counts-from-source`). This read "ten" until 2026-09-07, when it
+# measured 21 instances / 15 unique paths — already wrong at 18/13 before dist-2.3c added three.
 #
-# DELIBERATELY NOT IN THE VERDICT AT THE `if` BELOW (AC2, NFR10). This job gates `publish` on
-# every push and every PR, and the gate is RED today. Wiring it here would block the repository
-# until its remedies land. Story dist-2.3c adds $LINKS to that condition in the same commit that
-# turns it green. A check that prints FAILED and exits 0 is uncomfortable on purpose. If you are
-# reading this after 2.3c shipped and $LINKS still appears nowhere in the verdict, that is the bug.
+# IN THE VERDICT AND BLOCKING since story dist-2.3c, which wired it in the same commit that took
+# the finding count to zero — which is what NFR10 asks for, not a breach of it: it requires a gate
+# be DEMONSTRATED failing before wiring (dist-2.2 did that and deliberately did not wire), not
+# MERGED failing, and the epic names "checker wired in blocking, same commit" as the 2.3 pattern.
+# An earlier draft glossed this as "a gate and its first fix never land together" — the opposite.
+# Before that it
+# printed FAILED and exited 0 through 2.3a, 2.3b and 2.3c, deliberately, because this job gates
+# `publish` on every push and PR and wiring a red gate blocks the repository. It is green now, so
+# that reasoning has expired — $LINKS belongs in the `if` below and T32 is closed.
 #
-# No finding count is written here on purpose: 2.3a/2.3b/2.3c exist to drive it to zero, so any
-# number in this comment is stale within three stories and sends a maintainer chasing phantoms.
-# Run the script to see the current figure. One caveat that does NOT expire and is easy to miss:
-# not every finding belongs to one of ADR-002's three classes, so 2.3a+2.3b+2.3c is not by itself
-# proof the gate is green. Check before wiring it in blocking.
+# No finding count is written here on purpose: any number in this comment is stale within a
+# story and sends a maintainer chasing phantoms. Run the script to see the current figure.
+#
+# The caveat that did NOT expire, recorded because 2.3c hit it: not every finding belongs to one
+# of ADR-002's three classes. Two did not. One arrived after the classes were drawn and was ruled
+# in ADR-002 Amendment 3(1); the other was CREATED by 2.3c's own AC1, when adding `docs/migration/`
+# to `files[]` also shipped `docs/README.md` and its seven repository-only links — npm keeps
+# `README.md` in any directory it walks. So a story that clears its own class can still leave this
+# red, and can still make it red. That is now this gate's job to say, on the commit that does it.
 #
 # Run from $REPO, not from the installed copy: an auditor loaded out of the tree it is auditing
 # cannot report that tree as broken.
@@ -451,7 +461,15 @@ node "$REPO/scripts/audit/assert-shipped-links.js" "$TMP/proj/node_modules/convo
 # regressions, i.e. product defects. Each would take this job down as ENV_FAIL rather than
 # surface as a finding. That is a deliberate trade — those two states make the assertion
 # meaningless, so reporting a clean scan would be worse — but it is NOT the narrow "only a broken
-# assertion" the old sentence promised, and 2.3c should weigh it when wiring this in blocking.
+# assertion" the old sentence promised.
+#
+# 2.3c WEIGHED IT AND WIRED ANYWAY. The concern is that a packaging regression (no markdown ships,
+# or `repository.url` stops parsing) leaves here as ENV_FAIL rather than as a finding. Checked
+# against the workflow rather than assumed: `.github/workflows/ci.yml` runs this as a plain `run:`
+# step, which collapses exit 1 and exit 2 into the same failed step, and `publish` `needs:` this
+# job. So both codes block equally and there is no fail-open — what the trade costs is DIAGNOSIS,
+# not enforcement: a product defect reads as an environment problem in the log until someone
+# opens it. Accepted on those terms.
 if [ "$LINKS" -ne 0 ] && [ "$LINKS" -ne 1 ]; then
   echo "    [harness] the shipped-link assertion could not run (exit $LINKS — see message above)"
   exit "$ENV_FAIL"
@@ -464,7 +482,7 @@ echo "========================================"
 # of 0 cannot be distinguished from a crash that bash reported as 0. Set BEFORE the verdict, not
 # inside the PASS branch, so an explicit exit 1/2 below is still a completed run.
 COMPLETED=1
-if [ "$INSTALL" -eq 0 ] && [ "$DOCTOR" -eq 0 ] && [ "$EXPORT" -eq 0 ] && [ "$FAILED" -eq 0 ]; then
+if [ "$INSTALL" -eq 0 ] && [ "$DOCTOR" -eq 0 ] && [ "$EXPORT" -eq 0 ] && [ "$FAILED" -eq 0 ] && [ "$LINKS" -eq 0 ]; then
   echo "PASS — a new user gets a working, self-consistent install."
   echo
   echo "Note: convoke-doctor may still print ⚠ warnings. Warnings are fine; hard failures are"
@@ -473,7 +491,7 @@ if [ "$INSTALL" -eq 0 ] && [ "$DOCTOR" -eq 0 ] && [ "$EXPORT" -eq 0 ] && [ "$FAI
   exit 0
 fi
 echo "FAIL — a new user would hit this."
-echo "  install=$INSTALL doctor=$DOCTOR export=$EXPORT bins_failed=$FAILED"
+echo "  install=$INSTALL doctor=$DOCTOR export=$EXPORT bins_failed=$FAILED links=$LINKS"
 echo "Re-run locally with KEEP=1 to inspect the project. In CI, see the uploaded"
 echo "fresh-install-logs artifact."
 exit 1

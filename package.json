@@ -17,6 +17,7 @@
     "_bmad/_config/skill-manifest.csv",
     ".claude-plugin/",
     ".claude/skills/bmad-audit-skill-dirs/",
+    "docs/migration/",
     "INSTALLATION.md",
     "UPDATE-GUIDE.md",
     "CHANGELOG.md",
@@ -26,7 +27,7 @@
     "SECURITY.md",
     "src/"
   ],
-  "//files": "scripts/migration/format-conversion does NOT ship, and the exclusion lives in a .npmignore inside that directory rather than as a '!' negation here — a negation would put a glob metacharacter into this array, which scripts/audit/lib/installed-tree.js parses to build the expected set of _bmad/bme/* modules; four hand-written attempts to make that parser tell a harmless negation from a coverage-shrinking one were all broken by adversarial review. It is i97 agent-conversion tooling: a contributor runs it from the repository, an operator has no use for it, and shipping it put 18 links into the package that an operator cannot follow. It is STILL MAINTAINED and must not be deleted: I97 Epic 2 is 2 of 7 done, so five agent conversions still run through it. Story dist-2.3a. JSON has no comments, hence this key; npm ignores it. ALSO: _bmad/bme/covenant/ is listed as TWO NAMED FILE ENTRIES, never as a directory — installed-tree.js parses this array and reads any `_bmad/bme/<name>/` entry as a MODULE, which would then be required to arrive in a project, carry a config.yaml and declare units. It is prose, not a module. tests/lib/covenant-packaging.test.js asserts both halves.",
+  "//files": "scripts/migration/format-conversion does NOT ship, and the exclusion lives in a .npmignore inside that directory rather than as a '!' negation here — a negation would put a glob metacharacter into this array, which scripts/audit/lib/installed-tree.js parses to build the expected set of _bmad/bme/* modules; four hand-written attempts to make that parser tell a harmless negation from a coverage-shrinking one were all broken by adversarial review. It is i97 agent-conversion tooling: a contributor runs it from the repository, an operator has no use for it, and shipping it put 18 links into the package that an operator cannot follow. It is STILL MAINTAINED and must not be deleted: I97 Epic 2 is 2 of 7 done, so five agent conversions still run through it. Story dist-2.3a. JSON has no comments, hence this key; npm ignores it. ALSO: _bmad/bme/covenant/ is listed as TWO NAMED FILE ENTRIES, never as a directory — installed-tree.js parses this array and reads any `_bmad/bme/<name>/` entry as a MODULE, which would then be required to arrive in a project, carry a config.yaml and declare units. It is prose, not a module.  ALSO: docs/ ships as docs/migration/ ONLY, never the directory wholesale — CHANGELOG.md links the migration guide twice and it is the single most useful page an upgrading npm reader can follow, while the other 17 files under docs/ are repository-facing and carry their own relative links into _bmad-output/, which does not ship. Story dist-2.3c, ADR-002 Class 3.",
   "bin": {
     "convoke-install-vortex": "scripts/install-vortex-agents.js",
     "convoke-install-gyre": "scripts/install-gyre-agents.js",

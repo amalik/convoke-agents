@@ -1,0 +1,34 @@
+# Story dist-2.3c. `docs/migration/` is in package.json `files[]` because CHANGELOG.md links the
+# migration guide twice and it is the single most useful page an upgrading npm reader can follow
+# (ADR-002 Class 3). Nothing else under `docs/` is operator-facing.
+#
+# WHY THIS FILE IS NEEDED AT ALL. npm keeps `README.md` in any directory it walks, so listing ANY
+# path under `docs/` also ships `docs/README.md` — verified by controlled experiment 2026-09-07:
+# with no `docs/` entry npm ships nothing here; with `docs/migration/` it ships the guide AND
+# `docs/README.md`; with the named file `docs/migration/3.x-to-4.0.md` it ALSO ships
+# `docs/README.md`, so narrowing the entry does not help. That file carries 7 relative links into
+# repository-only siblings (agents.md, development.md, testing.md, references.md, faq.md,
+# BMAD-METHOD-COMPATIBILITY.md, ../project-context.md), every one of which becomes a broken
+# shipped link the moment it enters the package.
+#
+# WHY HERE AND NOT A `!` NEGATION IN `files[]`. Same reasoning as
+# scripts/migration/format-conversion/.npmignore, which see: a negation puts a glob metacharacter
+# into `files[]`, and scripts/audit/lib/installed-tree.js parses that array to build the expected
+# set of `_bmad/bme/*` modules. Excluding from inside the directory needs no pattern in `files[]`,
+# so that interaction does not arise. (A root `.npmignore` does NOT work when `files[]` is
+# present — it must live here.)
+#
+# SCOPED, NOT `*`. The format-conversion file excludes everything because none of that directory
+# ships. Here exactly one file must be kept out, and `docs/migration/` must still ship, so this
+# names the file rather than excluding the tree.
+#
+# ANCHORED WITH A LEADING SLASH, and that is load-bearing. `.npmignore` uses gitignore matching, so
+# a bare `README.md` matches at ANY depth below this file — it would also silently drop a future
+# `docs/migration/README.md`, which is a legitimate content file that SHOULD ship. Round 1 review
+# caught this: two layers independently created that file, packed, and watched it vanish with every
+# check green. `/README.md` binds the pattern to this directory only. Verified both directions:
+# `docs/README.md` still excluded, `docs/migration/README.md` ships.
+#
+# tests/lib/docs-packaging.test.js asserts all three halves: the guide ships, `docs/README.md` does
+# not, and the exclusion does not reach into `docs/migration/`.
+/README.md

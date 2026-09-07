@@ -51,7 +51,7 @@ If this release does its job, you'll barely notice it — which is the point.
 - **Multi-platform adapters** — Drop-in agent skills for Claude Code (`.claude/skills/`), GitHub Copilot (`.github/copilot-instructions.md`), and Cursor (`.cursor/rules/`). Use Convoke agents on the platform you already work in, no Convoke runtime required.
 - **Agent surface parity check** — Convoke verifies, on every commit, that an upgrade did not remove an agent, drop a menu code, or stop loading your configuration. It compares the last release tag against the current tree and fails loudly if any of those change. This covers 12 agents in seconds.
 
-  **What it does not do:** it does not prove your agents *behave* identically. It proves the contract you interact with is unchanged — which agents exist, what you can ask them to do, and whether they still read your config. Convoke 4.0 makes no behavioural-equivalence claim. An earlier draft of this entry described a "behavioral equivalence harness" whose gate had been "waived"; that gate was **retired** rather than waived (see [ADR-001](_bmad-output/planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md)), and the reasoning given for it was later withdrawn as unsound. The parity check above is what actually runs.
+  **What it does not do:** it does not prove your agents *behave* identically. It proves the contract you interact with is unchanged — which agents exist, what you can ask them to do, and whether they still read your config. Convoke 4.0 makes no behavioural-equivalence claim. An earlier draft of this entry described a "behavioral equivalence harness" whose gate had been "waived"; that gate was **retired** rather than waived (see [ADR-001](https://github.com/amalik/convoke-agents/blob/main/_bmad-output/planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md)), and the reasoning given for it was later withdrawn as unsound. The parity check above is what actually runs.
 - **Single-command auto-migration** — `convoke-update` runs the upgrade and completes in under 60 seconds. Idempotent (safe to run twice) and resumable (if something interrupts, re-run picks up where it stopped).
 - **`convoke-doctor` dependency surfacing** — Health check now warns you when Convoke depends on something upstream that has changed shape. Silent breakage becomes visible breakage.
 
@@ -1202,5 +1202,5 @@ No changes to installation flow. Reinstallation will fix the Wade workflow bug.
 **For detailed technical documentation, see:**
 - [README.md](README.md) - Project overview
 - [INSTALLATION.md](INSTALLATION.md) - Installation guide
-- [BMAD-METHOD-COMPATIBILITY.md](docs/BMAD-METHOD-COMPATIBILITY.md) - Integration details
+- [BMAD-METHOD-COMPATIBILITY.md](https://github.com/amalik/convoke-agents/blob/main/docs/BMAD-METHOD-COMPATIBILITY.md) - Integration details
 - User guides in `_bmad/bme/_vortex/guides/`

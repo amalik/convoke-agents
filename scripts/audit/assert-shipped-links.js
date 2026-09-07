@@ -18,11 +18,18 @@
  *   <repoRoot>     self-referential `blob/<ref>/` URLs resolve here (AC5, ADR-002 Amendment 1).
  *                  Such a URL names content on the default branch, which is a different set
  *                  from what `files[]` ships — `docs/` is in the repository and not in the
- *                  package, and every one of the ten shipping today points there.
+ *                  package, and every self-referential URL shipping today points there.
+ *                  NO COUNT HERE ON PURPOSE (`derive-counts-from-source`). This read "ten"
+ *                  until 2026-09-07, when it measured 21 instances / 15 unique paths — and
+ *                  was already wrong at 18/13 before dist-2.3c added three more.
+ *                  Run with `--json` and read `selfRefCount`.
  *
  * EXIT CODES — matching `assert-installed-tree.js` and the harness's own convention:
  *   0  no findings
- *   1  findings, printed as `FAILED:` lines
+ *   1  findings, printed as `FAILED:` lines. ALSO the code when findings were gathered AND a
+ *      post-scan precondition then failed: `cannotRunAfterScan` prints the findings, appends
+ *      `NOTE: the scan was also incomplete`, and exits 1. Findings win over the cannot-run
+ *      signal deliberately — but exit 1 therefore does not by itself mean a COMPLETE scan.
  *   2  the assertion could not run
  *
  * 2 is never conflated with 0 or 1. A cannot-run reported as 1 is a false defect report; as 0 it
@@ -30,17 +37,32 @@
  * of try-fresh-install.sh). `main()` is wrapped so an unexpected throw lands on 2 rather than on
  * node's default 1, which the caller would read as "findings".
  *
- * NOT IN THE VERDICT (NFR10). Story dist-2.3c wires this into try-fresh-install.sh's exit
- * condition, in the same commit that turns it green. It is red today, so merging it into the
- * verdict now would block every PR and every publish until its remedies land. A check that
- * prints FAILED and does not fail the job is uncomfortable on purpose. If you are reading this
- * after 2.3c shipped and this script still appears nowhere in the verdict, that is the bug.
+ * IN THE VERDICT AND BLOCKING since story dist-2.3c, which added $LINKS to try-fresh-install.sh's
+ * exit condition in the same commit that took the count to zero — which is what NFR10 asks for,
+ * not a breach of it. NFR10 requires a gate be *demonstrated* failing before it is wired (dist-2.2
+ * did that, and deliberately did not wire); it does not require it *merged* failing, and the epic
+ * names "checker wired in blocking, same commit" as 2.3's compliant pattern. An earlier draft of
+ * this paragraph glossed NFR10 as "a gate and its first fix never land together" — the opposite of
+ * what it says, and contradicted by this sentence's own first clause.
  *
- * READ THIS BEFORE PICKING UP 2.3c. Most of today's findings map to the three ADR-002 classes
- * that 2.3a/2.3b/2.3c remove, but NOT all of them: `lifecycle-process-spec.md` points at
- * `_bmad/bme/_config/name-registry.csv`, which is in the repository and not in `files[]`, and
- * belongs to none of the three classes. Wiring the gate in blocking without settling that one
- * lands a red gate on `main`. The story's Completion Notes carry the measurement and its date.
+ * Through 2.3a, 2.3b and 2.3c this printed FAILED and exited 0 on purpose,
+ * because the job gates `publish` on every push and PR and a red gate blocks the repository. That
+ * period is over. A finding here now fails the build, which is the point — T32 is closed.
+ *
+ * THE LESSON FROM 2.3a/b/c, which outlived them: not every finding maps to one of ADR-002's three
+ * classes. Two did not. `lifecycle-process-spec.md` pointed at `_bmad/bme/_config/name-registry.csv`
+ * — in the repository, not in `files[]` — which arrived after the classes were drawn and was ruled
+ * in ADR-002 Amendment 3(1). The other was created by 2.3c's own fix: adding `docs/migration/` to
+ * `files[]` also ships `docs/README.md`, because npm keeps `README.md` in any directory it walks,
+ * and that file's seven repository-only links came with it. So clearing a class is not proof this
+ * is green, and a change that ships a new path can turn it red by itself. Run it; do not reason
+ * about it.
+ *
+ * This paragraph replaced one that still said "NOT IN THE VERDICT... it is red today... READ THIS
+ * BEFORE PICKING UP 2.3c" after 2.3c's changes had landed. Round 1 review caught it: the story rewrote the
+ * equivalent claim in try-fresh-install.sh and missed the twin copy here, in the file the gate
+ * actually calls. Stale governance prose asserting the opposite of the code is the defect class
+ * this whole epic exists to close, so it is recorded rather than quietly deleted.
  */
 
 const fs = require('fs');
