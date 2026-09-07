@@ -924,7 +924,7 @@ development_status:
   dist-2-2-assert-every-documented-reference-resolves-inside-the-package: done
   dist-2-3a-exclude-the-conversion-tooling-from-the-package: done
   dist-2-3b-move-the-covenant-into-source-owned-space: done
-  dist-2-3c-settle-the-changelog-links-and-wire-the-gate-in-blocking: review
+  dist-2-3c-settle-the-changelog-links-and-wire-the-gate-in-blocking: done
   dist-2-4-assert-the-installed-tree-carries-what-was-shipped: done
   dist-2-5-ship-the-dependency-registry-and-close-bug-19: done
   dist-2-6-make-portability-reachable-and-wire-the-installed-tree-assertion-in: ready-for-dev
