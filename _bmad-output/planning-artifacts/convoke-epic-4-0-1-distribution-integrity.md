@@ -191,11 +191,9 @@ work", and it is a Forge prerequisite.)*
 
 ```
 FR16: EVERY interpolated `RegExp` construction in `export-engine.js` MUST escape its
-      interpolated value — not only the `u`-flag one. Enumerated mechanically per
-      `mechanical-research-enumeration`: `:311` ('u'), `:390` ('mi'), `:499` ('g') and
-      `:503` ('g') are unescaped; `:1070` already uses the `escapeRegExp` helper that is
-      imported into this same file. Derive the count at implementation time; do not carry
-      a literal forward.                                                      [T33]
+      interpolated value — including sites whose input is provably safe. RULED
+      2026-09-07 (see below). Derive the enumeration at implementation time; the line
+      numbers this FR originally carried are already stale.                   [T33]
 ```
 
 **Cluster 4.6 — Honest warnings.** *(sequenced last)*
@@ -777,21 +775,60 @@ So that a capability that ships is a capability I have.
 
 *Covers FR16. Independent of 2.1–2.6; may run in parallel. Forge prerequisite.*
 
+> **OPERATOR RULING 2026-09-07 — FR16 binds the provably-safe sites; escape them.**
+>
+> **What was asked.** Two of the interpolation sites are provably safe, so does FR16 reach them?
+>
+> **Evidence, derived rather than recalled.** FR16's enumeration is stale. A mechanical re-run
+> finds **five** interpolated `RegExp` constructions, of which **three already escape**
+> (`escapeRegExp(name)`, `escapeRegExp(headingName)`, `escapeRegExp(basename)`) and **two do
+> not** — both interpolating `varName` from `Object.entries(configVarMap)`. `configVarMap` is a
+> hardcoded object literal referenced in exactly three places: its own declaration and the two
+> loops. Nothing mutates or extends it, and its six keys are all `/^[a-z_]+$/`. So the two sites
+> are genuinely unreachable with a metacharacter.
+>
+> **Ruled: escape them anyway.** Three reasons.
+> 1. **T33 already decided this in this file.** It closed 2026-08-27 having escaped two
+>    provably-safe sites — the same three-escaped ones above — and rescored itself 7.2 → 1.9
+>    because *"neither site is reachable with a metacharacter … this is defensive hardening, not
+>    the crash the row described."* Ruling otherwise now would leave one file with two rules for
+>    one construct.
+> 2. **An exemption is a claim nothing checks.** "Every interpolation is escaped" is greppable;
+>    "every one except the safe ones" needs per-site judgement and must be re-verified whenever
+>    `configVarMap` gains a key. Every defect this epic has hit — the stale `ten`, the T32
+>    closure, seven rotted line citations — was a fact stated where nothing checked it.
+> 3. **The cost is two function calls**, with the helper imported at line 36.
+>
+> **NOT ruled: adding an enforcement gate.** Considered and declined. A gate guarding two
+> interpolations against a closed six-key input set is more code than the code it guards, and
+> this epic is at 8 of 10 with a freeze waiting on it. If FR16 ever regresses, that is a row with
+> an instance to point at.
+>
+> **The framing below was corrected by the same ruling.** It previously read *"I want the exporter
+> to survive any persona name / so that authoring a new team does not crash the export"*. Nothing
+> crashes: `varName` is a closed literal set. That is the identical overclaim T33 was rescored
+> for, and repeating it would sell a two-line hardening change as a defect fix.
+
 As a Convoke maintainer,
-I want the exporter to survive any persona name,
-So that authoring a new team does not crash the export in a way that surfaces nowhere near its cause.
+I want every interpolated regex in the exporter escaped without exception,
+So that the rule is one a grep can confirm rather than one that needs a safety argument per site.
 
 **Acceptance Criteria:**
 
 **Given** the interpolation sites in `scripts/portability/export-engine.js`
 **When** this story completes
 **Then** every interpolated `RegExp` construction escapes its value, using the `escapeRegExp` helper already imported into that file
-**And** the enumeration is re-run mechanically at implementation time rather than trusting this list: `:311` (`u`), `:390` (`mi`), `:499` (`g`) and `:503` (`g`) are unescaped today; `:1070` already escapes
+**And** the enumeration is re-run mechanically at implementation time — FR16's original list (`:311`, `:390`, `:499`, `:503`) is stale, and the 2026-09-07 re-derivation found five constructions, three already escaped and two not
 
-**Given** a persona name containing `{`, `}`, `(`, `[` or `\`
-**When** the export runs
-**Then** it completes without throwing
-**And** a committed test covers that input, demonstrated failing against the pre-fix code
+**Given** the two unescaped sites interpolate `varName` from a closed literal `configVarMap`
+**When** this story completes
+**Then** a comment at the fix records that the input is provably safe and the escape is hardening, so a later reader does not infer the value is untrusted
+**And** the story record states plainly that no crash is being fixed — T33's rescore is the precedent
+
+**Given** a `configVarMap` key containing a regex metacharacter — which cannot occur today
+**When** a test constructs that case directly against the interpolation
+**Then** the escaped form matches literally and the unescaped form does not
+**And** that test is demonstrated failing against the pre-fix code, so the hardening is falsifiable rather than merely present
 
 ### Story 2.8: Validate the manifest set that actually seeds
 
