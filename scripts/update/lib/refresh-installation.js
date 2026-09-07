@@ -433,6 +433,66 @@ async function refreshInstallation(projectRoot, options = {}) {
     // wrappers in section 6c after agent skills are generated).
   }
 
+  // 2c-bis. Portability module — copy tree, stamp version (Story dist-2.6)
+  // MIRRORS the Artifacts block above line for line, deliberately. Portability had NO install
+  // path at all: the only generic module loop iterates EXTRA_BME_AGENTS and is driven by the
+  // AGENT registry, so a module with no agents was never visited. Its four skills shipped in
+  // files[] to every operator and were reachable by none of them — which is the standing
+  // finding assert-installed-tree.js reports and ADR-004 C1/C2 define.
+  //
+  // No new module shape is introduced (ADR-004 C2, AC1): declaration is still `config.yaml`
+  // with `standalone: true`, the same mechanism Artifacts uses.
+  const packagePortability = path.join(packageRoot, '_bmad', 'bme', '_portability');
+  const portabilityConfigPath = path.join(packagePortability, 'config.yaml');
+
+  let portabilityConfig = null;
+  if (fs.existsSync(portabilityConfigPath)) {
+    try {
+      portabilityConfig = yaml.load(fs.readFileSync(portabilityConfigPath, 'utf8'));
+    } catch (err) {
+      const msg = `Portability config.yaml parse error: ${err.message} — skipping Portability installation`;
+      changes.push(msg);
+      if (verbose) console.log(`    ⚠ ${msg}`);
+    }
+  } else {
+    changes.push('Portability config.yaml not found — skipping Portability installation');
+    if (verbose) console.log('    ⚠ Portability config.yaml not found — skipping Portability installation');
+  }
+
+  if (portabilityConfig) {
+    const targetPortability = path.join(projectRoot, '_bmad', 'bme', '_portability');
+
+    if (!isSameRoot) {
+      if (fs.existsSync(targetPortability)) {
+        await fs.remove(targetPortability);
+      }
+      await fs.copy(packagePortability, targetPortability, { overwrite: true });
+      // Stamp the copied config's version to the package version — I137. _team-factory was the
+      // one module copied WITHOUT stamping, and a fresh successful install then failed Convoke's
+      // own version-consistency check and told a new user to run an update. Uses
+      // YAML.parseDocument (not mergeConfig) per the reasoning recorded at the Vortex block:
+      // mergeConfig's structural defaults are Vortex-specific and would seed wrong values into
+      // any field a submodule config omits.
+      const targetPortabilityConfig = path.join(targetPortability, 'config.yaml');
+      if (fs.existsSync(targetPortabilityConfig)) {
+        assertVersion(version, 'portability');
+        const pcDoc = YAML.parseDocument(fs.readFileSync(targetPortabilityConfig, 'utf8'));
+        if (pcDoc.errors && pcDoc.errors.length > 0) {
+          throw new Error(`Refresh: cannot parse Portability config.yaml: ${pcDoc.errors[0].message}`);
+        }
+        pcDoc.set('version', version);
+        fs.writeFileSync(targetPortabilityConfig, pcDoc.toString({ lineWidth: 0 }), 'utf8');
+      }
+      changes.push('Refreshed Portability module: _bmad/bme/_portability/');
+      if (verbose) console.log('    Refreshed Portability module: _bmad/bme/_portability/');
+    } else {
+      changes.push('Skipped Portability copy (dev environment — files already in place)');
+      if (verbose) console.log('    Skipped Portability copy (dev environment)');
+    }
+
+    // Skill wrapper generation happens in section 6d-bis, after skillsDir is defined.
+  }
+
   // 2d. Gyre module — copy agents, workflows, contracts, config
   const packageGyre = path.join(packageRoot, '_bmad', 'bme', '_gyre');
   const targetGyre = path.join(projectRoot, '_bmad', 'bme', '_gyre');
@@ -946,11 +1006,51 @@ You must fully embody this agent's persona and follow all activation instruction
     if (verbose) console.log('    Skipped Artifacts skill wrapper generation (dev environment)');
   }
 
+  // 6d-bis. Copy Portability workflow skill wrappers (Story dist-2.6)
+  // Mirrors 6d. workflow.name already carries the bmad- prefix, so it is used verbatim.
+  // The source SKILL.md loads its workflow by an ABSOLUTE {project-root} path — rewritten from a
+  // relative [workflow.md](workflow.md) by this story — because the generator copies SKILL.md
+  // ALONE. A relative link would resolve inside .claude/skills/<name>/, where no workflow.md
+  // exists, and every wrapper would point at a file that is not there.
+  if (portabilityConfig && !isSameRoot) {
+    for (const workflow of portabilityConfig.workflows || []) {
+      if (workflow.standalone !== true) {
+        const msg = `Portability: workflow ${workflow.name} has no standalone:true flag — only standalone workflows are supported, skipping`;
+        changes.push(msg);
+        if (verbose) console.log(`    ⚠ ${msg}`);
+        continue;
+      }
+
+      const destSkillDir = path.join(skillsDir, workflow.name);
+
+      if (fs.existsSync(destSkillDir)) {
+        await fs.remove(destSkillDir);
+      }
+      await fs.ensureDir(destSkillDir);
+
+      const sourceSkillPath = path.join(packageRoot, '_bmad', 'bme', '_portability', 'workflows', workflow.name, 'SKILL.md');
+      const targetSkillPath = path.join(destSkillDir, 'SKILL.md');
+      if (fs.existsSync(sourceSkillPath)) {
+        await fs.copy(sourceSkillPath, targetSkillPath, { overwrite: true });
+        changes.push(`Generated skill wrapper: ${workflow.name}`);
+        if (verbose) console.log(`    Generated skill wrapper: ${workflow.name}`);
+      } else {
+        const msg = `Portability: source SKILL.md not found for ${workflow.name} at ${sourceSkillPath}`;
+        changes.push(msg);
+        if (verbose) console.log(`    ⚠ ${msg}`);
+      }
+    }
+  } else if (portabilityConfig && isSameRoot) {
+    changes.push('Skipped Portability skill wrapper generation (dev environment — source files unchanged)');
+    if (verbose) console.log('    Skipped Portability skill wrapper generation (dev environment)');
+  }
+
   // 6e. Orphan workflow-wrapper cleanup (Story 7.4, I32)
   // Removes stale .claude/skills/ directories for workflow wrappers that are no longer
   // declared in the module configs. Uses a two-strategy matching approach:
   //   Strategy 1 (Enhance): any bmad-enhance-* dir not in the current union → orphan
-  //   Strategy 2 (Artifacts): any dir whose name exactly matches a known Artifacts
+  //   Strategy 2 (verbatim-name modules): any dir whose name exactly matches a known
+  //     Artifacts OR Portability workflow name (dist-2.6 added the second)
   //     workflow name but is not in the current union → orphan
   // All other directories (agent wrappers, upstream BMAD skills, third-party) are ignored.
   if (!isSameRoot) {
@@ -963,16 +1063,23 @@ You must fully embody this agent's persona and follow all activation instruction
     }
     // Artifacts wrappers: workflow.name verbatim (only standalone:true are installed,
     // but we track ALL names so a removed standalone workflow is still recognized as an orphan)
-    const knownArtifactsNames = new Set();
-    if (artifactsConfig && Array.isArray(artifactsConfig.workflows)) {
-      for (const wf of artifactsConfig.workflows) {
-        if (wf && wf.name) {
-          knownArtifactsNames.add(wf.name);
-          if (wf.standalone === true) currentWorkflowWrappers.add(wf.name);
+    // Renamed from knownArtifactsNames (Story dist-2.6): Portability declares its workflows the
+    // same way and its wrappers carry the same verbatim naming, so it belongs in this set on the
+    // same footing. Before this the four portability wrappers were safe from Strategy 2 only BY
+    // ACCIDENT -- their names matched no known Artifacts workflow -- and a workflow later removed
+    // from portability's config.yaml would have been stranded rather than cleaned.
+    const knownVerbatimNames = new Set();
+    for (const cfg of [artifactsConfig, portabilityConfig]) {
+      if (cfg && Array.isArray(cfg.workflows)) {
+        for (const wf of cfg.workflows) {
+          if (wf && wf.name) {
+            knownVerbatimNames.add(wf.name);
+            if (wf.standalone === true) currentWorkflowWrappers.add(wf.name);
+          }
         }
       }
     }
-    const orphanChanges = cleanupOrphanWorkflowWrappers(skillsDir, currentWorkflowWrappers, knownArtifactsNames, { verbose });
+    const orphanChanges = cleanupOrphanWorkflowWrappers(skillsDir, currentWorkflowWrappers, knownVerbatimNames, { verbose });
     changes.push(...orphanChanges);
   } else {
     changes.push('Skipped orphan workflow-wrapper cleanup (dev environment)');
@@ -1080,18 +1187,18 @@ prompts: []
  * Two-strategy matching (Story 7.4, I32):
  *   Strategy 1: Enhance prefix — any dir starting with `bmad-enhance-` that is
  *               not in `currentWrappers` is an orphan.
- *   Strategy 2: Artifacts exact-name — any dir whose name is in `knownArtifactsNames`
+ *   Strategy 2: verbatim exact-name (Artifacts + Portability) — any dir whose name is in `knownVerbatimNames`
  *               but not in `currentWrappers` is an orphan.
  * Everything else (agent wrappers, upstream BMAD skills, third-party) is ignored.
  *
  * @param {string} skillsDir - Absolute path to .claude/skills/
  * @param {Set<string>} currentWrappers - Union of live workflow wrapper names
- * @param {Set<string>} knownArtifactsNames - ALL Artifacts workflow names (including non-standalone)
+ * @param {Set<string>} knownVerbatimNames - ALL Artifacts + Portability workflow names (including non-standalone)
  * @param {object} [options]
  * @param {boolean} [options.verbose] - Log each action
  * @returns {Array<string>} Changes array entries for removed orphans
  */
-function cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, options = {}) {
+function cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatimNames, options = {}) {
   // Deliberately synchronous (fs.removeSync / fs.readdirSync) — the function returns
   // Array<string>, not a Promise. The sync pattern keeps the contract simple for both
   // the caller (section 6e spreads the result into changes[]) and the test file (which
@@ -1122,8 +1229,8 @@ function cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifact
       continue;
     }
 
-    // Strategy 2: Artifacts exact-name match
-    if (knownArtifactsNames.has(name)) {
+    // Strategy 2: verbatim exact-name match (Artifacts + Portability)
+    if (knownVerbatimNames.has(name)) {
       if (!currentWrappers.has(name)) {
         fs.removeSync(path.join(skillsDir, name));
         changes.push(`Removed orphan skill wrapper: ${name}`);

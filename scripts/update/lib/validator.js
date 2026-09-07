@@ -56,6 +56,9 @@ async function validateInstallation(preMigrationData = {}, projectRoot) {
   // 9. Artifacts module validation (optional — passes if not installed)
   checks.push(await validateArtifactsModule(projectRoot));
 
+  // 9b. Portability module validation (optional — passes if not installed) — dist-2.6
+  checks.push(await validatePortabilityModule(projectRoot));
+
   const allPassed = checks.every(c => c.passed);
 
   return {
@@ -622,23 +625,32 @@ async function validateEnhanceModule(projectRoot) {
 }
 
 /**
- * Validate Artifacts module installation (optional — passes if not installed)
- * Performs 5-point verification: directory, config, workflows array, per-workflow entry, per-workflow skill wrapper
+ * Validate a standalone-workflow module installation (optional — passes if not installed).
+ *
+ * Five-point verification: directory, config, workflows array, per-workflow entry, per-workflow
+ * skill wrapper. Shared by Artifacts and Portability, which are the two modules declaring their
+ * units as `config.yaml` workflows with `standalone: true` (ADR-004 C2). Extracted in story
+ * dist-2.6 rather than copied: the same fact stated in two places is what rots, and this session
+ * had already found one claim duplicated across two files going stale in both.
+ *
  * @param {string} projectRoot - Absolute path to project root
+ * @param {object} spec
+ * @param {string} spec.label - Human-facing module name used in `name` and in every error string
+ * @param {string} spec.dirRel - Module directory, relative to projectRoot
  * @returns {Promise<object>} Validation check result
  */
-async function validateArtifactsModule(projectRoot) {
+async function validateStandaloneWorkflowModule(projectRoot, { label, dirRel }) {
   const check = {
-    name: 'Artifacts module',
+    name: `${label} module`,
     passed: false,
     error: null
   };
 
   try {
-    const artifactsDir = path.join(projectRoot, '_bmad/bme/_artifacts');
+    const moduleDir = path.join(projectRoot, dirRel);
 
-    // Check 1: Directory exists — if not, Artifacts is simply not installed (optional)
-    if (!fs.existsSync(artifactsDir)) {
+    // Check 1: Directory exists — if not, the module is simply not installed (optional)
+    if (!fs.existsSync(moduleDir)) {
       check.passed = true;
       check.info = 'not installed';
       return check;
@@ -648,9 +660,9 @@ async function validateArtifactsModule(projectRoot) {
 
     // Check 2: Config parse — bail early if config is unreadable, since later checks
     // depend on a parsed workflows array.
-    const configPath = path.join(artifactsDir, 'config.yaml');
+    const configPath = path.join(moduleDir, 'config.yaml');
     if (!fs.existsSync(configPath)) {
-      check.error = 'Artifacts: config.yaml not found';
+      check.error = `${label}: config.yaml not found`;
       return check;
     }
 
@@ -658,18 +670,18 @@ async function validateArtifactsModule(projectRoot) {
     try {
       config = yaml.load(fs.readFileSync(configPath, 'utf8'));
     } catch (err) {
-      check.error = `Artifacts: config.yaml parse error: ${err.message}`;
+      check.error = `${label}: config.yaml parse error: ${err.message}`;
       return check;
     }
 
     if (!config || typeof config !== 'object') {
-      check.error = 'Artifacts: config.yaml is empty or invalid';
+      check.error = `${label}: config.yaml is empty or invalid`;
       return check;
     }
 
     // Check 3: Workflows array non-empty
     if (!Array.isArray(config.workflows) || config.workflows.length === 0) {
-      check.error = 'Artifacts: config.yaml has no workflows array';
+      check.error = `${label}: config.yaml has no workflows array`;
       return check;
     }
 
@@ -677,8 +689,8 @@ async function validateArtifactsModule(projectRoot) {
     // Aggregate failures across all workflows so a single doctor run reports every
     // problem at once (mirrors validateEnhanceModule).
     // Non-standalone workflows are skipped from wrapper/entry checks because
-    // refresh-installation.js section 6d does NOT install them — validating their
-    // wrapper would be a contract mismatch with the refresh logic.
+    // refresh-installation.js does NOT install them — validating their wrapper
+    // would be a contract mismatch with the refresh logic.
     for (const wf of config.workflows) {
       if (!wf || !wf.name || !wf.entry) {
         failures.push('workflow entry missing name or entry field');
@@ -691,7 +703,7 @@ async function validateArtifactsModule(projectRoot) {
       }
 
       // Check 4: Workflow entry point file exists
-      const entryPath = path.join(artifactsDir, wf.entry);
+      const entryPath = path.join(moduleDir, wf.entry);
       if (!fs.existsSync(entryPath)) {
         failures.push(`workflow entry missing for ${wf.name}: ${wf.entry}`);
       }
@@ -705,7 +717,7 @@ async function validateArtifactsModule(projectRoot) {
     }
 
     if (failures.length > 0) {
-      check.error = `Artifacts: ${failures.join('; ')}`;
+      check.error = `${label}: ${failures.join('; ')}`;
     } else {
       check.passed = true;
     }
@@ -714,6 +726,35 @@ async function validateArtifactsModule(projectRoot) {
   }
 
   return check;
+}
+
+/**
+ * Validate Artifacts module installation (optional — passes if not installed)
+ * @param {string} projectRoot - Absolute path to project root
+ * @returns {Promise<object>} Validation check result
+ */
+async function validateArtifactsModule(projectRoot) {
+  return validateStandaloneWorkflowModule(projectRoot, {
+    label: 'Artifacts',
+    dirRel: '_bmad/bme/_artifacts',
+  });
+}
+
+/**
+ * Validate Portability module installation (optional — passes if not installed).
+ *
+ * Added by story dist-2.6. Before it, this module had no install path at all — its four skills
+ * shipped in files[] and reached no operator — so there was nothing for doctor to validate and
+ * nothing that would have reported the gap.
+ *
+ * @param {string} projectRoot - Absolute path to project root
+ * @returns {Promise<object>} Validation check result
+ */
+async function validatePortabilityModule(projectRoot) {
+  return validateStandaloneWorkflowModule(projectRoot, {
+    label: 'Portability',
+    dirRel: '_bmad/bme/_portability',
+  });
 }
 
 /**
@@ -885,6 +926,8 @@ module.exports = {
   validateWorkflowStepStructure,
   validateEnhanceModule,
   validateArtifactsModule,
+  validatePortabilityModule,
+  validateStandaloneWorkflowModule,
   validateSkillMd,
   validateStepFiles,
   validateSkillCohesion,

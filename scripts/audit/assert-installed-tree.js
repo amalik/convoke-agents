@@ -58,7 +58,11 @@
  * rather than a rare short read. `fs.writeSync` on fd 1 followed by `process.exit()` closes
  * both: the write completes before the call returns, and the exit is unconditional.
  *
- * NOT IN THE VERDICT. Story dist-2.6 wires the caller's `TREE` variable into
+ * NOT IN THE VERDICT. This was to be story dist-2.6's job; 2.6 shipped its module work on
+ * 2026-09-07 and deferred the wiring to backlog row T102, which holds 17 lettered defects in THIS
+ * file's library (its header says 20, inherited from dist-2-4's Round 3 log and never reconciled);
+ * (a)-(f) are the fail-open ones. T102 now carries it. Superseded text follows for the
+ * record — "Story dist-2.6 wires the caller's `TREE` variable into
  * try-fresh-install.sh's exit condition. Until then this prints and the harness still
  * exits on its pre-existing checks alone (NFR10).
  */

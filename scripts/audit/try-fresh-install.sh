@@ -350,9 +350,12 @@ echo "==> Everything shipped arrives in the project, and every declared unit is 
 # Story dist-2.4 (FR13). Three failures none of the checks above can see, because every
 # one of them stops at `node_modules/convoke-agents/` — which is all `files[]` buys you:
 #
-#   1. a `_bmad/bme/*` entry in `files[]` never reaches the PROJECT. `_portability` is in
-#      `files[]` and no install path copies it; the only generic module loop iterates
-#      EXTRA_BME_AGENTS, so a module with no agent entry is never visited.
+#   1. a `_bmad/bme/*` entry in `files[]` never reaches the PROJECT. `_portability` WAS the
+#      worked example: it sat in `files[]` with no install path copying it, because the only
+#      generic module loop iterates EXTRA_BME_AGENTS and a module with no agent entry is never
+#      visited. **Fixed by dist-2-6 on 2026-09-07** — the module now conforms to ADR-004 and
+#      `refreshInstallation` copies it and generates a wrapper per declared workflow. Kept here
+#      as the illustration of the class, which is still real; it is no longer a live finding.
 #   2. a module arrives but its declared units are not invocable. `.claude/skills/`
 #      wrappers are GENERATED from declarations, never copied, so "the directory is there"
 #      and "the operator can run it" are different assertions — and only the second is what
@@ -368,7 +371,16 @@ echo "==> Everything shipped arrives in the project, and every declared unit is 
 # every PR — a gate merged red blocks the repository until its fix lands. Story dist-2.6
 # adds $TREE to that condition in the same commit that turns it green. A check that prints
 # FAILED and exits 0 is uncomfortable on purpose. If you are reading this after 2.6 shipped
-# and $TREE still appears nowhere in the verdict, that is the bug.
+# and $TREE still appears nowhere in the verdict, that is NOT necessarily the bug — read T102
+# first. dist-2-6 shipped its AC1-AC7 on 2026-09-07 and DEFERRED the wiring by operator ruling:
+# T102 holds 17 lettered defects in the assertion — its header says 20, a figure inherited from
+# dist-2-4's Round 3 log and never reconciled against the row's own enumeration; (a)-(f) are the
+# fail-open ones (a wrapper `name` used
+# verbatim in `path.join` is satisfied by a SKILL.md outside the project, reproduced at exit 0),
+# and wiring with those open would put them in the gate `publish` depends on. T102 now carries
+# the wiring. The assertion's preconditions are already met — it reports zero findings, and
+# dist-2-4 shipped the invocability form (C2), verified — so clearing T102 (a)-(f) leaves only
+# the one-line edit to the condition below.
 #
 # Run from $REPO, not from the installed copy. `scripts/` ships, so both exist — but an
 # auditor loaded out of the tree it is auditing cannot report that tree as broken.

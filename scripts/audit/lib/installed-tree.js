@@ -6,10 +6,18 @@
  * Story dist-2.4 (FR13). The question this answers is narrower than "did the tarball
  * contain it": a file can be in `package.json` `files[]`, reach
  * `node_modules/convoke-agents/`, and still never reach the project where the code
- * looks for it. `refresh-installation.js` copies `_bmad/_config/` PER NAMED FILE
- * (`:551`, `:585`), not as a directory, and `.claude/skills/` wrappers are GENERATED
- * from declarations (`:782`, `:811`, `:837`, `:863`, `:914`) — never copied. Those numbers are
- * re-derived and anchor-checked in WRAPPER_RULES below; this header carried the pre-correction
+ * looks for it. `refresh-installation.js` copies `_bmad/_config/` PER NAMED FILE, not as a
+ * directory, and `.claude/skills/` wrappers are GENERATED from declarations — never copied.
+ *
+ * NO LINE NUMBERS IN THIS HEADER, deliberately, since 2026-09-07. It used to restate them
+ * (the pre-shift `:551`/`:585` and `:782`/`:811`/`:837`/`:863`/`:914`, quoted here as history and
+ * deliberately NOT maintained) alongside the assurance that they were
+ * "re-derived and anchor-checked in WRAPPER_RULES below" — and that assurance is exactly what let
+ * them rot: the alarm walks the STRUCTURED tables, never this prose, so when dist-2-6 shifted the
+ * file by 60 lines every structured citation failed loudly and every copy up here went stale in
+ * silence, pointing at a template string, an `fs.existsSync` guard and two closing tags. Found by
+ * review, not by the alarm. The authoritative citations live in `RUNTIME_DATA_FILES` and
+ * `WRAPPER_RULES` below, where something checks them. This header carried the pre-correction
  * set until Round 2, where three of the five pointed at comments and guards.
  *
  * So there are three distinct failures, and this module names all three:
@@ -24,8 +32,12 @@
  * (`_bmad-output/planning-artifacts/adr/4-0-1/adr-004-bme-module-contract.md`),
  * accepted question 3.
  *
- * NOT WIRED INTO THE VERDICT. Story dist-2.4 builds and demonstrates; story dist-2.6
- * wires it in. NFR10: a gate merged green has never been shown to work.
+ * NOT WIRED INTO THE VERDICT. dist-2.4 built and demonstrated it. dist-2.6 was to wire it and
+ * did not: it shipped the module work on 2026-09-07 and deferred the wiring to T102, which holds
+ * 17 lettered defects in this library (its header says 20 — inherited from dist-2-4's Round 3 log,
+ * never reconciled against its own enumeration); (a)-(f) are the fail-open ones, and which now carries the wiring. Nothing
+ * regressed — this gated nothing before and gates nothing now; what changed is that it reports
+ * zero findings instead of one. NFR10: a gate merged green has never been shown to work.
  */
 
 const fs = require('fs');
@@ -62,16 +74,17 @@ const RUNTIME_DATA_FILES = [
     file: '_bmad/_config/skill-manifest.csv',
     readSite: 'scripts/portability/convoke-export.js:360',
     alsoRead: ['scripts/portability/export-engine.js:98', 'scripts/convoke-doctor.js:322'],
-    // `:585` opens the PACKAGE copy that seeds the project file; `:551` — cited until Round 2 —
-    // only declares the destination path, the same declaration-not-a-write defect corrected on
-    // the agent-manifest entry below. Missing this sibling is why the alarm is now an AND.
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:585',
+    // `arrivesVia` must cite the line that OPENS THE PACKAGE COPY seeding the project file, not
+    // the earlier line that merely DECLARES the destination path — deleting the copy and leaving
+    // the declaration would keep a basename-matching alarm green. That is why the alarm is an AND.
+    // No line numbers in this comment on purpose: only the field below is checked.
+    arrivesVia: 'scripts/update/lib/refresh-installation.js:645',
     arrivesViaToken: 'packageManifest',
     why: 'convoke-export resolves every skill through it — absence is I139 exactly: the bin exits non-zero on a fresh install.',
   },
   {
     file: '_bmad/_config/agent-manifest.csv',
-    readSite: 'scripts/update/lib/validator.js:286',
+    readSite: 'scripts/update/lib/validator.js:289',
     alsoRead: ['scripts/portability/export-engine.js:168'],
     // `:308` is `fs.writeFile(manifestPath, …)` — the write itself. The first draft cited
     // `:237`, which only DECLARES the destination path; deleting the write and leaving the
@@ -84,12 +97,13 @@ const RUNTIME_DATA_FILES = [
     file: '_bmad/_config/taxonomy.yaml',
     readSite: 'scripts/convoke-doctor.js:980',
     alsoRead: ['scripts/lib/artifact-utils.js:164'],
-    // `:1038` is the `mergeTaxonomy(projectRoot)` call that creates the file. The first
-    // draft cited `:1040`, which is the `changes.push('Created …taxonomy.yaml…')` LOG
-    // LINE inside `if (taxonomyResult.created)` — so the rot alarm passed merely because
-    // a string literal mentioned the basename. Deleting the real call and leaving the log
+    // `arrivesVia` must cite the `mergeTaxonomy(projectRoot)` CALL that creates the file. An
+    // early draft cited the `changes.push('Created …taxonomy.yaml…')` LOG LINE inside
+    // `if (taxonomyResult.created)` instead — so the rot alarm passed merely because a string
+    // literal mentioned the basename. Deleting the real call and leaving the log
+    // (No line numbers here on purpose: only the field below is checked.)
     // would have kept it green. Review 2026-08-30.
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:1038',
+    arrivesVia: 'scripts/update/lib/refresh-installation.js:1144',
     arrivesViaToken: 'mergeTaxonomy',
     why: 'a fresh install runs no migrations, so the installer seeds it directly; without it doctor fails its own Taxonomy checks.',
   },
@@ -121,9 +135,9 @@ const RUNTIME_DATA_FILES = [
     // `convoke-register-skill` and blinds the doctor's `unregistered-custom-skill` category.
     // The entry STAYS in the manifest: the file must still arrive, and `missingRuntimeFiles`
     // tests project presence, which a created file satisfies exactly as a copied one would.
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:1061',
-    // Discriminates the CALL from the declaration at :1201 and the export at :1261, both of
-    // which contain the bare identifier but not this token. The dist-2-4 review's lesson is
+    arrivesVia: 'scripts/update/lib/refresh-installation.js:1168',
+    // Discriminates the CALL from the function's own declaration and its export, both of which
+    // contain the bare identifier but not this token. (Named, not numbered, on purpose.) The dist-2-4 review's lesson is
     // that a token which merely appears does not prove a citation — and the previous two
     // revisions of this very comment cited the wrong lines while making that argument, which
     // is why the rot alarm checks the `arrivesVia` line rather than trusting the prose.
@@ -147,20 +161,26 @@ const RUNTIME_DATA_FILES = [
  * so nothing caught it. Both halves fixed 2026-08-30 after review.
  *
  * `derivedFrom` is honest about which basis each rule has. Four are read off the generator.
- * `standaloneWorkflow` is NOT: there is no generic standalone-workflow generator — block 6d
- * is `if (artifactsConfig && !isSameRoot)` over `artifactsConfig.workflows` and is
- * `_artifacts`-specific. That rule is derived from ADR-004 C2 (declared ⇒ invocable) and
- * applies to every arriving module ON PURPOSE, so that `dist-2-6` giving `_portability` a
- * config with `standalone: true` workflows goes RED until the generator is extended to
- * emit them. Demanding a wrapper nothing yet generates is the correct behaviour; claiming
- * the rule was read off a generator was not.
+ * `standaloneWorkflow` is NOT: there is still no GENERIC standalone-workflow generator. There
+ * are now two module-specific ones — block 6d over `artifactsConfig.workflows` and 6d-bis over
+ * `portabilityConfig.workflows`, added by dist-2-6 — and the `site` below cites the Artifacts
+ * one as the representative. The rule is derived from ADR-004 C2 (declared ⇒ invocable) and
+ * applies to every arriving module ON PURPOSE.
+ *
+ * THAT DESIGN WAS VINDICATED, and the record is kept because it is the useful part: this
+ * comment previously said the rule exists so that `dist-2-6` giving `_portability` a config
+ * with `standalone: true` workflows "goes RED until the generator is extended to emit them".
+ * dist-2-6 extended it, and the assertion went from one standing finding to zero without the
+ * rule being touched. A check written to fail on work not yet done, which then passes when the
+ * work lands, is the shape worth copying. Demanding a wrapper nothing yet generates was the
+ * correct behaviour; claiming the rule was read off a generator was not.
  */
 const WRAPPER_RULES = {
-  vortexAgent:        { site: 'scripts/update/lib/refresh-installation.js:782', anchor: 'for (const agent of AGENTS)',            derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
-  gyreAgent:          { site: 'scripts/update/lib/refresh-installation.js:811', anchor: 'for (const agent of GYRE_AGENTS)',       derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
-  extraBmeAgent:      { site: 'scripts/update/lib/refresh-installation.js:837', anchor: 'for (const agent of EXTRA_BME_AGENTS)',  derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
-  enhanceWorkflow:    { site: 'scripts/update/lib/refresh-installation.js:863', anchor: 'enhanceConfig.workflows',               derivedFrom: 'generator', name: n => `bmad-enhance-${n}` },
-  standaloneWorkflow: { site: 'scripts/update/lib/refresh-installation.js:914', anchor: 'artifactsConfig.workflows',             derivedFrom: 'ADR-004 C2', name: n => `${n}` },
+  vortexAgent:        { site: 'scripts/update/lib/refresh-installation.js:842', anchor: 'for (const agent of AGENTS)',            derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  gyreAgent:          { site: 'scripts/update/lib/refresh-installation.js:871', anchor: 'for (const agent of GYRE_AGENTS)',       derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  extraBmeAgent:      { site: 'scripts/update/lib/refresh-installation.js:897', anchor: 'for (const agent of EXTRA_BME_AGENTS)',  derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  enhanceWorkflow:    { site: 'scripts/update/lib/refresh-installation.js:923', anchor: 'enhanceConfig.workflows',               derivedFrom: 'generator', name: n => `bmad-enhance-${n}` },
+  standaloneWorkflow: { site: 'scripts/update/lib/refresh-installation.js:974', anchor: 'artifactsConfig.workflows',             derivedFrom: 'ADR-004 C2', name: n => `${n}` },
 };
 
 /** `_bmad/bme/*` entries in a `files[]` array, normalised to bare module names. */
@@ -223,7 +243,8 @@ function missingRuntimeFiles(projectRoot, manifest = RUNTIME_DATA_FILES) {
  *
  * The rules below are the GENERATOR's rules, read off the five code paths that emit
  * wrappers, not ADR-004's prose. They differ in one place and it matters: ADR-004 C2 says
- * a workflow is declared by `standalone: true`, but the Enhance path (`:863`) emits a
+ * a workflow is declared by `standalone: true`, but the Enhance path (the `enhanceConfig.workflows`
+ * loop in section 6c) emits a
  * wrapper for EVERY object-shaped workflow entry and `_enhance`'s sole entry carries no
  * `standalone` flag. Implementing C2 literally would leave `bmad-enhance-initiatives-backlog`
  * unchecked — a whole module's operator surface invisible to the gate. Recorded in the
@@ -248,8 +269,10 @@ function declaredUnits({ projectRoot, registry, arrived }) {
   const excludedCounts = new Map();
 
   // `honoursExclusions` mirrors the generator EXACTLY rather than applying a uniform rule.
-  // The Vortex loop (`:783`) and the Gyre loop (`:812`) skip excluded agents; the
-  // EXTRA_BME loop (`:837`) has no exclusion check at all and emits unconditionally.
+  // The Vortex loop (`for (const agent of AGENTS)`) and the Gyre loop (`GYRE_AGENTS`) skip
+  // excluded agents; the `EXTRA_BME_AGENTS` loop has no exclusion check at all and emits
+  // unconditionally. Named rather than numbered: the anchors below are what WRAPPER_RULES
+  // checks, and a line number in prose is checked by nothing.
   // Filtering that bucket — as the first draft did — meant an `excluded_agents` entry in
   // `_team-factory/config.yaml` would drop a wrapper from the CHECK that the installer
   // still generates: a skew in the fail-open direction. Review 2026-08-30.

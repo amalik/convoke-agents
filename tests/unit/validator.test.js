@@ -16,6 +16,7 @@ const {
   validateWorkflowStepStructure,
   validateEnhanceModule,
   validateArtifactsModule,
+  validatePortabilityModule,
   validateSkillMd,
   validateStepFiles,
   validateSkillCohesion,
@@ -803,6 +804,97 @@ describe('validateEnhanceModule', () => {
     const failureCount = result.error.split('; ').length;
     assert.ok(failureCount >= 2, `Expected multiple failures, got: ${result.error}`);
     await fs.remove(dir);
+  });
+});
+
+// === validatePortabilityModule (dist-2.6) ===
+
+describe('validatePortabilityModule', () => {
+  let tmpDir;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'validator-port-'));
+  });
+  afterEach(async () => { await fs.remove(tmpDir); });
+
+  async function seed(workflows, { wrappers = [], entries = [] } = {}) {
+    const dir = path.join(tmpDir, '_bmad/bme/_portability');
+    await fs.ensureDir(dir);
+    await fs.writeFile(path.join(dir, 'config.yaml'),
+      yaml.dump({ name: 'portability', version: '1.0.0', workflows }), 'utf8');
+    for (const e of entries) {
+      await fs.ensureDir(path.dirname(path.join(dir, e)));
+      await fs.writeFile(path.join(dir, e), '# wf', 'utf8');
+    }
+    for (const w of wrappers) {
+      await fs.ensureDir(path.join(tmpDir, '.claude/skills', w));
+      await fs.writeFile(path.join(tmpDir, '.claude/skills', w, 'SKILL.md'), '# skill', 'utf8');
+    }
+    return dir;
+  }
+
+  it('passes when the module is not installed (optional module)', async () => {
+    const result = await validatePortabilityModule(tmpDir);
+    assert.equal(result.passed, true);
+    assert.equal(result.info, 'not installed');
+  });
+
+  it('fails when config.yaml is missing', async () => {
+    await fs.ensureDir(path.join(tmpDir, '_bmad/bme/_portability'));
+    const result = await validatePortabilityModule(tmpDir);
+    assert.equal(result.passed, false);
+    assert.match(result.error, /Portability: config\.yaml not found/);
+  });
+
+  it('fails when a declared standalone workflow has no skill wrapper', async () => {
+    // THE DEFECT dist-2.6 EXISTS TO CLOSE, stated as a check: the module arrives but its
+    // skills are unreachable. Presence of the directory is not invocability (ADR-004 C4).
+    await seed(
+      [{ name: 'bmad-export-skill', entry: 'workflows/bmad-export-skill/workflow.md', standalone: true }],
+      { entries: ['workflows/bmad-export-skill/workflow.md'], wrappers: [] },
+    );
+    const result = await validatePortabilityModule(tmpDir);
+    assert.equal(result.passed, false);
+    assert.match(result.error, /skill wrapper missing for bmad-export-skill/);
+  });
+
+  it('fails when the workflow entry file is absent', async () => {
+    await seed(
+      [{ name: 'bmad-export-skill', entry: 'workflows/bmad-export-skill/workflow.md', standalone: true }],
+      { entries: [], wrappers: ['bmad-export-skill'] },
+    );
+    const result = await validatePortabilityModule(tmpDir);
+    assert.equal(result.passed, false);
+    assert.match(result.error, /workflow entry missing for bmad-export-skill/);
+  });
+
+  it('passes when every declared workflow has both an entry and a wrapper', async () => {
+    await seed(
+      [{ name: 'bmad-export-skill', entry: 'workflows/bmad-export-skill/workflow.md', standalone: true }],
+      { entries: ['workflows/bmad-export-skill/workflow.md'], wrappers: ['bmad-export-skill'] },
+    );
+    const result = await validatePortabilityModule(tmpDir);
+    assert.equal(result.passed, true, result.error || '');
+  });
+
+  it('aggregates failures across workflows rather than reporting only the first', async () => {
+    await seed([
+      { name: 'bmad-export-skill', entry: 'workflows/bmad-export-skill/workflow.md', standalone: true },
+      { name: 'bmad-seed-catalog', entry: 'workflows/bmad-seed-catalog/workflow.md', standalone: true },
+    ], { entries: [], wrappers: [] });
+    const result = await validatePortabilityModule(tmpDir);
+    assert.equal(result.passed, false);
+    assert.match(result.error, /bmad-export-skill/);
+    assert.match(result.error, /bmad-seed-catalog/);
+  });
+
+  it('labels its errors Portability, never Artifacts', async () => {
+    // The shared helper is parameterised; a label regression would misattribute every
+    // portability failure to the Artifacts module in doctor output.
+    await fs.ensureDir(path.join(tmpDir, '_bmad/bme/_portability'));
+    const result = await validatePortabilityModule(tmpDir);
+    assert.ok(!/Artifacts/.test(result.error), `error must not mention Artifacts: ${result.error}`);
+    assert.equal(result.name, 'Portability module');
   });
 });
 

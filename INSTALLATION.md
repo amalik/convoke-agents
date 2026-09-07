@@ -91,8 +91,11 @@ your-project/
 │   │   ├── templates/        # Generation templates
 │   │   ├── lib/              # Factory generators and validators
 │   │   └── config.yaml       # Configuration
-│   └── _artifacts/           # Skill: Artifact governance & portfolio
-│       ├── workflows/        # Migrate artifacts, portfolio status
+│   ├── _artifacts/           # Skill: Artifact governance & portfolio
+│   │   ├── workflows/        # Migrate artifacts, portfolio status
+│   │   └── config.yaml       # Configuration
+│   └── _portability/         # Skill: Export Convoke skills to other AI platforms
+│       ├── workflows/        # Export skill, generate/seed catalog, validate exports
 │       └── config.yaml       # Configuration
 ├── .claude/skills/           # Claude Code skill wrappers (auto-generated)
 ├── _bmad/_config/
@@ -111,9 +114,10 @@ your-project/
 | **Enhance** | Skill workflows, menu patch descriptors, module author guide |
 | **Team Factory** | The factory agent, its workflows, schemas, templates and validators |
 | **Artifacts** | Artifact governance and portfolio workflows |
+| **Portability** | Skills for exporting Convoke skills to other AI platforms (export, catalog generation, catalog seeding, export validation) |
 | **Skills** | Claude Code skill wrappers in `.claude/skills/` for every installed agent |
 
-The `_portability/` module ships inside the npm package but is **not** copied into your project — `convoke-export` runs from the package itself, so there is nothing to install.
+The `convoke-export` **command** runs from the npm package and needs no installation. The Portability **skills** install like every other module's: `_bmad/bme/_portability/` is copied into your project and each of its workflows gets a `.claude/skills/` wrapper, so you can invoke them as slash commands.
 
 ---
 

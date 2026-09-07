@@ -1,0 +1,25 @@
+name: portability
+version: 1.0.0
+description: "Portability module — operator-facing skills for exporting Convoke skills to other AI platforms (export, catalog generation, catalog seeding, export validation)"
+# Workflows in this module are STANDALONE (operator invokes them directly via slash command),
+# mirroring _bmad/bme/_artifacts/config.yaml, whose block this follows. The `standalone: true`
+# flag is what refresh-installation.js consumes to generate a .claude/skills/ wrapper instead of
+# patching a target_agent's menu — and per ADR-004 C2 it is one of only TWO declaration
+# mechanisms in this codebase (the other is an agent-registry entry). No third shape is added.
+#
+# THIS FILE IS WHY THE MODULE IS REACHABLE. Without it the module declared nothing, no wrapper
+# was ever generated, and all four skills shipped to every operator unreachable — the defect
+# story dist-2-6 exists to close, and the standing finding assert-installed-tree.js reported.
+workflows:
+  - name: bmad-export-skill
+    entry: workflows/bmad-export-skill/workflow.md
+    standalone: true
+  - name: bmad-generate-catalog
+    entry: workflows/bmad-generate-catalog/workflow.md
+    standalone: true
+  - name: bmad-seed-catalog
+    entry: workflows/bmad-seed-catalog/workflow.md
+    standalone: true
+  - name: bmad-validate-exports
+    entry: workflows/bmad-validate-exports/workflow.md
+    standalone: true

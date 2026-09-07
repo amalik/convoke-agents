@@ -113,6 +113,51 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — live wrappers preserved', ()
 
 // === (c) Third-party wrappers left alone ===
 
+describe('dist-2.6: cleanupOrphanWorkflowWrappers — Portability names are known by DESIGN', () => {
+  // Before dist-2.6 the sweep's Strategy 2 set held ONLY Artifacts workflow names. The four
+  // portability wrappers therefore survived it BY ACCIDENT — their names happened to match no
+  // known Artifacts workflow — and a workflow later removed from portability's config.yaml
+  // would have been stranded in .claude/skills/ forever rather than cleaned. These two tests
+  // pin both directions of that fix.
+  let tmpDir, skillsDir;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'orphan-cleanup-port-'));
+    skillsDir = path.join(tmpDir, '.claude', 'skills');
+  });
+  afterEach(async () => { await fs.remove(tmpDir); });
+
+  it('sweeps a portability wrapper whose workflow was removed from config.yaml', async () => {
+    await seedSkillsDir(skillsDir, ['bmad-export-skill', 'bmad-seed-catalog']);
+    // bmad-seed-catalog is still declared; bmad-export-skill has been removed from the config
+    // but its name is still KNOWN, which is what lets Strategy 2 recognise it as an orphan.
+    const currentWrappers = new Set(['bmad-seed-catalog']);
+    const knownVerbatimNames = new Set(['bmad-export-skill', 'bmad-seed-catalog']);
+
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatimNames);
+
+    assert.ok(!fs.existsSync(path.join(skillsDir, 'bmad-export-skill')),
+      'a removed portability workflow should have its wrapper swept, not stranded');
+    assert.ok(fs.existsSync(path.join(skillsDir, 'bmad-seed-catalog')),
+      'a still-declared portability wrapper must be preserved');
+    assert.ok(changes.some(c => c.includes('bmad-export-skill')));
+  });
+
+  it('preserves every live portability wrapper', async () => {
+    const live = ['bmad-export-skill', 'bmad-generate-catalog', 'bmad-seed-catalog', 'bmad-validate-exports'];
+    await seedSkillsDir(skillsDir, live);
+    const currentWrappers = new Set(live);
+    const knownVerbatimNames = new Set(live);
+
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatimNames);
+
+    for (const n of live) {
+      assert.ok(fs.existsSync(path.join(skillsDir, n)), `${n} must survive the sweep`);
+    }
+    assert.equal(changes.length, 0, 'no wrapper should be removed when all are declared');
+  });
+});
+
 describe('ag-7-4: cleanupOrphanWorkflowWrappers — third-party wrappers', () => {
   let tmpDir, skillsDir;
 
