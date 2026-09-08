@@ -163,6 +163,14 @@ function tree(projectRoot, packageRoot) {
   const registryPath = path.join(packageRoot, 'scripts', 'update', 'lib', 'agent-registry.js');
   try {
     registry = require(registryPath);
+    // A `require` that RESOLVES but exports a falsy value does not throw, so the catch below
+    // never fires. Round 1 reproduced the consequence end to end: exit 0 PASS with every
+    // agent-derived wrapper in the package unchecked and no diagnostic at all — the T102(e)
+    // fix's comment assumed the failure path always reports, and it does not.
+    if (!registry || typeof registry !== 'object') {
+      fail(`the shipped agent registry exported no usable module (${path.relative(packageRoot, registryPath)}) — agent wrappers could not be checked`);
+      registry = null;
+    }
   } catch (err) {
     // `scripts/` is in files[], so a registry that did not ship or does not load is a PRODUCT
     // defect — I139's exact class. The first draft called it a harness failure and exited 2,
@@ -186,9 +194,24 @@ function tree(projectRoot, packageRoot) {
   }
 
   // ── PHASE 4 — units, wrappers, runtime data.
-  const { units, malformed, byModule, duplicates } = registry
-    ? declaredUnits({ projectRoot, registry, arrived })
-    : { units: [], malformed: [], byModule: {}, duplicates: [] };
+  // T102(e). This used to fall back to `byModule: {}` when the registry failed to load, and
+  // `modulesDeclaringNothing` bails on a module with no accounting entry — so a registry
+  // failure silently DARKENED the ADR-004 C1 check, which reads nothing from the registry at
+  // all. C1 asks "does this arriving module's config.yaml declare anything?", a question about
+  // configs; it should still be answered when the registry is gone. Passing `{}` as the
+  // registry keeps the agent buckets empty (`registry.AGENTS || []`) while the workflow loop,
+  // which is config-driven, still populates `byModule`. The registry failure itself is already
+  // reported as a product defect above.
+  const { units, malformed, byModule, duplicates, exclusionAmbiguous } =
+    declaredUnits({ projectRoot, registry: registry || {}, arrived });
+
+  // T102(b), third attempt. An unparsable config makes the module unverifiable: its agents are
+  // skipped upstream so nothing is fabricated, and this finding is BLOCKING so nothing is
+  // concealed — the run goes red naming the module and the reason. It does not claim to report
+  // every defect in the module in one pass; it reports the one that has to be fixed first.
+  for (const m of exclusionAmbiguous || []) {
+    fail(`module "${m}" — config.yaml did not parse, so operator exclusions are unknown and its agent wrappers could not be verified`);
+  }
 
   for (const m of malformed) {
     fail(`agent "${m.id}" (${m.rule}) — ${m.reason}, so nothing can be asserted about its wrapper`);

@@ -267,6 +267,7 @@ function declaredUnits({ projectRoot, registry, arrived }) {
   const units = [];
   const malformed = [];
   const excludedCounts = new Map();
+  const exclusionAmbiguous = new Set();
 
   // `honoursExclusions` mirrors the generator EXACTLY rather than applying a uniform rule.
   // The Vortex loop (`for (const agent of AGENTS)`) and the Gyre loop (`GYRE_AGENTS`) skip
@@ -276,21 +277,54 @@ function declaredUnits({ projectRoot, registry, arrived }) {
   // Filtering that bucket — as the first draft did — meant an `excluded_agents` entry in
   // `_team-factory/config.yaml` would drop a wrapper from the CHECK that the installer
   // still generates: a skew in the fail-open direction. Review 2026-08-30.
+  // `Array.isArray`, not `|| []`: a truthy NON-array (a plain object from a malformed registry)
+  // satisfies `||` and then throws "is not iterable" out of the for..of below, crashing the whole
+  // assertion instead of reporting anything. Round 1 reproduced that crash.
+  //
+  // BUT SUBSTITUTING `[]` SILENTLY IS WORSE THAN THE CRASH, and the existing phases-2-4 test
+  // caught exactly that when the first version of this fix did it: a loud crash at least stopped
+  // the run, whereas an empty list means the whole bucket's wrappers go unchecked while the gate
+  // reports success. So the shape is recorded as malformed and the bucket is emptied — the run
+  // completes, and it completes with a finding rather than a silence.
+  const bucketList = (v, rule) => {
+    if (Array.isArray(v)) return v;
+    if (v === undefined || v === null) return [];
+    malformed.push({ id: `(${rule} list)`, rule, reason: `registry export is ${typeof v}, not an array — its agents could not be checked` });
+    return [];
+  };
   const agentBuckets = [
-    { list: registry.AGENTS || [], module: () => '_vortex', rule: 'vortexAgent', honoursExclusions: true },
-    { list: registry.GYRE_AGENTS || [], module: () => '_gyre', rule: 'gyreAgent', honoursExclusions: true },
-    { list: registry.EXTRA_BME_AGENTS || [], module: a => a.submodule, rule: 'extraBmeAgent', honoursExclusions: false },
+    { list: bucketList(registry.AGENTS, 'vortexAgent'), module: () => '_vortex', rule: 'vortexAgent', honoursExclusions: true },
+    { list: bucketList(registry.GYRE_AGENTS, 'gyreAgent'), module: () => '_gyre', rule: 'gyreAgent', honoursExclusions: true },
+    { list: bucketList(registry.EXTRA_BME_AGENTS, 'extraBmeAgent'), module: a => a.submodule, rule: 'extraBmeAgent', honoursExclusions: false },
   ];
 
   for (const bucket of agentBuckets) {
     for (const agent of bucket.list) {
+      // A null/undefined entry threw on `agent.id` (or `a.submodule`) BEFORE the typeof guards
+      // below could classify it — an uncaught crash where a finding was intended. Round 1.
+      if (!agent || typeof agent !== 'object') {
+        malformed.push({ id: String(agent), rule: bucket.rule, reason: 'registry entry is not an object' });
+        continue;
+      }
       const mod = bucket.module(agent);
       // A registry entry whose `submodule` field is renamed or absent used to yield
       // `present.has(undefined)` === false and vanish from the expectation set without a
       // word — a shape change in the audited package quietly shrinking what is checked.
       // Surfaced instead, and the CLI reports it. Review 2026-08-30.
-      if (mod === undefined || mod === null || mod === '') {
+      // T102(d). The guard tested three sentinels, so `0`, `false`, `NaN` and `{}` walked
+      // past it and became `present.has(0)` === false — the entry vanishing from the
+      // expectation set without a word, which is the coverage-shrink this guard exists to
+      // stop. A module name is a string or it is malformed.
+      if (typeof mod !== 'string' || !mod) {
         malformed.push({ id: agent.id, rule: bucket.rule, reason: 'registry entry declares no submodule' });
+        continue;
+      }
+      // T102(c). `WRAPPER_RULES[...].name(agent.id)` interpolates the id, so an entry with no
+      // `id` fabricated `bmad-agent-bme-undefined` and then reported THAT as a missing
+      // wrapper — a finding naming a unit nobody declared, while the real defect (a malformed
+      // registry entry) went unreported.
+      if (typeof agent.id !== 'string' || !agent.id) {
+        malformed.push({ id: String(agent.id), rule: bucket.rule, reason: 'registry entry declares no id' });
         continue;
       }
       // "declared by an ARRIVING module": a wrapper for an agent whose module never
@@ -299,6 +333,27 @@ function declaredUnits({ projectRoot, registry, arrived }) {
       if (!present.has(mod)) continue;
       if (bucket.honoursExclusions && excludedAgents(projectRoot, mod, yaml).includes(agent.id)) {
         excludedCounts.set(mod, (excludedCounts.get(mod) || 0) + 1);
+        continue;
+      }
+      // T102(b), THIRD ATTEMPT — and the instrument changed rather than the patch, per
+      // `code-review-convergence` ("two failed attempts at the same fix predict a third").
+      //
+      //   Attempt 1 skipped the module's agents. That removed the false findings AND the true
+      //   ones: a corrupted config plus a genuinely deleted SKILL.md reported only the parse
+      //   failure. A fail-open.
+      //   Attempt 2 collected the units anyway and added a per-module note. Round 2 reproduced
+      //   that the N false findings were still emitted alongside it — and the comment claiming
+      //   otherwise was simply untrue.
+      //
+      // The honest answer is that an unparsable config makes this module UNVERIFIABLE, and the
+      // check should say so and stop, not guess in either direction. Its agents are skipped
+      // (nothing fabricated) and the module is recorded so the CLI emits a BLOCKING finding
+      // naming it (nothing concealed — the run goes red and says which module and why). The
+      // operator fixes the config; the next run verifies the wrappers for real. What is NOT
+      // claimed, because attempt 1 tried it and it was false: that this reports every defect in
+      // one pass. It reports the one that must be fixed first.
+      if (bucket.honoursExclusions && configUnparsable(projectRoot, mod)) {
+        exclusionAmbiguous.add(mod);
         continue;
       }
       units.push({
@@ -354,7 +409,7 @@ function declaredUnits({ projectRoot, registry, arrived }) {
     }
     byName.set(u.name, u);
   }
-  return { units: [...byName.values()], malformed, byModule, duplicates };
+  return { units: [...byName.values()], malformed, byModule, duplicates, exclusionAmbiguous: [...exclusionAmbiguous] };
 }
 
 /**
@@ -365,9 +420,45 @@ function declaredUnits({ projectRoot, registry, arrived }) {
  * would be presence-checking again, one level down, which is the whole objection this
  * module exists to answer. Review 2026-08-30.
  */
+/**
+ * Resolve a path with symlinks defeated, the way this repository already does it three times
+ * over: realpath the nearest EXISTING ancestor, then re-append the non-existent tail. A plain
+ * `path.resolve` is lexical — it collapses `..` textually and never touches the filesystem — so a
+ * symlinked segment slips straight through it. Idiom taken from `drift-snapshot.js`'s
+ * `checkPathSafety` (CR-H3); the same shape appears in `convoke-register-skill.js` (R2-H3) and
+ * `audit-skill-dirs.js` (R2-H2).
+ */
+function realResolve(p) {
+  let current = path.resolve(p);
+  const tail = [];
+  while (!fs.existsSync(current)) {
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    tail.unshift(path.basename(current));
+    current = parent;
+  }
+  let real;
+  try { real = fs.realpathSync(current); } catch { real = current; }
+  return path.normalize(path.join(real, ...tail));
+}
+
 function missingWrappers(units, projectRoot) {
+  const skillsRoot = realResolve(path.join(projectRoot, '.claude', 'skills'));
   return units.filter(u => {
-    const p = path.join(projectRoot, '.claude', 'skills', u.name, 'SKILL.md');
+    // T102(a). `u.name` comes from a config.yaml the audited package supplies, and was used
+    // verbatim in `path.join` — so a declared workflow named `../../../../tmp/x` resolved
+    // OUTSIDE the project and was satisfied by any SKILL.md sitting there. Reproduced at
+    // exit 0: the gate reported an invocable unit that does not exist in the project at all.
+    // A name that escapes is not a missing wrapper, it is a malformed declaration, so it is
+    // reported rather than silently passing or silently failing.
+    // Round 1 review reproduced the hole the first fix left: the lexical check defeats
+    // `../../../../tmp/x`, but a SYMLINK at `.claude/skills/<name>` pointing outside the project
+    // passes it — the unresolved string is textually inside — and `statSync` then follows it, so
+    // the audit reported the wrapper PRESENT while the real file lived elsewhere. In a gate that
+    // now blocks every publish. `realResolve` closes it.
+    if (typeof u.name !== 'string' || !u.name) return true;
+    const p = realResolve(path.join(skillsRoot, u.name, 'SKILL.md'));
+    if (p !== skillsRoot && !p.startsWith(skillsRoot + path.sep)) return true;
     try {
       const st = fs.statSync(p);
       return !st.isFile() || st.size === 0;
@@ -411,7 +502,8 @@ function walkRequires(entryFile, opts = {}) {
   const RE = /\brequire\(\s*["']([^"']+)["']\s*\)/g;
   const seen = new Set();
   const missing = new Map();
-  const queue = [real(entryFile)];
+  const queue0 = real(entryFile);
+  const queue = [queue0];
   let capHit = false;
 
   while (queue.length) {
@@ -431,10 +523,22 @@ function walkRequires(entryFile, opts = {}) {
     try {
       src = fs.readFileSync(file, 'utf8');
     } catch {
-      // Only reachable for something `require.resolve` accepted and the reader then
-      // could not open (a .node addon, a permissions change mid-walk). Not a missing
-      // dependency — resolution already succeeded — so it is not reported as one.
+      // T102(f). The justification here used to read "only reachable for something
+      // `require.resolve` accepted", which is FALSE for the entry file: the entry is
+      // `realpath`'d and queued directly, never resolved. So an unreadable ENTRY returned the
+      // PASS value and the bin was reported as having no missing dependencies when in truth
+      // nothing had been walked at all. For a DEPENDENCY the old reasoning does hold —
+      // resolution already succeeded, so an unopenable file is not a missing dependency.
+      if (file === queue0) {
+        missing.set(`\u0000entry-unreadable`, { spec: '(entry)', from: entryFile });
+      }
       continue;
+    }
+
+    // A 0-byte entry is a degenerate bin, not a clean dependency walk — `missingWrappers`
+    // already treats a 0-byte SKILL.md as invalid and this is the same judgement. Round 1.
+    if (file === queue0 && src.trim() === '') {
+      missing.set('\u0000entry-empty', { spec: '(entry is empty)', from: entryFile });
     }
 
     for (const m of src.matchAll(RE)) {
@@ -534,6 +638,24 @@ function excludedAgents(projectRoot, mod, yaml) {
 }
 
 /**
+ * T102(b) — is this module's `config.yaml` present but unparsable?
+ *
+ * `excludedAgents` cannot distinguish "no exclusions" from "the config did not parse", and
+ * returns `[]` for both. When a config is unparsable, every agent the operator had EXCLUDED
+ * therefore looks declared, and each one produces a false "SKILL.md was not generated"
+ * finding — N false findings stacked on top of the one true parse finding, for a single
+ * cause. That is the two-findings-one-cause pattern the `modulesDeclaringNothing` carve-outs
+ * already closed on their path; this is the same shape, still open on this one.
+ *
+ * Used to SUPPRESS the derived findings, not to hide the cause: `unparsableConfigs` still
+ * reports the parse failure itself, which is the finding that can actually be acted on.
+ */
+function configUnparsable(projectRoot, mod) {
+  if (!isFile(path.join(projectRoot, '_bmad', 'bme', mod, 'config.yaml'))) return false;
+  return !configParses(projectRoot, mod);
+}
+
+/**
  * ADR-004 C1 — an arriving module must carry a `config.yaml`.
  *
  * NOT required by AC3, and added deliberately after the positive control MEASURED the
@@ -622,6 +744,7 @@ module.exports = {
   missingWrappers,
   modulesWithoutConfig,
   modulesDeclaringNothing,
+  configUnparsable,
   configParses,
   unparsableConfigs,
   walkRequires,

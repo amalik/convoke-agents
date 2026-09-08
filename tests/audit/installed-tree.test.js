@@ -529,15 +529,21 @@ describe('Round 3 — fail-open paths the restructure left open', () => {
   // Each of these was reproduced by a review layer against the shipped code, and each is a
   // check that reported less than it found, or reported health it had not established.
 
-  it('a crash in phases 2-4 still emits the findings gathered before it', () => {
+  it('a non-iterable AGENTS is REPORTED, not crashed on and not silently skipped', () => {
+    // Was: "a crash in phases 2-4 still emits the findings gathered before it", pinning that a
+    // non-iterable AGENTS threw and that earlier findings survived the throw. T102's Round 1
+    // removed the crash — but the first version of that fix substituted `[]`, which is WORSE:
+    // the bucket's wrappers go unchecked while the run reports success. This test caught it.
+    // The behaviour now asserted is the third option: complete the run AND report the shape.
     const { root, pkgRoot } = installedFixture();
-    // A legal-JS registry with a non-iterable AGENTS — `|| []` only rescues falsy values.
     write(path.join(pkgRoot, 'scripts', 'update', 'lib', 'agent-registry.js'),
       'module.exports = { AGENTS: { emma: {} }, GYRE_AGENTS: [], EXTRA_BME_AGENTS: [] };\n');
     const r = runCli(['tree', root, pkgRoot]);
-    assert.equal(r.code, 2, 'a crash means the run was incomplete');
+    assert.notEqual(r.code, 2, 'the run must complete, not abort as a harness failure');
+    assert.match(r.stdout + r.stderr, /not an array/,
+      'a non-array registry export must be reported, never silently emptied');
     assert.match(r.stdout, /_portability\/ is in files\[\] but did not arrive/,
-      'the finding gathered before the crash must survive it');
+      'findings from earlier phases must still be emitted');
   });
 
   it('the operator excluded_agents opt-out is not reported as a defect', () => {
@@ -792,5 +798,210 @@ describe('assert-installed-tree CLI', () => {
     const capped = runCli(['requires', path.join(root, 'entry.js'), '1']);
     assert.equal(capped.code, 2);
     assert.match(capped.stderr, /hit its 1-file cap/);
+  });
+});
+
+
+// --- T102 (a)-(f): the six correctness defects that had to clear before $TREE could be wired ---
+//
+// dist-2-4 shipped this assertion deliberately NOT in try-fresh-install.sh's verdict, and its
+// Round 3 residue was filed as T102 because code-review-convergence forbids a Round 4. These six
+// are the subset that could make the gate WRONG rather than merely noisy, and T102 says plainly:
+// clear them before adding $TREE to the condition. Each test below plants the exact defect the
+// row describes and asserts it is now caught.
+
+describe('T102 — the six correctness defects, each pinned', () => {
+  const os = require('os');
+
+  function tmpProject() {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), 't102-test-'));
+    fs.mkdirSync(path.join(d, '.claude', 'skills'), { recursive: true });
+    return d;
+  }
+
+  it('(a) a wrapper name that escapes .claude/skills is a finding, not satisfied from outside', () => {
+    // The row: a declared workflow named `../../../../tmp/x` was satisfied by any SKILL.md
+    // sitting there — reproduced at exit 0. path.join does not neutralise `..`.
+    const proj = tmpProject();
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 't102-outside-'));
+    fs.mkdirSync(path.join(outside, 'x'), { recursive: true });
+    fs.writeFileSync(path.join(outside, 'x', 'SKILL.md'), '# planted outside the project');
+    const escaping = path.relative(path.join(proj, '.claude', 'skills'), path.join(outside, 'x'));
+
+    const found = missingWrappers([{ name: escaping, module: 'm', rule: 'r', site: 's' }], proj);
+
+    assert.equal(found.length, 1, 'an escaping wrapper name must be reported, not satisfied');
+    fs.rmSync(proj, { recursive: true, force: true });
+    fs.rmSync(outside, { recursive: true, force: true });
+  });
+
+  it('(b) an unparsable config does not manufacture a false wrapper demand per excluded agent', () => {
+    // The row: excludedAgents cannot tell "no exclusions" from "did not parse" and returns []
+    // for both, so every opted-out agent produced a false "SKILL.md was not generated" finding
+    // stacked on the one true parse finding — two findings, one cause.
+    const proj = tmpProject();
+    const mod = path.join(proj, '_bmad', 'bme', '_vortex');
+    fs.mkdirSync(mod, { recursive: true });
+    fs.writeFileSync(path.join(mod, 'config.yaml'), 'name: vortex\n  bad: [unclosed\n\t\ttabs:');
+
+    const r = declaredUnits({
+      projectRoot: proj,
+      registry: { AGENTS: [{ id: 'a1' }, { id: 'a2' }] },
+      arrived: ['_vortex'],
+    });
+
+    // CORRECTED AT ROUND 1. The first fix skipped the module's agents entirely, which removed
+    // the false findings AND the true ones — review reproduced a corrupted config plus a
+    // genuinely deleted SKILL.md for a non-excluded agent and got zero findings for the real
+    // defect. Trading noise for a fail-open is the wrong direction in a blocking gate. The
+    // module is now marked exclusion-ambiguous so the CLI reports ONCE that these wrappers
+    // could not be verified — neither fabricating N findings nor concealing them.
+    assert.deepEqual(r.exclusionAmbiguous, ['_vortex'],
+      'a module whose config will not parse must be reported as exclusion-ambiguous');
+    fs.rmSync(proj, { recursive: true, force: true });
+  });
+
+  it('(a) a SYMLINK escaping .claude/skills is a finding — the lexical check alone missed this', () => {
+    // ROUND 2 GAP. The original (a) test built a lexical `../..` string via path.relative, which
+    // the pre-fix lexical check already caught — so reverting realResolve left the whole suite
+    // GREEN while the actual HIGH (a symlink pointing outside the project, statSync following
+    // it, wrapper reported PRESENT) went unverified. A fix whose regression test cannot fail is
+    // the class this repo has shipped repeatedly. This creates the real symlink.
+    const proj = tmpProject();
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 't102-sym-out-'));
+    fs.mkdirSync(path.join(outside, 'payload'), { recursive: true });
+    fs.writeFileSync(path.join(outside, 'payload', 'SKILL.md'), '# lives outside the project');
+    fs.symlinkSync(path.join(outside, 'payload'), path.join(proj, '.claude', 'skills', 'legit-name'));
+
+    const found = missingWrappers([{ name: 'legit-name', module: 'm', rule: 'r', site: 's' }], proj);
+
+    assert.equal(found.length, 1,
+      'a wrapper whose real file is outside the project must be reported, not counted as present');
+    fs.rmSync(proj, { recursive: true, force: true });
+    fs.rmSync(outside, { recursive: true, force: true });
+  });
+
+  it('(a) a genuinely present wrapper is not falsely reported by the containment check', () => {
+    // The other direction: a containment check that rejects everything would also pass the test
+    // above. This is what stops the fix being over-strict.
+    const proj = tmpProject();
+    fs.mkdirSync(path.join(proj, '.claude', 'skills', 'real'), { recursive: true });
+    fs.writeFileSync(path.join(proj, '.claude', 'skills', 'real', 'SKILL.md'), '---\n');
+
+    assert.equal(missingWrappers([{ name: 'real', module: 'm', rule: 'r', site: 's' }], proj).length, 0);
+    fs.rmSync(proj, { recursive: true, force: true });
+  });
+
+  it('a registry that require()s to a FALSY value is reported, not passed', () => {
+    // ROUND 2 GAP. Reverting this guard left all 63 tests green, though Round 1 had reproduced
+    // exit 0 PASS with every agent wrapper unchecked and no diagnostic — because `require`
+    // returning null does not throw, so the catch never fired.
+    const { root, pkgRoot } = installedFixture();
+    write(path.join(pkgRoot, 'scripts', 'update', 'lib', 'agent-registry.js'), 'module.exports = null;\n');
+
+    const r = runCli(['tree', root, pkgRoot]);
+
+    assert.match(r.stdout + r.stderr, /exported no usable module/,
+      'a falsy registry export must be reported');
+    assert.notEqual(r.code, 0, 'the run must not pass with every agent wrapper unchecked');
+  });
+
+  it('(b) an EXCLUDED agent in an unparsable module produces no fabricated wrapper finding', () => {
+    // ROUND 2 GAP, and the defect it found. Attempt 2 collected the units anyway, so the false
+    // "SKILL.md was not generated" finding still fired alongside the ambiguity note — while the
+    // comment claimed it did not. Neither (b) test covered a module with an excluded agent, so
+    // nothing contradicted the claim. This is that case.
+    const { root, pkgRoot } = installedFixture();
+    // emma is declared by the registry; her wrapper is deliberately absent, as it would be for a
+    // real `excluded_agents: [emma]` — but the config no longer parses, so that cannot be known.
+    fs.rmSync(path.join(root, '.claude', 'skills', 'bmad-agent-bme-emma'), { recursive: true, force: true });
+    write(path.join(root, '_bmad', 'bme', '_vortex', 'config.yaml'), 'version: 4.0.1\n  bad: [unclosed\n\t\ttabs:');
+
+    const r = runCli(['tree', root, pkgRoot]);
+
+    assert.match(r.stdout + r.stderr, /exclusions are unknown/,
+      'the unverifiable module must be named');
+    assert.doesNotMatch(r.stdout + r.stderr, /bmad-agent-bme-emma.*was not generated/,
+      'no per-agent wrapper finding may be fabricated while exclusions are unknown');
+    assert.notEqual(r.code, 0, 'an unverifiable module must block');
+  });
+
+  it('(b) the ambiguity reaches the operator through the CLI and blocks the run', () => {
+    // What this pins: the module-level note is not library-only — it survives to the binary's
+    // stdout and to a non-zero exit. It does NOT pin that a genuinely missing wrapper in the
+    // same module is still named; by design it is not (see the THIRD ATTEMPT note in
+    // installed-tree.js), and the test above is the one that deletes a wrapper.
+    //
+    // An earlier version of this comment claimed the end-to-end case it never set up. Round 3
+    // caught it — the third untrue comment on this branch, after two in the production file.
+    const { root, pkgRoot } = installedFixture();
+    write(path.join(root, '_bmad', 'bme', '_vortex', 'config.yaml'), 'version: 4.0.1\n  bad: [unclosed\n\t\ttabs:');
+
+    const r = runCli(['tree', root, pkgRoot]);
+
+    assert.match(r.stdout + r.stderr, /exclusions are unknown/,
+      'the CLI must say the wrappers could not be verified');
+    assert.notEqual(r.code, 0, 'an unverifiable module must not pass silently');
+  });
+
+  it('(c) a registry entry with no id is reported malformed, not fabricated into a unit name', () => {
+    // The row: the id is interpolated, so a missing one produced `bmad-agent-bme-undefined`
+    // and then reported THAT as a missing wrapper — a finding naming a unit nobody declared.
+    const proj = tmpProject();
+    const r = declaredUnits({ projectRoot: proj, registry: { AGENTS: [{ id: undefined }] }, arrived: ['_vortex'] });
+
+    assert.ok(r.malformed.some((m) => /no id/.test(m.reason)), 'the malformed entry must be reported');
+    assert.ok(!r.units.some((u) => /undefined/.test(u.name)), 'no unit name may be fabricated from a missing id');
+    fs.rmSync(proj, { recursive: true, force: true });
+  });
+
+  it('(d) a falsy-but-not-sentinel submodule is malformed, not silently dropped', () => {
+    // The row: the guard tested only undefined/null/'' so 0, false, NaN and {} walked past it
+    // and vanished from the expectation set — a silent coverage shrink.
+    const proj = tmpProject();
+    const r = declaredUnits({
+      projectRoot: proj,
+      registry: { EXTRA_BME_AGENTS: [{ id: 'a', submodule: 0 }, { id: 'b', submodule: false }, { id: 'c', submodule: {} }] },
+      arrived: ['_x'],
+    });
+
+    assert.equal(r.malformed.length, 3, 'all three non-string submodules must be reported');
+    fs.rmSync(proj, { recursive: true, force: true });
+  });
+
+  it('(e) the ADR-004 C1 check still runs when the agent registry fails to load', () => {
+    // The row: byModule fell back to {} on a registry failure, and modulesDeclaringNothing
+    // bails on a module with no accounting entry — so C1 went dark, though it reads nothing
+    // from the registry. C1 is a question about configs.
+    //
+    // DRIVEN THROUGH THE CLI, and that is the point. The first version of this test called
+    // declaredUnits({registry: {}}) directly and asserted C1 fired — which it always did,
+    // before and after the fix, because the defect was never in declaredUnits. It was in the
+    // CALLER, which substituted a literal `{}` for byModule instead of calling declaredUnits
+    // at all. Reverting the fix left that test green: a check that cannot fail, the third
+    // this session. It now breaks the registry and runs the real binary.
+    const { root, pkgRoot } = installedFixture();
+    // A module that arrives with a valid config declaring nothing — exactly what C1 exists for.
+    write(path.join(root, '_bmad', 'bme', '_portability', 'config.yaml'), 'name: portability\nversion: 4.0.1\n');
+    // Break the registry so it cannot be require'd.
+    write(path.join(pkgRoot, 'scripts', 'update', 'lib', 'agent-registry.js'), 'module.exports = {\n');
+
+    const res = runCli(['tree', root, pkgRoot]);
+
+    assert.match(res.stdout + res.stderr, /agent registry did not load/,
+      'the registry failure itself must still be reported');
+    assert.match(res.stdout + res.stderr, /_portability.*declares no/,
+      'ADR-004 C1 must still fire for a module whose config declares nothing');
+  });
+
+  it('(f) an unreadable ENTRY file is a finding, not the PASS value', () => {
+    // The row: the old comment justified returning PASS as "only reachable for something
+    // require.resolve accepted" — false for the ENTRY, which is realpath'd and queued
+    // directly, never resolved. So an unwalkable bin reported no missing dependencies.
+    const proj = tmpProject();
+    const r = walkRequires(path.join(proj, 'does-not-exist.js'));
+
+    assert.ok(r.missing.length > 0, 'an unreadable entry must not report a clean walk');
+    fs.rmSync(proj, { recursive: true, force: true });
   });
 });

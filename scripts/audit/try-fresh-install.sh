@@ -366,28 +366,28 @@ echo "==> Everything shipped arrives in the project, and every declared unit is 
 #      as a directory. So a file can be in `files[]`, arrive in node_modules, and still be
 #      absent from where the code looks for it.
 #
-# DELIBERATELY NOT IN THE VERDICT AT THE `if` BELOW. NFR10 requires a gate to be
-# DEMONSTRATED failing before it is trusted, and this job gates `publish` on every push and
-# every PR — a gate merged red blocks the repository until its fix lands. Story dist-2.6
-# adds $TREE to that condition in the same commit that turns it green. A check that prints
-# FAILED and exits 0 is uncomfortable on purpose. If you are reading this after 2.6 shipped
-# and $TREE still appears nowhere in the verdict, that is NOT necessarily the bug — read T102
-# first. dist-2-6 shipped its AC1-AC7 on 2026-09-07 and DEFERRED the wiring by operator ruling:
-# T102 holds 17 lettered defects in the assertion — its header says 20, a figure inherited from
-# dist-2-4's Round 3 log and never reconciled against the row's own enumeration; (a)-(f) are the
-# fail-open ones (a wrapper `name` used
-# verbatim in `path.join` is satisfied by a SKILL.md outside the project, reproduced at exit 0),
-# and wiring with those open would put them in the gate `publish` depends on. T102 now carries
-# the wiring. The assertion's preconditions are already met — it reports zero findings, and
-# dist-2-4 shipped the invocability form (C2), verified — so clearing T102 (a)-(f) leaves only
-# the one-line edit to the condition below.
+# IN THE VERDICT AND BLOCKING since 2026-09-07, and the sequence is the point. NFR10 requires
+# a gate to be DEMONSTRATED failing before it is trusted, and this job gates `publish` on every
+# push and every PR — a gate merged red blocks the repository until its fix lands. So dist-2-4
+# built this assertion and deliberately did NOT wire it, printing its status beside a verdict it
+# could not affect. dist-2-6 was to wire it and DEFERRED, because
+# T102 held six correctness defects -- (a)-(f) -- that could make the gate WRONG rather than
+# merely noisy: a wrapper name escaping via `..` and being satisfied from outside the project; an
+# unparsable config manufacturing a false finding per excluded agent; a missing registry id
+# fabricating a unit name; a falsy-but-not-sentinel submodule vanishing from the expectation set;
+# a registry failure darkening the ADR-004 C1 check entirely; and an unreadable entry file
+# reporting a clean dependency walk. All six are now fixed, each pinned by a test proven to go RED
+# when its fix is reverted, and the assertion reported ZERO findings before this line was edited
+# -- NFR10's precondition, met in that order rather than asserted after the fact.
 #
 # Run from $REPO, not from the installed copy. `scripts/` ships, so both exist — but an
 # auditor loaded out of the tree it is auditing cannot report that tree as broken.
 TREE=0
 node "$REPO/scripts/audit/assert-installed-tree.js" tree "$TMP/proj" "$TMP/proj/node_modules/convoke-agents" || TREE=$?
 # 0 = clean, 1 = findings printed. ANY OTHER CODE means the assertion did not run, and
-# that includes codes it never chose: 127 (node absent from PATH), 126 (not executable),
+# that includes codes it never chose: 127 (node absent from PATH), 126 (not executable —
+# though stock macOS bash 3.2 surfaces that case as 1, so it is caught by the verdict but
+# MISREPORTED as findings; diagnosis, not enforcement, the same limit the LINKS block admits),
 # 128+N (killed by a signal), or a startup abort from NODE_OPTIONS. An earlier version
 # tested `-eq 2` only, so those printed `[installed-tree status 127]` with no FAILED lines
 # above them and the run walked on to PASS — a check reporting health because it never
@@ -500,7 +500,7 @@ echo "========================================"
 # of 0 cannot be distinguished from a crash that bash reported as 0. Set BEFORE the verdict, not
 # inside the PASS branch, so an explicit exit 1/2 below is still a completed run.
 COMPLETED=1
-if [ "$INSTALL" -eq 0 ] && [ "$DOCTOR" -eq 0 ] && [ "$EXPORT" -eq 0 ] && [ "$FAILED" -eq 0 ] && [ "$LINKS" -eq 0 ]; then
+if [ "$INSTALL" -eq 0 ] && [ "$DOCTOR" -eq 0 ] && [ "$EXPORT" -eq 0 ] && [ "$FAILED" -eq 0 ] && [ "$LINKS" -eq 0 ] && [ "$TREE" -eq 0 ]; then
   echo "PASS — a new user gets a working, self-consistent install."
   echo
   echo "Note: convoke-doctor may still print ⚠ warnings. Warnings are fine; hard failures are"
@@ -509,7 +509,7 @@ if [ "$INSTALL" -eq 0 ] && [ "$DOCTOR" -eq 0 ] && [ "$EXPORT" -eq 0 ] && [ "$FAI
   exit 0
 fi
 echo "FAIL — a new user would hit this."
-echo "  install=$INSTALL doctor=$DOCTOR export=$EXPORT bins_failed=$FAILED links=$LINKS"
+echo "  install=$INSTALL doctor=$DOCTOR export=$EXPORT bins_failed=$FAILED links=$LINKS tree=$TREE"
 echo "Re-run locally with KEEP=1 to inspect the project. In CI, see the uploaded"
 echo "fresh-install-logs artifact."
 exit 1
