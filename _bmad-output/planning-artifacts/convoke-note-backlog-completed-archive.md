@@ -145,6 +145,20 @@ Rows arrive here only through the **Closing a Row** transition in
 
 ---
 
+## T49
+
+**Lane:** Fast Lane · **Score:** 4.8 · **Portfolio:** convoke · **Status:** ✅ Closed 2026-09-08. Both halves now shipped, in two parts a fortnight apart. **Half one (the dry rehearsal) shipped 2026-08-23 with `dist-1b-1`:** the non-publishing `downgrade-guard-dry` job (`ci.yml:501`) runs on `push: main` and PRs — deliberately NOT on tag pushes, so a red dry job cannot redden a run whose publish succeeded — exercising `scripts/ci/downgrade-guard.sh` over a 10-case matrix plus contract checks. Verified green on `90692732` (run `34193123655`), alongside 10 other jobs, with `publish` correctly skipped on a branch push. **Half two (the pre-tag checklist) shipped 2026-09-08 as `docs/pre-tag-release-checklist.md`**, covering all four assertions this row asked for: the version equals the intended stable version, the prerequisite jobs are green on the exact SHA to be tagged, `npm view dist-tags` is captured before and after, and the dry guard is observed green on that SHA. Every command in it was executed before it was written.
+
+**The row's own remaining blocker was stale.** It said *"`package.json` is still `4.0.1-rc.0`, so a `v4.0.1` tag aborts at gate 4"* — the tree reads `4.0.1` and 4.0.1 is published and `latest`. That half resolved with T46's close; nothing updated this row.
+
+**Residual, filed rather than silently closed — and narrower than first written.** The dry job injects `GUARD_CURRENT` and makes **no network call**. That does NOT make the registry read unproven: the v4.0.1 publish executed it live on a runner and logged `Downgrade guard: 4.0.1 >= current latest 4.0.0 -- OK` (run `32671542491`, 2026-08-23, after `dist-1b-1` landed). What has never fired on a runner is the narrower **E404 skip branch** (`ci.yml:949-975`) — the unpublished-package path — because `convoke-agents` has always existed in the registry; its anchoring is proven by fixture only. It fails LOUD rather than open (T46 closed the fail-open), so the exposure is an aborted publish on a spent tag, not a silent downgrade. Tracked under **T47**. *An earlier draft of this note claimed the `npm view` invocation itself had never run on a runner — false, and caught by Round 1 review of the close.*
+
+**Receipt:** Rehearse the FR5 comparison on a runner without spending a tag — dry job shipped by `dist-1b-1`, pre-tag checklist shipped 2026-09-08
+
+**Rehearse the FR5 comparison on a runner WITHOUT spending a tag -- it is the one gate of five that has never executed in CI.** `dist-1-6`'s live rehearsal published a *prerelease*, so the downgrade guard took its `DIST_TAG != latest` skip branch: the registry read, the shape checks, GNU `sort -V` and the OK/FATAL branches have never run on a GitHub runner. **Fix:** a non-publishing step on `push: main` / PR, outside the `publish` job, that runs the read-and-compare block verbatim against `package.json`, logs `Downgrade guard (dry): CAND vs CURRENT`, and cannot publish. **Second half:** a pre-tag checklist artifact, which does not exist.
+
+---
+
 ## T46
 
 **Lane:** Fast Lane · **Score:** 8.1 · **Portfolio:** convoke · **Status:** ✅ Closed 2026-08-23 by `dist-1b-1`. The skip branch now anchors on npm's error-CODE line (`^npm error code E404$`) instead of grepping the whole stderr stream, so unrelated 404 noise no longer disables the guard. **Demonstrated failing first** (NFR10): a fixture carrying `npm error code E500` plus `npm warn 404 Not Found - GET .../-/npm/v1/notifications` made the pre-fix guard SKIP with exit 0; post-fix it aborts. **The folded-in second defect is also fixed:** `npm view <pkg> <missing-field>` exits 0 with empty stdout AND empty stderr (executed -- it is not an error path), so an empty reply reached the success branch and was reported as *"registry returned a multi-line 'latest'"*; it now aborts naming the empty reply and citing the `npm dist-tag add` repair. Comparison extracted to `scripts/ci/downgrade-guard.sh` with a NAMED `GUARD_CAND`/`GUARD_CURRENT` contract, and a transposition test proves the call-site orientation inverts the verdict.

@@ -1011,7 +1011,7 @@ action_items:
   - epic: "dist-epic-2"
     action: "T49 before the stable tag -- prove the FR5 downgrade comparison on a runner via a non-publishing dry run; it is the one gate of five never executed"
     owner: "Amalik"
-    status: open
+    status: done
   - epic: "dist-epic-2"
     action: "T47 -- re-read the registry after npm publish; a green run is not proof latest moved"
     owner: "dev agent"
