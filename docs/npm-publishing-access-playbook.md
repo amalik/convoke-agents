@@ -181,9 +181,20 @@ rediscovered under pressure.
 | `current 'latest' … is not a plain X.Y.Z release` | A prerelease or non-canonical version is parked on `latest` — e.g. `4.0.1-rc.0`. | `npm dist-tag add convoke-agents@<good-version> latest`, then re-run. **Interactive, needs 2FA.** |
 | `refusing to publish X to 'latest' -- lower than current latest Y` | The version being published really is lower than `latest`. **The guard cannot tell an accidental downgrade from a deliberate repair of a corrupted `latest`, which is exactly why it stops and asks.** | Decide which value is wrong. If `Y` is legitimate, do not publish — fix the version being released. If `Y` is wrong (an accidental `999.0.0`, a mistaken `dist-tag set`), repair `latest` first, then re-run. |
 
-**Every repair route runs through `npm dist-tag add`, so every one of them inherits §4's dependency:**
-an interactive session with a live 2FA prompt. A token cannot do it and CI can never do it. Budget for
-a human at a terminal, not a re-run.
+**Split the table by WHAT is at fault, because that decides whether you need a human at a terminal.**
+
+- **The CANDIDATE is at fault** — row 1 (`GUARD_CAND … is not a plain X.Y.Z release`), and the first
+  branch of row 5 (the version really is lower and `latest` is legitimate). These are **repository**
+  problems: fix `package.json` and the tag. Nothing to repair on npm, no 2FA, no interactive session.
+- **`latest` is at fault** — rows 2 and 4, and the second branch of row 5. These run through
+  `npm dist-tag add` and therefore inherit §4's dependency: **an interactive session with a live 2FA
+  prompt.** A token cannot do it and CI can never do it. Budget for a human at a terminal.
+- **Neither, yet** — row 3 (multi-line `latest`) is the one mode that is often transient. Re-run the job
+  first; only if it repeats is it a `latest` repair.
+
+An earlier version of this paragraph read *"Every repair route runs through `npm dist-tag add`"*, which
+contradicted row 1 of its own table directly above it and sent a reader looking for a 2FA session they
+did not need. Corrected 2026-09-08.
 
 ### Why there is no override
 

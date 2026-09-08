@@ -49,14 +49,24 @@ gh run view "$RID" --json jobs --jq '.jobs[] | "\(.conclusion)\t\(.name)"'
 > a `CI` run and a `CodeQL` one. Filtering on `headSha` alone returns whichever is newest, silently
 > giving you an unrelated job list with no "Downgrade guard (dry)" and no error.
 
-Expect **11 jobs `success`, and exactly two `skipped`: `publish` and `burn-in`.** Both skips are
-correct on a branch push — `publish` fires only on `refs/tags/v*` (proven by `dist-1-6`), so a `main`
-push exercises the full prerequisite set without touching the registry. Any *other* skip, or any
-`failure`/`cancelled`, stops the release here.
+Expect **every job `success` except `publish` and `burn-in`, which must both be `skipped`.** They skip
+for *different* reasons, and neither runs on a plain branch push: `publish` is gated on
+`startsWith(github.ref, 'refs/tags/v')` (`ci.yml:572`), while `burn-in` is gated on
+`github.event_name == 'pull_request'` (`ci.yml:80`) and so does not run on a tag push either. A `main`
+push therefore exercises the full prerequisite set without touching the registry (`dist-1-6`). Any
+*other* skip, or any `failure`/`cancelled`, stops the release here.
 
-**`Downgrade guard (dry)` must be among them and must be green.** It runs only on `main` pushes and
-PRs — deliberately *not* on tag pushes — so if you skip this step it never runs for your release at
-all.
+> Deliberately not a job COUNT. An earlier draft said "expect 11 successes"; that was true the day it
+> was written and goes stale the moment a Node version joins the test matrix — and a stale count in a
+> release procedure reads as authoritative, halting a correct release. Name the load-bearing jobs
+> instead.
+>
+> A second draft then pluralised the skip reason — *"they fire only on `refs/tags/v*`"* — which is true
+> of `publish` and false of `burn-in`. Introduced while removing the count, and caught by review of that
+> removal. The two conditions are unrelated and are now stated separately.
+
+**`Downgrade guard (dry)` must be among the successes.** It runs only on `main` pushes and PRs —
+deliberately *not* on tag pushes — so if you skip this step it never runs for your release at all.
 
 ## 4. Rehearse the actual comparison against the live registry
 
@@ -130,8 +140,14 @@ An empty attestation means the release did **not** come through the automated pa
 ## If the guard refuses
 
 Do not improvise. Every refusal mode and its sanctioned repair is tabulated in
-[npm-publishing-access-playbook.md](npm-publishing-access-playbook.md) §5. **Most** repair routes run
-through `npm dist-tag add`, which needs an **interactive 2FA session** — see §4 of the same document.
-The exception is a malformed candidate version (`... is not a plain X.Y.Z release`): that is a
-repository problem, fixed in `package.json` and the tag, with nothing to repair on npm. There is no
+[npm-publishing-access-playbook.md](npm-publishing-access-playbook.md) §5. **Read it by what is at fault,
+not by counting routes.** If the CANDIDATE is wrong — a malformed version, or a genuine downgrade where
+`latest` is legitimate — it is a repository problem: fix `package.json` and the tag, with nothing to
+repair on npm and no 2FA needed. If **`latest`** is wrong, the repair runs through `npm dist-tag add`,
+which needs an **interactive 2FA session** (§4) that a token and CI can never provide. There is no
 override for the guard itself.
+
+> Two earlier drafts of this paragraph were both wrong: the first repeated the playbook's own
+> "every repair route runs through `npm dist-tag add`" (untrue of its row 1), the second called the
+> malformed-candidate case *the* exception (there are two). The playbook's contradicting sentence is
+> fixed in the same commit.
