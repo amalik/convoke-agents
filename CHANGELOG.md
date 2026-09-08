@@ -8,6 +8,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.2] - 2026-09-08
+
+Convoke 4.0.2 is a patch release about one thing: the package now contains what it says it contains, and what it contains reaches your project.
+
+4.0.1 shipped correctly and was signed correctly — but parts of it never arrived where the code looked for them. The portability module was in the tarball and no install step copied it out. A data file the shipped code reads at runtime was created by nothing. Contributor-only tooling was in the package, carrying links an operator has no way to follow. None of that is visible from a version number, which is why three checks now enforce it on every release.
+
+If you are on 4.0.1, upgrade with `convoke-update`. The agent roster is unchanged, but **twelve Vortex workflows do open differently** — see *Also in this release* below.
+
+### Fixed
+
+- **`convoke-export` now has the module it depends on.** `_bmad/bme/_portability/` shipped inside the package but no install path copied it into your project, so the exporter referred to skills that never arrived. It is now installed like every other module, and carries a `config.yaml` declaring its four workflows. Its internal directory was renamed `skills/` → `workflows/` to match every other module; if you referenced the packaged path directly, update it. `INSTALLATION.md` previously described the missing copy as deliberate — *"there is nothing to install"* — and that sentence was wrong, not the code; it has been corrected too.
+- **`convoke-doctor` no longer warns about a missing dependency registry.** `_bmad/_config/bmm-dependencies.csv` was read at runtime by code that shipped, and created by nothing. It is now created at install — **deliberately empty**. The installer records no dependency on your behalf; the file is yours to fill, and an empty registry is the correct starting state rather than a placeholder.
+- **The Vortex handoff contracts and examples now reach your project.** Workflow files cite schemas by path — `_bmad/bme/_vortex/contracts/hcN-*.md` — and nothing copied `contracts/` or `examples/` out of the package, so those citations pointed at a location that existed only inside the installed package. This is the same defect as the portability one above, found in the same sweep.
+- **`convoke-update` now says what it is actually doing when only some modules are out of step.** When the package version and Vortex agreed but a sibling `_bmad/bme/` module did not, it printed `From: 4.0.1 / To: 4.0.1` — the same version twice, in red and green — which read as a bug in the tool. It now names the modules that disagree and their state, and says a refresh re-stamps them.
+- **The exporter no longer mis-handles names containing regular-expression characters.** Values interpolated into a pattern were not escaped, so a skill or configuration value containing `.`, `+`, `(` or similar could match more than intended.
+
+### Changed
+
+- **The agent-conversion tooling no longer ships.** Seven files used only when contributing agent conversions from this repository were in the package, and their documentation links point into directories that are not published — an operator could not follow them. They remain maintained in the repository; they are simply no longer part of what you install.
+- **The migration guide ships.** `docs/migration/3.x-to-4.0.md` is linked twice from this changelog and is the most useful page for anyone upgrading — it was not previously in the package.
+- **`SECURITY.md` ships**, so the vulnerability-reporting policy is readable from the installed package.
+- **The Operator Covenant ships.** `covenant-operator.md` and `compliance-checklist.md` are normative required reading cited by every `_bmad/bme/` skill. They previously lived only in a directory that is not published.
+
+### Also in this release
+
+4.0.2 is framed around distribution integrity, but it is cut from a `main` that has moved on since 4.0.1, and several changes ride along. They are listed here because you will notice them, not because they belong to this release's theme.
+
+- **Twelve Vortex workflows now open in paced rounds.** The first step of `assumption-mapping`, `behavior-analysis`, `experiment-design`, `hypothesis-engineering`, `lean-experiment`, `lean-persona`, `pattern-mapping`, `pivot-resynthesis`, `production-monitoring`, `proof-of-value`, `research-convergence` and `signal-interpretation` used to recite the full input schema before asking you anything. It now asks, then waits — the schema is referenced rather than read aloud. Same contracts, same validation; a shorter opening turn and an explicit pause for your input.
+- **`README.md` was substantially rewritten** — new tagline, a replaced architecture diagram, and a reframed roadmap section. It is the package's landing page, so it is the change you are most likely to see first.
+- **The initiatives-backlog workflow's templates and steps were revised** (`_bmad/bme/_enhance/`), including the backlog format and lifecycle process specifications.
+
+The seven Vortex agents themselves are unchanged, and no handoff contract changed.
+
+### Verification
+
+Three checks now run on every push and pull request, and block publication:
+
+- every documented reference in the package resolves inside the package;
+- every module the package declares actually arrives in an installed project, carries its configuration, and declares at least one thing you can invoke;
+- the skill manifest rows that seed an installation are validated against a baseline that can only shrink.
+
+Each was demonstrated failing before it was made blocking, on the defect it exists to catch.
+
 ## [4.0.1] - 2026-08-24
 
 Convoke 4.0.1 is a patch release about one thing: you can trust that what you install came from the source it claims to.
