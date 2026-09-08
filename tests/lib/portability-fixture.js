@@ -1,7 +1,7 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
-const { findProjectRoot } = require('../../scripts/update/lib/utils');
 
 /**
  * Fixture project root for the portability/export suites (backlog I123).
@@ -47,7 +47,51 @@ const { findProjectRoot } = require('../../scripts/update/lib/utils');
  */
 const FIXTURE_ROOT = path.join(__dirname, '..', 'fixtures', 'portability-project');
 
-/** The real repository root — for locating the SCRIPTS under test, never their input data. */
-const REPO_ROOT = findProjectRoot();
+/**
+ * The real repository root — for locating the SCRIPTS under test, never their input data.
+ *
+ * DERIVED FROM `__dirname`, NOT FROM `process.cwd()`. This file lives at a known depth inside
+ * the repository, so the repository root is a STATIC FACT about the source tree. It was
+ * previously `findProjectRoot()`, which walks up from the working directory and therefore
+ * returns whatever `_bmad`-bearing directory happens to be current: `null` from `/tmp`, and —
+ * the sharp case — a TEMP PROJECT ROOT if anything has `process.chdir()`ed into one of the
+ * throwaway projects other suites build, since those carry a `_bmad/` and a seeded
+ * `skill-manifest.csv` of their own. Test 1b would then ratchet against the wrong manifest and
+ * report findings that are real for that tree and meaningless for this one.
+ *
+ * ON THE FLAKE THIS DOES AND DOES NOT EXPLAIN. `deferred-work.md` recorded a false red in Test 1b
+ * (`[BROKEN-DEP] bmad-advanced-elicitation`, one run in four) and attributed it to exactly that
+ * `chdir` race across the three suites that call `process.chdir()`. That attribution is WRONG and
+ * is corrected there: `node --test` runs each FILE in its own child process (measured — two probe
+ * files report different pids, and a `chdir` in one leaves the other's cwd untouched), so no other
+ * suite's `chdir` can reach this process. The hazard fixed here is real and demonstrated in
+ * isolation, but it is a LATENT one. Two of the three `chdir`-calling suites build temp projects that
+ * really do carry a seeded manifest (the migration-runner pair); the third builds a bare git repo with
+ * no `_bmad/` at all, where the same walk-up returns `null` instead. Both shapes are loaded traps that
+ * process isolation stops anything from springing today. (An earlier draft of this comment said all
+ * three seeded a manifest — asserted, not checked. Review caught it.) The observed
+ * flake remains unexplained, and more sharply than "unpinned": that finding is not constructible from
+ * the committed manifest at all (the row's dependencies column is empty, and the validator returns
+ * before attaching a finding), so whatever that run read was not the committed tree.
+ */
+const REPO_ROOT = path.resolve(__dirname, '..', '..');
+
+// A wrong root must fail loudly here, not surface later as a mystery finding against a tree that
+// is not this repository — the failure mode the old cwd-derived value produced.
+//
+// STRUCTURAL, NOT NOMINAL. The first version asserted `package.json`'s `name` was
+// `convoke-agents`. That pins a structural question ("did `__dirname` land on the repo root?")
+// to a cosmetic value THIS PACKAGE HAS ALREADY CHANGED ONCE (`bmad-enhanced` ->
+// `convoke-agents`): a second rename, or a downstream fork, would hard-crash all twelve
+// importing suites at module load with no other change. These three paths are what this module
+// actually promises its callers, so their absence is the real failure. Guarded by
+// `portability-fixture-guard.test.js`.
+for (const rel of ['package.json', 'scripts/portability', 'tests/fixtures/portability-project']) {
+  if (!fs.existsSync(path.join(REPO_ROOT, rel))) {
+    throw new Error(
+      `REPO_ROOT (${REPO_ROOT}) does not look like this repository root: ${rel} is missing`
+    );
+  }
+}
 
 module.exports = { FIXTURE_ROOT, REPO_ROOT };
