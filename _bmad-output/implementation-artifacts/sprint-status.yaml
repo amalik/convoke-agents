@@ -506,6 +506,7 @@ development_status:
   # were refuted against dist-2-8 — see the spec's .memlog.md before adding stories here.
   sp-epic-7: in-progress
   sp-7-1-fold-the-schema-lint-into-the-audit: review
+  sp-7-2-pin-the-third-vocabulary-copy: ready-for-dev
 
   # ============================================================
   # CONVOKE OPERATOR COVENANT (P21)
