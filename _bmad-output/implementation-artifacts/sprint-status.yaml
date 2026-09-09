@@ -505,7 +505,7 @@ development_status:
   # Remediation of sp-1-1/1-2/1-3's checkers. Scoped 2026-09-09 after three premises
   # were refuted against dist-2-8 — see the spec's .memlog.md before adding stories here.
   sp-epic-7: in-progress
-  sp-7-1-fold-the-schema-lint-into-the-audit: in-progress
+  sp-7-1-fold-the-schema-lint-into-the-audit: review
 
   # ============================================================
   # CONVOKE OPERATOR COVENANT (P21)

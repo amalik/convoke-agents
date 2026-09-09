@@ -20,20 +20,20 @@ sources:
 
 **How the error happened, stated so it is not repeated.** The validator's `main()` was run against the full **106-row CANDIDATE list** and its `exit 1` read as a broken gate. The validated scope is deliberately the **31 rows that actually seed**. This is the near neighbour of the documented CANDIDATE-LIST trap: not repointing `path` at gitignored `.claude/skills/` — that failure mode was correctly avoided — but treating the candidate list as the thing under test.
 
-**What remains.** Two genuinely open items, both smaller than the original scope:
+**What remains.** One genuinely open item (the second was closed by story sp-7-1 on 2026-09-09):
 
-1. **`tests/lib/portability-schema.test.js` calls `findProjectRoot()` at `:51` and `:105` to read the live manifest as data.** `tests/lib/portability-fixture.js` (backlog I123) already established the idiomatic pattern for this directory — `FIXTURE_ROOT` is the data under test and is *never* `findProjectRoot()`; `REPO_ROOT` only locates code. This file predates that pattern and never adopted it.
+1. **`tests/lib/portability-schema.test.js` calls `findProjectRoot()` at `:51` and `:105` to read the live manifest as data.** *(CLOSED 2026-09-09 by story sp-7-1 — see CAP-2.)* An earlier version of this spec prescribed adopting the `FIXTURE_ROOT`/`REPO_ROOT` two-root pattern from `tests/lib/portability-fixture.js` (backlog I123). **That was wrong, and reading the file is what showed it:** the file contained *no behavioural tests at all* — five assertions over two tracked artifacts, with no code under test. Pointing it at `FIXTURE_ROOT` would have asserted that our own fixture is well-formed, which tests nothing. It was a lint wearing a test's clothes, and its correct home was the audit script that already lints that artifact.
 2. **A seeding row whose bare-name dependency points at a row that does not seed is reported by nothing.** `dist-2-8` named this gap and filed it rather than improvising. It is real — but it has **no live drivers**, and the two that looked like drivers are not. `bmad-help` → `bmad-quick-dev` and `bmad-migrate-artifacts` → `bmad-create-epics-and-stories` both name upstream `bmm` rows this repo deleted in `a16fa340`; in an operator's project with BMAD installed, both resolve and seed. `validate-classification.js:449-460` already records exactly this. The check must therefore run against an **operator-shaped tree**, which means the fixture, and it sequences behind the fixture-extension work.
 
 Who is affected: the ~40% Vortex Standalone segment, for whom the seeding manifest is the load-bearing artifact behind `convoke-export` — a dependency that does not ship is a broken skill in their tree.
 
 ## Capabilities
 
-- **CAP-2**
-  - **intent:** The portability suites read their data from a fixture, so upstream churn in the live tree cannot turn a passing suite red or hollow.
-  - **success:** `tests/lib/portability-schema.test.js` no longer calls `findProjectRoot()`. Schema-shape assertions run against `FIXTURE_ROOT`. Any assertion that genuinely needs the shipped manifest uses `REPO_ROOT` explicitly with a ratchet, following Test 1b's pattern, and says why at the call site.
+- **CAP-2** *(satisfied 2026-09-09 by story sp-7-1)*
+  - **intent:** No file under `tests/` reads the live `skill-manifest.csv` as data, so upstream churn in the live tree cannot turn a passing suite red or hollow.
+  - **success:** `tests/lib/portability-schema.test.js` is deleted, its three unique assertions folded into `scripts/audit/skill-manifest-integrity.js`, and no test reads the live manifest as data. **Amended 2026-09-09:** the original success criterion said "schema-shape assertions run against `FIXTURE_ROOT`" — abandoned once the file turned out to hold no behavioural tests. A lint belongs in an audit script; the two-root pattern governs suites that have code under test, which this file did not.
 
-- **CAP-3**
+- **CAP-3** *(satisfied 2026-09-09 by story sp-7-1)*
   - **intent:** The assertions currently unique to `portability-schema.test.js` keep running after the change, so isolation does not quietly narrow coverage.
   - **success:** Exact header column order, exact 9-column row arity, and `portability-schema.md` doc conformance each still have a check, and each has been shown to go red.
 
@@ -84,7 +84,7 @@ The portability suites pass on a clean checkout with no test reading the live tr
 
 ## Delivery sequence
 
-1. **CAP-2 + CAP-3 — adopt the two-root pattern** in `portability-schema.test.js`, preserving header/arity/doc coverage. The only items that survived every check on 2026-09-09, and independent of the `dist-2-8` lineage.
+1. ~~**CAP-2 + CAP-3**~~ — **DONE 2026-09-09, story `sp-7-1`.** Folded `portability-schema.test.js`'s three unique assertions into `scripts/audit/skill-manifest-integrity.js` and deleted it, preserving header-order, exact-arity and schema-doc coverage. Delivered by folding into the audit, **not** by the two-root pattern this sequence originally named.
 2. **CAP-4 + CAP-5 — vocabulary ownership and the `VALID_TIERS` collision.** Mechanical.
 3. **Fixture extension** — the remedy `dist-2-8` filed for non-seeding coverage. Prerequisite for CAP-7.
 4. **CAP-7 — the seeding-closure gap**, driven by fixture rows built to exhibit it.

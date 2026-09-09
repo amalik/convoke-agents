@@ -10,6 +10,8 @@ const { execFileSync } = require('child_process');
 const { removeTempDirSync, initGitFixture } = require('../helpers');
 const { writeManifest } = require('../../scripts/portability/manifest-csv');
 
+const auditModule = require('../../scripts/audit/skill-manifest-integrity.js');
+
 const {
   audit,
   resolveRoster,
@@ -38,17 +40,10 @@ const {
 // `trackedSkillDirsAt`'s body with `return []` left all 25 tests green. The
 // `trackedSkillDirsAt` describe block below exists so that mutation fails.
 
-const HEADER = [
-  'canonicalId',
-  'name',
-  'description',
-  'module',
-  'path',
-  'install_to_bmad',
-  'tier',
-  'intent',
-  'dependencies',
-];
+// The column contract and section list come FROM the audit, not from copies here
+// (`shared-test-constants`). Round 1: both were hand-copied one line after the change that
+// made importing them free.
+const HEADER = [...auditModule.EXPECTED_HEADER_COLUMNS];
 
 const NAME_IDX = HEADER.indexOf('name');
 
@@ -488,8 +483,8 @@ describe('CLI — end to end against a git fixture', () => {
 // copy, and this block is what stops the two drifting apart unnoticed.
 //
 // Scope, stated honestly: this pins the writer<->checker PAIR, which is the pair that
-// decides whether the gate can be widened from outside. Two further copies exist
-// (`scripts/portability/validate-classification.js`, `tests/lib/portability-schema.test.js`);
+// decides whether the gate can be widened from outside. One further copy exists
+// (`scripts/portability/validate-classification.js`);
 // collapsing all four into one module is filed in `deferred-work.md`, not done here.
 describe('classification vocabulary — pinned against the writer', () => {
   const writer = require('../../scripts/portability/classify-skills');
@@ -634,3 +629,162 @@ describe('CLI — argument handling hardened in Round 2', () => {
     assert.doesNotMatch(stdout, /PASS/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// sp-7-1: coverage folded in from the deleted tests/lib/portability-schema.test.js.
+//
+// That file was a LINT wearing a test's clothes — five assertions over two tracked
+// artifacts, no code under test — and it read the live tree via findProjectRoot(),
+// violating `test-fixture-isolation`. Three of its assertions were unique; the other two
+// (tier and intent vocabulary) already existed here as row/invalid-tier and
+// row/invalid-intent and were NOT duplicated.
+// ---------------------------------------------------------------------------
+
+describe('audit — header column order (folded from portability-schema Test 1)', () => {
+  it('fires when the header carries the right columns in the wrong order', () => {
+    const input = base();
+    const h = [...HEADER];
+    const i = h.indexOf('tier');
+    const j = h.indexOf('intent');
+    [h[i], h[j]] = [h[j], h[i]];
+    input.header = h;
+    assert.ok(ids(audit(input)).includes('header/column-order'));
+  });
+
+  it('does not fire on the canonical order', () => {
+    assert.ok(!ids(audit(base())).includes('header/column-order'));
+  });
+
+  it('still reports a missing column, and still stops before trusting the rows', () => {
+    const input = base();
+    input.header = HEADER.filter((c) => c !== 'intent');
+    assert.deepEqual(ids(audit(input)), ['header/missing-column']);
+  });
+
+  it('a header finding does not suppress the manifest checks below it', () => {
+    // The early return guards on missing COLUMNS, not on findings.length, so a finding pushed
+    // before it cannot short-circuit everything after it.
+    const input = base();
+    const h = [...HEADER];
+    const i = h.indexOf('canonicalId');
+    const j = h.indexOf('description');
+    [h[i], h[j]] = [h[j], h[i]];
+    input.header = h;
+    rowFor(input.rows, 'bmad-help')[6] = 'semi-standalone';
+    const out = ids(audit(input));
+    assert.ok(out.includes('header/column-order'));
+    assert.ok(out.includes('row/invalid-tier'), `manifest checks were suppressed: ${out.join(', ')}`);
+  });
+});
+
+describe('audit — exact row arity (folded from portability-schema Test 2)', () => {
+  it('fires on a row with MORE fields than the header', () => {
+    // An unescaped comma inside a description splits the row. Before sp-7-1 the check was
+    // `row.length < header.length`, so this audited completely clean.
+    const input = base();
+    const long = [...mkRow('bmad-extra', 'standalone', 'plan-your-work'), 'spilled'];
+    input.rows = [long, ...input.rows];
+    assert.ok(ids(audit(input)).includes('row/malformed'));
+  });
+
+  it('still fires on a row with FEWER fields, and keeps auditing the rest', () => {
+    const input = base();
+    input.rows = [['orphan'], ...input.rows];
+    let findings;
+    assert.doesNotThrow(() => {
+      findings = audit(input);
+    });
+    assert.deepEqual(ids(findings), ['row/malformed']);
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// sp-7-1 Round 1 remediation. Each test below pins a defect the review PROVED by
+// execution, so reverting any fix turns this suite red.
+// ---------------------------------------------------------------------------
+
+describe('audit — Round 1 fixes', () => {
+  it('does NOT report roster decay for a row that is merely malformed', () => {
+    // Round 1: a row one field too long left `wellFormed`, and the roster then advised the
+    // operator to declare `bmad-help` an upstream retirement — which corrupts roster policy.
+    const input = base();
+    const i = input.rows.findIndex((r) => r[NAME_IDX] === 'bmad-help');
+    input.rows[i] = [...input.rows[i], 'spilled'];
+    const out = ids(audit(input));
+    assert.ok(out.includes('row/malformed'), 'the malformed row must still be reported');
+    assert.ok(
+      !out.includes('meta-platform/roster-decay'),
+      `a present-but-malformed row is not a retirement; got: ${out.join(', ')}`
+    );
+  });
+
+  it('keeps the indexed columns derived from the ordered contract', () => {
+    for (const col of ['name', 'tier', 'intent', 'dependencies']) {
+      assert.ok(
+        auditModule.EXPECTED_HEADER_COLUMNS.includes(col),
+        `${col} is indexed positionally but absent from the ordered contract`
+      );
+    }
+  });
+});
+
+// Round 2 found that the Round 1 `namedRows` fix guarded three of the FOUR roster loops and
+// missed the CIS one, crashing with a TypeError on any malformed CIS row. This covers every
+// roster by name so the class cannot recur when a fifth is added.
+describe('audit — a malformed row never crashes any roster loop (Round 2)', () => {
+  const ROSTER_SAMPLES = [
+    ['meta-platform', 'bmad-help'],
+    ['standalone-utility', 'bmad-shard-doc'],
+    ['persona-agent', 'bmad-agent-architect'],
+    ['cis', 'bmad-brainstorming'],
+  ];
+
+  for (const [roster, sample] of ROSTER_SAMPLES) {
+    it(`survives a too-long row in the ${roster} roster`, () => {
+      const input = base();
+      const i = input.rows.findIndex((r) => r[NAME_IDX] === sample);
+      assert.notEqual(i, -1, `${sample} missing from the fixture`);
+      input.rows[i] = [...input.rows[i], 'spilled'];
+      let out;
+      assert.doesNotThrow(() => {
+        out = ids(audit(input));
+      }, `${roster} loop threw on a malformed row`);
+      assert.ok(out.includes('row/malformed'));
+    });
+
+    it(`survives a too-short row in the ${roster} roster`, () => {
+      const input = base();
+      const i = input.rows.findIndex((r) => r[NAME_IDX] === sample);
+      assert.notEqual(i, -1, `${sample} missing from the fixture`);
+      input.rows[i] = input.rows[i].slice(0, NAME_IDX + 1);
+      let out;
+      assert.doesNotThrow(() => {
+        out = ids(audit(input));
+      }, `${roster} loop threw on a truncated row`);
+      assert.ok(out.includes('row/malformed'));
+    });
+  }
+
+  // Round 3: `wellFormedRows` was passed at all four call sites but exercised at only one, so
+  // deleting it from any of the other three left the suite green. Parameterised over every
+  // roster that actually declares retirements.
+  for (const [roster, retired] of [
+    ['meta-platform', RETIRED.metaPlatform],
+    ['persona-agent', RETIRED.personaAgents],
+  ]) {
+    for (const name of retired) {
+      it(`does not advise un-retiring a merely-malformed ${roster} row (${name})`, () => {
+        const input = base();
+        input.rows.push([...mkRow(name, 'standalone', 'plan-your-work'), 'spilled']);
+        const out = ids(audit(input));
+        assert.ok(out.includes('row/malformed'));
+        assert.ok(
+          !out.includes(`${roster}/stale-retirement`),
+          `a malformed row is not evidence of reappearance; got: ${out.join(', ')}`
+        );
+      });
+    }
+  }
+});
+

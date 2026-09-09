@@ -15,11 +15,14 @@ const assert = require('node:assert/strict');
 //
 // What remains below is genuinely unit-scoped: pure rendering tests with no tree access.
 //
-// SCOPE — this file is clean; the RULE is not satisfied repo-wide. `portability-schema.test.js`
-// in this same directory still calls `findProjectRoot()` and asserts against the live
-// manifest, so `test-fixture-isolation` remains violated there. Filed in `deferred-work.md`
-// rather than fixed, to keep this Fast Lane change at one file. Round 2 caught an earlier
-// version of this comment implying the class was closed.
+// SCOPE — the MANIFEST violation is closed; the rule is NOT satisfied directory-wide. An
+// earlier version of this comment recorded that `portability-schema.test.js` still called
+// `findProjectRoot()` and asserted against the live manifest. Story sp-7-1 (2026-09-09) folded
+// its three unique assertions into `scripts/audit/skill-manifest-integrity.js` and deleted it,
+// so no file under `tests/` reads `_bmad/_config/skill-manifest.csv` as data. But
+// `portability-canonical-format.test.js:72` still calls `findProjectRoot()` and asserts
+// against live template files — the same lint-wearing-a-test's-clothes pattern, a different
+// artifact. Round 2 caught this comment claiming the whole directory was clean.
 
 // --- BUG-12: markdown table-cell escaping in the borderline report ---
 //

@@ -19,14 +19,29 @@
  * `backlog-integrity.js` and `agent-surface-parity.js`, and
  * `tests/audit/skill-manifest-integrity.test.js` exercises the logic against fixtures.
  *
- * SCOPE — WHAT THIS DID *NOT* FIX
- * -------------------------------
- * This promotion covers ONE file. `tests/lib/portability-schema.test.js:51` still calls
- * `findProjectRoot()` and asserts against the live `skill-manifest.csv` — its header, its
- * 9-column row width, and any NON-EMPTY tier/intent value — so the `test-fixture-isolation`
- * violation is NOT resolved as a class, only for the file that moved here. Round 2
- * (2026-09-05) caught an earlier draft of this docblock claiming otherwise; Round 3 caught
- * that correction overstating what the sibling checks. Filed in `deferred-work.md`.
+ * SCOPE — RESOLVED AS A CLASS (sp-7-1, 2026-09-09)
+ * ------------------------------------------------
+ * An earlier version of this block recorded that `tests/lib/portability-schema.test.js` still
+ * read the live manifest, leaving `test-fixture-isolation` unresolved as a class. Story sp-7-1
+ * closed that: the sibling's three unique assertions (header ORDER, exact row arity, and
+ * schema-doc conformance) were folded in below and the file was DELETED. Its tier and intent
+ * vocabulary assertions were not folded in — `row/invalid-tier` and `row/invalid-intent`
+ * already covered them, strictly more strongly.
+ *
+ * SCHEMA-DOC CONFORMANCE WAS DELIBERATELY NOT FOLDED IN. The deleted file also asserted that
+ * `_bmad/_config/portability-schema.md` exists and carries the four sections plus every
+ * canonical term. Three review rounds each found a HIGH in the reimplementation of that one
+ * assertion — substring shadowing, then a crash, then a fence parser broken in both directions
+ * (false pass on a nested fence, four false accusations on an unterminated one) — and each
+ * defect was introduced by the previous round's fix. Per `code-review-convergence`'s
+ * prefer-deletion clause it was removed rather than rewritten a fourth time. Narrowing to what
+ * the AC specified is restoring scope, not cutting it; recorded here so it is visible.
+ *
+ * Two things go with it, both filed rather than lost: doc-conformance coverage needs a spec of
+ * its own (what counts as a section, whether fenced examples count, which trees it applies to
+ * — none of which this story ever answered), and the finding that surfaced along the way —
+ * NOTHING SEEDS `portability-schema.md` into an operator's project, so their manifest carries a
+ * vocabulary with no definition in their tree.
  *
  * WHAT IT DOES NOT PROVE
  * ----------------------
@@ -56,11 +71,11 @@ const { readManifest } = require('../portability/manifest-csv');
 // failures). A checker must not take its definition of "valid" from the thing it checks.
 //
 // They are therefore declared locally and PINNED against every other copy by
-// `tests/audit/skill-manifest-integrity.test.js`, which fails if any copy drifts. Three
-// other copies exist (`classify-skills.js`, `validate-classification.js`,
-// `tests/lib/portability-schema.test.js`); collapsing all four into one shared module is
-// filed in `deferred-work.md` rather than done here, because it touches two scripts this
-// change does not otherwise open.
+// `tests/audit/skill-manifest-integrity.test.js`, which fails if any copy drifts. Two
+// other copies exist (`classify-skills.js`, `validate-classification.js`) — sp-7-1 removed a
+// third when it deleted `tests/lib/portability-schema.test.js`. Collapsing the remaining three
+// into one shared module is filed in `deferred-work.md` rather than done here; note the pin is
+// deliberate independence, not drift, so any such collapse must keep the CHECKERS separate.
 const VALID_TIERS = ['standalone', 'light-deps', 'pipeline'];
 
 const VALID_INTENTS = [
@@ -172,6 +187,35 @@ class GitUnavailableError extends Error {
 // every call site passed the same value and `main()` counted only that value, so the first
 // other severity anyone added would have printed above a green PASS and exited 0. Round 2.
 // Removing the axis is what makes that unrepresentable rather than merely unlikely.
+// The manifest's full column contract, in order. `header/missing-column` below checks only
+// the four columns this audit indexes into; ORDER is a separate property, and a reordered
+// header is a real defect — every positional read in this repo silently reads the wrong cell.
+// Folded in from tests/lib/portability-schema.test.js (sp-1-1 Test 1) by sp-7-1.
+const EXPECTED_HEADER_COLUMNS = [
+  'canonicalId',
+  'name',
+  'description',
+  'module',
+  'path',
+  'install_to_bmad',
+  'tier',
+  'intent',
+  'dependencies',
+];
+
+// The columns this audit indexes into positionally. This is a SEPARATE list VALIDATED against
+// the ordered contract at load time — not derived from it. The distinction matters: a rename in
+// EXPECTED_HEADER_COLUMNS throws here rather than silently following, which is the intended
+// tripwire but is not what "derived" would mean. Round 1 found the two as unrelated literals;
+// Round 2 corrected this comment for overstating the fix. The throw is a source-edit guard and
+// cannot be exercised by input, so no test pins it.
+const INDEXED_COLUMNS = ['name', 'tier', 'intent', 'dependencies'];
+for (const col of INDEXED_COLUMNS) {
+  if (!EXPECTED_HEADER_COLUMNS.includes(col)) {
+    throw new Error(`INDEXED_COLUMNS names "${col}", absent from EXPECTED_HEADER_COLUMNS`);
+  }
+}
+
 const finding = (id, detail) => ({ id, detail });
 
 /**
@@ -192,7 +236,15 @@ const finding = (id, detail) => ({ id, detail });
  * roster would still pass on the survivor. That makes decay undetectable — the very thing
  * this function argues against. (Code review 2026-08-10.)
  */
-function resolveRoster({ names, rows, nameIdx, trackedSkillDirs, expectedAbsent = [], label }) {
+function resolveRoster({
+  names,
+  rows,
+  wellFormedRows = null,
+  nameIdx,
+  trackedSkillDirs,
+  expectedAbsent = [],
+  label,
+}) {
   const findings = [];
   const findRow = (name) => rows.find((r) => r[nameIdx] === name);
 
@@ -230,7 +282,12 @@ function resolveRoster({ names, rows, nameIdx, trackedSkillDirs, expectedAbsent 
     );
   }
 
-  const reappeared = expectedAbsent.filter((n) => findRow(n) !== undefined);
+  // Reappearance must rest on a row we can actually READ. `rows` here includes malformed rows
+  // so a mis-quoted row is not mistaken for a disappearance (Round 1) — but the reverse advice,
+  // "remove it from RETIRED", must not be driven by fields the code itself distrusts. Round 2
+  // found this mirror of the roster-decay bug: only the first direction had been fixed.
+  const trusted = wellFormedRows || rows;
+  const reappeared = expectedAbsent.filter((n) => trusted.some((r) => r[nameIdx] === n));
   if (reappeared.length) {
     findings.push(
       finding(
@@ -252,25 +309,47 @@ function resolveRoster({ names, rows, nameIdx, trackedSkillDirs, expectedAbsent 
 /**
  * The whole audit, as a pure function over data. No filesystem, no git, no cwd — which is
  * what lets `tests/audit/` drive it against fixtures.
+ *
+ * @param {object}   input
+ * @param {string[]} input.header           manifest header cells, in file order
+ * @param {string[][]} input.rows           manifest data rows
+ * @param {string[]} [input.trackedSkillDirs=[]]  product skill dirs; EMPTY is itself a finding,
+ *   because a guard that could not run must not read as a pass
+ * @returns {{id: string, detail: string}[]} findings; empty means clean
  */
 function audit({ header, rows, trackedSkillDirs = [] }) {
   const findings = [];
+
   const nameIdx = header.indexOf('name');
   const tierIdx = header.indexOf('tier');
   const intentIdx = header.indexOf('intent');
   const depsIdx = header.indexOf('dependencies');
 
-  for (const [label, idx] of [
-    ['name', nameIdx],
-    ['tier', tierIdx],
-    ['intent', intentIdx],
-    ['dependencies', depsIdx],
-  ]) {
+  let missingColumn = false;
+  for (const label of INDEXED_COLUMNS) {
+    const idx = header.indexOf(label);
     if (idx === -1) {
+      missingColumn = true;
       findings.push(finding('header/missing-column', `no "${label}" column in manifest header`));
     }
   }
-  if (findings.length) return findings; // nothing below can be trusted without the columns
+  // Guard on MISSING COLUMNS, not on `findings.length`, so a finding pushed earlier can never
+  // short-circuit the manifest checks below.
+  if (missingColumn) return findings; // nothing below can be trusted without the columns
+
+  // Presence passed, so every index above is valid. Order is the separate property.
+  if (
+    header.length !== EXPECTED_HEADER_COLUMNS.length ||
+    header.some((col, i) => col !== EXPECTED_HEADER_COLUMNS[i])
+  ) {
+    findings.push(
+      finding(
+        'header/column-order',
+        `header is ${JSON.stringify(header)}; expected exactly ` +
+          `${JSON.stringify(EXPECTED_HEADER_COLUMNS)}`
+      )
+    );
+  }
 
   if (rows.length === 0) {
     findings.push(finding('manifest/empty', 'skill-manifest.csv has no data rows'));
@@ -296,7 +375,7 @@ function audit({ header, rows, trackedSkillDirs = [] }) {
   // to throw a raw TypeError that discarded every finding collected so far. Round 1 finding.
   const wellFormed = [];
   for (const [i, row] of rows.entries()) {
-    if (row.length < header.length) {
+    if (row.length !== header.length) {
       findings.push(
         finding(
           'row/malformed',
@@ -310,6 +389,13 @@ function audit({ header, rows, trackedSkillDirs = [] }) {
   }
 
   const findRow = (name) => wellFormed.find((r) => r[nameIdx] === name);
+
+  // Roster PRESENCE is judged on every row carrying a readable name, including malformed ones.
+  // Round 1: a row one field too long left `wellFormed`, and the roster then reported
+  // `meta-platform/roster-decay` telling the operator to declare `bmad-help` a retirement —
+  // advice that corrupts roster policy for a row that is merely mis-quoted. Value checks below
+  // still read only `wellFormed`, because a malformed row's fields cannot be trusted.
+  const namedRows = rows.filter((r) => r.length > nameIdx && r[nameIdx]);
 
   // `findRow` returns the FIRST match, so a duplicate name exempts every later copy from
   // every policy check below. Round 1 finding: a bogus second `bmad-help` row produced an
@@ -352,7 +438,8 @@ function audit({ header, rows, trackedSkillDirs = [] }) {
   //    genuine upstream retirement can be declared rather than reddening CI forever.
   const cis = resolveRoster({
     names: Object.keys(CIS_POLICY),
-    rows: wellFormed,
+    rows: namedRows,
+    wellFormedRows: wellFormed,
     nameIdx,
     trackedSkillDirs,
     expectedAbsent: RETIRED.cis,
@@ -362,6 +449,7 @@ function audit({ header, rows, trackedSkillDirs = [] }) {
   for (const name of cis.present) {
     const policy = CIS_POLICY[name];
     const row = findRow(name);
+    if (!row) continue; // malformed — already reported by row/malformed
     if (row[intentIdx] !== policy.intent) {
       findings.push(finding('cis/intent', `${name}: expected ${policy.intent}, got "${row[intentIdx]}"`));
     }
@@ -388,7 +476,8 @@ function audit({ header, rows, trackedSkillDirs = [] }) {
   // 4. Canonical meta-platform skills are pipeline + meta-platform.
   const meta = resolveRoster({
     names: META_PLATFORM_SKILLS,
-    rows: wellFormed,
+    rows: namedRows,
+    wellFormedRows: wellFormed,
     nameIdx,
     trackedSkillDirs,
     expectedAbsent: RETIRED.metaPlatform,
@@ -397,6 +486,7 @@ function audit({ header, rows, trackedSkillDirs = [] }) {
   findings.push(...meta.findings);
   for (const name of meta.present) {
     const row = findRow(name);
+    if (!row) continue; // malformed — already reported by row/malformed
     if (row[tierIdx] !== 'pipeline') {
       findings.push(finding('meta-platform/tier', `${name}: expected pipeline, got "${row[tierIdx]}"`));
     }
@@ -410,7 +500,8 @@ function audit({ header, rows, trackedSkillDirs = [] }) {
   // 5. Standalone utilities are NOT meta-platform (AC #7 carve-out).
   const utils = resolveRoster({
     names: Object.keys(STANDALONE_UTILITIES),
-    rows: wellFormed,
+    rows: namedRows,
+    wellFormedRows: wellFormed,
     nameIdx,
     trackedSkillDirs,
     expectedAbsent: RETIRED.standaloneUtilities,
@@ -419,6 +510,7 @@ function audit({ header, rows, trackedSkillDirs = [] }) {
   findings.push(...utils.findings);
   for (const name of utils.present) {
     const row = findRow(name);
+    if (!row) continue; // malformed — already reported by row/malformed
     const expected = STANDALONE_UTILITIES[name];
     if (row[intentIdx] !== expected) {
       findings.push(
@@ -435,7 +527,8 @@ function audit({ header, rows, trackedSkillDirs = [] }) {
   // 6. Persona-only bmad-agent-* skills are standalone with empty deps.
   const personas = resolveRoster({
     names: PERSONA_AGENTS,
-    rows: wellFormed,
+    rows: namedRows,
+    wellFormedRows: wellFormed,
     nameIdx,
     trackedSkillDirs,
     expectedAbsent: RETIRED.personaAgents,
@@ -444,6 +537,7 @@ function audit({ header, rows, trackedSkillDirs = [] }) {
   findings.push(...personas.findings);
   for (const name of personas.present) {
     const row = findRow(name);
+    if (!row) continue; // malformed — already reported by row/malformed
     if (row[tierIdx] !== 'standalone') {
       findings.push(finding('persona-agent/tier', `${name}: expected standalone, got "${row[tierIdx]}"`));
     }
@@ -570,6 +664,7 @@ function main(argv) {
     return 1;
   }
 
+
   const findings = audit({ header, rows, trackedSkillDirs });
 
   console.log(`Skill-manifest integrity: ${path.relative(projectRoot, manifestPath)}`);
@@ -600,6 +695,7 @@ module.exports = {
   PRODUCT_TREE_PREFIXES,
   VALID_TIERS,
   VALID_INTENTS,
+  EXPECTED_HEADER_COLUMNS,
   META_PLATFORM_SKILLS,
   STANDALONE_UTILITIES,
   PERSONA_AGENTS,
