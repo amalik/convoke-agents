@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Three True Versions — Party Mode, 9 September 2026</title>
+<style>
+  :root{
+    --ink:#e9e5dc; --ink-dim:#9a9488; --ink-faint:#5f5a51;
+    --bg:#12110f; --panel:#1a1815; --line:#2b2823;
+    --john:#e0a33c; --winston:#5fa8c7; --alarm:#d9534f; --ok:#6fbf73;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);
+       line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:820px;margin:0 auto;padding:0 24px 96px}
+
+  /* ---------- header ---------- */
+  header{padding:72px 0 40px;text-align:center;position:relative}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+          color:var(--ink-faint)}
+  h1{font-size:clamp(38px,8vw,68px);margin:.18em 0 .1em;font-weight:400;letter-spacing:-.02em}
+  .sub{color:var(--ink-dim);font-style:italic;font-size:17px;max-width:46ch;margin:0 auto}
+  .rule{width:100%;height:1px;background:linear-gradient(90deg,transparent,var(--line) 18%,var(--line) 82%,transparent);margin:44px 0}
+
+  /* ---------- the three versions ---------- */
+  .versions{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:8px 0 6px}
+  .v{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px 14px;text-align:center;
+     position:relative;overflow:hidden}
+  .v .num{font-family:var(--mono);font-size:clamp(22px,5vw,30px);letter-spacing:-.01em;display:block}
+  .v .where{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+            color:var(--ink-faint);margin-top:8px}
+  .v.tree .num{color:var(--ok)}
+  .v.npm .num{color:var(--alarm)}
+  .v.mkt .num{color:var(--john)}
+  .v::after{content:"";position:absolute;inset:auto 0 0 0;height:2px;background:currentColor;opacity:.35}
+  .v.tree::after{background:var(--ok)} .v.npm::after{background:var(--alarm)} .v.mkt::after{background:var(--john)}
+  .vcap{text-align:center;color:var(--ink-dim);font-size:14px;font-style:italic;margin:14px 0 0}
+
+  /* ---------- timeline ---------- */
+  figure{margin:44px 0 8px}
+  svg{width:100%;height:auto;display:block;overflow:visible}
+  .glyph{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;fill:var(--ink-faint)}
+  .glyph.hot{fill:var(--alarm)}
+  .lbl{font-family:var(--mono);font-size:10px;fill:var(--ink-dim)}
+  .pulse{animation:pulse 2.6s ease-in-out infinite;transform-origin:center}
+  @keyframes pulse{0%,100%{opacity:.28;r:16}50%{opacity:0;r:26}}
+  .draw{stroke-dasharray:520;stroke-dashoffset:520;animation:draw 2.2s ease-out .3s forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  figcaption{font-size:13.5px;color:var(--ink-dim);text-align:center;margin-top:14px;font-style:italic}
+
+  /* ---------- exchange ---------- */
+  .turn{display:grid;grid-template-columns:52px 1fr;gap:16px;margin:26px 0}
+  .av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:20px;
+      border:1px solid var(--line);background:var(--panel)}
+  .av.j{box-shadow:0 0 0 1px rgba(224,163,60,.32)}
+  .av.w{box-shadow:0 0 0 1px rgba(95,168,199,.32)}
+  .who{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:5px}
+  .j .who{color:var(--john)} .w .who{color:var(--winston)}
+  .said{font-size:17px}
+  .stage{color:var(--ink-faint);font-style:italic}
+  code{font-family:var(--mono);font-size:.86em;background:#221f1b;border:1px solid var(--line);
+       padding:1px 5px;border-radius:4px;color:var(--ink)}
+
+  /* ---------- verdict cards ---------- */
+  h2{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+     color:var(--ink-faint);font-weight:400;margin:56px 0 20px;text-align:center}
+  .doors{display:grid;gap:12px}
+  .door{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;
+        background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);
+        border-radius:8px;padding:14px 18px}
+  .door.open{border-left-color:var(--ok)}
+  .door.gated{border-left-color:var(--john)}
+  .door.shut{border-left-color:var(--alarm);opacity:.72}
+  .door .name{font-size:16px}
+  .door .note{font-size:13px;color:var(--ink-dim);margin-top:2px}
+  .tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+       padding:4px 9px;border-radius:20px;border:1px solid var(--line);color:var(--ink-dim);white-space:nowrap}
+  .door.open .tag{color:var(--ok);border-color:rgba(111,191,115,.4)}
+  .door.gated .tag{color:var(--john);border-color:rgba(224,163,60,.4)}
+  .door.shut .tag{color:var(--alarm);border-color:rgba(217,83,79,.4)}
+  .icn{font-size:19px;opacity:.85}
+
+  /* ---------- pull quote ---------- */
+  blockquote{margin:56px 0;padding:0;text-align:center}
+  blockquote p{font-size:clamp(22px,4.4vw,30px);line-height:1.34;font-style:italic;margin:0;
+               color:var(--ink);letter-spacing:-.01em}
+  blockquote cite{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.2em;
+                  text-transform:uppercase;color:var(--ink-faint);font-style:normal;margin-top:18px}
+
+  /* ---------- counter ---------- */
+  .counter{text-align:center;margin:52px 0 0;padding:26px;border:1px dashed var(--line);border-radius:10px}
+  .counter .big{font-family:var(--mono);font-size:clamp(42px,10vw,72px);color:var(--john);display:block;line-height:1}
+  .counter .cap{font-size:14px;color:var(--ink-dim);margin-top:10px;font-style:italic}
+
+  footer{margin-top:64px;padding-top:26px;border-top:1px solid var(--line);
+         font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+         color:var(--ink-faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  @media(max-width:560px){
+    .versions{grid-template-columns:1fr;gap:10px}
+    .door{grid-template-columns:auto 1fr;}
+    .door .tag{grid-column:2}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Party Mode · Session Thirteen · 9 September 2026</div>
+  <h1>Three True Versions</h1>
+  <p class="sub">Amalik came in asking which channels to add. The room found that the one he had
+  hadn&rsquo;t been fed in seventeen days.</p>
+</header>
+
+<div class="versions">
+  <div class="v tree"><span class="num">4.0.2</span><span class="where">package.json</span></div>
+  <div class="v npm"><span class="num">4.0.1</span><span class="where">npm &middot; latest</span></div>
+  <div class="v mkt"><span class="num">4.0.0</span><span class="where">marketplace.json</span></div>
+</div>
+<p class="vcap">Three files. Three answers. All of them currently true.</p>
+
+<figure>
+<svg viewBox="0 0 800 210" role="img" aria-label="Publish timeline showing a seventeen-day gap after 23 August 2026">
+  <line x1="30" y1="120" x2="770" y2="120" stroke="#2b2823" stroke-width="1"/>
+
+  <!-- shipped publishes -->
+  <g>
+    <circle cx="120" cy="120" r="4.5" fill="#5f5a51"/>
+    <text class="glyph" x="120" y="146" text-anchor="middle">4.0.0</text>
+    <text class="glyph" x="120" y="160" text-anchor="middle">17 AUG</text>
+
+    <circle cx="230" cy="120" r="4" fill="#3d3a34"/>
+    <text class="glyph" x="230" y="146" text-anchor="middle">RC.0</text>
+    <text class="glyph" x="230" y="160" text-anchor="middle">22 AUG</text>
+
+    <circle cx="300" cy="120" r="7" fill="#6fbf73"/>
+    <text class="glyph" x="300" y="146" text-anchor="middle" style="fill:#6fbf73">4.0.1</text>
+    <text class="glyph" x="300" y="160" text-anchor="middle">23 AUG</text>
+    <text class="lbl" x="300" y="98" text-anchor="middle">last publish</text>
+  </g>
+
+  <!-- the gap -->
+  <path class="draw" d="M300 120 L710 120" stroke="#d9534f" stroke-width="1.4"
+        stroke-dasharray="6 7" opacity=".75"/>
+  <text class="glyph hot" x="505" y="104" text-anchor="middle">&mdash; 17 DAYS, NOTHING SHIPPED &mdash;</text>
+
+  <!-- the commit that wasn't a release -->
+  <g>
+    <line x1="620" y1="120" x2="620" y2="60" stroke="#2b2823" stroke-width="1"/>
+    <circle cx="620" cy="120" r="4" fill="#e0a33c"/>
+    <text class="lbl" x="620" y="50" text-anchor="middle" style="fill:#e0a33c">9968c224</text>
+    <text class="glyph" x="620" y="36" text-anchor="middle">&ldquo;release(4.0.2)&rdquo;</text>
+    <text class="glyph" x="620" y="146" text-anchor="middle">bumped &amp; wrote notes</text>
+    <text class="glyph" x="620" y="160" text-anchor="middle">never published</text>
+  </g>
+
+  <!-- today -->
+  <g>
+    <circle class="pulse" cx="740" cy="120" r="16" fill="#d9534f"/>
+    <circle cx="740" cy="120" r="6" fill="#d9534f"/>
+    <text class="glyph hot" x="740" y="146" text-anchor="middle">TODAY</text>
+    <text class="lbl" x="740" y="98" text-anchor="middle" style="fill:#d9534f">4.0.1</text>
+  </g>
+
+  <!-- freeze bar -->
+  <rect x="300" y="182" width="440" height="16" rx="4" fill="#1a1815" stroke="#2b2823"/>
+  <text class="glyph" x="520" y="194" text-anchor="middle">team-expansion-freeze &mdash; STILL IN FORCE</text>
+</svg>
+<figcaption>The freeze lifts when 4.0.2 <em>ships</em>. The commit bumped the version and wrote the
+release notes, and stopped there &mdash; so Friday&rsquo;s six-team ruling is standing on the far side of it.</figcaption>
+</figure>
+
+<div class="rule"></div>
+
+<div class="turn j">
+  <div class="av j">📋</div>
+  <div>
+    <div class="who">John · Product Manager</div>
+    <div class="said"><span class="stage">(pulls the laptop over before Winston can uncap the marker)</span>
+    Distribution strategy. Fine. New work, I&rsquo;ll take it. But I&rsquo;m running the check first &mdash;
+    <span class="stage">(stops)</span> &mdash; Amalik. <strong>4.0.2 is not published.</strong></div>
+  </div>
+</div>
+
+<div class="turn w">
+  <div class="av w">🏗️</div>
+  <div>
+    <div class="who">Winston · System Architect</div>
+    <div class="said"><span class="stage">(long pause at the whiteboard)</span> …That&rsquo;s not a
+    release-hygiene problem. <code>project-context.md</code>, first rule in the file. The freeze is keyed
+    to a publish event. The publish never happened.</div>
+  </div>
+</div>
+
+<div class="turn j">
+  <div class="av j">📋</div>
+  <div>
+    <div class="who">John</div>
+    <div class="said"><span class="stage">(flat)</span> Twice in two weeks this room has believed a thing
+    that a two-second command disproves. That&rsquo;s not a callback anymore. That&rsquo;s a control failure.</div>
+  </div>
+</div>
+
+<div class="turn w">
+  <div class="av w">🏗️</div>
+  <div>
+    <div class="who">Winston</div>
+    <div class="said">GitHub Packages requires a token to <em>install</em> &mdash; public packages included.
+    It makes Convoke strictly harder to install in exchange for nothing an operator can perceive. And it
+    solves private distribution inside an org, which is the tier you ruled yourself out of on Friday.</div>
+  </div>
+</div>
+
+<div class="turn j">
+  <div class="av j">📋</div>
+  <div>
+    <div class="who">John</div>
+    <div class="said">File it as answered and never re-open it. That&rsquo;s a no you can point at twice.</div>
+  </div>
+</div>
+
+<div class="turn w">
+  <div class="av w">🏗️</div>
+  <div>
+    <div class="who">Winston</div>
+    <div class="said"><span class="stage">(dry)</span> Fifth session running.</div>
+  </div>
+</div>
+
+<h2>The four doors</h2>
+<div class="doors">
+  <div class="door open">
+    <span class="icn">🔌</span>
+    <div>
+      <div class="name">Claude Code plugin marketplace</div>
+      <div class="note"><code>/plugin marketplace add amalik/convoke-agents</code> &mdash; committed, shipped
+      in <code>files[]</code>, all seven agents resolve. Git-based, no token. Unused.</div>
+    </div>
+    <span class="tag">Open today</span>
+  </div>
+  <div class="door open">
+    <span class="icn">🧭</span>
+    <div>
+      <div class="name"><code>--custom-source &lt;git-url&gt;</code></div>
+      <div class="note">BMAD&rsquo;s endorsed path post-v6.7. Already works. Cost: one README line
+      that has never been written.</div>
+    </div>
+    <span class="tag">Open today</span>
+  </div>
+  <div class="door gated">
+    <span class="icn">🏪</span>
+    <div>
+      <div class="name">BMAD community marketplace</div>
+      <div class="note">PR #9 closed with the structural spec attached. Needs Pattern A (v4.1 E1, 7 stories)
+      <em>and</em> sits behind T127 &mdash; the factory still emits v5 XML.</div>
+    </div>
+    <span class="tag">Gated ×2</span>
+  </div>
+  <div class="door shut">
+    <span class="icn">🔒</span>
+    <div>
+      <div class="name">GitHub Packages</div>
+      <div class="note">Auth required to install, public packages included. Solves a client-tier problem
+      Friday&rsquo;s ruling removed. Closed on mechanics <em>and</em> on strategy.</div>
+    </div>
+    <span class="tag">Ruled out</span>
+  </div>
+</div>
+
+<blockquote>
+  <p>&ldquo;npm is a package-manager channel for a thing nobody <code style="font-size:.7em">require</code>s.
+  GitHub Packages is <em>more npm</em> &mdash; a lateral move on the axis that matters least.&rdquo;</p>
+  <cite>Winston, on why the question was the wrong shape</cite>
+</blockquote>
+
+<div class="counter">
+  <span class="big">3,526</span>
+  <div class="cap">downloads last month, and not one of them attributable to a channel.<br>
+  Adding channels before you can measure one isn&rsquo;t distribution. It&rsquo;s inventory.</div>
+</div>
+
+<div class="counter" style="border-style:solid;margin-top:16px">
+  <span class="big" style="color:var(--alarm)">130</span>
+  <div class="cap">days on <code>i97-2-3</code> Task 8. Fifth session. John is still counting.</div>
+</div>
+
+<footer>
+  <span>Convoke · _bmad-output/party-mode</span>
+  <span>Pair session 5 · No one conceded</span>
+  <span>9 Sep 2026</span>
+</footer>
+
+</div>
+</body>
+</html>
