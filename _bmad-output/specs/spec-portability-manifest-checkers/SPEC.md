@@ -23,7 +23,7 @@ sources:
 **What remains.** Two genuinely open items, both smaller than the original scope:
 
 1. **`tests/lib/portability-schema.test.js` calls `findProjectRoot()` at `:51` and `:105` to read the live manifest as data.** `tests/lib/portability-fixture.js` (backlog I123) already established the idiomatic pattern for this directory — `FIXTURE_ROOT` is the data under test and is *never* `findProjectRoot()`; `REPO_ROOT` only locates code. This file predates that pattern and never adopted it.
-2. **A seeding row whose bare-name dependency points at a row that does not seed is reported by nothing.** `dist-2-8` named this gap and filed it rather than improvising. Two live instances: `bmad-help` → `bmad-quick-dev`, and `bmad-migrate-artifacts` → `bmad-create-epics-and-stories`.
+2. **A seeding row whose bare-name dependency points at a row that does not seed is reported by nothing.** `dist-2-8` named this gap and filed it rather than improvising. It is real — but it has **no live drivers**, and the two that looked like drivers are not. `bmad-help` → `bmad-quick-dev` and `bmad-migrate-artifacts` → `bmad-create-epics-and-stories` both name upstream `bmm` rows this repo deleted in `a16fa340`; in an operator's project with BMAD installed, both resolve and seed. `validate-classification.js:449-460` already records exactly this. The check must therefore run against an **operator-shaped tree**, which means the fixture, and it sequences behind the fixture-extension work.
 
 Who is affected: the ~40% Vortex Standalone segment, for whom the seeding manifest is the load-bearing artifact behind `convoke-export` — a dependency that does not ship is a broken skill in their tree.
 
@@ -45,9 +45,9 @@ Who is affected: the ~40% Vortex Standalone segment, for whom the seeding manife
   - **intent:** `VALID_TIERS` names one vocabulary within `scripts/audit/`.
   - **success:** `grep -rn "VALID_TIERS" scripts/audit/` shows no two declarations holding different value sets.
 
-- **CAP-7**
+- **CAP-7** *(sequences after fixture extension — see Delivery sequence)*
   - **intent:** A seeding manifest row whose bare-name dependency points at a row that does not seed is reported, so a shipped skill cannot depend on something the installer never delivers.
-  - **success:** A new finding type reports both live instances. `[ORPHAN-DEP]` and `[BROKEN-DEP]` are left untouched — the first is a typo check against the manifest's vocabulary, the second checks path-shaped deps, and neither can be redefined to cover this without losing its own meaning. The new type's severity (hard vs warning) is chosen deliberately and stated, since making it hard fails CI on two rows that exist today.
+  - **success:** A new finding type fires on **fixture rows constructed to exhibit the condition**, and reports nothing against the real repository — where the apparent instances are local deletions, not manifest defects. `[ORPHAN-DEP]` and `[BROKEN-DEP]` are left untouched: the first is a typo check against the manifest's vocabulary, the second checks path-shaped deps, and neither can be redefined to cover this without losing its own meaning.
 
 ### Retired capabilities
 
@@ -59,6 +59,7 @@ IDs are never reused (Spec Law 6).
 ## Constraints
 
 - **The `path` column is a CANDIDATE list.** 31 of 106 entries resolve; the other 75 do not, and that is correct. No change may repoint `path` at gitignored `.claude/skills/` — done 2026-08-10 in `4ed770a0`, reverted within the hour in `8f2fbda0`, because it passes on a developer machine and hollows out in a clean checkout. **And no check may treat the 106-row candidate list as its validated scope**; the seeding set is the subject. This trap has now caught five attempts.
+- **An operator-facing property must not be measured against this developer tree.** 75 manifest paths fail to resolve here only because `a16fa340` deleted the vendored upstream content; the same rows resolve and seed in an operator's project. Any check about what *ships* runs against an operator-shaped tree (the fixture). This is the third variant of the CANDIDATE-LIST trap and the one that produced CAP-7's false drivers.
 - **Reuse the installer's own seeding predicate**, imported, never reimplemented. A second copy lets the test and the installer drift into disagreeing about what ships — a ratchet confident about the wrong tree.
 - **The row-vocabulary overlap between `validate-classification.js` and `scripts/audit/skill-manifest-integrity.js` is deliberate and stays.** Two checkers with *independent* vocabularies mean a widened definition in one is caught by the other. Round 2 (2026-09-05) proved the alternative: importing the audit's vocabulary from `classify-skills.js` made it accept a bogus tier with zero test failures.
 - **`validate-classification.js` is not rewritten or retired.** It satisfies `no-process-cwd-in-libs`, carries an `isInsideProjectRoot` containment guard, and its 21 fixture-isolated tests must keep passing.
@@ -72,20 +73,21 @@ IDs are never reused (Spec Law 6).
 - **Not re-solving dependency integrity.** `dist-2-8` did it. Re-deriving that work is how this spec went wrong the first time.
 - **Not merging the two checkers, and not collapsing their vocabulary overlap.** `validate-classification.js` owns CSV self-consistency; `skill-manifest-integrity.js` owns upstream-and-policy conformance.
 - **Not extending the fixture to cover non-seeding upstream rows.** Named by `dist-2-8` as the remedy for that coverage, and real — but it is fixture-authoring work with its own scope.
-- **Not fixing the two live CAP-7 instances.** Reporting them is this spec's job; deciding whether `bmad-help` should ship without `bmad-quick-dev` is an operator call.
+- **Not treating `bmad-help` → `bmad-quick-dev` or `bmad-migrate-artifacts` → `bmad-create-epics-and-stories` as defects.** Both are local artifacts of `a16fa340`; they resolve in an operator's project. Any check that reports them is measuring the wrong tree.
 - **Not fixing the audit's one-directional blind spot** (a tracked product skill with no manifest row — 10 exist today).
 - **Not replacing the `>= 3` testarch magic floor.**
 - **Not ruling on `classify-skills.js`'s per-persona intent policy.**
 
 ## Success signal
 
-The portability suites pass on a clean checkout with no test reading the live tree for data, and a seeding skill that depends on something the installer never delivers is named by a check — including the two that exist today.
+The portability suites pass on a clean checkout with no test reading the live tree for data, and a seeding skill that depends on something the installer never delivers is named by a check that has been demonstrated on an operator-shaped fixture.
 
 ## Delivery sequence
 
-1. **CAP-7 — the seeding-closure gap.** A new finding type, the two known instances reported, severity chosen deliberately. Independently shippable and the only item delivering new operator-visible coverage.
-2. **CAP-2 + CAP-3 — adopt the two-root pattern** in `portability-schema.test.js`, preserving header/arity/doc coverage.
-3. **CAP-4 + CAP-5 — vocabulary ownership and the `VALID_TIERS` collision.**
+1. **CAP-2 + CAP-3 — adopt the two-root pattern** in `portability-schema.test.js`, preserving header/arity/doc coverage. The only items that survived every check on 2026-09-09, and independent of the `dist-2-8` lineage.
+2. **CAP-4 + CAP-5 — vocabulary ownership and the `VALID_TIERS` collision.** Mechanical.
+3. **Fixture extension** — the remedy `dist-2-8` filed for non-seeding coverage. Prerequisite for CAP-7.
+4. **CAP-7 — the seeding-closure gap**, driven by fixture rows built to exhibit it.
 
 ## Assumptions
 
