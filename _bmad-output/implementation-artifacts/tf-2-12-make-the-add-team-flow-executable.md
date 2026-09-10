@@ -58,13 +58,13 @@ Nothing corrupted anything, because all six failures are loud: called as written
   - [ ] Confirm `step-04-generate.md`'s §5c `writeRegistryBlock(specData, registryPath)` is left ALONE — it matches `registry-writer.js:25` and is the only correct call in the set
 
 - [ ] **Task 2: Repair the activation validator's contract** (AC: #2, #3)
-  - [ ] **Check 4** (`activation-validator.js:94`) — requires `module="..."` **inside** the `<activation>` block. Survey: all of `_bmad/` holds 12 `<activation critical="MANDATORY">` + 2 bare `<activation>` = 14 total, **zero** with `module=`. **OPERATOR RULING NEEDED — see Dev Notes §Decision 1.** Recommended: derive module identity from the config path check 2 already validates, rather than demanding a redundant attribute nothing emits
+  - [ ] **Check 4** (`activation-validator.js:94`) — requires `module="..."` **inside** the `<activation>` block. Survey: all of `_bmad/` holds 12 `<activation critical="MANDATORY">` + 2 bare `<activation>` = 14 total, **zero** with `module=`. **RULED (c) — see Dev Notes §Decision 1.** Derive module identity from the config path check 2 already validates, rather than demanding a redundant attribute nothing emits
   - [ ] **Check 2** (`:71`) — `activationContent.includes(moduleConfig.configPath)` is a raw substring match with no normalisation, so it passes or fails on the caller's string form. Accept both the `{project-root}/`-prefixed convention form and a resolved absolute path
-  - [ ] **Check 3** (`:82`) — requires `config.yaml` on disk, but §3c validates agents two sections before §5a creates it. **OPERATOR RULING NEEDED — see Dev Notes §Decision 2**
+  - [ ] **Check 3** (`:82`) — requires `config.yaml` on disk, but §3c validates agents two sections before §5a creates it. **RULED (a) — move the gate; see Dev Notes §Decision 2**
   - [ ] Do NOT touch checks 1 or 5 — both are correct and both pass today
 
 - [ ] **Task 3: Fix the ordering the validator gate depends on** (AC: #4)
-  - [ ] Apply whichever of Decision 2's options the operator rules; if the gate moves, update `step-04-generate.md`'s section numbering and its Visibility Checklist so the documented order matches the executed order
+  - [ ] Move the per-agent `validateActivation` gate from §3c to after §5a/§5b per the ruling, then update `step-04-generate.md`'s section numbering and its Visibility Checklist so the documented order matches the executed order
 
 - [ ] **Task 4: Test against reality, not fixtures** (AC: #5, #6)
   - [ ] Add a test in `tests/team-factory/activation-validator.test.js` that runs `validateActivation` against `_bmad/bme/_team-factory/agents/team-factory.md` and asserts `valid === true`
@@ -79,22 +79,26 @@ Nothing corrupted anything, because all six failures are loud: called as written
 
 ## Dev Notes
 
-### Decision 1 — Check 4 needs an operator ruling before you touch it
+### Decision 1 — RULED 2026-09-10 by Amalik: option (c), re-express check 4 against the config path
+
+**This is settled. Implement (c). Do not re-open it, and do not substitute (a) because it is quicker.**
 
 Three options, and the wrong two are both tempting:
 
-- **(a) Delete check 4.** Fastest, and it makes the validator weaker for no gain. This is precisely the `T121` failure mode already filed against this project: a gate that passes what it exists to catch. **Do not do this.**
-- **(b) Make the generator emit `module=`.** Keeps the check, but invents a framework-wide convention on the authority of one story, and every hand-written agent in `_bmad/` then fails a gate it never agreed to. Out of scope.
-- **(c) RECOMMENDED — re-express check 4 against what agents actually contain.** The activation block already references its config as `{project-root}/_bmad/bme/_{team}/config.yaml`. The module path is derivable from that string. Check 4 becomes "the activation block's config reference resolves to the expected module", which is a real assertion, is satisfiable by every shipped agent, and does not require a new convention.
+- **(a) REJECTED — Delete check 4.** Fastest, and it makes the validator weaker for no gain. This is precisely the `T121` failure mode already filed against this project: a gate that passes what it exists to catch. **Do not do this.**
+- **(b) REJECTED — Make the generator emit `module=`.** Keeps the check, but invents a framework-wide convention on the authority of one story, and every hand-written agent in `_bmad/` then fails a gate it never agreed to. Out of scope.
+- **(c) ✅ RULED — re-express check 4 against what agents actually contain.** The activation block already references its config as `{project-root}/_bmad/bme/_{team}/config.yaml`. The module path is derivable from that string. Check 4 becomes "the activation block's config reference resolves to the expected module", which is a real assertion, is satisfiable by every shipped agent, and does not require a new convention.
 
 Under (c), checks 2 and 4 partly overlap. That is acceptable — or fold them into one check with two failure messages. Either is fine; state which you chose in the Dev Agent Record.
 
-### Decision 2 — Check 3's ordering
+### Decision 2 — RULED 2026-09-10 by Amalik: option (a), move the per-agent gate after config creation
 
-- **(a) RECOMMENDED — move the per-agent validation gate** from §3c to after §5a creates `config.yaml`. The check is legitimate; only its placement is wrong. Cost: §3's "validate immediately after generating each agent" becomes "validate all agents after config exists", which slightly weakens per-agent feedback.
-- **(b) Drop check 3 from per-agent validation** and rely on check 5 (module directory exists) plus end-to-end validation. Cheaper, loses a real assertion.
+**Settled. The check is kept; only its placement moves.**
 
-Prefer (a). If you take (b), say why in the Dev Agent Record.
+- **(a) ✅ RULED — move the per-agent validation gate** from §3c to after §5a creates `config.yaml`. The check is legitimate; only its placement is wrong. Cost: §3's "validate immediately after generating each agent" becomes "validate all agents after config exists", which slightly weakens per-agent feedback.
+- **(b) REJECTED — Drop check 3 from per-agent validation** and rely on check 5 (module directory exists) plus end-to-end validation. Cheaper, loses a real assertion.
+
+Ruled (a). Consequences the dev must carry: `step-04-generate.md`'s section numbering changes, its **Visibility Checklist** must be updated to match the executed order, and its `Concept count:` footer re-checked against `loom-prd.md:313` NFR2. Per-agent feedback becomes all-agents feedback — that is an accepted cost, not a defect to work around.
 
 ### What is already proven — do not re-derive it
 
@@ -154,4 +158,5 @@ Filed separately from the same run; leave them alone so the diff stays reviewabl
 
 | Date | Change |
 |------|--------|
-| 2026-09-10 | Story authored via `bmad-create-story` from `T129` + `T130`. Scope deliberately excludes `T131` (persona collection), which is blocked on an NFR2 ruling. Two operator rulings are called out in Dev Notes and must be answered before Task 2 lands. |
+| 2026-09-10 | Story authored via `bmad-create-story` from `T129` + `T130`. Scope deliberately excludes `T131` (persona collection), which is blocked on an NFR2 ruling. Two operator rulings were called out in Dev Notes and were both answered the same day — Decision 1 (c) and Decision 2 (a). No open rulings remain; the story is unblocked for dev. |
+| 2026-09-10 | Decisions 1 and 2 ruled by Amalik: check 4 re-expressed against the config path (not deleted, not backed by a new `module=` convention); check 3 kept with the per-agent gate moved after config creation. Both recorded inline at their decision points and in the tasks that depend on them. |
