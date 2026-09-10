@@ -68,8 +68,17 @@ async function validateSingleAgent(agentFile, moduleConfig) {
 
   const activationContent = match[0];
 
-  // Check 2: Config path reference
-  const configPathValid = activationContent.includes(moduleConfig.configPath);
+  // Check 2: Config path reference.
+  // tf-2-12 (T129): compare on a normalised tail rather than a raw substring, so a
+  // caller may pass either the `{project-root}/...` convention form that agents
+  // actually write, or a resolved absolute path. Previously this was a bare
+  // includes() and therefore turned on the caller's string form.
+  const normaliseConfigRef = (p) =>
+    String(p).replace(/\\/g, '/').replace(/^\{project-root\}\//, '').replace(/^.*?(?=_bmad\/)/, '');
+  const expectedConfigRef = normaliseConfigRef(moduleConfig.configPath);
+  const configPathValid =
+    activationContent.includes(moduleConfig.configPath) ||
+    (expectedConfigRef !== '' && normaliseConfigRef(activationContent).includes(expectedConfigRef));
   checks.push({
     check: 'Config path reference',
     passed: configPathValid,
@@ -91,12 +100,28 @@ async function validateSingleAgent(agentFile, moduleConfig) {
     errors.push(`Config file does not exist at ${configAbsPath}`);
   }
 
-  // Check 4: Module path reference — strict module= attribute match only
+  // Check 4: Module path reference.
+  //
+  // tf-2-12 (T129), operator ruling Decision 1 option (c): module identity is
+  // DERIVED from the config reference the activation block already contains,
+  // rather than demanded via a `module="..."` attribute. A survey of `_bmad/`
+  // found 12 `<activation critical="MANDATORY">` + 2 bare `<activation>` and
+  // ZERO carrying `module=`, so the previous strict-attribute form could not be
+  // satisfied by any agent that has ever shipped — the Team Factory's own agent
+  // failed this validator.
+  //
+  // An explicit `module=` is still HONOURED when present: it is an additional
+  // signal, not a required convention. Deleting the check outright was rejected
+  // as the T121 decorative-gate failure; requiring the attribute was rejected as
+  // inventing a framework-wide convention on one story's authority.
   const moduleAttrRegex = /module\s*=\s*"([^"]*)"/;
   const moduleAttrMatch = activationContent.match(moduleAttrRegex);
+  const MODULE_FROM_CONFIG_REF = /(?:^|[/\\])(bme[/\\]_[A-Za-z0-9._-]+)[/\\]config\.yaml/;
+  const derivedMatch = activationContent.replace(/\\/g, '/').match(MODULE_FROM_CONFIG_REF);
+  const derivedModulePath = derivedMatch ? derivedMatch[1] : null;
   const modulePathValid = moduleAttrMatch
     ? moduleAttrMatch[1] === moduleConfig.modulePath
-    : false;
+    : derivedModulePath !== null && derivedModulePath === moduleConfig.modulePath;
   checks.push({
     check: 'Module path reference',
     passed: modulePathValid,
@@ -104,7 +129,9 @@ async function validateSingleAgent(agentFile, moduleConfig) {
       ? undefined
       : moduleAttrMatch
         ? `Expected module="${moduleConfig.modulePath}" but found module="${moduleAttrMatch[1]}" in activation block`
-        : `No module="..." attribute found in activation block`
+        : derivedModulePath
+          ? `Activation block's config reference resolves to module "${derivedModulePath}", expected "${moduleConfig.modulePath}"`
+          : `Activation block contains no module-identifying config reference (expected a path ending .../${moduleConfig.modulePath}/config.yaml)`
   });
   if (!modulePathValid) {
     errors.push(`Module path "${moduleConfig.modulePath}" not referenced correctly in activation block`);

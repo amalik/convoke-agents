@@ -18,7 +18,7 @@ Read the spec file and the generation manifest (list of all created/modified fil
 Run the full validation suite:
 
 ```
-run: node -e "const v = require('{project-root}/_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js'); v.validateTeam({spec_data}, '{project-root}').then(r => console.log(JSON.stringify(r, null, 2)))"
+run: node -e "const v = require('{project-root}/_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js'); v.validateTeam({spec_data}, {generation_context}, '{project-root}').then(r => console.log(JSON.stringify(r, null, 2)))"
 expect: result.valid === true → all checks passed
         result.valid === false → display failing checks with details
 ```

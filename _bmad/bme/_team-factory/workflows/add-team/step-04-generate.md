@@ -66,13 +66,8 @@ For each agent's workflows, delegate to BMB to generate:
 - `workflow.md` — entry point with step sequence
 - Step files — one per workflow step
 
-**3c. Per-Agent Validation**
-After generating each agent's files:
-```
-run: node -e "const av = require('{project-root}/_bmad/bme/_team-factory/lib/writers/activation-validator.js'); av.validateActivation('{agent_file_path}', '{config_path}').then(r => console.log(JSON.stringify(r)))"
-expect: result.valid === true → proceed to next agent
-        result.valid === false → display errors, fix before continuing
-```
+**3c. Defer activation validation**
+Activation validation does NOT run here. It requires `config.yaml` on disk, and this section executes *before* §5a creates it — validating here failed on a precondition the flow had not yet built. Moved to **§5c** per the tf-2-12 operator ruling (Decision 2, option (a)).
 
 **3d. Update Progress**
 Update spec file: `progress.generate.{agent_id}: "complete"`
@@ -88,17 +83,26 @@ For each contract in the spec:
 
 **5a. Config Creation**
 ```
-run: node -e "const cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); cc.createConfig({spec_data}).then(r => console.log(JSON.stringify(r)))"
+run: node -e "const cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); cc.createConfig({spec_data}, '{module_root}/config.yaml', '{project-root}/_bmad/bme/').then(r => console.log(JSON.stringify(r)))"
 expect: result.success === true
 ```
 
 **5b. CSV Creation**
 ```
-run: node -e "const csv = require('{project-root}/_bmad/bme/_team-factory/lib/writers/csv-creator.js'); csv.createCsv({spec_data}).then(r => console.log(JSON.stringify(r)))"
+run: node -e "const csv = require('{project-root}/_bmad/bme/_team-factory/lib/writers/csv-creator.js'); csv.createCsv({spec_data}, '{module_root}/module-help.csv').then(r => console.log(JSON.stringify(r)))"
 expect: result.success === true
 ```
 
-**5c. Registry Block (Full Write Safety Protocol)**
+**5c. Activation Validation (all agents)**
+Runs here, not in §3, because `activation-validator.js` check 3 requires `config.yaml` to exist and §5a has just created it.
+```
+run: node -e "const av = require('{project-root}/_bmad/bme/_team-factory/lib/writers/activation-validator.js'); av.validateActivation({agent_file_paths}, { configPath: '{config_path}', modulePath: 'bme/_{team_name_kebab}', moduleDir: '{module_root}' }).then(r => console.log(JSON.stringify(r)))"
+expect: result.valid === true → proceed to registry wiring (§5d)
+        result.valid === false → display result.results[].errors, fix before continuing
+```
+**Accepted cost of the move (tf-2-12 Decision 2):** feedback is now per-team rather than per-agent — a malformed agent surfaces after all agents are generated instead of immediately after its own. This is a deliberate trade, not a regression; do not "fix" it by moving the gate back without also solving the config-ordering problem.
+
+**5d. Registry Block (Full Write Safety Protocol)**
 ```
 run: node -e "const rw = require('{project-root}/_bmad/bme/_team-factory/lib/writers/registry-writer.js'); rw.writeRegistryBlock({spec_data}, '{registry_path}').then(r => console.log(JSON.stringify(r)))"
 expect: result.success === true → proceed
@@ -134,7 +138,7 @@ Generate `README.md` with:
 
 Track all created and modified files:
 ```
-run: node -e "const mt = require('{project-root}/_bmad/bme/_team-factory/lib/manifest-tracker.js'); mt.buildManifest({spec_data}).then(r => console.log(JSON.stringify(r)))"
+run: node -e "const mt = require('{project-root}/_bmad/bme/_team-factory/lib/manifest-tracker.js'); console.log(JSON.stringify(mt.buildManifest({spec_data}, {generation_context})))"
 ```
 
 ### 9. Save Progress
@@ -152,9 +156,9 @@ Colleague sees:
   - [ ] Registry block preview + approval prompt
 Runs silently:
   - [ ] BMB delegation calls
-  - [ ] Activation validation per agent
+  - [ ] Activation validation, all agents at once after config exists (§5c — moved from §3c, tf-2-12 Decision 2)
   - [ ] Config/CSV creation
   - [ ] Write Safety Protocol (registry)
   - [ ] Manifest tracking
-Concept count: 2/3 (generation progress, registry approval)
+Concept count: 2/3 (generation progress, registry approval) — unchanged by the tf-2-12 §3c→§5c gate move: activation validation runs silently and was never a surfaced concept, so NFR2's ≤3 ceiling is not approached.
 Approval prompt: "Here's what will be added to agent-registry.js — approve?"

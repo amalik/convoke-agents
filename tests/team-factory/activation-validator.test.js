@@ -143,3 +143,57 @@ describe('ACTIVATION_REGEX', () => {
     assert.equal(match, null);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// tf-2-12 (T129): validate against agents the framework ACTUALLY ships.
+//
+// Every test above this line builds a synthetic fixture shaped
+//   <activation config="..." module="bme/_test-team">
+// No shipped BMAD agent carries either attribute, so 184 passing tests
+// validated an invented convention while the validator rejected every real
+// agent — including the Team Factory's own. These tests join it to reality.
+// REPO_ROOT from __dirname, never cwd (see bff7b961).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const REPO_ROOT = path.resolve(__dirname, '..', '..');
+
+describe('tf-2-12: real shipped agents', () => {
+  const REAL_AGENT = path.join(REPO_ROOT, '_bmad/bme/_team-factory/agents/team-factory.md');
+  const REAL_MODULE_DIR = path.join(REPO_ROOT, '_bmad/bme/_team-factory');
+  const realModuleConfig = {
+    configPath: '{project-root}/_bmad/bme/_team-factory/config.yaml',
+    modulePath: 'bme/_team-factory',
+    moduleDir: REAL_MODULE_DIR
+  };
+
+  it("the Team Factory's own agent passes the Team Factory's own validator", async () => {
+    const result = await validateActivation([REAL_AGENT], realModuleConfig);
+    assert.deepEqual(
+      result.results[0].errors,
+      [],
+      'Loom Master must pass; if this fails the validator has drifted from the framework convention again'
+    );
+    assert.equal(result.valid, true);
+  });
+
+  it('a real agent pointing at a DIFFERENT module still fails', async () => {
+    const result = await validateActivation([REAL_AGENT], {
+      configPath: '{project-root}/_bmad/bme/_vortex/config.yaml',
+      modulePath: 'bme/_vortex',
+      moduleDir: REAL_MODULE_DIR
+    });
+    assert.equal(result.valid, false, 'the repair must not become a pass-everything gate (T121)');
+  });
+
+  it('an agent with no activation block still fails', async () => {
+    const tmp = path.join(os.tmpdir(), `tf212-noact-${Date.now()}.md`);
+    await fs.writeFile(tmp, '# Not an agent\n\nNo activation here.\n');
+    try {
+      const result = await validateActivation([tmp], realModuleConfig);
+      assert.equal(result.valid, false);
+      assert.match(result.results[0].errors[0], /No <activation> block found/);
+    } finally {
+      await fs.remove(tmp);
+    }
+  });
+});

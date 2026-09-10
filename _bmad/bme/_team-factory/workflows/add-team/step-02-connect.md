@@ -80,8 +80,9 @@ core_module: bme
 
 Run config field collision detection:
 ```
-run: node -e "const cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); // collision check logic"
-expect: no collisions with existing config fields
+run: node -e "const cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); cc.detectCollisions({spec_data}, '{project-root}/_bmad/bme/').then(c => console.log(JSON.stringify(c)))"
+expect: result.length === 0 → no collisions, proceed
+        result.length > 0  → display each {field, value, existingModule}, ask contributor to rename before continuing
 ```
 
 ### 6. Save Progress

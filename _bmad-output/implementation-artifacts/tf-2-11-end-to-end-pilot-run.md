@@ -258,3 +258,9 @@ Task 6's header is ticked because Step 5 was genuinely executed and produced a v
 **`T128` filed** (5.0, loom, Open) — Fast Lane, `backlog-integrity.js` PASS at 824 rows / 10 tables / 3 lanes ordered. **Findings 8-15 are recorded above but NOT filed** — that filing decision is separate and still owed.
 
 **Regression after cleanup:** `npm test` — 2253 tests, 2252 pass, 0 fail, 1 pre-existing skip. Registry restored to a zero git diff against HEAD.
+
+---
+
+### Superseding note — 2026-09-10 (`tf-2-12`)
+
+This run's Tasks 5 and 6 completed **only because the `run:` block calls were hand-corrected during the walkthrough** — the workflow as written could not execute them. `tf-2-12` repairs all six signatures and the activation validator, so a future run of this pilot needs no hand-patching. Findings 8 and 15 are closed by that story; 9-14 remain open as `T131`/`T132`/`T133`.
