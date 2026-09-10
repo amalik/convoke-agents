@@ -7,6 +7,8 @@ Run comprehensive validation on the generated team, produce a file manifest, col
 - Step 04 (Generate) completed — all files created and wired
 - Spec file has progress.generate = "complete" (or all agent sub-entries complete)
 
+> **`{generation_context}`** is the object accumulated during Step 4 — `{ module_root, agent_files, workflow_dirs, generated_files, config_yaml_path, module_help_csv_path, activation_validation_results, registry_wiring_result }`. Defined in `step-04-generate.md` §Placeholders. `validateTeam` requires it as its second argument.
+
 ## Execution Sequence
 
 ### 1. Load Spec & Manifest

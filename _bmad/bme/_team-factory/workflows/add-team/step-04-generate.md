@@ -7,6 +7,20 @@ Generate all team files through BMB delegation for content artifacts and factory
 - Step 03 (Review) completed — contributor approved all decisions
 - Spec file has progress.review = "complete"
 
+## Placeholders used in this step
+
+Every `run:` block below substitutes these. They are listed because a name that appears in exactly one command and is defined nowhere cannot be resolved by whoever drives the flow — which is the same class of defect tf-2-12 exists to remove.
+
+| Placeholder | Resolves to |
+|---|---|
+| `{spec_data}` | the parsed spec object from `team-spec-{team_name_kebab}.yaml` (see `spec-parser.js::parseSpec` → `.spec`) |
+| `{team_name_kebab}` | the team's kebab name, e.g. `pilot-test` |
+| `{module_root}` | absolute path to `_bmad/bme/_{team_name_kebab}` |
+| `{config_path}` | the config reference **as agents write it**: `{project-root}/_bmad/bme/_{team_name_kebab}/config.yaml`. Pass this placeholder form, not a resolved path — `activation-validator.js` check 2 accepts either, but the convention form is what agent files contain |
+| `{agent_file_paths}` | a JS **array** of absolute paths to the generated agent `.md` files. `validateActivation` takes an array; a bare string iterates character-by-character |
+| `{registry_path}` | absolute path to `scripts/update/lib/agent-registry.js` |
+| `{generation_context}` | object accumulated across §3-§5: `{ module_root, agent_files, workflow_dirs, generated_files, config_yaml_path, module_help_csv_path, activation_validation_results, registry_wiring_result }`. Consumed by §8 `buildManifest` and by `step-05`'s `validateTeam` |
+
 ## Execution Sequence
 
 ### 1. Load Spec & Plan Generation

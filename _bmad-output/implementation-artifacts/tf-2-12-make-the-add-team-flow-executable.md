@@ -174,6 +174,16 @@ Claude Opus 5 (1M context), via `bmad-dev-story`.
 
 **Deliberately NOT done, to keep the diff reviewable:** `step-04` §8's manifest block still has **no `expect:` line at all**. Fixing the signature was in scope; adding a missing assertion was not, and it belongs with `T133`, which already owns manifest defects. Also not done: a test that parses the step files and asserts each `run:` block's arity against the library it names. That would prevent this entire defect class from recurring and is the natural successor to this story — but it is not in any task here, so it is recorded rather than built.
 
+### Round 1 Review — 2026-09-10 (self-review at the landing point)
+
+**Two defects found in this story's own implementation, both fixed. `npm test` 2256/2255/0 fail after; lint clean.**
+
+**R1-1 — the fix reproduced its own defect class one level up.** Correcting the six `run:` blocks introduced three placeholders that appear in exactly one command each and are **defined nowhere**: `{agent_file_paths}` (1 occurrence, mine), `{module_root}` (3, all mine), `{generation_context}` (2, both mine). Compare `{team_name_kebab}` at 10 occurrences across 5 files. A driver reading the workflow could not resolve them — which is precisely the "instructions that cannot be executed as written" defect this story exists to remove. Fixed by adding a **Placeholders used in this step** table to `step-04-generate.md` and a `{generation_context}` note to `step-05-validate.md`; `{config_path}` and `{registry_path}` were pre-existing and equally undefined, and are now defined too.
+
+**R1-2 — check 4 read only the first config reference.** `.match()` returns one result, so an activation block that legitimately mentions another module's config alongside its own would be rejected whenever its own reference came second. Caught by adversarial probe, not by the test suite. Now uses `matchAll` and asks whether the block references its own module at all, rather than whether the first reference happens to be its own. Three probes verify: own-only PASS, own-plus-other PASS, other-only FAIL.
+
+**Probed and found sound, recorded so the next reviewer need not repeat it:** a degenerate `configPath` (e.g. bare `config.yaml`) does **not** turn check 2 into a pass-everything gate — probe returns `valid: false`. An agent referencing the wrong module still fails.
+
 ### File List
 
 - `_bmad/bme/_team-factory/lib/writers/activation-validator.js` (modified) — checks 2 and 4
@@ -191,3 +201,4 @@ Claude Opus 5 (1M context), via `bmad-dev-story`.
 | 2026-09-10 | Story authored via `bmad-create-story` from `T129` + `T130`. Scope deliberately excludes `T131` (persona collection), which is blocked on an NFR2 ruling. Two operator rulings are called out in Dev Notes and must be answered before Task 2 lands. |
 | 2026-09-10 | Decisions 1 and 2 ruled by Amalik: check 4 re-expressed against the config path (not deleted, not backed by a new `module=` convention); check 3 kept with the per-agent gate moved after config creation. Both recorded inline at their decision points and in the tasks that depend on them. |
 | 2026-09-10 | Implemented. All 5 tasks, AC#1-#6. Seven signatures corrected (a synchronous `buildManifest` called with `.then()` was found beyond the six the rows listed). Check 4 derives module identity from the config reference and honours an explicit `module=` when present — chosen over pure derivation because pure derivation would have silently deleted the existing wrong-module test's coverage. Gate moved §3c → §5c, ahead of the registry write. Falsifiability demonstrated by two mutations against the real shipped agent, restored byte-identical. End-to-end re-run passed with an agent carrying no `module=`. `npm test` 2256/2255/0 fail; lint clean. |
+| 2026-09-10 | **R1 at the landing point — two defects in this story's own work, both fixed.** (1) Three placeholders introduced by the Task 1 corrections were defined nowhere, reproducing the story's own defect class one level up; a Placeholders table now defines all six the workflow uses. (2) Check 4 used `.match()` and so read only the first config reference, falsely rejecting an activation block whose own reference came second; now `matchAll` + membership test, verified by three probes. Check 2 separately probed against a degenerate `configPath` and does not weaken. |

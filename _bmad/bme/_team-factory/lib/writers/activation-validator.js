@@ -116,12 +116,20 @@ async function validateSingleAgent(agentFile, moduleConfig) {
   // inventing a framework-wide convention on one story's authority.
   const moduleAttrRegex = /module\s*=\s*"([^"]*)"/;
   const moduleAttrMatch = activationContent.match(moduleAttrRegex);
-  const MODULE_FROM_CONFIG_REF = /(?:^|[/\\])(bme[/\\]_[A-Za-z0-9._-]+)[/\\]config\.yaml/;
-  const derivedMatch = activationContent.replace(/\\/g, '/').match(MODULE_FROM_CONFIG_REF);
-  const derivedModulePath = derivedMatch ? derivedMatch[1] : null;
+  // Collect EVERY module-identifying config reference, not just the first: an
+  // activation block may legitimately mention another module's config alongside
+  // its own. The question is whether it references its own, not whether the
+  // first reference happens to be its own. (R1 probe 3, tf-2-12.)
+  const MODULE_FROM_CONFIG_REF = /(?:^|[/\\])(bme[/\\]_[A-Za-z0-9._-]+)[/\\]config\.yaml/g;
+  const derivedModulePaths = [
+    ...activationContent.replace(/\\/g, '/').matchAll(MODULE_FROM_CONFIG_REF)
+  ].map(m => m[1]);
+  const derivedModulePath = derivedModulePaths.includes(moduleConfig.modulePath)
+    ? moduleConfig.modulePath
+    : (derivedModulePaths[0] || null);
   const modulePathValid = moduleAttrMatch
     ? moduleAttrMatch[1] === moduleConfig.modulePath
-    : derivedModulePath !== null && derivedModulePath === moduleConfig.modulePath;
+    : derivedModulePaths.includes(moduleConfig.modulePath);
   checks.push({
     check: 'Module path reference',
     passed: modulePathValid,
