@@ -7,7 +7,7 @@ Run comprehensive validation on the generated team, produce a file manifest, col
 - Step 04 (Generate) completed — all files created and wired
 - Spec file has progress.generate = "complete" (or all agent sub-entries complete)
 
-> **`{generation_context}`** is the object accumulated during Step 4 — `{ module_root, agent_files, workflow_dirs, generated_files, config_yaml_path, module_help_csv_path, activation_validation_results, registry_wiring_result }`. Defined in `step-04-generate.md` §Placeholders. `validateTeam` requires it as its second argument.
+> **`{generation_context}`** is the object accumulated during Step 4. Its full shape, and which consumer reads each key, is defined in `step-04-generate.md` §Placeholders — including **`contract_files`**, which `checkContractFiles` (`end-to-end-validator.js:217`) iterates and which passes **vacuously** when absent. `validateTeam` requires the object as its second argument. It is an in-memory Step-4 value with no persistence mechanism: if Step 4 and Step 5 are run in separate sessions it is gone, and `checkConfig`/`checkActivation`/`checkRegistryWiring` will report false failures on a correctly generated team. Re-run Step 4's §5 wiring to rebuild it rather than passing `{}`.
 
 ## Execution Sequence
 

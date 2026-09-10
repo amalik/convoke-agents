@@ -13,13 +13,14 @@ Every `run:` block below substitutes these. They are listed because a name that 
 
 | Placeholder | Resolves to |
 |---|---|
+| `{project-root}` | absolute path to the repository root. Framework-wide convention, listed here because line above claims this table is complete |
 | `{spec_data}` | the parsed spec object from `team-spec-{team_name_kebab}.yaml` (see `spec-parser.js::parseSpec` → `.spec`) |
 | `{team_name_kebab}` | the team's kebab name, e.g. `pilot-test` |
 | `{module_root}` | absolute path to `_bmad/bme/_{team_name_kebab}` |
 | `{config_path}` | the config reference **as agents write it**: `{project-root}/_bmad/bme/_{team_name_kebab}/config.yaml`. Pass this placeholder form, not a resolved path — `activation-validator.js` check 2 accepts either, but the convention form is what agent files contain |
 | `{agent_file_paths}` | a JS **array** of absolute paths to the generated agent `.md` files. `validateActivation` takes an array; a bare string iterates character-by-character |
 | `{registry_path}` | absolute path to `scripts/update/lib/agent-registry.js` |
-| `{generation_context}` | object accumulated across §3-§5: `{ module_root, agent_files, workflow_dirs, generated_files, config_yaml_path, module_help_csv_path, activation_validation_results, registry_wiring_result }`. Consumed by §8 `buildManifest` and by `step-05`'s `validateTeam` |
+| `{generation_context}` | object accumulated across §3-§5, consumed by §8 `buildManifest` and by `step-05`'s `validateTeam`. **Every key below is read by at least one consumer — omitting one does not raise, it silently drops checks:**<br>`module_root`, `agent_files`, `workflow_dirs`, `generated_files`, `config_yaml_path`, `module_help_csv_path`, **`contract_files`** (Sequential only — `end-to-end-validator.js:217` and `manifest-tracker.js:37` both iterate it; omit it and `checkContractFiles` emits **zero** checks and passes vacuously, and the abort manifest omits every contract file), `activation_validation_results` (**the whole `{valid, results}` object returned by §5c, not `results[]`** — `end-to-end-validator.js:257` reads `.valid`), `registry_wiring_result` (the whole object returned by §5d) |
 
 ## Execution Sequence
 
@@ -84,7 +85,11 @@ For each agent's workflows, delegate to BMB to generate:
 Activation validation does NOT run here. It requires `config.yaml` on disk, and this section executes *before* §5a creates it — validating here failed on a precondition the flow had not yet built. Moved to **§5c** per the tf-2-12 operator ruling (Decision 2, option (a)).
 
 **3d. Update Progress**
-Update spec file: `progress.generate.{agent_id}: "complete"`
+Update spec file: `progress.generate.{agent_id}: "generated"` — **not `"complete"`**.
+
+Nothing has validated these files yet: the activation gate moved to §5c (see §3c). Writing `"complete"` here made `spec-differ.js::findResumePoint` treat the generate phase as finished, so a run aborted at §5c resumed straight into `step-05` carrying an unvalidated agent, with no route back to §3. Promote each agent to `"complete"` only after §5c passes.
+
+**Abort note.** §5a and §5b write to disk before §5c runs. If §5c fails, do NOT simply re-run step-04 from the top — `config-creator.js:26` and `csv-creator.js:28` are additive-only and will refuse with `already exists at target path`, failing their own `expect: result.success === true`. Remove `{module_root}/config.yaml` and `{module_root}/module-help.csv` first, or fix the agent files in place and re-run §5c alone. This is the ordering cost of the tf-2-12 Decision 2 gate move; it is recorded rather than hidden.
 
 ### 4. Contract Generation (Sequential Only)
 
@@ -111,8 +116,8 @@ expect: result.success === true
 Runs here, not in §3, because `activation-validator.js` check 3 requires `config.yaml` to exist and §5a has just created it.
 ```
 run: node -e "const av = require('{project-root}/_bmad/bme/_team-factory/lib/writers/activation-validator.js'); av.validateActivation({agent_file_paths}, { configPath: '{config_path}', modulePath: 'bme/_{team_name_kebab}', moduleDir: '{module_root}' }).then(r => console.log(JSON.stringify(r)))"
-expect: result.valid === true → proceed to registry wiring (§5d)
-        result.valid === false → display result.results[].errors, fix before continuing
+expect: result.valid === true → store the WHOLE result object as `{generation_context}.activation_validation_results`, set each `progress.generate.{agent_id}: "complete"`, then proceed to §5d
+        result.valid === false → display result.results[].errors, fix before continuing; leave progress at "generated" so a resume returns here
 ```
 **Accepted cost of the move (tf-2-12 Decision 2):** feedback is now per-team rather than per-agent — a malformed agent surfaces after all agents are generated instead of immediately after its own. This is a deliberate trade, not a regression; do not "fix" it by moving the gate back without also solving the config-ordering problem.
 

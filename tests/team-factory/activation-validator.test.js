@@ -78,12 +78,19 @@ No activation block here.
     assert.equal(configCheck.passed, false);
   });
 
-  it('reports error for wrong module path', async () => {
+  // tf-2-12 R2: rewritten. The previous fixture expressed "wrong module" via a
+  // `module="bme/_wrong-team"` ATTRIBUTE — a convention no shipped agent uses and
+  // which the validator no longer reads (operator ruling Decision 1, option (c)).
+  // Module identity now derives from the config reference, so wrongness is
+  // expressed that way. This necessarily overlaps 'wrong config path' above:
+  // at the sole call site check 2 implies check 4, and that redundancy is
+  // accepted and documented in the validator rather than hidden here.
+  it('reports error for wrong module path (derived from the config reference)', async () => {
     const agentFile = path.join(moduleDir, 'agents', 'wrong-module.md');
     await fs.writeFile(agentFile, `# Wrong Module Agent
 
-<activation config="_bmad/bme/_test-team/config.yaml" module="bme/_wrong-team">
-  <agent name="Wrong" />
+<activation critical="MANDATORY">
+  <step>Load {project-root}/_bmad/bme/_wrong-team/config.yaml</step>
 </activation>
 `, 'utf8');
 
@@ -91,6 +98,38 @@ No activation block here.
     assert.equal(result.valid, false);
     const moduleCheck = result.results[0].checks.find(c => c.check === 'Module path reference');
     assert.equal(moduleCheck.passed, false);
+    assert.match(moduleCheck.detail, /resolves to module "bme\/_wrong-team"/);
+  });
+
+  it('a stale module= attribute no longer overrides a correct config reference', async () => {
+    const agentFile = path.join(moduleDir, 'agents', 'stale-attr.md');
+    await fs.writeFile(agentFile, `# Stale Attribute Agent
+
+<activation critical="MANDATORY" module="bme/_long_gone">
+  <step>Load {project-root}/_bmad/bme/_test-team/config.yaml</step>
+  <llm>If module = "stand-alone", skip.</llm>
+</activation>
+`, 'utf8');
+
+    const result = await validateActivation([agentFile], moduleConfig);
+    assert.deepEqual(result.results[0].errors, [],
+      'BMB writes `module = "stand-alone"` into activation bodies; it must not hijack this check');
+  });
+
+  it('an empty agentFiles array reports failure, not vacuous success', async () => {
+    const result = await validateActivation([], moduleConfig);
+    assert.equal(result.valid, false, '[].every() is true — the gate must not confuse "none checked" with "all passed"');
+    assert.match(result.results[0].errors[0], /non-empty array/);
+  });
+
+  it('a configPath that cannot identify a module fails rather than passing vacuously', async () => {
+    const agentFile = path.join(moduleDir, 'agents', 'ok.md');
+    await fs.writeFile(agentFile, `<activation critical="MANDATORY"><step>Load {project-root}/_bmad/bme/_test-team/config.yaml</step></activation>`, 'utf8');
+    for (const configPath of ['', ' ', 'a', 'config.yaml']) {
+      const result = await validateActivation([agentFile], { ...moduleConfig, configPath });
+      const c2 = result.results[0].checks.find(c => c.check === 'Config path reference');
+      assert.equal(c2.passed, false, `configPath ${JSON.stringify(configPath)} must not satisfy check 2`);
+    }
   });
 
   it('validates multiple agent files', async () => {
