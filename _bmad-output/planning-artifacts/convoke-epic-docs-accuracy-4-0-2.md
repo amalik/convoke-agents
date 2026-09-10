@@ -154,6 +154,21 @@ No FR is unmapped.
 
 ### Epic 1: Documentation Accuracy for the 4.0.2 Release
 
+**Story ID prefix — `docs`.** Stories in this epic are identified **`docs-1-1` … `docs-1-7`**,
+their files are `_bmad-output/implementation-artifacts/docs-1-N-<slug>.md`, and their
+`sprint-status.yaml` keys are **`docs-epic-1`** plus `docs-1-N-<slug>`.
+
+This is not decoration. `bmad-sprint-planning` keys an epic as `epic-{num}` by default, and
+`sprint-status.yaml:154` **already carries `epic-1: done`** — while `SKILL.md:152` preserves the
+more advanced status when a key already exists. Without this prefix all seven stories would land
+under a key marked done on the day they were created, and 15 of the 24 files matching the skill's
+`*epic*.md` glob declare `## Epic 1`, so the collision is not hypothetical.
+
+The prefix follows the established `dist-` / `gen-` / `scan-` convention. It is declared here in
+prose, deliberately: `bmad-create-story` sets `story_id = "{epic_num}.{story_num}"` and reads no
+prefix field, so prose in the epic is the mechanism the prior epics actually used — there is no
+frontmatter key to set, and inventing one would assert a policy no script implements.
+
 A reader can follow any in-scope Convoke document and have the action succeed — the command
 they type exists, the capability they expect has shipped, the diagram they follow routes where
 its own contract table says it routes — and the release path can refuse a tag when that stops
