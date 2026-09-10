@@ -1,6 +1,10 @@
+---
+baseline_commit: ba7c217a46bd054b2b42c32d872110fa6e03d953
+---
+
 # Story 2.11: Team Factory End-to-End Pilot Run
 
-Status: backlog
+Status: in-progress
 
 > **Deferred 2026-04-22:** operator not ready to drive the interactive 6-step pilot walkthrough. Story file + all preconditions remain ready. Promote back to `ready-for-dev` when operator has time for the manual walkthrough.
 
@@ -59,29 +63,29 @@ This is the real validation — the factory agent activates, guides the contribu
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Invoke factory and complete Step 0 — Route (AC: #1, #2)
-  - [ ] Run `/bmad-agent-bme-team-factory`
-  - [ ] Verify activation, config load, menu display
-  - [ ] Select "Create Team"
-  - [ ] Verify routing to step-01-scope
+- [x] Task 1: Invoke factory and complete Step 0 — Route (AC: #1, #2)
+  - [x] Run `/bmad-agent-bme-team-factory`
+  - [x] Verify activation, config load, menu display
+  - [x] Select "Create Team"
+  - [x] Verify routing to step-01-scope
 
-- [ ] Task 2: Complete Step 1 — Scope (AC: #3)
-  - [ ] Define team: "Pilot Test" / `pilot-test` / Independent pattern
-  - [ ] Define 2 agents: `alpha-tester` (role: "Test agent A") and `beta-tester` (role: "Test agent B")
-  - [ ] Verify naming enforcement catches bad names
-  - [ ] Verify collision detection finds no blocks for novel IDs
-  - [ ] Verify cascade eliminates: pipeline-order, handoff-contracts, feedback-contracts, contract-prefix, orchestration-workflow
-  - [ ] Verify spec file created at `_bmad-output/planning-artifacts/team-spec-pilot-test.yaml`
+- [x] Task 2: Complete Step 1 — Scope (AC: #3)
+  - [x] Define team: "Pilot Test" / `pilot-test` / Independent pattern
+  - [x] Define 2 agents: `alpha-tester` (role: "Test agent A") and `beta-tester` (role: "Test agent B")
+  - [x] Verify naming enforcement catches bad names
+  - [x] Verify collision detection finds no blocks for novel IDs
+  - [x] Verify cascade eliminates: pipeline-order, handoff-contracts, feedback-contracts, contract-prefix, orchestration-workflow
+  - [x] Verify spec file created at `_bmad-output/planning-artifacts/team-spec-pilot-test.yaml`
 
-- [ ] Task 3: Complete Step 2 — Connect (AC: #4)
-  - [ ] Set output directory: `_bmad-output/pilot-test-artifacts`
-  - [ ] Set compass routing: `per-agent` (Independent default)
-  - [ ] Verify no contract prompts appear (Independent pattern)
-  - [ ] Verify spec file updated
+- [x] Task 3: Complete Step 2 — Connect (AC: #4)
+  - [x] Set output directory: `_bmad-output/pilot-test-artifacts`
+  - [x] Set compass routing: `per-agent` (Independent default)
+  - [x] Verify no contract prompts appear (Independent pattern)
+  - [x] Verify spec file updated
 
 - [ ] Task 4: Complete Step 3 — Review (AC: #5)
-  - [ ] Verify decision summary displays all choices
-  - [ ] Verify validation passes
+  - [x] Verify decision summary displays all choices
+  - [x] Verify validation passes
   - [ ] Approve decisions
 
 - [ ] Task 5: Complete Step 4 — Generate (AC: #6)
@@ -153,6 +157,48 @@ From AC confrontation (`tf-2-workflow-layer-increment-2026-04-02.md`):
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context), driving `bmad-agent-bme-team-factory` (Loom Master) through `bmad-dev-story`.
+
 ### Completion Notes List
 
+**Run of 2026-09-10. Steps 0-3 executed against the live factory. HALTED AT THE GENERATE BOUNDARY by operator choice (option 3, Save & Exit) at step-03-review §4 — not by a failure.** Nothing was written outside the spec file: `_bmad/bme/_pilot-test/` was never created and `scripts/update/lib/agent-registry.js` was never touched.
+
+**Tasks 1-3 complete (AC#1-#4 met). Task 4 partial** — summary displayed and validation gate passed, approval deliberately withheld. Tasks 5-7 and AC#5-#8 not reached.
+
+**What was proven to work, by demonstration rather than assumption:**
+
+- **`collision-detector.js` is genuinely falsifiable.** Clean results on novel IDs were not trusted; negative controls were run. `analyst` -> blocked (`module "bmm"`), `bmad-master` -> blocked (`module "core"`), team name `vortex` -> blocked (`_bmad/bme/_vortex/ already exists`). It catches what it exists to catch.
+- **The cascade is load-bearing.** `getCascadeForPattern('Independent')` eliminates exactly the five the story names — `pipeline-order`, `handoff-contracts`, `feedback-contracts`, `contract-prefix`, `orchestration-workflow` — and step-02's entire contract-design section was skipped in consequence.
+- **Naming enforcement rejects bad IDs** — `Alpha_Tester`, `alpha tester`, `alpha-` all rejected; `alpha-tester`, `beta-tester` accepted.
+- **Spec write/parse/update round-trips cleanly.** `writeSpec` -> `{success:true}`; mid-flight `parseSpec` correctly reported `valid:false, errors:["integration.output_directory is required"]` at end of Step 1 and `valid:true` after Step 2 supplied it.
+- **Save & Exit honours its contract.** `progress.review` left `pending`; `findResumePoint()` returns `{resumable:true, resumeStep:"review"}`.
+
+**Six findings. None blocked the run.**
+
+1. **LOW — `_team-factory/config.yaml:10` holds `user_name: '{user}'`, so the greeting renders the placeholder.** Resolution is deliberately the operator's job (`config-loader.js:35` — "NO `{user}` placeholder resolution"), prompted at install. `install-vortex-agents.js:153` and `install-gyre-agents.js:109` both issue that prompt; there is no `install-team-factory-agents.js` and nothing prompts for `_team-factory/config.yaml`. It is the only agent-bearing module whose placeholder is never surfaced.
+
+2. **MEDIUM — the cascade fails silently on a case mismatch and step-01's expectation cannot see it.** `getCascadeForPattern('independent')` returns `{decisions:[], eliminated:[], error:"Unknown pattern..."}`; `KNOWN_PATTERNS = ['Independent','Sequential']` (`cascade-logic.js:10`), no normalisation. The step's expect block reads only `result.decisions` and `result.eliminated`, **never `result.error`** — both keys exist, so the check passes and the whole cascade is disabled. A driver following the step literally would ask five Sequential-only questions on an Independent team.
+
+3. **LOW — naming enforcement exists only inside a markdown instruction.** step-01's run block `require`s `naming-utils.js` and never uses it, validating with an inline regex instead; `naming-utils.js` exports only `toKebab` and `deriveWorkflowName` and contains no validator at all. The rule is therefore un-unit-testable, and has already drifted from its sibling: `agent2` is rejected as an agent ID while `pilot2` is accepted as a team name, because the two regexes disagree on digits.
+
+4. **MEDIUM — `collision-detector.js` is blind to all 12 of Convoke's own agents.** It compares the proposed `agent_id` against the manifest's `name` column. For upstream BMAD, `name` holds kebab IDs (`analyst`) and matching works. For every bme agent, `name` holds a display first name (`Emma`, `Scout`, `Coach`, `Loom Master`) and the kebab identity lives in `canonicalId`. Proposing `stack-detective` or `model-curator` therefore sails through unblocked — verified. The factory's job is creating agents and it cannot see Convoke's own.
+
+5. **LOW — step-02's config collision check is a stub that executes a comment.** `run: node -e "const cc = require('...config-creator.js'); // collision check logic"` loads the module, runs a comment, prints nothing, exits 0 — and `expect: no collisions` is trivially satisfied. The real check exists and *is* wired inside `createConfig`, so nothing unsafe ships; the cost is that a collision surfaces at Generate rather than at Connect where renaming is still free.
+
+6. **MEDIUM — `config-creator.detectCollisions` can never report a `submodule_name` collision, because it skips the only directory that could match.** `newSubmodule = '_' + team_name_kebab`, then `if (entry === newSubmodule) continue;` — the re-run self-skip and the collision check are the same line, and the skip wins, leaving `if (existing.submodule_name === newSubmodule)` unreachable for its primary case. Proposing `vortex` returns `[]`; proposing agent `contextualization-expert` against the same directory returns a correct collision, which proves the function works and only its headline case is self-blinded. `createConfig`'s `fs.pathExists` guard still blocks the write, so this is a diagnostics defect rather than a data-loss one — the operator gets "config.yaml already exists at target path" instead of a named module. Note the contrast with step-01's `collision-detector.js`, which catches `vortex` correctly: **two collision detectors, different behaviour, and the one wired into the write path is the blind one.**
+
+**Cost signal (the measurement this story exists to produce): NOT YET AVAILABLE.** Steps 0-3 are the conversational half and were cheap. The expensive half — Step 4 BMB delegation without templates, Step 5 validation (with the known `validateTeam` arity mismatch still unexercised), and Step 7 cleanup of a shared registry — was not run. No claim about what a factory-built team costs can be made from this run.
+
+**Resume:** `[RS] Resume` -> `_bmad-output/planning-artifacts/team-spec-pilot-test.yaml` -> returns to step-03-review.
+
 ### File List
+
+- `_bmad-output/planning-artifacts/team-spec-pilot-test.yaml` (new, untracked) — pilot spec, `progress.review: pending`. Required to resume; Task 7 deletes it.
+- `_bmad-output/implementation-artifacts/tf-2-11-end-to-end-pilot-run.md` (modified) — frontmatter, Status, task checkboxes, this record.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified) — row -> `in-progress`.
+
+## Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-09-10 | Story promoted `backlog` -> `in-progress` (`baseline_commit: ba7c217a`). Story-file `Status` corrected from `backlog`, which had disagreed with `sprint-status.yaml` since the 2026-09-09 promotion in `23b13166`. Steps 0-3 run against the live factory; operator chose Save & Exit at the approval gate, so Tasks 5-7 and AC#5-#8 are unreached and the story stays `in-progress`. Six findings recorded above. **Line 9's "Deferred 2026-04-22 ... promote back when operator has time" note is now stale but was left in place** — it sits outside the sections dev-story may edit, and rewriting it would erase the record rather than correct it. |
