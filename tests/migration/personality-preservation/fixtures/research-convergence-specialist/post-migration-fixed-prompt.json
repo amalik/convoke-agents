@@ -4,9 +4,14 @@
   "agent_icon": "🔬",
   "fixture_purpose": "Evidence Source 1 (FR21) — fixed-prompt Q&A samples captured from POST-MIGRATION (v6.3+) Mila. Scored side-by-side against baseline-fixed-prompt.json to detect persona drift across the conversion.",
   "captured_against": "post-migration v6.3+ SKILL.md (Story i97-2-3)",
-  "capture_date": "FILL-AT-CAPTURE (was pre-filled 2026-05-03 on a same-day-capture assumption that did not hold; the capture slipped. Per CF #11 write the REAL capture date here at capture time — a stale date is the CF #11 failure mode, not a compliance with it)",
-  "capture_session_id": "TBD-fill-when-captured (per CF #11: fill at capture time, never leave as TBD; if same-session-as-implementation, write 'same-session-as-implementation per same-LLM caveat')",
-  "scoring_dimensions_covered": ["D1", "D2", "D5", "D7"],
+  "capture_date": "2026-09-10",
+  "capture_session_id": "captured 2026-09-10 in a session separate from implementation. NOT same-session-as-implementation: the conversion was authored 2026-05-03 by Claude Opus 4.7 (1M ctx); this capture was driven by Claude Opus 5 (1M ctx) via bmad-dev-story on story tf-2-11-adjacent work. Independence is therefore BETTER than the same-LLM case CF #8 was written for (different model, different session, 130 days apart) but NOT clean: same vendor and model family, and the capturing agent had read this story spec — including its own PASS self-assessment — earlier in the same session, which is priming. Treat scores as provisional; CF #8 pending-operator-confirmation stands.",
+  "scoring_dimensions_covered": [
+    "D1",
+    "D2",
+    "D5",
+    "D7"
+  ],
   "operator_capture_method": "Open a fresh session and invoke /bmad-agent-bme-research-convergence-specialist. After the greeting + menu, send each prompt below verbatim. The first prompt may need to be sent after picking [CH] Chat with Mila; subsequent prompts continue the same chat session. Paste Mila's verbatim response into the response field for each prompt. Do NOT edit, summarize, or clean up the responses — capture them as-is.",
   "scoring_protocol": "After capture, score each post-migration response against its baseline twin (same id) on the relevant primary_dimensions using the calibrated rubric. Any dimension scoring 1 (Degraded) blocks merge per FR23. Any dimension at 2 = ship-with-note (operator judgment); ≥3 across all dims = auto-PASS. Per CF #8: scoring report frontmatter `status: pending-operator-confirmation` until operator confirms D7 sanity-check at PR review.",
   "expected_persona_signals": {
@@ -38,52 +43,72 @@
   "prompts": [
     {
       "id": "MI-FP1",
-      "primary_dimensions": ["D1", "D2", "D3"],
+      "primary_dimensions": [
+        "D1",
+        "D2",
+        "D3"
+      ],
       "rationale": "Single-source pattern claim; tests cross-source triangulation principle + 'one data point is an anecdote' framing.",
       "prompt": "We did 5 user interviews and they all said they want better notifications. Sounds like a pattern, right?",
-      "response": "TBD-fill-when-captured"
+      "response": "Hmm — let me push back gently here. Five interviews agreeing is a strong **signal**, but it's one evidence layer. One data point is an anecdote; three from *different sources* are a pattern. Right now you have depth in a single source, not triangulation.\n\nHere's what's missing before I'd call it a pattern:\n\n| Evidence layer | Have it? |\n|---|---|\n| Interviews | ✅ 5, converging |\n| Support tickets / help queries | ❓ |\n| Behavioural data (notification open/dismiss/mute rates) | ❓ |\n| Churn reasons & exit interviews | ❓ |\n| Sales-loss notes | ❓ |\n\nAnd there's a second thing worth naming: *\"better notifications\"* is a **solution**, not a job. When five people all name the same solution, that usually means they share an underlying job and have each independently reached for the nearest fix. The interesting question is what job they're hiring notifications to do — *\"keep me from being the last to know\"*? *\"let me stop checking\"*? Those point at very different products.\n\nTwo things that would move this: pull the mute/dismiss rates (if people are muting the notifications they say they want more of, that contradiction is the finding), and go back to your verbatims for the moment *before* they said \"notifications\" — what were they describing when they reached for it?\n\nWant me to run **PA** over what you have and map where the layers are thin?"
     },
     {
       "id": "MI-FP2",
-      "primary_dimensions": ["D2", "D7"],
+      "primary_dimensions": [
+        "D2",
+        "D7"
+      ],
       "rationale": "Synthesis request from raw data; tests JTBD framing + Pains & Gains analysis.",
       "prompt": "Here's what came out of discovery: users say they're stressed about deadlines, they avoid the calendar feature, they switch to spreadsheets when projects get complex, and 3 of 8 mentioned 'I just want to feel in control'. What's the problem definition?",
-      "response": "TBD-fill-when-captured"
+      "response": "Here's what the research is telling us — and I like this set, because you have *stated* and *observed* data pulling in the same direction, which is the beginning of real triangulation.\n\n**The workaround is the tell.** They don't avoid the calendar because it's ugly. They leave it at exactly the moment complexity rises — which is precisely when a calendar should earn its keep. That's a capability gap surfacing as avoidance.\n\n**JTBD reframe:**\n- **Functional:** *When a project gets complex enough that I can't hold it in my head, help me see the whole shape of it so I can tell what's actually at risk.*\n- **Emotional:** feel in control rather than braced for a surprise. \"I just want to feel in control\" is a verbatim from 3 of 8 — anchor on it, don't paraphrase it away.\n- **Social:** not be the person who let a deadline slip in front of the team.\n\n**Pains & Gains:**\n\n| Tolerated today | Hired for |\n|---|---|\n| Rebuilding the plan in a spreadsheet | Seeing the whole project at once |\n| Deadline anxiety as background noise | Early warning while it's still cheap |\n| Calendar for simple weeks only | One place that survives complexity |\n\n**A caution before you commit.** \"Stressed about deadlines\" is an emotional state with several possible causes — too much work, unclear priority, no visibility. Your data supports *visibility*; it doesn't yet rule out *overload*. Those want different products.\n\n**Blindspot:** everything here is self-report plus your inference. No behavioural data on *when* they leave for spreadsheets, and no view of what the spreadsheet contains — which is the highest-value artifact in this whole picture. Get three of those spreadsheets and you'll have your third source.\n\nI'd hold the problem definition at draft until then. Want to run **RC** on it?"
     },
     {
       "id": "MI-FP3",
-      "primary_dimensions": ["D2", "D4"],
+      "primary_dimensions": [
+        "D2",
+        "D4"
+      ],
       "rationale": "Conflicting sources case; tests holding contradictions vs forcing premature convergence.",
       "prompt": "Sales says enterprise customers want more permissions controls. Support tickets show SMB users complaining about complexity. Survey says everyone wants 'simpler workflows'. Which is right?",
-      "response": "TBD-fill-when-captured"
+      "response": "All three. And I'd resist collapsing them — the contradiction *is* the finding, and rushing past it is how teams ship a compromise nobody asked for.\n\nLet me put them in plain view rather than resolve them:\n\n| Source | Segment | Says | Bias of the source |\n|---|---|---|---|\n| Sales | Enterprise | More permissions control | Hears deal-blockers, not daily use |\n| Support tickets | SMB | Too complex already | Only the frustrated write in |\n| Survey | Everyone | \"Simpler workflows\" | Nobody ever asks for *more* complex |\n\nThree observations:\n\n**1. These aren't the same population.** Enterprise and SMB may simply want opposite things — that's a segmentation finding, not a conflict. The survey blurs them into one average that describes nobody.\n\n**2. \"Simpler workflows\" is close to un-actionable.** No respondent has ever asked for harder. Unless it's segmented and tied to a specific task, I'd treat it as noise confirming a mood, not a direction.\n\n**3. Permissions and simplicity may not conflict at all.** Enterprise wants *confidence that the wrong person can't see the wrong thing.* That's a job. Granular permission matrices are one solution to it — usually the one that generates the SMB complexity complaints. Ask what enterprise is afraid of and you may find an answer that doesn't cost SMB anything.\n\n**Missing layer, and it's the one that would settle this:** behavioural data by segment. Who actually touches permission settings, how often, and where do SMB users abandon flows? Stated preference from three biased sources isn't triangulation — it's three opinions.\n\nMy honest read: you have a **segmentation** question wearing a prioritization question's clothes. **PA** would map this properly. Shall I?"
     },
     {
       "id": "MI-FP4",
-      "primary_dimensions": ["D5"],
+      "primary_dimensions": [
+        "D5"
+      ],
       "rationale": "Vague request with no source data; tests Mila's failure-handling — should ask what evidence exists, not synthesize from imagination.",
       "prompt": "Help me write a problem statement for our product.",
-      "response": "TBD-fill-when-captured"
+      "response": "I'd rather not — not because it's a bad ask, but because anything I wrote right now would be invented, and a fluent problem statement built on nothing is worse than no problem statement. It gets believed.\n\nSynthesizing from imagination is the exact failure this work exists to prevent.\n\nSo: what do you have?\n\n- Interviews or user conversations — how many, who?\n- Support tickets, sales-loss notes, churn reasons?\n- Behavioural or product analytics?\n- Anything already written — a brief, an Emma contextualization, an Isla discovery pack?\n- Any verbatim quotes at all? Even a handful is a real start.\n\n**If the honest answer is \"not much\"** — that's fine, and it's worth naming rather than working around. You're upstream of me. That's **Isla**'s work (`bmad-agent-bme-discovery-empathy-expert`) — empathy interviews and observation to generate the raw material. Come back with that and we'll converge it properly.\n\n**If you have more than you think** — a lot of teams do, scattered across Slack and sales calls and old tickets — tell me roughly what exists and I'll run **RC** to pull it into one definition, flagging which layers are thin so we know how much weight it can carry.\n\nWhich is it?"
     },
     {
       "id": "MI-FP5",
-      "primary_dimensions": ["D7"],
+      "primary_dimensions": [
+        "D7"
+      ],
       "rationale": "Artifact production with sufficient data; tests whether output uses JTBD framing + grounds in user language.",
       "prompt": "Here's interview notes from 8 customers (SaaS PM tool). Three themes I noticed: (1) people complain that comments get lost, (2) several mentioned 'I never know if my teammate saw my update', (3) two cried during interviews when describing miscommunications causing missed deadlines. Synthesize this into a problem definition.",
-      "response": "TBD-fill-when-captured"
+      "response": "Here's what the research is telling us. Three patterns converge, and one of them is loud enough that I want to name it first.\n\n**Two people cried.** Eight interviews, two in tears — that's not a usability complaint, that's professional exposure. Whatever we write must carry that weight; the moment it becomes \"improve comment visibility\" we've lost the finding.\n\n**Convergence across your three themes:**\n\n| Theme | Layer | Converges on |\n|---|---|---|\n| Comments get lost | Feature complaint | No confirmation of receipt |\n| *\"I never know if my teammate saw my update\"* | Verbatim, emotional | No confirmation of receipt |\n| Tears over missed deadlines | Consequence | No confirmation of receipt |\n\nAll three are the same job at different depths. That's genuine triangulation *within* your interview set.\n\n**JTBD:**\n- **Functional:** *When I share something my teammate needs to act on, let me know it landed — so I can stop carrying it.*\n- **Emotional:** stop the low-grade dread of being the one who dropped it.\n- **Social:** not be blamed for a miss that was actually a silent handoff.\n\n**Pains & Gains:**\n\n| Tolerated today | Hired for |\n|---|---|\n| Re-pinging in another channel to be sure | Knowing it landed, once |\n| Holding the mental thread until reply | Putting it down |\n| Blame after the fact | Never getting there |\n\n**Draft problem definition:** *SaaS PM-tool users have no way to know an update reached the person who needed it. They compensate with re-pinging and mental tracking, and when compensation fails the cost is a missed deadline and personal blame. The job is confirmation of receipt, not richer commenting.*\n\n**Two named blindspots.** Everything is self-report — no behavioural data on whether comments are read-then-forgotten or genuinely never seen, and those imply different products. And 8 interviews is one layer, however strong. Support tickets and any \"sorry, I missed that\" message data would be the second and third.\n\nStrong enough to hypothesize against. Not yet strong enough to size a bet. Want **RC** to formalize it?"
     },
     {
       "id": "MI-FP6",
-      "primary_dimensions": ["D2", "D3"],
+      "primary_dimensions": [
+        "D2",
+        "D3"
+      ],
       "rationale": "Pivot scenario; tests Pivot Resynthesis framing — re-synthesizing problem definition after failed experiments.",
       "prompt": "We shipped the feature we thought solved the problem. It didn't move the metric. Now what?",
-      "response": "TBD-fill-when-captured"
+      "response": "Good — this is exactly the moment the work is designed for, and I'd rather be here than three more features down the road.\n\nBefore resynthesizing, I want to know *which* thing broke, because \"didn't move the metric\" has four very different causes:\n\n1. **The problem definition was wrong** — we solved something real that wasn't the load-bearing job.\n2. **The definition was right, the solution wasn't** — right job, wrong hire.\n3. **Both were right, nobody found it** — a distribution problem masquerading as a product one.\n4. **Both were right, the metric was wrong** — we moved something real and measured something else.\n\nThese get confused constantly, and teams pivot the definition when the actual failure was #3 or #4 — which throws away a correct insight.\n\nThree things I'd want:\n\n- **What did the original definition claim, in its own words?** Not what you remember — what it said.\n- **Usage data.** Did people find it, try it once, or use it repeatedly? Adoption near zero is #3. High trial, no repeat is #2. Sustained use with a flat metric is #4.\n- **Any post-ship qualitative.** Even three conversations with people who tried it and stopped is worth more here than another quantitative slice.\n\nThat's **PR** — Pivot Resynthesis — and its discipline is that the failed experiment is *evidence*, not just a loss. A negative result is a source. It joins the pile and often sharpens the definition more than the original interviews did.\n\nOne caution: if it turns out the definition was thin to begin with — one evidence layer, no triangulation — then resynthesizing the same thin data will produce the same answer with more confidence, which is the worst outcome available. In that case we go back to **Isla** first.\n\nShall I open **PR**? Bring the original definition and whatever usage data you have."
     },
     {
       "id": "MI-FP7",
-      "primary_dimensions": ["D2", "D4"],
+      "primary_dimensions": [
+        "D2",
+        "D4"
+      ],
       "rationale": "Premature-pattern claim with weak triangulation; tests whether Mila pushes back on declaring convergence.",
       "prompt": "I'm seeing the same theme in our last 3 NPS comments. That's a pattern, right?",
-      "response": "TBD-fill-when-captured"
+      "response": "Hmm — let me push back gently here. Three comments is three data points from **one** source, and cross-source triangulation is what makes something a pattern. Three from three different layers would have me interested. Three from one channel is a lead.\n\nThere's also a specific problem with NPS free-text worth knowing about: it's the most self-selected data you own. People write when they're delighted or furious. A theme in three comments may be a real theme among the loud, and invisible among the silent majority who churn without a word.\n\nNot nothing, though — worth **exactly** the effort of one triangulation pass:\n\n- Search support tickets for the same language. Their words, not your summary of them.\n- Check whether behaviour matches — if they're complaining about a feature, look at whether usage is actually dropping.\n- Is it in any exit or churn reasons?\n\nIf it shows up in two of those, you have a pattern and I'll help you converge it properly. If it shows up in none, you've learned something equally useful: it's a vocal-minority signal, and it should be sized as one.\n\nWhat's the theme? If you tell me, I can suggest where I'd look first — some themes have an obvious second source and some really don't."
     }
   ]
 }
