@@ -38,7 +38,24 @@ const {
 } = require('../lib/sanitize');
 
 // =============================================================================
-// CONSTANTS — must match scripts/portability/classify-skills.js
+// CONSTANTS — a deliberate third copy, not a duplication to be tidied away.
+//
+// THIS FILE IS A CHECKER. Its counterparts are `scripts/portability/classify-skills.js` (the
+// WRITER) and `scripts/audit/skill-manifest-integrity.js` (the other CHECKER). It declares the
+// vocabulary locally because a checker must not take its definition of "valid" from the module
+// it polices. The local declaration itself dates from sp-1-3, which authored this file; the
+// PRINCIPLE was later demonstrated by Round 2 of sp-7-1 against the sibling checker, where
+// importing from the writer let a widening there slip a bogus tier past the gate with zero test
+// failures. Stated in that order because the reverse reads as history and is not.
+//
+// Agreement is ENFORCED, not asserted here: `tests/audit/skill-manifest-integrity.test.js`
+// fails if any copy DRIFTS from another or if any two SHARE AN INSTANCE. Before sp-7-2 this
+// comment claimed "must match classify-skills.js" and nothing checked it at all.
+//
+// It does NOT detect all three copies being widened together through a shared module — a
+// copying import is indistinguishable at runtime from a literal, and two attempts to catch it
+// in source were defeated by execution. Keeping this declaration a literal is a convention the
+// suite cannot enforce.
 // =============================================================================
 
 const VALID_TIERS = ['standalone', 'light-deps', 'pipeline'];

@@ -33,15 +33,15 @@ Who is affected: the ~40% Vortex Standalone segment, for whom the seeding manife
   - **intent:** No file under `tests/` reads the live `skill-manifest.csv` as data, so upstream churn in the live tree cannot turn a passing suite red or hollow.
   - **success:** `tests/lib/portability-schema.test.js` is deleted, its three unique assertions folded into `scripts/audit/skill-manifest-integrity.js`, and no test reads the live manifest as data. **Amended 2026-09-09:** the original success criterion said "schema-shape assertions run against `FIXTURE_ROOT`" — abandoned once the file turned out to hold no behavioural tests. A lint belongs in an audit script; the two-root pattern governs suites that have code under test, which this file did not.
 
-- **CAP-3** *(satisfied 2026-09-09 by story sp-7-1)*
-  - **intent:** The assertions currently unique to `portability-schema.test.js` keep running after the change, so isolation does not quietly narrow coverage.
-  - **success:** Exact header column order, exact 9-column row arity, and `portability-schema.md` doc conformance each still have a check, and each has been shown to go red.
+- **CAP-3** *(partially satisfied 2026-09-09 by story sp-7-1 — third limb struck, see success)*
+  - **intent:** The assertions currently unique to `portability-schema.test.js` keep running after the change, so isolation does not quietly narrow coverage. **Amended 2026-09-09:** coverage DID narrow — the schema-doc limb was deleted, deliberately and on the record. This intent now covers the two limbs that survived.
+  - **success:** Exact header column order and exact 9-column row arity each still have a check, and each has been shown to go red. **Amended 2026-09-09:** the third limb — `portability-schema.md` doc conformance — was struck together with sp-7-1's AC4 when that check was deleted after three rounds of defects in it. Doc conformance is refiled as needing its own spec; this criterion no longer claims it.
 
-- **CAP-4**
+- **CAP-4** *(satisfied 2026-09-09 by story sp-7-2)*
   - **intent:** A reader can tell, at each declaration site of the classification vocabulary, whether the duplication is deliberate independence or drift.
   - **success:** Each surviving declaration carries a comment naming its role and its counterpart. A test fails when two sites that are supposed to agree diverge. Widening one site must never silently widen what another checker accepts.
 
-- **CAP-5**
+- **CAP-5** *(satisfied 2026-09-09 by story sp-7-2)*
   - **intent:** `VALID_TIERS` names one vocabulary within `scripts/audit/`.
   - **success:** `grep -rn "VALID_TIERS" scripts/audit/` shows no two declarations holding different value sets.
 
@@ -84,8 +84,8 @@ The portability suites pass on a clean checkout with no test reading the live tr
 
 ## Delivery sequence
 
-1. ~~**CAP-2 + CAP-3**~~ — **DONE 2026-09-09, story `sp-7-1`.** Folded `portability-schema.test.js`'s three unique assertions into `scripts/audit/skill-manifest-integrity.js` and deleted it, preserving header-order, exact-arity and schema-doc coverage. Delivered by folding into the audit, **not** by the two-root pattern this sequence originally named.
-2. **CAP-4 + CAP-5 — vocabulary ownership and the `VALID_TIERS` collision.** Mechanical.
+1. ~~**CAP-2 + CAP-3**~~ — **DONE 2026-09-09, story `sp-7-1`.** Folded `portability-schema.test.js`'s header-order and exact-arity assertions into `scripts/audit/skill-manifest-integrity.js` and deleted it. Its third assertion, schema-doc conformance, was NOT preserved — AC4 was struck and the check deleted after three rounds of defects. Delivered by folding into the audit, **not** by the two-root pattern this sequence originally named.
+2. ~~**CAP-4 + CAP-5**~~ — **DONE 2026-09-09, story `sp-7-2`.** All three vocabulary copies pinned to each other (the checker↔checker pair was previously unguarded); every site now names its role and counterparts; `name-registry-integrity.js`'s clashing `VALID_TIERS` renamed to `VALID_OWNERSHIP_TIERS`.
 3. **Fixture extension** — the remedy `dist-2-8` filed for non-seeding coverage. Prerequisite for CAP-7.
 4. **CAP-7 — the seeding-closure gap**, driven by fixture rows built to exhibit it.
 

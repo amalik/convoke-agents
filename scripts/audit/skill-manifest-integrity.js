@@ -23,8 +23,9 @@
  * ------------------------------------------------
  * An earlier version of this block recorded that `tests/lib/portability-schema.test.js` still
  * read the live manifest, leaving `test-fixture-isolation` unresolved as a class. Story sp-7-1
- * closed that: the sibling's three unique assertions (header ORDER, exact row arity, and
- * schema-doc conformance) were folded in below and the file was DELETED. Its tier and intent
+ * closed that: TWO of the sibling's three unique assertions — header ORDER and exact row arity
+ * — were folded in below and the file was DELETED. The third, schema-doc conformance, was NOT
+ * folded in; see the next paragraph. Its tier and intent
  * vocabulary assertions were not folded in — `row/invalid-tier` and `row/invalid-intent`
  * already covered them, strictly more strongly.
  *
@@ -70,12 +71,33 @@ const { readManifest } = require('../portability/manifest-csv');
 // (proven — adding a bogus tier to the writer made this audit accept it with zero test
 // failures). A checker must not take its definition of "valid" from the thing it checks.
 //
-// They are therefore declared locally and PINNED against every other copy by
-// `tests/audit/skill-manifest-integrity.test.js`, which fails if any copy drifts. Two
-// other copies exist (`classify-skills.js`, `validate-classification.js`) — sp-7-1 removed a
-// third when it deleted `tests/lib/portability-schema.test.js`. Collapsing the remaining three
-// into one shared module is filed in `deferred-work.md` rather than done here; note the pin is
-// deliberate independence, not drift, so any such collapse must keep the CHECKERS separate.
+// THIS FILE IS A CHECKER. Its two counterparts are `scripts/portability/classify-skills.js`
+// (the WRITER, which assigns these values) and `scripts/portability/validate-classification.js`
+// (the other CHECKER, which validates completeness and dependencies).
+//
+// All three declare the vocabulary locally and are PINNED to each other by
+// `tests/audit/skill-manifest-integrity.test.js`, which fails if any copy DRIFTS from another
+// or if any two SHARE AN INSTANCE. sp-7-1 removed a fourth copy when it deleted
+// `tests/lib/portability-schema.test.js`; sp-7-2 added the checker<->checker pair, unguarded
+// until then.
+//
+// THE PIN'S LIMIT, stated because two attempts to close it failed by execution: it does NOT
+// detect all three copies being widened TOGETHER through a shared module. A copying import
+// yields an independent array that is indistinguishable at runtime from a literal. The copies
+// stay literal by CONVENTION — this comment and its siblings are the enforcement, along with
+// review. See the test file for the two defeated attempts and `deferred-work.md` for the gap.
+//
+// The duplication is deliberate independence, not drift. What Round 2 of sp-7-1 actually proved
+// is narrower than "never collapse": a CHECKER importing from the WRITER it polices is unsafe,
+// because widening the writer then widens the gate.
+//
+// A neutral module owned by neither party is a DIFFERENT case, and an open one: it is not
+// covered by that proof, and it is not caught by this suite either. sp-7-2 tried twice to catch
+// it in source — a filename denylist, then an array-literal requirement — and both were
+// defeated by execution. Do not read the gap as permission: routing all three copies through a
+// shared module ships green while widening every gate, which is the worst of both. If that
+// consolidation is ever wanted, it has to answer the property BY DESIGN — an AST check is the
+// approach the backlog names, and a prototype was shown to work. See `deferred-work.md`.
 const VALID_TIERS = ['standalone', 'light-deps', 'pipeline'];
 
 const VALID_INTENTS = [

@@ -30,6 +30,18 @@ const {
 
 // =============================================================================
 // CONSTANTS — locked classification rules from sp-1-2 spec (AC #7, Task 3)
+//
+// THIS FILE IS THE WRITER: it ASSIGNS tier and intent to manifest rows. Two checkers police
+// what it writes — `scripts/audit/skill-manifest-integrity.js` and
+// `scripts/portability/validate-classification.js` — and each declares this vocabulary
+// independently ON PURPOSE. A checker importing from here would let a widening made here pass
+// its own gate unnoticed; Round 2 of sp-7-1 proved exactly that. All three copies are pinned to
+// each other by `tests/audit/skill-manifest-integrity.test.js`.
+//
+// THAT PIN HAS A LIMIT: it catches a copy drifting alone, and two copies sharing one array
+// instance. It does NOT catch all three being widened together through a shared module — a
+// copying import yields an independent array indistinguishable at runtime from a literal.
+// Keeping this a literal is a convention the suite cannot enforce. See `deferred-work.md`.
 // =============================================================================
 
 const VALID_TIERS = ['standalone', 'light-deps', 'pipeline'];

@@ -477,70 +477,117 @@ describe('CLI — end to end against a git fixture', () => {
   });
 });
 
-// Round 2 rejected importing the classification vocabulary from `classify-skills.js` — a
-// checker must not take its definition of "valid" from the module it polices, because
-// widening the writer would silently widen the gate. The audit therefore declares its own
-// copy, and this block is what stops the two drifting apart unnoticed.
+// Round 2 of sp-7-1 rejected importing the classification vocabulary from `classify-skills.js`
+// — a checker must not take its definition of "valid" from the module it polices, because
+// widening the writer would silently widen the gate. Proven at the time: adding a bogus tier to
+// the writer made the audit accept it with zero test failures. Each copy therefore declares its
+// own, and this block is what stops them drifting apart unnoticed.
 //
-// Scope, stated honestly: this pins the writer<->checker PAIR, which is the pair that
-// decides whether the gate can be widened from outside. One further copy exists
-// (`scripts/portability/validate-classification.js`);
-// collapsing all four into one module is filed in `deferred-work.md`, not done here.
-describe('classification vocabulary — pinned against the writer', () => {
-  const writer = require('../../scripts/portability/classify-skills');
-  const audited = require('../../scripts/audit/skill-manifest-integrity.js');
+// THREE copies, one writer and two checkers. Derived from the table below rather than written
+// out pairwise, so adding a fourth copy is one line and cannot half-land:
+//
+//   A  scripts/portability/classify-skills.js          WRITER   — assigns tier/intent
+//   B  scripts/audit/skill-manifest-integrity.js       CHECKER  — lints the manifest's rows
+//   C  scripts/portability/validate-classification.js  CHECKER  — validates completeness + deps
+//
+// sp-7-2 added C. Before that only A<->B was pinned, so a checker RE-EXPORTING the other
+// checker's array was invisible. Every unordered pair is now checked for identity, which closes
+// exactly that: a SHARED INSTANCE. It does not close a COPYING import — a spread yields two
+// distinct arrays holding one value, and that case passes every assertion here. See section 3.
+//
+// It lives in the audit's test file for a practical reason, not a principled one: this file
+// already owns the manifest-lint fixtures the block sits beside. Each copy is party to exactly
+// two of the three pairs, so no copy is a privileged home. Round 1 caught an earlier version
+// of this sentence claiming B was party to every pair, which is arithmetically impossible.
+describe('classification vocabulary — pinned across all three copies', () => {
+  const COPIES = [
+    { key: 'A', role: 'writer', name: 'classify-skills.js', mod: require('../../scripts/portability/classify-skills') },
+    { key: 'B', role: 'checker', name: 'skill-manifest-integrity.js', mod: require('../../scripts/audit/skill-manifest-integrity.js') },
+    { key: 'C', role: 'checker', name: 'validate-classification.js', mod: require('../../scripts/portability/validate-classification') },
+  ];
+  const VOCAB = ['VALID_TIERS', 'VALID_INTENTS'];
+  const writer = COPIES.find((c) => c.role === 'writer');
+  const checkers = COPIES.filter((c) => c.role === 'checker');
 
-  it('VALID_TIERS matches classify-skills.js exactly', () => {
+  // The table drives every loop below, so a typo in `role` silently emits FEWER tests rather
+  // than failing — Round 1 measured `role: 'Checker'` dropping 6 of 9 with a green suite.
+  // `node --test` cannot tell a full run from a truncated one, so the shape is asserted here.
+  it('the copy table is well-formed', () => {
+    assert.equal(COPIES.filter((c) => c.role === 'writer').length, 1, 'expected exactly one writer');
+    assert.ok(checkers.length >= 2, `expected at least two checkers, got ${checkers.length}`);
     assert.deepEqual(
-      audited.VALID_TIERS,
-      writer.VALID_TIERS,
-      'the audit and the writer disagree on the canonical tiers — one of them was widened alone'
+      COPIES.filter((c) => !['writer', 'checker'].includes(c.role)),
+      [],
+      'a copy carries an unrecognised role and is silently excluded from the loops below'
     );
-  });
-
-  it('VALID_INTENTS matches classify-skills.js exactly', () => {
+    // Same hazard, other table: with `VOCAB = []` the four value-agreement tests are never
+    // emitted and the identity tests pass on empty inner loops — measured green before this
+    // guard existed.
     assert.deepEqual(
-      audited.VALID_INTENTS,
-      writer.VALID_INTENTS,
-      'the audit and the writer disagree on the canonical intents — one of them was widened alone'
+      VOCAB,
+      ['VALID_TIERS', 'VALID_INTENTS'],
+      'VOCAB drives every loop below; an empty or renamed entry deletes assertions silently'
     );
   });
 
-  it('the audit does not import its vocabulary from the writer', () => {
-    // The property that makes the two tests above meaningful rather than tautological. If
-    // the audit imported (or re-exported) the writer's arrays, `deepEqual` would compare a
-    // value against itself and pass no matter how far the vocabulary was widened.
-    //
-    // Round 3: an earlier version of this test matched ONE literal import spelling, and was
-    // defeated by adding `.js` to the path — with the exact Round 1 defect reintroduced, all
-    // 49 tests passed and a manifest containing a bogus tier audited ✓ PASS. Two independent
-    // checks now, because the string check alone is not a property.
+  // 1. Value agreement: every checker matches the writer.
+  for (const checker of checkers) {
+    for (const key of VOCAB) {
+      it(`${checker.name} ${key} matches the writer exactly`, () => {
+        assert.deepEqual(
+          checker.mod[key],
+          writer.mod[key],
+          `${checker.name} and ${writer.name} disagree on ${key} — one was widened alone`
+        );
+      });
+    }
+  }
 
-    // (a) Identity: a shared array instance means the value came from the writer, however
-    //     the import was spelled.
-    assert.notStrictEqual(
-      audited.VALID_TIERS,
-      writer.VALID_TIERS,
-      'the audit and the writer share one VALID_TIERS instance — the vocabulary was imported'
-    );
-    assert.notStrictEqual(
-      audited.VALID_INTENTS,
-      writer.VALID_INTENTS,
-      'the audit and the writer share one VALID_INTENTS instance — the vocabulary was imported'
-    );
+  // 2. Identity, EVERY unordered pair — including checker<->checker, which is the pair the
+  //    pre-sp-7-2 version could not see. A shared instance means the value was imported,
+  //    however the import was spelled, and makes every deepEqual above compare a value with
+  //    itself.
+  for (let i = 0; i < COPIES.length; i += 1) {
+    for (let j = i + 1; j < COPIES.length; j += 1) {
+      const [x, y] = [COPIES[i], COPIES[j]];
+      it(`${x.key} and ${y.key} do not share a vocabulary instance`, () => {
+        for (const key of VOCAB) {
+          assert.notStrictEqual(
+            x.mod[key],
+            y.mod[key],
+            `${x.name} and ${y.name} share one ${key} instance — it was imported, not declared`
+          );
+        }
+      });
+    }
+  }
 
-    // (b) Source: catches a copying import (spread/slice), which identity alone would miss.
-    //     Quote-style and extension tolerant, unlike the Round 2 version.
-    const src = fs.readFileSync(
-      path.join(__dirname, '..', '..', 'scripts', 'audit', 'skill-manifest-integrity.js'),
-      'utf8'
-    );
-    assert.doesNotMatch(
-      src,
-      /require\(\s*['"`][^'"`]*classify-skills(\.js)?['"`]\s*\)/,
-      'importing the vocabulary from the writer lets a change there widen this gate silently'
-    );
-  });
+  // 3. WHAT THIS PIN DOES NOT ESTABLISH — stated because two attempts to establish it failed.
+  //
+  //    sp-7-2 Round 1 tried a source check naming the two counterpart filenames. It was a
+  //    denylist, not a property: routing both checkers through a THIRD module passed every
+  //    test while a widened writer left both accepting a bogus tier.
+  //
+  //    Round 2 tried "each copy must DECLARE its vocabulary as an array literal", parsed from
+  //    source. Four independent defeats, each executed and each 78/78 green with a bogus tier
+  //    live in all three copies: a `push(...require(...))` on the line AFTER a pristine literal
+  //    (`const` binds the reference, not the contents); a decoy comment carrying the canonical
+  //    literal so the leftmost match never reached the real `require`; `//` inside a string
+  //    element eating the rest of the line; and the lazy capture stopping at a `];` inside a
+  //    string. It also FALSELY accused legitimate values — an intent named `requires-approval`
+  //    reddened the gate with a message about an import that did not exist.
+  //
+  //    Detecting a COPYING import is not achievable here. A spread at load time produces a
+  //    genuinely independent array, indistinguishable at runtime from a literal, and any
+  //    regex over JavaScript source is defeatable. Per `code-review-convergence`'s
+  //    prefer-deletion clause the check was removed rather than attempted a third time.
+  //
+  //    SO: the two families above catch independent drift (value agreement) and a shared
+  //    instance (identity). They do NOT catch all three copies being widened together through
+  //    a common module. The copies stay literal by CONVENTION, enforced by review and by the
+  //    role comments at each site — not by this suite. That gap is filed in `deferred-work.md`
+  //    under "nothing detects all three copies being widened TOGETHER". Any future move to
+  //    consolidate the vocabulary is precisely what ships green while widening every gate.
 });
 
 describe('product-tree scope and roster escape hatches', () => {

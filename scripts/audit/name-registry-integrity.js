@@ -51,7 +51,11 @@ const VALID_STATUSES = ['shipped', 'in-dev', 'proposed', 'reserved'];
 // authorise it - an earlier comment here cited D4 as permitting it, which D4 does not say.
 // Recorded as an open item in deferred-work.md: either the ADR gains an amendment or the
 // column uses a blank cell. Kept for now so the audit reflects the artifact as authored.
-const VALID_TIERS = ['bmad-upstream', 'convoke', 'practice', 'client', 'unassigned'];
+// Named for its DOMAIN, not just "tiers": this column carries OWNERSHIP. Unprefixed, it
+// collided with the portability classification vocabulary declared under the same identifier
+// two files away in `skill-manifest-integrity.js` — an entirely different value set. Renamed
+// by sp-7-2; the prefix is what makes `grep -rnw` in this directory return one vocabulary.
+const VALID_OWNERSHIP_TIERS = ['bmad-upstream', 'convoke', 'practice', 'client', 'unassigned'];
 
 // Statuses whose rows describe something that exists operationally. A `proposed` or
 // `reserved` agent has no file and no operational registry entry by definition - that is
@@ -524,9 +528,9 @@ function checkShape(header, rows) {
         )
       );
     }
-    if (!VALID_TIERS.includes(row[idx.tier])) {
+    if (!VALID_OWNERSHIP_TIERS.includes(row[idx.tier])) {
       rowFindings.push(
-        finding('row/tier', `"${row[idx.name]}": tier "${row[idx.tier]}" not in ${VALID_TIERS.join('|')}`)
+        finding('row/tier', `"${row[idx.name]}": tier "${row[idx.tier]}" not in ${VALID_OWNERSHIP_TIERS.join('|')}`)
       );
     }
     // A reserved row may be deliberately unnamed - that is what reserving means. Source is
@@ -656,7 +660,7 @@ module.exports = {
   REQUIRED_COLUMNS,
   VALID_KINDS,
   VALID_STATUSES,
-  VALID_TIERS,
+  VALID_OWNERSHIP_TIERS,
   OPERATIONAL,
   MODULE_DIRS,
   GitUnavailableError,
