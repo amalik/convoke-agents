@@ -72,15 +72,21 @@ Migrations live in `scripts/update/migrations/registry.js` (append-only).
 
 ### Team Factory (Recommended)
 
-Use `/bmad-team-factory` for a guided workflow that handles the full creation process — composition pattern selection, agent scope definition, contract design, artifact generation, and integration wiring. The factory produces output that passes the same validation as native teams (Vortex, Gyre).
+Use `/bmad-agent-bme-team-factory` for a guided workflow that handles the full creation process — composition pattern selection, agent scope definition, contract design, artifact generation, and integration wiring. The factory produces output that passes the same validation as native teams (Vortex, Gyre).
 
-Three capabilities: **Create Team** (new team from scratch), **Add Agent** (extend existing team), **Add Skill** (new workflow for existing agent).
+One capability is available today: **Create Team** (new team from scratch).
+
+**Add Agent** and **Add Skill** are planned for Phase 3 and do not ship yet — `_bmad/bme/_team-factory/workflows/` contains `add-team/` only. Asked for either, the factory says so and routes you to the Architecture Reference (`[AR]` on its menu), to BMB (Bond) for generating individual agent or workflow files, and to manual integration wiring against the reference checklist.
 
 ### Agent File Naming Conventions
 
+Agent files are laid out differently by team, and both layouts are current — the Vortex
+directory form is what the clone recipe above copies.
+
 | Element | Convention | Example |
 |---------|-----------|---------|
-| Agent file | Role-based with dashes | `discovery-empathy-expert.md` |
+| Agent file (Vortex) | Directory named for the role; the agent lives in `SKILL.md` inside it | `_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md` |
+| Agent file (Gyre) | Flat file named for the role | `_bmad/bme/_gyre/agents/stack-detective.md` |
 | Frontmatter name | Spaces, lowercase | `"discovery empathy expert"` |
 | Display name | First name | `name="Isla"` |
 | User guide | Uppercase first name | `ISLA-USER-GUIDE.md` |

@@ -197,7 +197,7 @@ Yes. Install Gyre independently with `npx -p convoke-agents convoke-install-gyre
 
 ### Can I create my own team?
 
-Yes. Use the **Team Factory** (`/bmad-team-factory`) for a guided workflow that handles composition pattern selection, agent scope definition, contract design, artifact generation, and integration wiring. Output passes the same validation as native teams.
+Yes. Use the **Team Factory** (`/bmad-agent-bme-team-factory`) for a guided workflow that handles composition pattern selection, agent scope definition, contract design, artifact generation, and integration wiring. Output passes the same validation as native teams.
 
 ---
 

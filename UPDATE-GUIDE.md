@@ -70,7 +70,7 @@ npx -p convoke-agents convoke-doctor
 **Breaking changes:** Team Factory extension workflows (add-agent, add-skill) are new capabilities that change the module API surface.
 
 What happens:
-- **Team Factory extensions** — Add Agent and Add Skill workflows with appender modules (registry, config, CSV)
+- **Team Factory appender modules** — registry, config and CSV appenders (`_bmad/bme/_team-factory/lib/writers/`). The Add Agent and Add Skill workflows these were built for are planned for Phase 3 and did not ship in this release
 - **Multi-team docs-audit** — Audit tool now validates against all registered teams (Vortex + Gyre), not just Vortex
 - **Extension validator** — New validation for factory-generated agent and skill extensions
 
@@ -80,7 +80,7 @@ What happens:
 
 What happens:
 - **Gyre team installed** — 4 new agents (Scout, Atlas, Lens, Coach), 7 workflows, 4 contract schemas (GC1-GC4), 4 user guides
-- **Team Factory** — guided workflow for creating new BMAD-compliant teams (`/bmad-team-factory`)
+- **Team Factory** — guided workflow for creating new BMAD-compliant teams (`/bmad-agent-bme-team-factory`)
 - **Skill Validator** — new `validateSkill()` quality gate for factory-generated skills
 - Gyre skill wrappers added to `.claude/skills/`
 - Agent manifest updated with 4 new entries

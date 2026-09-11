@@ -60,8 +60,10 @@ reader forms a false belief but nothing breaks · **ROT** = stale marker, no rea
 | **D5** | [L9](../../docs/development.md#L9), [L21](../../docs/development.md#L21) | "Agent Architecture Framework (**v1.1.0**)", "Update System (**v1.4.0+**)" | Product is **4.0.2** | `grep -n '"version"' package.json` → `4.0.2` |
 | **D6** | [L69-70](../../docs/development.md#L69-L70) | "**39** scenarios", "**18** critical scenarios minimum" | Hardcoded counts with no derivation — `derive-counts-from-source` class | No source cited in the doc; counts not recomputed here (see Not Covered) |
 | **D7** | [L96-119](../../docs/development.md#L96-L119) | Project Structure tree lists `_vortex`, `_gyre`, `_enhance` | `_bmad/bme/` holds **8** directories; `_team-factory`, `covenant`, `_artifacts`, `_config`, `_portability` are all absent from the tree | `ls -1d _bmad/bme/*/` → 8 entries |
+| **D8** | [L90](../../docs/development.md#L90) | "Frontmatter name — Spaces, lowercase — `"discovery empathy expert"`", stated as universal | True for **Gyre only**. Vortex is three-way: converted agents use `bmad-bme-agent-emma`, unconverted use `discovery-empathy-expert`, Gyre uses `"stack detective"` | `grep -m1 '^name:' _bmad/bme/_vortex/agents/{contextualization-expert,discovery-empathy-expert}/SKILL.md _bmad/bme/_gyre/agents/stack-detective.md` |
+| **D9** | [L91](../../docs/development.md#L91) | "Display name — First name — `name="Isla"`", stated as universal | The `name="…"` XML attribute exists only in **unconverted** agents. Converted agents carry the display name as an `# Emma` heading — `grep -n 'name="' …/contextualization-expert/SKILL.md` returns nothing | `grep -nE 'name="\|^# ' _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md` |
 
-Severity: **D1, D2, D3 = ACT-FAIL** · **D4 = MISLEAD** · **D5, D6, D7 = ROT**
+Severity: **D1, D2, D3 = ACT-FAIL** · **D4, D8, D9 = MISLEAD** · **D5, D6, D7 = ROT**
 
 > **⚠ Evidence basis — read before reproducing D1.** An earlier version of this row cited
 > `ls -1d .claude/skills/*team-factory*`. **`.claude/skills/*` is gitignored** (`.gitignore:62`), so
@@ -185,7 +187,7 @@ shape:
 
 | File | In scope | Assertions | Examined | Story | Findings |
 |------|----------|-----------:|----------|-------|----------|
-| `docs/development.md` | yes | — | **yes** | 1.1, 1.3 | 7 |
+| `docs/development.md` | yes | — | **yes** | 1.1, 1.3 | 9 |
 | `docs/agents.md` | yes | — | **yes** | 1.2 | 4 |
 | `UPDATE-GUIDE.md` | yes | 37 | no | 1.4 | — |
 | `docs/faq.md` | yes | 20 | no | 1.4 | — |
@@ -197,6 +199,21 @@ shape:
 | `docs/what-convoke-brings-to-bmad-method.md` | yes | 1 | no | 1.6 | — |
 | `CREDITS.md` | yes | 0 | no | 1.6 | — |
 | `CODE_OF_CONDUCT.md` | yes | 0 | no | 1.6 | — |
+
+**Cross-file closures made by Story 1.1 — these files are NOT examined.** D1 and D2 each appeared in
+three files, not the one the epic anchored them to. Story 1.1 closed both classes everywhere they appeared,
+which means it *edited* `docs/faq.md`, `UPDATE-GUIDE.md` and `README.md` without performing their derivation
+passes. Those files keep `Examined: no`; Stories 1.4 and 1.6 still own them, and should **not** re-report D1
+or D2 there.
+
+- D1 (`/bmad-team-factory`) closed at `docs/development.md:75`, `docs/faq.md:200`, `UPDATE-GUIDE.md:83`
+- D2 (unshipped Add Agent / Add Skill) closed at `docs/development.md:77`, `README.md:100`, `UPDATE-GUIDE.md:73`
+
+**`README.md` was out of scope and had to be edited anyway.** It advertised a capability
+`_bmad/bme/_team-factory/workflows/step-00-route.md:42` explicitly refuses to run, in the highest-traffic
+document in the repository. The warm-tier exclusion was tested during the pre-mortem by resolving slash
+*commands*; it never tested capability *claims*. That is a gap in the test, not bad luck — a warm-tier file
+carried an ACT-FAIL defect.
 
 An `Assertions` value of `0` is a measurement, not an exemption: a zero-assertion file is still
 examined and still recorded as `0` findings, with the script output as its evidence.
