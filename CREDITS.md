@@ -33,7 +33,7 @@ These ship with Convoke. They are the ones you get.
 
 Not a team of its own — a skill-tier module that builds them.
 
-- Team Factory 🏭 — builds new BMAD-compliant teams, adds agents to existing teams, adds skills to existing agents
+- Team Factory 🏭 — builds new BMAD-compliant teams. Adding an agent to an existing team, or a skill to an existing agent, is planned for Phase 3 and does not ship yet
 
 ## Agents who built it
 

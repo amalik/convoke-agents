@@ -4,7 +4,7 @@ baseline_commit: e1510517fa5ea4928fbafc7947fd656db183748c
 
 # Story 1.1: Correct the claims that make a reader act and fail
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -30,7 +30,17 @@ so that I do not lose an afternoon to an invocation the package never shipped.
 **When** `_bmad/bme/_team-factory/workflows/` is enumerated — it contains `add-team/` and `step-00-route.md`, nothing else
 **And** `_bmad/bme/_team-factory/workflows/step-00-route.md:42-49` displays *"Add Agent and Add Skill workflows are planned for Phase 3 of the Team Factory"* and routes the user to three manual alternatives
 **Then** no document claims those capabilities as available
-**And** where a document mentions them at all, it states they are **not yet available** and points at the same three alternatives the router offers — the product and the documentation must not disagree about what exists
+**And** where a document mentions them at all, it states they are **not yet available**
+
+> **AC2 amended 2026-09-11 by operator ruling.** The second conjunct — *"and points at the same three
+> alternatives the router offers"* — is **struck**. It was written on the assumption that mirroring the
+> product's router would make documentation and product agree. Round 2 established that the router's
+> own promise is false for an installed operator: of its three alternatives, `[AR]` resolves into
+> `_bmad-output/`, which is not in `package.json` `files[]`, and Convoke ships **zero** BMB files.
+> Satisfying this conjunct meant propagating a false promise into the highest-traffic documents in the
+> repository, which Round 1 did. The rule "the product and the documentation must not disagree about
+> what exists" is retained — it is served by the first conjunct; it was the *inference* that agreement
+> is achieved by copying the product's text that failed. Filed as **T141** against the router itself.
 **And** `grep -rniE 'add (an )?agent|add (a )?skill' README.md INSTALLATION.md CONTRIBUTING.md docs/*.md UPDATE-GUIDE.md` returns no surviving claim of availability.
 
 > ⚠ **This AC's verification command is DISCREDITED — do not re-run it as written.** It requires a
@@ -164,9 +174,9 @@ Documentation only. No source, no tests, no `_bmad/` content. Paths touched: `do
 - [x] Every finding recorded carries a command that reproduces it (NFR1), derived from an artifact the operator receives — never `.claude/skills/`, which is gitignored (NFR8).
 - [x] Every claim written or kept obeys the source-of-truth rule (FR3a): keep-and-check what something can contradict, delete what nothing can.
 - [x] The findings note's coverage table is updated in the same commit (FR10). `0` findings is written as `0`; blank means *not examined*.
-- [x] `npm run lint` exits 0 with zero warnings in any file this story modifies (`lint-passes-before-review`).
-- [x] Every check cited as evidence in the Dev Agent Record names how it was shown able to fail (NFR5). "Verified by execution" without a named failing case does not satisfy this.
-- [x] Commit plan emitted with a Round 1 review record (NFR4, `commit-preparation`), and the reviewed file set equals the staged file set.
+- [~] `npm run lint` exits 0 — **but vacuously, and this box is NOT a pass.** `lint` is `eslint --max-warnings 0 scripts/ index.js tests/`; every file this story touches is `.md` or `.yaml`, so it inspected none of them and could not have gone red. Recorded per `commit-preparation` ("`lint 0` is not evidence unless lint can go red on this change").
+- [~] NFR5 — **met only after correction.** Round 1 cited `lint 0` and a bare "2258 pass / 0 fail" tally, neither falsifiable here, and described a pattern as "falsified" against a planted string the *original* pattern already matched. Corrected in the Round 1 and Round 2 records. The checks that now carry named failing cases: AC1's grep (red before, empty after), D8/D9's commands (both reproduce), and `docs:audit` (proven able to exit 1 on a planted broken path).
+- [~] Commit plans emitted for all three passes with review records. **The set-equality clause failed twice** — `2c74deb6` swept in 29 `abs-*` sprint rows, and `06a452cd` staged 12 files against a 7-file List that explicitly said "do not stage" for the backlog note. Nothing was damaged either time (backlog rows 139 → 139, prior text verbatim, `backlog-integrity.js` exit 0), but the clause is recorded as breached, not satisfied.
 
 ## Dev Agent Record
 
@@ -238,6 +248,7 @@ Both routed to **Story 1.3**, which already owns the conversion-state claim (D4)
 
 | Date | Change |
 |------|--------|
+| 2026-09-11 | **Story closed `done`.** Post-Round-2 pass closed the D2 class at 3 further locations (`CREDITS.md:36` — ships; `docs/BMAD-METHOD-COMPATIBILITY.md:162` and `UPDATE-GUIDE.md:75` — intra-file contradictions this story created). **8 locations across 6 files** closed in total, from a finding originally recorded as 3. AC2 amended by operator ruling to strike its second conjunct; router defect filed as **T141**. Three DoD boxes downgraded from `[x]` to `[~]` — vacuous lint, NFR5-after-correction, and a twice-breached set-equality clause. |
 | 2026-09-11 | Round 1 review: 5 HIGH, 15 patches applied as one batch, 5 deferred, 3 operator decisions. AC2's pattern retired and re-derived; D2 was live in 5 files, not 3. Second scope breach (`team-factory.md:123`) disclosed. **Round 2 mandatory** — `code-review-convergence`. |
 | 2026-09-11 | Story implemented. D1 closed in 3 files, D2 in 3 files, D3 in 1. D8 and D9 discovered by AC4 and filed to Story 1.3. `README.md` edited outside epic scope, disclosed. |
 
@@ -460,3 +471,35 @@ did **not** materialise in either commit: backlog row count 139 → 139, prior t
 governing clause is the restructure rule, which has been applied. Residue is in `deferred-work.md`
 under this date, routed to Stories 1.6 and 1.7 and to two operator rulings (CHANGELOG scope; whether
 AC2's second conjunct is satisfiable at all when two of the router's three routes do not ship).
+
+
+## Post-Round-2 completion pass — 2026-09-11
+
+Round 2 deferred the D2 class on the grounds that *enumerating* it needed tooling. That reasoning
+holds for finding **new** instances; it does not apply to the ones Round 2 had already found. Three
+were closed here, and two of them were this story's own residue rather than another story's scope.
+
+- **`CREDITS.md:36`** — "adds agents to existing teams, adds skills to existing agents". The plainest
+  form of the defect, in a file that **ships in the npm tarball**. Invisible to every pattern only
+  because it was outside their hardcoded file lists.
+- **`docs/BMAD-METHOD-COMPATIBILITY.md:162`** — contradicted `:105`, which *this story fixed*.
+- **`UPDATE-GUIDE.md:75`** — contradicted `:73`, which *this story fixed*.
+
+**Fixing one line and leaving its contradicting sibling two rows away is a worse outcome than not
+touching the file**: before, the document was uniformly wrong; after, it disagreed with itself, and a
+reader had no way to tell which half to believe. Both instances arose inside the edit that corrected
+their siblings.
+
+All three are **narrowings**, not deletions, following the precedent the story set at `:73`. Verified:
+`validateSkillExtension()` (`lib/validators/end-to-end-validator.js:638`) and
+`buildSkillExtensionManifest()` (`lib/manifest-tracker.js:178`) both exist, as do the three appenders.
+The validator shipped; the workflows producing what it validates did not.
+
+**Closure total: 8 locations across 6 files** (from an original finding recorded as 3).
+`CHANGELOG.md:217`, `:271`, `:273` remain open by ruling, pending the CHANGELOG scope decision.
+`CREDITS.md` and `docs/BMAD-METHOD-COMPATIBILITY.md` keep `Examined: no` — edited for one defect, not
+derived. Stories 1.6 and 1.5 still own their passes.
+
+**Unreviewed-text disclosure** (`code-review-convergence`): these three edits were written after
+Round 2 and no round has seen them. They are small in-place corrections to text the rounds did read,
+in the pattern those rounds approved — not new mechanism. Recorded here rather than left implicit.

@@ -159,7 +159,7 @@ Convoke installers check:
 
 | Convoke Version | Compatible BMAD Method Versions | Notes |
 |----------------------|--------------------------------|-------|
-| 3.0.0                | 1.x (optional — works standalone) | Team Factory extensions, multi-team docs-audit, extension validator |
+| 3.0.0                | 1.x (optional — works standalone) | Team Factory extension *groundwork* (appenders + validator; the Add Agent / Add Skill workflows did not ship), multi-team docs-audit |
 | 2.4.0                | 1.x (optional — works standalone) | Enhance module, Gyre team (4 agents), Team Factory, skill validator |
 | 2.3.x                | 1.x (optional — works standalone) | Enhance module, skills architecture |
 | 2.0.0                | 1.x (optional — works standalone) | Product renamed to Convoke, CLI commands: `convoke-*` |

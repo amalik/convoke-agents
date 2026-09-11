@@ -72,7 +72,7 @@ npx -p convoke-agents convoke-doctor
 What happens:
 - **Team Factory appender modules** — registry, config and CSV appenders (`_bmad/bme/_team-factory/lib/writers/`). The Add Agent and Add Skill workflows these were built for are planned for Phase 3 and did not ship in this release
 - **Multi-team docs-audit** — Audit tool now validates against all registered teams (Vortex + Gyre), not just Vortex
-- **Extension validator** — New validation for factory-generated agent and skill extensions
+- **Extension validator** — `validateSkillExtension()` and `buildSkillExtensionManifest()` (`_bmad/bme/_team-factory/lib/`). Like the appenders above, these shipped; the Add Agent and Add Skill workflows that would produce the extensions they validate did not
 
 ### From v2.3.x to v2.4.0
 

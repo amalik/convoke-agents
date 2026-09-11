@@ -244,10 +244,20 @@ still own them.
 - D2 (unshipped Add Agent / Add Skill) is closed at **5 locations across 4 files**, verified at HEAD:
   `docs/development.md:79`, `README.md:100`, `UPDATE-GUIDE.md:70`, `UPDATE-GUIDE.md:73`,
   `docs/BMAD-METHOD-COMPATIBILITY.md:105`.
-  **The class is NOT closed.** Round 2 found live instances at `CREDITS.md:36` (which *ships* —
-  `package.json` `files[]`), `docs/BMAD-METHOD-COMPATIBILITY.md:162`, `UPDATE-GUIDE.md:75`,
-  `CHANGELOG.md:217`, `:271` and `:273`. Three of those contain no `add` token at all, so **no
-  tuning of any grep reaches them** — see `deferred-work.md`.
+  **Class closure completed 2026-09-11 (post-Round-2), 3 further locations:** `CREDITS.md:36`
+  (which *ships* — `package.json` `files[]`), `docs/BMAD-METHOD-COMPATIBILITY.md:162` and
+  `UPDATE-GUIDE.md:75`. The latter two were **intra-file contradictions this story created** — it
+  fixed `:105` and `:73` and left their contradicting siblings two rows away. All three are
+  *narrowings*, matching the precedent already set at `UPDATE-GUIDE.md:73`: the appenders and
+  `validateSkillExtension()`/`buildSkillExtensionManifest()` genuinely shipped; the workflows that
+  would produce what they validate did not.
+  **Total: 8 locations across 6 files.** Remaining open, out of scope pending the CHANGELOG ruling:
+  `CHANGELOG.md:217`, `:271`, `:273`.
+  **`CREDITS.md` and `docs/BMAD-METHOD-COMPATIBILITY.md` keep `Examined: no`** — they were edited for
+  this one defect, not derived. Stories 1.6 and 1.5 still own their passes.
+  **Note for Story 1.6 (do not patch — figures are frozen):** `CREDITS.md`'s `Assertions` cell reads
+  `0`. It is not 0; `:36` alone carried one. The cell is wrong and is left wrong deliberately, per the
+  banner at the top of this document.
   **No pattern is recorded here as authoritative.** Two have now failed in succession: the
   space-separated original (blind to hyphens) and its high-recall replacement (blind to a hardcoded
   file list, and to claims phrased without the word "add"). Enumerating this class is referred to
