@@ -41,7 +41,19 @@ Story 5 wires the gate and lands last, the same shape `dist-epic-2` used.
 
 **Size.** 5 stories over 14 files. Deliberately excludes the remaining warm tier (written
 during `dist-epic-2`, low expected yield) and five vision/draft/snapshot documents held to the
-wrong bar by a present-tense accuracy pass. **Amended 2026-09-11, narrowed at Round 2:** `README.md` is admitted to scope after Story 1.1's
+wrong bar by a present-tense accuracy pass. **Amended 2026-09-11 (Story 1.2): file count 13 → 15.** `_bmad/bme/_vortex/guides/VORTEX-TEAM-GUIDE.md`
+and `_bmad/bme/_vortex/compass-routing-reference.md` are admitted. Both carry the **same** defective Vortex
+diagram as `docs/agents.md` — and both **ship in the npm tarball**, while `docs/agents.md`, the only file this
+epic originally scoped for that defect, does **not**. Scoping the unshipped copy and missing the two shipped
+ones is the instance-vs-class failure this epic exists to close, so the operator ratified the extension before
+the story was implemented rather than after.
+
+**⚠ Story 1.7's denominator does not cover them.** Its in-scope set is derived "from the filesystem minus a
+declared exclusion list", framed around documents under `docs/`. These two live under `_bmad/bme/_vortex/`.
+Story 1.7 must either widen that derivation or record why module documentation is out of the coverage gate —
+**it is an open item owned by 1.7**, not resolved here.
+
+**Amended 2026-09-11, narrowed at Round 2:** `README.md` is admitted to scope after Story 1.1's
 Round 1 review falsified the warm-tier exclusion for the D2 class (file count 12 → 13; `README.md`
 is 167 lines, so the ~3,191-line scope figure becomes ~3,358).
 

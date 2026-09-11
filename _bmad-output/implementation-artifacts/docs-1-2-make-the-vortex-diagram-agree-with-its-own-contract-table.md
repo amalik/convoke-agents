@@ -4,7 +4,7 @@ baseline_commit: a6b9c6be
 
 # Story 1.2: Make the Vortex diagram agree with its own contract table
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -116,49 +116,49 @@ The three files, with diagram fences located at `a6b9c6be`:
 
 > **Ordering is load-bearing.** Every task citing a line number runs **before** Task 6 converts the diagrams, because the conversion changes `docs/agents.md`'s line count and shifts every anchor below the fence. This is the anchor-rot rule applied to the task list itself — the first draft of this story ordered them the other way and would have sent the dev to `:258` after moving it.
 
-- [ ] **Task 1 — Build the checks, red first (AC: 1, 2, 4, 5, 7)**
-  - [ ] Create `scripts/audit/vortex-diagram-integrity.js` (namespace rationale in Dev Notes)
-  - [ ] **Reuse, do not hand-roll:** `splitRow`, `isTableLine`, `isSeparator` from `scripts/audit/backlog-integrity.js` (exported `:1135`; the file has a `require.main` guard, so requiring it is side-effect free); `FENCE_RE`, `stripInlineCode` from `scripts/audit/lib/shipped-links.js` (defined `:107`, exported `:588`). Read that file's note on why `FENCE_RE` is deliberately **not anchored at column 0** — it permits leading whitespace — before writing any fence logic
-  - [ ] Implement the render-width function **inline** — see the dependency trap in Dev Notes
-  - [ ] Implement: routing (AC1), geometry diagnostic (AC2), no-box-art-in-`HC`-fences (AC4), completeness (AC5), corpus sweep (AC7)
-  - [ ] **Run before touching anything. Paste the red output into the Dev Agent Record.** It must name HC9→Noah in all three files, HC7/HC10→Emma, the measured width spreads, ┌4/└3, **and the compass header box's short right edge at `:15`**
-- [ ] **Task 2 — Confirm the Gyre diagram is a non-finding (AC: 6)**
-  - [ ] Examine it; record why 61/60/60 is correct. **Do not edit it**
-- [ ] **Task 3 — Close the two unresolvable commands (AC: 8)**
-  - [ ] `for c in $(grep -oE '/bmad-[a-z0-9-]+' docs/agents.md | sort -u); do grep -q "^\"${c#/}\"," _bmad/_config/skill-manifest.csv || echo "UNRESOLVED: $c"; done`
-  - [ ] Derive real ids from the manifest; re-run; paste the empty result
-  - [ ] Record that `docs/faq.md:131-135` carries the same class and is 1.4's
-- [ ] **Task 4 — Re-derive the surviving counts (AC: 9)**
-  - [ ] The "Ten handoff contracts" and "10 handoff contracts (HC1-HC10)" sentences, against `AGENTS` and the tables
-  - [ ] State that the "all seven" claims belong to Story 1.3
-- [ ] **Task 5 — Record every anchor you are about to invalidate (AC: 9)**
-  - [ ] Before converting, list the findings-note anchors pointing below `docs/agents.md`'s diagram fence. You re-derive them in Task 8
-- [ ] **Task 6 — Convert the three box diagrams to mermaid (AC: 3, 4, 5)**
-  - [ ] `flowchart` per `documentation-standards.md:88-97`; label every edge with its contract id
-  - [ ] All 10 contracts, all 7 agents, in each of the three files
-  - [ ] The three flowcharts must be **edge-identical**, verified mechanically
-  - [ ] Re-run: routing, completeness, no-box-art and the corpus sweep all green
-  - [ ] **Retire the geometry check** (AC2) in this same commit; it has no subject left
-- [ ] **Task 7 — Tests (AC: 1, 2, 4, 5)**
-  - [ ] `tests/audit/vortex-diagram-integrity.test.js`, **fixtures only** (`test-fixture-isolation`)
-  - [ ] A red fixture per surviving assertion: mis-routed contract, truncated diagram, missing agent, box art inside an `HC` fence, a diagram outside the declared corpus
-  - [ ] **A CJK fixture for the `W`/`F` width branch** — without it that branch is dead code
-  - [ ] A fixture pinning **Ambiguous-width glyphs (`─ │ ┌ ▶ ◀ ▲ ▼ — ·`) as ONE column**
-- [ ] **Task 8 — Update the findings note (AC: DoD)**
-  - [ ] A1-A4 closed; add A5 (HC7/HC10), the two command findings, the compass header box, and the two shipped-file instances
-  - [ ] Write coverage rows for **all three** files examined — the two `_bmad/bme/_vortex/` files have none today
-  - [ ] Re-derive the anchors listed in Task 5, **after** the conversion
-  - [ ] Do **not** touch aggregate totals, tier figures, or anchors into files this story is not editing — the freeze banner still binds those
-- [ ] **Task 9 — Amend the epic (AC: DoD)**
-  - [ ] RULING 1 moves the file count 13 → 15. The epic's amendment line still says 13, and Story 1.7's denominator is shaped for `docs/` and will not see `_bmad/bme/_vortex/**` — record who owns that
-- [ ] **Task 10 — Wire it (AC: DoD)**
-  - [ ] Add `"audit:diagrams": "node scripts/audit/vortex-diagram-integrity.js"` to `package.json`
-  - [ ] Add a CI step in `.github/workflows/ci.yml` beside `node scripts/audit/name-registry-integrity.js` (`:209`), same job, same pattern
-  - [ ] **This story wires it. Story 1.7 does not** — see Dev Notes
-- [ ] **Task 11 — Verify and hand off**
-  - [ ] `npm run docs:audit` → 0 · `npm run lint` → 0 (**real here**) · `npm test` → green · `npm run audit:diagrams` → 0
-  - [ ] **`node scripts/test-runner.js tests/p0`** → green. `npm test` does **not** include `tests/p0`, and a p0 test live-reads one of the newly-in-scope files — see Regression risk
-  - [ ] Commit plan with a Round 1 review record; `git diff --name-only` before staging
+- [x] **Task 1 — Build the checks, red first (AC: 1, 2, 4, 5, 7)**
+  - [x] Create `scripts/audit/vortex-diagram-integrity.js` (namespace rationale in Dev Notes)
+  - [x] **Reuse, do not hand-roll:** `splitRow`, `isTableLine`, `isSeparator` from `scripts/audit/backlog-integrity.js` (exported `:1135`; the file has a `require.main` guard, so requiring it is side-effect free); `FENCE_RE`, `stripInlineCode` from `scripts/audit/lib/shipped-links.js` (defined `:107`, exported `:588`). Read that file's note on why `FENCE_RE` is deliberately **not anchored at column 0** — it permits leading whitespace — before writing any fence logic
+  - [x] Implement the render-width function **inline** — see the dependency trap in Dev Notes
+  - [x] Implement: routing (AC1), geometry diagnostic (AC2), no-box-art-in-`HC`-fences (AC4), completeness (AC5), corpus sweep (AC7)
+  - [x] **Run before touching anything. Paste the red output into the Dev Agent Record.** It must name HC9→Noah in all three files, HC7/HC10→Emma, the measured width spreads, ┌4/└3, **and the compass header box's short right edge at `:15`**
+- [x] **Task 2 — Confirm the Gyre diagram is a non-finding (AC: 6)**
+  - [x] Examine it; record why 61/60/60 is correct. **Do not edit it**
+- [x] **Task 3 — Close the two unresolvable commands (AC: 8)**
+  - [x] `for c in $(grep -oE '/bmad-[a-z0-9-]+' docs/agents.md | sort -u); do grep -q "^\"${c#/}\"," _bmad/_config/skill-manifest.csv || echo "UNRESOLVED: $c"; done`
+  - [x] Derive real ids from the manifest; re-run; paste the empty result
+  - [x] Record that `docs/faq.md:131-135` carries the same class and is 1.4's
+- [x] **Task 4 — Re-derive the surviving counts (AC: 9)**
+  - [x] The "Ten handoff contracts" and "10 handoff contracts (HC1-HC10)" sentences, against `AGENTS` and the tables
+  - [x] State that the "all seven" claims belong to Story 1.3
+- [x] **Task 5 — Record every anchor you are about to invalidate (AC: 9)**
+  - [x] Before converting, list the findings-note anchors pointing below `docs/agents.md`'s diagram fence. You re-derive them in Task 8
+- [x] **Task 6 — Convert the three box diagrams to mermaid (AC: 3, 4, 5)**
+  - [x] `flowchart` per `documentation-standards.md:88-97`; label every edge with its contract id
+  - [x] All 10 contracts, all 7 agents, in each of the three files
+  - [x] The three flowcharts must be **edge-identical**, verified mechanically
+  - [x] Re-run: routing, completeness, no-box-art and the corpus sweep all green
+  - [x] **Retire the geometry check** (AC2) in this same commit; it has no subject left
+- [x] **Task 7 — Tests (AC: 1, 2, 4, 5)**
+  - [x] `tests/audit/vortex-diagram-integrity.test.js`, **fixtures only** (`test-fixture-isolation`)
+  - [x] A red fixture per surviving assertion: mis-routed contract, truncated diagram, missing agent, box art inside an `HC` fence, a diagram outside the declared corpus
+  - [x] **A CJK fixture for the `W`/`F` width branch** — without it that branch is dead code
+  - [x] A fixture pinning **Ambiguous-width glyphs (`─ │ ┌ ▶ ◀ ▲ ▼ — ·`) as ONE column**
+- [x] **Task 8 — Update the findings note (AC: DoD)**
+  - [x] A1-A4 closed; add A5 (HC7/HC10), the two command findings, the compass header box, and the two shipped-file instances
+  - [x] Write coverage rows for **all three** files examined — the two `_bmad/bme/_vortex/` files have none today
+  - [x] Re-derive the anchors listed in Task 5, **after** the conversion
+  - [x] Do **not** touch aggregate totals, tier figures, or anchors into files this story is not editing — the freeze banner still binds those
+- [x] **Task 9 — Amend the epic (AC: DoD)**
+  - [x] RULING 1 moves the file count 13 → 15. The epic's amendment line still says 13, and Story 1.7's denominator is shaped for `docs/` and will not see `_bmad/bme/_vortex/**` — record who owns that
+- [x] **Task 10 — Wire it (AC: DoD)**
+  - [x] Add `"audit:diagrams": "node scripts/audit/vortex-diagram-integrity.js"` to `package.json`
+  - [x] Add a CI step in `.github/workflows/ci.yml` beside `node scripts/audit/name-registry-integrity.js` (`:209`), same job, same pattern
+  - [x] **This story wires it. Story 1.7 does not** — see Dev Notes
+- [x] **Task 11 — Verify and hand off**
+  - [x] `npm run docs:audit` → 0 · `npm run lint` → 0 (**real here**) · `npm test` → green · `npm run audit:diagrams` → 0
+  - [x] **`node scripts/test-runner.js tests/p0`** → green. `npm test` does **not** include `tests/p0`, and a p0 test live-reads one of the newly-in-scope files — see Regression risk
+  - [x] Commit plan with a Round 1 review record; `git diff --name-only` before staging
 
 ## Dev Notes
 
@@ -272,33 +272,132 @@ No dependency is added and no external API is called. Mermaid needs no library �
 
 ## Definition of Done
 
-- [ ] `npm run docs:audit` exits 0. **Non-regression only, not evidence of accuracy** *(NFR3, verbatim)*.
-- [ ] `npm run audit:diagrams` exits 0, **and runs in a workflow at HEAD** — demonstrated by the CI run on the branch, not by the script existing.
-- [ ] Every finding recorded carries a reproducing command (NFR1) from an artifact the operator receives — never `.claude/skills/` (NFR8). **Noted so it is not raised as a fresh finding:** the routing check's source of truth is `docs/agents.md`, which does **not** ship. The findings are in shipped files; the command that reproduces them needs a development checkout. NFR1 is satisfied here by **git-tracked** reproducibility, which is the property NFR8 actually protects — unlike `.claude/skills/`, nothing here is gitignored.
-- [ ] Every claim written or kept obeys the source-of-truth rule (FR3a).
-- [ ] Findings note updated in the same commit (FR10), within the freeze carve-out: **this story's own rows** — all three examined files, two of which have no row today. Aggregates and foreign anchors stay frozen.
-- [ ] `npm run lint` exits 0. **Unlike `docs-1-1`, this gate is real** — the story ships `.js` under `scripts/`.
-- [ ] `npm test` green, including the new fixture tests and both width fixtures.
-- [ ] `node scripts/test-runner.js tests/p0` green — **not covered by `npm test`**, and it live-reads `compass-routing-reference.md`.
-- [ ] The epic is amended: file count 13 → 15, with Story 1.7's denominator gap recorded.
-- [ ] Every check cited as evidence names how it was shown able to fail (NFR5) — for the three assertions that means the recorded red run, not a description of one.
-- [ ] The record states explicitly that **geometry passing is not evidence routing is correct**, and that the Gyre non-finding is what proves the check discriminates.
-- [ ] The three diagrams agree with each other, verified mechanically, not by reading.
-- [ ] Commit plan emitted with a Round 1 review record (NFR4); reviewed file set equals staged file set.
+- [x] `npm run docs:audit` exits 0. **Non-regression only, not evidence of accuracy** *(NFR3, verbatim)*.
+- [x] `npm run audit:diagrams` exits 0, **and runs in a workflow at HEAD** — demonstrated by the CI run on the branch, not by the script existing.
+- [x] Every finding recorded carries a reproducing command (NFR1) from an artifact the operator receives — never `.claude/skills/` (NFR8). **Noted so it is not raised as a fresh finding:** the routing check's source of truth is `docs/agents.md`, which does **not** ship. The findings are in shipped files; the command that reproduces them needs a development checkout. NFR1 is satisfied here by **git-tracked** reproducibility, which is the property NFR8 actually protects — unlike `.claude/skills/`, nothing here is gitignored.
+- [x] Every claim written or kept obeys the source-of-truth rule (FR3a).
+- [x] Findings note updated in the same commit (FR10), within the freeze carve-out: **this story's own rows** — all three examined files, two of which have no row today. Aggregates and foreign anchors stay frozen.
+- [x] `npm run lint` exits 0. **Unlike `docs-1-1`, this gate is real** — the story ships `.js` under `scripts/`.
+- [x] `npm test` green, including the new fixture tests and both width fixtures.
+- [x] `node scripts/test-runner.js tests/p0` green — **not covered by `npm test`**, and it live-reads `compass-routing-reference.md`.
+- [x] The epic is amended: file count 13 → 15, with Story 1.7's denominator gap recorded.
+- [x] Every check cited as evidence names how it was shown able to fail (NFR5) — for the three assertions that means the recorded red run, not a description of one.
+- [x] The record states explicitly that **geometry passing is not evidence routing is correct**, and that the Gyre non-finding is what proves the check discriminates.
+- [x] The three diagrams agree with each other, verified mechanically, not by reading.
+- [x] Commit plan emitted with a Round 1 review record (NFR4); reviewed file set equals staged file set.
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+claude-opus-5[1m]
+
 ### Debug Log References
+
+**The RED runs, both modes, at `a6b9c6be` before any file was touched.**
+
+`node scripts/audit/vortex-diagram-integrity.js --diagnose` → **exit 1, 32 findings across 3 files.**
+Every value in AC2's measured table reproduced exactly, including the one AC2 added at review:
+
+```
+docs/agents.md
+  [geometry] box row 236-239: render widths 71 / 72 / 69 / 68
+  [geometry] box row 236-239: edge columns disagree — L236[2,13,21,32,40,51,59,70] vs L237[2,14,21,33,40,52,59,71]
+                                                     vs L238[2,14,21,32,39,50,57,68] vs L239[2,13,20,31,38,49,56,67]
+  [geometry] box row 243-246: 4 box top(s) opened, 3 closed
+  [geometry] box row 243-246: render widths 68 / 59 / 50 / 50
+  [ascii-routing] HC9: arrow from the label at line 241 col 41 enters Noah, but the table says Liam -> Isla
+VORTEX-TEAM-GUIDE.md   83/84/81/80, 80/70/58/58, ┌4/└3, HC9 -> Noah
+compass-routing-reference.md  71/**70**/71/71 (header box), 83/84/81/80, 80/70/58/58, ┌4/└3, HC9 -> Noah
+```
+
+`node scripts/audit/vortex-diagram-integrity.js` (gate) → **exit 1**, 6 box-art + 30 completeness findings.
+
+**The four permanent assertions were each proven able to FAIL, individually, by planting a defect and reverting it:**
+
+| Assertion | Planted defect | Result |
+|---|---|---|
+| routing | `Liam -->\|HC9\| Noah` | `HC9 is drawn Liam -> Noah, but the table says Liam -> Isla` · exit 1 |
+| completeness | deleted the `HC7` edge | `HC7 is declared in the contract tables but absent from this diagram` · exit 1 |
+| no box art | `%% ┌─` inside the fence | `line 235: box-drawing characters in a contract diagram` · exit 1 |
+| corpus sweep | un-excluded `_bmad-output/_archive/` | 4 findings, naming the archived copies · exit 1 |
+
+**`npm run lint` is REAL on this story, unlike `docs-1-1`.** Proven: appending an unused binding to
+`scripts/audit/vortex-diagram-integrity.js` took `npm run lint` to **exit 1**. Restored, exit 0.
+
+**AC8's command loop falsified:** planting `/bmad-not-a-real-skill` in `docs/agents.md` made it fire;
+removed, it returns empty.
 
 ### Completion Notes List
 
+✅ **All 9 ACs satisfied.** ✅ **All 11 tasks complete.**
+
+**The headline result is worse than the story predicted, and more decisive.** The story expected the routing
+check to report three reds. An honest walk found that the ASCII diagram **did not decidably express 4 of its
+10 contracts at all** — HC4, HC6, HC7 and HC10 have rails that are interrupted or ambiguous — while HC9 was
+the single contract that was both decidable and **wrong**. Five (HC1, HC2, HC3, HC5, HC8) resolved correctly.
+So the picture was not merely mis-drawn in one place; it was undecidable in four, in **two files that ship**.
+Filed as **A5**.
+
+**A blind spot in my own check, caught and fixed mid-implementation.** The first walker returned *nothing* for
+HC7 and HC10 — not a wrong answer, silence. A label it cannot resolve now **reports as a finding**; silence
+would have made the diagnostic look stronger than it was, which is precisely the defect class this epic exists
+to close. Separately, the walker only handled vertical rails, so HC1-HC3 (drawn horizontally) were being
+reported as "ambiguous" — blaming the diagram for my blind spot. Horizontal resolution was added so the two
+are distinguishable.
+
+**A live false positive that would have broken the permanent gate.** `isContractDiagram` was "any fence with an
+HC label". That matched `compass-routing-reference.md`'s **decision tree**, which legitimately names HC6/HC8 as
+conditionals and legitimately draws itself with `├── └──` — so the no-box-art assertion would have failed on it
+**forever**. The predicate now requires a **majority of the declared contracts**, with the threshold derived
+from `contracts.size` rather than picked as a literal (`derive-counts-from-source`). The tree draws 2 of 10; the
+handoff diagram draws 10 of 10. Like the Gyre diagram, it is excluded **by construction, not by an exception
+list**. Found by spot-checking catch-all output, per `catch-all-phase-review`.
+
+**A fifth copy, found by the sweep.** AC7 anticipated a fourth (`_bmad-output/_archive/phase-1/`). Un-excluding
+the archive to falsify the sweep surfaced a **fifth** in `_bmad-output/_archive/phase-2/`. Both are closed story
+artifacts that do not ship and are **declared exclusions**, not oversights.
+
+**AC6 confirmed as a non-finding, which is what proves the checks discriminate.** The Gyre diagram is correct:
+`▲` at col 21 under Atlas, `│`/`┘` at col 59 under the first column of Coach's `🏋️` (cols 59-60); the 61-vs-60
+excess **is** that emoji's second column. It has zero box rows and no `HC` label, so the permanent guard leaves
+it alone by construction. It was not edited.
+
+**Disclosed reading of AC2's "retired".** The geometry check and the ASCII routing walker are **not wired** —
+CI runs `npm run audit:diagrams`, which is gate mode only. The `--diagnose` flag is retained, unwired and
+documented as a one-shot, so A5/A7/A8's evidence command stays reproducible (NFR1 requires findings carry a
+reproducing command). I read "retired" as "never a gate" rather than "deleted from the file". If the operator
+intended deletion, the flag and its two helpers come out in one edit and the evidence above stands as the
+record.
+
+**Counts were correct and were left correct.** `:231` and `:258` both said ten; the parser derives ten. AC9
+required them to **name their source**, not to change, so both sentences now point at the tables as the source
+of truth rather than asserting a bare number.
+
+**Anchors were re-derived AFTER the conversion, not before** — the whole reason the task order was inverted.
+A1-A4 cited `#L236-239/#L240/#L242/#L243/#L249`, all inside the fence the conversion destroyed; they are
+re-anchored to the mermaid block at `#L233-L255` and marked closed. `docs/agents.md` moved 602 → 607 lines.
+
+**What is NOT closed.** `docs/faq.md:131-135` carries the same `/bmad-bmb-*` class over four sites — Story
+1.4's, stated rather than silently skipped. Story 1.7's coverage denominator does not reach
+`_bmad/bme/_vortex/**`; recorded in the epic as an open item owned by 1.7.
+
 ### File List
+
+- `scripts/audit/vortex-diagram-integrity.js` — **new** (checks + one-shot diagnostic)
+- `tests/audit/vortex-diagram-integrity.test.js` — **new** (fixture tests, incl. both width fixtures)
+- `docs/agents.md` — modified (diagram → mermaid; two commands; two counts sourced)
+- `_bmad/bme/_vortex/guides/VORTEX-TEAM-GUIDE.md` — modified (diagram → mermaid) **ships**
+- `_bmad/bme/_vortex/compass-routing-reference.md` — modified (diagram → mermaid; header box) **ships**
+- `package.json` — modified (`audit:diagrams` script)
+- `.github/workflows/ci.yml` — modified (wired the gate)
+- `_bmad-output/planning-artifacts/convoke-note-docs-accuracy-findings-4-0-2.md` — modified (A1-A4 closed, A5-A8 added, 3 coverage rows)
+- `_bmad-output/planning-artifacts/convoke-epic-docs-accuracy-4-0-2.md` — modified (scope 13 → 15; 1.7 denominator gap)
+- `_bmad-output/implementation-artifacts/docs-1-2-…-contract-table.md` — modified (this story)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (status transitions)
 
 ## Change Log
 
 | Date | Change |
 |------|--------|
-| 2026-09-11 | Second independent review of the rewrite: 2 HIGH, 6 MEDIUM, 5 LOW, all applied. The rewrite's own new defects were consequences of the two rulings, not of the first round's corrections — `code-review-convergence`'s restructure trigger did **not** fire. Geometry check reclassified as a one-shot diagnostic that is **retired** after conversion (it would otherwise be a permanently vacuous gate, and the clause claiming otherwise was false); a no-box-art-in-`HC`-fences guard added as the permanent replacement; tasks **reordered** so every line-anchored task runs before the conversion that moves those lines; corpus made declared-plus-exclusions after a **fourth** copy was found in `_bmad-output/_archive/`; "verbatim" corrected to "same defects, richer variant"; column origin pinned 0-based; `tests/p0` surface added. |
-| 2026-09-11 | Story created, then substantially rewritten after independent validation. Two operator rulings: all three files in scope (two of them ship; the epic scoped only the one that does not), and the box diagrams convert to mermaid per the repo's own documentation standard. Corrections to the first draft: the Gyre diagram is **not** defective (AC4), the routing check will legitimately report three reds not one (A5), `string-width`/`eastasianwidth` **are** in `node_modules` as transitive dev deps, Story 1.7 does **not** own wiring this check, and existing table/fence parsers must be reused rather than hand-rolled. |
+| 2026-09-11 | **Implemented.** Three diagrams converted to mermaid, edge-identical, all 10 contracts correct. New lint `vortex-diagram-integrity.js` with 4 permanent assertions (each proven able to fail) plus a retired one-shot diagnostic; wired into CI. HC9 closed in **two shipped files** and one that does not ship. A5-A8 filed: the ASCII art was **undecidable for 4 of 10 contracts**, not merely wrong for one. Found during implementation: a false positive that would have broken the gate forever (a decision tree), a silence bug in my own walker, and a fifth archived copy. |

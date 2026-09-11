@@ -69,29 +69,28 @@ When evidence says "go back," these contracts route work backward:
 
 ### The Pipeline Diagram
 
-```
-                        ┌─────────────────────────────────────────────┐
-                        │            VORTEX PATTERN                   │
-                        │         7 Streams · 7 Agents                │
-                        └─────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    %% Generated to agree with the handoff-contract tables in docs/agents.md.
+    %% scripts/audit/vortex-diagram-integrity.js fails if any edge disagrees with them.
+    Isla["Isla 🔍<br/>Empathize"]
+    Mila["Mila 🔬<br/>Synthesize"]
+    Liam["Liam 💡<br/>Hypothesize"]
+    Wade["Wade 🧪<br/>Externalize"]
+    Noah["Noah 📡<br/>Sensitize"]
+    Max["Max 🧭<br/>Systematize"]
+    Emma["Emma 🎯<br/>Contextualize"]
 
-  ┌──────────┐    HC1    ┌──────────┐    HC2    ┌──────────┐    HC3    ┌──────────┐
-  │  Isla 🔍  │─────────▶│  Mila 🔬  │─────────▶│  Liam 💡  │─────────▶│  Wade 🧪  │
-  │ Empathize │ artifact │Synthesize│ artifact │Hypothesiz│ artifact │Externaliz│
-  └──────────┘          └──────────┘          └──────────┘          └──────────┘
-       ▲                      ▲                    │                      │
-       │                      │                  HC9│flag               HC4│artifact
-       │               HC6│routing                 │                      │
-       │                      │                    ▼                      ▼
-  ┌──────────┐          ┌──────────┐          ┌──────────┐          ┌──────────┐
-  │ Emma 🎯  │◀── HC8 ──│  Max 🧭  │◀── HC5 ──│  Noah 📡  │◀─────────┘
-  │Contextual│ routing  │Systematiz│ artifact │ Sensitize│
-  └──────────┘          └──────────┘          └──────────┘
-       │                      │                    │
-       │               HC7│routing            HC10│flag
-       │                      │                    │
-       └──────────────────────┴────────────────────┘
-                         ▼ to Isla 🔍
+    Isla -->|"HC1 · artifact"| Mila
+    Mila -->|"HC2 · artifact"| Liam
+    Liam -->|"HC3 · artifact"| Wade
+    Wade -->|"HC4 · artifact"| Noah
+    Noah -->|"HC5 · artifact"| Max
+    Max -->|"HC6 · routing"| Mila
+    Max -->|"HC7 · routing"| Isla
+    Max -->|"HC8 · routing"| Emma
+    Liam -->|"HC9 · flag"| Isla
+    Noah -->|"HC10 · flag"| Isla
 ```
 
 **Isla is the gravity well.** She has three formal inbound feedback contracts (HC7, HC9, HC10) plus organic routing from multiple workflows. When in doubt, the Vortex sends you back to the user research.

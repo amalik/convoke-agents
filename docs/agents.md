@@ -228,25 +228,30 @@ Max turns Wade's experiment results into organizational knowledge and strategic 
 
 ## The Vortex Flow
 
-The Vortex is **non-linear by design**. While there's a natural forward flow (Isla → Mila → Liam → Wade → Noah → Max), agents route back to each other based on evidence. Ten handoff contracts ensure structured information flows at every transition.
+The Vortex is **non-linear by design**. While there's a natural forward flow (Isla → Mila → Liam → Wade → Noah → Max), agents route back to each other based on evidence. The handoff contracts below — ten of them, enumerated in the tables in this file, which are the source of truth for both the count and the routing — ensure structured information flows at every transition.
 
-```
-                    VORTEX PATTERN — 7 Streams · 7 Agents
+```mermaid
+flowchart LR
+    %% Generated to agree with the handoff-contract tables in docs/agents.md.
+    %% scripts/audit/vortex-diagram-integrity.js fails if any edge disagrees with them.
+    Isla["Isla 🔍<br/>Empathize"]
+    Mila["Mila 🔬<br/>Synthesize"]
+    Liam["Liam 💡<br/>Hypothesize"]
+    Wade["Wade 🧪<br/>Externalize"]
+    Noah["Noah 📡<br/>Sensitize"]
+    Max["Max 🧭<br/>Systematize"]
+    Emma["Emma 🎯<br/>Contextualize"]
 
-  ┌──────────┐  HC1  ┌──────────┐  HC2  ┌──────────┐  HC3  ┌──────────┐
-  │  Isla 🔍  │─────▶│  Mila 🔬  │─────▶│  Liam 💡  │─────▶│  Wade 🧪  │
-  │ Empathize │      │Synthesize│      │Hypothesiz│      │Externaliz│
-  └──────────┘      └──────────┘      └──────────┘      └──────────┘
-       ▲                  ▲                │                    │
-       │            HC6   │              HC9│                  HC4│
-       │                  │                ▼                    ▼
-  ┌──────────┐      ┌──────────┐      ┌──────────┐      ┌──────────┐
-  │ Emma 🎯  │◀HC8─│  Max 🧭  │◀HC5─│  Noah 📡  │◀────────┘
-  │Contextual│      │Systematiz│      │ Sensitize│
-  └──────────┘      └──────────┘      └──────────┘
-       │            HC7   │              HC10│
-       └──────────────────┴──────────────────┘
-                      ▼ to Isla 🔍
+    Isla -->|HC1| Mila
+    Mila -->|HC2| Liam
+    Liam -->|HC3| Wade
+    Wade -->|HC4| Noah
+    Noah -->|HC5| Max
+    Max -->|HC6| Mila
+    Max -->|HC7| Isla
+    Max -->|HC8| Emma
+    Liam -->|HC9| Isla
+    Noah -->|HC10| Isla
 ```
 
 You can start with any agent. Max's **Vortex Navigation** workflow is the compass that helps you decide where to go based on what evidence you have and what gaps remain.
@@ -255,7 +260,7 @@ You can start with any agent. Max's **Vortex Navigation** workflow is the compas
 
 ## Handoff Contract System
 
-The Vortex uses 10 handoff contracts (HC1-HC10) to ensure agents pass structured information to each other. There are three contract types:
+The Vortex uses the handoff contracts enumerated in the three tables below (HC1-HC10) to ensure agents pass structured information to each other. Those tables are the source of truth: the diagram above is generated to agree with them, and `scripts/audit/vortex-diagram-integrity.js` fails if it does not. There are three contract types:
 
 ### Artifact Contracts (HC1-HC5)
 
@@ -354,7 +359,7 @@ These journeys show how practitioners move through the Vortex in practice.
 
 *You want to add a custom agent to the Vortex.*
 
-**Use BMB (BMAD Module Builder)** — the recommended way to extend Convoke. Run `/bmad-bmb-agent` to create a new agent through a guided process, or `/bmad-bmb-module` for a complete module with multiple agents and workflows. See the [extension guidance FAQ](faq.md#how-do-i-add-a-custom-agent-or-module) for details.
+**Use BMB (BMAD Module Builder)** — the recommended way to extend Convoke. Run `/bmad-agent-builder` to create a new agent through a guided process, or `/bmad-module-builder` for a complete module with multiple agents and workflows. See the [extension guidance FAQ](faq.md#how-do-i-add-a-custom-agent-or-module) for details.
 
 **Under the hood,** BMB generates the 4 components every agent needs:
 

@@ -94,6 +94,29 @@ reader forms a false belief but nothing breaks · **ROT** = stale marker, no rea
 | **D8** | [L90](../../docs/development.md#L90) | "Frontmatter name — Spaces, lowercase — `"discovery empathy expert"`", stated as universal | True for **Gyre only** (`"stack detective"`). Vortex is two-way: converted agents use `bmad-bme-agent-emma`, unconverted use `discovery-empathy-expert` | `grep -m1 '^name:' _bmad/bme/_vortex/agents/{contextualization-expert,discovery-empathy-expert}/SKILL.md _bmad/bme/_gyre/agents/stack-detective.md` |
 | **D9** | [L91](../../docs/development.md#L91) | "Display name — First name — `name="Isla"`", stated as universal | The `name="…"` XML attribute exists only in **unconverted** agents. Converted agents carry the display name as an `# Emma` heading — `grep -n 'name="' …/contextualization-expert/SKILL.md` returns nothing | `grep -nE 'name="|^# ' _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md` → `6:# Emma` |
 
+
+### `docs/agents.md` — findings added by Story 1.2
+
+| ID | Where | Defect | Evidence |
+|---|---|---|---|
+| **A5** | diagram fence, pre-conversion | **The ASCII diagram did not decidably express 4 of its 10 contracts, and expressed a 5th wrongly.** An honest path-walk resolved HC1, HC2, HC3, HC5, HC8 correctly; resolved **HC9 into Noah** against a table row reading Liam → Isla; and could not resolve **HC4, HC6, HC7, HC10 at all** — their rails are interrupted or ambiguous. HC7 and HC10 rise at col 7 straight through Emma's box. **Only one contract was both decidable and wrong; four were never decidable.** | `node scripts/audit/vortex-diagram-integrity.js --diagnose` at `a6b9c6be` |
+| **A6** | `L357` (pre-conversion) | `/bmad-bmb-agent` and `/bmad-bmb-module` resolve to nothing — 0 rows each in `skill-manifest.csv`; the shipped ids are `bmad-agent-builder` (`:68`) and `bmad-module-builder` (`:71`) | `for c in $(grep -oE '/bmad-[a-z0-9-]+' docs/agents.md \| sort -u); do grep -q "^\"${c#/}\"," _bmad/_config/skill-manifest.csv \|\| echo "UNRESOLVED: $c"; done` |
+
+### `_bmad/bme/_vortex/` — findings added by Story 1.2 (both files SHIP)
+
+The same diagram, the same three defects, in the two files operators actually receive. `docs/agents.md` — the only file the epic scoped — is the only one that does **not** ship.
+
+| ID | Where | Defect | Evidence |
+|---|---|---|---|
+| **A7** | `VORTEX-TEAM-GUIDE.md` fence, `compass-routing-reference.md` fence | HC9 drawn into Noah against the table; 4 box tops opened and 3 closed; `▼ to Isla` contradicting the `▲` above Emma. **Identical defects to A1/A2/A4, in shipped files.** | `node scripts/audit/vortex-diagram-integrity.js --diagnose` |
+| **A8** | `compass-routing-reference.md` header box | Its second line is one render column short of its three siblings (71 / **70** / 71 / 71) — a defect unique to this file; `VORTEX-TEAM-GUIDE.md`'s equivalent box is clean at 71/71/71/71 | same command |
+
+**Not findings, recorded so they are not re-reported:**
+
+- **The Gyre diagram** (`docs/agents.md` L422-426) is **correct**. Its 61/60/60 spread is Coach's two-column emoji `🏋️`, not a misalignment: `▲` at col 21 sits under Atlas, `│`/`┘` at col 59 under the emoji's first column. It contains **no box row**, so a box-row invariant is a category error there. It carries no `HC` label, so the permanent guard leaves it alone **by construction**.
+- **The decision tree** in `compass-routing-reference.md` names HC6 and HC8 as conditionals and draws itself with `├── └──`. It is not a flow diagram. The check's threshold — a majority of declared contracts — excludes it by construction rather than by an exception list.
+- **A fourth and fifth copy** of the diagram exist under `_bmad-output/_archive/`. Closed story artifacts, do not ship; **declared exclusions** in the check, not oversights.
+
 Severity: **D1, D2, D3 = ACT-FAIL** · **D4, D8, D9 = MISLEAD** · **D5, D6, D7 = ROT**
 
 > **⚠ Evidence basis — read before reproducing D1.** An earlier version of this row cited
@@ -123,10 +146,10 @@ All four rows were measured, not eyeballed, with an east-asian-width–aware col
 
 | ID | Line | Defect | Measurement |
 |----|------|--------|-------------|
-| **A1** | [L242](../../docs/agents.md#L242) | **The `HC9` arrow contradicts the contract table.** Its `▼` lands at render column 43 — inside the box spanning cols 38–49, which is **Noah**. [L288](../../docs/agents.md#L288) states HC9 is Liam 💡 → **Isla** 🔍 | `▼` glyph positions on L242 = cols **43**, **64**; L243 box spans = `[2-13] [20-31] [38-49] [56-67]` |
-| **A2** | [L243](../../docs/agents.md#L243) | **Four box tops opened, three closed.** The fourth (cols 56–67) has no body and no bottom | L243 = **68** render cols; L246 = **50** render cols |
-| **A3** | [L236-239](../../docs/agents.md#L236-L239) | Rows of the *same* box row measure **71 / 72 / 69 / 68** render columns. `│` edges drift up to **3** columns | L237 edges `[2,14,21,33,40,52,59,71]` vs L238 edges `[2,14,21,32,39,50,57,68]` — divergence begins at the 4th edge and grows |
-| **A4** | [L249](../../docs/agents.md#L249) | `▼ to Isla 🔍` points **downward** at col 22, while Isla's box is at the **top** of the diagram. The actual delivery is the `▲` at [L240](../../docs/agents.md#L240) col 7. Two contradictory renderings of one route | `▲` on L240 at cols **7**, **26**; `▼` on L249 at col **22** |
+| **A1** | [L242](../../docs/agents.md#L233-L255) | **The `HC9` arrow contradicts the contract table.** Its `▼` lands at render column 43 — inside the box spanning cols 38–49, which is **Noah**. [L288](../../docs/agents.md#L288) states HC9 is Liam 💡 → **Isla** 🔍 | `▼` glyph positions on L242 = cols **43**, **64**; L243 box spans = `[2-13] [20-31] [38-49] [56-67]`  **CLOSED by docs-1-2** — the ASCII art these cite no longer exists; the diagram is mermaid at `L233-255`. Anchors re-derived after the conversion, not before. |
+| **A2** | [L243](../../docs/agents.md#L233-L255) | **Four box tops opened, three closed.** The fourth (cols 56–67) has no body and no bottom | L243 = **68** render cols; L246 = **50** render cols  **CLOSED by docs-1-2** — the ASCII art these cite no longer exists; the diagram is mermaid at `L233-255`. Anchors re-derived after the conversion, not before. |
+| **A3** | [L236-239](../../docs/agents.md#L233-L255) | Rows of the *same* box row measure **71 / 72 / 69 / 68** render columns. `│` edges drift up to **3** columns | L237 edges `[2,14,21,33,40,52,59,71]` vs L238 edges `[2,14,21,32,39,50,57,68]` — divergence begins at the 4th edge and grows  **CLOSED by docs-1-2** — the ASCII art these cite no longer exists; the diagram is mermaid at `L233-255`. Anchors re-derived after the conversion, not before. |
+| **A4** | [L249](../../docs/agents.md#L233-L255) | `▼ to Isla 🔍` points **downward** at col 22, while Isla's box is at the **top** of the diagram. The actual delivery is the `▲` at [L240](../../docs/agents.md#L240) col 7. Two contradictory renderings of one route | `▲` on L240 at cols **7**, **26**; `▼` on L249 at col **22**  **CLOSED by docs-1-2** — the ASCII art these cite no longer exists; the diagram is mermaid at `L233-255`. Anchors re-derived after the conversion, not before. |
 
 Severity: **A1 = ACT-FAIL** (a reader routes to the wrong agent) · **A2, A4 = MISLEAD** · **A3 = ROT**
 
@@ -219,7 +242,9 @@ shape:
 | File | In scope | Assertions | Examined | Story | Findings |
 |------|----------|-----------:|----------|-------|----------|
 | `docs/development.md` | yes | — | **yes** | 1.1, 1.3 | 9 |
-| `docs/agents.md` | yes | — | **yes** | 1.2 | 4 |
+| `docs/agents.md` | yes | — | **yes** | 1.2 | 6 |
+| `_bmad/bme/_vortex/guides/VORTEX-TEAM-GUIDE.md` | yes | — | **yes** | 1.2 | 1 |
+| `_bmad/bme/_vortex/compass-routing-reference.md` | yes | — | **yes** | 1.2 | 2 |
 | `UPDATE-GUIDE.md` | yes | 37 | no | 1.4 | — |
 | `docs/faq.md` | yes | 20 | no | 1.4 | — |
 | `docs/host-framework-sync-playbook.md` | yes | 36 | no | 1.5 | — |
