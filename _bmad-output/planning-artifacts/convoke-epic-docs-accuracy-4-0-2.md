@@ -459,7 +459,7 @@ So that a security report reaches someone and a credit names the right person.
 
 **Acceptance Criteria:**
 
-**Given** `docs/testing.md`, `SECURITY.md`, `CREDITS.md`, `CODE_OF_CONDUCT.md`, `docs/what-convoke-brings-to-bmad-method.md`, and the two repository-facing assertions inside `docs/references.md`
+**Given** `docs/testing.md`, `SECURITY.md`, `CREDITS.md`, `CODE_OF_CONDUCT.md`, `docs/what-convoke-brings-to-bmad-method.md`, `README.md` (admitted 2026-09-11), and the two repository-facing assertions inside `docs/references.md`
 **When** the pinned script re-derives the assertion counts
 **Then** the counts are recorded using the same committed script Story 1.4 pins, and effort follows the count rather than the file list
 **And** every file — including one scoring zero — has each of its counted assertions individually marked checked or reported as a finding. A file may be *quick*; it may not be *skipped*, and a zero-assertion file is recorded as `0` with the script output as its evidence.
@@ -474,7 +474,7 @@ So that a security report reaches someone and a credit names the right person.
 
 **Given** the pass is complete
 **When** the coverage table is updated
-**Then** all five files carry `Examined: yes` and a findings count.
+**Then** every file in this story's Given carries `Examined: yes` and a findings count — **derived from the coverage table, not from a number written here.** (Was "all five files"; corrected 2026-09-11 when `README.md` was admitted, which made the literal count wrong. If the pending CHANGELOG ruling admits `CHANGELOG.md`, it joins this story and the phrasing still holds — that is why it no longer names a number.)
 
 **Definition of Done**
 

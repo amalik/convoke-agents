@@ -42,10 +42,12 @@ Ask the contributor what they want to do. Listen for natural language descriptio
 ### For Phase 3 Workflows (Not Yet Available)
 
 Display:
-> "Add Agent and Add Skill workflows are planned for Phase 3 of the Team Factory. For now, you can:
-> 1. Use the Architecture Reference ([AR] from the menu) to understand what's needed
-> 2. Use BMB (Bond) to generate individual agent or workflow files
-> 3. Manually wire integration following the reference checklist"
+> "Add Agent and Add Skill workflows are planned for Phase 3 of the Team Factory. They do not ship yet,
+> and there is no supported path that does the wiring for you.
+>
+> To extend a team by hand, work from an existing agent in the team you are extending — copy its file,
+> its registry entry and its contract, and follow the same shape. `_bmad/bme/_vortex/` and
+> `_bmad/bme/_gyre/` are the two worked examples that ship with the package."
 
 ### Resume Mode
 

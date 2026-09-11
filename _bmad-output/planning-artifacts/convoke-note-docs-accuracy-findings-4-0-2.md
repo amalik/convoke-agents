@@ -36,6 +36,14 @@ inputDocuments:
 > Until Story 1.7 lands that: treat every number here as *indicative of the finding, not of the
 > figure*, and re-derive from the tree before acting on any of them. The findings themselves were each
 > verified by execution and stand; only their arithmetic and their anchors are suspect.
+>
+> **CARVE-OUT — a story recording its OWN findings is not covered by this freeze.** The freeze exists
+> to stop derived figures being hand-corrected into staleness *by a story that does not own them*. It
+> must not stop a story doing its job: when a derivation pass finds N findings in the file it owns, it
+> **must** write N and set `Examined: yes` (FR10), and it should re-derive that file's line count while
+> it is there. What remains frozen is everything the story does **not** own — the tier totals, the
+> aggregate findings count, the scope-wide line figures, and every `#L<n>` anchor into a file the story
+> is not editing. Rule of thumb: **derive and write your own row; do not hand-fix anyone else's.**
 
 
 ## Why this note exists
