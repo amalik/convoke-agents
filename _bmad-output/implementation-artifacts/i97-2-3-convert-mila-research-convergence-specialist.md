@@ -231,7 +231,7 @@ Per-agent PR checklist (12 items, one per AC1–AC12) + 12 carry-forward binding
   - [x] 7.5 Natural commit point reached
 
 - [-] **Task 8 — Capture post-migration personality samples + operator scoring** (Activity 8) (AC11) — **HALT: operator handoff required (8.1, 8.3, 8.4, 8.5)**
-  - [ ] 8.1 Operator handoff: open fresh session, invoke `/bmad-agent-bme-research-convergence-specialist`, run fixed-prompt set + unscripted scenario per existing fixtures — **PENDING OPERATOR**
+  - [x] 8.1 Operator handoff: open fresh session, invoke `/bmad-agent-bme-research-convergence-specialist`, run fixed-prompt set + unscripted scenario per existing fixtures — **CAPTURED 2026-09-10**, committed `8be05be3`. Both fixtures filled, zero `TBD` remaining. See §Capture record below.
   - [x] 8.2b **Scoring report skeleton pre-staged 2026-08-28** at [`convoke-report-personality-rubric-scoring-mila-conversion-2026-08-28.md`](../planning-artifacts/convoke-report-personality-rubric-scoring-mila-conversion-2026-08-28.md) — frontmatter `status: pending-operator-confirmation` + `status_transition` (CF #8); capture protocol, persona fingerprint, 7-dim grid, gate table, and the CF #1/#3/#7/#12 determination tables laid out with prior Emma/Wade observations pre-filled as history. **Every judgment field is deliberately empty** — a score written by the dev agent is the bias the handoff exists to prevent. Filename uses the real creation date, not the 2026-05-03 the spec predicted.
   - [x] 8.2c **Stale `capture_date` corrected in both post-migration fixtures 2026-08-28** — both were pre-stamped `2026-05-03` on a same-day-capture assumption that did not hold; now `FILL-AT-CAPTURE` with the CF #11 rationale inline. A stale pre-filled date is the CF #11 failure mode, not compliance with it.
   - [x] 8.2 Pre-created [`post-migration-fixed-prompt.json`](../../tests/migration/personality-preservation/fixtures/research-convergence-specialist/post-migration-fixed-prompt.json) (7 prompts MI-FP1..MI-FP7 with TBD response fields; **CF #11 binding:** `capture_date: 2026-05-03` filled, `capture_session_id` flagged for fill-at-capture-time) and [`post-migration-unscripted-scenario.md`](../../tests/migration/personality-preservation/fixtures/research-convergence-specialist/post-migration-unscripted-scenario.md) (legal-tech opening turn from baseline + 3rd-observation carry-forward callouts)
@@ -313,6 +313,28 @@ Carry forward Stories 2.1 + 2.2's discipline: when scoring Mila's personality, t
 
 Per epic AR17 #6: if Mila scoring surfaces ambiguity (especially around D5 Failure Handling — she has distinctive uncertainty-acknowledgment patterns: "we don't have enough sources to triangulate yet"), pause + re-calibrate. Do NOT silently re-tune the rubric mid-story; open a backlog row at I97 epic note per the rubric's anti-silent-retune rule.
 
+
+---
+
+### Capture record — Task 8.1, 2026-09-10 (`8be05be3`)
+
+**Both evidence sources captured after 130 days. Scoring (8.3) remains open.**
+
+- **Fixed prompts** — `post-migration-fixed-prompt.json`: 7/7 responses (MI-FP1..MI-FP7), 1,195–2,061 chars each, zero `TBD` placeholders.
+- **Unscripted scenario** — `post-migration-unscripted-scenario.md`: 8 turns, natural closure at turn 8, opening turn used verbatim from baseline so the side-by-side stays meaningful. Operator turns escalate deadline pressure per the D3/D6 protocol without leading toward expected patterns.
+- **CF #11 honoured:** `capture_date: 2026-09-10` (the real date, not the `2026-05-03` the spec predicted), and `capture_session_id` records the independence position rather than a bare id.
+
+**Two carry-forwards settled by COUNT, not judgement — these do not need the scorer:**
+
+- **CF #1 (cross-agent escalation, D5): PRESERVED.** In 20,786 chars of Mila's own words: Isla ×4, Liam ×4, Emma ×2, and she routes to Isla explicitly when upstream evidence is thin (MI-FP4, T8). Emma regressed, Wade preserved, Mila preserved → **2-of-3 preserved**, hardening the agent-specific-to-Emma reading.
+- **CF #3 (stage directions, D2): ZERO** across all 7 responses and 8 turns; baseline also zero. Emma had them throughout, Wade zero, Mila zero → **2-of-3 absent**, same reading hardens.
+
+**CF #7 (D6 outperforms baseline) and CF #12 (persona-vs-transcript match) still require the scorer** — both are judgement, not counting.
+
+**Independence position, stated so the scorer can weigh it.** The conversion was authored 2026-05-03 by Claude Opus 4.7; this capture was driven 2026-09-10 by Claude Opus 5 via `bmad-dev-story`, 130 days later. That is **better** than the same-LLM case CF #8 was written for — different model, different session — but **not clean**: same vendor and family, and the capturing agent had read this story's own PASS self-assessment earlier in the same session, which is priming. **Recommendation on record: the capturing agent should not also score.** CF #8's `pending-operator-confirmation` covers a caveated score, but it was written for one caveat and there are now three.
+
+**Blocker for 8.3 removed 2026-09-10:** the personality harness could not parse any fixture — 9 of 10 were invalid JSON (raw newlines plus unescaped inner quotes), so `runPersonalityCheck` threw for every agent and it had never executed since it shipped. 7 repaired and verified on four axes (prompt count, id↔response pairing, containment, tail-match); harness now runs for 6 of 7 agents. Mila's baseline is among the repaired and verified. Recorded as `T135`.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -393,3 +415,4 @@ Amelia (dev) — Claude Opus 4.7 (1M context). **Same-LLM-bias caveat:** dev age
 |------|--------|-----|
 | 2026-05-02 | Story spec authored by Bob via `bmad-create-story` workflow. Status: ready-for-dev. **Lean version of Wade's spec** (which was lean version of Emma's POC) — Wade-pattern reference + Mila-specific deltas + 12 calibration carry-forwards explicitly bound at AC18 (6 from Story 2.1 + 6 NEW from Story 2.2 Round 1 code review). Estimate: ~1-1.5 hr dev + ~30 min operator capture (Mila has 3 capabilities — fewer than Wade's 5; cycle proven on 3rd application). | Bob (SM) |
 | 2026-05-03 | Status: in-progress. Tasks 1-7, 8.2, 9, 10, 11 complete. SKILL.md converted to v6.3+ (zero XML, BMB-canonical name, all 5 v5 principles preserved); 3 capability prompts authored (Pattern-C-friendly, 21 lines each) with explicit cross-agent escalation hooks (CF #1: Isla/Liam/Wade/Max named); module.yaml + module-help.csv updated (real descriptions, no TBD); wrapper inheritance verified (Story 2.1 OC-R5 fix carries forward); 9 Mila parity tests added (27/27 with Emma + Wade); audit citations N/A; reference-integrity 0 broken; lint exit 0; 27 + 120 + 681 tests green; OC-R0..R7 self-check all PASS (R3+R5 inherit Story 2.1; cleaner OC-R4 than Wade — no placeholder chains). CF #11 satisfied at Task 8.2 (capture_date filled). HALT at Task 8.1/8.3 for operator personality scoring; CF #8 binding sets scoring frontmatter `status: pending-operator-confirmation` until D7 confirmed at PR review. Calibration: ~1 hr dev work (vs Wade's ~1.5-2 hr — tooling maturation curve continues; recommend 2.4-2.7 estimate at 1-2 hr range based on capability count). | Amelia (dev) |
+| 2026-09-10 | Task 8.1 complete after 130 days (`8be05be3`) — both fixtures captured, zero `TBD`. CF #1 (cross-agent routing PRESERVED) and CF #3 (stage directions ZERO) settled by count. CF #7 and CF #12 still need the scorer. Independence position recorded: capture driven by a different model in a different session 130 days after the conversion, but primed by this story's own self-assessment — the capturing agent should not also score. Harness blocker removed (`T135`). Task 8.3 remains open. |
