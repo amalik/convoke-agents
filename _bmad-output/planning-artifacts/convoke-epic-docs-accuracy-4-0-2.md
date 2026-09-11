@@ -41,10 +41,21 @@ Story 5 wires the gate and lands last, the same shape `dist-epic-2` used.
 
 **Size.** 5 stories over 14 files. Deliberately excludes the remaining warm tier (written
 during `dist-epic-2`, low expected yield) and five vision/draft/snapshot documents held to the
-wrong bar by a present-tense accuracy pass. **Amended 2026-09-11:** `README.md` and `CHANGELOG.md`
-were admitted to scope after Story 1.1's Round 1 review falsified the warm-tier exclusion for the
-D2 class; the file count moved 12 → 14 and the ~3,191-line figure, which was always a scope number
-rather than a findings count, is superseded by the per-file coverage table in the findings note.
+wrong bar by a present-tense accuracy pass. **Amended 2026-09-11, narrowed at Round 2:** `README.md` is admitted to scope after Story 1.1's
+Round 1 review falsified the warm-tier exclusion for the D2 class (file count 12 → 13; `README.md`
+is 167 lines, so the ~3,191-line scope figure becomes ~3,358).
+
+**`CHANGELOG.md` is NOT admitted, and the question is referred to the operator.** Round 2 established
+that the repository already codifies the opposite ruling: `scripts/docs-audit.js:541-542` deliberately
+skips CHANGELOG's stale-reference and broken-path checks because *"historical entries reference files
+that may have been deleted or renamed in past versions"*, and the findings note exempts dated
+historical records on the same reasoning. Round 1's remediation rewrote two shipped-release entries
+and, in doing so, asserted that `step-add-agent.md` and `step-add-skill.md` "have never existed" —
+**which is false.** Stories `tf-3-1` and `tf-3-2` (both `done`, `tf-epic-3: done`) created both files
+in `.claude/skills/bmad-team-factory/`, which `.gitignore:62` excludes; the claim was derived from a
+git-path search structurally blind to that directory — the **NFR8** error, committed in the same
+commit that amended this epic. Both CHANGELOG entries were reverted 2026-09-11. Whether a changelog
+enters a present-tense derivation pass is an operator ruling, not a story-authored amendment.
 
 ## Requirements Inventory
 
@@ -125,7 +136,7 @@ Derived from `project-context.md` and the existing release machinery, in place o
   | Coverage denominator (FR8/FR10) | **Extension** to `docs-audit.js`; the in-scope column is derived from the filesystem minus a declared exclusion list, so a new document appears in the table unexamined on its own |
   | Diagram geometry + routing (FR2a) | **One new script**, both checks in one file |
 - **`.claude/skills/` is gitignored and is not a valid evidence basis.** See NFR8. Any story resolving a slash command must derive it from `scripts/update/lib/agent-registry.js`.
-- **A pre-mortem and a roundtable were run on this epic before story creation** (2026-09-10). The roundtable produced FR3a (the source-of-truth rule), FR4a (assertion-density calibration, replacing a lines-based estimate that would not extrapolate across this corpus), and the tooling inventory above — including the cancellation of a tree generator nobody needed once the claim was reduced. The pre-mortem produced FR2a, FR8a, FR10, NFR8 and the NFR3 DoD clause. Seven failure paths were worked backwards; the warm-tier scope exclusion was tested and not falsified **for D1** — no D1-class defect resolves wrongly in `README.md`, `INSTALLATION.md` or `CONTRIBUTING.md`. **Amended 2026-09-11 (Story 1.1 Round 1 review): the exclusion WAS falsified for D2.** The pre-mortem tested the warm tier by resolving slash *commands*; it never tested capability *claims*. `README.md` and `CHANGELOG.md` both advertised a capability `step-00-route.md:42` explicitly refuses to run, and `CHANGELOG.md` named two workflow files that have never existed. Both files are now **in scope** with coverage rows owned by Story 1.6. Read the original sentence as scoped to the one defect class it actually tested. That exclusion's premise ("recently edited implies accurate") remains weak: `development.md` was edited 16 days before carrying seven findings.
+- **A pre-mortem and a roundtable were run on this epic before story creation** (2026-09-10). The roundtable produced FR3a (the source-of-truth rule), FR4a (assertion-density calibration, replacing a lines-based estimate that would not extrapolate across this corpus), and the tooling inventory above — including the cancellation of a tree generator nobody needed once the claim was reduced. The pre-mortem produced FR2a, FR8a, FR10, NFR8 and the NFR3 DoD clause. Seven failure paths were worked backwards; the warm-tier scope exclusion was tested and not falsified **for D1** — no D1-class defect resolves wrongly in `README.md`, `INSTALLATION.md` or `CONTRIBUTING.md`. **Amended 2026-09-11 (Story 1.1 Round 1 review): the exclusion WAS falsified for D2.** The pre-mortem tested the warm tier by resolving slash *commands*; it never tested capability *claims*. `README.md` advertised a capability `step-00-route.md:42` explicitly refuses to run, and was corrected. **`CHANGELOG.md` is NOT admitted by this amendment** — see the ruling note below. Read the original sentence as scoped to the one defect class it actually tested. That exclusion's premise ("recently edited implies accurate") remains weak: `development.md` was edited 16 days before carrying seven findings.
 
 ### UX Design Requirements
 

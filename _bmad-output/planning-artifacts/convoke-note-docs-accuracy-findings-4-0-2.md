@@ -15,6 +15,29 @@ inputDocuments:
 
 # Documentation Accuracy — Derived Findings for 4.0.2
 
+
+> ## ⚠ Derived figures and line anchors in this document are FROZEN and unverified — 2026-09-11
+>
+> **Do not trust, cite, or hand-correct any count or `#L<n>` anchor below this banner.** Two review
+> rounds on Story 1.1 established that hand-maintained derived values in this note fail the same way
+> every time: a value gets corrected in one place and stales in the two others derived from it, and a
+> line anchor gets repaired by search-and-place without re-deriving whether the finding it points at
+> still holds. Round 2 found `12`-file assertions standing beside a 13-row table, `1,355` and `3,191`
+> stale by the same 8 lines that `743 → 751` corrected, and D3's anchor repointed onto the very text
+> that resolves D3 — a finding now false against its own citation.
+>
+> This is `derive-counts-from-source` failing inside the document that governs it. Per
+> `code-review-convergence` ("change the instrument, not patch again" — two failed attempts predict a
+> third), **further hand-patching of these values is suspended.** The replacement is already specified
+> by this epic's Tooling line (FR8/FR10): a `docs-audit.js` extension deriving the in-scope column and
+> its line counts from the filesystem, plus **content-addressed citations** — section anchor and the
+> quoted claim text — so a finding row cannot silently outlive the line it describes.
+>
+> Until Story 1.7 lands that: treat every number here as *indicative of the finding, not of the
+> figure*, and re-derive from the tree before acting on any of them. The findings themselves were each
+> verified by execution and stand; only their arithmetic and their anchors are suspect.
+
+
 ## Why this note exists
 
 The operator found two stale spots by eye on 2026-09-10 (`docs/development.md`, the
@@ -131,7 +154,7 @@ either; expect its yield per 100 lines to be higher, not lower.
 | `lifecycle-expansion-vision.md` | 459 | Vision artifact |
 | `lifecycle-expansion-references.md` | 379 | Sibling of the above; same treatment |
 | `codebase-audit-2026-06-27.md` | 526 | **Dated historical snapshot.** Holding a record of what was true on 2026-06-27 to present-tense accuracy is the wrong bar — `verification-claims-must-name-their-evidence` exempts prose recording history. Check only that nothing **cites** it as current |
-| Warm tier (Sep 4–8): `INSTALLATION`, `CONTRIBUTING`, `npm-publishing-access-playbook`, `pre-tag-release-checklist` | — | Written during `dist-epic-2`; low expected yield. `pre-tag-release-checklist.md` re-enters scope as Story 5's **subject**. **`README.md` and `CHANGELOG.md` left this tier on 2026-09-11** — both carried live D2 claims, and `CHANGELOG.md` additionally named two files that never existed. The exclusion was tested against slash *commands* only; capability *claims* were never tested |
+| Warm tier (Sep 4–8): `INSTALLATION`, `CONTRIBUTING`, `npm-publishing-access-playbook`, `pre-tag-release-checklist` | — | Written during `dist-epic-2`; low expected yield. `pre-tag-release-checklist.md` re-enters scope as Story 5's **subject**. **`README.md` left this tier on 2026-09-11** — it carried a live D2 claim, and the exclusion had been tested against slash *commands* only, never against capability *claims*. **`CHANGELOG.md` did NOT** — Round 2 referred it to an operator ruling instead; `scripts/docs-audit.js:541-542` already exempts it as a historical record |
 
 The five vision/draft/snapshot files carry a **separate, non-blocking finding**: they sit in
 `docs/` alongside published documentation with nothing marking them as drafts. Relocation or
@@ -200,7 +223,6 @@ shape:
 | `CREDITS.md` | yes | 0 | no | 1.6 | — |
 | `CODE_OF_CONDUCT.md` | yes | 0 | no | 1.6 | — |
 | `README.md` | yes | — | no | 1.6 | — |
-| `CHANGELOG.md` | yes | — | no | 1.6 | — |
 
 **Cross-file closures made by Story 1.1 — these files are NOT examined.** D1 and D2 each appeared in more
 files than the one the epic anchored them to. Story 1.1 *edited* `docs/faq.md`, `UPDATE-GUIDE.md` and
@@ -219,12 +241,17 @@ still own them.
   **Class not closed:** `/bmad-bmb-agent`, `/bmad-bmb-module` and `/bmad-bmb-workflow` are the same
   ACT-FAIL class and remain live at `docs/faq.md:131-135` and `docs/agents.md:357` — deferred, see
   `deferred-work.md`. Stories 1.4 and 1.2 own them.
-- D2 (unshipped Add Agent / Add Skill) closed at `docs/development.md:79`, `README.md:100`,
-  `UPDATE-GUIDE.md:73`, and — by the Round 1 remediation — `UPDATE-GUIDE.md:70`,
-  `docs/BMAD-METHOD-COMPATIBILITY.md:105`, `CHANGELOG.md:217` and `CHANGELOG.md:271`.
-  Enumerating pattern of record: `grep -rniE '\badd' <files> | grep -iE 'agent|skill'` (high-recall,
-  hand-filtered for false positives per `catch-all-phase-review`). The space-separated pattern is
-  insufficient and must not be reused.
+- D2 (unshipped Add Agent / Add Skill) is closed at **5 locations across 4 files**, verified at HEAD:
+  `docs/development.md:79`, `README.md:100`, `UPDATE-GUIDE.md:70`, `UPDATE-GUIDE.md:73`,
+  `docs/BMAD-METHOD-COMPATIBILITY.md:105`.
+  **The class is NOT closed.** Round 2 found live instances at `CREDITS.md:36` (which *ships* —
+  `package.json` `files[]`), `docs/BMAD-METHOD-COMPATIBILITY.md:162`, `UPDATE-GUIDE.md:75`,
+  `CHANGELOG.md:217`, `:271` and `:273`. Three of those contain no `add` token at all, so **no
+  tuning of any grep reaches them** — see `deferred-work.md`.
+  **No pattern is recorded here as authoritative.** Two have now failed in succession: the
+  space-separated original (blind to hyphens) and its high-recall replacement (blind to a hardcoded
+  file list, and to claims phrased without the word "add"). Enumerating this class is referred to
+  Story 1.7's tooling, not to a third grep.
 
 **`README.md` was out of scope and had to be edited anyway.** It advertised a capability
 `_bmad/bme/_team-factory/workflows/step-00-route.md:42` explicitly refuses to run, in the highest-traffic

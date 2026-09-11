@@ -33,6 +33,13 @@ so that I do not lose an afternoon to an invocation the package never shipped.
 **And** where a document mentions them at all, it states they are **not yet available** and points at the same three alternatives the router offers — the product and the documentation must not disagree about what exists
 **And** `grep -rniE 'add (an )?agent|add (a )?skill' README.md INSTALLATION.md CONTRIBUTING.md docs/*.md UPDATE-GUIDE.md` returns no surviving claim of availability.
 
+> ⚠ **This AC's verification command is DISCREDITED — do not re-run it as written.** It requires a
+> space between verb and noun; the corpus uses hyphens (`add-agent`), nominalizations ("skill
+> addition") and claims with no `add` token at all. It ran green over live defects. Its replacement
+> was also retired at Round 2. See §Round 1 Remediation Record and §Round 2. The Debug Log entry
+> below headed *"AC2 — the grep went blind, and was fixed"* records a fix that was itself
+> insufficient, and the Completion Note claiming "D2 closed in 3 files" is superseded.
+
 **AC3 — D3: the agent-file naming convention is stated once and is true for both teams.**
 
 **Given** `docs/development.md:52` demonstrates `cp _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md …` while `:83` states the convention as `` `discovery-empathy-expert.md` ``, and both are true — of different teams
@@ -291,7 +298,18 @@ that neither the original nor the hyphenated pattern sees.
 ### The pattern of record
 
 The AC2 pattern is retired. It required a space between verb and noun; the corpus uses hyphens,
-nominalizations and passives. Replacement is high-recall plus a hand-filter, per `catch-all-phase-review`:
+nominalizations and passives.
+
+> **Round 2: the replacement is retired too, and no successor is proposed.** The pattern below is
+> high-recall over a **hardcoded file list**, and Round 2 found a live, *shipping* D2 claim it cannot
+> see for that reason alone — `CREDITS.md:36` ("adds agents to existing teams"), which is in
+> `package.json` `files[]` but not in the list. Three further instances contain **no `add` token at
+> all**, so no tuning of this shape reaches them. Two greps have now failed in succession at the same
+> job. Per `code-review-convergence`, the response is to change the instrument, not to write a third
+> pattern — enumerating this class is referred to Story 1.7's filesystem-derived tooling. The command
+> below is retained **only** as the record of what was run in Round 1, not as a pattern of record.
+> Note also that it is `grep -vE`-filtered by **line**, so a genuine claim containing "additional" is
+> silently dropped.
 
 ```
 grep -rniE '\badd' README.md INSTALLATION.md CONTRIBUTING.md UPDATE-GUIDE.md CHANGELOG.md docs/*.md \
@@ -311,10 +329,21 @@ $ sed -n '70p' UPDATE-GUIDE.md | grep -iE '\badd' | grep -icE 'agent|skill'     
 ### D2 closures — five instances, not three
 
 `docs/development.md:79`, `README.md:100`, `UPDATE-GUIDE.md:73` (Story 1.1 as shipped), plus
-`UPDATE-GUIDE.md:70`, `docs/BMAD-METHOD-COMPATIBILITY.md:105`, `CHANGELOG.md:217` and
-`CHANGELOG.md:271` (Round 1). `CHANGELOG.md` additionally named `step-add-agent.md` and
-`step-add-skill.md`, two files that have never existed (`find _bmad -name 'step-add-*.md' | wc -l` → `0`),
-in a file that ships in the npm tarball.
+`UPDATE-GUIDE.md:70` and `docs/BMAD-METHOD-COMPATIBILITY.md:105` (Round 1) — **5 locations across
+4 files**, verified at HEAD.
+
+> **Corrected at Round 2, twice.** (a) The heading said "five instances" over a list of seven
+> locations in five files; instances and files are not the same unit. (b) The two `CHANGELOG.md`
+> edits were **reverted** — operator ruling 2026-09-11 — and with them a **false claim I introduced**:
+> that `step-add-agent.md` and `step-add-skill.md` "have never existed". **They existed.** Stories
+> `tf-3-1` and `tf-3-2` created both in `.claude/skills/bmad-team-factory/`, and `sprint-status.yaml`
+> records `tf-epic-3: done`; `.gitignore:62` (`.claude/skills/*`) excludes that directory, so the
+> `find _bmad -name 'step-add-*.md'` basis was **structurally blind to where the files were written**.
+> That is exactly **NFR8** — the evidence-basis rule — broken in the same commit that amended the epic
+> stating it. The supportable claim is "were never packaged or installable"; the absolute was not.
+> `CHANGELOG.md`'s admission to scope is referred to an operator ruling: `scripts/docs-audit.js:541-542`
+> already exempts it as a historical record, and a story that breached a scope rule should not author
+> its own amendment.
 
 ### Second scope breach, disclosed
 
@@ -333,18 +362,101 @@ story modifies" is **vacuously true** — it inspected none of them. Per `commit
 is not evidence unless lint can go red on this change." The same applies to the "2258 pass / 0 fail"
 suite tally, which is a bare count, and to AC3's enumeration grep, which reported a result without
 naming a case that would have differed. `npm run docs:audit` remains correctly disclaimed as
-non-regression only. **The honest statement of this story's automated-gate coverage is: none of the
-repository's automated gates can fail on a documentation-content change.** That is the finding the
-epic exists to act on, and it should not be restated as a passing gate.
+non-regression only.
+
+> **Corrected at Round 2.** This paragraph previously ended: *"none of the repository's automated
+> gates can fail on a documentation-content change."* **That is false**, and it was an overstatement
+> of a true narrower claim. `scripts/docs-audit.js` has content checks — `checkBrokenLinks` (`:175`)
+> and `checkBrokenPaths` (`:224`) — and `.github/workflows/ci.yml:221` runs them. Proven by execution:
+> planting one nonexistent path and one dead relative link in `docs/development.md` produced
+> `2 findings across 1 files (1 broken-path, 1 broken-link)` and **exit 1** (reverted immediately;
+> tree verified clean). `npm run refs:audit` is likewise content-sensitive. The accurate statement is
+> the one the findings note already carried: the gates check **shape** — link and path resolution —
+> and nothing in this repository has an opinion about whether a sentence is **true**. That is the gap
+> the epic exists to close, and it is narrower than what this record claimed.
 
 ### AC status after remediation
 
 - **AC1** — instance closed and re-verified. **Class not closed**: `/bmad-bmb-*` survives at
   `docs/faq.md:131-135` and `docs/agents.md:357`, deferred to Stories 1.4 / 1.2.
-- **AC2** — now satisfied on both conjuncts. Five instances closed; `README.md:100` and
-  `UPDATE-GUIDE.md:73` now carry the router's three alternatives, which they previously omitted.
+- **AC2** — **NOT satisfied, corrected at Round 2.** The Round 1 record claimed both conjuncts were
+  met. They were not: the remediation enlarged the closure set from 3 locations to 7 and never
+  re-derived the second conjunct ("points at the same three alternatives") over the new denominator —
+  4 of the 7 never offered it. Worse, the alternatives themselves were **over-build**: `[AR]` resolves
+  to `_bmad-output/`, which is not in `package.json` `files[]`, and Convoke ships zero BMB files, so
+  both routes were dead for every installed user, and `/bmad-bmb-*` is recorded in this very review as
+  a broken class. **Operator ruling 2026-09-11: delete the clause** (`code-review-convergence` —
+  prefer deletion to a further rewrite). `README.md:100` and `UPDATE-GUIDE.md:73` now state
+  unavailability plainly and offer nothing, which is AC2's first conjunct only. **Whether AC2's second
+  conjunct is satisfiable at all is now an open question for Story 1.3/1.7** — the router offers three
+  routes and at least two of them do not exist for an installed operator.
 - **AC3** — was satisfied; unchanged. The naming table now carries a caveat routing the two
   known-false rows to Story 1.3. No forward-going naming policy was invented here.
 - **AC4** — the story's own violation is fixed: "One capability is available today" is replaced by
   a **two**-capability statement derived from `_bmad/bme/_team-factory/module-help.csv`, a named
   source that could have produced a different answer.
+
+
+## Round 2 Review — 2026-09-11
+
+Three independent blind layers against `06a452cd`, the Round 1 remediation. **~12 HIGH, and the
+large majority were defects in Round 1's own corrections rather than in the story under review.**
+All three layers reached that conclusion independently; every claim below was re-verified by
+execution before being recorded.
+
+### Verdict: the instrument was changed, not patched again
+
+`code-review-convergence`: *"If a round's HIGH findings are predominantly defects in the previous
+round's corrections rather than in the work under review, the next action is to change the
+instrument, not to patch again. Two failed attempts at the same fix predict a third."* That
+condition was met on two separate components, so no Round 3 patch list was produced.
+
+**Component 1 — the enumerating grep. Retired with no successor.** Round 1 found it blind to
+hyphens and replaced it. Round 2 found the replacement blind to its own hardcoded file list —
+`CREDITS.md:36` carries a live D2 claim, **ships in the npm tarball**, and is simply not in the
+list — and blind to three instances containing no `add` token at all, which no tuning reaches.
+Enumerating this class is referred to Story 1.7's filesystem-derived tooling.
+
+**Component 2 — hand-maintained counts and `#L<n>` anchors. Frozen.** Round 1 corrected
+`eleven→thirteen`, `141→149`, `743→751` and two anchors; Round 2 found `12`-file assertions still
+standing beside a 13-row table, `1,355`/`3,191` stale by the same 8 lines, and D3's anchor repaired
+onto the very text that *resolves* D3 — a live-looking finding over corrected prose, feeding a
+release gate. One **document-wide freeze banner** was added to the findings note instead of a third
+sentence-level sweep, following the ADR-003 precedent the rule itself cites.
+
+**Component 3 — over-build, deleted.** AC2's "three alternatives" conjunct led Round 1 to advertise
+`[AR]` and BMB in README and UPDATE-GUIDE. Neither resolves for an installed operator
+(`_bmad-output/` is not in `package.json` `files[]`; Convoke ships zero BMB files), and `/bmad-bmb-*`
+is recorded as broken in this same review. Operator ruling: **delete the clause.** Narrowing an
+implementation back to what the AC specifies is restoring scope, not cutting it — recorded here
+rather than done silently, as the rule requires.
+
+### Three false claims Round 1 introduced, all corrected in place
+
+1. **"no `step-add-agent.md` or `step-add-skill.md` was ever added"** — false. Both existed
+   (`tf-3-1`, `tf-3-2`, `tf-epic-3: done`) in gitignored `.claude/skills/`. The basis was a
+   `find _bmad` search blind to that directory: **NFR8**, broken in the commit that amended the epic
+   stating it. CHANGELOG entries reverted.
+2. **"none of the repository's automated gates can fail on a documentation-content change"** —
+   false, disproved by execution (planted broken path + link → `2 findings`, **exit 1**, `docs:audit`
+   runs in CI at `ci.yml:221`). A true narrow claim widened into a false one.
+3. **"AC2 now satisfied on both conjuncts"** — false. The closure set was enlarged 3 → 7 and the
+   conjunct never re-derived over the new denominator; 4 of 7 never offered the alternatives.
+
+### What survived Round 2 intact
+
+The **five genuine D2 closures** stand and were re-verified at HEAD. `CHANGELOG.md:217` really was a
+fifth instance invisible to both prior patterns. **All 15 Round 1 patches did land** — the Round 2
+findings are incompleteness and overstatement in three of them, not patches that never ran. AC4's fix
+is correct and correctly sourced. The `[AR]` filename repoint is kept as strictly better than a name
+that resolves nowhere, with the route's real breakage deferred. Status and sprint sync are correct.
+All five Round 1 deferrals name real defects with the right owners. And the whole-file staging hazard
+did **not** materialise in either commit: backlog row count 139 → 139, prior text preserved verbatim,
+`backlog-integrity.js` exit 0.
+
+### Stopping here
+
+`code-review-convergence` permits Round 3 only for structural changes, and caps at Round 4 — but the
+governing clause is the restructure rule, which has been applied. Residue is in `deferred-work.md`
+under this date, routed to Stories 1.6 and 1.7 and to two operator rulings (CHANGELOG scope; whether
+AC2's second conjunct is satisfiable at all when two of the router's three routes do not ship).
