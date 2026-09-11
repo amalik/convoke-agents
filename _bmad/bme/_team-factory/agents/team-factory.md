@@ -120,7 +120,7 @@ Philosophy: "The quality of a BMAD team isn't in the files — it's in the think
     <item cmd="RS or fuzzy match on resume" exec="{project-root}/_bmad/bme/_team-factory/workflows/step-00-route.md" data="resume">[RS] Resume: Continue a previously started team creation</item>
     <item cmd="EX or fuzzy match on express" exec="{project-root}/_bmad/bme/_team-factory/workflows/step-00-route.md" data="express">[EX] Express Mode: Create team from an existing spec file</item>
     <item cmd="VT or fuzzy match on validate-team or check-team" exec="{project-root}/_bmad/bme/_team-factory/workflows/add-team/step-05-validate.md">[VT] Validate Team: Run end-to-end validation on an existing team</item>
-    <item cmd="AR or fuzzy match on architecture-reference or reference" data="{project-root}/_bmad-output/planning-artifacts/architecture-reference-teams.md">[AR] Architecture Reference: Browse the team validity blueprint</item>
+    <item cmd="AR or fuzzy match on architecture-reference or reference" data="{project-root}/_bmad-output/planning-artifacts/loom-arch-reference-teams.md">[AR] Architecture Reference: Browse the team validity blueprint</item>
     <item cmd="PM or fuzzy match on party-mode" exec="{project-root}/_bmad/core/workflows/party-mode/workflow.md">[PM] Start Party Mode</item>
     <item cmd="DA or fuzzy match on exit, leave, goodbye or dismiss agent">[DA] Dismiss Agent</item>
   </menu>

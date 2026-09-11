@@ -214,7 +214,7 @@ Patch bump: portability-system hardening + bme agent coverage in catalog manifes
 - **Seed Catalog** — Seeds a complete catalog repository staging directory with all exportable skills, adapters, and catalog README.
 - **Export Validation** — Validates exported skill staging directories for structural correctness and BMAD-internal leaks.
 - **Platform Adapters** — Generates Claude (CLAUDE.md commands), GitHub Copilot (`.github/copilot-instructions.md`), and Cursor (`.cursor/rules/`) adapter files from exported skills.
-- **Team Factory module** — Now ships in the npm package (`_bmad/bme/_team-factory/`). Factory workflows for industrializing team, agent, and skill addition.
+- **Team Factory module** — Now ships in the npm package (`_bmad/bme/_team-factory/`). Factory workflows for industrializing team creation; agent and skill addition are planned for Phase 3 and do not ship.
 
 ### Changed
 
@@ -268,7 +268,7 @@ Patch bump: portability-system hardening + bme agent coverage in catalog manifes
 
 ### Added
 
-- **Team Factory extension workflows** — Add Agent (`step-add-agent.md`) and Add Skill (`step-add-skill.md`) workflows for extending existing teams and agents
+- **Team Factory extension groundwork** — appender-backed wiring for extending existing teams and agents. The Add Agent and Add Skill *workflows* themselves are planned for Phase 3 and did **not** ship in this release; no `step-add-agent.md` or `step-add-skill.md` was ever added
 - **Appender modules** — `registry-appender.js`, `config-appender.js`, `csv-appender.js` for automated wiring when adding agents or skills to existing teams
 - **Extension validator** — `validateSkillExtension()` and `buildSkillExtensionManifest()` for validating factory-generated extensions
 - **Multi-team docs-audit** — `checkStaleReferences()` now validates against all registered teams (Vortex + Gyre) instead of only Vortex, eliminating false positives for Gyre references

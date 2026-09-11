@@ -102,7 +102,7 @@ your-project/
 - Optional detection: BMAD Method config (bmad.yaml in _bmad/_config/)
 - Teams: Vortex (7 agents), Gyre (4 agents)
 - Skills: Enhance (initiatives-backlog)
-- Team Factory: guided team creation, add-agent, add-skill extensions
+- Team Factory: guided team creation (the `add-agent` and `add-skill` extensions are planned for Phase 3 and do not ship yet)
 
 ### Detection Logic
 

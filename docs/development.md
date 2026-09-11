@@ -74,7 +74,7 @@ Migrations live in `scripts/update/migrations/registry.js` (append-only).
 
 Use `/bmad-agent-bme-team-factory` for a guided workflow that handles the full creation process — composition pattern selection, agent scope definition, contract design, artifact generation, and integration wiring. The factory produces output that passes the same validation as native teams (Vortex, Gyre).
 
-One capability is available today: **Create Team** (new team from scratch).
+Two capabilities are available today — **Create Team** (a new team from scratch) and **Validate Team** (end-to-end validation of an existing team). Both are derived from the two rows in `_bmad/bme/_team-factory/module-help.csv`, which is what the module declares it offers.
 
 **Add Agent** and **Add Skill** are planned for Phase 3 and do not ship yet — `_bmad/bme/_team-factory/workflows/` contains `add-team/` only. Asked for either, the factory says so and routes you to the Architecture Reference (`[AR]` on its menu), to BMB (Bond) for generating individual agent or workflow files, and to manual integration wiring against the reference checklist.
 
@@ -90,6 +90,8 @@ directory form is what the clone recipe above copies.
 | Frontmatter name | Spaces, lowercase | `"discovery empathy expert"` |
 | Display name | First name | `name="Isla"` |
 | User guide | Uppercase first name | `ISLA-USER-GUIDE.md` |
+
+**Frontmatter name and Display name are team- and conversion-state-dependent**, and are open findings (D8, D9) owned by Story 1.3. The values above hold for Gyre and for unconverted Vortex agents; converted Vortex agents use a `bmad-bme-agent-<name>` frontmatter name and carry the display name as a heading rather than a `name="…"` attribute.
 
 See: [Emma Reference Implementation](../_bmad-output/_archive/exploratory/emma-reference-implementation-complete.md)
 

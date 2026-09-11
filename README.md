@@ -97,7 +97,7 @@ Teams do lifecycle jobs. These three do something different — they change what
 
 Skills are classified by tier: **standalone** exports cleanly, **light-deps** carries dependency notes, **pipeline** is flagged non-portable. Where that leaves Convoke today, precisely: **all 12 Convoke agents are `pipeline`** — every Vortex and Gyre agent, and Team Factory. Exporting one emits *"Framework-only skill. This skill depends on the full Convoke installation and cannot run standalone. […]"* The exception is the Enhance backlog skill, classified `light-deps`, which does export. So what travels cleanly today is the upstream BMAD skill set plus that one — not the teams. Making the teams portable is roadmap, not a shipped feature.
 
-**Team Factory — build your own team.** `/bmad-agent-bme-team-factory` walks you through composition pattern, agent scope with overlap detection, contract design and integration wiring, and persists the decisions as a resumable spec. Output passes the same validation as the native teams. Adding an agent to an existing team, or a skill to an existing agent, is planned for Phase 3 and not yet available.
+**Team Factory — build your own team.** `/bmad-agent-bme-team-factory` walks you through composition pattern, agent scope with overlap detection, contract design and integration wiring, and persists the decisions as a resumable spec. Output passes the same validation as the native teams. Adding an agent to an existing team, or a skill to an existing agent, is planned for Phase 3 and not yet available — asked for either, the factory routes you to the Architecture Reference (`[AR]` on its menu), to BMB (Bond) for generating individual agent or workflow files, and to manual integration wiring against the reference checklist.
 
 ---
 

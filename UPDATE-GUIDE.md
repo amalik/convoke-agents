@@ -67,10 +67,10 @@ npx -p convoke-agents convoke-doctor
 
 ### From v2.4.x to v3.0.0
 
-**Breaking changes:** Team Factory extension workflows (add-agent, add-skill) are new capabilities that change the module API surface.
+**Breaking changes:** The Team Factory appender modules (registry, config, CSV) are new capabilities that change the module API surface. The `add-agent` and `add-skill` workflows they were built for are planned for Phase 3 and did **not** ship — see below.
 
 What happens:
-- **Team Factory appender modules** — registry, config and CSV appenders (`_bmad/bme/_team-factory/lib/writers/`). The Add Agent and Add Skill workflows these were built for are planned for Phase 3 and did not ship in this release
+- **Team Factory appender modules** — registry, config and CSV appenders (`_bmad/bme/_team-factory/lib/writers/`). The Add Agent and Add Skill workflows these were built for are planned for Phase 3 and did not ship in this release. Asked for either, the factory routes you to the Architecture Reference (`[AR]` on its menu), to BMB (Bond) for generating individual agent or workflow files, and to manual integration wiring against the reference checklist
 - **Multi-team docs-audit** — Audit tool now validates against all registered teams (Vortex + Gyre), not just Vortex
 - **Extension validator** — New validation for factory-generated agent and skill extensions
 

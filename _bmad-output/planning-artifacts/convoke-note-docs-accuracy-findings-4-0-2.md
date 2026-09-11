@@ -36,7 +36,7 @@ set -o pipefail; npm run docs:audit >/dev/null 2>&1; echo "EXIT: $?"   # => EXIT
 
 It is not broken. It checks *shape* — stale references, broken links, broken paths, docs
 coverage, incomplete agent tables, internal naming leaks, stale brand references
-(`scripts/docs-audit.js:59-457`). All eleven findings below survive it, because none of them
+(`scripts/docs-audit.js:59-457`). All thirteen findings below survive it, because none of them
 is a shape defect. This is `documentation-claims-must-be-derived` stated as a measurement:
 *nothing in this repository has an opinion about whether a sentence is true.*
 
@@ -46,7 +46,7 @@ it stands **cannot refuse a tag over documentation content**, and no gate can be
 does. The only enforceable form is a recorded derivation pass — a checklist step asserting a
 signed findings artifact exists for the release SHA. That is Story 5's subject.
 
-## Findings — `docs/development.md` (141 lines)
+## Findings — `docs/development.md` (149 lines)
 
 Severity key: **ACT-FAIL** = a reader follows the doc and the action fails · **MISLEAD** = the
 reader forms a false belief but nothing breaks · **ROT** = stale marker, no reader impact.
@@ -55,13 +55,13 @@ reader forms a false belief but nothing breaks · **ROT** = stale marker, no rea
 |----|------|------------------|---------|----------|
 | **D1** | [L75](../../docs/development.md#L75) | Use `/bmad-team-factory` | Installed skill is `bmad-agent-bme-team-factory`; the command as written does not exist | `sed -n '219p;230p' scripts/update/lib/agent-registry.js` → `id: kebab-case identifier (becomes bmad-agent-bme-{id})` + `id: 'team-factory'` |
 | **D2** | [L77](../../docs/development.md#L77) | "Three capabilities: **Create Team**, **Add Agent**, **Add Skill**" | Only Create Team shipped | `ls -1 _bmad/bme/_team-factory/workflows/` → `add-team`, `step-00-route.md`. Matches P25 (unshipped Phase 3, TF-FR25/26) |
-| **D3** | [L52](../../docs/development.md#L52) vs [L83](../../docs/development.md#L83) | Clone recipe uses `contextualization-expert/SKILL.md`; naming table says agent file is `discovery-empathy-expert.md` | **Both half-right, and mutually contradictory.** Vortex agents are `<dir>/SKILL.md`; Gyre agents are flat `.md`. The file states one convention and demonstrates the other | `ls -1 _bmad/bme/_vortex/agents/contextualization-expert/` → `SKILL.md`, `references`  ·  `ls -1 _bmad/bme/_gyre/agents/` → 4 flat `.md` files |
+| **D3** | [L52](../../docs/development.md#L52) vs [L88](../../docs/development.md#L88) | Clone recipe uses `contextualization-expert/SKILL.md`; naming table says agent file is `discovery-empathy-expert.md` | **Both half-right, and mutually contradictory.** Vortex agents are `<dir>/SKILL.md`; Gyre agents are flat `.md`. The file states one convention and demonstrates the other | `ls -1 _bmad/bme/_vortex/agents/contextualization-expert/` → `SKILL.md`, `references`  ·  `ls -1 _bmad/bme/_gyre/agents/` → 4 flat `.md` files |
 | **D4** | [L13](../../docs/development.md#L13) | "**XML-based** agent structure" — stated for *all* agents | False for the v6.3-converted agents | `grep -c '<agent\|```xml' <agent>/SKILL.md` → Emma **0**, Wade **0**, Isla **2**. 3/7 converted (I97 Epic 2), so the blanket claim is wrong either way |
 | **D5** | [L9](../../docs/development.md#L9), [L21](../../docs/development.md#L21) | "Agent Architecture Framework (**v1.1.0**)", "Update System (**v1.4.0+**)" | Product is **4.0.2** | `grep -n '"version"' package.json` → `4.0.2` |
 | **D6** | [L69-70](../../docs/development.md#L69-L70) | "**39** scenarios", "**18** critical scenarios minimum" | Hardcoded counts with no derivation — `derive-counts-from-source` class | No source cited in the doc; counts not recomputed here (see Not Covered) |
-| **D7** | [L96-119](../../docs/development.md#L96-L119) | Project Structure tree lists `_vortex`, `_gyre`, `_enhance` | `_bmad/bme/` holds **8** directories; `_team-factory`, `covenant`, `_artifacts`, `_config`, `_portability` are all absent from the tree | `ls -1d _bmad/bme/*/` → 8 entries |
-| **D8** | [L90](../../docs/development.md#L90) | "Frontmatter name — Spaces, lowercase — `"discovery empathy expert"`", stated as universal | True for **Gyre only**. Vortex is three-way: converted agents use `bmad-bme-agent-emma`, unconverted use `discovery-empathy-expert`, Gyre uses `"stack detective"` | `grep -m1 '^name:' _bmad/bme/_vortex/agents/{contextualization-expert,discovery-empathy-expert}/SKILL.md _bmad/bme/_gyre/agents/stack-detective.md` |
-| **D9** | [L91](../../docs/development.md#L91) | "Display name — First name — `name="Isla"`", stated as universal | The `name="…"` XML attribute exists only in **unconverted** agents. Converted agents carry the display name as an `# Emma` heading — `grep -n 'name="' …/contextualization-expert/SKILL.md` returns nothing | `grep -nE 'name="\|^# ' _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md` |
+| **D7** | [L102-127](../../docs/development.md#L102-L127) | Project Structure tree lists `_vortex`, `_gyre`, `_enhance` | `_bmad/bme/` holds **8** directories; `_team-factory`, `covenant`, `_artifacts`, `_config`, `_portability` are all absent from the tree | `ls -1d _bmad/bme/*/` → 8 entries |
+| **D8** | [L90](../../docs/development.md#L90) | "Frontmatter name — Spaces, lowercase — `"discovery empathy expert"`", stated as universal | True for **Gyre only** (`"stack detective"`). Vortex is two-way: converted agents use `bmad-bme-agent-emma`, unconverted use `discovery-empathy-expert` | `grep -m1 '^name:' _bmad/bme/_vortex/agents/{contextualization-expert,discovery-empathy-expert}/SKILL.md _bmad/bme/_gyre/agents/stack-detective.md` |
+| **D9** | [L91](../../docs/development.md#L91) | "Display name — First name — `name="Isla"`", stated as universal | The `name="…"` XML attribute exists only in **unconverted** agents. Converted agents carry the display name as an `# Emma` heading — `grep -n 'name="' …/contextualization-expert/SKILL.md` returns nothing | `grep -nE 'name="|^# ' _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md` → `6:# Emma` |
 
 Severity: **D1, D2, D3 = ACT-FAIL** · **D4, D8, D9 = MISLEAD** · **D5, D6, D7 = ROT**
 
@@ -118,7 +118,7 @@ only. The scope ruling of 2026-09-10 puts twelve files in the derivation pass:
 | Cold (Feb–Apr, survived two releases untouched) | `faq.md`, `testing.md`, `BMAD-METHOD-COMPATIBILITY.md`, `references.md`, `what-convoke-brings-to-bmad-method.md`, `CODE_OF_CONDUCT.md` | 1,836 |
 | Mid (Aug 15–26) | `development.md`, `agents.md`, `UPDATE-GUIDE.md`, `host-framework-sync-playbook.md`, `SECURITY.md`, `CREDITS.md` | 1,355 |
 
-**3,191 lines is a scope number, not a findings count.** Eleven findings came from 743 lines
+**3,191 lines is a scope number, not a findings count.** Thirteen findings came from 751 lines
 of the mid tier. The cold tier has had two releases to rot and has not been edited through
 either; expect its yield per 100 lines to be higher, not lower.
 
@@ -131,7 +131,7 @@ either; expect its yield per 100 lines to be higher, not lower.
 | `lifecycle-expansion-vision.md` | 459 | Vision artifact |
 | `lifecycle-expansion-references.md` | 379 | Sibling of the above; same treatment |
 | `codebase-audit-2026-06-27.md` | 526 | **Dated historical snapshot.** Holding a record of what was true on 2026-06-27 to present-tense accuracy is the wrong bar — `verification-claims-must-name-their-evidence` exempts prose recording history. Check only that nothing **cites** it as current |
-| Warm tier (Sep 4–8): `README`, `INSTALLATION`, `CONTRIBUTING`, `CHANGELOG`, `npm-publishing-access-playbook`, `pre-tag-release-checklist` | — | Written during `dist-epic-2`; low expected yield. `pre-tag-release-checklist.md` re-enters scope as Story 5's **subject** |
+| Warm tier (Sep 4–8): `INSTALLATION`, `CONTRIBUTING`, `npm-publishing-access-playbook`, `pre-tag-release-checklist` | — | Written during `dist-epic-2`; low expected yield. `pre-tag-release-checklist.md` re-enters scope as Story 5's **subject**. **`README.md` and `CHANGELOG.md` left this tier on 2026-09-11** — both carried live D2 claims, and `CHANGELOG.md` additionally named two files that never existed. The exclusion was tested against slash *commands* only; capability *claims* were never tested |
 
 The five vision/draft/snapshot files carry a **separate, non-blocking finding**: they sit in
 `docs/` alongside published documentation with nothing marking them as drafts. Relocation or
@@ -199,15 +199,32 @@ shape:
 | `docs/what-convoke-brings-to-bmad-method.md` | yes | 1 | no | 1.6 | — |
 | `CREDITS.md` | yes | 0 | no | 1.6 | — |
 | `CODE_OF_CONDUCT.md` | yes | 0 | no | 1.6 | — |
+| `README.md` | yes | — | no | 1.6 | — |
+| `CHANGELOG.md` | yes | — | no | 1.6 | — |
 
-**Cross-file closures made by Story 1.1 — these files are NOT examined.** D1 and D2 each appeared in
-three files, not the one the epic anchored them to. Story 1.1 closed both classes everywhere they appeared,
-which means it *edited* `docs/faq.md`, `UPDATE-GUIDE.md` and `README.md` without performing their derivation
-passes. Those files keep `Examined: no`; Stories 1.4 and 1.6 still own them, and should **not** re-report D1
-or D2 there.
+**Cross-file closures made by Story 1.1 — these files are NOT examined.** D1 and D2 each appeared in more
+files than the one the epic anchored them to. Story 1.1 *edited* `docs/faq.md`, `UPDATE-GUIDE.md` and
+`README.md` without performing their derivation passes. Those files keep `Examined: no`; Stories 1.4 and 1.6
+still own them.
 
-- D1 (`/bmad-team-factory`) closed at `docs/development.md:75`, `docs/faq.md:200`, `UPDATE-GUIDE.md:83`
-- D2 (unshipped Add Agent / Add Skill) closed at `docs/development.md:77`, `README.md:100`, `UPDATE-GUIDE.md:73`
+> **Corrected by Round 1 review, 2026-09-11.** This section previously read "closed both classes everywhere
+> they appeared" and instructed Stories 1.4 and 1.6 **not** to re-report D1 or D2. That was false and it
+> disarmed the stories that would have caught it. AC2's grep required a *space* between verb and noun
+> (`add (an )?agent`); the corpus form is *hyphenated* (`add-agent`), so the check ran green over live
+> defects — including `UPDATE-GUIDE.md:70`, three lines above the sentence the story corrected, in the file
+> Story 1.4 owns. Re-deriving the pattern from the corpus found **five** D2 instances, not three. Do not
+> treat a closure claim in this note as covering a class unless the enumerating pattern is recorded beside it.
+
+- D1 (`/bmad-team-factory`) closed at `docs/development.md:75`, `docs/faq.md:200`, `UPDATE-GUIDE.md:83`.
+  **Class not closed:** `/bmad-bmb-agent`, `/bmad-bmb-module` and `/bmad-bmb-workflow` are the same
+  ACT-FAIL class and remain live at `docs/faq.md:131-135` and `docs/agents.md:357` — deferred, see
+  `deferred-work.md`. Stories 1.4 and 1.2 own them.
+- D2 (unshipped Add Agent / Add Skill) closed at `docs/development.md:79`, `README.md:100`,
+  `UPDATE-GUIDE.md:73`, and — by the Round 1 remediation — `UPDATE-GUIDE.md:70`,
+  `docs/BMAD-METHOD-COMPATIBILITY.md:105`, `CHANGELOG.md:217` and `CHANGELOG.md:271`.
+  Enumerating pattern of record: `grep -rniE '\badd' <files> | grep -iE 'agent|skill'` (high-recall,
+  hand-filtered for false positives per `catch-all-phase-review`). The space-separated pattern is
+  insufficient and must not be reused.
 
 **`README.md` was out of scope and had to be edited anyway.** It advertised a capability
 `_bmad/bme/_team-factory/workflows/step-00-route.md:42` explicitly refuses to run, in the highest-traffic
