@@ -232,26 +232,25 @@ The Vortex is **non-linear by design**. While there's a natural forward flow (Is
 
 ```mermaid
 flowchart LR
-    %% Generated to agree with the handoff-contract tables in docs/agents.md.
-    %% scripts/audit/vortex-diagram-integrity.js fails if any edge disagrees with them.
+    %% Source of truth: the handoff-contract tables in docs/agents.md. Keep the three copies in step.
+    Emma["Emma 🎯<br/>Contextualize"]
     Isla["Isla 🔍<br/>Empathize"]
     Mila["Mila 🔬<br/>Synthesize"]
     Liam["Liam 💡<br/>Hypothesize"]
     Wade["Wade 🧪<br/>Externalize"]
     Noah["Noah 📡<br/>Sensitize"]
     Max["Max 🧭<br/>Systematize"]
-    Emma["Emma 🎯<br/>Contextualize"]
 
-    Isla -->|HC1| Mila
-    Mila -->|HC2| Liam
-    Liam -->|HC3| Wade
-    Wade -->|HC4| Noah
-    Noah -->|HC5| Max
-    Max -->|HC6| Mila
-    Max -->|HC7| Isla
-    Max -->|HC8| Emma
-    Liam -->|HC9| Isla
-    Noah -->|HC10| Isla
+    Isla -->|"HC1 · artifact"| Mila
+    Mila -->|"HC2 · artifact"| Liam
+    Liam -->|"HC3 · artifact"| Wade
+    Wade -->|"HC4 · artifact"| Noah
+    Noah -->|"HC5 · artifact"| Max
+    Max -.->|"HC6 · decision"| Mila
+    Max -.->|"HC7 · decision"| Isla
+    Max -.->|"HC8 · decision"| Emma
+    Liam ==>|"HC9 · flag"| Isla
+    Noah ==>|"HC10 · flag"| Isla
 ```
 
 You can start with any agent. Max's **Vortex Navigation** workflow is the compass that helps you decide where to go based on what evidence you have and what gaps remain.
@@ -260,7 +259,7 @@ You can start with any agent. Max's **Vortex Navigation** workflow is the compas
 
 ## Handoff Contract System
 
-The Vortex uses the handoff contracts enumerated in the three tables below (HC1-HC10) to ensure agents pass structured information to each other. Those tables are the source of truth: the diagram above is generated to agree with them, and `scripts/audit/vortex-diagram-integrity.js` fails if it does not. There are three contract types:
+The Vortex uses the handoff contracts enumerated in the three tables below (HC1-HC10) to ensure agents pass structured information to each other. Those tables are the source of truth: where the diagram above and a table disagree, the table is right. There are three contract types:
 
 ### Artifact Contracts (HC1-HC5)
 

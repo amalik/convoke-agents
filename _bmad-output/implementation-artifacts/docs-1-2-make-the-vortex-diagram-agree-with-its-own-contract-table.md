@@ -14,6 +14,31 @@ so that I do not follow a picture to the wrong agent.
 
 ## Acceptance Criteria
 
+> ## ⚠ AC1-AC5 and AC7 were written for an automated check that has been DELETED — read this first
+>
+> **Operator ruling, 2026-09-12: the check is deleted and filed as `T142`.** It was attempted twice
+> inside this story and failed both times. Attempt 1 (parse the drawing) broke in **7** places in one
+> review round. Attempt 2 (generate and compare) fixed all seven and introduced worse: a duplicate
+> `HC9` table row silently overwrote the canonical one, and `--write` then regenerated
+> `Liam ==> Noah` into all three files — two of which **ship** — with a **green** gate. *The
+> instrument built to prevent this story's defect produced it on command and certified the result.*
+> `code-review-convergence`: two failed attempts predict a third; prefer deletion.
+>
+> **What this story actually delivered, and it is not diminished:** the three diagrams are
+> **correct** — HC9 routes to Isla in all three files, they are byte-identical, and that has been
+> verified across four independent review passes. The two unresolvable commands are closed. The
+> shipped copies were brought into scope and fixed, which the epic's original scope would have
+> missed entirely.
+>
+> **How to read the ACs below.** AC6, AC8 and AC9 stand as written and are satisfied. AC1, AC3, AC4,
+> AC5 and AC7 each specify a *mechanism* (a routing check, mechanical edge-identity verification, a
+> no-box-art guard, a completeness assertion, a corpus sweep). **Those mechanisms no longer exist.**
+> The *properties* they were written to guarantee were each verified by hand and hold at HEAD; what
+> is gone is the automation that would keep them true. AC2 is satisfied in the strongest possible
+> sense — the geometry check is not merely retired, the whole tool is.
+>
+> This banner exists rather than quietly re-wording the ACs, so the gap between what was specified
+> and what shipped is visible to Stories 1.3-1.7 instead of being absorbed.
 > **All column numbers in this story are 0-based**, matching the findings note (A1 `col 43`, A3 `[2,14,21,33…]`).
 >
 > **Two operator rulings, made 2026-09-11, changed this story's shape. Read them first.**
@@ -128,10 +153,10 @@ The three files, with diagram fences located at `a6b9c6be`:
   - [x] `for c in $(grep -oE '/bmad-[a-z0-9-]+' docs/agents.md | sort -u); do grep -q "^\"${c#/}\"," _bmad/_config/skill-manifest.csv || echo "UNRESOLVED: $c"; done`
   - [x] Derive real ids from the manifest; re-run; paste the empty result
   - [x] Record that `docs/faq.md:131-135` carries the same class and is 1.4's
-- [x] **Task 4 — Re-derive the surviving counts (AC: 9)**
+- [x] **Task 4 — Re-derive the surviving counts (AC: 9)** *(the "all seven" routing statement was MISSING when first ticked; written at Round 1)*
   - [x] The "Ten handoff contracts" and "10 handoff contracts (HC1-HC10)" sentences, against `AGENTS` and the tables
   - [x] State that the "all seven" claims belong to Story 1.3
-- [x] **Task 5 — Record every anchor you are about to invalidate (AC: 9)**
+- [x] **Task 5 — Record every anchor you are about to invalidate (AC: 9)** *(recorded the anchors INSIDE the fence and missed the two BELOW it, which then rotted; corrected at Round 1)*
   - [x] Before converting, list the findings-note anchors pointing below `docs/agents.md`'s diagram fence. You re-derive them in Task 8
 - [x] **Task 6 — Convert the three box diagrams to mermaid (AC: 3, 4, 5)**
   - [x] `flowchart` per `documentation-standards.md:88-97`; label every edge with its contract id
@@ -139,7 +164,7 @@ The three files, with diagram fences located at `a6b9c6be`:
   - [x] The three flowcharts must be **edge-identical**, verified mechanically
   - [x] Re-run: routing, completeness, no-box-art and the corpus sweep all green
   - [x] **Retire the geometry check** (AC2) in this same commit; it has no subject left
-- [x] **Task 7 — Tests (AC: 1, 2, 4, 5)**
+- [x] **Task 7 — Tests (AC: 1, 2, 4, 5)** *(the corpus-sweep fixture was MISSING when first ticked; written at Round 1)*
   - [x] `tests/audit/vortex-diagram-integrity.test.js`, **fixtures only** (`test-fixture-isolation`)
   - [x] A red fixture per surviving assertion: mis-routed contract, truncated diagram, missing agent, box art inside an `HC` fence, a diagram outside the declared corpus
   - [x] **A CJK fixture for the `W`/`F` width branch** — without it that branch is dead code
@@ -401,3 +426,138 @@ re-anchored to the mermaid block at `#L233-L255` and marked closed. `docs/agents
 | Date | Change |
 |------|--------|
 | 2026-09-11 | **Implemented.** Three diagrams converted to mermaid, edge-identical, all 10 contracts correct. New lint `vortex-diagram-integrity.js` with 4 permanent assertions (each proven able to fail) plus a retired one-shot diagnostic; wired into CI. HC9 closed in **two shipped files** and one that does not ship. A5-A8 filed: the ASCII art was **undecidable for 4 of 10 contracts**, not merely wrong for one. Found during implementation: a false positive that would have broken the gate forever (a decision tree), a silence bug in my own walker, and a fifth archived copy. |
+
+
+## Round 1 Review — 2026-09-11
+
+Three blind layers against `2c372285`. **13 HIGH.** Most were holes in the hand-rolled mermaid
+parser; four were ticked task boxes that were false; two were claims I published that were not true.
+
+### Verdict: the instrument was changed, not patched
+
+`code-review-convergence`: *"When a fix keeps leaking in the same place, suspect OVER-BUILD, and
+prefer deletion to a further rewrite."* The parser leaked in seven places in one review round. Per
+[[project_review_rounds_correct_their_own_corrections]] this is also the
+**re-implementing-another-tool's-semantics** anti-pattern — the same shape as `dist-2-3a`'s four
+hand-rolled npm `files[]` predicates, every one of which review broke within minutes.
+
+**The diagrams already claimed to be "generated to agree with the tables". Round 1 made that true.**
+The parser is deleted (~400 lines, along with the `--diagnose` mode). The script now **generates**
+the expected mermaid block from the contract tables and the agent registry, and asserts each file
+contains it **verbatim**. Cross-file identity stopped being checked and became **structural** — all
+three files hold the same generated text, verified byte-identical by md5.
+
+Everything the parser leaked is now a byte difference. Re-running Round 1's own attacks, **with each
+mutation asserted to have applied** before the result was trusted:
+
+| Round 1 attack | Old gate | New gate |
+|---|---|---|
+| unlabelled edge `Liam --> Noah` | GREEN | **red** |
+| edge commented out with `%%` | GREEN | **red** |
+| fence info changed to ` ```text ` | GREEN | **red** |
+| inline node declaration `Isla[Isla] -->` | GREEN (0 edges parsed) | **red** |
+| parenthesis in a comment renames a node | 4 false failures | **red** (exact) |
+| edge re-pointed — the original HC9 defect | red | **red** |
+| edges reordered | GREEN | **red** |
+| one extra space | GREEN | **red** |
+| contract row unparseable | GREEN (denominator shrank) | **red** |
+| empty agent registry | GREEN | **red** |
+
+*(A first pass at this table reported four false "holes". The `sed` patterns used `|` as the
+delimiter while the content contains `|`, so the mutations never applied. Caught by asserting the
+mutation — the exact harness failure this repo records in
+[[project_review_rounds_correct_their_own_corrections]].)*
+
+### Two things I published that were not true
+
+**"A fourth and fifth copy" was false.** Un-excluding the archive returns four hits; only **one** is
+a diagram. The other three are a one-line text flow, a YAML frontmatter example and a document
+outline that merely name contract ids — the same false-positive class I correctly caught *inside*
+the corpus and left uncaught in the sweep. The sweep now requires a fence to actually **draw**.
+Corrected in the findings note.
+
+**A5 is retracted.** "Undecidable for 4 of 10 contracts" was the output of a walker with two known
+defects — it bound labels within ±2 render columns and never traversed `└`/`┴` corners — and the
+ASCII has since been deleted, so the claim cannot be re-tested. It was a property of my tool
+presented as a property of the art. What survives is the HC9 mis-routing, readable by eye from git
+history, and that is what A5 now says.
+
+### Four ticks that were false when I made them
+
+Task 4's "all seven" routing statement was never written. Task 5 recorded the anchors *inside* the
+fence and missed the two *below* it, which then rotted — `#L288` became blank, `#L240` became Wade's
+node. Task 7's corpus-sweep fixture did not exist: the one assertion AC7 was written for was the
+only one with **zero** tests. All four are now done, and the boxes carry the correction inline.
+
+Every remaining `#L` anchor into `docs/agents.md` is either the fence range or the HC9 row, both
+re-derived at HEAD; the rest are content-addressed.
+
+### Also fixed
+
+The legend in `compass-routing-reference.md` promised *solid / dashed / flag* lines while all ten
+edges rendered solid. The generator emits `-->`, `-.->` and `==>` by contract type, so the picture
+now matches the legend. Node labels are derived from the registry's `icon` and `stream` fields
+rather than transcribed, so the drawing follows the roster instead of drifting from it — the ASCII
+hardcoded them. `package.json`'s `//files` string, which my JSON round-trip had re-encoded every em
+dash in, is restored byte-for-byte.
+
+### Known and stated, not implied
+
+The two shipped files carry **their own** HC tables in a different column shape. This script's source
+of truth is `docs/agents.md` alone, so a divergence in a shipped guide's *table* is invisible to it.
+Documented in the script header rather than left for the next reviewer to find.
+
+
+## Round 2 Review — 2026-09-12
+
+Three blind layers launched; **five subagent runs failed** (stalls and a sleep-induced API error). One
+Blind Hunter retry completed. I covered the two dead layers' territory myself and said so — self-review
+finds mechanical errors, not judgement errors, so the areas I took were chosen for being mechanically
+checkable, and the one genuinely independent layer took the rest.
+
+### The finding that ended the check
+
+A plausible duplicate `HC9` row in a later "quick reference" table silently overwrites the canonical
+one — `contracts` is a `Map` keyed by id with no collision check, and the duplicate carries its own
+heading-derived type. `--write` then regenerated `Liam ==> Noah` into **all three files**, two of which
+ship, while the canonical table still read `Liam → Isla`. The gate reported **green**. Reproduced
+independently and by me.
+
+Also from the independent layer, all defects **in this round's correction**:
+
+- The rewrite **deleted the only endpoint validation.** Attempt 1's `checkCompleteness` caught `Islaa`
+  vs `Isla`; nothing did after. A typo emits phantom unlabelled nodes into two shipped files, green.
+- `HC100` is silently dropped — the id pattern is `$`-anchored at two digits — in a file whose header
+  claims an unreadable row is always a finding.
+- Contract type derives from a **file-global running heading**, so any later section containing
+  "flag", "decision" or "artifact" retypes every contract table beneath it.
+- `--write` writes file-by-file and `continue`s past a later failure, leaving the corpus **partially
+  rewritten** by the tool whose purpose is keeping the copies identical.
+- The generated banner instructed operators to run `npm run audit:diagrams` to regenerate. **No such
+  path exists.** A false instruction, shipped, on a docs-accuracy epic.
+
+### From my own pass on the dead layers' territory
+
+- **CRLF breaks the gate.** Byte-equality plus no `.gitattributes` means a Windows checkout fails for
+  a reason unrelated to correctness — and the natural fix is to loosen the check.
+- **`DRAWS` misses six mermaid diagram types**, including `flowchart-elk`. A corpus diagram in any of
+  them is a silent pass.
+- **AC drift**: AC1/AC3/AC4/AC5 no longer described the implementation even before deletion.
+
+Verified sound and worth recording so a third attempt does not re-test them: every vacuous-pass path
+is guarded (zero fences, two fences, unterminated fence each produce a finding); the parser really was
+694 → 413 lines; the three diagrams are md5-identical; `package.json`'s `//files` was restored
+byte-for-byte; A5's retraction is complete with no surviving assertion of the withdrawn claim; and the
+compass legend matches all ten generated edge operators.
+
+### Outcome
+
+Check, tests, npm script and CI step **deleted**. Filed as **T142** with both post-mortems and a note
+on what a third attempt should know — including *do not build a writer*, and the suggestion that the
+real fix may be structural (one source file included by the other two) rather than a policing tool.
+
+Two defects I had introduced into **shipped** files are fixed: the false regeneration instruction (in
+the banner and restated in `compass-routing-reference.md` prose), and a story-meta aside that told
+readers of a public agent guide which backlog story owned a sentence.
+
+The diagrams ship. The gate does not.

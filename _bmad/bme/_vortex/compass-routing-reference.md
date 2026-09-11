@@ -8,36 +8,35 @@
 
 ## Vortex Overview
 
-The Vortex Pattern has 7 agents across 7 streams, connected by 10 handoff contracts:
+The Vortex Pattern's agents, streams and handoff contracts are enumerated in `docs/agents.md` and in `scripts/update/lib/agent-registry.js`, which are the source of truth for the diagram below:
 
 ```mermaid
 flowchart LR
-    %% Generated to agree with the handoff-contract tables in docs/agents.md.
-    %% scripts/audit/vortex-diagram-integrity.js fails if any edge disagrees with them.
+    %% Source of truth: the handoff-contract tables in docs/agents.md. Keep the three copies in step.
+    Emma["Emma 🎯<br/>Contextualize"]
     Isla["Isla 🔍<br/>Empathize"]
     Mila["Mila 🔬<br/>Synthesize"]
     Liam["Liam 💡<br/>Hypothesize"]
     Wade["Wade 🧪<br/>Externalize"]
     Noah["Noah 📡<br/>Sensitize"]
     Max["Max 🧭<br/>Systematize"]
-    Emma["Emma 🎯<br/>Contextualize"]
 
     Isla -->|"HC1 · artifact"| Mila
     Mila -->|"HC2 · artifact"| Liam
     Liam -->|"HC3 · artifact"| Wade
     Wade -->|"HC4 · artifact"| Noah
     Noah -->|"HC5 · artifact"| Max
-    Max -->|"HC6 · routing"| Mila
-    Max -->|"HC7 · routing"| Isla
-    Max -->|"HC8 · routing"| Emma
-    Liam -->|"HC9 · flag"| Isla
-    Noah -->|"HC10 · flag"| Isla
+    Max -.->|"HC6 · decision"| Mila
+    Max -.->|"HC7 · decision"| Isla
+    Max -.->|"HC8 · decision"| Emma
+    Liam ==>|"HC9 · flag"| Isla
+    Noah ==>|"HC10 · flag"| Isla
 ```
 
 **Contract Types:**
 - **HC1–HC5** (solid lines): Artifact contracts — agent produces a schema-compliant artifact file
 - **HC6–HC8** (dashed lines): Decision-driven routing — Max routes based on strategic evidence
-- **HC9–HC10** (flag lines): Flag-driven routing — mid-workflow flag triggers Compass guidance
+- **HC9–HC10** (thick lines): Flag-driven routing — mid-workflow flag triggers Compass guidance
 
 ---
 

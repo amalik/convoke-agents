@@ -39,7 +39,7 @@ releases to rot and was edited in neither.
 **Gate posture — ratified 2026-09-10: this epic BLOCKS the 4.0.2 tag.** Stories 1–4 remediate;
 Story 5 wires the gate and lands last, the same shape `dist-epic-2` used.
 
-**Size.** 5 stories over 14 files. Deliberately excludes the remaining warm tier (written
+**Size.** 5 stories over 15 files (12 originally scoped, plus `README.md` and the two `_bmad/bme/_vortex/` files carrying the Vortex diagram; see the amendments below, which supersede any earlier count in this document). Deliberately excludes the remaining warm tier (written
 during `dist-epic-2`, low expected yield) and five vision/draft/snapshot documents held to the
 wrong bar by a present-tense accuracy pass. **Amended 2026-09-11 (Story 1.2): file count 13 → 15.** `_bmad/bme/_vortex/guides/VORTEX-TEAM-GUIDE.md`
 and `_bmad/bme/_vortex/compass-routing-reference.md` are admitted. Both carry the **same** defective Vortex

@@ -71,26 +71,25 @@ When evidence says "go back," these contracts route work backward:
 
 ```mermaid
 flowchart LR
-    %% Generated to agree with the handoff-contract tables in docs/agents.md.
-    %% scripts/audit/vortex-diagram-integrity.js fails if any edge disagrees with them.
+    %% Source of truth: the handoff-contract tables in docs/agents.md. Keep the three copies in step.
+    Emma["Emma 🎯<br/>Contextualize"]
     Isla["Isla 🔍<br/>Empathize"]
     Mila["Mila 🔬<br/>Synthesize"]
     Liam["Liam 💡<br/>Hypothesize"]
     Wade["Wade 🧪<br/>Externalize"]
     Noah["Noah 📡<br/>Sensitize"]
     Max["Max 🧭<br/>Systematize"]
-    Emma["Emma 🎯<br/>Contextualize"]
 
     Isla -->|"HC1 · artifact"| Mila
     Mila -->|"HC2 · artifact"| Liam
     Liam -->|"HC3 · artifact"| Wade
     Wade -->|"HC4 · artifact"| Noah
     Noah -->|"HC5 · artifact"| Max
-    Max -->|"HC6 · routing"| Mila
-    Max -->|"HC7 · routing"| Isla
-    Max -->|"HC8 · routing"| Emma
-    Liam -->|"HC9 · flag"| Isla
-    Noah -->|"HC10 · flag"| Isla
+    Max -.->|"HC6 · decision"| Mila
+    Max -.->|"HC7 · decision"| Isla
+    Max -.->|"HC8 · decision"| Emma
+    Liam ==>|"HC9 · flag"| Isla
+    Noah ==>|"HC10 · flag"| Isla
 ```
 
 **Isla is the gravity well.** She has three formal inbound feedback contracts (HC7, HC9, HC10) plus organic routing from multiple workflows. When in doubt, the Vortex sends you back to the user research.

@@ -208,24 +208,6 @@ jobs:
         # `convoke-doctor.js:92` already checks them there.
         run: node scripts/audit/name-registry-integrity.js
 
-      - name: Vortex diagram integrity
-        # docs-1-2. The Vortex handoff diagram is duplicated across three files; all three drew
-        # HC9 from Liam into NOAH while the contract table says ISLA, and TWO OF THE THREE SHIP.
-        # `docs/agents.md` — the copy the epic originally scoped — is the one that does not.
-        #
-        # Wired here and not deferred: T32 records `docs:audit` existing and passing in no
-        # workflow for months, and `audit:pacing` / `refs:audit` are npm scripts in no workflow
-        # today. A check that exists but is not enforced is indistinguishable from no check,
-        # and this one guards a defect that reaches operators.
-        #
-        # Four assertions, each demonstrated able to fail before this landed: routing (every
-        # mermaid edge terminates where the contract table says), completeness (no contract or
-        # registry agent may be dropped — the deletion attack), no box art in a contract fence
-        # (the regression guard that replaced the one-shot geometry diagnostic), and a corpus
-        # sweep that fails on any HC-labelled diagram outside the declared corpus and declared
-        # exclusions — because a hardcoded corpus is what let two shipped copies go unchecked.
-        run: npm run audit:diagrams
-
       - name: Documentation audit
         # T32: `docs:audit` has existed and passed for months while running in no workflow.
         # It was FAILING when discovered (8 broken paths across all 7 shipped Vortex user
