@@ -7,7 +7,7 @@ purpose: Define standard pattern for creating domain-specialized agents within B
 related_docs:
   - phase-0-implementation-guide.md (v1.2.0)
   - distribution-strategy.md (v2.0.0)
-reference_implementation: Emma - see _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md (was _bmad/bme/_designos/agents/empathy-mapper.md; that module and path no longer exist — corrected 2026-09-12, T144)
+reference_implementation: see _bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md — the agent that now owns the empathy-map workflow this spec was written around. (Was _bmad/bme/_designos/agents/empathy-mapper.md; that module no longer exists. A first correction pointed at contextualization-expert on the strength of the name "Emma"; the workflow, not the name, is the successor. Corrected 2026-09-12, T144.)
 ---
 
 # BMAD Agent Architecture Framework

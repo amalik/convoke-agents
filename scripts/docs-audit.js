@@ -70,8 +70,12 @@ function checkStaleReferences(content, filePath) {
     // which is in neither array above. Without it the full roster (12) was rejected while
     // 11 was accepted, so a TRUE statement about the agent count read as stale. `README.md`
     // said "all 12 Convoke agents" and passed only because an intervening word kept it away
-    // from the adjacency this check requires. Derived from the registry like its siblings —
-    // adding a fourth group there must not require editing this line again.
+    // from the adjacency this check requires. Derived from the registry like its siblings.
+    // NOTE: this does NOT generalise to a fourth group. The Team Factory writes each new team
+    // its OWN `{PREFIX}_AGENTS` array rather than appending to EXTRA_BME_AGENTS
+    // (`_team-factory/lib/writers/registry-writer.js:228`), so the next team registered
+    // reintroduces exactly this defect until the derivation reads every agent array the
+    // registry exports. Filed as T148, with the same gap for workflow counts below.
     AGENTS.length + GYRE_AGENTS.length + EXTRA_BME_AGENTS.length,
   ]);
   const validWorkflowCounts = new Set([

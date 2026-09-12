@@ -1882,3 +1882,43 @@ Full suite 1854 tests, 0 failures. The four new tests in `tests/unit/refresh-ins
 **The reviewed artifact was never committed.** R1 ran against the copy-everything draft, which existed only in the working tree; it was replaced before the first commit, so `git log -S"readdirSync(packageVortex)"` returns nothing on any branch. The findings above are stated in full precisely because the code they describe is not recoverable — do not go looking for it.
 
 **Still true and unchanged:** the defect was real and live in 4.0.1, `contracts/` genuinely never reached an operator project, and the fix is verified in a real install rather than only in the unit suite.
+
+## T146
+
+**Closed 2026-09-12.** `validAgentCounts` in `scripts/docs-audit.js` was built from `AGENTS.length`,
+`GYRE_AGENTS.length` and their sum, so the full agent roster (12) read as stale while the Vortex+Gyre
+subtotal (11) passed — a **true** statement about the agent count was reported wrong.
+
+The registry already knew all twelve: a third array, `EXTRA_BME_AGENTS`, holds Loom's `team-factory`. The
+row as filed led with a registry framing, though its own Scope did offer the checker-side fix; the defect
+was in the checker's valid set, not the registry. Fixed by adding the third group to the derivation.
+
+**Proven:** `all 12 agents` accepted, `all 13` and `all 9` still rejected. Two tests added and shown **red
+against the pre-fix file** before going green — the branch had no coverage at all, which is why the gap
+survived. `README.md:98` ("all 12 Convoke agents") had been passing only because "Convoke" sat between the
+number and the noun, evading the check's adjacency requirement; it is now legal on its merits.
+
+**Not closed by this, and filed as `T148`:** the derivation still names three arrays literally, and the Team
+Factory writes each new team its **own** `{PREFIX}_AGENTS` array rather than appending to `EXTRA_BME_AGENTS`
+— so the next team reintroduces the same defect. The symmetric workflow gap is live today: `validWorkflowCounts`
+is `{7, 22, 29}` while the true roster is 30.
+
+## T145
+
+**Ruled and closed 2026-09-12.** The directory form (`<agent-dir>/SKILL.md`) is canonical for new teams,
+recorded in `docs/development.md`'s naming table; the flat form is marked as Gyre's and Loom's and not the one
+to copy. Existing agents are not migrated — both forms stay current.
+
+**The deferral's stated reason was half wrong.** It claimed the question waited on I97 conversion. Layout and
+conversion state are **orthogonal**: all seven Vortex agents use the directory form whether converted or not.
+The other half of that reason — `T127`, the factory still emitting v5 XML — remains live and is unaffected by
+this ruling.
+
+**The ruling is ahead of the tooling, deliberately.** Review found that none of the three tools that create
+agents produces the canonical form: the Team Factory writes flat, `refresh-installation.js`'s generic loader
+expects flat (the directory form is a Vortex-specific branch), and BMB prescribes a third shape entirely. The
+operator ruled to keep the directory form canonical and file the gap rather than reverse to match the tooling.
+Filed as **`T147`**, and `docs/development.md` now states plainly that the generator does not yet emit it.
+
+**Still open from this row's original Scope:** it asked for a ruling on the canonical layout **and frontmatter
+form**. Only layout was ruled. The frontmatter question travels with `T147`.

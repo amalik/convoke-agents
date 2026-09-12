@@ -92,6 +92,13 @@ migrated, so both forms stay current. The clone recipe above copies the canonica
 Layout is independent of the v6.3 conversion state: all seven Vortex agents use the directory form whether or
 not they have been converted.
 
+> ⚠ **The tooling does not produce the canonical form yet.** The Team Factory generates
+> `_bmad/bme/_{team}/agents/{agent_id}.md`, and `refresh-installation.js`'s generic module loader expects that
+> flat path — the directory form is currently a Vortex-specific branch. **A team built by the factory today
+> gets the flat form**, and building one by hand in the canonical form would produce a skill wrapper pointing
+> at a file the installer will not find. Closing that gap is filed as `T147`. Until it lands, treat "canonical"
+> as the target for new teams, not as what the generator emits.
+
 | Element | Convention | Example |
 |---------|-----------|---------|
 | Agent file — **canonical for new teams** | Directory named for the role; the agent lives in `SKILL.md` inside it, with room for a `references/` subdirectory beside it | `_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md` |

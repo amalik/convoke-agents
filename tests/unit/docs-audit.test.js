@@ -16,7 +16,13 @@ const {
   USER_FACING_DOCS,
 } = require('../../scripts/docs-audit');
 
-const { AGENTS, WORKFLOWS, WORKFLOW_NAMES } = require('../../scripts/update/lib/agent-registry');
+const {
+  AGENTS,
+  WORKFLOWS,
+  WORKFLOW_NAMES,
+  GYRE_AGENTS,
+  EXTRA_BME_AGENTS,
+} = require('../../scripts/update/lib/agent-registry');
 const { runScript, removeTempDir } = require('../helpers');
 
 // === checkStaleReferences ===
@@ -47,6 +53,30 @@ describe('checkStaleReferences', () => {
     const findings = checkStaleReferences(content, 'test.md');
     const agentFindings = findings.filter(f => f.current.includes('agent'));
     assert.equal(agentFindings.length, 0);
+  });
+
+  // T146: the valid set is built from THREE registry groups, not two. Before this, the full
+  // roster (Vortex + Gyre + EXTRA_BME_AGENTS) read as stale while the Vortex+Gyre subtotal
+  // passed — so a TRUE statement about the agent count was reported wrong. Nothing exercised
+  // the third group, which is why the gap survived; these two cases pin it.
+  it('accepts the full roster count, including EXTRA_BME_AGENTS', () => {
+    const full = AGENTS.length + GYRE_AGENTS.length + EXTRA_BME_AGENTS.length;
+    const findings = checkStaleReferences(`All ${full} agents are registered.`, 'test.md');
+    assert.deepEqual(
+      findings.filter((f) => f.current.includes('agent')),
+      [],
+      `the full roster (${full}) must be a valid agent count`
+    );
+  });
+
+  it('still rejects a count belonging to no registry group', () => {
+    const bogus = AGENTS.length + GYRE_AGENTS.length + EXTRA_BME_AGENTS.length + 1;
+    const findings = checkStaleReferences(`All ${bogus} agents are registered.`, 'test.md');
+    assert.equal(
+      findings.filter((f) => f.current.includes('agent')).length,
+      1,
+      `${bogus} belongs to no group and must still be flagged`
+    );
   });
 
   it('detects stale digit workflow count', () => {
