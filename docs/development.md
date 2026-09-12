@@ -8,7 +8,7 @@ Architecture overview, agent development patterns, and contribution guidelines f
 
 ### Agent Architecture Framework (v1.1.0)
 
-> The version tracks the framework specification linked below, which declares `version: 1.1.0` in its frontmatter — not the package, which is at a different version entirely.
+> This version marks the framework specification linked below, which declares `version: 1.1.0` in its own frontmatter.
 
 All agents follow a standard pattern:
 
@@ -22,7 +22,7 @@ See: [Agent Architecture Framework](../_bmad-output/_archive/exploratory/generic
 
 ### Update System (v1.4.0+)
 
-> The version tracks `CHANGELOG.md`'s `## [1.4.0]` entry, which introduced exactly the modules below — `refresh-installation.js`, `migration-runner.js`, `validator.js`, `config-merger.js` — and states that "v1.4.0+ updates will use this system".
+> This version marks the update system's own generation, not the package's. `CHANGELOG.md` is where it is recorded — search it for `1.4.0` rather than trusting a heading named here, which is how the previous two attempts got it wrong.
 
 Key modules in `scripts/update/lib/`:
 
@@ -105,8 +105,8 @@ See: [Emma Reference Implementation](../_bmad-output/_archive/exploratory/emma-r
 
 **This is shape, not an inventory.** Every node below shows representative children, never all of them —
 `ls` the directory for the full set. **Adding** a directory never falsifies it, which is the property that
-matters for growth. Renaming or removing one of the few named exemplars (`_vortex/`, `_gyre/`, `docs/`) would,
-and that is the cost of naming any exemplar at all.
+matters for growth. Renaming or removing any node named below would, and that is the cost of naming exemplars
+at all.
 
 ```
 Convoke/                     # representative children only, like every node below

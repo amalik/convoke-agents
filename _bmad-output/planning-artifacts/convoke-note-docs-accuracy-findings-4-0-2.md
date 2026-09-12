@@ -88,7 +88,7 @@ reader forms a false belief but nothing breaks · **ROT** = stale marker, no rea
 | **D2** | [L77](../../docs/development.md#L77) | "Three capabilities: **Create Team**, **Add Agent**, **Add Skill**" | Only Create Team shipped | `ls -1 _bmad/bme/_team-factory/workflows/` → `add-team`, `step-00-route.md`. Matches P25 (unshipped Phase 3, TF-FR25/26) |
 | **D3** | [L52](../../docs/development.md#L52) vs [L88](../../docs/development.md#L88) | Clone recipe uses `contextualization-expert/SKILL.md`; naming table says agent file is `discovery-empathy-expert.md` | **Both half-right, and mutually contradictory.** Vortex agents are `<dir>/SKILL.md`; Gyre agents are flat `.md`. The file states one convention and demonstrates the other | `ls -1 _bmad/bme/_vortex/agents/contextualization-expert/` → `SKILL.md`, `references`  ·  `ls -1 _bmad/bme/_gyre/agents/` → 4 flat `.md` files |
 | **D4** | [L13](../../docs/development.md#L13) | "**XML-based** agent structure" — stated for *all* agents | False for the v6.3-converted agents | `grep -c '<agent\|```xml' <agent>/SKILL.md` → Emma **0**, Wade **0**, Isla **2**. 3/7 converted (I97 Epic 2), so the blanket claim is wrong either way |
-| **D5** | [L9](../../docs/development.md#L9), [L21](../../docs/development.md#L21) | "Agent Architecture Framework (**v1.1.0**)", "Update System (**v1.4.0+**)" | Product is **4.0.2** | `grep -n '"version"' package.json` → `4.0.2` |
+| **D5** | the two version markers in `docs/development.md` (Agent Architecture Framework, Update System) | "Agent Architecture Framework (**v1.1.0**)", "Update System (**v1.4.0+**)" | Product is **4.0.2** | `grep -n '"version"' package.json` → `4.0.2` |
 | **D6** | [L69-70](../../docs/development.md#L69-L70) | "**39** scenarios", "**18** critical scenarios minimum" | Hardcoded counts with no derivation — `derive-counts-from-source` class | No source cited in the doc; counts not recomputed here (see Not Covered) |
 | **D7** | [L102-127](../../docs/development.md#L102-L127) | Project Structure tree lists `_vortex`, `_gyre`, `_enhance` | `_bmad/bme/` holds **8** directories; `_team-factory`, `covenant`, `_artifacts`, `_config`, `_portability` are all absent from the tree | `ls -1d _bmad/bme/*/` → 8 entries |
 | **D8** | [L90](../../docs/development.md#L90) | "Frontmatter name — Spaces, lowercase — `"discovery empathy expert"`", stated as universal | True for **Gyre only** (`"stack detective"`). Vortex is two-way: converted agents use `bmad-bme-agent-emma`, unconverted use `discovery-empathy-expert` | `grep -m1 '^name:' _bmad/bme/_vortex/agents/{contextualization-expert,discovery-empathy-expert}/SKILL.md _bmad/bme/_gyre/agents/stack-detective.md` |
@@ -124,9 +124,9 @@ The same diagram, the same three defects, in the two files operators actually re
 |---|---|---|---|
 | **D4** | **Qualified**, not deleted | The agent files can contradict it. Under D4's own published unit, 3 Vortex agents (Emma, Wade, Mila) measure 0 and the other 9 measure 2; `name-registry.csv` records the per-agent state. | `find _bmad/bme -path '*agents*' -name '*.md' \| grep -v '/references/'` then D4's unit (row above) on each |
 | **D5** `(v1.1.0)` | **KEPT and checked** | An owner exists: the framework specification the section links to declares `version: 1.1.0`. **The epic's AC assumed none existed — wrong.** A second archived file also declares 1.1.0 but carries `status: CORRECTED`, which the archive ruling classifies as a record, not a specification — so ownership is **not** ambiguous. | `grep -rl '^version: 1.1.0' _bmad-output/` then `grep -m1 '^status:' <each>` |
-| **D5** `(v1.4.0+)` | **KEPT and checked** — *reversed at Round 1* | First deleted on the basis that `grep -rn '1.4.0' scripts/update/` is empty. **That was the wrong basis: source files do not carry the version they shipped in.** `CHANGELOG.md` `## [1.4.0]` introduces exactly the four modules this heading governs, and `:862` reads "v1.4.0+ updates will use this system". It is owned, and deleting it violated AC7. Restored. | `sed -n '540,552p' CHANGELOG.md` and `sed -n '862p' CHANGELOG.md` |
-| **D6** | **Deleted**, instruction retained | Of the 13 documents carrying either figure, none is a specification: each has no `status:` frontmatter or one describing a *run* (`READY FOR EXECUTION`). Under the archive ruling none is an owner. The P0 suite is named as the authority instead. | `grep -rlE '39 scenario\|18 critical' --include='*.md' .` then `grep -m1 '^status:' <each>` |
-| **D7** | **Shape, not inventory** | **Five** enumerating nodes were incomplete, not just `_bmad/bme/` — the root `Convoke/` node too, which the first pass missed. `_bmad-output/` showed 2 of 14. Each now shows representative children and is marked non-exhaustive, so adding, renaming or removing a directory does not falsify it. The registry-derived agent/workflow annotations were **preserved** and re-proven machine-checked by mutation. | `ls -1d _bmad/bme/*/ _bmad-output/*/ scripts/*/ tests/*/` vs the fence; annotations re-proven by mutating a count and re-running `npm run docs:audit` |
+| **D5** `(v1.4.0+)` | **KEPT and checked** — *reversed at Round 1* | First deleted on the basis that `grep -rn '1.4.0' scripts/update/` is empty. **Wrong basis: source files do not carry the version they shipped in.** `CHANGELOG.md` records this version and the update system's introduction; it is owned, and deleting it violated AC7. Restored. **The specific owning entry is deliberately not named here** — two attempts to name it were wrong, the second attributing `## [1.3.0]`'s content to `## [1.4.0]`. Run the command. | `grep -n '1\.4\.0' CHANGELOG.md` and read the enclosing `## [` heading |
+| **D6** | **Deleted**, instruction retained | No document carrying either figure is a specification — run the command and check `status:` on each; none carries a specification status, so under the archive ruling none is an owner. The P0 suite is named as the authority instead. **No count is given here on purpose:** this row has carried two different wrong ones. | `grep -rlE '39 scenario\|18 critical' --include='*.md' .` then `grep -m1 '^status:' <each>` |
+| **D7** | **Shape, not inventory** | **Five** enumerating nodes were incomplete, not just `_bmad/bme/` — the root `Convoke/` node too, which the first pass missed. `_bmad-output/` showed 2 of 14. Each now shows representative children and is marked non-exhaustive, so adding a directory does not falsify it; renaming or removing a named exemplar would, which is the stated cost. The registry-derived agent/workflow annotations were **preserved** and re-proven machine-checked by mutation. | `ls -1d _bmad/bme/*/ _bmad-output/*/ scripts/*/ tests/*/` vs the fence; annotations re-proven by mutating a count and re-running `npm run docs:audit` |
 | **D8 / D9** | **Resolved to their real forms** | Frontmatter name has three forms (`bmad-bme-agent-*`, unquoted role name, quoted spaced name). Display name exists only in v5 agents and is **not always a first name** — `name="Loom Master"`. The caveat Story 1.1 left pointing at 1.3 is removed; it had become a stale claim about a resolved finding. | `grep -m1 '^name:' <each agent file>` and `grep -o 'name="[^"]*"' <each>` |
 
 ### `docs/agents.md` — findings added by Story 1.3
@@ -142,26 +142,28 @@ matched by anything. Reworded to "all seven agents"; coverage proven by mutation
 `stale-reference` finding at `L403`, reverted). This is FR3a's *extend the checker that already exists*, at the
 cost of one word.
 
-> **The coverage count for `docs/agents.md` is deliberately NOT bumped.** That row is owned by Story 1.2, and
-> the freeze banner's carve-out says "derive and write your own row; do not hand-fix anyone else's." Story 1.3
-> edited two prose claims in that file; it did not perform its derivation pass. Recording the change here
-> rather than editing 1.2's row.
+> **The coverage row for `docs/agents.md` now reads `1.2, 1.3`.** Story 1.3 examined that file and found two
+> findings in it (`A9`, `A10`), so FR10 requires the row to reflect them. An earlier pass argued the freeze
+> carve-out forbade touching another story's row — the weaker reading, and it would have left a known-wrong
+> number with no owner, since Story 1.2 is `done`.
 
-**Same class, still live, routed not fixed.** Both evade the checker the same way — **a word between the number
-and the noun defeats its adjacency requirement**, which is worth knowing before anyone trusts a green
-`docs:audit` on a count:
+**Same class, still live, routed not fixed.** These evade the checker the same way — **a word between the
+number and the noun defeats its adjacency requirement**, which is worth knowing before anyone trusts a green
+`docs:audit` on a count.
 
-| Instance | Owner |
-|---|---|
-| `docs/faq.md:40` — "all seven **Vortex** agents" | 1.4 |
-| `docs/BMAD-METHOD-COMPATIBILITY.md:197` — "All 7 **Vortex** agent files" | 1.5 |
-| `docs/BMAD-METHOD-COMPATIBILITY.md:166` — "7 **Vortex** agents" | 1.5 |
-| `INSTALLATION.md:250` — "11 **team** agents" | 1.6 |
-| `README.md:98` — "all 12 **Convoke** agents" | **unowned — see the registry-gap row in the backlog** |
+**No list is given here.** Four successive attempts at "here are all the instances" were each short; the fourth
+was written in the commit that corrected the third. Find them instead:
 
-`README.md:98` is the interesting one: it is **true** (7 Vortex + 4 Gyre + Loom's `team-factory` = 12 agent
-files) and the checker would call it stale if the intervening word were removed, because `validAgentCounts` is
-`{7, 4, 11}` — `team-factory` is in neither registry array. Twelve files, eleven registry agents.
+```
+grep -rnoE '\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|[0-9]+) +[A-Za-z*-]+ +agents?\b' \
+  README.md INSTALLATION.md UPDATE-GUIDE.md docs/*.md
+```
+
+Each hit belongs to whichever story owns its file. **`README.md:98` is worth seeing before you trust any of
+them:** "all 12 Convoke agents" is **true**, and passes only because "Convoke" sits between the number and the
+noun. Remove that word and a correct sentence is reported stale — because `validAgentCounts` is built from the
+Vortex and Gyre arrays and `team-factory` is in neither. Twelve files, eleven registry agents; filed as the
+registry-gap row in the backlog.
 
 Severity: **D1, D2, D3 = ACT-FAIL** · **D4, D8, D9 = MISLEAD** · **D5, D6, D7 = ROT**
 

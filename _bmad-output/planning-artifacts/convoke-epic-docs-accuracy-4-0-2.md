@@ -366,14 +366,16 @@ So that the same findings do not return by 4.0.3.
 **When** the claim is checked against the agent `SKILL.md` files, which are its source of truth
 **Then** the claim is **qualified** to match the actual conversion state rather than deleted — a reader depends on it and something can contradict it.
 
-**Given** the `(v1.1.0)` and `(v1.4.0+)` markers at `docs/development.md:9` and `:21` version a concept rather than the package
+**Given** the `(v1.1.0)` and `(v1.4.0+)` markers in `docs/development.md`'s Agent Architecture Framework and Update System headings version a concept rather than the package
 **When** the repository is searched for an object that owns either value
 **Then** the Dev Agent Record states what was searched, and each marker is disposed of on its own evidence.
 
 > ⚠ **AMENDED 2026-09-12 by Story 1.3 — this AC's premise was false for BOTH markers.** It assumed no owner
 > exists. `(v1.1.0)` is owned by the framework specification the section links to (`version: 1.1.0` in its
-> frontmatter). `(v1.4.0+)` is owned by `CHANGELOG.md`'s `## [1.4.0]`, which introduces exactly the modules
-> that heading governs and states "v1.4.0+ updates will use this system". **Both are kept and checked; neither
+> frontmatter). `(v1.4.0+)` is owned by `CHANGELOG.md`, which records the update system's
+> introduction and its forward reference — **search that file for `1.4.0`; do not trust a heading named here.**
+> Two successive attempts to name the owning entry got it wrong, most recently by attributing `## [1.3.0]`'s
+> content to `## [1.4.0]`. **Both are kept and checked; neither
 > was deleted.** Story 1.3 deleted `(v1.4.0+)` on a first pass using `grep scripts/update/` as the basis —
 > wrong, because source files do not carry the version they shipped in — and Round 1 reversed it.
 

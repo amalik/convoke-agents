@@ -323,10 +323,15 @@ that work, not in the work itself.**
 ### A disposition reversed: `(v1.4.0+)` was owned, and deleting it violated AC7
 
 I deleted it because `grep -rn '1.4.0' scripts/update/` is empty. **That is the wrong basis — source files do
-not carry the version they shipped in.** `CHANGELOG.md`'s `## [1.4.0]` introduces *exactly* the four modules
-that heading governs (`refresh-installation.js`, `migration-runner.js`, `validator.js`, `config-merger.js`),
-and `:862` reads "v1.4.0+ updates will use this system". My own contrast case in AC2 — `UPDATE-GUIDE.md`'s
-`(v2.2.0)`, kept because CHANGELOG owns it — is the identical shape and cuts the other way. **Restored.**
+not carry the version they shipped in.** `CHANGELOG.md` records the version and the update system's
+introduction, so the marker is owned and deleting it violated AC7. **Restored.** My own contrast case in AC2 —
+`UPDATE-GUIDE.md`'s `(v2.2.0)`, kept because CHANGELOG owns it — is the identical shape and cut the other way.
+
+> **Corrected at Round 2.** This paragraph originally named `## [1.4.0]` as the owning entry and said it
+> "introduces exactly" four modules. **Both were wrong.** The quoted line sits under `## [1.3.0]`; three of the
+> four modules were introduced there too; `## [1.4.0]` is entirely under `### Changed`, so it introduces
+> nothing; and the table below the marker lists five modules, not four. The disposition survives — the marker
+> is owned — but the attribution does not, and is no longer stated in any artifact.
 
 So the epic's AC was wrong about *both* markers, not one: it assumed no owner existed, and both have one. The
 epic now carries that amendment; previously the reversal lived only here.
@@ -380,3 +385,49 @@ own T142 ruling in the same commit. With the backlog committed, **T144** (the lo
 whose own `reference_implementation` points at a directory that no longer exists), **T145** (canonical layout
 for a non-Vortex/Gyre team) and **T146** (the 12-vs-11 registry gap) are filed, scored and lane-ordered.
 AC2 and AC5 are now satisfied.
+
+
+## Round 2 Review — 2026-09-12
+
+One blind layer against `45d82bb8`, the Round 1 remediation. **NOT READY: 9 of 10 findings were defects that
+remediation introduced**, which is `code-review-convergence`'s trigger on its face.
+
+### What went wrong, stated plainly
+
+Round 1's headline act — restoring `(v1.4.0+)` after wrongly deleting it — was **justified by a misread of
+`CHANGELOG.md`**. I attributed the line *"v1.4.0+ updates will use this system"* to `## [1.4.0]`; it sits under
+`## [1.3.0]`. I said that entry "introduces exactly" four modules; three were introduced under `[1.3.0]`, the
+`[1.4.0]` entry is entirely `### Changed` so introduces nothing, and the table beneath the marker lists five.
+The disposition was right and the evidence for it was wrong — and I wrote that wrong evidence into a document.
+
+I also **replaced a correct number with an incorrect one**: D6's "8 documents" became "13", which reproduces
+under no definition. In the same commit, I deleted "73 backticked paths" *for exactly that reason*.
+
+And the findings note ended up **asserting both sides of one governance decision** — the coverage row bumped to
+satisfy FR10, with the blockquote explaining why it deliberately wasn't bumped left in place.
+
+### The instrument change
+
+Two classes failed in Round 1 and failed again in their Round 2 corrections: **exhaustive instance lists** and
+**provenance attributions**. The sibling list has now been short four times, the fourth in the commit
+correcting the third. The `(v1.4.0+)` owner has been named wrongly twice.
+
+**Operator ruling: strip the derived assertions.** This is the same fix already proven on this story's own
+file, where removing pre-computed values produced the first draft in which every executable assertion checked
+out — a lesson I learned there and failed to carry across to the artifacts.
+
+Applied: the marker stays and the owning heading is no longer named anywhere (search `CHANGELOG.md` for
+`1.4.0` instead). D6 states its disposition and its command, and gives no count — that row has now carried two
+wrong ones. The sibling table is replaced by the class, the command that finds it, and `README.md:98` as the
+one illustrative case worth seeing. The growth exemplar parenthetical is gone (it named 3 of 15 nodes). Line
+anchors that will rot are replaced by section names. D7's mirror claim is narrowed to match the document.
+
+**What survived untouched**, because it was never the problem: every disposition — keep `(v1.1.0)`, keep
+`(v1.4.0+)`, delete the arithmetic, shape-not-inventory, resolve the naming rows — plus the narrowed
+`docs:audit` claim, T142's corrected churn, and all of T144/T145/T146's facts, each independently verified in
+Round 2.
+
+### Stopping here
+
+`code-review-convergence` caps at no Round 4, and its restructure clause has now been applied: Round 2's
+response was not a third patch of the same two classes but their removal. The residue is in the backlog.
