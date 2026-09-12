@@ -10,6 +10,24 @@ related_docs:
 reference_implementation: see _bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md — the agent that now owns the empathy-map workflow this spec was written around. (Was _bmad/bme/_designos/agents/empathy-mapper.md; that module no longer exists. A first correction pointed at contextualization-expert on the strength of the name "Emma"; the workflow, not the name, is the successor. Corrected 2026-09-12, T144.)
 ---
 
+> ## ⚠ `_bmad/bme/_designos/` does not exist — 2026-09-12
+>
+> This specification was written around a module that has since been removed. **Every `_designos`
+> path below is historical**, whether it appears in an illustrative snippet or in a "See:" pointer —
+> none of them resolves today, and the five rendered links among them lead nowhere.
+>
+> The functional successor to the agent this spec was built around is
+> `_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md`, which owns the `empathy-map` workflow.
+> The examples are left unedited on purpose: rewriting 794 lines of archived teaching material would
+> produce a document that never existed, and the paths are illustrative in most cases anyway. This
+> banner is the correction.
+>
+> **A sibling document, `critical-framework-correction.md` — same date, same `version: 1.1.0`,
+> `status: CORRECTED`, titled "Framework Correction: Actual BMAD Agent Architecture" — may supersede
+> this one.** Which of the two is authoritative is an open question, filed in the initiatives backlog.
+> Do not treat this specification as current until that is settled.
+
+
 # BMAD Agent Architecture Framework
 
 **Purpose:** This framework defines a **standard pattern** for creating domain-specialized agents within BMAD Method.

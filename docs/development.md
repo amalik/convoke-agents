@@ -105,7 +105,7 @@ not they have been converted.
 |---------|-----------|---------|
 | Agent file — **canonical for new teams** | Directory named for the role; the agent lives in `SKILL.md` inside it, with room for a `references/` subdirectory beside it | `_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md` |
 | Agent file — flat form | A single file named for the role. Used by Gyre and Loom; **not** the form to copy for a new team | `_bmad/bme/_gyre/agents/stack-detective.md` |
-| Frontmatter name | Three forms, by team and conversion state | `bmad-bme-agent-emma` (converted Vortex) · `discovery-empathy-expert` (unconverted Vortex) · `"stack detective"` (Gyre and Loom, quoted and spaced) |
+| Frontmatter name — **canonical for new teams: `bmad-bme-agent-<name>`** | Three forms exist, by team and conversion state; the converted Vortex form is the one to copy, pairing with the canonical layout above | `bmad-bme-agent-emma` (converted Vortex) · `discovery-empathy-expert` (unconverted Vortex) · `"stack detective"` (Gyre and Loom, quoted and spaced) |
 | Display name | The `name="…"` attribute, in v5 agents only — usually a first name, but not always | `name="Isla"`, `name="Loom Master"` · converted agents have no such attribute and carry the name as a heading |
 | User guide | Uppercase first name, where one exists | `ISLA-USER-GUIDE.md`. Vortex and Gyre agents have one; `team-factory` does not |
 
