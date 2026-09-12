@@ -6,10 +6,10 @@ const fs = require('fs-extra');
 const path = require('path');
 const chalk = require('chalk');
 const { findProjectRoot } = require('./update/lib/utils');
-const { AGENTS, WORKFLOWS, WORKFLOW_NAMES } = require('./update/lib/agent-registry');
 // The whole module, so the valid-count derivation can enumerate EVERY roster array rather
 // than the three that happened to be named here when it was written (T146, T148).
 const agentRegistry = require('./update/lib/agent-registry');
+const { AGENTS, WORKFLOWS, WORKFLOW_NAMES } = agentRegistry;
 
 /**
  * Valid roster counts for a suffix (`AGENTS` / `WORKFLOWS`), derived from EVERY matching array
@@ -27,7 +27,14 @@ const agentRegistry = require('./update/lib/agent-registry');
  * ORDER-INDEPENDENT by construction. Prefix sums over `Object.keys` would make the valid set
  * depend on declaration order, which is arbitrary and would change silently.
  *
- * `EXTRA_` is the registry's own prefix for a roster that is not a team in its own right.
+ * `EXTRA_` marks a roster excluded from the "team agents" total. **This is a convention this
+ * check depends on, not one the registry enforces** — the only roster carrying it is
+ * `EXTRA_BME_AGENTS`, which `agent-registry.js` describes as standalone bme agents. (Other keys
+ * share the prefix without being rosters; the suffix filter is what separates them, so do not
+ * read a prefix match as a roster count.) The hazard is the Team Factory: `derivePrefix()` is
+ * kebab -> SCREAMING_SNAKE, so a team literally named `extra-something` produces
+ * `EXTRA_SOMETHING_AGENTS` and is silently dropped from the team total, making a correct
+ * document read as stale. Filed as T151, which is the ruling that constrains this line.
  */
 function validCountsFor(registry, suffix) {
   const rosters = Object.keys(registry)
@@ -110,12 +117,11 @@ function checkStaleReferences(content, filePath) {
   // valid set depend on declaration order, which is arbitrary and would change silently.
   // `EXTRA_` is the registry's own prefix for rosters that are not a team in their own right.
   const validAgentCounts = validCountsFor(agentRegistry, 'AGENTS');
-  // Same derivation, same reason. NOTE the reason is NOT the one T148 was originally filed
-  // with: that row claimed the valid set was wrong because the tree holds 37 workflow
-  // directories. It is not — the registry's workflow rosters are AGENT-OWNED workflows, and
-  // `_portability`, `_artifacts` and `_enhance` have no agents and appear in the registry at
-  // all. No document claims 37. That half of the row was retracted. What survives is growth:
-  // a fourth TEAM's workflow roster would be missed exactly as its agent roster would.
+  // Same derivation. ⚠ This one is KNOWN WRONG TODAY — see T150. The registry exports no
+  // `EXTRA_BME_WORKFLOWS`, but Loom's `team-factory` owns `add-team`, so the true agent-owned
+  // total is rejected while a smaller wrong one passes. Generalising this call did not fix it:
+  // the derivation enumerates exports, and the export does not exist. Do not read the green
+  // gate as evidence this axis is sound.
   const validWorkflowCounts = validCountsFor(agentRegistry, 'WORKFLOWS');
 
   // Build regex for written-out numbers

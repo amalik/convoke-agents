@@ -89,7 +89,12 @@ describe('checkStaleReferences', () => {
       assert.ok(valid.has(3), "the new roster's own size must become valid");
       assert.ok(valid.has(15), 'the whole roster (7+4+1+3) must become valid');
       assert.ok(valid.has(14), 'the teams without extras (7+4+3) must become valid');
-      assert.ok(!valid.has(11), 'the OLD team total must go stale once a team is added');
+      // NOTE: this records BEHAVIOUR, not desirability. `UPDATE-GUIDE.md` carries
+      // version-scoped lines ("From v1.7.x to v3.0.0: All 11 agents installed") that stay true
+      // forever, and the checker has no notion of version scope — so registering team four
+      // turns two CORRECT lines red. Filed as T152; do not read this assertion as approving
+      // that outcome.
+      assert.ok(!valid.has(11), 'the previous team total is no longer the team total');
     });
 
     it('excludes EXTRA_ rosters from the teams-without-extras total', () => {
@@ -106,12 +111,25 @@ describe('checkStaleReferences', () => {
       );
     });
 
-    it('ignores non-array exports and empty rosters', () => {
-      const noisy = { ...base, AGENT_IDS: 'not-an-array', FUTURE_AGENTS: [] };
+    it('ignores a non-array export that DOES match the suffix', () => {
+      // Must end in the suffix, or the key is filtered out before `Array.isArray` is consulted
+      // and the guard is never exercised. An earlier version of this test seeded `AGENT_IDS`,
+      // which fails `endsWith('AGENTS')` — so it asserted something trivially true while its
+      // title claimed coverage the suite did not have.
+      const noisy = { ...base, WAVE3_AGENTS: new Set([1, 2, 3]), FUTURE_AGENTS: [] };
       assert.deepEqual(
         [...validCountsFor(noisy, 'AGENTS')].sort((a, b) => a - b),
-        [1, 4, 7, 11, 12]
+        [1, 4, 7, 11, 12],
+        'a Set-valued roster must be ignored, not summed'
       );
+    });
+
+    it('matches the suffix at the END, not anywhere in the name', () => {
+      // Pins `endsWith` against `includes`: a mutation to `includes` survived the suite.
+      const trap = { ...base, AGENTS_ARCHIVE: new Array(99) };
+      const valid = validCountsFor(trap, 'AGENTS');
+      assert.ok(!valid.has(99), 'AGENTS_ARCHIVE must not be read as a roster');
+      assert.ok(!valid.has(111), 'and must not be summed into the total');
     });
 
     it('separates the two suffixes', () => {
