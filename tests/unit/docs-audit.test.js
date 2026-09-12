@@ -70,7 +70,9 @@ describe('checkStaleReferences', () => {
   });
 
   it('still rejects a count belonging to no registry group', () => {
-    const bogus = AGENTS.length + GYRE_AGENTS.length + EXTRA_BME_AGENTS.length + 1;
+    // Deliberately outside every subtotal and every sum of them, so a future fourth group
+    // cannot make this value accidentally valid and silently stop testing anything.
+    const bogus = (AGENTS.length + GYRE_AGENTS.length + EXTRA_BME_AGENTS.length) * 3 + 7;
     const findings = checkStaleReferences(`All ${bogus} agents are registered.`, 'test.md');
     assert.equal(
       findings.filter((f) => f.current.includes('agent')).length,

@@ -94,10 +94,12 @@ not they have been converted.
 
 > ⚠ **The tooling does not produce the canonical form yet.** The Team Factory generates
 > `_bmad/bme/_{team}/agents/{agent_id}.md`, and `refresh-installation.js`'s generic module loader expects that
-> flat path — the directory form is currently a Vortex-specific branch. **A team built by the factory today
-> gets the flat form**, and building one by hand in the canonical form would produce a skill wrapper pointing
-> at a file the installer will not find. Closing that gap is filed as `T147`. Until it lands, treat "canonical"
-> as the target for new teams, not as what the generator emits.
+> flat path — the directory form is currently a Vortex-specific branch. **A team built by the factory today gets the flat form — and is
+> installed by nothing.** `refresh-installation.js` walks only the arrays `AGENTS`, `GYRE_AGENTS` and
+> `EXTRA_BME_AGENTS`, and the factory appends to none of them; it writes each team its own array. So a
+> factory-built team currently receives **no skill wrapper at all**. Closing that gap is tracked in the initiatives backlog
+> (`_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md`, row `T147`). Until it lands,
+> treat "canonical" as the target for new teams, not as what the generator emits.
 
 | Element | Convention | Example |
 |---------|-----------|---------|

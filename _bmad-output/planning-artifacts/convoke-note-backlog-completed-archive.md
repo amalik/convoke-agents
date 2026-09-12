@@ -1893,9 +1893,9 @@ The registry already knew all twelve: a third array, `EXTRA_BME_AGENTS`, holds L
 row as filed led with a registry framing, though its own Scope did offer the checker-side fix; the defect
 was in the checker's valid set, not the registry. Fixed by adding the third group to the derivation.
 
-**Proven:** `all 12 agents` accepted, `all 13` and `all 9` still rejected. Two tests added and shown **red
-against the pre-fix file** before going green — the branch had no coverage at all, which is why the gap
-survived. `README.md:98` ("all 12 Convoke agents") had been passing only because "Convoke" sat between the
+**Proven:** `all 12 agents` accepted, `all 13` and `all 9` still rejected. Two tests added. **One of them — the positive case — was shown red against the pre-fix file** before going
+green; the other is a negative guard that passes either way and exists to stop the fix over-widening. The
+branch had no coverage at all, which is why the gap survived. `README.md:98` ("all 12 Convoke agents") had been passing only because "Convoke" sat between the
 number and the noun, evading the check's adjacency requirement; it is now legal on its merits.
 
 **Not closed by this, and filed as `T148`:** the derivation still names three arrays literally, and the Team
@@ -1921,4 +1921,4 @@ operator ruled to keep the directory form canonical and file the gap rather than
 Filed as **`T147`**, and `docs/development.md` now states plainly that the generator does not yet emit it.
 
 **Still open from this row's original Scope:** it asked for a ruling on the canonical layout **and frontmatter
-form**. Only layout was ruled. The frontmatter question travels with `T147`.
+form**. Only layout was ruled. **`T147`'s Scope was widened at R2 to carry the frontmatter ruling explicitly** — a first pass parked it there without the receiving row accepting it, which would have dropped it.
