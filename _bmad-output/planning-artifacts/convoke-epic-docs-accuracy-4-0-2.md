@@ -57,7 +57,25 @@ Story 1.7 must either widen that derivation or record why module documentation i
 Round 1 review falsified the warm-tier exclusion for the D2 class (file count 12 → 13; `README.md`
 is 167 lines, so the ~3,191-line scope figure becomes ~3,358).
 
-**`CHANGELOG.md` is NOT admitted, and the question is referred to the operator.** Round 2 established
+**`CHANGELOG.md` — RULED 2026-09-12: admitted for NEVER-TRUE claims only.**
+
+> A changelog entry naming a file that was later renamed **was true when written**; that is history, and
+> `scripts/docs-audit.js:541-542` rightly exempts it. An entry recording a capability that **never shipped**
+> was never true — that is not staleness, it is an error, and a changelog's whole value is being a reliable
+> record of what happened.
+>
+> **Scope: entries that record something that never happened.** Not the 73 backticked paths, not the 37
+> version headings, not present-tense accuracy over 1,249 lines. Story 1.6's size is unchanged.
+>
+> Applied the same day: `CHANGELOG.md:217` and `:271` corrected. `:273` was checked and **left alone** —
+> `validateSkillExtension()` and `buildSkillExtensionManifest()` genuinely exist, so that entry is true.
+>
+> **The `:271` correction is worded carefully on purpose.** An earlier attempt said the two workflow files
+> "have never existed." They did — `tf-3-1`/`tf-3-2` created them in `.claude/skills/`, which `.gitignore:62`
+> excludes. The supportable claim is that they were never tracked and never packaged. That earlier error is
+> the **NFR8** class, and it is why this ruling is scoped to *never shipped* rather than *never existed*.
+
+**The original referral, for the record:** Round 2 established
 that the repository already codifies the opposite ruling: `scripts/docs-audit.js:541-542` deliberately
 skips CHANGELOG's stale-reference and broken-path checks because *"historical entries reference files
 that may have been deleted or renamed in past versions"*, and the findings note exempts dated

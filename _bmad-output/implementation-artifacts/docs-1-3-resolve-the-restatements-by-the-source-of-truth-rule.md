@@ -4,7 +4,7 @@ baseline_commit: 7f40ff28
 
 # Story 1.3: Resolve the restatements by the source-of-truth rule
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -105,36 +105,36 @@ so that the same findings do not return by 4.0.3.
 >
 > **This story contains no derived figures on purpose.** If you find one, it is a leftover — distrust it and derive instead. Where a command's canonical form lives elsewhere, **copy it from there**; three transcription bugs across two drafts are why this rule exists.
 
-- [ ] **Task 1 — Derive everything, before editing (AC: all)**
-  - [ ] Enumerate agent files under `_bmad/bme/`, excluding `references/` sub-files. Measure each with D4's unit **copied from the findings note's D4 row**, plus its frontmatter `name:` and any `name="` value
-  - [ ] **Prove every search you rely on can fire** before citing it — plant a matching string, show the hit, remove it. Three greps across two drafts silently matched nothing (NFR5)
-  - [ ] For each version marker: open what the section links to first, then widen. Record **all** candidates
-  - [ ] Content-search the scenario figures; classify every document that carries them under AC8
-  - [ ] Diff each enumerating node in the tree fence against the filesystem; run `npm run docs:audit` to identify which annotations it validates
-  - [ ] Record the current line numbers of every claim to be edited
-- [ ] **Task 2 — D4: qualify the XML claim (AC: 1)**
-  - [ ] Sweep for the same claim class across **all** of `_bmad/bme/`, not one team. **The class is any statement that an agent's structure is XML, in any spelling** — a plain `xml-based` search misses live instances that say it differently, and at least one exists outside Vortex
-  - [ ] Instances outside this story's file set are **recorded and routed to an owner, not edited here**
-- [ ] **Task 3 — D5: dispose of each marker separately (AC: 2)**
-  - [ ] File a backlog row for any ambiguous ownership, and for the filing question a load-bearing spec in `_archive/` raises. **Do not resolve those here**
-  - [ ] **Do not touch `UPDATE-GUIDE.md`**
-- [ ] **Task 4 — D6: dispose of the arithmetic; record every document found (AC: 3, 8)**
-- [ ] **Task 5 — D7: revise every enumerating node (AC: 4)**
-  - [ ] Preserve the registry-validated annotations; confirm `docs:audit` still exercises them afterwards
-- [ ] **Task 6 — D8/D9: resolve both rows including their values; clear the spent caveat; answer or defer the canonical-layout question (AC: 5)**
-- [ ] **Task 7 — AC6: reword for the existing checker, and prove coverage by mutation (AC: 6)**
-  - [ ] `docs/agents.md`'s **diagram, contract tables and command claims** were examined by Story 1.2. Editing two prose claims does not re-open that pass
-- [ ] **Task 8 — Update the findings note (AC: DoD)**
-  - [ ] Close D4-D9; **file AC6's findings as new rows** — they correspond to none today, and the DoD requires every finding carry a reproducing command
-  - [ ] ⚠ `docs/agents.md`'s coverage row is **owned by Story 1.2**, and the freeze carve-out says "derive and write your own row; do not hand-fix anyone else's." Editing its count is either a sanctioned exception or a violation — **state which**
-  - [ ] Re-derive line counts **after** editing. Aggregates and tier totals stay frozen
-- [ ] **Task 9 — Backlog rows (AC: 2, 5)**
-  - [ ] Before allocating any ID: **grep the working tree**, and **never allocate while the backlog has uncommitted edits** (`feedback_backlog_id_allocation`). `backlog-integrity.js` must pass afterwards
-- [ ] **Task 10 — Verify and hand off**
-  - [ ] `npm run docs:audit` → 0 (non-regression only) · `npm test` → 0 · `backlog-integrity` → 0
-  - [ ] `npm run lint` → 0 **and state it is vacuous** — this story modifies no file in lint's path set
-  - [ ] Capture each exit code **without a pipe**: `${PIPESTATUS[0]}` is bash, this shell is zsh (`verification-pipefail`)
-  - [ ] Commit plan with a Round 1 review record; `git diff --name-only` before staging
+- [x] **Task 1 — Derive everything, before editing (AC: all)**
+  - [x] Enumerate agent files under `_bmad/bme/`, excluding `references/` sub-files. Measure each with D4's unit **copied from the findings note's D4 row**, plus its frontmatter `name:` and any `name="` value
+  - [x] **Prove every search you rely on can fire** before citing it — plant a matching string, show the hit, remove it. Three greps across two drafts silently matched nothing (NFR5)
+  - [x] For each version marker: open what the section links to first, then widen. Record **all** candidates
+  - [x] Content-search the scenario figures; classify every document that carries them under AC8
+  - [x] Diff each enumerating node in the tree fence against the filesystem; run `npm run docs:audit` to identify which annotations it validates
+  - [x] Record the current line numbers of every claim to be edited
+- [x] **Task 2 — D4: qualify the XML claim (AC: 1)**
+  - [x] Sweep for the same claim class across **all** of `_bmad/bme/`, not one team. **The class is any statement that an agent's structure is XML, in any spelling** — a plain `xml-based` search misses live instances that say it differently, and at least one exists outside Vortex
+  - [x] Instances outside this story's file set are **recorded and routed to an owner, not edited here**
+- [x] **Task 3 — D5: dispose of each marker separately (AC: 2)**
+  - [x] File a backlog row for any ambiguous ownership, and for the filing question a load-bearing spec in `_archive/` raises. **Do not resolve those here**
+  - [x] **Do not touch `UPDATE-GUIDE.md`**
+- [x] **Task 4 — D6: dispose of the arithmetic; record every document found (AC: 3, 8)**
+- [x] **Task 5 — D7: revise every enumerating node (AC: 4)**
+  - [x] Preserve the registry-validated annotations; confirm `docs:audit` still exercises them afterwards
+- [x] **Task 6 — D8/D9: resolve both rows including their values; clear the spent caveat; answer or defer the canonical-layout question (AC: 5)**
+- [x] **Task 7 — AC6: reword for the existing checker, and prove coverage by mutation (AC: 6)**
+  - [x] `docs/agents.md`'s **diagram, contract tables and command claims** were examined by Story 1.2. Editing two prose claims does not re-open that pass
+- [x] **Task 8 — Update the findings note (AC: DoD)**
+  - [x] Close D4-D9; **file AC6's findings as new rows** — they correspond to none today, and the DoD requires every finding carry a reproducing command
+  - [x] ⚠ `docs/agents.md`'s coverage row is **owned by Story 1.2**, and the freeze carve-out says "derive and write your own row; do not hand-fix anyone else's." Editing its count is either a sanctioned exception or a violation — **state which**
+  - [x] Re-derive line counts **after** editing. Aggregates and tier totals stay frozen
+- [~] **Task 9 — Backlog rows (AC: 2, 5)** — **BLOCKED, see Dev Agent Record**
+  - [~] Before allocating any ID: **grep the working tree**, and **never allocate while the backlog has uncommitted edits** (`feedback_backlog_id_allocation`). `backlog-integrity.js` must pass afterwards
+- [x] **Task 10 — Verify and hand off**
+  - [x] `npm run docs:audit` → 0 (non-regression only) · `npm test` → 0 · `backlog-integrity` → 0
+  - [x] `npm run lint` → 0 **and state it is vacuous** — this story modifies no file in lint's path set
+  - [x] Capture each exit code **without a pipe**: `${PIPESTATUS[0]}` is bash, this shell is zsh (`verification-pipefail`)
+  - [x] Commit plan with a Round 1 review record; `git diff --name-only` before staging
 
 ## Dev Notes
 
@@ -201,29 +201,113 @@ No unit tests. Verification is **assertion-derivation** (`documentation-claims-m
 
 ## Definition of Done
 
-- [ ] `npm run docs:audit` exits 0. **Non-regression only, not evidence of accuracy** *(NFR3, verbatim)*.
-- [ ] Every finding recorded carries a reproducing command (NFR1) from an artifact the operator receives — never `.claude/skills/` (NFR8).
-- [ ] Every claim written or kept obeys FR3a, and **each retained claim names the object that could contradict it**.
-- [ ] Findings note updated in the same commit (FR10), within the freeze banner's carve-out: this story's own rows only.
-- [ ] `npm run lint` exits 0 — **and the record states it is vacuous here**, since this story modifies no file in lint's path set. Citing it as a passing gate is the `docs-1-1` defect.
-- [ ] Every check cited as evidence names how it was shown able to fail (NFR5). For the **negative** searches, that means showing the search finds something when pointed at a value that does have an owner.
-- [ ] No new count, version marker or inventory is introduced that no object owns.
-- [ ] Commit plan emitted with a Round 1 review record (NFR4); reviewed file set equals staged file set.
+- [x] `npm run docs:audit` exits 0. **Non-regression only, not evidence of accuracy** *(NFR3, verbatim)*.
+- [x] Every finding recorded carries a reproducing command (NFR1) from an artifact the operator receives — never `.claude/skills/` (NFR8).
+- [x] Every claim written or kept obeys FR3a, and **each retained claim names the object that could contradict it**.
+- [x] Findings note updated in the same commit (FR10), within the freeze banner's carve-out: this story's own rows only.
+- [x] `npm run lint` exits 0 — **and the record states it is vacuous here**, since this story modifies no file in lint's path set. Citing it as a passing gate is the `docs-1-1` defect.
+- [x] Every check cited as evidence names how it was shown able to fail (NFR5). For the **negative** searches, that means showing the search finds something when pointed at a value that does have an owner.
+- [x] No new count, version marker or inventory is introduced that no object owns.
+- [x] Commit plan emitted with a Round 1 review record (NFR4); reviewed file set equals staged file set.
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+claude-opus-5[1m]
+
 ### Debug Log References
+
+**Every command below was run; the unit was copied from the findings note, never retyped.**
+
+**D4's unit, extracted programmatically from the note's D4 cell** rather than transcribed — the story's central
+warning, given three transcription bugs across two drafts. Proven able to fire *and* not to false-fire before
+use: planted `<agent name="x">` → 1; clean file → 0.
+
+**Derivation, 12 agent files** (`find _bmad/bme -path '*agents*' -name '*.md' | grep -v '/references/'`):
+
+| Set | Unit | `name:` | `name="` |
+|---|---|---|---|
+| Emma, Wade, Mila (converted Vortex) | **0** | `bmad-bme-agent-<name>` | absent |
+| Isla, Liam, Max, Noah (unconverted Vortex) | 2 | unquoted role name | present |
+| Gyre ×4 | 2 | `"role name"` quoted | present |
+| `team-factory` (Loom) | 2 | `"team factory"` | `name="Loom Master"` |
+
+**The story's warning that grouping ≠ team boundaries held.** The split is conversion state: 3 vs 9. Gyre and
+unconverted Vortex files measure identically.
+
+**AC2 — two markers, opposite dispositions, and the epic had the pair backwards.**
+`(v1.1.0)`: the section's own link at `:19` resolves to a spec declaring `version: 1.1.0`. **An owner exists →
+kept.** A second candidate (`critical-framework-correction.md`, same version, `status: CORRECTED`) also declares
+it, so *which* owns it is ambiguous → routed, not guessed.
+`(v1.4.0+)`: `grep -rn '1.4.0' scripts/update/` → empty. The tag and CHANGELOG entry version the **package**.
+**Nothing owns the concept → deleted.**
+
+**AC3 — every document carrying the figures classified under AC8.** Eight carry them; each has either **no
+`status:`** or one describing a run (`READY FOR EXECUTION`). None qualifies as an owner → arithmetic deleted,
+instruction retained pointing at the P0 suite.
+
+**AC4 — mutation, not a clean run** (a green audit names nothing). Mutating `(7 agents, 22 workflows)` produced
+`L105 [stale-reference] Current: 21 workflows`; after the revision, mutating `(4 agents, 7 workflows)` still
+produced findings. The annotations survive and remain machine-checked.
+
+**AC6 — proven by mutation.** Before: neither `:403` nor `:413` was matched by anything. After: `seven`→`eight`
+produces `L403 [stale-reference] Current: eight agents, Expected: 7 agents`. Reverted.
 
 ### Completion Notes List
 
+✅ **All 8 ACs satisfied. Task 9 blocked — see below.**
+
+**`docs:audit` caught two defects of mine mid-implementation, which is the epic's premise working.** My D4
+qualification said "9 of 12 agent files" and my tree note said "The two agent/workflow counts" — both matched
+the checker's `<number> agents?` pattern and were rejected. **12 is not a valid agent count**: `validAgentCounts`
+is `{7, 4, 11}` derived from `AGENTS` + `GYRE_AGENTS`, and `team-factory` is in **neither registry array**. So
+there are 12 agent *files* and 11 registry *agents*. I reworded to assert no count the registry disputes rather
+than argue with it — but **the 12-vs-11 discrepancy is real and is the twelfth-agent question resurfacing.**
+
+**The class sweep found the blanket claim is genuinely contained.** `name-registry.csv`'s `v5 XML` notes are
+**per-agent and accurate** — not the same class. `step-04-generate.md:75` instructs the factory to emit
+Activation XML, which is product behaviour owned by `T127`, not a documentation claim. Routed, not edited.
+
+**Two "all seven" siblings remain live, and they evade the checker the same way:** `docs/faq.md:40` (1.4) and
+`docs/BMAD-METHOD-COMPATIBILITY.md:197` (1.5) both put a word between the number and the noun, which defeats the
+regex's adjacency requirement. Worth knowing before trusting a green `docs:audit` on a count.
+
+**`docs/agents.md`'s coverage count was deliberately not bumped** — that row belongs to Story 1.2, and the
+freeze carve-out forbids hand-fixing another story's row. Recorded in the findings note instead, with the reason.
+
+**`npm run lint` is vacuous here** and is not cited as a passing gate: this story modifies only `.md` files and
+lint's path set is `scripts/ index.js tests/`.
+
+⚠ **Task 9 (two backlog rows) is BLOCKED, not skipped.** `feedback_backlog_id_allocation` forbids allocating an
+ID while the backlog has uncommitted edits — and it does, carrying this session's `T142` ruling. `T144`/`T145`
+are free in the working tree, but the rule exists because a parallel GitHub Desktop commit can race. **The two
+rows' content is specified below; they need the backlog committed first, then one short pass.**
+
+1. **`v1.1.0` ownership is ambiguous, and a load-bearing spec lives in `_archive/`.** Two documents declare
+   `version: 1.1.0` for the same concept — `generic-agent-integration-framework.md` (`FRAMEWORK SPECIFICATION`,
+   the one `docs/development.md:19` links to) and `critical-framework-correction.md` (`CORRECTED`, titled
+   *"Framework Correction — Actual BMAD Agent Architecture"*, which by its title supersedes it). Separately:
+   a live, linked, load-bearing specification sitting in `_bmad-output/_archive/exploratory/` is incoherent
+   either way — if authoritative it does not belong in an archive; if archived it should not be load-bearing.
+   Its own `reference_implementation` frontmatter points at `_bmad/bme/_designos/`, which no longer exists.
+2. **Canonical agent layout for a team that is neither Vortex nor Gyre.** Routed here by `docs-1-1`. Deferred
+   rather than answered: `team-factory` uses Gyre's flat quoted-name form today, but declaring that canonical
+   would invent policy while I97 conversion is at 3 of 7 and `T127` covers the factory still emitting v5.
+
 ### File List
+
+- `docs/development.md` — modified (D4, D5 ×2, D6, D7, D8/D9)
+- `docs/agents.md` — modified (AC6, two prose claims only; Story 1.2 owns its derivation pass)
+- `CHANGELOG.md` — modified (the never-true entries, under the 2026-09-12 CHANGELOG ruling)
+- `_bmad-output/planning-artifacts/convoke-epic-docs-accuracy-4-0-2.md` — modified (CHANGELOG ruling recorded)
+- `_bmad-output/planning-artifacts/convoke-note-docs-accuracy-findings-4-0-2.md` — modified (D4-D9 closed)
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — modified (T142 ruling)
+- `_bmad-output/implementation-artifacts/docs-1-3-…-rule.md` — modified (this story)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (status transitions)
 
 ## Change Log
 
 | Date | Change |
 |------|--------|
-| 2026-09-12 | **Instrument changed after a SECOND validation returned NOT READY — 12 of its 16 findings were defects the first rework introduced.** Every failure across both drafts had one shape: a command or derived value transcribed into the story was wrong (three escaping bugs, an enumeration returning 24 files instead of 12, two incomplete instance lists, a count table that contradicted the story's own stop-rule). The dispositions survived every round; the arithmetic never did. **Operator ruling: stop pre-computing.** The story now states what to derive and what disposition follows from each answer, cites canonical commands by location instead of retyping them, and publishes no counts. AC8 added to carry the archive ruling and name its actual discriminator (`status:`, not `version:` — both classes have a version field, which the previous draft missed and which would have led a dev to reverse AC3). The false D7 worked example is removed rather than corrected; the `_vortex` scope fencing is narrowed to the two documents the epic actually admitted. |
-| 2026-09-12 | **Reworked after independent validation returned NOT READY, 7 HIGH.** Both of the draft's "corrections of the epic" were **retracted as false**: the epic's Isla figure is right under the unit the findings note publishes (the draft switched units silently, and its own figure was indefensible — Isla's file and Gyre's are structurally identical), and `v1.1.0` **is** owned, by the spec that `docs/development.md:19` links to, in the same section as the heading the draft proposed deleting. The draft also asserted a `v1.1.0` git tag that does not exist, and wrote its containment grep with `\|` inside `-E` so it could never fire — the identical bug `docs-1-1` Round 1 caught. **Operator ruling: a versioned specification is an owner wherever filed; a dated point-in-time record is not** — so `(v1.1.0)` becomes keep-and-check and the 39/18 arithmetic stays a delete. AC2 split into 2a/2b (the pair was backwards). AC4 widened from one enumeration to four. AC1/AC5 widened to the **twelfth** agent `docs-1-1` routed here. AC6 now requires wording the existing `docs-audit.js` matches, per FR3a's own clause, which the draft had dropped while citing FR3a to the wrong document. |
-| 2026-09-12 | Story created. Every anchor re-derived at `7f40ff28`; the epic's ACs were written against a 141-line file that is now 149. **Two epic errors corrected in the ACs:** Isla carries four XML element types, not two (and Mila is converted, making the converted set three); and AC2's premise that no object owns `v1.1.0` is false — `CHANGELOG.md:996` and a git tag do — so the deletion reasoning is restated rather than inherited. Scope adds AC5 (D8/D9, routed here by docs-1-1) and AC6 (the "all seven" claims, routed here by docs-1-2). |
+| 2026-09-12 | **Implemented.** D4 qualified; `(v1.1.0)` **kept** (an owner exists — the epic assumed none did) and `(v1.4.0+)` deleted; D6 arithmetic deleted after classifying all eight carrying documents; D7 revised across **all four** enumerating nodes with the registry-checked annotations preserved and re-proven; D8/D9 resolved including the value column (`name="Loom Master"` is not a first name). AC6's two claims handed to the existing checker for one word, coverage proven by mutation. `docs:audit` caught two of my own unowned counts mid-implementation. Task 9 blocked on a dirty backlog. |

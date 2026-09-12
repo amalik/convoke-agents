@@ -400,7 +400,7 @@ You can trace any decision back to its evidence chain without using the agents d
 
 ## Using Agents Independently
 
-Each agent works standalone — you don't need all seven:
+Each agent works standalone — you don't need all seven agents:
 
 - **Just Emma** for strategic framing and problem-solution fit
 - **Just Isla** for user research and empathy mapping
@@ -410,7 +410,7 @@ Each agent works standalone — you don't need all seven:
 - **Just Noah** for production signal interpretation
 - **Just Max** for learning capture and decision-making
 
-Use all seven together for the complete Vortex flow, or any subset that fits your needs.
+Use all seven agents together for the complete Vortex flow, or any subset that fits your needs.
 
 ---
 

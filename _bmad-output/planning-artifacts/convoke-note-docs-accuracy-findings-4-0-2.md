@@ -77,7 +77,7 @@ it stands **cannot refuse a tag over documentation content**, and no gate can be
 does. The only enforceable form is a recorded derivation pass — a checklist step asserting a
 signed findings artifact exists for the release SHA. That is Story 5's subject.
 
-## Findings — `docs/development.md` (149 lines)
+## Findings — `docs/development.md` (153 lines)
 
 Severity key: **ACT-FAIL** = a reader follows the doc and the action fails · **MISLEAD** = the
 reader forms a false belief but nothing breaks · **ROT** = stale marker, no reader impact.
@@ -116,6 +116,34 @@ The same diagram, the same three defects, in the two files operators actually re
 - **The Gyre diagram** (`docs/agents.md` L422-426) is **correct**. Its 61/60/60 spread is Coach's two-column emoji `🏋️`, not a misalignment: `▲` at col 21 sits under Atlas, `│`/`┘` at col 59 under the emoji's first column. It contains **no box row**, so a box-row invariant is a category error there. It carries no `HC` label, so the permanent guard leaves it alone **by construction**.
 - **The decision tree** in `compass-routing-reference.md` names HC6 and HC8 as conditionals and draws itself with `├── └──`. It is not a flow diagram. The check's threshold — a majority of declared contracts — excludes it by construction rather than by an exception list.
 - **One further copy** of the diagram exists, at `_bmad-output/_archive/phase-1/5-3-update-documentation-for-complete-7-agent-vortex.md:173-196`. A closed story artifact that does not ship; a **declared exclusion**, not an oversight. **Corrected at Round 1:** this previously read "a fourth and fifth copy". Un-excluding the archive returned four hits, but only one is a diagram — the other three are a one-line text flow, a YAML frontmatter example and a document outline that merely name contract ids. The sweep now requires a fence to actually *draw* (box art or a `flowchart`/`graph` declaration), so those three no longer match.
+
+
+### D4-D9 closed by Story 1.3 — 2026-09-12
+
+| Finding | Disposition | Why |
+|---|---|---|
+| **D4** | **Qualified**, not deleted | The agent files can contradict it. Under D4's own published unit, 3 Vortex agents (Emma, Wade, Mila) measure 0 and the other 9 measure 2; `name-registry.csv` records the per-agent state. The blanket claim is now a mid-migration statement naming its source. |
+| **D5** `(v1.1.0)` | **KEPT and checked** | An owner exists: the framework specification `docs/development.md:19` links to declares `version: 1.1.0`. FR3a says keep-and-check what something can contradict. **The epic's AC assumed none existed — that assumption was wrong.** |
+| **D5** `(v1.4.0+)` | **Deleted** | Nothing in `scripts/update/` carries the value; the `v1.4.0` tag and CHANGELOG entry version the **package**, not the Update System concept. Nothing could tell you what to refresh it to. |
+| **D6** | **Deleted**, instruction retained | Every document carrying the figures has either no `status:` frontmatter or one describing a *run* (`READY FOR EXECUTION`). Under the 2026-09-12 archive ruling, none is an owner. The P0 suite is now named as the authority instead. |
+| **D7** | **Shape, not inventory** | All **four** enumerating nodes in the fence were incomplete, not just `_bmad/bme/` — `_bmad-output/` showed 2 of 14. Each now shows representative children and is marked non-exhaustive, so adding, renaming or removing a directory does not falsify it. The registry-derived agent/workflow annotations were **preserved** and re-proven machine-checked by mutation. |
+| **D8 / D9** | **Resolved to their real forms** | Frontmatter name has three forms (`bmad-bme-agent-*`, unquoted role name, quoted spaced name). Display name exists only in v5 agents and is **not always a first name** — `name="Loom Master"`. The caveat Story 1.1 left pointing at 1.3 is removed; it had become a stale claim about a resolved finding. |
+
+**Two claims in `docs/agents.md` were handed to the existing checker instead of being guarded by prose.**
+`:403` and `:413` said "all seven" with no noun, which `docs-audit.js`'s pattern requires — so neither was
+matched by anything. Reworded to "all seven agents"; coverage proven by mutation (`seven`→`eight` produces a
+`stale-reference` finding at `L403`, reverted). This is FR3a's *extend the checker that already exists*, at the
+cost of one word.
+
+> **The coverage count for `docs/agents.md` is deliberately NOT bumped.** That row is owned by Story 1.2, and
+> the freeze banner's carve-out says "derive and write your own row; do not hand-fix anyone else's." Story 1.3
+> edited two prose claims in that file; it did not perform its derivation pass. Recording the change here
+> rather than editing 1.2's row.
+
+**Same class, still live, routed not fixed:** `docs/faq.md:40` ("all seven **Vortex** agents", Story 1.4) and
+`docs/BMAD-METHOD-COMPATIBILITY.md:197` ("All 7 **Vortex** agent files", Story 1.5). Both evade the checker the
+same way — **a word between the number and the noun defeats its adjacency requirement**, which is worth knowing
+before anyone trusts a green `docs:audit` on a count.
 
 Severity: **D1, D2, D3 = ACT-FAIL** · **D4, D8, D9 = MISLEAD** · **D5, D6, D7 = ROT**
 

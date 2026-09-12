@@ -8,9 +8,11 @@ Architecture overview, agent development patterns, and contribution guidelines f
 
 ### Agent Architecture Framework (v1.1.0)
 
+> The version tracks the framework specification linked below, which declares `version: 1.1.0` in its frontmatter — not the package, which is at a different version entirely.
+
 All agents follow a standard pattern:
 
-- **XML-based agent structure** — Agent definition in markdown code blocks
+- **Agent structure is mid-migration** — most agent files still carry the v5 XML blocks (`<agent>` / ```` ```xml ````). The converted Vortex agents — Emma, Wade and Mila — carry none and are plain outcome-based markdown. Source of truth: the agent files under `_bmad/bme/**/agents/`; `_bmad/bme/_config/name-registry.csv` records the per-agent state
 - **Config-driven personalization** — `user_name`, `communication_language`, `output_folder`
 - **Step-file workflow pattern** — Just-in-time sequential loading (steps are only loaded when reached)
 - **Menu-driven interaction** — Numeric, text, and fuzzy command matching
@@ -18,7 +20,7 @@ All agents follow a standard pattern:
 
 See: [Agent Architecture Framework](../_bmad-output/_archive/exploratory/generic-agent-integration-framework.md)
 
-### Update System (v1.4.0+)
+### Update System
 
 Key modules in `scripts/update/lib/`:
 
@@ -66,8 +68,8 @@ Migrations live in `scripts/update/migrations/registry.js` (append-only).
    ```
 
 4. **Test thoroughly:**
-   - Follow Emma's test plan structure (39 scenarios)
-   - Execute P0 tests (18 critical scenarios minimum)
+   - Follow the structure of the existing agent verification test designs
+   - Execute the P0 suite — it is the authority on what must pass
    - Target: 100% P0 pass rate
 
 ### Team Factory (Recommended)
@@ -87,11 +89,11 @@ directory form is what the clone recipe above copies.
 |---------|-----------|---------|
 | Agent file (Vortex) | Directory named for the role; the agent lives in `SKILL.md` inside it | `_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md` |
 | Agent file (Gyre) | Flat file named for the role | `_bmad/bme/_gyre/agents/stack-detective.md` |
-| Frontmatter name | Spaces, lowercase | `"discovery empathy expert"` |
-| Display name | First name | `name="Isla"` |
+| Frontmatter name | Three forms, by team and conversion state | `bmad-bme-agent-emma` (converted Vortex) · `discovery-empathy-expert` (unconverted Vortex) · `"stack detective"` (Gyre and Loom, quoted and spaced) |
+| Display name | The `name="…"` attribute, in v5 agents only — usually a first name, but not always | `name="Isla"`, `name="Loom Master"` · converted agents have no such attribute and carry the name as a heading |
 | User guide | Uppercase first name | `ISLA-USER-GUIDE.md` |
 
-**Frontmatter name and Display name are team- and conversion-state-dependent**, and are open findings (D8, D9) owned by Story 1.3. The values above hold for Gyre and for unconverted Vortex agents; converted Vortex agents use a `bmad-bme-agent-<name>` frontmatter name and carry the display name as a heading rather than a `name="…"` attribute.
+Both rows above vary by team and by conversion state; the agent files under `_bmad/bme/**/agents/` are the source of truth, and `_bmad/bme/_config/name-registry.csv` records which agents are converted.
 
 See: [Emma Reference Implementation](../_bmad-output/_archive/exploratory/emma-reference-implementation-complete.md)
 
@@ -99,32 +101,34 @@ See: [Emma Reference Implementation](../_bmad-output/_archive/exploratory/emma-r
 
 ## Project Structure
 
+**This is shape, not an inventory.** Every node below shows representative children, never all of
+them — `ls` the directory for the full set. Nothing here needs editing when a directory is added,
+renamed or removed, which is the property that keeps it true.
+
 ```
 Convoke/
-├── _bmad/bme/
+├── _bmad/bme/               # one directory per team or skill module, e.g.
 │   ├── _vortex/             # Team: Product Discovery (7 agents, 22 workflows)
 │   ├── _gyre/               # Team: Production Readiness (4 agents, 7 workflows)
-│   └── _enhance/            # Skill: Agent Capability Upgrades
-├── _bmad-output/
-│   ├── vortex-artifacts/    # Vortex generated artifacts
-│   └── gyre-artifacts/      # Gyre generated artifacts
-├── scripts/
-│   ├── install-vortex-agents.js
-│   ├── install-gyre-agents.js
-│   ├── install-all-agents.js
+│   └── …                    # plus _enhance, _team-factory, covenant, _config and others
+├── _bmad-output/            # generated artifacts, one directory per producer, e.g.
+│   ├── vortex-artifacts/
+│   └── …                    # plus planning-artifacts, implementation-artifacts and others
+├── scripts/                 # CLI entry points at the top level, e.g.
+│   ├── install-*-agents.js  # per-team installers
 │   ├── convoke-doctor.js
-│   └── update/
-│       ├── lib/             # Update system modules
-│       └── migrations/      # Migration registry + delta files
-├── tests/
-│   ├── unit/                # Unit tests
-│   ├── integration/         # Integration tests
-│   └── p0/                  # P0 gate tests (release quality)
+│   └── update/              # the update system: lib/ modules, migrations/ registry + deltas
+├── tests/                   # one directory per tier, e.g.
+│   ├── unit/
+│   ├── p0/                  # P0 gate tests (release quality)
+│   └── …                    # plus integration, audit, lib and others
 ├── docs/                    # Documentation (you're here)
-├── package.json             # convoke-agents
-├── CHANGELOG.md             # Version history
-└── UPDATE-GUIDE.md          # Migration documentation
+└── package.json             # convoke-agents — see CHANGELOG.md and UPDATE-GUIDE.md alongside
 ```
+
+The agent and workflow counts above are derived from `scripts/update/lib/agent-registry.js` and are
+checked by `npm run docs:audit`, which fails if they drift. They are the only figures in this tree
+that any tool can contradict — everything else is illustrative.
 
 ---
 

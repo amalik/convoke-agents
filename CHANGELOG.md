@@ -214,7 +214,7 @@ Patch bump: portability-system hardening + bme agent coverage in catalog manifes
 - **Seed Catalog** — Seeds a complete catalog repository staging directory with all exportable skills, adapters, and catalog README.
 - **Export Validation** — Validates exported skill staging directories for structural correctness and BMAD-internal leaks.
 - **Platform Adapters** — Generates Claude (CLAUDE.md commands), GitHub Copilot (`.github/copilot-instructions.md`), and Cursor (`.cursor/rules/`) adapter files from exported skills.
-- **Team Factory module** — Now ships in the npm package (`_bmad/bme/_team-factory/`). Factory workflows for industrializing team, agent, and skill addition.
+- **Team Factory module** — Now ships in the npm package (`_bmad/bme/_team-factory/`). Factory workflow for industrializing team creation. *(Corrected 2026-09-12: agent and skill addition were planned for Phase 3 and have never shipped.)*
 
 ### Changed
 
@@ -268,7 +268,7 @@ Patch bump: portability-system hardening + bme agent coverage in catalog manifes
 
 ### Added
 
-- **Team Factory extension workflows** — Add Agent (`step-add-agent.md`) and Add Skill (`step-add-skill.md`) workflows for extending existing teams and agents
+- **Team Factory extension groundwork** — appender modules and an extension validator for extending existing teams and agents. *(Corrected 2026-09-12: this entry previously recorded Add Agent and Add Skill **workflows** as shipped. They did not ship. `step-add-agent.md` and `step-add-skill.md` were authored by stories `tf-3-1`/`tf-3-2` into `.claude/skills/`, which `.gitignore:62` excludes — so they existed on one machine, were never tracked, and were never packaged. The entry recorded a release that did not contain them.)*
 - **Appender modules** — `registry-appender.js`, `config-appender.js`, `csv-appender.js` for automated wiring when adding agents or skills to existing teams
 - **Extension validator** — `validateSkillExtension()` and `buildSkillExtensionManifest()` for validating factory-generated extensions
 - **Multi-team docs-audit** — `checkStaleReferences()` now validates against all registered teams (Vortex + Gyre) instead of only Vortex, eliminating false positives for Gyre references
