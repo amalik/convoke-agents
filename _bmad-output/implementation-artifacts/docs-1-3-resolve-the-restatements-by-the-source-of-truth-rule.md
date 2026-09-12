@@ -4,7 +4,7 @@ baseline_commit: 7f40ff28
 
 # Story 1.3: Resolve the restatements by the source-of-truth rule
 
-Status: review
+Status: done
 
 ## Story
 
@@ -310,6 +310,7 @@ rows' content is specified below; they need the backlog committed first, then on
 
 | Date | Change |
 |------|--------|
+| 2026-09-12 | **Closed `done` after two review rounds.** R1 found the `(v1.4.0+)` delete violated AC7 — the marker is owned — plus two numbers misread from my own output and a false claim about what `docs:audit` guarantees. R2 found 9 of 10 of R1's corrections defective, including a misattributed CHANGELOG citation and a correct count replaced by a wrong one. Instrument changed rather than patched a third time: exhaustive instance lists and provenance attributions **removed**. All dispositions survived every round untouched. |
 | 2026-09-12 | **Implemented.** D4 qualified; `(v1.1.0)` **kept** (an owner exists — the epic assumed none did) and `(v1.4.0+)` deleted; D6 arithmetic deleted after classifying all eight carrying documents; D7 revised across **all four** enumerating nodes with the registry-checked annotations preserved and re-proven; D8/D9 resolved including the value column (`name="Loom Master"` is not a first name). AC6's two claims handed to the existing checker for one word, coverage proven by mutation. `docs:audit` caught two of my own unowned counts mid-implementation. Task 9 blocked on a dirty backlog. |
 
 
