@@ -84,13 +84,18 @@ Two capabilities are available today — **Create Team** (a new team from scratc
 
 ### Agent File Naming Conventions
 
-Agent files are laid out differently by team, and both layouts are current — the Vortex
-directory form is what the clone recipe above copies.
+Agent files are laid out two ways, and both are in use. **The directory form is canonical for new teams** —
+it is what Vortex uses for all seven of its agents, and it gives each agent a place for the `references/`
+files several of them already carry. The flat form is what Gyre and Loom use; existing agents are not being
+migrated, so both forms stay current. The clone recipe above copies the canonical one.
+
+Layout is independent of the v6.3 conversion state: all seven Vortex agents use the directory form whether or
+not they have been converted.
 
 | Element | Convention | Example |
 |---------|-----------|---------|
-| Agent file (Vortex) | Directory named for the role; the agent lives in `SKILL.md` inside it | `_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md` |
-| Agent file (Gyre) | Flat file named for the role | `_bmad/bme/_gyre/agents/stack-detective.md` |
+| Agent file — **canonical for new teams** | Directory named for the role; the agent lives in `SKILL.md` inside it, with room for a `references/` subdirectory beside it | `_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md` |
+| Agent file — flat form | A single file named for the role. Used by Gyre and Loom; **not** the form to copy for a new team | `_bmad/bme/_gyre/agents/stack-detective.md` |
 | Frontmatter name | Three forms, by team and conversion state | `bmad-bme-agent-emma` (converted Vortex) · `discovery-empathy-expert` (unconverted Vortex) · `"stack detective"` (Gyre and Loom, quoted and spaced) |
 | Display name | The `name="…"` attribute, in v5 agents only — usually a first name, but not always | `name="Isla"`, `name="Loom Master"` · converted agents have no such attribute and carry the name as a heading |
 | User guide | Uppercase first name, where one exists | `ISLA-USER-GUIDE.md`. Vortex and Gyre agents have one; `team-factory` does not |

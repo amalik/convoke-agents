@@ -8,8 +8,7 @@ const chalk = require('chalk');
 const { findProjectRoot } = require('./update/lib/utils');
 const {
   AGENTS, WORKFLOWS, WORKFLOW_NAMES,
-  GYRE_AGENTS, GYRE_WORKFLOWS,
-} = require('./update/lib/agent-registry');
+  GYRE_AGENTS, GYRE_WORKFLOWS, EXTRA_BME_AGENTS } = require('./update/lib/agent-registry');
 
 // --- Constants (Task 1.1, 1.2) ---
 
@@ -66,7 +65,14 @@ function checkStaleReferences(content, filePath) {
   const validAgentCounts = new Set([
     AGENTS.length,                              // Vortex
     GYRE_AGENTS.length,                         // Gyre
-    AGENTS.length + GYRE_AGENTS.length,         // Combined total
+    AGENTS.length + GYRE_AGENTS.length,         // Vortex + Gyre
+    // T146: the registry knows a third group — EXTRA_BME_AGENTS holds Loom's `team-factory`,
+    // which is in neither array above. Without it the full roster (12) was rejected while
+    // 11 was accepted, so a TRUE statement about the agent count read as stale. `README.md`
+    // said "all 12 Convoke agents" and passed only because an intervening word kept it away
+    // from the adjacency this check requires. Derived from the registry like its siblings —
+    // adding a fourth group there must not require editing this line again.
+    AGENTS.length + GYRE_AGENTS.length + EXTRA_BME_AGENTS.length,
   ]);
   const validWorkflowCounts = new Set([
     WORKFLOWS.length,                           // Vortex

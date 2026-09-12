@@ -7,7 +7,7 @@ purpose: Define standard pattern for creating domain-specialized agents within B
 related_docs:
   - phase-0-implementation-guide.md (v1.2.0)
   - distribution-strategy.md (v2.0.0)
-reference_implementation: Emma (empathy-mapper) - see _bmad/bme/_designos/agents/empathy-mapper.md
+reference_implementation: Emma - see _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md (was _bmad/bme/_designos/agents/empathy-mapper.md; that module and path no longer exist — corrected 2026-09-12, T144)
 ---
 
 # BMAD Agent Architecture Framework
