@@ -8,11 +8,11 @@
 
 ## Vortex Overview
 
-The Vortex Pattern's agents, streams and handoff contracts are enumerated in `docs/agents.md` and in `scripts/update/lib/agent-registry.js`, which are the source of truth for the diagram below:
+The Vortex Pattern has 7 agents across 7 streams, connected by 10 handoff contracts. All ten are defined in this document — HC1–HC5 under **Artifact Contracts**, HC6–HC10 under **Routing Contracts** — and those tables are what the diagram below is drawn from:
 
 ```mermaid
 flowchart LR
-    %% Source of truth: the handoff-contract tables in docs/agents.md. Keep the three copies in step.
+    %% Drawn from the handoff-contract tables in this document; where they disagree, the tables are right.
     Emma["Emma 🎯<br/>Contextualize"]
     Isla["Isla 🔍<br/>Empathize"]
     Mila["Mila 🔬<br/>Synthesize"]

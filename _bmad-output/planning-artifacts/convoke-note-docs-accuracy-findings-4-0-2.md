@@ -108,7 +108,7 @@ The same diagram, the same three defects, in the two files operators actually re
 
 | ID | Where | Defect | Evidence |
 |---|---|---|---|
-| **A7** | `VORTEX-TEAM-GUIDE.md` fence, `compass-routing-reference.md` fence | HC9 drawn into Noah against the table; 4 box tops opened and 3 closed; `▼ to Isla` contradicting the `▲` above Emma. **Identical defects to A1/A2/A4, in shipped files.** | `node scripts/audit/vortex-diagram-integrity.js --diagnose` |
+| **A7** | `VORTEX-TEAM-GUIDE.md` fence, `compass-routing-reference.md` fence | HC9 drawn into Noah against the table; 4 box tops opened and 3 closed; `▼ to Isla` contradicting the `▲` above Emma. **Identical defects to A1/A2/A4, in shipped files.** | `git show 2c372285^:_bmad/bme/_vortex/guides/VORTEX-TEAM-GUIDE.md \| sed -n '78,95p'` (and `compass-routing-reference.md \| sed -n '19,36p'`) — the ASCII as it stood, showing `HC9│` descending into the third box of the row |
 | **A8** | `compass-routing-reference.md` header box | Its second line is one render column short of its three siblings (71 / **70** / 71 / 71) — a defect unique to this file; `VORTEX-TEAM-GUIDE.md`'s equivalent box is clean at 71/71/71/71 | same command |
 
 **Not findings, recorded so they are not re-reported:**

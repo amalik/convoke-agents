@@ -232,7 +232,7 @@ The Vortex is **non-linear by design**. While there's a natural forward flow (Is
 
 ```mermaid
 flowchart LR
-    %% Source of truth: the handoff-contract tables in docs/agents.md. Keep the three copies in step.
+    %% Drawn from the handoff-contract tables in this document; where they disagree, the tables are right.
     Emma["Emma 🎯<br/>Contextualize"]
     Isla["Isla 🔍<br/>Empathize"]
     Mila["Mila 🔬<br/>Synthesize"]

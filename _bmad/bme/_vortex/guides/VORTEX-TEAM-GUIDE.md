@@ -19,6 +19,9 @@ If you've read the individual user guides for Emma, Isla, Mila, Liam, Wade, Noah
 
 The Vortex is a 7-stream product discovery framework based on the [Innovation Vortex](https://unfix.com/innovation-vortex) from the unFIX model. Each stream has a dedicated agent. Artifacts flow forward through handoff contracts, while feedback loops route backward when evidence demands it.
 
+The seven streams in their canonical order — this is **stream sequence, not contract routing**;
+the handoff contracts are the diagram further down, and the two are not the same picture:
+
 ```
   Emma 🎯          Isla 🔍          Mila 🔬          Liam 💡          Wade 🧪          Noah 📡          Max 🧭
  Contextualize  →  Empathize  →   Synthesize  →   Hypothesize  →  Externalize  →   Sensitize  →   Systematize
@@ -71,7 +74,7 @@ When evidence says "go back," these contracts route work backward:
 
 ```mermaid
 flowchart LR
-    %% Source of truth: the handoff-contract tables in docs/agents.md. Keep the three copies in step.
+    %% Drawn from the handoff-contract tables in this document; where they disagree, the tables are right.
     Emma["Emma 🎯<br/>Contextualize"]
     Isla["Isla 🔍<br/>Empathize"]
     Mila["Mila 🔬<br/>Synthesize"]
