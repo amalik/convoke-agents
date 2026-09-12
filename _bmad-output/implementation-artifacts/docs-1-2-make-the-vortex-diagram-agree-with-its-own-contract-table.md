@@ -4,7 +4,7 @@ baseline_commit: a6b9c6be
 
 # Story 1.2: Make the Vortex diagram agree with its own contract table
 
-Status: review
+Status: done
 
 ## Story
 
@@ -425,6 +425,7 @@ re-anchored to the mermaid block at `#L233-L255` and marked closed. `docs/agents
 
 | Date | Change |
 |------|--------|
+| 2026-09-12 | **Story closed `done` after three review rounds.** R1 (13 HIGH) broke the hand-rolled mermaid parser in 7 places; R2 found the generator that replaced it regenerates the original defect into two shipped files with a green gate; the check was **deleted** by operator ruling and filed as **T142**. R3 found a sentence I had added to a shipped guide that was false three ways, and a gate blind to backticked paths (**T143**). **The deliverable stands and was re-verified in every round:** three byte-identical mermaid diagrams, all 10 contracts agreeing with each file's own table, HC9 → Isla, parsing under real `mermaid@11`. Tasks 1, 7 and 10 are `[~]` — built, then deleted. |
 | 2026-09-11 | **Implemented.** Three diagrams converted to mermaid, edge-identical, all 10 contracts correct. New lint `vortex-diagram-integrity.js` with 4 permanent assertions (each proven able to fail) plus a retired one-shot diagnostic; wired into CI. HC9 closed in **two shipped files** and one that does not ship. A5-A8 filed: the ASCII art was **undecidable for 4 of 10 contracts**, not merely wrong for one. Found during implementation: a false positive that would have broken the gate forever (a decision tree), a silence bug in my own walker, and a fifth archived copy. |
 
 
