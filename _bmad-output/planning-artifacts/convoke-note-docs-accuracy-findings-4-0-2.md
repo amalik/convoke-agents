@@ -120,14 +120,21 @@ The same diagram, the same three defects, in the two files operators actually re
 
 ### D4-D9 closed by Story 1.3 — 2026-09-12
 
-| Finding | Disposition | Why |
-|---|---|---|
-| **D4** | **Qualified**, not deleted | The agent files can contradict it. Under D4's own published unit, 3 Vortex agents (Emma, Wade, Mila) measure 0 and the other 9 measure 2; `name-registry.csv` records the per-agent state. The blanket claim is now a mid-migration statement naming its source. |
-| **D5** `(v1.1.0)` | **KEPT and checked** | An owner exists: the framework specification `docs/development.md:19` links to declares `version: 1.1.0`. FR3a says keep-and-check what something can contradict. **The epic's AC assumed none existed — that assumption was wrong.** |
-| **D5** `(v1.4.0+)` | **Deleted** | Nothing in `scripts/update/` carries the value; the `v1.4.0` tag and CHANGELOG entry version the **package**, not the Update System concept. Nothing could tell you what to refresh it to. |
-| **D6** | **Deleted**, instruction retained | Every document carrying the figures has either no `status:` frontmatter or one describing a *run* (`READY FOR EXECUTION`). Under the 2026-09-12 archive ruling, none is an owner. The P0 suite is now named as the authority instead. |
-| **D7** | **Shape, not inventory** | All **four** enumerating nodes in the fence were incomplete, not just `_bmad/bme/` — `_bmad-output/` showed 2 of 14. Each now shows representative children and is marked non-exhaustive, so adding, renaming or removing a directory does not falsify it. The registry-derived agent/workflow annotations were **preserved** and re-proven machine-checked by mutation. |
-| **D8 / D9** | **Resolved to their real forms** | Frontmatter name has three forms (`bmad-bme-agent-*`, unquoted role name, quoted spaced name). Display name exists only in v5 agents and is **not always a first name** — `name="Loom Master"`. The caveat Story 1.1 left pointing at 1.3 is removed; it had become a stale claim about a resolved finding. |
+| Finding | Disposition | Why | Command |
+|---|---|---|---|
+| **D4** | **Qualified**, not deleted | The agent files can contradict it. Under D4's own published unit, 3 Vortex agents (Emma, Wade, Mila) measure 0 and the other 9 measure 2; `name-registry.csv` records the per-agent state. | `find _bmad/bme -path '*agents*' -name '*.md' \| grep -v '/references/'` then D4's unit (row above) on each |
+| **D5** `(v1.1.0)` | **KEPT and checked** | An owner exists: the framework specification the section links to declares `version: 1.1.0`. **The epic's AC assumed none existed — wrong.** A second archived file also declares 1.1.0 but carries `status: CORRECTED`, which the archive ruling classifies as a record, not a specification — so ownership is **not** ambiguous. | `grep -rl '^version: 1.1.0' _bmad-output/` then `grep -m1 '^status:' <each>` |
+| **D5** `(v1.4.0+)` | **KEPT and checked** — *reversed at Round 1* | First deleted on the basis that `grep -rn '1.4.0' scripts/update/` is empty. **That was the wrong basis: source files do not carry the version they shipped in.** `CHANGELOG.md` `## [1.4.0]` introduces exactly the four modules this heading governs, and `:862` reads "v1.4.0+ updates will use this system". It is owned, and deleting it violated AC7. Restored. | `sed -n '540,552p' CHANGELOG.md` and `sed -n '862p' CHANGELOG.md` |
+| **D6** | **Deleted**, instruction retained | Of the 13 documents carrying either figure, none is a specification: each has no `status:` frontmatter or one describing a *run* (`READY FOR EXECUTION`). Under the archive ruling none is an owner. The P0 suite is named as the authority instead. | `grep -rlE '39 scenario\|18 critical' --include='*.md' .` then `grep -m1 '^status:' <each>` |
+| **D7** | **Shape, not inventory** | **Five** enumerating nodes were incomplete, not just `_bmad/bme/` — the root `Convoke/` node too, which the first pass missed. `_bmad-output/` showed 2 of 14. Each now shows representative children and is marked non-exhaustive, so adding, renaming or removing a directory does not falsify it. The registry-derived agent/workflow annotations were **preserved** and re-proven machine-checked by mutation. | `ls -1d _bmad/bme/*/ _bmad-output/*/ scripts/*/ tests/*/` vs the fence; annotations re-proven by mutating a count and re-running `npm run docs:audit` |
+| **D8 / D9** | **Resolved to their real forms** | Frontmatter name has three forms (`bmad-bme-agent-*`, unquoted role name, quoted spaced name). Display name exists only in v5 agents and is **not always a first name** — `name="Loom Master"`. The caveat Story 1.1 left pointing at 1.3 is removed; it had become a stale claim about a resolved finding. | `grep -m1 '^name:' <each agent file>` and `grep -o 'name="[^"]*"' <each>` |
+
+### `docs/agents.md` — findings added by Story 1.3
+
+| ID | Where | Defect | Command |
+|---|---|---|---|
+| **A9** | `docs/agents.md:403` | "you don't need all seven" — a count with **no noun**, so `docs-audit.js`'s pattern (which requires the number adjacent to `agents`) never matched it. Unchecked by anything. | `node -e "const{checkStaleReferences}=require('./scripts/docs-audit.js')"` on the line before and after the edit; or mutate `seven`→`eight` and run `npm run docs:audit` |
+| **A10** | `docs/agents.md:413` | "Use all seven together" — same defect, same file | same |
 
 **Two claims in `docs/agents.md` were handed to the existing checker instead of being guarded by prose.**
 `:403` and `:413` said "all seven" with no noun, which `docs-audit.js`'s pattern requires — so neither was
@@ -140,10 +147,21 @@ cost of one word.
 > edited two prose claims in that file; it did not perform its derivation pass. Recording the change here
 > rather than editing 1.2's row.
 
-**Same class, still live, routed not fixed:** `docs/faq.md:40` ("all seven **Vortex** agents", Story 1.4) and
-`docs/BMAD-METHOD-COMPATIBILITY.md:197` ("All 7 **Vortex** agent files", Story 1.5). Both evade the checker the
-same way — **a word between the number and the noun defeats its adjacency requirement**, which is worth knowing
-before anyone trusts a green `docs:audit` on a count.
+**Same class, still live, routed not fixed.** Both evade the checker the same way — **a word between the number
+and the noun defeats its adjacency requirement**, which is worth knowing before anyone trusts a green
+`docs:audit` on a count:
+
+| Instance | Owner |
+|---|---|
+| `docs/faq.md:40` — "all seven **Vortex** agents" | 1.4 |
+| `docs/BMAD-METHOD-COMPATIBILITY.md:197` — "All 7 **Vortex** agent files" | 1.5 |
+| `docs/BMAD-METHOD-COMPATIBILITY.md:166` — "7 **Vortex** agents" | 1.5 |
+| `INSTALLATION.md:250` — "11 **team** agents" | 1.6 |
+| `README.md:98` — "all 12 **Convoke** agents" | **unowned — see the registry-gap row in the backlog** |
+
+`README.md:98` is the interesting one: it is **true** (7 Vortex + 4 Gyre + Loom's `team-factory` = 12 agent
+files) and the checker would call it stale if the intervening word were removed, because `validAgentCounts` is
+`{7, 4, 11}` — `team-factory` is in neither registry array. Twelve files, eleven registry agents.
 
 Severity: **D1, D2, D3 = ACT-FAIL** · **D4, D8, D9 = MISLEAD** · **D5, D6, D7 = ROT**
 
@@ -270,7 +288,7 @@ shape:
 | File | In scope | Assertions | Examined | Story | Findings |
 |------|----------|-----------:|----------|-------|----------|
 | `docs/development.md` | yes | — | **yes** | 1.1, 1.3 | 9 |
-| `docs/agents.md` | yes | — | **yes** | 1.2 | 6 |
+| `docs/agents.md` | yes | — | **yes** | 1.2, 1.3 | 8 |
 | `_bmad/bme/_vortex/guides/VORTEX-TEAM-GUIDE.md` | yes | — | **yes** | 1.2 | 1 |
 | `_bmad/bme/_vortex/compass-routing-reference.md` | yes | — | **yes** | 1.2 | 2 |
 | `UPDATE-GUIDE.md` | yes | 37 | no | 1.4 | — |

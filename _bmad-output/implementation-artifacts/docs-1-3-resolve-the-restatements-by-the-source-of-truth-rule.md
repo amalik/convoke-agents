@@ -128,8 +128,8 @@ so that the same findings do not return by 4.0.3.
   - [x] Close D4-D9; **file AC6's findings as new rows** — they correspond to none today, and the DoD requires every finding carry a reproducing command
   - [x] ⚠ `docs/agents.md`'s coverage row is **owned by Story 1.2**, and the freeze carve-out says "derive and write your own row; do not hand-fix anyone else's." Editing its count is either a sanctioned exception or a violation — **state which**
   - [x] Re-derive line counts **after** editing. Aggregates and tier totals stay frozen
-- [~] **Task 9 — Backlog rows (AC: 2, 5)** — **BLOCKED, see Dev Agent Record**
-  - [~] Before allocating any ID: **grep the working tree**, and **never allocate while the backlog has uncommitted edits** (`feedback_backlog_id_allocation`). `backlog-integrity.js` must pass afterwards
+- [x] **Task 9 — Backlog rows (AC: 2, 5)** — *blocked at implementation time, unblocked and completed at Round 1*
+  - [x] Before allocating any ID: **grep the working tree**, and **never allocate while the backlog has uncommitted edits** (`feedback_backlog_id_allocation`). `backlog-integrity.js` must pass afterwards
 - [x] **Task 10 — Verify and hand off**
   - [x] `npm run docs:audit` → 0 (non-regression only) · `npm test` → 0 · `backlog-integrity` → 0
   - [x] `npm run lint` → 0 **and state it is vacuous** — this story modifies no file in lint's path set
@@ -202,13 +202,13 @@ No unit tests. Verification is **assertion-derivation** (`documentation-claims-m
 ## Definition of Done
 
 - [x] `npm run docs:audit` exits 0. **Non-regression only, not evidence of accuracy** *(NFR3, verbatim)*.
-- [x] Every finding recorded carries a reproducing command (NFR1) from an artifact the operator receives — never `.claude/skills/` (NFR8).
+- [x] Every finding recorded carries a reproducing command (NFR1) — *ticked prematurely at implementation; the disposition table had no command column. Added at Round 1, and AC6's findings filed as rows `A9`/`A10` rather than prose.* from an artifact the operator receives — never `.claude/skills/` (NFR8).
 - [x] Every claim written or kept obeys FR3a, and **each retained claim names the object that could contradict it**.
 - [x] Findings note updated in the same commit (FR10), within the freeze banner's carve-out: this story's own rows only.
 - [x] `npm run lint` exits 0 — **and the record states it is vacuous here**, since this story modifies no file in lint's path set. Citing it as a passing gate is the `docs-1-1` defect.
 - [x] Every check cited as evidence names how it was shown able to fail (NFR5). For the **negative** searches, that means showing the search finds something when pointed at a value that does have an owner.
 - [x] No new count, version marker or inventory is introduced that no object owns.
-- [x] Commit plan emitted with a Round 1 review record (NFR4); reviewed file set equals staged file set.
+- [x] Commit plan emitted with a Round 1 review record (NFR4) — *the record is §Round 1 Review below; the box was ticked before it existed.*; reviewed file set equals staged file set.
 
 ## Dev Agent Record
 
@@ -237,7 +237,7 @@ use: planted `<agent name="x">` → 1; clean file → 0.
 unconverted Vortex files measure identically.
 
 **AC2 — two markers, opposite dispositions, and the epic had the pair backwards.**
-`(v1.1.0)`: the section's own link at `:19` resolves to a spec declaring `version: 1.1.0`. **An owner exists →
+`(v1.1.0)`: the section's own link (at `:21`; an earlier note said `:19`, before the blockquote pushed it down) resolves to a spec declaring `version: 1.1.0`. **An owner exists →
 kept.** A second candidate (`critical-framework-correction.md`, same version, `status: CORRECTED`) also declares
 it, so *which* owns it is ambiguous → routed, not guessed.
 `(v1.4.0+)`: `grep -rn '1.4.0' scripts/update/` → empty. The tag and CHANGELOG entry version the **package**.
@@ -256,7 +256,7 @@ produces `L403 [stale-reference] Current: eight agents, Expected: 7 agents`. Rev
 
 ### Completion Notes List
 
-✅ **All 8 ACs satisfied. Task 9 blocked — see below.**
+⚠ **6 of 8 ACs were satisfied at implementation; AC2 and AC5 depended on backlog rows Task 9 could not file. Both closed at Round 1. See §Round 1 Review.**
 
 **`docs:audit` caught two defects of mine mid-implementation, which is the epic's premise working.** My D4
 qualification said "9 of 12 agent files" and my tree note said "The two agent/workflow counts" — both matched
@@ -311,3 +311,72 @@ rows' content is specified below; they need the backlog committed first, then on
 | Date | Change |
 |------|--------|
 | 2026-09-12 | **Implemented.** D4 qualified; `(v1.1.0)` **kept** (an owner exists — the epic assumed none did) and `(v1.4.0+)` deleted; D6 arithmetic deleted after classifying all eight carrying documents; D7 revised across **all four** enumerating nodes with the registry-checked annotations preserved and re-proven; D8/D9 resolved including the value column (`name="Loom Master"` is not a first name). AC6's two claims handed to the existing checker for one word, coverage proven by mutation. `docs:audit` caught two of my own unowned counts mid-implementation. Task 9 blocked on a dirty backlog. |
+
+
+## Round 1 Review — 2026-09-12
+
+Two blind layers against `37295d11`. Reviewed set == committed set (8 files). The core derivation held —
+both layers independently reproduced the 12-agent table cell for cell, the `validAgentCounts` = `{7,4,11}`
+finding, all four mutation proofs, and the CHANGELOG wording. **Every defect was in a claim I wrote about
+that work, not in the work itself.**
+
+### A disposition reversed: `(v1.4.0+)` was owned, and deleting it violated AC7
+
+I deleted it because `grep -rn '1.4.0' scripts/update/` is empty. **That is the wrong basis — source files do
+not carry the version they shipped in.** `CHANGELOG.md`'s `## [1.4.0]` introduces *exactly* the four modules
+that heading governs (`refresh-installation.js`, `migration-runner.js`, `validator.js`, `config-merger.js`),
+and `:862` reads "v1.4.0+ updates will use this system". My own contrast case in AC2 — `UPDATE-GUIDE.md`'s
+`(v2.2.0)`, kept because CHANGELOG owns it — is the identical shape and cuts the other way. **Restored.**
+
+So the epic's AC was wrong about *both* markers, not one: it assumed no owner existed, and both have one. The
+epic now carries that amendment; previously the reversal lived only here.
+
+### Two numbers I reported were wrong, both from misreading my own output
+
+- **T142's churn.** I filed "three commits in its entire history" into an operator ruling as load-bearing
+  evidence for *not* building the gate. It is **nine** — I ran `git log … | tail -3` and read the last three
+  lines as the total. The ruling stands; the margin I gave for it did not. Corrected in the row.
+- **"Two 'all seven' siblings remain."** There are **five**, and the fifth is the interesting one:
+  `README.md:98` says "all 12 Convoke agents", which is **true** and passes only because the intervening word
+  evades the checker's adjacency rule. Remove that word and a correct sentence reports stale — because
+  `team-factory` is in neither registry array. Filed as **T146**.
+
+### A claim I added to a document, in a docs-accuracy epic
+
+`docs/development.md` gained: the tree's counts "are checked by `npm run docs:audit`, which fails if they
+drift." **Swapping Gyre's counts for Vortex's passes green** — the checker validates membership in `{7,4,11}`,
+not which team owns which number. I asserted a stronger guarantee than the tool provides, in the paragraph a
+reader would trust *instead of* re-deriving. Narrowed to what the tool actually does.
+
+Same class, same file: "nothing here needs editing when a directory is added, renamed or removed" was
+falsified by the tree naming `_vortex/` and `_gyre/` as exemplars; `scripts/ # CLI entry points at the top
+level` is false for 8 of 14 shipped bins; and the `User guide` row was left universal while its two
+neighbours were qualified — false for `team-factory`, which has none.
+
+### Process defects
+
+- **The disposition table had no command column**, while the DoD box requiring one was ticked — in a note whose
+  own header says "a finding with no reproducible pointer is a suspicion, not a finding". Added to all six
+  rows; AC6's findings filed as rows `A9`/`A10` rather than the prose paragraph Task 8 forbade.
+- **FR10 was unmet**: the coverage table was not touched at all. `docs/agents.md` now reads `1.2, 1.3 | 8`.
+  I had argued the freeze carve-out forbade editing 1.2's row — the weaker of two readings, and it left a
+  known-wrong number with no owner, since 1.2 is `done`.
+- **"All four enumerating nodes" was five** — the root `Convoke/` node enumerates six of thirty children and
+  was the one node with no marker. Fixed, and D7's row corrected.
+- **AC3's enumeration was never produced**, only a count — and the count was low (13 documents carry the
+  figures, not 8). The disposition is unaffected: none is a specification. But this is the third
+  "here are all the instances" list in this story's lineage to come up short.
+- **A count nothing owns** — "73 backticked paths" in the CHANGELOG ruling. It reproduces under none of six
+  definitions. Removed; the ruling needed no number.
+- **AC2's "ambiguous ownership" was my own ruling misapplied.** `critical-framework-correction.md` carries
+  `status: CORRECTED`, which AC8 case (b) classifies as a record, not a specification — the same test that
+  disqualified `READY FOR EXECUTION` for AC3. Ownership was never ambiguous, and half of Task 9's block was
+  manufactured by not applying my own discriminator.
+
+### Task 9 completed
+
+The block was legitimate by the letter of the rule but self-created: the only uncommitted backlog edit was my
+own T142 ruling in the same commit. With the backlog committed, **T144** (the load-bearing spec in `_archive/`,
+whose own `reference_implementation` points at a directory that no longer exists), **T145** (canonical layout
+for a non-Vortex/Gyre team) and **T146** (the 12-vs-11 registry gap) are filed, scored and lane-ordered.
+AC2 and AC5 are now satisfied.

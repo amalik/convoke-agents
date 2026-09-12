@@ -64,8 +64,8 @@ is 167 lines, so the ~3,191-line scope figure becomes ~3,358).
 > was never true — that is not staleness, it is an error, and a changelog's whole value is being a reliable
 > record of what happened.
 >
-> **Scope: entries that record something that never happened.** Not the 73 backticked paths, not the 37
-> version headings, not present-tense accuracy over 1,249 lines. Story 1.6's size is unchanged.
+> **Scope: entries that record something that never happened.** Not its backticked paths, not its version
+> headings, not present-tense accuracy over the whole file. Story 1.6's size is unchanged.
 >
 > Applied the same day: `CHANGELOG.md:217` and `:271` corrected. `:273` was checked and **left alone** —
 > `validateSkillExtension()` and `buildSkillExtensionManifest()` genuinely exist, so that entry is true.
@@ -97,7 +97,7 @@ FR2: The `docs/agents.md` Vortex flow diagram routes HC9 to the agent its own co
 
 FR2a: The diagram is verified by **two independent mechanical checks, not one** — a *geometry* check (equal render-column counts per box row, equal `┌`/`└` counts, emoji counted as two columns) and a *routing* check that parses the HC contract tables at `docs/agents.md:264-289` and asserts each contract's arrow terminates in the box its own table names. **The geometry check cannot see A1**: a perfectly aligned diagram can still route HC9 to the wrong agent, so geometry alone is a check that cannot fail on this story's most severe finding.
 
-FR3: `docs/development.md` MISLEAD and ROT claims are resolved by the **source-of-truth rule** (FR3a), not by correcting values in place. (Findings D4, D5, D6, D7)
+FR3: `docs/development.md` MISLEAD and ROT claims are resolved by the **source-of-truth rule** (FR3a), not by correcting values in place. (Findings D4, D5, D6, D7) **D5's disposition was "Delete" as written; Story 1.3 found both markers owned and kept both — see the amendment at Story 1.3's AC.**
 
 - **D4** — the "XML-based agent structure" claim *has* a source of truth (the agent `SKILL.md` files) and a reader depends on it. **Qualify it** to match the actual conversion state.
 - **D5** — the `(v1.1.0)` / `(v1.4.0+)` section markers version a *concept*, not the package. Nothing in the repository owns them and no reader action depends on them. **Delete.**
@@ -368,7 +368,14 @@ So that the same findings do not return by 4.0.3.
 
 **Given** the `(v1.1.0)` and `(v1.4.0+)` markers at `docs/development.md:9` and `:21` version a concept rather than the package
 **When** the repository is searched for an object that owns either value
-**Then** none is found, the markers are **deleted**, and the Dev Agent Record states what was searched.
+**Then** the Dev Agent Record states what was searched, and each marker is disposed of on its own evidence.
+
+> ⚠ **AMENDED 2026-09-12 by Story 1.3 — this AC's premise was false for BOTH markers.** It assumed no owner
+> exists. `(v1.1.0)` is owned by the framework specification the section links to (`version: 1.1.0` in its
+> frontmatter). `(v1.4.0+)` is owned by `CHANGELOG.md`'s `## [1.4.0]`, which introduces exactly the modules
+> that heading governs and states "v1.4.0+ updates will use this system". **Both are kept and checked; neither
+> was deleted.** Story 1.3 deleted `(v1.4.0+)` on a first pass using `grep scripts/update/` as the basis —
+> wrong, because source files do not carry the version they shipped in — and Round 1 reversed it.
 
 **Given** "39 scenarios" and "18 critical scenarios minimum" at `docs/development.md:69-70` have no registry, config or suite that could contradict them
 **When** the source-of-truth rule is applied

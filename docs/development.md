@@ -20,7 +20,9 @@ All agents follow a standard pattern:
 
 See: [Agent Architecture Framework](../_bmad-output/_archive/exploratory/generic-agent-integration-framework.md)
 
-### Update System
+### Update System (v1.4.0+)
+
+> The version tracks `CHANGELOG.md`'s `## [1.4.0]` entry, which introduced exactly the modules below — `refresh-installation.js`, `migration-runner.js`, `validator.js`, `config-merger.js` — and states that "v1.4.0+ updates will use this system".
 
 Key modules in `scripts/update/lib/`:
 
@@ -91,9 +93,9 @@ directory form is what the clone recipe above copies.
 | Agent file (Gyre) | Flat file named for the role | `_bmad/bme/_gyre/agents/stack-detective.md` |
 | Frontmatter name | Three forms, by team and conversion state | `bmad-bme-agent-emma` (converted Vortex) · `discovery-empathy-expert` (unconverted Vortex) · `"stack detective"` (Gyre and Loom, quoted and spaced) |
 | Display name | The `name="…"` attribute, in v5 agents only — usually a first name, but not always | `name="Isla"`, `name="Loom Master"` · converted agents have no such attribute and carry the name as a heading |
-| User guide | Uppercase first name | `ISLA-USER-GUIDE.md` |
+| User guide | Uppercase first name, where one exists | `ISLA-USER-GUIDE.md`. Vortex and Gyre agents have one; `team-factory` does not |
 
-Both rows above vary by team and by conversion state; the agent files under `_bmad/bme/**/agents/` are the source of truth, and `_bmad/bme/_config/name-registry.csv` records which agents are converted.
+The last three rows above vary by team and by conversion state; the agent files under `_bmad/bme/**/agents/` are the source of truth, and `_bmad/bme/_config/name-registry.csv` records which agents are converted.
 
 See: [Emma Reference Implementation](../_bmad-output/_archive/exploratory/emma-reference-implementation-complete.md)
 
@@ -101,12 +103,13 @@ See: [Emma Reference Implementation](../_bmad-output/_archive/exploratory/emma-r
 
 ## Project Structure
 
-**This is shape, not an inventory.** Every node below shows representative children, never all of
-them — `ls` the directory for the full set. Nothing here needs editing when a directory is added,
-renamed or removed, which is the property that keeps it true.
+**This is shape, not an inventory.** Every node below shows representative children, never all of them —
+`ls` the directory for the full set. **Adding** a directory never falsifies it, which is the property that
+matters for growth. Renaming or removing one of the few named exemplars (`_vortex/`, `_gyre/`, `docs/`) would,
+and that is the cost of naming any exemplar at all.
 
 ```
-Convoke/
+Convoke/                     # representative children only, like every node below
 ├── _bmad/bme/               # one directory per team or skill module, e.g.
 │   ├── _vortex/             # Team: Product Discovery (7 agents, 22 workflows)
 │   ├── _gyre/               # Team: Production Readiness (4 agents, 7 workflows)
@@ -114,7 +117,7 @@ Convoke/
 ├── _bmad-output/            # generated artifacts, one directory per producer, e.g.
 │   ├── vortex-artifacts/
 │   └── …                    # plus planning-artifacts, implementation-artifacts and others
-├── scripts/                 # CLI entry points at the top level, e.g.
+├── scripts/                 # CLI entry points, some here and some in subdirectories, e.g.
 │   ├── install-*-agents.js  # per-team installers
 │   ├── convoke-doctor.js
 │   └── update/              # the update system: lib/ modules, migrations/ registry + deltas
@@ -126,9 +129,10 @@ Convoke/
 └── package.json             # convoke-agents — see CHANGELOG.md and UPDATE-GUIDE.md alongside
 ```
 
-The agent and workflow counts above are derived from `scripts/update/lib/agent-registry.js` and are
-checked by `npm run docs:audit`, which fails if they drift. They are the only figures in this tree
-that any tool can contradict — everything else is illustrative.
+The agent and workflow counts above come from `scripts/update/lib/agent-registry.js`. `npm run docs:audit`
+checks them, but **only that each number is one the registry knows** — it holds a single set of valid counts
+for all teams, so it catches a number that belongs to no team, and would **not** catch Gyre's counts being swapped for Vortex's.
+They are still the only figures here any tool can contradict at all; everything else is illustrative.
 
 ---
 
