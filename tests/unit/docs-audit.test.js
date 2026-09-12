@@ -14,6 +14,7 @@ const {
   formatReport,
   runAudit,
   USER_FACING_DOCS,
+  validCountsFor,
 } = require('../../scripts/docs-audit');
 
 const {
@@ -67,6 +68,57 @@ describe('checkStaleReferences', () => {
       [],
       `the full roster (${full}) must be a valid agent count`
     );
+  });
+
+  // T148: the derivation used to name its roster arrays literally, which is how T146 happened
+  // and how team four would have reintroduced it. These pin the generalisation itself — the
+  // function takes a registry so a roster the real one does not have can be handed to it.
+  describe('validCountsFor — generalises to rosters the real registry does not have', () => {
+    const base = { AGENTS: new Array(7), GYRE_AGENTS: new Array(4), EXTRA_BME_AGENTS: new Array(1) };
+
+    it('accepts each roster size, the whole roster, and the teams without extras', () => {
+      assert.deepEqual(
+        [...validCountsFor(base, 'AGENTS')].sort((a, b) => a - b),
+        [1, 4, 7, 11, 12]
+      );
+    });
+
+    it('picks up a FOURTH roster with no edit to this file — the T148 regression guard', () => {
+      const withForge = { ...base, FORGE_AGENTS: new Array(3) };
+      const valid = validCountsFor(withForge, 'AGENTS');
+      assert.ok(valid.has(3), "the new roster's own size must become valid");
+      assert.ok(valid.has(15), 'the whole roster (7+4+1+3) must become valid');
+      assert.ok(valid.has(14), 'the teams without extras (7+4+3) must become valid');
+      assert.ok(!valid.has(11), 'the OLD team total must go stale once a team is added');
+    });
+
+    it('excludes EXTRA_ rosters from the teams-without-extras total', () => {
+      assert.ok(validCountsFor(base, 'AGENTS').has(11), '7+4 excludes the EXTRA roster');
+    });
+
+    it('is order-independent', () => {
+      const reordered = {
+        EXTRA_BME_AGENTS: new Array(1), GYRE_AGENTS: new Array(4), AGENTS: new Array(7),
+      };
+      assert.deepEqual(
+        [...validCountsFor(base, 'AGENTS')].sort((a, b) => a - b),
+        [...validCountsFor(reordered, 'AGENTS')].sort((a, b) => a - b)
+      );
+    });
+
+    it('ignores non-array exports and empty rosters', () => {
+      const noisy = { ...base, AGENT_IDS: 'not-an-array', FUTURE_AGENTS: [] };
+      assert.deepEqual(
+        [...validCountsFor(noisy, 'AGENTS')].sort((a, b) => a - b),
+        [1, 4, 7, 11, 12]
+      );
+    });
+
+    it('separates the two suffixes', () => {
+      const mixed = { AGENTS: new Array(7), WORKFLOWS: new Array(22) };
+      assert.ok(!validCountsFor(mixed, 'AGENTS').has(22));
+      assert.ok(!validCountsFor(mixed, 'WORKFLOWS').has(7));
+    });
   });
 
   it('still rejects a count belonging to no registry group', () => {

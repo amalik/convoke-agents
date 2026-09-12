@@ -6,9 +6,40 @@ const fs = require('fs-extra');
 const path = require('path');
 const chalk = require('chalk');
 const { findProjectRoot } = require('./update/lib/utils');
-const {
-  AGENTS, WORKFLOWS, WORKFLOW_NAMES,
-  GYRE_AGENTS, GYRE_WORKFLOWS, EXTRA_BME_AGENTS } = require('./update/lib/agent-registry');
+const { AGENTS, WORKFLOWS, WORKFLOW_NAMES } = require('./update/lib/agent-registry');
+// The whole module, so the valid-count derivation can enumerate EVERY roster array rather
+// than the three that happened to be named here when it was written (T146, T148).
+const agentRegistry = require('./update/lib/agent-registry');
+
+/**
+ * Valid roster counts for a suffix (`AGENTS` / `WORKFLOWS`), derived from EVERY matching array
+ * the registry exports.
+ *
+ * Pure and registry-injectable on purpose: the generalisation is the whole point of this
+ * function, and the only honest way to test it is to hand it a registry with a roster the real
+ * one does not have. Reading the live registry inside would make that untestable.
+ *
+ * Returns the three things a document may legitimately say and nothing else:
+ *   - one roster's own size         ("the 7 Vortex agents")
+ *   - the whole roster              ("all 12 Convoke agents")
+ *   - the teams without the extras  ("11 team agents", INSTALLATION.md)
+ *
+ * ORDER-INDEPENDENT by construction. Prefix sums over `Object.keys` would make the valid set
+ * depend on declaration order, which is arbitrary and would change silently.
+ *
+ * `EXTRA_` is the registry's own prefix for a roster that is not a team in its own right.
+ */
+function validCountsFor(registry, suffix) {
+  const rosters = Object.keys(registry)
+    .filter((k) => k.endsWith(suffix) && Array.isArray(registry[k]))
+    .map((k) => ({ name: k, size: registry[k].length }));
+  const total = rosters.reduce((n, r) => n + r.size, 0);
+  const withoutExtras = rosters
+    .filter((r) => !r.name.startsWith('EXTRA_'))
+    .reduce((n, r) => n + r.size, 0);
+  // A roster of 0 is not a claim anyone makes; excluding it keeps "0 agents" reportable.
+  return new Set([...rosters.map((r) => r.size), total, withoutExtras].filter((n) => n > 0));
+}
 
 // --- Constants (Task 1.1, 1.2) ---
 
@@ -61,28 +92,31 @@ function checkStaleReferences(content, filePath) {
   const agentCount = AGENTS.length;
   const workflowCount = WORKFLOWS.length;
 
-  // Valid counts from all registered teams and their combined totals
-  const validAgentCounts = new Set([
-    AGENTS.length,                              // Vortex
-    GYRE_AGENTS.length,                         // Gyre
-    AGENTS.length + GYRE_AGENTS.length,         // Vortex + Gyre
-    // T146: the registry knows a third group — EXTRA_BME_AGENTS holds Loom's `team-factory`,
-    // which is in neither array above. Without it the full roster (12) was rejected while
-    // 11 was accepted, so a TRUE statement about the agent count read as stale. `README.md`
-    // said "all 12 Convoke agents" and passed only because an intervening word kept it away
-    // from the adjacency this check requires. Derived from the registry like its siblings.
-    // NOTE: this does NOT generalise to a fourth group. The Team Factory writes each new team
-    // its OWN `{PREFIX}_AGENTS` array rather than appending to EXTRA_BME_AGENTS
-    // (`_team-factory/lib/writers/registry-writer.js:228`), so the next team registered
-    // reintroduces exactly this defect until the derivation reads every agent array the
-    // registry exports. Filed as T148, with the same gap for workflow counts below.
-    AGENTS.length + GYRE_AGENTS.length + EXTRA_BME_AGENTS.length,
-  ]);
-  const validWorkflowCounts = new Set([
-    WORKFLOWS.length,                           // Vortex
-    GYRE_WORKFLOWS.length,                      // Gyre
-    WORKFLOWS.length + GYRE_WORKFLOWS.length,   // Combined total
-  ]);
+  // Valid counts, derived from EVERY roster array the registry exports (T148).
+  //
+  // This used to name its arrays literally, which is how T146 happened: `EXTRA_BME_AGENTS`
+  // existed, held Loom's `team-factory`, and was simply not in the list — so the true
+  // 12-agent roster read as stale while the Vortex+Gyre subtotal passed. Naming them
+  // literally also does not survive growth: the Team Factory writes each new team its OWN
+  // `{PREFIX}_AGENTS` array (`_team-factory/lib/writers/registry-writer.js:228`) rather than
+  // appending to an existing one, so team four would have reintroduced the same defect.
+  //
+  // Three things a document may legitimately say, and nothing else:
+  //   - one roster's own size            ("the 7 Vortex agents")
+  //   - the whole roster                 ("all 12 Convoke agents")
+  //   - the teams without the extras     ("11 team agents", INSTALLATION.md)
+  //
+  // The set is ORDER-INDEPENDENT on purpose. Prefix sums over `Object.keys` would make the
+  // valid set depend on declaration order, which is arbitrary and would change silently.
+  // `EXTRA_` is the registry's own prefix for rosters that are not a team in their own right.
+  const validAgentCounts = validCountsFor(agentRegistry, 'AGENTS');
+  // Same derivation, same reason. NOTE the reason is NOT the one T148 was originally filed
+  // with: that row claimed the valid set was wrong because the tree holds 37 workflow
+  // directories. It is not — the registry's workflow rosters are AGENT-OWNED workflows, and
+  // `_portability`, `_artifacts` and `_enhance` have no agents and appear in the registry at
+  // all. No document claims 37. That half of the row was retracted. What survives is growth:
+  // a fourth TEAM's workflow roster would be missed exactly as its agent roster would.
+  const validWorkflowCounts = validCountsFor(agentRegistry, 'WORKFLOWS');
 
   // Build regex for written-out numbers
   const wordKeys = Object.keys(WORD_TO_NUM).join('|');
@@ -592,6 +626,7 @@ async function main() {
 // --- Exports (for testing) ---
 
 module.exports = {
+  validCountsFor,
   USER_FACING_DOCS,
   WORD_TO_NUM,
   checkStaleReferences,

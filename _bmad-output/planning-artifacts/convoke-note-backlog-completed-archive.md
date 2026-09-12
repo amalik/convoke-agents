@@ -1922,3 +1922,32 @@ Filed as **`T147`**, and `docs/development.md` now states plainly that the gener
 
 **Still open from this row's original Scope:** it asked for a ruling on the canonical layout **and frontmatter
 form**. Only layout was ruled. **`T147`'s Scope was widened at R2 to carry the frontmatter ruling explicitly** — a first pass parked it there without the receiving row accepting it, which would have dropped it.
+
+## T148
+
+**Closed 2026-09-12.** `docs-audit.js` derived its valid agent and workflow counts from a hand-listed set
+of registry arrays. That is how `T146` happened — `EXTRA_BME_AGENTS` existed, held Loom's `team-factory`,
+and was simply not in the list, so the true 12-agent roster read as stale while the Vortex+Gyre subtotal
+passed. Naming rosters literally also does not survive growth: the Team Factory writes each new team its
+**own** `{PREFIX}_AGENTS` array rather than appending, so team four would have reintroduced the same defect.
+
+**The fix** derives from every array the registry exports whose name ends in the relevant suffix, yielding
+the three things a document may legitimately say and nothing else — one roster's own size, the whole roster,
+and the teams without the extras (`EXTRA_` being the registry's own prefix for a roster that is not a team
+in its own right). It is **order-independent** by construction; prefix sums over `Object.keys` would make
+the valid set depend on declaration order and change silently.
+
+The derivation was hoisted into a **pure, registry-injectable, exported** function. That is not incidental:
+the only honest way to test a generalisation is to hand it a roster the real registry does not have, and a
+function reading the live registry internally cannot be tested that way.
+
+**Proven.** Six tests, **all six red against the previous derivation** and green after — including that a
+fourth team's roster makes its own size and both new totals valid *without editing the checker*, while the
+old team total correctly goes stale. Real valid sets are unchanged except for `1`, Loom's own roster size,
+which is true.
+
+**Half this row was retracted before it closed.** As filed it claimed `validWorkflowCounts` was wrong
+because the tree holds 37 workflow directories against a valid set of `{7, 22, 29}`. That was a count of the
+wrong thing: the registry's workflow rosters are **agent-owned** workflows, and `_portability`, `_artifacts`
+and `_enhance` have no agents and appear in the registry zero times. No document claims 37. The workflow
+derivation was generalised anyway — but for growth, not for the reason originally filed.
