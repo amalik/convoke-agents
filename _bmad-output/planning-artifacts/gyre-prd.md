@@ -439,6 +439,8 @@ Contextual model must generate successfully for ≥3 distinct stack archetypes b
 | `.gyre/feedback.yaml` | **Commit** | Measurement infrastructure — the only mechanism for measuring absence accuracy. Without it, false negative detection is impossible. CLI explains after feedback prompt: *"Your feedback has been saved to .gyre/feedback.yaml — commit this file to share improvements with your team."* |
 | `.gyre/cache/` | **Gitignore** | Analysis cache; ephemeral, machine-specific |
 
+> **Amended 2026-09-12 — this table is incomplete and is not the authority.** It classifies three of the seven things `.gyre/` holds, and is silent on `stack-profile.yaml`, `findings.yaml`, `history.yaml` and `.lock`. The complete rule — *a `.gyre/` file is committed iff it is a declared GC contract artifact* — is implemented in `.gitignore` and described in [`gyre-arch.md` §"Cross-Cutting Concerns" item 4](gyre-arch.md). Read those; this table is retained as the origin of the policy, not as its current statement. Note that `.gyre/cache/` had no `.gitignore` rule from this row's writing until 2026-09-12, so the requirement stated here was never implemented.
+
 **Monorepo handling:** One `.gyre/` directory per service root, not per repo root. Each service has its own contextual model and findings.
 
 ### Constraint 4: Knowledge Currency (Risk — Deferred Mitigation)

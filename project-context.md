@@ -622,3 +622,71 @@ The cost is not tidiness. The first row is why a second silent data-loss path su
   The correction matters because the false sentence had a cost. On story `gen-1-1`, `code-review-convergence`'s mandatory Round 2 was skipped, the reasoning *"the HIGH is fixed"* was written into a pushed commit, and **132 lines shipped unreviewed** — caught only when the operator asked whether reviews had been included. Rounds 2 and 3 then found four more HIGH, including a fix that deleted 41 of 53 manifest rows while reporting *"other modules preserved"*. Nothing caught the bypass, because nothing was watching for it. This is the same defect class as `documentation-claims-must-be-derived`, occurring inside the file that defines that rule: **a policy written in the indicative before it exists tells the next reader they are protected when they are not.**
 
   Building the gate is tracked as **T77**. Until it ships, the chokepoint is the only enforcement, which means a skipped round is invisible unless a human asks — and that has now happened twice across sessions.
+
+---
+
+## Rule: team-state-directories
+
+**Statement.** A Convoke team that keeps state between runs owns **`.<team>/` at the project root** —
+its own, never another team's. That directory is distinct from the team's `output_folder`, which stays
+`{project-root}/_bmad-output/<team>-artifacts/` for every team without exception. Every file the state
+directory can hold carries a declared VCS treatment, and **the declaration is implemented in
+`.gitignore`.** A treatment stated only in an architecture document or a PRD is not a treatment.
+
+**Why.** Gyre is the only stateful Convoke team today, and `.gyre/` got all three parts wrong for six
+months without anyone noticing, because nothing was watching.
+
+*Four sources stated a policy and disagreed.* [`gyre-arch.md`](_bmad-output/planning-artifacts/gyre-arch.md)
+classified `findings.yaml` and `history.yaml` as gitignored — at `ed6a692a:164-167`, cited by commit
+because the same 2026-09-12 change that produced this rule corrected those lines, so the current file says
+the opposite (`git show ed6a692a:_bmad-output/planning-artifacts/gyre-arch.md | sed -n '164,167p'`). It
+also contradicted its own AD2 paragraph, which had `findings.yaml` committed all along.
+[`gyre-prd.md:438-440`](_bmad-output/planning-artifacts/gyre-prd.md)
+classified three files and stayed silent on four. [`README.md:78`](README.md) said "committing the
+directory is the intended workflow." `.gitignore` had no `.gyre` rule at all. The tree matched only the
+README — the one source that never enumerated the files.
+
+*Nothing implemented any of it.* All five files were tracked, each landed under a GitHub Desktop default
+message (`Update findings.yaml`, `Create feedback.yaml`), March 24-25. The classification was decided by
+whatever was dirty in the GUI. `.gyre/cache/` had carried a **Gitignore** row in the PRD since March and
+no rule anywhere, so it would have been committed the first time Gyre created it; `.gyre/.lock` would
+have been cloned into every fresh checkout, where [`full-analysis/steps/step-01-initialize.md:39-42`](_bmad/bme/_gyre/workflows/full-analysis/steps/step-01-initialize.md)
+warns on any lock older than five minutes.
+
+*And a second team was already proposing to squat.* [`gyre-note-hc-forge-gyre-handoff.md:228,230`](_bmad-output/planning-artifacts/gyre-note-hc-forge-gyre-handoff.md)
+has Forge writing findings to `.gyre/knowledge-gaps/` and a queue to `.gyre/forge-queue.yaml`, and
+[`forge-epic-phase-a.md:245`](_bmad-output/planning-artifacts/forge-epic-phase-a.md) carries it as an
+acceptance criterion. Forge would have inherited an unruled directory belonging to another team.
+
+**How to apply.**
+
+- **Adding state to a team.** Create `.<team>/`, and in the same change add its `.gitignore` rules. The
+  rules are part of the feature, not follow-up work — this rule exists because they were treated as
+  follow-up work and never arrived.
+- **Deciding a file's treatment.** Commit what a human or a future run *reads*; ignore what only the
+  current run *writes*. For Gyre that resolves to *committed iff it is a declared GC contract artifact*
+  (GC1-GC4), with `history.yaml`, `cache/` and `.lock` ignored. Name your team's equivalent boundary
+  explicitly rather than deciding file by file.
+- **Never write into another team's state directory.** A handoff between teams goes through a declared
+  contract artifact in the producing team's directory, which the consumer reads. Forge does not write to
+  `.gyre/`; it reads GC3 and writes its own.
+- **Verify the rule in both directions.** `git check-ignore --no-index <path>` for each file that must be
+  ignored *and* each that must not — an over-matching pattern silently untracks the artifacts the team
+  depends on. Use `--no-index`: without it, `git check-ignore` consults the index and reports an
+  already-tracked file as not-ignored, which measures tracked-ness rather than the pattern and reads as a
+  broken rule. This bit during the 2026-09-12 pass that wrote this rule.
+- **Untracking an already-committed state file** needs `git rm --cached <path>`; adding the `.gitignore`
+  rule alone changes nothing, because ignore rules do not apply to tracked files. GitHub Desktop cannot
+  do this — the agent runs it and says so in the commit plan per `commit-preparation`.
+- **Reviewing a PR.** If a diff adds a state directory, or a file inside one, with no corresponding
+  `.gitignore` change and no statement that the file is meant to be committed, block and cite this rule.
+
+**Scope.** `output_folder` contents are documents, not state, and are governed by artifact taxonomy rather
+than by this rule. This rule covers only machine-read state a team writes and reads back.
+
+**Not yet generalized.** There is exactly one stateful team. This rule states the convention so the second
+one inherits it, but the `.<team>/` shape has an N of 1 and no ADR ratifies it — deliberately, per
+[meta-model ADR-001's `_team-factory` ruling](_bmad-output/planning-artifacts/adr/meta-model/adr-001-provenance-and-vocabulary.md):
+*"Rule what Loom is first; the directory name is downstream of that."* Rule what Forge's state is before
+ruling where every team's state lives. If Forge adopts this unchanged, that is the two-instance evidence
+an ADR would ratify.

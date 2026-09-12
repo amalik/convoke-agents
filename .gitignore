@@ -78,3 +78,14 @@ env/
 # Runtime state written by convoke-update (scripts/update/lib/backup-manager.js).
 # Recreated locally on demand — machine state, not repository content.
 _bmad-output/.backups/
+
+# Gyre state directory. A `.gyre/` file is committed iff it is a declared GC
+# contract artifact: stack-profile (GC1), capabilities (GC2), findings (GC3),
+# feedback (GC4). Those are team-owned, read by humans, and compared across
+# repos (gyre-prd.md:580, README.md:86). Everything below is machine scratch
+# no reader consumes. history.yaml is a byte copy of the previous findings.yaml
+# written by the delta workflow; .lock is a concurrency guard that, if cloned,
+# makes every fresh checkout warn on first run.
+.gyre/history.yaml
+.gyre/cache/
+.gyre/.lock

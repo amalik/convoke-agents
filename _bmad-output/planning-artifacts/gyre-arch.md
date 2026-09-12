@@ -160,11 +160,15 @@ The CLI architecture passed data between phases via in-memory objects (StackProf
 
 3. **Finding consistency** — Finding shape is standardized across all Gyre agents via the GC3 contract schema. Every finding has: id, domain, severity, source, confidence, description, capability_ref, evidence_summary. Cross-domain compounds add: related_findings[], combined_impact.
 
-4. **`.gyre/` state management** — Created by full-analysis workflow on first run. Contains:
-   - `capabilities.yaml` (committed — team-owned model)
-   - `feedback.yaml` (committed — measurement infrastructure)
-   - `findings.yaml` (gitignored — current run output)
-   - `history.yaml` (gitignored — delta computation)
+4. **`.gyre/` state management** — Created by full-analysis workflow on first run. **A `.gyre/` file is committed iff it is a declared GC contract artifact**; everything else is machine scratch. The rule is implemented in `.gitignore`, which is what actually decides it — this list describes that file and is not itself the authority.
+   - `stack-profile.yaml` (committed — GC1, the detected stack classification)
+   - `capabilities.yaml` (committed — GC2, team-owned model)
+   - `findings.yaml` (committed — GC3, read by humans and compared across repos)
+   - `feedback.yaml` (committed — GC4, measurement infrastructure)
+   - `history.yaml` (gitignored — a byte copy of the previous `findings.yaml`, read only by the delta computation)
+   - `cache/`, `.lock` (gitignored — ephemeral, machine-specific)
+
+   > **Corrected 2026-09-12.** This list previously classified `findings.yaml` as gitignored and omitted `stack-profile.yaml`, `cache/` and `.lock` entirely. It also contradicted **AD2** in this same document, whose "Practical privacy guarantee" paragraph states that `capabilities.yaml` and `findings.yaml` *are* committed to VCS. AD2 is right: `findings.yaml` is committed on purpose by two independent designs — [`README.md:86`](../../README.md#L86) links it as public evidence, and [`gyre-prd.md:580`](gyre-prd.md#L580) has the platform-engineer persona comparing findings across repos, which only works if they are in the repos. No `.gitignore` rule had ever implemented any of this (`git log --all -S'.gyre' -- .gitignore` is empty), so all five files were tracked, each committed under a GitHub-Desktop default message — `Update findings.yaml`, `Create feedback.yaml` — on 24-25 March 2026. The rules now exist; `history.yaml` was untracked to match.
 
 5. **Model caching & regeneration** — The generated `capabilities.yaml` IS the cache. Re-runs load it directly. Regeneration is triggered conversationally ("regenerate the model" or when Scout detects stack changes).
 
