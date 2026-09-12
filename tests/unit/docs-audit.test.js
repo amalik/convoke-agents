@@ -15,6 +15,9 @@ const {
   runAudit,
   USER_FACING_DOCS,
   validCountsFor,
+  rosterTotal,
+  expectedCountText,
+  registryHeader,
 } = require('../../scripts/docs-audit');
 
 const {
@@ -24,6 +27,7 @@ const {
   GYRE_AGENTS,
   EXTRA_BME_AGENTS,
 } = require('../../scripts/update/lib/agent-registry');
+const agentRegistry = require('../../scripts/update/lib/agent-registry');
 const { runScript, removeTempDir } = require('../helpers');
 
 // === checkStaleReferences ===
@@ -38,7 +42,6 @@ describe('checkStaleReferences', () => {
     assert.equal(findings.length, 1);
     assert.equal(findings[0].category, 'stale-reference');
     assert.equal(findings[0].current, '5 agents');
-    assert.equal(findings[0].expected, `${agentCount} agents`);
     assert.equal(findings[0].line, 1);
   });
 
@@ -156,7 +159,6 @@ describe('checkStaleReferences', () => {
     const findings = checkStaleReferences(content, 'test.md');
     assert.equal(findings.length, 1);
     assert.equal(findings[0].current, '13 workflows');
-    assert.equal(findings[0].expected, `${workflowCount} workflows`);
   });
 
   it('detects stale written-out workflow count', () => {
@@ -526,6 +528,156 @@ describe('checkInternalNamingLeaks', () => {
     const content = 'The Vortex pattern enables agent routing.';
     const findings = checkInternalNamingLeaks(content, 'test.md');
     assert.equal(findings.length, 0);
+  });
+});
+
+/** chalk colour codes, removed so assertions read the text rather than the escapes. */
+const stripAnsi = (s) => s.replace(new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g'), '');
+
+describe('the remedy a finding prints (T153)', () => {
+  // The four `expectedCountText` call sites, digit and written-out alike. NOT every count remedy
+  // in the file — `contradictoryPatterns` holds three more, of which only the T157 site is pinned
+  // (separately, below); the other two are unguarded, filed as T158.
+  // Asserting this per-test-case guarded only two of the four: the written-out paths checked
+  // `current` and never `expected`, so both could be reverted to the pre-fix defect with the
+  // suite green. This list is hand-maintained — add a row when a new site is introduced.
+  const COUNT_REMEDY_SITES = [
+    { site: 'digit agents',        content: 'We support 5 agents in the Vortex.',  suffix: 'AGENTS',    noun: 'agents' },
+    { site: 'written-out agents',  content: 'The system has five agents.',         suffix: 'AGENTS',    noun: 'agents' },
+    { site: 'digit workflows',     content: 'Includes 13 workflows for validation.', suffix: 'WORKFLOWS', noun: 'workflows' },
+    { site: 'written-out workflows', content: 'We ship thirteen workflows.',        suffix: 'WORKFLOWS', noun: 'workflows' },
+  ];
+
+  for (const { site, content, suffix, noun } of COUNT_REMEDY_SITES) {
+    it(`never prescribes a lone roster size — ${site}`, () => {
+      const [finding] = checkStaleReferences(content, 'test.md');
+      assert.ok(finding, `${site}: nothing was flagged, so the remedy is untested`);
+      // A lone number here is the T153 defect: it is accepted by the check on re-run, so
+      // following it turns a wrong document into one the audit passes.
+      assert.doesNotMatch(finding.expected, new RegExp(`^\\d+ ${noun}$`),
+        `${site}: the remedy must not be a single roster size presented as the answer`);
+    });
+
+    it(`enumerates every accepted count — ${site}`, () => {
+      const [finding] = checkStaleReferences(content, 'test.md');
+      const valid = [...validCountsFor(agentRegistry, suffix)].sort((a, b) => a - b);
+      // Word-boundary, not `.includes`: "11, 12".includes("1") is true, so a substring test
+      // cannot see a one-digit accepted count vanish inside a two-digit one.
+      for (const n of valid) {
+        assert.match(finding.expected, new RegExp(`\\b${n}\\b`),
+          `${site}: accepted count ${n} is missing from the remedy`);
+      }
+      // Ascending order and the ", " separator are the rendering; both were revertible while
+      // the enumeration assertion alone stayed green, because it is one-directional.
+      assert.ok(finding.expected.includes(valid.join(', ')),
+        `${site}: accepted counts must render ascending and comma-separated`);
+    });
+  }
+
+  it('does not hand back a figure the audit would silently accept', () => {
+    // The original defect: "13 agents" was told to become "7 agents" — wrong (the total is 12)
+    // AND valid, so the corrected document passed. Re-running the check on the remedy's own
+    // figure must not turn a wrong document into a green one.
+    const findings = checkStaleReferences('Convoke ships 13 agents.', 'x.md');
+    assert.equal(findings.length, 1);
+    const single = findings[0].expected.match(/^(\d+) agents$/);
+    assert.equal(single, null,
+      'a lone number here is the T153 defect: it is accepted on re-run whether or not it is true');
+  });
+
+  it('says out loud that it cannot tell which roster is meant', () => {
+    // The archive note calls this clause the honest half of the remedy. Deleting it left the
+    // whole suite green until this test existed.
+    const many = checkStaleReferences('Convoke ships 13 agents.', 'x.md')[0].expected;
+    assert.match(many, /cannot tell which roster is meant \(T154\)/);
+  });
+
+  it('degrades honestly when the registry cannot support any count', () => {
+    assert.match(expectedCountText(new Set(), 'agents'), /no agents count is derivable/);
+    // One roster means the check CAN tell which roster is meant, so the hedge must go — and
+    // "one of 7 agents" would read partitively rather than as the number 7.
+    assert.equal(expectedCountText(new Set([7]), 'agents'), '7 agents');
+    assert.doesNotMatch(expectedCountText(new Set([7]), 'agents'), /one of/);
+  });
+
+  it('keeps the unfixed site visible rather than half-fixing it (T157)', () => {
+    // T153 left this remedy exactly as found and filed T157. Nothing pinned "exactly as found",
+    // so a silent edit here would go unnoticed — and it is the last live instance of T153's
+    // own defect: a lone count that the check itself accepts on re-run.
+    const [finding] = checkStaleReferences('The original 4 shipped in v1.0.', 'x.md');
+    assert.equal(finding.expected, `current ${AGENTS.length} agents`);
+    assert.ok(validCountsFor(agentRegistry, 'AGENTS').has(AGENTS.length),
+      'and it is still self-validating — that is why T157 stays open');
+  });
+
+  it('names the roster the incomplete-table count is about', () => {
+    const table = ['| Agent | Role |', '|---|---|']
+      .concat(AGENTS.slice(0, AGENTS.length - 2).map((a) => `| ${a.name} | x |`))
+      .join('\n');
+    const [finding] = checkIncompleteAgentTables(`${table}\n\ntail`, 'x.md');
+    assert.ok(finding, 'the fixture must actually trip the check');
+    assert.match(finding.current, /Vortex agents$/,
+      'the denominator is the Vortex roster and must say so');
+  });
+
+  it('names the whole registry in the report header, not one roster', () => {
+    const agents = rosterTotal(agentRegistry, 'AGENTS');
+    const workflows = rosterTotal(agentRegistry, 'WORKFLOWS');
+    // Falsification: these totals must differ from the single roster the header used to print,
+    // or this test would pass against the defect it exists to catch.
+    assert.notEqual(agents, AGENTS.length, 'fixture no longer distinguishes total from roster');
+    assert.notEqual(workflows, WORKFLOWS.length, 'fixture no longer distinguishes total from roster');
+
+    for (const output of [formatReport([]), formatReport([
+      { file: 'a.md', line: 1, category: 'stale-reference', current: 'x', expected: 'y' },
+    ])]) {
+      const plain = stripAnsi(output);
+      assert.match(plain, new RegExp(`Registry: ${agents} agents, ${workflows} workflows`));
+    }
+  });
+});
+
+describe('registryHeader', () => {
+  it('sums every roster, against a fixture the function cannot derive from itself', () => {
+    // Hand-built numbers, so a wrong `rosterTotal` cannot move both sides of the assertion
+    // together — the flaw in deriving the expectation from the function under test.
+    const fake = { AGENTS: new Array(3), GYRE_AGENTS: new Array(2), EXTRA_BME_AGENTS: new Array(1),
+      WORKFLOWS: new Array(9), GYRE_WORKFLOWS: new Array(1) };
+    assert.equal(registryHeader(fake), '6 agents, 10 workflows (from exported rosters)');
+  });
+
+  it('states the basis of its figures rather than asserting a bare total', () => {
+    // The workflow figure is a known undercount (T150) and the coverage checks span less than
+    // the word "Registry" implies (T156). The qualifier is what makes the line true.
+    assert.match(registryHeader(), /\(from exported rosters\)/);
+  });
+});
+
+describe('rosterTotal', () => {
+  it('sums every roster matching the suffix, ignoring non-arrays', () => {
+    const base = { AGENTS: new Array(7), GYRE_AGENTS: new Array(4), EXTRA_BME_AGENTS: new Array(1) };
+    assert.equal(rosterTotal(base, 'AGENTS'), 12);
+    assert.equal(rosterTotal({ ...base, WAVE4_AGENTS: new Array(3) }, 'AGENTS'), 15);
+    // NOTE: only `WIDE_AGENTS` probes the Array.isArray guard. `AGENT_IDS` fails `endsWith`
+    // first, so it proves nothing — kept solely to document that it is inert, because an
+    // earlier test in this file made exactly that mistake under a title claiming coverage.
+    assert.equal(rosterTotal({ ...base, AGENT_IDS: 'nope', WIDE_AGENTS: new Set('ab') }, 'AGENTS'), 12);
+    // A Set has no `.length`, so it cannot distinguish `Array.isArray` from a duck-typed
+    // `x && x.length !== undefined`. This one can: it is array-LIKE and must still be rejected.
+    assert.equal(rosterTotal({ ...base, ARRAYLIKE_AGENTS: { length: 99 } }, 'AGENTS'), 12);
+    assert.equal(rosterTotal({}, 'AGENTS'), 0);
+  });
+
+  it('counts EXTRA_ rosters, unlike the team subtotal', () => {
+    // rosterTotal answers "how many exist", validCountsFor answers "what may a doc claim".
+    // The fixture needs THREE rosters: with only AGENTS + EXTRA_BME_AGENTS the team subtotal
+    // coincides with a roster size, so `has(subtotal)` holds whether or not the filter runs —
+    // the assertion would observe nothing. Here the subtotal (11) is its own number.
+    const base = { AGENTS: new Array(7), GYRE_AGENTS: new Array(4), EXTRA_BME_AGENTS: new Array(1) };
+    assert.equal(rosterTotal(base, 'AGENTS'), 12, 'rosterTotal includes EXTRA_ rosters');
+    const valid = validCountsFor(base, 'AGENTS');
+    assert.ok(valid.has(11), 'the team subtotal must exclude EXTRA_, giving 11 alongside the total 12');
+    assert.ok(valid.has(12), 'and the whole-roster total must still be claimable');
   });
 });
 

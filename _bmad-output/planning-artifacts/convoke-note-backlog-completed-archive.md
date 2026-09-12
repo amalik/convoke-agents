@@ -1981,3 +1981,77 @@ derivation was generalised anyway — but for growth, not for the reason origina
 **Placement corrected.** All three rows were appended to the bottom of their score-tie blocks. `backlog-format-spec.md` is explicit that a **newly inserted** row breaks ties by confidence descending, then insertion order newest-first; they have been re-placed accordingly. `backlog-integrity.js` passed throughout because it validates score-descending only and cannot see the tie-break clause.
 
 **Not remediated here — filed as `T153`, `T154` and `T155`, because they are new scope rather than defects in this change.** The edge-case layer found five conditions under which `validCountsFor` returns a wrong answer: an exported convenience aggregate ending in `_AGENTS` is summed as if it were a team; `total` sums roster *lengths* rather than distinct agents, while the registry's own disjointness assertion iterates a **hardcoded** bucket list — the `T146` defect one layer down, in the guard meant to catch duplicates; roster shapes other than a plain own-enumerable array vanish with no diagnostic; the returned `Set` of bare numbers discards which roster a count refers to, so a figure correct for one roster launders a false claim about another; and the set grows monotonically toward vacuity as teams are added. It also found that `checkStaleReferences` prints a remedy naming a single hardcoded roster regardless of which claim was flagged, so acting on a finding can replace a wrong number with a different wrong number the checker then accepts. That one is a live defect in shipped code (`T153`). **Those three rows are themselves unreviewed** — they were authored as R2 remediation, so no review layer has seen them; `code-review-convergence` does not call a third round for record-only changes, and this sentence is the disclosure in its place.
+---
+
+## T153
+
+**Closed 2026-09-12.** `docs-audit.js` validated a count against its full derived valid set, then printed
+a remedy built **once, from a single hardcoded roster**, and reused it for every finding. A flagged claim
+about the whole roster was told to become the Vortex subtotal — which is itself an accepted count, so a
+reader who followed the remedy produced a document the audit then passed. **The gate reported success on
+a document it had just made wrong.** `formatReport` made the same substitution in its header, on every
+run including clean ones, under a word that claims to describe the whole registry.
+
+**The fix.** The remedy enumerates every count the check accepts and states that it cannot tell which
+roster a sentence means. That ambiguity is real and is `T154`; naming it is the alternative to guessing,
+and guessing is what produced the defect. The header derives from `rosterTotal` and states its basis —
+`(from exported rosters)` — because the workflow figure is a known undercount (`T150`) and the audit's
+coverage checks span less than the word "Registry" implies (`T156`). Degenerate registries are handled
+explicitly: no non-empty roster yields a remedy saying so, and a single roster drops the hedge, since
+with one roster the check *can* tell which is meant.
+
+**How to check any of this** — no roster count is reproduced below, deliberately:
+
+- present behaviour: `npm run docs:audit` (header); the exported `checkStaleReferences` on a sentence
+  stating an unaccepted count (remedy).
+- prior behaviour: `git cat-file -p "${ref}:scripts/docs-audit.js"` at any ancestor, run from inside
+  `scripts/` so its relative requires resolve, then call the same function. Note that `36935b65^` and
+  `e3106432^` carry the **same blob**; the last commit before `T146` is `23e090e9`.
+- what changed and what did not: `git diff`.
+
+**The guards, as mutant → sole executioner.** Reproduce by applying each mutant to a copy and running
+`node --test tests/unit/docs-audit.test.js`.
+
+| Mutant applied to `scripts/docs-audit.js` | Killed by |
+|---|---|
+| `registryHeader` reverts to the single Vortex roster | `names the whole registry in the report header…`; `sums every roster, against a fixture the function cannot derive from itself` |
+| remedy returns a lone roster size | `never prescribes a lone roster size — …` and `enumerates every accepted count — …`, at **all four call sites**; also `does not hand back a figure the audit would silently accept` and `says out loud that it cannot tell which roster is meant` |
+| enumeration silently drops the smallest accepted count | `enumerates every accepted count — …` at all four call sites; also `degrades honestly when the registry cannot support any count` (a one-member set is emptied by the same edit) |
+| the `cannot tell which roster is meant (T154)` clause is deleted | `says out loud that it cannot tell which roster is meant` — sole executioner |
+| `rostersFor` drops the `Array.isArray` guard | `ignores a non-array export that DOES match the suffix`; `sums every roster matching the suffix, ignoring non-arrays` |
+| `Array.isArray` relaxed to a duck-typed `x && x.length !== undefined` | `sums every roster matching the suffix, ignoring non-arrays` — sole executioner, via the array-*like* fixture |
+| the empty-valid-set guard is removed | `degrades honestly when the registry cannot support any count` — sole executioner |
+| **only** the two written-out call sites revert to a lone roster size | `never prescribes a lone roster size — written-out agents`; `enumerates every accepted count — written-out agents`; and the same pair for `— written-out workflows` (four in total) |
+| the enumeration renders in registry order instead of ascending | `enumerates every accepted count — …` at all four call sites |
+| the enumeration separator changes from `, ` to ` ` | `enumerates every accepted count — …` at all four call sites |
+| the `T157` site is silently reworded | `keeps the unfixed site visible rather than half-fixing it (T157)` — sole executioner |
+| the `Vortex` qualifier is dropped from the incomplete-table count | `names the roster the incomplete-table count is about` — sole executioner |
+
+Most of those rows exist because an earlier version of this work claimed a guard it did not have.
+The enumeration guard asserted `expected.includes(String(n))` — a substring test, blind to a one-digit
+count disappearing inside a two-digit one. The `(T154)` clause was pinned by nothing. The `Array.isArray`
+fixtures used a `Set`, which has no `.length` and so cannot distinguish that guard from a duck-typed one;
+an array-*like* fixture can.
+
+**And the guards were attached to test cases rather than to call sites, which left half the fix
+unpinned.** `checkStaleReferences` routes four sites through `expectedCountText` — digit and written-out,
+agents and workflows. (Not every count remedy in the file: `contradictoryPatterns` holds three more, one of
+which is the unfixed `T157` site.) Only the two digit cases asserted `expected`; the written-out cases
+checked `current` and stopped. Both could therefore be reverted to the exact pre-fix defect with the whole
+suite green, on live code paths. Those four are now driven from one table keyed by call site, so **a listed
+site cannot be reverted unnoticed** — which is narrower than it sounds: the table is a hand-written literal
+in `tests/unit/docs-audit.test.js` (`COUNT_REMEDY_SITES`), nothing derives it from the source, and a fifth
+site added without a row would be silently unguarded. Filed as `T158`.
+
+**Scope.** One change was reverted as out of scope: a rewording of the `original (four|4)` remedy, which
+no test distinguished and which made a false positive worse — that pattern matches any `4`, including
+version strings, so it began asserting a Vortex identity on matches containing no agent. Reverted to
+exactly its prior bytes; the underlying false positive is pre-existing and filed as `T157`. Also filed:
+`T156`, the coverage checks covering Vortex only while the header describes the product.
+
+**Still wrong, deliberately not fixed here.** A real workflow total remains rejected (`T150`). Counts are
+still compared without their subject (`T154`), which is why the remedy hedges. `checkDocsCoverage` still
+covers Vortex only (`T156`). One retained pattern still emits a bare agent count with no subject
+(`T157`). Each is cited from the source at the line it constrains.
+
+**Review.** Three rounds. Every finding in all three was in this note; none was in the shipped behaviour, which the layers could not break beyond the known-open `T157`.

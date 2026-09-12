@@ -9,7 +9,16 @@ const { findProjectRoot } = require('./update/lib/utils');
 // The whole module, so the valid-count derivation can enumerate EVERY roster array rather
 // than the three that happened to be named here when it was written (T146, T148).
 const agentRegistry = require('./update/lib/agent-registry');
-const { AGENTS, WORKFLOWS, WORKFLOW_NAMES } = agentRegistry;
+// WORKFLOWS is deliberately not destructured: every workflow COUNT this file states derives
+// from the whole registry (T153). Two named rosters remain, at four sites: `AGENTS` drives the
+// `contradictoryPatterns` remedies in `checkStaleReferences`, the agent half of
+// `checkDocsCoverage`, and `checkIncompleteAgentTables`; `WORKFLOW_NAMES` drives the workflow
+// half of `checkDocsCoverage`. (Named, not line-cited: three line numbers written here were
+// already stale by the end of the edit that added them.)
+// So coverage is Vortex-only on BOTH axes — narrower than the report header advertises, T156.
+// One of those sites still emits a BARE count with no subject (the `original (four|4)` remedy),
+// which is an unclosed instance of the very defect T153 fixed elsewhere — T157.
+const { AGENTS, WORKFLOW_NAMES } = agentRegistry;
 
 /**
  * Valid roster counts for a suffix (`AGENTS` / `WORKFLOWS`), derived from EVERY matching array
@@ -36,10 +45,58 @@ const { AGENTS, WORKFLOWS, WORKFLOW_NAMES } = agentRegistry;
  * `EXTRA_SOMETHING_AGENTS` and is silently dropped from the team total, making a correct
  * document read as stale. Filed as T151, which is the ruling that constrains this line.
  */
-function validCountsFor(registry, suffix) {
-  const rosters = Object.keys(registry)
+function rostersFor(registry, suffix) {
+  return Object.keys(registry)
     .filter((k) => k.endsWith(suffix) && Array.isArray(registry[k]))
     .map((k) => ({ name: k, size: registry[k].length }));
+}
+
+/**
+ * How many agents/workflows the registry EXPORTS, summed across every matching roster.
+ *
+ * Not "how many exist": on the workflow axis this is a known undercount, because `add-team` is
+ * owned by an agent whose workflow roster is not exported at all (T150). The report header says
+ * `from exported rosters` for exactly this reason.
+ *
+ * Distinct from `validCountsFor`, which answers a different question — "what may a document
+ * claim" — and deliberately excludes `EXTRA_` rosters from its team subtotal. This one includes
+ * them, and is what the report header states. Before T153 the header printed `AGENTS.length`,
+ * i.e. the Vortex roster, under the word "Registry".
+ *
+ * Counts roster LENGTHS, not distinct ids; those diverge only when two rosters share an agent,
+ * which `agent-registry.js`'s disjointness assertion is supposed to prevent and cannot for a
+ * fourth team — see T155.
+ */
+function rosterTotal(registry, suffix) {
+  return rostersFor(registry, suffix).reduce((n, r) => n + r.size, 0);
+}
+
+/**
+ * The remedy text for a stale count.
+ *
+ * It enumerates every count the check accepts rather than naming one. That is deliberately
+ * less specific than it looks like it could be: the check compares bare numbers and does not
+ * know which roster a sentence refers to (T154), so any single figure it printed would be a
+ * guess. Before T153 it guessed the Vortex roster every time — and because that figure is
+ * itself accepted, following the remedy produced a wrong document the audit then passed.
+ */
+function expectedCountText(validCounts, noun) {
+  const ordered = [...validCounts].sort((a, b) => a - b);
+  // Degenerate registries reach here: no matching roster, or every roster empty (validCountsFor
+  // drops zeroes). `one of  agents` would tell an operator to write nothing.
+  if (ordered.length === 0) {
+    return `no ${noun} count is derivable — the registry exports no non-empty roster`;
+  }
+  // With one roster the check CAN tell which roster is meant, and "one of 7 agents" reads
+  // partitively (pick an agent) rather than as the number 7.
+  if (ordered.length === 1) {
+    return `${ordered[0]} ${noun}`;
+  }
+  return `one of ${ordered.join(', ')} ${noun} — this check cannot tell which roster is meant (T154)`;
+}
+
+function validCountsFor(registry, suffix) {
+  const rosters = rostersFor(registry, suffix);
   const total = rosters.reduce((n, r) => n + r.size, 0);
   const withoutExtras = rosters
     .filter((r) => !r.name.startsWith('EXTRA_'))
@@ -96,8 +153,12 @@ const WORD_TO_NUM = {
 function checkStaleReferences(content, filePath) {
   const findings = [];
   const lines = content.split('\n');
+  // Three consumers below, not two. `original agents` and `initial agents` name their subject
+  // ("Vortex") and so may legitimately cite one roster. `original (four|4)` does NOT — it emits
+  // a bare count that the check accepts on re-run, which is T153's own defect, still live at
+  // that one site and owned by T157. Every OTHER count remedy in this file derives from the
+  // valid set.
   const agentCount = AGENTS.length;
-  const workflowCount = WORKFLOWS.length;
 
   // Valid counts, derived from EVERY roster array the registry exports (T148).
   //
@@ -132,7 +193,11 @@ function checkStaleReferences(content, filePath) {
   const digitWorkflowRe = /\b(\d+)\s+workflows?\b/gi;
   const wordWorkflowRe = new RegExp(`\\b(${wordKeys})\\s+workflows?\\b`, 'gi');
 
-  // Contradictory terminology patterns
+  // Contradictory terminology patterns.
+  // ⚠ The `original (four|4)` entry below fires on any `4` — version strings included — and
+  // answers with a bare Vortex count that the audit itself accepts on re-run. That is T153's
+  // defect, still live at this one site; T157 owns it. Left exactly as found rather than
+  // half-fixed, because narrowing the pattern and rewording the remedy are one decision.
   const contradictoryPatterns = [
     { re: /\boriginal\s+agents?\b/gi, expected: `current ${agentCount}-agent Vortex` },
     { re: /\boriginal\s+(?:four|4)\b/gi, expected: `current ${agentCount} agents` },
@@ -153,7 +218,7 @@ function checkStaleReferences(content, filePath) {
         findings.push({
           file: filePath, line: lineNum,
           category: 'stale-reference',
-          current: m[0], expected: `${agentCount} agents`,
+          current: m[0], expected: expectedCountText(validAgentCounts, 'agents'),
         });
       }
     }
@@ -166,7 +231,7 @@ function checkStaleReferences(content, filePath) {
         findings.push({
           file: filePath, line: lineNum,
           category: 'stale-reference',
-          current: m[0], expected: `${agentCount} agents`,
+          current: m[0], expected: expectedCountText(validAgentCounts, 'agents'),
         });
       }
     }
@@ -179,7 +244,7 @@ function checkStaleReferences(content, filePath) {
         findings.push({
           file: filePath, line: lineNum,
           category: 'stale-reference',
-          current: m[0], expected: `${workflowCount} workflows`,
+          current: m[0], expected: expectedCountText(validWorkflowCounts, 'workflows'),
         });
       }
     }
@@ -192,7 +257,7 @@ function checkStaleReferences(content, filePath) {
         findings.push({
           file: filePath, line: lineNum,
           category: 'stale-reference',
-          current: m[0], expected: `${workflowCount} workflows`,
+          current: m[0], expected: expectedCountText(validWorkflowCounts, 'workflows'),
         });
       }
     }
@@ -321,6 +386,8 @@ function checkDocsCoverage(allDocsContent) {
 
   // Check each agent has at least one mention by name (word boundary match
   // to avoid false negatives — e.g., "maximize" should not satisfy "Max")
+  // Vortex only — Gyre's agents and Loom's `team-factory` have no coverage requirement, although
+  // the report header names them. Deliberate and filed, not an oversight: T156.
   for (const agent of AGENTS) {
     const nameRe = new RegExp('\\b' + agent.name.toLowerCase() + '\\b');
     if (!nameRe.test(combined)) {
@@ -410,7 +477,7 @@ function checkIncompleteAgentTables(content, filePath) {
           file: filePath,
           line: tableStart + 1,
           category: 'incomplete-agent-table',
-          current: `table lists ${found.length}/${agentNames.length} agents`,
+          current: `table lists ${found.length}/${agentNames.length} Vortex agents`,
           expected: `missing: ${missingNames.join(', ')}`,
         });
       }
@@ -506,12 +573,23 @@ function checkStaleBrandReferences(content, filePath) {
  * @param {Array<object>} findings
  * @returns {string}
  */
+/** Every roster, not the Vortex one — the word "Registry" was previously false (T153). */
+function registryHeader(registry = agentRegistry) {
+  const agents = rosterTotal(registry, 'AGENTS');
+  const workflows = rosterTotal(registry, 'WORKFLOWS');
+  // "from exported rosters" is not padding. The workflow figure is an undercount today — see
+  // T150: `_team-factory` owns `add-team` and no `EXTRA_BME_WORKFLOWS` is exported. And the
+  // audit's coverage checks span less than this line advertises (T156). Stating the basis is
+  // what makes the sentence true.
+  return `${agents} agents, ${workflows} workflows (from exported rosters)`;
+}
+
 function formatReport(findings) {
   if (findings.length === 0) {
     return [
       '',
       chalk.green.bold('Convoke Docs Audit'),
-      chalk.gray(`Registry: ${AGENTS.length} agents, ${WORKFLOWS.length} workflows`),
+      chalk.gray(`Registry: ${registryHeader()}`),
       '',
       chalk.green.bold(`\u2713 Docs audit passed \u2014 zero findings.`),
       '',
@@ -534,7 +612,7 @@ function formatReport(findings) {
   const lines = [
     '',
     chalk.cyan.bold('Convoke Docs Audit Report'),
-    chalk.gray(`Registry: ${AGENTS.length} agents, ${WORKFLOWS.length} workflows`),
+    chalk.gray(`Registry: ${registryHeader()}`),
     '',
   ];
 
@@ -633,6 +711,9 @@ async function main() {
 
 module.exports = {
   validCountsFor,
+  rosterTotal,
+  expectedCountText,
+  registryHeader,
   USER_FACING_DOCS,
   WORD_TO_NUM,
   checkStaleReferences,
