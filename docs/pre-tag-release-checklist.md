@@ -75,10 +75,11 @@ node scripts/audit/coverage-denominator.js
 ```
 
 **What this asserts: that a derivation pass was *recorded* over the full in-scope documentation set.**
-It derives that set from tracked files — everything under `docs/` and at the repository root, minus a
+It derives that set from tracked files — every `*.md` under `docs/` and at the repository root, minus a
 declared exclusion list, plus the module documents named explicitly — and refuses if any of them has no
-row in the coverage table, or has one saying it was not examined. A file added to `docs/` enters the
-denominator on its own; nobody has to remember to add a row.
+row in the coverage table, or has one saying it was not examined. A tracked `*.md` added under `docs/`
+enters the denominator on its own; nobody maintains a list of what to check. The match is exact: a
+`.MD` or `.markdown` file is not seen, and neither is an untracked one.
 
 **What this does NOT assert: that any document is correct.** No check can decide whether a sentence is
 true. This one reads coverage, which is mechanically checkable, and stops a story being dropped while

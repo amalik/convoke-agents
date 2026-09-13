@@ -25,7 +25,7 @@
  *     developer vanishes in CI. `name-registry-integrity.js` ruled the same way.
  *
  *  3. Module docs are an explicit INCLUSION LIST, not a glob. Globbing
- *     `_bmad/bme/_vortex/**\/*.md` matches 223 files — 186 of them workflow step files —
+ *     `_bmad/bme/_vortex/**\/*.md` matches 223 files — 186 of them under `workflows/` —
  *     none of which this epic scoped. The cost is that a future module doc must be added
  *     by hand; that is the trade, recorded rather than left implicit.
  *
@@ -34,7 +34,8 @@
  * 9 of its entries are absent from the coverage table and 7 table rows are absent from it
  * — and `tests/unit/docs-audit.test.js` pins its length against prose in
  * `BMAD-METHOD-COMPATIBILITY.md`, so widening it would turn that test red and falsify a
- * shipped sentence. Recorded as an epic amendment in docs-1-7.
+ * shipped sentence. The epic's tooling inventory is amended in place to say so (Story 1.7,
+ * 2026-09-13), the way Stories 1.1 and 1.3 recorded theirs.
  */
 
 const fs = require('fs');
@@ -98,16 +99,32 @@ function stripFences(text) {
     .join('\n');
 }
 
-/**
- * Strip code ticks and bold/italic asterisks so `**yes**` compares equal to `yes`.
- *
- * ⚠ Underscores are NOT stripped. They are markdown emphasis in prose but PATH characters
- * here: stripping them turns `_bmad/bme/_vortex/...` into `bmad/bme/vortex/...` and
- * `CODE_OF_CONDUCT.md` into `CODEOFCONDUCT.md`, so every such row reads as an orphan and
- * every such file reads as unexamined. Caught by this gate refusing the real repository.
- */
+/** Trim only. Used for columns whose content is a value, not prose. */
 function cell(raw) {
-  return String(raw).replace(/[`*]/g, '').trim();
+  return String(raw).trim();
+}
+
+/**
+ * A VERDICT cell (`Examined`, `In scope`) — strip markdown emphasis so `**yes**` compares
+ * equal to `yes`.
+ */
+function verdictCell(raw) {
+  return String(raw).replace(/[`*_]/g, '').trim();
+}
+
+/**
+ * A PATH cell (the `File` column) — strip the surrounding code ticks that the table uses as
+ * formatting, and nothing else.
+ *
+ * ⚠ Do NOT strip `*`, `_` or backticks globally here. They are markdown emphasis in prose but
+ * PATH characters in a filename: a global strip turns `_bmad/bme/_vortex/…` into
+ * `bmad/bme/vortex/…`, `CODE_OF_CONDUCT.md` into `CODEOFCONDUCT.md`, and `docs/a*b.md` into
+ * `docs/ab.md` — so the row reads as an orphan and the file as unexamined, forever. The
+ * underscore half of this was found by the gate refusing the real repository; the `*` and
+ * backtick half survived that fix and was found at review. Same root cause, fixed once here.
+ */
+function pathCell(raw) {
+  return String(raw).trim().replace(/^`+|`+$/g, '').trim();
 }
 
 function tracked(root) {
@@ -142,31 +159,44 @@ function deriveInScope(root, { exclusions, moduleInclusions } = {}) {
 function parseCoverageTable(text) {
   const lines = stripFences(text).split('\n');
   const rows = [];
+  const malformed = [];
   let inTable = false;
-  for (const line of lines) {
-    const cells = line.split('|');
+  lines.forEach((line, i) => {
+    // A `\|` inside a cell is escaped content, not a delimiter. Splitting naively is how a
+    // Findings cell containing `| wc -l` silently detonated a whole table.
+    const cells = line.split(/(?<!\\)\|/);
     if (cells.length < 3) {
       inTable = false;
-      continue;
+      return;
     }
-    const head = cells.slice(1, -1).map(cell);
+    const head = cells.slice(1, -1).map(verdictCell);
     if (
       head.length === 6 &&
       head[0] === 'File' && head[1] === 'In scope' && head[2] === 'Assertions' &&
       head[3] === 'Examined' && head[4] === 'Story' && head[5] === 'Findings'
     ) {
       inTable = true;
-      continue;
+      return;
     }
-    if (!inTable) continue;
-    if (/^\|[-: |]+\|$/.test(line.trim())) continue;
-    const c = cells.slice(1, -1).map(cell);
-    if (c.length !== 6 || !c[0]) {
-      inTable = false;
-      continue;
+    if (!inTable) return;
+    if (/^\|[-: |]+\|$/.test(line.trim())) return;
+    const c = cells.slice(1, -1);
+    if (c.length !== 6 || !cell(c[0])) {
+      // ⚠ Do NOT silently stop parsing. A malformed row used to set inTable=false, so every
+      // LATER row left the audit unnoticed and the verdict could still be green — a gate
+      // failing OPEN. Record it and keep going.
+      malformed.push({ line: i + 1, text: line.trim().slice(0, 120) });
+      return;
     }
-    rows.push({ file: c[0], inScope: c[1], examined: c[3], story: c[4] || null });
-  }
+    rows.push({
+      file: pathCell(c[0]),
+      inScope: verdictCell(c[1]),
+      examined: verdictCell(c[3]),
+      story: verdictCell(c[4]) || null,
+      line: i + 1,
+    });
+  });
+  rows.malformed = malformed;
   return rows;
 }
 
@@ -197,8 +227,43 @@ function audit({ root, tablePath, exclusions, moduleInclusions } = {}) {
   }
 
   const inScope = deriveInScope(base, { exclusions: EXCL, moduleInclusions: INCL });
-  const rows = fs.existsSync(table) ? parseCoverageTable(fs.readFileSync(table, 'utf8')) : [];
-  const byFile = new Map(rows.map((r) => [r.file, r]));
+
+  // ⚠ A missing table is its OWN failure, reported once. It used to fall through to
+  // `rows = []`, which blamed every in-scope file for "having no row" — 15 findings naming
+  // 15 innocent documents while the real cause (a moved file, a sparse checkout) went
+  // unmentioned.
+  if (!fs.existsSync(table)) {
+    // The stale-list findings above are about the DECLARED LISTS, not the table, so they
+    // survive a missing table — otherwise a moved table would mask a rotten exclusion.
+    findings.push({ file: table, story: null, reason: 'coverage table not found — this gate has no input' });
+    return { ok: false, fatal: true, findings, inScope, rows: [] };
+  }
+
+  const rows = parseCoverageTable(fs.readFileSync(table, 'utf8'));
+
+  // ⚠ An unparseable row is a defect in its own right. Silently skipping them is how a gate
+  // reports health over a table it only half-read.
+  for (const bad of rows.malformed || []) {
+    findings.push({
+      file: `${table}:${bad.line}`, story: null,
+      reason: `unparseable table row (not six cells): ${bad.text}`,
+    });
+  }
+
+  // ⚠ Duplicate rows: a Map is last-wins, so a later `Examined: yes` used to override an
+  // earlier `no` and the gate exited 0. Report the duplication instead of resolving it.
+  const seen = new Map();
+  for (const r of rows) {
+    if (seen.has(r.file)) {
+      findings.push({
+        file: r.file, story: r.story,
+        reason: `duplicate row (lines ${seen.get(r.file).line} and ${r.line}) — a later row must not override an earlier verdict`,
+      });
+    } else {
+      seen.set(r.file, r);
+    }
+  }
+  const byFile = seen;
 
   for (const file of inScope) {
     const row = byFile.get(file);
@@ -206,10 +271,12 @@ function audit({ root, tablePath, exclusions, moduleInclusions } = {}) {
       findings.push({ file, story: null, reason: 'in scope but has no row in the coverage table' });
       continue;
     }
-    if (row.inScope.toLowerCase() === 'no') {
+    // Fail-closed, like `Examined`: anything that is not an affirmative `yes` is a finding.
+    // `=== 'no'` used to let `""`, `n/a` and `partial` through silently.
+    if (row.inScope.toLowerCase() !== 'yes') {
       findings.push({
         file, story: row.story,
-        reason: 'row says In scope: no, but the derivation puts it in scope',
+        reason: `row says In scope: ${JSON.stringify(row.inScope)}, but the derivation puts it in scope`,
       });
     }
     if (row.examined.toLowerCase() !== 'yes') {
@@ -224,6 +291,22 @@ function audit({ root, tablePath, exclusions, moduleInclusions } = {}) {
     }
   }
 
+  // ⚠ A FLOOR. `✓ 0 in-scope files, all recorded as examined` is not a pass — it is the
+  // gate reporting health while inert, which this project has recorded five times under
+  // other names. An empty derivation means the enumeration failed, not that the work is done.
+  if (inScope.length === 0) {
+    findings.push({
+      file: base, story: null,
+      reason: 'derived in-scope set is EMPTY — the enumeration failed; this is never a pass',
+    });
+  }
+  if (rows.length === 0) {
+    findings.push({
+      file: table, story: null,
+      reason: 'coverage table parsed to zero rows — the six-column header was not found',
+    });
+  }
+
   return { ok: findings.length === 0, findings, inScope, rows };
 }
 
@@ -235,7 +318,14 @@ function format(result) {
   const lines = ['✗ Coverage denominator FAILED', ''];
   for (const f of result.findings) {
     lines.push(`  ${f.file}`);
-    lines.push(`      ${f.reason}${f.story ? ` (owner: story ${f.story})` : ' (owner: none — no row in the coverage table)'}`);
+    // ⚠ Only a finding that IS about a missing row may say so. This clause used to key off
+    // `story` alone, so a stale-exclusion finding — which concerns a list entry, not a row —
+    // was reported as "no row in the coverage table", and an orphan-row finding claimed the
+    // row it had just found did not exist.
+    let owner = '';
+    if (f.story) owner = ` (owner: story ${f.story})`;
+    else if (/no row in the coverage table/.test(f.reason)) owner = ' (owner: none — nobody has examined it)';
+    lines.push(`      ${f.reason}${owner}`);
   }
   lines.push('', `  ${result.findings.length} finding(s).`);
   return lines.join('\n');

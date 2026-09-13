@@ -12,7 +12,7 @@ const {
   deriveInScope,
   parseCoverageTable,
   audit,
-  main,
+  format,
   EXCLUSIONS,
   MODULE_INCLUSIONS,
 } = require('../../scripts/audit/coverage-denominator');
@@ -211,8 +211,162 @@ describe('coverage-denominator: the declared lists', () => {
   });
 });
 
-describe('coverage-denominator: main', () => {
-  it('exits 0 against the real repository', () => {
-    assert.equal(main(), 0);
+describe('coverage-denominator: the REAL declared lists, against a fixture tree', () => {
+  // The previous version of this block asserted `main() === 0` against PACKAGE_ROOT. That
+  // violated `test-fixture-isolation` ("Exception. None."), and made any PR that tracked a
+  // new .md turn the suite red with a bare `1 !== 0`. It was also the SOLE executioner for
+  // 14 of 15 exclusions, both module inclusions, and the path-parsing fix — mutation-proved
+  // at review. This block keeps that coverage without scanning the real tree: it builds a
+  // fixture FROM the real lists, so a typo in either one fails here.
+
+  function treeFromRealLists() {
+    const dir = fixture();
+    for (const rel of EXCLUSIONS.keys()) write(dir, rel, '# excluded');
+    for (const rel of MODULE_INCLUSIONS) write(dir, rel, '# included');
+    write(dir, 'docs/in-scope-sentinel.md', '# in scope');
+    track(dir);
+    return dir;
+  }
+
+  it('every real exclusion entry names a path the glob would otherwise catch', () => {
+    const dir = treeFromRealLists();
+    const set = deriveInScope(dir);
+    const leaked = [...EXCLUSIONS.keys()].filter((rel) => set.includes(rel));
+    assert.deepEqual(leaked, [], 'these exclusions did not take effect');
+  });
+
+  it('every real module inclusion is pulled in even though no glob reaches it', () => {
+    const dir = treeFromRealLists();
+    const set = deriveInScope(dir);
+    const missing = MODULE_INCLUSIONS.filter((rel) => !set.includes(rel));
+    assert.deepEqual(missing, [], 'these inclusions were not added');
+  });
+
+  it('a typo in an exclusion path is caught as a stale entry', () => {
+    const dir = treeFromRealLists();
+    const typo = new Map(EXCLUSIONS);
+    typo.delete('CHANGELOG.md');
+    typo.set('CHANGELOGG.md', 'deliberately misspelt');
+    const r = audit({ root: dir, tablePath: path.join(dir, 'none.md'), exclusions: typo, moduleInclusions: MODULE_INCLUSIONS });
+    assert.ok(
+      r.findings.some((f) => f.file === 'CHANGELOGG.md' && /stale exclusion/i.test(f.reason)),
+      'a misspelt exclusion must be reported'
+    );
+  });
+
+  it('a typo in a module inclusion is caught as a stale entry', () => {
+    const dir = treeFromRealLists();
+    const r = audit({
+      root: dir, tablePath: path.join(dir, 'none.md'),
+      exclusions: EXCLUSIONS,
+      moduleInclusions: ['_bmad/bme/_vortex/NOT-A-REAL-GUIDE.md'],
+    });
+    assert.ok(
+      r.findings.some((f) => /NOT-A-REAL-GUIDE/.test(f.file) && /stale inclusion/i.test(f.reason)),
+      'a misspelt inclusion must be reported'
+    );
+  });
+
+  it('a path with underscores, asterisks or backticks survives parsing intact', () => {
+    for (const p of ['_bmad/bme/_vortex/x.md', 'CODE_OF_CONDUCT.md', 'docs/a*b.md']) {
+      const rows = parseCoverageTable(TABLE_HEADER + `| \`${p}\` | yes | 1 | **yes** | 1.4 | 0 |\n`);
+      assert.equal(rows[0].file, p, `${p} was mangled by cell parsing`);
+    }
+  });
+});
+
+describe('coverage-denominator: cannot be fooled', () => {
+  const EX = new Map([['note.md', 'fixture table']]);
+  function run(body) {
+    const dir = fixture();
+    write(dir, 'docs/one.md', '# 1');
+    write(dir, 'note.md', TABLE_HEADER + body);
+    track(dir);
+    return audit({ root: dir, tablePath: path.join(dir, 'note.md'), exclusions: EX, moduleInclusions: [] });
+  }
+
+  it('a duplicate row cannot override an earlier refusal', () => {
+    const r = run('| `docs/one.md` | yes | 1 | **no** | 1.4 | 0 |\n| `docs/one.md` | yes | 1 | **yes** | 1.4 | 0 |\n');
+    assert.equal(r.ok, false);
+    assert.ok(r.findings.some((f) => /duplicate row/i.test(f.reason)));
+  });
+
+  it('a malformed row is reported, not silently skipped', () => {
+    const r = run('| `docs/one.md` | yes | 1 | **yes** | 1.4 | 0 | extra |\n');
+    assert.equal(r.ok, false);
+    assert.ok(r.findings.some((f) => /unparseable table row/i.test(f.reason)));
+  });
+
+  it('a malformed row does not stop later rows being parsed', () => {
+    const rows = parseCoverageTable(
+      TABLE_HEADER +
+        '| `docs/a.md` | yes | 1 | **yes** | 1.4 | 0 |\n' +
+        '| `docs/bad.md` | yes | 1 | **yes** | 1.4 | 0 | extra |\n' +
+        '| `docs/c.md` | yes | 1 | **yes** | 1.6 | 0 |\n'
+    );
+    assert.deepEqual(rows.map((r) => r.file), ['docs/a.md', 'docs/c.md']);
+    assert.equal(rows.malformed.length, 1);
+  });
+
+  it('an escaped pipe inside a cell does not break the row', () => {
+    const rows = parseCoverageTable(
+      TABLE_HEADER + '| `docs/a.md` | yes | 1 | **yes** | 1.4 | run `x \\| wc -l` |\n'
+    );
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].file, 'docs/a.md');
+  });
+
+  it('In scope fails closed on anything that is not yes', () => {
+    for (const v of ['partial', 'n/a', '']) {
+      const r = run(`| \`docs/one.md\` | ${v} | 1 | **yes** | 1.4 | 0 |\n`);
+      assert.equal(r.ok, false, `In scope: ${JSON.stringify(v)} must not pass`);
+    }
+  });
+
+  it('an empty derivation is never a pass', () => {
+    const dir = fixture();
+    write(dir, 'note.md', TABLE_HEADER);
+    track(dir);
+    const r = audit({
+      root: dir, tablePath: path.join(dir, 'note.md'),
+      exclusions: new Map([['note.md', 'fixture']]), moduleInclusions: [],
+    });
+    assert.equal(r.ok, false, 'a zero-file derivation must refuse');
+    assert.ok(r.findings.some((f) => /EMPTY/.test(f.reason)));
+  });
+
+  it('a missing table is reported as itself, not as every file lacking a row', () => {
+    const dir = fixture();
+    write(dir, 'docs/one.md', '# 1');
+    track(dir);
+    const r = audit({ root: dir, tablePath: path.join(dir, 'gone.md'), exclusions: EX, moduleInclusions: [] });
+    assert.equal(r.ok, false);
+    assert.ok(
+      r.findings.some((f) => /table not found/i.test(f.reason)),
+      'the missing table must be named as its own finding'
+    );
+    // The point of the fix: it must NOT blame the in-scope files for "having no row".
+    assert.ok(
+      !r.findings.some((f) => /no row in the coverage table/i.test(f.reason)),
+      'a missing table must not be reported as every file lacking a row'
+    );
+  });
+});
+
+describe('coverage-denominator: the operator-facing report', () => {
+  it('does not claim "no row" for a finding that is not about a row', () => {
+    const out = format({
+      ok: false, inScope: [],
+      findings: [{ file: 'docs/x.md', story: null, reason: 'stale exclusion — entry names no tracked file' }],
+    });
+    assert.ok(!/no row in the coverage table/.test(out), 'stale-entry findings must not be labelled "no row"');
+  });
+
+  it('names the owning story when there is one', () => {
+    const out = format({
+      ok: false, inScope: [],
+      findings: [{ file: 'docs/x.md', story: '1.6', reason: 'in scope and not examined' }],
+    });
+    assert.match(out, /owner: story 1\.6/);
   });
 });
