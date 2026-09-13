@@ -296,6 +296,12 @@ describe('checkBrokenPaths', () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-audit-'));
     await fs.ensureDir(path.join(tmpDir, 'scripts'));
     await fs.writeFile(path.join(tmpDir, 'scripts', 'exists.js'), '// ok', 'utf8');
+    await fs.ensureDir(path.join(tmpDir, '_bmad-output', 'planning-artifacts'));
+    await fs.writeFile(
+      path.join(tmpDir, '_bmad-output', 'planning-artifacts', 'real-note.md'),
+      '# ok',
+      'utf8'
+    );
   });
 
   after(async () => {
@@ -312,6 +318,24 @@ describe('checkBrokenPaths', () => {
 
   it('does not flag existing paths', () => {
     const content = 'Run `scripts/exists.js` to check.';
+    const findings = checkBrokenPaths(content, 'README.md', tmpDir);
+    assert.equal(findings.length, 0);
+  });
+
+  // docs-1-5 R2: `_bmad-output/` failed the prefix alternation because the character after
+  // `_bmad` is `-`, not `/`. Nine of the playbook's fourteen links point into that tree and
+  // none were checked. Widening it costs nothing: across the whole corpus it newly checks 6
+  // paths, and the only two that do not resolve are in CHANGELOG.md, which runAudit exempts.
+  it('detects broken paths under _bmad-output/ (docs-1-5 R2)', () => {
+    const content = 'See `_bmad-output/planning-artifacts/no-such-note.md` for detail.';
+    const findings = checkBrokenPaths(content, 'README.md', tmpDir);
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].category, 'broken-path');
+    assert.equal(findings[0].current, '_bmad-output/planning-artifacts/no-such-note.md');
+  });
+
+  it('does not flag existing paths under _bmad-output/ (docs-1-5 R2)', () => {
+    const content = 'See `_bmad-output/planning-artifacts/real-note.md` for detail.';
     const findings = checkBrokenPaths(content, 'README.md', tmpDir);
     assert.equal(findings.length, 0);
   });

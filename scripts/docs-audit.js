@@ -367,8 +367,13 @@ function checkBrokenPaths(content, filePath, projectRoot) {
   const lines = content.split('\n');
 
   // Match backtick-wrapped paths that start with known project directories
-  // and end with a file extension
-  const backtickPathRe = /`((?:scripts|docs|tests|\.github|_bmad)\/[^`\s*{}<>]+\.\w+)`/g;
+  // and end with a file extension.
+  //
+  // `_bmad-output` must precede `_bmad` in the alternation: regex alternation is
+  // first-match-wins, so `_bmad` would match the prefix of `_bmad-output/...` and then fail
+  // on the required `\/`, leaving the whole path unchecked. That is exactly how nine of the
+  // host-framework-sync playbook's fourteen citations went unguarded (docs-1-5 R2).
+  const backtickPathRe = /`((?:scripts|docs|tests|\.github|_bmad-output|_bmad)\/[^`\s*{}<>]+\.\w+)`/g;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
