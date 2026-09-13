@@ -65,6 +65,12 @@ private reporting form:
 A report filed there is visible only to you and the maintainer.
 All complaints will be reviewed and investigated promptly and fairly.
 
+Two things to know before you use that form. GitHub labels it "Report a vulnerability",
+and it is the same channel this project uses for security reports — conduct reports are
+welcome there regardless, and are handled as conduct matters, not as security advisories.
+It also requires a GitHub account: the form redirects to a sign-in page if you are not
+logged in.
+
 All community leaders are obligated to respect the privacy and security of the
 reporter of any incident.
 

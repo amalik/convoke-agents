@@ -34,7 +34,7 @@ are not listed: they rot on every commit and nothing pins them. For a count, run
 | Suite | Coverage Area |
 |-------|---------------|
 | fresh-install | `refreshInstallation` end-to-end (all 7 agents) |
-| upgrade | Simulated upgrades from v1.0.x, v1.3.x, v1.4.x and v1.7.x; the migration chain runs past 4.0.0 — read `scripts/update/migrations/registry.js` for the current end point |
+| upgrade | Simulated upgrades from v1.0.x, v1.3.x, v1.4.x and v1.7.x. The migration chain's terminal entries target 4.0.0; `scripts/update/migrations/registry.js` is append-only and resolves the destination to the running package version, so it records no later target |
 | cli-entry-points | `index.js`, `convoke-version`, `convoke-update`, `convoke-doctor` |
 | installer-e2e | `install-vortex-agents` CLI end-to-end, idempotency |
 | convoke-doctor | Negative paths: no project, missing config, invalid YAML, missing agents, stale lock, version mismatch |
@@ -49,14 +49,21 @@ npm run test:all         # the three above, in sequence
 npm run test:coverage    # c8, enforcing the thresholds in .c8rc.json
 npm run lint             # ESLint
 npm run docs:audit       # documentation staleness and link checks
+npm run check            # convoke-check (slow — runs its own suite)
+npm run refs:audit       # cross-artifact reference integrity
 ```
+
+`docs:audit` gates CI and exits 0 on a clean tree. `refs:audit` does **not** — it sweeps the whole
+repository including `_bmad-output/_archive/`, where historical documents point at files that were
+since moved, so it exits non-zero by default. Read its output, do not treat a non-zero exit as a
+regression you caused.
 
 ---
 
 ## CI Pipeline
 
-The workflow defines more jobs than are listed below, and not all of them run on every event — three are
-conditional. Enumerate them and their conditions rather than trusting this table to be complete:
+The workflow defines more jobs than are listed below, and not all of them run on every event. Enumerate
+them and their conditions rather than trusting this table to be complete — the command prints both:
 
 ```bash
 node -e "const y=require('js-yaml'),w=y.load(require('fs').readFileSync('.github/workflows/ci.yml','utf8'));
@@ -74,12 +81,12 @@ every branch. The jobs most people care about:
 | `security` | `npm audit --omit=dev` |
 | `package-check` | `npm pack --dry-run` + `node index.js` |
 | `fresh-install` | packs a tarball and installs it into a throwaway project |
-| `agent-surface-parity` | compares the operator-facing agent surface across two refs |
-| `publish` | npm publish, **on `v*` tags only** — not on pushes or pull requests |
+| `agent-surface-parity` | the repo's audit job: agent-surface parity across two refs (skipped with a warning when no `v*` tag exists), plus `install-scope-check`, `backlog-integrity`, `skill-manifest-integrity`, `name-registry-integrity` and `npm run docs:audit` |
+| `publish` | npm publish, gated on `refs/tags/v*` — so a tag push, never a branch push or a pull request |
 
 ---
 
-## Agent Test Results
+## Agent Testing
 
 Agent behaviour is covered by the automated P0 suite — activation, voice consistency, handoff contracts,
 Compass routing and workflow structure, with a dedicated file per Vortex agent:
@@ -90,9 +97,9 @@ node --test tests/p0/p0-emma.test.js         # one agent
 ls tests/p0/                                 # what exists
 ```
 
-*This section previously transcribed manual test runs from February 2026, recorded against agent
-identities that no longer exist ("Emma (empathy-mapper)", "Wade (wireframe-designer)"). The automated
-suite supersedes them and is derived rather than transcribed, so no counts are restated here.*
+Historical manual test records live in `_bmad-output/_archive/`. They are a record of what was run in
+early 2026, not a statement about the suite today, and at least one of them reports zero executed tests
+in its own header — read them as history, not as results.
 
 ---
 
@@ -111,11 +118,15 @@ Infrastructure tests (registry, config-merger, validator) cover Gyre through the
 
 ## Coverage
 
-The modules once listed here as gaps — `convoke-update.js`, `convoke-version.js` and the `1.0.x-to-1.3.0`
-migration — are no longer gaps; all three now sit well above the enforced thresholds. **No per-module
-figures are restated here**, because a coverage percentage rots on almost every commit and nothing pins
-it. Run `npm run test:coverage` and read the per-file table it prints; `.c8rc.json` holds the thresholds
-that actually gate CI.
+**No per-module figures are restated here** — a coverage percentage rots on almost every commit and
+nothing pins it. Run `npm run test:coverage` and read the per-file table it prints; `.c8rc.json` holds
+the thresholds that actually gate CI, and the run fails if the project totals fall below them.
+
+The three modules this section once named as gaps — `convoke-update.js`, `convoke-version.js` and the
+`1.0.x-to-1.3.0` migration — now sit well above those thresholds. **Others do not.** The per-file table
+is the place to look: at the time of writing, `scripts/update/migrations/3.0.x-to-3.1.0.js` was the
+weakest module, well under the line threshold and with no function coverage at all. Project-level
+thresholds can pass while an individual module is bare.
 
 ---
 
