@@ -305,6 +305,13 @@ shape:
 | `CODE_OF_CONDUCT.md` | yes | 1 | **yes** | 1.6 | 1 |
 | `README.md` | yes | 45 | **yes** | 1.6 | 2 |
 
+**This table is now mechanically gated.** `node scripts/audit/coverage-denominator.js` derives the
+in-scope set from tracked files — everything under `docs/` and at the repository root, minus a declared
+exclusion list, plus the two module documents no glob reaches — and refuses if any of them lacks a row
+here or carries one saying it was not examined. **Story 1.7 added that gate and examined no prose file,
+so it adds no row to this table**; that is stated rather than left as a silent gap. The gate asserts a
+pass was *recorded*, never that any document is correct.
+
 ### ⚠ The counter reports a FLOOR, and these are the classes it misses
 
 Two review rounds found class after class the pinned pattern set does not see — several at Round 1,

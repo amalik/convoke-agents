@@ -973,7 +973,7 @@ development_status:
   docs-1-4-calibrate-the-derivation-pass-on-the-user-path-documents: done
   docs-1-5-derivation-pass-on-the-upstream-relationship-documents: done
   docs-1-6-derivation-pass-on-the-governance-and-positioning-documents: done
-  docs-1-7-wire-the-gate-and-file-what-this-epic-will-not-fix: ready-for-dev
+  docs-1-7-wire-the-gate-and-file-what-this-epic-will-not-fix: review
   docs-epic-1-retrospective: optional
 
   # --- Convoke v4.1 — upstream BMAD absorption (I113) (added 2026-09-10 by sprint-planning) ---

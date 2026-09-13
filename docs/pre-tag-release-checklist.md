@@ -68,6 +68,27 @@ push therefore exercises the full prerequisite set without touching the registry
 **`Downgrade guard (dry)` must be among the successes.** It runs only on `main` pushes and PRs —
 deliberately *not* on tag pushes — so if you skip this step it never runs for your release at all.
 
+### The documentation coverage denominator
+
+```bash
+node scripts/audit/coverage-denominator.js
+```
+
+**What this asserts: that a derivation pass was *recorded* over the full in-scope documentation set.**
+It derives that set from tracked files — everything under `docs/` and at the repository root, minus a
+declared exclusion list, plus the module documents named explicitly — and refuses if any of them has no
+row in the coverage table, or has one saying it was not examined. A file added to `docs/` enters the
+denominator on its own; nobody has to remember to add a row.
+
+**What this does NOT assert: that any document is correct.** No check can decide whether a sentence is
+true. This one reads coverage, which is mechanically checkable, and stops a story being dropped while
+the release reports a completed pass. A green result here is not evidence that the documentation is
+accurate, and must not be cited as such.
+
+When it refuses it names each file and the story that owns it, or reports `owner: none` when a file has
+no row at all. Either way the fix is to examine the file and record the result — not to add a row
+asserting work that was never done.
+
 ## 4. Rehearse the actual comparison against the live registry
 
 ```sh

@@ -1,6 +1,10 @@
+---
+baseline_commit: 081669052d3300ec3de99bb306f081d62a61bbf0
+---
+
 # Story 1.7: Wire the gate and file what this epic will not fix
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -171,41 +175,41 @@ which can never pass, and a `cut -d,` that returns noise. All three were caught 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Derive the denominator and confirm it reproduces 15 (AC: 1)**
-  - [ ] Re-derive the coverage table's rows and the three location groups; do not take the numbers from this story
-  - [ ] Build the exclusion list (13 at authoring time) with a one-line reason per entry, and the two-entry module inclusion list
-  - [ ] Assert the derived set equals the table's row set, both directions
-- [ ] **Task 2 — Write the check (AC: 1, 2)**
-  - [ ] `scripts/audit/` alongside `backlog-integrity.js` and `skill-manifest-integrity.js`; follow their exit-code and reporting shape
-  - [ ] Parse the coverage table; compare; on failure name **the file and its owning story**
-  - [ ] Never use `process.cwd()` — `findProjectRoot()` (from `scripts/update/lib/utils`, as `derived-assertions.js`, `skill-manifest-integrity.js` and `name-registry-integrity.js` all require it) or an injected root (`no-process-cwd-in-libs`)
-  - [ ] ⚠ **Parse the right table.** Three tables in the findings note begin `| File |`. Anchor on the full six-column header (`File | In scope | Assertions | Examined | Story | Findings`), strip fenced blocks first (precedent: `backlog-integrity.js::stripFences`), and strip emphasis before comparing cells — `Examined` reads `**yes**`, not `yes`
-  - [ ] **Decide and record whether this runs in CI.** Every sibling gate is wired (`grep -n "scripts/audit" .github/workflows/ci.yml`). If it becomes a CI job, AC3's checklist step becomes "confirm that job green" rather than a local invocation
-  - [ ] **Record a namespace / slash-command decision.** `slash-command-ux-for-user-facing-tools` requires operator-facing tools be slash commands. The exemption argument — the other `scripts/audit/*` gates are CI jobs, not typed by an operator — is available but must be *written down*, per `feedback_namespace_audit`
-- [ ] **Task 3 — RED first, then green (AC: 2)**
-  - [ ] Write the failing test before the implementation; `tests/audit/` runs under `npm test`
-  - [ ] Cover: a missing `Examined`, an in-scope file with no row, an excluded file that must NOT appear, and a module-inclusion file
-- [ ] **Task 4 — The two demonstrations (AC: 2)**
-  - [ ] **D-a** flipped row, on a copy or fixture — never the real table
-  - [ ] **D-b** scratch document under `docs/`, run, then remove it; confirm the tree is clean afterwards
-  - [ ] Capture both for the commit Description
-- [ ] **Task 5 — Checklist step (AC: 3)**
-  - [ ] Asserts *recorded*, not *correct*; no job count; existing seven section numbers untouched
-- [ ] **Task 6 — Two backlog rows (AC: 4)**
-  - [ ] Confirm the backlog tree is clean, re-derive the highest ID, compute both scores, insert at sorted position
-  - [ ] **Name the lane before writing**: the scored lanes are §2.2 Bug / §2.3 Fast / §2.4 Initiative, and ⚠ **their column shapes differ** — Bug is 12 (`… | Status | Dependencies | Linked Follow-up`), Fast is 11 (`… | Status | Dependencies`), Initiative is 12 with different tail columns (`… | Stage | Artifacts | Dependencies`). §2.1 Intakes is a different, score-free shape again. Both rows here are Fast Lane candidates, but confirm the header before writing. **Copy the layout from an adjacent row in the same table, never from memory** (`backlog-write-discipline` — that is what `BUG-17`/`BUG-18` got wrong)
-  - [ ] **The R/I/C/E values are yours to propose and the operator's to accept** — state them with a one-line rationale rather than presenting the score as derived
-  - [ ] Update the backlog's own `## Change Log` section, which every prior row addition updated and `backlog-integrity.js` does **not** check
-  - [ ] `node scripts/audit/backlog-integrity.js` → 0, and **paste its result into the commit Description** (`backlog-write-discipline`)
-- [ ] **Task 7 — Coverage table and findings note (DoD)**
-  - [ ] This story examines no prose file, so it adds no coverage row. Record that explicitly rather than leaving it ambiguous
-- [ ] **Task 8 — Verify and hand off**
-  - [ ] `npm run lint` → 0 · `npm test` → 0 · `node scripts/audit/backlog-integrity.js` → 0 · `npm run docs:audit` → 0
-  - [ ] Capture exit codes **without a pipe** — `${PIPESTATUS[0]}` is bash, this shell is zsh (`verification-pipefail`)
-  - [ ] **Run the new check itself against the real coverage table** — AC5 requires it to exit 0, and Task 8 is where that is evidenced
-  - [ ] Flip `sprint-status.yaml`'s `docs-1-7` entry as the story progresses; `backlog-integrity.js` reads that file and warns on divergence
-  - [ ] Run every command written into any document, to completion. ⚠ **`npm run check` and `npm run refs:audit` are known-broken at HEAD and are NOT this story's problem** — both are filed in `deferred-work.md` by `docs-1-6`. Do not chase them
-  - [ ] Commit plan with a Round 1 review record; `git diff HEAD --name-only` before staging
+- [x] **Task 1 — Derive the denominator and confirm it reproduces 15 (AC: 1)**
+  - [x] Re-derive the coverage table's rows and the three location groups; do not take the numbers from this story
+  - [x] Build the exclusion list (13 at authoring time) with a one-line reason per entry, and the two-entry module inclusion list
+  - [x] Assert the derived set equals the table's row set, both directions
+- [x] **Task 2 — Write the check (AC: 1, 2)**
+  - [x] `scripts/audit/` alongside `backlog-integrity.js` and `skill-manifest-integrity.js`; follow their exit-code and reporting shape
+  - [x] Parse the coverage table; compare; on failure name **the file and its owning story**
+  - [x] Never use `process.cwd()` — `findProjectRoot()` (from `scripts/update/lib/utils`, as `derived-assertions.js`, `skill-manifest-integrity.js` and `name-registry-integrity.js` all require it) or an injected root (`no-process-cwd-in-libs`)
+  - [x] ⚠ **Parse the right table.** Three tables in the findings note begin `| File |`. Anchor on the full six-column header (`File | In scope | Assertions | Examined | Story | Findings`), strip fenced blocks first (precedent: `backlog-integrity.js::stripFences`), and strip emphasis before comparing cells — `Examined` reads `**yes**`, not `yes`
+  - [x] **Decide and record whether this runs in CI.** Every sibling gate is wired (`grep -n "scripts/audit" .github/workflows/ci.yml`). If it becomes a CI job, AC3's checklist step becomes "confirm that job green" rather than a local invocation
+  - [x] **Record a namespace / slash-command decision.** `slash-command-ux-for-user-facing-tools` requires operator-facing tools be slash commands. The exemption argument — the other `scripts/audit/*` gates are CI jobs, not typed by an operator — is available but must be *written down*, per `feedback_namespace_audit`
+- [x] **Task 3 — RED first, then green (AC: 2)**
+  - [x] Write the failing test before the implementation; `tests/audit/` runs under `npm test`
+  - [x] Cover: a missing `Examined`, an in-scope file with no row, an excluded file that must NOT appear, and a module-inclusion file
+- [x] **Task 4 — The two demonstrations (AC: 2)**
+  - [x] **D-a** flipped row, on a copy or fixture — never the real table
+  - [x] **D-b** scratch document under `docs/`, run, then remove it; confirm the tree is clean afterwards
+  - [x] Capture both for the commit Description
+- [x] **Task 5 — Checklist step (AC: 3)**
+  - [x] Asserts *recorded*, not *correct*; no job count; existing seven section numbers untouched
+- [x] **Task 6 — Two backlog rows (AC: 4)**
+  - [x] Confirm the backlog tree is clean, re-derive the highest ID, compute both scores, insert at sorted position
+  - [x] **Name the lane before writing**: the scored lanes are §2.2 Bug / §2.3 Fast / §2.4 Initiative, and ⚠ **their column shapes differ** — Bug is 12 (`… | Status | Dependencies | Linked Follow-up`), Fast is 11 (`… | Status | Dependencies`), Initiative is 12 with different tail columns (`… | Stage | Artifacts | Dependencies`). §2.1 Intakes is a different, score-free shape again. Both rows here are Fast Lane candidates, but confirm the header before writing. **Copy the layout from an adjacent row in the same table, never from memory** (`backlog-write-discipline` — that is what `BUG-17`/`BUG-18` got wrong)
+  - [x] **The R/I/C/E values are yours to propose and the operator's to accept** — state them with a one-line rationale rather than presenting the score as derived
+  - [x] Update the backlog's own `## Change Log` section, which every prior row addition updated and `backlog-integrity.js` does **not** check
+  - [x] `node scripts/audit/backlog-integrity.js` → 0, and **paste its result into the commit Description** (`backlog-write-discipline`)
+- [x] **Task 7 — Coverage table and findings note (DoD)**
+  - [x] This story examines no prose file, so it adds no coverage row. Record that explicitly rather than leaving it ambiguous
+- [x] **Task 8 — Verify and hand off**
+  - [x] `npm run lint` → 0 · `npm test` → 0 · `node scripts/audit/backlog-integrity.js` → 0 · `npm run docs:audit` → 0
+  - [x] Capture exit codes **without a pipe** — `${PIPESTATUS[0]}` is bash, this shell is zsh (`verification-pipefail`)
+  - [x] **Run the new check itself against the real coverage table** — AC5 requires it to exit 0, and Task 8 is where that is evidenced
+  - [x] Flip `sprint-status.yaml`'s `docs-1-7` entry as the story progresses; `backlog-integrity.js` reads that file and warns on divergence
+  - [x] Run every command written into any document, to completion. ⚠ **`npm run check` and `npm run refs:audit` are known-broken at HEAD and are NOT this story's problem** — both are filed in `deferred-work.md` by `docs-1-6`. Do not chase them
+  - [x] Commit plan with a Round 1 review record; `git diff HEAD --name-only` before staging
 
 ## Dev Notes
 
@@ -262,32 +266,102 @@ code runs, not that the gate refuses.
 
 ## Definition of Done
 
-- [ ] `npm run docs:audit` exits 0. **Its passing is a non-regression check, not evidence of accuracy** — the
+- [x] `npm run docs:audit` exits 0. **Its passing is a non-regression check, not evidence of accuracy** — the
       epic exists because it passes on defective files, and this story may not cite it as proof any document
       is correct. *(NFR3, verbatim)*
-- [ ] Every finding recorded carries a command that reproduces it (NFR1), from an artifact the operator
+- [x] Every finding recorded carries a command that reproduces it (NFR1), from an artifact the operator
       receives — never `.claude/skills/` (NFR8).
-- [ ] Every claim written or kept obeys the source-of-truth rule (FR3a).
-- [ ] The findings note's coverage table is updated in the same commit (FR10) **if this story changes it**;
+- [x] Every claim written or kept obeys the source-of-truth rule (FR3a).
+- [x] The findings note's coverage table is updated in the same commit (FR10) **if this story changes it**;
       if it does not, that is stated rather than left silent.
-- [ ] `npm run lint` exits 0 with zero warnings in any file this story modifies.
-- [ ] `npm test` green, including the new test.
-- [ ] Every check cited as evidence in the Dev Agent Record names how it was shown able to fail (NFR5) —
+- [x] `npm run lint` exits 0 with zero warnings in any file this story modifies.
+- [x] `npm test` green, including the new test.
+- [x] Every check cited as evidence in the Dev Agent Record names how it was shown able to fail (NFR5) —
       satisfied by the **two AC2 demonstrations**, recorded in the commit Description.
-- [ ] Commit plan emitted with a Round 1 review record (NFR4); reviewed file set equals staged file set.
+- [x] Commit plan emitted with a Round 1 review record (NFR4); reviewed file set equals staged file set.
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`
+
 ### Debug Log References
+
+Exit codes captured without a pipe (`verification-pipefail`; this shell is zsh):
+`npm run lint` → **0** · `npm test` → **0** (2365 tests, 0 fail, 1 skipped) ·
+`node scripts/audit/backlog-integrity.js` → **0** · `npm run docs:audit` → **0** ·
+`node scripts/audit/coverage-denominator.js` → **0** (15 in-scope files, all examined).
+
+**NFR5 — the gate shown refusing, which is the point of the story.**
+
+| Demo | Command | Result |
+|---|---|---|
+| **D-a** | flip `docs/testing.md` to `Examined: **no**` **on a copy**, run against that path | exit **1**, *"docs/testing.md — in scope and not examined (owner: story 1.6)"* |
+| **D-b** | `git add docs/zz-scratch-demo.md`, run | exit **1**, *"in scope but has no row (owner: none)"* — **no row was added by hand** |
+| control | real table | exit **0** |
+
+The real coverage table was never mutated; D-a ran against a scratch copy, and the scratch document was
+removed with `git rm --cached` afterwards. `git status --porcelain` confirms neither survives.
+
+**Unit-level mutation proofs** (in memory): a path containing underscores parses intact; a six-column
+table inside a fence is ignored; a three-column `| File |` table is rejected; an exclusion with an empty
+reason is rejected.
 
 ### Completion Notes List
 
+**Two defects in my own first implementation, both caught by running the gate against the real
+repository rather than only against fixtures.**
+
+1. **`cell()` stripped `_` as markdown emphasis.** Underscores are emphasis in prose but *path
+   characters* here, so `_bmad/bme/_vortex/…` became `bmad/bme/vortex/…` and `CODE_OF_CONDUCT.md`
+   became `CODEOFCONDUCT.md`. Three coverage rows read as orphans and three files as unexamined. The
+   fixtures all passed — they used paths without underscores.
+2. **The stale-list check over-fired in fixtures**, reporting all 15 real exclusions as stale in a
+   two-file fixture. One test was passing *for the wrong reason* because of it. Fixed by making the
+   exclusion and inclusion lists injectable, which `test-fixture-isolation` required anyway.
+
+**Story inconsistencies found and resolved.** Three leftovers from the story's own review round had not
+propagated: the "Then the derivation is" line still said `docs/*.md` where fact 3 mandates recursive;
+Task 1 said "13 at authoring time" where fact 3 says 15; and both were correct in fact 3 alone. I
+followed the explicit rulings. **This is the incomplete-fix class the epic has now hit four times: when
+a figure appears twice, correcting one instance is the default failure.**
+
+**The decision the story delegated.** `docs/migration/3.x-to-4.0.md` is operator-facing and
+`convoke-update` links to it, so it has a real claim to being in scope — but no story in this epic
+examined it, and admitting it would have made the gate assert coverage that was never performed.
+**Excluded, with that reason recorded in the source** rather than as a silent omission.
+
+**CI wiring: not wired, deliberately.** The sibling gates in `agent-surface-parity` are CI jobs; this
+one is invoked by an operator from the release checklist, where a refusal has to be read and acted on
+before tagging. Wiring it to CI as well would be reasonable and is a separate decision — recorded here
+rather than made silently.
+
+**Slash-command exemption, recorded per `feedback_namespace_audit`.** `slash-command-ux-for-user-facing-tools`
+requires operator-facing tools be slash commands. This is a release-checklist step run once per tag by
+the maintainer, in the same shape as the `node scripts/audit/…` invocations already in that file — not
+a workflow an operator drives interactively. Exemption taken on that ground, written down rather than
+assumed.
+
+**Backlog.** Tree confirmed clean before allocation; highest ID re-derived from the working tree
+(`T160`). `T161` (5.4) and `T162` (1.2) inserted at their sorted positions in the Fast Lane, layout
+copied from adjacent rows. ⚠ `T162` first landed with **14 cells** because its description contains
+`| wc -l`; `backlog-integrity.js` caught it, and the pipes are now escaped. The backlog's own Change Log
+was updated — `backlog-integrity.js` does not check that.
+
 ### File List
+
+- `scripts/audit/coverage-denominator.js` — **new** (the gate)
+- `tests/audit/coverage-denominator.test.js` — **new** (16 tests)
+- `docs/pre-tag-release-checklist.md` — modified (step added inside §3, before §6; seven section numbers untouched)
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — modified (`T161`, `T162`, Change Log)
+- `_bmad-output/planning-artifacts/convoke-note-docs-accuracy-findings-4-0-2.md` — modified (records that this story adds no coverage row)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (status)
+- `_bmad-output/implementation-artifacts/docs-1-7-wire-the-gate-and-file-what-this-epic-will-not-fix.md` — modified (this record)
 
 ## Change Log
 
 | Date | Change |
 |------|--------|
+| 2026-09-13 | **Implemented — the epic's gate ships.** `scripts/audit/coverage-denominator.js` derives the in-scope set from tracked files (recursive under `docs/`, plus repo root, minus a 15-entry exclusion list with a reason each, plus two module documents no glob reaches) and refuses when a derived file has no row or an unexamined one. 16 tests; exit 0 against the real table with 15 in-scope files. **Shown refusing twice** per NFR5: a flipped row on a copy (names the file *and* story 1.6), and a tracked scratch document (`owner: none`, no row added by hand). Two implementation defects were caught by running against the real repository rather than fixtures — `cell()` stripped `_` as emphasis, mangling every underscored path, and the stale-list check over-fired in fixtures, making one test pass for the wrong reason. `docs/migration/3.x-to-4.0.md` excluded with its reason recorded, since no story examined it. `T161`/`T162` filed at sorted positions; `T162` first landed with 14 cells until its `\|` pipes were escaped. |
 | 2026-09-13 | **Story created.** The epic left the gate's denominator as an open item owned by this story; it is resolved in AC1 with the numbers derived rather than asserted. Three facts drove the design: the coverage table's rows span **three** locations (8 `docs/`, 5 repo-root, 2 `_bmad/bme/_vortex/`), so the epic's `docs/`-framing covers 8 of 15; **`USER_FACING_DOCS` cannot be reused** — 9 of its entries are absent from the table and 7 table rows are absent from it, so neither set contains the other; and `docs/*.md` + root `*.md` gives 26 candidates of which 13 are in scope, making a 13-entry exclusion list exact. The module docs are an **explicit inclusion list** rather than a glob; AC1 carries the derived figure and the probe that understates it. AC2 requires the gate be **shown refusing**, on a copy, because `cli-guidance-check` shipped twice matching nothing. |
