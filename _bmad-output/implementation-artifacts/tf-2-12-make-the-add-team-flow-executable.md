@@ -4,7 +4,7 @@ baseline_commit: 33e0280f037974b6c59d3d8b5914cc330459cb33
 
 # Story 2.12: Make the add-team flow executable
 
-Status: review
+Status: done
 
 **Epic:** tf-epic-2 — Team Factory Guided Workflow (in-progress) · **Origin:** `T129` (7.0) + `T130` (6.0), both filed 2026-09-10 from the first end-to-end factory run (`tf-2-11`).
 

@@ -4,7 +4,7 @@ baseline_commit: ba7c217a46bd054b2b42c32d872110fa6e03d953
 
 # Story 2.11: Team Factory End-to-End Pilot Run
 
-Status: review
+Status: done
 
 > **Deferred 2026-04-22:** operator not ready to drive the interactive 6-step pilot walkthrough. Story file + all preconditions remain ready. Promote back to `ready-for-dev` when operator has time for the manual walkthrough.
 
