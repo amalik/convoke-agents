@@ -79,13 +79,22 @@ function buildManifest(specData, generationContext) {
     entries.push({ path: generationContext.output_directory_path, operation: 'created', module: moduleName });
   }
 
-  // agent-registry.js — modified, unless the caller reports the write FAILED.
-  // tf-2-13 (T133d): this was pushed unconditionally, so a run whose registry write
-  // failed still told the aborting operator to go and un-edit it. Suppressed only on
-  // an explicit failure, not on absence: for an abort path over-claiming is the safer
-  // error — the operator checks a file needlessly rather than leaving one edited — and
-  // absence means the caller did not say, which is not the same as "did not happen".
-  if (!generationContext.registry_wiring_result || generationContext.registry_wiring_result.success !== false) {
+  // agent-registry.js — modified, ONLY on a confirmed successful write.
+  //
+  // tf-2-13 (T133d): originally pushed unconditionally. The first fix relaxed this to
+  // "unless explicitly failed", justified as "over-claiming is the safer error — the
+  // operator checks a file needlessly". **R2 corrected that: the argument is inverted
+  // for this consumer.** `formatAbortInstructions` does not ask anyone to check — it
+  // emits `git checkout -- "scripts/update/lib/agent-registry.js"`, which DISCARDS the
+  // operator's uncommitted work. And absence is not a rare case: step-04 §5c runs
+  // BEFORE §5d, so on the documented §5c abort this key is absent — meaning the
+  // relaxed form handed a destructive revert to an operator whose registry the factory
+  // had never touched. `writeRegistryBlock` carries a dirty-tree check precisely
+  // because that file holds uncommitted edits.
+  //
+  // For a DESTRUCTIVE instruction, under-claiming is the safe direction. Only a
+  // confirmed write earns a revert instruction.
+  if (generationContext.registry_wiring_result && generationContext.registry_wiring_result.success === true) {
     entries.push({ path: 'scripts/update/lib/agent-registry.js', operation: 'modified', module: moduleName });
   }
 

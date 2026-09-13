@@ -50,9 +50,9 @@ async function writeRegistryBlock(specData, registryPath, options = {}) {
   // Keyed by agent id via basename, so ordering of `options.agentFiles` does not matter.
   // Omitting `agentFiles` preserves the previous behaviour exactly.
   const personas = {};
-  for (const agentFile of (options.agentFiles || [])) {
-    const id = path.basename(agentFile, '.md');
-    personas[id] = await extractPersonaFromAgentFile(agentFile);
+  const agentFiles = Array.isArray(options.agentFiles) ? options.agentFiles : [];
+  for (const agentFile of agentFiles) {
+    personas[agentIdFromPath(agentFile)] = await extractPersonaFromAgentFile(agentFile);
   }
 
   const moduleBlock = buildModuleBlock(specData, prefix, teamName, workflowNames, personas);
@@ -209,6 +209,30 @@ function buildAgentEntry(agentSpec, teamNameKebab, extractedPersona) {
       expertise: agentSpec.persona?.expertise || (extractedPersona && extractedPersona.expertise) || '',
     }
   };
+}
+
+/**
+ * Derive an agent id from its file path, for BOTH shipped layouts.
+ *
+ * R2 (tf-2-13). The first pass used `path.basename(file, '.md')`. That is correct for
+ * the v5 layout (`agents/<id>.md`) and catastrophically wrong for v6.3
+ * (`agents/<id>/SKILL.md`): every agent keyed as `SKILL`, collided into one entry, and
+ * `buildModuleBlock`'s lookup by `a.id` missed every time — producing empty personas
+ * with `success: true` and no warning, i.e. exactly the defect T131 exists to remove.
+ * Proven end-to-end against the real Vortex agents before this fix.
+ *
+ * Latent for teams the factory generates today (step-04 §3a emits `agents/{id}.md`),
+ * but live for any hand-assembled `agentFiles`, and it is the layout the codebase is
+ * migrating toward.
+ *
+ * @param {string} agentFilePath
+ * @returns {string}
+ */
+function agentIdFromPath(agentFilePath) {
+  const base = path.basename(agentFilePath, '.md');
+  // v6.3: the id is the containing directory, the file is always SKILL.md
+  if (base.toUpperCase() === 'SKILL') return path.basename(path.dirname(agentFilePath));
+  return base;
 }
 
 /**
@@ -721,6 +745,7 @@ if (require.main === module) {
 
 module.exports = {
   writeRegistryBlock,
+  agentIdFromPath,
   extractPersonaFromAgentFile,
   derivePrefix,
   buildAgentEntry,

@@ -56,7 +56,13 @@ contracts:
 feedback_contracts: []
 
 integration:
-  output_directory: "{project-root}/_bmad-output/test-team-artifacts"
+  # R2 (tf-2-13): was "{project-root}/_bmad-output/test-team-artifacts" — the CONFIG
+  # shape in a SPEC field. step-02-connect.md:50 defaults this to a repo-relative
+  # `_bmad-output/<kebab>-artifacts`, :52 validates that shape, and :71 adds the
+  # {project-root}/ prefix when composing config.yaml. The fixture disagreed with
+  # all three, and every suite loaded it via yaml.load rather than parseSpec, so
+  # the module's canonical example was invalid under its own validator unnoticed.
+  output_directory: "_bmad-output/test-team-artifacts"
   compass_routing: "required"
   contract_prefix: "TC"
 

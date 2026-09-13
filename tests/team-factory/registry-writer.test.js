@@ -655,3 +655,41 @@ describe('tf-2-13: registry write populates persona from the generated files', (
     assert.match(written, /Wire principle/);
   });
 });
+
+// ── R2: persona keying by basename voids every v6.3 agent ──
+// writeRegistryBlock keyed personas as path.basename(file, '.md'). v5 agents live at
+// agents/<id>.md so that works; v6.3 agents live at agents/<id>/SKILL.md, so EVERY one
+// keys as "SKILL", collides, and buildModuleBlock's lookup by a.id misses — producing
+// empty personas with success:true. Proven end-to-end against the real Vortex files.
+describe('R2: persona keying works for the v6.3 directory layout', () => {
+  let dir, registryPath;
+  const REPO = path.resolve(__dirname, '..', '..');
+  before(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tf213-v63-'));
+    registryPath = path.join(dir, 'agent-registry.js');
+    await fs.writeFile(registryPath, "'use strict';\n\nmodule.exports = {\n};\n", 'utf8');
+  });
+  after(async () => { await fs.remove(dir); });
+
+  it('fills personas for real v6.3 agents stored as <id>/SKILL.md', async () => {
+    const spec = {
+      team_name: 'V63 Probe', team_name_kebab: 'v63-probe',
+      agents: [
+        { id: 'contextualization-expert', name: 'Emma', role: 'R', capabilities: ['a-b'] },
+        { id: 'research-convergence-specialist', name: 'Mila', role: 'R', capabilities: ['c-d'] }
+      ],
+      integration: { output_directory: '_bmad-output/v63-probe-artifacts' }
+    };
+    const r = await writeRegistryBlock(spec, registryPath, {
+      skipDirtyCheck: true,
+      agentFiles: [
+        path.join(REPO, '_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md'),
+        path.join(REPO, '_bmad/bme/_vortex/agents/research-convergence-specialist/SKILL.md')
+      ]
+    });
+    assert.equal(r.success, true, JSON.stringify(r.errors));
+    const written = await fs.readFile(registryPath, 'utf8');
+    const emptyPersonas = (written.match(/identity: ''/g) || []).length;
+    assert.equal(emptyPersonas, 0, 'v6.3 agents must not land with empty personas');
+  });
+});

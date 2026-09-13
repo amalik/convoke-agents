@@ -5,6 +5,7 @@ const path = require('path');
 const {
   derivePrefix,
   buildAgentEntry,
+  extractPersonaFromAgentFile,
   escapeSingleQuotes,
   verifyRequire,
   checkDirtyTree,
@@ -54,7 +55,14 @@ async function appendAgentToBlock(teamNameKebab, newAgentData, registryPath, opt
   }
 
   // Build the new agent entry as JS text
-  const entry = buildAgentEntry(newAgentData, teamNameKebab);
+  // R2 (tf-2-13): registry-writer's comment claimed "both paths get this" of the persona
+  // wiring. True of the `title` precedence flip (shared helper); FALSE of the persona,
+  // because this caller passed two arguments — so add-agent produced hollow entries while
+  // add-team produced full ones. Omitting `agentFilePath` preserves prior behaviour.
+  const extractedPersona = newAgentData.agentFilePath
+    ? await extractPersonaFromAgentFile(newAgentData.agentFilePath)
+    : undefined;
+  const entry = buildAgentEntry(newAgentData, teamNameKebab, extractedPersona);
   const entryLines = formatAgentEntry(entry);
 
   // --- 2. VALIDATE: Structural checks ---

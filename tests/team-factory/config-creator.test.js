@@ -224,7 +224,13 @@ describe('tf-2-13: output_folder prefix', () => {
     assert.equal(cfg.output_folder, '{project-root}/_bmad-output/prefix-probe-artifacts');
   });
 
-  it('does not double-prefix a value that already carries it', () => {
+  // R2: this input can no longer come from a validated spec — spec-parser rejects a
+  // `{project-root}/`-prefixed output_directory, so this test does NOT fail against the
+  // original defect and is not falsifiable by it (it passed at baseline too). It is kept
+  // deliberately as a guard on the BYPASS path: the CLI at the foot of config-creator.js
+  // calls yaml.load directly and never runs parseSpec, and without idempotency it emits
+  // `output_folder: '{project-root}/{project-root}/...'`.
+  it('does not double-prefix a value that already carries it (guards the CLI bypass path)', () => {
     const cfg = buildConfigData({
       team_name: 'Prefix Probe',
       team_name_kebab: 'prefix-probe',
@@ -264,5 +270,34 @@ describe('tf-2-13: output directory is created', () => {
   it('resolves against projectRoot, never process.cwd()', async () => {
     const r = await ensureOutputDirectory(spec, root);
     assert.ok(r.path.startsWith(root), `resolved outside projectRoot: ${r.path}`);
+  });
+});
+
+// ── R2: ensureOutputDirectory must refuse to escape projectRoot ──
+// The parser now rejects traversal, but this function is called directly from
+// step-04 §5a-ii and the shipped CLI bypasses parseSpec entirely — so the guard
+// cannot live only upstream. Verified escaping before the fix: a directory was
+// mkdir -p'd outside the repo and reported success:true.
+describe('R2: ensureOutputDirectory containment', () => {
+  let root;
+  before(async () => { root = await fs.mkdtemp(path.join(os.tmpdir(), 'tf213-cont-')); });
+  after(async () => { await fs.remove(root); });
+
+  for (const bad of ['_bmad-output/../../escaped', '_bmad-output/../etc', '/var/tmp/absolute', '_bmad-output/']) {
+    it(`refuses ${JSON.stringify(bad)}`, async () => {
+      const r = await ensureOutputDirectory({ integration: { output_directory: bad } }, root);
+      assert.equal(r.success, false, `escaped to ${r.path}`);
+    });
+  }
+
+  it('refuses a relative projectRoot rather than resolving against cwd', async () => {
+    const r = await ensureOutputDirectory({ integration: { output_directory: '_bmad-output/x' } }, 'relative-root');
+    assert.equal(r.success, false);
+  });
+
+  it('still creates a legitimate directory', async () => {
+    const r = await ensureOutputDirectory({ integration: { output_directory: '_bmad-output/good' } }, root);
+    assert.equal(r.success, true, JSON.stringify(r.errors));
+    assert.ok(r.path.startsWith(root));
   });
 });

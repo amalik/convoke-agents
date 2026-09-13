@@ -112,10 +112,31 @@ async function ensureOutputDirectory(specData, projectRoot) {
   if (!relative) {
     return { success: false, path: '', errors: ['integration.output_directory is required'] };
   }
-  if (!projectRoot) {
-    return { success: false, path: '', errors: ['projectRoot is required — do not fall back to process.cwd()'] };
+  // R2: the guard must be here, not only in spec-parser. This function is called
+  // directly from step-04 §5a-ii and the shipped CLI at the foot of this file bypasses
+  // parseSpec entirely, so an upstream-only check is no check for either caller.
+  if (typeof projectRoot !== 'string' || !path.isAbsolute(projectRoot)) {
+    return { success: false, path: '', errors: [`projectRoot must be an ABSOLUTE path (got ${JSON.stringify(projectRoot)}) — never fall back to process.cwd()`] };
   }
+  if (typeof relative !== 'string' || path.isAbsolute(relative)) {
+    return { success: false, path: '', errors: [`output_directory must be a repo-relative path (got ${JSON.stringify(relative)})`] };
+  }
+
   const target = path.resolve(projectRoot, relative);
+
+  // resolve + normalise + contains-check, per project-context.md
+  // `path-safety-for-destructive-ops`. The first pass did none: `_bmad-output/../../x`
+  // was created OUTSIDE the repo, written into config.yaml, and recorded in the abort
+  // manifest as an `rm` target.
+  const outputRoot = path.resolve(projectRoot, '_bmad-output');
+  const rel = path.relative(outputRoot, target);
+  if (target === outputRoot || rel.startsWith('..') || path.isAbsolute(rel)) {
+    return {
+      success: false,
+      path: target,
+      errors: [`output_directory must resolve to a directory strictly inside ${outputRoot} (resolved to ${target})`]
+    };
+  }
   try {
     await fs.ensureDir(target);
   } catch (err) {

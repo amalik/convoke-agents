@@ -43,3 +43,32 @@ describe('tf-2-13: output_directory shape is enforced in code, not just prose', 
     assert.match(errs, /output_directory is required/);
   });
 });
+
+// ── R2: `startsWith('_bmad-output/')` is a string test, not a path test ──
+// `_bmad-output/../../escaped` passed it, and ensureOutputDirectory then mkdir -p'd
+// outside the repo — the escaped path landing in config.yaml AND in the abort
+// manifest as an `rm` target. project-context.md rule `path-safety-for-destructive-ops`
+// requires resolve + normalise + contains-check; the first pass did none of them.
+describe('R2: output_directory cannot escape _bmad-output/', () => {
+  const base = {
+    schema_version: '1.0', team_name: 'Probe', team_name_kebab: 'probe',
+    composition_pattern: 'Independent', agents: [{ id: 'alpha-probe', role: 'r' }]
+  };
+  const errorsFor = async (d) =>
+    ((await parseSpecFromString(JSON.stringify({ ...base, integration: { output_directory: d } }))).errors || []).join(' | ');
+
+  for (const bad of [
+    '_bmad-output/../../escaped',
+    '_bmad-output/../etc',
+    '_bmad-output/x/../../../tmp/pwned',
+    '_bmad-output/'
+  ]) {
+    it(`rejects ${JSON.stringify(bad)}`, async () => {
+      assert.match(await errorsFor(bad), /_bmad-output\//);
+    });
+  }
+
+  it('still accepts a normal nested path', async () => {
+    assert.ok(!/output_directory/.test(await errorsFor('_bmad-output/probe-artifacts/sub')));
+  });
+});

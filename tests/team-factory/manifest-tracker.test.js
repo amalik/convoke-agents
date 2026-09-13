@@ -14,6 +14,12 @@ function buildTestContext() {
   const moduleRoot = '_bmad/bme/_test-team';
   return {
     module_root: moduleRoot,
+    // R2 (tf-2-13): a completed run HAS a registry result. This context modelled one
+    // without, which is the §5c-abort shape, not a successful generation — and the
+    // manifest now (correctly) refuses to emit a destructive `git checkout` for a file
+    // it cannot confirm was written. Added so these fixtures describe the success path
+    // they are named for; the absent case has its own explicit tests below.
+    registry_wiring_result: { success: true },
     generated_files: [
       `${moduleRoot}/agents/alpha-analyzer.md`,
       `${moduleRoot}/agents/beta-builder.md`,
@@ -333,8 +339,27 @@ describe('tf-2-13: manifest describes what was actually generated', () => {
 
   it('claims agent-registry.js as modified ONLY when the registry was written', () => {
     const withWrite = paths(ctx());
-    const without = paths(ctx({ registry_wiring_result: { success: false } }));
+    const failed = paths(ctx({ registry_wiring_result: { success: false } }));
     assert.ok(withWrite.some(p => p.includes('agent-registry.js')), 'should claim it on success');
-    assert.ok(!without.some(p => p.includes('agent-registry.js')), 'must not claim it when unwritten');
+    assert.ok(!failed.some(p => p.includes('agent-registry.js')), 'must not claim it when the write failed');
+  });
+
+  // R2: the ABSENT case is the one the condition was written for and the original test
+  // never exercised. step-04 §5c runs BEFORE §5d, so on a §5c abort the key is absent —
+  // and formatAbortInstructions turns a `modified` entry into
+  //   git checkout -- "scripts/update/lib/agent-registry.js"
+  // which DISCARDS the operator's uncommitted work in a file the factory never touched.
+  // writeRegistryBlock carries a dirty-tree check precisely because that file holds it.
+  it('does not claim agent-registry.js when the registry step never ran', () => {
+    const absent = paths(ctx({ registry_wiring_result: undefined }));
+    assert.ok(!absent.some(p => p.includes('agent-registry.js')),
+      'absent !== written — claiming it emits a destructive git checkout on an untouched file');
+  });
+
+  it('never emits a git checkout for a file the run did not modify', () => {
+    const manifest = buildManifest({ team_name_kebab: 'probe' }, ctx({ registry_wiring_result: undefined }));
+    const instructions = formatAbortInstructions(manifest);
+    assert.ok(!/git checkout .*agent-registry\.js/.test(instructions),
+      `abort instructions must not revert an untouched file:\n${instructions}`);
   });
 });

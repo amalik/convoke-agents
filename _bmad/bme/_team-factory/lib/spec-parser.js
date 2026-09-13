@@ -170,7 +170,7 @@ function validateAgainstSchema(doc, schema, pattern) {
       errors.push('integration must be an object');
     } else if (!doc.integration.output_directory) {
       errors.push('integration.output_directory is required');
-    } else if (!String(doc.integration.output_directory).startsWith('_bmad-output/')) {
+    } else if (!isContainedOutputDirectory(doc.integration.output_directory)) {
       // tf-2-13 (T133a): step-02-connect.md §3 instructs "Validate: path should start
       // with `_bmad-output/`" — but nothing in lib/ enforced it, so the rule was prose
       // only. A convention documented and unenforced is how the generated config's
@@ -182,6 +182,35 @@ function validateAgainstSchema(doc, schema, pattern) {
   }
 
   return errors;
+}
+
+/**
+ * Is `value` a repo-relative path genuinely CONTAINED under `_bmad-output/`?
+ *
+ * tf-2-13 R2. The first pass used `String(value).startsWith('_bmad-output/')`, which is
+ * a string test wearing a path test's clothes: `_bmad-output/../../escaped` passed it,
+ * and `ensureOutputDirectory` then created that directory OUTSIDE the project root,
+ * wrote the escaping path into the generated `config.yaml`, and recorded it in the
+ * abort manifest as an `rm` target. `project-context.md` rule
+ * `path-safety-for-destructive-ops` requires resolve + normalise + contains-check;
+ * none of the three was done.
+ *
+ * Also rejects the bare prefix `_bmad-output/`, which resolved to the shared artifacts
+ * root every module writes into — one character away from a valid value, and it made
+ * the abort manifest claim the whole tree as this run's creation.
+ *
+ * @param {*} value
+ * @returns {boolean}
+ */
+function isContainedOutputDirectory(value) {
+  if (typeof value !== 'string' || value.trim() === '') return false;
+  if (path.isAbsolute(value)) return false;
+  const ROOT = '_bmad-output';
+  const normalised = path.normalize(value).replace(/\\/g, '/').replace(/\/+$/, '');
+  if (normalised === ROOT) return false;                 // bare root — not a team directory
+  if (!normalised.startsWith(ROOT + '/')) return false;  // must live under it
+  if (normalised.split('/').includes('..')) return false; // belt and braces post-normalise
+  return true;
 }
 
 /**
