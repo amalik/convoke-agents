@@ -37,20 +37,54 @@ so that a dropped story cannot pass as a completed pass.
 2. **`USER_FACING_DOCS` cannot be the denominator.** It holds 17 entries; **9 are not in the coverage
    table** (`INSTALLATION.md`, `CHANGELOG.md`, the 7 Vortex user guides) and **7 coverage rows are not
    in it**. Neither set contains the other. Reuse is wrong in both directions.
-3. **`docs/*.md` + root `*.md` yields 26 candidates, of which 13 are in scope** — so a **13-entry
-   exclusion list** produces the `docs/` and root portions exactly.
+3. **The glob must be RECURSIVE.** `docs/*.md` is depth-1 and misses **`docs/adr/adr-bmad-coupling-v4.0.md`**
+   and **`docs/migration/3.x-to-4.0.md`** — the latter is what `convoke-update` links to on breaking
+   changes. A depth-1 gate could never see a document added under `docs/adr/`, which makes FR10's
+   justification ("a new document appears unexamined on its own") false for any subdirectory.
+   `docs/**/*.md` + root `*.md` yields **28** candidates, of which 13 are in scope — a **15-entry**
+   exclusion list. *(Depth-1 gives 26 and 13; both are derivable, and the recursive form is the one that
+   holds.)*
+4. **Tracked, not merely present.** Enumerate with `git ls-files`, not `readdirSync` — an untracked
+   scratch file in `docs/` must not turn the release gate red, and `name-registry-integrity.js:26-33`
+   already ruled this way for the same reason (*"an untracked local file satisfies a developer and
+   vanishes in CI"*). ⚠ This makes **AC2's D-b demonstration require `git add`** on the scratch
+   document; say so in the demonstration, and remove it afterwards.
 
 **Then** the derivation is: **glob** `docs/*.md` and root `*.md`, minus the declared exclusion list, **plus
 an explicit two-entry inclusion list** for `_bmad/bme/_vortex/guides/VORTEX-TEAM-GUIDE.md` and
 `_bmad/bme/_vortex/compass-routing-reference.md`
 **And** ⚠ **the module docs are an inclusion list, not a glob, and the reason is recorded in the source** —
-globbing `_bmad/bme/_vortex/**/*.md` pulls in ~20 contract and per-agent guide files that were never in
-this epic's scope. **This resolves the epic's open item** (*"Story 1.7 must either widen that derivation
+globbing `_bmad/bme/_vortex/**/*.md` pulls in **223** files — 186 of them workflow step files, plus
+agents, guides, contracts and examples — none of which this epic scoped. Re-derive with
+`find _bmad/bme/_vortex -name '*.md' | wc -l`. ⚠ **Do not probe this with `-maxdepth 2`**: that returns
+18 and makes the glob look survivable. **This resolves the epic's open item** (*"Story 1.7 must either widen that derivation
 or record why module documentation is out of the coverage gate"*): it is widened, by enumeration, and the
 enumeration's cost is that a future module doc must be added by hand — which is the trade the glob-plus-
 exclusion approach makes in the other direction for `docs/`.
 **And** the exclusion list entries each carry a one-line reason in the source, because an unexplained
-exclusion is how a file silently leaves scope.
+exclusion is how a file silently leaves scope. ⚠ **The reasons are judgement, not derivation — do not
+invent them.** Ten are already ruled at `convoke-note-docs-accuracy-findings-4-0-2.md` §*Explicitly out
+of scope (ruled 2026-09-10)*: the five vision/draft/snapshot files, and the warm tier (`INSTALLATION`,
+`CONTRIBUTING`, `npm-publishing-access-playbook`, `pre-tag-release-checklist`). The rest:
+
+| Entry | Reason |
+|---|---|
+| `CHANGELOG.md` | ⚠ **Not "historical record".** The operator **RULED 2026-09-12** it is admitted *for never-true claims only* and out of the derivation pass — *"Story 1.6's size is unchanged."* Cite the ruling |
+| `docs/README.md` | A directory index, not documentation carrying repository claims |
+| `docs/vortex-step-01-round-split-scaffold.md` | Contributor-normative spec; self-declared audience |
+| `project-context.md` | AI agent rules, not documentation |
+| `docs/adr/adr-bmad-coupling-v4.0.md` | *(new under the recursive glob)* An ADR is a dated decision record — same class as the snapshot exclusion |
+| `docs/migration/3.x-to-4.0.md` | *(new under the recursive glob)* ⚠ **Decide explicitly.** It is operator-facing and `convoke-update` links to it, so it has a real claim to being in scope — but admitting it now adds a 16th row no story examined. Excluding it needs a stated reason; admitting it needs a backlog row |
+| `docs/pre-tag-release-checklist.md` | Warm tier — **and this story's own edit subject.** The findings note says it *"re-enters scope as Story 5's subject"*; rule in the source that being edited is not being examined, so a reviewer does not re-litigate the denominator |
+**And** ⚠ **the check MUST accept an injected root and an injected table path.** `test-fixture-isolation`
+(`project-context.md`) states *"Exception. None."* for tests that scan the project tree, so a test that
+runs against `PACKAGE_ROOT` violates a binding rule — and without injection, AC2's D-a has no way to
+work "on a copy" and the implementer will be tempted to mutate the real table. Follow
+`scripts/audit/backlog-integrity.js`, whose `main(root = path.resolve(__dirname, '..', '..'))` is
+exported for exactly this
+**And** the check **exits non-zero if any exclusion or inclusion entry resolves to no file** — five of the
+exclusions are the documents AC4's first row proposes relocating, so a silent stale entry is not
+hypothetical.
 
 **AC2 — the gate refuses, and is shown refusing.**
 
@@ -58,6 +92,12 @@ exclusion is how a file silently leaves scope.
 **When** it compares the derived in-scope set against the examined set read from the coverage table
 **Then** it exits **non-zero** on any file that is in scope and not examined, **naming the file and the
 story that owns it** (the table's `Story` column)
+**And** ⚠ **the "no row at all" case is specified separately**, because it has no `Story` cell to name —
+that is exactly what D-b produces. Report it as the file plus `owner: none — no row in the coverage
+table`. The epic keeps these as two distinct Givens; do not collapse them
+**And** two further states are defined rather than left to chance: a **row for a file not in the derived
+set** (an orphan row — report it), and a row whose `In scope` cell reads `no` **while the file is in the
+derived set** (a contradiction between the table and the derivation — report it)
 **And** it exits **0** against the real table today, since all 15 rows read `Examined: yes`
 
 **And** ⚠ **two demonstrations are required, and both are executions, not assertions:**
@@ -81,9 +121,14 @@ state.
 states **explicitly that it does not assert the documentation is correct**
 **And** ⚠ **it introduces no job count** — that file's §3 already carries its own note on counts rotting
 into false halts, and names an earlier draft that said "expect 11 successes"
+**And** ⚠ **the step must land BEFORE §6, which is where the tag is pushed.** A step after §7 runs once
+the tag is spent and could never refuse one, defeating the point. The epic rules the placement already:
+*"`docs:audit` is one of the CI jobs §3 asserts green. The new step is therefore **additive to §3**, not
+a modification of it."* Add it inside §3, or as an unnumbered subsection immediately after §3
 **And** ⚠ **the existing seven sections keep their numbers** (`## 1.` … `## 7.`, plus the unnumbered
-`## If the guard refuses`), because `dist-epic-2` runbooks reference them. Add the step **inside** an
-existing section or after §7 without renumbering.
+`## If the guard refuses`) — not because other runbooks cite the numbers (they cite pre-tag *timing*, not
+section numbers; `grep -rn "pre-tag" _bmad-output/implementation-artifacts/dist-*.md`), but because
+renumbering a live operator checklist churns it for no gain.
 
 **AC4 — two backlog rows, filed not fixed.**
 
@@ -133,7 +178,10 @@ which can never pass, and a `cut -d,` that returns noise. All three were caught 
 - [ ] **Task 2 — Write the check (AC: 1, 2)**
   - [ ] `scripts/audit/` alongside `backlog-integrity.js` and `skill-manifest-integrity.js`; follow their exit-code and reporting shape
   - [ ] Parse the coverage table; compare; on failure name **the file and its owning story**
-  - [ ] Never use `process.cwd()` — `findProjectRoot()` or an injected root (`no-process-cwd-in-libs`)
+  - [ ] Never use `process.cwd()` — `findProjectRoot()` (from `scripts/update/lib/utils`, as `derived-assertions.js`, `skill-manifest-integrity.js` and `name-registry-integrity.js` all require it) or an injected root (`no-process-cwd-in-libs`)
+  - [ ] ⚠ **Parse the right table.** Three tables in the findings note begin `| File |`. Anchor on the full six-column header (`File | In scope | Assertions | Examined | Story | Findings`), strip fenced blocks first (precedent: `backlog-integrity.js::stripFences`), and strip emphasis before comparing cells — `Examined` reads `**yes**`, not `yes`
+  - [ ] **Decide and record whether this runs in CI.** Every sibling gate is wired (`grep -n "scripts/audit" .github/workflows/ci.yml`). If it becomes a CI job, AC3's checklist step becomes "confirm that job green" rather than a local invocation
+  - [ ] **Record a namespace / slash-command decision.** `slash-command-ux-for-user-facing-tools` requires operator-facing tools be slash commands. The exemption argument — the other `scripts/audit/*` gates are CI jobs, not typed by an operator — is available but must be *written down*, per `feedback_namespace_audit`
 - [ ] **Task 3 — RED first, then green (AC: 2)**
   - [ ] Write the failing test before the implementation; `tests/audit/` runs under `npm test`
   - [ ] Cover: a missing `Examined`, an in-scope file with no row, an excluded file that must NOT appear, and a module-inclusion file
@@ -145,13 +193,18 @@ which can never pass, and a `cut -d,` that returns noise. All three were caught 
   - [ ] Asserts *recorded*, not *correct*; no job count; existing seven section numbers untouched
 - [ ] **Task 6 — Two backlog rows (AC: 4)**
   - [ ] Confirm the backlog tree is clean, re-derive the highest ID, compute both scores, insert at sorted position
-  - [ ] `node scripts/audit/backlog-integrity.js` → 0
+  - [ ] **Name the lane before writing**: the scored lanes are §2.2 Bug / §2.3 Fast / §2.4 Initiative, and ⚠ **their column shapes differ** — Bug is 12 (`… | Status | Dependencies | Linked Follow-up`), Fast is 11 (`… | Status | Dependencies`), Initiative is 12 with different tail columns (`… | Stage | Artifacts | Dependencies`). §2.1 Intakes is a different, score-free shape again. Both rows here are Fast Lane candidates, but confirm the header before writing. **Copy the layout from an adjacent row in the same table, never from memory** (`backlog-write-discipline` — that is what `BUG-17`/`BUG-18` got wrong)
+  - [ ] **The R/I/C/E values are yours to propose and the operator's to accept** — state them with a one-line rationale rather than presenting the score as derived
+  - [ ] Update the backlog's own `## Change Log` section, which every prior row addition updated and `backlog-integrity.js` does **not** check
+  - [ ] `node scripts/audit/backlog-integrity.js` → 0, and **paste its result into the commit Description** (`backlog-write-discipline`)
 - [ ] **Task 7 — Coverage table and findings note (DoD)**
   - [ ] This story examines no prose file, so it adds no coverage row. Record that explicitly rather than leaving it ambiguous
 - [ ] **Task 8 — Verify and hand off**
   - [ ] `npm run lint` → 0 · `npm test` → 0 · `node scripts/audit/backlog-integrity.js` → 0 · `npm run docs:audit` → 0
   - [ ] Capture exit codes **without a pipe** — `${PIPESTATUS[0]}` is bash, this shell is zsh (`verification-pipefail`)
-  - [ ] Run every command written into any document, to completion
+  - [ ] **Run the new check itself against the real coverage table** — AC5 requires it to exit 0, and Task 8 is where that is evidenced
+  - [ ] Flip `sprint-status.yaml`'s `docs-1-7` entry as the story progresses; `backlog-integrity.js` reads that file and warns on divergence
+  - [ ] Run every command written into any document, to completion. ⚠ **`npm run check` and `npm run refs:audit` are known-broken at HEAD and are NOT this story's problem** — both are filed in `deferred-work.md` by `docs-1-6`. Do not chase them
   - [ ] Commit plan with a Round 1 review record; `git diff HEAD --name-only` before staging
 
 ## Dev Notes
@@ -180,6 +233,12 @@ which can never pass, and a `cut -d,` that returns noise. All three were caught 
 **Do not touch** `scripts/docs-audit.js`. This gate is a different instrument with a different
 denominator — `docs-1-6` ruled that `USER_FACING_DOCS` means *audited for staleness*, never *in the
 coverage gate*, and the two sets genuinely differ.
+
+⚠ **This DEVIATES from the epic's tooling inventory, which says "Extension to `docs-audit.js`". Record
+the deviation as an epic amendment**, the way Stories 1.1 and 1.2 recorded theirs — do not ship silently
+against an unamended requirement. The mechanical reason: `tests/unit/docs-audit.test.js` pins
+`USER_FACING_DOCS.length` against prose in `BMAD-METHOD-COMPATIBILITY.md`, so extending that array to
+serve as the coverage denominator turns that test red and falsifies a shipped sentence.
 
 ### Testing standards
 
@@ -231,4 +290,4 @@ code runs, not that the gate refuses.
 
 | Date | Change |
 |------|--------|
-| 2026-09-13 | **Story created.** The epic left the gate's denominator as an open item owned by this story; it is resolved in AC1 with the numbers derived rather than asserted. Three facts drove the design: the coverage table's rows span **three** locations (8 `docs/`, 5 repo-root, 2 `_bmad/bme/_vortex/`), so the epic's `docs/`-framing covers 8 of 15; **`USER_FACING_DOCS` cannot be reused** — 9 of its entries are absent from the table and 7 table rows are absent from it, so neither set contains the other; and `docs/*.md` + root `*.md` gives 26 candidates of which 13 are in scope, making a 13-entry exclusion list exact. The module docs are an **explicit two-entry inclusion list** rather than a glob, because `_bmad/bme/_vortex/**/*.md` would pull ~20 never-scoped contract and guide files — the trade is recorded in AC1 rather than left implicit. AC2 requires the gate be **shown refusing**, on a copy, because `cli-guidance-check` shipped twice matching nothing. The RICE formula for AC4 was derived from existing rows (`(R × I × C) / E`, `C` as a percentage) rather than assumed. |
+| 2026-09-13 | **Story created.** The epic left the gate's denominator as an open item owned by this story; it is resolved in AC1 with the numbers derived rather than asserted. Three facts drove the design: the coverage table's rows span **three** locations (8 `docs/`, 5 repo-root, 2 `_bmad/bme/_vortex/`), so the epic's `docs/`-framing covers 8 of 15; **`USER_FACING_DOCS` cannot be reused** — 9 of its entries are absent from the table and 7 table rows are absent from it, so neither set contains the other; and `docs/*.md` + root `*.md` gives 26 candidates of which 13 are in scope, making a 13-entry exclusion list exact. The module docs are an **explicit inclusion list** rather than a glob; AC1 carries the derived figure and the probe that understates it. AC2 requires the gate be **shown refusing**, on a copy, because `cli-guidance-check` shipped twice matching nothing. |
