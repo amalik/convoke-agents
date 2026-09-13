@@ -4,7 +4,7 @@ baseline_commit: 081669052d3300ec3de99bb306f081d62a61bbf0
 
 # Story 1.7: Wire the gate and file what this epic will not fix
 
-Status: review
+Status: done
 
 ## Story
 
