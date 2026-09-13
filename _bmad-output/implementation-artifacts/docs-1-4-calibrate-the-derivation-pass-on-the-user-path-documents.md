@@ -4,7 +4,7 @@ baseline_commit: 22903751
 
 # Story 1.4: Calibrate the derivation pass on the user-path documents
 
-Status: review
+Status: done
 
 ## Story
 
@@ -194,7 +194,7 @@ Fixtures only, in `tests/audit/`. Every pattern needs a fixture that makes it **
 
 - [x] `npm run docs:audit` exits 0. **Non-regression only, not evidence of accuracy** *(NFR3, verbatim)*.
 - [x] Every finding carries a reproducing command (NFR1) from an artifact the operator receives — never `.claude/skills/` (NFR8).
-- [~] The count is the script's output (verified). **The independent re-run is Round 1's, not mine** — self-certifying it would be the party the measurement sizes vouching for the measurement, which is the conflict AC2 was written to remove.
+- [x] The count is the script's output, and **two independent reviewers re-ran it** — Round 1's acceptance auditor and Round 2's verifier each recomputed the examined total, both remaining loads, the rate and the projection from the script rather than from this file, and both reproduced exactly. Self-certifying would have been the party the measurement sizes vouching for the measurement, which is the conflict AC2 exists to remove; that is why this box waited for them.
 - [x] Each pattern in the set was demonstrated firing on the fixture, and the script was shown able to fail.
 - [x] **Every check cited as evidence in the Dev Agent Record names how it was shown able to fail (NFR5)** — not only the script; the AC3 verifications and AC6's mutation proof are covered by this too.
 - [x] Every claim written or kept obeys the source-of-truth rule (FR3a).
@@ -202,7 +202,7 @@ Fixtures only, in `tests/audit/`. Every pattern needs a fixture that makes it **
 - [x] Coverage table updated for this story's own rows, `0` written as `0`.
 - [x] `npm run lint` exits 0 — **real here**, this story ships `.js` under `scripts/`.
 - [x] `npm test` green, including the new fixture tests.
-- [~] Commit plan emitted and the reviewed set verified equal to the staged set. **The Round 1 record is pending that round.**
+- [x] Commit plan emitted with the reviewed set verified equal to the staged set; landed as `6eb2a15e`. Two review rounds are recorded in the Change Log and the findings note.
 
 ## Dev Agent Record
 
@@ -369,6 +369,7 @@ visible, not verified against its own team.
 
 | Date | Change |
 |------|--------|
+| 2026-09-13 | **Closed `done`.** Two review rounds ran and every finding was applied; the story then sat at `review` because the rounds were driven directly rather than through `bmad-code-review`, whose step 4 owns the status transition — so nothing moved it. Both deferred DoD boxes are now satisfied on evidence: the count was independently re-run by Round 1's auditor and Round 2's verifier, and the commit plan landed as `6eb2a15e`. **Note for whoever picks up 1.5:** `T160` has since changed the instrument twice, so this story's figures are superseded by construction — the artifacts cite the regenerating command instead, and the counter now reports a FLOOR with its known gaps enumerated. |
 | 2026-09-13 | **Implemented, then corrected across two review rounds.** AC7 resolved to two files. Counting instrument built at `scripts/audit/derived-assertions.js`, run identically by 1.5/1.6. **Its fixture demonstration passed while four patterns were wrong**, found by reading matches rather than totals; AC2's hand-derivation then found an undercount the suite was green against. AC6's adjacency defect fixed in `docs-audit.js` with a registry-derived team qualifier, mutation-proven both directions, its `T154` limit recorded. **No assertion totals appear in this entry on purpose** — both rounds changed the instrument, so every figure written into these artifacts went stale; re-derive with the script. **Round 1** found two undercount classes and a false finding: `D14` claimed a file was deleted when it was **renamed**, and the remedy had deleted an owned claim — an AC8 violation, now a repoint. **Round 2** found five more undercount classes and five over-count classes, one of them inside the hand-derivation window this record had called an exact match. **Instrument change rather than a third pattern rewrite:** the script now reports a **FLOOR**, the known-missing classes (no total here — `T160` has since closed one and added two, so the
 findings note is the count) are enumerated in the findings note and filed, and the artifacts cite the regenerating command instead of carrying figures. Projection presented for the operator's scope call, not decided. |
 | 2026-09-12 | **Reworked after independent validation returned NOT READY (5 HIGH).** The defects clustered in one place: **AC1 required a "pinned pattern set" without specifying what it pins.** Fixed by (a) **ruling that fenced code blocks ARE counted** — the decision is invisible on `docs/faq.md`, which has no fences, and decisive on `UPDATE-GUIDE.md`, whose commands sit overwhelmingly inside them, so leaving it unmade would have silently propagated to 1.5 and 1.6; and (b) giving each of the four kinds an **operational definition** with what it excludes. **AC2's independence mechanism was unworkable** — Round 1 fires on the same change by the same agent, and re-running a deterministic script reproduces the same wrong number. Replaced with **hand-derivation of a named sample window**, which tests completeness rather than repeatability. **AC5 asked the implementer to decide "fits" against a threshold the epic names but never defines**; reframed to present the figures and ask, and to state that `README.md` is in 1.6's scope with no breakdown figure, so the projection is a floor unless it counts it. **AC6 named one instance where the same line carries two** (`seven Vortex agents` and `four Gyre agents`) — the fourth short instance-list in this epic — so it now requires enumerating the class by command. Task 5 restored the intelligence behind "do not re-report": `docs-1-1`'s R1 found a live D2 in this very file after the note declared the class closed. |
