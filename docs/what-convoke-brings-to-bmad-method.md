@@ -15,7 +15,7 @@ The BMAD Method is a framework for AI-assisted software engineering built on thr
 
 Four of its modules cover the canonical phases of software delivery — this is not the whole set. The shipped skill manifest also carries `core`, `wds` as a parallel extension that is neither BMAD-proper nor Convoke's, and `bme` which is Convoke's own; enumerate it with `grep -oE '"[a-z]+","_bmad/' _bmad/_config/skill-manifest.csv | cut -d'"' -f2 | sort -u` (a bare `cut -d,` splits inside the quoted description field and returns noise):
 
-- **BMM** — four phases spanning analysis (Mary), planning (John, Sally), solutioning (Winston), and implementation (Amelia, Quinn, Bob).
+- **BMM** — four phases spanning analysis (Mary, Paige), planning (John, Sally), solutioning (Winston), and implementation (Amelia, Quinn, Bob, Barry). Derive the roster and its phases rather than trusting this list: `grep -oE '"[^"]*","_bmad/bmm/[0-9]-[a-z-]+/[^"]*"' _bmad/_config/agent-manifest.csv | sed -E 's#.*bmm/([0-9]-[a-z-]+)/(bmad-agent-[a-z-]+).*#\1 \2#' | sort -u`.
 - **TEA (Test Architecture)** — Murat as a dedicated Master Test Architect, covering risk-based testing, ATDD, CI/CD governance, and scalable quality gates.
 - **CIS (Creative Intelligence Suite)** — creative and innovation agents for brainstorming (Carson), storytelling (Sophia), design thinking (Maya), innovation strategy (Victor), and presentation design (Caravaggio).
 - **BMB (Builder)** — tooling for creating new agents, modules, and workflows in a BMAD-compliant way.

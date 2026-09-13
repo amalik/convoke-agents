@@ -1,6 +1,6 @@
 # Testing
 
-Overview of the Convoke automated test suite, CI pipeline, and agent validation results.
+Overview of the Convoke automated test suite, CI pipeline, and agent testing.
 
 ---
 
@@ -49,14 +49,20 @@ npm run test:all         # the three above, in sequence
 npm run test:coverage    # c8, enforcing the thresholds in .c8rc.json
 npm run lint             # ESLint
 npm run docs:audit       # documentation staleness and link checks
-npm run check            # convoke-check (slow — runs its own suite)
 npm run refs:audit       # cross-artifact reference integrity
 ```
 
-`docs:audit` gates CI and exits 0 on a clean tree. `refs:audit` does **not** — it sweeps the whole
-repository including `_bmad-output/_archive/`, where historical documents point at files that were
-since moved, so it exits non-zero by default. Read its output, do not treat a non-zero exit as a
-regression you caused.
+`docs:audit` gates CI and exits 0 on a clean tree. **`refs:audit` does not, and is not a gate** — it
+exits non-zero on a clean checkout today. Most of what it reports is relative-path resolution against
+the referring file's own directory — a note inside a subdirectory that cites a repo-root-relative script
+path is resolved relative to that subdirectory, and reported broken — and most of the volume comes from
+`_bmad-output/`, not from the shipped docs. Run
+it, diff its output against a clean baseline, and judge your own additions — do not read a non-zero exit
+as a regression you caused. Derive the current split with:
+
+```bash
+npm run refs:audit 2>&1 | grep -oE '^  [^ ]+ →' | sed -E 's#^ +([^/]+/[^/]+|[^/]+)/.*#\1#' | sort | uniq -c | sort -rn
+```
 
 ---
 
@@ -81,7 +87,7 @@ every branch. The jobs most people care about:
 | `security` | `npm audit --omit=dev` |
 | `package-check` | `npm pack --dry-run` + `node index.js` |
 | `fresh-install` | packs a tarball and installs it into a throwaway project |
-| `agent-surface-parity` | the repo's audit job: agent-surface parity across two refs (skipped with a warning when no `v*` tag exists), plus `install-scope-check`, `backlog-integrity`, `skill-manifest-integrity`, `name-registry-integrity` and `npm run docs:audit` |
+| `agent-surface-parity` | the repo's audit job — agent-surface parity across two refs (skipped with a warning when no `v*` tag exists) plus every other audit gate. Enumerate its steps rather than trusting this cell: `node -e "const y=require('js-yaml'),w=y.load(require('fs').readFileSync('.github/workflows/ci.yml','utf8'));console.log(w.jobs['agent-surface-parity'].steps.filter(s=>s.run).map(s=>s.name).join('\n'))"` |
 | `publish` | npm publish, gated on `refs/tags/v*` — so a tag push, never a branch push or a pull request |
 
 ---
@@ -123,10 +129,14 @@ nothing pins it. Run `npm run test:coverage` and read the per-file table it prin
 the thresholds that actually gate CI, and the run fails if the project totals fall below them.
 
 The three modules this section once named as gaps — `convoke-update.js`, `convoke-version.js` and the
-`1.0.x-to-1.3.0` migration — now sit well above those thresholds. **Others do not.** The per-file table
-is the place to look: at the time of writing, `scripts/update/migrations/3.0.x-to-3.1.0.js` was the
-weakest module, well under the line threshold and with no function coverage at all. Project-level
-thresholds can pass while an individual module is bare.
+`1.0.x-to-1.3.0` migration — now sit well above those thresholds. **Others do not, and no module is
+named here** — which one is weakest changes, and a name written into this file would be wrong within
+weeks. **Project-level thresholds can pass while individual modules are bare**, including at 0% function
+coverage, so read the per-file table rather than the summary line. Sort it:
+
+```bash
+npm run test:coverage 2>&1 | awk -F'|' '$2+0>0 {gsub(/ /,"",$1); gsub(/ /,"",$2); print $2, $1}' | sort -n | head
+```
 
 ---
 

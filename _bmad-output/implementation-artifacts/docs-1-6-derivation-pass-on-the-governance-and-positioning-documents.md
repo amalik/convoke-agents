@@ -263,44 +263,32 @@ Known members include `:39` (`Vortex (7 agents)`, `Gyre (4 agents)`), `:153` (`7
 
 ### Review Findings
 
-*Code review 2026-09-13 — three independent parallel layers. ~35 claims re-executed. Deletion-safety
-weighted per operator request, and that is where the worst finding came from.*
+**Three rounds ran: Round 1 self, Rounds 2 and 3 with three independent blind layers each.** All
+findings were applied. The per-defect record lives in the findings note's `D43`-`D62` rows, each with a
+reproducing command; it is not duplicated here, because the duplicate is what went stale.
 
-- [x] [Review][Decision] **The CoC's new contact is the security-advisory form, and the wording hides two things** — it requires a GitHub account (302 → login) and it is byte-identical to the channel `SECURITY.md:20`, `README.md:151` and both issue templates label "Security vulnerability". A harassment report arrives as a draft security advisory. `R1` made the routing call; the *wording* is mine and it says only "GitHub's private reporting form". **RESOLVED 2026-09-13: keep the route, state both caveats** — the file now says GitHub labels it "Report a vulnerability", that conduct reports are welcome and handled as conduct matters, and that it requires an account.
+What the rounds actually established, kept because it changes how the next story should work:
 
-- [x] [Review][Patch] **`D47` was a FALSE finding — restore Quinn and Bob.** `agent-manifest.csv` (tracked) lists `dev/Amelia`, `qa/Quinn`, `sm/Bob` identically; their skills ship (`bmad-qa-generate-e2e-tests`, `bmad-sprint-planning`, `bmad-create-story`, `bmad-retrospective`); and `CREDITS.md:53-54` reaffirms both **in this same commit**. My instrument grepped a persona name in a description column — Amelia survived only because her skill's description says "talk to Amelia". AC8 violation, `docs-1-4` `D14` repeated [docs/what-convoke-brings-to-bmad-method.md:18]
-- [x] [Review][Patch] **"the migration chain runs past 4.0.0" is false and cites the file that disproves it** — the terminal entries are `3.1.x/3.2.x/3.3.x-to-4.0.0`; there is no `4.0.x` entry. A stale claim was replaced with a wrong one [docs/testing.md:38]
-- [x] [Review][Patch] **README folds WDS's 15 rows into "the upstream BMAD skill set"**, inflating `pipeline` from 23 to 38 (65%) — while the sibling file, edited in the same commit, calls `wds` "neither BMAD-proper nor Convoke's" [README.md:98]
-- [x] [Review][Patch] **AC2a's disposition was declared, not performed.** `CREDITS.md`'s one counted assertion is a **path** (`README.md`, `:79`); `CODE_OF_CONDUCT.md`'s is a **version** (`2.0`, `:120`). Neither is `D43`/`D44`, so the `1 | 1` coverage rows imply an identity that does not hold [findings note]
-- [x] [Review][Patch] **The "Behavioural prose" class was never swept** — AC2 lists ten classes, nine were reported. It is the class that produced `D46`, `D49` and `D53` [findings note, Dev Agent Record]
-- [x] [Review][Patch] **"112: 20 findings, remainder holding" is arithmetically false** — `D43`, `D44` and `D48` are not in the counted 112 (`D48`'s three paths are residual, as AC7 itself says) [Dev Agent Record]
-- [x] [Review][Patch] Coverage-table floors have **no basis annotation**; the same command at HEAD returns 149, and the note's own rule says re-derive rather than hand-edit [findings note]
-- [x] [Review][Patch] `D52`'s reproducing command returns **0** at HEAD — it reads the file this commit rewrote; `D43`'s correctly uses `git show 9e986db8:` [findings note]
-- [x] [Review][Patch] "Real totals are three orders larger" — it is **one** (16.9×). The same story states the right magnitude ("off by 2,933") [findings note]
-- [x] [Review][Patch] `grep -c 'bmm'` returns **33**, a count, under a sentence that says "derive the roster"; it also names nobody and contradicts the paragraph two sentences later [docs/what-convoke-brings-to-bmad-method.md:18]
-- [x] [Review][Patch] The date sweep's stated basis is falsified by this commit — `what-convoke-brings` last-commit month is now **2026-09** while `:8` says April 2026 [findings note]
-- [x] [Review][Patch] "three are conditional" is a **new unpinned rotting number** in the file whose stated principle is to delete them; no check sees it [docs/testing.md:58]
-- [x] [Review][Patch] `references.md`'s **82 residual candidates** are unaddressed while the row records `Examined: yes | 10 | 0` — AC7 requires a per-file residual sweep [findings note]
-- [x] [Review][Patch] **A real coverage gap was dropped with the good news** — `3.0.x-to-3.1.0.js` is at 43.9% lines / **0% functions**, 39 points under the enforced threshold. FR3a licensed deleting rotting percentages, not the signal [docs/testing.md]
-- [x] [Review][Patch] **Wade's cited source reports `Executed: 0 / Pass Rate: 0%`** while the deleted table claimed 18/18 — and the note wrote "the counts were right". The headline was fabricated and the pass missed it twice [findings note]
-- [x] [Review][Patch] Three "Reproduce" cells are not runnable: `D49` is prose, `D51` has an unexpanded `<the 14>` whose set was deleted from the doc, `D53` is elided with `…` (NFR1) [findings note]
-- [x] [Review][Patch] The replacement text **narrates the deletion** and mis-describes it — "empathy-mapper"/"wireframe-designer" never appeared in the deleted section, only in the linked archives [docs/testing.md:98-100]
-- [x] [Review][Patch] The new `agent-surface-parity` row is a **partial-truth sentence** — the class `D60` exists to catch. That job also runs `install-scope-check`, `backlog-integrity`, `skill-manifest-integrity`, `name-registry-integrity` and `docs:audit` [docs/testing.md:78]
-- [x] [Review][Patch] `D45`'s npm output is **silently trimmed** — actual is `{ latest: '4.0.1', rc: '4.0.1-rc.0' }`; the `rc` tag is material to a Supported-versions section [findings note]
-- [x] [Review][Patch] `D56`'s note row **silently narrowed** the finding — `check` and `refs:audit` were dropped from the four named omissions, and the block still omits them [findings note, docs/testing.md]
-- [x] [Review][Patch] `## Agent Test Results` now contains no results, and `README.md:139` still advertises them — the heading/body coherence `D55` applied [docs/testing.md, README.md:139]
-- [x] [Review][Patch] `D51`'s denominator is off by one — `ls tests/unit/*.test.js` is **49**, not 48 [findings note]
-- [x] [Review][Patch] `what-convoke-brings:16`'s command prints **7** names including `bme`, which the sentence never accounts for [docs/what-convoke-brings-to-bmad-method.md:16]
-- [x] [Review][Patch] `README.md:96` names a bare `scripts/portability/…` path that does not resolve for a reader of the **shipped** README [README.md:96]
-- [x] [Review][Patch] "on `v*` tags only — not on pushes" is imprecise: a `v*` tag arrives *as* a push event [docs/testing.md:79]
-- [x] [Review][Patch] **No Round 1 review record exists in any artifact**, yet Task 9 and the DoD line are both ticked (NFR4) [story file]
-- [x] [Review][Patch] The counter's raw output and command are **never pasted** — AC1 and Task 1 both require it, and its absence is what made the missing basis undetectable [Dev Agent Record]
+- **Self-review found ~2; independent layers found ~27 and ~22.** The ratio has held across three
+  stories now. Budget for independence, not for another self-pass.
+- **Every high-severity finding in Rounds 2 and 3 was introduced by the previous round's remediation**,
+  not by the original documents. Round 3's three were: a documented command that cannot pass, a caveat
+  whose stated cause was false, and a superlative falsified by the command it pointed at.
+- **Round 3's findings split roughly half shipped-documents, half this record.** The document defects
+  shrank each round; the record defects regenerated, because each rewrite created new derived values,
+  new tallies and new line citations to go stale. That is why this section and the Completion Notes are
+  now short, and why no post-pass figure is recorded anywhere in this story.
+- **One finding was retracted** (`D47`) after its remedy deleted an owned, true claim. The sibling-file
+  check in AC2 would have caught it; it was applied to `D44` and skipped for `D47`.
+- **Two repository defects were surfaced and filed**, not fixed here: `npm run check` cannot pass, and
+  `npm run refs:audit` exits non-zero for pre-existing reasons. Both are in `deferred-work.md`.
 
-- [x] [Review][Defer] `checkBrokenPaths` cannot see paths inside backticked *commands* or fenced blocks — only bare table-cell paths. The evidence paths this story ships are exactly the invisible ones [scripts/docs-audit.js:363] — deferred, pre-existing (`T160` class)
-- [x] [Review][Defer] `SECURITY.md:5` says "derive what is current" with a command returning two candidates (`latest` and `rc`) and no statement of which is authoritative — deferred, minor
-- [x] [Review][Defer] `what-convoke-brings:88`'s commands answer about the reader's own project if run outside a checkout; guarded by "From a Convoke checkout", and unlike `docs-1-5`'s trap they do not throw — deferred
+Three items were deferred rather than fixed: `checkBrokenPaths` cannot see paths inside backticked
+commands or fenced blocks (pre-existing, `T160` class); `SECURITY.md`'s "derive what is current" command
+returns two dist-tags without saying which is authoritative; and `what-convoke-brings`'s checkout-scoped
+commands answer about the reader's own project if run elsewhere.
 
-## Dev Notes
+## Dev Notes## Dev Notes
 
 ### What `docs-1-5` learned that this story inherits
 
@@ -408,93 +396,32 @@ block now in `docs/testing.md`, and the quote-aware manifest parse in
 
 ### Completion Notes List
 
-**AC1 — re-derived; 112, and the two `0`s were the trap the story said they were.**
+*Deliberately short. Three review rounds produced roughly as many findings about this record as about
+the documents it describes — stale basis figures, tallies that moved when a finding was retracted, line
+citations moved by the edits that shipped them. Per `T153`, the durable record is the findings note's
+`D43`-`D62` rows: each carries the defect, the fix and a command that re-derives it. What follows is
+only what those rows cannot say.*
 
-`node scripts/audit/derived-assertions.js docs/testing.md SECURITY.md CREDITS.md CODE_OF_CONDUCT.md docs/what-convoke-brings-to-bmad-method.md README.md docs/references.md`
-run **as received**, in a detached worktree at `9e986db8` (the pass changes what it measures, so the
-basis is stated with the figure):
+**Scope.** Seven files. `docs/references.md` was examined and correctly required **no edit** — its
+repository-facing claims were enumerated by filtering the file's `Project relevance` lines by where the
+source of truth lives, and all of them hold.
 
-```
-file                                        command     path    count  version    floor
----------------------------------------------------------------------------------------
-docs/testing.md                                  16       10        3        9       38
-SECURITY.md                                       2        1        0        2        5
-CREDITS.md                                        0        1        0        0        1
-CODE_OF_CONDUCT.md                                0        0        0        1        1
-docs/what-convoke-brings-to-bmad-method.md        0        8        4        0       12
-README.md                                        17       22        5        1       45
-docs/references.md                                0        0        6        4       10
+**The four operator rulings (`R1`-`R4`) were applied**, and `AC4a` — the canonical disposition map —
+overrode `R3`, which names the wrong defect IDs. That is what `AC4a` was added for.
 
-  ⚠ UNCLASSIFIED CANDIDATES: 110
-```
+**One finding was retracted.** `D47` claimed Quinn and Bob do not ship; the remedy deleted an owned,
+true claim. Tracked `agent-manifest.csv` registers them under BMM's implementation phase exactly as it
+registers Amelia, and `CREDITS.md` names both. The instrument was the defect: it grepped a persona name
+in a description column. The sentence is restored and `D47`'s row is struck rather than removed.
 
-= **112**. The same command at HEAD returns higher figures for the four edited files, which is expected
-and not a discrepancy — reproduce with `git worktree add --detach <dir> 9e986db8`. The epic's input was **28** — a 4× divergence, reported here as a finding about the input.
-`CREDITS.md` and `CODE_OF_CONDUCT.md` are recorded as `0` in the note's frozen density table and are
-**not** zero; had I read the table instead of deriving, the epic's "a zero-assertion file is recorded as
-`0`" clause would have let me skip both — and each carried a finding. The figures match Story 1.4's
-projection of 112 exactly, so **no scope call is owed**.
+**Gates:** `npm run lint`, `npm test`, `node scripts/audit/backlog-integrity.js` and
+`npm run docs:audit` all exit 0. Per NFR3 the last is a non-regression check only — it is inapplicable
+to five of these seven files and green-but-blind on the sixth, and this story does not cite it as
+evidence any document is correct.
 
-**AC2 — per-class sweep, `0` written as `0`.** statistics **6** (all six wrong) · dates **2 in scope,
-both HOLD** · unbackticked prose paths **0** (six resolve; `Node.js` is a regex false positive) ·
-requirement identifiers **0** · agent and team names **0** (all 7 Vortex, all 4 Gyre correct) ·
-CI job names **1** · word-form counts **1** · table-internal arithmetic **1** · partial-truth **1**.
-
-**AC2a — every assertion dispositioned, grouped rather than enumerated.** 112 assertions across seven
-files: **20 reported as findings** (`D43`-`D62`), the remainder **checked and holding**. Per-file
-dispositions equal the floors in the coverage table; regenerate with the AC1 command. Holdings are
-recorded by file and class in the findings note rather than line by line, because Story 1.4's review
-killed a transcribed per-kind tally twice.
-
-**AC3 — executed, nothing hedged.** `gh auth status` → account **amalik**;
-`gh api repos/amalik/convoke-agents --jq .owner.login` → `amalik` (re-proved **before** touching any
-URL); `private-vulnerability-reporting` → `{"enabled":true}`; `npm view convoke-agents dist-tags` →
-`{ latest: '4.0.1' }`. The community-health API was **not** used as evidence for `D43`, per AC3 — it
-reports 100% with the contact blank.
-
-**AC4 — all four rulings applied.** `R1`: the CoC contact is the GitHub route; **no address was
-invented**, and none exists in the repository to invent from. `R2`: the Agent Test Results section was
-replaced by a pointer to the live suite. `R3`: the seven positioning claims were left untouched; only
-falsifiable defects were fixed in that file. `R4`: `SECURITY.md`'s SLA and crediting commitments are
-intact.
-
-⚠ **`R3` names the wrong IDs** — it says "fix only the falsifiable defects there (`D44`, `D45`)", but
-`D44`/`D45` are `CREDITS.md` and `SECURITY.md`; the defects in `what-convoke-brings` are `D46`/`D47`.
-**AC4a is declared canonical and was followed.** This is exactly the drift AC4a was added to absorb, and
-it absorbed it. Three Task lines carry the same pre-review wording — Task 5 says "delete lines 64-118"
-where `R2` says 63-119, Task 1 says README's cell is "blank" where AC1 says `—`, and Task 6 says "verify
-lines 39 and 153" where AC5 says enumerate 21 candidates. AC4a and the ACs were followed in each case.
-
-**AC5 — 20 filed, 19 live after `D47`'s Round 2 retraction; every one re-verified before editing.** `D62` is new (the module
-under-enumeration AC7 predicted). `D57` and `D58` were closed by `R2`'s deletion; `D50`, `D52` and
-`D53` were **not** — they live at `:11` and `:51`, outside the deleted range, and were fixed
-individually, which is the error AC4a exists to prevent.
-
-**AC6 — admission DECLINED for all five, measured not assumed.** All six per-file checks return **0** on
-every ungated file, so admission would have caught **none** of the twenty findings while falsifying the
-"17 user-facing files" claim Story 1.5 pinned with a test. `scripts/docs-audit.js` was not touched.
-
-**AC7 — every trap held.** `.gyre/` left alone in README (4 occurrences; the stale object is
-`_gyre/config.yaml`). "Twenty-two workflows" left alone — correct; `name-registry.csv`'s 23 is the
-outlier. Coach's emoji untouched. `skill-manifest.csv` untouched. `README`'s live version badge
-untouched. The installer-equivalence sentence left alone. The WDS reading was **recorded as `D62`**
-rather than reported as "no conflation found".
-
-**AC8 — and I walked into its named trap, twice.** Writing `D46`'s fix I typed
-`require('convoke-agents/package.json')` — *the exact command AC8 warns about, the one `docs-1-5`
-shipped that throws*. I ran it, it threw, and it was replaced with commands that execute from a
-checkout. Then `D62`'s first command used `cut -d,` on the manifest, which splits inside the quoted
-description field and returned noise — the trap `D49`'s own row describes. Replaced with a quote-aware
-form and re-extracted from the file to confirm. **Both were caught only because AC8 required running
-them; neither would have been caught by review of the prose.** No file was deleted
-(`git status --porcelain | grep '^.D'` → empty), so the rename trap does not arise.
-
-**`docs/references.md`: zero edits, which is the correct outcome.** Enumerated 21 `Project relevance`
-candidates and filtered by where the source of truth lives. Every repository-facing claim HOLDS —
-Vortex 7, Gyre 4, `HC1`-`HC5` as files plus `HC6`-`HC10` in the compass reference, `GC1`-`GC4`,
-Scout/Atlas/Lens/Coach, the `7-stream` claim the counter cannot see, and the `.gyre/capabilities.yaml`
-reference whose referent is **not** under `_bmad/` (`find _bmad -name capabilities.yaml` → 0, and
-reading that as a defect is the trap). Recorded as examined with **0** findings.
+**Two repository defects were surfaced and filed rather than fixed here** — `npm run check` cannot pass
+on a clean tree, and `npm run refs:audit` exits non-zero for ~657 pre-existing reasons. Both are in
+`deferred-work.md` with reproductions.
 
 ### File List
 

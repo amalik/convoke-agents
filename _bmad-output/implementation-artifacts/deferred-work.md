@@ -1433,3 +1433,21 @@ Round 2 ran three independent blind layers on `06a452cd` — the Round 1 *remedi
 - **YAML frontmatter is scanned as prose.** The playbook is the only entry in `USER_FACING_DOCS` with frontmatter; a count-shaped value there produces a finding with a line number inside the metadata block. Latent, no current finding.
 - **`checkBrokenPaths`/`checkBrokenLinks` are not fence-aware.** An illustrative path or link inside a fenced example is treated as a real reference. **Measured 2026-09-13: purely preventive — stripping fences changes the result for 0 of 17 files and suppresses 0 current findings.** (The 5 findings those two checks produce corpus-wide are all in `CHANGELOG.md`, which `runAudit` exempts from `checkBrokenPaths` by design, which is why `docs:audit` correctly reports zero.) Act only when a document actually needs to cite a not-yet-existing path in an example.
 - **The count check is subject-blind (`T154`).** A true sentence stating BMAD's *upstream* agent or workflow counts in the playbook produces a `stale-reference` finding whose own `expected` text admits it cannot tell which roster is meant. `T154` owns this.
+
+## Deferred from: code review of docs-1-6 (2026-09-13)
+
+- **`npm run check` can never pass — a real script defect, surfaced by documenting the command.**
+  `scripts/convoke-check.js:26` runs `npx jest tests/lib/ --no-coverage`, but **jest is in neither
+  `dependencies` nor `devDependencies**, and `tests/lib/*.test.js` was converted from Jest to
+  `node:test` (the C1 phantom-test cleanup). Jest therefore reports *"Your test suite must contain at
+  least one test"* for all 36 files, the step fails, and `convoke-check.js:82` exits 1 — so the script
+  fails on a clean tree, every time. Its other four steps pass. Reproduce:
+  `node scripts/convoke-check.js --skip-coverage; echo $?` → `[FAIL] Jest lib tests`, exit `1`.
+  The fix is a one-line decision — drop the jest step, or repoint it at `node --test tests/lib/` — but
+  it is code work and belongs in its own story. `docs/testing.md` no longer documents the command.
+- **`npm run refs:audit` exits non-zero on a clean checkout** — 657 broken of ~2831 references. The
+  dominant cause is relative-path resolution against the referring file's own directory (a note in
+  `docs/` citing `scripts/x.js` resolves to `docs/scripts/x.js`), not moved targets. By source:
+  `_bmad-output/implementation-artifacts` 375, `_archive` 148, `docs` 45, `planning-artifacts` 42.
+  Not a gate and not wired into CI; worth either a baseline file or a scoping change so a real
+  regression is distinguishable from the standing noise.
