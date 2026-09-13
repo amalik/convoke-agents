@@ -94,7 +94,22 @@ function buildManifest(specData, generationContext) {
   //
   // For a DESTRUCTIVE instruction, under-claiming is the safe direction. Only a
   // confirmed write earns a revert instruction.
-  if (generationContext.registry_wiring_result && generationContext.registry_wiring_result.success === true) {
+  // R3: `success === true` is still not "a confirmed write" — the third predicate on
+  // this one line, and the first two were both wrong for the same reason: they asked
+  // about the CALL, not about the FILE.
+  //   R1  unconditional        always claim
+  //   R2a success !== false    claim unless it failed        (destructive on absence)
+  //   R2b success === true     claim if the call succeeded   (destructive on a no-op)
+  //   R3  written.length > 0   claim if it actually wrote
+  // `registry-writer.js:42` returns `{success:true, written:[], skipped:['block already
+  // exists']}` when the prefix block is present, and that early return sits BEFORE the
+  // dirty-tree check at :75 — so R2's stated defence ("writeRegistryBlock carries a
+  // dirty-tree check") never runs on this path. `derivePrefix` collapses `data-ops`,
+  // `data_ops` and `Data-Ops` onto `DATA_OPS`, so a genuinely different team can land on
+  // an existing block, leave the file byte-identical, and be handed
+  // `git checkout -- scripts/update/lib/agent-registry.js`, discarding uncommitted work.
+  const wiring = generationContext.registry_wiring_result;
+  if (wiring && wiring.success === true && Array.isArray(wiring.written) && wiring.written.length > 0) {
     entries.push({ path: 'scripts/update/lib/agent-registry.js', operation: 'modified', module: moduleName });
   }
 

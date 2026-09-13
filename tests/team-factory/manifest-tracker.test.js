@@ -14,12 +14,22 @@ function buildTestContext() {
   const moduleRoot = '_bmad/bme/_test-team';
   return {
     module_root: moduleRoot,
-    // R2 (tf-2-13): a completed run HAS a registry result. This context modelled one
-    // without, which is the §5c-abort shape, not a successful generation — and the
-    // manifest now (correctly) refuses to emit a destructive `git checkout` for a file
-    // it cannot confirm was written. Added so these fixtures describe the success path
-    // they are named for; the absent case has its own explicit tests below.
-    registry_wiring_result: { success: true },
+    // R3 (tf-2-13): this context models a COMPLETED run, and has now been corrected
+    // twice — first it carried no registry result at all (the §5c-abort shape), then a
+    // bare `{success:true}`. Neither is what `writeRegistryBlock` actually returns on a
+    // real write: it returns the five export names it added. Each tightening of the
+    // manifest's predicate exposed more of that gap, so the fixture was the incomplete
+    // thing all along, not the predicate. The no-write and absent cases have their own
+    // explicit tests below.
+    registry_wiring_result: {
+      success: true,
+      written: [
+        'TEST_TEAM_AGENTS', 'TEST_TEAM_WORKFLOWS', 'TEST_TEAM_AGENT_FILES',
+        'TEST_TEAM_AGENT_IDS', 'TEST_TEAM_WORKFLOW_NAMES'
+      ],
+      skipped: [],
+      errors: []
+    },
     generated_files: [
       `${moduleRoot}/agents/alpha-analyzer.md`,
       `${moduleRoot}/agents/beta-builder.md`,
@@ -316,7 +326,8 @@ describe('tf-2-13: manifest describes what was actually generated', () => {
     module_help_csv_path: '/tmp/_probe/module-help.csv',
     output_directory_path: '/tmp/_bmad-output/probe-artifacts',
     generated_files: [],
-    registry_wiring_result: { success: true },
+    // R3: a real write reports the export names it added, not a bare success flag.
+    registry_wiring_result: { success: true, written: ['PROBE_AGENTS'], skipped: [], errors: [] },
     ...over
   });
   const paths = (c) => buildManifest({ team_name_kebab: 'probe' }, c).map(e => e.path);
@@ -361,5 +372,44 @@ describe('tf-2-13: manifest describes what was actually generated', () => {
     const instructions = formatAbortInstructions(manifest);
     assert.ok(!/git checkout .*agent-registry\.js/.test(instructions),
       `abort instructions must not revert an untouched file:\n${instructions}`);
+  });
+});
+
+// ── R3 D1: `success === true` is not "a confirmed write" ──
+// registry-writer.js:42 returns {success:true, written:[], skipped:['block already
+// exists']} when the prefix block is present — and that early return sits BEFORE the
+// dirty-tree check at :75, so R2's stated defence never runs on this path. derivePrefix
+// collapses data-ops / data_ops / Data-Ops onto DATA_OPS, so a distinct team can hit an
+// existing block, leave the file byte-identical, and still be handed a destructive
+// `git checkout`. Third predicate on this line; this one asks whether anything was
+// WRITTEN rather than whether the call returned.
+describe('R3: registry claim requires an actual write, not merely success', () => {
+  const base = () => ({
+    module_root: '/tmp/_probe',
+    agent_files: ['/tmp/_probe/agents/a.md'],
+    config_yaml_path: '/tmp/_probe/config.yaml'
+  });
+  const has = (ctx) => buildManifest({ team_name_kebab: 'probe' }, ctx)
+    .some(e => e.path.includes('agent-registry.js'));
+
+  it('does not claim the registry when the block already existed (nothing written)', () => {
+    assert.equal(
+      has({ ...base(), registry_wiring_result: { success: true, written: [], skipped: ['block already exists'] } }),
+      false,
+      'a byte-identical file must not earn `git checkout`'
+    );
+  });
+
+  it('still claims the registry on a real write', () => {
+    assert.equal(
+      has({ ...base(), registry_wiring_result: { success: true, written: ['PROBE_AGENTS'], skipped: [] } }),
+      true
+    );
+  });
+
+  it('emits no git checkout for a skipped write', () => {
+    const m = buildManifest({ team_name_kebab: 'probe' },
+      { ...base(), registry_wiring_result: { success: true, written: [], skipped: ['block already exists'] } });
+    assert.ok(!/git checkout .*agent-registry/.test(formatAbortInstructions(m)));
   });
 });

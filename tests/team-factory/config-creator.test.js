@@ -301,3 +301,38 @@ describe('R2: ensureOutputDirectory containment', () => {
     assert.ok(r.path.startsWith(root));
   });
 });
+
+// ── R3 A1: containment must sit where the CLI actually passes ──
+// R2 put the guard in ensureOutputDirectory, justified as "the CLI bypasses parseSpec".
+// The CLI never CALLS ensureOutputDirectory — it calls createConfig -> buildConfigData.
+// So the traversal hole R2's record implies was closed was still live:
+//   node config-creator.js --spec-file <spec with _bmad-output/../../escaped>
+//   -> success:true, and output_folder: '{project-root}/_bmad-output/../../escaped'
+// written into the generated config. Guard the composing function itself.
+describe('R3: buildConfigData refuses an escaping output_directory', () => {
+  const spec = (d) => ({
+    team_name: 'CLI Probe', team_name_kebab: 'cli-probe', description: 'p',
+    agents: [{ id: 'alpha-probe', role: 'r' }],
+    integration: { output_directory: d }
+  });
+
+  for (const bad of ['_bmad-output/../../escaped', '_bmad-output/../etc', '_bmad-output/', '/abs/path']) {
+    it(`throws on ${JSON.stringify(bad)} rather than composing it into config.yaml`, () => {
+      assert.throws(() => buildConfigData(spec(bad)), /_bmad-output/);
+    });
+  }
+
+  it('still composes a legitimate value', () => {
+    assert.equal(
+      buildConfigData(spec('_bmad-output/cli-probe-artifacts')).output_folder,
+      '{project-root}/_bmad-output/cli-probe-artifacts'
+    );
+  });
+
+  it('accepts an already-prefixed value from the bypass path', () => {
+    assert.equal(
+      buildConfigData(spec('{project-root}/_bmad-output/cli-probe-artifacts')).output_folder,
+      '{project-root}/_bmad-output/cli-probe-artifacts'
+    );
+  });
+});

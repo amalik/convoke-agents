@@ -79,7 +79,7 @@ function buildConfigData(specData) {
     submodule_name: `_${specData.team_name_kebab}`,
     description: specData.description || `${specData.team_name} team module`,
     module: 'bme',
-    output_folder: prefixProjectRoot(specData.integration.output_directory),
+    output_folder: prefixProjectRoot(assertContainedOutputDirectory(specData.integration.output_directory)),
     agents,
     workflows,
     version: '1.0.0',
@@ -143,6 +143,47 @@ async function ensureOutputDirectory(specData, projectRoot) {
     return { success: false, path: target, errors: [`Failed to create output directory: ${err.message}`] };
   }
   return { success: true, path: target, errors: [] };
+}
+
+/**
+ * Throw unless `value` is a repo-relative path genuinely contained under `_bmad-output/`.
+ *
+ * R3 (tf-2-13). R2 added containment to `ensureOutputDirectory` and justified it as
+ * covering the CLI, "because the shipped CLI bypasses parseSpec entirely". That was
+ * false about the consumer: the CLI at the foot of this file calls `createConfig` ->
+ * `buildConfigData` and **never calls `ensureOutputDirectory` at all**. So the traversal
+ * hole R2's record implies was closed stayed live — `node config-creator.js --spec-file
+ * <spec with _bmad-output/../../escaped>` returned success and wrote
+ * `output_folder: '{project-root}/_bmad-output/../../escaped'` into the generated config.
+ *
+ * The guard belongs on the function that COMPOSES the value, which every path reaches.
+ * Throws rather than returning a result object because `buildConfigData` is synchronous
+ * and has no error channel; `createConfig` already converts throws into
+ * `{success:false, errors:[…]}` via its write try/block.
+ *
+ * Accepts an already-`{project-root}/`-prefixed value, which only the bypass path
+ * produces, and validates the remainder.
+ *
+ * @param {*} value
+ * @returns {string} the value, unchanged, when contained
+ * @throws {Error} when it is not
+ */
+function assertContainedOutputDirectory(value) {
+  const raw = typeof value === 'string' ? value : '';
+  const candidate = raw.startsWith('{project-root}/') ? raw.slice('{project-root}/'.length) : raw;
+  const ROOT = '_bmad-output';
+  const normalised = path.normalize(candidate).replace(/\\/g, '/').replace(/\/+$/, '');
+  const ok = candidate !== '' &&
+    !path.isAbsolute(candidate) &&
+    normalised !== ROOT &&
+    normalised.startsWith(ROOT + '/') &&
+    !normalised.split('/').includes('..');
+  if (!ok) {
+    throw new Error(
+      `integration.output_directory must be a repo-relative path strictly inside _bmad-output/ (got ${JSON.stringify(value)})`
+    );
+  }
+  return raw;
 }
 
 /**
