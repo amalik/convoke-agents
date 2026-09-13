@@ -10,6 +10,15 @@ so that a security report reaches someone and a credit names the right person.
 
 ## Acceptance Criteria
 
+> ### Start here
+>
+> **Two sections carry everything you cannot derive yourself. Read them first:**
+> **AC4** — four operator rulings already made (the CoC contact in particular **cannot** be derived from
+> this repository; do not invent one). **AC4a** — the canonical defect → task map; if any other section
+> disagrees with it, AC4a wins.
+>
+> Everything else is measurement you can re-run.
+
 > ## Read this before AC1 — four things make this story unlike 1.5
 >
 > **1. Reconnaissance already found ~20 confirmed defects.** They are listed in AC5 with the command
@@ -38,12 +47,12 @@ so that a security report reaches someone and a credit names the right person.
 **Then** the output is recorded with its command, and the divergence from the epic's input is reported **as a finding about the input**, both sides visible
 **And** the counts are recorded as **FLOORS** — the script says so and reports a non-zero residual (`T160`)
 **And** ⚠ **`CREDITS.md` and `CODE_OF_CONDUCT.md` are recorded as `0` in the findings note's density table and are NOT zero any more** — each now floors at `1`. The epic's own AC says "a zero-assertion file is recorded as `0` with the script output as its evidence", which an implementer reading the stale table will apply to two files that no longer qualify. **Derive; do not read the table.**
-**And** ⚠ **`README.md`'s `Assertions` cell is BLANK.** The DoD says blank means *not examined*. It owes the largest count in this story after `testing.md`
-**And** Story 1.4 already projected this story's remaining load; if the re-derivation materially invalidates that projection, it is **raised to the operator as a scope call**, never absorbed silently.
+**And** **`README.md` carries the LARGEST load in this story — 45, above `docs/testing.md`'s 38.** Its `Assertions` cell reads `—` (not blank; `—` also appears for two files that ARE examined), and `Examined:` is `no`: Story 1.1 *edited* README without ever deriving it. Weight effort by the re-derived floors, not by which file has the most known defects — `README` has 45 assertions and only 2 named defects, so it is the largest *unexamined* surface here
+**And** the expected total is **112**, which is exactly what Story 1.4 projected for this story (findings note: *"remaining load, Story 1.6 | 112 (includes `README.md`)"*). **The divergence to report is against the epic's stale `28`, not against 1.4 — and on today's evidence no scope call is owed.** If a future re-derivation does invalidate 1.4's projection, that is raised to the operator, never absorbed silently.
 
 **AC2 — the counter is a sizing instrument, not a worklist.**
 
-**Given** that in `docs/testing.md` roughly **8 of ~15** defects fall outside the counter entirely
+**Given** that most of `docs/testing.md`'s defects fall outside the counter entirely — count the AC5 rows whose evidence command is not `derived-assertions.js`, rather than taking a figure here
 **When** the worklist is built
 **Then** the script's output is a floor, and **each missing class is swept by its own enumerating command**, reported per class with **`0` written as `0`**:
 
@@ -63,6 +72,21 @@ so that a security report reaches someone and a credit names the right person.
 **And** every link and anchor is resolved by command, and each is checked for whether the target **says what the citing sentence claims** — three of this story's defects (`D46`, `D47`, `D53`) resolve perfectly and say something else
 **And** the same claim is searched for in the sibling files before a finding is written — `D44` is a two-file contradiction and fixing the wrong side is the trap.
 
+**AC2a — EVERY assertion is dispositioned. This is the story's real size, and it is 112, not 19.**
+
+**Given** the epic's clause, verbatim: *"every file — including one scoring zero — has each of its counted
+assertions individually marked checked or reported as a finding. A file may be **quick**; it may not be
+**skipped**"*
+**When** the pass runs
+**Then** each of the **112** counted assertions is marked **checked** or **reported as a finding** — the
+~19 defects in AC5 are the *known* subset, not the worklist
+**And** the assertions that HOLD are recorded as holding, following Story 1.4's precedent verbatim:
+*"a silent assertion is indistinguishable from an unexamined one"*
+**And** ⚠ **do not enumerate 112 holding assertions one by one in prose.** Story 1.4's review killed that
+twice — a transcribed per-kind tally goes stale the moment the instrument changes. Record them **grouped
+by file and class, with the command that regenerates them**, plus the disposition count per file
+**And** a file scoring `1` (`CREDITS.md`, `CODE_OF_CONDUCT.md`) still owes its one disposition.
+
 **AC3 — external identifiers: executed, because the tooling is already to hand.**
 
 **Given** every contact route, handle, account identifier or external URL in these files
@@ -77,9 +101,28 @@ so that a security report reaches someone and a credit names the right person.
 | # | Ruling | Apply as |
 |---|---|---|
 | **R1** | **The CoC enforcement contact is the GitHub private-reporting route**, not an email. Use `https://github.com/amalik/convoke-agents/security/advisories/new` — verified live (`gh api repos/amalik/convoke-agents/private-vulnerability-reporting` → `{"enabled":true}`), and already the route `SECURITY.md:20` uses. **Do NOT invent an address from git authorship.** | fixes `D43` |
-| **R2** | **`docs/testing.md` lines 64-118 ("Agent Test Results") are DELETED**, replaced by a pointer to the live suite (`node scripts/test-runner.js tests/p0`). The section transcribes manual runs from 2026-02-14 against retired agent identities ("Emma (empathy-mapper)", "Wade (wireframe-designer)"). Deleting it removes `D52`, `D53` and `N1` at once. | fixes `D51`-`D53` |
+| **R2** | **`docs/testing.md` lines 63-119 ("Agent Test Results") are DELETED**, replaced by a pointer to the live suite (`node scripts/test-runner.js tests/p0`). The section transcribes manual runs from 2026-02-14 against retired agent identities ("Emma (empathy-mapper)", "Wade (wireframe-designer)"). ⚠ **Delete 63-119, not 64-118** — 63 and 119 are blank and 120 is `---`; the narrower range leaves two blank lines before a stray separator, and `npm run lint` is ESLint (JS only) and will not catch it. | closes **`D57` and `D58` only** — see the disposition table below |
 | **R3** | **The 7 unfalsifiable positioning claims in `what-convoke-brings-to-bmad-method.md` are OUT OF SCOPE.** FR3a governs count, version and inventory claims; marketing voice is a separate editorial decision and not release-gate work. Fix only the falsifiable defects there (`D44`, `D45`). File the positioning prose as a backlog row. | bounds the file |
 | **R4** | **`SECURITY.md`'s SLA and crediting commitments are KEPT.** FR3a targets unfalsifiable claims about the **present**; an SLA is a promise about future conduct, which is what makes a policy a policy. Record the exemption so a mechanical FR3a pass does not gut the section. | protects `SECURITY.md:29` |
+
+**AC4a — the canonical disposition map. If any other section disagrees with this table, THIS TABLE WINS.**
+
+*Every defect, where it lives, and what closes it. An earlier draft had `R2` and Task 5 disagreeing about
+which IDs the deletion closes; this table exists so that cannot recur.*
+
+| File | IDs | Closed by |
+|---|---|---|
+| `CODE_OF_CONDUCT.md` | `D43` | Task 3, per **R1** |
+| `CREDITS.md` | `D44` | Task 3 |
+| `SECURITY.md` | `D45` | Task 3 |
+| `docs/what-convoke-brings-to-bmad-method.md` | `D46`, `D47` | Task 4 |
+| `README.md` | `D48`, `D49` | Task 4 |
+| `docs/testing.md` — **inside** lines 63-119 | `D57`, `D58` | **R2's deletion**, Task 5 |
+| `docs/testing.md` — **outside** that range | `D50`, `D51`, `D52` (`:11`), `D53` (`:51`), `D54` (`:57`), `D55` (`:139-141`), `D56` (`:40`), `D59` (`:129`), `D60` (`:127`), `D61` (`:32`) | Task 5, individually |
+| `docs/references.md` | none expected | Task 6 (verify only) |
+
+⚠ **`D50`, `D52` and `D53` are NOT closed by R2's deletion.** `:11` and `:51` sit outside lines 63-119.
+Ticking them off with the deletion leaves a live 53-vs-54 contradiction and a false CI sentence.
 
 **AC5 — the confirmed defects. Verify each by its command, then fix.**
 
@@ -108,22 +151,23 @@ so that a security report reaches someone and a credit names the right person.
 | ID | Claim | Reality | Reproduce |
 |----|-------|---------|-----------|
 | **D46** | `:88` "The npm package `convoke-agents` installs both BMAD Method and Convoke's extensions in a single dependency" | **Ships zero BMAD files.** No BMAD dependency, no fetch. ⚠ **Two-file contradiction** — `README.md:42` says the opposite and is **correct**. Fix this file, not the README | `npm pack --dry-run --json` (no `_bmad/{core,bmm,tea,cis,bmb,wds}` entries) · `node -e "console.log(require('./package.json').dependencies)"` |
-| **D47** | `:18` "implementation (Amelia, Quinn, Bob)" | **Quinn and Bob do not exist in anything that ships.** They survive only in `_bmad/_config/agent-manifest.csv`, which is **not in the tarball**. ⚠ `grep -rn Quinn .` returns hits and looks like confirmation — the **shipped** manifest is the basis | `grep -c -i "talk to Quinn" _bmad/_config/skill-manifest.csv` → `0` |
+| **D47** | `:18` "implementation (Amelia, Quinn, Bob)" | **No BMM implementation agent named Quinn or Bob ships.** The corrected sentence is "implementation (Amelia)" — `grep -ci amelia` → `1` (`bmad-agent-dev` ships). ⚠ **`grep -ci quinn` on the shipped manifest returns `1`, not `0`** — it is CIS's *"talk to **Dr.** Quinn"*, a different agent. The cited command returns `0` **only because of the `Dr.`**; an implementer who widens the grep will retract a true finding. Quinn/Bob survive only in `_bmad/_config/agent-manifest.csv`, which is **not in the tarball** | `grep -oi "talk to [A-Za-z. ]*quinn" _bmad/_config/skill-manifest.csv` → `talk to Dr. Quinn` · `grep -ci bob _bmad/_config/skill-manifest.csv` → `0` |
 
 **`README.md`**
 
 | ID | Claim | Reality | Reproduce |
 |----|-------|---------|-----------|
 | **D48** | `:96` the exporter "writes adapters into the export target for Claude (`{target}/CLAUDE.md`), Copilot (`{target}/.github/copilot-instructions.md`) and Cursor (`{target}/.cursor/rules/`)" | **All three paths wrong.** It writes an `adapters/` staging tree and the generated README tells the *user* to copy them into place. The Claude adapter is a `SKILL.md`, never a `CLAUDE.md`. This is the Story 1.1 class | `grep -rn "CLAUDE.md" scripts/portability/` → no hits · `grep -n "writeFileSync" scripts/portability/generate-adapters.js` |
-| **D49** | `:98` "what travels cleanly today is the upstream BMAD skill set plus that one" | **False on the file's own definition.** Of 87 upstream rows in the shipped manifest, **38 are `pipeline`** — which the same line says is "flagged non-portable". 43 standalone, 6 light-deps | parse `_bmad/_config/skill-manifest.csv`, group non-`bme` rows by tier |
+| **D49** | `:98` "what travels cleanly today is the upstream BMAD skill set plus that one" | **False on the file's own definition.** Of 87 upstream rows in the shipped manifest, **38 are `pipeline`** — which the same line says is "flagged non-portable". 43 standalone, 6 light-deps | ⚠ **A naive `split(',')` returns ZERO rows** — descriptions contain commas, and the empty result reads as "claim disproven". Use a quote-aware parse: `node -e "const t=require('fs').readFileSync('_bmad/_config/skill-manifest.csv','utf8');const rows=[];let f='',r=[],q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='\"'){if(t[i+1]==='\"'){f+='\"';i++}else q=false}else f+=c}else{if(c==='\"')q=true;else if(c===',')
+{r.push(f);f=''}else if(c==='\n'){r.push(f);rows.push(r);r=[];f=''}else if(c!=='\r')f+=c}}const h=rows[0],m=h.indexOf('module'),ti=h.indexOf('tier');const up=rows.slice(1).filter(x=>x[m]&&x[m]!=='bme');const by={};up.forEach(x=>by[x[ti]]=(by[x[ti]]||0)+1);console.log(up.length,JSON.stringify(by))"` → `87 {"standalone":43,"pipeline":38,"light-deps":6}` |
 
-**`docs/testing.md`** — *the largest file in this story and the one the gate already watches.*
+**`docs/testing.md`** — *the file with the most known defects, and the one the gate already watches. Note `README.md` carries more assertions (45 vs 38); this file carries more found defects.*
 
 | ID | Claim | Reality | Reproduce |
 |----|-------|---------|-----------|
 | **D50** | `:11` "184 tests (130 unit + 54 integration) \| 83.4% line coverage" | **Off by 2,933.** Real: 2351 + 124 + 642 = **3117**; coverage **88.44%**. ⚠ **Per FR3a and R2's logic, DELETE the arithmetic and name the command** (`npm run test:all`) rather than writing 3117 — nothing pins it and it rots on the next commit. "Correct it" is the obvious-and-wrong instruction | `npm test` · `npm run test:integration` · `node scripts/test-runner.js tests/p0` · `npm run test:coverage` |
-| **D51** | `:17-25`, `:31-35` per-suite counts | **9 of 14 wrong** (e.g. `validator.test.js` doc 23 / actual 92). ⚠ **5 rows are correct**, so a two-row spot-check declares the table sound. Derive **all 14**, or delete the counts column. The tables also show 9 of 48 unit files and 5 of 12 integration files while reading as a census | `for f in <each>; do node --test "$f" \| grep '^ℹ tests'; done` |
-| **D52** | `:11` vs `:31-35` | **The integration table sums to 53 under a headline of 54.** Internal arithmetic, invisible to any source-derivation pass | add the table's own column |
+| **D51** | `:17-25`, `:31-35` per-suite counts | **9 of 14 wrong** (e.g. `validator.test.js` doc 23 / actual 92). ⚠ **5 rows are correct**, so a two-row spot-check declares the table sound. Derive **all 14**, or delete the counts column. The tables also show 9 of 48 unit files and 5 of 12 integration files while reading as a census | `for f in tests/unit/{utils,registry,version-detector,config-merger,backup-manager,migration-runner,migration-runner-orchestration,validator,migrations-to-1.5.0}.test.js tests/integration/{fresh-install,upgrade,cli-entry-points,installer-e2e,convoke-doctor}.test.js; do echo -n "$f "; node --test "$f" 2>/dev/null \| grep '^ℹ tests'; done` — all 14, no placeholder |
+| **D52** | `:11` vs `:31-35` | **The integration table sums to 53 under a headline of 54.** Internal arithmetic, invisible to any source-derivation pass | `sed -n '31,35p' docs/testing.md \| awk -F'\|' '{s+=$3} END {print s}'` → `53`, against `:11`'s `54` |
 | **D53** | `:51` "Six jobs run on every push and pull request" | **11 jobs exist; 8 run unconditionally.** Five are omitted, and one of the six named (`publish`) runs on neither trigger. ⚠ Two edits on one line — the numeral **and** the sentence | `node -e "const y=require('js-yaml'),w=y.load(require('fs').readFileSync('.github/workflows/ci.yml','utf8'));const j=Object.keys(w.jobs);console.log(j.length, j.filter(n=>w.jobs[n].if).length+' conditional')"` → `11 3 conditional`. ⚠ **Do NOT count with a bare `grep` on indented keys** — it also matches `push:`, `pull_request:` and `run:`, returning 14-17 depending on the anchor. Parse the YAML |
 | **D54** | `:57` "c8 with threshold enforcement (60% lines, 50% branches)" | **Actual: lines 83, branches 80, functions 88** — both stated numbers wrong, a third threshold unmentioned. ⚠ Config lives in `.c8rc.json`, **not** `package.json`; grepping `package.json` concludes no thresholds exist | `cat .c8rc.json` |
 | **D55** | `:139-141` "Known Coverage Gaps" | **Obsolete, not stale.** `convoke-update.js` **91.91%** (doc 29), `convoke-version.js` **95.52%** (doc 56), `1.0.x-to-1.3.0.js` **100%** (doc 37). ⚠ **Project memory repeated these same wrong figures** — corrected 2026-09-13. **Memory is not a source** | `npm run test:coverage` |
@@ -137,9 +181,12 @@ so that a security report reaches someone and a credit names the right person.
 **`docs/references.md`** — **scope is two lines, and "no change" is the expected outcome.**
 
 **Given** the counter reports **10** assertions for this file and the epic puts only the **repository-facing** ones in scope
-**Then** the in-scope set is **line 39** (`Vortex (7 agents)`, `Gyre (4 agents)`) **and line 153** (`7-stream`). ⚠ **Line 153 is NOT one of the counter's ten** — `7-stream` is a hyphenated adjective matching no pattern. This is the epic's own lesson in miniature: *"the assertions the counter reports" ≠ "the repository-facing claims"*
-**And** the distinguishing test is stated as **where the source of truth lives**: for these three it is this repository; for the other eight it is a publisher, author or standards body (`ChatDev 2.0`, `Management 3.0`, `TOGAF 9.2`, *The Four Steps to the Epiphany*) — bibliographic metadata a derivation pass must not touch
-**And** all three **currently HOLD**, so the expected diff for this file is **zero lines**, recorded as examined with `0` findings — not skipped
+**Then** the distinguishing test is **where the source of truth lives**: in scope if it is this repository; out of scope if it is a publisher, author or standards body (`ChatDev 2.0`, `Management 3.0`, `TOGAF 9.2`, *The Four Steps to the Epiphany* — bibliographic metadata a derivation pass must not touch, and **8 of the counter's 10 are exactly that**)
+**And** ⚠ **the in-scope set is NOT the counter's output and is NOT two lines.** Enumerate it — do not take a list from here:
+`grep -n "Project relevance" docs/references.md` → **21** candidates, which you then filter by the test above.
+Known members include `:39` (`Vortex (7 agents)`, `Gyre (4 agents)`), `:153` (`7-stream`), `:99` (`HC1-HC10`, `GC1-GC4`), `:113` and `:287` (Gyre's `Scout → Atlas → Lens → Coach`), `:206`/`:263`/`:330`/`:345` (agent→stream mappings) and `:324` (`.gyre/capabilities.yaml`). **This list is a floor, not a census** — hand-written instance lists have repeatedly come up short in this epic
+**And** ⚠ **`:153` and `:324` are invisible to the counter** — `7-stream` is a hyphenated adjective matching no pattern, and `:324`'s referent `.gyre/capabilities.yaml` is **not under `_bmad/`**, so `find _bmad -name capabilities.yaml` returns nothing and reads as a defect. Resolve it at the repo root
+**And** every one checked at authoring time **HOLDS**, so the expected diff for this file is **zero lines** — but the coverage row must state the denominator it examined, because Story 1.7's gate consumes that row as full coverage
 **And** the 63 external URLs are **out of scope** (FR9 backlog row); ⚠ if anyone hand-rolls an anchor checker, GitHub replaces spaces **individually**, so `\s+` → `-` collapsing produces **19 phantom broken anchors** out of 22.
 
 **AC6 — the audit-scope decision, and it goes the OTHER WAY from 1.5.**
@@ -168,7 +215,7 @@ so that a security report reaches someone and a credit names the right person.
 | **`README` carries no hardcoded version** | The badge renders live. **Do not "add the current version"** — that creates the rot this epic removes |
 | **`convoke-install-vortex` ≡ `convoke-install-gyre`** | `README:111` is candid and **correct** — different files, identical installed tree. Leave it |
 | **`CODE_OF_CONDUCT.md` does not ship** | `SECURITY.md` and `CREDITS.md` do. `D43` is GitHub-surface-only; `D44`/`D45` are live in the published tarball |
-| **The counter's residuals here are noise** | The six in the governance files are glob/heading artifacts; `testing.md`'s three are all fine. Do not let the residual become the worklist |
+| **The residual is noise in SOME files and a defect-finder in others** | The run reports **110** unclassified candidates. The **6** in the governance files and the **3** in `testing.md` are genuinely artifacts (globs, canonical heading numbers). ⚠ **`README.md`'s 13 are NOT** — three of them are `:96 {target}/CLAUDE.md`, `{target}/.github/copilot-instructions.md`, `{target}/.cursor/rules/`, i.e. `D48`'s three wrong paths, surfaced by the residual and by nothing else. `references.md` contributes 82, unexamined. **Sweep the residual per file; do not dismiss it wholesale** |
 
 **AC8 — no correction introduces a claim nothing can contradict.**
 
@@ -229,7 +276,9 @@ so that a security report reaches someone and a credit names the right person.
 ### Why this story's files rot differently
 
 `docs/testing.md` was last touched **2026-03-24**; since then **428** commits landed in `tests/` and **37**
-in `.github/workflows/`. `what-convoke-brings-to-bmad-method.md` has **two** commits, both 2026-04-24 —
+in `.github/workflows/` — basis `git log --oneline $(git log -1 --format=%h -- docs/testing.md)..HEAD -- tests/`.
+*(A date-based `git rev-list --count HEAD --since=2026-03-24` returns 430 instead; both are correct for their
+command, which is why the command is stated with the number.)* `what-convoke-brings-to-bmad-method.md` has **two** commits, both 2026-04-24 —
 before 4.0 shipped, before the v6.3 conversion, before ADR-002/003/004. `README.md` went through
 `docs-1-1`'s review and is the cleanest of the three. **Defect density is asymmetric; weight effort accordingly.**
 
@@ -238,7 +287,14 @@ before 4.0 shipped, before the v6.3 conversion, before ADR-002/003/004. `README.
 - `docs/testing.md`, `SECURITY.md`, `CREDITS.md`, `CODE_OF_CONDUCT.md`,
   `docs/what-convoke-brings-to-bmad-method.md`, `README.md` — this story's pass
 - `docs/references.md` — verify only; expected diff is **zero lines**
-- `convoke-note-docs-accuracy-findings-4-0-2.md` — Task 8, under the freeze banner's carve-out
+- `_bmad-output/planning-artifacts/convoke-note-docs-accuracy-findings-4-0-2.md` — Task 8, under the freeze banner's carve-out. ⚠ **Write your own coverage rows only.** The *density* table (same file, the `Lines/Commands/Paths/Counts/Versions/Assertions` breakdown) is **frozen and deliberately wrong** — it carries `CREDITS.md = 0`, and the note says in its own D2 section *"do not patch — figures are frozen"*. Do not "fix" it
+
+**`CHANGELOG.md` is NOT in this story.** The epic ruled it 2026-09-12, admitted for never-true claims only,
+and the corrections were applied the same day — *"Story 1.6's size is unchanged"*. The epic still carries a
+sentence speculating that a pending ruling might add it; that ruling has happened and did not.
+
+**Finding IDs continue from `D61`.** `D62` onward for anything the AC2 sweep or the AC2a disposition pass
+turns up — `README.md` carries 45 assertions and only two named defects, so expect new IDs there.
 
 **Do not touch** `scripts/docs-audit.js` — AC6 declines admission, so no code change is in scope. If that
 ruling is reversed, `tests/unit/docs-audit.test.js` and the compatibility document's two counts move in
