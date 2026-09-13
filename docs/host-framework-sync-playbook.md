@@ -36,7 +36,7 @@ A `host_framework_sync` release is a **coordinated platform alignment release** 
 
 ## (b) Trigger Criteria
 
-A release qualifies as `host_framework_sync` when **one or more** of the following conditions is met (typically all three at once):
+A release qualifies as `host_framework_sync` when **two or more** of the following conditions are met (typically all three at once). One condition alone is **not** enough — see the `host_framework_track` fallback below, which exists precisely to name that case:
 
 1. **BMAD upstream release that moves the coupling.** Historically framed as a *major*-version trigger with `v6.4` as the example — but `v6.3 → v6.4` is a **minor** bump, so that example contradicted the rule it illustrated. It also never fired: upstream has shipped no major since v6.3, going 6.3 → 6.12.0 (`npm view bmad-method version`) while Convoke's coupling moved enough to need a v6.4–v6.8 absorption PRD. Treat **any** upstream release that changes the contracts in conditions 2 and 3 as the canonical trigger; a true major (v7.0) is a guaranteed one.
 2. **Shared-infrastructure change.** Upstream changes affect Convoke's runtime contracts — config-loader format, skill-format spec, install-path conventions, BMM module structure, or `_bmad/_config/` schema. Detected via `convoke-doctor` BMM-dependency check + `bmm-dependencies.csv` diff.
@@ -49,16 +49,25 @@ A release qualifies as `host_framework_sync` when **one or more** of the followi
 - [ ] Has the upstream marketplace `registry/registry-schema.yaml` changed since Convoke's entry was authored? **This must be checked by hand against upstream.** `convoke-validate-marketplace` (`scripts/audit/validate-marketplace.js`) does *not* read that schema — nothing in this repository does. It validates the local `.claude-plugin/marketplace.json` and `module.yaml`, and its only drift check (`checkVersionDrift`) compares `marketplace.json` against `package.json`.
 - [ ] Are there breaking changes to canonical agent skill format (SKILL.md structure, slash-command activation, frontmatter contract)?
 
-> ⚠ **OPEN RULING — the two thresholds in this section disagree, and neither is applied below.**
-> The section opens with "**one or more** of the following conditions", while the checklist resolves
-> with "**≥2 boxes ticked**". A release meeting exactly one condition is therefore both in and out of
-> the class. This changes when the release class applies, so it is an operator decision, deliberately
-> left unresolved by the 2026-09-13 accuracy pass (Story `docs-1-5`, AC5). Until it is ruled on, treat
-> a single-condition release as a judgement call and say which threshold you used.
+**RULED 2026-09-13 (operator).** This section previously opened with "one or more" and resolved with
+"≥2 boxes", making a single-condition release both in and out of the class. **`≥2` stands**, on two
+grounds: the `host_framework_track` fallback below is written for the box-1-only case and is dead text
+under any other reading, and conditions 2 and 3 are what make a re-sync expensive — if neither changed,
+the migration, marketplace and dependency workstreams have little to do.
 
 If **≥2 boxes ticked**, this is a `host_framework_sync` release. If only **box 1** ticked AND boxes 2 + 3 + 4 are unticked (no shared-infra change, no marketplace contract change, no skill-format break), the release may be a minor `host_framework_track` (Convoke's prior version stays compatible; ship as a feature release with version-bump only).
 
 **Anti-vapor anchor (per PM4).** A release is not `host_framework_sync` because someone says it is — it qualifies because the trigger criteria above objectively apply. Conversely, a release that meets the criteria IS `host_framework_sync` even if maintainer bandwidth tempts skipping the playbook.
+
+⚠ **The threshold is not the live risk; not evaluating is.** The class has been declared **once**
+(Convoke 4.0, adopting BMAD v6.3). Upstream has shipped **nine** stable minor lines since — 6.4 through
+6.12 (`npm view bmad-method versions --json`) — and this checklist was not run at any of them. One of
+those absorptions was large enough to receive its own PRD
+(`_bmad-output/planning-artifacts/convoke-prd-bmad-v6.4-v6.8-absorption.md`), with migration and
+marketplace workstreams, and was still never classified: the string `host_framework_sync` appears
+nowhere in `CHANGELOG.md`. **That is the registry's own falsification clause — "exists but is never
+consulted" — applied to this section.** Tightening the threshold does not fix it; running the checklist
+does.
 
 **Cross-reference.** The ADR's [Revalidation Trigger](adr/adr-bmad-coupling-v4.0.md#revalidation-trigger) names the *strategic-bet* revalidation conditions (which include but are not limited to upstream major releases). The Trigger Criteria here are *release-class-classification* criteria — narrower scope: "is this release a `host_framework_sync` event?" The two layers complement each other; both are evaluated at upstream-rev time.
 

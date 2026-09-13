@@ -387,8 +387,17 @@ and the sibling-file search surfaced exactly one genuinely shared claim — the 
 (`D15`). The files are paired by subject, not by dependency.
 
 **AC5 — every row verified by execution.** All nine fell as reconnaissance predicted, and each was
-corrected or hedged. The `≥2 boxes` / `one or more` threshold conflict was **raised, not resolved**:
-it is now marked in §(b) as an open operator ruling, with neither reading applied.
+corrected or hedged. The `≥2 boxes` / `one or more` threshold conflict was **raised, not resolved** by
+this story, as AC5 requires. **RULED by the operator 2026-09-13, after the story closed: `≥2` stands**,
+and §(b) now reads consistently. The deciding evidence was internal — the `host_framework_track`
+fallback is written for the box-1-only case and is dead text under any other reading.
+
+**A larger risk surfaced while ruling, and is recorded in §(b) rather than fixed:** the class has been
+declared **once**, while upstream shipped **nine** stable minor lines since v6.3 (6.4-6.12,
+`npm view bmad-method versions --json`) with the checklist run at none of them — including an
+absorption large enough to have its own PRD. `host_framework_sync` appears nowhere in `CHANGELOG.md`
+(`grep -c` → `0`, exit 1). That is the anti-pattern registry's own falsification clause — *"exists but
+is never consulted"* — and no threshold fixes it.
 
 **AC6 — decided: the playbook is ADMITTED to `USER_FACING_DOCS`.** All per-file checks return 0 on
 it (`checkStaleReferences`, `checkBrokenPaths`, `checkBrokenLinks`, plus
