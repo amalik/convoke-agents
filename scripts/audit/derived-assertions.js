@@ -9,16 +9,16 @@
  * a path they open, a count they repeat, a version they rely on. This script finds them so the
  * docs-accuracy epic can size its remaining stories against a measurement instead of an estimate.
  *
- * ⚠ IT REPORTS A FLOOR, NOT A COUNT, AND THAT IS A DELIBERATE RETREAT.
- * Two review rounds found nine distinct classes the pattern set missed — four in Round 1, five
- * more in Round 2, after Round 1's fixes. `code-review-convergence` says two failed attempts at
- * the same fix predict a third, so the claim was narrowed instead of the patterns being widened a
- * third time. Every figure this script emits is a LOWER BOUND under the pinned pattern set below.
+ * ⚠ IT REPORTS A FLOOR, NOT A COUNT, AND SAYS SO IN ITS OWN OUTPUT.
+ * Two review rounds found class after class the pattern set missed — several in Round 1, more in
+ * Round 2 *after* Round 1's fixes. `code-review-convergence` says two failed attempts at the same
+ * fix predict a third, so the claim was narrowed rather than the patterns widened again. Every
+ * figure this script emits is a LOWER BOUND under the pinned pattern set below.
  *
- * The classes known to be missing are enumerated in the findings note and filed on the backlog;
- * they are not secret and they are not fixed. Treat the output as ordinally useful (which file is
- * heavier) and not as a census. A floor is honest and still sizes work; a "count" that keeps
- * growing under review is neither.
+ * **How many classes remain is not written here, because it changes.** The RESIDUAL (see below)
+ * reports it at run time; prose cannot. Treat the output as ordinally useful — which file is
+ * heavier — and not as a census. A floor is honest and still sizes work; a "count" that keeps
+ * growing under review is neither. `T160` owns the remaining classes.
  *
  * It COUNTS AND REPORTS. It never edits a document. That prohibition is not stylistic — this epic
  * deleted two purpose-built checkers (backlog `T142`), the second of which regenerated the very
@@ -143,7 +143,7 @@ const PATTERNS = [
     // 'any', not 'prose'. AC1 rules that fenced bodies ARE counted, and this file's header says
     // so — but `count` carried zone 'prose', and `scan` treats a whole fenced line as a code
     // zone, so NO count inside a fence was ever counted. Invisible on this story's two files (they
-    // lose none) and worth nine assertions across the files Stories 1.5 and 1.6 are sized on.
+    // lose none) and worth a material number across the files Stories 1.5 and 1.6 are sized on.
     // The ruling's own text warned it "would silently propagate to 1.5 and 1.6"; it did.
     zone: 'any',
     // A number asserted about this repository. The noun list is what makes it an assertion about
@@ -170,6 +170,20 @@ const PATTERNS = [
     // `1.4.x` / `v1.7.x` appear throughout UPDATE-GUIDE.md as migration ranges.
     re: /(?:^|[\s@(`'"v>=^~])(\d+\.\d+\.x)\b/g,
     note: 'A version range of the 1.4.x form, used for migration boundaries.',
+  },
+  {
+    kind: 'version',
+    zone: 'any',
+    // TWO-PART versions: `2.x`, `v6.3`, `4.0`. Closed at T160 because the RESIDUAL ALARM surfaced
+    // them — version-shaped tokens that no pattern claimed and no rejector named — which is
+    // the mechanism working as designed: the gap announced itself rather than being found by a
+    // sixth reading of the pattern set. Before this, `docs/host-framework-sync-playbook.md`
+    // reported ZERO versions for a document whose entire subject is upstream version alignment.
+    //
+    // Ordered AFTER the three-part patterns so `1.4.0` is claimed as a three-part version first;
+    // `scan` keeps one assertion per (kind, line, column), so the overlap resolves to one.
+    re: /(?:^|[\s@(`'"v>=^~])(\d+\.(?:\d+|x))(?![.\d])/g,
+    note: 'A two-part version or range (2.x, v6.3, 4.0). Three-part forms are claimed above.',
   },
 ];
 
@@ -232,9 +246,11 @@ const TREE_RE = /[\u2500-\u257F]/;
 function accept(kind, text, line, inDiagram = false) {
   if (kind === 'path') {
     // A node in a directory tree is a label, not a path the reader opens — AC1's excluded case,
-    // "a bare word that happens to contain a slash", drawn with box characters. Seventeen of
-    // `docs/BMAD-METHOD-COMPATIBILITY.md`'s 27 path assertions came from one such diagram, i.e.
-    // a quarter of the figure Story 1.5 is sized on. Found by review, not by a test.
+    // "a bare word that happens to contain a slash", drawn with box characters. One such diagram
+    // in `docs/BMAD-METHOD-COMPATIBILITY.md` supplied a large share of that file's path
+    // assertions. No ratio is quoted: two earlier attempts at one were wrong, and the share moves
+    // whenever the pattern set does. Re-derive by removing the suppression and diffing.
+    // Found by review, not by a test.
     if (inDiagram || TREE_RE.test(line)) return false;
     // AC1's "a URL" exclusion is STRUCTURAL, not a filter here: the path patterns require an
     // opening delimiter and `:` is neither a delimiter nor a path character, so a match can never
@@ -251,6 +267,13 @@ function accept(kind, text, line, inDiagram = false) {
     // A `convoke-*` token is an invocation only if it is a shipped binary. The package itself is
     // `convoke-agents`, which appears in prose as a rename target, not as something to run.
     return binNames().has(text);
+  }
+  if (kind === 'version') {
+    // A percentage is not a version. `92.91% coverage` and `83.4% line coverage` began matching
+    // when the two-part pattern landed at T160 — an over-count the change introduced and did not
+    // record until review found it.
+    if (new RegExp(`${text.replace('.', '\\.')}\\s*%`).test(line)) return false;
+    return true;
   }
   if (kind === 'count') {
     // "Version numbers (their own kind)" — a digit run that is part of a dotted version is not a
@@ -355,6 +378,131 @@ function scan(content) {
   return kept.map((a) => ({ kind: a.kind, line: a.line, col: a.col, text: a.text }));
 }
 
+/**
+ * Candidate extraction, and the named rules that discard a candidate.
+ *
+ * WHY THIS EXISTS. The pattern set above is a set of NARROW MATCHERS, so anything it does not match
+ * is invisible, and invisibility produces an undercount that nothing detects. Two review rounds
+ * found class after class this way — several, then more AFTER those were fixed — and the
+ * hand-derivation written to catch exactly this shared the patterns' blind spot, because the same
+ * person wrote both.
+ *
+ * So the bias is inverted here. A token in an assertion position is a CANDIDATE by default, and it
+ * leaves the candidate pool by exactly one of two routes:
+ *   1. a PATTERN classifies it — it becomes a counted assertion; or
+ *   2. a REJECTOR discards it — BY NAME, and the name is reportable.
+ * Anything on neither route is RESIDUAL, and the residual is printed.
+ *
+ * A non-zero residual is not a failure; it is the honest statement that the pattern set does not
+ * span its input. What it removes is *silence*: a tenth missed class now announces itself instead
+ * of shrinking a number nobody can check. `T160` owns the residual's contents.
+ */
+
+/** A token in an assertion position: inside code, inside a link target, or a number in prose. */
+function candidates(content) {
+  const lines = content.split('\n');
+  const out = [];
+  let fence = null;
+  lines.forEach((line, i) => {
+    const m = FENCE_RE.exec(line);
+    if (fence) {
+      if (m && m[2][0] === fence.char && m[2].length >= fence.len && m[3].trim() === '') {
+        fence = null;
+        return;
+      }
+    } else if (m && m[2].length >= 3) {
+      fence = { char: m[2][0], len: m[2].length };
+      return;
+    }
+    const spans = fence ? [[0, line.length]] : codeSpans(line).map(([a, b]) => [a + 1, b - 1]);
+    const zones = fence ? spans : [...spans, ...linkTargets(line)];
+    for (const [a, b] of zones) {
+      for (const mm of line.slice(a, b).matchAll(/[^\s`|,;()[\]]+/g)) {
+        out.push({ line: i + 1, col: a + mm.index, text: mm[0] });
+      }
+    }
+    if (!fence) {
+      // Anchored on a NON-word character, not `\b`. `\b` cannot match between `v` and `2`, so
+      // `v2.4.x` never became a candidate while its fragment `4.x` did — the alarm reported a
+      // phantom shard of a version `scan` had already counted, and missed the version itself.
+      // That phantom is part of what justified closing the two-part class at T160, so the
+      // discovery story was partly a false alarm. Recorded rather than quietly repaired.
+      // The `v` is consumed OUTSIDE the capture so a candidate starts at the same column the
+      // classifier reports. Capturing it produced `v6.3` at one column and `6.3` at the next,
+      // so the same version appeared as both a counted assertion and an unclassified candidate.
+      for (const mm of line.matchAll(/(?:^|[^\w.])v?(\d[\d.x]*)/g)) {
+        const col = mm.index + mm[0].indexOf(mm[1]);
+        if (!codeSpans(line).some(([x, y]) => col >= x && col < y)) {
+          out.push({ line: i + 1, col, text: mm[1] });
+        }
+      }
+    }
+  });
+
+  // THE GUARANTEE, MADE BY CONSTRUCTION. Everything `scan` claims is a candidate, whether or not
+  // the broad extraction above happened to find it. Without this the pool was merely a THIRD
+  // narrow extractor with its own blind spots — assertions the script itself counted sat outside it,
+  // which makes "a token in an assertion position is a candidate by default" false, and the
+  // residual's arithmetic meaningless. Review found this; no test did, so one now pins it.
+  const seen = new Set(out.map((c) => `${c.line}:${c.col}`));
+  for (const a of scan(content)) {
+    const key = `${a.line}:${a.col}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push({ line: a.line, col: a.col, text: a.text });
+    }
+  }
+  out.sort((a, b) => a.line - b.line || a.col - b.col);
+  return out;
+}
+
+/**
+ * Named reasons a candidate is NOT an assertion. Each carries the clause it serves, because a
+ * rejection with no name is the same silence this whole mechanism exists to remove.
+ */
+const REJECTORS = [
+  { name: 'markup', note: 'punctuation or markdown syntax, not a token a reader acts on',
+    test: (t) => /^[^\w]+$/.test(t) },
+  { name: 'cli-flag', note: 'a flag belongs to the invocation already counted as a command',
+    test: (t) => /^--?[A-Za-z]/.test(t) },
+  { name: 'shell-token', note: 'a shell variable or quoted fragment, not a repository object',
+    test: (t) => /^["'$]/.test(t) },
+  { name: 'url', note: 'AC1 excludes URLs from the Path kind',
+    test: (t) => /^[a-z][a-z0-9+.-]*:/i.test(t) || t.startsWith('//') },
+  { name: 'prose-word', note: 'an ordinary word inside a code span or fence — prose, not an object',
+    test: (t) => /^[A-Za-z][A-Za-z-]*$/.test(t) },
+  { name: 'bare-number', note: 'a number with no repository noun is not a count claim (AC1)',
+    test: (t, line) => /^\d+$/.test(t) && !new RegExp(`${t}\\s*%`).test(line || '') },
+  { name: 'list-marker', note: 'markdown ordered-list numbering, not a claim about anything',
+    test: (t, line) => /^\d+\.$/.test(t) && new RegExp(`^\\s*${t.replace('.', '\\.')}\\s`).test(line || '') },
+  { name: 'percentage', note: 'a coverage or share figure is not a version or a count of objects',
+    test: (t, line) => /^\d+(\.\d+)?$/.test(t) && new RegExp(`${t.replace('.', '\\.')}\\s*%`).test(line || '') },
+];
+
+/**
+ * Candidates that no pattern classified and no rejector named.
+ *
+ * @returns {{residual: Array, rejected: object, classified: number, candidates: number}}
+ */
+function residual(content) {
+  const lines = content.split('\n');
+  const lineOf = (n) => lines[n - 1] || '';
+  const claimed = new Set(scan(content).map((a) => `${a.line}:${a.col}`));
+  const all = candidates(content);
+  const rejected = {};
+  const left = [];
+  for (const c of all) {
+    if (claimed.has(`${c.line}:${c.col}`)) continue;
+    const r = REJECTORS.find((x) => x.test(c.text, lineOf(c.line)));
+    if (r) {
+      rejected[r.name] = (rejected[r.name] || 0) + 1;
+      continue;
+    }
+    left.push(c);
+  }
+  return { residual: left, rejected, classified: claimed.size, candidates: all.length };
+}
+
 /** Kinds in report order. A kind absent here would be invisible in every total. */
 const KINDS = ['command', 'path', 'count', 'version'];
 
@@ -443,12 +591,40 @@ function main(argv) {
     );
   }
   console.log('');
-  console.log('  These are FLOORS under the pinned pattern set, not counts. Nine known-missing');
-  console.log('  classes are recorded in convoke-note-docs-accuracy-findings-4-0-2.md.');
+
+  // The residual is the alarm. A pattern set that does not span its input says so here rather
+  // than quietly returning a smaller number.
+  let totalResidual = 0;
+  const perFile = [];
+  for (const rel of files) {
+    const abs = path.isAbsolute(rel) ? rel : path.join(root, rel);
+    const r = residual(fs.readFileSync(abs, 'utf8'));
+    totalResidual += r.residual.length;
+    perFile.push([rel, r]);
+  }
+
+  if (totalResidual === 0) {
+    console.log('  Residual: 0 — every candidate was classified or rejected by a named rule.');
+  } else {
+    console.log(`  ⚠ UNCLASSIFIED CANDIDATES: ${totalResidual}`);
+    console.log('  Tokens in an assertion position that no pattern claimed and no rejector named.');
+    console.log('  A non-zero residual is a KNOWN GAP, not a clean run — see backlog T160.');
+    if (argv.includes('--residual')) {
+      for (const [rel, r] of perFile) {
+        if (!r.residual.length) continue;
+        console.log(`\n  ${rel}`);
+        for (const c of r.residual) console.log(`    :${String(c.line).padEnd(5)} ${c.text}`);
+      }
+    } else {
+      console.log('  Re-run with --residual to list them.');
+    }
+  }
+  console.log('');
+  console.log('  Figures above are FLOORS under the pinned pattern set, not counts.');
   console.log('');
   return 0;
 }
 
 if (require.main === module) process.exit(main(process.argv));
 
-module.exports = { PATTERNS, KINDS, codeSpans, linkTargets, accept, scan, tally, selfCheck, main };
+module.exports = { PATTERNS, KINDS, REJECTORS, candidates, residual, codeSpans, linkTargets, accept, scan, tally, selfCheck, main };

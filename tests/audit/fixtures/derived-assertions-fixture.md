@@ -68,6 +68,10 @@ sibling pattern kept `version` alive.)
 
 Pin `convoke-agents@3.3.0` if you need the previous behaviour.
 
+A project on 2.x stays on 2.x; upstream BMAD v6.3 is the host baseline. (TWO-PART versions — the
+class the residual alarm surfaced at T160. Before it was closed, a document entirely about version
+alignment reported zero version assertions.)
+
 ## Version claims — should NOT count
 
 Nothing here: a semver inside an illustrative snippet the reader is not asked to believe is

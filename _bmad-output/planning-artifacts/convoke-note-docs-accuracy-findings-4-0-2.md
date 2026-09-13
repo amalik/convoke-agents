@@ -293,7 +293,7 @@ shape:
 | `docs/agents.md` | yes | — | **yes** | 1.2, 1.3 | 8 |
 | `_bmad/bme/_vortex/guides/VORTEX-TEAM-GUIDE.md` | yes | — | **yes** | 1.2 | 1 |
 | `_bmad/bme/_vortex/compass-routing-reference.md` | yes | — | **yes** | 1.2 | 2 |
-| `UPDATE-GUIDE.md` | yes | 91 | **yes** | 1.4 | 0 |
+| `UPDATE-GUIDE.md` | yes | 95 | **yes** | 1.4 | 0 |
 | `docs/faq.md` | yes | 37 | **yes** | 1.4 | 4 |
 | `docs/host-framework-sync-playbook.md` | yes | 36 | no | 1.5 | — |
 | `docs/BMAD-METHOD-COMPATIBILITY.md` | yes | 30 | no | 1.5 | — |
@@ -307,18 +307,25 @@ shape:
 
 ### ⚠ The counter reports a FLOOR, and these are the classes it misses
 
-Two review rounds found **nine** classes the pinned pattern set does not see — four at Round 1, five
-more at Round 2 *after* Round 1's fixes. `code-review-convergence` says two failed attempts at the same
+Two review rounds found class after class the pinned pattern set does not see — several at Round 1,
+more at Round 2 *after* Round 1's fixes. **`T160` has since closed one and built a residual alarm that
+reports the rest at run time**, so no total is written here: run the script with `--residual`. `code-review-convergence` says two failed attempts at the same
 fix predict a third, so the claim was narrowed rather than the patterns widened again. **Every figure
 below is a lower bound.** The missing classes are listed here so Stories 1.5 and 1.6 inherit a known
 gap instead of a false census, and are filed as backlog row **`T160`**, which owns the decision about whether to close any of them.
 
+**One of these is now CLOSED.** `T160` closed the two-part-version class after the residual alarm
+surfaced it unprompted; the row is struck below and left visible, because the way it was found is the
+point. The rest remain, and the residual lists them: `node scripts/audit/derived-assertions.js <file> --residual`.
+
 | Missing class | Example | Effect |
 |---|---|---|
 | **Elided-noun counts** | `UPDATE-GUIDE.md:109` — *"All 11 agents installed (7 Vortex + 4 Gyre)"* carries **three** repository numbers; one is seen | undercount, and `docs:audit` cannot fail on the other two either |
-| **Two-part versions** (`2.x`, `v6.3`) | `UPDATE-GUIDE.md:11`; `docs/host-framework-sync-playbook.md` reports **0** versions for a document about version alignment | large undercount in Story 1.5 |
+| ~~**Two-part versions** (`2.x`, `v6.3`)~~ | **CLOSED at `T160`.** `docs/host-framework-sync-playbook.md` reported **zero** versions for a document about version alignment; it now reports them, and Story 1.5's load rose by roughly a third | **surfaced by the residual alarm** — though Round 1 later showed part of that alarm was phantom fragments the extractor cut out of versions it had already counted, so the discovery was real but smaller than first recorded |
 | **Counted nouns outside the list** | `tests`, `assertions`, `jobs`, `scripts`, `Operator Rights` | undercount across 1.5 and 1.6 |
 | **Path extensions outside the list** | `.prettierrc`, `.svg`, `.xsd`, `Makefile` | none in today's corpus; latent |
+| **Story IDs and path-internal versions read as versions** *(new at `T160`)* | `Story 4.4` → `4.4`; a `v6.3` inside a directory name counted on top of the path already counted | over-count **introduced** by the two-part-version pattern and found at its own review round, not by a test |
+| **Word-form counts in prose** *(found at `T160` R2)* | *"ships seven dashboards"* — an off-list noun with a written-out number | **invisible to the residual as well as to the patterns**: the candidate pool covers prose numerically only, so this reaches no candidate position and the alarm cannot report it. The clearest limit of the mechanism. |
 | **Directory-diagram nodes** | `docs/BMAD-METHOD-COMPATIBILITY.md:70-90` — 21 paths suppressed as decoration while the same block's 6 counts are kept | deliberate, but inconsistent, and unauthorised by AC1 |
 | **Line-local box-drawing suppression** | a prose line quoting `` `├──` `` loses its real paths | false suppression; fires in this epic's own artifacts |
 | **Duplicate link text/target** | `[`a/b.md`](a/b.md)` counted twice | over-count |
@@ -343,12 +350,20 @@ was retracted, so both the numerator and the denominator moved.
 
 | Figure | Value | How to re-derive |
 |---|---|---|
-| assertions examined (1.4) | **128** | `node scripts/audit/derived-assertions.js UPDATE-GUIDE.md docs/faq.md` |
+| assertions examined (1.4) | **132** | `node scripts/audit/derived-assertions.js UPDATE-GUIDE.md docs/faq.md` |
 | findings | **4** (`D10`-`D13`) | the findings table above |
-| **measured rate** | **0.0313 findings/assertion** | 4 ÷ 128 |
-| remaining load, Story 1.5 | **117** | the projection command below |
-| remaining load, Story 1.6 | **105** (includes `README.md`) | same command |
-| **projected findings** | **≈ 6.9** | 222 × 0.0313 |
+| **measured rate** | **0.0303 findings/assertion** | 4 ÷ 132 |
+| remaining load, Story 1.5 | **156** | the projection command below |
+| remaining load, Story 1.6 | **112** (includes `README.md`) | same command |
+| **projected findings** | **≈ 8.1** | 268 × 0.0303 |
+
+⚠ **These moved at `T160`, moved AGAIN inside its own review round, and will move again.** Closing the
+two-part-version class raised Story 1.5's load by roughly a third — `docs/host-framework-sync-playbook.md`
+reported **zero** version assertions for a document about version alignment. Then Round 1 found that the
+counter's candidate pool was not the superset it claimed to be and was manufacturing phantom fragments,
+and repairing that moved the figures a second time in the same day. **A figure in this table is a
+reading, not a fact**; the command beside it is the fact. Classes remain open, so the next close moves
+them again.
 
 **The blend hides the only interesting fact.** One examined file returned no findings at all and the
 other returned all of them, so the average describes neither. Both per-file rates are in the table

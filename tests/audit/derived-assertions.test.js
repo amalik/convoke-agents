@@ -14,6 +14,10 @@ const {
   scan,
   tally,
   selfCheck,
+  candidates,
+  residual,
+  REJECTORS,
+  main,
 } = require('../../scripts/audit/derived-assertions');
 
 const FIXTURE = path.join(__dirname, 'fixtures', 'derived-assertions-fixture.md');
@@ -28,6 +32,20 @@ describe('derived-assertions — the fixture demonstration (AC1)', () => {
     const { ok, counts, silent } = selfCheck(FIXTURE);
     assert.ok(ok, `silent kinds: ${silent.join(', ')}`);
     for (const k of KINDS) assert.ok(counts[k] > 0, `${k} fired zero times`);
+  });
+
+  it('the fixture yields EXACTLY these counts — so a deleted pattern fails', () => {
+    // `> 0` and the per-pattern `dead` check both catch a pattern that stops MATCHING; neither
+    // catches one that is REMOVED, because a sibling keeps the kind alive and `dead` only walks
+    // the patterns that still exist. Deleting the `N.N.x` entry left 53/53 green and `--self-check`
+    // green while the two examined files lost seven assertions. These totals are fixture-guaranteed
+    // (`derive-counts-from-source` permits that) and move the moment the pattern set does.
+    const { counts } = selfCheck(FIXTURE);
+    assert.deepEqual(
+      { command: counts.command, path: counts.path, count: counts.count, version: counts.version },
+      { command: 6, path: 8, count: 3, version: 8 },
+      'the fixture totals changed — a pattern was added or removed; update this only deliberately'
+    );
   });
 
   it('FAILS when a kind is silent — the check can say something else', () => {
@@ -84,14 +102,168 @@ describe('derived-assertions — fenced blocks are COUNTED (AC1 ruling)', () => 
   });
 });
 
+describe('derived-assertions — the residual alarm (T160)', () => {
+  // THE POINT OF THE MECHANISM. Nine classes were missed across two review rounds because an
+  // unmatched token was invisible. A candidate now leaves the pool only by being classified or by
+  // being rejected BY NAME; anything else is residual and is reported. This test is the property
+  // itself: an assertion shape nobody anticipated must SURFACE, not vanish.
+  it('surfaces an unanticipated assertion shape instead of dropping it', () => {
+    // A shape drawn from the LIVE residual, not invented: a template placeholder. An earlier
+    // version of this test used `@scope/pkg#v2-beta`, which the path pattern already claims
+    // because it contains a slash — the test failed on its own precondition, which is the
+    // precondition earning its place.
+    const novel = 'The `{backup-dir}` placeholder expands at runtime.';
+    assert.equal(scan(novel).length, 0, 'precondition: no pattern classifies this shape');
+    const r = residual(novel);
+    assert.ok(
+      r.residual.some((c) => c.text.includes('{backup-dir}')),
+      'an unclassified token in an assertion position must appear in the residual'
+    );
+  });
+
+  it('a classified token does not also appear in the residual', () => {
+    const r = residual('Run `npm test` now.');
+    assert.ok(scan('Run `npm test` now.').some((a) => a.kind === 'command'));
+    assert.ok(!r.residual.some((c) => c.text === 'npm'), 'a claimed token must leave the pool');
+  });
+
+  it('every rejector carries a name and the clause it serves', () => {
+    // A rejection with no name is the same silence the mechanism exists to remove.
+    for (const r of REJECTORS) {
+      assert.ok(r.name && /^[a-z-]+$/.test(r.name), `rejector name is unusable: ${r.name}`);
+      assert.ok(r.note && r.note.length > 15, `rejector ${r.name} has no stated reason`);
+      assert.equal(typeof r.test, 'function');
+    }
+  });
+
+  it('rejects by name rather than silently, and reports the tally', () => {
+    const r = residual('Run `npm install --dry-run` now.');
+    assert.ok(r.rejected['cli-flag'] >= 1, '--dry-run must be rejected as a flag, by name');
+    assert.ok(!r.residual.some((c) => c.text === '--dry-run'));
+  });
+
+  it('candidates cover fence bodies, code spans and link targets alike', () => {
+    const md = ['See [guide](docs/faq.md) and `docs/agents.md`.', '', '```bash', 'npm run build', '```'].join('\n');
+    const texts = candidates(md).map((c) => c.text);
+    assert.ok(texts.includes('docs/faq.md'), 'link target missing from candidates');
+    assert.ok(texts.includes('docs/agents.md'), 'code span missing from candidates');
+    assert.ok(texts.includes('npm'), 'fence body missing from candidates');
+  });
+
+  it('the residual shrinks when a class is closed — T160 closed two-part versions', () => {
+    // The alarm surfaced `2.x` / `v6.3`; closing that class must move it OUT of the residual and
+    // INTO the count. Both halves are asserted, so a pattern that merely silences the alarm fails.
+    const md = 'A project on 2.x stays on 2.x; upstream BMAD v6.3 is the baseline.';
+    const versions = scan(md).filter((a) => a.kind === 'version').map((a) => a.text);
+    assert.ok(versions.includes('2.x'), 'two-part version must now be classified');
+    assert.ok(versions.includes('6.3'), 'a vN.N form must be classified');
+    assert.ok(!residual(md).residual.some((c) => /^v?\d+\.\dx?$/.test(c.text)));
+  });
+
+  it('EVERY counted assertion is also a candidate — the mechanism\'s core guarantee', () => {
+    // This was FALSE when the alarm shipped: many assertions the script counted were outside the
+    // pool, because the prose arm was `\\b\\d…` and `\\b` cannot match between `v` and `2`. The
+    // pool was a third narrow extractor with its own blind spots, which makes the residual's
+    // arithmetic meaningless. It now holds by construction; this asserts it rather than trusting.
+    const docs = [
+      fs.readFileSync(FIXTURE, 'utf8'),
+      'Upgrading from v2.4.x to v3.0.0 is supported.',
+      'Use all seven Vortex agents, or all four Gyre agents.',
+      'Run convoke-doctor to verify, or `npm test` first.',
+      ['```bash', 'npx -p convoke-agents convoke-update', '```'].join('\n'),
+    ];
+    for (const doc of docs) {
+      const pool = new Set(candidates(doc).map((c) => `${c.line}:${c.col}`));
+      for (const a of scan(doc)) {
+        assert.ok(pool.has(`${a.line}:${a.col}`),
+          `counted ${a.kind} ${JSON.stringify(a.text)} is not in the candidate pool`);
+      }
+    }
+  });
+
+  it('does not emit a FRAGMENT of a version it already counts', () => {
+    // `v2.4.x` used to yield the candidate `4.x` — a shard of an assertion already counted — and
+    // those phantoms were part of what justified closing the two-part class. The alarm must not
+    // manufacture its own evidence.
+    const md = 'Upgrading from v2.4.x to v3.0.0 is supported.';
+    const junk = residual(md).residual.filter((c) => /^\d+\.[\dx]$/.test(c.text));
+    assert.deepEqual(junk, [], 'a version fragment must not appear as an unclassified candidate');
+  });
+
+  it('the CLI actually reports the residual — the alarm has a visible surface', () => {
+    // Deleting the reporting block left every gate green: lint, the whole suite, docs:audit and
+    // --self-check all passed while the mechanism's ONLY user-visible output was gone.
+    const out = [];
+    const log = console.log;
+    console.log = (...a) => out.push(a.join(' '));
+    try {
+      main(['node', 'x', 'tests/audit/fixtures/derived-assertions-fixture.md']);
+    } finally {
+      console.log = log;
+    }
+    const text = out.join('\n');
+    assert.match(text, /FLOOR/, 'the output must say the figures are floors');
+    assert.match(text, /UNCLASSIFIED CANDIDATES|Residual: 0/,
+      'the residual must be reported, or the alarm is invisible');
+  });
+
+  it('a version fragment inside a FILENAME is not a version assertion', () => {
+    // This is what the `(?![.\\d])` lookahead actually guards. A test that only checked
+    // three-part versions could not see its removal: the width-collapse dedupe absorbs the nested
+    // match, so `4.0.2` reads identically with or without it. Dropping the lookahead silently
+    // moved one file's floor by nine, with the whole suite green.
+    const md = 'See `adr/adr-bmad-coupling-v4.0.md` for the ruling.';
+    assert.deepEqual(scan(md).filter((a) => a.kind === 'version').map((a) => a.text), []);
+  });
+
+  it('a percentage is not a version', () => {
+    // Introduced by the two-part pattern at T160 and caught at review, not by a test.
+    assert.deepEqual(scan('convoke-update.js (92.91% coverage)').filter((a) => a.kind === 'version'), []);
+    assert.deepEqual(scan('83.4% line coverage').filter((a) => a.kind === 'version'), []);
+    // and a real version on the same axis still counts
+    assert.deepEqual(scan('A project on 2.x stays there.').filter((a) => a.kind === 'version').map((a) => a.text), ['2.x']);
+  });
+
+  it('the prose arm surfaces a version NO pattern claims — its only unique contribution', () => {
+    // An earlier version of this test used a version the patterns DO claim, so the superset union
+    // re-added it and deleting the whole prose arm changed nothing the test could see: it passed
+    // for the wrong reason. What the arm uniquely buys is residual entries — assertions the
+    // classifiers miss. `migrations-to-1.5.0` is real: the version pattern's delimiter class has
+    // no `-`, so the version is uncounted, and only the prose arm makes it visible.
+    const md = '| migrations-to-1.5.0 | 6 | migration metadata |';
+    assert.deepEqual(
+      scan(md).filter((a) => a.kind === 'version').map((a) => a.text), [],
+      'precondition: no pattern claims this version'
+    );
+    assert.ok(
+      residual(md).residual.some((c) => c.text === '1.5.0'),
+      'a version the classifiers miss must reach the residual, or the alarm is blind'
+    );
+  });
+
+  it('markdown list numbering is rejected by name, not left as residual noise', () => {
+    // Most of the prose arm's residual entries were `1.` `2.` `3.` from ordered lists — noise the
+    // alarm correctly surfaced and that had no named reason to leave the pool.
+    const md = ['1. First step', '2. Second step'].join('\n');
+    const r = residual(md);
+    assert.ok(r.rejected['list-marker'] >= 2, 'list numbering must leave by a named rule');
+    assert.deepEqual(r.residual.filter((c) => /^\d+\.$/.test(c.text)), []);
+  });
+
+  it('a three-part version is still claimed as one assertion, not two', () => {
+    // The two-part pattern could shadow or double-count the three-part one.
+    assert.deepEqual(scan('The release is 4.0.2.').filter((a) => a.kind === 'version').map((a) => a.text), ['4.0.2']);
+  });
+});
+
 describe('derived-assertions — defects found by ROUND 1, not by hand-derivation', () => {
   // The author's two hand-derived windows both matched. Every defect below sits OUTSIDE them,
   // which is the argument for review on top of hand-derivation, not instead of it.
 
   it('applies the fence ruling to COUNTS, not only to commands', () => {
     // `count` carried zone 'prose' while the file header declared fenced bodies counted. Zero
-    // counts were lost on this story's two files and nine on the files 1.5/1.6 are sized on —
-    // so neither the fixture nor hand-derivation could see it.
+    // counts were lost on this story's two files and a material number on the files 1.5/1.6 are
+    // sized on — so neither the fixture nor hand-derivation could see it.
     assert.equal(count(['```', '7 agents', '```'].join('\n'), 'count'), 1);
     assert.equal(count('The roster is `7 agents` today.', 'count'), 1);
   });
