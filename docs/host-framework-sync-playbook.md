@@ -86,12 +86,20 @@ If **≥2 boxes ticked**, this is a `host_framework_sync` release. If only **box
 
 **Purpose.** *Establish* Convoke's presence in the upstream plugin marketplace. ⚠ **Convoke has no
 marketplace presence today, so there is nothing to "maintain."** Submission PR #9 to
-`bmad-code-org/bmad-plugins-marketplace` was rejected; the repository's own planning artifacts call it
-"the rejected PR #9" (`grep -rn "rejected PR #9" _bmad-output/planning-artifacts/`). ⚠ **The closure
-date (2026-04-27) and the "older version of bmad" framing are recorded only in Convoke's own planning
-prose** (`convoke-prd-bmad-v63-source-format-adoption.md:57`) — they have **not** been verified against
-GitHub. Settle them with
-`gh pr view 9 --repo bmad-code-org/bmad-plugins-marketplace --json state,closedAt` before relying on either. npm is currently Convoke's **only**
+`bmad-code-org/bmad-plugins-marketplace` was **closed unmerged on 2026-04-27**, verified against GitHub
+(`gh pr view 9 --repo bmad-code-org/bmad-plugins-marketplace --json state,closedAt` → `CLOSED`,
+`2026-04-27T00:58:13Z`). The maintainer's reason, quoted verbatim from that PR's comment thread:
+
+> For a module to be installable, all content should be in self contained skills. It looks like this
+> might be from an older version of bmad.
+>
+> Ideally your repo will have at the root a skills folder and within the skills folder there should be
+> a module.yaml and a module-help.csv.
+
+⚠ **The close was not hostile and the door was left open** — *"Will close for now, happy to help or
+chat if you need some help."* Convoke's own planning artifacts call this "the rejected PR #9", which is
+accurate as to outcome but reads more final than the thread does. What blocks re-entry is structural,
+and it is stated above: `skills/` at the repository root, `module.yaml`, `module-help.csv`. npm is currently Convoke's **only**
 live external distribution channel. Re-entry requires the structural changes named in the v6.3+
 source-format epic (`skills/` at repo root, `module.yaml`, `module-help.csv`), not a re-submission of
 the same entry.
