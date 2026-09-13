@@ -54,7 +54,7 @@ The persona defect (`T131`) is the one that decides whether the factory is worth
 
 - [ ] **Task 1: `config.yaml` output path** (AC: #1)
   - [ ] `config-creator.js:82` writes `output_folder: specData.integration.output_directory` — bare. Prefix it, matching `step-02-connect.md:71` (`'{project-root}/{output_directory}'`) and the three shipped modules
-  - [ ] Decide and record whether the prefix belongs in `buildConfigData` or is expected pre-applied in the spec. **The spec's `integration.output_directory` is validated by `spec-parser.js` as starting with `_bmad-output/`**, so the prefix must be added at write time, not stored — state this in the Dev Agent Record
+  - [ ] Decide and record whether the prefix belongs in `buildConfigData` or is expected pre-applied in the spec. **Nothing in code constrains this** — verified 2026-09-13: `spec-parser.js:171-172` checks only that `output_directory` is *present*, and there is no `startsWith('_bmad-output/')` anywhere in `lib/`. The `_bmad-output/` rule exists solely as prose in `step-02-connect.md`'s §3. So the choice is genuinely open — **but whichever you pick, add the missing enforcement in code**, or the next generator drifts the same way this one did. State the choice and the enforcement in the Dev Agent Record
 
 - [ ] **Task 2: unique command codes** (AC: #2)
   - [ ] `csv-creator.js:142` `deriveCode` returns the first letters of the first two words, so `run-check-a` and `run-check-b` both yield `RC`. Reproduced live 2026-09-13
