@@ -188,6 +188,44 @@ being time does not license reading the real time.
 
 ---
 
+## Rule: a-remediation-is-an-unreviewed-change
+
+**Statement.** A fix applied in response to a review finding is **new work, not a correction**. It gets
+the same adversarial scrutiny the original did, scoped to what it touched. A round does not close on
+"findings applied"; it closes when the applied findings have themselves been checked.
+
+Two obligations follow, and they fail differently — do both:
+
+1. **Re-derive, don't reason.** Run the command that proves the fix, from the directory the reader will
+   be standing in. Do not accept that a change is correct because it was written to be correct.
+2. **Fix the CLASS, not the instance.** Before closing a finding, grep for every other occurrence of
+   the value, the shape, or the code path being fixed. "Closed" must not mean "closed for the input the
+   reviewer happened to send".
+
+**Why.** Measured across the seven stories of the 4.0.2 documentation-accuracy epic: **every single
+remediation introduced defects.** `docs-1-2`'s generator regenerated the very defect it was built to
+remove, into two shipped files, with a green gate. `docs-1-3`'s Round 2 found **9 of 10** of Round 1's
+corrections defective. In `docs-1-5`, `docs-1-6` and `docs-1-7`, *every* high-severity finding of the
+later round had been created by the earlier round's fixes. Five separate **incomplete fixes** occurred —
+a figure appearing twice and corrected once, a character class fixed for `_` and left broken for `*`.
+
+This is not carelessness. It is that applying a fix feels like closing work rather than opening it, so
+the step that would catch it is the step that gets skipped.
+
+**How to apply.** When a review round produces fixes: scope a follow-up pass to **what the remediation
+touched**, not to the whole diff. Rewritten executable logic earns one; rewritten prose does not — see
+the stopping rule below. State in the record which of the two obligations each fix satisfied.
+
+**Falsification.** A remediation lands, a later pass examines it, and finds nothing. That has not yet
+happened in this project; when it does twice running, relax this rule.
+
+**Companion — the stopping rule.** Judge by **what the remediation touched** and by **where the findings
+are landing**. When findings about the *record* (tallies, round histories, basis figures) approach
+findings about the *artifact*, stop patching and **delete the narration**: keep the defect, the fix, and
+the command that re-derives it. Careful rewrites generate the next round's findings; deletion ends it.
+`docs-1-6` stopped that way after three rounds; `docs-1-7` correctly continued, because its remediation
+had rewritten a gate's parsing logic rather than its prose.
+
 ## Rule: code-review-convergence
 
 **Statement.** Code reviews follow a bounded convergence rule:
