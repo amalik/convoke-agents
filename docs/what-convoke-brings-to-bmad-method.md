@@ -13,9 +13,9 @@
 
 The BMAD Method is a framework for AI-assisted software engineering built on three deterministic commitments: agents with explicit role definitions, workflows with structured artifacts, and handoff contracts that make state transitions auditable. Where most AI development tooling offers probabilistic autocomplete, BMAD Method offers a predictable process that teams can reason about, operate, and extend.
 
-Its core modules cover four canonical phases of software delivery:
+Four of its modules cover the canonical phases of software delivery — this is not the whole set. The shipped skill manifest also carries `core`, and `wds` as a parallel extension that is neither BMAD-proper nor Convoke's; enumerate it with `grep -oE '"[a-z]+","_bmad/' _bmad/_config/skill-manifest.csv | cut -d'"' -f2 | sort -u` (a bare `cut -d,` splits inside the quoted description field and returns noise):
 
-- **BMM** — four phases spanning analysis (Mary), planning (John, Sally), solutioning (Winston), and implementation (Amelia, Quinn, Bob).
+- **BMM** — four phases spanning analysis (Mary), planning (John, Sally), solutioning (Winston), and implementation (Amelia). Derive the roster you actually receive from the shipped manifest rather than from this list: `grep -c 'bmm' _bmad/_config/skill-manifest.csv`.
 - **TEA (Test Architecture)** — Murat as a dedicated Master Test Architect, covering risk-based testing, ATDD, CI/CD governance, and scalable quality gates.
 - **CIS (Creative Intelligence Suite)** — creative and innovation agents for brainstorming (Carson), storytelling (Sophia), design thinking (Maya), innovation strategy (Victor), and presentation design (Caravaggio).
 - **BMB (Builder)** — tooling for creating new agents, modules, and workflows in a BMAD-compliant way.
@@ -85,7 +85,7 @@ This matters because it tells decision-makers: Convoke is not a collection of fe
 
 ## How They Work Together
 
-Convoke modules live at `_bmad/bme/` — the Convoke-specific module root. BMAD's `_bmad/` directory paths and `.claude/commands/bmad-*` skill files remain untouched for upstream compatibility. The npm package `convoke-agents` installs both BMAD Method and Convoke's extensions in a single dependency.
+Convoke modules live at `_bmad/bme/` — the Convoke-specific module root. BMAD's `_bmad/` directory paths and `.claude/commands/bmad-*` skill files remain untouched for upstream compatibility. The npm package `convoke-agents` installs **Convoke's modules only**: it declares no dependency on BMAD Method and ships no BMAD module files, so Convoke works standalone or alongside an existing BMAD install. From a Convoke checkout, `node -e "console.log(require('./package.json').dependencies)"` lists the dependencies and `npm pack --dry-run` lists every file that ships.
 
 Teams can use BMAD Method alone. They can activate Convoke modules as their needs expand. Discovery work activates Vortex. Production concerns activate Gyre. Governance pressure activates Enhance and Artifact Governance. The activation is evidence-driven — which is the gravity model in practice, at the module level. And across all of it, the Operator Covenant applies: the human remains the resolver, regardless of which modules are active.
 

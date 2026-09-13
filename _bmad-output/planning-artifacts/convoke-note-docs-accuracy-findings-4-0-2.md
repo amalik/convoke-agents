@@ -297,13 +297,13 @@ shape:
 | `docs/faq.md` | yes | 37 | **yes** | 1.4 | 4 |
 | `docs/host-framework-sync-playbook.md` | yes | 82 | **yes** | 1.5 | 9 |
 | `docs/BMAD-METHOD-COMPATIBILITY.md` | yes | 74 | **yes** | 1.5 | 6 |
-| `docs/testing.md` | yes | 22 | no | 1.6 | — |
-| `SECURITY.md` | yes | 3 | no | 1.6 | — |
-| `docs/references.md` | yes | 2 | no | 1.6 | — |
-| `docs/what-convoke-brings-to-bmad-method.md` | yes | 1 | no | 1.6 | — |
-| `CREDITS.md` | yes | 0 | no | 1.6 | — |
-| `CODE_OF_CONDUCT.md` | yes | 0 | no | 1.6 | — |
-| `README.md` | yes | — | no | 1.6 | — |
+| `docs/testing.md` | yes | 38 | **yes** | 1.6 | 12 |
+| `SECURITY.md` | yes | 5 | **yes** | 1.6 | 1 |
+| `docs/references.md` | yes | 10 | **yes** | 1.6 | 0 |
+| `docs/what-convoke-brings-to-bmad-method.md` | yes | 12 | **yes** | 1.6 | 3 |
+| `CREDITS.md` | yes | 1 | **yes** | 1.6 | 1 |
+| `CODE_OF_CONDUCT.md` | yes | 1 | **yes** | 1.6 | 1 |
+| `README.md` | yes | 45 | **yes** | 1.6 | 2 |
 
 ### ⚠ The counter reports a FLOOR, and these are the classes it misses
 
@@ -590,6 +590,55 @@ coverage table's `Assertions` column, which still carried the pre-script input (
 above. The decidable contributor to the playbook's rise is `T160` closing the two-part-version class:
 this note's breakdown table recorded **0** versions for it before that closure; it now reports 24.
 Both figures are **floors** — the script says so itself and reports a non-zero residual.
+
+### Story 1.6 findings — governance and positioning documents
+
+**20 findings, `D43`-`D62`.** Seven files, **112** derived assertions (floors). `docs/references.md`
+returned **zero edits** — every repository-facing claim in it holds, which is a result, not a skip.
+
+| ID | Line | Claim | Reality | Reproduce |
+|----|------|-------|---------|-----------|
+| **D43** | `CODE_OF_CONDUCT.md:63` | *"reported to the community leaders responsible for enforcement at ."* | **No contact at all** — the line was two bytes, `.` and a newline; the Contributor Covenant placeholder was deleted in the file's only commit and never filled, while `CONTRIBUTING.md:5` points contributors at it. Fixed to the GitHub private-reporting route per operator ruling **R1**; an address could not be derived from the repository at all | `git show 9e986db8:CODE_OF_CONDUCT.md \| sed -n '63p' \| od -c` · `gh api repos/amalik/convoke-agents/private-vulnerability-reporting` → `{"enabled":true}` |
+| **D44** | `CREDITS.md:36` | `- Team Factory 🏭 — builds new BMAD-compliant teams` | The agent's registered name is **`Loom Master`** and the string appeared nowhere in the file; every other row is `Name Emoji Title`. Fixed the name only — the section heading was left alone because `name-registry.csv` marks the `loom`/Team Factory duplication as an open operator ruling | `grep -o 'name="[^"]*"' _bmad/bme/_team-factory/agents/team-factory.md` → `name="Loom Master"` |
+| **D45** | `SECURITY.md:5` vs `:9` | "Only the latest published release receives security fixes" against a table row `4.0.x ✅` | **Self-contradiction**: `4.0.0` is published, undeprecated, matches `4.0.x`, and is not latest. Fixed the **prose**, kept `4.0.x`. ⚠ `4.0.2` was deliberately **not** written in — `package.json` says 4.0.2 but npm `latest` is `4.0.1`, so asserting it would name a version nobody can install | `npm view convoke-agents dist-tags` → `{ latest: '4.0.1' }` · `npm view convoke-agents@4.0.0 version` → `4.0.0` |
+| **D46** | `what-convoke-brings:88` | "The npm package `convoke-agents` installs both BMAD Method and Convoke's extensions in a single dependency" | **Ships zero BMAD module files and declares no BMAD dependency.** Two-file contradiction — `README.md:42` says the opposite and is correct, so this file was fixed and the README left alone | `npm pack --dry-run --json` → 465 files, **0** under `_bmad/{core,bmm,tea,cis,bmb,wds}/` · `node -e "console.log(require('./package.json').dependencies)"` |
+| **D47** | `what-convoke-brings:18` | "implementation (Amelia, Quinn, Bob)" | **Quinn and Bob ship in nothing an operator receives.** ⚠ `grep -ci quinn` on the shipped manifest returns `1`, not `0` — it is CIS's *"talk to **Dr.** Quinn"*, a different agent; widening the grep retracts a true finding | `grep -oi "talk to [A-Za-z. ]*quinn" _bmad/_config/skill-manifest.csv` → `talk to Dr. Quinn` · `grep -ci bob …` → `0` · `grep -ci amelia …` → `1` |
+| **D48** | `README.md:96` | the exporter "writes adapters into the export target for Claude (`{target}/CLAUDE.md`), Copilot (`…/.github/copilot-instructions.md`) and Cursor (`…/.cursor/rules/`)" | **All three destinations wrong.** It writes an `adapters/` staging tree — `adapters/claude-code/SKILL.md`, `adapters/copilot/copilot-instructions.md`, `adapters/cursor/<skill>.md` — and the generated README tells the user to copy them. There is no `CLAUDE.md` anywhere in the exporter | `grep -rn "CLAUDE.md" scripts/portability/` → exit 1, no hits · `grep -n writeFileSync scripts/portability/generate-adapters.js` |
+| **D49** | `README.md:98` | "what travels cleanly today is the upstream BMAD skill set plus that one" | **False on the file's own definition.** Of 87 non-Convoke rows in the shipped manifest, **43 `standalone`, 6 `light-deps`, 38 `pipeline`** — and `pipeline` is what the same line calls "flagged non-portable". ⚠ A naive `cut -d,`/`split(',')` returns noise or zero rows; the description field contains commas | quote-aware parse of `_bmad/_config/skill-manifest.csv` → `87 {"standalone":43,"pipeline":38,"light-deps":6}` |
+| **D50** | `docs/testing.md:11` | "184 tests (130 unit + 54 integration) \| 83.4% line coverage" | Real totals are three orders larger and coverage is higher. **The arithmetic was deleted, not corrected** (FR3a): nothing pins a test total and it rots on the next commit. Replaced by `npm run test:all` and `npm run test:coverage` | `npm test` · `npm run test:integration` · `npm run test:p0` · `npm run test:coverage` |
+| **D51** | `docs/testing.md:17-25`, `:31-35` | per-suite `Tests` columns | **9 of 14 wrong**; 5 correct, so a spot-check passes. The tables also showed 9 of 48 unit files and 5 of 12 integration files while reading as a census. **Counts column deleted; both tables labelled a selection** | `for f in <the 14>; do node --test "$f" \| grep '^ℹ tests'; done` |
+| **D52** | `docs/testing.md:11` vs `:31-35` | headline said 54 integration tests | **The table summed to 53.** Internal arithmetic — no source-derivation pass finds this; closed with `D50`'s deletion | `sed -n '31,35p' docs/testing.md \| awk -F'\|' '{s+=$3} END {print s}'` → `53` |
+| **D53** | `docs/testing.md:51` | "Six jobs run on every push and pull request" | **11 jobs; 3 conditional; 8 unconditional.** Five were omitted, and one of the six named (`publish`) runs on neither trigger. CI also runs on pushes to `main` and PRs to `main`, not every push | `node -e "…y.load(ci.yml); Object.entries(w.jobs)…"` — the enumerating command now ships in the doc |
+| **D54** | `docs/testing.md:57` | "c8 with threshold enforcement (60% lines, 50% branches)" | **Actual `.c8rc.json`: lines 83, branches 80, functions 88** — both numbers wrong, a third threshold unmentioned. ⚠ The config is not in `package.json`, so grepping there concludes no thresholds exist | `cat .c8rc.json` |
+| **D55** | `docs/testing.md:139-141` | "Known Coverage Gaps" at 29% / 56% / 37% | **Obsolete, not stale** — all three are now far above the enforced thresholds, and the section heading contradicted its own corrected body, so the heading moved too. ⚠ **Project memory carried the same three wrong figures and was corrected the same day** — memory is not a source | `npm run test:coverage` |
+| **D56** | `docs/testing.md:40` | "`npm test` — Unit tests" | Runs **four** directories, three of which are not `tests/unit`; `test:p0`, `docs:audit` were absent from the block | `node -e "console.log(require('./package.json').scripts.test)"` |
+| **D57** | `docs/testing.md:88` | Wade's Domain 4 "Error Handling" | The cited source says **"Output Quality"**. Domains 1-3 matched and the counts were right, so everything read verified unless you opened the target. Closed by **R2**'s deletion | `grep -n "^## Domain" _bmad-output/_archive/phase-2/wade-p0-test-execution.md` |
+| **D58** | `docs/testing.md:90` | "Live Test Suite: 5/5 PASSED (activation, full workflow, validation, chat, party mode)" | **Only "activation" was real**; the other four named no test, and the 5/5 came from a file `testing.md` never cited. Closed by **R2**'s deletion | `grep -n "^### Test" _bmad-output/_archive/phase-2/wade-live-test-results.md` |
+| **D59** | `docs/testing.md:129` | Gyre "P0 content tests for voice consistency, persona accuracy, workflow activation" | **Zero Gyre coverage.** `tests/p0/` is Vortex-only by construction | `grep -rn -il "gyre\|stack-detective" tests/p0/` → exit 1 · `grep -n AGENTS_DIR tests/p0/helpers.js` |
+| **D60** | `docs/testing.md:127` | "`convoke-doctor` checks Gyre agents, workflows, config, and contracts" | **No contracts check exists** — a partial-truth sentence whose other three nouns are real | `grep -niE "contracts\|GC[0-9]" scripts/convoke-doctor.js scripts/update/lib/validator.js` → exit 1 |
+| **D61** | `docs/testing.md:32` | "v1.0.x, v1.3.x, v1.4.x upgrade paths to v1.5.0" | **`v1.7.x` is tested and was unlisted**, and the chain no longer ends at 1.5.0 | `grep -n "^describe(" tests/integration/upgrade.test.js` |
+| **D62** | `what-convoke-brings:16` | "Its core modules cover four canonical phases of software delivery" over a list of four | **Under-enumeration read as exhaustive** — the shipped manifest carries six upstream modules; `core` and `wds` are absent from the list. Claim reduced to shape and pointed at the manifest. *(This is AC7's WDS reading: the file never mentions WDS, so the epic's "conflating sentence" class has no target here — the defect is an omission)* | `grep -oE '"[a-z]+","_bmad/' _bmad/_config/skill-manifest.csv \| cut -d'"' -f2 \| sort -u` → `bmb bme bmm cis core tea wds` |
+
+**Per-class sweep, `0` written as `0`.** Classes the counter does not see, each swept by its own command:
+statistics/percentages **6** (all six wrong — `D50`, `D54`, `D55`); dates **2 in scope, both HOLD**
+(`what-convoke-brings:8` and `references.md:6`, each matching its file's last commit month);
+unbackticked prose paths **0** (six real ones, all resolve — `Node.js` is a regex false positive);
+requirement identifiers **0** across all six prose files; agent and team names **0** (all 7 Vortex and
+4 Gyre names correct); CI job names **1** (`D53`); word-form counts **1** (`Six jobs`; *"Twenty-two
+workflows"*, *"Five additions"*, *"Three capabilities"*, *"seven-stream"* all verified and HOLD);
+table-internal arithmetic **1** (`D52`); partial-truth sentences **1** (`D60`).
+
+**The audit-scope ruling: admission DECLINED for all five ungated files.** Measured, not assumed — all
+six per-file checks return **0** on `SECURITY.md`, `CREDITS.md`, `CODE_OF_CONDUCT.md`,
+`what-convoke-brings-to-bmad-method.md` and `references.md`, so admitting them would have caught **none**
+of the twenty findings above while falsifying the "17 user-facing files" claim that Story 1.5 pinned with
+a test. For `references.md` the instrument is also wrong: it would put 63 external URLs and 72 academic
+titles under `checkStaleReferences` and `checkBrokenLinks`. **This is the opposite of Story 1.5's AC6
+decision, and deliberately so** — 1.5's file had defects the checks could see; these do not.
+
+**`npm run docs:audit` is annotated for this story:** it is **inapplicable** to five of the seven files,
+and **green-but-blind** on `docs/testing.md`, where it passed over every defect above. Per NFR3 it is
+cited here only as a non-regression check, never as evidence any document is correct.
 
 ## Method for Stories 2–4
 

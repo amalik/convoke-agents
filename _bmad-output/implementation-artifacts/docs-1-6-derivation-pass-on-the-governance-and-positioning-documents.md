@@ -1,6 +1,10 @@
+---
+baseline_commit: 9e986db842b3b99b36e9a1000b27d8a0de419e41
+---
+
 # Story 1.6: Derivation pass on the governance and positioning documents
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -230,32 +234,32 @@ Known members include `:39` (`Vortex (7 agents)`, `Gyre (4 agents)`), `:153` (`7
 > **Read all seven files end to end before running anything.** AC2 exists because the counter is not the
 > worklist, and the fastest way to inherit that mistake is to start from `--json`.
 
-- [ ] **Task 1 — Re-derive and report the divergence (AC: 1)**
-  - [ ] Run the counter over all seven; paste output with its command; compare to the epic's `28`
-  - [ ] Record as FLOORS. Explicitly note that `CREDITS.md` and `CODE_OF_CONDUCT.md` are **no longer `0`**, and that `README.md`'s cell is blank
-- [ ] **Task 2 — Sweep the classes the counter misses (AC: 2)**
-  - [ ] Each class by its own command; `0` written as `0`; include the table-arithmetic and partial-truth checks
-- [ ] **Task 3 — Governance files (AC: 3, 4, 5)**
-  - [ ] `D43` per **R1** (GitHub route, never an invented email) · `D44` agent name only, not the section heading · `D45` fix the prose, keep `4.0.x`
-  - [ ] Re-prove the `amalik` handle before touching any URL
-- [ ] **Task 4 — Positioning files (AC: 5, 7)**
-  - [ ] `D46` fix `what-convoke-brings`, **not** the README · `D47` against the shipped manifest · `D48`, `D49`
-  - [ ] Apply **R3**: leave the 7 positioning claims; file them as a backlog row
-  - [ ] Record the WDS reading per AC7 rather than reporting "none found"
-- [ ] **Task 5 — `docs/testing.md` (AC: 5)** — the bulk of the work
-  - [ ] Apply **R2**: delete lines 64-118, point at the live suite
-  - [ ] `D50` delete the arithmetic, name the command · `D51` derive all 14 or drop the column · `D52`-`D56`, `D59`-`D61`
-- [ ] **Task 6 — `docs/references.md` (AC: 5)**
-  - [ ] Verify lines 39 and 153. Expect **no edit**. Record as examined with `0` findings
-- [ ] **Task 7 — Audit-scope ruling (AC: 6)**
-  - [ ] Record the DECLINE for all five with its reason; annotate the DoD's `docs:audit` line
-- [ ] **Task 8 — Findings note and coverage table (AC: 1, DoD)**
-  - [ ] All seven rows `Examined: yes` with counts; `0` written as `0`. **Your own rows only** — the freeze banner permits exactly that
-- [ ] **Task 9 — Verify and hand off**
-  - [ ] `npm run lint` → 0 · `npm test` → 0 · `node scripts/audit/backlog-integrity.js` → 0 · `npm run docs:audit` → 0 **and annotated per AC6**
-  - [ ] Capture exit codes **without a pipe** — `${PIPESTATUS[0]}` is bash, this shell is zsh (`verification-pipefail`)
-  - [ ] **AC8 sweep** — run every command you wrote into a document, from the reader's directory
-  - [ ] Commit plan with a Round 1 review record; `git diff HEAD --name-only` before staging
+- [x] **Task 1 — Re-derive and report the divergence (AC: 1)**
+  - [x] Run the counter over all seven; paste output with its command; compare to the epic's `28`
+  - [x] Record as FLOORS. Explicitly note that `CREDITS.md` and `CODE_OF_CONDUCT.md` are **no longer `0`**, and that `README.md`'s cell is blank
+- [x] **Task 2 — Sweep the classes the counter misses (AC: 2)**
+  - [x] Each class by its own command; `0` written as `0`; include the table-arithmetic and partial-truth checks
+- [x] **Task 3 — Governance files (AC: 3, 4, 5)**
+  - [x] `D43` per **R1** (GitHub route, never an invented email) · `D44` agent name only, not the section heading · `D45` fix the prose, keep `4.0.x`
+  - [x] Re-prove the `amalik` handle before touching any URL
+- [x] **Task 4 — Positioning files (AC: 5, 7)**
+  - [x] `D46` fix `what-convoke-brings`, **not** the README · `D47` against the shipped manifest · `D48`, `D49`
+  - [x] Apply **R3**: leave the 7 positioning claims; file them as a backlog row
+  - [x] Record the WDS reading per AC7 rather than reporting "none found"
+- [x] **Task 5 — `docs/testing.md` (AC: 5)** — the bulk of the work
+  - [x] Apply **R2**: delete lines 64-118, point at the live suite
+  - [x] `D50` delete the arithmetic, name the command · `D51` derive all 14 or drop the column · `D52`-`D56`, `D59`-`D61`
+- [x] **Task 6 — `docs/references.md` (AC: 5)**
+  - [x] Verify lines 39 and 153. Expect **no edit**. Record as examined with `0` findings
+- [x] **Task 7 — Audit-scope ruling (AC: 6)**
+  - [x] Record the DECLINE for all five with its reason; annotate the DoD's `docs:audit` line
+- [x] **Task 8 — Findings note and coverage table (AC: 1, DoD)**
+  - [x] All seven rows `Examined: yes` with counts; `0` written as `0`. **Your own rows only** — the freeze banner permits exactly that
+- [x] **Task 9 — Verify and hand off**
+  - [x] `npm run lint` → 0 · `npm test` → 0 · `node scripts/audit/backlog-integrity.js` → 0 · `npm run docs:audit` → 0 **and annotated per AC6**
+  - [x] Capture exit codes **without a pipe** — `${PIPESTATUS[0]}` is bash, this shell is zsh (`verification-pipefail`)
+  - [x] **AC8 sweep** — run every command you wrote into a document, from the reader's directory
+  - [x] Commit plan with a Round 1 review record; `git diff HEAD --name-only` before staging
 
 ## Dev Notes
 
@@ -320,34 +324,137 @@ that test red until the prose moves**. That coupling is deliberate; do not loose
 
 ## Definition of Done
 
-- [ ] `npm run docs:audit` exits 0. **Its passing is a non-regression check, not evidence of accuracy** — the
+- [x] `npm run docs:audit` exits 0. **Its passing is a non-regression check, not evidence of accuracy** — the
       epic exists because it passes on defective files, **and this story may not cite it as proof any document
       is correct** *(NFR3, verbatim)* — **and annotated per AC6**: vacuous for five of seven files, and
       green-but-blind on `docs/testing.md`.
-- [ ] Every finding carries a reproducing command (NFR1) from an artifact the operator receives — never
+- [x] Every finding carries a reproducing command (NFR1) from an artifact the operator receives — never
       `.claude/skills/` (NFR8).
-- [ ] Every external identifier is executed against external truth, not accepted as plausible (AC3).
-- [ ] Every missing class in AC2's table is swept and reported, `0` written as `0`.
-- [ ] Every check cited as evidence in the Dev Agent Record names how it was shown able to fail (NFR5).
-- [ ] Every claim written or kept obeys the source-of-truth rule (FR3a), as bounded by rulings R3 and R4.
-- [ ] The findings note's coverage table is updated **in the same commit** (FR10), carrying all seven files
+- [x] Every external identifier is executed against external truth, not accepted as plausible (AC3).
+- [x] Every missing class in AC2's table is swept and reported, `0` written as `0`.
+- [x] Every check cited as evidence in the Dev Agent Record names how it was shown able to fail (NFR5).
+- [x] Every claim written or kept obeys the source-of-truth rule (FR3a), as bounded by rulings R3 and R4.
+- [x] The findings note's coverage table is updated **in the same commit** (FR10), carrying all seven files
       with `Examined: yes` and a findings count. **`0` findings is written as `0`; blank means *not examined***.
-- [ ] `npm run lint` exits 0 with zero warnings in any file this story modifies.
-- [ ] `npm test` green.
-- [ ] Commit plan emitted with a Round 1 review record (NFR4); reviewed file set equals staged file set.
+- [x] `npm run lint` exits 0 with zero warnings in any file this story modifies.
+- [x] `npm test` green.
+- [x] Commit plan emitted with a Round 1 review record (NFR4); reviewed file set equals staged file set.
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`
+
 ### Debug Log References
+
+Exit codes captured without a pipe (`verification-pipefail`; this shell is zsh):
+`npm run lint` → **0** · `npm test` → **0** (2351 tests, 0 fail, 1 skipped) ·
+`node scripts/audit/backlog-integrity.js` → **0** · `npm run docs:audit` → **0**.
+
+**`docs:audit` annotated per AC6.** It is **inapplicable** to five of this story's seven files, which
+are absent from `USER_FACING_DOCS`, and **green-but-blind** on `docs/testing.md`, where it passed over
+all twelve findings. Per NFR3 it is cited as a non-regression check only, never as evidence that any
+document is correct.
+
+**NFR5 — how each check was shown able to fail.** Mutated copies **in memory only**; the working tree
+was never modified. `checkStaleReferences` on `CREDITS.md` 0→1; `checkBrokenPaths` on `SECURITY.md`
+0→1; `checkBrokenLinks` on `CREDITS.md` 0→1. Separately on the edited `docs/testing.md`:
+`all 4 agents` → `all 9 agents` takes `checkStaleReferences` 0→1, so the registry guard is live on the
+file after editing — the counts the tables kept are still defended.
+
+**Commands extracted from the documents and run verbatim**, not retyped: the CI-enumeration `node -e`
+block now in `docs/testing.md`, and the quote-aware manifest parse in
+`what-convoke-brings-to-bmad-method.md`. Both produce exactly what the surrounding prose claims.
 
 ### Completion Notes List
 
+**AC1 — re-derived; 112, and the two `0`s were the trap the story said they were.**
+Floors: `docs/testing.md` 38 · `SECURITY.md` 5 · `CREDITS.md` **1** · `CODE_OF_CONDUCT.md` **1** ·
+`what-convoke-brings` 12 · `README.md` 45 · `references.md` 10 = **112**, with 110 unclassified
+candidates. The epic's input was **28** — a 4× divergence, reported here as a finding about the input.
+`CREDITS.md` and `CODE_OF_CONDUCT.md` are recorded as `0` in the note's frozen density table and are
+**not** zero; had I read the table instead of deriving, the epic's "a zero-assertion file is recorded as
+`0`" clause would have let me skip both — and each carried a finding. The figures match Story 1.4's
+projection of 112 exactly, so **no scope call is owed**.
+
+**AC2 — per-class sweep, `0` written as `0`.** statistics **6** (all six wrong) · dates **2 in scope,
+both HOLD** · unbackticked prose paths **0** (six resolve; `Node.js` is a regex false positive) ·
+requirement identifiers **0** · agent and team names **0** (all 7 Vortex, all 4 Gyre correct) ·
+CI job names **1** · word-form counts **1** · table-internal arithmetic **1** · partial-truth **1**.
+
+**AC2a — every assertion dispositioned, grouped rather than enumerated.** 112 assertions across seven
+files: **20 reported as findings** (`D43`-`D62`), the remainder **checked and holding**. Per-file
+dispositions equal the floors in the coverage table; regenerate with the AC1 command. Holdings are
+recorded by file and class in the findings note rather than line by line, because Story 1.4's review
+killed a transcribed per-kind tally twice.
+
+**AC3 — executed, nothing hedged.** `gh auth status` → account **amalik**;
+`gh api repos/amalik/convoke-agents --jq .owner.login` → `amalik` (re-proved **before** touching any
+URL); `private-vulnerability-reporting` → `{"enabled":true}`; `npm view convoke-agents dist-tags` →
+`{ latest: '4.0.1' }`. The community-health API was **not** used as evidence for `D43`, per AC3 — it
+reports 100% with the contact blank.
+
+**AC4 — all four rulings applied.** `R1`: the CoC contact is the GitHub route; **no address was
+invented**, and none exists in the repository to invent from. `R2`: the Agent Test Results section was
+replaced by a pointer to the live suite. `R3`: the seven positioning claims were left untouched; only
+falsifiable defects were fixed in that file. `R4`: `SECURITY.md`'s SLA and crediting commitments are
+intact.
+
+⚠ **`R3` names the wrong IDs** — it says "fix only the falsifiable defects there (`D44`, `D45`)", but
+`D44`/`D45` are `CREDITS.md` and `SECURITY.md`; the defects in `what-convoke-brings` are `D46`/`D47`.
+**AC4a is declared canonical and was followed.** This is exactly the drift AC4a was added to absorb, and
+it absorbed it. Three Task lines carry the same pre-review wording — Task 5 says "delete lines 64-118"
+where `R2` says 63-119, Task 1 says README's cell is "blank" where AC1 says `—`, and Task 6 says "verify
+lines 39 and 153" where AC5 says enumerate 21 candidates. AC4a and the ACs were followed in each case.
+
+**AC5 — 20 findings, every one re-verified at HEAD before editing.** `D62` is new (the module
+under-enumeration AC7 predicted). `D57` and `D58` were closed by `R2`'s deletion; `D50`, `D52` and
+`D53` were **not** — they live at `:11` and `:51`, outside the deleted range, and were fixed
+individually, which is the error AC4a exists to prevent.
+
+**AC6 — admission DECLINED for all five, measured not assumed.** All six per-file checks return **0** on
+every ungated file, so admission would have caught **none** of the twenty findings while falsifying the
+"17 user-facing files" claim Story 1.5 pinned with a test. `scripts/docs-audit.js` was not touched.
+
+**AC7 — every trap held.** `.gyre/` left alone in README (4 occurrences; the stale object is
+`_gyre/config.yaml`). "Twenty-two workflows" left alone — correct; `name-registry.csv`'s 23 is the
+outlier. Coach's emoji untouched. `skill-manifest.csv` untouched. `README`'s live version badge
+untouched. The installer-equivalence sentence left alone. The WDS reading was **recorded as `D62`**
+rather than reported as "no conflation found".
+
+**AC8 — and I walked into its named trap, twice.** Writing `D46`'s fix I typed
+`require('convoke-agents/package.json')` — *the exact command AC8 warns about, the one `docs-1-5`
+shipped that throws*. I ran it, it threw, and it was replaced with commands that execute from a
+checkout. Then `D62`'s first command used `cut -d,` on the manifest, which splits inside the quoted
+description field and returned noise — the trap `D49`'s own row describes. Replaced with a quote-aware
+form and re-extracted from the file to confirm. **Both were caught only because AC8 required running
+them; neither would have been caught by review of the prose.** No file was deleted
+(`git status --porcelain | grep '^.D'` → empty), so the rename trap does not arise.
+
+**`docs/references.md`: zero edits, which is the correct outcome.** Enumerated 21 `Project relevance`
+candidates and filtered by where the source of truth lives. Every repository-facing claim HOLDS —
+Vortex 7, Gyre 4, `HC1`-`HC5` as files plus `HC6`-`HC10` in the compass reference, `GC1`-`GC4`,
+Scout/Atlas/Lens/Coach, the `7-stream` claim the counter cannot see, and the `.gyre/capabilities.yaml`
+reference whose referent is **not** under `_bmad/` (`find _bmad -name capabilities.yaml` → 0, and
+reading that as a defect is the trap). Recorded as examined with **0** findings.
+
 ### File List
+
+- `CODE_OF_CONDUCT.md` — modified (`D43`)
+- `CREDITS.md` — modified (`D44`)
+- `SECURITY.md` — modified (`D45`)
+- `docs/what-convoke-brings-to-bmad-method.md` — modified (`D46`, `D47`, `D62`)
+- `README.md` — modified (`D48`, `D49`)
+- `docs/testing.md` — modified (`D50`-`D61`)
+- `docs/references.md` — **examined, not modified** (0 findings)
+- `_bmad-output/planning-artifacts/convoke-note-docs-accuracy-findings-4-0-2.md` — modified (findings `D43`-`D62`; own coverage rows only)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (status)
+- `_bmad-output/implementation-artifacts/docs-1-6-derivation-pass-on-the-governance-and-positioning-documents.md` — modified (this record)
 
 ## Change Log
 
 | Date | Change |
 |------|--------|
+| 2026-09-13 | **Implemented.** 20 findings (`D43`-`D62`) across seven files; **112** assertions dispositioned, matching Story 1.4's projection exactly, against the epic's stale input of 28. `docs/references.md` returned **zero edits** — all 21 `Project relevance` candidates enumerated, every repository-facing claim holds, recorded as examined with `0`. **Audit-scope admission DECLINED for all five ungated files** (the reverse of 1.5, and measured: all six per-file checks return 0 on each, so admission catches none of the 20 findings while falsifying the "17 files" claim 1.5 pinned). Four operator rulings applied; **`R3` names the wrong defect IDs and `AC4a` absorbed it**, which is what AC4a was added for. **AC8's named trap was hit twice and caught only by running the commands**: `require('convoke-agents/package.json')` — the exact command `docs-1-5` shipped that throws — and a `cut -d,` on the manifest that splits inside the quoted description field. Both replaced and re-extracted from the file to confirm. `npm run lint` 0 · `npm test` 0 (2351) · `backlog-integrity` 0 · `npm run docs:audit` 0 (annotated per AC6 — inapplicable to five of seven files, green-but-blind on the sixth). |
 | 2026-09-13 | **Story created.** Authored after three parallel read-only reconnaissance passes (governance/contact, positioning, testing/references) which checked ~264 assertions and confirmed **19 defects** with commands. Four findings shaped the ACs rather than the epic's text: (1) **the audit-scope decision REVERSES 1.5's** — admitting these files to `USER_FACING_DOCS` catches *none* of the defects (all six per-file checks return empty) while falsifying the "17 files" claim 1.5 pinned, so AC6 declines with reasons; (2) **`CREDITS.md` and `CODE_OF_CONDUCT.md` are recorded as `0` assertions and are not zero any more**, which turns the epic's "a zero-assertion file is recorded as 0" clause into a trap; (3) **the CoC enforcement contact cannot be derived from the repository at all** — it is the one defect a fixer cannot close alone, so R1 carries the operator's ruling; (4) **`references.md`'s in-scope set is three lines, not the counter's ten, and one of the three is invisible to the counter** — the epic's own lesson in miniature. Four operator rulings (R1-R4) are carried in AC4 so the implementer does not guess. Project memory's "Remaining Test Debt" figures were found stale by 3-6x and corrected the same day — they would have confirmed `D55`'s wrong numbers. |

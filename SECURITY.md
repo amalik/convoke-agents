@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Only the latest published release receives security fixes. There are no maintenance branches and no backports.
+Security fixes land on the current minor line, shipped as a new release on it. There are no maintenance branches and no backports to earlier lines — if you are on an older line, upgrading is the fix. Derive what is current with `npm view convoke-agents dist-tags`.
 
 | Version | Supported |
 |---------|-----------|

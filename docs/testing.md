@@ -8,114 +8,91 @@ Overview of the Convoke automated test suite, CI pipeline, and agent validation 
 
 Zero-dependency test runner using `node:test`.
 
-**Current stats:** 184 tests (130 unit + 54 integration) | 83.4% line coverage
+**No totals are stated here.** They change on almost every commit and nothing in the repository pins them, so a number written here is wrong within days. Derive them: `npm run test:all` runs every suite, and `npm run test:coverage` reports coverage against the thresholds in `.c8rc.json`.
 
 ### Unit Tests
 
-| Suite | Tests | Coverage Area |
-|-------|-------|---------------|
-| utils | 12 | `compareVersions`, `getPackageVersion`, `findProjectRoot` |
-| registry | 19 | `getMigrationsFor`, `getBreakingChanges`, `hasMigrationBeenApplied` |
-| version-detector | 23 | `getCurrentVersion`, `detectInstallationScenario` |
-| config-merger | 17 | `mergeConfig`, `validateConfig`, `addMigrationHistory` |
-| backup-manager | 11 | `createBackup`, `restoreBackup`, `cleanupOldBackups` |
-| migration-runner | 10 | `executeMigration`, `previewMigrations`, `MigrationError` |
-| migration-runner-orchestration | 9 | `runMigrations` full cycle, dry-run, skip, lock conflict, error handling |
-| validator | 23 | `validateInstallation`, config, agents, workflows, manifest, user data |
-| migrations-to-1.5.0 | 6 | 1.3.x and 1.4.x migration metadata, preview, apply |
+*A selection, not a census — `tests/unit/` holds far more files than the rows below. Per-suite counts
+are not listed: they rot on every commit and nothing pins them. For a count, run the file.*
+
+| Suite | Coverage Area |
+|-------|---------------|
+| utils | `compareVersions`, `getPackageVersion`, `findProjectRoot` |
+| registry | `getMigrationsFor`, `getBreakingChanges`, `hasMigrationBeenApplied` |
+| version-detector | `getCurrentVersion`, `detectInstallationScenario` |
+| config-merger | `mergeConfig`, `validateConfig`, `addMigrationHistory` |
+| backup-manager | `createBackup`, `restoreBackup`, `cleanupOldBackups` |
+| migration-runner | `executeMigration`, `previewMigrations`, `MigrationError` |
+| migration-runner-orchestration | `runMigrations` full cycle, dry-run, skip, lock conflict, error handling |
+| validator | `validateInstallation`, config, agents, workflows, manifest, user data |
+| migrations-to-1.5.0 | 1.3.x and 1.4.x migration metadata, preview, apply |
 
 ### Integration Tests
 
-| Suite | Tests | Coverage Area |
-|-------|-------|---------------|
-| fresh-install | 9 | `refreshInstallation` end-to-end (all 7 agents) |
-| upgrade | 22 | v1.0.x, v1.3.x, v1.4.x upgrade paths to v1.5.0 |
-| cli-entry-points | 8 | `index.js`, `convoke-version`, `convoke-update`, `convoke-doctor` |
-| installer-e2e | 7 | `install-vortex-agents` CLI end-to-end, idempotency |
-| convoke-doctor | 7 | Negative paths: no project, missing config, invalid YAML, missing agents, stale lock, version mismatch |
+*Also a selection. Enumerate the suites with `ls tests/integration/*.test.js`.*
+
+| Suite | Coverage Area |
+|-------|---------------|
+| fresh-install | `refreshInstallation` end-to-end (all 7 agents) |
+| upgrade | Simulated upgrades from v1.0.x, v1.3.x, v1.4.x and v1.7.x; the migration chain runs past 4.0.0 — read `scripts/update/migrations/registry.js` for the current end point |
+| cli-entry-points | `index.js`, `convoke-version`, `convoke-update`, `convoke-doctor` |
+| installer-e2e | `install-vortex-agents` CLI end-to-end, idempotency |
+| convoke-doctor | Negative paths: no project, missing config, invalid YAML, missing agents, stale lock, version mismatch |
 
 ### Running Tests
 
 ```bash
-npm test                 # Unit tests
-npm run test:integration # Integration tests
-npm run test:all         # All tests
-npm run test:coverage    # Tests with coverage thresholds
+npm test                 # tests/unit, tests/team-factory, tests/lib, tests/audit
+npm run test:integration # tests/integration
+npm run test:p0          # tests/p0 — agent activation and content correctness
+npm run test:all         # the three above, in sequence
+npm run test:coverage    # c8, enforcing the thresholds in .c8rc.json
 npm run lint             # ESLint
+npm run docs:audit       # documentation staleness and link checks
 ```
 
 ---
 
 ## CI Pipeline
 
-Six jobs run on every push and pull request:
+The workflow defines more jobs than are listed below, and not all of them run on every event — three are
+conditional. Enumerate them and their conditions rather than trusting this table to be complete:
+
+```bash
+node -e "const y=require('js-yaml'),w=y.load(require('fs').readFileSync('.github/workflows/ci.yml','utf8'));
+for (const [n,j] of Object.entries(w.jobs)) console.log(n, j.if ? '(conditional: '+j.if+')' : '')"
+```
+
+CI runs on pushes to `main`, on pull requests targeting `main`, and on `v*` tags — not on every push to
+every branch. The jobs most people care about:
 
 | Job | What it does |
 |-----|-------------|
 | `lint` | ESLint with architecture rules (e.g., no `process.cwd()`) |
 | `test` | Node 18/20/22 matrix, unit + integration |
-| `coverage` | c8 with threshold enforcement (60% lines, 50% branches) |
+| `coverage` | c8 enforcing the thresholds in `.c8rc.json`; also the only job that runs `tests/p0` |
 | `security` | `npm audit --omit=dev` |
 | `package-check` | `npm pack --dry-run` + `node index.js` |
-| `publish` | Automated npm publish on `v*` tags |
+| `fresh-install` | packs a tarball and installs it into a throwaway project |
+| `agent-surface-parity` | compares the operator-facing agent surface across two refs |
+| `publish` | npm publish, **on `v*` tags only** — not on pushes or pull requests |
 
 ---
 
 ## Agent Test Results
 
-### Emma - P0 Suite: 18/18 PASSED
+Agent behaviour is covered by the automated P0 suite — activation, voice consistency, handoff contracts,
+Compass routing and workflow structure, with a dedicated file per Vortex agent:
 
-| Domain | Scenarios | Passed |
-|--------|-----------|--------|
-| Agent Activation | 7 | 7 |
-| Command Processing | 3 | 3 |
-| Workflow Execution | 6 | 6 |
-| Registration | 3 | 2* |
+```bash
+npm run test:p0                              # the whole suite
+node --test tests/p0/p0-emma.test.js         # one agent
+ls tests/p0/                                 # what exists
+```
 
-*One environment limitation (slash command) — validated workaround exists.
-
-Quality Gates: 6/6 PASSED (coverage, pass rate, critical path, risk mitigation, usability, documentation)
-
-See: [Emma P0 Test Results](../_bmad-output/_archive/phase-1/emma-p0-test-results.md)
-
-### Wade - P0 Suite: 18/18 PASSED
-
-| Domain | Scenarios | Passed |
-|--------|-----------|--------|
-| Activation & Registration | 6 | 6 |
-| Command Processing | 3 | 3 |
-| Workflow Execution | 6 | 6 |
-| Error Handling | 3 | 3 |
-
-Live Test Suite: 5/5 PASSED (activation, full workflow, validation, chat, party mode)
-
-Quality Gates: 6/6 PASSED
-
-See: [Wade P0 Test Results](../_bmad-output/_archive/phase-2/wade-p0-test-execution.md)
-
-### Isla - Infrastructure Validated
-
-Isla follows the same agent architecture as Emma and Wade. Infrastructure validation covered by:
-- Fresh-install integration tests
-- Upgrade path tests (v1.3.x, v1.4.x)
-- CLI entry point verification
-- Each of Isla's workflow directories validated (templates, steps, validation)
-
-### Mila - Infrastructure Validated
-
-Same infrastructure validation as Isla. Content correctness validated by P0 content-only tests (voice consistency, persona accuracy, workflow activation).
-
-### Liam - Infrastructure Validated
-
-Same infrastructure validation as Isla. Content correctness validated by P0 content-only tests (voice consistency, persona accuracy, workflow activation).
-
-### Noah - Infrastructure Validated
-
-Same infrastructure validation as Isla. Content correctness validated by P0 content-only tests (voice consistency, persona accuracy, workflow activation).
-
-### Max - Infrastructure Validated
-
-Same infrastructure validation as Isla. Content correctness validated by P0 content-only tests (voice consistency, persona accuracy, workflow activation).
+*This section previously transcribed manual test runs from February 2026, recorded against agent
+identities that no longer exist ("Emma (empathy-mapper)", "Wade (wireframe-designer)"). The automated
+suite supersedes them and is derived rather than transcribed, so no counts are restated here.*
 
 ---
 
@@ -124,21 +101,21 @@ Same infrastructure validation as Isla. Content correctness validated by P0 cont
 Gyre agents are markdown-only (no JS code beyond installation scripts). Test coverage focuses on:
 
 - **Installation validation** — `convoke-install-gyre` creates correct directory structure, all 4 agents and 7 workflows present
-- **Doctor validation** — `convoke-doctor` checks Gyre agents, workflows, config, and contracts
+- **Doctor validation** — `convoke-doctor` checks Gyre agents, workflows and config. It does **not** check handoff contracts; no contracts check exists (`grep -niE 'contracts|GC[0-9]' scripts/convoke-doctor.js scripts/update/lib/validator.js` returns nothing)
 - **Refresh validation** — `refreshInstallation` handles Gyre module alongside Vortex
-- **Agent activation** — P0 content tests for voice consistency, persona accuracy, workflow activation
+- **Agent activation** — ⚠ **not covered.** `tests/p0/` is Vortex-only by construction (`grep -n AGENTS_DIR tests/p0/helpers.js`), so no Gyre agent has a P0 content test. Gyre's coverage is the installation and refresh paths above, not agent behaviour
 
 Infrastructure tests (registry, config-merger, validator) cover Gyre through the same shared update pipeline as Vortex.
 
 ---
 
-## Known Coverage Gaps
+## Coverage
 
-| Module | Coverage | Notes |
-|--------|----------|-------|
-| `convoke-update.js` | 29% | CLI orchestration — low ROI for unit testing |
-| `convoke-version.js` | 56% | CLI branch coverage |
-| `1.0.x-to-1.3.0.js` | 37% | Legacy migration apply logic |
+The modules once listed here as gaps — `convoke-update.js`, `convoke-version.js` and the `1.0.x-to-1.3.0`
+migration — are no longer gaps; all three now sit well above the enforced thresholds. **No per-module
+figures are restated here**, because a coverage percentage rots on almost every commit and nothing pins
+it. Run `npm run test:coverage` and read the per-file table it prints; `.c8rc.json` holds the thresholds
+that actually gate CI.
 
 ---
 
