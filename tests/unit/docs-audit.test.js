@@ -865,25 +865,57 @@ describe('USER_FACING_DOCS', () => {
   });
 
   // The previous two cases assert a handful of inclusions and exclusions; neither pins the
-  // list, so an entry naming a file that no longer exists passed unnoticed.
-  it('every entry resolves to a file on disk', () => {
+  // list, so an entry naming a file that no longer exists passed unnoticed. statSync().isFile()
+  // rather than existsSync(): a directory entry satisfies existsSync but makes runAudit throw
+  // EISDIR on readFileSync (R2 finding).
+  it('every entry resolves to a readable file on disk', () => {
     const root = path.resolve(__dirname, '../..');
-    const missing = USER_FACING_DOCS.filter((rel) => !fs.existsSync(path.join(root, rel)));
-    assert.deepEqual(missing, [], `USER_FACING_DOCS names files that do not exist: ${missing.join(', ')}`);
+    const bad = USER_FACING_DOCS.filter((rel) => {
+      try {
+        return !fs.statSync(path.join(root, rel)).isFile();
+      } catch {
+        return true;
+      }
+    });
+    assert.deepEqual(bad, [], `USER_FACING_DOCS entries that are not readable files: ${bad.join(', ')}`);
   });
 
-  // docs-1-5 AC6/AC8: BMAD-METHOD-COMPATIBILITY.md states how many user-facing files the
-  // audit covers. Adding an entry to USER_FACING_DOCS falsifies that sentence and no check
-  // would have caught it. This binds the prose to the array that owns it.
-  it('matches the file count documented in BMAD-METHOD-COMPATIBILITY.md', () => {
+  // docs-1-5 AC6/AC8: BMAD-METHOD-COMPATIBILITY.md states how many user-facing files the audit
+  // covers. Adding an entry to USER_FACING_DOCS falsifies that sentence and no check would have
+  // caught it. This binds the prose to the array that owns it.
+  //
+  // TWO denominators, not one — the R2 review found the single-number version was false.
+  // runAudit exempts CHANGELOG.md from checkStaleReferences and checkBrokenPaths (docs-audit.js),
+  // so only broken-link detection covers the whole list. Both numbers are derived here, never
+  // transcribed, so the exemption changing moves the expectation with it.
+  //
+  // The patterns tolerate emphasis, line wrapping and thousands separators, and are asserted to
+  // occur exactly once so a second (e.g. illustrative) occurrence cannot give a false pass by
+  // matching first.
+  it('matches both file counts documented in BMAD-METHOD-COMPATIBILITY.md', () => {
     const root = path.resolve(__dirname, '../..');
-    const doc = fs.readFileSync(path.join(root, 'docs/BMAD-METHOD-COMPATIBILITY.md'), 'utf8');
-    const m = doc.match(/across (\d+) user-facing files/);
-    assert.ok(m, 'BMAD-METHOD-COMPATIBILITY.md no longer states "across N user-facing files"');
-    assert.equal(
-      Number(m[1]),
-      USER_FACING_DOCS.length,
-      `doc says ${m[1]} user-facing files; USER_FACING_DOCS has ${USER_FACING_DOCS.length}`
-    );
+    const docPath = path.join(root, 'docs/BMAD-METHOD-COMPATIBILITY.md');
+    assert.ok(fs.existsSync(docPath), `${docPath} is missing — the count claim it carries is unpinned`);
+    const doc = fs.readFileSync(docPath, 'utf8');
+
+    const num = (s) => Number(String(s).replace(/[,\s*]/g, ''));
+    const allRe = /across all\s+\*{0,2}([\d,]+)\*{0,2}\s+user-facing\s+files/g;
+    const someRe = /detection across\s+\*{0,2}([\d,]+)\*{0,2}\s+of them/g;
+
+    const all = [...doc.matchAll(allRe)];
+    const some = [...doc.matchAll(someRe)];
+    assert.equal(all.length, 1, `expected exactly one "across all N user-facing files", found ${all.length}`);
+    assert.equal(some.length, 1, `expected exactly one "detection across N of them", found ${some.length}`);
+
+    // Derive the exempt set from the audit source rather than hardcoding CHANGELOG.md.
+    const auditSrc = fs.readFileSync(path.join(root, 'scripts/docs-audit.js'), 'utf8');
+    const exemptM = auditSrc.match(/if \(relPath !== '([^']+)'\) \{/);
+    assert.ok(exemptM, 'docs-audit.js no longer exempts a file from the per-file checks — update this test');
+    const exemptCount = USER_FACING_DOCS.includes(exemptM[1]) ? 1 : 0;
+
+    assert.equal(num(all[1] ? all[1][1] : all[0][1]), USER_FACING_DOCS.length,
+      `doc says ${all[0][1]} files for the check that covers all of them; USER_FACING_DOCS has ${USER_FACING_DOCS.length}`);
+    assert.equal(num(some[0][1]), USER_FACING_DOCS.length - exemptCount,
+      `doc says ${some[0][1]} files for the checks that exempt ${exemptM[1]}; expected ${USER_FACING_DOCS.length - exemptCount}`);
   });
 });

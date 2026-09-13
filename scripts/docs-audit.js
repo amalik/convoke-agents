@@ -120,6 +120,14 @@ const USER_FACING_DOCS = [
   'docs/BMAD-METHOD-COMPATIBILITY.md',
   // docs-1-5 AC6: admitted 2026-09-13. It describes Convoke's upstream coupling — the
   // most rot-prone subject in the corpus — and no gate had ever read it.
+  //
+  // ⚠ USER_FACING_DOCS is the docs-audit CORPUS, not FR43's "user-facing documents".
+  // FR43 (convoke-prd-bmad-v6.3-adoption/functional-requirements.md:81) forbids internalOnly
+  // vocabulary in "the PRD and derivative release documents"; this playbook contains
+  // `host_framework_sync` 13 times because that string IS its subject and its filename.
+  // The two terms are deliberately not the same set, and nothing here implements FR43.
+  // Ruled 2026-09-13 (docs-1-5 R2): membership in this array means "audited for staleness",
+  // never "cleared for release vocabulary". Do not read one as the other.
   'docs/host-framework-sync-playbook.md',
   '_bmad/bme/_vortex/guides/EMMA-USER-GUIDE.md',
   '_bmad/bme/_vortex/guides/ISLA-USER-GUIDE.md',
@@ -710,10 +718,26 @@ async function runAudit(opts = {}) {
 
   const allFindings = [];
   const allDocsContent = [];
+  /** Declared docs that were not readable files here — reported, never silently dropped. */
+  const skipped = [];
 
   for (const relPath of USER_FACING_DOCS) {
     const absPath = path.join(projectRoot, relPath);
-    if (!fs.existsSync(absPath)) continue;
+    // A declared doc that is not a readable file is SKIPPED, not failed — the shipped package
+    // legitimately omits most of `docs/`, so failing here would break `docs:audit` for every
+    // operator. But say so: a silent skip made "covers N files" a ceiling rather than a count,
+    // and on a case-sensitive filesystem a wrong-cased entry vanished without a word
+    // (docs-1-5 R2). `existsSync` is case-INSENSITIVE on APFS, so this can differ by platform.
+    let stat;
+    try {
+      stat = fs.statSync(absPath);
+    } catch {
+      stat = null;
+    }
+    if (!stat || !stat.isFile()) {
+      skipped.push(relPath);
+      continue;
+    }
 
     const content = fs.readFileSync(absPath, 'utf8');
     allDocsContent.push(content);
@@ -732,6 +756,18 @@ async function runAudit(opts = {}) {
 
   // Coverage check across all docs combined
   allFindings.push(...checkDocsCoverage(allDocsContent));
+
+  // Not a finding — a declared doc missing from THIS tree is normal in an installed copy.
+  // But it must be visible: without this, "detection across N files" reads as a count when
+  // it is only a ceiling (docs-1-5 R2).
+  if (skipped.length > 0) {
+    process.stderr.write(
+      chalk.yellow(
+        `  ⚠ ${skipped.length} of ${USER_FACING_DOCS.length} declared docs were not readable files here and were skipped:\n` +
+          skipped.map((f) => `      ${f}\n`).join('')
+      )
+    );
+  }
 
   return allFindings;
 }

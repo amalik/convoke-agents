@@ -86,9 +86,12 @@ If **≥2 boxes ticked**, this is a `host_framework_sync` release. If only **box
 
 **Purpose.** *Establish* Convoke's presence in the upstream plugin marketplace. ⚠ **Convoke has no
 marketplace presence today, so there is nothing to "maintain."** Submission PR #9 to
-`bmad-code-org/bmad-plugins-marketplace` was **closed/rejected on 2026-04-27** with "older version of
-bmad" framing; the repository's own planning artifacts call it "the rejected PR #9"
-(`grep -rn "rejected PR #9" _bmad-output/planning-artifacts/`). npm is currently Convoke's **only**
+`bmad-code-org/bmad-plugins-marketplace` was rejected; the repository's own planning artifacts call it
+"the rejected PR #9" (`grep -rn "rejected PR #9" _bmad-output/planning-artifacts/`). ⚠ **The closure
+date (2026-04-27) and the "older version of bmad" framing are recorded only in Convoke's own planning
+prose** (`convoke-prd-bmad-v63-source-format-adoption.md:57`) — they have **not** been verified against
+GitHub. Settle them with
+`gh pr view 9 --repo bmad-code-org/bmad-plugins-marketplace --json state,closedAt` before relying on either. npm is currently Convoke's **only**
 live external distribution channel. Re-entry requires the structural changes named in the v6.3+
 source-format epic (`skills/` at repo root, `module.yaml`, `module-help.csv`), not a re-submission of
 the same entry.
@@ -118,7 +121,7 @@ the same entry.
 
 ### WS5 — Release Discipline
 
-**Purpose.** Ship the release with the full release-discipline machinery (Sprint 1 experiments + ADR + playbook + CHANGELOG + N=1 validation + retrospective + anti-pattern registry update). This is the release-discipline workstream — it ensures every `host_framework_sync` release leaves behind a verifiable trail of decisions. *(This paragraph previously invoked "release process is content, not software". The PRD's insight is that **Convoke** is content, not software — `convoke-prd-bmad-v6.3-adoption/executive-summary.md:5`, about the product, not the release process — and `innovation-novel-patterns.md:54` lists the phrase as internal-only framing that must not reach user-facing copy.)*
+**Purpose.** Ship the release with the full release-discipline machinery (Sprint 1 experiments + ADR + playbook + CHANGELOG + N=1 validation + retrospective + anti-pattern registry update). This is the release-discipline workstream — it ensures every `host_framework_sync` release leaves behind a verifiable trail of decisions. *(This paragraph previously characterised the release **process** with a phrase the PRD applies to the **product** — `convoke-prd-bmad-v6.3-adoption/executive-summary.md:5`. `innovation-novel-patterns.md:54` also lists that phrase as internal-only framing, so it is described here rather than reprinted.)*
 
 **Template tasks:**
 - Run pre-registered Sprint 1 experiments at the new upstream version; log go/no-go decisions + downstream-impact statements (FR33+FR34+M5).
@@ -132,10 +135,13 @@ the same entry.
 Every `host_framework_sync` release must pass the gates below before publish. **Most, but not all, run
 in CI** — and CI runs on pushes to `main`, on pull requests targeting `main`, and on `v*` tags, not on
 every push to every branch (`.github/workflows/ci.yml`, `on:`). Two rows below are deliberately outside
-CI and the `Where` column says so: **drift snapshots** are invoked by hand
-(`grep -rn drift-snapshot .github/` returns nothing) and **N=1 external validation** is a person on
-their own machine. For everything else, "did we validate?" is answered by a green pipeline rather than
-by recollection.
+CI: **drift snapshots** are invoked by hand (`grep -rn drift-snapshot .github/` returns nothing) and
+**N=1 external validation** is a person on their own machine. Their `Where` cells name a story and a
+script rather than a CI job — that absence is the only signal, so read it as one. A third caveat:
+`burn-in` is **pull-request-only** (`if: github.event_name == 'pull_request'`), so it does not run on
+pushes to `main` or on tags. Derive the conditions with
+`awk '/^  [a-z0-9-]+:$/{j=$1} /^    if:/{print j, $0}' .github/workflows/ci.yml`. For everything else,
+"did we validate?" is answered by a green pipeline rather than by recollection.
 
 **⚠ If you came here looking for the PF1 battery, it no longer exists.** Planning artifacts written
 before 2026-08-13 describe a behavioural-equivalence battery with a numeric drift threshold *T* and a
