@@ -228,6 +228,60 @@ describe('coverage-denominator: the REAL declared lists, against a fixture tree'
     return dir;
   }
 
+  // ⚠ The two tests below iterate the list under test to BUILD the fixture, so they catch a
+  // TYPO but are blind to a DELETION — the entry is simply absent from both sides. Round 2
+  // mutation-proved that gap: dropping an exclusion, dropping a module inclusion, and
+  // dropping the root-`*.md` half of the derivation all left the suite green. These three
+  // pin the lists and the derivation shape independently.
+
+  it('the declared lists are pinned — a DELETED entry fails here', () => {
+    // Required members, named literally. Deleting any of them from the source fails this.
+    for (const rel of [
+      'CHANGELOG.md', 'CONTRIBUTING.md', 'INSTALLATION.md', 'project-context.md',
+      'docs/README.md', 'docs/pre-tag-release-checklist.md',
+      'docs/adr/adr-bmad-coupling-v4.0.md', 'docs/migration/3.x-to-4.0.md',
+    ]) {
+      assert.ok(EXCLUSIONS.has(rel), `${rel} must remain excluded, with its reason`);
+    }
+    assert.deepEqual(
+      [...MODULE_INCLUSIONS].sort(),
+      ['_bmad/bme/_vortex/compass-routing-reference.md', '_bmad/bme/_vortex/guides/VORTEX-TEAM-GUIDE.md'],
+      'the module inclusion list is exact — no glob reaches these'
+    );
+  });
+
+  it('the derivation covers root *.md, not only docs/', () => {
+    const dir = fixture();
+    write(dir, 'docs/in-docs.md', '# d');
+    write(dir, 'AT-ROOT.md', '# r');
+    write(dir, 'sub/dir/elsewhere.md', '# e');
+    track(dir);
+    const set = deriveInScope(dir, { exclusions: new Map(), moduleInclusions: [] });
+    assert.ok(set.includes('docs/in-docs.md'), 'docs/ half');
+    assert.ok(set.includes('AT-ROOT.md'), 'root half — 5 of the 15 rows live here');
+    assert.ok(!set.includes('sub/dir/elsewhere.md'), 'other directories are out of scope');
+  });
+
+  it('a row hidden behind a blank line is reported, not silently dropped', () => {
+    const rows = parseCoverageTable(
+      TABLE_HEADER +
+        '| `docs/a.md` | yes | 1 | **yes** | 1.4 | 0 |\n\n' +
+        '| `docs/b.md` | yes | 1 | **no** | 1.5 | 0 |\n'
+    );
+    assert.deepEqual(rows.map((r) => r.file), ['docs/a.md']);
+    assert.equal(rows.malformed.length, 1, 'the unreachable row must be recorded');
+    assert.ok(rows.malformed[0].unreached);
+  });
+
+  it('a sibling table with a backticked first cell is NOT swept', () => {
+    const rows = parseCoverageTable(
+      TABLE_HEADER +
+        '| `docs/a.md` | yes | 1 | **yes** | 1.4 | 0 |\n\n' +
+        '| File | Lines | Why |\n|---|---|---|\n| `docs/x.md` | 637 | prose |\n'
+    );
+    assert.equal(rows.malformed.length, 0, 'other tables in the same file are not coverage rows');
+  });
+
   it('every real exclusion entry names a path the glob would otherwise catch', () => {
     const dir = treeFromRealLists();
     const set = deriveInScope(dir);

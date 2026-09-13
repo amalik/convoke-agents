@@ -70,6 +70,9 @@ deliberately *not* on tag pushes — so if you skip this step it never runs for 
 
 ### The documentation coverage denominator
 
+This runs as a step of the audit job above, so on a green pipeline it has already passed. Run it
+locally when you want the detail, or when the pipeline is not green yet:
+
 ```bash
 node scripts/audit/coverage-denominator.js
 ```

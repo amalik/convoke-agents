@@ -387,10 +387,13 @@ during implementation — **the same defect, half-fixed**. A missing table blame
 - *"CI wiring: not wired, deliberately"* — **wrong**. `npm test` includes `tests/audit` and runs in CI,
   so the gate was CI-enforced through a test asserting `main() === 0` against the real tree, surfacing
   as `1 !== 0` with no filename. That test also violated `test-fixture-isolation`, the rule AC1 quotes
-  as binding. It is **deleted**; its coverage — 14 of 15 exclusions, both inclusions, and the
-  path-parsing fix, all mutation-proved to have had no other executioner — is replaced by fixtures built
-  *from* the real lists, which catch a typo in either without scanning `PACKAGE_ROOT`. The gate is now
-  invoked only from the release checklist, as intended.
+  as binding. It is **deleted**, and the gate is now a **step of the `agent-surface-parity` audit job**,
+  which is in `publish.needs` — real enforcement rather than a checklist item an operator can skip.
+  ⚠ **Round 2 corrected this paragraph's first version, which claimed the replacement fixtures kept the
+  deleted test's coverage. They did not.** They iterate the list under test to build the fixture, so a
+  *deleted* entry was invisible by construction, and nothing covered the root-`*.md` half of the
+  derivation at all — three mutants survived. The lists are now pinned by literal membership, the
+  derivation shape is tested directly, and all three mutants die.
 - *"Recorded as an epic amendment"* — **it was not**. No edit existed. The epic's tooling inventory now
   carries the amendment in place, the way Stories 1.1 and 1.3 recorded theirs.
 - *"in the same shape as the `node scripts/audit/…` invocations already in that file"* — **there were
@@ -410,6 +413,7 @@ problem is placement, and one of the five genuinely has no marker.
 
 - `scripts/audit/coverage-denominator.js` — **new** (the gate)
 - `tests/audit/coverage-denominator.test.js` — **new** (16 tests)
+- `.github/workflows/ci.yml` — modified (gate wired into the audit job, Round 2)
 - `docs/pre-tag-release-checklist.md` — modified (step added inside §3, before §6; seven section numbers untouched)
 - `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — modified (`T161`, `T162`, Change Log)
 - `_bmad-output/planning-artifacts/convoke-note-docs-accuracy-findings-4-0-2.md` — modified (records that this story adds no coverage row)
@@ -421,6 +425,7 @@ problem is placement, and one of the five genuinely has no marker.
 
 | Date | Change |
 |------|--------|
+| 2026-09-13 | **Round 2 on the remediation — scoped to the rewritten parser, and it found two real holes.** Closed route #2 was **narrowed, not shut**: a blank line, fence or heading ends a GFM table, so every row below left the audit unrecorded with a green verdict — a row reading `Examined: no` simply stopped existing. Closed by an independent **row-shaped-line sweep** that reports any coverage-shaped row the parser never reached, scoped so the note's sibling tables are not swept. Second: **the Round 1 test replacement lost coverage while claiming to keep it** — dropping an exclusion, a module inclusion, or the root-`*.md` half of the derivation all left the suite green, because the fixtures iterate the list under test and are blind to deletion. All three mutants now die. Deleting the old test had also removed the gate's only CI execution; it is now a step of the audit job, in `publish.needs`. 33 tests. |
 | 2026-09-13 | **Round 2 (independent) applied — 19 patches, 5 deferred.** Three layers briefed to attack the gate's soundness confirmed all six ACs functionally satisfied, then found **six ways to fool or mis-diagnose it**, all now closed with a test each: duplicate rows were last-wins so a later `yes` overrode an earlier `no`; a malformed row silently truncated the table, dropping later rows **with a green verdict**; `✓ 0 in-scope files` printed over an empty set; `cell()` still stripped `*` and backticks from the File column after the underscore half was fixed during implementation; a missing table blamed 15 innocent files; and `In scope` accepted anything but a literal `no`. Three claims in the record were false and are corrected, not softened: the gate **was** CI-enforced (via a test that also violated `test-fixture-isolation`, now deleted and its coverage replaced by fixtures built from the real lists); the epic amendment was **claimed but never made**, and is now recorded in place; and the slash-command exemption rested on a precedent that did not exist. `T161`'s premise was wrong — four of the five documents do carry draft markers, as the gate's own KORE exclusion reason says — and the row now states the real problem, placement. No test total is transcribed in this record; the first draft's did not reproduce. |
 | 2026-09-13 | **Implemented — the epic's gate ships.** `scripts/audit/coverage-denominator.js` derives the in-scope set from tracked files (recursive under `docs/`, plus repo root, minus a 15-entry exclusion list with a reason each, plus two module documents no glob reaches) and refuses when a derived file has no row or an unexamined one. 16 tests; exit 0 against the real table with 15 in-scope files. **Shown refusing twice** per NFR5: a flipped row on a copy (names the file *and* story 1.6), and a tracked scratch document (`owner: none`, no row added by hand). Two implementation defects were caught by running against the real repository rather than fixtures — `cell()` stripped `_` as emphasis, mangling every underscored path, and the stale-list check over-fired in fixtures, making one test pass for the wrong reason. `docs/migration/3.x-to-4.0.md` excluded with its reason recorded, since no story examined it. `T161`/`T162` filed at sorted positions; `T162` first landed with 14 cells until its `\|` pipes were escaped. |
 | 2026-09-13 | **Story created.** The epic left the gate's denominator as an open item owned by this story; it is resolved in AC1 with the numbers derived rather than asserted. Three facts drove the design: the coverage table's rows span **three** locations (8 `docs/`, 5 repo-root, 2 `_bmad/bme/_vortex/`), so the epic's `docs/`-framing covers 8 of 15; **`USER_FACING_DOCS` cannot be reused** — 9 of its entries are absent from the table and 7 table rows are absent from it, so neither set contains the other; and `docs/*.md` + root `*.md` gives 26 candidates of which 13 are in scope, making a 13-entry exclusion list exact. The module docs are an **explicit inclusion list** rather than a glob; AC1 carries the derived figure and the probe that understates it. AC2 requires the gate be **shown refusing**, on a copy, because `cli-guidance-check` shipped twice matching nothing. |

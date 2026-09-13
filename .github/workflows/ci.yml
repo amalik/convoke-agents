@@ -220,6 +220,16 @@ jobs:
         # guide blocks a release. That is the intended severity — these files go in the tarball.
         run: npm run docs:audit
 
+      - name: Documentation coverage denominator
+        # docs-1-7. Asserts a derivation pass was RECORDED over the full in-scope
+        # documentation set — never that any document is correct.
+        #
+        # Wired here for the same reason as the step above, and because the first version of
+        # this story left it in no workflow at all: a release checklist an operator may skip
+        # is not enforcement. This job is in `publish.needs`, so a documentation story dropped
+        # halfway blocks the tag rather than being discovered after it.
+        run: node scripts/audit/coverage-denominator.js
+
       - name: Agent manifest bme rows match the registry
         # T74. Until story gen-1.1 (`7b957dbf`), every `npm test` run regenerated
         # `_bmad/_config/agent-manifest.csv`, so a registry edit made without a

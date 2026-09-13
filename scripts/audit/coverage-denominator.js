@@ -29,6 +29,10 @@
  *     none of which this epic scoped. The cost is that a future module doc must be added
  *     by hand; that is the trade, recorded rather than left implicit.
  *
+ * Runs as a step of the `agent-surface-parity` audit job, which is in `publish.needs` — so a
+ * documentation story dropped halfway blocks the tag. The first version of this gate was left
+ * in no workflow at all, which made it a checklist item an operator could skip.
+ *
  * NOT an extension of `scripts/docs-audit.js`, which the epic's tooling inventory
  * originally proposed. `USER_FACING_DOCS` is a different set with a different purpose —
  * 9 of its entries are absent from the coverage table and 7 table rows are absent from it
@@ -166,6 +170,11 @@ function parseCoverageTable(text) {
     // Findings cell containing `| wc -l` silently detonated a whole table.
     const cells = line.split(/(?<!\\)\|/);
     if (cells.length < 3) {
+      // ⚠ A blank line, a heading or a prose line ENDS a GFM table. That is correct markdown
+      // — but it used to end parsing silently, so every row below vanished from the audit
+      // with a green verdict: an orphan row, or one reading `Examined: no`, simply stopped
+      // existing. The six-cell malformation case was fixed first and this one was not; the
+      // sweep below is what actually closes the class.
       inTable = false;
       return;
     }
@@ -196,6 +205,34 @@ function parseCoverageTable(text) {
       line: i + 1,
     });
   });
+  // ⚠ THE ROW-SHAPED-LINE SWEEP. Parsing alone cannot be trusted to have seen everything:
+  // anything that ends the table (a blank line, a fence, a stray heading) sends later rows
+  // out of scope of the state machine entirely. So independently count every line in the
+  // file that LOOKS like a coverage row — six cells whose first is a backticked path — and
+  // report any that parsing did not reach. Without this, one blank line hides a refusal.
+  // "Row-shaped" means shaped like a COVERAGE row specifically: exactly six cells, the first
+  // a backticked path, and a verdict column that reads yes/no. The note holds other tables
+  // whose first cell is also a backticked path (the density breakdown, the out-of-scope
+  // list) — those are legitimately different shapes and must not be swept.
+  const parsedLines = new Set(rows.map((r) => r.line));
+  const looksLikeCoverageRow = (line) => {
+    const c = line.split(/(?<!\\)\|/);
+    if (c.length - 2 !== 6) return false;
+    const body = c.slice(1, -1);
+    if (!/^\s*`[^`]+`\s*$/.test(body[0])) return false;
+    return /^(yes|no)$/i.test(verdictCell(body[3]));
+  };
+  lines.forEach((line, i) => {
+    if (parsedLines.has(i + 1)) return;
+    if (!looksLikeCoverageRow(line)) return;
+    if (malformed.some((mal) => mal.line === i + 1)) return;
+    malformed.push({
+      line: i + 1,
+      text: line.trim().slice(0, 120),
+      unreached: true,
+    });
+  });
+
   rows.malformed = malformed;
   return rows;
 }
@@ -246,7 +283,9 @@ function audit({ root, tablePath, exclusions, moduleInclusions } = {}) {
   for (const bad of rows.malformed || []) {
     findings.push({
       file: `${table}:${bad.line}`, story: null,
-      reason: `unparseable table row (not six cells): ${bad.text}`,
+      reason: bad.unreached
+        ? `row-shaped line the table parser never reached — the table ends above it (blank line, fence or heading): ${bad.text}`
+        : `unparseable table row (not six cells): ${bad.text}`,
     });
   }
 
