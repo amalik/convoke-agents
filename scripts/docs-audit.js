@@ -118,6 +118,9 @@ const USER_FACING_DOCS = [
   'INSTALLATION.md',
   'CHANGELOG.md',
   'docs/BMAD-METHOD-COMPATIBILITY.md',
+  // docs-1-5 AC6: admitted 2026-09-13. It describes Convoke's upstream coupling — the
+  // most rot-prone subject in the corpus — and no gate had ever read it.
+  'docs/host-framework-sync-playbook.md',
   '_bmad/bme/_vortex/guides/EMMA-USER-GUIDE.md',
   '_bmad/bme/_vortex/guides/ISLA-USER-GUIDE.md',
   '_bmad/bme/_vortex/guides/MILA-USER-GUIDE.md',

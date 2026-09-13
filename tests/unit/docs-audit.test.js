@@ -855,4 +855,35 @@ describe('USER_FACING_DOCS', () => {
     assert.ok(!USER_FACING_DOCS.includes('PUBLISHING-GUIDE.md'));
     assert.ok(!USER_FACING_DOCS.includes('TEST-PLAN-REAL-INSTALL.md'));
   });
+
+  // docs-1-5 AC6: the playbook describes Convoke's upstream coupling and was audited by
+  // nothing until this story added it. The three per-file checks return 0 on it today
+  // (checkStaleReferences / checkBrokenPaths / checkBrokenLinks), so admitting it does not
+  // turn the gate red — it closes a blind spot.
+  it('includes the host-framework-sync playbook (docs-1-5 AC6)', () => {
+    assert.ok(USER_FACING_DOCS.includes('docs/host-framework-sync-playbook.md'));
+  });
+
+  // The previous two cases assert a handful of inclusions and exclusions; neither pins the
+  // list, so an entry naming a file that no longer exists passed unnoticed.
+  it('every entry resolves to a file on disk', () => {
+    const root = path.resolve(__dirname, '../..');
+    const missing = USER_FACING_DOCS.filter((rel) => !fs.existsSync(path.join(root, rel)));
+    assert.deepEqual(missing, [], `USER_FACING_DOCS names files that do not exist: ${missing.join(', ')}`);
+  });
+
+  // docs-1-5 AC6/AC8: BMAD-METHOD-COMPATIBILITY.md states how many user-facing files the
+  // audit covers. Adding an entry to USER_FACING_DOCS falsifies that sentence and no check
+  // would have caught it. This binds the prose to the array that owns it.
+  it('matches the file count documented in BMAD-METHOD-COMPATIBILITY.md', () => {
+    const root = path.resolve(__dirname, '../..');
+    const doc = fs.readFileSync(path.join(root, 'docs/BMAD-METHOD-COMPATIBILITY.md'), 'utf8');
+    const m = doc.match(/across (\d+) user-facing files/);
+    assert.ok(m, 'BMAD-METHOD-COMPATIBILITY.md no longer states "across N user-facing files"');
+    assert.equal(
+      Number(m[1]),
+      USER_FACING_DOCS.length,
+      `doc says ${m[1]} user-facing files; USER_FACING_DOCS has ${USER_FACING_DOCS.length}`
+    );
+  });
 });

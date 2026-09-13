@@ -38,20 +38,27 @@ A `host_framework_sync` release is a **coordinated platform alignment release** 
 
 A release qualifies as `host_framework_sync` when **one or more** of the following conditions is met (typically all three at once):
 
-1. **BMAD upstream major-version release.** A new BMAD major version drops (e.g., v6.4, v7.0). This is the canonical trigger.
+1. **BMAD upstream release that moves the coupling.** Historically framed as a *major*-version trigger with `v6.4` as the example — but `v6.3 → v6.4` is a **minor** bump, so that example contradicted the rule it illustrated. It also never fired: upstream has shipped no major since v6.3, going 6.3 → 6.12.0 (`npm view bmad-method version`) while Convoke's coupling moved enough to need a v6.4–v6.8 absorption PRD. Treat **any** upstream release that changes the contracts in conditions 2 and 3 as the canonical trigger; a true major (v7.0) is a guaranteed one.
 2. **Shared-infrastructure change.** Upstream changes affect Convoke's runtime contracts — config-loader format, skill-format spec, install-path conventions, BMM module structure, or `_bmad/_config/` schema. Detected via `convoke-doctor` BMM-dependency check + `bmm-dependencies.csv` diff.
 3. **Marketplace contract change.** Upstream changes the plugin marketplace's `registry-schema.yaml`, PluginResolver behavior, or community-tier requirements in ways that require Convoke's `convoke.yaml` registry entry to be re-authored or re-validated.
 
 **Operational checklist (use this at trigger evaluation time):**
 
-- [ ] Has BMAD shipped a new major version? (`semver` major-bump on `bmad-method` npm package OR upstream repo.)
+- [ ] Has BMAD shipped a release above the version Convoke enforces? Compare `REQUIRED_BMAD_VERSION` (`scripts/update/lib/compat-preflight.js`) against `npm view bmad-method version`. A **major** bump is a guaranteed trigger; a minor that changes the contracts below also counts.
 - [ ] Does `convoke-doctor` BMM-dependency check report any changes vs the previous Convoke release?
-- [ ] Does `validate-marketplace` report schema drift vs upstream `registry/registry-schema.yaml`?
+- [ ] Has the upstream marketplace `registry/registry-schema.yaml` changed since Convoke's entry was authored? **This must be checked by hand against upstream.** `convoke-validate-marketplace` (`scripts/audit/validate-marketplace.js`) does *not* read that schema — nothing in this repository does. It validates the local `.claude-plugin/marketplace.json` and `module.yaml`, and its only drift check (`checkVersionDrift`) compares `marketplace.json` against `package.json`.
 - [ ] Are there breaking changes to canonical agent skill format (SKILL.md structure, slash-command activation, frontmatter contract)?
+
+> ⚠ **OPEN RULING — the two thresholds in this section disagree, and neither is applied below.**
+> The section opens with "**one or more** of the following conditions", while the checklist resolves
+> with "**≥2 boxes ticked**". A release meeting exactly one condition is therefore both in and out of
+> the class. This changes when the release class applies, so it is an operator decision, deliberately
+> left unresolved by the 2026-09-13 accuracy pass (Story `docs-1-5`, AC5). Until it is ruled on, treat
+> a single-condition release as a judgement call and say which threshold you used.
 
 If **≥2 boxes ticked**, this is a `host_framework_sync` release. If only **box 1** ticked AND boxes 2 + 3 + 4 are unticked (no shared-infra change, no marketplace contract change, no skill-format break), the release may be a minor `host_framework_track` (Convoke's prior version stays compatible; ship as a feature release with version-bump only).
 
-**Anti-vapor anchor (per PM5).** A release is not `host_framework_sync` because someone says it is — it qualifies because the trigger criteria above objectively apply. Conversely, a release that meets the criteria IS `host_framework_sync` even if maintainer bandwidth tempts skipping the playbook.
+**Anti-vapor anchor (per PM4).** A release is not `host_framework_sync` because someone says it is — it qualifies because the trigger criteria above objectively apply. Conversely, a release that meets the criteria IS `host_framework_sync` even if maintainer bandwidth tempts skipping the playbook.
 
 **Cross-reference.** The ADR's [Revalidation Trigger](adr/adr-bmad-coupling-v4.0.md#revalidation-trigger) names the *strategic-bet* revalidation conditions (which include but are not limited to upstream major releases). The Trigger Criteria here are *release-class-classification* criteria — narrower scope: "is this release a `host_framework_sync` event?" The two layers complement each other; both are evaluated at upstream-rev time.
 
@@ -77,16 +84,23 @@ If **≥2 boxes ticked**, this is a `host_framework_sync` release. If only **box
 
 ### WS2 — Marketplace
 
-**Purpose.** Maintain Convoke's presence in the upstream plugin marketplace, registering or re-registering with the new framework version's contract. This is Convoke's primary external distribution channel beyond npm.
+**Purpose.** *Establish* Convoke's presence in the upstream plugin marketplace. ⚠ **Convoke has no
+marketplace presence today, so there is nothing to "maintain."** Submission PR #9 to
+`bmad-code-org/bmad-plugins-marketplace` was **closed/rejected on 2026-04-27** with "older version of
+bmad" framing; the repository's own planning artifacts call it "the rejected PR #9"
+(`grep -rn "rejected PR #9" _bmad-output/planning-artifacts/`). npm is currently Convoke's **only**
+live external distribution channel. Re-entry requires the structural changes named in the v6.3+
+source-format epic (`skills/` at repo root, `module.yaml`, `module-help.csv`), not a re-submission of
+the same entry.
 
 **Template tasks:**
-- Author or update `convoke.yaml` registry-submission file to match upstream `registry/registry-schema.yaml`.
+- Author the `convoke.yaml` registry-submission file to match upstream `registry/registry-schema.yaml`. **No file named `convoke.yaml` exists in this repository** (`find . -name 'convoke.yaml' -not -path './node_modules/*'` returns nothing); the only draft is the never-submitted `_bmad-output/implementation-artifacts/v63-3-3-convoke.yaml`.
 - Open PR against upstream marketplace repo (`bmad-plugins-marketplace`); pass PluginResolver validation OR document Path-C manual schema-match per OP-4.
 - Capture PR open + validation evidence in story-level artifacts (PR link, validation log, M12a status).
 
 ### WS3 — Distribution
 
-**Purpose.** Verify Convoke installs cleanly across all supported distribution channels (npm + marketplace + platform-agnostic exporters → Claude Code + Copilot + Cursor adapters). Distribution-channel parity is the operationalization of "ships everywhere, starting with the BMAD marketplace."
+**Purpose.** Verify Convoke installs cleanly across all supported distribution channels (npm + platform-agnostic exporters → Claude Code + Copilot + Cursor adapters). The marketplace path is aspirational, not supported — see WS2. Distribution-channel parity is the operationalization of "ships everywhere, starting with the BMAD marketplace."
 
 **Template tasks:**
 - Test fresh `npm install` of new Convoke version on a clean sandbox.
@@ -104,7 +118,7 @@ If **≥2 boxes ticked**, this is a `host_framework_sync` release. If only **box
 
 ### WS5 — Release Discipline
 
-**Purpose.** Ship the release with the full release-discipline machinery (Sprint 1 experiments + ADR + playbook + CHANGELOG + N=1 validation + retrospective + anti-pattern registry update). This is the "release process is content, not software" workstream — it ensures every `host_framework_sync` release leaves behind a verifiable trail of decisions.
+**Purpose.** Ship the release with the full release-discipline machinery (Sprint 1 experiments + ADR + playbook + CHANGELOG + N=1 validation + retrospective + anti-pattern registry update). This is the release-discipline workstream — it ensures every `host_framework_sync` release leaves behind a verifiable trail of decisions. *(This paragraph previously invoked "release process is content, not software". The PRD's insight is that **Convoke** is content, not software — `convoke-prd-bmad-v6.3-adoption/executive-summary.md:5`, about the product, not the release process — and `innovation-novel-patterns.md:54` lists the phrase as internal-only framing that must not reach user-facing copy.)*
 
 **Template tasks:**
 - Run pre-registered Sprint 1 experiments at the new upstream version; log go/no-go decisions + downstream-impact statements (FR33+FR34+M5).
@@ -115,8 +129,13 @@ If **≥2 boxes ticked**, this is a `host_framework_sync` release. If only **box
 
 ## (d) Validation Battery Reference
 
-Every `host_framework_sync` release must pass the gates below before publish. All of them run in
-CI on every push, so "did we validate?" is answered by a green pipeline rather than by recollection.
+Every `host_framework_sync` release must pass the gates below before publish. **Most, but not all, run
+in CI** — and CI runs on pushes to `main`, on pull requests targeting `main`, and on `v*` tags, not on
+every push to every branch (`.github/workflows/ci.yml`, `on:`). Two rows below are deliberately outside
+CI and the `Where` column says so: **drift snapshots** are invoked by hand
+(`grep -rn drift-snapshot .github/` returns nothing) and **N=1 external validation** is a person on
+their own machine. For everything else, "did we validate?" is answered by a green pipeline rather than
+by recollection.
 
 **⚠ If you came here looking for the PF1 battery, it no longer exists.** Planning artifacts written
 before 2026-08-13 describe a behavioural-equivalence battery with a numeric drift threshold *T* and a
@@ -159,9 +178,13 @@ node scripts/audit/agent-surface-parity.js "$BASE" HEAD
 
 Exit 0 with every agent listed means the contract held. Then push a `v*` tag: the `publish` job is
 gated on eight jobs including `fresh-install`, and publishes with npm provenance. **Publishing by
-hand bypasses all of it** — every 4.0 release candidate was hand-published and therefore ungated,
-which is logged as T35. Recruit the N=1 validator in parallel; it has real lead time and is the only
-gate that cannot be automated.
+hand bypasses all of it** — every 4.0 release candidate was hand-published and therefore ungated.
+That was logged as `T35`, which is now **closed and archived** (§2.5 of
+`_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md`): fixed in part by
+`dist-1-7`, residual absorbed into `T47`. Re-derive with
+`grep -n '^| T35 ' _bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md`.
+Recruit the N=1 validator in parallel; it has real lead time and is the only gate that cannot be
+automated.
 
 ---
 

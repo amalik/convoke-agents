@@ -65,30 +65,30 @@ npx -p convoke-agents convoke-install-vortex
 
 ### What Gets Installed
 
-**Convoke creates:**
+**Convoke creates** the shape below. This is an orientation sketch, not an inventory —
+derive the authoritative module set from the package manifest rather than reading it here:
+
+```bash
+node -e "console.log(require('convoke-agents/package.json').files.filter(f => f.startsWith('_bmad/bme/')).join('\n'))"
+```
+
 ```
 your-project/
 └── _bmad/
     ├── bme/
-    │   ├── _vortex/
-    │   │   ├── agents/           # 7 agent definitions
-    │   │   ├── workflows/        # 22 workflows
-    │   │   ├── contracts/        # Handoff contracts (HC1-HC5 artifact, HC6-HC10 routing)
-    │   │   ├── guides/           # 7 user guides
-    │   │   └── config.yaml
-    │   ├── _gyre/
-    │   │   ├── agents/           # 4 agent definitions
-    │   │   ├── workflows/        # 7 workflows
-    │   │   ├── contracts/        # GC1-GC4 handoff contracts
-    │   │   ├── guides/           # 4 user guides
-    │   │   └── config.yaml
-    │   └── _enhance/
-    │       ├── workflows/        # Skill workflows
-    │       ├── extensions/       # Agent menu patches
-    │       └── config.yaml
+    │   ├── _vortex/          # Vortex — product discovery
+    │   ├── _gyre/            # Gyre — production readiness
+    │   ├── _enhance/         # Enhance — agent skills
+    │   ├── _artifacts/       # artifact governance workflows
+    │   ├── _portability/     # platform-agnostic exporters
+    │   ├── _team-factory/    # Loom — team creation
+    │   └── covenant/         # Operator Covenant + compliance checklist
     └── _config/
         └── agent-manifest.csv (updated)
 ```
+
+Each team module carries its own `config.yaml`, `workflows/`, and — where it has agents —
+`agents/`, `guides/` and `contracts/`.
 
 ---
 
@@ -96,8 +96,12 @@ your-project/
 
 ### Current Version
 
-**Convoke v3.0.0**
-- Compatible with: BMAD Method v1.x (optional — works standalone)
+Read the package version from `package.json` rather than from this file:
+`node -e "console.log(require('./package.json').version)"`.
+
+- Compatible with: **BMAD Method >= 6.3.0** (optional — works standalone). The floor is
+  `REQUIRED_BMAD_VERSION` in `scripts/update/lib/compat-preflight.js`; the preflight *warns*
+  and proceeds, so a lower version does not block installation
 - Creates `_bmad/` directory automatically if missing
 - Optional detection: BMAD Method config (bmad.yaml in _bmad/_config/)
 - Teams: Vortex (7 agents), Gyre (4 agents)
@@ -135,8 +139,8 @@ Convoke installers check:
    # Install new BMAD Method version
    cd bmad && git pull && npm install
 
-   # Test Convoke agents
-   cat _bmad/bme/_vortex/agents/contextualization-expert.md
+   # Test Convoke agents — each agent is a DIRECTORY containing SKILL.md
+   cat _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md
    # Verify Emma still works
 
    # Run diagnostics to check all 7 agents
@@ -159,18 +163,32 @@ Convoke installers check:
 
 | Convoke Version | Compatible BMAD Method Versions | Notes |
 |----------------------|--------------------------------|-------|
-| 3.0.0                | 1.x (optional — works standalone) | Team Factory extension *groundwork* (appenders + validator; the Add Agent / Add Skill workflows did not ship), multi-team docs-audit |
-| 2.4.0                | 1.x (optional — works standalone) | Enhance module, Gyre team (4 agents), Team Factory, skill validator |
-| 2.3.x                | 1.x (optional — works standalone) | Enhance module, skills architecture |
-| 2.0.0                | 1.x (optional — works standalone) | Product renamed to Convoke, CLI commands: `convoke-*` |
-| 1.6.4                | 1.x (optional — works standalone) | 7 Vortex agents, 22 workflows, Compass routing |
-| 1.6.0                | 1.x (optional — works standalone) | Added Mila, Liam, Noah; HC contracts; Compass routing |
-| 1.5.x                | 1.x (optional — works standalone) | Added Isla and Max, test hardening |
-| 1.4.x                | 1.x (optional — works standalone) | Architecture refactor, registry-driven |
-| 1.3.x                | 1.x (assumed)                  | Migration system |
-| 1.0.x-alpha          | 1.x (assumed)                  | Initial release (Emma and Wade only) |
+| 4.0.x                | **>= 6.3.0** (optional — works standalone) | Enforced by `REQUIRED_BMAD_VERSION` (`scripts/update/lib/compat-preflight.js`); warns, does not block |
+| 3.0.0                | not determined by the package | Team Factory extension *groundwork* (appenders + validator; the Add Agent / Add Skill workflows did not ship), multi-team docs-audit |
+| 2.4.0                | not determined by the package | Enhance module, Gyre team (4 agents), Team Factory, skill validator |
+| 2.3.x                | not determined by the package | Enhance module, skills architecture |
+| 2.0.0                | not determined by the package | Product renamed to Convoke, CLI commands: `convoke-*` |
+| 1.6.4                | not determined by the package | 7 Vortex agents, 22 workflows, Compass routing |
+| 1.6.0                | not determined by the package | Added Mila, Liam, Noah; HC contracts; Compass routing |
+| 1.5.x                | not determined by the package | Added Isla and Max, test hardening |
+| 1.4.x                | not determined by the package | Architecture refactor, registry-driven |
+| 1.3.x                | not determined by the package | Migration system |
+| 1.0.x-alpha          | not determined by the package | Initial release (Emma and Wade only) |
 
-**Updated as versions are released and tested.**
+**Why the pre-4.0 rows name no BMAD version.** They previously all read `1.x`. No Convoke
+release ever targeted BMAD 1.x: that line was published once, on 2025-06-15
+(`npm view bmad-method time --json`), months before Convoke's first release, and BMAD was
+already on its 6.x line by the time 1.6.4 shipped. Nothing in the repository determined a
+supported BMAD version before `compat-preflight.js` was added on 2026-04-25
+(`git log --diff-filter=A -M --follow -- scripts/update/lib/compat-preflight.js`), so those
+cells asserted something no object could confirm or contradict.
+
+**The version column is authoritative only for rows a gate covers.** Releases after 3.0.0 —
+3.1.0, 3.2.0, 3.2.1, 3.3.0 — are absent from this table; enumerate what actually shipped with
+`git tag --list` and `CHANGELOG.md` rather than reading this list as complete. `1.6.4` has no
+CHANGELOG entry and no git tag here, but it did ship: it was published on 2026-02-27 under the
+package's pre-rename name (`bmad-enhanced` → `convoke-agents`; re-derive with `npm view bmad-enhanced time --json`).
+The row is real; this repository's own records are what is incomplete.
 
 ---
 
@@ -258,9 +276,9 @@ When new BMAD Method version releases:
 - [ ] Install new BMAD Method version
 - [ ] Run `npx -p convoke-agents convoke-install-vortex`
 - [ ] Verify all files copied correctly
-- [ ] Activate Emma: `cat _bmad/bme/_vortex/agents/contextualization-expert.md`
+- [ ] Activate Emma: `cat _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md`
 - [ ] Test Emma workflow: Type `LP` (Lean Persona) and complete all steps
-- [ ] Activate Mila (or another recent agent): `cat _bmad/bme/_vortex/agents/research-convergence-specialist.md`
+- [ ] Activate Mila (or another recent agent): `cat _bmad/bme/_vortex/agents/research-convergence-specialist/SKILL.md`
 - [ ] Run `npx -p convoke-agents convoke-doctor` to verify all 7 agents and 22 workflows
 - [ ] Verify artifacts generated correctly
 - [ ] Check for errors or warnings
@@ -268,13 +286,21 @@ When new BMAD Method version releases:
 
 ### Automated Testing
 
-Convoke includes automated test coverage:
+Convoke includes automated test coverage. **Totals are not restated here** — they change on
+almost every commit and nothing in the repository pins them. Derive them instead:
 
-- **P0 activation tests:** Verify all 7 agents activate correctly (642 assertions)
-- **Content correctness tests:** Validate voice consistency, handoff contracts, Compass routing
-- **CLI tests:** convoke-update.js (92.91% coverage), convoke-version.js (95.52% coverage)
-- **Docs audit:** Programmatic stale-reference, broken-link, and broken-path detection across 16 user-facing files
-- **Total:** 293 tests, 0 failures, CI-integrated
+| Suite | What it covers | Derive with |
+|---|---|---|
+| **P0** | Agent activation, voice consistency, handoff contracts, Compass routing, workflow structure | `node scripts/test-runner.js tests/p0` |
+| **Unit / lib / audit / team-factory** | Installers, update system, registries, audit scripts | `npm test` |
+| **Integration** | End-to-end install and update flows | `npm run test:integration` |
+| **Coverage** | Line/branch coverage for the CLI entry points | `npm run test:coverage` |
+| **Docs audit** | Stale-reference, broken-link and broken-path detection across 17 user-facing files | `npm run docs:audit` |
+
+All of the above run in CI (`.github/workflows/ci.yml`) on pushes to `main`, on pull requests
+targeting `main`, and on `v*` tags — though not each under its own job: the P0 suite reaches CI
+through `npm run test:coverage` in the `coverage` job, not a standalone p0 job. Check with
+`grep -n 'run: npm' .github/workflows/ci.yml`.
 
 ---
 
@@ -354,7 +380,7 @@ Convoke includes automated test coverage:
 ✅ If BMAD Method is present, the installer detects and logs it
 ✅ Installers create `_bmad/` automatically if missing
 ✅ Compatibility should be tested if using both together
-✅ 293 automated tests validate agent activation, content correctness, and CLI behavior
+✅ Automated tests validate agent activation, content correctness, and CLI behavior — run `npm test` and `node scripts/test-runner.js tests/p0` for current totals
 
 **For Maintainers:**
 
@@ -370,6 +396,6 @@ Convoke includes automated test coverage:
 
 ---
 
-**Version:** 3.0.0
-**Last Updated:** 2026-03-25
+**Applies to:** Convoke 4.0.x (`REQUIRED_BMAD_VERSION` >= 6.3.0)
+**Last Updated:** 2026-09-13
 **Status:** Living Document (update as needed)

@@ -1,6 +1,10 @@
+---
+baseline_commit: 8c84c540ae147cb7a0ccb84a66678cc50e0309e6
+---
+
 # Story 1.5: Derivation pass on the upstream-relationship documents
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -151,26 +155,26 @@ so that I do not plan an installation around a relationship that changed two rel
 > **Read both files end to end before running anything.** AC2 exists because the script's output is not
 > the worklist here, and the fastest way to inherit that mistake is to start from `--json`.
 
-- [ ] **Task 1 — Establish the ground truth for the upstream relationship (AC: 3, 4)**
-  - [ ] Derive the vendored upstream version from `_bmad/*/config.yaml`; derive the live one from npm; read `docs/adr/adr-bmad-coupling-v4.0.md` for the coupling this package shipped
-  - [ ] Record all three with their commands **before** touching either document — every later edit depends on which is authoritative
-- [ ] **Task 2 — Re-derive and report the divergence (AC: 1)**
-  - [ ] Run the counter over both files; paste output with its command; compare to the epic's input figure
-  - [ ] **Do not tune anything toward the epic's number.** Report the divergence as a finding about the input
-- [ ] **Task 3 — Build the worklist by READING (AC: 2)**
-  - [ ] Sweep each missing class in AC2's table explicitly; record per-class findings, `0` as `0`
-- [ ] **Task 4 — Work the cross-file contradiction as one finding (AC: 4)**
-  - [ ] Resolve the version relationship across both files together; enumerate the matrix column by command
-- [ ] **Task 5 — Capability and status overclaims (AC: 5)**
-  - [ ] Verify each row of AC5's table by execution; correct or hedge; raise the threshold conflict for a ruling
-- [ ] **Task 6 — Decide the audit-scope gap (AC: 6)**
-- [ ] **Task 7 — Findings note and coverage table (AC: 1, DoD)**
-  - [ ] Both files `Examined: yes` with counts, `0` written as `0`. **Your own rows only** — the note's freeze banner permits exactly that
-- [ ] **Task 8 — Verify and hand off**
-  - [ ] `npm run lint` → 0 · `npm test` → 0 · `node scripts/audit/backlog-integrity.js` → 0 · `npm run docs:audit` → 0 **and annotated per AC6**
-  - [ ] Capture each exit code **without a pipe** — `${PIPESTATUS[0]}` is bash, this shell is zsh (`verification-pipefail`)
-  - [ ] **AC8 sweep** — for every retained claim in the diff, name the object that could contradict it; for every deletion, show that nothing owned it, using `git log --diff-filter=D -M --follow -- <path>`. **The `-M` is not optional**: without it a rename reports as a deletion, which is exactly how `docs-1-4` produced a false finding and deleted a live document's sentence
-  - [ ] Commit plan with a Round 1 review record; `git diff HEAD --name-only` before staging
+- [x] **Task 1 — Establish the ground truth for the upstream relationship (AC: 3, 4)**
+  - [x] Derive the vendored upstream version from `_bmad/*/config.yaml`; derive the live one from npm; read `docs/adr/adr-bmad-coupling-v4.0.md` for the coupling this package shipped
+  - [x] Record all three with their commands **before** touching either document — every later edit depends on which is authoritative
+- [x] **Task 2 — Re-derive and report the divergence (AC: 1)**
+  - [x] Run the counter over both files; paste output with its command; compare to the epic's input figure
+  - [x] **Do not tune anything toward the epic's number.** Report the divergence as a finding about the input
+- [x] **Task 3 — Build the worklist by READING (AC: 2)**
+  - [x] Sweep each missing class in AC2's table explicitly; record per-class findings, `0` as `0`
+- [x] **Task 4 — Work the cross-file contradiction as one finding (AC: 4)**
+  - [x] Resolve the version relationship across both files together; enumerate the matrix column by command
+- [x] **Task 5 — Capability and status overclaims (AC: 5)**
+  - [x] Verify each row of AC5's table by execution; correct or hedge; raise the threshold conflict for a ruling
+- [x] **Task 6 — Decide the audit-scope gap (AC: 6)**
+- [x] **Task 7 — Findings note and coverage table (AC: 1, DoD)**
+  - [x] Both files `Examined: yes` with counts, `0` written as `0`. **Your own rows only** — the note's freeze banner permits exactly that
+- [x] **Task 8 — Verify and hand off**
+  - [x] `npm run lint` → 0 · `npm test` → 0 · `node scripts/audit/backlog-integrity.js` → 0 · `npm run docs:audit` → 0 **and annotated per AC6**
+  - [x] Capture each exit code **without a pipe** — `${PIPESTATUS[0]}` is bash, this shell is zsh (`verification-pipefail`)
+  - [x] **AC8 sweep** — for every retained claim in the diff, name the object that could contradict it; for every deletion, show that nothing owned it, using `git log --diff-filter=D -M --follow -- <path>`. **The `-M` is not optional**: without it a rename reports as a deletion, which is exactly how `docs-1-4` produced a false finding and deleted a live document's sentence
+  - [x] Commit plan with a Round 1 review record; `git diff HEAD --name-only` before staging
 
 ## Dev Notes
 
@@ -237,37 +241,155 @@ This story ships no `.js` unless AC6 is decided as "add the file to `USER_FACING
 
 ## Definition of Done
 
-- [ ] `npm run docs:audit` exits 0. **Its passing is a non-regression check, not evidence of accuracy** — the
+- [x] `npm run docs:audit` exits 0. **Its passing is a non-regression check, not evidence of accuracy** — the
       epic exists because it passes on defective files, **and this story may not cite it as proof any document
       is correct** *(NFR3, verbatim)* — **and annotated per AC6**, because it has never examined one of this
       story's two files. *(`docs-1-4` carried a compressed version of this line under the same `verbatim`
       tag; the prohibition clause was the part it dropped.)*
-- [ ] Every finding carries a reproducing command (NFR1) from an artifact the operator receives — never
+- [x] Every finding carries a reproducing command (NFR1) from an artifact the operator receives — never
       `.claude/skills/` (NFR8).
-- [ ] Every external claim is executed, quoted verbatim with its source named, or marked unverified
+- [x] Every external claim is executed, quoted verbatim with its source named, or marked unverified
       naming what would settle it (AC3).
-- [ ] Every missing class in AC2's table is swept and reported, `0` written as `0`.
-- [ ] Every check cited as evidence in the Dev Agent Record names how it was shown able to fail (NFR5).
-- [ ] Every claim written or kept obeys the source-of-truth rule (FR3a).
-- [ ] The findings note's coverage table is updated **in the same commit** (FR10), carrying both files with
+- [x] Every missing class in AC2's table is swept and reported, `0` written as `0`.
+- [x] Every check cited as evidence in the Dev Agent Record names how it was shown able to fail (NFR5).
+- [x] Every claim written or kept obeys the source-of-truth rule (FR3a).
+- [x] The findings note's coverage table is updated **in the same commit** (FR10), carrying both files with
       `Examined: yes` and a findings count. **`0` findings is written as `0`; blank means *not examined*** —
       Story 1.7's gate reads that column, so a blank left where a `0` belongs reads as unexamined work.
-- [ ] `npm run lint` exits 0 with zero warnings in any file this story modifies.
-- [ ] `npm test` green.
-- [ ] Commit plan emitted with a Round 1 review record (NFR4); reviewed file set equals staged file set.
+- [x] `npm run lint` exits 0 with zero warnings in any file this story modifies.
+- [x] `npm test` green.
+- [x] Commit plan emitted with a Round 1 review record (NFR4); reviewed file set equals staged file set.
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`
+
 ### Debug Log References
+
+Gates, exit codes captured without a pipe (`verification-pipefail`; this shell is zsh):
+`npm run lint` → **0** · `npm test` → **0** (2349 tests, 0 fail, 1 skipped) ·
+`node scripts/audit/backlog-integrity.js` → **0** · `npm run docs:audit` → **0**.
+
+**The `docs:audit` line is annotated per AC6.** Before this story it was **inapplicable** — not
+merely weak — to `docs/host-framework-sync-playbook.md`, which was absent from `USER_FACING_DOCS`
+and had never been read by any gate. It now covers that file. Per NFR3 this exit code is a
+non-regression check and is **not** cited as evidence that either document is correct.
+
+**NFR5 — how each check was shown able to fail.** The three per-file checks were run against
+mutated copies of the playbook **in memory only** (the working tree was never modified):
+`checkStaleReferences` 0→1 on `12 agents`→`13 agents`; `checkBrokenPaths` 0→1 on a standalone
+backticked path; `checkBrokenLinks` 0→1 on a link target. A first mutation attempt produced
+**false "cannot fail" results** for two of the three because the mutants were wrong for the
+checks' contracts — `checkBrokenPaths` only matches a path alone inside backticks, and brand
+tokens belong to `checkStaleBrandReferences`, not `checkStaleReferences`. The first three calls
+also passed a *path* where the signature expects *content*, which returned a false `0`. Read
+signatures before trusting a zero.
+
+`checkStaleReferences` was separately shown live on the shipped compatibility document: mutating
+`Vortex (7 agents)` → `(9 agents)` yields 1 finding, so removing the per-directory counts from the
+installed-tree block lost no guarded claim — those counts survive at seven other sites.
+
+**The gate caught this story's own edit.** The first draft of the matrix rationale used the
+pre-rename package name in prose and `docs:audit` failed on it. It was reworded onto the check's
+existing rename-transition allowance (`→` plus `convoke` on the same line) rather than by
+weakening the check.
 
 ### Completion Notes List
 
+**AC1 — re-derived; divergence NOT re-reported as a finding.**
+`node scripts/audit/derived-assertions.js docs/host-framework-sync-playbook.md docs/BMAD-METHOD-COMPATIBILITY.md`
+→ playbook **82**, compatibility **74**, total **156**, with **62 unclassified candidates**. Both
+are **FLOORS** — the script says so and reports a non-zero residual (`T160` owns the open classes).
+Story 1.4 had already re-derived this pair with the same command and projected **156** remaining
+load for 1.5; the re-derivation matches it exactly, so **1.4's projection is not materially
+invalidated and no AC5 scope call arises.** What was owed was the coverage table's `Assertions`
+column, which still carried the pre-script input (36 / 30) — now 82 / 74. The decidable contributor
+is `T160` closing the two-part-version class: the note's breakdown table recorded **0** versions for
+the playbook (a document about version alignment); it now reports 24.
+
+**AC2 — per-class sweep, `0` written as `0`.**
+
+| Class | Swept by | Found |
+|---|---|---|
+| Statistics / percentages | `grep -nE '[0-9]+(\.[0-9]+)?%\|[0-9]{2,} (tests\|assertions)'` + `npm test`, `tests/p0`, `test:coverage` | **3** (`D17`) |
+| Dates | `grep -nE '[0-9]{4}-[0-9]{2}-[0-9]{2}\|Last Updated'` | **1** (`D26`) |
+| Unbackticked paths in prose | `grep -nE '[A-Za-z_][A-Za-z0-9_./-]*\.(md\|js\|json\|yaml\|csv\|sh)'` | **3** (`D16`) |
+| Agent and team names | per-agent `name=` / `# <Name>` reads vs `agent-registry.js` | **0** — all 7 Vortex and 4 Gyre names correct |
+| Requirement identifiers | `grep -oE '\b(FR\|NFR\|PM\|AP-\|OP-\|EXP\|M\|I\|T)[0-9]+'` | **3** (`D21`, `D25`, and `D22`'s `AP-7` self-reference). **`0` in the compatibility document — it contains none** |
+| CI job names | `grep -nE '^  [a-z0-9-]+:$' .github/workflows/ci.yml` vs each gate row | **1** (`D24`) |
+| Word-form counts | `grep -nEi '\b(one\|two\|…\|twelve)\b'` | **0** — `eight jobs` and `12 agents` both derive correctly |
+| Behavioural prose | read against installers and `compat-preflight.js` | **1** (`D24`); "works standalone", "no npm dependency", "creates `_bmad/`" all HOLD |
+| Links and anchors | resolved by script, then each target read for whether it says what the citing sentence claims | **0** of 14 in the playbook; **0** links exist in the compatibility document |
+
+**AC3 — external claims executed, not hedged.** `npm view bmad-method version` → `6.12.0`;
+`npm view bmad-method versions --json` → distinct majors 1, 4, 5, 6; `npm view bmad-method time --json`
+→ the `1.x` line was published only on **2025-06-15**; `npm view bmad-enhanced time --json` →
+`1.6.4` on 2026-02-27. **Nothing was marked unverified.** The vendored `_bmad/{core,bmm,bmb}` copy
+reads 6.10.0 and was deliberately **not** treated as authoritative: it ships to nobody
+(`files[]` filter → `[]`).
+
+**AC4 — one finding, five bases, and the trap avoided.** `D15` resolves the contradiction to
+`REQUIRED_BMAD_VERSION = '6.3.0'` (`compat-preflight.js:36`), corroborated by the ADR. The local
+install's **6.10.0 was not written into the compatibility document** — that is the trap this AC
+exists to prevent, and the enforced-vs-local gap stays open as `T73`.
+
+The matrix column was enumerated by command, not spot-checked. `grep -c` exited **1** on two rows;
+one (`1.0.x-alpha`) was **my own glob's fault**, not a phantom. The other, `1.6.4`, has no CHANGELOG
+entry and no git tag — **and is still a real release**, published as `bmad-enhanced@1.6.4`. Had the
+check stopped at CHANGELOG + tags, the remedy would have deleted a row describing a shipped release:
+`docs-1-4`'s `D14` exactly. The row was kept; what changed is that the whole `1.x` column, which no
+object ever owned, no longer asserts a version — no gate existed before `compat-preflight.js` was
+added on 2026-04-25.
+
+**Reconnaissance's "the playbook is load-bearing for the compatibility document" was tested and
+holds only weakly.** Neither file references the other in either direction (`0` links between them),
+and the sibling-file search surfaced exactly one genuinely shared claim — the version relationship
+(`D15`). The files are paired by subject, not by dependency.
+
+**AC5 — every row verified by execution.** All nine fell as reconnaissance predicted, and each was
+corrected or hedged. The `≥2 boxes` / `one or more` threshold conflict was **raised, not resolved**:
+it is now marked in §(b) as an open operator ruling, with neither reading applied.
+
+**AC6 — decided: the playbook is ADMITTED to `USER_FACING_DOCS`.** All per-file checks return 0 on
+it (`checkStaleReferences`, `checkBrokenPaths`, `checkBrokenLinks`, plus
+`checkIncompleteAgentTables`, `checkInternalNamingLeaks`, `checkStaleBrandReferences`), so admitting
+it did not turn the gate red. Admitting it **falsified** the compatibility document's "across 16
+user-facing files" — corrected to 17 in the same commit, and the count is now **pinned by a test**
+that reads the prose and compares it to `USER_FACING_DOCS.length`. That is the check AC6 correctly
+said did not exist. The existing suite asserted three inclusions and three exclusions and did not
+pin the list, so two further assertions were added: membership of the playbook, and that every entry
+resolves on disk.
+
+**AC7 — structural hazards treated as recorded.** The installed-tree block was disposed of as **one**
+structural assertion (`D18`), not per-branch, and `shippedBmeModules` was called with the `files[]`
+array — handed a path it returns `[]` with no error, which reads as "nothing missing". Globs and
+version patterns were not resolved as files. The playbook's `outline_complete: false` was left alone.
+The Team Factory sentence was not re-litigated; `docs-1-1`'s deferred `cat`-command class was worked
+(`D16`). The playbook's fenced shell block was not transcribed anywhere — it is cited by location only.
+
+**AC8 — no unowned claim introduced, no owned claim deleted.** No file was deleted by this story
+(`git status --porcelain | grep '^.D'` → empty), so the `-M --follow` rename trap does not arise.
+Every claim retained names its object: the compatibility floor names `compat-preflight.js`; the
+module set names `package.json` `files[]`; test totals were **replaced by the commands that derive
+them** rather than restated, per the `D6` precedent (keep the instruction, delete the arithmetic) —
+no checker pins a test total and one that did would fail on almost every commit. The one count kept
+as a literal, "17 user-facing files", was kept precisely *because* it could be pinned, and it now is.
+
 ### File List
+
+- `docs/BMAD-METHOD-COMPATIBILITY.md` — modified
+- `docs/host-framework-sync-playbook.md` — modified
+- `scripts/docs-audit.js` — modified (playbook admitted to `USER_FACING_DOCS`)
+- `tests/unit/docs-audit.test.js` — modified (3 assertions added)
+- `_bmad-output/planning-artifacts/convoke-note-docs-accuracy-findings-4-0-2.md` — modified (findings `D15`-`D28`; own coverage rows)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (status)
+- `_bmad-output/implementation-artifacts/docs-1-5-derivation-pass-on-the-upstream-relationship-documents.md` — modified (this record)
 
 ## Change Log
 
 | Date | Change |
 |------|--------|
+| 2026-09-13 | **Implemented.** 14 findings (`D15`-`D28`) across both files; `D15` spans both per AC4. Re-derived load **82 + 74 = 156**, matching Story 1.4's projection exactly — no scope call. `docs/host-framework-sync-playbook.md` **admitted to `USER_FACING_DOCS`** (AC6): no gate had ever read it. Admitting it falsified the compatibility document's file count, which is corrected in the same commit and now **pinned by a new test** — the check AC6 said did not exist. Three assertions added to `tests/unit/docs-audit.test.js`, which previously did not pin the list. The `≥2 boxes` / `one or more` threshold conflict is **raised for an operator ruling, not resolved**. Two near-misses recorded rather than smoothed over: `1.6.4` looked like a phantom matrix row under a CHANGELOG+tag check and is a **real published release** under the pre-rename package name (deleting it would have repeated `docs-1-4`'s `D14`), and the first NFR5 mutation round produced **false "cannot fail"** results because the mutants did not match the checks' contracts. `npm run lint` 0 · `npm test` 0 · `backlog-integrity` 0 · `npm run docs:audit` 0 (annotated per AC6 — it was *inapplicable* to one of these two files until today). |
 | 2026-09-13 | **Story created.** Authored after two read-only reconnaissance passes over both files. Three findings shaped the ACs rather than the epic's text: (1) **the counter is not the worklist here** — this pair's worst defects, including two order-of-magnitude-wrong test counts, return `counted=[] residual=[]`, which inverts 1.4's central mechanic and is why AC2 exists; (2) **`docs/host-framework-sync-playbook.md` is not in `USER_FACING_DOCS`**, so the DoD's `docs:audit` line is vacuous for it — AC6 forces that to be decided rather than inherited; (3) **upstream BMAD is vendored in this tree and npm is reachable**, so AC3 says plainly that "unverified" is the last resort, not the first — the rule's own evidence is that unexecuted external claims were the ones that went wrong. AC4 makes the pair's defining contradiction a single finding: the two documents assert incompatible relationships to the same framework, and the tree and registry each report a third and fourth answer. No counts appear in any AC; the epic's input figures predate the script and the instrument has changed twice since. |

@@ -295,8 +295,8 @@ shape:
 | `_bmad/bme/_vortex/compass-routing-reference.md` | yes | — | **yes** | 1.2 | 2 |
 | `UPDATE-GUIDE.md` | yes | 95 | **yes** | 1.4 | 0 |
 | `docs/faq.md` | yes | 37 | **yes** | 1.4 | 4 |
-| `docs/host-framework-sync-playbook.md` | yes | 36 | no | 1.5 | — |
-| `docs/BMAD-METHOD-COMPATIBILITY.md` | yes | 30 | no | 1.5 | — |
+| `docs/host-framework-sync-playbook.md` | yes | 82 | **yes** | 1.5 | 9 |
+| `docs/BMAD-METHOD-COMPATIBILITY.md` | yes | 74 | **yes** | 1.5 | 6 |
 | `docs/testing.md` | yes | 22 | no | 1.6 | — |
 | `SECURITY.md` | yes | 3 | no | 1.6 | — |
 | `docs/references.md` | yes | 2 | no | 1.6 | — |
@@ -529,6 +529,59 @@ dropped under tag pressure while the gate stays green because the artifact is st
 **Findings count is recorded, never targeted.** The column exists so a later reader can see yield per
 file, not so a story can be judged by it. A zero is a legitimate result and must be written as `0`,
 never left blank — blank means *not examined*, and the two must never be confusable.
+
+### Story 1.5 findings — `docs/BMAD-METHOD-COMPATIBILITY.md`, `docs/host-framework-sync-playbook.md`
+
+**14 findings, D15–D28.** `D15` spans both files and is recorded once per AC4, so the per-file rows
+below sum to 15 while the distinct count is 14. Neither file had ever had a derivation pass; the
+playbook had not been touched since `4.0.0` shipped and was in no audit scope at all (`D28`).
+
+| ID | Line | Claim | Reality | Reproduce |
+|----|------|-------|---------|-----------|
+| **D15** | `BMAD-METHOD-COMPATIBILITY.md:100` + matrix; `host-framework-sync-playbook.md:17` | The compatibility document asserts BMAD **`1.x`** in every matrix row and a "Current Version" of Convoke 3.0.0; the playbook describes a **v6.3** coupling | **One contradiction, five bases.** What the package enforces is `REQUIRED_BMAD_VERSION = '6.3.0'` (`scripts/update/lib/compat-preflight.js:36`) — the authority, and it *warns* rather than blocks. The ADR records adoption of v6.3.0. **BMAD `1.x` was published once, on 2025-06-15, before Convoke's first release**, so no Convoke version ever targeted it. The local `_bmad/{core,bmm,bmb}` install reads 6.10.0 but ships to nobody (`files[]` filter returns `[]`); the registry serves 6.12.0. Resolved to the enforced floor. **The enforced-vs-local gap is `T73` and is NOT closed here.** | `grep -n REQUIRED_BMAD_VERSION scripts/update/lib/compat-preflight.js` · `npm view bmad-method time --json` · `node -e "console.log(require('./package.json').files.filter(f=>/_bmad\/(core\|bmm\|bmb)/.test(f)))"` |
+| **D16** | `BMAD-METHOD-COMPATIBILITY.md:139,261,263` | Three copy-paste `cat _bmad/bme/_vortex/agents/<name>.md` commands | Agents are **directories** containing `SKILL.md`; every one of the three paths fails. Routed here by `docs-1-1`'s review so 1.5 need not rediscover it | `ls -d _bmad/bme/_vortex/agents/*/` · `test -f _bmad/bme/_vortex/agents/contextualization-expert.md; echo $?` → `1` |
+| **D17** | `BMAD-METHOD-COMPATIBILITY.md:273,275,277,357` | "642 assertions", "convoke-update.js (92.91% coverage)", "**Total: 293 tests**" (twice) | `tests/p0` runs **642 tests** (right number, wrong noun, and it covers more than activation). Coverage is **91.91%**, not 92.91%. The suite runs **3112** tests under `test:coverage` — 293 understates it by an order of magnitude. Totals removed in favour of the commands, since nothing pins them | `node scripts/test-runner.js tests/p0` · `npm run test:coverage` · `npm test` |
+| **D18** | `BMAD-METHOD-COMPATIBILITY.md:69-91` | Installed-tree diagram showing `_vortex`, `_gyre`, `_enhance` | **Three of the six `_bmad/bme/` modules that actually ship.** `_artifacts`, `_portability` and `_team-factory` are missing, as is `covenant/`. Reduced to shape + derivation per FR3a/D7 rather than re-listing an inventory. Counted as **one** structural assertion per AC7 | `node -e "console.log(require('./scripts/audit/lib/installed-tree.js').shippedBmeModules(require('./package.json').files))"` |
+| **D19** | `host-framework-sync-playbook.md:41,47` | "BMAD upstream **major**-version release … (e.g., **v6.4**, v7.0). This is the canonical trigger." | A semver category error: `v6.3 → v6.4` is a **minor** bump, so the example contradicts the rule. Empirically the trigger never fired — upstream went 6.3 → **6.12.0** with no major, while Convoke needed a v6.4–v6.8 absorption PRD | `npm view bmad-method versions --json` (distinct majors: 1, 4, 5, 6) |
+| **D20** | `host-framework-sync-playbook.md:49` | `validate-marketplace` "reports schema drift vs upstream `registry/registry-schema.yaml`" | It does not, and **nothing in this repository reads that schema**. The script validates local `.claude-plugin/marketplace.json` + `module.yaml`; its only drift check compares `marketplace.json` to `package.json` | `node scripts/audit/validate-marketplace.js` · `grep -rn registry-schema --include='*.js' scripts/` → no hits |
+| **D21** | `host-framework-sync-playbook.md:54` | "Anti-vapor anchor (per **PM5**)" | Anti-vapor is **PM4** (*"'named release class' without this artifact is vapor"*). PM5 is the separate hypothesis-not-commitment principle | `grep -n "PM4\|PM5" _bmad-output/planning-artifacts/convoke-prd-bmad-v6.3-adoption/success-criteria.md` |
+| **D22** | `host-framework-sync-playbook.md:80,83,89` | WS2 "**Maintain** Convoke's presence in the upstream plugin marketplace"; marketplace as "primary external distribution channel beyond npm"; `convoke.yaml` in the present tense | **Convoke has no marketplace presence.** PR #9 was closed/rejected 2026-04-27; the repo's own epics call it "the rejected PR #9". npm is the only live external channel. No file named `convoke.yaml` exists — only the never-submitted `v63-3-3-convoke.yaml` draft. This is the `AP-7` failure mode, inside the document that lists `AP-7` | `grep -rn "rejected PR #9" _bmad-output/planning-artifacts/` · `find . -name 'convoke.yaml' -not -path './node_modules/*'` → empty |
+| **D23** | `host-framework-sync-playbook.md:107` | The "release process is **content, not software**" workstream | The insight is about **the product** — *"Convoke is content, not software"* (`convoke-prd-bmad-v6.3-adoption/executive-summary.md:5`) — not the release process. It is also on the `internalOnly` phrase list that must not reach user-facing copy | `grep -rn "content, not software" --include='*.md' .` · `innovation-novel-patterns.md:54` |
+| **D24** | `host-framework-sync-playbook.md:118-119` | "**All of them** run in CI on every push" | False twice. **`drift-snapshot` (FR39) appears nowhere in `.github/`**, and N=1 external validation is a person on their own machine — the same table says so ~20 lines later. CI also runs on pushes to `main`, PRs to `main` and `v*` tags, not every push | `grep -rn drift-snapshot .github/` → no hits · `sed -n '1,10p' .github/workflows/ci.yml` |
+| **D25** | `host-framework-sync-playbook.md:163` | The hand-publish incident "is logged as **T35**" | `T35` is in **§2.5 Absorbed / Archived** — closed, fixed in part by `dist-1-7`, residual absorbed into `T47`. Citing it as the live record points a reader at a closed row | `grep -n '^\| T35 ' _bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` |
+| **D26** | `BMAD-METHOD-COMPATIBILITY.md:373-374` | "**Version:** 3.0.0 / **Last Updated:** 2026-03-25" | Stale by four releases. The version marker is now a pointer to `package.json` rather than a restatement, per FR3a | `node -e "console.log(require('./package.json').version)"` |
+| **D27** | `BMAD-METHOD-COMPATIBILITY.md` matrix | The matrix reads as a complete release history | `3.1.0`, `3.2.0`, `3.2.1`, `3.3.0` and every 4.0.x are absent. **`1.6.4` has no CHANGELOG entry and no git tag — and is still real**: it shipped as `bmad-enhanced@1.6.4` on 2026-02-27 under the pre-rename package name. A CHANGELOG+tag-only check would have deleted a row describing a real release, repeating `D14` | `git tag --list` · `grep -cE '^## \[1\.6\.4' CHANGELOG.md` → `0`, **exit 1** · `npm view bmad-enhanced time --json` |
+| **D28** | `scripts/docs-audit.js` `USER_FACING_DOCS` | — | **`docs/host-framework-sync-playbook.md` was in no audit scope**, so the DoD's "docs:audit exits 0" was *inapplicable* to it, not merely weak. Decided per AC6: **admitted**. All per-file checks return 0 on it, so the gate did not turn red; admitting it falsified the compatibility document's "16 user-facing files", which is corrected in the same commit and now pinned by a test | `node -e "console.log(require('./scripts/docs-audit.js').USER_FACING_DOCS.length)"` |
+
+**`0` is written as `0`.** Classes swept with no finding: requirement identifiers in
+`BMAD-METHOD-COMPATIBILITY.md` (**0** — the file contains none); markdown links in
+`BMAD-METHOD-COMPATIBILITY.md` (**0** — the file contains none); broken links or anchors in the
+playbook (**0** of 14 — all resolve, and each target was read for whether it says what the citing
+sentence claims).
+
+**Assertions checked and HOLDING** — recorded because a silent assertion is indistinguishable from an
+unexamined one: all 7 Vortex first names and all 4 Gyre first names; `7 agents` / `22 workflows` /
+`4 agents` / `7 workflows` against the registry; `12 agents` in the playbook's parity row; "eight jobs
+including `fresh-install`" (the `publish` job's `needs` list is exactly 8); `bmad.yaml in _bmad/_config/`
+and the verbatim installer log line `✓ BMAD Method configuration found`; "No npm dependency on BMAD
+Method"; `_bmad/` created automatically; the `pf1-*` scripts existing but unwired; FR39/FR40 surviving
+ADR-001; FR38a as the replacement for FR36–FR38; `I1`'s `≥50%` reuse target; the anti-pattern registry's
+`AP-1`–`AP-11` and its falsification clause quoted verbatim; §(b)'s "three numbered conditions / four-box
+checklist" self-description.
+
+**Raised, not resolved — an operator ruling is owed.** §(b) opens with "**one or more** of the
+following conditions" and resolves with "**≥2 boxes ticked**". A release meeting exactly one condition is
+both in and out of the class. AC5 reserves this for the operator because it changes when the release
+class applies; the contradiction is now marked in the document and left undecided.
+
+**Not re-reported: the AC1 divergence.** Story 1.4 already re-derived this pair with the same command,
+so a fresh finding would duplicate it. The re-derived floors are **82** (playbook) and **74**
+(compatibility) = **156**, which matches 1.4's projected remaining load for this story exactly, so 1.4's
+projection is **not** materially invalidated and no scope call arises. What this story owed was the
+coverage table's `Assertions` column, which still carried the pre-script input (36 and 30) — updated
+above. The decidable contributor to the playbook's rise is `T160` closing the two-part-version class:
+this note's breakdown table recorded **0** versions for it before that closure; it now reports 24.
+Both figures are **floors** — the script says so itself and reports a non-zero residual.
 
 ## Method for Stories 2–4
 
