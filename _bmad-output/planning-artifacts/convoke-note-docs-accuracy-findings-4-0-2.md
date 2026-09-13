@@ -293,8 +293,8 @@ shape:
 | `docs/agents.md` | yes | — | **yes** | 1.2, 1.3 | 8 |
 | `_bmad/bme/_vortex/guides/VORTEX-TEAM-GUIDE.md` | yes | — | **yes** | 1.2 | 1 |
 | `_bmad/bme/_vortex/compass-routing-reference.md` | yes | — | **yes** | 1.2 | 2 |
-| `UPDATE-GUIDE.md` | yes | 37 | no | 1.4 | — |
-| `docs/faq.md` | yes | 20 | no | 1.4 | — |
+| `UPDATE-GUIDE.md` | yes | 91 | **yes** | 1.4 | 0 |
+| `docs/faq.md` | yes | 37 | **yes** | 1.4 | 4 |
 | `docs/host-framework-sync-playbook.md` | yes | 36 | no | 1.5 | — |
 | `docs/BMAD-METHOD-COMPATIBILITY.md` | yes | 30 | no | 1.5 | — |
 | `docs/testing.md` | yes | 22 | no | 1.6 | — |
@@ -304,6 +304,158 @@ shape:
 | `CREDITS.md` | yes | 0 | no | 1.6 | — |
 | `CODE_OF_CONDUCT.md` | yes | 0 | no | 1.6 | — |
 | `README.md` | yes | — | no | 1.6 | — |
+
+### ⚠ The counter reports a FLOOR, and these are the classes it misses
+
+Two review rounds found **nine** classes the pinned pattern set does not see — four at Round 1, five
+more at Round 2 *after* Round 1's fixes. `code-review-convergence` says two failed attempts at the same
+fix predict a third, so the claim was narrowed rather than the patterns widened again. **Every figure
+below is a lower bound.** The missing classes are listed here so Stories 1.5 and 1.6 inherit a known
+gap instead of a false census, and are filed as backlog row **`T160`**, which owns the decision about whether to close any of them.
+
+| Missing class | Example | Effect |
+|---|---|---|
+| **Elided-noun counts** | `UPDATE-GUIDE.md:109` — *"All 11 agents installed (7 Vortex + 4 Gyre)"* carries **three** repository numbers; one is seen | undercount, and `docs:audit` cannot fail on the other two either |
+| **Two-part versions** (`2.x`, `v6.3`) | `UPDATE-GUIDE.md:11`; `docs/host-framework-sync-playbook.md` reports **0** versions for a document about version alignment | large undercount in Story 1.5 |
+| **Counted nouns outside the list** | `tests`, `assertions`, `jobs`, `scripts`, `Operator Rights` | undercount across 1.5 and 1.6 |
+| **Path extensions outside the list** | `.prettierrc`, `.svg`, `.xsd`, `Makefile` | none in today's corpus; latent |
+| **Directory-diagram nodes** | `docs/BMAD-METHOD-COMPATIBILITY.md:70-90` — 21 paths suppressed as decoration while the same block's 6 counts are kept | deliberate, but inconsistent, and unauthorised by AC1 |
+| **Line-local box-drawing suppression** | a prose line quoting `` `├──` `` loses its real paths | false suppression; fires in this epic's own artifacts |
+| **Duplicate link text/target** | `[`a/b.md`](a/b.md)` counted twice | over-count |
+| **Globs and templates** | `scripts/audit/pf1-*`, `backup-{version}-{timestamp}/` captured truncated | over-count of a non-path |
+| **Filenames in prose read as invocations** | `docs/BMAD-METHOD-COMPATIBILITY.md:275` — `convoke-update.js (92.91% coverage)` becomes a command | over-count |
+
+**The over- and under-counts do not cancel, and no claim is made that they do.** They are listed
+together because both bound the same figure's trustworthiness.
+
+**Why hand-derivation did not catch the first of these.** `UPDATE-GUIDE.md:109` sits inside Window A,
+the window Story 1.4's own record reports as an exact match. The hand pass and the script shared a
+blind spot because the same person wrote both, holding the same mental model of what a count is. AC2
+chose hand-derivation over re-running precisely to get independence, and got less than it expected:
+**the method is only as independent as the two derivations' assumptions are.** A future window should
+be enumerated by someone who has not seen the pattern set.
+
+### Story 1.4 output: findings per derived assertion, and the projection (AC4, AC5)
+
+**Findings per derived assertion — the named output this story owes, with all three figures AC5 asks
+for.** Round 1 changed every number here: two undercount classes were fixed in the instrument and `D14`
+was retracted, so both the numerator and the denominator moved.
+
+| Figure | Value | How to re-derive |
+|---|---|---|
+| assertions examined (1.4) | **128** | `node scripts/audit/derived-assertions.js UPDATE-GUIDE.md docs/faq.md` |
+| findings | **4** (`D10`-`D13`) | the findings table above |
+| **measured rate** | **0.0313 findings/assertion** | 4 ÷ 128 |
+| remaining load, Story 1.5 | **117** | the projection command below |
+| remaining load, Story 1.6 | **105** (includes `README.md`) | same command |
+| **projected findings** | **≈ 6.9** | 222 × 0.0313 |
+
+**The blend hides the only interesting fact.** One examined file returned no findings at all and the
+other returned all of them, so the average describes neither. Both per-file rates are in the table
+above; a reader sizing 1.5 or 1.6 should use the pair, not the blend.
+
+**Remaining load, measured rather than inherited.** AC5 permits counting files this story may not edit —
+counting is not examining. Figures above; the command that produces them is
+`node scripts/audit/derived-assertions.js docs/host-framework-sync-playbook.md docs/BMAD-METHOD-COMPATIBILITY.md docs/testing.md SECURITY.md docs/references.md docs/what-convoke-brings-to-bmad-method.md CREDITS.md CODE_OF_CONDUCT.md README.md`
+and sum the `Story` groupings in the coverage table above. **`README.md` IS included**, so this
+projection is a whole-corpus figure and not a floor — the gap AC5 requires stating does not apply.
+
+**The unexamined files also measure differently from their pre-story estimates, and no characterisation
+of the spread is offered here.** Two attempts were made — "by a similar factor", then a stated range —
+and both were wrong; the second understated its own upper bound by a third and asserted "every file"
+while naming a counterexample in the same sentence. A third attempt would be the same mistake. The
+per-file ratios are computable from the table below and the script, and are left to the reader. The `Assertions` column above is untouched for unexamined files, so both methods
+sit side by side and anyone can compute the per-file ratios rather than take a characterisation on
+trust.
+
+**The scope call is the operator's, and this story does not make it.** "Before the tag" is named as the
+threshold in the epic and defined nowhere in it — no date, no session budget, no rate — so there is a
+numerator and a denominator and nothing to compare them against. A story that declared "it fits" would
+be guessing in the operator's name. The figures are above; the decision is recorded wherever the
+operator makes it.
+
+### Story 1.4 findings — `docs/faq.md`, `UPDATE-GUIDE.md`
+
+*(No count in this heading. It said "(5)" against four live rows after `D14` was retracted — a figure in a heading is one more thing to go stale. The rows below are the findings.)*
+
+Every assertion in both files was dispositioned; the ones that HOLD are marked checked below rather
+than left silent, because a silent assertion is indistinguishable from an unexamined one.
+
+| ID | Line | Claim | Reality | Reproduce |
+|----|------|-------|---------|-----------|
+| **D10** | `docs/faq.md:131` | `/bmad-bmb-agent` | No such skill. Real id is `bmad-agent-builder` | `cut -d, -f1 _bmad/_config/skill-manifest.csv \| grep -c '"bmad-bmb-agent"'` → `0` |
+| **D11** | `docs/faq.md:132` | `/bmad-bmb-module` | Real id is `bmad-module-builder` | same command, substituting the id |
+| **D12** | `docs/faq.md:133` | `/bmad-bmb-workflow` | Real id is `bmad-workflow-builder` | same command, substituting the id |
+| **D13** | `docs/faq.md:135` | `/bmad-bmb-agent` again, in the Quick start line | Same defect, fourth site | `grep -c '/bmad-bmb-' docs/faq.md` |
+| ~~**D14**~~ | `docs/faq.md:84` | *(withdrawn)* | **RETRACTED at Round 1 — the finding was false and its remedy made the document worse.** The file was **renamed, not deleted**: `89f0ffb0` records `R100` to `vision-original-readme.md`, and `9ea6a860` renamed it again to `convoke-vision-original-readme.md`, where it is today. The pointer was stale; the claim was OWNED. The first pass deleted the sentence, which is an AC8 violation — the correct remedy was repointing the path, and that is what now ships. | `git show --name-status -M 89f0ffb0 \| grep -i vision` → `R100`, **not** `D` |
+
+**D10-D13 are one class, and the prefix is not uniformly wrong.** `bmad-bmb-setup` *does* exist, so a
+blanket `bmad-bmb-*` → something rewrite would have broken a correct id. Each was derived from
+`_bmad/_config/skill-manifest.csv` — the shipped manifest, never `.claude/skills/`, which is gitignored
+(NFR8). Falsified after the fix: every `/bmad-*` token in `docs/faq.md` now resolves to exactly one
+manifest row.
+
+**Why D14 was wrong, recorded because the cause is a rule this story's own Dev Notes name.** The basis
+was `git log --diff-filter=D`, run **without `-M`**, so a 100%-similarity rename reported as a deletion.
+That is *"an empty search licenses only 'not in the scope I searched'"* — cited in this story's Dev Notes
+as a lesson from `docs-1-1`, and committed anyway, one story later. **Any claim that a file is gone must
+be derived with rename detection on**: `git log --diff-filter=D -M --follow -- <path>`.
+
+#### Assertions checked and HOLDING
+
+**No per-kind figures or line anchors are reproduced in this section, and that is the third attempt at
+it.** The first two carried hand-maintained totals that went stale the moment Round 1 changed the
+instrument — the table summed to the pre-Round-1 total while the coverage table said otherwise — and six
+line anchors off by exactly two, frozen at a state the file never shipped in. Both are the same defect:
+a derived value written into an artifact whose reader re-derives it. **Regenerate, do not read:**
+
+```
+node scripts/audit/derived-assertions.js UPDATE-GUIDE.md docs/faq.md --json
+```
+
+What was checked, as classes with the command that reproduces each:
+
+| Class | Verdict | Reproduce |
+|---|---|---|
+| every `convoke-*` token in both files | all are shipped binaries | compare the `command` rows of the `--json` output against `Object.keys(require('./package.json').bin)` |
+| every path in `UPDATE-GUIDE.md` | the ones that do not resolve are runtime-created (`.backups/`, `.logs/`, `.migration-lock`), plus two verified by hand — `:97 .claude/commands/` is a **historical** migration source (and `.claude/` is gitignored, so absence proves nothing — NFR8), and a per-team `guides/` directory exists | `fs.existsSync` over the `path` rows; `ls -d _bmad/bme/*/guides/` |
+| every path in `docs/faq.md` | all resolve, or are filenames whose directory is named in the same passage (`.gyre/` under its own heading, the contracts dir on the same line, "the agent registry") | same, plus read the naming line |
+| every version in `UPDATE-GUIDE.md` | migration boundaries, not claims about the current release | `grep -n '^### From' UPDATE-GUIDE.md` — this covers the `### From` headings only; `:97`'s inline `(v2.2.0)` was checked separately |
+| every version in `docs/faq.md` | historical release references | `grep -n '^## \[' CHANGELOG.md` — `1.1.0` and `1.5.0` have headings; `1.0.x` and `1.6.x` are **ranges**, which no single heading matches, and were read against the range they name |
+| every count in both files | verified against the registry and the contract directories | `node -e "const r=require('./scripts/update/lib/agent-registry');console.log(r.AGENTS.length,r.GYRE_AGENTS.length,r.WORKFLOWS.length,r.GYRE_WORKFLOWS.length)"`; `ls -1 _bmad/bme/_vortex/contracts/ _bmad/bme/_gyre/contracts/` |
+| counts with a **non-team** qualifier | true, and not roster claims — a Wave-3 historical delta, and BMB's builder agents listed in the table directly beneath the sentence | read the table beneath it |
+
+⚠ **This section covers the assertions the counter reports. It does not cover the classes the counter
+misses**, which are listed above and filed. An assertion the instrument cannot see was not examined here,
+and that includes `UPDATE-GUIDE.md:109`'s two team counts and `docs/faq.md:159`'s Gyre count.
+
+#### A tooling finding, not a document finding
+
+**`docs-audit.js` required the counted noun ADJACENT to the number, so `docs/faq.md:40` was invisible —
+in both directions.** The line's two claims are correct, but a *wrong* version of the same line produced
+zero findings, so the sentence could go stale with the gate green. Fixed by admitting a qualifier
+between number and noun, restricted to names drawn from `_bmad/bme/_config/name-registry.csv`. The
+restriction is load-bearing: an unrestricted qualifier flags "adding three new agents" and "three
+builder agents", which are true and are not roster claims. Both directions are mutation-proven.
+
+**⚠ The limit of that fix, recorded because it is easy to over-read.** It makes a claim **visible**, not
+**verified against its own team**. `validCountsFor` holds one valid set for every roster, so
+*"all four Vortex agents"* still passes on Gyre's 4. That is `T154`, and this story does not close it.
+
+**Assertion counts are Story 1.4's script output, not the pre-story estimates.** The `Assertions`
+column above still holds the 2026-09-10 first-pass figures for files no story has examined; the two
+rows Story 1.4 examined now carry the count from
+[`scripts/audit/derived-assertions.js`](../../scripts/audit/derived-assertions.js), which Stories 1.5
+and 1.6 run identically. Re-derive any cell with
+`node scripts/audit/derived-assertions.js <file>`; do not hand-edit a figure in this table.
+
+**The two methods disagree substantially, and the estimate is the side that moved.** Both examined
+files came in higher than their pre-story figure, `UPDATE-GUIDE.md` by well over double. The first-pass
+pattern set was never recorded — this note and the epic both say only "a first-pass pattern set" — so
+the divergence cannot be attributed, and *"prior method not reproducible"* is the honest reading rather
+than a gap to fill. One likely contributor is decidable: Story 1.4 ruled that **fenced code blocks are
+counted**, and `UPDATE-GUIDE.md`'s commands sit inside fences — a bare majority, not the near-totality an earlier draft claimed. Patterns were deliberately
+**not** tuned toward the estimate; doing so would invert the test.
 
 **Cross-file closures made by Story 1.1 — these files are NOT examined.** D1 and D2 each appeared in more
 files than the one the epic anchored them to. Story 1.1 *edited* `docs/faq.md`, `UPDATE-GUIDE.md` and

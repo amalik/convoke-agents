@@ -188,10 +188,25 @@ function checkStaleReferences(content, filePath) {
   // Build regex for written-out numbers
   const wordKeys = Object.keys(WORD_TO_NUM).join('|');
 
-  const digitAgentRe = /\b(\d+)\s+agents?\b/gi;
-  const wordAgentRe = new RegExp(`\\b(${wordKeys})\\s+agents?\\b`, 'gi');
-  const digitWorkflowRe = /\b(\d+)\s+workflows?\b/gi;
-  const wordWorkflowRe = new RegExp(`\\b(${wordKeys})\\s+workflows?\\b`, 'gi');
+  // ONE qualifier may sit between the number and the noun, and it must name a team. WITHOUT it, a claim like
+  // "all seven Vortex agents" is invisible to this check — and so is a FALSE version of it, which
+  // is the part that matters: `docs/faq.md:40` carried two such claims on one line and the gate
+  // stayed green against both the true and the deliberately-wrong form. Found by Story 1.4's
+  // derivation pass (docs-1-4, AC6); the same defect existed in the counter built to measure it.
+  //
+  // ⚠ SCOPE OF THIS FIX. It makes the claim VISIBLE. It does not make it right for its team:
+  // `validCountsFor` holds ONE valid set for all rosters, so "all four Vortex agents" passes on
+  // Gyre's 4. Counts are compared without their subject — that is T154, not closed here.
+  // The qualifier must NAME A TEAM, derived from the name registry. An unrestricted qualifier
+  // over-matches: "adding three new agents" (a historical delta) and "three builder agents"
+  // (BMB's roster, listed in the table directly below the sentence) are both TRUE and neither is
+  // a claim about a Convoke roster, yet a subject-blind check rejects both. Requiring a team name
+  // is the narrowest thing that distinguishes "seven Vortex agents" from "three new agents".
+  const QUALIFIER = `(?:(?:${teamNames().join('|')})\\s+)?`;
+  const digitAgentRe = new RegExp(`\\b(\\d+)\\s+${QUALIFIER}agents?\\b`, 'gi');
+  const wordAgentRe = new RegExp(`\\b(${wordKeys})\\s+${QUALIFIER}agents?\\b`, 'gi');
+  const digitWorkflowRe = new RegExp(`\\b(\\d+)\\s+${QUALIFIER}workflows?\\b`, 'gi');
+  const wordWorkflowRe = new RegExp(`\\b(${wordKeys})\\s+${QUALIFIER}workflows?\\b`, 'gi');
 
   // Contradictory terminology patterns.
   // ⚠ The `original (four|4)` entry below fires on any `4` — version strings included — and
@@ -569,10 +584,39 @@ function checkStaleBrandReferences(content, filePath) {
 // --- Report Functions (Task 6) ---
 
 /**
- * Format findings as a human-readable chalk-colored report.
- * @param {Array<object>} findings
- * @returns {string}
+ * Team names, from the name registry rather than a list here.
+ *
+ * Used to decide whether a qualifier between a number and a counted noun marks a claim about a
+ * team's roster ("seven Vortex agents") or about something else entirely ("three new agents").
+ * Falls back to a small hardcoded set if the registry is unreadable, so a missing file narrows the
+ * check rather than crashing the audit. ⚠ That fallback is the NORMAL path in an installed copy:
+ * `scripts/` ships but `_bmad/bme/_config/name-registry.csv` does not appear in `package.json`
+ * `files[]`, so an operator's install sees the fallback teams and not the registry's full set.
+ * Derive before relying on it: `node -e "console.log(require('./package.json').files)"`.
  */
+let TEAM_NAMES = null;
+function teamNames() {
+  if (TEAM_NAMES) return TEAM_NAMES;
+  const fallback = ['Vortex', 'Gyre', 'Convoke'];
+  try {
+    const csv = fs.readFileSync(
+      path.join(findProjectRoot(__dirname), '_bmad', 'bme', '_config', 'name-registry.csv'),
+      'utf8'
+    );
+    const names = csv
+      .split('\n')
+      .slice(1)
+      .map((l) => l.split(','))
+      .filter((c) => c[0] === 'team' && c[1])
+      .map((c) => c[1].trim())
+      .filter((n) => /^[A-Za-z][\w-]*$/.test(n));
+    TEAM_NAMES = names.length ? [...new Set(names)] : fallback;
+  } catch {
+    TEAM_NAMES = fallback;
+  }
+  return TEAM_NAMES;
+}
+
 /** Every roster, not the Vortex one — the word "Registry" was previously false (T153). */
 function registryHeader(registry = agentRegistry) {
   const agents = rosterTotal(registry, 'AGENTS');
@@ -584,6 +628,11 @@ function registryHeader(registry = agentRegistry) {
   return `${agents} agents, ${workflows} workflows (from exported rosters)`;
 }
 
+/**
+ * Format findings as a human-readable chalk-colored report.
+ * @param {Array<object>} findings
+ * @returns {string}
+ */
 function formatReport(findings) {
   if (findings.length === 0) {
     return [
@@ -711,6 +760,7 @@ async function main() {
 
 module.exports = {
   validCountsFor,
+  teamNames,
   rosterTotal,
   expectedCountText,
   registryHeader,

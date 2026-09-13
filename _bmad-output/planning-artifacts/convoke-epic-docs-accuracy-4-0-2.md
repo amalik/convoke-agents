@@ -437,7 +437,7 @@ So that the scope call on the remaining files is mine and is informed.
 **Then** the story **raises an explicit scope call to the operator** and does not proceed silently
 **And** a projection that fits is recorded just as explicitly, so the basis of the decision survives.
 
-**Given** the three files are examined
+**Given** the two files are examined *(corrected 2026-09-13 by Story 1.4 AC7, which exists to settle this. "Three" contradicted this same AC block's opening line — which names `UPDATE-GUIDE.md` and `docs/faq.md` and nothing else — and the findings note's coverage table, which assigns exactly two rows to 1.4. The note's remaining-work figures corroborate: 1.5's cited 66 is its two files' assertions and 1.6's 28 is its six, leaving no third file for 1.4 to own. Derive: read the `Story` column of the coverage table.)*
 **When** the coverage table is updated
 **Then** each carries `Examined: yes` and a findings count, `0` written as `0`.
 

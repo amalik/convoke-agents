@@ -81,7 +81,7 @@ Empathy mapping was later resurrected in v1.5.0 under Isla's Empathize stream.
 
 No. The project pivoted from multi-framework orchestration (Quint + DesignOS + BMAD + AgentOS) to focused domain-specialized agents within BMAD.
 
-The archived original vision is at `_bmad-output/planning-artifacts/ORIGINAL-VISION-README.md`.
+The archived original vision is at `_bmad-output/planning-artifacts/convoke-vision-original-readme.md`.
 
 ---
 
@@ -128,11 +128,11 @@ Convoke includes three builder agents specifically for extending the system:
 
 | Builder | Slash Command | What it creates |
 |---------|---------------|-----------------|
-| Bond (Agent Builder) | `/bmad-bmb-agent` | Custom agents with persona, menu, and workflows |
-| Morgan (Module Builder) | `/bmad-bmb-module` | Complete modules with agents, workflows, and config |
-| Wendy (Workflow Builder) | `/bmad-bmb-workflow` | Standalone workflows with steps, templates, and validation |
+| Bond (Agent Builder) | `/bmad-agent-builder` | Custom agents with persona, menu, and workflows |
+| Morgan (Module Builder) | `/bmad-module-builder` | Complete modules with agents, workflows, and config |
+| Wendy (Workflow Builder) | `/bmad-workflow-builder` | Standalone workflows with steps, templates, and validation |
 
-**Quick start:** Run `/bmad-bmb-agent` to create a new agent through a guided process. BMB handles registry entries, file structure, and validation — you focus on the agent's purpose and behavior.
+**Quick start:** Run `/bmad-agent-builder` to create a new agent through a guided process. BMB handles registry entries, file structure, and validation — you focus on the agent's purpose and behavior.
 
 **Alternative:** Fork the repository if you need full control over distribution (custom npm packages, non-standard patterns).
 

@@ -18,6 +18,7 @@ const {
   rosterTotal,
   expectedCountText,
   registryHeader,
+  teamNames,
 } = require('../../scripts/docs-audit');
 
 const {
@@ -533,6 +534,52 @@ describe('checkInternalNamingLeaks', () => {
 
 /** chalk colour codes, removed so assertions read the text rather than the escapes. */
 const stripAnsi = (s) => s.replace(new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g'), '');
+
+describe('count claims with a team qualifier (docs-1-4 AC6)', () => {
+  // `docs/faq.md:40` carried TWO count claims on one line — "all seven Vortex agents" and "all
+  // four Gyre agents" — and the checker saw NEITHER, because it required the counted noun
+  // adjacent to the number. The claims were true; what mattered is that a FALSE version was
+  // equally invisible, so the line could go stale with the gate green.
+  it('flags a wrong count that carries a team qualifier', () => {
+    const line = 'Use all nine Vortex agents, or all six Gyre agents.';
+    const found = checkStaleReferences(line, 'x.md');
+    assert.equal(found.length, 2, 'both claims on the line must be flagged, not just the first');
+    assert.deepEqual(found.map((f) => f.current), ['nine Vortex agents', 'six Gyre agents']);
+  });
+
+  it('accepts the same line when the counts are right', () => {
+    const line = 'Use all seven Vortex agents, or all four Gyre agents.';
+    assert.deepEqual(checkStaleReferences(line, 'x.md'), []);
+  });
+
+  it('does NOT treat a non-team qualifier as a roster claim', () => {
+    // Both are true and neither is about a Convoke roster: one counts a historical delta, the
+    // other counts BMB's builder agents. An unrestricted qualifier flagged both.
+    assert.deepEqual(checkStaleReferences('adding three new agents:', 'x.md'), []);
+    assert.deepEqual(checkStaleReferences('Convoke includes three builder agents:', 'x.md'), []);
+  });
+
+  it('still flags the bare adjacent form', () => {
+    assert.equal(checkStaleReferences('We support 5 agents.', 'x.md').length, 1);
+  });
+
+  it('derives team names from the registry rather than a list in this file', () => {
+    const teams = teamNames();
+    assert.ok(teams.length >= 2, 'the registry yielded no teams');
+    for (const t of ['vortex', 'gyre']) {
+      assert.ok(teams.map((x) => x.toLowerCase()).includes(t), `${t} missing from the derived set`);
+    }
+  });
+
+  // ⚠ CAVEAT, recorded because AC6 requires it and because the mutation proof above is easy to
+  // over-read: this makes the claim VISIBLE, not verified against its own team. `validCountsFor`
+  // holds ONE valid set for every roster, so a claim naming the wrong team still passes when the
+  // number is valid for some other team. That is T154 and is not closed here.
+  it('a count valid for ANOTHER team still passes — the known limit of this fix', () => {
+    assert.deepEqual(checkStaleReferences('Use all four Vortex agents.', 'x.md'), [],
+      'documents the T154 gap; this is not an endorsement of the behaviour');
+  });
+});
 
 describe('the remedy a finding prints (T153)', () => {
   // The four `expectedCountText` call sites, digit and written-out alike. NOT every count remedy
