@@ -192,8 +192,8 @@ release ever targeted BMAD 1.x: that line was published once, on 2025-06-15
 already on its 6.x line by the time 1.6.4 shipped. Nothing in the repository determined a
 supported BMAD version before `compat-preflight.js` was added on 2026-04-25
 (`git log --diff-filter=A -M --follow -- scripts/update/lib/compat-preflight.js`), so those
-cells asserted something no object could confirm or contradict. BMAD's entire `1.x` line consists of
-two releases (`1.0.1` and `1.1.0`) published four minutes apart on that one day.
+cells asserted something no object could confirm or contradict. BMAD's entire `1.x` line is
+two releases (`1.0.1` and `1.1.0`), both published on that one day.
 
 **This table is not a release history, and no in-repo record is one.** Many shipped versions are
 missing from it, before and after 3.0.0. **Do not enumerate releases with `git tag --list` or
