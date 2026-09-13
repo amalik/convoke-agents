@@ -5,7 +5,7 @@ const fs = require('fs-extra');
 const os = require('os');
 const yaml = require('js-yaml');
 
-const { createConfig, detectCollisions, deriveWorkflowNames, toKebab } = require('../../_bmad/bme/_team-factory/lib/writers/config-creator');
+const { createConfig, detectCollisions, deriveWorkflowNames, toKebab, buildConfigData, ensureOutputDirectory } = require('../../_bmad/bme/_team-factory/lib/writers/config-creator');
 
 const FIXTURE_PATH = path.join(__dirname, 'fixtures', 'test-team-spec.yaml');
 const GOLDEN_PATH = path.join(__dirname, 'golden', 'golden-config.yaml');
@@ -205,5 +205,64 @@ describe('toKebab', () => {
 
   it('trims leading/trailing hyphens', () => {
     assert.equal(toKebab(' Test '), 'test');
+  });
+});
+
+// ── tf-2-13 Task 1 (T133a): output_folder must carry the {project-root}/ prefix ──
+// step-02-connect.md §5 documents the template as '{project-root}/{output_directory}'
+// and every shipped module (_gyre, _vortex, _team-factory) carries it. buildConfigData
+// wrote the bare value, so a generated team resolved its output against process.cwd().
+describe('tf-2-13: output_folder prefix', () => {
+  it('prefixes output_folder with {project-root}/, matching every shipped module', () => {
+    const cfg = buildConfigData({
+      team_name: 'Prefix Probe',
+      team_name_kebab: 'prefix-probe',
+      description: 'probe',
+      agents: [{ id: 'alpha-probe', role: 'r' }],
+      integration: { output_directory: '_bmad-output/prefix-probe-artifacts' }
+    });
+    assert.equal(cfg.output_folder, '{project-root}/_bmad-output/prefix-probe-artifacts');
+  });
+
+  it('does not double-prefix a value that already carries it', () => {
+    const cfg = buildConfigData({
+      team_name: 'Prefix Probe',
+      team_name_kebab: 'prefix-probe',
+      description: 'probe',
+      agents: [{ id: 'alpha-probe', role: 'r' }],
+      integration: { output_directory: '{project-root}/_bmad-output/prefix-probe-artifacts' }
+    });
+    assert.equal(cfg.output_folder, '{project-root}/_bmad-output/prefix-probe-artifacts');
+  });
+});
+
+// ── tf-2-13 Task 5 (T133e): the factory must create the team's output directory ──
+// Nothing did. The three ensureDir calls (spec-writer:43, config-creator:41,
+// csv-creator:37) each create the parent of the file being written; output_directory
+// was only ever read — validated, written into config, displayed. tf-2-11 Risk #3
+// predicted exactly this, and the pilot confirmed it: the directory never appeared.
+describe('tf-2-13: output directory is created', () => {
+  let root;
+  before(async () => { root = await fs.mkdtemp(path.join(os.tmpdir(), 'tf213-out-')); });
+  after(async () => { await fs.remove(root); });
+
+  const spec = { team_name_kebab: 'out-probe', integration: { output_directory: '_bmad-output/out-probe-artifacts' } };
+
+  it('creates the directory under the given projectRoot', async () => {
+    const r = await ensureOutputDirectory(spec, root);
+    assert.equal(r.success, true, JSON.stringify(r.errors));
+    assert.equal(await fs.pathExists(path.join(root, '_bmad-output/out-probe-artifacts')), true);
+    assert.equal(r.path, path.join(root, '_bmad-output/out-probe-artifacts'));
+  });
+
+  it('is idempotent — a second call on an existing directory succeeds', async () => {
+    await ensureOutputDirectory(spec, root);
+    const r = await ensureOutputDirectory(spec, root);
+    assert.equal(r.success, true);
+  });
+
+  it('resolves against projectRoot, never process.cwd()', async () => {
+    const r = await ensureOutputDirectory(spec, root);
+    assert.ok(r.path.startsWith(root), `resolved outside projectRoot: ${r.path}`);
   });
 });

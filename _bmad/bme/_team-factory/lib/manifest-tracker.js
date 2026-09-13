@@ -27,10 +27,28 @@ function buildManifest(specData, generationContext) {
     entries.push({ path: agentFile, operation: 'created', module: moduleName });
   }
 
-  // Workflow directories — each gets a workflow.md and SKILL.md
+  // Workflow directories — each gets a workflow.md plus its step files.
+  // tf-2-13 (T133d): this previously also claimed a `SKILL.md` per workflow. The
+  // generator writes `workflow.md` + `steps/` and never a SKILL.md (`grep -c SKILL.md
+  // step-04-generate.md` is 0) — the tracker was written to a v6.3 expectation while
+  // the generator emits v5. T127 ruled the generator stays v5, so the tracker moves.
+  // This matters because step-05-validate.md §8 prints the manifest as the abort
+  // path's removal instructions: a named-but-uncreated file sends the operator after
+  // nothing, and an omitted file is left behind.
   for (const wfDir of (generationContext.workflow_dirs || [])) {
     entries.push({ path: path.join(wfDir, 'workflow.md'), operation: 'created', module: moduleName });
-    entries.push({ path: path.join(wfDir, 'SKILL.md'), operation: 'created', module: moduleName });
+  }
+  for (const stepFile of (generationContext.workflow_step_files || [])) {
+    entries.push({ path: stepFile, operation: 'created', module: moduleName });
+  }
+
+  // README and user guides — listed by §1 and §7 of step-04 as generated, but the
+  // tracker had no branch for either (tf-2-13, T133d).
+  if (generationContext.readme_path) {
+    entries.push({ path: generationContext.readme_path, operation: 'created', module: moduleName });
+  }
+  for (const guideFile of (generationContext.guide_files || [])) {
+    entries.push({ path: guideFile, operation: 'created', module: moduleName });
   }
 
   // Contract files — created
@@ -55,8 +73,21 @@ function buildManifest(specData, generationContext) {
     entries.push({ path: generationContext.module_help_csv_path, operation: 'created', module: moduleName });
   }
 
-  // agent-registry.js — modified
-  entries.push({ path: 'scripts/update/lib/agent-registry.js', operation: 'modified', module: moduleName });
+  // Output directory — created during integration wiring (tf-2-13, T133e). Listed so
+  // the abort path removes it; it is the one artefact that lives outside module_root.
+  if (generationContext.output_directory_path) {
+    entries.push({ path: generationContext.output_directory_path, operation: 'created', module: moduleName });
+  }
+
+  // agent-registry.js — modified, unless the caller reports the write FAILED.
+  // tf-2-13 (T133d): this was pushed unconditionally, so a run whose registry write
+  // failed still told the aborting operator to go and un-edit it. Suppressed only on
+  // an explicit failure, not on absence: for an abort path over-claiming is the safer
+  // error — the operator checks a file needlessly rather than leaving one edited — and
+  // absence means the caller did not say, which is not the same as "did not happen".
+  if (!generationContext.registry_wiring_result || generationContext.registry_wiring_result.success !== false) {
+    entries.push({ path: 'scripts/update/lib/agent-registry.js', operation: 'modified', module: moduleName });
+  }
 
   // Spec file — modified (progress updated)
   if (specData.spec_file_path) {

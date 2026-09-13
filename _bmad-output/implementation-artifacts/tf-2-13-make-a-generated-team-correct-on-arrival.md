@@ -1,6 +1,10 @@
+---
+baseline_commit: 90ce726eb0072489c68cfddb13464ea27ae01ec4
+---
+
 # Story 2.13: Make a generated team correct on arrival
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** tf-epic-2 — Team Factory Guided Workflow (in-progress) · **Origin:** `T131` (6.0) + `T133` (3.0), both filed 2026-09-10 from the first end-to-end factory run (`tf-2-11`).
 
@@ -52,44 +56,44 @@ The persona defect (`T131`) is the one that decides whether the factory is worth
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: `config.yaml` output path** (AC: #1)
-  - [ ] `config-creator.js:82` writes `output_folder: specData.integration.output_directory` — bare. Prefix it, matching `step-02-connect.md:71` (`'{project-root}/{output_directory}'`) and the three shipped modules
-  - [ ] Decide and record whether the prefix belongs in `buildConfigData` or is expected pre-applied in the spec. **Nothing in code constrains this** — verified 2026-09-13: `spec-parser.js:171-172` checks only that `output_directory` is *present*, and there is no `startsWith('_bmad-output/')` anywhere in `lib/`. The `_bmad-output/` rule exists solely as prose in `step-02-connect.md`'s §3. So the choice is genuinely open — **but whichever you pick, add the missing enforcement in code**, or the next generator drifts the same way this one did. State the choice and the enforcement in the Dev Agent Record
+- [x] **Task 1: `config.yaml` output path** (AC: #1)
+  - [x] `config-creator.js:82` writes `output_folder: specData.integration.output_directory` — bare. Prefix it, matching `step-02-connect.md:71` (`'{project-root}/{output_directory}'`) and the three shipped modules
+  - [x] Decide and record whether the prefix belongs in `buildConfigData` or is expected pre-applied in the spec. **Nothing in code constrains this** — verified 2026-09-13: `spec-parser.js:171-172` checks only that `output_directory` is *present*, and there is no `startsWith('_bmad-output/')` anywhere in `lib/`. The `_bmad-output/` rule exists solely as prose in `step-02-connect.md`'s §3. So the choice is genuinely open — **but whichever you pick, add the missing enforcement in code**, or the next generator drifts the same way this one did. State the choice and the enforcement in the Dev Agent Record
 
-- [ ] **Task 2: unique command codes** (AC: #2)
-  - [ ] `csv-creator.js:142` `deriveCode` returns the first letters of the first two words, so `run-check-a` and `run-check-b` both yield `RC`. Reproduced live 2026-09-13
-  - [ ] Make codes unique *within a module*, deterministically — the same spec must always produce the same codes (NFR4 idempotency is scoped within-version; do not introduce a counter that depends on iteration order)
-  - [ ] Check the collision against codes already present in the CSV, not only within the batch being written
+- [x] **Task 2: unique command codes** (AC: #2)
+  - [x] `csv-creator.js:142` `deriveCode` returns the first letters of the first two words, so `run-check-a` and `run-check-b` both yield `RC`. Reproduced live 2026-09-13
+  - [x] Make codes unique *within a module*, deterministically — the same spec must always produce the same codes (NFR4 idempotency is scoped within-version; do not introduce a counter that depends on iteration order)
+  - [x] Check the collision against codes already present in the CSV, not only within the batch being written
 
-- [ ] **Task 3: `title` stops being overwritten by `role`** (AC: #3)
-  - [ ] `registry-writer.js:185` — `title: agentSpec.role || agentSpec.title || agentSpec.id`. Role wins; the spec's `title` is discarded
-  - [ ] **No second site to fix** — verified 2026-09-13: `registry-appender.js:57` calls the same `buildAgentEntry` imported from `registry-writer` (`:7-11`) and only formats the result at `:147`. One helper, one fix, both paths. Confirm this still holds before you edit, rather than assuming it
+- [x] **Task 3: `title` stops being overwritten by `role`** (AC: #3)
+  - [x] `registry-writer.js:185` — `title: agentSpec.role || agentSpec.title || agentSpec.id`. Role wins; the spec's `title` is discarded
+  - [x] **No second site to fix** — verified 2026-09-13: `registry-appender.js:57` calls the same `buildAgentEntry` imported from `registry-writer` (`:7-11`) and only formats the result at `:147`. One helper, one fix, both paths. Confirm this still holds before you edit, rather than assuming it
 
-- [ ] **Task 4: a truthful manifest** (AC: #4)
-  - [ ] `manifest-tracker.js:30-33` asserts a `SKILL.md` per workflow directory. `grep -c "SKILL.md" step-04-generate.md` is **0** — the generator writes `workflow.md` + `steps/`. The tracker was written to a **v6.3** expectation while the generator emits **v5**; per `T127`'s ruling the generator stays v5, so the tracker moves
-  - [ ] No branch exists for `README.md` or `guides/` (`grep -ci readme` and `grep -ci guide` both return 0) though §1 and §7 list both as generated
-  - [ ] The `agent-registry.js` "modified" entry is pushed **unconditionally**, whether or not the registry was written — make it conditional on the wiring result
-  - [ ] **The manifest is the abort path's removal instructions** (`step-05-validate.md` §8). A manifest that omits a created file leaves it behind on abort; one that names an uncreated file sends the operator after nothing
+- [x] **Task 4: a truthful manifest** (AC: #4)
+  - [x] `manifest-tracker.js:30-33` asserts a `SKILL.md` per workflow directory. `grep -c "SKILL.md" step-04-generate.md` is **0** — the generator writes `workflow.md` + `steps/`. The tracker was written to a **v6.3** expectation while the generator emits **v5**; per `T127`'s ruling the generator stays v5, so the tracker moves
+  - [x] No branch exists for `README.md` or `guides/` (`grep -ci readme` and `grep -ci guide` both return 0) though §1 and §7 list both as generated
+  - [x] The `agent-registry.js` "modified" entry is pushed **unconditionally**, whether or not the registry was written — make it conditional on the wiring result
+  - [x] **The manifest is the abort path's removal instructions** (`step-05-validate.md` §8). A manifest that omits a created file leaves it behind on abort; one that names an uncreated file sends the operator after nothing
 
-- [ ] **Task 5: create the output directory** (AC: #5)
-  - [ ] Nothing creates `integration.output_directory`. The three `ensureDir` calls (`spec-writer.js:43`, `config-creator.js:41`, `csv-creator.js:37`) each create the parent of the file being written; `output_directory` is only ever read — validated, written into config, displayed
-  - [ ] `tf-2-11` Risk #3 predicted exactly this. Create it during §5 integration wiring, and add it to the manifest (Task 4) so cleanup removes it
+- [x] **Task 5: create the output directory** (AC: #5)
+  - [x] Nothing creates `integration.output_directory`. The three `ensureDir` calls (`spec-writer.js:43`, `config-creator.js:41`, `csv-creator.js:37`) each create the parent of the file being written; `output_directory` is only ever read — validated, written into config, displayed
+  - [x] `tf-2-11` Risk #3 predicted exactly this. Create it during §5 integration wiring, and add it to the manifest (Task 4) so cleanup removes it
 
-- [ ] **Task 6: populate the persona from the generated agent file** (AC: #6)
-  - [ ] **Design ruled 2026-09-11 by Amalik — do not re-open.** Extract at registry-write time from the file BMB just produced. Zero new operator questions; NFR2 never binds; one source of truth
-  - [ ] Map `<role>`→`persona.role`, `<identity>`→`persona.identity`, `<communication_style>`→`persona.communication_style`, `<principles>`→`persona.expertise`
-  - [ ] **Handle both shapes.** v5 agents carry XML tags; the 3 converted v6.3 agents carry `## Identity` / `## Communication Style` / `## Principles` and **zero** XML tags. The factory emits v5 today (`T127`) but the extractor must not hardcode one format
-  - [ ] `registry-writer.js:188-191` currently reads `agentSpec.persona?.*` and falls back to `''`. Keep a spec-supplied persona winning over an extracted one if present — extraction is the fallback that makes the empty case correct, not a replacement for an explicit value
+- [x] **Task 6: populate the persona from the generated agent file** (AC: #6)
+  - [x] **Design ruled 2026-09-11 by Amalik — do not re-open.** Extract at registry-write time from the file BMB just produced. Zero new operator questions; NFR2 never binds; one source of truth
+  - [x] Map `<role>`→`persona.role`, `<identity>`→`persona.identity`, `<communication_style>`→`persona.communication_style`, `<principles>`→`persona.expertise`
+  - [x] **Handle both shapes.** v5 agents carry XML tags; the 3 converted v6.3 agents carry `## Identity` / `## Communication Style` / `## Principles` and **zero** XML tags. The factory emits v5 today (`T127`) but the extractor must not hardcode one format
+  - [x] `registry-writer.js:188-191` currently reads `agentSpec.persona?.*` and falls back to `''`. Keep a spec-supplied persona winning over an extracted one if present — extraction is the fallback that makes the empty case correct, not a replacement for an explicit value
 
-- [ ] **Task 7: tests, each proven able to fail** (AC: #7)
-  - [ ] One test per AC#1-#6 in the existing suites: `config-creator.test.js`, `csv-creator.test.js`, `registry-writer.test.js`, `manifest-tracker.test.js`
-  - [ ] **For each, demonstrate red before green** — break the fix, confirm the test fails, restore. Per `project-context.md` rule `verification-must-be-falsifiable`. `tf-2-12` R2 found two defects that a 2,256-test suite could not see; assertions that cannot fail are how that happens
-  - [ ] `npm test` — 0 failures, skip count unchanged
+- [x] **Task 7: tests, each proven able to fail** (AC: #7)
+  - [x] One test per AC#1-#6 in the existing suites: `config-creator.test.js`, `csv-creator.test.js`, `registry-writer.test.js`, `manifest-tracker.test.js`
+  - [x] **For each, demonstrate red before green** — break the fix, confirm the test fails, restore. Per `project-context.md` rule `verification-must-be-falsifiable`. `tf-2-12` R2 found two defects that a 2,256-test suite could not see; assertions that cannot fail are how that happens
+  - [x] `npm test` — 0 failures, skip count unchanged
 
-- [ ] **Task 8: end-to-end confirmation** (AC: #1-#6)
-  - [ ] Generate a throwaway team and assert all six properties on the real output, not on unit fixtures
-  - [ ] Delete it per `tf-2-11` AC8 — module dir, registry block, spec file, **and the output directory Task 5 now creates** — and verify `agent-registry.js` returns to a **zero git diff**. `git checkout` would test git, not removability
-  - [ ] **Do not grep the framework while the throwaway exists.** `tf-2-11` published a wrong census that way, and its R1 correction was wrong too
+- [x] **Task 8: end-to-end confirmation** (AC: #1-#6)
+  - [x] Generate a throwaway team and assert all six properties on the real output, not on unit fixtures
+  - [x] Delete it per `tf-2-11` AC8 — module dir, registry block, spec file, **and the output directory Task 5 now creates** — and verify `agent-registry.js` returns to a **zero git diff**. `git checkout` would test git, not removability
+  - [x] **Do not grep the framework while the throwaway exists.** `tf-2-11` published a wrong census that way, and its R1 correction was wrong too
 
 ## Dev Notes
 
@@ -117,12 +121,58 @@ The persona defect (`T131`) is the one that decides whether the factory is worth
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context), via `bmad-dev-story`.
+
 ### Completion Notes List
 
+**All 8 tasks, AC#1-#7. `npm test` 2409 / 2408 pass / 0 fail / 1 pre-existing skip (up 26). Every AC proven RED before GREEN and killed by mutation afterwards.**
+
+| AC | RED | mutation kills |
+|---|---|---|
+| 1 prefix | 2 fail | 1 |
+| 1 enforcement | 2 fail | 2 |
+| 2 codes | 1 fail | 1 |
+| 3 title | 1 fail | 1 |
+| 4 manifest | 4 fail | 1 |
+| 5 output dir | 3 fail | 1 |
+| 6 persona | 5 fail | 3 |
+
+**Task 1 — the real finding was the missing enforcement, not the missing prefix.** `config-creator.js` wrote `output_folder` bare. But the `_bmad-output/` rule existed **only as prose** in `step-02-connect.md` §3 — there was no `startsWith('_bmad-output/')` anywhere in `lib/`, which is *why* it drifted. The prefix is now applied at write time (idempotent) **and** enforced in `spec-parser.js`. That module had **zero test coverage** before today despite being the parse-and-validate core; `tests/team-factory/spec-parser.test.js` is new.
+
+**Task 2 — a second caller would have been missed.** `csv-appender.js:75` called `deriveCode` with no awareness of codes already in the file, so fixing only the creator would have left the add-agent path colliding. True RED proved it: `duplicate codes after append: RC, RC`. Disambiguation is derived from the name in a fixed candidate order — never a counter over iteration order, which would break re-runs and express mode (NFR4 is scoped within-version).
+
+**Task 3 — one helper, both paths.** `registry-appender.js:57` calls the same `buildAgentEntry`, so the precedence fix reaches the add-agent path for free. Deliberately not forked.
+
+**Task 4 — two judgement calls, both changing pre-existing tests, both recorded because a reviewer should challenge them.** (i) My first registry condition required `success === true`, which dropped the entry whenever a caller simply omitted the field, breaking three tests. Corrected to **suppress only on explicit failure**: for an abort path over-claiming is the safer error — the operator checks a file needlessly rather than leaving one edited — and absence means the caller did not say, which is not "did not happen". (ii) `golden-manifest.json` carried two `SKILL.md` entries and the count test hardcoded `11` with the comment *"2 workflows * 2 files"*. Both encode a **v6.3 expectation the generator never satisfied**; `T127` ruled the generator stays v5, so the tracker moved. Golden trimmed (still parses), count corrected 11→9 and created 9→7, reason written into the test.
+
+**Task 5 — `ensureOutputDirectory` is new.** Nothing created the team's artifact directory; the three existing `ensureDir` calls each make the parent of the file being written. Takes `projectRoot` explicitly per `no-process-cwd-in-libs`. Wired as §5a-ii, and its path recorded in `{generation_context}.output_directory_path` so the abort manifest removes it.
+
+**Task 6 — implemented exactly as ruled, and verified on real agents of both formats.** `extractPersonaFromAgentFile` reads v5 `<persona>` XML and v6.3 `## Identity` / `## Communication Style` / `## Principles`. Against shipped agents: v5 Scout yields 975/323/415 chars, v6.3 Mila 787/800/919. An explicit spec persona still wins — extraction is the fallback that makes the empty case correct, not a replacement. Wiring was a separate defect: `writeRegistryBlock` knew nothing of the agent files, so the extractor was inert until §5d passed `agentFiles`.
+
+**Task 8 — all six ACs asserted on real generated output**, not unit fixtures: `output_folder: '{project-root}/_bmad-output/e2e-probe-artifacts'`, codes `RC,RB` unique, title `'E2E Probe Agent'`, persona populated, manifest carrying README/guides/outdir and no `SKILL.md`, output directory present on disk. Throwaway removed; `agent-registry.js` hand-restored to a **zero git diff** with `require()` re-verified.
+
+**Process notes, recorded because they were nearly failures.** Three of my test files first failed on *my* import errors rather than the defect — each time I read the failure instead of treating RED as success. Two export insertions failed **silently** because I used `.replace()` without an `assert` on those two lines only; caught by checking `Object.keys(require(...))` rather than assuming. And one falsifiability mutation did not apply at all — `sed` choked on `|` characters and reported a meaningless pass; redone with an asserted anchor. **A RED you do not read is indistinguishable from a test that cannot run.**
+
+**Lint, stated precisely:** `npm run lint` is clean and says nothing about this work — `_bmad/` is excluded (`I126`). Run with `--no-ignore`, the changed files carry **7 pre-existing problems and zero from this story**; one is a genuine eslint **error** at `registry-appender.js:325` (`no-useless-assignment`) in code this story only read. Left alone; it is `I126`'s cost made concrete.
+
 ### File List
+
+- `_bmad/bme/_team-factory/lib/writers/config-creator.js` — prefix helper, `ensureOutputDirectory`, exports
+- `_bmad/bme/_team-factory/lib/writers/csv-creator.js` — `deriveCode` disambiguation, `usedCodes` seed
+- `_bmad/bme/_team-factory/lib/writers/csv-appender.js` — seed from codes already in the CSV
+- `_bmad/bme/_team-factory/lib/writers/registry-writer.js` — title precedence, `extractPersonaFromAgentFile`, persona wiring, exports
+- `_bmad/bme/_team-factory/lib/manifest-tracker.js` — SKILL.md removed, README/guides/steps/outdir added, conditional registry claim
+- `_bmad/bme/_team-factory/lib/spec-parser.js` — `_bmad-output/` enforcement
+- `_bmad/bme/_team-factory/workflows/add-team/step-04-generate.md` — §5a-ii added, §5d passes `agentFiles`, placeholder table extended
+- `tests/team-factory/spec-parser.test.js` — **new**, first coverage for that module
+- `tests/team-factory/{config-creator,csv-creator,csv-appender,registry-writer,manifest-tracker}.test.js` — tf-2-13 suites
+- `tests/team-factory/golden/golden-manifest.json` — two SKILL.md entries removed
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — row → review
 
 ## Change Log
 
 | Date | Change |
 |------|--------|
 | 2026-09-13 | Story authored via `bmad-create-story` from `T131` + `T133`, after a staleness pre-flight confirmed all six defects still live. Both of its design questions were already ruled (T131 2026-09-11, T127 2026-09-11) so it carries no open decisions. Scope excludes T136/T137/T138/T128/T139. Epic placement recorded: second story into a retrospected epic, mini-epic alternative considered and declined. |
+| 2026-09-13 | Reviewed before registering: 12/12 citations verified, 7 ACs / 8 tasks with no orphans. One defect found — Task 1 claimed `spec-parser.js` validates the `_bmad-output/` prefix. It does not, and nothing did; the rule was prose-only, which is the real finding. |
+| 2026-09-13 | Implemented. All 8 tasks, AC#1-#7. Seven fixes across six source files, each RED-proven and mutation-killed; `spec-parser.js` gained its first tests. Two pre-existing tests and one golden fixture updated because they encoded a v6.3 expectation the generator never satisfied — recorded rather than buried. End-to-end verified on real output; throwaway removed to a zero registry diff. `npm test` 2409/2408/0 fail. |

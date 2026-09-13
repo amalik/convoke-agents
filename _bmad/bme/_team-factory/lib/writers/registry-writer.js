@@ -44,7 +44,18 @@ async function writeRegistryBlock(specData, registryPath, options = {}) {
 
   // --- 1. STAGE: Build module block + export additions ---
   const workflowNames = buildWorkflowNames(specData);
-  const moduleBlock = buildModuleBlock(specData, prefix, teamName, workflowNames);
+  // tf-2-13 (T131): extract each agent's persona from the file BMB just generated.
+  // The extractor is inert unless the write path calls it, and writeRegistryBlock knew
+  // nothing of the agent files — so personas stayed empty even once extraction existed.
+  // Keyed by agent id via basename, so ordering of `options.agentFiles` does not matter.
+  // Omitting `agentFiles` preserves the previous behaviour exactly.
+  const personas = {};
+  for (const agentFile of (options.agentFiles || [])) {
+    const id = path.basename(agentFile, '.md');
+    personas[id] = await extractPersonaFromAgentFile(agentFile);
+  }
+
+  const moduleBlock = buildModuleBlock(specData, prefix, teamName, workflowNames, personas);
   const exportNames = buildExportNames(prefix);
 
   // --- 2. VALIDATE: Syntax, prefix uniqueness, additive-only ---
@@ -177,19 +188,78 @@ function escapeSingleQuotes(str) {
  * @param {string} teamNameKebab - Team name for stream field
  * @returns {Object}
  */
-function buildAgentEntry(agentSpec, teamNameKebab) {
+function buildAgentEntry(agentSpec, teamNameKebab, extractedPersona) {
   return {
     id: agentSpec.id,
     name: agentSpec.name || agentSpec.id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
     icon: agentSpec.icon || '\u{2699}',
-    title: agentSpec.role || agentSpec.title || agentSpec.id,
+    // tf-2-13 (T133c): title before role. The precedence was reversed, so a spec
+    // carrying both had its title silently discarded — and title and role are not
+    // interchangeable: contextualization-expert's registry entry pairs the title
+    // 'Contextualization Expert' with a far longer persona.role. Shared with
+    // registry-appender via buildAgentEntry, so both paths get this.
+    title: agentSpec.title || agentSpec.role || agentSpec.id,
     stream: teamNameKebab,
     persona: {
-      role: agentSpec.persona?.role || agentSpec.role || '',
-      identity: agentSpec.persona?.identity || '',
-      communication_style: agentSpec.persona?.communication_style || '',
-      expertise: agentSpec.persona?.expertise || '',
+      // tf-2-13 (T131): an explicit spec persona still wins. The extracted one is the
+      // fallback that makes the EMPTY case correct, not a replacement for a stated value.
+      role: agentSpec.persona?.role || agentSpec.role || (extractedPersona && extractedPersona.role) || '',
+      identity: agentSpec.persona?.identity || (extractedPersona && extractedPersona.identity) || '',
+      communication_style: agentSpec.persona?.communication_style || (extractedPersona && extractedPersona.communication_style) || '',
+      expertise: agentSpec.persona?.expertise || (extractedPersona && extractedPersona.expertise) || '',
     }
+  };
+}
+
+/**
+ * Extract an agent's persona from the agent file BMB generated.
+ *
+ * tf-2-13 (T131), operator ruling 2026-09-11. Filed as "the factory never COLLECTS
+ * persona" — which read as a scope problem blocked on NFR2, since step-01-scope sits at
+ * `Concept count: 3/3` with nowhere to add questions. The premise was wrong:
+ * `step-04-generate.md` §3a already instructs BMB to author a "Persona section (role,
+ * identity, communication_style, principles)" into every agent file. The factory
+ * commissioned the persona and then read an empty spec field. A WIRING defect, so this
+ * fix adds zero operator questions and NFR2 never binds.
+ *
+ * Reads BOTH shapes deliberately: v5 agents carry `<persona>` XML, the three converted
+ * v6.3 agents carry `## Identity` / `## Communication Style` / `## Principles` markdown
+ * and no XML at all. T127 ruled the factory keeps emitting v5 (BMB has no v6.3 path and
+ * is upstream), so v5 is today's case — but hardcoding it would rot on the day that
+ * changes.
+ *
+ * `principles` maps to `expertise`, matching hand-written entries: contextualization-
+ * expert's registry `expertise` holds principle-style bullets.
+ *
+ * Never throws. An unreadable file yields empty fields, because a missing persona must
+ * degrade the entry rather than abort the registry write.
+ *
+ * @param {string} agentFilePath
+ * @returns {Promise<{role: string, identity: string, communication_style: string, expertise: string}>}
+ */
+async function extractPersonaFromAgentFile(agentFilePath) {
+  const empty = { role: '', identity: '', communication_style: '', expertise: '' };
+  let content;
+  try {
+    content = await fs.readFile(agentFilePath, 'utf8');
+  } catch {
+    return empty;
+  }
+
+  const xmlTag = (tag) => {
+    const m = content.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
+    return m ? m[1].trim() : '';
+  };
+  const mdSection = (heading) => {
+    const m = content.match(new RegExp(`^##\\s+${heading}\\s*$([\\s\\S]*?)(?=^##\\s|$(?![\\s\\S]))`, 'm'));
+    return m ? m[1].trim() : '';
+  };
+
+  return {
+    role: xmlTag('role') || mdSection('Role') || '',
+    identity: xmlTag('identity') || mdSection('Identity') || '',
+    communication_style: xmlTag('communication_style') || mdSection('Communication Style') || '',
+    expertise: xmlTag('principles') || mdSection('Principles') || ''
   };
 }
 
@@ -201,8 +271,8 @@ function buildAgentEntry(agentSpec, teamNameKebab) {
  * @param {Object} workflowNames - Map of agent_id → workflow_name
  * @returns {string}
  */
-function buildModuleBlock(specData, prefix, teamName, workflowNames) {
-  const agents = (specData.agents || []).map(a => buildAgentEntry(a, specData.team_name_kebab));
+function buildModuleBlock(specData, prefix, teamName, workflowNames, personas) {
+  const agents = (specData.agents || []).map(a => buildAgentEntry(a, specData.team_name_kebab, (personas || {})[a.id]));
   const workflows = [];
   for (const agent of (specData.agents || [])) {
     const wfName = workflowNames[agent.id];
@@ -651,6 +721,7 @@ if (require.main === module) {
 
 module.exports = {
   writeRegistryBlock,
+  extractPersonaFromAgentFile,
   derivePrefix,
   buildAgentEntry,
   buildModuleBlock,

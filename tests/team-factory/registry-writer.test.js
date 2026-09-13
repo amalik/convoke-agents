@@ -9,6 +9,7 @@ const {
   writeRegistryBlock,
   derivePrefix,
   buildAgentEntry,
+  extractPersonaFromAgentFile,
   buildModuleBlock,
   buildWorkflowNames,
   applyInsertions,
@@ -504,5 +505,153 @@ describe('checkDirtyTree (unit)', () => {
     } finally {
       await fs.remove(tmpDir);
     }
+  });
+});
+
+// ── tf-2-13 Task 3 (T133c): title must be the spec's title, not its role ──
+// buildAgentEntry read `agentSpec.role || agentSpec.title || agentSpec.id`, so role
+// won and the spec's title was silently discarded. Compare a hand-written entry:
+// contextualization-expert has title 'Contextualization Expert' and a separate,
+// much longer persona.role — conflating them loses the distinction.
+describe('tf-2-13: registry entry title', () => {
+  it('uses the spec title when one is given', () => {
+    const e = buildAgentEntry(
+      { id: 'alpha-probe', name: 'Alpha', role: 'Does the alpha thing', title: 'Alpha Specialist' },
+      'probe'
+    );
+    assert.equal(e.title, 'Alpha Specialist');
+  });
+
+  it('falls back to role when no title is given', () => {
+    const e = buildAgentEntry({ id: 'beta-probe', name: 'Beta', role: 'Does the beta thing' }, 'probe');
+    assert.equal(e.title, 'Does the beta thing');
+  });
+
+  it('falls back to the id when neither is given', () => {
+    const e = buildAgentEntry({ id: 'gamma-probe', name: 'Gamma' }, 'probe');
+    assert.equal(e.title, 'gamma-probe');
+  });
+});
+
+// ── tf-2-13 Task 6 (T131): populate persona from the agent file BMB just wrote ──
+// Design ruled 2026-09-11. The row was filed as "the factory never ASKS for persona",
+// which read as a collection problem blocked on NFR2 (step-01 sits at 3/3). But
+// step-04-generate.md §3a ALREADY instructs BMB to author "role, identity,
+// communication_style, principles" into every agent file — the factory commissioned
+// the persona and then read an empty spec field. A wiring defect, not a scope gap,
+// which is why this adds zero operator questions.
+describe('tf-2-13: persona extracted from the generated agent file', () => {
+  let dir;
+  before(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tf213-persona-')); });
+  after(async () => { await fs.remove(dir); });
+
+  const V5 = `# Agent
+\`\`\`xml
+<agent id="a" name="A"><activation critical="MANDATORY"></activation>
+  <persona>
+    <role>V5 Role Line</role>
+    <identity>V5 identity prose.</identity>
+    <communication_style>V5 style prose.</communication_style>
+    <principles>- V5 principle one - V5 principle two</principles>
+  </persona>
+</agent>
+\`\`\``;
+
+  const V63 = `---
+name: bmad-bme-agent-probe
+description: probe
+---
+
+# Probe
+
+## Identity
+
+V63 identity prose.
+
+## Communication Style
+
+V63 style prose.
+
+## Principles
+
+- V63 principle one
+- V63 principle two
+`;
+
+  it('reads a v5 <persona> block', async () => {
+    const f = path.join(dir, 'v5.md');
+    await fs.writeFile(f, V5);
+    const p = await extractPersonaFromAgentFile(f);
+    assert.equal(p.identity, 'V5 identity prose.');
+    assert.equal(p.communication_style, 'V5 style prose.');
+    assert.match(p.expertise, /V5 principle one/);
+  });
+
+  it('reads v6.3 markdown sections', async () => {
+    const f = path.join(dir, 'v63.md');
+    await fs.writeFile(f, V63);
+    const p = await extractPersonaFromAgentFile(f);
+    assert.equal(p.identity, 'V63 identity prose.');
+    assert.equal(p.communication_style, 'V63 style prose.');
+    assert.match(p.expertise, /V63 principle one/);
+  });
+
+  it('returns empty fields rather than throwing on an unreadable file', async () => {
+    const p = await extractPersonaFromAgentFile(path.join(dir, 'nope.md'));
+    assert.deepEqual(p, { role: '', identity: '', communication_style: '', expertise: '' });
+  });
+
+  it('an explicit spec persona still wins over an extracted one', async () => {
+    const f = path.join(dir, 'v5.md');
+    const extracted = await extractPersonaFromAgentFile(f);
+    const e = buildAgentEntry(
+      { id: 'p-probe', name: 'P', role: 'R', persona: { identity: 'EXPLICIT' } },
+      'probe',
+      extracted
+    );
+    assert.equal(e.persona.identity, 'EXPLICIT');
+  });
+
+  it('fills the empty case from the extracted persona', async () => {
+    const f = path.join(dir, 'v5.md');
+    const extracted = await extractPersonaFromAgentFile(f);
+    const e = buildAgentEntry({ id: 'q-probe', name: 'Q', role: 'R' }, 'probe', extracted);
+    assert.equal(e.persona.identity, 'V5 identity prose.');
+  });
+});
+
+// ── tf-2-13 Task 6 wiring: writeRegistryBlock populates persona from agentFiles ──
+// The extractor is useless unless the write path calls it. writeRegistryBlock knew
+// nothing of the agent files, so personas stayed empty even once extraction existed.
+describe('tf-2-13: registry write populates persona from the generated files', () => {
+  let dir, registryPath;
+  before(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tf213-wire-'));
+    registryPath = path.join(dir, 'agent-registry.js');
+    await fs.writeFile(registryPath, "'use strict';\n\nmodule.exports = {\n};\n", 'utf8');
+    await fs.writeFile(path.join(dir, 'wire-probe.md'), `<persona>
+  <role>Wire Role</role>
+  <identity>Wire identity prose.</identity>
+  <communication_style>Wire style prose.</communication_style>
+  <principles>- Wire principle</principles>
+</persona>`, 'utf8');
+  });
+  after(async () => { await fs.remove(dir); });
+
+  it('fills identity/communication_style/expertise from the agent file', async () => {
+    const spec = {
+      team_name: 'Wire Probe', team_name_kebab: 'wire-probe',
+      agents: [{ id: 'wire-probe', name: 'Wire', role: 'R', capabilities: ['do-thing'] }],
+      integration: { output_directory: '_bmad-output/wire-probe-artifacts' }
+    };
+    const r = await writeRegistryBlock(spec, registryPath, {
+      skipDirtyCheck: true,
+      agentFiles: [path.join(dir, 'wire-probe.md')]
+    });
+    assert.equal(r.success, true, JSON.stringify(r.errors));
+    const written = await fs.readFile(registryPath, 'utf8');
+    assert.match(written, /Wire identity prose\./);
+    assert.match(written, /Wire style prose\./);
+    assert.match(written, /Wire principle/);
   });
 });

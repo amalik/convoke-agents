@@ -79,7 +79,7 @@ function buildConfigData(specData) {
     submodule_name: `_${specData.team_name_kebab}`,
     description: specData.description || `${specData.team_name} team module`,
     module: 'bme',
-    output_folder: specData.integration.output_directory,
+    output_folder: prefixProjectRoot(specData.integration.output_directory),
     agents,
     workflows,
     version: '1.0.0',
@@ -88,6 +88,62 @@ function buildConfigData(specData) {
     party_mode_enabled: true,
     core_module: 'bme'
   };
+}
+
+/**
+ * Create the team's artifact output directory.
+ *
+ * tf-2-13 (T133e): nothing created it. The three `ensureDir` calls in this module,
+ * `csv-creator` and `spec-writer` each create the parent of the file being written;
+ * `integration.output_directory` was only ever READ — validated, written into
+ * `config.yaml` as `output_folder`, and displayed in the review summary. `tf-2-11`
+ * Risk #3 predicted this and the pilot confirmed it: the directory never appeared,
+ * so the first workflow to write an artifact would have failed on a missing path.
+ *
+ * Takes `projectRoot` explicitly rather than reading `process.cwd()`, per the
+ * `no-process-cwd-in-libs` rule in project-context.md. Idempotent.
+ *
+ * @param {Object} specData - Parsed team spec
+ * @param {string} projectRoot - Absolute path to the project root
+ * @returns {Promise<{success: boolean, path: string, errors: string[]}>}
+ */
+async function ensureOutputDirectory(specData, projectRoot) {
+  const relative = specData && specData.integration && specData.integration.output_directory;
+  if (!relative) {
+    return { success: false, path: '', errors: ['integration.output_directory is required'] };
+  }
+  if (!projectRoot) {
+    return { success: false, path: '', errors: ['projectRoot is required — do not fall back to process.cwd()'] };
+  }
+  const target = path.resolve(projectRoot, relative);
+  try {
+    await fs.ensureDir(target);
+  } catch (err) {
+    return { success: false, path: target, errors: [`Failed to create output directory: ${err.message}`] };
+  }
+  return { success: true, path: target, errors: [] };
+}
+
+/**
+ * Prefix an output directory with `{project-root}/` unless it already carries it.
+ *
+ * tf-2-13 (T133a): `buildConfigData` wrote the bare `integration.output_directory`,
+ * so a generated team's `output_folder` resolved against `process.cwd()` rather than
+ * the project root — the hazard `project-context.md` rule `no-process-cwd-in-libs`
+ * exists for. `step-02-connect.md` §5 documents the template as
+ * `'{project-root}/{output_directory}'`, and `_gyre`, `_vortex` and `_team-factory`
+ * all carry the prefix; only generated teams did not.
+ *
+ * Applied at WRITE time rather than stored in the spec: the spec's field is the
+ * repo-relative path the contributor chose, and `spec-parser.js` now enforces that
+ * shape. Idempotent, so a spec that already carries the prefix is not double-wrapped.
+ *
+ * @param {string} outputDirectory
+ * @returns {string}
+ */
+function prefixProjectRoot(outputDirectory) {
+  const value = String(outputDirectory || '');
+  return value.startsWith('{project-root}/') ? value : `{project-root}/${value}`;
 }
 
 /**
@@ -212,4 +268,4 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { createConfig, buildConfigData, detectCollisions, deriveWorkflowNames, toKebab };
+module.exports = { createConfig, buildConfigData, ensureOutputDirectory, detectCollisions, deriveWorkflowNames, toKebab };

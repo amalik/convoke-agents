@@ -170,6 +170,14 @@ function validateAgainstSchema(doc, schema, pattern) {
       errors.push('integration must be an object');
     } else if (!doc.integration.output_directory) {
       errors.push('integration.output_directory is required');
+    } else if (!String(doc.integration.output_directory).startsWith('_bmad-output/')) {
+      // tf-2-13 (T133a): step-02-connect.md §3 instructs "Validate: path should start
+      // with `_bmad-output/`" — but nothing in lib/ enforced it, so the rule was prose
+      // only. A convention documented and unenforced is how the generated config's
+      // output_folder drifted from every shipped module's shape in the first place.
+      errors.push(
+        `integration.output_directory must be a repo-relative path under _bmad-output/ (got '${doc.integration.output_directory}')`
+      );
     }
   }
 

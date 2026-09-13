@@ -125,3 +125,29 @@ describe('toTitleCase', () => {
     assert.equal(toTitleCase('full-analysis'), 'Full Analysis');
   });
 });
+
+// ── tf-2-13 Task 2 (T133b): command codes must be unique within a module ──
+// deriveCode returned the initials of the first two words, so `run-check-a` and
+// `run-check-b` both yielded `RC`. Reproduced on the tf-2-11 pilot: both rows of
+// the generated module-help.csv carried code RC, making the second unreachable.
+describe('tf-2-13: module-help.csv command codes', () => {
+  const specWith = (workflows) => ({
+    team_name: 'Code Probe',
+    team_name_kebab: 'code-probe',
+    description: 'probe',
+    agents: workflows.map((w, i) => ({ id: `agent-${i}`, role: `Role ${i}`, capabilities: [w] })),
+    integration: { output_directory: '_bmad-output/code-probe-artifacts' }
+  });
+
+  it('gives colliding workflow names distinct codes', () => {
+    const rows = buildCsvRows(specWith(['run-check-a', 'run-check-b']));
+    const codes = rows.map(r => r.code);
+    assert.equal(new Set(codes).size, codes.length, `duplicate codes: ${codes.join(', ')}`);
+  });
+
+  it('is deterministic — the same spec yields the same codes (NFR4, within-version)', () => {
+    const a = buildCsvRows(specWith(['run-check-a', 'run-check-b', 'run-check-c'])).map(r => r.code);
+    const b = buildCsvRows(specWith(['run-check-a', 'run-check-b', 'run-check-c'])).map(r => r.code);
+    assert.deepEqual(a, b);
+  });
+});

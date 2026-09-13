@@ -5,7 +5,7 @@ const fs = require('fs-extra');
 const os = require('os');
 
 const { appendCsvRow } = require('../../_bmad/bme/_team-factory/lib/writers/csv-appender');
-const { CSV_HEADER } = require('../../_bmad/bme/_team-factory/lib/writers/csv-creator');
+const { CSV_HEADER, buildCsvRows, formatCsvRow } = require('../../_bmad/bme/_team-factory/lib/writers/csv-creator');
 
 function buildExistingCsv() {
   return [
@@ -166,5 +166,35 @@ describe('appendCsvRow — atomic write', () => {
     await appendCsvRow(buildNewRowData(), csvPath);
 
     assert.equal(await fs.pathExists(csvPath + '.tmp'), false);
+  });
+});
+
+// ── tf-2-13 Task 2 (T133b): the appender must avoid codes ALREADY in the file ──
+// csv-creator now de-duplicates within a batch. csv-appender called deriveCode with
+// no awareness of the rows already present, so adding a workflow to an existing
+// module could reissue a code that file already uses.
+describe('tf-2-13: appended codes avoid codes already in the CSV', () => {
+  let dir;
+  before(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), 'tf213-app-')); });
+  after(async () => { await fs.remove(dir); });
+
+  it('does not reissue a code the existing CSV already carries', async () => {
+    const csvPath = path.join(dir, 'module-help.csv');
+    const seed = buildCsvRows({
+      team_name: 'App Probe', team_name_kebab: 'app-probe', description: 'p',
+      agents: [{ id: 'first-agent', role: 'First', capabilities: ['run-check-a'] }],
+      integration: { output_directory: '_bmad-output/app-probe-artifacts' }
+    });
+    await fs.writeFile(csvPath, CSV_HEADER + '\n' + seed.map(formatCsvRow).join('\n') + '\n', 'utf8');
+
+    const r = await appendCsvRow({
+      module: 'bme/_app-probe', teamNameKebab: 'app-probe', workflowName: 'run-check-b',
+      agentId: 'second-agent', agentRole: 'Second', outputLocation: '_bmad-output/app-probe-artifacts'
+    }, csvPath);
+    assert.equal(r.success, true, JSON.stringify(r.errors));
+
+    const codes = (await fs.readFile(csvPath, 'utf8')).trim().split('\n').slice(1)
+      .map(l => l.split(',')[3]);
+    assert.equal(new Set(codes).size, codes.length, `duplicate codes after append: ${codes.join(', ')}`);
   });
 });

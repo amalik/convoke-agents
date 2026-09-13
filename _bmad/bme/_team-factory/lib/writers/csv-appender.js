@@ -67,12 +67,17 @@ async function appendCsvRow(rowData, csvPath, options = {}) {
   }
 
   // --- Build new row ---
+  // tf-2-13 (T133b): seed the disambiguator with the codes this file ALREADY carries.
+  // csv-creator de-duplicates within a batch; without this the appender could reissue
+  // a code already in use, which is how `run-check-a` and `run-check-b` both became RC.
+  // Column index 3 is `code` (module, phase, name, code, ...).
+  const existingCodes = new Set(existingRows.map(r => r.split(',')[3]).filter(Boolean));
   const sequence = rowData.sequence || ((existingRows.length + 1) * 10);
   const csvRow = {
     module: rowData.module,
     phase: 'anytime',
     name: toTitleCase(rowData.workflowName),
-    code: deriveCode(rowData.workflowName),
+    code: deriveCode(rowData.workflowName, existingCodes),
     sequence,
     workflow_file: `_bmad/bme/_${rowData.teamNameKebab}/workflows/${rowData.workflowName}/workflow.md`,
     command: `bmad-${rowData.teamNameKebab}-${rowData.workflowName}`,

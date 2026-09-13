@@ -382,7 +382,7 @@ development_status:
   tf-2-10-bmad-master-wiring-verification: done
   tf-2-11-end-to-end-pilot-run: done
   tf-2-12-make-the-add-team-flow-executable: done
-  tf-2-13-make-a-generated-team-correct-on-arrival: ready-for-dev
+  tf-2-13-make-a-generated-team-correct-on-arrival: review
   tf-epic-2-retrospective: done
 
   # Epic 3: Extensions — Add Agent & Add Skill

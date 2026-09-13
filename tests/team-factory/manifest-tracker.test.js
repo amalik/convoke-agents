@@ -52,12 +52,17 @@ describe('buildManifest', () => {
   it('returns correct entry count and operations', () => {
     const manifest = buildManifest(buildTestSpec(), buildTestContext());
 
-    // 2 agents + 2 workflows * 2 files + 1 contract + config + csv + registry (modified) + spec (modified)
-    assert.equal(manifest.length, 11);
+    // tf-2-13 (T133d): was 11 / 9 created, counting "2 workflows * 2 files" — a
+    // workflow.md AND a SKILL.md per directory. The generator writes workflow.md +
+    // steps/ and never a SKILL.md, so the manifest claimed two files that do not
+    // exist and the abort path sent the operator after them. T127 ruled the generator
+    // stays v5, so the tracker moved rather than the generator.
+    // 2 agents + 2 workflows * 1 file + 1 contract + config + csv + registry (modified) + spec (modified)
+    assert.equal(manifest.length, 9);
 
     const created = manifest.filter(e => e.operation === 'created');
     const modified = manifest.filter(e => e.operation === 'modified');
-    assert.equal(created.length, 9);
+    assert.equal(created.length, 7);
     assert.equal(modified.length, 2);
   });
 
@@ -284,5 +289,52 @@ describe('buildSkillExtensionManifest', () => {
     assert.ok(instructions.includes('git checkout -- "_bmad/bme/_test-team/agents/alpha-analyzer.md"'));
     assert.ok(instructions.includes('git checkout -- "_bmad/bme/_test-team/config.yaml"'));
     assert.ok(instructions.includes('git checkout -- "scripts/update/lib/agent-registry.js"'));
+  });
+});
+
+// ── tf-2-13 Task 4 (T133d): the manifest is the abort path's removal instructions ──
+// step-05-validate.md §8 displays it under "To remove all generated files, delete the
+// following paths". A manifest that names an uncreated file sends the operator after
+// nothing; one that omits a created file leaves it behind. Both were true:
+// it asserted workflows/*/SKILL.md (step-04 never writes SKILL.md — grep -c is 0) and
+// had no branch for README.md, guides/ or workflow step files.
+describe('tf-2-13: manifest describes what was actually generated', () => {
+  const ctx = (over = {}) => ({
+    module_root: '/tmp/_probe',
+    agent_files: ['/tmp/_probe/agents/alpha-probe.md'],
+    workflow_dirs: ['/tmp/_probe/workflows/run-check-a'],
+    workflow_step_files: ['/tmp/_probe/workflows/run-check-a/steps/step-01-run.md'],
+    guide_files: ['/tmp/_probe/guides/ALPHA-USER-GUIDE.md'],
+    readme_path: '/tmp/_probe/README.md',
+    config_yaml_path: '/tmp/_probe/config.yaml',
+    module_help_csv_path: '/tmp/_probe/module-help.csv',
+    output_directory_path: '/tmp/_bmad-output/probe-artifacts',
+    generated_files: [],
+    registry_wiring_result: { success: true },
+    ...over
+  });
+  const paths = (c) => buildManifest({ team_name_kebab: 'probe' }, c).map(e => e.path);
+
+  it('does not claim a SKILL.md the generator never writes', () => {
+    assert.ok(!paths(ctx()).some(p => p.endsWith('SKILL.md')),
+      'step-04-generate.md writes workflow.md + steps/, never SKILL.md');
+  });
+
+  it('lists README.md, the user guides and the workflow step files', () => {
+    const p = paths(ctx());
+    assert.ok(p.includes('/tmp/_probe/README.md'), 'README.md missing');
+    assert.ok(p.includes('/tmp/_probe/guides/ALPHA-USER-GUIDE.md'), 'guides missing');
+    assert.ok(p.includes('/tmp/_probe/workflows/run-check-a/steps/step-01-run.md'), 'step files missing');
+  });
+
+  it('lists the output directory so cleanup removes it', () => {
+    assert.ok(paths(ctx()).includes('/tmp/_bmad-output/probe-artifacts'));
+  });
+
+  it('claims agent-registry.js as modified ONLY when the registry was written', () => {
+    const withWrite = paths(ctx());
+    const without = paths(ctx({ registry_wiring_result: { success: false } }));
+    assert.ok(withWrite.some(p => p.includes('agent-registry.js')), 'should claim it on success');
+    assert.ok(!without.some(p => p.includes('agent-registry.js')), 'must not claim it when unwritten');
   });
 });

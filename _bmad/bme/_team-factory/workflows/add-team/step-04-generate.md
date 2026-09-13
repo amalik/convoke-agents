@@ -20,7 +20,7 @@ Every `run:` block below substitutes these. They are listed because a name that 
 | `{config_path}` | the config reference **as agents write it**: `{project-root}/_bmad/bme/_{team_name_kebab}/config.yaml`. Pass this placeholder form, not a resolved path — `activation-validator.js` check 2 accepts either, but the convention form is what agent files contain |
 | `{agent_file_paths}` | a JS **array** of absolute paths to the generated agent `.md` files. `validateActivation` takes an array; a bare string iterates character-by-character |
 | `{registry_path}` | absolute path to `scripts/update/lib/agent-registry.js` |
-| `{generation_context}` | object accumulated across §3-§5, consumed by §8 `buildManifest` and by `step-05`'s `validateTeam`. **Every key below is read by at least one consumer — omitting one does not raise, it silently drops checks:**<br>`module_root`, `agent_files`, `workflow_dirs`, `generated_files`, `config_yaml_path`, `module_help_csv_path`, **`contract_files`** (Sequential only — `end-to-end-validator.js:217` and `manifest-tracker.js:37` both iterate it; omit it and `checkContractFiles` emits **zero** checks and passes vacuously, and the abort manifest omits every contract file), `activation_validation_results` (**the whole `{valid, results}` object returned by §5c, not `results[]`** — `end-to-end-validator.js:257` reads `.valid`), `registry_wiring_result` (the whole object returned by §5d) |
+| `{generation_context}` | object accumulated across §3-§5, consumed by §8 `buildManifest` and by `step-05`'s `validateTeam`. **Every key below is read by at least one consumer — omitting one does not raise, it silently drops checks:**<br>`module_root`, `agent_files`, `workflow_dirs`, `generated_files`, `config_yaml_path`, `module_help_csv_path`, **`contract_files`** (Sequential only — `end-to-end-validator.js:217` and `manifest-tracker.js:37` both iterate it; omit it and `checkContractFiles` emits **zero** checks and passes vacuously, and the abort manifest omits every contract file), `output_directory_path` (absolute path returned by §5a-ii — the one generated artefact living outside `module_root`, so the abort path only removes it if the manifest lists it), `workflow_step_files`, `guide_files`, `readme_path` (all three read by `manifest-tracker.js`; omit one and the abort path leaves that file behind), `activation_validation_results` (**the whole `{valid, results}` object returned by §5c, not `results[]`** — `end-to-end-validator.js:257` reads `.valid`), `registry_wiring_result` (the whole object returned by §5d) |
 
 ## Execution Sequence
 
@@ -106,6 +106,14 @@ run: node -e "const cc = require('{project-root}/_bmad/bme/_team-factory/lib/wri
 expect: result.success === true
 ```
 
+**5a-ii. Output Directory Creation**
+The team's artifact directory is NOT created by any writer — each `ensureDir` above makes only the parent of the file it is writing. Create it explicitly, or the first workflow to produce an artifact fails on a missing path (tf-2-13, T133e; predicted by tf-2-11 Risk #3).
+```
+run: node -e "const cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); cc.ensureOutputDirectory({spec_data}, '{project-root}').then(r => console.log(JSON.stringify(r)))"
+expect: result.success === true → record result.path as `{generation_context}.output_directory_path` so §8's manifest lists it and the abort path removes it
+        result.success === false → display result.errors, fix before continuing
+```
+
 **5b. CSV Creation**
 ```
 run: node -e "const csv = require('{project-root}/_bmad/bme/_team-factory/lib/writers/csv-creator.js'); csv.createCsv({spec_data}, '{module_root}/module-help.csv').then(r => console.log(JSON.stringify(r)))"
@@ -123,11 +131,13 @@ expect: result.valid === true → store the WHOLE result object as `{generation_
 
 **5d. Registry Block (Full Write Safety Protocol)**
 ```
-run: node -e "const rw = require('{project-root}/_bmad/bme/_team-factory/lib/writers/registry-writer.js'); rw.writeRegistryBlock({spec_data}, '{registry_path}').then(r => console.log(JSON.stringify(r)))"
+run: node -e "const rw = require('{project-root}/_bmad/bme/_team-factory/lib/writers/registry-writer.js'); rw.writeRegistryBlock({spec_data}, '{registry_path}', { agentFiles: {agent_file_paths} }).then(r => console.log(JSON.stringify(r)))"
 expect: result.success === true → proceed
         result.dirty === true → warn contributor, ask for confirmation
         result.success === false → display errors, attempt rollback
 ```
+
+**Pass `agentFiles`.** Each agent's `persona.identity`, `.communication_style` and `.expertise` are extracted from the file BMB authored in §3a — the factory already commissions that content and previously discarded it, leaving every generated agent hollow beside the hand-written ones (tf-2-13, T131). Omit `agentFiles` and the write still succeeds, silently, with empty personas.
 
 **IMPORTANT:** The registry write uses the Full Write Safety Protocol:
 1. **Stage** — Build module block in memory

@@ -66,12 +66,17 @@ function buildCsvRows(specData) {
   const outputLocation = specData.integration.output_directory;
   const workflows = deriveWorkflowNames(specData);
   const rows = [];
+  // tf-2-13 (T133b): codes must be unique WITHIN the module. deriveCode took the
+  // initials of the first two words, so `run-check-a` and `run-check-b` both produced
+  // `RC` and the second command was unreachable. Seeded per call so the derivation stays
+  // deterministic for a given spec (NFR4 idempotency is scoped within-version).
+  const usedCodes = new Set();
 
   for (let i = 0; i < (specData.agents || []).length; i++) {
     const agent = specData.agents[i];
     const workflowName = workflows[i];
     const displayName = toTitleCase(workflowName);
-    const code = deriveCode(workflowName);
+    const code = deriveCode(workflowName, usedCodes);
     const sequence = (i + 1) * 10;
 
     rows.push({
@@ -139,12 +144,26 @@ function csvQuote(val) {
  * @param {string} name - kebab-case workflow name
  * @returns {string}
  */
-function deriveCode(name) {
+function deriveCode(name, usedCodes) {
   const words = name.split('-').filter(Boolean);
-  if (words.length >= 2) {
-    return (words[0][0] + words[1][0]).toUpperCase();
-  }
-  return (words[0] || 'XX').substring(0, 2).toUpperCase();
+  const base = words.length >= 2
+    ? (words[0][0] + words[1][0]).toUpperCase()
+    : (words[0] || 'XX').substring(0, 2).toUpperCase();
+
+  if (!usedCodes) return base;
+
+  // tf-2-13 (T133b): disambiguate deterministically. Candidates are derived from the
+  // name itself in a fixed order, so the same spec always yields the same codes —
+  // never a counter over iteration order, which would break re-runs and express mode.
+  const letters = name.replace(/[^a-z0-9]/gi, '').toUpperCase();
+  const candidates = [base];
+  for (const w of words.slice(2)) candidates.push((base[0] + w[0]).toUpperCase());
+  for (const ch of letters.slice(1)) candidates.push((base[0] + ch).toUpperCase());
+  for (let i = 1; i <= 9; i++) candidates.push(`${base[0]}${i}`);
+
+  const chosen = candidates.find(c => !usedCodes.has(c)) || base;
+  usedCodes.add(chosen);
+  return chosen;
 }
 
 /**
