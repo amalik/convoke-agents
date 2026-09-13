@@ -684,6 +684,42 @@ acceptance criterion. Forge would have inherited an unruled directory belonging 
 **Scope.** `output_folder` contents are documents, not state, and are governed by artifact taxonomy rather
 than by this rule. This rule covers only machine-read state a team writes and reads back.
 
+**No state, no directory — and "state" is narrower than "reads its own output".** The condition in the
+Statement binds in both directions: a team that keeps no state gets **no `.<team>/` at all**, and symmetry
+with a team that does is not a reason to create one. An empty state directory is worse than no directory,
+because it is an unowned namespace at the project root and nothing in the tree says who may write to it —
+the same condition that let Forge propose writing into `.gyre/`, but without even a state model to justify
+the directory's existence.
+
+The test is whether a **workflow branches on a project-root state file**. Gyre passes it explicitly:
+[`full-analysis/steps/step-01-initialize.md:34`](_bmad/bme/_gyre/workflows/full-analysis/steps/step-01-initialize.md)
+routes to **Anticipation** mode and skips model generation when `.gyre/capabilities.yaml` exists. That is
+machine-read state deciding control flow, and it is what makes a team stateful for this rule's purposes.
+
+*Vortex is the worked example, and it is the one that carries a trap.* `.vortex/` was considered and
+declined on 2026-09-12, alongside the `1c9aff30` pass that produced this rule. **Vortex does re-read its
+own prior output, and that does not make it stateful under this rule** — `pivot-resynthesis` revises an
+existing HC2 rather than creating one ([`workflow.md:19`](_bmad/bme/_vortex/workflows/pivot-resynthesis/workflow.md),
+[`step-03-jtbd-reframing.md:21`](_bmad/bme/_vortex/workflows/pivot-resynthesis/steps/step-03-jtbd-reframing.md)
+*"Start from your existing JTBD (from the original HC2...)"*), and HC6 routes Max's pivot decision to Mila
+carrying Isla's original artifacts
+([`compass-routing-reference.md:114`](_bmad/bme/_vortex/compass-routing-reference.md)). All of that flows
+through **documents in `output_folder`**, which the Scope paragraph above excludes. Anyone who reads
+`pivot-resynthesis` as evidence that Vortex is stateful will award it a `.vortex/` this rule does not
+grant — that reading is why the distinction is spelled out here rather than left to the Statement.
+
+Re-derive rather than trust the paragraph:
+`grep -rnE '\.vortex/|\.gyre/|\{project-root\}/\.' _bmad/bme/_vortex` returns nothing, and the same
+pattern against `_bmad/bme/_gyre` matches — so the empty result measures Vortex rather than a broken
+pattern, per `verification-must-be-falsifiable`. Should a Vortex workflow ever branch on a project-root
+file, it earns `.vortex/` under the Statement and the How-to-apply bullets, with no amendment needed here.
+
+This paragraph exists because the rule first shipped stating only the positive condition and naming no
+stateless team (`git show 1c9aff30:project-context.md` — the rule as shipped contains no occurrence of
+either *Vortex* or *stateless*), and the question *"why `.gyre/` and no `.vortex/`"* was re-asked within a
+day with the opposite answer recalled. A convention that has to be inferred gets re-litigated; one that
+names its declined case and the near-miss reading does not.
+
 **Not yet generalized.** There is exactly one stateful team. This rule states the convention so the second
 one inherits it, but the `.<team>/` shape has an N of 1 and no ADR ratifies it — deliberately, per
 [meta-model ADR-001's `_team-factory` ruling](_bmad-output/planning-artifacts/adr/meta-model/adr-001-provenance-and-vocabulary.md):
