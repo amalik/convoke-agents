@@ -4,7 +4,7 @@ baseline_commit: 9e986db842b3b99b36e9a1000b27d8a0de419e41
 
 # Story 1.6: Derivation pass on the governance and positioning documents
 
-Status: review
+Status: done
 
 ## Story
 
