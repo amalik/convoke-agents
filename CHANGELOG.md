@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [4.0.2] - 2026-09-08
+## [4.0.2] - 2026-09-14
 
 Convoke 4.0.2 is a patch release about one thing: the package now contains what it says it contains, and what it contains reaches your project.
 
@@ -43,11 +43,14 @@ The seven Vortex agents themselves are unchanged, and no handoff contract change
 
 ### Verification
 
-Three checks now run on every push and pull request, and block publication:
+Six checks now run on every push and pull request, and block publication — count the list:
 
 - every documented reference in the package resolves inside the package;
 - every module the package declares actually arrives in an installed project, carries its configuration, and declares at least one thing you can invoke;
-- the skill manifest rows that seed an installation are validated against a baseline that can only shrink.
+- the skill manifest rows that seed an installation are validated against a baseline that can only shrink;
+- no shipped document contains a broken path or link — this one was **failing when it was first enforced**, with eight dead paths across all seven Vortex user guides, every one pointing at the pre-v4 agent layout;
+- team and agent names are unique within their kind, resolve to a tracked file, and agree with the agent registry;
+- every in-scope document has a **recorded** derivation pass behind it. This gate deliberately does not claim any document is *correct* — no check can decide whether a sentence is true. It catches the other failure: a documentation pass abandoned halfway and discovered after the release rather than before it.
 
 Each was demonstrated failing before it was made blocking, on the defect it exists to catch.
 
