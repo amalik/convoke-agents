@@ -45,14 +45,16 @@ If you find yourself needing one of these to finish a task, stop and say so — 
 There are **12** `run: node -e` blocks across the four step files. None of them may build a JS object inside the shell string. A contributor copying any block, substituting only placeholders the step file defines, gets the block's stated `expect:` outcome. Demonstrated against a spec whose `description` contains **both** a double quote and an apostrophe. Derive the count from source before claiming completeness (`derive-counts-from-source`):
 
 ```bash
-grep -rhc '^run: node -e' _bmad/bme/_team-factory/workflows/add-team/*.md
+grep -rh '^run: node -e' _bmad/bme/_team-factory/workflows/add-team/*.md | wc -l
 ```
+
+(`grep -rhc` prints a count *per file* — six numbers, not a total. Run what is written here.)
 
 **AC#2 — `{generation_context}` survives between steps.**
 The context Step 4 accumulates is readable by Step 5 in a separate shell invocation. `step-05-validate.md`'s current caveat — *"It is an in-memory Step-4 value with no persistence mechanism: if Step 4 and Step 5 are run in separate sessions it is gone"* — is no longer true, and that paragraph is corrected rather than left standing.
 
 **AC#3 — one containment predicate, three callers, and a test that proves they agree.**
-`spec-parser.js::isContainedOutputDirectory`, `config-creator.js::assertContainedOutputDirectory` and the inline check in `config-creator.js::ensureOutputDirectory` are replaced by a single exported predicate that all three sites call. `_bmad-output/..foo` is **accepted** by every site (it resolves genuinely inside the output root); `_bmad-output/../../escaped`, bare `_bmad-output`, `''`, absolute paths and non-strings are **rejected** by every site. The agreement is asserted by a test that iterates one shared case table across all call sites — not three separate tests that could drift apart again.
+`spec-parser.js::isContainedOutputDirectory`, `config-creator.js::assertContainedOutputDirectory` and the inline check in `config-creator.js::ensureOutputDirectory` are replaced by a single exported predicate that all three sites call. `_bmad-output/..foo` is **accepted** by every site (it resolves genuinely inside the output root); `_bmad-output/../../escaped`, bare `_bmad-output`, `''`, absolute paths and non-strings are **rejected** by every site. **An already-`{project-root}/`-prefixed value stays accepted** — `assertContainedOutputDirectory` strips that prefix before validating precisely because `buildConfigData` is reached with a prefixed value on the bypass path, and a unified predicate that drops the stripping regresses what R3 fixed. The agreement is asserted by a test that iterates one shared case table across all call sites — not three separate tests that could drift apart again.
 
 **AC#4 — a hollow team cannot report success.**
 `writeRegistryBlock` reports persona coverage: given `specData.agents`, it states which agent ids received a non-empty persona. An unusable `options.agentFiles` (absent, a bare string, a non-array, paths that do not exist) no longer passes silently. `end-to-end-validator.js` gains a check that fails when a declared agent has an empty persona, so the terminal gate — not the writer's `success` flag — is what stops a hollow team.
@@ -63,18 +65,21 @@ The context Step 4 accumulates is readable by Step 5 in a separate shell invocat
 **AC#6 — the terminal gate can return true on a correctly generated team.**
 `checkVortexRegression` asks a **differential** question: did the factory's changes break anything that was working before? It passes when the post-generation failing-check set is not larger than the pre-generation baseline. Proven by running the full `validateTeam` against a real generated team in this source tree and observing `valid === true`.
 
+> **Reachability is reasoned, not executed — check it early.** A structural read of `validateTeam`'s nine checks found no second blocker of `T128`'s kind: seven read paths out of `{generation_context}` that a real run populates, and `checkRegistryRegression` needs only `require()` to succeed. But no full generation was run during authoring, so this is a reading, not a demonstration. `tf-2-11`'s AC#7 was unachievable for exactly this reason. **If a check other than VORTEX-REGRESSION blocks `valid === true`, that is a scope finding — report it, do not widen the story to fix it.**
+
 **AC#7 — every AC is proven RED before GREEN, and each fix is killed by a mutant that targets it alone.**
 Per `verification-must-be-falsifiable`: record a **mutant → sole-executioner test** table, not a pass/fail tally. Name the assertion that dies, never the count. A test no mutant uniquely kills is deleted or rewritten.
 
 **AC#8 — a real team is generated end to end, kept long enough to be verified, then removed to a zero git diff.**
-Not a unit fixture. Walk `add-team` as a contributor would, pasting the blocks. Record what the run produced. Then restore the tree — `agent-registry.js` back to a zero `git diff`, `require()` re-verified — and say so.
+Not a unit fixture. Walk `add-team` as a contributor would, pasting the blocks. Record what the run produced. Then restore the tree — `agent-registry.js` back to a zero `git diff`, `require()` re-verified, **and `git status --porcelain` clean of untracked leftovers**, since the generated module directory is untracked and a zero diff says nothing about it. Say so.
 
 ## Tasks / Subtasks
 
 - [ ] **Task 1 — Replace the `run:` block transport (AC: #1, #2) — `T136`**
-  - [ ] Add a context-file mechanism: Step 4 writes `{spec_data}` and the accumulating `{generation_context}` to a JSON file under the run's own scratch location, and every `run:` block receives a **path**, never an object.
+  - [ ] **`{spec_data}` needs no new mechanism — the file already exists.** `step-01-scope.md` §5 *Save Progress* creates `team-spec-{team_name_kebab}.yaml` in `_bmad-output/planning-artifacts/`, and `spec-parser.js::parseSpec(specPath)` already takes a path. Pass the path and parse inside the block (`parseSpec(path).then(r => …r.spec…)`). `step-04`'s Placeholders table already defines `{spec_data}` as *"the parsed spec object from `team-spec-{team_name_kebab}.yaml` (see `spec-parser.js::parseSpec` → `.spec`)"* — the transport just has to match what the table already says. **Do not write the spec to a second JSON file**: duplicating state that is already on disk is the drift class Task 3 exists to delete.
+  - [ ] **`{generation_context}` is the one thing that needs a new file.** It is accumulated in memory across §3–§5 and persisted nowhere. Step 4 writes it to a JSON file as it accumulates; every block receives that **path**.
   - [ ] Rewrite the **8** blocks that interpolate a named object placeholder (`{spec_data}`, `{generation_context}`, `{agent_file_paths}`) so none is substituted into a `node -e "…"` string.
-  - [ ] Update `step-04-generate.md` §Placeholders: `{spec_data}` and `{generation_context}` now resolve to file paths; state where the file lives and who writes it.
+  - [ ] Update `step-04-generate.md` §Placeholders: `{spec_data}` and `{generation_context}` now resolve to file paths; say which file each is and who writes it.
   - [ ] Correct `step-05-validate.md`'s persistence caveat paragraph (AC#2) — it currently tells the operator to re-run Step 4's §5 wiring.
   - [ ] Verify with a spec whose `description` is `He said "go" — it's fine`, containing both quote characters.
 
@@ -82,15 +87,15 @@ Not a unit fixture. Walk `add-team` as a contributor would, pasting the blocks. 
 
   The 8 in Task 1 are not the whole surface. The remaining four break down as:
 
-  - [ ] **`step-01-scope.md` collision check — hand-builds an object and cannot execute at all.** It reads `cd.detectCollisions({team_name_kebab: '{kebab}', agents: [{id: '{id1}'}, ...]}, …)`. The literal `...` is not valid JS, and `{kebab}` / `{id1}` are placeholders **`step-01` never defines** — the exact class `step-04`'s Placeholders table preamble exists to remove (*"a name that appears in exactly one command and is defined nowhere cannot be resolved by whoever drives the flow"*). Route it through the same context file as Task 1, and give `step-01-scope.md` a Placeholders table or delete the undefined names.
+  - [ ] **`step-01-scope.md` collision check — hand-builds an object and cannot execute at all.** It reads `cd.detectCollisions({team_name_kebab: '{kebab}', agents: [{id: '{id1}'}, ...]}, …)`. The literal `...` is not valid JS, and `{kebab}` / `{id1}` are placeholders **`step-01` never defines** — the exact class `step-04`'s Placeholders table preamble exists to remove (*"a name that appears in exactly one command and is defined nowhere cannot be resolved by whoever drives the flow"*). **It cannot use Task 1's context file** — that is a Step-4 artifact, and §4 runs *before* `step-01` §5 *Save Progress* creates the spec file, so at §4 there is nothing on disk to read. **And the order cannot simply be inverted:** §5 populates the spec with *"team identity, composition pattern, agents, overlap acknowledgments"* — and the acknowledgments are what §4 produces, so §4 must stay ahead of §5. The shape that works is for §4 to write its own scoping scratch file (the agent inventory it has just collected) and pass that path. Also give `step-01-scope.md` a Placeholders table or delete the undefined names.
   - [ ] **`step-05-validate.md` §3 Regression Check — a no-op with a stray token.** It reads `run: node -e "require('{project-root}/scripts/update/lib/validator.js')" logic`: requires a module, calls nothing, asserts nothing, and trails a bare `logic`. `validateTeam` already runs the regression check via `checkVortexRegression`, so this is redundant as well as inert. **Prefer deletion** and say so in the record.
   - [ ] **The two scalar-only blocks** (`getCascadeForPattern('{pattern}')` and the `naming-utils` id check) are safe for kebab-shaped values. Confirm that by execution rather than by inspection, and leave them alone if they hold.
 
 - [ ] **Task 3 — One containment predicate (AC: #3) — `T163`(a)**
   - [ ] Extract a single exported containment predicate. Decide its home: it is currently half in `spec-parser.js` and half in `config-creator.js`; a small shared module under `lib/utils/` is the obvious third option.
-  - [ ] Delete the two duplicate implementations and the inline check in `ensureOutputDirectory`. This is **deletion, not a fourth rewrite** — see §Why this is a deletion.
+  - [ ] Delete the two duplicate implementations and the inline check in `ensureOutputDirectory`. This is **deletion, not a fourth rewrite** — see §The three containment predicates.
   - [ ] Write the shared case table (`shared-test-constants`) and iterate it across all call sites.
-  - [ ] Confirm `_bmad-output/../../escaped` is still rejected at `buildConfigData` — R3 put that guard there deliberately and it must survive the refactor.
+  - [ ] Pin **both** directions at `buildConfigData`: `_bmad-output/../../escaped` still **rejected** (R3 put that guard there deliberately), and `{project-root}/_bmad-output/team-artifacts` still **accepted**. Only the first half is obvious, and only the second half catches a predicate that forgot to strip the prefix.
 
 - [ ] **Task 4 — Persona coverage is reported and gated (AC: #4) — `T164`(a)**
   - [ ] `writeRegistryBlock`: report coverage of `specData.agents` by extracted personas. Do **not** change what `success` means — see §Trap: the fourth predicate.
@@ -102,7 +107,7 @@ Not a unit fixture. Walk `add-team` as a contributor would, pasting the blocks. 
   - [ ] Add the `expect:` record instruction, phrased like §5a-ii and §5c.
 
 - [ ] **Task 6 — The terminal gate asks a differential question (AC: #6) — `T128`**
-  - [ ] Capture a pre-generation `validateInstallation` baseline and carry it in `{generation_context}` (Task 1's context file makes this persistable).
+  - [ ] Capture a pre-generation `validateInstallation` baseline and carry it in `{generation_context}` (Task 1's context file makes this persistable). **Ordering is the whole correctness of a differential:** it must be taken before §5d writes to `agent-registry.js` — `step-04` §1 is the natural home. A "baseline" captured after the write measures nothing.
   - [ ] Rewrite `checkVortexRegression` to compare post against baseline.
   - [ ] Replace the VORTEX-REGRESSION assertions in `tests/team-factory/end-to-end-validator.test.js` — they currently check only `assert.ok(vortexCheck)` and `assert.equal(vortexCheck.stepName, 'regression')`, never `.passed`, under the comment *"Vortex regression runs but may fail due to pre-existing project state"*. A test that documents the defect instead of catching it.
 
@@ -197,8 +202,7 @@ Two surfaces:
 
 ### Testing standards
 
-`tests/team-factory/` uses `node:test`. All four target suites already exist:
-`end-to-end-validator.test.js` (289 lines), `config-creator.test.js` (338), `registry-writer.test.js` (695), `spec-parser.test.js`.
+`tests/team-factory/` uses `node:test`. All four target suites already exist — `end-to-end-validator.test.js`, `config-creator.test.js`, `registry-writer.test.js`, `spec-parser.test.js`. (Line counts deliberately omitted: they are live state, they rot, and nothing here depends on them.)
 
 Governing rules, each load-bearing here:
 
@@ -221,10 +225,10 @@ All work is inside `_bmad/bme/_team-factory/` plus `tests/team-factory/`. No `_b
 
 ### References
 
-**Anchored by symbol, not by line, deliberately.** `T136`'s own R1 finding is that a line citation into a file the citing work is itself editing will always rot — that row cited `step-04-generate.md:99,106,113,155` and was wrong within hours. Every file below except `ci.yml` and the backlog is edited by this story, so they are cited by function and section. Two citations inherited from `tf-2-13`'s record were already stale when checked at HEAD (`registry-appender.js:57` is now `:65`); they are not reproduced here.
+**Anchored by symbol, not by line, deliberately.** `T136`'s own R1 finding is that a line citation into a file the citing work is itself editing will always rot — that row cited `step-04-generate.md:99,106,113,155` and was wrong within hours. Every file below is edited by this story — the backlog included, since closing these four rows moves them — so all are cited by symbol, section or a grep that survives renumbering. The single line citation anywhere in this story is `ci.yml:366`, in a file nothing here touches. Two citations inherited from `tf-2-13`'s record were already stale when checked at HEAD (`registry-appender.js:57` is now `:65`); they are not reproduced here.
 
 - [convoke-epic-team-factory-repair.md](../planning-artifacts/convoke-epic-team-factory-repair.md) — epic scope, the 4-of-15 split, and the gate on the parked eight
-- [convoke-note-initiative-lifecycle-backlog.md](../planning-artifacts/convoke-note-initiative-lifecycle-backlog.md) — rows `T136`:273, `T128`:289, `T163`:291, `T164`:292
+- [convoke-note-initiative-lifecycle-backlog.md](../planning-artifacts/convoke-note-initiative-lifecycle-backlog.md) — rows `T136`, `T128`, `T163`, `T164` in §2.3 Fast Lane. Find them with `grep -n '^| T136 |' <file>` rather than by line: closing a row is a **move** to §2.5 (`backlog-write-discipline`), so this story's own close renumbers every row below it.
 - [tf-2-13-make-a-generated-team-correct-on-arrival.md](tf-2-13-make-a-generated-team-correct-on-arrival.md) — §Round 2 Review, §Round 3 Review (the full text of all four rows' findings)
 - [project-context.md](../../project-context.md) — `code-review-convergence`, `verification-must-be-falsifiable`, `path-safety-for-destructive-ops`, `test-fixture-isolation`, `fixture-determinism`, `shared-test-constants`, `derive-counts-from-source`, `no-process-cwd-in-libs`, `verification-pipefail`, `commit-preparation`
 - [step-04-generate.md](../../_bmad/bme/_team-factory/workflows/add-team/step-04-generate.md) — §Placeholders, §5a–§5d, §8
@@ -248,4 +252,5 @@ All work is inside `_bmad/bme/_team-factory/` plus `tests/team-factory/`. No `_b
 
 | Date | Note |
 |---|---|
+| 2026-09-14 | **Self-review, 9 findings, all applied.** Three HIGH, and two of them were defects in the story's *design* rather than its prose: (1) AC#1 documented `grep -rhc … *.md` as the way to derive the block count — it prints six per-file numbers, not 12, the `docs-1-5` "command that does not run" class, now `grep -rh … | wc -l` and executed; (2) Task 2 told the executor to route `step-01` §4 through Task 1's context file, which is a **Step-4** artifact that does not exist at §4 — the "reasoning about the consumer without reading it" fault the story itself warns against, committed in the story; (3) Task 1 had Step 4 write `{spec_data}` to a new JSON file when `step-01` §5 already writes the spec to disk and `parseSpec` already takes a path — the duplication Task 3 exists to delete, in the same document. **The first correction to (2) was also wrong** and is recorded rather than tidied away: it proposed moving Overlap Detection after §5, but §5 populates the overlap acknowledgments §4 produces, so the order cannot invert; the fix is a scoping scratch file. MEDIUM: AC#3 could regress R3's `{project-root}/` stripping (positive case now pinned); Task 6 never said when the baseline is captured (now: before §5d writes the registry); backlog line citations would rot on this story's own close (now grep-anchored). LOW: a dangling `§` pointer, rotting test line-counts, and `git diff` not covering untracked output. AC#6's reachability is now marked reasoned-not-executed, with an instruction to report a second blocker rather than absorb it. |
 | 2026-09-14 | Story authored via `bmad-create-story` from the `tfr-epic-1` scoping ruling (`T136`, `T164`, `T163`(a), `T128`). Staleness pre-flight run at HEAD `3c2b0112` — **GREEN**, all four reproduced by execution, one finding sharper than its row (`T163`(a) leaves a half-written config, not only a false reject) and one broader (`T136` fails on plain JSON, not only quote-bearing JSON). One open decision recorded and pre-answered: the `run:` block transport contract, chosen as a context file with the CLI and single-quote alternatives declined and the reasons given. Two scope corrections made during authoring, both by counting rather than assuming: the `run:`-block surface is 12 blocks, of which 8 carry object placeholders, 1 hand-builds an object with a literal `...` that is not valid JS *and* uses two placeholders its step file never defines, 1 is an inert no-op, and 2 are scalar-safe. Scope excludes `T163`(b), `T165`, `T166`, `T127`, `T132`, `T134`, `T137`, `T138`, `T139`, `T141`, `T147`, `T151`. |
