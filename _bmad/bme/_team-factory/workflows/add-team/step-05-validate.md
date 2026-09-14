@@ -42,7 +42,14 @@ The end-to-end validator checks:
 - All workflows appear in the registry WORKFLOWS array
 - Derived lists (AGENT_FILES, AGENT_IDS, WORKFLOW_NAMES) are correct
 - Registry file passes `node require()` verification
-- **`PERSONA-COVERAGE`** — every agent the spec declares carries a non-empty persona in the registry. It reads `agent-registry.js` **on disk**, at the `registry_path` §5d recorded, rather than trusting `registry_wiring_result.success`: for the whole of tf-2-13 the writer returned `success: true` over a registry of empty personas, and a gate that asks the writer whether the writer did its job reproduces exactly that. A hollow team fails here, named agent by agent
+- **`PERSONA-COVERAGE`** — every agent the spec declares carries at least one of `identity`, `communication_style` or `expertise` in its registry entry. These normally come from the agent file BMB authored; a spec that declares them explicitly under `persona:` also satisfies the check. It reads `agent-registry.js` **on disk**, at the `registry_path` §5d recorded, rather than trusting `registry_wiring_result.success`: for the whole of tf-2-13 the writer returned `success: true` over a registry of empty personas, and a gate that asks the writer whether the writer did its job reproduces exactly that. A hollow team fails here, named agent by agent.
+
+  **`persona.role` is deliberately not counted.** Every agent must have a `role`, and `buildAgentEntry` copies it from the spec, so it is present whether or not extraction ever ran. Counting it made the check unable to fail.
+
+  **A red `PERSONA-COVERAGE` on a team whose agents plainly have roles is the check working.** There are two causes, and they need different fixes:
+
+  1. **§5d ran without a usable `agentFiles`.** Its output shows `personaCoverage.agentFilesIssues` or `.missingAgentFiles`, or the context has no `agent_files` key. **Re-running §5d alone does not repair this:** the block already exists, so the writer skips (`skipped: ["block already exists"]`) and the hollow block stays. First run `git diff scripts/update/lib/agent-registry.js` and confirm the diff is **only** this team's `<PREFIX>_*` block — `git checkout --` discards every uncommitted change in the file, not just yours. Then restore it with `git checkout -- scripts/update/lib/agent-registry.js`, record `agent_files` (step-04 §3), and re-run §5d.
+  2. **The agent files are there, but the extractor does not recognise their persona markup.** It reads `<identity>`, `<communication_style>` and `<principles>` XML tags written exactly like that, or `## Identity`, `## Communication Style` and `## Principles` headings. A YAML `persona:` block, `### Identity`, or a tag with attributes (`<identity lang="en">`) extracts nothing. Fix the agent files to one of the two recognised shapes, then recover as in (1).
 
 **Naming checks:**
 - Module directory matches `_{team_name_kebab}`

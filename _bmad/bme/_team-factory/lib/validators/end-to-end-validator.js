@@ -3,7 +3,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('js-yaml');
-const { verifyRequire, buildExportNames, derivePrefix, hasPersona } = require('../writers/registry-writer');
+const { verifyRequire, buildExportNames, derivePrefix, hasPersona, PERSONA_EVIDENCE_FIELDS } = require('../writers/registry-writer');
 const { parseCsvRow } = require('../utils/csv-utils');
 
 /** @typedef {import('../types/factory-types').E2EValidationResult} E2EValidationResult */
@@ -306,9 +306,20 @@ async function runVortexValidation(projectRoot) {
   }
   const { validateInstallation } = require(validatorPath);
   const result = await validateInstallation({}, projectRoot);
+  if (!result || !Array.isArray(result.checks)) {
+    throw new Error(`validateInstallation returned no checks array (got ${JSON.stringify(result)}); the failing set cannot be derived`);
+  }
+  // A failing check is compared by name, so one without a usable name cannot be compared
+  // at all. Throwing keeps the differential fail-closed: dropping it would let a
+  // regression in that check pass silently.
+  const failingChecks = result.checks.filter(c => !c.passed);
+  const unnamed = failingChecks.filter(c => typeof c.name !== 'string' || c.name.trim() === '').length;
+  if (unnamed > 0) {
+    throw new Error(`${unnamed} failing check(s) have no usable name, so a regression cannot be told from pre-existing state`);
+  }
   return {
     valid: result.valid === true,
-    failing: (result.checks || []).filter(c => !c.passed).map(c => c.name).sort(),
+    failing: failingChecks.map(c => c.name).sort(),
   };
 }
 
@@ -389,7 +400,11 @@ async function checkVortexRegression(projectRoot, baseline) {
     actual: regressions.length === 0
       ? 'no Vortex check regressed'
       : `regressed: ${regressions.join(', ')}`,
-    detail: repaired.length > 0 ? `also now passing: ${repaired.join(', ')}` : undefined,
+    // The validator path is always present, per the E2ECheck typedef and every other
+    // check in this file; the repaired list is appended when there is one. The previous
+    // form dropped the path entirely on a regression — the one case where the reader
+    // most needs to know what was run.
+    detail: repaired.length > 0 ? `${validatorPath} (also now passing: ${repaired.join(', ')})` : validatorPath,
   };
 }
 
@@ -407,10 +422,10 @@ async function checkVortexRegression(projectRoot, baseline) {
  * pre-write state as the result.
  *
  * The path comes from `ctx.registry_path` — the value §5d actually wrote to — rather
- * than being re-derived from `projectRoot`. Re-deriving would let the gate inspect a
- * different file from the one the writer touched, which is the whole failure mode this
- * check exists to close. The convention path remains the fallback for a context written
- * before §5d recorded the key.
+ * than being re-derived from `projectRoot`, and it must be ABSOLUTE. The writer opens a
+ * relative path against the process cwd, which the gate cannot know, so accepting one
+ * would let the gate inspect a different file from the one the writer touched. The
+ * convention path is the fallback only when the key is absent.
  *
  * @param {Object} specData
  * @param {Object} ctx - generation context
@@ -418,19 +433,25 @@ async function checkVortexRegression(projectRoot, baseline) {
  * @returns {E2ECheck}
  */
 function checkPersonaCoverage(specData, ctx, projectRoot) {
-  const registryPath = (ctx && ctx.registry_path)
+  const registryPath = (ctx && ctx.registry_path !== undefined)
     ? ctx.registry_path
     : path.join(projectRoot, 'scripts/update/lib/agent-registry.js');
-  const prefix = derivePrefix((specData && specData.team_name_kebab) || '');
-  const exportName = `${prefix}_AGENTS`;
+  const evidence = PERSONA_EVIDENCE_FIELDS.join(', ');
+  const expected = `every declared agent has at least one of ${evidence} in the registry`;
   const fail = (actual) => ({
     name: 'PERSONA-COVERAGE',
     stepName: 'wiring',
     passed: false,
-    expected: 'every declared agent has a non-empty persona in the registry',
+    expected,
     actual,
-    detail: registryPath,
+    detail: String(registryPath),
   });
+
+  if (typeof registryPath !== 'string' || !path.isAbsolute(registryPath)) {
+    return fail(`registry_path must be an absolute path, got ${JSON.stringify(registryPath)}`);
+  }
+  const prefix = derivePrefix((specData && specData.team_name_kebab) || '');
+  const exportName = `${prefix}_AGENTS`;
 
   let registry;
   try {
@@ -445,25 +466,42 @@ function checkPersonaCoverage(specData, ctx, projectRoot) {
     return fail(`${exportName} is not an array in the registry — the module block was not written`);
   }
 
-  const byId = new Map(entries.map(e => [e && e.id, e]));
-  const declared = ((specData && specData.agents) || []).map(a => a.id);
-  const hollow = declared.filter(id => {
-    const entry = byId.get(id);
-    return !entry || !hasPersona(entry.persona);
-  });
+  // Collect ALL entries per id rather than last-wins. A duplicated id let a populated
+  // entry answer for a hollow one sharing its key, while `AGENT_IDS` and every consumer
+  // that scans the array in order would hit the hollow one first.
+  const byId = new Map();
+  for (const e of entries) {
+    const id = e && e.id;
+    if (!byId.has(id)) byId.set(id, []);
+    byId.get(id).push(e);
+  }
 
+  const declared = ((specData && specData.agents) || []).map(a => a && a.id);
   if (declared.length === 0) {
     return fail('the spec declares no agents, so persona coverage is unverifiable');
   }
+
+  // A declared agent with no usable id cannot be matched to an entry at all. Matching it
+  // against the `undefined` key would let an id-less registry entry answer for it.
+  const unidentified = declared.filter(id => typeof id !== 'string' || id.trim() === '');
+  if (unidentified.length > 0) {
+    return fail(`${unidentified.length} declared agent(s) have no usable id, so coverage cannot be attributed`);
+  }
+
+  const hollow = declared.filter(id => {
+    const matches = byId.get(id);
+    return !matches || matches.length === 0 || !matches.every(e => hasPersona(e.persona));
+  });
+
   if (hollow.length > 0) {
-    return fail(`empty persona for: ${hollow.join(', ')}`);
+    return fail(`no ${evidence} for: ${hollow.join(', ')}`);
   }
   return {
     name: 'PERSONA-COVERAGE',
     stepName: 'wiring',
     passed: true,
-    expected: 'every declared agent has a non-empty persona in the registry',
-    actual: `all ${declared.length} declared agent(s) carry a persona`,
+    expected,
+    actual: `all ${declared.length} declared agent(s) carry persona evidence`,
     detail: registryPath,
   };
 }

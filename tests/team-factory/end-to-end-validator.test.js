@@ -12,30 +12,75 @@ const {
   checkPersonaCoverage,
 } = require('../../_bmad/bme/_team-factory/lib/validators/end-to-end-validator');
 
-/**
- * A minimal stand-in for `scripts/update/lib/agent-registry.js`, carrying the
- * TEST_TEAM_AGENTS export that `checkPersonaCoverage` reads. `personaMode` controls
- * whether the block is the correct one or the hollow one T131 was filed on.
- */
-function buildFixtureRegistry(personaMode) {
-  const persona = personaMode === 'hollow'
-    ? "{ role: '', identity: '', communication_style: '', expertise: '' }"
-    : "{ role: 'Analyzer', identity: 'Reads data', communication_style: 'Terse', expertise: 'Analysis' }";
-  const entry = (id, name) =>
-    `{ id: '${id}', name: '${name}', icon: 'x', title: '${name}', stream: 'test-team', persona: ${persona} }`;
-  return [
-    "'use strict';",
-    `const TEST_TEAM_AGENTS = [${entry('alpha-analyzer', 'Alpha')}, ${entry('beta-builder', 'Beta')}];`,
-    'module.exports = { TEST_TEAM_AGENTS };',
-    '',
-  ].join('\n');
-}
+const { derivePrefix, writeRegistryBlock } = require('../../_bmad/bme/_team-factory/lib/writers/registry-writer');
 
 const FIXTURE_PATH = path.join(__dirname, 'fixtures', 'test-team-spec.yaml');
 const PROJECT_ROOT = path.resolve(__dirname, '../..');
 
 function loadFixtureSpec() {
   return yaml.load(fs.readFileSync(FIXTURE_PATH, 'utf8'));
+}
+
+/**
+ * A stand-in for `scripts/update/lib/agent-registry.js`, carrying the `<PREFIX>_AGENTS`
+ * export `checkPersonaCoverage` reads.
+ *
+ * The ids and the export name are derived from the spec it is given. Only this registry
+ * is derived: the rest of `buildHappyContext` (agent files, config, CSV rows) is still
+ * hand-built for two agents.
+ *
+ * `personaMode: 'hollow'` is hand-written in the T131 shape — `role` present, evidence
+ * fields empty. The writer-produced version of that shape is exercised separately, by
+ * "a hollow team written by the real writer fails the gate".
+ */
+function buildFixtureRegistry(specData, personaMode = 'full') {
+  const persona = personaMode === 'hollow'
+    ? (role) => `{ role: ${JSON.stringify(role)}, identity: '', communication_style: '', expertise: '' }`
+    : (role) => `{ role: ${JSON.stringify(role)}, identity: 'Reads data', communication_style: 'Terse', expertise: 'Analysis' }`;
+  const exportName = `${derivePrefix(specData.team_name_kebab)}_AGENTS`;
+  const entries = (specData.agents || []).map(a =>
+    `{ id: ${JSON.stringify(a.id)}, name: ${JSON.stringify(a.id)}, icon: 'x', title: ${JSON.stringify(a.id)}, ` +
+    `stream: ${JSON.stringify(specData.team_name_kebab)}, persona: ${persona(a.role || 'Stated in the spec')} }`
+  );
+  return [
+    "'use strict';",
+    `const ${exportName} = [${entries.join(', ')}];`,
+    `module.exports = { ${exportName} };`,
+    '',
+  ].join('\n');
+}
+
+/**
+ * A stub project root with the two files `validateTeam`'s regression checks read.
+ *
+ * Round 1 finding: the differential tests took `PROJECT_ROOT` — the live repo — as the
+ * scanned root, and asserted on the three modules that fail there. `.claude/skills/*` is
+ * gitignored, so those failures exist only on a tree where `convoke-install` never ran:
+ * on an installed machine `baseline.failing` is `[]`, two assertions invert, and the
+ * suite goes red in a green repo. Worse, one of the two is the sole executioner for the
+ * set-containment mutant — AC#6's whole evidence. `fixture-determinism`: a test must not
+ * assert on anything it does not control.
+ *
+ * @param {string} dir
+ * @param {string[]} failing - names the stub's validateInstallation reports as failed
+ */
+async function buildStubProjectRoot(dir, failing = []) {
+  const libDir = path.join(dir, 'scripts/update/lib');
+  await fs.ensureDir(libDir);
+  await fs.writeFile(path.join(libDir, 'validator.js'), [
+    "'use strict';",
+    `const FAILING = ${JSON.stringify(failing)};`,
+    "const ALL = ['Vortex module', 'Agent files', 'Enhance module', 'Artifacts module', 'Portability module'];",
+    'async function validateInstallation() {',
+    '  const checks = ALL.map(name => ({ name, passed: !FAILING.includes(name) }));',
+    '  for (const name of FAILING) if (!ALL.includes(name)) checks.push({ name, passed: false });',
+    '  return { valid: checks.every(c => c.passed), checks };',
+    '}',
+    'module.exports = { validateInstallation };',
+    '',
+  ].join('\n'), 'utf8');
+  await fs.writeFile(path.join(libDir, 'agent-registry.js'), "'use strict';\nmodule.exports = {};\n", 'utf8');
+  return dir;
 }
 
 /**
@@ -95,15 +140,15 @@ async function buildHappyContext(tmpDir, personaMode = 'full') {
   // A fixture registry keeps the assertion off live repo state (`test-fixture-isolation`)
   // and lets the hollow case be built deliberately rather than waited for.
   const registryPath = path.join(tmpDir, 'fixture-agent-registry.js');
-  await fs.writeFile(registryPath, buildFixtureRegistry(personaMode), 'utf8');
+  await fs.writeFile(registryPath, buildFixtureRegistry(loadFixtureSpec(), personaMode), 'utf8');
 
   return {
     module_root: moduleRoot,
     registry_path: registryPath,
-    // tfr-1-1 (T128): the differential's pre-generation baseline. Captured from the same
-    // projectRoot the check reads, so the relation under test is "did the failing set
-    // grow", never the absolute number of live failures (`fixture-determinism`).
-    vortex_baseline: await captureVortexBaseline(PROJECT_ROOT),
+    // tfr-1-1 (T128): stated, not captured. The stub root fails nothing, so this baseline
+    // differs from the post-generation read, which is what makes the happy-path assertion
+    // on VORTEX-REGRESSION able to fail.
+    vortex_baseline: { valid: false, failing: ['Enhance module'] },
     generated_files: agentFiles.concat(
       workflowDirs.map(d => path.join(d, 'workflow.md')),
       workflowDirs.map(d => path.join(d, 'SKILL.md')),
@@ -129,9 +174,11 @@ async function buildHappyContext(tmpDir, personaMode = 'full') {
 
 describe('validateTeam — happy path', () => {
   let tmpDir;
+  let stubRoot;
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-e2e-'));
+    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'), ['Enhance module']);
   });
 
   after(async () => {
@@ -142,7 +189,7 @@ describe('validateTeam — happy path', () => {
     const specData = loadFixtureSpec();
     const ctx = await buildHappyContext(tmpDir);
 
-    const result = await validateTeam(specData, ctx, PROJECT_ROOT);
+    const result = await validateTeam(specData, ctx, stubRoot);
 
     assert.ok(result.checks.length > 0, 'should have checks');
 
@@ -160,8 +207,8 @@ describe('validateTeam — happy path', () => {
     // tfr-1-1 (T128). This replaces an assertion that checked the check EXISTED and
     // nothing about whether it passed, excused by a comment reading "may fail due to
     // pre-existing project state". That is `verification-must-be-falsifiable`'s check
-    // that can only pass. The differential makes the real assertion available: with a
-    // baseline captured from the same tree, nothing regressed, so it must be GREEN.
+    // that can only pass. Here the stated baseline fails 'Enhance module' and the stub
+    // root fails nothing, so nothing regressed and it must be GREEN.
     const vortexCheck = result.checks.find(c => c.name === 'VORTEX-REGRESSION');
     assert.ok(vortexCheck, 'should have VORTEX-REGRESSION check');
     assert.equal(vortexCheck.stepName, 'regression');
@@ -179,9 +226,11 @@ describe('validateTeam — happy path', () => {
 
 describe('validateTeam — missing agent file', () => {
   let tmpDir;
+  let stubRoot;
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-e2e-'));
+    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'), ['Enhance module']);
   });
 
   after(async () => {
@@ -195,7 +244,7 @@ describe('validateTeam — missing agent file', () => {
     // Remove one agent file
     await fs.remove(ctx.agent_files[0]);
 
-    const result = await validateTeam(specData, ctx, PROJECT_ROOT);
+    const result = await validateTeam(specData, ctx, stubRoot);
 
     assert.equal(result.valid, false);
     const failedCheck = result.checks.find(c => c.name === 'AGENT-FILE-EXISTS' && !c.passed);
@@ -210,9 +259,11 @@ describe('validateTeam — missing agent file', () => {
 
 describe('validateTeam — missing config', () => {
   let tmpDir;
+  let stubRoot;
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-e2e-'));
+    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'), ['Enhance module']);
   });
 
   after(async () => {
@@ -226,7 +277,7 @@ describe('validateTeam — missing config', () => {
     // Remove config
     await fs.remove(ctx.config_yaml_path);
 
-    const result = await validateTeam(specData, ctx, PROJECT_ROOT);
+    const result = await validateTeam(specData, ctx, stubRoot);
 
     assert.equal(result.valid, false);
     const failedCheck = result.checks.find(c => c.name === 'CONFIG-EXISTS' && !c.passed);
@@ -266,9 +317,11 @@ describe('validateTeam — registry regression', () => {
 
 describe('validateTeam — failed activation', () => {
   let tmpDir;
+  let stubRoot;
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-e2e-'));
+    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'), ['Enhance module']);
   });
 
   after(async () => {
@@ -285,7 +338,7 @@ describe('validateTeam — failed activation', () => {
       results: [{ agentFile: 'test.md', checks: [], errors: ['config path wrong'] }],
     };
 
-    const result = await validateTeam(specData, ctx, PROJECT_ROOT);
+    const result = await validateTeam(specData, ctx, stubRoot);
 
     assert.equal(result.valid, false);
     const failedCheck = result.checks.find(c => c.name === 'ACTIVATION-VALID' && !c.passed);
@@ -300,9 +353,11 @@ describe('validateTeam — failed activation', () => {
 
 describe('validateTeam — NFR11 error format', () => {
   let tmpDir;
+  let stubRoot;
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-e2e-'));
+    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'), ['Enhance module']);
   });
 
   after(async () => {
@@ -314,7 +369,7 @@ describe('validateTeam — NFR11 error format', () => {
     const ctx = await buildHappyContext(tmpDir);
     await fs.remove(ctx.agent_files[0]); // cause a failure
 
-    const result = await validateTeam(specData, ctx, PROJECT_ROOT);
+    const result = await validateTeam(specData, ctx, stubRoot);
     const failedChecks = result.checks.filter(c => !c.passed);
 
     assert.ok(failedChecks.length > 0, 'should have failed checks');
@@ -332,115 +387,274 @@ describe('validateTeam — NFR11 error format', () => {
 
 describe('PERSONA-COVERAGE — a hollow team cannot report success', () => {
   let tmpDir;
+  let stubRoot;
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-persona-'));
+    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'), ['Enhance module']);
   });
 
   after(async () => {
     await fs.remove(tmpDir);
   });
 
-  it('fails validateTeam when every declared agent has an empty persona', async () => {
+  it('fails validateTeam on a hollow registry — role present, evidence fields empty', async () => {
     const specData = loadFixtureSpec();
     const ctx = await buildHappyContext(tmpDir, 'hollow');
 
-    const result = await validateTeam(specData, ctx, PROJECT_ROOT);
+    const result = await validateTeam(specData, ctx, stubRoot);
 
     const check = result.checks.find(c => c.name === 'PERSONA-COVERAGE');
     assert.ok(check, 'should have PERSONA-COVERAGE check');
     assert.equal(check.passed, false, 'hollow personas must fail the terminal gate');
     // Name the agents, not a count: the message is what tells a contributor what to fix.
-    assert.match(check.actual, /alpha-analyzer/);
-    assert.match(check.actual, /beta-builder/);
+    for (const agent of specData.agents) assert.match(check.actual, new RegExp(agent.id));
     assert.equal(result.valid, false, 'a hollow team must not be reported valid');
   });
 
-  it('fails when the module block is absent from the registry', () => {
+  // The generation path, unmocked: the real fixture spec → writeRegistryBlock → the
+  // registry on disk → checkPersonaCoverage. This is the instrument that guards
+  // PERSONA_EVIDENCE_FIELDS: if buildAgentEntry ever back-fills an evidence field from
+  // the spec (capabilities, title, role…), the first test goes green-for-the-wrong-reason
+  // and fails.
+  const MINIMAL_REGISTRY = "'use strict';\n\nmodule.exports = {\n};\n";
+
+  it('a hollow team written by the real writer fails the gate', async () => {
     const specData = loadFixtureSpec();
-    const emptyRegistry = path.join(tmpDir, 'no-block-registry.js');
-    fs.writeFileSync(emptyRegistry, "'use strict';\nmodule.exports = {};\n", 'utf8');
+    const registryPath = path.join(tmpDir, 'writer-hollow-registry.js');
+    await fs.writeFile(registryPath, MINIMAL_REGISTRY, 'utf8');
 
-    const check = checkPersonaCoverage(specData, { registry_path: emptyRegistry }, PROJECT_ROOT);
+    const written = await writeRegistryBlock(specData, registryPath, { skipDirtyCheck: true });
+    assert.equal(written.success, true, JSON.stringify(written.errors));
 
-    assert.equal(check.passed, false);
-    assert.match(check.actual, /TEST_TEAM_AGENTS/);
+    const check = checkPersonaCoverage(specData, { registry_path: registryPath }, stubRoot);
+    assert.equal(check.passed, false, `a team written with no agentFiles must be hollow, got: ${check.actual}`);
+    for (const agent of specData.agents) assert.match(check.actual, new RegExp(agent.id));
   });
 
-  it('fails rather than passing vacuously when the spec declares no agents', () => {
-    const registryPath = path.join(tmpDir, 'fixture-agent-registry.js');
-    const check = checkPersonaCoverage({ team_name_kebab: 'test-team', agents: [] }, { registry_path: registryPath }, PROJECT_ROOT);
+  it('a team written by the real writer from real agent files passes the gate', async () => {
+    const specData = loadFixtureSpec();
+    const registryPath = path.join(tmpDir, 'writer-full-registry.js');
+    await fs.writeFile(registryPath, MINIMAL_REGISTRY, 'utf8');
+    const agentFiles = [];
+    for (const agent of specData.agents) {
+      const f = path.join(tmpDir, 'writer-agents', `${agent.id}.md`);
+      await fs.ensureDir(path.dirname(f));
+      await fs.writeFile(f, `<persona>\n<identity>${agent.id} identity</identity>\n</persona>\n`, 'utf8');
+      agentFiles.push(f);
+    }
+
+    const written = await writeRegistryBlock(specData, registryPath, { skipDirtyCheck: true, agentFiles });
+    assert.equal(written.success, true, JSON.stringify(written.errors));
+
+    const check = checkPersonaCoverage(specData, { registry_path: registryPath }, stubRoot);
+    assert.equal(check.passed, true, `extracted identities must count, got: ${check.actual}`);
+  });
+
+  it('fails when the module block is absent from the registry', async () => {
+    const specData = loadFixtureSpec();
+    const emptyRegistry = path.join(tmpDir, 'no-block-registry.js');
+    await fs.writeFile(emptyRegistry, "'use strict';\nmodule.exports = {};\n", 'utf8');
+
+    const check = checkPersonaCoverage(specData, { registry_path: emptyRegistry }, stubRoot);
+
+    assert.equal(check.passed, false);
+    assert.match(check.actual, new RegExp(`${derivePrefix(specData.team_name_kebab)}_AGENTS`));
+  });
+
+  it('fails rather than passing vacuously when the spec declares no agents', async () => {
+    // Its own registry file, and the message is pinned. Round 1: this pointed at a file
+    // created as a side effect of the FIRST test in the describe, so run under a name
+    // filter it passed on the `cannot read registry` branch and never reached the guard
+    // it claims to test — leaving that guard deletable with the suite still green.
+    const registryPath = path.join(tmpDir, 'no-agents-registry.js');
+    await fs.writeFile(registryPath, "'use strict';\nmodule.exports = { TEST_TEAM_AGENTS: [] };\n", 'utf8');
+
+    const check = checkPersonaCoverage({ team_name_kebab: 'test-team', agents: [] }, { registry_path: registryPath }, stubRoot);
 
     assert.equal(check.passed, false, 'zero declared agents is unverifiable, not a pass');
+    assert.match(check.actual, /declares no agents/, 'must fail on the vacuity guard, not on a missing file');
+  });
+
+  it('fails a declared agent that has no usable id rather than letting an id-less entry answer for it', async () => {
+    const registryPath = path.join(tmpDir, 'idless-registry.js');
+    await fs.writeFile(registryPath,
+      "'use strict';\nmodule.exports = { TEST_TEAM_AGENTS: [{ persona: { identity: 'populated' } }] };\n", 'utf8');
+
+    const check = checkPersonaCoverage({ team_name_kebab: 'test-team', agents: [{ name: 'nameless' }] }, { registry_path: registryPath }, stubRoot);
+
+    assert.equal(check.passed, false);
+    assert.match(check.actual, /no usable id/);
+  });
+
+  it('does not let a duplicate id hide a hollow entry, whichever order they appear in', async () => {
+    const hollow = "  { id: 'alpha-analyzer', persona: { role: 'r', identity: '', communication_style: '', expertise: '' } },";
+    const populated = "  { id: 'alpha-analyzer', persona: { role: 'r', identity: 'populated', communication_style: '', expertise: '' } },";
+    // Hollow-first kills a last-wins lookup; hollow-last kills a first-wins one.
+    for (const [label, order] of [['hollow first', [hollow, populated]], ['hollow last', [populated, hollow]]]) {
+      const registryPath = path.join(tmpDir, `dup-registry-${label.replace(' ', '-')}.js`);
+      await fs.writeFile(registryPath,
+        ["'use strict';", 'module.exports = { TEST_TEAM_AGENTS: [', ...order, '] };', ''].join('\n'), 'utf8');
+
+      const check = checkPersonaCoverage({ team_name_kebab: 'test-team', agents: [{ id: 'alpha-analyzer' }] }, { registry_path: registryPath }, stubRoot);
+
+      assert.equal(check.passed, false, `${label}: a populated duplicate must not answer for the hollow one`);
+      assert.match(check.actual, /alpha-analyzer/);
+    }
+  });
+
+  it('rejects a relative registry_path instead of guessing which base the writer used', async () => {
+    // The writer resolves a relative path against cwd. Resolving it against projectRoot
+    // instead produced a false green when the two differed: the gate read a populated
+    // registry while the writer had written a hollow one somewhere else.
+    const specData = loadFixtureSpec();
+    const rel = 'relative-registry.js';
+    await fs.writeFile(path.join(stubRoot, rel), buildFixtureRegistry(specData, 'full'), 'utf8');
+
+    const check = checkPersonaCoverage(specData, { registry_path: rel }, stubRoot);
+
+    assert.equal(check.passed, false, 'a populated file at projectRoot/<rel> must not be trusted');
+    assert.match(check.actual, /must be an absolute path/);
+  });
+
+  it('returns a failed check, not a crash, for a non-string registry_path', async () => {
+    const specData = loadFixtureSpec();
+    for (const bad of [42, {}, ['a.js'], '']) {
+      const check = checkPersonaCoverage(specData, { registry_path: bad }, stubRoot);
+      assert.equal(check.passed, false, `registry_path ${JSON.stringify(bad)}`);
+      assert.match(check.actual, /must be an absolute path/);
+    }
   });
 
   it('reads the registry the run wrote to, not one re-derived from projectRoot', async () => {
     const specData = loadFixtureSpec();
     const written = path.join(tmpDir, 'written-registry.js');
-    await fs.writeFile(written, buildFixtureRegistry('hollow'), 'utf8');
+    await fs.writeFile(written, buildFixtureRegistry(specData, 'hollow'), 'utf8');
 
-    // projectRoot is the real repo, whose registry has no TEST_TEAM block at all.
-    // The check must report on `written`, so it must name the hollow agents.
-    const check = checkPersonaCoverage(specData, { registry_path: written }, PROJECT_ROOT);
+    // stubRoot's own registry has no module block at all. The check must report on
+    // `written`, so it must name the hollow agents.
+    const check = checkPersonaCoverage(specData, { registry_path: written }, stubRoot);
 
     assert.equal(check.passed, false);
-    assert.match(check.actual, /empty persona for/);
+    assert.match(check.actual, /no identity, communication_style, expertise for:/);
     assert.equal(check.detail, written);
   });
 });
 
 // === tfr-1-1 Task 6 (T128) — the differential ===
+//
+// Every test here runs against a STUB project root whose validateInstallation result the
+// test states outright. Round 1: the first version scanned the live repo and asserted on
+// the three modules that fail in a source tree — which inverted on any machine where
+// `convoke-install` had run, taking the set-containment mutant's sole executioner with it.
 
 describe('VORTEX-REGRESSION — differential, not absolute', () => {
+  let tmpDir;
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-vortex-'));
+  });
+
+  after(async () => {
+    await fs.remove(tmpDir);
+  });
+
+  const rootWith = (name, failing) => buildStubProjectRoot(path.join(tmpDir, name), failing);
+
   it('passes when the post-generation failing set is unchanged from the baseline', async () => {
-    const baseline = await captureVortexBaseline(PROJECT_ROOT);
-    const check = await checkVortexRegression(PROJECT_ROOT, baseline);
+    const root = await rootWith('unchanged', ['Enhance module', 'Artifacts module']);
+    const check = await checkVortexRegression(root, { valid: false, failing: ['Enhance module', 'Artifacts module'] });
 
     assert.equal(check.passed, true, `expected no regression, got: ${check.actual}`);
   });
 
   it('fails when a check that was passing before generation is now failing', async () => {
-    // A baseline claiming everything passed turns today's pre-existing failures into
-    // regressions — the shape a real regression has.
-    const check = await checkVortexRegression(PROJECT_ROOT, { valid: true, failing: [] });
+    const root = await rootWith('regressed', ['Vortex module']);
+    const check = await checkVortexRegression(root, { valid: true, failing: [] });
 
     assert.equal(check.passed, false);
-    assert.match(check.actual, /^regressed: /);
+    assert.match(check.actual, /^regressed: Vortex module$/);
   });
 
   it('passes when generation REPAIRED a check, and says which', async () => {
-    const baseline = await captureVortexBaseline(PROJECT_ROOT);
-    const check = await checkVortexRegression(PROJECT_ROOT, {
-      valid: false,
-      failing: baseline.failing.concat('Imaginary module'),
-    });
+    const root = await rootWith('repaired', []);
+    const check = await checkVortexRegression(root, { valid: false, failing: ['Enhance module'] });
 
     assert.equal(check.passed, true);
-    assert.match(check.detail, /Imaginary module/);
+    assert.match(check.detail, /also now passing: Enhance module/);
   });
 
   it('is a set containment, not a count — an equal-sized swap is a regression', async () => {
-    const baseline = await captureVortexBaseline(PROJECT_ROOT);
-    assert.ok(baseline.failing.length > 0, 'this assertion needs a non-empty baseline to be meaningful');
     // Same cardinality, different membership. A `post.length <= baseline.length`
     // comparison passes this; set containment must not.
-    const swapped = baseline.failing.map((_, i) => `Swapped module ${i}`);
-    const check = await checkVortexRegression(PROJECT_ROOT, { valid: false, failing: swapped });
+    const root = await rootWith('swap', ['Enhance module', 'Artifacts module']);
+    const check = await checkVortexRegression(root, { valid: false, failing: ['Vortex module', 'Agent files'] });
 
     assert.equal(check.passed, false, 'an equal-sized swap must still be a regression');
+    assert.match(check.actual, /Enhance module/);
+    assert.match(check.actual, /Artifacts module/);
+  });
+
+  it('always names the validator it ran, regression or not', async () => {
+    const root = await rootWith('detail', ['Vortex module']);
+    const check = await checkVortexRegression(root, { valid: true, failing: [] });
+
+    assert.equal(check.passed, false);
+    assert.match(check.detail, /scripts[/\\]update[/\\]lib[/\\]validator\.js/);
+  });
+
+  it('throws rather than reporting a clean run when validateInstallation yields no checks array', async () => {
+    // The degenerate read: `(result.checks || [])` reported an empty failing set, which
+    // makes every baseline entry look REPAIRED and the run regression-free — a confident
+    // wrong answer. The docstring promised this guard before the code carried it.
+    const root = path.join(tmpDir, 'nochecks');
+    await fs.ensureDir(path.join(root, 'scripts/update/lib'));
+    await fs.writeFile(path.join(root, 'scripts/update/lib/validator.js'),
+      "module.exports = { validateInstallation: async () => ({ valid: false }) };\n", 'utf8');
+
+    const check = await checkVortexRegression(root, { valid: false, failing: ['Enhance module'] });
+
+    assert.equal(check.passed, false);
+    assert.match(check.actual, /no checks array/);
+  });
+
+  it('fails closed when a failing check has no usable name, rather than dropping it', async () => {
+    // Dropping unnamed checks let a regression inside one pass silently: baseline clean,
+    // post has one unnamed failure, gate green. Compared by name, it cannot be compared.
+    for (const [label, badName] of [['missing', undefined], ['blank', '   ']]) {
+      const root = path.join(tmpDir, `unnamed-${label}`);
+      await fs.ensureDir(path.join(root, 'scripts/update/lib'));
+      await fs.writeFile(path.join(root, 'scripts/update/lib/validator.js'),
+        `module.exports = { validateInstallation: async () => ({ valid: false, checks: [{ name: ${JSON.stringify(badName)}, passed: false }] }) };\n`, 'utf8');
+
+      const check = await checkVortexRegression(root, { valid: true, failing: [] });
+
+      assert.equal(check.passed, false, `${label} name must not be dropped`);
+      assert.match(check.actual, /no usable name/);
+    }
   });
 
   it('fails closed when no baseline was captured', async () => {
-    const check = await checkVortexRegression(PROJECT_ROOT, undefined);
+    const root = await rootWith('nobaseline', ['Enhance module']);
+    const check = await checkVortexRegression(root, undefined);
 
     assert.equal(check.passed, false);
     assert.match(check.actual, /no baseline recorded/);
   });
 
   it('fails closed when the baseline is present but unusable', async () => {
-    const check = await checkVortexRegression(PROJECT_ROOT, { failing: 'Enhance module' });
+    const root = await rootWith('badbaseline', ['Enhance module']);
+    const check = await checkVortexRegression(root, { failing: 'Enhance module' });
 
     assert.equal(check.passed, false);
     assert.match(check.actual, /unusable baseline/);
+  });
+
+  it('captureVortexBaseline reduces a run to its failing check names', async () => {
+    const root = await rootWith('capture', ['Artifacts module', 'Enhance module']);
+    const baseline = await captureVortexBaseline(root);
+
+    assert.equal(baseline.valid, false);
+    assert.deepEqual(baseline.failing, ['Artifacts module', 'Enhance module'], 'sorted, names only');
   });
 });

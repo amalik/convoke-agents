@@ -311,6 +311,10 @@ describe('writeRegistryBlock', () => {
     assert.equal(result2.success, true);
     assert.deepEqual(result2.skipped, ['block already exists']);
     assert.deepEqual(result2.written, []);
+    // tfr-1-1: the skip did no extraction, so coverage is "not computed" — present as
+    // null, never absent and never a zeroed object that would read as "nothing covered".
+    assert.ok('personaCoverage' in result2, 'every return carries personaCoverage');
+    assert.equal(result2.personaCoverage, null);
 
     delete require.cache[require.resolve(registryPath)];
   });
@@ -700,7 +704,7 @@ describe('R2: persona keying works for the v6.3 directory layout', () => {
 // === tfr-1-1 Task 4 (T164a) — agentFiles is no longer coerced, coverage is reported ===
 
 describe('normalizeAgentFiles — an unusable value is reported, not swallowed', () => {
-  it('accepts omission without an issue (the appender and pre-T131 callers pass nothing)', () => {
+  it('accepts omission without an issue (the writer\'s own CLI passes no options)', () => {
     assert.deepEqual(normalizeAgentFiles(undefined), { agentFiles: [], agentFilesIssues: [] });
     assert.deepEqual(normalizeAgentFiles(null), { agentFiles: [], agentFilesIssues: [] });
   });
@@ -737,19 +741,27 @@ describe('personaCoverage — a different fact from write success', () => {
     assert.deepEqual(c.empty, ['alpha-analyzer', 'beta-builder']);
   });
 
-  it('counts an extracted persona as coverage', () => {
-    const c = personaCoverage(spec, { 'alpha-analyzer': { role: 'Analyzer', identity: '', communication_style: '', expertise: '' } });
+  it('counts an extracted field as coverage', () => {
+    const c = personaCoverage(spec, { 'alpha-analyzer': { role: '', identity: 'Reads data', communication_style: '', expertise: '' } });
     assert.deepEqual(c.covered, ['alpha-analyzer']);
     assert.deepEqual(c.empty, ['beta-builder']);
   });
 
-  it('counts a spec-declared role as coverage, because buildAgentEntry does', () => {
-    // Deriving coverage from the extracted `personas` map alone would call this agent
-    // empty while the registry entry it produces carries a role.
+  it('does NOT count a spec-declared role as coverage', () => {
+    // Round 1's decisive finding. `role` is required with minLength 1 by both team
+    // schemas and `buildAgentEntry` copies it into `persona.role`, so counting it made
+    // the predicate true for every spec that can reach the writer — a gate that cannot
+    // fail, reporting the exact T131 shape as covered.
     const declared = { team_name_kebab: 'test-team', agents: [{ id: 'alpha-analyzer', role: 'Stated in the spec' }] };
     const c = personaCoverage(declared, {});
+    assert.deepEqual(c.covered, []);
+    assert.deepEqual(c.empty, ['alpha-analyzer']);
+  });
+
+  it('counts a spec-declared persona.identity as coverage — the schema does not require it', () => {
+    const declared = { team_name_kebab: 'test-team', agents: [{ id: 'alpha-analyzer', role: 'r', persona: { identity: 'Stated deliberately' } }] };
+    const c = personaCoverage(declared, {});
     assert.deepEqual(c.covered, ['alpha-analyzer']);
-    assert.deepEqual(c.empty, []);
   });
 
   it('derives the agent set from the spec at call time, never a fixed list', () => {
@@ -767,16 +779,57 @@ describe('personaCoverage — a different fact from write success', () => {
 });
 
 describe('hasPersona', () => {
-  it('is false when every field is blank or whitespace', () => {
+  it('is false when every evidence field is blank or whitespace', () => {
     assert.equal(hasPersona({ role: '', identity: '   ', communication_style: '', expertise: '\n' }), false);
   });
 
-  it('is true when any single field carries text', () => {
-    assert.equal(hasPersona({ role: '', identity: 'x', communication_style: '', expertise: '' }), true);
+  it('is false when ONLY role carries text — every agent has a role, so it is no evidence', () => {
+    assert.equal(hasPersona({ role: 'Analyzes data patterns', identity: '', communication_style: '', expertise: '' }), false);
+  });
+
+  it('is true when any single evidence field carries text', () => {
+    for (const field of ['identity', 'communication_style', 'expertise']) {
+      const persona = { role: '', identity: '', communication_style: '', expertise: '', [field]: 'x' };
+      assert.equal(hasPersona(persona), true, `${field} should count as evidence`);
+    }
   });
 
   it('is false for a missing or non-object persona', () => {
     assert.equal(hasPersona(undefined), false);
     assert.equal(hasPersona('role'), false);
+  });
+});
+
+describe('writeRegistryBlock — agent files that cannot be read are reported', () => {
+  let tmpDir;
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-agentfiles-'));
+  });
+
+  after(async () => {
+    await removeTempDir(tmpDir);
+  });
+
+  it('lists a missing path and a DIRECTORY in missingAgentFiles, and not a readable file', async () => {
+    // A directory passes `pathExists`, and the extractor swallows EISDIR like ENOENT, so
+    // recording `agents/<id>/` instead of `agents/<id>/SKILL.md` used to vanish silently.
+    const registryPath = path.join(tmpDir, 'agentfiles-registry.js');
+    await fs.writeFile(registryPath, buildTestRegistry(), 'utf8');
+    const readable = path.join(tmpDir, 'agents', 'alpha-analyzer.md');
+    const directory = path.join(tmpDir, 'agents', 'beta-builder');
+    const missing = path.join(tmpDir, 'agents', 'gamma-nowhere.md');
+    await fs.ensureDir(directory);
+    await fs.writeFile(readable, '<identity>Reads data</identity>\n', 'utf8');
+
+    const result = await writeRegistryBlock(buildTestSpec(), registryPath, {
+      skipDirtyCheck: true,
+      agentFiles: [readable, directory, missing],
+    });
+
+    assert.equal(result.success, true, JSON.stringify(result.errors));
+    assert.deepEqual(result.personaCoverage.missingAgentFiles.slice().sort(), [directory, missing].sort());
+
+    delete require.cache[require.resolve(registryPath)];
   });
 });

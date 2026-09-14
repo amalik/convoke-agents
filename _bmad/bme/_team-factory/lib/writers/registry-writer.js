@@ -20,11 +20,15 @@ const { deriveWorkflowName } = require('../utils/naming-utils');
  * @param {string} registryPath - Absolute path to agent-registry.js
  * @param {Object} [options]
  * @param {boolean} [options.skipDirtyCheck] - Skip git dirty-tree detection (for tests)
+ * @param {string[]} [options.agentFiles] - Paths to the agent files BMB authored, used to
+ *   extract each agent's persona. Omitting it is supported and yields empty personas;
+ *   a value that is PRESENT but unusable (a bare string, a non-array, non-path entries)
+ *   is reported in `result.personaCoverage.agentFilesIssues` rather than coerced to `[]`.
  * @returns {Promise<import('../types/factory-types').RegistryResult>}
  */
 async function writeRegistryBlock(specData, registryPath, options = {}) {
   if (!specData.team_name_kebab || !specData.team_name_kebab.trim()) {
-    return { success: false, written: [], skipped: [], errors: ['team_name_kebab is required and must not be empty'], rollbackApplied: false };
+    return { success: false, written: [], skipped: [], errors: ['team_name_kebab is required and must not be empty'], rollbackApplied: false, personaCoverage: null };
   }
 
   const prefix = derivePrefix(specData.team_name_kebab);
@@ -35,11 +39,14 @@ async function writeRegistryBlock(specData, registryPath, options = {}) {
   try {
     currentContent = await fs.readFile(registryPath, 'utf8');
   } catch (err) {
-    return { success: false, written: [], skipped: [], errors: [`Cannot read registry file: ${err.message}`], rollbackApplied: false };
+    return { success: false, written: [], skipped: [], errors: [`Cannot read registry file: ${err.message}`], rollbackApplied: false, personaCoverage: null };
   }
 
   if (currentContent.includes(`const ${prefix}_AGENTS`)) {
-    return { success: true, written: [], skipped: ['block already exists'], errors: [], rollbackApplied: false };
+    // `personaCoverage: null` means "not computed" — here, and on every failure return. It
+    // is not `{covered:[],empty:[]}`, which would read as "nothing is covered". Callers
+    // tell the skip from a failure by `skipped`/`success`, never by this key.
+    return { success: true, written: [], skipped: ['block already exists'], errors: [], rollbackApplied: false, personaCoverage: null };
   }
 
   // --- 1. STAGE: Build module block + export additions ---
@@ -52,13 +59,17 @@ async function writeRegistryBlock(specData, registryPath, options = {}) {
   //
   // tfr-1-1 (T164a): `Array.isArray(...) ? ... : []` silently swallowed every unusable
   // value — a bare string, an object, a typo'd option name — and produced a registry
-  // with empty personas and `success: true`. Omission stays legitimate (the appender
-  // and older callers rely on it); anything PRESENT and unusable is reported.
+  // with empty personas and `success: true`. Omission stays legitimate (this module's own
+  // CLI passes no options); anything PRESENT and unusable is reported.
   const personas = {};
   const { agentFiles, agentFilesIssues } = normalizeAgentFiles(options.agentFiles);
+  // `pathExists` is true for a DIRECTORY, and `extractPersonaFromAgentFile`'s bare catch
+  // swallows EISDIR exactly like ENOENT — so recording `agents/<id>/` instead of
+  // `agents/<id>/SKILL.md` (a one-character slip the v6.3 layout invites, and one
+  // `agentIdFromPath` explicitly supports) produced zero personas and zero issues.
   const missingAgentFiles = [];
   for (const agentFile of agentFiles) {
-    if (!(await fs.pathExists(agentFile))) missingAgentFiles.push(agentFile);
+    if (!(await isReadableFile(agentFile))) missingAgentFiles.push(agentFile);
     personas[agentIdFromPath(agentFile)] = await extractPersonaFromAgentFile(agentFile);
   }
 
@@ -68,32 +79,32 @@ async function writeRegistryBlock(specData, registryPath, options = {}) {
   // --- 2. VALIDATE: Syntax, prefix uniqueness, additive-only ---
   const validateErrors = validateStaged(moduleBlock, prefix, currentContent);
   if (validateErrors.length > 0) {
-    return { success: false, written: [], skipped: [], errors: validateErrors, rollbackApplied: false };
+    return { success: false, written: [], skipped: [], errors: validateErrors, rollbackApplied: false, personaCoverage: null };
   }
 
   // Validate staged block syntax via temp file
   const syntaxError = await validateSyntax(moduleBlock, prefix);
   if (syntaxError) {
-    return { success: false, written: [], skipped: [], errors: [syntaxError], rollbackApplied: false };
+    return { success: false, written: [], skipped: [], errors: [syntaxError], rollbackApplied: false, personaCoverage: null };
   }
 
   // --- 3. CHECK: Dirty-tree detection ---
   if (!options.skipDirtyCheck) {
     const dirtyResult = checkDirtyTree(registryPath);
     if (dirtyResult.dirty) {
-      return { success: false, written: [], skipped: [], errors: [], rollbackApplied: false, dirty: true, diff: dirtyResult.diff };
+      return { success: false, written: [], skipped: [], errors: [], rollbackApplied: false, dirty: true, diff: dirtyResult.diff, personaCoverage: null };
     }
   }
 
   // --- 4. APPLY: Read → save .bak → insert → write ---
   const bakPath = `${registryPath}.bak`;
   if (await fs.pathExists(bakPath)) {
-    return { success: false, written: [], skipped: [], errors: ['Stale .bak file exists — a previous run may have crashed. Remove it manually before retrying.'], rollbackApplied: false };
+    return { success: false, written: [], skipped: [], errors: ['Stale .bak file exists — a previous run may have crashed. Remove it manually before retrying.'], rollbackApplied: false, personaCoverage: null };
   }
   try {
     await fs.writeFile(bakPath, currentContent, 'utf8');
   } catch (err) {
-    return { success: false, written: [], skipped: [], errors: [`Failed to create backup: ${err.message}`], rollbackApplied: false };
+    return { success: false, written: [], skipped: [], errors: [`Failed to create backup: ${err.message}`], rollbackApplied: false, personaCoverage: null };
   }
 
   let modified;
@@ -101,7 +112,7 @@ async function writeRegistryBlock(specData, registryPath, options = {}) {
     modified = applyInsertions(currentContent, moduleBlock, exportNames);
   } catch (err) {
     await fs.remove(bakPath);
-    return { success: false, written: [], skipped: [], errors: [`Insertion failed: ${err.message}`], rollbackApplied: false };
+    return { success: false, written: [], skipped: [], errors: [`Insertion failed: ${err.message}`], rollbackApplied: false, personaCoverage: null };
   }
 
   try {
@@ -110,7 +121,7 @@ async function writeRegistryBlock(specData, registryPath, options = {}) {
     // Restore from backup
     await fs.writeFile(registryPath, currentContent, 'utf8');
     await fs.remove(bakPath);
-    return { success: false, written: [], skipped: [], errors: [`Write failed: ${err.message}`], rollbackApplied: true };
+    return { success: false, written: [], skipped: [], errors: [`Write failed: ${err.message}`], rollbackApplied: true, personaCoverage: null };
   }
 
   // --- 5. VERIFY: Re-read + node require() ---
@@ -119,7 +130,7 @@ async function writeRegistryBlock(specData, registryPath, options = {}) {
     // Rollback
     await fs.writeFile(registryPath, currentContent, 'utf8');
     await fs.remove(bakPath);
-    return { success: false, written: [], skipped: [], errors: [verifyError], rollbackApplied: true };
+    return { success: false, written: [], skipped: [], errors: [verifyError], rollbackApplied: true, personaCoverage: null };
   }
 
   // --- Cleanup: Remove .bak ---
@@ -141,14 +152,34 @@ async function writeRegistryBlock(specData, registryPath, options = {}) {
 }
 
 /**
+ * True when `p` is a regular file this process can read.
+ *
+ * `extractPersonaFromAgentFile` swallows EISDIR and EACCES exactly like ENOENT, so a
+ * directory or an unreadable file would otherwise extract nothing and report nothing.
+ *
+ * @param {string} p
+ * @returns {Promise<boolean>}
+ */
+async function isReadableFile(p) {
+  try {
+    const st = await fs.stat(p);
+    if (!st.isFile()) return false;
+    await fs.access(p, fs.constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Normalise `options.agentFiles` without swallowing an unusable value.
  *
- * Omission is legitimate and yields no issue — `registry-appender` and pre-T131 callers
- * pass nothing, and the header comment on the persona loop promises that omitting it
- * "preserves the previous behaviour exactly". Anything else that is not an array of
- * non-empty strings is REPORTED, because the previous `Array.isArray(x) ? x : []` turned
- * `agentFiles: '/path/one.md'` (a plausible single-file call) into zero personas, a
- * registry of empty entries, and `success: true`.
+ * Omission is legitimate and yields no issue: this module's own CLI calls
+ * `writeRegistryBlock(specData, registryPath)` with no options at all.
+ *
+ * Anything else that is not an array of non-empty strings is REPORTED, because the
+ * previous `Array.isArray(x) ? x : []` turned `agentFiles: '/path/one.md'` (a plausible
+ * single-file call) into zero personas, a registry of empty entries, and `success: true`.
  *
  * @param {*} input - the raw `options.agentFiles`
  * @returns {{agentFiles: string[], agentFilesIssues: string[]}}
@@ -174,12 +205,12 @@ function normalizeAgentFiles(input) {
 }
 
 /**
- * Report which declared agents end up with a non-empty persona in the registry entry.
+ * Report which declared agents end up with persona evidence in the registry entry.
  *
  * Classification goes through `buildAgentEntry` — the same function `buildModuleBlock`
- * uses — so "has a persona" here cannot drift from what is actually written. Computing
- * it from the extracted `personas` map alone would under-report: an agent carrying an
- * explicit `spec.persona` or a bare `spec.role` is covered without any extraction.
+ * uses — so this cannot drift from what is actually written. Computing it from the
+ * extracted `personas` map alone would under-report an agent whose spec declares
+ * `persona.identity` (or another evidence field) explicitly.
  *
  * Counts are derived from `specData.agents` at call time (`derive-counts-from-source`);
  * nothing here is hardcoded.
@@ -207,19 +238,33 @@ function personaCoverage(specData, personas = {}, issues = {}) {
 }
 
 /**
- * A persona is empty when no field carries text — the shape T131 was filed on, where
- * every agent landed with `{role: '', identity: '', communication_style: '', expertise: ''}`.
+ * The persona fields that are EVIDENCE of coverage.
  *
- * Deliberately not "every field is populated": partial personas are a quality question
- * this story was not scoped to rule on, and gating on them would fail teams the factory
- * builds correctly today.
+ * `role` is deliberately absent: `spec-parser.js` rejects an agent without one and
+ * `buildAgentEntry` copies it into `persona.role`, so it is present whether or not
+ * extraction ran. Counting it made PERSONA-COVERAGE unable to fail.
+ *
+ * What guards this list is behaviour, not an assumption about the schemas: the
+ * end-to-end-validator test "a hollow team written by the real writer fails the gate"
+ * runs spec → `writeRegistryBlock` → registry → `checkPersonaCoverage`, so any field that
+ * `buildAgentEntry` starts back-filling from the spec turns it red.
+ */
+const PERSONA_EVIDENCE_FIELDS = ['identity', 'communication_style', 'expertise'];
+
+/**
+ * True when a persona carries an evidence field — content the spec does not guarantee.
+ *
+ * Deliberately not "every evidence field is populated": partial personas are a quality
+ * question this story was not scoped to rule on, and gating on them would fail teams the
+ * factory builds correctly today. What it does catch is the hollow team — the one where
+ * extraction never ran and only the spec-sourced `role` survives.
  *
  * @param {Object} persona
  * @returns {boolean}
  */
 function hasPersona(persona) {
   if (!persona || typeof persona !== 'object') return false;
-  return Object.values(persona).some(v => typeof v === 'string' && v.trim() !== '');
+  return PERSONA_EVIDENCE_FIELDS.some(f => typeof persona[f] === 'string' && persona[f].trim() !== '');
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -840,6 +885,7 @@ if (require.main === module) {
 
 module.exports = {
   writeRegistryBlock,
+  PERSONA_EVIDENCE_FIELDS,
   normalizeAgentFiles,
   personaCoverage,
   hasPersona,
