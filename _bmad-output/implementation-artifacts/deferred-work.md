@@ -1456,3 +1456,7 @@ Round 2 ran three independent blind layers on `06a452cd` — the Round 1 *remedi
 ## Deferred from: code review of tfr-1-1 (2026-09-14)
 
 - ~~**`.MD`-cased workflow files are skipped by `run-block-transport.js`'s walk.**~~ **Moot 2026-09-14** — the gate was deleted in Round 3 (it produced eight findings across two rounds and its whitelist rested on a constraint nothing enforced). No file to fix.
+
+## Deferred from: code review of tfr-1-1-generate-one-real-team-without-hand-patching (2026-09-14)
+
+- Empty untracked `relative-root/_bmad-output/x` at the repo root — residue from `tf-2-13` R2 development of the `config-creator.test.js` test "refuses a relative projectRoot rather than resolving against cwd". The current suite does not recreate it (mtime `Sep 13 23:01:04` unchanged across a run). `git status` cannot see empty directories, so it survives AC#8's porcelain check; remove it during tfr-1-1 Task 8's cleanup.
