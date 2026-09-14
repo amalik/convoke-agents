@@ -57,4 +57,13 @@ It reads the same at module scale. **The Team Factory has produced zero survivin
 
 - **`tfr-1-1`** — make the factory able to generate one real team end to end without hand-patching. Covers `T136`, `T164`, `T163`(a), `T128`.
 
-**Definition of done for this epic:** a contributor follows `add-team` start to finish, with no hand-corrected `run:` block, and the result is a team that is kept rather than deleted. That deliverable — a surviving team — is also what re-opens the eight parked rows for triage, because it is the first time their paths get walked.
+**Definition of done for this epic:** a contributor follows `add-team` start to finish, with no hand-corrected `run:` block, and the terminal gate returns true on the result.
+
+**Amended 2026-09-14, and the reason is worth keeping.** This read *"the result is a team that is kept rather than deleted"*, which made one phrase do two jobs and was unsatisfiable for the epic's first three hours: keeping a generated team is *adding a team that does not exist*, which `project-context.md`'s `team-expansion-freeze` forbade until 4.0.2 shipped. `tfr-1-1`'s AC#8 had already routed around it by deleting its throwaway — so the story could ship under the freeze while being unable to close the epic above it. 4.0.2 published 2026-09-14 and the freeze has lifted, so the conflict is gone; the conflation is not, and that is what this amendment fixes.
+
+The two questions the old sentence merged, now separated:
+
+- **Is the repair done?** The factory runs clean end to end and its own terminal gate passes. That is what `tfr-1-1` delivers and what closes this epic.
+- **When do the eight parked rows get triaged?** Unchanged, and still stated in §"The gate on those eight": when the factory has generated a team that **survives** — the first time their paths get walked.
+
+**A surviving team is deliberately NOT this epic's exit criterion.** It is the ratified job of a different piece of work: [`project_baseline_before_expansion`](../../project-context.md) sequences the first real team as **Forge alone, as a measured one-team test**, and Forge carries its own gates (the meta-model baseline, `P60`'s open questions, and Victor's condition that Gyre's build cost be written down first). Keeping an arbitrary probe team to satisfy a DoD would front-run that decision, permanently modify `agent-registry.js` for a team with no consumer, and block this epic on gates that have nothing to do with repair.
