@@ -220,19 +220,6 @@ jobs:
         # guide blocks a release. That is the intended severity — these files go in the tarball.
         run: npm run docs:audit
 
-      - name: Team Factory run-block transport
-        # tfr-1-1 (T136). The `run:` blocks are MARKDOWN — nothing executes them, so
-        # nothing notices when one rots. That is the module's whole history: T130 found
-        # six wrong call signatures because "the markdown orchestrating the factory had
-        # never been executed", and T136 is the half signature-fixing could not reach.
-        #
-        # Placed in this job because it is in `publish.needs`, so a block a contributor
-        # cannot paste blocks a release. Proven able to fail before being wired: both
-        # rules were killed by targeted mutants on a COPY of the workflow tree (an
-        # interpolated {spec_data}, and a reintroduced literal `...`), never on the
-        # working tree.
-        run: node scripts/audit/run-block-transport.js
-
       - name: Documentation coverage denominator
         # docs-1-7. Asserts a derivation pass was RECORDED over the full in-scope
         # documentation set — never that any document is correct.

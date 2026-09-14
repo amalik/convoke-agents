@@ -116,11 +116,70 @@ const CONTAINMENT_CASES = [
   { value: 42, contained: false, why: 'non-string' },
   { value: {}, contained: false, why: 'non-string' },
   { value: ['_bmad-output/x'], contained: false, why: 'an array is not a path' },
+
+  // --- shell-safety, added in Round 2 ---
+  // This value is interpolated into `rm "${entry.path}"` by
+  // manifest-tracker.js::formatAbortInstructions. Containment alone is not enough:
+  // a perfectly contained path can still end the argument.
+  {
+    value: '_bmad-output/x"; rm -rf ~; echo "',
+    contained: false,
+    why: 'COMMAND INJECTION. Accepted at all three call sites before Round 2, written into the '
+       + 'generated config.yaml, and emitted to the operator as three shell commands',
+  },
+  {
+    value: '_bmad-output/$(id)',
+    contained: false,
+    why: 'command substitution in the same position',
+  },
+  {
+    value: '_bmad-output/`id`',
+    contained: false,
+    why: 'backtick substitution — the older spelling, and live inside double quotes',
+  },
+  {
+    value: '_bmad-output/notes[draft]',
+    contained: true,
+    why: 'brackets are inert inside double quotes. Pinned as ACCEPTED so nobody re-widens the '
+       + 'shell-safety class back to the ~17 character classes it briefly carried',
+  },
+  {
+    value: '_bmad-output/a b',
+    contained: true,
+    why: 'a space is INERT inside the double quotes the abort path emits, and "my team artifacts" is '
+       + 'a name a contributor would plausibly choose. Listed among the accepted cases after a '
+       + 'correction: it was rejected with the rationale "a space splits the rm argument in two", '
+       + 'which is false — formatAbortInstructions emits rm "…" and the argument stays whole',
+  },
+  {
+    value: `_bmad-output/x${String.fromCharCode(0)}y`,
+    contained: false,
+    why: 'NUL byte. Before Round 2 this reproduced the exact two-site divergence this module was '
+       + 'written to delete: assertContainedOutputDirectory accepted it and wrote config.yaml, '
+       + 'ensureOutputDirectory then rejected it',
+  },
+  {
+    value: '_bmad-output\\foo',
+    contained: false,
+    why: 'BACKSLASH. The check used to fold \\ to / while resolution used the raw value, so this '
+       + 'was reported contained and then created as a SIBLING of _bmad-output at the repo root. '
+       + 'A check whose answer does not describe what the caller will do is worse than none',
+  },
 ];
+
+/**
+ * Cases in CONFIG shape — carrying the `{project-root}/` prefix.
+ *
+ * `spec-parser` must reject every one of these regardless of containment: a spec
+ * field is repo-relative by `step-02-connect.md`'s default, and the config shape
+ * appearing there is the defect tf-2-13 R2 fixed. Round 2 caught the first
+ * version of the unified predicate silently undoing that ruling.
+ */
+const PREFIXED = CONTAINMENT_CASES.filter(c => typeof c.value === 'string' && c.value.startsWith('{project-root}/'));
 
 /** Cases the predicate must accept. */
 const ACCEPTED = CONTAINMENT_CASES.filter(c => c.contained);
 /** Cases the predicate must reject. */
 const REJECTED = CONTAINMENT_CASES.filter(c => !c.contained);
 
-module.exports = { CONTAINMENT_CASES, ACCEPTED, REJECTED };
+module.exports = { CONTAINMENT_CASES, ACCEPTED, REJECTED, PREFIXED };

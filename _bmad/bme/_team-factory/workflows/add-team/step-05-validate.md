@@ -57,7 +57,11 @@ The end-to-end validator checks:
 
 Run by `validateTeam` in §2 — there is no separate command here.
 
-**A block was deleted from this section (tfr-1-1).** It read `run: node -e "require('{project-root}/scripts/update/lib/validator.js')" logic`: it `require`d a module, called nothing, asserted nothing, and trailed a bare `logic` token that is not part of any command. It could not fail, which made it worse than absent — it read as a regression check while performing none. The real check is `end-to-end-validator.js::checkVortexRegression`, which §2 already runs as part of `validateTeam` and which tfr-1-1 rewrote to ask a differential question (see `T128`).
+**A block was deleted from this section (tfr-1-1).** It read `run: node -e "require('{project-root}/scripts/update/lib/validator.js')" logic`: it `require`d a module, called nothing, asserted nothing, and trailed a bare `logic` token that is not part of any command. It could not fail, which made it worse than absent — it read as a regression check while performing none. The real check is `end-to-end-validator.js::checkVortexRegression`, which §2 already runs as part of `validateTeam`.
+
+**`VORTEX-REGRESSION` still fails, and that is `T128`, not a fault in your team.** It delegates to `validateInstallation` — an *installation* validator — against a *source* tree, so it reports the Enhance, Artifacts and Portability modules as missing because their skill wrappers are install-time artifacts absent from the repo by design. It is the only check in `validateTeam` that cannot pass here. tfr-1-1 Task 6 rewrites it to ask a differential question; **that work is not in the tree yet.** Until it lands, read a red `VORTEX-REGRESSION` beside a green everything-else as expected.
+
+*(An earlier version of this paragraph asserted that tfr-1-1 had already rewritten it. It had not — `git diff` over `lib/validators/` was empty. Corrected rather than deleted, because shipped step files asserting work that is not in the tree is the defect class this module keeps producing.)*
 
 ### 4. Display Results
 

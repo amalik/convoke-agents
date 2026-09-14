@@ -140,10 +140,14 @@ describe('readContext — absence is loud, never an empty object', () => {
     // team fail validation, which is what step-05's own caveat describes.
     const p = path.join(tmp(), 'never-written.json');
     assert.throws(() => readContext(p), err => {
-      assert.match(err.message, /generation context not found/);
+      assert.match(err.message, /context file not found/);
       assert.ok(err.message.includes(p), 'names the missing file');
-      assert.match(err.message, /step-04/, 'says where it comes from');
-      assert.match(err.message, /empty context makes a correct team fail/, 'says why {} is not the answer');
+      // Deliberately does NOT name a step. Two previous versions each hardcoded a
+      // step reference, and each was wrong for one of the two callers — the second
+      // named a caller the same change had deleted, with this assertion pinning it.
+      // A message that cannot go stale is worth more than one that is specific.
+      assert.ok(!/§\d/.test(err.message), 'must not cite a step number that can be deleted');
+      assert.match(err.message, /empty\s+context makes a correctly generated team fail/, 'says why {} is not the answer');
       return true;
     });
   });

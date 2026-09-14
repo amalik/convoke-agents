@@ -1,6 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
+const { REJECTED, PREFIXED } = require('./output-directory-cases');
 const { parseSpecFromString } = require('../../_bmad/bme/_team-factory/lib/spec-parser');
 
 // ── tf-2-13 Task 1 (T133a): enforce the _bmad-output/ rule that was prose-only ──
@@ -57,14 +58,27 @@ describe('R2: output_directory cannot escape _bmad-output/', () => {
   const errorsFor = async (d) =>
     ((await parseSpecFromString(JSON.stringify({ ...base, integration: { output_directory: d } }))).errors || []).join(' | ');
 
-  for (const bad of [
-    '_bmad-output/../../escaped',
-    '_bmad-output/../etc',
-    '_bmad-output/x/../../../tmp/pwned',
-    '_bmad-output/'
-  ]) {
+  // tfr-1-1 R2: this was a hardcoded list of four. AC#3 asks for ONE case table
+  // across every caller precisely so the lists cannot drift apart again, and a
+  // duplicate here is the drift it forbids. Sourced from the shared table; the
+  // prefixed cases are included because a SPEC field must be repo-relative —
+  // `step-02-connect.md` defaults it that way and the config shape appearing here
+  // is the defect tf-2-13 R2 fixed.
+  const mustReject = [...REJECTED, ...PREFIXED]
+    .map(c => c.value)
+    .filter(v => typeof v === 'string' && v.trim() !== '');
+
+  it('the shared table actually carries escape cases — a guard against an empty sweep', () => {
+    assert.ok(mustReject.includes('_bmad-output/../../escaped'), 'the real escape must be in the table');
+    assert.ok(mustReject.length >= 10, `expected a substantial table, got ${mustReject.length}`);
+  });
+
+  // Deduplicated: REJECTED and PREFIXED overlap, and a repeated value produced a
+  // duplicate test name that node:test silently tolerates.
+  for (const bad of [...new Set(mustReject)]) {
     it(`rejects ${JSON.stringify(bad)}`, async () => {
-      assert.match(await errorsFor(bad), /_bmad-output\//);
+      const errs = await errorsFor(bad);
+      assert.match(errs, /output_directory/, 'the refusal must name the field, not merely be some error');
     });
   }
 

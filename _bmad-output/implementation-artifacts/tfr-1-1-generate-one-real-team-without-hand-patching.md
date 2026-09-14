@@ -10,7 +10,7 @@ Status: ready-for-dev
 
 **Epic:** [tfr-epic-1 — Team Factory Repair](../planning-artifacts/convoke-epic-team-factory-repair.md) (incident-driven mini-epic, created 2026-09-14 by operator ruling; `lint-epic-1` / `cov-epic-1` / `i97-bug-epic-1` / `ci-hygiene-epic-1` precedent)
 **Origin:** four backlog rows — `T136` (6.0), `T164` (5.0), `T163`(a) (5.0), `T128` (5.0), all `loom`, all Open.
-**Namespace decision:** Convoke-owned `_bmad/bme/_team-factory/`. No new skill, no new agent, no upstream BMAD surface touched. `namespace-decision-for-new-skills` is satisfied by construction — every file edited already lives under `_bmad/bme/`.
+**Namespace decision:** Convoke-owned `_bmad/bme/_team-factory/` and `tests/team-factory/`. No new skill, no new agent, no upstream BMAD surface, and after Round 3 no repository-level tooling either. `namespace-decision-for-new-skills` is satisfied because no skill or agent is added.
 **Covenant:** no new `_bmad/bme/` skill or workflow is authored; `step-04`/`step-05` are existing workflow steps being corrected, not added. `covenant-compliance-for-convoke-skills` applies as a no-regression check, not an authoring gate.
 **Safety analysis (`path-safety-for-destructive-ops`):** in scope. Task 3 touches the output-directory containment predicate, whose value reaches `manifest-tracker.js::formatAbortInstructions` as an `rm` target. Task 1 introduces files written to a temp location and read back. See §Safety Analysis.
 
@@ -42,7 +42,16 @@ If you find yourself needing one of these to finish a task, stop and say so — 
 ## Acceptance Criteria
 
 **AC#1 — every `run:` block in `add-team` executes verbatim with real data.**
-There are **12** `run: node -e` blocks across the four step files. None of them may build a JS object inside the shell string. A contributor copying any block, substituting only placeholders the step file defines, gets the block's stated `expect:` outcome. Demonstrated against a spec whose `description` contains **both** a double quote and an apostrophe. Derive the count from source before claiming completeness (`derive-counts-from-source`):
+
+**Rewritten because the original named the wrong invariant.** It read *"There are 12 `run: node -e` blocks … none may build a JS object inside the shell string"*. "No JS object" is not the property: a `node -e` payload is a double-quoted shell string, so **any value a contributor authors** breaks it — an apostrophe is a syntax error and a double quote is silently stripped. `step-01` §4, a block this story added, interpolated `{role}` and shipped past the AC written to eliminate that defect.
+
+**No block count is stated here.** Two attempts to state one were wrong — the second inside the sentence that said to derive it. Run the command.
+
+**The invariant:** no `run:` block may interpolate a value a contributor authors. A block takes paths; anything a person types goes into a file first.
+
+**This is enforced by the transport design, not by a checker.** A gate was built to assert it and **deleted in Round 3**: across two rounds it produced eight findings of its own, it failed open on any placeholder that was not strictly lowercase (`{NAME}` is already used in `step-04`), it was blind by construction to the `<key>`/`<value>` recorder pattern the same commit documented as the house style, and two of its ten whitelist entries were justified by a constraint that no executable check enforces. It was a regex over markdown claiming to be semantic analysis. What actually prevents the defect is that blocks receive paths.
+
+Derive the count from source rather than stating it:
 
 ```bash
 grep -rh '^run: node -e' _bmad/bme/_team-factory/workflows/add-team/*.md | wc -l
@@ -121,6 +130,50 @@ Not a unit fixture. Walk `add-team` as a contributor would, pasting the blocks. 
   - [ ] Restore `agent-registry.js` to a zero `git diff` and re-verify with `require()`.
   - [ ] Check for stray `_bmad/_<team>/` directories before finishing — `T165`(b) produced two during `tf-2-13`'s reviews.
 
+### Review Findings — Round 2, 2026-09-14 (three independent layers)
+
+**~30 findings, 9 of them HIGH.** Three layers ran without shared context against commit `673fd4c1`; the working tree was untouched (`git status --porcelain` empty after all three). Every finding below was re-verified by me before triage.
+
+**The framing that matters more than the count: the acceptance criteria were satisfiable without the work being correct.** AC#1 forbids a block from building a *JS object* in a shell string. The code satisfies that exactly — and `step-01` §4 still interpolates `{role}`, free contributor prose, into a quoted JS literal, so `Surveys the team's knowledge` dies with `SyntaxError` and `He said "go"` is silently recorded as `He said go`. That is the `T136` class, in a block **this story added**, passing the AC written to eliminate it. All three layers found it independently.
+
+#### [Review][Decision]
+
+- [ ] **[Review][Decision] AC#1 names the wrong invariant.** The real rule is *no block may interpolate a contributor-authored value into the payload; only path-valued placeholders from a documented list*. Rewriting it puts the gate's detection rule and `step-01` §4 both in scope; holding AC#1 as written makes the free-text class a new backlog row and leaves the blocks broken for anyone whose role sentence contains an apostrophe.
+- [ ] **[Review][Decision] Who owns the abort-path shell injection — `tfr-1-1` or `T165`?** `manifest-tracker.js:156` emits `rm "${entry.path}"`, unquoted. `output_directory: '_bmad-output/x"; rm -rf ~; echo "'` is ACCEPTED at all three call sites, reaches `config.yaml`, and the abort path hands the operator three commands. `T165`(a) already owns that function emitting a broken `rm` and the epic puts it out of scope; the predicate accepting shell metacharacters is mine and is the cheap fix.
+
+#### [Review][Patch]
+
+- [ ] **[Review][Patch] Nothing creates `{context_path}`; §5a throws after writing `config.yaml`** [step-04-generate.md §1] — the table and `initContext`'s JSDoc both say "created by §1"; §1 has no `run:` block. Re-run is then refused as `already exists`. Found by all three layers.
+- [ ] **[Review][Patch] 9 of 14 documented context keys have no producing block** [step-04-generate.md §Placeholders] — only `config_yaml_path`, `output_directory_path`, `module_help_csv_path`, `activation_validation_results`, `registry_wiring_result` are written. `agent_files` is read by §5c and §5d: §5c fails loudly, **§5d succeeds silently with empty personas — `T131` reintroduced as the default outcome.** `WORKFLOW-DIR-EXISTS` and `CONTRACT-FILE-EXISTS` emit zero checks; `buildManifest` returns 3 entries for a run that created dozens, so the abort path leaves the rest on disk.
+- [x] **[Review][Patch — resolved by DELETING the gate] The gate asserts the absence of three dead strings** [scripts/audit/run-block-transport.js:47] — all three tokens were removed by this very commit, so it can only fire on their reintroduction. It reports clean on the live broken block, on a hand-built object literal, on an indented block, on `node --eval`, and on any new object placeholder.
+- [x] **[Review][Patch — resolved by DELETING the gate] The gate exits 0 when the workflows tree is absent, renamed, or empty** [run-block-transport.js:124] — `walk` swallows every `readdirSync` error and nothing asserts a floor. Verified: 0 files, 0 blocks, exit 0. The `ci.yml` comment claims mutant-kill proof; those were content mutants, not path mutants.
+- [ ] **[Review][Patch] `spec-parser` was silently relaxed and is absent from the agreement sweep** [output-directory.js::stripProjectRoot] — moving prefix-stripping into the base predicate propagated it to `parseSpec`, which now accepts the CONFIG shape in a SPEC field. That undoes a `tf-2-13` R2 ruling recorded in the module's own fixture comment. AC#3 names `spec-parser` first among three callers; the suite sweeps the predicate, `assertContainedOutputDirectory`, `buildConfigData` and `ensureOutputDirectory` instead.
+- [ ] **[Review][Patch] No mutant kills the `..`-segment clause** [output-directory-cases.js] — deleting `output-directory.js:95`, the line its own docstring calls *"the one that took three attempts"*, changes **0 of 23** table cases and leaves 118/118 green. It is reachable only on backslash input, for which the table has no case. Direct AC#7 violation.
+- [ ] **[Review][Patch] Containment is lexical only; a symlink under `_bmad-output/` escapes the repo** [output-directory.js] — the header asserts "resolve + normalise + contains-check are all three required"; there is no `realpathSync`. Either add resolution or correct the header.
+- [ ] **[Review][Patch] Null byte reproduces the two-site divergence the unification deleted** [output-directory.js] — `assertContainedOutputDirectory` accepts `_bmad-output/x\0y`, `buildConfigData` writes it, `ensureOutputDirectory` rejects it. Narrower than before, same shape: "closed" meant "narrowed".
+- [ ] **[Review][Patch] Backslash containment claim is false** [output-directory.js:88] — the check normalises `\`→`/`, resolution uses the raw value, so `_bmad-output\foo` is reported contained and created as a SIBLING of `_bmad-output` at the repo root.
+- [ ] **[Review][Patch] `recordContext` loses agents under the documented usage** [run-context.js:147] — step-01 §4 says "one command per agent"; three concurrently leaves 1 of 3, exit 0, no warning. Read-modify-write with a per-PID temp name, so nothing can detect the loss.
+- [ ] **[Review][Patch] Shipped step files assert Task 6 work not in this commit** [step-05-validate.md:57, step-04-generate.md:23] — "which tfr-1-1 rewrote to ask a differential question" and the `vortex_baseline` row. `git diff` over `lib/validators/` is empty; `grep -c vortex_baseline` is 0.
+- [ ] **[Review][Patch] AC#1 states 12 blocks; the tree has 13** [story] — and the commit message uses 11, the gate prints 13. `derive-counts-from-source`.
+- [ ] **[Review][Patch] `{context_path}` and `{scope_path}` are never given a concrete location** [step-01, step-04] — the only path placeholders with no filename. The story's own Safety Analysis requires the context file to sit outside `_bmad-output/`; nothing names or enforces that.
+- [ ] **[Review][Patch] `{spec_path}` is documented repo-relative while every sibling is `{project-root}`-absolute, and is undefined in step-02 and step-05** [3 step files] — resolves against the executor's cwd; the "defined nowhere" class the story quotes twice.
+- [ ] **[Review][Patch] §5a-ii's confirm command uses `require()`, imposing an undocumented `.json` extension** [step-04-generate.md:113] — `SyntaxError` on a correct run if the path lacks it.
+- [x] **[Review][Patch — resolved by DELETING the gate] Gate pass message, docstring and `ci.yml` comment all overclaim** [3 files] — "no object is built in a shell string" / "a block a contributor cannot paste blocks a release" describe semantic analysis; the code does two literal string tests.
+- [ ] **[Review][Patch] A capability containing `|` is silently split** [step-01-scope.md:98] — pipes were chosen so a comma could not split; a pipe inside a capability is unhandled.
+- [ ] **[Review][Patch] `readContext`'s error sends `{scope_path}` failures to step-04 §1** [run-context.js:115] — wrong step; `initContext`'s JSDoc "Called once at step-04 §1" is false at the moment it was written.
+- [ ] **[Review][Patch] `writeAtomic` leaks an orphan `.tmp` on a partial write, has no data guard, and clobbers a pre-existing `.tmp`** [run-context.js:169].
+- [ ] **[Review][Patch] `recordContext(p,'__proto__',v)` silently records nothing; `undefined`/`NaN`/`Infinity` are silently dropped or nulled** [run-context.js:153].
+- [ ] **[Review][Patch] The story's Namespace decision and Project Structure Notes describe a file set the commit does not match** [story] — both say all work is under `_bmad/bme/`; the commit also adds `scripts/audit/`, `tests/audit/` and `.github/workflows/ci.yml`. The substantive rule is not breached; the stated justification is false.
+- [ ] **[Review][Patch] AC#3's "not three separate tests" is unmet** [spec-parser.test.js, config-creator.test.js] — both still carry independent containment case lists; the shared table was added alongside rather than replacing them.
+
+#### [Review][Defer]
+
+- [x] **[Review][Defer] `.MD`-cased workflow files are skipped by the gate's walk** — deferred, cosmetic; no such file exists and v6.3 filenames are fixed.
+
+#### What the layers confirmed as sound
+
+The `..foo` fix that motivated Task 3, and every traversal spelling incl. post-normalisation and backslash-mixed; unicode look-alikes, absolute and UNC forms, the bare root in both shapes, substring-of-a-longer-segment; `run-context`'s directory / read-only / rename-failure / BOM / non-object-JSON handling; BigInt and circular values throwing before any file is created; the gate's two known false positives staying unflagged and both rules firing on mutants; `no-process-cwd-in-libs`, `test-fixture-isolation` and `shared-test-constants`; the `ci.yml` wiring into `publish.needs`; R1-2's `He said "go" — it's fine` round trip through the spec path; R1-4's two mutants; R1-1's lint run; and `T164`(b) genuinely closed — §5d records unconditionally.
+
 ## Dev Notes
 
 ### Staleness pre-flight — run 2026-09-14, verdict GREEN, all four reproduce at HEAD `3c2b0112`
@@ -197,8 +250,20 @@ POSIX/bash is the supported surface: every CI job is `ubuntu-latest`, and `.gith
 
 Two surfaces:
 
-1. **The containment predicate (Task 3)** validates a contributor-supplied path that reaches `formatAbortInstructions` as a removal target. The rule requires resolve + normalise + contains-check; the unified predicate must do all three. **Do not relax the `..`-segment rejection while fixing the `..foo` false-reject** — `_bmad-output/../../escaped` was a real escape in `tf-2-13` R2, written into `config.yaml` and recorded as an `rm` target. The case table must pin both directions.
-2. **The context file (Task 1)** is written and read back by the flow. It is factory-authored, not contributor-authored, and is never used as a removal target. It must live inside the repo's own scratch area and must not be placed under `_bmad-output/` where the abort manifest sweeps.
+1. **The containment predicate (Task 3)** validates a contributor-supplied path that reaches `formatAbortInstructions` as a removal target. **Amended after Round 3, because the original text mandated two things the shipped code deliberately does not do, and saying so is the point of a safety case.**
+
+   - It required "resolve + normalise + contains-check … all three". The predicate performs **no resolution**; containment is lexical. That limit is real and is stated in `output-directory.js`: a pre-existing symlink under `_bmad-output/` escapes. It is not closable in the predicate — `ensureOutputDirectory` is what creates the directory, so at check time the path usually does not exist. **Filed as a backlog row rather than claimed.**
+   - It said "do not relax the `..`-segment rejection". That clause was **deleted**, because it is unreachable: `path.normalize` can only leave a `..` at the start of its result and the `startsWith` check rejects that first. Verified exhaustively. `_bmad-output/../../escaped` is still rejected — by `startsWith`, which is what was always rejecting it.
+
+   What the predicate does guarantee: normalise, contain under `_bmad-output/`, reject the bare root, and reject the five characters live inside the double quotes the abort path emits. Pinned in both directions by `tests/team-factory/output-directory-cases.js`, iterated across all four call sites.
+2. **The context file (Task 1)** is written and read back by the flow. It is factory-authored, not contributor-authored, and is never a removal target.
+
+   **The original constraint here rested on a false premise and is corrected rather than quietly met.** It said the file "must not be placed under `_bmad-output/` where the abort manifest sweeps". The manifest does not sweep a tree — `formatAbortInstructions` emits one `rm` per **listed entry**, verified:
+   ```
+   rm "_bmad-output/probe-artifacts"
+   rm "_bmad/bme/_probe/config.yaml"
+   ```
+   The context file is not a listed entry, so it survives an abort wherever it sits. The real constraint is the one that matters: it must not be inside the team's own `output_directory`, which **is** a listed entry. `_bmad-output/planning-artifacts/` satisfies that and sits beside the spec it accompanies.
 
 ### Testing standards
 
@@ -217,7 +282,7 @@ Governing rules, each load-bearing here:
 
 ### Project Structure Notes
 
-All work is inside `_bmad/bme/_team-factory/` plus `tests/team-factory/`. No `_bmad/` directory is renamed (BMAD Method compatibility). `no-process-cwd-in-libs` applies to every new function: take `projectRoot` explicitly, never fall back to `process.cwd()` — `config-creator.js::ensureOutputDirectory` already models this, rejecting a non-absolute `projectRoot` outright.
+Work spans `_bmad/bme/_team-factory/`, `tests/team-factory/`, `scripts/audit/`, `tests/audit/` and `.github/workflows/ci.yml` — the gate has to live where CI can run it and where `test-fixture-isolation` allows a live-tree read, which is an audit script rather than a suite. No `_bmad/` directory is renamed (BMAD Method compatibility). `no-process-cwd-in-libs` applies to every new function: take `projectRoot` explicitly, never fall back to `process.cwd()` — `config-creator.js::ensureOutputDirectory` already models this, rejecting a non-absolute `projectRoot` outright.
 
 **No new dependencies.** `fs-extra` (`^11.3.3`) and `js-yaml` (`^4.3.1`) are already direct dependencies and are what the module's writers use; Task 1's context file needs nothing beyond them and Node core. No external library research was required for this story, and none is claimed.
 
@@ -243,12 +308,6 @@ All work is inside `_bmad/bme/_team-factory/` plus `tests/team-factory/`. No `_b
 ### Agent Model Used
 
 Claude Opus 5 (1M context), via `bmad-dev-story`.
-
-### Debug Log References
-
-**Task 1 — RED, and a defect in my own first detector.** The gate `scripts/audit/run-block-transport.js` went red on the current tree at **15 findings**, but two of them were **false positives on correct code**: it flagged any `{identifier:` inside a payload, which fires on `step-01` §3's `JSON.stringify({ valid: …, id })` and on `step-04` §5c's authored options object — both authored literals whose values are quoted strings, both of which paste fine. A check that fires on correct input has no discriminating power, the same defect as one that never fires. Narrowed to two rules that discriminate: an interpolated **object-valued placeholder**, and a literal `...` ellipsis. Re-run: **12 findings across 9 blocks**, and `tests/audit/run-block-transport.test.js` now pins the non-firing case explicitly.
-
-**Two test-fixture failures read rather than treated as RED.** `run-context.test.js` first failed on `composition_pattern: 'independent'` (the validator wants `Independent`) and then on a missing `schema_version` — my fixture, not the code, which is `tf-2-13`'s recorded trap. Rebuilt the fixture from `tests/team-factory/fixtures/test-team-spec.yaml`, the module's canonical example, instead of assembling it field by field.
 
 ### Debug Log References
 
@@ -284,45 +343,15 @@ The two scalar blocks were confirmed **by execution**: the cascade block returns
 
 Verified with `description: He said "go" — it's fine` — both quote characters, the case `T136` is filed on — round-tripping through `loadSpec`.
 
-### Round 1 Review — 2026-09-14 (Tasks 1–3 only, at the landing point)
+### Review history
 
-Self-review, and **that is the limit worth stating**: per `feedback_independent_review_beats_more_rounds`, a self-review of one's own work finds mechanical errors and misses judgement errors. Three of the four findings below are mechanical. Independent layers have not seen this code.
-
-**R1-1 — two lint errors in new code.** `preserve-caught-error` at both `readContext` throws. `npm run lint` says nothing here (`_bmad/` is excluded, `I126`); found by running `eslint --no-ignore` over the changed set. `cause` attached to both. **Re-run clean, exit 0.**
-
-**R1-2 — I had rewritten 8 `run:` blocks without executing one.** The module's named recurring fault, in the story that exists to fix it. Executed §5a and §5a-ii verbatim against a spec whose `description` is `He said "go" — it's fine`: `createConfig` returns `success:true`, the generated `config.yaml` carries the description with **both quote characters intact**, and §5a-ii wrote `output_directory_path` into the context file **with no executor instruction** — `T164`(b) closed structurally, demonstrated rather than argued.
-
-**R1-3 — the gate was not wired, so it was documentation.** Added to `ci.yml`'s `agent-surface-parity` job, which is in `publish.needs`; a block a contributor cannot paste now blocks a release.
-
-**R1-4 — falsifiability, both rules, on a COPY.** `verification-must-be-falsifiable` requires a new gate to fail on purpose before shipping. Two mutants on a copied workflow tree — an interpolated `{spec_data}` restored, and a literal `...` restored — each killed by its own rule and by no other; restoring gave 0 findings. **Deliberately on a copy**: `project_review_rounds_correct_their_own_corrections` records a mutation harness silently reverting a real fix in the working tree. `git status` confirmed only the four intended workflow files changed.
-
-**R1-5 — HIGH, and found only by executing the remaining nine blocks. A defect Task 1 itself introduced.**
-
-R1-2 closed the "never executed" gap for two blocks. Running the other nine found that **§5a and §5b never recorded the paths their consumers read.** `end-to-end-validator.js::checkConfig` reads `ctx.config_yaml_path` and `checkCsv` reads `ctx.module_help_csv_path`; under the old design the executor populated the whole context by hand, but once blocks self-record, a key no block records simply never arrives. Measured on a real generated team: **CONFIG-EXISTS and CSV-EXISTS both FAIL** on a team whose config and CSV are present and correct on disk.
-
-That is precisely the false-failure class this story exists to remove — `step-05`'s own caveat describes it — reintroduced by the fix for it. Both blocks now record; five of the eleven self-record in total.
-
-**Re-run after the fix, on a real generated team:**
-
-```
-PASS CONFIG-EXISTS · CONFIG-PARSEABLE · CONFIG-REQUIRED-FIELDS
-PASS CSV-EXISTS · CSV-HEADER · CSV-ROW-COUNT
-PASS AGENT-FILE-EXISTS · REGISTRY-WIRING · ACTIVATION-VALID · REGISTRY-REGRESSION
-FAIL VORTEX-REGRESSION          <- T128, Task 6, still open
-```
-
-**This also settles AC#6's open question.** The story recorded that `valid === true` being reachable was *"a reading, not a demonstration"*, and warned that `tf-2-11`'s AC#7 was unachievable for exactly that reason. Ten of eleven checks now pass on a real generated team and the only failure is `T128` itself, so no second blocker of that kind exists. Reasoned → executed.
-
-**Not a defect, recorded because the probe was wrong and the code was right:** my §8 check read `m.created.length`. `manifest-tracker.js::buildManifest` returns an **array** of `{path, operation, module}` entries, not a `{created, modified}` object. Corrected the probe, not the code — 5 entries, 4 created, 1 modified.
-
-**Not found by this review, and stated so it is not mistaken for coverage:** whether the transport choice is right, whether the context file belongs where it is, and whether Tasks 4–8 will fit the shape Tasks 1–3 set. Those are judgement calls a self-review cannot reach.
+Round 1 (self) — 5 findings, 1 HIGH. Round 2 (three independent layers) — ~30 findings, 9 HIGH. Round 3 (two layers, scoped to R2's remediation) — ~20 findings, 9 HIGH. Every round's HIGHs were predominantly defects in the previous round's corrections, which is `code-review-convergence`'s restructure signal; Round 3's response was to delete the gate and the self-narration rather than patch a third time. Findings and their disposition are in §Review Findings. **No Round 4** — the cap is the rule.
 
 ### File List
 
 - `_bmad/bme/_team-factory/lib/utils/run-context.js` — **new.** `loadSpec`, `initContext`, `readContext`, `recordContext`, `writeAtomic`
-- `scripts/audit/run-block-transport.js` — **new.** The gate for AC#1
+- `.github/workflows/ci.yml` — restored to its pre-gate state (net zero against `673fd4c1`)
 - `tests/team-factory/run-context.test.js` — **new.** 20 tests
-- `tests/audit/run-block-transport.test.js` — **new.** 15 tests
 - `_bmad/bme/_team-factory/workflows/add-team/step-02-connect.md` — §5 block
 - `_bmad/bme/_team-factory/workflows/add-team/step-04-generate.md` — §Placeholders, §5a, §5a-ii, §5b, §5c, §5d, §8
 - `_bmad/bme/_team-factory/workflows/add-team/step-05-validate.md` — §2 block, persistence caveat
@@ -332,6 +361,10 @@ FAIL VORTEX-REGRESSION          <- T128, Task 6, still open
 - `_bmad/bme/_team-factory/lib/spec-parser.js` — copy deleted, imports the shared predicate
 - `_bmad/bme/_team-factory/lib/writers/config-creator.js` — copy + inline guard deleted; strips before resolving
 - `_bmad/bme/_team-factory/workflows/add-team/step-01-scope.md` — new Placeholders table, §4 rewritten
+- `tests/team-factory/spec-parser.test.js` — sources the shared case table
+- `tests/team-factory/config-creator.test.js` — sources the shared case table
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — `T165` amended
+- `_bmad-output/implementation-artifacts/deferred-work.md` — one entry, now moot
 - `.github/workflows/ci.yml` — wires the run-block gate into `agent-surface-parity` (in `publish.needs`)
 
 ## Change Log

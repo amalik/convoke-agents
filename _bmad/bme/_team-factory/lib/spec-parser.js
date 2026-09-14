@@ -4,7 +4,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('js-yaml');
 
-const { isContainedOutputDirectory } = require('./utils/output-directory');
+const { isRepoRelativeOutputDirectory } = require('./utils/output-directory');
 
 /** @typedef {import('./types/factory-types').TeamSpec} TeamSpec */
 
@@ -172,7 +172,7 @@ function validateAgainstSchema(doc, schema, pattern) {
       errors.push('integration must be an object');
     } else if (!doc.integration.output_directory) {
       errors.push('integration.output_directory is required');
-    } else if (!isContainedOutputDirectory(doc.integration.output_directory)) {
+    } else if (!isRepoRelativeOutputDirectory(doc.integration.output_directory)) {
       // tf-2-13 (T133a): step-02-connect.md §3 instructs "Validate: path should start
       // with `_bmad-output/`" — but nothing in lib/ enforced it, so the rule was prose
       // only. A convention documented and unenforced is how the generated config's

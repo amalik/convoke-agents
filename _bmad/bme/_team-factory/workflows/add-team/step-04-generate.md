@@ -20,7 +20,27 @@ Every `run:` block below substitutes these. They are listed because a name that 
 | `{config_path}` | the config reference **as agents write it**: `{project-root}/_bmad/bme/_{team_name_kebab}/config.yaml`. Pass this placeholder form, not a resolved path — `activation-validator.js` check 2 accepts either, but the convention form is what agent files contain |
 | ~~`{agent_file_paths}`~~ | **Removed.** It was a second name for `{generation_context}.agent_files`, and the two could disagree. Blocks now read `rc.readContext('{context_path}').agent_files`. `validateActivation` takes an array; a bare string iterates character-by-character, which is why the value must come from one place |
 | `{registry_path}` | absolute path to `scripts/update/lib/agent-registry.js` |
-| `{context_path}` | **a PATH, not an object.** A JSON file holding the generation context, created by §1 and updated as the run proceeds. Previously this lived only in the executor's head, which `step-05-validate.md` recorded as a live hazard: run steps 4 and 5 in separate sessions and it was gone, and `checkConfig`/`checkActivation`/`checkRegistryWiring` then reported **false failures on a correctly generated team**. Blocks read it with `run-context.js::readContext`, which **throws when the file is absent** rather than returning `{}` — an empty context is indistinguishable from a lost one, and `{}` is what produced those false failures. Keys, every one read by at least one consumer: `module_root`, `agent_files`, `workflow_dirs`, `generated_files`, `config_yaml_path`, `module_help_csv_path`, **`contract_files`** (Sequential only — omit it and `checkContractFiles` emits **zero** checks and passes vacuously, and the abort manifest omits every contract file), `output_directory_path`, `workflow_step_files`, `guide_files`, `readme_path`, `activation_validation_results` (**the whole `{valid, results}` object**), `registry_wiring_result` (the whole object returned by §5d), `vortex_baseline` (§1, read by `checkVortexRegression`) |
+| `{context_path}` | **a PATH, not an object.** `_bmad-output/planning-artifacts/.factory-context-{team_name_kebab}.json`. A JSON file holding the generation context, created by the §1 block above and updated as the run proceeds. Deliberately NOT under the team's own output directory: the abort manifest sweeps that tree, and a run's bookkeeping must survive its own abort. Previously the context lived only in the executor's head, which `step-05-validate.md` recorded as a live hazard — run steps 4 and 5 in separate sessions and it was gone, and `checkConfig`/`checkActivation`/`checkRegistryWiring` then reported **false failures on a correctly generated team**. Blocks read it with `run-context.js::readContext`, which **throws when the file is absent** rather than returning `{}`, because `{}` is what produced those false failures. Delete it after step-05 completes |
+
+### Context keys — and the section that must write each one
+
+**Every key below is read by at least one consumer. A key with no writer does not raise — it silently drops checks or drops files from the abort manifest.** That is why this table names an owner rather than only a reader.
+
+| Key | Written by | Read by |
+|---|---|---|
+| `module_root` | §1 (the `initContext` block) | `manifest-tracker.js` |
+| `config_yaml_path` | §5a (the block records it) | `checkConfig` |
+| `module_help_csv_path` | §5b (the block records it) | `checkCsv` |
+| `output_directory_path` | §5a-ii (the block records it) | `manifest-tracker.js`; the abort path removes it |
+| `activation_validation_results` | §5c (the block records it — the WHOLE `{valid, results}` object) | `checkActivation` reads `.valid` |
+| `registry_wiring_result` | §5d (the block records it — the whole object) | `checkRegistryWiring` |
+| `agent_files` | **§3 — you record it** after BMB writes the agent files | `checkAgentFiles`, `manifest-tracker.js`, and §5c/§5d read it as `agentFiles` |
+| `workflow_dirs` | **§3 — you record it** | `checkWorkflowDirs`; absent ⇒ **zero checks emitted** |
+| `workflow_step_files` | **§3 — you record it** | `manifest-tracker.js`; absent ⇒ files left behind on abort |
+| `contract_files` | **§4 — you record it** (Sequential only) | `checkContractFiles`; absent ⇒ **zero checks emitted** |
+| `guide_files` | **§3 — you record it** | `manifest-tracker.js` |
+| `readme_path` | **§7 — you record it** | `manifest-tracker.js` |
+| `generated_files` | **§3/§6/§7 — you record it** | `manifest-tracker.js` |
 
 ## Execution Sequence
 
@@ -44,6 +64,21 @@ Read the spec file. Build the generation plan:
 9. Registry block in `scripts/update/lib/agent-registry.js`
 
 Display the plan: "{N} files to create, 1 shared file to modify."
+
+**Create the generation context — nothing else does.** Every later block reads it, and `readContext` throws when it is absent rather than returning `{}`, so this block is not optional:
+
+```
+run: node -e "require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js').initContext('{context_path}', { module_root: '{module_root}' })"
+expect: the file exists at {context_path}. It is REPLACED on each run — a context left from an abandoned run would carry stale paths into the abort manifest, which emits removal instructions against every `created` entry
+```
+
+**You record what you generate.** §3, §4, §6 and §7 delegate file creation to BMB; the factory never sees those paths, so it cannot record them for you. After each of those sections, write what it produced into the context with the same command shape:
+
+```
+run: node -e "require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js').recordContext('{context_path}', '<key>', <value>)"
+```
+
+The §Placeholders table names which section owns each key. **A key nobody writes does not fail loudly — it silently removes checks**: `checkWorkflowDirs` and `checkContractFiles` iterate `(ctx.<key> || [])` and emit ZERO checks when the key is absent, and `buildManifest` omits every file it never heard about, so the abort path leaves them on disk.
 
 ### 2. Directory Structure
 
@@ -110,7 +145,7 @@ expect: result.success === true
 The team's artifact directory is NOT created by any writer — each `ensureDir` above makes only the parent of the file it is writing. Create it explicitly, or the first workflow to produce an artifact fails on a missing path (tf-2-13, T133e; predicted by tf-2-11 Risk #3).
 ```
 run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); rc.loadSpec('{spec_path}').then(s => cc.ensureOutputDirectory(s, '{project-root}')).then(r => { if (r.success) rc.recordContext('{context_path}', 'output_directory_path', r.path); console.log(JSON.stringify(r)); })"
-expect: result.success === true → the block has already written `output_directory_path` into `{context_path}`, so §8's manifest lists it and the abort path removes it. Confirm with `node -e "console.log(require('{context_path}').output_directory_path)"`
+expect: result.success === true → the block has already written `output_directory_path` into `{context_path}`, so §8's manifest lists it and the abort path removes it. Confirm with `node -e "console.log(require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js').readContext('{context_path}').output_directory_path)"` — `readContext`, not `require`, which would impose a `.json` extension the path is not required to have
         result.success === false → display result.errors, fix before continuing
 ```
 

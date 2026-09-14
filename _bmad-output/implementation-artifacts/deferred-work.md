@@ -1451,3 +1451,8 @@ Round 2 ran three independent blind layers on `06a452cd` — the Round 1 *remedi
   `_bmad-output/implementation-artifacts` 375, `_archive` 148, `docs` 45, `planning-artifacts` 42.
   Not a gate and not wired into CI; worth either a baseline file or a scoping change so a real
   regression is distinguishable from the standing noise.
+
+
+## Deferred from: code review of tfr-1-1 (2026-09-14)
+
+- ~~**`.MD`-cased workflow files are skipped by `run-block-transport.js`'s walk.**~~ **Moot 2026-09-14** — the gate was deleted in Round 3 (it produced eight findings across two rounds and its whitelist rested on a constraint nothing enforced). No file to fix.

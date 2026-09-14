@@ -1,6 +1,7 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('path');
+const { REJECTED } = require('./output-directory-cases');
 const fs = require('fs-extra');
 const os = require('os');
 const yaml = require('js-yaml');
@@ -283,7 +284,17 @@ describe('R2: ensureOutputDirectory containment', () => {
   before(async () => { root = await fs.mkdtemp(path.join(os.tmpdir(), 'tf213-cont-')); });
   after(async () => { await fs.remove(root); });
 
-  for (const bad of ['_bmad-output/../../escaped', '_bmad-output/../etc', '/var/tmp/absolute', '_bmad-output/']) {
+  // tfr-1-1 R2: was a hardcoded list of four. Sourced from the shared case table
+  // instead — AC#3 exists because three independent lists is what let three
+  // predicates drift apart, and a fourth list here would be the same mistake.
+  const mustRefuse = REJECTED.map(c => c.value).filter(v => typeof v === 'string' && v.trim() !== '');
+
+  it('the shared table actually carries refusal cases', () => {
+    assert.ok(mustRefuse.includes('_bmad-output/../../escaped'), 'the real escape must be in the table');
+    assert.ok(mustRefuse.length >= 10, `expected a substantial table, got ${mustRefuse.length}`);
+  });
+
+  for (const bad of mustRefuse) {
     it(`refuses ${JSON.stringify(bad)}`, async () => {
       const r = await ensureOutputDirectory({ integration: { output_directory: bad } }, root);
       assert.equal(r.success, false, `escaped to ${r.path}`);

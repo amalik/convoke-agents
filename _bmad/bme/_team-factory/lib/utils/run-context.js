@@ -1,45 +1,24 @@
 'use strict';
 
 /**
- * run-context — the transport for `run:` blocks. tfr-1-1 (T136).
+ * run-context — the transport for `run:` blocks.
  *
- * THE PROBLEM THIS EXISTS TO REMOVE. Every `run:` block in the add-team workflow
- * is `node -e "…"`, a DOUBLE-quoted shell string. Substituting a JS object into
- * it destroys the object before node sees it, because the outer `"` terminates
- * on the JSON's first `"`:
+ * A `run:` block interpolates only PATHS, never objects or contributor-authored
+ * values. A `node -e "…"` payload is a double-quoted shell string: JSON
+ * substituted into it loses its own quotes, and a value containing an apostrophe
+ * is a syntax error (`T136`).
  *
- *   run: node -e "const s = {"team_name":"forge"}; …"
- *   shell hands node:  const s = {team_name:forge};   -> SyntaxError
+ *   {spec_path}     the spec `step-01` §5 writes. Parsed here, not interpolated.
+ *   {context_path}  the generation context: a JSON file, so Step 5 reads what
+ *                   Step 4 wrote even in a separate session.
  *
- * Not only for values containing quotes — plain JSON already fails. So the
- * blocks could never be pasted verbatim, which is what `T136` records and what
- * `T130`'s signature fixes could not reach.
+ * `readContext` THROWS on absence rather than returning `{}`, because an empty
+ * context makes a correctly generated team fail `checkConfig`, `checkActivation`
+ * and `checkRegistryWiring`.
  *
- * THE CONTRACT. A block interpolates only PATHS, never objects. Two paths:
+ * `no-process-cwd-in-libs`: every function takes its paths explicitly.
  *
- *   {spec_path}     the spec `step-01` §5 already writes to
- *                   `_bmad-output/planning-artifacts/team-spec-<kebab>.yaml`.
- *                   NOT a new file — `spec-parser.js::parseSpec` already takes a
- *                   path, and `step-04`'s Placeholders table already defines
- *                   `{spec_data}` as the parse of exactly this file. Writing the
- *                   spec to a second JSON file would duplicate on-disk state,
- *                   which is the drift class tfr-1-1 Task 3 exists to delete.
- *
- *   {context_path}  the generation context, which previously lived only in the
- *                   executor's head. `step-05-validate.md` documented that as a
- *                   live hazard: run steps 4 and 5 in separate sessions and it is
- *                   gone, and `checkConfig`/`checkActivation`/`checkRegistryWiring`
- *                   then report FALSE FAILURES on a correctly generated team.
- *                   Persisting it fixes that as a side effect of fixing the
- *                   transport.
- *
- * Paths are single-quoted at the call site (`rc.loadSpec('{spec_path}')`), the
- * same convention `{project-root}` already uses in every block. POSIX/bash is the
- * supported surface: every CI job is `ubuntu-latest` and `.github/workflows/ci.yml`
- * records Windows as separately tracked.
- *
- * `no-process-cwd-in-libs`: every function takes its paths explicitly. Nothing
- * here falls back to `process.cwd()`.
+ * Reproduce: node --test tests/team-factory/run-context.test.js
  */
 
 const fs = require('fs');
@@ -74,9 +53,9 @@ async function loadSpec(specPath) {
 /**
  * Create the generation-context file, replacing any previous run's.
  *
- * Called once at `step-04` §1. Deliberately destructive: a context left over
- * from an abandoned run would carry stale paths into the abort manifest, which
- * emits removal instructions against every `created` entry.
+ * Deliberately destructive: a context left over from an abandoned run would
+ * carry stale paths into the abort manifest, which emits removal instructions
+ * against every `created` entry.
  *
  * @param {string} contextPath - where to write it
  * @param {Object} [seed] - initial keys
@@ -113,9 +92,9 @@ function readContext(contextPath) {
     raw = fs.readFileSync(contextPath, 'utf8');
   } catch (err) {
     throw new Error(
-      `generation context not found at ${contextPath} (${err.code || err.message}). ` +
-      'It is created by step-04 §1. Re-run step-04 rather than passing an empty object — ' +
-      'an empty context makes a correct team fail validation.',
+      `context file not found at ${contextPath} (${err.code || err.message}). ` +
+      'Create it before reading it. Do not substitute an empty object: an empty ' +
+      'context makes a correctly generated team fail validation.',
       { cause: err }
     );
   }
@@ -133,11 +112,8 @@ function readContext(contextPath) {
 /**
  * Merge one key into the generation context and persist it.
  *
- * This is what the `expect:` lines in `step-04` §5 call, so recording a result
- * is a command the executor pastes rather than an instruction they may skip.
- * `T164`(b) is exactly that skip: §5d said merely "proceed" while §5a-ii and §5c
- * said to record, and `end-to-end-validator.js::checkRegistryWiring` reads the
- * key either way.
+ * The `expect:` lines in `step-04` §5 call this, so recording a result is a
+ * command rather than an instruction an executor can skip.
  *
  * @param {string} contextPath
  * @param {string} key

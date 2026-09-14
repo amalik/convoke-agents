@@ -7,13 +7,17 @@ const os = require('os');
 const path = require('path');
 
 const { removeTempDirSync } = require('../helpers');
-const { CONTAINMENT_CASES, ACCEPTED, REJECTED } = require('./output-directory-cases');
+const { CONTAINMENT_CASES, ACCEPTED, REJECTED, PREFIXED } = require('./output-directory-cases');
 
 const {
   isContainedOutputDirectory,
+  isRepoRelativeOutputDirectory,
   assertContainedOutputDirectory,
   stripProjectRoot,
 } = require('../../_bmad/bme/_team-factory/lib/utils/output-directory');
+
+const { parseSpecFromString } = require('../../_bmad/bme/_team-factory/lib/spec-parser');
+const yaml = require('js-yaml');
 
 const { buildConfigData, ensureOutputDirectory } = require('../../_bmad/bme/_team-factory/lib/writers/config-creator');
 
@@ -105,6 +109,53 @@ describe('call site: ensureOutputDirectory', () => {
       assert.ok(r.errors.length > 0, 'refusal names a reason');
     });
   }
+});
+
+describe('call site: spec-parser — the caller AC#3 names FIRST', () => {
+  // Round 2: this sweep did not exist, and moving the `{project-root}/` stripping
+  // into the base predicate silently relaxed parseSpec to accept the CONFIG shape
+  // in a SPEC field — undoing a tf-2-13 R2 ruling recorded in the module's own
+  // fixture comment. No test noticed, because the "four call sites" were the
+  // predicate, the assert, buildConfigData and ensureOutputDirectory.
+  const specYaml = (output_directory) => yaml.dump({
+    schema_version: '1.0', team_name: 'Probe', team_name_kebab: 'probe',
+    composition_pattern: 'Independent', created: '2026-09-14', factory_version: '1.0',
+    discovery_path: 'unknown', decisions: [],
+    agents: [{ id: 'probe-one', role: 'Probes', capabilities: ['probing'], overlap_acknowledgments: [] }],
+    integration: { output_directory },
+    progress: { route: 'complete', scope: 'complete', connect: 'complete', review: 'complete', generate: 'pending' },
+  });
+
+  // The expectation is DERIVED FROM THE TABLE, never from the predicate under
+  // test. Round 3: it used to read `isRepoRelativeOutputDirectory(c.value)`, so
+  // mutating that function to accept everything left all 22 tests green — merely
+  // renamed from `rejects` to `accepts`, including `accepts "_bmad-output/../../escaped"`.
+  // That is `verification-must-be-falsifiable`'s absorbed-mutant case verbatim:
+  // both sides of the comparison shared a source.
+  const expectedFor = c => c.contained && !String(c.value).startsWith('{project-root}/');
+
+  for (const c of CONTAINMENT_CASES.filter(x => typeof x.value === 'string' && x.value.trim() !== '')) {
+    const expected = expectedFor(c);
+    it(`${expected ? 'accepts' : 'rejects'} ${JSON.stringify(c.value)}`, async () => {
+      const r = await parseSpecFromString(specYaml(c.value));
+      assert.equal(r.valid, expected, `${c.why}\nerrors: ${JSON.stringify(r.errors)}`);
+    });
+  }
+
+  it('REJECTS every config-shaped value, contained or not', async () => {
+    assert.ok(PREFIXED.length >= 3, 'the table must carry prefixed cases for this to mean anything');
+    for (const c of PREFIXED) {
+      assert.equal(isRepoRelativeOutputDirectory(c.value), false, `${c.value} is config shape`);
+      const r = await parseSpecFromString(specYaml(c.value));
+      assert.equal(r.valid, false, `spec-parser must reject the config shape: ${c.value}`);
+    }
+  });
+
+  it('but buildConfigData still ACCEPTS the config shape — the two contracts differ on purpose', () => {
+    for (const c of PREFIXED.filter(x => x.contained)) {
+      assert.equal(isContainedOutputDirectory(c.value), true, c.why);
+    }
+  });
 });
 
 describe('the three call sites agree — the property T163a was filed on', () => {

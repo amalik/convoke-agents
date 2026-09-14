@@ -14,11 +14,11 @@ Guide the contributor through defining their team's composition pattern, agents,
 |---|---|
 | `{project-root}` | absolute path to the repository root |
 | `{team_name_kebab}` | the team's kebab name, e.g. `pilot-test`. **Not `{kebab}`** — that spelling appeared once, in one command, defined nowhere |
-| `{agent_id}` | one agent's kebab id, as collected in §3 |
-| `{role}` | that agent's one-sentence role, as collected in §3 |
-| `{capabilities}` | that agent's capabilities, **pipe-separated** (`a\|b\|c`). Pipes rather than commas so a comma inside a capability cannot split the list |
-| `{pattern}` | `Independent` or `Sequential`, as chosen in §2 |
-| `{scope_path}` | a PATH to the scoping scratch file this step writes in §4. It exists because §4 runs **before** §5 creates the spec, so there is nothing else on disk to read, and because §5 consumes the acknowledgments §4 produces — the order cannot be inverted |
+| `{agent_id}` | one agent's kebab id, as collected in §3. Safe to interpolate **only because** §3 enforces `/^[a-z]+(-[a-z]+)*$/` on it before it reaches any command |
+| `{pattern}` | `Independent` or `Sequential`, as chosen in §2 — a closed set of two literals |
+| `{scope_path}` | `_bmad-output/planning-artifacts/.scope-{team_name_kebab}.json`, the scoping file **you write** in §4. It exists because §4 runs before §5 creates the spec, so there is nothing else on disk to read, and because §5 consumes the acknowledgments §4 produces — the order cannot be inverted. Delete it after §5 |
+
+**No placeholder carrying contributor prose appears in any `run:` block in this step.** A role sentence or a capability list is written to a file, never substituted into a shell string.
 
 ## Execution Sequence
 
@@ -85,21 +85,20 @@ expect: result.valid === true → proceed
 
 After all agents are defined, run collision detection.
 
-**Write the inventory to a file first.** The spec does not exist yet — §5 *Save Progress* creates it, and §5 needs the overlap acknowledgments this section produces, so the order cannot be inverted. Write what you have just collected to a scratch file:
+**Write the inventory to a file yourself — do not build it in a shell command.** You are driving this workflow and you already hold the agent inventory from §3; write it directly to `{scope_path}` as JSON:
 
-```
-run: node -e "require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js').initContext('{scope_path}', { team_name_kebab: '{team_name_kebab}', agents: [] })"
-expect: the file exists — it is overwritten on each run, so a re-scope never inherits a previous inventory
-```
-
-Then append each agent you collected in §3, one command per agent, so no JSON is ever pasted:
-
-```
-run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), c = rc.readContext('{scope_path}'); c.agents.push({ id: '{agent_id}', role: '{role}', capabilities: '{capabilities}'.split('|') }); rc.recordContext('{scope_path}', 'agents', c.agents)"
-expect: repeat once per agent; `{capabilities}` is pipe-separated so a comma inside a capability cannot split it
+```json
+{
+  "team_name_kebab": "<the team's kebab name>",
+  "agents": [
+    { "id": "<agent id>", "role": "<the agent's role sentence>", "capabilities": ["<capability>", "…"] }
+  ]
+}
 ```
 
-Now detect collisions against the file:
+**Why a file you write and not a `run:` block.** A role is free prose, and a `node -e` payload is a double-quoted shell string: `Surveys the team's knowledge` is a syntax error there, and `He said "go"` is silently recorded as `He said go`. Never interpolate a value a contributor authored into a command (`T136`).
+
+Then detect collisions against the file:
 
 ```
 run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), cd = require('{project-root}/_bmad/bme/_team-factory/lib/collision-detector.js'); cd.detectCollisions(rc.readContext('{scope_path}'), '{project-root}/_bmad/_config/agent-manifest.csv', '{project-root}/_bmad/bme/').then(r => console.log(JSON.stringify(r, null, 2)))"

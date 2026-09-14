@@ -1,50 +1,35 @@
 'use strict';
 
 /**
- * output-directory — the ONE containment predicate. tfr-1-1 (T163a).
+ * output-directory — the single containment predicate for `integration.output_directory`.
  *
- * WHY THIS FILE IS A DELETION, NOT A FOURTH REWRITE. The same property had three
- * implementations, written across two review rounds, and they disagreed:
+ * Callers: `spec-parser.js` (spec shape), `config-creator.js::buildConfigData` and
+ * `::ensureOutputDirectory` (config shape). One implementation, because three
+ * copies drifted apart and disagreed about `_bmad-output/..foo` (`T163a`).
  *
- *   spec-parser.js::isContainedOutputDirectory     normalise + segment scan
- *   config-creator.js::assertContainedOutputDirectory  a near-copy, plus prefix stripping
- *   config-creator.js::ensureOutputDirectory (inline)  path.relative + startsWith('..')
+ * A value is contained when, after stripping an optional `{project-root}/` prefix
+ * and normalising:
+ *   - it is a non-empty string and not absolute;
+ *   - it is not the bare root `_bmad-output`;
+ *   - it lies under `_bmad-output/` — which is also what rejects traversal, since
+ *     `_bmad-output/../../escaped` normalises to `../escaped`;
+ *   - it carries no character that is live inside double quotes (see SHELL_UNSAFE_RE).
  *
- * Measured at HEAD before this change, `_bmad-output/..foo` — a directory whose
- * name begins with two dots, which resolves genuinely INSIDE the output root —
- * was accepted by the first two and refused by the third. Worse than a false
- * rejection: `step-04` §5a writes `config.yaml` before §5a-ii runs, so the flow
- * left a config on disk pointing at a directory the factory then declared
- * illegal. `config-creator.js::buildConfigData` accepted it and wrote
- * `output_folder: '{project-root}/_bmad-output/..foo'`; `ensureOutputDirectory`
- * then refused it with "fix before continuing".
+ * `..foo` as a SEGMENT is an ordinary directory name and is accepted; that is
+ * `T163a`.
  *
- * Patching `startsWith('..')` into `rel === '..' || rel.startsWith('..' + sep)`
- * would have produced a FOURTH implementation and left the duplication that
- * caused the drift. `project-context.md` rule `code-review-convergence`: *"When a
- * fix keeps leaking in the same place, suspect OVER-BUILD, and prefer deletion to
- * a further rewrite."* So the two copies and the inline check are gone and all
- * three call sites call this.
- *
- * THE RULE, stated once. A value is contained when, after stripping an optional
- * `{project-root}/` prefix and normalising:
- *
- *   - it is a non-empty string and not an absolute path;
- *   - it is not the bare root `_bmad-output` (that is the shared artifacts root
- *     every module writes into — one character from a valid value, and it made
- *     the abort manifest claim the whole tree as this run's creation);
- *   - it lies under `_bmad-output/`;
- *   - no path SEGMENT is exactly `..`.
- *
- * The last clause is the one that took three attempts. `..` as a segment escapes;
- * `..foo` as a segment is an ordinary directory name and must be accepted.
+ * LIMIT — containment is LEXICAL. No `realpath` is performed, so a pre-existing
+ * symlink under `_bmad-output/` pointing outside the repository is accepted and
+ * artifacts land outside the project root. Resolution cannot run here:
+ * `ensureOutputDirectory` is what creates the directory, so at check time the path
+ * usually does not exist. Closing it means re-verifying after `ensureDir`, in the
+ * caller that holds the resolved path.
  *
  * `path-safety-for-destructive-ops`: this value reaches
- * `manifest-tracker.js::formatAbortInstructions` as a removal target, so
- * resolve + normalise + contains-check are all three required. The escape this
- * guards — `_bmad-output/../../escaped` — was real: it was created outside the
- * project root, written into the generated config, and recorded as an `rm`
- * target (tf-2-13 R2).
+ * `manifest-tracker.js::formatAbortInstructions` as a removal target.
+ *
+ * Reproduce the guarantees:
+ *   node --test tests/team-factory/output-directory.test.js
  */
 
 const path = require('path');
@@ -54,6 +39,21 @@ const OUTPUT_ROOT = '_bmad-output';
 
 /** The prefix the config shape carries and the spec shape does not. */
 const PROJECT_ROOT_PREFIX = '{project-root}/';
+
+/**
+ * Characters that retain meaning inside the double quotes this value lands in.
+ *
+ * `manifest-tracker.js::formatAbortInstructions` emits ``rm "${entry.path}"``.
+ * Inside double quotes only `"`, `$`, backtick, backslash and a newline are live;
+ * a space, `;`, `|`, `*` and the rest are inert and are therefore allowed —
+ * `my team artifacts` is a legitimate directory name.
+ *
+ * This narrows the injection and does not close it: every other `created` entry
+ * reaches the same line, and agent ids, workflow names and guide filenames are
+ * contributor-named. Root cause is `T165`.
+ */
+// eslint-disable-next-line no-control-regex
+const SHELL_UNSAFE_RE = /[\x00-\x1f\x7f"$`\\]/;
 
 /**
  * Strip an optional `{project-root}/` prefix.
@@ -84,6 +84,20 @@ function isContainedOutputDirectory(value) {
   const candidate = stripProjectRoot(value);
   if (candidate === '' || path.isAbsolute(candidate)) return false;
 
+  // Shell-safety BEFORE containment. A value can be perfectly contained and still
+  // end the `rm` argument it is interpolated into. Tested on the STRIPPED
+  // candidate so the `{project-root}/` prefix's own braces do not trip it.
+  if (SHELL_UNSAFE_RE.test(candidate)) return false;
+
+  // Fold separators AFTER normalise, not before. Input backslashes are already
+  // rejected by SHELL_UNSAFE_RE, but `path.normalize` EMITS them on win32:
+  // `normalize('_bmad-output/x')` returns `_bmad-output\\x` there, so without
+  // this fold `startsWith('_bmad-output/')` is false for every legitimate value
+  // and the predicate rejects everything. Round 3 caught that; Round 2 had
+  // deleted the fold on the strength of an argument about INPUT backslashes that
+  // did not cover the ones normalise produces. CI is ubuntu-only, so nothing
+  // would have caught it — `backup-manager.js` and `activation-validator.js`
+  // both fold for the same reason.
   const normalised = path
     .normalize(candidate)
     .replace(/\\/g, '/')
@@ -91,8 +105,10 @@ function isContainedOutputDirectory(value) {
 
   if (normalised === OUTPUT_ROOT) return false;
   if (!normalised.startsWith(`${OUTPUT_ROOT}/`)) return false;
-  // Segment-exact, NOT a prefix test: `..` escapes, `..foo` is a directory name.
-  if (normalised.split('/').includes('..')) return false;
+
+  // There is deliberately no `..`-segment check. It is unreachable:
+  // `path.normalize` can only leave a `..` at the start of its result, and the
+  // `startsWith` above has already rejected that. Verified exhaustively.
 
   return true;
 }
@@ -118,8 +134,30 @@ function assertContainedOutputDirectory(value) {
   return value;
 }
 
+/**
+ * Is `value` a contained output directory in SPEC shape — repo-relative, with no
+ * `{project-root}/` prefix?
+ *
+ * `spec-parser` must reject the prefix. `tests/team-factory/fixtures/test-team-spec.yaml`
+ * carries the reason in its own comment: `step-02-connect.md` defaults the field
+ * to repo-relative, validates that shape, and adds the prefix only when composing
+ * `config.yaml`. A spec carrying the config shape was a real defect (tf-2-13 R2),
+ * and the first version of this file reintroduced it by moving the prefix
+ * stripping into the base predicate where every caller inherited it.
+ *
+ * @param {*} value
+ * @returns {boolean}
+ */
+function isRepoRelativeOutputDirectory(value) {
+  if (typeof value !== 'string') return false;
+  if (value.startsWith(PROJECT_ROOT_PREFIX)) return false;
+  return isContainedOutputDirectory(value);
+}
+
 module.exports = {
+  SHELL_UNSAFE_RE,
   isContainedOutputDirectory,
+  isRepoRelativeOutputDirectory,
   assertContainedOutputDirectory,
   stripProjectRoot,
   OUTPUT_ROOT,
