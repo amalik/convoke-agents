@@ -32,6 +32,8 @@ Two alternatives were considered and declined:
 
 It reads the same at module scale. **The Team Factory has produced zero surviving teams** — `_vortex`, `_gyre` and `_team-factory` all predate it, and `tf-2-11`'s pilot team was deleted by its own AC8. So this epic does **not** take all fifteen rows. It takes the ones that block a contributor generating one real team, and it states a gate for the rest.
 
+**Footnote on "fifteen", added 2026-09-14.** The figure was right and the backlog was not: it held **sixteen** open `loom` rows, the extra being `BUG-3` (2.8, filed 2026-04-23, parked) — `convoke-doctor` reporting `_team-factory` missing its `add-team` workflow. Checked rather than assumed: the workflow directory holds 6 files, `config.yaml` declares `workflows: [add-team]`, and `node scripts/convoke-doctor.js` prints `✓ _team-factory workflows — 1 workflows present`. The row had been fixed by a commit with no reason to name a row filed before it — `staleness-preflight-for-backlog-pickup`'s qualification-arm blind spot, second instance after `T57`. **`BUG-3` is closed into §2.5 and the count is now fifteen for the right reason.** Derive it, never quote it: `grep -cE "\| loom \| Open \|" convoke-note-initiative-lifecycle-backlog.md`.
+
 ### Epic scope — blocks generating one real team (4)
 
 | Row | | Why it blocks |
