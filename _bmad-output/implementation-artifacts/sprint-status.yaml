@@ -398,7 +398,7 @@ development_status:
   # Epic file: convoke-epic-team-factory-repair.md
   # ============================================================
   tfr-epic-1: in-progress
-  tfr-1-1-generate-one-real-team-without-hand-patching: ready-for-dev
+  tfr-1-1-generate-one-real-team-without-hand-patching: in-progress
   tfr-epic-1-retrospective: optional
 
   # ============================================================

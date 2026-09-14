@@ -3,6 +3,8 @@
 const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('js-yaml');
+
+const { isContainedOutputDirectory, assertContainedOutputDirectory, stripProjectRoot } = require('../utils/output-directory');
 const { toKebab, deriveWorkflowName } = require('../utils/naming-utils');
 
 /** @typedef {import('../types/factory-types')} Types */
@@ -122,68 +124,38 @@ async function ensureOutputDirectory(specData, projectRoot) {
     return { success: false, path: '', errors: [`output_directory must be a repo-relative path (got ${JSON.stringify(relative)})`] };
   }
 
-  const target = path.resolve(projectRoot, relative);
-
   // resolve + normalise + contains-check, per project-context.md
   // `path-safety-for-destructive-ops`. The first pass did none: `_bmad-output/../../x`
   // was created OUTSIDE the repo, written into config.yaml, and recorded in the abort
   // manifest as an `rm` target.
-  const outputRoot = path.resolve(projectRoot, '_bmad-output');
-  const rel = path.relative(outputRoot, target);
-  if (target === outputRoot || rel.startsWith('..') || path.isAbsolute(rel)) {
+  //
+  // tfr-1-1 (T163a): ONE predicate, shared with spec-parser and buildConfigData.
+  // This was `path.relative(...)` + `rel.startsWith('..')`, which false-rejected
+  // `_bmad-output/..foo` — a directory NAME beginning with two dots, which the
+  // parser accepted and which resolves genuinely inside the root. §5a writes
+  // config.yaml before §5a-ii runs, so the disagreement left a config on disk
+  // pointing at a directory this function then called illegal.
+  if (!isContainedOutputDirectory(relative)) {
     return {
       success: false,
-      path: target,
-      errors: [`output_directory must resolve to a directory strictly inside ${outputRoot} (resolved to ${target})`]
+      path: path.resolve(projectRoot, stripProjectRoot(relative)),
+      errors: [`output_directory must be a repo-relative path strictly inside _bmad-output/ (got ${JSON.stringify(relative)})`]
     };
   }
+
+  // STRIP BEFORE RESOLVING. The shared predicate accepts an already-`{project-root}/`
+  // prefixed value because `buildConfigData`'s bypass path produces one, and resolving
+  // that literally creates a directory NAMED `{project-root}` inside the repo. The
+  // agreement suite caught this: the predicate said contained, the directory landed at
+  // `<root>/{project-root}/_bmad-output/…`. The old inline guard hid it by rejecting
+  // every prefixed value outright, which is not agreement — it is a second opinion.
+  const target = path.resolve(projectRoot, stripProjectRoot(relative));
   try {
     await fs.ensureDir(target);
   } catch (err) {
     return { success: false, path: target, errors: [`Failed to create output directory: ${err.message}`] };
   }
   return { success: true, path: target, errors: [] };
-}
-
-/**
- * Throw unless `value` is a repo-relative path genuinely contained under `_bmad-output/`.
- *
- * R3 (tf-2-13). R2 added containment to `ensureOutputDirectory` and justified it as
- * covering the CLI, "because the shipped CLI bypasses parseSpec entirely". That was
- * false about the consumer: the CLI at the foot of this file calls `createConfig` ->
- * `buildConfigData` and **never calls `ensureOutputDirectory` at all**. So the traversal
- * hole R2's record implies was closed stayed live — `node config-creator.js --spec-file
- * <spec with _bmad-output/../../escaped>` returned success and wrote
- * `output_folder: '{project-root}/_bmad-output/../../escaped'` into the generated config.
- *
- * The guard belongs on the function that COMPOSES the value, which every path reaches.
- * Throws rather than returning a result object because `buildConfigData` is synchronous
- * and has no error channel; `createConfig` already converts throws into
- * `{success:false, errors:[…]}` via its write try/block.
- *
- * Accepts an already-`{project-root}/`-prefixed value, which only the bypass path
- * produces, and validates the remainder.
- *
- * @param {*} value
- * @returns {string} the value, unchanged, when contained
- * @throws {Error} when it is not
- */
-function assertContainedOutputDirectory(value) {
-  const raw = typeof value === 'string' ? value : '';
-  const candidate = raw.startsWith('{project-root}/') ? raw.slice('{project-root}/'.length) : raw;
-  const ROOT = '_bmad-output';
-  const normalised = path.normalize(candidate).replace(/\\/g, '/').replace(/\/+$/, '');
-  const ok = candidate !== '' &&
-    !path.isAbsolute(candidate) &&
-    normalised !== ROOT &&
-    normalised.startsWith(ROOT + '/') &&
-    !normalised.split('/').includes('..');
-  if (!ok) {
-    throw new Error(
-      `integration.output_directory must be a repo-relative path strictly inside _bmad-output/ (got ${JSON.stringify(value)})`
-    );
-  }
-  return raw;
 }
 
 /**

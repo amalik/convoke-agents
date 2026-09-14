@@ -80,7 +80,7 @@ core_module: bme
 
 Run config field collision detection:
 ```
-run: node -e "const cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); cc.detectCollisions({spec_data}, '{project-root}/_bmad/bme/').then(c => console.log(JSON.stringify(c)))"
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); rc.loadSpec('{spec_path}').then(s => cc.detectCollisions(s, '{project-root}/_bmad/bme/')).then(c => console.log(JSON.stringify(c)))"
 expect: result.length === 0 → no collisions, proceed
         result.length > 0  → display each {field, value, existingModule}, ask contributor to rename before continuing
 ```

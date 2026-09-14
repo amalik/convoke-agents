@@ -75,27 +75,27 @@ Not a unit fixture. Walk `add-team` as a contributor would, pasting the blocks. 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Replace the `run:` block transport (AC: #1, #2) — `T136`**
-  - [ ] **`{spec_data}` needs no new mechanism — the file already exists.** `step-01-scope.md` §5 *Save Progress* creates `team-spec-{team_name_kebab}.yaml` in `_bmad-output/planning-artifacts/`, and `spec-parser.js::parseSpec(specPath)` already takes a path. Pass the path and parse inside the block (`parseSpec(path).then(r => …r.spec…)`). `step-04`'s Placeholders table already defines `{spec_data}` as *"the parsed spec object from `team-spec-{team_name_kebab}.yaml` (see `spec-parser.js::parseSpec` → `.spec`)"* — the transport just has to match what the table already says. **Do not write the spec to a second JSON file**: duplicating state that is already on disk is the drift class Task 3 exists to delete.
-  - [ ] **`{generation_context}` is the one thing that needs a new file.** It is accumulated in memory across §3–§5 and persisted nowhere. Step 4 writes it to a JSON file as it accumulates; every block receives that **path**.
-  - [ ] Rewrite the **8** blocks that interpolate a named object placeholder (`{spec_data}`, `{generation_context}`, `{agent_file_paths}`) so none is substituted into a `node -e "…"` string.
-  - [ ] Update `step-04-generate.md` §Placeholders: `{spec_data}` and `{generation_context}` now resolve to file paths; say which file each is and who writes it.
-  - [ ] Correct `step-05-validate.md`'s persistence caveat paragraph (AC#2) — it currently tells the operator to re-run Step 4's §5 wiring.
-  - [ ] Verify with a spec whose `description` is `He said "go" — it's fine`, containing both quote characters.
+- [x] **Task 1 — Replace the `run:` block transport (AC: #1, #2) — `T136`**
+  - [x] **`{spec_data}` needs no new mechanism — the file already exists.** `step-01-scope.md` §5 *Save Progress* creates `team-spec-{team_name_kebab}.yaml` in `_bmad-output/planning-artifacts/`, and `spec-parser.js::parseSpec(specPath)` already takes a path. Pass the path and parse inside the block (`parseSpec(path).then(r => …r.spec…)`). `step-04`'s Placeholders table already defines `{spec_data}` as *"the parsed spec object from `team-spec-{team_name_kebab}.yaml` (see `spec-parser.js::parseSpec` → `.spec`)"* — the transport just has to match what the table already says. **Do not write the spec to a second JSON file**: duplicating state that is already on disk is the drift class Task 3 exists to delete.
+  - [x] **`{generation_context}` is the one thing that needs a new file.** It is accumulated in memory across §3–§5 and persisted nowhere. Step 4 writes it to a JSON file as it accumulates; every block receives that **path**.
+  - [x] Rewrite the **8** blocks that interpolate a named object placeholder (`{spec_data}`, `{generation_context}`, `{agent_file_paths}`) so none is substituted into a `node -e "…"` string.
+  - [x] Update `step-04-generate.md` §Placeholders: `{spec_data}` and `{generation_context}` now resolve to file paths; say which file each is and who writes it.
+  - [x] Correct `step-05-validate.md`'s persistence caveat paragraph (AC#2) — it currently tells the operator to re-run Step 4's §5 wiring.
+  - [x] Verify with a spec whose `description` is `He said "go" — it's fine`, containing both quote characters.
 
-- [ ] **Task 2 — The other four `run:` blocks (AC: #1)**
+- [x] **Task 2 — The other four `run:` blocks (AC: #1)**
 
   The 8 in Task 1 are not the whole surface. The remaining four break down as:
 
-  - [ ] **`step-01-scope.md` collision check — hand-builds an object and cannot execute at all.** It reads `cd.detectCollisions({team_name_kebab: '{kebab}', agents: [{id: '{id1}'}, ...]}, …)`. The literal `...` is not valid JS, and `{kebab}` / `{id1}` are placeholders **`step-01` never defines** — the exact class `step-04`'s Placeholders table preamble exists to remove (*"a name that appears in exactly one command and is defined nowhere cannot be resolved by whoever drives the flow"*). **It cannot use Task 1's context file** — that is a Step-4 artifact, and §4 runs *before* `step-01` §5 *Save Progress* creates the spec file, so at §4 there is nothing on disk to read. **And the order cannot simply be inverted:** §5 populates the spec with *"team identity, composition pattern, agents, overlap acknowledgments"* — and the acknowledgments are what §4 produces, so §4 must stay ahead of §5. The shape that works is for §4 to write its own scoping scratch file (the agent inventory it has just collected) and pass that path. Also give `step-01-scope.md` a Placeholders table or delete the undefined names.
-  - [ ] **`step-05-validate.md` §3 Regression Check — a no-op with a stray token.** It reads `run: node -e "require('{project-root}/scripts/update/lib/validator.js')" logic`: requires a module, calls nothing, asserts nothing, and trails a bare `logic`. `validateTeam` already runs the regression check via `checkVortexRegression`, so this is redundant as well as inert. **Prefer deletion** and say so in the record.
-  - [ ] **The two scalar-only blocks** (`getCascadeForPattern('{pattern}')` and the `naming-utils` id check) are safe for kebab-shaped values. Confirm that by execution rather than by inspection, and leave them alone if they hold.
+  - [x] **`step-01-scope.md` collision check — hand-builds an object and cannot execute at all.** It reads `cd.detectCollisions({team_name_kebab: '{kebab}', agents: [{id: '{id1}'}, ...]}, …)`. The literal `...` is not valid JS, and `{kebab}` / `{id1}` are placeholders **`step-01` never defines** — the exact class `step-04`'s Placeholders table preamble exists to remove (*"a name that appears in exactly one command and is defined nowhere cannot be resolved by whoever drives the flow"*). **It cannot use Task 1's context file** — that is a Step-4 artifact, and §4 runs *before* `step-01` §5 *Save Progress* creates the spec file, so at §4 there is nothing on disk to read. **And the order cannot simply be inverted:** §5 populates the spec with *"team identity, composition pattern, agents, overlap acknowledgments"* — and the acknowledgments are what §4 produces, so §4 must stay ahead of §5. The shape that works is for §4 to write its own scoping scratch file (the agent inventory it has just collected) and pass that path. Also give `step-01-scope.md` a Placeholders table or delete the undefined names.
+  - [x] **`step-05-validate.md` §3 Regression Check — a no-op with a stray token.** It reads `run: node -e "require('{project-root}/scripts/update/lib/validator.js')" logic`: requires a module, calls nothing, asserts nothing, and trails a bare `logic`. `validateTeam` already runs the regression check via `checkVortexRegression`, so this is redundant as well as inert. **Prefer deletion** and say so in the record.
+  - [x] **The two scalar-only blocks** (`getCascadeForPattern('{pattern}')` and the `naming-utils` id check) are safe for kebab-shaped values. Confirm that by execution rather than by inspection, and leave them alone if they hold.
 
-- [ ] **Task 3 — One containment predicate (AC: #3) — `T163`(a)**
-  - [ ] Extract a single exported containment predicate. Decide its home: it is currently half in `spec-parser.js` and half in `config-creator.js`; a small shared module under `lib/utils/` is the obvious third option.
-  - [ ] Delete the two duplicate implementations and the inline check in `ensureOutputDirectory`. This is **deletion, not a fourth rewrite** — see §The three containment predicates.
-  - [ ] Write the shared case table (`shared-test-constants`) and iterate it across all call sites.
-  - [ ] Pin **both** directions at `buildConfigData`: `_bmad-output/../../escaped` still **rejected** (R3 put that guard there deliberately), and `{project-root}/_bmad-output/team-artifacts` still **accepted**. Only the first half is obvious, and only the second half catches a predicate that forgot to strip the prefix.
+- [x] **Task 3 — One containment predicate (AC: #3) — `T163`(a)**
+  - [x] Extract a single exported containment predicate. Decide its home: it is currently half in `spec-parser.js` and half in `config-creator.js`; a small shared module under `lib/utils/` is the obvious third option.
+  - [x] Delete the two duplicate implementations and the inline check in `ensureOutputDirectory`. This is **deletion, not a fourth rewrite** — see §The three containment predicates.
+  - [x] Write the shared case table (`shared-test-constants`) and iterate it across all call sites.
+  - [x] Pin **both** directions at `buildConfigData`: `_bmad-output/../../escaped` still **rejected** (R3 put that guard there deliberately), and `{project-root}/_bmad-output/team-artifacts` still **accepted**. Only the first half is obvious, and only the second half catches a predicate that forgot to strip the prefix.
 
 - [ ] **Task 4 — Persona coverage is reported and gated (AC: #4) — `T164`(a)**
   - [ ] `writeRegistryBlock`: report coverage of `specData.agents` by extracted personas. Do **not** change what `success` means — see §Trap: the fourth predicate.
@@ -242,11 +242,97 @@ All work is inside `_bmad/bme/_team-factory/` plus `tests/team-factory/`. No `_b
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context), via `bmad-dev-story`.
+
+### Debug Log References
+
+**Task 1 — RED, and a defect in my own first detector.** The gate `scripts/audit/run-block-transport.js` went red on the current tree at **15 findings**, but two of them were **false positives on correct code**: it flagged any `{identifier:` inside a payload, which fires on `step-01` §3's `JSON.stringify({ valid: …, id })` and on `step-04` §5c's authored options object — both authored literals whose values are quoted strings, both of which paste fine. A check that fires on correct input has no discriminating power, the same defect as one that never fires. Narrowed to two rules that discriminate: an interpolated **object-valued placeholder**, and a literal `...` ellipsis. Re-run: **12 findings across 9 blocks**, and `tests/audit/run-block-transport.test.js` now pins the non-firing case explicitly.
+
+**Two test-fixture failures read rather than treated as RED.** `run-context.test.js` first failed on `composition_pattern: 'independent'` (the validator wants `Independent`) and then on a missing `schema_version` — my fixture, not the code, which is `tf-2-13`'s recorded trap. Rebuilt the fixture from `tests/team-factory/fixtures/test-team-spec.yaml`, the module's canonical example, instead of assembling it field by field.
+
 ### Debug Log References
 
 ### Completion Notes List
 
+**Task 2 (AC#1) — the other four blocks.**
+
+`step-01` §4 could never run: a literal `...` is not valid JavaScript, and `{kebab}`/`{id1}` were defined nowhere. It **cannot** use Task 1's context file — that is a Step-4 artifact and §4 runs before §5 creates the spec — and the order **cannot be inverted**, because §5 populates the spec with the overlap acknowledgments §4 produces. §4 now writes its own scoping scratch file one agent at a time, and `step-01-scope.md` gained the Placeholders table it never had. Capabilities are pipe-separated so a comma inside one cannot split the list.
+
+`step-05` §3's block was **deleted**. `run: node -e "require('…/validator.js')" logic` required a module, called nothing, asserted nothing, and trailed a bare `logic` token. It could not fail, which made it worse than absent: it read as a regression check while performing none.
+
+The two scalar blocks were confirmed **by execution**: the cascade block returns a decision set for `Independent`, and the naming block returns `{"valid":true}` for `knowledge-surveyor` and `{"valid":false}` for `Bad_Id9` — it can say no, so it is a check.
+
+**Task 3 (AC#3) — `T163`(a). Three predicates became one, by deletion.**
+
+`spec-parser.js::isContainedOutputDirectory` and `config-creator.js::assertContainedOutputDirectory` were near-copies; `ensureOutputDirectory` carried a third, inline, that disagreed with both. All three are gone; `lib/utils/output-directory.js` is the only implementation. Patching `startsWith('..')` would have been a fourth.
+
+**The agreement suite found a live bug the unification itself created, before it could ship.** The shared predicate accepts a `{project-root}/`-prefixed value — it must, because `buildConfigData`'s bypass path produces one — and `ensureOutputDirectory` then resolved it literally, creating a directory **named `{project-root}`** inside the repo. The old inline guard hid this by rejecting every prefixed value outright, which is not agreement but a second opinion. It now strips before resolving.
+
+**A correction to the case table, made before it drove the code.** `_bmad-output/a/../b` was listed as rejected, reasoned as *"the abort manifest records the value it was GIVEN"*. False — `ensureOutputDirectory` returns the RESOLVED path and that is what the manifest records. Moved to the accepted block with the wrong reasoning kept, because it is tempting.
+
+23 cases × 4 call sites, one table (`shared-test-constants`). Three separate suites is what let the predicates drift apart in the first place.
+
+**Task 1 (AC#1, AC#2) — `T136`. The transport is a file path; no block builds an object in a shell string.**
+
+`{spec_data}` needed **no new mechanism**: `step-01` §5 already writes `team-spec-<kebab>.yaml` and `parseSpec` already takes a path, so blocks now call `run-context.js::loadSpec('{spec_path}')`. Writing the spec to a second JSON file — which the story's first draft proposed — would have duplicated on-disk state, the drift class Task 3 exists to delete. `{generation_context}` is the one genuinely new file.
+
+`{agent_file_paths}` was **deleted rather than converted**. It was a second name for `{generation_context}.agent_files` and the two could disagree; blocks now read the context key. That is one placeholder fewer, not one more.
+
+**The `expect:` lines no longer ask the executor to remember.** §5a-ii, §5c and §5d record their own results into the context file as part of the block. `T164`(b) — "§5d never instructs the executor to record `registry_wiring_result`" — is closed structurally rather than by adding an instruction a driver can skip.
+
+`readContext` **throws on absence** rather than returning `{}`. `step-05`'s own caveat documented what `{}` produces: `checkConfig`/`checkActivation`/`checkRegistryWiring` reporting false failures on a correctly generated team. That caveat is now corrected rather than left standing (AC#2).
+
+Verified with `description: He said "go" — it's fine` — both quote characters, the case `T136` is filed on — round-tripping through `loadSpec`.
+
+### Round 1 Review — 2026-09-14 (Tasks 1–3 only, at the landing point)
+
+Self-review, and **that is the limit worth stating**: per `feedback_independent_review_beats_more_rounds`, a self-review of one's own work finds mechanical errors and misses judgement errors. Three of the four findings below are mechanical. Independent layers have not seen this code.
+
+**R1-1 — two lint errors in new code.** `preserve-caught-error` at both `readContext` throws. `npm run lint` says nothing here (`_bmad/` is excluded, `I126`); found by running `eslint --no-ignore` over the changed set. `cause` attached to both. **Re-run clean, exit 0.**
+
+**R1-2 — I had rewritten 8 `run:` blocks without executing one.** The module's named recurring fault, in the story that exists to fix it. Executed §5a and §5a-ii verbatim against a spec whose `description` is `He said "go" — it's fine`: `createConfig` returns `success:true`, the generated `config.yaml` carries the description with **both quote characters intact**, and §5a-ii wrote `output_directory_path` into the context file **with no executor instruction** — `T164`(b) closed structurally, demonstrated rather than argued.
+
+**R1-3 — the gate was not wired, so it was documentation.** Added to `ci.yml`'s `agent-surface-parity` job, which is in `publish.needs`; a block a contributor cannot paste now blocks a release.
+
+**R1-4 — falsifiability, both rules, on a COPY.** `verification-must-be-falsifiable` requires a new gate to fail on purpose before shipping. Two mutants on a copied workflow tree — an interpolated `{spec_data}` restored, and a literal `...` restored — each killed by its own rule and by no other; restoring gave 0 findings. **Deliberately on a copy**: `project_review_rounds_correct_their_own_corrections` records a mutation harness silently reverting a real fix in the working tree. `git status` confirmed only the four intended workflow files changed.
+
+**R1-5 — HIGH, and found only by executing the remaining nine blocks. A defect Task 1 itself introduced.**
+
+R1-2 closed the "never executed" gap for two blocks. Running the other nine found that **§5a and §5b never recorded the paths their consumers read.** `end-to-end-validator.js::checkConfig` reads `ctx.config_yaml_path` and `checkCsv` reads `ctx.module_help_csv_path`; under the old design the executor populated the whole context by hand, but once blocks self-record, a key no block records simply never arrives. Measured on a real generated team: **CONFIG-EXISTS and CSV-EXISTS both FAIL** on a team whose config and CSV are present and correct on disk.
+
+That is precisely the false-failure class this story exists to remove — `step-05`'s own caveat describes it — reintroduced by the fix for it. Both blocks now record; five of the eleven self-record in total.
+
+**Re-run after the fix, on a real generated team:**
+
+```
+PASS CONFIG-EXISTS · CONFIG-PARSEABLE · CONFIG-REQUIRED-FIELDS
+PASS CSV-EXISTS · CSV-HEADER · CSV-ROW-COUNT
+PASS AGENT-FILE-EXISTS · REGISTRY-WIRING · ACTIVATION-VALID · REGISTRY-REGRESSION
+FAIL VORTEX-REGRESSION          <- T128, Task 6, still open
+```
+
+**This also settles AC#6's open question.** The story recorded that `valid === true` being reachable was *"a reading, not a demonstration"*, and warned that `tf-2-11`'s AC#7 was unachievable for exactly that reason. Ten of eleven checks now pass on a real generated team and the only failure is `T128` itself, so no second blocker of that kind exists. Reasoned → executed.
+
+**Not a defect, recorded because the probe was wrong and the code was right:** my §8 check read `m.created.length`. `manifest-tracker.js::buildManifest` returns an **array** of `{path, operation, module}` entries, not a `{created, modified}` object. Corrected the probe, not the code — 5 entries, 4 created, 1 modified.
+
+**Not found by this review, and stated so it is not mistaken for coverage:** whether the transport choice is right, whether the context file belongs where it is, and whether Tasks 4–8 will fit the shape Tasks 1–3 set. Those are judgement calls a self-review cannot reach.
+
 ### File List
+
+- `_bmad/bme/_team-factory/lib/utils/run-context.js` — **new.** `loadSpec`, `initContext`, `readContext`, `recordContext`, `writeAtomic`
+- `scripts/audit/run-block-transport.js` — **new.** The gate for AC#1
+- `tests/team-factory/run-context.test.js` — **new.** 20 tests
+- `tests/audit/run-block-transport.test.js` — **new.** 15 tests
+- `_bmad/bme/_team-factory/workflows/add-team/step-02-connect.md` — §5 block
+- `_bmad/bme/_team-factory/workflows/add-team/step-04-generate.md` — §Placeholders, §5a, §5a-ii, §5b, §5c, §5d, §8
+- `_bmad/bme/_team-factory/workflows/add-team/step-05-validate.md` — §2 block, persistence caveat
+- `_bmad/bme/_team-factory/lib/utils/output-directory.js` — **new.** The one containment predicate
+- `tests/team-factory/output-directory-cases.js` — **new.** The shared case table, 23 cases
+- `tests/team-factory/output-directory.test.js` — **new.** 118 tests across 4 call sites
+- `_bmad/bme/_team-factory/lib/spec-parser.js` — copy deleted, imports the shared predicate
+- `_bmad/bme/_team-factory/lib/writers/config-creator.js` — copy + inline guard deleted; strips before resolving
+- `_bmad/bme/_team-factory/workflows/add-team/step-01-scope.md` — new Placeholders table, §4 rewritten
+- `.github/workflows/ci.yml` — wires the run-block gate into `agent-surface-parity` (in `publish.needs`)
 
 ## Change Log
 

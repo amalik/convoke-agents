@@ -6,6 +6,20 @@ Guide the contributor through defining their team's composition pattern, agents,
 ## Prerequisites
 - Step 00 (Route) completed — contributor confirmed "Create Team"
 
+## Placeholders used in this step
+
+`step-04-generate.md` carries this table because *"a name that appears in exactly one command and is defined nowhere cannot be resolved by whoever drives the flow"*. This step had no table and two such names: the collision block used `{kebab}` and `{id1}`, neither defined anywhere, alongside a literal `...` that is not valid JavaScript. Both are gone.
+
+| Placeholder | Resolves to |
+|---|---|
+| `{project-root}` | absolute path to the repository root |
+| `{team_name_kebab}` | the team's kebab name, e.g. `pilot-test`. **Not `{kebab}`** — that spelling appeared once, in one command, defined nowhere |
+| `{agent_id}` | one agent's kebab id, as collected in §3 |
+| `{role}` | that agent's one-sentence role, as collected in §3 |
+| `{capabilities}` | that agent's capabilities, **pipe-separated** (`a\|b\|c`). Pipes rather than commas so a comma inside a capability cannot split the list |
+| `{pattern}` | `Independent` or `Sequential`, as chosen in §2 |
+| `{scope_path}` | a PATH to the scoping scratch file this step writes in §4. It exists because §4 runs **before** §5 creates the spec, so there is nothing else on disk to read, and because §5 consumes the acknowledgments §4 produces — the order cannot be inverted |
+
 ## Execution Sequence
 
 ### 1. Team Identity
@@ -69,9 +83,26 @@ expect: result.valid === true → proceed
 
 ### 4. Overlap Detection
 
-After all agents are defined, run collision detection:
+After all agents are defined, run collision detection.
+
+**Write the inventory to a file first.** The spec does not exist yet — §5 *Save Progress* creates it, and §5 needs the overlap acknowledgments this section produces, so the order cannot be inverted. Write what you have just collected to a scratch file:
+
 ```
-run: node -e "const cd = require('{project-root}/_bmad/bme/_team-factory/lib/collision-detector.js'); cd.detectCollisions({team_name_kebab: '{kebab}', agents: [{id: '{id1}'}, ...]}, '{project-root}/_bmad/_config/agent-manifest.csv', '{project-root}/_bmad/bme/').then(r => console.log(JSON.stringify(r, null, 2)))"
+run: node -e "require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js').initContext('{scope_path}', { team_name_kebab: '{team_name_kebab}', agents: [] })"
+expect: the file exists — it is overwritten on each run, so a re-scope never inherits a previous inventory
+```
+
+Then append each agent you collected in §3, one command per agent, so no JSON is ever pasted:
+
+```
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), c = rc.readContext('{scope_path}'); c.agents.push({ id: '{agent_id}', role: '{role}', capabilities: '{capabilities}'.split('|') }); rc.recordContext('{scope_path}', 'agents', c.agents)"
+expect: repeat once per agent; `{capabilities}` is pipe-separated so a comma inside a capability cannot split it
+```
+
+Now detect collisions against the file:
+
+```
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), cd = require('{project-root}/_bmad/bme/_team-factory/lib/collision-detector.js'); cd.detectCollisions(rc.readContext('{scope_path}'), '{project-root}/_bmad/_config/agent-manifest.csv', '{project-root}/_bmad/bme/').then(r => console.log(JSON.stringify(r, null, 2)))"
 expect: result.hasBlocking === false → proceed with optional warnings
         result.hasBlocking === true → display blocks, ask contributor to rename
         result.warnings.length > 0 → display warnings, ask contributor to acknowledge or rename

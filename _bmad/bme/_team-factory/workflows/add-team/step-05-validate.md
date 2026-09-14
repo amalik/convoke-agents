@@ -7,7 +7,9 @@ Run comprehensive validation on the generated team, produce a file manifest, col
 - Step 04 (Generate) completed — all files created and wired
 - Spec file has progress.generate = "complete" (or all agent sub-entries complete)
 
-> **`{generation_context}`** is the object accumulated during Step 4. Its full shape, and which consumer reads each key, is defined in `step-04-generate.md` §Placeholders — including **`contract_files`**, which `checkContractFiles` (`end-to-end-validator.js:217`) iterates and which passes **vacuously** when absent. `validateTeam` requires the object as its second argument. It is an in-memory Step-4 value with no persistence mechanism: if Step 4 and Step 5 are run in separate sessions it is gone, and `checkConfig`/`checkActivation`/`checkRegistryWiring` will report false failures on a correctly generated team. Re-run Step 4's §5 wiring to rebuild it rather than passing `{}`.
+> **`{context_path}`** is the path to the generation context Step 4 accumulated. Its shape, and which consumer reads each key, is defined in `step-04-generate.md` §Placeholders — including **`contract_files`**, which `end-to-end-validator.js::checkContractFiles` iterates and which passes **vacuously** when absent.
+>
+> **It persists.** This paragraph used to say the context was an in-memory Step-4 value with no persistence mechanism — gone if Steps 4 and 5 ran in separate sessions, with `checkConfig`/`checkActivation`/`checkRegistryWiring` reporting false failures on a correctly generated team, and the only remedy being to re-run Step 4's §5 wiring. Since tfr-1-1 it is a JSON file on disk, so Step 5 reads what Step 4 wrote regardless of session. **Never pass `{}`**: `run-context.js::readContext` throws when the file is absent precisely so a lost context fails loudly instead of masquerading as a broken team.
 
 ## Execution Sequence
 
@@ -20,7 +22,7 @@ Read the spec file and the generation manifest (list of all created/modified fil
 Run the full validation suite:
 
 ```
-run: node -e "const v = require('{project-root}/_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js'); v.validateTeam({spec_data}, {generation_context}, '{project-root}').then(r => console.log(JSON.stringify(r, null, 2)))"
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), v = require('{project-root}/_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js'); rc.loadSpec('{spec_path}').then(s => v.validateTeam(s, rc.readContext('{context_path}'), '{project-root}')).then(r => console.log(JSON.stringify(r, null, 2)))"
 expect: result.valid === true → all checks passed
         result.valid === false → display failing checks with details
 ```
@@ -53,12 +55,9 @@ The end-to-end validator checks:
 
 ### 3. Regression Check
 
-Verify that existing teams still pass validation:
-```
-run: node -e "require('{project-root}/scripts/update/lib/validator.js')" logic
-```
+Run by `validateTeam` in §2 — there is no separate command here.
 
-This confirms the factory's changes to shared files (agent-registry.js) didn't break existing teams.
+**A block was deleted from this section (tfr-1-1).** It read `run: node -e "require('{project-root}/scripts/update/lib/validator.js')" logic`: it `require`d a module, called nothing, asserted nothing, and trailed a bare `logic` token that is not part of any command. It could not fail, which made it worse than absent — it read as a regression check while performing none. The real check is `end-to-end-validator.js::checkVortexRegression`, which §2 already runs as part of `validateTeam` and which tfr-1-1 rewrote to ask a differential question (see `T128`).
 
 ### 4. Display Results
 

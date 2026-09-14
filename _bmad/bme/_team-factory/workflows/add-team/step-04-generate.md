@@ -14,13 +14,13 @@ Every `run:` block below substitutes these. They are listed because a name that 
 | Placeholder | Resolves to |
 |---|---|
 | `{project-root}` | absolute path to the repository root. Framework-wide convention, listed here because line above claims this table is complete |
-| `{spec_data}` | the parsed spec object from `team-spec-{team_name_kebab}.yaml` (see `spec-parser.js::parseSpec` → `.spec`) |
+| `{spec_path}` | **a PATH, not an object.** `_bmad-output/planning-artifacts/team-spec-{team_name_kebab}.yaml` — the file `step-01` §5 already wrote. Blocks parse it themselves via `run-context.js::loadSpec`, which wraps `spec-parser.js::parseSpec` and throws rather than handing a writer `undefined`. **There is no second copy of the spec**: duplicating on-disk state is the drift class this module keeps paying for |
 | `{team_name_kebab}` | the team's kebab name, e.g. `pilot-test` |
 | `{module_root}` | absolute path to `_bmad/bme/_{team_name_kebab}` |
 | `{config_path}` | the config reference **as agents write it**: `{project-root}/_bmad/bme/_{team_name_kebab}/config.yaml`. Pass this placeholder form, not a resolved path — `activation-validator.js` check 2 accepts either, but the convention form is what agent files contain |
-| `{agent_file_paths}` | a JS **array** of absolute paths to the generated agent `.md` files. `validateActivation` takes an array; a bare string iterates character-by-character |
+| ~~`{agent_file_paths}`~~ | **Removed.** It was a second name for `{generation_context}.agent_files`, and the two could disagree. Blocks now read `rc.readContext('{context_path}').agent_files`. `validateActivation` takes an array; a bare string iterates character-by-character, which is why the value must come from one place |
 | `{registry_path}` | absolute path to `scripts/update/lib/agent-registry.js` |
-| `{generation_context}` | object accumulated across §3-§5, consumed by §8 `buildManifest` and by `step-05`'s `validateTeam`. **Every key below is read by at least one consumer — omitting one does not raise, it silently drops checks:**<br>`module_root`, `agent_files`, `workflow_dirs`, `generated_files`, `config_yaml_path`, `module_help_csv_path`, **`contract_files`** (Sequential only — `end-to-end-validator.js:217` and `manifest-tracker.js:37` both iterate it; omit it and `checkContractFiles` emits **zero** checks and passes vacuously, and the abort manifest omits every contract file), `output_directory_path` (absolute path returned by §5a-ii — the one generated artefact living outside `module_root`, so the abort path only removes it if the manifest lists it), `workflow_step_files`, `guide_files`, `readme_path` (all three read by `manifest-tracker.js`; omit one and the abort path leaves that file behind), `activation_validation_results` (**the whole `{valid, results}` object returned by §5c, not `results[]`** — `end-to-end-validator.js:257` reads `.valid`), `registry_wiring_result` (the whole object returned by §5d) |
+| `{context_path}` | **a PATH, not an object.** A JSON file holding the generation context, created by §1 and updated as the run proceeds. Previously this lived only in the executor's head, which `step-05-validate.md` recorded as a live hazard: run steps 4 and 5 in separate sessions and it was gone, and `checkConfig`/`checkActivation`/`checkRegistryWiring` then reported **false failures on a correctly generated team**. Blocks read it with `run-context.js::readContext`, which **throws when the file is absent** rather than returning `{}` — an empty context is indistinguishable from a lost one, and `{}` is what produced those false failures. Keys, every one read by at least one consumer: `module_root`, `agent_files`, `workflow_dirs`, `generated_files`, `config_yaml_path`, `module_help_csv_path`, **`contract_files`** (Sequential only — omit it and `checkContractFiles` emits **zero** checks and passes vacuously, and the abort manifest omits every contract file), `output_directory_path`, `workflow_step_files`, `guide_files`, `readme_path`, `activation_validation_results` (**the whole `{valid, results}` object**), `registry_wiring_result` (the whole object returned by §5d), `vortex_baseline` (§1, read by `checkVortexRegression`) |
 
 ## Execution Sequence
 
@@ -102,36 +102,36 @@ For each contract in the spec:
 
 **5a. Config Creation**
 ```
-run: node -e "const cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); cc.createConfig({spec_data}, '{module_root}/config.yaml', '{project-root}/_bmad/bme/').then(r => console.log(JSON.stringify(r)))"
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); rc.loadSpec('{spec_path}').then(s => cc.createConfig(s, '{module_root}/config.yaml', '{project-root}/_bmad/bme/')).then(r => { if (r.success) rc.recordContext('{context_path}', 'config_yaml_path', r.filePath); console.log(JSON.stringify(r)); })"
 expect: result.success === true
 ```
 
 **5a-ii. Output Directory Creation**
 The team's artifact directory is NOT created by any writer — each `ensureDir` above makes only the parent of the file it is writing. Create it explicitly, or the first workflow to produce an artifact fails on a missing path (tf-2-13, T133e; predicted by tf-2-11 Risk #3).
 ```
-run: node -e "const cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); cc.ensureOutputDirectory({spec_data}, '{project-root}').then(r => console.log(JSON.stringify(r)))"
-expect: result.success === true → record result.path as `{generation_context}.output_directory_path` so §8's manifest lists it and the abort path removes it
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); rc.loadSpec('{spec_path}').then(s => cc.ensureOutputDirectory(s, '{project-root}')).then(r => { if (r.success) rc.recordContext('{context_path}', 'output_directory_path', r.path); console.log(JSON.stringify(r)); })"
+expect: result.success === true → the block has already written `output_directory_path` into `{context_path}`, so §8's manifest lists it and the abort path removes it. Confirm with `node -e "console.log(require('{context_path}').output_directory_path)"`
         result.success === false → display result.errors, fix before continuing
 ```
 
 **5b. CSV Creation**
 ```
-run: node -e "const csv = require('{project-root}/_bmad/bme/_team-factory/lib/writers/csv-creator.js'); csv.createCsv({spec_data}, '{module_root}/module-help.csv').then(r => console.log(JSON.stringify(r)))"
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), csv = require('{project-root}/_bmad/bme/_team-factory/lib/writers/csv-creator.js'); rc.loadSpec('{spec_path}').then(s => csv.createCsv(s, '{module_root}/module-help.csv')).then(r => { if (r.success) rc.recordContext('{context_path}', 'module_help_csv_path', r.filePath); console.log(JSON.stringify(r)); })"
 expect: result.success === true
 ```
 
 **5c. Activation Validation (all agents)**
 Runs here, not in §3, because `activation-validator.js` check 3 requires `config.yaml` to exist and §5a has just created it.
 ```
-run: node -e "const av = require('{project-root}/_bmad/bme/_team-factory/lib/writers/activation-validator.js'); av.validateActivation({agent_file_paths}, { configPath: '{config_path}', modulePath: 'bme/_{team_name_kebab}', moduleDir: '{module_root}' }).then(r => console.log(JSON.stringify(r)))"
-expect: result.valid === true → store the WHOLE result object as `{generation_context}.activation_validation_results`, set each `progress.generate.{agent_id}: "complete"`, then proceed to §5d
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), av = require('{project-root}/_bmad/bme/_team-factory/lib/writers/activation-validator.js'); av.validateActivation(rc.readContext('{context_path}').agent_files, { configPath: '{config_path}', modulePath: 'bme/_{team_name_kebab}', moduleDir: '{module_root}' }).then(r => { rc.recordContext('{context_path}', 'activation_validation_results', r); console.log(JSON.stringify(r)); })"
+expect: result.valid === true → the block has already written the WHOLE `{valid, results}` object into `{context_path}` as `activation_validation_results` (`end-to-end-validator.js::checkActivation` reads `.valid`). Set each `progress.generate.{agent_id}: "complete"`, then proceed to §5d
         result.valid === false → display result.results[].errors, fix before continuing; leave progress at "generated" so a resume returns here
 ```
 **Accepted cost of the move (tf-2-12 Decision 2):** feedback is now per-team rather than per-agent — a malformed agent surfaces after all agents are generated instead of immediately after its own. This is a deliberate trade, not a regression; do not "fix" it by moving the gate back without also solving the config-ordering problem.
 
 **5d. Registry Block (Full Write Safety Protocol)**
 ```
-run: node -e "const rw = require('{project-root}/_bmad/bme/_team-factory/lib/writers/registry-writer.js'); rw.writeRegistryBlock({spec_data}, '{registry_path}', { agentFiles: {agent_file_paths} }).then(r => console.log(JSON.stringify(r)))"
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), rw = require('{project-root}/_bmad/bme/_team-factory/lib/writers/registry-writer.js'); rc.loadSpec('{spec_path}').then(s => rw.writeRegistryBlock(s, '{registry_path}', { agentFiles: rc.readContext('{context_path}').agent_files })).then(r => { rc.recordContext('{context_path}', 'registry_wiring_result', r); console.log(JSON.stringify(r)); })"
 expect: result.success === true → proceed
         result.dirty === true → warn contributor, ask for confirmation
         result.success === false → display errors, attempt rollback
@@ -167,7 +167,7 @@ Generate `README.md` with:
 
 Track all created and modified files:
 ```
-run: node -e "const mt = require('{project-root}/_bmad/bme/_team-factory/lib/manifest-tracker.js'); console.log(JSON.stringify(mt.buildManifest({spec_data}, {generation_context})))"
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), mt = require('{project-root}/_bmad/bme/_team-factory/lib/manifest-tracker.js'); rc.loadSpec('{spec_path}').then(s => console.log(JSON.stringify(mt.buildManifest(s, rc.readContext('{context_path}')))))"
 ```
 
 ### 9. Save Progress
