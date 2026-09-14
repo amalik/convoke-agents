@@ -3,7 +3,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { toKebab, deriveWorkflowName } = require('../utils/naming-utils');
+const { deriveWorkflowName } = require('../utils/naming-utils');
 
 /** @typedef {import('../types/factory-types')} Types */
 
@@ -49,9 +49,16 @@ async function writeRegistryBlock(specData, registryPath, options = {}) {
   // nothing of the agent files — so personas stayed empty even once extraction existed.
   // Keyed by agent id via basename, so ordering of `options.agentFiles` does not matter.
   // Omitting `agentFiles` preserves the previous behaviour exactly.
+  //
+  // tfr-1-1 (T164a): `Array.isArray(...) ? ... : []` silently swallowed every unusable
+  // value — a bare string, an object, a typo'd option name — and produced a registry
+  // with empty personas and `success: true`. Omission stays legitimate (the appender
+  // and older callers rely on it); anything PRESENT and unusable is reported.
   const personas = {};
-  const agentFiles = Array.isArray(options.agentFiles) ? options.agentFiles : [];
+  const { agentFiles, agentFilesIssues } = normalizeAgentFiles(options.agentFiles);
+  const missingAgentFiles = [];
   for (const agentFile of agentFiles) {
+    if (!(await fs.pathExists(agentFile))) missingAgentFiles.push(agentFile);
     personas[agentIdFromPath(agentFile)] = await extractPersonaFromAgentFile(agentFile);
   }
 
@@ -123,8 +130,96 @@ async function writeRegistryBlock(specData, registryPath, options = {}) {
     written: [`${prefix}_AGENTS`, `${prefix}_WORKFLOWS`, `${prefix}_AGENT_FILES`, `${prefix}_AGENT_IDS`, `${prefix}_WORKFLOW_NAMES`],
     skipped: [],
     errors: [],
-    rollbackApplied: false
+    rollbackApplied: false,
+    // tfr-1-1 (T164a). Coverage is a DIFFERENT FACT from write success and is reported
+    // as its own field. `success` deliberately keeps its meaning — it has been rewritten
+    // four times already and the story's §Trap forbids a fifth. What stops a hollow team
+    // is `end-to-end-validator.js::checkPersonaCoverage`, which reads the registry on
+    // disk rather than trusting this report.
+    personaCoverage: personaCoverage(specData, personas, { agentFilesIssues, missingAgentFiles })
   };
+}
+
+/**
+ * Normalise `options.agentFiles` without swallowing an unusable value.
+ *
+ * Omission is legitimate and yields no issue — `registry-appender` and pre-T131 callers
+ * pass nothing, and the header comment on the persona loop promises that omitting it
+ * "preserves the previous behaviour exactly". Anything else that is not an array of
+ * non-empty strings is REPORTED, because the previous `Array.isArray(x) ? x : []` turned
+ * `agentFiles: '/path/one.md'` (a plausible single-file call) into zero personas, a
+ * registry of empty entries, and `success: true`.
+ *
+ * @param {*} input - the raw `options.agentFiles`
+ * @returns {{agentFiles: string[], agentFilesIssues: string[]}}
+ */
+function normalizeAgentFiles(input) {
+  if (input === undefined || input === null) return { agentFiles: [], agentFilesIssues: [] };
+  if (typeof input === 'string') {
+    return { agentFiles: [], agentFilesIssues: [`options.agentFiles is a string (${JSON.stringify(input)}); an array of paths is required`] };
+  }
+  if (!Array.isArray(input)) {
+    return { agentFiles: [], agentFilesIssues: [`options.agentFiles is ${typeof input}; an array of paths is required`] };
+  }
+  const agentFiles = [];
+  const agentFilesIssues = [];
+  for (const entry of input) {
+    if (typeof entry !== 'string' || entry.trim() === '') {
+      agentFilesIssues.push(`options.agentFiles contains a non-path entry: ${JSON.stringify(entry)}`);
+      continue;
+    }
+    agentFiles.push(entry);
+  }
+  return { agentFiles, agentFilesIssues };
+}
+
+/**
+ * Report which declared agents end up with a non-empty persona in the registry entry.
+ *
+ * Classification goes through `buildAgentEntry` — the same function `buildModuleBlock`
+ * uses — so "has a persona" here cannot drift from what is actually written. Computing
+ * it from the extracted `personas` map alone would under-report: an agent carrying an
+ * explicit `spec.persona` or a bare `spec.role` is covered without any extraction.
+ *
+ * Counts are derived from `specData.agents` at call time (`derive-counts-from-source`);
+ * nothing here is hardcoded.
+ *
+ * @param {Object} specData
+ * @param {Object} personas - agent id → extracted persona
+ * @param {Object} [issues]
+ * @param {string[]} [issues.agentFilesIssues]
+ * @param {string[]} [issues.missingAgentFiles]
+ * @returns {{covered: string[], empty: string[], agentFilesIssues: string[], missingAgentFiles: string[]}}
+ */
+function personaCoverage(specData, personas = {}, issues = {}) {
+  const covered = [];
+  const empty = [];
+  for (const agentSpec of ((specData && specData.agents) || [])) {
+    const entry = buildAgentEntry(agentSpec, specData.team_name_kebab, personas[agentSpec.id]);
+    (hasPersona(entry.persona) ? covered : empty).push(entry.id);
+  }
+  return {
+    covered,
+    empty,
+    agentFilesIssues: issues.agentFilesIssues || [],
+    missingAgentFiles: issues.missingAgentFiles || [],
+  };
+}
+
+/**
+ * A persona is empty when no field carries text — the shape T131 was filed on, where
+ * every agent landed with `{role: '', identity: '', communication_style: '', expertise: ''}`.
+ *
+ * Deliberately not "every field is populated": partial personas are a quality question
+ * this story was not scoped to rule on, and gating on them would fail teams the factory
+ * builds correctly today.
+ *
+ * @param {Object} persona
+ * @returns {boolean}
+ */
+function hasPersona(persona) {
+  if (!persona || typeof persona !== 'object') return false;
+  return Object.values(persona).some(v => typeof v === 'string' && v.trim() !== '');
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -745,6 +840,9 @@ if (require.main === module) {
 
 module.exports = {
   writeRegistryBlock,
+  normalizeAgentFiles,
+  personaCoverage,
+  hasPersona,
   agentIdFromPath,
   extractPersonaFromAgentFile,
   derivePrefix,

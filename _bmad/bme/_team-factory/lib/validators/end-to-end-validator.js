@@ -3,7 +3,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('js-yaml');
-const { verifyRequire, buildExportNames } = require('../writers/registry-writer');
+const { verifyRequire, buildExportNames, derivePrefix, hasPersona } = require('../writers/registry-writer');
 const { parseCsvRow } = require('../utils/csv-utils');
 
 /** @typedef {import('../types/factory-types').E2EValidationResult} E2EValidationResult */
@@ -34,10 +34,11 @@ async function validateTeam(specData, generationContext, projectRoot) {
   // --- Wiring checks ---
   checks.push(checkRegistryWiring(generationContext));
   checks.push(checkActivation(generationContext));
+  checks.push(checkPersonaCoverage(specData, generationContext, projectRoot));
 
   // --- Regression checks ---
   checks.push(checkRegistryRegression(projectRoot));
-  checks.push(await checkVortexRegression(projectRoot));
+  checks.push(await checkVortexRegression(projectRoot, generationContext.vortex_baseline));
 
   const valid = checks.every(c => c.passed);
   if (!valid) {
@@ -288,34 +289,85 @@ function checkRegistryRegression(projectRoot) {
 }
 
 /**
- * Run existing Vortex validateInstallation() to confirm native team still passes.
+ * Run `validateInstallation` and reduce it to the set of failing check names.
+ *
+ * Shared by the baseline capture and the post-generation read so the two can never
+ * disagree about what "failing" means. Throws rather than returning a shape the caller
+ * would have to guess at: a baseline that silently came back empty would turn the
+ * differential into a check that can only pass.
+ *
  * @param {string} projectRoot
- * @returns {Promise<E2ECheck>}
+ * @returns {Promise<{valid: boolean, failing: string[]}>}
  */
-async function checkVortexRegression(projectRoot) {
+async function runVortexValidation(projectRoot) {
   const validatorPath = path.join(projectRoot, 'scripts/update/lib/validator.js');
   if (!fs.existsSync(validatorPath)) {
+    throw new Error(`validator.js not found at ${validatorPath}`);
+  }
+  const { validateInstallation } = require(validatorPath);
+  const result = await validateInstallation({}, projectRoot);
+  return {
+    valid: result.valid === true,
+    failing: (result.checks || []).filter(c => !c.passed).map(c => c.name).sort(),
+  };
+}
+
+/**
+ * Capture the pre-generation Vortex baseline for `{generation_context}.vortex_baseline`.
+ *
+ * tfr-1-1 Task 6 (T128). MUST run before Step 4 §5d writes to `agent-registry.js` —
+ * `step-04-generate.md` §1 is where the flow calls it. A "baseline" taken after the
+ * write measures nothing, because the write is the thing being measured.
+ *
+ * @param {string} projectRoot
+ * @returns {Promise<{valid: boolean, failing: string[]}>}
+ */
+async function captureVortexBaseline(projectRoot) {
+  return runVortexValidation(projectRoot);
+}
+
+/**
+ * Ask whether generation BROKE anything that was working before it ran.
+ *
+ * T128. The old form asked `validateInstallation(...).valid === true` — an absolute
+ * question put to an *installation* validator against a *source* tree, where the
+ * Enhance, Artifacts and Portability modules report missing by design because their
+ * skill wrappers are install-time artifacts. It could not return true in this repo, and
+ * `end-to-end-validator.test.js` had settled for asserting the check merely *existed*,
+ * under a comment excusing the red as "pre-existing project state". That is a check that
+ * can only fail paired with a test that can only pass.
+ *
+ * The differential is a SET containment, not a count: `post ⊆ baseline`. A count
+ * comparison would pass a run that fixed one module and broke another, which is exactly
+ * the regression this check exists to catch.
+ *
+ * **Fail-closed on a missing or unusable baseline.** A run whose Step 4 §1 never
+ * captured one cannot answer the question, and answering it vacuously would restore the
+ * defect in the opposite direction (`verification-must-be-falsifiable`).
+ *
+ * @param {string} projectRoot
+ * @param {{valid?: boolean, failing?: string[]}} [baseline] - from `{generation_context}.vortex_baseline`
+ * @returns {Promise<E2ECheck>}
+ */
+async function checkVortexRegression(projectRoot, baseline) {
+  const validatorPath = path.join(projectRoot, 'scripts/update/lib/validator.js');
+  const base = baseline && Array.isArray(baseline.failing) ? baseline.failing : null;
+  if (base === null) {
     return {
       name: 'VORTEX-REGRESSION',
       stepName: 'regression',
       passed: false,
-      expected: 'validator.js exists',
-      actual: `validator.js not found at ${validatorPath}`,
+      expected: 'a pre-generation baseline at {generation_context}.vortex_baseline',
+      actual: baseline === undefined || baseline === null
+        ? 'no baseline recorded — step-04 §1 did not capture one, so a regression cannot be distinguished from pre-existing state'
+        : `unusable baseline (no .failing array): ${JSON.stringify(baseline)}`,
       detail: validatorPath,
     };
   }
+
+  let post;
   try {
-    const { validateInstallation } = require(validatorPath);
-    const result = await validateInstallation({}, projectRoot);
-    const failedChecks = (result.checks || []).filter(c => !c.passed);
-    return {
-      name: 'VORTEX-REGRESSION',
-      stepName: 'regression',
-      passed: result.valid === true,
-      expected: 'all Vortex checks pass',
-      actual: result.valid ? 'all Vortex checks pass' : `${failedChecks.length} check(s) failed: ${failedChecks.map(c => c.name).join(', ')}`,
-      detail: validatorPath,
-    };
+    post = await runVortexValidation(projectRoot);
   } catch (err) {
     return {
       name: 'VORTEX-REGRESSION',
@@ -323,10 +375,99 @@ async function checkVortexRegression(projectRoot) {
       passed: false,
       expected: 'validateInstallation() succeeds',
       actual: `error: ${err.message}`,
-      detail: path.join(projectRoot, 'scripts/update/lib/validator.js'),
+      detail: validatorPath,
     };
   }
+
+  const regressions = post.failing.filter(name => !base.includes(name));
+  const repaired = base.filter(name => !post.failing.includes(name));
+  return {
+    name: 'VORTEX-REGRESSION',
+    stepName: 'regression',
+    passed: regressions.length === 0,
+    expected: 'no Vortex check fails that was passing before generation',
+    actual: regressions.length === 0
+      ? 'no Vortex check regressed'
+      : `regressed: ${regressions.join(', ')}`,
+    detail: repaired.length > 0 ? `also now passing: ${repaired.join(', ')}` : undefined,
+  };
 }
+
+/**
+ * Fail when a declared agent reached the registry with an empty persona.
+ *
+ * T164a. This reads `agent-registry.js` ON DISK rather than
+ * `ctx.registry_wiring_result.personaCoverage`, deliberately: the writer's own report is
+ * the thing being checked. `writeRegistryBlock` returned `success: true` on a registry of
+ * empty personas for the whole of tf-2-13, and a gate that asks the writer whether the
+ * writer did its job reproduces that.
+ *
+ * The in-process require cache is cleared first — within one process the registry may
+ * have been required before Step 4 wrote to it, and a cached copy would report the
+ * pre-write state as the result.
+ *
+ * The path comes from `ctx.registry_path` — the value §5d actually wrote to — rather
+ * than being re-derived from `projectRoot`. Re-deriving would let the gate inspect a
+ * different file from the one the writer touched, which is the whole failure mode this
+ * check exists to close. The convention path remains the fallback for a context written
+ * before §5d recorded the key.
+ *
+ * @param {Object} specData
+ * @param {Object} ctx - generation context
+ * @param {string} projectRoot
+ * @returns {E2ECheck}
+ */
+function checkPersonaCoverage(specData, ctx, projectRoot) {
+  const registryPath = (ctx && ctx.registry_path)
+    ? ctx.registry_path
+    : path.join(projectRoot, 'scripts/update/lib/agent-registry.js');
+  const prefix = derivePrefix((specData && specData.team_name_kebab) || '');
+  const exportName = `${prefix}_AGENTS`;
+  const fail = (actual) => ({
+    name: 'PERSONA-COVERAGE',
+    stepName: 'wiring',
+    passed: false,
+    expected: 'every declared agent has a non-empty persona in the registry',
+    actual,
+    detail: registryPath,
+  });
+
+  let registry;
+  try {
+    delete require.cache[require.resolve(registryPath)];
+    registry = require(registryPath);
+  } catch (err) {
+    return fail(`cannot read registry: ${err.message}`);
+  }
+
+  const entries = registry[exportName];
+  if (!Array.isArray(entries)) {
+    return fail(`${exportName} is not an array in the registry — the module block was not written`);
+  }
+
+  const byId = new Map(entries.map(e => [e && e.id, e]));
+  const declared = ((specData && specData.agents) || []).map(a => a.id);
+  const hollow = declared.filter(id => {
+    const entry = byId.get(id);
+    return !entry || !hasPersona(entry.persona);
+  });
+
+  if (declared.length === 0) {
+    return fail('the spec declares no agents, so persona coverage is unverifiable');
+  }
+  if (hollow.length > 0) {
+    return fail(`empty persona for: ${hollow.join(', ')}`);
+  }
+  return {
+    name: 'PERSONA-COVERAGE',
+    stepName: 'wiring',
+    passed: true,
+    expected: 'every declared agent has a non-empty persona in the registry',
+    actual: `all ${declared.length} declared agent(s) carry a persona`,
+    detail: registryPath,
+  };
+}
+
 
 // ── Extension validation ──────────────────────────────────────────────
 
@@ -895,4 +1036,10 @@ module.exports = {
   validateTeam,
   validateExtension,
   validateSkillExtension,
+  // tfr-1-1: exported so step-04 §1 can capture the baseline through a path-only
+  // `run:` block, and so the differential and the persona gate are testable in
+  // isolation rather than only through a full validateTeam.
+  captureVortexBaseline,
+  checkVortexRegression,
+  checkPersonaCoverage,
 };

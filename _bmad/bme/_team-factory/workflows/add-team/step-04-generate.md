@@ -34,6 +34,8 @@ Every `run:` block below substitutes these. They are listed because a name that 
 | `output_directory_path` | §5a-ii (the block records it) | `manifest-tracker.js`; the abort path removes it |
 | `activation_validation_results` | §5c (the block records it — the WHOLE `{valid, results}` object) | `checkActivation` reads `.valid` |
 | `registry_wiring_result` | §5d (the block records it — the whole object) | `checkRegistryWiring` |
+| `registry_path` | §5d (the block records the path it wrote to) | `checkPersonaCoverage` — it inspects the file the writer TOUCHED, not one re-derived by convention |
+| `vortex_baseline` | §1 (the baseline block) | `checkVortexRegression`; absent ⇒ the check **fails closed**, because a regression cannot be told from pre-existing state without it |
 | `agent_files` | **§3 — you record it** after BMB writes the agent files | `checkAgentFiles`, `manifest-tracker.js`, and §5c/§5d read it as `agentFiles` |
 | `workflow_dirs` | **§3 — you record it** | `checkWorkflowDirs`; absent ⇒ **zero checks emitted** |
 | `workflow_step_files` | **§3 — you record it** | `manifest-tracker.js`; absent ⇒ files left behind on abort |
@@ -70,6 +72,13 @@ Display the plan: "{N} files to create, 1 shared file to modify."
 ```
 run: node -e "require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js').initContext('{context_path}', { module_root: '{module_root}' })"
 expect: the file exists at {context_path}. It is REPLACED on each run — a context left from an abandoned run would carry stale paths into the abort manifest, which emits removal instructions against every `created` entry
+```
+
+**Capture the Vortex baseline — here, and nowhere later.** `step-05`'s `VORTEX-REGRESSION` asks a *differential* question: did generation break something that was working? That needs a reading taken **before §5d writes to `agent-registry.js`**. A baseline captured after the write measures nothing, because the write is the thing being measured. §1 is the last point in the flow where the tree is still untouched.
+
+```
+run: node -e "const ev = require('{project-root}/_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js'), rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'); ev.captureVortexBaseline('{project-root}').then(b => { rc.recordContext('{context_path}', 'vortex_baseline', b); console.log(JSON.stringify(b)); })"
+expect: a JSON object `{"valid": …, "failing": […]}`. In a source tree `valid` is normally `false` and `failing` names the Enhance, Artifacts and Portability modules — their skill wrappers are install-time artifacts absent from the repo by design. **That is the expected reading, not a problem to fix.** The differential compares against it; it never requires it to be empty
 ```
 
 **You record what you generate.** §3, §4, §6 and §7 delegate file creation to BMB; the factory never sees those paths, so it cannot record them for you. After each of those sections, write what it produced into the context with the same command shape:
@@ -166,13 +175,15 @@ expect: result.valid === true → the block has already written the WHOLE `{vali
 
 **5d. Registry Block (Full Write Safety Protocol)**
 ```
-run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), rw = require('{project-root}/_bmad/bme/_team-factory/lib/writers/registry-writer.js'); rc.loadSpec('{spec_path}').then(s => rw.writeRegistryBlock(s, '{registry_path}', { agentFiles: rc.readContext('{context_path}').agent_files })).then(r => { rc.recordContext('{context_path}', 'registry_wiring_result', r); console.log(JSON.stringify(r)); })"
-expect: result.success === true → proceed
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), rw = require('{project-root}/_bmad/bme/_team-factory/lib/writers/registry-writer.js'); rc.loadSpec('{spec_path}').then(s => rw.writeRegistryBlock(s, '{registry_path}', { agentFiles: rc.readContext('{context_path}').agent_files })).then(r => { rc.recordContext('{context_path}', 'registry_wiring_result', r); rc.recordContext('{context_path}', 'registry_path', '{registry_path}'); console.log(JSON.stringify(r)); })"
+expect: the block has already written the WHOLE result object into `{context_path}` as `registry_wiring_result` (`end-to-end-validator.js::checkRegistryWiring` reads `.success` and `.written`), and the path it wrote to as `registry_path` (`checkPersonaCoverage` reads it). Then:
+        result.success === true → proceed
         result.dirty === true → warn contributor, ask for confirmation
         result.success === false → display errors, attempt rollback
+        result.personaCoverage.empty is non-empty, or .agentFilesIssues / .missingAgentFiles are → the write succeeded and the team is hollow. Do not proceed on `success` alone; step-05's PERSONA-COVERAGE gate will refuse it
 ```
 
-**Pass `agentFiles`.** Each agent's `persona.identity`, `.communication_style` and `.expertise` are extracted from the file BMB authored in §3a — the factory already commissions that content and previously discarded it, leaving every generated agent hollow beside the hand-written ones (tf-2-13, T131). Omit `agentFiles` and the write still succeeds, silently, with empty personas.
+**Pass `agentFiles`.** Each agent's `persona.identity`, `.communication_style` and `.expertise` are extracted from the file BMB authored in §3a — the factory already commissions that content and previously discarded it, leaving every generated agent hollow beside the hand-written ones (tf-2-13, T131). Omitting `agentFiles` still succeeds; what changed in tfr-1-1 (T164a) is that it no longer succeeds *silently*. A value that is present but unusable — a bare string, an object, a path that does not exist — is reported in `result.personaCoverage` instead of being coerced to `[]`, and `step-05`'s `PERSONA-COVERAGE` check reads the registry on disk and fails the run. `success` deliberately still means "the write completed": coverage is a different fact, reported as its own field.
 
 **IMPORTANT:** The registry write uses the Full Write Safety Protocol:
 1. **Stage** — Build module block in memory

@@ -106,23 +106,23 @@ Not a unit fixture. Walk `add-team` as a contributor would, pasting the blocks. 
   - [x] Write the shared case table (`shared-test-constants`) and iterate it across all call sites.
   - [x] Pin **both** directions at `buildConfigData`: `_bmad-output/../../escaped` still **rejected** (R3 put that guard there deliberately), and `{project-root}/_bmad-output/team-artifacts` still **accepted**. Only the first half is obvious, and only the second half catches a predicate that forgot to strip the prefix.
 
-- [ ] **Task 4 — Persona coverage is reported and gated (AC: #4) — `T164`(a)**
-  - [ ] `writeRegistryBlock`: report coverage of `specData.agents` by extracted personas. Do **not** change what `success` means — see §Trap: the fourth predicate.
-  - [ ] Reject or report an unusable `options.agentFiles` rather than coercing it to `[]` inside `writeRegistryBlock`.
-  - [ ] Add the terminal check in `end-to-end-validator.js` that fails on an empty persona for a declared agent.
-  - [ ] Do not fork `buildAgentEntry` — `registry-appender.js::appendAgentToBlock` calls the same helper, and that sharing is deliberate.
+- [x] **Task 4 — Persona coverage is reported and gated (AC: #4) — `T164`(a)**
+  - [x] `writeRegistryBlock`: report coverage of `specData.agents` by extracted personas. Do **not** change what `success` means — see §Trap: the fourth predicate.
+  - [x] Reject or report an unusable `options.agentFiles` rather than coercing it to `[]` inside `writeRegistryBlock`.
+  - [x] Add the terminal check in `end-to-end-validator.js` that fails on an empty persona for a declared agent.
+  - [x] Do not fork `buildAgentEntry` — `registry-appender.js::appendAgentToBlock` calls the same helper, and that sharing is deliberate.
 
-- [ ] **Task 5 — `step-04` §5d records its result (AC: #5) — `T164`(b)**
-  - [ ] Add the `expect:` record instruction, phrased like §5a-ii and §5c.
+- [x] **Task 5 — `step-04` §5d records its result (AC: #5) — `T164`(b)**
+  - [x] Add the `expect:` record instruction, phrased like §5a-ii and §5c.
 
-- [ ] **Task 6 — The terminal gate asks a differential question (AC: #6) — `T128`**
-  - [ ] Capture a pre-generation `validateInstallation` baseline and carry it in `{generation_context}` (Task 1's context file makes this persistable). **Ordering is the whole correctness of a differential:** it must be taken before §5d writes to `agent-registry.js` — `step-04` §1 is the natural home. A "baseline" captured after the write measures nothing.
-  - [ ] Rewrite `checkVortexRegression` to compare post against baseline.
-  - [ ] Replace the VORTEX-REGRESSION assertions in `tests/team-factory/end-to-end-validator.test.js` — they currently check only `assert.ok(vortexCheck)` and `assert.equal(vortexCheck.stepName, 'regression')`, never `.passed`, under the comment *"Vortex regression runs but may fail due to pre-existing project state"*. A test that documents the defect instead of catching it.
+- [x] **Task 6 — The terminal gate asks a differential question (AC: #6) — `T128`**
+  - [x] Capture a pre-generation `validateInstallation` baseline and carry it in `{generation_context}` (Task 1's context file makes this persistable). **Ordering is the whole correctness of a differential:** it must be taken before §5d writes to `agent-registry.js` — `step-04` §1 is the natural home. A "baseline" captured after the write measures nothing.
+  - [x] Rewrite `checkVortexRegression` to compare post against baseline.
+  - [x] Replace the VORTEX-REGRESSION assertions in `tests/team-factory/end-to-end-validator.test.js` — they currently check only `assert.ok(vortexCheck)` and `assert.equal(vortexCheck.stepName, 'regression')`, never `.passed`, under the comment *"Vortex regression runs but may fail due to pre-existing project state"*. A test that documents the defect instead of catching it.
 
-- [ ] **Task 7 — Falsifiability battery (AC: #7)**
-  - [ ] One mutant per property. Record mutant → the single test that dies.
-  - [ ] Assert each mutant actually applied before reading the result (`tf-2-13` had a `sed` choke silently on `|` and report a meaningless pass).
+- [x] **Task 7 — Falsifiability battery (AC: #7)**
+  - [x] One mutant per property. Record mutant → the single test that dies.
+  - [x] Assert each mutant actually applied before reading the result (`tf-2-13` had a `sed` choke silently on `|` and report a meaningless pass).
 
 - [ ] **Task 8 — End-to-end run and clean removal (AC: #8)**
   - [ ] Generate a throwaway team by walking the flow.
@@ -343,6 +343,55 @@ The two scalar blocks were confirmed **by execution**: the cascade block returns
 
 Verified with `description: He said "go" — it's fine` — both quote characters, the case `T136` is filed on — round-tripping through `loadSpec`.
 
+**Task 4 (AC#4) — `T164`(a). Coverage is reported by the writer and gated by the validator, and those are two different places on purpose.**
+
+`Array.isArray(options.agentFiles) ? options.agentFiles : []` swallowed every unusable value. `normalizeAgentFiles` keeps omission legitimate — `registry-appender` and pre-`T131` callers pass nothing, and the persona loop's own header promises omission preserves prior behaviour — but reports anything present and unusable: a bare string (the plausible single-file call, which the old code turned into zero personas and `success: true`), a non-array, and non-path entries inside an array. Paths that do not exist are collected separately, because `extractPersonaFromAgentFile` never throws and a missing file is otherwise indistinguishable from an empty one.
+
+`success` was **not** touched. The §Trap names four rewrites of that predicate and forbids a fifth; coverage is a different fact and ships as `result.personaCoverage`.
+
+Coverage classifies through `buildAgentEntry` — the same function `buildModuleBlock` uses — so "has a persona" cannot drift from what is actually written. Deriving it from the extracted `personas` map instead would have called an agent empty while the entry it produces carries a spec-declared `role`; mutant **M6** is that mistake, and one assertion dies on it.
+
+`checkPersonaCoverage` reads `agent-registry.js` **on disk**, at `ctx.registry_path` — the path §5d recorded, not one re-derived from `projectRoot`. Re-deriving lets the gate inspect a different file from the one the writer touched (mutant **M3**). Asking `registry_wiring_result.personaCoverage` instead would ask the writer whether the writer did its job, which is the tf-2-13 failure exactly (mutant **M19**). The require cache is cleared first: within one process the registry may have been loaded before §5d wrote to it.
+
+**"Absent `agentFiles` no longer passes silently" is satisfied by the gate, not by an error in the writer.** AC#4 lists absence among the unusable cases, but making it an error breaks every caller the code documents as supported. With `agentFiles` absent, personas stay empty, and `PERSONA-COVERAGE` fails the run naming each agent. That is the AC's own design — the terminal gate, not the `success` flag.
+
+**Task 5 (AC#5) — `T164`(b).** §5d's `expect:` now names `registry_wiring_result` in the shape §5a-ii and §5c use, and names `personaCoverage` as a reason not to proceed on `success` alone. The block also records `registry_path`, and both keys are in the context-keys table with an owner — a key with no writer is the silent-drop class that table exists to prevent.
+
+**Task 6 (AC#6) — `T128`. The gate asks a differential question, by set containment.**
+
+The old check asked `validateInstallation(...).valid === true` — an absolute question put to an *installation* validator against a *source* tree. Measured at HEAD, it reports three failures by design:
+
+```bash
+node -e "require('./scripts/update/lib/validator.js').validateInstallation({}, process.cwd()).then(r => console.log(r.valid, (r.checks||[]).filter(c=>!c.passed).map(c=>c.name).join(', ')))"
+```
+→ `false Enhance module, Artifacts module, Portability module` — their skill wrappers are install-time artifacts absent from the repo. `step-05-validate.md` already named these three; the check now compares against a baseline instead of demanding they be absent.
+
+**Containment, not a count.** AC#6's wording is "not larger than". That is implemented as `post ⊆ baseline`, which is strictly stronger: a count comparison passes a run that repaired one module and broke another. Mutant **M1** is precisely that count form, and it dies on a single assertion built from an equal-sized swap.
+
+**Fail-closed without a baseline.** A run whose §1 never captured one cannot tell a regression from pre-existing state, and answering anyway would restore the defect pointing the other way (mutant **M2**). `step-05`'s caveat paragraph — which said the rewrite "is not in the tree yet" — is corrected rather than left standing.
+
+**Ordering is the correctness.** The baseline block sits in `step-04` §1, beside `initContext`, because §1 is the last point at which the tree is untouched. Captured after §5d writes the registry it would measure nothing.
+
+**Task 7 (AC#7) — mutant → sole executioner.**
+
+The harness backs up both source files, asserts the replacement actually changed the file before running anything (`tf-2-13` read a silent `sed` no-op as a pass), restores on every exit path, and byte-compares the restore. No review subagent touched the working tree.
+
+| # | Mutant | Test that dies |
+|---|---|---|
+| M1 | set containment → `post.failing.length <= base.length` | *is a set containment, not a count — an equal-sized swap is a regression* |
+| M5 | a bare-string `agentFiles` reported as no issue | *reports a bare string instead of iterating it character by character* |
+| M6 | coverage read from the `personas` map, not `buildAgentEntry` | *counts a spec-declared role as coverage, because buildAgentEntry does* |
+| M8 | zero declared agents passes vacuously | *fails rather than passing vacuously when the spec declares no agents* |
+| M9 | repaired checks not reported in `detail` | *passes when generation REPAIRED a check, and says which* |
+| M10 | array passed through unfiltered | *keeps the usable paths and reports only the unusable entries* |
+| M11 | omission reported as an issue | *accepts omission without an issue* |
+| M12 | non-array object silently coerced | *reports a non-array object* |
+| M13 | `hasPersona` without `trim()` | *is false when every field is blank or whitespace* |
+| M14 | a missing persona counts as present | *is false for a missing or non-object persona* |
+| M16 | `agentFilesIssues` dropped from the report | *carries the agentFiles issues through to the caller* |
+
+**Where no sole executioner exists, that is stated rather than dressed up.** Five mutants kill more than one test, because the tests they kill assert one property in several shapes: **M2** (vacuous pass on a missing baseline) kills both fail-closed assertions; **M3** (path re-derived from `projectRoot`) and **M19** (gate reads the writer's report) each kill the two that pin where the gate looks; **M4** (`hasPersona` always true) kills five; **M7** (missing module block treated as empty), **M15** (agent set hardcoded), **M17** (baseline ignored) and **M18** (nothing is ever a regression) kill two or three each. What matters for AC#7's real question — *can this test fail at all* — is closed: **every assertion added by Tasks 4–6 is killed by at least one mutant.** Two had no killer after the first battery (*passes when the post-generation failing set is unchanged* and *fails when a check that was passing before generation is now failing*); M17 and M18 exist because of that gap, not to pad the table.
+
 ### Review history
 
 Round 1 (self) — 5 findings, 1 HIGH. Round 2 (three independent layers) — ~30 findings, 9 HIGH. Round 3 (two layers, scoped to R2's remediation) — ~20 findings, 9 HIGH. Every round's HIGHs were predominantly defects in the previous round's corrections, which is `code-review-convergence`'s restructure signal; Round 3's response was to delete the gate and the self-narration rather than patch a third time. Findings and their disposition are in §Review Findings. **No Round 4** — the cap is the rule.
@@ -366,10 +415,17 @@ Round 1 (self) — 5 findings, 1 HIGH. Round 2 (three independent layers) — ~3
 - `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — `T165` amended
 - `_bmad-output/implementation-artifacts/deferred-work.md` — one entry, now moot
 - `.github/workflows/ci.yml` — wires the run-block gate into `agent-surface-parity` (in `publish.needs`)
+- `_bmad/bme/_team-factory/lib/writers/registry-writer.js` — Task 4: `normalizeAgentFiles`, `personaCoverage`, `hasPersona`; the `agentFiles` coercion deleted; unused `toKebab` import removed (`lint-passes-before-review` scopes by file touched)
+- `_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js` — Tasks 4+6: `checkPersonaCoverage`, `captureVortexBaseline`, `runVortexValidation`; `checkVortexRegression` rewritten as a differential
+- `tests/team-factory/registry-writer.test.js` — Task 4: `normalizeAgentFiles`, `personaCoverage`, `hasPersona` suites
+- `tests/team-factory/end-to-end-validator.test.js` — Tasks 4+6: fixture registry + baseline in `buildHappyContext`; `PERSONA-COVERAGE` and differential suites; the VORTEX-REGRESSION blind spot replaced with an assertion on `.passed`
+- `_bmad/bme/_team-factory/workflows/add-team/step-04-generate.md` — §1 baseline block; §5d `expect:` + `registry_path`; context-keys table gains `registry_path` and `vortex_baseline`
+- `_bmad/bme/_team-factory/workflows/add-team/step-05-validate.md` — §2 documents `PERSONA-COVERAGE`; the `T128` caveat corrected
 
 ## Change Log
 
 | Date | Note |
 |---|---|
+| 2026-09-14 | **Tasks 4–7 implemented.** `T164`(a): `agentFiles` is normalized and reported rather than coerced to `[]`; `personaCoverage` ships as its own field (`success` untouched — the §Trap forbids a fifth rewrite); `PERSONA-COVERAGE` gates at the terminal validator, reading `agent-registry.js` on disk at the path §5d recorded. `T164`(b): §5d's `expect:` names its recorded keys. `T128`: `checkVortexRegression` became a differential against a §1 baseline, by **set containment** rather than the count AC#6's wording allows — a count passes a run that repairs one module and breaks another. Fail-closed with no baseline. The `end-to-end-validator.test.js` assertion that checked the VORTEX check merely *existed*, excused by a "pre-existing project state" comment, is replaced by an assertion on `.passed`. AC#7: 19 mutants run under a harness that asserts the mutant applied and byte-compares the restore; every assertion added by Tasks 4–6 is killed by at least one, and the eleven with a sole executioner are tabled by name. Where a mutant kills several tests that is stated, not padded. Full suite 2673 pass / 0 fail; `eslint --no-ignore` clean on all four changed JS files. **Task 8 (the real end-to-end run) is the remaining work** — AC#6's `valid === true` is still reasoned, not demonstrated, and `PERSONA-COVERAGE` adds a thirteenth check the previous generation run did not exercise. |
 | 2026-09-14 | **Self-review, 9 findings, all applied.** Three HIGH, and two of them were defects in the story's *design* rather than its prose: (1) AC#1 documented `grep -rhc … *.md` as the way to derive the block count — it prints six per-file numbers, not 12, the `docs-1-5` "command that does not run" class, now `grep -rh … | wc -l` and executed; (2) Task 2 told the executor to route `step-01` §4 through Task 1's context file, which is a **Step-4** artifact that does not exist at §4 — the "reasoning about the consumer without reading it" fault the story itself warns against, committed in the story; (3) Task 1 had Step 4 write `{spec_data}` to a new JSON file when `step-01` §5 already writes the spec to disk and `parseSpec` already takes a path — the duplication Task 3 exists to delete, in the same document. **The first correction to (2) was also wrong** and is recorded rather than tidied away: it proposed moving Overlap Detection after §5, but §5 populates the overlap acknowledgments §4 produces, so the order cannot invert; the fix is a scoping scratch file. MEDIUM: AC#3 could regress R3's `{project-root}/` stripping (positive case now pinned); Task 6 never said when the baseline is captured (now: before §5d writes the registry); backlog line citations would rot on this story's own close (now grep-anchored). LOW: a dangling `§` pointer, rotting test line-counts, and `git diff` not covering untracked output. AC#6's reachability is now marked reasoned-not-executed, with an instruction to report a second blocker rather than absorb it. |
 | 2026-09-14 | Story authored via `bmad-create-story` from the `tfr-epic-1` scoping ruling (`T136`, `T164`, `T163`(a), `T128`). Staleness pre-flight run at HEAD `3c2b0112` — **GREEN**, all four reproduced by execution, one finding sharper than its row (`T163`(a) leaves a half-written config, not only a false reject) and one broader (`T136` fails on plain JSON, not only quote-bearing JSON). One open decision recorded and pre-answered: the `run:` block transport contract, chosen as a context file with the CLI and single-quote alternatives declined and the reasons given. Two scope corrections made during authoring, both by counting rather than assuming: the `run:`-block surface is 12 blocks, of which 8 carry object placeholders, 1 hand-builds an object with a literal `...` that is not valid JS *and* uses two placeholders its step file never defines, 1 is an inert no-op, and 2 are scalar-safe. Scope excludes `T163`(b), `T165`, `T166`, `T127`, `T132`, `T134`, `T137`, `T138`, `T139`, `T141`, `T147`, `T151`. |

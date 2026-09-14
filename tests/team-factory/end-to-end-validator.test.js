@@ -5,7 +5,31 @@ const fs = require('fs-extra');
 const os = require('os');
 const yaml = require('js-yaml');
 
-const { validateTeam } = require('../../_bmad/bme/_team-factory/lib/validators/end-to-end-validator');
+const {
+  validateTeam,
+  captureVortexBaseline,
+  checkVortexRegression,
+  checkPersonaCoverage,
+} = require('../../_bmad/bme/_team-factory/lib/validators/end-to-end-validator');
+
+/**
+ * A minimal stand-in for `scripts/update/lib/agent-registry.js`, carrying the
+ * TEST_TEAM_AGENTS export that `checkPersonaCoverage` reads. `personaMode` controls
+ * whether the block is the correct one or the hollow one T131 was filed on.
+ */
+function buildFixtureRegistry(personaMode) {
+  const persona = personaMode === 'hollow'
+    ? "{ role: '', identity: '', communication_style: '', expertise: '' }"
+    : "{ role: 'Analyzer', identity: 'Reads data', communication_style: 'Terse', expertise: 'Analysis' }";
+  const entry = (id, name) =>
+    `{ id: '${id}', name: '${name}', icon: 'x', title: '${name}', stream: 'test-team', persona: ${persona} }`;
+  return [
+    "'use strict';",
+    `const TEST_TEAM_AGENTS = [${entry('alpha-analyzer', 'Alpha')}, ${entry('beta-builder', 'Beta')}];`,
+    'module.exports = { TEST_TEAM_AGENTS };',
+    '',
+  ].join('\n');
+}
 
 const FIXTURE_PATH = path.join(__dirname, 'fixtures', 'test-team-spec.yaml');
 const PROJECT_ROOT = path.resolve(__dirname, '../..');
@@ -18,7 +42,7 @@ function loadFixtureSpec() {
  * Build a fully-passing generation context in a temp directory.
  * Creates real files on disk so structural checks pass.
  */
-async function buildHappyContext(tmpDir) {
+async function buildHappyContext(tmpDir, personaMode = 'full') {
   const moduleRoot = path.join(tmpDir, '_bmad/bme/_test-team');
 
   // Create agent files
@@ -67,8 +91,19 @@ async function buildHappyContext(tmpDir) {
   ];
   await fs.writeFile(csvPath, csvRows.join('\n'), 'utf8');
 
+  // tfr-1-1 (T164a): PERSONA-COVERAGE reads the registry the run actually wrote to.
+  // A fixture registry keeps the assertion off live repo state (`test-fixture-isolation`)
+  // and lets the hollow case be built deliberately rather than waited for.
+  const registryPath = path.join(tmpDir, 'fixture-agent-registry.js');
+  await fs.writeFile(registryPath, buildFixtureRegistry(personaMode), 'utf8');
+
   return {
     module_root: moduleRoot,
+    registry_path: registryPath,
+    // tfr-1-1 (T128): the differential's pre-generation baseline. Captured from the same
+    // projectRoot the check reads, so the relation under test is "did the failing set
+    // grow", never the absolute number of live failures (`fixture-determinism`).
+    vortex_baseline: await captureVortexBaseline(PROJECT_ROOT),
     generated_files: agentFiles.concat(
       workflowDirs.map(d => path.join(d, 'workflow.md')),
       workflowDirs.map(d => path.join(d, 'SKILL.md')),
@@ -122,10 +157,15 @@ describe('validateTeam — happy path', () => {
     assert.ok(regCheck, 'should have REGISTRY-REGRESSION check');
     assert.equal(regCheck.passed, true, `REGISTRY-REGRESSION failed: ${regCheck.actual}`);
 
-    // Vortex regression runs but may fail due to pre-existing project state
+    // tfr-1-1 (T128). This replaces an assertion that checked the check EXISTED and
+    // nothing about whether it passed, excused by a comment reading "may fail due to
+    // pre-existing project state". That is `verification-must-be-falsifiable`'s check
+    // that can only pass. The differential makes the real assertion available: with a
+    // baseline captured from the same tree, nothing regressed, so it must be GREEN.
     const vortexCheck = result.checks.find(c => c.name === 'VORTEX-REGRESSION');
     assert.ok(vortexCheck, 'should have VORTEX-REGRESSION check');
     assert.equal(vortexCheck.stepName, 'regression');
+    assert.equal(vortexCheck.passed, true, `VORTEX-REGRESSION failed: ${vortexCheck.actual}`);
 
     // Verify check names use PROP-SEMANTIC format
     for (const check of result.checks) {
@@ -285,5 +325,122 @@ describe('validateTeam — NFR11 error format', () => {
       // At least one of expected/actual should be present for failed checks
       assert.ok(check.expected || check.actual, `Failed check "${check.name}" missing both expected and actual`);
     }
+  });
+});
+
+// === tfr-1-1 Task 4 (T164a) — PERSONA-COVERAGE ===
+
+describe('PERSONA-COVERAGE — a hollow team cannot report success', () => {
+  let tmpDir;
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-persona-'));
+  });
+
+  after(async () => {
+    await fs.remove(tmpDir);
+  });
+
+  it('fails validateTeam when every declared agent has an empty persona', async () => {
+    const specData = loadFixtureSpec();
+    const ctx = await buildHappyContext(tmpDir, 'hollow');
+
+    const result = await validateTeam(specData, ctx, PROJECT_ROOT);
+
+    const check = result.checks.find(c => c.name === 'PERSONA-COVERAGE');
+    assert.ok(check, 'should have PERSONA-COVERAGE check');
+    assert.equal(check.passed, false, 'hollow personas must fail the terminal gate');
+    // Name the agents, not a count: the message is what tells a contributor what to fix.
+    assert.match(check.actual, /alpha-analyzer/);
+    assert.match(check.actual, /beta-builder/);
+    assert.equal(result.valid, false, 'a hollow team must not be reported valid');
+  });
+
+  it('fails when the module block is absent from the registry', () => {
+    const specData = loadFixtureSpec();
+    const emptyRegistry = path.join(tmpDir, 'no-block-registry.js');
+    fs.writeFileSync(emptyRegistry, "'use strict';\nmodule.exports = {};\n", 'utf8');
+
+    const check = checkPersonaCoverage(specData, { registry_path: emptyRegistry }, PROJECT_ROOT);
+
+    assert.equal(check.passed, false);
+    assert.match(check.actual, /TEST_TEAM_AGENTS/);
+  });
+
+  it('fails rather than passing vacuously when the spec declares no agents', () => {
+    const registryPath = path.join(tmpDir, 'fixture-agent-registry.js');
+    const check = checkPersonaCoverage({ team_name_kebab: 'test-team', agents: [] }, { registry_path: registryPath }, PROJECT_ROOT);
+
+    assert.equal(check.passed, false, 'zero declared agents is unverifiable, not a pass');
+  });
+
+  it('reads the registry the run wrote to, not one re-derived from projectRoot', async () => {
+    const specData = loadFixtureSpec();
+    const written = path.join(tmpDir, 'written-registry.js');
+    await fs.writeFile(written, buildFixtureRegistry('hollow'), 'utf8');
+
+    // projectRoot is the real repo, whose registry has no TEST_TEAM block at all.
+    // The check must report on `written`, so it must name the hollow agents.
+    const check = checkPersonaCoverage(specData, { registry_path: written }, PROJECT_ROOT);
+
+    assert.equal(check.passed, false);
+    assert.match(check.actual, /empty persona for/);
+    assert.equal(check.detail, written);
+  });
+});
+
+// === tfr-1-1 Task 6 (T128) — the differential ===
+
+describe('VORTEX-REGRESSION — differential, not absolute', () => {
+  it('passes when the post-generation failing set is unchanged from the baseline', async () => {
+    const baseline = await captureVortexBaseline(PROJECT_ROOT);
+    const check = await checkVortexRegression(PROJECT_ROOT, baseline);
+
+    assert.equal(check.passed, true, `expected no regression, got: ${check.actual}`);
+  });
+
+  it('fails when a check that was passing before generation is now failing', async () => {
+    // A baseline claiming everything passed turns today's pre-existing failures into
+    // regressions — the shape a real regression has.
+    const check = await checkVortexRegression(PROJECT_ROOT, { valid: true, failing: [] });
+
+    assert.equal(check.passed, false);
+    assert.match(check.actual, /^regressed: /);
+  });
+
+  it('passes when generation REPAIRED a check, and says which', async () => {
+    const baseline = await captureVortexBaseline(PROJECT_ROOT);
+    const check = await checkVortexRegression(PROJECT_ROOT, {
+      valid: false,
+      failing: baseline.failing.concat('Imaginary module'),
+    });
+
+    assert.equal(check.passed, true);
+    assert.match(check.detail, /Imaginary module/);
+  });
+
+  it('is a set containment, not a count — an equal-sized swap is a regression', async () => {
+    const baseline = await captureVortexBaseline(PROJECT_ROOT);
+    assert.ok(baseline.failing.length > 0, 'this assertion needs a non-empty baseline to be meaningful');
+    // Same cardinality, different membership. A `post.length <= baseline.length`
+    // comparison passes this; set containment must not.
+    const swapped = baseline.failing.map((_, i) => `Swapped module ${i}`);
+    const check = await checkVortexRegression(PROJECT_ROOT, { valid: false, failing: swapped });
+
+    assert.equal(check.passed, false, 'an equal-sized swap must still be a regression');
+  });
+
+  it('fails closed when no baseline was captured', async () => {
+    const check = await checkVortexRegression(PROJECT_ROOT, undefined);
+
+    assert.equal(check.passed, false);
+    assert.match(check.actual, /no baseline recorded/);
+  });
+
+  it('fails closed when the baseline is present but unusable', async () => {
+    const check = await checkVortexRegression(PROJECT_ROOT, { failing: 'Enhance module' });
+
+    assert.equal(check.passed, false);
+    assert.match(check.actual, /unusable baseline/);
   });
 });

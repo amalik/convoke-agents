@@ -42,6 +42,7 @@ The end-to-end validator checks:
 - All workflows appear in the registry WORKFLOWS array
 - Derived lists (AGENT_FILES, AGENT_IDS, WORKFLOW_NAMES) are correct
 - Registry file passes `node require()` verification
+- **`PERSONA-COVERAGE`** — every agent the spec declares carries a non-empty persona in the registry. It reads `agent-registry.js` **on disk**, at the `registry_path` §5d recorded, rather than trusting `registry_wiring_result.success`: for the whole of tf-2-13 the writer returned `success: true` over a registry of empty personas, and a gate that asks the writer whether the writer did its job reproduces exactly that. A hollow team fails here, named agent by agent
 
 **Naming checks:**
 - Module directory matches `_{team_name_kebab}`
@@ -59,9 +60,11 @@ Run by `validateTeam` in §2 — there is no separate command here.
 
 **A block was deleted from this section (tfr-1-1).** It read `run: node -e "require('{project-root}/scripts/update/lib/validator.js')" logic`: it `require`d a module, called nothing, asserted nothing, and trailed a bare `logic` token that is not part of any command. It could not fail, which made it worse than absent — it read as a regression check while performing none. The real check is `end-to-end-validator.js::checkVortexRegression`, which §2 already runs as part of `validateTeam`.
 
-**`VORTEX-REGRESSION` still fails, and that is `T128`, not a fault in your team.** It delegates to `validateInstallation` — an *installation* validator — against a *source* tree, so it reports the Enhance, Artifacts and Portability modules as missing because their skill wrappers are install-time artifacts absent from the repo by design. It is the only check in `validateTeam` that cannot pass here. tfr-1-1 Task 6 rewrites it to ask a differential question; **that work is not in the tree yet.** Until it lands, read a red `VORTEX-REGRESSION` beside a green everything-else as expected.
+**`VORTEX-REGRESSION` asks a differential question (tfr-1-1 Task 6 closed `T128`).** It no longer asks `validateInstallation(...).valid === true` — an absolute question put to an *installation* validator against a *source* tree, where the Enhance, Artifacts and Portability modules report missing by design because their skill wrappers are install-time artifacts. It now compares the post-generation failing set against the baseline `step-04` §1 captured, and passes when nothing regressed. The comparison is set containment, not a count: a run that repaired one module and broke another is a regression.
 
-*(An earlier version of this paragraph asserted that tfr-1-1 had already rewritten it. It had not — `git diff` over `lib/validators/` was empty. Corrected rather than deleted, because shipped step files asserting work that is not in the tree is the defect class this module keeps producing.)*
+So a source tree with those three modules already failing is **green**, and a check that was passing before your team was generated and fails after it is **red** — which is the question the gate was always meant to ask.
+
+**No baseline means red.** If `step-04` §1 did not run, `{generation_context}.vortex_baseline` is absent and the check fails closed with `no baseline recorded`. That is not a bug to work around: without a pre-generation reading, a regression cannot be told apart from pre-existing state, and answering anyway would restore the defect in the opposite direction.
 
 ### 4. Display Results
 

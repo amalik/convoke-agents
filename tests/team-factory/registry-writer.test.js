@@ -14,6 +14,9 @@ const {
   buildWorkflowNames,
   applyInsertions,
   escapeSingleQuotes,
+  normalizeAgentFiles,
+  personaCoverage,
+  hasPersona,
 } = require('../../_bmad/bme/_team-factory/lib/writers/registry-writer');
 
 const GOLDEN_BLOCK_PATH = path.join(__dirname, 'golden', 'golden-registry-block.js');
@@ -691,5 +694,89 @@ describe('R2: persona keying works for the v6.3 directory layout', () => {
     const written = await fs.readFile(registryPath, 'utf8');
     const emptyPersonas = (written.match(/identity: ''/g) || []).length;
     assert.equal(emptyPersonas, 0, 'v6.3 agents must not land with empty personas');
+  });
+});
+
+// === tfr-1-1 Task 4 (T164a) — agentFiles is no longer coerced, coverage is reported ===
+
+describe('normalizeAgentFiles — an unusable value is reported, not swallowed', () => {
+  it('accepts omission without an issue (the appender and pre-T131 callers pass nothing)', () => {
+    assert.deepEqual(normalizeAgentFiles(undefined), { agentFiles: [], agentFilesIssues: [] });
+    assert.deepEqual(normalizeAgentFiles(null), { agentFiles: [], agentFilesIssues: [] });
+  });
+
+  it('reports a bare string instead of iterating it character by character', () => {
+    const r = normalizeAgentFiles('/tmp/agents/one.md');
+    assert.deepEqual(r.agentFiles, []);
+    assert.equal(r.agentFilesIssues.length, 1);
+    assert.match(r.agentFilesIssues[0], /is a string/);
+  });
+
+  it('reports a non-array object', () => {
+    const r = normalizeAgentFiles({ 0: '/tmp/a.md' });
+    assert.deepEqual(r.agentFiles, []);
+    assert.match(r.agentFilesIssues[0], /is object/);
+  });
+
+  it('keeps the usable paths and reports only the unusable entries', () => {
+    const r = normalizeAgentFiles(['/tmp/a.md', '', null, 42, '/tmp/b.md']);
+    assert.deepEqual(r.agentFiles, ['/tmp/a.md', '/tmp/b.md']);
+    assert.equal(r.agentFilesIssues.length, 3);
+  });
+});
+
+describe('personaCoverage — a different fact from write success', () => {
+  const spec = {
+    team_name_kebab: 'test-team',
+    agents: [{ id: 'alpha-analyzer' }, { id: 'beta-builder' }],
+  };
+
+  it('classifies an agent with no persona anywhere as empty', () => {
+    const c = personaCoverage(spec, {});
+    assert.deepEqual(c.covered, []);
+    assert.deepEqual(c.empty, ['alpha-analyzer', 'beta-builder']);
+  });
+
+  it('counts an extracted persona as coverage', () => {
+    const c = personaCoverage(spec, { 'alpha-analyzer': { role: 'Analyzer', identity: '', communication_style: '', expertise: '' } });
+    assert.deepEqual(c.covered, ['alpha-analyzer']);
+    assert.deepEqual(c.empty, ['beta-builder']);
+  });
+
+  it('counts a spec-declared role as coverage, because buildAgentEntry does', () => {
+    // Deriving coverage from the extracted `personas` map alone would call this agent
+    // empty while the registry entry it produces carries a role.
+    const declared = { team_name_kebab: 'test-team', agents: [{ id: 'alpha-analyzer', role: 'Stated in the spec' }] };
+    const c = personaCoverage(declared, {});
+    assert.deepEqual(c.covered, ['alpha-analyzer']);
+    assert.deepEqual(c.empty, []);
+  });
+
+  it('derives the agent set from the spec at call time, never a fixed list', () => {
+    const one = personaCoverage({ team_name_kebab: 'test-team', agents: [{ id: 'solo' }] }, {});
+    assert.equal(one.covered.length + one.empty.length, 1);
+    const none = personaCoverage({ team_name_kebab: 'test-team', agents: [] }, {});
+    assert.equal(none.covered.length + none.empty.length, 0);
+  });
+
+  it('carries the agentFiles issues through to the caller', () => {
+    const c = personaCoverage(spec, {}, { agentFilesIssues: ['bad'], missingAgentFiles: ['/nope.md'] });
+    assert.deepEqual(c.agentFilesIssues, ['bad']);
+    assert.deepEqual(c.missingAgentFiles, ['/nope.md']);
+  });
+});
+
+describe('hasPersona', () => {
+  it('is false when every field is blank or whitespace', () => {
+    assert.equal(hasPersona({ role: '', identity: '   ', communication_style: '', expertise: '\n' }), false);
+  });
+
+  it('is true when any single field carries text', () => {
+    assert.equal(hasPersona({ role: '', identity: 'x', communication_style: '', expertise: '' }), true);
+  });
+
+  it('is false for a missing or non-object persona', () => {
+    assert.equal(hasPersona(undefined), false);
+    assert.equal(hasPersona('role'), false);
   });
 });
