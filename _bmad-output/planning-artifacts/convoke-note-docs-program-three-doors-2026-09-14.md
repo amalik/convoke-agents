@@ -87,7 +87,7 @@ Evidence: `convoke-note-maturity-ledger-2026-09-14.md` (appendix) and `_bmad-out
   - Scout's error message suggests `output_folder: vortex-artifacts` for Gyre, which is defect D1 leaking into the error text.
   - Emma's missing `bmad-init` does not stop her.
   - → **Hotfix (4.0.3) or disclose: Amalik's call.**
-- **`_gyre/config.yaml` is seeded with Vortex values** (D1), and every update doubles its agent and workflow lists (D2).
+- **`_gyre/config.yaml` is seeded with Vortex values** (D1), and its first update doubles its agent and workflow lists, which then stay doubled (D2).
 - **Overclaims in shipped docs contradict page 2:** README ×2, the lifecycle vision, the 4.0.0 changelog.
 - **About 13 defects have no backlog row** (4 from the ledger, 9 from the customize evidence). The backlog edits that blocked filing are now committed; filing waits only on the 4.0.3 decision.
 - **Upstream drift:** BMAD 6.12.0 removed `bmad-agent-tech-writer` and `bmad-check-implementation-readiness`. Existing overrides for them go dead silently, and the Use door must not send operators to them.
