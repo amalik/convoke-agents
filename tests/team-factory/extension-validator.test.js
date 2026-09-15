@@ -11,6 +11,17 @@ const { CSV_HEADER } = require('../../_bmad/bme/_team-factory/lib/writers/csv-cr
 const PROJECT_ROOT = path.resolve(__dirname, '../..');
 
 /**
+ * tfr-2-1 R1: a project root holding only a loadable `agent-registry.js`, so the happy paths assert
+ * `result.valid === true` without depending on the live repository's registry (`test-fixture-isolation`).
+ */
+async function buildStubProjectRoot(dir) {
+  const libDir = path.join(dir, 'scripts/update/lib');
+  await fs.ensureDir(libDir);
+  await fs.writeFile(path.join(libDir, 'agent-registry.js'), "'use strict';\nmodule.exports = {};\n", 'utf8');
+  return dir;
+}
+
+/**
  * Build a fully-passing extension context in a temp directory.
  * Simulates adding gamma-guardian to an existing team with alpha-analyzer.
  */
@@ -92,8 +103,9 @@ describe('validateExtension — happy path', () => {
 
   it('all checks pass when extension is valid', async () => {
     const ctx = await buildExtensionContext(tmpDir);
+    const stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'stub-root'));
 
-    const result = await validateExtension(ctx, PROJECT_ROOT);
+    const result = await validateExtension(ctx, stubRoot);
 
     // All extension-specific checks should pass
     const extChecks = result.checks.filter(c => c.stepName === 'extension' || c.stepName === 'extension-regression');
@@ -111,6 +123,12 @@ describe('validateExtension — happy path', () => {
     const regCheck = result.checks.find(c => c.name === 'REGISTRY-REGRESSION');
     assert.ok(regCheck, 'should have REGISTRY-REGRESSION check');
     assert.equal(regCheck.passed, true);
+
+    // tfr-2-1 (T174): the title says ALL checks pass, so assert it. This test used to filter to
+    // extension-specific checks and never read `result.valid`, which is how a check that failed
+    // on every run (the Vortex regression check, called here with no baseline — T174) shipped green.
+    const failing = result.checks.filter(c => !c.passed).map(c => `${c.name}: ${c.actual}`);
+    assert.equal(result.valid, true, `expected a valid extension, failing: ${failing.join(' | ')}`);
   });
 });
 
@@ -396,8 +414,9 @@ describe('validateSkillExtension — happy path', () => {
 
   it('all checks pass when skill extension is valid', async () => {
     const ctx = await buildSkillContext(tmpDir);
+    const stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'stub-root'));
 
-    const result = await validateSkillExtension(ctx, PROJECT_ROOT);
+    const result = await validateSkillExtension(ctx, stubRoot);
 
     // All skill-extension-specific checks should pass
     const skillChecks = result.checks.filter(c =>
@@ -407,6 +426,15 @@ describe('validateSkillExtension — happy path', () => {
     for (const check of skillChecks) {
       assert.equal(check.passed, true, `${check.name} should pass but got: ${check.actual}`);
     }
+
+    // tfr-2-1 R1: REGISTRY-REGRESSION is this validator's only registry-level regression check; pin that it runs.
+    const regCheck = result.checks.find(c => c.name === 'REGISTRY-REGRESSION');
+    assert.ok(regCheck, 'should have REGISTRY-REGRESSION check');
+    assert.equal(regCheck.passed, true);
+
+    // tfr-2-1 (T174): the title says ALL checks pass, so assert it (see validateExtension's happy path).
+    const failing = result.checks.filter(c => !c.passed).map(c => `${c.name}: ${c.actual}`);
+    assert.equal(result.valid, true, `expected a valid skill extension, failing: ${failing.join(' | ')}`);
   });
 });
 

@@ -7,7 +7,7 @@ Run comprehensive validation on the generated team, produce a file manifest, col
 - Step 04 (Generate) completed — all files created and wired
 - Spec file has progress.generate = "complete" (or all agent sub-entries complete)
 
-> **Reached from `[VT] Validate Team`?** VT runs this step directly, so everything above must already exist: it validates a team that `add-team` generated **in this repository**, using that run's spec file and context file (`{context_path}`), and that run's `vortex_baseline`. It cannot validate a hand-built team or one whose context file is gone — `readContext` throws without the file, and `VORTEX-REGRESSION` fails closed without the baseline, because only step-04 §1 can take a reading from before the team existed.
+> **Reached from `[VT] Validate Team`?** VT runs this step directly, so everything above must already exist: it validates a team that `add-team` generated **in this repository**, using that run's spec file and context file (`{context_path}`). Two of its checks, `REGISTRY-WIRING` and `ACTIVATION-VALID`, trust the results step-04 recorded in that file rather than re-checking them — so on a hand-built team they either fail or repeat whatever a hand-written context claims. That is why VT is a check on a team `add-team` generated, not on a hand-built one. Without the file, `readContext` throws; that is deliberate, so a missing context fails loudly instead of reading as a broken team.
 
 > **`{context_path}`** is the path to the generation context Step 4 accumulated. Its shape, and which consumer reads each key, is defined in `step-04-generate.md` §Placeholders — including **`contract_files`**, which `end-to-end-validator.js::checkContractFiles` iterates and which passes **vacuously** when absent.
 >
@@ -68,13 +68,11 @@ The end-to-end validator checks:
 
 Run by `validateTeam` in §2 — there is no separate command here.
 
-**A block was deleted from this section (tfr-1-1).** It read `run: node -e "require('{project-root}/scripts/update/lib/validator.js')" logic`: it `require`d a module, called nothing, asserted nothing, and trailed a bare `logic` token that is not part of any command. It could not fail, which made it worse than absent — it read as a regression check while performing none. The real check is `end-to-end-validator.js::checkVortexRegression`, which §2 already runs as part of `validateTeam`.
+**A block was deleted from this section (tfr-1-1).** It read `run: node -e "require('{project-root}/scripts/update/lib/validator.js')" logic`: it `require`d a module, called nothing, asserted nothing, and trailed a bare `logic` token that is not part of any command. It asserted nothing: loading `validator.js` exits non-zero only when `agent-registry.js` fails to load, and nothing read that exit — a regression check in name only. Nothing replaces it here: the regression check that exists runs inside §2's `validateTeam`.
 
-**`VORTEX-REGRESSION` asks a differential question (tfr-1-1 Task 6 closed `T128`).** It no longer asks `validateInstallation(...).valid === true` — an absolute question put to an *installation* validator against a *source* tree, where the Enhance, Artifacts and Portability modules report missing by design because their skill wrappers are install-time artifacts. It now compares the post-generation failing set against the baseline `step-04` §1 captured, and passes when nothing regressed. The comparison is set containment, not a count: a run that repaired one module and broke another is a regression.
+**`REGISTRY-REGRESSION` is the regression check.** Generation modifies one shared file, `scripts/update/lib/agent-registry.js`, and this check proves it still loads with `require()`; it fails on a registry that does not load, and that alone makes the team invalid. It proves no more than that. A registry that loads can still change what its consumers report — a team whose prefix collides with a consumer's naming convention loads fine and changes a count (`T151`). And the claim that generation touches no other shared file holds only when step-01's collision check has run on the team's name as it stands — it stops a team named after an existing module before anything is written. Express Mode skips step-01, and a name edited at step-03 or between sessions reaches step-04 unchecked (`T177`).
 
-So a source tree with those three modules already failing is **green**, and a check that was passing before your team was generated and fails after it is **red** — which is the question the gate was always meant to ask.
-
-**No baseline means red.** If `step-04` §1 did not run, `vortex_baseline` is absent from `{context_path}` and the check fails closed with `no baseline recorded`. That is not a bug to work around: without a pre-generation reading, a regression cannot be told apart from pre-existing state, and answering anyway would restore the defect in the opposite direction.
+**A Vortex installation check used to run here too, and was deleted (tfr-2-1, `T171`).** It compared a Vortex installation validation taken before generation with one taken after. When step-01's collision check has run on the team's name, nothing `add-team` writes changes what that validation reports, so it could only pass. Where that check was skipped (`T177`), generation can write into an existing module — a step file added to a Vortex workflow fails `Workflow step structure` — and the deleted check would have caught that. The fix for that path is the collision gate, not a regression check.
 
 ### 4. Display Results
 
@@ -158,7 +156,7 @@ Colleague sees:
   - [ ] Next steps guidance
 Runs silently:
   - [ ] End-to-end validation suite
-  - [ ] Regression check on existing teams
+  - [ ] Registry regression check (`agent-registry.js` still loads)
   - [ ] Manifest generation
 Concept count: 2/3 (validation results, next steps)
 Approval prompt: N/A — this is the final step

@@ -35,7 +35,6 @@ Every `run:` block below substitutes these. They are listed because a name that 
 | `activation_validation_results` | §5c (the block records it — the WHOLE `{valid, results}` object) | `checkActivation` reads `.valid` |
 | `registry_wiring_result` | §5d (the block records it — the whole object) | `checkRegistryWiring` |
 | `registry_path` | §5d (the block records the path it wrote to) | `checkPersonaCoverage` — it inspects the file the writer TOUCHED, not one re-derived by convention |
-| `vortex_baseline` | §1 (the baseline block) | `checkVortexRegression`; absent ⇒ the check **fails closed**, because a regression cannot be told from pre-existing state without it |
 | `agent_files` | **§3 — you record it** after BMB writes the agent files | `checkAgentFiles`, `manifest-tracker.js`, and §5c/§5d read it as `agentFiles` |
 | `workflow_dirs` | **§3 — you record it** | `checkWorkflowDirs`; absent ⇒ **zero checks emitted** |
 | `workflow_step_files` | **§3 — you record it** | `manifest-tracker.js`; absent ⇒ files left behind on abort |
@@ -72,15 +71,6 @@ Display the plan: "{N} files to create, 1 shared file to modify."
 ```
 run: node -e "require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js').initContext('{context_path}', { module_root: '{module_root}' })"
 expect: the file exists at {context_path}. It is REPLACED on each run — a context left from an abandoned run would carry stale paths into the abort manifest, which emits removal instructions against every `created` entry
-```
-
-**Capture the Vortex baseline — here, and nowhere later.** `step-05`'s `VORTEX-REGRESSION` asks a *differential* question: did generation break something that was working? That needs a reading taken **before §5d writes to `agent-registry.js`**. A baseline captured after the write measures nothing, because the write is the thing being measured. §1 is the last point in the flow where the tree is still untouched.
-
-```
-run: node -e "const ev = require('{project-root}/_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js'), rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'); ev.captureVortexBaseline('{project-root}').then(b => { rc.recordContext('{context_path}', 'vortex_baseline', b); console.log(JSON.stringify(b)); }).catch(e => { console.error('BASELINE CAPTURE FAILED: ' + e.message); process.exit(1); })"
-expect: a JSON object `{"valid": …, "failing": […]}`. In a source tree `valid` is normally `false` and `failing` names the Enhance, Artifacts and Portability modules — their skill wrappers are install-time artifacts absent from the repo by design. On a tree where `convoke-install` has run, `failing` may be empty instead. **Both are expected readings, not problems to fix.** The differential compares against whatever this records; it never requires the set to be empty or non-empty.
-
-        `BASELINE CAPTURE FAILED: <reason>` with a non-zero exit means no baseline was recorded. Read the reason: `validator.js not found`, `returned no checks array`, a failing check with `no usable name`, or `context file not found` (the `initContext` block above was not run). Fix it before continuing. Otherwise `VORTEX-REGRESSION` in step-05 §2 fails closed with `no baseline recorded`, which names the symptom rather than this cause
 ```
 
 **You record what you generate.** §3, §4, §6 and §7 delegate file creation to BMB; the factory never sees those paths, so it cannot record them for you. After each of those sections, write what it produced into the context with the same command shape:

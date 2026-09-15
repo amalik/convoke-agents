@@ -7,8 +7,6 @@ const yaml = require('js-yaml');
 
 const {
   validateTeam,
-  captureVortexBaseline,
-  checkVortexRegression,
   checkPersonaCoverage,
 } = require('../../_bmad/bme/_team-factory/lib/validators/end-to-end-validator');
 
@@ -51,35 +49,20 @@ function buildFixtureRegistry(specData, personaMode = 'full') {
 }
 
 /**
- * A stub project root with the two files `validateTeam`'s regression checks read.
+ * A stub project root holding the one file `validateTeam`'s regression check reads:
+ * `scripts/update/lib/agent-registry.js`, which `REGISTRY-REGRESSION` must be able to require.
+ * `registryBody` lets a test hand it a registry that does not load.
  *
- * Round 1 finding: the differential tests took `PROJECT_ROOT` — the live repo — as the
- * scanned root, and asserted on the three modules that fail there. `.claude/skills/*` is
- * gitignored, so those failures exist only on a tree where `convoke-install` never ran:
- * on an installed machine `baseline.failing` is `[]`, two assertions invert, and the
- * suite goes red in a green repo. Worse, one of the two is the sole executioner for the
- * set-containment mutant — AC#6's whole evidence. `fixture-determinism`: a test must not
- * assert on anything it does not control.
+ * tfr-2-1: this also used to write a stub `validator.js` for the Vortex regression check,
+ * deleted with that check (T171). Assertions stay off live repo state (`test-fixture-isolation`).
  *
  * @param {string} dir
- * @param {string[]} failing - names the stub's validateInstallation reports as failed
+ * @param {string} [registryBody]
  */
-async function buildStubProjectRoot(dir, failing = []) {
+async function buildStubProjectRoot(dir, registryBody = "'use strict';\nmodule.exports = {};\n") {
   const libDir = path.join(dir, 'scripts/update/lib');
   await fs.ensureDir(libDir);
-  await fs.writeFile(path.join(libDir, 'validator.js'), [
-    "'use strict';",
-    `const FAILING = ${JSON.stringify(failing)};`,
-    "const ALL = ['Vortex module', 'Agent files', 'Enhance module', 'Artifacts module', 'Portability module'];",
-    'async function validateInstallation() {',
-    '  const checks = ALL.map(name => ({ name, passed: !FAILING.includes(name) }));',
-    '  for (const name of FAILING) if (!ALL.includes(name)) checks.push({ name, passed: false });',
-    '  return { valid: checks.every(c => c.passed), checks };',
-    '}',
-    'module.exports = { validateInstallation };',
-    '',
-  ].join('\n'), 'utf8');
-  await fs.writeFile(path.join(libDir, 'agent-registry.js'), "'use strict';\nmodule.exports = {};\n", 'utf8');
+  await fs.writeFile(path.join(libDir, 'agent-registry.js'), registryBody, 'utf8');
   return dir;
 }
 
@@ -145,10 +128,6 @@ async function buildHappyContext(tmpDir, personaMode = 'full') {
   return {
     module_root: moduleRoot,
     registry_path: registryPath,
-    // tfr-1-1 (T128): stated, not captured from the tree under test. Every validateTeam describe
-    // builds its stub root failing exactly 'Enhance module', so this is the "unchanged" case:
-    // it passes by set containment, and it would fail if the stub root failed anything else.
-    vortex_baseline: { valid: false, failing: ['Enhance module'] },
     generated_files: agentFiles.concat(
       workflowDirs.map(d => path.join(d, 'workflow.md')),
       workflowDirs.map(d => path.join(d, 'SKILL.md')),
@@ -178,7 +157,7 @@ describe('validateTeam — happy path', () => {
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-e2e-'));
-    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'), ['Enhance module']);
+    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'));
   });
 
   after(async () => {
@@ -204,15 +183,10 @@ describe('validateTeam — happy path', () => {
     assert.ok(regCheck, 'should have REGISTRY-REGRESSION check');
     assert.equal(regCheck.passed, true, `REGISTRY-REGRESSION failed: ${regCheck.actual}`);
 
-    // tfr-1-1 (T128). This replaces an assertion that checked the check EXISTED and
-    // nothing about whether it passed, excused by a comment reading "may fail due to
-    // pre-existing project state". That is `verification-must-be-falsifiable`'s check
-    // that can only pass. Here the stated baseline and the stub root both fail exactly
-    // 'Enhance module', so nothing regressed and it must be GREEN.
-    const vortexCheck = result.checks.find(c => c.name === 'VORTEX-REGRESSION');
-    assert.ok(vortexCheck, 'should have VORTEX-REGRESSION check');
-    assert.equal(vortexCheck.stepName, 'regression');
-    assert.equal(vortexCheck.passed, true, `VORTEX-REGRESSION failed: ${vortexCheck.actual}`);
+    // tfr-2-1: every check, not a filtered subset — a correctly generated team is valid.
+    // (The Vortex regression check this block used to single out was deleted: T171.)
+    const failing = result.checks.filter(c => !c.passed).map(c => `${c.name}: ${c.actual}`);
+    assert.equal(result.valid, true, `expected a valid team, failing: ${failing.join(' | ')}`);
 
     // Verify check names use PROP-SEMANTIC format
     for (const check of result.checks) {
@@ -230,7 +204,7 @@ describe('validateTeam — missing agent file', () => {
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-e2e-'));
-    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'), ['Enhance module']);
+    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'));
   });
 
   after(async () => {
@@ -263,7 +237,7 @@ describe('validateTeam — missing config', () => {
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-e2e-'));
-    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'), ['Enhance module']);
+    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'));
   });
 
   after(async () => {
@@ -311,6 +285,31 @@ describe('validateTeam — registry regression', () => {
     assert.equal(regCheck.passed, true, `REGISTRY-REGRESSION failed: ${regCheck.actual}`);
     assert.equal(regCheck.stepName, 'regression');
   });
+
+  it('fails REGISTRY-REGRESSION on a registry that does not load, and that alone makes the team invalid', async () => {
+    // tfr-2-1 R1: the fixture is an otherwise VALID team, so REGISTRY-REGRESSION is the only check that
+    // can fail — a verdict that ignored it would read valid. Two kinds of unloadable registry: a syntax
+    // error, and one that parses but throws while loading (the registry's own disjoint-id guard throws at
+    // load time, which a syntax-only check like `node --check` would miss).
+    for (const [label, registryBody] of [
+      ['syntax error', "'use strict';\nconst BROKEN = [;\nmodule.exports = {};\n"],
+      ['throws while loading', "'use strict';\nthrow new Error('agent id declared in two registries');\n"],
+    ]) {
+      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-broken-registry-'));
+      try {
+        const ctx = await buildHappyContext(tmpDir);
+        const root = await buildStubProjectRoot(path.join(tmpDir, 'root'), registryBody);
+        const result = await validateTeam(loadFixtureSpec(), ctx, root);
+
+        const failing = result.checks.filter(c => !c.passed).map(c => c.name);
+        assert.deepEqual(failing, ['REGISTRY-REGRESSION'], `${label}: only the registry check should fail, got ${failing.join(', ')}`);
+        assert.match(result.checks.find(c => c.name === 'REGISTRY-REGRESSION').actual, /require\(\) verification failed/);
+        assert.equal(result.valid, false, `${label}: an unloadable registry must make the team invalid`);
+      } finally {
+        await fs.remove(tmpDir);
+      }
+    }
+  });
 });
 
 // === Failed activation results ===
@@ -321,7 +320,7 @@ describe('validateTeam — failed activation', () => {
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-e2e-'));
-    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'), ['Enhance module']);
+    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'));
   });
 
   after(async () => {
@@ -357,7 +356,7 @@ describe('validateTeam — NFR11 error format', () => {
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-e2e-'));
-    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'), ['Enhance module']);
+    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'));
   });
 
   after(async () => {
@@ -391,7 +390,7 @@ describe('PERSONA-COVERAGE — a hollow team cannot report success', () => {
 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-persona-'));
-    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'), ['Enhance module']);
+    stubRoot = await buildStubProjectRoot(path.join(tmpDir, 'root'));
   });
 
   after(async () => {
@@ -538,127 +537,5 @@ describe('PERSONA-COVERAGE — a hollow team cannot report success', () => {
     assert.equal(check.passed, false);
     assert.match(check.actual, /no identity, communication_style, expertise for:/);
     assert.equal(check.detail, written);
-  });
-});
-
-// === tfr-1-1 Task 6 (T128) — the differential ===
-//
-// Every test here runs against a STUB project root whose validateInstallation result the
-// test states outright. Round 1: the first version scanned the live repo and asserted on
-// the three modules that fail in a source tree — which inverted on any machine where
-// `convoke-install` had run, taking the set-containment mutant's sole executioner with it.
-
-describe('VORTEX-REGRESSION — differential, not absolute', () => {
-  let tmpDir;
-
-  before(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-vortex-'));
-  });
-
-  after(async () => {
-    await fs.remove(tmpDir);
-  });
-
-  const rootWith = (name, failing) => buildStubProjectRoot(path.join(tmpDir, name), failing);
-
-  it('passes when the post-generation failing set is unchanged from the baseline', async () => {
-    const root = await rootWith('unchanged', ['Enhance module', 'Artifacts module']);
-    const check = await checkVortexRegression(root, { valid: false, failing: ['Enhance module', 'Artifacts module'] });
-
-    assert.equal(check.passed, true, `expected no regression, got: ${check.actual}`);
-  });
-
-  it('fails when a check that was passing before generation is now failing', async () => {
-    const root = await rootWith('regressed', ['Vortex module']);
-    const check = await checkVortexRegression(root, { valid: true, failing: [] });
-
-    assert.equal(check.passed, false);
-    assert.match(check.actual, /^regressed: Vortex module$/);
-  });
-
-  it('passes when generation REPAIRED a check, and says which', async () => {
-    const root = await rootWith('repaired', []);
-    const check = await checkVortexRegression(root, { valid: false, failing: ['Enhance module'] });
-
-    assert.equal(check.passed, true);
-    assert.match(check.detail, /also now passing: Enhance module/);
-  });
-
-  it('is a set containment, not a count — an equal-sized swap is a regression', async () => {
-    // Same cardinality, different membership. A `post.length <= baseline.length`
-    // comparison passes this; set containment must not.
-    const root = await rootWith('swap', ['Enhance module', 'Artifacts module']);
-    const check = await checkVortexRegression(root, { valid: false, failing: ['Vortex module', 'Agent files'] });
-
-    assert.equal(check.passed, false, 'an equal-sized swap must still be a regression');
-    assert.match(check.actual, /Enhance module/);
-    assert.match(check.actual, /Artifacts module/);
-  });
-
-  it('always names the validator it ran, regression or not', async () => {
-    const root = await rootWith('detail', ['Vortex module']);
-    const check = await checkVortexRegression(root, { valid: true, failing: [] });
-
-    assert.equal(check.passed, false);
-    assert.match(check.detail, /scripts[/\\]update[/\\]lib[/\\]validator\.js/);
-  });
-
-  it('throws rather than reporting a clean run when validateInstallation yields no checks array', async () => {
-    // The degenerate read: `(result.checks || [])` reported an empty failing set, which
-    // makes every baseline entry look REPAIRED and the run regression-free — a confident
-    // wrong answer. The docstring promised this guard before the code carried it.
-    const root = path.join(tmpDir, 'nochecks');
-    await fs.ensureDir(path.join(root, 'scripts/update/lib'));
-    await fs.writeFile(path.join(root, 'scripts/update/lib/validator.js'),
-      "module.exports = { validateInstallation: async () => ({ valid: false }) };\n", 'utf8');
-
-    const check = await checkVortexRegression(root, { valid: false, failing: ['Enhance module'] });
-
-    assert.equal(check.passed, false);
-    assert.match(check.actual, /no checks array/);
-  });
-
-  it('fails closed when a failing check has no usable name, rather than dropping it', async () => {
-    // Dropping unnamed checks let a regression inside one pass silently: baseline clean,
-    // post has one unnamed failure, gate green. Compared by name, it cannot be compared.
-    // `null` is the one non-string that survives the context file's JSON round trip, so a guard
-    // keyed on `=== undefined` would pass it into a real baseline; `42` covers any other non-string.
-    for (const [label, badName] of [['missing', undefined], ['blank', '   '], ['null', null], ['number', 42]]) {
-      const root = path.join(tmpDir, `unnamed-${label}`);
-      await fs.ensureDir(path.join(root, 'scripts/update/lib'));
-      // The check is written as data beside a fixed module body, not spliced into source
-      // (CodeQL alert 27). writeJson drops an undefined `name` key: that is the `missing` case.
-      await fs.writeJson(path.join(root, 'scripts/update/lib/check.json'), { name: badName, passed: false });
-      await fs.writeFile(path.join(root, 'scripts/update/lib/validator.js'),
-        "module.exports = { validateInstallation: async () => ({ valid: false, checks: [require('./check.json')] }) };\n", 'utf8');
-      const check = await checkVortexRegression(root, { valid: true, failing: [] });
-
-      assert.equal(check.passed, false, `${label} name must not be dropped`);
-      assert.match(check.actual, /no usable name/);
-    }
-  });
-
-  it('fails closed when no baseline was captured', async () => {
-    const root = await rootWith('nobaseline', ['Enhance module']);
-    const check = await checkVortexRegression(root, undefined);
-
-    assert.equal(check.passed, false);
-    assert.match(check.actual, /no baseline recorded/);
-  });
-
-  it('fails closed when the baseline is present but unusable', async () => {
-    const root = await rootWith('badbaseline', ['Enhance module']);
-    const check = await checkVortexRegression(root, { failing: 'Enhance module' });
-
-    assert.equal(check.passed, false);
-    assert.match(check.actual, /unusable baseline/);
-  });
-
-  it('captureVortexBaseline reduces a run to its failing check names', async () => {
-    const root = await rootWith('capture', ['Artifacts module', 'Enhance module']);
-    const baseline = await captureVortexBaseline(root);
-
-    assert.equal(baseline.valid, false);
-    assert.deepEqual(baseline.failing, ['Artifacts module', 'Enhance module'], 'sorted, names only');
   });
 });
