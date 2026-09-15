@@ -1460,3 +1460,7 @@ Round 2 ran three independent blind layers on `06a452cd` — the Round 1 *remedi
 ## Deferred from: code review of tfr-1-1-generate-one-real-team-without-hand-patching (2026-09-14)
 
 - Empty untracked `relative-root/_bmad-output/x` at the repo root — residue from `tf-2-13` R2 development of the `config-creator.test.js` test "refuses a relative projectRoot rather than resolving against cwd". The current suite does not recreate it (mtime `Sep 13 23:01:04` unchanged across a run). `git status` cannot see empty directories, so it survives AC#8's porcelain check; remove it during tfr-1-1 Task 8's cleanup.
+
+## Deferred from: code review of tfr-2-1-delete-the-regression-check-that-cannot-fail (2026-09-15)
+
+- `tests/team-factory/end-to-end-validator.test.js` › *passes REGISTRY-REGRESSION against real project root* still asserts on the live `scripts/update/lib/agent-registry.js` (`test-fixture-isolation`). Pre-existing; `tfr-2-1` moved the extension happy paths to stub roots but left this test, whose name says it targets the real root. Decide whether the real-root read is the point, or give it a stub.

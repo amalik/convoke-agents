@@ -4,7 +4,7 @@ baseline_commit: a2944e7dfadc351332618e04bb76020098472d9e
 
 # Story tfr-2.1: Delete the regression check that cannot fail
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** [tfr-epic-2 — delete the regression check that cannot fail](../planning-artifacts/convoke-epic-team-factory-regression-check-deletion.md) (one-story mini-epic, operator decision 2026-09-15; `tfr-epic-1` precedent)
 **Origin:** Fast Lane rows `T171`, `T172`, `T173`, `T174` — all `loom`, all Open, all traced to one check.
@@ -69,30 +69,58 @@ Records under `_bmad-output/` keep their history and are excluded on purpose.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Re-derive the premise (AC: #1)**
-  - [ ] Read set: every `path.join(projectRoot, …)` in `validator.js` and the registry exports it destructures.
-  - [ ] Write set: `config-creator.js::createConfig`/`ensureOutputDirectory`, `csv-creator.js::createCsv`, `registry-writer.js::writeRegistryBlock`, and the BMB-authored paths step-04 §3 records.
-  - [ ] Confirm the three known near-overlaps are still guarded (Dev Notes §Premise). Any unguarded overlap → STOP.
+- [x] **Task 1 — Re-derive the premise (AC: #1)**
+  - [x] Read set: every `path.join(projectRoot, …)` in `validator.js` and the registry exports it destructures.
+  - [x] Write set: `config-creator.js::createConfig`/`ensureOutputDirectory`, `csv-creator.js::createCsv`, `registry-writer.js::writeRegistryBlock`, and the BMB-authored paths step-04 §3 records.
+  - [x] Confirm the three known near-overlaps are still guarded (Dev Notes §Premise). Any unguarded overlap → STOP.
 
-- [ ] **Task 2 — Delete the check (AC: #2)**
-  - [ ] `end-to-end-validator.js`: delete `runVortexValidation`, `captureVortexBaseline`, `checkVortexRegression`; remove the `VORTEX-REGRESSION` push from `validateTeam`, `validateExtension`, `validateSkillExtension`; remove the three exports and the export comment that justifies them; correct `validateTeam`'s JSDoc ("regression (registry require, Vortex validation)").
-  - [ ] Keep `projectRoot`: `checkRegistryRegression` and `checkPersonaCoverage`'s fallback still use it.
+- [x] **Task 2 — Delete the check (AC: #2)**
+  - [x] `end-to-end-validator.js`: delete `runVortexValidation`, `captureVortexBaseline`, `checkVortexRegression`; remove the `VORTEX-REGRESSION` push from `validateTeam`, `validateExtension`, `validateSkillExtension`; remove the three exports and the export comment that justifies them; correct `validateTeam`'s JSDoc ("regression (registry require, Vortex validation)").
+  - [x] Keep `projectRoot`: `checkRegistryRegression` and `checkPersonaCoverage`'s fallback still use it.
 
-- [ ] **Task 3 — Tests (AC: #4, #5)**
-  - [ ] `end-to-end-validator.test.js`: delete the `VORTEX-REGRESSION — differential, not absolute` describe; remove the happy path's `VORTEX-REGRESSION` assertions and `vortex_baseline` from `buildHappyContext`; drop the now-unused `captureVortexBaseline`/`checkVortexRegression` imports; drop the stub `validator.js` from `buildStubProjectRoot` but keep its `agent-registry.js`. Make the happy path assert `result.valid === true`.
-  - [ ] `extension-validator.test.js`: both happy paths assert `result.valid === true`.
-  - [ ] **Add** a test that turns `REGISTRY-REGRESSION` red on a registry that does not `require()` — none exists at `a2944e7d` (every assertion on that check expects `passed: true`). Point `projectRoot` at a stub root whose `agent-registry.js` is syntactically broken.
+- [x] **Task 3 — Tests (AC: #4, #5)**
+  - [x] `end-to-end-validator.test.js`: delete the `VORTEX-REGRESSION — differential, not absolute` describe; remove the happy path's `VORTEX-REGRESSION` assertions and `vortex_baseline` from `buildHappyContext`; drop the now-unused `captureVortexBaseline`/`checkVortexRegression` imports; drop the stub `validator.js` from `buildStubProjectRoot` but keep its `agent-registry.js`. Make the happy path assert `result.valid === true`.
+  - [x] `extension-validator.test.js`: both happy paths assert `result.valid === true`.
+  - [x] **Add** a test that turns `REGISTRY-REGRESSION` red on a registry that does not `require()` — none exists at `a2944e7d` (every assertion on that check expects `passed: true`). Point `projectRoot` at a stub root whose `agent-registry.js` is syntactically broken.
 
-- [ ] **Task 4 — Workflow prose (AC: #3)**
-  - [ ] `step-04-generate.md` §1: delete the "Capture the Vortex baseline" paragraph and block; delete the `vortex_baseline` context-keys row.
-  - [ ] `step-05-validate.md` §3: replace the `VORTEX-REGRESSION` paragraphs with the remaining regression check and a short pointer to `T171`; update the VT prerequisite note.
-  - [ ] Run every remaining step-04/step-05 `run:` block verbatim, extracted from the files, in the documented order on a throwaway team — or record why a subset suffices. Restore the tree to a `git status --porcelain` snapshot.
+- [x] **Task 4 — Workflow prose (AC: #3)**
+  - [x] `step-04-generate.md` §1: delete the "Capture the Vortex baseline" paragraph and block; delete the `vortex_baseline` context-keys row.
+  - [x] `step-05-validate.md` §3: replace the `VORTEX-REGRESSION` paragraphs with the remaining regression check and a short pointer to `T171`; update the VT prerequisite note.
+  - [x] Run every remaining step-04/step-05 `run:` block verbatim, extracted from the files, in the documented order on a throwaway team — or record why a subset suffices. Restore the tree to a `git status --porcelain` snapshot.
 
-- [ ] **Task 5 — Falsifiability (AC: #8)** — mutant table, harness that proves the suite ran, control edit.
+- [x] **Task 5 — Falsifiability (AC: #8)** — mutant table, harness that proves the suite ran, control edit.
 
-- [ ] **Task 6 — Consumer audit (AC: #6)** — `git grep` over the whole repo; disposition per consumer in the record.
+- [x] **Task 6 — Consumer audit (AC: #6)** — `git grep` over the whole repo; disposition per consumer in the record.
 
-- [ ] **Task 7 — Backlog and archive (AC: #7)** — §2.5 moves, `T128` addendum, Change Log entry, integrity passes.
+- [x] **Task 7 — Backlog and archive (AC: #7)** — §2.5 moves, `T128` addendum, Change Log entry, integrity passes.
+
+### Review Findings — Round 1, 2026-09-15 (three independent layers)
+
+Every HIGH reproduced before triage. HIGH present, so `code-review-convergence` triggers Round 2 after remediation.
+
+- [x] [Review][Decision] **The "cannot fail" premise was proven for `add-team` only, but the check was also deleted from the two extension validators — where it can fail.** Blind Hunter and Edge Case Hunter, independently. Reproduced: `registry-appender.js::appendAgentToBlock('gyre', …)` succeeds, `REGISTRY-REGRESSION` still passes, and a fresh `validateInstallation` gains `Agent manifest missing: probe-sentinel`; `validateExtension` returns `valid: true`. AC#1 said STOP on an overlap; the overlap is on a path with no caller today (`T139`). Deleting the check also unmasked two defects in the same validators that its permanent red had hidden: `checkExistingAgentsRegistry` passes when **every** existing agent is removed, and both extension validators pass with zero file checks on an empty context (and `checkActivationMenuUpdated` accepts a comment). Options: keep the deletion and record the extension-path gap as a row owned by the future add-agent work, reopening `T174` rather than absorbing it; restore a baseline-taking check in the extension validators only; or restore the old always-failing call. **Ruled 2026-09-15: keep the deletion everywhere; `T174` stays open, rescoped to the add-agent work with (a) the manifest-drift gap and (b)/(c) the two unmasked defects.**
+- [x] [Review][Patch] The new broken-registry test's `result.valid === false` cannot fail — six checks already fail in its fixture, so a verdict that ignores `REGISTRY-REGRESSION` survives, and removing that check from `validateSkillExtension` survives [`end-to-end-validator.test.js`, `extension-validator.test.js`]
+- [x] [Review][Patch] Both extension happy paths now assert validity against the live `PROJECT_ROOT` registry (`test-fixture-isolation`) [`extension-validator.test.js`]
+- [x] [Review][Patch] step-05 §3 overstates `REGISTRY-REGRESSION` ("the one way generation could break … every other consumer") — a registry that loads can still change what consumers report (`T151`) [`step-05-validate.md` §3]
+- [x] [Review][Patch] AC#6's consumer audit missed `docs/development.md`, which still says VT's "regression check needs a reading taken before the team existed" — prose with no deleted symbol in it [`docs/development.md`]
+- [x] [Review][Patch] The module-name guard is stated unconditionally in step-05 prose, the `T171` archive note and the backlog Change Log, but Express Mode skips step-01's collision detector; step-03's re-check has no block and `config-creator.js::detectCollisions` skips the team's own name (`T132`(c)). The deleted check could not see that damage either, so the premise stands; the claim needs its condition and the gap needs a row [step-05, archive, backlog]
+- [x] [Review][Patch] step-05 §3's history misstates: "it could not fail" (it always failed in the extension validators), and the tfr-1-1 deleted block's "real check is `REGISTRY-REGRESSION`" misattributes; the Visibility Checklist still promises a "Regression check on existing teams"; the VT note's "cannot validate a hand-built team" lost its justification [`step-05-validate.md`]
+- [x] [Review][Patch] Record accuracy: the `T171` note's re-derive command cannot fail (a `--test-name-pattern` matching nothing exits 0); it says "`validateTeam` passes `{}`" (it was `runVortexValidation`); the AC#1 read set omits two files and a fourth near-overlap (`wave3` → `WAVE3_WORKFLOW_NAMES`, guarded by `validateStaged`); `T128`'s addendum does not say its re-derive command now throws; Completion Notes state a block count AC#3 forbids [archive, this file]
+- [x] [Review][Patch] The broken-registry test uses a syntax error only; a syntax-only `node --check` replacement survives — add a load-time throw [`end-to-end-validator.test.js`]
+- [x] [Review][Defer] `checkRegistryRegression` reads `projectRoot` rather than `ctx.registry_path`, and throws on an undefined root — out of scope per the Scope boundary (`REGISTRY-REGRESSION` code unchanged) — deferred, pre-existing
+
+### Review Findings — Round 2, 2026-09-15 (one scoped layer, operator-agreed)
+
+Scoped to the Round 1 remediation's executable and contributor-facing parts: the rewritten tests, step-05, `docs/development.md`. Records excluded by design. **No HIGH, so no Round 3.** Round 1's three named fixes held — each mutant still dies. The fixes below are small in-place edits and unreviewed by construction.
+
+- [x] [Review][Patch] step-05 §3 said the Vortex check "could only pass, whatever generation did". False where step-01's collision check is skipped: a step file added to a Vortex workflow fails `Workflow step structure`, which the deleted check would have caught (reproduced: `lean-persona: 7 step files (expected 4-6)`). Narrowed to its condition in step-05, the `T171` note and the `T177` row, which also said the check "could not see it either" [`step-05-validate.md` §3, archive, backlog]
+- [x] [Review][Patch] "Holds on the interactive path" was too strong — a name edited at step-03 or between sessions also reaches step-04 unchecked; stated in step-05 and added to `T177` [`step-05-validate.md` §3, backlog]
+- [x] [Review][Patch] The tfr-1-1 deleted block "could not fail" — it exited non-zero on an unloadable registry; nothing read the exit [`step-05-validate.md` §3]
+- [x] [Review][Patch] The VT note and `docs/development.md` gave the wrong mechanism: `REGISTRY-WIRING` and `ACTIVATION-VALID` trust results step-04 recorded, and `readContext` throws by design [`step-05-validate.md`, `docs/development.md`]
+- [x] [Review][Patch] The skill happy-path comment called `REGISTRY-REGRESSION` "the only" regression check; three `skill-extension-regression` checks remain [`extension-validator.test.js`]
+- [x] [Review][Defer] Neither extension validator has a test where `REGISTRY-REGRESSION` fails, so verdict-ignoring mutants survive there — added to `T174` as (d) (no caller, `T139`) — deferred
+- [x] [Review][Defer] step-05 §2 lists checks `validateTeam` does not run — filed `T178`, pre-existing — deferred
+- [x] [Review][Defer] *passes REGISTRY-REGRESSION against real project root* still reads the live registry — `deferred-work.md`, pre-existing — deferred
 
 ## Dev Notes
 
@@ -142,14 +170,82 @@ Cited by symbol and section, not line — `tfr-1-1` rotted its own line citation
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context), via `bmad-dev-story`.
+
 ### Debug Log References
 
 ### Completion Notes List
 
+**Task 1 (AC#1) — premise re-derived; it holds, and one guard in Dev Notes names the wrong mechanism.** `validator.js` and `agent-registry.js` are unchanged since `a2944e7d`. The read set, re-enumerated at implementation, also covers `_bmad/<wf.target_agent>` and the `.claude/skills/` wrappers — `add-team` writes neither. **Correction to Dev Notes §Premise:** a team named after an existing module (`vortex`, `enhance`, `artifacts`, `portability`, `gyre`, `team-factory`) is not guarded by `createConfig`'s additive-only check, because step-04 §3's agent and workflow files land in `_bmad/bme/_{team}/` *before* §5a runs. It is guarded earlier: step-01 §4's `collision-detector.js::detectCollisions` returns `hasBlocking: true` (exact `submodule_name` match) for all six, before anything is written. `extra-bme` is not blocked there; its registry write is intercepted by `writeRegistryBlock`'s idempotency check and its module directory is outside the read set. No unguarded overlap.
+
+**Tasks 2–3 (AC#2, #4, #5) — red, then green, by deletion.** Three assertions were written first and read red, each naming `VORTEX-REGRESSION: no baseline recorded …` as the only failing check: *all checks pass when extension is valid*, *all checks pass when skill extension is valid* (both now assert `result.valid === true`), and *structural and wiring checks pass when all files exist and results are valid* (now asserts `result.valid === true`). Deleting `runVortexValidation`, `captureVortexBaseline` and `checkVortexRegression`, their three call sites and two exports turned all three green. The differential describe, `vortex_baseline` in `buildHappyContext`, and the stub `validator.js` in `buildStubProjectRoot` went with them; the stub keeps its `agent-registry.js` and gained a `registryBody` parameter. **Added:** *fails REGISTRY-REGRESSION on a registry that does not load* — the first assertion on that check expecting `passed: false`.
+
+AC#2's command exits 1 (no matches) over `_bmad scripts tests docs`; the same form finds `REGISTRY-REGRESSION` (exit 0), so the empty result is not a broken grep. Test comments were worded "the Vortex regression check" so the command can stay strict.
+
+**Task 4 (AC#3) — prose, then a walk.** step-04 §1's baseline block and the `vortex_baseline` context-keys row are deleted; step-05 §3 now describes `REGISTRY-REGRESSION` and says in two sentences why the Vortex check went; the VT note no longer mentions a baseline, and the "deleted block" paragraph points at `REGISTRY-REGRESSION`. Every remaining block — counted with `grep -rh '^run: node -e' … | wc -l`, not stated here — was extracted from the step files and run in the documented order on a throwaway Sequential team: `validateTeam` → `valid: true`, 15 checks, no `vortex_baseline` in the context. Removal as before: registry diff block-only (+39 −0) and restored, SHA identical, `HEAD` unchanged, `git status --porcelain` identical to the pre-walk snapshot.
+
+**Task 5 (AC#8) — edit → test that goes red.** Harness on a copy, suite floor enforced (497 ran each time), known-lethal control first.
+
+| Edit to make | Test that goes red |
+|---|---|
+| `validateTeam` emits a check that always fails | *structural and wiring checks pass when all files exist and results are valid* |
+| `validateExtension` emits a check that always fails | *all checks pass when extension is valid* |
+| `validateSkillExtension` emits a check that always fails | *all checks pass when skill extension is valid* |
+| `REGISTRY-REGRESSION` always passes | *fails REGISTRY-REGRESSION on a registry that does not load* |
+| `REGISTRY-REGRESSION` dropped from `validateTeam` | three: the happy path, *passes REGISTRY-REGRESSION against real project root*, and the broken-registry test — one property asserted in three shapes |
+
+The first three rows are the point of AC#4: before this story, an always-failing check in either extension validator killed nothing.
+
+**Task 6 (AC#6) — consumer audit, whole repository.** `git grep -l -F` for each deleted symbol, `vortex_baseline`, the §1 block's text (`BASELINE CAPTURE FAILED`, `Capture the Vortex baseline`) and step-05's prose (`No baseline means red`, `no baseline recorded`), over `.` including records; plus `.claude/`, and any importer of `end-to-end-validator` outside the Team Factory.
+
+| Consumer | Disposition |
+|---|---|
+| `_bmad/`, `scripts/`, `tests/`, `docs/`, `.claude/` | none remain |
+| importers of `end-to-end-validator` outside `_team-factory` and `tests/team-factory` | none |
+| `tf-2-9`, `tf-2-11`, `tf-2-12`, `tf-3-1`, `tf-3-2`, `tf-epic-2` retro, `tfr-1-1` story records | historical records — left as-is |
+| this story and its epic | describe the deletion — left as-is |
+| backlog rows `T171`–`T174` | moved to §2.5 (Task 7) |
+| backlog Change Log and §2.5 history mentions | history — left as-is |
+| archive `## T128` | dated addendum appended, note unchanged (Task 7) |
+
+**Task 7 (AC#7).** `T171` → §2.5 *Completed (shipped)* with a closing note; `T172`, `T173` → §2.5 *Absorbed into larger initiatives*, target `T171`. **`T174` was first absorbed too, then reopened after Round 1** (see below). `## T128` gains *Addendum — 2026-09-15, `tfr-2-1`*. Change Log entry prepended. `node scripts/audit/backlog-integrity.js` → PASS. Both re-derive commands in the `T171` closing note were run as written.
+
+**Round 1 remediation (2026-09-15).** All three layers ran; the decision and eight patches were applied as one batch.
+
+- **The premise was proven for `add-team` only.** Blind Hunter and Edge Case Hunter independently reproduced that the extension write path (`appendAgentToBlock` into Gyre's block) changes what `validateInstallation` reads, and that the check's permanent red had hidden two defects in the extension validators. By operator decision the deletion stands; `T174` is reopened and rescoped rather than absorbed, owned by the unbuilt add-agent work. AC#7's literal "T174 absorbed" is therefore not what shipped, deliberately.
+- **Tests that could not fail are fixed.** The broken-registry test now runs on an otherwise valid team, with two unloadable registries (a syntax error and a load-time throw); the extension happy paths run on stub roots, and the skill happy path pins `REGISTRY-REGRESSION`. The three mutants Round 1 found surviving now die:
+
+| Edit to make | Test that goes red |
+|---|---|
+| `validateTeam`'s verdict ignores `REGISTRY-REGRESSION` | *fails REGISTRY-REGRESSION on a registry that does not load, and that alone makes the team invalid* |
+| `REGISTRY-REGRESSION` becomes syntax-only (`node --check`) | the same test (its load-time-throw case) |
+| `REGISTRY-REGRESSION` removed from `validateSkillExtension` | *all checks pass when skill extension is valid* |
+
+- **Prose narrowed to what the code supports.** step-05 §3 says what `REGISTRY-REGRESSION` does not prove (`T151`) and states the module-name guard's condition; the history sentences, the stale Visibility Checklist line and the VT note are corrected; `docs/development.md` no longer cites the deleted baseline — the consumer AC#6's symbol grep could not see.
+- **A scope finding filed, not fixed: `T177`.** Express Mode skips step-01's collision gate; `config-creator.js::detectCollisions` returns `[]` for `vortex`, `enhance` and `gyre` (verified). The deleted check could not see that damage either.
+- **Records corrected:** the `T171` note (premise limits, the full read set, `wave3` guarded by `validateStaged`, a re-derive command that can fail — `grep -c` prints `2` here and `0` on HEAD's file); `T128`'s addendum says its re-derive command now throws; the archive stays append-only against HEAD (+43 −0).
+
+Round 2 (one scoped layer) then ran on this remediation and found no HIGH — see §Review Findings — Round 2; its five small fixes are unreviewed by construction, and the review stops per `code-review-convergence`.
+
 ### File List
+
+- `_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js` — deleted `runVortexValidation`, `captureVortexBaseline`, `checkVortexRegression`, their call sites and exports
+- `_bmad/bme/_team-factory/workflows/add-team/step-04-generate.md` — §1 baseline block and `vortex_baseline` context-keys row deleted
+- `_bmad/bme/_team-factory/workflows/add-team/step-05-validate.md` — §3 regression prose, VT prerequisite note
+- `tests/team-factory/end-to-end-validator.test.js` — differential describe deleted; happy path asserts validity; broken-registry test added; stub root reduced to the registry
+- `tests/team-factory/extension-validator.test.js` — both happy paths assert `result.valid === true`, on stub roots; skill happy path pins `REGISTRY-REGRESSION`
+- `docs/development.md` — VT sentence no longer cites the deleted baseline
+- `_bmad-output/planning-artifacts/convoke-epic-team-factory-regression-check-deletion.md` — `T174` scope row
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — `T171` closed, `T172`/`T173` absorbed, `T174` rescoped, `T177` and `T178` filed, Change Log
+- `_bmad-output/implementation-artifacts/deferred-work.md` — one Round 2 deferral
+- `_bmad-output/planning-artifacts/convoke-note-backlog-completed-archive.md` — `## T171` closing note, `## T128` addendum
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — story status
 
 ## Change Log
 
 | Date | Note |
 |---|---|
+| 2026-09-15 | **Round 2 (one scoped layer) applied; review complete.** No HIGH. Its MEDIUM corrected a claim the Round 1 remediation had narrowed but kept: where step-01's collision check is skipped, the deleted check could have caught generation writing into an existing module — reproduced, and the condition now stated in step-05, the `T171` note and `T177`. Four LOW fixed in place; three deferred (`T174`(d), `T178`, deferred-work). Status stays `review` pending commit. |
+| 2026-09-15 | **Round 1 (three independent layers) applied.** 1 decision, 8 patches, 1 deferred. The premise held for `add-team` but not for the extension validators the check was also removed from; the deletion stands by operator decision, `T174` reopened rescoped. Weak tests fixed and proven by the three mutants that had survived. Prose narrowed, one missed consumer (`docs/development.md`) fixed, `T177` filed. Round 2 triggered. |
+| 2026-09-15 | **Implemented; to `review`.** `VORTEX-REGRESSION` deleted from all three validators, the baseline block and context key removed from the flow, and `T171` closed with `T172`–`T174` absorbed. Red read first on three validity assertions; green by deletion. The extension validators can pass for the first time, and a test proves `REGISTRY-REGRESSION` can fail. Premise re-derived; one Dev Notes guard was misattributed and is corrected in Completion Notes. Remaining blocks walked in the documented order; tree restored to its snapshot. |
 | 2026-09-15 | Story authored via `bmad-create-story` from the operator's decision to delete `VORTEX-REGRESSION` (`T171`) rather than widen it. Staleness pre-flight **GREEN**: the only commits since qualification are the three that built the check; no dependencies; anchors exist; `validator.js` unchanged. `T171`'s premise re-derived at `a2944e7d`, including three near-overlaps its row did not name, each found guarded — one by a different mechanism than first written (`extra-bme` is intercepted by `writeRegistryBlock`'s idempotency check, not `validateStaged`), corrected after execution. One finding sharper than the rows: the extension validators' happy-path tests never assert `result.valid`, which is why `T174` shipped green — and a probe confirmed `VORTEX-REGRESSION` is the only check failing in both, so AC#4 is reachable. |

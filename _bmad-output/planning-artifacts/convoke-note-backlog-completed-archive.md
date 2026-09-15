@@ -2099,6 +2099,16 @@ modules passed.
 (`T172`); a same-process require-cache edge (`T173`); and the two extension validators still call it
 without a baseline, so they can no longer pass — introduced by this fix, unreachable today (`T174`).
 
+
+### Addendum — 2026-09-15, `tfr-2-1`
+
+The differential this note describes was deleted in `tfr-2-1` (`T171`). It fixed what `T128` filed — a
+gate that could never pass in a source tree — but nothing `add-team` writes can make that check fail
+either, so a passing result carried no information. The terminal gate's regression check is now
+`REGISTRY-REGRESSION` alone. **The "Re-derive" command above no longer runs:** `captureVortexBaseline` was
+deleted, so it throws `is not a function`. The note above stands as the record of what was understood when
+`T128` closed.
+
 ## T163
 
 **Part (a) closed 2026-09-15** by `tfr-1-1` (`673fd4c1`, `8a7291bf`); **part (b) remains open** in §2.3.
@@ -2131,3 +2141,38 @@ has because `spec-parser` requires it. It now counts only `identity`, `communica
 **Re-derive:**
 `node --test --test-name-pattern='a hollow team written by the real writer fails the gate' tests/team-factory/end-to-end-validator.test.js`
 — spec → `writeRegistryBlock` with no `agentFiles` → registry on disk → the gate, which must fail.
+
+## T171
+
+**Closed 2026-09-15** by `tfr-2-1`. `VORTEX-REGRESSION` asked whether generating a team broke the Vortex
+installation. When `step-01`'s collision check has run on the team's name, nothing `add-team` writes changes
+what that validation reports, so on that path the check could only pass. Where that check is skipped
+(`T177`), generation can write into an existing module and the check could have failed — partial protection
+whose real fix is the collision gate. Two more rows grew from it and close with it: a name-only comparison (`T172`) and an in-process cache
+edge (`T173`). A third, `T174`, was **rescoped rather than closed** — see below.
+
+**The fix was deletion,** by operator decision, rather than widening. `checkVortexRegression`,
+`runVortexValidation` and `captureVortexBaseline` are gone; no validator emits the check; `step-04` §1 no
+longer captures a baseline. The regression check that remains is `REGISTRY-REGRESSION`, and a test now
+shows that an unloadable registry alone makes an otherwise valid team invalid.
+
+**The premise, and its limits.** `scripts/update/lib/validator.js` was unchanged since the row was filed.
+Its read set: the Vortex, Enhance, Artifacts and Portability module paths, `_bmad/bme/_gyre/config.yaml`,
+`_bmad/bme/_team-factory/agents/team-factory.md`, the agent manifest, and the registry exports
+`WORKFLOW_NAMES`, `WAVE3_WORKFLOW_NAMES`, `AGENTS`, `GYRE_AGENTS`, `EXTRA_BME_AGENTS`, `VORTEX_SKILL_PATHS`.
+`add-team` writes a new module directory, a new output directory and new `<PREFIX>_*` exports. The
+near-overlaps are guarded on the interactive path: a team named after an existing module is blocked by
+`step-01`'s collision detector before anything is written (Express Mode skips it — `T177`); `extra-bme` and
+`gyre` are stopped by `writeRegistryBlock`'s idempotency check; `wave3` by `validateStaged`
+(`Additive-only violation: WAVE3_WORKFLOW_NAMES already exists`); and the user-data check never ran, because
+the deleted `runVortexValidation` passed `{}`.
+
+**The premise did not cover the extension validators**, from which the check was also deleted. There the
+write path can change what the check read — `registry-appender.js::appendAgentToBlock` adding to Gyre's
+block produces `Agent manifest missing` — so they lack a regression check that sees it. By operator
+decision the deletion stands and that gap stays open as `T174`, owned by the unbuilt add-agent work.
+
+**Re-derive:**
+`git grep -n -e 'VORTEX-REGRESSION' -e 'checkVortexRegression' -e 'runVortexValidation' -e 'captureVortexBaseline' -e 'vortex_baseline' -- _bmad scripts tests docs`
+returns nothing (exit 1). `grep -c "assert.equal(result.valid, true" tests/team-factory/extension-validator.test.js`
+prints `2`, and `node --test tests/team-factory/extension-validator.test.js` passes.

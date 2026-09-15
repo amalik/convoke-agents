@@ -24,7 +24,7 @@ only to feed it, and closes four Fast Lane rows by that deletion:
 | `T171` | the check passes, but nothing `add-team` writes can make it fail | the check is gone |
 | `T172` | it compares failing checks by name only | nothing compares |
 | `T173` | `validator.js` caches its registry bindings in one process | nothing re-reads `validator.js` |
-| `T174` | `validateExtension`/`validateSkillExtension` call it without a baseline, so they can never pass | they no longer call it |
+| `T174` | `validateExtension`/`validateSkillExtension` call it without a baseline, so they can never pass | they no longer call it — **but Round 1 found the extension write path can change what the check read, so `T174` stays open, rescoped to the unbuilt add-agent work (operator decision 2026-09-15)** |
 
 **Why delete rather than widen.** `verification-must-be-falsifiable`: a check that cannot fail is no
 evidence, and worse than none because it reads like proof. `code-review-convergence`'s over-build clause:
