@@ -4,7 +4,7 @@ baseline_commit: 3c2b011265368f1c4956b0b95317a787a349e331
 
 # Story tfr-1.1: Generate one real team end to end without hand-patching
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -124,11 +124,11 @@ Not a unit fixture. Walk `add-team` as a contributor would, pasting the blocks. 
   - [x] One mutant per property. Record mutant → the single test that dies.
   - [x] Assert each mutant actually applied before reading the result (`tf-2-13` had a `sed` choke silently on `|` and report a meaningless pass).
 
-- [ ] **Task 8 — End-to-end run and clean removal (AC: #8)**
-  - [ ] Generate a throwaway team by walking the flow.
-  - [ ] `createConfig` and `createCsv` are additive-only (each opens with `if (await fs.pathExists(outputPath))`) — the throwaway cannot be regenerated in place; delete first.
-  - [ ] Restore `agent-registry.js` to a zero `git diff` and re-verify with `require()`.
-  - [ ] Check for stray `_bmad/_<team>/` directories before finishing — `T165`(b) produced two during `tf-2-13`'s reviews.
+- [x] **Task 8 — End-to-end run and clean removal (AC: #8)**
+  - [x] Generate a throwaway team by walking the flow.
+  - [x] `createConfig` and `createCsv` are additive-only (each opens with `if (await fs.pathExists(outputPath))`) — the throwaway cannot be regenerated in place; delete first.
+  - [x] Restore `agent-registry.js` to a zero `git diff` and re-verify with `require()`.
+  - [x] Check for stray `_bmad/_<team>/` directories before finishing — `T165`(b) produced two during `tf-2-13`'s reviews.
 
 ### Review Findings — Round 2, 2026-09-14 (three independent layers)
 
@@ -407,6 +407,29 @@ Both halves of every row exist in the repository, so any row is re-runnable with
 
 **Where a single edit kills several tests, that is stated rather than dressed up.** Reverting the fail-closed branch, the `ctx.registry_path` branch, the `hasPersona` predicate, the module-block guard and the baseline comparison each kill two or more, because the tests they kill assert one property in several shapes. What AC#7 actually asks — *can this assertion fail at all* — is closed: every assertion added by Tasks 4–6 goes red under at least one edit. Two had no killer after the first battery (*passes when the post-generation failing set is unchanged* and *fails when a check that was passing before generation is now failing*); the baseline-ignored and never-a-regression edits exist because of that gap, not to pad the table.
 
+**Task 8 (AC#6, AC#8) — a real team, walked end to end, verified, and removed.**
+
+Team **Probe Relay** (`probe-relay`), Sequential, two agents (`signal-scout`, `pattern-weaver`), one contract (`PR1`). Chosen over Independent so `CONTRACT-FILE-EXISTS` is exercised rather than passing vacuously. The spec's `description` is `He said "go" — it's fine. …` and one role is `Collects the team's raw signals` — the `T136` hazards, carried through real writers: both quote characters reached `config.yaml` intact and the registry escaped the apostrophe as `team\'s`.
+
+All 14 `run:` blocks were pasted with only placeholders substituted (`grep -rh '^run: node -e' _bmad/bme/_team-factory/workflows/add-team/*.md | wc -l`). Step 03 has no block; its validation gate was run by hand and passed all nine checks. §3's BMB delegation was performed by the executor, following the shipped Gyre v5 agent template.
+
+**AC#6 — demonstrated, not reasoned.** `validateTeam` on the real team returned `valid: true` with every check passing: CONFIG ×3, CSV ×3, AGENT-FILE ×2, WORKFLOW-DIR ×2, CONTRACT-FILE, REGISTRY-WIRING, ACTIVATION-VALID, PERSONA-COVERAGE, REGISTRY-REGRESSION, VORTEX-REGRESSION. (The count is per file, so it is a property of the team, not a constant — an earlier "13 checks" in this session was wrong.)
+
+**The gate went red on the same team,** each time on exactly the check targeted, and back to green when restored:
+
+| Flip, on the real artifact or a copy of it | Result |
+|---|---|
+| registry copy with the team's evidence fields blanked (the writer's hollow shape; `role` kept) | `valid: false` — PERSONA-COVERAGE names both agents |
+| context copy whose baseline claims the three modules passed | `valid: false` — VORTEX-REGRESSION `regressed: Artifacts module, Enhance module, Portability module` |
+| `pr1-signal-digest.md` moved aside | `valid: false` — CONTRACT-FILE-EXISTS |
+
+**AC#8 — removal.** The registry diff was checked to be the team's block only (39 insertions, 0 deletions) before `git checkout --`. Afterwards: registry SHA identical to the pre-run snapshot, zero `git diff`, `require()` loads with no `PROBE_RELAY_AGENTS`, no `.bak`. Five untracked paths removed, each checked to be inside the repo and untracked: the module, the output directory, the spec, the context file, and the empty `relative-root/` deferred from Round 2. No stray `_bmad/_probe-relay/` (`T165`(b)). `git status --porcelain` is byte-identical to the snapshot taken before the run — including another session's uncommitted files, which were not touched — `HEAD` is unchanged, and `captureVortexBaseline` reports the same three failing modules as the §1 baseline did.
+
+**Found during the run, filed rather than fixed:**
+- `T174` — `validateExtension` / `validateSkillExtension` call `checkVortexRegression` without a baseline, so since `0db3aac8` they fail closed everywhere. Introduced by this story; unreachable today (no callers, `T139`); their tests assert only `valid: false`.
+- `T175` — the abort manifest lists each `workflow.md` twice (17 entries, 2 duplicated), because the context-keys table does not exclude it from `workflow_step_files`.
+- `T176` — step-01 deletes the scoping file that step-03's collision re-check needs.
+
 ### Review Findings — Round 1 on Tasks 4–7, 2026-09-14 (three independent layers)
 
 Against commit `0db3aac8`. Reviewed set == committed set, asserted by command. Working tree
@@ -512,6 +535,7 @@ Round 1 (self) — 5 findings, 1 HIGH. Round 2 (three independent layers) — ~3
 
 - `_bmad/bme/_team-factory/lib/utils/run-context.js` — **new.** `loadSpec`, `initContext`, `readContext`, `recordContext`, `writeAtomic`
 - `.github/workflows/ci.yml` — restored to its pre-gate state (net zero against `673fd4c1`)
+- Task 8 changed no code: it generated and removed a throwaway team, and filed `T174`–`T176` in `convoke-note-initiative-lifecycle-backlog.md`
 - `tests/team-factory/run-context.test.js` — **new.**
 - `_bmad/bme/_team-factory/workflows/add-team/step-02-connect.md` — §5 block
 - `_bmad/bme/_team-factory/workflows/add-team/step-04-generate.md` — §Placeholders, §5a, §5a-ii, §5b, §5c, §5d, §8
@@ -538,6 +562,7 @@ Round 1 (self) — 5 findings, 1 HIGH. Round 2 (three independent layers) — ~3
 
 | Date | Note |
 |---|---|
+| 2026-09-15 | **Task 8 done; story to `review`.** A real Sequential team generated by walking all 14 `run:` blocks returned `validateTeam` → `valid: true`, went red on three targeted flips of the same team, and was removed to a porcelain snapshot identical to the pre-run one. AC#6 is now demonstrated rather than reasoned. Filed `T174` (introduced by this story, unreachable today), `T175`, `T176`. |
 | 2026-09-14 | **Tasks 4–7 implemented.** `T164`(a): `agentFiles` is normalized and reported rather than coerced to `[]`; `personaCoverage` ships as its own field (`success` untouched — the §Trap forbids a fifth rewrite); `PERSONA-COVERAGE` gates at the terminal validator, reading `agent-registry.js` on disk at the path §5d recorded. `T164`(b): §5d's `expect:` names its recorded keys. `T128`: `checkVortexRegression` became a differential against a §1 baseline, by **set containment** rather than the count AC#6's wording allows — a count passes a run that repairs one module and breaks another. Fail-closed with no baseline. The `end-to-end-validator.test.js` assertion that checked the VORTEX check merely *existed*, excused by a "pre-existing project state" comment, is replaced by an assertion on `.passed`. AC#7: 19 mutants run under a harness that asserts the mutant applied and byte-compares the restore; every assertion added by Tasks 4–6 is killed by at least one, and the eleven with a sole executioner are tabled by name. Where a mutant kills several tests that is stated, not padded. Suite and lint state are not transcribed here — run `npm test` and `npx eslint --no-ignore <the changed files>`. **Task 8 (the real end-to-end run) is the remaining work** — AC#6's `valid === true` is still reasoned, not demonstrated, and `PERSONA-COVERAGE` adds a thirteenth check the previous generation run did not exercise. |
 | 2026-09-14 | **Self-review, 9 findings, all applied.** Three HIGH, and two of them were defects in the story's *design* rather than its prose: (1) AC#1 documented `grep -rhc … *.md` as the way to derive the block count — it prints six per-file numbers, not 12, the `docs-1-5` "command that does not run" class, now `grep -rh … | wc -l` and executed; (2) Task 2 told the executor to route `step-01` §4 through Task 1's context file, which is a **Step-4** artifact that does not exist at §4 — the "reasoning about the consumer without reading it" fault the story itself warns against, committed in the story; (3) Task 1 had Step 4 write `{spec_data}` to a new JSON file when `step-01` §5 already writes the spec to disk and `parseSpec` already takes a path — the duplication Task 3 exists to delete, in the same document. **The first correction to (2) was also wrong** and is recorded rather than tidied away: it proposed moving Overlap Detection after §5, but §5 populates the overlap acknowledgments §4 produces, so the order cannot invert; the fix is a scoping scratch file. MEDIUM: AC#3 could regress R3's `{project-root}/` stripping (positive case now pinned); Task 6 never said when the baseline is captured (now: before §5d writes the registry); backlog line citations would rot on this story's own close (now grep-anchored). LOW: a dangling `§` pointer, rotting test line-counts, and `git diff` not covering untracked output. AC#6's reachability is now marked reasoned-not-executed, with an instruction to report a second blocker rather than absorb it. |
 | 2026-09-14 | Story authored via `bmad-create-story` from the `tfr-epic-1` scoping ruling (`T136`, `T164`, `T163`(a), `T128`). Staleness pre-flight run at HEAD `3c2b0112` — **GREEN**, all four reproduced by execution, one finding sharper than its row (`T163`(a) leaves a half-written config, not only a false reject) and one broader (`T136` fails on plain JSON, not only quote-bearing JSON). One open decision recorded and pre-answered: the `run:` block transport contract, chosen as a context file with the CLI and single-quote alternatives declined and the reasons given. Two scope corrections made during authoring, both by counting rather than assuming: the `run:`-block surface is 12 blocks, of which 8 carry object placeholders, 1 hand-builds an object with a literal `...` that is not valid JS *and* uses two placeholders its step file never defines, 1 is an inert no-op, and 2 are scalar-safe. Scope excludes `T163`(b), `T165`, `T166`, `T127`, `T132`, `T134`, `T137`, `T138`, `T139`, `T141`, `T147`, `T151`. |
