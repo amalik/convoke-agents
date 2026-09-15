@@ -995,8 +995,8 @@ development_status:
   # IR gate: convoke-report-implementation-readiness-bmad-v6.4-v6.8-absorption-2026-08-09-r2.md
   #   — verdict READY. Tracked at `backlog` on the ILE precedent (rows land when the IR gate
   #   passes; capacity is committed later).
-  # NOT startable yet: the dist-epic-2 action item makes the 4.0.2 PUBLISH the gate on new epic
-  #   work, and project-context team-expansion-freeze exits on the same event.
+  # Publish gate cleared 2026-09-14: the dist-epic-2 action item made the 4.0.2 PUBLISH the gate on
+  #   new epic work, and 4.0.2 published that day (tag v4.0.2 -> a77cfefe).
   # Absorption window is v6.4–v6.12 (re-baselined 2026-09-05); the filename qualifier understates
   #   it by four minors — frontmatter `absorption_window` is authoritative, rename tracked as I121.
   # Epic 4 is Phase-2 fast-follow, not MVP. IR r2 warns Epic 3's sizing rests on a denominator
@@ -1041,7 +1041,7 @@ action_items:
   - epic: "docs-1"
     action: "Publish 4.0.2 — carried unchanged from dist-epic-2; larger now than when first written"
     owner: "Amalik"
-    status: open
+    status: done
   - epic: "docs-1"
     action: "Five deferred coverage-gate items (.MD escaping, ships in files[], unbalanced fences, HTML-comment tables, seven user guides excluded by accident)"
     owner: "dev agent"
@@ -1109,7 +1109,7 @@ action_items:
   - epic: "dist-epic-2"
     action: "Publish 4.0.2 -- bump package.json off 4.0.1, ship through the CI path, verify latest moved. BLOCKS all new epic work; the team-expansion-freeze exit is the publish, not the epic"
     owner: "Amalik"
-    status: open
+    status: done
   - epic: "dist-epic-2"
     action: "Close T45 with a verification check -- confirm ci.yml:697-730 satisfies its filing (the npmrc scan that inspected zero files appears fixed but the row is open)"
     owner: "dev agent"
