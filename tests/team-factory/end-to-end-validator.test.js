@@ -623,9 +623,12 @@ describe('VORTEX-REGRESSION — differential, not absolute', () => {
     // post has one unnamed failure, gate green. Compared by name, it cannot be compared.
     for (const [label, badName] of [['missing', undefined], ['blank', '   ']]) {
       const root = path.join(tmpDir, `unnamed-${label}`);
+      process.env.TF_BAD_NAME = (badName === undefined) ? '__TF_UNDEFINED__' : yaml.dump(badName).trim();
       await fs.ensureDir(path.join(root, 'scripts/update/lib'));
       await fs.writeFile(path.join(root, 'scripts/update/lib/validator.js'),
-        `module.exports = { validateInstallation: async () => ({ valid: false, checks: [{ name: ${JSON.stringify(badName)}, passed: false }] }) };\n`, 'utf8');
+        "const raw = process.env.TF_BAD_NAME;\n" +
+        "const name = raw === '__TF_UNDEFINED__' ? undefined : JSON.parse(raw);\n" +
+        "module.exports = { validateInstallation: async () => ({ valid: false, checks: [{ name, passed: false }] }) };\n", 'utf8');
 
       const check = await checkVortexRegression(root, { valid: true, failing: [] });
 
