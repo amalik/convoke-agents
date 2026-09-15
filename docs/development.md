@@ -78,7 +78,7 @@ Migrations live in `scripts/update/migrations/registry.js` (append-only).
 
 Use `/bmad-agent-bme-team-factory` for a guided workflow that handles the full creation process — composition pattern selection, agent scope definition, contract design, artifact generation, and integration wiring. It is a preview: its first steps record your design decisions as a resumable spec, but generating the team writes into Convoke's own source files, so it only completes inside a clone of the Convoke repository, and nothing installs a generated team yet. Treat the result as a starting point, not a finished team.
 
-Two capabilities are available today — **Create Team** (a new team from scratch) and **Validate Team** (end-to-end validation of an existing team). Both are derived from the two rows in `_bmad/bme/_team-factory/module-help.csv`, which is what the module declares it offers.
+Two capabilities are available today — **Create Team** (a new team from scratch) and **Validate Team** (end-to-end validation of a team Create Team generated in your clone, read from that run's context file — it cannot validate a hand-built team, because its regression check needs a reading taken before the team existed). Both are derived from the two rows in `_bmad/bme/_team-factory/module-help.csv`, which is what the module declares it offers.
 
 **Add Agent** and **Add Skill** are planned for Phase 3 and do not ship yet — `_bmad/bme/_team-factory/workflows/` contains `add-team/` only. Asked for either, the factory says so and routes you to the Architecture Reference (`[AR]` on its menu), to BMB (Bond) for generating individual agent or workflow files, and to manual integration wiring against the reference checklist.
 
