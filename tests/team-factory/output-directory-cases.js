@@ -68,6 +68,17 @@ const CONTAINMENT_CASES = [
 
   // --- rejected ---
   {
+    value: '_bmad-output/../etc',
+    contained: false,
+    why: 'a one-level escape to a sibling of _bmad-output — moved here from a separate list in '
+       + 'config-creator.test.js so every call site sees it (tfr-1-1 additional review)',
+  },
+  {
+    value: '/abs/path',
+    contained: false,
+    why: 'an absolute path with no _bmad-output segment at all — moved here from the same separate list',
+  },
+  {
     value: '_bmad-output/../../escaped',
     contained: false,
     why: 'the real escape (tf-2-13 R2): created OUTSIDE the project root, written into the '

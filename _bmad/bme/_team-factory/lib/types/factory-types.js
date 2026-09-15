@@ -140,6 +140,9 @@
  * @property {boolean} rollbackApplied - True if .bak was restored after verify failure
  * @property {boolean} [dirty] - True if dirty-tree detection found uncommitted changes
  * @property {string} [diff] - Git diff output when dirty
+ * @property {{covered: string[], empty: string[], agentFilesIssues: string[], missingAgentFiles: string[]}|null} personaCoverage
+ *   - Which declared agents carry persona evidence. `null` on every return except a completed
+ *     write (the skip, dirty and failure paths compute none)
  */
 
 /**

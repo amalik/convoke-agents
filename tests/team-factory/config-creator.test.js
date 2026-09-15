@@ -327,11 +327,13 @@ describe('R3: buildConfigData refuses an escaping output_directory', () => {
     integration: { output_directory: d }
   });
 
-  for (const bad of ['_bmad-output/../../escaped', '_bmad-output/../etc', '_bmad-output/', '/abs/path']) {
-    it(`throws on ${JSON.stringify(bad)} rather than composing it into config.yaml`, () => {
-      assert.throws(() => buildConfigData(spec(bad)), /_bmad-output/);
-    });
-  }
+  // The rejected values are not listed here: output-directory.test.js sweeps every REJECTED case
+  // in output-directory-cases.js through buildConfigData, and a separate list is how the call
+  // sites drifted apart in the first place (AC#3). The two values only this list carried were
+  // moved into the shared table.
+  it('throws on the real escape rather than composing it into config.yaml', () => {
+    assert.throws(() => buildConfigData(spec('_bmad-output/../../escaped')), /_bmad-output/);
+  });
 
   it('still composes a legitimate value', () => {
     assert.equal(

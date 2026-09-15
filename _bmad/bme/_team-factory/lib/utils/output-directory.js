@@ -117,8 +117,10 @@ function isContainedOutputDirectory(value) {
  * Assert containment, returning the value unchanged.
  *
  * Throws rather than returning a result object because `buildConfigData` is
- * synchronous with no error channel, and `createConfig` already converts throws
- * into `{success: false, errors: […]}`.
+ * synchronous with no error channel. `createConfig` does NOT convert that throw:
+ * it calls `buildConfigData` outside its `try`, so an uncontained value rejects
+ * its promise. In the flow that is unreachable — step-04 §5a's `loadSpec` rejects
+ * the same value first — and the config-creator CLI catches the rejection.
  *
  * @param {*} value
  * @returns {string} the value, unchanged and still carrying any prefix

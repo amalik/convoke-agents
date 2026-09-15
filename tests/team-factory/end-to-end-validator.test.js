@@ -145,9 +145,9 @@ async function buildHappyContext(tmpDir, personaMode = 'full') {
   return {
     module_root: moduleRoot,
     registry_path: registryPath,
-    // tfr-1-1 (T128): stated, not captured. The stub root fails nothing, so this baseline
-    // differs from the post-generation read, which is what makes the happy-path assertion
-    // on VORTEX-REGRESSION able to fail.
+    // tfr-1-1 (T128): stated, not captured from the tree under test. Every validateTeam describe
+    // builds its stub root failing exactly 'Enhance module', so this is the "unchanged" case:
+    // it passes by set containment, and it would fail if the stub root failed anything else.
     vortex_baseline: { valid: false, failing: ['Enhance module'] },
     generated_files: agentFiles.concat(
       workflowDirs.map(d => path.join(d, 'workflow.md')),
@@ -207,8 +207,8 @@ describe('validateTeam — happy path', () => {
     // tfr-1-1 (T128). This replaces an assertion that checked the check EXISTED and
     // nothing about whether it passed, excused by a comment reading "may fail due to
     // pre-existing project state". That is `verification-must-be-falsifiable`'s check
-    // that can only pass. Here the stated baseline fails 'Enhance module' and the stub
-    // root fails nothing, so nothing regressed and it must be GREEN.
+    // that can only pass. Here the stated baseline and the stub root both fail exactly
+    // 'Enhance module', so nothing regressed and it must be GREEN.
     const vortexCheck = result.checks.find(c => c.name === 'VORTEX-REGRESSION');
     assert.ok(vortexCheck, 'should have VORTEX-REGRESSION check');
     assert.equal(vortexCheck.stepName, 'regression');
@@ -621,9 +621,11 @@ describe('VORTEX-REGRESSION — differential, not absolute', () => {
   it('fails closed when a failing check has no usable name, rather than dropping it', async () => {
     // Dropping unnamed checks let a regression inside one pass silently: baseline clean,
     // post has one unnamed failure, gate green. Compared by name, it cannot be compared.
-    for (const [label, badName] of [['missing', undefined], ['blank', '   ']]) {
+    // `null` is the one non-string that survives the context file's JSON round trip, so a guard
+    // keyed on `=== undefined` would pass it into a real baseline; `42` covers any other non-string.
+    for (const [label, badName] of [['missing', undefined], ['blank', '   '], ['null', null], ['number', 42]]) {
       const root = path.join(tmpDir, `unnamed-${label}`);
-     await fs.ensureDir(path.join(root, 'scripts/update/lib'));
+      await fs.ensureDir(path.join(root, 'scripts/update/lib'));
       // The check is written as data beside a fixed module body, not spliced into source
       // (CodeQL alert 27). writeJson drops an undefined `name` key: that is the `missing` case.
       await fs.writeJson(path.join(root, 'scripts/update/lib/check.json'), { name: badName, passed: false });

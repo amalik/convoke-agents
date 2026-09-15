@@ -78,18 +78,21 @@ party_mode_enabled: true
 core_module: bme
 ```
 
-Run config field collision detection:
-```
-run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); rc.loadSpec('{spec_path}').then(s => cc.detectCollisions(s, '{project-root}/_bmad/bme/')).then(c => console.log(JSON.stringify(c)))"
-expect: result.length === 0 → no collisions, proceed
-        result.length > 0  → display each {field, value, existingModule}, ask contributor to rename before continuing
-```
-
 ### 6. Save Progress
 
 Update the spec file:
 - Add contracts, feedback_contracts, integration section
 - Set progress: `connect: complete`
+
+### 7. Config Field Collision Check
+
+**This runs after §6, not in §5.** The block reads the spec from disk with `loadSpec`, which validates the whole file — and `integration` (plus `contracts` and `contract_prefix` for a Sequential team) only exist once §6 has saved them. Run before the save, it throws `spec … is not usable: Missing required field: integration`.
+
+```
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), cc = require('{project-root}/_bmad/bme/_team-factory/lib/writers/config-creator.js'); rc.loadSpec('{spec_path}').then(s => cc.detectCollisions(s, '{project-root}/_bmad/bme/')).then(c => console.log(JSON.stringify(c)))"
+expect: result.length === 0 → no collisions, proceed
+        result.length > 0  → display each {field, value, existingModule}, ask the contributor to rename, update the spec file, and re-run this block
+```
 
 Display summary:
 - "{N} forward contracts, {M} feedback contracts defined" (Sequential)

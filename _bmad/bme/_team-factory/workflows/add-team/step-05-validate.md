@@ -7,6 +7,8 @@ Run comprehensive validation on the generated team, produce a file manifest, col
 - Step 04 (Generate) completed — all files created and wired
 - Spec file has progress.generate = "complete" (or all agent sub-entries complete)
 
+> **Reached from `[VT] Validate Team`?** VT runs this step directly, so everything above must already exist: it validates a team that `add-team` generated **in this repository**, using that run's spec file and context file (`{context_path}`), and that run's `vortex_baseline`. It cannot validate a hand-built team or one whose context file is gone — `readContext` throws without the file, and `VORTEX-REGRESSION` fails closed without the baseline, because only step-04 §1 can take a reading from before the team existed.
+
 > **`{context_path}`** is the path to the generation context Step 4 accumulated. Its shape, and which consumer reads each key, is defined in `step-04-generate.md` §Placeholders — including **`contract_files`**, which `end-to-end-validator.js::checkContractFiles` iterates and which passes **vacuously** when absent.
 >
 > **It persists.** This paragraph used to say the context was an in-memory Step-4 value with no persistence mechanism — gone if Steps 4 and 5 ran in separate sessions, with `checkConfig`/`checkActivation`/`checkRegistryWiring` reporting false failures on a correctly generated team, and the only remedy being to re-run Step 4's §5 wiring. Since tfr-1-1 it is a JSON file on disk, so Step 5 reads what Step 4 wrote regardless of session. **Never pass `{}`**: `run-context.js::readContext` throws when the file is absent precisely so a lost context fails loudly instead of masquerading as a broken team.
@@ -46,10 +48,11 @@ The end-to-end validator checks:
 
   **`persona.role` is deliberately not counted.** Every agent must have a `role`, and `buildAgentEntry` copies it from the spec, so it is present whether or not extraction ever ran. Counting it made the check unable to fail.
 
-  **A red `PERSONA-COVERAGE` on a team whose agents plainly have roles is the check working.** There are two causes, and they need different fixes:
+  **A red `PERSONA-COVERAGE` on a team whose agents plainly have roles is the check working.** There are three causes, and they need different fixes:
 
   1. **§5d ran without a usable `agentFiles`.** Its output shows `personaCoverage.agentFilesIssues` or `.missingAgentFiles`, or the context has no `agent_files` key. **Re-running §5d alone does not repair this:** the block already exists, so the writer skips (`skipped: ["block already exists"]`) and the hollow block stays. First run `git diff scripts/update/lib/agent-registry.js` and confirm the diff is **only** this team's `<PREFIX>_*` block — `git checkout --` discards every uncommitted change in the file, not just yours. Then restore it with `git checkout -- scripts/update/lib/agent-registry.js`, record `agent_files` (step-04 §3), and re-run §5d.
   2. **The agent files are there, but the extractor does not recognise their persona markup.** It reads `<identity>`, `<communication_style>` and `<principles>` XML tags written exactly like that, or `## Identity`, `## Communication Style` and `## Principles` headings. A YAML `persona:` block, `### Identity`, or a tag with attributes (`<identity lang="en">`) extracts nothing. Fix the agent files to one of the two recognised shapes, then recover as in (1).
+  3. **An agent file's name does not match its agent id.** Extracted personas are keyed by the file's basename (`agents/<id>.md`, or the directory name for `agents/<id>/SKILL.md`), so `agents/alpha.md` gives nothing to agent `alpha-analyzer` — with no entry in `agentFilesIssues` or `.missingAgentFiles`, and `AGENT-FILE-EXISTS` still green. Rename the file to the agent id, re-record `agent_files`, then recover as in (1).
 
 **Naming checks:**
 - Module directory matches `_{team_name_kebab}`
@@ -71,7 +74,7 @@ Run by `validateTeam` in §2 — there is no separate command here.
 
 So a source tree with those three modules already failing is **green**, and a check that was passing before your team was generated and fails after it is **red** — which is the question the gate was always meant to ask.
 
-**No baseline means red.** If `step-04` §1 did not run, `{generation_context}.vortex_baseline` is absent and the check fails closed with `no baseline recorded`. That is not a bug to work around: without a pre-generation reading, a regression cannot be told apart from pre-existing state, and answering anyway would restore the defect in the opposite direction.
+**No baseline means red.** If `step-04` §1 did not run, `vortex_baseline` is absent from `{context_path}` and the check fails closed with `no baseline recorded`. That is not a bug to work around: without a pre-generation reading, a regression cannot be told apart from pre-existing state, and answering anyway would restore the defect in the opposite direction.
 
 ### 4. Display Results
 

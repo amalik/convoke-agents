@@ -324,7 +324,7 @@ async function runVortexValidation(projectRoot) {
 }
 
 /**
- * Capture the pre-generation Vortex baseline for `{generation_context}.vortex_baseline`.
+ * Capture the pre-generation Vortex baseline for the context file's `vortex_baseline`.
  *
  * tfr-1-1 Task 6 (T128). MUST run before Step 4 §5d writes to `agent-registry.js` —
  * `step-04-generate.md` §1 is where the flow calls it. A "baseline" taken after the
@@ -357,7 +357,7 @@ async function captureVortexBaseline(projectRoot) {
  * defect in the opposite direction (`verification-must-be-falsifiable`).
  *
  * @param {string} projectRoot
- * @param {{valid?: boolean, failing?: string[]}} [baseline] - from `{generation_context}.vortex_baseline`
+ * @param {{valid?: boolean, failing?: string[]}} [baseline] - the context file's `vortex_baseline`
  * @returns {Promise<E2ECheck>}
  */
 async function checkVortexRegression(projectRoot, baseline) {
@@ -368,7 +368,7 @@ async function checkVortexRegression(projectRoot, baseline) {
       name: 'VORTEX-REGRESSION',
       stepName: 'regression',
       passed: false,
-      expected: 'a pre-generation baseline at {generation_context}.vortex_baseline',
+      expected: 'a pre-generation baseline recorded as vortex_baseline in the context file (step-04 §1)',
       actual: baseline === undefined || baseline === null
         ? 'no baseline recorded — step-04 §1 did not capture one, so a regression cannot be distinguished from pre-existing state'
         : `unusable baseline (no .failing array): ${JSON.stringify(baseline)}`,
