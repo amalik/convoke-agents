@@ -336,3 +336,129 @@ describe('Agent customize files', () => {
     assert.equal(afterContent, customContent, 'customize file should not be overwritten');
   });
 });
+
+// fic-1-1 / BUG-22. A fresh 4.0.2 install wrote configs with no user_name/communication_language,
+// so 7 of 11 agents stopped on first start; it also seeded Gyre with Vortex identity and doubled
+// Gyre's lists on its first update. These go through refreshInstallation, the path the installer and
+// convoke-update both take, rather than mergeConfig alone.
+describe('Fresh Install writes the config every agent needs (fic-1-1)', () => {
+  const { GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES } = require('../../scripts/update/lib/agent-registry');
+  const templateDescription = (submodule) =>
+    yaml.load(fs.readFileSync(path.join(__dirname, `../../_bmad/bme/${submodule}/config.yaml`), 'utf8')).description;
+  let tmpDir;
+
+  const readConfig = (submodule) =>
+    yaml.load(fs.readFileSync(path.join(tmpDir, `_bmad/bme/${submodule}/config.yaml`), 'utf8'));
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-fic-'));
+    await fs.ensureDir(path.join(tmpDir, '_bmad'));
+    await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
+  });
+
+  after(async () => {
+    await fs.remove(tmpDir);
+  });
+
+  for (const [submodule, outputFolder] of [
+    ['_vortex', '{project-root}/_bmad-output/vortex-artifacts'],
+    ['_gyre', '{project-root}/_bmad-output/gyre-artifacts'],
+  ]) {
+    it(`${submodule}/config.yaml carries the fields its agents require (AC1)`, () => {
+      const config = readConfig(submodule);
+      assert.equal(config.submodule_name, submodule);
+      assert.equal(config.module, 'bme');
+      assert.equal(config.output_folder, outputFolder);
+      if (submodule === '_gyre') assert.equal(config.description, templateDescription('_gyre'));
+      assert.equal(config.user_name, '{user}');
+      assert.equal(config.communication_language, 'en');
+    });
+  }
+
+  it('repeated refreshes leave Gyre lists canonical (AC2)', async () => {
+    await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
+    await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
+    const config = readConfig('_gyre');
+    assert.deepEqual(config.agents, GYRE_AGENT_IDS);
+    assert.deepEqual(config.workflows, GYRE_WORKFLOW_NAMES);
+  });
+
+  it('repairs a Gyre config in the shape a 4.0.2 install left it (AC3)', async () => {
+    const gyreConfigPath = path.join(tmpDir, '_bmad/bme/_gyre/config.yaml');
+    fs.writeFileSync(gyreConfigPath, yaml.dump({
+      submodule_name: '_vortex',
+      description: 'Vortex Pattern - Contextualize, Empathize, Synthesize, Hypothesize, Externalize, Sensitize, and Systematize streams',
+      module: 'bmx',
+      output_folder: '{project-root}/_bmad-output/vortex-artifacts',
+      agents: [...GYRE_AGENT_IDS, ...GYRE_AGENT_IDS],
+      excluded_agents: [],
+      workflows: [...GYRE_WORKFLOW_NAMES, ...GYRE_WORKFLOW_NAMES],
+      version: '4.0.2',
+      migration_history: [],
+      acme_client: 'Globex',
+    }));
+
+    await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
+
+    const config = readConfig('_gyre');
+    assert.equal(config.submodule_name, '_gyre');
+    assert.equal(config.module, 'bme');
+    assert.equal(config.description, templateDescription('_gyre'));
+    assert.equal(config.output_folder, '{project-root}/_bmad-output/gyre-artifacts');
+    assert.deepEqual(config.agents, GYRE_AGENT_IDS);
+    assert.deepEqual(config.workflows, GYRE_WORKFLOW_NAMES);
+    assert.equal(config.user_name, '{user}');
+    assert.equal(config.communication_language, 'en');
+    assert.equal(config.acme_client, 'Globex');
+  });
+
+  it('repairs a Vortex config left holding Gyre identity (the Vortex call site passes its submodule)', async () => {
+    const vortexConfigPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
+    const config = readConfig('_vortex');
+    const gyreTemplate = yaml.load(fs.readFileSync(path.join(__dirname, '../../_bmad/bme/_gyre/config.yaml'), 'utf8'));
+    fs.writeFileSync(vortexConfigPath, yaml.dump({
+      ...config, submodule_name: '_gyre', description: gyreTemplate.description, output_folder: gyreTemplate.output_folder,
+    }));
+
+    const warn = console.warn;
+    console.warn = () => {};
+    try {
+      await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
+    } finally {
+      console.warn = warn;
+    }
+
+    const repaired = readConfig('_vortex');
+    assert.equal(repaired.submodule_name, '_vortex');
+    assert.equal(repaired.output_folder, '{project-root}/_bmad-output/vortex-artifacts');
+  });
+
+  it('refuses a config with a duplicate key before copying anything, leaving it byte-identical', async () => {
+    const dupDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-fic-dup-'));
+    try {
+      await fs.ensureDir(path.join(dupDir, '_bmad'));
+      await refreshInstallation(dupDir, { backupGuides: false, verbose: false });
+      const gyreConfigPath = path.join(dupDir, '_bmad/bme/_gyre/config.yaml');
+      const content = fs.readFileSync(gyreConfigPath, 'utf8') + 'acme_client: Globex\nuser_name: Pat\n';
+      fs.writeFileSync(gyreConfigPath, content);
+      const agentPath = path.join(dupDir, '_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md');
+      const agentMarked = fs.readFileSync(agentPath, 'utf8') + '\n<!-- marker: must survive a refused refresh -->\n';
+      fs.writeFileSync(agentPath, agentMarked);
+
+      const warn = console.warn;
+      console.warn = () => {};
+      try {
+        await assert.rejects(
+          refreshInstallation(dupDir, { backupGuides: false, verbose: false }),
+          /refusing to overwrite .*_gyre\/config\.yaml: it is not valid YAML/
+        );
+      } finally {
+        console.warn = warn;
+      }
+      assert.equal(fs.readFileSync(gyreConfigPath, 'utf8'), content);
+      assert.equal(fs.readFileSync(agentPath, 'utf8'), agentMarked, 'nothing was copied before the refusal');
+    } finally {
+      await fs.remove(dupDir);
+    }
+  });
+});

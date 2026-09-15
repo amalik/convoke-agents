@@ -3,7 +3,7 @@
 const fs = require('fs-extra');
 const yaml = require('js-yaml');
 const YAML = require('yaml'); // Comment-preserving YAML library (ag-7-1: I29). Used by mergeConfig + writeConfig to preserve comments across the merge round-trip.
-const { AGENT_IDS, WORKFLOW_NAMES } = require('./agent-registry');
+const { AGENT_IDS, WORKFLOW_NAMES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES } = require('./agent-registry');
 const { assertVersion } = require('./utils');
 
 /**
@@ -18,6 +18,49 @@ const { assertVersion } = require('./utils');
  */
 
 const MERGED_DOC_SENTINEL = Symbol.for('convoke.config-merger.docMerged');
+
+/**
+ * Per-module structural defaults and canonical lists for the modules merged through `mergeConfig`.
+ *
+ * fic-1-1 (BUG-22). `mergeConfig` used to hold one Vortex-shaped set of defaults and judged
+ * "user-added" agents against Vortex's lists, while `refresh-installation.js` called it for Gyre
+ * too. A fresh 4.0.2 install therefore wrote configs with no `user_name`/`communication_language`
+ * (Isla, Liam, Noah, Max and all four Gyre agents stop without them), seeded Gyre with Vortex's
+ * identity, and doubled Gyre's lists on its first update (they then stayed doubled).
+ *
+ * `user_name` and `communication_language` are defaults because the agents require the keys to be
+ * present; the installer then tells the operator to replace `{user}`. `submodule_name`, `module`,
+ * `output_folder`, `user_name` and `communication_language` are pinned to the shipped templates by
+ * `tests/unit/config-merger-module-profiles.test.js`; `description` is not, because the Vortex
+ * template's copy is stale (IN-208). The lists are frozen copies, so the export cannot mutate the
+ * registry.
+ */
+const MODULE_PROFILES = Object.freeze({
+  _vortex: Object.freeze({
+    defaults: Object.freeze({
+      submodule_name: '_vortex',
+      description: 'Vortex Pattern - Contextualize, Empathize, Synthesize, Hypothesize, Externalize, Sensitize, and Systematize streams',
+      module: 'bme',
+      output_folder: '{project-root}/_bmad-output/vortex-artifacts',
+      user_name: '{user}',
+      communication_language: 'en'
+    }),
+    agentIds: Object.freeze([...AGENT_IDS]),
+    workflowNames: Object.freeze([...WORKFLOW_NAMES])
+  }),
+  _gyre: Object.freeze({
+    defaults: Object.freeze({
+      submodule_name: '_gyre',
+      description: 'Gyre Pattern - Production readiness discovery through stack analysis, contextual model generation, and absence detection',
+      module: 'bme',
+      output_folder: '{project-root}/_bmad-output/gyre-artifacts',
+      user_name: '{user}',
+      communication_language: 'en'
+    }),
+    agentIds: Object.freeze([...GYRE_AGENT_IDS]),
+    workflowNames: Object.freeze([...GYRE_WORKFLOW_NAMES])
+  })
+});
 
 /**
  * Read `excluded_agents` from a module's config.yaml without going through the
@@ -54,6 +97,64 @@ function readExcludedAgents(configPath) {
 }
 
 /**
+ * Read an existing module config as a YAML Document, or refuse to touch it.
+ *
+ * fic-1-1. Returns the Document, or null when the file does not exist. Throws
+ * `refusing to overwrite <path>` when the file is not something every reader in this package
+ * accepts: a yaml parse error (including a duplicate key), a document that is not a mapping, one
+ * yaml cannot convert (e.g. more than 100 aliases), or one js-yaml rejects (the doctor, the
+ * version detector and `readExcludedAgents` read with js-yaml). A document of just `null` is
+ * treated as empty.
+ *
+ * @param {string} configPath
+ * @returns {YAML.Document|null}
+ */
+function readConfigDocument(configPath) {
+  if (!fs.existsSync(configPath)) return null;
+  const content = fs.readFileSync(configPath, 'utf8');
+  const firstLine = (message) => String(message).split('\n')[0];
+  const refuse = (why) =>
+    new Error(`config-merger: refusing to overwrite ${configPath}: ${why}. Fix or remove the file, then re-run.`);
+
+  const doc = YAML.parseDocument(content);
+  if (doc.errors && doc.errors.length > 0) {
+    throw refuse(`it is not valid YAML (${firstLine(doc.errors[0].message)})`);
+  }
+  if (YAML.isScalar(doc.contents) && doc.contents.value === null) {
+    doc.contents = null;
+  }
+  if (doc.contents !== null && !YAML.isMap(doc.contents)) {
+    throw refuse('it is not a YAML mapping');
+  }
+  try {
+    doc.toJS();
+  } catch (err) {
+    throw refuse(`it cannot be read (${firstLine(err.message)})`);
+  }
+  try {
+    yaml.load(content);
+  } catch (err) {
+    throw refuse(`it is not valid YAML (${firstLine(err.message)})`);
+  }
+  return doc;
+}
+
+/**
+ * Refuse, before anything is copied, a module config an update could not write back.
+ *
+ * fic-1-1. `refreshInstallation` copies agents, workflows and other modules before it merges the
+ * Vortex and Gyre configs, so a refusal at write time left a mixed-version tree. Calling this
+ * first makes the refusal happen while nothing has changed.
+ *
+ * @param {string} configPath
+ * @returns {string} configPath, unchanged, so it can wrap an existing call
+ */
+function assertConfigReadable(configPath) {
+  readConfigDocument(configPath);
+  return configPath;
+}
+
+/**
  * Merge current config with new template while preserving user preferences.
  * Agents and workflows use smart-merge: canonical entries in registry order
  * first, then any user-added entries (not in AGENT_IDS/WORKFLOW_NAMES)
@@ -62,50 +163,67 @@ function readExcludedAgents(configPath) {
  * @param {string} currentConfigPath - Path to current config.yaml
  * @param {string} newVersion - New version to set
  * @param {object} updates - Updates to apply (agents, workflows, etc.)
+ * @param {object} [options]
+ * @param {string} [options.submodule='_vortex'] - Which MODULE_PROFILES entry supplies defaults and canonical lists.
+ *   Omitting it on a config that names another known module throws rather than stamping Vortex onto it.
  * @returns {Promise<object>} Merged config object (with hidden Document sentinel for comment preservation)
  */
-async function mergeConfig(currentConfigPath, newVersion, updates = {}) {
+async function mergeConfig(currentConfigPath, newVersion, updates = {}, options = {}) {
   assertVersion(newVersion, 'config-merger'); // ag-7-1: I30 — fail fast on undefined/null/empty version
+  const requested = (options || {}).submodule;
+  const submodule = requested === undefined ? '_vortex' : requested;
+  // Own-property lookup: `MODULE_PROFILES.constructor` would otherwise resolve through the prototype.
+  const hasProfile = (name) => typeof name === 'string' && Object.prototype.hasOwnProperty.call(MODULE_PROFILES, name);
+  const profile = hasProfile(submodule) ? MODULE_PROFILES[submodule] : undefined;
+  if (!profile) {
+    throw new Error(
+      `config-merger: unknown submodule "${String(submodule)}" (known: ${Object.keys(MODULE_PROFILES).join(', ')})`
+    );
+  }
 
-  let current = {};
-  let doc = null; // YAML.Document for comment preservation
+  let current;
+  let doc; // YAML.Document for comment preservation (null for a fresh or unreadable file)
 
-  // Read current config if it exists
-  if (fs.existsSync(currentConfigPath)) {
-    try {
-      const currentContent = fs.readFileSync(currentConfigPath, 'utf8');
-      doc = YAML.parseDocument(currentContent);
-      // Note: YAML.parseDocument does not throw on syntax errors — check doc.errors
-      if (doc.errors && doc.errors.length > 0) {
-        console.warn(`Warning: Could not parse current config.yaml (${doc.errors[0].message}), using defaults`);
-        current = {};
-        doc = null;
-      } else {
-        const parsed = doc.toJSON();
-        current = (parsed && typeof parsed === 'object') ? parsed : {};
-      }
-    } catch (_error) {
-      console.warn('Warning: Could not parse current config.yaml, using defaults');
-      current = {};
-      doc = null;
-    }
+  // Read current config if it exists. An unreadable file yields defaults here (the merged result
+  // is still well-formed), and `writeConfig` then refuses to write over it (fic-1-1).
+  try {
+    doc = readConfigDocument(currentConfigPath);
+    const parsed = doc ? doc.toJS() : null;
+    current = (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+  } catch (error) {
+    console.warn(`Warning: ${error.message}`);
+    current = {};
+    doc = null;
+  }
+
+  // fic-1-1: the default submodule is a convenience for Vortex callers, never a guess about a file
+  // that says it belongs to another module. Stamping Vortex identity onto a Gyre config is the
+  // BUG-22 corruption, so refuse and make the caller say which profile applies.
+  if (requested === undefined && hasProfile(current.submodule_name) && current.submodule_name !== submodule) {
+    throw new Error(
+      `config-merger: ${currentConfigPath} is a ${current.submodule_name} config; pass { submodule: '${current.submodule_name}' }`
+    );
   }
 
   // Extract user preferences
-  const userPrefs = extractUserPreferences(current);
+  const userPrefs = extractUserPreferences(current, profile.defaults);
 
   // Seed with required structural defaults for fresh installs
   const defaults = {
-    submodule_name: '_vortex',
-    description: 'Vortex Pattern - Contextualize, Empathize, Synthesize, Hypothesize, Externalize, Sensitize, and Systematize streams',
-    module: 'bme',
-    output_folder: '{project-root}/_bmad-output/vortex-artifacts',
-    agents: [...AGENT_IDS],
-    workflows: [...WORKFLOW_NAMES]
+    ...profile.defaults,
+    agents: [...profile.agentIds],
+    workflows: [...profile.workflowNames]
   };
 
   // Start with defaults, overlay current config (preserves existing values)
   const merged = { ...defaults, ...current };
+  // fic-1-1: a key that is present but empty (`user_name:` or `user_name: ''`) is as unusable to an
+  // agent as a missing one, so it takes the default too.
+  for (const key of Object.keys(profile.defaults)) {
+    if (merged[key] === null || merged[key] === '') {
+      merged[key] = profile.defaults[key];
+    }
+  }
 
   // Update version (system field)
   merged.version = newVersion;
@@ -123,7 +241,7 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}) {
     : [];
   if (updates.agents) {
     const userAgents = Array.isArray(current.agents)
-      ? [...new Set(current.agents.filter(a => !AGENT_IDS.includes(a)))]
+      ? [...new Set(current.agents.filter(a => !profile.agentIds.includes(a)))]
       : [];
     merged.agents = [...updates.agents, ...userAgents];
   }
@@ -139,13 +257,30 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}) {
   // Smart-merge workflows: canonical workflows in order, then unique user-added appended
   if (updates.workflows) {
     const userWorkflows = Array.isArray(current.workflows)
-      ? [...new Set(current.workflows.filter(w => !WORKFLOW_NAMES.includes(w)))]
+      ? [...new Set(current.workflows.filter(w => !profile.workflowNames.includes(w)))]
       : [];
     merged.workflows = [...updates.workflows, ...userWorkflows];
   }
 
   // Preserve user preferences
   Object.assign(merged, userPrefs);
+
+  // fic-1-1 (BUG-22b): identity. `submodule_name` and `module` name the directory the file lives
+  // in, so they are never an operator preference. `description` and `output_folder` are the other
+  // two fields a Vortex-seeded Gyre config received: a value equal to ANOTHER module's exact
+  // default is that corruption, whatever `submodule_name` now says (an operator may have fixed
+  // that line by hand). Any other value, including an edited one, is kept.
+  for (const [name, other] of Object.entries(MODULE_PROFILES)) {
+    if (name === submodule) continue;
+    for (const field of ['description', 'output_folder']) {
+      if (merged[field] === other.defaults[field]) {
+        console.warn(`Repaired ${field} in ${currentConfigPath}: it held the ${name} default`);
+        merged[field] = profile.defaults[field];
+      }
+    }
+  }
+  merged.submodule_name = profile.defaults.submodule_name;
+  merged.module = profile.defaults.module;
 
   // Ensure migration_history exists
   if (!merged.migration_history) {
@@ -170,9 +305,11 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}) {
 /**
  * Extract user-specific preferences from config
  * @param {object} config - Config object
+ * @param {object} [defaults] - The module's structural defaults; a value equal to its default is not a preference
  * @returns {object} User preferences
  */
-function extractUserPreferences(config) {
+function extractUserPreferences(config, defaults) {
+  defaults = defaults || MODULE_PROFILES._vortex.defaults;
   const prefs = {};
 
   // Preserve these fields if they exist and are not default placeholders
@@ -184,7 +321,7 @@ function extractUserPreferences(config) {
     prefs.communication_language = config.communication_language;
   }
 
-  if (config.output_folder && config.output_folder !== '{project-root}/_bmad-output/vortex-artifacts') {
+  if (config.output_folder && config.output_folder !== defaults.output_folder) {
     prefs.output_folder = config.output_folder;
   }
 
@@ -319,17 +456,13 @@ async function writeConfig(configPath, config) {
 
   if (!doc && fs.existsSync(configPath)) {
     // Self-heal: re-parse the existing file so its comments survive the rewrite.
-    try {
-      const existingContent = fs.readFileSync(configPath, 'utf8');
-      const reparsed = YAML.parseDocument(existingContent);
-      if (!reparsed.errors || reparsed.errors.length === 0) {
-        doc = reparsed;
-      }
-      // If parse fails, fall through to the bare-object path silently —
-      // the caller is writing a known-good structure either way.
-    } catch (_err) {
-      // Silent — fall through to bare-object path.
-    }
+    //
+    // fic-1-1: an existing file that cannot be read is NEVER overwritten. This used to fall through
+    // to `yaml.dump`, so a config with one duplicate key (an operator adding `user_name: Pat` below
+    // the installer's `user_name: '{user}'` line) was silently replaced by defaults on the next
+    // update, losing every operator value. `mergeConfig` still returns defaults for such a file;
+    // `readConfigDocument` refuses here, and `refreshInstallation` calls it before copying anything.
+    doc = readConfigDocument(configPath);
   }
 
   let yamlContent;
@@ -414,6 +547,8 @@ function addMigrationHistory(config, fromVersion, toVersion, migrationsApplied) 
 
 module.exports = {
   CONFIG_SCHEMA,
+  MODULE_PROFILES,
+  assertConfigReadable,
   mergeConfig,
   readExcludedAgents,
   extractUserPreferences,

@@ -49,9 +49,9 @@ async function refreshInstallation(projectRoot, options = {}) {
   // These are opt-out lists the operator maintains; excluded agents don't get
   // their agent file copied, don't get a skill wrapper generated, and don't
   // fail presence checks downstream.
-  const vortexExcluded = configMerger.readExcludedAgents(path.join(targetVortex, 'config.yaml'));
+  const vortexExcluded = configMerger.readExcludedAgents(configMerger.assertConfigReadable(path.join(targetVortex, 'config.yaml')));
   const gyreExcluded = configMerger.readExcludedAgents(
-    path.join(projectRoot, '_bmad', 'bme', '_gyre', 'config.yaml')
+    configMerger.assertConfigReadable(path.join(projectRoot, '_bmad', 'bme', '_gyre', 'config.yaml'))
   );
 
   // 1. Copy agent files
@@ -251,9 +251,9 @@ async function refreshInstallation(projectRoot, options = {}) {
         //
         // i.e. the first thing a new user was told after installing was to go and update.
         //
-        // `doc.set` rather than `mergeConfig` is deliberate: mergeConfig's structural defaults are
-        // Vortex-specific (`submodule_name: '_vortex'`, Vortex agents/workflows), so it would seed
-        // the wrong values into any field a submodule config happens to omit.
+        // `doc.set` rather than `mergeConfig` is deliberate: mergeConfig has profiles for `_vortex`
+        // and `_gyre` only (fic-1-1). Named any other submodule it throws; called without one it
+        // treats the file as Vortex and would stamp Vortex identity and defaults onto it.
         const destConfig = path.join(destDir, 'config.yaml');
         if (fs.existsSync(destConfig)) {
           assertVersion(version, `standalone:${agent.submodule}`);
@@ -470,9 +470,9 @@ async function refreshInstallation(projectRoot, options = {}) {
       // Stamp the copied config's version to the package version — I137. _team-factory was the
       // one module copied WITHOUT stamping, and a fresh successful install then failed Convoke's
       // own version-consistency check and told a new user to run an update. Uses
-      // YAML.parseDocument (not mergeConfig) per the reasoning recorded at the Vortex block:
-      // mergeConfig's structural defaults are Vortex-specific and would seed wrong values into
-      // any field a submodule config omits.
+      // YAML.parseDocument (not mergeConfig) per the reasoning recorded at the standalone-submodule
+      // block: mergeConfig has profiles for `_vortex` and `_gyre` only, and would stamp Vortex
+      // identity and defaults onto any other module's config.
       const targetPortabilityConfig = path.join(targetPortability, 'config.yaml');
       if (fs.existsSync(targetPortabilityConfig)) {
         assertVersion(version, 'portability');
@@ -568,7 +568,7 @@ async function refreshInstallation(projectRoot, options = {}) {
         workflows: GYRE_WORKFLOW_NAMES
       };
       assertVersion(version, 'config-merger:gyre'); // ag-7-1: defense-in-depth before mergeConfig
-      const gyreConfigMerged = await configMerger.mergeConfig(gyreConfigTarget, version, gyreUpdates);
+      const gyreConfigMerged = await configMerger.mergeConfig(gyreConfigTarget, version, gyreUpdates, { submodule: '_gyre' }); // fic-1-1 (BUG-22): without it Gyre got Vortex defaults and lists
       await configMerger.writeConfig(gyreConfigTarget, gyreConfigMerged);
       changes.push(`Updated Gyre config.yaml to v${version}`);
       if (verbose) console.log(`    Updated Gyre config.yaml to v${version}`);
@@ -718,7 +718,7 @@ async function refreshInstallation(projectRoot, options = {}) {
     };
 
     assertVersion(version, 'config-merger:vortex'); // ag-7-1: defense-in-depth before mergeConfig
-    const merged = await configMerger.mergeConfig(configPath, version, updates);
+    const merged = await configMerger.mergeConfig(configPath, version, updates, { submodule: '_vortex' });
     await configMerger.writeConfig(configPath, merged);
     changes.push(`Updated config.yaml to v${version}`);
     if (verbose) console.log(`    Updated config.yaml to v${version}`);

@@ -123,7 +123,7 @@ The `convoke-export` **command** runs from the npm package and needs no installa
 
 ## Configuration
 
-Each team installer creates a `config.yaml` in its module directory. The key fields you'll want to customize:
+Each team installer creates a `config.yaml` in its module directory. The key fields you'll want to customize are already in the file: edit their values in place rather than adding new lines. A second `user_name:` line makes the file invalid YAML, and `convoke-update` will stop rather than overwrite it.
 
 ```yaml
 # _bmad/bme/_vortex/config.yaml (or _gyre/config.yaml)
