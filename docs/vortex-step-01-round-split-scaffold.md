@@ -159,9 +159,9 @@ cannot accept them. They describe the *intent* (two rounds), not the *mechanism*
 Use the Loom `add-team` convention exactly — it names the concepts in parentheses and handles
 branch-dependent counts:
 
-- `_bmad/bme/_team-factory/workflows/add-team/step-01-scope.md:104` →
+- `_bmad/bme/_team-factory/workflows/add-team/step-01-scope.md`, §Visibility Checklist →
   `Concept count: 3/3 (team identity, pattern, agents)`
-- `…/step-02-connect.md:109` →
+- `…/step-02-connect.md`, §Visibility Checklist →
   `Concept count: 2/3 (contracts, integration settings) — or 1/3 for Independent (integration only)`
 
 **Round 1 starts at the top of the file, not at §1.** The preamble — the `# Step 1: …` title, its

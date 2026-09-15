@@ -481,7 +481,7 @@ function missingWrappers(units, projectRoot) {
  * commented-out or string-literal `require` reads as missing. **Not latent in the tree —
  * only latent on the bin graph.** An earlier version of this comment said "no bin has
  * one", which was true of the 14 bin ENTRY files and misleading about everything else:
- * `_bmad/bme/_team-factory/lib/writers/registry-writer.js:323` already carries a quoted
+ * `_bmad/bme/_team-factory/lib/writers/registry-writer.js` (inside `buildModuleBlock`) already carries a quoted
  * require inside a comment, and is unreachable from a bin only by accident of the current
  * import graph. One new relative import turns the `publish`-gating job red on a healthy
  * package. Tracked as T101(b); corrected here 2026-08-30 after review. Only

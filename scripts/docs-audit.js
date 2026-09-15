@@ -177,7 +177,7 @@ function checkStaleReferences(content, filePath) {
   // existed, held Loom's `team-factory`, and was simply not in the list — so the true
   // 12-agent roster read as stale while the Vortex+Gyre subtotal passed. Naming them
   // literally also does not survive growth: the Team Factory writes each new team its OWN
-  // `{PREFIX}_AGENTS` array (`_team-factory/lib/writers/registry-writer.js:228`) rather than
+  // `{PREFIX}_AGENTS` array (`_team-factory/lib/writers/registry-writer.js::buildModuleBlock`) rather than
   // appending to an existing one, so team four would have reintroduced the same defect.
   //
   // Three things a document may legitimately say, and nothing else:

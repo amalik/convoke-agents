@@ -376,9 +376,9 @@ describe('tf-2-13: manifest describes what was actually generated', () => {
 });
 
 // ── R3 D1: `success === true` is not "a confirmed write" ──
-// registry-writer.js:42 returns {success:true, written:[], skipped:['block already
-// exists']} when the prefix block is present — and that early return sits BEFORE the
-// dirty-tree check at :75, so R2's stated defence never runs on this path. derivePrefix
+// registry-writer.js::writeRegistryBlock returns {success:true, written:[], skipped:['block
+// already exists']} when the prefix block is present — and that early return sits BEFORE
+// its checkDirtyTree call, so R2's stated defence never runs on this path. derivePrefix
 // collapses data-ops / data_ops / Data-Ops onto DATA_OPS, so a distinct team can hit an
 // existing block, leave the file byte-identical, and still be handed a destructive
 // `git checkout`. Third predicate on this line; this one asks whether anything was
