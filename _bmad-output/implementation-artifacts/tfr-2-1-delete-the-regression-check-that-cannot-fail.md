@@ -4,7 +4,7 @@ baseline_commit: a2944e7dfadc351332618e04bb76020098472d9e
 
 # Story tfr-2.1: Delete the regression check that cannot fail
 
-Status: review
+Status: done
 
 **Epic:** [tfr-epic-2 — delete the regression check that cannot fail](../planning-artifacts/convoke-epic-team-factory-regression-check-deletion.md) (one-story mini-epic, operator decision 2026-09-15; `tfr-epic-1` precedent)
 **Origin:** Fast Lane rows `T171`, `T172`, `T173`, `T174` — all `loom`, all Open, all traced to one check.
@@ -245,6 +245,7 @@ Round 2 (one scoped layer) then ran on this remediation and found no HIGH — se
 
 | Date | Note |
 |---|---|
+| 2026-09-15 | **Done, by operator decision.** The epic's definition of done was amended to match the `T174` ruling, and `tfr-epic-2` closes with this story. |
 | 2026-09-15 | **Round 2 (one scoped layer) applied; review complete.** No HIGH. Its MEDIUM corrected a claim the Round 1 remediation had narrowed but kept: where step-01's collision check is skipped, the deleted check could have caught generation writing into an existing module — reproduced, and the condition now stated in step-05, the `T171` note and `T177`. Four LOW fixed in place; three deferred (`T174`(d), `T178`, deferred-work). Status stays `review` pending commit. |
 | 2026-09-15 | **Round 1 (three independent layers) applied.** 1 decision, 8 patches, 1 deferred. The premise held for `add-team` but not for the extension validators the check was also removed from; the deletion stands by operator decision, `T174` reopened rescoped. Weak tests fixed and proven by the three mutants that had survived. Prose narrowed, one missed consumer (`docs/development.md`) fixed, `T177` filed. Round 2 triggered. |
 | 2026-09-15 | **Implemented; to `review`.** `VORTEX-REGRESSION` deleted from all three validators, the baseline block and context key removed from the flow, and `T171` closed with `T172`–`T174` absorbed. Red read first on three validity assertions; green by deletion. The extension validators can pass for the first time, and a test proves `REGISTRY-REGRESSION` can fail. Premise re-derived; one Dev Notes guard was misattributed and is corrected in Completion Notes. Remaining blocks walked in the documented order; tree restored to its snapshot. |

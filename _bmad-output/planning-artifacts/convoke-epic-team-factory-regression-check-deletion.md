@@ -3,7 +3,8 @@ initiative: convoke
 artifact_type: epic
 qualifier: team-factory-regression-check-deletion
 created: '2026-09-15'
-status: active
+status: complete
+completedAt: '2026-09-15'
 schema_version: 1
 related_initiative: 'P14 Team Factory / Loom'
 qualifier_role: operator-authored
@@ -44,4 +45,12 @@ survives — and the first real team is Forge's job (`project_baseline_before_ex
 no other row, including rows it touches in passing.
 
 **Definition of done:** `VORTEX-REGRESSION` no longer exists in the Team Factory; every validator that
-emitted it can return `valid: true` on a correct fixture; `T171`–`T174` are closed in §2.5.
+emitted it can return `valid: true` on a correct fixture; `T171` is closed and `T172`/`T173` absorbed in
+§2.5; `T174` is rescoped to the add-agent work.
+
+**Amended 2026-09-15, by operator ruling, and the reason is kept.** This read *"`T171`–`T174` are closed in
+§2.5"*. `tfr-2-1`'s Round 1 found the story's premise held for `add-team` but not for the extension
+validators the check was also removed from: their write path can change what the check read. The operator
+ruled the deletion stands and `T174` stays open, rescoped to the unbuilt add-agent work (`T139`), which is
+the only work that can supply the regression check that path needs. Keeping the old sentence would hold this
+epic open on work it was scoped never to take. **Closed 2026-09-15** with `tfr-2-1` done.

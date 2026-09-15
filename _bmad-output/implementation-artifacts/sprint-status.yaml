@@ -403,8 +403,8 @@ development_status:
 
   # tfr-epic-2 — one-story mini-epic, deletion only (operator decision 2026-09-15)
   # Epic file: convoke-epic-team-factory-regression-check-deletion.md
-  tfr-epic-2: in-progress
-  tfr-2-1-delete-the-regression-check-that-cannot-fail: review
+  tfr-epic-2: done
+  tfr-2-1-delete-the-regression-check-that-cannot-fail: done
   tfr-epic-2-retrospective: optional
 
   # ============================================================
