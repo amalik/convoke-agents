@@ -2055,3 +2055,79 @@ covers Vortex only (`T156`). One retained pattern still emits a bare agent count
 (`T157`). Each is cited from the source at the line it constrains.
 
 **Review.** Three rounds. Every finding in all three was in this note; none was in the shipped behaviour, which the layers could not break beyond the known-open `T157`.
+
+## T136
+
+**Closed 2026-09-15** by `tfr-1-1` (`673fd4c1`, `8a7291bf`, `63359f6a`). `add-team`'s `run:` blocks
+could not be pasted with real data: a `node -e` payload is a double-quoted shell string, so substituting
+a JSON object — or any value a contributor typed — ended the string early or silently stripped quotes.
+
+**The fix is the transport, not a checker.** Blocks receive file paths: the spec is parsed from the file
+`step-01` already writes (`run-context.js::loadSpec`), the generation context is a JSON file
+(`{context_path}`), and `step-01` §4 writes the agent inventory to a scoping file instead of building it in
+a command. A regex gate built to assert the invariant was deleted in Round 3 — it produced more findings
+than it caught. The additional review found two blocks still violating it and fixed both: `step-02`'s
+collision check ran before the spec it reads was saved, and `step-01`'s naming check interpolated the
+contributor's agent id into the shell (`a$(echo SUBST)b` ran the substitution).
+
+**Re-derive:** no block interpolates an object placeholder —
+`grep -rh '^run: node -e' _bmad/bme/_team-factory/workflows/add-team/*.md | grep -c -e '{spec_data}' -e '{generation_context}' -e '{agent_file_paths}'`
+prints `0`. The end-to-end evidence is `tfr-1-1`'s Task 8 re-walk: every block extracted from the step
+files, run in the documented order with hostile ids, `validateTeam` → `valid: true`.
+
+**Residue, filed:** the generic recorder still interpolates `<value>` (`T170`); three path placeholders
+resolve against the executor's cwd (`T168`).
+
+## T128
+
+**Closed 2026-09-15** by `tfr-1-1` (`0db3aac8`, `02b6d735`). The terminal gate asked an *installation*
+validator whether a *source* tree was valid. The Enhance, Artifacts and Portability wrappers are
+install-time artifacts, so the answer was always no, and `step-05` could never report success.
+
+**The fix.** `step-04` §1 captures a baseline before anything is generated, and
+`checkVortexRegression` passes when the post-generation failing set is contained in it — set containment,
+not a count, so a run that repairs one module and breaks another still fails. It fails closed without a
+baseline, and on a validator result it cannot compare.
+
+**Re-derive:**
+`node -e "require('./_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js').captureVortexBaseline(process.cwd()).then(b => console.log(JSON.stringify(b)))"`
+prints `{"valid":false,"failing":["Artifacts module","Enhance module","Portability module"]}` in a source
+tree. On a real generated team the gate returned true, and went red when that baseline claimed the three
+modules passed.
+
+**Residue, filed:** nothing `add-team` writes can make the check fail (`T171`); it compares names only
+(`T172`); a same-process require-cache edge (`T173`); and the two extension validators still call it
+without a baseline, so they can no longer pass — introduced by this fix, unreachable today (`T174`).
+
+## T163
+
+**Part (a) closed 2026-09-15** by `tfr-1-1` (`673fd4c1`, `8a7291bf`); **part (b) remains open** in §2.3.
+(a): the output-directory containment check existed three times — in `spec-parser.js`, in
+`config-creator.js::assertContainedOutputDirectory`, and inline in `ensureOutputDirectory` — and they
+disagreed. `_bmad-output/..foo`, a directory genuinely inside the output root, passed `parseSpec` and was
+refused at `step-04` §5a-ii.
+
+**The fix was deletion.** One predicate, `lib/utils/output-directory.js`; every call site uses it; one
+shared case table (`tests/team-factory/output-directory-cases.js`) is iterated across all of them, so the
+sites cannot drift apart again. Containment is lexical — a pre-existing symlink escapes — which is filed
+rather than claimed (`T169`).
+
+**Re-derive:**
+`node -e "const o = require('./_bmad/bme/_team-factory/lib/utils/output-directory.js'); console.log(o.isContainedOutputDirectory('_bmad-output/..foo'), o.isContainedOutputDirectory('_bmad-output/../../escaped'))"`
+prints `true false`; `node --test tests/team-factory/output-directory.test.js` sweeps the table across every call site.
+
+## T164
+
+**Closed 2026-09-15** by `tfr-1-1` (`0db3aac8`, `02b6d735`, `63359f6a`). A generated team could be
+wired with empty personas and still report success. (a) `writeRegistryBlock` coerced an unusable
+`agentFiles` to `[]` silently; (b) `step-04` §5d never recorded its result.
+
+**The fix.** The writer reports `personaCoverage` as its own field — `success` keeps its meaning — and the
+terminal validator gains `PERSONA-COVERAGE`, which reads the registry on disk rather than trusting the
+writer. **The first version of that gate could not fail:** it counted `persona.role`, which every agent
+has because `spec-parser` requires it. It now counts only `identity`, `communication_style` and
+`expertise`. §5d records `registry_wiring_result` and the absolute `registry_path` it wrote to.
+
+**Re-derive:**
+`node --test --test-name-pattern='a hollow team written by the real writer fails the gate' tests/team-factory/end-to-end-validator.test.js`
+— spec → `writeRegistryBlock` with no `agentFiles` → registry on disk → the gate, which must fail.

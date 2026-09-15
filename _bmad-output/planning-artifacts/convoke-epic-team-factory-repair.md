@@ -3,7 +3,8 @@ initiative: convoke
 artifact_type: epic
 qualifier: team-factory-repair
 created: '2026-09-14'
-status: active
+status: complete
+completedAt: '2026-09-15'
 schema_version: 1
 related_initiative: 'P14 Team Factory / Loom'
 qualifier_role: operator-authored
