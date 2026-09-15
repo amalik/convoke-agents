@@ -76,7 +76,7 @@ Migrations live in `scripts/update/migrations/registry.js` (append-only).
 
 ### Team Factory (Recommended)
 
-Use `/bmad-agent-bme-team-factory` for a guided workflow that handles the full creation process — composition pattern selection, agent scope definition, contract design, artifact generation, and integration wiring. The factory produces output that passes the same validation as native teams (Vortex, Gyre).
+Use `/bmad-agent-bme-team-factory` for a guided workflow that handles the full creation process — composition pattern selection, agent scope definition, contract design, artifact generation, and integration wiring. It is a preview: its first steps record your design decisions as a resumable spec, but generating the team writes into Convoke's own source files, so it only completes inside a clone of the Convoke repository, and nothing installs a generated team yet. Treat the result as a starting point, not a finished team.
 
 Two capabilities are available today — **Create Team** (a new team from scratch) and **Validate Team** (end-to-end validation of an existing team). Both are derived from the two rows in `_bmad/bme/_team-factory/module-help.csv`, which is what the module declares it offers.
 

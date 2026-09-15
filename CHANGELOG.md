@@ -95,6 +95,16 @@ If this release does its job, you'll barely notice it — which is the point.
 
 - **Marketplace distribution** — Install Convoke through the BMAD community plugin marketplace alongside the framework itself. If you have colleagues who use BMAD but haven't tried Convoke, they can install it through the normal BMAD plugin system.
 - **Multi-platform adapters** — Drop-in agent skills for Claude Code (`.claude/skills/`), GitHub Copilot (`.github/copilot-instructions.md`), and Cursor (`.cursor/rules/`). Use Convoke agents on the platform you already work in, no Convoke runtime required.
+
+  *Corrected 2026-09-15: the summary line ("adds marketplace distribution for reach"), the introduction's "You
+  can now install Convoke through the BMAD plugin system, as a standalone Claude Code skill pack, or via
+  adapters for GitHub Copilot and Cursor", and the two entries above overstated what shipped. Convoke is not
+  listed in the BMAD community plugin marketplace: the listing metadata is in the package, but the submission
+  was declined on packaging structure and has not been resubmitted, so install through npm, which works with
+  or without BMAD Method. The adapters, the Claude Code one included, are files you generate with
+  `convoke-export` and copy into place by hand. BMAD skills classified `standalone` or `light-deps` export as
+  self-contained instructions meant to run without Convoke; `pipeline` skills, including every Convoke team
+  agent, export with a notice that they need a full Convoke installation.*
 - **Agent surface parity check** — Convoke verifies, on every commit, that an upgrade did not remove an agent, drop a menu code, or stop loading your configuration. It compares the last release tag against the current tree and fails loudly if any of those change. This covers 12 agents in seconds.
 
   **What it does not do:** it does not prove your agents *behave* identically. It proves the contract you interact with is unchanged — which agents exist, what you can ask them to do, and whether they still read your config. Convoke 4.0 makes no behavioural-equivalence claim. An earlier draft of this entry described a "behavioral equivalence harness" whose gate had been "waived"; that gate was **retired** rather than waived (see [ADR-001](https://github.com/amalik/convoke-agents/blob/main/_bmad-output/planning-artifacts/adr/v63/adr-001-retire-m9-pf1-gate.md)), and the reasoning given for it was later withdrawn as unsound. The parity check above is what actually runs.

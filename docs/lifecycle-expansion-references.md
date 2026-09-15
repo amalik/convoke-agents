@@ -28,7 +28,7 @@
 
 ## 1. Current Coverage: Module Detail
 
-Convoke currently covers five major lifecycle phases through its module ecosystem.
+Together with the BMAD Method modules it runs alongside (WDS, BMM, TEA, CIS, BMB), Convoke's modules (Vortex, Gyre, Enhance, Team Factory) cover five major lifecycle phases.
 
 ### 1.1 Discovery & Validation — Vortex (7 agents, 22 workflows)
 

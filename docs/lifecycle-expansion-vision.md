@@ -52,7 +52,7 @@ These principles are the thesis of this document. Each one emerged from the inte
 
 ## 2. The Gravity Model
 
-The diagram below maps Convoke's current coverage against lifecycle perimeters. It is tempting to read these left-to-right as a pipeline. But Vortex already proved that discovery is non-linear — its compass routing system moves between streams based on evidence, not sequence. If discovery isn't a pipeline, why would the macro lifecycle be one?
+The diagram below maps current coverage against lifecycle perimeters: Convoke's modules (Vortex, Gyre, Enhance, Team Factory) together with the BMAD Method modules they run alongside (WDS, BMM, TEA, CIS, BMB). It is tempting to read these left-to-right as a pipeline. But Vortex already proved that discovery is non-linear — its compass routing system moves between streams based on evidence, not sequence. If discovery isn't a pipeline, why would the macro lifecycle be one?
 
 A production incident doesn't "flow forward" — it pulls gravity back toward readiness, or even toward discovery if it reveals a fundamental misunderstanding of user needs. A market shift doesn't wait for the current build to finish — it pulls gravity toward strategy.
 
@@ -432,7 +432,7 @@ Several core lean thinking principles (Womack & Jones, 1996; Ohno, 1988) are alr
 
 ## Appendix A: Current Coverage Detail
 
-For teams unfamiliar with Convoke's existing modules, this appendix provides full detail. See also [companion Section 1](lifecycle-expansion-references.md#1-current-coverage-module-detail) for theoretical foundations per module.
+For teams unfamiliar with the modules this vision builds on, this appendix provides full detail. Of the modules below, Vortex, Gyre, Enhance and Team Factory are Convoke's. WDS, BMM, TEA, CIS and BMB belong to the BMAD Method ecosystem: Convoke runs alongside them but does not ship or maintain them. See also [companion Section 1](lifecycle-expansion-references.md#1-current-coverage-module-detail) for theoretical foundations per module.
 
 ### Discovery & Validation — Vortex (7 agents, 22 workflows)
 
