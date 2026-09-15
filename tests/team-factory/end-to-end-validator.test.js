@@ -623,10 +623,12 @@ describe('VORTEX-REGRESSION — differential, not absolute', () => {
     // post has one unnamed failure, gate green. Compared by name, it cannot be compared.
     for (const [label, badName] of [['missing', undefined], ['blank', '   ']]) {
       const root = path.join(tmpDir, `unnamed-${label}`);
-      await fs.ensureDir(path.join(root, 'scripts/update/lib'));
+     await fs.ensureDir(path.join(root, 'scripts/update/lib'));
+      // The check is written as data beside a fixed module body, not spliced into source
+      // (CodeQL alert 27). writeJson drops an undefined `name` key: that is the `missing` case.
+      await fs.writeJson(path.join(root, 'scripts/update/lib/check.json'), { name: badName, passed: false });
       await fs.writeFile(path.join(root, 'scripts/update/lib/validator.js'),
-        `module.exports = { validateInstallation: async () => ({ valid: false, checks: [{ name: ${JSON.stringify(badName)}, passed: false }] }) };\n`, 'utf8');
-
+        "module.exports = { validateInstallation: async () => ({ valid: false, checks: [require('./check.json')] }) };\n", 'utf8');
       const check = await checkVortexRegression(root, { valid: true, failing: [] });
 
       assert.equal(check.passed, false, `${label} name must not be dropped`);
