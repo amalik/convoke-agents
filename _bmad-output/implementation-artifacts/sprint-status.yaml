@@ -412,8 +412,8 @@ development_status:
   # Epic file: convoke-epic-fresh-install-config-4-0-3.md
   # 2026-09-15: operator ruled a patch release for BUG-22 (7 of 11 agents stop on a fresh 4.0.2 install).
   # ============================================================
-  fic-epic-1: in-progress
-  fic-1-1-seed-the-config-every-agent-needs-on-a-fresh-install: review
+  fic-epic-1: done
+  fic-1-1-seed-the-config-every-agent-needs-on-a-fresh-install: done
   fic-epic-1-retrospective: optional
 
   # ============================================================

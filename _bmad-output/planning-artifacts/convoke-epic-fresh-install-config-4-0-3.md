@@ -3,7 +3,7 @@ initiative: convoke
 artifact_type: epic
 qualifier: fresh-install-config-4-0-3
 created: '2026-09-15'
-status: active
+status: done
 schema_version: 1
 qualifier_role: operator-authored
 ---
@@ -20,7 +20,7 @@ On a clean install of `convoke-agents@4.0.2` from npm, 7 of the 11 Convoke agent
 
 | Story | Row | What it changes |
 |---|---|---|
-| `fic-1-1` | `BUG-22` (a)–(c) | `mergeConfig` becomes module-aware. Fresh configs carry `user_name`/`communication_language`; Gyre stops receiving Vortex defaults and doubled lists; configs a 4.0.2 install damaged are repaired on update. |
+| `fic-1-1` | `BUG-22` (a)–(d) | `mergeConfig` becomes module-aware. Fresh configs carry `user_name`/`communication_language`; Gyre stops receiving Vortex defaults and doubled lists; configs a 4.0.2 install damaged are repaired on update. **(d), found in review:** an existing config that cannot be parsed is never overwritten — `convoke-update` and `convoke-install` now refuse and exit non-zero, leaving the file byte-identical, where before a single duplicate key replaced it with defaults. |
 
 ## Not in scope, stated as decisions
 
@@ -28,3 +28,19 @@ On a clean install of `convoke-agents@4.0.2` from npm, 7 of the 11 Convoke agent
 - **`IN-198`** (`bmad-init`): Emma recovers in a live start, so it is not blocking.
 - **`IN-194`–`IN-208`**: unqualified intakes from the same verification pass.
 - **The release itself** (branch, version bump, tag): an operator decision, recorded when made. `main` carries Team Factory commits after `v4.0.2` that are still in review.
+
+## Close (2026-09-16)
+
+`fic-1-1` is `done`; `BUG-22` has moved to §2.5. The story-close consumer audit required by
+`code-review-convergence` found five consumers the diff-scoped rounds could not see — a diff does
+not show a caller nobody edited. Four were corrected (the docs-program draft twice, `UPDATE-GUIDE`,
+I138's stated reason, and this file's own scope row); the doctor/`convoke-update` remediation
+strings were deferred to `IN-211` by operator ruling, docs-only for the hotfix.
+
+**The release did not happen and was not meant to.** npm `latest` is 4.0.2, `package.json` is 4.0.2,
+and there is no `v4.0.3` tag — so every defect this epic fixed is still live for anyone installing
+today. The operator ruled on 2026-09-16 to hold the release. Cutting 4.0.3 is what converts this
+epic from fixed-in-`main` to fixed-for-operators, and it remains an open operator decision.
+
+`IN-193`, the gate that would have caught BUG-22 (nothing detects a config its own agents cannot
+start with), is still open and still out of scope.
