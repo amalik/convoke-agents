@@ -229,6 +229,31 @@ npx -p convoke-agents@latest convoke-update
 
 This tells npx to download `convoke-agents@latest` first, then run the `convoke-update` bin from it.
 
+### "refusing to overwrite ... config.yaml"
+
+From 4.0.3, an update or install stops rather than replace a `config.yaml` it cannot read:
+
+```
+config-merger: refusing to overwrite /path/to/project/_bmad/bme/_gyre/config.yaml: it is not valid YAML (Map keys must be unique at line 3, column 1:). Fix or remove the file, then re-run.
+```
+
+It arrives as a single line, naming the absolute path and the parser's own first line of error.
+
+This protects your settings — before 4.0.3, a single duplicate key silently replaced the whole
+file with defaults. The file named in the message is left byte-identical, and nothing else has
+been changed: the check runs before any module is copied, so your installation is not half-updated.
+
+**Reinstalling will not clear this, and that is deliberate** — `convoke-install` runs the same
+check. Repair the file itself:
+
+1. Open the file named in the message and fix the error it reports. The most common cause is a
+   second `user_name:` line added below the seeded `user_name: '{user}'` — delete one of them.
+2. If you would rather start over on that file, delete it. The next run writes a fresh one.
+3. Re-run your original command.
+
+Both `config.yaml` files are checked, so a damaged *Gyre* config also blocks
+`convoke-install-vortex`. Fix whichever file the message names.
+
 ### "Installation appears corrupted"
 
 Reinstall from scratch (preserves user data):
@@ -238,6 +263,9 @@ npx -p convoke-agents convoke-install          # Everything
 npx -p convoke-agents convoke-install-vortex   # Vortex only
 npx -p convoke-agents convoke-install-gyre     # Gyre only
 ```
+
+If this reports `refusing to overwrite ... config.yaml`, see the section above — the reinstall is
+being blocked on purpose, and repairing that one file is what unblocks it.
 
 ### Check migration logs
 

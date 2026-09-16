@@ -3,6 +3,8 @@
 This page is for projects where Convoke is installed from npm (`convoke-agents`), usually next to BMAD Method. It tells you where each kind of change belongs, whether that change survives an update, and where no supported place exists yet.
 
 > **Last verified:** 2026-09-15, against `convoke-agents` 4.0.2 and BMAD Method 6.12.0, including an update from BMAD Method 6.10.0. Every command below was run from the project root of a scratch project and succeeded.
+>
+> **4.0.3 is not published yet.** Where this page says "from 4.0.3", the behaviour is the fix merged to `main` as `fic-1-1` (`6ab2fafa`), read from source and exercised locally — not from an installed 4.0.3. Until it publishes, `npm install convoke-agents` gives you 4.0.2 and the 4.0.2 column is the one that applies.
 
 ---
 
@@ -172,10 +174,15 @@ This file configures BMAD, not Convoke. Convoke's agents aren't listed in it.
 
 Edit `_bmad/bme/_vortex/config.yaml` and `_bmad/bme/_gyre/config.yaml`. These are the only two files under `_bmad/bme/` that `convoke-update` merges instead of replacing.
 
-**A fresh install doesn't write your name or language.** Add the keys yourself. The installer's message tells you to "replace `{user}`", but no `{user}` placeholder appears in these files.
+**What a fresh install writes changed in 4.0.3. Open the file and look before you edit it.**
+
+- **4.0.2 and earlier.** Neither `user_name` nor `communication_language` is written. Add them yourself. The installer's message tells you to "replace `{user}`", but no `{user}` placeholder appears in these files.
+- **4.0.3 and later.** Both files already contain `user_name: '{user}'` and `communication_language: en`. **Change the values in place — do not add a second `user_name:` line.** A duplicate key makes the file invalid YAML, and from 4.0.3 both `convoke-update` and `convoke-install` refuse to run against a config they cannot parse: they exit non-zero, name the file and the parse error, and leave it byte-identical rather than replacing it with defaults. Fix or remove the file, then re-run.
 
 ```yaml
-# _bmad/bme/_vortex/config.yaml (add or change these)
+# _bmad/bme/_vortex/config.yaml
+# 4.0.3+: these keys are already present — change the values, don't re-add the keys.
+# 4.0.2 and earlier: add them.
 user_name: Pat
 communication_language: French
 party_mode_enabled: false
@@ -198,7 +205,7 @@ Who reads these settings:
 **`output_folder` survives updates, but think twice before moving it.**
 
 - Vortex honours it unevenly. Some workflows write to `{output_folder}/…`, others to `{output_folder}/vortex-artifacts/…`, and some steps look for their inputs at the literal path `_bmad-output/vortex-artifacts/`. If you change it, check where artifacts actually land and where the next workflow looks for them.
-- Gyre's workflows write to fixed locations (`.gyre/` and `_bmad-output/gyre-artifacts/`), not to `output_folder`. A fresh install also puts Vortex's folder in `_bmad/bme/_gyre/config.yaml`. That looks wrong, but no Gyre workflow reads the value.
+- Gyre's workflows write to fixed locations (`.gyre/` and `_bmad-output/gyre-artifacts/`), not to `output_folder`. On 4.0.2 and earlier a fresh install puts *Vortex's* folder in `_bmad/bme/_gyre/config.yaml`; from 4.0.3 it carries Gyre's own. Either way no Gyre workflow reads the value.
 
 **Team Factory is different.** `_bmad/bme/_team-factory/` is replaced on every update, so a `user_name` you set there resets to `'{user}'`.
 
