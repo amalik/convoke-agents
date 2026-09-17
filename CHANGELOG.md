@@ -8,6 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [4.0.3] - UNRELEASED
+
+Convoke 4.0.3 is a patch release about the config file your agents read on a fresh install.
+
+### Fixed
+
+- **A fresh install left most agents unable to start.** `mergeConfig` seeded only the Vortex agent and
+  workflow lists, and was called for Gyre as well, so **8 of the 12 installed agents** stopped at activation
+  with `Configuration Error: Missing required field(s)` — Isla, Liam, Noah, Max and all four Gyre agents.
+  (Emma, Mila and Wade load their config a different way and never hit that branch; Team Factory's template
+  already carried the fields.) Each module now seeds its own profile, and every installed agent gets a
+  config it can read. (`BUG-22`)
+
+### Changed
+
+- **A Vortex or Gyre `config.yaml` that cannot be read is no longer overwritten.** Before 4.0.3, a single duplicate key —
+  most often a second `user_name:` line added by hand — was silently replaced with defaults, losing your
+  settings. An install now stops instead, naming the file and the parser's own error, and leaves the file
+  byte-identical.
+  - `convoke-update` also stops, when the damaged file is the Gyre config and a refresh is due.
+  - **Known gap:** with a damaged *Vortex* config, `convoke-update` cannot reach that refusal. Version
+    detection reads the config first, cannot parse it, and falls back to guessing `1.1.0` from the directory
+    layout — so you are offered a migration plan from `1.1.0` instead. Accepting it fails on the same
+    parse error and rolls back from its backup; your config is left byte-identical. Tracked as `T180`.
+  - **Also not covered:** the `_enhance`, `_artifacts`, `_portability` and `_team-factory` configs are not
+    checked at all, and a damaged one there is still silently replaced (`T181`).
+    UPDATE-GUIDE, section "refusing to overwrite ... config.yaml", has the full table.
+
 ## [4.0.2] - 2026-09-14
 
 Convoke 4.0.2 is a patch release about one thing: the package now contains what it says it contains, and what it contains reaches your project.

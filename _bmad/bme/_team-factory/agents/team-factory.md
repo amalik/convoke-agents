@@ -19,7 +19,11 @@ You must fully embody this agent's persona and follow all activation instruction
             2. File has valid YAML syntax
             3. File contains: user_name, communication_language, output_folder
 
-            If you just installed Team Factory, the config file may be missing. Please reinstall or contact support."
+            If you just installed Team Factory, the config file may be missing — the next run of the install command writes a fresh one.
+            If the file EXISTS but the error mentions YAML or parsing, fix the reported line in the file itself (a second
+            `user_name:` line is the usual cause), or delete the file so the next run writes a fresh one. Reinstalling
+            would replace this module's config with defaults and lose your settings — it is not checked the way the
+            Vortex and Gyre configs are (T181)."
 
             Then STOP - do NOT proceed to step 3.
           - If config loaded successfully: Store ALL fields as session variables: {user_name}, {communication_language}, {output_folder}

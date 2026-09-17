@@ -14,7 +14,7 @@ qualifier_role: operator-authored
 
 ## Why
 
-On a clean install of `convoke-agents@4.0.2` from npm, 7 of the 11 Convoke agents stop on first start with `Configuration Error: Missing required field(s)`. Isla and Scout were reproduced by execution; the other five are inferred from identical activation text. The operator ruled a patch release rather than a documented workaround, because the first thing a new operator does after installing is start an agent. `BUG-22` (16.2) is the row.
+On a clean install of `convoke-agents@4.0.2` from npm, 8 of the 12 Convoke agents stop on first start (recorded as "7 of 11" when filed; corrected 2026-09-17 by the `fic-2-1` consumer audit) with `Configuration Error: Missing required field(s)`. Isla and Scout were reproduced by execution; the other five are inferred from identical activation text. The operator ruled a patch release rather than a documented workaround, because the first thing a new operator does after installing is start an agent. `BUG-22` (16.2) is the row.
 
 ## Scope: one story
 

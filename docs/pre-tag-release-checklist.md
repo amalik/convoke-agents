@@ -25,6 +25,25 @@ disagrees with it.
 > This is the step that was open in T49 for weeks. The tree read `4.0.1-rc.0` while the intended tag
 > was `v4.0.1`.
 
+## 1b. `CHANGELOG.md` has an entry for that version
+
+```sh
+V=$(node -p "require('./package.json').version"); L=$(grep -m1 "^## \[$V\]" CHANGELOG.md) \
+  && [ -n "$L" ] && ! printf '%s' "$L" | grep -qi "unreleased" \
+  && echo "changelog entry dated for $V: $L" \
+  || { echo "MISSING OR UNDATED CHANGELOG ENTRY for $V"; false; }
+```
+
+Must print the "dated" line and exit 0. It fails both when the entry is absent **and** while its heading
+still says `UNRELEASED` — `changelog-reader.js` tests the version, not the date, so an undated entry ships
+happily and `convoke-update` then shows operators `4.0.3 — UNRELEASED` under "What's New". `convoke-update` shows operators the entries between their
+version and yours (`changelog-reader.js::readChangelogEntries` → `convoke-update.js::printChangelog`), and
+`printChangelog` returns early when the list is empty — so a release with no entry updates people silently.
+Nothing else catches this: before `fic-2-1` added this step, the word "changelog" did not appear in this
+checklist at all, and no CI job reads the file.
+
+So: replace the `UNRELEASED` placeholder with the release date, then re-run the check above.
+
 ## 2. The working tree is clean and pushed
 
 ```sh

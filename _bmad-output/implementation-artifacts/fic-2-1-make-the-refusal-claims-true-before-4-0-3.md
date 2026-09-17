@@ -4,7 +4,7 @@ baseline_commit: d1194f94510c208855bfdf729d12316c3740dc07
 
 # Story fic-2.1: Make the refusal claims true before 4.0.3
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** [fic-epic-2 — make 4.0.3's refusal claims true](../planning-artifacts/convoke-epic-release-truth-4-0-3.md) (one-story mini-epic, `tfr-epic-2` precedent)
 **Origin:** a second, independent story-close consumer audit of `fic-1-1`, 2026-09-17 — the clause added in `d954e90a`.
@@ -50,13 +50,13 @@ so that **I am not sent to a command that refuses, or shown a breaking-change mi
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Establish the three paths by execution (AC: #1)** — install with a damaged config; update with damaged Gyre and a refresh due; update with damaged Vortex. Record each command and its output. Work in a scratch project, never the repo.
-- [ ] **Task 2 — Correct `INSTALLATION.md` and `UPDATE-GUIDE.md` (AC: #1)** — each claim names its path; the Vortex-under-update case is stated with a pointer to `T180`.
-- [ ] **Task 3 — Repair the nine activation blocks (AC: #2)** — derive the file list with the grep in AC#2 rather than from this list.
-- [ ] **Task 4 — Repair the seven Vortex guides (AC: #3)**; confirm the Gyre guides have no equivalent section before touching them.
-- [ ] **Task 5 — Changelog entry and a checklist step that catches its absence (AC: #4)** — prove the step fails with the entry removed.
-- [ ] **Task 6 — File `T180`; correct `IN-211`'s evidence (AC: #5)** — lanes stay ordered; `backlog-integrity.js` passes.
-- [ ] **Task 7 — Consumer audit at close (AC: #6)** — one independent layer; dispositions recorded.
+- [x] **Task 1 — Establish the three paths by execution (AC: #1)** — install with a damaged config; update with damaged Gyre and a refresh due; update with damaged Vortex. Record each command and its output. Work in a scratch project, never the repo.
+- [x] **Task 2 — Correct `INSTALLATION.md` and `UPDATE-GUIDE.md` (AC: #1)** — each claim names its path; the Vortex-under-update case is stated with a pointer to `T180`.
+- [x] **Task 3 — Repair the nine activation blocks (AC: #2)** — derive the file list with the grep in AC#2 rather than from this list.
+- [x] **Task 4 — Repair the seven Vortex guides (AC: #3)**; confirm the Gyre guides have no equivalent section before touching them.
+- [x] **Task 5 — Changelog entry and a checklist step that catches its absence (AC: #4)** — prove the step fails with the entry removed.
+- [x] **Task 6 — File `T180`; correct `IN-211`'s evidence (AC: #5)** — lanes stay ordered; `backlog-integrity.js` passes.
+- [x] **Task 7 — Consumer audit at close (AC: #6)** — one independent layer; dispositions recorded.
 
 ## Dev Notes
 
@@ -89,14 +89,53 @@ so that **I am not sent to a command that refuses, or shown a breaking-change mi
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context), via `bmad-dev-story`.
+
 ### Debug Log References
 
 ### Completion Notes List
 
+**Task 1 — the paths, executed.** In a scratch project (never the repo): install with a damaged config → refuses, exit 1, byte-identical. `convoke-update` with damaged **Gyre** and a refresh due → refuses, exit 1. `convoke-update` with damaged **Vortex** → `Warning: Could not read config.yaml`, plan `From: 1.1.0 / To: 4.0.2`, breaking changes, `1.5.x-to-1.6.0` fails, rollback, exit 1, config byte-identical. Fourth case found while running them: damaged **Gyre** with nothing out of step → `✓ Already up to date!`, exit 0, never noticed.
+
+**Two of the story's own assumptions were wrong, and are corrected here rather than followed.** (a) It said the Gyre guides have no config section, citing four Gyre files — those four are *agent* files, already covered by Task 3; the Gyre guides have no such section at all, so nothing was added there. (b) Six of the seven Vortex guides carry a second "If missing" line belonging to a different section about missing workflow files; only the config block was touched.
+
+**A mistake of mine, caught before review.** The guides first cited `UPDATE-GUIDE.md` by repo-relative path. Those guides are copied into a user's project where that file does not exist — the "reason about the consumer without reading it" trap, inside the story written because of it. Replaced, then removed entirely (see below).
+
+**Task 7 — story-close consumer audit (AC#6): 3 HIGH, 3 MEDIUM, 4 LOW. All three HIGHs were in claims this story authored, and all three were reproduced by me before fixing.**
+
+| Finding | What was false | Fix |
+|---|---|---|
+| HIGH-1 | "a `config.yaml` that cannot be read is never replaced" — only `_vortex` and `_gyre` are guarded (`refresh-installation.js`). A damaged `_enhance` config: `convoke-install` **exit 0**, zero refusals, file replaced, operator's `user_name` gone | Claims scoped to Vortex and Gyre in UPDATE-GUIDE, CHANGELOG and INSTALLATION; the table gains the unguarded-modules row; **`T181` filed** |
+| HIGH-2 | `1.1.0 → 4.0.2` is a version-pinned literal in a document shipped *inside* 4.0.3; the plan's target is `package.json`'s version | Literal removed from both documents |
+| HIGH-3 | CHANGELOG said "7 of the 11 installed agents" — never derived, inherited from the `BUG-22` row. `docs-audit` prints `Registry: 12 agents`; the eight that stop are Isla, Liam, Noah, Max and the four Gyre agents | Corrected to 8 of 12 with the agents named; `BUG-22`'s receipt and both epic files annotated |
+| MEDIUM-1 | Step 1b passed with the `UNRELEASED` placeholder intact, and `convoke-update` would show operators `4.0.3 — UNRELEASED` | Step 1b now fails on a missing **or undated** entry; verified against all three states |
+| MEDIUM-2 | The guides cited a document absent from a user's project (an npx install leaves no local copy) | Citation removed; the advice is self-contained |
+| MEDIUM-3 | `drafts/docs-program/customize-without-forking.md` still stated the claim this story disproved | Corrected, with both gaps named |
+| LOW-1/2 | "three cases" against a four-row table; "stops when it reaches the copy step" (the refusal runs *before* any copy) | Both corrected |
+| LOW-3 | Emma, Mila and Wade load config via `bmad-init` and cannot emit that error; their guides' section was pre-existing and got enlarged | Left as-is — harmless, and trimming it is not this story's scope. Disclosed here |
+| LOW-4 | `convoke-doctor` still says "Reinstall the module" while 16 shipped surfaces now say do not | `IN-211`, deferred by operator ruling 2026-09-16. Disclosed, unchanged |
+
+**The most consequential single edit** was to `_bmad/bme/_team-factory/agents/team-factory.md`: my Task 3 wording told the Loom Master operator that install "refuses to overwrite a config it cannot read" — about the one config for which that is demonstrably untrue. It now tells them not to reinstall because reinstalling *would* replace it, and points at `T181`.
+
+**Not fixed, by scope:** `version-detector.js` (`T180`) and the unguarded module configs (`T181`). Both are behaviour changes; this story makes the words match the code.
+
+**Checks:** full suite `npm test` 0 failures; `npm run lint` clean; `docs-audit` clean; `backlog-integrity` PASS (931 rows). `assert-shipped-links.js` exits 1 — it does so on a pristine HEAD copy too and is wired into neither CI nor npm scripts, so it is pre-existing and not this story's.
+
 ### File List
+
+- `INSTALLATION.md`, `UPDATE-GUIDE.md` — refusal claims scoped per path and per config; the four-case table
+- `CHANGELOG.md` — `[4.0.3] - UNRELEASED` entry, corrected figures, both known gaps
+- `docs/pre-tag-release-checklist.md` — step 1b, failing on a missing or undated entry
+- `_bmad/bme/_vortex/agents/*/SKILL.md` (4), `_bmad/bme/_gyre/agents/*.md` (4), `_bmad/bme/_team-factory/agents/team-factory.md` — activation advice; the Team Factory one differs because its config is unguarded
+- `_bmad/bme/_vortex/guides/*-USER-GUIDE.md` (7) — unreadable-config branch
+- `_bmad-output/drafts/docs-program/customize-without-forking.md` — the disproved claim
+- `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — `T181` filed, `BUG-22` figure annotated (`T180` and the `IN-211` correction landed at authoring)
+- `_bmad-output/planning-artifacts/convoke-epic-fresh-install-config-4-0-3.md`, `convoke-epic-release-truth-4-0-3.md` — figure corrections
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — story status
 
 ## Change Log
 
 | Date | Note |
 |---|---|
+| 2026-09-17 | **Implemented; to `review`.** Three paths established by execution, both shipped documents scoped per path, nine activation blocks and seven guides repaired, a 4.0.3 changelog entry and a checklist step that fails without a dated one. The story-close consumer audit found 3 HIGH — all in claims this story authored — and all were reproduced and fixed: the refusal covers only two of six module configs (`T181` filed), a version-pinned `4.0.2` literal inside a 4.0.3 document, and an undrived "7 of 11" that is 8 of 12. |
 | 2026-09-17 | Story authored from a second, independent story-close consumer audit of `fic-1-1`. The production fix is sound; two published sentences are false on the `convoke-update` + damaged-Vortex path, nine shipped activation blocks and seven guides advise a command that now refuses, and a 4.0.3 would ship without a changelog entry. Mechanism verified in source: `getCurrentVersion` swallows the parse error and `guessVersionFromFileStructure` returns `1.1.0` because `workflows/_deprecated/` exists on every real install. |

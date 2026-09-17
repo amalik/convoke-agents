@@ -177,7 +177,7 @@ Edit `_bmad/bme/_vortex/config.yaml` and `_bmad/bme/_gyre/config.yaml`. These ar
 **What a fresh install writes changed in 4.0.3. Open the file and look before you edit it.**
 
 - **4.0.2 and earlier.** Neither `user_name` nor `communication_language` is written. Add them yourself. The installer's message tells you to "replace `{user}`", but no `{user}` placeholder appears in these files.
-- **4.0.3 and later.** Both files already contain `user_name: '{user}'` and `communication_language: en`. **Change the values in place — do not add a second `user_name:` line.** A duplicate key makes the file invalid YAML, and from 4.0.3 both `convoke-update` and `convoke-install` refuse to run against a config they cannot parse: they exit non-zero, name the file and the parse error, and leave it byte-identical rather than replacing it with defaults. Fix or remove the file, then re-run.
+- **4.0.3 and later.** Both files already contain `user_name: '{user}'` and `communication_language: en`. **Change the values in place — do not add a second `user_name:` line.** A duplicate key makes the file invalid YAML, and from 4.0.3 `convoke-install` refuses to run against a Vortex or Gyre config it cannot parse — it exits non-zero, names the file and the parse error, and leaves it byte-identical. `convoke-update` does the same only when a refresh is due and the damaged file is the Gyre config; a damaged Vortex config gets a migration plan instead (`T180`), and the other four module configs are not checked at all (`T181`) rather than replacing it with defaults. Fix or remove the file, then re-run.
 
 ```yaml
 # _bmad/bme/_vortex/config.yaml

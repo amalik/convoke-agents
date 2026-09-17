@@ -419,7 +419,7 @@ development_status:
   # fic-epic-2 — one-story mini-epic: make 4.0.3's refusal claims true (consumer audit, 2026-09-17)
   # Epic file: convoke-epic-release-truth-4-0-3.md
   fic-epic-2: in-progress
-  fic-2-1-make-the-refusal-claims-true-before-4-0-3: ready-for-dev
+  fic-2-1-make-the-refusal-claims-true-before-4-0-3: review
   fic-epic-2-retrospective: optional
 
   # ============================================================

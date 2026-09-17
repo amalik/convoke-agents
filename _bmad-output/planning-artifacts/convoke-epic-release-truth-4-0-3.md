@@ -16,7 +16,7 @@ qualifier_role: operator-authored
 
 ## Why it exists
 
-`fic-1-1` fixed a real defect — a fresh install left 7 of 11 agents unable to start (`BUG-22`) — and its
+`fic-1-1` fixed a real defect — a fresh install left 8 of 12 agents unable to start (the row said 7 of 11; corrected 2026-09-17) (`BUG-22`) — and its
 story-close consumer audit was run. A **second, independent** consumer audit then found that the production
 fix is sound but **what the story published about it is false on the path most existing users take**:
 

@@ -231,7 +231,11 @@ This tells npx to download `convoke-agents@latest` first, then run the `convoke-
 
 ### "refusing to overwrite ... config.yaml"
 
-From 4.0.3, an update or install stops rather than replace a `config.yaml` it cannot read:
+From 4.0.3, the **Vortex and Gyre** `config.yaml` files are never replaced when they cannot be read. Those
+two are the ones the installer checks (`refresh-installation.js`); the `_enhance`, `_artifacts`,
+`_portability` and `_team-factory` configs are **not** checked, and a damaged one there is still overwritten
+silently — tracked as `T181`. Where you see this message depends on the command and on which file is
+damaged; the table below has every case, because they differ:
 
 ```
 config-merger: refusing to overwrite /path/to/project/_bmad/bme/_gyre/config.yaml: it is not valid YAML (Map keys must be unique at line 3, column 1:). Fix or remove the file, then re-run.
@@ -240,8 +244,23 @@ config-merger: refusing to overwrite /path/to/project/_bmad/bme/_gyre/config.yam
 It arrives as a single line, naming the absolute path and the parser's own first line of error.
 
 This protects your settings — before 4.0.3, a single duplicate key silently replaced the whole
-file with defaults. The file named in the message is left byte-identical, and nothing else has
-been changed: the check runs before any module is copied, so your installation is not half-updated.
+file with defaults. Wherever the message appears, the file it names is left byte-identical and no module
+has been copied, so your installation is not half-updated.
+
+**Which command shows it, and when** (each line below was run against a real installation):
+
+| What you run | Which config is damaged | What happens |
+|---|---|---|
+| `convoke-install` (any variant) | either | Refuses with the message above, exit 1. The file is left byte-identical |
+| `convoke-update` | Gyre, and a refresh is due | Refuses with the message above, exit 1 |
+| `convoke-update` | Gyre, nothing else out of step | `✓ Already up to date!`, exit 0 — the damaged file is not noticed |
+| `convoke-update` | **Vortex** | **No refusal.** Version detection cannot read the file, falls back to inspecting the directory layout, and reports the install as `1.1.0`. You are offered a plan from `1.1.0` up to the package's version, listing breaking changes. If you accept it, an early migration fails on the same parse error and the run is rolled back from its backup — exit 1, your config byte-identical |
+| either command | `_enhance`, `_artifacts`, `_portability`, `_team-factory` | **No refusal, exit 0**, and the damaged file is replaced with defaults — the settings loss this release fixes for Vortex and Gyre still happens here (`T181`) |
+
+The last row is a known defect, tracked as `T180`: the refusal exists and runs, but version detection
+reads the Vortex config first and swallows the error before the refusal can be reached. Until it is fixed,
+treat a `Could not read config.yaml` warning followed by a surprising `From: 1.1.0` as this case, decline
+the plan, and repair the file as below.
 
 **Reinstalling will not clear this, and that is deliberate** — `convoke-install` runs the same
 check. Repair the file itself:

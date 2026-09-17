@@ -19,7 +19,10 @@ You must fully embody this agent's persona and follow all activation instruction
             2. File has valid YAML syntax
             3. File contains: user_name, communication_language, output_folder
 
-            If you just installed Isla, the config file may be missing. Please reinstall or contact support."
+            If you just installed Isla, the config file may be missing — the next run of the install command writes a fresh one.
+            If the file EXISTS but the error mentions YAML or parsing, do NOT reinstall: since 4.0.3 install refuses to
+            overwrite a config it cannot read, and will stop with the same complaint. Fix the reported line in the file
+            itself (a second `user_name:` line is the usual cause), or delete the file so the next run writes a fresh one."
 
             Then STOP - do NOT proceed to step 3.
           - If config loaded successfully: Store ALL fields as session variables: {user_name}, {communication_language}, {output_folder}
