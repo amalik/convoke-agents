@@ -10,22 +10,22 @@ status: draft
 
 ## 1. Client-facing ledger
 
-*Basis: the published package convoke-agents 4.0.2, the current release on npm, assessed 14–15 September 2026. "Shipped" and "works" mean verified by running the software or by an automated test that exercises it. No team's conversation quality is measured by automated tests.*
+*Basis: the published package convoke-agents 4.0.3, the current release on npm, assessed 17 September 2026. "Shipped" and "works" mean verified by running the software or by an automated test that exercises it. Every agent named below was also started once in a live session against a clean install of that package — which establishes that it starts, and nothing more. No team's conversation quality is measured by automated tests.*
 
 | Capability | What it does for you | Status | Ownership | Honest note |
 |---|---|---|---|---|
-| Vortex product-discovery team | Seven specialist agents take a team from framing the problem through research, hypotheses and experiments to a pivot, patch or persevere decision, across 22 guided workflows. | Works with limits | Convoke | All seven install and appear as commands in Claude Code. Three use the current BMAD agent format. Four still use the previous format and are scheduled for conversion. |
+| Vortex product-discovery team | Seven specialist agents take a team from framing the problem through research, hypotheses and experiments to a pivot, patch or persevere decision, across 22 guided workflows. | Works with limits | Convoke | All seven install, appear as commands in Claude Code, and start. Three use the current BMAD agent format; four still use the previous format and are scheduled for conversion. The three converted agents start without reading your project's configuration — they ask you for your name and language instead of taking them from the file the installer wrote. |
 | Vortex hand-off contracts | Standard templates for what each discovery stage passes to the next, plus guidance on which agent picks up. | Shipped | Convoke | Five hand-off templates and five routing rules. Agents are instructed to follow them. No software checks a document against its template. |
-| Gyre production-readiness team | Four agents detect your technology stack, build a capability model, find readiness gaps and review them with you, across 7 workflows. | Works with limits | Convoke | Installs with Convoke and appears in Claude Code. Still classed internally as in development: all four agents use the previous format, the team cannot yet be packaged for a plugin marketplace, and its team guide is not copied into your project. |
-| Team Factory | Guides a contributor through designing a new agent team and saves the decisions as a resumable specification. | Works with limits | Convoke | Preview. The design steps run. Generation has not yet produced a team that works end to end, and the installer does not pick up a generated team. It runs from Convoke's source repository and relies on BMAD's agent builder. Under active repair. |
+| Gyre production-readiness team | Four agents detect your technology stack, build a capability model, find readiness gaps and review them with you, across 7 workflows. | Works with limits | Convoke | Installs with Convoke, appears in Claude Code, and all four agents start. Still classed internally as in development: all four use the previous format, the team cannot yet be packaged for a plugin marketplace, and its team guide is not copied into your project. Until 4.0.3 the installer wrote this team's configuration with the discovery team's identity, which stopped all four agents from starting at all. |
+| Team Factory | Guides a contributor through designing a new agent team and saves the decisions as a resumable specification. | Works with limits | Convoke | Preview, and **the maintainer has decided it is internal scaffolding rather than a capability to adopt** (September 2026); removing it from the installed package is planned but not yet done. The design steps run. Generation has not produced a team that works end to end, and the installer does not pick up a generated team. It runs only from Convoke's source repository and relies on BMAD's agent builder. Do not plan on it. |
 | Adding an agent or skill to an existing team | Extend a team without rebuilding it. | Mapped, not built | Convoke | Documented as planned. Some groundwork code exists, but no workflow uses it. |
 | Enhance: initiative backlog skill | A RICE-scored workflow for capturing, triaging and re-scoring initiatives. | Works with limits | Convoke | Available as a direct command. It is meant to appear in BMAD's product-manager agent menu, which happens only on older BMAD layouts. It is the only Enhance skill so far. |
 | Artifact governance and portfolio view | Reports each initiative's phase, status and next step from your planning documents. Renames older documents to a naming standard. | Works with limits | Convoke | The command-line report runs but under-reports which initiatives are active. The renaming tool targets older file names and flags already-compliant files for manual review. The guided in-chat versions point at a script location that does not exist in an installed project. |
 | Export to GitHub Copilot and Cursor | Turns a skill into a portable instruction document, with ready-to-copy files for Copilot, Cursor and Claude Code. | Works with limits | Convoke (the tool). Most skills that export in full are BMAD ecosystem. | You copy the files into place by hand, and nothing tests that those tools load them. Convoke's own team agents export only as a notice that they need a full Convoke install. The guided in-chat version has the same script-location problem as above; the command-line tool works. |
 | Operator Covenant | A published standard: when a skill cannot resolve something, it hands you the decision with a default, a way to override it and the reason it matters. | Works with limits | Convoke | Applied through review, not enforced by software. An April 2026 review of eight skills found 46 of 56 checks passing (82%). Fixes for the discovery team's failing area, the pacing of questions, are in review. |
-| Installation and health check | One command installs the teams, with or without BMAD Method. A health check confirms the installation or names what is broken. | Shipped | Convoke | Verified on a clean project: it installed, passed every health check, and correctly failed a deliberately damaged copy. Installs for Claude Code only. A "BMAD core not detected" warning appears on standalone installs even when nothing is wrong. |
-| Upgrades | Upgrades an existing installation in place, taking a backup first. | Shipped | Convoke | Verified by upgrading a 3.3.0 installation to 4.0.2. The health check passed afterwards. |
-| Release pipeline | CI builds each release from a tagged commit. It must pass the tests and a clean-install trial, and it carries signed build provenance. | Shipped | Convoke | Verified for 4.0.2: every release gate passed and the provenance attestation verifies. The pipeline does not yet re-check the published result automatically. |
+| Installation and health check | One command installs the teams, with or without BMAD Method. A health check confirms the installation or names what is broken. | Shipped | Convoke | Verified on a clean project: it installed, passed all 31 health checks, and correctly failed a deliberately damaged copy. Since 4.0.3 it refuses to overwrite a discovery- or readiness-team configuration file it cannot parse, naming the file and the error instead of replacing your settings with defaults. Four of the six module configuration files are still rewritten from the template on **every** install, so customisation there does not persist. Installs for Claude Code only. A "BMAD core not detected" warning appears on standalone installs even when nothing is wrong. |
+| Upgrades | Upgrades an existing installation in place, taking a backup first. | Shipped | Convoke | Verified by upgrading a 3.3.0 installation to 4.0.3, and a 4.0.2 one. The health check passed afterwards, and the upgrade repairs a readiness-team configuration that an earlier release had mis-written. One edge case: if your *discovery* team's configuration file is unparseable, the upgrade cannot recognise your version, offers a migration plan from a much older one, and fails partway through — it then restores from its own backup and leaves your files as they were. |
+| Release pipeline | CI builds each release from a tagged commit. It must pass the tests and a clean-install trial, and it carries signed build provenance. | Shipped | Convoke | Verified for 4.0.3: every release gate passed and the provenance attestation verifies against the public transparency log. The pipeline does not yet re-check the published result automatically — after the 4.0.3 publish the registry reported the previous version for about two and a half minutes, so a single check taken straight afterwards would have reported a successful release as a failed one. |
 | Plugin marketplace distribution | Installing Convoke from the BMAD plugin marketplace. | Mapped, not built | Convoke | The listing metadata is included, but Convoke is not listed. The submission was declined on packaging structure and has not been resubmitted. Install through npm instead. |
 | Use in chat windows (e.g. Claude.ai) | Documentation suggests pasting an agent file into a conversation. | Mapped, not built | Convoke | No tooling supports this path, and the agents expect project files a chat window does not have. Not tested in a live session. |
 | Further lifecycle phases: Strategy, Growth, Delivery, Security, Operations, Sunset | Coverage of the lifecycle beyond discovery and readiness. | Mapped, not built | Convoke (vision) | Described in an exploratory vision document that says it is not a commitment to build. No agents exist. Gyre assesses security readiness gaps, but nothing fixes them. |
@@ -41,28 +41,48 @@ status: draft
 
 - **Shorthand:**
   - `$SP` = `$SCRATCH` (a temporary working directory outside the repository)
-  - `$P` = `$SP/pub/x/package` (the published 4.0.2 tarball, extracted)
-  - `$T` = `$SP/trial` (a clean project with 4.0.2 installed from the registry)
+  - `$P` = `$SP/pub/x/package` (the published 4.0.3 tarball, extracted) · `$P2` = the 4.0.2 tarball, for contrast
+  - `$T` = `$SP/trial` (a clean project with 4.0.3 installed from the registry) · `$T2` = the same with 4.0.2
   - Backlog = `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md`
-- **Repo state when assessed:** HEAD `0db3aac8`, which is `v4.0.2-5-g0db3aac8` (five commits after the release tag). The working tree has uncommitted changes that belong to another session; none were touched.
+- **Repo state when assessed:** HEAD `b2900c39`, which is `v4.0.3-1-gb2900c39` (one commit after the release tag). Re-derived on 17 September 2026, the day 4.0.3 published; the 14–15 September pass against 4.0.2 is the prior basis.
 - **Materiality rule:** a defect moves a row to *Works with limits* when it affects the documented outcome. Cosmetic or diagnostic defects are stated in the row's note but do not downgrade it.
-- **What "works" could not cover:** no agent was activated in a live LLM session. For agent and workflow rows, "works" means the agent installs, its command wrapper resolves to a file that exists, and structural tests pass in CI. Conversation behaviour is unverified for every team.
+- **What "works" now covers, and what it still does not.** Every one of the 12 installed agents was started once, headless, against `$T`, and all 12 reached their menu. That establishes that activation completes — nothing more. No workflow was driven to an artifact, nothing was produced and checked, and conversation quality is unmeasured for every team. These are single samples of a non-deterministic system.
+
+  This is the one row where the previous basis was materially out of date. On 4.0.2, a fresh standalone install left **8 of the 12 installed agents unable to start at all**: `mergeConfig` seeded only the discovery team's lists and was called for the readiness team too, so neither configuration file carried `user_name` or `communication_language`, and each of those agents stopped with `❌ Configuration Error: Missing required field(s) in config.yaml`. 4.0.3 fixes it. Both directions were observed rather than inferred — the failure reproduced on a 4.0.2 install (`$T2`) and the fix confirmed on a 4.0.3 one (`$T`):
+
+```
+$ cd $T2 && claude -p "/bmad-agent-bme-discovery-empathy-expert"      # 4.0.2
+❌ **Configuration Error: Missing required field(s) in config.yaml**
+Required fields: `user_name`, `communication_language`, `output_folder`
+Found: `output_folder` (with template variable)
+Missing: `user_name`, `communication_language`
+
+$ cd $T && claude -p "/bmad-agent-bme-discovery-empathy-expert"       # 4.0.3
+Hello {user}! I'm **Isla**, your Discovery & Empathy Expert.
+…
+**What would you like to work on?**
+1. **[MH] Redisplay Menu Help**  …
+```
+
+  The readiness team's agent failed the same way on 4.0.2, and its error text proposed the *discovery* team's output folder — the mis-seeding showing through the diagnostic.
+
+- **A nuance the client table cannot hold.** Three of the seven discovery agents (the converted ones) start, but never read the configuration. Their first activation step calls a `bmad-init` skill that no longer exists in the package; the call returns `Unknown skill: bmad-init`, four searches for the config look in four paths that are not where it lives, and the agent falls back to asking the operator for their name and language. The effect is a degraded first turn, not a halt. The other nine read the file and echo all three fields back.
 
 #### Version and publication
 
 ```
 $ npm view convoke-agents dist-tags --json
-{ "rc": "4.0.1-rc.0", "latest": "4.0.2" }
+{ "rc": "4.0.1-rc.0", "latest": "4.0.3" }
 $ npm view convoke-agents time --json | tail -2
-  "4.0.1": "2026-08-23T22:46:20.186Z",
-  "4.0.2": "2026-09-14T08:29:49.928Z"
-$ npm view convoke-agents@4.0.2 dist --json      (trimmed)
-  shasum add6b5e3c097a6e21c55bf0c197ba962616e8f0f, fileCount 466, unpackedSize 3272081
+  "4.0.2": "2026-09-14T08:29:49.928Z",
+  "4.0.3": "2026-09-17T10:46:34.840Z"
+$ npm view convoke-agents@4.0.3 dist --json      (trimmed)
+  shasum c18b1b672b4d6612355f61f24114687b7d1a24e1, fileCount 469, unpackedSize 3342296
   attestations.provenance.predicateType: https://slsa.dev/provenance/v1
-$ npm view convoke-agents@4.0.2 gitHead
-a77cfefe5a8718a5cf85fd46efe70e1975df1f43
-$ git rev-parse v4.0.2^{commit}
-a77cfefe5a8718a5cf85fd46efe70e1975df1f43
+$ npm view convoke-agents@4.0.3 gitHead
+35b7793f0de9659954b21b7f157697ae84645a9a
+$ git rev-parse v4.0.3^{commit}
+35b7793f0de9659954b21b7f157697ae84645a9a
 ```
 
 The `rc` dist-tag still points at `4.0.1-rc.0`, which is older than `latest`. This is harmless but stale; backlog row T43 covers `rc` downgrade protection.
@@ -76,9 +96,11 @@ The `rc` dist-tag still points at `4.0.1-rc.0`, which is older than `latest`. Th
 - Lifecycle scripts: `grep '"prepack\|"prepare\|"prepublish' package.json` returns nothing. The only lifecycle script is `postinstall`, which prints guidance.
 
 ```
-$ npm pack convoke-agents@latest --pack-destination $SP/pub  → convoke-agents-4.0.2.tgz, 466 files
+$ npm pack convoke-agents@latest --pack-destination $SP/pub  → convoke-agents-4.0.3.tgz, 469 files
 $ find $P/_bmad/bme/<module> -type f | wc -l
-  _vortex 226 · _gyre 54 · _enhance 23 · _artifacts 12 · _portability 9 · _team-factory 30 · covenant 2
+  _vortex 226 · _gyre 54 · _enhance 23 · _artifacts 12 · _portability 9 · _team-factory 32 · covenant 2
+$ diff <(cd $P2 && find . -type f | sort) <(cd $P && find . -type f | sort)
+  three additions only: _team-factory/lib/utils/{output-directory,run-context}.js, scripts/audit/check-changelog-entry.js
 $ npm pack --dry-run --json   (repo HEAD working tree) → 468 entries
 $ diff <published file list> <dry-run file list>
   > _bmad/bme/_team-factory/lib/utils/output-directory.js
@@ -92,8 +114,9 @@ The two extra files were added after the tag. **The published tarball is the bas
 Lanes were parsed with the repo's own `parseTables`/`isClosed`, exported from `scripts/audit/backlog-integrity.js`. The script is `$SP/lanes.js`.
 
 ```
-HEAD (git show HEAD:<backlog>):  live lane rows 231 = Bug 3 + Fast 213 + Initiative 15; closed-in-lane 0; Intakes 192
-working tree (uncommitted):      live lane rows 234 = Bug 3 + Fast 216 + Initiative 15
+HEAD (git show HEAD:<backlog>):  live lane rows 238 = Bug 6 + Fast 217 + Initiative 15; closed-in-lane 0
+by portfolio:                    convoke 194 · loom 25 · enhance 13 · gyre 2 · forge 1 · helm 1 · vortex 1 · (pending) 1
+Bug Lane:                        T181, T183, T182, BUG-4, BUG-20, BUG-9   (BUG-22 closed at 4.0.3)
 ```
 
 Intake rows (§2.1) have no Portfolio column, so the per-team counts below cover lanes §2.2–§2.4 only.
@@ -133,7 +156,7 @@ Results:
 **Install trial** (clean project, registry package):
 
 ```
-$ cd $T && npm init -y && npm install convoke-agents@4.0.2        → exit 0
+$ cd $T && npm init -y && npm install convoke-agents@4.0.3        → exit 0
 $ npx --no-install convoke-install                                → exit 0
     Refreshed agent: contextualization-expert/SKILL.md … learning-decision-expert/SKILL.md (7)
     Refreshed workflow: lean-persona … vortex-navigation (22)
@@ -152,9 +175,9 @@ $ grep -rhno "{project-root}/_bmad/bme/_[a-z-]*/[…]" _bmad/bme .claude/skills 
 
 Seven paths dangle, and all seven are in `_vortex/workflows/_deprecated/wireframe/` (they point at `_designos`). Every `./references/*.md` target named in the 3 converted agents exists.
 
-**Tests (CI).** CI run `34822641000` on tag `v4.0.2`:
-- `test (22)`: unit/team-factory/lib/audit suite `tests 2432 · pass 2431 · fail 0 · skipped 1`; integration suite `tests 124 · pass 124`.
-- `coverage` job (adds `tests/p0`): `tests 3198 · pass 3197 · fail 0 · skipped 1`.
+**Tests (CI).** CI run `35211917101` on tag `v4.0.3`:
+- `test (22)`: unit/team-factory/lib/audit suite `tests 2752 · pass 2751 · fail 0 · skipped 1`; integration suite `tests 130 · pass 130 · fail 0`.
+- `coverage` job (adds `tests/p0`): `tests 3524 · pass 3523 · fail 0 · skipped 1`; "All files" 88.61 / 84.08 / 91.7 / 88.61.
 
 P0 suites cover each agent (`tests/p0/p0-{emma,isla,mila,liam,wade,noah,max}.test.js`), workflow structure and handoff contracts. They are **structural** (file shape, menu codes, schema tables), not behavioural. CHANGELOG 4.0.0 says so itself: "Convoke 4.0 makes no behavioural-equivalence claim."
 
@@ -172,7 +195,7 @@ P0 suites cover each agent (`tests/p0/p0-{emma,isla,mila,liam,wade,noah,max}.tes
    - `ls $T/.claude/skills | grep -i init` returns nothing.
    - In the repo, `_bmad/core/bmad-init/` holds only `.bak` files (moved aside by commit `a16fa340`, 2026-06-27).
    - CHANGELOG 4.0.0 §Removed says "`bmad-init` skill — Removed" and §Changed says agents "load configuration directly from `_bmad/{module}/config.yaml`". The shipped converted agents do not do that.
-   - Impact in a live session is **unverified**; see §3.
+   - **Measured 2026-09-17 against 4.0.3: the missing skill does not stop them, and does not make them find the config either.** Tracing Emma's activation shows `Skill(bmad-init)` returning `Unknown skill: bmad-init`, then four searches — `.bmad/config.*`, `bmad-config.*`, `.vortex/config.*`, `project-context.md` — none of which is `_bmad/bme/_vortex/config.yaml`, each returning `No files found`. She then asks the operator for their name and language. Mila says the same in prose; Wade does not mention configuration at all. The effect is a degraded first turn: these three do not read `user_name`, `communication_language` or `output_folder` unless the operator supplies them. The four unconverted discovery agents and all four readiness agents read the file and echo all three fields. Filed as `T183`.
 2. All 9 v5 XML agent files (4 Vortex, 4 Gyre, Team Factory) carry a literal unsubstituted `<step n="{HELP_STEP}">`. This is cosmetic.
 3. The installer writes `_bmad/_config/agents/bme-<name>.customize.yaml` for 11 agents, but no agent file or wrapper references them (`grep -rln customize` over installed agents and wrappers). No doc claims this as a feature, so it is observed only and not a ledger claim.
 
@@ -255,16 +278,18 @@ $ grep -n "_AGENTS" $P/_bmad/bme/_team-factory/lib/writers/registry-writer.js
 - `tf-2-11-end-to-end-pilot-run.md` §Completion Notes records "Steps 0-3 executed against the live factory" with 7 findings. §Full Pilot Run records "AC#7 is unmet" (terminal validation `valid:false`) and findings 8–15, including "the activation validator cannot pass any agent that has ever shipped".
 - `sprint-status.yaml`: `tfr-epic-1: in-progress`, `tfr-1-1…: in-progress`.
 
-**Open rows: 22 live rows with Portfolio `loom` in lanes §2.2–§2.4 at HEAD `0db3aac8`, all in the Fast Lane and none closed.** The uncommitted working tree adds T171, T172 and T173, giving 25. At least two HEAD rows (T167 `run-context.js`, T169 `output-directory.js`) concern files added after v4.0.2.
+**Open rows: 25 live rows with Portfolio `loom` at HEAD `b2900c39`, all in the Fast Lane and none closed.** `T136`, `T128` and `T164` closed with the repair epic; `T174`–`T179` are new. The uncommitted working tree adds T171, T172 and T173, giving 25. At least two HEAD rows (T167 `run-context.js`, T169 `output-directory.js`) concern files added after v4.0.2.
 - **HEAD rows:** T136, T168, T128, T139, T163, T164, T170, T132, T134, T127, T165, T167, T147, T137, T138, T166, T169, T141, T151, I7, I9, I68.
 - **Rows most relevant to the client note:**
-  - **T128**: the terminal gate "can never report success where teams are actually built". HEAD commit `0db3aac8` reworks it, after the release.
+  - **T128**: the terminal gate "can never report success where teams are actually built" — **closed** 2026-09-15 by `tfr-1-1`, along with `T164` and `T136`. The repair epic (`tfr-epic-1`) is done: `add-team` runs end to end and its blocks execute verbatim in documented order. What has *not* changed is the outcome this row's verdict rests on — no generated team has ever been installed.
   - **T147**: "a factory-built team is installed by nothing at all". Verified above.
   - **T127**: emits v5 XML agents and hard-fails v6.3. Ruled 2026-09-11 as accepted.
   - **T136**: the `run:` blocks cannot be pasted with real data.
   - **T164**: steps can be skipped while the flow reports success.
 
-**Shipped documentation overclaims.** `README.md:100` says "Output passes the same validation as the native teams." This is contradicted by T128 and by `tf-2-11` AC#7. Do not repeat it in the whitepaper.
+**Shipped documentation no longer overclaims — corrected in 4.0.3.** Until 4.0.2, `README.md:100` said "Output passes the same validation as the native teams", which `T128` and `tf-2-11` AC#7 contradicted. That sentence is gone. The shipped text now reads: *"It is a preview: its first steps record your design decisions as a resumable spec, but generating the team writes into Convoke's own source files, so it only completes inside a clone of the Convoke repository, and nothing installs a generated team yet. Treat the result as a starting point, not a finished team."* Shipped documentation and observed behaviour now agree.
+
+**A governance fact that outranks the defects.** `T179` (filed 2026-09-16, open): the maintainer ruled the Team Factory **internal scaffolding, not a user-facing capability**, and planned its removal from the installed package as one coordinated change. That has not been executed — it still ships, still installs, and its agent still starts. For an evaluating organisation this matters more than the defect list: the owner has already decided this is not something to adopt.
 
 **Why Works with limits (and not Shipped):** it ships, and its design steps have been executed, but the documented outcome (a new, validated, installable team) has never been achieved. See §3 for the case for a stricter classification.
 
@@ -315,7 +340,9 @@ $ npx --no-install convoke-export --all → exports bmad-enhance-initiatives-bac
 $ cd $T && node node_modules/convoke-agents/scripts/lib/portfolio/portfolio-engine.js
   convoke   complete   draft (explicit)   Initiative complete — consider retrospective
   …
-  Total: 60 artifacts | Governed: 53 | Ungoverned: 7 | Unattributed: 0
+  Total: 120 artifacts | Governed: 109 | Ungoverned: 11 | Unattributed: 0
+  loom          complete    complete (explicit)     Initiative complete — consider retrospective
+  gyre          complete    complete (explicit)     Initiative complete — consider retrospective
 ```
 
 **T99** (Open): "Declaring an initiative `active` removes it from the WIP radar — and in production the radar is near-silent". It was confirmed live 2026-08-30. The `convoke  complete  draft (explicit)` line above is the same symptom.
@@ -410,7 +437,7 @@ $ cd $T && node scripts/portability/convoke-export.js --all --dry-run → MODULE
 ### 2.9 Operator Covenant: Works with limits · Convoke
 
 - **What ships:** `$P/_bmad/bme/covenant/covenant-operator.md` (220 lines, frontmatter `status: draft`) and `compliance-checklist.md` (526 lines). Neither is copied into a project (`ls $T/_bmad/bme` shows no `covenant`), and `package.json` `//files` notes "It is prose, not a module". No code enforces it; `grep -rn covenant $P/scripts/update/lib/refresh-installation.js` returns nothing.
-- **Shipped claim:** `README.md:143`, "one axiom and seven Operator Rights every Convoke skill honours".
+- **Shipped claim, softened in 4.0.3.** Until 4.0.2, `README.md:143` claimed "one axiom and seven Operator Rights every Convoke skill honours" — a universal present-tense claim beyond the evidence. It now reads: *"one axiom and seven Operator Rights every Convoke skill is **required to** honour. Authors self-check against the Compliance Checklist and reviewers confirm it; **nothing enforces it in software**."* The shipped text now states the enforcement gap itself, so the verdict rests on the remaining two grounds — the sampled 82% static audit, and the failing area's fix still in review — not on a contradiction between the README and reality.
 
 **Audit evidence** (repo, `_bmad-output/planning-artifacts/`):
 - `convoke-report-operator-covenant-audit-2026-04-18.md:279`: "Total cells audited: 56. Total fails: 10. Compliance rate: 46/56 = 82%."
@@ -431,15 +458,15 @@ $ cd $T && node scripts/portability/convoke-export.js --all --dry-run → MODULE
 ### 2.10 Installation and health check: Shipped · Convoke
 
 ```
-$ export npm_config_cache=$SP/npmcache; cd $T && npm install convoke-agents@4.0.2 → exit 0 ("added 14 packages … found 0 vulnerabilities")
-$ npx --no-install convoke-version → "Status: Not in a Convoke project · Package version: 4.0.2" (exit 0)
+$ export npm_config_cache=$SP/npmcache; cd $T && npm install convoke-agents@4.0.3 → exit 0 ("added 14 packages … found 0 vulnerabilities")
+$ npx --no-install convoke-version → "Status: Not in a Convoke project · Package version: 4.0.3" (exit 0)
 $ npx --no-install convoke-install → exit 0
     [1/5] ⚠ _bmad directory not found - creating it · ⚠ BMAD Method not detected (Convoke will install standalone)
     ⚠ BMAD core not detected (package not in node_modules) — cannot verify v6.3 compatibility; proceeding anyway
-    Created skill-manifest.csv (19/106 skills present) · Updated config.yaml to v4.0.2
+    Created skill-manifest.csv (19/106 skills present) · Updated config.yaml to v4.0.3
     [5/5] ✓ All files installed successfully
 $ npx --no-install convoke-doctor → exit 0, "All 31 checks passed. Installation looks healthy!"
-$ npx --no-install convoke-version → "Installed version: 4.0.2 · Package version: 4.0.2 · Status: ✓ Up to date"
+$ npx --no-install convoke-version → "Installed version: 4.0.3 · Package version: 4.0.3 · Status: ✓ Up to date"
 $ (copy of $T with _vortex/agents/hypothesis-engineer and .claude/skills/bmad-agent-bme-review-coach deleted)
   node …/convoke-doctor.js → exit 1: "✗ _vortex agents · ✗ BME agent skill wrappers · 2 issue(s) found, 29 checks passed."
 ```
@@ -451,14 +478,14 @@ $ (copy of $T with _vortex/agents/hypothesis-engineer and .claude/skills/bmad-ag
 - `convoke-validate-marketplace --help` exits 0.
 - `install-gyre-agents.js` exits 0.
 
-**CI:** `fresh-install` job at tag run `34822641000` printed `[install exit 0]`, `All 31 checks passed`, `all 5 export(s) succeeded`, `all 14 bins present, shipped, parseable, and their requires resolve`, `[installed-tree status 0]`, `[shipped-links status 0]` and `PASS — a new user gets a working, self-consistent install.` That job packs the tagged tree, not the registry tarball; the registry trial above covers the gap.
+**CI:** `fresh-install` job at tag run `35211917101` printed `[install exit 0]`, `All 31 checks passed`, `all 5 export(s) succeeded`, `all 14 bins present, shipped, parseable, and their requires resolve`, `[installed-tree status 0]`, `[shipped-links status 0]` and `PASS — a new user gets a working, self-consistent install.` That job packs the tagged tree, not the registry tarball; the registry trial above covers the gap.
 
 **Hosts.** Code: `$P/scripts/update/lib/refresh-installation.js:792-1017` writes wrappers to `.claude/skills/` only. A `find` in `$T` for `.cursor*`, `.github`, `AGENTS.md`, `.clinerules`, `.windsurf*` and `copilot-instructions.md` (excluding node_modules) returned nothing. Whole-word searches for Cline, Windsurf, Codex, Gemini CLI and ChatGPT found no host claim, so **these tools are neither claimed nor supported**. CI runs on `ubuntu-latest` only (`grep runs-on .github/workflows/ci.yml`); the trials here ran on macOS; Windows is untested.
 
 **Backlog (Bug Lane at HEAD, 3 rows):**
 - **BUG-20** (Open): the "BMAD core not detected" warning fires for essentially every operator. Reproduced in both trials.
 - **BUG-9** (Open): `convoke-update`'s downgrade hint hardcodes `@latest`, affecting prerelease testers only.
-- **BUG-4** (Open): doctor cross-module version drift. **Not reproduced**: "Version consistency 4.0.2 — package and config versions consistent" in both the fresh and upgraded projects. Possibly stale.
+- **BUG-4** (Open): doctor cross-module version drift. **Not reproduced**: "Version consistency 4.0.3 — package and config versions consistent" in both the fresh and upgraded projects. Possibly stale.
 
 **Other open rows:**
 - **T112** (Open): doctor's fix line for `unregistered-custom-skill` leads to a hard failure. This needs a custom BMM-dependent skill and was not exercised.
@@ -471,16 +498,32 @@ $ (copy of $T with _vortex/agents/hypothesis-engineer and .claude/skills/bmad-ag
 ### 2.11 Upgrades: Shipped · Convoke
 
 ```
-$ cd $SP/upgrade && npm install convoke-agents@3.3.0 && npx --no-install convoke-install → exit 0; convoke-version "Installed version: 3.3.0"
-$ npm install convoke-agents@4.0.2 && npx --no-install convoke-update --yes → exit 0
+$ cd $SP/upgrade33 && npm install convoke-agents@3.3.0 && npx --no-install convoke-install → exit 0; convoke-version "Installed version: 3.3.0"
+$ npm install convoke-agents@4.0.3 && npx --no-install convoke-update --yes → exit 0   (From: 3.3.0  To: 4.0.3)
     [4/5] ✓ Config structure · ✓ Agent files · ✓ Workflow files · ✓ Agent manifest · ✓ User data preserved (Files: 1, expected: 1)
           ✓ Deprecated workflows · ✓ Workflow step structure · ✓ Enhance module · ✓ Artifacts module · ✓ Portability module
     ✓ Migration completed successfully! Changes applied: ✓ 3.3.x-to-4.0.0 ✓ refresh-installation
     Backup location: …/upgrade/_bmad-output/.backups/backup-3.3.0-1789422636325
-$ npx --no-install convoke-doctor → exit 0, "All 31 checks passed." · convoke-version → "Installed version: 4.0.2 … ✓ Up to date"
+$ npx --no-install convoke-doctor → exit 0, "All 31 checks passed." · convoke-version → "Installed version: 4.0.3 … ✓ Up to date"
 $ npx --no-install convoke-migrate → 13 migrations listed, 1.0.x-to-1.3.0 … 3.2.x-to-4.0.0
-$ (fresh project) npx --no-install convoke-update --dry-run → exit 0, "✓ Already up to date! (v4.0.2)"
+$ (fresh project) npx --no-install convoke-update --dry-run → exit 0, "✓ Already up to date! (v4.0.3)"
+$ cd $SP/upgrade && (4.0.2 install) && npm install convoke-agents@4.0.3 && convoke-update --yes → exit 0
+    From: 4.0.2  To: 4.0.3 · "No migration deltas needed — refreshing installation files."
 ```
+
+**The 4.0.2 → 4.0.3 upgrade repairs the mis-written readiness config in place**: `submodule_name` `_vortex`→`_gyre`, `output_folder` `vortex-artifacts`→`gyre-artifacts`, and both missing keys added. The discovery config gains the two keys the same way.
+
+**One path cannot deliver the new refusal (`T180`, Open).** With a *discovery* `config.yaml` that will not parse, version detection cannot read it, falls back to guessing `1.1.0` from the directory layout, and offers a seven-migration plan:
+
+```
+Update Plan:  From: 1.1.0  To: 4.0.3
+Could not check migration history: duplicated mapping key (40:1)      (×7)
+Migration 3/7: 1.5.x-to-1.6.0
+✗ 1.5.x-to-1.6.0 failed: duplicated mapping key (40:1)
+✗ Migration failed! … Restoring from backup… ✓ Installation restored from backup
+```
+
+exit 1, and the config is byte-identical afterwards. With a damaged *readiness* config the refusal does land: `✗ Update failed! config-merger: refusing to overwrite …/_gyre/config.yaml: it is not valid YAML …`. A rollback after a failed migration was therefore observed once, and it restored the installation.
 
 - **Tests:** `tests/integration/upgrade-cli-e2e.test.js` passed in CI (`✔ Test 16: v3.x → v4.0 upgrade (AC9 + R1-H2)` in the `test (22)` log).
 - **Backlog:** BUG-9 (above). **BUG-8**, rollback unable to restore rewritten files, is in §2.5 as fixed `cc685063`.
@@ -493,18 +536,20 @@ $ (fresh project) npx --no-install convoke-update --dry-run → exit 0, "✓ Alr
 ### 2.12 Release pipeline: Shipped · Convoke
 
 ```
-$ gh run list --commit a77cfefe… → "completed success … CI v4.0.2 push 34822641000"
-$ gh run view 34822641000 --json jobs --jq '.jobs[] | "\(.name)\t\(.conclusion)"'
+$ gh run list --commit 35b7793f… → "completed success … CI v4.0.3 push 35211917101"
+$ gh run view 35211917101 --json jobs --jq '.jobs[] | "\(.name)\t\(.conclusion)"'
   lint success · test (18) success · test (20) success · test (22) success · coverage success · agent-surface-parity success
   python-test success · package-check success · security success · fresh-install success
   Downgrade guard (dry) skipped · burn-in skipped · publish success
 $ grep -n "needs:" .github/workflows/ci.yml → 580: needs: [lint, test, python-test, coverage, security, package-check, agent-surface-parity, fresh-install]
 $ grep -n "if: startsWith\|id-token" .github/workflows/ci.yml → 582: if: startsWith(github.ref, 'refs/tags/v') · 592: id-token: write
 $ cd $T && npm audit signatures → "14 packages have verified registry signatures · 1 package has a verified attestation"
-$ curl -s https://registry.npmjs.org/-/npm/v1/attestations/convoke-agents@4.0.2 | <decode>
-  https://slsa.dev/provenance/v1 {"ref":"refs/tags/v4.0.2","repository":"https://github.com/amalik/convoke-agents","path":".github/workflows/ci.yml"}
-  https://github.com/amalik/convoke-agents/actions/runs/34822641000/attempts/1
-$ gh release view v4.0.2 --json … → isDraft false, isPrerelease false, publishedAt 2026-09-14T10:30:18Z
+$ curl -s https://registry.npmjs.org/-/npm/v1/attestations/convoke-agents@4.0.3 | <decode>
+  https://slsa.dev/provenance/v1 {"ref":"refs/tags/v4.0.3","repository":"https://github.com/amalik/convoke-agents","path":".github/workflows/ci.yml"}
+  https://github.com/amalik/convoke-agents/actions/runs/35211917101/attempts/1
+  Rekor logIndex 2877236851, integrated 2026-09-17T10:44:26Z
+$ curl -s "https://rekor.sigstore.dev/api/v1/log/entries?logIndex=2877236851" → entry returned
+$ gh release view v4.0.3 --json … → isDraft false, isPrerelease false, publishedAt 2026-09-17T10:58:55Z
 ```
 
 - **Coverage** (`coverage` job at the tag, c8 "All files" line): statements 88.44%, branches 83.62%, functions 91.58%. Scope: files instrumented in that job's run.
@@ -605,7 +650,7 @@ The background research also ran `gh api repos/bmad-code-org/bmad-plugins-market
 |---|---|---|
 | I98 | Gyre "cannot be installed or invoked through any supported path" | `convoke-install` and `install-gyre-agents.js` install Gyre and generate 4 resolving wrappers. The structural half (no `module.yaml`) still holds. |
 | I141 | `_portability` never copied, skills unreachable | Copied, 4 wrappers generated, doctor green. Script comment records the fix 2026-09-07. |
-| BUG-4 | doctor reports cross-module version drift | Fresh and upgraded installs both report "4.0.2 — package and config versions consistent". |
+| BUG-4 | doctor reports cross-module version drift | Fresh and upgraded installs both report "4.0.3 — package and config versions consistent". |
 | `package.json` `//files` | "I97 Epic 2 is 2 of 7 done" | 3 of 7 agent files are converted. |
 
 ---
@@ -637,7 +682,7 @@ The background research also ran `gh api repos/bmad-code-org/bmad-plugins-market
    - The in-chat script-path defect (§2.7, §2.8) was verified by running the literal command. Whether a live agent recovers from it is unverified.
 
 6. **Coexistence with an existing BMAD Method install.** Not trialled; only standalone installs were run. The Enhance menu patch, BUG-20's detection logic (it looks only in `node_modules/bmad-method`), and Team Factory's BMB delegation all behave differently with BMAD present.
-   - *Would settle it:* install BMAD Method, then Convoke 4.0.2, in a scratch project and run install, doctor and an Enhance menu check.
+   - *Would settle it:* install BMAD Method, then Convoke 4.0.3, in a scratch project and run install, doctor and an Enhance menu check.
 
 7. **Gyre (Works with limits): conflicting internal signals.**
    - Backlog I98 says Gyre is not installable through any supported path; the 4.0.2 trial shows it is, for npm + Claude Code. The ledger follows the trial.

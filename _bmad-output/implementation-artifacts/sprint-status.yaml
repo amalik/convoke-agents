@@ -423,6 +423,25 @@ development_status:
   fic-epic-2-retrospective: optional
 
   # ============================================================
+  # EVALUATE DOOR (eval) — docs program Wave 1, leadership review Tue 2026-09-22
+  # Epic file: convoke-epic-evaluate-door-2026-09-22.md
+  # Program plan: convoke-note-docs-program-three-doors-2026-09-14.md (2026-09-14)
+  # 2026-09-17: Wave 1 had been running for three days with no epic and no story tracking.
+  # Format ruled markdown-in-repo; interviews are happening, so only page one waits on them.
+  # 1-1 first because 4.0.3 published today and the ledger's basis is 4.0.2 — page 2 leads
+  # with a defect the release just fixed.
+  # ============================================================
+  eval-epic-1: in-progress
+  eval-1-1-re-derive-the-maturity-ledger-against-4-0-3: done
+  eval-1-2-claim-check-the-state-of-the-art-research: review
+  eval-1-3-draft-the-whitepaper-except-page-one: review
+  eval-1-4-draft-the-executive-brief: backlog
+  eval-1-5-lock-page-one-on-the-interviews: backlog
+  eval-1-6-assemble-the-due-diligence-pack: backlog
+  eval-1-7-independent-review-before-it-reaches-an-evaluator: backlog
+  eval-epic-1-retrospective: optional
+
+  # ============================================================
   # ARTIFACT GOVERNANCE & PORTFOLIO (I14 + P15)
   # Epic file: epic-artifact-governance-portfolio.md
   # PRD: prd-artifact-governance-portfolio.md
