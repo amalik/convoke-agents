@@ -42,7 +42,7 @@ const REPO_ROOT = path.join(__dirname, '..', '..');
 const FENCE_RE = /^(\s{0,3})(`{3,}|~{3,})(.*)$/;
 const HEADING_RE = /^\s{0,3}##\s/;
 const COMMENT_OPEN_RE = /<!--/;
-const COMMENT_CLOSE_RE = /-->/;
+const COMMENT_CLOSE_RE = /--!?>/;
 // A heading that means to be a release entry. `## Version History` and other prose
 // headings are legitimate and must not be flagged — the real CHANGELOG.md has them.
 const VERSIONISH_RE = /^\s{0,3}##\s+\[?v?\d+\.\d+\.\d+/;
