@@ -1,0 +1,104 @@
+# BMAD Method + Convoke — Executive brief
+
+*Two pages. Every product claim here was established by running the published software on 17 September
+2026; every external claim is sourced in the accompanying whitepaper and was checked against its primary
+source. Where evidence does not exist, this brief says so rather than filling the gap.*
+
+---
+
+## What it is
+
+**BMAD Method** is an open-source framework that wraps AI coding assistants in a defined process, delivered
+as agent skills. **Convoke** is an extension to it covering the two ends of the lifecycle that BMAD's own
+modules do not: *discovery* — deciding what to build, through research with real users, hypotheses and
+experiments — and *readiness* — judging whether what was built is fit to run. Convoke adds seven discovery
+agents across 22 guided workflows and four readiness agents across seven, plus the hand-off contracts that
+define what each stage passes to the next. It installs into a team's existing AI coding assistant; it is
+not a platform, a service, or somewhere your data goes.
+
+## Why now
+
+AI coding assistance is already mainstream: in a 2026 survey of more than 15,000 professional developers,
+90% reported using AI coding agents at work at least weekly. The business case is far less settled.
+
+The most consequential finding for a delivery organisation is Google's DORA research, which associated AI
+adoption with **less stable software delivery** in both 2024 and 2025 — in 2025, throughput and product
+performance improved while stability did not. DORA's own conclusion is that AI *amplifies* what an
+organisation already is. Strong process gets stronger; weak process gets faster and worse.
+
+That is the argument for adopting method alongside tooling, and it is the argument this product exists to
+serve. It is not an argument that this product has been proven to work.
+
+## What changes for a delivery organisation
+
+Three things, concretely:
+
+1. **Discovery produces artifacts, not opinions.** Each stage's output is specified in advance — empathy
+   artifacts, problem definition, hypothesis, experiment context, signal report — so a reviewer can ask
+   whether it exists and what it says. Decisions become inspectable after the fact.
+2. **Readiness becomes a step rather than an assumption.** The readiness team detects the stack in a
+   repository, builds a capability model, and names the gaps between that model and production
+   expectations.
+3. **The operator stays the decision-maker.** When the method cannot resolve something, it is designed to
+   hand the person the decision with a default, a way to override it, and the reason it matters.
+
+**The limit on all three:** agents are *instructed* to follow the contracts. No software validates a
+document against its template, and nothing enforces the operator-decides standard in code. These are
+disciplines the method encourages, not controls it imposes. An organisation that needs enforcement must
+add it.
+
+## What is proven, and what is not
+
+The accompanying maturity ledger classifies sixteen capabilities against what was verified by running the
+software: **four Shipped, seven Works with limits, five Mapped but not built**. Page 2 of the whitepaper
+gives the full table with the evidence behind each row.
+
+Three disclosures a vendor document would not usually volunteer, and which we would rather you heard from
+us than found later:
+
+- **There is no independent evidence that this method — or any competing structured AI-delivery framework —
+  improves delivery outcomes.** We searched and found none. Any vendor claiming otherwise is ahead of the
+  evidence.
+- **Convoke's own agents are not portable** to other AI coding assistants. Portability is a stated
+  direction, not a current capability.
+- **The team-building tool ships but should not be adopted.** It is classed *Works with limits*, and its
+  maintainer has since ruled it internal scaffolding rather than a customer-facing capability.
+
+The product is young and its release discipline is visible: releases build from a tagged commit, must pass
+a full test suite and a clean-install trial, and carry signed build provenance verifiable against a public
+transparency log.
+
+## What adoption looks like
+
+A pilot, not a rollout. The adoption research is consistent that tool use spreads through peer networks
+rather than mandates, and that most organisations are not yet extracting value from AI at scale.
+
+A defensible pilot shape:
+
+- **One team that wants it**, on one real product decision, for one discovery cycle.
+- **Success judged by whether the method held** — were the artifacts produced, did a hypothesis get
+  falsified, did the decision change on evidence — **not by a productivity claim**, because no credible
+  productivity claim is available for any framework in this category.
+- **A named upstream policy.** BMAD published nineteen stable versions between February and September 2026,
+  several with breaking changes. An organisation standardising on this stack should decide deliberately how
+  closely it tracks upstream.
+- **A review path for what gets installed.** This is an ecosystem-level concern rather than a property of
+  this product: agent instruction files are context, not enforced configuration, and independent testing has
+  found substantial proportions of published agent extensions carrying security issues.
+
+## The decision being asked for
+
+Whether to run one pilot, on the terms above, with the limits stated above understood — not whether to
+standardise on this stack.
+
+What you would be betting on is that method and inspectable artifacts are the right response to AI making
+delivery faster without making it more stable. What you would *not* be betting on is a proven productivity
+outcome, because no such proof exists for this category today, from anyone.
+
+---
+
+*Regulatory note: nothing in this brief or the accompanying whitepaper constitutes a compliance claim. The
+EU AI Act's human-oversight obligations bind system providers and deploying organisations; a development
+tool cannot discharge them. This method can help an organisation evidence how decisions were made and by
+whom. It cannot make an organisation compliant, and no software can. The whitepaper's regulatory section
+has not been reviewed by counsel.*
