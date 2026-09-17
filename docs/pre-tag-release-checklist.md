@@ -35,20 +35,23 @@ Must print `✓ changelog entry for <version> dated <date>` and exit 0. It resol
 own location, so it does not matter which directory you run it from.
 
 It reads the entry with `changelog-reader.js`, the parser `convoke-update` itself uses, and compares
-versions the way `printChangelog` does — so the entry it blesses is the entry operators are shown. It then
-applies five checks the reader does not, and rejects:
+versions the way `printChangelog` does — so the entry it blesses is the entry operators are shown. It also
+reads the file a second time under CommonMark's fence and comment rules, and **refuses when the two
+readings disagree** rather than picking a side. On top of that it rejects:
 
 | Shape | Why it matters |
 |---|---|
 | no entry for the version | `printChangelog` returns early on an empty list, so the release reaches people silently |
 | `## [4.0.3]`, `- UNRELEASED`, `- TBD` | the reader tests the version and not the date, so `convoke-update` renders `4.0.3 — UNRELEASED` |
 | `- 0000-00-00`, `- 2026-13-45` | date-shaped, not a date; rendered verbatim to operators |
-| a heading that exists only inside a code fence | `changelog-reader.js` cannot see fences indented 1-3 spaces, so an *example* counts as an entry. `CHANGELOG.md` already contains four such fences |
+| a heading that is only an example — inside a code fence, or an HTML comment | `changelog-reader.js` sees neither fences indented 1-3 spaces nor comments, so an example counts as a release. `CHANGELOG.md` already carries two indented fenced blocks |
 | two entries for one version, or a malformed `## 4.0.2 - …` neighbour | the first wins and the rest of the file leaks into it — the leak the reader's own header comment warns about |
-| a dated heading with an empty body | "has an entry" was satisfied by a heading alone |
+| a dated heading with an empty body, or a body that is only a comment | "has an entry" was satisfied by a heading alone |
+| a mistyped flag (`--versoin 4.0.3`) | exits 2 rather than silently checking the version in `package.json` instead |
 
-Each shape is pinned by a test in `tests/audit/check-changelog-entry.test.js`, and each guard was reverted
-in turn to confirm the test that covers it goes red.
+Each shape is pinned by a test in `tests/audit/check-changelog-entry.test.js` (28 tests). Every guard in
+the script — 23 of them — was reverted one at a time on a copy of the tree, and each was killed by a test;
+no guard survives unpinned. Do not take that claim on trust if you change the file: re-run the sweep.
 
 Nothing else catches any of this. `docs-audit.js` does read `CHANGELOG.md` — broken-link, naming and
 coverage checks run on it, while stale-reference and broken-path checks are deliberately skipped

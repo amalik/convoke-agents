@@ -163,9 +163,11 @@ documents' claims, C on the deletions and the nine activation blocks.
 
 **The release check was restructured rather than patched a fourth time.** Layer A fooled it three ways, so
 it moved out of the markdown into `scripts/audit/check-changelog-entry.js`, with
-`tests/audit/check-changelog-entry.test.js` pinning each shape (14 tests). Six guards were reverted one at
-a time on a copy of the tree: each was killed by its own test, suite floor 14 on every run, copy restored
-byte-identical.
+`tests/audit/check-changelog-entry.test.js` pinning each shape (14 tests). ~~Six guards were reverted one at
+a time on a copy of the tree: each was killed by its own test.~~ **Retracted — Round 3 disproved the
+implied exhaustiveness.** Six of the sixteen guards then present were mutated, not all of them; three
+others were killed by no test at all, including the one that matters for the shape 4.0.3 has (a version
+newer than every entry in the file). The sweep is now mechanical and covers every guard — see Round 3.
 
 | # | Defect | Fix |
 |---|---|---|
@@ -196,6 +198,52 @@ to the deleted sections; and every "re-derive with" command in the Round 1 table
 `_bmad/_config/v6.3-migration-inventory.csv`; the files touched here carry no `bmad-init` reference and the
 generated inventory is identical before and after.
 
+### Round 3 (one scoped layer on the gate and its tests) — 5 HIGH, 3 MEDIUM, 7 LOW
+
+Scoped to `scripts/audit/check-changelog-entry.js`, its tests, and the step 1b prose — the only rewritten
+executable logic in Round 2's remediation. The rest of that commit was rewritten narration and was not
+re-reviewed.
+
+**The gate was redesigned rather than patched.** Three of the five HIGH came from one root cause: it tried
+to out-parse `changelog-reader.js` with a boolean "am I in a fence" toggle. A four-marker fence documenting
+a three-marker one flips that toggle mid-block, which both admits an example as a live entry and — in the
+other direction — hides every heading below a legitimate nested code block, failing a correct changelog. It
+now reads the file under CommonMark's own fence and comment rules and **refuses when the strict read and
+the shipped reader disagree** about how many headings claim the version, or about the date they carry.
+Neither parser has to win.
+
+| # | Defect | Fix |
+|---|---|---|
+| H1 | A heading inside a fence of four or more markers was accepted as an entry | Fence tracking records the opening marker and run length, and closes only on the same marker repeated at least as many times |
+| H2 | A fenced example *above* a real entry defeated the UNDATED, EMPTY and DUPLICATE guards at once: the strict scan hid it (so no duplicate) while the reader returned two entries and the gate validated the first — the example. `CHANGELOG.md` says `UNRELEASED` today, so this was live, not hypothetical | Duplicate detection applies to both readings, and the two must agree |
+| H3 | **False failure:** one legitimate indented four-marker block documenting a three-marker fence left the scan stuck "inside a fence", hiding every heading below it — a correct changelog, refused | Same fix as H1, pinned by a test that asserts the *accepting* direction |
+| H4 | `runs from any working directory` shelled out with no arguments, so it asserted that the repository's real `CHANGELOG.md` satisfied its real `package.json`. Step 1 of this checklist bumps the version — from that moment until the date is written, `npm test` went red, under a name that named nothing | Split in two: one test pins directory-independence by fixture, the other asserts only that the gate locates its own repository files (no `cannot read`), which stays true mid-release |
+| H5 | "each guard was reverted in turn" was false — 6 of 16 guards were mutated, and 3 others were killed by no test: the `^` anchor on the date, the 1-3 space indent in the heading scan, and `.find` vs `[0]`. The only missing-entry test used a version *below* the file's floor, where the reader returns nothing anyway | The sweep is mechanical over every guard; the retraction is recorded above |
+| M1 | An entry inside an HTML comment passed both parsers | Comments are regions in the strict scan, so a commented draft disagrees with the reader and is refused |
+| M2 | Two step-1b claims were false, both disproved by H1/H2 | Rewritten around the agreement rule |
+| M3 | `exits non-zero when the repository changelog fails the gate` never touched the repository changelog | Renamed to what it does |
+| L1/L2 | `--versoin 4.0.3` silently checked `package.json`'s version instead and printed a green line; `--changelog` with no value threw `ERR_INVALID_ARG_TYPE` | Unknown flags and missing values exit 2, distinct from a gate failure |
+| L3 | A body of `<!-- nothing written yet -->` counted as content | Comments are stripped before the emptiness test |
+| L4/L5 | "four such fences" is four markers forming two blocks; "five checks" sat above a six-row table | Both corrected |
+
+**Mutation sweep, mechanical and complete:** 23 guards, each reverted one at a time on a copy of the tree,
+suite floor 28 on every run, copy restored byte-identical. First sweep: 6 survivors. Every one was a gap in
+the tests, not the gate — two assertions accepted either of two messages, so removing a guard only changed
+which fired; three paths had no test; and my own H4 fix had removed the coverage that used to kill the
+`REPO_ROOT` mutant. Four tests added, two assertions tightened. Second sweep: **no survivors**.
+
+The last survivor was worth looking at rather than writing a test on reflex: `compareVersions('9.9.9.0',
+'9.9.9')` is `0`, so that guard does real work, and the message it produces is the one that helps —
+`MISSING` sends the releaser to write an entry, where `DISPUTED` would send them hunting for a stray fence.
+
+**Known and not fixed:** `changelog-reader.js` itself still mis-parses both shapes, so `convoke-update`
+renders a fenced example as a release and leaks a section past a bracket-less heading. That is `T182`, a
+production fix; this gate only stops such a changelog from shipping.
+
+**Interface note:** `scripts/` ships inside the package, so this file lands in a user's `node_modules`. It
+is inert there — no bin, no `postinstall`, no `convoke-check.js` reference — and run by hand it would only
+compare the installed package against its own changelog.
+
 ### File List
 
 - `INSTALLATION.md`, `UPDATE-GUIDE.md` — refusal claims scoped per path and per config; the four-case table
@@ -213,6 +261,7 @@ generated inventory is identical before and after.
 
 | Date | Note |
 |---|---|
+| 2026-09-17 | **Round 3 remediated; the review closes at its cap.** 5 HIGH, 3 MEDIUM, 7 LOW, all on the gate Round 2 built. Three HIGH shared one root cause — a boolean fence toggle trying to out-parse the shipped reader — so the gate now compares the two readings and refuses when they disagree. One HIGH was a test that would have turned `npm test` red in the middle of this release. One was my own false claim of an exhaustive mutation sweep: retracted above, replaced with a mechanical one over 23 guards, no survivors, 28 tests. |
 | 2026-09-17 | **Round 2 remediated as one batch: 7 HIGH, 6 MEDIUM, 3 LOW, every HIGH generated by Round 1's own fixes.** The release check was fooled three ways and moved out of the markdown into a tested script, proven by reverting each of its six guards on a copy. Two claims generalised from two installers to three were false for `convoke-install-gyre`. The guide sections Round 1 deleted were restored: their justification rested on `bmad-init`, a skill deleted upstream in June and shipped by nothing — now `T183`. `T181` is wider than filed: the four unguarded configs are rewritten on every install, not only when damaged. |
 | 2026-09-17 | **Round 1 remediated as one batch.** 2 HIGH, 4 MEDIUM, 6 LOW — every one a sentence this story authored, both HIGHs reproduced first. The install refusal is not write-free: step `[2/5]` deletes `_bmad/bme/_designos` before the check at `[4/5]`, and both shipped documents said otherwise. Step 1b now reads the entry with the shipped parser and is proven to fail on four heading shapes and pass on three. One claim was refuted rather than fixed: `refreshInstallation` really does refuse before copying. |
 | 2026-09-17 | **Implemented; to `review`.** Three paths established by execution, both shipped documents scoped per path, nine activation blocks and seven guides repaired, a 4.0.3 changelog entry and a checklist step that fails without a dated one. The story-close consumer audit found 3 HIGH — all in claims this story authored — and all were reproduced and fixed: the refusal covers only two of six module configs (`T181` filed), a version-pinned `4.0.2` literal inside a 4.0.3 document, and an undrived "7 of 11" that is 8 of 12. |

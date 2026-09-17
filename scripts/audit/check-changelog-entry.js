@@ -11,19 +11,19 @@
  * `printChangelog` return early, so the release reaches people silently.
  *
  * It reads the entry through `changelog-reader.js` — the parser `convoke-update` itself
- * uses — so the gate and the operator see the same entry. It then applies checks the
- * reader does not, each of which was a way an earlier version of this gate could be
- * fooled:
+ * uses — and separately scans the file with CommonMark's own fence and comment rules.
+ * The two readings must agree on how many headings claim the version and on the date
+ * they carry; a disagreement means one of them is not a real entry, and the gate refuses
+ * rather than pick a side. Every earlier version of this check was fooled by trying to
+ * out-parse the reader instead of comparing against it.
  *
- *   - headings are re-scanned with a fence rule that accepts the 1-3 space indent
- *     CommonMark allows and `changelog-reader.js` does not. If the reader accepted a
- *     heading this scan cannot see, the heading is inside an example block and the
- *     entry is not real.
- *   - every `##` heading outside a fence must parse as `## [version] - date`. One
- *     malformed neighbour silently merges its whole section into the entry above it.
- *   - exactly one heading may claim the release version.
- *   - the date must be a real calendar date, not `0000-00-00` or `2026-13-45`.
- *   - the body must not be empty.
+ * On top of the agreement it requires:
+ *
+ *   - every version-shaped `##` heading parses as `## [version] - date`. One malformed
+ *     neighbour silently merges its whole section into the entry above it.
+ *   - exactly one heading claims the release version.
+ *   - the date is a real calendar date, not `0000-00-00` or `2026-13-45`.
+ *   - the body is not empty, and not only an HTML comment.
  *
  * Usage: node scripts/audit/check-changelog-entry.js [--changelog PATH] [--version V]
  */
@@ -35,9 +35,14 @@ const { compareVersions } = require('../update/lib/utils');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 
-// Deliberately looser than changelog-reader.js's own FENCE_RE, which anchors at column 0.
-const FENCE_RE = /^\s{0,3}(?:```|~~~)/;
+// CommonMark fences: 0-3 spaces of indent, three or more markers, closed by the same
+// marker repeated at least as many times with nothing after it. A boolean "am I in a
+// fence" toggle is not enough — a ````-fence documenting a ```-fence flips it mid-block,
+// which both hides a real heading and reveals an example one.
+const FENCE_RE = /^(\s{0,3})(`{3,}|~{3,})(.*)$/;
 const HEADING_RE = /^\s{0,3}##\s/;
+const COMMENT_OPEN_RE = /<!--/;
+const COMMENT_CLOSE_RE = /-->/;
 // A heading that means to be a release entry. `## Version History` and other prose
 // headings are legitimate and must not be flagged — the real CHANGELOG.md has them.
 const VERSIONISH_RE = /^\s{0,3}##\s+\[?v?\d+\.\d+\.\d+/;
@@ -54,13 +59,33 @@ const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})/;
  */
 function visibleHeadings(raw) {
   const found = [];
-  let inFence = false;
+  let fence = null;
+  let inComment = false;
   raw.split('\n').forEach((line, i) => {
-    if (FENCE_RE.test(line)) {
-      inFence = !inFence;
+    const fenceMatch = FENCE_RE.exec(line);
+    if (fence) {
+      if (fenceMatch
+        && fenceMatch[2][0] === fence.marker
+        && fenceMatch[2].length >= fence.length
+        && fenceMatch[3].trim() === '') {
+        fence = null;
+      }
       return;
     }
-    if (!inFence && HEADING_RE.test(line)) found.push({ line, number: i + 1 });
+    if (inComment) {
+      if (COMMENT_CLOSE_RE.test(line)) inComment = false;
+      return;
+    }
+    if (fenceMatch) {
+      fence = { marker: fenceMatch[2][0], length: fenceMatch[2].length };
+      return;
+    }
+    if (COMMENT_OPEN_RE.test(line) && !COMMENT_CLOSE_RE.test(line)) {
+      inComment = true;
+      return;
+    }
+    if (COMMENT_OPEN_RE.test(line)) return;
+    if (HEADING_RE.test(line)) found.push({ line, number: i + 1 });
   });
   return found;
 }
@@ -122,29 +147,47 @@ function checkChangelogEntry(options = {}) {
     const m = HEADER_RE.exec(h.line.trim());
     return m && SEMVER_RE.test(m[1].trim()) && compareVersions(m[1].trim(), version) === 0;
   });
-  if (claiming.length > 1) {
+  // What convoke-update will show, read with its own parser.
+  const entries = readChangelogEntries(null, version, changelogPath)
+    .filter((e) => compareVersions(e.version, version) === 0);
+
+  if (claiming.length > 1 || entries.length > 1) {
+    const where = claiming.length > 1 ? ` at lines ${claiming.map((h) => h.number).join(', ')}` : '';
     return {
       ok: false,
-      message: `DUPLICATE CHANGELOG ENTRIES for ${version} at lines ${claiming.map((h) => h.number).join(', ')}.\n`
-        + '  Only the first is checked here and both are shown to operators.',
+      message: `DUPLICATE CHANGELOG ENTRIES for ${version}${where}.\n`
+        + '  Only the first is checked here and every one of them is shown to operators.',
     };
   }
-
-  const entry = readChangelogEntries(null, version, changelogPath)
-    .find((e) => compareVersions(e.version, version) === 0);
-  if (!entry) {
+  if (claiming.length === 0 && entries.length === 0) {
     return {
       ok: false,
       message: `MISSING CHANGELOG ENTRY for ${version}.\n`
         + '  convoke-update shows operators nothing at all for this release.',
     };
   }
-  if (claiming.length === 0) {
+  // The two readings must agree. They diverge when a heading is an example inside a code
+  // fence or an HTML comment (this scan hides it, changelog-reader.js does not), or when
+  // it is indented 1-3 spaces (this scan sees it, changelog-reader.js does not).
+  if (claiming.length !== entries.length) {
     return {
       ok: false,
-      message: `FENCED CHANGELOG ENTRY for ${version}.\n`
-        + '  The only heading for this version sits inside a code fence, so it is an example,\n'
-        + '  not an entry. changelog-reader.js cannot see fences indented 1-3 spaces.',
+      message: `DISPUTED CHANGELOG ENTRY for ${version}: a strict read finds ${claiming.length} heading(s), `
+        + `changelog-reader.js finds ${entries.length}.\n`
+        + '  One of them is not a real entry — usually a heading inside a code fence or an HTML\n'
+        + '  comment, or a heading indented 1-3 spaces. Operators are shown what the reader finds.',
+    };
+  }
+
+  const entry = entries[0];
+  const headingMatch = HEADER_RE.exec(claiming[0].line.trim());
+  const headingDate = headingMatch && headingMatch[2] ? headingMatch[2].trim() : null;
+  if (headingDate !== (entry.date || null)) {
+    return {
+      ok: false,
+      message: `DISPUTED CHANGELOG ENTRY for ${version}: a strict read dates it ${JSON.stringify(headingDate)}, `
+        + `changelog-reader.js dates it ${JSON.stringify(entry.date)}.\n`
+        + '  The heading the gate checked is not the heading operators will be shown.',
     };
   }
   if (!isRealDate(entry.date || '')) {
@@ -154,7 +197,7 @@ function checkChangelogEntry(options = {}) {
         + '  Replace the placeholder with the release date, as YYYY-MM-DD.',
     };
   }
-  if (entry.body.trim() === '') {
+  if (entry.body.replace(/<!--[\s\S]*?-->/g, '').trim() === '') {
     return {
       ok: false,
       message: `EMPTY CHANGELOG ENTRY for ${version}: the heading is dated but there is nothing under it.`,
@@ -164,17 +207,40 @@ function checkChangelogEntry(options = {}) {
   return { ok: true, message: `changelog entry for ${version} dated ${entry.date}` };
 }
 
+const USAGE = 'usage: check-changelog-entry.js [--changelog PATH] [--version VERSION]';
+
+/**
+ * @param {string[]} argv - Arguments after the script name.
+ * @returns {{changelogPath?: string, version?: string}}
+ * @throws {Error} On an unknown flag or a missing value — a typo must never read as a pass.
+ */
 function parseArgs(argv) {
   const options = {};
   for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === '--changelog') options.changelogPath = path.resolve(argv[i + 1]);
-    if (argv[i] === '--version') options.version = argv[i + 1];
+    const flag = argv[i];
+    if (flag !== '--changelog' && flag !== '--version') {
+      throw new Error(`unknown argument: ${flag}\n  ${USAGE}`);
+    }
+    const value = argv[i + 1];
+    if (value === undefined || value.startsWith('--')) {
+      throw new Error(`${flag} needs a value\n  ${USAGE}`);
+    }
+    if (flag === '--changelog') options.changelogPath = path.resolve(value);
+    else options.version = value;
+    i += 1;
   }
   return options;
 }
 
 if (require.main === module) {
-  const result = checkChangelogEntry(parseArgs(process.argv.slice(2)));
+  let parsed;
+  try {
+    parsed = parseArgs(process.argv.slice(2));
+  } catch (err) {
+    console.error(`✗ ${err.message}`);
+    process.exit(2);
+  }
+  const result = checkChangelogEntry(parsed);
   if (result.ok) {
     console.log(`✓ ${result.message}`);
   } else {

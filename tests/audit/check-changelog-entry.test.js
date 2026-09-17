@@ -92,7 +92,7 @@ Example of the format:
 `;
   const result = check(fenced);
   assert.equal(result.ok, false);
-  assert.match(result.message, /FENCED CHANGELOG ENTRY/);
+  assert.match(result.message, /DISPUTED CHANGELOG ENTRY/);
 });
 
 test('rejects two entries for the same version', () => {
@@ -158,11 +158,24 @@ test('accepts a pre-release version and a trailing note on the date', () => {
 });
 
 test('runs from any working directory', () => {
-  const output = execFileSync('node', [SCRIPT], { cwd: os.tmpdir(), encoding: 'utf8' });
-  assert.match(output, /changelog entry for /);
+  // Deliberately a fixture, not the repository's own files: pointed at those, this test
+  // goes red between `npm version` and the moment the date replaces UNRELEASED — during
+  // the release, under a name that says nothing about the cause.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'convoke-changelog-'));
+  const changelogPath = path.join(dir, 'CHANGELOG.md');
+  fs.writeFileSync(changelogPath, GOOD);
+  try {
+    const output = execFileSync('node', [SCRIPT, '--changelog', changelogPath, '--version', VERSION], {
+      cwd: path.parse(process.cwd()).root,
+      encoding: 'utf8',
+    });
+    assert.match(output, /changelog entry for 9\.9\.9 dated 2026-09-17/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
-test('exits non-zero when the repository changelog fails the gate', () => {
+test('exits 1 on a failing changelog', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'convoke-changelog-'));
   const changelogPath = path.join(dir, 'CHANGELOG.md');
   fs.writeFileSync(changelogPath, '# Changelog\n');
@@ -179,4 +192,218 @@ test('exits non-zero when the repository changelog fails the gate', () => {
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('exits 2 on a mistyped flag rather than checking something else', () => {
+  for (const args of [['--versoin', '9.9.9'], ['--version'], ['--changelog'], ['9.9.9']]) {
+    try {
+      execFileSync('node', [SCRIPT, ...args], { cwd: os.tmpdir(), encoding: 'utf8', stdio: 'pipe' });
+      assert.fail(`expected a non-zero exit for ${args.join(' ')}`);
+    } catch (err) {
+      assert.equal(err.status, 2, `${args.join(' ')} exited ${err.status}: ${err.stdout}${err.stderr}`);
+      assert.match(err.stderr, /unknown argument|needs a value/);
+    }
+  }
+});
+
+test('rejects a heading hidden in a fence longer than three markers', () => {
+  // A ````-fence documenting a ```-fence. A boolean in-fence toggle flips mid-block and
+  // treats the example as a live entry.
+  const nested = `# Changelog
+
+\`\`\`\`md
+\`\`\`
+## [9.9.9] - 2026-09-17
+
+- example only
+\`\`\`
+\`\`\`\`
+
+## [9.9.8] - 2026-09-14
+
+- older
+`;
+  const result = check(nested);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /DISPUTED CHANGELOG ENTRY/);
+});
+
+test('accepts a real entry below a legitimate nested code block', () => {
+  // The false-failure direction: this changelog is correct and must pass.
+  const documented = `# Changelog
+
+Code blocks are written like:
+
+  \`\`\`\`md
+  Open a code block with:
+  \`\`\`
+  \`\`\`\`
+
+## [9.9.9] - 2026-09-17
+
+- a real, dated, non-empty entry
+
+## [9.9.8] - 2026-09-14
+
+- older
+`;
+  const result = check(documented);
+  assert.equal(result.ok, true, result.message);
+});
+
+test('rejects a fenced example sitting above the real entry', () => {
+  // The example hides from a strict scan but not from changelog-reader.js, so the gate
+  // would otherwise validate the example and never look at the UNRELEASED entry below.
+  const masked = `# Changelog
+
+   \`\`\`md
+## [9.9.9] - 2026-09-17
+- example
+   \`\`\`
+
+## [9.9.9] - UNRELEASED
+
+- the real entry
+`;
+  const result = check(masked);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /DUPLICATE CHANGELOG ENTRIES/);
+});
+
+test('rejects an entry that exists only inside an HTML comment', () => {
+  const commented = `# Changelog
+
+<!--
+## [9.9.9] - 2026-09-17
+
+- drafted, not released
+-->
+
+## [9.9.8] - 2026-09-14
+
+- older
+`;
+  const result = check(commented);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /DISPUTED CHANGELOG ENTRY/);
+});
+
+test('rejects a body that is only an HTML comment', () => {
+  const result = check(`# Changelog
+
+## [9.9.9] - 2026-09-17
+
+<!-- nothing written yet -->
+
+## [9.9.8] - 2026-09-14
+
+- older
+`);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /EMPTY CHANGELOG ENTRY/);
+});
+
+test('rejects a version above every entry in the file', () => {
+  // The shape a release actually has: the new version is newer than everything present.
+  // The earlier missing-entry test used a version BELOW the floor, where the reader's
+  // ceiling filter returns nothing anyway — so it pinned the wrong thing.
+  const result = check(GOOD, '9.9.10');
+  assert.equal(result.ok, false);
+  assert.match(result.message, /MISSING CHANGELOG ENTRY/);
+});
+
+test('rejects a date that does not start the heading', () => {
+  const result = check(GOOD.replace(' - 2026-09-17', ' - UNRELEASED (target 2026-09-17)'));
+  assert.equal(result.ok, false);
+  assert.match(result.message, /UNDATED CHANGELOG ENTRY/);
+});
+
+test('sees an indented duplicate heading', () => {
+  const result = check(`# Changelog
+
+## [9.9.9] - 2026-09-17
+
+- first
+
+  ## [9.9.9] - 2026-09-16
+
+- second
+`);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /DUPLICATE CHANGELOG ENTRIES/);
+});
+
+test('reports an unreadable changelog rather than blessing it', () => {
+  const result = checkChangelogEntry({
+    changelogPath: path.join(os.tmpdir(), 'convoke-no-such-changelog.md'),
+    version: VERSION,
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.message, /cannot read/);
+});
+
+test('ignores a standing Unreleased section', () => {
+  // Keep-a-Changelog convention: a non-semver heading that must neither be treated as
+  // this release nor make the gate throw.
+  const result = check(`# Changelog
+
+## [Unreleased]
+
+- in progress
+
+${GOOD.replace('# Changelog\n\n', '')}`);
+  assert.equal(result.ok, true, result.message);
+});
+
+test('rejects a real heading and a fenced one that disagree about the date', () => {
+  // Counts match — the reader sees only the column-0 heading inside the fence, the strict
+  // scan sees only the indented one — so only comparing the dates catches it.
+  const result = check(`# Changelog
+
+   \`\`\`md
+## [9.9.9] - 2026-09-17
+- example
+   \`\`\`
+
+  ## [9.9.9] - UNRELEASED
+
+- the real entry
+
+## [9.9.8] - 2026-09-14
+
+- older
+`);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /DISPUTED CHANGELOG ENTRY/);
+});
+
+test('finds its own repository files from an unrelated working directory', () => {
+  // Asserts location, not verdict: between `npm version` and dating the entry the gate
+  // legitimately exits 1, and this test must not go red for that.
+  let output;
+  try {
+    output = execFileSync('node', [SCRIPT], { cwd: os.tmpdir(), encoding: 'utf8', stdio: 'pipe' });
+  } catch (err) {
+    assert.equal(err.status, 1, `expected a gate verdict, got exit ${err.status}: ${err.stderr}`);
+    output = err.stdout + err.stderr;
+  }
+  assert.doesNotMatch(output, /cannot read|ENOENT/, 'the gate must resolve its own repository, not the cwd');
+});
+
+test('does not mistake a four-part version for this release', () => {
+  // compareVersions('9.9.9.0', '9.9.9') is 0, but changelog-reader.js's SEMVER_RE rejects
+  // the heading, so operators are shown nothing — MISSING is the accurate verdict, and
+  // sends the releaser to write an entry rather than to hunt for a stray code fence.
+  const result = check(`# Changelog
+
+## [9.9.9.0] - 2026-09-17
+
+- a typo in the version
+
+## [9.9.8] - 2026-09-14
+
+- older
+`);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /MISSING CHANGELOG ENTRY/);
 });
