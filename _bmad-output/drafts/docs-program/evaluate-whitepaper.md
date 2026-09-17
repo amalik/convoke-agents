@@ -48,6 +48,10 @@ The two ends carry the risk. At the front, deciding what to build: an organisati
 thing faster has not improved, and AI makes building faster. At the back, knowing whether what was built
 is fit to run: readiness is where an unglamorous gap becomes an incident.
 
+AI coding assistance is already mainstream — in a 2026 survey of more than 15,000 professional developers,
+90% reported using AI coding agents at work at least weekly (the survey's publisher is itself a tool vendor,
+and re-weights its sample by familiarity with its own products). The business case is far less settled.
+
 The industry evidence points the same way, and it is uncomfortable reading for anyone selling AI tooling.
 Google's DORA research found AI adoption associated with *less stable* software delivery in both 2024 and
 2025 — in 2025 throughput and product performance turned positive while stability did not. DORA's own
