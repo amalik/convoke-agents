@@ -4,7 +4,10 @@ This page is for projects where Convoke is installed from npm (`convoke-agents`)
 
 > **Last verified:** 2026-09-15, against `convoke-agents` 4.0.2 and BMAD Method 6.12.0, including an update from BMAD Method 6.10.0. Every command below was run from the project root of a scratch project and succeeded.
 >
-> **4.0.3 is not published yet.** Where this page says "from 4.0.3", the behaviour is the fix merged to `main` as `fic-1-1` (`6ab2fafa`), read from source and exercised locally — not from an installed 4.0.3. Until it publishes, `npm install convoke-agents` gives you 4.0.2 and the 4.0.2 column is the one that applies.
+> **4.0.3 published 2026-09-17** and is now `latest`, so `npm install convoke-agents` gives you 4.0.3 and the
+> "from 4.0.3" column is the one that applies. Every behaviour this page predicted from source before the
+> release was confirmed against the installed package on 17 September: both configs carry `user_name` and
+> `communication_language`, the readiness config carries its own output folder, and both refusals land.
 
 ---
 

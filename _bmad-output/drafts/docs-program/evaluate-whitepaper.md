@@ -2,8 +2,10 @@
 
 *Draft for the upcoming leadership review. Every product claim in this document was derived from the
 published package `convoke-agents@4.0.3` on 17 September 2026 by running it, not by reading its
-documentation. Every external claim is sourced in the reference appendix and was re-checked against its
-primary source on the same date.*
+documentation. Every external claim traces to the accompanying state-of-the-art research note, whose citation
+tables were independently claim-checked against their primary sources on the same date. **Appendix B, which
+reproduces those citations inline, is not yet assembled** — until it is, an external claim must be followed
+into that note rather than looked up here.*
 
 > **Draft status.** Page one (*The stakes*) is deliberately not written yet: its framing is being set by
 > interviews with evaluating organisations, and writing it first would mean arguing backwards from a
@@ -21,14 +23,14 @@ because an evaluating organisation's first question about a young product is not
 | | Count | What it means |
 |---|---|---|
 | **Shipped** | 4 of 16 capabilities | Verified by running the software or by an automated test that exercises it |
-| **Works with limits** | 7 of 16 | Works, with a named defect or gap that affects the documented outcome |
-| **Mapped, not built** | 5 of 16 | Documented as planned. No working implementation |
+| **Works with limits** | 6 of 16 | Works, with a named defect or gap that affects the documented outcome |
+| **Mapped, not built** | 6 of 16 | Documented as planned. No working implementation |
 
 Three things that ledger says which a vendor document usually would not:
 
-- The Team Factory — a tool for building new agent teams — is classed *Works with limits*, and the
-  maintainer has since decided it is internal scaffolding rather than a capability to adopt. It still
-  ships. Do not plan on it.
+- The Team Factory — a tool for building new agent teams — is classed *Mapped, not built*: it ships and its
+  design steps run, but it has never produced a working team, and the maintainer has since decided it is
+  internal scaffolding rather than a capability to adopt. It still ships. Do not plan on it.
 - Convoke's own agents are **not portable** to other AI coding assistants. The export tool works; what it
   exports for Convoke's own agents is a notice saying a full install is required.
 - Four of the six module configuration files are rewritten from the template on every install, so
@@ -150,7 +152,7 @@ so we do not claim they are absent there.
 delivery outcomes, and the most rigorous study of AI-assisted development effects could not measure the
 effect reliably at all.
 
-## 5. The stakes
+## 5. What is at stake in adopting it
 
 ### 5.1 Adoption and scaling
 
@@ -166,7 +168,7 @@ run one minor version behind upstream — rather than assume stability.
 ### 5.2 Portability and interoperability
 
 Stated plainly: **Convoke's own agents are not portable.** The export tool produces usable instruction
-files for other assistants from ecosystem skills, but Convoke's twelve agents are classed non-portable and
+files for other assistants from ecosystem skills, but Convoke's twelve installed agents — the eleven discovery and readiness agents plus the Team Factory agent — are classed non-portable and
 export as a notice that a full install is required. Portability is a direction, not a destination, and the
 product's own README says so.
 
@@ -179,12 +181,19 @@ format, MCP, AGENTS.md, A2A — but Convoke does not yet implement those interfa
 > other section depends on it. It has not been reviewed by counsel.*
 
 The Operator Covenant is Convoke's governance standard: when a skill cannot resolve something, it hands the
-operator the decision with a default, a way to override it, and the reason it matters. What that is, and is
-not:
+operator the decision with a default, a way to override it, and the reason it matters. Note before anything
+else that **the Covenant documents are not copied into an installed project** — they live in the package and
+on GitHub, so the standard the rest of this subsection describes never arrives in your repository. What it
+is, and is not:
 
 - It is applied through review, **not enforced by software**. The product's own README now says exactly
   that. An April 2026 audit found 46 of 56 checks passing (82%), across eight skills out of roughly
-  thirty-three, and the audit itself says that figure is more plausibly a ceiling than a floor.
+  thirty-three. Three caveats travel with that number, and all three are the auditor's own: the reviewer was
+  **an AI persona written by this project, scoring files written by this project** — the report states that
+  "an external audit would add independence that this report does not claim"; it was a single reviewer, not
+  a panel; and the compliance rate is "likely a ceiling, not a floor" (said of the 84% figure from an
+  earlier round). The audit also predates 4.0, and the discovery team scored **25%** on one of the seven
+  rights — a number the 82% aggregate conceals.
 - The EU AI Act's Article 14 obliges **providers** to design high-risk systems so that human overseers can
   understand and override them; deployers must implement those measures and assign competent overseers
   (Article 26). These are obligations on organisations and on system providers. **A development tool cannot
@@ -214,9 +223,10 @@ agent-skills tooling needs a review path for what it installs.
 
 ## 6. Roadmap and release management
 
-Convoke ships from a CI pipeline: every release builds from a tagged commit, must pass the full test suite
-and a clean-install trial, and carries signed build provenance verifiable against a public transparency
-log. The 4.0.3 release of 17 September 2026 was verified this way.
+Convoke ships from a CI pipeline: a release builds from a tagged commit, must pass the full test suite and a
+clean-install trial, and carries signed build provenance verifiable against a public transparency log. The
+4.0.3 release of 17 September 2026 was verified this way. **This applies from 4.0.1 onward** — three of the
+twenty-seven published versions. Releases before that have no attestation.
 
 Two honest notes about that pipeline. Nothing in it re-reads the registry after publishing, so a green
 pipeline is not by itself proof that a release reached users — and after 4.0.3 the registry reported the

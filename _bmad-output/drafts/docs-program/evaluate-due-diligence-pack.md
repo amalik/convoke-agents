@@ -20,13 +20,37 @@ listener, and stores nothing outside your repository.
 access in the lifecycle is `npm` fetching the package itself, which your own registry policy governs.
 
 **What does it execute?**
-Shipped code shells out to exactly two commands: **`git`** (16 call sites — status, log, rev-parse, used by
-artifact tooling and the portfolio report) and **`npx`** (one call site). It executes nothing else.
+Five external commands, and one of them deserves your attention:
+
+- **`git`** — by far the most used (around 29 call sites, depending on how the invocation forms are counted).
+  Not only read commands: the artifact tooling runs `git mv`, `git add` and `git commit`, and **rolls back a
+  failed rename with `git reset --hard HEAD`** (`scripts/lib/artifact-utils.js`, four sites). That command
+  discards *every* uncommitted change in the working tree, not only the ones this tool made. It is reachable
+  through the artifact-migration tooling, not through installing or updating.
+- **`npx`**, **`node`** (via `process.execPath`), **`python3`** (a legacy configuration fallback), and
+  **`claude`** (a contributor-only recording script).
+- One script, `scripts/convoke-check.js`, executes commands from its own hardcoded table (`npm run lint`,
+  `npm test` and similar) through a shell. It is contributor tooling and is not part of installing or
+  running the product.
 
 **What are its dependencies?**
-Four, all widely used: `chalk`, `fs-extra`, `js-yaml`, `yaml`. Every release carries signed build
-provenance (SLSA) verifiable against the public Sigstore transparency log, and `npm audit signatures`
-verifies it in your own project.
+Four direct — `chalk`, `fs-extra`, `js-yaml`, `yaml` — which resolve to 13 packages in the installed tree.
+
+**Is the build attested?**
+Releases from **4.0.1 onward** carry signed build provenance (SLSA) verifiable against the public Sigstore
+transparency log. That is three of the twenty-seven published versions: the attested pipeline was introduced
+at 4.0.1, and earlier releases have no attestation. Check any version yourself at
+`registry.npmjs.org/-/npm/v1/attestations/convoke-agents@<version>`.
+
+**Our discovery workflows interview real people. What about their data?**
+This is the sharpest gap in the product today, and we would rather name it than be asked. The
+`user-interview` workflow instructs an operator to recruit participants, review screening-survey answers,
+optionally record sessions, and write participant tables with direct quotes into the repository — where they
+also pass through your AI assistant. **The workflow contains no guidance on consent, data minimisation or
+retention**; the word "consent" does not appear in it. Those obligations fall entirely on the adopting
+organisation, under its own data-protection regime, and we do not currently help you meet them. Treat
+research artifacts produced by these workflows as personal data and apply your existing controls to the
+repository and to the assistant.
 
 **Where does my data go?**
 Wherever your AI coding assistant already sends it. Convoke adds no data path of its own. The prompts and
@@ -64,7 +88,7 @@ available with any MIT-licensed dependency — fork it, vendor it, or contribute
 | Interface | Status |
 |---|---|
 | Claude Code | Supported. This is the environment Convoke installs for |
-| GitHub Copilot, Cursor | Export tool produces instruction files for ecosystem skills. **Convoke's own twelve agents export only as a notice that a full install is required** |
+| GitHub Copilot, Cursor | Export tool produces instruction files for ecosystem skills. **Convoke's own twelve agents export with a framework-only warning banner — but the file beneath the banner is the agent's full persona** (role, identity, communication style, principles, output contract), plus Copilot and Cursor adapter files. It is lossy rather than empty: a developer could paste it into Cursor and get partial, unsupported behaviour. On a Convoke-only install, `convoke-export --all` exports exactly **one** skill, because most manifest rows do not install |
 | MCP (Model Context Protocol) | Not implemented |
 | AGENTS.md | Not implemented. Claude Code reads `CLAUDE.md`, not `AGENTS.md` |
 | A2A (Agent2Agent) | Not implemented |
@@ -87,10 +111,17 @@ You decide when to take it. Nineteen stable BMAD versions were published between
 upstream. An adopting organisation should set its own policy deliberately rather than inherit the cadence.
 
 **Can we customise the agents without forking?**
-Yes, for the two protected configuration files — the discovery and readiness team configs — which are
-merged rather than replaced on update, and which since 4.0.3 an install will refuse to overwrite if it
-cannot parse them. **Four other module configuration files are rewritten from the template on every
-install**, so customisation in those does not persist. A separate document covers customisation in detail.
+**Not the agents themselves.** Edits to an agent file, a workflow file or a hand-off contract template are
+overwritten by the next install — silently, with no prompt and no backup. That includes
+`contracts/hc1-empathy-artifacts.md`, and the hand-off contracts are the part of the method this pack calls
+load-bearing. Re-running an installer also overwrites the Vortex user guides with no backup, though
+`convoke-update` does keep a `.bak` of those.
+
+What *does* survive: the discovery and readiness team configuration files, which are merged rather than
+replaced, and which since 4.0.3 an install refuses to overwrite if it cannot parse them. The other four
+module configuration files are rewritten from the template on every install. The supported extension points
+are the `_bmad/custom/` overrides and your own prefixed skills, which are left untouched — a separate
+document covers those in detail.
 
 **What does it cost to run?**
 Nothing in licence fees. The cost is your AI assistant's token usage, which depends on the workflows you
@@ -98,7 +129,9 @@ run and the model you run them on. We publish no cost model, because the one pra
 found was a single run on an older version and is not a basis for a projection.
 
 **How do we verify a release is genuine?**
-`npm audit signatures` in your project, and the provenance attestation at
+`npm audit signatures` in a project where the package is a recorded dependency (`npm install convoke-agents`).
+It reports *"found no installed dependencies to audit"* if you used the `npx -p` form, which records nothing.
+Also the provenance attestation at
 `registry.npmjs.org/-/npm/v1/attestations/convoke-agents@<version>`, which names the GitHub workflow and
 commit that built it and resolves in the public transparency log.
 
@@ -109,7 +142,7 @@ outcomes.
 
 ## 5. Ledger evidence
 
-The maturity ledger classifies sixteen capabilities — four *Shipped*, seven *Works with limits*, five
+The maturity ledger classifies sixteen capabilities — four *Shipped*, six *Works with limits*, six
 *Mapped, not built* — with an evidence appendix giving, per row, the commands that were run and their
 output. It is a separate document, re-derived against 4.0.3. Reviewers who want to reproduce any row can
 run the commands it records.

@@ -1,8 +1,8 @@
 # BMAD Method + Convoke — Executive brief
 
 *Two pages. Every product claim here was established by running the published software on 17 September
-2026; every external claim is sourced in the accompanying whitepaper and was checked against its primary
-source. Where evidence does not exist, this brief says so rather than filling the gap.*
+2026; every external claim traces to a claim-checked research note accompanying the whitepaper, and was
+checked against its primary source there. Where evidence does not exist, this brief says so rather than filling the gap.*
 
 ---
 
@@ -13,13 +13,14 @@ as agent skills. **Convoke** is an extension to it covering the two ends of the 
 modules do not: *discovery* — deciding what to build, through research with real users, hypotheses and
 experiments — and *readiness* — judging whether what was built is fit to run. Convoke adds seven discovery
 agents across 22 guided workflows and four readiness agents across seven, plus the hand-off contracts that
-define what each stage passes to the next. It installs into a team's existing AI coding assistant; it is
-not a platform, a service, or somewhere your data goes.
+define what each stage passes to the next. It installs into Claude Code — today the only supported
+assistant — and is not a platform, a service, or somewhere your data goes.
 
 ## Why now
 
 AI coding assistance is already mainstream: in a 2026 survey of more than 15,000 professional developers,
-90% reported using AI coding agents at work at least weekly. The business case is far less settled.
+90% reported using AI coding agents at work at least weekly (the survey's publisher sells developer tools,
+and weights its sample by familiarity with its own products). The business case is far less settled.
 
 The most consequential finding for a delivery organisation is Google's DORA research, which associated AI
 adoption with **less stable software delivery** in both 2024 and 2025 — in 2025, throughput and product
@@ -33,40 +34,54 @@ serve. It is not an argument that this product has been proven to work.
 
 Three things, concretely:
 
-1. **Discovery produces artifacts, not opinions.** Each stage's output is specified in advance — empathy
-   artifacts, problem definition, hypothesis, experiment context, signal report — so a reviewer can ask
-   whether it exists and what it says. Decisions become inspectable after the fact.
-2. **Readiness becomes a step rather than an assumption.** The readiness team detects the stack in a
-   repository, builds a capability model, and names the gaps between that model and production
-   expectations.
+1. **Discovery is designed to produce artifacts, not opinions.** Each stage's output is specified in
+   advance — empathy artifacts, problem definition, hypothesis, experiment context, signal report — so a
+   reviewer can ask whether it exists and what it says. The intent is that decisions become inspectable
+   after the fact.
+2. **Readiness becomes a step rather than an assumption.** The readiness team is built to detect the stack
+   in a repository, derive a capability model, and name the gaps against production expectations. It is the
+   younger of the two teams: classed internally as still in development, on the older agent format, and its
+   team guide is not copied into your project.
 3. **The operator stays the decision-maker.** When the method cannot resolve something, it is designed to
    hand the person the decision with a default, a way to override it, and the reason it matters.
 
-**The limit on all three:** agents are *instructed* to follow the contracts. No software validates a
+**The limit that governs all three, and the most important sentence in this brief:** no workflow in either
+team has been driven end to end to a finished artifact and checked, by us or by anyone we can name. What has
+been verified is that every agent installs and starts, and that the structure is what it claims to be. The
+outcomes above are the design, not a measured result.
+
+Separately, and just as important: agents are *instructed* to follow the contracts. No software validates a
 document against its template, and nothing enforces the operator-decides standard in code. These are
-disciplines the method encourages, not controls it imposes. An organisation that needs enforcement must
-add it.
+disciplines the method encourages, not controls it imposes. An organisation that needs enforcement must add
+it.
 
 ## What is proven, and what is not
 
 The accompanying maturity ledger classifies sixteen capabilities against what was verified by running the
-software: **four Shipped, seven Works with limits, five Mapped but not built**. Page 2 of the whitepaper
+software: **four Shipped, six Works with limits, six Mapped but not built**. Page 2 of the whitepaper
 gives the full table with the evidence behind each row.
 
-Three disclosures a vendor document would not usually volunteer, and which we would rather you heard from
-us than found later:
+Five disclosures a vendor document would not usually volunteer, and which we would rather you heard from us
+than found later:
 
 - **There is no independent evidence that this method — or any competing structured AI-delivery framework —
   improves delivery outcomes.** We searched and found none. Any vendor claiming otherwise is ahead of the
   evidence.
 - **Convoke's own agents are not portable** to other AI coding assistants. Portability is a stated
   direction, not a current capability.
-- **The team-building tool ships but should not be adopted.** It is classed *Works with limits*, and its
-  maintainer has since ruled it internal scaffolding rather than a customer-facing capability.
+- **The team-building tool ships but should not be adopted.** It is classed *Mapped, not built* — it has
+  never produced a working team — and its maintainer has ruled it internal scaffolding rather than a
+  customer-facing capability.
+- **Until the day this brief is dated, a fresh install left 8 of the 12 agents unable to start at all.**
+  Fixed in the 4.0.3 release of 17 September 2026 and verified by starting every agent. It is here because
+  it tells you what stage of maturity this is at.
+- **No organisation can be named as a reference.** We are not aware of an adopter whose experience you could
+  check, and that deserves as much weight as anything else in this brief.
 
-The product is young and its release discipline is visible: releases build from a tagged commit, must pass
-a full test suite and a clean-install trial, and carry signed build provenance verifiable against a public
-transparency log.
+The product is young and its release discipline is visible: releases from 4.0.1 onward build from a tagged
+commit, must pass a full test suite and a clean-install trial, and carry signed build provenance verifiable
+against a public transparency log. That is three of the twenty-seven published versions; earlier ones have
+no attestation.
 
 ## What adoption looks like
 
