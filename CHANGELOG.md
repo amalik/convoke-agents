@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [4.0.3] - UNRELEASED
+## [4.0.3] - 2026-09-17
 
 Convoke 4.0.3 is a patch release about the config file your agents read on a fresh install.
 
