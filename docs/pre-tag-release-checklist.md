@@ -191,13 +191,39 @@ Deriving the tag from `package.json` makes the agreement gate unfailable by cons
 
 ## 7. Verify the registry actually changed
 
+**Poll — do not compare once.** The registry lags the publish job, and during that window every check
+here reads as a *failed* release.
+
 ```sh
-npm view convoke-agents dist-tags          # compare against step 5
-npm view convoke-agents@<version> dist.attestations   # expect a signed record
+VER=$(node -p "require('./package.json').version")
+for i in $(seq 1 18); do
+  OUT=$(curl -s https://registry.npmjs.org/convoke-agents \
+        | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);
+          process.stdout.write(JSON.stringify(j["dist-tags"]))})')
+  echo "$(date -u +%H:%M:%SZ)  $OUT"
+  case "$OUT" in *"\"latest\":\"$VER\""*) echo "moved"; break;; esac
+  sleep 20
+done
+npm view "convoke-agents@$VER" dist.attestations --prefer-online   # expect a signed record
 ```
 
-An empty attestation means the release did **not** come through the automated path — that is how
-`4.0.0` is known to have been hand-published.
+Expect `latest` to become the version you tagged, and a `provenance` predicate. An empty attestation means
+the release did **not** come through the automated path — that is how `4.0.0` is known to have been
+hand-published.
+
+**Measured at the 4.0.3 publish (2026-09-17): the gap was ~2.5 minutes.** The job logged
+`+ convoke-agents@4.0.3` and a Sigstore transparency entry at 10:44:28Z; the packument — read uncached,
+over plain HTTP, with no npm cache in the way — still returned `latest: 4.0.2` and `404` for the new
+version at 10:45:33, 10:45:53, 10:46:13 and 10:46:34, and first showed `latest: 4.0.3` at 10:46:54.
+
+> **If it has not moved, do not retag.** An npm version is permanent and a spent tag cannot be reused, so
+> retagging cannot repair a publish — it can only burn the next version number. Read the `publish` job's
+> log first: `+ convoke-agents@<version>` and a `Provenance statement published to transparency log` line
+> mean the publish succeeded and you are looking at propagation. Absent those, go to
+> `docs/npm-publishing-access-playbook.md` §5.
+
+`T47` is the reason this is a manual poll: nothing in the pipeline re-reads the registry after
+`npm publish`, so a green run is not evidence that `latest` moved.
 
 ---
 
