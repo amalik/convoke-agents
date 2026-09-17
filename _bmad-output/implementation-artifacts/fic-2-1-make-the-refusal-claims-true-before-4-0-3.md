@@ -135,7 +135,7 @@ Each defect below was reproduced before it was fixed. Both HIGHs were in sentenc
 | M4 | "no module has been copied, so your installation is not half-updated" — the second clause is false for `convoke-install` (see H2) | Replaced; "no module directory has been copied" is kept because it is true | as H2 |
 | L1 | `INSTALLATION.md` "an update stops too when a refresh is due" — false for Vortex (`T180`) | Scoped to the Gyre config | — |
 | L2 | The changelog cited "UPDATE-GUIDE, section …" without saying where the reader would find it | Cites `UPDATE-GUIDE.md` and notes it ships inside the package (`package.json` `files[]`) | `node -p "require('./package.json').files"` |
-| L3 | This story enlarged the "Cannot load config file" section in EMMA, MILA and WADE guides — those three agents cannot emit that string; they load config through `bmad-init`, which walks the operator through setup instead | Section deleted from those three guides; kept and enlarged in the four whose agents do emit it | `grep -rl "Cannot load config file" _bmad/bme/*/agents` → 9 activation blocks, none of them Emma, Mila or Wade |
+| L3 | This story enlarged the "Cannot load config file" section in EMMA, MILA and WADE guides — those three agents cannot emit that string (it appears in 9 activation blocks, none of them theirs) | Section deleted from those three guides. **Round 2 reversed this** — see R2-H1 and R2-H2 | `grep -rl "Cannot load config file" _bmad/bme/*/agents` → 9 activation blocks, none of them Emma, Mila or Wade |
 | L4 | Step 1b hard-failed pre-release versions | The reader accepts them; this changelog's five `-alpha` entries pass | case table below |
 | L5 | Step 1b's hand-written heading pattern disagreed with `changelog-reader.js::HEADER_RE` on spacing and dash characters | Uses the reader itself, so the check accepts exactly what `convoke-update` will render | case table below |
 | L6 | Nine activation blocks said "the next run of the install command" without naming it | Names `convoke-install-vortex` / `convoke-install-gyre` / `convoke-install`, each observed rewriting a deleted config | delete a module `config.yaml`, re-run that installer |
@@ -156,11 +156,52 @@ Each defect below was reproduced before it was fixed. Both HIGHs were in sentenc
 
 **Checks after remediation:** `docs-audit` zero findings (`Registry: 12 agents, 29 workflows`); `npx eslint scripts tests` exit 0. No production code changed.
 
+### Round 2 (three scoped layers on the remediation) — 7 HIGH, 6 MEDIUM, 3 LOW
+
+Round 1's fixes generated every HIGH here. Layers: A on the rewritten release check, B on the shipped
+documents' claims, C on the deletions and the nine activation blocks.
+
+**The release check was restructured rather than patched a fourth time.** Layer A fooled it three ways, so
+it moved out of the markdown into `scripts/audit/check-changelog-entry.js`, with
+`tests/audit/check-changelog-entry.test.js` pinning each shape (14 tests). Six guards were reverted one at
+a time on a copy of the tree: each was killed by its own test, suite floor 14 on every run, copy restored
+byte-identical.
+
+| # | Defect | Fix |
+|---|---|---|
+| A-H1 | A `##` heading inside a fence indented 1-3 spaces parsed as a live entry — `changelog-reader.js`'s `FENCE_RE` is anchored at column 0. `CHANGELOG.md` already contains four such fences | The gate re-scans headings with a fence rule that accepts the indent and rejects an entry the strict scan cannot see. The **rendering** half is `T182` |
+| A-H2 | Two entries for one version: `.find()` took the first, so a dated stub masked a live `UNRELEASED` heading | Rejects more than one heading claiming the version |
+| A-H3 | The command ran only from the repository root — including for a reader sitting in `docs/`, where the checklist lives; `MODULE_NOT_FOUND` is indistinguishable from a gate failure | The script resolves the repository from `__dirname`; a test runs it from `os.tmpdir()` |
+| A-M1/M2 | A dated heading with an empty body passed; `0000-00-00`, `9999-99-99`, `2026-13-45` passed | Body must be non-empty; the date must be a real calendar date |
+| A-M3 | "`docs-audit.js` … for link and staleness checks only" — false in both halves: staleness is precisely what is skipped for `CHANGELOG.md`, and four other checks run on it | Corrected, citing `scripts/docs-audit.js:750-755` |
+| A-M4 | "what this step accepts is what operators will be shown" — `4.0.3+build.7` failed the gate but rendered to operators, because the gate used string equality where `printChangelog` uses `compareVersions` | The gate compares versions the same way; pinned by a test |
+| A-M5 | A malformed neighbouring heading (`## 4.0.2 - …`) merged 4.0.2's whole section under 4.0.3, gate green | Rejects a version-shaped heading that does not parse. Prose headings such as `## Version History` are left alone — the first version of this guard failed on the repository's own changelog, caught by the test that runs the gate against the real file |
+| B-H1 | "`convoke-install` (any variant) … step `[2/5]` has already run" — `convoke-install-gyre` runs four steps, refuses at `[3/4]`, and has no archive or cleanup step at all. INSTALLATION.md's "treat them as aliases" made a reader apply the false claim to exactly that variant | All three documents now state the sequence per command; the table gained a `convoke-install-gyre` row |
+| B-H2 | Row 4's `From: 1.1.0` is `1.0.0` on a project installed with `convoke-install-gyre` alone (`guessVersionFromFileStructure` needs `workflows/_deprecated/`, which that installer never creates), with three breaking changes, not two — and the recovery advice told operators to recognise the case by the `1.1.0` | The row gives both values and the condition; the advice keys on "a surprisingly old `From:` version" |
+| B-L3/L4/L5 | `[2/5]`/`[4/5]` collide with `convoke-update`'s own five-step sequence; "no module directory has been copied" is contradicted by the `wireframe` copy one paragraph later; "an early migration" is migration 3 of 7 | Commands named; "no agent, workflow, guide or config file has been replaced"; the migration named |
+| C-H1 | R1-L3 justified deleting guide sections because those agents "load config through `bmad-init`, which walks the operator through setup". **`bmad-init` does not exist** — deleted upstream in `a16fa340`, only `.bak` files remain, no `.claude/skills/bmad-init`, and a packed tarball ships no `_bmad/core`. The deleted advice was replaced by nothing | Sections restored; the missing skill is filed as `T183`, which is a live defect in three shipped agents, not a docs issue |
+| C-H2 | Three of seven Vortex guides were left with no mention of `config.yaml` at all — a file all seven agents share, guarded by an installer-level refusal any Emma operator can hit. The guides are the only config document installed into a project | Restored under a heading that is true for those agents: "The Vortex config file is missing or cannot be read" |
+| C-M1 | The named install commands reset `_enhance`, `_artifacts`, `_portability` and `_team-factory` configs on **every** run, damaged or not; UPDATE-GUIDE scoped the loss to "the damaged file" | Re-derived independently: `my_custom_key` and `user_name: Pat` gone after an ordinary re-install (exit 0) while `_vortex` and `_gyre` kept both. Table row, INSTALLATION, CHANGELOG and `T181` all widened |
+| C-L1 | The Round 1 commit message says "Thirteen findings"; the table enumerates twelve plus one refuted claim | Recorded here; the commit message stands as pushed |
+| C-L2 | R1-L3's "the four whose agents do emit it" implies a match that does not hold — nine agents emit the string, four guides carry the section | Corrected in the row above |
+
+**Checked and sound across the three layers:** all five original table rows reproduced exit-for-exit,
+including the `_designos` delete (a planted `MY-NOTES.md` was destroyed by a run that then refused); the
+`T180`/`T181` attributions as the table now reads; "8 of the 12" and the named eight; every command↔config
+pairing in the nine activation blocks, each observed rewriting its module's config after deletion; the
+refusal asymmetry that makes the Team Factory block say the opposite of the other eight; nothing linking
+to the deleted sections; and every "re-derive with" command in the Round 1 table above.
+
+**Not this commit's:** `scripts/audit/audit-bmad-init-refs.js --verify-only` reports pre-existing drift at
+`_bmad/_config/v6.3-migration-inventory.csv`; the files touched here carry no `bmad-init` reference and the
+generated inventory is identical before and after.
+
 ### File List
 
 - `INSTALLATION.md`, `UPDATE-GUIDE.md` — refusal claims scoped per path and per config; the four-case table
 - `CHANGELOG.md` — `[4.0.3] - UNRELEASED` entry, corrected figures, both known gaps
-- `docs/pre-tag-release-checklist.md` — step 1b, failing on a missing or undated entry
+- `docs/pre-tag-release-checklist.md` — step 1b, now one line calling the gate below
+- `scripts/audit/check-changelog-entry.js`, `tests/audit/check-changelog-entry.test.js` — the release gate and the 14 tests that pin it (Round 2)
 - `_bmad/bme/_vortex/agents/*/SKILL.md` (4), `_bmad/bme/_gyre/agents/*.md` (4), `_bmad/bme/_team-factory/agents/team-factory.md` — activation advice; the Team Factory one differs because its config is unguarded
 - `_bmad/bme/_vortex/guides/*-USER-GUIDE.md` (7) — unreadable-config branch
 - `_bmad-output/drafts/docs-program/customize-without-forking.md` — the disproved claim
@@ -172,6 +213,7 @@ Each defect below was reproduced before it was fixed. Both HIGHs were in sentenc
 
 | Date | Note |
 |---|---|
+| 2026-09-17 | **Round 2 remediated as one batch: 7 HIGH, 6 MEDIUM, 3 LOW, every HIGH generated by Round 1's own fixes.** The release check was fooled three ways and moved out of the markdown into a tested script, proven by reverting each of its six guards on a copy. Two claims generalised from two installers to three were false for `convoke-install-gyre`. The guide sections Round 1 deleted were restored: their justification rested on `bmad-init`, a skill deleted upstream in June and shipped by nothing — now `T183`. `T181` is wider than filed: the four unguarded configs are rewritten on every install, not only when damaged. |
 | 2026-09-17 | **Round 1 remediated as one batch.** 2 HIGH, 4 MEDIUM, 6 LOW — every one a sentence this story authored, both HIGHs reproduced first. The install refusal is not write-free: step `[2/5]` deletes `_bmad/bme/_designos` before the check at `[4/5]`, and both shipped documents said otherwise. Step 1b now reads the entry with the shipped parser and is proven to fail on four heading shapes and pass on three. One claim was refuted rather than fixed: `refreshInstallation` really does refuse before copying. |
 | 2026-09-17 | **Implemented; to `review`.** Three paths established by execution, both shipped documents scoped per path, nine activation blocks and seven guides repaired, a 4.0.3 changelog entry and a checklist step that fails without a dated one. The story-close consumer audit found 3 HIGH — all in claims this story authored — and all were reproduced and fixed: the refusal covers only two of six module configs (`T181` filed), a version-pinned `4.0.2` literal inside a 4.0.3 document, and an undrived "7 of 11" that is 8 of 12. |
 | 2026-09-17 | Story authored from a second, independent story-close consumer audit of `fic-1-1`. The production fix is sound; two published sentences are false on the `convoke-update` + damaged-Vortex path, nine shipped activation blocks and seven guides advise a command that now refuses, and a 4.0.3 would ship without a changelog entry. Mechanism verified in source: `getCurrentVersion` swallows the parse error and `guessVersionFromFileStructure` returns `1.1.0` because `workflows/_deprecated/` exists on every real install. |

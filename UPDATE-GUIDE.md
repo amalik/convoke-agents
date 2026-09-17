@@ -244,31 +244,37 @@ config-merger: refusing to overwrite /path/to/project/_bmad/bme/_gyre/config.yam
 It arrives as a single line, naming the absolute path and the parser's own first line of error.
 
 This protects your settings — before 4.0.3, a single duplicate key silently replaced the whole
-file with defaults. Wherever the message appears, the file it names is left byte-identical, and no module
-directory has been copied.
+file with defaults. Wherever the message appears, the file it names is left byte-identical, and no agent,
+workflow, guide or config file has been replaced.
 
-The refusal is not the first thing an install does, though. `convoke-install` and `convoke-install-vortex`
-reach the config check at step `[4/5]`, and step `[2/5]` has already run by then: it copies the deprecated
-`wireframe` workflow into `_bmad/bme/_vortex/workflows/_deprecated/`, and **deletes** `_bmad/bme/_designos`
-and `_bmad/_designos` if either exists (leftovers from the pre-Vortex layout). Both were observed on a run
-that went on to refuse. If you keep anything of your own under those two paths, move it before you install.
+The refusal is not the first thing an install does, though, and which writes precede it depends on the
+command:
+
+- `convoke-install` and `convoke-install-vortex` run five steps and refuse at `[4/5]`. Step `[2/5]` has
+  already run: it copies the deprecated `wireframe` workflow into
+  `_bmad/bme/_vortex/workflows/_deprecated/`, and **deletes** `_bmad/bme/_designos` and `_bmad/_designos`
+  if either exists (leftovers from the pre-Vortex layout). A file planted under `_designos` did not survive
+  a run that went on to refuse — if you keep anything of your own there, move it before you install.
+- `convoke-install-gyre` runs four steps and refuses at `[3/4]`. It has no archive or cleanup step, and
+  touches neither `wireframe` nor `_designos`.
 
 **Which command shows it, and when** (each line below was run against a real installation):
 
 | What you run | Which config is damaged | What happens |
 |---|---|---|
-| `convoke-install` (any variant) | either | Refuses with the message above, exit 1. The file is left byte-identical — but step `[2/5]` has already run, as above |
+| `convoke-install` or `convoke-install-vortex` | either | Refuses with the message above at `[4/5]`, exit 1. The file is left byte-identical — but step `[2/5]` has already run, as above |
+| `convoke-install-gyre` | either | Refuses with the message above at `[3/4]`, exit 1. The file is left byte-identical, and nothing has been archived or deleted |
 | `convoke-update` | Gyre, and a refresh is due | Refuses with the message above, exit 1 |
 | `convoke-update` | Gyre, nothing else out of step | `✓ Already up to date!`, exit 0 — the damaged file is not noticed |
-| `convoke-update` | **Vortex** | **No refusal.** Version detection cannot read the file, falls back to inspecting the directory layout, and reports the install as `1.1.0`. You are offered a plan from `1.1.0` up to the package's version, listing breaking changes. If you accept it, an early migration fails on the same parse error and the run is rolled back from its backup — exit 1, your config byte-identical |
-| `convoke-install` (any variant), or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability`, `_team-factory` | **No refusal, exit 0**, and the damaged file is replaced with defaults — the settings loss this release fixes for Vortex and Gyre still happens here (`T181`). With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches the file |
+| `convoke-update` | **Vortex** | **No refusal.** Version detection cannot read the file, falls back to inspecting the directory layout, and reports an old version: `1.1.0` where `workflows/_deprecated/` exists, `1.0.0` on a project installed with `convoke-install-gyre` alone, which never creates it. You are offered a plan from there up to the package's version, listing two or three breaking changes. If you accept it, migration 3 of 7 (`1.5.x-to-1.6.0`) fails on the same parse error and the run is rolled back from its backup — exit 1, your config byte-identical |
+| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability`, `_team-factory` | **No refusal, exit 0**, and the file is replaced with the package template — whether or not it is damaged. A custom key added to `_enhance/config.yaml` and a hand-set `user_name` in `_team-factory/config.yaml` were both gone after an ordinary re-install, where Vortex and Gyre kept theirs. The settings loss this release fixes for those two still happens here, on every run (`T181`). With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
 
 The `convoke-update` + **Vortex** row is a known defect, tracked as `T180`: the refusal exists and runs,
 but version detection reads the Vortex config first and swallows the error before the refusal can be
-reached. Until it is fixed, treat a `Could not read config.yaml` warning followed by a surprising
-`From: 1.1.0` as this case, decline the plan, and repair the file as below. The last row is a different
-defect, `T181` — those four configs are never checked, so there is no refusal to reach and no plan to
-decline.
+reached. Until it is fixed, treat a `Could not read config.yaml` warning followed by a surprisingly old
+`From:` version — `1.1.0` or `1.0.0`, neither of which you installed — as this case, decline the plan, and
+repair the file as below. The four-config row is a different defect, `T181`: those configs are never
+checked, so there is no refusal to reach and no plan to decline.
 
 **Reinstalling will not clear this, and that is deliberate** — `convoke-install` runs the same
 check. Repair the file itself:

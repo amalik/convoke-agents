@@ -27,16 +27,19 @@ Convoke 4.0.3 is a patch release about the config file your agents read on a fre
   most often a second `user_name:` line added by hand — was silently replaced with defaults, losing your
   settings. An install now stops instead, naming the file and the parser's own error, and leaves the file
   byte-identical.
-  - The refusal is step `[4/5]` of the install. Step `[2/5]` has already run by then: it archives the
-    deprecated `wireframe` workflow and deletes a pre-Vortex `_designos` directory if you still have one.
-    Your config is left untouched; those two are not.
+  - `convoke-install` and `convoke-install-vortex` refuse at their step `[4/5]`, and step `[2/5]` has
+    already run by then: it archives the deprecated `wireframe` workflow and deletes a pre-Vortex
+    `_designos` directory if you still have one. Your config is left untouched; those two are not.
+    `convoke-install-gyre` refuses at `[3/4]` and does neither.
   - `convoke-update` also stops, when the damaged file is the Gyre config and a refresh is due.
   - **Known gap:** with a damaged *Vortex* config, `convoke-update` cannot reach that refusal. Version
     detection reads the config first, cannot parse it, and falls back to guessing `1.1.0` from the directory
     layout — so you are offered a migration plan from `1.1.0` instead. Accepting it fails on the same
     parse error and rolls back from its backup; your config is left byte-identical. Tracked as `T180`.
   - **Also not covered:** the `_enhance`, `_artifacts`, `_portability` and `_team-factory` configs are not
-    checked at all, and a damaged one there is still silently replaced (`T181`).
+    checked at all. A damaged one is still silently replaced — and so is an undamaged one: those four are
+    rewritten from the package template on every install, so anything you customise in them is lost each
+    run (`T181`).
     `UPDATE-GUIDE.md`, which ships inside the package, has the full table — one row per command and
     damaged config.
 

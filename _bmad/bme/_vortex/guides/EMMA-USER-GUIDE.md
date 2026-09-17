@@ -180,6 +180,17 @@ Select **[CH] Chat** to discuss:
 
 ## Troubleshooting
 
+### The Vortex config file is missing or cannot be read
+
+`_bmad/bme/_vortex/config.yaml` is shared by all seven Vortex agents, and an install will not repair it
+for you.
+
+1. **If it is missing:** `npx -p convoke-agents convoke-install-vortex` writes a fresh one.
+2. **If an install stops with `refusing to overwrite … config.yaml`:** do not reinstall — since 4.0.3 the
+   installer refuses to overwrite a config it cannot read, and every install command stops with the same
+   complaint. Open the file and fix the line the error names; a second `user_name:` line below the seeded
+   `user_name: '{user}'` is the usual cause. Or delete the file, and the command above writes a fresh one.
+
 ### Error: "Unknown skill: bmad-agent-bme-contextualization-expert"
 
 **What it means:**
