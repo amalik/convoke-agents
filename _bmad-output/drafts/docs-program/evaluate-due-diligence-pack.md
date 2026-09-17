@@ -17,10 +17,13 @@ listener, and stores nothing outside your repository.
 **How was that established?** The shipped code was searched for every network-capable construct —
 `require('http')`, `require('https')`, `require('net')`, `require('dgram')`, `require('tls')`, `fetch(`,
 `axios`, `node-fetch` — across all 469 files of the published tarball. **There are none.** The only network
-access in the lifecycle is `npm` fetching the package itself, which your own registry policy governs.
+access in the lifecycle is `npm` fetching the package itself, which your own registry policy governs — note
+that one migration step re-invokes the package through `npx`, so that fetch can also happen during an
+update, not only at install.
 
 **What does it execute?**
-Five external commands, and one of them deserves your attention:
+Five external commands in the product's own code paths, plus a shell in one contributor script. One of the
+five deserves your attention:
 
 - **`git`** — by far the most used (around 29 call sites, depending on how the invocation forms are counted).
   Not only read commands: the artifact tooling runs `git mv`, `git add` and `git commit`, and **rolls back a
@@ -37,17 +40,19 @@ Five external commands, and one of them deserves your attention:
 Four direct — `chalk`, `fs-extra`, `js-yaml`, `yaml` — which resolve to 13 packages in the installed tree.
 
 **Is the build attested?**
-Releases from **4.0.1 onward** carry signed build provenance (SLSA) verifiable against the public Sigstore
-transparency log. That is three of the twenty-seven published versions: the attested pipeline was introduced
-at 4.0.1, and earlier releases have no attestation. Check any version yourself at
+Releases from **`4.0.1-rc.0` onward** carry signed build provenance (SLSA) verifiable against the public
+Sigstore transparency log. That is four of the twenty-seven published versions: the attested pipeline first
+ran for that release candidate, and everything before it has no attestation. Check any version yourself at
 `registry.npmjs.org/-/npm/v1/attestations/convoke-agents@<version>`.
 
 **Our discovery workflows interview real people. What about their data?**
-This is the sharpest gap in the product today, and we would rather name it than be asked. The
+This is the sharpest gap in what the product does *for you*, and we would rather name it than be asked. The
 `user-interview` workflow instructs an operator to recruit participants, review screening-survey answers,
 optionally record sessions, and write participant tables with direct quotes into the repository — where they
-also pass through your AI assistant. **The workflow contains no guidance on consent, data minimisation or
-retention**; the word "consent" does not appear in it. Those obligations fall entirely on the adopting
+also pass through your AI assistant. The workflow does tell the interviewer to set expectations about
+recording and to ask permission to take notes or record. What it contains **no guidance on at all is data
+minimisation, retention, lawful basis or participant withdrawal** — the word "consent" does not appear in
+it, and nothing tells you how long to keep a participant table or how to remove someone from it. Those obligations fall entirely on the adopting
 organisation, under its own data-protection regime, and we do not currently help you meet them. Treat
 research artifacts produced by these workflows as personal data and apply your existing controls to the
 repository and to the assistant.
@@ -119,9 +124,11 @@ load-bearing. Re-running an installer also overwrites the Vortex user guides wit
 
 What *does* survive: the discovery and readiness team configuration files, which are merged rather than
 replaced, and which since 4.0.3 an install refuses to overwrite if it cannot parse them. The other four
-module configuration files are rewritten from the template on every install. The supported extension points
-are the `_bmad/custom/` overrides and your own prefixed skills, which are left untouched — a separate
-document covers those in detail.
+module configuration files are rewritten from the template on every install. The supported extension points are `_bmad/custom/`
+overrides — which reach the **BMAD** agents you hand off to, not Convoke's own, none of which ship a
+`customize.toml` — and your own prefixed skills, which are left untouched. To add rules on top of a Convoke
+agent, wrap it in a skill of your own: you can layer onto it, but not rewrite it. A separate document covers
+this in detail.
 
 **What does it cost to run?**
 Nothing in licence fees. The cost is your AI assistant's token usage, which depends on the workflows you

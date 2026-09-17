@@ -1,8 +1,8 @@
 # BMAD Method + Convoke — Executive brief
 
 *Two pages. Every product claim here was established by running the published software on 17 September
-2026; every external claim traces to a claim-checked research note accompanying the whitepaper, and was
-checked against its primary source there. Where evidence does not exist, this brief says so rather than filling the gap.*
+2026; every external claim is listed with its source in Appendix B of the accompanying whitepaper, and was
+checked against that primary source. Where evidence does not exist, this brief says so rather than filling the gap.*
 
 ---
 
@@ -47,8 +47,10 @@ Three things, concretely:
 
 **The limit that governs all three, and the most important sentence in this brief:** no workflow in either
 team has been driven end to end to a finished artifact and checked, by us or by anyone we can name. What has
-been verified is that every agent installs and starts, and that the structure is what it claims to be. The
-outcomes above are the design, not a measured result.
+been verified by running it is installation, upgrade and the release pipeline — including upgrades from
+3.3.0 and from 4.0.2, 31 health checks, and a deliberately damaged install correctly rejected — plus that
+every agent installs and starts. What was *not* verified is the thing the three points above describe: that
+running these workflows produces better decisions. That is the design, not a measured result.
 
 Separately, and just as important: agents are *instructed* to follow the contracts. No software validates a
 document against its template, and nothing enforces the operator-decides standard in code. These are
@@ -58,8 +60,8 @@ it.
 ## What is proven, and what is not
 
 The accompanying maturity ledger classifies sixteen capabilities against what was verified by running the
-software: **four Shipped, six Works with limits, six Mapped but not built**. Page 2 of the whitepaper
-gives the full table with the evidence behind each row.
+software: **four Shipped, six Works with limits, six Mapped but not built**. The maturity ledger, supplied alongside, gives the full
+table and the commands behind each row.
 
 Five disclosures a vendor document would not usually volunteer, and which we would rather you heard from us
 than found later:
@@ -78,10 +80,10 @@ than found later:
 - **No organisation can be named as a reference.** We are not aware of an adopter whose experience you could
   check, and that deserves as much weight as anything else in this brief.
 
-The product is young and its release discipline is visible: releases from 4.0.1 onward build from a tagged
-commit, must pass a full test suite and a clean-install trial, and carry signed build provenance verifiable
-against a public transparency log. That is three of the twenty-seven published versions; earlier ones have
-no attestation.
+The product is young and its release discipline is visible: releases build from a tagged commit and must
+pass a full test suite and a clean-install trial. Signed build provenance, verifiable against a public
+transparency log, has been carried since `4.0.1-rc.0` — four of the twenty-seven published versions; earlier
+ones have no attestation.
 
 ## What adoption looks like
 

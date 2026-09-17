@@ -2,10 +2,8 @@
 
 *Draft for the upcoming leadership review. Every product claim in this document was derived from the
 published package `convoke-agents@4.0.3` on 17 September 2026 by running it, not by reading its
-documentation. Every external claim traces to the accompanying state-of-the-art research note, whose citation
-tables were independently claim-checked against their primary sources on the same date. **Appendix B, which
-reproduces those citations inline, is not yet assembled** — until it is, an external claim must be followed
-into that note rather than looked up here.*
+documentation. Every external claim is listed with its source in Appendix B, and each was checked against
+that primary source on the same date by two reviewers working independently of the author.*
 
 > **Draft status.** Page one (*The stakes*) is deliberately not written yet: its framing is being set by
 > interviews with evaluating organisations, and writing it first would mean arguing backwards from a
@@ -31,8 +29,9 @@ Three things that ledger says which a vendor document usually would not:
 - The Team Factory — a tool for building new agent teams — is classed *Mapped, not built*: it ships and its
   design steps run, but it has never produced a working team, and the maintainer has since decided it is
   internal scaffolding rather than a capability to adopt. It still ships. Do not plan on it.
-- Convoke's own agents are **not portable** to other AI coding assistants. The export tool works; what it
-  exports for Convoke's own agents is a notice saying a full install is required.
+- Convoke's own agents are **not portable** to other AI coding assistants. The export tool runs, but what it
+  produces for them is the agent's full persona under a "framework-only" banner — lossy rather than empty,
+  and usable-looking enough to mislead someone who pastes it into another assistant.
 - Four of the six module configuration files are rewritten from the template on every install, so
   customisation in those four does not persist.
 
@@ -168,8 +167,10 @@ run one minor version behind upstream — rather than assume stability.
 ### 5.2 Portability and interoperability
 
 Stated plainly: **Convoke's own agents are not portable.** The export tool produces usable instruction
-files for other assistants from ecosystem skills, but Convoke's twelve installed agents — the eleven discovery and readiness agents plus the Team Factory agent — are classed non-portable and
-export as a notice that a full install is required. Portability is a direction, not a destination, and the
+files for other assistants from ecosystem skills, but Convoke's twelve installed agents — the eleven discovery and
+readiness agents plus the Team Factory agent — are classed non-portable: the export carries a
+framework-only warning banner over the agent's full persona, and ships Copilot and Cursor adapters
+alongside it. Portability is a direction, not a destination, and the
 product's own README says so.
 
 Convoke installs for Claude Code. The wider ecosystem is converging on shared formats — the agent skills
@@ -183,17 +184,22 @@ format, MCP, AGENTS.md, A2A — but Convoke does not yet implement those interfa
 The Operator Covenant is Convoke's governance standard: when a skill cannot resolve something, it hands the
 operator the decision with a default, a way to override it, and the reason it matters. Note before anything
 else that **the Covenant documents are not copied into an installed project** — they live in the package and
-on GitHub, so the standard the rest of this subsection describes never arrives in your repository. What it
+on GitHub, so the standard the rest of this subsection describes never arrives in your repository. What the standard
 is, and is not:
 
 - It is applied through review, **not enforced by software**. The product's own README now says exactly
   that. An April 2026 audit found 46 of 56 checks passing (82%), across eight skills out of roughly
-  thirty-three. Three caveats travel with that number, and all three are the auditor's own: the reviewer was
+  thirty-three. Four caveats travel with that number, and all four are the auditor's own: the reviewer was
   **an AI persona written by this project, scoring files written by this project** — the report states that
   "an external audit would add independence that this report does not claim"; it was a single reviewer, not
   a panel; and the compliance rate is "likely a ceiling, not a floor" (said of the 84% figure from an
-  earlier round). The audit also predates 4.0, and the discovery team scored **25%** on one of the seven
-  rights — a number the 82% aggregate conceals.
+  earlier round); and the pacing rubric needed a project-specific glossary to apply. The report further
+  states that its rate "applies to the sample", not to the product, and recommends a re-audit under its
+  extended methodology **before external publication** — that re-audit has not happened, so the figure
+  appears here as the only evidence that exists, not as evidence its own author considers publishable.
+  The audit also predates 4.0. A companion audit of the discovery team a day later found it at **25%
+  compliance on Right to pacing** (1 of 4 skills passing) — a team-level weakness the eight-skill aggregate
+  was never scoped to surface.
 - The EU AI Act's Article 14 obliges **providers** to design high-risk systems so that human overseers can
   understand and override them; deployers must implement those measures and assign competent overseers
   (Article 26). These are obligations on organisations and on system providers. **A development tool cannot
@@ -225,8 +231,8 @@ agent-skills tooling needs a review path for what it installs.
 
 Convoke ships from a CI pipeline: a release builds from a tagged commit, must pass the full test suite and a
 clean-install trial, and carries signed build provenance verifiable against a public transparency log. The
-4.0.3 release of 17 September 2026 was verified this way. **This applies from 4.0.1 onward** — three of the
-twenty-seven published versions. Releases before that have no attestation.
+4.0.3 release of 17 September 2026 was verified this way. **This applies from `4.0.1-rc.0` onward** — four of the
+twenty-seven published versions. Everything before it has no attestation.
 
 Two honest notes about that pipeline. Nothing in it re-reads the registry after publishing, so a green
 pipeline is not by itself proof that a release reached users — and after 4.0.3 the registry reported the
@@ -241,9 +247,50 @@ are designed but not built, and are not offered as a reason to adopt.
 
 ## Appendix A — Glossary
 
-*To be written: agent, skill, workflow, hand-off contract, module, stream, provenance, deployer/provider.*
+| Term | What it means here |
+|---|---|
+| **Agent** | A specialist persona with a defined role, activated by a command inside your AI coding assistant. Not a running process — it is instructions the assistant loads |
+| **Skill** | The packaged unit an assistant loads: instructions plus supporting files. Convoke's agents ship as skills |
+| **Workflow** | A guided, multi-step procedure an agent runs with you, producing a named artifact |
+| **Hand-off contract** | A template specifying what one discovery stage passes to the next, so the artifact is defined before it is written |
+| **Module** | A directory of related agents and workflows with its own configuration — `_vortex` (discovery), `_gyre` (readiness) and four supporting ones |
+| **Stream** | One of the seven stages of the discovery method, each with one agent |
+| **Provenance** | A cryptographically signed record of which commit and which build pipeline produced a published package, verifiable by anyone |
+| **Provider / deployer** | EU AI Act terms. The provider develops and places a system on the market; the deployer uses it under its own authority. Most obligations differ between the two |
+| **Materiality rule** | The ledger's own test: a defect moves a capability to *Works with limits* when it affects the documented outcome, not when it is merely cosmetic |
 
 ## Appendix B — References
 
-*To be assembled from the state-of-the-art research note's citation tables, which were independently
-claim-checked on 17 September 2026. Every external claim in this document traces to a row there.*
+Every external claim in this document is listed here with its source. Each was fetched and checked against
+its primary source on 17 September 2026 by two reviewers working independently of the author; that pass
+produced 25 corrections, which are applied. Where a source is a vendor with a commercial interest in its own
+finding, this table says so.
+
+| Claim in this document | Source |
+|---|---|
+| AI adoption associated with reduced delivery stability, 2024 | Google Cloud, "Announcing the 2024 DORA report" — https://cloud.google.com/blog/products/devops-sre/announcing-the-2024-dora-report |
+| 2025: throughput and product performance positive, stability still negative; "AI amplifies what's already there" | Google Cloud, "Announcing the 2025 DORA Report" — https://cloud.google.com/blog/products/ai-machine-learning/announcing-the-2025-dora-report |
+| 90% of professional developers using AI coding agents at least weekly (15,000+ respondents) | JetBrains Research, "AI Coding Agents: Adoption Trends" — https://blog.jetbrains.com/research/2026/08/ai-coding-agent-adoption-2026/ — **vendor survey**, re-weighted by familiarity with the publisher's own products |
+| Synthetic users predict average survey-experiment effects well | Ashokkumar, Hewitt, Ghezae, Willer, *Nature* 656:115–122 |
+| Synthetic users "misportray and flatten" identity groups (3,200 participants, four LLMs) | Wang, Morgenstern, Dickerson, *Nature Machine Intelligence* 7:400–411 — https://arxiv.org/abs/2402.01908 |
+| Review of 12 papers: most found discrepancies; "premature to rely on research with synthetic users for critical decision-making" | MeasuringU (Lewis, Sauro), "A Review of Experiments with Synthetic Users" — https://measuringu.com/review-of-experiments-with-synthetic-users/ |
+| Spec-driven development rated *Assess* (November 2025; not carried into the current Radar); BMAD described as heavier and more rigid | Thoughtworks Technology Radar — https://www.thoughtworks.com/radar/techniques/spec-driven-development and Vol. 34, "OpenSpec" — https://www.thoughtworks.com/en-us/radar/tools/openspec |
+| AWS AI-DLC: five phases, 33 stages, approval after each stage | AWS Labs, "AI-DLC Workflows: Introduction" — https://awslabs.github.io/aidlc-workflows/guide/00-introduction/ |
+| The only published comparison of these frameworks; author wrote one of the six compared | de Macedo, "From Prompt to Process", arXiv 2606.04967 — https://arxiv.org/abs/2606.04967 |
+| Nineteen stable BMAD 6.x versions, 17 February – 4 September 2026 | npm registry (`npm view bmad-method time`) and the GitHub releases API |
+| EU AI Act Article 14 — provider duty to design for human oversight, including awareness of automation bias | EC AI Act Service Desk — https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-14 |
+| EU AI Act Article 26 — deployer duties, including log retention with its qualifiers | EC AI Act Service Desk — https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-26 |
+| EN 18286 approved 12 July 2026; not yet cited in the Official Journal | CEN-CENELEC and JTC 21 trackers — https://jtc21.eu/category/harmonized-ai-standards/ |
+| ISO/IEC 42001 scope — an organisation-wide AI management system | IEC Webstore — https://webstore.iec.ch/en/publication/90574 |
+| People follow confident AI advice even when it is wrong | EC Joint Research Centre study (N=1,411) |
+| Agent instruction files are context, not enforced configuration; hooks are needed for hard limits | Anthropic, Claude Code documentation — https://code.claude.com/docs/en/memory |
+| Substantial proportions of published agent skills carry security flaws (3,984 skills audited) | Cloud Security Alliance, "Agent Context Poisoning: SKILL.md and the New AI Supply Chain Attack Surface" |
+| Tool adoption spreads primarily through peer networks | Murphy-Hill, Butler, Savelieva, arXiv 2607.01418 — https://arxiv.org/abs/2607.01418 |
+
+**On the absence of outcome evidence.** The statement that no independent evidence shows this or any
+competing framework improves delivery outcomes is a negative claim, and is meant in this precise sense: we
+searched Google Scholar, arXiv and the named vendor and registry sites on 14–15 September 2026 and
+re-checked on 17 September, and found nothing matching. It is not a claim that no such work exists.
+
+*Product claims are not listed here. Every one was established by running `convoke-agents@4.0.3`; the
+maturity ledger records the commands and their output, row by row, so that any of them can be reproduced.*
