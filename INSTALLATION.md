@@ -123,7 +123,7 @@ The `convoke-export` **command** runs from the npm package and needs no installa
 
 ## Configuration
 
-Each team installer creates a `config.yaml` in its module directory. The key fields you'll want to customize are already in the file: edit their values in place rather than adding new lines. A second `user_name:` line makes the file invalid YAML. For the Vortex and Gyre configs, an **install** then stops before copying anything rather than overwrite it, and an update stops too when a refresh is due. Two gaps: a damaged `_vortex/config.yaml` under `convoke-update` gets a migration plan instead of the refusal (`T180`), and the other four module configs are not checked at all (`T181`). See [UPDATE-GUIDE](UPDATE-GUIDE.md#refusing-to-overwrite--configyaml).
+Each team installer creates a `config.yaml` in its module directory. The key fields you'll want to customize are already in the file: edit their values in place rather than adding new lines. A second `user_name:` line makes the file invalid YAML. For the Vortex and Gyre configs, an **install** stops rather than overwrite it — before copying any module, though after step `[2/5]` has archived the deprecated `wireframe` workflow and deleted a pre-Vortex `_designos` directory if you have one; the refusal is step `[4/5]`. `convoke-update` stops too, when the damaged file is the **Gyre** config and a refresh is due. Two gaps: a damaged `_vortex/config.yaml` under `convoke-update` gets a migration plan instead of the refusal (`T180`), and the other four module configs are not checked at all (`T181`). See [UPDATE-GUIDE](UPDATE-GUIDE.md#refusing-to-overwrite--configyaml).
 
 ```yaml
 # _bmad/bme/_vortex/config.yaml (or _gyre/config.yaml)

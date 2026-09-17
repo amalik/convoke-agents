@@ -121,6 +121,41 @@ Claude Opus 5 (1M context), via `bmad-dev-story`.
 
 **Checks:** full suite `npm test` 0 failures; `npm run lint` clean; `docs-audit` clean; `backlog-integrity` PASS (931 rows). `assert-shipped-links.js` exits 1 — it does so on a pristine HEAD copy too and is wired into neither CI nor npm scripts, so it is pre-existing and not this story's.
 
+### Round 1 (scoped layer on the shipped files) — 2 HIGH, 4 MEDIUM, 6 LOW, all remediated
+
+Each defect below was reproduced before it was fixed. Both HIGHs were in sentences this story authored.
+
+| # | Defect | Fix | Re-derive with |
+|---|---|---|---|
+| H1 | `UPDATE-GUIDE.md` said "The last row is a known defect, tracked as `T180`" — a fifth row appended at story close moved `T180`'s case to row 4, so the sentence attached the "decline the plan" advice to the `T181` case, which offers no plan | Names the case (`convoke-update` + Vortex) instead of a row position, and says what the last row is | `awk '/^\| What you run/,/^$/' UPDATE-GUIDE.md` |
+| H2 | `INSTALLATION.md` said an install "stops **before copying anything**" — false for the CLI. `install-vortex-agents.js` step `[2/5]` runs `archiveDeprecatedWorkflows` (`fs.copySync`) and `cleanupLegacyFiles` (`fs.removeSync` of `_bmad/bme/_designos` and `_bmad/_designos`) before the config check at `[4/5]`. A run that refused restored `workflows/_deprecated/wireframe` and **deleted** `_bmad/bme/_designos` | Both documents and the changelog now name what step `[2/5]` has already done, including the delete | install into a scratch dir, `rm -rf` the wireframe dir, create `_bmad/bme/_designos`, append `user_name: dup` to the Vortex config, re-run the installer: exit 1, wireframe back, `_designos` gone |
+| M1 | Step 1b said "no CI job reads the file" — `docs-audit.js` reads `CHANGELOG.md` (`scripts/docs-audit.js:119`, `:750`) | The true claim: no CI job checks the file has an entry for the version being released | `grep -n CHANGELOG scripts/docs-audit.js` |
+| M2 | Step 1b rejected only the literal `UNRELEASED`; `## [4.0.3]` and `## [4.0.3] - TBD` both passed | Reads the entry with `changelog-reader.js` and requires a leading ISO date | the seven-case table below |
+| M3 | UPDATE-GUIDE row 5 said "either command … replaced with defaults" — `convoke-update` with nothing out of step prints `✓ Already up to date!` and exits before any config is written (`convoke-update.js:289-290`) | Row 5 names the commands that reach the file, and says what happens when update does not | `convoke-update` in a damaged-but-current install |
+| M4 | "no module has been copied, so your installation is not half-updated" — the second clause is false for `convoke-install` (see H2) | Replaced; "no module directory has been copied" is kept because it is true | as H2 |
+| L1 | `INSTALLATION.md` "an update stops too when a refresh is due" — false for Vortex (`T180`) | Scoped to the Gyre config | — |
+| L2 | The changelog cited "UPDATE-GUIDE, section …" without saying where the reader would find it | Cites `UPDATE-GUIDE.md` and notes it ships inside the package (`package.json` `files[]`) | `node -p "require('./package.json').files"` |
+| L3 | This story enlarged the "Cannot load config file" section in EMMA, MILA and WADE guides — those three agents cannot emit that string; they load config through `bmad-init`, which walks the operator through setup instead | Section deleted from those three guides; kept and enlarged in the four whose agents do emit it | `grep -rl "Cannot load config file" _bmad/bme/*/agents` → 9 activation blocks, none of them Emma, Mila or Wade |
+| L4 | Step 1b hard-failed pre-release versions | The reader accepts them; this changelog's five `-alpha` entries pass | case table below |
+| L5 | Step 1b's hand-written heading pattern disagreed with `changelog-reader.js::HEADER_RE` on spacing and dash characters | Uses the reader itself, so the check accepts exactly what `convoke-update` will render | case table below |
+| L6 | Nine activation blocks said "the next run of the install command" without naming it | Names `convoke-install-vortex` / `convoke-install-gyre` / `convoke-install`, each observed rewriting a deleted config | delete a module `config.yaml`, re-run that installer |
+
+**Step 1b, seven cases** (scratch dir, `package.json` version varied, repo `scripts/` symlinked):
+
+| Changelog heading | Version | Exit |
+|---|---|---|
+| `## [4.0.3] - UNRELEASED` | 4.0.3 | 1 — undated |
+| `## [4.0.3]` | 4.0.3 | 1 — undated (`null`) |
+| `## [4.0.3] - TBD` | 4.0.3 | 1 — undated |
+| entry absent | 4.0.3 | 1 — missing |
+| `##  [4.0.3]   -   2026-09-17` | 4.0.3 | 0 |
+| `## [4.0.3] - 2026-09-17 (Unpublished)` | 4.0.3 | 0 |
+| `## [1.0.3-alpha] - 2026-02-15 (Unpublished)` | 1.0.3-alpha | 0 |
+
+**Refuted, so not changed:** `config-merger.js:464`, `tests/integration/fresh-install.test.js:436` and the `BUG-22` backlog row all say `refreshInstallation` refuses "before copying anything". Scoped to `refreshInstallation` that is true: called directly against a project with a damaged Vortex config, a deleted `hypothesis-engineer/SKILL.md` and a deleted `_bmad/bme/_gyre/agents/`, it threw and restored neither. The false claim was `INSTALLATION.md`'s, which attributed the property to the install command.
+
+**Checks after remediation:** `docs-audit` zero findings (`Registry: 12 agents, 29 workflows`); `npx eslint scripts tests` exit 0. No production code changed.
+
 ### File List
 
 - `INSTALLATION.md`, `UPDATE-GUIDE.md` — refusal claims scoped per path and per config; the four-case table
@@ -137,5 +172,6 @@ Claude Opus 5 (1M context), via `bmad-dev-story`.
 
 | Date | Note |
 |---|---|
+| 2026-09-17 | **Round 1 remediated as one batch.** 2 HIGH, 4 MEDIUM, 6 LOW — every one a sentence this story authored, both HIGHs reproduced first. The install refusal is not write-free: step `[2/5]` deletes `_bmad/bme/_designos` before the check at `[4/5]`, and both shipped documents said otherwise. Step 1b now reads the entry with the shipped parser and is proven to fail on four heading shapes and pass on three. One claim was refuted rather than fixed: `refreshInstallation` really does refuse before copying. |
 | 2026-09-17 | **Implemented; to `review`.** Three paths established by execution, both shipped documents scoped per path, nine activation blocks and seven guides repaired, a 4.0.3 changelog entry and a checklist step that fails without a dated one. The story-close consumer audit found 3 HIGH — all in claims this story authored — and all were reproduced and fixed: the refusal covers only two of six module configs (`T181` filed), a version-pinned `4.0.2` literal inside a 4.0.3 document, and an undrived "7 of 11" that is 8 of 12. |
 | 2026-09-17 | Story authored from a second, independent story-close consumer audit of `fic-1-1`. The production fix is sound; two published sentences are false on the `convoke-update` + damaged-Vortex path, nine shipped activation blocks and seven guides advise a command that now refuses, and a 4.0.3 would ship without a changelog entry. Mechanism verified in source: `getCurrentVersion` swallows the parse error and `guessVersionFromFileStructure` returns `1.1.0` because `workflows/_deprecated/` exists on every real install. |

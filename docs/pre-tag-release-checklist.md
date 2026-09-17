@@ -28,19 +28,35 @@ disagrees with it.
 ## 1b. `CHANGELOG.md` has an entry for that version
 
 ```sh
-V=$(node -p "require('./package.json').version"); L=$(grep -m1 "^## \[$V\]" CHANGELOG.md) \
-  && [ -n "$L" ] && ! printf '%s' "$L" | grep -qi "unreleased" \
-  && echo "changelog entry dated for $V: $L" \
-  || { echo "MISSING OR UNDATED CHANGELOG ENTRY for $V"; false; }
+node -e '
+const { readChangelogEntries } = require("./scripts/update/lib/changelog-reader");
+const v = require("./package.json").version;
+const e = readChangelogEntries(null, v, require("path").resolve("CHANGELOG.md")).find((x) => x.version === v);
+if (!e) { console.error("MISSING CHANGELOG ENTRY for " + v); process.exit(1); }
+if (!/^\d{4}-\d{2}-\d{2}/.test(e.date || "")) { console.error("UNDATED CHANGELOG ENTRY for " + v + ": heading reads " + JSON.stringify(e.date)); process.exit(1); }
+console.log("changelog entry for " + v + " dated " + e.date);
+'
 ```
 
-Must print the "dated" line and exit 0. It fails both when the entry is absent **and** while its heading
-still says `UNRELEASED` — `changelog-reader.js` tests the version, not the date, so an undated entry ships
-happily and `convoke-update` then shows operators `4.0.3 — UNRELEASED` under "What's New". `convoke-update` shows operators the entries between their
-version and yours (`changelog-reader.js::readChangelogEntries` → `convoke-update.js::printChangelog`), and
-`printChangelog` returns early when the list is empty — so a release with no entry updates people silently.
-Nothing else catches this: before `fic-2-1` added this step, the word "changelog" did not appear in this
-checklist at all, and no CI job reads the file.
+Must print the "dated" line and exit 0. It fails when the entry is absent, and when the heading carries
+no date or a placeholder — `## [4.0.3]`, `## [4.0.3] - UNRELEASED` and `## [4.0.3] - TBD` all fail. It
+reads the entry through `changelog-reader.js`, the parser `convoke-update` itself uses, so what this step
+accepts is what operators will be shown; a check that re-implemented the heading pattern would disagree
+with it on spacing and dashes.
+
+Both failure modes reach operators. `changelog-reader.js` tests the version, not the date, so an undated
+entry ships happily and `convoke-update` renders `4.0.3 — UNRELEASED` under "What's New". A missing entry
+is quieter still: `convoke-update` shows the entries between the operator's version and yours
+(`changelog-reader.js::readChangelogEntries` → `convoke-update.js::printChangelog`), and `printChangelog`
+returns early when that list is empty — so a release with no entry updates people silently.
+
+Nothing else catches either. `docs-audit.js` does read `CHANGELOG.md`, but for link and staleness checks
+only — no CI job checks that the file has an entry for the version being released — and before `fic-2-1`
+added this step, the word "changelog" did not appear in this checklist at all.
+
+A pre-release version needs its own dated entry; this changelog carries five (`1.0.0-alpha` …
+`1.0.4-alpha`). A trailing note passes, since only the start of the date is tested: `- 2026-02-15
+(Unpublished)` is accepted.
 
 So: replace the `UNRELEASED` placeholder with the release date, then re-run the check above.
 

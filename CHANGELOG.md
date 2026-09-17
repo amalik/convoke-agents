@@ -27,6 +27,9 @@ Convoke 4.0.3 is a patch release about the config file your agents read on a fre
   most often a second `user_name:` line added by hand — was silently replaced with defaults, losing your
   settings. An install now stops instead, naming the file and the parser's own error, and leaves the file
   byte-identical.
+  - The refusal is step `[4/5]` of the install. Step `[2/5]` has already run by then: it archives the
+    deprecated `wireframe` workflow and deletes a pre-Vortex `_designos` directory if you still have one.
+    Your config is left untouched; those two are not.
   - `convoke-update` also stops, when the damaged file is the Gyre config and a refresh is due.
   - **Known gap:** with a damaged *Vortex* config, `convoke-update` cannot reach that refusal. Version
     detection reads the config first, cannot parse it, and falls back to guessing `1.1.0` from the directory
@@ -34,7 +37,8 @@ Convoke 4.0.3 is a patch release about the config file your agents read on a fre
     parse error and rolls back from its backup; your config is left byte-identical. Tracked as `T180`.
   - **Also not covered:** the `_enhance`, `_artifacts`, `_portability` and `_team-factory` configs are not
     checked at all, and a damaged one there is still silently replaced (`T181`).
-    UPDATE-GUIDE, section "refusing to overwrite ... config.yaml", has the full table.
+    `UPDATE-GUIDE.md`, which ships inside the package, has the full table — one row per command and
+    damaged config.
 
 ## [4.0.2] - 2026-09-14
 

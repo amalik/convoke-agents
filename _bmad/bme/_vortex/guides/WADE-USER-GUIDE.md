@@ -198,16 +198,6 @@ Select **[CH] Chat** to discuss:
 
 ## Troubleshooting
 
-### Error: "Configuration Error: Cannot load config file"
-
-**How to fix:**
-1. Check if `_bmad/bme/_vortex/config.yaml` exists.
-2. **If it is missing:** `npx -p convoke-agents convoke-install-vortex` writes a fresh one.
-3. **If it exists but the error mentions YAML or parsing:** do not reinstall — since 4.0.3 the installer
-   refuses to overwrite a config it cannot read, and stops with the same complaint. Open the file, fix the
-   line the error names (a second `user_name:` line below the seeded `user_name: '{user}'` is the usual
-   cause), or delete the file and re-run the command above.
-
 ### Error: "Workflow Error: Cannot load lean experiment workflow"
 
 **How to fix:**
