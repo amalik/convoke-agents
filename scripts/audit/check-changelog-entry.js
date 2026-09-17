@@ -42,7 +42,14 @@ const REPO_ROOT = path.join(__dirname, '..', '..');
 const FENCE_RE = /^(\s{0,3})(`{3,}|~{3,})(.*)$/;
 const HEADING_RE = /^\s{0,3}##\s/;
 const COMMENT_OPEN_RE = /<!--/;
-const COMMENT_CLOSE_RE = /--!?>/;
+// `-->` only. `--!>` is the HTML tokenizer's comment-end-bang state; CommonMark 0.31.2
+// ends a comment on `-->` alone. Widening this to `--!?>` closes a comment early and
+// un-hides the heading inside it, so the scan agrees with changelog-reader.js about an
+// entry that renders as a comment and the gate returns ok. scripts/lib/sanitize.js makes
+// the opposite choice because stripping more is the safe direction for a stripper.
+// Two-sided pin: tests/audit/check-changelog-entry.test.js
+// 'a comment closes on --> and not on the HTML-only --!>'.
+const COMMENT_CLOSE_RE = /-->/;
 // A heading that means to be a release entry. `## Version History` and other prose
 // headings are legitimate and must not be flagged — the real CHANGELOG.md has them.
 const VERSIONISH_RE = /^\s{0,3}##\s+\[?v?\d+\.\d+\.\d+/;

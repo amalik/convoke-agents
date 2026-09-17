@@ -7,7 +7,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { checkChangelogEntry } = require('../../scripts/audit/check-changelog-entry');
+const { checkChangelogEntry, visibleHeadings } = require('../../scripts/audit/check-changelog-entry');
 
 const SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'audit', 'check-changelog-entry.js');
 const VERSION = '9.9.9';
@@ -286,6 +286,36 @@ test('rejects an entry that exists only inside an HTML comment', () => {
   const result = check(commented);
   assert.equal(result.ok, false);
   assert.match(result.message, /DISPUTED CHANGELOG ENTRY/);
+});
+
+// `--!>` is the HTML tokenizer's comment-end-bang state and is not a CommonMark
+// terminator; `-->` is. The fixture puts `--!>`, a blank line and an ASCII arrow inside
+// the comment ahead of the hidden heading on purpose: a COMMENT_CLOSE_RE that stops at
+// any of those, or one that never matches at all, changes this list and turns the test
+// red. Asserting visibleHeadings rather than checkChangelogEntry's verdict is deliberate
+// — hiding every heading also produces DISPUTED, so the composite cannot tell a working
+// terminator from a broken one.
+test('a comment closes on --> and not on the HTML-only --!>', () => {
+  const raw = `# Changelog
+
+<!--
+draft note --!>
+
+migrate 4.0.2 -> 4.0.3
+
+## [9.9.9] - 2026-09-17
+
+- drafted, not released
+-->
+
+## [9.9.8] - 2026-09-14
+
+- older
+`;
+  assert.deepEqual(
+    visibleHeadings(raw).map((h) => h.line),
+    ['## [9.9.8] - 2026-09-14']
+  );
 });
 
 test('rejects a body that is only an HTML comment', () => {
