@@ -197,7 +197,7 @@ function checkChangelogEntry(options = {}) {
         + '  Replace the placeholder with the release date, as YYYY-MM-DD.',
     };
   }
-  if (entry.body.replace(/<!--[\s\S]*?-->/g, '').trim() === '') {
+  if (stripHtmlComments(entry.body).trim() === '') {
     return {
       ok: false,
       message: `EMPTY CHANGELOG ENTRY for ${version}: the heading is dated but there is nothing under it.`,
@@ -205,6 +205,23 @@ function checkChangelogEntry(options = {}) {
   }
 
   return { ok: true, message: `changelog entry for ${version} dated ${entry.date}` };
+}
+
+/**
+ * Repeatedly remove HTML comments until no further change occurs.
+ * A single pass can be bypassed by crafted overlapping multi-character patterns.
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+function stripHtmlComments(input) {
+  let current = input;
+  let next = current.replace(/<!--[\s\S]*?-->/g, '');
+  while (next !== current) {
+    current = next;
+    next = current.replace(/<!--[\s\S]*?-->/g, '');
+  }
+  return next;
 }
 
 const USAGE = 'usage: check-changelog-entry.js [--changelog PATH] [--version VERSION]';
