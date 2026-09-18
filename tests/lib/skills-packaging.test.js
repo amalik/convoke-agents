@@ -8,12 +8,11 @@
  * was tracked, exempted, and absent from every published tarball — verified against
  * `npm pack convoke-agents@4.0.0` through `@4.0.3` — while `bmad-audit-skill-dirs` shipped.
  *
- * The expected set is written out as literals, following `covenant-packaging.test.js`. An earlier
- * version of this file derived it from `git ls-files` and was worse in three measured ways:
- * narrowing the one shared constant shrank both sides together and disarmed the file with every
- * gate green; a tracked `.npmignore` or symlink — the exclusion mechanism this repo documents and
- * uses twice — could never satisfy equality; and the git call needed a catch that turned real npm
- * failures into green skips.
+ * The literal `EXPECTED` list follows `covenant-packaging.test.js`, and so does the derived half
+ * that makes literals safe there: a list nobody is forced to update rots. Git is the authority on
+ * which skills exist, because the defect is a file that is tracked and unpublished. Comparison is
+ * by DIRECTORY — a tracked `.npmignore` or symlink adds no directory, so this cannot raise the
+ * false alarm a file-level comparison does.
  *
  * Asked of npm rather than read from `files[]`, because npm's own always-exclude list and any
  * skill-local `.npmignore` subtract from what `files[]` declares and neither is visible in that
@@ -36,6 +35,22 @@ const { PACKAGE_ROOT } = require('../helpers');
 
 const SKILLS_ROOT = '.claude/skills';
 const pkg = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8'));
+
+/**
+ * The skill directories named by a list of paths, however they are spelled.
+ *
+ * `files[]` may carry a directory (`.claude/skills/x/`) or named files (`.claude/skills/x/SKILL.md`)
+ * — `covenant-packaging.test.js` uses the second form deliberately — and both ship the same thing,
+ * so both must normalise the same way. A parent entry such as `.claude/skills/` normalises to two
+ * segments and matches no skill, which is the intent: it would publish every untracked directory.
+ */
+function skillDirs(paths) {
+  return [...new Set(
+    paths
+      .filter((p) => p.startsWith(`${SKILLS_ROOT}/`))
+      .map((p) => p.replace(/\/+$/, '').split('/').slice(0, 3).join('/')),
+  )].sort();
+}
 
 /** Every file both tracked skills must publish. Literal on purpose — see the header. */
 const EXPECTED = [
@@ -74,14 +89,17 @@ describe('the tracked operator skills ship', () => {
     assert.deepEqual(packedSkillFiles(), EXPECTED);
   });
 
-  it('files[] declares no skill directory that EXPECTED does not cover', () => {
-    // The coupling. Shipping a third skill means adding it to files[]; this makes that edit fail
-    // until EXPECTED names its files too, so the assertion above cannot quietly go out of date.
-    const declared = pkg.files
-      .filter((f) => f.startsWith(`${SKILLS_ROOT}/`))
-      .map((f) => f.replace(/\/+$/, ''))
-      .sort();
-    const covered = [...new Set(EXPECTED.map((p) => p.split('/').slice(0, 3).join('/')))].sort();
-    assert.deepEqual(declared, covered);
+  it('git, files[] and EXPECTED name the same skill directories', () => {
+    // The link that was missing. Without it, exempting a skill in .gitignore and forgetting
+    // files[] ships nothing and passes — which is exactly how bmad-register-skill went unpacked
+    // for five months. EXPECTED needs no separate coupling: a skill that is tracked AND declared
+    // but unnamed here arrives in the tarball, which the equality above already catches.
+    const tracked = skillDirs(
+      execFileSync('git', ['ls-files', '-z', '--', `${SKILLS_ROOT}/`], {
+        cwd: PACKAGE_ROOT, encoding: 'utf8',
+      }).split('\0').filter(Boolean),
+    );
+    assert.deepEqual(skillDirs(pkg.files), tracked, 'files[] and git disagree about which skills exist');
+    assert.deepEqual(skillDirs(EXPECTED), tracked, 'EXPECTED and git disagree about which skills exist');
   });
 });
