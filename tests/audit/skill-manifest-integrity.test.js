@@ -593,7 +593,10 @@ describe('classification vocabulary — pinned across all three copies', () => {
 describe('product-tree scope and roster escape hatches', () => {
   it('counts tracked Convoke skills under .claude/skills/', () => {
     // Round 2: an earlier `_bmad/`-only filter excluded `bmad-audit-skill-dirs` and
-    // `bmad-register-skill`, which are tracked and shipped.
+    // `bmad-register-skill`, which are tracked and shipped. This test proves the TRACKED half
+    // only, against a fixture; the shipped half is `tests/lib/skills-packaging.test.js`, which
+    // asks npm. Saying "shipped" here with nothing behind it hid a real gap —
+    // `bmad-register-skill` was absent from `files[]` and from every tarball.
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-manifest-audit-'));
     created.push(dir);
     for (const rel of [

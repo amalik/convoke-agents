@@ -17,6 +17,7 @@
     "_bmad/_config/skill-manifest.csv",
     ".claude-plugin/",
     ".claude/skills/bmad-audit-skill-dirs/",
+    ".claude/skills/bmad-register-skill/",
     "docs/migration/",
     "INSTALLATION.md",
     "UPDATE-GUIDE.md",

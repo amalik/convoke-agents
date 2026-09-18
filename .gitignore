@@ -49,8 +49,11 @@ coverage/
 .claude/
 
 # Exception: operator-tooling slash-command skills shipped via npm-pack must be tracked
-# (per package.json files[] entry; CI Test 17 in tests/unit/audit-skill-dirs.test.js
-# verifies these land in the shipped tarball). Un-gitignore via step-wise pattern as
+# (per package.json files[] entry; tests/lib/skills-packaging.test.js asserts the tracked set
+# and the packed set are equal, so a skill exempted here and left out of files[] fails CI —
+# Test 17 in tests/unit/audit-skill-dirs.test.js names only bmad-audit-skill-dirs, and this
+# comment claiming it covered "these" is why bmad-register-skill went unpacked for months).
+# Un-gitignore via step-wise pattern as
 # Option A unblock 2026-04-25 — git cannot un-ignore a child of a fully-ignored parent
 # directory, so we must (a) un-ignore .claude/ (b) re-ignore .claude/skills/* contents
 # (c) un-ignore the two specific skills. Pending Option B architectural cleanup (see
