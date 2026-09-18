@@ -32,6 +32,7 @@ const fs = require('fs');
 const path = require('path');
 const { readChangelogEntries } = require('../update/lib/changelog-reader');
 const { compareVersions } = require('../update/lib/utils');
+const { stripHtmlComments } = require('../lib/sanitize');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 
@@ -204,10 +205,33 @@ function checkChangelogEntry(options = {}) {
         + '  Replace the placeholder with the release date, as YYYY-MM-DD.',
     };
   }
-  if (entry.body.replace(/<!--[\s\S]*?-->/g, '').trim() === '') {
+  // Remove every HTML comment, then ask whether anything is left. The inline
+  // `/<!--[\s\S]*?-->/g` this replaces recognised only `-->`, so a body written with any other
+  // terminator was read as text and the entry shipped — CodeQL alert 29. `stripHtmlComments` is
+  // the repository's audited implementation; sanitize.js states what it does and does not
+  // guarantee, and restating that here is how three wrong summaries got written.
+  //
+  // This asks whether the body is only comments. It does not establish that the body renders as
+  // anything — a body can render as nothing without containing a comment.
+  let visible;
+  try {
+    visible = stripHtmlComments(entry.body).trim();
+  } catch (err) {
+    // Only the pass-limit refusal becomes a verdict. Anything else is a defect in our own code
+    // and must not be reported against the operator's changelog. Pinned by
+    // 'rethrows a defect in our own code instead of blaming the changelog'.
+    if (!(err instanceof RangeError)) throw err;
     return {
       ok: false,
-      message: `EMPTY CHANGELOG ENTRY for ${version}: the heading is dated but there is nothing under it.`,
+      message: `UNREADABLE CHANGELOG BODY for ${version}: ${err.message}\n`
+        + '  The comments in the body could not be removed, so the gate cannot judge what is left.',
+    };
+  }
+  if (visible === '') {
+    return {
+      ok: false,
+      message: `EMPTY CHANGELOG ENTRY for ${version}: the body is empty once HTML comments are removed.\n`
+        + '  A dated heading is not an entry.',
     };
   }
 

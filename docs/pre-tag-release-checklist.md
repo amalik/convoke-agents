@@ -53,8 +53,8 @@ Each shape in the table above is pinned by a test in `tests/audit/check-changelo
 
 > **Retracted 2026-09-17.** This paragraph used to add that every guard in the script — 23 of them — had
 > been reverted one at a time and that *no guard survives unpinned*. That is not true at this commit.
-> Reverting the same-line comment return (`check-changelog-entry.js:94`), `VERSIONISH_RE`'s 1-3-space
-> indent tolerance (`:55`) or `parseArgs`' rejection of a flag-shaped value (`:232`) each leaves the suite
+> Reverting `visibleHeadings`' same-line comment return, `VERSIONISH_RE`'s 1-3-space indent
+> tolerance or `parseArgs`' rejection of a flag-shaped value each leaves the suite
 > fully green. Re-derive before trusting any such claim: copy the script, revert one guard, point a copy
 > of the test file at it, and run `node --test`. The suite pins the shapes in the table, not every guard
 > in the file.

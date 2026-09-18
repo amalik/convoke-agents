@@ -8,6 +8,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const { checkChangelogEntry, visibleHeadings } = require('../../scripts/audit/check-changelog-entry');
+const { MAX_PASSES } = require('../../scripts/lib/sanitize');
 
 const SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'audit', 'check-changelog-entry.js');
 const VERSION = '9.9.9';
@@ -318,19 +319,123 @@ migrate 4.0.2 -> 4.0.3
   );
 });
 
-test('rejects a body that is only an HTML comment', () => {
+// CodeQL alert 29 (js/incomplete-multi-character-sanitization) on the inline
+// `/<!--[\s\S]*?-->/g` this replaced. The security framing does not apply — the stripped string is
+// compared to '' and discarded, so there is no sink — but the under-removal was real. Each body
+// below is only comments and none of them is content; swap sanitize.js back for that regex and the
+// rows it cannot see go red. Re-derive rather than trusting a count here: that is what the last
+// three rounds of miscounted claims cost.
+const NL = '\n';
+const COMMENT_ONLY_BODIES = {
+  'a complete comment': '<!-- nothing written yet -->',
+  'a comment spanning several lines': '<!--' + NL + '## draft' + NL + '- not released yet' + NL + '-->',
+  'the abrupt-closing form': '<!-->',
+  'the other abrupt-closing form': '<!--->',
+  'the comment-end-bang terminator': '<!-- nothing written yet --!>',
+  'a comment that reassembles an opener': '<!<!-- x -->-- nothing -->',
+};
+
+for (const [name, body] of Object.entries(COMMENT_ONLY_BODIES)) {
+  test(`rejects a body that is only ${name}`, () => {
+    const result = check(`# Changelog
+
+## [9.9.9] - 2026-09-17
+
+${body}
+
+## [9.9.8] - 2026-09-14
+
+- older
+`);
+    assert.equal(result.ok, false, `expected a refusal for ${JSON.stringify(body)}`);
+    assert.match(result.message, /EMPTY CHANGELOG ENTRY/);
+  });
+}
+
+// Release-blocking false refusals, both caused by an earlier version of this check that deleted
+// everything after any surviving `<!--`. Each renders IN FULL on GitHub — verified — so refusing
+// either stops a correct release, which for a gate nobody can override costs more than a miss.
+const MUST_STILL_PASS = {
+  'an indented code block containing a comment opener': '    <!-- how to open a comment',
+  'sanitize.js residue that never existed in the file': '<!<!-- x -->-- >' + NL + NL + '- a real entry',
+};
+
+for (const [name, body] of Object.entries(MUST_STILL_PASS)) {
+  test(`accepts a body with ${name}`, () => {
+    const result = check(`# Changelog
+
+## [9.9.9] - 2026-09-17
+
+${body}
+
+## [9.9.8] - 2026-09-14
+
+- older
+`);
+    assert.equal(result.ok, true, result.message);
+  });
+}
+
+test('refuses rather than throws when the comments cannot be removed', () => {
+  // stripHtmlComments raises past MAX_PASSES instead of returning a partly-cleaned string, and the
+  // gate is documented to return a verdict. Blessing the body on a throw would turn an adversarial
+  // input into a way past this check, so the throw becomes a refusal. The depth is derived from the
+  // module's own budget — a literal would stop exercising the branch the day that budget changes.
+  const nested = '<!-'.repeat(MAX_PASSES + 5) + '<!--a-->' + '-->'.repeat(MAX_PASSES + 5);
   const result = check(`# Changelog
 
 ## [9.9.9] - 2026-09-17
 
-<!-- nothing written yet -->
+${nested}
 
 ## [9.9.8] - 2026-09-14
 
 - older
 `);
   assert.equal(result.ok, false);
-  assert.match(result.message, /EMPTY CHANGELOG ENTRY/);
+  assert.match(result.message, /UNREADABLE CHANGELOG BODY/);
+});
+
+test('rethrows a defect in our own code instead of blaming the changelog', () => {
+  // The narrowed catch (`if (!(err instanceof RangeError)) throw err;`) had no executioner:
+  // deleting it, widening it to `instanceof Error`, or rewriting it as a message test all left the
+  // suite green, because the only test entering the catch throws the RangeError the guard admits.
+  // Stub the dependency so it throws something else, and require the gate fresh so it binds to it.
+  const sanitizePath = require.resolve('../../scripts/lib/sanitize');
+  const gatePath = require.resolve('../../scripts/audit/check-changelog-entry');
+  const realSanitize = require.cache[sanitizePath];
+  const realGate = require.cache[gatePath];
+  require.cache[sanitizePath] = {
+    id: sanitizePath,
+    filename: sanitizePath,
+    loaded: true,
+    exports: {
+      MAX_PASSES,
+      stripHtmlComments() { throw new TypeError('stripHtmlComments is not a function'); },
+    },
+  };
+  delete require.cache[gatePath];
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'convoke-changelog-'));
+  try {
+    const changelogPath = path.join(dir, 'CHANGELOG.md');
+    fs.writeFileSync(changelogPath, `# Changelog
+
+## [9.9.9] - 2026-09-17
+
+- a real entry
+`);
+    const patched = require('../../scripts/audit/check-changelog-entry');
+    assert.throws(
+      () => patched.checkChangelogEntry({ changelogPath, version: VERSION }),
+      TypeError,
+      'our own defect must reach the caller, not become a verdict about the changelog',
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    require.cache[sanitizePath] = realSanitize;
+    delete require.cache[gatePath];
+    require.cache[gatePath] = realGate;
+  }
 });
 
 test('rejects a version above every entry in the file', () => {
