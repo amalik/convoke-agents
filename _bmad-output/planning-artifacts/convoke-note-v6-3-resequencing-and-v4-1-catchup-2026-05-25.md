@@ -184,7 +184,7 @@ v6.8.0 (2026-05-25) released the same day as the Option F decision and was not i
 ## Provenance
 
 - **Backlog rows added 2026-05-25:** D13, D14, D15, D16 (Fast Lane, IN-160 → IN-163)
-- **Memory files updated 2026-05-25:** [project_marketplace_structural_adoption.md](../../../../.claude/projects/-Users-amalikamriou-BMAD-Enhanced/memory/project_marketplace_structural_adoption.md) + MEMORY.md pointer + project_v63_adoption.md pointer
+- **Memory files updated 2026-05-25:** `project_marketplace_structural_adoption.md` (agent auto-memory, outside the repository) + MEMORY.md pointer + project_v63_adoption.md pointer
 - **Spike data sources:** `gh release view` output for v6.4.0 → v6.7.1 + web-bundles-v1.0.0; `gh api repos/bmad-code-org/BMAD-METHOD/contents/bmad-modules.yaml`; `gh pr view 9 --repo bmad-code-org/bmad-plugins-marketplace`
 - **Predecessor analysis:** [spike-marketplace-packaging-delta.md](../implementation-artifacts/spike-marketplace-packaging-delta.md) (2026-04-27 — Pattern A decision)
 - **Related decision artifacts:** `convoke-arch-bmad-v63-source-format-adoption.md` (I97 architecture, 2026-04-28); 5 ADRs at `adr/i97/`

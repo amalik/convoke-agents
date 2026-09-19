@@ -17,7 +17,7 @@ Epic 7 addresses cross-cutting platform debt surfaced by the Epic 6 retrospectiv
 
 **Source documents:**
 - [`ag-epic-6-retro-2026-04-08.md`](../implementation-artifacts/ag-epic-6-retro-2026-04-08.md) — surfaced the cross-cutting debt and authorized this epic
-- [`initiatives-backlog.md`](convoke-note-initiatives-backlog.md) — RICE-scored items I29, I30, I31, I32, I34, I10 (after triage on 2026-04-08)
+- [`initiatives-backlog.md`](convoke-note-initiative-lifecycle-backlog.md) — RICE-scored items I29, I30, I31, I32, I34, I10 (after triage on 2026-04-08)
 
 **Why now:** Five of the items belong to a single code-path family — refresh-installation/validator/doctor contracts and YAML safety on config writes. Fixing them one-by-one across future feature epics would mean retrofitting each fix into three different modules. Doing them in one focused epic is cheaper and prevents the next platform-debt cluster from forming on top of unfixed foundations.
 

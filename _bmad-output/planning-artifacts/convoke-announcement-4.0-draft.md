@@ -77,7 +77,7 @@ Before this announcement ships:
 
 ## Traceability
 
-- Source PRD: [`convoke-prd-bmad-v6.3-adoption.md`](convoke-prd-bmad-v6.3-adoption.md)
+- Source PRD: [`convoke-prd-bmad-v6.3-adoption.md`](archive/convoke-prd-bmad-v6.3-adoption.md)
 - Validation report: [`convoke-report-prd-validation-bmad-v6.3-adoption.md`](convoke-report-prd-validation-bmad-v6.3-adoption.md)
 - PRD frontmatter source: `partyFindingsRound2.PR2-5`
 - Related FRs: FR41 (mostHonestOneLineSummary verbatim), FR42 (cliché grep test), FR43 (dual-framing vocabulary), FR44 (maintainer sign-off)

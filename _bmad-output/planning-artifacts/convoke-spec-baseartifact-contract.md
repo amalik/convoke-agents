@@ -1093,9 +1093,9 @@ designos_data:
 
 ## 12. Related Documents
 
-- [4-Framework Comparison Matrix](./4-framework-comparison-matrix.md) - Complete framework analysis
-- [Product Brief: Convoke](./product-brief-Convoke-2026-02-01.md) - Product vision and ADRs
-- [Integration Roadmap](./integration-roadmap.md) - Phased implementation plan (TBD)
+- [4-Framework Comparison Matrix](../_archive/exploratory/4-framework-comparison-matrix.md) - Complete framework analysis
+- [Product Brief: Convoke](../_archive/phase-2/product-brief-BMAD-Enhanced-2026-02-01.md) - Product vision and ADRs
+- [Integration Roadmap](../_archive/exploratory/integration-roadmap.md) - Phased implementation plan (TBD)
 
 ---
 

@@ -66,7 +66,7 @@ That's it. Everything else is internal maintenance.
 
 ## Traceability
 
-- Source PRD: [`convoke-prd-bmad-v6.3-adoption.md`](convoke-prd-bmad-v6.3-adoption.md)
+- Source PRD: [`convoke-prd-bmad-v6.3-adoption.md`](archive/convoke-prd-bmad-v6.3-adoption.md)
 - Validation report: [`convoke-report-prd-validation-bmad-v6.3-adoption.md`](convoke-report-prd-validation-bmad-v6.3-adoption.md)
 - PRD frontmatter source: `visionDraft.plainLanguage.whatExistingUsersGet`
 - Related FRs: FR5 (single-command upgrade), FR7 (idempotent), FR10 (≤1 page), FR11 (zero new concepts), FR16 (custom skill registration)

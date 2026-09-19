@@ -9,7 +9,15 @@ schema_version: 1
 
 # bmad-init Behavior Audit — Functional Spec for `config-loader.js`
 
-**Audited script:** [`_bmad/core/bmad-init/scripts/bmad_init.py`](../../_bmad/core/bmad-init/scripts/bmad_init.py) (591 LOC)
+**Audited script:** `_bmad/core/bmad-init/scripts/bmad_init.py` (591 LOC)
+
+> **The audited script no longer exists under that name, and the citations below are
+> deliberately not links.** The replacement this spec specifies shipped, and `bmad_init.py` and
+> its test file were then retired by renaming them to `.bak` — `git ls-files _bmad/core/bmad-init`
+> returns `scripts/bmad_init.py.bak` and `scripts/tests/test_bmad_init.py.bak`, and
+> `scripts/bmad_init.py` is absent. Every `bmad_init.py:NN-NN` below is therefore a code span
+> naming what was audited on 2026-04-21, not a link. Do not "repair" them by repointing at the
+> `.bak` files: the audit was of the live script, and a link to a `.bak` would claim otherwise.
 **Target replacement:** `scripts/update/lib/config-loader.js` (per [Architecture Decision 1](convoke-arch-bmad-v6.3-adoption.md#decision-1-config-loading-architecture-wr1--wr8))
 **Closes failure mode:** [FM1-2](convoke-arch-bmad-v6.3-adoption.md#known-failure-modes--mitigations) — "bmad-init undocumented behaviors"
 **Parent story:** [Story 1A.1](../implementation-artifacts/v63-1a-1-audit-bmad-init-behavior-before-replacement.md)
@@ -162,12 +170,12 @@ Total: **19 rows** — split into **18 canonical sweep targets** (matching the `
 
 ### §1 — Project-root detection (`find_project_root`)
 
-**Lines:** [bmad_init.py:46-71](../../_bmad/core/bmad-init/scripts/bmad_init.py#L46-L71)
+**Lines:** `bmad_init.py:46-71`
 **Inputs:** Optional `llm_provided` string path.
 **Outputs:** `Path` object or `None`.
 **Behaviors:**
 - **B1.1:** If `llm_provided` is given AND that path contains `_bmad/`, return it.
-- **B1.2:** If `llm_provided` is given but `_bmad/` doesn't exist yet AND the path is a directory, still return it (first-run bootstrap case — verified by [test_llm_provided_without_bmad_still_returns_dir](../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L57-L64)).
+- **B1.2:** If `llm_provided` is given but `_bmad/` doesn't exist yet AND the path is a directory, still return it (first-run bootstrap case — verified by `test_llm_provided_without_bmad_still_returns_dir` (`test_bmad_init.py:57-64`)).
 - **B1.3:** Otherwise walk up from `Path.cwd()` and `Path(__file__).resolve().parent` looking for `_bmad/`. Returns first match.
 - **B1.4:** Returns `None` if no match found.
 
@@ -181,7 +189,7 @@ Total: **19 rows** — split into **18 canonical sweep targets** (matching the `
 
 ### §2 — Module.yaml discovery (`find_core_module_yaml`, `find_target_module_yaml`)
 
-**Lines:** [bmad_init.py:112-140](../../_bmad/core/bmad-init/scripts/bmad_init.py#L112-L140)
+**Lines:** `bmad_init.py:112-140`
 **Behaviors:**
 - **B2.1:** `find_core_module_yaml()` returns hardcoded `{script_dir}/../resources/core-module.yaml`.
 - **B2.2:** `find_target_module_yaml(module_code, project_root, skill_path)` searches in order:
@@ -189,7 +197,7 @@ Total: **19 rows** — split into **18 canonical sweep targets** (matching the `
   2. `skill_path/module.yaml`
   3. `_bmad/{module_code}/module.yaml`
 - **B2.3:** Returns first existing path, else `None`.
-- **B2.4:** Skill-path takes priority over `_bmad/{module}/` ([confirmed in test_skill_path_takes_priority](../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L248-L260)).
+- **B2.4:** Skill-path takes priority over `_bmad/{module}/` (`confirmed in test_skill_path_takes_priority` (`test_bmad_init.py:248-260`)).
 
 **Disposition:** `move-to-convoke-install`.
 
@@ -199,7 +207,7 @@ Total: **19 rows** — split into **18 canonical sweep targets** (matching the `
 
 ### §3 — `load_module_yaml(path)` — module.yaml parsing
 
-**Lines:** [bmad_init.py:78-109](../../_bmad/core/bmad-init/scripts/bmad_init.py#L78-L109)
+**Lines:** `bmad_init.py:78-109`
 **Behaviors:**
 - **B3.1:** `yaml.safe_load` with exception-to-None handling (silent failure).
 - **B3.2:** Partitions keys into three buckets:
@@ -217,12 +225,12 @@ Total: **19 rows** — split into **18 canonical sweep targets** (matching the `
 
 ### §4 — Flat config-file loading (`load_config_file`, `load_module_config`)
 
-**Lines:** [bmad_init.py:147-160](../../_bmad/core/bmad-init/scripts/bmad_init.py#L147-L160)
+**Lines:** `bmad_init.py:147-160`
 **Behaviors:**
 - **B4.1:** `yaml.safe_load` with exception-to-None (silent failure).
 - **B4.2:** Type guard: must be a `dict`; else `None`.
 - **B4.3:** `load_module_config(module_code, project_root)` = thin wrapper: `load_config_file({project_root}/_bmad/{module_code}/config.yaml)`.
-- **B4.4:** **Module configs already contain core vars merged in** (verified by [test_load_module_includes_core_vars](../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L314-L320) and spot-check of [`_bmad/bme/config.yaml`](../../_bmad/bme/config.yaml) which contains `user_name`, `communication_language`, `document_output_language`, `output_folder`).
+- **B4.4:** **Module configs already contain core vars merged in** (verified by `test_load_module_includes_core_vars` (`test_bmad_init.py:314-320`) and spot-check of [`_bmad/bme/config.yaml`](../../_bmad/bme/config.yaml) which contains `user_name`, `communication_language`, `document_output_language`, `output_folder`).
 
 **Disposition:** `reproduce-in-loader` (B4.1 behavior is *modified* — see key deltas below; tagged `reproduce-in-loader` with an explicit "modified to throw" callout in the Disposition Table).
 
@@ -264,11 +272,11 @@ function loadModuleConfig(projectRoot, moduleConfigPath) {
 
 ### §5 — `{project-root}` placeholder resolution (`resolve_project_root_placeholder`)
 
-**Lines:** [bmad_init.py:163-169](../../_bmad/core/bmad-init/scripts/bmad_init.py#L163-L169)
+**Lines:** `bmad_init.py:163-169`
 **Behaviors:**
-- **B5.1:** If value is not a string (including `None`, `42`, dict, etc.), pass through unchanged ([confirmed in test_non_string](../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L109-L110)).
+- **B5.1:** If value is not a string (including `None`, `42`, dict, etc.), pass through unchanged (`confirmed in test_non_string` (`test_bmad_init.py:109-110`)).
 - **B5.2:** String replacement: `{project-root}` → actual path (simple `.replace()`, all occurrences).
-- **B5.3:** Called in `cmd_load` ([bmad_init.py:252-253](../../_bmad/core/bmad-init/scripts/bmad_init.py#L252-L253)) over **every config value** before returning to caller.
+- **B5.3:** Called in `cmd_load` (`bmad_init.py:252-253`) over **every config value** before returning to caller.
 
 **Disposition:** `reproduce-in-loader`.
 
@@ -294,12 +302,12 @@ function _resolveProjectRootPlaceholder(config, projectRoot) {
 
 ### §6 — Variable-spec parsing (`parse_var_specs`)
 
-**Lines:** [bmad_init.py:172-189](../../_bmad/core/bmad-init/scripts/bmad_init.py#L172-L189)
+**Lines:** `bmad_init.py:172-189`
 **Behaviors:**
 - **B6.1:** Splits `"var1:def1,var2:def2"` on commas.
 - **B6.2:** Per entry, splits on first `:` — `[name, default]`.
 - **B6.3:** Entries without `:` → `{name, default: None}`.
-- **B6.4:** Colons inside defaults (e.g., `path:{project-root}/some/path`) are preserved because the split limit is 1 ([confirmed in test_colon_in_default](../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L85-L87)).
+- **B6.4:** Colons inside defaults (e.g., `path:{project-root}/some/path`) are preserved because the split limit is 1 (`confirmed in test_colon_in_default` (`test_bmad_init.py:85-87`)).
 - **B6.5:** Empty string / `None` input → empty list.
 
 **Disposition:** `drop-with-rationale`.
@@ -314,16 +322,16 @@ Mechanical verification (§Mechanical Enumeration Evidence) confirms the `--vars
 
 ### §7 — Template expansion (`expand_template`, `apply_result_template`)
 
-**Lines:** [bmad_init.py:196-225](../../_bmad/core/bmad-init/scripts/bmad_init.py#L196-L225)
+**Lines:** `bmad_init.py:196-225`
 **Behaviors:**
 - **B7.1:** `expand_template(value, context)` — iterates `context` dict, replaces every `{key}` in `value` with `context[key]`.
 - **B7.2:** Skips `None` values in context.
-- **B7.3:** Pass-through for non-string inputs ([confirmed in test_non_string](../../_bmad/core/bmad-init/scripts/tests/test_bmad_init.py#L129-L130)).
+- **B7.3:** Pass-through for non-string inputs (`confirmed in test_non_string` (`test_bmad_init.py:129-130`)).
 - **B7.4:** `apply_result_template(var_def, raw_value, context)` — if `var_def` has a `result` template (e.g., `"{project-root}/{value}"`), expands it with `value = raw_value` added to context. Else passes raw through.
 
 **Disposition:** `move-to-convoke-install`.
 
-**Rationale:** `apply_result_template` is called only by `cmd_write` ([bmad_init.py:442, 489](../../_bmad/core/bmad-init/scripts/bmad_init.py#L442)) during config **authoring**, not loading. The `result` template field comes from `module.yaml` variable definitions ([core-module.yaml line 25](../../_bmad/core/bmad-init/resources/core-module.yaml#L25)) — e.g., `output_folder.result: "{project-root}/{value}"`. These transform raw operator answers (`"_bmad-output"`) into the stored config form (`"{project-root}/_bmad-output"`).
+**Rationale:** `apply_result_template` is called only by `cmd_write` (`bmad_init.py:442, 489`) during config **authoring**, not loading. The `result` template field comes from `module.yaml` variable definitions (`core-module.yaml line 25` (`core-module.yaml:25`)) — e.g., `output_folder.result: "{project-root}/{value}"`. These transform raw operator answers (`"_bmad-output"`) into the stored config form (`"{project-root}/_bmad-output"`).
 
 By the time the loader runs, these transformations are already baked into the stored `config.yaml`. The loader only needs to resolve `{project-root}` at read time (see §5); it does not evaluate `result` templates.
 
@@ -331,7 +339,7 @@ By the time the loader runs, these transformations are already baked into the st
 
 ### §8 — `cmd_load` — the fast-path loader
 
-**Lines:** [bmad_init.py:232-272](../../_bmad/core/bmad-init/scripts/bmad_init.py#L232-L272)
+**Lines:** `bmad_init.py:232-272`
 **Behaviors:**
 - **B8.1:** Calls `find_project_root` — exits 1 with JSON stderr error if not found.
 - **B8.2:** Default module code = `'core'` when `--module` omitted.
@@ -413,7 +421,7 @@ All six deltas are defended in the Anti-Drift Compliance Walk. Items 1–3 are d
 
 ### §9 — `cmd_check` — bootstrap state probe
 
-**Lines:** [bmad_init.py:279-338](../../_bmad/core/bmad-init/scripts/bmad_init.py#L279-L338)
+**Lines:** `bmad_init.py:279-338`
 **Behaviors:**
 - **B9.1:** Returns status enum: `no_project` | `ready` | `core_missing` | `module_missing`.
 - **B9.2:** Includes `core_module` (from `core-module.yaml`) when core is missing.
@@ -430,7 +438,7 @@ For the install path in 4.0: `convoke-install` can perform its own `fs.existsSyn
 
 ### §10 — `cmd_resolve_defaults` — compute module defaults
 
-**Lines:** [bmad_init.py:345-396](../../_bmad/core/bmad-init/scripts/bmad_init.py#L345-L396)
+**Lines:** `bmad_init.py:345-396`
 **Behaviors:**
 - **B10.1:** Parses `--core-answers` JSON (exit 1 on malformed).
 - **B10.2:** Builds context with `project-root`, `directory_name`, and every core answer.
@@ -445,7 +453,7 @@ For the install path in 4.0: `convoke-install` can perform its own `fs.existsSyn
 
 ### §11 — `cmd_write` — author config files
 
-**Lines:** [bmad_init.py:403-520](../../_bmad/core/bmad-init/scripts/bmad_init.py#L403-L520)
+**Lines:** `bmad_init.py:403-520`
 **Behaviors:**
 - **B11.1:** Parses `--answers` JSON (core + per-module answers).
 - **B11.2:** Builds initial context with `project-root` and `directory_name`.
@@ -467,7 +475,7 @@ For the install path in 4.0: `convoke-install` can perform its own `fs.existsSyn
 
 ### §12 — Config file write format (`_write_config_file`)
 
-**Lines:** [bmad_init.py:523-530](../../_bmad/core/bmad-init/scripts/bmad_init.py#L523-L530)
+**Lines:** `bmad_init.py:523-530`
 **Behaviors:**
 - **B12.1:** Header: `# {module_label} Module Configuration\n# Generated by bmad-init\n# Date: {UTC ISO}`.
 - **B12.2:** Body: `yaml.safe_dump(data, default_flow_style=False, allow_unicode=True, sort_keys=False)`.
@@ -482,7 +490,7 @@ For the install path in 4.0: `convoke-install` can perform its own `fs.existsSyn
 
 ### §13 — CLI entry point (`main`)
 
-**Lines:** [bmad_init.py:537-591](../../_bmad/core/bmad-init/scripts/bmad_init.py#L537-L591)
+**Lines:** `bmad_init.py:537-591`
 **Behaviors:** argparse with 4 subcommands (`load`, `check`, `resolve-defaults`, `write`).
 
 **Disposition:** `drop-with-rationale`.
@@ -496,12 +504,12 @@ For the install path in 4.0: `convoke-install` can perform its own `fs.existsSyn
 Per AC1 category 12, this section consolidates error-handling behavior scattered across earlier sections into a unified cross-function view.
 
 **Behaviors observed:**
-- **E14.1 — Silent `None` on YAML parse exception** ([bmad_init.py:149-154](../../_bmad/core/bmad-init/scripts/bmad_init.py#L149-L154)). `load_config_file` and `load_module_yaml` wrap `yaml.safe_load` in bare `try/except Exception:` returning `None`. No log, no stderr message, no propagation. (Also B3.1, B4.1.)
-- **E14.2 — JSON-to-stderr error + exit 1 for CLI errors.** `cmd_load`, `cmd_check`, `cmd_resolve_defaults`, `cmd_write` each emit `print(json.dumps({'error': ...}), file=sys.stderr); sys.exit(1)` for their failure paths ([bmad_init.py:236-238](../../_bmad/core/bmad-init/scripts/bmad_init.py#L236-L238), [246-249](../../_bmad/core/bmad-init/scripts/bmad_init.py#L246-L249), [259-261](../../_bmad/core/bmad-init/scripts/bmad_init.py#L259-L261), [348-356](../../_bmad/core/bmad-init/scripts/bmad_init.py#L348-L356), [405-412](../../_bmad/core/bmad-init/scripts/bmad_init.py#L405-L412), [417-421](../../_bmad/core/bmad-init/scripts/bmad_init.py#L417-L421)). Structured JSON error shape: `{"error": "..."}` or `{"init_required": true, "missing_module": "..."}`.
-- **E14.3 — `argparse` SystemExit on missing/invalid CLI args.** `main()` prints help + `sys.exit(1)` when `args.command is None` or handler dispatch fails ([bmad_init.py:572-587](../../_bmad/core/bmad-init/scripts/bmad_init.py#L572-L587)).
-- **E14.4 — No exception handler around `yaml.safe_dump`.** `_write_config_file` writes the config with no try/except ([bmad_init.py:523-530](../../_bmad/core/bmad-init/scripts/bmad_init.py#L523-L530)) — a disk-full or permission-denied error would propagate as an unhandled Python exception, visible to CLI but not formatted as JSON.
+- **E14.1 — Silent `None` on YAML parse exception** (`bmad_init.py:149-154`). `load_config_file` and `load_module_yaml` wrap `yaml.safe_load` in bare `try/except Exception:` returning `None`. No log, no stderr message, no propagation. (Also B3.1, B4.1.)
+- **E14.2 — JSON-to-stderr error + exit 1 for CLI errors.** `cmd_load`, `cmd_check`, `cmd_resolve_defaults`, `cmd_write` each emit `print(json.dumps({'error': ...}), file=sys.stderr); sys.exit(1)` for their failure paths (`bmad_init.py:236-238`, `246-249` (`bmad_init.py:246-249`), `259-261` (`bmad_init.py:259-261`), `348-356` (`bmad_init.py:348-356`), `405-412` (`bmad_init.py:405-412`), `417-421` (`bmad_init.py:417-421`)). Structured JSON error shape: `{"error": "..."}` or `{"init_required": true, "missing_module": "..."}`.
+- **E14.3 — `argparse` SystemExit on missing/invalid CLI args.** `main()` prints help + `sys.exit(1)` when `args.command is None` or handler dispatch fails (`bmad_init.py:572-587`).
+- **E14.4 — No exception handler around `yaml.safe_dump`.** `_write_config_file` writes the config with no try/except (`bmad_init.py:523-530`) — a disk-full or permission-denied error would propagate as an unhandled Python exception, visible to CLI but not formatted as JSON.
 - **E14.5 — `find_project_root` returns `None` (not exception) for unresolvable project.** Callers check for `None` and emit their own JSON error. Distributed error handling, not centralized.
-- **E14.6 — Template expansion silently skips `None` values in context** ([bmad_init.py:206-207](../../_bmad/core/bmad-init/scripts/bmad_init.py#L206-L207)). `apply_result_template`/`expand_template` skip keys whose values are `None`. A bootstrapping bug where a core answer is `None` (instead of absent) produces a still-expanded partial string, not an error — surprising for the operator.
+- **E14.6 — Template expansion silently skips `None` values in context** (`bmad_init.py:206-207`). `apply_result_template`/`expand_template` skip keys whose values are `None`. A bootstrapping bug where a core answer is `None` (instead of absent) produces a still-expanded partial string, not an error — surprising for the operator.
 
 **Disposition (all error-handling behaviors):** mixed — see per-row table below.
 
@@ -647,7 +655,7 @@ This was the most surprising finding of the audit and deserves preservation:
 
 **Find result:** `find _bmad/bme -path '*/agents/*.md'` → **12 agent files** (Vortex × 7, Gyre × 4, Team Factory × 1). The `_bmad/bme/_enhance/` module exists but has no `agents/` subdirectory — `_enhance` ships skills + workflows, no standalone agents.
 
-All 12 bme agents already direct-load their module configs at activation. Sample from [`_bmad/bme/_vortex/agents/contextualization-expert.md:13`](../../_bmad/bme/_vortex/agents/contextualization-expert.md#L13):
+All 12 bme agents already direct-load their module configs at activation. Sample from [`_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md:13`](../../_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md#L13):
 
 ```
 - Load and read {project-root}/_bmad/bme/_vortex/config.yaml NOW

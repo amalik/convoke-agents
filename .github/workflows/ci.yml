@@ -220,6 +220,25 @@ jobs:
         # guide blocks a release. That is the intended severity — these files go in the tarball.
         run: npm run docs:audit
 
+      - name: Reference integrity
+        # This script shipped in May 2026 and was never wired into any workflow, so nothing
+        # enforced it. By 2026-09-19 it reported 658 broken references across 92 files and
+        # exited 1 on every run — a gate in that state is not a weak gate, it is documentation,
+        # and the repo has the scar twice over (`cli-guidance-check`, withdrawn after shipping
+        # twice matching nothing; the inline backlog check that cried 51 violations against a
+        # correct file and taught everyone to ignore it).
+        #
+        # Wired only after it was made green, and in that order on purpose: 548 of the 658 were
+        # in append-only receipts that must not be edited (HISTORICAL_RECORD_PREFIXES), and the
+        # remaining 110 were real and are fixed. The exempt count is printed on every run and
+        # `--no-exempt` still scans them, so the exemption cannot quietly grow — and a test pins
+        # the prefix list by literal membership, because deleting an entry otherwise killed no test.
+        #
+        # In this job because it is the audit aggregator and this job is in `publish.needs`:
+        # `README.md`, `INSTALLATION.md` and `UPDATE-GUIDE.md` are in the tarball, so a broken
+        # link in one blocks the tag rather than reaching an operator.
+        run: npm run refs:audit
+
       - name: Documentation coverage denominator
         # docs-1-7. Asserts a derivation pass was RECORDED over the full in-scope
         # documentation set — never that any document is correct.

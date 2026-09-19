@@ -70,7 +70,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 1. compareVersions mishandles prerelease tags — rc→final upgrade misreads as a downgrade and is blocked
 
 - **Status:** 🔵 Known — re-prioritize · ✅ reproduced 2026-06-28
-- **Type:** execution  •  **Location:** [scripts/update/lib/utils.js:27](scripts/update/lib/utils.js#L27)  •  **Reviewer:** `update-engine`
+- **Type:** execution  •  **Location:** `scripts/update/lib/utils.js:27`  •  **Reviewer:** `update-engine`
 - **Evidence:** compareVersions splits on '.' and maps Number: '4.0.0-rc.1'.split('.').map(Number) === [4,0,NaN,1]. compareVersions('4.0.0-rc.1','4.0.0') returns 1 (rc treated as GREATER than final); compareVersions('4.0.0','4.0.0-rc.1') returns -1. version-detector.getMigrationPath does `if (compareVersions(currentVersion, targetVersion) > 0) return {type:'downgrade'}`, and convoke-update.js:285 hard-exits 1 with 'DOWNGRADE DETECTED' on that action.
 - **Impact:** The package is literally at convoke-agents@4.0.0-rc.1 shipping toward 4.0.0. Any operator who installed an rc and then runs `convoke-update` against the final 4.0.0 (or any later rc) will be told they are downgrading and the update will refuse to proceed (exit 1). This is a release-blocking correctness bug in the core version-ordering primitive used by getMigrationPath, convoke-version status, and changelog-reader range filtering. Note compat-preflight.js:113 already had to special-case this exact NaN trap by stripping the suffix before calling compareVersions — the core function was never fixed.
 - **Suggested fix:** Make compareVersions SemVer-aware: split off the prerelease suffix on '-', compare the numeric core first, and only if cores are equal apply SemVer precedence (a version WITH a prerelease is LOWER than the same version without; compare prerelease identifiers dot-by-dot numerically/lexically). At minimum strip and compare the numeric core, then treat presence-of-prerelease as lower. Add a unit test pinning compareVersions('4.0.0-rc.1','4.0.0') === -1.
@@ -80,7 +80,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 2. Backup set excludes every file the 3.x→4.0 migration rewrites — rollback cannot restore them
 
 - **Status:** 🔴 Live — untracked · ✅ reproduced 2026-06-28
-- **Type:** execution  •  **Location:** [scripts/update/lib/backup-manager.js:212](scripts/update/lib/backup-manager.js#L212)  •  **Reviewer:** `update-engine`
+- **Type:** execution  •  **Location:** `scripts/update/lib/backup-manager.js:212`  •  **Reviewer:** `update-engine`
 - **Evidence:** getFilesToBackup() returns only _bmad/bme/_vortex/config.yaml, _bmad/bme/_vortex/agents, _bmad/bme/_vortex/workflows, and _bmad/_config/agent-manifest.csv. The 3.3.x-to-4.0.0 migration (apply→_phase3_sweepSkillMd, _phase4_deprecateBmadInit) rewrites 18 upstream-BMAD SKILL.md files across arbitrary _bmad/<module>/ paths (from v6.3-migration-inventory.csv) plus _bmad/core/bmad-init/SKILL.md. None of those paths are under the backed-up directories. migration-runner.js:193 calls backupManager.restoreBackup on failure, which only restores the four items in getFilesToBackup().
 - **Impact:** If runMigrations fails after Phase 3/4 (e.g. validation fails at step [4/5], or a later module copy throws), the advertised automatic rollback silently leaves all rewritten SKILL.md activation blocks and the bmad-init deprecation banner in place while only reverting the Vortex subset. The operator is told 'Installation restored from backup' but is actually left in a half-migrated state for the upstream skills — the exact files most likely to break activation. This breaks the migration's central safety guarantee.
 - **Suggested fix:** Before the SKILL.md sweep, snapshot every file the migration will touch (the canonical inventory targets + bmad-init/SKILL.md) into the backup dir, and have restoreBackup restore them. Either extend getFilesToBackup to include the migration's write set, or give each migration a backup-manifest hook the runner consumes so the backup scope tracks the migration's actual write surface rather than a fixed Vortex-only list.
@@ -92,7 +92,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 3. convoke-migrate applies a delta but never records migration_history
 
 - **Status:** 🔴 Live — untracked
-- **Type:** conception  •  **Location:** [scripts/update/convoke-migrate.js:84](scripts/update/convoke-migrate.js#L84)  •  **Reviewer:** `update-engine`
+- **Type:** conception  •  **Location:** `scripts/update/convoke-migrate.js:84`  •  **Reviewer:** `update-engine`
 - **Evidence:** convoke-migrate main() does createBackup → migration.module.apply(projectRoot) → refreshInstallation, with no call to configMerger.addMigrationHistory / migration-runner.updateMigrationHistory. By contrast migration-runner.js:155 writes history after a successful run. convoke-migrate.js:49 itself gates on registry.hasMigrationBeenApplied (which reads migration_history).
 - **Impact:** Two sources of truth diverge: convoke-update records applied migrations in config.yaml migration_history; convoke-migrate does not. After a manual convoke-migrate, `convoke-version` shows no record of it, and convoke-migrate's own already-applied guard (line 49) will never fire on re-run because history was never written. For older deltas with no internal idempotency marker (e.g. the taxonomy migrations, or the 1.x no-op deltas), re-running convoke-migrate re-executes the delta. The CLI's own guard contradicts its own write behavior.
 - **Suggested fix:** After a successful delta+refresh in convoke-migrate, call the same updateMigrationHistory path migration-runner uses (read Vortex config.yaml, addMigrationHistory(config, fromVersion, toVersion, [migration.name]), writeConfig). Reuse migration-runner's helper rather than duplicating it so the two CLIs stay consistent.
@@ -102,7 +102,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 4. Governed (frontmatter-bearing) files lose hcPrefix and date, silently disabling HC-chain (FR34) and date inference for the best-governed artifacts
 
 - **Status:** 🔴 Live — untracked
-- **Type:** conception  •  **Location:** [scripts/lib/portfolio/portfolio-engine.js:301](scripts/lib/portfolio/portfolio-engine.js#L301)  •  **Reviewer:** `lib-portfolio`
+- **Type:** conception  •  **Location:** `scripts/lib/portfolio/portfolio-engine.js:301`  •  **Reviewer:** `lib-portfolio`
 - **Evidence:** For files with frontmatter.initiative + artifact_type, the engine hardcodes typeResult = { type: artifactType, hcPrefix: null, ..., date: null, typeSource: 'frontmatter' } and passes hcPrefix:null/date:null into the enriched record (lines 351-352). Only the ungoverned branch calls inferArtifactType (line 304), which is what populates hcPrefix and date. Downstream, applyArtifactChainRule builds its hcPrefixes Set from a.hcPrefix (artifact-chain-rule.js:36) and detectHCChain depends on it; latestDate tracking (lines 41-49) depends on a.date.
 - **Impact:** This inverts the design intent: the more complete a file's governance metadata, the less the portfolio engine can infer from it. A fully-governed Vortex HC artifact contributes nothing to HC-chain completeness detection (FR34) and reports date null, so last-activity/lastArtifact fall back entirely to git-recency. Frontmatter does not carry hcPrefix, so there is no compensating source.
 - **Suggested fix:** Even for governed files, still run inferArtifactType(file.filename, taxonomy) (or extract hcPrefix/date from the filename) to populate hcPrefix and date, while keeping frontmatter as the authority for type/initiative. Merge: { ...inferArtifactType(...), type: frontmatter.artifact_type, typeSource: 'frontmatter' }.
@@ -112,7 +112,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 5. Vortex/Gyre agent roster + name mapping duplicated across agent-registry, export-engine, and classify-skills
 
 - **Status:** 🔴 Live — untracked
-- **Type:** conception  •  **Location:** [scripts/portability/export-engine.js:175](scripts/portability/export-engine.js#L175)  •  **Reviewer:** `invariant-sweep`
+- **Type:** conception  •  **Location:** `scripts/portability/export-engine.js:175`  •  **Reviewer:** `invariant-sweep`
 - **Evidence:** export-engine.js:175 BME_SKILL_TO_AGENT = { 'bmad-agent-bme-contextualization-expert':'Emma','bmad-agent-bme-discovery-empathy-expert':'Isla',... ,'bmad-agent-bme-team-factory':'Loom Master' }; and classify-skills.js:97 VORTEX_AGENTS = new Set(['bmad-agent-bme-contextualization-expert',...]) + GYRE_AGENTS Set. Both reproduce the roster that scripts/update/lib/agent-registry.js already defines canonically: AGENTS = [{ id:'contextualization-expert', name:'Emma' }, ... { id:'team-factory', name:'Loom Master' }] with the documented derivation `bmad-agent-bme-{id}` (agent-registry.js:219, 132-139). Neither portability file requires agent-registry.
 - **Impact:** Multiple sources of truth for the agent set/name mapping. agent-registry.js is explicitly designed as the single source ("To add a new agent: push one entry to AGENTS") and already exposes id+name+pattern sufficient to derive both BME_SKILL_TO_AGENT (`bmad-agent-bme-${id}` -> name) and the VORTEX/GYRE partitions. Adding or renaming an agent today requires editing 3+ files in lockstep; a missed edit silently mis-classifies or mis-labels exported skills.
 - **Suggested fix:** Import AGENTS from scripts/update/lib/agent-registry.js into both portability modules. Derive BME_SKILL_TO_AGENT as Object.fromEntries(AGENTS.map(a => [`bmad-agent-bme-${a.id}`, a.name])). Tag each agent-registry entry with its stream (vortex/gyre) and derive VORTEX_AGENTS/GYRE_AGENTS by filtering, eliminating the hand-maintained Sets.
@@ -122,7 +122,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 6. Canonical frontmatter parser exists but ~15 files re-roll their own YAML/frontmatter extraction (two YAML libs in parallel)
 
 - **Status:** 🟢 In progress — expected
-- **Type:** conception  •  **Location:** [scripts/update/lib/validator.js:609](scripts/update/lib/validator.js#L609)  •  **Reviewer:** `cross-cutting-conception`
+- **Type:** conception  •  **Location:** `scripts/update/lib/validator.js:609`  •  **Reviewer:** `cross-cutting-conception`
 - **Evidence:** scripts/lib/frontmatter.js was created specifically to be the single frontmatter parser (its docstring: 'Drop-in replacement for the subset of gray-matter... so we no longer pull in gray-matter's vulnerable js-yaml@3.x'). Yet only 3 files import it (artifact-utils.js:12, audit-bmad-init-refs.js:6, audit-bmm-dependencies.js:7). validator.js:609-618 re-extracts frontmatter with its own regex `/^---\n([\s\S]*?)\n---/` + `yaml.load`; pf1-validation-battery.js and export-engine.js/validate-exports.js hand-roll `^---` splitting too. Meanwhile two YAML libraries run in parallel: `yaml` (frontmatter.js, config-loader.js, generate-badges-json.js, refresh-installation write path) and `js-yaml` (~14 files incl. validator.js, migrate-artifacts.js, portfolio-engine.js, audit/*). artifact-utils.js even imports BOTH the canonical frontmatter parser (line 12) and js-yaml directly (line 11).
 - **Impact:** Multiple sources of truth for the same parse concern. The ad-hoc regex parsers don't strip the BOM or tolerate CRLF the way frontmatter.js does (it explicitly handles 0xFEFF and \r?\n), so identical files can parse differently across subsystems. Running both js-yaml and yaml defeats the security rationale that motivated frontmatter.js and doubles the surface area for behavioral skew.
 - **Suggested fix:** Route all frontmatter extraction through scripts/lib/frontmatter.js (move it to the base layer), replace the inline `^---` regexes in validator.js/pf1/export scripts with frontmatter.parse(), and standardize on a single YAML library, retiring whichever of js-yaml / yaml is redundant.
@@ -132,7 +132,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 7. Install-layout paths are a dispersed source of truth — no shared paths module
 
 - **Status:** 🔴 Live — untracked
-- **Type:** conception  •  **Location:** [scripts/update/lib/migration-runner.js:52](scripts/update/lib/migration-runner.js#L52)  •  **Reviewer:** `cross-cutting-conception`
+- **Type:** conception  •  **Location:** `scripts/update/lib/migration-runner.js:52`  •  **Reviewer:** `cross-cutting-conception`
 - **Evidence:** The canonical install config path string `_bmad/bme/_vortex/config.yaml` is hardcoded in 10+ files across subsystems: version-detector.js:27, validator.js:76 & :120, migration-runner.js:52 & :275, convoke-version.js:114, convoke-migrate.js:48, backup-manager.js:216, 1.5.x-to-1.6.0.js:52, install-vortex-agents.js:113, isolated-install.js:46. The `_bmad-output` root literal appears 15x in artifact-utils.js alone and across utils.js, backup-manager.js (`_bmad-output/.backups` repeated at :22/:131/:195), migration-runner.js (`_bmad-output/.logs` at :322/:347). grep confirms NO scripts/lib/paths.js or constants.js exists.
 - **Impact:** agent-registry.js advertises itself as the 'single source of truth' for agents/workflows, but the equally-load-bearing on-disk layout (module dir, config path, output/backup/log dirs) has no such anchor. Relocating the module or renaming the output tree requires a fragile multi-file find-and-replace, and any miss yields a silently-wrong path. This is precisely the multiple-sources-of-truth smell the registry pattern was meant to eliminate, applied inconsistently.
 - **Suggested fix:** Add a base-layer scripts/lib/paths.js exporting derivations like vortexConfigPath(root), backupsDir(root), logsDir(root), outputDir(root), and have every subsystem build paths from it instead of inlining literals.
@@ -142,7 +142,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 8. Migration state file (migration-state-4.0.yaml) survives rollback, leaving phase5_complete=true after files are reverted
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [scripts/update/migrations/3.3.x-to-4.0.0.js:380](scripts/update/migrations/3.3.x-to-4.0.0.js#L380)  •  **Reviewer:** `update-engine`
+- **Type:** execution  •  **Location:** `scripts/update/migrations/3.3.x-to-4.0.0.js:380`  •  **Reviewer:** `update-engine`
 - **Evidence:** _phase5_doctorDiff sets state.phase5_complete = true and persists it via _writeState to _bmad/_memory/migration-state-4.0.yaml. This path is NOT in backup-manager.getFilesToBackup(), and migration-runner rollback (restoreBackup) does not delete it. _phase1_detect returns {isPreV4:false} whenever state.phase5_complete === true.
 - **Impact:** apply() completes all five phases (writing phase5_complete=true) before control returns to the runner, which THEN runs refreshInstallation + validation. If validation fails, the runner rolls back the Vortex files but the state file still says phase5_complete. A subsequent convoke-update re-run hits _phase1_detect → 'already complete' and SKIPS the migration entirely, even though the Vortex config/agents were just reverted to the pre-migration version. The state file and the on-disk reality disagree, and the operator cannot re-drive the migration without manually deleting the state file.
 - **Suggested fix:** Either include _bmad/_memory/migration-state-4.0.yaml in the backup/restore set so rollback reverts it too, or only mark phase5_complete after the runner confirms validation passed (move the completion stamp out of apply() into a post-validation callback). Document the 'delete state file to retry' escape hatch in the rollback error message at minimum.
@@ -152,7 +152,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 9. Phase 6 config-var catch-all corrupts regex quantifiers and non-config braces
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [scripts/portability/export-engine.js:509](scripts/portability/export-engine.js#L509)  •  **Reviewer:** `portability`
+- **Type:** execution  •  **Location:** `scripts/portability/export-engine.js:509`  •  **Reviewer:** `portability`
 - **Evidence:** result = result.replace(/\{\{?([\w_-]+)\}?\}/g, (_match, varName) => { ... return 'your-project-context'; });  — applied to every section. Verified: input "Match names with /[a-z]{2}/ pattern ... key {sessionId}" becomes "/[a-z]your-project-context/ ... key your-project-context".
 - **Impact:** The catch-all matches ANY {token} of word characters, not just config vars. A regex quantifier like {2}, JSON/template tokens, or legitimate identifier placeholders ({sessionId}) in step instructions get rewritten to 'your-project-context', producing broken regexes and nonsense in the exported instructions.md. Only a warning is emitted, so it ships silently. Violates catch-all-phase-review: the fallback matcher does not guard against false positives.
 - **Suggested fix:** Restrict the catch-all to the snake_case config-var shape actually used by BMAD config (e.g. /\{\{?[a-z][a-z0-9_]*\}?\}/ with a minimum length, or only strip tokens containing an underscore / matching a known config-var prefix). Exclude purely-numeric tokens and tokens that are part of /.../  regex spans. Better: only substitute keys present in configVarMap and leave unknown braces untouched (still warn).
@@ -162,7 +162,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 10. no-hardcoded-versions: target version '4.0.0-rc.1' hardcoded in PF1 recording provenance
 
 - **Status:** 🟣 Blocked — keep (FINISH or waive)
-- **Type:** execution  •  **Location:** [scripts/audit/pf1-record-agent.js:61](scripts/audit/pf1-record-agent.js#L61)  •  **Reviewer:** `audit-scripts`
+- **Type:** execution  •  **Location:** `scripts/audit/pf1-record-agent.js:61`  •  **Reviewer:** `audit-scripts`
 - **Evidence:** const PHASE_TO_VERSION = {   baseline: '3.x',   'post-migration': '4.0.0-rc.1', }; ... used at line 156: `from convoke ${version} (commit ${commitSha})` in buildRecordingFile()
 - **Impact:** '4.0.0-rc.1' is a semver literal that exactly matches package.json's current version. It is stamped verbatim into the provenance header of every post-migration recording file. The project invariant no-hardcoded-versions requires reading the version via getPackageVersion() (which exists in scripts/update/lib/utils.js). When the package ships 4.0.0 / 4.0.1 / etc., this script keeps stamping '4.0.0-rc.1', producing recordings whose provenance lies about which build they were captured from — defeating the whole point of the commit+version provenance stamp.
 - **Suggested fix:** Import getPackageVersion from scripts/update/lib/utils and derive the post-migration version at runtime: `const { getPackageVersion } = require('../update/lib/utils'); ... 'post-migration': getPackageVersion()`. Keep 'baseline' literal only if it intentionally names a frozen pre-migration line; otherwise document why it is exempt.
@@ -172,7 +172,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 11. Module-load-time findProjectRoot() with no null guard crashes require() outside a project
 
 - **Status:** 🟣 Blocked — keep (FINISH or waive)
-- **Type:** execution  •  **Location:** [scripts/audit/pf1-judge-calibration.js:29](scripts/audit/pf1-judge-calibration.js#L29)  •  **Reviewer:** `audit-scripts`
+- **Type:** execution  •  **Location:** `scripts/audit/pf1-judge-calibration.js:29`  •  **Reviewer:** `audit-scripts`
 - **Evidence:** const PROJECT_ROOT = findProjectRoot(); const PROMPT_PATH = path.join(PROJECT_ROOT, 'scripts/audit/pf1-judge-prompt.md'); // findProjectRoot() returns null when no _bmad/ ancestor exists (utils.js:88). Same top-level pattern in pf1-validation-battery.js:46, pf1-record-agent.js:46, install-scope-check.js:48.
 - **Impact:** findProjectRoot() returns null when run outside a Convoke project. These four scripts call it at module top level and immediately pass the result to path.join(PROJECT_ROOT, ...). path.join(null, ...) throws a TypeError at REQUIRE time — before main()/its try-catch and exit-code mapping can run. pf1-validation-battery.js imports pf1-judge-calibration.js at the top, so requiring the battery (which tests/lib/pf1-validation-battery.test.js does) executes findProjectRoot() at import; in a context without _bmad/ the import itself throws. The sibling CLIs validate-marketplace.js and audit-skill-dirs.js correctly call findProjectRoot() inside main() and emit a clean 'Not inside a Convoke project' message — this group does not.
 - **Suggested fix:** Move findProjectRoot() into main()/the CLI entry (or lazily compute PROJECT_ROOT inside functions), and emit the same clean 'no _bmad/ found' diagnostic + nonzero exit the other audit CLIs use. At minimum, null-check PROJECT_ROOT before any path.join and throw an Error with a tagged exitCode instead of letting path.join blow up at load time.
@@ -182,7 +182,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 12. Epic completion markers fire on a single sub-task checkbox, falsely marking initiatives 'complete'
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [scripts/lib/portfolio/rules/artifact-chain-rule.js:22](scripts/lib/portfolio/rules/artifact-chain-rule.js#L22)  •  **Reviewer:** `lib-portfolio`
+- **Type:** execution  •  **Location:** `scripts/lib/portfolio/rules/artifact-chain-rule.js:22`  •  **Reviewer:** `lib-portfolio`
 - **Evidence:** DONE_PATTERNS = [ /(?:status|epic)[^:]*:\s*done\b/i, /(?:status|epic)[^:]*:\s*complete\b/i, /\*\*\s*done\b/i, /✅/, /\[x\]/i, /~~[^~]{3,}~~/ ]; isEpicDone() returns true if ANY pattern matches. The header comment claims patterns 'require status context to avoid false positives' and the rule's Priority-1 docstring says 'Epic with all stories done/complete/✅/[x]/strikethrough → complete'. But /\[x\]/i, /✅/, and the strikethrough pattern have NO status context — a single checked checkbox or one ✅ anywhere in an in-progress epic marks the WHOLE initiative complete. tests/lib/portfolio-rules.test.js:125 confirms content '- [x] All stories' → complete, and an epic with one checked subtask among many would match identically.
 - **Impact:** This is the catch-all-phase-review invariant: a fallback/heuristic matcher must guard against false positives. A real in-progress epic with a single completed subtask (extremely common in story checklists) is misreported as 'complete', which then drives deriveNextAction to suggest a retrospective and removes the initiative from WIP radar — an actively misleading portfolio signal.
 - **Suggested fix:** Require status context for the bare markers too: scope /\[x\]/, /✅/, and strikethrough to a line that also contains an epic/status/all-stories token (e.g. match within a 'Status:' or 'Epic ... :' line), or only treat the epic as done when EVERY story/checkbox in the file is checked (count [x] vs [ ]) rather than any single one.
@@ -192,7 +192,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 13. Tree-wide 'git reset --hard HEAD' rollback can destroy uncommitted work outside the migration scope that ensureCleanTree intentionally ignores
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [scripts/lib/artifact-utils.js:1406](scripts/lib/artifact-utils.js#L1406)  •  **Reviewer:** `lib-portfolio`
+- **Type:** execution  •  **Location:** `scripts/lib/artifact-utils.js:1406`  •  **Reviewer:** `lib-portfolio`
 - **Evidence:** executeRenames() and executeInjections() roll back with execFileSync('git', ['reset', '--hard', 'HEAD'], { cwd: projectRoot }) (lines 1406, 1427, 1616, 1645). The only pre-flight guard is ensureCleanTree(scopeDirs, projectRoot) (line 270), which scopes its diff/cached/ls-files checks to `_bmad-output/${dir}` for the scope dirs ONLY (line 272) and is invoked in scripts/migrate-artifacts.js:346 with filteredIncludeDirs. A user can therefore have legitimate uncommitted changes anywhere else in the repo (source, docs, other _bmad-output subdirs) that pass the clean-tree gate, and a mid-migration git mv / commit failure then runs a tree-wide hard reset that discards ALL of them.
 - **Impact:** path-safety-for-destructive-ops: a destructive operation must be bounded to the project scope it operates on. The clean-tree precondition and the rollback blast radius are mismatched — the guard is scope-narrow, the destruction is tree-wide, so the guard does not actually protect the data the rollback can destroy.
 - **Suggested fix:** Make rollback scope-bounded: reset only the migrated paths (git checkout -- <scopePaths> / git reset HEAD <scopePaths> then restore), or stash-and-restore unrelated changes, or have ensureCleanTree assert a fully clean tree (no path scoping) before any phase that can hard-reset. At minimum document and enforce that the whole tree must be clean before executeRenames.
@@ -202,7 +202,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 14. executeInjections stages the entire _bmad-output/ directory, absorbing unrelated changes into the injection commit
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [scripts/lib/artifact-utils.js:1637](scripts/lib/artifact-utils.js#L1637)  •  **Reviewer:** `lib-portfolio`
+- **Type:** execution  •  **Location:** `scripts/lib/artifact-utils.js:1637`  •  **Reviewer:** `lib-portfolio`
 - **Evidence:** execFileSync('git', ['add', '_bmad-output/'], { cwd: projectRoot, stdio: 'pipe' }) stages everything under _bmad-output/ before committing 'chore: inject frontmatter metadata and update links'. This contradicts the sibling ADR-phase logic in scripts/migrate-artifacts.js:398-404 which deliberately stages 'only the paths this phase writes — not the entire planning-artifacts/ dir — so unrelated staged/modified files in the directory don't get absorbed'.
 - **Impact:** Any incidental file under _bmad-output/ (outside the scope dirs, e.g. _archive edits, drafts, brainstorming) gets swept into the migration's injection commit, polluting the atomic migration history and making the rollback hard-reset (which targets HEAD) even more dangerous. Inconsistent staging discipline within the same codebase is a coupling/correctness defect.
 - **Suggested fix:** Stage only the files this phase actually writes: the renamed-file paths it injected into, the updated-link files returned by updateLinks, and the rename-map path. Build an explicit path list and `git add -- <paths>` exactly like the ADR phase does.
@@ -212,7 +212,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 15. convoke-check 'CI mirror' runs a Jest step that cannot succeed — jest is not a dependency and the lib tests are node:test
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [scripts/convoke-check.js:26](scripts/convoke-check.js#L26)  •  **Reviewer:** `entrypoints`
+- **Type:** execution  •  **Location:** `scripts/convoke-check.js:26`  •  **Reviewer:** `entrypoints`
 - **Evidence:** STEPS includes `{ name: 'Jest lib tests', cmd: 'npx jest tests/lib/ --no-coverage' }`. But package.json has NO jest in dependencies or devDependencies (`node -e ... jest dep: undefined`), and every tests/lib/*.test.js imports `node:test` (grep confirms node:test in artifact-utils/config-loader/manifest/... ; project MEMORY records the C1 conversion from Jest to node:test and removal of Jest globals). The file header asserts 'Runs the same checks as .github/workflows/ci.yml', yet ci.yml runs only `npm test`, `npm run test:integration`, `npm run test:coverage` (grep of ci.yml shows no jest job at all). `npm test` already covers tests/lib via `node scripts/test-runner.js tests/unit tests/team-factory tests/lib`.
 - **Impact:** `npm run check` (the documented pre-push gate, used in dev-story step 9 per the header) will hang on `npx jest` attempting to download a non-installed package, or fail outright — and the failure is in a step CI does not even have, so it is a false negative that blocks pushes. It also double-runs tests/lib (already inside `npm test`).
 - **Suggested fix:** Delete the Jest step from STEPS. The remaining Lint / Unit / Integration / Coverage steps already mirror the three CI test jobs. If a separate lib pass is wanted, use `node scripts/test-runner.js tests/lib` instead of npx jest.
@@ -222,7 +222,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 16. Fresh-install manifest row counts (12 / 14) hardcoded instead of derived from the agent registry
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [tests/integration/fresh-install.test.js:251](tests/integration/fresh-install.test.js#L251)  •  **Reviewer:** `test-architecture`
+- **Type:** execution  •  **Location:** `tests/integration/fresh-install.test.js:251`  •  **Reviewer:** `test-architecture`
 - **Evidence:** Line 251: `assert.equal(dataRows.length, 12, 'should have 12 agent rows (7 vortex + 4 gyre + 1 standalone bme: team-factory)');` and line 287: `assert.equal(lines.length, 14, 'should have header + 1 bmm + 12 bme rows (7 vortex + 4 gyre + 1 standalone)');`. The numbers are asserted against the live output of refreshInstallation(tmpDir). The component counts are all exported from scripts/update/lib/agent-registry.js (AGENTS, GYRE_AGENTS, EXTRA_BME_AGENTS — confirmed exported at lines 285-289 and referenced by refresh-installation.js line 12), so the expected total is computable as AGENTS.length + GYRE_AGENTS.length + EXTRA_BME_AGENTS.length.
 - **Impact:** Violates derive-counts-from-source: when an agent is added to any of the three registry arrays, refreshInstallation correctly writes the extra row but this test fails with an opaque '13 !== 12' instead of tracking the source of truth. The literal and its prose comment are a second source of truth for the agent count that must be hand-edited in lockstep with the registry.
 - **Suggested fix:** Import the registry arrays and compute the expected count: `const { AGENTS, GYRE_AGENTS, EXTRA_BME_AGENTS } = require('../../scripts/update/lib/agent-registry'); const bmeRows = AGENTS.length + GYRE_AGENTS.length + EXTRA_BME_AGENTS.length;` then assert `dataRows.length === bmeRows` and `lines.length === bmeRows + 2` (header + 1 preserved bmm row). Keep the column-count assertion (12) since that is the structural CSV schema, not an agent count.
@@ -232,7 +232,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 17. FORBIDDEN_IN_EXAMPLE duplicates the shared FORBIDDEN_STRINGS list instead of importing it
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [tests/lib/portability-canonical-format.test.js:28](tests/lib/portability-canonical-format.test.js#L28)  •  **Reviewer:** `invariant-sweep`
+- **Type:** execution  •  **Location:** `tests/lib/portability-canonical-format.test.js:28`  •  **Reviewer:** `invariant-sweep`
 - **Evidence:** const FORBIDDEN_IN_EXAMPLE = [ 'Read tool', 'Edit tool', 'Write tool', 'Bash tool', 'Glob tool', 'Grep tool', 'Skill tool', 'bmad-init', 'bmad-help', 'bmad-speak', '_bmad/', '.claude/hooks', '{project-root}', 'Load step:', 'read fully and follow', 'Read fully and execute:', 'Load fully and follow:' ]; — verified byte-for-byte identical (17/17 entries, 0 diff) to FORBIDDEN_STRINGS exported from scripts/portability/test-constants.js. Sibling tests (portability-export-engine.test.js, portability-export-all.test.js, portability-catalog-generator.test.js) all `require` the shared constant; this file (and only this file) inlines a copy.
 - **Impact:** Violates shared-test-constants invariant: a forbidden-string list used by 2+ test files must be imported from the shared constants file, not duplicated. test-constants.js's own header explicitly states it was extracted to close this exact debt ("flagged in Epic 2 retro A4, Epic 3 retro A1, Epic 4 retro A1 as the #1 test-reliability debt item"). The inline copy will silently drift when the exporter's strip rules change, producing a false-green here while siblings catch a regression — or vice versa.
 - **Suggested fix:** Delete the inline FORBIDDEN_IN_EXAMPLE array and replace its uses with `const { FORBIDDEN_STRINGS } = require('../../scripts/portability/test-constants');` then iterate over FORBIDDEN_STRINGS in Test 3, matching the pattern already used by the three sibling portability tests.
@@ -242,7 +242,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 18. ~110 lines of installer scaffolding duplicated verbatim between install-vortex and install-gyre with no shared module
 
 - **Status:** 🔴 Live — untracked
-- **Type:** muda  •  **Location:** [scripts/install-gyre-agents.js:18](scripts/install-gyre-agents.js#L18)  •  **Reviewer:** `entrypoints`
+- **Type:** muda  •  **Location:** `scripts/install-gyre-agents.js:18`  •  **Reviewer:** `entrypoints`
 - **Evidence:** printBanner (the entire CONVOKE ASCII block), checkPrerequisites (identical _bmad dir + bmad.yaml probe), createOutputDirectory, verifyInstallation (identical loop + exit logic), printSuccess (identical box + next-steps loop), and the 7 ANSI color constants are byte-for-byte duplicated between install-vortex-agents.js and install-gyre-agents.js. grep confirms `printBanner`/`checkPrerequisites`/`verifyInstallation` exist ONLY in these two files — no shared helper. The only real deltas are the registry array (AGENTS vs GYRE_AGENTS), step counts ([n/5] vs [n/4]), output dir name, agent-file leaf shape (`<id>/SKILL.md` vs `<id>.md`), and the banner subtitle.
 - **Impact:** Divergence risk: the Gyre `verifyInstallation` already had to be kept in lock-step manually (note the SKILL.md vs .md leaf difference between the two), and the R2-H1 comment in install-gyre main() documents a prior bug where the two scripts drifted on null-handling. Every future installer change must be applied twice. Adding a third team multiplies the copy.
 - **Suggested fix:** Extract a shared `scripts/update/lib/installer-ui.js` (or similar) exposing `printBanner(subtitle)`, `checkPrerequisites(projectRoot)`, `createOutputDirectory(projectRoot, artifactsDirName)`, `verifyInstallation(projectRoot, checks)`, `printSuccess(agents, opts)` parameterized by the per-team specifics. Both installers (and any future one) then become ~30 lines of wiring.
@@ -252,7 +252,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 19. FORBIDDEN_IN_EXAMPLE duplicates the shared FORBIDDEN_STRINGS list byte-for-byte
 
 - **Status:** 🔴 Live — untracked
-- **Type:** muda  •  **Location:** [tests/lib/portability-canonical-format.test.js:28](tests/lib/portability-canonical-format.test.js#L28)  •  **Reviewer:** `test-architecture`
+- **Type:** muda  •  **Location:** `tests/lib/portability-canonical-format.test.js:28`  •  **Reviewer:** `test-architecture`
 - **Evidence:** Lines 28-50 define a local `const FORBIDDEN_IN_EXAMPLE = [...]` containing exactly the same entries as `FORBIDDEN_STRINGS` exported from scripts/portability/test-constants.js (the same 7 Claude tool names 'Read tool'..'Skill tool', the same framework calls 'bmad-init'/'bmad-help'/'bmad-speak', the same framework paths '_bmad/'/'.claude/hooks'/'{project-root}', and the same 4 micro-file directives). Sibling tests portability-export-engine.test.js, portability-catalog-generator.test.js, and portability-export-all.test.js all `require('../../scripts/portability/test-constants')` for this exact list. The shared file's own header documents this list was 'flagged in Epic 2 retro A4, Epic 3 retro A1, Epic 4 retro A1 as the #1 test-reliability debt item' and 'Import this instead of duplicating the list.'
 - **Impact:** Direct violation of the shared-test-constants invariant: a forbidden-string list used by 2+ test files is duplicated rather than imported. The two lists will drift — a forbidden token added to test-constants.js (e.g. a new Claude tool name) will silently NOT be enforced against canonical-example.md, creating a false-negative gap exactly where the project already recorded this as its top test-reliability debt.
 - **Suggested fix:** Delete the local FORBIDDEN_IN_EXAMPLE array and replace its uses (lines 142-144) with `const { FORBIDDEN_STRINGS } = require('../../scripts/portability/test-constants');` then iterate `for (const forbidden of FORBIDDEN_STRINGS)`, matching the other three portability test files.
@@ -262,7 +262,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 20. config-loader.js: fully-built, fully-tested v4 config module with zero production consumers (created-but-never-wired)
 
 - **Status:** 🟢 Reserved — pre-positioned (KEEP)
-- **Type:** muda  •  **Location:** [scripts/update/lib/config-loader.js:325](scripts/update/lib/config-loader.js#L325)  •  **Reviewer:** `muda-triage`
+- **Type:** muda  •  **Location:** `scripts/update/lib/config-loader.js:325`  •  **Reviewer:** `muda-triage`
 - **Evidence:** Sole export is `module.exports = { loadModuleConfig };` (line 325). A repo-wide grep for `loadModuleConfig` and `config-loader` across scripts/ + index.js + tests/ returns hits ONLY in: (a) its own dedicated test `tests/lib/config-loader.test.js` (which imports and exercises it ~40x), and (b) a deprecation-message string literal in `scripts/update/migrations/3.3.x-to-4.0.0.js:42` ('via `scripts/update/lib/config-loader.js`...' — a text mention, not a require). NO production module (migration, installer, refresh, validator, doctor) requires it. The module's own header says it 'Replaces the legacy bmad-init skill load path' (Story v63-1a-2), but that replacement was never plumbed into any caller.
 - **Impact:** This is the high-signal 'created-but-never-wired' case the v6.3 adoption work introduced (Story 1A.2). The pinning test at tests/lib/config-loader.test.js gives the file a false appearance of liveness (it passes, has coverage), but the v4 direct-YAML load path it provides is dead — nothing in the runtime ever calls loadModuleConfig(). It carries a subprocess-shelling backwards-compat branch (execFileSync of bmad_init.py) and a 30s timeout / 10MB buffer config that will never execute in production. It is maintenance surface and reader-confusion with no payoff.
 - **Suggested fix:** Either WIRE IT UP (have the v4 migration / agent-activation path actually call loadModuleConfig instead of the legacy load path it was meant to replace) or DELETE both scripts/update/lib/config-loader.js and tests/lib/config-loader.test.js. Do not leave a tested-but-unconsumed module: pick one. Given Story 4.3 is stalled and 4.0 ships on the v6.3 baseline, confirm with the release owner whether the direct-load path is still on the 4.0 critical path before deleting.
@@ -272,7 +272,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 21. install-scope-check.js: orphaned operator CLI with no code, test, or CI references
 
 - **Status:** 🟡 Salvage — promote to CI
-- **Type:** muda  •  **Location:** [scripts/audit/install-scope-check.js:1](scripts/audit/install-scope-check.js#L1)  •  **Reviewer:** `muda-triage`
+- **Type:** muda  •  **Location:** `scripts/audit/install-scope-check.js:1`  •  **Reviewer:** `muda-triage`
 - **Evidence:** A grep for `install-scope-check` across all *.js/*.json/*.yml/*.yaml (excluding node_modules, exported-skills, and self/comment references) returns ZERO hits. It is not in package.json `bin`/`scripts`, not in any .github workflow, not required anywhere, and has no test file. The only references are: (a) two source COMMENTS in pf1-validation-battery.js:51 and pf1-record-agent.js:53 ('replaced by mechanical install-scope-check.js'), and (b) Story-4.3 markdown under _bmad-output/. Its own header documents a snapshot-based write-op-count assertion driven by a `--update` operator-confirmed snapshot file.
 - **Impact:** Like pf1-record-agent.js, this is dormant Story-4.3 (Path B+ re-scope) operator tooling that substitutes mechanical scope-checking for 4 BMAD-agent control validation. With Story 4.3 stalled and no programmatic entry point, test, or snapshot fixture committed/exercised, the script provides no executing guard today — a migration could leak write scope into BMAD-owned dirs and nothing runs this check. It is either an unfinished safety net (should be wired into CI) or dead weight.
 - **Suggested fix:** Decide its fate explicitly: if the install-scope guard is valuable (it catches migration-scope-leak regressions cheaply), wire `node scripts/audit/install-scope-check.js` into ci.yml and commit the snapshot fixture so it actually runs on every PR. Otherwise delete it. Leaving an unwired guard gives false assurance of scope protection.
@@ -284,7 +284,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 22. exportSkill JSDoc/contract is stale — claims throws that never happen
 
 - **Status:** 🔴 Live — untracked
-- **Type:** conception  •  **Location:** [scripts/portability/export-engine.js:1006](scripts/portability/export-engine.js#L1006)  •  **Reviewer:** `portability`
+- **Type:** conception  •  **Location:** `scripts/portability/export-engine.js:1006`  •  **Reviewer:** `portability`
 - **Evidence:** JSDoc lines 1006-1010: 'Throws: - if the skill's tier is pipeline (only standalone + light-deps are exportable) - if persona resolution fails (all 5 strategies)'. But line 1014 comment says 'all tiers exportable; pipeline skills get a framework-only notice' and line 1082 emits a notice instead of throwing; synthesizePersonaFromWorkflow (Strategy 5, line 328) is documented 'Always returns a valid persona — never throws'.
 - **Impact:** The documented contract contradicts the implementation. Callers (e.g. convoke-export.js runSingle) code defensively against throws that cannot occur, creating dead branches (see related finding). A wrong contract is a maintenance hazard and a single-source-of-truth violation between doc and behavior.
 - **Suggested fix:** Update the JSDoc to reflect actual behavior: throws only when the skill is not in the manifest or SKILL.md is missing; pipeline tiers are exported with a framework-only banner; persona resolution always succeeds via Strategy 5 fallback.
@@ -294,7 +294,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 23. Module-level README template cache keyed by nothing; ignores projectRoot
 
 - **Status:** 🔴 Live — untracked
-- **Type:** conception  •  **Location:** [scripts/portability/convoke-export.js:219](scripts/portability/convoke-export.js#L219)  •  **Reviewer:** `portability`
+- **Type:** conception  •  **Location:** `scripts/portability/convoke-export.js:219`  •  **Reviewer:** `portability`
 - **Evidence:** let _templateCache = null; function loadReadmeTemplate(projectRoot) { if (_templateCache !== null) return _templateCache; ... _templateCache = fs.readFileSync(tplPath, 'utf8'); } — the cache stores the first template read and returns it for ALL subsequent calls regardless of the projectRoot argument.
 - **Impact:** If loadReadmeTemplate/buildReadme is ever invoked against more than one projectRoot in a single process (test harnesses using a tmpDir, or a future multi-root tool), the second call silently returns the first root's template. The parameter that should key the cache is ignored — a latent correctness hazard and a leaky abstraction (mutable module-global state in an otherwise pure-ish builder).
 - **Suggested fix:** Key the cache by resolved template path (a Map<path,string>), or drop the cache entirely (reading one small file per export is negligible).
@@ -304,7 +304,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 24. docs-audit hardcodes the seven user-guide paths instead of deriving them from the agent registry's USER_GUIDES
 
 - **Status:** 🔴 Live — untracked
-- **Type:** conception  •  **Location:** [scripts/docs-audit.js:27](scripts/docs-audit.js#L27)  •  **Reviewer:** `entrypoints`
+- **Type:** conception  •  **Location:** `scripts/docs-audit.js:27`  •  **Reviewer:** `entrypoints`
 - **Evidence:** USER_FACING_DOCS lists `_bmad/bme/_vortex/guides/EMMA-USER-GUIDE.md` ... `MAX-USER-GUIDE.md` as seven literal strings. agent-registry.js already exports `USER_GUIDES = AGENTS.map(a => `${a.name.toUpperCase()}-USER-GUIDE.md`)` (verified at runtime: ['EMMA-USER-GUIDE.md',...,'MAX-USER-GUIDE.md']). docs-audit.js imports AGENTS/WORKFLOWS/GYRE_AGENTS from that same registry (line 9-12) but NOT USER_GUIDES, then re-spells the same seven names by hand.
 - **Impact:** Multiple sources of truth for the agent roster. If an 8th Vortex agent is added (the registry's documented one-line extension point), AGENTS-derived checks update automatically but the guide-audit list silently stays at 7 — the new agent's guide never gets link/coverage-audited, defeating the audit's purpose. The list is already subtly incomplete (VORTEX-TEAM-GUIDE.md on disk is unaudited).
 - **Suggested fix:** Import USER_GUIDES from agent-registry and build the guide paths as `USER_GUIDES.map(g => `_bmad/bme/_vortex/guides/${g}`)`, concatenated into USER_FACING_DOCS. The non-guide docs (README, docs/*) stay as literals.
@@ -314,7 +314,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 25. runMigrations has no projectRoot seam, forcing the orchestration test to process.chdir into the temp dir
 
 - **Status:** 🔴 Live — untracked
-- **Type:** conception  •  **Location:** [tests/unit/migration-runner-orchestration.test.js:28](tests/unit/migration-runner-orchestration.test.js#L28)  •  **Reviewer:** `test-architecture`
+- **Type:** conception  •  **Location:** `tests/unit/migration-runner-orchestration.test.js:28`  •  **Reviewer:** `test-architecture`
 - **Evidence:** The suite must `process.chdir(tmpDir)` (line 28; cwd captured at line 18, restored in `after` at line 22) before every `runMigrations('1.4.1')` call because runMigrations takes only a fromVersion string. scripts/update/lib/migration-runner.js:31 resolves the target via `const projectRoot = findProjectRoot();` (cwd-walking) rather than accepting a projectRoot parameter — unlike its own collaborators backupManager.createBackup(fromVersion, projectRoot), executeMigration(migration, projectRoot), refreshInstallation(projectRoot), and validator.validateInstallation(backupMetadata, projectRoot), which all take projectRoot explicitly.
 - **Impact:** Missing test seam: the only way to point runMigrations at an isolated fixture is global process.cwd mutation, which is shared mutable state. The test cannot run in parallel with anything else in-process and depends on after-hook restoration for isolation; a thrown assertion before restore would leak cwd to later files. It is also an inconsistent abstraction — every downstream function in the same module is projectRoot-parameterized except its entry orchestrator.
 - **Suggested fix:** Add an optional projectRoot parameter to runMigrations(fromVersion, { projectRoot, verbose }) defaulting to findProjectRoot() for the CLI path, and pass it through. Then change the test to `runMigrations('1.4.1', { projectRoot: tmpDir })` and delete all process.chdir/originalCwd plumbing.
@@ -324,7 +324,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 26. Shared kernel utilities misplaced inside the update/ subsystem — every subsystem reaches up into update/lib/utils.js
 
 - **Status:** 🔴 Live — untracked
-- **Type:** conception  •  **Location:** [scripts/update/lib/utils.js:76](scripts/update/lib/utils.js#L76)  •  **Reviewer:** `cross-cutting-conception`
+- **Type:** conception  •  **Location:** `scripts/update/lib/utils.js:76`  •  **Reviewer:** `cross-cutting-conception`
 - **Evidence:** utils.js (under scripts/update/lib/) defines the codebase-wide primitives findProjectRoot(), getPackageVersion(), compareVersions(), assertVersion(), countUserDataFiles(). Its consumers span EVERY subsystem: audit/ (audit-bmm-dependencies.js:9, audit-skill-dirs.js:37, reference-integrity.js:63, validate-marketplace.js:36, drift-snapshot.js:34, install-scope-check.js:46, pf1-*.js), portability/ (catalog-generator.js:22, convoke-export.js:28, classify-skills.js:24, validate-classification.js:33, seed-catalog-repo.js:21), portfolio (scripts/lib/portfolio/portfolio-engine.js:19), and 8 top-level scripts (archive.js:5, convoke-doctor.js:7, migrate-artifacts.js:15, docs-audit.js:8, etc.). 30+ importers, most having nothing to do with the update workflow.
 - **Impact:** These are foundational, subsystem-agnostic utilities, but they are scoped as if private to the update/ feature. The module's own docstring even calls itself 'Shared utilities for the Convoke update system' while being the de-facto shared kernel for the whole package. The result is a leaky abstraction with the wrong home: low-level shared code lives inside a high-level feature folder, so the dependency graph fans out from a feature subsystem rather than a neutral base layer.
 - **Suggested fix:** Promote the cross-cutting primitives (findProjectRoot, getPackageVersion, compareVersions, assertVersion) to a neutral base module such as scripts/lib/runtime.js (or scripts/lib/utils.js), leave update-specific helpers (countUserDataFiles) in update/lib, and re-point all importers. This makes update/ a consumer of the base layer like every other subsystem.
@@ -334,7 +334,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 27. Package self-location depth duplicated as fragile ../../../ chains with no getPackageRoot() helper
 
 - **Status:** 🔴 Live — untracked
-- **Type:** conception  •  **Location:** [scripts/update/lib/refresh-installation.js:34](scripts/update/lib/refresh-installation.js#L34)  •  **Reviewer:** `cross-cutting-conception`
+- **Type:** conception  •  **Location:** `scripts/update/lib/refresh-installation.js:34`  •  **Reviewer:** `cross-cutting-conception`
 - **Evidence:** Each script independently encodes its distance to the package root: refresh-installation.js:34 `path.join(__dirname, '..', '..', '..')`, changelog-reader.js:7 `path.join(__dirname, '..', '..', '..', 'CHANGELOG.md')`, utils.js:17 getPackageVersion `require('../../../package.json')` — three separate hardcodings of the same 3-level depth. install-vortex-agents.js:59 uses `__dirname, '..'` and generate-badges-json.js:21 uses `__dirname, '..'` (different depth because different nesting). grep confirms there is NO getPackageRoot() helper anywhere.
 - **Impact:** The number of `..` segments silently depends on each file's directory depth, so moving any of these files between folders breaks its package-root resolution with no compile-time signal. getPackageVersion already needs exactly this resolution and re-derives it; the lack of a shared helper means the package's own install root is computed four+ different ways.
 - **Suggested fix:** Expose getPackageRoot() once in the base layer (e.g. anchored via require.resolve('<pkg>/package.json') or a single __dirname computation in one known-depth file) and have getPackageVersion, refresh-installation, and changelog-reader consume it instead of re-counting `..`.
@@ -344,7 +344,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 28. Migration preview() emits a hardcoded count of 18 SKILL.md targets instead of deriving it
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [scripts/update/migrations/3.3.x-to-4.0.0.js:84](scripts/update/migrations/3.3.x-to-4.0.0.js#L84)  •  **Reviewer:** `update-engine`
+- **Type:** execution  •  **Location:** `scripts/update/migrations/3.3.x-to-4.0.0.js:84`  •  **Reviewer:** `update-engine`
 - **Evidence:** When preview() is called with no projectRoot (the migration-runner.previewMigrations path always calls `migration.module.preview()` with zero args, runner line 226), it returns _previewActionsWithCount('up to 18'); the literal 18 also appears in the registry description and the apply() doc. The project-aware path (preview(projectRoot)) correctly derives canonicalCount from the inventory CSV, proving the count is knowable at runtime.
 - **Impact:** Violates derive-counts-from-source. The runner's dry-run (`convoke-update --dry-run`) always hits the zero-arg branch and shows the frozen '18', which drifts the moment the v6.3-migration-inventory.csv canonical row count changes (the very file the real apply() iterates). The dry-run preview can therefore misreport the work the real run will do.
 - **Suggested fix:** Have migration-runner.previewMigrations pass projectRoot into preview() (it already resolves projectRoot in runMigrations), and make the no-projectRoot branch report 'N canonical inventory targets' computed from the inventory CSV rather than the literal 18. Remove the '18' literal from the static fallback.
@@ -354,7 +354,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 29. guessVersionFromFileStructure returns minor-pinned guesses that can mis-route the migration chain
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [scripts/update/lib/version-detector.js:55](scripts/update/lib/version-detector.js#L55)  •  **Reviewer:** `update-engine`
+- **Type:** execution  •  **Location:** `scripts/update/lib/version-detector.js:55`  •  **Reviewer:** `update-engine`
 - **Evidence:** When config.yaml has no version field, getCurrentVersion falls back to guessVersionFromFileStructure, which returns the hardcoded strings '1.1.0' or '1.0.0' based on directory presence. registry.matchesVersionRange then keys off major.minor: '1.1.0' → matches '1.1.x' entry, '1.0.0' → '1.0.x'. A modern install (e.g. 3.x) that lost its version field but still has workflows/_deprecated would be guessed as '1.1.0' and run the entire 1.1.x→…→4.0.0 chain.
 - **Impact:** The fallback can only ever return two ancient versions, so any version-field-less install newer than 1.1 is silently misclassified as 1.1.0 and dragged through a long, wrong migration chain (including breaking 1.7→2.0 rename logic) instead of being flagged for reinstall. The structural signals (presence of _deprecated) are not version-discriminating beyond 1.1.
 - **Suggested fix:** Treat a config.yaml that exists but lacks a version field as 'partial/corrupted' (route to convoke-install) rather than guessing an ancient version, OR strengthen the structural probe to detect the actual installed generation (skill-dir agents ⇒ >=4.0, _gyre present ⇒ >=3.x). Do not feed a fabricated 1.x version into getMigrationsFor.
@@ -364,7 +364,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 30. Destructive rmSync on user-supplied output path lacks resolve+contains-check
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [scripts/portability/seed-catalog-repo.js:405](scripts/portability/seed-catalog-repo.js#L405)  •  **Reviewer:** `portability`
+- **Type:** execution  •  **Location:** `scripts/portability/seed-catalog-repo.js:405`  •  **Reviewer:** `portability`
 - **Evidence:** outputDir resolved from --output via path.resolve(process.cwd(), outputDir) (line 352) with no normalize+contains-check against projectRoot; fs.rmSync(outputDir, { recursive: true, force: true }) at lines 381, 394, 405 on generation/verification failure.
 - **Impact:** path-safety-for-destructive-ops requires user paths used for delete to be resolved, normalized, and contains-checked against project root, refusing outside paths. Here the recursive rm is only mitigated by the non-empty guard (line 364) and the dirCreatedByUs flag, not by a containment check — the invariant's required guard is absent. The guards bound impact to script-created empty trees, so severity is low, but the explicit safety check the project mandates is missing.
 - **Suggested fix:** Before any rmSync, resolve+normalize outputDir and assert it is inside an allowed root (project root or an explicit staging base); refuse and skip cleanup for outside paths. Keep the existing non-empty and dirCreatedByUs guards as defense-in-depth.
@@ -374,7 +374,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 31. install-scope-check write-op matcher counts matches inside comments and strings; snapshot bakes in a known false positive
 
 - **Status:** 🟡 Salvage — promote to CI
-- **Type:** execution  •  **Location:** [scripts/audit/install-scope-check.js:60](scripts/audit/install-scope-check.js#L60)  •  **Reviewer:** `audit-scripts`
+- **Type:** execution  •  **Location:** `scripts/audit/install-scope-check.js:60`  •  **Reviewer:** `audit-scripts`
 - **Evidence:** { file: 'scripts/update/migrations/3.3.x-to-4.0.0.js', expected: 5 }, // comment at line 56-58 admits: '5 matches (4 real writes + 1 comment false-positive at line 394)'. Verified: line 394 of that migration is a JSDoc line ' * (state file) pass through this helper before `fs.writeFileSync` is called.' counted as a write op by WRITE_OP_RE (line 83).
 - **Impact:** countWriteOps() runs WRITE_OP_RE over raw line text with no comment/string stripping (catch-all-phase-review: a matcher with no false-positive guard). The control's whole purpose is to detect when a real fs write is added/removed. Because a comment mention counts as +1, the snapshot expected:5 is '4 real + 1 comment'. If a dev removes that comment AND adds a real write in the same change, the count stays 5 and the scope regression passes silently — the exact failure mode the control exists to catch. The expected counts are also a hand-maintained snapshot of source state, brittle to any unrelated edit (e.g. adding a write-op mention to a doc-comment) and updated manually.
 - **Suggested fix:** Strip line/block comments and string literals before matching (or only count matches whose line is not comment-only), so the count reflects real call sites. Then re-baseline expected:5 -> 4. Optionally assert against AST/`require('acorn')` tokenization rather than a line regex to make the control robust.
@@ -384,7 +384,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 32. parseRecording hardcodes the prompt count (4) instead of deriving from PF1_PROMPTS
 
 - **Status:** 🟣 Blocked — keep (FINISH or waive)
-- **Type:** execution  •  **Location:** [scripts/audit/pf1-validation-battery.js:96](scripts/audit/pf1-validation-battery.js#L96)  •  **Reviewer:** `audit-scripts`
+- **Type:** execution  •  **Location:** `scripts/audit/pf1-validation-battery.js:96`  •  **Reviewer:** `audit-scripts`
 - **Evidence:** if (headers.length !== 4) { throw ...expected exactly 4 [Prompt 1..Prompt 4] headers... } const expectedNums = ['1', '2', '3', '4']; // while the module already defines the source-of-truth array: const PF1_PROMPTS = ['Prompt 1','Prompt 2','Prompt 3','Prompt 4'] (line 62), used everywhere else (writeResults, main, dry-run).
 - **Impact:** derive-counts-from-source: PF1_PROMPTS is the declared source-of-truth array for the prompt set, but parseRecording independently hardcodes the literal 4 and the ['1','2','3','4'] sequence. If the prompt battery is ever expanded/reduced (the file header and drift-snapshot already contemplate 3- and 5-skill variants), PF1_PROMPTS and the parser will silently disagree: callers will iterate N prompts while parseRecording still demands exactly 4, throwing exitCode 5 on otherwise-valid recordings. drift-snapshot.js (PROMPT_LABELS, PROMPTS_PER_SKILL) has the same split-source shape.
 - **Suggested fix:** Derive from the array: `const expectedNums = PF1_PROMPTS.map((_, i) => String(i + 1));` and check `headers.length !== PF1_PROMPTS.length`. Update the thrown message to interpolate PF1_PROMPTS.length so count and message can't drift apart.
@@ -394,7 +394,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 33. archive.js aborts mid-migration and skips INDEX update when two loose root files collide to the same lowercased archive name
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [scripts/archive.js:246](scripts/archive.js#L246)  •  **Reviewer:** `entrypoints`
+- **Type:** execution  •  **Location:** `scripts/archive.js:246`  •  **Reviewer:** `entrypoints`
 - **Evidence:** Root files are archived to `_archive/exploratory/${toLowerKebab(f)}` and moved with `fs.move(a.from, a.to, { overwrite: false })`. If two loose root files normalize to the same kebab name (e.g. `Notes.md` and `notes.md`, or `My File.md` and `my-file.md`), the first move succeeds and the second throws (fs-extra rejects an existing dest under overwrite:false). The throw propagates to the top-level `run().catch` (line 282) AFTER some files have already been moved, and crucially BEFORE `appendToIndex(indexPath, indexEntries)` (line 252) runs — so the moved files are physically relocated but have NO traceability row in INDEX.md, contradicting the file's 'append-only traceability log' contract.
 - **Impact:** Partial, non-atomic mutation with a broken audit trail. The operator sees a crash, some files moved with no index record, and must reconstruct what happened by hand. The collision is reachable on case-insensitive filesystems (macOS default) or any two files differing only in case/separators.
 - **Suggested fix:** Detect target-path collisions before executing (group actions by `a.to`, and either de-duplicate with a numeric suffix or fail the dry-run with a clear 'N files collide to X' message). Alternatively, append each entry to INDEX immediately after its successful move rather than batching after the loop, so a mid-loop failure still leaves an accurate (if partial) index.
@@ -404,7 +404,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 34. Dead findProjectRoot try/catch in portability CLIs assumes it throws, but it returns null
 
 - **Status:** 🔴 Live — untracked
-- **Type:** execution  •  **Location:** [scripts/portability/seed-catalog-repo.js:355](scripts/portability/seed-catalog-repo.js#L355)  •  **Reviewer:** `invariant-sweep`
+- **Type:** execution  •  **Location:** `scripts/portability/seed-catalog-repo.js:355`  •  **Reviewer:** `invariant-sweep`
 - **Evidence:** seed-catalog-repo.js:354-358 `let projectRoot; try { projectRoot = findProjectRoot(); } catch (e) { ...return 2; }` and the identical block in catalog-generator.js:317-322. But utils.js:76-89 `findProjectRoot()` returns null when no _bmad ancestor is found — it never throws. So the catch is unreachable and a null projectRoot flows onward into generate(null,...) (seed-catalog:376) / generateCatalog(null) (catalog-generator:327), where path.join(null,'_bmad',...) throws a generic TypeError caught by the downstream try with an opaque message instead of the intended 'could not find project root'.
 - **Impact:** Error-handling gap from a wrong assumption about the findProjectRoot() contract: the explicit, user-facing 'could not find project root' diagnostic is dead, and the not-found case surfaces as a confusing downstream TypeError instead. When run outside a Convoke install the operator gets a misleading 'Generation failed: Cannot read properties of null' / 'Error generating catalog' message.
 - **Suggested fix:** Replace the try/catch with an explicit null check: `const projectRoot = findProjectRoot(); if (!projectRoot) { process.stderr.write('Error: could not find project root (no _bmad/ directory found).\n'); return 2; }` in both seed-catalog-repo.js and catalog-generator.js.
@@ -414,7 +414,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 35. Unreachable tier-not-supported branch in single-skill export
 
 - **Status:** 🔴 Live — untracked
-- **Type:** muda  •  **Location:** [scripts/portability/convoke-export.js:319](scripts/portability/convoke-export.js#L319)  •  **Reviewer:** `portability`
+- **Type:** muda  •  **Location:** `scripts/portability/convoke-export.js:319`  •  **Reviewer:** `portability`
 - **Evidence:** if (msg.includes('not standalone') || msg.includes('tier "')) { return { ok: false, exitCode: EXIT_TIER_NOT_SUPPORTED, error: err }; }  — but export-engine.js throws no error containing 'not standalone' or 'tier "' (grep of export-engine.js error strings shows only 'is not in the manifest' and 'SKILL.md not found'). Pipeline skills now export with a notice rather than throwing.
 - **Impact:** EXIT_TIER_NOT_SUPPORTED (exit 3) is unreachable in single-skill mode; the matcher checks for an error message the engine never produces. Dead code that also contradicts the help text (line 149 advertises exit 3 'Tier 3 / pipeline requested') for single-skill invocation — a single skill name of a pipeline tier actually succeeds.
 - **Suggested fix:** Remove the dead branch, or if single-skill pipeline rejection is desired, look up the skill's tier from the manifest and return EXIT_TIER_NOT_SUPPORTED explicitly. Reconcile the help text's exit-code table with actual behavior.
@@ -424,7 +424,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 36. truncateDescription duplicated verbatim across two modules
 
 - **Status:** 🔴 Live — untracked
-- **Type:** muda  •  **Location:** [scripts/portability/generate-adapters.js:22](scripts/portability/generate-adapters.js#L22)  •  **Reviewer:** `portability`
+- **Type:** muda  •  **Location:** `scripts/portability/generate-adapters.js:22`  •  **Reviewer:** `portability`
 - **Evidence:** generate-adapters.js:22 function truncateDescription(desc) {...} with comment line 20 'Same logic as catalog-generator.js's truncateDescription.' catalog-generator.js:67 defines the identical function.
 - **Impact:** Two copies of the same truncation logic drift independently. The comment admits the duplication. Any change to truncation rules (e.g., the 120-char cap) must be made in two places.
 - **Suggested fix:** Extract truncateDescription into a shared module (e.g. scripts/portability/format-utils.js or export-engine.js) and import it in both catalog-generator.js and generate-adapters.js.
@@ -434,7 +434,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 37. generate-adapters reimplements humanizeSkillName inline instead of importing it
 
 - **Status:** 🔴 Live — untracked
-- **Type:** muda  •  **Location:** [scripts/portability/generate-adapters.js:62](scripts/portability/generate-adapters.js#L62)  •  **Reviewer:** `portability`
+- **Type:** muda  •  **Location:** `scripts/portability/generate-adapters.js:62`  •  **Reviewer:** `portability`
 - **Evidence:** Lines 62-69 build displayName via .replace(/^bmad-cis-agent-/,'').replace(/^bmad-agent-/,'').replace(/^bmad-cis-/,'').replace(/^bmad-/,'').split('-').map(s=>s.charAt(0).toUpperCase()+s.slice(1)).join(' ') — identical to export-engine.js:533 humanizeSkillName, which is already exported from export-engine.js.
 - **Impact:** Duplicated prefix-stripping/title-casing logic. If the bmad- prefix set or casing changes (export-engine.js humanizeSkillName), the adapter copy silently diverges, producing inconsistent display names across catalog vs adapter files.
 - **Suggested fix:** Import { humanizeSkillName } from './export-engine' and use it for the Copilot adapter displayName.
@@ -444,7 +444,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 38. No-op .replace in extractWhatYouProduce Goal branch
 
 - **Status:** 🔴 Live — untracked
-- **Type:** muda  •  **Location:** [scripts/portability/export-engine.js:818](scripts/portability/export-engine.js#L818)  •  **Reviewer:** `portability`
+- **Type:** muda  •  **Location:** `scripts/portability/export-engine.js:818`  •  **Reviewer:** `portability`
 - **Evidence:** goalMatch[1].toLowerCase().replace(/^[a-z]/, (c) => c) — the replacement callback returns the matched char unchanged, so the .replace is a guaranteed no-op.
 - **Impact:** Dead transformation that signals lost intent (likely meant to capitalize or otherwise normalize the leading char). It misleads readers into thinking some casing fix happens.
 - **Suggested fix:** Remove the no-op .replace(/^[a-z]/, (c) => c), or implement the intended transformation (e.g., (c)=>c.toUpperCase()) if leading-cap was the goal.
@@ -454,7 +454,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 39. writeInventoryCsv is dead in production — CLI duplicates its logic instead of calling it
 
 - **Status:** 🔴 Live — untracked
-- **Type:** muda  •  **Location:** [scripts/audit/audit-bmad-init-refs.js:112](scripts/audit/audit-bmad-init-refs.js#L112)  •  **Reviewer:** `audit-scripts`
+- **Type:** muda  •  **Location:** `scripts/audit/audit-bmad-init-refs.js:112`  •  **Reviewer:** `audit-scripts`
 - **Evidence:** function writeInventoryCsv(entries, outputPath) { ... lines.push([...].join(',')) ... fs.writeFileSync(outputPath, lines.join('\n') + '\n', 'utf8'); } // but _runCli (line 255) does: `const generated = renderInventoryCsv(entries); ... fs.writeFileSync(outputAbs, generated, 'utf8');` — never calling writeInventoryCsv. grep confirms writeInventoryCsv is referenced only in tests/lib/audit-bmad-init-refs.test.js, never by production code.
 - **Impact:** writeInventoryCsv and renderInventoryCsv contain the same 8-line serialization loop. Production uses renderInventoryCsv + a bare fs.writeFileSync; writeInventoryCsv exists only to be unit-tested. This is duplicated logic plus an export that production never exercises — the test verifies a code path no caller uses, and the two serializers can drift (one already carries a JSDoc note 'Mirrors writeInventoryCsv's formatting exactly', which is a maintenance hazard rather than a guarantee).
 - **Suggested fix:** Have writeInventoryCsv delegate to renderInventoryCsv (`fs.writeFileSync(outputPath, renderInventoryCsv(entries), 'utf8')`) and have _runCli call writeInventoryCsv, so there is one serialization path that both production and tests exercise. Or drop writeInventoryCsv entirely if the project standard is render-then-write at the call site.
@@ -464,7 +464,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 40. Duplicated kebab-boundary initiative scanner kept in two files that must stay in sync
 
 - **Status:** 🔴 Live — untracked
-- **Type:** muda  •  **Location:** [scripts/lib/portfolio/portfolio-engine.js:43](scripts/lib/portfolio/portfolio-engine.js#L43)  •  **Reviewer:** `lib-portfolio`
+- **Type:** muda  •  **Location:** `scripts/lib/portfolio/portfolio-engine.js:43`  •  **Reviewer:** `lib-portfolio`
 - **Evidence:** _scanCorpus() (portfolio-engine.js:43-60) is byte-for-byte equivalent in logic to _scanCorpusForInitiative() (artifact-utils.js:503-528): same length-desc candidate sort, same escape `/[.*+?^${}()|[\]\\]/g`, same boundary regex `(?:^|[^a-z0-9-])${escaped}(?:$|[^a-z0-9-])`, same alias resolution. The portfolio copy's own comment (lines 34-37) acknowledges it 'Mirrors _scanCorpusForInitiative ... kept local to avoid a cross-module dependency.'
 - **Impact:** Two sources of truth for the load-bearing kebab-boundary correctness invariant (the documented 'pre-gyre must not match gyre' behavior). A future fix to the boundary class in one file silently diverges from the other, reintroducing the very false-match bug the lookarounds exist to prevent. The 'avoid a cross-module dependency' rationale is weak — portfolio already imports four functions from artifact-utils (portfolio-engine.js:12-18).
 - **Suggested fix:** Export _scanCorpusForInitiative from artifact-utils.js (or a small shared scanner module) and import it in portfolio-engine.js, deleting the local copy.
@@ -474,7 +474,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 41. git-recency rule spawns one git subprocess per artifact, scaling O(artifacts) in process spawns
 
 - **Status:** 🔴 Live — untracked
-- **Type:** muda  •  **Location:** [scripts/lib/portfolio/rules/git-recency-rule.js:31](scripts/lib/portfolio/rules/git-recency-rule.js#L31)  •  **Reviewer:** `lib-portfolio`
+- **Type:** muda  •  **Location:** `scripts/lib/portfolio/rules/git-recency-rule.js:31`  •  **Reviewer:** `lib-portfolio`
 - **Evidence:** applyGitRecencyRule loops over every artifact for the initiative and runs execFileSync('git', ['log', '-1', '--format=%as', '--', relativePath]) once per artifact (lines 31-46), only to keep the single maximum date. This rule is invoked once per initiative in generatePortfolio (portfolio-engine.js:383), so total git invocations are O(total governed+ungoverned artifacts) on every portfolio run.
 - **Impact:** Redundant work: the per-initiative result is a single 'most recent commit date', obtainable with one `git log -1 --format=%as -- <path1> <path2> ...` over all the initiative's paths instead of N separate spawns. On large repos this is the dominant cost of the read-only portfolio command. Unlike the migration suggester (which caps git queries via MAX_GIT_SUGGESTER_QUERIES), this path has no cap and no batching.
 - **Suggested fix:** Pass all of the initiative's relativePaths to a single `git log -1 --format=%as --` invocation (git reports the newest commit touching any of them), or batch across all initiatives once and index by path. Eliminates the per-file spawn loop.
@@ -484,7 +484,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 42. INTERNALS list duplicates a subset of the shared FORBIDDEN_STRINGS
 
 - **Status:** 🔴 Live — untracked
-- **Type:** muda  •  **Location:** [tests/lib/portability-seed-catalog.test.js:82](tests/lib/portability-seed-catalog.test.js#L82)  •  **Reviewer:** `test-architecture`
+- **Type:** muda  •  **Location:** `tests/lib/portability-seed-catalog.test.js:82`  •  **Reviewer:** `test-architecture`
 - **Evidence:** Line 82: `const INTERNALS = ['_bmad/', 'bmad-init', '.claude/hooks', '{project-root}'];` — every entry is a member of FORBIDDEN_STRINGS in scripts/portability/test-constants.js (framework-paths + bmad-init). This 'zero BMAD internals across staging tree' check hand-rolls a subset of the canonical forbidden list instead of importing it.
 - **Impact:** shared-test-constants violation: the same 'these tokens must never leak into exports' concept is maintained in two places. If the shared list gains a new internal path/directive, the seed-catalog staging-tree scan will not catch it, so the export pipeline can regress with this test still green.
 - **Suggested fix:** Import FORBIDDEN_STRINGS from scripts/portability/test-constants.js and iterate over it here too (or, if a deliberate subset is required, derive INTERNALS by filtering the shared list with a documented predicate rather than re-typing literals).
@@ -494,7 +494,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 43. Stale cross-reference comment points at a non-existent module (scripts/lib/csv-utils.js)
 
 - **Status:** 🔴 Live — untracked
-- **Type:** muda  •  **Location:** [scripts/portability/manifest-csv.js:5](scripts/portability/manifest-csv.js#L5)  •  **Reviewer:** `cross-cutting-conception`
+- **Type:** muda  •  **Location:** `scripts/portability/manifest-csv.js:5`  •  **Reviewer:** `cross-cutting-conception`
 - **Evidence:** manifest-csv.js:5 documents: 'It is intentionally separate from `scripts/lib/csv-utils.js` (Team Factory's CSV writer utility)'. That path does not exist — verified `ls scripts/lib/csv-utils.js` returns no file. The actual Team Factory CSV utility lives at _bmad/bme/_team-factory/lib/utils/csv-utils.js. The migration file's comment (3.3.x-to-4.0.0.js:640) points to the correct path, so the two comments disagree.
 - **Impact:** The justification comment for keeping a duplicate parser cites a module that was never at that path, so a future maintainer trying to reconcile the duplicates is misdirected. It also weakens the (already questionable) rationale for the third parseCsvRow copy.
 - **Suggested fix:** Correct the comment to reference _bmad/bme/_team-factory/lib/utils/csv-utils.js (or, better, remove the duplicate entirely per the consolidation finding above).
@@ -504,7 +504,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 44. pf1-record-agent.js: orphaned operator CLI with no code, test, or CI references
 
 - **Status:** 🟣 Blocked — keep (FINISH or waive)
-- **Type:** muda  •  **Location:** [scripts/audit/pf1-record-agent.js:1](scripts/audit/pf1-record-agent.js#L1)  •  **Reviewer:** `muda-triage`
+- **Type:** muda  •  **Location:** `scripts/audit/pf1-record-agent.js:1`  •  **Reviewer:** `muda-triage`
 - **Evidence:** A grep for `pf1-record-agent` across all *.js/*.json/*.yml/*.yaml in the repo (excluding node_modules, exported-skills, and the file's own self-references/comments) returns ZERO hits. It is not in package.json `bin` or `scripts`, not invoked by any .github workflow (ci.yml/badges.yml), not required by any script, and has no test file (tests/lib/pf1-record-agent.test.js does not exist). It is only referenced in Story-4.3 markdown runbooks under _bmad-output/ (e.g. v63-4-3-recording-protocol.md).
 - **Impact:** This is a manual operator script for the PF1 validation recording cycle (Story 4.3). Per project memory, Story 4.3 is STALLED and 4.0 ships on the v6.3 baseline as planned. The script has no automated coverage and no programmatic entry point — it is dormant tooling tied to an in-flight-but-blocked gate, drifting away from the code it inspects (its header pins a `claude -p` invariant from a spike that may already be stale).
 - **Suggested fix:** Confirm with the release owner whether the PF1 manual-recording cycle is still a release gate for 4.0/4.1. If yes, wire it into the documented runbook as a maintained tool and add a smoke test asserting arg-parse + exit codes. If the cycle was superseded (Path B+ re-scope moved control validation to install-scope-check.js), delete pf1-record-agent.js along with the stalled-story scaffolding.
@@ -514,7 +514,7 @@ Each finding carries a **Status** from reconciliation + intent reconstruction. �
 #### 45. config-merger.js: CONFIG_SCHEMA export is dead (used only internally, referenced by no other module or test)
 
 - **Status:** 🔴 Live — untracked
-- **Type:** muda  •  **Location:** [scripts/update/lib/config-merger.js:416](scripts/update/lib/config-merger.js#L416)  •  **Reviewer:** `muda-triage`
+- **Type:** muda  •  **Location:** `scripts/update/lib/config-merger.js:416`  •  **Reviewer:** `muda-triage`
 - **Evidence:** `CONFIG_SCHEMA` is defined at line 207, consumed internally at line 238 (`for (const rule of CONFIG_SCHEMA)`), and re-exported in `module.exports` at line 416. An exact grep for `CONFIG_SCHEMA` across scripts/ + index.js + tests/ returns hits ONLY inside config-merger.js itself (lines 207, 238, 416). No other source file and no test references the exported symbol. (By contrast, the file's other flagged exports — mergeConfig, writeConfig, readExcludedAgents, extractUserPreferences — all have real cross-file/test references and are false positives.)
 - **Impact:** CONFIG_SCHEMA is a legitimate internal constant, but exporting it from the module's public surface implies an external contract that does not exist. It is an unused export entry only (the constant itself is live), so blast radius is tiny — but it invites future code to depend on an internal detail and bloats the module's apparent API.
 - **Suggested fix:** Drop `CONFIG_SCHEMA` from the `module.exports` object at line 416, keeping it as a module-local const. If a test legitimately needs to assert on the schema, add that test and the export together; otherwise remove the export.
