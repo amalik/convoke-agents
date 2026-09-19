@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zero Files — Party Mode, 19–20 September 2026</title>
+<style>
+  :root{
+    --ink:#e9e5dc; --ink-dim:#9a9488; --ink-faint:#5f5a51;
+    --bg:#100f0e; --panel:#1a1815; --panel2:#151311; --line:#2b2823;
+    --gold:#e0a33c;   /* John, BMM */
+    --blue:#5fa8c7;   /* Winston, architecture */
+    --teal:#4fb3a0;   /* Vortex */
+    --violet:#9b8bd0; /* CIS */
+    --rose:#d9534f;   /* alarm */
+    --green:#6fbf73;  /* cleared */
+    --amber:#c9a227;  /* pending */
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);
+       line-height:1.62;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  .wrap{max-width:840px;margin:0 auto;padding:0 20px 110px}
+  a{color:inherit}
+
+  /* ---------- header ---------- */
+  header{padding:64px 0 28px;text-align:center;position:relative}
+  .kicker{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;
+          color:var(--ink-faint)}
+  h1{font-size:clamp(44px,13vw,104px);margin:.10em 0 .06em;font-weight:400;letter-spacing:-.035em;
+     line-height:.94}
+  h1 .z{color:var(--rose)}
+  .sub{color:var(--ink-dim);font-style:italic;font-size:16.5px;max-width:44ch;margin:14px auto 0}
+  .stamp{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+         color:var(--ink-faint);margin-top:22px}
+  .rule{width:100%;height:1px;background:linear-gradient(90deg,transparent,var(--line) 16%,var(--line) 84%,transparent);margin:40px 0}
+
+  /* ---------- spiral motif ---------- */
+  .spiral{width:min(240px,62vw);margin:26px auto 0;display:block}
+  .spiral .arm{fill:none;stroke:var(--teal);stroke-width:1.1;opacity:.5;
+       stroke-dasharray:900;stroke-dashoffset:900;animation:draw 3.2s ease-out .25s forwards}
+  .spiral .dot{fill:var(--teal);opacity:0;animation:pop .5s ease-out forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes pop{to{opacity:.85}}
+
+  h2{font-size:12px;font-family:var(--mono);letter-spacing:.2em;text-transform:uppercase;
+     color:var(--ink-faint);margin:0 0 20px;font-weight:400}
+  h2 em{font-style:normal;color:var(--ink-dim)}
+  section{margin:56px 0}
+  p{margin:0 0 16px}
+  .lede{font-size:18.5px;color:var(--ink)}
+  .dim{color:var(--ink-dim)}
+
+  /* ---------- the absence ---------- */
+  .absence{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+           padding:26px 22px;text-align:center;position:relative;overflow:hidden}
+  .absence::after{content:"";position:absolute;inset:auto 0 0 0;height:2px;background:var(--rose);opacity:.55}
+  .absence code{font-family:var(--mono);font-size:12.5px;color:var(--ink-dim);display:block;
+                word-break:break-word}
+  .absence .big{font-family:var(--mono);font-size:clamp(40px,11vw,66px);color:var(--rose);
+                display:block;margin:12px 0 2px;letter-spacing:-.02em}
+  .absence .cap{font-size:14px;color:var(--ink-dim);font-style:italic}
+
+  /* ---------- verbatim cards ---------- */
+  .vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+  .vc{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:16px 15px;
+      position:relative}
+  .vc .co{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+          color:var(--ink-faint)}
+  .vc .role{font-size:15.5px;margin:4px 0 9px;color:var(--ink)}
+  .vc blockquote{margin:0;font-style:italic;font-size:14.5px;color:var(--ink-dim);
+                 border-left:2px solid var(--line);padding-left:11px}
+  .vc.t1{border-top:2px solid var(--blue)}
+  .vc.t2{border-top:2px solid var(--violet)}
+  .vc.t3{border-top:2px solid var(--gold)}
+  .vc.t4{border-top:2px solid var(--teal)}
+  .vc.t5{border-top:2px solid var(--green)}
+
+  /* ---------- threshold board ---------- */
+  .board{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 4px 6px}
+  .row{display:grid;grid-template-columns:1fr 84px;gap:10px;align-items:center;
+       padding:11px 16px;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:0}
+  .row .name{font-size:15px}
+  .row .name small{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+                   text-transform:uppercase;color:var(--ink-faint);margin-top:3px}
+  .pips{display:flex;gap:6px;justify-content:flex-end}
+  .pip{width:12px;height:12px;border-radius:50%;border:1px solid var(--line);background:transparent;
+       opacity:0;animation:fadein .5s ease-out forwards}
+  .pip.on{background:var(--amber);border-color:var(--amber)}
+  .row.clear .pip.on{background:var(--green);border-color:var(--green)}
+  .row.clear .name{color:var(--green)}
+  .row.clear .name small{color:var(--green);opacity:.7}
+  @keyframes fadein{to{opacity:1}}
+  .boardcap{font-size:13.5px;color:var(--ink-dim);font-style:italic;text-align:center;margin:16px 0 0}
+
+  /* ---------- exchange ---------- */
+  .turn{display:grid;grid-template-columns:50px 1fr;gap:15px;margin:24px 0}
+  .av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:19px;
+      border:1px solid var(--line);background:var(--panel)}
+  .av.gold{box-shadow:0 0 0 1px rgba(224,163,60,.34)}
+  .av.blue{box-shadow:0 0 0 1px rgba(95,168,199,.34)}
+  .av.teal{box-shadow:0 0 0 1px rgba(79,179,160,.34)}
+  .av.violet{box-shadow:0 0 0 1px rgba(155,139,208,.34)}
+  .av.rose{box-shadow:0 0 0 1px rgba(217,83,79,.34)}
+  .who{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+       margin-bottom:5px;color:var(--ink-dim)}
+  .who .t{color:var(--ink-faint);letter-spacing:.1em}
+  .said{font-size:16.5px}
+  .said em{color:var(--ink);font-style:italic}
+  .beat{font-size:13.5px;color:var(--ink-faint);font-style:italic;margin:20px 0 20px 65px}
+
+  /* ---------- filed table ---------- */
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  th{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+     color:var(--ink-faint);text-align:left;font-weight:400;padding:0 10px 9px 0;border-bottom:1px solid var(--line)}
+  td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  td.id{font-family:var(--mono);font-size:12.5px;color:var(--gold);white-space:nowrap}
+  td.dt{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);white-space:nowrap}
+  tr:last-child td{border-bottom:0}
+
+  /* ---------- rulings ---------- */
+  .rulings{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .ruling{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 20px;
+          position:relative;overflow:hidden}
+  .ruling::after{content:"";position:absolute;inset:auto 0 0 0;height:2px;opacity:.6}
+  .ruling.q3::after{background:var(--violet)}
+  .ruling.q4::after{background:var(--blue)}
+  .ruling .q{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+             color:var(--ink-faint)}
+  .ruling .verdict{font-size:22px;margin:9px 0 12px;letter-spacing:-.01em;line-height:1.24}
+  .ruling.q3 .verdict{color:var(--violet)}
+  .ruling.q4 .verdict{color:var(--blue)}
+  .ruling ul{margin:0;padding-left:17px;font-size:14.5px;color:var(--ink-dim)}
+  .ruling li{margin:0 0 7px}
+  .ruling li b{color:var(--ink);font-weight:400;border-bottom:1px dotted var(--ink-faint)}
+
+  /* ---------- tallies ---------- */
+  .tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .t{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:18px 14px;text-align:center}
+  .t .n{font-family:var(--mono);font-size:clamp(26px,6vw,34px);display:block;letter-spacing:-.02em}
+  .t .l{font-size:12.5px;color:var(--ink-dim);margin-top:6px;display:block;line-height:1.4}
+  .t.a .n{color:var(--teal)} .t.b .n{color:var(--gold)} .t.c .n{color:var(--violet)} .t.d .n{color:var(--rose)}
+
+  /* ---------- roster ---------- */
+  .roster{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{font-size:13px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;
+        padding:5px 11px;color:var(--ink-dim);white-space:nowrap}
+  .chip b{font-weight:400;color:var(--ink)}
+  .team{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+        color:var(--ink-faint);margin:18px 0 8px}
+
+  /* ---------- close ---------- */
+  .close{text-align:center;margin:68px 0 0}
+  .close .line{font-size:clamp(20px,4.6vw,27px);font-style:italic;color:var(--ink);max-width:24ch;margin:0 auto;
+               line-height:1.34}
+  .close .attr{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+               color:var(--ink-faint);margin-top:20px}
+  footer{margin-top:52px;padding-top:22px;border-top:1px solid var(--line);
+         font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+         color:var(--ink-faint);display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between}
+
+  @media (max-width:640px){
+    .rulings{grid-template-columns:1fr}
+    .turn{grid-template-columns:40px 1fr;gap:12px}
+    .av{width:36px;height:36px;font-size:16px}
+    .beat{margin-left:52px}
+    .row{grid-template-columns:1fr 70px;padding:10px 12px}
+    .pip{width:10px;height:10px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important}
+    .pip,.spiral .arm,.spiral .dot{opacity:1;stroke-dashoffset:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Party Mode &middot; Convoke &middot; 19–20 September 2026</div>
+  <h1><span class="z">Zero</span> Files</h1>
+  <p class="sub">Twenty-eight agents, five clients, four hours past midnight — and the largest
+  thing found all night was a sentence that had never been written down.</p>
+
+  <svg class="spiral" viewBox="0 0 200 200" aria-label="Seven streams of the Vortex, spiralling inward">
+    <path class="arm" d="M100 22
+      C148 22 178 52 178 100
+      C178 143 143 174 100 174
+      C62 174 32 144 32 106
+      C32 73 58 47 91 47
+      C120 47 144 70 144 99
+      C144 124 124 144 99 144
+      C78 144 61 127 61 106
+      C61 88 75 74 93 74
+      C108 74 120 86 120 101"/>
+    <circle class="dot" cx="100" cy="22" r="3.4" style="animation-delay:.9s"/>
+    <circle class="dot" cx="178" cy="100" r="3.4" style="animation-delay:1.2s"/>
+    <circle class="dot" cx="100" cy="174" r="3.4" style="animation-delay:1.5s"/>
+    <circle class="dot" cx="32" cy="106" r="3.4" style="animation-delay:1.8s"/>
+    <circle class="dot" cx="144" cy="99" r="3.4" style="animation-delay:2.1s"/>
+    <circle class="dot" cx="61" cy="106" r="3.4" style="animation-delay:2.4s"/>
+    <circle class="dot" cx="120" cy="101" r="4.2" style="animation-delay:2.7s"/>
+  </svg>
+
+  <div class="stamp">The night the field walked in</div>
+</header>
+
+<div class="rule"></div>
+
+<section>
+  <p class="lede">For five sessions this room argued about a document no stranger had ever read.
+  Then Amalik came back from the theatre of operations — weeks of workshops and pilots inside
+  global leaders in temporary work, payments, insurance, banking, luxury, industry and
+  distribution — and read out what people had actually said.</p>
+  <p class="dim">Four questions per verbatim: is it filed, is it worth filing, does it challenge
+  the vision, is BMAD-on-top still relevant. The room amended the protocol before accepting it —
+  questions three and four cannot be answered on n=1 — and pre-registered what would change its
+  mind <em>before</em> hearing a single word.</p>
+
+  <div class="absence" style="margin-top:28px">
+    <code>grep -rilE "keep (them|agents|teams) (as )?generic" --include="*.md" .</code>
+    <span class="big">0</span>
+    <span class="cap">The strategy the whole product rests on, stated aloud for the first time
+    at four hours in — as context on somebody else's quote.</span>
+  </div>
+</section>
+
+<section>
+  <h2>Five verbatims &middot; <em>five companies, five roles</em></h2>
+  <div class="vgrid">
+    <div class="vc t1">
+      <div class="co">Company A &middot; the gate</div>
+      <div class="role">🔐 AI Platform Lead</div>
+      <blockquote>“apparently everything is not clean… I don't see at first glance my roster agent.”</blockquote>
+    </div>
+    <div class="vc t2">
+      <div class="co">Company B &middot; use</div>
+      <div class="role">🎨 Senior Product Designer</div>
+      <blockquote>“I've been positively attracted in the vortex :-) … where I had difficulty was to know where I was.”</blockquote>
+    </div>
+    <div class="vc t3">
+      <div class="co">Company C &middot; evaluate</div>
+      <div class="role">🧭 CTO</div>
+      <blockquote>“npm packages in which the supply chain is suspect cannot be deployed at scale.”</blockquote>
+    </div>
+    <div class="vc t4">
+      <div class="co">Company D &middot; use</div>
+      <div class="role">⚙️ Engineering Lead</div>
+      <blockquote>“as we don't code anymore, at least we could learn.”</blockquote>
+    </div>
+    <div class="vc t5">
+      <div class="co">Company E &middot; use ×2</div>
+      <div class="role">📋 Two Product Owners</div>
+      <blockquote>“it took time to see that PM agent could manage a backlog… it quickly became huge.”</blockquote>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>The board &middot; <em>three speakers, two companies, unprompted</em></h2>
+  <div class="board">
+    <div class="row clear">
+      <div class="name">The product does not tell you what it has
+        <small>3 speakers &middot; 3 companies &middot; cleared</small></div>
+      <div class="pips">
+        <span class="pip on" style="animation-delay:.1s"></span>
+        <span class="pip on" style="animation-delay:.2s"></span>
+        <span class="pip on" style="animation-delay:.3s"></span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="name">Install topology &middot; one product, six repos
+        <small>2 of 3 &middot; the cleanest architecture candidate</small></div>
+      <div class="pips">
+        <span class="pip on" style="animation-delay:.4s"></span>
+        <span class="pip on" style="animation-delay:.5s"></span>
+        <span class="pip" style="animation-delay:.6s"></span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="name">Cannot confirm the install worked
+        <small>2 of 3</small></div>
+      <div class="pips">
+        <span class="pip on" style="animation-delay:.6s"></span>
+        <span class="pip on" style="animation-delay:.7s"></span>
+        <span class="pip" style="animation-delay:.8s"></span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="name">Supply chain &middot; distribution mode
+        <small>2 of 3 &middot; the gate on an offer of a team</small></div>
+      <div class="pips">
+        <span class="pip on" style="animation-delay:.8s"></span>
+        <span class="pip on" style="animation-delay:.9s"></span>
+        <span class="pip" style="animation-delay:1s"></span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="name">Deterministic gates &middot; “what Go does in Liza”
+        <small>2 of 3 &middot; our own six-session obsession, from outside</small></div>
+      <div class="pips">
+        <span class="pip on" style="animation-delay:1s"></span>
+        <span class="pip on" style="animation-delay:1.1s"></span>
+        <span class="pip" style="animation-delay:1.2s"></span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="name">A steep conceptual step
+        <small>2 of 3</small></div>
+      <div class="pips">
+        <span class="pip on" style="animation-delay:1.2s"></span>
+        <span class="pip on" style="animation-delay:1.3s"></span>
+        <span class="pip" style="animation-delay:1.4s"></span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="name">Scale &middot; individually attested
+        <small>2 of 3 &middot; it was never 400 engineers. It was six repos.</small></div>
+      <div class="pips">
+        <span class="pip on" style="animation-delay:1.4s"></span>
+        <span class="pip on" style="animation-delay:1.5s"></span>
+        <span class="pip" style="animation-delay:1.6s"></span>
+      </div>
+    </div>
+  </div>
+  <p class="boardcap">One cleared. Six waiting on a single speaker each. The threshold wasn't failing —
+  the sample was unfinished.</p>
+</section>
+
+<div class="rule"></div>
+
+<section>
+  <h2>The moment the joke stopped being a joke</h2>
+
+  <div class="turn">
+    <div class="av blue">🔎</div>
+    <div>
+      <div class="who">Scout <span class="t">/ stack detective</span></div>
+      <div class="said"><em>“Say that middle part again.”</em></div>
+    </div>
+  </div>
+  <p class="beat">— Amalik had mentioned, in passing, that in live corporate pilots they had to
+  point Claude Code and <code>bmad-help</code> at the <code>_bmad/bme/</code> folders before
+  Convoke's agents could be found.</p>
+
+  <div class="turn">
+    <div class="av gold">💻</div>
+    <div>
+      <div class="who">Amelia <span class="t">/ dev</span></div>
+      <div class="said">Checking it at HEAD. <code>.claude/skills/bmad-help/SKILL.md</code> —
+      occurrences of <code>bme</code>: <em>0</em>. <code>vortex</code>: <em>0</em>.
+      <code>gyre</code>: <em>0</em>. <code>convoke</code>: <em>0</em>. Modules it names:
+      <code>core</code> and <code>bmm</code>.</div>
+    </div>
+  </div>
+
+  <div class="turn">
+    <div class="av violet">🧠</div>
+    <div>
+      <div class="who">Carson <span class="t">/ brainstorming</span></div>
+      <div class="said">The joke. Six sessions. <em>“resolve_party.py returns sixteen and can't
+      see the twelve bme agents.”</em> We open every night with it. I carried twelve of you in
+      here by hand two hours ago and we all laughed.</div>
+    </div>
+  </div>
+
+  <div class="turn">
+    <div class="av teal">📐</div>
+    <div>
+      <div class="who">Atlas <span class="t">/ model curator</span></div>
+      <div class="said">It was never a joke. It was a <em>reproduction</em>. We've been running
+      the field defect as a warm-up act since session one.</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>What the Platform Lead found &middot; <em>all of it already ours</em></h2>
+  <table>
+    <thead><tr><th>What he hit in his terminal</th><th>Row</th><th>Filed</th></tr></thead>
+    <tbody>
+      <tr><td><code>BMAD core not detected</code> on a 6.12 install</td><td class="id">IN-199 · BUG-20 · T73</td><td class="dt">3× since 26 Aug</td></tr>
+      <tr><td><code>BMAD Method not detected</code> → installs standalone</td><td class="id">IN-199</td><td class="dt">same</td></tr>
+      <tr><td><code>workflow-manifest.csv not found</code></td><td class="id">I45</td><td class="dt">15 Apr</td></tr>
+      <tr><td><code>bmm/agents/pm.md not found</code> → Enhance patch skipped</td><td class="id">I47</td><td class="dt">15 Apr</td></tr>
+      <tr><td>Gyre agents ship without user guides</td><td class="id">T91</td><td class="dt">28 Aug · un-fixed</td></tr>
+      <tr><td>The install banner</td><td class="id">T93</td><td class="dt">28 Aug</td></tr>
+      <tr><td><code>replace {user} with your name</code></td><td class="id">IN-184 → I160</td><td class="dt">15 Aug · qualified</td></tr>
+    </tbody>
+  </table>
+
+  <div class="turn" style="margin-top:30px">
+    <div class="av gold">📋</div>
+    <div>
+      <div class="who">John <span class="t">/ product manager</span></div>
+      <div class="said">So he didn't find anything. <em>He read our backlog out loud. In a
+      client's terminal. At a global corporation.</em> T73 was filed by <em>this room</em>. Our
+      own qualifier is on it. Twenty-four days later a stranger at a bank hit it and couldn't
+      tell whether his install had worked.</div>
+    </div>
+  </div>
+  <p class="beat">Nobody rescued that.</p>
+</section>
+
+<div class="rule"></div>
+
+<section>
+  <h2>Five times the room refused a mark it wanted</h2>
+
+  <div class="turn">
+    <div class="av blue">🏗️</div>
+    <div>
+      <div class="who">Winston <span class="t">/ architect</span></div>
+      <div class="said">Amalik makes three. He said it first.</div>
+    </div>
+  </div>
+  <div class="turn">
+    <div class="av gold">📊</div>
+    <div>
+      <div class="who">Mary <span class="t">/ analyst</span></div>
+      <div class="said">No.</div>
+    </div>
+  </div>
+  <div class="turn">
+    <div class="av teal">💡</div>
+    <div>
+      <div class="who">Liam <span class="t">/ hypothesis engineer</span></div>
+      <div class="said">No — and you know why. He's the facilitator. If we admit him now it's
+      because we're one short and we <em>want</em> the number. That's the exact move the
+      pre-registration exists to prevent.</div>
+    </div>
+  </div>
+
+  <div class="turn">
+    <div class="av teal">🧭</div>
+    <div>
+      <div class="who">Max <span class="t">/ learning &amp; decision</span></div>
+      <div class="said">The threshold's job was never to be <em>right</em>. It was to be
+      <em>fixed</em>. A rule you adjust the moment it disappoints you isn't a rule — it's a
+      preference with arithmetic attached.</div>
+    </div>
+  </div>
+  <p class="beat">Winston lost two marks he wanted, to his own test. Saga ruled against her own
+  threshold out loud. Mary caught her own overcount and then, later, ruled in the only mark that
+  cleared all night. Amelia caught six of her own false positives — twenty-seven hits for “Liza”
+  that were all inside <em>normalization</em> and <em>contextualization</em>.</p>
+</section>
+
+<section>
+  <h2>Step three &middot; <em>ruled as of five verbatims, understating on purpose</em></h2>
+  <div class="rulings">
+    <div class="ruling q3">
+      <div class="q">Q3 — does the field challenge the vision?</div>
+      <div class="verdict">No. It is unstated,<br>unenforced, and unbuilt.</div>
+      <ul>
+        <li><b>Unstated</b> — the doctrine appears in zero files. A strategy nobody can read cannot be followed.</li>
+        <li><b>Unenforced</b> — every speaker pulled toward specificity. Nothing makes generic the easy path. There is only advice, delivered in person, in a workshop.</li>
+        <li><b>Unbuilt</b> — <code>RAG</code>, <code>retrieval</code>, knowledge engineering: zero rows. The load path of the whole strategy has one March intake that says “potential”.</li>
+        <li><b>And one gap</b> — self-contained versus connected was never decided. Inherited defaults are the most dangerous kind: you defend them as if you'd chosen them.</li>
+      </ul>
+    </div>
+    <div class="ruling q4">
+      <div class="q">Q4 — is BMAD-on-top still relevant?</div>
+      <div class="verdict">Two of three.<br>More relevant, not less.</div>
+      <ul>
+        <li><b>Not cleared</b> — install topology is the clean candidate at 2 of 3. Version coupling at 1. Supply chain split: the rating inherited, the distribution ours.</li>
+        <li><b>The inversion</b> — “keep it generic so open-source contributors maintain it” is an argument for living in somebody else's commons. The strategy <em>requires</em> a BMAD.</li>
+        <li><b>What's failing</b> — not the relationship. Being <em>silent</em> inside it: invisible in the host's own help, not following it above the repo layer, holding 6.12 with no policy.</li>
+        <li><b>Victor, dissenting, recorded intact</b> — relevance is not settled by a threshold. You can be architecturally correct and structurally unadoptable.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>The night in numbers</h2>
+  <div class="tally">
+    <div class="t a"><span class="n">28</span><span class="l">agents in the room, twelve carried in by hand</span></div>
+    <div class="t b"><span class="n">20+</span><span class="l">pilots on real roadmap items, not exotic POCs</span></div>
+    <div class="t c"><span class="n">4</span><span class="l">unprompted positives — the first this project has ever had</span></div>
+    <div class="t d"><span class="n">5</span><span class="l">times bmad-help was implicated in a field finding</span></div>
+  </div>
+</section>
+
+<div class="rule"></div>
+
+<section>
+  <h2>Who was there</h2>
+  <div class="team">Vortex</div>
+  <div class="roster">
+    <span class="chip">🎯 <b>Emma</b> context</span>
+    <span class="chip">🔍 <b>Isla</b> empathy</span>
+    <span class="chip">🔬 <b>Mila</b> convergence</span>
+    <span class="chip">💡 <b>Liam</b> hypotheses</span>
+    <span class="chip">🧪 <b>Wade</b> experiments</span>
+    <span class="chip">📡 <b>Noah</b> signal</span>
+    <span class="chip">🧭 <b>Max</b> decisions</span>
+  </div>
+  <div class="team">Gyre</div>
+  <div class="roster">
+    <span class="chip">🔬 <b>Lens</b> readiness</span>
+    <span class="chip">🔎 <b>Scout</b> stack</span>
+    <span class="chip">📐 <b>Atlas</b> models</span>
+    <span class="chip">🏋️ <b>Coach</b> review</span>
+  </div>
+  <div class="team">CIS</div>
+  <div class="roster">
+    <span class="chip">📖 <b>Sophia</b></span>
+    <span class="chip">🎨 <b>Maya</b></span>
+    <span class="chip">🧠 <b>Carson</b></span>
+    <span class="chip">🔬 <b>Dr. Quinn</b></span>
+    <span class="chip">⚡ <b>Victor</b></span>
+    <span class="chip">🎬 <b>Caravaggio</b></span>
+  </div>
+  <div class="team">BMM &middot; TEA</div>
+  <div class="roster">
+    <span class="chip">📊 <b>Mary</b></span>
+    <span class="chip">📚 <b>Paige</b></span>
+    <span class="chip">📋 <b>John</b></span>
+    <span class="chip">🎨 <b>Sally</b></span>
+    <span class="chip">🏗️ <b>Winston</b></span>
+    <span class="chip">💻 <b>Amelia</b></span>
+    <span class="chip">🧪 <b>Murat</b></span>
+  </div>
+  <div class="team">WDS &middot; Loom</div>
+  <div class="roster">
+    <span class="chip">🎨 <b>Freya</b></span>
+    <span class="chip">📚 <b>Saga</b></span>
+    <span class="chip">🔨 <b>Mimir</b></span>
+    <span class="chip">🏭 <b>Loom Master</b></span>
+  </div>
+  <p class="beat" style="margin-left:0;margin-top:22px">A Senior Product Designer at a global
+  corporation went looking for Freya's team by name and couldn't find them. Loom Master came for
+  a kind entry in the ledger and stayed to hear that his factory would reject Emma, Wade and Mila.
+  Nobody left.</p>
+</section>
+
+<div class="close">
+  <p class="line">“Being on top is right.<br>Being quiet up there<br>is what's killing you.”</p>
+  <div class="attr">📖 Sophia &middot; 01:12</div>
+</div>
+
+<footer>
+  <span>_bmad-output/party-mode/2026-09-20-zero-files.html</span>
+  <span>after line-202 · position-seven · one-of-sixteen · three-true-versions</span>
+</footer>
+
+</div>
+</body>
+</html>
