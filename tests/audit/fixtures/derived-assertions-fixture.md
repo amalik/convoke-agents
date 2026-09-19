@@ -31,7 +31,7 @@ Read `scripts/update/lib/agent-registry.js` before editing the roster.
 
 The manifest is at `_bmad/_config/skill-manifest.csv`.
 
-See [the contributing guide](CONTRIBUTING.md) for the workflow.
+See the contributing guide (`CONTRIBUTING.md`) for the workflow.
 
 `README.md` is the entry point. (A root-level file with no directory prefix.)
 

@@ -54,7 +54,12 @@
  *   node scripts/audit/reference-integrity.js               # full project scan
  *   node scripts/audit/reference-integrity.js --paths a,b   # comma-separated
  *   node scripts/audit/reference-integrity.js --paths=a,b   # equals form
+ *   node scripts/audit/reference-integrity.js --no-exempt   # include historical records
  *   node scripts/audit/reference-integrity.js --help        # usage + exit 0
+ *
+ * **Historical-record exemption.** Append-only receipts are skipped by default; see
+ * HISTORICAL_RECORD_PREFIXES for the list and the reasoning. The skipped count is always
+ * printed, and `--no-exempt` scans them.
  */
 
 const fs = require('fs-extra');
@@ -62,6 +67,54 @@ const path = require('path');
 const { findProjectRoot } = require('../update/lib/utils');
 
 // ─── Constants ───────────────────────────────────────────────────────
+
+/**
+ * Append-only historical records, exempt from reference checking by construction.
+ *
+ * These are not "files we gave up on". They are receipts: a closed story file, an
+ * archived plan, or a dated test artifact records what was true on the day it was
+ * written, and is never edited afterwards — the same property §2.1 Intakes and §2.5
+ * receipts have in the lifecycle backlog. A reference inside one is part of the
+ * record, so "repairing" it would falsify the record rather than fix a document.
+ *
+ * The exemption is structural, not a judgement call about effort. It is also never
+ * silent: the CLI reports how many files it skipped, and `--no-exempt` scans them
+ * anyway, so the unexempted number is always one flag away.
+ *
+ * Do NOT add a live, maintained document here to make the gate green. If a document
+ * is still being edited, its references are still claims, and a broken one is a defect.
+ */
+// Frozen because it is exported: a consumer holding the live array could otherwise widen the
+// exemption at runtime, which is the one change to this gate that produces no failure anywhere.
+// `fic-1-1` froze the agent registry arrays for the same reason.
+const HISTORICAL_RECORD_PREFIXES = Object.freeze([
+  '_bmad-output/implementation-artifacts/',
+  '_bmad-output/_archive/',
+  '_bmad-output/test-artifacts/',
+  '_bmad-output/vortex-artifacts/',
+  '_bmad-output/planning-artifacts/archive/',
+]);
+
+/**
+ * Documents whose relative links are written for the directory they will be PUBLISHED into,
+ * not the directory they currently sit in. Maps repo-relative file → repo-relative publish dir.
+ *
+ * `_bmad-output/drafts/README-draft.md` is the worked case: it is a draft of the root
+ * `README.md`, so `[FAQ](docs/faq.md)` is correct for its destination and wrong where it sits.
+ * Resolving from the draft's own directory reported 24 broken links, all 17 distinct targets of
+ * which exist at the root — so the checker was wrong about the intent, not the document.
+ *
+ * This is deliberately NOT an exemption. The file's links are still checked, just from the
+ * right base, so breaking one still fails the gate. Prefer this over adding a draft directory
+ * to HISTORICAL_RECORD_PREFIXES: `_bmad-output/drafts/` also holds the docs-program pages that
+ * ship to clients, and those must stay checked.
+ *
+ * A frontmatter declaration would be the general version. It is not used here because the entry
+ * below is a README draft, and frontmatter added to it would be published into `README.md`.
+ */
+const PUBLISH_BASES = Object.freeze({
+  '_bmad-output/drafts/README-draft.md': '.',
+});
 
 const COVERAGE_SCOPES = {
   tests: {
@@ -103,9 +156,13 @@ const URL_SCHEME_REGEX = /^[a-z][a-z0-9+.-]*:/i;
  * @param {Object} options
  * @param {string} options.projectRoot   Absolute path to the project root.
  * @param {string[]} [options.scopePaths]  Optional list of scope paths.
+ * @param {boolean} [options.exemptHistorical=true]  Skip HISTORICAL_RECORD_PREFIXES.
+ *   Pass `false` to scan them too.
  * @returns {{
  *   totalRefs: number,
- *   brokenRefs: Array<{ source: string, target: string, reason: string }>
+ *   brokenRefs: Array<{ source: string, target: string, reason: string }>,
+ *   exemptedCount: number,
+ *   filesScanned: number
  * }}
  */
 function runReferenceIntegrityCheck(options) {
@@ -117,9 +174,17 @@ function runReferenceIntegrityCheck(options) {
     throw new TypeError('runReferenceIntegrityCheck: options.projectRoot must be a non-empty string');
   }
 
-  const filesToScan = scopePaths && scopePaths.length > 0
+  const resolved = scopePaths && scopePaths.length > 0
     ? _resolveScopePaths(projectRoot, scopePaths)
     : _resolveAllScopes(projectRoot);
+
+  // Historical records are exempt unless the caller opts out. See
+  // HISTORICAL_RECORD_PREFIXES for why this is structural rather than a concession.
+  const exemptHistorical = options.exemptHistorical !== false;
+  const filesToScan = exemptHistorical
+    ? resolved.filter(f => !_isHistoricalRecord(projectRoot, f))
+    : resolved;
+  const exemptedCount = resolved.length - filesToScan.length;
 
   let totalRefs = 0;
   const brokenRefs = [];
@@ -134,7 +199,15 @@ function runReferenceIntegrityCheck(options) {
     }
 
     const refs = _extractMarkdownLinkRefs(content);
-    const fileDir = path.dirname(fileAbs);
+    // A document destined for another directory has its links resolved from there. See
+    // PUBLISH_BASES — this validates them at the destination rather than skipping them.
+    const relPosix = path.relative(projectRoot, fileAbs).split(path.sep).join('/');
+    const publishBase = Object.prototype.hasOwnProperty.call(PUBLISH_BASES, relPosix)
+      ? PUBLISH_BASES[relPosix]
+      : null;
+    const fileDir = publishBase === null
+      ? path.dirname(fileAbs)
+      : path.resolve(projectRoot, publishBase);
 
     for (const ref of refs) {
       totalRefs += 1;
@@ -149,7 +222,19 @@ function runReferenceIntegrityCheck(options) {
     }
   }
 
-  return { totalRefs, brokenRefs };
+  return { totalRefs, brokenRefs, exemptedCount, filesScanned: filesToScan.length };
+}
+
+/**
+ * True when `fileAbs` sits under one of HISTORICAL_RECORD_PREFIXES.
+ *
+ * Compares on a POSIX-separated repo-relative path so the prefixes read the same on
+ * Windows, and anchors at the start so a directory of the same name nested deeper
+ * (`docs/_bmad-output/_archive/`) is not silently exempted too.
+ */
+function _isHistoricalRecord(projectRoot, fileAbs) {
+  const rel = path.relative(projectRoot, fileAbs).split(path.sep).join('/');
+  return HISTORICAL_RECORD_PREFIXES.some(prefix => rel.startsWith(prefix));
 }
 
 // ─── Internal helpers ───────────────────────────────────────────────
@@ -526,6 +611,7 @@ function _printUsage() {
     '  node scripts/audit/reference-integrity.js                # full project scan',
     '  node scripts/audit/reference-integrity.js --paths a,b    # comma-separated',
     '  node scripts/audit/reference-integrity.js --paths=a,b    # equals form',
+    '  node scripts/audit/reference-integrity.js --no-exempt    # include historical records',
     '  node scripts/audit/reference-integrity.js --help         # usage + exit 0',
     '',
     'Exit codes:',
@@ -550,8 +636,13 @@ function _runCli(argv) {
     }
 
     let scopePaths = null;
+    let exemptHistorical = true;
     for (let i = 0; i < args.length; i += 1) {
       const arg = args[i];
+      if (arg === '--no-exempt') {
+        exemptHistorical = false;
+        continue;
+      }
       // Round 1 review patch P25: support `--paths=foo,bar` equals-form.
       if (arg.startsWith('--paths=')) {
         const value = arg.slice('--paths='.length);
@@ -582,14 +673,21 @@ function _runCli(argv) {
       return 2;
     }
 
-    const result = runReferenceIntegrityCheck({ projectRoot, scopePaths });
+    const result = runReferenceIntegrityCheck({ projectRoot, scopePaths, exemptHistorical });
+
+    // Always state the exemption. A gate that quietly stops inspecting things is how
+    // a green result comes to mean less than the reader thinks it does.
+    const scopeNote = scopePaths ? ` (scoped to ${scopePaths.join(', ')})` : '';
+    const exemptNote = exemptHistorical
+      ? ` — ${result.exemptedCount} historical-record file(s) exempt; re-run with --no-exempt to include them`
+      : ' — --no-exempt: historical records included';
 
     if (result.brokenRefs.length === 0) {
-      console.log(`[reference-integrity] PASS — ${result.totalRefs} references checked, 0 broken${scopePaths ? ` (scoped to ${scopePaths.join(', ')})` : ''}`);
+      console.log(`[reference-integrity] PASS — ${result.totalRefs} references checked across ${result.filesScanned} file(s), 0 broken${scopeNote}${exemptNote}`);
       return 0;
     }
 
-    console.error(`[reference-integrity] FAIL — ${result.totalRefs} references checked, ${result.brokenRefs.length} broken${scopePaths ? ` (scoped to ${scopePaths.join(', ')})` : ''}`);
+    console.error(`[reference-integrity] FAIL — ${result.totalRefs} references checked across ${result.filesScanned} file(s), ${result.brokenRefs.length} broken${scopeNote}${exemptNote}`);
     for (const broken of result.brokenRefs) {
       console.error(`  ${broken.source} → ${broken.target}  (${broken.reason})`);
     }
@@ -603,6 +701,8 @@ function _runCli(argv) {
 module.exports = {
   runReferenceIntegrityCheck,
   COVERAGE_SCOPES,
+  HISTORICAL_RECORD_PREFIXES,
+  PUBLISH_BASES,
 };
 
 if (require.main === module) {
