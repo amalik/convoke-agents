@@ -25,7 +25,7 @@ update, not only at install.
 Five external commands in the product's own code paths, plus a shell in one contributor script. One of the
 five deserves your attention:
 
-- **`git`** — by far the most used (around 29 call sites, depending on how the invocation forms are counted).
+- **`git`** — by far the most used: 17 call sites pass `git` as the command to `execSync`/`execFileSync` across `scripts/` and `src/`; counting every literal `git` invocation across the shipped tree, including `_bmad/`, gives 33. Derive it yourself rather than taking a single number: the two counts answer different questions.
   Not only read commands: the artifact tooling runs `git mv`, `git add` and `git commit`, and **rolls back a
   failed rename with `git reset --hard HEAD`** (`scripts/lib/artifact-utils.js`, four sites). That command
   discards *every* uncommitted change in the working tree, not only the ones this tool made. It is reachable
@@ -97,7 +97,7 @@ available with any MIT-licensed dependency — fork it, vendor it, or contribute
 | MCP (Model Context Protocol) | Not implemented |
 | AGENTS.md | Not implemented. Claude Code reads `CLAUDE.md`, not `AGENTS.md` |
 | A2A (Agent2Agent) | Not implemented |
-| BMAD Method | Required host framework. Convoke also installs standalone, without it |
+| BMAD Method | Not required. Convoke extends it where it is installed, and installs standalone where it is not |
 | Plugin marketplace | Not listed. A submission was declined on packaging structure and has not been resubmitted |
 
 **The honest summary:** Convoke is a Claude Code product today. The wider ecosystem is converging on shared

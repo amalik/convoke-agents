@@ -24,7 +24,7 @@ because an evaluating organisation's first question about a young product is not
 | **Works with limits** | 6 of 16 | Works, with a named defect or gap that affects the documented outcome |
 | **Mapped, not built** | 6 of 16 | Documented as planned. No working implementation |
 
-Three things that ledger says which a vendor document usually would not:
+Five things that ledger says which a vendor document usually would not:
 
 - The Team Factory — a tool for building new agent teams — is classed *Mapped, not built*: it ships and its
   design steps run, but it has never produced a working team, and the maintainer has since decided it is
@@ -34,6 +34,14 @@ Three things that ledger says which a vendor document usually would not:
   and usable-looking enough to mislead someone who pastes it into another assistant.
 - Four of the six module configuration files are rewritten from the template on every install, so
   customisation in those four does not persist.
+- **Two of Convoke's own in-chat workflows do not work as written.** The guided artifact-governance and
+  export workflows tell the assistant to run a script at a path that does not exist in an installed project,
+  so they fail on invocation. The equivalent command-line tools work, and that is the supported route.
+- **Three of the seven discovery agents have no dependable way to read your project's configuration.** The
+  startup step they call to load it no longer exists, and whether they find the file anyway varies between
+  runs of the same project — measured on 4.0.3, the configuration was read in one run of four. Expect to be
+  asked for your name and working language some of the time. Four of the seven are also still on the
+  previous agent format, pending conversion.
 
 Nothing in this document should be read as claiming more than that ledger allows.
 
@@ -223,8 +231,8 @@ directory.
 
 Two ecosystem-level risks belong in an evaluation, because they are properties of the environment this runs
 in rather than of this product: agent instruction files are context, not enforced configuration — hard
-limits need hooks or managed settings — and independent testing of skill and MCP ecosystems has found
-substantial proportions of published extensions carrying security issues. An organisation adopting any
+limits need hooks or managed settings — and an independent audit of a published agent-skill ecosystem
+found a substantial proportion of skills carrying security issues. An organisation adopting any
 agent-skills tooling needs a review path for what it installs.
 
 ## 6. Roadmap and release management
@@ -236,8 +244,9 @@ twenty-seven published versions. Everything before it has no attestation.
 
 Two honest notes about that pipeline. Nothing in it re-reads the registry after publishing, so a green
 pipeline is not by itself proof that a release reached users — and after 4.0.3 the registry reported the
-previous version for about two and a half minutes, long enough for a naive check to report a successful
-release as a failed one. Release verification is therefore a documented manual step, not an automated gate.
+previous version for roughly two and a half minutes on the one release where it was measured — a single
+observation, with no retained artifact, but long enough for a naive check to report a successful release as
+a failed one. Release verification is therefore a documented manual step, not an automated gate.
 
 The near-term roadmap is deliberately narrow: finish converting the remaining agents to the current BMAD
 format, close the defects named in the ledger, and complete the operator-facing documentation. New teams
@@ -262,9 +271,10 @@ are designed but not built, and are not offered as a reason to adopt.
 ## Appendix B — References
 
 Every external claim in this document is listed here with its source. Each was fetched and checked against
-its primary source on 17 September 2026 by two reviewers working independently of the author; that pass
-produced 25 corrections, which are applied. Where a source is a vendor with a commercial interest in its own
-finding, this table says so.
+its primary source on 17 September 2026 by two reviewers working independently of the author, and their
+corrections are applied. Where a source is a vendor with a commercial interest in its own finding, this
+table says so; where the finding reaches us through a secondary publisher rather than the primary source,
+the row says that too.
 
 | Claim in this document | Source |
 |---|---|
@@ -284,7 +294,7 @@ finding, this table says so.
 | ISO/IEC 42001 scope — an organisation-wide AI management system | IEC Webstore — https://webstore.iec.ch/en/publication/90574 |
 | People follow confident AI advice even when it is wrong | EC Joint Research Centre study (N=1,411) |
 | Agent instruction files are context, not enforced configuration; hooks are needed for hard limits | Anthropic, Claude Code documentation — https://code.claude.com/docs/en/memory |
-| Substantial proportions of published agent skills carry security flaws (3,984 skills audited) | Cloud Security Alliance, "Agent Context Poisoning: SKILL.md and the New AI Supply Chain Attack Surface" |
+| Substantial proportions of published agent skills carry security flaws (3,984 skills audited) | Audit by **Snyk**, a security vendor, reported via Cloud Security Alliance, "Agent Context Poisoning: SKILL.md and the New AI Supply Chain Attack Surface" — **secondary source; the audit itself was not retrieved** |
 | Tool adoption spreads primarily through peer networks | Murphy-Hill, Butler, Savelieva, arXiv 2607.01418 — https://arxiv.org/abs/2607.01418 |
 
 **On the absence of outcome evidence.** The statement that no independent evidence shows this or any

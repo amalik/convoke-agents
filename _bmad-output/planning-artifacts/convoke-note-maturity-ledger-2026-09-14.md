@@ -256,10 +256,10 @@ $ node node_modules/convoke-agents/scripts/install-gyre-agents.js   (separate sc
 
 ---
 
-### 2.4 Team Factory: Works with limits · Convoke
+### 2.4 Team Factory: Mapped, not built · Convoke
 
 **What ships:**
-- 30 files under `$P/_bmad/bme/_team-factory/`: agent `team-factory.md` (v5 XML), `workflows/step-00-route.md` and `workflows/add-team/step-01..05` (**one workflow, add-team**), plus `lib/` writers, validators, schemas and templates.
+- 32 files under `$P/_bmad/bme/_team-factory/`: agent `team-factory.md` (v5 XML), `workflows/step-00-route.md` and `workflows/add-team/step-01..05` (**one workflow, add-team**), plus `lib/` writers, validators, schemas and templates.
 - It installs: `✓ _team-factory agents 1 agents present`, wrapper `bmad-agent-bme-team-factory`.
 
 **It targets the Convoke source repository and upstream BMB:**
@@ -282,8 +282,8 @@ $ grep -n "_AGENTS" $P/_bmad/bme/_team-factory/lib/writers/registry-writer.js
 - `tf-2-11-end-to-end-pilot-run.md` §Completion Notes records "Steps 0-3 executed against the live factory" with 7 findings. §Full Pilot Run records "AC#7 is unmet" (terminal validation `valid:false`) and findings 8–15, including "the activation validator cannot pass any agent that has ever shipped".
 - `sprint-status.yaml`: `tfr-epic-1: in-progress`, `tfr-1-1…: in-progress`.
 
-**Open rows: 25 live rows with Portfolio `loom` at HEAD `b2900c39`, all in the Fast Lane and none closed.** `T136`, `T128` and `T164` closed with the repair epic; `T174`–`T179` are new. The uncommitted working tree adds T171, T172 and T173, giving 25. At least two HEAD rows (T167 `run-context.js`, T169 `output-directory.js`) concern files added after v4.0.2.
-- **HEAD rows:** T136, T168, T128, T139, T163, T164, T170, T132, T134, T127, T165, T167, T147, T137, T138, T166, T169, T141, T151, I7, I9, I68.
+**Open rows: 25 live rows with Portfolio `loom` at HEAD `b2900c39`, all in the Fast Lane and none closed.** `T136`, `T128` and `T164` closed with the repair epic and are not among them; `T174`–`T179` are at that HEAD, not uncommitted. Re-derive with the repository's own parser (`parseTables`/`isClosed` from `scripts/audit/backlog-integrity.js`) rather than by hand — an earlier enumeration here listed 22 rows against a count of 25 and included three closed ones. At least two HEAD rows (T167 `run-context.js`, T169 `output-directory.js`) concern files added after v4.0.2.
+- **The 25 rows:** T168, T139, T170, T132, T134, T127, T165, T167, T163, T147, T137, T138, T166, T169, T175, T176, T177, T141, T178, T179, T151, T174, I7, I9, I68.
 - **Rows most relevant to the client note:**
   - **T128**: the terminal gate "can never report success where teams are actually built" — **closed** 2026-09-15 by `tfr-1-1`, along with `T164` and `T136`. The repair epic (`tfr-epic-1`) is done: `add-team` runs end to end and its blocks execute verbatim in documented order. What has *not* changed is the outcome this row's verdict rests on — no generated team has ever been installed.
   - **T147**: "a factory-built team is installed by nothing at all". Verified above.
@@ -295,7 +295,7 @@ $ grep -n "_AGENTS" $P/_bmad/bme/_team-factory/lib/writers/registry-writer.js
 
 **A governance fact that outranks the defects.** `T179` (filed 2026-09-16, open): the maintainer ruled the Team Factory **internal scaffolding, not a user-facing capability**, and planned its removal from the installed package as one coordinated change. That has not been executed — it still ships, still installs, and its agent still starts. For an evaluating organisation this matters more than the defect list: the owner has already decided this is not something to adopt.
 
-**Why Works with limits (and not Shipped):** it ships, and its design steps have been executed, but the documented outcome (a new, validated, installable team) has never been achieved. See §3 for the case for a stricter classification.
+**Why Mapped, not built (reclassified 2026-09-17, from *Works with limits*):** it ships and its design steps run, but the documented outcome — a new, validated, installable team — has never been achieved, and the row was therefore measuring that the steps execute rather than that the capability works. This ledger's own materiality rule (§2.0) decides it: a defect that removes the documented outcome is not a limit on a working capability. `T179`'s ruling — internal scaffolding, not a user-facing capability — is the operator's own statement of the same thing.
 
 ---
 
@@ -574,7 +574,7 @@ $ gh release view v4.0.3 --json … → isDraft false, isPrerelease false, publi
 
 ```
 $ cat $P/.claude-plugin/marketplace.json
-  plugins: [{ name: "convoke-vortex", source: "./", version: "4.0.0", skills: [7 × ./_bmad/bme/_vortex/agents/<id>] }]   (package is 4.0.2; no Gyre/Team Factory/Enhance)
+  plugins: [{ name: "convoke-vortex", source: "./", version: "4.0.0", skills: [7 × ./_bmad/bme/_vortex/agents/<id>] }]   (package is 4.0.3; no Gyre/Team Factory/Enhance)
 $ gh pr view 9 --repo bmad-code-org/bmad-plugins-marketplace --json state,mergedAt,closedAt
   {"closedAt":"2026-04-27T00:58:13Z","mergedAt":null,"state":"CLOSED"}
 $ gh pr view 9 --repo bmad-code-org/bmad-plugins-marketplace --comments   (maintainer, trimmed)
@@ -664,12 +664,12 @@ The background research also ran `gh api repos/bmad-code-org/bmad-plugins-market
 1. **Vortex (Works with limits): impact of the `bmad-init` reference in the 3 converted agents.**
    - *Verified:* the instruction exists, no such skill is installed in a standalone project, and CHANGELOG 4.0.0 says it was removed.
    - *Unverified:* whether Emma, Wade and Mila activate correctly in Claude Code anyway, since the model may find `_bmad/bme/_vortex/config.yaml` on its own. If they do not, the Vortex note should add that three agents fail to start in standalone installs.
-   - *Would settle it:* a live activation of `/bmad-agent-bme-contextualization-expert` (plus one v5 agent as a control) in a fresh standalone 4.0.2 install, with the transcript kept.
+   - *Settled in part:* the live activations in §2.1 were run against a fresh standalone **4.0.3** install. They establish that the agents start; the config-reading behaviour is the part that varied between runs.
 
-2. **Team Factory (Works with limits): arguably Mapped, not built for its headline outcome.**
-   - It ships and its design steps have run, but it has never produced a surviving team, its terminal validation cannot pass at 4.0.2 (T128), and a generated team is not installed (T147).
-   - A due-diligence reader who equates "works" with "delivers the documented outcome" would classify it more strictly. The ledger keeps *Works with limits* and labels it "Preview".
-   - *Would settle it:* `tfr-1-1` producing one team that installs via `convoke-install` and passes validation, re-run against a published package.
+2. **Team Factory: settled 2026-09-17 — reclassified to *Mapped, not built*.** No longer uncertain; kept here because the ledger's first version said otherwise.
+   - It ships and its design steps run, but it has never produced a surviving team and a generated team is not installed (T147). `T128`, the terminal gate that could not pass, was closed by `tfr-1-1` on 2026-09-15; the outcome it gated still has not been achieved.
+   - The stricter reading is now the ledger's: a defect that removes the documented outcome is not a limit on a working capability (§2.0 materiality rule). `T179` records the maintainer's own ruling to the same effect.
+   - *Would reopen it:* the factory producing one team that installs via `convoke-install` and passes validation, re-run against a published package.
 
 3. **Use in chat windows (Mapped, not built): may be unfairly harsh.**
    - A pasted v6.3 agent persona could still give useful discovery conversation even though workflows and config are absent. The classification rests on the absence of any supporting tooling and on the v5 agents' explicit STOP instruction, not on a failed attempt.
@@ -689,11 +689,11 @@ The background research also ran `gh api repos/bmad-code-org/bmad-plugins-market
    - *Would settle it:* install BMAD Method, then Convoke 4.0.3, in a scratch project and run install, doctor and an Enhance menu check.
 
 7. **Gyre (Works with limits): conflicting internal signals.**
-   - Backlog I98 says Gyre is not installable through any supported path; the 4.0.2 trial shows it is, for npm + Claude Code. The ledger follows the trial.
+   - Backlog I98 says Gyre is not installable through any supported path; the install trials (4.0.2, then 4.0.3) show it is, for npm + Claude Code. The ledger follows the trials.
    - If "supported path" in I98 means the marketplace or the v6.3 packaging contract, both are right. The owner should reword I98 before the whitepaper cites Gyre as "in development".
 
 8. **Platform coverage.** CI runs only on Ubuntu, and the trials here ran on macOS. No evidence covers Windows; the backlog notes a copy-loop race "under Windows file-lock scenarios" (I89). The ledger makes no platform claim. Do not add one without a Windows run.
 
-9. **Time sensitivity.** Re-derived against **4.0.3** and backlog HEAD `b2900c39` on 2026-09-17. (Written when the basis was 4.0.2 at HEAD `0db3aac8`.) Team Factory repair commits are landing now (five commits since the tag, plus uncommitted work). If a 4.0.3 publishes before 2026-09-22:
+9. **Time sensitivity.** Re-derived against **4.0.3** and backlog HEAD `b2900c39` on 2026-09-17. (Written when the basis was 4.0.2 at HEAD `0db3aac8`.) Team Factory repair commits were landing as this was derived. If a version later than 4.0.3 publishes before it is read:
    - re-run the `npm view convoke-agents dist-tags --json` check and the §2.10 and §2.11 trials against it
    - re-derive the `loom` count with `$SP/lanes.js`

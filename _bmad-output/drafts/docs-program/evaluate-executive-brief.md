@@ -60,10 +60,10 @@ it.
 ## What is proven, and what is not
 
 The accompanying maturity ledger classifies sixteen capabilities against what was verified by running the
-software: **four Shipped, six Works with limits, six Mapped but not built**. The maturity ledger, supplied alongside, gives the full
+software: **four Shipped, six Works with limits, six Mapped, not built**. The maturity ledger, supplied alongside, gives the full
 table and the commands behind each row.
 
-Five disclosures a vendor document would not usually volunteer, and which we would rather you heard from us
+Six disclosures a vendor document would not usually volunteer, and which we would rather you heard from us
 than found later:
 
 - **There is no independent evidence that this method — or any competing structured AI-delivery framework —
@@ -77,6 +77,10 @@ than found later:
 - **Until the day this brief is dated, a fresh install left 8 of the 12 agents unable to start at all.**
   Fixed in the 4.0.3 release of 17 September 2026 and verified by starting every agent. It is here because
   it tells you what stage of maturity this is at.
+- **Three of the seven discovery agents still read your settings unreliably.** Starting is fixed; reading
+  the configuration file is not. Measured on 4.0.3, they picked it up in one run of four, so they will ask
+  for your name and working language some of the time. A nuisance rather than a blocker, and the kind of
+  thing a young product still has.
 - **No organisation can be named as a reference.** We are not aware of an adopter whose experience you could
   check, and that deserves as much weight as anything else in this brief.
 
@@ -101,7 +105,7 @@ A defensible pilot shape:
   closely it tracks upstream.
 - **A review path for what gets installed.** This is an ecosystem-level concern rather than a property of
   this product: agent instruction files are context, not enforced configuration, and independent testing has
-  found substantial proportions of published agent extensions carrying security issues.
+  found substantial proportions of published agent skills carrying security issues.
 
 ## The decision being asked for
 
