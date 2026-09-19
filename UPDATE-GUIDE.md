@@ -241,7 +241,21 @@ damaged; the table below has every case, because they differ:
 config-merger: refusing to overwrite /path/to/project/_bmad/bme/_gyre/config.yaml: it is not valid YAML (Map keys must be unique at line 3, column 1:). Fix or remove the file, then re-run.
 ```
 
-It arrives as a single line, naming the absolute path and the parser's own first line of error.
+It arrives as a single line naming the absolute path. It takes one of two forms, and only the first
+tells you where to look:
+
+- `it is not valid YAML (<parser message>)` — a duplicate key, a tab, more than one document. The
+  parenthesis carries the parser's own first line of error, with a line and column.
+- `it is not a YAML mapping.` — the file holds a list, or a bare string, number or boolean. There is
+  no parser error and no location, because nothing failed to parse: the file is valid YAML of the
+  wrong shape. Replace it rather than hunting for an error.
+
+**Two failures look similar and are not this.** If the file cannot be opened at all, the refusal
+never runs and you get the underlying OS error instead — `EACCES: permission denied, open '<path>'`
+for an unreadable file, or `EISDIR: illegal operation on a directory, read` if a directory sits
+where the config should be. `EISDIR` names no path, so if you see it, check both
+`_bmad/bme/_vortex/config.yaml` and `_bmad/bme/_gyre/config.yaml`. Neither case is protected by the
+refusal and neither is repaired by the steps below — fix the permissions, or remove the directory.
 
 This protects your settings — before 4.0.3, a single duplicate key silently replaced the whole
 file with defaults. Wherever the message appears, the file it names is left byte-identical, and no agent,
@@ -279,12 +293,29 @@ checked, so there is no refusal to reach and no plan to decline.
 **Reinstalling will not clear this, and that is deliberate** — `convoke-install` runs the same
 check. Repair the file itself:
 
-1. Open the file named in the message and fix the error it reports. The most common cause is a
-   second `user_name:` line added below the seeded `user_name: '{user}'` — delete one of them.
-2. If you would rather start over on that file, delete it. The next run writes a fresh one.
-3. Re-run your original command.
+1. Open the file named in the message and fix it. The most common cause is a second `user_name:`
+   line added below the seeded `user_name: '{user}'`. **Delete the seeded `'{user}'` line and keep
+   your own** — deleting yours instead leaves you on the placeholder, which is the state this
+   release exists to fix. Where the message reported no location (`it is not a YAML mapping`), go to
+   step 2 instead.
+2. If you would rather start over on that file, delete it.
+3. Run an **install**, not an update:
 
-Both `config.yaml` files are checked, so a damaged *Gyre* config also blocks
+   ```bash
+   npx -p convoke-agents convoke-install
+   ```
+
+   `convoke-install`, `convoke-install-vortex` and `convoke-install-gyre` each rewrite **both**
+   configs, so any one of them restores a deleted or replaced file with the right contents for its
+   own module, and keeps every value you had set in the file that was not damaged.
+
+> **`convoke-update` will not do this, and it will not tell you so.** On an installation that is
+> otherwise current it stops at `✓ Already up to date!` and exits **0** without reaching the code
+> that writes the configs — so a config you deleted at step 2 stays deleted, and the command reports
+> success. All four Gyre agents read `_bmad/bme/_gyre/config.yaml` when they start, so a missing one
+> leaves them unable to start with nothing on screen to explain why. Always finish with an install.
+
+Both the Vortex and the Gyre `config.yaml` are checked, so a damaged *Gyre* config also blocks
 `convoke-install-vortex`. Fix whichever file the message names.
 
 ### "Installation appears corrupted"

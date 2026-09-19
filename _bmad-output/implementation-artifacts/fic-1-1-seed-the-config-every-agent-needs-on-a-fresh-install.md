@@ -153,19 +153,44 @@ Consumers that were not already correct:
 Consumers checked and still correct: `migration-runner.js:311` (the only bare-object `writeConfig`
 caller — `yaml.load` at `:301` throws first, and the preflight has already run); `validator.js`
 (`CONFIG_SCHEMA` unchanged, and it still cannot see this defect class — that is `IN-193`);
-`convoke-doctor`'s check count (`passed.length`, no check added); all 18 line-pinned citations in
-`scripts/audit/lib/installed-tree.js` (`refresh-installation.js` line numbers are unchanged — every
+`convoke-doctor`'s check count (`passed.length`, no check added); every line-pinned citation in
+`scripts/audit/lib/installed-tree.js` — **20** of them, not the 18 first recorded here: 18 are
+path-qualified and two omit the `scripts/` prefix (`convoke-doctor.js:763`, `refresh-installation.js:48-51`),
+which is why a count scoped to the qualified ones missed them. All 20 resolve. Re-derive the count
+with `grep -oE '[A-Za-z0-9_./-]+\.js:[0-9]+' scripts/audit/lib/installed-tree.js | wc -l` rather than
+reading it here. (`refresh-installation.js` line numbers are unchanged — every
 hunk is balanced and the preflight wraps existing arguments rather than adding a statement);
-`.github/workflows/ci.yml`; the 11 agent activation blocks that require the three fields.
+`.github/workflows/ci.yml`; the **8** agent activation blocks that require the three fields — Isla,
+Liam, Noah, Max and all four Gyre agents, out of the **12** agents `docs:audit` reports
+(`Registry: 12 agents`). Emma, Mila and Wade load config another way; Team Factory's template already
+carried the fields.
 
 No consumers exist in `_bmad/**` workflows, `run:` blocks, agent menus, `.claude/skills/**`, the CSV
 registries, or `scripts/portability/` — `grep -rn "config-merger\|mergeConfig\|writeConfig\|refreshInstallation" _bmad/ .claude/`
-returns three unrelated comments, and `grep -rn "config.yaml" scripts/portability/` returns nothing.
+returns **four** lines, none of them a consumer, and `grep -rn "config.yaml" scripts/portability/`
+returns nothing. **Three of the four are in `.claude/skills/`, which `.gitignore:69` excludes**
+(`git check-ignore -v .claude/skills/<any>/SKILL.md` names the rule), so a
+reader with a fresh clone gets one line: `_bmad/bme/_vortex/README.md:150`, prose stating that the
+installer, validator, config-merger and doctor all read from the agent registry — still true
+(`config-merger.js` requires `./agent-registry`). Use `git grep` rather than `grep -rn` for any claim
+another reader must be able to reproduce.
 
-Falsification of the negative results: the prose patterns used do return hits elsewhere —
-`replace .?\{user\}|\{user\} with your|add (the )?(keys|user_name)` finds `README.md:49`,
-`INSTALLATION.md:243` and both installer scripts; `(overwrit|reset|regenerat|replace|restore|repair).{0,40}config`
-finds `UPDATE-GUIDE.md` and `CHANGELOG.md`. So the empty results measure the tree, not a broken pattern.
+**Corrected 2026-09-19.** This paragraph previously said "three unrelated comments", and the
+falsification below cited two exhibits that do not hold. Both were written from the audit layer's
+report rather than re-derived.
+
+Falsification of the negative results — the patterns do fire elsewhere, so an empty result measures
+the tree rather than a broken pattern:
+
+```bash
+# fires — README.md and INSTALLATION.md among them. Read the output; no count is pinned here.
+grep -rlE 'replace .?\{user\}|\{user\} with your|add (the )?(keys|user_name)' --include='*.md' .
+# does NOT fire on the installers — 0 — though the string is there:
+#   install-vortex-agents.js:153  `... and replace ${YELLOW}{user}${RESET} with your name`
+# ANSI interpolation splits the literal, so a source-text pattern cannot match it.
+grep -cE '(overwrit|reset|regenerat|replace|restore|repair).{0,40}config' UPDATE-GUIDE.md CHANGELOG.md
+# UPDATE-GUIDE.md:4   CHANGELOG.md:0  — CHANGELOG puts `config` before the verb, so it never matched
+```
 
 Reproducing the refusal, both directions:
 
