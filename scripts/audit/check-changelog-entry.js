@@ -140,6 +140,8 @@ function checkChangelogEntry(options = {}) {
 
   const headings = visibleHeadings(raw);
 
+  // ADR-001 surface: GitHub. Readings: strict scan only — no reader-side counterpart, so anything
+  // that hides a heading from this scan defeats it (T190, open).
   const malformed = headings.filter((h) => VERSIONISH_RE.test(h.line) && !HEADER_RE.test(h.line.trim()));
   if (malformed.length > 0) {
     const first = malformed[0];
@@ -159,6 +161,7 @@ function checkChangelogEntry(options = {}) {
   const entries = readChangelogEntries(null, version, changelogPath)
     .filter((e) => compareVersions(e.version, version) === 0);
 
+  // ADR-001 surface: both. Readings: both — a divergence detector, correct on either surface.
   if (claiming.length > 1 || entries.length > 1) {
     const where = claiming.length > 1 ? ` at lines ${claiming.map((h) => h.number).join(', ')}` : '';
     return {
@@ -167,6 +170,7 @@ function checkChangelogEntry(options = {}) {
         + '  Only the first is checked here and every one of them is shown to operators.',
     };
   }
+  // ADR-001 surface: both. Readings: both — neither surface has anything to show.
   if (claiming.length === 0 && entries.length === 0) {
     return {
       ok: false,
@@ -177,6 +181,7 @@ function checkChangelogEntry(options = {}) {
   // The two readings must agree. They diverge when a heading is an example inside a code
   // fence or an HTML comment (this scan hides it, changelog-reader.js does not), or when
   // it is indented 1-3 spaces (this scan sees it, changelog-reader.js does not).
+  // ADR-001 surface: both. Readings: both — this is the invariant itself, stated as a check.
   if (claiming.length !== entries.length) {
     return {
       ok: false,
@@ -190,6 +195,7 @@ function checkChangelogEntry(options = {}) {
   const entry = entries[0];
   const headingMatch = HEADER_RE.exec(claiming[0].line.trim());
   const headingDate = headingMatch && headingMatch[2] ? headingMatch[2].trim() : null;
+  // ADR-001 surface: both. Readings: both — the heading checked here must be the one shown.
   if (headingDate !== (entry.date || null)) {
     return {
       ok: false,
@@ -198,6 +204,7 @@ function checkChangelogEntry(options = {}) {
         + '  The heading the gate checked is not the heading operators will be shown.',
     };
   }
+  // ADR-001 surface: both. Readings: changelog-reader only — the date operators are shown.
   if (!isRealDate(entry.date || '')) {
     return {
       ok: false,
@@ -205,18 +212,18 @@ function checkChangelogEntry(options = {}) {
         + '  Replace the placeholder with the release date, as YYYY-MM-DD.',
     };
   }
-  // Remove every HTML comment, then ask whether anything is left. The inline
-  // `/<!--[\s\S]*?-->/g` this replaces recognised only `-->`, so a body written with any other
-  // terminator was read as text and the entry shipped — CodeQL alert 29. `stripHtmlComments` is
-  // the repository's audited implementation; sanitize.js states what it does and does not
-  // guarantee, and restating that here is how three wrong summaries got written.
+  // ADR-001 surface: both. Readings: changelog-reader's body, stripped with sanitize.js's
+  // tokenizer model. A body that is only comments shows a GitHub reader nothing AND prints the
+  // drafting notes to an operator's terminal, so it is wrong on both surfaces.
   //
-  // This asks whether the body is only comments. It does not establish that the body renders as
-  // anything — a body can render as nothing without containing a comment.
+  // Why the two comment models differ, and why they are not reconciled:
+  // _bmad-output/planning-artifacts/adr/changelog-surfaces/adr-001-two-changelog-surfaces.md.
+  // Do not restate it here — four rewrites of this comment produced a false claim each time.
   let visible;
   try {
     visible = stripHtmlComments(entry.body).trim();
   } catch (err) {
+    // ADR-001 surface: none. A refusal to judge, not a verdict about either surface.
     // Only the pass-limit refusal becomes a verdict. Anything else is a defect in our own code
     // and must not be reported against the operator's changelog. Pinned by
     // 'rethrows a defect in our own code instead of blaming the changelog'.

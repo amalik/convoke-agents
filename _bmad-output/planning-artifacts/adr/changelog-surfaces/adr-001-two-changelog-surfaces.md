@@ -3,7 +3,8 @@ initiative: convoke
 artifact_type: adr
 qualifier: changelog-surfaces-two-rendering-models
 created: '2026-09-18'
-status: proposed
+status: accepted
+decided: '2026-09-19'
 schema_version: 1
 related_initiative: 'Release-gate correctness (no epic; qualified from the alert-29 review)'
 related_decision: 'Gates T192 and T195; informs T189 and T190'
@@ -28,7 +29,7 @@ symptom. The cause is one level down.
 | Surface | Path | HTML comments |
 |---|---|---|
 | GitHub | `CHANGELOG.md` rendered by cmark-gfm plus GitHub's sanitizer | **invisible** |
-| `convoke-update` | `printChangelog` → `console.log(entry.body)` (`scripts/update/convoke-update.js:514`) | **fully visible** |
+| `convoke-update` | `printChangelog` → `console.log(entry.body)` | **fully visible** |
 
 `convoke-update` prints raw markdown to a terminal. It performs no comment handling, and neither
 does `changelog-reader.js` (zero occurrences of `<!--`). So a body that is only an HTML comment is
@@ -43,18 +44,28 @@ enumeration of "two misses" that was neither closed nor correctly scoped. The co
 four times and was wrong each time. That is the evidence that this belongs in a ratified artifact
 rather than in prose beside the code.
 
-### Which reading each check consults today
+### Which reading each check consults, and which surface it protects
 
-| Check | Strict scan | `changelog-reader.js` | Honours the invariant |
-|---|---|---|---|
-| `MALFORMED HEADING` (`:148`) | yes | no | **no** — T190 |
-| `DUPLICATE CHANGELOG ENTRIES` (`:166`) | yes | yes | yes |
-| `DISPUTED …` heading count (`:183`) | yes | yes | yes |
-| `DISPUTED …` date (`:196`) | yes | yes | yes |
-| `EMPTY CHANGELOG ENTRY` (`:233`) | no | body only, via a third model | **no** |
-| `UNREADABLE CHANGELOG BODY` (`:226`) | n/a — a refusal to judge | n/a | n/a |
+Ratified as the declaration each verdict now carries in `check-changelog-entry.js`. Anchored by verdict
+name rather than line number, because a line pin in that file rots on the next edit to it.
 
-The third model is `stripHtmlComments` (`scripts/lib/sanitize.js:54`,
+| Verdict | Strict scan | `changelog-reader.js` | Surface | Honours the invariant |
+|---|---|---|---|---|
+| `MALFORMED HEADING` | yes | no | GitHub | **no** — T190 |
+| `DUPLICATE CHANGELOG ENTRIES` | yes | yes | both | yes |
+| `MISSING CHANGELOG ENTRY` | yes | yes | both | yes |
+| `DISPUTED …` heading count | yes | yes | both | yes |
+| `DISPUTED …` date | yes | yes | both | yes |
+| `UNDATED CHANGELOG ENTRY` | no | date only | both | reader-side by design |
+| `UNREADABLE CHANGELOG BODY` | n/a — a refusal to judge | n/a | none | n/a |
+| `EMPTY CHANGELOG ENTRY` | no | body only, via a third model | both | **no** |
+
+**Corrected at ratification (2026-09-19):** the proposed table listed six verdicts. The gate emits eight —
+`MISSING CHANGELOG ENTRY` and `UNDATED CHANGELOG ENTRY` were absent from it. Both consult readings that
+agree, so neither changes the decision; but an invariant that does not cover every check is the defect this
+ADR exists to stop.
+
+The third model is `stripHtmlComments` (`scripts/lib/sanitize.js::htmlCommentPattern`,
 `/<!--(?:>|->|[\s\S]*?--!?>)/g`), which follows the HTML tokenizer. `COMMENT_CLOSE_RE` in the gate
 follows CommonMark (`-->` only). Both are correct for their own purpose; T192 is the defect that
 falls out of the seam between them.
@@ -70,7 +81,7 @@ Record the table above as a ratified invariant. Every existing check declares wh
 protects; every new check must do the same or declare itself surface-independent. The two comment
 models stay, because each is correct for the surface it serves.
 
-- Cost: this document, plus a one-line declaration per check.
+- Cost: this document, plus a one-line declaration per check (**done at ratification**).
 - `T190` becomes a straightforward instance: restore the invariant by giving the malformed check a
   reader-side counterpart.
 - `T192` stops being a seam defect and becomes an ordinary GitHub-surface defect — `--!>` followed
@@ -106,12 +117,13 @@ Widen `COMMENT_CLOSE_RE` to `--!?>`.
 
 ## Consequences
 
-- New checks in this gate carry one extra line: which surface, and which readings.
+- New checks in this gate carry one extra line: which surface, and which readings. The eight existing
+  verdicts carry theirs as of ratification.
 - The two comment models remain, permanently, with a written reason. Future readers stop
   rediscovering the seam and rewriting the comment.
 - `sanitize.js` keeps its single-implementation property; the gate does not grow a private stripper.
-- The code comment at the body check shrinks to a pointer at this ADR, removing the prose that has
-  been the source of every review finding on this file.
+- The code comment at the body check is now a pointer at this ADR, and the prose that produced a false
+  claim on each of its four rewrites is gone.
 
 ## Alternatives considered
 
@@ -125,14 +137,15 @@ careless: a comment beside one check cannot hold an invariant that spans six.
 Every claim above was derived on 2026-09-18, not recalled. Re-derive with:
 
 ```sh
-sed -n '514p' scripts/update/convoke-update.js          # console.log(entry.body) — raw to terminal
+grep -n 'console.log(entry.body)' scripts/update/convoke-update.js  # raw markdown to a terminal
 grep -c -- '<!--' scripts/update/lib/changelog-reader.js # 0 — the reader has no comment model
 grep -c -- '<!--' CHANGELOG.md                           # 0 — no shipped entry exercises this
 grep -n 'htmlCommentPattern = ' scripts/lib/sanitize.js  # the tokenizer model
 grep -n 'COMMENT_CLOSE_RE = ' scripts/audit/check-changelog-entry.js  # the CommonMark model
+grep -c 'check-changelog-entry' .github/workflows/ci.yml # 0 — the gate runs in no CI job (T194)
 ```
 
-All five were run from the repository root on 2026-09-18. Note that the two `grep -c` lines exit
+All were run from the repository root on 2026-09-18, and re-run unchanged on 2026-09-19. Note that the two `grep -c` lines exit
 **1**, because that is what `grep` does when the count is zero — which is the answer being cited.
 Under `set -e` they abort on a correct result.
 
@@ -141,4 +154,12 @@ Rendering differences were confirmed against GitHub's own renderer with
 
 ## Operator decision
 
-**PENDING.** Option A is recommended. Amalik to accept, amend or reject.
+**ACCEPTED 2026-09-19 — Option A.** The two surfaces are a ratified invariant. Every verdict in
+`check-changelog-entry.js` declares the surface it protects and the readings it consults; the two comment
+models stay, each correct for the surface it serves.
+
+Changed by the ruling, in the same commit: the eight declarations, the body check's comment reduced to a
+pointer here, and the table above completed to all eight verdicts.
+
+Not changed: `T189`, `T190`, `T192` and `T195` stay open — they have a frame now, not a fix. The gate is
+still wired into no CI job (`T194`), so what it protects remains latent until it is.
