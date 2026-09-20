@@ -589,16 +589,32 @@ describe('Round 3 — fail-open paths the restructure left open', () => {
   });
 });
 
-describe('the auditor runs where the CI job runs — no repo node_modules', () => {
+describe('the auditor resolves js-yaml from the installed package, not from $REPO', () => {
   // CI run 33323351907 took main red. `js-yaml` is a runtime dependency of convoke-agents, so
-  // a bare require finds it in $REPO/node_modules on any developer machine — but the
-  // `fresh-install` job deliberately runs NO `npm ci` ("the script needs no repo dependencies
-  // (verified against a clean clone)"), so on the runner there is no $REPO/node_modules and
-  // the auditor died mid-run. That is the "works in THIS repo" failure the whole harness
-  // exists to catch, committed inside the harness itself.
+  // a bare require finds it in $REPO/node_modules on any developer machine — and at the time
+  // the `fresh-install` job ran NO `npm ci`, so on the runner there was no $REPO/node_modules
+  // and the auditor died mid-run. `8c5de2f8` fixed it by resolving from the INSTALLED package
+  // root, and this test is what pins that.
   //
-  // This test reproduces the runner: the scripts are COPIED to a tree with no node_modules and
-  // executed from there, with js-yaml reachable only through the installed package root.
+  // THE JOB NOW INSTALLS ITS DEPENDENCIES (T104), so a bare require would no longer kill it.
+  // This block was named for that condition and asserted it in prose; the name and both
+  // paragraphs were rewritten with the workflow. (A first pass rewrote only one of the two and
+  // then claimed both had changed — found by review, not by the suite, because prose is not
+  // code.)
+  //
+  // WHAT IT STILL GUARDS, stated narrowly because the broad version is no longer true: the
+  // auditor resolves js-yaml from the package root it is given. That is
+  // `setYamlResolutionRoot`'s contract, and the caller that still needs it is the repo-side
+  // one — this auditor run from a checkout with no `node_modules`, which `try-fresh-install.sh`
+  // documents as the pre-release ritual. NOT the operator: npm hoists js-yaml to the project's
+  // own `node_modules`, where a bare require finds it.
+  //
+  // ONE BOUND, because the assert below is weaker than it reads. It checks a single directory
+  // (`root/node_modules`), not the whole resolution chain, so if `os.tmpdir()` happens to sit
+  // under a tree containing `node_modules/js-yaml` the bare-require fallback succeeds and this
+  // block passes with the mechanism deleted. Verified: with `TMPDIR` pointed at such a tree the
+  // mutant survives; on an ordinary machine it is killed. Do not read a green here as proof of
+  // isolation without checking where the fixture landed.
   function isolatedRepo() {
     const root = tmp('convoke-norepo-');
     fs.mkdirSync(path.join(root, 'scripts', 'audit', 'lib'), { recursive: true });

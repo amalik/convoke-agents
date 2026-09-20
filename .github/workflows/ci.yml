@@ -376,19 +376,59 @@ jobs:
     # I139, so neither a launch smoke nor the health check would have caught it — only invoking
     # real work did.
     #
-    # No `npm ci`: the script needs no repo dependencies (verified against a clean clone). NOTE
-    # this holds only while package.json has no `prepack`/`prepare` script — `npm pack` fires
-    # both. `postinstall` is the only hook left and does not fire on pack; `prepublishOnly` was removed with the badges pipeline (ADR-001/dist-1-1) and never fired on pack either. If you add `prepare`,
-    # this job needs `npm ci` or it breaks with a missing-devDependency error whose cause is a
-    # comment in another file.
+    # `npm ci` INTO A THROWAWAY CACHE — T104.
+    #
+    # This job used to run no `npm ci`, on the ground that "the script needs no repo
+    # dependencies". True, and unenforceable: a `js-yaml` dependency added to
+    # `scripts/audit/lib/installed-tree.js` resolved on every developer machine and killed this
+    # runner (CI run 33323351907). Two detection gates were built for it and both were
+    # abandoned after review; installing the dependencies removes the failure instead. Neither
+    # gate was committed, so nothing here is re-runnable — the backlog receipt for T104 carries
+    # what they taught, without tallies that cannot be checked.
+    #
+    # WHAT THIS DOES AND DOES NOT BUY, because the first draft of this comment overstated it.
+    # It ends the class where a repo-side script cannot LOAD here. It does not make dependency
+    # mistakes impossible: `npm ci` also installs devDependencies, so a repo-side script that
+    # requires one now loads here and would still fail anyone running that script out of an
+    # installed package. Nothing enforces that, and no gate here claims to.
+    #
+    # It also covers the `prepack`/`prepare` hazard the removed comment recorded and nothing
+    # checked: with devDependencies present, a pack-time hook has what it needs.
+    #
+    # NOTE WHAT THIS STEP NOW EXECUTES. `npm ci` fires `postinstall`, so this job runs
+    # `scripts/postinstall.js` against the checkout before packing — it previously ran no repo
+    # product code at all. That script is print-only today and five other jobs already run it,
+    # but a `postinstall` that throws would now redden THIS job, on the publish path, with a
+    # stack trace that has nothing to do with packaging. The removed comment tracked the hook
+    # inventory; this sentence replaces it rather than dropping it.
+    #
+    # THE THROWAWAY CACHE IS LOAD-BEARING. This job packs a tarball and installs it from a LOCAL
+    # path — what comes from the registry uncached is that package's DEPENDENCY TREE, not the
+    # tarball. Those dependencies are this repository's own `dependencies`, so a plain `npm ci`
+    # would warm `~/.npm` with the packages that install is meant to fetch cold. (An earlier
+    # draft said "installs it from the registry uncached", which is more specific and less true.)
+    # Re-derive rather than trust this paragraph, IN A THROWAWAY DIRECTORY — `npm i` rewrites
+    # package.json and package-lock.json in whatever directory it is run from:
+    #   npm i js-yaml --cache A && npm i js-yaml --cache B --offline   # exits 1, ENOTCACHED
+    #   npm i js-yaml --cache A --offline                              # exits 0
+    # `cache: 'npm'` stays deliberately absent from `setup-node` below for the same reason.
+    # `mktemp -d` rather than a runner variable: it asserts nothing about the environment, and
+    # that is the whole argument. An earlier draft also characterised how npm fails on the
+    # unwritable path an unset variable would produce; that was never measured here and is
+    # deleted rather than guessed at a second time.
+    #
+    # One cost, accepted rather than hidden: npm writes its own failure log under the cache dir,
+    # so a failing `npm ci` here leaves its "complete log" in the throwaway tree, which the
+    # artifact upload below does not collect. The step's own stdout/stderr is still in the run log.
     #
     # Bash and ubuntu-only by design; Windows install behaviour is tracked separately as I128.
     # Node 20 only, against `engines: >=18` — install-time code has the narrowest version coverage
     # in this workflow. Widening to the 18/20/22 matrix is tracked in the backlog rather than done
     # here, because it triples the cost of the slowest-to-start job for a thin marginal return.
     runs-on: ubuntu-latest
-    # The critical path is an UNCACHED registry install (no `npm ci`, no `cache: 'npm'`), which is
-    # the most stall-prone step in the workflow. Without a ceiling a hang burns the 6-hour default
+    # The critical path is the UNCACHED registry install of the packed tarball (no
+    # `cache: 'npm'`; the `npm ci` step above uses a throwaway cache and leaves `~/.npm` cold),
+    # which is the most stall-prone step in the workflow. Without a ceiling a hang burns the 6-hour default
     # while `concurrency.cancel-in-progress` holds the ref's group — the trail-erasing dynamic
     # backlog I105 blames for a 4-day invisible red.
     timeout-minutes: 15
@@ -399,6 +439,11 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: 20
+
+      # See the block at the top of this job for why this exists and why the cache is throwaway.
+      # `--no-audit --no-fund` only trims output; they do not affect resolution.
+      - name: Install repo dependencies (throwaway cache — leaves ~/.npm untouched)
+        run: npm ci --cache "$(mktemp -d)" --no-audit --no-fund
 
       # The script exits 2 for a harness/environment failure (registry blip, missing tarball) and
       # 1 for a real product defect. NOTE the workflow cannot act on that distinction — `run:`

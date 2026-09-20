@@ -577,9 +577,22 @@ function isFile(p) { try { return fs.statSync(p).isFile(); } catch { return fals
  *
  * WHY THIS EXISTS — CI run 33323351907, main went red. `js-yaml` is a runtime dependency of
  * `convoke-agents`, so a bare `require` finds it in `$REPO/node_modules` on any developer
- * machine. The `fresh-install` job runs **no `npm ci`** — deliberately, and its own comment
- * says so: *"the script needs no repo dependencies (verified against a clean clone)"* — so on
- * the runner `$REPO/node_modules` does not exist and the auditor died mid-run.
+ * machine. At the time the `fresh-install` job ran **no `npm ci`**, so on the runner
+ * `$REPO/node_modules` did not exist and the auditor died mid-run.
+ *
+ * THAT JOB NOW INSTALLS ITS DEPENDENCIES (T104), so this is no longer what stands between the
+ * auditor and a red runner.
+ *
+ * WHO STILL NEEDS IT — corrected at review, because the first answer was wrong in an
+ * instructive way. It is NOT the operator: npm hoists `js-yaml` to `<project>/node_modules`,
+ * so a bare require from inside `node_modules/convoke-agents/scripts/audit/lib/` walks up and
+ * finds it with no root set. Re-derive in a throwaway directory —
+ *   mkdir -p p/node_modules/convoke-agents/x p/node_modules/js-yaml
+ *   (write a stub package.json + index.js for js-yaml, then require.resolve('js-yaml') from x)
+ * It is the REPO-SIDE invocation: `try-fresh-install.sh` run from a checkout that has no
+ * `node_modules`, which that script's own header documents as the pre-release ritual. That
+ * caller is exactly the one T104 removed from CI and did not remove from a developer's
+ * machine.
  *
  * That is the exact defect class this harness was built to catch, committed inside the
  * harness: code that works in THIS repo and nowhere else. I135, I137 and I139 are the three

@@ -133,8 +133,12 @@ function tree(projectRoot, packageRoot) {
     if (!fs.existsSync(dir)) precondition(`${label} root does not exist: ${dir}`);
   }
   // Before ANY config is parsed: resolve js-yaml out of the installed package, which carries
-  // it as a runtime dependency. The `fresh-install` job runs no `npm ci`, so `$REPO/node_modules`
-  // does not exist on the runner — this is what took main red in CI run 33323351907.
+  // it as a runtime dependency. This is what took main red in CI run 33323351907, when the
+  // `fresh-install` job ran no `npm ci` and `$REPO/node_modules` did not exist on the runner.
+  // That job now installs its dependencies (T104), so the crash is no longer reachable there.
+  // The root stays for the repo-side caller that remains: this script run from a checkout with
+  // no `node_modules`. It is NOT for the operator — npm hoists js-yaml to the project's own
+  // `node_modules`, where a bare require finds it. See `setYamlResolutionRoot`'s docstring.
   setYamlResolutionRoot(packageRoot);
 
   const pkgPath = path.join(packageRoot, 'package.json');

@@ -489,9 +489,15 @@ function gitSubjects(root) {
  *
  * WHY NO YAML PARSER
  *   This script requires only `fs`, `path` and `child_process` — zero third-party deps in a
- *   CI-blocking audit. `8c5de2f8` had just finished fixing that exact class for `dist-2-4`,
- *   where a `js-yaml` require resolved on every developer machine and did not exist on the
- *   `fresh-install` runner (T104).
+ *   CI-blocking audit. The original reason was `8c5de2f8`, which had just fixed that class for
+ *   `dist-2-4`: a `js-yaml` require that resolved on every developer machine and not on the
+ *   `fresh-install` runner. **That reason never applied to THIS script** — it has only ever run
+ *   in `agent-surface-parity` (`9db669b8`, the one commit that touched its wiring), a job that
+ *   already did its own `npm ci`; and T104 has since given `fresh-install` one too. An earlier
+ *   correction here said the reason "expired with T104", which its own next clause refutes: a
+ *   reason that never applied cannot expire. What survives is the weaker claim: a CI-blocking audit with no
+ *   third-party deps has less to go wrong. Weigh that against the silent-loss defect recorded
+ *   immediately below before treating the hand-rolled parser as settled.
  *
  * EVERY IN-BLOCK LINE LANDS IN EXACTLY ONE BUCKET, AND THAT IS THE WHOLE POINT.
  *   The first version of this function returned only the lines it understood. Anything else --
