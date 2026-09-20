@@ -62,7 +62,9 @@ An update rewrites the paths it owns, so keep your changes in paths you own.
 | `_bmad-output/` | **You** | Your files are left alone. Convoke adds its own folders there: `.backups/` and `vortex-artifacts/`. |
 | `_bmad/bme/` | Convoke | Mostly **replaced**. Only the Vortex and Gyre `config.yaml` files are merged. |
 | `.claude/skills/bmad-agent-bme-*`, `.claude/skills/bmad-enhance-*` | Convoke | **Regenerated.** Names Convoke doesn't recognise are **deleted**. |
-| The rest of `_bmad/`, and BMAD's `.claude/skills/bmad-*` | BMAD Method | Replaced by BMAD's installer. |
+| `.claude/skills/bmad-migrate-artifacts`, `bmad-portfolio-status`, `bmad-export-skill`, `bmad-generate-catalog`, `bmad-seed-catalog`, `bmad-validate-exports` | Convoke | **Regenerated.** These six carry BMAD's `bmad-` prefix but are Convoke's, written by Convoke's installer. Delete one and it comes back on the next install. |
+| `_bmad/_config/agent-manifest.csv`, `skill-manifest.csv`, `taxonomy.yaml` | Convoke writes these, inside BMAD's directory | Regenerated. `agent-manifest.csv` has its `bme` rows rewritten and other modules' rows preserved. (`bmm-dependencies.csv` lives here too and is **yours** — see the row above.) |
+| The rest of `_bmad/`, and BMAD's own `.claude/skills/bmad-*` | BMAD Method | Replaced by BMAD's installer. |
 
 ---
 
@@ -88,6 +90,12 @@ An update rewrites the paths it owns, so keep your changes in paths you own.
 ---
 
 ## 1. Tune BMAD agents and workflows: `_bmad/custom/`
+
+> **This section requires BMAD Method to be installed.** Everything in it — `_bmad/custom/`,
+> `_bmad/scripts/`, and the `bmad-*` skills the commands below invoke — belongs to BMAD Method and ships
+> with it, not with `convoke-agents`. On a standalone Convoke install `_bmad/` contains only `_config/` and
+> `bme/`, and every command in this section will fail with "No such file or directory". Sections 2 onward
+> apply to standalone installs as well.
 
 BMAD skills that ship a `customize.toml` read override files from `_bmad/custom/` when they activate. **No Convoke agent ships a `customize.toml`, so this layer does not reach Emma, Isla, or any other Convoke agent.** It does reach the BMAD agents and workflows your Convoke work hands off to, such as the product manager, the architect and PRD creation.
 
@@ -251,8 +259,14 @@ Who reads these settings:
 
 ## 3. Switch off agents you don't use: `excluded_agents`
 
+**Edit the existing key — do not paste this in as an addition.** A shipped `config.yaml` already contains
+`excluded_agents: []`. Appending the block below instead of editing that line produces a duplicate key, and
+the next install refuses the file rather than overwriting it: `config-merger: refusing to overwrite …
+_vortex/config.yaml: it is not valid YAML (Map keys must be unique …)`, exit 1. This is the same trap as
+the one in section 2 — it applies to every key here, not just `user_name`.
+
 ```yaml
-# _bmad/bme/_vortex/config.yaml
+# _bmad/bme/_vortex/config.yaml — change the value of the key that is already there
 excluded_agents:
   - production-intelligence-specialist
 ```

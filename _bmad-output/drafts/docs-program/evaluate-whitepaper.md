@@ -20,9 +20,9 @@ because an evaluating organisation's first question about a young product is not
 
 | | Count | What it means |
 |---|---|---|
-| **Shipped** | 4 of 16 capabilities | Verified by running the software or by an automated test that exercises it |
-| **Works with limits** | 6 of 16 | Works, with a named defect or gap that affects the documented outcome |
-| **Mapped, not built** | 6 of 16 | Documented as planned. No working implementation |
+| **Shipped** | 4 of 18 capabilities | Verified by running the software or by an automated test that exercises it |
+| **Works with limits** | 8 of 18 | Works, with a named defect or gap that affects the documented outcome |
+| **Mapped, not built** | 6 of 18 | Documented as planned. No working implementation |
 
 Five things that ledger says which a vendor document usually would not:
 
@@ -34,9 +34,13 @@ Five things that ledger says which a vendor document usually would not:
   and usable-looking enough to mislead someone who pastes it into another assistant.
 - Four of the six module configuration files are rewritten from the template on every install, so
   customisation in those four does not persist.
-- **Two of Convoke's own in-chat workflows do not work as written.** The guided artifact-governance and
-  export workflows tell the assistant to run a script at a path that does not exist in an installed project,
-  so they fail on invocation. The equivalent command-line tools work, and that is the supported route.
+- **Six of Convoke's own in-chat workflows do not work as written** — every guided workflow it installs.
+  `bmad-portfolio-status`, `bmad-migrate-artifacts`, `bmad-export-skill`, `bmad-generate-catalog`,
+  `bmad-seed-catalog` and `bmad-validate-exports` all tell the assistant to run a script at a relative
+  `scripts/…` path, and an installed project has no `scripts/` directory, so they fail on invocation with
+  `MODULE_NOT_FOUND`. Three of the six have a working command-line equivalent and that is the supported
+  route; the other three — catalogue generation, catalogue seeding and export validation — have **no
+  command-line entry point at all**, so there is no supported route to them today.
 - **Three of the seven discovery agents have no dependable way to read your project's configuration.** The
   startup step they call to load it no longer exists, and whether they find the file anyway varies between
   runs of the same project — measured on 4.0.3, the configuration was read in one run of four. Expect to be
@@ -181,8 +185,9 @@ framework-only warning banner over the agent's full persona, and ships Copilot a
 alongside it. Portability is a direction, not a destination, and the
 product's own README says so.
 
-Convoke installs for Claude Code. The wider ecosystem is converging on shared formats — the agent skills
-format, MCP, AGENTS.md, A2A — but Convoke does not yet implement those interfaces.
+Convoke installs for Claude Code, and its agents ship **in** the agent-skills format — an install writes 19
+`SKILL.md` directories. The wider ecosystem is converging on further shared interfaces — MCP, AGENTS.md,
+A2A — and Convoke implements none of those.
 
 ### 5.3 Governance and regulatory context
 

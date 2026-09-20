@@ -2,8 +2,9 @@
 
 *Answers to the questions an evaluating organisation's security, legal and architecture reviewers ask.
 Every answer here was established on 17 September 2026 by inspecting the published package
-`convoke-agents@4.0.3` — 469 files, extracted from the npm tarball — or by running it. Where something was
-not tested, this pack says so rather than inferring.*
+`convoke-agents@4.0.3` — 469 files, extracted from the npm tarball — or by running it, with one exception:
+the answers drawn from the maturity ledger's §2.18 and §2.19 were established on 20 September, and those
+sections name their own basis. Where something was not tested, this pack says so rather than inferring.*
 
 ---
 
@@ -95,7 +96,7 @@ available with any MIT-licensed dependency — fork it, vendor it, or contribute
 | Claude Code | Supported. This is the environment Convoke installs for |
 | GitHub Copilot, Cursor | Export tool produces instruction files for ecosystem skills. **Convoke's own twelve agents export with a framework-only warning banner — but the file beneath the banner is the agent's full persona** (role, identity, communication style, principles, output contract), plus Copilot and Cursor adapter files. It is lossy rather than empty: a developer could paste it into Cursor and get partial, unsupported behaviour. On a Convoke-only install, `convoke-export --all` exports exactly **one** skill, because most manifest rows do not install |
 | MCP (Model Context Protocol) | Not implemented |
-| AGENTS.md | Not implemented. Claude Code reads `CLAUDE.md`, not `AGENTS.md` |
+| AGENTS.md | Not implemented — Convoke emits no `AGENTS.md`. Note that the host does support it: Claude Code reads a repository's `AGENTS.md` as project instructions, on its own or alongside `CLAUDE.md` ([source](https://code.claude.com/docs/en/memory)). The gap is Convoke's, not the platform's |
 | A2A (Agent2Agent) | Not implemented |
 | BMAD Method | Not required. Convoke extends it where it is installed, and installs standalone where it is not |
 | Plugin marketplace | Not listed. A submission was declined on packaging structure and has not been resubmitted |
