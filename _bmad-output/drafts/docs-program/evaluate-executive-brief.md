@@ -59,8 +59,8 @@ it.
 
 ## What is proven, and what is not
 
-The accompanying maturity ledger classifies sixteen capabilities against what was verified by running the
-software: **four Shipped, six Works with limits, six Mapped, not built**. The maturity ledger, supplied alongside, gives the full
+The accompanying maturity ledger classifies eighteen capabilities against what was verified by running the
+software: **four Shipped, eight Works with limits, six Mapped, not built**. The maturity ledger, supplied alongside, gives the full
 table and the commands behind each row.
 
 Six disclosures a vendor document would not usually volunteer, and which we would rather you heard from us
@@ -81,8 +81,16 @@ than found later:
   the configuration file is not. Measured on 4.0.3, they picked it up in one run of four, so they will ask
   for your name and working language some of the time. A nuisance rather than a blocker, and the kind of
   thing a young product still has.
-- **No organisation can be named as a reference.** We are not aware of an adopter whose experience you could
-  check, and that deserves as much weight as anything else in this brief.
+- **Adopters exist, and not one of them can be offered to you as a reference.** The framework's author has
+  run this method inside large organisations — in regulated financial services, in industry and in consumer
+  sectors — on real programme work rather than demonstrations, and has trained practitioners in it. Those
+  engagements are confidential: no organisation is named, and no count, score or metric drawn from them
+  appears anywhere in this pack. They also are not evidence. The same person designed the method,
+  facilitated the sessions and led the work, so every favourable observation has an obvious alternative
+  explanation, and we would discount it if a vendor showed it to us. Treat it as practitioner experience
+  and nothing more. The one thing worth passing on, offered as an anecdote and not a result: a product
+  owner who had used MoSCoW for years moved to RICE after a few weeks of working this way, and nobody
+  argued her into it.
 
 The product is young and its release discipline is visible: releases build from a tagged commit and must
 pass a full test suite and a clean-install trial. Signed build provenance, verifiable against a public

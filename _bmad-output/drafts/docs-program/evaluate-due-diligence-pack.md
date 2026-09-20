@@ -149,7 +149,7 @@ outcomes.
 
 ## 5. Ledger evidence
 
-The maturity ledger classifies sixteen capabilities — four *Shipped*, six *Works with limits*, six
+The maturity ledger classifies eighteen capabilities — four *Shipped*, eight *Works with limits*, six
 *Mapped, not built* — with an evidence appendix giving, per row, the commands that were run and their
 output. It is a separate document, re-derived against 4.0.3. Reviewers who want to reproduce any row can
 run the commands it records.
