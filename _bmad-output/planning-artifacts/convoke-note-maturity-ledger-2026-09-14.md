@@ -565,7 +565,6 @@ $ gh release view v4.0.3 --json … → isDraft false, isPrerelease false, publi
   - **T45**: the npmrc credential scan inspects zero files.
   - **T48**: tag delete-and-repush cancels its own run.
   - **T43**: no `rc` downgrade protection.
-  - **T104** (Qualified): the `fresh-install` job runs no `npm ci`.
   - **I152**, **I106** (Node matrix only on the test job), **T27**, **I102**.
   - None of these made 4.0.2 wrong; each is a hardening gap.
 
