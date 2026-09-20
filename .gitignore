@@ -96,3 +96,11 @@ _bmad-output/.backups/
 .gyre/history.yaml
 .gyre/cache/
 .gyre/.lock
+
+# Party-mode session memories — private working records; may quote third parties
+_bmad-output/party-mode/memories/
+
+# Interview and research data — personal data, never committed
+_bmad-output/user-interview-*
+_bmad-output/interviews/
+*.transcript.md
