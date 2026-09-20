@@ -30,6 +30,8 @@ status: draft
 | Use in chat windows (e.g. Claude.ai) | Documentation suggests pasting an agent file into a conversation. | Mapped, not built | Convoke | No tooling supports this path, and the agents expect project files a chat window does not have. Not tested in a live session. |
 | Further lifecycle phases: Strategy, Growth, Delivery, Security, Operations, Sunset | Coverage of the lifecycle beyond discovery and readiness. | Mapped, not built | Convoke (vision) | Described in an exploratory vision document that says it is not a commitment to build. No agents exist. Gyre assesses security readiness gaps, but nothing fixes them. |
 | Proposed teams: Forge (knowledge capture), Helm (portfolio steering) | Named future teams. | Mapped, not built | Convoke (proposed) | Forge is waiting on an external pilot engagement. Helm's engine is fully designed, but none of it is built. Other names in circulation (Sentinel, Conduit, Pulse, Compass, Ledger) have no agreed scope or owner. |
+| Finding and confirming what you installed | Knowing which agents and workflows you have, where they live, and whether the install actually worked. | Works with limits | Convoke; BMAD Method (its help skill) | The health check is real: it verifies an installation and names what is broken. Everything else in this area is weaker than it looks. The installer's own final verification covers the **seven discovery agents only** — the five other agents it installs in the same run are not among its checks — and its success banner reads *"All Vortex Agents Installed"*, which is literally true and easy to read as *all agents*. The "Next Steps" it prints lists seven commands out of the twelve installed. BMAD Method's own "what should I do next" skill has no knowledge of Convoke at all: it names two upstream modules and none of Convoke's teams, so asking it will not surface anything we ship. The readiness team's guides ship inside the package and no install path copies them into your project. The practical effect — reported independently by operators in different roles at different organisations, and reproducible from source — is that people do not find capabilities they already have, and cannot always tell whether the install succeeded. |
+| Supply chain and how you obtain it | What Convoke is made of, what it depends on, and what you can check before you install it. | Works with limits | Convoke (its own package); BMAD Method (the required dependency) | Convoke publishes one npm package with **four direct runtime dependencies** — `chalk`, `fs-extra`, `js-yaml`, `yaml`. `npm audit` over the production tree reports **0 vulnerabilities at any severity across 14 packages**, and every release carries signed build provenance that verifies against the public transparency log. **npm is the only supported channel.** There is no binary, no guidance for an internal registry or mirror, and no air-gapped path; an organisation that cannot pull from the public registry at scale has no supported route to Convoke, and we do not currently solve that. Convoke also requires BMAD Method, which is a **separate supply chain that we neither control nor audit**. Its installer surfaces third-party scan results at install time; those results describe BMAD, not Convoke, and you should evaluate them on their own terms. We have not reproduced them and do not restate them here. |
 
 *Design (WDS), build and test (BMM, TEA), creative facilitation (CIS) and agent building (BMB) are BMAD Method ecosystem modules. Convoke does not ship or maintain them, and this ledger does not assess them. WDS is a separate BMAD extension. Convoke is built to run alongside them, but that combination was not trialled for this ledger.*
 
@@ -658,6 +660,73 @@ The background research also ran `gh api repos/bmad-code-org/bmad-plugins-market
 | `package.json` `//files` | "I97 Epic 2 is 2 of 7 done" | 3 of 7 agent files are converted. |
 
 ---
+
+### 2.18 Finding and confirming what you installed: Works with limits · Convoke; BMAD Method
+
+Assessed 20 September 2026. Unlike most rows here, this one is reproducible from source alone — no install
+trial is needed to see it.
+
+**The installer verifies a subset of what it installs.** In `scripts/install-vortex-agents.js`, the phase-5
+check list is built from the `AGENTS` array — the seven discovery agents — twice over (agent file, then
+generated skill) plus the configuration file: fifteen checks. The same run also writes skills for the four
+readiness agents and the team-factory agent. None of those five is in the list, so the verification cannot
+fail on them, and "All files installed successfully" is a statement about fifteen paths rather than about the
+installation.
+
+**The banner says what it checked, and reads as more.** The success box prints `All Vortex Agents Installed!`
+That is accurate about the discovery team and is the last line most operators read. `Next Steps` then lists
+seven activation commands; twelve agents are installed.
+
+**BMAD Method's router does not know Convoke exists.** `.claude/skills/bmad-help/SKILL.md` — the skill whose
+job is answering *what should I do next* — contains **0** occurrences of `bme`, `vortex`, `gyre` or
+`convoke`. The modules it names are `core` and `bmm`. An operator who asks the ecosystem's own help skill
+what is available will not be told about anything Convoke ships. Convoke can address this with a
+customisation override and has not.
+
+**The readiness team's guides never arrive.** Filed as `T91` (2026-08-27, open): `guides/` and
+`compass-routing-reference.md` ship inside the package and no install path copies them into the project.
+
+**Field corroboration.** Operators in different roles at different client organisations independently reported
+both halves of this row — not finding capabilities that were already installed, and not being able to tell
+whether the install had succeeded. Those reports are held confidentially and are not quoted here; they are
+recorded because they arrived independently of each other and independently of this repository, and because
+the underlying defects are verifiable above without them.
+
+**What this row does not claim.** That the capabilities are missing. Every one of them is installed and
+starts. The defect is that the product under-describes itself at exactly the moment a new operator is
+deciding whether it worked.
+
+### 2.19 Supply chain and how you obtain it: Works with limits · Convoke; BMAD Method
+
+Assessed 20 September 2026 against the working tree at `1b584d24`.
+
+```
+$ node -e "console.log(require('./package.json').dependencies)"
+{ chalk: '^4.1.2', fs-extra: '^11.3.3', js-yaml: '^4.3.1', yaml: '^2.8.3' }
+
+$ npm audit --omit=dev --json   # metadata.vulnerabilities
+{"info":0,"low":0,"moderate":0,"high":0,"critical":0,"total":0}   # across 14 production packages
+```
+
+Build provenance is covered in §2.12 and is not restated here.
+
+**The distribution limit is real and unsolved.** npm is the only supported channel. There is no binary
+distribution, no documented internal-registry or mirror path, and no air-gapped procedure. An organisation
+whose policy prevents pulling from the public registry at deployment scale has no supported route, and this
+ledger should not imply otherwise.
+
+**A verification that failed, recorded rather than dropped.** An operator reported seeing third-party risk
+ratings — Gen, Socket and Snyk columns — displayed during a BMAD Method skills installation, with
+medium-risk entries among them. An attempt to reproduce those values from the cited source
+(`https://skills.sh/bmad-code-org/BMAD-METHOD`, fetched 20 September 2026) returned a page displaying **no
+ratings at all**. The values could not be confirmed from the source that was cited for them, so they are
+**not published here** — restating an unverified security rating about somebody else's package is precisely
+the kind of claim this ledger exists to refuse.
+
+What survives verification is structural, and is what the client-facing row states: adopting Convoke means
+adopting **two** supply chains, only one of which is ours, and the other's scan results will be surfaced to
+whoever installs it. Evaluate them separately.
+
 
 ## 3. Uncertain rows
 
