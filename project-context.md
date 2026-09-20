@@ -565,6 +565,41 @@ The common shape is not carelessness about shell syntax. It is **reading a check
 
 **Exception.** None. If a check genuinely cannot be falsified — a tautology, a count of itself — it must not be cited as evidence at all.
 
+**Companion — a fix must change BEHAVIOUR, not just the verdict.** This rule's subject is a check
+that cannot fail. Its dual is a change that makes a check pass without touching what the check is
+about. Before accepting a fix that turns a signal green, name the observable behaviour that now
+differs. If the honest answer is *"the check's verdict"*, it is not a fix.
+
+Measured, T104. `loadYaml` was rewritten from `require('js-yaml')` to
+`require(require.resolve('js-yaml', { paths: [__dirname] }))`. That reads as an explicit,
+deliberate resolution root, and it resolves to exactly the same file, because `__dirname` is
+inside `$REPO`. Re-derive — this is the whole rule in one command:
+
+```bash
+node -e "console.log(require.resolve('js-yaml', { paths: ['./scripts/audit/lib'] }))"
+# -> <repo>/node_modules/js-yaml/index.js   — the same place a bare require finds
+```
+
+The static gate under review flipped from red to green on that edit; both versions still died
+identically on a tree with no `node_modules`. The rewrite was reverted before it was committed, so
+the gate itself is not reproducible — the command above is, and it is the part that transfers. The
+same session produced a second instance: an "anchor" exemption silenced by a JSDoc sentence
+*describing* the pattern it excused, which made the gate unable to fail for the one module it was
+built for.
+
+**The class was recognised independently before this.** `T140` (2026-09-11, a different defect and
+a different session): *"Do NOT close by widening `VOICE_MARKERS`; that would make the decorative
+gate pass harder without making it detect drift."* Two people reaching it from two directions is
+why it is written down rather than treated as one bad session.
+
+**Falsification.** If two consecutive fixes challenged this way turn out to have changed real
+behaviour, relax the rule.
+
+**Not enforced, and unenforceable.** No check can see this — a gate that could tell a real fix from
+a verdict-shaped one would have to know what the fix was for. It sits here, where authors read
+before writing, for the same reason `verification-claims-must-name-their-evidence` states outright
+that it carries no grep.
+
 ---
 
 ## Rule: verification-claims-must-name-their-evidence
