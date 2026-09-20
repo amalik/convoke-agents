@@ -14,7 +14,10 @@ modules do not: *discovery* — deciding what to build, through research with re
 experiments — and *readiness* — judging whether what was built is fit to run. Convoke adds seven discovery
 agents across 22 guided workflows and four readiness agents across seven, plus the hand-off contracts that
 define what each stage passes to the next. It installs into Claude Code — today the only supported
-assistant — and is not a platform, a service, or somewhere your data goes.
+assistant. It is not a platform and not a service: Convoke runs nothing, hosts nothing and receives nothing
+from you. What it does do is write files into your repository — including, in the discovery workflows,
+whatever you gather from real people. That data stays yours, in your version control, and governing it
+stays your responsibility. See the disclosure below and section 1 of the due-diligence pack.
 
 ## Why now
 
@@ -63,7 +66,7 @@ The accompanying maturity ledger classifies eighteen capabilities against what w
 software: **four Shipped, eight Works with limits, six Mapped, not built**. The maturity ledger, supplied alongside, gives the full
 table and the commands behind each row.
 
-Six disclosures a vendor document would not usually volunteer, and which we would rather you heard from us
+Seven disclosures a vendor document would not usually volunteer, and which we would rather you heard from us
 than found later:
 
 - **There is no independent evidence that this method — or any competing structured AI-delivery framework —
@@ -81,6 +84,19 @@ than found later:
   the configuration file is not. Measured on 4.0.3, they picked it up in one run of four, so they will ask
   for your name and working language some of the time. A nuisance rather than a blocker, and the kind of
   thing a young product still has.
+- **The discovery workflows produce personal data, and we give you no help governing it.** This is the
+  disclosure we would least like you to find on your own. The `user-interview` workflow tells an operator to
+  recruit participants, review screening answers, optionally record sessions, and write participant tables
+  with direct quotes into your repository — where they also pass through your AI assistant. It does set
+  expectations about recording and ask permission to take notes. It says **nothing** about data
+  minimisation, retention, lawful basis or participant withdrawal; the word *consent* does not appear in it,
+  and nothing tells you how long to keep a participant table or how to remove someone from it. Version
+  control makes that harder rather than easier, because history is not somewhere you can quietly delete
+  from. Treat anything these workflows produce as personal data under your own regime, and run a DPIA before
+  the first participant is recruited. Section 1 of the due-diligence pack sets out exactly what we checked.
+  We have not researched data-protection obligations and the whitepaper says so — this is the one place that
+  omission meets something you would actually do in a pilot.
+
 - **Adopters exist, and not one of them can be offered to you as a reference.** The framework's author has
   run this method inside large organisations — in regulated financial services, in industry and in consumer
   sectors — on real programme work rather than demonstrations, and has trained practitioners in it. Those
