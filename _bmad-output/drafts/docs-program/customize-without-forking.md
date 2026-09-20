@@ -15,6 +15,41 @@ This page is for projects where Convoke is installed from npm (`convoke-agents`)
 
 A fork freezes Convoke on the day you cloned it. After that, every fix and every new agent is a merge you do by hand, and the improvements you make stay in your copy where nobody else can use them. Most of what practitioners fork for has a supported place that updates leave alone, and this page shows you each one, including the cases where no such place exists.
 
+## Before you customise anything: change the knowledge, not the agent
+
+Almost everyone reaches for the same thing in week one — open an agent and make it *ours*. Put the house
+architecture in the developer agent, the client's vocabulary in the analyst, the stack conventions in the
+reviewer. It works immediately, and it is the most expensive decision available to you on this page.
+
+**The moment an agent carries your domain, you own that agent.** Not its behaviour — the agent itself, and
+every future improvement to it, as a merge you do by hand. A generic agent is maintained by everybody: by
+upstream BMAD, by Convoke, by every other organisation running it. A specialised one is maintained by you,
+alone, forever. That is the same trade as forking, taken one file at a time, which is why it rarely feels
+like a decision at all.
+
+The alternative is to keep the agents generic and let them **read** what makes your work specific.
+
+| You want | Don't | Do instead |
+|---|---|---|
+| The team's architecture standards applied | Edit the developer or architect agent | Write them as project rules the agents read (`project-context.md` is exactly this pattern — Convoke uses it on itself) |
+| Domain vocabulary, business rules, product context | Rewrite agent personas | Keep them as knowledge artifacts in a path you own, and point the agents at them |
+| Different tone, menus, or model settings | Copy the agent file | `_bmad/custom/` overrides — section 1 below |
+| An agent that doesn't exist yet | Fork and add one | Your own skill alongside Convoke's — section 4 below |
+
+Knowledge is meant to grow through a progression, and starting at the far end is its own mistake:
+**markdown files → a wiki → retrieval → a graph.** Begin with files in a directory you own. Move up only when
+the corpus itself becomes the bottleneck, not because the later form sounds more serious.
+
+> **What Convoke does not yet give you.** Today that knowledge layer is markdown files and project rules,
+> read by agents at run time. Convoke ships no inventory, no curation tooling, no retrieval and no graph —
+> if you are running agents across many teams and repositories, that gap is real and you will feel it
+> before we close it. We would rather you plan around it than discover it.
+
+Everything below assumes you have already made this call. The rest of the page is about *where a change
+belongs* once you have decided it belongs in a file you own.
+
+---
+
 ## The one rule: know who owns each path
 
 An update rewrites the paths it owns, so keep your changes in paths you own.

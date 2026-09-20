@@ -736,3 +736,59 @@ one inherits it, but the `.<team>/` shape has an N of 1 and no ADR ratifies it �
 *"Rule what Loom is first; the directory name is downstream of that."* Rule what Forge's state is before
 ruling where every team's state lives. If Forge adopts this unchanged, that is the two-instance evidence
 an ADR would ratify.
+
+---
+
+## Rule: generic-agents-specific-knowledge
+
+**Statement.** Teams, agents, skills and workflows stay **as generic as possible**. Domain specificity is
+carried by **curated knowledge that agents read** — never by specialising the agent itself. This applies to
+what Convoke authors under `_bmad/bme/`, and to what Convoke advises operators to do with their install.
+
+**Operational check.** Before writing a line into an agent, skill or workflow file, ask: *is this true of the
+work, or only of one domain, one client, one stack?* If it is only true of one, it belongs in a knowledge
+artifact the agent reads at run time. The test is substitution — if replacing the domain would require
+editing the agent, the domain is in the wrong place.
+
+The knowledge layer is meant to grow through a deliberate progression, and starting at the far end is its
+own failure: **markdown files → wiki → RAG → graph.** Begin with files. Move up only when the corpus makes
+the previous form the bottleneck.
+
+**Why.** Maintenance economics, and they are the reason Convoke is built *on top of* BMAD rather than beside
+it. A generic agent is maintained by the commons — upstream BMAD, open-source contributors, other adopters.
+A specialised agent is maintained by whoever specialised it, forever, alone. Shared maintenance requires
+shared artifacts; the moment an agent carries your domain, it stops being shareable and the bill comes to
+you. Every argument for living inside someone else's ecosystem collapses if the things living there are
+bespoke.
+
+Field evidence, 2026-09-19/20 (five client organisations, five roles):
+
+- A CTO, unprompted: *"when adopting BMAD and Convoke, we start customizing agents and skills."* Immediately,
+  on landing. That is the failure mode this rule exists to prevent, and it is what adopters currently do by
+  default because nothing tells them otherwise.
+- The same corpus named **knowledge engineering** as the capability they most lack at scale — which is this
+  rule's other half. Genericity without a knowledge layer produces a well-mannered stranger.
+- An engineering lead asked for the loop to run **both ways**: agents that report which architectural approach
+  and patterns they applied, and why. Knowledge flows into a generic agent; it should be able to flow back out.
+
+**How to apply.**
+
+- **Authoring an agent, skill or workflow.** Keep it domain-neutral. A client name, a sector term, a
+  stack-specific rule or a house convention inside an agent file is a defect, not a feature.
+- **Adding domain capability.** Put it in knowledge — a markdown artifact first — and have the agent read it.
+  Inventory it, curate it, and **expose** it; knowledge nothing can find is knowledge you do not have.
+- **Advising an operator.** Tell them to customise the *knowledge*, not the *agent*. Behaviour overrides
+  belong in `_bmad/custom/`; domain belongs in artifacts. Any page that teaches customisation must carry this
+  distinction, or it teaches the acquisition of maintenance debt with excellent citations.
+- **Reviewing a PR.** If a diff puts domain-specific content inside an agent, skill or workflow file, block
+  and cite this rule.
+
+**Exception.** *Functional* specialisation is not domain specialisation. Vortex is discovery-shaped, Gyre is
+readiness-shaped, TEA is test-shaped — that is what a team *is*, and it stays generic across every domain that
+does discovery, readiness or testing. The rule forbids binding an agent to a customer, a sector or a codebase,
+not to a craft.
+
+**Not enforced.** Nothing mechanical distinguishes generic content from domain content today, and until
+something does, this rule is a declaration — the same class of gap this file documents elsewhere. It was
+also, until 2026-09-20, unwritten: it existed only in the operator's head and in advice given verbally in
+workshops, which is why adopters who never attended one do the opposite on day one.
