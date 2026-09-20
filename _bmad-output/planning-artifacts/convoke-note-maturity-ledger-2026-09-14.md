@@ -134,7 +134,7 @@ Intake rows (§2.1) have no Portfolio column, so the per-team counts below cover
 **Format of each agent, from the shipped files.** Commands:
 
 ```
-$ for d in $P/_bmad/bme/_vortex/agents/*/; do f=$d/SKILL.md; echo "$d lines=$(wc -l <$f) <agent=$(grep -c '<agent ' $f) <activation=$(grep -c '<activation' $f) ##=$(grep -c '^## ' $f)"; done
+$ for d in $P/_bmad/bme/_vortex/agents/*/; do f=$d/SKILL.md; echo "$d lines=$(wc -l <$f | tr -d " ") <agent=$(grep -c '<agent ' $f) <activation=$(grep -c '<activation' $f) ##=$(grep -c '^## ' $f)"; done
 ```
 
 Results:
@@ -144,10 +144,10 @@ Results:
 | contextualization-expert/ (Emma) | 71 | 0 | 0 | 6 |
 | lean-experiments-specialist/ (Wade) | 73 | 0 | 0 | 6 |
 | research-convergence-specialist/ (Mila) | 69 | 0 | 0 | 6 |
-| discovery-empathy-expert/ (Isla) | 117 | 1 | 1 | 0 |
-| hypothesis-engineer/ (Liam) | 117 | 1 | 1 | 0 |
-| production-intelligence-specialist/ (Noah) | 117 | 1 | 1 | 0 |
-| learning-decision-expert/ (Max) | 117 | 1 | 1 | 0 |
+| discovery-empathy-expert/ (Isla) | 120 | 1 | 1 | 0 |
+| hypothesis-engineer/ (Liam) | 120 | 1 | 1 | 0 |
+| production-intelligence-specialist/ (Noah) | 120 | 1 | 1 | 0 |
+| learning-decision-expert/ (Max) | 120 | 1 | 1 | 0 |
 
 - **v6.3 markdown (3):** Emma, Wade, Mila. Each has frontmatter `name: bmad-bme-agent-*`, the sections Overview, Identity, Communication Style, Principles, Capabilities and On Activation, and a `references/` directory.
 - **v5 XML-in-markdown (4):** Isla, Liam, Noah, Max. Each has a fenced `xml` block containing `<agent id="…agent.yaml" name="…">` and `<activation critical="MANDATORY">`.
@@ -176,10 +176,11 @@ $ npx --no-install convoke-doctor                                 → exit 0
 **Path resolution in the installed tree.** Command:
 
 ```
-$ grep -rhno "{project-root}/_bmad/bme/_[a-z-]*/[…]" _bmad/bme .claude/skills | sort -u  → 235 unique paths
+$ grep -rhoE "\{project-root\}/_bmad/bme/_[a-z-]*/[^\"'`) ]*" _bmad/bme .claude/skills | sort -u | wc -l  → 244
+  (working tree, and it reaches into the gitignored `.claude/skills/`, so this one is repo-scoped rather than package-scoped)
 ```
 
-Seven paths dangle, and all seven are in `_vortex/workflows/_deprecated/wireframe/` (they point at `_designos`). Every `./references/*.md` target named in the 3 converted agents exists.
+Thirteen unique paths dangle, across 12 files, split evenly between `_vortex/workflows/_deprecated/wireframe/` and `_vortex/workflows/_deprecated/empathy-map/` — six step files each, all pointing at `_designos`, plus `_designos/config.yaml` referenced from both. Derive with `grep -rhoE "\{project-root\}/_bmad/bme/_designos[^\"'`) ]*" $P/_bmad/bme | sort -u`. Every `./references/*.md` target named in the 3 converted agents exists.
 
 **Tests (CI).** CI run `35211917101` on tag `v4.0.3`:
 - `test (22)`: unit/team-factory/lib/audit suite `tests 2752 · pass 2751 · fail 0 · skipped 1`; integration suite `tests 130 · pass 130 · fail 0`.
@@ -232,9 +233,9 @@ $ grep -rn "HC[0-9]*" -o $T/_bmad/bme/_vortex/workflows | sed 's/.*://' | sort |
 ### 2.3 Gyre production-readiness team: Works with limits · Convoke
 
 ```
-$ for f in $P/_bmad/bme/_gyre/agents/*.md; do …; done
-  model-curator.md lines=128 <agent=1 name="Atlas" · readiness-analyst.md 127 name="Lens"
-  review-coach.md 130 name="Coach" · stack-detective.md 125 name="Scout"      → all 4 are v5 XML
+$ for f in $P/_bmad/bme/_gyre/agents/*.md; do echo "$(basename $f) lines=$(wc -l <$f | tr -d ' ') <agent=$(grep -c '<agent ' $f) $(grep -m1 -oE 'name="[A-Za-z]+"' $f)"; done
+  model-curator.md lines=131 <agent=1 name="Atlas" · readiness-analyst.md 130 name="Lens"
+  review-coach.md 133 name="Coach" · stack-detective.md 128 name="Scout"      → all 4 are v5 XML
 $ find $P/_bmad/bme -name module.yaml -o -name module-help.csv
   _vortex/module.yaml · _vortex/module-help.csv · _team-factory/module-help.csv       → Gyre has neither
 $ ls $P/_bmad/bme/_gyre   → README.md agents compass-routing-reference.md config.yaml contracts guides workflows
@@ -340,7 +341,7 @@ $ npx --no-install convoke-export --all → exports bmad-enhance-initiatives-bac
 - Skills `bmad-portfolio-status` and `bmad-migrate-artifacts` (`$P/_bmad/bme/_artifacts/`, 12 files).
 - Wrappers are generated at install (`Generated skill wrapper: bmad-migrate-artifacts`, `bmad-portfolio-status`).
 
-**Portfolio report.** Run on a scratchpad copy of 60 repo planning documents (running against the repo itself was not permitted):
+**Portfolio report.** The input basis for this run is not recorded, and the figure below is what the run printed. An earlier draft described it as "a scratchpad copy of 60 repo planning documents"; that description belongs to the migration-tool run further down, which reports `Total: 60`, and is inconsistent with this run's own `Total: 120`. The repository holds 120 `.md` files in `planning-artifacts/`, so 120 is the plausible corpus, but that is inference and is not asserted here:
 
 ```
 $ cd $T && node node_modules/convoke-agents/scripts/lib/portfolio/portfolio-engine.js
@@ -488,7 +489,7 @@ $ (copy of $T with _vortex/agents/hypothesis-engineer and .claude/skills/bmad-ag
 
 **Hosts.** Code: `$P/scripts/update/lib/refresh-installation.js:792-1017` writes wrappers to `.claude/skills/` only. A `find` in `$T` for `.cursor*`, `.github`, `AGENTS.md`, `.clinerules`, `.windsurf*` and `copilot-instructions.md` (excluding node_modules) returned nothing. Whole-word searches for Cline, Windsurf, Codex, Gemini CLI and ChatGPT found no host claim, so **these tools are neither claimed nor supported**. CI runs on `ubuntu-latest` only (`grep runs-on .github/workflows/ci.yml`); the trials here ran on macOS; Windows is untested.
 
-**Backlog (Bug Lane at HEAD, 3 rows):**
+**Backlog (Bug Lane at HEAD, 6 rows — T181, T183, T182, BUG-4, BUG-20, BUG-9, as §2.0 records; the three most relevant to this row are below):**
 - **BUG-20** (Open): the "BMAD core not detected" warning fires for essentially every operator. Reproduced in both trials.
 - **BUG-9** (Open): `convoke-update`'s downgrade hint hardcodes `@latest`, affecting prerelease testers only.
 - **BUG-4** (Open): doctor cross-module version drift. **Not reproduced**: "Version consistency 4.0.3 — package and config versions consistent" in both the fresh and upgraded projects. Possibly stale.
@@ -558,7 +559,7 @@ $ curl -s "https://rekor.sigstore.dev/api/v1/log/entries?logIndex=2877236851" �
 $ gh release view v4.0.3 --json … → isDraft false, isPrerelease false, publishedAt 2026-09-17T10:58:55Z
 ```
 
-- **Coverage** (`coverage` job at the tag, c8 "All files" line): statements 88.44%, branches 83.62%, functions 91.58%. Scope: files instrumented in that job's run.
+- **Coverage** (`coverage` job at the tag, c8 "All files" line): statements 88.61%, branches 84.08%, functions 91.7%. Scope: files instrumented in that job's run.
 - **Open backlog rows (Fast Lane, HEAD):**
   - **T47**: nothing re-reads `dist-tags.latest` after `npm publish`.
   - **T45**: the npmrc credential scan inspects zero files.
