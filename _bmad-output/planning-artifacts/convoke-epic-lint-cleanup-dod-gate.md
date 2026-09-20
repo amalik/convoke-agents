@@ -37,7 +37,7 @@ FR3: Two dead-assertion captures (`lightDepsCount` in portability-tier2-export.t
 
 FR4: A new rule `lint-passes-before-review` MUST be added to [project-context.md](../../project-context.md), adjacent to the `code-review-convergence` rule, citing Story 1A.2 + CI #714 as scar-story evidence. The rule states that `npm run lint` must exit 0 with zero warnings in files touched by the story before the story moves to `review`. *(Source: process gap identified 2026-04-22)*
 
-FR5: The [bmad-dev-story DoD checklist](../../.claude/skills/bmad-dev-story/checklist.md) MUST be amended: (a) line 47's weasel wording "when configured in project" is removed; (b) "Linting reports" is promoted from `optional-inputs` to `required-inputs` frontmatter. *(Source: process gap identified 2026-04-22)*
+FR5: The DoD checklist of the installed `bmad-dev-story` skill MUST be amended — `checklist.md`, which lives under `.claude/skills/` in a BMAD install and is gitignored here (`.gitignore:69`), so it is named rather than linked: (a) line 47's weasel wording "when configured in project" is removed; (b) "Linting reports" is promoted from `optional-inputs` to `required-inputs` frontmatter. *(Source: process gap identified 2026-04-22)*
 
 FR6: A post-review note MUST be appended to the v63-1a-2 story file cross-referencing this epic and explicitly upholding the `code-review-convergence` rule — lint-1.1 is the forward-going remediation artifact, NOT a Round 3 reopening of Story 1A.2. *(Source: convergence-rule preservation)*
 
