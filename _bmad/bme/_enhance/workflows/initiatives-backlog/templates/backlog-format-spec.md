@@ -50,7 +50,9 @@ The file uses this exact structure. Sections must appear in this order.
 ### 2.3 Fast Lane (Quick Wins + Spikes)                (H3)
 ### 2.4 Initiative Lane                                (H3)
 ### 2.5 Absorbed / Archived                            (H3)
-####   Absorbed into [name] / Completed (shipped)      (H4 — optional sub-grouping)
+####   Absorbed into [name] / Completed (shipped) /   (H4 — optional sub-grouping)
+####   Aged out / Closed — superseded, rescoped,
+####   closed or invalid
 
 ## Appendix: Initiative Details                        (H2 — full descriptions for §2.4 items)
 ### [Item ID] — [Title]                                (H3 — one per initiative when detail is needed)
@@ -197,6 +199,27 @@ worked, and the distinction matters when reading §2.5, which is otherwise a rec
 - Age-out is a periodic operator decision, not an automatic sweep. Nothing should age a row out without
   someone choosing the floor.
 
+**Closed — superseded, rescoped, closed or invalid:**
+```markdown
+| ID | Description | Closed | Score | Portfolio |
+|----|-------------|--------|-------|-----------|
+```
+
+Added 2026-09-21 by operator ruling, documenting a table the backlog had carried undocumented. Clause 3
+of **Lane Ordering** names seven closing statuses and `backlog-integrity.js` enforces exactly that set;
+the sub-tables above give a destination to only `Done`/`Shipped` (Completed) and `Absorbed`. The
+remaining four — `Superseded`, `Rescoped`, `Closed`, `Invalid` — had none, so rows landed in an ad-hoc
+table whose name described two of them. **The heading is the status list, deliberately.** An earlier
+draft of this entry named the property instead ("the row closed, shipped nothing…") and invented
+`Retracted` to cover `I131`; neither survives contact with the rows. `Retracted` is not a status in
+clause 3 or in the enforcement regex, so routing to it would leave a row in its lane with the
+closed-row assertion green — the compounding failure clause 3 exists to make detectable. And the
+property was false for `BUG-3`, whose defect *was* fixed, by a commit that had no reason to name it.
+
+Naming a status with no destination is how the same closure gets filed two ways. If a future status
+does not fit these four tables, amend this list **and** clause 3 **and** the regex in the same edit
+rather than adding a fifth ad-hoc heading.
+
 **After ANY bulk move — age-out, sweep, migration — run all three checks.** Not just the first.
 
 1. **Did exactly the intended rows leave?** Diff the lane row-ID sets before and after, and assert every
@@ -294,7 +317,7 @@ Closing is a **move**, not a status edit. One transition, performed in a single 
 
 1. Set the `Status` / `Stage` cell to its closed value with the date.
 2. **Delete the row from its lane.**
-3. Append a row to the §2.5 sub-table — `Completed (shipped)` for finished work, `Absorbed into [target]` where another item took it over.
+3. Append a row to the §2.5 sub-table the status selects — `Completed (shipped)` for finished work, `Absorbed into [target]` where another item took it over, `Closed — superseded, rescoped, closed or invalid` for a row that closed without shipping work of its own.
 4. Where the lane row carried substantive post-mortem prose, the §2.5 row carries a **one-line summary** and links the full text by ID into the completed-work archive. §2.5 is an index of receipts; it is not where write-ups are read.
 
 A row that satisfies (1) without (2) and (3) is the defect this section exists to prevent. If the tooling cannot perform the move, perform it by hand — do not leave the row behind as a marker of intent.
@@ -379,7 +402,7 @@ The qualifying gate (Vortex, John, or Winston) assigns each intake to one lane:
 - **Bug → Fast Lane / Initiative (deeper rework):** Add row to target lane referencing the bug ID in `Linked Follow-up`.
 - **Fast Lane → Initiative (scope grew):** Move row, update ID prefix or keep original. Note in Change Log.
 - **Any → §2.5 Absorbed:** Move row to §2.5 with reference to absorbing target.
-- **Any → §2.5 Completed (shipped):** Move row to Completed sub-table with shipping date. This is the **only** destination for a closed row — see **Closing a Row** above. Removing it from the lane is part of the move, not a follow-up.
+- **Any → §2.5:** Move the row to the sub-table its closing status selects — `Completed (shipped)` for `Done`/`Shipped` (with the shipping date), `Absorbed into [target]` for `Absorbed`, and `Closed — superseded, rescoped, closed or invalid` for the other four. See **Closing a Row** above. *(Until 2026-09-21 this line read "This is the only destination for a closed row", which was true of no version of this file that had more than one closed-row table.)* Removing it from the lane is part of the move, not a follow-up.
 
 Never delete a row outright — every removal becomes a §2.5 entry.
 
