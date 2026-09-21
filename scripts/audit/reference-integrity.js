@@ -364,7 +364,67 @@ function _validateRef(ref, { fileDir, projectRoot: _projectRoot }) {
   } catch (err) {
     return { valid: false, reason: `stat failed: ${err.code || err.message} (resolved: ${resolved})` };
   }
+  // Fragment last: the file resolves, so a bad `#anchor` is a real finding rather than a
+  // consequence of a missing file.
+  if (hashIdx >= 0) {
+    const frag = ref.slice(hashIdx + 1);
+    if (frag && !_fragmentResolves(resolved, frag)) {
+      return { valid: false, reason: `anchor "#${frag}" matches no heading in ${path.basename(resolved)}` };
+    }
+  }
   return { valid: true };
+}
+
+/**
+ * GitHub's heading-slug rules, as this repository's own working anchors demonstrate them.
+ *
+ * THE ONE RULE THAT MATTERS: punctuation is dropped and **each surviving space becomes one
+ * hyphen**, so a run of spaces becomes a run of hyphens. `### 2.3 Fast Lane (Quick Wins + Spikes)`
+ * slugs to `23-fast-lane-quick-wins--spikes` — double hyphen, because dropping `+` leaves two
+ * spaces. Five links in this repository use that exact string, which is what establishes the rule
+ * here rather than an appeal to an external spec. A first attempt collapsed runs with `\s+` and
+ * produced a 12% false-positive rate on healthy links; that bug is the reason this comment exists.
+ */
+function _slugify(heading) {
+  return heading
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/\*\*?([^*]*)\*\*?/g, '$1')
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/ /g, '-');
+}
+
+/** Heading slugs of a markdown file, with GitHub's `-1`, `-2` … disambiguation for duplicates. */
+const _slugCache = new Map();
+function _headingSlugs(file) {
+  if (_slugCache.has(file)) return _slugCache.get(file);
+  const slugs = new Set();
+  const seen = new Map();
+  try {
+    for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+      const m = /^#{1,6}\s+(.*)$/.exec(line);
+      if (!m) continue;
+      const base = _slugify(m[1]);
+      if (!base) continue;
+      const n = seen.get(base) || 0;
+      seen.set(base, n + 1);
+      slugs.add(n === 0 ? base : `${base}-${n}`);
+    }
+  } catch { /* unreadable target is already reported by the file check above */ }
+  _slugCache.set(file, slugs);
+  return slugs;
+}
+
+/**
+ * NOT EVERY FRAGMENT IS A HEADING SLUG, and the exclusions are the majority of what a naive
+ * version reports. `#L75` / `#L102-L127` are GitHub blob line anchors — no slug algorithm resolves
+ * them and none should try; 53 of them exist here. Non-markdown targets have no headings to match.
+ */
+function _fragmentResolves(resolved, frag) {
+  if (/^L\d+(-L\d+)?$/.test(frag)) return true;
+  if (!resolved.endsWith('.md')) return true;
+  return _headingSlugs(resolved).has(frag.toLowerCase());
 }
 
 function _resolveAllScopes(projectRoot) {

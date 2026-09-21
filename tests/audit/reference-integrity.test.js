@@ -195,3 +195,69 @@ describe('reference-integrity: the CLI states the exemption', () => {
     assert.equal(code, 2);
   });
 });
+
+// ─── Anchor fragments (2026-09-21) ────────────────────────────────────────────
+//
+// Until this change the fragment after `#` was sliced off and discarded, so `foo.md#anything`
+// passed whenever `foo.md` existed. Adding the check found 23 real broken anchors in the
+// repository, 20 of them one class: a link omitting the DOUBLE hyphen GitHub produces where
+// dropped punctuation leaves two spaces.
+//
+// The first prototype collapsed runs of whitespace with `\s+` and reported a 12% false-positive
+// rate on healthy links, which nearly got the whole check written off as unbuildable. The
+// double-hyphen case below is that bug's executioner — it fails against a collapsing slugger and
+// passes against the shipped one.
+describe('reference-integrity: anchor fragments', () => {
+  let dir;
+  before(() => { dir = makeFixture(); });
+  after(() => { removeTempDirSync(dir); });
+
+  it('reports an anchor that matches no heading', () => {
+    write(dir, 'docs/target.md', '# Real Heading\n');
+    write(dir, 'docs/src.md', '[x](target.md#no-such-heading)\n');
+    const res = runReferenceIntegrityCheck({ projectRoot: dir, scopePaths: ['docs/src.md'] });
+    assert.equal(res.brokenRefs.length, 1);
+    assert.match(res.brokenRefs[0].reason, /anchor "#no-such-heading" matches no heading/);
+  });
+
+  it('accepts an anchor that matches a heading', () => {
+    write(dir, 'docs/target2.md', '# Real Heading\n');
+    write(dir, 'docs/src2.md', '[x](target2.md#real-heading)\n');
+    assert.deepEqual(runReferenceIntegrityCheck({ projectRoot: dir, scopePaths: ['docs/src2.md'] }).brokenRefs, []);
+  });
+
+  it('preserves a RUN of hyphens where dropped punctuation left a run of spaces', () => {
+    // `### 2.3 Fast Lane (Quick Wins + Spikes)` -> `#23-fast-lane-quick-wins--spikes`. Five links
+    // in this repository use that exact form, which is what makes it the correct behaviour rather
+    // than a preference. A slugger that collapses whitespace turns this test red.
+    write(dir, 'docs/runs.md', '### 2.3 Fast Lane (Quick Wins + Spikes)\n');
+    write(dir, 'docs/src3.md', '[x](runs.md#23-fast-lane-quick-wins--spikes)\n');
+    assert.deepEqual(runReferenceIntegrityCheck({ projectRoot: dir, scopePaths: ['docs/src3.md'] }).brokenRefs, []);
+  });
+
+  it('does NOT try to resolve #L<line> blob anchors', () => {
+    // 53 of these exist here. No slug algorithm resolves a GitHub line anchor, and a check that
+    // tried would report the majority of its findings against links that are correct.
+    write(dir, 'docs/target4.md', '# Heading\n');
+    write(dir, 'docs/src4.md', '[a](target4.md#L75)\n[b](target4.md#L102-L127)\n');
+    assert.deepEqual(runReferenceIntegrityCheck({ projectRoot: dir, scopePaths: ['docs/src4.md'] }).brokenRefs, []);
+  });
+
+  it('disambiguates duplicate headings the way GitHub does', () => {
+    write(dir, 'docs/dup.md', '# Notes\n\n# Notes\n');
+    write(dir, 'docs/src5.md', '[first](dup.md#notes)\n[second](dup.md#notes-1)\n');
+    assert.deepEqual(runReferenceIntegrityCheck({ projectRoot: dir, scopePaths: ['docs/src5.md'] }).brokenRefs, []);
+  });
+
+  it('strips backticks and bold from headings before slugging', () => {
+    write(dir, 'docs/fmt.md', '## The `config.yaml` **contract**\n');
+    write(dir, 'docs/src6.md', '[x](fmt.md#the-configyaml-contract)\n');
+    assert.deepEqual(runReferenceIntegrityCheck({ projectRoot: dir, scopePaths: ['docs/src6.md'] }).brokenRefs, []);
+  });
+
+  it('leaves a non-markdown target alone — it has no headings to match', () => {
+    write(dir, 'docs/thing.js', 'module.exports = 1;\n');
+    write(dir, 'docs/src7.md', '[x](thing.js#whatever)\n');
+    assert.deepEqual(runReferenceIntegrityCheck({ projectRoot: dir, scopePaths: ['docs/src7.md'] }).brokenRefs, []);
+  });
+});
