@@ -734,6 +734,23 @@ jobs:
       # surfaces as a bare auth error. This job only runs on a tag push, so each diagnosis
       # costs a tag delete-and-repush. Keep it until a green publish exists on a prerelease
       # tag as well as a stable one.
+      - name: Marketplace metadata integrity
+        # T206, second placement — deliberately duplicated from `agent-surface-parity`.
+        #
+        # THE POINT IS THE WORKSPACE, not redundancy. That job validates a checkout of its own;
+        # this one validates the tree `npm publish` is about to pack, two lines below. An earlier
+        # step in the audit job that writes the manifest — or a `ref:` on its checkout — leaves
+        # that gate green on a file the release never ships, and nothing about a `run:` line, an
+        # `if:` or `needs` can detect it. Demonstrated end to end during the 2026-09-21 review.
+        #
+        # It is not hypothetical drift-proofing: this job's sibling already regenerates a tracked
+        # file and diffs it, so a "keep the manifest in sync" convenience step is a one-line
+        # change that reads as tidy-up.
+        #
+        # Runs AFTER `npm ci` (the script needs js-yaml, chalk, fs-extra) and BEFORE the publish,
+        # so a drifted manifest stops the release rather than shipping in the tarball.
+        run: node scripts/audit/validate-marketplace.js
+
       - name: Publish to npm
         # FR3/dist-1-4: `github.ref_name` reaches the shell as an ENV VAR, never interpolated
         # into the `run:` body. Splicing a context value into a shell script is the Actions

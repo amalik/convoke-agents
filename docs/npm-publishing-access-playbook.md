@@ -50,6 +50,13 @@ Two routes. **Try them in this order.**
 
 ### Primary — publish interactively (no setting change)
 
+> **Pre-flight — the manifest check belongs here too.** This route bypasses CI entirely, so the
+> `agent-surface-parity` gate that normally refuses a drifted plugin manifest never runs. Before
+> publishing by hand, run `pre-tag-release-checklist.md` §1a from the repository root:
+> `node -e "const m=require('./.claude-plugin/marketplace.json').plugins[0].version, p=require('./package.json').version; console.log(m, p, m===p ? 'OK' : 'DRIFT')"`.
+> §1a lives on the *tag* path; this section exists for when the tag path is unavailable, which is
+> exactly when nothing else will catch it.
+
 **Before you type it, do the thing T35 exists to enforce.** `npm publish` packs the **working
 tree**, not a commit — that is precisely how `4.0.0-rc.1` shipped uncommitted content nobody could
 identify afterwards. So:

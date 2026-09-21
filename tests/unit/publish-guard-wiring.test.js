@@ -202,89 +202,125 @@ test('the cited playbook section exists', () => {
 
 // ─── T206: the marketplace validator's wiring (2026-09-21) ────────────────────
 //
-// Same seam as the downgrade guard above, one level up. T206 closed "a validator that ran in no
-// CI job for five months" by adding a step — and asserted nothing about it, so deleting the step
-// left the whole 2783-test suite green. That is the defect it fixed, reintroduced in the fix.
+// PARSED, NOT REGEXED — and that is the whole lesson of this block. The first version matched
+// `ci.yml` as text: it sliced jobs on indentation, found `needs:` with an unanchored regex over a
+// block that is mostly comments, anchored key detection on bare identifiers at fixed columns, and
+// checked `publish.if` against a two-entry blacklist. An adversarial pass got a drifted manifest
+// published NINE ways with all twenty tests green — a quoted `"if": false` key, a job re-indented
+// by two spaces, a `needs` entry renamed to a superstring of the old one, a decoy `needs:` in a
+// comment, `success() || failure()` instead of `always()`, and a second `npm publish` job.
 //
-// The step is only protection if it RUNS, the job it runs in gates publish, and neither can be
-// made advisory. All of that is asserted below — an earlier version claimed "both are asserted"
-// while checking only the invocation and `needs` membership, and a one-line `if: false` on the
-// step passed all 18 tests with the gate fully neutered.
+// Eight of the nine were the same defect. YAML has a parser, this repository already depends on
+// one, and `scripts/audit/validate-marketplace.js` already documents this exact idiom. Text
+// matching cannot bound a structured document or an expression language; do not reintroduce it
+// here.
 //
-// Anchored on the executable `run:` line, never on a mention — the comment block above that step
-// names `validate-marketplace.js` twice, and matching any occurrence is how the sibling checks in
-// this file broke three times.
+// The tests above this line stay text-based on purpose: they assert SHELL inside a `run:` block,
+// which a parser hands back as an opaque string anyway.
+const yaml = require('js-yaml');
+
+const WORKFLOW = yaml.load(CI);
+const MARKETPLACE_STEP = 'Marketplace metadata integrity';
+const AUDIT_JOB = 'agent-surface-parity';
+
+function auditJob() {
+  const job = WORKFLOW.jobs[AUDIT_JOB];
+  assert.ok(job, `${AUDIT_JOB} job not found in ci.yml`);
+  return job;
+}
+
+function marketplaceStep(jobName = AUDIT_JOB) {
+  const job = WORKFLOW.jobs[jobName];
+  assert.ok(job, `${jobName} job not found in ci.yml`);
+  const matches = (job.steps || []).filter((s) => s.name === MARKETPLACE_STEP);
+  assert.equal(matches.length, 1,
+    `expected exactly one "${MARKETPLACE_STEP}" step in ${jobName}, found ${matches.length}`);
+  return matches[0];
+}
+
 test('the marketplace validator is actually invoked in agent-surface-parity', () => {
-  const block = jobBlock('agent-surface-parity');
-  const executable = block
-    .split('\n')
-    .filter((l) => l.includes('validate-marketplace.js') && !/^\s*#/.test(l));
-  assert.equal(executable.length, 1,
-    `expected exactly one executable reference to validate-marketplace.js in agent-surface-parity, found ${executable.length}`);
-  assert.match(executable[0], /^\s*run:\s*node scripts\/audit\/validate-marketplace\.js\s*$/,
-    `the reference must be a bare run: invocation with no || true or redirection — got: ${executable[0]}`);
+  assert.equal((marketplaceStep().run || '').trim(), 'node scripts/audit/validate-marketplace.js',
+    'the step must invoke the validator bare — no || true, no --dry-run, no redirection');
 });
 
-// A `run:` line can be pristine and the gate still toothless. `continue-on-error: true` lets the
-// step (or the whole job) report failure while the workflow treats it as success, so `publish`
-// proceeds — no edit to the command, no visible difference in the log's step list.
-//
-// Found by mutating the first version of these tests, which asserted only the run line: both the
-// step-level and job-level form survived it. That is the same silent-neutering class this file
-// exists to close, in the test written to close it.
-test('neither the marketplace step nor its job can fail softly', () => {
-  const block = jobBlock('agent-surface-parity');
-  const jobLevel = block
-    .split('\n')
-    .filter((l) => /^\s{4}continue-on-error\s*:/.test(l) && !/^\s*#/.test(l));
-  assert.equal(jobLevel.length, 0,
-    `agent-surface-parity must not set continue-on-error — a soft-failing job still satisfies publish.needs; got: ${jobLevel.join(' / ')}`);
-
-  // Scope to the marketplace step: from its `- name:` to the next step at the same indent.
-  const start = block.indexOf('      - name: Marketplace metadata integrity');
-  assert.notEqual(start, -1, 'marketplace step not found in agent-surface-parity');
-  const rest = block.slice(start + 1);
-  const end = rest.search(/\n {6}- name:/);
-  const step = end === -1 ? rest : rest.slice(0, end);
-  assert.ok(!/^\s*continue-on-error\s*:/m.test(step),
-    'the marketplace step must not set continue-on-error — it would report the finding and pass the job anyway');
+// `if:` and `continue-on-error:` are read off the PARSED node, so a quoted key, an odd indent and
+// a false-valued expression are all the same thing to this assertion. Any `if:` is refused rather
+// than only falsy ones: a conditional release gate is a decision that should break this test.
+test('the marketplace step and its job are unconditional and cannot fail softly', () => {
+  const step = marketplaceStep();
+  const job = auditJob();
+  for (const [label, node] of [['step', step], ['job', job]]) {
+    assert.ok(!('if' in node),
+      `the marketplace ${label} must not be conditional — a skipped check is a green tick over nothing; got if: ${JSON.stringify(node.if)}`);
+    assert.ok(!('continue-on-error' in node),
+      `the marketplace ${label} must not set continue-on-error — it would report the finding and pass anyway`);
+  }
 });
 
-// The cheapest neuter of all, and the one the first version of these tests missed: `if: false` on
-// the step leaves the `run:` line pristine, adds no `continue-on-error`, touches no `needs`, and
-// skips the check while the job goes green. Any `if:` is refused rather than only falsy ones — a
-// conditional release gate is a decision that should break this test and be re-argued.
-test('the marketplace step and its job are unconditional', () => {
-  const block = jobBlock('agent-surface-parity');
-
-  const jobIf = block.split('\n').filter((l) => /^ {4}if\s*:/.test(l) && !/^\s*#/.test(l));
-  assert.equal(jobIf.length, 0,
-    `agent-surface-parity must not be conditional — a skipped job skips publish SILENTLY, and the release checklist tells the operator to expect a skipped publish; got: ${jobIf.join(' / ')}`);
-
-  const start = block.indexOf('      - name: Marketplace metadata integrity');
-  assert.notEqual(start, -1, 'marketplace step not found in agent-surface-parity');
-  const rest = block.slice(start + 1);
-  const end = rest.search(/\n {6}- name:/);
-  const step = end === -1 ? rest : rest.slice(0, end);
-  assert.ok(!/^\s*if\s*:/m.test(step),
-    'the marketplace step must not be conditional — `if: false` neuters it while every other assertion here still passes');
+// SET MEMBERSHIP, not substring. `needs: [… agent-surface-parity-lite …]` satisfied the old
+// `includes()` check while the real job gated nothing.
+test('publish needs agent-surface-parity, by exact entry', () => {
+  const needs = WORKFLOW.jobs.publish.needs;
+  assert.ok(Array.isArray(needs), `publish.needs must be a list; got ${typeof needs}`);
+  assert.ok(needs.includes(AUDIT_JOB),
+    `publish.needs must contain the exact entry "${AUDIT_JOB}" or the marketplace check cannot block a release; got: ${needs.join(', ')}`);
 });
 
-// `needs` membership is not gating. `always()` or `!cancelled()` in publish's own `if:` makes it
-// run even when a needed job FAILED, turning all eight entries advisory at once. Not hypothetical:
-// `!cancelled()` is already used elsewhere in this workflow.
+// A WHITELIST, because a blacklist cannot bound an expression language: `!cancelled()` is
+// `success() || failure()` spelled differently, and `!failure()` lets publish run over a skipped
+// need. Any status function in publish's `if:` means it no longer defers to `needs`.
 test('publish does not run regardless of its needs', () => {
-  const block = jobBlock('publish');
-  const jobIf = block.split('\n').filter((l) => /^ {4}if\s*:/.test(l) && !/^\s*#/.test(l));
-  assert.equal(jobIf.length, 1, `expected exactly one job-level if: on publish, found ${jobIf.length}`);
-  assert.ok(!/always\s*\(\s*\)|!\s*cancelled\s*\(\s*\)/.test(jobIf[0]),
-    `publish.if must not use always()/!cancelled() — either publishes over a FAILED needs job; got: ${jobIf[0]}`);
+  const cond = WORKFLOW.jobs.publish.if;
+  assert.ok(typeof cond === 'string' && cond.length, 'publish must keep a job-level if:');
+  const statusFn = cond.match(/\b(always|success|failure|cancelled)\s*\(/);
+  assert.equal(statusFn, null,
+    `publish.if must contain no status function — any of them overrides the needs gate; got: ${cond}`);
 });
 
-test('publish still needs agent-surface-parity, so that check gates a release', () => {
-  const publishBlock = jobBlock('publish');
-  const needs = publishBlock.match(/needs:\s*\[([^\]]*)\]/);
-  assert.ok(needs, 'publish job needs: not found');
-  assert.ok(needs[1].includes('agent-surface-parity'),
-    `publish.needs must contain agent-surface-parity or the marketplace check cannot block a publish; got: ${needs[1]}`);
+// Nothing forbade a SECOND publishing job. npm's trusted publisher is bound to the workflow
+// FILENAME, not the job, so an "emergency lane" inside ci.yml is registry-permitted and bypasses
+// both this gate and the FR5 downgrade guard. The sibling assertion for `downgrade-guard-dry`
+// already existed; this generalises it.
+test('publish is the only job in ci.yml that runs npm publish', () => {
+  const publishers = Object.entries(WORKFLOW.jobs)
+    .filter(([, job]) => (job.steps || []).some((s) => /(^|\s)npm publish(\s|$)/.test(s.run || '')))
+    .map(([name]) => name);
+  assert.deepEqual(publishers, ['publish'],
+    `exactly one job may run npm publish; found: ${publishers.join(', ') || 'none'}`);
+});
+
+// `ci.yml` is the only workflow that may publish. npm's trusted publisher is bound to the
+// workflow FILENAME (`docs/npm-publishing-access-playbook.md` §1), so a second file publishing is
+// refused registry-side — but that is an external control the playbook itself records as having
+// no read-back. Asserting it here turns an invisible dependency into a visible local one.
+test('ci.yml is the only workflow file that runs npm publish', () => {
+  const dir = path.join(__dirname, '..', '..', '.github', 'workflows');
+  const offenders = fs.readdirSync(dir)
+    .filter((f) => /\.ya?ml$/.test(f))
+    .filter((f) => /(^|\s)npm publish(\s|$)/m.test(fs.readFileSync(path.join(dir, f), 'utf8')))
+    .sort();
+  assert.deepEqual(offenders, ['ci.yml'],
+    `only ci.yml may contain npm publish — the registry's trusted publisher is bound to that filename; found: ${offenders.join(', ') || 'none'}`);
+});
+
+// The placement that closes the last bypass. `agent-surface-parity` validates a checkout of its
+// own; a step earlier in that job which writes the manifest, or a `ref:` on its checkout, leaves
+// it green on a file the release never ships — and no assertion about `run:`, `if:` or `needs`
+// can see that. This step validates the tree `npm publish` actually packs, so the whole class is
+// unreachable rather than enumerated.
+test('publish validates the manifest in the tree it is about to pack', () => {
+  const step = marketplaceStep('publish');
+  assert.equal((step.run || '').trim(), 'node scripts/audit/validate-marketplace.js',
+    'the publish-side check must invoke the validator bare');
+  assert.ok(!('if' in step) && !('continue-on-error' in step),
+    'the publish-side check must be unconditional and hard-failing');
+
+  // Order is the whole point: after `npm ci` so its dependencies resolve, before the publish so a
+  // drifted manifest stops the release instead of shipping inside the tarball.
+  const names = WORKFLOW.jobs.publish.steps.map((x) => x.name || x.uses);
+  const check = names.indexOf(MARKETPLACE_STEP);
+  assert.ok(check > names.indexOf('Install dependencies'),
+    'the check must run after npm ci or the validator cannot load js-yaml');
+  assert.ok(check < names.indexOf('Publish to npm'),
+    'the check must run before npm publish or it validates a tarball already gone');
 });
