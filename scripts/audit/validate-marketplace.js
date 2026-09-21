@@ -5,10 +5,15 @@
 /**
  * @module scripts/audit/validate-marketplace
  *
- * Story v63-3-1 (Epic 3 / FR19 / FR20 / NFR11 / NFR13 / FM5-1): pre-submission
- * local validator for `.claude-plugin/marketplace.json`. Gate for Story 3.3
- * (submit marketplace registry PR) — operators must run this cleanly before
- * opening the PR to `bmad-plugins-marketplace`.
+ * Story v63-3-1 (Epic 3 / FR19 / FR20 / NFR11 / NFR13 / FM5-1): validator for
+ * `.claude-plugin/marketplace.json`.
+ *
+ * **A BLOCKING CI GATE since 2026-09-21 (T206)** — a step in `agent-surface-parity`, which is in
+ * `publish.needs`, so a finding here stops a release. It was written as Story 3.3's
+ * pre-submission check, to be run by hand before opening the PR to `bmad-plugins-marketplace`;
+ * that PR (#9) closed 2026-04-27, and the script then ran in no CI job for five months while the
+ * manifest it checks drifted three patch releases. The pre-submission framing is kept as history
+ * here because the checks themselves are unchanged — what changed is who runs it and when.
  *
  * Bin entry: `convoke-validate-marketplace` (see package.json).
  *
@@ -364,7 +369,7 @@ function checkVersionDrift(marketplaceVersion, pkgVersion) {
 
 function renderHelp() {
   console.log('');
-  console.log(chalk.bold('convoke-validate-marketplace') + ' — pre-submission validator for BMAD marketplace metadata');
+  console.log(chalk.bold('convoke-validate-marketplace') + ' — validator for BMAD marketplace metadata (also a blocking CI gate)');
   console.log('');
   console.log('Usage:');
   console.log('  convoke-validate-marketplace [options]');

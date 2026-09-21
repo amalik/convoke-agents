@@ -51,8 +51,13 @@ rc release is a real release for this purpose.
 > version disagreeing with its own `package.json` in **ten** tarballs (every publish from
 > `4.0.0-rc.1` on except `4.0.0`; `.claude-plugin/` has been in `files[]` since 2026-04-24). The
 > validator reported it every single run as a yellow warning that deferred enforcement to a
-> publish-time escalation which was never built. Catching it before the tag is the point of the
-> step; run it here and the gate never fires.
+> publish-time escalation which was never built.
+> 
+> **The gate is continuous, not tag-time.** `agent-surface-parity` carries no `if:` and the
+> workflow fires on pull requests and on pushes to `main`, so the two versions must agree at all
+> times — bump them in the same commit. A release-prep PR that moves only `package.json` goes red
+> before anyone reaches this checklist. Running the command here means the tag push is not where
+> you find out.
 
 ## 1b. `CHANGELOG.md` has an entry for that version
 
@@ -125,8 +130,8 @@ gh run view "$RID" --json jobs --jq '.jobs[] | "\(.conclusion)\t\(.name)"'
 
 Expect **every job `success` except `publish` and `burn-in`, which must both be `skipped`.** They skip
 for *different* reasons, and neither runs on a plain branch push: `publish` is gated on
-`startsWith(github.ref, 'refs/tags/v')` (`ci.yml:572`), while `burn-in` is gated on
-`github.event_name == 'pull_request'` (`ci.yml:80`) and so does not run on a tag push either. A `main`
+`startsWith(github.ref, 'refs/tags/v')` (locate it with `grep -n "startsWith(github.ref" .github/workflows/ci.yml`), while `burn-in` is gated on
+`github.event_name == 'pull_request'` and so does not run on a tag push either. A `main`
 push therefore exercises the full prerequisite set without touching the registry (`dist-1-6`). Any
 *other* skip, or any `failure`/`cancelled`, stops the release here.
 
@@ -191,7 +196,7 @@ evidence — see `verification-must-be-falsifiable`.
 That does *not* mean the registry read is unproven: the v4.0.1 publish executed it against the live
 registry on a runner and logged `Downgrade guard: 4.0.1 >= current latest 4.0.0 -- OK`
 (run `32671542491`, 2026-08-23). What has **never** fired on a runner is the narrower **E404 skip
-branch** (`ci.yml:949-975`) — the path taken when the registry reports the package as unpublished —
+branch** (the `E404` branch — `grep -n E404 .github/workflows/ci.yml`) — the path taken when the registry reports the package as unpublished —
 because `convoke-agents` has always existed there. Its anchoring is proven by fixture only.
 
 That branch fails **loud**, not open (T46 closed the fail-open), so the exposure is an aborted publish

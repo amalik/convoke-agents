@@ -27,13 +27,19 @@ function guardCallLine(block) {
   return lines[0];
 }
 
-function publishJobBlock() {
-  // The publish job runs from `  publish:` to the next top-level (2-space) job key.
-  const start = CI.indexOf('\n  publish:\n');
-  assert.ok(start !== -1, 'publish job not found in ci.yml');
+// A job runs from `  <name>:` to the next top-level (2-space) job key. Generalised from
+// `publishJobBlock` when T206 needed the same slice of `agent-surface-parity`; the publish
+// wrapper below is kept so the existing tests read unchanged.
+function jobBlock(name) {
+  const start = CI.indexOf(`\n  ${name}:\n`);
+  assert.ok(start !== -1, `${name} job not found in ci.yml`);
   const rest = CI.slice(start + 1);
   const next = rest.search(/\n {2}[a-z0-9-]+:\n/);
   return next === -1 ? rest : rest.slice(0, next);
+}
+
+function publishJobBlock() {
+  return jobBlock('publish');
 }
 
 test('publish job invokes the shared downgrade guard', () => {
@@ -188,4 +194,36 @@ test('the cited playbook section exists', () => {
   for (const mode of ['EMPTY', 'multi-line', 'lower than current latest']) {
     assert.ok(doc.includes(mode), `playbook §5 no longer documents the "${mode}" refusal mode`);
   }
+});
+
+// ─── T206: the marketplace validator's wiring (2026-09-21) ────────────────────
+//
+// Same seam as the downgrade guard above, one level up. T206 closed "a validator that ran in no
+// CI job for five months" by adding a step — and asserted nothing about it, so deleting the step
+// left the whole 2783-test suite green. That is the defect it fixed, reintroduced in the fix.
+//
+// The step is only protection if it runs AND the job it runs in gates publish. Both are asserted,
+// because either one alone is silent: a step in a job nothing needs is documentation, and a job
+// in `publish.needs` that stopped running the check is a green tick over nothing.
+//
+// Anchored on the executable `run:` line, never on a mention — the comment block above that step
+// names `validate-marketplace.js` twice, and matching any occurrence is how the sibling checks in
+// this file broke three times.
+test('the marketplace validator is actually invoked in agent-surface-parity', () => {
+  const block = jobBlock('agent-surface-parity');
+  const executable = block
+    .split('\n')
+    .filter((l) => l.includes('validate-marketplace.js') && !/^\s*#/.test(l));
+  assert.equal(executable.length, 1,
+    `expected exactly one executable reference to validate-marketplace.js in agent-surface-parity, found ${executable.length}`);
+  assert.match(executable[0], /^\s*run:\s*node scripts\/audit\/validate-marketplace\.js\s*$/,
+    `the reference must be a bare run: invocation with no || true or redirection — got: ${executable[0]}`);
+});
+
+test('publish still needs agent-surface-parity, so that check gates a release', () => {
+  const publishBlock = jobBlock('publish');
+  const needs = publishBlock.match(/needs:\s*\[([^\]]*)\]/);
+  assert.ok(needs, 'publish job needs: not found');
+  assert.ok(needs[1].includes('agent-surface-parity'),
+    `publish.needs must contain agent-surface-parity or the marketplace check cannot block a publish; got: ${needs[1]}`);
 });

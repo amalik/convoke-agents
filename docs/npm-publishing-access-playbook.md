@@ -175,7 +175,7 @@ rediscovered under pressure.
 
 | `FATAL:` message begins | What it means | Repair |
 |---|---|---|
-| `GUARD_CAND '…' is not a plain X.Y.Z release` | The version being published is malformed or is a prerelease. This is a **repository** problem, not a registry one. | Fix `package.json` and the tag. Nothing to repair on npm. |
+| `GUARD_CAND '…' is not a plain X.Y.Z release` | The version being published is malformed or is a prerelease. This is a **repository** problem, not a registry one. | Fix `package.json`, **`.claude-plugin/marketplace.json`** and the tag. Nothing to repair on npm. |
 | `registry returned an EMPTY 'latest'` | The package exists but has no `latest` dist-tag — `npm dist-tag rm`, or mid-replication. | `npm dist-tag add convoke-agents@<good-version> latest`, then re-run the job. **Interactive, needs 2FA** — see §4. |
 | `registry returned a multi-line 'latest'` | `npm view` returned something the guard will not parse. Usually a transient registry or network fault, occasionally a genuinely corrupted tag. | Re-run the job first — this is the one mode that is often transient. If it repeats, read the tag by hand (`npm view convoke-agents dist-tags`) and repair as above. |
 | `current 'latest' … is not a plain X.Y.Z release` | A prerelease or non-canonical version is parked on `latest` — e.g. `4.0.1-rc.0`. | `npm dist-tag add convoke-agents@<good-version> latest`, then re-run. **Interactive, needs 2FA.** |
@@ -185,7 +185,15 @@ rediscovered under pressure.
 
 - **The CANDIDATE is at fault** — row 1 (`GUARD_CAND … is not a plain X.Y.Z release`), and the first
   branch of row 5 (the version really is lower and `latest` is legitimate). These are **repository**
-  problems: fix `package.json` and the tag. Nothing to repair on npm, no 2FA, no interactive session.
+  problems: fix `package.json`, `.claude-plugin/marketplace.json` and the tag. Nothing to repair on
+  npm, no 2FA, no interactive session.
+
+  > **The manifest is part of this repair since 2026-09-21 (T206), and omitting it burns a second
+  > tag.** `agent-surface-parity` now runs `validate-marketplace.js`, which fails when
+  > `.claude-plugin/marketplace.json`'s `plugins[0].version` differs from `package.json`; that job
+  > is in `publish.needs`, so the publish never starts and the new tag is spent. Bumping only
+  > `package.json` here is the natural reading of the old wording and is exactly the trap. Check
+  > with `docs/pre-tag-release-checklist.md` step 1a before re-tagging.
 - **`latest` is at fault** — rows 2 and 4, and the second branch of row 5. These run through
   `npm dist-tag add` and therefore inherit §4's dependency: **an interactive session with a live 2FA
   prompt.** A token cannot do it and CI can never do it. Budget for a human at a terminal.
