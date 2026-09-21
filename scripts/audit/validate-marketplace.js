@@ -9,7 +9,9 @@
  * `.claude-plugin/marketplace.json`.
  *
  * **A BLOCKING CI GATE since 2026-09-21 (T206)** — a step in `agent-surface-parity`, which is in
- * `publish.needs`, so a finding here stops a release. It was written as Story 3.3's
+ * `publish.needs`, so a HARD FAILURE here stops a release. Not every finding is one: `--dry-run`
+ * exits 0 unconditionally (see the exit codes below), so unlike the downgrade guard — which the
+ * publishing playbook advertises as having no override — this check has one. It was written as Story 3.3's
  * pre-submission check, to be run by hand before opening the PR to `bmad-plugins-marketplace`;
  * that PR (#9) closed 2026-04-27, and the script then ran in no CI job for five months while the
  * manifest it checks drifted three patch releases. The pre-submission framing is kept as history

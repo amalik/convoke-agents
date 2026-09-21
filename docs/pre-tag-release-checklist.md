@@ -54,7 +54,8 @@ rc release is a real release for this purpose.
 > publish-time escalation which was never built.
 > 
 > **The gate is continuous, not tag-time.** `agent-surface-parity` carries no `if:` and the
-> workflow fires on pull requests and on pushes to `main`, so the two versions must agree at all
+> workflow fires on all three of `push.branches: [main]`, `push.tags: ['v*']` and
+> `pull_request.branches: [main]`, so the two versions must agree at all
 > times — bump them in the same commit. A release-prep PR that moves only `package.json` goes red
 > before anyone reaches this checklist. Running the command here means the tag push is not where
 > you find out.
@@ -196,7 +197,7 @@ evidence — see `verification-must-be-falsifiable`.
 That does *not* mean the registry read is unproven: the v4.0.1 publish executed it against the live
 registry on a runner and logged `Downgrade guard: 4.0.1 >= current latest 4.0.0 -- OK`
 (run `32671542491`, 2026-08-23). What has **never** fired on a runner is the narrower **E404 skip
-branch** (the `E404` branch — `grep -n E404 .github/workflows/ci.yml`) — the path taken when the registry reports the package as unpublished —
+branch** (the `E404` branch — `grep -n 'returned E404 for' .github/workflows/ci.yml`, which is unique; a bare `E404` grep returns nine hits and the first is a comment saying the dry job does *not* exercise it) — the path taken when the registry reports the package as unpublished —
 because `convoke-agents` has always existed there. Its anchoring is proven by fixture only.
 
 That branch fails **loud**, not open (T46 closed the fail-open), so the exposure is an aborted publish

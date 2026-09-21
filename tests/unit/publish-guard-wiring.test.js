@@ -34,7 +34,9 @@ function jobBlock(name) {
   const start = CI.indexOf(`\n  ${name}:\n`);
   assert.ok(start !== -1, `${name} job not found in ci.yml`);
   const rest = CI.slice(start + 1);
-  const next = rest.search(/\n {2}[a-z0-9-]+:\n/);
+  // `[\w-]` not `[a-z0-9-]`: job ids may carry `_` and uppercase, and a terminator that cannot
+  // stop on one lets the block over-run into the next job, attributing its settings to this one.
+  const next = rest.search(/\n {2}[\w-]+:\n/);
   return next === -1 ? rest : rest.slice(0, next);
 }
 
@@ -77,7 +79,9 @@ test('the dry job cannot publish', () => {
   const start = CI.indexOf('\n  downgrade-guard-dry:\n');
   assert.ok(start !== -1, 'downgrade-guard-dry job not found');
   const rest = CI.slice(start + 1);
-  const next = rest.search(/\n {2}[a-z0-9-]+:\n/);
+  // `[\w-]` not `[a-z0-9-]`: job ids may carry `_` and uppercase, and a terminator that cannot
+  // stop on one lets the block over-run into the next job, attributing its settings to this one.
+  const next = rest.search(/\n {2}[\w-]+:\n/);
   const block = next === -1 ? rest : rest.slice(0, next);
   assert.ok(!/id-token/.test(block), 'dry job must not request id-token');
   assert.ok(!/npm publish/.test(block), 'dry job must not invoke npm publish');
@@ -202,9 +206,10 @@ test('the cited playbook section exists', () => {
 // CI job for five months" by adding a step — and asserted nothing about it, so deleting the step
 // left the whole 2783-test suite green. That is the defect it fixed, reintroduced in the fix.
 //
-// The step is only protection if it runs AND the job it runs in gates publish. Both are asserted,
-// because either one alone is silent: a step in a job nothing needs is documentation, and a job
-// in `publish.needs` that stopped running the check is a green tick over nothing.
+// The step is only protection if it RUNS, the job it runs in gates publish, and neither can be
+// made advisory. All of that is asserted below — an earlier version claimed "both are asserted"
+// while checking only the invocation and `needs` membership, and a one-line `if: false` on the
+// step passed all 18 tests with the gate fully neutered.
 //
 // Anchored on the executable `run:` line, never on a mention — the comment block above that step
 // names `validate-marketplace.js` twice, and matching any occurrence is how the sibling checks in
@@ -218,6 +223,62 @@ test('the marketplace validator is actually invoked in agent-surface-parity', ()
     `expected exactly one executable reference to validate-marketplace.js in agent-surface-parity, found ${executable.length}`);
   assert.match(executable[0], /^\s*run:\s*node scripts\/audit\/validate-marketplace\.js\s*$/,
     `the reference must be a bare run: invocation with no || true or redirection — got: ${executable[0]}`);
+});
+
+// A `run:` line can be pristine and the gate still toothless. `continue-on-error: true` lets the
+// step (or the whole job) report failure while the workflow treats it as success, so `publish`
+// proceeds — no edit to the command, no visible difference in the log's step list.
+//
+// Found by mutating the first version of these tests, which asserted only the run line: both the
+// step-level and job-level form survived it. That is the same silent-neutering class this file
+// exists to close, in the test written to close it.
+test('neither the marketplace step nor its job can fail softly', () => {
+  const block = jobBlock('agent-surface-parity');
+  const jobLevel = block
+    .split('\n')
+    .filter((l) => /^\s{4}continue-on-error\s*:/.test(l) && !/^\s*#/.test(l));
+  assert.equal(jobLevel.length, 0,
+    `agent-surface-parity must not set continue-on-error — a soft-failing job still satisfies publish.needs; got: ${jobLevel.join(' / ')}`);
+
+  // Scope to the marketplace step: from its `- name:` to the next step at the same indent.
+  const start = block.indexOf('      - name: Marketplace metadata integrity');
+  assert.notEqual(start, -1, 'marketplace step not found in agent-surface-parity');
+  const rest = block.slice(start + 1);
+  const end = rest.search(/\n {6}- name:/);
+  const step = end === -1 ? rest : rest.slice(0, end);
+  assert.ok(!/^\s*continue-on-error\s*:/m.test(step),
+    'the marketplace step must not set continue-on-error — it would report the finding and pass the job anyway');
+});
+
+// The cheapest neuter of all, and the one the first version of these tests missed: `if: false` on
+// the step leaves the `run:` line pristine, adds no `continue-on-error`, touches no `needs`, and
+// skips the check while the job goes green. Any `if:` is refused rather than only falsy ones — a
+// conditional release gate is a decision that should break this test and be re-argued.
+test('the marketplace step and its job are unconditional', () => {
+  const block = jobBlock('agent-surface-parity');
+
+  const jobIf = block.split('\n').filter((l) => /^ {4}if\s*:/.test(l) && !/^\s*#/.test(l));
+  assert.equal(jobIf.length, 0,
+    `agent-surface-parity must not be conditional — a skipped job skips publish SILENTLY, and the release checklist tells the operator to expect a skipped publish; got: ${jobIf.join(' / ')}`);
+
+  const start = block.indexOf('      - name: Marketplace metadata integrity');
+  assert.notEqual(start, -1, 'marketplace step not found in agent-surface-parity');
+  const rest = block.slice(start + 1);
+  const end = rest.search(/\n {6}- name:/);
+  const step = end === -1 ? rest : rest.slice(0, end);
+  assert.ok(!/^\s*if\s*:/m.test(step),
+    'the marketplace step must not be conditional — `if: false` neuters it while every other assertion here still passes');
+});
+
+// `needs` membership is not gating. `always()` or `!cancelled()` in publish's own `if:` makes it
+// run even when a needed job FAILED, turning all eight entries advisory at once. Not hypothetical:
+// `!cancelled()` is already used elsewhere in this workflow.
+test('publish does not run regardless of its needs', () => {
+  const block = jobBlock('publish');
+  const jobIf = block.split('\n').filter((l) => /^ {4}if\s*:/.test(l) && !/^\s*#/.test(l));
+  assert.equal(jobIf.length, 1, `expected exactly one job-level if: on publish, found ${jobIf.length}`);
+  assert.ok(!/always\s*\(\s*\)|!\s*cancelled\s*\(\s*\)/.test(jobIf[0]),
+    `publish.if must not use always()/!cancelled() — either publishes over a FAILED needs job; got: ${jobIf[0]}`);
 });
 
 test('publish still needs agent-surface-parity, so that check gates a release', () => {
