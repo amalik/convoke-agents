@@ -25,6 +25,35 @@ disagrees with it.
 > This is the step that was open in T49 for weeks. The tree read `4.0.1-rc.0` while the intended tag
 > was `v4.0.1`.
 
+## 1a. `.claude-plugin/marketplace.json` declares that same version
+
+**From the repository root**, like every other command here — these paths are cwd-relative and the
+command throws from anywhere else. (An earlier draft contrasted this with step 1b; that was wrong.
+`node scripts/audit/…` is equally cwd-relative — 1b's note is about how that script resolves the
+repository once loaded, not about where you invoke it.)
+
+```sh
+node -e "const m=require('./.claude-plugin/marketplace.json').plugins[0].version, p=require('./package.json').version; console.log(m, p, m===p ? 'OK' : 'DRIFT')"
+```
+
+Nothing syncs these two files — there is no `version` script and no release step that touches the
+manifest — so a bump edits `package.json` and leaves the manifest behind. Fix by hand: set
+`plugins[0].version` in `.claude-plugin/marketplace.json` to match.
+
+**For an `-rc` tag, the manifest takes the full prerelease string** (`4.1.0-rc.0`, not `4.1.0`).
+The check is string equality, and the publish job routes prereleases to the `rc` dist-tag, so an
+rc release is a real release for this purpose.
+
+> **This step can burn a tag, which the previous behaviour could not.** `agent-surface-parity` is
+> in `publish.needs` and the workflow fires on `v*`, so pushing a tag with the manifest unsynced
+> fails the job and blocks the publish — and a tag is spent the moment it is pushed. That trade
+> was made deliberately: the manifest sat at `4.0.0` while the package reached `4.0.3`, shipping a
+> version disagreeing with its own `package.json` in **ten** tarballs (every publish from
+> `4.0.0-rc.1` on except `4.0.0`; `.claude-plugin/` has been in `files[]` since 2026-04-24). The
+> validator reported it every single run as a yellow warning that deferred enforcement to a
+> publish-time escalation which was never built. Catching it before the tag is the point of the
+> step; run it here and the gate never fires.
+
 ## 1b. `CHANGELOG.md` has an entry for that version
 
 ```sh

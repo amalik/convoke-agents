@@ -596,11 +596,10 @@ The background research also ran `gh api repos/bmad-code-org/bmad-plugins-market
 - **I98** (Reinstated): Gyre packaging blocks I113 Epic 4 Story 4.1.
 - **I113** (In Pipeline): marketplace structural adoption is Epic 4, "Phase-2 fast-follow; does not gate the MVP".
 - **I97** (In Pipeline).
-- **T205** (Open): the manifest above declares `4.0.0` against a `4.0.3` package — the drift this section's own `$ cat` block records, now filed.
-- **T206** (Open): `validate-marketplace.js` runs in no CI job, and wiring it as-is would assert nothing — it exits 0 on that warning.
+- **T205 / T206** ✅ Done 2026-09-21 — the drift this section's own `$ cat` block records is fixed (manifest now `4.0.3`), and `validate-marketplace.js` is wired into `agent-surface-parity` with the drift as a hard failure. The capture above is left as the record of what was true on this ledger's 17 September basis; read it as history, not as current state. See the completed-work archive.
 - **T107 / T108** closed INVALID 2026-09-21 — `module_definition` is absent from `marketplace.json` by design, not omission. See the completed-work archive.
 
-*Basis for the three bullets above: assessed 2026-09-21 against HEAD, not on this ledger's 17 September basis — the same named-exception treatment §2.18 and §2.19 carry. The two 2026-09-14 bullets they replace (T107, T108) were deleted rather than struck, because the rows no longer exist in any lane.*
+*Basis for the two bullets above: assessed 2026-09-21 against HEAD, not on this ledger's 17 September basis — the same named-exception treatment §2.18 and §2.19 carry. The two 2026-09-14 bullets they replace (T107, T108) were deleted rather than struck, because the rows no longer exist in any lane.*
 
 **Why Mapped, not built:** the metadata ships, but the distribution channel does not exist for Convoke.
 

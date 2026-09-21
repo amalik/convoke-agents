@@ -183,6 +183,28 @@ jobs:
         # (`derive-counts-from-source`); the script prints the live figure itself.
         run: node scripts/audit/skill-manifest-integrity.js
 
+      - name: Marketplace metadata integrity
+        # T206. `validate-marketplace.js` shipped 2026-04-24 and ran in no CI job until now — it
+        # existed only as the `convoke-validate-marketplace` bin, so its six checks ran when a
+        # human remembered. The cost is measurable: `.claude-plugin/marketplace.json` declared
+        # v4.0.0 while the package reached 4.0.3; `.claude-plugin/` has been in `files[]` since
+        # 2026-04-24, so ten published tarballs carry the mismatch.
+        #
+        # WIRING IT ALONE WOULD HAVE ASSERTED NOTHING. The drift was a soft warning with exit 0,
+        # under a note saying it "escalates to ERROR at Story 3.3's publish gate" — a gate that was
+        # never built — `git show 36deb9af:.github/workflows/ci.yml | grep -c marketplace` returns 0,
+        # pinned to a sha because running it against the working tree now returns this step's own
+        # mentions and would read as contradicting the sentence.
+        # T205 syncs the version and the check is now a hard failure, so this step can fail; it was
+        # demonstrated red against the exact 4.0.0-vs-4.0.3 state that shipped.
+        #
+        # In THIS job because it is the audit aggregator, NOT because it needs history — it reads
+        # working-tree files only (two JSON manifests, module.yaml, and the seven agent SKILL.md
+        # files its skill-dir audit walks), so a depth-1 clone answers the same. Verified against a
+        # real `--depth 1` clone rather than assumed; an earlier draft of this line said "two JSON
+        # files and a module.yaml", which undercounted what the step opens.
+        run: node scripts/audit/validate-marketplace.js
+
       - name: Name-registry integrity
         # T124, deliverable 3 of the meta-model baseline. Lints
         # `_bmad/bme/_config/name-registry.csv`, which ADR-001 (accepted 2026-09-05) makes

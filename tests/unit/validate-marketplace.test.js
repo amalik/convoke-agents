@@ -273,17 +273,46 @@ describe('validate-marketplace CLI (Story v63-3-1)', () => {
     }
   });
 
-  // ── Test 10: version drift → warning, exit 0 ──
-  it('marketplace.json vs package.json version drift → exit 0 + yellow warning', async () => {
+  // ── Test 10: version drift → hard failure, exit 1 ──
+  //
+  // WAS `exit 0 + yellow warning` until 2026-09-21 (T205/T206). The warning said drift was
+  // "expected during pre-4.0 dev" and would "escalate to ERROR at Story 3.3's publish gate";
+  // 4.0 shipped and three patches followed, and that gate was never built — `git show 36deb9af:.github/workflows/ci.yml
+  // | grep -c marketplace` returns 0 (pinned to a sha — the working tree now carries this step). The manifest drifted three releases with every run
+  // reporting success, which is what this test had pinned in place.
+  it('marketplace.json vs package.json version drift → exit 1 and names the fix', async () => {
+    const tmpDir = await createTempDir('bmad-mp-');
+    try {
+      // PATCH-LEVEL drift, deliberately — `4.0.0` vs `4.0.3` is the shape that actually shipped in
+      // ten tarballs. An earlier version of this test used `4.0.0` vs `3.3.0`, which differ in the
+      // MAJOR field: a comparison folded to major.minor passed the entire suite, so the test did
+      // not pin the defect class it exists for. Caught by review, and only after a control run —
+      // the first attempt to reproduce it used an incomplete fixture copy whose failures were
+      // identical with and without the mutant.
+      const marketplace = defaultMarketplace();
+      marketplace.plugins[0].version = '4.0.0';
+      await seedMarketplaceFixture(tmpDir, { marketplace, pkgVersion: '4.0.3' });
+      const { exitCode, stdout } = await runScript(SCRIPT_PATH, ['--verbose'], { cwd: tmpDir });
+      assert.equal(exitCode, 1, `drift must fail the run; got exit=${exitCode}, stdout:\n${stdout}`);
+      assert.ok(stdout.includes('marketplace.json v4.0.0') && stdout.includes('package.json v4.0.3'),
+        `expected both versions named; got:\n${stdout}`);
+      // The message has to carry the remedy: this gate fires at a release, when whoever reads it
+      // is mid-bump and should not have to open the validator to learn which file to edit.
+      assert.match(stdout, /Fix: set plugins\[0\]\.version in \.claude-plugin\/marketplace\.json to 4\.0\.3/);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  // ── Test 10b: aligned versions still pass ──
+  it('marketplace.json matching package.json → exit 0', async () => {
     const tmpDir = await createTempDir('bmad-mp-');
     try {
       const marketplace = defaultMarketplace();
-      marketplace.plugins[0].version = '4.0.0';
+      marketplace.plugins[0].version = '3.3.0';
       await seedMarketplaceFixture(tmpDir, { marketplace, pkgVersion: '3.3.0' });
       const { exitCode, stdout } = await runScript(SCRIPT_PATH, ['--verbose'], { cwd: tmpDir });
-      assert.equal(exitCode, 0, `drift is warning, not error; got exit=${exitCode}, stdout:\n${stdout}`);
-      assert.ok(stdout.includes('marketplace.json v4.0.0') && stdout.includes('package.json v3.3.0'),
-        `expected drift warning with both versions; got:\n${stdout}`);
+      assert.equal(exitCode, 0, `aligned versions must pass; got exit=${exitCode}, stdout:\n${stdout}`);
     } finally {
       await fs.remove(tmpDir);
     }

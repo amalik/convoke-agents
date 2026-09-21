@@ -310,8 +310,29 @@ function validateModuleYaml(projectRoot) {
 }
 
 /**
- * Warn (not error) if `marketplace.json.plugins[0].version` differs from
- * `package.json.version`. Ship-time drift is expected; publish-gate escalates.
+ * FAIL if `marketplace.json.plugins[0].version` differs from `package.json.version`.
+ *
+ * THIS WAS A SOFT WARNING UNTIL 2026-09-21. The divergence was not an accident: Story 3.3 chose
+ * "Path A — submit at publication-target `version: "4.0.0"`" while the package was 3.3.0, so the
+ * manifest was a deliberate FORWARD DECLARATION for the marketplace submission. What failed is
+ * that it was never retired when 4.0.0 shipped and PR #9 closed.
+ *
+ * THE ESCALATION THE WARNING PROMISED WAS NEVER BUILT — and note the precise claim, because a
+ * looser one is false. A gate did exist: Story 3.3's pre-submission gate ran on 2026-04-25, saw
+ * this drift, and passed it as informational BY DESIGN (`v63-3-3-validation-log.md:44,61-65`).
+ * What never shipped is the publish-time escalation that warning pointed at. Re-derive against
+ * the `publish` job. It has four steps and does check the TAG against `package.json`
+ * (`ci.yml`, "Tag/version check") — what it has never checked is this manifest:
+ *   node -e "const d=require('js-yaml').load(require('fs').readFileSync('.github/workflows/ci.yml','utf8')); console.log(d.jobs.publish.steps.map(s=>s.name||s.uses))"
+ *
+ * So the check reported the drift on every run and deferred enforcement to something that did not
+ * exist. Ten published tarballs carry a manifest version disagreeing with their own package.json
+ * — every publish from `4.0.0-rc.1` on except `4.0.0` itself.
+ *
+ * CONSEQUENCE, STATED BECAUSE IT REVERSES A RECORDED DECISION: publication-target versioning is
+ * now refused. That is deliberate — PR #9 is closed, so no open submission needs a forward
+ * declaration — but a future re-submission that wants one needs this check changed, not
+ * worked around. `docs/pre-tag-release-checklist.md` step 1a carries the release-time fix.
  */
 function checkVersionDrift(marketplaceVersion, pkgVersion) {
   const name = 'version alignment (marketplace.json vs package.json)';
@@ -334,8 +355,8 @@ function checkVersionDrift(marketplaceVersion, pkgVersion) {
   }
   return {
     name,
-    passed: true, // soft warning, not hard failure
-    warning: `marketplace.json v${marketplaceVersion} vs package.json v${pkgVersion} — expected during pre-4.0 dev; escalates to ERROR at Story 3.3's publish gate`,
+    passed: false,
+    error: `marketplace.json v${marketplaceVersion} vs package.json v${pkgVersion} — the shipped manifest declares a version the package is not. Fix: set plugins[0].version in .claude-plugin/marketplace.json to ${pkgVersion}`,
   };
 }
 

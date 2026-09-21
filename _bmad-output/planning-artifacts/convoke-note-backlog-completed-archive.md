@@ -2206,8 +2206,8 @@ retro that says "worth amending" ticks FR20 done in the same line.
 **Bounds.** The registry draft at `v63-3-3-convoke.yaml` is Convoke-local; PR #9 is CLOSED
 (`gh pr view 9 --repo bmad-code-org/bmad-plugins-marketplace --json state`), so upstream holds no
 Convoke entry. Whether the Claude Code manifest schema permits the key is not established here.
-Nothing validates a `module_definition` target if one is ever added — noted against `T206`, no
-instance.
+Nothing validates a `module_definition` target if one is ever added — no instance, and `T206`
+closed carrying it forward in its own Residue paragraph rather than as an open row.
 
 ---
 
@@ -2225,7 +2225,7 @@ validator reject the manifest the repository ships:
 ```bash
 S=$(mktemp -d); cp -R scripts package.json .claude-plugin _bmad "$S"/
 ln -s "$PWD/node_modules" "$S/node_modules"
-(cd "$S" && node scripts/audit/validate-marketplace.js; echo "control exit=$?")   # 5 passed, 0
+(cd "$S" && node scripts/audit/validate-marketplace.js; echo "control exit=$?")   # 6 passed, 0
 perl -pi -e "s/'skills'\]/'skills', 'module_definition']/" "$S/scripts/audit/validate-marketplace.js"
 (cd "$S" && node scripts/audit/validate-marketplace.js; echo "patched exit=$?")
 # ✗ plugins[0] missing required field(s): module_definition   exit=1
@@ -2233,3 +2233,69 @@ perl -pi -e "s/'skills'\]/'skills', 'module_definition']/" "$S/scripts/audit/val
 
 **Not independent of `T107`.** The reason the gate would be wrong is that the manifest is right,
 which is `T107`'s premise. If `T107` is ever re-litigated, re-open this row with it.
+
+---
+
+## T205
+
+**Lane:** Fast Lane · **Score:** 3.8 · **Portfolio:** convoke · **Status:** ✅ Done 2026-09-21
+
+**Defect.** `.claude-plugin/marketplace.json` declared `4.0.0` while `package.json` reached `4.0.3`.
+Synced. The bad tarballs are **immutable** — npm versions are permanent, so every affected publish
+stays wrong; this closes the source, not the artifacts.
+
+| Fact | Command |
+|---|---|
+| Ten published tarballs carry a manifest disagreeing with their own package.json — every publish from `4.0.0-rc.1` on except `4.0.0` | `npm view convoke-agents versions --json`, against `git log -S'"version": "4.0.0"' -- .claude-plugin/marketplace.json` (set `179c304e`, 2026-04-24, never moved) |
+| `.claude-plugin/` has shipped since 2026-04-24, not always | `git log --oneline -S'.claude-plugin' -- package.json \| tail -1` → `48d99374 …`; date via `git show -s --format='%h %ad' --date=short 48d99374` |
+| Now aligned | `node -e "const m=require('./.claude-plugin/marketplace.json').plugins[0].version, p=require('./package.json').version; console.log(m, p, m===p?'OK':'DRIFT')"` — **from the repository root** |
+
+**NOT neglect — a deliberate convention that was never retired.** Story 3.3 chose *"Path A — submit
+at publication-target `version: "4.0.0"` with `approved_sha: null` per whiteport precedent"*
+(`v63-3-3-submit-marketplace-registry-pr.md:86`), and ADR-5's marketplace template hardcodes the
+same. The manifest was a forward declaration for the submission. PR #9 closed 2026-04-27; the
+declaration outlived its purpose by five months because nothing retires one.
+
+**This change forbids that practice, which reverses a recorded decision.** Deliberate: no open
+submission needs a forward declaration. A future re-submission that does needs `checkVersionDrift`
+changed, not worked around.
+
+**Disclosed, not fixed.** Story 3.3 Task 2.4 pins `convoke.yaml.version === marketplace.json
+.plugins[0].version`; syncing the manifest breaks it (`v63-3-3-convoke.yaml:25` still reads
+`4.0.0`). That file is a spent draft for a closed PR and nothing checks the invariant.
+
+---
+
+## T206
+
+**Lane:** Fast Lane · **Score:** 3.0 · **Portfolio:** convoke · **Status:** ✅ Done 2026-09-21
+
+**Defect.** `validate-marketplace.js` shipped 2026-04-24 and ran in no CI job. Now a step in
+`agent-surface-parity`, which is in `publish.needs`.
+
+**Precise, because the looser claim is false.** A gate *did* exist — Story 3.3's pre-submission
+gate ran 2026-04-25, saw this drift, and passed it as informational by design
+(`v63-3-3-validation-log.md:44,61-65`). What never shipped is the **publish-time escalation** the
+warning text pointed at. Equally, the manifest was not wholly unwatched — three test files read the
+real one and run in CI via `npm test` (`grep -rln "PACKAGE_ROOT" tests/ \| xargs grep -l claude-plugin`). The validator
+executable runs 15 times per `npm test` against fixtures; what ran nowhere is the validator
+**against this repository's own tree**.
+
+**Both halves had to land together.** Wiring it alone would have asserted nothing: the one live
+finding was a soft warning with exit 0, so the gate would have been green on a real defect.
+
+| Check | Command |
+|---|---|
+| Wired, and the job gates publish | `node -e "const d=require('js-yaml').load(require('fs').readFileSync('.github/workflows/ci.yml','utf8')); console.log(d.jobs['agent-surface-parity'].steps.map(s=>s.name||s.uses), d.jobs.publish.needs)"` |
+| Green on the real tree | `node scripts/audit/validate-marketplace.js` → 6 checks, exit 0 |
+| RED on the state that shipped | `S=$(mktemp -d); cp -R scripts package.json .claude-plugin _bmad "$S"/; ln -s "$PWD/node_modules" "$S/node_modules"; node -e "const f='$S/.claude-plugin/marketplace.json',fs=require('fs'),j=JSON.parse(fs.readFileSync(f));j.plugins[0].version='4.0.0';fs.writeFileSync(f,JSON.stringify(j,null,2))"; (cd "$S" && node scripts/audit/validate-marketplace.js; echo "exit=$?")` → exit 1 |
+| The test pins the failure and the remedy | `node --test tests/unit/validate-marketplace.test.js` |
+
+**Residue, carried from the row and still open.** Nothing validates a `module_definition` *target*
+if one is ever added to the manifest — a path pointing nowhere passes. No instance exists (the
+field is absent by design, see `#t107`), so it is recorded here rather than filed.
+
+**Class removal was not built.** Deriving `plugins[0].version` at pack time, or an npm `version`
+hook, would make the drift impossible — the route `#t104` took. The reason first written here was
+that the gate "keeps the choice" to let the manifest lead; that is false, the gate refuses it (see
+`#t205`). No argument survives: derivation was simply not attempted.
