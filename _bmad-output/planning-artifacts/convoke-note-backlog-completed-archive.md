@@ -2176,3 +2176,60 @@ decision the deletion stands and that gap stays open as `T174`, owned by the unb
 `git grep -n -e 'VORTEX-REGRESSION' -e 'checkVortexRegression' -e 'runVortexValidation' -e 'captureVortexBaseline' -e 'vortex_baseline' -- _bmad scripts tests docs`
 returns nothing (exit 1). `grep -c "assert.equal(result.valid, true" tests/team-factory/extension-validator.test.js`
 prints `2`, and `node --test tests/team-factory/extension-validator.test.js` passes.
+
+---
+
+## T107
+
+**Lane:** Fast Lane · **Score:** 7.2 · **Portfolio:** convoke · **Status:** Closed INVALID 2026-09-21
+
+**Claim.** `module_definition` is absent from `.claude-plugin/marketplace.json`, which Architecture
+Decision 5 requires. From `IN-135` (2026-04-25), qualified 2026-08-31.
+
+**Disproof — each line has a command.**
+
+| Fact | Command |
+|---|---|
+| ADR-5's own `marketplace.json` template carries no such key | `awk 'NR>=419 && NR<=444' _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md \| grep -c module_definition` → `0` |
+| The `module_definition:` line at `:448` is about the target FILE, outside that template | `sed -n '446,450p' _bmad-output/planning-artifacts/convoke-arch-bmad-v6.3-adoption.md` |
+| Story 3.1's AC1 enumerates the plugin-entry fields and omits it | `sed -n '60,66p' _bmad-output/implementation-artifacts/v63-3-1-create-and-validate-marketplace-metadata.md` |
+| Story 3.1 records the manifest not inlining it, with PluginResolver auto-discovery as the reason | `sed -n '185p' _bmad-output/implementation-artifacts/v63-3-1-create-and-validate-marketplace-metadata.md` |
+| The 3-retro ticks FR20 satisfied while noting the field's absence | `sed -n '231p' _bmad-output/implementation-artifacts/epic-v63-3-retro-2026-04-25.md` |
+| The field appears in the community REGISTRY draft (FR24), not the manifest | `grep -n module_definition _bmad-output/implementation-artifacts/v63-3-3-convoke.yaml` |
+
+**Anchors that read the other way**, listed so a re-reader does not re-file the row:
+`functional-requirements.md:35` (FR20 wording), `success-criteria.md:38` (the word *field*),
+`convoke-epic-bmad-v6.3-adoption.md:308` (Story 3.1 AC), `epic-v63-3-retro-2026-04-25.md:231`
+(*"Worth amending pre-4.0 ship"*). All four specify intent; none is the implementation, and the
+retro that says "worth amending" ticks FR20 done in the same line.
+
+**Bounds.** The registry draft at `v63-3-3-convoke.yaml` is Convoke-local; PR #9 is CLOSED
+(`gh pr view 9 --repo bmad-code-org/bmad-plugins-marketplace --json state`), so upstream holds no
+Convoke entry. Whether the Claude Code manifest schema permits the key is not established here.
+Nothing validates a `module_definition` target if one is ever added — noted against `T206`, no
+instance.
+
+---
+
+## T108
+
+**Lane:** Fast Lane · **Score:** 3.6 · **Portfolio:** convoke · **Status:** Closed INVALID 2026-09-21
+
+**Claim.** `validate-marketplace.js` does not enforce `module_definition`, so the field "can go
+missing again undetected."
+
+**Observation accurate, conclusion wrong.** `sed -n '47,48p' scripts/audit/validate-marketplace.js`
+confirms the field is in neither constant. Adding it to `REQUIRED_PLUGIN_FIELDS` makes the
+validator reject the manifest the repository ships:
+
+```bash
+S=$(mktemp -d); cp -R scripts package.json .claude-plugin _bmad "$S"/
+ln -s "$PWD/node_modules" "$S/node_modules"
+(cd "$S" && node scripts/audit/validate-marketplace.js; echo "control exit=$?")   # 5 passed, 0
+perl -pi -e "s/'skills'\]/'skills', 'module_definition']/" "$S/scripts/audit/validate-marketplace.js"
+(cd "$S" && node scripts/audit/validate-marketplace.js; echo "patched exit=$?")
+# ✗ plugins[0] missing required field(s): module_definition   exit=1
+```
+
+**Not independent of `T107`.** The reason the gate would be wrong is that the manifest is right,
+which is `T107`'s premise. If `T107` is ever re-litigated, re-open this row with it.
