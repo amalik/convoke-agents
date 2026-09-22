@@ -190,7 +190,7 @@ P0 suites cover each agent (`tests/p0/p0-{emma,isla,mila,liam,wade,noah,max}.tes
 
 **Backlog rows that bear on this row:**
 - **T140** (Open): all 3 converted agents' persona text has drifted from `agent-registry.js`. The voice test `tests/p0/p0-voice-consistency.test.js` checks marker phrases only, so it cannot detect this.
-- **T135** (Open): the personality-preservation harness has never executed; 9 of its 10 fixtures are invalid JSON. **No evidence of persona preservation across conversion exists.**
+- **T135** ✅ Done 2026-09-21: the personality-preservation harness now loads every agent's capture; before, it had never run, because its fixtures were invalid JSON. That repair produced no new scores. **What the scoring record holds for the three converted agents:** Emma — scored by the operator, lowest dimension 3, report `status: pass` (`convoke-report-personality-rubric-scoring-emma-conversion-2026-05-02.md`). Wade — all seven dimensions 4, but scored by the same model that converted him; the report stays `status: pending-operator-confirmation` until the operator checks it (`…-wade-conversion-2026-05-02.md`). Mila — **unscored**; the report is a skeleton awaiting the operator (`…-mila-conversion-2026-08-28.md`). So persona preservation is operator-confirmed for **one agent of seven**. The 2026-09-14 line here said no evidence existed; Emma's report already existed then. *(Basis: assessed 2026-09-21 against HEAD, the same named-exception treatment §2.18 and §2.19 carry.)*
 - **I97**: Initiative Lane, "In Pipeline — E2 at 3 of 7".
 - **P13** (Qualified, blocked on P12): the Vortex redesign.
 - **Portfolio `vortex`:** one live row at HEAD, which is P13.

@@ -2299,3 +2299,75 @@ field is absent by design, see `#t107`), so it is recorded here rather than file
 hook, would make the drift impossible — the route `#t104` took. The reason first written here was
 that the gate "keeps the choice" to let the manifest lead; that is false, the gate refuses it (see
 `#t205`). No argument survives: derivation was simply not attempted.
+
+---
+
+## T135
+
+**Lane:** Fast Lane · **Score:** 6.0 · **Portfolio:** convoke · **Status:** ✅ Done 2026-09-21
+
+**Defect.** The personality-preservation harness had never executed: its fixtures were invalid JSON,
+so `runPersonalityCheck` threw on every agent. A 2026-09-10 pass repaired six agents; Emma
+(`contextualization-expert`) was left with both captures still broken. Both are now repaired and the
+harness runs for all seven agents.
+
+| Fact | Command |
+|---|---|
+| Both Emma captures parse strictly, with contiguous ids | `node --test tests/lib/personality-fixtures.test.js` |
+| The harness loads every registered agent's baseline | same file; the roster is the agent registry, so a deleted fixture directory fails rather than shrinks the run |
+| No content was lost in the repair | an independent character-level diff against `git show HEAD:<file>` at review — see the review note below; not re-runnable from this test |
+
+**How the repair was done, because the method is the transferable part.** Quote characters could not
+be trusted to find string boundaries — some responses had no closing quote at all and ran straight into
+`},`. So values were sliced by **object structure** (fixed field order, `response` always last), never by
+quotes. A verifier using a **different method** — positional anchoring in the raw bytes, head *and* tail,
+plus exact deep-equality for every well-formed top-level field — was written and proven able to fail
+**before** either file was touched. It rejected: the historical 7→3 cut, a truncation, a middle-only
+deletion with head and tail intact, a swap, a dropped trailing block, a gutted one, and an altered
+header field — each with a correct attribution.
+
+**The verifier caught a real loss mid-repair.** The first build read only the header and the prompts
+array, and **silently dropped post-migration's trailing `scoring_results` block** — Emma's actual
+scoring evidence (`per_prompt`, `aggregate_per_dimension`, `merge_gate`) — while producing a file that
+parsed and had seven prompts. The verifier flagged it, though first by side effect (as a "truncated
+FP7", because its last region ran to end-of-file); a direct top-level-key check and exact value
+comparison were then added so the class is caught and named correctly.
+
+**Regression guard, and its measured floor.** `tests/lib/personality-fixtures.test.js` is the first test
+to run the harness against its real fixtures; the existing ones exercised only its error path, and
+`tests/migration/` is not in the `npm test` suite. It checks each capture against sources the capture
+does not control:
+- the agent registry, for which agents exist and each one's prompt-id prefix;
+- converted agents' `SKILL.md`, since an agent has a post-migration capture exactly when it is converted;
+- the prompt ids the scoring sheets cite, each of which must still exist.
+
+It also checks that each capture is filed under the right agent (`agent_role`) and phase (no
+post-migration response may equal its baseline), and that a recorded `scoring_results` block's numbers
+agree with one another. So these all fail: prompts cut from any agent's baseline, a capture copied over
+another, and scores dropped or gutted.
+
+**It does NOT detect** truncated response or prompt text, two responses swapped, truncated scenario
+content, deleted descriptive fields, or a `scoring_results` block dropped outright. The test file lists
+these, with the reason each needs a record that does not exist outside the capture.
+
+**Mutants → which test kills them** (run on a full copy of the repo, with a control run first):
+
+| Mutant | Killed by |
+|---|---|
+| another agent's baseline copied over Isla's | `agent_role` check |
+| Emma's post-migration capture copied over her baseline, or the reverse, or only the responses | response-identity check |
+| `scoring_results` keeps only `per_prompt`; `per_prompt` values emptied or nulled; `lowest_dimension` falsified | scoring-consistency check |
+| `primary_dimensions` removed | per-capture parse |
+| Emma's post-migration capture deleted (her `SKILL.md` intact, deleted, or with `<agent>` added in prose) | converted ⇔ captured |
+| a post-migration capture added for unconverted Liam | converted ⇔ captured |
+| a scenario `.md` deleted | per-capture parse |
+| the last prompt dropped | scoring-sheet record check |
+
+**What this does and does not unblock.** i97-2-4..2-7 convert Isla, Noah, Max and Liam, whose baselines
+have parsed since `854b2ade`. This change repairs Emma and adds the guard those stories inherit; it is
+not what made their harness runs possible.
+
+**Review note — data integrity.** An independent review verified the repair lossless by a third method
+(character-level diff, a separate lexer, and a Node token comparison), itself shown to fail on six
+planted defects. Every original character survives in order; the repair added only escapes, four closing
+quotes on baseline FP1–FP4, and layout whitespace. The author's repair-time verifier is not committed.
