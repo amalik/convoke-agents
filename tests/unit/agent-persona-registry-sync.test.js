@@ -96,13 +96,17 @@ function personaOf(agent) {
 // Every `_bmad/bme/<module>/agents/<id>.md` and `.../agents/<id>/SKILL.md`, found by walking rather
 // than by a list of the three shapes that existed when this was written.
 function agentFiles(id) {
+  const isDir = (p) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };
+  const isFile = (p) => { try { return fs.statSync(p).isFile(); } catch { return false; } };
   const found = [];
-  for (const mod of fs.readdirSync(BME, { withFileTypes: true })) {
-    if (!mod.isDirectory()) continue;
-    const dir = path.join(BME, mod.name, 'agents');
-    if (!fs.existsSync(dir)) continue;
+  // `statSync`, not the dirent: a symlinked module directory is not `isDirectory()` and would be
+  // skipped whole, hiding every agent inside it. Candidates must be real files — a directory named
+  // `<id>.md` would otherwise be read and throw EISDIR instead of reporting its shape.
+  for (const mod of fs.readdirSync(BME)) {
+    const dir = path.join(BME, mod, 'agents');
+    if (!isDir(path.join(BME, mod)) || !isDir(dir)) continue;
     for (const p of [path.join(dir, `${id}.md`), path.join(dir, id, 'SKILL.md')]) {
-      if (fs.existsSync(p)) found.push(p);
+      if (isFile(p)) found.push(p);
     }
   }
   return found;
@@ -112,11 +116,13 @@ const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 
 describe('agent registry personas match their agent files', () => {
   it('every id the registry declares is on the roster this file checks', () => {
-    const declared = [...new Set([
-      ...(registry.AGENT_IDS || []),
-      ...(registry.GYRE_AGENT_IDS || []),
-      ...(registry.EXTRA_BME_AGENT_IDS || []),
-    ])].sort();
+    // Derived like the roster above, for the same reason: a generated team exports its own
+    // `<PREFIX>_AGENT_IDS`, and naming the three that existed when this was written would leave
+    // this guard covering exactly the case the roster derivation exists to cover.
+    const declared = [...new Set(Object.entries(registry)
+      .filter(([name, value]) => /(^|_)AGENT_IDS$/.test(name) && Array.isArray(value))
+      .flatMap(([, value]) => value)
+      .filter((id) => typeof id === 'string'))].sort();
     assert.ok(declared.length > 0, 'the registry declared no agent ids at all');
     const onRoster = AGENTS.map((a) => a.id);
     assert.deepEqual(declared.filter((id) => !onRoster.includes(id)), [],
@@ -146,19 +152,27 @@ describe('agent registry personas match their agent files', () => {
       const rel = path.relative(PACKAGE_ROOT, file);
 
       // A half-converted file — v6.3 sections added, the v5 XML left behind — is the drift this gate
-      // exists for, wearing a disguise: the extractor prefers the XML wherever it appears, so the
-      // registry stays "in sync" with the persona the agent no longer uses.
-      const hasXml = /<(identity|communication_style|principles)>/.test(raw);
-      const hasMarkdown = /^##\s+(Identity|Communication Style|Principles)\s*$/m.test(raw);
-      assert.ok(!(hasXml && hasMarkdown),
-        `${rel} carries BOTH a v5 XML persona and v6.3 markdown sections. The extractor reads the XML, so this file's `
-        + 'registry entry is pinned to the older text. Finish the conversion by deleting the XML persona.');
+      // exists for, wearing a disguise: `extractPersonaFromAgentFile` prefers the XML, so the registry
+      // stays "in sync" with the persona the agent no longer uses.
+      //
+      // Both halves are judged on the file MINUS its HTML comments, and the XML half requires a
+      // CLOSING tag — exactly what the extractor requires. Otherwise a sentence mentioning
+      // `<identity>` in prose, or a commented-out heading in a template note, failed a healthy file
+      // with a message whose stated reason ("pinned to the older text") was provably false: with no
+      // closing tag the extractor reads the markdown anyway. Both demonstrated by R3, 2026-09-23.
+      const body = raw.replace(/<!--[\s\S]*?-->/g, '');
+      const hasXmlPersona = /<(identity|communication_style|principles)>[\s\S]*?<\/\1>/.test(body);
+      const hasMarkdownPersona = /^##\s+(Identity|Communication Style|Principles)\s*$/m.test(body);
+      assert.ok(!(hasXmlPersona && hasMarkdownPersona),
+        `${rel} carries BOTH a closed v5 XML persona and v6.3 markdown sections. `
+        + '`extractPersonaFromAgentFile` reads the XML, so this file\'s registry entry is pinned to the older text. '
+        + 'Finish the conversion by deleting the XML persona.');
 
       const filePersona = await extractPersonaFromAgentFile(file);
       // Which fields the file must expose is derived from its FORMAT, not from what it happens to
       // contain. Without this, renaming a heading (`## Principles` → `## Operating Principles`) drops
       // that field out of the comparison silently and leaves the registry value unconstrained.
-      const isV5 = /^\s*<agent[\s>]/m.test(raw);
+      const isV5 = /^\s*<agent[\s>]/m.test(body);
       const required = isV5 ? FIELDS : FIELDS.filter((f) => f !== 'role');
       const compared = [];
       for (const field of FIELDS) {

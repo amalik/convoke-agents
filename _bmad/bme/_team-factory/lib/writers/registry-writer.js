@@ -389,7 +389,7 @@ function agentIdFromPath(agentFilePath) {
  * opening paragraph (detection targets, lists) that the registry summarises, so writing the whole
  * field is wrong.
  *
- * A LEADING LIST IS ONE BLOCK, however its items are spaced. Splitting on blank lines alone turned
+ * A LEADING LIST IS ONE BLOCK, however its items are spaced — bulleted or numbered. Splitting on blank lines alone turned
  * `- one` / `- two` / `- three` written with blank lines between them into `- one`, so an agent file
  * that spaced out its principles registered one principle of N — and the sync gate could not see it,
  * because it applied the same rule to the same text and agreed by construction. The truncated value
@@ -405,7 +405,9 @@ function agentIdFromPath(agentFilePath) {
 function firstBlock(value) {
   const blocks = String(value || '').split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
   if (blocks.length === 0) return '';
-  const isListItem = (b) => /^[-*+]\s/.test(b);
+  // A marker plus a space: `-`, `*`, `+`, or an ordered `1.` / `1)`. The space matters — `---` is a
+  // thematic break, not a list item, and would otherwise chain two unrelated blocks together.
+  const isListItem = (b) => /^([-*+]|\d+[.)])\s/.test(b);
   const taken = [blocks[0]];
   if (isListItem(blocks[0])) {
     for (let i = 1; i < blocks.length && isListItem(blocks[i]); i++) taken.push(blocks[i]);

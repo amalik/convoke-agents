@@ -846,10 +846,29 @@ describe('firstBlock — the relation the registry holds (T140)', () => {
     assert.equal(firstBlock('* star one\n\n* star two'), '* star one * star two');
   });
 
+  it('keeps a leading NUMBERED list whole too', () => {
+    assert.equal(firstBlock('1. one\n\n2. two\n\n3. three'), '1. one 2. two 3. three');
+    assert.equal(firstBlock('1) one\n\n2) two'), '1) one 2) two');
+  });
+
   it('stops at the operational content a v5 field carries after its opening block', () => {
+    // The continuation only runs when the FIRST block is itself a list. This fixture's second block
+    // IS a list, so it fails if that guard is dropped — the previous fixture here started its second
+    // block with prose, which terminated the loop on its first pass either way, and so could not
+    // tell the guard from its relaxation. Found by R3, 2026-09-23.
+    assert.equal(firstBlock('Opening paragraph.\n\n- detection target a\n- detection target b'),
+      'Opening paragraph.', 'prose first means prose only — a following list is operational content');
     assert.equal(firstBlock('Opening paragraph.\n\nDetection targets:\n- a manifest\n- a config'),
       'Opening paragraph.');
     assert.equal(firstBlock('- one\n\n- two\n\nTrailing prose that is not a bullet.'), '- one - two');
+  });
+
+  it('needs a marker AND a space, and trims each block before judging it', () => {
+    assert.equal(firstBlock('+ one\n\n+ two'), '+ one + two', 'a `+` bullet is a bullet');
+    assert.equal(firstBlock('- one\n\n  - indented continuation'), '- one - indented continuation',
+      'a block is trimmed before it is judged, or an indented item stops the list');
+    assert.equal(firstBlock('- one\n\n---\n\n- two'), '- one',
+      'a thematic break is not a list item — without the space in the marker test it would chain');
   });
 
   it('collapses whitespace and survives CRLF', () => {

@@ -54,7 +54,8 @@ const agents = discoverAgents();
 // relation in `tests/unit/agent-persona-registry-sync.test.js`, over all 12 registered agents
 // rather than the 7 this suite discovers, and it runs in `npm test` as well as CI's coverage job.
 // The "all 4 persona fields non-empty" check that stood here duplicated
-// `tests/unit/agent-registry.test.js` exactly, for the same agents, so it went with it.
+// `tests/unit/agent-registry.test.js` for the same agents — except that it also asserted each field
+// is a string, which the survivor does not. A non-string truthy value now passes both.
 
 // ─── P0 Voice Consistency: Workflow Step Voice Markers ───────────
 

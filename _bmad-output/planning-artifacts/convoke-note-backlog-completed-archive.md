@@ -2483,3 +2483,25 @@ now *requires* editing `agent-registry.js` in the same commit.
 is now ~6; `tests/fixtures/portability-project/` keeps a copy of the pre-T140 manifest, which is fixture
 isolation working as ruled; and `tests/p0/helpers.js` sniffs the v5 format slightly differently from
 this gate. None changes an output today.
+
+### R3 — one scoped layer on the R2 remediation, 2026-09-23
+
+Scoped to executable code, because R2's record findings had caught up with its code findings. Every
+row below is pinned by a mutant; re-run with
+`node --test tests/unit/agent-persona-registry-sync.test.js tests/team-factory/registry-writer.test.js`.
+
+| Defect | Fix |
+|---|---|
+| **The guard that makes the list rule safe was unpinned.** Relaxing `if (isListItem(blocks[0]))` to `if (true)` left all 2853 tests green, and would have written a v5 field's operational content into the registry. The test that claimed to cover it used a second block starting with prose, which ends the loop either way — a fixture that cannot tell a guard from its relaxation, one round after the same trap | fixture's second block is now itself a list |
+| The rule said "a leading list, however its items are spaced" but matched only `-`, `*`, `+` — a spaced **numbered** list still registered one item of N | markers are now `-`, `*`, `+`, `1.`, `1)`, each requiring a following space so `---` stays a thematic break |
+| The half-converted check fired on a **prose mention** of `<identity>` and on a heading inside an **HTML comment**, failing healthy files — and its message stated a reason that was false, since the extractor needs a closing tag and had read the markdown correctly all along | the check ignores HTML comments and requires a closed XML element, matching what the extractor actually reads |
+| The roster cross-check named three `*_AGENT_IDS` exports in a file whose stated rule is "derived, not listed" | derived by pattern, like the roster |
+| A **symlinked** module directory was skipped whole, hiding every agent in it; a directory named `<id>.md` threw EISDIR instead of reporting its shape | resolution stats paths instead of trusting dirents, and accepts only real files |
+| Three further `firstBlock` mutants survived: dropping `+`, dropping the per-block trim, making the marker's space optional | one test pins all three |
+
+**Also corrected:** the p0 file's comment claimed the deleted check duplicated
+`tests/unit/agent-registry.test.js` "exactly" — the deleted one also asserted each field is a string,
+which the survivor does not.
+
+**Verified unchanged by all of this:** old and new `firstBlock` over all 45 non-empty persona fields of
+the 12 shipped agent files differ in **0** cases.
