@@ -2399,12 +2399,14 @@ corresponding field, whitespace collapsed.
 - Not the whole field: a v5 `<identity>` carries operational content after its opening paragraph
   (detection targets, lists) that the registry deliberately summarises.
 - Not a bare prefix: "the first three words" would satisfy that, and a mutant proves the gate rejects it.
-- The first block has a mechanical boundary, and it is what every already-consistent agent looked like —
-  Liam and Noah on all four fields, `stack-detective`, `model-curator` and `readiness-analyst` on identity.
+- The first block has a mechanical boundary, and it is what the already-consistent agents looked like —
+  Liam and Noah on all four fields, `team-factory` on three, the Gyre trio on identity. Re-derive rather
+  than trusting that list: it is a snapshot, and R2 found it incomplete.
 
 **What shipped.** 25 persona fields across 10 of 12 agents re-synced from their files;
 `tests/unit/agent-persona-registry-sync.test.js` enforcing the relation; three superseded p0 tests and
-their phrase table deleted; `registry-writer.js` writing first blocks so a generated team is not born
+their phrase table deleted (one shared signature phrase in `communication_style`, one shared 3+-character
+word in `role`, two shared 4+-character words between `expertise` and `principles`); `registry-writer.js` writing first blocks so a generated team is not born
 drifted; `_bmad/_config/agent-manifest.csv` regenerated.
 
 **Two design choices worth keeping.** The gate derives its roster from every `*_AGENTS` export rather
@@ -2439,6 +2441,45 @@ measures it — 8 of 45 fields hold less than their whole field today).
 
 | Fact | Command |
 |---|---|
-| Every registered agent's persona matches its file | `node --test tests/unit/agent-persona-registry-sync.test.js` |
-| The suite is green with the re-synced registry | `npm test` |
+| Every registered agent's persona agrees with its file's **leading block** — not the whole field: 8 of 45 fields hold 30-67% of theirs | `node --test tests/unit/agent-persona-registry-sync.test.js` |
+| The suite is green with the re-synced registry | `npm test` **and** `npm run test:p0` — the p0 suites assert literal substrings of these persona fields, and `npm test` does not run them |
 | The manifest is in sync with the registry | `npm run generate:manifest && git diff --quiet -- _bmad/_config/agent-manifest.csv` — **on a clean tree**: regeneration must produce no change. This is CI's own check (`agent-surface-parity`, in `publish.needs`), which runs it against a checked-out commit. |
+
+### R2 — three independent layers, 2026-09-23
+
+R1 found a HIGH, so `code-review-convergence` required a second round. Three layers ran in parallel on
+separate copies: consumers, detection power, and the record.
+
+**The gate could be walked past four ways.** Each is fixed, and each fix verified by re-running the
+mutation that found it.
+
+| Hole | Why it mattered | Fix |
+|---|---|---|
+| A **half-converted** agent file — v6.3 markdown added, v5 XML left — pins the registry to the persona the agent no longer uses | T140's own defect class surviving the gate built for it; the four remaining v5 Vortex agents are one step from this state | the gate rejects a file carrying both shapes |
+| An agent registered with a **flat persona** was skipped silently | the registry's own doc block for `EXTRA_BME_AGENTS` prescribes the flat shape while its entry nests — follow the documentation and your agent goes unchecked | both shapes are read; an entry with neither fails |
+| Agent files resolved from **three hardcoded directories** | `add-team` writes under the new team's own submodule, so the first correct use of `add-team` made `npm test` red, with a message pointing at the wrong thing | the gate searches `_bmad/bme/*/agents/` and requires exactly one file per id |
+| Two agents could **share an id** across exports | both were validated against one file, neither against its own | ids must be unique across the roster |
+
+**The relation itself was wrong for lists.** `- one` / `- two` / `- three` written with blank lines
+between them registered **one principle of three**, and the gate agreed by construction because it
+applied the same rule to the same text. `firstBlock` now keeps a leading list whole however its items
+are spaced. No shipped agent file is written that way, but a BMB-authored one could be, and the
+truncated value would reach `agent-manifest.csv` — what party-mode loads as the agent's principles.
+
+**The writer half was untested.** Deleting all four `firstBlock` calls in `buildAgentEntry` left the
+suite green: every persona fixture is a single one-line block, on which `firstBlock` is the identity
+function. It is now exported — one definition shared by the writer and the gate — and pinned by tests,
+along with the writer's use of it.
+
+**The record was wrong in four places**, all corrected: T209 named three agents when only Mila's `role`
+is unguarded (`p0-emma` and `p0-wade` pin the other two, and p0 runs in a `publish.needs` job); T210
+named the wrong cause; the Change Log's re-derivation command needed its basis commit, because at HEAD
+the drift it counts is fixed; and the `npm test` evidence excluded the p0 suites, which are the ones
+asserting substrings of the rewritten fields. The maturity-ledger row and the four queued i97
+conversion stories were corrected too — those stories cited the deleted table, and converting an agent
+now *requires* editing `agent-registry.js` in the same commit.
+
+**Accepted, not fixed:** the exported-README convention asks for 2-3 sentences where one persona field
+is now ~6; `tests/fixtures/portability-project/` keeps a copy of the pre-T140 manifest, which is fixture
+isolation working as ruled; and `tests/p0/helpers.js` sniffs the v5 format slightly differently from
+this gate. None changes an output today.

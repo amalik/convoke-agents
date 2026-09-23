@@ -50,33 +50,11 @@ const VOICE_MARKERS = {
 // ─── Dynamic Agent Discovery (NFR5) ────────────────────────────
 const agents = discoverAgents();
 
-// ─── P0 Voice Consistency: Registry vs Agent Definition ─────────
-
-describe('P0 Voice Consistency: Registry persona fields are populated', () => {
-  // M2: Vacuous pass guard — ensure dynamic discovery found agents
-  it('discovered at least 7 agents for voice testing', () => {
-    assert.ok(
-      agents.length >= 7,
-      `Expected at least 7 agents for voice consistency testing, discovered ${agents.length}`
-    );
-  });
-
-  for (const agent of agents) {
-    describe(`${agent.name} (${agent.id})`, () => {
-      // Task 1.8: all 4 registry persona fields are non-empty strings
-      it('registry persona has all 4 fields as non-empty strings', () => {
-        const fields = ['role', 'identity', 'communication_style', 'expertise'];
-        for (const field of fields) {
-          assert.ok(
-            typeof agent.persona[field] === 'string' && agent.persona[field].length > 0,
-            `[Low-Confidence] ${agent.name} (${agent.id}): registry persona.${field} should be a non-empty string (human spot-check recommended)`
-          );
-        }
-      });
-
-    });
-  }
-});
+// The registry-vs-agent-file half of this file is gone (T140). Persona agreement is an exact
+// relation in `tests/unit/agent-persona-registry-sync.test.js`, over all 12 registered agents
+// rather than the 7 this suite discovers, and it runs in `npm test` as well as CI's coverage job.
+// The "all 4 persona fields non-empty" check that stood here duplicated
+// `tests/unit/agent-registry.test.js` exactly, for the same agents, so it went with it.
 
 // ─── P0 Voice Consistency: Workflow Step Voice Markers ───────────
 

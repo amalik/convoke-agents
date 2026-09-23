@@ -108,6 +108,9 @@ Add the **7th** describe block. **Expected total: 63 tests (9 × 7)** if 2.4–2
 
 `VOICE_MARKERS['hypothesis-engineer']` also expects `What if?` **or** `safe bet` shared between registry and agent file, plus ≥2 of `hypothesis/assumption/brainwriting/falsifiable/belief/experiment` in `## Principles`.
 
+
+> **T140 (2026-09-23) changed this step.** `VOICE_MARKERS['hypothesis-engineer']` and the registry-vs-agent-file cross-validation tests it fed no longer exist; `tests/p0/p0-voice-consistency.test.js` now holds only the workflow-vocabulary checks. What replaces them is stricter: `tests/unit/agent-persona-registry-sync.test.js` requires this agent's `agent-registry.js` persona to equal the **leading block** of the matching field in its agent file, so **converting this agent means editing `agent-registry.js` in the same commit** — `npm test` goes red otherwise. A v6.3 file exposes `identity`, `communication_style` and `principles`; the gate also rejects a file that still carries its v5 `<persona>` XML alongside new markdown sections, so delete the XML when you convert.
+
 **Class B — port to the format-aware helpers (copy [`p0-mila.test.js:74-104`](../../tests/p0/p0-mila.test.js#L74)):**
 
 | # | Today (inline v5 regex) | Port to | Threshold change |

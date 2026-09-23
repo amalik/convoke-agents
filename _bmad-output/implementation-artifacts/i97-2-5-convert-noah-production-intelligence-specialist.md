@@ -88,6 +88,9 @@ Add a **5th** describe block to `tests/integration/vortex-parity.test.js` with t
 
 `VOICE_MARKERS['production-intelligence-specialist']` also expects `The signal indicates` **or** `what we're seeing in context` shared between registry and agent file, plus ≥2 of `signal/pattern/observe/behavior/metric/anomaly/data` in `## Principles`.
 
+
+> **T140 (2026-09-23) changed this step.** `VOICE_MARKERS['production-intelligence-specialist']` and the registry-vs-agent-file cross-validation tests it fed no longer exist; `tests/p0/p0-voice-consistency.test.js` now holds only the workflow-vocabulary checks. What replaces them is stricter: `tests/unit/agent-persona-registry-sync.test.js` requires this agent's `agent-registry.js` persona to equal the **leading block** of the matching field in its agent file, so **converting this agent means editing `agent-registry.js` in the same commit** — `npm test` goes red otherwise. A v6.3 file exposes `identity`, `communication_style` and `principles`; the gate also rejects a file that still carries its v5 `<persona>` XML alongside new markdown sections, so delete the XML when you convert.
+
 **Class B — port these three to the format-aware helpers (copy [`p0-mila.test.js:74-104`](../../tests/p0/p0-mila.test.js#L74)):**
 
 | # | Today (inline v5 regex) | Port to | Threshold change |
@@ -144,7 +147,7 @@ Mirror [Story 2.4's Tasks 1–12](i97-2-4-convert-isla-discovery-empathy-expert.
 - [Source: `_bmad-output/planning-artifacts/convoke-epic-bmad-v63-source-format-adoption.md#story-25-convert-noah-production-intelligence-specialist`]
 - [Source: `_bmad/bme/_vortex/agents/production-intelligence-specialist/SKILL.md`] — 7 codes, 5 principles, 9 rules, 4 exec paths
 - [Source: `tests/p0/p0-noah.test.js:32,39,44-47,52,68,88,104`] — the AC-P0 contracts
-- [Source: `tests/p0/p0-voice-consistency.test.js:19-31`] — `VOICE_MARKERS` for Noah
+- [Source: `tests/unit/agent-persona-registry-sync.test.js` — the registry/agent-file relation that replaced `VOICE_MARKERS` (T140)] — `VOICE_MARKERS` for Noah
 - [Source: `scripts/update/lib/agent-registry.js:71-73`] — registry title/icon/stream
 - [Source: `_bmad/bme/_vortex/contracts/hc5-signal-report.md`] — HC5 schema Noah's workflows emit
 

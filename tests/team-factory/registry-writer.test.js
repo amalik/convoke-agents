@@ -17,6 +17,7 @@ const {
   normalizeAgentFiles,
   personaCoverage,
   hasPersona,
+  firstBlock,
 } = require('../../_bmad/bme/_team-factory/lib/writers/registry-writer');
 
 const GOLDEN_BLOCK_PATH = path.join(__dirname, 'golden', 'golden-registry-block.js');
@@ -831,5 +832,52 @@ describe('writeRegistryBlock — agent files that cannot be read are reported', 
     assert.deepEqual(result.personaCoverage.missingAgentFiles.slice().sort(), [directory, missing].sort());
 
     delete require.cache[require.resolve(registryPath)];
+  });
+});
+
+describe('firstBlock — the relation the registry holds (T140)', () => {
+  // Every persona fixture in this file is a single one-line block, on which firstBlock is the
+  // identity function — so before these tests, deleting all four of its call sites in
+  // buildAgentEntry left the entire suite green. Found by R2, 2026-09-23.
+  it('keeps a leading list whole however its items are spaced', () => {
+    assert.equal(firstBlock('- one\n- two\n- three'), '- one - two - three');
+    assert.equal(firstBlock('- one\n\n- two\n\n- three'), '- one - two - three',
+      'a blank line between bullets must not register one principle of three');
+    assert.equal(firstBlock('* star one\n\n* star two'), '* star one * star two');
+  });
+
+  it('stops at the operational content a v5 field carries after its opening block', () => {
+    assert.equal(firstBlock('Opening paragraph.\n\nDetection targets:\n- a manifest\n- a config'),
+      'Opening paragraph.');
+    assert.equal(firstBlock('- one\n\n- two\n\nTrailing prose that is not a bullet.'), '- one - two');
+  });
+
+  it('collapses whitespace and survives CRLF', () => {
+    assert.equal(firstBlock('Two   spaces\n and a wrap.'), 'Two spaces and a wrap.');
+    assert.equal(firstBlock('- one\r\n\r\n- two'), '- one - two');
+  });
+
+  it('returns an empty string for nothing at all', () => {
+    for (const empty of ['', '   ', '\n\n', null, undefined]) assert.equal(firstBlock(empty), '');
+  });
+});
+
+describe('buildAgentEntry — writes the first block, not the whole field (T140)', () => {
+  it('truncates a multi-block extracted persona to its leading block', () => {
+    const entry = buildAgentEntry(
+      { id: 'multi-block-agent', name: 'Multi', capabilities: ['do-thing'] },
+      'probe-team',
+      {
+        role: 'Role line.',
+        identity: 'Opening identity.\n\nOperational detail the registry does not hold.',
+        communication_style: 'Speaks plainly.\n\nMore about how.',
+        expertise: '- one\n\n- two',
+      }
+    );
+    assert.equal(entry.persona.identity, 'Opening identity.',
+      'a generated team must not be born holding a value its own sync gate calls drift');
+    assert.equal(entry.persona.communication_style, 'Speaks plainly.');
+    assert.equal(entry.persona.expertise, '- one - two', 'a spaced-out principle list must survive whole');
+    assert.equal(entry.persona.role, 'Role line.');
   });
 });

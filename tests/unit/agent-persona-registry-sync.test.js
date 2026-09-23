@@ -15,8 +15,11 @@
  * `npm test` covers `tests/unit tests/team-factory tests/lib tests/audit`, so the p0 suite runs only
  * inside CI's `coverage` job. This file runs in both.
  *
- * THE RELATION, ruled 2026-09-23: **the registry field equals the first block of the agent file's
- * corresponding field**, compared with whitespace collapsed. Not equality of the whole field: a v5
+ * THE RELATION, ruled 2026-09-23: **the registry field equals the leading block of the agent file's
+ * corresponding field**, compared with whitespace collapsed. A leading LIST is one block however its
+ * items are spaced — splitting on blank lines alone registered one principle of N. The rule lives in
+ * `registry-writer.js::firstBlock`, which is also what writes generated teams' personas; this file
+ * imports it rather than restating it, because two copies of one rule drift apart silently. Not equality of the whole field: a v5
  * agent file's `<identity>` carries operational content after the opening paragraph (detection
  * targets, lists) that the registry deliberately summarises — `stack-detective` holds 369 registry
  * characters against a 973-character element. Not a bare prefix either: "the first three words"
@@ -24,22 +27,31 @@
  * consistent at ruling time already looked (Liam and Noah on all four fields; `stack-detective`,
  * `model-curator` and `readiness-analyst` on identity).
  *
+ * THE AGENT FILE IS FOUND BY SEARCHING `_bmad/bme/`, not by a list of known directories: `add-team`
+ * writes each new team's agents under its own submodule, so a hardcoded list made every generated
+ * team fail on the path rather than on its persona. Exactly one file must match an id — two agents
+ * sharing an id across modules would otherwise both be validated against whichever file was listed
+ * first, and neither against its own.
+ *
  * WHICH FIELDS MUST BE COMPARED IS DERIVED FROM THE FILE'S FORMAT, not from what the file happens
  * to contain: v5 files must expose all four, v6.3 files the three they have (they carry no
  * `## Role` section). Otherwise renaming one heading drops that field out of the comparison and
  * leaves its registry value unconstrained, with nothing failing.
  *
  * WHAT THIS DOES NOT CATCH:
- *   - **`role` on the three converted agents.** No gate compares it — `tests/unit/agent-registry.
- *     test.js` only checks it is non-empty. The p0 role test deleted alongside this file did compare
- *     it, through a helper that maps a v6.3 agent's role onto its identity section, so this is a net
- *     reduction on that one field. Filed as **T209**.
+ *   - **`role` on Mila.** v6.3 files carry no `## Role` section, so this gate cannot compare it for
+ *     any converted agent — but `tests/p0/p0-emma.test.js` and `p0-wade.test.js` pin Emma's and
+ *     Wade's registry role against their agent files, and p0 runs in CI's `coverage` job, which is in
+ *     `publish.needs`. Mila has no such test, so hers is guarded only by a non-emptiness check in
+ *     `tests/unit/agent-registry.test.js`. Filed as **T209**.
  *   - **How deep the guard goes, which the agent file's author chooses.** Inserting a blank line
  *     after the first sentence shrinks what is compared, and nothing detects the shrink. Measured
  *     2026-09-23: 8 of 45 fields hold less than their whole file field — `expertise` at 63-67% for
  *     the three converted agents, `identity` at 30-38% for the five multi-block v5 agents. Filed as
  *     **T211**.
  *   - Both sides edited to the same wrong text.
+ *   - A field's later blocks, by construction — that content is what the registry is allowed not to
+ *     hold.
  *
  * `committed-artifact-integrity` (`project-context.md`): the **registry** is the subject; the agent
  * files are the authority, and are asserted on only for existence and for exposing their format's
@@ -55,67 +67,112 @@ const path = require('path');
 const { PACKAGE_ROOT } = require('../helpers');
 const {
   extractPersonaFromAgentFile,
+  firstBlock,
 } = require('../../_bmad/bme/_team-factory/lib/writers/registry-writer');
 const registry = require('../../scripts/update/lib/agent-registry');
 
 const FIELDS = ['role', 'identity', 'communication_style', 'expertise'];
+const BME = path.join(PACKAGE_ROOT, '_bmad/bme');
 
-// One roster, from the registry itself: the Vortex seven, the Gyre four, and the standalone bme
-// agents. A test scoped to one module is how six drifted agents stayed green — the p0 voice suite
-// iterates Vortex only, and `review-coach` (Gyre) had diverged on all four fields.
 // Derived, not listed: `add-team` writes a new team as its own `<PREFIX>_AGENTS` export
 // (`registry-writer.js`, its `written:` array), so a hardcoded list of export names would leave
 // every generated team unguarded — green forever, whatever its personas said.
 const AGENTS = Object.entries(registry)
   .filter(([name, value]) => /(^|_)AGENTS$/.test(name) && Array.isArray(value))
   .flatMap(([, value]) => value)
-  .filter((a) => a && a.id && a.persona)
+  .filter((a) => a && a.id)
   .sort((a, b) => a.id.localeCompare(b.id));
 
-// The three shapes an agent file takes today. A registered agent whose file matches none of them
-// fails rather than skips — that is the check, not an inconvenience.
-function agentFile(id) {
-  const candidates = [
-    `_bmad/bme/_vortex/agents/${id}/SKILL.md`,
-    `_bmad/bme/_gyre/agents/${id}.md`,
-    `_bmad/bme/_team-factory/agents/${id}.md`,
-  ].map((p) => path.join(PACKAGE_ROOT, p));
-  return candidates.find((p) => fs.existsSync(p)) || null;
+// An entry may carry its persona nested under `persona` or flat on the entry itself: the registry's
+// own doc block for `EXTRA_BME_AGENTS` describes the flat shape while its entry uses the nested one.
+// Skipping the shape we did not expect is how an agent goes unchecked, so both are read and an entry
+// with neither fails.
+function personaOf(agent) {
+  if (agent.persona && typeof agent.persona === 'object') return agent.persona;
+  if (FIELDS.some((f) => typeof agent[f] === 'string')) return agent;
+  return null;
+}
+
+// Every `_bmad/bme/<module>/agents/<id>.md` and `.../agents/<id>/SKILL.md`, found by walking rather
+// than by a list of the three shapes that existed when this was written.
+function agentFiles(id) {
+  const found = [];
+  for (const mod of fs.readdirSync(BME, { withFileTypes: true })) {
+    if (!mod.isDirectory()) continue;
+    const dir = path.join(BME, mod.name, 'agents');
+    if (!fs.existsSync(dir)) continue;
+    for (const p of [path.join(dir, `${id}.md`), path.join(dir, id, 'SKILL.md')]) {
+      if (fs.existsSync(p)) found.push(p);
+    }
+  }
+  return found;
 }
 
 const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim();
-const firstBlock = (s) => norm(String(s || '').split(/\n\s*\n/)[0]);
 
 describe('agent registry personas match their agent files', () => {
-  it('the registry exports agents to check', () => {
-    assert.ok(AGENTS.length >= 12,
-      `expected at least the 7 Vortex + 4 Gyre + 1 bme agents, got ${AGENTS.length}`);
+  it('every id the registry declares is on the roster this file checks', () => {
+    const declared = [...new Set([
+      ...(registry.AGENT_IDS || []),
+      ...(registry.GYRE_AGENT_IDS || []),
+      ...(registry.EXTRA_BME_AGENT_IDS || []),
+    ])].sort();
+    assert.ok(declared.length > 0, 'the registry declared no agent ids at all');
+    const onRoster = AGENTS.map((a) => a.id);
+    assert.deepEqual(declared.filter((id) => !onRoster.includes(id)), [],
+      'an id the registry declares is not reachable through any `*_AGENTS` export — it would go unchecked');
+  });
+
+  it('no two registered agents share an id', () => {
+    const ids = AGENTS.map((a) => a.id);
+    const dupes = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+    assert.deepEqual(dupes, [],
+      `two registered agents share an id (${dupes.join(', ')}) — both would be validated against one file, neither against its own`);
   });
 
   for (const agent of AGENTS) {
     it(`${agent.id}: every persona field the file carries matches the registry`, async () => {
-      const file = agentFile(agent.id);
-      assert.ok(file, `${agent.id} is registered but has no agent file in any known location`);
+      const persona = personaOf(agent);
+      assert.ok(persona,
+        `${agent.id} is registered with no persona in either shape (nested \`persona: {…}\` or flat fields)`);
+
+      const files = agentFiles(agent.id);
+      assert.equal(files.length, 1,
+        files.length === 0
+          ? `${agent.id} is registered but no _bmad/bme/*/agents/${agent.id}.md or .../${agent.id}/SKILL.md exists`
+          : `${agent.id} resolves to ${files.length} agent files (${files.map((f) => path.relative(PACKAGE_ROOT, f)).join(', ')}) — which one is authoritative is undefined`);
+      const file = files[0];
+      const raw = fs.readFileSync(file, 'utf8');
+      const rel = path.relative(PACKAGE_ROOT, file);
+
+      // A half-converted file — v6.3 sections added, the v5 XML left behind — is the drift this gate
+      // exists for, wearing a disguise: the extractor prefers the XML wherever it appears, so the
+      // registry stays "in sync" with the persona the agent no longer uses.
+      const hasXml = /<(identity|communication_style|principles)>/.test(raw);
+      const hasMarkdown = /^##\s+(Identity|Communication Style|Principles)\s*$/m.test(raw);
+      assert.ok(!(hasXml && hasMarkdown),
+        `${rel} carries BOTH a v5 XML persona and v6.3 markdown sections. The extractor reads the XML, so this file's `
+        + 'registry entry is pinned to the older text. Finish the conversion by deleting the XML persona.');
 
       const filePersona = await extractPersonaFromAgentFile(file);
-      // Which fields the file must expose is derived from its FORMAT, not from what it happens
-      // to contain. Without this, renaming a heading (`## Principles` → `## Operating
-      // Principles`) drops that field out of the comparison silently and leaves the registry
-      // value unconstrained — no failure, no signal.
-      const isV5 = /^<agent\s/m.test(fs.readFileSync(file, 'utf8'));
+      // Which fields the file must expose is derived from its FORMAT, not from what it happens to
+      // contain. Without this, renaming a heading (`## Principles` → `## Operating Principles`) drops
+      // that field out of the comparison silently and leaves the registry value unconstrained.
+      const isV5 = /^\s*<agent[\s>]/m.test(raw);
       const required = isV5 ? FIELDS : FIELDS.filter((f) => f !== 'role');
       const compared = [];
       for (const field of FIELDS) {
         const expected = firstBlock(filePersona[field]);
         if (!expected) continue;
         compared.push(field);
-        assert.equal(norm(agent.persona[field]), expected,
-          `${agent.id}: registry persona.${field} has drifted from ${path.relative(PACKAGE_ROOT, file)}. `
-          + 'The agent file is authoritative: copy its first block into the registry, do not edit the file to match.');
+        assert.equal(norm(persona[field]), expected,
+          `${agent.id}: registry persona.${field} has drifted from ${rel}. `
+          + 'The agent file is authoritative: copy its leading block into the registry, do not edit the file to match.');
       }
+
       const missing = required.filter((f) => !compared.includes(f));
       assert.deepEqual(missing, [],
-        `${agent.id}: ${path.relative(PACKAGE_ROOT, file)} no longer exposes ${missing.join(', ')} — `
+        `${agent.id}: ${rel} no longer exposes ${missing.join(', ')} — `
         + `a ${isV5 ? 'v5' : 'v6.3'} agent file must expose ${required.join(', ')}, or the registry value goes unchecked. `
         + 'Restore the element or heading rather than letting the field drop out of the comparison.');
     });

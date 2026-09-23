@@ -474,7 +474,10 @@ The dev agent will likely be the same LLM that authored this spec. **Do not self
 - [Source: `_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md`] — pre-migration source, all 8 codes + 4 workflow paths + 7 principles
 - [Source: `tests/p0/p0-isla.test.js:32,39,44-47,52`] — the AC-P0 literal-phrase constraints
 - [Source: `tests/p0/helpers.js:179-233,276-314`] — `parseV63Definition` field mapping + `MIN_NUMERIC_ACTIVATION_STEPS`
-- [Source: `tests/p0/p0-voice-consistency.test.js:19-31,85-125`] — `VOICE_MARKERS` + cross-validation
+- [Source: `tests/unit/agent-persona-registry-sync.test.js` — the registry/agent-file relation that replaced `VOICE_MARKERS` (T140)] — `VOICE_MARKERS` + cross-validation
+
+
+> **T140 (2026-09-23) changed this step.** `VOICE_MARKERS['discovery-empathy-expert']` and the registry-vs-agent-file cross-validation tests it fed no longer exist; `tests/p0/p0-voice-consistency.test.js` now holds only the workflow-vocabulary checks. What replaces them is stricter: `tests/unit/agent-persona-registry-sync.test.js` requires this agent's `agent-registry.js` persona to equal the **leading block** of the matching field in its agent file, so **converting this agent means editing `agent-registry.js` in the same commit** — `npm test` goes red otherwise. A v6.3 file exposes `identity`, `communication_style` and `principles`; the gate also rejects a file that still carries its v5 `<persona>` XML alongside new markdown sections, so delete the XML when you convert.
 - [Source: `scripts/update/lib/agent-registry.js:27-35`] — registry persona used by voice cross-validation
 - [Source: `tests/integration/vortex-parity.test.js:310-432`] — Mila describe block, the template for Isla's
 - [Source: `tests/integration/fixtures/vortex-parity/research-convergence-specialist-baseline.json`] — fixture schema

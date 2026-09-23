@@ -94,6 +94,9 @@ Add a **6th** describe block. **Expected total: 54 tests (9 × 6)** if Stories 2
 
 `VOICE_MARKERS['learning-decision-expert']` also expects `The evidence suggests` **or** `what we've learned` shared between registry and agent file, plus ≥2 of `evidence/decision/pivot/learning/data/action/experiment` in `## Principles`.
 
+
+> **T140 (2026-09-23) changed this step.** `VOICE_MARKERS['learning-decision-expert']` and the registry-vs-agent-file cross-validation tests it fed no longer exist; `tests/p0/p0-voice-consistency.test.js` now holds only the workflow-vocabulary checks. What replaces them is stricter: `tests/unit/agent-persona-registry-sync.test.js` requires this agent's `agent-registry.js` persona to equal the **leading block** of the matching field in its agent file, so **converting this agent means editing `agent-registry.js` in the same commit** — `npm test` goes red otherwise. A v6.3 file exposes `identity`, `communication_style` and `principles`; the gate also rejects a file that still carries its v5 `<persona>` XML alongside new markdown sections, so delete the XML when you convert.
+
 **Class B — port to the format-aware helpers (copy [`p0-mila.test.js:74-104`](../../tests/p0/p0-mila.test.js#L74)):**
 
 | # | Today (inline v5 regex) | Port to | Threshold change |
@@ -153,7 +156,7 @@ Mirror [Story 2.4's Tasks 1–12](i97-2-4-convert-isla-discovery-empathy-expert.
 - [Source: `_bmad-output/planning-artifacts/convoke-epic-bmad-v63-source-format-adoption.md#story-26-convert-max-learning-decision-expert`]
 - [Source: `_bmad/bme/_vortex/agents/learning-decision-expert/SKILL.md`] — 8 codes, 7 principles, 8 rules, 5 exec paths
 - [Source: `tests/p0/p0-max.test.js:33,40,45-48,53,69,89,105`] — the AC-P0 contracts
-- [Source: `tests/p0/p0-voice-consistency.test.js:19-31`] — `VOICE_MARKERS` for Max
+- [Source: `tests/unit/agent-persona-registry-sync.test.js` — the registry/agent-file relation that replaced `VOICE_MARKERS` (T140)] — `VOICE_MARKERS` for Max
 - [Source: `scripts/update/lib/agent-registry.js:82-84`] — registry title/icon/stream
 - [Source: `_bmad/bme/_vortex/workflows/learning-card/validate.md`] — 134 lines, no `## Output`
 

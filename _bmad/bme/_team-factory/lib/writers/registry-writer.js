@@ -382,6 +382,38 @@ function agentIdFromPath(agentFilePath) {
 }
 
 /**
+ * The leading block of a persona field, whitespace collapsed — the form the registry holds.
+ *
+ * T140 ruled the relation between `agent-registry.js` and an agent file: the registry field equals
+ * the file field's first block. A v5 `<identity>` element carries operational content after its
+ * opening paragraph (detection targets, lists) that the registry summarises, so writing the whole
+ * field is wrong.
+ *
+ * A LEADING LIST IS ONE BLOCK, however its items are spaced. Splitting on blank lines alone turned
+ * `- one` / `- two` / `- three` written with blank lines between them into `- one`, so an agent file
+ * that spaced out its principles registered one principle of N — and the sync gate could not see it,
+ * because it applied the same rule to the same text and agreed by construction. The truncated value
+ * reaches `_bmad/_config/agent-manifest.csv`, which is what party-mode loads as the agent's
+ * principles. Found by R2, 2026-09-23; no shipped agent file was written that way.
+ *
+ * Exported because `tests/unit/agent-persona-registry-sync.test.js` enforces the relation this
+ * function writes: two copies of one rule drift apart silently.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function firstBlock(value) {
+  const blocks = String(value || '').split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+  if (blocks.length === 0) return '';
+  const isListItem = (b) => /^[-*+]\s/.test(b);
+  const taken = [blocks[0]];
+  if (isListItem(blocks[0])) {
+    for (let i = 1; i < blocks.length && isListItem(blocks[i]); i++) taken.push(blocks[i]);
+  }
+  return taken.join(' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
  * Extract an agent's persona from the agent file BMB generated.
  *
  * tf-2-13 (T131), operator ruling 2026-09-11. Filed as "the factory never COLLECTS
@@ -407,21 +439,6 @@ function agentIdFromPath(agentFilePath) {
  * @param {string} agentFilePath
  * @returns {Promise<{role: string, identity: string, communication_style: string, expertise: string}>}
  */
-/**
- * The first block of a persona field, whitespace collapsed — the form the registry holds.
- *
- * T140 ruled the relation between `agent-registry.js` and an agent file: the registry field
- * equals the file field's first block. A v5 `<identity>` element carries operational content
- * after its opening paragraph (detection targets, lists) that the registry summarises, so the
- * whole field is the wrong value to write.
- *
- * @param {string} value
- * @returns {string}
- */
-function firstBlock(value) {
-  return String(value || '').split(/\n\s*\n/)[0].replace(/\s+/g, ' ').trim();
-}
-
 async function extractPersonaFromAgentFile(agentFilePath) {
   const empty = { role: '', identity: '', communication_style: '', expertise: '' };
   let content;
@@ -906,6 +923,7 @@ if (require.main === module) {
 
 module.exports = {
   writeRegistryBlock,
+  firstBlock,
   PERSONA_EVIDENCE_FIELDS,
   normalizeAgentFiles,
   personaCoverage,
