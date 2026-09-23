@@ -66,7 +66,7 @@ A red gate is a gate doing its job. If one fails for a reason you believe is unr
 
 | Rule | In one line |
 |---|---|
-| `test-fixture-isolation` | Every `runScript(...)` passes `{ cwd: tmpDir }`. Never test against the live repo tree. |
+| `test-fixture-isolation` | Every `runScript(...)` passes `{ cwd: tmpDir }`. Never test against the live repo tree — the one exception, `committed-artifact-integrity`, is for a test whose subject *is* a committed artifact's integrity, and it carries four conditions. |
 | `fixture-determinism` | Never assert on a value you do not control — clocks, unawaited children, fixed delays, ambient env. |
 | `no-hardcoded-versions` | Read the version from `package.json` via `getPackageVersion()`. |
 | `no-process-cwd-in-libs` | Use `findProjectRoot()` or accept a `projectRoot` parameter. |

@@ -11,10 +11,13 @@
  * harness called it with an INVALID mode to exercise its error handling, and `tests/migration/` is
  * not in the `npm test` suite.
  *
- * THIS TEST READS REPOSITORY DATA ON PURPOSE, and does not claim an exemption for it.
- * `test-fixture-isolation` makes none ("Exception. None. … escalate"). The subject here is the
- * integrity of these specific files and the record that cites them; a fixture copy would test the
- * copy. Disclosed for the operator rather than asserted as allowed.
+ * THIS TEST READS REPOSITORY DATA ON PURPOSE, under `test-fixture-isolation`'s one exception,
+ * `committed-artifact-integrity` (ruled 2026-09-23 on this test's escalation). The subject here is the
+ * integrity of these specific files and the record that cites them; a fixture copy would test the copy.
+ * The exception's four conditions bind this file: assert only about the artifact; take expectations
+ * from sources the artifact does not control (the agent registry, the SKILL.md files, the scoring
+ * sheets); state what the test cannot detect (THE FLOOR, below); and accept that a newly registered
+ * agent turns this suite red until its capture exists.
  *
  * WHAT "COMPLETE" MEANS HERE — each check below names the loss it catches. A first repair of these
  * files produced valid JSON that had cut Emma's baseline from 7 prompts to 3, so validity is not

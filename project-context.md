@@ -22,7 +22,16 @@ Rules and conventions that BMAD dev agents and contributors must follow when wor
 - **Rescuing an existing bare call.** Create a fixture in `before()`, thread `cwd` through the test's helper, convert assertions to behavior-based. If the test was a pure smoke test ("does it run against our own repo?") and the same behavior is already covered by a fixture-based test in the same file, **delete it** — do not fixture-ize redundant coverage.
 - **Reviewing a PR.** If a diff adds `runScript(...)` without a `cwd:` option, block and cite this rule.
 
-**Exception.** None. If you believe you have one, escalate — the exception is almost certainly a sign the test is checking something that belongs in a separate gate (e.g., `npm run docs:audit` as its own CI step), not in the unit/integration suite.
+**Exception.** One, and it is narrow: **`committed-artifact-integrity`**. A test whose *subject* is the integrity of a committed artifact — where the artifact itself is what may have rotted, not the code that reads it — may read that artifact from `PACKAGE_ROOT`. A fixture copy would test the copy. Everything else escalates, and is almost certainly a sign the test is checking something that belongs in a separate gate (e.g., `npm run docs:audit` as its own CI step), not in the unit/integration suite.
+
+**Conditions — all four, or you do not have the exception.**
+
+1. **Assert only about the artifact.** The moment the test asserts on the behaviour of code, the exception is gone and the code side needs a fixture.
+2. **Take expectations from a source the artifact does not control** — a registry, a committed record — never from the artifact's own contents. Otherwise a corrupted artifact chooses the standard it is judged against.
+3. **State in the file what the test cannot detect.** A green run against data is easy to over-read.
+4. **Accept that new data makes it red until the data is complete.** That is the point, not a flake: adding an 8th agent to the registry turns the personality suite red until that agent's capture exists.
+
+**Ruled 2026-09-23**, on the escalation this rule asks for, from T135, raised by `tests/lib/personality-fixtures.test.js` — which cites the exception and meets the four conditions. **This ruling is not a survey of the suite.** 22 test files read paths under `PACKAGE_ROOT`; most do so legitimately (resolving the script under test, seeding a fixture), but at least two assert on a live artifact's integrity in exactly this shape — `tests/lib/covenant-packaging.test.js` (the shipped covenant directory) and `tests/unit/validate-marketplace.test.js` (`.claude-plugin/marketplace.json`) — and have not been checked against the conditions. Filed as **T208**. Not a separate gate, because the rule's separate-gate advice fits a test of the live *project* (`docs:audit`), while this is a test of committed *data*; a new CI job would be one more thing to wire, and a gate not in `publish.needs` is documentation. Condition 2 is there because the first draft of that test took each capture's prompt-id prefix from the capture itself — so a capture filed under the wrong agent was judged against the wrong slice of the record, and passed.
 
 ---
 

@@ -2367,6 +2367,10 @@ these, with the reason each needs a record that does not exist outside the captu
 have parsed since `854b2ade`. This change repairs Emma and adds the guard those stories inherit; it is
 not what made their harness runs possible.
 
+**Escalation resolved 2026-09-23.** The test reads repository data, and `test-fixture-isolation` said
+"Exception. None. … escalate". It now has one — `committed-artifact-integrity`, with four conditions —
+and this test cites it. The ruling claims no census of the suite; T208 classifies the rest.
+
 **Review note — data integrity.** An independent review verified the repair lossless by a third method
 (character-level diff, a separate lexer, and a Node token comparison), itself shown to fail on six
 planted defects. Every original character survives in order; the repair added only escapes, four closing
