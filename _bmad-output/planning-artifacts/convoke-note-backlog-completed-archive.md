@@ -2375,3 +2375,70 @@ and this test cites it. The ruling claims no census of the suite; T208 classifie
 (character-level diff, a separate lexer, and a Node token comparison), itself shown to fail on six
 planted defects. Every original character survives in order; the repair added only escapes, four closing
 quotes on baseline FP1–FP4, and layout whitespace. The author's repair-time verifier is not committed.
+
+## T140
+
+**Lane:** Fast Lane · **Score:** 3.2 (rescored from 6.0 at pickup) · **Portfolio:** convoke · **Status:** ✅ Done 2026-09-23
+
+**Defect.** `agent-registry.js` holds each agent's persona text, and nothing required it to match the
+agent file. The gate that existed — three keyword-overlap tests in `tests/p0/p0-voice-consistency.test.js`
+— asked whether registry and file shared at least one signature phrase or one four-letter word. Two
+fully diverged personas passed it. It self-labelled `[Low-Confidence]`.
+
+**The row's own diagnosis did not survive pickup.** It said all three converted agents had drifted and
+the unconverted control was identical, so the drift was a side effect of the I97 conversion. Measured
+with the shipped `extractPersonaFromAgentFile`: six agents diverged on `identity` — the three converted
+ones and **Isla, Max and Gyre's `review-coach`, none of which was ever converted** — and the control was
+not identical but a summary: 369 registry characters against a 973-character file element. Had the row
+been implemented as written, three drifted agents would have been left behind and the gate would still
+not have seen them.
+
+**The relation, ruled 2026-09-23.** The registry field equals the **first block** of the agent file's
+corresponding field, whitespace collapsed.
+
+- Not the whole field: a v5 `<identity>` carries operational content after its opening paragraph
+  (detection targets, lists) that the registry deliberately summarises.
+- Not a bare prefix: "the first three words" would satisfy that, and a mutant proves the gate rejects it.
+- The first block has a mechanical boundary, and it is what every already-consistent agent looked like —
+  Liam and Noah on all four fields, `stack-detective`, `model-curator` and `readiness-analyst` on identity.
+
+**What shipped.** 25 persona fields across 10 of 12 agents re-synced from their files;
+`tests/unit/agent-persona-registry-sync.test.js` enforcing the relation; three superseded p0 tests and
+their phrase table deleted; `registry-writer.js` writing first blocks so a generated team is not born
+drifted; `_bmad/_config/agent-manifest.csv` regenerated.
+
+**Two design choices worth keeping.** The gate derives its roster from every `*_AGENTS` export rather
+than a list of three, because `add-team` writes each new team as its own export — a listed roster would
+have left every generated team green forever. And it derives which fields a file must expose from the
+file's **format**, because otherwise renaming one heading drops that field out of the comparison with
+nothing failing.
+
+| Mutant | Result |
+|---|---|
+| registry value edited | killed |
+| registry value truncated to a bare prefix | killed |
+| agent file's first block edited | killed |
+| agent file deleted | killed |
+| registered id pointing at no file | killed |
+| persona sections stripped from a file | killed |
+| a later block added to a v5 element, or to a v6.3 section | passes by design — the registry is not required to hold it |
+
+**R1 (independent) found three defects behind a green suite.** (1) `_bmad/_config/agent-manifest.csv`
+was not regenerated: `agent-surface-parity` is in `publish.needs` and would have failed, and because
+`export-engine.js` reads the manifest rather than the registry, the re-sync would have reached no
+consumer at all. (2) The gate's hardcoded export list left `add-team`-generated teams unguarded — a
+`LOOM_AGENTS` block with the persona text `"NOT CHECKED BY ANYTHING"` passed. (3) A field could stop
+being compared silently. All three were fixed before landing. R1 also verified the 25 rewrites lossless
+with its own parser: 45 of 48 field pairs match exactly, 3 have no such field in the file, 0 mismatch.
+
+**Residue, filed rather than patched.** T209 (`role` on converted agents is guarded by nothing but a
+non-emptiness check — a net reduction, since the deleted p0 test did touch it), T210 (the writer's
+spec-persona precedence can still produce a registry value this gate calls drift, and reversing it would
+overturn tf-2-13), T211 (how deep the guard goes is chosen by the agent file's author and nothing
+measures it — 8 of 45 fields hold less than their whole field today).
+
+| Fact | Command |
+|---|---|
+| Every registered agent's persona matches its file | `node --test tests/unit/agent-persona-registry-sync.test.js` |
+| The suite is green with the re-synced registry | `npm test` |
+| The manifest is in sync with the registry | `npm run generate:manifest && git diff --quiet -- _bmad/_config/agent-manifest.csv` — **on a clean tree**: regeneration must produce no change. This is CI's own check (`agent-surface-parity`, in `publish.needs`), which runs it against a checked-out commit. |

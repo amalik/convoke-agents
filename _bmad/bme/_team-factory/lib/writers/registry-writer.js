@@ -343,10 +343,16 @@ function buildAgentEntry(agentSpec, teamNameKebab, extractedPersona) {
     persona: {
       // tf-2-13 (T131): an explicit spec persona still wins. The extracted one is the
       // fallback that makes the EMPTY case correct, not a replacement for a stated value.
-      role: agentSpec.persona?.role || agentSpec.role || (extractedPersona && extractedPersona.role) || '',
-      identity: agentSpec.persona?.identity || (extractedPersona && extractedPersona.identity) || '',
-      communication_style: agentSpec.persona?.communication_style || (extractedPersona && extractedPersona.communication_style) || '',
-      expertise: agentSpec.persona?.expertise || (extractedPersona && extractedPersona.expertise) || '',
+      // T140 (2026-09-23): the registry holds the FIRST BLOCK of the agent file's field —
+      // `tests/unit/agent-persona-registry-sync.test.js` enforces that for every registered
+      // agent. Writing the whole extracted field would generate a team that its own project
+      // calls drifted. A spec-supplied persona still wins (tf-2-13 above) and is written as
+      // given: whether a spec persona must satisfy the relation too is an open ruling, filed
+      // as T210 — not a precedence this row may reverse on its own.
+      role: agentSpec.persona?.role || agentSpec.role || firstBlock(extractedPersona && extractedPersona.role) || '',
+      identity: agentSpec.persona?.identity || firstBlock(extractedPersona && extractedPersona.identity) || '',
+      communication_style: agentSpec.persona?.communication_style || firstBlock(extractedPersona && extractedPersona.communication_style) || '',
+      expertise: agentSpec.persona?.expertise || firstBlock(extractedPersona && extractedPersona.expertise) || '',
     }
   };
 }
@@ -401,6 +407,21 @@ function agentIdFromPath(agentFilePath) {
  * @param {string} agentFilePath
  * @returns {Promise<{role: string, identity: string, communication_style: string, expertise: string}>}
  */
+/**
+ * The first block of a persona field, whitespace collapsed — the form the registry holds.
+ *
+ * T140 ruled the relation between `agent-registry.js` and an agent file: the registry field
+ * equals the file field's first block. A v5 `<identity>` element carries operational content
+ * after its opening paragraph (detection targets, lists) that the registry summarises, so the
+ * whole field is the wrong value to write.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function firstBlock(value) {
+  return String(value || '').split(/\n\s*\n/)[0].replace(/\s+/g, ' ').trim();
+}
+
 async function extractPersonaFromAgentFile(agentFilePath) {
   const empty = { role: '', identity: '', communication_style: '', expertise: '' };
   let content;
