@@ -173,14 +173,24 @@ function assertPath(p, fn) {
  * Every caller is a `run:` block in an add-team step file, and a relative path resolves against
  * whatever directory the executor happens to be in: run step 4 from the repo root and step 5 from
  * anywhere else and `readContext` either throws ENOENT or reads a DIFFERENT context file than
- * `initContext` wrote — which is how `checkConfig`/`checkActivation`/`checkRegistryWiring` reported
- * false failures on a correctly generated team. The step files pass `{project-root}`-prefixed
- * placeholders; this refuses anything else rather than resolving it against a guess.
+ * `initContext` wrote. The step files pass `{project-root}`-prefixed placeholders; this refuses
+ * anything else rather than resolving it against a guess.
+ *
+ * An UNSUBSTITUTED placeholder is refused too, anywhere in the path. `{project-root}/…` fails
+ * `isAbsolute` on its own, but `<root>/…/.factory-context-{team_name_kebab}.json` does not — and a
+ * mid-string placeholder is the easier one to miss, since every context path carries two.
  *
  * @param {string} p
  * @param {string} fn - caller name, for the message
  */
 function assertAbsolute(p, fn) {
+  const unsubstituted = String(p).match(/\{[a-z][a-z0-9_-]*\}/i);
+  if (unsubstituted) {
+    throw new Error(
+      `${fn} was given a path with an unsubstituted placeholder: ${unsubstituted[0]} in ${JSON.stringify(p)}. `
+      + 'Substitute every placeholder in the step file before running the block.'
+    );
+  }
   if (!path.isAbsolute(p)) {
     throw new Error(
       `${fn} needs an absolute path, got ${JSON.stringify(p)}. A relative path resolves against the `

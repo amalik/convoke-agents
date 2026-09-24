@@ -230,8 +230,7 @@ describe('writeAtomic', () => {
 describe('a relative path is refused, not resolved (T168)', () => {
   // The add-team step files pass `{project-root}`-prefixed placeholders. A relative path here
   // resolves against the executor's working directory, so the same block run from two directories
-  // reads or writes two different files — which is how the step-5 checks once reported false
-  // failures on a correctly generated team. Refuse rather than resolve against a guess.
+  // reads or writes two different files. Refuse rather than resolve against a guess.
   const relative = path.join('relative-not-absolute', 'ctx.json');
 
   it('every entry point refuses one', () => {
@@ -243,7 +242,11 @@ describe('a relative path is refused, not resolved (T168)', () => {
     ]) {
       assert.throws(call, /needs an absolute path/, `${name} resolved a relative path instead of refusing it`);
     }
-    // Nothing was created relative to the test process's cwd on the way to those throws.
+    // The DIRECTORY, not just the file: `initContext` mkdirs the parent before it writes, so a
+    // missing guard there leaves a stray directory in whatever tree the suite ran in — and git does
+    // not report an empty directory, so nothing would show it. Asserting on the file alone passed
+    // that mutant.
+    assert.equal(fs.existsSync(path.dirname(relative)), false, 'a refused path must not have had its parent created');
     assert.equal(fs.existsSync(relative), false, 'a refused path must not have been written anyway');
   });
 
@@ -252,9 +255,20 @@ describe('a relative path is refused, not resolved (T168)', () => {
       /needs an absolute path/);
   });
 
-  it('an unsubstituted placeholder is refused too', () => {
+  it('an unsubstituted placeholder is refused wherever it sits in the path', () => {
     assert.throws(() => readContext('{project-root}/_bmad-output/planning-artifacts/ctx.json'),
-      /needs an absolute path/, 'a forgotten substitution must fail, not create a literal {project-root} directory');
+      /unsubstituted placeholder/, 'a forgotten substitution must fail, not create a literal {project-root} directory');
+    // The mid-string one is the easier miss, and `isAbsolute` alone does not catch it: every context
+    // path carries `{project-root}` AND `{team_name_kebab}`.
+    assert.throws(() => initContext(path.join(tmp(), '.factory-context-{team_name_kebab}.json'), {}),
+      /unsubstituted placeholder/, 'a literal {team_name_kebab} file must not be created');
+  });
+
+  it('each entry point carries its own guard, not a neighbour\'s', () => {
+    // recordContext reads before it writes, so `readContext`'s guard masks a missing one here.
+    const p = path.join(tmp(), 'ctx.json');
+    initContext(p, { seeded: true });
+    assert.throws(() => recordContext(path.join('still', 'relative.json'), 'k', 'v'), /needs an absolute path/);
   });
 
   it('an absolute path still reaches the real check', () => {

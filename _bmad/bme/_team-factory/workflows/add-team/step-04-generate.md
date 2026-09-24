@@ -109,7 +109,7 @@ For each agent in pipeline order:
 Delegate to BMB (Bond) to generate the agent `.md` file. Provide full context:
 - Agent ID, name, icon, role, title, capabilities
 - Team name and composition pattern
-- Config path: `_bmad/bme/_{team}/config.yaml`
+- Config path: `{project-root}/_bmad/bme/_{team_name_kebab}/config.yaml` — the `{project-root}`-prefixed convention form, which is what every shipped agent file contains. An unprefixed reference resolves against wherever the agent is activated from, and `activation-validator.js::normaliseConfigRef` strips the prefix before comparing, so the §5c gate accepts either (T214)
 - Communication style guidance from spec
 
 The agent file must follow the standard BMAD agent template:
@@ -173,8 +173,8 @@ expect: result.valid === true → the block has already written the WHOLE `{vali
 
 **5d. Registry Block (Full Write Safety Protocol)**
 ```
-run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), rw = require('{project-root}/_bmad/bme/_team-factory/lib/writers/registry-writer.js'); rc.loadSpec('{spec_path}').then(s => rw.writeRegistryBlock(s, '{registry_path}', { agentFiles: rc.readContext('{context_path}').agent_files })).then(r => { rc.recordContext('{context_path}', 'registry_wiring_result', r); rc.recordContext('{context_path}', 'registry_path', require('path').resolve('{registry_path}')); console.log(JSON.stringify(r)); })"
-expect: the block has already written the WHOLE result object into `{context_path}` as `registry_wiring_result` (`end-to-end-validator.js::checkRegistryWiring` reads `.success` and `.written`), and the ABSOLUTE path it wrote to as `registry_path` (`checkPersonaCoverage` rejects a relative one, so the block resolves it against the same cwd the writer used). Then, in THIS order — `personaCoverage` is `null` on every path except a completed write, so it cannot tell you which path you are on:
+run: node -e "const rc = require('{project-root}/_bmad/bme/_team-factory/lib/utils/run-context.js'), rw = require('{project-root}/_bmad/bme/_team-factory/lib/writers/registry-writer.js'); rc.loadSpec('{spec_path}').then(s => rw.writeRegistryBlock(s, '{registry_path}', { agentFiles: rc.readContext('{context_path}').agent_files })).then(r => { rc.recordContext('{context_path}', 'registry_wiring_result', r); rc.recordContext('{context_path}', 'registry_path', '{registry_path}'); console.log(JSON.stringify(r)); })"
+expect: the block has already written the WHOLE result object into `{context_path}` as `registry_wiring_result` (`end-to-end-validator.js::checkRegistryWiring` reads `.success` and `.written`), and the ABSOLUTE path it wrote to as `registry_path` (`checkPersonaCoverage` rejects a relative one; `{registry_path}` is `{project-root}`-prefixed, so it is already absolute and nothing is resolved against a cwd). Then, in THIS order — `personaCoverage` is `null` on every path except a completed write, so it cannot tell you which path you are on:
         result.dirty === true → NOTHING was written: `agent-registry.js` already had uncommitted changes. Show the contributor `result.diff` and ask how to proceed. Do NOT roll anything back — the only restore command in this flow, `git checkout --`, would discard exactly the uncommitted edits this check exists to protect. (A dirty result also has `success: false`, which is why this line comes first)
         result.success === false → display errors. If `result.rollbackApplied` is true the writer has already restored the file; otherwise nothing was written. Either way `personaCoverage` is null
         result.skipped includes "block already exists" → nothing was written and no coverage was computed. If an earlier run of this block wrote a hollow team, re-running cannot repair it — see step-05 §2, PERSONA-COVERAGE

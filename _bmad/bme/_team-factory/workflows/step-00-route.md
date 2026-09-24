@@ -51,7 +51,7 @@ Display:
 
 ### Resume Mode
 
-1. Ask for the path to an existing `team-spec-*.yaml` file
+1. Ask for the **absolute** path to an existing `team-spec-*.yaml` file — `run-context.js::loadSpec` refuses a relative one, because it would resolve against whatever directory the block runs from. The canonical location is `{project-root}/_bmad-output/planning-artifacts/`
 2. Run: `node {project-root}/_bmad/bme/_team-factory/lib/spec-differ.js` logic:
    - Parse the spec file
    - Find the first non-complete step in the progress section
@@ -60,7 +60,7 @@ Display:
 
 ### Express Mode
 
-1. Ask for the path to a completed `team-spec-*.yaml` file
+1. Ask for the **absolute** path to a completed `team-spec-*.yaml` file — `run-context.js::loadSpec` refuses a relative one. The canonical location is `{project-root}/_bmad-output/planning-artifacts/`
 2. Run: `node {project-root}/_bmad/bme/_team-factory/lib/spec-parser.js` logic:
    - Parse and validate the spec file against the appropriate schema
    - If validation fails: display errors, ask contributor to fix the spec file

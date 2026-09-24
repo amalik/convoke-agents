@@ -15,14 +15,15 @@ Run comprehensive validation on the generated team, produce a file manifest, col
 
 ## Placeholders used in this step
 
-Every `run:` block below substitutes these. A placeholder used here is defined here: reading one step
-file must be enough to run it.
+Every `run:` block below substitutes these. Every placeholder a `run:` block PASSES TO A COMMAND is
+defined here — narration slots in prose and in the display blocks are not, and `{team}`, `{path}` and
+`{output_directory}` are named nowhere in this workflow (T213).
 
 | Placeholder | Resolves to |
 |---|---|
 | `{project-root}` | absolute path to the repository root. Framework-wide convention |
 | `{spec_path}` | **a PATH, not an object.** `{project-root}/_bmad-output/planning-artifacts/team-spec-{team_name_kebab}.yaml`, parsed via `run-context.js::loadSpec` |
-| `{context_path}` | **a PATH, not an object.** `{project-root}/_bmad-output/planning-artifacts/.factory-context-{team_name_kebab}.json` — the generation context Step 4 accumulated, read with `run-context.js::readContext`, which throws when it is absent rather than returning `{}`. Delete it once this step completes |
+| `{context_path}` | **a PATH, not an object.** `{project-root}/_bmad-output/planning-artifacts/.factory-context-{team_name_kebab}.json` — the generation context Step 4 accumulated, read with `run-context.js::readContext`, which throws when it is absent rather than returning `{}`. **Do not delete it when this step completes:** `[VT] Validate Team` runs this step directly against an existing team and reads this file, so deleting it makes VT unusable for that team. Step 04's table is the one that governs its lifetime |
 | `{team_name_kebab}` | the team's kebab name, e.g. `pilot-test` |
 
 ## Execution Sequence
@@ -100,13 +101,13 @@ Run by `validateTeam` in §2 — there is no separate command here.
   Checks:   {passed}/{total} passed
 
   FILES CREATED:
-  ├── _bmad/bme/_{team}/config.yaml
-  ├── _bmad/bme/_{team}/module-help.csv
-  ├── _bmad/bme/_{team}/README.md
-  ├── _bmad/bme/_{team}/agents/{agent_id}.md
-  ├── _bmad/bme/_{team}/workflows/...
-  ├── _bmad/bme/_{team}/contracts/...     [Sequential]
-  └── _bmad/bme/_{team}/guides/...
+  ├── _bmad/bme/_{team_name_kebab}/config.yaml
+  ├── _bmad/bme/_{team_name_kebab}/module-help.csv
+  ├── _bmad/bme/_{team_name_kebab}/README.md
+  ├── _bmad/bme/_{team_name_kebab}/agents/{agent_id}.md
+  ├── _bmad/bme/_{team_name_kebab}/workflows/...
+  ├── _bmad/bme/_{team_name_kebab}/contracts/...     [Sequential]
+  └── _bmad/bme/_{team_name_kebab}/guides/...
 
   FILES MODIFIED:
   └── scripts/update/lib/agent-registry.js
@@ -159,7 +160,7 @@ If the contributor requests abort at any point:
 - Display the file manifest: "The following files were created during this factory run:"
 - List each file with its path
 - Provide removal instructions: "To remove all generated files, delete the following paths:"
-- Note: "The spec file at {path} will be preserved for your records."
+- Note: "The spec file at `{project-root}/_bmad-output/planning-artifacts/team-spec-{team_name_kebab}.yaml` will be preserved for your records."
 
 ## Visibility Checklist — Step 5
 Colleague sees:

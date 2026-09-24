@@ -2,7 +2,8 @@
 # Fill in this template and pass to the factory for rapid team creation.
 # Fields marked REQUIRED must be provided. Optional fields can be removed.
 #
-# Usage: Save as team-spec-{your-team-name}.yaml in _bmad-output/planning-artifacts/
+# Usage: Save as team-spec-{your-team-name}.yaml in {project-root}/_bmad-output/planning-artifacts/
+#        Give the factory its ABSOLUTE path: loadSpec refuses a relative one.
 # Then invoke the factory in Express Mode with this file as input.
 
 schema_version: "1.0"

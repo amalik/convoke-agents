@@ -9,8 +9,9 @@ Guide the contributor through integration decisions: contracts (Sequential only)
 
 ## Placeholders used in this step
 
-Every `run:` block below substitutes these. A placeholder used here is defined here: reading one step
-file must be enough to run it.
+Every `run:` block below substitutes these. Every placeholder a `run:` block PASSES TO A COMMAND is
+defined here — narration slots in prose and in the display blocks are not, and `{team}`, `{path}` and
+`{output_directory}` are named nowhere in this workflow (T213).
 
 | Placeholder | Resolves to |
 |---|---|
