@@ -268,7 +268,11 @@ describe('a relative path is refused, not resolved (T168)', () => {
     // recordContext reads before it writes, so `readContext`'s guard masks a missing one here.
     const p = path.join(tmp(), 'ctx.json');
     initContext(p, { seeded: true });
-    assert.throws(() => recordContext(path.join('still', 'relative.json'), 'k', 'v'), /needs an absolute path/);
+    // ANCHORED to the caller name: with its own guard deleted, recordContext falls through to
+    // readContext, which throws the same sentence under a different name — so the unanchored
+    // pattern passed the exact mutant this test exists for.
+    assert.throws(() => recordContext(path.join('still', 'relative.json'), 'k', 'v'),
+      /recordContext needs an absolute path/);
   });
 
   it('an absolute path still reaches the real check', () => {

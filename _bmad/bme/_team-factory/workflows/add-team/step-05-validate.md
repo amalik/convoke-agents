@@ -17,7 +17,7 @@ Run comprehensive validation on the generated team, produce a file manifest, col
 
 Every `run:` block below substitutes these. Every placeholder a `run:` block PASSES TO A COMMAND is
 defined here — narration slots in prose and in the display blocks are not, and `{team}`, `{path}` and
-`{output_directory}` are named nowhere in this workflow (T213).
+`{output_directory}` are used in this workflow but DEFINED nowhere in it (T213).
 
 | Placeholder | Resolves to |
 |---|---|

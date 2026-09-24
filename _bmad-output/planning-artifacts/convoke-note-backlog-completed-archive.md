@@ -2559,3 +2559,26 @@ T213 (`{team}`, `{path}`, `{output_directory}` are path-valued and defined nowhe
 activation gate normalises the prefix away, so it cannot see an unprefixed config reference), T215
 (an aborted run emits one repo-relative `git checkout` — destructive from a second clone), T216
 (Express/Resume tell the operator to run two commands that execute nothing).
+
+### R3 — one scoped layer on the R2 remediation, 2026-09-25
+
+Code and step files only. Every row is pinned by a mutant; re-run with
+`node --test tests/team-factory/add-team-placeholders.test.js tests/team-factory/run-context.test.js`.
+
+| Defect | Fix |
+|---|---|
+| **The test written to pin `recordContext`'s guard passed with that guard deleted.** Its own comment names the hazard — `recordContext` reads before it writes, so `readContext`'s guard masks a missing one — and its `/needs an absolute path/` pattern matched the neighbour's message, the caller name being the only difference | the pattern is anchored to `recordContext` |
+| **The deletion instruction survived the fix that was supposed to remove it.** step-05's row was rewritten to "do not delete it, step 04 governs its lifetime"; step-04 still said "delete it after step-05 completes", so `[VT] Validate Team` was still left unusable | step-04 states the VT dependency, and a test fails any step file whose `{context_path}` row orders the deletion |
+| `resolvesTo` took the first backticked token, so moving the prose BEFORE the path passed a relative definition again — the third reading of this check, after "the cell contains `{project-root}/` anywhere" and "a cell naming a different absolute file" | it takes the first backticked token that is a path: contains `/`, does not end in one |
+| The path-name shape accepted underscores only, while the framework's own central placeholder is `{project-root}` — so `{context-path}` in house style had no guard | dashes and underscores both, with `project-root` itself named in `NOT_A_PATH` |
+| Two claims added by R2 were false: `{output_directory}` and `{team}` ARE named in this workflow (they are defined nowhere), and step-00's justification named `loadSpec`, which neither of its two routes calls | both corrected to what the code does |
+
+**Dead code and floor corrections:** an asterisk strip in `resolvesTo` that could never fire, a header
+line calling `{output_directory}` invisible when it is visible and exempted, and a message promising to
+catch a removal that actually aborts the file at load — red either way, but not by that assertion.
+
+**The recurring shape, three rounds running:** R1 — the placeholder list was derived from the
+definitions it judged. R2 — the file list was read from the directory it judged. R3 — the assertion
+meant to pin a guard matched a neighbouring guard's message. Each time the fix was correct and the
+thing verifying it could not tell the fix from its absence.
+

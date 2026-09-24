@@ -21,10 +21,15 @@
  * about `run-context.js`'s behaviour live in `run-context.test.js` against temp-dir fixtures,
  * because asserting on code would forfeit the exception's first condition.
  *
- * WHAT THIS DOES NOT CATCH: a placeholder defined with a wrong-but-absolute path; a name outside
- * `PATH_SHAPE` (`{team}`, `{path}`, `{output_directory}` are path-valued, defined nowhere, and
- * invisible here — T213); the values an executor RECORDS into the context file (T212); and narration
+ * WHAT THIS DOES NOT CATCH: a placeholder defined with a wrong-but-absolute path; `{team}` and
+ * `{path}`, which are path-valued but shaped like narration so `PATH_SHAPE` never sees them, and
+ * `{output_directory}`, which it sees and `NOT_A_PATH` exempts — all three are defined nowhere in
+ * the workflow (T213); the values an executor RECORDS into the context file (T212); and narration
  * slots such as `{agent_id}`, which are prose rather than command arguments.
+ *
+ * Deleting a step file does not reach the directory-contents assertion: the module-level read below
+ * throws first, cancelling every test in this file. That is still a red, non-zero exit — the message
+ * on that assertion fires for additions and renames.
  */
 
 const { describe, it } = require('node:test');
@@ -54,10 +59,14 @@ const PATH_PLACEHOLDERS = ['config_path', 'context_path', 'module_root', 'regist
 // Anything shaped like a path placeholder must be on that list or named here with its reason. The
 // shape is deliberately wider than the six: `{…_directory}` and `{…_paths}` escaped an earlier
 // `_(path|root)$`.
-const PATH_SHAPE = /^[a-z][a-z0-9_]*_(path|paths|root|dir|dirs|directory|file|files)$/;
+// Dashes as well as underscores: `{project-root}` is the framework's own central placeholder, so
+// house style produces `{context-path}` as readily as `{context_path}`, and an underscore-only shape
+// left the dashed spelling with no guard at all.
+const PATH_SHAPE = /^[a-z][a-z0-9_-]*[_-](path|paths|root|dir|dirs|directory|file|files)$/;
 const NOT_A_PATH = new Map([
   ['agent_file_paths', 'retired — its row in step-04 is struck through, and no run: block passes it'],
   ['output_directory', 'a spec VALUE, interpolated as `{project-root}/{output_directory}` by its consumers'],
+  ['project-root', 'the substitution root itself — the prefix every other path is measured against'],
 ]);
 
 // A table row: | `{name}` | definition |
@@ -73,12 +82,14 @@ function definitions(text) {
   return out;
 }
 
-// The first backticked token in a definition is the value the placeholder resolves to. Checking the
-// whole cell for `{project-root}/` anywhere passed "…, relative to `{project-root}/`" and passed a
-// cell naming a different, absolute file — both of which document exactly the defect T168 closed.
+// The value a placeholder resolves to is the first backticked token in its row that is a PATH: it
+// contains a `/` and does not end in one. Three weaker readings each passed a relative definition —
+// the whole cell containing `{project-root}/` anywhere ("…, relative to `{project-root}/`"), a cell
+// naming a different absolute file, and the first backticked token of any kind ("Relative to
+// `{project-root}/`: `_bmad-output/…`", where that token IS the bare prefix).
 function resolvesTo(definition) {
-  const m = String(definition).match(/`([^`]+)`/);
-  return m ? m[1].replace(/^\*+|\*+$/g, '').trim() : '';
+  const tokens = [...String(definition).matchAll(/`([^`]+)`/g)].map((m) => m[1].trim());
+  return tokens.find((t) => t.includes('/') && !t.endsWith('/')) || '';
 }
 
 // Anywhere in the file, not only on `run:` lines: a command can wrap onto a continuation line, can
@@ -91,8 +102,8 @@ describe('add-team step files — path placeholders', () => {
   it('the workflow directory holds exactly the files this test knows about', () => {
     const onDisk = fs.readdirSync(STEPS_DIR).filter((f) => /\.md$/i.test(f)).sort();
     assert.deepEqual(onDisk, [...STEP_FILES].sort(),
-      'a step file was added, removed or renamed. Update STEP_FILES deliberately — a file this test '
-      + 'does not know about is a file it cannot check, and one it lists but cannot read fails loudly.');
+      'a step file was added or renamed. Update STEP_FILES deliberately — a file this test does not '
+      + 'know about is a file it cannot check. (A DELETED file throws at load instead, which is also red.)');
     assert.ok(PATH_PLACEHOLDERS.length >= 6, 'the literal list has shrunk — it is the standard, not a snapshot');
   });
 
@@ -120,6 +131,18 @@ describe('add-team step files — path placeholders', () => {
       assert.deepEqual(undefinedHere, [],
         `${file} names ${undefinedHere.join(', ')} but defines it nowhere in this file. `
         + 'Reading one step file must be enough to run it — a name defined only in a sibling is how these went cwd-relative.');
+    });
+
+    // `[VT] Validate Team` re-runs step 05 against an existing team and reads the context file
+    // (`step-05-validate.md` says so, and `readContext` throws without it). Two tables document that
+    // file's lifetime, and for one round they disagreed: step-05 was rewritten to "do not delete it,
+    // step 04 governs", while step 04 still said "delete it after step-05 completes" — so the
+    // instruction survived the fix that was supposed to remove it.
+    it(`${file}: does not order the context file deleted`, () => {
+      const cell = defined.get('context_path') || '';
+      assert.equal(/(?<!do not )(?<!never )\bdelete (it|this file)\b/i.test(cell), false,
+        `${file} tells the operator to delete the context file. [VT] Validate Team reads it, so the `
+        + 'team it was generated for can never be re-validated. Say when it may be removed instead.');
     });
 
     it(`${file}: every path placeholder it defines is {project-root}-absolute`, () => {
