@@ -71,6 +71,16 @@ const {
 } = require('../../_bmad/bme/_team-factory/lib/writers/registry-writer');
 const registry = require('../../scripts/update/lib/agent-registry');
 
+function stripHtmlComments(input) {
+  let previous;
+  let current = input;
+  do {
+    previous = current;
+    current = current.replace(/<!--[\s\S]*?-->/g, '');
+  } while (current !== previous);
+  return current;
+}
+
 const FIELDS = ['role', 'identity', 'communication_style', 'expertise'];
 const BME = path.join(PACKAGE_ROOT, '_bmad/bme');
 
@@ -160,7 +170,7 @@ describe('agent registry personas match their agent files', () => {
       // `<identity>` in prose, or a commented-out heading in a template note, failed a healthy file
       // with a message whose stated reason ("pinned to the older text") was provably false: with no
       // closing tag the extractor reads the markdown anyway. Both demonstrated by R3, 2026-09-23.
-      const body = raw.replace(/<!--[\s\S]*?-->/g, '');
+      const body = stripHtmlComments(raw);
       const hasXmlPersona = /<(identity|communication_style|principles)>[\s\S]*?<\/\1>/.test(body);
       const hasMarkdownPersona = /^##\s+(Identity|Communication Style|Principles)\s*$/m.test(body);
       assert.ok(!(hasXmlPersona && hasMarkdownPersona),
