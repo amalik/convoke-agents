@@ -14,13 +14,13 @@ Every `run:` block below substitutes these. They are listed because a name that 
 | Placeholder | Resolves to |
 |---|---|
 | `{project-root}` | absolute path to the repository root. Framework-wide convention, listed here because line above claims this table is complete |
-| `{spec_path}` | **a PATH, not an object.** `_bmad-output/planning-artifacts/team-spec-{team_name_kebab}.yaml` — the file `step-01` §5 already wrote. Blocks parse it themselves via `run-context.js::loadSpec`, which wraps `spec-parser.js::parseSpec` and throws rather than handing a writer `undefined`. **There is no second copy of the spec**: duplicating on-disk state is the drift class this module keeps paying for |
+| `{spec_path}` | **a PATH, not an object.** `{project-root}/_bmad-output/planning-artifacts/team-spec-{team_name_kebab}.yaml` — the file `step-01` §5 already wrote. Blocks parse it themselves via `run-context.js::loadSpec`, which wraps `spec-parser.js::parseSpec` and throws rather than handing a writer `undefined`. **There is no second copy of the spec**: duplicating on-disk state is the drift class this module keeps paying for |
 | `{team_name_kebab}` | the team's kebab name, e.g. `pilot-test` |
-| `{module_root}` | absolute path to `_bmad/bme/_{team_name_kebab}` |
+| `{module_root}` | `{project-root}/_bmad/bme/_{team_name_kebab}`. Written `{project-root}`-prefixed because `createConfig` and `createCsv` echo this path back into the context file, and `end-to-end-validator.js` then `existsSync`es it raw in step 5 — a relative value there is two different answers from two directories (T168) |
 | `{config_path}` | the config reference **as agents write it**: `{project-root}/_bmad/bme/_{team_name_kebab}/config.yaml`. Pass this placeholder form, not a resolved path — `activation-validator.js` check 2 accepts either, but the convention form is what agent files contain |
 | ~~`{agent_file_paths}`~~ | **Removed.** It was a second name for the context file's `agent_files`, and the two could disagree. Blocks now read `rc.readContext('{context_path}').agent_files`. `validateActivation` takes an array; a bare string iterates character-by-character, which is why the value must come from one place |
-| `{registry_path}` | absolute path to `scripts/update/lib/agent-registry.js` |
-| `{context_path}` | **a PATH, not an object.** `_bmad-output/planning-artifacts/.factory-context-{team_name_kebab}.json`. A JSON file holding the generation context, created by the §1 block above and updated as the run proceeds. Deliberately NOT under the team's own output directory: the abort manifest sweeps that tree, and a run's bookkeeping must survive its own abort. Previously the context lived only in the executor's head, which `step-05-validate.md` recorded as a live hazard — run steps 4 and 5 in separate sessions and it was gone, and `checkConfig`/`checkActivation`/`checkRegistryWiring` then reported **false failures on a correctly generated team**. Blocks read it with `run-context.js::readContext`, which **throws when the file is absent** rather than returning `{}`, because `{}` is what produced those false failures. Delete it after step-05 completes |
+| `{registry_path}` | `{project-root}/scripts/update/lib/agent-registry.js` |
+| `{context_path}` | **a PATH, not an object.** `{project-root}/_bmad-output/planning-artifacts/.factory-context-{team_name_kebab}.json`. A JSON file holding the generation context, created by the §1 block above and updated as the run proceeds. **`{project-root}`-prefixed, like every repo path in this table:** `run-context.js` refuses a relative path outright, because the same block run from two directories would otherwise read or write two different files (T168). Deliberately NOT under the team's own output directory: the abort manifest sweeps that tree, and a run's bookkeeping must survive its own abort. Previously the context lived only in the executor's head, which `step-05-validate.md` recorded as a live hazard — run steps 4 and 5 in separate sessions and it was gone, and `checkConfig`/`checkActivation`/`checkRegistryWiring` then reported **false failures on a correctly generated team**. Blocks read it with `run-context.js::readContext`, which **throws when the file is absent** rather than returning `{}`, because `{}` is what produced those false failures. Delete it after step-05 completes |
 
 ### Context keys — and the section that must write each one
 
@@ -42,6 +42,12 @@ Every `run:` block below substitutes these. They are listed because a name that 
 | `guide_files` | **§3 — you record it** | `manifest-tracker.js` |
 | `readme_path` | **§7 — you record it** | `manifest-tracker.js` |
 | `generated_files` | **§3/§6/§7 — you record it** | `manifest-tracker.js` |
+
+**Every path you record here is absolute, `{project-root}`-prefixed.** `recordContext` guards the
+context file's own path, not the values written into it, and step 5 hands these straight to
+`fs.existsSync` (`end-to-end-validator.js::checkAgentFiles`, `::checkWorkflowDirs`) and to the abort
+manifest. A relative value recorded here is the T168 failure one level in: it reads as present from the
+directory step 4 ran in and absent from anywhere else.
 
 ## Execution Sequence
 

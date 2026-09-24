@@ -226,3 +226,38 @@ describe('writeAtomic', () => {
     assert.deepEqual(JSON.parse(fs.readFileSync(p, 'utf8')), { good: true }, 'previous context survives');
   });
 });
+
+describe('a relative path is refused, not resolved (T168)', () => {
+  // The add-team step files pass `{project-root}`-prefixed placeholders. A relative path here
+  // resolves against the executor's working directory, so the same block run from two directories
+  // reads or writes two different files — which is how the step-5 checks once reported false
+  // failures on a correctly generated team. Refuse rather than resolve against a guess.
+  const relative = path.join('relative-not-absolute', 'ctx.json');
+
+  it('every entry point refuses one', () => {
+    for (const [name, call] of [
+      ['readContext', () => readContext(relative)],
+      ['initContext', () => initContext(relative, {})],
+      ['recordContext', () => recordContext(relative, 'k', 'v')],
+      ['writeAtomic', () => writeAtomic(relative, { k: 'v' })],
+    ]) {
+      assert.throws(call, /needs an absolute path/, `${name} resolved a relative path instead of refusing it`);
+    }
+    // Nothing was created relative to the test process's cwd on the way to those throws.
+    assert.equal(fs.existsSync(relative), false, 'a refused path must not have been written anyway');
+  });
+
+  it('loadSpec refuses one', async () => {
+    await assert.rejects(() => loadSpec(path.join('relative-not-absolute', 'team-spec-x.yaml')),
+      /needs an absolute path/);
+  });
+
+  it('an unsubstituted placeholder is refused too', () => {
+    assert.throws(() => readContext('{project-root}/_bmad-output/planning-artifacts/ctx.json'),
+      /needs an absolute path/, 'a forgotten substitution must fail, not create a literal {project-root} directory');
+  });
+
+  it('an absolute path still reaches the real check', () => {
+    assert.throws(() => readContext(path.join(tmp(), 'absent.json')), /context file not found/);
+  });
+});

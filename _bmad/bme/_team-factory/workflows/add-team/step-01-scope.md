@@ -15,7 +15,8 @@ Guide the contributor through defining their team's composition pattern, agents,
 | `{project-root}` | absolute path to the repository root |
 | `{team_name_kebab}` | the team's kebab name, e.g. `pilot-test`. **Not `{kebab}`** — that spelling appeared once, in one command, defined nowhere |
 | `{pattern}` | `Independent` or `Sequential`, as chosen in §2 — a closed set of two literals |
-| `{scope_path}` | `_bmad-output/planning-artifacts/.scope-{team_name_kebab}.json`, the scoping file **you write** in §4. It exists because §4 runs before §5 creates the spec, so there is nothing else on disk to read, and because §5 consumes the acknowledgments §4 produces — the order cannot be inverted. Delete it after §5 |
+| `{spec_path}` | `{project-root}/_bmad-output/planning-artifacts/team-spec-{team_name_kebab}.yaml`, the spec **you write** in §5 and every later step reads |
+| `{scope_path}` | `{project-root}/_bmad-output/planning-artifacts/.scope-{team_name_kebab}.json`, the scoping file **you write** in §4. It exists because §4 runs before §5 creates the spec, so there is nothing else on disk to read, and because §5 consumes the acknowledgments §4 produces — the order cannot be inverted. Delete it after §5 |
 
 **No value a contributor authored appears in any `run:` block in this step** — not a role sentence, not a capability, and not an agent id. Each is written to a file, and blocks receive that file's path.
 
@@ -118,7 +119,7 @@ expect: result.hasBlocking === false → proceed with optional warnings
 ### 5. Save Progress
 
 Initialize the spec file:
-- Create `team-spec-{team_name_kebab}.yaml` in `_bmad-output/planning-artifacts/`
+- Create `team-spec-{team_name_kebab}.yaml` in `{project-root}/_bmad-output/planning-artifacts/` — steps 02, 04 and 05 read it from there by absolute path, and `loadSpec` refuses a relative one
 - Populate: team identity, composition pattern, agents, overlap acknowledgments
 - Set progress: `orient: complete, scope: complete, connect: pending, ...`
 

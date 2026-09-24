@@ -42,6 +42,7 @@ async function loadSpec(specPath) {
   if (typeof specPath !== 'string' || specPath.trim() === '') {
     throw new Error(`loadSpec needs a path to the team spec (got ${JSON.stringify(specPath)})`);
   }
+  assertAbsolute(specPath, 'loadSpec');
   const result = await parseSpec(specPath);
   if (!result.valid || !result.spec) {
     const errs = (result.errors || []).join('; ') || 'unknown parse failure';
@@ -143,6 +144,8 @@ function recordContext(contextPath, key, value) {
  * @param {Object} data
  */
 function writeAtomic(target, data) {
+  // Exported, so it is reachable without going through the callers that already check (T168 R1).
+  assertAbsolute(target, 'writeAtomic');
   const tmp = `${target}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
   try {
@@ -160,6 +163,30 @@ function writeAtomic(target, data) {
 function assertPath(p, fn) {
   if (typeof p !== 'string' || p.trim() === '') {
     throw new Error(`${fn} needs a context file path (got ${JSON.stringify(p)})`);
+  }
+  assertAbsolute(p, fn);
+}
+
+/**
+ * A relative path here is a silent two-file bug, not a style question (T168).
+ *
+ * Every caller is a `run:` block in an add-team step file, and a relative path resolves against
+ * whatever directory the executor happens to be in: run step 4 from the repo root and step 5 from
+ * anywhere else and `readContext` either throws ENOENT or reads a DIFFERENT context file than
+ * `initContext` wrote — which is how `checkConfig`/`checkActivation`/`checkRegistryWiring` reported
+ * false failures on a correctly generated team. The step files pass `{project-root}`-prefixed
+ * placeholders; this refuses anything else rather than resolving it against a guess.
+ *
+ * @param {string} p
+ * @param {string} fn - caller name, for the message
+ */
+function assertAbsolute(p, fn) {
+  if (!path.isAbsolute(p)) {
+    throw new Error(
+      `${fn} needs an absolute path, got ${JSON.stringify(p)}. A relative path resolves against the `
+      + "executor's working directory, so the same block run from two directories reads or writes two "
+      + 'different files. Use the {project-root}-prefixed placeholder from the step file.'
+    );
   }
 }
 

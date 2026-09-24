@@ -13,6 +13,18 @@ Run comprehensive validation on the generated team, produce a file manifest, col
 >
 > **It persists.** This paragraph used to say the context was an in-memory Step-4 value with no persistence mechanism — gone if Steps 4 and 5 ran in separate sessions, with `checkConfig`/`checkActivation`/`checkRegistryWiring` reporting false failures on a correctly generated team, and the only remedy being to re-run Step 4's §5 wiring. Since tfr-1-1 it is a JSON file on disk, so Step 5 reads what Step 4 wrote regardless of session. **Never pass `{}`**: `run-context.js::readContext` throws when the file is absent precisely so a lost context fails loudly instead of masquerading as a broken team.
 
+## Placeholders used in this step
+
+Every `run:` block below substitutes these. A placeholder used here is defined here: reading one step
+file must be enough to run it.
+
+| Placeholder | Resolves to |
+|---|---|
+| `{project-root}` | absolute path to the repository root. Framework-wide convention |
+| `{spec_path}` | **a PATH, not an object.** `{project-root}/_bmad-output/planning-artifacts/team-spec-{team_name_kebab}.yaml`, parsed via `run-context.js::loadSpec` |
+| `{context_path}` | **a PATH, not an object.** `{project-root}/_bmad-output/planning-artifacts/.factory-context-{team_name_kebab}.json` — the generation context Step 4 accumulated, read with `run-context.js::readContext`, which throws when it is absent rather than returning `{}`. Delete it once this step completes |
+| `{team_name_kebab}` | the team's kebab name, e.g. `pilot-test` |
+
 ## Execution Sequence
 
 ### 1. Load Spec & Manifest
@@ -99,7 +111,7 @@ Run by `validateTeam` in §2 — there is no separate command here.
   FILES MODIFIED:
   └── scripts/update/lib/agent-registry.js
 
-  Spec file: _bmad-output/planning-artifacts/team-spec-{team}.yaml
+  Spec file: {project-root}/_bmad-output/planning-artifacts/team-spec-{team_name_kebab}.yaml
 
 ═══════════════════════════════════════════════════
 ```
@@ -138,7 +150,7 @@ Display guidance:
 > 4. **Test with a real workflow** — Invoke one of your agents and run through a workflow
 > 5. **Iterate** — Use the factory's Add Agent (Phase 3) to extend your team later
 >
-> Spec file saved at: `_bmad-output/planning-artifacts/team-spec-{team}.yaml`
+> Spec file saved at: `{project-root}/_bmad-output/planning-artifacts/team-spec-{team_name_kebab}.yaml`
 > This file is your audit trail and can be used with Express Mode to recreate the team."
 
 ### 8. Abort Path (If Requested)

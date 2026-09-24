@@ -7,6 +7,17 @@ Guide the contributor through integration decisions: contracts (Sequential only)
 - Step 01 (Scope) completed — team identity, pattern, and agents defined
 - Spec file exists with progress.scope = "complete"
 
+## Placeholders used in this step
+
+Every `run:` block below substitutes these. A placeholder used here is defined here: reading one step
+file must be enough to run it.
+
+| Placeholder | Resolves to |
+|---|---|
+| `{project-root}` | absolute path to the repository root. Framework-wide convention |
+| `{spec_path}` | **a PATH, not an object.** `{project-root}/_bmad-output/planning-artifacts/team-spec-{team_name_kebab}.yaml` — the file `step-01` §5 wrote. Blocks parse it themselves via `run-context.js::loadSpec` |
+| `{team_name_kebab}` | the team's kebab name, e.g. `pilot-test` |
+
 ## Execution Sequence
 
 ### 1. Load Context

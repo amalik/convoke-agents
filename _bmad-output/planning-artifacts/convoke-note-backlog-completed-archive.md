@@ -2505,3 +2505,52 @@ which the survivor does not.
 
 **Verified unchanged by all of this:** old and new `firstBlock` over all 45 non-empty persona fields of
 the 12 shipped agent files differ in **0** cases.
+
+## T168
+
+**Lane:** Fast Lane · **Score:** 6.0 · **Portfolio:** loom · **Status:** ✅ Done 2026-09-24
+
+**Defect.** `{spec_path}`, `{context_path}` and `{scope_path}` were documented as repo-relative while
+every sibling placeholder in the same blocks was `{project-root}`-absolute, so they resolved against
+the executor's working directory: a `run:` block executed from anywhere but the repository root threw
+ENOENT, and `initContext` run from two directories silently created two different context files —
+which is how `checkConfig`/`checkActivation`/`checkRegistryWiring` once reported false failures on a
+correctly generated team. Two of the three were used in `step-02-connect.md` and `step-05-validate.md`,
+which had **no placeholder table at all**.
+
+**Fixed in two places, deliberately.** The step files document the absolute form; `run-context.js`
+**refuses** a relative path in `loadSpec`, `initContext`, `readContext`, `recordContext` and
+`writeAtomic`. Documentation alone would have left the next relative path to fail somewhere less
+legible. Side benefit: an unsubstituted `{project-root}` is not absolute either, so a forgotten
+substitution now fails instead of creating a literal `{project-root}` directory.
+
+| Fact | Command |
+|---|---|
+| Every path placeholder is defined where it is named, and absolute | `node --test tests/team-factory/add-team-placeholders.test.js` |
+| A relative path is refused at every entry point | `node --test tests/team-factory/run-context.test.js` |
+| The suite is green | `npm test` |
+
+**R1 found the guard blind to the defect it existed for.** The first version derived its set of path
+placeholders *from the step files' own definitions*, so deleting a definition removed the placeholder
+from the set: `{context_path}` deleted from both tables while **9 `run:` blocks still passed it** was
+fully green. A set built from the thing under test cannot see a deletion. The list is literal now, and
+any `{…_path}`/`{…_root}` name not on it fails until it is added deliberately.
+
+**R1's other findings, all fixed.** `{module_root}` and `{registry_path}` were still relative in the
+same table — both are echoed into the context file and `existsSync`ed raw by step 5, so they carried
+the identical two-directories-two-answers defect. The spec's **producer** in `step-01` still wrote to a
+relative directory while every consumer had been absolutized. Two operator-facing display strings
+showed a path that `loadSpec` now refuses, in the one place an operator is invited to copy one. The
+behaviour assertions sat in a test claiming `committed-artifact-integrity`, whose first condition
+forbids asserting on code — they moved to `run-context.test.js` against temp-dir fixtures, which also
+removed a probe that would have written into the working tree if the guard ever regressed. And the
+placeholder tables carried round-history narration into operator-facing files, saying an executor "had
+to guess" a path that had in fact been defined, relatively, all along.
+
+**Residue:** T212 — the values an executor *records into* the context file are stated to be absolute
+and checked by nothing.
+
+**Scope not taken:** narration placeholders (`{agent_id}`, `{count}`) are prose slots, not command
+arguments; step-02, step-03 and step-05 define none of them, and making them do so is a different job
+from this one.
+
