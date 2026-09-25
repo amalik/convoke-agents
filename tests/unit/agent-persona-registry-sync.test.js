@@ -70,16 +70,13 @@ const {
   firstBlock,
 } = require('../../_bmad/bme/_team-factory/lib/writers/registry-writer');
 const registry = require('../../scripts/update/lib/agent-registry');
-
-function stripHtmlComments(input) {
-  let previous;
-  let current = input;
-  do {
-    previous = current;
-    current = current.replace(/<!--[\s\S]*?-->/g, '');
-  } while (current !== previous);
-  return current;
-}
+// The shared stripper, not a local one. Copilot Autofix (PR #15, CodeQL alert 31) replaced a one-pass
+// `<!--[\s\S]*?-->` here with a local fixpoint loop over the same naive pattern. That closes the
+// reassembling-opener case and leaves three HTML comment forms under-removed — `<!-->`, `<!--->` and
+// `--!>` — each of which leaves a commented-out `## Identity` visible to the check below and fails a
+// healthy v5 file. `scripts/lib/sanitize.js` was written for this exact rule (alert 29) and handles
+// all five forms; eight modules already use it.
+const { stripHtmlComments } = require('../../scripts/lib/sanitize');
 
 const FIELDS = ['role', 'identity', 'communication_style', 'expertise'];
 const BME = path.join(PACKAGE_ROOT, '_bmad/bme');

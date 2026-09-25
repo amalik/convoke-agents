@@ -38,6 +38,9 @@ const fs = require('fs');
 const path = require('path');
 
 const { PACKAGE_ROOT } = require('../helpers');
+// The same rule CodeQL raised as alert 31 against the sibling gate: a one-pass `<!--…-->` strip
+// under-removes `<!-->`, `<!--->` and `--!>`. The shared helper handles all of them.
+const { stripHtmlComments } = require('../../scripts/lib/sanitize');
 
 const STEPS_DIR = path.join(PACKAGE_ROOT, '_bmad/bme/_team-factory/workflows/add-team');
 
@@ -76,7 +79,7 @@ const DEFINITION = /^\|\s*`\{([a-z][a-z0-9_-]*)\}`\s*\|(.*)$/gm;
 // or a commented-out table, once counted as defining everything in it — and `set` is first-wins, so a
 // later example cannot satisfy the check for a broken row above it.
 function definitions(text) {
-  const body = text.replace(/```[\s\S]*?```/g, '').replace(/<!--[\s\S]*?-->/g, '');
+  const body = stripHtmlComments(text.replace(/```[\s\S]*?```/g, ''));
   const out = new Map();
   for (const m of body.matchAll(DEFINITION)) if (!out.has(m[1])) out.set(m[1], m[2]);
   return out;
