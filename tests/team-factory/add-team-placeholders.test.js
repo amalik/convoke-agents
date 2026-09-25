@@ -38,8 +38,13 @@ const fs = require('fs');
 const path = require('path');
 
 const { PACKAGE_ROOT } = require('../helpers');
-// The same rule CodeQL raised as alert 31 against the sibling gate: a one-pass `<!--…-->` strip
-// under-removes `<!-->`, `<!--->` and `--!>`. The shared helper handles all of them.
+// The same rule CodeQL raised as alert 31 against the sibling gate. The naive `<!--…-->` strip
+// under-removes `--!>` and OVER-removes past `<!-->` / `<!--->`; the shared helper handles all four
+// terminator forms. Its own limit is disclosed in the sibling gate's header (T218).
+//
+// Note the deliberate asymmetry with `mentioned()` below: definitions are read from the STRIPPED
+// text, mentions from the RAW text. So a placeholder used only inside a fence or a comment must
+// still be defined outside one, and over-removal here cannot quietly satisfy a requirement.
 const { stripHtmlComments } = require('../../scripts/lib/sanitize');
 
 const STEPS_DIR = path.join(PACKAGE_ROOT, '_bmad/bme/_team-factory/workflows/add-team');
@@ -75,11 +80,31 @@ const NOT_A_PATH = new Map([
 // A table row: | `{name}` | definition |
 const DEFINITION = /^\|\s*`\{([a-z][a-z0-9_-]*)\}`\s*\|(.*)$/gm;
 
+// Fences are removed line by line, opener-aware: a `/```[\s\S]*?```/` strip mis-pairs when a longer
+// fence wraps a shorter one, which is how a table in an EXAMPLE block leaked into the definitions map
+// — and since the map is first-wins, an example ABOVE a real row shadowed it, passing a genuinely
+// relative `{spec_path}`. A fence opens on 3+ backticks or tildes and closes only on at least as many
+// of the same character (CommonMark 4.5).
+function stripFencedBlocks(text) {
+  const out = [];
+  let open = null;
+  for (const line of text.split('\n')) {
+    const m = line.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (open === null) {
+      if (m) open = m[1];
+      else out.push(line);
+      continue;
+    }
+    if (m && m[1][0] === open[0] && m[1].length >= open.length) open = null;
+  }
+  return out.join('\n');
+}
+
 // Fenced blocks and HTML comments are stripped first: an example of the table format inside a fence,
 // or a commented-out table, once counted as defining everything in it — and `set` is first-wins, so a
 // later example cannot satisfy the check for a broken row above it.
 function definitions(text) {
-  const body = stripHtmlComments(text.replace(/```[\s\S]*?```/g, ''));
+  const body = stripHtmlComments(stripFencedBlocks(text));
   const out = new Map();
   for (const m of body.matchAll(DEFINITION)) if (!out.has(m[1])) out.set(m[1], m[2]);
   return out;

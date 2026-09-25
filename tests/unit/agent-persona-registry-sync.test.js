@@ -71,11 +71,25 @@ const {
 } = require('../../_bmad/bme/_team-factory/lib/writers/registry-writer');
 const registry = require('../../scripts/update/lib/agent-registry');
 // The shared stripper, not a local one. Copilot Autofix (PR #15, CodeQL alert 31) replaced a one-pass
-// `<!--[\s\S]*?-->` here with a local fixpoint loop over the same naive pattern. That closes the
-// reassembling-opener case and leaves three HTML comment forms under-removed — `<!-->`, `<!--->` and
-// `--!>` — each of which leaves a commented-out `## Identity` visible to the check below and fails a
-// healthy v5 file. `scripts/lib/sanitize.js` was written for this exact rule (alert 29) and handles
-// all five forms; eight modules already use it.
+// `<!--[\s\S]*?-->` here with a LOCAL fixpoint loop over the same naive pattern. That naive pattern
+// gets two different things wrong, in opposite directions, and an earlier version of this comment had
+// them backwards:
+//   - `--!>` is UNDER-removed (no `-->` to match), so a commented-out `## Identity` stays visible and
+//     a healthy v5 file fails — a false positive.
+//   - `<!-->` and `<!--->` are complete EMPTY comments. The naive pattern starts at their `<!--` and
+//     runs to the next `-->`, swallowing whatever lies between — so a REAL `## Identity` after one of
+//     them disappears and a genuinely half-converted file passes. That is the false negative this
+//     whole file exists to prevent, and it is the worse of the two.
+// `scripts/lib/sanitize.js` handles all four terminator forms. It was written for alerts 9-14 /
+// issue #7 / BUG-12, and adopted at alert 29 to close that alert in `check-changelog-entry.js`; six
+// modules require it, two use this function (`grep -rl "require(.*lib/sanitize')" scripts/`).
+//
+// KNOWN LIMIT, disclosed rather than inherited silently: the shared helper loops to a fixpoint, which
+// is right for a sanitizer and over-paranoid for a DETECTOR like this one — it can splice `<!` or
+// `<!-` junk onto a following abrupt-closing form and delete text a real parser would render
+// (`<!-<!-->--!>` before a heading). `sanitize.js` documents the over-consumption but claims it never
+// eats readable text; that claim is false and is filed as T218. Unreachable here today: no agent file
+// in the repo contains an HTML comment at all.
 const { stripHtmlComments } = require('../../scripts/lib/sanitize');
 
 const FIELDS = ['role', 'identity', 'communication_style', 'expertise'];
