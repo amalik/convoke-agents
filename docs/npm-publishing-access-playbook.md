@@ -249,6 +249,11 @@ config-repointing `npm_config_*` variable is set, or when it could not establish
   `npm config get userconfig` nor `globalconfig`, and npm emits no auth warning about it, so it is the
   one source that must be read rather than merely counted.
 
+  It is located two ways, and both are checked: from `npm root -g`, and from npm's own binary. The second
+  route exists because `npm root -g` is derived from npm's `prefix`, which is settable from the
+  environment — so on its own it could be pointed away from the file npm actually reads. `npm_config_prefix`
+  is refused outright for the same reason.
+
 | Message | What it means | Repair |
 |---|---|---|
 | `'<path>' exists on the publish path AND sets a credential key` | A real credential is on a path npm reads. `setup-node` exports `NODE_AUTH_TOKEN='XXXXX-…'` when unset, so npm would send that dummy as a bearer token and an OIDC decline would be reported as *bad token* rather than *no token* | **Tree- or workflow-borne.** Find what wrote it — a step added before `Publish to npm`, a composite action, or a change to `setup-node`'s inputs. Remove the writer, not the file, or the next release reproduces it. **Assume the credential is compromised and revoke it** |
@@ -258,7 +263,8 @@ config-repointing `npm_config_*` variable is set, or when it could not establish
 | `npm's builtin npmrc '<path>' sets a credential key` | A credential was appended to the npmrc that ships beside npm itself. npm sends it with no warning | **Runner- or workflow-borne.** Find the step that wrote into npm's install directory. **Revoke the credential.** This is the most serious of these findings: nothing else in the toolchain reports it |
 | `npm's builtin npmrc '<path>' cannot be read (<CODE>)` | The one source judged by content could not be inspected | **Workflow- or runner-borne.** Treat as uninspected, not clean |
 | `the set of npmrc paths npm reads could not be established: …` | `npm config get` or `npm root -g` failed, so the scan does not know which paths to check. A guard that cannot see cannot clear | **Runner-borne.** Usually npm missing from `PATH` or a broken toolchain install. Fix the `setup-node` step; **re-run the job** |
-| `--cwd was given with no value` | The invocation is malformed | Pass `--cwd "$PWD"` or omit the flag. Wiring bug, not a credential |
+| `--cwd was given with no value` / `… which is a flag, not a directory` / `… is not a directory` | The invocation is malformed. The scan refuses rather than guessing which project npmrc npm would read — accepting a wrong shape would certify a tree it never looked at | Pass `--cwd "$PWD"` (the space form; `--cwd=<path>` also works) or omit the flag. Wiring bug, not a credential |
+| `npm's builtin npmrc could not be located` | Neither `npm root -g` nor npm's own binary could be resolved, so the one source judged by content cannot be read | **Runner-borne.** Fix the toolchain install; **re-run the job** |
 | `NODE_AUTH_TOKEN is set` | A token is in the environment, which outranks OIDC — the regression that put 4.0.0 back on the token path | **Environment-borne.** Remove the `env:` entry, secret reference, or repository/organisation Variable; **re-run the job** |
 | `npm_config_* credential, rewritable or config-repointing key(s) in the environment` | npm reads config from the environment above every npmrc. Rejected names include credential spellings, rewritable ones (`${…}`), nerf-darted ones (`//`, `:`), and `userconfig`/`globalconfig`/`cert`/`key`/`cafile`, which repoint npm at another file or are themselves credentials. npm honours any casing | **Environment-borne.** Remove the variable; if it is needed elsewhere, rename it so it does not start `npm_config_`. **Re-run the job** |
 | `NPM_ID_TOKEN is set` | It replaces the identity GitHub mints (`oidc.js:50`), so the exchange would run against a supplied assertion | **Environment-borne.** Remove it; **re-run the job** |

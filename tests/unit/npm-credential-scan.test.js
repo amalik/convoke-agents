@@ -32,6 +32,7 @@ const {
   setsCredential,
   npmrcCandidates,
   npmLocalPrefix,
+  npmBuiltinCandidates,
   badNpmEnvNames,
   check,
 } = require('../../scripts/audit/npm-credential-scan');
@@ -73,11 +74,16 @@ exit 0
  * @returns {{status: number, stdout: string, stderr: string}}
  */
 function runCli({
-  cwd, home, env = {}, stub = {}, args = ['--cwd', cwd],
+  cwd, home, env = {}, stub = {}, args = ['--cwd', cwd], projectRoot = fixtureProjectRoot(),
 }) {
   try {
     const stdout = execFileSync(process.execPath, [SCRIPT, ...args], {
       encoding: 'utf8',
+      // The child's CWD, not the test runner's. `main()` calls `findProjectRoot()`, which walks up from
+      // `process.cwd()` looking for `_bmad` — so the candidate count depended on where the suite was
+      // launched from and on whether the real repo had a `.npmrc`. A benign `engine-strict=true` at the
+      // repo root, or running the suite from `/`, turned the count assertions red (R3).
+      cwd: projectRoot,
       env: { PATH: npmStub(stub), HOME: home, ...env },
     });
     return { status: 0, stdout, stderr: '' };
@@ -89,6 +95,17 @@ function runCli({
 after(() => {
   for (const dir of STUBS) fs.rmSync(dir, { recursive: true, force: true });
 });
+
+/**
+ * A directory that `findProjectRoot()` will resolve to: it holds a `_bmad` marker and no `.npmrc`.
+ * @returns {string}
+ */
+function fixtureProjectRoot() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-root-'));
+  STUBS.push(dir);
+  fs.mkdirSync(path.join(dir, '_bmad'));
+  return dir;
+}
 
 function tmpNpmrc(contents) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-scan-'));
@@ -299,41 +316,32 @@ describe('the CLI — the exit code is the only thing CI consumes', () => {
   });
 
   it('exits 0 on a clean tree, and says how many paths it checked', () => {
-    // THE NUMBER IS THE ASSERTION (R2). The first version of this test matched only the surrounding
-    // prose, so hardcoding the count back to `0` — the literal regression R1 existed to remove — and
-    // hardcoding it to `9999` both passed. A number nothing asserts is decoration.
+    // THE NUMBER IS THE ASSERTION (R2). The first version matched only the surrounding prose, so
+    // hardcoding the count back to `0` — the literal regression R1 existed to remove — and hardcoding it
+    // to `9999` both passed. A number nothing asserts is decoration.
     //
-    // 4 = HOME + localPrefix(--cwd) + the project root's own .npmrc + npm's builtin npmrc. `userconfig`
-    // and `globalconfig` are `undefined` from the stub and dropped. Pinned as a literal, not derived
-    // from `npmrcCandidates()`: a fixture built from the thing under test cannot see it shrink.
+    // BASE AND BASE+1 FROM ONE STUB, not a machine-shaped absolute (R3). The literal `4` asserted stub
+    // arithmetic and broke on two unrelated conditions: a benign `.npmrc` at the repo root (which is not
+    // gitignored here, so it would be committed) and running the suite from outside a `_bmad` tree. Real
+    // npm never prints `undefined` for these keys either, so the absolute figure described a state no
+    // runner produces. The delta is the property worth pinning, and a constant cannot satisfy it.
     const clean = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-clean-'));
     const home = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-home-'));
     try {
       const { status, stdout } = runCli({ cwd: clean, home });
       assert.equal(status, 0, stdout);
-      assert.match(stdout, /^npm credential check: 4 path\(s\) npm reads were checked/,
-        `the count must be the paths INSPECTED, and must be exactly 4 here; got: ${stdout}`);
+      const base = Number((stdout.match(/^npm credential check: (\d+) path\(s\)/) || [])[1]);
+      assert.ok(Number.isInteger(base) && base >= 3,
+        `the count must be a real number of inspected paths, at least HOME + project + builtin; got: ${stdout}`);
       assert.match(stdout, /-- OK/);
-    } finally {
-      fs.rmSync(clean, { recursive: true, force: true });
-      fs.rmSync(home, { recursive: true, force: true });
-    }
-  });
 
-  it('the count RISES when npm names one more path, so it tracks the candidate set', () => {
-    // The absolute figure alone could be satisfied by a constant. This pins it to the set: one extra
-    // path npm reports, one higher count (R2).
-    const clean = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-clean-'));
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-home-'));
-    try {
-      const { status, stdout } = runCli({
-        cwd: clean,
-        home,
-        stub: { userconfig: path.join(clean, 'absent-userconfig') },
+      const more = runCli({
+        cwd: clean, home, stub: { userconfig: path.join(clean, 'absent-userconfig') },
       });
-      assert.equal(status, 0, stdout);
-      assert.match(stdout, /^npm credential check: 5 path\(s\)/,
-        `one more path npm reports must raise the count to 5; got: ${stdout}`);
+      assert.equal(more.status, 0, more.stdout);
+      const raised = Number((more.stdout.match(/^npm credential check: (\d+) path\(s\)/) || [])[1]);
+      assert.equal(raised, base + 1,
+        `one more path npm reports must raise the count by exactly one: ${base} -> ${raised}`);
     } finally {
       fs.rmSync(clean, { recursive: true, force: true });
       fs.rmSync(home, { recursive: true, force: true });
@@ -526,7 +534,12 @@ describe("check — npm's builtin npmrc, the source judged by CONTENT", () => {
       fromNpm: [],
       builtin: ['/npm/npmrc'],
       fsImpl: {
-        statSync: () => { const e = new Error('nope'); e.code = 'ENOENT'; throw e; },
+        // Only the builtin path exists — the existence candidates must stay absent, or their own fatals
+        // would be counted here and this would pass for the wrong reason.
+        statSync: (p) => {
+          if (p === '/npm/npmrc') return { isFile: () => true, isDirectory: () => false };
+          const e = new Error('nope'); e.code = 'ENOENT'; throw e;
+        },
         readFileSync: () => { const e = new Error('denied'); e.code = 'EACCES'; throw e; },
         realpathSync: (p) => p,
       },
@@ -726,6 +739,254 @@ describe("the CLI — main() reads the project npmrc from npm's localPrefix", ()
       assert.ok(!stderr.includes('npm_PREFIX'), 'the token value must never be echoed');
     } finally {
       for (const d of [root, home]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('setsCredential — the character class BEFORE the = (R3)', () => {
+  // R2 widened the LEADING class to `\s` and left this one as `[ \t\f\v]` — the same defect, one position
+  // over. Driven through npm's own `ini`, each of these produced a live credential key while
+  // `setsCredential` returned false.
+  const SPACES = [' ', ' ', ' ', ' ', ' ', ' ', ' ', '　', '﻿'];
+  for (const ch of SPACES) {
+    it(`sees a key followed by U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')} before the =`, () => {
+      assert.equal(setsCredential(`//registry.npmjs.org/:_authToken${ch}=tok`), true);
+    });
+  }
+
+  it("sees ini's array-append form, which npm interpolates into a working Bearer header", () => {
+    // `ini` parses this to `['tok']`; npm-registry-fetch does `Bearer ${auth.token}`, and interpolating a
+    // one-element array yields exactly `Bearer tok`.
+    assert.equal(setsCredential('//registry.npmjs.org/:_authToken[]=tok'), true);
+    assert.equal(setsCredential('_password[]=hunter2'), true);
+  });
+
+  it('still does not fire on a comment or a benign key', () => {
+    // The floor. Widening both classes to `\s` must not start matching prose.
+    assert.equal(setsCredential('# _authToken = nope'), false);
+    assert.equal(setsCredential('registry=https://registry.npmjs.org/'), false);
+    assert.equal(setsCredential('always-auth=false'), false);
+  });
+});
+
+describe('npmBuiltinCandidates — located independently of `prefix` (R3)', () => {
+  // R2 derived the builtin npmrc from `npm root -g`, which is `resolve(prefix,'lib','node_modules')`.
+  // `prefix` is settable from the environment, so `npm_config_prefix=/tmp/x` moved where the scan LOOKED
+  // without moving where npm READS — a complete bypass of the only content-checked source, and in reverse
+  // a false refusal over a file npm never opens.
+  it('includes the path derived from what `npm root -g` reported', () => {
+    // BOTH routes are returned deliberately, so this asserts membership, not the whole list: extra
+    // candidates cost nothing under the content rule (an absent path is skipped), and requiring exactly
+    // one would forbid the prefix-independent route that closes the bypass.
+    const got = npmBuiltinCandidates(['/opt/x/lib/node_modules']);
+    assert.ok(got.includes(path.join('/opt/x/lib/node_modules', 'npm', 'npmrc')),
+      `the reported global root must be checked; got ${JSON.stringify(got)}`);
+  });
+
+  it('returns a candidate even when npm could not be asked for its global root', () => {
+    // The second, prefix-independent route: npm's own binary. On a machine with npm installed this must
+    // produce something; the assertion is that the function does not simply give up.
+    const got = npmBuiltinCandidates([]);
+    assert.ok(Array.isArray(got), 'must always return a list');
+    for (const p of got) assert.match(p, /npmrc$/, `${p} is not an npmrc path`);
+  });
+
+  it('never returns the same path twice', () => {
+    const got = npmBuiltinCandidates(['/opt/x/lib/node_modules', '/opt/x/lib/node_modules']);
+    assert.equal(new Set(got).size, got.length, JSON.stringify(got));
+  });
+});
+
+describe('badNpmEnvNames — prefix, empty values, and npm\'s own lifecycle env (R3)', () => {
+  it('rejects npm_config_prefix, which relocates the tree the builtin lookup uses', () => {
+    assert.deepEqual(badNpmEnvNames({ npm_config_prefix: '/tmp/FAKE' }), ['npm_config_prefix']);
+    assert.deepEqual(badNpmEnvNames({ NPM_CONFIG_PREFIX: '/tmp/FAKE' }), ['NPM_CONFIG_PREFIX']);
+  });
+
+  it('rejects npm_config_ca, the inline-PEM sibling of cafile', () => {
+    assert.deepEqual(badNpmEnvNames({ npm_config_ca: '-----BEGIN CERTIFICATE-----' }), ['npm_config_ca']);
+  });
+
+  it('ignores an EMPTY value, because npm ignores it too', () => {
+    // npm's `loadEnv` does `if (… || envVal === '') continue`. An Actions `env:` entry interpolating an
+    // unset secret produces exactly this, and refusing it refused a correct configuration.
+    assert.deepEqual(badNpmEnvNames({ NPM_CONFIG_USERCONFIG: '' }), []);
+    assert.deepEqual(badNpmEnvNames({ npm_config_prefix: '' }), []);
+  });
+
+  it("ignores a value npm itself reports, and still rejects a DIFFERENT value for that key", () => {
+    // `npm run` injects userconfig/globalconfig/prefix set to npm's own answers, so the scan refused in
+    // any environment npm created. Repeating npm's answer is not a finding; changing it is.
+    assert.deepEqual(badNpmEnvNames({ npm_config_userconfig: '/home/me/.npmrc' }, ['/home/me/.npmrc']), []);
+    assert.deepEqual(badNpmEnvNames({ npm_config_userconfig: '/evil/.npmrc' }, ['/home/me/.npmrc']),
+      ['npm_config_userconfig']);
+  });
+
+  it('still rejects a credential-shaped name whatever the benign list says', () => {
+    // The floor: the benign list must not become a way to whitelist a token.
+    assert.deepEqual(badNpmEnvNames({ npm_config__authToken: 'tok' }, ['tok']), ['npm_config__authToken']);
+  });
+});
+
+describe('npmLocalPrefix — npm\'s own file/directory rules (R3)', () => {
+  it('does not stop at a DIRECTORY named package.json', () => {
+    // npm uses `fileExists`; `existsSync` accepted a directory and stopped the walk one level below npm,
+    // hiding the npmrc npm actually loads.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-prefix-'));
+    try {
+      const sub = path.join(root, 'sub');
+      fs.mkdirSync(path.join(sub, 'package.json'), { recursive: true });
+      fs.writeFileSync(path.join(root, 'package.json'), '{"name":"r","version":"1.0.0"}');
+      assert.equal(npmLocalPrefix(sub), path.resolve(root));
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not stop at a FILE named node_modules', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-prefix-'));
+    try {
+      const sub = path.join(root, 'sub');
+      fs.mkdirSync(sub, { recursive: true });
+      fs.writeFileSync(path.join(sub, 'node_modules'), 'not a directory');
+      fs.mkdirSync(path.join(root, 'node_modules'));
+      assert.equal(npmLocalPrefix(sub), path.resolve(root));
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('check — the builtin loop stats before it reads (R3)', () => {
+  it('does not report a DIRECTORY at the builtin path as an uninspected credential source', () => {
+    // npm's own `#loadFile` catches the same read error, loads no config, and `validate()` skips this
+    // source — so such a path provably carries nothing, and the old fatal's justification was false for it.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-builtindir-'));
+    try {
+      const asDir = path.join(dir, 'npmrc');
+      fs.mkdirSync(asDir);
+      const { fatal } = check({
+        env: {}, home: '/none', cwd: '/none', fromNpm: [], builtin: [asDir],
+      });
+      assert.deepEqual(fatal, []);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('the CLI — --cwd cannot be defeated by argument shape (R3)', () => {
+  // R2 checked only that a value was PRESENT. Each shape below certified a tree holding a live token.
+  function plantedTree() {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-planted-'));
+    fs.writeFileSync(path.join(dir, '.npmrc'), '//registry.npmjs.org/:_authToken=npm_LIVE\n');
+    return dir;
+  }
+
+  it('honours the --cwd=<path> equals form, the spelling the playbook invites', () => {
+    const proj = plantedTree();
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-home-'));
+    try {
+      const { status, stderr } = runCli({ cwd: proj, home, args: [`--cwd=${proj}`] });
+      assert.equal(status, 1, 'the equals form must scan the same tree as the space form');
+      assert.match(stderr, /AND sets a credential key/);
+    } finally {
+      for (const d of [proj, home]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a flag as the value of --cwd instead of treating it as a directory', () => {
+    const proj = plantedTree();
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-home-'));
+    try {
+      const { status, stderr } = runCli({ cwd: proj, home, args: ['--cwd', '--verbose', proj] });
+      assert.equal(status, 1);
+      assert.match(stderr, /which is a flag, not a directory/);
+    } finally {
+      for (const d of [proj, home]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a --cwd that is not a directory rather than certifying it', () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-home-'));
+    try {
+      const { status, stderr } = runCli({ cwd: '/nonexistent-xyz', home });
+      assert.equal(status, 1);
+      assert.match(stderr, /is not a directory/);
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('the CLI — a zero exit from npm is not an answer (R3)', () => {
+  // R2 fixed only the non-zero branch, so npm exiting 0 with empty output still dropped the source and
+  // printed the same OK line as a clean run — verbatim the defect its own header claimed closed.
+  it('refuses when npm exits 0 but prints nothing', () => {
+    const clean = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-clean-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-home-'));
+    try {
+      const { status, stderr } = runCli({ cwd: clean, home, stub: { userconfig: '' } });
+      assert.equal(status, 1);
+      assert.match(stderr, /printed nothing|could not be established/);
+    } finally {
+      for (const d of [clean, home]) fs.rmSync(d, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('npmBuiltinCandidates — the prefix-independent route (R3)', () => {
+  // The whole point of HIGH-1's fix: `npm root -g` is derived from `prefix`, which an attacker sets, so a
+  // second route that `prefix` cannot move must contribute a candidate. Deleting it left the suite green
+  // until this test existed.
+  it('derives a candidate from npm_execpath, which `prefix` does not move', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-exec-'));
+    const saved = process.env.npm_execpath;
+    try {
+      const npmDir = path.join(root, 'lib', 'node_modules', 'npm');
+      fs.mkdirSync(path.join(npmDir, 'bin'), { recursive: true });
+      fs.writeFileSync(path.join(npmDir, 'bin', 'npm-cli.js'), '// stub\n');
+      process.env.npm_execpath = path.join(npmDir, 'bin', 'npm-cli.js');
+      const got = npmBuiltinCandidates([]);
+      // Compared against the RESOLVED directory: the route deliberately realpaths, and on macOS a tmpdir
+      // under /var resolves to /private/var.
+      const expected = path.join(fs.realpathSync(npmDir), 'npmrc');
+      assert.ok(got.includes(expected),
+        `the binary-derived builtin npmrc must be a candidate; wanted ${expected}, got ${JSON.stringify(got)}`);
+    } finally {
+      if (saved === undefined) delete process.env.npm_execpath;
+      else process.env.npm_execpath = saved;
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not synthesise a candidate under a FILE named npm', () => {
+    // A wrapper script on PATH named `npm` resolves to itself; returning it would name `<file>/npmrc`.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-exec-'));
+    const saved = process.env.npm_execpath;
+    try {
+      fs.writeFileSync(path.join(root, 'npm'), '#!/bin/sh\n');
+      process.env.npm_execpath = path.join(root, 'npm');
+      const got = npmBuiltinCandidates([]);
+      const forbidden = path.join(fs.realpathSync(path.join(root, 'npm')), 'npmrc');
+      assert.ok(!got.includes(forbidden),
+        `a file cannot hold an npmrc; ${forbidden} must not be a candidate, got ${JSON.stringify(got)}`);
+    } finally {
+      if (saved === undefined) delete process.env.npm_execpath;
+      else process.env.npm_execpath = saved;
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('badNpmEnvNames — the benign exemption cannot launder a credential key (R3)', () => {
+  it('never exempts a credential-carrying key by value coincidence', () => {
+    // The exemption exists for keys that NAME a file npm already reported. `cert`, `key`, `ca` and
+    // `cafile` carry or point at material, so a value that happens to match one of npm's answers must not
+    // clear them. An earlier version applied the exemption to every key, which let this through.
+    for (const name of ['npm_config_cert', 'npm_config_key', 'npm_config_ca', 'npm_config_cafile']) {
+      assert.deepEqual(badNpmEnvNames({ [name]: '/home/me/.npmrc' }, ['/home/me/.npmrc']), [name],
+        `${name} must be rejected regardless of what npm reports elsewhere`);
     }
   });
 });

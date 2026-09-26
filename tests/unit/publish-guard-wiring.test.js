@@ -221,6 +221,34 @@ const yaml = require('js-yaml');
 
 const WORKFLOW = yaml.load(CI);
 const MARKETPLACE_STEP = 'Marketplace metadata integrity';
+/**
+ * Does this `shell:` value run the body with errexit in force?
+ *
+ * R2 used `/bash\s+-[a-z]*e/`, which is wrong in both directions (R3):
+ *   - It ACCEPTED `bash -eo pipefail +e {0}`, matching on `-eo` and never reading the later `+e`, which
+ *     turns errexit back off. Verified in bash: `bash -eo pipefail +e -c 'false; echo X; exit 0'` prints X.
+ *   - It REJECTED every correct spelling that is not literally `bash -e…`: the Actions keyword `bash`
+ *     (which expands to `bash --noprofile --norc -eo pipefail {0}`), that literal expansion, `bash -x -e
+ *     {0}`, and `sh -e {0}`. Writing the workflow default as the string GitHub itself documents failed
+ *     the test, which is a false accusation on correct wiring.
+ *
+ * @param {string} shell
+ * @returns {boolean}
+ */
+function shellEnablesErrexit(shell) {
+  const v = String(shell || '').trim();
+  if (!v) return false;
+  // Actions keywords. `bash` expands to `bash --noprofile --norc -eo pipefail {0}`; `sh` to `sh -e {0}`.
+  if (v === 'bash' || v === 'sh') return true;
+  // Any other value is a literal command line. It must be a POSIX shell, must enable errexit, and must
+  // not disable it again afterwards.
+  if (!/(^|\/)(ba)?sh(\s|$)/.test(v)) return false;
+  const enable = v.search(/\s-[a-z]*e/);
+  if (enable < 0) return false;
+  const disable = v.search(/\s\+([a-z]*e[a-z]*|o\s+errexit)\b/);
+  return disable < 0 || disable < enable;
+}
+
 const AUDIT_JOB = 'agent-surface-parity';
 
 function auditJob() {
@@ -291,6 +319,27 @@ test('publish waits on every gate, by whole-list equality', () => {
     + 'silently is a gate nobody reviewed. Got: ' + needs.join(', '));
 });
 
+// MEMBERSHIP IS NOT BLOCKING. R2 closed DELETION from `publish.needs` and left SOFTENING wide open:
+// `continue-on-error: true` on a gate job makes it report success while its checks fail, and `publish`
+// then runs. R3 neutralised 7 of the 8 gates one line at a time with the suite green — `test` among them,
+// the job that runs this very file — and did the same at step level inside `lint`. Only
+// `agent-surface-parity` was protected, and only because T206 happened to protect it.
+test('every gate publish waits on can actually fail', () => {
+  const soft = [];
+  for (const name of REQUIRED_NEEDS) {
+    const job = WORKFLOW.jobs[name];
+    assert.ok(job, `publish.needs names "${name}" but no such job exists`);
+    if ('continue-on-error' in job) soft.push(`${name} (job)`);
+    if ('if' in job) soft.push(`${name} (job if:)`);
+    for (const [i, step] of (job.steps || []).entries()) {
+      if ('continue-on-error' in step) soft.push(`${name} step ${i} (${step.name || step.uses || 'run'})`);
+    }
+  }
+  assert.deepEqual(soft, [],
+    'a gate that cannot fail is not a gate: continue-on-error makes the job report success while its '
+    + `checks fail, and a job-level if: can skip it entirely, which satisfies needs. Found: ${soft.join(', ')}`);
+});
+
 test('publish is not itself allowed to fail', () => {
   // The step-level check at the T45 block reads the step; the JOB node was never checked, although the
   // sibling marketplace assertion checks both. Not a credential bypass while the scan and `npm publish`
@@ -318,11 +367,25 @@ test('publish does not run regardless of its needs', () => {
 // job survived as `npm  publish` (two spaces) or `$NPMBIN publish`; and nothing constrained the other
 // commands that mutate the registry — a job running `npm dist-tag add convoke-agents@1.0.0 latest` moved
 // `latest` backwards past both this gate and the FR5 downgrade guard, with the suite green (R2).
-const REGISTRY_MUTATING = /(^|[\s;&|(])npm\s+(publish|dist-tag|deprecate|unpublish|access|owner|token)(\s|$)/;
+// WRITE subcommands only, and read off parsed `run:` bodies rather than raw file text (R3). The R2 form
+// flagged read-only calls — a `npm publish --dry-run` rehearsal step went red — and, applied to whole
+// file text, flagged a second workflow whose only mention was a PROSE COMMENT. Both are false accusations
+// on correct configuration, which is how an assertion gets relaxed.
+const REGISTRY_WRITE = /(^|[\s;&|(])npm\s+(\S+\s+)*?(publish|dist-tag|deprecate|unpublish)(\s|$)/;
+const REGISTRY_WRITE_SUB = /(^|[\s;&|(])npm\s+(\S+\s+)*?(access\s+(set|grant|revoke)|owner\s+(add|rm)|token\s+(create|revoke))(\s|$)/;
+
+/** Executable lines of a `run:` body that write to the registry. `--dry-run` writes nothing. */
+function registryWrites(run) {
+  return String(run || '').split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'))
+    .filter((l) => !l.includes('--dry-run'))
+    .filter((l) => REGISTRY_WRITE.test(l) || REGISTRY_WRITE_SUB.test(l));
+}
 
 test('publish is the only job in ci.yml that mutates the registry', () => {
   const publishers = Object.entries(WORKFLOW.jobs)
-    .filter(([, job]) => (job.steps || []).some((s) => REGISTRY_MUTATING.test(s.run || '')))
+    .filter(([, job]) => (job.steps || []).some((s) => registryWrites(s.run).length > 0))
     .map(([name]) => name);
   assert.deepEqual(publishers, ['publish'],
     `exactly one job may run npm publish/dist-tag/deprecate/unpublish/access/owner/token; found: ${publishers.join(', ') || 'none'}`);
@@ -340,19 +403,35 @@ test('publish is the only job in ci.yml that mutates the registry', () => {
 // residual — an indirect spelling in a job that carries a token by some other route — is filed, not
 // claimed closed (R2).
 test('only the publish job may mint an OIDC identity', () => {
+  // Two blind spots R3 walked through, each 88/0 green:
+  //   - WORKFLOW-level `permissions:` applies to every job ("applies to all jobs in the workflow"), so
+  //     declaring id-token there hands an OIDC identity to all of them while `publish` still declares its
+  //     own and this list still reads `['publish']`.
+  //   - `permissions: write-all` is a documented STRING shorthand setting every scope to write, id-token
+  //     included; `job.permissions['id-token']` on a string is `undefined`.
+  // Composed with a flag-prefixed `npm --loglevel=silly publish`, those made a complete second publishing
+  // lane that passed every assertion — each half caught alone, neither caught together.
+  const grantsIdToken = (perms) => perms === 'write-all' || (perms && perms['id-token'] === 'write');
+  assert.ok(!grantsIdToken(WORKFLOW.permissions),
+    'the workflow must not grant id-token at the top level — that gives every job an OIDC identity; '
+    + 'declare it on the publish job only');
   const holders = Object.entries(WORKFLOW.jobs)
-    .filter(([, job]) => job.permissions && job.permissions['id-token'] === 'write')
+    .filter(([, job]) => grantsIdToken(job.permissions))
     .map(([name]) => name)
     .sort();
   assert.deepEqual(holders, ['publish'],
-    `only publish may hold id-token: write — that permission is how a job authenticates to the registry; found: ${holders.join(', ') || 'none'}`);
+    `only publish may hold id-token: write, by any spelling including write-all — that permission is how a job authenticates to the registry; found: ${holders.join(', ') || 'none'}`);
 });
 
 test('ci.yml is the only workflow file that mutates the registry', () => {
   const dir = path.join(__dirname, '..', '..', '.github', 'workflows');
   const offenders = fs.readdirSync(dir)
     .filter((f) => /\.ya?ml$/.test(f))
-    .filter((f) => REGISTRY_MUTATING.test(fs.readFileSync(path.join(dir, f), 'utf8')))
+    .filter((f) => {
+      const doc = yaml.load(fs.readFileSync(path.join(dir, f), 'utf8'));
+      return Object.values((doc && doc.jobs) || {})
+        .some((job) => (job.steps || []).some((st) => registryWrites(st.run).length > 0));
+    })
     .sort();
   assert.deepEqual(offenders, ['ci.yml'],
     `only ci.yml may contain npm publish — the registry's trusted publisher is bound to that filename; found: ${offenders.join(', ') || 'none'}`);
@@ -462,17 +541,27 @@ test('T45: the step relies on errexit, so errexit must be in force', () => {
     || (job.defaults && job.defaults.run && job.defaults.run.shell)
     || (WORKFLOW.defaults && WORKFLOW.defaults.run && WORKFLOW.defaults.run.shell)
     || '';
-  assert.match(shell, /bash\s+-[a-z]*e/,
+  assert.ok(shellEnablesErrexit(shell),
     `the publish step's shell must carry errexit for a bare script call to fail the job; got ${JSON.stringify(shell)}`);
   // BOTH spellings of the same instruction. `set +o errexit` is `set +e`, and pinning one spelling let
   // one inserted line walk past this with 55/55 green (R2).
-  assert.ok(!/(^|[\s;&|(])set\s+(\+[a-z]*e[a-z]*|\+o\s+errexit)\b/.test(step.run),
-    'the step must not disable errexit, in any spelling — `set +e`, `set +ex` and `set +o errexit` are '
-    + 'the same instruction');
+  // EXECUTABLE LINES ONLY. Both of these read prose before R3, so documenting the prohibition in the
+  // step's own comment tripped the assertion that enforces it, and a `# set +e` note went red.
+  // Also matched `set -e +e` and `eval "set +e"`, which the single `set\s+\+` shape missed (R3).
+  const execAll = step.run.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')).join('\n');
+  assert.ok(!/(^|[\s;&|("'`])set\s+[-+a-z]*\s*(\+[a-z]*e[a-z]*|\+o\s+errexit)\b/m.test(execAll),
+    'the step must not disable errexit, in any spelling — `set +e`, `set +ex`, `set -e +e`, '
+    + '`eval "set +e"` and `set +o errexit` are the same instruction');
   // `PWD` is an ordinary assignable variable, so the `--cwd "$PWD"` this step passes can be pointed at an
   // empty directory while the call stays byte-identical and every other assertion here passes (R2).
-  assert.ok(!/(^|[\s;&|(])(export\s+)?PWD=/.test(step.run),
+  assert.ok(!/(^|[\s;&|(])(export\s+|declare\s+-\S+\s+)?PWD=/m.test(execAll),
     'the step must not assign PWD — the scan is told which project npmrc to read through "$PWD"');
+  // `cd` before the call repoints `$PWD` without assigning it, and R3 proved end to end that
+  // `cd /tmp` hides a live repo-root token. Unreachable now that the call is the first executable
+  // line, and asserted anyway so moving the call back cannot quietly reopen it.
+  const beforeCall = execAll.split('\n').slice(0, execAll.split('\n').findIndex((l) => l.includes(CRED_SCRIPT)));
+  assert.deepEqual(beforeCall, [],
+    `nothing may run before the credential scan; found: ${JSON.stringify(beforeCall)}`);
 });
 
 test('T45: the scan call is not neutered', () => {
@@ -481,30 +570,28 @@ test('T45: the scan call is not neutered', () => {
   const step = (publishJobT45().steps || [])
     .find((x) => typeof x.run === 'string' && x.run.includes(CRED_SCRIPT));
   assert.ok(step, `no publish step references ${CRED_SCRIPT}`);
-  const rawLines = step.run.split('\n');
-  const callIdx = rawLines.findIndex((line) => line.trim().startsWith(`node ${CRED_SCRIPT}`));
-  assert.ok(callIdx >= 0, `${CRED_SCRIPT} must be called bare at the start of a line`);
-  const callLine = rawLines[callIdx].trim();
-  // NOT NESTED. `.trim()` made the call's position invisible, so wrapping it in a SHELL conditional
-  // passed everything here — the step-level `if:` assertion below reads the parsed YAML node and sees
-  // nothing when the conditional is written in bash. `if [ -z "${SKIP_CRED_SCAN:-}" ]; then … fi` was the
-  // cheapest full bypass found, and it ships an operator-visible escape hatch that would outlive the
-  // release it was added for. Checked two ways, because either alone is evadable: the call must sit at the
-  // body's own indentation, AND no block may still be open when it is reached — a call at column 0 inside
-  // `if … fi` is valid bash (R2).
-  assert.equal(rawLines[callIdx], callLine,
-    `the call must sit at the step body's own indentation level, not nested in a shell block; got: ${JSON.stringify(rawLines[callIdx])}`);
-  const execBefore = rawLines.slice(0, callIdx).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
-  let depth = 0;
-  for (const line of execBefore) {
-    if (/^(if|while|until|for|case)\b/.test(line)) depth += 1;
-    if (/^(fi|done|esac)\b/.test(line)) depth -= 1;
-  }
-  assert.equal(depth, 0,
-    `the call is nested ${depth} shell block(s) deep — a bash conditional skips the only credential guard `
-    + 'while the step-level `if:` assertion sees nothing');
-  assert.match(callLine, new RegExp(`^node ${CRED_SCRIPT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} --cwd "\\$PWD"$`),
-    `the call must be bare and pass --cwd "$PWD" — no || true, no redirection, no trailing conditional; got: ${callLine}`);
+  // THE CALL IS THE FIRST EXECUTABLE LINE OF THE STEP. That is the whole guard, and it needs no bash
+  // parser.
+  //
+  // R2 tried to prove the call was not nested by counting `if|while|until|for|case` openers against
+  // `fi|done|esac` closers. A hand-rolled bash parser fails in both directions, and R3 demonstrated both:
+  //   - It knew 5 of bash's 8 grouping constructs. `{ … } || true`, `( … ) || true`, and a never-invoked
+  //     `scan_credentials() { … }` wrapper all left the suite green with the scan NEVER RUNNING. A heredoc
+  //     body line beginning `fi` cancelled a real `if`, restoring the very `SKIP_CRED_SCAN` bypass the
+  //     assertion was written to close.
+  //   - It was already WRONG about this file. `ci.yml` contains a one-line `case … esac`, whose closer the
+  //     line-anchored regex never sees, so the step's running depth ends at 1. The call passed only
+  //     because it sat before that line; any one-liner added above it falsely accused correct wiring of
+  //     nesting — which is how an assertion gets deleted under release pressure.
+  //
+  // Position is checkable without interpreting anything. Nothing can enclose the first executable line,
+  // nothing can `set +e` before it, nothing can `cd` before it, and it cannot be ordered after
+  // `npm publish`. The scan was moved to the top of the step for this (R3).
+  const exec = step.run.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+  assert.ok(exec.length > 0, 'the publish step has no executable lines');
+  assert.match(exec[0], new RegExp(`^node ${CRED_SCRIPT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} --cwd "\\$PWD"$`),
+    'the credential scan must be the FIRST executable line of the publish step, called bare and passing '
+    + `--cwd "$PWD". Anything above it can wrap, skip or relocate it. Got: ${JSON.stringify(exec[0])}`);
   // Read off the PARSED node, so a quoted key or odd indentation cannot hide it.
   assert.ok(!('continue-on-error' in step),
     'the step must not set continue-on-error — it would report the finding and publish anyway');

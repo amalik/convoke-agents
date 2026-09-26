@@ -3050,6 +3050,101 @@ battery without them cannot tell a kill from a no-op.
 | a second job spelling it `$NPMBIN publish` with no `id-token` | **passes — cannot authenticate**; the residual is recorded, not claimed closed |
 | a benign earlier step naming `npm publish` in a COMMENT | **passes — correct wiring**; this was red before the ordering fix |
 
+### Round 3 — scoped to what Round 2 rewrote
+
+`code-review-convergence` earns one follow-up layer for rewritten executable logic in something that must
+not be foolable, and denies one for rewritten narration. Round 3 was therefore scoped to the *code* Round 2
+touched: one reviewer on the scan's logic, one on the wiring assertions, records and playbook prose
+excluded. Both returned HIGHs. **Every finding was in Round 2's own fixes.**
+
+**The scan (4 HIGH).**
+- **The builtin npmrc was located by the wrong algorithm.** npm reads it at `resolve(npmPath, 'npmrc')` —
+  npm's install directory. Round 2 derived it from `npm root -g`, which is
+  `resolve(prefix, 'lib', 'node_modules')`, and **`prefix` is settable from the environment**. So
+  `npm_config_prefix=/tmp/x` moved where the scan *looked* without moving where npm *reads*: a complete
+  bypass of the only content-checked source, and in reverse a refusal over a file npm never opens.
+  `prefix` was in neither `DANGEROUS_CONFIG_KEYS` nor any structural rule. Now refused, and the path is
+  taken from npm's binary as well, which `prefix` cannot move.
+- **The whitespace class before the `=` was still narrow.** Round 2 widened the *leading* class to `\s`
+  and left the trailing one as `[ \t\f\v]` — the same defect one character position over. Driven through
+  npm's own `ini`, 11 characters there each produced a live credential key the scan called clean.
+- **`ini`'s array-append form was missed.** `…:_authToken[]=tok` parses to `['tok']`, and
+  `npm-registry-fetch` interpolates that into exactly `Bearer tok`.
+- **`--cwd` validated only that a value was present.** `--cwd=<path>` (the conventional spelling, and the
+  one the playbook invites), `--cwd --verbose <path>` and `--cwd <missing dir>` each certified a tree
+  holding a live token. A guard must not be defeatable by argument shape.
+
+Also: npm exiting 0 with **empty or multi-line output** still dropped a source and printed the clean OK
+line — verbatim the defect Round 2's own header claimed closed, because that fix covered only the non-zero
+branch. `npm_config_*` with an **empty value** was refused although npm ignores it, and npm's own lifecycle
+environment (`npm run` injects `userconfig`/`globalconfig`/`prefix`) refused every time, so the scan failed
+in any environment npm created. `npmLocalPrefix` used `existsSync` where npm uses `isFile`/`isDirectory`,
+stopping the walk one level below npm. The builtin loop read without stat'ing, so a directory there was
+reported as an uninspected credential source npm provably cannot read, and a FIFO would have blocked
+forever.
+
+**The wiring (6 HIGH), and the lesson is the one that generalises.** Round 2 proved the call was not
+nested by counting `if|while|until|for|case` against `fi|done|esac`. **A hand-rolled bash parser fails in
+both directions and this one did both.** It knew 5 of bash's 8 grouping constructs, so `{ … } || true`,
+`( … ) || true` and a never-invoked `scan_credentials() { … }` wrapper each left the suite green **with the
+scan never running**; a heredoc body line beginning `fi` cancelled a real `if`, restoring the exact
+`SKIP_CRED_SCAN` bypass the assertion was written to close. And it was already wrong about the file it
+guarded: `ci.yml` holds a one-line `case … esac` whose closer a line-anchored regex never sees, so the
+step's running depth ends at 1 — the call passed only because it sat above that line, and any one-liner
+added above it would have falsely accused correct wiring.
+
+**The fix was to stop parsing.** The scan is now the **first executable line** of the publish step. Nothing
+can enclose the first line, `set +e` before it, `cd` before it, or order it after `npm publish`. That one
+positional invariant replaced the parser and closed all of it.
+
+The rest of the wiring: `/bash\s+-[a-z]*e/` **accepted** `bash -eo pipefail +e {0}`, which has errexit off,
+and **rejected** every correct spelling that is not literally `bash -e…` — including the Actions keyword
+`bash` and its own documented expansion, a false accusation on correct wiring. `set -e +e` and
+`eval "set +e"` walked past the `set +e` check, which also read the step's *comments*, so documenting the
+prohibition tripped the assertion enforcing it. `publish.needs` pinned **membership**, not blocking: seven
+of the eight gates could be made to pass while failing, one `continue-on-error` at a time, `test` among
+them. The OIDC containment read only job-level `permissions['id-token']`, so **workflow-level**
+`permissions` and the **`write-all`** string shorthand both slipped through — composed with a
+flag-prefixed `npm --loglevel=silly publish`, that was a complete second publishing lane passing every
+assertion, each half caught alone and neither caught together. `cd /tmp` repointed `$PWD` without
+assigning it, demonstrated end to end hiding a live repo-root token. The registry-command scan flagged
+read-only `npm publish --dry-run` and, over raw file text, a second workflow whose only mention was a
+prose comment.
+
+**Two findings were in Round 3's own fixes, caught by the battery before landing.** The benign-value
+exemption added for npm's lifecycle environment was applied before every other rule, so the exemption list
+could have laundered a credential — it is now scoped to the three keys that name a file rather than carry
+one, with a floor test. And `resolveNpmDir` accepted a *file* named `npm`, synthesising a candidate beneath
+it.
+
+| Fact | Command |
+|---|---|
+| The scan is the first executable line of the publish step, under errexit, with every gate blocking and OIDC confined to `publish` | `node --test tests/unit/publish-guard-wiring.test.js` |
+| Every rule fires against a fixture; the count tracks the candidate set; `--cwd` cannot be defeated by shape | `node --test tests/unit/npm-credential-scan.test.js` |
+
+**Round 3 mutants.** All on `cp -a` copies against a control. Correct-configuration mutants are included
+deliberately: a guard that reds on correct wiring is a finding, and four of Round 2's did.
+
+| Mutant | Result |
+|---|---|
+| the call wrapped in a function definition, in `{ … } \|\| true`, in `( … ) \|\| true` | killed, 3 of 3 |
+| a heredoc body line `fi` cancelling a real `if` | killed |
+| `cd /tmp`, `set -e +e`, `eval "set +e"` before the call | killed, 3 of 3 |
+| step `shell: bash -eo pipefail +e {0}` | killed |
+| `continue-on-error` on the `test` gate, on the `lint` gate | killed, 2 of 2 |
+| workflow-level `id-token: write`; a second job with `permissions: write-all` | killed, 2 of 2 |
+| `prefix` removed from the refused keys; the builtin located from `npm root -g` alone; the `npm_execpath` route dropped | killed, 3 of 3 |
+| the class before the `=` narrowed back; the array form dropped | killed, 2 of 2 |
+| `--cwd=` form dropped; a flag accepted as its value; a nonexistent directory accepted | killed, 3 of 3 |
+| npm's zero-exit-empty-output treated as an answer | killed |
+| the empty-value skip removed; the benign exemption widened to every key | killed, 2 of 2 |
+| `isFile`/`isDirectory` reverted to `existsSync`; the builtin stat check removed | killed, 3 of 3 |
+| `ca` removed from the refused keys; `resolveNpmDir` accepting a file | killed, 2 of 2 |
+| a one-line `if … fi` above the call (**correct wiring**) | killed — and under Round 2's parser this *passed* while the real bypasses did not |
+| `shell: bash`; `shell: bash --noprofile --norc -eo pipefail {0}` (**correct**) | **pass** — Round 2 reddened both |
+| `set +e` inside a comment (**correct**) | **pass** — Round 2 reddened it |
+| `npm publish --dry-run` in another job (**correct**) | **pass** — Round 2 reddened it |
+
 **What Round 2 does not close.** A second job that invokes npm indirectly (`$NPMBIN publish`) *and*
 obtains a credential by some route other than `id-token: write` is caught by neither the text scan nor
 the permission assertion. The claim is a floor, not a closure. **A Fast Lane row is owed for it** — no ID
