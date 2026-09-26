@@ -171,11 +171,12 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
     try {
       const existing = [
         'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
+        'first-skill,bmad-agent-dev,frontmatter,bme,bob@example.com,2026-04-01',
         'skill-x,bmad-agent-pm,frontmatter,unknown,auto-scan,2026-09-01',
-        'other-skill,bmad-agent-dev,frontmatter,bme,bob@example.com,2026-04-01',
+        'last-skill,bmad-agent-sm,frontmatter,bme,dan@example.com,2026-04-02',
         '',
       ].join('\n');
-      await seedFixture(tmpDir, { csvContents: existing, skillNames: ['skill-x', 'other-skill'] });
+      await seedFixture(tmpDir, { csvContents: existing, skillNames: ['skill-x', 'first-skill', 'last-skill'] });
 
       const { exitCode, stdout } = await runScript(
         SCRIPT_PATH,
@@ -192,11 +193,15 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
       assert.equal(matching.length, 1, 'claiming must REPLACE the row, not add a second one with the same triple');
       assert.ok(matching[0].includes('carol@example.com'), 'the operator must own the row now');
       assert.ok(!matching[0].includes('auto-scan'), 'the reserved marker must be gone');
-      // Order is deliberately preserved by renderCsv; a claim must not move the row. The claim target
-      // is deliberately NOT the last row: with it last, "keeps its position" is also true of an
-      // implementation that deletes and appends, so the assertion pinned nothing (R1).
-      assert.ok(lines[1].startsWith('skill-x'), 'the claimed row keeps ITS position rather than moving to the end');
-      assert.ok(lines[2].startsWith('other-skill'), 'the untouched row keeps its position');
+      // The claim target sits in the MIDDLE of three data rows, and the whole file is asserted. Both
+      // degenerate positions have now bitten: with the target last, delete-and-append satisfied "keeps
+      // its position" (R1); with it first, hardcoding the claim index to 0 passed all 2926 tests while
+      // destroying the row above it (R3). Only a middle target plus a full-file assertion pins the index.
+      assert.deepEqual(lines.slice(1), [
+        'first-skill,bmad-agent-dev,frontmatter,bme,bob@example.com,2026-04-01',
+        'skill-x,bmad-agent-pm,frontmatter,unknown,carol@example.com,2026-09-26',
+        'last-skill,bmad-agent-sm,frontmatter,bme,dan@example.com,2026-04-02',
+      ], 'the claimed row is replaced in place and its neighbours are untouched');
     } finally {
       await fs.remove(tmpDir);
     }
@@ -273,6 +278,11 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
       );
       assert.equal(exitCode, 1, `a duplicate triple must not be claimed; got: ${stdout}`);
       assert.match(stdout, /2 rows for that triple/, 'the message must say what it found');
+      // Validate BEFORE announcing: the real run used to print "↻ Claiming …" and then refuse, which
+      // is the discipline the dry-run path got and this one did not (R3). Without this assertion,
+      // restoring that order passes every other test.
+      assert.ok(!stdout.includes('Claiming the auto-scan row'),
+        'a refused claim must not be announced as happening first');
       assert.equal(await fs.readFile(csvPath, 'utf8'), before, 'nothing may be written on refusal');
     } finally {
       await fs.remove(tmpDir);
@@ -339,14 +349,17 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
     }
   });
 
-  it('T112 R2: the reserved marker is unwritable in every spelling the claim logic accepts', async () => {
+  it('T112 R2: the reserved marker is unwritable in every CASE the claim logic accepts', async () => {
     // The read side was widened to trim and case-fold; leaving the write side strict let an operator
     // register as `Auto-Scan`, which the claim logic then treated as an unclaimed audit row and
     // overwrote — deterministically, no race needed. Both sides must classify it identically.
     const tmpDir = await createTempDir('bmad-reg-reserved-');
     try {
       await seedFixture(tmpDir, { skillNames: ['skill-x'] });
-      for (const spelling of ['Auto-Scan', ' auto-scan', 'auto-scan ', 'AUTO-SCAN']) {
+      // `parseArgs` trims every flag value, so ` auto-scan` reached the old strict check as `auto-scan`
+      // and was already refused — only CASE variants could slip through. The whitespace variants are
+      // covered directly against `isReservedMarker` below (R3).
+      for (const spelling of ['Auto-Scan', 'AUTO-SCAN', 'auTO-scAN']) {
         const { exitCode, stdout } = await runScript(
           SCRIPT_PATH,
           ['--skill', 'skill-x', '--agent', 'bmad-agent-pm', '--type', 'frontmatter',
@@ -395,7 +408,10 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
       await seedFixture(tmpDir, {
         csvContents: [
           'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
-          'skill-x,bmad-agent-pm,frontmatter,bme,   ,   ',
+          // Whitespace registrant with a VALID date: pins the `registered_by` conjunct on its own. With
+          // both fields blank either conjunct satisfied the test, so reverting the trim on one of them
+          // went undetected (R3).
+          'skill-x,bmad-agent-pm,frontmatter,bme,   ,2026-09-01',
           '',
         ].join('\n'),
         skillNames: ['skill-x'],
@@ -409,6 +425,44 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
       assert.match(stdout, /incomplete metadata/, 'a whitespace-only field is not metadata');
     } finally {
       await fs.remove(tmpDir);
+    }
+  });
+
+  it('T112 R3: a whitespace-only DATE also reaches the locatable message', async () => {
+    // The other conjunct, on its own.
+    const tmpDir = await createTempDir('bmad-reg-wsdate-');
+    try {
+      await seedFixture(tmpDir, {
+        csvContents: [
+          'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
+          'skill-x,bmad-agent-pm,frontmatter,bme,alice@example.com,   ',
+          '',
+        ].join('\n'),
+        skillNames: ['skill-x'],
+      });
+      const { exitCode, stdout } = await runScript(
+        SCRIPT_PATH,
+        ['--skill', 'skill-x', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--yes'],
+        { cwd: tmpDir }
+      );
+      assert.equal(exitCode, 1);
+      assert.match(stdout, /incomplete metadata/, 'a whitespace-only date is not metadata either');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('T112 R3: isReservedMarker classifies the marker the way the audit does', async () => {
+    // A direct unit test of the predicate that gates the claim on both sides — the reason it was
+    // exported. `parseArgs` trims every flag value, so the CLI can only ever present CASE variants to
+    // it; the whitespace variants are only reachable from a hand-edited CSV, which is this path.
+    const { isReservedMarker } = require('../../scripts/convoke-register-skill')._internal;
+    for (const yes of ['auto-scan', 'Auto-Scan', 'AUTO-SCAN', ' auto-scan', 'auto-scan ', ' Auto-Scan ']) {
+      assert.equal(isReservedMarker(yes), true, `${JSON.stringify(yes)} is the audit's marker`);
+    }
+    for (const no of ['operator', 'auto scan', 'autoscan', 'auto--scan', '', '   ', null, undefined,
+      'auto-scan-2', 'x auto-scan']) {
+      assert.equal(isReservedMarker(no), false, `${JSON.stringify(no)} is not the marker`);
     }
   });
 

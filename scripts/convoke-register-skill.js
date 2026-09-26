@@ -237,9 +237,10 @@ function validateInput(input, projectRoot) {
   // sides must classify the marker identically or the reserved value is writable after all. R2.
   if (isReservedMarker(email)) {
     errors.push(
-      `'${RESERVED_REGISTERED_BY}' is reserved for the scan tool. Registration rows ` +
+      `'${email}' is reserved for the scan tool — matched case-insensitively with surrounding whitespace `
+      + `trimmed, so it is the reserved value '${RESERVED_REGISTERED_BY}'. Registration rows ` +
       `must carry an operator identifier so mergePreservingManual treats them as manual rows ` +
-      `and preserves them byte-identical across re-scans. Provide any other value ` +
+      `and preserve them byte-identical across re-scans. Provide any other value ` +
       `(email, username, 'operator').`
     );
   }
@@ -395,16 +396,6 @@ function _withCsvLock(csvPath, fn) {
 }
 
 /**
- * Append a registration row to `_bmad/_config/bmm-dependencies.csv`, preserving
- * existing rows byte-identical (no re-sort). Atomic write via Story 2.1's
- * `_atomicWrite`, wrapped in an advisory lock (R1-H1) so concurrent
- * registrations don't clobber each other. Creates the file with header if
- * absent.
- *
- * @param {object} row - The row shape returned by `buildRow`.
- * @param {string} csvPath - Absolute CSV path.
- */
-/**
  * Rows in the registry whose triple key matches, paired with their index.
  * @param {object[]} existingRows
  * @param {string} newKey
@@ -446,6 +437,16 @@ function assertClaimable(matches, row, csvRel) {
   }
 }
 
+/**
+ * Append a registration row to `_bmad/_config/bmm-dependencies.csv`, preserving
+ * existing rows byte-identical (no re-sort). Atomic write via Story 2.1's
+ * `_atomicWrite`, wrapped in an advisory lock (R1-H1) so concurrent
+ * registrations don't clobber each other. Creates the file with header if
+ * absent.
+ *
+ * @param {object} row - The row shape returned by `buildRow`.
+ * @param {string} csvPath - Absolute CSV path.
+ */
 function writeRow(row, csvPath, { claim = false } = {}) {
   const audit = require('./audit/audit-bmm-dependencies');
   _withCsvLock(csvPath, () => {
@@ -799,6 +800,17 @@ async function main(argv) {
 
   // Write.
   if (claimable) {
+    // Validate BEFORE announcing. The real run used to print "↻ Claiming …" and then refuse, which is
+    // the discipline the dry-run path was given and this one was not (R3). A refusal that arrives after
+    // the claim is announced still happens if the row changes under the lock — that is a genuine lost
+    // race, and the notice was true when printed.
+    try {
+      const rows = fs.existsSync(csvPath) ? audit.readExistingCsv(csvPath) : [];
+      assertClaimable(claimMatches(rows, audit._internal._tripleKey(row)), row, audit.OUTPUT_CSV_REL);
+    } catch (err) {
+      console.log(chalk.red(`  ✗ ${(err && err.message) || String(err)}`));
+      return 1;
+    }
     console.log(chalk.cyan(
       `  ↻ Claiming the auto-scan row for ${row.skill_name}/${row.bmm_agent}/${row.dependency_type} `
       + `(listed by convoke-audit-bmm-deps on ${duplicate.registered_date || 'an unrecorded date'}).`

@@ -2830,3 +2830,41 @@ skill's inventory row. `--skill` rejects path characters but not the delimiter. 
 "exactly one row for the key" premise unsound for a reason sanitisation-matching would not fix, so the
 row now names the class: make the key injective.
 
+### R3 — one scoped layer, 2026-09-26
+
+**The shipped code was correct, and R3 established that more thoroughly than any round before it.** The
+reserved-marker pairing was verified exhaustively rather than argued: all 1,112,064 code points as
+prefix and suffix around `auto-scan` (the two classifiers' operator order is immaterial — 0 divergences),
+and 10,008,576 candidate `--email` values pushed through the real write path (`parseArgs` trim →
+`isReservedMarker` → `buildRow` → `_sanitizeFormula` → `formatCsvRow` → `parseCsvRow`) then classified by
+the read side: **0 values the write side accepts that the read side calls reserved.** A 21-scenario
+before/after battery confirmed the extraction changed exactly the four intended behaviours and nothing
+else, with both throw messages byte-identical.
+
+**What survived were two fixtures that could not distinguish the fix from a specific wrong
+implementation** — and one of them is this arc's sharpest lesson.
+
+| Survivor | Why it survived | Fix |
+|---|---|---|
+| **The claim index was unpinned.** Hardcoding it to `0` passed all 2,926 tests while destroying the row above the target and leaving a duplicate triple — exit 0, `REGISTERED:` emitted, and post-write verification green because it matches on `rows.find` | R1 moved the claim target off the LAST index, where delete-and-append satisfied "keeps its position", and onto index **0** — the other degenerate index. The mirror mutant (replace-last) *was* killed; only replace-first survived | the target now sits in the middle of three data rows and the whole file is asserted |
+| **The `hasMetadata` conjunction was pinned only as a whole**, because the fixture blanked both fields, so either conjunct satisfied it. Reverting the trim on `registered_by` alone restored the exact `registered by     on <date>` message the test's title says it prevents | one fixture for a two-term conjunction | two fixtures, one per conjunct |
+
+**Also fixed:** the real run announced `↻ Claiming …` and *then* refused — the discipline the dry-run path
+was given and this one was not, now validated before announcing and pinned by an assertion that the
+notice is absent on refusal. The reserved-value error named `'auto-scan'` when the operator typed
+`Auto-Scan`, reading as a false accusation; it now echoes their value and says the comparison folds case
+and trims. `writeRow`'s JSDoc had been orphaned — the R2 reattachment **relocated** the orphan rather
+than removing it, the same insertion mistake a third time. And `isReservedMarker` / `assertClaimable`
+were exported "for unit-level testing" with nothing testing them; there is now a direct test, which is
+also where the whitespace spellings belong, since `parseArgs` trims every flag value so only CASE
+variants can reach the predicate through the CLI.
+
+**Eight mutants, each killed by a named test**, including both degenerate claim indices, both
+`hasMetadata` conjuncts, and the announce-before-validate ordering.
+
+**The pattern, stated once for the whole arc.** Across R1, R2 and R3 the code was right each time. What
+failed was the thing describing or verifying it: a fixture that could not tell a guard from its
+relaxation, a predicate widened on one side only, a fixture moved from one degenerate index to the other,
+a conjunction pinned as a whole, an orphaned JSDoc relocated twice, and three record claims drawn from
+truncated evidence. Every fix above is pinned by a mutant, because reading the diff is what missed them.
+
