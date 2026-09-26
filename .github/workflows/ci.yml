@@ -809,7 +809,8 @@ jobs:
 
           # FR4/dist-1-5, part 2 -- no credential may reach npm on this path.
           #
-          # T45: this was ~100 lines of inline bash, and in the healthy steady state it inspected
+          # T45: this was 106 lines of inline bash (57 executable, the rest comment), and in the healthy
+          # steady state it inspected
           # ZERO files -- FR4 removes `registry-url:` so nothing writes a userconfig -- then printed
           # `no npmrc exists on any path npm reads … OK`. Observed live in dist-1-6's rehearsal (run
           # 32599414962). The environment assertions were real; the FILE loop had never executed
@@ -825,7 +826,10 @@ jobs:
           # line endings, certfile/keyfile, key-line anchoring so a comment does not abort a publish,
           # unreadable-is-fatal, structural npm_config_* name rules, NUL-safe env reading, and the
           # NODE_AUTH_TOKEN / NPM_ID_TOKEN vectors.
-          node scripts/audit/npm-credential-scan.js
+          # `--cwd "$PWD"` states the project path rather than letting the script infer it: npm reads
+          # the `.npmrc` of the directory it RUNS IN, and inferring that from the repo layout skipped
+          # the file npm would actually read whenever the two differ (R1).
+          node scripts/audit/npm-credential-scan.js --cwd "$PWD"
 
           # FR4/dist-1-5, part 3 -- a `npm publish --dry-run` OIDC gate was written here and
           # REMOVED at Round 2. Recorded so it is not re-attempted without the context:

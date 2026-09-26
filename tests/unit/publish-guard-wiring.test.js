@@ -365,6 +365,45 @@ test('T45: the wired script exists and can actually fail', () => {
   assert.ok(fatal.length > 0, 'the script must be able to fail, or wiring it asserts nothing');
 });
 
+test('T45: the scan runs BEFORE npm publish', () => {
+  // Both siblings in this file pin ordering; the T45 block skipped the idiom. A guard that runs after
+  // the credential it guards has been used is decoration.
+  const steps = publishJobT45().steps || [];
+  const scanAt = steps.findIndex((x) => typeof x.run === 'string' && x.run.includes(CRED_SCRIPT));
+  const publishAt = steps.findIndex((x) => typeof x.run === 'string' && /npm\s+publish/.test(x.run));
+  assert.ok(scanAt >= 0, `${CRED_SCRIPT} is not invoked in the publish job`);
+  assert.ok(publishAt >= 0, 'no `npm publish` step found in the publish job');
+  if (scanAt === publishAt) {
+    // Same step: compare EXECUTABLE lines. The body also mentions `npm publish` in the FR4 note about a
+    // dry-run gate that was removed, and a comment is not an ordering.
+    const exec = steps[scanAt].run.split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#'));
+    const scanLine = exec.findIndex((line) => line.includes(CRED_SCRIPT));
+    const publishLine = exec.findIndex((line) => /(^|[|&;(]\s*)npm\s+publish/.test(line));
+    assert.ok(scanLine >= 0, 'the scan is not on an executable line');
+    assert.ok(publishLine >= 0, '`npm publish` is not on an executable line in this step');
+    assert.ok(scanLine < publishLine,
+      `the credential scan must precede \`npm publish\` within the step (scan at ${scanLine}, publish at ${publishLine})`);
+  } else {
+    assert.ok(scanAt < publishAt, 'the credential scan step must precede the publish step');
+  }
+});
+
+test('T45: the step relies on errexit, so errexit must be in force', () => {
+  // Every other assertion in the step ends in an explicit `exit 1`; the scan fails ONLY because the
+  // default shell is `bash -e…`. Dropping `-e` disarms this guard and leaves the others working (R1).
+  const shell = (WORKFLOW.defaults && WORKFLOW.defaults.run && WORKFLOW.defaults.run.shell)
+    || (WORKFLOW.jobs.publish.defaults && WORKFLOW.jobs.publish.defaults.run
+      && WORKFLOW.jobs.publish.defaults.run.shell)
+    || '';
+  assert.match(shell, /bash\s+-[a-z]*e/,
+    `the publish step's shell must carry errexit for a bare script call to fail the job; got ${JSON.stringify(shell)}`);
+  const step = (publishJobT45().steps || [])
+    .find((x) => typeof x.run === 'string' && x.run.includes(CRED_SCRIPT));
+  assert.ok(!/set\s+\+e/.test(step.run), 'the step must not disable errexit');
+});
+
 test('T45: the scan call is not neutered', () => {
   // `|| true` on the call passed every other assertion here. T206 pinned nine neutering paths for the
   // marketplace check for exactly this reason: a wired guard that cannot fail is documentation.
@@ -375,8 +414,8 @@ test('T45: the scan call is not neutered', () => {
     .map((line) => line.trim())
     .find((line) => line.startsWith(`node ${CRED_SCRIPT}`));
   assert.ok(callLine, `${CRED_SCRIPT} must be called bare at the start of a line`);
-  assert.strictEqual(callLine, `node ${CRED_SCRIPT}`,
-    `the call must be bare — no || true, no redirection, no trailing conditional; got: ${callLine}`);
+  assert.match(callLine, new RegExp(`^node ${CRED_SCRIPT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} --cwd "\\$PWD"$`),
+    `the call must be bare and pass --cwd "$PWD" — no || true, no redirection, no trailing conditional; got: ${callLine}`);
   // Read off the PARSED node, so a quoted key or odd indentation cannot hide it.
   assert.ok(!('continue-on-error' in step),
     'the step must not set continue-on-error — it would report the finding and publish anyway');
@@ -385,6 +424,11 @@ test('T45: the scan call is not neutered', () => {
 });
 
 test('T45: no inline npmrc loop remains beside the script', () => {
+  // By CLASS, not by variable name: the previous assertion pinned `NPMRC_CHECKED`, so a reintroduced
+  // loop with any other counter passed (R1).
   assert.ok(!CI.includes('NPMRC_CHECKED'),
     'the inline bash loop is back alongside the script — two implementations, one of them untested');
+  const inlineScan = /for\s+\w*npmrc\w*|grep[^\n]*_authToken|\.npmrc"?\s*\|\|/i;
+  assert.ok(!inlineScan.test(CI),
+    'ci.yml appears to scan npmrc files inline again — the script is the one implementation to keep honest');
 });

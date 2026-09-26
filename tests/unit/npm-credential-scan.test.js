@@ -21,12 +21,32 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const { execFileSync } = require('child_process');
+
 const {
   setsCredential,
   npmrcCandidates,
   badNpmEnvNames,
   check,
 } = require('../../scripts/audit/npm-credential-scan');
+
+const SCRIPT = path.join(__dirname, '..', '..', 'scripts', 'audit', 'npm-credential-scan.js');
+
+/**
+ * Run the CLI as CI runs it, with an isolated HOME and an explicit --cwd.
+ * @returns {{status: number, stdout: string, stderr: string}}
+ */
+function runCli({ cwd, home, env = {} }) {
+  try {
+    const stdout = execFileSync(process.execPath, [SCRIPT, '--cwd', cwd], {
+      encoding: 'utf8',
+      env: { PATH: process.env.PATH, HOME: home, ...env },
+    });
+    return { status: 0, stdout, stderr: '' };
+  } catch (err) {
+    return { status: err.status, stdout: err.stdout || '', stderr: err.stderr || '' };
+  }
+}
 
 function tmpNpmrc(contents) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-scan-'));
@@ -199,5 +219,113 @@ describe('check — the publish path must have no npmrc at all', () => {
     for (const secret of ['npm_secret_value', 'id_secret_value', 'cfg_secret_value']) {
       assert.ok(!fatal.includes(secret), `${secret} leaked into the failure output`);
     }
+  });
+});
+
+describe('the CLI — the exit code is the only thing CI consumes', () => {
+  // `check()` was tested 18 ways and the bridge from it to an exit code was tested zero ways: changing
+  // `if (fatal.length > 0)` to `if (false)` left the whole suite green while the guard became a no-op
+  // that printed a success line. That is T45's own defect — an unexercised path — one layer in (R1).
+  it('exits 1 and reports on stderr when a planted npmrc sets a credential', () => {
+    const { dir } = tmpNpmrc('//registry.npmjs.org/:_authToken=npm_PLANTED\n');
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-home-'));
+    try {
+      const { status, stderr } = runCli({ cwd: dir, home });
+      assert.equal(status, 1, 'a credential on the publish path must fail the job');
+      assert.match(stderr, /FATAL:/);
+      assert.match(stderr, /AND sets a credential key/);
+      assert.ok(!stderr.includes('npm_PLANTED'), 'the token value must never be echoed');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('exits 1 for an npmrc with no credential in it — existence is the rule', () => {
+    const { dir } = tmpNpmrc('registry=https://registry.npmjs.org/\n');
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-home-'));
+    try {
+      const { status, stderr } = runCli({ cwd: dir, home });
+      assert.equal(status, 1);
+      assert.match(stderr, /sets no credential key/);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('exits 0 on a clean tree, and says how many paths it checked', () => {
+    const clean = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-clean-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-home-'));
+    try {
+      const { status, stdout } = runCli({ cwd: clean, home });
+      assert.equal(status, 0, stdout);
+      assert.match(stdout, /path\(s\) npm reads were checked/,
+        'the count must be the paths INSPECTED — the earlier message printed a number that is always 0 here');
+      assert.match(stdout, /-- OK/);
+    } finally {
+      fs.rmSync(clean, { recursive: true, force: true });
+      fs.rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('exits 1 when the environment carries a token, even with no npmrc anywhere', () => {
+    const clean = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-clean-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'npmrc-home-'));
+    try {
+      const { status, stderr } = runCli({ cwd: clean, home, env: { NODE_AUTH_TOKEN: 'x' } });
+      assert.equal(status, 1);
+      assert.match(stderr, /NODE_AUTH_TOKEN is set/);
+    } finally {
+      fs.rmSync(clean, { recursive: true, force: true });
+      fs.rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('check — every candidate path is really scanned, not just the project one', () => {
+  // Only `cwd` was pinned: dropping `home` or the env overrides from the candidate list left all 45
+  // tests green, and `$HOME/.npmrc` is the likeliest place for a real npmrc on a runner (R1).
+  it('finds an npmrc at $HOME', () => {
+    const { dir } = tmpNpmrc('//registry.npmjs.org/:_authToken=abc\n');
+    try {
+      const { fatal } = check({ env: {}, home: dir, cwd: '/nonexistent-repo', fromNpm: [] });
+      assert.equal(fatal.length, 1, 'the HOME candidate must be scanned');
+      assert.match(fatal[0], /AND sets a credential key/);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('finds one at NPM_CONFIG_USERCONFIG and at NPM_CONFIG_GLOBALCONFIG', () => {
+    for (const key of ['NPM_CONFIG_USERCONFIG', 'NPM_CONFIG_GLOBALCONFIG']) {
+      const { dir, file } = tmpNpmrc('_authToken=abc\n');
+      try {
+        const { fatal } = check({ env: { [key]: file }, home: '/none', cwd: '/none', fromNpm: [] });
+        assert.equal(fatal.length, 1, `${key} must be scanned`);
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('finds one at a path npm itself reports', () => {
+    const { dir, file } = tmpNpmrc('_authToken=abc\n');
+    try {
+      const { fatal } = check({ env: {}, home: '/none', cwd: '/none', fromNpm: [file, 'undefined'] });
+      assert.equal(fatal.length, 1, "npm's own userconfig answer must be scanned");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('setsCredential — the whitespace npm honours', () => {
+  it('sees a key preceded by a form feed or vertical tab', () => {
+    // POSIX [[:space:]] covers these and npm's `ini` trims the key: measured against npm 11.11.0, a
+    // form-feed-prefixed key is honoured. `[ \t]` alone missed them (R1).
+    assert.equal(setsCredential('\f_authToken=abc'), true);
+    assert.equal(setsCredential('\v_authToken=abc'), true);
+    assert.equal(setsCredential('_authToken\f=abc'), true);
   });
 });

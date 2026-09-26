@@ -4,7 +4,7 @@
 /**
  * Assert that no credential can reach npm on the publish path.
  *
- * WHY THIS IS A SCRIPT (T45). It was inline bash in `ci.yml`'s publish job, and in the healthy steady
+ * WHY THIS IS A SCRIPT (T45). It was inline bash in `ci.yml`'s publish job (106 lines deleted, 57 of them executable), and in the healthy steady
  * state it inspected ZERO files: FR4 removed `registry-url:` from `setup-node` precisely so no
  * userconfig is written, so there is no npmrc for the loop to open. It then printed
  * `no npmrc exists on any path npm reads … OK`. The environment assertions were real and did run, but
@@ -46,7 +46,11 @@ const { execFileSync } = require('child_process');
 const { findProjectRoot } = require('../update/lib/utils');
 
 // Anchored to a config-key line. The optional `//host/:` prefix is npm's nerf-dart form.
-const CREDENTIAL_KEY_RE = /^[ \t]*(\/\/[^\s]*:)?(_authToken|_auth|_password|username|certfile|keyfile)[ \t]*=/;
+// Whitespace class mirrors POSIX `[[:space:]]`, which the bash used: npm's `ini` trims the key, and
+// npm 11.11.0 honours a key preceded by a form feed or vertical tab (measured). `[ \t]` alone missed
+// `\f_authToken=…`, and `[^\s]` inside the nerf-dart was NARROWER than POSIX because JS `\s` counts
+// U+00A0. Both directions matter for a classifier other code may reuse (R1).
+const CREDENTIAL_KEY_RE = /^[ \t\f\v]*(\/\/[^ \t\f\v\r\n]*:)?(_authToken|_auth|_password|username|certfile|keyfile)[ \t\f\v]*=/;
 
 const CREDENTIAL_WORD_RE = /(_auth|_password|username|certfile|keyfile)/i;
 
@@ -73,13 +77,14 @@ function setsCredential(content) {
  * @param {string[]} [opts.fromNpm] - values of `npm config get userconfig|globalconfig`
  * @returns {string[]}
  */
-function npmrcCandidates({ env = {}, home, cwd, fromNpm = [] }) {
+function npmrcCandidates({ env = {}, home, cwd, fromNpm = [], extra = [] }) {
   const raw = [
     ...fromNpm,
     env.NPM_CONFIG_USERCONFIG,
     env.NPM_CONFIG_GLOBALCONFIG,
     home ? path.join(home, '.npmrc') : '',
     cwd ? path.join(cwd, '.npmrc') : '',
+    ...extra,
   ];
   const seen = new Set();
   const out = [];
@@ -118,9 +123,9 @@ function badNpmEnvNames(env = {}) {
  * @param {object} [opts.fsImpl] - injectable for tests
  * @returns {{fatal: string[], candidates: string[], present: string[]}}
  */
-function check({ env = {}, home, cwd, fromNpm = [], fsImpl = fs }) {
+function check({ env = {}, home, cwd, fromNpm = [], extra = [], fsImpl = fs }) {
   const fatal = [];
-  const candidates = npmrcCandidates({ env, home, cwd, fromNpm });
+  const candidates = npmrcCandidates({ env, home, cwd, fromNpm, extra });
   const present = [];
 
   for (const candidate of candidates) {
@@ -146,9 +151,13 @@ function check({ env = {}, home, cwd, fromNpm = [], fsImpl = fs }) {
     // The rule is EXISTENCE. Content is reported because it changes how urgent this is, not whether it
     // fails: FR4 leaves this job with no userconfig, so anything here was written by something.
     fatal.push(setsCredential(content)
-      ? `'${candidate}' exists on the publish path AND sets a credential key.`
+      ? `'${candidate}' exists on the publish path AND sets a credential key. setup-node exports `
+        + "NODE_AUTH_TOKEN='XXXXX-XXXXX-XXXXX-XXXXX' when it is otherwise unset (authutil.ts:55-57), so "
+        + 'npm sends THAT dummy as a bearer token and an OIDC decline is reported as *bad token*, not '
+        + '*no token*. See docs/npm-publishing-access-playbook.md §6 "The credential scan refused the publish".'
       : `'${candidate}' exists on the publish path. It sets no credential key, but FR4 leaves this job `
-        + 'with no npmrc at all — something wrote this one, and the next thing it writes may carry a token.');
+        + 'with no npmrc at all — something wrote this one, and the next thing it writes may carry a token. '
+        + 'See docs/npm-publishing-access-playbook.md §6 "The credential scan refused the publish".');
   }
 
   if (env.NODE_AUTH_TOKEN) {
@@ -181,24 +190,38 @@ function npmConfigGet(key) {
   }
 }
 
-function main() {
+/**
+ * @param {string[]} argv
+ * @returns {number} exit code
+ */
+function main(argv = process.argv.slice(2)) {
   const fromNpm = [npmConfigGet('userconfig'), npmConfigGet('globalconfig')];
-  // `findProjectRoot()` rather than `process.cwd()` (project rule `no-process-cwd-in-libs`). npm's
-  // project config is the CWD's `.npmrc`; in the publish job the step runs at the repository root, so
-  // the two coincide. A caller running from a subdirectory should pass `cwd` explicitly.
-  const { fatal, present } = check({
+  // The project npmrc is the one npm reads from the DIRECTORY IT RUNS IN, so the caller states it:
+  // `ci.yml` passes `--cwd "$PWD"`, which is what the deleted bash checked. Inferring it with
+  // `findProjectRoot()` alone was a real loss — it returns null outside a `_bmad` tree (the file is then
+  // never examined and the OK line still prints) and climbs to the repo root from a subdirectory,
+  // skipping the `.npmrc` npm would actually read (R1). The project root is ALSO checked, because a
+  // subdirectory run should not miss the repo's own file; `check()` dedupes.
+  const cwdFlag = argv.indexOf('--cwd');
+  const cwd = cwdFlag >= 0 ? argv[cwdFlag + 1] : undefined;
+  const projectRoot = findProjectRoot();
+  const { fatal, candidates } = check({
     env: process.env,
     home: process.env.HOME,
-    cwd: findProjectRoot(),
+    cwd: cwd || projectRoot,
+    extra: cwd && projectRoot && cwd !== projectRoot ? [require('path').join(projectRoot, '.npmrc')] : [],
     fromNpm,
   });
   if (fatal.length > 0) {
     for (const reason of fatal) console.error(`FATAL: ${reason}`);
     return 1;
   }
-  // Says what was actually established: no npmrc exists, and the three environment vectors are unset.
-  console.log('npm credential check: no npmrc on any path npm reads '
-    + `(${present.length} present of the paths checked); NODE_AUTH_TOKEN, npm_config_* and NPM_ID_TOKEN clean -- OK`);
+  // Reports what was ACTUALLY established, which is the whole point of this row: the count is the
+  // number of paths INSPECTED. An earlier version printed `present.length`, which is provably 0 on this
+  // branch — a parenthetical carrying no information, in a message whose predecessor existed to stop
+  // exactly that (R1).
+  console.log(`npm credential check: ${candidates.length} path(s) npm reads were checked, no npmrc on any `
+    + 'of them; NODE_AUTH_TOKEN, npm_config_* and NPM_ID_TOKEN clean -- OK');
   return 0;
 }
 

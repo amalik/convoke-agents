@@ -2868,3 +2868,61 @@ relaxation, a predicate widened on one side only, a fixture moved from one degen
 a conjunction pinned as a whole, an orphaned JSDoc relocated twice, and three record claims drawn from
 truncated evidence. Every fix above is pinned by a mutant, because reading the diff is what missed them.
 
+## T45
+
+**Lane:** Fast Lane · **Score:** 5.4 · **Portfolio:** convoke · **Status:** ✅ Done 2026-09-26
+
+**Defect.** The publish job's npmrc credential scan inspected ZERO files in the healthy steady state and
+reported OK. FR4 removed `registry-url:` from `setup-node` precisely so no userconfig is written, so
+there was no npmrc for the loop to open; it took the zero-file branch and printed
+`no npmrc exists on any path npm reads; NODE_AUTH_TOKEN unset -- OK`. Observed live in `dist-1-6`'s
+rehearsal, run `32599414962`. The `NODE_AUTH_TOKEN` and `npm_config_*` / `NPM_ID_TOKEN` assertions were
+real and did run — what was unproven is that the file loop would catch a credential if one appeared. A
+regex that has never matched anything is a plan, not a check.
+
+**Both of the row's leading options, because each alone is half a fix.**
+
+- **The rule is existence** (option b). On this path an npmrc existing is the finding, whatever it
+  contains: FR4 leaves this job with none, so a "clean" npmrc means something wrote one, and the next
+  thing it writes may carry a token. Existence is checkable in the steady state; content never was.
+- **The detection is exercised** — the scan moved to `scripts/audit/npm-credential-scan.js`, with a
+  hermetic test file that includes a credential-bearing npmrc. Option c (plant a benign npmrc in CI) would have
+  made the loop run by undoing what FR4 achieved on the real publish path.
+
+**106 lines of inline bash removed** (`git show --numstat ae61e5c7 -- .github/workflows/ci.yml`; 57 of them executable, the rest comment — an earlier version of this entry said 111, which was the SPAN of the old block, not what was deleted), **every behaviour preserved and individually pinned.** Each was paid
+for by a defect, so each has its own test: CR-only line endings (npm's `ini` splits on `[\r\n]+` and
+grep on `\n`, so a CR-only npmrc is a credential npm honours that a bare grep certifies clean);
+`certfile`/`keyfile` (`publish.js:144` treats them as credentials); key-line anchoring, so a comment
+mentioning `_authToken` cannot abort a clean publish; unreadable-is-fatal (`grep -q` returns 2 for
+"cannot read" and an `if` collapses that to "no match"); the structural `npm_config_*` name rules —
+rewritable `${`, nerf-darted `//` and `:`, as well as credential spellings, because `@npmcli/config`
+runs `envReplace` on every key; NUL-safe environment reading, because `env` line-splits a multi-line
+VALUE and a benign variable could forge a match and abort a release on a tag already spent; and
+`NODE_AUTH_TOKEN` / `NPM_ID_TOKEN` as separate vectors.
+
+| Fact | Command |
+|---|---|
+| Every rule fires against a fixture, and no message echoes a credential value | `node --test tests/unit/npm-credential-scan.test.js` |
+| The publish job calls it, bare, unconditionally | `node --test tests/unit/publish-guard-wiring.test.js` |
+| The suite is green | `npm test` |
+
+| Mutant | Killed by |
+|---|---|
+| existence rule dropped (only credentials fail) | the two existence tests |
+| CR normalisation dropped | the CR-only test |
+| key anchor dropped, so comments match | the comment test |
+| `certfile`/`keyfile` removed from the key list | the every-spelling test |
+| unreadable treated as clean | the EACCES test |
+| structural env rule narrowed to credential words | the rewritable-name test |
+| `NPM_ID_TOKEN` check dropped | the three-vectors test |
+| the CI call commented out | the wiring test |
+| the CI call suffixed `\|\| true` | the not-neutered test — **it passed everything else until that test existed** |
+| `continue-on-error` on the step | same |
+
+**The `|| true` gap is worth recording.** With the script wired and its own tests green, neutering the
+call passed every other assertion in the wiring file. T206 pinned nine such paths for the marketplace
+check; this is that lesson applied without waiting to relearn it.
+
+**A note on running it locally:** the script exits 1 on a developer machine, correctly — it finds
+`~/.npmrc`, which sets a credential. It reports the path and never the value; that is verified by test.
+

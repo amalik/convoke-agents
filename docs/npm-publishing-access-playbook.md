@@ -226,7 +226,31 @@ it is rare.
 
 ---
 
-## 6. Related
+## 6. The credential scan refused the publish
+
+`node scripts/audit/npm-credential-scan.js` runs in the publish job before `npm publish`. It refuses the
+publish when **any** npmrc exists on a path npm reads, or when `NODE_AUTH_TOKEN`, a credential-shaped
+`npm_config_*` variable, or `NPM_ID_TOKEN` is set.
+
+**An npmrc existing is the finding, whatever it contains.** FR4 removed `registry-url:` from
+`setup-node` precisely so nothing writes a userconfig, so this job's steady state is *no npmrc at all* —
+two real releases were verified that way (runs `32599414962` and `35211917101`). A "clean" npmrc means
+something wrote one, and the next thing it writes may carry a token.
+
+| Message | What it means | Repair |
+|---|---|---|
+| `'<path>' exists on the publish path AND sets a credential key` | A real credential is on the path npm reads. `setup-node` exports `NODE_AUTH_TOKEN='XXXXX-…'` when unset, so npm would send that dummy as a bearer token and an OIDC decline would be reported as *bad token* rather than *no token* | Find what wrote it. A step added before `Publish to npm`, a composite action, or a change to `setup-node`'s inputs are the candidates. Remove the writer — do not delete the file and re-run, or the next release reproduces it |
+| `'<path>' exists on the publish path. It sets no credential key…` | Same cause, no token yet | Same repair. The refusal is deliberate: the file's existence is the regression, not its current contents |
+| `NODE_AUTH_TOKEN is set` | A token is in the environment, which outranks OIDC — the regression that put 4.0.0 back on the token path | Remove the `env:` entry or the secret reference. This job publishes via Trusted Publishing and must have no token |
+| `npm_config_* credential or rewritable key(s) in the environment` | npm reads config from the environment above every npmrc. A rewritable name (`${…}`) or a nerf-darted one (`//`, `:`) is rejected too, because `@npmcli/config` expands keys after any name check | Remove the variable. If it is needed for something else, rename it so it does not start `npm_config_` |
+| `NPM_ID_TOKEN is set` | It replaces the identity GitHub mints (`oidc.js:50`), so the exchange would run against a supplied assertion | Remove it |
+
+**There is no override, and the tag is spent.** Like the downgrade guard in §5, this refusal fires on a
+tag that has already been pushed, so the repair is a new tag after the cause is removed. If you believe
+the refusal is wrong, that is a defect in the scan — reproduce it with
+`node --test tests/unit/npm-credential-scan.test.js` and fix the rule rather than bypassing the job.
+
+## 7. Related
 
 - [ADR-003 — publish-path enforcement](../_bmad-output/planning-artifacts/adr/4-0-1/adr-003-publish-path-enforcement.md)
   — why registry-side enforcement was chosen over a repository guard
