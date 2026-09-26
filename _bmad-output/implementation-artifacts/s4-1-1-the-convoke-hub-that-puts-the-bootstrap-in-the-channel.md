@@ -16,6 +16,49 @@ Status: ready-for-dev
 > put the hub behind a `standalone: true` generated wrapper and built its central open question
 > on a miscount. Both were wrong, and the corrections are recorded inline rather than dropped,
 > because each one is a trap the dev agent would otherwise re-enter.
+>
+> ## ⛔ Then reviewed twice more, and it is BLOCKED ON FOUR OPERATOR RULINGS
+>
+> `ready-for-dev` here means only what the vocabulary defines it as — *the story file exists*. **Do
+> not start implementation.** Two further independent reviews (one checking the rewrite, one with no
+> prior context) found ~14 findings, and they converge on one thing: **this story is carrying
+> decisions it has no authority to make.** Naming them is the fix; a third rewrite is not.
+>
+> 1. **C8 — does merging this story publish?** Yes, per the retraction in §Out of scope. Tracking
+>    the hub under `.claude/skills/` makes `convoke` publicly indexable with no retraction path.
+>    **Ruling needed: accept that, or hold the hub untracked until the discovery surface is
+>    checkable.** Everything below is moot until this is answered.
+> 2. **Markdown-only, or a Node detector?** AC10 makes the detector conditional because markdown has
+>    no `process.exit`/`throw`/`chalk`; AC12 then demands exit-code and swallowed-throw proof
+>    unconditionally. **They contradict.** The precedent skills are a six-line `SKILL.md` plus a
+>    `workflow.md`, which pushes markdown-only — and then AC12 and Task 6 have no subject.
+> 3. **Location, given PR #9.** `.claude/skills/convoke/` is a **third** destination. PR #9 was
+>    closed 2026-04-27 on a structural rejection — *"needs `skills/` at root"* — and `I80` wants
+>    `_bmad/bme/`. Placing the hub here may mean moving it twice.
+> 4. **Is doctor coverage owed?** Task 3's row-vs-no-row dichotomy is **false in both branches**:
+>    `checkModuleSkillWrappers` only looks up manifest rows for workflows enumerated in a discovered
+>    module's `config.yaml`, so for a non-workflow skill a row is inert. Neither precedent skill has
+>    one. The real question is whether the hub needs doctor coverage at all, through what mechanism.
+>
+> **Known defects in the text below, not yet fixed** (held as one batch pending the rulings, because
+> piecemeal patching is what produced this round): AC3 pins the wrong command — it must be
+> `npx -p convoke-agents convoke-install` (`README.md:108`), since `npm install` alone does not create
+> the runtime; **six ACs (AC4–AC9) cannot be falsified by any test** and no task verifies them;
+> **OC-R6 has no AC at all** while AC4 expands its surface to three CLIs that AC10 forbids touching,
+> which `project-context.md:141` alone makes a blocker for ready-for-review; AC11 misses that
+> `trackedSourcesAt()` is `git ls-files _bmad/bme`-scoped, so its resolver would emit a false
+> `source/untracked`; AC1 must enumerate **every** file the hub ships, because
+> `skills-packaging.test.js` asserts `deepEqual`, not membership; the plugin-cache quote in
+> §"The placement is already decided" is **misapplied** — the plugin's `source` is `"./"`, so
+> `_bmad/bme/` is inside the plugin directory, and the real reason is `{project-root}` resolution,
+> which the next clause states correctly; and the upstream `bmad-prd` quote is verbatim but must be
+> cited as a URL at `bmad-code-org/BMAD-METHOD@main`, since no such local path exists and the
+> installed copy is a different file.
+>
+> **`s4-1-2` is blocked by a gate nobody named:** `validate-marketplace.js` enforces set identity
+> between `marketplace.json` `skills[]` basenames and `AGENT_IDS`, proven by execution to fail with
+> *"unexpected skill path(s): convoke"*. That step is `ci.yml:206`, inside `agent-surface-parity`,
+> which is in `publish.needs` (`ci.yml:666`).
 
 ## Story
 
@@ -207,5 +250,11 @@ the generated-wrapper rule to a universal mandate; that would have broken AC2.
 - **Absorbing the three CLIs** — C11 defers it.
 - **Moving tracked skills into `_bmad/bme/`** — that is `I80`.
 - **`.claude-plugin/marketplace.json`** — `s4-1-2`, and it must **follow** this story.
-- **Publishing.** C8 binds; the check it needs is blocked on a ratification. **This story can be
-  built and merged without unblocking that.**
+- **Publishing.** ~~This story can be built and merged without unblocking C8.~~ **RETRACTED
+  2026-09-26 — that was false, and it was the most consequential error in this file.** `.claude/skills/`
+  is entry #435 in the `npx skills` CLI's own container-directory list, and the two existing tracked
+  skills sit one level inside it, within the three-level walk. The findings note counts them in the
+  live public surface for exactly that reason (2 tracked + 7 manifest = 9). **So the moment
+  `!.claude/skills/convoke/` lands in `.gitignore`, the surface becomes ten and the name `convoke` is
+  publicly indexable — and there is no self-serve retraction.** C8 is therefore a **merge**
+  precondition for this story, not a publish one.
