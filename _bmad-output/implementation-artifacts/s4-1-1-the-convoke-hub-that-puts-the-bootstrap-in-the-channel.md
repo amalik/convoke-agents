@@ -31,10 +31,11 @@ Status: ready-for-dev
 >    it needs is forbidden by C1's spent budget (ADR-001 C8). **Note what is and is not locked:** the
 >    unretractable artifact is the frontmatter `name`, which skills.sh keys listings on — so the
 >    *location* below remains free to change without a second irreversible act.
-> 2. **Markdown-only, or a Node detector?** AC10 makes the detector conditional because markdown has
->    no `process.exit`/`throw`/`chalk`; AC12 then demands exit-code and swallowed-throw proof
->    unconditionally. **They contradict.** The precedent skills are a six-line `SKILL.md` plus a
->    `workflow.md`, which pushes markdown-only — and then AC12 and Task 6 have no subject.
+> 2. ~~**Markdown-only, or a Node detector?**~~ **RULED 2026-09-27: markdown-only. No Node detector
+>    ships with the hub.** The AC10/AC12 contradiction is resolved below: the soft-warn contract
+>    applies as the **skill-level analogue**, the scope extension is recorded in AC10, and AC12 no
+>    longer asks for exit codes it cannot have. File set is therefore exactly
+>    `SKILL.md` + `workflow.md`.
 > 3. **Location, given PR #9.** `.claude/skills/convoke/` is a **third** destination. PR #9 was
 >    closed 2026-04-27 on a structural rejection — *"needs `skills/` at root"* — and `I80` wants
 >    `_bmad/bme/`. Placing the hub here may mean moving it twice.
@@ -43,20 +44,14 @@ Status: ready-for-dev
 >    module's `config.yaml`, so for a non-workflow skill a row is inert. Neither precedent skill has
 >    one. The real question is whether the hub needs doctor coverage at all, through what mechanism.
 >
-> **Known defects in the text below, not yet fixed** (held as one batch pending the rulings, because
-> piecemeal patching is what produced this round): AC3 pins the wrong command — it must be
-> `npx -p convoke-agents convoke-install` (`README.md:108`), since `npm install` alone does not create
-> the runtime; **six ACs (AC4–AC9) cannot be falsified by any test** and no task verifies them;
-> **OC-R6 has no AC at all** while AC4 expands its surface to three CLIs that AC10 forbids touching,
-> which `project-context.md:141` alone makes a blocker for ready-for-review; AC11 misses that
-> `trackedSourcesAt()` is `git ls-files _bmad/bme`-scoped, so its resolver would emit a false
-> `source/untracked`; AC1 must enumerate **every** file the hub ships, because
-> `skills-packaging.test.js` asserts `deepEqual`, not membership; the plugin-cache quote in
-> §"The placement is already decided" is **misapplied** — the plugin's `source` is `"./"`, so
-> `_bmad/bme/` is inside the plugin directory, and the real reason is `{project-root}` resolution,
-> which the next clause states correctly; and the upstream `bmad-prd` quote is verbatim but must be
-> cited as a URL at `bmad-code-org/BMAD-METHOD@main`, since no such local path exists and the
-> installed copy is a different file.
+> **The held batch was applied 2026-09-27**, once rulings 1 and 2 made it safe: AC3's command
+> corrected, AC1's file set enumerated against `deepEqual`, AC10 and AC12 de-contradicted, AC11
+> widened to the git pathspec, **AC14 added for OC-R6** with its inherited CLI surface declared, the
+> misapplied plugin-copy quote replaced by the `{project-root}` reason, and the upstream quote
+> re-cited by URL. **Rulings 3 and 4 remain open**, plus this standing limit: AC4–AC9 are verified by
+> assertions recorded in this file rather than by a gate, because C1 forbids the gate — the same
+> declared-but-unchecked posture accepted for C8, and it should be read as documentation, not
+> enforcement.
 >
 > **`s4-1-2` is blocked by a gate nobody named:** `validate-marketplace.js` enforces set identity
 > between `marketplace.json` `skills[]` basenames and `AGENT_IDS`, proven by execution to fail with
@@ -93,9 +88,13 @@ Three reasons this is not a preference:
    enter the tarball. The manifest story literally cannot declare a generated wrapper.
 2. **A `standalone: true` wrapper is self-defeating here.** That shape produces a *thin*
    `SKILL.md` that loads `{project-root}/_bmad/bme/<mod>/workflows/convoke/workflow.md` — a file
-   absent **by definition** in the absent-runtime case this hub exists to handle. A plugin is
-   copied to `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/` and *"files outside the
-   plugin directory are not copied"*. The hub must be self-contained.
+   absent **by definition** in the absent-runtime case this hub exists to handle. **The reason is
+   `{project-root}` resolution, not the plugin copy boundary.** An earlier draft cited *"files outside
+   the plugin directory are not copied"*; that is misapplied here, because the plugin's `source` is
+   `"./"`, so `_bmad/bme/` *is* inside the plugin directory — and the findings note warns about
+   exactly this misreading (rejection applies to *declared component paths*, not runtime reads).
+   `{project-root}` resolves to the **operator's project**, which is precisely where the runtime is
+   absent. The hub must be self-contained.
 3. **It needs no `refresh-installation.js` change at all.**
 
 **Moving these skills into `_bmad/bme/` with a copy step is `I80`** (open, 4.5) — named by the
@@ -115,20 +114,28 @@ dev agent must not "de-duplicate" three things that are two.**
 
 ## Acceptance Criteria
 
-**AC1 — the hub is a tracked, self-contained skill directory.** `.claude/skills/convoke/`, git-tracked
-via the step-wise `.gitignore` exemption, **and** in `package.json` `files[]`, **and** in `EXPECTED`
-in `tests/lib/skills-packaging.test.js`. All three, or the tarball omission recurs exactly as the
-`.gitignore` comment records it.
+**AC1 — the hub is a tracked, self-contained skill directory, and every file it ships is enumerated.**
+`.claude/skills/convoke/`, git-tracked via the step-wise `.gitignore` exemption, **and** in
+`package.json` `files[]`, **and** in `EXPECTED` in `tests/lib/skills-packaging.test.js`. All three.
+**`EXPECTED` is `assert.deepEqual` — file-level equality, not membership and not directory-level** —
+so it must name exactly `.claude/skills/convoke/SKILL.md` and `.claude/skills/convoke/workflow.md`,
+and nothing else. Per ruling 2 there is no detector file. The test's own comment names over-shipping
+as the likelier next defect, so one stray `references/` file reddens `npm test`, which is in
+`publish.needs`.
 
 **AC2 — no `{project-root}` read at activation time.** Every path the hub needs before the runtime
 exists is inside its own directory. A relative `[workflow.md](workflow.md)` is correct here, as in
 `bmad-register-skill/SKILL.md:6`, **because both files are tracked and co-located** — the opposite of
 the generated-wrapper rule in §Dev Notes.
 
-**AC3 — it names the acquisition command, literally.** Not a local binary: an operator who reached
-Convoke through a channel has **no** `convoke-install` on PATH — `command not found` for precisely
-this reader. The command is `npm install convoke-agents@latest` (`README.md:107`). This is the lesson
-of the upstream snippet quoted in §Dev Notes, which names an *acquisition* command, not a local one.
+**AC3 — it names the acquisition command, literally: `npx -p convoke-agents convoke-install`**
+(`README.md:108`). Not a local binary — an operator who arrived through a channel has **no**
+`convoke-install` on PATH. And **not** `npm install convoke-agents@latest`: that installs the package
+without creating the runtime, so the hub would emit a command leaving its own precondition unmet and
+the operator would re-activate into the identical warning. *(An earlier draft pinned exactly that
+wrong command.)* The `npx -p` form is one step, needs no prior install, and is this repo's canonical
+acquisition string in three places — `index.js:48-52`, `scripts/postinstall.js:43`, and
+`validate-marketplace.js`'s own not-a-Convoke-project fallback.
 
 **AC4 — OC-R0 first, as a mandatory precondition.** The 3-layer interaction surface is enumerated in
 this file before any other right is answered, with each layer-3 entry carrying `(internal)` or
@@ -158,12 +165,16 @@ wrapper, channel, bootstrap, hub) exceeds the budget in one block as drafted. St
 
 **AC10 — it fronts once present, and never hard-fails.** It invokes the existing
 `convoke-install` / `convoke-update` / `convoke-doctor` **when they exist** (C11 — no CLI logic is
-reimplemented or moved); when they do not, AC3's command is the answer. **Rule which artifact carries
-the soft-warn contract:** `preflight-soft-warn` binds *preflight helpers* through `process.exit`,
-`throw` and `chalk.yellow` — **Node APIs a markdown `SKILL.md` does not have.** If a Node detector
-ships with the hub, it follows `scripts/update/lib/compat-preflight.js` (already stderr +
-`chalk.yellow` + exit 0) and is exempt from this AC's no-CLI-logic clause; if not, this AC is the
-skill-level analogue and **the scope extension is recorded here**, not assumed.
+reimplemented or moved); when they do not, AC3's command is the answer.
+
+**Soft-warn scope, ruled 2026-09-27.** `preflight-soft-warn` binds *preflight helpers* through
+`process.exit`, `throw` and `chalk.yellow` — Node APIs a markdown `SKILL.md` does not have. **Ruling 2
+is markdown-only, so no Node helper ships and the rule does not bind literally.** It binds as the
+**skill-level analogue**, and that scope extension is recorded here rather than assumed: the hub
+**warns and continues** — it never refuses, never treats an absent runtime as terminal, and never
+offers `abort` as the only option. `compat-preflight.js` is the nearest in-repo pattern, but note it
+*returns an object* rather than exiting and does `throw` at `:94` on a bad `projectRoot` — a reference
+for tone, not a template to copy.
 
 **AC11 — the registry row flips, and A2's hole actually closes.** Flip `skill,convoke` in
 `_bmad/bme/_config/name-registry.csv` from `proposed` to `in-dev`, **and add a separate
@@ -174,16 +185,42 @@ skips the row anyway and A2 stays vacuous while the check prints PASS. Also: **A
 row** (`checkAgentSources` is A2+A3 in one loop and would demand `bmad-bme-agent-convoke`); `:309`
 hardcodes `['_bmad','bme',moduleDir,'agents',…]`, and the row's `declared_in` is
 `channel-integrity-adr-001`, a provenance, not a module — **nothing in the row locates a `SKILL.md`
-today**, so the resolver and the convention must both be stated. A4 and A1 are safe (verified). The
-PASS line and v5 count are agent-denominated and must not claim the skill row.
+today**, so the resolver and the convention must both be stated. **And the tracked-file set must
+widen:** `trackedSourcesAt()` (`:126`) runs `git ls-files -z _bmad/bme`, so a hub at
+`.claude/skills/convoke/SKILL.md` is **not in that set** — a resolver reusing it emits a false
+`source/untracked` and reddens `ci.yml:231` on the very commit that flips the row. Extend the git
+pathspec to include `.claude/skills`; **never substitute `fs.existsSync`**, which re-opens the
+presence-only hole this AC exists to close, one level in. The `ci.yml:228-230` comment — *"It does NOT
+read `.claude/skills/`… a check over an ignored path passes vacuously in CI"* — becomes false in the
+same change and must be corrected with it. A4 and A1 are safe (verified). The PASS line and v5 count
+are agent-denominated and must not claim the skill row.
 
-**AC12 — the soft-warn is proven in both directions.** Runtime **absent** ⇒ warning emitted **and**
-exit 0. Runtime **present** ⇒ exit 0 **and no warning**. Plus a thrown-error case proven to be
-swallowed. *"Exits 0 and emits the warning"* alone is satisfied by a detector that always warns —
-**the fixture cannot distinguish the guard from its relaxation.** Record a mutant → sole-executing-test
-table, not a pass count.
+**AC12 — the markdown is asserted mechanically, and the limits of that are stated.** Ruling 2 removes
+exit codes and swallowed throws from scope — there is no Node artifact to run. What replaces them are
+assertions over the skill text, each of which can fail:
+
+- the literal halt marker from AC8 appears on a line following every menu;
+- AC3's command string appears **verbatim**, so a paraphrase fails;
+- the activation path contains **zero** `{project-root}` tokens (AC2);
+- the novel-concept count per round is ≤ 3 (AC9).
+
+**Stated honestly: these are story evidence, not a gate.** `scripts/audit/vortex-pacing-check.js`
+already asserts rounds == footers == halt markers and N ≤ 3, but it hardcodes `ROOT` at `:57` and
+takes no arguments, so aiming it at the hub is a small code change — and wiring it into CI would be a
+new gate, which **AC13/C1 forbids under the spent baseline.** So this AC is satisfied by running the
+assertions and recording their output here: the same *declared-but-unchecked* posture accepted for
+C8. **A gate not wired into `publish.needs` is documentation, and this is documentation.** Say so;
+do not imply enforcement.
 
 **AC13 — no new ADR, registry or CI check.** ADR-001 C1; the baseline budget is spent.
+
+**AC14 — OC-R6 has an AC, and its inherited surface is declared.** Every error the hub itself emits
+carries a concrete next action. **And `compliance-checklist.md:34`'s "or any underlying script it
+invokes" pulls the three fronted CLIs' error strings into the hub's OC-R6 surface** — while AC10
+forbids modifying them. Resolve by **declaring** it: those errors are *inherited-and-unmodified*,
+recorded with that rationale, so OC-R6 reads PASS on hub-emitted errors and a declared scope note on
+the inherited ones. `project-context.md:141` requires every Right to PASS or carry a declared `N/A`
+with rationale, so an unanswered OC-R6 blocks ready-for-review by itself.
 
 ## Tasks
 
@@ -222,7 +259,11 @@ new recursive-remove path.
 
 ### The reference implementation, verbatim, and the lesson to extract
 
-Upstream `skills/bmad-prd/SKILL.md` step 1:
+Upstream, at `bmad-code-org/BMAD-METHOD@main`, `skills/bmad-prd/SKILL.md` step 1 — fetched
+2026-09-26 from `raw.githubusercontent.com/bmad-code-org/BMAD-METHOD/main/skills/bmad-prd/SKILL.md`.
+**Cited by URL deliberately:** no such local path exists, that tree is on `main` in no tagged
+release, and the installed `.claude/skills/bmad-prd/SKILL.md` is a different, gitignored file whose
+step 1 is about `resolve_customization.py`. A bare path would have read as local.
 
 > Script not found: BMad is not set up here. Offer to run the `bmad` skill's setup, installing
 > `bmad` first if you do not have it (`npx skills add bmad-code-org/BMAD-METHOD --skill bmad`),
