@@ -643,7 +643,7 @@ The ledger's rule, twice stated:
 > the kind of claim this ledger exists to refuse."
 
 The addendum:
-> §3: "[Snyk ToxicSkills](…): 3,984 skills scanned, **1,467 (36.82%)** with ≥1 flaw, **534 (13.4%)**
+> §3: "[Snyk ToxicSkills](https://snyk.io/blog/toxicskills-malicious-ai-agent-skills-clawhub/): 3,984 skills scanned, **1,467 (36.82%)** with ≥1 flaw, **534 (13.4%)**
 > critical, **76** confirmed malicious."
 
 Four figures to four significant digits, from a vendor blog, with a link and **no verification label** —
