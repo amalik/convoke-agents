@@ -210,6 +210,24 @@ point. This is a **row-type extension, not a fourth deliverable**, so it does no
 the baseline budget — but `scripts/audit/name-registry-integrity.js` must learn the new
 kind **in the same change**, or the check goes green on a row it cannot read.
 
+**C10 as implemented, 2026-09-26.** `VALID_KINDS` gained `skill`; the hub is named
+**`convoke`**, matching upstream's own `bmad` hub and the `convoke` team row's existing scope
+("Core platform, CLI, update system, meta-infrastructure"). The collision is declared on the
+new row per A1, and the row is `proposed` — the name is reserved, nothing is built. Two things
+the implementation surfaced, recorded here rather than left in a CSV cell:
+
+- **A1 needed no logic change, but its message was wrong.** It already grouped by name and
+  counted distinct kinds, so it was kind-agnostic — yet the text read *"is used by both a team
+  and an agent"*, true only while `VALID_KINDS` held exactly those two. It now reports the kinds
+  actually present. A message naming a defect that does not exist is worse than none: the reader
+  goes looking for an agent.
+- **⚠️ A2 does not cover skills.** The tracked-source assertion branches on `kind === 'agent'`,
+  so a `skill` row's source file is never verified. Harmless today, because `OPERATIONAL` is
+  `shipped`/`in-dev` and this row is `proposed` — but **the day the hub ships, the registry will
+  assert a skill exists without checking that it does.** That is the presence-only hole ADR-004
+  §3 warns about, and it must be closed in the same change that flips this row to `in-dev`, not
+  afterwards.
+
 **C11 — The hub fronts `convoke-install`, `convoke-update` and `convoke-doctor` before it
 absorbs them.** Ruled 2026-09-26, deliberately against the obvious answer. Upstream's
 `bmad` hub does all three itself, and `slash-command-ux-for-user-facing-tools` points the
