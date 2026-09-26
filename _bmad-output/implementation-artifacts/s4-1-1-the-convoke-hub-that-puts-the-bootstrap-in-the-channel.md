@@ -24,10 +24,13 @@ Status: ready-for-dev
 > prior context) found ~14 findings, and they converge on one thing: **this story is carrying
 > decisions it has no authority to make.** Naming them is the fix; a third rewrite is not.
 >
-> 1. **C8 — does merging this story publish?** Yes, per the retraction in §Out of scope. Tracking
->    the hub under `.claude/skills/` makes `convoke` publicly indexable with no retraction path.
->    **Ruling needed: accept that, or hold the hub untracked until the discovery surface is
->    checkable.** Everything below is moot until this is answered.
+> 1. ~~**C8 — does merging this story publish?**~~ **RULED 2026-09-27: Amalik accepts publishing the
+>    name `convoke`.** Merging does publish — tracking under `.claude/skills/` makes the name
+>    publicly indexable with no retraction path — and that risk is accepted. C8 is satisfied here by
+>    an operator-accepted risk, **not** by a check: its *checkable* half stays open because the gate
+>    it needs is forbidden by C1's spent budget (ADR-001 C8). **Note what is and is not locked:** the
+>    unretractable artifact is the frontmatter `name`, which skills.sh keys listings on — so the
+>    *location* below remains free to change without a second irreversible act.
 > 2. **Markdown-only, or a Node detector?** AC10 makes the detector conditional because markdown has
 >    no `process.exit`/`throw`/`chalk`; AC12 then demands exit-code and swallowed-throw proof
 >    unconditionally. **They contradict.** The precedent skills are a six-line `SKILL.md` plus a

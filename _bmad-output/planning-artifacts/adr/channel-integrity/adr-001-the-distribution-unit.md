@@ -197,9 +197,21 @@ converted into a design.
 own marketplace copy is a generation behind its skills.sh copy. S4 accepts the asymmetry
 as the design.
 
-**C8 — The irreversibility constraint still binds.** There is no self-serve retraction
-from skills.sh. Nothing new is published until the discovery surface is declared and
-checkable.
+**C8 — The irreversibility constraint still binds, and was RULED 2026-09-27.** There is no
+self-serve retraction from skills.sh.
+
+**Ruling: Amalik accepts publishing the name `convoke`.** That is an acceptance of the
+**declared-but-unchecked** branch — C8's *declared* half is satisfied by the manifest and the
+tracked directory; its *checkable* half is **not**, because the check is a new CI gate that C1's
+spent baseline budget forbids. So C8 is satisfied here by an **operator-accepted risk, not by a
+check**, and that is the record.
+
+**What the acceptance does and does not cover.** The durable, unretractable artifact is the
+**frontmatter `name`** — skills.sh keys a listing on it (`bmad-bme-agent-wade` became a URL and a
+`--skill` argument by name, not by path). So this ruling makes the *name* permanent and leaves the
+*location* free: the hub may later move to `_bmad/bme/` (`I80`) or to a root `skills/` tree (PR #9's
+structural rejection) without a second irreversible act. **The acceptance is not a waiver of the
+check** — if the baseline is re-ratified for one gate, C8's second half should still be closed.
 
 **C10 — The name registry gains a `kind: skill` row type.** Ruled 2026-09-26. The
 alternative was to declare the hub as an agent, which would misdescribe it — a hub is
