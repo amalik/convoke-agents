@@ -230,8 +230,12 @@ function validateInput(input, projectRoot) {
     errors.push('--source must be a non-empty string if provided');
   }
 
-  // registered_by (email) — reject the reserved scanner value
-  if (email === RESERVED_REGISTERED_BY) {
+  // registered_by (email) — reject the reserved scanner value.
+  // `isReservedMarker`, not `===`: T112 widened the READ side to trim and case-fold, and leaving this
+  // side strict let an operator register as `Auto-Scan` — which the claim logic then treated as an
+  // unclaimed audit row and silently overwrote, with a notice falsely crediting the audit. The two
+  // sides must classify the marker identically or the reserved value is writable after all. R2.
+  if (isReservedMarker(email)) {
     errors.push(
       `'${RESERVED_REGISTERED_BY}' is reserved for the scan tool. Registration rows ` +
       `must carry an operator identifier so mergePreservingManual treats them as manual rows ` +
@@ -273,20 +277,15 @@ function _todayIso() {
 // ─── Duplicate detection ─────────────────────────────────────────
 
 /**
- * Scan the existing CSV for a row whose triple-key matches the candidate.
- * Returns the matching row or null.
- *
- * @param {object} candidate - The row shape returned by `buildRow`.
- * @param {string} csvPath - Absolute CSV path.
- * @returns {object|null}
- */
-/**
  * Is this `registered_by` the audit's reserved marker?
  *
  * Classified the way `audit-bmm-dependencies.js::mergePreservingManual` classifies it — trimmed and
  * case-folded — rather than by strict equality. Strict equality made ` auto-scan` and `Auto-Scan` a
  * third state: an auto-scan row to the audit, a person's row to this guard, so the T112 trap stayed
- * shut on those hand-edited variants and the operator got a message naming a registrant of "".
+ * shut on those hand-edited variants — `already registered by  Auto-Scan  on …`, exit 1. (The
+ * separate `registered by     on …` message, with an empty registrant, comes from a WHITESPACE-ONLY
+ * field and is handled by the `hasMetadata` trim below, not here. An earlier version of this comment
+ * welded the two together.)
  *
  * @param {*} registeredBy
  * @returns {boolean}
@@ -295,6 +294,14 @@ function isReservedMarker(registeredBy) {
   return String(registeredBy || '').trim().toLowerCase() === RESERVED_REGISTERED_BY;
 }
 
+/**
+ * Scan the existing CSV for a row whose triple-key matches the candidate.
+ * Returns the matching row or null.
+ *
+ * @param {object} candidate - The row shape returned by `buildRow`.
+ * @param {string} csvPath - Absolute CSV path.
+ * @returns {object|null}
+ */
 function checkDuplicate(candidate, csvPath) {
   const audit = require('./audit/audit-bmm-dependencies');
   if (!fs.existsSync(csvPath)) return null;
@@ -397,6 +404,48 @@ function _withCsvLock(csvPath, fn) {
  * @param {object} row - The row shape returned by `buildRow`.
  * @param {string} csvPath - Absolute CSV path.
  */
+/**
+ * Rows in the registry whose triple key matches, paired with their index.
+ * @param {object[]} existingRows
+ * @param {string} newKey
+ * @returns {Array<[object, number]>}
+ */
+function claimMatches(existingRows, newKey) {
+  const audit = require('./audit/audit-bmm-dependencies');
+  return existingRows.map((r, i) => [r, i]).filter(([r]) => audit._internal._tripleKey(r) === newKey);
+}
+
+/**
+ * Throw unless the registry is in a state where claiming is safe.
+ *
+ * The claim decision is taken outside the CSV lock, against an earlier read, so its premise has to be
+ * revalidated against the state being written: exactly one row for the key, still carrying the reserved
+ * marker. `--dry-run` calls this too — it used to report "would CLAIM" and exit 0 for a registry the
+ * real run refuses, which is the opposite of what a dry run is for (R2).
+ *
+ * @param {Array<[object, number]>} matches
+ * @param {object} row
+ * @param {string} csvRel
+ * @throws {Error}
+ */
+function assertClaimable(matches, row, csvRel) {
+  const triple = `${row.skill_name}/${row.bmm_agent}/${row.dependency_type}`;
+  if (matches.length !== 1) {
+    throw new Error(
+      `Refusing to claim ${triple}: the registry holds ${matches.length} rows for that triple, not 1. `
+      + `Inspect ${csvRel} — a duplicate triple means the file was hand-edited, and which row to `
+      + 'replace is not ours to guess.'
+    );
+  }
+  if (!isReservedMarker(matches[0][0].registered_by)) {
+    throw new Error(
+      `Refusing to claim ${triple}: the row is now registered by "${matches[0][0].registered_by}", not `
+      + `"${RESERVED_REGISTERED_BY}". It changed between the duplicate check and this write — re-run to `
+      + 'see the current state.'
+    );
+  }
+}
+
 function writeRow(row, csvPath, { claim = false } = {}) {
   const audit = require('./audit/audit-bmm-dependencies');
   _withCsvLock(csvPath, () => {
@@ -423,23 +472,8 @@ function writeRow(row, csvPath, { claim = false } = {}) {
     //   - a hand-edited CSV holding the triple twice let the claim replace the first match while a
     //     person's row for the same triple survived, which is the state the guard exists to prevent.
     // Both refused now: exactly one row for the key, and it must still carry the reserved marker.
-    const matches = claim ? existingRows.map((r, i) => [r, i]).filter(([r]) => audit._internal._tripleKey(r) === newKey) : [];
-    if (claim) {
-      if (matches.length !== 1) {
-        throw new Error(
-          `Refusing to claim ${row.skill_name}/${row.bmm_agent}/${row.dependency_type}: the registry holds `
-          + `${matches.length} rows for that triple, not 1. Inspect ${audit.OUTPUT_CSV_REL} — a duplicate `
-          + 'triple means the file was hand-edited, and which row to replace is not ours to guess.'
-        );
-      }
-      if (!isReservedMarker(matches[0][0].registered_by)) {
-        throw new Error(
-          `Refusing to claim ${row.skill_name}/${row.bmm_agent}/${row.dependency_type}: the row is now `
-          + `registered by "${matches[0][0].registered_by}", not "${RESERVED_REGISTERED_BY}". It changed `
-          + 'between the duplicate check and this write — re-run to see the current state.'
-        );
-      }
-    }
+    const matches = claim ? claimMatches(existingRows, newKey) : [];
+    if (claim) assertClaimable(matches, row, audit.OUTPUT_CSV_REL);
     const claimIndex = matches.length === 1 ? matches[0][1] : -1;
     const allRows = claimIndex >= 0
       ? existingRows.map((r, i) => (i === claimIndex ? row : r))
@@ -743,6 +777,18 @@ async function main(argv) {
 
   // Dry-run: render the row that would be written + exit 0.
   if (flags.dryRun) {
+    if (claimable) {
+      // Same validation the real run applies under the lock, so a dry run cannot promise a claim the
+      // real run refuses. Read here without the lock: a dry run mutates nothing, so a concurrent
+      // change can only make this stale, never destructive.
+      try {
+        const rows = fs.existsSync(csvPath) ? audit.readExistingCsv(csvPath) : [];
+        assertClaimable(claimMatches(rows, audit._internal._tripleKey(row)), row, audit.OUTPUT_CSV_REL);
+      } catch (err) {
+        console.log(chalk.red(`  ✗ ${(err && err.message) || String(err)}`));
+        return 1;
+      }
+    }
     console.log(chalk.cyan(claimable
       ? `  Dry-run — would CLAIM the auto-scan row for ${row.skill_name}/${row.bmm_agent}/${row.dependency_type}:`
       : '  Dry-run — row that would be written:'));
@@ -761,9 +807,15 @@ async function main(argv) {
   try {
     writeRow(row, csvPath, { claim: claimable });
   } catch (err) {
-    console.log(chalk.red(`  ✗ Registration failed: ${(err && err.message) || String(err)}`));
-    console.log(chalk.gray('    Fix hint: verify filesystem permissions on _bmad/_config/ ' +
-      'or hand-edit the CSV following the header schema.'));
+    const message = (err && err.message) || String(err);
+    console.log(chalk.red(`  ✗ Registration failed: ${message}`));
+    // A claim refusal already says what to do ("re-run to see the current state", or which file to
+    // inspect). Appending "hand-edit the CSV" to it is wrong advice for a registry that is not in a
+    // hand-editable-defect state (R2).
+    if (!message.startsWith('Refusing to claim')) {
+      console.log(chalk.gray('    Fix hint: verify filesystem permissions on _bmad/_config/ ' +
+        'or hand-edit the CSV following the header schema.'));
+    }
     return 1;
   }
 
@@ -826,6 +878,8 @@ module.exports = {
   // via mutable require.cache entries. Helpers exposed for unit-level testing
   // without spawning the CLI.
   _internal: Object.freeze({
+    isReservedMarker,
+    assertClaimable,
     parseArgs,
     validateInput,
     buildRow,

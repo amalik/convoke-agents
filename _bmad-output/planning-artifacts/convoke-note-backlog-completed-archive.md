@@ -2762,8 +2762,12 @@ per-skill form "names no command", and that only the summary form at
 + `  npx -p convoke-agents@${pv} convoke-audit-bmm-deps`,
 ```
 
-and `git log -S "Or regenerate the auto-scan baseline with"` returns one commit — `5f3a5904`,
-2026-04-23 — the commit that **introduced** the per-skill finding *with* that command. So 2026-04-23 is
+and `git log -S "Or regenerate the auto-scan baseline with" -- scripts/convoke-doctor.js` returns one commit — `5f3a5904`,
+2026-04-23 — the commit that **introduced** the per-skill finding *with* that command. **The path
+filter is load-bearing:** without `-- scripts/convoke-doctor.js` the same search returns seven commits,
+because these records now contain the line too. An earlier version of this paragraph omitted it and so
+misstated its own evidence — in the entry whose subject is a false claim caused by an incompletely run
+command (R2). So 2026-04-23 is
 when the advice started naming the audit, not when it stopped, and the trap is reachable from the
 common single-skill case, not only at ten-or-more findings.
 
@@ -2783,4 +2787,46 @@ change; `git stash pop` restored it intact, and HEAD had not moved, so nothing w
 burying a git call inside a one-liner instead of keeping repo operations explicit and separate. The
 comparison was then done the way it should have been from the start: on a `cp -a` copy of the repo, with
 `git checkout HEAD -- <file>` applied inside the copy.
+
+### R2 — one layer, concurrency and data integrity, 2026-09-26
+
+The author's test for the in-lock revalidation SIMULATED the race (rewrite the CSV, call `writeRow`
+directly), so the fix had never met a real one. R2 ran two actual processes.
+
+**The revalidation holds under a genuine race, and is reached without contrivance.** Six consecutive
+unsynchronised runs of two `convoke-register-skill` processes claiming the same row: winner exit 0,
+loser exit 1 with `Refusing to claim … the row is now registered by "…", not "auto-scan"`, one data row,
+no attribution lost, no stale `.lock`, no `.tmp-` residue, and **no `REGISTERED:` marker on failure**.
+The same fixture on the pre-R1 code: **both** processes exit 0, one operator's attribution silently
+gone, 6/6. Cross-triple claims both land; the lock-timeout path exits 1 with the CSV byte-identical.
+
+**But the same commit had re-opened the property it protects, deterministically.** R1's remediation
+widened the READ side to trim and case-fold the reserved marker and left the WRITE side
+(`validateInput`) on strict equality. So an operator could `--email 'Auto-Scan'` — accepted — and the
+next operator's registration of that triple **claimed and overwrote it**, exit 0, with a notice falsely
+crediting `convoke-audit-bmm-deps`. No race, no hand-edit needed: the CLI itself wrote the claimable
+value. Both sides now share `isReservedMarker`, and four spellings are pinned by test.
+
+| Defect | Fix |
+|---|---|
+| the reserved marker was writable in any non-exact spelling, then claimable | one predicate on both sides |
+| `--dry-run` promised `would CLAIM … exit 0` for a registry the real run refuses | the dry run applies the same validation and exits 1 |
+| the `hasMetadata` trim was a fifth behaviour change, undocumented and killed by nothing | pinned by a whitespace-only fixture |
+| the generic `hand-edit the CSV` hint was appended to claim refusals, contradicting their own advice | suppressed for `Refusing to claim` |
+| `checkDuplicate`'s JSDoc was orphaned onto the new predicate — the same insertion mistake as T168 | reattached |
+| the predicate's own comment blamed the case/whitespace variants for the empty-registrant message, which belongs to the whitespace-only field | corrected |
+| `isReservedMarker` / `assertClaimable` were untestable | exported in `_internal` |
+
+**The record was wrong twice more, both of the class this entry is about.** The command quoted as
+evidence for the retraction — `git log -S "Or regenerate the auto-scan baseline with"` — returns seven
+commits, not one; only the `-- scripts/convoke-doctor.js` form returns one, and these records now quote
+the line themselves. And the retracted sentences were left standing as live assertions in the Change
+Log rather than struck, including "no operator can write" — which R2 had just falsified. Both fixed;
+the false clauses are struck, not deleted.
+
+**T219 rescoped, not extended.** `_tripleKey` joins its three fields with an unescaped `||`, so skill
+`a||b` + agent `c` collides with skill `a` + agent `b||c` — and claiming then deletes the unrelated
+skill's inventory row. `--skill` rejects path characters but not the delimiter. That makes T112's
+"exactly one row for the key" premise unsound for a reason sanitisation-matching would not fix, so the
+row now names the class: make the key injective.
 

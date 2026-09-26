@@ -339,6 +339,104 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
     }
   });
 
+  it('T112 R2: the reserved marker is unwritable in every spelling the claim logic accepts', async () => {
+    // The read side was widened to trim and case-fold; leaving the write side strict let an operator
+    // register as `Auto-Scan`, which the claim logic then treated as an unclaimed audit row and
+    // overwrote — deterministically, no race needed. Both sides must classify it identically.
+    const tmpDir = await createTempDir('bmad-reg-reserved-');
+    try {
+      await seedFixture(tmpDir, { skillNames: ['skill-x'] });
+      for (const spelling of ['Auto-Scan', ' auto-scan', 'auto-scan ', 'AUTO-SCAN']) {
+        const { exitCode, stdout } = await runScript(
+          SCRIPT_PATH,
+          ['--skill', 'skill-x', '--agent', 'bmad-agent-pm', '--type', 'frontmatter',
+            '--email', spelling, '--yes'],
+          { cwd: tmpDir }
+        );
+        assert.equal(exitCode, 1, `--email ${JSON.stringify(spelling)} must be refused; got: ${stdout}`);
+        assert.ok(stdout.includes('reserved for the scan tool'), `expected the reserved-value error for ${spelling}`);
+      }
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('T112 R2: --dry-run refuses what the real run would refuse', async () => {
+    // A dry run that says "would CLAIM … exit 0" where the real run exits 1 is worse than no dry run.
+    const tmpDir = await createTempDir('bmad-reg-drydupe-');
+    try {
+      await seedFixture(tmpDir, {
+        csvContents: [
+          'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
+          'skill-x,bmad-agent-pm,frontmatter,unknown,auto-scan,2026-09-01',
+          'skill-x,bmad-agent-pm,frontmatter,bme,dave@example.com,2026-05-05',
+          '',
+        ].join('\n'),
+        skillNames: ['skill-x'],
+      });
+      const { exitCode, stdout } = await runScript(
+        SCRIPT_PATH,
+        ['--skill', 'skill-x', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--dry-run'],
+        { cwd: tmpDir }
+      );
+      assert.equal(exitCode, 1, `dry-run must mirror the real refusal; got: ${stdout}`);
+      assert.match(stdout, /2 rows for that triple/);
+      assert.ok(!stdout.includes('would CLAIM'), 'it must not promise a claim it would refuse');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('T112 R2: a whitespace-only registrant gets the locatable message, not "registered by    "', async () => {
+    // `.length > 0` was true for "   ", so the incomplete-metadata fallback did not fire and the
+    // operator got `already registered by     on …` — the unlocatable message it exists to prevent.
+    const tmpDir = await createTempDir('bmad-reg-ws-');
+    try {
+      await seedFixture(tmpDir, {
+        csvContents: [
+          'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
+          'skill-x,bmad-agent-pm,frontmatter,bme,   ,   ',
+          '',
+        ].join('\n'),
+        skillNames: ['skill-x'],
+      });
+      const { exitCode, stdout } = await runScript(
+        SCRIPT_PATH,
+        ['--skill', 'skill-x', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--yes'],
+        { cwd: tmpDir }
+      );
+      assert.equal(exitCode, 1);
+      assert.match(stdout, /incomplete metadata/, 'a whitespace-only field is not metadata');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('T112 R2: a claim refusal does not tell the operator to hand-edit the CSV', async () => {
+    const tmpDir = await createTempDir('bmad-reg-hint-');
+    try {
+      await seedFixture(tmpDir, {
+        csvContents: [
+          'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
+          'skill-x,bmad-agent-pm,frontmatter,unknown,auto-scan,2026-09-01',
+          'skill-x,bmad-agent-pm,frontmatter,bme,dave@example.com,2026-05-05',
+          '',
+        ].join('\n'),
+        skillNames: ['skill-x'],
+      });
+      const { exitCode, stdout } = await runScript(
+        SCRIPT_PATH,
+        ['--skill', 'skill-x', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--yes'],
+        { cwd: tmpDir }
+      );
+      assert.equal(exitCode, 1);
+      assert.ok(!stdout.includes('hand-edit the CSV following the header schema'),
+        'the refusal already says what to do; the generic hint contradicts it');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
   // ── AC8 case 4: duplicate triple rejection ──
   it('duplicate triple → exit 1 + error identifies existing row metadata', async () => {
     const tmpDir = await createTempDir('bmad-reg-');
