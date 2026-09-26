@@ -171,8 +171,8 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
     try {
       const existing = [
         'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
-        'other-skill,bmad-agent-dev,frontmatter,bme,bob@example.com,2026-04-01',
         'skill-x,bmad-agent-pm,frontmatter,unknown,auto-scan,2026-09-01',
+        'other-skill,bmad-agent-dev,frontmatter,bme,bob@example.com,2026-04-01',
         '',
       ].join('\n');
       await seedFixture(tmpDir, { csvContents: existing, skillNames: ['skill-x', 'other-skill'] });
@@ -192,9 +192,11 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
       assert.equal(matching.length, 1, 'claiming must REPLACE the row, not add a second one with the same triple');
       assert.ok(matching[0].includes('carol@example.com'), 'the operator must own the row now');
       assert.ok(!matching[0].includes('auto-scan'), 'the reserved marker must be gone');
-      // Order is deliberately preserved by renderCsv; a claim must not move the row.
-      assert.ok(lines[1].startsWith('other-skill'), 'the untouched row keeps its position');
-      assert.ok(lines[2].startsWith('skill-x'), 'the claimed row keeps ITS position rather than moving to the end');
+      // Order is deliberately preserved by renderCsv; a claim must not move the row. The claim target
+      // is deliberately NOT the last row: with it last, "keeps its position" is also true of an
+      // implementation that deletes and appends, so the assertion pinned nothing (R1).
+      assert.ok(lines[1].startsWith('skill-x'), 'the claimed row keeps ITS position rather than moving to the end');
+      assert.ok(lines[2].startsWith('other-skill'), 'the untouched row keeps its position');
     } finally {
       await fs.remove(tmpDir);
     }
@@ -242,6 +244,96 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
       assert.equal(exitCode, 0);
       assert.ok(stdout.includes('would CLAIM'), `expected the claim wording in dry-run; got: ${stdout}`);
       assert.equal(await fs.readFile(csvPath, 'utf8'), before, 'dry-run must not mutate the CSV');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('T112 R1: refuses to claim when the registry holds the triple twice', async () => {
+    // A hand-edited CSV can hold the same triple twice — one auto-scan row, one a person's. The guard
+    // inspects the FIRST match and the write replaced the FIRST match, so the claim proceeded and the
+    // person's row survived beside it: exactly the duplicate state the guard exists to prevent.
+    const tmpDir = await createTempDir('bmad-reg-dupe-');
+    try {
+      const existing = [
+        'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
+        'skill-x,bmad-agent-pm,frontmatter,unknown,auto-scan,2026-09-01',
+        'skill-x,bmad-agent-pm,frontmatter,bme,dave@example.com,2026-05-05',
+        '',
+      ].join('\n');
+      await seedFixture(tmpDir, { csvContents: existing, skillNames: ['skill-x'] });
+      const csvPath = path.join(tmpDir, '_bmad/_config/bmm-dependencies.csv');
+      const before = await fs.readFile(csvPath, 'utf8');
+
+      const { exitCode, stdout } = await runScript(
+        SCRIPT_PATH,
+        ['--skill', 'skill-x', '--agent', 'bmad-agent-pm', '--type', 'frontmatter',
+          '--email', 'carol@example.com', '--yes'],
+        { cwd: tmpDir }
+      );
+      assert.equal(exitCode, 1, `a duplicate triple must not be claimed; got: ${stdout}`);
+      assert.match(stdout, /2 rows for that triple/, 'the message must say what it found');
+      assert.equal(await fs.readFile(csvPath, 'utf8'), before, 'nothing may be written on refusal');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('T112 R1: refuses to claim a row that stopped being auto-scan since the check', async () => {
+    // The claim decision is made outside the CSV lock. Two concurrent registrations both cleared the
+    // duplicate check while one held the lock; the second then replaced a row whose registered_by was
+    // by then a PERSON, and reported success. `writeRow` re-verifies the marker under the lock, so the
+    // stale decision is refused rather than applied.
+    const tmpDir = await createTempDir('bmad-reg-race-');
+    try {
+      await seedFixture(tmpDir, {
+        csvContents: [
+          'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
+          'skill-x,bmad-agent-pm,frontmatter,unknown,auto-scan,2026-09-01',
+          '',
+        ].join('\n'),
+        skillNames: ['skill-x'],
+      });
+      const csvPath = path.join(tmpDir, '_bmad/_config/bmm-dependencies.csv');
+      const { writeRow } = require('../../scripts/convoke-register-skill')._internal;
+      // Simulate the lost race: the row is a person's by the time the write runs.
+      await fs.writeFile(csvPath, [
+        'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
+        'skill-x,bmad-agent-pm,frontmatter,bme,bob@example.com,2026-09-26',
+        '',
+      ].join('\n'), 'utf8');
+      const row = {
+        skill_name: 'skill-x', bmm_agent: 'bmad-agent-pm', dependency_type: 'frontmatter',
+        source_module: 'unknown', registered_by: 'carol@example.com', registered_date: '2026-09-26',
+      };
+      assert.throws(() => writeRow(row, csvPath, { claim: true }), /not "auto-scan"/,
+        'a claim decided against an auto-scan row must not overwrite a person after the fact');
+      const after = await fs.readFile(csvPath, 'utf8');
+      assert.ok(after.includes('bob@example.com'), "bob's row must survive");
+      assert.ok(!after.includes('carol@example.com'), 'carol must not have overwritten it');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('T112 R1: a hand-edited " Auto-Scan " is claimable, as the audit also classifies it', async () => {
+    const tmpDir = await createTempDir('bmad-reg-case-');
+    try {
+      await seedFixture(tmpDir, {
+        csvContents: [
+          'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
+          'skill-x,bmad-agent-pm,frontmatter,unknown, Auto-Scan ,2026-09-01',
+          '',
+        ].join('\n'),
+        skillNames: ['skill-x'],
+      });
+      const { exitCode, stdout } = await runScript(
+        SCRIPT_PATH,
+        ['--skill', 'skill-x', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--yes'],
+        { cwd: tmpDir }
+      );
+      assert.equal(exitCode, 0, `a case/whitespace variant of the reserved marker is still the audit's row; got: ${stdout}`);
+      assert.ok(stdout.includes('Claiming the auto-scan row'));
     } finally {
       await fs.remove(tmpDir);
     }

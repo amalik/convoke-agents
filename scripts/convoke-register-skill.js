@@ -280,6 +280,21 @@ function _todayIso() {
  * @param {string} csvPath - Absolute CSV path.
  * @returns {object|null}
  */
+/**
+ * Is this `registered_by` the audit's reserved marker?
+ *
+ * Classified the way `audit-bmm-dependencies.js::mergePreservingManual` classifies it — trimmed and
+ * case-folded — rather than by strict equality. Strict equality made ` auto-scan` and `Auto-Scan` a
+ * third state: an auto-scan row to the audit, a person's row to this guard, so the T112 trap stayed
+ * shut on those hand-edited variants and the operator got a message naming a registrant of "".
+ *
+ * @param {*} registeredBy
+ * @returns {boolean}
+ */
+function isReservedMarker(registeredBy) {
+  return String(registeredBy || '').trim().toLowerCase() === RESERVED_REGISTERED_BY;
+}
+
 function checkDuplicate(candidate, csvPath) {
   const audit = require('./audit/audit-bmm-dependencies');
   if (!fs.existsSync(csvPath)) return null;
@@ -401,7 +416,31 @@ function writeRow(row, csvPath, { claim = false } = {}) {
     // state the duplicate guard exists to prevent — and would move the skill to
     // the end of a file whose order is deliberately preserved.
     const newKey = audit._internal._tripleKey(row);
-    const claimIndex = claim ? existingRows.findIndex((r) => audit._internal._tripleKey(r) === newKey) : -1;
+    // T112 R1: the claim decision is made OUTSIDE this lock, against an earlier read. Revalidate it
+    // against the state actually being written, or the decision's premise is never checked:
+    //   - two processes both cleared the guard while one held the lock, so the second replaced a row
+    //     whose `registered_by` was by then a PERSON — and reported success;
+    //   - a hand-edited CSV holding the triple twice let the claim replace the first match while a
+    //     person's row for the same triple survived, which is the state the guard exists to prevent.
+    // Both refused now: exactly one row for the key, and it must still carry the reserved marker.
+    const matches = claim ? existingRows.map((r, i) => [r, i]).filter(([r]) => audit._internal._tripleKey(r) === newKey) : [];
+    if (claim) {
+      if (matches.length !== 1) {
+        throw new Error(
+          `Refusing to claim ${row.skill_name}/${row.bmm_agent}/${row.dependency_type}: the registry holds `
+          + `${matches.length} rows for that triple, not 1. Inspect ${audit.OUTPUT_CSV_REL} — a duplicate `
+          + 'triple means the file was hand-edited, and which row to replace is not ours to guess.'
+        );
+      }
+      if (!isReservedMarker(matches[0][0].registered_by)) {
+        throw new Error(
+          `Refusing to claim ${row.skill_name}/${row.bmm_agent}/${row.dependency_type}: the row is now `
+          + `registered by "${matches[0][0].registered_by}", not "${RESERVED_REGISTERED_BY}". It changed `
+          + 'between the duplicate check and this write — re-run to see the current state.'
+        );
+      }
+    }
+    const claimIndex = matches.length === 1 ? matches[0][1] : -1;
     const allRows = claimIndex >= 0
       ? existingRows.map((r, i) => (i === claimIndex ? row : r))
       : [...existingRows, row];
@@ -682,14 +721,16 @@ async function main(argv) {
   // CSV, which is the toil this command exists to remove. Their registration now
   // CLAIMS that row: same position, their attribution. A row registered by a person
   // is still a conflict and still exits 1.
-  const claimable = Boolean(duplicate) && duplicate.registered_by === RESERVED_REGISTERED_BY;
+  const claimable = Boolean(duplicate) && isReservedMarker(duplicate.registered_by);
   if (duplicate && !claimable) {
     // R1-M6: fall back to an operator-actionable message when the existing
     // row has empty metadata (hand-edited CSV, truncated fields). Otherwise
     // the error reads `"already registered by  on "` with no way to locate
     // the conflict.
-    const hasMetadata = (duplicate.registered_by && duplicate.registered_by.length > 0)
-      && (duplicate.registered_date && duplicate.registered_date.length > 0);
+    // `.trim()`: a whitespace-only field took the "has metadata" branch and produced
+    // `already registered by     on …` — the unlocatable message the fallback exists to prevent.
+    const hasMetadata = String(duplicate.registered_by || '').trim().length > 0
+      && String(duplicate.registered_date || '').trim().length > 0;
     const attribution = hasMetadata
       ? `already registered by ${duplicate.registered_by} on ${duplicate.registered_date}`
       : 'already registered (existing row has incomplete metadata — inspect `_bmad/_config/bmm-dependencies.csv` manually to locate it)';

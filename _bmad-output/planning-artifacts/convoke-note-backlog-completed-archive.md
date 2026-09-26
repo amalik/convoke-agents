@@ -2693,3 +2693,94 @@ unanchored tail opened a same-class hole, and the fix for it landed in one of tw
 fix was right and the thing verifying it could not distinguish the fix from its absence — which is why
 every row above names the mutant, not the intent.
 
+## T112
+
+**Lane:** Fast Lane · **Score:** 5.7 · **Portfolio:** convoke · **Status:** ✅ Done 2026-09-26
+
+**Defect.** `convoke-audit-bmm-deps` writes a registry row for every custom skill it finds, marked
+`registered_by: auto-scan` — including the operator's own. The duplicate-triple guard in
+`convoke-register-skill` then rejected the operator's registration of that same skill, with
+*"edit the CSV manually to update"* as the only way forward: the toil the command exists to remove.
+
+**Ruling: option 2 of the three the row offered** — the guard distinguishes an unclaimed scan row from a
+real conflict. (An earlier version of this entry called it option 1 while listing 1 and 3 as the
+rejected pair two lines later.) `auto-scan` is a RESERVED marker no operator can write (`convoke-register-skill.js:33`),
+so the information needed was already in the row. A registration now **claims** it: replaced where it
+sits, the operator's attribution, one row rather than two. Still exits 1 for a row a person registered,
+and for a row with empty metadata — that means hand-edited, not unclaimed.
+
+Rejected: stopping the audit from claiming unknown-source skills (it would erase the inventory the
+doctor's finding exists to raise), and narrowing the doctor's advice (cosmetic — the wall stays for
+anyone who runs the audit for another reason).
+
+| Fact | Command |
+|---|---|
+| Claiming works, replaces in place, preserves order | `node --test tests/unit/convoke-register-skill.test.js` — `registering a skill the audit already listed CLAIMS that row` |
+| A person's row, and a row with no attribution, still exit 1 | same file — the pre-existing duplicate test plus `a row with no registered_by is NOT claimable` |
+| `--dry-run` says it would claim and writes nothing | same file |
+
+**Reproduced end to end**, old code against new, same fixture: a custom skill with a frontmatter
+`dependencies:` entry, scanned by the real audit, then registered.
+
+```
+audit claims:  my-custom-skill,bmad-agent-pm,frontmatter,unknown,auto-scan,<date>
+OLD  ✗ Duplicate triple … already registered by auto-scan … edit the CSV manually to update   exit 1
+NEW  ↻ Claiming the auto-scan row …  ✓ Registered: my-custom-skill → bmad-agent-pm            exit 0
+```
+
+**R1 found four more defects in this change, all fixed before landing.** The claim decision is made
+outside the CSV lock, so two concurrent registrations both cleared the guard and the second replaced a
+row that was by then a **person's** — reporting success; `writeRow` now revalidates under the lock and
+refuses. A hand-edited CSV holding the triple twice let the claim replace the first match while a
+person's row survived beside it — refused too. The order-preservation assertion was tautological,
+because the fixture's claim target was already the last row, so an appending implementation satisfied
+it. And the reserved marker was classified by strict equality here but trimmed-and-case-folded by the
+audit, making ` Auto-Scan ` a third state — an audit row to one and a person's row to the other; both
+now classify it the same way.
+
+| Mutant | Killed by |
+|---|---|
+| `claimable = false` (the old rejection) | the claim test and the dry-run test |
+| drop the in-lock marker re-check | `refuses to claim a row that stopped being auto-scan since the check` |
+| allow any number of matches under the lock | `refuses to claim when the registry holds the triple twice` |
+| claim by delete-and-append | the in-place assertion, after its fixture stopped putting the target last |
+| marker back to strict equality | `a hand-edited " Auto-Scan " is claimable` |
+| `claimable` for ANY duplicate (would overwrite a person's row) | `a row with no registered_by is NOT claimable` and the pre-existing duplicate test |
+| claim appends instead of replacing | the one-row-per-triple assertion |
+| the `claim` flag never reaches `writeRow` | same |
+| dry-run loses the claim wording | the dry-run test |
+| the claim notice is silenced | the claim test |
+
+**The row's premise was TRUE, and my preflight "correction" of it was false — retracted here.** I
+wrote that the `unregistered-custom-skill` finding no longer advises the audit command, that the
+per-skill form "names no command", and that only the summary form at
+`BMM_DRIFT_SUMMARY_THRESHOLD = 10` offers it. All three are wrong. The per-skill `fix` string
+(`convoke-doctor.js:914-917`) ends:
+
+```js
++ '\nOr regenerate the auto-scan baseline with:\n'
++ `  npx -p convoke-agents@${pv} convoke-audit-bmm-deps`,
+```
+
+and `git log -S "Or regenerate the auto-scan baseline with"` returns one commit — `5f3a5904`,
+2026-04-23 — the commit that **introduced** the per-skill finding *with* that command. So 2026-04-23 is
+when the advice started naming the audit, not when it stopped, and the trap is reachable from the
+common single-skill case, not only at ten-or-more findings.
+
+**Cause of the error, because it repeated three times in one sitting:** I read the `fix` string with
+`sed -n '893,915p'` and it ends at line 917. The conclusion was drawn from a window that cut the
+evidence off. The other two instances the same day were an emoji count reported without its character
+class, and an "old code exits 1" that was a missing-module error. Truncated evidence, confident claim.
+
+The fix still belongs in the guard rather than the advice — it closes the trap wherever it is reached,
+including for an operator who runs the audit for an unrelated reason — but that is a design argument,
+not the reachability argument I wrongly made.
+
+**Process note.** While reproducing the old behaviour I ran `git stash` against the working tree inside a
+compound command — an explicit prohibition in this repo, because the operator commits from GitHub Desktop
+mid-session and a stash/pop race can stage a revert of their work. It stashed this row's own uncommitted
+change; `git stash pop` restored it intact, and HEAD had not moved, so nothing was lost. The cause was
+burying a git call inside a one-liner instead of keeping repo operations explicit and separate. The
+comparison was then done the way it should have been from the start: on a `cp -a` copy of the repo, with
+`git checkout HEAD -- <file>` applied inside the copy.
+
