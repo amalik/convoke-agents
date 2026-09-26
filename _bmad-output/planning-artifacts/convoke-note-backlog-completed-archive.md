@@ -3111,6 +3111,12 @@ assigning it, demonstrated end to end hiding a live repo-root token. The registr
 read-only `npm publish --dry-run` and, over raw file text, a second workflow whose only mention was a
 prose comment.
 
+**Round 3's residuals are `T220`:** npm's workspace `localPrefix` rule (npm walks past the first
+`package.json` to a workspace root, and logs that it is *ignoring* the file this scan inspects), the
+`email` key — which npm returns as a credential but which cannot simply be added, because an `email=`
+line in the builtin npmrc that legitimately exists would then refuse every release — behavioural rather
+than textual errexit verification, and Round 2's indirect-invocation gap.
+
 **Two findings were in Round 3's own fixes, caught by the battery before landing.** The benign-value
 exemption added for npm's lifecycle environment was applied before every other rule, so the exemption list
 could have laundered a credential — it is now scoped to the three keys that name a file rather than carry
@@ -3147,7 +3153,7 @@ deliberately: a guard that reds on correct wiring is a finding, and four of Roun
 
 **What Round 2 does not close.** A second job that invokes npm indirectly (`$NPMBIN publish`) *and*
 obtains a credential by some route other than `id-token: write` is caught by neither the text scan nor
-the permission assertion. The claim is a floor, not a closure. **A Fast Lane row is owed for it** — no ID
-was allocated here because the backlog had uncommitted edits at the time, and allocating against a dirty
-backlog is how IDs collide (`I150`).
+the permission assertion. The claim is a floor, not a closure. **Filed as `T220`** (2.7), together with
+the three Round 3 residuals below. The ID was allocated only once the backlog was committed — allocating
+against a dirty backlog is how IDs collide (`I150`).
 
