@@ -809,114 +809,23 @@ jobs:
 
           # FR4/dist-1-5, part 2 -- no credential may reach npm on this path.
           #
-          # Checks EVERY npmrc npm reads, not just $NPM_CONFIG_USERCONFIG. An earlier draft
-          # checked only that one file -- and since FR4 removes `registry-url:`, setup-node no
-          # longer exports it, so the guard took its else branch, printed OK, and grepped
-          # nothing. It was inert in exactly the state this change creates. Project .npmrc
-          # OUTRANKS user config and is not gitignored, so it must be covered.
+          # T45: this was ~100 lines of inline bash, and in the healthy steady state it inspected
+          # ZERO files -- FR4 removes `registry-url:` so nothing writes a userconfig -- then printed
+          # `no npmrc exists on any path npm reads … OK`. Observed live in dist-1-6's rehearsal (run
+          # 32599414962). The environment assertions were real; the FILE loop had never executed
+          # against an npmrc in CI, so its regex was a plan rather than a check.
           #
-          # Asserted against the FILES: `npm config get //registry.npmjs.org/:_authToken`
-          # refuses protected keys and exits 1 whether the value is present OR absent, so it
-          # cannot tell the two states apart -- the one thing this needs to do.
+          # Two things changed. The RULE: on this path an npmrc EXISTING is the finding, whatever it
+          # contains, because FR4 leaves this job with none -- so "clean" means something wrote one.
+          # And the DETECTION is now exercised against fixtures in
+          # `tests/unit/npm-credential-scan.test.js`, including a credential-bearing npmrc, rather
+          # than by planting a file on the real publish path (which would undo FR4).
           #
-          # Matches every credential spelling (_auth, _password, username all authenticate),
-          # anchored to a config-key line so a comment mentioning _authToken does not abort a
-          # clean publish. Unreadable candidates are FATAL, not skipped: `grep -q` returns 2
-          # for "cannot read" and an `if` collapses that to "no match", reporting an
-          # unreadable npmrc as verified-clean.
-          #
-          # Runs BEFORE the exchange: a successful oidc() does config.set() on the same key.
-          # Covers: certfile|keyfile too -- publish.js:144 treats `certfile && keyfile` as
-          # credentials exactly like a token. CR-only line endings are normalised first: npm's
-          # `ini` splits on [\r\n]+ while grep splits on \n only, so a CR-only npmrc is a
-          # credential npm honours and a bare grep would certify it clean. Paths come from npm
-          # itself, not guesses, and are deduped.
-          CRED_RE='^[[:space:]]*(//[^[:space:]]*:)?(_authToken|_auth|_password|username|certfile|keyfile)[[:space:]]*='
-          NPMRC_CHECKED=0
-          NPMRC_SEEN=""
-          for npmrc_candidate in \
-            "$(npm config get userconfig 2>/dev/null)" \
-            "$(npm config get globalconfig 2>/dev/null)" \
-            "${NPM_CONFIG_USERCONFIG:-}" "${NPM_CONFIG_GLOBALCONFIG:-}" \
-            "$HOME/.npmrc" "$PWD/.npmrc"; do
-            [ -n "$npmrc_candidate" ] && [ "$npmrc_candidate" != "undefined" ] || continue
-            [ -e "$npmrc_candidate" ] || continue
-            case ":$NPMRC_SEEN:" in *":$npmrc_candidate:"*) continue ;; esac
-            NPMRC_SEEN="$NPMRC_SEEN:$npmrc_candidate"
-            if [ ! -f "$npmrc_candidate" ] || [ ! -r "$npmrc_candidate" ]; then
-              echo "FATAL: npmrc candidate '$npmrc_candidate' exists but is not a readable file." >&2; exit 1
-            fi
-            if tr '\r' '\n' < "$npmrc_candidate" | grep -Eq "$CRED_RE"; then
-              echo "FATAL: '$npmrc_candidate' sets a credential key on the publish path." >&2
-              echo "  setup-node exports NODE_AUTH_TOKEN='XXXXX-XXXXX-XXXXX-XXXXX' when it is" >&2
-              echo "  otherwise unset (authutil.ts:55-57), so npm sends THAT dummy as a bearer" >&2
-              echo "  token and an OIDC decline is reported as *bad token*, not *no token*." >&2
-              exit 1
-            fi
-            NPMRC_CHECKED=$((NPMRC_CHECKED+1))
-          done
-
-          # The environment outranks every npmrc, and ci.yml's own OIDC note warns that "a token
-          # in the environment takes precedence over OIDC, which put 4.0.0 back on the token
-          # path". Two vectors, both asserted:
-          #   1. NODE_AUTH_TOKEN -- the specific variable setup-node exports.
-          #   2. any npm_config_* / NPM_CONFIG_* credential key. npm reads config from the
-          #      environment at HIGHER precedence than any npmrc, so a repo/org Variable or a
-          #      prior composite action can supply one invisibly to a file-based check.
-          # `npm config ls -l` does NOT surface env-supplied credentials (measured), which is
-          # why this greps the environment directly rather than asking npm.
-          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "FATAL: NODE_AUTH_TOKEN is set on the publish path." >&2
-            echo "  A token in the environment takes precedence over OIDC. This job publishes" >&2
-            echo "  via Trusted Publishing and must have no token at all." >&2
-            exit 1
-          fi
-          # Matches on the ENV-VAR NAME with structural rules, because npm authenticates on
-          # the RESOLVED config key and `#loadObject` runs `envReplace(key, this.env)` on every
-          # key (@npmcli/config/lib/index.js:586) -- so `${VAR}` inside a key is expanded AFTER
-          # any name-based regex has looked. Measured: `npm_config_//registry.npmjs.org/:${X}`
-          # with `X=_authToken` delivers a working token while a credential-word regex sees
-          # nothing. That vector is unbounded, so the rule is: reject any npm_config_* name that
-          # is REWRITABLE (`${`) or nerf-darted (`//`, `:`) as well as any credential spelling.
-          # Env outranks the user layer, so such a var shadows the token oidc() writes.
-          #
-          # Iterates NUL-framed names rather than grepping `env` output: `env` line-splits a
-          # multi-line VALUE, so a benign var containing a newline could forge a match and abort
-          # a release on a tag already spent. Measured before this was fixed.
-          BAD_NPM_ENV=""
-          while IFS= read -r -d '' npm_env_kv; do
-            npm_env_name=${npm_env_kv%%=*}
-            case $npm_env_name in [Nn][Pp][Mm]_[Cc][Oo][Nn][Ff][Ii][Gg]_*) ;; *) continue ;; esac
-            shopt -s nocasematch
-            if [[ $npm_env_name == *'${'* || $npm_env_name == *//* || $npm_env_name == *:* \
-               || $npm_env_name =~ (_auth|_password|username|certfile|keyfile) ]]; then
-              BAD_NPM_ENV="$BAD_NPM_ENV $npm_env_name"
-            fi
-            shopt -u nocasematch
-          done < <(env -0)
-          if [ -n "$BAD_NPM_ENV" ]; then
-            echo "FATAL: npm_config_* credential or rewritable key(s) in the environment:$BAD_NPM_ENV" >&2
-            echo "  npm reads config from the environment above every npmrc, so this takes" >&2
-            echo "  precedence over OIDC -- the token-path regression that broke 4.0.0." >&2
-            exit 1
-          fi
-          # Third vector: oidc.js:50 uses NPM_ID_TOKEN in place of the identity GitHub mints,
-          # so a supplied value performs the exchange against an attacker-chosen assertion.
-          # Neither of the checks above sees it.
-          if [ -n "${NPM_ID_TOKEN:-}" ]; then
-            echo "FATAL: NPM_ID_TOKEN is set on the publish path." >&2
-            echo "  It overrides the ID token GitHub mints for this workflow (oidc.js:50)." >&2
-            exit 1
-          fi
-
-          # Reports what was ACTUALLY inspected. An earlier version said "none sets a
-          # credential" after inspecting ZERO files -- the same unearned positive claim R1
-          # rejected one revision earlier, just with a different cause removed.
-          if [ "$NPMRC_CHECKED" -eq 0 ]; then
-            echo "npm credential check: no npmrc exists on any path npm reads; NODE_AUTH_TOKEN unset -- OK"
-          else
-            echo "npm credential check: $NPMRC_CHECKED npmrc file(s) inspected, none sets a credential; NODE_AUTH_TOKEN unset -- OK"
-          fi
+          # Every behaviour the bash had is preserved in the script and pinned by a test: CR-only
+          # line endings, certfile/keyfile, key-line anchoring so a comment does not abort a publish,
+          # unreadable-is-fatal, structural npm_config_* name rules, NUL-safe env reading, and the
+          # NODE_AUTH_TOKEN / NPM_ID_TOKEN vectors.
+          node scripts/audit/npm-credential-scan.js
 
           # FR4/dist-1-5, part 3 -- a `npm publish --dry-run` OIDC gate was written here and
           # REMOVED at Round 2. Recorded so it is not re-attempted without the context:

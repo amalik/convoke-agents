@@ -324,3 +324,67 @@ test('publish validates the manifest in the tree it is about to pack', () => {
   assert.ok(check < names.indexOf('Publish to npm'),
     'the check must run before npm publish or it validates a tarball already gone');
 });
+
+// ─── T45: the npm credential scan ───────────────────────────────────────────
+// The scan used to be inline bash that inspected ZERO files in the steady state. It is now a script
+// with its own tests (`tests/unit/npm-credential-scan.test.js`), which moves the fragile part to the
+// WIRING — the same failure class this file was created for.
+const CRED_SCRIPT = 'scripts/audit/npm-credential-scan.js';
+
+function publishJobT45() {
+  const job = WORKFLOW.jobs.publish;
+  assert.ok(job, 'publish job not found in ci.yml');
+  return job;
+}
+
+test('T45: exactly one publish step invokes the credential scan', () => {
+  const invoking = (publishJobT45().steps || [])
+    .filter((step) => typeof step.run === 'string' && step.run.includes(CRED_SCRIPT));
+  assert.strictEqual(invoking.length, 1,
+    `expected exactly one publish step invoking ${CRED_SCRIPT}, found ${invoking.length}`);
+});
+
+test('T45: the scan is on an executable line, not only in a comment', () => {
+  const step = (publishJobT45().steps || [])
+    .find((s) => typeof s.run === 'string' && s.run.includes(CRED_SCRIPT));
+  assert.ok(step, `no publish step references ${CRED_SCRIPT}`);
+  const executable = step.run.split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .some((line) => line.includes(`node ${CRED_SCRIPT}`));
+  assert.ok(executable,
+    `${CRED_SCRIPT} appears in the step but never on an executable line — a commented-out guard is documentation`);
+});
+
+test('T45: the wired script exists and can actually fail', () => {
+  // A wiring assertion that never runs the thing is how the marketplace check stayed dead for months.
+  const abs = path.join(__dirname, '..', '..', CRED_SCRIPT);
+  assert.ok(fs.existsSync(abs), `${CRED_SCRIPT} is wired into ci.yml but does not exist`);
+  const { check } = require(abs);
+  const { fatal } = check({ env: { NODE_AUTH_TOKEN: 'x' }, home: '/none', cwd: '/none', fromNpm: [] });
+  assert.ok(fatal.length > 0, 'the script must be able to fail, or wiring it asserts nothing');
+});
+
+test('T45: the scan call is not neutered', () => {
+  // `|| true` on the call passed every other assertion here. T206 pinned nine neutering paths for the
+  // marketplace check for exactly this reason: a wired guard that cannot fail is documentation.
+  const step = (publishJobT45().steps || [])
+    .find((x) => typeof x.run === 'string' && x.run.includes(CRED_SCRIPT));
+  assert.ok(step, `no publish step references ${CRED_SCRIPT}`);
+  const callLine = step.run.split('\n')
+    .map((line) => line.trim())
+    .find((line) => line.startsWith(`node ${CRED_SCRIPT}`));
+  assert.ok(callLine, `${CRED_SCRIPT} must be called bare at the start of a line`);
+  assert.strictEqual(callLine, `node ${CRED_SCRIPT}`,
+    `the call must be bare — no || true, no redirection, no trailing conditional; got: ${callLine}`);
+  // Read off the PARSED node, so a quoted key or odd indentation cannot hide it.
+  assert.ok(!('continue-on-error' in step),
+    'the step must not set continue-on-error — it would report the finding and publish anyway');
+  assert.ok(!('if' in step),
+    'the step must not be conditional — an `if:` that evaluates false skips the only credential guard');
+});
+
+test('T45: no inline npmrc loop remains beside the script', () => {
+  assert.ok(!CI.includes('NPMRC_CHECKED'),
+    'the inline bash loop is back alongside the script — two implementations, one of them untested');
+});
