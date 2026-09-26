@@ -4,21 +4,20 @@ artifact_type: adr
 qualifier: channel-integrity-the-distribution-unit
 created: '2026-09-26'
 status: active
-decision_status: proposed
-accepted: none
+decision_status: accepted
+accepted: '2026-09-26'
 schema_version: 1
 related_initiative: 'Channel integrity (2026-09-26)'
 related_decision: 'ADR-004 (invocable-unit declaration); meta-model ADR-001 (name registry)'
 related_epic: none
 supersedes: none
 qualifier_role: operator-authored
-signoff_by: none
+signoff_by: amalik
 ---
 
 # ADR-001: What unit does Convoke distribute?
 
-**Status:** **PROPOSED — RULING OPEN.** No option is selected. This ADR exists to make
-the ruling cheap, not to pre-empt it.
+**Status:** **ACCEPTED** (2026-09-26) — ruled by Amalik: **S4 now, S2 as the destination.**
 **Proposed:** 2026-09-26
 **Decision owner:** Amalik
 **Evidence:** [`convoke-note-channel-integrity-findings-2026-09-26.md`](../../convoke-note-channel-integrity-findings-2026-09-26.md)
@@ -136,21 +135,82 @@ channel asymmetry rather than fighting it.
 
 ## Decision
 
-**OPEN.** To be ruled by Amalik.
+**S4 now. S2 as the stated destination.** Ruled by Amalik, 2026-09-26.
 
-A ruling should state: the option; whether it re-ratifies the baseline budget
-(constraint 1); whether it amends ADR-004 (constraint 2) and `preflight-soft-warn`
-(constraint 3); and what happens to `.gyre/` (constraint 4).
+Convoke publishes **one** deliberate plugin to the Claude Code marketplace — a hub that
+installs and repairs the runtime — and the catalog reaches operators behind it. The
+module remains the unit of coherence. S2 (promoting the 29 workflows and 14 contracts to
+addressable personaless skills) is the declared destination, not deferred indefinitely
+and not started now: it requires a ratification this initiative does not hold.
+
+**What the ruling does not decide, and is not blocked on:** the shape of the hub skill,
+the order of the remediation, and whether the name registry gains a `kind: skill` row
+type. The last of those is the only one that touches a ratified artifact — see C1 below.
 
 ## Consequences
 
-Recorded once ruled.
+The four constraint questions the ruling had to answer. **Three are settled by S4
+itself; one needs a one-line confirmation.**
+
+**C1 — Baseline budget (constraint 1): no re-ratification needed for S4. ⚠️ one item to
+confirm.** S4 adds one plugin entry to a manifest that already exists and one hub skill.
+It needs no new ADR, no new registry and no new CI check. It does need a **row** in
+`_bmad/bme/_config/name-registry.csv`, and the registry currently types rows by team and
+agent — a hub skill is neither. **Extending an existing registry with a row type is not
+a new deliverable, but it modifies an artifact ratified by meta-model ADR-001, so it
+wants Amalik's line before it is written.** S2 will need a full re-ratification; that is
+part of what makes it a destination rather than a next step.
+
+**C2 — ADR-004 (constraint 2): not amended. Deferred to S2.** S4 makes nothing newly
+invocable beyond the hub, which fits an existing declared shape. ADR-004's rejected
+third shape is needed only to make **contracts** addressable, which is S2's work. The
+amendment is therefore a precondition *of S2*, recorded here so S2 cannot start by
+assuming it.
+
+**C3 — `preflight-soft-warn` (constraint 3): not amended, and this is an argument for
+the ruling rather than a cost of it.** S1's shape — a skill that *refuses* and explains
+— collides with the rule's stderr-WARNING/exit-0 contract and with Operator Rights
+OC-R1 and OC-R5. S4's shape does not: the hub **detects, warns, offers setup and passes
+through**, which is the contract the rule already mandates and the pattern upstream runs
+at `skills/bmad-prd/SKILL.md` step 1. **S4 is the only option that needs no amendment
+here.**
+
+**C4 — `.gyre/` (constraint 4): unchanged, and the question does not arise.** S4 does
+not make Gyre's workflows addressable from a plugin cache; the hub materialises the
+runtime in the operator's project, so `.gyre/capabilities.yaml` stays at the project
+root where `team-state-directories` requires it. **The conflict becomes live only under
+S2**, and S2 must state its answer before it starts.
+
+### Consequences beyond the four
+
+**C5 — The hub closes three defects at once, which is why it is the move.** Gyre's
+absence from every skills channel, `convoke-install-gyre` being a `bin` entry rather
+than a skill, and the absence of any runtime bootstrap are **one defect**: the thing that
+builds the runtime is not itself in the channel. The hub is that thing.
+
+**C6 — The manifest becomes intentional.** `.claude-plugin/marketplace.json` is already
+the discovery surface; today it declares seven agent paths by accident of authorship.
+Under S4 it declares what Convoke means to publish, which is the finding of 2026-09-26
+converted into a design.
+
+**C7 — Parity is explicitly not a goal.** Nobody runs both channels at parity; upstream's
+own marketplace copy is a generation behind its skills.sh copy. S4 accepts the asymmetry
+as the design.
+
+**C8 — The irreversibility constraint still binds.** There is no self-serve retraction
+from skills.sh. Nothing new is published until the discovery surface is declared and
+checkable.
+
+**C9 — Unaffected by this ruling.** The six verified defects are remediation and proceed
+independently. The air-gapped / internal-registry gap the ledger calls *"real and
+unsolved"* is narrowed by neither S4 nor S2 and remains open.
 
 ## Not in this ADR
 
 - **The six defects** in the findings note are remediation and do not depend on this
-  ruling, except FR-style work on making the flow addressable. They can proceed as a
-  mini-epic on the `fic` / `tfr-epic-1` precedent.
+  ruling. They can proceed as a mini-epic on the `fic` / `tfr-epic-1` precedent.
+- **The hub skill's design** — its name, its declared shape, and whether it absorbs
+  `convoke-install`, `convoke-update` and `convoke-doctor` — is not decided here.
 - **The maturity ledger correction** is independent and carries a clock: the document
   is client-facing and was presented on 2026-09-22 containing statements that are false
   in the reassuring direction.
