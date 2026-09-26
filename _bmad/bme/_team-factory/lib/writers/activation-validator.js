@@ -89,6 +89,14 @@ async function validateSingleAgent(agentFile, moduleConfig) {
   // caller may pass either the `{project-root}/...` convention form that agents
   // actually write, or a resolved absolute path. Previously this was a bare
   // includes() and therefore turned on the caller's string form.
+  // WHAT THIS CHECK GUARANTEES, precisely: every occurrence of the module-relative tail that appears in
+  // the activation block carries the `{project-root}/` prefix, and at least one occurrence exists. It
+  // does NOT guarantee the agent loads its config from the project root — a load step that names the
+  // config by any other string (`config.yaml`, `./config.yaml`, or BMB's compiler-injected
+  // `Load config to get {user_name}…`, which carries no path at all) contributes no occurrence and is
+  // invisible here, while prefixed mentions in the error boilerplate satisfy the check. Asserting the
+  // reference sits inside the load instruction is T138, not this. Found by R2, 2026-09-26.
+  //
   // T214: the module-relative tail is derived from the CALLER's parameter, which may legitimately
   // arrive prefixed, unprefixed or absolute — it is an argument, not an artifact. The AGENT FILE is
   // held to the convention: `{project-root}/_bmad/…/config.yaml`, which is what the 9 agents that
@@ -119,10 +127,18 @@ async function validateSingleAgent(agentFile, moduleConfig) {
   // own outcome (an agent resolving its config against the directory it was activated from), and it
   // is the shape BMB produces when it substitutes the value it was handed and copies the boilerplate
   // verbatim. Found by R1, 2026-09-26.
+  // `gi`, and a right boundary. Case-insensitive because the filesystems this runs on are: a load step
+  // reading `_bmad/BME/_x/config.yaml` resolves against the cwd exactly like the lower-case spelling,
+  // and a case-sensitive match saw nothing. The boundary stops `config.yaml` matching inside
+  // `config.yaml.bak` / `.tmpl`, which let an agent reference a file that need not even exist.
   const occurrences = configRefUsable
-    ? [...activation.matchAll(new RegExp(expectedConfigRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))]
+    ? [...activation.matchAll(new RegExp(`${expectedConfigRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w.\\-])`, 'gi'))]
     : [];
   const bare = occurrences.filter((m) => !activation.slice(0, m.index).endsWith('{project-root}/'));
+  // Line numbers, because "appears 2 time(s)" in a block with three references is eyeball work, and a
+  // wrong first try means deleting the generated config and module-help.csv before re-running §5a/§5b.
+  const bareLines = bare.map((m) => activation.slice(0, m.index).split('\n').length);
+  const at = bareLines.length > 0 ? ` (activation-block line${bareLines.length > 1 ? 's' : ''} ${bareLines.join(', ')})` : '';
   const configPathValid = configRefUsable && occurrences.length > 0 && bare.length === 0;
   // A near miss is reported as one: `{PROJECT-ROOT}/`, `{project-root}//`, `{project-root}/./` and a
   // prefix wrapped onto the previous line all leave an unprefixed occurrence, and telling their author
@@ -137,17 +153,19 @@ async function validateSingleAgent(agentFile, moduleConfig) {
       : !configRefUsable
         ? `moduleConfig.configPath ("${moduleConfig.configPath}") cannot identify a module — expected a path ending in .../config.yaml`
         : nearMiss
-          ? `Activation block references "${expectedConfigRef}" with a prefix that is not exactly "{project-root}/" (check case, doubled or "./" segments, and a prefix wrapped onto the previous line). Write "${conventionRef}"`
+          ? `Activation block references "${expectedConfigRef}" ${bare.length} time(s)${at} with a prefix that is not exactly "{project-root}/" (check case, doubled or "./" segments, and a prefix wrapped onto the previous line). Write "${conventionRef}"`
           : bare.length > 0
-            ? `Activation block references "${expectedConfigRef}" ${bare.length} time(s) without the "{project-root}/" prefix. Those resolve against the directory the agent is activated from — every occurrence must read "${conventionRef}"`
+            ? `Activation block references "${expectedConfigRef}" ${bare.length} time(s)${at} without the "{project-root}/" prefix. A relative one resolves against the directory the agent is activated from; an absolute one is not portable between checkouts. Every occurrence must read "${conventionRef}"`
             : `Expected reference to "${conventionRef}" not found in activation block`
   });
   if (!configPathValid) {
     errors.push(!configRefUsable
       ? `Unusable moduleConfig.configPath "${moduleConfig.configPath}" — expected a path ending in .../config.yaml`
-      : bare.length > 0
-        ? `Config reference "${expectedConfigRef}" appears ${bare.length} time(s) without its "{project-root}/" prefix — those resolve against the activation cwd`
-        : `Config path "${conventionRef}" not referenced in activation block`);
+      : nearMiss
+        ? `Config reference "${expectedConfigRef}" appears ${bare.length} time(s)${at} with a prefix that is not exactly "{project-root}/" — check case, doubled or "./" segments, and a prefix wrapped onto the previous line. Write "${conventionRef}"`
+        : bare.length > 0
+          ? `Config reference "${expectedConfigRef}" appears ${bare.length} time(s)${at} without its "{project-root}/" prefix — write "${conventionRef}" at each`
+          : `Config path "${conventionRef}" not referenced in activation block`);
   }
 
   // Check 3: Config file exists on disk

@@ -101,7 +101,7 @@ Run by `validateTeam` in §2 — there is no separate command here.
   Checks:   {passed}/{total} passed
 
   FILES CREATED:
-  ├── _bmad/bme/_{team_name_kebab}/config.yaml
+  ├── {project-root}/_bmad/bme/_{team_name_kebab}/config.yaml
   ├── _bmad/bme/_{team_name_kebab}/module-help.csv
   ├── _bmad/bme/_{team_name_kebab}/README.md
   ├── _bmad/bme/_{team_name_kebab}/agents/{agent_id}.md

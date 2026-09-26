@@ -257,9 +257,9 @@ describe('check 2 — the config reference must carry its {project-root}/ prefix
   // The prefix is the whole point: an unprefixed reference resolves against whatever directory the
   // agent is ACTIVATED from. Before T214 both sides were normalised — prefix stripped, then
   // everything up to the first `_bmad/` — so the two forms collapsed to one string and this check
-  // could not tell them apart. All 12 shipped agents write the prefixed form; step-04 §3a handed BMB
-  // the unprefixed one until 2026-09-24, which is what made the gap reachable. The 9 agents that HAVE
-  // an activation block all write the prefixed form (27 references); the 3 v6.3 agents have none (T127).
+  // could not tell them apart. The 9 agents that HAVE an activation block all write the prefixed form
+  // (27 references, 3 per agent); the 3 v6.3 agents have none (T127). step-04 §3a handed BMB the
+  // unprefixed form until 2026-09-24, which is what made the gap reachable.
   const CONVENTION = '{project-root}/_bmad/bme/_test-team/config.yaml';
   const UNPREFIXED = '_bmad/bme/_test-team/config.yaml';
 
@@ -306,14 +306,19 @@ describe('check 2 — the config reference must carry its {project-root}/ prefix
     // let an agent load its config from the activation cwd while the boilerplate satisfied the check —
     // T214's own outcome, surviving the first fix for T214. Every occurrence must be prefixed.
     const c2 = check2(await validateWith(
-      `<step n="2">Load and read ${UNPREFIXED} NOW
+      // The prefixed mention comes FIRST on purpose: with the bare one leading, nothing precedes it
+      // either way and the prefix test (`endsWith`) is never executed — relaxing it to `includes`
+      // passed this test until the order was fixed.
+      `<step n="1">Config lives at ${CONVENTION}</step>
+       <step n="2">Load and read ${UNPREFIXED} NOW
          - If not found display: "Cannot load ${CONVENTION}
            Please update ${CONVENTION} with all required fields."
        </step>`,
       CONVENTION
     ));
     assert.equal(c2.passed, false, 'a prefixed mention in boilerplate must not excuse an unprefixed load step');
-    assert.match(c2.detail, /1 time\(s\) without the "\{project-root\}\/" prefix/);
+    assert.match(c2.detail, /1 time\(s\).*without the "\{project-root\}\/" prefix/);
+    assert.match(c2.detail, /activation-block line \d+/, 'a count without a location is eyeball work across three references');
   });
 
   it('calls a near-miss prefix what it is, rather than telling the author to add one', async () => {
@@ -325,12 +330,41 @@ describe('check 2 — the config reference must carry its {project-root}/ prefix
     }
   });
 
+  it('treats a prefix wrapped onto the previous line as a near miss', async () => {
+    const c2 = check2(await validateWith(`<step>Load {project-root}/\n${UNPREFIXED} NOW</step>`, CONVENTION));
+    assert.equal(c2.passed, false);
+    assert.match(c2.detail, /not exactly "\{project-root\}\/"/);
+  });
+
+  it('rejects a prefixed reference to a DIFFERENT file whose name starts with config.yaml', async () => {
+    for (const other of ['config.yaml.bak', 'config.yaml.tmpl']) {
+      const c2 = check2(await validateWith(`<step>Load ${CONVENTION}${other.slice('config.yaml'.length)} NOW</step>`, CONVENTION));
+      assert.equal(c2.passed, false, `${other} is not the config file — it need not even exist`);
+    }
+  });
+
+  it('sees a case-drifted reference, which the filesystem would resolve', async () => {
+    const c2 = check2(await validateWith('<step>Load _bmad/BME/_test-team/config.yaml NOW</step>', CONVENTION));
+    assert.equal(c2.passed, false, 'a case-insensitive filesystem resolves this against the cwd like any other bare path');
+    // Asserting only that it fails cannot tell case-insensitive matching from case-SENSITIVE matching:
+    // under the latter the reference is invisible and fails as "not found", which is the wrong reason
+    // and the wrong remedy. The message has to say the prefix is missing.
+    assert.match(c2.detail, /without the "\{project-root\}\/" prefix/,
+      'the reference must be SEEN and reported as unprefixed, not missed entirely');
+  });
+
   it('puts the same distinction in errors[], which is what §5c shows the operator', async () => {
     const bare = await validateWith(`<step>Load ${UNPREFIXED} NOW</step>`, CONVENTION);
     assert.match(bare.results[0].errors.join(' '), /without its "\{project-root\}\/" prefix/);
     const absent = await validateWith('<step>Load nothing</step>', CONVENTION);
     assert.match(absent.results[0].errors.join(' '), /not referenced in activation block/);
     assert.doesNotMatch(absent.results[0].errors.join(' '), /prefix/);
+    // §5c displays errors[], so the near-miss wording has to live there too — it existed only in
+    // checks[].detail, which nothing shows the operator.
+    const near = await validateWith(`<step>Load {PROJECT-ROOT}/${UNPREFIXED} NOW</step>`, CONVENTION);
+    const nearErrors = near.results[0].errors.join(' ');
+    assert.match(nearErrors, /not exactly "\{project-root\}\/"/, 'the operator-facing channel must not say "add the prefix" to someone who wrote one');
+    assert.match(nearErrors, /Write "\{project-root\}\/_bmad/, 'and it must carry the remedy string');
   });
 
   it('a Windows-style backslash reference still matches', async () => {

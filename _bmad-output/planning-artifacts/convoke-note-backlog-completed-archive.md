@@ -2601,24 +2601,31 @@ held to the convention: **every** occurrence of the tail must carry `{project-ro
 anywhere in the block was not enough. The shipped agent template names the config three times — once in
 the load step and twice inside the quoted "Configuration Error" boilerplate — so an agent whose load
 instruction was unprefixed still contained the prefixed string and passed, which is T214's own stated
-outcome. It is also the shape an LLM authoring from a template produces: substitute the value handed
-to you, copy the boilerplate verbatim. Found by R1 before the change landed.
+outcome. Found by R1 before the change landed.
+
+**Correction to this entry's first version.** It said the three-mention shape is "the shape BMB
+produces". Not derived, and false: BMB ships no such template — `grep -rl "Configuration Error"
+_bmad/bmb/` finds nothing, and its only agent exemplar
+(`workflows/agent/data/reference/module-examples/architect.md`) names the config **once**, prefixed,
+with no boilerplate. The three-mention shape is the de-facto shape of Convoke's own 9 agents, and §3a
+never shows it to BMB at all.
 
 | Fact | Command |
 |---|---|
-| All 9 agents with activation blocks pass; the 3 v6.3 agents have none (T127) | `node --test tests/team-factory/activation-validator.test.js` — plus the real-agent sweep in that file |
+| Every shipped agent's activation block prefixes its own config references | `node --test tests/unit/agent-activation-config-refs.test.js` — one test per agent file, 10 pass and 3 skip (the v6.3 agents have no block, T127). The earlier version of this row cited a "real-agent sweep" in the validator's own test file; there was none, it exercised **one** agent, which is why this file now exists |
 | An unprefixed load step fails even when the boilerplate is prefixed | same file, `REJECTS an unprefixed LOAD step even when the boilerplate carries the prefix` |
+| 27 prefixed references across the 9 agents, 3 each, 0 unprefixed | the per-agent tests above; or `grep -c '{project-root}/_bmad/bme/<mod>/config.yaml'` inside each agent's activation block |
 | The suite is green | `npm test` |
 
 | Mutant | Killed by |
 |---|---|
-| revert to normalising both sides | `REJECTS the same path without the prefix, and says why` |
+| revert to normalising both sides (restore `configTail(activation).includes(expectedConfigRef)`) | `REJECTS the same path without the prefix, and says why` |
 | one prefixed occurrence is enough again | `REJECTS an unprefixed LOAD step even when the boilerplate carries the prefix` |
-| check 2 goes module-blind | `reports error for wrong config path` — only after R1 had its fixture prefixed |
+| check 2 goes module-blind (`expectedConfigRef` → `'_bmad/'` in the occurrence regex) | `reports error for wrong config path` — which stopped killing it while the `wrong-config` fixture was unprefixed, and kills it again now that R1 had it prefixed |
 | absent path passes vacuously | `distinguishes 'wrong form' from 'absent'` |
 | near-miss diagnostic forced off | `calls a near-miss prefix what it is` |
-| `errors[]` branch collapses | `puts the same distinction in errors[]` |
-| caller-side separator normalisation dropped | the any-form caller test, after a backslash form was added to it |
+| `errors[]` near-miss branch replaced by `false` | `puts the same distinction in errors[]` |
+| caller-side separator normalisation dropped (`toSlash` → `String`) | the any-form caller test, after a backslash form was added to it |
 
 **What R1 found besides the HIGH.** The `wrong-config` fixture was check 2's sole executioner for
 module discrimination and had stopped killing it — a module-blind check 2 passed 20/0 — because the
@@ -2628,8 +2635,26 @@ form, one of them citing `normaliseConfigRef`, a function this change renames aw
 comment claimed "all 12 shipped agents write the prefixed form" when 3 of the 12 write no config
 reference at all — the repo's own T127 row already had the right number.
 
-**Accepted, not fixed:** `includes` still matches the tail inside a longer filename, so an agent
-referencing only `…/config.yaml.bak` passes — a pre-existing substring class, and the sibling question
-of whether check 2 should inspect the load instruction specifically rather than the whole block is
-already filed as T138.
+**What this guarantees, and what it does not — the first version of this entry overstated it.** It said
+"a generated agent can no longer ship resolving its own config against the directory it is activated
+from". False. The check constrains every occurrence of the module-relative tail that appears in the
+block; a load step that names the config by some other string contributes no occurrence and is
+invisible, while prefixed mentions in the error boilerplate satisfy the check. R2 demonstrated it with
+**BMB's compiler default** — `_bmad/bmb/workflows/agent/data/agent-compilation.md:78` injects
+`<step n="2">Load config to get {user_name}, {communication_language}</step>`, no path at all — plus the
+standard boilerplate: `check2=true, valid=true`, on an agent that loads its config from the activation
+cwd. `Load ./config.yaml NOW` and `Load file config.yaml NOW` behave the same, and both are shapes
+`bmb/workflows/agent/data/critical-actions.md:91,101` records authors writing.
+
+**So T214's scope was the normalisation collapse, which is closed and tested. The outcome is T138's**,
+which now carries that reachability evidence. `step-04-generate.md` §3a and its placeholder table say
+so plainly rather than implying the gate covers it. Also open and uncited by the first version:
+**T137** owns two further routes — only the FIRST `<activation>` block in a file is inspected, and a
+literal `</activation>` in the body truncates the region.
+
+**Fixed in R2 as well:** the near-miss diagnostic existed only in `checks[].detail` while §5c displays
+`errors[]`, so the operator got exactly the "add the prefix" message the change was meant to replace;
+the tail was unanchored on the right, so a prefixed `…/config.yaml.tmpl` satisfied a check for
+`config.yaml`; the match was case-sensitive on case-insensitive filesystems; and a failure gave a count
+with no location across three references.
 
