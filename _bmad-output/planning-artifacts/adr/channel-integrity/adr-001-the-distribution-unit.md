@@ -143,22 +143,22 @@ module remains the unit of coherence. S2 (promoting the 29 workflows and 14 cont
 addressable personaless skills) is the declared destination, not deferred indefinitely
 and not started now: it requires a ratification this initiative does not hold.
 
-**What the ruling does not decide, and is not blocked on:** the shape of the hub skill,
-the order of the remediation, and whether the name registry gains a `kind: skill` row
-type. The last of those is the only one that touches a ratified artifact — see C1 below.
+**Ruled in two follow-up lines, 2026-09-26** (C10, C11): the name registry **does** gain a
+`kind: skill` row type, and the hub **fronts** the existing CLIs before absorbing them.
+**Still open:** the hub's name, and the order of the remediation.
 
 ## Consequences
 
 The four constraint questions the ruling had to answer. **Three are settled by S4
 itself; one needs a one-line confirmation.**
 
-**C1 — Baseline budget (constraint 1): no re-ratification needed for S4. ⚠️ one item to
-confirm.** S4 adds one plugin entry to a manifest that already exists and one hub skill.
+**C1 — Baseline budget (constraint 1): no re-ratification needed for S4.** *(The one item
+this flagged for confirmation was ruled the same day — see C10.)* S4 adds one plugin entry to a manifest that already exists and one hub skill.
 It needs no new ADR, no new registry and no new CI check. It does need a **row** in
 `_bmad/bme/_config/name-registry.csv`, and the registry currently types rows by team and
 agent — a hub skill is neither. **Extending an existing registry with a row type is not
 a new deliverable, but it modifies an artifact ratified by meta-model ADR-001, so it
-wants Amalik's line before it is written.** S2 will need a full re-ratification; that is
+needed a line of its own, given in C10.** S2 will need a full re-ratification; that is
 part of what makes it a destination rather than a next step.
 
 **C2 — ADR-004 (constraint 2): not amended. Deferred to S2.** S4 makes nothing newly
@@ -201,6 +201,26 @@ as the design.
 from skills.sh. Nothing new is published until the discovery surface is declared and
 checkable.
 
+**C10 — The name registry gains a `kind: skill` row type.** Ruled 2026-09-26. The
+alternative was to declare the hub as an agent, which would misdescribe it — a hub is
+neither a team nor an agent. A parallel list was never an option: meta-model ADR-001 made
+this registry *the* declaration point, and a second one would undo its purpose. Extending
+an existing row type is the cheapest honest option and preserves the single declaration
+point. This is a **row-type extension, not a fourth deliverable**, so it does not reopen
+the baseline budget — but `scripts/audit/name-registry-integrity.js` must learn the new
+kind **in the same change**, or the check goes green on a row it cannot read.
+
+**C11 — The hub fronts `convoke-install`, `convoke-update` and `convoke-doctor` before it
+absorbs them.** Ruled 2026-09-26, deliberately against the obvious answer. Upstream's
+`bmad` hub does all three itself, and `slash-command-ux-for-user-facing-tools` points the
+same way — but absorbing outright means rewriting three working CLIs on the eve of a
+channel change, unbudgeted, with the install path as the blast radius. **Fronting them
+puts the runtime bootstrap in the channel immediately, which is the whole of C5, without
+touching code that works.** It also keeps the binaries intact for the ~40% standalone
+segment, who never touch the channel and for whom `convoke-export` is the delivery path.
+Absorption becomes a later, measurable step rather than a precondition — the ratified
+baseline-before-expansion pattern: ship the small thing, then one measured test.
+
 **C9 — Unaffected by this ruling.** The six verified defects are remediation and proceed
 independently. The air-gapped / internal-registry gap the ledger calls *"real and
 unsolved"* is narrowed by neither S4 nor S2 and remains open.
@@ -209,8 +229,9 @@ unsolved"* is narrowed by neither S4 nor S2 and remains open.
 
 - **The six defects** in the findings note are remediation and do not depend on this
   ruling. They can proceed as a mini-epic on the `fic` / `tfr-epic-1` precedent.
-- **The hub skill's design** — its name, its declared shape, and whether it absorbs
-  `convoke-install`, `convoke-update` and `convoke-doctor` — is not decided here.
+- **The hub skill's name**, and the order in which the six defects are remediated. The
+  hub's shape is settled to the extent of C10 and C11; naming follows the `kind: skill`
+  extension.
 - **The maturity ledger correction** is independent and carries a clock: the document
   is client-facing and was presented on 2026-09-22 containing statements that are false
   in the reassuring direction.
