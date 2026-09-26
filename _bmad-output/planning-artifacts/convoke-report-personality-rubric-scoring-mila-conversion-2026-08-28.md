@@ -114,6 +114,52 @@ Surface-level observations from the captured transcripts — flags to hold in mi
 
 **Selected outcome:** _____
 
+## Derived Measurements — mechanical, by the dev agent (read AFTER you have scored)
+
+**Why this sits below the grid.** These are counts, not judgments, and they are placed after the scoring
+grid on purpose: Emma's report set the protocol — *"the operator should score independently against the
+rubric criteria, then consult these notes as a sanity check."* Reading a −55% compression figure before
+scoring anchors the score, which is the bias `status: pending-operator-confirmation` exists to prevent.
+They are recorded rather than left in a chat message because Wade's D7 rationale described artifact tables
+that exist in **no** capture, and that stood unchallenged for four months — a report carrying prose *about*
+the evidence instead of measurements *of* it cannot be checked.
+
+Derived 2026-09-26 from the four capture files in `tests/migration/personality-preservation/fixtures/`.
+
+| Measure (fixed-prompt responses, 7 prompts) | Emma | Wade | **Mila** |
+|---|---|---|---|
+| Response volume, baseline → post-migration | 21,689 → 18,313 (−16%) | 23,999 → 22,651 (−6%) | **24,536 → 11,149 (−55%)** |
+| Markdown table lines, baseline → post | 0 → 0 | 0 → 0 | **0 → 27** |
+| Narrated action markers (the "stage direction" sense), base → post | 0 → 0 | 0 → 2 | 0 → 3 |
+| Emoji, baseline → post (fixed prompts) | 45 → 7 | 25 → 16 | 0 → 5 |
+| Emoji, baseline → post (unscripted scenario) | — | — | 7 → 0 |
+| Scenario turn headings, baseline → post | — | — | 14 → 16 |
+
+**Re-derive** with `node -e` over the capture files: sum `prompts[].response.length` per phase; count lines
+matching `/^\s*\|/` for table lines; count
+`/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/gu` for emoji.
+
+**The emoji class is stated because the figure moves with it.** Dropping `\u{2B00}-\u{2BFF}` turns Wade's
+baseline from 25 to 3: that range holds ⭐ (U+2B50), which his baseline uses 22 times. Emma and Mila are
+unaffected either way. An emoji count without its character class is not a fact.
+
+**What each measure can and cannot tell you.**
+
+- **Volume.** Mila's compression is an order apart from the other two. CF #4 says lean compression is not
+  automatically D7 drift; −55% is the figure that *tests* that carry-forward rather than confirming it.
+- **Table lines.** D7's fingerprint for Mila names a triangulation table, and post-migration contains one
+  (`| Theme | Layer | Converges on |`) where baseline contains no table at all. Note the contrast with
+  Wade, whose report *claimed* tables that appear in neither of his captures.
+- **Action markers — read this caveat before using the number.** A first pass counted 11 in the fixed
+  prompts and 19 in the scenario using `\*[a-z][^*\n]{2,40}\*`. Inspecting the matches showed they are
+  ordinary italic emphasis — `*stated*`, `*observed*`, `*before*` — not narrated action. The row above
+  instead counts asterisked spans containing an action verb from a fixed keyword list (`leans`, `pauses`,
+  `nods`, …). That is a keyword list, not a reading: it can miss a stage direction phrased outside the
+  list. **CF #3 is yours to determine by reading the transcripts; this number is only a starting point.**
+- **Not measured.** CF #7 (does Mila hold convergence discipline longer than baseline under pressure to
+  commit early) cannot be counted — it needs the scenario transcripts read. Turn counts are given above so
+  you know the size of the reading, not as a proxy for the answer.
+
 ## Carry-Forward Determinations (the 2-of-2 splits Mila resolves)
 
 Prior observations below are **history**, drawn from the Emma and Wade scoring reports. The determination column is the operator's.
