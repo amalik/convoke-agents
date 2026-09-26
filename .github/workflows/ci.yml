@@ -809,26 +809,35 @@ jobs:
 
           # FR4/dist-1-5, part 2 -- no credential may reach npm on this path.
           #
-          # T45: this was 106 lines of inline bash (57 executable, the rest comment), and in the healthy
-          # steady state it inspected
-          # ZERO files -- FR4 removes `registry-url:` so nothing writes a userconfig -- then printed
-          # `no npmrc exists on any path npm reads … OK`. Observed live in dist-1-6's rehearsal (run
-          # 32599414962). The environment assertions were real; the FILE loop had never executed
-          # against an npmrc in CI, so its regex was a plan rather than a check.
+          # T45: this was 106 lines of inline bash (57 executable, the rest comment), and in the
+          # healthy steady state it inspected ZERO files -- FR4 removes `registry-url:` so nothing
+          # writes a userconfig -- then printed `no npmrc exists on any path npm reads … OK`.
+          # Observed live in dist-1-6's rehearsal (run 32599414962). The environment assertions were
+          # real; the FILE loop had never executed against an npmrc in CI, so its regex was a plan
+          # rather than a check.
           #
-          # Two things changed. The RULE: on this path an npmrc EXISTING is the finding, whatever it
-          # contains, because FR4 leaves this job with none -- so "clean" means something wrote one.
-          # And the DETECTION is now exercised against fixtures in
-          # `tests/unit/npm-credential-scan.test.js`, including a credential-bearing npmrc, rather
-          # than by planting a file on the real publish path (which would undo FR4).
+          # Two things changed. The RULE: for npm's project, user and global config, an npmrc EXISTING
+          # is the finding, whatever it contains, because FR4 leaves this job with none -- so "clean"
+          # means something wrote one. npm's BUILTIN npmrc is the exception and is judged by content,
+          # because it legitimately exists on every install (R2). And the DETECTION is now exercised
+          # against fixtures in `tests/unit/npm-credential-scan.test.js`, including a
+          # credential-bearing npmrc, rather than by planting a file on the real publish path (which
+          # would undo FR4).
           #
-          # Every behaviour the bash had is preserved in the script and pinned by a test: CR-only
-          # line endings, certfile/keyfile, key-line anchoring so a comment does not abort a publish,
+          # Every behaviour the bash had is preserved in the script and pinned by a test: CR-only line
+          # endings, certfile/keyfile, key-line anchoring so a comment does not abort a publish,
           # unreadable-is-fatal, structural npm_config_* name rules, NUL-safe env reading, and the
           # NODE_AUTH_TOKEN / NPM_ID_TOKEN vectors.
-          # `--cwd "$PWD"` states the project path rather than letting the script infer it: npm reads
-          # the `.npmrc` of the directory it RUNS IN, and inferring that from the repo layout skipped
-          # the file npm would actually read whenever the two differ (R1).
+          #
+          # `--cwd "$PWD"` states where to start looking rather than letting the script infer it:
+          # inferring from the repo layout returns null outside a _bmad tree, and the file is then
+          # never examined while the OK line still prints (R1). The script resolves npm's own
+          # localPrefix from this directory -- the nearest ancestor with package.json or node_modules,
+          # which is what npm reads the project .npmrc from, and is NOT simply the cwd (R2).
+          #
+          # Do not add `|| true`, `continue-on-error`, an `if:`, a shell conditional around the call,
+          # `set +e` in any spelling, or a `shell:` without errexit at any precedence level: each is
+          # a full bypass and each is pinned by tests/unit/publish-guard-wiring.test.js.
           node scripts/audit/npm-credential-scan.js --cwd "$PWD"
 
           # FR4/dist-1-5, part 3 -- a `npm publish --dry-run` OIDC gate was written here and

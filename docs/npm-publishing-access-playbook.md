@@ -228,27 +228,65 @@ it is rare.
 
 ## 6. The credential scan refused the publish
 
-`node scripts/audit/npm-credential-scan.js` runs in the publish job before `npm publish`. It refuses the
-publish when **any** npmrc exists on a path npm reads, or when `NODE_AUTH_TOKEN`, a credential-shaped
-`npm_config_*` variable, or `NPM_ID_TOKEN` is set.
+`node scripts/audit/npm-credential-scan.js --cwd "$PWD"` runs in the publish job before `npm publish`
+(`.github/workflows/ci.yml`). Run it the same way if you reproduce it by hand: without `--cwd` it infers
+the project directory, and from a subdirectory that is a different set of paths than CI checks.
 
-**An npmrc existing is the finding, whatever it contains.** FR4 removed `registry-url:` from
-`setup-node` precisely so nothing writes a userconfig, so this job's steady state is *no npmrc at all* —
-two real releases were verified that way (runs `32599414962` and `35211917101`). A "clean" npmrc means
-something wrote one, and the next thing it writes may carry a token.
+It refuses the publish when an npmrc exists on any path npm reads under the existence rule, when npm's
+**builtin** npmrc sets a credential, when `NODE_AUTH_TOKEN` / `NPM_ID_TOKEN` / a credential-shaped or
+config-repointing `npm_config_*` variable is set, or when it could not establish which paths npm reads.
+
+**Two rules, because npm has two kinds of config file.** npm has exactly four file-backed config sources
+— `builtin`, `project`, `user`, `global`.
+
+- For `project`, `user` and `global`, **existence is the finding, whatever the file contains.** FR4
+  removed `registry-url:` from `setup-node` precisely so nothing writes a userconfig, so this job's
+  steady state is *no npmrc at all* — observed live in `dist-1-6`'s rehearsal, run `32599414962`, which
+  is the same evidence that the guard this replaced was inspecting zero files. A "clean" npmrc means
+  something wrote one, and the next thing it writes may carry a token.
+- For `builtin` (`<npm install dir>/npmrc`), **content is the finding**, because that file legitimately
+  exists on every install — npm ships one containing `prefix = …`. It is reported by neither
+  `npm config get userconfig` nor `globalconfig`, and npm emits no auth warning about it, so it is the
+  one source that must be read rather than merely counted.
 
 | Message | What it means | Repair |
 |---|---|---|
-| `'<path>' exists on the publish path AND sets a credential key` | A real credential is on the path npm reads. `setup-node` exports `NODE_AUTH_TOKEN='XXXXX-…'` when unset, so npm would send that dummy as a bearer token and an OIDC decline would be reported as *bad token* rather than *no token* | Find what wrote it. A step added before `Publish to npm`, a composite action, or a change to `setup-node`'s inputs are the candidates. Remove the writer — do not delete the file and re-run, or the next release reproduces it |
-| `'<path>' exists on the publish path. It sets no credential key…` | Same cause, no token yet | Same repair. The refusal is deliberate: the file's existence is the regression, not its current contents |
-| `NODE_AUTH_TOKEN is set` | A token is in the environment, which outranks OIDC — the regression that put 4.0.0 back on the token path | Remove the `env:` entry or the secret reference. This job publishes via Trusted Publishing and must have no token |
-| `npm_config_* credential or rewritable key(s) in the environment` | npm reads config from the environment above every npmrc. A rewritable name (`${…}`) or a nerf-darted one (`//`, `:`) is rejected too, because `@npmcli/config` expands keys after any name check | Remove the variable. If it is needed for something else, rename it so it does not start `npm_config_` |
-| `NPM_ID_TOKEN is set` | It replaces the identity GitHub mints (`oidc.js:50`), so the exchange would run against a supplied assertion | Remove it |
+| `'<path>' exists on the publish path AND sets a credential key` | A real credential is on a path npm reads. `setup-node` exports `NODE_AUTH_TOKEN='XXXXX-…'` when unset, so npm would send that dummy as a bearer token and an OIDC decline would be reported as *bad token* rather than *no token* | **Tree- or workflow-borne.** Find what wrote it — a step added before `Publish to npm`, a composite action, or a change to `setup-node`'s inputs. Remove the writer, not the file, or the next release reproduces it. **Assume the credential is compromised and revoke it** |
+| `'<path>' exists on the publish path. It sets no credential key…` | The file is there and this scan found no credential key in it. That is not a promise there is no secret in it — only that no key it recognises is set | **Tree- or workflow-borne.** Same repair. The refusal is deliberate: the file's existence is the regression, not its current contents |
+| `'<path>' exists on the publish path but is not a regular file` | A directory, symlink target, FIFO or socket sits where npm expects a file — usually `$npm_config_userconfig` pointed somewhere odd, or a `mkdir` that should have been a `touch` | **Workflow-borne.** Find the step that created it. npm's own read would fail too, so this is a bug in the job, not a credential |
+| `'<path>' exists on the publish path and cannot be read (<CODE>)` | The file exists but this scan cannot open it, usually `EACCES` after a prior step ran something under `sudo`. Unreadable is never reported as clean | **Workflow-borne.** Fix the step that changed the ownership or mode. Do not `chmod` it and re-run without finding the writer |
+| `npm's builtin npmrc '<path>' sets a credential key` | A credential was appended to the npmrc that ships beside npm itself. npm sends it with no warning | **Runner- or workflow-borne.** Find the step that wrote into npm's install directory. **Revoke the credential.** This is the most serious of these findings: nothing else in the toolchain reports it |
+| `npm's builtin npmrc '<path>' cannot be read (<CODE>)` | The one source judged by content could not be inspected | **Workflow- or runner-borne.** Treat as uninspected, not clean |
+| `the set of npmrc paths npm reads could not be established: …` | `npm config get` or `npm root -g` failed, so the scan does not know which paths to check. A guard that cannot see cannot clear | **Runner-borne.** Usually npm missing from `PATH` or a broken toolchain install. Fix the `setup-node` step; **re-run the job** |
+| `--cwd was given with no value` | The invocation is malformed | Pass `--cwd "$PWD"` or omit the flag. Wiring bug, not a credential |
+| `NODE_AUTH_TOKEN is set` | A token is in the environment, which outranks OIDC — the regression that put 4.0.0 back on the token path | **Environment-borne.** Remove the `env:` entry, secret reference, or repository/organisation Variable; **re-run the job** |
+| `npm_config_* credential, rewritable or config-repointing key(s) in the environment` | npm reads config from the environment above every npmrc. Rejected names include credential spellings, rewritable ones (`${…}`), nerf-darted ones (`//`, `:`), and `userconfig`/`globalconfig`/`cert`/`key`/`cafile`, which repoint npm at another file or are themselves credentials. npm honours any casing | **Environment-borne.** Remove the variable; if it is needed elsewhere, rename it so it does not start `npm_config_`. **Re-run the job** |
+| `NPM_ID_TOKEN is set` | It replaces the identity GitHub mints (`oidc.js:50`), so the exchange would run against a supplied assertion | **Environment-borne.** Remove it; **re-run the job** |
 
-**There is no override, and the tag is spent.** Like the downgrade guard in §5, this refusal fires on a
-tag that has already been pushed, so the repair is a new tag after the cause is removed. If you believe
-the refusal is wrong, that is a defect in the scan — reproduce it with
-`node --test tests/unit/npm-credential-scan.test.js` and fix the rule rather than bypassing the job.
+**There is no override.** No `workflow_dispatch` input, no environment variable, no skip marker — same
+choice as the downgrade guard in §5, for the same reason.
+
+**Whether the tag is spent depends on WHAT is at fault, exactly as it does in §5.** Nothing has been
+published when this fires — the scan runs before `npm publish` — so the version number is not consumed.
+
+- **Environment-borne and runner-borne causes** (the last five rows, and the two unreadable/degraded
+  rows) live *outside* the tag's tree: a repository or organisation Variable, a secret reference, a
+  broken toolchain. Removing one of those needs no commit, so **fix the cause and re-run the failed run
+  on the same tag.** Cutting a new tag here burns a version number for nothing.
+- **Tree- and workflow-borne causes** (a step or action that writes an npmrc, committed in this tree)
+  cannot be fixed without a commit, so the tag *is* spent: remove the writer, then cut a new tag.
+
+If you believe the refusal is wrong, reproduce it as the job does, from the repository root:
+
+```bash
+node scripts/audit/npm-credential-scan.js --cwd "$PWD"; echo "exit=$?"
+```
+
+**Expect this to exit 1 on a development machine** — it finds your own `~/.npmrc`, which is correct
+behaviour and not the CI failure you are chasing. It prints the path, never the token. To exercise the
+rules themselves against fixtures rather than your machine, run
+`node --test tests/unit/npm-credential-scan.test.js`; that proves what the scan *can* detect, and cannot
+reproduce a specific refusal.
 
 ## 7. Related
 

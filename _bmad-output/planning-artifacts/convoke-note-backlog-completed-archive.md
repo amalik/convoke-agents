@@ -2889,8 +2889,8 @@ regex that has never matched anything is a plan, not a check.
   hermetic test file that includes a credential-bearing npmrc. Option c (plant a benign npmrc in CI) would have
   made the loop run by undoing what FR4 achieved on the real publish path.
 
-**106 lines of inline bash removed** (`git show --numstat ae61e5c7 -- .github/workflows/ci.yml`; 57 of them executable, the rest comment — an earlier version of this entry said 111, which was the SPAN of the old block, not what was deleted), **every behaviour preserved and individually pinned.** Each was paid
-for by a defect, so each has its own test: CR-only line endings (npm's `ini` splits on `[\r\n]+` and
+**106 lines of inline bash removed** (`git show --numstat ae61e5c7 -- .github/workflows/ci.yml`; 57 of them executable, the rest comment — an earlier version of this entry said 111, which was the SPAN of the old block, not what was deleted), **every behaviour preserved.** Each was paid
+for by a defect: CR-only line endings (npm's `ini` splits on `[\r\n]+` and
 grep on `\n`, so a CR-only npmrc is a credential npm honours that a bare grep certifies clean);
 `certfile`/`keyfile` (`publish.js:144` treats them as credentials); key-line anchoring, so a comment
 mentioning `_authToken` cannot abort a clean publish; unreadable-is-fatal (`grep -q` returns 2 for
@@ -2925,4 +2925,134 @@ check; this is that lesson applied without waiting to relearn it.
 
 **A note on running it locally:** the script exits 1 on a developer machine, correctly — it finds
 `~/.npmrc`, which sets a credential. It reports the path and never the value; that is verified by test.
+
+### Round 2 — three independent reviewers, one dimension each
+
+Round 1 was self-review and found 6 defects. Round 2 ran three reviewers on separate `cp -a` copies, one
+each on the scan's detection logic, the CI wiring, and test power plus the record. They returned 36
+findings. **Not one was in the shipped bash this replaced; the great majority were in Round 1's own
+remediation or in what surrounded it.** Two reviewers independently found the same two coverage holes.
+
+**The defect that mattered.** `@npmcli/config` has exactly four file-backed config sources — `builtin`,
+`project`, `user`, `global` — and the candidate set had three. npm's **builtin** npmrc
+(`<npm install dir>/npmrc`) is reported by neither `npm config get userconfig` nor `globalconfig`, and
+`Config.validate()` skips it, so a token appended there was sent by npm while this scan printed
+`3 path(s) npm reads were checked … OK`. Demonstrated end to end against npm 11.11.0.
+
+The fix is not "add it to the list": that file **legitimately exists on every install** — npm ships one
+containing `prefix = …`. Existence cannot be the rule for a file that must be present, so the scan now
+carries **two rules**, and the builtin source is the one judged by `setsCredential`. The existence
+rewrite was right for the three paths that should be absent, and it had removed the only rule that fits
+the one path that must be present.
+
+**Fixed in the scan.** A degraded enumeration is now fatal — when `npm config get` or `npm root -g`
+cannot answer, the path used to be dropped silently and the success line read identically to a clean run.
+`npm_config_userconfig` / `globalconfig` / `cert` / `key` / `cafile` are now rejected by config key, in
+any casing, because npm's `loadEnv` tests `/^npm_config_/i` and a name-cased spelling defeated both the
+structural rule and the exact-uppercase path lookup. The project npmrc is read from npm's `localPrefix`
+— the nearest ancestor with `package.json` or `node_modules` — not from `cwd`, which could have aborted a
+publish over a file npm never reads. The key regex now matches a quoted key and a BOM- or U+00A0-prefixed
+one, all three of which produced a live credential key in npm's own `ini` while the scan called the file
+clean. Candidates dedupe on the resolved path, `--cwd` with no value is refused rather than guessed, and
+npm's subprocess stderr is captured rather than inherited into a public log.
+
+**Fixed in the wiring.** The errexit assertion walked step/job/workflow shell precedence **backwards** and
+never read the step at all, so `shell: bash {0}` on the publish step left the suite green while the scan's
+`exit 1` was ignored — and disarmed the FR5 downgrade guard in the same two lines. `set +o errexit` is the
+same instruction as `set +e` and walked past a one-spelling check. The not-neutered anchor trimmed
+indentation, so wrapping the call in `if [ -z "${SKIP_CRED_SCAN:-}" ]; then … fi` was invisible: the
+step-level `if:` assertion reads the parsed YAML node and sees nothing when the conditional is written in
+bash. `publish.needs` pinned one of its eight entries, so seven could be deleted green — **including
+`test`, the job that runs these very tests**, which made every assertion here invisible to a release while
+the `test` job went red beside it. `PWD` is an ordinary assignable variable, so `--cwd "$PWD"` could be
+pointed at an empty directory with the call byte-identical. The "only publisher" checks matched one
+literal space and only `npm publish`, so `npm  publish`, `$NPMBIN publish` and `npm dist-tag add … latest`
+all passed; they now cover every registry-mutating command, and a separate assertion confines
+`id-token: write` to the publish job, which is what a second publishing job would need whatever it is
+spelled. The ordering check had a branch that could never execute and a comment-blind sibling that went
+**red on correct wiring**; it is now one path over executable lines.
+
+**Fixed in the tests.** The count in the success line — Round 1's headline fix — was asserted only by its
+surrounding prose, so hardcoding it back to `0`, the literal regression, passed. Each of the three
+structural `npm_config_*` clauses was individually deletable because the single fixture carried `${`, `//`
+and `:` at once. The `extra` project-root candidate Round 1 added had nothing exercising it, and
+`npmLocalPrefix` was later added with four unit tests and nothing asserting `main()` called it — the same
+defect class as T45 itself, twice. The §6 playbook citation was unpinned in both directions, on a guard
+whose sibling had already paid for that exact bug. The CLI tests read the machine's real
+`npm config get` output and stat whatever it returns, which is a latent CI flake wherever a global npmrc
+exists; they now put a stub `npm` on the child's PATH.
+
+**Fixed in the playbook.** §6 told the operator that the tag is always spent. For the environment-borne
+refusals — a repository or organisation Variable, a secret reference, a broken toolchain — the cause lives
+outside the tag's tree, nothing has been published because the scan runs before `npm publish`, and a
+re-run on the same tag is correct: following the old advice burned a version number for nothing. The
+advice is now split by what is at fault, as §5 already did. Two of the script's failure messages had
+neither a documented repair nor a pointer to one, and the "reproduce it with" command ran the unit tests,
+which cannot reproduce an operator's refusal.
+
+**Corrections to this record and to `b5ef6018`'s message.** "Every behaviour … individually pinned" was
+false: three structural clauses were pinned only as a conjunction. `b5ef6018`'s message said the extra
+project-root candidate was "pinned by a mutant that removes the flag" — the flag was pinned, the
+candidate was not; two different behaviours conflated. The claim that two *real releases* were verified
+with no npmrc was wrong in both legs: run `32599414962` is `dist-1-6`'s rehearsal publishing a
+prerelease, and it is the same run that evidences the old check inspecting zero files; run `35211917101`
+has no credential-check record at all. Test counts and mutant tallies have been deleted from this entry
+and from both test files rather than corrected — two were transcribed and both were false within one
+commit of being written.
+
+**One self-inflicted finding worth keeping.** The Round 2 fix added `\uFEFF` to the key regex's leading
+class with a comment explaining why the BOM needed its own term. It does not: JS `\s` already includes
+U+FEFF as ECMAScript `<ZWNBSP>`. The mutation battery caught it by showing the extra term could be
+deleted with no behaviour change, and the class is now plain `\s`, which is exactly the set
+`String.trim()` strips — the same set npm trims the key with. The remediation generated the next
+finding, on schedule.
+
+| Fact | Command |
+|---|---|
+| Every rule fires against a fixture; no message echoes a credential value; the CLI is hermetic | `node --test tests/unit/npm-credential-scan.test.js` |
+| The publish job calls it bare, unconditionally, before `npm publish`, under errexit, and is the only registry-mutating job | `node --test tests/unit/publish-guard-wiring.test.js` |
+| The operator-facing command behaves as §6 documents (exit 1 on a dev machine, path only) | `node scripts/audit/npm-credential-scan.js --cwd "$PWD"` |
+| Lines of bash removed | `git show --numstat ae61e5c7 -- .github/workflows/ci.yml` |
+
+**Round 2 mutants.** Every row was run on a `cp -a` copy against a control; the author's tree was never
+mutated. The three that pass are semantically equivalent or are correct wiring, and are listed because a
+battery without them cannot tell a kill from a no-op.
+
+| Mutant | Result |
+|---|---|
+| npm's builtin npmrc dropped from the sources | killed |
+| the builtin content loop made a no-op | killed |
+| a degraded enumeration no longer fatal | killed |
+| `userconfig` removed from the repointing keys | killed |
+| case-insensitive env lookup reverted to exact uppercase | killed |
+| leading class narrowed to `[ \t\f\v]` | killed |
+| quote stripping removed from the key regex | killed |
+| nerf-dart body narrowed to `[^\s]` | killed |
+| `main()` stops using `npmLocalPrefix` | killed |
+| `npmLocalPrefix` stops climbing | killed |
+| the `extra` project-root candidate dropped | killed |
+| each of `${`, `//`, `:` dropped separately | killed, 3 of 3 |
+| realpath dedupe reverted to raw strings | killed |
+| `--cwd` with no value silently inferred | killed |
+| the count hardcoded to `0`, to `9999`, and with the builtin term dropped | killed, 3 of 3 |
+| the scan's citation renumbered to §9 | killed |
+| the playbook heading renumbered away from §6 | killed |
+| `.sort()` dropped from `badNpmEnvNames` | killed |
+| step `shell: bash {0}`; job defaults without `-e`; workflow defaults without `-e` | killed, 3 of 3 |
+| `set +o errexit`, `set +e`, `set +ex` | killed, 3 of 3 |
+| the call nested in `if … fi`, indented and at column 0 | killed, 2 of 2 |
+| `test`, `fresh-install`, `agent-surface-parity` each dropped from `publish.needs` | killed, 3 of 3 |
+| an unreviewed job ADDED to `publish.needs` | killed |
+| `PWD=/tmp` before the call | killed |
+| a second job spelling it `npm  publish`, `$NPMBIN publish` with `id-token`, or `npm dist-tag add` | killed, 3 of 3 |
+| `continue-on-error` on the publish job | killed |
+| `\uFEFF` deleted from the leading class | **passes — equivalent**, `\s` already covers U+FEFF |
+| a second job spelling it `$NPMBIN publish` with no `id-token` | **passes — cannot authenticate**; the residual is recorded, not claimed closed |
+| a benign earlier step naming `npm publish` in a COMMENT | **passes — correct wiring**; this was red before the ordering fix |
+
+**What Round 2 does not close.** A second job that invokes npm indirectly (`$NPMBIN publish`) *and*
+obtains a credential by some route other than `id-token: write` is caught by neither the text scan nor
+the permission assertion. The claim is a floor, not a closure. **A Fast Lane row is owed for it** — no ID
+was allocated here because the backlog had uncommitted edits at the time, and allocating against a dirty
+backlog is how IDs collide (`I150`).
 

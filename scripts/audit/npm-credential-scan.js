@@ -4,22 +4,31 @@
 /**
  * Assert that no credential can reach npm on the publish path.
  *
- * WHY THIS IS A SCRIPT (T45). It was inline bash in `ci.yml`'s publish job (106 lines deleted, 57 of them executable), and in the healthy steady
- * state it inspected ZERO files: FR4 removed `registry-url:` from `setup-node` precisely so no
- * userconfig is written, so there is no npmrc for the loop to open. It then printed
- * `no npmrc exists on any path npm reads … OK`. The environment assertions were real and did run, but
- * **the file loop had never executed against an npmrc in CI** — observed live in `dist-1-6`'s rehearsal
- * (run 32599414962). A regex that has never matched anything is not a check; it is a plan.
+ * WHY THIS IS A SCRIPT (T45). It was inline bash in `ci.yml`'s publish job (106 lines deleted, 57 of them
+ * executable), and in the healthy steady state it inspected ZERO files: FR4 removed `registry-url:` from
+ * `setup-node` precisely so no userconfig is written, so there is no npmrc for the loop to open. It then
+ * printed `no npmrc exists on any path npm reads … OK`. The environment assertions were real and did run,
+ * but **the file loop had never executed against an npmrc in CI** — observed live in `dist-1-6`'s
+ * rehearsal (run 32599414962). A regex that has never matched anything is not a check; it is a plan.
  *
- * Two changes, and they are different in kind:
+ * TWO RULES, because npm has two kinds of config file (R2). `@npmcli/config` has exactly four
+ * file-backed sources — `builtin`, `project`, `user`, `global` (`@npmcli/config/lib/index.js`,
+ * `confTypes`) — and they do not share a rule:
  *
- *   1. THE RULE CHANGED. On the publish path an npmrc EXISTING is itself the finding, whatever it
- *      contains. FR4's whole point is that this job has no userconfig; a "clean" npmrc appearing means
- *      something wrote one, and the next thing it writes may not be clean. Existence is checkable in the
- *      steady state, which grepping content never was.
- *   2. THE DETECTION IS NOW EXERCISED. Every rule below runs against fixtures in
- *      `tests/unit/npm-credential-scan.test.js`, including a real credential-bearing npmrc, so the regex
- *      is proven able to fire without planting a file on the real publish path — which would undo FR4.
+ *   1. EXISTENCE is the rule for `project`, `user` and `global`. FR4's whole point is that this job has
+ *      no userconfig; a "clean" npmrc appearing means something wrote one, and the next thing it writes
+ *      may not be clean. Existence is checkable in the steady state, which grepping content never was.
+ *   2. CONTENT is the rule for `builtin` — `<npm install dir>/npmrc` — because it legitimately exists on
+ *      every install (npm ships one containing `prefix = …`). Existence cannot be the rule for a file
+ *      that must be present, so this is the one path where `setsCredential` is the verdict and not just
+ *      the urgency. R1 shipped with this source missing from the candidate set entirely: it is reported
+ *      by neither `npm config get userconfig` nor `globalconfig`, `Config.validate()` skips it, so a
+ *      token appended there was sent by npm while this scan printed OK.
+ *
+ * A DEGRADED ENUMERATION IS FATAL (R2). Two of the four sources are named by a subprocess. When that
+ * subprocess cannot answer, the path is simply dropped and the success line reads the same as a clean
+ * run — a guard that cannot see cannot clear. Every failure to enumerate is now a fatal with its own
+ * message.
  *
  * Every behaviour the bash had is preserved deliberately; each is pinned by a test. They were all paid
  * for by a defect:
@@ -38,6 +47,9 @@
  *     contains a newline could otherwise forge a match and abort a release on a tag already spent.
  *   - `NODE_AUTH_TOKEN` and `NPM_ID_TOKEN` are separate vectors. The environment outranks every npmrc,
  *     and `oidc.js:50` uses `NPM_ID_TOKEN` in place of the identity GitHub mints.
+ *   - `npm_config_userconfig` / `globalconfig` REPOINT npm at an arbitrary file, and npm honours any
+ *     casing (`loadEnv` tests `/^npm_config_/i`), so they are rejected by config key, case-insensitively
+ *     — a name-cased spelling defeated both the structural rule and the path lookup (R2).
  */
 
 const fs = require('fs');
@@ -45,14 +57,32 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { findProjectRoot } = require('../update/lib/utils');
 
-// Anchored to a config-key line. The optional `//host/:` prefix is npm's nerf-dart form.
-// Whitespace class mirrors POSIX `[[:space:]]`, which the bash used: npm's `ini` trims the key, and
-// npm 11.11.0 honours a key preceded by a form feed or vertical tab (measured). `[ \t]` alone missed
-// `\f_authToken=…`, and `[^\s]` inside the nerf-dart was NARROWER than POSIX because JS `\s` counts
-// U+00A0. Both directions matter for a classifier other code may reuse (R1).
-const CREDENTIAL_KEY_RE = /^[ \t\f\v]*(\/\/[^ \t\f\v\r\n]*:)?(_authToken|_auth|_password|username|certfile|keyfile)[ \t\f\v]*=/;
+// Anchored to a config-key line.
+//
+// LEADING CLASS: `\s`, matching what npm does — it trims the key with `String.trim()`, and JS `\s` is
+// the same set `trim()` strips, the BOM (U+FEFF, ECMAScript `<ZWNBSP>`) included. A UTF-8 BOM and a
+// U+00A0 each produced a live `_authToken` key in npm's own `ini` while `[ \t\f\v]` called the file
+// clean (R2). An earlier version of this line spelled the class `[\s\uFEFF]` with a comment claiming
+// the BOM needed its own term; `\s` already covers it, and the mutation battery caught the redundancy by
+// showing the extra term could be deleted with no behaviour change.
+// QUOTES: optional, because `ini`'s `unsafe()` strips surrounding quotes, so
+// `"//registry.npmjs.org/:_authToken"=tok` is the same key (R2).
+// NERF-DART BODY: `[^ \t\f\v\r\n]`, deliberately NOT `[^\s]` — JS `\s` counts U+00A0, which POSIX
+// `[[:space:]]` does not, so `[^\s]` would be narrower than the bash this replaced.
+const CREDENTIAL_KEY_RE = /^\s*["']?(\/\/[^ \t\f\v\r\n]*:)?(_authToken|_auth|_password|username|certfile|keyfile)["']?[ \t\f\v]*=/;
 
 const CREDENTIAL_WORD_RE = /(_auth|_password|username|certfile|keyfile)/i;
+
+// npm config keys that are credentials in their own right, or that repoint npm at another config file.
+// `cert`/`key` are inline PEM client credentials — `CREDENTIAL_WORD_RE` matches `certfile`/`keyfile` but
+// not these (R2). `userconfig`/`globalconfig` do not carry a credential; they name the file that does.
+const DANGEROUS_CONFIG_KEYS = new Set([
+  'userconfig',
+  'globalconfig',
+  'cert',
+  'key',
+  'cafile',
+]);
 
 /**
  * Does this npmrc content set a credential key?
@@ -65,7 +95,8 @@ function setsCredential(content) {
 }
 
 /**
- * Every npmrc path npm would read, deduped, in precedence-ish order.
+ * The npmrc paths npm reads under the EXISTENCE rule — `project`, `user` and `global`. The `builtin`
+ * source is deliberately absent: it has its own rule and reaches `check()` by its own argument.
  *
  * Paths come from npm itself where possible rather than from guesses — but the project `.npmrc`
  * OUTRANKS user config and is not gitignored, so it is included explicitly.
@@ -73,15 +104,22 @@ function setsCredential(content) {
  * @param {object} opts
  * @param {object} opts.env
  * @param {string} [opts.home]
- * @param {string} [opts.cwd]
+ * @param {string} [opts.cwd] - npm's `localPrefix`, not the process cwd; see `npmLocalPrefix`
  * @param {string[]} [opts.fromNpm] - values of `npm config get userconfig|globalconfig`
+ * @param {string[]} [opts.extra]
+ * @param {object} [opts.fsImpl] - injectable; used only to resolve symlinked duplicates
  * @returns {string[]}
  */
-function npmrcCandidates({ env = {}, home, cwd, fromNpm = [], extra = [] }) {
+function npmrcCandidates({ env = {}, home, cwd, fromNpm = [], extra = [], fsImpl = fs }) {
+  // npm honours `npm_config_*` in ANY casing, so the override cannot be read by exact name (R2).
+  const envOverride = (key) => {
+    const hit = Object.keys(env).find((name) => name.toLowerCase() === `npm_config_${key}`);
+    return hit ? env[hit] : '';
+  };
   const raw = [
     ...fromNpm,
-    env.NPM_CONFIG_USERCONFIG,
-    env.NPM_CONFIG_GLOBALCONFIG,
+    envOverride('userconfig'),
+    envOverride('globalconfig'),
     home ? path.join(home, '.npmrc') : '',
     cwd ? path.join(cwd, '.npmrc') : '',
     ...extra,
@@ -92,23 +130,62 @@ function npmrcCandidates({ env = {}, home, cwd, fromNpm = [], extra = [] }) {
     // `npm config get` prints the string `undefined` when unset — a real path check would then stat a
     // file literally named "undefined".
     if (!candidate || candidate === 'undefined') continue;
-    if (seen.has(candidate)) continue;
-    seen.add(candidate);
+    // Dedupe on the RESOLVED path: an aliased or symlinked `--cwd` named the same file twice and
+    // reported one writer as two, and inflated the count on a clean tree (R2).
+    let resolved = candidate;
+    try {
+      resolved = fsImpl.realpathSync(candidate);
+    } catch {
+      /* absent or unresolvable — fall back to the literal, which `check()` will stat and classify */
+    }
+    if (seen.has(resolved)) continue;
+    seen.add(resolved);
     out.push(candidate);
   }
   return out;
 }
 
 /**
- * `npm_config_*` environment names that npm would honour as credentials or rewrite into one.
+ * npm's `localPrefix`: the nearest ancestor of `startDir` containing `package.json` or `node_modules`
+ * (`@npmcli/config/lib/index.js`). npm reads the project npmrc at `<localPrefix>/.npmrc`, NOT at
+ * `<cwd>/.npmrc` — measured: run from `repo/scripts/sub`, npm reads `repo/.npmrc` and ignores
+ * `sub/.npmrc`. Checking `cwd/.npmrc` could therefore abort a publish over a file npm never reads, on a
+ * tag already spent (R2).
+ *
+ * @param {string} startDir
+ * @param {object} [fsImpl]
+ * @returns {string} the localPrefix, or `startDir` when no ancestor qualifies (npm's own fallback)
+ */
+function npmLocalPrefix(startDir, fsImpl = fs) {
+  if (!startDir) return startDir;
+  let dir = path.resolve(startDir);
+  for (;;) {
+    if (fsImpl.existsSync(path.join(dir, 'package.json'))
+      || fsImpl.existsSync(path.join(dir, 'node_modules'))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) return path.resolve(startDir);
+    dir = parent;
+  }
+}
+
+/**
+ * `npm_config_*` environment names that npm would honour as credentials, rewrite into one, or use to
+ * repoint its own config file.
  * @param {object} env
  * @returns {string[]}
  */
 function badNpmEnvNames(env = {}) {
   return Object.keys(env)
     .filter((name) => /^npm_config_/i.test(name))
-    .filter((name) => name.includes('${') || name.includes('//') || name.includes(':')
-      || CREDENTIAL_WORD_RE.test(name))
+    .filter((name) => {
+      // npm slices a fixed 11 characters and lowercases, so this is the config key it will set.
+      const key = name.slice('npm_config_'.length).toLowerCase();
+      return name.includes('${')
+        || name.includes('//')
+        || name.includes(':')
+        || CREDENTIAL_WORD_RE.test(name)
+        || DANGEROUS_CONFIG_KEYS.has(key);
+    })
     .sort();
 }
 
@@ -120,13 +197,24 @@ function badNpmEnvNames(env = {}) {
  * @param {string} [opts.home]
  * @param {string} [opts.cwd]
  * @param {string[]} [opts.fromNpm]
+ * @param {string[]} [opts.extra]
+ * @param {string[]} [opts.builtin] - npmrc paths judged by CONTENT, not existence
+ * @param {string[]} [opts.degraded] - reasons the enumeration is incomplete; each is fatal
  * @param {object} [opts.fsImpl] - injectable for tests
- * @returns {{fatal: string[], candidates: string[], present: string[]}}
+ * @returns {{fatal: string[], candidates: string[], builtin: string[], present: string[]}}
  */
-function check({ env = {}, home, cwd, fromNpm = [], extra = [], fsImpl = fs }) {
+function check({
+  env = {}, home, cwd, fromNpm = [], extra = [], builtin = [], degraded = [], fsImpl = fs,
+}) {
   const fatal = [];
-  const candidates = npmrcCandidates({ env, home, cwd, fromNpm, extra });
+  const candidates = npmrcCandidates({ env, home, cwd, fromNpm, extra, fsImpl });
   const present = [];
+
+  // A path we could not even name is not a path we cleared.
+  for (const reason of degraded) {
+    fatal.push(`the set of npmrc paths npm reads could not be established: ${reason}. `
+      + 'A scan that cannot enumerate cannot certify; see docs/npm-publishing-access-playbook.md §6.');
+  }
 
   for (const candidate of candidates) {
     let stat;
@@ -160,33 +248,61 @@ function check({ env = {}, home, cwd, fromNpm = [], extra = [], fsImpl = fs }) {
         + 'See docs/npm-publishing-access-playbook.md §6 "The credential scan refused the publish".');
   }
 
+  // The CONTENT rule. This file is supposed to be here, so only what it sets can be the finding.
+  for (const candidate of builtin) {
+    let content;
+    try {
+      content = fsImpl.readFileSync(candidate, 'utf8');
+    } catch (err) {
+      if (err.code === 'ENOENT') continue; // no builtin npmrc on this install — nothing npm will read
+      fatal.push(`npm's builtin npmrc '${candidate}' cannot be read (${err.code || 'unknown'}). `
+        + 'It is the one config file npm reads that this scan judges by content, so an unreadable one is '
+        + 'an uninspected credential source.');
+      continue;
+    }
+    present.push(candidate);
+    if (setsCredential(content)) {
+      fatal.push(`npm's builtin npmrc '${candidate}' sets a credential key. It is reported by neither `
+        + '`npm config get userconfig` nor `globalconfig` and `Config.validate()` skips it, so npm would '
+        + 'send this credential with no warning. See docs/npm-publishing-access-playbook.md §6.');
+    }
+  }
+
   if (env.NODE_AUTH_TOKEN) {
     fatal.push('NODE_AUTH_TOKEN is set. A token in the environment takes precedence over OIDC; '
       + 'this job publishes via Trusted Publishing and must have no token at all.');
   }
   const badEnv = badNpmEnvNames(env);
   if (badEnv.length > 0) {
-    fatal.push(`npm_config_* credential or rewritable key(s) in the environment: ${badEnv.join(' ')}. `
-      + 'npm reads config from the environment above every npmrc, so these outrank OIDC.');
+    fatal.push(`npm_config_* credential, rewritable or config-repointing key(s) in the environment: `
+      + `${badEnv.join(' ')}. npm reads config from the environment above every npmrc, so these outrank OIDC.`);
   }
   if (env.NPM_ID_TOKEN) {
     fatal.push('NPM_ID_TOKEN is set. It overrides the ID token GitHub mints for this workflow '
       + '(oidc.js:50), so the exchange would run against a supplied assertion.');
   }
 
-  return { fatal, candidates, present };
+  return {
+    fatal, candidates, builtin, present,
+  };
 }
 
 /**
- * `npm config get <key>`, or '' when npm cannot answer.
- * @param {string} key
- * @returns {string}
+ * Run npm and return what it said, plus whether it could be asked at all.
+ *
+ * stderr is CAPTURED, not inherited: npm's config warnings would otherwise land in a public CI log
+ * (R2). npm prints key names only, so nothing observed leaked — captured because the guarantee should
+ * not depend on that.
+ *
+ * @param {string[]} args
+ * @returns {{ok: boolean, out: string, err: string}}
  */
-function npmConfigGet(key) {
+function npmExec(args) {
   try {
-    return execFileSync('npm', ['config', 'get', key], { encoding: 'utf8' }).trim();
-  } catch {
-    return '';
+    const out = execFileSync('npm', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    return { ok: true, out: String(out).trim(), err: '' };
+  } catch (err) {
+    return { ok: false, out: '', err: (err && (err.code || err.message)) || 'unknown' };
   }
 }
 
@@ -195,21 +311,51 @@ function npmConfigGet(key) {
  * @returns {number} exit code
  */
 function main(argv = process.argv.slice(2)) {
-  const fromNpm = [npmConfigGet('userconfig'), npmConfigGet('globalconfig')];
-  // The project npmrc is the one npm reads from the DIRECTORY IT RUNS IN, so the caller states it:
-  // `ci.yml` passes `--cwd "$PWD"`, which is what the deleted bash checked. Inferring it with
-  // `findProjectRoot()` alone was a real loss — it returns null outside a `_bmad` tree (the file is then
-  // never examined and the OK line still prints) and climbs to the repo root from a subdirectory,
-  // skipping the `.npmrc` npm would actually read (R1). The project root is ALSO checked, because a
-  // subdirectory run should not miss the repo's own file; `check()` dedupes.
+  const degraded = [];
+
+  // Two of npm's four config sources are named by npm itself. A silent '' here used to drop the path
+  // and print the same OK line as a clean run (R2).
+  const fromNpm = [];
+  for (const key of ['userconfig', 'globalconfig']) {
+    const r = npmExec(['config', 'get', key]);
+    if (r.ok) fromNpm.push(r.out);
+    else degraded.push(`\`npm config get ${key}\` failed (${r.err})`);
+  }
+
+  // The builtin npmrc lives beside npm itself and is named by no config key. `npm root -g` gives the
+  // directory; `process.execPath` is the fallback so a lost subprocess does not silently drop the one
+  // source judged by content.
+  const builtin = [];
+  const root = npmExec(['root', '-g']);
+  if (root.ok && root.out) builtin.push(path.join(root.out, 'npm', 'npmrc'));
+  else {
+    const guess = path.join(path.dirname(process.execPath), '..', 'lib', 'node_modules', 'npm', 'npmrc');
+    builtin.push(path.resolve(guess));
+    degraded.push(`\`npm root -g\` failed (${root.err || 'empty'}); npm's builtin npmrc was guessed at `
+      + `'${path.resolve(guess)}' from process.execPath instead of being located`);
+  }
+
+  // `ci.yml` passes `--cwd "$PWD"`. `findProjectRoot()` alone was a real loss: it returns null outside a
+  // `_bmad` tree, and the file is then never examined while the OK line still prints. The project root is
+  // ALSO checked, because a subdirectory run should not miss the repo's own file; `check()` dedupes.
   const cwdFlag = argv.indexOf('--cwd');
+  if (cwdFlag >= 0 && !argv[cwdFlag + 1]) {
+    console.error('FATAL: --cwd was given with no value. Refusing to guess which project npmrc npm '
+      + 'would read; pass `--cwd "$PWD"` or omit the flag entirely.');
+    return 1;
+  }
   const cwd = cwdFlag >= 0 ? argv[cwdFlag + 1] : undefined;
   const projectRoot = findProjectRoot();
-  const { fatal, candidates } = check({
+  const start = cwd || projectRoot;
+  // npm reads `<localPrefix>/.npmrc`, which is not `<cwd>/.npmrc` from a subdirectory.
+  const localPrefix = start ? npmLocalPrefix(start) : start;
+  const { fatal, candidates, builtin: builtinChecked } = check({
     env: process.env,
     home: process.env.HOME,
-    cwd: cwd || projectRoot,
-    extra: cwd && projectRoot && cwd !== projectRoot ? [require('path').join(projectRoot, '.npmrc')] : [],
+    cwd: localPrefix,
+    extra: projectRoot ? [path.join(projectRoot, '.npmrc')] : [],
+    builtin,
+    degraded,
     fromNpm,
   });
   if (fatal.length > 0) {
@@ -217,11 +363,13 @@ function main(argv = process.argv.slice(2)) {
     return 1;
   }
   // Reports what was ACTUALLY established, which is the whole point of this row: the count is the
-  // number of paths INSPECTED. An earlier version printed `present.length`, which is provably 0 on this
-  // branch — a parenthetical carrying no information, in a message whose predecessor existed to stop
-  // exactly that (R1).
-  console.log(`npm credential check: ${candidates.length} path(s) npm reads were checked, no npmrc on any `
-    + 'of them; NODE_AUTH_TOKEN, npm_config_* and NPM_ID_TOKEN clean -- OK');
+  // number of paths INSPECTED, across both rules. An earlier version printed `present.length`, which is
+  // provably 0 on this branch — a parenthetical carrying no information, in a message whose predecessor
+  // existed to stop exactly that (R1). The count now includes the builtin source, whose absence from it
+  // made the same sentence false in a second way (R2).
+  console.log(`npm credential check: ${candidates.length + builtinChecked.length} path(s) npm reads were `
+    + 'checked (no npmrc on any existence-checked path; no credential key in npm\'s builtin npmrc); '
+    + 'NODE_AUTH_TOKEN, npm_config_* and NPM_ID_TOKEN clean -- OK');
   return 0;
 }
 
@@ -229,8 +377,10 @@ if (require.main === module) process.exit(main());
 
 module.exports = {
   CREDENTIAL_KEY_RE,
+  DANGEROUS_CONFIG_KEYS,
   setsCredential,
   npmrcCandidates,
+  npmLocalPrefix,
   badNpmEnvNames,
   check,
   main,
