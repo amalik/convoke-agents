@@ -382,7 +382,7 @@ function _withCsvLock(csvPath, fn) {
  * @param {object} row - The row shape returned by `buildRow`.
  * @param {string} csvPath - Absolute CSV path.
  */
-function writeRow(row, csvPath) {
+function writeRow(row, csvPath, { claim = false } = {}) {
   const audit = require('./audit/audit-bmm-dependencies');
   _withCsvLock(csvPath, () => {
     let existingRows = [];
@@ -395,7 +395,16 @@ function writeRow(row, csvPath) {
     // Preserve existing order; append new row at the end. renderCsv does NOT
     // sort — it iterates in array order — so this inherits order preservation
     // from Story 2.1 + formula-sanitization + RFC 4180 quoting for free.
-    const allRows = [...existingRows, row];
+    //
+    // T112: when CLAIMING an auto-scan row, replace it where it sits rather than
+    // appending. Appending would leave two rows with the same triple — the very
+    // state the duplicate guard exists to prevent — and would move the skill to
+    // the end of a file whose order is deliberately preserved.
+    const newKey = audit._internal._tripleKey(row);
+    const claimIndex = claim ? existingRows.findIndex((r) => audit._internal._tripleKey(r) === newKey) : -1;
+    const allRows = claimIndex >= 0
+      ? existingRows.map((r, i) => (i === claimIndex ? row : r))
+      : [...existingRows, row];
     const contents = audit.renderCsv(allRows);
     audit._internal._atomicWrite(csvPath, contents);
   });
@@ -666,7 +675,15 @@ async function main(argv) {
   const audit = require('./audit/audit-bmm-dependencies');
   const csvPath = path.join(projectRoot, audit.OUTPUT_CSV_REL);
   const duplicate = checkDuplicate(row, csvPath);
-  if (duplicate) {
+  // T112: `auto-scan` is a RESERVED marker (see RESERVED_REGISTERED_BY) — no operator
+  // can write it, so a row carrying it was written by `convoke-audit-bmm-deps`'s
+  // inventory scan and belongs to nobody. Rejecting the operator's registration of
+  // their OWN skill because the scan had already listed it sent them to hand-edit the
+  // CSV, which is the toil this command exists to remove. Their registration now
+  // CLAIMS that row: same position, their attribution. A row registered by a person
+  // is still a conflict and still exits 1.
+  const claimable = Boolean(duplicate) && duplicate.registered_by === RESERVED_REGISTERED_BY;
+  if (duplicate && !claimable) {
     // R1-M6: fall back to an operator-actionable message when the existing
     // row has empty metadata (hand-edited CSV, truncated fields). Otherwise
     // the error reads `"already registered by  on "` with no way to locate
@@ -685,15 +702,23 @@ async function main(argv) {
 
   // Dry-run: render the row that would be written + exit 0.
   if (flags.dryRun) {
-    console.log(chalk.cyan('  Dry-run — row that would be written:'));
+    console.log(chalk.cyan(claimable
+      ? `  Dry-run — would CLAIM the auto-scan row for ${row.skill_name}/${row.bmm_agent}/${row.dependency_type}:`
+      : '  Dry-run — row that would be written:'));
     console.log('    ' + JSON.stringify(row));
     console.log(chalk.gray(`    (CSV path: ${audit.OUTPUT_CSV_REL})`));
     return 0;
   }
 
   // Write.
+  if (claimable) {
+    console.log(chalk.cyan(
+      `  ↻ Claiming the auto-scan row for ${row.skill_name}/${row.bmm_agent}/${row.dependency_type} `
+      + `(listed by convoke-audit-bmm-deps on ${duplicate.registered_date || 'an unrecorded date'}).`
+    ));
+  }
   try {
-    writeRow(row, csvPath);
+    writeRow(row, csvPath, { claim: claimable });
   } catch (err) {
     console.log(chalk.red(`  ✗ Registration failed: ${(err && err.message) || String(err)}`));
     console.log(chalk.gray('    Fix hint: verify filesystem permissions on _bmad/_config/ ' +

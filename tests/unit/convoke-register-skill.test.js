@@ -161,6 +161,92 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
     }
   });
 
+  // ── T112: an auto-scan row is claimable, a person's row is not ──
+  it('T112: registering a skill the audit already listed CLAIMS that row instead of failing', async () => {
+    // The trap this closes: `convoke-audit-bmm-deps` inventories every custom skill with
+    // `registered_by: auto-scan`, and the duplicate guard then rejected the operator's
+    // registration of their OWN skill, advising them to hand-edit the CSV — the toil this
+    // command exists to remove. Reachable by following the doctor's own advice.
+    const tmpDir = await createTempDir('bmad-reg-claim-');
+    try {
+      const existing = [
+        'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
+        'other-skill,bmad-agent-dev,frontmatter,bme,bob@example.com,2026-04-01',
+        'skill-x,bmad-agent-pm,frontmatter,unknown,auto-scan,2026-09-01',
+        '',
+      ].join('\n');
+      await seedFixture(tmpDir, { csvContents: existing, skillNames: ['skill-x', 'other-skill'] });
+
+      const { exitCode, stdout } = await runScript(
+        SCRIPT_PATH,
+        ['--skill', 'skill-x', '--agent', 'bmad-agent-pm', '--type', 'frontmatter',
+          '--email', 'carol@example.com', '--yes'],
+        { cwd: tmpDir }
+      );
+      assert.equal(exitCode, 0, `claiming an auto-scan row must succeed; got: ${stdout}`);
+      assert.ok(stdout.includes('Claiming the auto-scan row'), `expected a claim notice; got: ${stdout}`);
+
+      const lines = (await fs.readFile(path.join(tmpDir, '_bmad/_config/bmm-dependencies.csv'), 'utf8'))
+        .split('\n').filter(Boolean);
+      const matching = lines.filter((l) => l.startsWith('skill-x,bmad-agent-pm,frontmatter'));
+      assert.equal(matching.length, 1, 'claiming must REPLACE the row, not add a second one with the same triple');
+      assert.ok(matching[0].includes('carol@example.com'), 'the operator must own the row now');
+      assert.ok(!matching[0].includes('auto-scan'), 'the reserved marker must be gone');
+      // Order is deliberately preserved by renderCsv; a claim must not move the row.
+      assert.ok(lines[1].startsWith('other-skill'), 'the untouched row keeps its position');
+      assert.ok(lines[2].startsWith('skill-x'), 'the claimed row keeps ITS position rather than moving to the end');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('T112: a row with no registered_by is NOT claimable — it stays a conflict', async () => {
+    // An empty attribution is a hand-edited or truncated row, not an unclaimed scan row.
+    // Treating it as claimable would silently overwrite whatever a person put there.
+    const tmpDir = await createTempDir('bmad-reg-noclaim-');
+    try {
+      const existing = [
+        'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
+        'skill-x,bmad-agent-pm,frontmatter,bme,,',
+        '',
+      ].join('\n');
+      await seedFixture(tmpDir, { csvContents: existing, skillNames: ['skill-x'] });
+      const { exitCode, stdout } = await runScript(
+        SCRIPT_PATH,
+        ['--skill', 'skill-x', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--yes'],
+        { cwd: tmpDir }
+      );
+      assert.equal(exitCode, 1, 'an incomplete row must still be reported as a duplicate');
+      assert.ok(stdout.includes('Duplicate triple'), `expected the duplicate error; got: ${stdout}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('T112: --dry-run on a claimable row says it would claim, and writes nothing', async () => {
+    const tmpDir = await createTempDir('bmad-reg-claimdry-');
+    try {
+      const existing = [
+        'skill_name,bmm_agent,dependency_type,source_module,registered_by,registered_date',
+        'skill-x,bmad-agent-pm,frontmatter,unknown,auto-scan,2026-09-01',
+        '',
+      ].join('\n');
+      await seedFixture(tmpDir, { csvContents: existing, skillNames: ['skill-x'] });
+      const csvPath = path.join(tmpDir, '_bmad/_config/bmm-dependencies.csv');
+      const before = await fs.readFile(csvPath, 'utf8');
+      const { exitCode, stdout } = await runScript(
+        SCRIPT_PATH,
+        ['--skill', 'skill-x', '--agent', 'bmad-agent-pm', '--type', 'frontmatter', '--dry-run'],
+        { cwd: tmpDir }
+      );
+      assert.equal(exitCode, 0);
+      assert.ok(stdout.includes('would CLAIM'), `expected the claim wording in dry-run; got: ${stdout}`);
+      assert.equal(await fs.readFile(csvPath, 'utf8'), before, 'dry-run must not mutate the CSV');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
   // ── AC8 case 4: duplicate triple rejection ──
   it('duplicate triple → exit 1 + error identifies existing row metadata', async () => {
     const tmpDir = await createTempDir('bmad-reg-');
