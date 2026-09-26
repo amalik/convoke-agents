@@ -127,24 +127,46 @@ async function validateSingleAgent(agentFile, moduleConfig) {
   // own outcome (an agent resolving its config against the directory it was activated from), and it
   // is the shape BMB produces when it substitutes the value it was handed and copies the boilerplate
   // verbatim. Found by R1, 2026-09-26.
-  // `gi`, and a right boundary. Case-insensitive because the filesystems this runs on are: a load step
-  // reading `_bmad/BME/_x/config.yaml` resolves against the cwd exactly like the lower-case spelling,
-  // and a case-sensitive match saw nothing. The boundary stops `config.yaml` matching inside
-  // `config.yaml.bak` / `.tmpl`, which let an agent reference a file that need not even exist.
+  // The boundary and the flags, both of which cut in two directions — stating only the benefit is how
+  // the last two rounds' findings got written.
+  //
+  // `(?![\w\-])(?!\.[A-Za-z0-9])` — no word character, hyphen, or dot-then-alphanumeric may follow.
+  // That rejects `config.yaml.bak` / `.tmpl` (a file that need not even exist) while still MATCHING a
+  // sentence-terminating `config.yaml.`, which a blanket `(?![\w.\-])` swallowed: the occurrence went
+  // unseen, so a bare reference ending a sentence passed the check and a correctly prefixed one read as
+  // "not referenced". Both demonstrated by R3, 2026-09-26.
+  //
+  // `gi` — matching is case-insensitive because a case-drifted path resolves on a case-insensitive
+  // filesystem, so the reference must be SEEN. But seeing it is not accepting it: `exactCase` below
+  // requires the matched text to equal the expected tail byte for byte, because the package ships to
+  // Linux, where `_BMAD/…` does not resolve at all. Matching case-insensitively and asserting
+  // case-sensitively is the pairing; `gi` alone silently blessed `{project-root}/_BMAD/…`.
   const occurrences = configRefUsable
-    ? [...activation.matchAll(new RegExp(`${expectedConfigRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w.\\-])`, 'gi'))]
+    ? [...activation.matchAll(new RegExp(
+      `${expectedConfigRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w\\-])(?!\\.[A-Za-z0-9])`, 'gi'))]
     : [];
-  const bare = occurrences.filter((m) => !activation.slice(0, m.index).endsWith('{project-root}/'));
+  const prefixed = (m) => activation.slice(0, m.index).endsWith('{project-root}/');
   // Line numbers, because "appears 2 time(s)" in a block with three references is eyeball work, and a
   // wrong first try means deleting the generated config and module-help.csv before re-running §5a/§5b.
-  const bareLines = bare.map((m) => activation.slice(0, m.index).split('\n').length);
-  const at = bareLines.length > 0 ? ` (activation-block line${bareLines.length > 1 ? 's' : ''} ${bareLines.join(', ')})` : '';
-  const configPathValid = configRefUsable && occurrences.length > 0 && bare.length === 0;
+  const lineOf = (m) => activation.slice(0, m.index).split('\n').length;
+  const where = (list) => (list.length > 0
+    ? ` (activation-block line${list.length > 1 ? 's' : ''} ${list.map(lineOf).join(', ')})`
+    : '');
+  const bare = occurrences.filter((m) => !prefixed(m));
+  // Prefixed but spelled with different case: seen because of `gi`, rejected because the package ships
+  // to case-sensitive filesystems where it does not resolve.
+  const caseDrifted = occurrences.filter((m) => prefixed(m) && m[0] !== expectedConfigRef);
+  const configPathValid = configRefUsable
+    && occurrences.length > 0
+    && bare.length === 0
+    && caseDrifted.length === 0;
   // A near miss is reported as one: `{PROJECT-ROOT}/`, `{project-root}//`, `{project-root}/./` and a
   // prefix wrapped onto the previous line all leave an unprefixed occurrence, and telling their author
   // to "add the prefix" tells them to write what they think they wrote.
-  const nearMiss = bare.length > 0
-    && bare.some((m) => /\{\s*project[-_ ]?root\s*\}[/.\\]*\s*$/i.test(activation.slice(0, m.index)));
+  // Split, not merged: `bare.some(...)` reported every bare occurrence as a near miss, so a block with
+  // one `{PROJECT-ROOT}/` and one prefix-less reference told the author to "check case" about both.
+  const nearMisses = bare.filter((m) => /\{\s*project[-_ ]?root\s*\}[/.\\]*\s*$/i.test(activation.slice(0, m.index)));
+  const noPrefix = bare.filter((m) => !nearMisses.includes(m));
   checks.push({
     check: 'Config path reference',
     passed: configPathValid,
@@ -152,20 +174,24 @@ async function validateSingleAgent(agentFile, moduleConfig) {
       ? undefined
       : !configRefUsable
         ? `moduleConfig.configPath ("${moduleConfig.configPath}") cannot identify a module — expected a path ending in .../config.yaml`
-        : nearMiss
-          ? `Activation block references "${expectedConfigRef}" ${bare.length} time(s)${at} with a prefix that is not exactly "{project-root}/" (check case, doubled or "./" segments, and a prefix wrapped onto the previous line). Write "${conventionRef}"`
-          : bare.length > 0
-            ? `Activation block references "${expectedConfigRef}" ${bare.length} time(s)${at} without the "{project-root}/" prefix. A relative one resolves against the directory the agent is activated from; an absolute one is not portable between checkouts. Every occurrence must read "${conventionRef}"`
-            : `Expected reference to "${conventionRef}" not found in activation block`
+        : occurrences.length === 0
+          ? `Expected reference to "${conventionRef}" not found in activation block`
+          : [
+            noPrefix.length > 0
+              ? `${noPrefix.length} reference(s)${where(noPrefix)} name "${expectedConfigRef}" with no "{project-root}/" prefix — a relative one resolves against the directory the agent is activated from, an absolute one is not portable between checkouts`
+              : '',
+            nearMisses.length > 0
+              ? `${nearMisses.length} reference(s)${where(nearMisses)} carry a prefix that is not exactly "{project-root}/" — check case, doubled or "./" segments, and a prefix wrapped onto the previous line`
+              : '',
+            caseDrifted.length > 0
+              ? `${caseDrifted.length} reference(s)${where(caseDrifted)} are prefixed but spell the path with different case, which does not resolve on a case-sensitive filesystem`
+              : '',
+          ].filter(Boolean).join('; ') + `. Every occurrence must read "${conventionRef}"`
   });
   if (!configPathValid) {
     errors.push(!configRefUsable
       ? `Unusable moduleConfig.configPath "${moduleConfig.configPath}" — expected a path ending in .../config.yaml`
-      : nearMiss
-        ? `Config reference "${expectedConfigRef}" appears ${bare.length} time(s)${at} with a prefix that is not exactly "{project-root}/" — check case, doubled or "./" segments, and a prefix wrapped onto the previous line. Write "${conventionRef}"`
-        : bare.length > 0
-          ? `Config reference "${expectedConfigRef}" appears ${bare.length} time(s)${at} without its "{project-root}/" prefix — write "${conventionRef}" at each`
-          : `Config path "${conventionRef}" not referenced in activation block`);
+      : checks[checks.length - 1].detail);
   }
 
   // Check 3: Config file exists on disk

@@ -65,9 +65,22 @@ describe('shipped agents — activation-block config references', () => {
       if (!match) { t.skip(`${rel} has no activation block (v6.3 — T127)`); return; }
       const block = match[1].replace(/\\/g, '/');
       const tail = `_bmad/bme/${mod}/config.yaml`;
-      const bare = [...block.matchAll(new RegExp(`${tail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w.\\-])`, 'gi'))]
+      // ONE regex for both the floor and the prefix check. Two copies is how the boundary correction
+      // reached only half of this file: the floor got `(?!\.[A-Za-z0-9])` and `bare` kept the blanket
+      // `(?![\w.\-])`, so a bare reference ending a sentence stayed invisible here after the validator
+      // had been fixed. R3, 2026-09-26.
+      //
+      // The floor mirrors the validator's own: without it the per-agent assertion passed vacuously —
+      // retarget every reference to `_gyre-typo` or delete them all and `bare` is empty, while
+      // `withBlocks.length >= 9` still counts the block.
+      const tailRe = new RegExp(`${tail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w\\-])(?!\\.[A-Za-z0-9])`, 'gi');
+      const all = [...block.matchAll(tailRe)];
+      const bare = all
         .filter((m) => !block.slice(0, m.index).endsWith('{project-root}/'))
         .map((m) => block.slice(0, m.index).split('\n').length);
+      assert.ok(all.length > 0,
+        `${rel} has an activation block that never names ${tail}. Either it loads the wrong module's config `
+        + 'or it names none at all — both leave this agent unguarded by the sweep.');
       assert.deepEqual(bare, [],
         `${rel} names ${tail} without the "{project-root}/" prefix on activation-block line(s) ${bare.join(', ')}. `
         + 'That resolves against the directory the agent is activated from.');

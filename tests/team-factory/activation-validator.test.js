@@ -281,7 +281,7 @@ describe('check 2 — the config reference must carry its {project-root}/ prefix
   it('REJECTS the same path without the prefix, and says why', async () => {
     const c2 = check2(await validateWith(`<step>Load ${UNPREFIXED} NOW</step>`));
     assert.equal(c2.passed, false, 'an unprefixed reference resolves against the activation cwd');
-    assert.match(c2.detail, /without the "\{project-root\}\/" prefix/);
+    assert.match(c2.detail, /with no "\{project-root\}\/" prefix/);
     assert.match(c2.detail, /activated from/);
   });
 
@@ -317,7 +317,7 @@ describe('check 2 — the config reference must carry its {project-root}/ prefix
       CONVENTION
     ));
     assert.equal(c2.passed, false, 'a prefixed mention in boilerplate must not excuse an unprefixed load step');
-    assert.match(c2.detail, /1 time\(s\).*without the "\{project-root\}\/" prefix/);
+    assert.match(c2.detail, /1 reference\(s\).*with no "\{project-root\}\/" prefix/);
     assert.match(c2.detail, /activation-block line \d+/, 'a count without a location is eyeball work across three references');
   });
 
@@ -349,22 +349,66 @@ describe('check 2 — the config reference must carry its {project-root}/ prefix
     // Asserting only that it fails cannot tell case-insensitive matching from case-SENSITIVE matching:
     // under the latter the reference is invisible and fails as "not found", which is the wrong reason
     // and the wrong remedy. The message has to say the prefix is missing.
-    assert.match(c2.detail, /without the "\{project-root\}\/" prefix/,
+    assert.match(c2.detail, /with no "\{project-root\}\/" prefix/,
       'the reference must be SEEN and reported as unprefixed, not missed entirely');
+  });
+
+  it('still sees a bare reference that ENDS A SENTENCE', async () => {
+    // The right boundary that stops `config.yaml.bak` matching must not also swallow `config.yaml.` —
+    // a blanket `(?![\w.\-])` made the occurrence invisible, so a bare reference ending a sentence
+    // passed while the boilerplate's prefixed mentions satisfied the check. R3, 2026-09-26.
+    const c2 = check2(await validateWith(
+      `<step n="1">Config lives at ${CONVENTION}</step>
+       <step n="2">Load and read ${UNPREFIXED}.</step>`,
+      CONVENTION
+    ));
+    assert.equal(c2.passed, false, 'a trailing period must not hide an unprefixed reference');
+    assert.match(c2.detail, /with no "\{project-root\}\/" prefix/);
+  });
+
+  it('accepts a CORRECT reference that ends a sentence', async () => {
+    // The mirror of the same boundary bug: a correctly prefixed reference followed by a period read as
+    // "not referenced in activation block", telling the author to add what they had already written.
+    const c2 = check2(await validateWith(`<step>Load and read ${CONVENTION}.</step>`, CONVENTION));
+    assert.equal(c2.passed, true, c2.detail);
+  });
+
+  it('rejects a prefixed reference whose path is spelled with different case', async () => {
+    // `gi` exists so a case-drifted reference is SEEN. Seeing it is not accepting it: this package
+    // ships to Linux, where `_BMAD/…` does not resolve at all.
+    const c2 = check2(await validateWith(
+      '<step>Load {project-root}/_BMAD/bme/_test-team/config.yaml NOW</step>', CONVENTION));
+    assert.equal(c2.passed, false, 'a case-drifted path does not resolve on a case-sensitive filesystem');
+    assert.match(c2.detail, /different case/);
+  });
+
+  it('reports a bare reference and a near miss as two different problems', async () => {
+    const c2 = check2(await validateWith(
+      `<step n="1">Load {PROJECT-ROOT}/${UNPREFIXED} NOW</step>
+       <step n="2">Also read ${UNPREFIXED} here</step>`,
+      CONVENTION
+    ));
+    assert.equal(c2.passed, false);
+    assert.match(c2.detail, /1 reference\(s\).*with no "\{project-root\}\/" prefix/,
+      'the prefix-less one is not a case problem');
+    assert.match(c2.detail, /1 reference\(s\).*not exactly "\{project-root\}\/"/,
+      'and the near miss is not a missing prefix');
   });
 
   it('puts the same distinction in errors[], which is what §5c shows the operator', async () => {
     const bare = await validateWith(`<step>Load ${UNPREFIXED} NOW</step>`, CONVENTION);
-    assert.match(bare.results[0].errors.join(' '), /without its "\{project-root\}\/" prefix/);
+    assert.match(bare.results[0].errors.join(' '), /with no "\{project-root\}\/" prefix/);
     const absent = await validateWith('<step>Load nothing</step>', CONVENTION);
-    assert.match(absent.results[0].errors.join(' '), /not referenced in activation block/);
-    assert.doesNotMatch(absent.results[0].errors.join(' '), /prefix/);
+    // `errors[]` now carries check 2's own detail text verbatim, so the wording is the detail's.
+    assert.match(absent.results[0].errors.join(' '), /not found in activation block/);
+    assert.doesNotMatch(absent.results[0].errors.join(' '), /prefix/,
+      'a missing reference must not be reported as a prefix problem');
     // §5c displays errors[], so the near-miss wording has to live there too — it existed only in
     // checks[].detail, which nothing shows the operator.
     const near = await validateWith(`<step>Load {PROJECT-ROOT}/${UNPREFIXED} NOW</step>`, CONVENTION);
     const nearErrors = near.results[0].errors.join(' ');
     assert.match(nearErrors, /not exactly "\{project-root\}\/"/, 'the operator-facing channel must not say "add the prefix" to someone who wrote one');
-    assert.match(nearErrors, /Write "\{project-root\}\/_bmad/, 'and it must carry the remedy string');
+    assert.match(nearErrors, /must read "\{project-root\}\/_bmad/, 'and it must carry the remedy string');
   });
 
   it('a Windows-style backslash reference still matches', async () => {

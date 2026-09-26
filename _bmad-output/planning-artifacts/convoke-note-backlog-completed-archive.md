@@ -2658,3 +2658,28 @@ the tail was unanchored on the right, so a prefixed `…/config.yaml.tmpl` satis
 `config.yaml`; the match was case-sensitive on case-insensitive filesystems; and a failure gave a count
 with no location across three references.
 
+### R3 — one scoped layer on the R2 remediation, 2026-09-26
+
+Code only. Every row is pinned by a mutant; re-run with
+`node --test tests/team-factory/activation-validator.test.js tests/unit/agent-activation-config-refs.test.js`.
+
+| Defect | Fix |
+|---|---|
+| **The right boundary added in R2 reopened T214's own outcome, one character wide.** `(?![\w.\-])` treats a sentence-terminating period as a filename continuation, so `_bmad/bme/_x/config.yaml.` was never seen — and an unseen bare reference is a clean bill of health while the boilerplate's prefixed mentions keep the occurrence count non-zero. `47ce2cd4` caught the input that `85105d36` passed | `(?![\w\-])(?!\.[A-Za-z0-9])` — still rejects `config.yaml.bak` / `.tmpl`, still matches a period that ends a sentence |
+| The same boundary made a **correct** prefixed reference ending a sentence read as "not referenced in activation block" — telling the author to add what they had written | same one-character fix closes both directions |
+| `gi` was a **net loss of detection**: it let `{project-root}/_BMAD/…` pass, which `47ce2cd4` rejected. The package ships to Linux, where that path does not resolve | match case-insensitively so the reference is SEEN, then require the matched text to equal the expected tail byte for byte |
+| The sweep had **no non-empty floor**, so retargeting every reference to another module, or deleting them all, passed — and `withBlocks.length >= 9` still counted the block | the floor the validator already had, mirrored |
+| A mixed block reported every bare occurrence as a near miss, so "check case" was the hint for a reference with no prefix at all | the two classes are counted and reported separately |
+
+**The escaping trap, recorded because it nearly shipped.** The boundary correction reached only half the
+sweep: the floor I typed fresh got it, and the `bare` computation kept the blanket boundary, because the
+replacement string did not match the escaping inside the template literal. The file read as fixed. What
+caught it was planting the defect in a real agent file and watching the sweep stay green — not reading
+the diff. The regex is now built once and used for both.
+
+**Four rounds, one pattern.** R1: the fixture could not tell a guard from its relaxation. R2: the
+`{project-root}/` check was a substring test over the whole cell. R3: the boundary that closed an
+unanchored tail opened a same-class hole, and the fix for it landed in one of two copies. Each time the
+fix was right and the thing verifying it could not distinguish the fix from its absence — which is why
+every row above names the mutant, not the intent.
+
