@@ -44,7 +44,7 @@ const { AGENTS, GYRE_AGENTS, EXTRA_BME_AGENTS } = require('../update/lib/agent-r
 const REGISTRY = path.join('_bmad', 'bme', '_config', 'name-registry.csv');
 
 const REQUIRED_COLUMNS = ['kind', 'name', 'code', 'scope', 'tier', 'status', 'declared_in', 'collision'];
-const VALID_KINDS = ['team', 'agent'];
+const VALID_KINDS = ['team', 'agent', 'skill'];
 const VALID_STATUSES = ['shipped', 'in-dev', 'proposed', 'reserved'];
 // ADR-001 D4 declares FOUR tiers and no more. `unassigned` is a fifth value this artifact
 // needed for proposed teams whose tier has not been decided, and the signed ADR does not
@@ -227,12 +227,17 @@ function checkUniqueness(rows, idx) {
     const bounded = new RegExp(`(^|[^\\p{L}\\p{N}])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^\\p{L}\\p{N}]|$)`, 'u');
     const declares = group.some((r) => bounded.test(norm(r[idx.collision])));
     if (!declares) {
+      // Name the kinds actually present. This message used to read "by both a team and an
+      // agent", which was true while VALID_KINDS held exactly those two; once `skill` was
+      // added (channel-integrity ADR-001 C10) the fixed wording would have misreported
+      // every team-vs-skill collision - a check that names the wrong defect.
+      const kinds = [...new Set(group.map((r) => norm(r[idx.kind])))].sort().join(', ');
       findings.push(
         finding(
           'unique/undeclared-collision',
-          `"${group[0][idx.name]}" is used by both a team and an agent, and no row's collision ` +
-            `cell mentions that name. Cross-kind reuse is allowed, but it must be recorded ` +
-            `against the name it collides on, not merely somewhere on the row.`
+          `"${group[0][idx.name]}" is used by more than one kind (${kinds}), and no row's ` +
+            `collision cell mentions that name. Cross-kind reuse is allowed, but it must be ` +
+            `recorded against the name it collides on, not merely somewhere on the row.`
         )
       );
     }

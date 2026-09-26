@@ -248,6 +248,30 @@ describe('checkUniqueness', () => {
     assert.deepEqual(ids(checkUniqueness(declared, IDX)), []);
   });
 
+  it('treats a team/skill collision exactly as a team/agent one', () => {
+    // `skill` joined VALID_KINDS for the channel-integrity hub (ADR-001 C10). A1 groups by
+    // name and counts distinct kinds, so it should have needed no change - this pins that,
+    // because a kind the rule silently ignored would exempt every hub name from it.
+    const declared = [
+      row({ kind: 'team', name: 'convoke', collision: 'team convoke vs the convoke hub skill' }),
+      row({ kind: 'skill', name: 'convoke' }),
+    ];
+    assert.deepEqual(ids(checkUniqueness(declared, IDX)), []);
+
+    const undeclared = [row({ kind: 'team', name: 'convoke' }), row({ kind: 'skill', name: 'convoke' })];
+    assert.deepEqual(ids(checkUniqueness(undeclared, IDX)), ['unique/undeclared-collision']);
+  });
+
+  it('names the kinds actually colliding, not the two the message was written for', () => {
+    // The message read "used by both a team and an agent" while VALID_KINDS held exactly
+    // those two. Adding `skill` made that wording report the wrong defect, which is worse
+    // than reporting none - the reader goes looking for an agent that does not exist.
+    const rows = [row({ kind: 'team', name: 'convoke' }), row({ kind: 'skill', name: 'convoke' })];
+    const [f] = checkUniqueness(rows, IDX);
+    assert.match(f.detail, /more than one kind \(skill, team\)/);
+    assert.doesNotMatch(f.detail, /both a team and an agent/);
+  });
+
   it('rejects collision prose that describes a DIFFERENT name', () => {
     // The defect this replaces: any non-empty text immunised the row, so a name already
     // carrying prose about an unrelated collision was exempt from every future one.
