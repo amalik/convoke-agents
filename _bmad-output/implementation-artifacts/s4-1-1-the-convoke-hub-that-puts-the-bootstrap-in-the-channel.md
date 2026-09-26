@@ -36,13 +36,25 @@ Status: ready-for-dev
 >    applies as the **skill-level analogue**, the scope extension is recorded in AC10, and AC12 no
 >    longer asks for exit codes it cannot have. File set is therefore exactly
 >    `SKILL.md` + `workflow.md`.
-> 3. **Location, given PR #9.** `.claude/skills/convoke/` is a **third** destination. PR #9 was
->    closed 2026-04-27 on a structural rejection — *"needs `skills/` at root"* — and `I80` wants
->    `_bmad/bme/`. Placing the hub here may mean moving it twice.
-> 4. **Is doctor coverage owed?** Task 3's row-vs-no-row dichotomy is **false in both branches**:
->    `checkModuleSkillWrappers` only looks up manifest rows for workflows enumerated in a discovered
->    module's `config.yaml`, so for a non-workflow skill a row is inert. Neither precedent skill has
->    one. The real question is whether the hub needs doctor coverage at all, through what mechanism.
+> 3. ~~**Location, given PR #9.**~~ **RULED 2026-09-27: the hub stays at `.claude/skills/convoke/`,
+>    and is added to `I80`'s scope.** It is the only shape that works today, and because the permanent
+>    artifact is the frontmatter name rather than the path, moving later costs a rename plus the three
+>    tracking sites — not a second irreversible act. `I80` is already a *consolidation* row, so folding
+>    the hub in makes that **one move for three skills** instead of a third location for one. PR #9's
+>    root-`skills/` is an upstream marketplace contract, not Convoke's requirement; adopting it would
+>    be a repo-wide restructure adjacent to S2, not this story's business.
+> 4. ~~**Is doctor coverage owed?**~~ **RULED 2026-09-27: none, and it is recorded rather than
+>    implied.** `checkModuleSkillWrappers` cannot see a non-workflow skill and a `skill-manifest.csv`
+>    row is never looked up for one, so Task 3's old row-vs-no-row dichotomy was false in **both**
+>    branches; neither precedent skill carries a row. **But "no coverage" is not neutral** — see the
+>    new Task 3, because the hub's own name makes doctor noisy in operators' trees.
+>
+> **Also ruled 2026-09-27: the baseline is NOT re-ratified for a gate.** The ratified sequence is
+> ship, then a tiny baseline, then *one measured test* — and the hub **is** the measured test, so
+> gating before it runs inverts the order. The counter-metric is 111 gates built for ourselves and
+> none shipped to an operator. AC12's assertions are therefore run as a task with their output pasted
+> into this file, and a gate is considered **after** the hub meets a real operator, with evidence
+> about what actually broke.
 >
 > **The held batch was applied 2026-09-27**, once rulings 1 and 2 made it safe: AC3's command
 > corrected, AC1's file set enumerated against `deepEqual`, AC10 and AC12 de-contradicted, AC11
@@ -228,12 +240,18 @@ with rationale, so an unanswered OC-R6 blocks ready-for-review by itself.
    AC3–AC10 in its activation block.
 2. Wire all three tracking sites in one change: `.gitignore` step-wise exemption, `package.json`
    `files[]`, `EXPECTED` in `tests/lib/skills-packaging.test.js` (AC1).
-3. **Decide the `skill-manifest.csv` question and write the decision down.** It is the **opt-in
-   marker** for doctor's wrapper check (`scripts/convoke-doctor.js:416-419, 463-473`). **No row ⇒
-   `convoke-doctor` silently skips the hub** — the same presence-only hole AC11 exists to close. **A
-   row ⇒** doctor reports a missing wrapper in the dev tree, where `isSameRoot` suppressed
-   generation. **Never repoint `path` at gitignored `.claude/skills/`** — that is the candidate-list
-   trap that has caught four attempts.
+3. **Keep the hub out of `skill-manifest.csv`, and stop doctor warning about it.** Per ruling 4 the
+   hub gets **no** row: `checkModuleSkillWrappers` iterates a discovered module's `config.yaml`
+   workflows and only then looks up `` `${moduleRelPath}/workflows/${wfName}/SKILL.md` ``
+   (`scripts/convoke-doctor.js:455-468`), so for a non-workflow skill a row is **inert** — it changes
+   nothing in either direction. Record that, and **never repoint `path` at gitignored
+   `.claude/skills/`** (the candidate-list trap that has caught four attempts).
+   **The real work is the classifier.** `audit-bmm-dependencies.js:515` tests
+   `skillName.startsWith('convoke-')`; the directory is `convoke`, with no hyphen, so
+   `_inferSourceModule` falls through to `return 'unknown'` (`:521`) and
+   `convoke-doctor.js` reports the hub under **`unregistered-custom-skill` in every operator's
+   tree**. ADR-001 C10 fixed the name, so the fix is here: add the exact-match branch, with a test
+   that fails without it. **Doing nothing is not neutral — it ships noise to operators.**
 4. Front the three binaries when present; name AC3's command when absent (AC10).
 5. `checkSkillSources()` + the registry row flip, with a test for each (AC11).
 6. Tests per AC12, in an isolated fixture directory (`test-fixture-isolation`, `{ cwd: tmpDir }`).

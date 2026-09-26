@@ -251,6 +251,29 @@ segment, who never touch the channel and for whom `convoke-export` is the delive
 Absorption becomes a later, measurable step rather than a precondition — the ratified
 baseline-before-expansion pattern: ship the small thing, then one measured test.
 
+**C12 — The baseline is NOT re-ratified for a gate. Ruled 2026-09-27.** C8's *checkable* half and
+several of `s4-1-1`'s acceptance criteria would each be cheapest as a CI check, and C1 forbids one.
+The answer is not to re-ratify: **the ratified sequence is ship, then a tiny baseline, then one
+measured test — and the hub is the measured test.** Gating before the test runs inverts the order,
+and the standing counter-metric is 111 gates built for ourselves against none shipped to an operator.
+So the assertions run as story tasks with their output recorded in the story, the same
+declared-but-unchecked posture accepted in C8, and a gate is considered **afterwards** — with
+evidence about what actually broke rather than a guess about what might.
+
+**C13 — The hub's location is `.claude/skills/convoke/`, and it joins `I80`. Ruled 2026-09-27.**
+The permanent artifact is the frontmatter **name**, not the path, so a later move costs a rename plus
+the three tracking sites rather than a second irreversible act. `I80` is already a consolidation row,
+so the hub joins it and all three tracked operator-tooling skills move once. PR #9's root-`skills/`
+is an upstream marketplace contract, not Convoke's requirement.
+
+**C14 — No doctor coverage for the hub, recorded. Ruled 2026-09-27.** `checkModuleSkillWrappers`
+iterates a discovered module's `config.yaml` workflows, so for a non-workflow skill a
+`skill-manifest.csv` row is never looked up and changes nothing; neither existing tracked skill has
+one. **But silence is not neutral:** `audit-bmm-dependencies.js:515` tests
+`startsWith('convoke-')`, and the directory is `convoke`, so the hub classifies as `unknown` and
+`convoke-doctor` would report it under `unregistered-custom-skill` **in every operator's tree**.
+C10 fixed the name, so `s4-1-1` owns the classifier branch.
+
 **C9 — Unaffected by this ruling.** The six verified defects are remediation and proceed
 independently. The air-gapped / internal-registry gap the ledger calls *"real and
 unsolved"* is narrowed by neither S4 nor S2 and remains open.
