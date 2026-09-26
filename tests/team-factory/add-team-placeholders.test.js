@@ -184,3 +184,50 @@ describe('add-team step files — path placeholders', () => {
     });
   }
 });
+
+describe('stripFencedBlocks — the fence rules this file depends on', () => {
+  // The parser had no direct test: it was written to close a hole where a table inside an EXAMPLE block
+  // leaked into the definitions map, and the only thing exercising it was that one scenario. These pin
+  // the CommonMark rules it implements (§4.5) and the two directions each rule can fail.
+  const keeps = (text, kept) => assert.equal(stripFencedBlocks(text).trim(), kept);
+
+  it('removes a fenced block and keeps what surrounds it', () => {
+    keeps('before\n```\ninside\n```\nafter', 'before\nafter');
+  });
+
+  it('a longer fence is not closed by a shorter one', () => {
+    // This is the hole that prompted the parser: ````-wrapped example containing a ``` block.
+    keeps('before\n````\n```\n| a | table |\n```\n````\nafter', 'before\nafter');
+  });
+
+  it('a closing fence may be longer than its opener, and must use the same character', () => {
+    keeps('before\n```\ninside\n`````\nafter', 'before\nafter');
+    // `~~~` cannot close a ``` fence, so everything after it stays inside the block.
+    assert.equal(stripFencedBlocks('before\n```\ninside\n~~~\nafter').trim(), 'before');
+  });
+
+  it('handles tilde fences', () => {
+    keeps('before\n~~~\ninside\n~~~\nafter', 'before\nafter');
+  });
+
+  it('ignores an info string on the opener', () => {
+    keeps('before\n```markdown title="x"\ninside\n```\nafter', 'before\nafter');
+  });
+
+  it('accepts up to three spaces of indent, and four makes it an indented code block, not a fence', () => {
+    keeps('before\n   ```\ninside\n   ```\nafter', 'before\nafter');
+    // Four spaces: CommonMark reads this as an indented code block. The line is content, not a fence,
+    // so nothing is stripped — and a table inside it WOULD be read as a definition. Stated rather than
+    // fixed: no step file uses indented code blocks, and this is the direction that fails LOUDLY (an
+    // example row would have to also carry a valid `| {name} | {project-root}/… |` shape to matter).
+    assert.match(stripFencedBlocks('before\n    ```\n    inside\n    ```\nafter'), /inside/);
+  });
+
+  it('an unterminated fence runs to the end, as CommonMark says', () => {
+    keeps('before\n```\ninside\nstill inside', 'before');
+  });
+
+  it('leaves text alone when there is no fence at all', () => {
+    keeps('| `{spec_path}` | `{project-root}/x.yaml` |', '| `{spec_path}` | `{project-root}/x.yaml` |');
+  });
+});

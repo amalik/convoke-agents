@@ -2577,6 +2577,16 @@ Code and step files only. Every row is pinned by a mutant; re-run with
 line calling `{output_directory}` invisible when it is visible and exempted, and a message promising to
 catch a removal that actually aborts the file at load — red either way, but not by that assertion.
 
+**Fence parser pinned, 2026-09-26.** `stripFencedBlocks` shipped with no direct test — the only thing
+exercising it was the one scenario it was written for. Eight assertions now pin the CommonMark §4.5 rules
+it implements, each verified against a mutant: a longer fence is not closed by a shorter one, a closing
+fence may be longer but must use the same character, tilde fences, an info string on the opener, up to
+three spaces of indent, and an unterminated fence running to the end. **Disclosed rather than fixed:** a
+four-space-indented block is an indented code block, not a fence, so its contents are not stripped and a
+table inside one would be read as a definition. No step file uses indented code blocks, and the failure
+direction is loud — the planted row would also have to carry a valid `| {name} | {project-root}/… |`
+shape to matter.
+
 **The recurring shape, three rounds running:** R1 — the placeholder list was derived from the
 definitions it judged. R2 — the file list was read from the directory it judged. R3 — the assertion
 meant to pin a guard matched a neighbouring guard's message. Each time the fix was correct and the
