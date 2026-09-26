@@ -34,7 +34,7 @@ describe('validateActivation', () => {
     const agentFile = path.join(moduleDir, 'agents', 'valid-agent.md');
     await fs.writeFile(agentFile, `# Valid Agent
 
-<activation config="_bmad/bme/_test-team/config.yaml" module="bme/_test-team">
+<activation config="{project-root}/_bmad/bme/_test-team/config.yaml" module="bme/_test-team">
   <agent name="Valid Agent" />
 </activation>
 
@@ -67,7 +67,7 @@ No activation block here.
     const agentFile = path.join(moduleDir, 'agents', 'wrong-config.md');
     await fs.writeFile(agentFile, `# Wrong Config Agent
 
-<activation config="_bmad/bme/_wrong-team/config.yaml" module="bme/_test-team">
+<activation config="{project-root}/_bmad/bme/_wrong-team/config.yaml" module="bme/_test-team">
   <agent name="Wrong" />
 </activation>
 `, 'utf8');
@@ -135,7 +135,7 @@ No activation block here.
   it('validates multiple agent files', async () => {
     const agent1 = path.join(moduleDir, 'agents', 'multi-1.md');
     const agent2 = path.join(moduleDir, 'agents', 'multi-2.md');
-    await fs.writeFile(agent1, `<activation config="_bmad/bme/_test-team/config.yaml" module="bme/_test-team"><agent/></activation>`, 'utf8');
+    await fs.writeFile(agent1, `<activation config="{project-root}/_bmad/bme/_test-team/config.yaml" module="bme/_test-team"><agent/></activation>`, 'utf8');
     await fs.writeFile(agent2, `No activation here`, 'utf8');
 
     const result = await validateActivation([agent1, agent2], moduleConfig);
@@ -234,5 +234,107 @@ describe('tf-2-12: real shipped agents', () => {
     } finally {
       await fs.remove(tmp);
     }
+  });
+});
+
+describe('check 2 — the config reference must carry its {project-root}/ prefix (T214)', () => {
+  let tmpDir;
+  let moduleDir;
+  let moduleConfig;
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-tf-t214-'));
+    moduleDir = path.join(tmpDir, '_test-team');
+    await fs.ensureDir(path.join(moduleDir, 'agents'));
+    await fs.writeFile(path.join(moduleDir, 'config.yaml'), 'submodule_name: _test-team', 'utf8');
+    moduleConfig = { configPath: '_bmad/bme/_test-team/config.yaml', modulePath: 'bme/_test-team', moduleDir };
+  });
+
+  after(async () => {
+    await fs.remove(tmpDir);
+  });
+
+  // The prefix is the whole point: an unprefixed reference resolves against whatever directory the
+  // agent is ACTIVATED from. Before T214 both sides were normalised — prefix stripped, then
+  // everything up to the first `_bmad/` — so the two forms collapsed to one string and this check
+  // could not tell them apart. All 12 shipped agents write the prefixed form; step-04 §3a handed BMB
+  // the unprefixed one until 2026-09-24, which is what made the gap reachable. The 9 agents that HAVE
+  // an activation block all write the prefixed form (27 references); the 3 v6.3 agents have none (T127).
+  const CONVENTION = '{project-root}/_bmad/bme/_test-team/config.yaml';
+  const UNPREFIXED = '_bmad/bme/_test-team/config.yaml';
+
+  const check2 = (result) => result.results[0].checks.find((c) => c.check === 'Config path reference');
+
+  let seq = 0;
+  async function validateWith(activationBody, configPath = UNPREFIXED) {
+    // A counter, not a random name: a failure has to be reproducible from the filename in the message.
+    const agentFile = path.join(moduleDir, 'agents', `t214-${++seq}.md`);
+    await fs.writeFile(agentFile, `<activation critical="MANDATORY">${activationBody}</activation>`, 'utf8');
+    return validateActivation([agentFile], { ...moduleConfig, configPath });
+  }
+
+  it('accepts the convention form', async () => {
+    const c2 = check2(await validateWith(`<step>Load ${CONVENTION} NOW</step>`));
+    assert.equal(c2.passed, true, c2.detail);
+  });
+
+  it('REJECTS the same path without the prefix, and says why', async () => {
+    const c2 = check2(await validateWith(`<step>Load ${UNPREFIXED} NOW</step>`));
+    assert.equal(c2.passed, false, 'an unprefixed reference resolves against the activation cwd');
+    assert.match(c2.detail, /without the "\{project-root\}\/" prefix/);
+    assert.match(c2.detail, /activated from/);
+  });
+
+  it("distinguishes 'wrong form' from 'absent': the message names which", async () => {
+    const absent = check2(await validateWith('<step>Load nothing at all</step>'));
+    assert.equal(absent.passed, false);
+    assert.match(absent.detail, /not found in activation block/);
+    assert.doesNotMatch(absent.detail, /prefix/, 'a missing reference must not be reported as a prefix problem');
+  });
+
+  it('takes the caller\'s configPath in any form — it is an argument, not an artifact', async () => {
+    for (const given of [UNPREFIXED, CONVENTION, `/Users/someone/checkout/${UNPREFIXED}`,
+      'C:\\checkout\\_bmad\\bme\\_test-team\\config.yaml']) {
+      const c2 = check2(await validateWith(`<step>Load ${CONVENTION} NOW</step>`, given));
+      assert.equal(c2.passed, true, `configPath ${JSON.stringify(given)} should resolve to the same tail: ${c2.detail}`);
+    }
+  });
+
+  it('REJECTS an unprefixed LOAD step even when the boilerplate carries the prefix', async () => {
+    // The shipped agent template names the config three times: once in the load step and twice inside
+    // the quoted "Configuration Error" text. Requiring merely that the prefixed string appear SOMEWHERE
+    // let an agent load its config from the activation cwd while the boilerplate satisfied the check —
+    // T214's own outcome, surviving the first fix for T214. Every occurrence must be prefixed.
+    const c2 = check2(await validateWith(
+      `<step n="2">Load and read ${UNPREFIXED} NOW
+         - If not found display: "Cannot load ${CONVENTION}
+           Please update ${CONVENTION} with all required fields."
+       </step>`,
+      CONVENTION
+    ));
+    assert.equal(c2.passed, false, 'a prefixed mention in boilerplate must not excuse an unprefixed load step');
+    assert.match(c2.detail, /1 time\(s\) without the "\{project-root\}\/" prefix/);
+  });
+
+  it('calls a near-miss prefix what it is, rather than telling the author to add one', async () => {
+    for (const prefix of ['{PROJECT-ROOT}/', '{project-root}//', '{project-root}/./']) {
+      const c2 = check2(await validateWith(`<step>Load ${prefix}${UNPREFIXED} NOW</step>`, CONVENTION));
+      assert.equal(c2.passed, false, `${prefix} must not satisfy the convention`);
+      assert.match(c2.detail, /not exactly "\{project-root\}\/"/,
+        `${prefix} is a near miss, not a missing prefix — saying "add the prefix" tells the author to write what they wrote`);
+    }
+  });
+
+  it('puts the same distinction in errors[], which is what §5c shows the operator', async () => {
+    const bare = await validateWith(`<step>Load ${UNPREFIXED} NOW</step>`, CONVENTION);
+    assert.match(bare.results[0].errors.join(' '), /without its "\{project-root\}\/" prefix/);
+    const absent = await validateWith('<step>Load nothing</step>', CONVENTION);
+    assert.match(absent.results[0].errors.join(' '), /not referenced in activation block/);
+    assert.doesNotMatch(absent.results[0].errors.join(' '), /prefix/);
+  });
+
+  it('a Windows-style backslash reference still matches', async () => {
+    const c2 = check2(await validateWith('<step>Load {project-root}\\_bmad\\bme\\_test-team\\config.yaml NOW</step>'));
+    assert.equal(c2.passed, true, c2.detail);
   });
 });

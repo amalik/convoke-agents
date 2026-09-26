@@ -2582,3 +2582,54 @@ definitions it judged. R2 — the file list was read from the directory it judge
 meant to pin a guard matched a neighbouring guard's message. Each time the fix was correct and the
 thing verifying it could not tell the fix from its absence.
 
+## T214
+
+**Lane:** Fast Lane · **Score:** 6.0 · **Portfolio:** loom · **Status:** ✅ Done 2026-09-26
+
+**Defect.** Check 2 of `activation-validator.js` verifies that a generated agent's activation block
+references its module config. It normalised both sides — stripping a leading `{project-root}/`, then
+everything up to the first `_bmad/` — and compared with `includes`, so `_bmad/bme/_x/config.yaml` and
+`{project-root}/_bmad/bme/_x/config.yaml` collapsed to one string. An unprefixed reference resolves
+against whatever directory the agent is activated from, and `step-04-generate.md` §3a handed BMB that
+form until 2026-09-24.
+
+**Fix.** The module-relative tail is still derived from the caller's `moduleConfig.configPath`, which
+may arrive prefixed, unprefixed or absolute — it is an argument, not an artifact. The agent file is
+held to the convention: **every** occurrence of the tail must carry `{project-root}/`.
+
+**The first attempt narrowed the defect instead of closing it.** Requiring one prefixed occurrence
+anywhere in the block was not enough. The shipped agent template names the config three times — once in
+the load step and twice inside the quoted "Configuration Error" boilerplate — so an agent whose load
+instruction was unprefixed still contained the prefixed string and passed, which is T214's own stated
+outcome. It is also the shape an LLM authoring from a template produces: substitute the value handed
+to you, copy the boilerplate verbatim. Found by R1 before the change landed.
+
+| Fact | Command |
+|---|---|
+| All 9 agents with activation blocks pass; the 3 v6.3 agents have none (T127) | `node --test tests/team-factory/activation-validator.test.js` — plus the real-agent sweep in that file |
+| An unprefixed load step fails even when the boilerplate is prefixed | same file, `REJECTS an unprefixed LOAD step even when the boilerplate carries the prefix` |
+| The suite is green | `npm test` |
+
+| Mutant | Killed by |
+|---|---|
+| revert to normalising both sides | `REJECTS the same path without the prefix, and says why` |
+| one prefixed occurrence is enough again | `REJECTS an unprefixed LOAD step even when the boilerplate carries the prefix` |
+| check 2 goes module-blind | `reports error for wrong config path` — only after R1 had its fixture prefixed |
+| absent path passes vacuously | `distinguishes 'wrong form' from 'absent'` |
+| near-miss diagnostic forced off | `calls a near-miss prefix what it is` |
+| `errors[]` branch collapses | `puts the same distinction in errors[]` |
+| caller-side separator normalisation dropped | the any-form caller test, after a backslash form was added to it |
+
+**What R1 found besides the HIGH.** The `wrong-config` fixture was check 2's sole executioner for
+module discrimination and had stopped killing it — a module-blind check 2 passed 20/0 — because the
+fixture's failure had silently migrated from "wrong module" to "missing prefix" when the behaviour
+changed around it. `step-04-generate.md` told the operator in two places that the gate "accepts either"
+form, one of them citing `normaliseConfigRef`, a function this change renames away. And the code
+comment claimed "all 12 shipped agents write the prefixed form" when 3 of the 12 write no config
+reference at all — the repo's own T127 row already had the right number.
+
+**Accepted, not fixed:** `includes` still matches the tail inside a longer filename, so an agent
+referencing only `…/config.yaml.bak` passes — a pre-existing substring class, and the sibling question
+of whether check 2 should inspect the load instruction specifically rather than the whole block is
+already filed as T138.
+

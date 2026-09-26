@@ -89,31 +89,65 @@ async function validateSingleAgent(agentFile, moduleConfig) {
   // caller may pass either the `{project-root}/...` convention form that agents
   // actually write, or a resolved absolute path. Previously this was a bare
   // includes() and therefore turned on the caller's string form.
-  const normaliseConfigRef = (p) =>
-    String(p).replace(/\\/g, '/').replace(/^\{project-root\}\//, '').replace(/^.*?(?=_bmad\/)/, '');
-  const expectedConfigRef = normaliseConfigRef(moduleConfig.configPath);
+  // T214: the module-relative tail is derived from the CALLER's parameter, which may legitimately
+  // arrive prefixed, unprefixed or absolute — it is an argument, not an artifact. The AGENT FILE is
+  // held to the convention: `{project-root}/_bmad/…/config.yaml`, which is what the 9 agents that
+  // HAVE an activation block write (27 references across them; the 3 v6.3 agents have none, per T127)
+  // and what `step-04-generate.md`'s `{config_path}` row specifies.
+  //
+  // Before this, both sides were normalised — the prefix stripped, then everything up to the first
+  // `_bmad/` — and compared with `includes`. So `_bmad/bme/_x/config.yaml` in an agent file satisfied
+  // an expected `{project-root}/_bmad/bme/_x/config.yaml`: the two forms collapsed to one string. An
+  // unprefixed reference resolves against whatever directory the agent is ACTIVATED from, so this
+  // check was blind to the one thing it exists to catch, and step-04 §3a handed BMB that very form
+  // until 2026-09-24.
+  const toSlash = (p) => String(p).replace(/\\/g, '/');
+  const configTail = (p) => toSlash(p).replace(/^\{project-root\}\//, '').replace(/^.*?(?=_bmad\/)/, '');
+  const expectedConfigRef = configTail(moduleConfig.configPath);
   // tf-2-12 R2: reject a configPath that cannot identify a module BEFORE comparing.
   // Previously `activationContent.includes('')` short-circuited the `||` to true, so
   // '', ' ', 'a' and even a bare 'config.yaml' passed against ANY agent — a bare
   // filename is contained in every activation block that mentions a config at all.
   const configRefUsable = expectedConfigRef.includes('/') && expectedConfigRef.endsWith('config.yaml');
-  const configPathValid = configRefUsable && (
-    activationContent.includes(moduleConfig.configPath) ||
-    normaliseConfigRef(activationContent).includes(expectedConfigRef)
-  );
+  const activation = toSlash(activationContent);
+  const conventionRef = `{project-root}/${expectedConfigRef}`;
+
+  // EVERY occurrence must be prefixed, not merely one of them. Requiring `activation.includes(
+  // conventionRef)` was not enough: the shipped agent template names the config three times — once in
+  // the load step and twice inside the quoted "Configuration Error" boilerplate — so an agent whose
+  // LOAD instruction is unprefixed still contained the prefixed string, and passed. That is T214's
+  // own outcome (an agent resolving its config against the directory it was activated from), and it
+  // is the shape BMB produces when it substitutes the value it was handed and copies the boilerplate
+  // verbatim. Found by R1, 2026-09-26.
+  const occurrences = configRefUsable
+    ? [...activation.matchAll(new RegExp(expectedConfigRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))]
+    : [];
+  const bare = occurrences.filter((m) => !activation.slice(0, m.index).endsWith('{project-root}/'));
+  const configPathValid = configRefUsable && occurrences.length > 0 && bare.length === 0;
+  // A near miss is reported as one: `{PROJECT-ROOT}/`, `{project-root}//`, `{project-root}/./` and a
+  // prefix wrapped onto the previous line all leave an unprefixed occurrence, and telling their author
+  // to "add the prefix" tells them to write what they think they wrote.
+  const nearMiss = bare.length > 0
+    && bare.some((m) => /\{\s*project[-_ ]?root\s*\}[/.\\]*\s*$/i.test(activation.slice(0, m.index)));
   checks.push({
     check: 'Config path reference',
     passed: configPathValid,
     detail: configPathValid
       ? undefined
-      : configRefUsable
-        ? `Expected reference to "${moduleConfig.configPath}" not found in activation block`
-        : `moduleConfig.configPath ("${moduleConfig.configPath}") cannot identify a module — expected a path ending in .../config.yaml`
+      : !configRefUsable
+        ? `moduleConfig.configPath ("${moduleConfig.configPath}") cannot identify a module — expected a path ending in .../config.yaml`
+        : nearMiss
+          ? `Activation block references "${expectedConfigRef}" with a prefix that is not exactly "{project-root}/" (check case, doubled or "./" segments, and a prefix wrapped onto the previous line). Write "${conventionRef}"`
+          : bare.length > 0
+            ? `Activation block references "${expectedConfigRef}" ${bare.length} time(s) without the "{project-root}/" prefix. Those resolve against the directory the agent is activated from — every occurrence must read "${conventionRef}"`
+            : `Expected reference to "${conventionRef}" not found in activation block`
   });
   if (!configPathValid) {
-    errors.push(configRefUsable
-      ? `Config path "${moduleConfig.configPath}" not referenced in activation block`
-      : `Unusable moduleConfig.configPath "${moduleConfig.configPath}" — expected a path ending in .../config.yaml`);
+    errors.push(!configRefUsable
+      ? `Unusable moduleConfig.configPath "${moduleConfig.configPath}" — expected a path ending in .../config.yaml`
+      : bare.length > 0
+        ? `Config reference "${expectedConfigRef}" appears ${bare.length} time(s) without its "{project-root}/" prefix — those resolve against the activation cwd`
+        : `Config path "${conventionRef}" not referenced in activation block`);
   }
 
   // Check 3: Config file exists on disk
