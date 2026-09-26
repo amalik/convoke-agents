@@ -3,9 +3,10 @@ title: 'Channel Integrity: how Convoke arrives'
 initiative: convoke
 artifact_type: prd
 qualifier: channel-integrity
-status: draft
+status: superseded
 created: '2026-09-26'
 updated: '2026-09-26'
+superseded_by: '_bmad-output/planning-artifacts/convoke-note-channel-integrity-findings-2026-09-26.md; _bmad-output/planning-artifacts/adr/channel-integrity/adr-001-the-distribution-unit.md'
 schema_version: 1
 qualifier_role: operator-authored
 inputDocuments:
@@ -14,7 +15,28 @@ inputDocuments:
 
 # Channel Integrity: how Convoke arrives
 
-> **Status: draft — Discovery in progress.** Nothing below is a requirement yet.
+> ## ⚠️ SUPERSEDED 2026-09-26, the day it was drafted. Do not build from this document.
+>
+> Five independent reviews found that its requirements had **already foreclosed three of
+> the four options** for a decision the document itself declared open, that `declared`
+> carried two opposite meanings in one document, that FR4 specified a gate which cannot
+> fail, that NFR1 stated a cadence cap the project's own architecture records as
+> unsatisfiable, and that NFR2 asserted a budget already spent. Fourteen figures were
+> wrong.
+>
+> **What replaced it.** The verified diagnosis is
+> `convoke-note-channel-integrity-findings-2026-09-26.md`. The open ruling is
+> `adr/channel-integrity/adr-001-the-distribution-unit.md`. Requirements come after the
+> ruling, not before it.
+>
+> **Why this file is kept.** A retraction is a first-class outcome: the row is struck,
+> not deleted. The five reviews beside it (`review-*.md`, `reconcile-*.md`) are the most
+> useful artifacts of the day and they cite this text. `.memlog.md` holds the decision
+> trail, including every correction as an `override` row.
+>
+> **Status of the original draft below: superseded.**
+
+> **Original header: draft — Discovery in progress.** Nothing below is a requirement yet.
 > The trigger and the measured position are recorded first because they are derived
 > facts, not proposals: every figure was produced by execution on 2026-09-26, and
 > mechanism claims carry their primary source in `addendum.md`.
@@ -76,7 +98,144 @@ what the requirements must answer.
   has no dependency mechanism at all?
 - *(further open questions accrue during Discovery)*
 
-## Requirements
+## Goals
 
-*Pending Discovery — brain dump, stakes, working mode.*
+**G1.** Everything Convoke exposes to a public channel is exposed on purpose, and the
+exposed set is verifiable by a command rather than asserted.
+**G2.** A Convoke skill that arrives without its runtime says so, names what is
+missing, and gives the command that fixes it — in the storefront and at runtime.
+**G3.** The parts of Convoke that carry its value — the workflows and the handoff
+contracts — become addressable, so the flow can travel through a channel whose unit
+is one skill.
+**G4.** Both segments arrive intact: the BMAD-addon majority through the channel they
+already use, the standalone minority with the whole module.
+
+## Non-goals
+
+- **Winning a skill-level install count.** Wade at one install is the correct output
+  of a one-skill channel meeting a many-part product, not a marketing failure.
+  Install counts are a counter-metric here, not a goal.
+- **Matching upstream's unreleased tree.** The flat-skills restructure is on `main`
+  and in no tagged release; chasing it violates NFR1.
+- **A multi-team release.** The ratified baseline-before-expansion rule binds this
+  initiative (NFR2).
+
+## Success metrics
+
+| | Metric | Today | Target |
+|---|---|---|---|
+| SM1 | Reachable set equals declared set | 9 reachable, **0 declared** | equal, checked in CI |
+| SM2 | Agents addressable | 7 of 11 | 11 of 11 |
+| SM3 | Workflows addressable | 0 of 30 | *to be set with G3's scope* |
+| SM4 | Contracts addressable | 0 of 14 | *to be set with G3's scope* |
+| SM5 | Single-skill installs that fail **silently** | unknown, assumed all | zero |
+| SM6 | Non-product `SKILL.md` reachable by any documented flag | 38 | zero |
+
+**Counter-metrics** — watched so the goals are not gamed: install counts and number
+of listings (both can rise while SM5 worsens); count of names published (rises
+irreversibly, see NFR3); number of new CI gates (NFR2's budget).
+
+## F1 — The discovery surface is intentional
+
+- **FR1.** The set of Convoke skills reachable through each public channel is
+  declared in one place in the repository.
+- **FR2.** Every reachable set is derivable by a command that a reader can run, and
+  the command is the source of any figure quoted about it.
+- **FR3.** Every `SKILL.md` in the repository that is not a product skill is marked
+  such that no documented channel path offers it for installation — including
+  explicitly-flagged paths, not only default ones.
+- **FR4.** A check fails CI when the reachable set diverges from the declared set.
+- **FR5.** No name is published into a channel before FR1–FR4 hold for that channel.
+
+## F2 — A skill that arrives alone says so
+
+- **FR6.** Any Convoke skill that requires the Convoke runtime detects its absence
+  during activation, before producing output.
+- **FR7.** On detecting absence, the skill names the missing component and states the
+  exact command that obtains it.
+- **FR8.** The dependency is legible in the channel's rendered storefront text, not
+  only at runtime. *(The storefront renders frontmatter `description`; a README is
+  invisible to it.)*
+- **FR9.** A skill never silently produces output when its runtime is absent.
+  Degradation is permitted; silence is not.
+
+## F3 — References resolve wherever the skill lands
+
+- **FR10.** Every reference from a skill to a file outside its own directory states
+  its resolution base explicitly.
+- **FR11.** Under an install where the skill root is not inside the operator's
+  project — a plugin cache, a global skills directory — a Convoke skill either
+  resolves its references correctly or fails per FR6–FR9.
+- **FR12.** A check fails CI on any bare cross-directory path in a shipped skill.
+  *(This is T214's class, extended past config references to capability references.)*
+
+## F4 — The flow is addressable
+
+- **FR13.** All 11 agents across both teams exist in the repository as skills.
+  *(Gyre's four are generated at install time today and exist nowhere in the tree.)*
+- **FR14.** Each workflow can be invoked by name without first activating an agent.
+- **FR15.** Each handoff contract is a named, addressable artifact.
+  *(HC1–HC5 are files; HC6–HC10 exist only as mentions across a README, a routing
+  reference and seven workflow step files.)*
+- **FR16.** Every skill name is allocated from a single registry, and no two skills —
+  Convoke's or an upstream skill Convoke ships alongside — claim the same name.
+- **FR17.** A skill that is metadata or scaffolding rather than a capability is
+  distinguishable from one an operator should invoke.
+
+## F5 — Both segments arrive intact
+
+- **FR18.** An operator who already has BMAD can add Convoke by the same means they
+  add BMAD skills.
+- **FR19.** An operator with no BMAD receives the complete module, configuration
+  included, and is not required to obtain it from a second channel.
+- **FR20.** Every published artifact declares which upstream BMAD versions it is
+  compatible with, and that declaration is checkable.
+- **FR21.** An operator can tell, before installing, which parts of Convoke a given
+  channel path will and will not deliver.
+
+## F6 — The record matches what ships
+
+- **FR22.** Statements about Convoke's distribution in operator-facing documents are
+  derived from the repository at the stated version, never asserted from memory.
+- **FR23.** No shipped Convoke surface depends on an upstream component that upstream
+  has removed or renamed.
+- **FR24.** When a channel carries a defect Convoke cannot fix, the limit is
+  disclosed rather than omitted. *(Two supply chains, only one of them Convoke's.)*
+
+## Non-functional requirements
+
+- **NFR1 — Cadence.** Convoke tracks upstream at N-1, four to six weeks behind. No
+  restructure targets an upstream branch that has no tagged release.
+- **NFR2 — Budget.** The ratified baseline binds: one ADR, one name registry, one
+  doctor check, hard budget. Work that exceeds it is a separate initiative, and the
+  count of new self-facing gates is a counter-metric.
+- **NFR3 — Irreversibility.** No action publishes a name into a channel from which it
+  cannot be retracted until F1 holds. *(There is no self-serve delisting; retraction
+  is manual and discretionary.)*
+- **NFR4 — Operator sovereignty.** The installer never writes governance rows on the
+  operator's behalf. *(The BUG-19 ruling: an empty registry created at install, not a
+  populated one.)*
+- **NFR5 — Derivation.** Any figure in a shipped document carries the command that
+  produces it.
+- **NFR6 — Safety of the shipped surface.** Nothing Convoke publishes can shadow an
+  upstream skill an operator already depends on.
+
+## Gaps this draft does not fill
+
+- **User journeys are missing by design.** "How an operator finds, installs and first
+  runs Convoke" is a journey, and every one of the six defects lives inside it — but
+  journeys are captured from your narration, not authored here. Two protagonists are
+  needed: one who already runs BMAD, one who does not. **The operator reviewed and
+  accepted this draft on 2026-09-26 without narrating them, so FR18–FR21 stand on
+  inference by acceptance rather than by capture** — a later reader should treat those
+  four as the least validated requirements in the document.
+- **SM3 and SM4 have no target.** Setting them is the same decision as OQ-1.
+- **[ASSUMPTION] Stakes: internal-to-launch.** Calibrated from the corporate pilots
+  and the leadership track, bounded by NFR2. Say otherwise and the depth changes.
+- **[ASSUMPTION] Entry point: Vision + Features**, capability-first, on the grounds
+  that this is developer tooling with a single operator role per segment.
+- **[NOTE FOR PM]** `_bmad/bmm/config.yaml` still carries `project_name: BMAD-Enhanced`;
+  it named this run folder. And this skill writes `prds/<run>/prd.md` while every
+  existing PRD here is a flat `convoke-prd-<qualifier>.md`. Both want a ruling before
+  finalize.
 
