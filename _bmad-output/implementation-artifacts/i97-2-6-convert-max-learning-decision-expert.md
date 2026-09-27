@@ -2,6 +2,44 @@
 
 Status: ready-for-dev
 
+> ## ⛔ STOP — the activation contract in this spec is superseded. Amended 2026-09-27 by `T183`.
+>
+> **Do not write an `## On Activation` block from this spec, or from Story 2.4's, without reading this.**
+> The v6.3 conversion contract these stories were authored against delegates config loading to the
+> **`bmad-init`** skill. That skill has not existed since `a16fa340` (2026-06-27) and no Convoke release
+> ships `_bmad/core`:
+> `node -e "console.log(require('./package.json').files.some(p=>p.startsWith('_bmad/core')))"` → `false`.
+> Building it as specified re-introduces the exact defect `T183` closed in Emma, Mila and Wade.
+>
+> **Settled — and this is the whole of what is settled.** Two things: the config to read is
+> `{project-root}/_bmad/bme/_vortex/config.yaml`, the file `convoke-install-vortex` writes; and `bmad-init`
+> must not appear anywhere in the block. **Nothing else about the converted agents' block is settled for
+> this agent** — see the next paragraph. Read
+> `_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md`, `## On Activation`, to see how those two are
+> expressed. Its per-state remedies are correct for a soft-warn design and may not be the right shape here.
+>
+> **NOT settled for THIS agent — get a ruling before you write the block.** `T183`'s soft-warn ruling covers
+> only the three already-converted agents. Whether the four still-unconverted ones converge on soft-warn or
+> on an OC-R1-compliant hard-stop that offers a default first is an **open operator decision**, filed in the
+> initiatives backlog as `IN-243` along with whether HC1–HC10 must state the behaviour. This agent is one of
+> those four. Do not settle it by following the three converted agents.
+>
+> **The P0 contract also changed**, so any instruction in this spec to match or preserve the exact string
+> `1. **Load config via bmad-init skill**`, or to retitle a P0 test around it, is unsatisfiable. For a v6.3
+> agent, `tests/p0/helpers.js` now requires a per-module config reference plus the ruled never-stop wording
+> in step 1, and rejects the block outright if step 1 mentions `bmad-init` — see
+> `tests/p0/p0-activation-contract.test.js`. That check inspects **step 1 of a v6.3 `SKILL.md` only**; it
+> does not reach reference files, workflow steps or guides. Note also that **line-anchored citations into
+> `helpers.js` elsewhere in this spec have shifted** — locate symbols by name, not by line.
+>
+> **Left standing deliberately, by operator ruling:** the PRD
+> (`convoke-prd-bmad-v63-source-format-adoption.md`) and the epic
+> (`convoke-epic-bmad-v63-source-format-adoption.md`) still state FR4 as delegation to `bmad-init`, and a
+> second ratified PRD (`convoke-prd-bmad-v6.3-adoption/functional-requirements.md`) states the opposite.
+> Amending ratified requirements was scoped out of `T183`; the contradiction is filed as `IN-244`. The
+> architecture is the one place that is current — FR4 **Amendment 1** in
+> `convoke-arch-bmad-v63-source-format-adoption.md`.
+
 **Epic:** [i97-epic-2 — Vortex Agent Conversions Complete](../planning-artifacts/convoke-epic-bmad-v63-source-format-adoption.md#epic-2-vortex-agent-conversions-complete) (atomic-by-agent commit pattern per ADR-004)
 **Origin:** I97. **Sixth per-agent conversion.**
 **Canonical template:** [Story 2.4 (Isla)](i97-2-4-convert-isla-discovery-empathy-expert.md) — the shared cycle is fully specified there. **This spec carries only Max's deltas.**
