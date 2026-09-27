@@ -147,6 +147,84 @@ and not started now: it requires a ratification this initiative does not hold.
 `kind: skill` row type, and the hub **fronts** the existing CLIs before absorbing them.
 **Still open:** the hub's name, and the order of the remediation.
 
+## Amendment 1 — channel tiers, and S2 reopened (ruled 2026-09-27)
+
+**Ruled by Amalik, in conversation, and recorded here because a signed ADR named a destination he does
+not want.**
+
+### A1.1 — Both channels are non-reference and disclaimed
+
+> Reference distribution is **GitHub + npm**. Both `skills.sh` **and** the Claude Code plugin
+> marketplace are **non-reference** channels: they may carry incomplete features, and users arriving
+> through them are told so. Being *referenced* there is acceptable; being *represented* by them is not.
+
+**The purpose is visibility, not distribution** — in his words, *"to reference all of our agents/skills
+on these places as a quick win without degrading our core reference product."*
+
+**The binding condition is non-degradation, not completeness.** He said *"as long as I'm 100% sure our
+product on GitHub and npm is complete"*, and on a literal reading that gate can never open: the maturity
+ledger's own §1 carries **4 Shipped, 6 "Works with limits", 4 "Mapped, not built"** across 14
+client-facing rows, with both *teams* at "Works with limits" and "Plugin marketplace distribution" itself
+"Mapped, not built". So the condition is read as his second clause states it — *without degrading the core
+reference product* — and made testable as A1.3.
+
+### A1.2 — S2 is no longer the destination, and the reason is his constraint, not a cost
+
+> *"I don't want to sell the differentiator to buy the channel."*
+
+**S2 as signed does sell it**, and the option text concedes it without noticing: it asserts *"the module
+stays the unit of coherence"* while the ledger's contracts row states *"Agents are instructed to follow
+them. **No software checks a document against its template.**"* The coupling — HC1–HC10, one stage's
+output feeding the next — exists only as prose, so **the single mechanism holding it together is that the
+pieces arrive together.** Promoting 43 units to independently installable skills removes exactly that.
+The earlier correction (the atom is the step, not the persona) changed *what* would be atomised, not
+*whether* atomisation dissolves the coupling; "publish the differentiator" was a rename, not a fix.
+
+**S2's status: reopened.** It is not a destination. If it is ever revisited it carries a precondition —
+**contract conformance enforced in software before the units become independently installable** — because
+only then does separating them not sell anything. **S4 is therefore not a step toward S2.**
+
+### A1.3 — The disclaimer: a flat notice plus a pointer, neither of which can rot
+
+Both parts, because each carries a different kind of claim:
+
+- **Pre-install, in the frontmatter `description`** — the only text Convoke controls that a browsing user
+  sees, and the only surface **both** channels render. Terse, because that field is also the activation
+  trigger: the three converted agents' descriptions already run **174 / 204 / 203** characters against
+  upstream `bmad-prd`'s 104, and doubling a trigger dilutes it.
+- **Post-install, in the body: a pointer, never a transcribed status.** *"This capability's current
+  maturity and known limits are recorded in the maturity ledger"* + link — the skill states the
+  **invariant**, the ledger states the **value**. A copied status rots on the next ledger edit;
+  `documentation-claims-must-be-derived` forbids it, and `docs/testing.md` already demonstrates the
+  pattern by refusing to state totals at all.
+
+**This is the testable form of A1.1's condition:** a channel listing never claims more than the ledger's
+status for that capability, so the channel version cannot overstate the reference.
+
+### A1.4 — Two corrections this ruling forces
+
+1. **Gyre's `SKILL.md` wrappers become a PREREQUISITE, not a non-issue.** The `cir` epic states defect 4
+   is *"resolved by the ruling's design, not by remediation"* because the hub materialises the runtime.
+   **Under A1.1 that is false:** referencing all agents requires declarable manifest paths, and Gyre's
+   four agents have **no `SKILL.md` in the repo at all**. The epic row must be corrected.
+2. **`validate-marketplace.js`'s identity invariant must widen.** It enforces set identity between
+   `marketplace.json` `skills[]` and `AGENT_IDS` — the 7 Vortex agents — so declaring 11 fails at
+   `ci.yml:206`, inside `agent-surface-parity`, which is in `publish.needs`. Proven by execution:
+   *"unexpected skill path(s): convoke"*.
+
+**And the shared-manifest fact that made disclaiming both cheaper than disclaiming either:**
+`.claude-plugin/marketplace.json` is read by **both** channels — `npx skills` README: *"If
+`.claude-plugin/marketplace.json` or `.claude-plugin/plugin.json` exists, skills declared in those files
+are also discovered"* — and the `description` they render is the same string. One manifest, one
+disclaimer surface, two channels.
+
+### A1.5 — The cheapest thing in the plan, found while checking A1.3
+
+The four v5 agents' descriptions are **21–36 characters** (`hypothesis-engineer` is 21). Even where those
+agents are listed they are near-undiscoverable, because a browsing operator has nothing to match on.
+Writing four real descriptions is smaller than the hub and smaller than the manifest work, and it is the
+part that actually makes a listing findable.
+
 ## Consequences
 
 The four constraint questions the ruling had to answer. **Three are settled by S4

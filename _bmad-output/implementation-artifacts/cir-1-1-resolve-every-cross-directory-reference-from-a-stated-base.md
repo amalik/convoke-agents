@@ -4,7 +4,7 @@ baseline_commit: 14403e55
 
 # Story cir-1.1: Resolve every cross-directory reference from a stated base
 
-Status: done
+Status: review
 
 **Epic:** [cir — Channel-Integrity Remediation](../planning-artifacts/convoke-epic-channel-integrity-remediation.md)
 **Namespace decision:** Convoke-owned — 12 files under `_bmad/bme/_vortex/agents/*/references/` and one new test under `tests/unit/`. No skill, agent or workflow is added, and no script is changed.
@@ -191,6 +191,44 @@ circular — was settled by reading the fixture. It is a frozen pre-migration ca
 it predates the reference files and is a *stronger* condition-2 oracle than the `SKILL.md`, which at
 least ships in the same commit as the file it judges.
 
+### R2 findings — the remediation reviewed, per `a-remediation-is-an-unreviewed-change`
+
+**R2, 2026-09-27.** Two scoped layers: one adversarial on the rebuilt guard, one on the five record
+corrections. 29 mutants. **Not yet applied** — recorded first because the reports are ephemeral.
+
+#### Code — the rebuild traded breadth for depth and did not disclose it
+
+- [ ] [R2][Patch] **HIGH — a 4th agent converted with bare paths is GREEN, and the old guard caught it** [tests/unit/agent-capability-reference-paths.test.js:104] — the rewrite iterates `Object.entries(frozen)`, hard-listing three agents at `:98-99`; the old version iterated every agent whose `SKILL.md` named `./references/*.md`. Measured: a simulated Isla conversion with bare paths → **new guard 31/31 GREEN, old guard red**. `I97` Stories 2.4–2.7 convert exactly four more agents, so **the story's forward-looking purpose is currently unguarded**, and the old header's promise ("a newly converted agent goes red until its references are prefixed; that is the point") was deleted by the rewrite and is not in the new non-detection list. **Fix: keep the frozen per-code assertion AND re-add a shape+existence sweep over every agent with a `references/` directory, red-by-default when one has no baseline.**
+- [ ] [R2][Patch] **HIGH — a commented-out capability table satisfies both set-equality assertions** [tests/unit/agent-capability-reference-paths.test.js:66] — `routedCapabilities()` anchors on `^\|`, which a row inside `<!-- -->` still matches. Wrapping Wade's five routed rows in a comment, so he can route nothing, leaves this guard **and** `vortex-parity` green. The guard reads its oracle out of dead markdown. Also `out[m[1]] = m[2]` is last-wins with no duplicate-code check.
+- [ ] [R2][Patch] **HIGH — `preMigrationGitBlob` is decorative** [tests/unit/agent-capability-reference-paths.test.js:22] — its only occurrence in all of `tests/` and `scripts/` is the sentence claiming the pin. Nothing compares `menuCodeToWorkflow` to the blob, so the independence argument's load-bearing clause is unenforced. R2 verified it by hand — all three blobs reproduce all 12 mappings — and found that **the v5 `exec=` attributes already carried `{project-root}/`: the migration is what dropped the prefix.** ~6 lines makes the pin real.
+- [ ] [R2][Patch] **HIGH — a doubled base passes, and the file's own comment says it cannot** [tests/unit/agent-capability-reference-paths.test.js:133] — `{project-root}/{project-root}/_bmad/…` → the 15-char look-back sees a prefix and the captured string is unchanged, so set equality passes. Measured. Line 133 claims set equality kills "a double base".
+- [ ] [R2][Patch] **MED — exact set equality forbids a legitimate additional path** [tests/unit/agent-capability-reference-paths.test.js:134] — a real `hc4-experiment-context.md` contract pointer reddens the suite; so does naming the same workflow twice (`found` is an array, not a Set). **Needs an operator ruling**: subset (`captured ⊆ found`, all prefixed and existing) permits additions and gives back a little strictness.
+- [ ] [R2][Patch] **MED — `expectedPaths()` hard-codes the sibling-`steps/` convention** [tests/unit/agent-capability-reference-paths.test.js:76-81] — true for all 23 workflow directories today, enforced nowhere; a stepless workflow fails unfixably without editing the test. **Also an operator ruling.**
+- [ ] [R2][Patch] **MED — `routedCapabilities()` mis-parses nine table shapes, three silently mis-route** [tests/unit/agent-capability-reference-paths.test.js:66] — a 3-letter code is dropped (and `parity-harness.js:57` uses `[A-Z]{2,3}`, so the repo's two menu-code parsers disagree on what a code is); two refs in one cell takes the **last**; `[^|]*` matches newlines so following prose can mis-route.
+- [ ] [R2][Patch] **MED — the existence test never reads the file it is named after** [tests/unit/agent-capability-reference-paths.test.js:138-153] — it uses only fixture paths, so `${code} -> ${file}: every target exists` is a fixture-vs-repo assertion wearing a subject title. Overwrite `mvp.md` with garbage and it still passes.
+- [ ] [R2][Patch] **MED — a collection-time throw reports `fail 0` and exit 0** [tests/unit/agent-capability-reference-paths.test.js:106] — `routedCapabilities()` runs in the `describe` body; deleting one `SKILL.md` gives `tests 19 · pass 19 · fail 0`, exit 0 under bare `node --test`. `npm test`'s T66 side channel catches it, but that gate is best-effort by its own comment. Move the call inside the `it`s.
+- [ ] [R2][Patch] **MED — `readdirSync` is unfiltered, so a `.DS_Store` reddens the gate** [tests/unit/agent-capability-reference-paths.test.js:116] — `vortex-parity.test.js:107` filters `.endsWith('.md')`; this does not. The old guard was green on the same tree. A gate that fails because someone opened a Finder window is a gate that gets skipped.
+
+#### Record — stop patching, delete the narrative (`docs-1-6`)
+
+**Ten CONFIRMED record findings, and the decisive one is that my own correction introduced two new false
+claims.** The AC2 strike says T214's R2/R3 "belong to `activation-validator.js` check 4" — but
+`git log --name-only --grep=T214` shows `85105d36` and `d6ed9151` **both touch this test file**, so those
+rounds are its own two commits; and by the AC body one paragraph above, the reading the strike declares
+wrong was the correct one. Per `docs-1-6` the response is **deletion, not a third version**: the
+round-history prose, the old-guard column, the tallies and the derived figures come out, leaving defect ·
+fix · reproducing command.
+
+Also confirmed stale or wrong, none of which bears on whether the guard works: **"eight mutants" is six**
+(the table contradicts itself — only 7 rows say GREEN, one is the control — and the `drop a routing row`
+cell is wrong, since the old `total >= 12` floor sat exactly on 12, so 11 failed); `1232` → **1238**;
+`1040` → **1042**; `:481` → **:482** in three places; "857 uses across 356 files" matches **no** scope
+(closest is 799/351) and the "zero `{project_root}`" half is false for shipped `scripts/`; the bare-eslint
+explanation names one file when 5 of 6 errors are in another; and **K6's `grep 'rigor bar'` demonstration
+is not reproducible** — the string exists nowhere but K6's own line.
+
+#### Patch — R1 (applied)
+
 #### Patch — the guard is weaker than it claims
 
 - [x] [Review][Patch] The guard never checks the target is the RIGHT one, and the oracle exists in-repo, unused [tests/unit/agent-capability-reference-paths.test.js:113-126] — mutant M16 cross-wired all 12 capabilities to `mvp/workflow.md`; unit 25/25, `vortex-parity` 27/27, `tests/p0` 613/613 all stayed green. `tests/integration/fixtures/vortex-parity/*-baseline.json` carries `menuCodeToWorkflow` for **12/12** codes. Asserting `line21 === PREFIX + fixture.menuCodeToWorkflow[code]` closes this and three findings below at once.
@@ -295,6 +333,15 @@ grep -rc '_bmad' <tmp>/…/          | grep -v ':0$' | wc -l  # 0
 Same file count, same prose, no leaked token — identical to the pre-fix export. **The prefix changed
 nothing for the standalone segment**, which is what the retraction claimed and what an implementation
 could have quietly falsified.
+
+### ⚠️ R2 is open — this story is NOT done
+
+`a-remediation-is-an-unreviewed-change`: *"A round does not close on 'findings applied'; it closes when
+the applied findings have themselves been checked."* R1's fixes rebuilt a guard and rewrote five record
+claims; both are new, unreviewed work. Status was set to `done` on "findings applied" and is corrected
+back to `review`. R2 is scoped to what the remediation touched — the rebuilt guard and the five
+corrections — not a fresh full round, per `docs-1-7`: rewritten *executable logic in something that must
+not be foolable* earns one scoped follow-up layer; rewritten narration does not.
 
 ### R1 outcome — the guard was rebuilt, not patched
 
