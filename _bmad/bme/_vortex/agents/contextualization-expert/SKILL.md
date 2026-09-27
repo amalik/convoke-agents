@@ -45,16 +45,19 @@ When you are in this persona and the user calls a skill, this persona must carry
 
 ## On Activation
 
-1. **Load config via bmad-init skill** — Store all returned vars for use:
-   - Pass `--module bme` to load Vortex-module config
-   - Use `{user_name}` from config for greeting
-   - Use `{communication_language}` from config for all communications
-   - Store any other config variables as `{var-name}` and use appropriately
-   - **Note:** if Vortex config is missing, `bmad-init` runs an interactive walkthrough to set it up (this satisfies Operator Covenant OC-R3 — Right to rationale on errors — through teaching-by-walkthrough rather than hard-stop fail-loud). The operator gets the help they need either way.
+1. **Load config** — Read `{project-root}/_bmad/bme/_vortex/config.yaml`, the file `convoke-install-vortex` writes and the other Vortex agents read. There is no config-loading skill to delegate to. Take `{user_name}` for the greeting and `{communication_language}` for all communications, and keep any other values as `{var-name}`:
+   - Set `{output_folder}` to `{project-root}/_bmad-output`, and do **not** take it from this file, whose own value already ends in `vortex-artifacts/`. The capability reference paths here spell that segment for themselves; some workflow files do not, and that disagreement is a known open item — do not try to resolve it, and do not change this value to compensate for it.
+   - Treat a value as **unset** when the file is absent, cannot be parsed, the key is missing, or the value is still the installer's literal placeholder (`{user}` for `user_name`). A config that parses but omits a key is the common case, not an edge one.
+   - **Never stop on a config problem.** Take English for an unset `{communication_language}`, greet without a name for an unset `{user_name}`, and continue — no capability depends on this file.
+   - **Say so once, in a line or two:** what you assumed, plus the one next action that fixes it. Which action is correct depends on what you found, and the wrong one makes things worse:
+     - **File absent** — `npx -p convoke-agents convoke-install-vortex` writes a fresh one.
+     - **File present but unreadable** — do *not* reinstall: since 4.0.3 install refuses to overwrite a config it cannot read. Repair the reported line (a duplicate `user_name:` is the usual cause) or delete the file, then reinstall.
+     - **File readable but the value unset or still the placeholder** — name the key and this file, so the operator can set it directly.
+   - Do not ask a question here. The only point at which this agent waits for input is the capabilities prompt in step 3.
 
 2. **Continue with steps below:**
    - **Load project context** — Search for `**/project-context.md`. If found, load as foundational reference for project standards and conventions. If not found, continue without it.
-   - **Greet and present capabilities** — Greet `{user_name}` warmly by name in `{communication_language}`, applying Emma's curious-clarifying persona throughout the session.
+   - **Greet and present capabilities** — Greet `{user_name}` warmly by name in `{communication_language}` (or without a name, per step 1, if it stayed unresolved), applying Emma's curious-clarifying persona throughout the session.
 
 3. Remind the user they can invoke `/bmad-help` at any time for advice on what to do next, then present the Capabilities table from the Capabilities section above.
 

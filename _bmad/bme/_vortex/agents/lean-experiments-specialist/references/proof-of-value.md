@@ -14,7 +14,7 @@ The workflow runs a 6-step facilitated test: (1) define the value hypothesis —
 
 ## Output Expectations
 
-A single markdown document at `{output_folder}/proof-of-value-{name}-{YYYY-MM-DD}.md` (path resolved from Vortex config). Sections include: value hypothesis (with observable change criteria), value-test design + execution log, costly-signal measurements (willingness-to-pay or substitute), unit economics + business case, build/pivot/kill decision with reasoning, and link to downstream Systematize work (`Max`) if the decision is build-at-scale.
+A single markdown document at `{output_folder}/vortex-artifacts/proof-of-value-{name}-{YYYY-MM-DD}.md` (path resolved from Vortex config). Sections include: value hypothesis (with observable change criteria), value-test design + execution log, costly-signal measurements (willingness-to-pay or substitute), unit economics + business case, build/pivot/kill decision with reasoning, and link to downstream Systematize work (`Max`) if the decision is build-at-scale.
 
 ## Activation
 

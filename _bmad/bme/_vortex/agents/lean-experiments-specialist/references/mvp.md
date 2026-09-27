@@ -14,7 +14,7 @@ The workflow runs a 6-step facilitated discovery: (1) name the riskiest assumpti
 
 ## Output Expectations
 
-A single markdown document at `{output_folder}/mvp-spec-{mvp-name}-{YYYY-MM-DD}.md` (path resolved from Vortex config). Sections include: riskiest assumption stated as a falsifiable claim, success criteria (with thresholds — vanity metrics rejected), MVP scope (in/out boundaries), Build-Measure-Learn plan with measurement instrumentation, learn-or-pivot decision rule, and link to downstream Lean Experiment (`LE`) for execution.
+A single markdown document at `{output_folder}/vortex-artifacts/mvp-spec-{mvp-name}-{YYYY-MM-DD}.md` (path resolved from Vortex config). Sections include: riskiest assumption stated as a falsifiable claim, success criteria (with thresholds — vanity metrics rejected), MVP scope (in/out boundaries), Build-Measure-Learn plan with measurement instrumentation, learn-or-pivot decision rule, and link to downstream Lean Experiment (`LE`) for execution.
 
 ## Activation
 

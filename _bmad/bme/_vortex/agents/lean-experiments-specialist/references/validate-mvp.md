@@ -14,7 +14,7 @@ The workflow runs a focused review: (1) enumerate the design's claims (riskiest 
 
 ## Output Expectations
 
-A single markdown document at `{output_folder}/validate-experiment-{source-slug}-{YYYY-MM-DD}.md` (path resolved from Vortex config). Sections include: source artifact reference, claims-tagged-by-rigor-class, scope-creep findings, prioritized refinement list (5–10 items typical), recommended re-spec or proceed verdict, and (if proceed) the go-or-no-go decision rule the team committed to before run.
+A single markdown document at `{output_folder}/vortex-artifacts/validate-experiment-{source-slug}-{YYYY-MM-DD}.md` (path resolved from Vortex config). Sections include: source artifact reference, claims-tagged-by-rigor-class, scope-creep findings, prioritized refinement list (5–10 items typical), recommended re-spec or proceed verdict, and (if proceed) the go-or-no-go decision rule the team committed to before run.
 
 ## Activation
 

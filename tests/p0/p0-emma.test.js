@@ -94,10 +94,10 @@ describe('P0 Emma: Activation Sequence', () => {
     }
   });
 
-  it('activation has config-error handling on step 2 (or v6.3 step-1 bmad-init delegation)', () => {
+  it('activation names its module config and says a config problem never stops it', () => {
     assert.ok(
       hasConfigErrorHandling(def, rawContent),
-      `Emma (${EMMA_ID}): ${def.format} agent file should have config-error handling — v5: <step n="2"> with "config.yaml" + "Configuration Error"; v6.3: step 1 with "**Load config via bmad-init"`
+      `Emma (${EMMA_ID}): ${def.format} agent file must carry config-error handling \u2014 v6.3: step 1 names its module config AND says a config problem never stops activation; v5: <step n="2"> with "config.yaml" + "Configuration Error". Do NOT restore "Load config via bmad-init" (T183 removed it; the skill does not exist).`
     );
   });
 

@@ -14,7 +14,7 @@ The workflow runs a 6-step facilitated build: (1) define the technical risk — 
 
 ## Output Expectations
 
-A single markdown document at `{output_folder}/proof-of-concept-{name}-{YYYY-MM-DD}.md` (path resolved from Vortex config), accompanied by the prototype artifact (code, notebook, or runtime trace). Document sections include: technical risk stated, PoC scope + inputs, prototype location, test results against the risk, feasibility verdict (production-viable / promising-but-needs-refinement / blocked), newly-surfaced risks, recommended next step (typically `PV` Proof of Value if feasible, or pivot/kill).
+A single markdown document at `{output_folder}/vortex-artifacts/proof-of-concept-{name}-{YYYY-MM-DD}.md` (path resolved from Vortex config), accompanied by the prototype artifact (code, notebook, or runtime trace). Document sections include: technical risk stated, PoC scope + inputs, prototype location, test results against the risk, feasibility verdict (production-viable / promising-but-needs-refinement / blocked), newly-surfaced risks, recommended next step (typically `PV` Proof of Value if feasible, or pivot/kill).
 
 ## Activation
 

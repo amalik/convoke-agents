@@ -13,6 +13,48 @@ const AGENTS_DIR = path.join(VORTEX_DIR, 'agents');
 const WORKFLOWS_DIR = path.join(VORTEX_DIR, 'workflows');
 const STEP_PATTERN = /^step-\d{2}(-[^.]+)?\.md$/;
 
+// v6.3 config-error-handling contract, as of T183 (2026-09-27).
+//
+// WHAT THIS IS. Two checks with different strengths, deliberately not conflated:
+//
+//   v63ConfigRefRe(mod) — the agent's step 1 names the module config it reads, built from the module
+//                         directory rather than fixed. NOTE: this suite only ever reaches `_vortex`
+//                         (`AGENTS_DIR` is a Vortex constant and `discoverAgents()` resolves under it),
+//                         so the parameterisation is forward-looking, not active coverage of _gyre.
+//   V63_NEVER_STOP_RE   — a WORDING PIN on the operator-ruled soft-warn clause. It is lexical, and it
+//                         establishes only that the sentence is present. It does NOT establish that the
+//                         step behaves that way: a negated, quoted or commented-out copy of the sentence
+//                         satisfies it. Treated as a regression tripwire on ruled wording, nothing more.
+//
+//   NO_BMAD_INIT_RE     — the retired call must not appear in step 1. This is a conjunct of the contract
+//                         below, not advice: without it a step could reinstate
+//                         `Load config via bmad-init skill` ADDITIVELY alongside correct new text and
+//                         still pass, which is the shape a real regression takes. It is scoped to the
+//                         step-1 body of a v6.3 agent's SKILL.md — it does NOT reach reference files,
+//                         workflow steps, guides, or the v5 agents. The wider assertion is
+//                         `grep -rl bmad-init _bmad/bme/`, which is not a test.
+//
+// WHY IT REPLACED THE OLD MARKER. The previous check was an exact match on
+// `1. **Load config via bmad-init skill**` — the string T183 deletes — so it pinned the defect: removing
+// the dead call turned the suite red and the only way to pass was to put the call back. Its fallback
+// accepted a bare `Configuration Error`/`STOP` anywhere in step 2, the hard-stop shape the Covenant counts
+// as an OC-R1 FAIL (`compliance-checklist.md:29` — `skip`/`abort` are exits, not fallback values).
+//
+// WHAT THIS DOES NOT COVER. The four unconverted Vortex agents still hard-stop, and the v5 branch below
+// still REQUIRES `Configuration Error`/`STOP` for them. That divergence is an operator ruling of
+// 2026-09-27, not an oversight; it is recorded in the initiatives backlog and is not resolved here. So this
+// file encodes two opposite contracts by design, one per format.
+const V63_NEVER_STOP_RE = /never\s+stop\s+on\s+a\s+config\s+problem/i;
+const NO_BMAD_INIT_RE = /bmad-init/i;
+
+// The module config a v6.3 agent under `_bmad/bme/<mod>/agents/` must name in its step 1.
+function v63ConfigRefRe(moduleDir) {
+  // Interpolating first would hand `escapeRegExp` a string unconditionally, laundering `undefined` past
+  // the guard `scripts/lib/sanitize.js:19-23` exists to provide — it would build a live pattern matching
+  // the literal text `undefined`, which matches nothing and reads as "this agent names no config".
+  return new RegExp(`${escapeRegExp('_bmad/bme/')}${escapeRegExp(moduleDir)}${escapeRegExp('/config.yaml')}`);
+}
+
 // ─── Agent Discovery ────────────────────────────────────────────
 
 /**
@@ -164,11 +206,10 @@ function parseV5Definition(content) {
  * - `## Capabilities` markdown table with `| Code | Description | Skill |` header;
  *   non-separator rows are menu items (cmd = first column).
  * - `## On Activation` numbered markdown list; top-level `N.` items are activation steps.
- * - Step-2 error-handling: v6.3 convention delegates config-error semantics to
- *   `bmad-init` (invoked in step 1, satisfies Operator Covenant OC-R3 via interactive
- *   walkthrough). The format-aware test treats step-1 reference to `bmad-init` as
- *   v6.3's canonical satisfaction signal. Explicit `Configuration Error` / `STOP`
- *   substring inside step 2 is also accepted (forward-compatibility).
+ * - Config-error handling: since T183 the v6.3 convention is OC-R1-shaped — step 1 names the
+ *   module config it reads AND states that a config problem does not stop activation. It no longer
+ *   delegates to `bmad-init`, which upstream deleted in June 2026, and that call is now a disqualifier.
+ *   See the contract block at the top of this file for each conjunct and its limits.
  *
  * `agentAttrs` for v6.3: file body doesn't carry v5-style `id`/`title`/`icon`
  * literals — those live in the registry by design. We synthesize:
@@ -176,7 +217,7 @@ function parseV5Definition(content) {
  *   - `name` = the H1 display heading (TESTABLE — must match registry name)
  *   - `title` / `icon` = registry values (presence-only assertion in P0)
  */
-function parseV63Definition(content, registryAgent) {
+function parseV63Definition(content, registryAgent, moduleDir) {
   // H1 display name (first `# {Name}` after frontmatter)
   const h1Match = content.match(/^#\s+(.+?)\s*$/m);
   const displayName = h1Match ? h1Match[1].trim() : '';
@@ -234,18 +275,13 @@ function parseV63Definition(content, registryAgent) {
   if (activSection) {
     // Step 1 body: from "1." line to "2." line (or end of section)
     const step1Match = activSection.match(/^1\.([\s\S]*?)(?=^2\.|$(?![\s\S]))/m);
-    // Tighten: require structural marker (bold-prefixed "Load config via bmad-init")
-    // rather than bare substring, to avoid false positives on prose mentioning the
-    // string. (i97-bug-1 R1 review fix.) Verified canonical across Emma/Wade/Mila.
-    if (step1Match && /\*\*[^*]*Load config via `?bmad-init/i.test(step1Match[1])) {
+    // Both halves required — see the contract block at the top of this file for what each one does and
+    // does not establish. `moduleDir` is the agent's own module, so the config path is derived, not fixed.
+    if (step1Match
+      && v63ConfigRefRe(moduleDir).test(step1Match[1].replace(/\\/g, '/'))
+      && V63_NEVER_STOP_RE.test(step1Match[1])
+      && !NO_BMAD_INIT_RE.test(step1Match[1])) {
       hasErrorHandling = true;
-    }
-    // Forward-compatibility: also accept explicit `Configuration Error` / `STOP` in step 2
-    if (!hasErrorHandling) {
-      const step2Match = activSection.match(/^2\.([\s\S]*?)(?=^3\.|$(?![\s\S]))/m);
-      if (step2Match && (step2Match[1].includes('Configuration Error') || step2Match[1].includes('STOP'))) {
-        hasErrorHandling = true;
-      }
     }
   }
 
@@ -270,13 +306,16 @@ function parseV63Definition(content, registryAgent) {
  *   - persona: { role, identity, communication_style, principles }
  *   - menuItems: array of { cmd } objects
  *   - activationSteps: array of step numbers found
- *   - hasErrorHandling: boolean (step 2 has error-handling; v6.3 = step-1
- *     `bmad-init` reference satisfies; v5 = `Configuration Error`/`STOP` substring)
+ *   - hasErrorHandling: boolean (v6.3 = step 1 names its module config AND says a config
+ *     problem never stops activation; v5 = `Configuration Error`/`STOP` substring)
  */
 function loadAgentDefinition(agentId) {
   // Story v63-3-1: Vortex migrated to skill-dir layout (<id>/SKILL.md).
   const filePath = path.join(AGENTS_DIR, agentId, 'SKILL.md');
   const content = fs.readFileSync(filePath, 'utf8');
+  // The agent's own module directory, read off the path rather than fixed, so the config-reference
+  // check holds each agent to ITS module's config (T183). `AGENTS_DIR` is `<bme>/<mod>/agents`.
+  const moduleDir = path.basename(path.dirname(AGENTS_DIR));
 
   const frontmatter = parseFrontmatter(content);
 
@@ -300,7 +339,7 @@ function loadAgentDefinition(agentId) {
   const format = isV5 ? 'v5' : 'v6.3';
   const formatSpecific = isV5
     ? parseV5Definition(content)
-    : parseV63Definition(content, AGENTS.find(a => a.id === agentId));
+    : parseV63Definition(content, AGENTS.find(a => a.id === agentId), moduleDir);
 
   return { frontmatter, format, ...formatSpecific };
 }
@@ -395,10 +434,9 @@ function countRules(def, rawContent) {
 }
 
 /**
- * Format-aware "step 2 has config-error handling" — v5 inspects `<step n="2">`
- * body; v6.3 uses the already-format-aware `def.hasErrorHandling` (which is
- * true iff step 1 has the canonical `**Load config via bmad-init` marker, OR
- * step 2 has explicit `Configuration Error` / `STOP` substring as fallback).
+ * Format-aware "has config-error handling" — v5 inspects the `<step n="2">` body; v6.3 uses the
+ * already-format-aware `def.hasErrorHandling`, true iff step 1 both names its module config and
+ * states that a config problem does not stop activation (T183).
  */
 function hasConfigErrorHandling(def, rawContent) {
   if (def.format === 'v5') {
@@ -485,8 +523,8 @@ function validateActivation(agent, agentDef) {
   // Check error handling in step 2
   if (!agentDef.hasErrorHandling) {
     issues.push({
-      field: 'error handling (step 2)',
-      expected: 'Configuration Error handling present',
+      field: 'config-error handling (v6.3: step 1; v5: step 2)',
+      expected: 'v6.3: module config named AND "never stop on a config problem"; v5: Configuration Error (T183)',
       actual: 'not found',
       severity: 'medium',
     });
@@ -626,6 +664,11 @@ module.exports = {
   WORKFLOWS_DIR,
   STEP_PATTERN,
   MIN_NUMERIC_ACTIVATION_STEPS,
+  // Exported so the contract itself is testable, not only its effect on the real files (T183).
+  V63_NEVER_STOP_RE,
+  NO_BMAD_INIT_RE,
+  v63ConfigRefRe,
+  parseV63Definition,
   discoverAgents,
   loadAgentDefinition,
   extractMarkdownSection,

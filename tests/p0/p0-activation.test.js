@@ -97,10 +97,10 @@ describe('P0 Activation: Agent Definition Files', () => {
         );
       });
 
-      it('step 2 includes error handling', () => {
+      it('activation has config-error handling', () => {
         assert.ok(
           def.hasErrorHandling,
-          `${agent.name} (${agent.id}): step 2 missing error handling (Configuration Error / STOP)`
+          `${agent.name} (${agent.id}): ${def.format} activation must carry config-error handling — v6.3: step 1 names its module config AND says a config problem never stops activation, and must not mention bmad-init; v5: <step n="2"> contains "Configuration Error" or "STOP". Match the branch for THIS agent's format (T183) — do not add the v6.3 wording to a v5 agent, and do not restore bmad-init to satisfy either.`
         );
       });
 

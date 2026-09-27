@@ -14,7 +14,7 @@ The workflow runs a 6-step facilitated cycle: (1) state the hypothesis as a fals
 
 ## Output Expectations
 
-A single markdown document at `{output_folder}/lean-experiment-{name}-{YYYY-MM-DD}.md` (path resolved from Vortex config). Sections include: hypothesis statement (falsifiable form), experiment design + run plan, metrics + thresholds (declared *before* run), execution log + raw data, results vs. thresholds, pivot-or-persevere decision with reasoning, and links to downstream work (next experiment, MVP refinement, or escalation to Max for systematize-decision).
+A single markdown document at `{output_folder}/vortex-artifacts/lean-experiment-{name}-{YYYY-MM-DD}.md` (path resolved from Vortex config). Sections include: hypothesis statement (falsifiable form), experiment design + run plan, metrics + thresholds (declared *before* run), execution log + raw data, results vs. thresholds, pivot-or-persevere decision with reasoning, and links to downstream work (next experiment, MVP refinement, or escalation to Max for systematize-decision).
 
 ## Activation
 
