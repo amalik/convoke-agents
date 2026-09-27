@@ -197,9 +197,14 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
       // degenerate positions have now bitten: with the target last, delete-and-append satisfied "keeps
       // its position" (R1); with it first, hardcoding the claim index to 0 passed all 2926 tests while
       // destroying the row above it (R3). Only a middle target plus a full-file assertion pins the index.
+      // The claimed row's date is stamped by the CLI from the wall clock, so hardcoding it made this
+      // assertion a clock: it was authored on 2026-09-26 and went red on 2026-09-27 with no code change
+      // — `fixture-determinism`'s first axis. The neighbours keep literal dates because the FIXTURE
+      // writes those, and this assertion's subject is row POSITION, not date-stamping: derive the one
+      // value the test does not control, pin everything it does.
       assert.deepEqual(lines.slice(1), [
         'first-skill,bmad-agent-dev,frontmatter,bme,bob@example.com,2026-04-01',
-        'skill-x,bmad-agent-pm,frontmatter,unknown,carol@example.com,2026-09-26',
+        `skill-x,bmad-agent-pm,frontmatter,unknown,carol@example.com,${_internal._todayIso()}`,
         'last-skill,bmad-agent-sm,frontmatter,bme,dan@example.com,2026-04-02',
       ], 'the claimed row is replaced in place and its neighbours are untouched');
     } finally {
