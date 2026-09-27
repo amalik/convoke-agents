@@ -151,7 +151,11 @@ describe('cir-1-1: capability reference files point where the frozen capture say
       it('the reference directory holds exactly the files the capability table routes to', () => {
         // Closes both orphan directions: a file on disk that no code names would otherwise never be
         // opened, and a routed file that is missing would otherwise be invisible.
-        assert.deepEqual(fs.readdirSync(refsDir).sort(), [...new Set(Object.values(routed))].sort());
+        // `.md` only, and consistently with the breadth block above: an unfiltered read makes a
+        // `.DS_Store` redden the gate, and a gate that fails because someone opened a Finder window is
+        // a gate that gets skipped. (`vortex-parity.test.js:107` filters the same way.)
+        assert.deepEqual(fs.readdirSync(refsDir).filter((f) => f.endsWith('.md')).sort(),
+          [...new Set(Object.values(routed))].sort());
       });
 
       for (const [code, workflowPath] of Object.entries(codeToWorkflow)) {
