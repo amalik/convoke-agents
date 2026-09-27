@@ -433,8 +433,8 @@ development_status:
 
   # cir — remediation of the three verified defects that do not depend on the ruling.
   # Epic file: convoke-epic-channel-integrity-remediation.md
-  cir-epic-1: backlog
-  cir-1-1-resolve-every-cross-directory-reference-from-a-stated-base: backlog
+  cir-epic-1: in-progress
+  cir-1-1-resolve-every-cross-directory-reference-from-a-stated-base: ready-for-dev
   cir-1-2-retire-the-four-dead-upstream-dependencies: backlog
   cir-1-3-make-a-skill-that-arrives-alone-say-so: backlog
   cir-epic-1-retrospective: optional
