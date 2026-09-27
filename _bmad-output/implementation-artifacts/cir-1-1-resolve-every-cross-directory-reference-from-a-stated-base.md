@@ -4,7 +4,7 @@ baseline_commit: 14403e55
 
 # Story cir-1.1: Resolve every cross-directory reference from a stated base
 
-Status: review
+Status: done
 
 **Epic:** [cir — Channel-Integrity Remediation](../planning-artifacts/convoke-epic-channel-integrity-remediation.md)
 **Namespace decision:** Convoke-owned — 12 files under `_bmad/bme/_vortex/agents/*/references/` and one new test under `tests/unit/`. No skill, agent or workflow is added, and no script is changed.
@@ -97,11 +97,19 @@ blocker got wrong, and one command now settles it either way.
 
 **AC2 — a new sibling test asserts it, and it is a sibling on purpose.**
 `tests/unit/agent-activation-config-refs.test.js` is a **T214 deliverable** — `git log --name-only
---grep=T214` lists it — so it is a `loom`-lane artifact, and **its regex has already been patched twice**
-(R2 added `(?![\w.\-])`, R3 replaced it). `T138`'s *"two failed attempts predict a third — restructure,
-do not patch it a third time"* therefore **does apply to it**. A third patch is the thing to avoid; a
-sibling file with its own subject is not. *(An earlier draft of this story claimed that warning was a
-category error. It was not.)*
+--grep=T214` lists it — so it is a `loom`-lane artifact. **Corrected in R1:** `git log --follow
+--diff-filter=AMD` on that file returns two commits — `85105d36` created it, `d6ed9151` replaced its
+regex — so it was **authored once and patched once**, and `T138`'s "rewritten twice" is a row about
+`activation-validator.js` check 4, not this test. The sibling decision stands on its own grounds (a
+different subject on every axis, and a second patch to an already-corrected regex is still worth
+avoiding); it was justified with a count the cited command does not produce.
+
+> ~~its regex has already been patched twice (R2 added `(?![\w.\-])`, R3 replaced it). `T138`'s "two
+> failed attempts predict a third — restructure, do not patch it a third time" therefore **does apply to
+> it**.~~ — struck in R1. The R2/R3 rounds it names belong to `activation-validator.js` check 4, which is
+> the file `T138` is about. A prior draft of this AC called that warning a category error and was then
+> "corrected" to the opposite; both readings were wrong, and the strike is kept rather than deleted so the
+> third reader does not re-derive it.
 
 **AC3 — the expectation set comes from a source the judged artifact does not control.**
 `committed-artifact-integrity` condition 2. **The agent registry holds no reference-file data** — so use
@@ -122,8 +130,10 @@ red. Without this, *"count the bare form, expect zero"* is satisfied by deletion
 
 **AC5 — state that nothing else guards these paths.** Measured: `node scripts/audit/reference-integrity.js
 --paths=_bmad/bme/_vortex/agents` → **"0 references checked across 19 file(s)"**, because it space-fills
-inline code spans and all 22 are backticked; and `docs:audit`'s corpus is 18 fixed entries that do not
-include these files. **So no gate checks that a prefixed target exists.** Either the new test also
+inline code spans and all 22 are backticked; and `docs:audit`'s corpus is **17** fixed entries that do
+not include these files —
+`node -e "console.log(require('./scripts/docs-audit.js').USER_FACING_DOCS.length)"` → 17. *(Stated as 18
+before R1, with no command attached.)* **So no gate checks that a prefixed target exists.** Either the new test also
 `existsSync`es each target, or the gap is filed — not left implied.
 
 **AC6 — no new CI gate.** The sibling lives under `tests/unit`, which `npm test` already runs. ADR-001
@@ -166,6 +176,53 @@ An earlier draft argued this story should precede `s4-1-1` so the hub inherits a
 tracked and co-located — and that story records a draft that broke by generalising the prefix rule.
 **So there is no ordering benefit, and asserting one invited exactly that generalisation.**
 
+
+### Review Findings
+
+**R1, 2026-09-27.** Three independent layers — Blind Hunter, Edge Case Hunter, Acceptance Auditor —
+each read-only, each on its own copy. 29 mutants run between them. **The 22 content edits are correct
+and `{project-root}/` is the right base** (857 uses across 356 shipped files, zero `{project_root}`,
+and `refresh-installation.js:840` emits the identical form). Every finding is in the guard or in the
+record.
+
+No `decision-needed`: the one real ambiguity — whether binding the guard to the parity fixture would be
+circular — was settled by reading the fixture. It is a frozen pre-migration capture
+(`captured: 2026-05-02`, `preMigrationFormat: v5-xml-in-markdown`, `preMigrationGitBlob: 36cc5e48…`), so
+it predates the reference files and is a *stronger* condition-2 oracle than the `SKILL.md`, which at
+least ships in the same commit as the file it judges.
+
+#### Patch — the guard is weaker than it claims
+
+- [x] [Review][Patch] The guard never checks the target is the RIGHT one, and the oracle exists in-repo, unused [tests/unit/agent-capability-reference-paths.test.js:113-126] — mutant M16 cross-wired all 12 capabilities to `mvp/workflow.md`; unit 25/25, `vortex-parity` 27/27, `tests/p0` 613/613 all stayed green. `tests/integration/fixtures/vortex-parity/*-baseline.json` carries `menuCodeToWorkflow` for **12/12** codes. Asserting `line21 === PREFIX + fixture.menuCodeToWorkflow[code]` closes this and three findings below at once.
+- [x] [Review][Patch] The existence assertion is satisfied by an ANCESTOR directory [tests/unit/agent-capability-reference-paths.test.js:71,122] — the match class excludes `{`, so `…/workflows/{name}/workflow.md` truncates to `…/workflows/`, which exists. Measured: `prefixed: true, existsSync: true`. Same for a glob and an `@scope` segment. Fix with `statSync().isFile()` branched on the trailing slash, and reject a remainder containing `{`.
+- [x] [Review][Patch] Deleting 10 of the 22 subject paths passes [tests/unit/agent-capability-reference-paths.test.js:106] — the per-file floor is `> 0`, not the derived per-file count. Mutant M15 stripped the "follow its step-file sequence under …" clause from all 12 files, 22 paths → 12: green, 25/25. The headline number is pinned nowhere.
+- [x] [Review][Patch] The floors are aggregate and expire on the next conversion [tests/unit/agent-capability-reference-paths.test.js:81-88] — `>= 3` / `>= 12` are exactly today's values. Mutant F8: convert a 4th agent, then strip every prefix from Emma's four files and drop her routing rows → 3 agents / 12 files → green. Four regressed files, invisible. The instance-vs-gate decay class already recorded in `project_backlog_lessons.md`.
+- [x] [Review][Patch] `occ.prefixed` is computed and discarded in the existence test [tests/unit/agent-capability-reference-paths.test.js:119-127] — titled "every **prefixed** target exists" but it iterates every occurrence and joins bare paths to `PACKAGE_ROOT`, the base this story calls wrong. A bare path is reported as existing.
+- [x] [Review][Patch] The subject set is scrape-defined, so an orphan reference file is guarded by nothing [tests/unit/agent-capability-reference-paths.test.js:60] — nothing compares `named` to `readdirSync(references/)`, and `agent-surface-parity.js:87` does `if (f.includes('/references/')) continue;`. Set-equality closes this and the floor decay together.
+- [x] [Review][Patch] The filename regex silently skips a whole agent with no diagnostic [tests/unit/agent-capability-reference-paths.test.js:60] — `[a-z0-9-]+\.md` rejects `MVP.md`, `lean_persona.md`, `v1.2.md`, `sub/x.md`, and a miss yields `named.length === 0` → `continue`. Weakens condition 4 to one spelling.
+- [x] [Review][Patch] The verdict is filesystem-dependent [tests/unit/agent-capability-reference-paths.test.js:122] — `_bmad/BME/_VORTEX/…` is `existsSync: true` on macOS APFS and false on `ubuntu-latest`. CI would catch it; a local "guard proven" run cannot.
+- [x] [Review][Patch] The punctuation strip is 80% unreachable [tests/unit/agent-capability-reference-paths.test.js:122] — the match class cannot capture `,` `;` `:` `)`; only `.` is live, while `-` `_` `/` are reachable and unstripped. Dead characters read as protection against a class the regex cannot reach.
+- [x] [Review][Patch] Double filesystem walk and a dead field [tests/unit/agent-capability-reference-paths.test.js:79,92,73] — `agentsWithCapabilityReferences()` is called twice rather than reusing `agents`, and `index` is stored and never read. No divergence is constructible today; it unguards one array if either call is ever filtered.
+
+#### Patch — the record
+
+- [x] [Review][Patch] **The Gates line names a command that exits 1 — the exact class AC7 exists to prevent** — `eslint --max-warnings 0` → exit **1** (it trips on `eslint.config.mjs`); the clean form is `npm run lint` → exit 0. AC7 caught this for `agent-surface-parity.js` and the line below reintroduced it.
+- [x] [Review][Patch] "a fixed 18-entry corpus" is **17** — `require('./scripts/docs-audit.js').USER_FACING_DOCS.length` → 17. Stated twice with no command. AC5's substance is intact: none of the 17 is a `references/` file.
+- [x] [Review][Patch] "its regex has already been patched twice" is not what git says — `git log --follow --diff-filter=AMD` on that file returns two commits: `85105d36` created it, `d6ed9151` replaced the regex. Authored once, patched once. T138's "rewritten twice" is a row about `activation-validator.js` check 4. The sibling decision stands; its justification does not.
+- [x] [Review][Patch] "blind to at least nine forms" is false, and per `docs-1-6` the narration should be deleted rather than renumbered — six named, and a char class **flags** the wrapped prefix (the one example the commit message headlines), while the uppercase module segment is missed by the positional check too. Four of six support the design choice; the count was never derived.
+- [x] [Review][Patch] The prefix rule is coupled to the export's line-kill list, and the record does not say so — `export-engine.js:481` deletes any line containing `{project-root}`. Verified harmless here (pre/post exports byte-identical), but adding substantive prose carrying the token silently removes that sentence from the ~40% standalone bundle. Belongs in Dev Notes and in `convoke-note-pieces-of-knowledge-to-review.md`.
+- [x] [Review][Patch] The mutant table proves one of the test's two assertion families — corrupting a target to `workflowX.md` reddens `mvp.md: every prefixed target exists on disk` as a sole executioner. Add the row.
+- [x] [Review][Patch] The residue parenthetical accounts for 79 of 83 — four occurrences in three files are unlisted (`_team-factory/workflows/step-00-route.md:49-50`, `add-team/workflow.md:43`, `_enhance/.../lifecycle-process-spec.md:133`). None is a load instruction, so the functional boundary holds; the enumeration is what is not exhaustive. Delete the parenthetical rather than complete it.
+- [x] [Review][Patch] "Both halves live in the repository" was false when written — true only once this commit landed. One clause.
+
+#### Deferred
+
+- [x] [Review][Defer] `_bmad-output/` is invisible to the guard [tests/unit/agent-capability-reference-paths.test.js:71] — deferred, scope. `/_bmad\//` never matches `_bmad-output/`; no reference file names that tree today, and widening the match changes what the guard is for. Added to the header's non-detection list instead.
+
+#### Dismissed (4)
+
+Symlink double-counting in a committed tree; `..` containment with no such path present; a fenced or negative-prose `./references/x.md` mention (dodged because the template row is written `{cap}.md`); and "AC1 is syntactic, not behavioural" — the convention is established by 857 shipped uses and enforced for generated agents by `activation-validator.js` check 2.
+
 ---
 
 ## Dev Agent Record
@@ -177,16 +234,23 @@ reference file was touched — 25 tests, 13 pass, 12 fail, one failure per file 
 floor test passed in that run, which is what makes the 12 failures meaningful rather than an empty walk.
 
 **The prefix is detected by position, not by a character class.** The story's own grep — "the character
-before `_bmad` is not in `[{/a-zA-Z._-]`" — is blind to at least nine forms (`{project-ROOT}/`,
-`{project_root}/`, `{project-root}//`, `./_bmad/`, a prefix wrapped onto the previous line, an uppercase
-module segment). The test instead walks every `_bmad/` occurrence and inspects the characters
-immediately before it, so the only way to pass is to carry the exact prefix. The edit used the same
-walk, so 22 of 22 were reached and nothing else was rewritten.
+before `_bmad` is not in `[{/a-zA-Z._-]`" — is blind to `{project-ROOT}/`, `{project_root}/`,
+`{project-root}//`, `./_bmad/`, and an uppercase module segment. The test instead walks every `_bmad/`
+occurrence and inspects the characters immediately before it. The edit used the same walk, so 22 of 22
+were reached and nothing else was rewritten.
+
+**A count stood here and is deleted rather than renumbered, per `docs-1-6`.** It claimed "at least nine
+forms" with six enumerated. R1 implemented both formulations and ran them: a character class **flags**
+the wrapped-prefix form — the one example this story's commit message singled out by name — and the
+uppercase-module form is missed by the positional check as well, so it supports neither mechanism. Four
+of the six named forms support the design choice, which is enough; the count was never derived, so the
+count goes.
 
 **AC5 was closed rather than filed.** A second assertion per file `existsSync`es every prefixed target,
 because measurement showed nothing else does: `reference-integrity.js` reports *0 references checked*
 over these files (it space-fills inline code spans and every path is backticked) and `docs-audit.js`
-runs against a fixed 18-entry corpus that excludes them.
+runs against a fixed **17**-entry corpus that excludes them
+(`node -e "console.log(require('./scripts/docs-audit.js').USER_FACING_DOCS.length)"` → 17).
 
 ### Derivations — each with the command that produced it
 
@@ -199,7 +263,8 @@ runs against a fixed 18-entry corpus that excludes them.
 | bare occurrences after | as above | **0** |
 | prefixed after | as above | **22** |
 | suite before | `npm test` at `14403e55` | 3025 / 3007 pass / 0 fail / 18 skipped |
-| suite after | `npm test` | **3050 / 3032 pass / 0 fail / 18 skipped** |
+| suite after (pre-R1) | `npm test` | 3050 / 3032 pass / 0 fail / 18 skipped |
+| suite after R1 | `npm test` | **3056 / 3038 pass / 0 fail / 18 skipped** — guard 25 → 31 tests |
 
 ### Mutant → sole executioner (AC3)
 
@@ -207,7 +272,8 @@ runs against a fixed 18-entry corpus that excludes them.
 |---|---|---|
 | `sed -i '' 's\|{project-root}/_bmad/bme/_vortex/workflows/mvp/workflow.md\|_bmad/bme/_vortex/workflows/mvp/workflow.md\|' _bmad/bme/_vortex/agents/lean-experiments-specialist/references/mvp.md` | `it('mvp.md: exists, and every cross-directory path carries {project-root}/')` | **1 of 1232** tests under `tests/unit` (`node scripts/test-runner.js tests/unit` → 1232 tests, 1227 pass, 1 fail) |
 
-Both halves live in the repository, so a later reader re-runs the row with one command and reverts with
+Both halves live in the repository **as of this commit** — the sentence was false when written and
+became true when the fix landed — so a later reader re-runs the row with one command and reverts with
 `git checkout -- <file>`. **During this run the restore came from a scratch copy instead**, because
 `HEAD` still held the unprefixed version and `git checkout --` would have reverted the fix itself. The
 two `not ok` lines above the named test in TAP output are its parent `describe` blocks, not additional
@@ -230,11 +296,67 @@ Same file count, same prose, no leaked token — identical to the pre-fix export
 nothing for the standalone segment**, which is what the retraction claimed and what an implementation
 could have quietly falsified.
 
+### R1 outcome — the guard was rebuilt, not patched
+
+R1's decisive finding was that the guard asserted a prefix *shape* and nothing about the target: a mutant
+repointed all 12 capabilities at one workflow and this test, `vortex-parity` and all 613 of `tests/p0`
+stayed green. The right-target oracle existed in the repo, unused —
+`tests/integration/fixtures/vortex-parity/*-baseline.json` carries `menuCodeToWorkflow` for **12/12** codes.
+
+**Why that oracle is not circular**, the question that decided the fix: the baselines are a frozen
+pre-migration capture — `captured: 2026-05-02`, `preMigrationFormat: v5-xml-in-markdown`, pinned by
+`preMigrationGitBlob`. They predate the reference files and were taken from a different format, so they
+cannot have been derived from what they now judge. That makes them a **stronger**
+`committed-artifact-integrity` condition-2 source than the `SKILL.md`, which at least ships in the same
+commit as the file it judges.
+
+The guard now asserts, per capability: exact set equality of the file's `_bmad/`-rooted paths against the
+frozen capture, the prefix on each, and each target's existence **and type**. Set equality in both
+directions — routed codes ↔ captured codes, and files on disk ↔ files the table routes to — replaces the
+aggregate floors, which sat exactly on today's values and would have expired on the fourth conversion.
+
+**Mutants, eight of which the first version passed:**
+
+| Mutant | Old guard | New guard |
+|---|---|---|
+| cross-wire `mvp.md` → `lean-experiment/workflow.md` | GREEN | **red** |
+| `{wf}` placeholder in the path (match truncates at `{`) | GREEN | **red** |
+| repoint at a directory instead of `workflow.md` | GREEN | **red** |
+| uppercase module segment (`_bmad/BME/_VORTEX/…/MVP/…`) | GREEN | **red** |
+| delete the `steps/` path — 22 paths → 12 | GREEN | **red** |
+| revert one prefix to bare | red | **red** |
+| unrouted orphan file in `references/` | GREEN | **red** |
+| drop a routing row from `SKILL.md` | GREEN | **red** |
+| *(control)* unmutated tree | green | **green** |
+
+31 tests, 31 pass. The AC5 assertion has a mutant now too, supplied by R1's auditor: corrupting a target
+to `workflowX.md` reddens the type/existence test as a sole executioner — previously asserted without one.
+
+**Record defects R1 found, all corrected above:** the Gates line named `eslint --max-warnings 0`, which
+exits 1; the `docs:audit` corpus was stated as 18 and is 17; "patched twice" is not what `git log` shows;
+the "nine forms" count was false and is deleted rather than renumbered; the both-halves sentence was false
+when written. **One deferred:** `_bmad-output/` is invisible to the occurrence scan, recorded in the test
+header's non-detection list.
+
+### The prefix is coupled to the export's line-kill list — do not generalise it
+
+`export-engine.js:481` puts `/\{project-root\}/` in `frameworkPatterns`, and Phase 3 deletes the **whole
+line** that matches. Harmless for this change — pre- and post-fix exports are byte-identical, because these
+Activation sentences are absent from `instructions.md` in both. But R1 demonstrated the hazard: adding
+substantive prose carrying the token keeps this guard green **and silently removes that sentence** from the
+~40% Vortex-Standalone bundle. Filed in `convoke-note-pieces-of-knowledge-to-review.md`.
+
 ### Gates
 
-`npm test` 3050/3032/0 · `npm run refs:audit` PASS 941/0 broken · `npm run docs:audit` zero findings ·
+`npm test` **3056/3038/0** (R1 rebuilt the guard: 25 tests → 31) · `npm run refs:audit` PASS 941/0 broken · `npm run docs:audit` zero findings ·
 `node scripts/audit/backlog-integrity.js` PASS 1040 rows · `node scripts/audit/agent-surface-parity.js
-"$(git describe --tags --abbrev=0)" HEAD` PASS 12 agents · `eslint --max-warnings 0` clean.
+"$(git describe --tags --abbrev=0)" HEAD` PASS 12 agents · **`npm run lint`** exit 0.
+
+**One gate was named here in a form that exits 1** — the class AC7 exists to prevent, caught by AC7's own
+text for a different script two lines above. Bare `eslint --max-warnings 0` → **exit 1**: it lints
+`eslint.config.mjs` and fails on `'import' and 'export' may appear only with 'sourceType: module'`. The
+working form is `npm run lint` (`eslint --max-warnings 0 scripts/ index.js tests/`) → exit 0.
+Corrected in R1.
 
 ### Completion notes
 
@@ -264,10 +386,12 @@ test's header.
 | `_bmad/bme/_vortex/agents/research-convergence-specialist/references/pattern-mapping.md` | +2 |
 | `_bmad/bme/_vortex/agents/research-convergence-specialist/references/pivot-resynthesis.md` | +2 |
 | `_bmad/bme/_vortex/agents/research-convergence-specialist/references/research-convergence.md` | +2 |
-| `_bmad-output/implementation-artifacts/sprint-status.yaml` | `cir-1-1` → review |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | `cir-1-1` → review → done |
+| `_bmad-output/planning-artifacts/convoke-note-pieces-of-knowledge-to-review.md` | +1 entry (the export kill-list hazard) |
 
 ## Change Log
 
 | Date | Change |
 |---|---|
 | 2026-09-27 | Implemented. 22 cross-directory paths prefixed across 12 capability reference files; new sibling test `tests/unit/agent-capability-reference-paths.test.js` guards them, takes its expectation set from each agent's `SKILL.md`, carries three floors, and additionally asserts each target exists because no other gate does. Guard proven by mutating a tracked file: 1 of 1232 `tests/unit` tests goes red. Status → review. |
+| 2026-09-27 | **R1 applied.** Three independent layers, 29 mutants. The guard was rebuilt around the frozen parity capture rather than patched: it asserts the target now, not the prefix shape, and eight mutants the first version passed all go red. Five record defects corrected, including a Gates line naming a command that exits 1; the "nine forms" count deleted rather than renumbered per `docs-1-6`. One finding deferred, four dismissed. |

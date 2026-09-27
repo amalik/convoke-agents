@@ -102,6 +102,37 @@ exactly those three agents' reference files, at which point the sentence underst
 Filed now because the story's Task 2 is the only thing that would catch it, and a later reader of the test
 would have no reason to doubt it. **Basis: verified as currently true; flagged as due to rot.**
 
+### K6 — the standalone export deletes any line carrying `{project-root}`, and nothing warns
+
+**Says:** `scripts/portability/export-engine.js:481`, inside `frameworkPatterns`:
+> `/\{project-root\}/`
+
+Phase 3 then filters the line out entirely, and records a warning **only** for `.claude/hooks` and
+`bmad-speak`.
+
+**Contradicted by:** nothing — the code does what it says. The problem is that twenty-four lines later,
+Phase 3b is deliberately surgical about the same content:
+
+> Only strip lines whose primary content is a `_bmad/` path … **Avoid stripping the line if `_bmad/`
+> appears only as a parenthetical or backtick reference.**
+
+So a line mentioning `_bmad/` inline survives, and the same line carrying `{project-root}/_bmad/` is
+deleted whole, silently.
+
+```sh
+# demonstrated during cir-1-1 R1: a sentence carrying the token disappears from the bundle
+node scripts/portability/convoke-export.js bmad-agent-bme-lean-experiments-specialist --output <tmp>
+grep -r 'rigor bar' <tmp>/   # nothing — the whole sentence was removed
+```
+
+**Why it matters:** `cir-1-1` prefixed 22 load instructions with `{project-root}/`. Harmless there,
+verified — those sentences are absent from `instructions.md` both before and after, so pre- and post-fix
+exports are byte-identical. But the convention the repo now enforces is on a collision course with this
+filter: **any future prose carrying the token is removed from the ~40% Vortex-Standalone bundle with no
+warning recorded.** The fix is probably to strip the token rather than the line, or to warn as the hook
+patterns do — but it is a change to a shipped script for the standalone segment, so it wants its own scope.
+**Basis: verified** (the filter, the Phase 3b asymmetry, and the byte-identical exports).
+
 ---
 
 ## Resolved

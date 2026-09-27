@@ -1,43 +1,40 @@
 'use strict';
 
 /**
- * Every cross-directory path inside a v6.3 agent's capability reference file carries the
- * `{project-root}/` prefix, and resolves to a file that exists.
+ * Each v6.3 agent's capability reference file points at the workflow its menu code was captured
+ * pointing at, with a `{project-root}/` prefix, and each target exists with the right type.
  *
- * WHY THIS EXISTS (cir-1-1). A bare path resolves from skill root, so a capability that says
- * "invoke the workflow at `_bmad/bme/_vortex/workflows/mvp/workflow.md`" points inside the agent's
- * own directory, where no `workflows/` tree exists. It only appears to work when the agent is
- * activated from the project root. Measured at 6e306647: 22 such paths across 12 files, every one on
- * line 21, every line the same "invoke the workflow at … follow its step-file sequence under …"
- * sentence.
+ * WHY THIS EXISTS (cir-1-1). A bare path resolves from skill root, so "invoke the workflow at
+ * `_bmad/bme/_vortex/workflows/mvp/workflow.md`" pointed inside the agent's own directory, where no
+ * `workflows/` tree exists. It only appeared to work when the agent was activated from the project
+ * root. 22 such paths across 12 files were prefixed.
  *
- * WHY A SIBLING AND NOT AN EXTENSION of `agent-activation-config-refs.test.js`, whose header names
- * this very gap. That file is a T214 deliverable and its regex has already been patched twice (R2
- * added `(?![\w.\-])`, R3 replaced it with `(?![\w\-])(?!\.[A-Za-z0-9])`). `code-review-convergence`'s
- * "two failed attempts predict a third" applies to it, and T138 says restructure rather than patch a
- * third time. The subject differs on every axis anyway: reference files not agent files, any
- * `_bmad/…` path not the single literal config path, and no activation block is involved.
+ * WHY IT ASSERTS THE TARGET AND NOT JUST THE SHAPE. R1 demonstrated that a prefix-shape check is
+ * nearly worthless: a mutant repointed all 12 capabilities at one workflow and this file, plus
+ * `vortex-parity` and all of `tests/p0`, stayed green. Nothing in the repository detected a
+ * cross-wired capability. So the expected path is taken from `menuCodeToWorkflow` in
+ * `tests/integration/fixtures/vortex-parity/*-baseline.json` and compared as an exact string.
  *
  * `committed-artifact-integrity` (`project-context.md`): the reference files ARE the subject, so a
- * fixture copy would test the copy. This file imports NO module under test. Expectations come from
- * each agent's `SKILL.md` — which names its own `./references/<cap>.md` files — never from the
- * reference file being judged, so a corrupted reference cannot choose the standard it is judged
- * against. A newly converted agent goes red until its references are prefixed; that is the point.
- *
- * WHY THE PREFIX IS DETECTED BY POSITION, NOT BY A CHARACTER CLASS. The obvious pattern is "the
- * character before `_bmad` is not `/`", and it is blind to at least nine forms — `{project-ROOT}/`,
- * `{project_root}/`, `{project-root}//`, `./_bmad/`, a prefix wrapped onto the previous line, an
- * uppercase module segment. This walks every `_bmad/` occurrence and inspects the text immediately
- * before it, so the only way to pass is to carry the exact prefix.
+ * fixture copy would test the copy. This file imports no module under test. Two independent
+ * expectation sources, neither controlled by the judged file:
+ *   - the frozen parity baselines — `captured: 2026-05-02`, `preMigrationFormat: v5-xml-in-markdown`,
+ *     pinned by `preMigrationGitBlob`. They predate the reference files and were taken from a
+ *     different format, so they cannot have been derived from what they now judge.
+ *   - each agent's `SKILL.md` capability table, for which reference file a code routes to.
+ * Set equality in both directions means new data goes red until it is complete, in either direction:
+ * an unrouted file on disk and a routed file that is missing both fail.
  *
  * WHAT THIS DOES NOT CATCH:
- *   - whether the path is the RIGHT target — only that it is prefixed and the file exists;
- *   - paths written without the `_bmad/` root at all (e.g. a bare `mvp/validate.md` gloss);
- *   - the same defect class outside these files: 83 further occurrences ship in `_bmad/bme/**.md`
- *     (guides, READMEs, `compass-routing-reference.md`, 7 workflow schema glosses). cir-1-1 scoped
- *     to load instructions deliberately; the residue is stated in that story, not guarded here;
- *   - anything about the agents' `SKILL.md` files, which carry no unprefixed cross-directory paths
- *     (verified at 6e306647) and are the expectation SOURCE here, not a subject.
+ *   - `_bmad-output/` and other sibling trees: the occurrence scan is `_bmad/`-rooted, and
+ *     `_bmad-output/` does not match it. No reference file names that tree today (deferred in R1).
+ *   - paths written without an `_bmad/` root at all — a bare `mvp/validate.md` gloss is invisible.
+ *   - whether the workflow a code SHOULD point at is itself correct. The baselines freeze what the
+ *     v5 agents did; if a pre-migration mapping was wrong, this preserves the error faithfully.
+ *   - the same defect class outside these files: 83 occurrences ship elsewhere under `_bmad/bme/`.
+ *     cir-1-1 scoped to load instructions; that residue is stated in the story, not guarded here.
+ *   - anything about an installed or published tree. Targets resolve against the source repo, so a
+ *     target present here but absent from the tarball would pass.
  */
 
 const { describe, it } = require('node:test');
@@ -48,81 +45,111 @@ const path = require('path');
 const { PACKAGE_ROOT } = require('../helpers');
 
 const AGENTS_DIR = path.join(PACKAGE_ROOT, '_bmad/bme/_vortex/agents');
+const FIXTURES_DIR = path.join(PACKAGE_ROOT, 'tests/integration/fixtures/vortex-parity');
 const PREFIX = '{project-root}/';
 
-/** Agents whose SKILL.md routes capabilities to `./references/<name>.md`. */
-function agentsWithCapabilityReferences() {
-  const found = [];
-  for (const id of fs.readdirSync(AGENTS_DIR).sort()) {
-    const skill = path.join(AGENTS_DIR, id, 'SKILL.md');
-    if (!fs.existsSync(skill)) continue;
-    // Expectation source: the SKILL.md, which the reference files do not control.
-    const named = [...fs.readFileSync(skill, 'utf8').matchAll(/\.\/references\/([a-z0-9-]+\.md)/g)]
-      .map((m) => m[1]);
-    if (named.length === 0) continue;
-    found.push({ id, named: [...new Set(named)].sort() });
-  }
-  return found;
-}
-
-/** Every `_bmad/` occurrence in `text`, with whether the exact prefix sits immediately before it. */
-function bmadPathOccurrences(text) {
-  const out = [];
-  for (const m of text.matchAll(/_bmad\/[A-Za-z0-9_.\-/]*/g)) {
-    const before = text.slice(Math.max(0, m.index - PREFIX.length), m.index);
-    out.push({ path: m[0], prefixed: before === PREFIX, index: m.index });
+/** The frozen pre-migration capture: agent id -> { menu code -> workflow path }. */
+function frozenMaps() {
+  const out = {};
+  for (const f of fs.readdirSync(FIXTURES_DIR).sort()) {
+    if (!f.endsWith('-baseline.json')) continue;
+    const fixture = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, f), 'utf8'));
+    if (fixture.menuCodeToWorkflow) out[f.replace('-baseline.json', '')] = fixture.menuCodeToWorkflow;
   }
   return out;
 }
 
-describe('cir-1-1: capability reference files resolve from a stated base', () => {
-  const agents = agentsWithCapabilityReferences();
+/** From an agent's SKILL.md capability table: menu code -> reference filename. */
+function routedCapabilities(agentId) {
+  const skill = fs.readFileSync(path.join(AGENTS_DIR, agentId, 'SKILL.md'), 'utf8');
+  const out = {};
+  for (const m of skill.matchAll(/^\|\s*([A-Z]{2})\s*\|[^|]*\|[^|]*`\.\/references\/([^`]+)`/gm)) {
+    out[m[1]] = m[2];
+  }
+  return out;
+}
 
-  it('finds the converted agents and their reference files — the floor', () => {
-    // Without floors this whole suite passes on an empty tree: deleting the 12 files, or emptying
-    // them, would leave nothing unprefixed to find. The existing sibling needed three floors for
-    // exactly this reason.
-    assert.ok(agents.length >= 3,
-      `expected at least 3 agents routing to ./references/, found ${agents.length}`);
-    const total = agents.reduce((n, a) => n + a.named.length, 0);
-    assert.ok(total >= 12,
-      `expected at least 12 capability reference files named across SKILL.md files, found ${total}`);
+/**
+ * The paths a reference file must name, derived from the frozen map rather than listed here.
+ * A `workflow.md` capability also names its `steps/` directory; a `validate.md` one does not.
+ */
+function expectedPaths(workflowPath) {
+  if (path.basename(workflowPath) === 'workflow.md') {
+    return [workflowPath, `${path.dirname(workflowPath)}/steps/`].sort();
+  }
+  return [workflowPath];
+}
+
+/** Every `_bmad/`-rooted occurrence, with whether the exact prefix sits immediately before it. */
+function occurrences(text) {
+  return [...text.matchAll(/_bmad\/[A-Za-z0-9_.\-/]*/g)].map((m) => ({
+    path: m[0],
+    prefixed: text.slice(Math.max(0, m.index - PREFIX.length), m.index) === PREFIX,
+  }));
+}
+
+const frozen = frozenMaps();
+
+describe('cir-1-1: capability reference files point where the frozen capture says', () => {
+  it('the frozen oracle covers the agents and codes it is asserted against', () => {
+    // Literal membership from the committed record, not an aggregate count off today's tree. An
+    // aggregate floor (">= 3 agents", ">= 12 files") stops biting the moment a fourth agent is
+    // converted: R1 showed a whole agent could regress while both counts still passed.
+    assert.deepEqual(Object.keys(frozen).sort(),
+      ['contextualization-expert', 'lean-experiments-specialist', 'research-convergence-specialist']);
+    const codes = Object.values(frozen).reduce((n, m) => n + Object.keys(m).length, 0);
+    assert.equal(codes, 12, `expected 12 routed capabilities in the frozen baselines, found ${codes}`);
   });
 
-  for (const agent of agentsWithCapabilityReferences()) {
-    describe(agent.id, () => {
-      for (const file of agent.named) {
-        const rel = path.join('_bmad/bme/_vortex/agents', agent.id, 'references', file);
-        const abs = path.join(AGENTS_DIR, agent.id, 'references', file);
+  for (const [agentId, codeToWorkflow] of Object.entries(frozen)) {
+    describe(agentId, () => {
+      const routed = routedCapabilities(agentId);
+      const refsDir = path.join(AGENTS_DIR, agentId, 'references');
 
-        it(`${file}: exists, and every cross-directory path carries ${PREFIX}`, () => {
-          assert.ok(fs.existsSync(abs),
-            `${rel} is named by ${agent.id}/SKILL.md but does not exist`);
-          const text = fs.readFileSync(abs, 'utf8');
-          const occurrences = bmadPathOccurrences(text);
+      it('every routed code is captured, and every captured code is routed', () => {
+        assert.deepEqual(Object.keys(routed).sort(), Object.keys(codeToWorkflow).sort());
+      });
 
-          // Per-file floor: a file with no cross-directory path at all cannot vacuously pass the
-          // assertion below. Emptying a reference file must go red, not silent.
-          assert.ok(occurrences.length > 0,
-            `${rel} names no _bmad/ path — either the capability lost its workflow pointer, or this test is looking in the wrong place`);
+      it('the reference directory holds exactly the files the capability table routes to', () => {
+        // Closes both orphan directions: a file on disk that no code names would otherwise never be
+        // opened, and a routed file that is missing would otherwise be invisible.
+        assert.deepEqual(fs.readdirSync(refsDir).sort(), [...new Set(Object.values(routed))].sort());
+      });
 
-          const bare = occurrences.filter((o) => !o.prefixed);
-          assert.deepEqual(bare.map((o) => o.path), [],
-            `${rel}: ${bare.length} cross-directory path(s) lack ${PREFIX} and resolve from skill root`);
+      for (const [code, workflowPath] of Object.entries(codeToWorkflow)) {
+        const file = routed[code];
+        if (!file) continue; // the equality assertion above owns this failure
+        const rel = path.join('_bmad/bme/_vortex/agents', agentId, 'references', file);
+
+        it(`${code} -> ${file}: names exactly its captured workflow, prefixed`, () => {
+          const text = fs.readFileSync(path.join(refsDir, file), 'utf8');
+          const found = occurrences(text);
+
+          const bare = found.filter((o) => !o.prefixed).map((o) => o.path);
+          assert.deepEqual(bare, [], `${rel}: path(s) lack ${PREFIX} and resolve from skill root`);
+
+          // Exact set equality against the frozen capture. This is what a prefix-shape check missed:
+          // it kills cross-wiring, a path truncated at a `{placeholder}` (the match stops at `{`, so
+          // the set no longer matches), a wrong-case segment, and a double base — in one assertion.
+          assert.deepEqual(found.map((o) => o.path).sort(), expectedPaths(workflowPath),
+            `${rel}: named paths do not match the frozen capture for ${code}`);
         });
 
-        it(`${file}: every prefixed target exists on disk`, () => {
-          // No other gate does this. Measured at 6e306647: `reference-integrity.js` reports
+        it(`${code} -> ${file}: every target exists with the right type`, () => {
+          // No other gate checks these targets at all: `reference-integrity.js` reports
           // "0 references checked" over these files because it space-fills inline code spans and
-          // every path here is backticked; `docs-audit.js`'s corpus is a fixed list that excludes
-          // them. So a typo in a prefixed target would otherwise ship unnoticed.
-          const text = fs.readFileSync(abs, 'utf8');
-          const missing = [];
-          for (const occ of bmadPathOccurrences(text)) {
-            const target = path.join(PACKAGE_ROOT, occ.path.replace(/[.,;:)]+$/, ''));
-            if (!fs.existsSync(target)) missing.push(occ.path);
+          // every path here is backticked, and `docs-audit.js` runs a fixed corpus that excludes
+          // them. `existsSync` alone was not enough — a directory satisfied a claim about a file.
+          for (const p of expectedPaths(workflowPath)) {
+            const target = path.join(PACKAGE_ROOT, p);
+            assert.ok(fs.existsSync(target), `${rel}: ${p} does not exist`);
+            const stat = fs.statSync(target);
+            if (p.endsWith('/')) {
+              assert.ok(stat.isDirectory(), `${rel}: ${p} is named as a directory but is a file`);
+            } else {
+              assert.ok(stat.isFile(), `${rel}: ${p} is named as a file but is a directory`);
+            }
           }
-          assert.deepEqual(missing, [], `${rel}: target(s) do not exist: ${missing.join(', ')}`);
         });
       }
     });
