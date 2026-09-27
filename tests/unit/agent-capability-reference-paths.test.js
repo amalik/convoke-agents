@@ -26,6 +26,8 @@
  * an unrouted file on disk and a routed file that is missing both fail.
  *
  * WHAT THIS DOES NOT CATCH:
+ *   - a reference file whose SKILL.md does not route to it is swept for prefix and existence by the
+ *     breadth block, but its TARGET is not checked against the frozen map — only routed files get that.
  *   - `_bmad-output/` and other sibling trees: the occurrence scan is `_bmad/`-rooted, and
  *     `_bmad-output/` does not match it. No reference file names that tree today (deferred in R1).
  *   - paths written without an `_bmad/` root at all — a bare `mvp/validate.md` gloss is invisible.
@@ -88,6 +90,12 @@ function occurrences(text) {
   }));
 }
 
+/** Every agent that HAS a `references/` directory on disk, baseline or not. */
+function agentsWithReferences() {
+  return fs.readdirSync(AGENTS_DIR).sort()
+    .filter((id) => fs.existsSync(path.join(AGENTS_DIR, id, 'references')));
+}
+
 const frozen = frozenMaps();
 
 describe('cir-1-1: capability reference files point where the frozen capture says', () => {
@@ -99,6 +107,36 @@ describe('cir-1-1: capability reference files point where the frozen capture say
       ['contextualization-expert', 'lean-experiments-specialist', 'research-convergence-specialist']);
     const codes = Object.values(frozen).reduce((n, m) => n + Object.keys(m).length, 0);
     assert.equal(codes, 12, `expected 12 routed capabilities in the frozen baselines, found ${codes}`);
+  });
+
+  it('every agent with a references/ directory has a frozen baseline', () => {
+    // R2 HIGH-1: the first rewrite iterated the BASELINES, so a newly converted agent with bare paths
+    // passed while the version it replaced caught it — and I97 Stories 2.4-2.7 convert four more agents,
+    // which is the case this guard exists for. Red by default: a converted agent without a baseline
+    // fails here rather than being silently skipped.
+    assert.deepEqual(agentsWithReferences(), Object.keys(frozen).sort(),
+      'an agent has reference files but no parity baseline (or vice versa) — add the baseline, or this '
+      + 'agent is unguarded against the defect cir-1-1 exists to prevent');
+  });
+
+  describe('breadth sweep — every reference file of every agent, baseline or not', () => {
+    // Deliberately independent of the frozen map. If the per-code assertions below are ever narrowed,
+    // scoped or skipped, these still hold for every file on disk.
+    for (const agentId of agentsWithReferences()) {
+      const refsDir = path.join(AGENTS_DIR, agentId, 'references');
+      for (const file of fs.readdirSync(refsDir).filter((f) => f.endsWith('.md')).sort()) {
+        it(`${agentId}/${file}: every _bmad/ path is prefixed and exists`, () => {
+          const found = occurrences(fs.readFileSync(path.join(refsDir, file), 'utf8'));
+          assert.ok(found.length > 0, `${agentId}/${file} names no _bmad/ path at all`);
+          assert.deepEqual(found.filter((o) => !o.prefixed).map((o) => o.path), [],
+            `${agentId}/${file}: path(s) lack ${PREFIX} and resolve from skill root`);
+          for (const o of found) {
+            assert.ok(fs.existsSync(path.join(PACKAGE_ROOT, o.path)),
+              `${agentId}/${file}: ${o.path} does not exist`);
+          }
+        });
+      }
+    }
   });
 
   for (const [agentId, codeToWorkflow] of Object.entries(frozen)) {
