@@ -63,7 +63,7 @@ they wonder what else is.
 ## Explicitly not in scope
 
 - **Wave 2 (Use) and Wave 3 (Build).** Named in the program plan, scheduled after the review.
-- **Fixing what the ledger discloses.** `T180`, `T181`, `T182` and `T183` are open rows. The Evaluate door
+- **Fixing what the ledger discloses.** `T180`, `T181` and `T182` are open rows; **`T183` closed 2026-09-27** — and the ledger has not caught up, which is the failure this epic's own standard names: a ledger disclosing a defect the product no longer has. Re-derive rather than trusting this sentence: `grep -n '^| T18[0-3] |' _bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` — a row is open if its line falls above §2.5, closed if below it (`grep -n '^### 2.5' <same file>`). Note `T180` is a **Fast Lane** row, not a Bug Lane one, so a Bug-Lane-scoped command will miss it; that is how a first attempt at this falsifier went wrong. **And not `backlog-integrity.js`**, which an earlier draft named — it prints a pass/fail verdict and row counts only, never lane membership or per-row status, so it cannot answer what this sentence invites. The Evaluate door
   reports the product as it is; it does not wait for it to improve.
 - **Backlog filing of the ~13 defects found during Wave 1** (4 from the ledger, 9 from the customize
   evidence). Unblocked now that 4.0.3 has shipped, but it is backlog hygiene, not a client deliverable.

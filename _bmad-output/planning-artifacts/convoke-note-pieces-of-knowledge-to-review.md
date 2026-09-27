@@ -133,17 +133,21 @@ warning recorded.** The fix is probably to strip the token rather than the line,
 patterns do — but it is a change to a shipped script for the standalone segment, so it wants its own scope.
 **Basis: verified** (the filter, the Phase 3b asymmetry, and the byte-identical exports).
 
-### K7 — the ratified v6.3 architecture mandates `bmad-init` delegation in four places
+### ~~K7 — the ratified v6.3 architecture mandates `bmad-init` delegation in four places~~ — **RESOLVED, see below**
 
-**Says:** `convoke-arch-bmad-v63-source-format-adoption.md` at `:93`, `:429-430`, `:685`, `:702` — e.g.
+**Says:** `convoke-arch-bmad-v63-source-format-adoption.md` at `:93`, `:429-430`, and the two summary
+sites originally cited as `:685` and `:702` — now `:715` and `:732`, because Amendment 1 inserted lines
+above them. Re-derive rather than trust these numbers. E.g.
 > Every converted agent's `## On Activation` section delegates to `bmad-init` skill rather than encoding
 > hardcoded `<step>` orchestration · Format: "Load config via `bmad-init` skill…"
 
-**Contradicted by:** `bmad-init` has not existed since upstream's 6.2.x removals, and `T183` will replace
-those delegations with a direct read of `_bmad/bme/config.yaml`.
+**Contradicted by:** `bmad-init` has not existed since upstream's 6.2.x removals. `T183` replaced those
+delegations with a direct read of `_bmad/bme/_vortex/config.yaml` — **not** `_bmad/bme/config.yaml`, which
+this entry originally predicted and which turned out to be a file Convoke never writes.
 
 ```sh
-grep -n 'bmad-init' _bmad-output/planning-artifacts/convoke-arch-bmad-v63-source-format-adoption.md   # 4 sites
+grep -n 'bmad-init' _bmad-output/planning-artifacts/convoke-arch-bmad-v63-source-format-adoption.md
+# 4 sites when this was filed; 6 hits now, because Amendment 1's own prose names the skill it retires
 ```
 
 **Why it matters:** this is **ratified architecture**, so it is the document a future conversion story
@@ -157,9 +161,19 @@ rot, attributed to `T183`.** **Basis: verified.**
 activation step it provided is now handled directly by the configuration loading change above"*; `:179` —
 4.0 *"keeps `bmad-init` and the current agent set intact"*.
 
-**Contradicted by:** the three converted agents still open with *"Load config via bmad-init skill"* —
-`grep -rl bmad-init _bmad/bme/` returns them. So `:152` and `:170` describe a change that was never made,
-and `:179` contradicts `:170` **in the same file**.
+**Contradicted by:** `:179` contradicts `:170` **in the same file** — that half stands and is untouched
+by anything since.
+
+> **Narrowed 2026-09-27 by `T183`.** The original contradiction rested on the three converted agents still
+> opening with *"Load config via bmad-init skill"*, shown by `grep -rl bmad-init _bmad/bme/` returning
+> them. **That command now exits 1 with no output**, so this entry no longer has the falsifier the queue's
+> own rules require, and `:152`/`:170` are no longer describing a change that was never made — `T183` made
+> it. Two residues survive and are why the row stays open: `:179`'s self-contradiction, and the fact that
+> `:152` names `_bmad/{module}/config.yaml` while the shipped read is the **submodule** config
+> `_bmad/bme/_vortex/config.yaml`, because the bme-level file is BMAD's installer's to write. Also
+> `CHANGELOG.md:21-22` — *"(Emma, Mila and Wade load their config a different way and never hit that
+> branch…)"* — keeps a true conclusion on dead reasoning: they now read exactly that file. **Re-derive
+> before acting:** `grep -rl bmad-init _bmad/bme/; echo $?` and `sed -n '150,180p' CHANGELOG.md`.
 
 **Why it matters:** the CHANGELOG is operator-facing and shipped, so this is the strongest class in this
 queue — a released document asserting a fix that does not exist. **`committed-artifact-integrity` means a
@@ -181,6 +195,68 @@ verified.**
 
 ---
 
+### K10 — the maturity ledger discloses a defect the product no longer has
+
+**Says:** `convoke-note-maturity-ledger-2026-09-14.md:211` — *"Emma, Wade and Mila read `1. **Load config via
+bmad-init skill**`"*; `:81` — *"Their first activation step calls a `bmad-init` skill that no longer exists in
+the package"*; `:219` — the **Works with limits** rating rests partly on *"The one-shot activation defect in
+the converted agents is unverified in impact."* `:135` and `:502` also list `T183` in the Bug Lane; `:135` is pinned to a `git show HEAD:` snapshot and is
+a measurement record, `:502` presents the same list as current state and is not.
+
+**Contradicted by:** `T183`, closed 2026-09-27 — **for the mechanism sentences only.** `grep -rl bmad-init _bmad/bme/` exits 1 with no output, so `:211` and the `bmad-init` clause of `:81` are stale. **`:219` is NOT contradicted:** *"unverified in impact"* is still true and stays — `T183` replaced an instruction and did not establish what the agents do at run time. Likewise `:81`'s non-determinism observation (`:27`, read once in four runs) is untouched. Only the mechanism is stale; re-derive with `grep -n 'bmad-init' _bmad-output/planning-artifacts/convoke-note-maturity-ledger-2026-09-14.md`.
+
+**Why it matters:** this is **page 2 of a client-facing document**, and
+`convoke-epic-evaluate-door-2026-09-22.md:58-61` sets the standard itself: *"A ledger that discloses a defect
+the product no longer has is as wrong as one that hides a defect it still has, and it is wrong in the
+direction that costs credibility twice."* **Note what does NOT change:** uncertain-row 1 stays uncertain —
+`T183` replaced an instruction, and did not establish what the agents do at run time. `:135` is explicitly
+pinned to a `git show HEAD:` snapshot and is a measurement record; `:502` presents the same list as current
+state and is not. **Basis: verified.**
+
+### K11 — a SHIPPED migration doc names the wrong config file
+
+**Says:** `docs/migration/3.x-to-4.0.md:31` — *"**In 4.0:** Convoke loads configuration directly from
+`_bmad/{module}/config.yaml` at activation."* `docs/migration/` is in `files[]`, so this reaches operators.
+
+**Contradicted by:** the shipped read is the **submodule** config `_bmad/bme/_vortex/config.yaml`. The
+bme-level `_bmad/bme/config.yaml` is BMAD's installer's to write and is absent from a Convoke-only install —
+`bash scripts/audit/try-fresh-install.sh` then
+`find <proj> -name 'config*.yaml' -not -path '*/node_modules/*'` → six submodule configs, no bme-level one.
+
+**Why it matters:** an upgrading operator following this doc looks in a file that does not exist on their
+tree. Same sentence shape as `K8`'s `CHANGELOG.md:152`, and the two should be corrected together.
+**Basis: verified.**
+
+### K12 — the in-flight Evaluate-door draft restates the deleted behaviour in three places
+
+**Says:** `_bmad-output/drafts/docs-program/customize-without-forking.md:249` — *"**Emma, Mila and Wade** load
+settings through a `bmad-init` step that no longer exists"*; `:85` and `:358` — *"no dependable way to read
+project files at startup — measured 1 run in 4 (`T183`)"*. Evidence file
+`customize-without-forking.evidence.md:55` (C13) and `:301` (D9) record the `bmad-init` step as the basis.
+
+**Contradicted by:** `T183`. The `bmad-init` half is now false.
+
+**Re-derive:** `grep -n 'bmad-init\|no dependable way\|one run of four' _bmad-output/drafts/docs-program/customize-without-forking.md`
+and `grep -n 'bmad-init' _bmad-output/drafts/docs-program/customize-without-forking.evidence.md`.
+
+**Why it matters:** each claim cites `T183` as the tracker that will fix it, and `T183` is closed — so nothing
+brings a reader back. Not in `files[]` today, but this is a Wave-2 docs-program deliverable aimed at
+operators. **The 1-in-4 measurement is NOT superseded** and must survive any edit: it is about whether these
+agents read config at run time, which `T183` did not change. Only the mechanism sentence is stale.
+**Basis: verified.**
+
+### K13 — the maturity ledger cites a backlog section that does not exist
+
+**Says:** `convoke-note-maturity-ledger-2026-09-14.md:502` — the Bug Lane list is attributed *"as §2.0
+records"*.
+
+**Contradicted by:** the backlog has §2.1–§2.5 and no §2.0 —
+`grep -n '^### 2\.' _bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md`.
+
+**Why it matters:** a broken attribution on a client-facing page, and a different class from `K10` (which is
+about a defect the product no longer has). Filed separately because this queue's rule is one entry per
+sentence. **Basis: verified.**
+
 ## Resolved
 
 *(strike the row, record the outcome and the commit — never delete)*
@@ -188,3 +264,4 @@ verified.**
 | Entry | Outcome |
 |---|---|
 | **K5** | **Resolved 2026-09-27.** It predicted `tests/unit/agent-activation-config-refs.test.js`'s non-detection paragraph would become false when `cir-1-1` landed. `cir-1-1` landed (`ba15efc7`) — and the prediction held only in part: the sibling's own header was never edited, because `cir-1-1` created a **separate** test rather than extending it, so the sentence *"the 3 v6.3 agents, which carry no activation block at all"* is still literally true of that file. **The row is kept struck rather than deleted** because the near-miss is the useful part: the rot was avoided by a design choice made for an unrelated reason (`T138`'s do-not-patch-a-third-time), not by anyone acting on this entry. |
+| **K7** | **Resolved 2026-09-27 by `T183`.** All four sites in `convoke-arch-bmad-v63-source-format-adoption.md` are corrected: the normative FR4 bullets are left standing and answered by **Amendment 1** directly beneath them — a ratified decision is superseded in place, not rewritten — and the dependency entry plus the two summary sites now point at it. **Re-derive rather than trusting line numbers here; this change shifted them once already:** `grep -n 'bmad-init' _bmad-output/planning-artifacts/convoke-arch-bmad-v63-source-format-adoption.md` — every hit should be the struck entry, the two superseded bullets, the Amendment's own prose, or the corrected pointer; none a live instruction. **The shipped fix reads that config as its only source, not as a fallback** — an earlier draft of this row described a fallback chain that the remediation deleted. *(Commit: this row is written in the change that resolves it, so no SHA exists yet — trace with `git log --oneline -- _bmad-output/planning-artifacts/convoke-arch-bmad-v63-source-format-adoption.md`.)* |

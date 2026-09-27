@@ -33,7 +33,7 @@ workflows or contracts, to a channel it did not treat as one.
 | 1 | [`convoke-note-channel-integrity-findings-2026-09-26.md`](convoke-note-channel-integrity-findings-2026-09-26.md) | **The diagnosis.** Every figure carries its command. Start here. |
 | 2 | [`adr/channel-integrity/adr-001-the-distribution-unit.md`](adr/channel-integrity/adr-001-the-distribution-unit.md) | **The decisions.** C1–C14 plus **Amendment 1**, which is the one that reframes everything. |
 | 3 | [`convoke-epic-s4-channel-hub.md`](convoke-epic-s4-channel-hub.md) · [`convoke-epic-channel-integrity-remediation.md`](convoke-epic-channel-integrity-remediation.md) | The two epics. |
-| 4 | [`convoke-note-pieces-of-knowledge-to-review.md`](convoke-note-pieces-of-knowledge-to-review.md) | Stale sentences found in passing, K1–K6. |
+| 4 | [`convoke-note-pieces-of-knowledge-to-review.md`](convoke-note-pieces-of-knowledge-to-review.md) | Stale sentences found in passing. **No range stated here — it grew twice on 2026-09-27 alone.** Derive it with `grep -n '^### ~*K[0-9]' _bmad-output/planning-artifacts/convoke-note-pieces-of-knowledge-to-review.md`; struck headings are resolved and recorded in the Resolved table at the foot. |
 
 **There is no live PRD.** `prds/prd-BMAD-Enhanced-2026-09-26/prd.md` was superseded the day it was
 written and does **not** govern — but the five reviews beside it are the most useful artifacts of that
@@ -61,16 +61,21 @@ mechanism holding it together is that the pieces arrive together.
 | `s4-1-1` | authored, not built. Same re-scope caveat. Its four rulings are closed. |
 | `s4-1-2` | not authored. Blocked on `validate-marketplace.js`'s `AGENT_IDS` identity check. |
 
-## 5. Next action, and it is small
+## 5. Next action
 
-**`T183`** — the only genuinely dead upstream dependency. It carries its own corrected fix spec, derived
-2026-09-27; do not re-derive it. About an hour. It is the only remaining item that repairs the **reference
-product**, which Amendment 1 makes the only thing that has to be complete.
+~~**`T183`**~~ — **done 2026-09-27**, see the
+[closing note](convoke-note-backlog-completed-archive.md#t183). It took considerably more than the hour
+estimated here, for a reason worth carrying: **the row's own "corrected fix spec" was wrong**, and so was
+the first implementation of it. This section told the next reader *"do not re-derive it"* — that
+instruction is what the spec's error was hiding behind, and `verification-claims-must-name-their-evidence`
+already forbids it (*"Never instruct a reviewer not to verify something"*). Round 1 returned ~36 findings
+across three independent layers, ~10 HIGH. **Next action is now a re-scope**, per the paragraph
+immediately below, plus the rows `T183` filed — derive them with `grep -n 'T183' _bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` rather than listing them here, since an earlier draft of this line already under-counted them.
 
 Everything else waits on a re-scope, because the channels are non-reference now and both `s4` and
 `cir-1-3` were sized before that ruling.
 
-## 6. Open decisions — all small, none blocking `T183`
+## 6. Open decisions — all small, none blocking the re-scope
 
 - **`IN-240(f2)`** — keep the baseline↔references assertion symmetric, or assert only the direction the
   guard exists for?
@@ -88,7 +93,13 @@ Everything else waits on a re-scope, because the channels are non-reference now 
 - **Do not use `resolve_config.py`** for module config. Central TOML only; its `modules` keys have no
   `bme`; it drops `document_output_language` and `project_name`; and it would take `_bmad/bme/` Python
   usage 0 → 3 against an invariant the absorption architecture credits with making upstream's churn inert.
-  Read `_bmad/bme/config.yaml` instead — one read, everything.
+  Read a config **Convoke actually writes** instead — which is **not** `_bmad/bme/config.yaml`.
+  **Corrected 2026-09-27 by `T183`:** that file is BMAD's installer's to write, `files[]` carries no
+  `_bmad/bme/config.*`, and a real fresh install (`bash scripts/audit/try-fresh-install.sh`) produces only
+  the six *submodule* configs. Reading it alone resolves to nothing for any operator without upstream
+  BMAD. The shipped read is `{project-root}/_bmad/bme/_vortex/config.yaml`. Before rebuilding this in
+  prose, read `scripts/update/lib/config-loader.js` — `:21` already replaces the `bmad-init` load path and
+  `:35` already assigns `{user}` resolution to the agent.
 - **`agent-surface-parity.js` does not cover activation-block defects.** Its check is a presence regex
   (`:110`) that passes the defect and the fix identically. **Three stories cited it as coverage.**
 - **`refs:audit` sees nothing in the agent reference files** — it space-fills inline code spans, and every
@@ -100,6 +111,15 @@ Everything else waits on a re-scope, because the channels are non-reference now 
   Nothing new is published until the discovery surface is declared and checkable — and **C12 declined to
   build the gate**, so that is an accepted risk, not compliance.
 - **Grep the backlog before authoring a story.** `cir-1-2` duplicated `T183` by ten days.
+- **Closing a story silently drops its unmet ACs.** Nothing walks them; the status flips and the
+  obligations go with it. `cir-1-2` was closed as a duplicate of `T183` carrying **9** ACs
+  (`grep -c '^\*\*AC[0-9a-z]*' _bmad-output/implementation-artifacts/cir-1-2-*.md`). **AC7** — file the v7
+  watch item — was unmet, and survived only because that pass happened to re-read the ACs; it is now
+  `IN-241`. Whichever of them the successor does *not* inherit dies unrecorded, and the row shows nothing.
+  **Before closing a story for any reason — duplicate, superseded, descoped — walk its ACs and dispose of
+  each one explicitly: inherited by <successor>, already satisfied, or re-filed as <ID>.** §8's *carry the
+  obligations forward* is this same class one artifact up, at the superseded PRD; this is the story-level
+  instance, and it has now happened at both levels.
 
 ## 8. The two lessons that outlived the work
 

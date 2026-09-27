@@ -90,7 +90,7 @@ Five NFRs (NFR7, NFR8, NFR15, NFR16, NFR18) are **load-bearing for tooling archi
 **Dependencies (existing artifacts/tools that I97 leverages):**
 
 - **BMB conversion tooling** (`_bmad/bmb/skills/bmad-agent-builder/`, `_bmad/bmb/skills/bmad-workflow-builder/`) — both shipped, both expose `build-process` action with `convert` mode. Diagnostic confirmed they produce v6.3+ outcome-based markdown but may need manual fixup per agent.
-- **`bmad-init` skill** — activation pattern delegation target (per FR4) for converted agent SKILL.md files.
+- ~~**`bmad-init` skill** — activation pattern delegation target (per FR4) for converted agent SKILL.md files.~~ **Deleted upstream 2026-06-27; no longer a dependency — see FR4 Amendment 1.**
 - **Operator Covenant Compliance Checklist tooling** — existing audit harness referenced in Compliance Checklist; new Covenant survival audit (FR17-20) extends or wraps this.
 - **Existing CI infrastructure** — `convoke-doctor`, `audit-skill-dirs`, lint pipeline (per NFR4-6).
 - **Existing release pipeline** — `host-framework-sync-playbook.md` Story 5A.2 outline (per FR29-32).
@@ -429,6 +429,36 @@ This structure is **complete enough to be promoted to a standalone workflow skil
 - Every converted agent's `## On Activation` section delegates to `bmad-init` skill rather than encoding hardcoded `<step>` orchestration
 - Format: "Load config via `bmad-init` skill. Greet the user appropriately and present capabilities."
 
+> **Amendment 1 — the delegation target no longer exists; its replacement already did. 2026-09-27, `T183`.**
+>
+> FR4's **shape** stands: a converted agent states activation as outcomes, not `<step>` orchestration. Its
+> **target** does not. Upstream deleted `bmad-init` in `a16fa340` (2026-06-27); no Convoke release ships
+> `_bmad/core` —
+> `node -e "console.log(require('./package.json').files.some(p=>p.startsWith('_bmad/core')))"` → `false`,
+> and `git log --all -p -- package.json | grep _bmad/core` is empty, so that holds for every release. The
+> two bullets above therefore name a target that has been absent since June 2026. **What an LLM does when
+> told to load config via a skill that is not there was never measured** and is not asserted here; the
+> maturity ledger records these three agents' activation behaviour as varying between runs.
+>
+> **Replacement, as shipped:** one read of `{project-root}/_bmad/bme/_vortex/config.yaml` — the file
+> `convoke-install-vortex` writes, and the one the four unconverted Vortex agents already read. Not the
+> bme-level `_bmad/bme/config.yaml`: **BMAD's installer writes that, not Convoke's**, and a real fresh
+> install (`bash scripts/audit/try-fresh-install.sh`) produces only the six submodule configs, so reading
+> it alone would resolve to nothing on any install without upstream BMAD. Unresolved values take defaults
+> that are stated to the operator in one line, and a config problem never stops activation (OC-R1; a bare
+> refusal is a FAIL per `compliance-checklist.md:29`).
+>
+> **A library already existed for this and should be read before anyone rebuilds it in prose:**
+> `scripts/update/lib/config-loader.js` — `:21` *"Replaces the legacy `bmad-init` skill's load path with
+> a direct-YAML utility. Reads `_bmad/{moduleConfigPath}/config.yaml`, resolves the `{project-root}`
+> placeholder"*, and `:35` *"NO `{user}` placeholder resolution (Convoke-bme activation convention handled
+> by agents)"*. Its API is frozen per Story 1A.2 AC9. The shipped agent text follows that division of
+> labour — the agent resolves `{user}` — and the first draft of this amendment was wrong precisely because
+> it was written without opening that file.
+>
+> **Read one of the three agents rather than this paragraph** — `_bmad/bme/_vortex/agents/*/SKILL.md`,
+> `## On Activation`. This note rots as they change; they are the artifact.
+
 **Cross-reference path conventions:**
 
 - Within `_bmad/bme/_vortex/`: relative paths (`./references/`, `../workflows/`)
@@ -682,7 +712,7 @@ BMAD-Enhanced/                                              # Repo root
 **Internal (within Convoke repo):**
 
 - BMB tooling invocation: migration tooling at `scripts/migration/format-conversion/` invokes `_bmad/bmb/skills/bmad-agent-builder/` and `_bmad/bmb/skills/bmad-workflow-builder/`
-- Activation delegation: every converted agent's SKILL.md delegates activation to `bmad-init` skill (per FR4)
+- Activation delegation: every converted agent's SKILL.md reads `_bmad/bme/_vortex/config.yaml` directly (per FR4 **Amendment 1** — the original `bmad-init` target no longer exists)
 - Capability routing: agent SKILL.md `## Capabilities` table loads `./references/{cap}.md` (per FR11)
 - Workflow source preservation: `references/{name}.md` derived from `workflows/{name}/workflow.md` but workflow source unchanged (per FR12)
 
@@ -699,7 +729,7 @@ BMAD-Enhanced/                                              # Repo root
 2. Install resolves agent paths from `marketplace.json` `skills[]` array OR from npm package
 3. BMAD `manifest-generator.collectAgentsFromModuleYaml()` reads `module.yaml` `agents:` array → registers 7 Vortex agents in BMAD's agent manifest
 4. Operator invokes `bmad-agent-bme-{role}` slash command → wrapper at `.claude/skills/bmad-agent-bme-{role}/SKILL.md` loads `_bmad/bme/_vortex/agents/{role}/SKILL.md`
-5. Agent SKILL.md activates: delegates config loading to `bmad-init`, presents capability menu
+5. Agent SKILL.md activates: reads `_bmad/bme/_vortex/config.yaml` directly (per FR4 **Amendment 1**), presents capability menu
 6. Operator selects capability code → agent loads `./references/{cap}.md`, drives workflow per Pattern-C-friendly capability prompt
 7. Workflow output written to existing `_bmad-output/vortex-artifacts/` location
 
