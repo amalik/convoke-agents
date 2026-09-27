@@ -911,3 +911,34 @@ Concrete instances from that day, each cheap to have prevented:
   is indistinguishable from a checked fact, which is the whole defect.
 - **Verify against the basis the claim is about.** A function call is not a pipeline run; a local
   generated directory is not the current pipeline; a backlog row is not the row's summary in an epic.
+
+**The mechanism clause — added 2026-09-27 after six instances of one mistake.** The rule above catches
+*figures*, because it was written about numbers and commands. It did not catch **designs**, and every
+draft rescued in that session failed the same way: **a mechanism was prescribed without reading the
+mechanism.**
+
+- the hub was designed as a generated `standalone: true` wrapper **without reading how wrappers are
+  delivered** — they load `{project-root}` paths that are absent by definition in the case the hub exists
+  for, and gitignored wrappers can never be a `marketplace.json` path;
+- `refs:audit` was cited as covering 22 paths **without reading it** — it space-fills inline code spans and
+  reports *0 references checked* over those files;
+- `agent-surface-parity.js` was cited as catching a broken activation block **without reading it** — its
+  check is `/config\.yaml|load.{0,20}config/i`, a presence regex that passes the defect and the fix alike;
+- `resolve_config.py` was prescribed **without reading `_bmad/bme/config.yaml`**, the file the instruction
+  it replaced actually loaded — so the design was more machinery and less coverage;
+- `uv run` was prescribed **without grepping for whether the repo forbids it** — Convoke ships zero `.py`
+  and no `_bmad/bme/` skill invokes Python, and the absorption architecture records that pair as what made
+  upstream's churn inert;
+- `grep -rc` was written as a falsifier **without running it** — it exits 0 whether or not the string is
+  present, so the AC read satisfied while the defect was live.
+
+**So, before prescribing a mechanism, open it:**
+
+- **Naming a script?** Read it, and run it in the form you are naming.
+- **Claiming a gate covers something?** Read the assertion. A presence regex is not coverage, and "it
+  passed" is not evidence of detection — `feedback_verification_basis`: *"ran it" ≠ "it detects failure"*.
+- **Replacing a call?** Read what the call actually loaded. The file you assume is not the file it read.
+- **Adding a dependency or a language?** Grep for a prohibition before adding it. Prohibitions here are
+  usually written in an architecture document and enforced nowhere.
+- **Writing a story?** Grep the backlog for the defect first. `cir-1-2` duplicated `T183`, which had been
+  filed ten days earlier, named the same three agents and was already cited by two epics.
