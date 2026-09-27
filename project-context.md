@@ -836,3 +836,78 @@ not to a craft.
 something does, this rule is a declaration — the same class of gap this file documents elsewhere. It was
 also, until 2026-09-20, unwritten: it existed only in the operator's head and in advice given verbally in
 workshops, which is why adopters who never attended one do the opposite on day one.
+
+---
+
+## Rule: file-stale-knowledge-when-you-find-it
+
+**Statement.** When you find evidence that a sentence in a committed document is false, stale or
+misleading, and fixing it is not your current task, **file it in
+[`_bmad-output/planning-artifacts/convoke-note-pieces-of-knowledge-to-review.md`](_bmad-output/planning-artifacts/convoke-note-pieces-of-knowledge-to-review.md)**
+with enough context that someone else can investigate without repeating your work. Do not fix it in
+passing, and do not carry it only in a conversation.
+
+**Why.** Stale prose here is load-bearing and it misleads silently. The maturity ledger told a leadership
+audience *"Convoke is not listed"* while a Convoke agent had been publicly listed for three months, and
+`ci.yml:228-230` justifies a check's scope by citing `.gitignore:62` — a comment line, whose operative
+neighbours *un-ignore* the path the comment calls ignored. Both were found incidentally, by someone whose
+task was something else. A finding that lives only in a chat window is lost at the end of the session, and
+a drive-by edit to a document you have not investigated is how a correct sentence gets replaced with a
+confident wrong one.
+
+**How to apply.**
+
+- **One entry per sentence.** Where it is, what it says, what contradicts it, and **the command that shows
+  the contradiction.** An entry without a reproducing command is a suspicion — file it and say so in the
+  Basis line rather than dressing it as fact.
+- **State your basis honestly.** `verified` means you ran the command. If the count came from a reviewer,
+  a subagent or another document, say whose it is and that it is unchecked.
+- **Forward-dated rot is filable.** A sentence that is true today and will be false when a named story
+  lands belongs in the queue, attributed to that story.
+- **Resolving is a move, not a delete.** Edit the source, then strike the row and record the outcome and
+  the commit. An entry that turns out to be *wrong* is struck the same way — the finder can be mistaken,
+  and that is worth keeping.
+- **Your own memory is in scope.** The first thing this rule caught was an assistant memory asserting that
+  `docs/testing.md` still carried stale coverage figures; the file had already been corrected to refuse
+  stating totals at all.
+
+---
+
+## Rule: derive-before-you-write
+
+**Statement.** In an **authored artifact** — a story, epic, ADR, PRD, note or review — every figure,
+command, file reference and cross-artifact attribution is produced by running something **before** the
+sentence containing it is written. Writing first and verifying afterwards is forbidden, because the
+verification pass reliably misses what the writing pass invented.
+
+**Why.** `derive-counts-from-source` and `documentation-claims-must-be-derived` already bind documents
+*about* the project, and they did not reach authored artifacts — measured on 2026-09-27, when three
+consecutive stories each shipped wrong figures that a single command would have caught. The failures were
+not carelessness but a pattern: an inference and a measurement read identically once they are prose, so
+nothing in the finished document distinguishes them.
+
+Concrete instances from that day, each cheap to have prevented:
+
+- `node scripts/audit/agent-surface-parity.js` was named as a gate in two stories. It takes two git refs
+  and exits 1 with a usage error. Nobody ran it.
+- A story claimed `refs:audit` covered the paths it was fixing. Scoped to those files it reports
+  **0 references checked** — it space-fills inline code spans and every path there is backticked.
+- *"`git log --grep=T214` confirms it touched only Team Factory files."* The quoted output contained the
+  contradicting filename. The command ran; the output was read for confirmation.
+- An export blocker was derived by calling a transformation function on a hand-written line rather than
+  running the exporter. A real export showed the line was already absent, so the blocker did not exist —
+  and an operator ruling had already been requested on it.
+
+**How to apply.**
+
+- **Every figure carries its command, inline, in the artifact.** If the command is too long to include,
+  the figure is too fragile to state.
+- **Never cite a document for a fact about code.** Cite the code. A document is evidence of what someone
+  believed when they wrote it.
+- **Do negative checks by machine.** "Is there anything here that is *not* X?" is `grep -v`, a count or a
+  set difference — never a human reading a list. Confirmation-scanning long output is where this fails.
+- **Run every command you name**, in the form you name it, from the directory a reader would use.
+- **Mark what you could not verify** with a visible `[UNVERIFIED]` and leave it ugly. A smoothed unknown
+  is indistinguishable from a checked fact, which is the whole defect.
+- **Verify against the basis the claim is about.** A function call is not a pipeline run; a local
+  generated directory is not the current pipeline; a backlog row is not the row's summary in an epic.
