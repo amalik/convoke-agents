@@ -7,8 +7,8 @@ baseline_commit: 14403e55
 Status: ready-for-dev
 
 **Epic:** [cir — Channel-Integrity Remediation](../planning-artifacts/convoke-epic-channel-integrity-remediation.md)
-**Namespace decision:** Convoke-owned — 12 files under `_bmad/bme/_vortex/agents/*/references/`, one new test under `tests/unit/`, and (pending §The blocker) `scripts/portability/export-engine.js`. No skill, agent or workflow is added.
-**Safety analysis (`path-safety-for-destructive-ops`):** in scope **only if** the export change lands — that edit alters what an operator's exported bundle contains. Nothing here deletes or writes in an operator's tree and no script gains a path argument.
+**Namespace decision:** Convoke-owned — 12 files under `_bmad/bme/_vortex/agents/*/references/` and one new test under `tests/unit/`. No skill, agent or workflow is added, and no script is changed.
+**Safety analysis (`path-safety-for-destructive-ops`):** **not in scope.** Nothing here deletes, moves or writes in an operator's tree, and no script gains a path argument. The export change an earlier draft contemplated is retracted below.
 
 > **Every figure in this story was produced by a command, run at `14403e55`, before the story was
 > written.** An earlier draft was written first and verified afterwards; six of its claims were wrong,
@@ -40,35 +40,35 @@ No resolution base. The twelve files belong to the three agents that have a `ref
 (4 · 5 · 3) — the three whose content was converted to outcome-based markdown. The other four carry
 none.
 
-## ⛔ The blocker: as things stand, the fix deletes the sentence it fixes
+## The blocker I raised does not exist — retracted 2026-09-27
 
-Measured, not reasoned:
+**I reported that prefixing would delete these lines from the standalone export, asked for a ruling,
+and got one. The ruling is not needed and Phase 3 should not be touched for this story.**
+
+What I measured first was `applyTransformations` on a **hand-written line**: bare survived, prefixed
+became `""`. True about the function, and the wrong basis — it is not what the pipeline does to these
+files. A fresh export at `14403e55` says so:
 
 ```sh
-node -e "…applyTransformations(line)…"
-BARE   -> "…Then invoke the workflow at `_bmad/…/workflow.md`…"     # survives
-PREFIX -> ""                                                         # whole line gone
+node scripts/portability/convoke-export.js bmad-agent-bme-lean-experiments-specialist --output <tmp>
+# ✅ 1 success, 2 warnings — 5 files
+grep -rniE 'invoke the workflow|step-file sequence|_bmad' <tmp>/…/    # NO MATCHES
+grep -rciE 'riskiest assumption' <tmp>/…/instructions.md              # 2
 ```
 
-`export-engine.js:481` puts `/\{project-root\}/` in `frameworkPatterns` and **drops the entire line**,
-recording a warning only for `.claude/hooks` and `bmad-speak`. The three agents export as `pipeline`
-tier, so this reaches the ~40% Vortex-Standalone segment.
+**Line 21's instruction is already absent from the export today, with the bare path.** The capability
+prose *is* carried — `instructions.md` is assembled from selected sections (`export-engine.js:1075`,
+`:1129`), not by concatenating reference files — so the load instruction never reaches the bundle in
+either form. Prefixing cannot remove what is not there. *(The earlier local `exported-skills/` copy was
+also stale — 2026-04-14 against `mvp.md` at 2026-05-02 — so it could not have settled this either way.)*
 
-**This is a defect in the export, not a conflict with the fix** — and the export already contains its
-own better answer twenty-four lines later. `export-engine.js:505`, Phase 3b:
+**AC1 therefore has no export precondition, and `scripts/portability/export-engine.js` is out of scope.**
 
-> Only strip lines whose primary content is a `_bmad/` path … **Avoid stripping the line if `_bmad/`
-> appears only as a parenthetical or backtick reference.**
-
-Phase 3b is surgical about exactly this and its guard `/^\s*[`*-]?\s*_bmad\//` is why the bare line
-survives. Phase 3 is blunt about the same content, and its own comment assumes that bluntness
-("*those references are already gone*").
-
-**Recommendation, and the one thing needing your ruling:** narrow Phase 3 for `{project-root}` to match
-Phase 3b — strip the **token**, or strip the line only when the path is the line's primary content —
-rather than deleting every line that mentions it. `{project-root}` stays in `FORBIDDEN_STRINGS`
-(`test-constants.js:34`) either way, because removing the token satisfies it. **AC1 must not land
-before this**, or 22 load instructions vanish from the standalone bundle.
+**One real gap found while establishing this, and it is not this story's:** an exported standalone agent
+carries the capability prose with **no pointer to any workflow at all**, because the load instruction is
+dropped and the workflows are not exported. That is a live limitation for the ~40% standalone segment,
+it is **unchanged by this story in either direction**, and it belongs to the portability initiative.
+Recorded here only so the next reader does not rediscover it as a regression of this work.
 
 ## Scope — 22 of 105, and the boundary is functional
 
@@ -90,9 +90,10 @@ occurrence an agent is instructed to act on**, versus **one a reader may follow*
 
 ## Acceptance Criteria
 
-**AC1 — the 22 carry `{project-root}/`, and the export change lands with them.** Falsifier: the grep in
-§Root cause returns non-zero for the bare form, **or** the measurement in §The blocker still returns `""`
-for a prefixed line. **Both, or the AC is unmet** — prefixing alone is a regression.
+**AC1 — the 22 carry `{project-root}/`.** Falsifier: the grep in §Root cause returns non-zero for the
+bare form. A fresh `convoke-export` of one of the three agents must also still succeed and still contain
+the capability prose — not because prefixing threatens it, but because that is the claim the retracted
+blocker got wrong, and one command now settles it either way.
 
 **AC2 — a new sibling test asserts it, and it is a sibling on purpose.**
 `tests/unit/agent-activation-config-refs.test.js` is a **T214 deliverable** — `git log --name-only
@@ -136,14 +137,12 @@ Baseline for comparison at `14403e55`: **3025 tests, 3007 pass, 0 fail, 18 skipp
 
 ## Tasks
 
-1. **Get the export ruling** (§The blocker). Nothing else starts: task 2 without it is a regression.
-2. Narrow Phase 3 per the ruling; verify with the before/after measurement on a real line 21.
-3. Prefix the 22 on the twelve line-21s (AC1).
-4. New sibling test: expectation set from each `SKILL.md`, floors per AC4, non-detections stated (AC2, AC3, AC4, AC5).
-5. Prove the guard by mutating a **committed** file — `sed` one prefix back to bare, run, `git checkout --`
+1. Prefix the 22 on the twelve line-21s (AC1).
+2. New sibling test: expectation set from each `SKILL.md`, floors per AC4, non-detections stated (AC2, AC3, AC4, AC5).
+3. Prove the guard by mutating a **committed** file — `sed` one prefix back to bare, run, `git checkout --`
    it — and record *edit → the named `it()` that went red*. Both halves must exist in the repo, so a
    create-then-delete probe does not qualify.
-6. Gates per AC7.
+4. Gates per AC7, plus a fresh `convoke-export` of one of the three agents (AC1).
 
 ## Dev Notes
 
