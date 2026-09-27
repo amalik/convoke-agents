@@ -18,4 +18,4 @@ A single markdown document at `{output_folder}/vortex-artifacts/pattern-map-{slu
 
 ## Activation
 
-Load this file when the parent agent's capability menu routes to `PA`. Then invoke the workflow at `_bmad/bme/_vortex/workflows/pattern-mapping/workflow.md` and follow its step-file sequence under `_bmad/bme/_vortex/workflows/pattern-mapping/steps/`. The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.
+Load this file when the parent agent's capability menu routes to `PA`. Then invoke the workflow at `{project-root}/_bmad/bme/_vortex/workflows/pattern-mapping/workflow.md` and follow its step-file sequence under `{project-root}/_bmad/bme/_vortex/workflows/pattern-mapping/steps/`. The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.

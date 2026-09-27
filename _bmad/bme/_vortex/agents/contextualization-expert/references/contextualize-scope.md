@@ -18,4 +18,4 @@ A single markdown document at `{output_folder}/vortex-artifacts/scope-decision-{
 
 ## Activation
 
-Load this file when the parent agent's capability menu routes to `CS`. Then invoke the workflow at `_bmad/bme/_vortex/workflows/contextualize-scope/workflow.md` and follow its step-file sequence under `_bmad/bme/_vortex/workflows/contextualize-scope/steps/`. The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.
+Load this file when the parent agent's capability menu routes to `CS`. Then invoke the workflow at `{project-root}/_bmad/bme/_vortex/workflows/contextualize-scope/workflow.md` and follow its step-file sequence under `{project-root}/_bmad/bme/_vortex/workflows/contextualize-scope/steps/`. The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.

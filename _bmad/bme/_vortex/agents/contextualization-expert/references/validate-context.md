@@ -18,4 +18,4 @@ A single markdown document at `{output_folder}/vortex-artifacts/validation-plan-
 
 ## Activation
 
-Load this file when the parent agent's capability menu routes to `VL`. Then invoke the workflow at `_bmad/bme/_vortex/workflows/lean-persona/validate.md` (note: validation lives under `lean-persona/` directory but applies to both Lean Persona and Product Vision artifacts — Pattern-C-friendly indirection). The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.
+Load this file when the parent agent's capability menu routes to `VL`. Then invoke the workflow at `{project-root}/_bmad/bme/_vortex/workflows/lean-persona/validate.md` (note: validation lives under `lean-persona/` directory but applies to both Lean Persona and Product Vision artifacts — Pattern-C-friendly indirection). The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.

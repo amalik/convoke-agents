@@ -18,4 +18,4 @@ A single markdown document at `{output_folder}/vortex-artifacts/problem-definiti
 
 ## Activation
 
-Load this file when the parent agent's capability menu routes to `RC`. Then invoke the workflow at `_bmad/bme/_vortex/workflows/research-convergence/workflow.md` and follow its step-file sequence under `_bmad/bme/_vortex/workflows/research-convergence/steps/`. The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.
+Load this file when the parent agent's capability menu routes to `RC`. Then invoke the workflow at `{project-root}/_bmad/bme/_vortex/workflows/research-convergence/workflow.md` and follow its step-file sequence under `{project-root}/_bmad/bme/_vortex/workflows/research-convergence/steps/`. The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.

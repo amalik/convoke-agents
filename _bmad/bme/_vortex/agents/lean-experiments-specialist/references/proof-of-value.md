@@ -18,4 +18,4 @@ A single markdown document at `{output_folder}/proof-of-value-{name}-{YYYY-MM-DD
 
 ## Activation
 
-Load this file when the parent agent's capability menu routes to `PV`. Then invoke the workflow at `_bmad/bme/_vortex/workflows/proof-of-value/workflow.md` and follow its step-file sequence under `_bmad/bme/_vortex/workflows/proof-of-value/steps/`. The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.
+Load this file when the parent agent's capability menu routes to `PV`. Then invoke the workflow at `{project-root}/_bmad/bme/_vortex/workflows/proof-of-value/workflow.md` and follow its step-file sequence under `{project-root}/_bmad/bme/_vortex/workflows/proof-of-value/steps/`. The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.

@@ -18,4 +18,4 @@ A single markdown document at `{output_folder}/proof-of-concept-{name}-{YYYY-MM-
 
 ## Activation
 
-Load this file when the parent agent's capability menu routes to `PC`. Then invoke the workflow at `_bmad/bme/_vortex/workflows/proof-of-concept/workflow.md` and follow its step-file sequence under `_bmad/bme/_vortex/workflows/proof-of-concept/steps/`. The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.
+Load this file when the parent agent's capability menu routes to `PC`. Then invoke the workflow at `{project-root}/_bmad/bme/_vortex/workflows/proof-of-concept/workflow.md` and follow its step-file sequence under `{project-root}/_bmad/bme/_vortex/workflows/proof-of-concept/steps/`. The workflow source is authoritative for step-by-step instructions; this capability prompt is the activation pointer + scope summary.

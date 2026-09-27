@@ -4,7 +4,7 @@ baseline_commit: 14403e55
 
 # Story cir-1.1: Resolve every cross-directory reference from a stated base
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** [cir — Channel-Integrity Remediation](../planning-artifacts/convoke-epic-channel-integrity-remediation.md)
 **Namespace decision:** Convoke-owned — 12 files under `_bmad/bme/_vortex/agents/*/references/` and one new test under `tests/unit/`. No skill, agent or workflow is added, and no script is changed.
@@ -137,12 +137,12 @@ Baseline for comparison at `14403e55`: **3025 tests, 3007 pass, 0 fail, 18 skipp
 
 ## Tasks
 
-1. Prefix the 22 on the twelve line-21s (AC1).
-2. New sibling test: expectation set from each `SKILL.md`, floors per AC4, non-detections stated (AC2, AC3, AC4, AC5).
-3. Prove the guard by mutating a **committed** file — `sed` one prefix back to bare, run, `git checkout --`
+1. [x] Prefix the 22 on the twelve line-21s (AC1).
+2. [x] New sibling test: expectation set from each `SKILL.md`, floors per AC4, non-detections stated (AC2, AC3, AC4, AC5).
+3. [x] Prove the guard by mutating a **committed** file — `sed` one prefix back to bare, run, `git checkout --`
    it — and record *edit → the named `it()` that went red*. Both halves must exist in the repo, so a
    create-then-delete probe does not qualify.
-4. Gates per AC7, plus a fresh `convoke-export` of one of the three agents (AC1).
+4. [x] Gates per AC7, plus a fresh `convoke-export` of one of the three agents (AC1).
 
 ## Dev Notes
 
@@ -165,3 +165,109 @@ An earlier draft argued this story should precede `s4-1-1` so the hub inherits a
 `s4-1-1` AC2 requires the opposite convention for its own files — a **relative** link, because the hub is
 tracked and co-located — and that story records a draft that broke by generalising the prefix rule.
 **So there is no ordering benefit, and asserting one invited exactly that generalisation.**
+
+---
+
+## Dev Agent Record
+
+### Implementation
+
+Red-green, in that order. The sibling test was written first and **failed on all 12 files** before any
+reference file was touched — 25 tests, 13 pass, 12 fail, one failure per file naming its own count. The
+floor test passed in that run, which is what makes the 12 failures meaningful rather than an empty walk.
+
+**The prefix is detected by position, not by a character class.** The story's own grep — "the character
+before `_bmad` is not in `[{/a-zA-Z._-]`" — is blind to at least nine forms (`{project-ROOT}/`,
+`{project_root}/`, `{project-root}//`, `./_bmad/`, a prefix wrapped onto the previous line, an uppercase
+module segment). The test instead walks every `_bmad/` occurrence and inspects the characters
+immediately before it, so the only way to pass is to carry the exact prefix. The edit used the same
+walk, so 22 of 22 were reached and nothing else was rewritten.
+
+**AC5 was closed rather than filed.** A second assertion per file `existsSync`es every prefixed target,
+because measurement showed nothing else does: `reference-integrity.js` reports *0 references checked*
+over these files (it space-fills inline code spans and every path is backticked) and `docs-audit.js`
+runs against a fixed 18-entry corpus that excludes them.
+
+### Derivations — each with the command that produced it
+
+| Claim | Command | Result |
+|---|---|---|
+| bare occurrences before | `grep -rhoE '(^\|[^{/a-zA-Z._-])_bmad/bme/_[a-z-]+/[A-Za-z0-9_./-]*' _bmad/bme/_vortex/agents/*/references/ \| wc -l` | **22** |
+| files affected | same pattern with `-rlE` on `*.md` | **12** |
+| already prefixed before | `grep -rhoE '\{project-root\}/_bmad/bme/_[a-z-]+/' … \| wc -l` | **0** |
+| line numbers | `grep -rnE … \| cut -d: -f2 \| sort -nu` | **21** (only) |
+| bare occurrences after | as above | **0** |
+| prefixed after | as above | **22** |
+| suite before | `npm test` at `14403e55` | 3025 / 3007 pass / 0 fail / 18 skipped |
+| suite after | `npm test` | **3050 / 3032 pass / 0 fail / 18 skipped** |
+
+### Mutant → sole executioner (AC3)
+
+| Mutant | Test that goes red | Scope |
+|---|---|---|
+| `sed -i '' 's\|{project-root}/_bmad/bme/_vortex/workflows/mvp/workflow.md\|_bmad/bme/_vortex/workflows/mvp/workflow.md\|' _bmad/bme/_vortex/agents/lean-experiments-specialist/references/mvp.md` | `it('mvp.md: exists, and every cross-directory path carries {project-root}/')` | **1 of 1232** tests under `tests/unit` (`node scripts/test-runner.js tests/unit` → 1232 tests, 1227 pass, 1 fail) |
+
+Both halves live in the repository, so a later reader re-runs the row with one command and reverts with
+`git checkout -- <file>`. **During this run the restore came from a scratch copy instead**, because
+`HEAD` still held the unprefixed version and `git checkout --` would have reverted the fix itself. The
+two `not ok` lines above the named test in TAP output are its parent `describe` blocks, not additional
+tests.
+
+### The retracted blocker, re-measured AFTER the change
+
+The story retracted a claim that prefixing would delete these lines from the standalone export. That
+retraction was measured before the edit; here it is measured after, which is the direction that matters:
+
+```sh
+node scripts/portability/convoke-export.js bmad-agent-bme-lean-experiments-specialist --output <tmp>
+# ✅ 1 success, 0 failed, 2 warnings — 5 files
+grep -rci 'riskiest assumption' <tmp>/…/instructions.md   # 2   (capability prose carried)
+grep -rc '{project-root}' <tmp>/…/ | grep -v ':0$' | wc -l  # 0  (FORBIDDEN_STRINGS honoured)
+grep -rc '_bmad' <tmp>/…/          | grep -v ':0$' | wc -l  # 0
+```
+
+Same file count, same prose, no leaked token — identical to the pre-fix export. **The prefix changed
+nothing for the standalone segment**, which is what the retraction claimed and what an implementation
+could have quietly falsified.
+
+### Gates
+
+`npm test` 3050/3032/0 · `npm run refs:audit` PASS 941/0 broken · `npm run docs:audit` zero findings ·
+`node scripts/audit/backlog-integrity.js` PASS 1040 rows · `node scripts/audit/agent-surface-parity.js
+"$(git describe --tags --abbrev=0)" HEAD` PASS 12 agents · `eslint --max-warnings 0` clean.
+
+### Completion notes
+
+All seven ACs met. AC1 derived to 0 bare / 22 prefixed. AC2 is a sibling file, not an extension —
+`agent-activation-config-refs.test.js` is untouched. AC3 takes its expectation set from each agent's
+`SKILL.md`. AC4 carries three floors (≥3 agents, ≥12 files, >0 occurrences per file). AC5 closed in the
+test. AC6 adds no CI step. AC7's gates all ran, in the forms named.
+
+**Not done, and deliberately:** the 83 further occurrences of this class elsewhere in shipped
+`_bmad/bme/**.md`. cir-1-1 scoped to load instructions; the residue is stated in §Scope and in the new
+test's header.
+
+## File List
+
+| File | Change |
+|---|---|
+| `tests/unit/agent-capability-reference-paths.test.js` | **new** — the sibling guard |
+| `_bmad/bme/_vortex/agents/contextualization-expert/references/contextualize-scope.md` | +2 prefixes |
+| `_bmad/bme/_vortex/agents/contextualization-expert/references/lean-persona.md` | +2 |
+| `_bmad/bme/_vortex/agents/contextualization-expert/references/product-vision.md` | +2 |
+| `_bmad/bme/_vortex/agents/contextualization-expert/references/validate-context.md` | +1 |
+| `_bmad/bme/_vortex/agents/lean-experiments-specialist/references/lean-experiment.md` | +2 |
+| `_bmad/bme/_vortex/agents/lean-experiments-specialist/references/mvp.md` | +2 |
+| `_bmad/bme/_vortex/agents/lean-experiments-specialist/references/proof-of-concept.md` | +2 |
+| `_bmad/bme/_vortex/agents/lean-experiments-specialist/references/proof-of-value.md` | +2 |
+| `_bmad/bme/_vortex/agents/lean-experiments-specialist/references/validate-mvp.md` | +1 |
+| `_bmad/bme/_vortex/agents/research-convergence-specialist/references/pattern-mapping.md` | +2 |
+| `_bmad/bme/_vortex/agents/research-convergence-specialist/references/pivot-resynthesis.md` | +2 |
+| `_bmad/bme/_vortex/agents/research-convergence-specialist/references/research-convergence.md` | +2 |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | `cir-1-1` → review |
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-09-27 | Implemented. 22 cross-directory paths prefixed across 12 capability reference files; new sibling test `tests/unit/agent-capability-reference-paths.test.js` guards them, takes its expectation set from each agent's `SKILL.md`, carries three floors, and additionally asserts each target exists because no other gate does. Guard proven by mutating a tracked file: 1 of 1232 `tests/unit` tests goes red. Status → review. |
