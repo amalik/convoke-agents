@@ -420,6 +420,21 @@ development_status:
   tfr-epic-2-retrospective: done
 
   # ============================================================
+  # TEAM FACTORY UNSHIP (tfu) — operator ruling 2026-09-16: internal scaffolding
+  # Epic file: convoke-epic-team-factory-unship.md
+  # Epic stays `backlog`, NOT `in-progress`: the story is authored but `deferred`
+  # on an unanswered ruling, so no work has started. create-story's automatic
+  # backlog -> in-progress flip is deliberately not applied here.
+  # ============================================================
+  tfu-epic-1: backlog
+  # `deferred`, not `ready-for-dev`: AC#0 is an open operator ruling (how
+  # EXTRA_BME_AGENTS retires) and every other AC's edit list depends on it.
+  # `ready-for-dev` would let bmad-dev-story flip this to in-progress before
+  # reading the file. Revival condition is stated in the story.
+  tfu-1-1-stop-shipping-the-team-factory: deferred
+  tfu-epic-1-retrospective: optional
+
+  # ============================================================
   # FRESH-INSTALL CONFIG (fic) — incident-driven mini-epic, 4.0.3 hotfix
   # Epic file: convoke-epic-fresh-install-config-4-0-3.md
   # 2026-09-15: operator ruled a patch release for BUG-22 (7 of 11 agents stop on a fresh 4.0.2 install).
