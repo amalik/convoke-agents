@@ -6,6 +6,40 @@ baseline_commit: f83cdfd6
 
 Status: ready-for-dev
 
+> ## ⏸ DEFERRED 2026-09-28 by operator ruling — do not start. Not cancelled.
+>
+> **The four rulings below are closed and this file is complete. The deferral is about sequencing, not
+> quality.** ADR-001 **Amendment 1** (2026-09-27) made both channels **non-reference and disclaimed** —
+> visibility, not distribution. This story's *Why* is a distribution argument: *"a skill that arrives alone
+> cannot repair itself."* Under a disclaimed channel that points the reader at GitHub + npm, that is no
+> longer clearly what earns the hub its place.
+>
+> **What goes first instead:** [`cir-1-3`](cir-1-3-make-a-skill-that-arrives-alone-say-so.md) — Amendment 1
+> A1.3's disclaimer. It is the only item that must exist before anything new is published, and it absorbs
+> the original `cir-1-3` scope (a skill that arrives alone says so through the notice and the ledger
+> pointer, not through a detector).
+>
+> **What is NOT decided here.** **C10** (the hub is named `convoke`; the registry gains `kind: skill`) and
+> **C11** (the hub *fronts* the three CLIs rather than absorbing them) both stand. Nothing retires C11 —
+> deferring the hub defers its fronting with it, and retiring it would be a ruling, not a consequence.
+> Ruling 1 below also stands: publishing the name `convoke` is an accepted risk **if and when this ships**,
+> and deferring means that irreversible act has not yet been taken.
+>
+> **What would bring it back:** evidence about what actually breaks for a real operator who finds a Convoke
+> skill through a channel. That is the ratified sequence — ship, tiny baseline, then *one measured test* —
+> and this story was itself named as that measured test. Deferring it behind the disclaimer keeps the order;
+> it does not invert it.
+>
+> **Status vocabulary — resolved 2026-09-28 by operator ruling.** This story is `deferred` in
+> `sprint-status.yaml`, a value added to the vocabulary **for it**. Neither pre-existing value was safe:
+> `ready-for-dev` is what `bmad-dev-story` selects on (`SKILL.md:103-107`), flipping the status before it
+> ever reads this banner; `backlog` is what `bmad-create-story` selects on (`SKILL.md:140-144`), and its
+> `:399` *"Save story document unconditionally"* would **overwrite this file** — these four rulings and
+> this banner with it. Both skills match on literal status values, so `deferred` is selected by neither and
+> the hold is mechanical rather than prose. **Do not "correct" the value back on the grounds that the file
+> exists**; that argument is what an earlier draft of this paragraph made, and it is how the guard gets
+> removed.
+
 **Epic:** [s4 — The `convoke` Channel Hub](../planning-artifacts/convoke-epic-s4-channel-hub.md)
 **Ruling:** [ADR-001 — the distribution unit](../planning-artifacts/adr/channel-integrity/adr-001-the-distribution-unit.md), accepted 2026-09-26. **C10** names the hub `convoke`; **C11** fronts rather than absorbs; **C5** is why it is the move.
 **Evidence:** [channel-integrity findings](../planning-artifacts/convoke-note-channel-integrity-findings-2026-09-26.md)

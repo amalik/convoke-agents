@@ -25,6 +25,18 @@
 #     (the work was never performed) and NOT 'blocked' (nothing is waiting). Added 2026-08-14
 #     for v63-4-3, whose M9 PF1 gate was retired by adr-001-retire-m9-pf1-gate.md. Downstream
 #     stories must gate on the replacement evidence key, never on `done`.
+#   - deferred: Story file EXISTS and is complete; work is intentionally not to start yet. NOT
+#     'backlog' (that means the file does not exist) and NOT 'ready-for-dev' (that means take it).
+#     Added 2026-09-28 by operator ruling, because NEITHER existing value was safe for s4-1-1:
+#     `ready-for-dev` -> bmad-dev-story SKILL.md:103-107 selects it and flips it to in-progress
+#     BEFORE reading the file; `backlog` -> bmad-create-story SKILL.md:140-144 selects it and
+#     :399 "Save story document unconditionally" DESTROYS the file. A comment is not data to
+#     either skill. Both match on literal status values, so `deferred` is selected by neither --
+#     the hold is mechanical, not prose. A deferred story states its revival condition in its file.
+#   - duplicate: Story closed because another item already covers it. NOT 'descoped-by-ADR' (no ADR
+#     retired it) and NOT 'done' (nothing was performed). Added 2026-09-28 by operator ruling for
+#     cir-1-2, closed as a duplicate of T183 and mislabelled descoped-by-ADR because no value
+#     existed. Name the item that absorbs it.
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
@@ -439,17 +451,38 @@ development_status:
   # Its premise was also wrong: only bmad-init is dead. T183 CLOSED 2026-09-27 (done) — the work landed
   # there, not here, and the shipped fix reads _bmad/bme/_vortex/config.yaml, not the _bmad/bme/config.yaml
   # this story and T183's own spec both named. Residue: IN-242..IN-247. Status value still reads
-  # descoped-by-ADR, which remains wrong (closed as a DUPLICATE) — that vocabulary gap is still open.
-  cir-1-2-retire-the-four-dead-upstream-dependencies: descoped-by-ADR
-  cir-1-3-make-a-skill-that-arrives-alone-say-so: backlog
+  # Value corrected descoped-by-ADR -> duplicate on 2026-09-28, when `duplicate` was added by ruling.
+  cir-1-2-retire-the-four-dead-upstream-dependencies: duplicate
+  # cir-1-3 RE-SCOPED 2026-09-28 by operator ruling: it is now ADR-001 Amendment 1 A1.3's disclaimer
+  # (pre-install notice + post-install ledger pointer) and absorbs the original defect-1 runtime
+  # detection. Folds in A1.5's four short descriptions. Scope is the 7 declared manifest paths;
+  # Gyre's four cannot be declared at all and are filed as IN-248.
+  cir-1-3-make-a-skill-that-arrives-alone-say-so: ready-for-dev
   cir-epic-1-retrospective: optional
 
   # s4 — build the ruled option: one deliberate plugin and a hub that bootstraps the runtime.
   # Epic file: convoke-epic-s4-channel-hub.md
   # NOTE s4-1-2 stays `backlog` until s4-1-1 is done: the manifest must never point at a hub
   # that does not exist (stated in the epic, not merely preferred).
+  # 2026-09-28: that gate is now UNREACHABLE -- s4-1-1 is `deferred` with no revival trigger (IN-249),
+  # so "until s4-1-1 is done" has no date. s4-1-2 is also now FIRST in bmad-create-story's backlog
+  # queue, so a create-story run would author it early; authoring is reversible, unlike s4-1-1's
+  # publish, so it is left at `backlog` rather than deferred (it has no story file, which is what
+  # `backlog` means). The handoff section 4 names a DIFFERENT blocker for it -- validate-marketplace's
+  # AGENT_IDS identity check -- and both are real: the hub dependency and the widening. IN-248 owns
+  # the second.
   s4-epic-1: in-progress
-  s4-1-1-the-convoke-hub-that-puts-the-bootstrap-in-the-channel: ready-for-dev
+  # s4-1-1 DEFERRED 2026-09-28 by operator ruling -- NOT cancelled, and C10/C11 stand. Its Why is a
+  # distribution argument that Amendment 1's visibility-only ruling weakened; cir-1-3's disclaimer
+  # goes first. Reconsidered with evidence about what breaks for a real operator.
+  #
+  # DEFERRED 2026-09-28 by operator ruling -- NOT cancelled; ADR-001 C10 and C11 stand and nothing
+  # retires C11. Its Why is a distribution argument that Amendment 1's visibility-only ruling
+  # weakened; cir-1-3's disclaimer goes first. Revival condition -- and the fact that nothing
+  # currently collects it -- is in the story file and IN-249. The `deferred` value was added to the
+  # vocabulary above FOR this story: both ready-for-dev and backlog hand it to a workflow, and
+  # building it takes ADR-001 C8's irreversible publish of the name `convoke`.
+  s4-1-1-the-convoke-hub-that-puts-the-bootstrap-in-the-channel: deferred
   s4-1-2-make-the-manifest-a-declaration: backlog
   s4-epic-1-retrospective: optional
 
