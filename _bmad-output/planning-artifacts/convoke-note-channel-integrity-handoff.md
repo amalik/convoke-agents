@@ -57,8 +57,8 @@ mechanism holding it together is that the pieces arrive together.
 |---|---|
 | `cir-1-1` | **done.** Residue `IN-240` (8 holes, 2 rulings). |
 | `cir-1-2` | **closed unimplemented** — a duplicate of `T183`. Its fix was also wrong; do not copy it. Kept for the review inside it. |
-| `cir-1-3` | not authored. **Sized for a world where the channels had to be complete — re-scope before authoring.** |
-| `s4-1-1` | authored, not built. Same re-scope caveat. Its four rulings are closed. |
+| `cir-1-3` | **authored 2026-09-28, `ready-for-dev`, and re-scoped first.** It is now Amendment 1 **A1.3's disclaimer** — a pre-install notice in the frontmatter `description` plus a post-install pointer to the maturity ledger — and it absorbs the original defect-1 runtime detection. Folds in **A1.5**. Scope is the 7 declared manifest paths. |
+| `s4-1-1` | authored, **deferred 2026-09-28 by operator ruling — not cancelled.** Four rulings closed; **C10 and C11 stand** and nothing retires C11. Its *Why* is a distribution argument that A1.1's visibility-only ruling weakened, so it is reconsidered with evidence about what breaks for a real operator — which keeps the ratified ship-then-one-measured-test order rather than inverting it. |
 | `s4-1-2` | not authored. Blocked on `validate-marketplace.js`'s `AGENT_IDS` identity check. |
 
 ## 5. Next action
@@ -69,22 +69,34 @@ estimated here, for a reason worth carrying: **the row's own "corrected fix spec
 the first implementation of it. This section told the next reader *"do not re-derive it"* — that
 instruction is what the spec's error was hiding behind, and `verification-claims-must-name-their-evidence`
 already forbids it (*"Never instruct a reviewer not to verify something"*). Round 1 returned ~36 findings
-across three independent layers, ~10 HIGH. **Next action is now a re-scope**, per the paragraph
-immediately below, plus the rows `T183` filed — derive them with `grep -n 'T183' _bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` rather than listing them here, since an earlier draft of this line already under-counted them.
+across three independent layers, ~10 HIGH. The re-scope that was owed here **is now done** — see immediately below. Also relevant: the rows `T183` filed — derive them with `grep -n 'T183' _bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` rather than listing them here, since an earlier draft of this line already under-counted them.
 
-Everything else waits on a re-scope, because the channels are non-reference now and both `s4` and
-`cir-1-3` were sized before that ruling.
+**The re-scope is done (2026-09-28).** Both epics had framing that predated their own governing ruling:
+the `s4` epic's Ruling line read *"S4 now, S2 the destination"* against A1.2, and the `cir` epic's defect-4
+row claimed Gyre was *"resolved by the ruling's design"* while reasoning about whether Gyre can **run**
+rather than whether it can be **referenced**. Both corrected — though the `s4` line was corrected first and the `cir` one only after R1 caught that this
+sentence already claimed both, the sweep having been run against the sentence in one file rather than
+against the claim. **Next action is `cir-1-3`**, then the hub
+only with operator evidence. **`IN-248`** carries what *"reference all of our agents"* would actually cost:
+7 of 11 are declarable, and Gyre's four have no in-repo `SKILL.md` at all.
 
-## 6. Open decisions — all small, none blocking the re-scope
+## 6. Open decisions — all small, none blocking `cir-1-3`
 
 - **`IN-240(f2)`** — keep the baseline↔references assertion symmetric, or assert only the direction the
   guard exists for?
 - **`IN-240`** — may a reference file name *additional* paths (exact set equality currently reddens a
   legitimate `hc*` contract pointer)? And keep hard-coding the sibling-`steps/` convention?
 - **The hub's name is ruled (`convoke`); its shape is not** beyond C10/C11.
-- **`sprint-status.yaml` vocabulary** — `cir-1-2` is recorded as `descoped-by-ADR`, which is defined as
-  closure *by an ADR*. It was closed as a **duplicate**. The vocabulary has no value for that; two comment
-  lines above the entry say so. Add a `duplicate` value, or leave it.
+- ~~**`sprint-status.yaml` vocabulary**~~ — **RULED 2026-09-28. `deferred` and `duplicate` added.**
+  `s4-1-1` is now `deferred` and `cir-1-2` is `duplicate`, correcting a mislabel that had stood since
+  2026-09-27. **The ruling was forced by a demonstrated destructive path, not by tidiness:** neither
+  pre-existing value was safe for a deferred story — `ready-for-dev` is what `bmad-dev-story` selects on
+  (`SKILL.md:103-107`), flipping the status before it reads the file, and `backlog` is what
+  `bmad-create-story` selects on (`SKILL.md:140-144`), whose `:399` *"Save story document unconditionally"*
+  would have **overwritten `s4-1-1`'s file**, four closed operator rulings and its deferral banner with it.
+  A comment is not data to either skill. Both new values are selected by neither, so the hold is mechanical.
+  Consumer audit run: no consumer enumerates an allowed set, `backlog-integrity.js` parses both as
+  `[a-z-]+` and classifies `deferred` as live, and its three status-divergence warnings are unchanged.
 - **Is `cir-1-1` in the right epic?** It fixes source-repo path hygiene, not the channel problem the
   epic's Why invokes. See §7.
 

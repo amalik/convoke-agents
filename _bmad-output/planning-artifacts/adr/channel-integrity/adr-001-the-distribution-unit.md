@@ -17,7 +17,7 @@ signoff_by: amalik
 
 # ADR-001: What unit does Convoke distribute?
 
-**Status:** **ACCEPTED** (2026-09-26) — ruled by Amalik: **S4 now, S2 as the destination.**
+**Status:** **ACCEPTED** (2026-09-26) — ruled by Amalik: **S4 now**. **⚠ The "S2 as the destination" half of this ruling was overturned by Amendment 1 on 2026-09-27** (§*Amendment 1 — channel tiers, and S2 reopened*): S2 is reopened, is not a destination, and S4 is not a step toward it. Read A1.1–A1.5 before acting on anything below; C1–C14 are not restated by Amendment 1, but **C2 is affected in effect**: it defers an ADR-004 amendment to S2, so with S2 reopened that deferral now points at nothing scheduled.
 **Proposed:** 2026-09-26
 **Decision owner:** Amalik
 **Evidence:** [`convoke-note-channel-integrity-findings-2026-09-26.md`](../../convoke-note-channel-integrity-findings-2026-09-26.md)
@@ -135,12 +135,12 @@ channel asymmetry rather than fighting it.
 
 ## Decision
 
-**S4 now. S2 as the stated destination.** Ruled by Amalik, 2026-09-26.
+**S4 now.** ~~S2 as the stated destination.~~ Ruled by Amalik, 2026-09-26; **the S2 half was overturned by Amendment 1 on 2026-09-27 — S2 is reopened, is not a destination, and S4 is not a step toward it.**
 
 Convoke publishes **one** deliberate plugin to the Claude Code marketplace — a hub that
 installs and repairs the runtime — and the catalog reaches operators behind it. The
 module remains the unit of coherence. S2 (promoting the 29 workflows and 14 contracts to
-addressable personaless skills) is the declared destination, not deferred indefinitely
+addressable personaless skills) ~~is the declared destination, not deferred indefinitely~~ — **overturned by Amendment 1 A1.2; S2 is reopened and carries a precondition (contract conformance enforced in software)**
 and not started now: it requires a ratification this initiative does not hold.
 
 **Ruled in two follow-up lines, 2026-09-26** (C10, C11): the name registry **does** gain a
