@@ -25,6 +25,39 @@ const {
  */
 
 /**
+ * The `_bmad/bme/<module>/` names that ship a `config.yaml` template, sorted.
+ *
+ * Read from the package tree so a new module is covered on arrival rather than when someone
+ * remembers a list. Sorted because the order decides WHICH damaged config an operator is told
+ * about first, and `fs.readdirSync` order is unspecified in Node — see
+ * `tests/unit/refresh-installation-config-guard.test.js`, which pins the sort directly. Exported
+ * for that test because the ORDER is not observable through `refreshInstallation` — set membership
+ * for the modules that exist today is (deleting the guard loop reddens seven tests), but the sort
+ * and the treatment of a module that does not exist yet are not.
+ *
+ * @param {string} packageRoot
+ * @returns {string[]} module directory names, lexically sorted
+ */
+function guardedModuleNames(packageRoot, options = {}) {
+  const packageBme = path.join(packageRoot, '_bmad', 'bme');
+  if (!fs.existsSync(packageBme)) return [];
+  // `listDirs` is injectable because the sort below is otherwise unfalsifiable: `readdirSync`
+  // happens to return lexical order on APFS, so an assertion that the result is sorted passes
+  // whether or not the sort is there. The test drives a reverse-ordered lister instead
+  // (`fixture-determinism`: control the input rather than widen the tolerance).
+  const listDirs =
+    options.listDirs ||
+    ((dir) =>
+      fs
+        .readdirSync(dir, { withFileTypes: true })
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name));
+  return listDirs(packageBme)
+    .filter((name) => fs.existsSync(path.join(packageBme, name, 'config.yaml')))
+    .sort();
+}
+
+/**
  * Refresh all installation files from the package to the project.
  *
  * @param {string} projectRoot - Absolute path to project root
@@ -44,6 +77,36 @@ async function refreshInstallation(projectRoot, options = {}) {
   // When running from the package's own directory (dev environment),
   // source and destination are identical — skip file copies.
   const isSameRoot = path.resolve(packageRoot) === path.resolve(projectRoot);
+
+  // T181: refuse a module config that cannot be read, before any module tree is copied.
+  //
+  // `assertConfigReadable` was wired into Vortex and Gyre only (fic-1-1), so a damaged
+  // `_enhance`, `_artifacts`, `_portability` or `_team-factory` config was replaced with the
+  // package template and the operator's values were lost with nothing on screen. Those four
+  // blocks (2b1 standalone, 2a Enhance, 2c Artifacts, 2c-bis Portability) do each parse a
+  // config, but only after their `fs.copy` has already replaced the target — `scDoc`, `ecDoc`,
+  // `acDoc` and `pcDoc` are all read from the DESTINATION path, so they see the package's own
+  // template and cannot fail on operator data.
+  //
+  // The set is read from the package tree rather than named here. That covers a seventh module
+  // only if it ships a `config.yaml` TEMPLATE and its directory is listed in `package.json`
+  // `files[]`; a module whose config the operator creates is not covered, and the 2b1 block
+  // would still remove-and-copy over it.
+  //
+  // A path with no file on it is skipped: the `readConfigDocument` helper behind it returns null before
+  // reading, which is what keeps a fresh install silent.
+  //
+  // NOT gated on `isSameRoot`, matching the two `readExcludedAgents` calls below. In a dev tree
+  // the module copies are skipped, so this refuses a refresh that would not have written; the
+  // message still names the file and the parser error, which is the actionable part.
+  //
+  // This refuses an UNREADABLE config. It does not preserve a readable one: these four are
+  // rewritten from the package template on every run, because `configMerger.mergeConfig` carries
+  // profiles for `_vortex` and `_gyre` alone and throws when named any other submodule. That
+  // half is T221.
+  for (const moduleName of guardedModuleNames(packageRoot)) {
+    configMerger.assertConfigReadable(path.join(projectRoot, '_bmad', 'bme', moduleName, 'config.yaml'));
+  }
 
   // U8: read per-module `excluded_agents` from target configs BEFORE copy.
   // These are opt-out lists the operator maintains; excluded agents don't get
@@ -1424,6 +1487,7 @@ const STAMPABLE_MODULES = Object.freeze([
 ]);
 
 module.exports = {
+  guardedModuleNames,
   refreshInstallation,
   cleanupOrphanWorkflowWrappers,
   manifestRowSeeds,

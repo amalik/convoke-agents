@@ -111,10 +111,25 @@ function readExcludedAgents(configPath) {
  */
 function readConfigDocument(configPath) {
   if (!fs.existsSync(configPath)) return null;
-  const content = fs.readFileSync(configPath, 'utf8');
   const firstLine = (message) => String(message).split('\n')[0];
   const refuse = (why) =>
     new Error(`config-merger: refusing to overwrite ${configPath}: ${why}. Fix or remove the file, then re-run.`);
+
+  // T181 review. The read was outside this wrapper, so a DIRECTORY at the config path escaped as
+  // a raw `EISDIR: illegal operation on a directory, read` — which, unlike `EACCES`, carries no
+  // path at all. Reachable for six modules now rather than two, so it is wrapped to name the file
+  // and carry the "Fix or remove" instruction every other refusal here carries.
+  //
+  // ENOENT stays "absent" rather than becoming a refusal: the `existsSync` branch above treats a
+  // missing config as a fresh install, and a file that vanishes between that check and this read
+  // is the same condition one race later. `readExcludedAgents` takes the same position.
+  let content;
+  try {
+    content = fs.readFileSync(configPath, 'utf8');
+  } catch (err) {
+    if (err && err.code === 'ENOENT') return null;
+    throw refuse(`it cannot be read (${firstLine(err.message)})`);
+  }
 
   const doc = YAML.parseDocument(content);
   if (doc.errors && doc.errors.length > 0) {

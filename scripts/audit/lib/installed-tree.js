@@ -78,7 +78,7 @@ const RUNTIME_DATA_FILES = [
     // the earlier line that merely DECLARES the destination path — deleting the copy and leaving
     // the declaration would keep a basename-matching alarm green. That is why the alarm is an AND.
     // No line numbers in this comment on purpose: only the field below is checked.
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:645',
+    arrivesVia: 'scripts/update/lib/refresh-installation.js:708',
     arrivesViaToken: 'packageManifest',
     why: 'convoke-export resolves every skill through it — absence is I139 exactly: the bin exits non-zero on a fresh install.',
   },
@@ -103,7 +103,7 @@ const RUNTIME_DATA_FILES = [
     // literal mentioned the basename. Deleting the real call and leaving the log
     // (No line numbers here on purpose: only the field below is checked.)
     // would have kept it green. Review 2026-08-30.
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:1128',
+    arrivesVia: 'scripts/update/lib/refresh-installation.js:1191',
     arrivesViaToken: 'mergeTaxonomy',
     why: 'a fresh install runs no migrations, so the installer seeds it directly; without it doctor fails its own Taxonomy checks.',
   },
@@ -135,7 +135,7 @@ const RUNTIME_DATA_FILES = [
     // `convoke-register-skill` and blinds the doctor's `unregistered-custom-skill` category.
     // The entry STAYS in the manifest: the file must still arrive, and `missingRuntimeFiles`
     // tests project presence, which a created file satisfies exactly as a copied one would.
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:1151',
+    arrivesVia: 'scripts/update/lib/refresh-installation.js:1214',
     // Discriminates the CALL from the function's own declaration and its export, both of which
     // contain the bare identifier but not this token. (Named, not numbered, on purpose.) The dist-2-4 review's lesson is
     // that a token which merely appears does not prove a citation — and the previous two
@@ -176,11 +176,11 @@ const RUNTIME_DATA_FILES = [
  * correct behaviour; claiming the rule was read off a generator was not.
  */
 const WRAPPER_RULES = {
-  vortexAgent:        { site: 'scripts/update/lib/refresh-installation.js:825', anchor: 'for (const agent of AGENTS)',            derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
-  gyreAgent:          { site: 'scripts/update/lib/refresh-installation.js:854', anchor: 'for (const agent of GYRE_AGENTS)',       derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
-  extraBmeAgent:      { site: 'scripts/update/lib/refresh-installation.js:880', anchor: 'for (const agent of EXTRA_BME_AGENTS)',  derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
-  enhanceWorkflow:    { site: 'scripts/update/lib/refresh-installation.js:906', anchor: 'enhanceConfig.workflows',               derivedFrom: 'generator', name: n => `bmad-enhance-${n}` },
-  standaloneWorkflow: { site: 'scripts/update/lib/refresh-installation.js:957', anchor: 'artifactsConfig.workflows',             derivedFrom: 'ADR-004 C2', name: n => `${n}` },
+  vortexAgent:        { site: 'scripts/update/lib/refresh-installation.js:888', anchor: 'for (const agent of AGENTS)',            derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  gyreAgent:          { site: 'scripts/update/lib/refresh-installation.js:917', anchor: 'for (const agent of GYRE_AGENTS)',       derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  extraBmeAgent:      { site: 'scripts/update/lib/refresh-installation.js:943', anchor: 'for (const agent of EXTRA_BME_AGENTS)',  derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  enhanceWorkflow:    { site: 'scripts/update/lib/refresh-installation.js:969', anchor: 'enhanceConfig.workflows',               derivedFrom: 'generator', name: n => `bmad-enhance-${n}` },
+  standaloneWorkflow: { site: 'scripts/update/lib/refresh-installation.js:1020', anchor: 'artifactsConfig.workflows',             derivedFrom: 'ADR-004 C2', name: n => `${n}` },
 };
 
 /** `_bmad/bme/*` entries in a `files[]` array, normalised to bare module names. */
@@ -387,7 +387,7 @@ function declaredUnits({ projectRoot, registry, arrived }) {
   //   declared — units this module contributed
   //   excluded — units suppressed by the operator's `excluded_agents` opt-out
   // declared 0 AND excluded 0 is genuine vacuity (ADR-004 C1 second form). declared 0 with
-  // excluded > 0 is a SUPPORTED configuration (`refresh-installation.js:48-51`), and calling
+  // excluded > 0 is a SUPPORTED configuration (`refresh-installation.js`, the `readExcludedAgents` calls), and calling
   // it a packaging defect turns a correct install red — reproduced against a `_gyre` config
   // excluding both its agents.
   const byModule = {};
