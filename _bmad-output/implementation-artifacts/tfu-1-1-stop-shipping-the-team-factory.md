@@ -143,18 +143,25 @@ in the same commit with a dated comment in the house style. **Its current tracke
 at `:135`** — the `8→9→10→11→10→13` chain in the comments above it is *history*, not the live figure.
 
 **AC#6 — nothing is left asserting nothing, and nothing is left throwing.** Option (c) means every
-iterate/spread consumer is removed, not merely allowed to go quiet. Derive the denominator; do not
-count by eye:
+iterate/spread consumer is removed, not merely allowed to go quiet.
+
+**Enumerate with the bare symbol. Do not pattern-match the usage.** Two attempts at a narrower
+enumeration have now failed in opposite directions — a hand list that omitted three sites, then a
+usage-shaped regex that missed two *more*, including the one AC#0 itself cites. `EXTRA_BME_AGENTS`
+appears with `.filter(` on the **next line** (`validator.js`), and as `REG.EXTRA_BME_AGENTS` in tests;
+no clever pattern survives contact with both. So:
 
 ```bash
-grep -rnE 'of EXTRA_BME_AGENTS|\.\.\.(REG\.)?EXTRA_BME_AGENTS|EXTRA_BME_AGENTS\.(map|filter|find|forEach|length)|registry\.EXTRA_BME_AGENTS' --include='*.js' scripts/ tests/
+grep -rn 'EXTRA_BME_AGENTS' --include='*.js' scripts/ tests/
 ```
 
-At authoring (`66a34b73`) that returns **25 sites across 13 files — 12 under `scripts/`, 13 under
-`tests/`**. Every one gets a disposition: removed, rewritten, or kept with a stated reason. Known sites
-the earlier draft under-listed: `tests/unit/validator.test.js` has **four** (`:213`, `:227`, `:268`,
-`:392`), not one; `tests/integration/` holds three more (`upgrade-cli-e2e.test.js:115`,
-`convoke-doctor.test.js:277` and `:338`) which `npm test` **does not run** — see AC#13.
+At `aaa178c3` that returns **76 references across 19 files**. It cannot miss, because it matches the
+symbol rather than a guess about how the symbol is used. Classify every hit as one of: **iterate/spread**
+(must be removed under option (c)), **destructuring import** (must be removed with its last use),
+**export** (goes with the array), or **comment/prose** (rewrite or delete). Record the four counts you
+derive; do not carry a total from this file.
+
+Do **not** re-narrow this grep to make the output shorter. That is what failed twice.
 
 > **Correction from Round 1.** An earlier draft claimed
 > `tests/unit/refresh-installation-orphan-cleanup.test.js:206-217` would contradict the stale sweep.
@@ -168,8 +175,10 @@ Audited corpus first (`scripts/docs-audit.js:111-139` is the list; `npm run docs
 Build the site list mechanically rather than from this AC — `mechanical-research-enumeration`:
 
 ```bash
-node -e "const {USER_FACING_DOCS}=require('./scripts/docs-audit.js')||{};" 2>/dev/null; \
-grep -rn 'Team Factory\|team-factory\|Loom Master' README.md INSTALLATION.md UPDATE-GUIDE.md docs/faq.md docs/development.md docs/testing.md docs/BMAD-METHOD-COMPATIBILITY.md
+# The corpus is an export — read it, never retype it. 8 of its 17 entries carry hits
+# at aaa178c3 (38 lines); a hand-typed 7-file list omitted CHANGELOG.md.
+node -e "console.log(require('./scripts/docs-audit.js').USER_FACING_DOCS.join('\n'))" \
+  | xargs grep -n -e 'Team Factory' -e 'team-factory' -e 'Loom Master'
 ```
 
 **The Covenant needs three different treatments, not one.** The earlier draft flattened all four sites
@@ -243,7 +252,9 @@ in the closing note; do not gate the story on it.
 
 **AC#13 — the gates that actually run, run.** `npm test` does **not** include `tests/integration`
 (`package.json:51`), and CI does (`.github/workflows/ci.yml:68`). Run **both** `npm test` and
-`npm run test:integration` locally, or three `EXTRA_BME_AGENTS` sites go green locally and red in CI.
+`npm run test:integration` locally, or **four** integration assertions go green locally and red in CI:
+three `EXTRA_BME_AGENTS` sites (`upgrade-cli-e2e.test.js:115`, `convoke-doctor.test.js:277`, `:338`)
+plus AC#15's hardcoded `12` at `fresh-install.test.js:251`, which is also under `tests/integration`.
 
 Mutation evidence per `verification-must-be-falsifiable`: record *(edit to make → test that goes red)*,
 never a mutant identifier. Two traps specific to this story:
@@ -261,9 +272,15 @@ H1. The epic's claim that C10–C13 are satisfied by not deleting the tree was *
 from the generator edit alone.)*
 
 `agent-surface-parity.js:134-149` extracts every `const content = \`` literal from the **committed**
-generator via `git show <ref>:<generator>`. There are three; the third,
-the third `const content = \`` template, inside the `// 6b1.` loop, is inside the `EXTRA_BME_AGENTS` loop at `:907` that AC#6 deletes. The
-extraction then yields two, the comparison against `.github/expected-wrapper-template.txt` fails,
+generator via `git show <ref>:<generator>`. There are three, and the third sits inside the
+`// 6b1.` `for (const agent of EXTRA_BME_AGENTS)` loop that AC#6 deletes. Derive it — do not trust this
+sentence, and do not trust a line number for this file (see Traps):
+
+```bash
+git show HEAD:scripts/update/lib/refresh-installation.js | grep -c 'const content = `'   # 3
+```
+
+The extraction then yields two, the comparison against `.github/expected-wrapper-template.txt` fails,
 severity `BROKEN`, exit 2 — and `agent-surface-parity` is in `publish.needs` (`.github/workflows/ci.yml:666`),
 so this blocks release, not just a push.
 
@@ -314,12 +331,23 @@ another literal — `derive-counts-from-source`).
 - **`scripts/update/lib/agent-registry.js`** — `EXTRA_BME_AGENTS` array closes at `:242`;
   `EXTRA_BME_AGENT_IDS` derived at `:244`; both exported at `:290-291`; the disjoint-ID IIFE runs
   `:252-274`.
-- **`scripts/update/lib/refresh-installation.js`** — destructures eight named exports at `:12` and
-  performs **no** dynamic enumeration, so a new export would be inert here. Five `EXTRA_BME_AGENTS`
-  sites: `:12`, the copy block `:222-276`, the stale-wrapper sweep `:812`, the skills loop `:907-910`,
-  and `STAMPABLE_MODULES` at `:1418-1424` — module-level and frozen, so a throw there happens at import
-  and takes `scripts/lib/bme-modules.js:92` with it.
-  **The `// 6a.`-through-`// 6b1.` band is unguarded by `!isSameRoot` as a whole** — the `for (const agent of AGENTS)` and `for (const agent of GYRE_AGENTS)` loops are equally unguarded, and the nearest `!isSameRoot` guards sit outside that whole band. *(An earlier
+- **`scripts/update/lib/refresh-installation.js`** — its single `require('./agent-registry')` destructures
+  eight named exports and performs **no** dynamic enumeration, so a new export would be inert here.
+  `EXTRA_BME_AGENTS` appears on **8 lines: 5 code sites and 3 comments.** Named by anchor, never by
+  line, because this file's lines move under concurrent work (see Traps) — the copy loop has been at
+  three different lines during this story's authoring alone. The five code sites: the destructuring
+  import; the `// 2b1. Standalone bme submodule trees` copy loop; the stale-wrapper sweep's
+  `currentSkillDirs` spread; the `// 6b1.` skills loop; and `STAMPABLE_MODULES` — module-level and
+  frozen, so a throw there happens at import and takes `scripts/lib/bme-modules.js`'s
+  `isManagedByInstaller` with it.
+
+  ⚠ `grep -c` returns **8, not 5** — it counts matching lines, comments included. Separate them, and do
+  not use the raw count as the site count:
+
+  ```bash
+  grep -n 'EXTRA_BME_AGENTS' scripts/update/lib/refresh-installation.js | grep -v '^\s*[0-9]*: *[*/]'
+  ```
+  **The `// 6.`-through-`// 6b1.` band is unguarded by `!isSameRoot` as a whole** (the file's markers are `// 6.`, `// 6b.`, `// 6b1.`, `// 6c.`, `// 6d.`, `// 6d-bis.`, `// 6e.` — there is no `// 6a.`) — the `for (const agent of AGENTS)` and `for (const agent of GYRE_AGENTS)` loops are equally unguarded, and the nearest `!isSameRoot` guards sit outside that whole band. *(An earlier
   draft called the standalone loop the exception. It is not. Round 1, Blind Hunter H9.)*
 - **`scripts/docs-audit.js`** — `rostersFor` `:48-52` enumerates by suffix over `Object.keys`, so it
   needs no edit when a roster disappears; `validCountsFor` `:98-106` drops zero-length rosters.
@@ -371,7 +399,7 @@ Blind Hunter, Edge Case Hunter and Acceptance Auditor, each run without this ses
 | AC#1's re-derivation command was filtered so it could not see two of the four `csv-utils` consumers | command replaced | `grep -rn "utils/csv-utils'" --include='*.js' . \| grep -v node_modules` → 4 |
 | Header claimed `path-safety` requirements that AC#8 did not contain | safety analysis now states "not in scope", with the reason | — |
 | AC#7 ordered replacing two Covenant sites that are not worked examples | split into three treatments | `sed -n '208p' _bmad/bme/covenant/covenant-operator.md` |
-| Epic said "three of T179's four are inaccurate"; one is | epic corrected | `sed -n '477p' …initiative-lifecycle-backlog.md` |
+| Epic said "three of T179's four are inaccurate"; one is | epic corrected | `grep -n '^| T179 ' …initiative-lifecycle-backlog.md` |
 | Epic C8 named three failing tests; no AC fixed them | AC#15 added | — |
 | "twelve sites" appeared twice with no derivation | replaced with a derived 25/13/12/13 and the command | the grep in AC#6 |
 | Claimed contradiction at `refresh-installation-orphan-cleanup.test.js:206-217` does not exist | claim retracted in AC#6 | `sed -n '1255,1256p' scripts/update/lib/refresh-installation.js` |
@@ -379,6 +407,34 @@ Blind Hunter, Edge Case Hunter and Acceptance Auditor, each run without this ses
 | `npm test` excludes `tests/integration`; three sites would pass locally and fail in CI | AC#13 requires both | `node -e "console.log(require('./package.json').scripts.test)"` |
 | AC#2's derivation printed `FAIL` and exited 0 | exit code wired | run it at HEAD |
 | Citation drifts: `docs-audit.js:750`→`:752`, `installed-tree.js:292-296`→`:291`, `migration-runner.js:146`→`:163-164`, `validator.js:359-366`→`:359-365`, `agent-registry.js:228-243`→`:242` | corrected | — |
+
+## Review Findings — Round 2, 2026-09-29 (one scoped layer)
+
+Scoped to the executable logic Round 1's remediation rewrote — not its prose, per the stopping rule.
+**Both HIGHs were regressions introduced by Round 1's own corrections**, which is why the instrument was
+changed rather than the patch repeated.
+
+| Defect | Instrument change | Re-derive |
+|---|---|---|
+| AC#6's usage-shaped regex missed 2 sites, including the one AC#0 cites. `EXTRA_BME_AGENTS` appears with `.filter(` on the *next* line, and as `REG.EXTRA_BME_AGENTS`. 25 was a floor presented as a denominator | **stopped pattern-matching usage** — enumerate the bare symbol (76 refs / 19 files) and classify. Two narrow enumerations had already failed in opposite directions | `grep -rn 'EXTRA_BME_AGENTS' --include='*.js' scripts/ tests/` |
+| AC#14 and Dev Notes cited `:907`; at HEAD that is the Enhance loop, and the text Round 1 *replaced* (`:879-902`) was correct. The "correction" was derived from another session's uncommitted tree | **no line numbers for this file at all** — anchors only. And the *check* widened: `grep -c 'refresh-installation.js:[0-9]'` returned 0 while bare `` `:907` `` survived | `git show HEAD:scripts/update/lib/refresh-installation.js \| sed -n '907p'` |
+| `sed -n '477p'` returned `T178`; `T222`'s own insertion moved `T179` in the same commit that first cited its line | row match, never a line number | `grep -n '^| T179 ' …lifecycle-backlog.md` |
+| The `// 6a.` anchor matched nothing — the file has no such marker | markers enumerated inline | `grep -oE '// 6[a-z0-9-]*\.' scripts/update/lib/refresh-installation.js \| sort -u` |
+| AC#7's "mechanical" command had a dead `node -e` that discarded its result and could not fail, then hand-typed 7 corpus files | reads `USER_FACING_DOCS` and pipes to `xargs grep`; the hand list had omitted `CHANGELOG.md` | the command in AC#7 → 38 hits / 8 files |
+| AC#13 said three integration assertions; four go red | corrected | `node -e "console.log(require('./package.json').scripts.test)"` |
+
+**Found by me during this remediation, not by the layer** — both by running what I had just written:
+`grep -c 'EXTRA_BME_AGENTS' <generator>` returns **8, not 5** (it counts comment lines), so a sentence
+written to fix a falsifier contained a wrong falsifier; and AC#7's replacement was first written as a
+multi-line `node -e` that is the shape `T136` exists about, so it was simplified to a pasteable form.
+
+**Deferred, not fixed:** `T222` sub-claim (g) names `install-all-agents.js` → `refreshInstallation`
+directly; the call is one hop further on, in `install-vortex-agents.js`. The conclusion holds. Not
+corrected here because the backlog carries another session's uncommitted rows and must not be touched.
+
+**Round 3 is not triggered.** `code-review-convergence` fires Round 3 only on structural change — new
+files, renamed functions, altered control flow. This remediation changed three commands, a set of
+citations and one count claim. Nothing structural.
 
 **Not accepted:** the Acceptance Auditor read `deferred` as straining its own definition ("complete").
 The status is now `ready-for-dev`, so the point is moot rather than resolved.

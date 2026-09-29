@@ -54,7 +54,13 @@ and the `EXTRA_BME_AGENTS` registry entry. A three-layer audit on 2026-09-28 fou
 **Corrected at Round 1:** an earlier version of this section claimed three of T179's four were
 inaccurate. **One is.** The other two rows below are *new findings*, not corrections — T179 makes no
 sufficiency claim, enumerates no edit count, and already states the validator coupling this epic carries
-as C1. Re-derive with `sed -n '477p' convoke-note-initiative-lifecycle-backlog.md`:
+as C1. Re-derive with a row match, never a line number — this backlog is append-heavy and `T222`'s own
+insertion moved `T179` in the same commit that first cited its line:
+
+```bash
+grep -n '^| T179 ' _bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md
+```
+
 
 | T179 says | Source says |
 |---|---|
