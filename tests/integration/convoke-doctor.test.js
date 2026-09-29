@@ -273,8 +273,8 @@ describe('convoke-doctor: excluded_agents (U8)', () => {
       await fs.writeFile(path.join(dir, 'SKILL.md'), '# stub', 'utf8');
     }
     // Seed wrappers for Gyre + EXTRA_BME agents too, since checkAgentSkillWrappers scans them.
-    const { GYRE_AGENTS, EXTRA_BME_AGENTS } = require('../../scripts/update/lib/agent-registry');
-    for (const a of [...GYRE_AGENTS, ...EXTRA_BME_AGENTS]) {
+    const { GYRE_AGENTS } = require('../../scripts/update/lib/agent-registry');
+    for (const a of [...GYRE_AGENTS]) {
       const dir = path.join(skillsDir, `bmad-agent-bme-${a.id}`);
       await fs.ensureDir(dir);
       await fs.writeFile(path.join(dir, 'SKILL.md'), '# stub', 'utf8');
@@ -310,7 +310,7 @@ describe('convoke-doctor: governance softWarning exit-code (Story v63-2-2 H1)', 
   before(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-doc-softwarn-'));
     const yaml = require('js-yaml');
-    const { AGENT_IDS, GYRE_AGENTS, EXTRA_BME_AGENTS } = require('../../scripts/update/lib/agent-registry');
+    const { AGENT_IDS, GYRE_AGENTS } = require('../../scripts/update/lib/agent-registry');
 
     // _bmad/bme/_vortex/ — valid config + all agents present + workflows listed.
     const vortexDir = path.join(tmpDir, '_bmad/bme/_vortex');
@@ -335,7 +335,7 @@ describe('convoke-doctor: governance softWarning exit-code (Story v63-2-2 H1)', 
       await fs.ensureDir(dir);
       await fs.writeFile(path.join(dir, 'SKILL.md'), '# stub', 'utf8');
     }
-    for (const a of [...GYRE_AGENTS, ...EXTRA_BME_AGENTS]) {
+    for (const a of [...GYRE_AGENTS]) {
       const dir = path.join(skillsDir, `bmad-agent-bme-${a.id}`);
       await fs.ensureDir(dir);
       await fs.writeFile(path.join(dir, 'SKILL.md'), '# stub', 'utf8');

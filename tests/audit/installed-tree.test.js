@@ -205,7 +205,8 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
   // `if (artifactsConfig && !isSameRoot)` over `artifactsConfig.workflows`.
   it('is explicit that standaloneWorkflow comes from ADR-004 C2, not from a generator', () => {
     assert.equal(WRAPPER_RULES.standaloneWorkflow.derivedFrom, 'ADR-004 C2');
-    for (const k of ['vortexAgent', 'gyreAgent', 'extraBmeAgent', 'enhanceWorkflow']) {
+    // `extraBmeAgent` was in this list until tfu-1-1 removed the rule with its generator loop.
+    for (const k of ['vortexAgent', 'gyreAgent', 'enhanceWorkflow']) {
       assert.equal(WRAPPER_RULES[k].derivedFrom, 'generator', `${k} should be generator-derived`);
     }
   });
@@ -269,18 +270,17 @@ function moduleFixture() {
   mk('_gyre', 'version: 4.0.1\nexcluded_agents:\n  - review-coach\nworkflows:\n  - gap-analysis\n');
   mk('_enhance', 'workflows:\n  - name: initiatives-backlog\n    entry: workflows/initiatives-backlog/workflow.md\n');
   mk('_artifacts', 'workflows:\n  - name: bmad-portfolio-status\n    standalone: true\n  - name: bmad-not-standalone\n');
-  mk('_team-factory', 'version: 4.0.1\nworkflows:\n  - add-team\n');
   return root;
 }
 
+// EXTRA_BME_AGENTS held `team-factory` here until tfu-1-1 removed the roster and its bucket.
 const REGISTRY = {
   AGENTS: [{ id: 'emma' }, { id: 'isla' }],
   GYRE_AGENTS: [{ id: 'review-coach' }, { id: 'stack-detective' }],
-  EXTRA_BME_AGENTS: [{ id: 'team-factory', submodule: '_team-factory' }],
 };
 
 describe('declaredUnits', () => {
-  const arrived = ['_vortex', '_gyre', '_enhance', '_artifacts', '_team-factory'];
+  const arrived = ['_vortex', '_gyre', '_enhance', '_artifacts'];
 
   it('derives agents, honours excluded_agents, and skips string-shaped workflows', () => {
     const root = moduleFixture();
@@ -289,11 +289,10 @@ describe('declaredUnits', () => {
       'bmad-agent-bme-emma',
       'bmad-agent-bme-isla',
       'bmad-agent-bme-stack-detective',   // review-coach is excluded in _gyre's config
-      'bmad-agent-bme-team-factory',      // EXTRA_BME honours NO exclusions — see below
       'bmad-enhance-initiatives-backlog', // no standalone flag — the Enhance path emits anyway
       'bmad-portfolio-status',            // standalone: true, name used verbatim
     ]);
-    // The string-shaped workflows (lean-persona, gap-analysis, add-team) declare nothing,
+    // The string-shaped workflows (lean-persona, gap-analysis) declare nothing,
     // and `bmad-not-standalone` is an object without the flag — neither reaches a generator.
     assert.ok(!names.includes('lean-persona'));
     assert.ok(!names.includes('bmad-not-standalone'));
@@ -453,34 +452,19 @@ describe('zero units — a packaging regression is not an environment failure', 
 });
 
 describe('exclusions mirror the generator rather than a uniform rule', () => {
-  // The generator excludes for Vortex (:783) and Gyre (:812) and NOT for EXTRA_BME (:837).
-  // Filtering that bucket dropped a wrapper from the CHECK that the installer still emits.
-  it('does NOT honour excluded_agents for the EXTRA_BME bucket', () => {
-    const root = moduleFixture();
-    write(path.join(root, '_bmad', 'bme', '_team-factory', 'config.yaml'),
-      'version: 4.0.1\nexcluded_agents:\n  - team-factory\nworkflows:\n  - add-team\n');
-    const { units } = declaredUnits({
-      projectRoot: root, registry: REGISTRY,
-      arrived: ['_vortex', '_gyre', '_enhance', '_artifacts', '_team-factory'],
-    });
-    assert.ok(units.map(u => u.name).includes('bmad-agent-bme-team-factory'),
-      'the installer generates this wrapper regardless of excluded_agents, so the check must assert it');
-  });
+  // REMOVED by tfu-1-1: 'does NOT honour excluded_agents for the EXTRA_BME bucket'.
+  //
+  // It pinned a real asymmetry — the Vortex and Gyre generator loops skip excluded agents and the
+  // EXTRA_BME loop did not, so filtering that bucket would have dropped a wrapper from the CHECK that
+  // the installer still emitted: skew in the fail-open direction. Both the loop and the bucket are
+  // gone, so there is nothing left to assert. The reasoning is preserved in `installed-tree.js`'s
+  // `honoursExclusions` comment, because the next standalone module faces the same choice.
 
-  it('reports a registry entry with no submodule instead of dropping it', () => {
-    const root = moduleFixture();
-    const { units, malformed } = declaredUnits({
-      projectRoot: root,
-      registry: { AGENTS: [], GYRE_AGENTS: [], EXTRA_BME_AGENTS: [{ id: 'orphan' }] },
-      arrived: ['_vortex'],
-    });
-    assert.equal(units.filter(u => u.name.includes('orphan')).length, 0);
-    assert.equal(malformed.length, 1);
-    assert.equal(malformed[0].id, 'orphan');
-  });
-});
+  // REMOVED by tfu-1-1: 'reports a registry entry with no submodule instead of dropping it'.
+  // `extraBmeAgent` was the only bucket whose `module` resolver read `a.submodule`, so with it gone no
+  // registry entry has a submodule to omit and the path is unreachable. A future standalone bucket must
+  // bring this case back with it.
 
-describe('wrapper and unit hygiene', () => {
   it('a zero-byte SKILL.md is not a wrapper', () => {
     const root = tmp();
     const units = [{ name: 'bmad-agent-bme-emma', module: '_vortex', rule: 'v', site: 'x:1' }];
@@ -971,19 +955,10 @@ describe('T102 — the six correctness defects, each pinned', () => {
     fs.rmSync(proj, { recursive: true, force: true });
   });
 
-  it('(d) a falsy-but-not-sentinel submodule is malformed, not silently dropped', () => {
-    // The row: the guard tested only undefined/null/'' so 0, false, NaN and {} walked past it
-    // and vanished from the expectation set — a silent coverage shrink.
-    const proj = tmpProject();
-    const r = declaredUnits({
-      projectRoot: proj,
-      registry: { EXTRA_BME_AGENTS: [{ id: 'a', submodule: 0 }, { id: 'b', submodule: false }, { id: 'c', submodule: {} }] },
-      arrived: ['_x'],
-    });
-
-    assert.equal(r.malformed.length, 3, 'all three non-string submodules must be reported');
-    fs.rmSync(proj, { recursive: true, force: true });
-  });
+  // REMOVED by tfu-1-1: '(d) a falsy-but-not-sentinel submodule is malformed'. It fed
+  // `EXTRA_BME_AGENTS` entries with submodules of 0 / false / {} to prove the guard tested more than
+  // undefined/null/''. No surviving bucket reads `submodule`, so there is no way to construct the
+  // input. `bucketList`'s malformed reporting is still covered by the non-array cases above.
 
   it('(e) the ADR-004 C1 check still runs when the agent registry fails to load', () => {
     // The row: byModule fell back to {} on a registry failure, and modulesDeclaringNothing

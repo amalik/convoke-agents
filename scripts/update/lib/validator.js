@@ -7,7 +7,7 @@ const configMerger = require('./config-merger');
 const { countUserDataFiles } = require('./utils');
 // Story v63-3-1: AGENT_FILES dropped — validateAgentFiles now uses
 // VORTEX_SKILL_PATHS (lazy-required inside the function).
-const { WORKFLOW_NAMES, WAVE3_WORKFLOW_NAMES, AGENTS, GYRE_AGENTS, EXTRA_BME_AGENTS } = require('./agent-registry');
+const { WORKFLOW_NAMES, WAVE3_WORKFLOW_NAMES, AGENTS, GYRE_AGENTS } = require('./agent-registry');
 // T76: the manifest parser and the exclusion reader are shared with the generator
 // rather than reimplemented. A validator that parses differently from the writer
 // cannot detect a writer bug — it detects a disagreement between two parsers.
@@ -323,7 +323,6 @@ async function validateManifest(projectRoot) {
     const expected = [
       ...AGENTS.filter(a => !excluded.vortex.includes(a.id)),
       ...GYRE_AGENTS.filter(a => !excluded.gyre.includes(a.id)),
-      ...EXTRA_BME_AGENTS,
     ].map(a => a.id);
 
     const counts = new Map(expected.map(id => [id, 0]));
@@ -356,14 +355,15 @@ async function validateManifest(projectRoot) {
       );
     }
 
-    // Confirm standalone bme agent files exist on disk
-    const missingExtraFiles = EXTRA_BME_AGENTS
-      .filter(a => !fs.existsSync(path.join(projectRoot, '_bmad', 'bme', a.submodule, 'agents', `${a.id}.md`)))
-      .map(a => a.id);
-    if (missingExtraFiles.length > 0) {
-      check.error = `Standalone bme agent files missing: ${missingExtraFiles.join(', ')}`;
-      return check;
-    }
+    // The standalone-bme on-disk check was REMOVED with EXTRA_BME_AGENTS in tfu-1-1. It confirmed each
+    // roster entry had an agent file at `_bmad/bme/<submodule>/agents/<id>.md`; its only subject was
+    // `_team-factory`, which no longer installs.
+    //
+    // Why deleted rather than left iterating an empty roster: `missingExtraFiles` would be
+    // unconditionally `[]`, so the check could never fire again while its code and error string stayed
+    // in the shipped validator looking alive — and its own fixture in `tests/unit/validator.test.js`
+    // would have stopped seeding the very files it checked, so both halves of one contract would have
+    // gone quiet together with nothing red. That pairing is what ruled out option (a) in AC#0.
 
     check.passed = true;
     if (warnings.length > 0) check.warning = warnings.join('; ');

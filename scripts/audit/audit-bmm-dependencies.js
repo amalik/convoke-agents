@@ -10,7 +10,7 @@ const { findProjectRoot } = require('../update/lib/utils');
 const {
   parseCsvRow,
   formatCsvRow,
-} = require('../../_bmad/bme/_team-factory/lib/utils/csv-utils');
+} = require('../lib/csv-utils');
 
 /**
  * Audit tool: inventory custom skills under `.claude/skills/` that depend on

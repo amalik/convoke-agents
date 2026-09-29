@@ -132,7 +132,21 @@ const TRACKED = [
   // copying is invisible to a control whose stated purpose is seeing writes into that project.
   // Not fixed here: widening the regex changes every count in this array at once and belongs to
   // T111, not to a story about portability.
-  { file: 'scripts/update/lib/refresh-installation.js', expected: 14 },
+  //
+  // 14 -> 13 on 2026-09-29 (story tfu-1-1). The removed write is the standalone-bme-submodule config
+  // version stamp — the same `fs.writeFileSync(destConfig, ...)` that the `8 -> 9` note above added
+  // for I137 — deleted with the `// 2b1.` block when the Team Factory stopped shipping (operator
+  // ruling 2026-09-16). Reviewed before accepting: this is a REMOVAL, so the usual question (does a
+  // new write target the operator's project outside Convoke-owned scope?) does not arise; the
+  // checker independently reported "no scope violations, but write-op counts diverged" and named the
+  // delta as -1. The T111 caveat above applies in reverse and is worth stating: the block also
+  // removed fs-extra `fs.remove`/`fs.copy` calls that `WRITE_OP_RE` never counted, so a snapshot
+  // reading 14 -> 13 understates what left the installer exactly as it understated what arrived.
+  //
+  // ⚠ The migration that would remove an ALREADY-INSTALLED `_bmad/bme/_team-factory/` from an
+  // operator's project is T222, deliberately not this story. When it lands it writes destructively
+  // into `{projectRoot}` from a migration file, which this array does not track at all — add it.
+  { file: 'scripts/update/lib/refresh-installation.js', expected: 13 },
   // Added 2026-08-26 (story gen-1.1). This is the other half of the 11 -> 10 above.
   // It is tracked rather than left alone because this checker inspects ONLY the files
   // in this array and has no assertion for write ops in an untracked file — so

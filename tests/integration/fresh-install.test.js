@@ -248,7 +248,12 @@ describe('Agent manifest v6.1.0 schema', () => {
     const lines = fs.readFileSync(manifestPath, 'utf8').trim().split('\n');
     const dataRows = lines.slice(1);
 
-    assert.equal(dataRows.length, 12, 'should have 12 agent rows (7 vortex + 4 gyre + 1 standalone bme: team-factory)');
+    // Derived, not a literal. The previous `12` was a hardcoded count that broke when tfu-1-1
+    // removed the standalone-bme roster — `derive-counts-from-source` exists for exactly this.
+    const { AGENTS, GYRE_AGENTS } = require('../../scripts/update/lib/agent-registry');
+    const expectedAgentRows = AGENTS.length + GYRE_AGENTS.length;
+    assert.equal(dataRows.length, expectedAgentRows,
+      `should have ${expectedAgentRows} agent rows, derived from the registry rosters`);
 
     for (const row of dataRows) {
       // Count fields by parsing quoted CSV
@@ -284,7 +289,11 @@ describe('Agent manifest v6.1.0 schema', () => {
     assert.ok(content.includes('"Emma"'), 'should add Emma bme row');
 
     const lines = content.trim().split('\n');
-    assert.equal(lines.length, 14, 'should have header + 1 bmm + 12 bme rows (7 vortex + 4 gyre + 1 standalone)');
+    // header + 1 bmm row + every bme agent row, derived rather than hardcoded (was `14`).
+    const { AGENTS: VA, GYRE_AGENTS: GA } = require('../../scripts/update/lib/agent-registry');
+    const expectedLines = 1 + 1 + VA.length + GA.length;
+    assert.equal(lines.length, expectedLines,
+      `should have ${expectedLines} lines: header + 1 bmm + ${VA.length + GA.length} bme rows`);
 
     await fs.remove(tmpDir2);
   });

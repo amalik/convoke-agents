@@ -99,7 +99,7 @@ Compass routing and workflow structure, with a dedicated file per Vortex agent:
 
 ```bash
 npm run test:p0                              # the whole suite
-node --test tests/p0/p0-emma.test.js         # one agent
+node --test tests/p0/p0-emma.test.js         # a single agent's suite
 ls tests/p0/                                 # what exists
 ```
 

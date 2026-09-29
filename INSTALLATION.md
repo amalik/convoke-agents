@@ -24,7 +24,7 @@ Convoke works **standalone** or as an extension to [BMAD Method](https://github.
 npm install convoke-agents && npx -p convoke-agents convoke-install
 ```
 
-Both teams (Vortex and Gyre), Team Factory, the Enhance and Artifacts modules, and all supporting files are installed and ready to use.
+Both teams (Vortex and Gyre), the Enhance and Artifacts modules, and all supporting files are installed and ready to use.
 
 > **On the per-team installers.** `convoke-install-vortex` and `convoke-install-gyre` exist, but they are **not currently scoped installs** — every entry point calls the same refresh routine and installs every module. Treat them as aliases for now; `excluded_agents` in each team's `config.yaml` is the supported way to opt out of agents you do not want.
 
@@ -84,13 +84,6 @@ your-project/
 │   │   ├── extensions/       # Agent menu patch descriptors
 │   │   ├── guides/           # Module author guide
 │   │   └── config.yaml       # Configuration
-│   ├── _team-factory/        # Skill: Create new BMAD-compliant teams
-│   │   ├── agents/           # Team Factory agent
-│   │   ├── workflows/        # Factory workflows
-│   │   ├── schemas/          # Team/agent schemas
-│   │   ├── templates/        # Generation templates
-│   │   ├── lib/              # Factory generators and validators
-│   │   └── config.yaml       # Configuration
 │   ├── _artifacts/           # Skill: Artifact governance & portfolio
 │   │   ├── workflows/        # Migrate artifacts, portfolio status
 │   │   └── config.yaml       # Configuration
@@ -112,7 +105,6 @@ your-project/
 | **Vortex** | 7 agents, 22 workflows, 10 handoff contracts (HC1-HC5 artifact, HC6-HC10 routing), 7 user guides |
 | **Gyre** | 4 agents, 7 workflows, 4 contract schemas (GC1-GC4), 4 user guides |
 | **Enhance** | Skill workflows, menu patch descriptors, module author guide |
-| **Team Factory** | The factory agent, its workflows, schemas, templates and validators |
 | **Artifacts** | Artifact governance and portfolio workflows |
 | **Portability** | Skills for exporting Convoke skills to other AI platforms (export, catalog generation, catalog seeding, export validation) |
 | **Skills** | Claude Code skill wrappers in `.claude/skills/` for every installed agent |
@@ -165,8 +157,6 @@ Then activate an agent to confirm it works.
 /bmad-agent-bme-readiness-analyst                   # Lens  🔬  Analyze
 /bmad-agent-bme-review-coach                        # Coach 🏋️  Review
 
-# Team construction
-/bmad-agent-bme-team-factory                        # Team Factory 🏭
 ```
 
 Agents listed in a team's `excluded_agents` config field get no skill wrapper, so their slash command will not resolve — that is the opt-out working as intended, not a broken install.
@@ -247,7 +237,7 @@ See [BMAD-METHOD-COMPATIBILITY.md](https://github.com/amalik/convoke-agents/blob
 3. **Find your artifacts** — outputs are saved in `_bmad-output/vortex-artifacts/` or `.gyre/`
 4. **Check updates** — run `npx -p convoke-agents convoke-version` periodically
 
-See the [Agent Guide](https://github.com/amalik/convoke-agents/blob/main/docs/agents.md) for detailed workflow descriptions. User guides are available for the 11 team agents in their respective `guides/` directories; Team Factory is documented in its workflow rather than a user guide.
+See the [Agent Guide](https://github.com/amalik/convoke-agents/blob/main/docs/agents.md) for detailed workflow descriptions. User guides are available for the 11 team agents in their respective `guides/` directories.
 
 ---
 
@@ -265,7 +255,6 @@ cp -r .gyre/ ~/my-backup/
 rm -rf _bmad/bme/_vortex/
 rm -rf _bmad/bme/_gyre/
 rm -rf _bmad/bme/_enhance/
-rm -rf _bmad/bme/_team-factory/
 rm -rf _bmad/bme/_artifacts/
 rm -rf .claude/skills/bmad-agent-bme-*/
 rm -rf .claude/skills/bmad-enhance-*/

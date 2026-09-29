@@ -29,7 +29,6 @@ const configMerger = require('../update/lib/config-merger');
 const {
   AGENTS,
   GYRE_AGENTS,
-  EXTRA_BME_AGENTS,
 } = require('../update/lib/agent-registry');
 
 /** v6.1.0 manifest header: 12 columns, module at index 9. */
@@ -163,34 +162,12 @@ function buildAgentRowLegacy(a, submodule) {
   ].map(csvEscape).join(',');
 }
 
-// Row builders for standalone bme agents (e.g. team-factory) — the submodule path
-// differs from the team agents', so the `submodule` comes off the agent itself.
-function buildExtraBmeAgentRow610(a) {
-  const p = a.persona;
-  return [
-    csvEscape(a.name),
-    csvEscape(''),
-    csvEscape(a.title),
-    csvEscape(a.icon),
-    csvEscape(''),
-    csvEscape(p.role),
-    csvEscape(p.identity),
-    csvEscape(p.communication_style),
-    csvEscape(p.expertise),
-    csvEscape('bme'),
-    csvEscape(agentManifestPath(a.submodule, a.id)),
-    csvEscape(`bmad-agent-bme-${a.id}`),
-  ].join(',');
-}
-
-function buildExtraBmeAgentRowLegacy(a) {
-  const p = a.persona;
-  return [
-    a.id, a.name, a.title, a.icon,
-    p.role, p.identity, p.communication_style, p.expertise,
-    'bme', agentManifestPath(a.submodule, a.id),
-  ].map(csvEscape).join(',');
-}
+// The standalone-bme row builders (buildExtraBmeAgentRow610 / …Legacy) were removed with
+// EXTRA_BME_AGENTS in tfu-1-1. They existed because a standalone agent's submodule path comes off the
+// agent itself rather than from a team constant; their only caller was the roster spread below, so they
+// became dead code the moment it went. Note the spread was guarded with `|| []`, which means deleting
+// the export alone would have been silently absorbed here — one of the two coercion sites that ruled
+// out AC#0 option (b).
 
 /**
  * Read the per-module `excluded_agents` opt-out lists from the TARGET tree.
@@ -218,7 +195,7 @@ function readExclusions(projectRoot) {
  *
  * @param {string} projectRoot - Absolute path to the target project root
  * @param {object} [options]
- * @param {{AGENTS: object[], GYRE_AGENTS: object[], EXTRA_BME_AGENTS: object[]}} [options.registry]
+ * @param {{AGENTS: object[], GYRE_AGENTS: object[]}} [options.registry]
  *        Injectable registry. Defaults to the real one. Injecting is how a test proves
  *        a registry change propagates without mutating the shared module.
  * @param {{vortex: string[], gyre: string[]}} [options.excluded]
@@ -228,7 +205,7 @@ function readExclusions(projectRoot) {
  */
 async function generateAgentManifest(projectRoot, options = {}) {
   const {
-    registry = { AGENTS, GYRE_AGENTS, EXTRA_BME_AGENTS },
+    registry = { AGENTS, GYRE_AGENTS },
     excluded,
   } = options;
 
@@ -296,12 +273,10 @@ async function generateAgentManifest(projectRoot, options = {}) {
     ? [
         ...activeVortexAgents.map(a => buildAgentRow610(a, '_vortex')),
         ...activeGyreAgents.map(a => buildAgentRow610(a, '_gyre')),
-        ...(registry.EXTRA_BME_AGENTS || []).map(buildExtraBmeAgentRow610),
       ]
     : [
         ...activeVortexAgents.map(a => buildAgentRowLegacy(a, '_vortex')),
         ...activeGyreAgents.map(a => buildAgentRowLegacy(a, '_gyre')),
-        ...(registry.EXTRA_BME_AGENTS || []).map(buildExtraBmeAgentRowLegacy),
       ];
 
   const allRows = [...preservedRows, ...bmeRows].join('\n') + '\n';

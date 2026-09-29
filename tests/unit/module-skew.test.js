@@ -109,7 +109,11 @@ describe('only modules the installer can stamp are routed', () => {
 
   it('requires BOTH a declared stamp path and a present package source', () => {
     assert.equal(isManagedByInstaller('_gyre'), true);
-    assert.equal(isManagedByInstaller('_team-factory'), true, 'EXTRA_BME_AGENTS submodules count');
+    // `_team-factory` asserted `true` here until tfu-1-1, via EXTRA_BME_AGENTS feeding
+    // STAMPABLE_MODULES. It is now the negative case for the OTHER half of the conjunction:
+    // the package source is still present (the tree stays tracked in git) but nothing declares
+    // a stamp path for it any more, so a test that only checked presence would still pass.
+    assert.equal(isManagedByInstaller('_team-factory'), false, 'tracked in git, but no longer stamped');
     assert.equal(isManagedByInstaller('_portability'), false, 'shipped, but nothing stamps it');
     assert.equal(isManagedByInstaller('_nope'), false);
   });

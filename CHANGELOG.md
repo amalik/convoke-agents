@@ -8,6 +8,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Removed
+
+- **Team Factory no longer ships.** Operator ruling 2026-09-16: it is internal scaffolding — Convoke's own
+  tool for building Convoke's teams — not a user-facing capability. `_bmad/bme/_team-factory/` is out of
+  `package.json` `files[]`, its `skill-manifest.csv` row is gone, and `agent-manifest.csv` no longer carries
+  the Loom Master row. There is no `/bmad-agent-bme-team-factory` command in a new install.
+
+  The source tree **stays tracked in git** and the module still works inside a clone of the repository. It
+  is unshipped, not deleted: `scripts/audit/agent-surface-parity.js` exits 2 on a removed agent and carries
+  no waiver, so deleting it cannot be made green in-commit.
+
+  The `EXTRA_BME_AGENTS` registry roster went with it, along with every consumer — the installer's
+  standalone-submodule copy block and skill-wrapper loop, the validator's on-disk agent-file check, the
+  manifest generator's row builders, the doctor's wrapper bucket, and the installed-tree expectation set.
+  The roster was deleted rather than emptied: an empty one leaves those sites iterating nothing while still
+  reading as live checks.
+
+  **If you already installed it,** `_bmad/bme/_team-factory/` stays in your project — nothing removes it,
+  because the removal loop was itself driven by the roster. `convoke-doctor` will report a version-consistency
+  failure naming `_team-factory` indefinitely. Retiring that orphan is tracked as `T222`; a damaged orphaned
+  config can additionally refuse installs and updates, tracked as `T227`. Deleting the directory by hand is
+  safe in the meantime.
+
+### Fixed
+
+- **`csv-utils` moved to `scripts/lib/`.** It was inside the Team Factory module while being required by
+  `scripts/audit/audit-bmm-dependencies.js` — the target of the shipped `convoke-audit-bmm-deps` bin — at the
+  top level and unguarded. Un-shipping the module without moving it would have published a bin that parses
+  cleanly and throws `MODULE_NOT_FOUND` on a user's first run.
+
+---
+
 ## [4.0.3] - 2026-09-17
 
 Convoke 4.0.3 is a patch release about the config file your agents read on a fresh install.

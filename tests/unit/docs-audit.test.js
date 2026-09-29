@@ -26,7 +26,6 @@ const {
   WORKFLOWS,
   WORKFLOW_NAMES,
   GYRE_AGENTS,
-  EXTRA_BME_AGENTS,
 } = require('../../scripts/update/lib/agent-registry');
 const agentRegistry = require('../../scripts/update/lib/agent-registry');
 const { runScript, removeTempDir } = require('../helpers');
@@ -60,12 +59,17 @@ describe('checkStaleReferences', () => {
     assert.equal(agentFindings.length, 0);
   });
 
-  // T146: the valid set is built from THREE registry groups, not two. Before this, the full
-  // roster (Vortex + Gyre + EXTRA_BME_AGENTS) read as stale while the Vortex+Gyre subtotal
-  // passed — so a TRUE statement about the agent count was reported wrong. Nothing exercised
-  // the third group, which is why the gap survived; these two cases pin it.
-  it('accepts the full roster count, including EXTRA_BME_AGENTS', () => {
-    const full = AGENTS.length + GYRE_AGENTS.length + EXTRA_BME_AGENTS.length;
+  // T146: the valid set is the SUM across every registry roster, not just one subtotal. Before the
+  // fix, the full roster read as stale while a subtotal passed, so a TRUE statement about the agent
+  // count was reported wrong.
+  //
+  // ⚠ tfu-1-1 removed EXTRA_BME_AGENTS, so the live registry now has TWO rosters and the sum equals
+  // the team subtotal. This case therefore no longer distinguishes "sums all rosters" from "uses the
+  // team subtotal" — it would pass under either. The property is still pinned, but by the SYNTHETIC
+  // three-roster fixtures in the `validCountsFor` describe block below, which is where the
+  // discrimination now lives. Do not read this case alone as covering T146.
+  it('accepts the full roster count', () => {
+    const full = AGENTS.length + GYRE_AGENTS.length;
     const findings = checkStaleReferences(`All ${full} agents are registered.`, 'test.md');
     assert.deepEqual(
       findings.filter((f) => f.current.includes('agent')),
@@ -146,7 +150,7 @@ describe('checkStaleReferences', () => {
   it('still rejects a count belonging to no registry group', () => {
     // Deliberately outside every subtotal and every sum of them, so a future fourth group
     // cannot make this value accidentally valid and silently stop testing anything.
-    const bogus = (AGENTS.length + GYRE_AGENTS.length + EXTRA_BME_AGENTS.length) * 3 + 7;
+    const bogus = (AGENTS.length + GYRE_AGENTS.length) * 3 + 7;
     const findings = checkStaleReferences(`All ${bogus} agents are registered.`, 'test.md');
     assert.equal(
       findings.filter((f) => f.current.includes('agent')).length,
@@ -718,8 +722,9 @@ describe('registryHeader', () => {
   });
 
   it('states the basis of its figures rather than asserting a bare total', () => {
-    // The workflow figure is a known undercount (T150) and the coverage checks span less than
-    // the word "Registry" implies (T156). The qualifier is what makes the line true.
+    // The coverage checks span less than the word "Registry" implies (T156), so the qualifier is
+    // what makes the line true. A second reason — a workflow undercount (T150) — closed in tfu-1-1;
+    // T156 alone still requires the hedge, which is why this assertion is unchanged.
     assert.match(registryHeader(), /\(from exported rosters\)/);
   });
 });

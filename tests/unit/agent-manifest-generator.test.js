@@ -241,7 +241,7 @@ describe('gen-1.1 AC3 — target-tree dependencies', () => {
         expertise: 'e',
       },
     };
-    const registry = { AGENTS: [multiline], GYRE_AGENTS: [], EXTRA_BME_AGENTS: [] };
+    const registry = { AGENTS: [multiline], GYRE_AGENTS: [] };
 
     await generateAgentManifest(root, { excluded: NO_EXCLUSIONS, registry });
     const first = await fs.readFile(manifestPathIn(root), 'utf8');
@@ -267,7 +267,10 @@ describe('gen-1.1 AC3 — target-tree dependencies', () => {
   // its own output.
   // Counts derived from the registry, never hardcoded (`derive-counts-from-source`).
   const REG = require('../../scripts/update/lib/agent-registry');
-  const FULL_BME = REG.AGENTS.length + REG.GYRE_AGENTS.length + REG.EXTRA_BME_AGENTS.length;
+  // EXTRA_BME_AGENTS.length was a third term here until tfu-1-1 removed the roster. Note this is a
+  // DERIVED count and it broke anyway — deriving from the registry does not survive the symbol
+  // being deleted, which is why the story warns against reading a red derived test as a test bug.
+  const FULL_BME = REG.AGENTS.length + REG.GYRE_AGENTS.length;
 
   const PARTIAL_OPTIONS = [
     ['excluded.gyre missing', { excluded: { vortex: [] } }, FULL_BME],
@@ -277,7 +280,7 @@ describe('gen-1.1 AC3 — target-tree dependencies', () => {
     ['excluded absent entirely', {}, FULL_BME],
     // registry partials: each missing key must default to [], never throw, and never
     // silently fall through to the real registry.
-    ['registry.AGENTS missing', { excluded: NO_EXCLUSIONS, registry: { GYRE_AGENTS: [], EXTRA_BME_AGENTS: [] } }, 0],
+    ['registry.AGENTS missing', { excluded: NO_EXCLUSIONS, registry: { GYRE_AGENTS: [] } }, 0],
     ['registry.GYRE + EXTRA missing', { excluded: NO_EXCLUSIONS, registry: { AGENTS: [] } }, 0],
     ['registry empty', { excluded: NO_EXCLUSIONS, registry: {} }, 0],
   ];
@@ -389,7 +392,7 @@ describe('gen-1.1 AC5 — injected registry propagates to a temp projectRoot', (
 
     await generateAgentManifest(root, {
       excluded: NO_EXCLUSIONS,
-      registry: { AGENTS: [injected], GYRE_AGENTS: [], EXTRA_BME_AGENTS: [] },
+      registry: { AGENTS: [injected], GYRE_AGENTS: [] },
     });
     const out = await fs.readFile(manifestPathIn(root), 'utf8');
 

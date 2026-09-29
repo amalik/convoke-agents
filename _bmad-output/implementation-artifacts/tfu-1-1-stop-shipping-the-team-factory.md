@@ -1,5 +1,5 @@
 ---
-baseline_commit: 66a34b73d9bc6ac7cb3430986ad80e1f3a5cfaa8
+baseline_commit: d198cab6c130936036880fa770b3439f7a586cb9
 ---
 
 # Story tfu-1.1: Stop shipping the Team Factory
@@ -155,7 +155,7 @@ no clever pattern survives contact with both. So:
 grep -rn 'EXTRA_BME_AGENTS' --include='*.js' scripts/ tests/
 ```
 
-At `aaa178c3` that returns **76 references across 19 files**. It cannot miss, because it matches the
+At `d198cab6` that returns **76 references across 19 files** (re-derived after `T181` moved lines in the generator). It cannot miss, because it matches the
 symbol rather than a guess about how the symbol is used. Classify every hit as one of: **iterate/spread**
 (must be removed under option (c)), **destructuring import** (must be removed with its last use),
 **export** (goes with the array), or **comment/prose** (rewrite or delete). Record the four counts you
@@ -305,17 +305,17 @@ another literal — `derive-counts-from-source`).
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — re-derive the premise (AC#1).** All four commands; stop on any disagreement.
-- [ ] **Task 2 — relocate `csv-utils` (AC#3).** Move to `scripts/lib/`; repoint all four consumers;
+- [x] **Task 1 — re-derive the premise (AC#1).** All four commands; stop on any disagreement.
+- [x] **Task 2 — relocate `csv-utils` (AC#3).** Move to `scripts/lib/`; repoint all four consumers;
       delete the doctor's degradation branch. Must precede or accompany Task 3.
-- [ ] **Task 3 — unship (AC#2, AC#4, AC#5).** `files[]`; delete the export and its consumers per (c);
+- [x] **Task 3 — unship (AC#2, AC#4, AC#5).** `files[]`; delete the export and its consumers per (c);
       install block; `install-scope-check.js` snapshot + comment; regenerate the agent manifest;
       hand-delete `skill-manifest.csv` row 106; retire `name-registry.csv:27` **only**; the dead
       carve-out; `_bmad/bme/README.md:15`.
-- [ ] **Task 4 — dispositions (AC#6).** Derive the 25 sites; give each one.
-- [ ] **Task 5 — docs and Covenant (AC#7, AC#9, AC#10).** Three treatments, not one. Delete the `T150`
+- [x] **Task 4 — dispositions (AC#6).** Derive the 25 sites; give each one.
+- [x] **Task 5 — docs and Covenant (AC#7, AC#9, AC#10).** Three treatments, not one. Delete the `T150`
       clauses, keep `(from exported rosters)`. Reword `docs/testing.md:102`; leave `:45` alone.
-- [ ] **Task 6 — tests (AC#15).** Fix the three; derive, never re-literal.
+- [x] **Task 6 — tests (AC#15).** Fix the three; derive, never re-literal.
 - [ ] **Task 7 — the wrapper baseline (AC#14).** Commit first, regenerate, amend. Confirm the extractor
       reports 2.
 - [ ] **Task 8 — gates (AC#13).** `npm run lint` clean on modified files; `npm test` **and**
@@ -443,11 +443,105 @@ The status is now `ready-for-dev`, so the point is moot rather than resolved.
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — `claude-opus-5[1m]`
+
 ### Debug Log References
+
+- **Task 1** — all four AC#1 commands run at `d198cab6`: `has 1: true` / `has 1: false`; the waiver grep
+  returns nothing (exit 1); exactly the four `csv-utils` consumers AC#3 tabulates; `3 true`.
+- **Task 2 RED** — `node --test tests/unit/csv-utils-relocation.test.js` failed on **both** of its own
+  named assertions before the move, not on anything incidental.
+- **Task 2 GREEN** — both pass; `npm test` exits 0; `npm run lint` exits 0.
 
 ### Completion Notes List
 
+**Task 1 — premise re-derived.** No disagreement, so no re-scope. Re-run against `d198cab6` rather than
+the story's original `66a34b73` baseline, because `T181` landed two commits in between and moved lines in
+`refresh-installation.js`. Every symbol anchor the story uses still resolved to exactly one match, which
+is the first evidence that Round 2's anchor-over-line-number change was worth making.
+
+**Task 2 — `csv-utils` relocated.** `git mv` (tracked rename, not copy) to `scripts/lib/csv-utils.js`;
+85 lines, self-contained, no internal requires. All four consumers repointed in the same change:
+`scripts/audit/audit-bmm-dependencies.js` → `../lib/csv-utils`; `scripts/convoke-doctor.js` →
+`./lib/csv-utils`; `_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js` →
+`../../../../../scripts/lib/csv-utils` (5 levels, derived with `path.relative`, not counted);
+`tests/team-factory/csv-utils.test.js` → `../../scripts/lib/csv-utils`.
+
+The doctor's degradation branch is **deleted**, per AC#3. It existed because `_team-factory` could
+legitimately be absent; now that csv-utils ships with `scripts/`, an absent module is a genuinely broken
+install and degrading would have disabled every skill-wrapper check behind a yellow warning.
+
+**Regression I caused and fixed, worth recording because it is this story's own subject.** Deleting that
+branch changed `convoke-doctor.js` by **net −5 lines** (7 added, 12 removed), which shifted every line
+citation after it. `scripts/audit/lib/installed-tree.js`'s `RUNTIME_DATA_FILES` cites that file by line,
+and two citations broke: `:980` → `:975` (the `taxonomy.yaml` path join) and `:763` → `:758` (the
+`BMM_DEPS_CSV_REL` read). Both fixed; `tests/audit/installed-tree.test.js` exits 0.
+
+Two things about how that surfaced are worth keeping. First, the assertion reports offenders **one at a
+time**: the initial run named only `:980`, and `:763` appeared only after `:980` was fixed — so "one
+offender" is not "one defect", and a reader who stopped at the first green would have shipped the second.
+Second, this is the third instance in this story's life of the line-citation class, and it landed on code
+rather than prose. The other session filed `T225` for exactly it.
+
+**Not fixed, because the workflow forbids it.** Story line 140 reads *"The standalone-bme-submodule block
+at the `// 2b1. Standalone bme submodule trees` block in `refresh-installation.js`"* — a duplication left
+by Round 2's line-ref-to-anchor substitution. AC text is not among the sections this workflow permits a
+dev agent to edit, so it is reported here rather than silently corrected.
+
+**One check of mine was wrong and is worth naming.** A `node -e "require('./<test file>')"` smoke check
+reported `LOAD ERROR` for `tests/team-factory/csv-utils.test.js`. Requiring a test file *runs* it, and the
+check treated its passing output as an error. `node --test` on the same file exits 0. The repoint was
+never broken; the check was.
+
 ### File List
+
+Relative to repo root. Updated as tasks complete.
+
+| Path | Change |
+|---|---|
+| `scripts/lib/csv-utils.js` | **moved** from `_bmad/bme/_team-factory/lib/utils/csv-utils.js` (`git mv`) |
+| `scripts/audit/audit-bmm-dependencies.js` | modified — require repointed |
+| `scripts/convoke-doctor.js` | modified — require repointed, degradation branch deleted |
+| `_bmad/bme/_team-factory/lib/validators/end-to-end-validator.js` | modified — require repointed |
+| `tests/team-factory/csv-utils.test.js` | modified — require repointed |
+| `tests/unit/csv-utils-relocation.test.js` | **new** — relocation guard (exists + no `_team-factory` requires) |
+| `scripts/audit/lib/installed-tree.js` | modified — two `convoke-doctor.js` citations after the −5-line shift |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | modified — status → `in-progress` |
+| `scripts/update/lib/agent-registry.js` | modified — roster, derived ids, bucket entry, both exports removed |
+| `scripts/update/lib/refresh-installation.js` | modified — 5 code sites removed (`// 2b1.` and `// 6b1.` blocks, destructure, sweep spread, `STAMPABLE_MODULES`) |
+| `scripts/update/lib/validator.js` | modified — import, expected-set spread, on-disk check removed |
+| `scripts/lib/agent-manifest-generator.js` | modified — import, both row builders, both call sites, JSDoc, default param |
+| `scripts/audit/name-registry-integrity.js` | modified — import, roster spread, `_team-factory` carve-out removed |
+| `scripts/docs-audit.js` | modified — 2 comments, and the three `T150` clauses (qualifier kept) |
+| `package.json` | modified — `_bmad/bme/_team-factory/` removed from `files[]` |
+| `_bmad/_config/skill-manifest.csv` | modified — row 106 deleted |
+| `_bmad/_config/agent-manifest.csv` | regenerated — 54 → 53 lines |
+| `_bmad/bme/_config/name-registry.csv` | modified — `Loom Master` `in-dev` → `reserved` (the `loom` **team** row untouched) |
+| `_bmad/bme/README.md` | modified — table row + live link removed |
+| `scripts/audit/install-scope-check.js` | modified — snapshot `14` → `13`, dated note |
+| `tests/unit/team-factory-unshipped.test.js` | **new** — replaces the wiring test with the inverse guard |
+| `tests/unit/team-factory-wiring.test.js` | **deleted** — obsoleted (AC#15) |
+| `tests/unit/module-skew.test.js` | modified — assertion inverted, now exercises the other conjunct |
+| `tests/unit/validator.test.js` | modified — 4 sites incl. the fixture that paired with the removed check |
+| `tests/unit/docs-audit.test.js` | modified — import, T146 case re-scoped with a coverage caveat, bogus calc |
+| `tests/unit/agent-manifest-generator.test.js` | modified — derived term + 3 dead fixture keys |
+| `tests/audit/name-registry-integrity.test.js` | modified — 2 `operationalAgents` cases, 1 fixture given `team` |
+| `tests/audit/installed-tree.test.js` | modified — 5 cases; 3 removed with tombstones |
+| `tests/integration/convoke-doctor.test.js` | modified — 2 spreads, 2 imports |
+| `tests/integration/upgrade-cli-e2e.test.js` | modified — import + spread |
+| `tests/integration/fresh-install.test.js` | modified — 2 hardcoded counts replaced by derivations |
+| `README.md` | modified — count 12 → 11, Team Factory paragraph removed |
+| `docs/testing.md` | modified — `# one agent` reworded (AC#10) |
+| `docs/host-framework-sync-playbook.md` | modified — 12 → 11 agents |
+| `INSTALLATION.md` | modified — installed-list, tree block, table row, slash command, uninstall line, user-guide sentence |
+| `UPDATE-GUIDE.md` | modified — `T181` paragraph rewritten with a derivation command + `T221`/`T227` caveats; table row narrowed |
+| `docs/faq.md` | modified — "Can I create my own team?" now says it does not ship |
+| `docs/development.md` | modified — heading + lead sentence scoped to a repo clone |
+| `docs/BMAD-METHOD-COMPATIBILITY.md` | modified — tree entry, module-shape sentence, capability list |
+| `CHANGELOG.md` | modified — `[Unreleased]` entry added; **34 insertions, 0 deletions** (history untouched) |
+| `_bmad/bme/covenant/covenant-operator.md` | modified — §6.3 and §6.7 examples replaced; the scoped verdict annotated, not rewritten |
+| `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` | modified — `T227` filed |
+| `tests/unit/csv-utils-relocation.test.js` | *(Task 2)* |
 
 ## Change Log
 
@@ -455,3 +549,7 @@ The status is now `ready-for-dev`, so the point is moot rather than resolved.
 |------|--------|
 | 2026-09-28 | Authored. Status `deferred` pending AC#0. |
 | 2026-09-28 | Round 1 (3 independent layers) → 9 HIGH. AC#0 ruled option (c); AC#8 struck to `T222`; AC#14 and AC#15 added; AC#1, AC#3, AC#4, AC#6, AC#7, AC#13 corrected. Status → `ready-for-dev`. |
+| 2026-09-29 | Round 2 (one scoped layer) → 2 HIGH, both regressions from Round 1's corrections. Instrument changed twice: bare-symbol enumeration in AC#6, symbol anchors instead of line numbers for `refresh-installation.js`. Round 3 not triggered (no structural change). |
+| 2026-09-29 | Task 5 complete. Docs, Covenant and CHANGELOG. **`T227` filed** — a defect at the seam with `T181`: `guardedModuleNames` derives its set from directories on disk rather than `files[]`, so the guard now covers a module that no longer ships, and an orphaned damaged config refuses every install. `try-fresh-install.sh` PASSES (28 checks, all 14 bins resolve) — the gate that proves AC#3. |
+| 2026-09-29 | Tasks 3, 4 and 6 complete. Roster and all consumers removed; package, manifests, name-registry and snapshot moved with it. **AC#15 understated the test work by an order of magnitude: 47 failing assertions across 7 files, not 3 tests in 3 files.** `npm test`, `npm run test:integration`, `npm run lint`, `npm run docs:audit` and four audit gates all exit 0. |
+| 2026-09-29 | Task 1 and Task 2 complete. `csv-utils` relocated to `scripts/lib/` with all four consumers repointed; the doctor's degradation branch deleted. Two `installed-tree.js` line citations into `convoke-doctor.js` repaired after the −5-line shift. `npm test` and `npm run lint` both exit 0. |

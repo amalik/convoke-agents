@@ -5,7 +5,7 @@ const path = require('path');
 const chalk = require('chalk');
 const yaml = require('js-yaml');
 const { findProjectRoot, getPackageVersion } = require('./update/lib/utils');
-const { AGENTS, GYRE_AGENTS, EXTRA_BME_AGENTS } = require('./update/lib/agent-registry');
+const { AGENTS, GYRE_AGENTS } = require('./update/lib/agent-registry');
 const {
   scanBmmDependencies,
   readExistingCsv,
@@ -327,18 +327,13 @@ function loadSkillManifest(projectRoot) {
     return map;
   }
 
-  // Lazy-load parseCsvRow from the optional _team-factory submodule.
-  // ag-7-2 review patch (Edge Case Hunter EH#1): if _team-factory/ is missing
-  // (e.g., user opted out of the team-factory module), the top-level require
-  // would crash the doctor before main() even runs — exactly the broken-install
-  // case the doctor exists to diagnose. Lazy + try/catch degrades cleanly.
-  let parseCsvRow;
-  try {
-    ({ parseCsvRow } = require('../_bmad/bme/_team-factory/lib/utils/csv-utils'));
-  } catch (_err) {
-    console.warn(chalk.yellow(`  ⚠ csv-utils unavailable (_team-factory submodule not installed); skill wrapper checks will be skipped`));
-    return map;
-  }
+  // csv-utils moved to scripts/lib/ in story tfu-1-1 (AC#3), so it is no longer optional:
+  // it ships with scripts/ rather than with the un-shipped _team-factory submodule. The former
+  // lazy require + try/catch existed because _team-factory could legitimately be absent; under
+  // the new location an absent module means a genuinely broken install, and degrading would
+  // silently disable EVERY skill-wrapper check behind a yellow warning — which Round 1 of tfu-1-1
+  // identified as the reason the check would go permanently dark. Fail loudly instead.
+  const { parseCsvRow } = require('./lib/csv-utils');
 
   try {
     const content = fs.readFileSync(manifestPath, 'utf8');
@@ -508,7 +503,10 @@ function checkAgentSkillWrappers(projectRoot, modules = []) {
     }
   }
 
-  const allAgents = [...AGENTS, ...GYRE_AGENTS, ...EXTRA_BME_AGENTS].filter(
+  // EXTRA_BME_AGENTS was spread here until tfu-1-1. Spreading a deleted export would have thrown
+  // at startup — the doctor dying before it can diagnose anything — which is why the roster and
+  // every consumer moved in one change rather than the export alone (AC#0 option (b), rejected).
+  const allAgents = [...AGENTS, ...GYRE_AGENTS].filter(
     a => !excludedIds.has(a.id)
   );
   const failures = [];

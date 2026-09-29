@@ -173,7 +173,7 @@ and is stale.** What follows is what actually runs.
 
 | Gate | What it proves | Where |
 |---|---|---|
-| **Agent surface parity** | The operator-facing contract is unchanged across two git refs: agents present, menu codes preserved, activation still loads config. 12 agents, seconds, no API key. | `scripts/audit/agent-surface-parity.js <base-ref> HEAD`, CI job `agent-surface-parity` |
+| **Agent surface parity** | The operator-facing contract is unchanged across two git refs: agents present, menu codes preserved, activation still loads config. 11 agents, seconds, no API key. | `scripts/audit/agent-surface-parity.js <base-ref> HEAD`, CI job `agent-surface-parity` |
 | **Fresh install** | Packs *this tree* into a tarball, installs **that tarball** into a throwaway project, and runs what a new user runs. Catches packaging defects (`files` omissions, unresolvable bins, postinstall failures) that a repo-local test cannot. | CI job `fresh-install`, `scripts/audit/try-fresh-install.sh` |
 | **Install-scope containment** | Migration and install writes stay inside Convoke-owned paths. | CI job step, `scripts/audit/install-scope-check.js` |
 | **CLI guidance pinning** | The two operator-facing scripts emit no unpinned `npx -p convoke-agents <bin>`. An unpinned form resolves the `latest` dist-tag rather than the running build. | `tests/lib/fresh-install-health.test.js` |

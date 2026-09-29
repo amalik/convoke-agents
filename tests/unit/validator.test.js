@@ -210,7 +210,6 @@ describe('validateManifest', () => {
     const rows = [
       ...REG.AGENTS.filter(a => !omit.includes(a.id)).map(a => row(a.id, '_vortex')),
       ...REG.GYRE_AGENTS.filter(a => !omit.includes(a.id)).map(a => row(a.id, '_gyre', `${a.id}.md`)),
-      ...REG.EXTRA_BME_AGENTS.filter(a => !omit.includes(a.id)).map(a => row(a.id, a.submodule, `${a.id}.md`)),
     ];
     return [V610_HEADER, ...rows, ...extraRows].join('\n') + '\n';
   }
@@ -223,12 +222,12 @@ describe('validateManifest', () => {
 
   beforeEach(async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-val-'));
-    // standalone bme agent files must exist on disk for validation to pass
-    for (const a of REG.EXTRA_BME_AGENTS) {
-      const f = path.join(tmpDir, '_bmad', 'bme', a.submodule, 'agents', `${a.id}.md`);
-      await fs.ensureDir(path.dirname(f));
-      await fs.writeFile(f, '# stub', 'utf8');
-    }
+    // This hook used to seed `_bmad/bme/<submodule>/agents/<id>.md` for every EXTRA_BME_AGENTS entry,
+    // because validateManifest checked those files existed on disk. Story tfu-1-1 removed the roster
+    // and that check together — deliberately together, because an EMPTY roster would have left the
+    // check unconditionally satisfied while this hook stopped seeding what it verified: both halves of
+    // one contract going quiet with nothing red. If a standalone bme roster ever returns, the check
+    // and its fixture come back as a pair.
   });
   afterEach(async () => {
     await fs.remove(tmpDir);
@@ -265,7 +264,7 @@ describe('validateManifest', () => {
   // T76: the old check was a raw substring test over the whole file, so IDs
   // appearing anywhere — even in one prose line with no rows — satisfied it.
   it('fails when the IDs appear only in prose, with no rows', async () => {
-    const ids = [...REG.AGENTS, ...REG.GYRE_AGENTS, ...REG.EXTRA_BME_AGENTS].map(a => a.id);
+    const ids = [...REG.AGENTS, ...REG.GYRE_AGENTS].map(a => a.id);
     await write(`${V610_HEADER}\n"${ids.join(' ')}"\n`);
     const result = await validateManifest(tmpDir);
     assert.equal(result.passed, false);
@@ -389,7 +388,6 @@ describe('validateManifest', () => {
       const rows = [
         ...REG.AGENTS.map(a => row(a.id, '_vortex', `${a.id}.md`)),
         ...REG.GYRE_AGENTS.map(a => row(a.id, '_gyre', `${a.id}.md`)),
-        ...REG.EXTRA_BME_AGENTS.map(a => row(a.id, a.submodule, `${a.id}.md`)),
       ];
       await write([header, ...rows].join('\n') + '\n');
       const result = await validateManifest(tmpDir);

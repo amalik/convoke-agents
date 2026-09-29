@@ -84,7 +84,6 @@ your-project/
     │   ├── _enhance/         # Enhance — agent skills
     │   ├── _artifacts/       # artifact governance workflows
     │   ├── _portability/     # platform-agnostic exporters
-    │   ├── _team-factory/    # Loom — team creation
     │   └── covenant/         # Operator Covenant + compliance checklist
     └── _config/
         └── agent-manifest.csv (updated)
@@ -92,7 +91,7 @@ your-project/
 
 Every module above carries a `config.yaml` and a `workflows/` directory. The rest vary and are
 **not** predictable from whether a module has agents: `_enhance` ships `guides/` with no `agents/`,
-and `_team-factory` ships `agents/` with neither `guides/` nor `contracts/`. `covenant/` is not a
+and `_gyre` ships `contracts/` where `_vortex` ships `guides/`. `covenant/` is not a
 module at all — it is two markdown files. Derive per module rather than assuming:
 `ls _bmad/bme/*/`.
 
@@ -117,7 +116,6 @@ Read the package version from `package.json` rather than from this file:
 - Optional detection: BMAD Method config (bmad.yaml in _bmad/_config/)
 - Teams: Vortex (7 agents), Gyre (4 agents)
 - Skills: Enhance (initiatives-backlog)
-- Team Factory: guided team creation (the `add-agent` and `add-skill` extensions are planned for Phase 3 and do not ship yet)
 
 ### Detection Logic
 

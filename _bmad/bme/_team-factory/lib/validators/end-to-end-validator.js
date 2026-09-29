@@ -4,7 +4,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('js-yaml');
 const { verifyRequire, buildExportNames, derivePrefix, hasPersona, PERSONA_EVIDENCE_FIELDS } = require('../writers/registry-writer');
-const { parseCsvRow } = require('../utils/csv-utils');
+const { parseCsvRow } = require('../../../../../scripts/lib/csv-utils');
 
 /** @typedef {import('../types/factory-types').E2EValidationResult} E2EValidationResult */
 /** @typedef {import('../types/factory-types').E2ECheck} E2ECheck */

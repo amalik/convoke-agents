@@ -211,40 +211,24 @@ const GYRE_AGENT_IDS = GYRE_AGENTS.map(a => a.id);
 const GYRE_WORKFLOW_NAMES = GYRE_WORKFLOWS.map(w => w.name);
 
 // Standalone bme agents that don't fit the Vortex/Gyre team pattern.
-// These agents live in their own submodule (not _vortex or _gyre) and are
-// individually registered. refresh-installation.js and validator.js both
-// consume this list to preserve and validate them.
+// EXTRA_BME_AGENTS / EXTRA_BME_AGENT_IDS were REMOVED by story tfu-1-1 (2026-09-29).
 //
-// Each entry must include:
-//   - id: kebab-case identifier (becomes bmad-agent-bme-{id})
-//   - submodule: directory under _bmad/bme/ (e.g., '_team-factory')
-//   - name: displayName for manifest
-//   - title: persona title
-//   - icon: emoji
-//   - role: persona role string
-//   - identity: persona identity description
-//   - communication_style: persona voice
-//   - expertise: principles/expertise bullets
-const EXTRA_BME_AGENTS = [
-  {
-    id: 'team-factory',
-    submodule: '_team-factory',
-    name: 'Loom Master',
-    title: 'Team Factory',
-    icon: '🏭',
-    persona: {
-      role: 'Team Architecture Specialist + BMAD Compliance Expert',
-      identity: 'Master team architect who guides framework contributors through creating fully-wired, BMAD-compliant teams. Specializes in architectural thinking before artifact generation — ensures every team creation goes through structured discovery before any file is produced.',
-      communication_style: 'Methodical yet encouraging — like a senior architect pair-programming with a colleague. Asks focused questions, explains trade-offs clearly, and celebrates good decisions. Uses concrete examples from Vortex and Gyre to illustrate patterns. Never dumps all decisions at once — progressive disclosure, one step at a time.',
-      expertise: "- Thinking before files — every team creation goes through discovery before generation - BMAD compliance is non-negotiable — output must be indistinguishable from native teams - No orphaned artifacts — if a file is created, it must be registered, wired, and discoverable - Delegate to BMB for artifact generation — factory owns integration wiring only - Validate continuously — don't wait until the end to check"
-    }
-  }
-];
+// They held exactly one entry — Loom's `team-factory` — and existed so the installer could copy a
+// standalone `_bmad/bme/<submodule>/` tree wholesale and generate its skill wrapper. Operator ruling
+// 2026-09-16: the Team Factory is internal scaffolding, not a user-facing capability, so it no longer
+// ships. The roster went with it rather than being emptied, because an empty roster leaves twelve
+// production sites iterating nothing while still LOOKING like live checks — see the story's AC#0 for
+// the three options and why this one was chosen.
+//
+// The source tree stays tracked in git: `scripts/audit/agent-surface-parity.js` exits 2 on a removed
+// agent and carries no waiver, so deleting it cannot be made green in-commit.
+//
+// If a future standalone bme module needs this mechanism back, it is a new roster and a new install
+// path, not a revival of this one — and `scripts/audit/lib/installed-tree.js`'s WRAPPER_RULES will need
+// a matching entry.
 
-const EXTRA_BME_AGENT_IDS = EXTRA_BME_AGENTS.map(a => a.id);
-
-// R1-M4: disjoint-IDs assertion. AGENT_IDS (Vortex), GYRE_AGENT_IDS (Gyre),
-// and EXTRA_BME_AGENT_IDS (standalone bme) MUST be mutually disjoint — an
+// R1-M4: disjoint-IDs assertion. AGENT_IDS (Vortex) and GYRE_AGENT_IDS (Gyre)
+// MUST be mutually disjoint — an
 // overlap would mean refresh-installation, validator, and doctor would
 // double-process the same id under different submodule shapes (Vortex
 // skill-dir vs Gyre flat) and one side would silently win. Better to fail
@@ -253,7 +237,6 @@ const EXTRA_BME_AGENT_IDS = EXTRA_BME_AGENTS.map(a => a.id);
   const buckets = {
     AGENT_IDS,
     GYRE_AGENT_IDS,
-    EXTRA_BME_AGENT_IDS,
   };
   const seen = new Map(); // id → bucket name
   const collisions = [];
@@ -287,6 +270,4 @@ module.exports = {
   GYRE_AGENT_FILES,
   GYRE_AGENT_IDS,
   GYRE_WORKFLOW_NAMES,
-  EXTRA_BME_AGENTS,
-  EXTRA_BME_AGENT_IDS,
 };

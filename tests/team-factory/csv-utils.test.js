@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { parseCsvRow, formatCsvRow } = require('../../_bmad/bme/_team-factory/lib/utils/csv-utils');
+const { parseCsvRow, formatCsvRow } = require('../../scripts/lib/csv-utils');
 
 describe('parseCsvRow', () => {
   it('parses simple row with no quoted fields', () => {

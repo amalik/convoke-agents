@@ -30,7 +30,6 @@ const {
   VORTEX_SKILL_PATHS,
   WORKFLOW_NAMES,
   GYRE_AGENTS,
-  EXTRA_BME_AGENTS,
 } = require('../../scripts/update/lib/agent-registry');
 
 const pkg = require('../../package.json');
@@ -112,7 +111,7 @@ async function assertPostUpgradeState(tmpDir) {
 
   // Agent skill wrappers — Vortex, Gyre, and EXTRA_BME all generate .claude/skills/bmad-agent-bme-{id}/SKILL.md.
   const skillsDir = path.join(tmpDir, '.claude/skills');
-  for (const agent of [...AGENTS, ...GYRE_AGENTS, ...EXTRA_BME_AGENTS]) {
+  for (const agent of [...AGENTS, ...GYRE_AGENTS]) {
     const skill = path.join(skillsDir, `bmad-agent-bme-${agent.id}`, 'SKILL.md');
     assert.ok(fs.existsSync(skill), `Skill wrapper missing after upgrade: bmad-agent-bme-${agent.id}/SKILL.md`);
   }

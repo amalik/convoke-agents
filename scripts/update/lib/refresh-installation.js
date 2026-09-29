@@ -9,7 +9,7 @@ const configMerger = require('./config-merger');
 // Story v63-3-1: AGENT_FILES dropped from this file's imports — post-migration
 // the Vortex copy loop iterates AGENT_IDS and handles skill-dir shape inline.
 // AGENT_FILES remains @deprecated in agent-registry for any external consumers.
-const { AGENTS, AGENT_IDS, WORKFLOW_NAMES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES, EXTRA_BME_AGENTS } = require('./agent-registry');
+const { AGENTS, AGENT_IDS, WORKFLOW_NAMES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES } = require('./agent-registry');
 const {
   generateAgentManifest,
   CHANGE_MESSAGE: MANIFEST_CHANGE_MESSAGE,
@@ -282,61 +282,22 @@ async function refreshInstallation(projectRoot, options = {}) {
     if (verbose) console.log('    Skipped Vortex reference assets (dev environment)');
   }
 
-  // 2b1. Standalone bme submodule trees (e.g., _team-factory)
-  // Each EXTRA_BME_AGENTS entry references a submodule directory under _bmad/bme/
-  // that must be copied wholesale so the agent file, workflows, lib code, and config travel together.
-  // Mirrors the workflow loop pattern (2-step remove-then-copy) so renamed/deleted files
-  // in the package don't survive in the user install as stale leftovers.
-  const copiedExtraSubmodules = new Set();
-  if (!isSameRoot) {
-    for (const agent of EXTRA_BME_AGENTS) {
-      if (copiedExtraSubmodules.has(agent.submodule)) continue;
-      copiedExtraSubmodules.add(agent.submodule);
-      const srcDir = path.join(packageRoot, '_bmad', 'bme', agent.submodule);
-      const destDir = path.join(projectRoot, '_bmad', 'bme', agent.submodule);
-      if (fs.existsSync(srcDir)) {
-        // Remove existing destination first to clear stale files
-        // (e.g., renamed/deleted workflow steps from previous versions)
-        if (fs.existsSync(destDir)) {
-          await fs.remove(destDir);
-        }
-        await fs.copy(srcDir, destDir, { overwrite: true });
-        // Stamp the submodule config version to match the package, exactly as the Enhance and
-        // Artifacts blocks below do.
-        //
-        // Backlog I137. This was the ONLY module tree copied without its config being stamped —
-        // Vortex and Gyre go through `mergeConfig`, Enhance and Artifacts set it directly, and
-        // `_team-factory` did neither. The package ships `version: 1.0.0`, so a FRESH, SUCCESSFUL
-        // install immediately failed Convoke's own health check:
-        //
-        //   ✗ Version consistency — Package: 4.0.0-rc.1, _team-factory: 1.0.0
-        //     Fix: Run: npx -p convoke-agents convoke-update
-        //
-        // i.e. the first thing a new user was told after installing was to go and update.
-        //
-        // `doc.set` rather than `mergeConfig` is deliberate: mergeConfig has profiles for `_vortex`
-        // and `_gyre` only (fic-1-1). Named any other submodule it throws; called without one it
-        // treats the file as Vortex and would stamp Vortex identity and defaults onto it.
-        const destConfig = path.join(destDir, 'config.yaml');
-        if (fs.existsSync(destConfig)) {
-          assertVersion(version, `standalone:${agent.submodule}`);
-          const scDoc = YAML.parseDocument(fs.readFileSync(destConfig, 'utf8'));
-          if (scDoc.errors && scDoc.errors.length > 0) {
-            throw new Error(
-              `Refresh: cannot parse ${agent.submodule} config.yaml: ${scDoc.errors[0].message}`
-            );
-          }
-          scDoc.set('version', version);
-          fs.writeFileSync(destConfig, scDoc.toString({ lineWidth: 0 }), 'utf8');
-        }
-        changes.push(`Refreshed standalone bme submodule: ${agent.submodule} (config v${version})`);
-        if (verbose) console.log(`    Refreshed standalone bme submodule: ${agent.submodule}`);
-      }
-    }
-  } else {
-    changes.push('Skipped standalone bme submodule copy (dev environment — files already in place)');
-    if (verbose) console.log('    Skipped standalone bme submodule copy (dev environment)');
-  }
+  // 2b1. REMOVED by story tfu-1-1 (2026-09-29) — standalone bme submodule trees.
+  //
+  // This block copied each EXTRA_BME_AGENTS submodule wholesale and stamped its config version. Its
+  // only consumer was Loom's `_team-factory`, which stopped shipping per the 2026-09-16 operator
+  // ruling. Removing it drops one tracked write op (`fs.writeFileSync(destConfig, ...)`), so
+  // `scripts/audit/install-scope-check.js`'s snapshot for this file moves with it.
+  //
+  // Backlog I137 is why the stamp existed: this was the ONLY module tree copied without its config
+  // being stamped, so a fresh successful install immediately failed Convoke's own version-consistency
+  // check. That history matters if the mechanism is ever rebuilt for another standalone module —
+  // stamp the config in the same block that copies the tree.
+  //
+  // NOTE for T222: this loop was also the only thing that could REMOVE a stale submodule from an
+  // existing project (remove-then-copy). With it gone, a project that already installed
+  // `_bmad/bme/_team-factory/` keeps it, and `convoke-doctor` fails version consistency
+  // indefinitely. That orphan is T222's scope, deliberately not this story's.
 
   // 2a. Enhance module — read config, copy directory tree, patch target agent menu
   const packageEnhance = path.join(packageRoot, '_bmad', 'bme', '_enhance');
@@ -498,8 +459,10 @@ async function refreshInstallation(projectRoot, options = {}) {
 
   // 2c-bis. Portability module — copy tree, stamp version (Story dist-2.6)
   // MIRRORS the Artifacts block above line for line, deliberately. Portability had NO install
-  // path at all: the only generic module loop iterates EXTRA_BME_AGENTS and is driven by the
-  // AGENT registry, so a module with no agents was never visited. Its four skills shipped in
+  // path at all: the only generic module loop iterated EXTRA_BME_AGENTS and was driven by the
+  // AGENT registry, so a module with no agents was never visited. (That loop was removed with the
+  // Team Factory in tfu-1-1; there is now NO generic module loop at all, which makes every module's
+  // install path explicit — see §2b1's tombstone.) Its four skills shipped in
   // files[] to every operator and were reachable by none of them — which is the standing
   // finding assert-installed-tree.js reports and ADR-004 C1/C2 define.
   //
@@ -872,7 +835,6 @@ async function refreshInstallation(projectRoot, options = {}) {
   const currentSkillDirs = new Set([
     ...AGENTS.filter(a => !vortexExcluded.includes(a.id)).map(a => `bmad-agent-bme-${a.id}`),
     ...GYRE_AGENTS.filter(a => !gyreExcluded.includes(a.id)).map(a => `bmad-agent-bme-${a.id}`),
-    ...EXTRA_BME_AGENTS.map(a => `bmad-agent-bme-${a.id}`),
   ]);
   if (fs.existsSync(skillsDir)) {
     const existingSkills = (await fs.readdir(skillsDir)).filter(d => d.startsWith('bmad-agent-bme-'));
@@ -939,30 +901,13 @@ You must fully embody this agent's persona and follow all activation instruction
     if (verbose) console.log(`    Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
   }
 
-  // 6b1. Generate .claude/skills/ for standalone bme agents (e.g., team-factory)
-  for (const agent of EXTRA_BME_AGENTS) {
-    const skillDir = path.join(skillsDir, `bmad-agent-bme-${agent.id}`);
-    await fs.ensureDir(skillDir);
-    const content = `---
-name: bmad-agent-bme-${agent.id}
-description: ${agent.id} agent
----
-
-You must fully embody this agent's persona and follow all activation instructions exactly as specified. NEVER break character until given an exit command.
-
-<agent-activation CRITICAL="TRUE">
-1. LOAD the FULL agent file from {project-root}/_bmad/bme/${agent.submodule}/agents/${agent.id}.md
-2. READ its entire contents - this contains the complete agent persona, menu, and instructions
-3. FOLLOW the activation steps precisely
-4. DISPLAY the welcome/greeting as instructed
-5. PRESENT the numbered menu
-6. WAIT for user input before proceeding
-</agent-activation>
-`;
-    await fs.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf8');
-    changes.push(`Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
-    if (verbose) console.log(`    Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
-  }
+  // 6b1. REMOVED by story tfu-1-1 (2026-09-29) — skill wrappers for standalone bme agents.
+  //
+  // ⚠ This block held the THIRD of three `const content = \`` wrapper templates that
+  // `scripts/audit/agent-surface-parity.js` extracts from this file and compares against the
+  // committed `.github/expected-wrapper-template.txt`. Deleting it takes the extraction from three
+  // templates to two, so that baseline is regenerated in the same change (story AC#14). The gate is
+  // in `publish.needs`, so a stale baseline blocks release rather than merely reddening a push.
 
   // 6c. Copy Enhance workflow skill wrappers and register in manifests
   if (enhanceConfig && !isSameRoot) {
@@ -1473,8 +1418,10 @@ function seedBmmDependencies(projectRoot, opts = {}) {
  * the two-callers-disagree defect BUG-17 exists to remove, reproduced inside its own fix.
  *
  * The stamp sites are the `configMerger.mergeConfig` call for Vortex, the `ecDoc.set('version')`
- * write for Enhance, `acDoc.set('version')` for Artifacts, the Gyre `mergeConfig` call, and the
- * `scDoc.set('version')` write in the `EXTRA_BME_AGENTS` loop. Named by symbol on purpose: line
+ * write for Enhance, `acDoc.set('version')` for Artifacts, and the Gyre `mergeConfig` call. A fifth —
+ * `scDoc.set('version')` in the EXTRA_BME_AGENTS loop — was removed with the Team Factory in tfu-1-1,
+ * which is why this list is four and `install-scope-check.js`'s snapshot for this file dropped by one.
+ * Named by symbol on purpose: line
  * numbers in this file are not gate-checked, and every attempt to keep them current during
  * BUG-17 rotted within the hour.
  */
@@ -1483,7 +1430,8 @@ const STAMPABLE_MODULES = Object.freeze([
   '_enhance',
   '_artifacts',
   '_gyre',
-  ...new Set(EXTRA_BME_AGENTS.map(a => a.submodule)),
+  // `_team-factory` was here via EXTRA_BME_AGENTS until tfu-1-1; it is no longer
+  // installer-managed because it is no longer installed.
 ]);
 
 module.exports = {

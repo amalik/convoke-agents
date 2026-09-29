@@ -419,7 +419,13 @@ describe('checkAgentSources', () => {
 
   it('builds a multi-word canonical name by hyphenating, so Loom Master resolves', () => {
     const agents = [
-      { name: 'Loom Master', id: 'team-factory', module: 'loom', submodule: '_team-factory' },
+      // `team` is set explicitly. tfu-1-1 removed the `_team-factory` carve-out from the
+      // `drift/unlabelled-team` guard, making it uniform: any agent carrying a submodule but no
+      // team field is now reported. That is the guard working as intended — this case is about
+      // multi-word NAME hyphenation, so it supplies the team rather than tripping an unrelated
+      // finding. In production no roster carries a submodule at all, so the guard is reachable
+      // only by a future standalone agent, which is exactly who it should report.
+      { name: 'Loom Master', id: 'team-factory', module: 'loom', team: 'loom', submodule: '_team-factory' },
     ];
     const tree = makeTree([
       {
@@ -653,24 +659,29 @@ describe('operationalAgents', () => {
     const flat = operationalAgents({
       AGENTS: [{ name: 'Emma', id: 'a' }],
       GYRE_AGENTS: [{ name: 'Scout', id: 'b' }],
-      EXTRA_BME_AGENTS: [{ name: 'Loom Master', id: 'c', submodule: '_team-factory' }],
     });
+    // A third bucket over EXTRA_BME_AGENTS, tagged `loom`, was asserted here until tfu-1-1 removed
+    // that roster. Note it was spread WITHOUT a `|| []` guard in the source, so the export's deletion
+    // threw rather than producing a short list — which is how the CI step would have died with a
+    // stack trace instead of a finding.
     assert.deepEqual(
       flat.map((a) => [a.name, a.module]),
       [
         ['Emma', 'vortex'],
         ['Scout', 'gyre'],
-        ['Loom Master', 'loom'],
       ]
     );
   });
 
   it('preserves the submodule field the source of truth carries', () => {
+    // No roster carries `submodule` any more — EXTRA_BME_AGENTS was the only one, and tfu-1-1 removed
+    // it. The CODE PATH survives (`agent.submodule || MODULE_DIRS[agent.module]` at the resolution
+    // site, where the agent's own field still wins), so it is exercised with a synthetic entry rather
+    // than left untested until a future standalone module reintroduces the case.
     const flat = operationalAgents({
-      AGENTS: [],
+      AGENTS: [{ name: 'x', id: 'y', submodule: '_somewhere-else' }],
       GYRE_AGENTS: [],
-      EXTRA_BME_AGENTS: [{ name: 'x', id: 'y', submodule: '_team-factory' }],
     });
-    assert.equal(flat[0].submodule, '_team-factory');
+    assert.equal(flat[0].submodule, '_somewhere-else');
   });
 });

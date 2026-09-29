@@ -127,7 +127,7 @@ The full list, in canonical order:
 
 **Why it exists.** A bare option list asks the operator to decide without context; they either guess or halt. Rationale is the bridge between an option and a judgment.
 
-**Good example.** Loom's team-factory recommends a composition pattern based on the team description and renders a one-line analogy explaining each alternative, so the operator knows *why* they would prefer one.
+**Good example.** Gyre's `stack-detection` step-03 cannot ask a guard question without explaining it: its template is `a) [Interpretation A] — [what this means for the analysis]` for every option, so the downstream effect of each choice is part of the question's shape rather than something an author has to remember.
 
 **Anti-pattern.** A menu that lists options with no explanation of when to choose which.
 
@@ -167,7 +167,7 @@ The full list, in canonical order:
 
 **Why it exists.** Operators have limited working memory within a single round. A skill that dumps five or ten new terms in one prompt forces the operator to parse vocabulary before they can make the decision. The concept budget is how Convoke protects the operator's attention.
 
-**Good example.** Loom's `add-team` step-01 closes with the footer `Concept count: 3/3 (team identity, pattern, agents)` — three novel concepts introduced in the step, right at the budget limit. The skill was authored with the pacing constraint made visible to the reader.
+**Good example.** Vortex's `lean-persona` step-01 closes with the footer `Concept count: 3/3 (job frequency, job importance, evidence basis — the worked example and the hypothesis-marking note illustrate these rather than adding to them)` — at the budget limit, and showing the author's reasoning about what does *not* count against it. Every Vortex workflow carries such a footer, so the constraint is a convention rather than one remembered instance.
 
 **Anti-pattern.** A menu that presents a long enumeration of categories, decision verbs, and escape hatches in one round, asking the operator to navigate a surface of many options.
 
@@ -205,7 +205,7 @@ The Covenant is not aspirational. As of 2026-04-18, eight Convoke skills have be
 - **Static review primary.** One skill was exercised live in the auditing session; the other seven were scored from workflow and step file review. Live exposure would likely surface violations static review missed. The 82% rate is more plausibly a ceiling than a floor.
 - **Sample size.** Eight skills audited from roughly thirty-three Convoke-owned skills. Generalizing the number to the full Convoke surface requires larger follow-up.
 - **Auditor inside the project.** The auditor was a Convoke-authored persona running against Convoke-authored skills. An external audit would add credibility this report does not claim.
-- **One scoped verdict.** Loom's `add-team` passes Right to pacing on the audited step-01; the remaining steps (02-05) were not individually audited and may narrow the verdict when re-checked.
+- **One scoped verdict.** Loom's `add-team` passes Right to pacing on the audited step-01; the remaining steps (02-05) were not individually audited and may narrow the verdict when re-checked. *(Note added 2026-09-29: the Team Factory stopped shipping in `tfu-1-1` — operator ruling 2026-09-16, internal scaffolding. The verdict is left as the record of what the 2026-04-25 audit found; it is not restated against a module that still ships, because rewriting an audit record to name a different subject would falsify it.)*
 - **Calibration was re-baselined.** Two of the audit's story-level acceptance criteria were formally amended when the scar cases turned out to already be remediated; the amendment is documented in the audit report.
 
 External publication of this Covenant must cite both the 82% number and these caveats — *you do not publish a covenant you cannot keep*.

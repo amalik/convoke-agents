@@ -38,7 +38,8 @@ const { AGENTS, WORKFLOW_NAMES } = agentRegistry;
  *
  * `EXTRA_` marks a roster excluded from the "team agents" total. **This is a convention this
  * check depends on, not one the registry enforces** — the only roster carrying it is
- * `EXTRA_BME_AGENTS`, which `agent-registry.js` describes as standalone bme agents. (Other keys
+ * `EXTRA_BME_AGENTS` (removed by tfu-1-1 with the Team Factory; no roster carries the prefix today,
+ * so the filter below is dormant rather than dead — it still governs any future one). (Other keys
  * share the prefix without being rosters; the suffix filter is what separates them, so do not
  * read a prefix match as a roster count.) The hazard is the Team Factory: `derivePrefix()` is
  * kebab -> SCREAMING_SNAKE, so a team literally named `extra-something` produces
@@ -54,9 +55,13 @@ function rostersFor(registry, suffix) {
 /**
  * How many agents/workflows the registry EXPORTS, summed across every matching roster.
  *
- * Not "how many exist": on the workflow axis this is a known undercount, because `add-team` is
- * owned by an agent whose workflow roster is not exported at all (T150). The report header says
- * `from exported rosters` for exactly this reason.
+ * Not "how many exist" — the header says `from exported rosters` for that reason, and T156 keeps
+ * that qualifier honest: the audit's coverage checks span less than the word "Registry" implies.
+ *
+ * The workflow axis USED to be a known undercount too (T150): `add-team` was owned by an agent whose
+ * workflow roster was never exported, so the true agent-owned total was rejected while a smaller one
+ * passed. Story tfu-1-1 closed that by removing the agent rather than adding the roster — with no
+ * agent-owned workflow left, there is nothing for an `EXTRA_BME_WORKFLOWS` export to hold.
  *
  * Distinct from `validCountsFor`, which answers a different question — "what may a document
  * claim" — and deliberately excludes `EXTRA_` rosters from its team subtotal. This one includes
@@ -174,6 +179,7 @@ function checkStaleReferences(content, filePath) {
   // Valid counts, derived from EVERY roster array the registry exports (T148).
   //
   // This used to name its arrays literally, which is how T146 happened: `EXTRA_BME_AGENTS`
+  // (since removed by tfu-1-1)
   // existed, held Loom's `team-factory`, and was simply not in the list — so the true
   // 12-agent roster read as stale while the Vortex+Gyre subtotal passed. Naming them
   // literally also does not survive growth: the Team Factory writes each new team its OWN
@@ -189,11 +195,9 @@ function checkStaleReferences(content, filePath) {
   // valid set depend on declaration order, which is arbitrary and would change silently.
   // `EXTRA_` is the registry's own prefix for rosters that are not a team in their own right.
   const validAgentCounts = validCountsFor(agentRegistry, 'AGENTS');
-  // Same derivation. ⚠ This one is KNOWN WRONG TODAY — see T150. The registry exports no
-  // `EXTRA_BME_WORKFLOWS`, but Loom's `team-factory` owns `add-team`, so the true agent-owned
-  // total is rejected while a smaller wrong one passes. Generalising this call did not fix it:
-  // the derivation enumerates exports, and the export does not exist. Do not read the green
-  // gate as evidence this axis is sound.
+  // Same derivation. This carried a ⚠ KNOWN WRONG TODAY note until tfu-1-1 (T150): an agent owned a
+  // workflow whose roster was never exported, so the true agent-owned total was rejected. Closed by
+  // removing the agent, not by adding the roster.
   const validWorkflowCounts = validCountsFor(agentRegistry, 'WORKFLOWS');
 
   // Build regex for written-out numbers
@@ -637,10 +641,10 @@ function teamNames() {
 function registryHeader(registry = agentRegistry) {
   const agents = rosterTotal(registry, 'AGENTS');
   const workflows = rosterTotal(registry, 'WORKFLOWS');
-  // "from exported rosters" is not padding. The workflow figure is an undercount today — see
-  // T150: `_team-factory` owns `add-team` and no `EXTRA_BME_WORKFLOWS` is exported. And the
-  // audit's coverage checks span less than this line advertises (T156). Stating the basis is
-  // what makes the sentence true.
+  // "from exported rosters" is not padding, and it STAYS. Its justification was a conjunction —
+  // T150 (a workflow undercount) and T156 (the audit's coverage checks span less than this line
+  // advertises). T150 closed in tfu-1-1; T156 did not, and T156 alone still requires the qualifier.
+  // Deleting the string because "the undercount is fixed" would remove a true hedge.
   return `${agents} agents, ${workflows} workflows (from exported rosters)`;
 }
 

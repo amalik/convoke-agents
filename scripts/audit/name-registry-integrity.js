@@ -39,7 +39,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { readManifest } = require('../portability/manifest-csv');
 const { findProjectRoot } = require('../update/lib/utils');
-const { AGENTS, GYRE_AGENTS, EXTRA_BME_AGENTS } = require('../update/lib/agent-registry');
+const { AGENTS, GYRE_AGENTS } = require('../update/lib/agent-registry');
 
 const REGISTRY = path.join('_bmad', 'bme', '_config', 'name-registry.csv');
 
@@ -64,10 +64,11 @@ const VALID_OWNERSHIP_TIERS = ['bmad-upstream', 'convoke', 'practice', 'client',
 // mention reserving at all, and an earlier comment here miscited its D8 (tier graduation).
 const OPERATIONAL = ['shipped', 'in-dev'];
 
-// Fallback only. `EXTRA_BME_AGENTS` entries carry their own `submodule`, and that field
-// wins wherever present - hardcoding a second copy of data the source of truth already
-// holds is the exact drift class A4 exists to catch, and an earlier draft of this file
-// reintroduced it one function above the check.
+// Fallback only, and since tfu-1-1 removed EXTRA_BME_AGENTS it is now the ONLY source of a
+// directory: no remaining roster entry carries its own `submodule`. The resolution site still
+// prefers `a.submodule` where present, because hardcoding a second copy of data the source of
+// truth already holds is the exact drift class A4 exists to catch, and an earlier draft of this
+// file reintroduced it one function above the check.
 const MODULE_DIRS = { vortex: '_vortex', gyre: '_gyre' };
 
 class GitUnavailableError extends Error {}
@@ -99,20 +100,19 @@ const norm = (s) =>
  * that exist, and I122 (`agent-manifest.csv` rot) is the precedent for what an unchecked
  * registry does. A4 turns that overlap into an enforced invariant.
  */
-function operationalAgents(registry = { AGENTS, GYRE_AGENTS, EXTRA_BME_AGENTS }) {
+function operationalAgents(registry = { AGENTS, GYRE_AGENTS }) {
   return [
     ...registry.AGENTS.map((a) => ({ ...a, module: 'vortex' })),
     ...registry.GYRE_AGENTS.map((a) => ({ ...a, module: 'gyre' })),
-    // `module` is the TEAM label that `declared_in` is checked against; the DIRECTORY
-    // comes from `a.submodule` at the resolution site. ADR-001 D2 makes those different
-    // objects, and an earlier attempt at this fix collapsed them - deriving `loom` from
-    // `_team-factory` would have made the team label a function of the directory name,
-    // which is the conflation the ADR exists to end.
+    // EXTRA_BME_AGENTS was spread here until tfu-1-1, mapping its one entry to the team label
+    // `loom`. Note it was spread WITHOUT a `|| []` guard, so deleting the export alone would have
+    // thrown here and taken the CI `Name-registry integrity` step down with a stack trace rather
+    // than a finding — which is why the roster and its consumers moved together (AC#0).
     //
-    // `agent-registry.js` carries no team field, so `loom` cannot be derived and is
-    // asserted here. `checkAgentSources` reports it rather than guessing silently if a
-    // second standalone agent ever appears under a different submodule.
-    ...registry.EXTRA_BME_AGENTS.map((a) => ({ ...a, module: a.team || 'loom' })),
+    // If a second standalone bme agent ever appears, `module` is the TEAM label that `declared_in`
+    // is checked against while the DIRECTORY comes from `a.submodule` at the resolution site.
+    // ADR-001 D2 makes those different objects, and an earlier attempt collapsed them — deriving
+    // `loom` from `_team-factory` would have made the team label a function of the directory name.
   ];
 }
 
@@ -267,7 +267,11 @@ function checkAgentSources(rows, idx, agents, projectRoot, trackedSources) {
     // not carry one. An unknown module is a hard finding rather than a wrong-directory
     // guess, because guessing produces a misleading `source/missing` path.
     const moduleDir = agent.submodule || MODULE_DIRS[agent.module];
-    if (agent.submodule && agent.submodule !== '_team-factory' && !agent.team) {
+    // The `_team-factory` carve-out here died with the roster (tfu-1-1): it exempted the one
+    // agent that had a submodule but no team field. No remaining roster entry carries a
+    // submodule, so the guard is now reachable only by a future standalone agent — which is
+    // exactly who it should report.
+    if (agent.submodule && !agent.team) {
       findings.push(
         finding(
           'drift/unlabelled-team',

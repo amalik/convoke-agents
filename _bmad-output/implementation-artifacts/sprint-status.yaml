@@ -430,7 +430,7 @@ development_status:
   # Was `deferred` on 2026-09-28 pending AC#0. Ruled the same day (option (c):
   # delete the export AND its consumers) after Round 1 -- 3 independent layers,
   # 9 HIGH -- and AC#8 was split out as T222. The story is now startable.
-  tfu-1-1-stop-shipping-the-team-factory: ready-for-dev
+  tfu-1-1-stop-shipping-the-team-factory: in-progress
   tfu-epic-1-retrospective: optional
 
   # ============================================================

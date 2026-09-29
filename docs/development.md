@@ -74,9 +74,11 @@ Migrations live in `scripts/update/migrations/registry.js` (append-only).
    - Execute the P0 suite — it is the authority on what must pass
    - Target: 100% P0 pass rate
 
-### Team Factory (Recommended)
+### Team Factory (internal scaffolding — does not ship)
 
-Use `/bmad-agent-bme-team-factory` for a guided workflow that handles the full creation process — composition pattern selection, agent scope definition, contract design, artifact generation, and integration wiring. It is a preview: its first steps record your design decisions as a resumable spec, but generating the team writes into Convoke's own source files, so it only completes inside a clone of the Convoke repository, and nothing installs a generated team yet. Treat the result as a starting point, not a finished team.
+**Not available in an installed project.** It stopped shipping in the package (see the ruling below), so this
+section applies only inside a clone of the Convoke repository, where `/bmad-agent-bme-team-factory` runs a
+guided workflow handling the full creation process — composition pattern selection, agent scope definition, contract design, artifact generation, and integration wiring. It is a preview: its first steps record your design decisions as a resumable spec, but generating the team writes into Convoke's own source files, so it only completes inside a clone of the Convoke repository, and nothing installs a generated team yet. Treat the result as a starting point, not a finished team.
 
 **Operator ruling, 2026-09-16: the Team Factory is internal scaffolding for now** — Convoke's own tool for building Convoke's teams, not a capability to build one in your own project. It still installs (it is in `package.json` `files[]` and both manifests), and withdrawing that is filed as `T179`; until then, treat it as internal. Two capabilities exist, both declared in `_bmad/bme/_team-factory/module-help.csv`: **Create Team** (a new team from scratch) and **Validate Team** (end-to-end validation of a team Create Team generated in your clone, read from that run's context file — two of its checks trust the results that run recorded there, so it is a check on a generated team, not on a hand-built one).
 

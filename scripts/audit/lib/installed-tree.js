@@ -50,7 +50,7 @@ const path = require('path');
  * The obvious mechanisation — `grep -rn "path.join(projectRoot" scripts/` — was tried
  * and measured on 2026-08-29: 135 sites, no way to tell a read from a write, many
  * paths built from variables, several of them directories, and decisively it CANNOT
- * SEE the one entry this check is required to fire on: `convoke-doctor.js:763` reads
+ * SEE the one entry this check is required to fire on: `convoke-doctor.js:761` reads
  * `path.join(projectRoot, BMM_DEPS_CSV_REL)`, so the filename lives in a constant and
  * a static extractor yields no filename. A check built that way could not satisfy its
  * own acceptance criterion.
@@ -78,7 +78,7 @@ const RUNTIME_DATA_FILES = [
     // the earlier line that merely DECLARES the destination path — deleting the copy and leaving
     // the declaration would keep a basename-matching alarm green. That is why the alarm is an AND.
     // No line numbers in this comment on purpose: only the field below is checked.
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:708',
+    arrivesVia: 'scripts/update/lib/refresh-installation.js:671',
     arrivesViaToken: 'packageManifest',
     why: 'convoke-export resolves every skill through it — absence is I139 exactly: the bin exits non-zero on a fresh install.',
   },
@@ -89,13 +89,13 @@ const RUNTIME_DATA_FILES = [
     // `:308` is `fs.writeFile(manifestPath, …)` — the write itself. The first draft cited
     // `:237`, which only DECLARES the destination path; deleting the write and leaving the
     // declaration would have kept the rot alarm green. Review 2026-08-30.
-    arrivesVia: 'scripts/lib/agent-manifest-generator.js:308',
+    arrivesVia: 'scripts/lib/agent-manifest-generator.js:283',
     arrivesViaToken: 'fs.writeFile(manifestPath',
     why: 'the installer regenerates it during refresh, so a post-install absence means the regeneration step did not run.',
   },
   {
     file: '_bmad/_config/taxonomy.yaml',
-    readSite: 'scripts/convoke-doctor.js:980',
+    readSite: 'scripts/convoke-doctor.js:978',
     alsoRead: ['scripts/lib/artifact-utils.js:164'],
     // `arrivesVia` must cite the `mergeTaxonomy(projectRoot)` CALL that creates the file. An
     // early draft cited the `changes.push('Created …taxonomy.yaml…')` LOG LINE inside
@@ -103,13 +103,13 @@ const RUNTIME_DATA_FILES = [
     // literal mentioned the basename. Deleting the real call and leaving the log
     // (No line numbers here on purpose: only the field below is checked.)
     // would have kept it green. Review 2026-08-30.
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:1191',
+    arrivesVia: 'scripts/update/lib/refresh-installation.js:1136',
     arrivesViaToken: 'mergeTaxonomy',
     why: 'a fresh install runs no migrations, so the installer seeds it directly; without it doctor fails its own Taxonomy checks.',
   },
   {
     file: '_bmad/_config/bmm-dependencies.csv',
-    readSite: 'scripts/convoke-doctor.js:763',
+    readSite: 'scripts/convoke-doctor.js:761',
     // The read site does not spell the filename: it reads `path.join(projectRoot,
     // BMM_DEPS_CSV_REL)`. That indirection is the single most important fact about this
     // entry — it is why no static extractor can find this file, and therefore why AC4 is
@@ -135,7 +135,7 @@ const RUNTIME_DATA_FILES = [
     // `convoke-register-skill` and blinds the doctor's `unregistered-custom-skill` category.
     // The entry STAYS in the manifest: the file must still arrive, and `missingRuntimeFiles`
     // tests project presence, which a created file satisfies exactly as a copied one would.
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:1214',
+    arrivesVia: 'scripts/update/lib/refresh-installation.js:1159',
     // Discriminates the CALL from the function's own declaration and its export, both of which
     // contain the bare identifier but not this token. (Named, not numbered, on purpose.) The dist-2-4 review's lesson is
     // that a token which merely appears does not prove a citation — and the previous two
@@ -176,11 +176,15 @@ const RUNTIME_DATA_FILES = [
  * correct behaviour; claiming the rule was read off a generator was not.
  */
 const WRAPPER_RULES = {
-  vortexAgent:        { site: 'scripts/update/lib/refresh-installation.js:888', anchor: 'for (const agent of AGENTS)',            derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
-  gyreAgent:          { site: 'scripts/update/lib/refresh-installation.js:917', anchor: 'for (const agent of GYRE_AGENTS)',       derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
-  extraBmeAgent:      { site: 'scripts/update/lib/refresh-installation.js:943', anchor: 'for (const agent of EXTRA_BME_AGENTS)',  derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
-  enhanceWorkflow:    { site: 'scripts/update/lib/refresh-installation.js:969', anchor: 'enhanceConfig.workflows',               derivedFrom: 'generator', name: n => `bmad-enhance-${n}` },
-  standaloneWorkflow: { site: 'scripts/update/lib/refresh-installation.js:1020', anchor: 'artifactsConfig.workflows',             derivedFrom: 'ADR-004 C2', name: n => `${n}` },
+  vortexAgent:        { site: 'scripts/update/lib/refresh-installation.js:850', anchor: 'for (const agent of AGENTS)',            derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  gyreAgent:          { site: 'scripts/update/lib/refresh-installation.js:879', anchor: 'for (const agent of GYRE_AGENTS)',       derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  // extraBmeAgent was REMOVED by tfu-1-1. It mirrored the `// 6b1.` generator loop over
+  // EXTRA_BME_AGENTS, which is gone with the Team Factory. A rule whose `anchor` matches nothing is
+  // worse than no rule: `WRAPPER_RULES`' own test asserts every rule cites a line that still holds
+  // its generator, so a stale entry would either redden that test or, if relaxed, silently check
+  // nothing. A future standalone bme module needs a NEW rule, not this one revived.
+  enhanceWorkflow:    { site: 'scripts/update/lib/refresh-installation.js:914', anchor: 'enhanceConfig.workflows',               derivedFrom: 'generator', name: n => `bmad-enhance-${n}` },
+  standaloneWorkflow: { site: 'scripts/update/lib/refresh-installation.js:965', anchor: 'artifactsConfig.workflows',             derivedFrom: 'ADR-004 C2', name: n => `${n}` },
 };
 
 /** `_bmad/bme/*` entries in a `files[]` array, normalised to bare module names. */
@@ -271,12 +275,14 @@ function declaredUnits({ projectRoot, registry, arrived }) {
 
   // `honoursExclusions` mirrors the generator EXACTLY rather than applying a uniform rule.
   // The Vortex loop (`for (const agent of AGENTS)`) and the Gyre loop (`GYRE_AGENTS`) skip
-  // excluded agents; the `EXTRA_BME_AGENTS` loop has no exclusion check at all and emits
-  // unconditionally. Named rather than numbered: the anchors below are what WRAPPER_RULES
-  // checks, and a line number in prose is checked by nothing.
-  // Filtering that bucket — as the first draft did — meant an `excluded_agents` entry in
-  // `_team-factory/config.yaml` would drop a wrapper from the CHECK that the installer
-  // still generates: a skew in the fail-open direction. Review 2026-08-30.
+  // excluded agents. A third bucket over `EXTRA_BME_AGENTS` existed until tfu-1-1 and had no
+  // exclusion check at all, emitting unconditionally; filtering it — as that bucket's first draft
+  // did — meant an `excluded_agents` entry in `_team-factory/config.yaml` would drop a wrapper from
+  // the CHECK that the installer still generated, a skew in the fail-open direction (review
+  // 2026-08-30). Kept as prose because the asymmetry is the reason `honoursExclusions` is per-bucket
+  // rather than a uniform rule, and the next standalone module will face the same choice.
+  // Named rather than numbered: the anchors below are what WRAPPER_RULES checks, and a line number
+  // in prose is checked by nothing.
   // `Array.isArray`, not `|| []`: a truthy NON-array (a plain object from a malformed registry)
   // satisfies `||` and then throws "is not iterable" out of the for..of below, crashing the whole
   // assertion instead of reporting anything. Round 1 reproduced that crash.
@@ -295,7 +301,6 @@ function declaredUnits({ projectRoot, registry, arrived }) {
   const agentBuckets = [
     { list: bucketList(registry.AGENTS, 'vortexAgent'), module: () => '_vortex', rule: 'vortexAgent', honoursExclusions: true },
     { list: bucketList(registry.GYRE_AGENTS, 'gyreAgent'), module: () => '_gyre', rule: 'gyreAgent', honoursExclusions: true },
-    { list: bucketList(registry.EXTRA_BME_AGENTS, 'extraBmeAgent'), module: a => a.submodule, rule: 'extraBmeAgent', honoursExclusions: false },
   ];
 
   for (const bucket of agentBuckets) {

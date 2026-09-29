@@ -231,10 +231,28 @@ This tells npx to download `convoke-agents@latest` first, then run the `convoke-
 
 ### "refusing to overwrite ... config.yaml"
 
-From 4.0.3, the **Vortex and Gyre** `config.yaml` files are never replaced when they cannot be read. Those
-two are the ones the installer checks (`refresh-installation.js`); the `_enhance`, `_artifacts`,
-`_portability` and `_team-factory` configs are **not** checked, and a damaged one there is still overwritten
-silently — tracked as `T181`. Where you see this message depends on the command and on which file is
+From 4.0.3 the **Vortex and Gyre** `config.yaml` files were never replaced when they could not be read,
+and the other module configs were not checked at all. **`T181` closed that**: the installer now refuses on
+an unreadable config for **every** module that ships a `config.yaml`, derived from the package tree rather
+than from a hardcoded pair. Derive the current set rather than trusting this sentence:
+
+```bash
+node -e "console.log(require('./scripts/update/lib/refresh-installation.js').guardedModuleNames(process.cwd()).join(', '))"
+```
+
+Two caveats, both open and both narrower than the old defect:
+
+- **The refusal half only.** `_enhance`, `_artifacts` and `_portability` configs are still rewritten from
+  the package template on every run, because `mergeConfig` carries profiles for `_vortex` and `_gyre`
+  alone. A readable config there is not preserved — that is `T221`.
+- **The set is one directory wider than what ships.** It is computed from `_bmad/bme/*` directories
+  carrying a `config.yaml`, not from `package.json` `files[]`, and `_team-factory` stopped shipping in
+  `tfu-1-1` while staying tracked in git. It therefore still appears above. Harmless for a project that
+  never had it; for one carrying an orphaned copy, a damaged `_team-factory/config.yaml` refuses every
+  install and update with a message naming a module the package no longer contains. That is `T227`, and
+  `T222` covers retiring the orphan itself.
+
+Where you see this message depends on the command and on which file is
 damaged; the table below has every case, because they differ:
 
 ```
@@ -281,14 +299,16 @@ command:
 | `convoke-update` | Gyre, and a refresh is due | Refuses with the message above, exit 1 |
 | `convoke-update` | Gyre, nothing else out of step | `✓ Already up to date!`, exit 0 — the damaged file is not noticed |
 | `convoke-update` | **Vortex** | **No refusal.** Version detection cannot read the file, falls back to inspecting the directory layout, and reports an old version: `1.1.0` where `workflows/_deprecated/` exists, `1.0.0` on a project installed with `convoke-install-gyre` alone, which never creates it. You are offered a plan from there up to the package's version, listing two or three breaking changes. If you accept it, migration 3 of 7 (`1.5.x-to-1.6.0`) fails on the same parse error and the run is rolled back from its backup — exit 1, your config byte-identical |
-| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability`, `_team-factory` | **No refusal, exit 0**, and the file is replaced with the package template — whether or not it is damaged. A custom key added to `_enhance/config.yaml` and a hand-set `user_name` in `_team-factory/config.yaml` were both gone after an ordinary re-install, where Vortex and Gyre kept theirs. The settings loss this release fixes for those two still happens here, on every run (`T181`). With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
+| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability` | **No refusal, exit 0**, and the file is replaced with the package template — whether or not it is damaged. A custom key added to `_enhance/config.yaml` and a hand-set `user_name` in `_team-factory/config.yaml` were both gone after an ordinary re-install, where Vortex and Gyre kept theirs. The settings loss this release fixes for those two still happens here, on every run (`T181`). With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
 
 The `convoke-update` + **Vortex** row is a known defect, tracked as `T180`: the refusal exists and runs,
 but version detection reads the Vortex config first and swallows the error before the refusal can be
 reached. Until it is fixed, treat a `Could not read config.yaml` warning followed by a surprisingly old
 `From:` version — `1.1.0` or `1.0.0`, neither of which you installed — as this case, decline the plan, and
-repair the file as below. The four-config row is a different defect, `T181`: those configs are never
-checked, so there is no refusal to reach and no plan to decline.
+repair the file as below. The row above it described a second defect, `T181` — those configs were never
+checked, so there was no refusal to reach and no plan to decline. `T181` has since shipped: they are
+checked now, and an unreadable one refuses like Gyre's. What remains for them is `T221` (a readable config
+is still overwritten from template) and, for an orphaned `_team-factory`, `T227`.
 
 **Reinstalling will not clear this, and that is deliberate** — `convoke-install` runs the same
 check. Repair the file itself:
