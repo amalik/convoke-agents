@@ -422,16 +422,15 @@ development_status:
   # ============================================================
   # TEAM FACTORY UNSHIP (tfu) — operator ruling 2026-09-16: internal scaffolding
   # Epic file: convoke-epic-team-factory-unship.md
-  # Epic stays `backlog`, NOT `in-progress`: the story is authored but `deferred`
-  # on an unanswered ruling, so no work has started. create-story's automatic
-  # backlog -> in-progress flip is deliberately not applied here.
+  # Epic status is set BY HAND and stays that way: bmad-quick-dev derives a parent
+  # epic as `epic-{N}` from the leading numeric segment of the story key, which for
+  # `tfu-1-1-...` is `tfu` -- so no automation can ever lift `tfu-epic-1`.
   # ============================================================
-  tfu-epic-1: backlog
-  # `deferred`, not `ready-for-dev`: AC#0 is an open operator ruling (how
-  # EXTRA_BME_AGENTS retires) and every other AC's edit list depends on it.
-  # `ready-for-dev` would let bmad-dev-story flip this to in-progress before
-  # reading the file. Revival condition is stated in the story.
-  tfu-1-1-stop-shipping-the-team-factory: deferred
+  tfu-epic-1: in-progress
+  # Was `deferred` on 2026-09-28 pending AC#0. Ruled the same day (option (c):
+  # delete the export AND its consumers) after Round 1 -- 3 independent layers,
+  # 9 HIGH -- and AC#8 was split out as T222. The story is now startable.
+  tfu-1-1-stop-shipping-the-team-factory: ready-for-dev
   tfu-epic-1-retrospective: optional
 
   # ============================================================
