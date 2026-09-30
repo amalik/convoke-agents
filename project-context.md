@@ -942,3 +942,145 @@ mechanism.**
   usually written in an architecture document and enforced nowhere.
 - **Writing a story?** Grep the backlog for the defect first. `cir-1-2` duplicated `T183`, which had been
   filed ten days earlier, named the same three agents and was already cited by two epics.
+
+---
+
+## Rule: commit-plans-assume-no-amend-window
+
+**Statement.** A commit plan never instructs an amend. The operator commits **and pushes** in one motion
+through GitHub Desktop, so the window between the two does not exist. Work that can only be computed after a
+commit lands is a **second commit with its content pre-computed**, not an amendment to the first.
+
+**Why.** `tfu-1-1`'s AC#14 required the wrapper baseline to be regenerated from the *committed* generator —
+`agent-surface-parity`'s extractor reads `git show <ref>:<generator>`, so it genuinely cannot see an
+uncommitted tree. The AC therefore said "commit the generator change, then regenerate and amend". The
+operator committed and pushed. `agent-surface-parity` is in `publish.needs`, so `main` sat red behind a
+release gate until a follow-up commit landed. The instruction was not wrong about the mechanism; it was
+unfollowable by the person executing it.
+
+**How to apply.**
+- When a value can only be derived post-commit, emit **two** commits in the plan. State the exact command
+  for the second and its expected output, so it can run immediately without re-deriving anything.
+- Say out loud that the gate will be **red between them**, and name the gate. An operator who sees red CI
+  and was not warned reasonably assumes something broke.
+- `--amend` and force-push over published history are never in a plan. If a plan needs one, the plan is
+  wrong.
+
+**Falsification.** If two consecutive plans that prescribe an amend are executed without a red interval,
+relax this.
+
+---
+
+## Rule: all-green-means-every-step-from-the-committed-state
+
+**Statement.** "The gates pass" is a claim about **every step CI runs**, evaluated at the **committed**
+state. A sweep of a self-chosen subset, or of a working tree holding uncommitted fixes, is not that claim and
+must not be reported as it.
+
+**Operational check.** Two things, both cheap. Enumerate the steps from the workflow file rather than from
+memory — `grep -nE '^\s+- name:|^\s+run: (npm|node|bash|python)' .github/workflows/ci.yml` — and run
+`git status --porcelain` first. A non-empty tree means you are reporting on something CI will not see.
+
+**Why.** In `tfu-1-1` I reported "all green" having run six of roughly fifteen steps, against a tree holding
+the uncommitted fix for the one gate that was failing. The operator found `main` red and had to say so. The
+subset omitted `test:coverage`, `validate-marketplace`, `coverage-denominator`, the manifest-vs-registry
+diff, `npm audit`, `npm pack` and `node index.js` — none of which I had a reason to exclude beyond not having
+listed them.
+
+**How to apply.**
+- Name which steps you ran. "All gates green" with no enumeration is the phrasing this rule exists to catch.
+- Where a step cannot run locally, say so and say why. `tfu-1-1`'s `python-test` was untouched because the
+  commit contained zero `.py` files — that is a statement with evidence, not an omission.
+- **A green sweep bounds regression, not correctness.** Twelve gates were green before `tfu-1-1`'s consumer
+  audit and after it, and the audit found a vacuous assertion, three rotted citations and a load-bearing
+  denominator wrong in six places. None of that is gated. Do not let a sweep stand in for a review.
+
+---
+
+## Rule: freeze-the-tree-before-an-audit
+
+**Statement.** Before dispatching a review or audit that reads the working tree, either **stop editing it**
+or **tell the auditor it is moving**. An audit against a tree that changes underneath it can report a finding
+that is already fixed, miss one that appears after it looked, and cannot be re-derived afterwards.
+
+**Why.** `tfu-1-1`'s consumer audit was told "the tree is clean and pushed." It was not: fourteen files were
+edited underneath it while it worked, and it correctly said so in its own report rather than trusting the
+brief. It changed nothing — but a less careful agent, or one with write access and a mutation harness, is the
+`feedback_never_git_stash` hazard with a second actor in it.
+
+**How to apply.**
+- Commit or hold. A clean tree is the cheapest way to make an audit reproducible.
+- If you must keep working, say which paths are in flight and tell the auditor to report against `HEAD`.
+- **Every review subagent is read-only and told so in absolute terms**, including no scratch files inside the
+  repo. That rule already exists for mutation harnesses; this extends it to the tree's stability.
+- An audit's own statement that the tree moved is a **finding about the process**, not noise. Record it.
+
+---
+
+## Rule: closing-a-row-greps-for-its-own-citations
+
+**Statement.** Closing a backlog row is not finished until you have searched for prose that cites it. A
+sentence written as *"X is true until `TNNN` lands"* becomes **false** the moment `TNNN` closes, and nothing
+in this repository detects that.
+
+**Why — and the instance is the previous retrospective's own action item.** `tfr-epic-1-2`'s retro (commit
+`0e1f2ed2`) had action 3 "file the unshipping as ONE row" — which became `T179` — and action 4 "correct
+`docs/development.md` to describe the factory as internal for now". Action 4 wrote:
+
+> *"It still installs (it is in `package.json` `files[]` and both manifests), and withdrawing that is filed
+> as `T179`; until then, treat it as internal."*
+
+True when written. `T179` closed in `tfu-1-1`, at which point all three clauses were false. The sentence
+survived an edit **four lines above it** in the same section and was caught only by a blind prose auditor two
+weeks later. Re-derive the pair with
+`git log --oneline -S "withdrawing that is filed as \`T179\`" -- docs/development.md`, which returns the
+commit that wrote it and the commit that removed it.
+
+**How to apply.**
+- In the same edit that closes a row: `git grep -n '<ID>'` and read every hit. Code and prose, not just the
+  backlog.
+- `file-stale-knowledge-when-you-find-it` already makes forward-dated rot **filable** when you notice it.
+  This is the other direction and the cheaper one: the row's own closing is the moment you know.
+- **A retrospective action item that writes a forward-dated claim must name the row that expires it, and that
+  row's Description must name the sentence.** One of the two will be read; neither alone was.
+
+**Not enforced.** Nothing can see this. `reference-integrity.js` validates paths and heading anchors and
+cannot know whether a sentence is still true — see `T230` for why even the line numbers are unguarded.
+
+---
+
+## Rule: search-the-shipped-set-not-the-tree
+
+**Statement.** When a change alters what an operator receives, the search key is **`package.json` `files[]`**
+— or better, the actual tarball — not a grep over the working tree. A grep finds hits; it cannot tell you
+which of them reach a user.
+
+**Operational check.**
+
+```bash
+npm pack --dry-run --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{
+  console.log(JSON.parse(s)[0].files.map(f=>f.path).join('\n'))})"
+```
+
+`files[]` is a declaration; the tarball is the fact. Note that `package-check` in CI runs only
+`npm pack --dry-run` — `scripts/audit/try-fresh-install.sh` is the only gate that packs a tarball **and
+installs it**.
+
+**Why.** `tfu-1-1` un-shipped a module and then, reviewing its own prose by grep, **fixed one copy of a
+duplicated sentence and shipped the other**: `12 agents` was corrected in
+`docs/host-framework-sync-playbook.md`, which is not in `files[]`, and left standing in
+`docs/migration/3.x-to-4.0.md`, which is. The same shape recurred in `CREDITS.md`, which ships and listed the
+withdrawn agent under its own lede *"These ship with Convoke. They are the ones you get."*, and in
+`_bmad/bme/covenant/compliance-checklist.md`, a shipped **normative** file whose worked examples all named the
+withdrawn module. Three shipped prose files were never opened, because grep ranked hits by count rather than
+by reach.
+
+**How to apply.**
+- Enumerate the shipped set first, then intersect it with your grep. The shipped subset is reviewed first and
+  most carefully, because it is the only part an operator can be misled by.
+- A file being *in the repository* says nothing about whether it ships. `CREDITS.md`, `UPDATE-GUIDE.md`,
+  `docs/migration/` and `_bmad/bme/covenant/` all ship and are all easy to forget.
+- The same asymmetry runs the other way: a claim about the source tree, the test suite or contributor
+  workflow stays **true** after an unship, and "fixing" it makes a correct document wrong. `docs/testing.md`'s
+  `npm test` line and `package.json`'s test globs were correctly left alone for exactly this reason.
+

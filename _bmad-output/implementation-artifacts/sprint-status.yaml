@@ -431,7 +431,7 @@ development_status:
   # delete the export AND its consumers) after Round 1 -- 3 independent layers,
   # 9 HIGH -- and AC#8 was split out as T222. The story is now startable.
   tfu-1-1-stop-shipping-the-team-factory: done
-  tfu-epic-1-retrospective: optional
+  tfu-epic-1-retrospective: done
 
   # ============================================================
   # FRESH-INSTALL CONFIG (fic) — incident-driven mini-epic, 4.0.3 hotfix
@@ -1156,6 +1156,26 @@ development_status:
   abs-epic-4-retrospective: optional
 
 action_items:
+  - epic: "tfu-epic-1"
+    action: "T230 — teach reference-integrity.js to check path:NNN citations, or require a path+substring pair. The gate half of T225; the only row from this epic that changes behaviour rather than describing it"
+    owner: "dev agent"
+    status: open
+  - epic: "tfu-epic-1"
+    action: "T227 — gate guardedModuleNames on files[] so it matches T181's own commit message. Close BEFORE any release: an orphaned damaged _team-factory/config.yaml refuses every install and update, unactionably"
+    owner: "dev agent"
+    status: open
+  - epic: "tfu-epic-1"
+    action: "T222 — retire the orphan _bmad/bme/_team-factory/ from projects that already installed it. Needs a dev-tree guard: migrations receive only projectRoot and the contract has none"
+    owner: "dev agent"
+    status: open
+  - epic: "tfu-epic-1"
+    action: "Five rules encoded in project-context.md: commit-plans-assume-no-amend-window, all-green-means-every-step-from-the-committed-state, freeze-the-tree-before-an-audit, closing-a-row-greps-for-its-own-citations, search-the-shipped-set-not-the-tree"
+    owner: "dev agent"
+    status: done
+  - epic: "tfu-epic-1"
+    action: "REFUSED, recorded deliberately: a sharper derivation rule. The absorbed-mutant rule already exists in project-context.md and was cited in the comment directly above the violation. T230 is the answer, not a seventh paragraph"
+    owner: "n/a"
+    status: done
   - epic: "tfr-epic-1+2"
     action: "Record the internal-scaffolding ruling in the backlog Change Log and project_team_factory memory"
     owner: "dev agent"
@@ -1169,7 +1189,7 @@ action_items:
     owner: "dev agent"
     status: done
   - epic: "tfr-epic-1+2"
-    action: "Correct docs/development.md to describe the Team Factory as internal for now"
+    action: "Correct docs/development.md to describe the Team Factory as internal for now — DONE but incomplete in a new way: it wrote a forward-dated claim naming T179, which went false the moment T179 closed and survived two weeks. See the tfu-epic-1 retro; closing-a-row-greps-for-its-own-citations exists because of it"
     owner: "dev agent"
     status: done
   - epic: "tfr-epic-1+2"
