@@ -3,7 +3,7 @@ initiative: loom
 artifact_type: epic
 qualifier: team-factory-unship
 created: '2026-09-28'
-status: ready
+status: done
 schema_version: 1
 qualifier_role: operator-authored
 ---
@@ -224,3 +224,43 @@ so the clause had no gate behind it here.
 **Not in the DoD, deliberately:** that the source tree is deleted, and that `T179`'s *"schedule it when
 the factory's status would otherwise mislead someone"* condition has fired. The first is out of scope
 above; the second is the operator's call to make at pickup, not this epic's to assert.
+
+---
+
+## Epic closed 2026-09-30
+
+Shipped as `efb29a50` (the unship), `1ac5e9cf` (the wrapper baseline), `22e097c5` (the backlog close) and
+`d3d581e5` (the consumer-audit remediation). One story, `tfu-1-1`, nine tasks.
+
+**Every DoD clause verified by execution rather than recall, on the day of closing:**
+
+| Clause | How it was checked |
+|---|---|
+| absent from a **fresh** install | `bash scripts/audit/try-fresh-install.sh` → exit 0, and **zero** `_team-factory` mentions anywhere in the run. It is the only gate that packs a tarball and installs it. |
+| still present in git | `git ls-files _bmad/bme/_team-factory/` → 31 files |
+| every §Ordering gate, **including C14** | 13 gates at exit 0, plus `npm run generate:manifest` leaving no drift |
+| nothing shipped advertises it as invocable | the 33 remaining mentions were enumerated from the **actual tarball** (`npm pack --dry-run --json`), not by grep over the tree; each is a scope note added by this story, a historical `CHANGELOG` entry, a `package.json` test glob, or the `loom` **portfolio** label in a table that defers to the name registry — which now reads `reserved` |
+
+**What this epic did NOT do, deliberately, and where each went.** The source tree is not deleted
+(`agent-surface-parity` exits 2 on a removed agent and carries no waiver). The orphan left in projects that
+already installed it is **`T222`**. `T179`'s *"schedule it when the factory's status would otherwise mislead
+someone"* condition was never asserted to have fired — that stayed the operator's call.
+
+**Five rows filed rather than fixed**, because each is a class and this epic only had instances of them:
+`T222` (the orphan) · `T227` (the module-config guard covers a module that no longer ships, and an orphaned
+damaged config refuses every install) · `T228` (`T152`'s version-scope class firing on a *shrinking* roster) ·
+`T229` (the Covenant checklist's structural-anomaly example is no longer anomalous) · **`T230`** (the lever:
+`reference-integrity.js` blanks inline code spans, so no `path:NNN` citation in this repository is checkable —
+which is why that class fired seven times in this one story).
+
+**Nothing is published.** `npm view convoke-agents dist-tags` reads `latest: 4.0.3`, which still ships the
+Team Factory. No operator has any of this until a release, and `T227` should close before one is cut.
+
+**The retrospective is where this epic's value is.** It produced four process failures that cost real time and
+are not yet encoded anywhere a dev agent reads: a commit plan that assumed an amend window the operator does
+not have (left `main` red behind a `publish.needs` gate); "all gates green" reported from a dirty tree on 6 of
+~15 CI steps; an audit agent told the tree was clean while 14 files were edited underneath it; and a check
+written that **cannot fail** — the absorbed-mutant pattern, which `project-context.md` already documents and
+which was reproduced anyway, with a comment citing the very rule that forbids it. That last one is the
+strongest available argument that a prose rule does not bind without a gate.
+
