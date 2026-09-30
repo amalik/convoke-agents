@@ -20,7 +20,7 @@ body:
         - "Diagnostics (convoke-doctor, convoke-version, audit commands)"
         - "Export / portability (convoke-export, catalog generation)"
         - "Artifacts / portfolio (convoke-migrate-artifacts, convoke-portfolio)"
-        - "Team Factory"
+        - "Team Factory (repository only — not installed)"
         - "A Vortex agent or workflow"
         - "A Gyre agent or workflow"
         - "An Enhance skill"

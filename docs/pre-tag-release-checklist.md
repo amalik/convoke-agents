@@ -96,7 +96,7 @@ Each shape in the table above is pinned by a test in `tests/audit/check-changelo
 
 Nothing else catches any of this. `docs-audit.js` does read `CHANGELOG.md` — broken-link, naming and
 coverage checks run on it, while stale-reference and broken-path checks are deliberately skipped
-(`scripts/docs-audit.js:750-755`) — but no CI job checks that the file has an entry for the version being
+(the `if (relPath !== 'CHANGELOG.md')` guard in `scripts/docs-audit.js`) — but no CI job checks that the file has an entry for the version being
 released, and before `fic-2-1` added this step the word "changelog" did not appear in this checklist at
 all.
 

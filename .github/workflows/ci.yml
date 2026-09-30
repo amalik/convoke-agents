@@ -122,7 +122,7 @@ jobs:
   agent-surface-parity:
     # Replaces the retired M9 PF1 behavioural-equivalence gate (ADR-001, 2026-08-13).
     # PF1 required ~6 hr of manual capture per release and could not separate signal from
-    # noise; this runs in seconds on every push, covers 12 agents instead of 4, and fails
+    # noise; this runs in seconds on every push, covers 11 agents instead of 4, and fails
     # loudly when an agent or menu code disappears.
     runs-on: ubuntu-latest
     steps:
@@ -280,7 +280,8 @@ jobs:
         # rewrite a tracked file. Its absence was confirmed by execution: delete one
         # bme row and every other gate stays green.
         #
-        # SCOPE — this covers the 12 `bme` rows ONLY, and the step name says so.
+        # SCOPE — this covers the `bme` rows ONLY, and the step name says so. Count derived from the
+        # registry rosters, not stated here (tfu-1-1 took it from 12 to 11).
         # `generateAgentManifest` reads the existing file for its header and its
         # `preservedRows` (every row whose module column is not `bme`) and writes them
         # straight back, so the header and the 41 upstream rows are compared against

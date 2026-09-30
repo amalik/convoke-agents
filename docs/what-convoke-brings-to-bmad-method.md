@@ -61,10 +61,10 @@ The Covenant is a deliberate contrast to the "self-driving" and "fully autonomou
 
 ### 4. Governance & Industrialization
 
-BMAD Method is a framework a team can use. Convoke makes it a platform an organization can run. Three capabilities enable that shift:
+BMAD Method is a framework a team can use. Convoke makes it a platform an organization can run. Two shipped capabilities enable that shift, with a third in the repository only:
 
 - **Enhance** — RICE-scored backlog management layered onto John (PM). Prioritization on Reach, Impact, Confidence, Effort — not vibes, not loudest-voice-wins.
-- **Team Factory** — a workflow for creating new BMAD-compliant teams. Organizations scale Convoke itself by industrializing the creation of specialized agent teams for their domains.
+- **Team Factory** *(repository only — does not ship)* — a workflow for creating new BMAD-compliant teams. The intent is that organizations scale Convoke itself by industrializing team creation; it was ruled internal scaffolding on 2026-09-16 and un-shipped, so it is not something an install can do today.
 - **Artifact Governance** — taxonomy-based artifact management, migration tooling, sprint status tracking, retrospective workflows, and portfolio-level views across initiatives.
 
 These capabilities are unglamorous but load-bearing. They are what the enterprise actually needs to run BMAD Method across many simultaneous initiatives without losing track of what is happening, what is decided, and what is owned by whom.
@@ -94,7 +94,7 @@ Teams can use BMAD Method alone. They can activate Convoke modules as their need
 - **Product teams** that need discovery rigor, not only build rigor. If your PRDs are template-filled rather than research-grounded, Vortex is the answer.
 - **Platform engineering teams** responsible for production readiness across multiple services. Gyre's capabilities manifests and absence detection replace tribal-knowledge audits.
 - **Organizations** adopting agentic workflows at scale. The Operator Covenant plus artifact governance prevent the fragmentation that kills enterprise AI adoption.
-- **Consultancies** that want an extensible framework they can tailor to client domains. Team Factory lets you build specialized agent teams without forking the core platform.
+- **Consultancies** that want an extensible framework they can tailor to client domains. Extending Convoke with your own teams is the intent, but not yet a shipped capability — the Team Factory that does it is repository-only scaffolding (ruled internal 2026-09-16), so today this means contributing upstream rather than running a tool.
 
 If BMAD Method gets you from requirements to shipped code, Convoke gets you from *possible problem* to *validated production system* — with the governance to do it repeatedly, at scale, and with coherent vision for where you are going.
 

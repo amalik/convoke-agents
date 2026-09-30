@@ -248,8 +248,20 @@ describe('Agent manifest v6.1.0 schema', () => {
     const lines = fs.readFileSync(manifestPath, 'utf8').trim().split('\n');
     const dataRows = lines.slice(1);
 
-    // Derived, not a literal. The previous `12` was a hardcoded count that broke when tfu-1-1
-    // removed the standalone-bme roster — `derive-counts-from-source` exists for exactly this.
+    // ⚠ THIS ASSERTION CANNOT DETECT A ROSTER DELETION, and the comment that used to sit here claimed
+    // the opposite. `agent-manifest.csv` is GENERATED from `agent-registry.js` by
+    // `agent-manifest-generator.js`, so deriving the expectation from the same rosters compares a
+    // generated file to its own generator: delete an agent, regenerate, and both sides move together.
+    // That is `project-context.md`'s absorbed-mutant anti-pattern — "ask what the expectation is derived
+    // FROM; if the answer includes the thing you just mutated, the mutant is inert".
+    //
+    // What it DOES check, and why it is still worth having: that the installer wrote one row per
+    // registry agent into the INSTALLED tree — i.e. no row dropped, duplicated or mangled in transit.
+    // That is a transport check, not a count check.
+    //
+    // Roster deletion is pinned by literal elsewhere, deliberately: `scripts/audit/name-registry-integrity.js`
+    // A4 compares the registry against `_bmad/bme/_config/name-registry.csv`'s enumerated rows, which do
+    // not derive from it. If that coupling is ever removed, this file needs a real count guard.
     const { AGENTS, GYRE_AGENTS } = require('../../scripts/update/lib/agent-registry');
     const expectedAgentRows = AGENTS.length + GYRE_AGENTS.length;
     assert.equal(dataRows.length, expectedAgentRows,

@@ -200,7 +200,6 @@ const BME_SKILL_TO_AGENT = {
   'bmad-agent-bme-model-curator': 'Atlas',
   'bmad-agent-bme-readiness-analyst': 'Lens',
   'bmad-agent-bme-review-coach': 'Coach',
-  'bmad-agent-bme-team-factory': 'Loom Master',
 };
 
 function findAgentMatch(skillName, agents) {

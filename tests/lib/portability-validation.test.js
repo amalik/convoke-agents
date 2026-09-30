@@ -117,11 +117,11 @@ describe('Portability validator (sp-1-3)', () => {
     // Ratchet, same shape as .github/expected-python-tests.txt and expected-wrapper-template.txt.
     // A NEW broken dependency fails here. FIXING one also fails here, until its line is removed
     // from the baseline — so the acknowledged list can only ever shrink.
-    // dist-2-8: validate the set that SEEDS, not the 106-row candidate list.
+    // dist-2-8: validate the set that SEEDS, not the whole candidate list.
     //
     // WHY. `refresh-installation.js` documents the shipped manifest as a CANDIDATE list and seeds a
-    // set filtered by path existence, printing `Created skill-manifest.csv (N/106 skills present)`.
-    // Validating all 106 asked a question no operator's tree answers: 75 rows point at upstream
+    // set filtered by path existence, printing `Created skill-manifest.csv (N/<total> skills present)`.
+    // Validating every row asked a question no operator's tree answers: most rows point at upstream
     // BMAD content that this repo deleted in `a16fa340`, so they can never resolve in CI, and the
     // findings they produced were accurate but unrepairable.
     //
@@ -157,8 +157,19 @@ describe('Portability validator (sp-1-3)', () => {
 
     // NON-VACUITY FLOOR, not merely non-zero. Filtering is precisely the operation that can reduce
     // the validated set to nothing, and this repository has shipped checks that reported success
-    // while doing no work. Measured 2026-09-07: **31 of 106 rows seed — `core` 11, `bmm` 1,
-    // `bme` 19**, grouped by the manifest's own `module` column.
+    // while doing no work.
+    //
+    // NO FIGURE IS TRANSCRIBED HERE. It rotted once already: the measurement read `31 of 106 rows seed
+    // — core 11, bmm 1, bme 19` until `tfu-1-1` removed the `bmad-agent-bme-team-factory` row, which
+    // was itself a seeding row, so BOTH numerator and denominator moved and the comment was wrong in
+    // five places at once. Derive it instead, grouped by the manifest's own `module` column:
+    //
+    //   node -e "const fs=require('fs');const {parseCsvRow}=require('./scripts/lib/csv-utils.js');
+    //   const L=fs.readFileSync('_bmad/_config/skill-manifest.csv','utf8').split('\n').filter(l=>l.trim());
+    //   const h=parseCsvRow(L[0]),pi=h.indexOf('path'),mi=h.indexOf('module');
+    //   const s=L.slice(1).map(parseCsvRow).filter(r=>r[pi]&&fs.existsSync(r[pi]));
+    //   const by={};for(const r of s)by[r[mi]]=(by[r[mi]]||0)+1;
+    //   console.log(L.length-1+' rows, '+s.length+' seed', by)"
     //
     // (An earlier draft of this comment said `core` 12 / `bme` 19 and asserted the story's figure
     // was wrong. It was not. That grouping came from the path's second segment, a different basis:
@@ -172,7 +183,7 @@ describe('Portability validator (sp-1-3)', () => {
     assert.ok(totalSkills > 0, 'seeding manifest is empty — cannot evaluate');
     assert.ok(
       totalSkills >= 25,
-      `seeding set collapsed to ${totalSkills} rows (expected ~31) — the filter is too aggressive ` +
+      `seeding set collapsed to ${totalSkills} rows, below the floor of 25 — the filter is too aggressive ` +
         `or the tree changed shape; a small set here would pass vacuously`
     );
 

@@ -91,7 +91,7 @@ your-project/
 
 Every module above carries a `config.yaml` and a `workflows/` directory. The rest vary and are
 **not** predictable from whether a module has agents: `_enhance` ships `guides/` with no `agents/`,
-and `_gyre` ships `contracts/` where `_vortex` ships `guides/`. `covenant/` is not a
+and `_artifacts` and `_portability` ship neither `agents/` nor `guides/`. `covenant/` is not a
 module at all — it is two markdown files. Derive per module rather than assuming:
 `ls _bmad/bme/*/`.
 
@@ -311,7 +311,7 @@ almost every commit and nothing in the repository pins them. Derive them instead
 | **Unit / lib / audit / team-factory** | Installers, update system, registries, audit scripts | `npm test` |
 | **Integration** | End-to-end install and update flows | `npm run test:integration` |
 | **Coverage** | Line/branch coverage for the CLI entry points | `npm run test:coverage` |
-| **Docs audit** | Broken-link detection across all 17 user-facing files; stale-reference and broken-path detection across 16 of them — `CHANGELOG.md` is exempt, because historical entries legitimately cite files that have since moved (`scripts/docs-audit.js:721-726`) | `npm run docs:audit` |
+| **Docs audit** | Broken-link detection across all 17 user-facing files; stale-reference and broken-path detection across 16 of them — `CHANGELOG.md` is exempt, because historical entries legitimately cite files that have since moved (the `if (relPath !== 'CHANGELOG.md')` guard in `scripts/docs-audit.js`) | `npm run docs:audit` |
 
 All of the above run in CI (`.github/workflows/ci.yml`) on pushes to `main`, on pull requests
 targeting `main`, and on `v*` tags — though not each under its own job: the P0 suite reaches CI

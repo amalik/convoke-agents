@@ -89,7 +89,7 @@ Scout 🔎 · Atlas 📐 · Lens 🔬 · Coach 🏋️
 
 ## Extending Convoke
 
-Teams do lifecycle jobs. These three do something different — they change what your agents can do, and how far they travel.
+Teams do lifecycle jobs. These two do something different — they change what your agents can do, and how far they travel.
 
 **Enhance — skills for existing agents.** A skill adds a workflow without editing the agent that offers it. The first one is RICE-scored backlog management: run `/bmad-enhance-initiatives-backlog` directly. It also declares a menu patch for the PM agent, which lands only where that agent exists as a file — on BMAD v6.3+ layouts, where agents are skills rather than `.md` files, the slash command is the working path. The [Enhance Guide](_bmad/bme/_enhance/guides/ENHANCE-GUIDE.md) documents the pattern for writing your own.
 

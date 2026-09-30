@@ -8,6 +8,27 @@ schema_version: 1
 
 # Convoke Operator Covenant — Compliance Checklist
 
+> ⚠ **Scope note added 2026-09-29 (`tfu-1-1`): every reference below to Loom, `add-team` or the Team
+> Factory names something you do not have.** That module was ruled internal scaffolding on 2026-09-16 and
+> un-shipped: it is not in `package.json` `files[]`, no skill wrapper is generated for it, and
+> `ls .claude/skills/ | grep team-factory` returns nothing even in a clone of the Convoke repository. It is
+> still tracked in git, so the paths resolve for a contributor and no link check notices.
+>
+> Three consequences for a reader auditing their own skill:
+>
+> - **The §A41-1 "Example PASS" and the strict-per-Loom interpretation** cite an exemplar you cannot open.
+>   The *pattern* is the normative part — an operator-decision menu carrying an explicit default suggestion —
+>   and it binds whether or not you can read the example. Match the pattern, not the citation.
+> - **The "Future Loom validation gate" (Story 2.2, deferred)** was to be owned by that module. Nothing
+>   currently plans to build it; treat this document as manually applied until something says otherwise.
+>   Note also that `loom` is a genuinely ambiguous name — `_bmad/bme/_config/name-registry.csv` records two
+>   definitions under it — so "the Loom gate" does not identify an owner.
+> - **The structural-anomaly example in the categories section** points at `add-team`, and that directory
+>   now *has* a `workflow.md`, so it no longer demonstrates the category it illustrates. Filed as `T229`;
+>   with N=1 there is no substitute to swap in, which is why it is a checklist decision rather than an edit.
+>
+> None of the rules change. Only the worked examples became unreachable.
+
 **Purpose:** the operational tool for auditing a Convoke skill against the Operator Covenant. One binary question per right; answers strictly enumerated; glossary + scope rules + parser grammar defined inline so the Checklist stands on its own.
 
 **Consumers:**

@@ -36,7 +36,7 @@
 
 ## 1. Multi-Agent Systems & AI Agent Architectures
 
-**Project relevance:** Core architecture of Convoke — Vortex (7 agents), Gyre (4 agents), Team Factory, handoff contracts, compass routing.
+**Project relevance:** Core architecture of Convoke — Vortex (7 agents), Gyre (4 agents), handoff contracts, compass routing. (The Team Factory is repository-only scaffolding, not shipped.)
 
 ### Foundational Theory
 

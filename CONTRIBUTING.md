@@ -9,7 +9,7 @@ By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md). To repo
 ## What to contribute
 
 - **Agents and workflows** — new domain specialists, workflow and template improvements
-- **Teams** — new team modules, built with the Team Factory (`/bmad-agent-bme-team-factory`)
+- **Teams** — new team modules. The Team Factory is repository-only scaffolding with no skill wrapper; build by hand per [docs/development.md](docs/development.md)
 - **Testing** — edge cases, coverage for known gaps, performance
 - **Documentation** — tutorials, walkthroughs, translations
 

@@ -302,10 +302,19 @@ for BIN in $BINS; do
   fi
   # Parsing is not enough. `node --check` never resolves `require()`, so a bin whose dependency
   # was not shipped parses cleanly and then throws MODULE_NOT_FOUND on the user's first run —
-  # which is I139's exact class, and reachable: `audit-bmm-dependencies.js` requires
-  # `../../_bmad/bme/_team-factory/lib/utils/csv-utils`, and `_bmad/bme/_team-factory/` is a
-  # SEPARATE `files:` entry from `scripts/`. Drop that one entry and the old check still said
-  # "all 14 bins present, shipped and parseable". Found by R2 review 2026-08-14.
+  # which is I139's exact class. The reachable example this check was BUILT for was
+  # `audit-bmm-dependencies.js` requiring `../../_bmad/bme/_team-factory/lib/utils/csv-utils` while
+  # `_bmad/bme/_team-factory/` was a SEPARATE `files:` entry from `scripts/`: drop that one entry and
+  # the old check still said "all 14 bins present, shipped and parseable". Found by R2 review
+  # 2026-08-14.
+  #
+  # That example no longer exists, and the way it was removed is the argument for keeping this check.
+  # `tfu-1-1` (2026-09-29) un-shipped `_bmad/bme/_team-factory/` — exactly the "drop that one entry"
+  # move — and had to relocate csv-utils to `scripts/lib/` first precisely because THIS check would
+  # otherwise have caught a broken bin. The require is now `../lib/csv-utils` (see `:13` of that file)
+  # and the module is no longer a `files:` entry. So the canary is gone because the class it guarded
+  # against was avoided, not because the class went away: any future `files:` entry holding code a
+  # shipped bin requires re-creates it.
   #
   # Resolve each require specifier instead of executing the file — running these would fire three
   # installers for real, which is the mistake the previous version made.
@@ -352,8 +361,10 @@ echo "==> Everything shipped arrives in the project, and every declared unit is 
 #
 #   1. a `_bmad/bme/*` entry in `files[]` never reaches the PROJECT. `_portability` WAS the
 #      worked example: it sat in `files[]` with no install path copying it, because the only
-#      generic module loop iterates EXTRA_BME_AGENTS and a module with no agent entry is never
-#      visited. **Fixed by dist-2-6 on 2026-09-07** — the module now conforms to ADR-004 and
+#      generic module loop iterated EXTRA_BME_AGENTS and a module with no agent entry was never
+#      visited. (That loop was removed with the Team Factory in `tfu-1-1`; there is now no generic
+#      module loop at all, so every module's install path is explicit — which removes this failure
+#      mode by construction rather than by fixing it.) **Fixed by dist-2-6 on 2026-09-07** — the module now conforms to ADR-004 and
 #      `refreshInstallation` copies it and generates a wrapper per declared workflow. Kept here
 #      as the illustration of the class, which is still real; it is no longer a live finding.
 #   2. a module arrives but its declared units are not invocable. `.claude/skills/`
@@ -362,7 +373,9 @@ echo "==> Everything shipped arrives in the project, and every declared unit is 
 #      this file's own premise promises. A presence-only check goes green on precisely the
 #      defect I141 was filed for. See ADR-004 (bme module contract), accepted question 3.
 #   3. a data file the shipped code READS at runtime never reaches the project, because
-#      `_bmad/_config/` is copied PER NAMED FILE (refresh-installation.js:551, :585), not
+#      `_bmad/_config/` is copied PER NAMED FILE (in `refreshInstallation`, by name — not cited by
+#      line here: those numbers have rotted twice, and `installed-tree.js` flags the same `:551`/`:585`
+#      pair as known-stale history), not
 #      as a directory. So a file can be in `files[]`, arrive in node_modules, and still be
 #      absent from where the code looks for it.
 #

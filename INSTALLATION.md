@@ -156,7 +156,6 @@ Then activate an agent to confirm it works.
 /bmad-agent-bme-model-curator                       # Atlas 📐  Model
 /bmad-agent-bme-readiness-analyst                   # Lens  🔬  Analyze
 /bmad-agent-bme-review-coach                        # Coach 🏋️  Review
-
 ```
 
 Agents listed in a team's `excluded_agents` config field get no skill wrapper, so their slash command will not resolve — that is the opt-out working as intended, not a broken install.

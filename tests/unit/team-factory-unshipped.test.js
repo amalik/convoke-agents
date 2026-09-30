@@ -53,11 +53,13 @@ test('the agent registry exports no EXTRA_BME roster', () => {
 });
 
 test('no production code references the EXTRA_BME roster', () => {
-  // `scripts/` only. Tests may legitimately name the symbol — this very file does — and a historical
+  // `scripts/` AND `index.js` — the latter is production and in `files[]`, and an earlier version of this
+  // sweep missed it (consumer audit, 2026-09-30). Tests may legitimately name the symbol — this very file does — and a historical
   // comment is not a dependency. Offenders are LISTED, not counted: a bare count says something broke
   // without saying what, which is the failure `verification-must-be-falsifiable` is about.
   const offenders = [];
-  for (const file of jsFiles(path.join(REPO_ROOT, 'scripts'))) {
+  const production = [...jsFiles(path.join(REPO_ROOT, 'scripts')), path.join(REPO_ROOT, 'index.js')];
+  for (const file of production) {
     for (const [i, line] of fs.readFileSync(file, 'utf8').split('\n').entries()) {
       if (!SYMBOLS.some((s) => line.includes(s))) continue;
       // A comment recording why the roster was removed is the intended end state, not a leak.

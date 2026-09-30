@@ -29,15 +29,15 @@ These ship with Convoke. They are the ones you get.
 - Lens 🔬 Readiness Analyst — absence detection and cross-domain correlation
 - Coach 🏋️ Review Coach — guided review, amendment and feedback capture
 
-### BME — Team Factory
-
-Not a team of its own — a skill-tier module that builds them.
-
-- Loom Master 🏭 Team Factory — builds new BMAD-compliant teams. Adding an agent to an existing team, or a skill to an existing agent, is planned for Phase 3 and does not ship yet
-
 ## Agents who built it
 
 These are BMAD Method and module agents that did the work. They are not part of what Convoke installs.
+
+### BME — Team Factory (repository only)
+
+- Loom Master 🏭 Team Factory — builds new BMAD-compliant teams. Ruled internal scaffolding 2026-09-16 and
+  un-shipped in `tfu-1-1`: it lives in the Convoke repository and is not installed, so there is no
+  `/bmad-agent-bme-team-factory` command in your project.
 
 ### Core
 

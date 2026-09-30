@@ -65,6 +65,15 @@ npx -p convoke-agents convoke-doctor
 
 ## Migration Paths
 
+> ⚠ **These sections record what each release ADDED, not what you get today.** Upgrading from an old
+> version lands you on the current release, and some capabilities listed below have since been withdrawn.
+> The **Team Factory** is the one that matters here: `tfu-1-1` un-shipped it on 2026-09-29 (operator ruling
+> 2026-09-16, internal scaffolding), so the `/bmad-agent-bme-team-factory` command and everything under
+> `_bmad/bme/_team-factory/` named in the v2.4.0 and v3.0.0 paths below will **not** arrive in your project.
+> Derive what does arrive rather than reading it off this list:
+> `node -e "console.log(require('convoke-agents/package.json').files.join('\n'))"`.
+
+
 ### From v2.4.x to v3.0.0
 
 **Breaking changes:** The Team Factory appender modules (registry, config, CSV) are new capabilities that change the module API surface. The `add-agent` and `add-skill` workflows they were built for are planned for Phase 3 and did **not** ship — see below.

@@ -12,7 +12,7 @@ const path = require('path');
  * findProjectRoot())`. That violated `project-context.md`'s `test-fixture-isolation` rule
  * ("Exception: None") and it broke for real: BMAD Update `a16fa340` (2026-06-27) deleted
  * Convoke's vendored copy of upstream skill content (1,162 files; tracked `SKILL.md` went
- * 113 -> 35 by 2026-08-14). 75 of 106 manifest paths stopped resolving in a clean checkout,
+ * 113 -> 35 by 2026-08-14). Most manifest paths stopped resolving in a clean checkout,
  * the material surviving only in gitignored `.claude/skills/`. Twelve suites were quarantined
  * behind a precondition guard and `scripts/portability/**` was dropped from the coverage gate
  * — i.e. the shipped `convoke-export` bin went untested to keep the build green.

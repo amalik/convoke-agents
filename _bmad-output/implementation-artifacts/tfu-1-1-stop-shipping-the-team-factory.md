@@ -4,7 +4,7 @@ baseline_commit: d198cab6c130936036880fa770b3439f7a586cb9
 
 # Story tfu-1.1: Stop shipping the Team Factory
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** [tfu-epic-1 — Team Factory Unship](../planning-artifacts/convoke-epic-team-factory-unship.md)
 **Origin:** Fast Lane rows `T179` (2.0, `loom`) and `T150` (5.7, `convoke`), bundled `21ed0512`.
@@ -322,7 +322,7 @@ another literal — `derive-counts-from-source`).
       `npm run test:integration`; `npm run docs:audit` exit 0; `backlog-integrity`; `install-scope-check`;
       `name-registry-integrity`; `agent-surface-parity`; `scripts/audit/try-fresh-install.sh` — the only
       gate that packs and installs a real tarball, and the one that catches AC#3.
-- [ ] **Task 9 — consumer audit and backlog close (AC#11, AC#12).** Independent of the implementer.
+- [x] **Task 9 — consumer audit and backlog close (AC#11, AC#12).** Independent of the implementer.
 
 ## Dev Notes
 
@@ -439,6 +439,90 @@ citations and one count claim. Nothing structural.
 **Not accepted:** the Acceptance Auditor read `deferred` as straining its own definition ("complete").
 The status is now `ready-for-dev`, so the point is moot rather than resolved.
 
+## Consumer Audit — 2026-09-30 (AC#11, independent of the implementer)
+
+Two blind layers, neither with sight of the implementation session: one chasing symbols and contracts, one
+chasing **behavioural claims in prose** — the class symbol search cannot reach, and the reason
+`code-review-convergence` requires this layer at all. Prose layer's results below; defect · fix · command.
+
+**The structural finding, worth more than the individual rows: the story fixed one copy of a duplicated
+sentence and shipped the other.** `12 agents` was corrected in `docs/host-framework-sync-playbook.md`, which
+does **not** ship, and left standing in `docs/migration/3.x-to-4.0.md`, which does. Same shape in
+`CREDITS.md`. The three shipped prose files the implementation never opened held the worst live claims. The
+correct search key was `package.json` `files[]`, not grep hits:
+`node -e "console.log(require('./package.json').files.join('\n'))"`.
+
+| Defect | Fix | Re-derive |
+|---|---|---|
+| `CREDITS.md` listed Loom Master under its own lede *"These ship with Convoke. They are the ones you get."* — and it ships | moved below the *"not part of what Convoke installs"* heading | `node -e "console.log(require('./package.json').files.includes('CREDITS.md'))"` |
+| `docs/migration/3.x-to-4.0.md` claimed 12 agents — and it ships | 12 → 11 | `node -e "console.log(require('./package.json').files.some(f=>f.includes('docs/migration')))"` |
+| `docs/development.md` asserted `/bmad-agent-bme-team-factory` works in a clone. **Introduced by the remediation** — the wrapper generator was deleted by this very story | names the real path: read the agent file into the conversation | `ls .claude/skills/ \| grep -c team-factory` → 0 |
+| `docs/development.md` still read *"It still installs (it is in `files[]` and both manifests), and withdrawing that is filed as `T179`"* — three false clauses, four lines under this story's own "not available anywhere" | replaced | `grep -n 'still installs' docs/development.md` |
+| `README.md` said *"These three do something different"* with two paragraphs following. **Contains no symbol of any kind** | three → two | read `README.md` §92-97 |
+| `docs/BMAD-METHOD-COMPATIBILITY.md`'s module-shape contrast. **Introduced by the remediation** and false: `_gyre` ships `contracts/` AND `guides/` | `_artifacts` / `_portability`, which ship neither | `ls _bmad/bme/*/` |
+| `UPDATE-GUIDE.md` §Migration Paths promises the factory in present tense under "What happens" | section scoped with a derivation command; rows left as the record they are | `sed -n '/## Migration Paths/,+10p' UPDATE-GUIDE.md` |
+| `compliance-checklist.md` — a shipped NORMATIVE rubric whose §A41-1 exemplar, deferred Loom gate, and structural-anomaly example all name an unshipped module | one document-wide scope note, not four sentence edits | `node -e "console.log(require('./package.json').files.includes('_bmad/bme/covenant/compliance-checklist.md'))"` |
+| `docs/what-convoke-brings-to-bmad-method.md` promised the factory as a capability to a named buyer segment, and counted "three capabilities" | both corrected, module marked repository-only | — |
+| `CONTRIBUTING.md`, `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/workflows/ci.yml` (×2), `docs/references.md`, `name-registry.csv` notes cell, a stray blank line in `INSTALLATION.md` | all corrected | the gate sweep |
+
+**Not acted on — not the implementer's call.** `convoke-note-maturity-ledger-2026-09-14.md` is correctly
+basis-pinned to *published* 4.0.3, so its "12 agents" rows are **right** and must not be "fixed". But its
+§Time-sensitivity trigger fires only *"if a version later than 4.0.3 publishes"*, and today's state is *the
+repository changed while nothing published* — which the trigger does not cover. It is page 2 of the
+client-facing Evaluate pack. **The gap is the trigger, not the rows.**
+
+### Symbol and contract layer
+
+**The worst finding is a check this story wrote that cannot fail.**
+`tests/integration/fresh-install.test.js` replaced a hardcoded `12` with a derivation from
+`AGENTS.length + GYRE_AGENTS.length`. But `agent-manifest.csv` is **generated from** those same rosters by
+`agent-manifest-generator.js`, so the assertion compares a generated file to its own generator: delete an
+agent, regenerate, both sides move, green. The literal it replaced would have gone red. This is
+`project-context.md`'s absorbed-mutant anti-pattern — *"ask what the expectation is derived FROM; if the
+answer includes the thing you just mutated, the mutant is inert"* — and the comment cited
+`derive-counts-from-source` as its justification. Corrected to state what it does check (transport: one row
+per registry agent survived the install) and to name where roster deletion IS pinned by literal
+(`name-registry-integrity.js` A4, against enumerated rows that do not derive from the registry).
+
+| Defect | Fix | Re-derive |
+|---|---|---|
+| A check that cannot fail: `fresh-install.test.js`'s derived count is absorbed by its own generator | comment corrected to claim only transport; deletion-detection located in A4 | both sides read `AGENTS`; `grep -n 'registry = {' scripts/lib/agent-manifest-generator.js` |
+| **2 of 5 copies** of `convoke-doctor.js:763` were fixed. Three left, including `installed-tree.test.js` — inside the rot alarm, two lines above the loop that checks the structured citations | all three anchored by symbol | `grep -rn 'convoke-doctor.js:763' --include='*.js' .` → 0 |
+| `portability-validation.test.js` / `portability-fixture.js`: `31 of 106 rows seed` wrong in **six** places, one inside a failing operator's assertion message. The removed row was itself a seeding row, so numerator and denominator both moved | figures deleted; the derivation command embedded and run as written | `105 rows, 30 seed {core:11, bmm:1, bme:18}` |
+| `try-fresh-install.sh`'s own justification cites a `require` this story relocated and a `files:` entry it deleted — the gate's reachable example no longer exists | rewritten to say the canary is gone because the class was *avoided*, which is the argument for keeping the check | `sed -n '303,320p' scripts/audit/try-fresh-install.sh` |
+| `export-engine.js`'s `BME_SKILL_TO_AGENT` kept a `Loom Master` key resolving against a manifest row this story deleted — fails soft to `null` | key removed | `grep -c team-factory scripts/portability/export-engine.js` → 1 (a comment) |
+| Two live docs cite the CHANGELOG exemption at two different, both-wrong ranges | both anchored by the `if (relPath !== 'CHANGELOG.md')` guard, not a number | — |
+| `team-factory-unshipped.test.js` swept `scripts/` only; `index.js` is production **and in `files[]`** | `index.js` added to the sweep | read the test |
+
+**The structural cause, filed as `T230`.** `scripts/audit/reference-integrity.js:277-279` blanks every inline
+code span before scanning (`` const inlineRe = /`[^`\n]*`/g `` → spaces), and the file has no line-number
+logic at all. Every citation in this repository is backticked, so **no `path:NNN` citation is checkable
+anywhere** — the nine in `installed-tree.js` survive only because one test checks them directly. That is why
+this class fired **seven times in this story**: three in executable files, three created by this story's own
+remediation, two in live docs. `T225` (the instance) was annotated with the cause rather than duplicated;
+`T230` is the gate half, filed separately because instance and gate decay at different rates.
+
+**Recorded because it was my error, not the auditor's.** The agent was told the tree was clean. It was not —
+14 files were being edited live underneath it while it worked. It flagged this and correctly changed nothing.
+Freeze the tree or tell the auditor the truth; an audit against a moving tree can report a finding that is
+already fixed, or miss one that appears after it looked.
+
+**Not acted on — not the implementer's call.** `convoke-note-maturity-ledger-2026-09-14.md` is correctly
+basis-pinned to *published* 4.0.3, so its "12 agents" rows are RIGHT and must not be "fixed". But its
+§Time-sensitivity trigger fires only *"if a version later than 4.0.3 publishes"*, and today's state is *the
+repository changed while nothing published*. It is page 2 of the client-facing Evaluate pack. **The gap is
+the trigger, not the rows.**
+
+**Left as-is, correctly:** ~500 `path:NNN` citations in `_bmad-output/implementation-artifacts/*.md` are a
+historical record; three open backlog rows (`T217`, `T147`, `T111`) cite evidence this story invalidated and
+are annotated in `T230`'s scope rather than edited; `_bmad/_config/skill-manifest.csv`'s CRLF→LF normalisation
+is benign (the relocated `csv-utils` has no `\r` handling, so LF is what its parser wants) but is now noted
+here because nothing else records it.
+
+**Judgement the audit got right and the implementation got wrong:** `_bmad-output/` is a historical record
+and past-tense statements there are correct, not stale; `docs/testing.md:45` and `package.json`'s test globs
+are repo-facing and still true because the tree is tracked. Those were correctly left alone.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -551,6 +635,18 @@ Relative to repo root. Updated as tasks complete.
 | `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` | modified — `T227` filed; `T179`+`T150` moved to §2.5; `T228`+`T229` filed |
 | `_bmad-output/planning-artifacts/convoke-note-backlog-completed-archive.md` | modified — closing notes `## T179` and `## T150` |
 | `.github/expected-wrapper-template.txt` | modified — regenerated, 3 → 2 sections |
+| — | **consumer-audit remediation, 2026-09-30** | |
+| `CREDITS.md` | modified — Loom Master moved below "not part of what Convoke installs" (it ships) |
+| `docs/migration/3.x-to-4.0.md` | modified — 12 → 11 (it ships; the non-shipping copy had been fixed instead) |
+| `CONTRIBUTING.md` · `.github/ISSUE_TEMPLATE/bug_report.yml` · `.github/workflows/ci.yml` | modified — dead command, dropdown option, two comment counts |
+| `docs/what-convoke-brings-to-bmad-method.md` · `docs/references.md` | modified — capability promise to a buyer segment; "three capabilities" |
+| `_bmad/bme/covenant/compliance-checklist.md` | modified — one document-wide scope note covering three findings |
+| `docs/pre-tag-release-checklist.md` | modified — CHANGELOG-exemption citation anchored by symbol |
+| `scripts/portability/export-engine.js` | modified — dead `Loom Master` map key removed |
+| `scripts/audit/try-fresh-install.sh` | modified — three justification comments corrected |
+| `tests/lib/portability-validation.test.js` · `tests/lib/portability-fixture.js` | modified — six rotted figures deleted, derivation embedded |
+| `tests/unit/refresh-installation-bmm-deps.test.js` | modified — citation anchored by symbol |
+| `_bmad-output/planning-artifacts/convoke-note-backlog-completed-archive.md` | modified — `## T179`, `## T150` closing notes |
 | `tests/unit/csv-utils-relocation.test.js` | *(Task 2)* |
 
 ## Change Log
@@ -560,6 +656,7 @@ Relative to repo root. Updated as tasks complete.
 | 2026-09-28 | Authored. Status `deferred` pending AC#0. |
 | 2026-09-28 | Round 1 (3 independent layers) → 9 HIGH. AC#0 ruled option (c); AC#8 struck to `T222`; AC#14 and AC#15 added; AC#1, AC#3, AC#4, AC#6, AC#7, AC#13 corrected. Status → `ready-for-dev`. |
 | 2026-09-29 | Round 2 (one scoped layer) → 2 HIGH, both regressions from Round 1's corrections. Instrument changed twice: bare-symbol enumeration in AC#6, symbol anchors instead of line numbers for `refresh-installation.js`. Round 3 not triggered (no structural change). |
+| 2026-09-30 | **AC#11 discharged — two blind layers, neither with sight of the implementation.** Between them: a check this story wrote that **cannot fail** (`fresh-install.test.js`'s derived count absorbed by its own generator), 2 of 5 copies of one citation fixed, a load-bearing denominator wrong in six places, and the fresh-install gate's own justification falsified. Structural cause filed as **`T230`**: `reference-integrity.js` blanks inline code spans, so no `path:NNN` citation in this repository is checkable — which is why the class fired seven times here. All 12 gates green after remediation. Status → `review`. |
 | 2026-09-30 | **AC#12 discharged.** `T179` and `T150` closed and MOVED to §2.5 (a move, not a status edit, per `backlog-format-spec.md` §"Closing a Row"); full text in the archive. `T228` and `T229` filed rather than fixed. `T151` deliberately not closed — out of epic scope, and it carries a 2026-09-12 ruling. `backlog-integrity` 1071 rows, exit 0. |
 | 2026-09-30 | Tasks 7 and 8 complete. Baseline regenerated (`1ac5e9cf`) after `efb29a50` — **which left `main` red in between**: `agent-surface-parity` is in `publish.needs` and the amend AC#14 prescribes is unavailable in a commit-and-push-together workflow. AC#14 should be rewritten as two commits. |
 | 2026-09-29 | Task 5 complete. Docs, Covenant and CHANGELOG. **`T227` filed** — a defect at the seam with `T181`: `guardedModuleNames` derives its set from directories on disk rather than `files[]`, so the guard now covers a module that no longer ships, and an orphaned damaged config refuses every install. `try-fresh-install.sh` PASSES (28 checks, all 14 bins resolve) — the gate that proves AC#3. |

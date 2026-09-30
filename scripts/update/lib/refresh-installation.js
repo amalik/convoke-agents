@@ -1293,7 +1293,7 @@ function cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatim
  * Create an EMPTY BMM governance registry in the operator's project (dist-2-5 / BUG-19).
  *
  * `convoke-doctor` reads `path.join(projectRoot, '_bmad/_config/bmm-dependencies.csv')`
- * (`convoke-doctor.js:763`). Nothing created it, so every npm-installed operator saw
+ * (`convoke-doctor.js's `const csvAbs = path.join(projectRoot, BMM_DEPS_CSV_REL)``). Nothing created it, so every npm-installed operator saw
  * `⚠ BMM dependencies: registry missing` on an otherwise healthy install.
  *
  * HEADER ONLY — THE SCHEMA, NEVER A ROW. Two implementations were rejected by measurement
