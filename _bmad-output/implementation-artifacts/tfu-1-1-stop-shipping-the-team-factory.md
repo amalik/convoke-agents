@@ -316,9 +316,9 @@ another literal — `derive-counts-from-source`).
 - [x] **Task 5 — docs and Covenant (AC#7, AC#9, AC#10).** Three treatments, not one. Delete the `T150`
       clauses, keep `(from exported rosters)`. Reword `docs/testing.md:102`; leave `:45` alone.
 - [x] **Task 6 — tests (AC#15).** Fix the three; derive, never re-literal.
-- [ ] **Task 7 — the wrapper baseline (AC#14).** Commit first, regenerate, amend. Confirm the extractor
+- [x] **Task 7 — the wrapper baseline (AC#14).** Commit first, regenerate, amend. Confirm the extractor
       reports 2.
-- [ ] **Task 8 — gates (AC#13).** `npm run lint` clean on modified files; `npm test` **and**
+- [x] **Task 8 — gates (AC#13).** `npm run lint` clean on modified files; `npm test` **and**
       `npm run test:integration`; `npm run docs:audit` exit 0; `backlog-integrity`; `install-scope-check`;
       `name-registry-integrity`; `agent-surface-parity`; `scripts/audit/try-fresh-install.sh` — the only
       gate that packs and installs a real tarball, and the one that catches AC#3.
@@ -488,6 +488,14 @@ at the `// 2b1. Standalone bme submodule trees` block in `refresh-installation.j
 by Round 2's line-ref-to-anchor substitution. AC text is not among the sections this workflow permits a
 dev agent to edit, so it is reported here rather than silently corrected.
 
+**Two process failures of mine, recorded because they cost real time.** First, I reported "all green" from a
+working tree that held an uncommitted fix, having run six of CI's ~15 steps rather than all of them — the
+operator found `main` red and had to tell me. A local sweep is not CI, and a dirty tree is not the committed
+state. Second, AC#14's "commit then amend" was unfollowable here: the operator commits and pushes in one
+motion, so the amend window never existed, and `agent-surface-parity` — which is in `publish.needs` — was
+red on `main` until a follow-up commit landed. The AC needs rewriting as two commits with the second's
+content pre-computed.
+
 **One check of mine was wrong and is worth naming.** A `node -e "require('./<test file>')"` smoke check
 reported `LOAD ERROR` for `tests/team-factory/csv-utils.test.js`. Requiring a test file *runs* it, and the
 check treated its passing output as an error. `node --test` on the same file exits 0. The repoint was
@@ -540,7 +548,9 @@ Relative to repo root. Updated as tasks complete.
 | `docs/BMAD-METHOD-COMPATIBILITY.md` | modified — tree entry, module-shape sentence, capability list |
 | `CHANGELOG.md` | modified — `[Unreleased]` entry added; **34 insertions, 0 deletions** (history untouched) |
 | `_bmad/bme/covenant/covenant-operator.md` | modified — §6.3 and §6.7 examples replaced; the scoped verdict annotated, not rewritten |
-| `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` | modified — `T227` filed |
+| `_bmad-output/planning-artifacts/convoke-note-initiative-lifecycle-backlog.md` | modified — `T227` filed; `T179`+`T150` moved to §2.5; `T228`+`T229` filed |
+| `_bmad-output/planning-artifacts/convoke-note-backlog-completed-archive.md` | modified — closing notes `## T179` and `## T150` |
+| `.github/expected-wrapper-template.txt` | modified — regenerated, 3 → 2 sections |
 | `tests/unit/csv-utils-relocation.test.js` | *(Task 2)* |
 
 ## Change Log
@@ -550,6 +560,8 @@ Relative to repo root. Updated as tasks complete.
 | 2026-09-28 | Authored. Status `deferred` pending AC#0. |
 | 2026-09-28 | Round 1 (3 independent layers) → 9 HIGH. AC#0 ruled option (c); AC#8 struck to `T222`; AC#14 and AC#15 added; AC#1, AC#3, AC#4, AC#6, AC#7, AC#13 corrected. Status → `ready-for-dev`. |
 | 2026-09-29 | Round 2 (one scoped layer) → 2 HIGH, both regressions from Round 1's corrections. Instrument changed twice: bare-symbol enumeration in AC#6, symbol anchors instead of line numbers for `refresh-installation.js`. Round 3 not triggered (no structural change). |
+| 2026-09-30 | **AC#12 discharged.** `T179` and `T150` closed and MOVED to §2.5 (a move, not a status edit, per `backlog-format-spec.md` §"Closing a Row"); full text in the archive. `T228` and `T229` filed rather than fixed. `T151` deliberately not closed — out of epic scope, and it carries a 2026-09-12 ruling. `backlog-integrity` 1071 rows, exit 0. |
+| 2026-09-30 | Tasks 7 and 8 complete. Baseline regenerated (`1ac5e9cf`) after `efb29a50` — **which left `main` red in between**: `agent-surface-parity` is in `publish.needs` and the amend AC#14 prescribes is unavailable in a commit-and-push-together workflow. AC#14 should be rewritten as two commits. |
 | 2026-09-29 | Task 5 complete. Docs, Covenant and CHANGELOG. **`T227` filed** — a defect at the seam with `T181`: `guardedModuleNames` derives its set from directories on disk rather than `files[]`, so the guard now covers a module that no longer ships, and an orphaned damaged config refuses every install. `try-fresh-install.sh` PASSES (28 checks, all 14 bins resolve) — the gate that proves AC#3. |
 | 2026-09-29 | Tasks 3, 4 and 6 complete. Roster and all consumers removed; package, manifests, name-registry and snapshot moved with it. **AC#15 understated the test work by an order of magnitude: 47 failing assertions across 7 files, not 3 tests in 3 files.** `npm test`, `npm run test:integration`, `npm run lint`, `npm run docs:audit` and four audit gates all exit 0. |
 | 2026-09-29 | Task 1 and Task 2 complete. `csv-utils` relocated to `scripts/lib/` with all four consumers repointed; the doctor's degradation branch deleted. Two `installed-tree.js` line citations into `convoke-doctor.js` repaired after the −5-line shift. `npm test` and `npm run lint` both exit 0. |

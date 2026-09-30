@@ -3303,3 +3303,85 @@ design, though AC2a's principle — do not claim Convoke provides what it does n
 bme-config defect above; **AC3** inherited and promoted, the `_vortex` config being the only source rather
 than a fallback; **AC4**, **AC5** inherited; **AC6** already satisfied by the epic row; **AC7** re-filed as
 `IN-241`; **AC8** is the Gates paragraph above.
+
+---
+
+## T179
+
+**Closed 2026-09-29 — shipped as `efb29a50` + `1ac5e9cf` (story `tfu-1-1`).** The Team Factory no longer
+ships. `_bmad/bme/_team-factory/` is out of `package.json` `files[]`, its `skill-manifest.csv` row is gone,
+`agent-manifest.csv` no longer carries the Loom Master row, and the `EXTRA_BME_AGENTS` registry roster is
+deleted along with every consumer. Operator ruling 2026-09-16: internal scaffolding, not a user-facing
+capability.
+
+**Unship, not delete.** The source tree stays tracked in git. `scripts/audit/agent-surface-parity.js` exits
+2 on a removed agent and carries no waiver — `grep -n 'waiver\|allowlist\|EXEMPT'` on that file returns
+nothing — so a deletion cannot be made green in-commit. Deleting it would also have broken three non-module
+consumers of `_team-factory/lib/` and the 18-file `tests/team-factory/` suite that `package.json` runs.
+
+**Three of T179's own four named sites were wrong, and the row said four edits where there were 43 files.**
+`agent-manifest.csv` was listed as a shipping site; it does not ship
+(`node -e "console.log(require('./package.json').files.filter(x=>x.includes('_config')))"` returns
+`_bmad/_config/skill-manifest.csv` alone) and is a generated artifact, so it is regenerated rather than
+edited. T179 made no sufficiency claim about `files[]` and enumerated no edit count — two of the three
+"corrections" the epic first claimed were new findings, not corrections, and the epic was amended to say so.
+
+**The roster was deleted, not emptied.** Emptying would have left 12 production sites iterating nothing while
+still reading as live checks. The decisive pair: `validator.js`'s `Standalone bme agent files missing` check
+would have been unconditionally satisfied while its own seeding fixture in `tests/unit/validator.test.js`
+stopped seeding the files it verified — both halves of one contract going quiet with nothing red.
+
+**What the change actually cost, versus what the story predicted.** The story's AC#15 named three failing
+tests in three files. The real surface was **47 failing assertions across 7 files**, plus 4 more under
+`tests/integration/`, which `npm test` does not run. Not one was a test defect. Most *derived* their counts
+from the registry per `derive-counts-from-source` and broke anyway — a derivation does not survive the
+symbol being deleted.
+
+**Split out rather than shipped:** `T222`, the orphan `_bmad/bme/_team-factory/` left in projects that
+already installed it. Its AC drew six review defects, one dangerous — migrations receive only `projectRoot`
+and the contract has no dev-tree guard, so the prescribed migration would have deleted the tracked source
+inside a Convoke clone.
+
+**Found while closing:** `T227`. `guardedModuleNames` derives the guarded-config set from directories on disk
+rather than from `files[]`, contradicting `T181`'s own commit message, so the guard now covers a module that
+no longer installs and an orphaned damaged config refuses every install and update.
+
+Re-derive the end state:
+
+```bash
+npm pack --dry-run --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{
+console.log(JSON.parse(s)[0].files.filter(x=>x.path.includes('_team-factory')).length + ' packed')})"
+bash scripts/audit/try-fresh-install.sh   # 28 checks, all 14 bins resolve
+```
+
+---
+
+## T150
+
+**Closed 2026-09-29 — shipped as `efb29a50` (story `tfu-1-1`), by deletion rather than correction.**
+`docs-audit.js`'s `validCountsFor(registry,'WORKFLOWS')` rejected the true agent-owned workflow total because
+`add-team` was owned by an agent whose workflow roster was never exported. The fix was not to add
+`EXTRA_BME_WORKFLOWS`: with the Team Factory unshipped there is no agent-owned workflow left, so there is
+nothing for such an export to hold. That answers the row's own open design question — *"whether `add-team`
+belongs in its own roster, an existing one, or outside the count"* — with "outside the count", on the
+authority of the 2026-09-28 bundling ruling rather than by fiat.
+
+**The `(from exported rosters)` qualifier SURVIVES.** Its justification was a conjunction — `T150` and
+`T156` — and `T156` did not close. Three `T150` clauses were deleted from `scripts/docs-audit.js` and one
+from `tests/unit/docs-audit.test.js`; the string stays, justified by `T156` alone. Deleting it because "the
+undercount is fixed" would have removed a still-true hedge.
+
+**A correct document was flagged stale on the way through, exactly as predicted.** `docs/testing.md`'s
+`# one agent` — a comment in a bash fence — passed only because `EXTRA_BME_AGENTS.length === 1` made `1` a
+legal agent count. Removing the roster took `1` out of the valid set and the audit reported a true sentence
+as stale, with the unfollowable remedy `one of 4, 7, 11 agents`. Fixed at the instance by rewording; the
+class is `T152`'s version-scope defect firing on a *shrinking* roster, filed separately as `T228`.
+
+Re-derive:
+
+```bash
+node -e "const r=require('./scripts/update/lib/agent-registry.js');
+const {validCountsFor,registryHeader}=require('./scripts/docs-audit.js');
+console.log([...validCountsFor(r,'AGENTS')].sort((a,b)=>a-b).join(','), '|', registryHeader(r))"
+```
+
