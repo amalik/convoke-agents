@@ -177,6 +177,50 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
     }
   });
 
+  it('T227 R1/F1: a files[] entry that cannot resolve to one module keeps the guard WIDE', async () => {
+    // The R1 defect. The first fix matched only `_bmad/bme/<name>/` and DROPPED everything else, so six
+    // npm-legal ways of declaring the same modules yielded an empty set — not "unknowable" — and the
+    // guard silently narrowed to []. That is T181's data loss reintroduced, in the exact direction the
+    // comment beside the filter says must never be silent.
+    //
+    // Each form below ships the two fixture modules. None may turn the guard off. `scripts/` in this
+    // repo's own files[] is a recursive directory entry, so collapsing five `_bmad/bme/_x/` lines into
+    // one `_bmad/bme/` is a semantically identical, entirely plausible edit.
+    for (const files of [
+      ['_bmad/bme/*'],            // glob
+      ['_bmad/bme/*/'],           // glob, trailing slash
+      ['_bmad/bme/**'],           // recursive glob
+      ['_bmad/bme/'],             // ancestor of every module
+      ['_bmad/'],                 // ancestor, one level up
+      ['_bmad/bme/_aa-fixture/agents'],  // a path INSIDE a module: ships part of it, not its config
+      ['./_bmad/bme/_aa-fixture/', './_bmad/bme/_zz-fixture/'],  // leading ./ — npm accepts it
+      [' _bmad/bme/_aa-fixture/ ', '_bmad/bme/_zz-fixture/'],    // padded; the delegated parser trims
+    ]) {
+      const pkg = await syntheticPackageRoot({ files });
+      try {
+        assert.deepEqual(
+          guardedModuleNames(pkg),
+          ['_aa-fixture', '_zz-fixture'],
+          `files[] ${JSON.stringify(files)} must be unknowable, not empty — narrowing here loses operator data`
+        );
+      } finally {
+        await fs.remove(pkg);
+      }
+    }
+  });
+
+  it('T227 R1/F1: a whitespace-padded entry still resolves, and the two parsers agree', async () => {
+    // R1 measured the two parsers of this same array DISAGREEING: `installed-tree.js` trims, the new
+    // one did not, so ' _bmad/bme/_vortex/' resolved in one and vanished from the other with nothing
+    // noticing. Reusing that parser is what makes them agree by construction rather than by review.
+    const pkg = await syntheticPackageRoot({ files: [' _bmad/bme/_aa-fixture/ ', '_bmad/bme/_zz-fixture/'] });
+    try {
+      assert.deepEqual(guardedModuleNames(pkg), ['_aa-fixture', '_zz-fixture']);
+    } finally {
+      await fs.remove(pkg);
+    }
+  });
+
   it('T227: with no package.json, the guard stays WIDE rather than silently narrowing', async () => {
     // Direction matters and is asserted, not assumed. files[] unknowable must fail toward GUARDING:
     // T181's defect was an operator's config silently overwritten (data loss); T227's is a blocked
@@ -209,7 +253,9 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
   it('T227: a damaged config for an UNSHIPPED module does not block the refresh', async () => {
     // The operator-facing half. `guardedModuleNames` excluding it is necessary but not sufficient —
     // what matters is that `refreshInstallation` completes. An orphaned `_team-factory/` is exactly
-    // the state every project that installed <= 4.0.3 is left in (T222), so this is not hypothetical.
+    // the state projects installed between 3.2.0 (when the module entered files[]) and 4.0.3 are left in
+    // (T222), so this is not hypothetical. NOT every project <= 4.0.3 — one installed at 3.1.0 and never
+    // updated has no orphan to leave behind.
     await writeModuleConfig(tmpDir, '_team-factory', DAMAGED_CONFIG);
     await assert.doesNotReject(() => refreshInstallation(tmpDir, { verbose: false }));
   });

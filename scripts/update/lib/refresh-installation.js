@@ -60,14 +60,18 @@ function guardedModuleNames(packageRoot, options = {}) {
   // project holding an ORPHANED damaged `_team-factory/config.yaml` had every `convoke-update` and
   // `convoke-install` refused, naming a module the package no longer contains — unactionable,
   // because nothing will ever replace an orphaned file.
-  const shipped = options.shippedDirs || shippedBmeDirs(packageRoot);
+  // No injection seam here, deliberately. An earlier version had `options.shippedDirs ||` with a
+  // comment claiming a test could use it to prove this filter is consulted — no test ever did, and
+  // because the operator is `||` a caller could not inject `null` to reach the unknowable branch
+  // anyway. The branch is driven by omitting `package.json` from the fixture instead, which is what
+  // the tests do. Round 1 of T227 found the comment credited an apparatus that did not exist.
+  const shipped = shippedBmeDirs(packageRoot);
   return listDirs(packageBme)
     .filter((name) => fs.existsSync(path.join(packageBme, name, 'config.yaml')))
     // `shipped === null` means the manifest could not be read. The guard then stays WIDE, and the
     // direction is deliberate: T181's defect was an operator's config silently overwritten (data
     // loss), T227's is a blocked update (recoverable). A missing manifest must not quietly
-    // reintroduce the worse one. `shippedDirs` is injectable so a test can prove this filter is
-    // consulted at all — the same reason `listDirs` is.
+    // reintroduce the worse one.
     .filter((name) => shipped === null || shipped.has(name))
     .sort();
 }
@@ -77,30 +81,75 @@ function guardedModuleNames(packageRoot, options = {}) {
  * when that cannot be determined.
  *
  * `null` is not "none": it is "unknowable", and `guardedModuleNames` treats the two differently on
- * purpose. Returning an empty Set for an unreadable manifest would disable the guard silently, which
- * is the fail-open-in-silence shape this repository has been bitten by repeatedly.
+ * purpose. Returning an empty Set for a manifest this cannot resolve would disable the guard
+ * silently, which is the fail-open-in-silence shape this repository has been bitten by repeatedly.
  *
- * Only whole-directory entries count. `files[]` also carries individual paths such as
- * `_bmad/bme/covenant/covenant-operator.md`; those ship a FILE, not a module, and the regex's single
- * trailing segment excludes them. (`covenant/` carries no `config.yaml`, so it never reached the
- * guarded set either way — but the distinction is the point, not the current data.)
+ * PARSING IS DELEGATED, NOT REIMPLEMENTED. `scripts/audit/lib/installed-tree.js::shippedBmeModules`
+ * already extracts module names from this array and was hardened over three review rounds against
+ * exactly the failure this function first shipped with: a glob is npm-legal in `files[]`, the first
+ * fix SKIPPED it, and that silently shrank the set. Its own comment records that Round 2 and both
+ * Round 3 layers reproduced a run exiting 0 having never looked at the globbed module. T227's R1
+ * review found this function had reproduced that skip twenty lines from where the lesson is written
+ * out — and found the two parsers of the same array DISAGREEING on a whitespace-padded entry,
+ * because that one trims and this one did not. Calling it makes them agree by construction.
+ *
+ * `refresh-installation.js` already requires from `../../audit/` (see the `renderCsv` call below), so
+ * the direction is established; `installed-tree.js` requires nothing from `update/`, so there is no
+ * cycle.
+ *
+ * UNRESOLVABLE IS UNKNOWABLE. Three entry shapes ship a module without naming it: a glob
+ * (`_bmad/bme/*`), an ancestor (`_bmad/` or `_bmad/bme/` — and this package already ships `scripts/`
+ * that way, so collapsing the five per-module lines into one is a plausible edit), and a path INSIDE a
+ * module (`_bmad/bme/_x/agents`), which ships part of it but says nothing about its `config.yaml`.
+ * Any of them returns `null` and the guard stays wide.
  */
 function shippedBmeDirs(packageRoot) {
   let declared;
   try {
     declared = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8')).files;
   } catch {
+    // Absent or malformed. In practice unreachable from `refreshInstallation`, which parses this same
+    // file via `getPackageVersion()` before reaching the guard loop and throws there first — so a
+    // malformed manifest is already a broken build rather than an unknowable one. Kept because this
+    // function is exported and a future caller need not have done that.
     return null;
   }
   if (!Array.isArray(declared)) return null;
-  const names = new Set();
-  for (const entry of declared) {
-    const match = /^_bmad\/bme\/([^/]+)\/?$/.exec(entry);
-    if (match) names.add(match[1]);
-  }
-  return names;
-}
 
+  const { shippedBmeModules } = require('../../audit/lib/installed-tree');
+  const resolved = shippedBmeModules(declared);
+  if (resolved.unresolvable.length > 0) return null;
+
+  // An entry can ship a module's `config.yaml` without ever naming the module. Those cases are
+  // UNKNOWABLE, not absent, because narrowing on them is the data-loss direction. Each entry is
+  // normalised first — trimmed, leading `./` stripped, trailing slashes stripped — so one spelling of
+  // a path cannot resolve while another vanishes. R1 found exactly that divergence between this
+  // function and `shippedBmeModules`, which trims and did not.
+  const bmeDir = path.join(packageRoot, '_bmad', 'bme');
+  for (const entry of declared) {
+    if (typeof entry !== 'string') continue;
+    const norm = entry.trim().replace(/^\.\//, '').replace(/\/+$/, '');
+
+    // An ancestor of the module directories ships all of them and names none. This package already
+    // ships `scripts/` that way, so collapsing the per-module lines into one is a plausible edit.
+    if (norm === '_bmad' || norm === '_bmad/bme') return null;
+
+    const inside = /^_bmad\/bme\/([^/]+)(?:\/(.+))?$/.exec(norm);
+    if (!inside) continue; // not under `_bmad/bme/` at all — e.g. `_bmad/_config/skill-manifest.csv`
+    const [, name, deeper] = inside;
+
+    // A directory with no `config.yaml` is not a module, so a path inside it is irrelevant here —
+    // `_bmad/bme/covenant/covenant-operator.md` ships a file, not a module, and this package has
+    // carried that entry all along.
+    if (!fs.existsSync(path.join(bmeDir, name, 'config.yaml'))) continue;
+
+    // A real module named whole is the resolvable case; `shippedBmeModules` already collected it.
+    // Anything deeper ships PART of the module and says nothing about its `config.yaml`.
+    if (deeper) return null;
+    if (!resolved.includes(name)) return null; // a spelling the delegated parser could not read
+  }
+  return new Set(resolved);
+}
 /**
  * Refresh all installation files from the package to the project.
  *

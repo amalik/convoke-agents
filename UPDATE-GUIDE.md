@@ -254,12 +254,16 @@ Two caveats, both open and both narrower than the old defect:
 - **The refusal half only.** `_enhance`, `_artifacts` and `_portability` configs are still rewritten from
   the package template on every run, because `mergeConfig` carries profiles for `_vortex` and `_gyre`
   alone. A readable config there is not preserved — that is `T221`.
-- **The set is one directory wider than what ships.** It is computed from `_bmad/bme/*` directories
-  carrying a `config.yaml`, not from `package.json` `files[]`, and `_team-factory` stopped shipping in
-  `tfu-1-1` while staying tracked in git. It therefore still appears above. Harmless for a project that
-  never had it; for one carrying an orphaned copy, a damaged `_team-factory/config.yaml` refuses every
-  install and update with a message naming a module the package no longer contains. That is `T227`, and
-  `T222` covers retiring the orphan itself.
+- **The set is exactly what ships.** `T227` closed 2026-10-01: it is computed from `_bmad/bme/*`
+  directories that carry a `config.yaml` **and** are declared in `package.json` `files[]`, which is
+  what this section's own command prints. Before that fix the set was derived from directories alone,
+  so `_team-factory` — un-shipped in `tfu-1-1` but still tracked in git — remained in it, and a project
+  carrying an orphaned damaged `_team-factory/config.yaml` had every install and update refused by a
+  message naming a module the package no longer contains. That can no longer happen. Where `files[]`
+  cannot be resolved to module names (a glob, or an ancestor entry like `_bmad/bme/`), the guard stays
+  **wide** rather than narrowing — guarding too much costs a refusal, guarding too little costs the
+  operator's data. **`T222` still covers retiring the orphan itself**, which this did not do: a
+  `convoke-doctor` version-consistency failure naming `_team-factory` persists until it lands.
 
 Where you see this message depends on the command and on which file is
 damaged; the table below has every case, because they differ:
@@ -317,7 +321,8 @@ reached. Until it is fixed, treat a `Could not read config.yaml` warning followe
 repair the file as below. The row above it described a second defect, `T181` — those configs were never
 checked, so there was no refusal to reach and no plan to decline. `T181` has since shipped: they are
 checked now, and an unreadable one refuses like Gyre's. What remains for them is `T221` (a readable config
-is still overwritten from template) and, for an orphaned `_team-factory`, `T227`.
+is still overwritten from template). `T227` — the guard covering a module that no longer ships — closed
+2026-10-01.
 
 **Reinstalling will not clear this, and that is deliberate** — `convoke-install` runs the same
 check. Repair the file itself:

@@ -3423,8 +3423,34 @@ from its literal floor, and the *"one refusal at a time"* case was retargeted fr
 `_portability` — otherwise it would have passed because the module was skipped entirely rather than ordered
 second, which is a different assertion wearing the same name.
 
+**The row offered TWO candidates and said neither was ruled; (a) was taken without one.** The row's own
+words were *"gate `guardedModuleNames` on `files[]` … or let `T222`'s migration remove the orphan and accept
+that an un-migrated project stays blocked. The first is narrower and makes the commit message true."* That is
+an argument, not a ruling, and no operator ruling exists. The basis for proceeding was the action item
+recorded one commit earlier in `sprint-status.yaml` (`5e14dba7`), which already named the `files[]` gating.
+R1's acceptance layer judged it within remit for a Fast Lane row because it is narrow, reversible,
+test-pinned and does **not** foreclose (b) — `T222` is untouched and still needed. Recorded here so a future
+reader of §2.5 can see a ruling was skipped rather than discovering it.
+
+**Round 1 (2026-10-01, two blind layers) found two HIGH, both real.** Defect · fix · command:
+
+| Defect | Fix | Re-derive |
+|---|---|---|
+| The new `files[]` parser matched only `_bmad/bme/<name>/` and DROPPED everything else as absent rather than unknowable, so a glob, an ancestor entry, a deep path, a leading `./` or a padded entry silently narrowed the guard to `[]` — `T181`'s data loss, in the direction the code comment said must never be silent. This package already ships `scripts/` as a recursive entry, so collapsing the per-module lines is a plausible edit | **delegated** to `installed-tree.js::shippedBmeModules`, hardened over three review rounds against this exact class, plus an explicit ambiguity test. Two attempts at this parser had failed; the third already worked | the nine-form table in `tests/unit/refresh-installation-config-guard.test.js` → every ambiguous form keeps the guard wide |
+| Three now-false sentences left in two SHIPPED files (`UPDATE-GUIDE.md` ×2, `CHANGELOG.md`), one of them contradicted by a command printed eight lines above it, plus no `[Unreleased]` entry for the fix | corrected; entry added | `git grep -n 'T227'` |
+
+**The aggravating fact, recorded because it is the point.** `closing-a-row-greps-for-its-own-citations` was
+added to `project-context.md` in the **immediately preceding commit** (`5e14dba7`, `HEAD~1`) as this arc's
+headline lesson, and its sibling `search-the-shipped-set-not-the-tree` names `UPDATE-GUIDE.md` among the
+files "easy to forget". The rule was written one commit before the commit that broke it.
+
+**Also from R1, corrected:** the `options.shippedDirs` seam was dead code whose comment credited a test that
+did not exist, and which could not express the `null` branch it sat beside — deleted rather than rewritten.
+`T226`'s reachable surface, `T230`'s hand-counted tally and `T221`'s scope were all stale by this change and
+are annotated in their rows.
+
 **`T222` is unaffected and still needed.** This stops an orphan from *blocking* updates; it does not remove
-the orphan, so `convoke-doctor` still reports version inconsistency for every project that installed ≤ 4.0.3.
+the orphan, so `convoke-doctor` still reports version inconsistency for every project installed between **3.2.0** — when `_bmad/bme/_team-factory/` entered `files[]` (`32af3b70`) — and **4.0.3**. Not every project ≤ 4.0.3: one installed at 3.1.0 and never updated has no orphan.
 
 **Fourth instance of `T230` in one arc.** The fix added ~45 lines to `refresh-installation.js` and broke all
 seven line citations in `scripts/audit/lib/installed-tree.js`. Re-derived mechanically — match each

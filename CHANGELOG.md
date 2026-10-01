@@ -29,11 +29,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   **If you already installed it,** `_bmad/bme/_team-factory/` stays in your project — nothing removes it,
   because the removal loop was itself driven by the roster. `convoke-doctor` will report a version-consistency
-  failure naming `_team-factory` indefinitely. Retiring that orphan is tracked as `T222`; a damaged orphaned
-  config can additionally refuse installs and updates, tracked as `T227`. Deleting the directory by hand is
-  safe in the meantime.
+  failure naming `_team-factory` indefinitely. Retiring that orphan is tracked as `T222`. Deleting the
+  directory by hand is safe in the meantime.
 
 ### Fixed
+
+- **The module-config guard no longer covers a module that does not ship (`T227`).**
+  `guardedModuleNames` derived its set from `_bmad/bme/*` directories carrying a `config.yaml` and never
+  read `package.json` `files[]`, though that was the stated contract. Once the Team Factory was
+  un-shipped — out of `files[]`, kept in git — the guard still covered it, so a project holding an
+  orphaned **damaged** `_team-factory/config.yaml` had every `convoke-update` and `convoke-install`
+  refused, naming a module the package no longer contains. Only projects installed between **3.2.0**
+  (when the module entered `files[]`) and **4.0.3** can hold such an orphan. Where `files[]` cannot be
+  resolved to module names — a glob, or an ancestor entry such as `_bmad/bme/` — the guard now stays
+  **wide**: guarding too much costs a refusal, guarding too little costs the operator's config.
 
 - **`csv-utils` moved to `scripts/lib/`.** It was inside the Team Factory module while being required by
   `scripts/audit/audit-bmm-dependencies.js` — the target of the shipped `convoke-audit-bmm-deps` bin — at the
