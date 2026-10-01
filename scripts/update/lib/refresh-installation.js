@@ -52,9 +52,53 @@ function guardedModuleNames(packageRoot, options = {}) {
         .readdirSync(dir, { withFileTypes: true })
         .filter((e) => e.isDirectory())
         .map((e) => e.name));
+  // T227: and it must ALSO be shipped. T181's commit message stated the contract as "a module is
+  // covered if it ships a template and its directory is in `files[]`", but nothing read `files[]`.
+  // The two agreed only while every config-carrying `_bmad/bme/*` directory was also packaged, and
+  // `tfu-1-1` broke that by dropping `_bmad/bme/_team-factory/` from `files[]` while deliberately
+  // keeping the tree tracked in git. The guard then covered a module that can never arrive, so a
+  // project holding an ORPHANED damaged `_team-factory/config.yaml` had every `convoke-update` and
+  // `convoke-install` refused, naming a module the package no longer contains — unactionable,
+  // because nothing will ever replace an orphaned file.
+  const shipped = options.shippedDirs || shippedBmeDirs(packageRoot);
   return listDirs(packageBme)
     .filter((name) => fs.existsSync(path.join(packageBme, name, 'config.yaml')))
+    // `shipped === null` means the manifest could not be read. The guard then stays WIDE, and the
+    // direction is deliberate: T181's defect was an operator's config silently overwritten (data
+    // loss), T227's is a blocked update (recoverable). A missing manifest must not quietly
+    // reintroduce the worse one. `shippedDirs` is injectable so a test can prove this filter is
+    // consulted at all — the same reason `listDirs` is.
+    .filter((name) => shipped === null || shipped.has(name))
     .sort();
+}
+
+/**
+ * The `_bmad/bme/<name>/` directories this package declares in `package.json` `files[]`, or `null`
+ * when that cannot be determined.
+ *
+ * `null` is not "none": it is "unknowable", and `guardedModuleNames` treats the two differently on
+ * purpose. Returning an empty Set for an unreadable manifest would disable the guard silently, which
+ * is the fail-open-in-silence shape this repository has been bitten by repeatedly.
+ *
+ * Only whole-directory entries count. `files[]` also carries individual paths such as
+ * `_bmad/bme/covenant/covenant-operator.md`; those ship a FILE, not a module, and the regex's single
+ * trailing segment excludes them. (`covenant/` carries no `config.yaml`, so it never reached the
+ * guarded set either way — but the distinction is the point, not the current data.)
+ */
+function shippedBmeDirs(packageRoot) {
+  let declared;
+  try {
+    declared = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8')).files;
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(declared)) return null;
+  const names = new Set();
+  for (const entry of declared) {
+    const match = /^_bmad\/bme\/([^/]+)\/?$/.exec(entry);
+    if (match) names.add(match[1]);
+  }
+  return names;
 }
 
 /**
@@ -1436,6 +1480,7 @@ const STAMPABLE_MODULES = Object.freeze([
 
 module.exports = {
   guardedModuleNames,
+  shippedBmeDirs,
   refreshInstallation,
   cleanupOrphanWorkflowWrappers,
   manifestRowSeeds,

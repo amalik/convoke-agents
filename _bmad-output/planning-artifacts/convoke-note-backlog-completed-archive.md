@@ -3385,3 +3385,48 @@ const {validCountsFor,registryHeader}=require('./scripts/docs-audit.js');
 console.log([...validCountsFor(r,'AGENTS')].sort((a,b)=>a-b).join(','), '|', registryHeader(r))"
 ```
 
+---
+
+## T227
+
+**Closed 2026-10-01 (story-less Fast Lane row).** `guardedModuleNames` now gates on `package.json`
+`files[]`, so the guarded-config set equals the shipped set:
+
+```bash
+node -e "const m=require('./scripts/update/lib/refresh-installation.js');
+console.log(m.guardedModuleNames(process.cwd()).join(', '));
+console.log([...m.shippedBmeDirs(process.cwd())].sort().join(', '))"
+# both lines: _artifacts, _enhance, _gyre, _portability, _vortex
+```
+
+Before the fix the first line also contained `_team-factory`, a module `tfu-1-1` removed from `files[]`
+while keeping the tree tracked in git. `T181`'s commit message had always *stated* the contract as *"a
+module is covered if it ships a template and its directory is in `files[]`"*; nothing read `files[]`, and the
+two agreed only by coincidence until `tfu-1-1` broke it.
+
+**The direction of the new `null` is the design decision, and it is asserted rather than assumed.**
+`shippedBmeDirs` returns `null` — not an empty Set — when the manifest cannot be read, and
+`guardedModuleNames` then keeps the guard **wide**. `T181`'s defect was an operator's config silently
+overwritten (data loss); `T227`'s was a blocked update (recoverable). A missing manifest must not quietly
+reintroduce the worse one. A test named for that property pins it.
+
+**Mutant → test.** Stripping the `files[]` filter is killed by *"T227: a config-carrying directory that does
+NOT ship is not guarded"* (unit) **and** *"T227: a damaged config for an UNSHIPPED module does not block the
+refresh"* (operator-facing, through `refreshInstallation`). Making an unreadable manifest narrow instead of
+wide is killed by *"T227: with no package.json, the guard stays WIDE rather than silently narrowing"* **and
+two pre-existing cases** — so that test is **not** the sole executioner; it earns its place by naming the
+property the others fail on incidentally. Recorded as redundant rather than given a manufactured unique
+mutant.
+
+**Contract change recorded in the test file, not silently.** `PREVIOUSLY_UNGUARDED` dropped `_team-factory`
+from its literal floor, and the *"one refusal at a time"* case was retargeted from `_team-factory` to
+`_portability` — otherwise it would have passed because the module was skipped entirely rather than ordered
+second, which is a different assertion wearing the same name.
+
+**`T222` is unaffected and still needed.** This stops an orphan from *blocking* updates; it does not remove
+the orphan, so `convoke-doctor` still reports version inconsistency for every project that installed ≤ 4.0.3.
+
+**Fourth instance of `T230` in one arc.** The fix added ~45 lines to `refresh-installation.js` and broke all
+seven line citations in `scripts/audit/lib/installed-tree.js`. Re-derived mechanically — match each
+citation's exact content at `HEAD`, then find that line in the working tree — never by arithmetic.
+

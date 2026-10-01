@@ -1163,7 +1163,7 @@ action_items:
   - epic: "tfu-epic-1"
     action: "T227 — gate guardedModuleNames on files[] so it matches T181's own commit message. Close BEFORE any release: an orphaned damaged _team-factory/config.yaml refuses every install and update, unactionably"
     owner: "dev agent"
-    status: open
+    status: done
   - epic: "tfu-epic-1"
     action: "T222 — retire the orphan _bmad/bme/_team-factory/ from projects that already installed it. Needs a dev-tree guard: migrations receive only projectRoot and the contract has none"
     owner: "dev agent"

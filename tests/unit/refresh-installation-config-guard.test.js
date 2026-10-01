@@ -38,9 +38,16 @@ const { readExcludedAgents } = require('../../scripts/update/lib/config-merger')
 const { AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
 const { PACKAGE_ROOT, createValidInstallation, silenceConsole, restoreConsole } = require('../helpers');
 
-/** Unguarded before T181. Pinned as a LITERAL: deriving it the way the code does would agree with
- *  the code even if the code stopped guarding a module. This is the floor. */
-const PREVIOUSLY_UNGUARDED = ['_artifacts', '_enhance', '_portability', '_team-factory'];
+/** Unguarded before T181, and still SHIPPED. Pinned as a LITERAL: deriving it the way the code does
+ *  would agree with the code even if the code stopped guarding a module. This is the floor.
+ *
+ *  `_team-factory` was a fifth entry until T227. It is no longer guarded — not because the guard
+ *  regressed, but because the module stopped shipping in `tfu-1-1` and the guard now follows
+ *  `files[]`, which is what T181's own commit message always claimed it did. Its removal from this
+ *  list is therefore a contract change, and the case below named `T227` is what pins the new one.
+ *  If a module is ever added back to `files[]`, add it here too — this list is the floor, not the
+ *  derivation. */
+const PREVIOUSLY_UNGUARDED = ['_artifacts', '_enhance', '_portability'];
 
 /** Guarded before T181 by the two `readExcludedAgents` wrappers. These two cases are REGRESSION
  *  COVER for that older guard, not coverage of the T181 loop — deleting the loop leaves them
@@ -77,8 +84,13 @@ function sentinelPaths(tmpDir) {
 
 /** A package root this test owns, holding two config-bearing modules and two things that must be
  *  excluded: a directory with no config, and a bare `config.yaml` FILE beside the directories. */
-async function syntheticPackageRoot() {
+async function syntheticPackageRoot(opts = {}) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-t181-pkg-'));
+  // T227: a package.json is written only when the case is ABOUT files[]. Omitting it is the
+  // "unknowable" branch, which must keep the guard wide.
+  if (opts.files) {
+    await fs.writeFile(path.join(root, 'package.json'), JSON.stringify({ files: opts.files }), 'utf8');
+  }
   const bme = path.join(root, '_bmad', 'bme');
   for (const name of ['_zz-fixture', '_aa-fixture']) {
     await fs.ensureDir(path.join(bme, name));
@@ -144,6 +156,39 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
     }
   });
 
+  it('T227: a config-carrying directory that does NOT ship is not guarded', async () => {
+    // The defect: this function's contract — stated in T181's own commit message — is that "a module is
+    // covered if it ships a template AND its directory is in files[]". It never read files[]. The two
+    // agreed only while every _bmad/bme/* directory with a config was also shipped, and tfu-1-1 broke
+    // that: it dropped _bmad/bme/_team-factory/ from files[] while deliberately keeping the tree in git.
+    //
+    // Consequence if unguarded-by-files[] is wrong: a project carrying an ORPHANED, damaged
+    // _team-factory/config.yaml has EVERY convoke-update and convoke-install refused, naming a module
+    // the package no longer contains. Nothing can clear it, because nothing will ever replace an
+    // orphaned file.
+    const pkg = await syntheticPackageRoot({
+      files: ['_bmad/bme/_aa-fixture/'],
+    });
+    try {
+      // _zz-fixture carries a config.yaml and is NOT in files[]. It must not be guarded.
+      assert.deepEqual(guardedModuleNames(pkg), ['_aa-fixture']);
+    } finally {
+      await fs.remove(pkg);
+    }
+  });
+
+  it('T227: with no package.json, the guard stays WIDE rather than silently narrowing', async () => {
+    // Direction matters and is asserted, not assumed. files[] unknowable must fail toward GUARDING:
+    // T181's defect was an operator's config silently overwritten (data loss); T227's is a blocked
+    // update (recoverable). Narrowing on a missing manifest would reintroduce the worse one quietly.
+    const pkg = await syntheticPackageRoot();
+    try {
+      assert.deepEqual(guardedModuleNames(pkg), ['_aa-fixture', '_zz-fixture']);
+    } finally {
+      await fs.remove(pkg);
+    }
+  });
+
   it('the derived set honours the injected lister, and sorts what it returns', async () => {
     const pkg = await syntheticPackageRoot();
     try {
@@ -161,6 +206,14 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
     }
   });
 
+  it('T227: a damaged config for an UNSHIPPED module does not block the refresh', async () => {
+    // The operator-facing half. `guardedModuleNames` excluding it is necessary but not sufficient —
+    // what matters is that `refreshInstallation` completes. An orphaned `_team-factory/` is exactly
+    // the state every project that installed <= 4.0.3 is left in (T222), so this is not hypothetical.
+    await writeModuleConfig(tmpDir, '_team-factory', DAMAGED_CONFIG);
+    await assert.doesNotReject(() => refreshInstallation(tmpDir, { verbose: false }));
+  });
+
   it('guards the PACKAGE\'s modules, not the project\'s — an operator-authored config is untouched', async () => {
     // `guardedModuleNames(projectRoot)` passes every other case in this file, and would refuse an
     // update because of a config the refresh never writes: a false refusal blocking every update.
@@ -169,14 +222,17 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
   });
 
   it('names exactly one module, the first in sorted order, when several are damaged', async () => {
-    const other = await writeModuleConfig(tmpDir, '_team-factory', DAMAGED_CONFIG);
+    // `_portability` sorts AFTER `_artifacts`, which is the whole point: the refusal must name the
+    // first in sorted order. This was `_team-factory` until T227 unguarded it, at which point the
+    // case would have passed because the module was skipped entirely rather than ordered second.
+    const other = await writeModuleConfig(tmpDir, '_portability', DAMAGED_CONFIG);
     await writeModuleConfig(tmpDir, '_artifacts', DAMAGED_CONFIG);
 
     await assert.rejects(
       () => refreshInstallation(tmpDir, { verbose: false }),
       (err) => {
         assert.match(err.message, /_artifacts[/\\]config\.yaml/);
-        assert.doesNotMatch(err.message, /_team-factory/, 'one refusal at a time — a combined message is a different contract');
+        assert.doesNotMatch(err.message, /_portability/, 'one refusal at a time — a combined message is a different contract');
         return true;
       }
     );
