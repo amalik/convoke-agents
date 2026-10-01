@@ -35,14 +35,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **The module-config guard no longer covers a module that does not ship (`T227`).**
-  `guardedModuleNames` derived its set from `_bmad/bme/*` directories carrying a `config.yaml` and never
-  read `package.json` `files[]`, though that was the stated contract. Once the Team Factory was
-  un-shipped — out of `files[]`, kept in git — the guard still covered it, so a project holding an
-  orphaned **damaged** `_team-factory/config.yaml` had every `convoke-update` and `convoke-install`
-  refused, naming a module the package no longer contains. Only projects installed between **3.2.0**
-  (when the module entered `files[]`) and **4.0.3** can hold such an orphan. Where `files[]` cannot be
-  resolved to module names — a glob, or an ancestor entry such as `_bmad/bme/` — the guard now stays
-  **wide**: guarding too much costs a refusal, guarding too little costs the operator's config.
+  `guardedModuleNames` derived its set from `_bmad/bme/*` directories carrying a `config.yaml`. Once the
+  Team Factory was un-shipped — out of `files[]`, kept in git — a dev tree still covered it, so a project
+  holding an orphaned **damaged** `_team-factory/config.yaml` could have every `convoke-update` and
+  `convoke-install` refused, naming a module the package no longer contains. Only projects installed
+  between **3.2.0** (when the module entered `files[]`) and **4.0.3** can hold such an orphan.
+
+  The guard now names the five modules whose config the refresh **writes** — `_artifacts`, `_enhance`,
+  `_gyre`, `_portability`, `_vortex` — rather than deriving them. An intermediate fix read
+  `package.json` `files[]` and was withdrawn before release: review measured that a leading `/`, a
+  doubled `//`, a case difference, a `./` prefix or an empty string each left npm shipping the module
+  while the parser dropped it, silently disabling the guard and reintroducing the config overwrite of
+  `T181`. On an extracted tarball, removing `files[]` altogether changed the result not at all — the
+  installed package tree is already the shipped set — so the parser could only subtract from a correct
+  answer. The list is held honest by a test that runs a real refresh and asserts it equals the set of
+  configs that changed.
 
 - **`csv-utils` moved to `scripts/lib/`.** It was inside the Team Factory module while being required by
   `scripts/audit/audit-bmm-dependencies.js` — the target of the shipped `convoke-audit-bmm-deps` bin — at the

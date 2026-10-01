@@ -25,131 +25,47 @@ const {
  */
 
 /**
- * The `_bmad/bme/<module>/` names that ship a `config.yaml` template, sorted.
+ * The `_bmad/bme/<module>/` configs this refresh WRITES, sorted.
  *
- * Read from the package tree so a new module is covered on arrival rather than when someone
- * remembers a list. Sorted because the order decides WHICH damaged config an operator is told
- * about first, and `fs.readdirSync` order is unspecified in Node — see
- * `tests/unit/refresh-installation-config-guard.test.js`, which pins the sort directly. Exported
- * for that test because the ORDER is not observable through `refreshInstallation` — set membership
- * for the modules that exist today is (deleting the guard loop reddens seven tests), but the sort
- * and the treatment of a module that does not exist yet are not.
+ * A literal, and the reason is measured rather than preferred. Two earlier derivations were tried
+ * and both were wrong in the data-loss direction:
  *
- * @param {string} packageRoot
- * @returns {string[]} module directory names, lexically sorted
+ *   1. `readdirSync` of the package tree, filtered to directories carrying a `config.yaml`. Correct
+ *      on every real install — the installed package tree IS the shipped set — but in a dev tree it
+ *      covers `_team-factory`, whose source stays tracked in git while `tfu-1-1` stopped shipping it
+ *      and deleted its copy loop. The guard then refuses over a config nothing would have written.
+ *      That was `T227`.
+ *   2. The same, intersected with `package.json` `files[]`. `T227`'s fix, and worse: `files[]` is a
+ *      declaration whose glob semantics have now defeated five hand-written parsers in this
+ *      repository (`deferred-work.md` records the first four; T227's Round 2 measured the fifth).
+ *      A leading `/`, a `//`, a case difference, a `./` or an empty string each left npm shipping
+ *      the module while the parser dropped it — reintroducing `T181`'s silent overwrite. Measured on
+ *      an extracted tarball, deleting `files[]` outright changed the result not at all, so the
+ *      parser could only ever subtract from a correct answer.
+ *
+ * So the question "which modules ship" was the wrong one. The guard exists to refuse an unreadable
+ * config rather than overwrite it, which makes the only relevant question "which configs does this
+ * function WRITE" — and that is not knowable from any manifest. It is a property of the code below,
+ * where five modules have a config write site and nothing else does.
+ *
+ * NOT DERIVED, THEREFORE PINNED BEHAVIOURALLY. A literal rots when someone adds a module and
+ * forgets. `tests/unit/refresh-installation-config-guard.test.js` seeds a readable sentinel config
+ * for every config-bearing module in the package tree, runs one real refresh, and asserts that the
+ * set whose config CHANGED equals this list exactly. A new copy loop without an entry here reddens;
+ * an entry here without a copy loop reddens. Neither direction depends on reading a manifest.
+ *
+ * Sorted because the order decides WHICH damaged config an operator is told about first, and the
+ * refusal names only the first. A test asserts both the sortedness and that behaviour.
  */
-function guardedModuleNames(packageRoot, options = {}) {
-  const packageBme = path.join(packageRoot, '_bmad', 'bme');
-  if (!fs.existsSync(packageBme)) return [];
-  // `listDirs` is injectable because the sort below is otherwise unfalsifiable: `readdirSync`
-  // happens to return lexical order on APFS, so an assertion that the result is sorted passes
-  // whether or not the sort is there. The test drives a reverse-ordered lister instead
-  // (`fixture-determinism`: control the input rather than widen the tolerance).
-  const listDirs =
-    options.listDirs ||
-    ((dir) =>
-      fs
-        .readdirSync(dir, { withFileTypes: true })
-        .filter((e) => e.isDirectory())
-        .map((e) => e.name));
-  // T227: and it must ALSO be shipped. T181's commit message stated the contract as "a module is
-  // covered if it ships a template and its directory is in `files[]`", but nothing read `files[]`.
-  // The two agreed only while every config-carrying `_bmad/bme/*` directory was also packaged, and
-  // `tfu-1-1` broke that by dropping `_bmad/bme/_team-factory/` from `files[]` while deliberately
-  // keeping the tree tracked in git. The guard then covered a module that can never arrive, so a
-  // project holding an ORPHANED damaged `_team-factory/config.yaml` had every `convoke-update` and
-  // `convoke-install` refused, naming a module the package no longer contains — unactionable,
-  // because nothing will ever replace an orphaned file.
-  // No injection seam here, deliberately. An earlier version had `options.shippedDirs ||` with a
-  // comment claiming a test could use it to prove this filter is consulted — no test ever did, and
-  // because the operator is `||` a caller could not inject `null` to reach the unknowable branch
-  // anyway. The branch is driven by omitting `package.json` from the fixture instead, which is what
-  // the tests do. Round 1 of T227 found the comment credited an apparatus that did not exist.
-  const shipped = shippedBmeDirs(packageRoot);
-  return listDirs(packageBme)
-    .filter((name) => fs.existsSync(path.join(packageBme, name, 'config.yaml')))
-    // `shipped === null` means the manifest could not be read. The guard then stays WIDE, and the
-    // direction is deliberate: T181's defect was an operator's config silently overwritten (data
-    // loss), T227's is a blocked update (recoverable). A missing manifest must not quietly
-    // reintroduce the worse one.
-    .filter((name) => shipped === null || shipped.has(name))
-    .sort();
-}
+const GUARDED_MODULE_NAMES = Object.freeze(['_artifacts', '_enhance', '_gyre', '_portability', '_vortex']);
 
 /**
- * The `_bmad/bme/<name>/` directories this package declares in `package.json` `files[]`, or `null`
- * when that cannot be determined.
- *
- * `null` is not "none": it is "unknowable", and `guardedModuleNames` treats the two differently on
- * purpose. Returning an empty Set for a manifest this cannot resolve would disable the guard
- * silently, which is the fail-open-in-silence shape this repository has been bitten by repeatedly.
- *
- * PARSING IS DELEGATED, NOT REIMPLEMENTED. `scripts/audit/lib/installed-tree.js::shippedBmeModules`
- * already extracts module names from this array and was hardened over three review rounds against
- * exactly the failure this function first shipped with: a glob is npm-legal in `files[]`, the first
- * fix SKIPPED it, and that silently shrank the set. Its own comment records that Round 2 and both
- * Round 3 layers reproduced a run exiting 0 having never looked at the globbed module. T227's R1
- * review found this function had reproduced that skip twenty lines from where the lesson is written
- * out — and found the two parsers of the same array DISAGREEING on a whitespace-padded entry,
- * because that one trims and this one did not. Calling it makes them agree by construction.
- *
- * `refresh-installation.js` already requires from `../../audit/` (see the `renderCsv` call below), so
- * the direction is established; `installed-tree.js` requires nothing from `update/`, so there is no
- * cycle.
- *
- * UNRESOLVABLE IS UNKNOWABLE. Three entry shapes ship a module without naming it: a glob
- * (`_bmad/bme/*`), an ancestor (`_bmad/` or `_bmad/bme/` — and this package already ships `scripts/`
- * that way, so collapsing the five per-module lines into one is a plausible edit), and a path INSIDE a
- * module (`_bmad/bme/_x/agents`), which ships part of it but says nothing about its `config.yaml`.
- * Any of them returns `null` and the guard stays wide.
+ * @returns {string[]} a fresh copy of {@link GUARDED_MODULE_NAMES}
  */
-function shippedBmeDirs(packageRoot) {
-  let declared;
-  try {
-    declared = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8')).files;
-  } catch {
-    // Absent or malformed. In practice unreachable from `refreshInstallation`, which parses this same
-    // file via `getPackageVersion()` before reaching the guard loop and throws there first — so a
-    // malformed manifest is already a broken build rather than an unknowable one. Kept because this
-    // function is exported and a future caller need not have done that.
-    return null;
-  }
-  if (!Array.isArray(declared)) return null;
-
-  const { shippedBmeModules } = require('../../audit/lib/installed-tree');
-  const resolved = shippedBmeModules(declared);
-  if (resolved.unresolvable.length > 0) return null;
-
-  // An entry can ship a module's `config.yaml` without ever naming the module. Those cases are
-  // UNKNOWABLE, not absent, because narrowing on them is the data-loss direction. Each entry is
-  // normalised first — trimmed, leading `./` stripped, trailing slashes stripped — so one spelling of
-  // a path cannot resolve while another vanishes. R1 found exactly that divergence between this
-  // function and `shippedBmeModules`, which trims and did not.
-  const bmeDir = path.join(packageRoot, '_bmad', 'bme');
-  for (const entry of declared) {
-    if (typeof entry !== 'string') continue;
-    const norm = entry.trim().replace(/^\.\//, '').replace(/\/+$/, '');
-
-    // An ancestor of the module directories ships all of them and names none. This package already
-    // ships `scripts/` that way, so collapsing the per-module lines into one is a plausible edit.
-    if (norm === '_bmad' || norm === '_bmad/bme') return null;
-
-    const inside = /^_bmad\/bme\/([^/]+)(?:\/(.+))?$/.exec(norm);
-    if (!inside) continue; // not under `_bmad/bme/` at all — e.g. `_bmad/_config/skill-manifest.csv`
-    const [, name, deeper] = inside;
-
-    // A directory with no `config.yaml` is not a module, so a path inside it is irrelevant here —
-    // `_bmad/bme/covenant/covenant-operator.md` ships a file, not a module, and this package has
-    // carried that entry all along.
-    if (!fs.existsSync(path.join(bmeDir, name, 'config.yaml'))) continue;
-
-    // A real module named whole is the resolvable case; `shippedBmeModules` already collected it.
-    // Anything deeper ships PART of the module and says nothing about its `config.yaml`.
-    if (deeper) return null;
-    if (!resolved.includes(name)) return null; // a spelling the delegated parser could not read
-  }
-  return new Set(resolved);
+function guardedModuleNames() {
+  return [...GUARDED_MODULE_NAMES];
 }
+
 /**
  * Refresh all installation files from the package to the project.
  *
@@ -181,10 +97,10 @@ async function refreshInstallation(projectRoot, options = {}) {
   // `acDoc` and `pcDoc` are all read from the DESTINATION path, so they see the package's own
   // template and cannot fail on operator data.
   //
-  // The set is read from the package tree rather than named here. That covers a seventh module
-  // only if it ships a `config.yaml` TEMPLATE and its directory is listed in `package.json`
-  // `files[]`; a module whose config the operator creates is not covered, and the 2b1 block
-  // would still remove-and-copy over it.
+  // The set is NAMED in `GUARDED_MODULE_NAMES`, not derived. Two derivations were tried and both
+  // narrowed the guard in the data-loss direction; the reasoning is recorded at that constant. A
+  // module added below without an entry there reddens the behavioural probe in
+  // `tests/unit/refresh-installation-config-guard.test.js`.
   //
   // A path with no file on it is skipped: the `readConfigDocument` helper behind it returns null before
   // reading, which is what keeps a fresh install silent.
@@ -193,11 +109,12 @@ async function refreshInstallation(projectRoot, options = {}) {
   // the module copies are skipped, so this refuses a refresh that would not have written; the
   // message still names the file and the parser error, which is the actionable part.
   //
-  // This refuses an UNREADABLE config. It does not preserve a readable one: these four are
-  // rewritten from the package template on every run, because `configMerger.mergeConfig` carries
-  // profiles for `_vortex` and `_gyre` alone and throws when named any other submodule. That
-  // half is T221.
-  for (const moduleName of guardedModuleNames(packageRoot)) {
+  // This refuses an UNREADABLE config. It does not preserve a readable one, and the split is
+  // three to two: `_enhance`, `_artifacts` and `_portability` are replaced wholesale by
+  // `fs.copy(..., { overwrite: true })` and then version-stamped, so operator values are lost;
+  // `_vortex` and `_gyre` go through `configMerger.mergeConfig`, which has profiles for those two
+  // alone and throws when named any other submodule. The overwriting half is T221.
+  for (const moduleName of guardedModuleNames()) {
     configMerger.assertConfigReadable(path.join(projectRoot, '_bmad', 'bme', moduleName, 'config.yaml'));
   }
 
@@ -1529,7 +1446,6 @@ const STAMPABLE_MODULES = Object.freeze([
 
 module.exports = {
   guardedModuleNames,
-  shippedBmeDirs,
   refreshInstallation,
   cleanupOrphanWorkflowWrappers,
   manifestRowSeeds,

@@ -29,6 +29,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
+const yaml = require('js-yaml');
 
 const {
   refreshInstallation,
@@ -82,23 +83,41 @@ function sentinelPaths(tmpDir) {
   };
 }
 
-/** A package root this test owns, holding two config-bearing modules and two things that must be
- *  excluded: a directory with no config, and a bare `config.yaml` FILE beside the directories. */
-async function syntheticPackageRoot(opts = {}) {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-t181-pkg-'));
-  // T227: a package.json is written only when the case is ABOUT files[]. Omitting it is the
-  // "unknowable" branch, which must keep the guard wide.
-  if (opts.files) {
-    await fs.writeFile(path.join(root, 'package.json'), JSON.stringify({ files: opts.files }), 'utf8');
+/** Which module configs does ONE real refresh WRITE? Observed, never parsed.
+ *
+ *  This is the apparatus that lets `GUARDED_MODULE_NAMES` be a literal. It reads no manifest and no
+ *  directory listing of its own beyond enumerating candidates: every config-bearing module in the
+ *  PACKAGE tree is seeded with a readable config carrying a version no release will ever have, one
+ *  real refresh runs, and a module counts as WRITTEN when that version is gone.
+ *
+ *  `_vortex` arrives from `createValidInstallation` and the refresh needs its agent and workflow
+ *  lists, so the version is replaced in place rather than the file being truncated. */
+const PROBE_VERSION = '0.0.0-probe';
+
+async function probeWrittenConfigs(tmpDir) {
+  const packageBme = path.join(PACKAGE_ROOT, '_bmad', 'bme');
+  const candidates = (await fs.readdir(packageBme, { withFileTypes: true }))
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .filter((n) => fs.existsSync(path.join(packageBme, n, 'config.yaml')))
+    .sort();
+
+  for (const name of candidates) {
+    const target = path.join(tmpDir, '_bmad', 'bme', name, 'config.yaml');
+    const doc = (await fs.pathExists(target)) ? yaml.load(await fs.readFile(target, 'utf8')) || {} : {};
+    doc.version = PROBE_VERSION;
+    await fs.outputFile(target, yaml.dump(doc), 'utf8');
   }
-  const bme = path.join(root, '_bmad', 'bme');
-  for (const name of ['_zz-fixture', '_aa-fixture']) {
-    await fs.ensureDir(path.join(bme, name));
-    await fs.writeFile(path.join(bme, name, 'config.yaml'), 'version: 1.0.0\n', 'utf8');
+
+  await refreshInstallation(tmpDir, { verbose: false });
+
+  const written = [];
+  for (const name of candidates) {
+    const target = path.join(tmpDir, '_bmad', 'bme', name, 'config.yaml');
+    const after = (await fs.pathExists(target)) ? await fs.readFile(target, 'utf8') : '';
+    if (!after.includes(PROBE_VERSION)) written.push(name);
   }
-  await fs.ensureDir(path.join(bme, '_no-config'));
-  await fs.writeFile(path.join(bme, 'config.yaml'), 'not_a_module: true\n', 'utf8');
-  return root;
+  return { candidates, written };
 }
 
 describe('refreshInstallation — module config readability guard (T181)', () => {
@@ -146,108 +165,28 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
     assert.ok(!excluded.includes(sentinel.agentId), `fixture must not exclude ${sentinel.agentId} — its copy would be skipped`);
   });
 
-  it('the derived set is read from the package tree it is given, and excludes non-modules', async () => {
-    const pkg = await syntheticPackageRoot();
-    try {
-      // A hardcoded literal returns the six real module names and fails here. A superset fails too.
-      assert.deepEqual(guardedModuleNames(pkg), ['_aa-fixture', '_zz-fixture']);
-    } finally {
-      await fs.remove(pkg);
-    }
+  it('the guarded list is exactly the set of module configs the refresh WRITES', async () => {
+    // THE PIN THAT LETS THE LIST BE A LITERAL. Two derivations were tried and both were wrong in the
+    // data-loss direction — see `GUARDED_MODULE_NAMES` in the source for which and why. A literal is
+    // the third answer, and it rots unless something observes the real behaviour, so this reads no
+    // manifest: it runs one real refresh and watches which configs changed.
+    const { candidates, written } = await probeWrittenConfigs(tmpDir);
+
+    // Vacuity, closed explicitly. With no DECOY — a candidate the refresh does not write — the probe
+    // cannot detect a list that is too wide, and would pass on a literal naming every candidate.
+    // `_team-factory` is the decoy today: tracked in git, no copy loop since `tfu-1-1`. If it ever
+    // leaves the tree this reddens, which is correct — the author is told the probe went blind.
+    assert.ok(
+      candidates.length > written.length,
+      `probe cannot detect an over-wide list: every candidate was written (${candidates.join(', ')})`
+    );
+    assert.deepEqual(written, guardedModuleNames());
   });
 
-  it('T227: a config-carrying directory that does NOT ship is not guarded', async () => {
-    // The defect: this function's contract — stated in T181's own commit message — is that "a module is
-    // covered if it ships a template AND its directory is in files[]". It never read files[]. The two
-    // agreed only while every _bmad/bme/* directory with a config was also shipped, and tfu-1-1 broke
-    // that: it dropped _bmad/bme/_team-factory/ from files[] while deliberately keeping the tree in git.
-    //
-    // Consequence if unguarded-by-files[] is wrong: a project carrying an ORPHANED, damaged
-    // _team-factory/config.yaml has EVERY convoke-update and convoke-install refused, naming a module
-    // the package no longer contains. Nothing can clear it, because nothing will ever replace an
-    // orphaned file.
-    const pkg = await syntheticPackageRoot({
-      files: ['_bmad/bme/_aa-fixture/'],
-    });
-    try {
-      // _zz-fixture carries a config.yaml and is NOT in files[]. It must not be guarded.
-      assert.deepEqual(guardedModuleNames(pkg), ['_aa-fixture']);
-    } finally {
-      await fs.remove(pkg);
-    }
-  });
-
-  it('T227 R1/F1: a files[] entry that cannot resolve to one module keeps the guard WIDE', async () => {
-    // The R1 defect. The first fix matched only `_bmad/bme/<name>/` and DROPPED everything else, so six
-    // npm-legal ways of declaring the same modules yielded an empty set — not "unknowable" — and the
-    // guard silently narrowed to []. That is T181's data loss reintroduced, in the exact direction the
-    // comment beside the filter says must never be silent.
-    //
-    // Each form below ships the two fixture modules. None may turn the guard off. `scripts/` in this
-    // repo's own files[] is a recursive directory entry, so collapsing five `_bmad/bme/_x/` lines into
-    // one `_bmad/bme/` is a semantically identical, entirely plausible edit.
-    for (const files of [
-      ['_bmad/bme/*'],            // glob
-      ['_bmad/bme/*/'],           // glob, trailing slash
-      ['_bmad/bme/**'],           // recursive glob
-      ['_bmad/bme/'],             // ancestor of every module
-      ['_bmad/'],                 // ancestor, one level up
-      ['_bmad/bme/_aa-fixture/agents'],  // a path INSIDE a module: ships part of it, not its config
-      ['./_bmad/bme/_aa-fixture/', './_bmad/bme/_zz-fixture/'],  // leading ./ — npm accepts it
-      [' _bmad/bme/_aa-fixture/ ', '_bmad/bme/_zz-fixture/'],    // padded; the delegated parser trims
-    ]) {
-      const pkg = await syntheticPackageRoot({ files });
-      try {
-        assert.deepEqual(
-          guardedModuleNames(pkg),
-          ['_aa-fixture', '_zz-fixture'],
-          `files[] ${JSON.stringify(files)} must be unknowable, not empty — narrowing here loses operator data`
-        );
-      } finally {
-        await fs.remove(pkg);
-      }
-    }
-  });
-
-  it('T227 R1/F1: a whitespace-padded entry still resolves, and the two parsers agree', async () => {
-    // R1 measured the two parsers of this same array DISAGREEING: `installed-tree.js` trims, the new
-    // one did not, so ' _bmad/bme/_vortex/' resolved in one and vanished from the other with nothing
-    // noticing. Reusing that parser is what makes them agree by construction rather than by review.
-    const pkg = await syntheticPackageRoot({ files: [' _bmad/bme/_aa-fixture/ ', '_bmad/bme/_zz-fixture/'] });
-    try {
-      assert.deepEqual(guardedModuleNames(pkg), ['_aa-fixture', '_zz-fixture']);
-    } finally {
-      await fs.remove(pkg);
-    }
-  });
-
-  it('T227: with no package.json, the guard stays WIDE rather than silently narrowing', async () => {
-    // Direction matters and is asserted, not assumed. files[] unknowable must fail toward GUARDING:
-    // T181's defect was an operator's config silently overwritten (data loss); T227's is a blocked
-    // update (recoverable). Narrowing on a missing manifest would reintroduce the worse one quietly.
-    const pkg = await syntheticPackageRoot();
-    try {
-      assert.deepEqual(guardedModuleNames(pkg), ['_aa-fixture', '_zz-fixture']);
-    } finally {
-      await fs.remove(pkg);
-    }
-  });
-
-  it('the derived set honours the injected lister, and sorts what it returns', async () => {
-    const pkg = await syntheticPackageRoot();
-    try {
-      // A subset the DEFAULT lister could never return: proves the seam is actually consulted, so
-      // deleting `options.listDirs ||` cannot silently restore the old tautology.
-      assert.deepEqual(guardedModuleNames(pkg, { listDirs: () => ['_zz-fixture'] }), ['_zz-fixture']);
-      // Reverse order in, ascending out: the only thing that makes `.sort()` falsifiable, since
-      // readdirSync already returns lexical order on APFS.
-      assert.deepEqual(
-        guardedModuleNames(pkg, { listDirs: () => ['_zz-fixture', '_aa-fixture'] }),
-        ['_aa-fixture', '_zz-fixture']
-      );
-    } finally {
-      await fs.remove(pkg);
-    }
+  it('the guarded list is sorted, because the refusal names only the first', async () => {
+    // Trivially true as written, and recorded as trivial rather than dressed up. The BEHAVIOUR it
+    // protects is pinned by `names exactly one module, the first in sorted order` below.
+    assert.deepEqual(guardedModuleNames(), [...guardedModuleNames()].sort());
   });
 
   it('T227: a damaged config for an UNSHIPPED module does not block the refresh', async () => {

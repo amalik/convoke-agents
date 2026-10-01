@@ -135,9 +135,9 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
       // The basename, or the CONSTANT that holds it: convoke-doctor.js's `const csvAbs = path.join(projectRoot, BMM_DEPS_CSV_REL)` reads
       // `path.join(projectRoot, BMM_DEPS_CSV_REL)`, so the filename is not on the line.
       // That indirection is precisely why AC4 is a declared list and not a grep.
-      // AND, not OR. A declared token is authoritative: `refresh-installation.js:1040` is a
-      // `changes.push('Created …taxonomy.yaml…')` LOG line, so accepting the basename there
-      // let the exact wrong citation Round 1 disproved pass again.
+      // AND, not OR. A declared token is authoritative: the `changes.push('Created …taxonomy.yaml…')`
+      // LOG line names the file without creating it, so accepting the basename there let the exact
+      // wrong citation Round 1 disproved pass again.
       const anchor = token || path.basename(entry.file);
       assert.deepEqual(
         auditCitations([{ site, anchor }]), [],
@@ -146,6 +146,20 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
     }
   });
 });
+
+/** The 1-based line holding `needle` in a package file.
+ *
+ *  DERIVED, because a hardcoded negative control rots exactly like the citations it polices — and
+ *  both of this file's did. When this was written `:913` held `if (fs.existsSync(commandsDir))` and
+ *  `:1040` held the skill-manifest push, neither of which is what its comment claimed. The
+ *  assertions still passed, because a wrong line is rejected whatever it holds, so only the stated
+ *  REASON was false and nothing could catch it. */
+function lineHolding(rel, needle) {
+  const lines = fs.readFileSync(path.join(PACKAGE_ROOT, rel), 'utf8').split('\n');
+  const hits = lines.map((l, i) => (l.includes(needle) ? i + 1 : 0)).filter(Boolean);
+  assert.equal(hits.length, 1, `${needle} must appear exactly once in ${rel} — found ${hits.length}`);
+  return hits[0];
+}
 
 describe('WRAPPER_RULES — the generator call sites this check mirrors', () => {
   // THIS TEST WAS THE STORY'S OWN FIFTH FAIL-OPEN, and it is worth recording why rather
@@ -182,20 +196,22 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
     // In range, exists, and wrong — a bounds check passes all of these.
     const [rel] = site.split(':');
     assert.equal(auditCitations([{ site: `${rel}:1`, anchor }]).length, 1, 'line 1 is in range and must still be rejected');
-    // `:913` is the `if (artifactsConfig && !isSameRoot)` GUARD immediately above the loop —
-    // the exact off-by-one this story shipped twice.
-    assert.equal(auditCitations([{ site: `${rel}:913`, anchor }]).length, 1, 'the guard line above the loop must be rejected');
+    // The `if (artifactsConfig && !isSameRoot)` GUARD immediately above the loop — the exact
+    // off-by-one this story shipped twice. Located by content, not written as a number.
+    const guard = `${rel}:${lineHolding(rel, 'if (artifactsConfig && !isSameRoot)')}`;
+    assert.equal(auditCitations([{ site: guard, anchor }]).length, 1, 'the guard line above the loop must be rejected');
   });
 
   // The same discrimination proof for the runtime-data manifest's alarm.
   it('the manifest alarm rejects a log line that merely mentions the filename', () => {
     const taxonomy = RUNTIME_DATA_FILES.find(e => e.file.endsWith('taxonomy.yaml'));
     assert.deepEqual(auditCitations([{ site: taxonomy.arrivesVia, anchor: taxonomy.arrivesViaToken }]), [], 'the real citation must hold');
-    // `:1040` is `changes.push('Created _bmad/_config/taxonomy.yaml (platform defaults)')` —
-    // it names the file and does not create it. This is the citation Round 1 disproved and
-    // Round 2 found still passing.
+    // `changes.push('Created _bmad/_config/taxonomy.yaml (platform defaults)')` names the file and
+    // does not create it. This is the citation Round 1 disproved and Round 2 found still passing.
+    const rel = 'scripts/update/lib/refresh-installation.js';
+    const logLine = `${rel}:${lineHolding(rel, "Created _bmad/_config/taxonomy.yaml (platform defaults)")}`;
     assert.equal(
-      auditCitations([{ site: 'scripts/update/lib/refresh-installation.js:1040', anchor: taxonomy.arrivesViaToken }]).length, 1,
+      auditCitations([{ site: logLine, anchor: taxonomy.arrivesViaToken }]).length, 1,
       'a log line naming the file must not satisfy the alarm'
     );
   });

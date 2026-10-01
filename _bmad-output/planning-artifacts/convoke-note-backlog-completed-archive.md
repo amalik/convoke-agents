@@ -3389,24 +3389,27 @@ console.log([...validCountsFor(r,'AGENTS')].sort((a,b)=>a-b).join(','), '|', reg
 
 ## T227
 
-**Closed 2026-10-01 (story-less Fast Lane row).** `guardedModuleNames` now gates on `package.json`
-`files[]`, so the guarded-config set equals the shipped set:
+**Closed 2026-10-01 (story-less Fast Lane row).** The guarded-config set no longer covers a module the
+package does not ship:
 
 ```bash
-node -e "const m=require('./scripts/update/lib/refresh-installation.js');
-console.log(m.guardedModuleNames(process.cwd()).join(', '));
-console.log([...m.shippedBmeDirs(process.cwd())].sort().join(', '))"
-# both lines: _artifacts, _enhance, _gyre, _portability, _vortex
+node -e "console.log(require('./scripts/update/lib/refresh-installation.js').guardedModuleNames().join(', '))"
+# _artifacts, _enhance, _gyre, _portability, _vortex
 ```
+
+> ⚠️ **The mechanism recorded below was superseded the same day.** This section describes the `files[]`
+> gate as it was closed; Round 2 withdrew it and the guard now names the five modules outright. Read the
+> **Round 2** section at the end of this note for what actually ships. The `shippedBmeDirs` export this
+> section referred to no longer exists, so any command naming it will throw.
 
 Before the fix the first line also contained `_team-factory`, a module `tfu-1-1` removed from `files[]`
 while keeping the tree tracked in git. `T181`'s commit message had always *stated* the contract as *"a
 module is covered if it ships a template and its directory is in `files[]`"*; nothing read `files[]`, and the
 two agreed only by coincidence until `tfu-1-1` broke it.
 
-**The direction of the new `null` is the design decision, and it is asserted rather than assumed.**
-`shippedBmeDirs` returns `null` — not an empty Set — when the manifest cannot be read, and
-`guardedModuleNames` then keeps the guard **wide**. `T181`'s defect was an operator's config silently
+**The direction of the new `null` was the design decision** (~~asserted rather than assumed~~ —
+withdrawn in Round 2 along with the function). `shippedBmeDirs` returned `null` — not an empty Set — when
+the manifest could not be read, and `guardedModuleNames` then kept the guard **wide**. `T181`'s defect was an operator's config silently
 overwritten (data loss); `T227`'s was a blocked update (recoverable). A missing manifest must not quietly
 reintroduce the worse one. A test named for that property pins it.
 
@@ -3436,7 +3439,7 @@ reader of §2.5 can see a ruling was skipped rather than discovering it.
 
 | Defect | Fix | Re-derive |
 |---|---|---|
-| The new `files[]` parser matched only `_bmad/bme/<name>/` and DROPPED everything else as absent rather than unknowable, so a glob, an ancestor entry, a deep path, a leading `./` or a padded entry silently narrowed the guard to `[]` — `T181`'s data loss, in the direction the code comment said must never be silent. This package already ships `scripts/` as a recursive entry, so collapsing the per-module lines is a plausible edit | **delegated** to `installed-tree.js::shippedBmeModules`, hardened over three review rounds against this exact class, plus an explicit ambiguity test. Two attempts at this parser had failed; the third already worked | the nine-form table in `tests/unit/refresh-installation-config-guard.test.js` → every ambiguous form keeps the guard wide |
+| The new `files[]` parser matched only `_bmad/bme/<name>/` and DROPPED everything else as absent rather than unknowable, so a glob, an ancestor entry, a deep path, a leading `./` or a padded entry silently narrowed the guard to `[]` — `T181`'s data loss, in the direction the code comment said must never be silent. This package already ships `scripts/` as a recursive entry, so collapsing the per-module lines is a plausible edit | ~~**delegated** to `installed-tree.js::shippedBmeModules`, plus an explicit ambiguity test~~ **— THIS FIX WAS WITHDRAWN. See the Round 2 section below: delegation closed the shapes the reviewer had sent and left seven more live.** The parser is gone | the behavioural probe in `tests/unit/refresh-installation-config-guard.test.js` |
 | Three now-false sentences left in two SHIPPED files (`UPDATE-GUIDE.md` ×2, `CHANGELOG.md`), one of them contradicted by a command printed eight lines above it, plus no `[Unreleased]` entry for the fix | corrected; entry added | `git grep -n 'T227'` |
 
 **The aggravating fact, recorded because it is the point.** `closing-a-row-greps-for-its-own-citations` was
@@ -3455,4 +3458,57 @@ the orphan, so `convoke-doctor` still reports version inconsistency for every pr
 **Fourth instance of `T230` in one arc.** The fix added ~45 lines to `refresh-installation.js` and broke all
 seven line citations in `scripts/audit/lib/installed-tree.js`. Re-derived mechanically — match each
 citation's exact content at `HEAD`, then find that line in the working tree — never by arithmetic.
+
+---
+
+### Round 2 (2026-10-01, one scoped layer): the mechanism was WITHDRAWN
+
+Round 1's remediation rewrote executable logic in something that must not be foolable, which earns one
+scoped layer. It found **two HIGH, both real data loss**, and the answer was to delete the mechanism rather
+than patch it a third time.
+
+| Defect | Fix | Re-derive |
+|---|---|---|
+| **Seven more npm-legal `files[]` spellings silently narrowed or disabled the guard.** The loop's default for an entry it could not classify was `continue` ("irrelevant"), but npm ships the module anyway. Verified against real npm with throwaway packages: a leading `/`, a doubled `//`, a case difference, `["./"]` and an empty string each ship the config while the parser drops the module. `["./"]` and `""` turn the guard off for **four or five** modules at once — `T181`'s silent overwrite, in full | the `files[]` gate is **deleted**. `GUARDED_MODULE_NAMES` names the five modules whose config the refresh writes | the form table in the command below → every spelling returns all five |
+| **`fs.existsSync` inside the parser was case-insensitive while the `Set.has` one line later was not.** On APFS `_bmad/bme/_Artifacts/config.yaml` tests *true*, `unresolvable` stays empty, `null` is never returned — every check in the loop votes yes — and then `shipped.has('_artifacts')` is case-**sensitive** and drops the module. The result depended on filesystem case-folding that the consuming comparison did not share | same deletion; nothing asks the filesystem to classify a manifest entry any more | as above, the `case _Artifacts` row |
+
+Three MEDIUM were mutation survivors inside the deleted code (`if (deeper) return null;`, the local
+`.trim()`, and the `!Array.isArray` branch), confirmed with positive controls so the harness was provably
+live. The test named *"the two parsers agree"* — the headline claim of Round 1 — **could not fail**: its
+expected value was identical to the wide answer, so it passed whether the entry resolved or was ruled
+unknowable. All five died with the mechanism.
+
+**Why deletion rather than a third parser.** Measured on an extracted tarball: deleting `files[]` outright
+changes `guardedModuleNames` not at all, because `packageRoot` is the *installed* package and its tree **is**
+the shipped set. The parser could only ever subtract from an already-correct answer. `deferred-work.md`
+already recorded the lesson from four earlier attempts — *"the durable fix is to ask npm rather than to
+re-derive its pattern matching"* — and this was the fifth.
+
+**The question was wrong, not just the answer.** "Which modules ship" is unknowable from a manifest. The
+guard exists to refuse an unreadable config rather than overwrite it, so the only relevant question is
+"which configs does this function WRITE", which is a property of the code: five modules have a config write
+site and nothing else does.
+
+**A literal needs a behavioural pin, and this one has one.** The test seeds a readable config carrying
+`version: 0.0.0-probe` for every config-bearing module in the package tree, runs one real refresh, and
+asserts the set whose version changed equals the literal. A new copy loop without an entry reddens; an entry
+without a copy loop reddens. Its vacuity channel is closed explicitly: it asserts a decoy exists, so it
+cannot pass on a literal naming every candidate.
+
+```bash
+# every spelling must print the same five modules
+node -e "console.log(require('./scripts/update/lib/refresh-installation.js').guardedModuleNames().join(', '))"
+node --test tests/unit/refresh-installation-config-guard.test.js
+```
+
+**Mutant → sole executioner.** Adding `_team-factory` to the literal, removing `_portability`, reversing the
+order, and neutering the guard loop were each killed; the probe is the sole executioner for the over-wide
+direction.
+
+**`T230`, fifth instance, and two citations that were already wrong.** The deletion shifted all seven
+`installed-tree.js` citations again — re-derived by matching content, never arithmetic. Separately, the two
+hardcoded negative controls in `tests/audit/installed-tree.test.js` (`:913`, `:1040`) were **already
+pointing at unrelated lines at `HEAD`**: `:913` held `if (fs.existsSync(commandsDir))` and `:1040` held the
+skill-manifest push. Their assertions still passed, because a wrong line is rejected whatever it holds, so
+only their stated reason was false and nothing could catch it. Both are now located by content.
 

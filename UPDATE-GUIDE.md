@@ -242,11 +242,11 @@ This tells npx to download `convoke-agents@latest` first, then run the `convoke-
 
 From 4.0.3 the **Vortex and Gyre** `config.yaml` files were never replaced when they could not be read,
 and the other module configs were not checked at all. **`T181` closed that**: the installer now refuses on
-an unreadable config for **every** module that ships a `config.yaml`, derived from the package tree rather
-than from a hardcoded pair. Derive the current set rather than trusting this sentence:
+an unreadable config for **every** module whose `config.yaml` it writes, rather than for a hardcoded pair.
+Derive the current set rather than trusting this sentence:
 
 ```bash
-node -e "console.log(require('./scripts/update/lib/refresh-installation.js').guardedModuleNames(process.cwd()).join(', '))"
+node -e "console.log(require('./scripts/update/lib/refresh-installation.js').guardedModuleNames().join(', '))"
 ```
 
 Two caveats, both open and both narrower than the old defect:
@@ -254,15 +254,15 @@ Two caveats, both open and both narrower than the old defect:
 - **The refusal half only.** `_enhance`, `_artifacts` and `_portability` configs are still rewritten from
   the package template on every run, because `mergeConfig` carries profiles for `_vortex` and `_gyre`
   alone. A readable config there is not preserved — that is `T221`.
-- **The set is exactly what ships.** `T227` closed 2026-10-01: it is computed from `_bmad/bme/*`
-  directories that carry a `config.yaml` **and** are declared in `package.json` `files[]`, which is
-  what this section's own command prints. Before that fix the set was derived from directories alone,
-  so `_team-factory` — un-shipped in `tfu-1-1` but still tracked in git — remained in it, and a project
-  carrying an orphaned damaged `_team-factory/config.yaml` had every install and update refused by a
-  message naming a module the package no longer contains. That can no longer happen. Where `files[]`
-  cannot be resolved to module names (a glob, or an ancestor entry like `_bmad/bme/`), the guard stays
-  **wide** rather than narrowing — guarding too much costs a refusal, guarding too little costs the
-  operator's data. **`T222` still covers retiring the orphan itself**, which this did not do: a
+- **The set is exactly what the installer writes.** `T227` closed 2026-10-01: the five modules are
+  named in the source, which is what this section's own command prints. Before that fix the set was
+  derived from the package tree's directories, so in a clone `_team-factory` — un-shipped in `tfu-1-1`
+  but still tracked in git — remained in it, and a project carrying an orphaned damaged
+  `_team-factory/config.yaml` could have every install and update refused by a message naming a module
+  the package no longer contains. That can no longer happen. A named list is deliberate: an
+  intermediate fix read `package.json` `files[]` and was withdrawn before release, because several
+  npm-legal spellings of the same entry left npm shipping a module while the parser dropped it,
+  turning the guard off. **`T222` still covers retiring the orphan itself**, which this did not do: a
   `convoke-doctor` version-consistency failure naming `_team-factory` persists until it lands.
 
 Where you see this message depends on the command and on which file is
