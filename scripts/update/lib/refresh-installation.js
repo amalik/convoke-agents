@@ -50,9 +50,17 @@ const {
  *
  * NOT DERIVED, THEREFORE PINNED BEHAVIOURALLY. A literal rots when someone adds a module and
  * forgets. `tests/unit/refresh-installation-config-guard.test.js` seeds a readable sentinel config
- * for every config-bearing module in the package tree, runs one real refresh, and asserts that the
- * set whose config CHANGED equals this list exactly. A new copy loop without an entry here reddens;
- * an entry here without a copy loop reddens. Neither direction depends on reading a manifest.
+ * into every `_bmad/bme/*` directory, runs one real refresh, and asserts that the set whose config
+ * CONTENT changed equals this list exactly. A write site without an entry here reddens; an entry
+ * here without a write site reddens. Neither direction reads a manifest.
+ *
+ * The scope of that guarantee, stated because an earlier version of this comment overstated it and
+ * Round 3 of `T227` falsified it twice: the probe sees a write only if it changes the file's BYTES.
+ * It originally keyed on the `version` scalar alone, and a write that restored the operator's
+ * previous version was invisible — suite green, config destroyed. It also enumerated only modules
+ * shipping a `config.yaml` template, so a module whose config the installer GENERATES was never
+ * examined. Both are closed. What remains open is a write that reproduces the seeded bytes exactly,
+ * which is not a data-loss shape and is left stated rather than closed.
  *
  * Sorted because the order decides WHICH damaged config an operator is told about first, and the
  * refusal names only the first. A test asserts both the sortedness and that behaviour.

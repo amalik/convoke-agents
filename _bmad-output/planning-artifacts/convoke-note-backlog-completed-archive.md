@@ -3505,6 +3505,58 @@ node --test tests/unit/refresh-installation-config-guard.test.js
 order, and neutering the guard loop were each killed; the probe is the sole executioner for the over-wide
 direction.
 
+---
+
+### Round 3 (2026-10-01, one scoped layer): the PROBE was escapable twice
+
+Round 2's remediation replaced a derivation with a literal, which is only honest if something observes the
+real behaviour. That probe was the one piece of new unfoolable-by-requirement logic, so it earned a layer.
+**Two HIGH, both demonstrated with working data loss on copies outside the repo.**
+
+| Defect | Fix | Re-derive |
+|---|---|---|
+| **The signal was "the `version` scalar changed", not "the file changed."** A write site that clobbers a config and then restores the operator's previous `version` was invisible: suite 15/15 green while an unguarded module's config was replaced by the template — `T181` verbatim. The probe's own cross-file dependency made this concrete: conditioning `config-merger.js`'s `merged.version = newVersion` removed `_gyre` and `_vortex` from the observed set although both files were still rewritten | key on full **content** inequality. The `config-merger` mutant now correctly survives this file — the probe no longer depends on a version stamp in another module | inject a version-preserving write site for a 7th module; the probe reddens naming it, and goes green when the literal is corrected |
+| **Candidates required the package to ship a `config.yaml` TEMPLATE.** A module whose config the installer GENERATES has none, so it was enumerated nowhere and the probe was silent — same data loss, and not even the vacuity check could fire. `taxonomy-merger.js` already generates a config with no template, so the shape is in use | the universe is now every `_bmad/bme/*` **directory**; a config appearing where none was seeded counts as written | inject a module with a tree but no template whose config the refresh generates |
+
+Three MEDIUM and three LOW, all confirmed by execution with a positive control proving the harness live:
+
+- **The vacuity check was one character from unconditional.** `candidates.length > written.length`, where
+  `written` is filtered FROM `candidates` — so `>=` can never fail. Both the relaxation and outright
+  deletion survived. Replaced by pinning the `_bmad/bme/*` directory universe as a literal, which is
+  falsifiable in both directions and names what changed.
+- **An `assert.ok` short-circuited the diff that names the real problem.** A write site with no literal
+  entry — the data-loss direction — reported "the probe cannot detect an over-wide list" instead of naming
+  the module. The contract assertion now runs first.
+- **`PROBE_VERSION` could be `1.0.0`** — the version five of the six shipped templates carry — with the
+  suite green. Its stated property is now asserted. Separately the sentinel write itself was unpinned:
+  replacing the assignment with a no-op left the suite green, so the seeding now asserts it changed the file.
+- **`Object.freeze` and the returned copy were both unpinned**, and together let any caller zero the guard
+  for the process. A floor test covers it. Dropping `freeze` alone still survives, deliberately — the copy
+  already protects callers, so it is semantically equivalent rather than an untested path.
+- **The stale `guardedModuleNames(projectRoot)` comment** — the function takes no arguments. No caller or doc
+  command passes one; the comment was the only site.
+
+**The instructive part, and it is about a comment, not the code.** Round 2's own source comment claimed the
+probe *"asserts that the set whose config CHANGED equals this list exactly. A new copy loop without an entry
+here reddens."* It asserted neither: the signal was a version substring, and a module without a template was
+never examined. That comment was written one turn after this arc recorded *"never let a comment assert a
+guarantee the code does not provide"* — the same recurrence the Team Factory retro refused to answer with a
+seventh paragraph. The source now states the guarantee's two qualifiers and the one gap left open: a write
+reproducing the seeded bytes exactly, which destroys nothing and is therefore stated rather than closed.
+
+```bash
+node --test tests/unit/refresh-installation-config-guard.test.js
+node -e "console.log(require('./scripts/update/lib/refresh-installation.js').guardedModuleNames().join(', '))"
+```
+
+**`T230`, sixth instance — the same seven citations broke twice in one day.** Re-derived by content both
+times; `for (const agent of AGENTS)` is now ambiguous (the user-guides loop and the wrapper loop), so
+arithmetic would have silently picked the wrong one. `T230` is annotated with a cheaper fix than
+line-checking: the `anchor` already identifies the site, so the `:NNN` is redundant data that exists only to
+rot. **Structural cause filed as `T231`** — five bespoke per-module blocks with no shared table, which is
+what made the guarded set a fact about scattered code rather than data, and what `T181`, `T227` and `T221`
+all grew out of.
+
 **`T230`, fifth instance, and two citations that were already wrong.** The deletion shifted all seven
 `installed-tree.js` citations again — re-derived by matching content, never arithmetic. Separately, the two
 hardcoded negative controls in `tests/audit/installed-tree.test.js` (`:913`, `:1040`) were **already

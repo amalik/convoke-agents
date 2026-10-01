@@ -85,28 +85,56 @@ function sentinelPaths(tmpDir) {
 
 /** Which module configs does ONE real refresh WRITE? Observed, never parsed.
  *
- *  This is the apparatus that lets `GUARDED_MODULE_NAMES` be a literal. It reads no manifest and no
- *  directory listing of its own beyond enumerating candidates: every config-bearing module in the
- *  PACKAGE tree is seeded with a readable config carrying a version no release will ever have, one
- *  real refresh runs, and a module counts as WRITTEN when that version is gone.
+ *  This is the apparatus that lets `GUARDED_MODULE_NAMES` be a literal, and Round 3 of `T227` broke
+ *  two earlier versions of it. Both escapes are recorded because the shape recurs:
+ *
+ *    1. **The signal was "the `version` scalar changed", not "the file changed."** A write site that
+ *       clobbers the config and then restores the operator's previous `version` was invisible — the
+ *       whole suite stayed green while an unguarded module's config was destroyed, which is `T181`
+ *       verbatim. The signal is now full CONTENT inequality. Measured: with the version signal that
+ *       write site gave 15/15 pass; keyed on content it reddens, naming the module.
+ *    2. **Candidates required the package to ship a `config.yaml` TEMPLATE.** A module whose config
+ *       the installer GENERATES has no template, so it was enumerated nowhere and the probe was
+ *       silent about it — the same data loss, and not even the decoy check could fire.
+ *       `taxonomy-merger.js` already generates a config with no shipped template, so this is a shape
+ *       the codebase uses. The universe is now every `_bmad/bme/*` DIRECTORY, template or not; a
+ *       config that appears where none was seeded counts as written.
  *
  *  `_vortex` arrives from `createValidInstallation` and the refresh needs its agent and workflow
- *  lists, so the version is replaced in place rather than the file being truncated. */
+ *  lists, so its version is replaced in place rather than the file being truncated.
+ *
+ *  WHAT THIS STILL CANNOT SEE. A write that reproduces the seeded bytes exactly. That is not a
+ *  data-loss shape — a write which leaves the operator's file byte-identical has destroyed nothing —
+ *  so the gap is stated rather than closed. */
 const PROBE_VERSION = '0.0.0-probe';
 
 async function probeWrittenConfigs(tmpDir) {
   const packageBme = path.join(PACKAGE_ROOT, '_bmad', 'bme');
+  // NO `config.yaml` filter: see (2) above. Every directory is a candidate.
   const candidates = (await fs.readdir(packageBme, { withFileTypes: true }))
     .filter((e) => e.isDirectory())
     .map((e) => e.name)
-    .filter((n) => fs.existsSync(path.join(packageBme, n, 'config.yaml')))
     .sort();
 
+  // `null` means "nothing was seeded here", so a config existing afterwards is a GENERATED write.
+  const seeded = new Map();
   for (const name of candidates) {
     const target = path.join(tmpDir, '_bmad', 'bme', name, 'config.yaml');
-    const doc = (await fs.pathExists(target)) ? yaml.load(await fs.readFile(target, 'utf8')) || {} : {};
-    doc.version = PROBE_VERSION;
-    await fs.outputFile(target, yaml.dump(doc), 'utf8');
+    if (await fs.pathExists(target)) {
+      const before = await fs.readFile(target, 'utf8');
+      const doc = yaml.load(before) || {};
+      doc.version = PROBE_VERSION;
+      await fs.outputFile(target, yaml.dump(doc), 'utf8');
+      // The sentinel must actually land, or detection rests on whatever the yaml round-trip happens
+      // to reformat. Without this, replacing the assignment with a no-op leaves the suite green.
+      assert.notEqual(await fs.readFile(target, 'utf8'), before, `probe sentinel did not change ${name}/config.yaml`);
+    } else if (fs.existsSync(path.join(packageBme, name, 'config.yaml'))) {
+      await fs.outputFile(target, yaml.dump({ version: PROBE_VERSION }), 'utf8');
+    } else {
+      seeded.set(name, null);
+      continue;
+    }
+    seeded.set(name, await fs.readFile(target, 'utf8'));
   }
 
   await refreshInstallation(tmpDir, { verbose: false });
@@ -114,11 +142,25 @@ async function probeWrittenConfigs(tmpDir) {
   const written = [];
   for (const name of candidates) {
     const target = path.join(tmpDir, '_bmad', 'bme', name, 'config.yaml');
-    const after = (await fs.pathExists(target)) ? await fs.readFile(target, 'utf8') : '';
-    if (!after.includes(PROBE_VERSION)) written.push(name);
+    const after = (await fs.pathExists(target)) ? await fs.readFile(target, 'utf8') : null;
+    if (after !== seeded.get(name)) written.push(name);
   }
   return { candidates, written };
 }
+
+/** Every `_bmad/bme/*` directory in the package, pinned as a LITERAL.
+ *
+ *  This replaces a `candidates.length > written.length` vacuity check, which Round 3 showed was a
+ *  tautology one character from being unconditional (`written` is filtered FROM `candidates`, so
+ *  `>=` can never fail) and which survived both relaxation and outright deletion. It also collapsed
+ *  three opposite future changes into one misleading message, and its `assert.ok` short-circuited
+ *  the diff that would have named the real problem.
+ *
+ *  Pinning the universe instead is falsifiable in both directions and says what changed. Adding a
+ *  directory here is a deliberate act: it forces a decision about whether its config is written. */
+const BME_DIRECTORIES = [
+  '_artifacts', '_config', '_enhance', '_gyre', '_portability', '_team-factory', '_vortex', 'covenant',
+];
 
 describe('refreshInstallation — module config readability guard (T181)', () => {
   let tmpDir;
@@ -166,27 +208,61 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
   });
 
   it('the guarded list is exactly the set of module configs the refresh WRITES', async () => {
-    // THE PIN THAT LETS THE LIST BE A LITERAL. Two derivations were tried and both were wrong in the
-    // data-loss direction — see `GUARDED_MODULE_NAMES` in the source for which and why. A literal is
-    // the third answer, and it rots unless something observes the real behaviour, so this reads no
-    // manifest: it runs one real refresh and watches which configs changed.
+    // THE PIN THAT LETS THE LIST BE A LITERAL — with the two qualifiers Round 3 found escapable now
+    // closed, and the one remaining gap stated at `probeWrittenConfigs`. Nothing here reads a
+    // manifest: one real refresh runs and the configs that changed are compared to the literal.
     const { candidates, written } = await probeWrittenConfigs(tmpDir);
 
-    // Vacuity, closed explicitly. With no DECOY — a candidate the refresh does not write — the probe
-    // cannot detect a list that is too wide, and would pass on a literal naming every candidate.
-    // `_team-factory` is the decoy today: tracked in git, no copy loop since `tfu-1-1`. If it ever
-    // leaves the tree this reddens, which is correct — the author is told the probe went blind.
-    assert.ok(
-      candidates.length > written.length,
-      `probe cannot detect an over-wide list: every candidate was written (${candidates.join(', ')})`
+    // The contract, asserted BEFORE the universe pin: a failure in the data-loss direction (a write
+    // site with no literal entry) must produce the diff that NAMES the module, not a message about
+    // the probe. Round 3 found the old ordering hid exactly that behind a short-circuiting assert.
+    assert.deepEqual(
+      written,
+      guardedModuleNames(),
+      'a module in `written` but not the literal means a config is written UNGUARDED (data loss, T181); ' +
+        'a module in the literal but not `written` means either the write site went away or the probe ' +
+        'stopped seeing it — check which before editing the literal'
     );
-    assert.deepEqual(written, guardedModuleNames());
+
+    // The universe. Guarantees a decoy exists (candidates ⊋ written) without a comparison that
+    // cannot fail, and names any directory that appeared or vanished.
+    assert.deepEqual(candidates, BME_DIRECTORIES, 'the set of _bmad/bme/* directories changed');
   });
 
   it('the guarded list is sorted, because the refusal names only the first', async () => {
     // Trivially true as written, and recorded as trivial rather than dressed up. The BEHAVIOUR it
     // protects is pinned by `names exactly one module, the first in sorted order` below.
     assert.deepEqual(guardedModuleNames(), [...guardedModuleNames()].sort());
+  });
+
+  it('the probe sentinel cannot collide with a shipped template', async () => {
+    // Round 3: `PROBE_VERSION = '1.0.0'` — the version five of the six shipped templates carry —
+    // left the suite at 15/15. The sentinel's whole job is to differ from what the refresh writes,
+    // and that property was asserted nowhere.
+    const packageBme = path.join(PACKAGE_ROOT, '_bmad', 'bme');
+    const offenders = [];
+    for (const name of BME_DIRECTORIES) {
+      const template = path.join(packageBme, name, 'config.yaml');
+      if (!fs.existsSync(template)) continue;
+      if ((await fs.readFile(template, 'utf8')).includes(PROBE_VERSION)) offenders.push(name);
+    }
+    assert.deepEqual(offenders, [], `PROBE_VERSION ${PROBE_VERSION} appears in a shipped template`);
+  });
+
+  it('a caller cannot shrink the guard for the rest of the process', async () => {
+    // Round 3: dropping `Object.freeze` AND the returned copy both survived, and together let any
+    // caller zero the guard permanently. No live caller does — this is the floor that keeps it so.
+    //
+    // TWO MUTANTS SURVIVE HERE DELIBERATELY, recorded so nobody re-derives them as gaps. Dropping
+    // `Object.freeze` ALONE is unobservable, because the returned copy already protects callers —
+    // semantically equivalent, not an untested path; dropping both together fails this case.
+    // Separately, making `config-merger.js`'s `merged.version = newVersion` conditional now survives
+    // this FILE, where it used to break it: the probe keys on content, so it no longer depends on a
+    // version stamp in another module. That dependency was Round 3's MEDIUM 5 and is gone.
+    const first = guardedModuleNames();
+    first.length = 0;
+    first.push('_nonsense');
+    assert.deepEqual(guardedModuleNames(), ['_artifacts', '_enhance', '_gyre', '_portability', '_vortex']);
   });
 
   it('T227: a damaged config for an UNSHIPPED module does not block the refresh', async () => {
@@ -200,7 +276,7 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
   });
 
   it('guards the PACKAGE\'s modules, not the project\'s — an operator-authored config is untouched', async () => {
-    // `guardedModuleNames(projectRoot)` passes every other case in this file, and would refuse an
+    // A guard derived from the PROJECT tree would pass every other case in this file, and would refuse an
     // update because of a config the refresh never writes: a false refusal blocking every update.
     await writeModuleConfig(tmpDir, '_operator-notes', DAMAGED_CONFIG);
     await assert.doesNotReject(() => refreshInstallation(tmpDir, { verbose: false }));
