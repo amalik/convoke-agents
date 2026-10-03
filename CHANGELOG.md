@@ -43,9 +43,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     a `user_name:`, so a second one added by hand is the usual cause. The other three seed none, so a
     single `user_name:` line you add there is valid YAML — it is not refused, it is silently dropped by
     the template overwrite (`T221`). What refuses for those three is a file that genuinely will not
-    parse: a duplicated key the template does carry, a stray tab, broken indentation. An install now stops before anything is copied, naming the file and the
-  parser's own error. A config that is a *directory* used to escape as a bare
-  `EISDIR: illegal operation on a directory, read` naming no path at all; it now refuses with the path.
+    parse: a duplicated key, a tab used as **indentation**, broken indentation. A tab elsewhere — after
+    a value, between a key and its value, inside a quoted string — is valid YAML, is not refused, and
+    is lost to the overwrite like any other edit.
+  - An install now stops before anything is copied, naming the file and the parser's own error. For
+    `_vortex` and `_gyre` — the only two guarded before this change — a config that is a *directory*
+    used to escape as a bare `EISDIR: illegal operation on a directory, read` naming no path at all;
+    it now refuses with the path. One route still shows the bare errno: `convoke-update` reads the
+    Vortex config through version detection before the refusal runs, which is the open `T180` gap.
   - This covers an UNREADABLE config only. A readable one is still replaced on every run for those three
     modules — `mergeConfig` carries profiles for `_vortex` and `_gyre` alone — which is `T221`.
 
@@ -105,8 +110,9 @@ Convoke 4.0.3 is a patch release about the config file your agents read on a fre
     checked at all. A damaged one is still silently replaced — and so is an undamaged one: those four are
     rewritten from the package template on every install, so anything you customise in them is lost each
     run (`T181`).
-    `UPDATE-GUIDE.md`, which ships inside the package, has the full table — one row per command and
-    damaged config.
+    `UPDATE-GUIDE.md` has the per-command table, but it tracks `main`: `T181` has since closed and
+    that table now describes the refusal, not this release's silence. For 4.0.3 behaviour, read this
+    entry.
 
 ## [4.0.2] - 2026-09-14
 

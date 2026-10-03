@@ -272,22 +272,31 @@ damaged; the table below has every case, because they differ:
 config-merger: refusing to overwrite /path/to/project/_bmad/bme/_gyre/config.yaml: it is not valid YAML (Map keys must be unique at line 3, column 1:). Fix or remove the file, then re-run.
 ```
 
-It arrives as a single line naming the absolute path. It takes one of two forms, and only the first
-tells you where to look:
+It arrives as a single line naming the absolute path. It takes one of three forms, and only the
+first two tell you where to look:
 
-- `it is not valid YAML (<parser message>)` — a duplicate key, a tab, more than one document. The
+- `it is not valid YAML (<parser message>)` — a duplicate key, a tab used as indentation, more
+  than one document. A tab elsewhere — trailing a value, between a key and its value, inside a
+  quoted string — is valid YAML and is not refused. The
   parenthesis carries the parser's own first line of error, with a line and column.
 - `it is not a YAML mapping.` — the file holds a list, or a bare string, number or boolean. There is
   no parser error and no location, because nothing failed to parse: the file is valid YAML of the
   wrong shape. Replace it rather than hunting for an error.
 
-**A file that cannot be opened at all refuses too, and names itself.** An unreadable file or a
-directory sitting where the config should be both come back through the refusal, carrying the path
-and the OS error — `it cannot be read (EACCES: permission denied, open '<path>')`, or
-`it cannot be read (EISDIR: illegal operation on a directory, read)`. Earlier releases let the raw
-errno escape instead, and `EISDIR` carries no path of its own, so the message named no file and you
-had to guess which config it was. The repair steps below do not apply to either: fix the
-permissions, or remove the directory.
+- `it cannot be read (<OS error>)` — the file cannot be opened at all: an unreadable file gives
+  `it cannot be read (EACCES: permission denied, open '<path>')`, and a directory sitting where the
+  config should be gives `it cannot be read (EISDIR: illegal operation on a directory, read)`. Both
+  carry the path through the `refusing to overwrite <path>:` prefix. Earlier releases let the raw
+  errno escape instead, and `EISDIR` carries no path of its own, so the message named no file.
+  For an unreadable file, fix the permissions. For a directory, remove it and then run an
+  **install** — the steps below are the repair, because removing it leaves no config at that path.
+
+> **One case still gives you the bare errno with no path: `convoke-update` against a damaged
+> **Vortex** config.** Version detection reads that file before the refusal can run, catches every
+> error, and prints `Warning: Could not read config.yaml: <OS error>` — then offers a migration
+> plan from a guessed version. `EISDIR` names no file of its own, so if you see that warning with
+> no path, check `_bmad/bme/_vortex/config.yaml` first. Decline the plan and repair the file. This
+> is the `T180` gap described below, and it reaches the `EACCES`/`EISDIR` cases too.
 
 This protects your settings — before 4.0.3, a single duplicate key silently replaced the whole
 file with defaults. Wherever the message appears, the file it names is left byte-identical, and no agent,
@@ -313,7 +322,7 @@ command:
 | `convoke-update` | Gyre, and a refresh is due | Refuses with the message above, exit 1 |
 | `convoke-update` | Gyre, nothing else out of step | `✓ Already up to date!`, exit 0 — the damaged file is not noticed |
 | `convoke-update` | **Vortex** | **No refusal.** Version detection cannot read the file, falls back to inspecting the directory layout, and reports an old version: `1.1.0` where `workflows/_deprecated/` exists, `1.0.0` on a project installed with `convoke-install-gyre` alone, which never creates it. You are offered a plan from there up to the package's version, listing two or three breaking changes. If you accept it, migration 3 of 7 (`1.5.x-to-1.6.0`) fails on the same parse error and the run is rolled back from its backup — exit 1, your config byte-identical |
-| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability` | Refuses with the message above at `[4/5]`, exit 1, file byte-identical — but step `[2/5]` has already run, as above. `T181` shipped. A **readable** config there is a different matter: it is still replaced by the package template on every run, damaged or not, so operator values are lost. Verified by re-install — a planted `my_custom_key` was gone from all three, where `_vortex` and `_gyre` kept it, because `configMerger.mergeConfig` carries profiles for those two alone. That overwriting half is `T221`. With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
+| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability` | Refuses, exit 1, file byte-identical — `T181` shipped. Which step, and what has already run by then, differs per command: see the four rows above for the installers, and note that `convoke-update` refuses inside `[2/3] Refreshing installation files`, then restores from its backup and reports `✓ Installation restored from backup` (`T224`). A **readable** config there is a different matter: it is still replaced by the package template on every run, damaged or not, so operator values are lost. Verified by re-install — a planted `my_custom_key` was gone from all three, where `_vortex` and `_gyre` kept it, because `configMerger.mergeConfig` carries profiles for those two alone. That overwriting half is `T221`. With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
 
 The `convoke-update` + **Vortex** row is a known defect, tracked as `T180`: the refusal exists and runs,
 but version detection reads the Vortex config first and swallows the error before the refusal can be
