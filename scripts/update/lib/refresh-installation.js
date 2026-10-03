@@ -1435,10 +1435,14 @@ function seedBmmDependencies(projectRoot, opts = {}) {
  * Declared here, beside the stamp sites, and imported there — a second hardcoded list would be
  * the two-callers-disagree defect BUG-17 exists to remove, reproduced inside its own fix.
  *
- * The stamp sites are the `configMerger.mergeConfig` call for Vortex, the `ecDoc.set('version')`
- * write for Enhance, `acDoc.set('version')` for Artifacts, and the Gyre `mergeConfig` call. A fifth —
- * `scDoc.set('version')` in the EXTRA_BME_AGENTS loop — was removed with the Team Factory in tfu-1-1,
- * which is why this list is four and `install-scope-check.js`'s snapshot for this file dropped by one.
+ * The stamp sites are the `configMerger.mergeConfig` calls for Vortex and Gyre, and the
+ * `ecDoc`/`acDoc`/`pcDoc` `.set('version')` writes for Enhance, Artifacts and Portability — five.
+ * A sixth, `scDoc.set('version')` in the EXTRA_BME_AGENTS loop, was removed with the Team Factory in
+ * tfu-1-1, which is why `install-scope-check.js`'s snapshot for this file dropped by one.
+ *
+ * T234: this enumeration was written by hand and omitted `pcDoc`, so the list said four while the
+ * code stamped five, and `_portability` read as unmanaged. Derive it rather than counting by eye:
+ * `grep -nE "\\.set\\('version'|configMerger\\.mergeConfig\\(" scripts/update/lib/refresh-installation.js`.
  * Named by symbol on purpose: line
  * numbers in this file are not gate-checked, and every attempt to keep them current during
  * BUG-17 rotted within the hour.
@@ -1447,6 +1451,7 @@ const STAMPABLE_MODULES = Object.freeze([
   '_vortex',
   '_enhance',
   '_artifacts',
+  '_portability',
   '_gyre',
   // `_team-factory` was here via EXTRA_BME_AGENTS until tfu-1-1; it is no longer
   // installer-managed because it is no longer installed.

@@ -107,6 +107,17 @@ describe('only modules the installer can stamp are routed', () => {
     } finally { await removeTempDir(dir); }
   });
 
+  it('a _portability-only skew is routed, not reported up-to-date (T234)', async () => {
+    // Measured before the fix: the doctor printed "Package: 4.0.3, _portability: 1.0.0 / Fix: Run:
+    // npx -p convoke-agents convoke-update" and that command answered "Already up to date!" — a
+    // deadlock with no supported way out. A refresh does repair it (1.0.0 to 4.0.3, verified).
+    const dir = await fixture({ _portability: at('1.0.0') });
+    try {
+      assert.deepEqual(detectRepairableSkew(dir).map((s) => s.name), ['_portability']);
+      assert.notEqual(assessUpdate(dir).action, 'up-to-date');
+    } finally { await removeTempDir(dir); }
+  });
+
   it('requires BOTH a declared stamp path and a present package source', () => {
     assert.equal(isManagedByInstaller('_gyre'), true);
     // `_team-factory` asserted `true` here until tfu-1-1, via EXTRA_BME_AGENTS feeding
@@ -114,7 +125,10 @@ describe('only modules the installer can stamp are routed', () => {
     // the package source is still present (the tree stays tracked in git) but nothing declares
     // a stamp path for it any more, so a test that only checked presence would still pass.
     assert.equal(isManagedByInstaller('_team-factory'), false, 'tracked in git, but no longer stamped');
-    assert.equal(isManagedByInstaller('_portability'), false, 'shipped, but nothing stamps it');
+    // Asserted `false` with the reason "shipped, but nothing stamps it" until T234. That premise was
+    // wrong — `pcDoc.set('version', version)` has stamped it since dist-2-6 — so this assertion was
+    // pinning the defect, and `_team-factory` above is the real negative case for this conjunct.
+    assert.equal(isManagedByInstaller('_portability'), true, 'pcDoc.set stamps it, so a refresh repairs it');
     assert.equal(isManagedByInstaller('_nope'), false);
   });
 });
