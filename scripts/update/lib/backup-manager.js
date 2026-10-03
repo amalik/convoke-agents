@@ -364,37 +364,30 @@ function getFilesToBackup() {
       path: '_bmad/_config/agent-manifest.csv',
       type: 'file'
     },
-    // T234 review, rounds 1 and 2. `convoke-update` prints "Your data will be backed up
-    // automatically" immediately before asking for consent, and a refresh then replaces these
-    // three module trees from the package template — `_artifacts` and `_portability` with
-    // `fs.remove` first, so operator-added FILES are deleted outright, not merely overwritten
-    // (T221). Routing a `_portability` version skew to a refresh (T234) made that reachable from
-    // the doctor's own printed advice.
+    // T184. ONE ENTRY FOR THE WHOLE TREE, deliberately, after enumeration failed three times.
     //
-    // WHOLE TREES, not just `config.yaml`. Round 1 of that review reported a lost config key and
-    // the first fix covered configs only; Round 2 then measured a planted `my-notes.md` deleted
-    // from `_artifacts` and `_portability` with no copy anywhere — the same promise still false,
-    // because the fix had matched the instance the reviewer happened to send instead of the class.
-    // `destroyed implies backed up` is pinned behaviourally in `tests/unit/backup-manager.test.js`
-    // by planting a marker in every `_bmad/bme/*` module, running a real refresh, and requiring a
-    // copy of anything the refresh removed. A fourth module cannot be missed by forgetting a list.
+    // `convoke-update` asks for consent and then a refresh replaces what it installed. T234 tried
+    // to cover that by listing paths: first the three module `config.yaml` files, then the three
+    // module directories, and Round 3 still found operator files destroyed in
+    // `_vortex/contracts/`, `_vortex/examples/` and `_gyre/workflows/*` with no copy anywhere.
+    // There are 14 `fs.remove` call sites in `refresh-installation.js`; a list will keep losing.
     //
-    // Path-mirrored under `tree/` rather than given flat names: the basenames collide with each
-    // other and with `_vortex`'s entries. That is the hazard the `tree/` convention exists for —
-    // see `_normalizeBackupEntries`, BUG-8 hardening #1.
+    // `_bmad/bme` is the root the installer owns and replaces, so backing it up whole is complete
+    // by construction and cannot miss a site. It costs ~2.5M per backup against ~1.4M for the
+    // list it subsumes, with five retained.
+    //
+    // The three `_vortex` entries below it are KEPT, not folded in: `restoreBackup` falls back to
+    // the CURRENT `getFilesToBackup()` for manifests predating `backup_entries`, so removing them
+    // would stop legacy backups restoring the flat `config.yaml`/`agents`/`workflows` they contain.
+    // The overlap is harmless — both restore the same bytes to the same place.
+    //
+    // `.claude/skills/` is NOT here and should not be. It is gitignored generated output
+    // (`.gitignore:69`), regenerated from the agent registry on every refresh, and 13M. A refresh
+    // does destroy operator files placed there; the answer is that it is not a place to keep work,
+    // which `UPDATE-GUIDE` now says, not 65M of regenerable wrappers in the backups.
     {
-      name: 'tree/_bmad/bme/_enhance',
-      path: '_bmad/bme/_enhance',
-      type: 'directory'
-    },
-    {
-      name: 'tree/_bmad/bme/_artifacts',
-      path: '_bmad/bme/_artifacts',
-      type: 'directory'
-    },
-    {
-      name: 'tree/_bmad/bme/_portability',
-      path: '_bmad/bme/_portability',
+      name: 'tree/_bmad/bme',
+      path: '_bmad/bme',
       type: 'directory'
     }
   ];

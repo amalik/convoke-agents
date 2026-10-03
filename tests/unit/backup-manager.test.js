@@ -47,48 +47,44 @@ describe('createBackup — anything a refresh CHANGES has a copy (T234)', () => 
   after(async () => { await fs.remove(dir); });
 
   it('every file the refresh removes is in the backup it just made', async () => {
+    // PER DIRECTORY, not per module. T235: the first version of this pin planted one marker at each
+    // `_bmad/bme/*` root, and nothing removes a module root — the destructive `fs.remove` calls are
+    // on SUBTREES (`_vortex/contracts`, `_vortex/examples`, `_gyre/workflows/*`). So `_gyre`, the one
+    // module with a destructive subtree and no backup entry of its own, was enumerated, never
+    // entered the changed set, and was skipped. One marker per module root is still a hand-written
+    // list, one level up. This walks every directory the installer owns.
     const bmeDir = path.join(dir, '_bmad/bme');
-    const modules = (await fs.readdir(bmeDir, { withFileTypes: true }))
-      .filter((e) => e.isDirectory())
-      .map((e) => e.name);
-    assert.ok(modules.length >= 3, 'fixture precondition: the install must produce module directories');
-
-    // Two markers per module, named after it so a failure says which one: a FILE catches a tree
-    // the refresh removes, and a KEY appended to config.yaml catches one it overwrites in place.
-    for (const m of modules) {
-      await fs.writeFile(path.join(bmeDir, m, `MARKER-${m}.md`), `operator content for ${m}`, 'utf8');
-      const cfg = path.join(bmeDir, m, 'config.yaml');
-      if (await fs.pathExists(cfg)) {
-        await fs.appendFile(cfg, `\nmarker_${m.replace(/-/g, '_')}: operator-value\n`);
+    const dirs = [];
+    const walk = async (d) => {
+      dirs.push(d);
+      for (const e of await fs.readdir(d, { withFileTypes: true })) {
+        if (e.isDirectory()) await walk(path.join(d, e.name));
       }
+    };
+    await walk(bmeDir);
+    assert.ok(dirs.length >= 20, `fixture precondition: expected a populated module tree, saw ${dirs.length} directories`);
+
+    for (const d of dirs) {
+      await fs.writeFile(path.join(d, 'MARKER.md'), `operator content for ${path.relative(dir, d)}`, 'utf8');
     }
 
     const metadata = await backupManager.createBackup('4.0.3', dir);
     await refreshInstallation(dir, { verbose: false });
 
-    const changed = [];
+    const destroyed = [];
     const unprotected = [];
-    const inBackup = async (rel) => fs.pathExists(path.join(metadata.backup_dir, 'tree', rel));
-    for (const m of modules) {
-      const key = `marker_${m.replace(/-/g, '_')}`;
-      const cfg = path.join(bmeDir, m, 'config.yaml');
-      const fileGone = !(await fs.pathExists(path.join(bmeDir, m, `MARKER-${m}.md`)));
-      const keyGone =
-        (await fs.pathExists(cfg)) && !(await fs.readFile(cfg, 'utf8')).includes(key);
-      if (!fileGone && !keyGone) continue; // the refresh left this module's operator data alone
-      changed.push(m);
-      if (fileGone && !(await inBackup(`_bmad/bme/${m}/MARKER-${m}.md`))) unprotected.push(`${m} (file)`);
-      if (keyGone) {
-        const stored = path.join(metadata.backup_dir, 'tree/_bmad/bme', m, 'config.yaml');
-        const kept = (await fs.pathExists(stored)) && (await fs.readFile(stored, 'utf8')).includes(key);
-        if (!kept) unprotected.push(`${m} (config)`);
+    for (const d of dirs) {
+      const rel = path.relative(dir, d);
+      if (await fs.pathExists(path.join(d, 'MARKER.md'))) continue; // survived
+      destroyed.push(rel);
+      if (!(await fs.pathExists(path.join(metadata.backup_dir, 'tree', rel, 'MARKER.md')))) {
+        unprotected.push(rel);
       }
     }
 
-    // Guards against passing because the refresh changed nothing — if it stops replacing trees
-    // this must be revisited, not silently satisfied.
-    assert.ok(changed.length > 0, 'the refresh changed no operator data; this test would prove nothing');
-    assert.deepEqual(unprotected, [], `a refresh changed operator data in ${unprotected.join(', ')} and the backup has no copy — the "your data will be backed up" promise is false for them`);
+    // Guards against passing because the refresh destroyed nothing.
+    assert.ok(destroyed.length > 0, 'the refresh destroyed no operator file; this test would prove nothing');
+    assert.deepEqual(unprotected, [], `a refresh destroyed operator files in ${unprotected.join(', ')} and the backup has no copy — the promise the CLI prints is false for them`);
   });
 
   it('restores a destroyed operator file, so the loss is recoverable and not merely recorded', async () => {

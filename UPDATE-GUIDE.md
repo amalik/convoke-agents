@@ -146,16 +146,16 @@ npx -p convoke-agents convoke-update            # Apply
 Every update creates a backup before making changes:
 
 - **Location:** `_bmad-output/.backups/backup-{version}-{timestamp}/`
-- **Includes:** the Vortex `config.yaml`, `agents/` and `workflows/`, `_bmad/_config/agent-manifest.csv`,
-  and the whole `_enhance`, `_artifacts` and `_portability` module directories. `_artifacts` and
-  `_portability` are deleted and recopied on every refresh; `_enhance` is copied over, so files you
-  add there survive and only same-named ones are replaced. The three are stored path-mirrored under
-  `tree/` (e.g. `tree/_bmad/bme/_artifacts/`), matching how migration-declared entries are stored.
-- **NOT included, and a refresh destroys them — this is `T184`, open:** `_bmad/bme/_vortex/contracts/`,
-  `_bmad/bme/_vortex/examples/`, anything under `_bmad/bme/_gyre/`, and `.claude/skills/`. Operator
-  files planted in all four were gone after a **successful** update, with no copy anywhere — measured
-  2026-10-03. If you keep your own work there, copy it elsewhere before updating. Vortex user guides
-  are the exception: `convoke-update` writes a sibling `.bak` for each.
+- **Includes:** the whole of `_bmad/bme/` — every module, agent, workflow, contract, example and
+  guide the installer owns — plus `_bmad/_config/agent-manifest.csv`. It is stored path-mirrored as
+  `tree/_bmad/bme/`. The whole tree is copied rather than a list of paths because a refresh replaces
+  its contents from fourteen separate places, and three successive attempts to enumerate them each
+  missed one (`T184`). Your Vortex user guides additionally get a sibling `.bak` from
+  `convoke-update`.
+- **NOT included:** `.claude/skills/`. A refresh regenerates those wrappers from the agent registry
+  and deletes the directories first, so operator files placed there are destroyed and there is no
+  copy — measured 2026-10-03. That directory is gitignored build output, not a place to keep work;
+  if you have customised a generated wrapper, keep the source of your change elsewhere.
 - **Also not included, but safe:** `_bmad-output/` apart from the backups themselves, and the shared
   files under `_bmad/_config/` other than `agent-manifest.csv`. A refresh writes `skill-manifest.csv`,
   `taxonomy.yaml` and the `agents/` customization directory, but appends or creates rather than
@@ -172,8 +172,9 @@ Every update creates a backup before making changes:
 - Custom values in the **Vortex** and **Gyre** `config.yaml` — but **not** in `_enhance`,
   `_artifacts` or `_portability`, which are rewritten from the package template on every refresh
   (`T221`). They are backed up, not preserved; see Automatic Backups above.
-- Your own files under `_bmad/bme/_vortex/contracts/`, `examples/`, `_gyre/` or `.claude/skills/` are
-  **not** in this list — a refresh deletes them and they are in no backup (`T184`).
+- Your own files anywhere under `_bmad/bme/` are **not** in this list either — a refresh replaces
+  them. They are now backed up, so they are recoverable (see Automatic Backups), but they are not
+  preserved in place. Files under `.claude/skills/` are neither preserved nor backed up.
 - Coach amendments and feedback in `.gyre/feedback.yaml`
 
 ### What Gets Updated
@@ -247,8 +248,9 @@ cp -r _bmad-output/.backups/{backup-dir}/config.yaml _bmad/bme/_vortex/
 cp -r _bmad-output/.backups/{backup-dir}/agents _bmad/bme/_vortex/
 cp -r _bmad-output/.backups/{backup-dir}/workflows _bmad/bme/_vortex/
 
-# The three module directories a refresh replaces are stored under tree/.
+# Everything the installer owns is stored under tree/. Restore the part you need, e.g.
 cp -r _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_artifacts _bmad/bme/
+cp -r _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_vortex/contracts _bmad/bme/_vortex/
 
 # WARNING: that copies config.yaml too, setting the module's version back to the release you
 # updated FROM. convoke-doctor then reports a version inconsistency and tells you to run
