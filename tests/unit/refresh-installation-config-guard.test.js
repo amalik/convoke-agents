@@ -38,6 +38,7 @@ const {
 } = require('../../scripts/update/lib/refresh-installation');
 const { readExcludedAgents } = require('../../scripts/update/lib/config-merger');
 const { AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
+const { getPackageVersion } = require('../../scripts/update/lib/utils');
 const { PACKAGE_ROOT, createValidInstallation, silenceConsole, restoreConsole } = require('../helpers');
 
 /** Unguarded before T181, and still SHIPPED. Pinned as a LITERAL: deriving it the way the code does
@@ -242,18 +243,26 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
     // This asserts the property the consumer depends on instead: `isManagedByInstaller` promises
     // a refresh can repair this module's version, so skew every declared module and require a
     // refresh to actually re-stamp it. A module added to the list with no stamp site fails here.
+    // Asserting "the value is no longer the stub" does NOT work, and the first version of this
+    // test made exactly that mistake. The three unprofiled modules are replaced wholesale by
+    // `fs.copy` before any stamp runs, and the shipped templates carry `version: 1.0.0`, so a stub
+    // differs afterwards whether or not anything stamped: removing `pcDoc.set('version')` — the
+    // exact defect T234 filed — left this file fully green. The PACKAGE version is the only value
+    // a stamp can produce, so require that instead.
+    const pkgVersion = getPackageVersion();
     for (const m of STAMPABLE_MODULES) {
       const cfg = path.join(tmpDir, '_bmad', 'bme', m, 'config.yaml');
       await fs.ensureDir(path.dirname(cfg));
-      await fs.writeFile(cfg, 'version: 0.0.1\nname: probe\n', 'utf8');
+      await fs.writeFile(cfg, `version: ${PROBE_VERSION}\nname: probe\n`, 'utf8');
     }
     await refreshInstallation(tmpDir, { verbose: false });
     const notRestamped = [];
     for (const m of STAMPABLE_MODULES) {
       const body = await fs.readFile(path.join(tmpDir, '_bmad', 'bme', m, 'config.yaml'), 'utf8');
-      if (/^version:\s*0\.0\.1\s*$/m.test(body)) notRestamped.push(m);
+      const stamped = yaml.load(body);
+      if (!stamped || String(stamped.version) !== pkgVersion) notRestamped.push(m);
     }
-    assert.deepEqual(notRestamped, [], 'declared stampable but a refresh left the version alone — the skew detector would route convoke-update to a refresh that cannot repair it (BUG-17)');
+    assert.deepEqual(notRestamped, [], `declared stampable but a refresh did not leave version ${pkgVersion} — the skew detector would route convoke-update to a refresh that cannot repair it (BUG-17)`);
   });
 
   it('nothing stampable escapes the readability guard (T234)', () => {

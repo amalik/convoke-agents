@@ -147,12 +147,19 @@ Every update creates a backup before making changes:
 
 - **Location:** `_bmad-output/.backups/backup-{version}-{timestamp}/`
 - **Includes:** the Vortex `config.yaml`, `agents/` and `workflows/`, `_bmad/_config/agent-manifest.csv`,
-  and the whole `_enhance`, `_artifacts` and `_portability` module directories — those three are
-  replaced from the package template on every refresh, so anything of yours inside them is copied
-  first. The three are stored path-mirrored under `tree/`, e.g.
-  `tree/_bmad/bme/_artifacts/`, because their file names collide with the Vortex entries.
-- **Not included:** your own files elsewhere under `_bmad/`, and `_bmad-output/` itself — nothing
-  there is touched, so nothing there is copied.
+  and the whole `_enhance`, `_artifacts` and `_portability` module directories. `_artifacts` and
+  `_portability` are deleted and recopied on every refresh; `_enhance` is copied over, so files you
+  add there survive and only same-named ones are replaced. The three are stored path-mirrored under
+  `tree/` (e.g. `tree/_bmad/bme/_artifacts/`), matching how migration-declared entries are stored.
+- **NOT included, and a refresh destroys them — this is `T184`, open:** `_bmad/bme/_vortex/contracts/`,
+  `_bmad/bme/_vortex/examples/`, anything under `_bmad/bme/_gyre/`, and `.claude/skills/`. Operator
+  files planted in all four were gone after a **successful** update, with no copy anywhere — measured
+  2026-10-03. If you keep your own work there, copy it elsewhere before updating. Vortex user guides
+  are the exception: `convoke-update` writes a sibling `.bak` for each.
+- **Also not included, but safe:** `_bmad-output/` apart from the backups themselves, and the shared
+  files under `_bmad/_config/` other than `agent-manifest.csv`. A refresh writes `skill-manifest.csv`,
+  `taxonomy.yaml` and the `agents/` customization directory, but appends or creates rather than
+  replacing: a marker line added to each survived an update, measured 2026-10-03.
 - **Retention:** Last 5 backups kept automatically
 - **Rollback:** Automatic **only if the update fails.** A refresh that SUCCEEDS still replaces those
   three module directories, and nothing restores them for you — use the manual recipe below.
@@ -165,6 +172,8 @@ Every update creates a backup before making changes:
 - Custom values in the **Vortex** and **Gyre** `config.yaml` — but **not** in `_enhance`,
   `_artifacts` or `_portability`, which are rewritten from the package template on every refresh
   (`T221`). They are backed up, not preserved; see Automatic Backups above.
+- Your own files under `_bmad/bme/_vortex/contracts/`, `examples/`, `_gyre/` or `.claude/skills/` are
+  **not** in this list — a refresh deletes them and they are in no backup (`T184`).
 - Coach amendments and feedback in `.gyre/feedback.yaml`
 
 ### What Gets Updated
@@ -223,9 +232,11 @@ npx -p convoke-agents convoke-update
 
 Or run `npx -p convoke-agents convoke-doctor` to diagnose — it detects stale locks.
 
-### Update fails and won't rollback
+### Restoring from a backup by hand
 
-Restore from backup manually:
+Needed in two cases: an update that failed without rolling back, and an update that **succeeded** —
+automatic rollback runs only on failure, so a module directory replaced by a successful refresh is
+yours to restore.
 
 ```bash
 # Find your backup
@@ -236,12 +247,18 @@ cp -r _bmad-output/.backups/{backup-dir}/config.yaml _bmad/bme/_vortex/
 cp -r _bmad-output/.backups/{backup-dir}/agents _bmad/bme/_vortex/
 cp -r _bmad-output/.backups/{backup-dir}/workflows _bmad/bme/_vortex/
 
-# The three module directories a refresh replaces are stored under tree/. Restore the one you
-# need — this is the only route after an update that SUCCEEDED, since automatic rollback runs
-# only on failure.
-cp -r _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_enhance _bmad/bme/
+# The three module directories a refresh replaces are stored under tree/.
 cp -r _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_artifacts _bmad/bme/
-cp -r _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_portability _bmad/bme/
+
+# WARNING: that copies config.yaml too, setting the module's version back to the release you
+# updated FROM. convoke-doctor then reports a version inconsistency and tells you to run
+# convoke-update, and that refresh replaces the directory again — destroying what you restored.
+# Measured 2026-10-03. Prefer copying only the files you added:
+#
+#   cp _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_artifacts/MY-FILE.md _bmad/bme/_artifacts/
+#
+# If you do copy the whole directory, reset the version afterwards to the installed release
+# (npx -p convoke-agents convoke-version prints it) by editing version: in the module's config.
 ```
 
 ### "Already up to date" but version is outdated

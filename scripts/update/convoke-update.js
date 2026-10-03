@@ -367,7 +367,11 @@ async function main() {
     }
 
     if (!yes) {
-      console.log(chalk.cyan('Your data will be backed up automatically.'));
+      console.log(chalk.cyan('Backed up first: the Vortex config, agents and workflows, the agent'));
+      console.log(chalk.cyan('manifest, and the _enhance, _artifacts and _portability directories.'));
+      console.log(chalk.yellow('NOT copied: anything else under _bmad/ or .claude/ — including'));
+      console.log(chalk.yellow('_vortex/contracts, _vortex/examples, _gyre/ and .claude/skills/.'));
+      console.log(chalk.yellow('A refresh replaces those, so your own files there are lost (T184).'));
       console.log('');
       const confirmed = await confirm('Proceed with update?');
       if (!confirmed) {
@@ -448,7 +452,10 @@ async function main() {
 
   // Confirm with user (unless --yes)
   if (!yes) {
-    console.log(chalk.cyan('Your data will be backed up automatically before migration.'));
+    console.log(chalk.cyan('Backed up first: the Vortex config, agents and workflows, the agent'));
+    console.log(chalk.cyan('manifest, and the _enhance, _artifacts and _portability directories.'));
+    console.log(chalk.yellow('NOT copied: anything else under _bmad/ or .claude/ — a refresh'));
+    console.log(chalk.yellow('replaces those, so your own files there are lost (T184).'));
     console.log('');
 
     const confirmed = await confirm('Proceed with migration?');
