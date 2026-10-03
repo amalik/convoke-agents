@@ -15,6 +15,57 @@ const _error = console.error;
 before(() => { console.log = console.warn = console.error = () => {}; });
 after(() => { console.log = _log; console.warn = _warn; console.error = _error; });
 
+describe('createBackup — the configs a refresh overwrites (T234)', () => {
+  // A refresh replaces `_enhance`, `_artifacts` and `_portability` configs wholesale from the
+  // package template, losing operator values (T221), and `convoke-update` promises "Your data
+  // will be backed up automatically" before asking for consent. Until T234 these three were not
+  // in the backup set, so that promise was false and the loss unrecoverable. All three basenames
+  // are `config.yaml`, so they are stored path-mirrored under `tree/`; a flat name would clobber
+  // `_vortex`'s, which is the BUG-8 hazard `_normalizeBackupEntries` documents.
+  const MODULES = ['_enhance', '_artifacts', '_portability'];
+  let tmpDir;
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-backup-t234-'));
+    const vortexDir = path.join(tmpDir, '_bmad/bme/_vortex');
+    await fs.ensureDir(path.join(vortexDir, 'agents'));
+    await fs.ensureDir(path.join(vortexDir, 'workflows'));
+    await fs.writeFile(path.join(vortexDir, 'config.yaml'), yaml.dump({ version: '1.3.0', keep: 'vortex' }));
+    for (const m of MODULES) {
+      await fs.ensureDir(path.join(tmpDir, '_bmad/bme', m));
+      await fs.writeFile(path.join(tmpDir, '_bmad/bme', m, 'config.yaml'), yaml.dump({ version: '1.3.0', keep: m }));
+    }
+    await fs.ensureDir(path.join(tmpDir, '_bmad-output'));
+    await fs.ensureDir(path.join(tmpDir, '_bmad/_config'));
+    await fs.writeFile(path.join(tmpDir, '_bmad/_config/agent-manifest.csv'), 'header\nrow1');
+  });
+
+  after(async () => { await fs.remove(tmpDir); });
+
+  it('backs up each overwritten config, and no basename clobbers another', async () => {
+    const metadata = await backupManager.createBackup('1.3.0', tmpDir);
+    for (const m of MODULES) {
+      const stored = path.join(metadata.backup_dir, 'tree/_bmad/bme', m, 'config.yaml');
+      assert.ok(fs.existsSync(stored), `${m}/config.yaml must be in the backup`);
+      assert.match(await fs.readFile(stored, 'utf8'), new RegExp(`keep: ${m}`), `${m}'s own content, not another module's`);
+    }
+    // The pre-existing flat entry must still hold Vortex's, not a later module's.
+    assert.match(await fs.readFile(path.join(metadata.backup_dir, 'config.yaml'), 'utf8'), /keep: vortex/);
+  });
+
+  it('restores them, so the loss is recoverable rather than merely recorded', async () => {
+    const metadata = await backupManager.createBackup('1.3.0', tmpDir);
+    for (const m of MODULES) {
+      await fs.writeFile(path.join(tmpDir, '_bmad/bme', m, 'config.yaml'), yaml.dump({ version: '9.9.9' }));
+    }
+    await backupManager.restoreBackup(metadata, tmpDir);
+    for (const m of MODULES) {
+      const body = await fs.readFile(path.join(tmpDir, '_bmad/bme', m, 'config.yaml'), 'utf8');
+      assert.match(body, new RegExp(`keep: ${m}`), `${m}'s value must come back`);
+    }
+  });
+});
+
 describe('createBackup', () => {
   let tmpDir;
 

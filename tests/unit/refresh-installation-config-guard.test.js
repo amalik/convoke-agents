@@ -34,6 +34,7 @@ const yaml = require('js-yaml');
 const {
   refreshInstallation,
   guardedModuleNames,
+  STAMPABLE_MODULES,
 } = require('../../scripts/update/lib/refresh-installation');
 const { readExcludedAgents } = require('../../scripts/update/lib/config-merger');
 const { AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
@@ -227,6 +228,23 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
     // The universe. Guarantees a decoy exists (candidates ⊋ written) without a comparison that
     // cannot fail, and names any directory that appeared or vanished.
     assert.deepEqual(candidates, BME_DIRECTORIES, 'the set of _bmad/bme/* directories changed');
+  });
+
+  it('the two lists of module configs this file writes agree (T234)', () => {
+    // `GUARDED_MODULE_NAMES` (what the readability guard checks) and `STAMPABLE_MODULES` (what the
+    // skew detector is told a refresh can re-stamp) are two hardcoded lists of the same thing,
+    // 1300 lines apart in one file. T234 was them disagreeing: `_portability` was stamped and
+    // guarded but missing from STAMPABLE, so `convoke-doctor` reported a skew and
+    // `convoke-update` answered "Already up to date!" — a deadlock with no supported way out, and
+    // nothing detected it. STAMPABLE_MODULES' own docblock warns that a second hardcoded list
+    // would be "the two-callers-disagree defect BUG-17 exists to remove, reproduced inside its
+    // own fix"; this is what makes that warning enforceable.
+    //
+    // Equality in both directions on purpose. A config written but NOT stamped is the I137
+    // defect — a fresh install reports a stale version and tells the operator to update. A config
+    // stamped but NOT guarded would be rewritten with no readability check. If a future module
+    // must diverge, that is a ruling: change this assertion deliberately, do not relax it.
+    assert.deepEqual([...STAMPABLE_MODULES].sort(), guardedModuleNames());
   });
 
   it('the guarded list is sorted, because the refusal names only the first', async () => {

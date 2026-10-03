@@ -363,6 +363,31 @@ function getFilesToBackup() {
       name: 'agent-manifest.csv',
       path: '_bmad/_config/agent-manifest.csv',
       type: 'file'
+    },
+    // T234 review. A refresh replaces these three wholesale from the package template, so an
+    // operator's values in them are lost (T221) — and `convoke-update` prints "Your data will be
+    // backed up automatically" immediately before asking for consent. Measured before this entry:
+    // a planted key in `_enhance` and `_artifacts` was absent from the backup it had just made,
+    // so the loss was unrecoverable. Routing a `_portability` version skew to a refresh (T234)
+    // made that reachable from the doctor's own advice, which is why it is fixed here.
+    //
+    // Path-mirrored under `tree/` rather than given flat names: all three basenames are
+    // `config.yaml` and would clobber each other and `_vortex`'s. That is the hazard the
+    // `tree/` convention was added for — see `_normalizeBackupEntries`, BUG-8 hardening #1.
+    {
+      name: 'tree/_bmad/bme/_enhance/config.yaml',
+      path: '_bmad/bme/_enhance/config.yaml',
+      type: 'file'
+    },
+    {
+      name: 'tree/_bmad/bme/_artifacts/config.yaml',
+      path: '_bmad/bme/_artifacts/config.yaml',
+      type: 'file'
+    },
+    {
+      name: 'tree/_bmad/bme/_portability/config.yaml',
+      path: '_bmad/bme/_portability/config.yaml',
+      type: 'file'
     }
   ];
 }

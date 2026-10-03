@@ -109,7 +109,7 @@ describe('only modules the installer can stamp are routed', () => {
 
   it('a _portability-only skew is routed, not reported up-to-date (T234)', async () => {
     // Measured before the fix: the doctor printed "Package: 4.0.3, _portability: 1.0.0 / Fix: Run:
-    // npx -p convoke-agents convoke-update" and that command answered "Already up to date!" — a
+    // npx -p convoke-agents@4.0.3 convoke-update" and that command answered "Already up to date!" — a
     // deadlock with no supported way out. A refresh does repair it (1.0.0 to 4.0.3, verified).
     const dir = await fixture({ _portability: at('1.0.0') });
     try {

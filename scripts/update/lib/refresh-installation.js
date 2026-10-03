@@ -1442,7 +1442,7 @@ function seedBmmDependencies(projectRoot, opts = {}) {
  *
  * T234: this enumeration was written by hand and omitted `pcDoc`, so the list said four while the
  * code stamped five, and `_portability` read as unmanaged. Derive it rather than counting by eye:
- * `grep -nE "\\.set\\('version'|configMerger\\.mergeConfig\\(" scripts/update/lib/refresh-installation.js`.
+ * `grep -nE "\\.set\\('version'|configMerger\\.mergeConfig\\(" scripts/update/lib/refresh-installation.js | grep -v "^[0-9]*: \\*"` — the filter matters: without it the two sentences above match too, and one of them names `scDoc`, a site `tfu-1-1` deleted, so the unfiltered command returns 7 and reproduces the hand-count it replaces.
  * Named by symbol on purpose: line
  * numbers in this file are not gate-checked, and every attempt to keep them current during
  * BUG-17 rotted within the hour.
