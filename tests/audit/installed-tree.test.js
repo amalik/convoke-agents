@@ -67,95 +67,79 @@ const CLI = path.join(PACKAGE_ROOT, 'scripts', 'audit', 'assert-installed-tree.j
  * before it was true once.
  */
 function auditCitations(pairs) {
-  return pairs.filter(({ site, anchor }) => !citationHolds(site, anchor));
+  return pairs.filter(({ site, anchor, claim }) => !citationHolds(site, anchor, claim));
 }
 
 /**
- * A citation holds when its anchor identifies EXACTLY ONE LOAD-BEARING line of the cited file.
+ * Which anchors may stand for which kind of claim.
  *
- * T230: `site` carried a `:NNN` until 2026-10-02 and the predicate checked that the cited LINE
- * contained the anchor. Every edit to `refresh-installation.js` in the `tfu-1-1`/`T227` arc rotted
- * all of these at once — six repairs in three days, each found by this test going red rather than by
- * anyone remembering. So the number went and the line is resolved from the anchor instead.
+ * AN ALLOWLIST, AND THE DIRECTION IS THE POINT. Round 1 removed the `:NNN` from these citations and
+ * left content-uniqueness as the only test, which accepted anything occurring once — a log line, a
+ * comment, the `console.warn` from the `catch` that runs when seeding FAILED. Round 2 then showed a
+ * DENYLIST of line shapes could not close that: it missed a `changes.push` whose string sits on the
+ * next line, an `if (verbose) {` block opener, a `require` destructure, a `module.exports` member and
+ * a trailing comment — four more shapes, each inviting a fifth regex.
  *
- * THE NUMBER WAS NOT REDUNDANT, and an earlier version of this comment claimed it was. Round 1
- * disproved that: `(position ∧ content)` was an AND, and dropping position left content alone, which
- * accepts any string occurring once — including a `changes.push` log line, a section comment, and
- * the `console.warn` inside the `catch` that runs when seeding FAILED. All three passed with the
- * suite green, and HEAD had reddened on all three. Worse, deleting a generator while leaving its text
- * in a history comment — the commenting habit used throughout this repository — also passed.
+ * So the test is inverted. A denylist fails OPEN on a shape nobody thought of, which is how every one
+ * of those got through with the suite green. An allowlist fails CLOSED: an unrecognised shape is
+ * rejected and whoever introduced it adds it deliberately. A false red costs a conversation; a false
+ * green cost `T181` an operator's config.
  *
- * SO THE SECOND CONJUNCT IS RESTORED, as a property of the resolved line rather than its position:
- * it must be load-bearing. A comment and a pure reporting call (`changes.push`, `console.*`) are
- * both rejected, because neither can be the code that does the thing the record claims. That kills
- * all four survivors while staying immune to the shift that rotted the numbers. It is weaker than a
- * position check in one way — it cannot tell a write from a declaration beside it — so the records
- * themselves carry that burden: each `arrivesVia` anchor names the WRITE, not a path declaration
- * near it. `skill-manifest.csv` cited a declaration 29 lines above its write until Round 1; deleting
- * the write kept the alarm green, a hole that was open at HEAD too.
- *
- * WHAT IS STILL NOT CHECKED. That the anchor names the semantically correct construct among several
- * load-bearing candidates. An earlier version of this comment said "nothing can" check that; two
- * cheap things can and now do, so the claim was false as well as self-serving. What remains is a
- * judgement a reviewer makes, and a wrong anchor is wrong code visible in a diff — which a wrong
- * number was not.
- *
- * AMBIGUITY WAS THE REAL WORK. Four of the eight anchors matched more than one line before the
- * conversion (`for (const agent of AGENTS)` matches the user-guides loop as well as the wrapper
- * loop), so for those four the number was the sole disambiguator. They were lengthened until unique
- * and each verified to resolve to the line it previously cited.
+ * It is also per CLAIM, because the old predicate was write-semantics wearing a kind-agnostic name:
+ * it rejected a `const x = path.join(...)` line, which is exactly what all nine READ sites cite, so
+ * it forbade the conversion the same commit's comment called available.
  */
-function citationHolds(site, anchor) {
-  // TWO CITATION KINDS COEXIST, deliberately, and the shape of `site` says which.
-  //
-  //   `path`      — ANCHORED. The anchor is a unique, load-bearing snippet of the cited code and the
-  //                 line is resolved from it. Eight of these.
-  //   `path:NNN`  — LINE-CITED. Nine of these. SEVEN carry no token of their own, so their anchor is
-  //                 a bare basename that legitimately recurs in the file and uniqueness is the wrong
-  //                 test; the number is still load-bearing there. The other TWO do carry a token
-  //                 (`token: 'BMM_DEPS_CSV_REL'`, `alsoReadToken`), and one of those two is already
-  //                 unique — so it is convertible today with no anchor invented. Converting the rest
-  //                 is the remaining half of `T230`.
-  const [rel, lineNo, ...rest] = site.split(':');
-  if (!rel || rest.length > 0) return false;        // '' would read PACKAGE_ROOT; 'a:1:2' is not a site
+const ADMISSIBLE_ANCHOR = Object.freeze({
+  // A GENERATOR claim names the loop that emits the wrapper.
+  generates: /^\s*for\s*\(|\.(forEach|map)\s*\(/,
+  // An ARRIVAL claim names the call that PUTS THE FILE THERE: a write/copy primitive, or a
+  // delegating seeder invoked on the project or package root (`mergeTaxonomy(projectRoot)`).
+  arrives: /fs\.(writeFile|writeFileSync|copy|outputFile|move|appendFile)\s*\(|^\s*(const\s+\w+\s*=\s*)?(await\s+)?\w+\((projectRoot|packageRoot)\b/,
+  // A READ claim names where the reader resolves or opens the path.
+  reads: /^\s*(const|let)\s+\w+\s*=\s*path\.join\(|fs\.(readFile|readFileSync|existsSync)\s*\(/,
+});
+
+/**
+ * A citation holds when it resolves to exactly one line AND that line is an admissible anchor for
+ * the kind of claim the record makes.
+ *
+ * TWO CITATION KINDS COEXIST and the shape of `site` says which. `path` is ANCHORED — the anchor is a
+ * unique snippet and the line is resolved from it; eight of these. `path:NNN` is LINE-CITED — nine of
+ * these, seven of which carry no token of their own so their anchor is a bare basename that
+ * legitimately recurs, which is why the number is still load-bearing there. Both kinds are now
+ * checked for admissibility, so the nine read sites are covered by something for the first time.
+ *
+ * `claim` is required. Omitting it rejects, rather than defaulting to a kind that might pass.
+ */
+function citationHolds(site, anchor, claim) {
+  const rule = ADMISSIBLE_ANCHOR[claim];
+  if (!rule || !anchor) return false;
+  const [rel, lineNo, ...rest] = String(site).split(':');
+  // `!rel` is REDUNDANT with the `isFile` check below — an empty `rel` resolves to PACKAGE_ROOT, a
+  // directory. Removing it alone survives mutation, so it is defence-in-depth rather than an untested
+  // path; recorded so it is not re-derived as a gap. `rest.length` is not redundant and is pinned.
+  if (!rel || rest.length > 0) return false;
   const abs = path.join(PACKAGE_ROOT, rel);
   if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) return false;
-  const src = fs.readFileSync(abs, 'utf8');
+  const lines = fs.readFileSync(abs, 'utf8').split('\n');
+  let line;
   if (lineNo === undefined) {
-    if (occurrencesOf(src, anchor) !== 1) return false;
-    return isLoadBearing(src.split('\n')[anchorLine(rel, anchor) - 1]);
+    const at = anchorLine(rel, anchor);
+    if (at === 0) return false;           // absent or ambiguous
+    line = lines[at - 1];
+  } else {
+    line = lines[Number(lineNo) - 1];
+    if (line === undefined || !line.includes(anchor)) return false;
   }
-  if (!anchor) return false;                        // '' matches every line; undefined stringifies
-  const line = src.split('\n')[Number(lineNo) - 1];
-  return line !== undefined && line.includes(anchor);
-}
-
-/**
- * Can this line be the code that does the thing a citation claims?
- *
- * A comment cannot — and a generator deleted with its text left in a history comment is the exact
- * fail-open Round 1 demonstrated. A pure reporting call cannot either: `changes.push` and `console.*`
- * describe what happened, and one of them (`Warning: could not seed skill-manifest.csv`) reports that
- * it did NOT happen. Anchoring a record on it would assert arrival by citing proof of failure.
- */
-function isLoadBearing(line) {
-  if (typeof line !== 'string') return false;
-  const t = line.trim();
-  if (t === '') return false;
-  if (/^(\/\/|\*|\/\*)/.test(t)) return false;
-  if (/^(changes\.push\(|console\.(log|warn|error|info)\()/.test(t)) return false;
-  // A bare `const x = path.join(...)` DECLARES where a file would go; it never puts one there. This
-  // is the narrow form of the write-vs-declaration problem: `skill-manifest.csv` cited a declaration
-  // 29 lines above its write, and deleting the write left the alarm green — open at HEAD too.
-  // Deliberately narrow: it rejects only a declaration whose entire right-hand side is `path.join`,
-  // so `const r = await mergeTaxonomy(...)` and `const d = seedBmmDependencies(...)` still qualify.
-  if (/^const\s+\w+\s*=\s*path\.join\(/.test(t)) return false;
-  return true;
+  return rule.test(line);
 }
 
 /** Count of `needle` in `hay`, counting overlapping matches — so a self-overlapping anchor reads as
  *  ambiguous rather than unique, which errs toward rejection. */
 function occurrencesOf(hay, needle) {
+  // This guard prevents a HANG, not a wrong answer: without it an empty needle loops forever, so its
+  // mutant hangs instead of reddening. That is why it is a guard and not something a test can kill —
+  // `citationHolds` also rejects an empty anchor before reaching here.
   if (!needle) return 0;
   let n = 0;
   for (let i = hay.indexOf(needle); i !== -1; i = hay.indexOf(needle, i + 1)) n++;
@@ -165,7 +149,9 @@ function occurrencesOf(hay, needle) {
 /** The 1-based line an anchor resolves to, for diagnostics. 0 when it does not resolve uniquely. */
 function anchorLine(site, anchor) {
   const abs = path.join(PACKAGE_ROOT, String(site).split(':')[0]);
-  if (!fs.existsSync(abs)) return 0;
+  // `isFile` as well as `existsSync`: a directory passed `existsSync` and then threw EISDIR out of
+  // the rot alarm, where an assertion was written for it (Round 2).
+  if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) return 0;
   const src = fs.readFileSync(abs, 'utf8');
   if (occurrencesOf(src, anchor) !== 1) return 0;
   return src.slice(0, src.indexOf(anchor)).split('\n').length;
@@ -202,9 +188,13 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
       // T230: `arrivesVia` is ANCHORED — bare path, line resolved from `arrivesViaToken`. A number
       // here means the conversion was reverted.
       for (const s of e.alsoRead || []) {
-        // `alsoRead` was asserted by nothing. Un-numbering one made the rot alarm fail with a
-        // message naming the wrong file, because it is still a LINE-CITED kind.
-        assert.match(s, /^scripts\/.+:\d+$/, `${e.file}: alsoRead entry ${s} is not <path>:<line>`);
+        // EITHER shape is allowed, because conversion is meant to be possible one site at a time.
+        // Round 2: a guard requiring `:NNN` here made the doc's "convertible today" false by
+        // forbidding it. An ANCHORED entry needs a token, or there is nothing to resolve it from.
+        assert.match(s, /^scripts\/.+?(:\d+)?$/, `${e.file}: alsoRead entry ${s} is not a path`);
+        if (!/:\d+$/.test(s)) {
+          assert.ok(e.alsoReadToken, `${e.file}: alsoRead ${s} is anchored but the entry has no alsoReadToken`);
+        }
       }
       if (e.arrivesVia) {
         assert.doesNotMatch(e.arrivesVia, /:\d+$/, `${e.file}: arrivesVia carries a line number again`);
@@ -228,12 +218,12 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
     // destination declaration — all of which passed because the old check accepted any line
     // merely mentioning the basename anywhere in the entry.
     const sites = RUNTIME_DATA_FILES.flatMap(e => [
-      { site: e.readSite, entry: e, token: e.token },
-      ...(e.alsoRead || []).map(s => ({ site: s, entry: e, token: e.alsoReadToken })),
-      ...(e.arrivesVia ? [{ site: e.arrivesVia, entry: e, token: e.arrivesViaToken }] : []),
+      { site: e.readSite, entry: e, token: e.token, claim: 'reads' },
+      ...(e.alsoRead || []).map(s => ({ site: s, entry: e, token: e.alsoReadToken, claim: 'reads' })),
+      ...(e.arrivesVia ? [{ site: e.arrivesVia, entry: e, token: e.arrivesViaToken, claim: 'arrives' }] : []),
     ]);
     assert.ok(sites.length >= RUNTIME_DATA_FILES.length);
-    for (const { site, entry, token } of sites) {
+    for (const { site, entry, token, claim } of sites) {
       const [rel, lineNo] = site.split(':');
       const abs = path.join(PACKAGE_ROOT, rel);
       assert.ok(fs.existsSync(abs), `${site} — file no longer exists`);
@@ -252,7 +242,7 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
       // wrong citation Round 1 disproved pass again.
       const anchor = token || path.basename(entry.file);
       assert.deepEqual(
-        auditCitations([{ site, anchor }]), [],
+        auditCitations([{ site, anchor, claim }]), [],
         `${site} no longer contains ${anchor} — line reads: ${line.trim()}`
       );
     }
@@ -276,7 +266,7 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
       const n = occurrencesOf(fs.readFileSync(abs, 'utf8'), def.anchor);
       assert.equal(n, 1, `${rule}: anchor ${JSON.stringify(def.anchor)} occurs ${n}× in ${def.site} — ` +
         (n === 0 ? 'the generator was renamed or removed' : 'lengthen it until it identifies one site'));
-      assert.deepEqual(auditCitations([{ site: def.site, anchor: def.anchor }]), [], `${rule}: predicate disagrees`);
+      assert.deepEqual(auditCitations([{ site: def.site, anchor: def.anchor, claim: 'generates' }]), [], `${rule}: predicate disagrees`);
       assert.equal(typeof def.name, 'function');
       assert.ok(['generator', 'ADR-004 C2'].includes(def.derivedFrom), `${rule}: unstated basis`);
     }
@@ -288,11 +278,11 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
   // left the suite green — the Round 1 defect class reproduced one level up.
   it('the citation predicate rejects an absent anchor and an AMBIGUOUS one', () => {
     const { site, anchor } = WRAPPER_RULES.standaloneWorkflow;
-    assert.deepEqual(auditCitations([{ site, anchor }]), [], 'the real citation must hold, or the rest proves nothing');
+    assert.deepEqual(auditCitations([{ site, anchor, claim: 'generates' }]), [], 'the real citation must hold, or the rest proves nothing');
     assert.ok(anchorLine(site, anchor) > 0, 'the real anchor must resolve to a line');
 
     // Absent.
-    assert.equal(auditCitations([{ site, anchor: 'for (const nothing of NOWHERE)' }]).length, 1,
+    assert.equal(auditCitations([{ site, anchor: 'for (const nothing of NOWHERE)', claim: 'generates' }]).length, 1,
       'an anchor matching nothing must be rejected');
 
     // AMBIGUOUS — and this is the real historical defect, not a synthetic one. `vortexAgent` cited
@@ -301,41 +291,94 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
     const short = 'for (const agent of AGENTS)';
     assert.ok(occurrencesOf(fs.readFileSync(path.join(PACKAGE_ROOT, site), 'utf8'), short) > 1,
       'this guard is vacuous unless that text really is ambiguous');
-    assert.equal(auditCitations([{ site, anchor: short }]).length, 1, 'an ambiguous anchor must be rejected');
+    assert.equal(auditCitations([{ site, anchor: short, claim: 'generates' }]).length, 1, 'an ambiguous anchor must be rejected');
     assert.equal(anchorLine(site, short), 0, 'an ambiguous anchor must not resolve to a line');
   });
 
   // The same discrimination proof for the runtime-data manifest's alarm.
-  it('isLoadBearing rejects every class that cannot be the code a citation claims', () => {
-    // Each branch is pinned directly, because Round 1's survivors were all DATA-level mutants and
-    // removing any one of these three branches left the suite green — a guard with no test is a
-    // comment. The inputs are real lines from the file these records cite, not invented ones.
-    const src = fs.readFileSync(path.join(PACKAGE_ROOT, 'scripts/update/lib/refresh-installation.js'), 'utf8');
-    const realLine = (needle) => {
-      const lines = src.split('\n').filter((l) => l.includes(needle));
-      assert.equal(lines.length, 1, `fixture needle ${JSON.stringify(needle)} must match exactly one line`);
+  it('only an admissible anchor stands for a claim — every shape Round 2 got through is rejected', () => {
+    // The title names the property, not a universal: this is an ALLOWLIST, so the claim is that each
+    // listed shape is rejected and the real anchors are accepted. An unrecognised shape is rejected
+    // by construction, which is the whole reason for inverting the test.
+    const REL = 'scripts/update/lib/refresh-installation.js';
+    const realLineIn = (rel, needle) => {
+      const lines = fs.readFileSync(path.join(PACKAGE_ROOT, rel), 'utf8').split('\n').filter((l) => l.includes(needle));
+      assert.equal(lines.length, 1, `fixture needle ${JSON.stringify(needle)} must match exactly one line of ${rel}`);
       return lines[0];
     };
+    const realLine = (needle) => realLineIn(REL, needle);
+    const admits = (claim, line) => ADMISSIBLE_ANCHOR[claim].test(line);
 
-    assert.equal(isLoadBearing(realLine('for (const agent of GYRE_AGENTS) {')), true, 'a loop is load-bearing');
-    assert.equal(isLoadBearing(realLine('fs.writeFileSync(skillManifestPath,')), true, 'a write is load-bearing');
+    // ACCEPTED: the shapes the records actually use.
+    assert.equal(admits('generates', realLine('for (const agent of GYRE_AGENTS) {')), true, 'a loop generates');
+    assert.equal(admits('arrives', realLine('fs.writeFileSync(skillManifestPath,')), true, 'a write arrives');
+    assert.equal(admits('arrives', realLine('const taxonomyResult = await mergeTaxonomy(projectRoot);')), true,
+      'a seeder invoked on projectRoot arrives');
+    // From the file that actually reads it — a READ site is not in the installer.
+    assert.equal(admits('reads', realLineIn('scripts/lib/artifact-utils.js', "const configPath = path.join(projectRoot, '_bmad', '_config', 'taxonomy.yaml');")), true,
+      'a path construction is what a READ site cites — the old predicate rejected all nine of these');
 
-    assert.equal(isLoadBearing(realLine('Backlog I137. `mergeTaxonomy` was reachable')), false, 'a comment is not');
-    assert.equal(isLoadBearing(realLine("changes.push('Created _bmad/_config/taxonomy.yaml (platform defaults)')")), false,
-      'a changes.push only reports');
-    assert.equal(isLoadBearing(realLine('Warning: could not seed skill-manifest.csv')), false,
-      'the failure-path warning reports that it did NOT happen');
-    assert.equal(isLoadBearing(realLine("const packageManifest = path.join(packageRoot, '_bmad', '_config', 'skill-manifest.csv');")), false,
-      'a path declaration says where a file would go, never puts one there');
+    // REJECTED: every shape Round 2 demonstrated getting through the denylist, plus Round 1's three.
+    const rejected = [
+      ['a plain log line', "changes.push('Created _bmad/_config/taxonomy.yaml (platform defaults)');"],
+      ['the failure-path warning', 'Warning: could not seed skill-manifest.csv'],
+      ['a guarded log line', "if (verbose) console.log('    Created _bmad/_config/taxonomy.yaml');"],
+      ['a comment', 'Backlog I137. `mergeTaxonomy` was reachable'],
+      ['a trailing comment on a code line', 'unparseable — treat as unusable and reseed'],
+      ['a changes.push string on its OWN line', 'Created _bmad/_config/skill-manifest.csv (${kept.length}'],
+      ['a require destructure', "const { mergeTaxonomy } = require('./taxonomy-merger');"],
+      ['a path DECLARATION, for an ARRIVAL claim', "const packageManifest = path.join(packageRoot, '_bmad', '_config', 'skill-manifest.csv');"],
+    ];
+    for (const [label, needle] of rejected) {
+      assert.equal(admits('arrives', realLine(needle)), false, `${label} must not stand for an arrival`);
+    }
 
-    assert.equal(isLoadBearing(''), false);
-    assert.equal(isLoadBearing('   '), false);
-    assert.equal(isLoadBearing(undefined), false);
+    // A block opener cannot stand for an arrival either — Round 2 reached one as a multi-line anchor's
+    // first line. It is not unique on its own, so it is checked directly rather than via `realLine`.
+    assert.equal(admits('arrives', '        if (verbose) {'), false, 'a block opener does not arrive');
+    assert.equal(admits('generates', '        if (verbose) {'), false, 'nor does it generate');
+
+    // A claim kind that does not exist, and a missing one, both reject rather than default.
+    assert.equal(citationHolds(REL, 'for (const agent of GYRE_AGENTS) {', 'nonsense'), false);
+    assert.equal(citationHolds(REL, 'for (const agent of GYRE_AGENTS) {', undefined), false);
+    assert.equal(citationHolds(REL, 'for (const agent of GYRE_AGENTS) {', 'generates'), true);
+    // ...and a generator anchor is not admissible for an arrival, nor a write for a generator.
+    assert.equal(citationHolds(REL, 'for (const agent of GYRE_AGENTS) {', 'arrives'), false);
+    assert.equal(citationHolds(REL, 'fs.writeFileSync(skillManifestPath,', 'generates'), false);
+  });
+
+  it('the LINE-CITED branch rejects a wrong line, and the defensive guards are reachable', () => {
+    // Round 2: replacing the line-cited branch's `line.includes(anchor)` with `true` survived the
+    // whole suite — nine of the seventeen citations had no negative control at all, because every
+    // guard in this file exercised an ANCHORED site. This is that control.
+    const REL = 'scripts/update/lib/refresh-installation.js';
+    const bmm = RUNTIME_DATA_FILES.find((e) => e.file.endsWith('bmm-dependencies.csv'));
+    assert.equal(citationHolds(bmm.readSite, bmm.token, 'reads'), true, 'the real line-cited citation must hold');
+    // The wrong line must ITSELF be admissible, or the admissibility rule rejects it and this control
+    // proves nothing. `:1` is a shebang: not admissible, so it passed with `includes` removed. Line 322
+    // of the same file is a `const … = path.join(…)` — admissible for a read, and it does not contain
+    // `BMM_DEPS_CSV_REL`, so only the content check can reject it.
+    const [rel] = bmm.readSite.split(':');
+    const wrongButAdmissible = `${rel}:322`;
+    assert.match(fs.readFileSync(path.join(PACKAGE_ROOT, rel), 'utf8').split('\n')[321], /path\.join\(/,
+      'fixture: line 322 must still be a path construction, or this control stops isolating `includes`');
+    assert.equal(citationHolds(wrongButAdmissible, bmm.token, 'reads'), false,
+      'an admissible line that does not contain the anchor must still be rejected');
+
+    // Each of these took a branch that no test reached, so each could be deleted with the suite green.
+    assert.equal(citationHolds('', 'anything', 'reads'), false, 'an empty site must not read PACKAGE_ROOT');
+    assert.equal(citationHolds('scripts', 'anything', 'reads'), false, 'a directory is not a citation');
+    assert.equal(citationHolds(`${REL}:897:5`, 'for (const agent of GYRE_AGENTS) {', 'generates'), false,
+      'a two-colon site is not a citation');
+    assert.equal(citationHolds(REL, '', 'generates'), false, 'an empty anchor matches everything, so it must reject');
+    assert.equal(citationHolds(`${REL}:897`, '', 'generates'), false, 'likewise on the line-cited branch');
+    assert.equal(occurrencesOf('aaaa', ''), 0, 'an empty needle must not loop');
+    assert.equal(anchorLine('scripts', 'anything'), 0, 'a directory resolves to no line rather than throwing');
   });
 
   it('the manifest alarm rejects a log line that merely mentions the filename', () => {
     const taxonomy = RUNTIME_DATA_FILES.find(e => e.file.endsWith('taxonomy.yaml'));
-    assert.deepEqual(auditCitations([{ site: taxonomy.arrivesVia, anchor: taxonomy.arrivesViaToken }]), [], 'the real citation must hold');
+    assert.deepEqual(auditCitations([{ site: taxonomy.arrivesVia, anchor: taxonomy.arrivesViaToken, claim: 'arrives' }]), [], 'the real citation must hold');
     // THE LOG LINE, restored. Round 1 found this test had kept its name while losing the case it was
     // named for: dropping the line number left content-uniqueness alone, and the `changes.push` line
     // below the call is unique, so pointing the record at it passed with the suite green. It asserts
@@ -344,18 +387,18 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
     const logLine = "changes.push('Created _bmad/_config/taxonomy.yaml (platform defaults)');";
     assert.equal(occurrencesOf(fs.readFileSync(path.join(PACKAGE_ROOT, taxonomy.arrivesVia), 'utf8'), logLine), 1,
       'this guard is vacuous unless that log line really is unique');
-    assert.equal(auditCitations([{ site: taxonomy.arrivesVia, anchor: logLine }]).length, 1,
+    assert.equal(auditCitations([{ site: taxonomy.arrivesVia, anchor: logLine, claim: 'arrives' }]).length, 1,
       'a log line must not satisfy the alarm, however unique it is');
     const warnLine = "console.warn(`    Warning: could not seed skill-manifest.csv: ${err.message}`);";
-    assert.equal(auditCitations([{ site: taxonomy.arrivesVia, anchor: warnLine }]).length, 1,
+    assert.equal(auditCitations([{ site: taxonomy.arrivesVia, anchor: warnLine, claim: 'arrives' }]).length, 1,
       'the failure-path warning must not satisfy the alarm');
 
     // The old token was the bare symbol `mergeTaxonomy`, which occurs three times: a COMMENT at
     // `Backlog I137`, the `require` destructure, and the call. Not a log line — the log line does not
     // contain the symbol at all, and an earlier version of this comment said it did.
-    assert.equal(auditCitations([{ site: taxonomy.arrivesVia, anchor: 'mergeTaxonomy' }]).length, 1,
+    assert.equal(auditCitations([{ site: taxonomy.arrivesVia, anchor: 'mergeTaxonomy', claim: 'arrives' }]).length, 1,
       'the bare symbol is ambiguous and must be rejected');
-    assert.equal(auditCitations([{ site: taxonomy.arrivesVia, anchor: 'mergeTaxonomyNope' }]).length, 1,
+    assert.equal(auditCitations([{ site: taxonomy.arrivesVia, anchor: 'mergeTaxonomyNope', claim: 'arrives' }]).length, 1,
       'an absent token must be rejected');
   });
 
