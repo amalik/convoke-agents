@@ -6,6 +6,7 @@ const os = require('os');
 const yaml = require('js-yaml');
 
 const backupManager = require('../../scripts/update/lib/backup-manager');
+const { refreshInstallation } = require('../../scripts/update/lib/refresh-installation');
 
 // Silence console output during tests to prevent node:test IPC serialization
 // issues on Node 20 (V8 structured clone deserialization bug)
@@ -15,54 +16,89 @@ const _error = console.error;
 before(() => { console.log = console.warn = console.error = () => {}; });
 after(() => { console.log = _log; console.warn = _warn; console.error = _error; });
 
-describe('createBackup — the configs a refresh overwrites (T234)', () => {
-  // A refresh replaces `_enhance`, `_artifacts` and `_portability` configs wholesale from the
-  // package template, losing operator values (T221), and `convoke-update` promises "Your data
-  // will be backed up automatically" before asking for consent. Until T234 these three were not
-  // in the backup set, so that promise was false and the loss unrecoverable. All three basenames
-  // are `config.yaml`, so they are stored path-mirrored under `tree/`; a flat name would clobber
-  // `_vortex`'s, which is the BUG-8 hazard `_normalizeBackupEntries` documents.
-  const MODULES = ['_enhance', '_artifacts', '_portability'];
-  let tmpDir;
+describe('createBackup — anything a refresh CHANGES has a copy (T234)', () => {
+  // DERIVED, NOT LISTED, and that is the whole point of this test.
+  //
+  // `convoke-update` prints "Your data will be backed up automatically" immediately before the
+  // consent prompt. Round 1 of the T234 review found a lost config KEY with no copy; the fix added
+  // the three `config.yaml` files. Round 2 then found a lost operator FILE with no copy — the same
+  // promise still false, because the fix had matched the instance the reviewer happened to send
+  // instead of the class. Two hand-written lists had failed in a row, so this asserts the property
+  // instead: plant a marker in every `_bmad/bme/*` module, take the backup the CLI promises, run a
+  // real refresh, and require a copy of anything that vanished.
+  //
+  // A fourth module cannot be missed by forgetting to extend a list, and the failure names the
+  // module. Dropping an entry from `getFilesToBackup()` reddens this with that module's own path.
+  //
+  // REMOVED *and* OVERWRITTEN, because the first version of this test checked removal only — the
+  // half of the harm Round 2 had just demonstrated — and so dropping `_enhance` reddened nothing:
+  // that module is a bare `fs.copy` with no `fs.remove`, so a planted file survives and only its
+  // `config.yaml` is replaced. A derived pin can inherit the blind spot of the instance that
+  // prompted it, which is the same mistake one level up.
+  let dir;
 
   before(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-backup-t234-'));
-    const vortexDir = path.join(tmpDir, '_bmad/bme/_vortex');
-    await fs.ensureDir(path.join(vortexDir, 'agents'));
-    await fs.ensureDir(path.join(vortexDir, 'workflows'));
-    await fs.writeFile(path.join(vortexDir, 'config.yaml'), yaml.dump({ version: '1.3.0', keep: 'vortex' }));
-    for (const m of MODULES) {
-      await fs.ensureDir(path.join(tmpDir, '_bmad/bme', m));
-      await fs.writeFile(path.join(tmpDir, '_bmad/bme', m, 'config.yaml'), yaml.dump({ version: '1.3.0', keep: m }));
-    }
-    await fs.ensureDir(path.join(tmpDir, '_bmad-output'));
-    await fs.ensureDir(path.join(tmpDir, '_bmad/_config'));
-    await fs.writeFile(path.join(tmpDir, '_bmad/_config/agent-manifest.csv'), 'header\nrow1');
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-backup-destroy-'));
+    await fs.ensureDir(path.join(dir, '_bmad'));
+    await fs.ensureDir(path.join(dir, '_bmad-output'));
+    await refreshInstallation(dir, { verbose: false });
   });
 
-  after(async () => { await fs.remove(tmpDir); });
+  after(async () => { await fs.remove(dir); });
 
-  it('backs up each overwritten config, and no basename clobbers another', async () => {
-    const metadata = await backupManager.createBackup('1.3.0', tmpDir);
-    for (const m of MODULES) {
-      const stored = path.join(metadata.backup_dir, 'tree/_bmad/bme', m, 'config.yaml');
-      assert.ok(fs.existsSync(stored), `${m}/config.yaml must be in the backup`);
-      assert.match(await fs.readFile(stored, 'utf8'), new RegExp(`keep: ${m}`), `${m}'s own content, not another module's`);
+  it('every file the refresh removes is in the backup it just made', async () => {
+    const bmeDir = path.join(dir, '_bmad/bme');
+    const modules = (await fs.readdir(bmeDir, { withFileTypes: true }))
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
+    assert.ok(modules.length >= 3, 'fixture precondition: the install must produce module directories');
+
+    // Two markers per module, named after it so a failure says which one: a FILE catches a tree
+    // the refresh removes, and a KEY appended to config.yaml catches one it overwrites in place.
+    for (const m of modules) {
+      await fs.writeFile(path.join(bmeDir, m, `MARKER-${m}.md`), `operator content for ${m}`, 'utf8');
+      const cfg = path.join(bmeDir, m, 'config.yaml');
+      if (await fs.pathExists(cfg)) {
+        await fs.appendFile(cfg, `\nmarker_${m.replace(/-/g, '_')}: operator-value\n`);
+      }
     }
-    // The pre-existing flat entry must still hold Vortex's, not a later module's.
-    assert.match(await fs.readFile(path.join(metadata.backup_dir, 'config.yaml'), 'utf8'), /keep: vortex/);
+
+    const metadata = await backupManager.createBackup('4.0.3', dir);
+    await refreshInstallation(dir, { verbose: false });
+
+    const changed = [];
+    const unprotected = [];
+    const inBackup = async (rel) => fs.pathExists(path.join(metadata.backup_dir, 'tree', rel));
+    for (const m of modules) {
+      const key = `marker_${m.replace(/-/g, '_')}`;
+      const cfg = path.join(bmeDir, m, 'config.yaml');
+      const fileGone = !(await fs.pathExists(path.join(bmeDir, m, `MARKER-${m}.md`)));
+      const keyGone =
+        (await fs.pathExists(cfg)) && !(await fs.readFile(cfg, 'utf8')).includes(key);
+      if (!fileGone && !keyGone) continue; // the refresh left this module's operator data alone
+      changed.push(m);
+      if (fileGone && !(await inBackup(`_bmad/bme/${m}/MARKER-${m}.md`))) unprotected.push(`${m} (file)`);
+      if (keyGone) {
+        const stored = path.join(metadata.backup_dir, 'tree/_bmad/bme', m, 'config.yaml');
+        const kept = (await fs.pathExists(stored)) && (await fs.readFile(stored, 'utf8')).includes(key);
+        if (!kept) unprotected.push(`${m} (config)`);
+      }
+    }
+
+    // Guards against passing because the refresh changed nothing — if it stops replacing trees
+    // this must be revisited, not silently satisfied.
+    assert.ok(changed.length > 0, 'the refresh changed no operator data; this test would prove nothing');
+    assert.deepEqual(unprotected, [], `a refresh changed operator data in ${unprotected.join(', ')} and the backup has no copy — the "your data will be backed up" promise is false for them`);
   });
 
-  it('restores them, so the loss is recoverable rather than merely recorded', async () => {
-    const metadata = await backupManager.createBackup('1.3.0', tmpDir);
-    for (const m of MODULES) {
-      await fs.writeFile(path.join(tmpDir, '_bmad/bme', m, 'config.yaml'), yaml.dump({ version: '9.9.9' }));
-    }
-    await backupManager.restoreBackup(metadata, tmpDir);
-    for (const m of MODULES) {
-      const body = await fs.readFile(path.join(tmpDir, '_bmad/bme', m, 'config.yaml'), 'utf8');
-      assert.match(body, new RegExp(`keep: ${m}`), `${m}'s value must come back`);
-    }
+  it('restores a destroyed operator file, so the loss is recoverable and not merely recorded', async () => {
+    const target = path.join(dir, '_bmad/bme/_artifacts/RESTORE-ME.md');
+    await fs.writeFile(target, 'operator content', 'utf8');
+    const metadata = await backupManager.createBackup('4.0.3', dir);
+    await refreshInstallation(dir, { verbose: false });
+    assert.equal(await fs.pathExists(target), false, 'precondition: the refresh must have removed it');
+    await backupManager.restoreBackup(metadata, dir);
+    assert.equal(await fs.readFile(target, 'utf8'), 'operator content');
   });
 });
 

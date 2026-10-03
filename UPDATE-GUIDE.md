@@ -146,16 +146,25 @@ npx -p convoke-agents convoke-update            # Apply
 Every update creates a backup before making changes:
 
 - **Location:** `_bmad-output/.backups/backup-{version}-{timestamp}/`
-- **Includes:** config.yaml, agents, workflows, agent-manifest.csv
+- **Includes:** the Vortex `config.yaml`, `agents/` and `workflows/`, `_bmad/_config/agent-manifest.csv`,
+  and the whole `_enhance`, `_artifacts` and `_portability` module directories — those three are
+  replaced from the package template on every refresh, so anything of yours inside them is copied
+  first. The three are stored path-mirrored under `tree/`, e.g.
+  `tree/_bmad/bme/_artifacts/`, because their file names collide with the Vortex entries.
+- **Not included:** your own files elsewhere under `_bmad/`, and `_bmad-output/` itself — nothing
+  there is touched, so nothing there is copied.
 - **Retention:** Last 5 backups kept automatically
-- **Rollback:** Automatic if migration fails
+- **Rollback:** Automatic **only if the update fails.** A refresh that SUCCEEDS still replaces those
+  three module directories, and nothing restores them for you — use the manual recipe below.
 
 ### What's Never Touched
 
 - All user-generated files in `_bmad-output/`
 - Gyre analysis artifacts in `.gyre/` (stack-profile, capabilities, findings, feedback)
-- User preferences (name, language settings)
-- Custom configuration values
+- User preferences (name, language settings) in the **Vortex** and **Gyre** configs
+- Custom values in the **Vortex** and **Gyre** `config.yaml` — but **not** in `_enhance`,
+  `_artifacts` or `_portability`, which are rewritten from the package template on every refresh
+  (`T221`). They are backed up, not preserved; see Automatic Backups above.
 - Coach amendments and feedback in `.gyre/feedback.yaml`
 
 ### What Gets Updated
@@ -226,6 +235,13 @@ ls -la _bmad-output/.backups/
 cp -r _bmad-output/.backups/{backup-dir}/config.yaml _bmad/bme/_vortex/
 cp -r _bmad-output/.backups/{backup-dir}/agents _bmad/bme/_vortex/
 cp -r _bmad-output/.backups/{backup-dir}/workflows _bmad/bme/_vortex/
+
+# The three module directories a refresh replaces are stored under tree/. Restore the one you
+# need — this is the only route after an update that SUCCEEDED, since automatic rollback runs
+# only on failure.
+cp -r _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_enhance _bmad/bme/
+cp -r _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_artifacts _bmad/bme/
+cp -r _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_portability _bmad/bme/
 ```
 
 ### "Already up to date" but version is outdated

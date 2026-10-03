@@ -364,30 +364,38 @@ function getFilesToBackup() {
       path: '_bmad/_config/agent-manifest.csv',
       type: 'file'
     },
-    // T234 review. A refresh replaces these three wholesale from the package template, so an
-    // operator's values in them are lost (T221) — and `convoke-update` prints "Your data will be
-    // backed up automatically" immediately before asking for consent. Measured before this entry:
-    // a planted key in `_enhance` and `_artifacts` was absent from the backup it had just made,
-    // so the loss was unrecoverable. Routing a `_portability` version skew to a refresh (T234)
-    // made that reachable from the doctor's own advice, which is why it is fixed here.
+    // T234 review, rounds 1 and 2. `convoke-update` prints "Your data will be backed up
+    // automatically" immediately before asking for consent, and a refresh then replaces these
+    // three module trees from the package template — `_artifacts` and `_portability` with
+    // `fs.remove` first, so operator-added FILES are deleted outright, not merely overwritten
+    // (T221). Routing a `_portability` version skew to a refresh (T234) made that reachable from
+    // the doctor's own printed advice.
     //
-    // Path-mirrored under `tree/` rather than given flat names: all three basenames are
-    // `config.yaml` and would clobber each other and `_vortex`'s. That is the hazard the
-    // `tree/` convention was added for — see `_normalizeBackupEntries`, BUG-8 hardening #1.
+    // WHOLE TREES, not just `config.yaml`. Round 1 of that review reported a lost config key and
+    // the first fix covered configs only; Round 2 then measured a planted `my-notes.md` deleted
+    // from `_artifacts` and `_portability` with no copy anywhere — the same promise still false,
+    // because the fix had matched the instance the reviewer happened to send instead of the class.
+    // `destroyed implies backed up` is pinned behaviourally in `tests/unit/backup-manager.test.js`
+    // by planting a marker in every `_bmad/bme/*` module, running a real refresh, and requiring a
+    // copy of anything the refresh removed. A fourth module cannot be missed by forgetting a list.
+    //
+    // Path-mirrored under `tree/` rather than given flat names: the basenames collide with each
+    // other and with `_vortex`'s entries. That is the hazard the `tree/` convention exists for —
+    // see `_normalizeBackupEntries`, BUG-8 hardening #1.
     {
-      name: 'tree/_bmad/bme/_enhance/config.yaml',
-      path: '_bmad/bme/_enhance/config.yaml',
-      type: 'file'
+      name: 'tree/_bmad/bme/_enhance',
+      path: '_bmad/bme/_enhance',
+      type: 'directory'
     },
     {
-      name: 'tree/_bmad/bme/_artifacts/config.yaml',
-      path: '_bmad/bme/_artifacts/config.yaml',
-      type: 'file'
+      name: 'tree/_bmad/bme/_artifacts',
+      path: '_bmad/bme/_artifacts',
+      type: 'directory'
     },
     {
-      name: 'tree/_bmad/bme/_portability/config.yaml',
-      path: '_bmad/bme/_portability/config.yaml',
-      type: 'file'
+      name: 'tree/_bmad/bme/_portability',
+      path: '_bmad/bme/_portability',
+      type: 'directory'
     }
   ];
 }

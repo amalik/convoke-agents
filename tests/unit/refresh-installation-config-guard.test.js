@@ -230,21 +230,38 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
     assert.deepEqual(candidates, BME_DIRECTORIES, 'the set of _bmad/bme/* directories changed');
   });
 
-  it('the two lists of module configs this file writes agree (T234)', () => {
-    // `GUARDED_MODULE_NAMES` (what the readability guard checks) and `STAMPABLE_MODULES` (what the
-    // skew detector is told a refresh can re-stamp) are two hardcoded lists of the same thing,
-    // 1300 lines apart in one file. T234 was them disagreeing: `_portability` was stamped and
-    // guarded but missing from STAMPABLE, so `convoke-doctor` reported a skew and
-    // `convoke-update` answered "Already up to date!" — a deadlock with no supported way out, and
-    // nothing detected it. STAMPABLE_MODULES' own docblock warns that a second hardcoded list
-    // would be "the two-callers-disagree defect BUG-17 exists to remove, reproduced inside its
-    // own fix"; this is what makes that warning enforceable.
+  it('every module declared stampable is actually re-stamped by a refresh (T234)', async () => {
+    // Replaces an equality assertion between `STAMPABLE_MODULES` and `guardedModuleNames()`. That
+    // pin caught T234 but had a backwards incentive: the two are NOT the same predicate — guarded
+    // means the refresh changes these bytes, stampable means it re-writes this version — so a
+    // future module that is written but NOT stamped must be guarded and must NOT be stampable.
+    // Under equality the cheap move was to append it to `STAMPABLE_MODULES`, which is exactly
+    // BUG-17's defect (routing `convoke-update` to a refresh that takes the lock, cuts a backup
+    // and stamps nothing), and the correct move was the one that turned the suite red.
     //
-    // Equality in both directions on purpose. A config written but NOT stamped is the I137
-    // defect — a fresh install reports a stale version and tells the operator to update. A config
-    // stamped but NOT guarded would be rewritten with no readability check. If a future module
-    // must diverge, that is a ruling: change this assertion deliberately, do not relax it.
-    assert.deepEqual([...STAMPABLE_MODULES].sort(), guardedModuleNames());
+    // This asserts the property the consumer depends on instead: `isManagedByInstaller` promises
+    // a refresh can repair this module's version, so skew every declared module and require a
+    // refresh to actually re-stamp it. A module added to the list with no stamp site fails here.
+    for (const m of STAMPABLE_MODULES) {
+      const cfg = path.join(tmpDir, '_bmad', 'bme', m, 'config.yaml');
+      await fs.ensureDir(path.dirname(cfg));
+      await fs.writeFile(cfg, 'version: 0.0.1\nname: probe\n', 'utf8');
+    }
+    await refreshInstallation(tmpDir, { verbose: false });
+    const notRestamped = [];
+    for (const m of STAMPABLE_MODULES) {
+      const body = await fs.readFile(path.join(tmpDir, '_bmad', 'bme', m, 'config.yaml'), 'utf8');
+      if (/^version:\s*0\.0\.1\s*$/m.test(body)) notRestamped.push(m);
+    }
+    assert.deepEqual(notRestamped, [], 'declared stampable but a refresh left the version alone — the skew detector would route convoke-update to a refresh that cannot repair it (BUG-17)');
+  });
+
+  it('nothing stampable escapes the readability guard (T234)', () => {
+    // The direction that IS a true invariant: stamping writes the config, so anything stamped must
+    // also be guarded. Containment, not equality, so a guarded-but-unstamped module stays legal.
+    const guarded = new Set(guardedModuleNames());
+    assert.deepEqual(STAMPABLE_MODULES.filter((m) => !guarded.has(m)), [],
+      'a module is re-stamped without a readability check, so a damaged config there is overwritten (T181)');
   });
 
   it('the guarded list is sorted, because the refusal names only the first', async () => {
