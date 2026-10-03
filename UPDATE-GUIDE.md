@@ -281,12 +281,13 @@ tells you where to look:
   no parser error and no location, because nothing failed to parse: the file is valid YAML of the
   wrong shape. Replace it rather than hunting for an error.
 
-**Two failures look similar and are not this.** If the file cannot be opened at all, the refusal
-never runs and you get the underlying OS error instead — `EACCES: permission denied, open '<path>'`
-for an unreadable file, or `EISDIR: illegal operation on a directory, read` if a directory sits
-where the config should be. `EISDIR` names no path, so if you see it, check both
-`_bmad/bme/_vortex/config.yaml` and `_bmad/bme/_gyre/config.yaml`. Neither case is protected by the
-refusal and neither is repaired by the steps below — fix the permissions, or remove the directory.
+**A file that cannot be opened at all refuses too, and names itself.** An unreadable file or a
+directory sitting where the config should be both come back through the refusal, carrying the path
+and the OS error — `it cannot be read (EACCES: permission denied, open '<path>')`, or
+`it cannot be read (EISDIR: illegal operation on a directory, read)`. Earlier releases let the raw
+errno escape instead, and `EISDIR` carries no path of its own, so the message named no file and you
+had to guess which config it was. The repair steps below do not apply to either: fix the
+permissions, or remove the directory.
 
 This protects your settings — before 4.0.3, a single duplicate key silently replaced the whole
 file with defaults. Wherever the message appears, the file it names is left byte-identical, and no agent,
@@ -312,17 +313,16 @@ command:
 | `convoke-update` | Gyre, and a refresh is due | Refuses with the message above, exit 1 |
 | `convoke-update` | Gyre, nothing else out of step | `✓ Already up to date!`, exit 0 — the damaged file is not noticed |
 | `convoke-update` | **Vortex** | **No refusal.** Version detection cannot read the file, falls back to inspecting the directory layout, and reports an old version: `1.1.0` where `workflows/_deprecated/` exists, `1.0.0` on a project installed with `convoke-install-gyre` alone, which never creates it. You are offered a plan from there up to the package's version, listing two or three breaking changes. If you accept it, migration 3 of 7 (`1.5.x-to-1.6.0`) fails on the same parse error and the run is rolled back from its backup — exit 1, your config byte-identical |
-| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability` | **No refusal, exit 0**, and the file is replaced with the package template — whether or not it is damaged. A custom key added to `_enhance/config.yaml` and a hand-set `user_name` in `_team-factory/config.yaml` were both gone after an ordinary re-install, where Vortex and Gyre kept theirs. The settings loss this release fixes for those two still happens here, on every run (`T181`). With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
+| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability` | Refuses with the message above at `[4/5]`, exit 1, file byte-identical — but step `[2/5]` has already run, as above. `T181` shipped. A **readable** config there is a different matter: it is still replaced by the package template on every run, damaged or not, so operator values are lost. Verified by re-install — a planted `my_custom_key` was gone from all three, where `_vortex` and `_gyre` kept it, because `configMerger.mergeConfig` carries profiles for those two alone. That overwriting half is `T221`. With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
 
 The `convoke-update` + **Vortex** row is a known defect, tracked as `T180`: the refusal exists and runs,
 but version detection reads the Vortex config first and swallows the error before the refusal can be
 reached. Until it is fixed, treat a `Could not read config.yaml` warning followed by a surprisingly old
 `From:` version — `1.1.0` or `1.0.0`, neither of which you installed — as this case, decline the plan, and
-repair the file as below. The row above it described a second defect, `T181` — those configs were never
-checked, so there was no refusal to reach and no plan to decline. `T181` has since shipped: they are
-checked now, and an unreadable one refuses like Gyre's. What remains for them is `T221` (a readable config
-is still overwritten from template). `T227` — the guard covering a module that no longer ships — closed
-2026-10-01.
+repair the file as below. The row above it carried that same defect for `_enhance`, `_artifacts` and
+`_portability` until `T181` shipped; they are checked now, and an unreadable one refuses like Gyre's. What
+remains for those three is `T221`: a *readable* config is still overwritten from the package template on
+every run. `T227` — the guard covering a module that no longer ships — closed 2026-10-01.
 
 **Reinstalling will not clear this, and that is deliberate** — `convoke-install` runs the same
 check. Repair the file itself:

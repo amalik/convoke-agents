@@ -34,6 +34,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A module `config.yaml` that cannot be read is no longer replaced with the package template (`T181`).**
+  Before this, `assertConfigReadable` was wired into Vortex and Gyre only. A damaged `_enhance`,
+  `_artifacts` or `_portability` config was overwritten with defaults, exit 0, with nothing on screen.
+  Those blocks did parse a config, but the parse read the package's own source file and then the
+  destination *after* `fs.copy` had replaced it, so neither read could fail on operator data.
+  - What counts as damaged differs by module, and it is worth knowing which: `_vortex` and `_gyre` seed
+    a `user_name:`, so a second one added by hand is the usual cause. The other three seed none, so a
+    single `user_name:` line you add there is valid YAML — it is not refused, it is silently dropped by
+    the template overwrite (`T221`). What refuses for those three is a file that genuinely will not
+    parse: a duplicated key the template does carry, a stray tab, broken indentation. An install now stops before anything is copied, naming the file and the
+  parser's own error. A config that is a *directory* used to escape as a bare
+  `EISDIR: illegal operation on a directory, read` naming no path at all; it now refuses with the path.
+  - This covers an UNREADABLE config only. A readable one is still replaced on every run for those three
+    modules — `mergeConfig` carries profiles for `_vortex` and `_gyre` alone — which is `T221`.
+
 - **The module-config guard no longer covers a module that does not ship (`T227`).**
   `guardedModuleNames` derived its set from `_bmad/bme/*` directories carrying a `config.yaml`. Once the
   Team Factory was un-shipped — out of `files[]`, kept in git — a dev tree still covered it, so a project
