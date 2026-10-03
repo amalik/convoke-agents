@@ -78,8 +78,8 @@ const RUNTIME_DATA_FILES = [
     // the earlier line that merely DECLARES the destination path — deleting the copy and leaving
     // the declaration would keep a basename-matching alarm green. That is why the alarm is an AND.
     // No line numbers in this comment on purpose: only the field below is checked.
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:689',
-    arrivesViaToken: 'packageManifest',
+    arrivesVia: 'scripts/update/lib/refresh-installation.js',
+    arrivesViaToken: 'fs.writeFileSync(skillManifestPath,',
     why: 'convoke-export resolves every skill through it — absence is I139 exactly: the bin exits non-zero on a fresh install.',
   },
   {
@@ -89,8 +89,8 @@ const RUNTIME_DATA_FILES = [
     // `:308` is `fs.writeFile(manifestPath, …)` — the write itself. The first draft cited
     // `:237`, which only DECLARES the destination path; deleting the write and leaving the
     // declaration would have kept the rot alarm green. Review 2026-08-30.
-    arrivesVia: 'scripts/lib/agent-manifest-generator.js:283',
-    arrivesViaToken: 'fs.writeFile(manifestPath',
+    arrivesVia: 'scripts/lib/agent-manifest-generator.js',
+    arrivesViaToken: 'await fs.writeFile(manifestPath, header + \'\\n\' + allRows, \'utf8\');',
     why: 'the installer regenerates it during refresh, so a post-install absence means the regeneration step did not run.',
   },
   {
@@ -103,8 +103,8 @@ const RUNTIME_DATA_FILES = [
     // literal mentioned the basename. Deleting the real call and leaving the log
     // (No line numbers here on purpose: only the field below is checked.)
     // would have kept it green. Review 2026-08-30.
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:1154',
-    arrivesViaToken: 'mergeTaxonomy',
+    arrivesVia: 'scripts/update/lib/refresh-installation.js',
+    arrivesViaToken: 'const taxonomyResult = await mergeTaxonomy(projectRoot);',
     why: 'a fresh install runs no migrations, so the installer seeds it directly; without it doctor fails its own Taxonomy checks.',
   },
   {
@@ -135,13 +135,13 @@ const RUNTIME_DATA_FILES = [
     // `convoke-register-skill` and blinds the doctor's `unregistered-custom-skill` category.
     // The entry STAYS in the manifest: the file must still arrive, and `missingRuntimeFiles`
     // tests project presence, which a created file satisfies exactly as a copied one would.
-    arrivesVia: 'scripts/update/lib/refresh-installation.js:1177',
+    arrivesVia: 'scripts/update/lib/refresh-installation.js',
     // Discriminates the CALL from the function's own declaration and its export, both of which
     // contain the bare identifier but not this token. (Named, not numbered, on purpose.) The dist-2-4 review's lesson is
     // that a token which merely appears does not prove a citation — and the previous two
     // revisions of this very comment cited the wrong lines while making that argument, which
     // is why the rot alarm checks the `arrivesVia` line rather than trusting the prose.
-    arrivesViaToken: 'seedBmmDependencies(projectRoot, {',
+    arrivesViaToken: 'const depsResult = seedBmmDependencies(projectRoot, { isSameRoot, verbose });',
     why:
       'convoke-doctor reads it at :763 and treats absence as a soft governance warning (BUG-19). ' +
       'dist-2-5 creates it at install time as an EMPTY registry — the schema, never a row — so a ' +
@@ -176,15 +176,15 @@ const RUNTIME_DATA_FILES = [
  * correct behaviour; claiming the rule was read off a generator was not.
  */
 const WRAPPER_RULES = {
-  vortexAgent:        { site: 'scripts/update/lib/refresh-installation.js:868', anchor: 'for (const agent of AGENTS)',            derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
-  gyreAgent:          { site: 'scripts/update/lib/refresh-installation.js:897', anchor: 'for (const agent of GYRE_AGENTS)',       derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  vortexAgent:        { site: 'scripts/update/lib/refresh-installation.js', anchor: 'for (const agent of AGENTS) {\n    if (vortexExcluded.includes(agent.id)) continue;',            derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  gyreAgent:          { site: 'scripts/update/lib/refresh-installation.js', anchor: 'for (const agent of GYRE_AGENTS) {',       derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
   // extraBmeAgent was REMOVED by tfu-1-1. It mirrored the `// 6b1.` generator loop over
   // EXTRA_BME_AGENTS, which is gone with the Team Factory. A rule whose `anchor` matches nothing is
   // worse than no rule: `WRAPPER_RULES`' own test asserts every rule cites a line that still holds
   // its generator, so a stale entry would either redden that test or, if relaxed, silently check
   // nothing. A future standalone bme module needs a NEW rule, not this one revived.
-  enhanceWorkflow:    { site: 'scripts/update/lib/refresh-installation.js:932', anchor: 'enhanceConfig.workflows',               derivedFrom: 'generator', name: n => `bmad-enhance-${n}` },
-  standaloneWorkflow: { site: 'scripts/update/lib/refresh-installation.js:983', anchor: 'artifactsConfig.workflows',             derivedFrom: 'ADR-004 C2', name: n => `${n}` },
+  enhanceWorkflow:    { site: 'scripts/update/lib/refresh-installation.js', anchor: 'for (const workflow of enhanceConfig.workflows || []) {',               derivedFrom: 'generator', name: n => `bmad-enhance-${n}` },
+  standaloneWorkflow: { site: 'scripts/update/lib/refresh-installation.js', anchor: 'for (const workflow of artifactsConfig.workflows || []) {',             derivedFrom: 'ADR-004 C2', name: n => `${n}` },
 };
 
 /** `_bmad/bme/*` entries in a `files[]` array, normalised to bare module names. */

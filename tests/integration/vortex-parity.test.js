@@ -159,7 +159,8 @@ describe('vortex-parity — Emma (contextualization-expert)', () => {
     // R2-P4 regression class: extractV5MenuCodes was previously calling
     // stripCodeRegions(rawContent) BEFORE the menu-code regex, which
     // blanked the fenced ```xml content where canonical v5 SKILL.md
-    // files store <agent>...<menu>. The fix (parity-harness.js:1028)
+    // files store <agent>...<menu>. The fix (parity-harness.js, the
+    // `Story 2.1 Task 1 regression fix: R2-P4 stripped fences` block)
     // operates on raw content, leaving fences intact for regex.
     //
     // This test's input has menu codes ONLY inside a ```xml fence —

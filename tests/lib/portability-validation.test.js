@@ -130,7 +130,7 @@ describe('Portability validator (sp-1-3)', () => {
     // 2026-08-10 in `4ed770a0` and reverted within the hour in `8f2fbda0`, because
     // `.claude/skills/` is gitignored (`.gitignore:62`): it passes on a developer machine with
     // BMAD installed and hollows out in a clean checkout. **It produces a false green.** The
-    // closed row at `convoke-note-backlog-completed-archive.md:355` is kept expressly as this
+    // closed row `BUG-14` in `convoke-note-backlog-completed-archive.md` is kept expressly as this
     // warning; read it before touching any `path` cell. This story edits none.
     //
     // THE PREDICATE IS THE INSTALLER'S OWN, imported rather than reimplemented. A second copy

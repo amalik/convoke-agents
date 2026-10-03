@@ -114,7 +114,8 @@ const PATTERNS = [
     // A repository path: at least one slash, path-ish characters, no scheme. Restricted to code
     // zones and link targets so ordinary prose containing a slash ("and/or") cannot match.
     // The final segment is OPTIONAL so a bare directory counts. Requiring it missed `_bmad/` —
-    // found by AC2's hand-derivation of UPDATE-GUIDE.md:100-121, not by any test, and it is the
+    // found by AC2's hand-derivation of UPDATE-GUIDE.md's `### From vX.Y.x to vZ.0.0` migration-path
+    // sections, not by any test, and it is the
     // undercount class this story was written to catch.
     re: /(?:^|[\s('"[<`])((?:\.{1,2}\/|\/)?(?:[\w.@-]+\/)+[\w.@-]*)/g,
     note: 'A repository path in a code span, fence body, or link target; a bare directory counts.',

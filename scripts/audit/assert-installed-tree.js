@@ -229,7 +229,10 @@ function tree(projectRoot, packageRoot) {
     fail(`_bmad/bme/${m}/ arrived and carries a config.yaml but declares no invocable unit (ADR-004 C1/C3) — nothing in it is reachable`);
   }
   for (const u of missingWrappers(units, projectRoot)) {
-    fail(`${u.module} declares ${u.name} but .claude/skills/${u.name}/SKILL.md was not generated or is empty (${u.site})`);
+    // `${u.rule} @ ${u.site}`, not `site` alone: T230 removed the `:NNN`, so all four wrapper rules
+    // now print the same path and the operator loses the discriminator this message existed to give.
+    // The rule name restores it and cannot rot.
+    fail(`${u.module} declares ${u.name} but .claude/skills/${u.name}/SKILL.md was not generated or is empty (${u.rule} @ ${u.site})`);
   }
   for (const e of missingRuntimeFiles(projectRoot)) {
     fail(`${e.file} is read at runtime by ${e.readSite} but did not arrive in the project`);

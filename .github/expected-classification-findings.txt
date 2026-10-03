@@ -14,7 +14,9 @@
 # ⚠ DO NOT "FIX" A FINDING BY REPOINTING A MANIFEST `path` AT `.claude/skills/...`. That was done
 # on 2026-08-10 (4ed770a0) and reverted within the hour (8f2fbda0): those paths are gitignored,
 # so it passes on a developer machine and hollows out in a clean checkout — a false green. The
-# trap has caught four attempts; see convoke-note-backlog-completed-archive.md:355.
+# trap has caught four attempts; see the `BUG-14` row in convoke-note-backlog-completed-archive.md
+# (closed 2026-08-15 as NOT A DEFECT and kept expressly as this warning). Cited by row ID, not by
+# line: the line number it used to carry pointed at a blank line under an unrelated row (T230).
 #
 # A NEW hard finding fails the suite. Fixing one also fails it, until you delete its line here —
 # which is the point: the list must only ever shrink.

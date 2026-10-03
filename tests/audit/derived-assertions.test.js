@@ -393,7 +393,8 @@ describe('derived-assertions — the adjacency class (AC6, reproduced here first
 });
 
 describe('derived-assertions — defects found by AC2 hand-derivation, not by any test', () => {
-  // Both were found by enumerating UPDATE-GUIDE.md:100-121 by hand and diffing against the
+  // Both were found by enumerating UPDATE-GUIDE.md's `### From vX.Y.x to vZ.0.0` migration-path
+  // sections by hand and diffing against the
   // script. The suite was green throughout. That is the whole argument for AC2's method: the
   // fixture proves a pattern fires AT ALL, hand-derivation proves it fires COMPLETELY.
   it('counts a bare directory path with no trailing filename', () => {
