@@ -45,13 +45,29 @@ const { runCompatPreflight } = require('./lib/compat-preflight');
  * `.claude/skills/` is named as uncovered deliberately and is the one hardcoded clause here,
  * because it is an absence rather than an entry — see the reasoning at `getFilesToBackup`.
  */
-function printBackupScope() {
-  const paths = getFilesToBackup().map((f) => f.path).sort();
+function printBackupScope({ migration = false } = {}) {
+  // Print only the outermost paths. The set keeps three `_vortex` entries nested inside the
+  // whole-tree entry, for the legacy-manifest fallback in `restoreBackup`; they add no coverage,
+  // and printing them read as four separate backups — and as an enumeration, which is the one
+  // thing this inventory should not look like.
+  const all = getFilesToBackup().map((f) => f.path);
+  const outermost = all
+    .filter((p) => !all.some((q) => q !== p && p.startsWith(`${q}/`)))
+    .sort();
   console.log(chalk.cyan('Backed up first, and restorable from _bmad-output/.backups/:'));
-  for (const p of paths) console.log(chalk.cyan(`  ${p}`));
-  console.log(chalk.yellow('NOT copied: .claude/skills/ — a refresh regenerates those wrappers and'));
-  console.log(chalk.yellow('deletes them first, so your own files there are lost (T236 tracks the'));
-  console.log(chalk.yellow('wider question of customising shipped files).'));
+  for (const p of outermost) console.log(chalk.cyan(`  ${p}`));
+  if (migration) {
+    // The migration path passes its own write-set to `createBackup` on top of this list, so the
+    // static set understates it there. Saying so beats listing rows this function cannot see.
+    console.log(chalk.cyan('  plus every file the migrations below declare they will rewrite'));
+  }
+  // Hardcoded because these are ABSENCES, not entries — nothing in the backup set names them.
+  // Stated as a class and then an example: an earlier version named `.claude/skills/` alone and
+  // lost the blanket warning it replaced, which is how `.claude/commands/bmad-agent-bme-*` came
+  // to be deleted by a refresh, uncovered, and unmentioned anywhere.
+  console.log(chalk.yellow('NOT copied: anything under .claude/ — a refresh regenerates those'));
+  console.log(chalk.yellow('wrappers and commands from the agent registry and deletes them first,'));
+  console.log(chalk.yellow('so your own files there are lost. (T236 tracks customising what ships.)'));
 }
 
 function assessUpdate(projectRoot) {
@@ -470,7 +486,7 @@ async function main() {
 
   // Confirm with user (unless --yes)
   if (!yes) {
-    printBackupScope();
+    printBackupScope({ migration: true });
     console.log('');
 
     const confirmed = await confirm('Proceed with migration?');

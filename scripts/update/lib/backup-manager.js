@@ -238,26 +238,49 @@ async function restoreBackup(backupMetadata, projectRoot) {
       // entry was one small directory and is not now that `_bmad/bme` is an entry: a backup
       // source that cannot be fully read (ENOSPC mid-restore, a permissions fault, a truncated
       // backup) left the whole installed tree deleted and only partly replaced. Measured before
-      // this change: poisoning one directory inside the backup took the install from 294 files to
-      // 0, where the previous per-module entries lost 12.
+      // this change on a from-scratch `convoke-install`: poisoning one directory inside the backup
+      // took it from 302 files to 0, where the previous per-module entries lost 12. ENOSPC is the
+      // realistic trigger and it is a WRITE failure, so staging also means two copies coexist —
+      // a restore that needed 1x free space now needs 2x. That is the trade: it refuses where it
+      // used to half-succeed. Pinned by `backup-manager.test.js`.
       //
       // Stage beside the target, then swap. The live tree is only unlinked once a complete copy
-      // exists, so a failure anywhere above leaves the installation exactly as it was.
-      const staging = `${destPath}.restoring-${process.pid}`;
-      const displaced = `${destPath}.replaced-${process.pid}`;
+      // exists, so a failure on THIS entry leaves THIS path exactly as it was.
+      //
+      // That is a per-entry guarantee, not a transactional restore. Entries are applied in order
+      // and the whole-tree entry is last, so the three flat `_vortex` entries have already been
+      // swapped in by the time it runs: if it then fails, the installation is a mixed state —
+      // Vortex restored, the rest live. Measured. Making the whole restore atomic would mean
+      // staging every entry before swapping any, which nothing currently needs.
+      // Suffixed with pid AND a random token: with the pid alone, a crash-leftover
+      // `<path>.replaced-<pid>` — the only copy of someone's pre-restore tree — would be silently
+      // deleted by the unconditional removes below the next time a run drew the same pid.
+      const tag = `${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
+      const staging = `${destPath}.restoring-${tag}`;
+      const displaced = `${destPath}.replaced-${tag}`;
       await fs.remove(staging);
       await fs.remove(displaced);
       try {
         await fs.copy(sourcePath, staging);
         if (fs.existsSync(destPath)) await fs.move(destPath, displaced);
         await fs.move(staging, destPath);
-        await fs.remove(displaced);
       } catch (err) {
         // Put the original back if it had already been moved aside, then let the catch below
         // record the failure. Restoring a backup must never be the thing that loses the tree.
         if (!fs.existsSync(destPath) && fs.existsSync(displaced)) await fs.move(displaced, destPath);
         await fs.remove(staging);
         throw err;
+      }
+      // Cleanup is deliberately OUTSIDE the try: once the swap above returns, the restore has
+      // succeeded, and a failure to unlink the displaced copy must not be reported as a failed
+      // restore. It was, before — an operator-chmod'd directory inside the live tree produced
+      // `✗ Restore failed!` for a rollback that had worked, and orphaned a half-deleted
+      // `<path>.replaced-<pid>` that no health check looks at and `.gitignore` does not cover.
+      try {
+        await fs.remove(displaced);
+      } catch (cleanupErr) {
+        console.warn(`  ⚠ Restored ${relPath}, but could not remove ${path.basename(displaced)}: ${cleanupErr.message}`);
+        console.warn('    The restore succeeded. Delete that directory by hand when you can.');
       }
       console.log(`  ✓ Restored: ${relPath}`);
     } catch (error) {
@@ -394,8 +417,10 @@ function getFilesToBackup() {
     // There are 14 `fs.remove` call sites in `refresh-installation.js`; a list will keep losing.
     //
     // `_bmad/bme` is the root the installer owns and replaces, so backing it up whole is complete
-    // by construction and cannot miss a site. Measured on a from-scratch install: 3016K per backup
-    // against 1424K for the list it subsumes, of which 1132K is the `_vortex` duplication below.
+    // by construction and cannot miss a site. Measured on a from-scratch `convoke-install` (302
+    // files under `_bmad/bme`): 3016K per backup against 1464K for the list it subsumes, of which
+    // 1132K is the `_vortex` duplication below. A refresh-only fixture is slightly smaller — 294
+    // files — which is why the two figures quoted around this row differ.
     //
     // The three `_vortex` entries below it are KEPT, not folded in: `restoreBackup` falls back to
     // the CURRENT `getFilesToBackup()` for manifests predating `backup_entries`, so removing them
@@ -403,10 +428,10 @@ function getFilesToBackup() {
     // The overlap is harmless — both restore the same bytes to the same place.
     //
     // `.claude/skills/` is NOT here, and the reason is NOT cost. An earlier version of this
-    // comment said 13M, which measured the whole directory on a dev machine — 106 entries, 95 of
-    // them unrelated upstream BMAD and plugin skills the installer never writes. The set this
-    // installer actually owns is 18 wrappers, 72K, measured on a from-scratch install: 360K across
-    // the five retained, against ~3.0M this entry already writes per backup. Cost is no argument.
+    // comment said 13M, which measured the whole directory on a dev machine — 106 entries here, of
+    // which 18 are this installer's and 88 are unrelated upstream BMAD and plugin skills it never
+    // writes. The set it owns is those 18 wrappers, 72K on a from-scratch install: 360K across the
+    // five retained, against the 1860K this entry writes per backup. Cost is no argument.
     //
     // The real reasons are two. Covering it means naming paths again — the wrappers are derived
     // from `AGENTS`/`GYRE_AGENTS`, so an entry would be an enumeration, which is the instrument

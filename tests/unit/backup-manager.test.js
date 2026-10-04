@@ -67,15 +67,22 @@ describe('createBackup — anything a refresh CHANGES has a copy (T234)', () => 
     // them, including the module whose invisibility prompted this rewrite — and still read as
     // "populated". The vacuity it claimed to catch is already caught by `destroyed.length > 0`
     // below. What is worth asserting is that the walk saw every module the installer manages.
-    const topLevel = dirs
-      .filter((d) => path.dirname(d) === bmeDir)
-      .map((d) => path.basename(d))
-      .sort();
-    assert.deepEqual(topLevel, [...guardedModuleNames()].sort(),
-      'the walk must cover every module the installer manages, or a module is unexamined');
+    // ONE-SIDED on purpose. Equality was the first replacement for the magic number and it was too
+    // tight in the direction that fights this test: operators put their own directories under
+    // `_bmad/bme`, which is what T184 is about, and a brownfield install keeps a `_team-factory/`
+    // that no refresh removes. This repo's own tree has 8 top-level entries against 5 guarded, so
+    // equality passed only because the fixture is a pristine temp dir. What matters is that no
+    // managed module escapes the walk; extra directories are the normal case, not a failure.
+    const topLevel = new Set(
+      dirs.filter((d) => path.dirname(d) === bmeDir).map((d) => path.basename(d))
+    );
+    assert.deepEqual(guardedModuleNames().filter((m) => !topLevel.has(m)), [],
+      'a module the installer manages was not walked, so it is unexamined by this test');
 
-    // TWO markers per directory. A file catches a tree the refresh REMOVES; a key appended to any
-    // config.yaml catches one it OVERWRITES in place. The previous rewrite planted only the file
+    // TWO markers per directory. A file catches a tree the refresh REMOVES; a key appended to a
+    // config.yaml catches one it OVERWRITES in place — live for `_enhance`, `_artifacts` and
+    // `_portability` only, because `mergeConfig` deliberately PRESERVES operator keys in the
+    // `_vortex` and `_gyre` configs, so there the key survives and nothing is lost to detect. The previous rewrite planted only the file
     // and skipped on `pathExists`, so `_enhance` — bare `fs.copy`, no `fs.remove` — was invisible
     // and a backup set omitting it passed. That is the second time this pin lost the overwrite
     // half; the comment above it kept claiming both.
@@ -113,6 +120,48 @@ describe('createBackup — anything a refresh CHANGES has a copy (T234)', () => 
     // Guards against passing because the refresh destroyed nothing.
     assert.ok(destroyed.length > 0, 'the refresh destroyed no operator file; this test would prove nothing');
     assert.deepEqual(unprotected, [], `a refresh destroyed operator files in ${unprotected.join(', ')} and the backup has no copy — the promise the CLI prints is false for them`);
+  });
+
+  it('a backup it cannot fully read leaves the installation untouched', async (t) => {
+    // THE PIN THE STAGE-AND-SWAP SHIPPED WITHOUT. `restoreBackup` used to `fs.remove(destPath)`
+    // and then copy, which was survivable while every entry was one small directory and is not
+    // now that `_bmad/bme` is an entry: a backup source that cannot be fully read took the live
+    // tree with it. Measured before the fix: 302 files to 0 on a real install. The fix was shipped
+    // with no test, and reverting it left this file 27/27 green — in the same commit that re-added
+    // a behavioural pin for the coverage half, in this same file.
+    const bmeDir = path.join(dir, '_bmad/bme');
+    const count = async (p) => {
+      let n = 0;
+      const walk = async (d) => {
+        for (const e of await fs.readdir(d, { withFileTypes: true })) {
+          if (e.isDirectory()) await walk(path.join(d, e.name));
+          else n++;
+        }
+      };
+      await walk(p);
+      return n;
+    };
+    const before = await count(bmeDir);
+    assert.ok(before > 0, 'fixture precondition: the tree must hold files');
+
+    const metadata = await backupManager.createBackup('4.0.3', dir);
+    const poisoned = path.join(metadata.backup_dir, 'tree/_bmad/bme/_artifacts');
+    assert.ok(await fs.pathExists(poisoned), 'fixture precondition: the backup must hold that subtree');
+    await fs.chmod(poisoned, 0o000);
+    try {
+      // Prove the poison actually bites before asserting on it — running as root, or on a
+      // filesystem that ignores the mode, would make this test unfalsifiable.
+      let readable = true;
+      try { await fs.readdir(poisoned); } catch { readable = false; }
+      if (!readable) {
+        await assert.rejects(() => backupManager.restoreBackup(metadata, dir), /Restore incomplete/);
+        assert.equal(await count(bmeDir), before, 'a failed restore must not remove the live tree');
+      } else {
+        t.skip('chmod 000 did not block reads here, so the failure cannot be provoked');
+      }
+    } finally {
+      await fs.chmod(poisoned, 0o755);
+    }
   });
 
   it('restores a destroyed operator file, so the loss is recoverable and not merely recorded', async () => {

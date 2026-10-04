@@ -149,9 +149,9 @@ Every update creates a backup before making changes:
 - **Includes:** the whole of `_bmad/bme/` — every module, agent, workflow, contract, example and
   guide the installer owns — plus `_bmad/_config/agent-manifest.csv`. It is stored path-mirrored as
   `tree/_bmad/bme/`. The whole tree is copied rather than a list of paths because the installer
-  removes and replaces directories from many separate places — `refresh-installation.js` has 14
-  `fs.remove` calls — and three successive attempts to enumerate the ones that matter each missed
-  one (`T184`). Your Vortex user guides additionally get a sibling `.bak` from
+  removes and replaces directories from many separate places — `grep -cE 'fs\.remove(Sync)?\('
+  scripts/update/lib/refresh-installation.js` returns 14 — and three successive attempts to
+  enumerate the ones that matter each missed one (`T184`). Your Vortex user guides additionally get a sibling `.bak` from
   `convoke-update`.
 - **NOT included:** `.claude/skills/`. A refresh regenerates those wrappers from the agent registry
   and deletes the directories first, so operator files placed there are destroyed and there is no
@@ -159,13 +159,16 @@ Every update creates a backup before making changes:
   if you have customised a generated wrapper, keep the source of your change elsewhere.
 - **Also not included, but safe:** `_bmad-output/` apart from the backups themselves, and the shared
   files under `_bmad/_config/` other than `agent-manifest.csv`. A refresh writes `skill-manifest.csv`,
-  `workflow-manifest.csv`, `taxonomy.yaml`, `bmm-dependencies.csv` and the `agents/` customization
-  directory, but appends or creates rather than replacing: a marker line added to each survived an
-  update, measured 2026-10-03. One exception — a `skill-manifest.csv` that is present but unusable
+  `taxonomy.yaml`, `bmm-dependencies.csv` and the `agents/` customization directory, but appends or
+  creates rather than replacing: a marker line added to each survived an update, measured
+  2026-10-03. (`workflow-manifest.csv` is listed in some older notes; a Convoke-only install does
+  not have one and a refresh does not create it.) One exception — a `skill-manifest.csv` that is present but unusable
   is renamed to `.corrupt-<version>` and reseeded, so it is preserved rather than appended to.
 - **Retention:** Last 5 backups kept automatically
-- **Rollback:** Automatic **only if the update fails.** A refresh that SUCCEEDS still replaces
-  everything under `_bmad/bme/`, and nothing restores it for you — use the manual recipe below.
+- **Rollback:** Automatic **only if the update fails.** A successful refresh still replaces most of
+  `_bmad/bme/` — measured, 82 of its 103 directories lost a planted file, the surviving 21 being
+  module roots and a few directories the installer only copies into — and nothing restores them for
+  you. Use the manual recipe below.
 
 ### What's Never Touched
 
