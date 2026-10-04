@@ -4,6 +4,11 @@ How to update your Convoke installation to the latest version.
 
 - **Package:** [`convoke-agents`](https://www.npmjs.com/package/convoke-agents)
 
+> **This guide describes `main`.** Each release ships its own copy, so the guide inside the version
+> you installed is correct for that version. If you are reading this on GitHub and running a
+> published release, some behaviour described here may not be in your copy yet — check
+> [CHANGELOG.md](CHANGELOG.md) for the section matching `npx -p convoke-agents convoke-version`.
+
 ---
 
 ## Quick Update
@@ -151,7 +156,7 @@ Every update creates a backup before making changes:
   `tree/_bmad/bme/`. The whole tree is copied rather than a list of paths because the installer
   removes and replaces directories from many separate places — `grep -cE 'fs\.remove(Sync)?\('
   scripts/update/lib/refresh-installation.js` returns 14 — and three successive attempts to
-  enumerate the ones that matter each missed one (`T184`). Your Vortex user guides additionally get a sibling `.bak` from
+  enumerate the ones that matter each missed one. Your Vortex user guides additionally get a sibling `.bak` from
   `convoke-update`.
 - **NOT included:** `.claude/skills/`. A refresh regenerates those wrappers from the agent registry
   and deletes the directories first, so operator files placed there are destroyed and there is no
@@ -177,7 +182,7 @@ Every update creates a backup before making changes:
 - User preferences (name, language settings) in the **Vortex** and **Gyre** configs
 - Custom values in the **Vortex** and **Gyre** `config.yaml` — but **not** in `_enhance`,
   `_artifacts` or `_portability`, which are rewritten from the package template on every refresh
-  (`T221`). They are backed up, not preserved; see Automatic Backups above.
+  on every refresh. They are backed up, not preserved; see Automatic Backups above.
 - Your own files anywhere under `_bmad/bme/` are **not** in this list either — a refresh replaces
   them. They are now backed up, so they are recoverable (see Automatic Backups), but they are not
   preserved in place. Files under `.claude/skills/` are neither preserved nor backed up.
@@ -282,7 +287,7 @@ This tells npx to download `convoke-agents@latest` first, then run the `convoke-
 ### "refusing to overwrite ... config.yaml"
 
 From 4.0.3 the **Vortex and Gyre** `config.yaml` files were never replaced when they could not be read,
-and the other module configs were not checked at all. **`T181` closed that**: the installer now refuses on
+and the other module configs were not checked at all. **That was fixed**: the installer now refuses on
 an unreadable config for **every** module whose `config.yaml` it writes, rather than for a hardcoded pair.
 Derive the current set rather than trusting this sentence:
 
@@ -294,8 +299,8 @@ Two caveats, both open and both narrower than the old defect:
 
 - **The refusal half only.** `_enhance`, `_artifacts` and `_portability` configs are still rewritten from
   the package template on every run, because `mergeConfig` carries profiles for `_vortex` and `_gyre`
-  alone. A readable config there is not preserved — that is `T221`.
-- **The set is exactly what the installer writes.** `T227` closed 2026-10-01: the five modules are
+  alone. A readable config there is not preserved; see Automatic Backups.
+- **The set is exactly what the installer writes.** Since 2026-10-01: the five modules are
   named in the source, which is what this section's own command prints. Before that fix the set was
   derived from the package tree's directories, so in a clone `_team-factory` — un-shipped in `tfu-1-1`
   but still tracked in git — remained in it, and a project carrying an orphaned damaged
@@ -303,7 +308,7 @@ Two caveats, both open and both narrower than the old defect:
   the package no longer contains. That can no longer happen. A named list is deliberate: an
   intermediate fix read `package.json` `files[]` and was withdrawn before release, because several
   npm-legal spellings of the same entry left npm shipping a module while the parser dropped it,
-  turning the guard off. **`T222` still covers retiring the orphan itself**, which this did not do: a
+  turning the guard off. **A separate change still covers retiring the orphan itself**, which this did not do: a
   `convoke-doctor` version-consistency failure naming `_team-factory` persists until it lands.
 
 Where you see this message depends on the command and on which file is
@@ -337,7 +342,7 @@ first two tell you where to look:
 > error, and prints `Warning: Could not read config.yaml: <OS error>` — then offers a migration
 > plan from a guessed version. `EISDIR` names no file of its own, so if you see that warning with
 > no path, check `_bmad/bme/_vortex/config.yaml` first. Decline the plan and repair the file. This
-> is the `T180` gap described below, and it reaches the `EACCES`/`EISDIR` cases too.
+> is the `convoke-update` + Vortex gap described below, and it reaches the `EACCES`/`EISDIR` cases too.
 
 This protects your settings — before 4.0.3, a single duplicate key silently replaced the whole
 file with defaults. Wherever the message appears, the file it names is left byte-identical, and no agent,
@@ -363,16 +368,16 @@ command:
 | `convoke-update` | Gyre, and a refresh is due | Refuses with the message above, exit 1 |
 | `convoke-update` | Gyre, nothing else out of step | `✓ Already up to date!`, exit 0 — the damaged file is not noticed |
 | `convoke-update` | **Vortex** | **No refusal.** Version detection cannot read the file, falls back to inspecting the directory layout, and reports an old version: `1.1.0` where `workflows/_deprecated/` exists, `1.0.0` on a project installed with `convoke-install-gyre` alone, which never creates it. You are offered a plan from there up to the package's version, listing two or three breaking changes. If you accept it, migration 3 of 7 (`1.5.x-to-1.6.0`) fails on the same parse error and the run is rolled back from its backup — exit 1, your config byte-identical |
-| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability` | Refuses, exit 1, file byte-identical — `T181` shipped. Which step, and what has already run by then, differs per command: see the four rows above for the installers, and note that `convoke-update` refuses inside `[2/3] Refreshing installation files`, then restores from its backup and reports `✓ Installation restored from backup` (`T224`). A **readable** config there is a different matter: it is still replaced by the package template on every run, damaged or not, so operator values are lost. Verified by re-install — a planted `my_custom_key` was gone from all three, where `_vortex` and `_gyre` kept it, because `configMerger.mergeConfig` carries profiles for those two alone. That overwriting half is `T221`. With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
+| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability` | Refuses, exit 1, file byte-identical. Which step, and what has already run by then, differs per command: see the four rows above for the installers, and note that `convoke-update` refuses inside `[2/3] Refreshing installation files`, then restores from its backup and reports `✓ Installation restored from backup`. A **readable** config there is a different matter: it is still replaced by the package template on every run, damaged or not, so operator values are lost. Verified by re-install — a planted `my_custom_key` was gone from all three, where `_vortex` and `_gyre` kept it, because `configMerger.mergeConfig` carries profiles for those two alone. A readable config there is still replaced; see Automatic Backups. With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
 
-The `convoke-update` + **Vortex** row is a known defect, tracked as `T180`: the refusal exists and runs,
+The `convoke-update` + **Vortex** row is a known defect: the refusal exists and runs,
 but version detection reads the Vortex config first and swallows the error before the refusal can be
 reached. Until it is fixed, treat a `Could not read config.yaml` warning followed by a surprisingly old
 `From:` version — `1.1.0` or `1.0.0`, neither of which you installed — as this case, decline the plan, and
 repair the file as below. The row above it carried that same defect for `_enhance`, `_artifacts` and
-`_portability` until `T181` shipped; they are checked now, and an unreadable one refuses like Gyre's. What
-remains for those three is `T221`: a *readable* config is still overwritten from the package template on
-every run. `T227` — the guard covering a module that no longer ships — closed 2026-10-01.
+`_portability` until that was fixed; they are checked now, and an unreadable one refuses like Gyre's. What
+remains for those three is that a *readable* config is still overwritten from the package template on
+every run. The change that stopped the guard covering a module that no longer ships — closed 2026-10-01.
 
 **Reinstalling will not clear this, and that is deliberate** — `convoke-install` runs the same
 check. Repair the file itself:
