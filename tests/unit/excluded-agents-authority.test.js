@@ -12,6 +12,7 @@ const {
   resetExcludedAgentWarnings,
   mergeConfig,
   writeConfig,
+  readExcludedAgents,
 } = require('../../scripts/update/lib/config-merger');
 const { parseExcludedAgentsLocal } = require('../../scripts/audit/lib/installed-tree');
 
@@ -38,6 +39,14 @@ const SHAPES = [
   ['list with a number', ['review-coach', 42], ['review-coach'], false],
   ['list with a mapping', ['review-coach', { a: 1 }], ['review-coach'], false],
   ['list of only non-strings', [42, null], [], false],
+  // Content classes, not shape classes. The copy nobody imports is most likely to drift by
+  // "helpful cleanup", and with shape rows alone a trim, a dedupe, an empty-string drop, a case
+  // fold and a truncation all passed parity.
+  ['padded id', ['  review-coach  '], ['  review-coach  '], true],
+  ['duplicate ids', ['lens', 'lens'], ['lens', 'lens'], true],
+  ['empty-string id', [''], [''], true],
+  ['mixed case', ['Review-Coach'], ['Review-Coach'], true],
+  ['three ids', ['scout', 'atlas', 'lens'], ['scout', 'atlas', 'lens'], true],
 ];
 
 describe('T244 — the authority for what excluded_agents means', () => {
@@ -110,11 +119,41 @@ describe('T244 — the one site that cannot delegate stays in step', () => {
     }
   });
 
-  it('the shape table is not empty and covers both conformance outcomes', () => {
-    // Without this the parity loop above could pass vacuously on an emptied table.
-    assert.ok(SHAPES.length >= 8, `expected a real shape table, got ${SHAPES.length}`);
+  it('the table still holds the shapes this row was reported for', () => {
+    // A floor on COUNT let the four shapes T244 was actually reported for be deleted while eight
+    // rows and both outcomes remained — green. Pinned by literal membership instead.
+    for (const label of ['bare scalar', 'mapping', 'number', 'boolean', 'list with a number']) {
+      assert.ok(SHAPES.some(([l]) => l === label), `the "${label}" shape must stay in the table`);
+    }
     assert.ok(SHAPES.some(([, , , c]) => c), 'no conforming shape');
     assert.ok(SHAPES.some(([, , , c]) => !c), 'no non-conforming shape');
+  });
+});
+
+describe('T244 — readExcludedAgents warns too, not just mergeConfig', () => {
+  // Dropping `{ source: configPath }` from this call reddened nothing and left the full suite
+  // byte-identical to baseline. The operator saw one line anyway only because `refreshInstallation`
+  // also calls `mergeConfig` on the same file in the same process and `warnOnce` dedupes —
+  // incidental coupling. `validator.js` and `agent-manifest-generator.js` call this with no merge
+  // behind them at all.
+  it('names the file when the value is non-conforming', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 't244r-'));
+    const p = path.join(dir, 'config.yaml');
+    await fs.outputFile(p, 'submodule_name: _gyre\nexcluded_agents: review-coach\n', 'utf8');
+    resetExcludedAgentWarnings();
+    const warned = [];
+    const real = console.warn;
+    console.warn = (...a) => warned.push(a.join(' '));
+    let ids;
+    try {
+      ids = readExcludedAgents(p);
+    } finally {
+      console.warn = real;
+    }
+    await fs.remove(dir);
+    assert.deepEqual(ids, [], 'a bare scalar yields no exclusions');
+    assert.equal(warned.length, 1, 'readExcludedAgents must warn on its own, not rely on mergeConfig');
+    assert.ok(warned[0].includes(p), 'the warning must name the file the operator has to edit');
   });
 });
 
@@ -152,7 +191,7 @@ describe('T244 — a non-conforming value is kept, not rewritten', () => {
       'the cleaned-up list was written back, destroying the entry the operator has to fix');
   });
 
-  it('a conforming list is still normalised and applied', async () => {
+  it('a conforming list is written back and applied', async () => {
     const { merged, onDisk } = await mergeWith(['review-coach']);
     assert.deepEqual(onDisk.excluded_agents, ['review-coach']);
     assert.ok(!merged.agents.includes('review-coach'), 'a conforming opt-out must still take effect');
@@ -165,32 +204,73 @@ describe('T244 — a non-conforming value is kept, not rewritten', () => {
   });
 });
 
-describe('T244 — no site re-implements the rule', () => {
-  // The consolidation is the fix; a sixth copy appearing is the regression. Enumerated by file
-  // with one named exemption, plus a floor so a renamed idiom cannot make this vacuous.
-  const IDIOM = /Array\.isArray\([^)]*excluded_agents|excluded_agents[^\n]*\n?[^\n]*typeof a === 'string'/;
+describe('T244 — no site decides what excluded_agents means on its own', () => {
+  // The first version of this matched a text IDIOM. Measured: across 94 `.js` files under
+  // `scripts/` it had exactly ONE hit — a JSDoc sentence in config-merger.js. It matched neither
+  // the authority's real code nor the pinned copy's, so the `installed-tree.js` allow-list entry
+  // was dead and the vacuity floor was held up by prose. A verbatim copy of the pinned function
+  // evaded it, as did a local alias, `?.`/`??`, a four-line split, and the exact idiom in a `.cjs`,
+  // an `.mjs`, or anywhere outside `scripts/`.
+  //
+  // The question is not "does this text appear" but "does any file other than the authority and
+  // the pinned copy decide this". That is a property of imports, so it is checked as one. It fails
+  // closed: a sixth site has to mention `excluded_agents` in live code to do its job at all.
   const ALLOWED = new Set([
-    'scripts/update/lib/config-merger.js',     // the authority itself
-    'scripts/audit/lib/installed-tree.js',     // documented local copy, pinned by parity above
+    'scripts/update/lib/config-merger.js',   // the authority
+    'scripts/audit/lib/installed-tree.js',   // documented copy, pinned by parity above
   ]);
+  const IMPORTS_AUTHORITY = /require\(\s*['"][^'"]*(config-merger|installed-tree)/;
+
+  /** Comments stripped, so a file that merely MENTIONS the field in prose is not an offender. */
+  function liveCode(src) {
+    return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  }
 
   function walk(dir, out = []) {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
       const p = path.join(dir, e.name);
       if (e.isDirectory()) walk(p, out);
-      else if (e.name.endsWith('.js')) out.push(p);
+      else if (/\.(js|cjs|mjs)$/.test(e.name)) out.push(p);
     }
     return out;
   }
 
-  it('the coercion appears only in the authority and the one pinned copy', () => {
-    const root = path.join(__dirname, '..', '..');
-    const hits = walk(path.join(root, 'scripts'))
-      .filter((p) => IDIOM.test(fs.readFileSync(p, 'utf8')))
-      .map((p) => path.relative(root, p))
-      .sort();
-    assert.ok(hits.length >= 1, 'the idiom scan found nothing — it stopped matching, so it is vacuous');
-    assert.deepEqual(hits.filter((h) => !ALLOWED.has(h)), [],
-      'a new site re-implements what excluded_agents means; call parseExcludedAgents instead');
+  const ROOT = path.join(__dirname, '..', '..');
+
+  it('every file that works with excluded_agents goes through the authority', () => {
+    const offenders = [];
+    let considered = 0;
+    for (const p of walk(path.join(ROOT, 'scripts'))) {
+      const src = fs.readFileSync(p, 'utf8');
+      if (!/excluded_agents|excludedAgents/.test(liveCode(src))) continue;
+      considered += 1;
+      const rel = path.relative(ROOT, p);
+      if (ALLOWED.has(rel) || IMPORTS_AUTHORITY.test(src)) continue;
+      offenders.push(rel);
+    }
+    assert.ok(considered >= 3,
+      `only ${considered} file(s) touch excluded_agents in live code — the scan broke, so this is vacuous`);
+    assert.deepEqual(offenders, [],
+      'this file decides what excluded_agents means without importing the authority; ' +
+        'call configMerger.parseExcludedAgents instead');
+  });
+
+  it('the allow-list has no dead entries', () => {
+    // The previous guard exempted a file it could not even see. An exemption that matches nothing
+    // launders exactly what it is supposed to scope.
+    for (const rel of ALLOWED) {
+      const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+      assert.match(liveCode(src), /excluded_agents|excludedAgents/,
+        `${rel} is exempted but does not work with excluded_agents in live code — drop the entry`);
+    }
+  });
+
+  it('the offender test can actually fail', () => {
+    // A positive control over the predicate itself, not over the repo: the repo having zero
+    // offenders is the desired state, so the repo cannot demonstrate that this can fire.
+    const decidesWithoutAuthority = 'const ex = cfg.excluded_agents;\nif (!Array.isArray(ex)) return [];\n';
+    assert.match(liveCode(decidesWithoutAuthority), /excluded_agents/, 'precondition');
+    assert.ok(!IMPORTS_AUTHORITY.test(decidesWithoutAuthority),
+      'a file like this must be classed as an offender, or the check is inert');
   });
 });

@@ -19,7 +19,7 @@
  *
  * THE REGISTRY IS REPO-SIDE ONLY, BY DECISION. Nothing copies `_bmad/bme/_config/` into
  * an operator's project and nothing should: it governs authoring, and the operator-facing
- * half of A2 is already owned by `convoke-doctor.js:92` (I43, agent skill wrapper check,
+ * half of A2 is already owned by `convoke-doctor.js`'s `checkAgentSkillWrappers` (I43,
  * spanning all bme modules). Do not add it to `package.json` `files[]` without reopening
  * that ruling in T124.
  *

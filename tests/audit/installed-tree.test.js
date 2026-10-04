@@ -354,18 +354,26 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
     const REL = 'scripts/update/lib/refresh-installation.js';
     const bmm = RUNTIME_DATA_FILES.find((e) => e.file.endsWith('bmm-dependencies.csv'));
     assert.equal(citationHolds(bmm.readSite, bmm.token, 'reads'), true, 'the real line-cited citation must hold');
-    // The wrong line must ITSELF be admissible, or the admissibility rule rejects it and this control
-    // proves nothing. `:1` is a shebang: not admissible, so it passed with `includes` removed. We need
-    // a `path.join(` line — admissible for a read — that does NOT contain the anchor, so only the
-    // content check can reject it. DERIVED, not hardcoded: this was pinned to line 322 and rotted the
-    // moment an unrelated commit added lines above it (T244), which is the same failure mode as the
-    // citations this test polices.
+    // The wrong line must ITSELF be admissible, or the rule rejects it on admissibility and this
+    // control proves nothing about `includes`. This was pinned to a line NUMBER and rotted when an
+    // unrelated commit added lines above it; the first repair derived it with `/path\.join\(/`,
+    // which is BROADER than the admissibility rule — one innocuous reshaping of the line it happened
+    // to pick (`let x; x = path.join(…)`) made the control vacuous with nothing to say so. So
+    // admissibility is now established by `citationHolds` ITSELF: find a line it ACCEPTS for an
+    // anchor actually on that line, which proves both that the line is admissible and that the
+    // content check can pass there.
     const [rel] = bmm.readSite.split(':');
     const relLines = fs.readFileSync(path.join(PACKAGE_ROOT, rel), 'utf8').split('\n');
-    const wrongLineNo = relLines.findIndex((l) => /path\.join\(/.test(l) && !l.includes(bmm.token)) + 1;
-    assert.ok(wrongLineNo > 0,
-      `fixture: ${rel} has no \`path.join(\` line without ${bmm.token}, so this control cannot isolate \`includes\``);
-    const wrongButAdmissible = `${rel}:${wrongLineNo}`;
+    let wrongButAdmissible = null;
+    for (let i = 0; i < relLines.length && !wrongButAdmissible; i += 1) {
+      if (relLines[i].includes(bmm.token)) continue;
+      const word = (relLines[i].match(/[A-Za-z_][A-Za-z0-9_]{3,}/) || [])[0];
+      if (!word) continue;
+      const site = `${rel}:${i + 1}`;
+      if (citationHolds(site, word, 'reads')) wrongButAdmissible = site;
+    }
+    assert.ok(wrongButAdmissible,
+      `fixture: no line of ${rel} is admissible for a read without containing ${bmm.token}, so this control cannot isolate \`includes\``);
     assert.equal(citationHolds(wrongButAdmissible, bmm.token, 'reads'), false,
       'an admissible line that does not contain the anchor must still be rejected');
 

@@ -517,8 +517,10 @@ describe('mergeConfig — excluded_agents (U8)', () => {
     }
 
     assert.ok(!merged.agents.includes('noah'), 'the usable id must still be excluded');
+    // In-memory only; the disk-level pin is `tests/unit/excluded-agents-authority.test.js`, which
+    // caught a `writeConfig` that sanitised on the way out while this assertion stayed green.
     assert.deepEqual(merged.excluded_agents, ['noah', null, 123],
-      'the operator\'s value must survive verbatim — rewriting it is the T244 data loss');
+      'the operator\'s value must reach writeConfig unmodified — rewriting it is the T244 data loss');
     assert.equal(warned.length, 1, 'and the run must say the opt-out was not fully applied');
     assert.match(warned[0], /excluded_agents/);
   });

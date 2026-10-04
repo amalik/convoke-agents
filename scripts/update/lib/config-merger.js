@@ -88,12 +88,23 @@ function parseExcludedAgents(value, options = {}) {
   const conforming = isList && ids.length === value.length;
 
   if (!conforming && source) {
-    const shape = isList ? 'contains entries that are not agent ids' : `is ${typeof value === 'object' ? 'not a list' : `a bare ${typeof value}`}`;
+    const shape = isList
+      ? 'contains entries that are not agent ids'
+      : `is ${value !== null && typeof value === 'object' ? 'not a list' : `a bare ${typeof value}`}`;
+    // `ids` can repeat and can be long: a 5000-entry list produced a 34k-character single line.
+    const named = [...new Set(ids)];
+    const shown = named.length > 8 ? `${named.slice(0, 8).join(', ')} and ${named.length - 8} more` : named.join(', ');
     warnOnce(
       `${source}: \`excluded_agents\` ${shape}, so the opt-out was NOT applied` +
-        `${ids.length > 0 ? ` beyond ${ids.join(', ')}` : ''}. ` +
-        'It must be a YAML list of agent ids, e.g. `excluded_agents: [review-coach]`. ' +
-        'Your value is left as you wrote it.'
+        `${named.length > 0 ? ` beyond ${shown}` : ''}. ` +
+        'It must be a YAML list of agent ids, e.g.\n' +
+        '  excluded_agents:\n    - review-coach\n' +
+        // NOT "left exactly as you wrote it": `writeConfig` syncs through `doc.set(key, jsValue)`,
+        // and `yaml`'s YAMLMap.add keeps the old node only for a SCALAR. A collection is replaced
+        // with the raw JS value, so a flow list becomes a block list and inline comments on it are
+        // lost. What is guaranteed is that the value is not replaced with `[]`.
+        'Your value is kept rather than replaced with an empty list, though a list may be ' +
+        're-indented and comments on it are not preserved.'
     );
   }
   return { ids, conforming, absent: false };
@@ -139,7 +150,10 @@ function readExcludedAgents(configPath) {
     return [];
   }
   try {
-    const parsed = yaml.load(content);
+    // Parsed with `yaml`, not js-yaml, so this reader and `mergeConfig` (which goes through
+    // `readConfigDocument`) hand the authority the SAME JS value. Under js-yaml's default schema a
+    // YAML timestamp became a `Date` here and a string there, so the two disagreed on conformance.
+    const parsed = YAML.parse(content);
     if (parsed && typeof parsed === 'object') {
       return parseExcludedAgents(parsed.excluded_agents, { source: configPath }).ids;
     }
@@ -322,7 +336,9 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}, options 
   // T244: a NON-CONFORMING value is left exactly as the operator wrote it. Writing the cleaned-up
   // list back destroyed their text and left nothing on screen explaining why the opt-out did not
   // take effect, so the only record of their intent disappeared.
-  merged.excluded_agents = exclusions.conforming ? excludedAgents : current.excluded_agents;
+  merged.excluded_agents = exclusions.conforming
+    ? (exclusions.absent && current.excluded_agents === null ? null : excludedAgents)
+    : current.excluded_agents;
 
   // Smart-merge workflows: canonical workflows in order, then unique user-added appended
   if (updates.workflows) {

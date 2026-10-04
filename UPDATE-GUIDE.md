@@ -208,11 +208,12 @@ survives, and so does any key you add.** Only the fields the installer owns are 
 `workflows` lists, to which your own additions are appended rather than dropped. Consequences that
 are easy to trip over:
 
-- `excluded_agents` is the supported way to opt an agent out, and a well-formed list does survive
-  an upgrade — but **it must be a YAML list.** Given anything else (`excluded_agents: review-coach`,
-  or a list holding something that is not an agent id) the run warns, names the file, leaves your
-  value exactly as you wrote it, and installs the agent: the opt-out does not take effect until you
-  fix the shape. Any ids it can read from a malformed list are still applied.
+- `excluded_agents` is the supported way to opt an agent out, and a well-formed list survives an
+  upgrade — but **it must be a YAML list**, and the two malformed cases differ. A value that is not
+  a list at all (`excluded_agents: review-coach`) excludes **nothing**: the run warns, names the
+  file, and installs the agent. A *list* holding something that is not an agent id still applies
+  every id it can read, and warns about the rest. Either way your value is kept rather than replaced
+  with an empty list — though a list may be re-indented and comments on it are not preserved.
 - A `description` or `output_folder` you set to the **other** module's exact default value is read
   as the `BUG-22` corruption and reset to this module's own, printing
   `Repaired <field> in <path>: it held the <other module> default` — on stderr, so it is missing
