@@ -6,7 +6,7 @@ const os = require('os');
 const yaml = require('js-yaml');
 
 const backupManager = require('../../scripts/update/lib/backup-manager');
-const { refreshInstallation } = require('../../scripts/update/lib/refresh-installation');
+const { refreshInstallation, guardedModuleNames } = require('../../scripts/update/lib/refresh-installation');
 
 // Silence console output during tests to prevent node:test IPC serialization
 // issues on Node 20 (V8 structured clone deserialization bug)
@@ -62,10 +62,29 @@ describe('createBackup — anything a refresh CHANGES has a copy (T234)', () => 
       }
     };
     await walk(bmeDir);
-    assert.ok(dirs.length >= 20, `fixture precondition: expected a populated module tree, saw ${dirs.length} directories`);
+    // Derived, not a threshold. `20` sat here and was 5x looser than the regression it guarded:
+    // the real fixture has ~100 directories, so the tree could lose `_vortex` AND `_gyre` — 78 of
+    // them, including the module whose invisibility prompted this rewrite — and still read as
+    // "populated". The vacuity it claimed to catch is already caught by `destroyed.length > 0`
+    // below. What is worth asserting is that the walk saw every module the installer manages.
+    const topLevel = dirs
+      .filter((d) => path.dirname(d) === bmeDir)
+      .map((d) => path.basename(d))
+      .sort();
+    assert.deepEqual(topLevel, [...guardedModuleNames()].sort(),
+      'the walk must cover every module the installer manages, or a module is unexamined');
 
+    // TWO markers per directory. A file catches a tree the refresh REMOVES; a key appended to any
+    // config.yaml catches one it OVERWRITES in place. The previous rewrite planted only the file
+    // and skipped on `pathExists`, so `_enhance` — bare `fs.copy`, no `fs.remove` — was invisible
+    // and a backup set omitting it passed. That is the second time this pin lost the overwrite
+    // half; the comment above it kept claiming both.
     for (const d of dirs) {
       await fs.writeFile(path.join(d, 'MARKER.md'), `operator content for ${path.relative(dir, d)}`, 'utf8');
+      const cfg = path.join(d, 'config.yaml');
+      if (await fs.pathExists(cfg)) {
+        await fs.appendFile(cfg, `\nmarker_key: ${path.relative(dir, d).replace(/[^a-z0-9]/gi, '_')}\n`);
+      }
     }
 
     const metadata = await backupManager.createBackup('4.0.3', dir);
@@ -75,10 +94,19 @@ describe('createBackup — anything a refresh CHANGES has a copy (T234)', () => 
     const unprotected = [];
     for (const d of dirs) {
       const rel = path.relative(dir, d);
-      if (await fs.pathExists(path.join(d, 'MARKER.md'))) continue; // survived
+      const key = `marker_key: ${rel.replace(/[^a-z0-9]/gi, '_')}`;
+      const cfg = path.join(d, 'config.yaml');
+      const fileGone = !(await fs.pathExists(path.join(d, 'MARKER.md')));
+      const keyGone = (await fs.pathExists(cfg)) && !(await fs.readFile(cfg, 'utf8')).includes(key);
+      if (!fileGone && !keyGone) continue; // the refresh left this directory's operator data alone
       destroyed.push(rel);
-      if (!(await fs.pathExists(path.join(metadata.backup_dir, 'tree', rel, 'MARKER.md')))) {
-        unprotected.push(rel);
+      if (fileGone && !(await fs.pathExists(path.join(metadata.backup_dir, 'tree', rel, 'MARKER.md')))) {
+        unprotected.push(`${rel} (file)`);
+      }
+      if (keyGone) {
+        const stored = path.join(metadata.backup_dir, 'tree', rel, 'config.yaml');
+        const kept = (await fs.pathExists(stored)) && (await fs.readFile(stored, 'utf8')).includes(key);
+        if (!kept) unprotected.push(`${rel} (config)`);
       }
     }
 

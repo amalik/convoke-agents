@@ -234,10 +234,31 @@ async function restoreBackup(backupMetadata, projectRoot) {
         console.log(`  Skipping ${relPath} (not in backup)`);
         continue;
       }
-      if (fs.existsSync(destPath)) {
-        await fs.remove(destPath);
+      // T184 review. This was `remove(destPath)` then `copy`, which was tolerable when every
+      // entry was one small directory and is not now that `_bmad/bme` is an entry: a backup
+      // source that cannot be fully read (ENOSPC mid-restore, a permissions fault, a truncated
+      // backup) left the whole installed tree deleted and only partly replaced. Measured before
+      // this change: poisoning one directory inside the backup took the install from 294 files to
+      // 0, where the previous per-module entries lost 12.
+      //
+      // Stage beside the target, then swap. The live tree is only unlinked once a complete copy
+      // exists, so a failure anywhere above leaves the installation exactly as it was.
+      const staging = `${destPath}.restoring-${process.pid}`;
+      const displaced = `${destPath}.replaced-${process.pid}`;
+      await fs.remove(staging);
+      await fs.remove(displaced);
+      try {
+        await fs.copy(sourcePath, staging);
+        if (fs.existsSync(destPath)) await fs.move(destPath, displaced);
+        await fs.move(staging, destPath);
+        await fs.remove(displaced);
+      } catch (err) {
+        // Put the original back if it had already been moved aside, then let the catch below
+        // record the failure. Restoring a backup must never be the thing that loses the tree.
+        if (!fs.existsSync(destPath) && fs.existsSync(displaced)) await fs.move(displaced, destPath);
+        await fs.remove(staging);
+        throw err;
       }
-      await fs.copy(sourcePath, destPath);
       console.log(`  ✓ Restored: ${relPath}`);
     } catch (error) {
       console.error(`  ✗ Failed to restore ${relPath}:`, error.message);
@@ -373,18 +394,26 @@ function getFilesToBackup() {
     // There are 14 `fs.remove` call sites in `refresh-installation.js`; a list will keep losing.
     //
     // `_bmad/bme` is the root the installer owns and replaces, so backing it up whole is complete
-    // by construction and cannot miss a site. It costs ~2.5M per backup against ~1.4M for the
-    // list it subsumes, with five retained.
+    // by construction and cannot miss a site. Measured on a from-scratch install: 3016K per backup
+    // against 1424K for the list it subsumes, of which 1132K is the `_vortex` duplication below.
     //
     // The three `_vortex` entries below it are KEPT, not folded in: `restoreBackup` falls back to
     // the CURRENT `getFilesToBackup()` for manifests predating `backup_entries`, so removing them
     // would stop legacy backups restoring the flat `config.yaml`/`agents`/`workflows` they contain.
     // The overlap is harmless — both restore the same bytes to the same place.
     //
-    // `.claude/skills/` is NOT here and should not be. It is gitignored generated output
-    // (`.gitignore:69`), regenerated from the agent registry on every refresh, and 13M. A refresh
-    // does destroy operator files placed there; the answer is that it is not a place to keep work,
-    // which `UPDATE-GUIDE` now says, not 65M of regenerable wrappers in the backups.
+    // `.claude/skills/` is NOT here, and the reason is NOT cost. An earlier version of this
+    // comment said 13M, which measured the whole directory on a dev machine — 106 entries, 95 of
+    // them unrelated upstream BMAD and plugin skills the installer never writes. The set this
+    // installer actually owns is 18 wrappers, 72K, measured on a from-scratch install: 360K across
+    // the five retained, against ~3.0M this entry already writes per backup. Cost is no argument.
+    //
+    // The real reasons are two. Covering it means naming paths again — the wrappers are derived
+    // from `AGENTS`/`GYRE_AGENTS`, so an entry would be an enumeration, which is the instrument
+    // three rounds of T234 showed fails here. And restore must never touch the 95 upstream skills
+    // sharing that directory, so a whole-directory entry is unsafe in the one way this entry is
+    // safe for `_bmad/bme`. So a refresh does destroy operator files placed there, and the answer
+    // is that it is generated output and not a place to keep work — which `UPDATE-GUIDE` says.
     {
       name: 'tree/_bmad/bme',
       path: '_bmad/bme',
@@ -394,6 +423,7 @@ function getFilesToBackup() {
 }
 
 module.exports = {
+  getFilesToBackup,
   createBackup,
   restoreBackup,
   listBackups,

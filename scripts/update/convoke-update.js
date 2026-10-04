@@ -13,6 +13,7 @@ const { readChangelogEntries } = require('./lib/changelog-reader');
 // was reached. `getCurrentVersion()` keeps its scalar contract (it feeds the migration
 // registry, which keys off Vortex's history); this is a separate question, asked here only.
 const { detectRepairableSkew } = require('../lib/bme-modules');
+const { getFilesToBackup } = require('./lib/backup-manager');
 const { runCompatPreflight } = require('./lib/compat-preflight');
 // Story v63-2-3: post-upgrade governance gate. `checkBmmDependencies` is
 // lazy-required inside `_runPostUpgradeGate` (Round 1 R1-M2 fix) so a
@@ -32,6 +33,27 @@ const { runCompatPreflight } = require('./lib/compat-preflight');
  * @param {string|null} projectRoot - Project root path (null if not found)
  * @returns {object} Assessment result with action, versions, migrations, breakingChanges
  */
+/**
+ * Tell the operator what the backup covers, derived from the backup set itself.
+ *
+ * T184 Round 1. This was five hand-written lines naming the covered and uncovered paths, and the
+ * commit that widened the backup to the whole of `_bmad/bme` left them behind — so the prompt
+ * asserted that `_vortex/contracts`, `_vortex/examples` and `_gyre/` were NOT copied when they are.
+ * Nothing tied the text to `getFilesToBackup()`, and the re-derivation recipe used `--yes`, which
+ * skips the prompt, so the check could never have printed the sentence it invalidated.
+ *
+ * `.claude/skills/` is named as uncovered deliberately and is the one hardcoded clause here,
+ * because it is an absence rather than an entry — see the reasoning at `getFilesToBackup`.
+ */
+function printBackupScope() {
+  const paths = getFilesToBackup().map((f) => f.path).sort();
+  console.log(chalk.cyan('Backed up first, and restorable from _bmad-output/.backups/:'));
+  for (const p of paths) console.log(chalk.cyan(`  ${p}`));
+  console.log(chalk.yellow('NOT copied: .claude/skills/ — a refresh regenerates those wrappers and'));
+  console.log(chalk.yellow('deletes them first, so your own files there are lost (T236 tracks the'));
+  console.log(chalk.yellow('wider question of customising shipped files).'));
+}
+
 function assessUpdate(projectRoot) {
   if (!projectRoot) {
     return { action: 'no-project' };
@@ -367,11 +389,7 @@ async function main() {
     }
 
     if (!yes) {
-      console.log(chalk.cyan('Backed up first: the Vortex config, agents and workflows, the agent'));
-      console.log(chalk.cyan('manifest, and the _enhance, _artifacts and _portability directories.'));
-      console.log(chalk.yellow('NOT copied: anything else under _bmad/ or .claude/ — including'));
-      console.log(chalk.yellow('_vortex/contracts, _vortex/examples, _gyre/ and .claude/skills/.'));
-      console.log(chalk.yellow('A refresh replaces those, so your own files there are lost (T184).'));
+      printBackupScope();
       console.log('');
       const confirmed = await confirm('Proceed with update?');
       if (!confirmed) {
@@ -452,10 +470,7 @@ async function main() {
 
   // Confirm with user (unless --yes)
   if (!yes) {
-    console.log(chalk.cyan('Backed up first: the Vortex config, agents and workflows, the agent'));
-    console.log(chalk.cyan('manifest, and the _enhance, _artifacts and _portability directories.'));
-    console.log(chalk.yellow('NOT copied: anything else under _bmad/ or .claude/ — a refresh'));
-    console.log(chalk.yellow('replaces those, so your own files there are lost (T184).'));
+    printBackupScope();
     console.log('');
 
     const confirmed = await confirm('Proceed with migration?');

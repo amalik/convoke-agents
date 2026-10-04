@@ -148,9 +148,10 @@ Every update creates a backup before making changes:
 - **Location:** `_bmad-output/.backups/backup-{version}-{timestamp}/`
 - **Includes:** the whole of `_bmad/bme/` — every module, agent, workflow, contract, example and
   guide the installer owns — plus `_bmad/_config/agent-manifest.csv`. It is stored path-mirrored as
-  `tree/_bmad/bme/`. The whole tree is copied rather than a list of paths because a refresh replaces
-  its contents from fourteen separate places, and three successive attempts to enumerate them each
-  missed one (`T184`). Your Vortex user guides additionally get a sibling `.bak` from
+  `tree/_bmad/bme/`. The whole tree is copied rather than a list of paths because the installer
+  removes and replaces directories from many separate places — `refresh-installation.js` has 14
+  `fs.remove` calls — and three successive attempts to enumerate the ones that matter each missed
+  one (`T184`). Your Vortex user guides additionally get a sibling `.bak` from
   `convoke-update`.
 - **NOT included:** `.claude/skills/`. A refresh regenerates those wrappers from the agent registry
   and deletes the directories first, so operator files placed there are destroyed and there is no
@@ -158,11 +159,13 @@ Every update creates a backup before making changes:
   if you have customised a generated wrapper, keep the source of your change elsewhere.
 - **Also not included, but safe:** `_bmad-output/` apart from the backups themselves, and the shared
   files under `_bmad/_config/` other than `agent-manifest.csv`. A refresh writes `skill-manifest.csv`,
-  `taxonomy.yaml` and the `agents/` customization directory, but appends or creates rather than
-  replacing: a marker line added to each survived an update, measured 2026-10-03.
+  `workflow-manifest.csv`, `taxonomy.yaml`, `bmm-dependencies.csv` and the `agents/` customization
+  directory, but appends or creates rather than replacing: a marker line added to each survived an
+  update, measured 2026-10-03. One exception — a `skill-manifest.csv` that is present but unusable
+  is renamed to `.corrupt-<version>` and reseeded, so it is preserved rather than appended to.
 - **Retention:** Last 5 backups kept automatically
-- **Rollback:** Automatic **only if the update fails.** A refresh that SUCCEEDS still replaces those
-  three module directories, and nothing restores them for you — use the manual recipe below.
+- **Rollback:** Automatic **only if the update fails.** A refresh that SUCCEEDS still replaces
+  everything under `_bmad/bme/`, and nothing restores it for you — use the manual recipe below.
 
 ### What's Never Touched
 
