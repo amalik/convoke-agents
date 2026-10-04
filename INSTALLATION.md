@@ -115,7 +115,11 @@ The `convoke-export` **command** runs from the npm package and needs no installa
 
 ## Configuration
 
-Each team installer creates a `config.yaml` in its module directory. For `_vortex` and `_gyre`, the key fields you'll want to customize are already in the file: edit their values in place rather than adding new lines, because a second `user_name:` line makes the file invalid YAML. The other three seed no such fields, and a value you add to them does not survive the next install either way — see the note on preservation below. For the Vortex and Gyre configs, an **install** stops rather than overwrite it, before it replaces any agent, workflow or guide. `convoke-install` and `convoke-install-vortex` stop at step `[4/5]`, by which point step `[2/5]` has archived the deprecated `wireframe` workflow and deleted a pre-Vortex `_designos` directory if you had one; `convoke-install-gyre` stops at `[3/4]` and has no such step. `convoke-update` stops too, when the damaged file is the **Gyre** config and a refresh is due. The five module configs an install writes are all checked, not just those two — `_vortex`, `_gyre`, `_enhance`, `_artifacts` and `_portability`. Two gaps: a damaged `_vortex/config.yaml` under `convoke-update` gets a migration plan instead of the refusal, and a `_bmad/bme/_team-factory/config.yaml` left behind by a 4.0.3-or-earlier install is not checked at all, because nothing installs that module any more. And checking is not preserving — `_enhance`, `_artifacts` and `_portability` are rewritten from the package template on every install even when readable, so a value you add there is lost; `_vortex` and `_gyre` keep yours. See [UPDATE-GUIDE](UPDATE-GUIDE.md#refusing-to-overwrite--configyaml).
+Each team installer creates a `config.yaml` in its module directory. For `_vortex` and `_gyre`, the key fields you'll want to customize are already in the file: **edit their values in place rather than adding new lines**, because a second `user_name:` line makes the file invalid YAML and the installer will then refuse to run until you repair it. The other three modules seed no such fields.
+
+Which of the five configs an install checks, and which keep what you put in them, is stated in the Update Guide: [Which configs are checked, and which are preserved](UPDATE-GUIDE.md#which-configs-are-checked-and-which-are-preserved).
+
+If you see `refusing to overwrite ... config.yaml`, the repair steps — and what an install has already done by the time it refuses, including a `_designos` directory it may have deleted — are under [refusing to overwrite ... config.yaml](UPDATE-GUIDE.md#refusing-to-overwrite--configyaml).
 
 ```yaml
 # _bmad/bme/_vortex/config.yaml (or _gyre/config.yaml)
@@ -188,7 +192,7 @@ npx -p convoke-agents convoke-install-vortex
 
 ### Config file already exists
 
-For `_vortex` and `_gyre` the installer preserves your custom settings and only adds missing entries. For `_enhance`, `_artifacts` and `_portability` it does not — those are rewritten from the package template on every install, so a value you added is lost. **An install takes no backup** — only `convoke-update` and `convoke-migrate` do — so copy anything of your own out of those three directories before re-installing. To force a clean installation:
+What the installer does with a config that already exists depends on which module it belongs to: [Which configs are checked, and which are preserved](UPDATE-GUIDE.md#which-configs-are-checked-and-which-are-preserved). **An install takes no backup** — only `convoke-update` and `convoke-migrate` do — so copy anything of your own out of the module directories before re-installing. To force a clean installation:
 
 ```bash
 rm -rf _bmad/bme/_vortex/    # or _gyre/ for Gyre

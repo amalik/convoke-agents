@@ -21,7 +21,8 @@ npx -p convoke-agents convoke-update --dry-run
 npx -p convoke-agents convoke-update
 ```
 
-Your data is backed up automatically before any changes.
+Your `_bmad/bme/` tree is backed up automatically before any changes — with the exceptions
+listed under [Data Safety](#data-safety).
 
 ---
 
@@ -94,7 +95,10 @@ What happens:
 - Gyre skill wrappers added to `.claude/skills/`
 - Agent manifest updated with 4 new entries
 
-If you previously had only Vortex installed, Gyre files are added alongside — nothing in `_bmad/bme/_vortex/` changes.
+If you previously had only Vortex installed, Gyre files are added alongside — and Vortex is
+refreshed from the package in the same run, because `convoke-install-gyre` refreshes every module.
+Your Vortex agents and workflows are replaced and its config is re-stamped; see *What's Never
+Touched* and [Which configs are checked, and which are preserved](#which-configs-are-checked-and-which-are-preserved).
 
 ### From v2.0.x to v3.0.0
 
@@ -170,15 +174,59 @@ Every update creates a backup before making changes:
   module roots and a few directories the installer only copies into — and nothing restores them for
   you. Use the manual recipe below.
 
+### Which configs are checked, and which are preserved
+
+An install writes five module `config.yaml` files — `_vortex`, `_gyre`, `_enhance`, `_artifacts`
+and `_portability`. **This table is the canonical statement of what happens to them. Correct it
+here, and make every other mention a pointer rather than a second copy.** The repository pins the
+table against the code it describes, in `tests/unit/config-doc-canonical.test.js`, so the two
+cannot drift apart silently.
+
+| Module config | If it cannot be read (install) | If it can be read |
+|---|---|---|
+| `_vortex` | **Refused** — the run stops and names the file and the parser's own error | **Your values are kept** |
+| `_gyre` | **Refused** | **Your values are kept** |
+| `_enhance` | **Refused** | **Replaced** by the package template, so anything you added is lost |
+| `_artifacts` | **Refused** | **Replaced** |
+| `_portability` | **Refused** | **Replaced** |
+
+A refusal leaves *the config file* byte-identical. It does not mean the run was a no-op: see the
+per-command rows under ["refusing to overwrite ... config.yaml"](#refusing-to-overwrite--configyaml) for what an install has already done by the time it refuses.
+
+*Your values are kept* is a rule rather than a list — **every key already in the file survives, and
+so does any key you add.** Only the fields the installer owns are reset: `version`,
+`submodule_name`, `module`, and the canonical `agents` and `workflows` lists, to which your own
+additions are appended rather than dropped. Three consequences are easy to trip over:
+
+- An agent you name in `excluded_agents` stays out. That list is the supported way to opt out of an
+  agent, and it survives an upgrade.
+- A `description` or `output_folder` you set to the **other** module's exact default value is read
+  as the `BUG-22` corruption and reset to this module's own, printing `Repaired <field> in <path>`.
+  Any other value, including an edited one, is kept.
+- A seeded field left empty — `user_name:` with nothing after it — is re-seeded with its own
+  default rather than left blank. `party_mode_enabled` and `core_module` are not re-seeded.
+
+**The table is what an install does.** `convoke-update` and `convoke-migrate` do the same to both
+columns, refusing the same unreadable files and replacing the same readable ones, with two
+differences on the update path: it only reaches these files when a refresh is actually due, so with
+nothing out of step it prints `✓ Already up to date!` with your installed version and never touches
+them; and it does **not** refuse on a damaged **Vortex** config, because version detection reads
+that file first and swallows the parse error, offering you a migration plan instead. Both are
+covered in ["refusing to overwrite ... config.yaml"](#refusing-to-overwrite--configyaml). `convoke-migrate` always takes a backup first.
+
+One config is not checked at all: a `_bmad/bme/_team-factory/config.yaml` left behind by a
+4.0.3-or-earlier install. Nothing installs that module any more. A `_bmad/bme/config.yaml`, if your
+project has one, is written by neither an install nor an update.
+
+Before any of this an **update** backs up `_bmad/bme` in full (see Automatic Backups above). An
+**install** takes no backup, so on the three replaced configs an install is a one-way door.
+
 ### What's Never Touched
 
 - All user-generated files in `_bmad-output/`
 - Gyre analysis artifacts in `.gyre/` (stack-profile, capabilities, findings, feedback)
-- User preferences (name, language settings) in the **Vortex** and **Gyre** configs
-- Custom values in the **Vortex** and **Gyre** `config.yaml` — but **not** in `_enhance`,
-  `_artifacts` or `_portability`, which are rewritten from the package template on every refresh.
-  They are backed up by an update, not preserved — see Automatic Backups above — and an install
-  takes no backup at all.
+- Values in the five module `config.yaml` files — which ones, and what "kept" covers, is in
+  [Which configs are checked, and which are preserved](#which-configs-are-checked-and-which-are-preserved).
 - Your own files anywhere under `_bmad/bme/` are **not** in this list either — a refresh replaces
   them. An **update** backs them up first, so they are recoverable (see Automatic Backups); an
   **install** does not, so the same files are destroyed with no copy. Neither preserves them in
@@ -189,7 +237,7 @@ Every update creates a backup before making changes:
 
 - Agent definition files (Vortex and Gyre)
 - Workflow files (steps, templates, validation)
-- Config files (with preference preservation — user-added entries are kept)
+- Config files — see [Which configs are checked, and which are preserved](#which-configs-are-checked-and-which-are-preserved)
 - User guides
 - Claude Code skill wrappers in `.claude/skills/`
 - Agent manifest in `_bmad/_config/`
@@ -224,7 +272,8 @@ These change between versions but are handled automatically by `convoke-update`:
 - **Internal file structure** — The layout of `_bmad/bme/` may change between versions
 - **User guides** — Updated guides are installed in each team's `guides/` directory
 
-You do not need to manually update these — the update system replaces them while preserving your preferences and artifacts.
+You do not need to manually update these — the update system replaces them. Your artifacts are
+untouched. For the configs, see [Which configs are checked, and which are preserved](#which-configs-are-checked-and-which-are-preserved).
 
 ---
 
@@ -292,17 +341,18 @@ This tells npx to download `convoke-agents@latest` first, then run the `convoke-
 From 4.0.3 the **Vortex and Gyre** `config.yaml` files were never replaced when they could not be read,
 and the other module configs were not checked at all. **That was fixed on `main`, after 4.0.3**: the installer now refuses on
 an unreadable config for **every** module whose `config.yaml` it writes, rather than for a hardcoded pair.
-Derive the current set rather than trusting this sentence:
+Derive the current set rather than trusting this sentence. From a clone of the repository:
 
 ```bash
 node -e "console.log(require('./scripts/update/lib/refresh-installation.js').guardedModuleNames().join(', '))"
 ```
 
+The function does not exist in 4.0.3, so this reports what `main` does, not what you installed.
+
 Two caveats, both open and both narrower than the old defect:
 
-- **The refusal half only.** `_enhance`, `_artifacts` and `_portability` configs are still rewritten from
-  the package template on every run, because `mergeConfig` carries profiles for `_vortex` and `_gyre`
-  alone. A readable config there is not preserved; see Automatic Backups.
+- **The refusal half only.** Checking a config is not keeping it. Which of the five are kept, and
+  what "kept" covers, is in [Which configs are checked, and which are preserved](#which-configs-are-checked-and-which-are-preserved).
 - **The set is exactly what the installer writes.** On `main`, after 4.0.3: the five modules are
   named in the source, which is what this section's own command prints. Before that fix the set was
   derived from the package tree's directories, so in a clone `_team-factory` — un-shipped
@@ -372,16 +422,15 @@ command:
 | `convoke-update` | Gyre, and a refresh is due | Refuses with the message above, exit 1, then rolls back: `Restoring from backup...` and `✓ Installation restored from backup`. Where it refuses, and what it calls the failure, depends on whether your version has migration deltas to run — `[2/3] Refreshing installation files` with `✗ Update failed!` when it does not, `[3/5]` with `✗ Migration failed!` when it does. **The two differ in what has already happened.** On the first, the refusal precedes every write, so nothing was touched. On the second, step `[2/5]` has already run your deltas to completion — moving deprecated workflows, rewriting the agent manifest — and it is the rollback, not the refusal, that undoes them. Either way your `_bmad/` tree ends as it was — unless the rollback itself fails, which is covered under *Restoring from a backup by hand* |
 | `convoke-update` | Gyre, nothing else out of step | `✓ Already up to date!`, exit 0 — the damaged file is not noticed |
 | `convoke-update` | **Vortex** | **No refusal.** Version detection cannot read the file, falls back to inspecting the directory layout, and reports an old version: `1.1.0` where `workflows/_deprecated/` exists, `1.0.0` on a project installed with `convoke-install-gyre` alone, which never creates it. You are offered a plan from there up to the package's version, listing two or three breaking changes. If you accept it, migration 3 of 7 (`1.5.x-to-1.6.0`) fails on the same parse error and the run is rolled back from its backup — exit 1, your config byte-identical |
-| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability` | Refuses, exit 1, file byte-identical. Which step, and what has already run by then, differs per command: see the installer rows above, and note that `convoke-update` refuses inside `[2/3] Refreshing installation files` — or `[3/5]`, with `✗ Migration failed!`, when your version also has migration deltas to run — then restores from its backup and reports `✓ Installation restored from backup`. A **readable** config there is a different matter: it is still replaced by the package template on every run, damaged or not, so operator values are lost. Verified by re-install — a planted `my_custom_key` was gone from all three, where `_vortex` and `_gyre` kept it, because `configMerger.mergeConfig` carries profiles for those two alone. An update backs that up first; an install does not — see Automatic Backups. With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
+| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability` | Refuses, exit 1, file byte-identical. Which step, and what has already run by then, differs per command: see the installer rows above, and note that `convoke-update` refuses inside `[2/3] Refreshing installation files` — or `[3/5]`, with `✗ Migration failed!`, when your version also has migration deltas to run — then restores from its backup and reports `✓ Installation restored from backup`. A **readable** config there is a different matter — see [Which configs are checked, and which are preserved](#which-configs-are-checked-and-which-are-preserved). With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
 
 The `convoke-update` + **Vortex** row is a known defect: the refusal exists and runs,
 but version detection reads the Vortex config first and swallows the error before the refusal can be
 reached. Until it is fixed, treat a `Could not read config.yaml` warning followed by a surprisingly old
 `From:` version — `1.1.0` or `1.0.0`, neither of which you installed — as this case, decline the plan, and
 repair the file as below. The three-module row below it carried that same defect for `_enhance`, `_artifacts` and
-`_portability` until that was fixed; they are checked now, and an unreadable one refuses like Gyre's. What
-remains for those three is that a *readable* config is still overwritten from the package template on
-every run. On 2026-10-01, on `main`, the guard stopped covering the module that no longer ships.
+`_portability` until that was fixed; they are checked now, and an unreadable one refuses like Gyre's.
+On 2026-10-01, on `main`, the guard stopped covering the module that no longer ships.
 
 **Reinstalling will not clear this, and that is deliberate** — `convoke-install` runs the same
 check. Repair the file itself:
@@ -391,16 +440,24 @@ check. Repair the file itself:
    your own** — deleting yours instead leaves you on the placeholder, which is the state this
    release exists to fix. Where the message reported no location (`it is not a YAML mapping`), go to
    step 2 instead.
-2. If you would rather start over on that file, delete it.
+2. If you would rather start over on that file, delete it. For `_vortex` or `_gyre` that discards
+   every value you had: copy your `user_name`, `communication_language` and `excluded_agents` out
+   first, because the fresh file comes back on the `{user}` placeholder — the state step 1 calls
+   the one this release exists to fix — and an install takes no backup.
 3. Run an **install**, not an update:
 
    ```bash
    npx -p convoke-agents convoke-install
    ```
 
-   `convoke-install`, `convoke-install-vortex` and `convoke-install-gyre` each rewrite **both**
-   configs, so any one of them restores a deleted or replaced file with the right contents for its
-   own module, and keeps every value you had set in the file that was not damaged.
+   `convoke-install`, `convoke-install-vortex` and `convoke-install-gyre` each write **all five**
+   module configs, not just their own, so any one of them restores a file you deleted at step 2.
+   What it restores each of the five to is not the same — read [Which configs are checked, and which are preserved](#which-configs-are-checked-and-which-are-preserved) before you run it. In
+   particular, **if the damaged file is `_enhance`, `_artifacts` or `_portability`, this step
+   replaces that same file from the package template**, so a repair you made in step 1 is discarded
+   along with everything else you had in it. For those three, copy out what you want to keep and
+   use step 2 rather than step 1. The step also replaces a *readable* config in the other two of
+   those three, which you had not damaged at all.
 
 > **`convoke-update` will not do this, and it will not tell you so.** On an installation that is
 > otherwise current it stops at `✓ Already up to date!` and exits **0** without reaching the code
@@ -408,12 +465,15 @@ check. Repair the file itself:
 > success. All four Gyre agents read `_bmad/bme/_gyre/config.yaml` when they start, so a missing one
 > leaves them unable to start with nothing on screen to explain why. Always finish with an install.
 
-Both the Vortex and the Gyre `config.yaml` are checked, so a damaged *Gyre* config also blocks
-`convoke-install-vortex`. Fix whichever file the message names.
+All five module configs are checked, so a damaged config in **any** of them blocks every install
+command — a broken `_artifacts/config.yaml` stops `convoke-install-vortex` too. Fix whichever file
+the message names, and see [Which configs are checked, and which are preserved](#which-configs-are-checked-and-which-are-preserved).
 
 ### "Installation appears corrupted"
 
-Reinstall from scratch (preserves user data):
+Reinstall from scratch. Your artifacts under `_bmad-output/` and `.gyre/` are untouched; your own
+files under `_bmad/bme/` are **not**, and an install takes no backup. For the configs, see
+[Which configs are checked, and which are preserved](#which-configs-are-checked-and-which-are-preserved).
 
 ```bash
 npx -p convoke-agents convoke-install          # Everything
