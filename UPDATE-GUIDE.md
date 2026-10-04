@@ -4,13 +4,6 @@ How to update your Convoke installation to the latest version.
 
 - **Package:** [`convoke-agents`](https://www.npmjs.com/package/convoke-agents)
 
-> **This guide tracks `main`, not the release you have installed.** Behaviour described here may
-> not be in your copy. [CHANGELOG.md](CHANGELOG.md)'s `[Unreleased]` section lists what has not
-> shipped yet. Do not read a published release's own copy of this guide as authoritative either —
-> every release from 3.2.0 to 4.0.3 shipped a guide that was wrong about its own behaviour, most
-> visibly by listing custom configuration values as never touched while the installer replaced
-> them. Treat a specific claim as something to check against your installation, not a guarantee.
-
 ---
 
 ## Quick Update
@@ -187,8 +180,9 @@ Every update creates a backup before making changes:
   They are backed up by an update, not preserved — see Automatic Backups above — and an install
   takes no backup at all.
 - Your own files anywhere under `_bmad/bme/` are **not** in this list either — a refresh replaces
-  them. They are now backed up, so they are recoverable (see Automatic Backups), but they are not
-  preserved in place. Files under `.claude/skills/` are neither preserved nor backed up.
+  them. An **update** backs them up first, so they are recoverable (see Automatic Backups); an
+  **install** does not, so the same files are destroyed with no copy. Neither preserves them in
+  place. Files under `.claude/skills/` are neither preserved nor backed up by either.
 - Coach amendments and feedback in `.gyre/feedback.yaml`
 
 ### What Gets Updated
@@ -311,8 +305,9 @@ Two caveats, both open and both narrower than the old defect:
   the package no longer contains. That can no longer happen. A named list is deliberate: an
   intermediate fix read `package.json` `files[]` and was withdrawn before release, because several
   npm-legal spellings of the same entry left npm shipping a module while the parser dropped it,
-  turning the guard off. **Retiring the orphan directory itself is still open and unscheduled**, which this did not do: a
-  `convoke-doctor` version-consistency failure naming `_team-factory` persists until it lands.
+  turning the guard off. **Removing the orphan directory itself is separate work, still open and
+  unscheduled**, and this change did not do it: a `convoke-doctor` version-consistency failure
+  naming `_team-factory` persists until that work lands.
 
 Where you see this message depends on the command and on which file is
 damaged; the table below has every case, because they differ:
@@ -371,7 +366,7 @@ command:
 | `convoke-update` | Gyre, and a refresh is due | Refuses with the message above, exit 1 |
 | `convoke-update` | Gyre, nothing else out of step | `✓ Already up to date!`, exit 0 — the damaged file is not noticed |
 | `convoke-update` | **Vortex** | **No refusal.** Version detection cannot read the file, falls back to inspecting the directory layout, and reports an old version: `1.1.0` where `workflows/_deprecated/` exists, `1.0.0` on a project installed with `convoke-install-gyre` alone, which never creates it. You are offered a plan from there up to the package's version, listing two or three breaking changes. If you accept it, migration 3 of 7 (`1.5.x-to-1.6.0`) fails on the same parse error and the run is rolled back from its backup — exit 1, your config byte-identical |
-| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability` | Refuses, exit 1, file byte-identical. Which step, and what has already run by then, differs per command: see the four rows above for the installers, and note that `convoke-update` refuses inside `[2/3] Refreshing installation files`, then restores from its backup and reports `✓ Installation restored from backup`. A **readable** config there is a different matter: it is still replaced by the package template on every run, damaged or not, so operator values are lost. Verified by re-install — a planted `my_custom_key` was gone from all three, where `_vortex` and `_gyre` kept it, because `configMerger.mergeConfig` carries profiles for those two alone. A readable config there is still replaced. An update backs it up first; an install does not. With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
+| any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability` | Refuses, exit 1, file byte-identical. Which step, and what has already run by then, differs per command: see the four rows above for the installers, and note that `convoke-update` refuses inside `[2/3] Refreshing installation files`, then restores from its backup and reports `✓ Installation restored from backup`. A **readable** config there is a different matter: it is still replaced by the package template on every run, damaged or not, so operator values are lost. Verified by re-install — a planted `my_custom_key` was gone from all three, where `_vortex` and `_gyre` kept it, because `configMerger.mergeConfig` carries profiles for those two alone. An update backs that up first; an install does not — see Automatic Backups. With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
 
 The `convoke-update` + **Vortex** row is a known defect: the refusal exists and runs,
 but version detection reads the Vortex config first and swallows the error before the refusal can be
@@ -380,7 +375,7 @@ reached. Until it is fixed, treat a `Could not read config.yaml` warning followe
 repair the file as below. The row above it carried that same defect for `_enhance`, `_artifacts` and
 `_portability` until that was fixed; they are checked now, and an unreadable one refuses like Gyre's. What
 remains for those three is that a *readable* config is still overwritten from the package template on
-every run. The guard stopped covering the module that no longer ships on 2026-10-01, on `main`.
+every run. On 2026-10-01, on `main`, the guard stopped covering the module that no longer ships.
 
 **Reinstalling will not clear this, and that is deliberate** — `convoke-install` runs the same
 check. Repair the file itself:

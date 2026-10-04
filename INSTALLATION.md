@@ -4,13 +4,6 @@ Complete guide to installing Convoke agent teams into your project.
 
 - **Package:** [`convoke-agents`](https://www.npmjs.com/package/convoke-agents)
 
-> **This guide tracks `main`, not the release you have installed.** Behaviour described here may
-> not be in your copy. [CHANGELOG.md](CHANGELOG.md)'s `[Unreleased]` section lists what has not
-> shipped yet. Do not read a published release's own copy of this guide as authoritative either —
-> every release from 3.2.0 to 4.0.3 shipped a guide that was wrong about its own behaviour, most
-> visibly by listing custom configuration values as never touched while the installer replaced
-> them. Treat a specific claim as something to check against your installation, not a guarantee.
-
 ---
 
 ## Prerequisites
@@ -195,7 +188,7 @@ npx -p convoke-agents convoke-install-vortex
 
 ### Config file already exists
 
-For `_vortex` and `_gyre` the installer preserves your custom settings and only adds missing entries. For `_enhance`, `_artifacts` and `_portability` it does not — those are rewritten from the package template on every install, so a value you added is lost. **An install takes no backup** — only `convoke-update` does — so copy anything of your own out of those three directories before re-installing. To force a clean installation:
+For `_vortex` and `_gyre` the installer preserves your custom settings and only adds missing entries. For `_enhance`, `_artifacts` and `_portability` it does not — those are rewritten from the package template on every install, so a value you added is lost. **An install takes no backup** — only `convoke-update` and `convoke-migrate` do — so copy anything of your own out of those three directories before re-installing. To force a clean installation:
 
 ```bash
 rm -rf _bmad/bme/_vortex/    # or _gyre/ for Gyre
