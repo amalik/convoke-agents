@@ -115,7 +115,7 @@ The `convoke-export` **command** runs from the npm package and needs no installa
 
 ## Configuration
 
-Each team installer creates a `config.yaml` in its module directory. For `_vortex` and `_gyre`, the key fields you'll want to customize are already in the file: **edit their values in place rather than adding new lines**, because a second `user_name:` line makes the file invalid YAML and the installer will then refuse to run until you repair it. The other three modules seed no such fields.
+Each team installer creates a `config.yaml` in its module directory. For `_vortex` and `_gyre`, the key fields you'll want to customize are already in the file: **edit their values in place rather than adding new lines**, because a second `user_name:` line makes the file invalid YAML and the installer will then stop partway — after work it has already done — until you repair it. The other three modules seed no such fields.
 
 Which of the five configs an install checks, and which keep what you put in them, is stated in the Update Guide: [Which configs are checked, and which are preserved](UPDATE-GUIDE.md#which-configs-are-checked-and-which-are-preserved).
 
@@ -125,6 +125,7 @@ If you see `refusing to overwrite ... config.yaml`, the repair steps — and wha
 # _bmad/bme/_vortex/config.yaml (or _gyre/config.yaml)
 user_name: "{user}"                # Your name (used in agent greetings)
 communication_language: "en"       # Language for agent communication
+excluded_agents: []                # Agent IDs to opt out of, kept across upgrades
 ```
 
 The config also includes auto-generated fields (`submodule_name`, `module`, `version`, `agents`, `workflows`) that you typically don't need to edit — the installer and update system manage those.
@@ -192,7 +193,7 @@ npx -p convoke-agents convoke-install-vortex
 
 ### Config file already exists
 
-What the installer does with a config that already exists depends on which module it belongs to: [Which configs are checked, and which are preserved](UPDATE-GUIDE.md#which-configs-are-checked-and-which-are-preserved). **An install takes no backup** — only `convoke-update` and `convoke-migrate` do — so copy anything of your own out of the module directories before re-installing. To force a clean installation:
+What the installer does with a config that already exists depends on which module it belongs to: [Which configs are checked, and which are preserved](UPDATE-GUIDE.md#which-configs-are-checked-and-which-are-preserved). **An install takes no backup** — only `convoke-update` and `convoke-migrate` do — so copy anything of your own out of the module directories before re-installing — including `excluded_agents`, which a `rm -rf` discards, bringing the agents you opted out of back. To force a clean installation:
 
 ```bash
 rm -rf _bmad/bme/_vortex/    # or _gyre/ for Gyre
