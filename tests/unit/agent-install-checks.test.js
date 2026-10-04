@@ -6,7 +6,12 @@ const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
 
-const { agentInstallChecks, checkHolds } = require('../../scripts/lib/agent-install-checks');
+const {
+  agentInstallChecks,
+  checkHolds,
+  pathPresent,
+  evaluateAgentInstall,
+} = require('../../scripts/lib/agent-install-checks');
 const { resetExcludedAgentWarnings } = require('../../scripts/update/lib/config-merger');
 
 // ─────────────────────────────────────────────────────────────────
@@ -62,6 +67,12 @@ describe('T251 — the expected set honours the opt-out', () => {
         assert.equal(find(checks, `.claude/skills/bmad-agent-bme-${a.id}/SKILL.md`).expect, 'present', `${a.id} wrapper`);
       }
       assert.equal(find(checks, CONFIG_REL).expect, 'present');
+      // `name` is what the installer prints. With it unasserted, dropping it left the suite green
+      // and the bin printing `✓ undefined` for every check.
+      assert.equal(find(checks, fileFor(ROSTER[0])).name, `${ROSTER[0].name} agent file`);
+      assert.equal(find(checks, `.claude/skills/bmad-agent-bme-${ROSTER[0].id}/SKILL.md`).name,
+        `${ROSTER[0].name} skill`);
+      assert.equal(find(checks, CONFIG_REL).name, 'Configuration file');
     });
   });
 
@@ -74,6 +85,19 @@ describe('T251 — the expected set honours the opt-out', () => {
         'requiring an opted-out wrapper to be present is what failed the install');
       assert.equal(find(checks, fileFor({ id: 'coach' })), undefined,
         'a refresh skips copying the agent file but never deletes it, so neither state is checked');
+      // Pin the SET, not one absence. Checking only that one spelling is missing was satisfied by
+      // re-adding the row as `./${agentFileFor(agent)}` — `find` missed it, `path.join` normalised
+      // it, and the bin required the excluded agent's file present again.
+      assert.deepEqual(
+        checks.map((c) => c.path).sort(),
+        [
+          CONFIG_REL,
+          '.claude/skills/bmad-agent-bme-coach/SKILL.md',
+          '.claude/skills/bmad-agent-bme-scout/SKILL.md',
+          fileFor({ id: 'scout' }),
+        ].sort(),
+        'exactly one wrapper for the excluded agent, a file and a wrapper for the other, and the config'
+      );
       // The other agent is untouched.
       assert.equal(find(checks, fileFor({ id: 'scout' })).expect, 'present');
       assert.equal(find(checks, '.claude/skills/bmad-agent-bme-scout/SKILL.md').expect, 'present');
@@ -107,14 +131,81 @@ describe('T251 — the expected set honours the opt-out', () => {
   });
 });
 
-describe('T251 — both installers use the shared expectation (a floor)', () => {
-  // Narrow on purpose. This checks that each bin references the shared module; it cannot establish
-  // that no bin re-derives the expectation some other way. Stated rather than overclaimed.
-  for (const bin of ['scripts/install-gyre-agents.js', 'scripts/install-vortex-agents.js']) {
-    it(`${bin} calls agentInstallChecks`, () => {
-      const src = fs.readFileSync(path.join(__dirname, '..', '..', bin), 'utf8');
-      assert.match(src, /agentInstallChecks\(\{/, 'the verification list must come from the shared module');
-      assert.match(src, /checkHolds\(check, exists\)/, 'and so must the pass/fail verdict');
+// The text guard that stood here asserted each bin's CALL SHAPES. It was evadable — a bin could
+// call the module and then override its result, or revert to the old inline list while keeping the
+// module's names in a comment, with the whole suite green — and it reddened on three
+// behaviour-preserving refactors (renaming the loop variable, a prettier wrap, hoisting the options
+// object). `tests/integration/installer-opt-out.test.js` runs the real bins with a real exclusion
+// instead, and kills both evasions. A behavioural property belongs in a behavioural test.
+
+describe('T251 — existence is resolved the way the stale-wrapper sweep resolves it', () => {
+  // `fs.existsSync` is case-INSENSITIVE on APFS; the sweep filters `readdir` entries with a
+  // case-SENSITIVE `startsWith('bmad-agent-bme-')`. A directory stored as `Bmad-agent-bme-<id>`
+  // was invisible to the sweep and present to the verifier, so an excluded agent failed
+  // verification with STILL INSTALLED on every run, unhealably.
+  it('a case-variant directory is not reported present under the canonical name', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 't251c-'));
+    try {
+      await fs.outputFile(path.join(dir, '.claude/skills/Bmad-agent-bme-coach/SKILL.md'), 'x', 'utf8');
+      assert.equal(pathPresent(dir, '.claude/skills/bmad-agent-bme-coach/SKILL.md'), false,
+        'the canonical name is not on disk, so it must not be reported present');
+      assert.equal(pathPresent(dir, '.claude/skills/Bmad-agent-bme-coach/SKILL.md'), true,
+        'the name that IS on disk must be found, or this is just broken rather than exact');
+    } finally {
+      await fs.remove(dir);
+    }
+  });
+
+  it('every path component is matched exactly, not just the basename', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 't251c-'));
+    try {
+      await fs.outputFile(path.join(dir, 'a/B/c.md'), 'x', 'utf8');
+      assert.equal(pathPresent(dir, 'a/B/c.md'), true);
+      assert.equal(pathPresent(dir, 'a/b/c.md'), false, 'a mid-path case difference must not pass');
+      assert.equal(pathPresent(dir, 'a/B/C.md'), false, 'nor a basename case difference');
+      assert.equal(pathPresent(dir, 'a/B/missing.md'), false);
+      assert.equal(pathPresent(dir, 'nope/B/c.md'), false, 'an unreadable parent is simply absent');
+    } finally {
+      await fs.remove(dir);
+    }
+  });
+});
+
+describe('T251 — the whole decision, including the all-excluded case', () => {
+  it('reports excluded ids so a success report can agree with the verdict', async () => {
+    await withConfig('excluded_agents: [coach]\n', async (dir) => {
+      const e = evaluateAgentInstall({ projectRoot: dir, agents: ROSTER, configRel: CONFIG_REL, agentFileFor: fileFor });
+      assert.deepEqual(e.excluded, ['coach'],
+        'printSuccess listed every opted-out agent as installed because it had no access to this');
     });
-  }
+  });
+
+  it('flags a run where every roster agent is opted out', async () => {
+    await withConfig('excluded_agents: [scout, coach]\n', async (dir) => {
+      const e = evaluateAgentInstall({ projectRoot: dir, agents: ROSTER, configRel: CONFIG_REL, agentFileFor: fileFor });
+      assert.equal(e.anyPresentExpected, false,
+        'nothing installed was verified, so this must not read as a clean install');
+      assert.ok(e.results.every((r) => r.expect === 'absent' || r.path === CONFIG_REL));
+    });
+  });
+
+  it('a normal run does expect something present', async () => {
+    await withConfig('excluded_agents: [coach]\n', async (dir) => {
+      const e = evaluateAgentInstall({ projectRoot: dir, agents: ROSTER, configRel: CONFIG_REL, agentFileFor: fileFor });
+      assert.equal(e.anyPresentExpected, true);
+    });
+  });
+
+  it('allHeld is false when an expected file is missing, and true once it is there', async () => {
+    await withConfig('excluded_agents: []\n', async (dir) => {
+      let e = evaluateAgentInstall({ projectRoot: dir, agents: ROSTER, configRel: CONFIG_REL, agentFileFor: fileFor });
+      assert.equal(e.allHeld, false, 'nothing is installed in this fixture');
+      for (const a of ROSTER) {
+        await fs.outputFile(path.join(dir, fileFor(a)), 'x', 'utf8');
+        await fs.outputFile(path.join(dir, `.claude/skills/bmad-agent-bme-${a.id}/SKILL.md`), 'x', 'utf8');
+      }
+      e = evaluateAgentInstall({ projectRoot: dir, agents: ROSTER, configRel: CONFIG_REL, agentFileFor: fileFor });
+      assert.equal(e.allHeld, true);
+    });
+  });
 });

@@ -6,7 +6,7 @@ const { refreshInstallation } = require('./update/lib/refresh-installation');
 const { findProjectRoot } = require('./update/lib/utils');
 const { runCompatPreflight } = require('./update/lib/compat-preflight');
 const { AGENTS } = require('./update/lib/agent-registry');
-const { agentInstallChecks, checkHolds } = require('./lib/agent-install-checks');
+const { evaluateAgentInstall } = require('./lib/agent-install-checks');
 
 const BOLD = '\x1b[1m';
 const RESET = '\x1b[0m';
@@ -108,39 +108,55 @@ function createOutputDirectory(projectRoot) {
 function verifyInstallation(projectRoot) {
   console.log(`${CYAN}[5/5]${RESET} Verifying installation...`);
 
-  // T251: built from the registry alone, this failed the install for every opted-out agent.
-  const checks = agentInstallChecks({
+  const { results, excluded, allHeld, anyPresentExpected } = evaluateAgentInstall({
     projectRoot,
     agents: AGENTS,
     configRel: '_bmad/bme/_vortex/config.yaml',
     agentFileFor: (a) => `_bmad/bme/_vortex/agents/${a.id}/SKILL.md`,
   });
 
-  let allChecksPass = true;
-  checks.forEach(check => {
-    const exists = fs.existsSync(path.join(projectRoot, check.path));
-    const held = checkHolds(check, exists);
-    if (held) {
-      console.log(`${GREEN}  ✓${RESET} ${check.name}${check.expect === 'absent' ? ' — opted out' : ''}`);
-    } else if (check.expect === 'absent') {
-      console.log(`${RED}  ✗${RESET} ${check.name} - STILL INSTALLED, the opt-out did not take effect`);
-      allChecksPass = false;
+  let sawPresentFailure = false;
+  let sawAbsentFailure = false;
+  results.forEach((r) => {
+    if (r.held) {
+      console.log(`${GREEN}  ✓${RESET} ${r.name}${r.expect === 'absent' ? ' — opted out' : ''}`);
+      return;
+    }
+    if (r.expect === 'absent') {
+      sawAbsentFailure = true;
+      console.log(`${RED}  ✗${RESET} ${r.name} - STILL INSTALLED at ${r.path}, the opt-out did not take effect`);
     } else {
-      console.log(`${RED}  ✗${RESET} ${check.name} - MISSING`);
-      allChecksPass = false;
+      sawPresentFailure = true;
+      console.log(`${RED}  ✗${RESET} ${r.name} - MISSING`);
     }
   });
 
-  if (!allChecksPass) {
+  if (!allHeld) {
     console.log('');
-    console.error(`${RED}Installation verification failed. Some files are missing.${RESET}`);
+    // The summary must match the failure: an `absent` check fails because something is PRESENT.
+    const why = sawPresentFailure && sawAbsentFailure
+      ? 'Some files are missing, and an opted-out agent is still installed.'
+      : sawAbsentFailure
+        ? 'An opted-out agent is still installed.'
+        : 'Some files are missing.';
+    console.error(`${RED}Installation verification failed. ${why}${RESET}`);
     process.exit(1);
   }
 
-  console.log(`${GREEN}  ✓${RESET} All files installed successfully`);
+  if (!anyPresentExpected) {
+    // Every roster agent is opted out, so nothing installed was verified. Reporting this as a
+    // clean install would be the T251 defect inverted.
+    console.log(`${YELLOW}  !${RESET} All ${AGENTS.length} agents are opted out — nothing from this module is invocable`);
+  } else {
+    // Scoped deliberately: this step checks agent files, wrappers and the module config —
+    // not the other module trees, the non-agent wrappers or `_bmad/_config/`. Saying "all
+    // files" claimed a sweep it never made.
+    console.log(`${GREEN}  ✓${RESET} Agent files, skills and config verified — run ${CYAN}convoke-doctor${RESET} for a full check`);
+  }
+  return excluded;
 }
 
-function printSuccess() {
+function printSuccess(excluded = []) {
   console.log('');
   console.log(`${GREEN}${BOLD}╔════════════════════════════════════════════════════╗${RESET}`);
   console.log(`${GREEN}${BOLD}║                                                    ║${RESET}`);
@@ -151,7 +167,13 @@ function printSuccess() {
   console.log(`${BOLD}Installed Agents:${RESET}`);
   console.log('');
   for (const agent of AGENTS) {
-    console.log(`  ${GREEN}✓${RESET} ${agent.name} (${agent.id}) - ${agent.title} ${agent.icon}`);
+    // T251 R1: this listed every opted-out agent as installed, with a slash command that cannot
+    // resolve. Pre-fix it was unreachable because verification exited 1 first — fixing the verdict
+    // is what exposed it.
+    const out = excluded.includes(agent.id);
+    const mark = out ? `${YELLOW}!${RESET}` : `${GREEN}✓${RESET}`;
+    const note = out ? ` ${YELLOW}— opted out, no slash command${RESET}` : '';
+    console.log(`  ${mark} ${agent.name} (${agent.id}) - ${agent.title} ${agent.icon}${note}`);
   }
   console.log('');
   console.log(`${BOLD}Next Steps:${RESET}`);
@@ -161,6 +183,7 @@ function printSuccess() {
   console.log('');
   console.log(`  ${YELLOW}2.${RESET} Activate an agent (skill) in Claude Code:`);
   for (const agent of AGENTS) {
+    if (excluded.includes(agent.id)) continue;
     console.log(`     ${CYAN}/bmad-agent-bme-${agent.id}${RESET}  (${agent.name})`);
   }
   console.log('');
@@ -188,8 +211,8 @@ async function main() {
     await refreshInstallation(projectRoot, { backupGuides: false });
     console.log(`${GREEN}  ✓${RESET} Installation refreshed`);
 
-    verifyInstallation(projectRoot);
-    printSuccess();
+    const excluded = verifyInstallation(projectRoot);
+    printSuccess(excluded);
   } catch (error) {
     console.error(`${RED}✗ Installation failed:${RESET}`, error.message);
     process.exit(1);

@@ -165,7 +165,7 @@ Then activate an agent to confirm it works.
 
 Agents listed in a team's `excluded_agents` config field get no skill wrapper, so their slash command will not resolve — that is the opt-out working as intended, not a broken install. The installer's verification step confirms it, reporting the agent as `— opted out` rather than missing.
 
-**In a terminal, or on Claude.ai**, read the agent file into the conversation. Note that the two teams currently differ in layout — Vortex agents are directories, Gyre agents are flat files:
+**In a terminal, or on Claude.ai**, read the agent file into the conversation — for an agent you have *not* opted out of. An opted-out agent's file is absent on a fresh install (nothing copied it) and present on a tree where it was installed before the opt-out, because a refresh skips copying it but never deletes it; either way it has no skill wrapper. Note that the two teams currently differ in layout — Vortex agents are directories, Gyre agents are flat files:
 
 ```bash
 cat _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md   # Emma
