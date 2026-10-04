@@ -111,7 +111,7 @@ Convoke 4.0.3 is a patch release about the config file your agents read on a fre
     rewritten from the package template on every install, so anything you customise in them is lost each
     run (`T181`).
     `UPDATE-GUIDE.md` has the per-command table, but it tracks `main` and says so in its own
-    banner: the guard has since shipped and that table now describes the refusal, not this
+    banner: the guard has since landed on `main` and that table now describes the refusal, not this
     release's silence. For 4.0.3 behaviour, read this entry.
 
 ## [4.0.2] - 2026-09-14
