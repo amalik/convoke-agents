@@ -247,6 +247,12 @@ Needed in two cases: an update that failed without rolling back, and an update t
 automatic rollback runs only on failure, so a module directory replaced by a successful refresh is
 yours to restore.
 
+The first case announces itself. When an update fails, it tries to roll back; if that rollback also
+fails it prints `✗ Restore failed!` followed by `Manual restore may be needed from:` and the backup
+directory. That message matters most after a failure on the migration path, because the migration
+deltas have already run by then — your tree is part-migrated and the rollback did not undo it, so
+restoring by hand from that directory is the way back.
+
 ```bash
 # Find your backup
 ls -la _bmad-output/.backups/
@@ -363,7 +369,7 @@ command:
 |---|---|---|
 | `convoke-install` or `convoke-install-vortex` | either | Refuses with the message above at `[4/5]`, exit 1. The file is left byte-identical — but step `[2/5]` has already run, as above |
 | `convoke-install-gyre` | either | Refuses with the message above at `[3/4]`, exit 1. The file is left byte-identical, and nothing has been archived or deleted |
-| `convoke-update` | Gyre, and a refresh is due | Refuses with the message above, exit 1, then rolls back: `Restoring from backup...` and `✓ Installation restored from backup`. Where it refuses and what it calls the failure depend on whether your version has migrations to run — `[2/3] Refreshing installation files` and `✗ Update failed!` when it does not (4.0.0 through 4.0.2, or a sibling-module skew at the same version), `[3/5]` and `✗ Migration failed!` when it does (anything from 1.x through 3.3.x). The refusal happens before anything is written and after the backup is taken, so your `_bmad/` tree is left exactly as it was |
+| `convoke-update` | Gyre, and a refresh is due | Refuses with the message above, exit 1, then rolls back: `Restoring from backup...` and `✓ Installation restored from backup`. Where it refuses, and what it calls the failure, depends on whether your version has migration deltas to run — `[2/3] Refreshing installation files` with `✗ Update failed!` when it does not, `[3/5]` with `✗ Migration failed!` when it does. **The two differ in what has already happened.** On the first, the refusal precedes every write, so nothing was touched. On the second, step `[2/5]` has already run your deltas to completion — moving deprecated workflows, rewriting the agent manifest — and it is the rollback, not the refusal, that undoes them. Either way your `_bmad/` tree ends as it was — unless the rollback itself fails, which is covered under *Restoring from a backup by hand* |
 | `convoke-update` | Gyre, nothing else out of step | `✓ Already up to date!`, exit 0 — the damaged file is not noticed |
 | `convoke-update` | **Vortex** | **No refusal.** Version detection cannot read the file, falls back to inspecting the directory layout, and reports an old version: `1.1.0` where `workflows/_deprecated/` exists, `1.0.0` on a project installed with `convoke-install-gyre` alone, which never creates it. You are offered a plan from there up to the package's version, listing two or three breaking changes. If you accept it, migration 3 of 7 (`1.5.x-to-1.6.0`) fails on the same parse error and the run is rolled back from its backup — exit 1, your config byte-identical |
 | any install command, or `convoke-update` when a refresh is due | `_enhance`, `_artifacts`, `_portability` | Refuses, exit 1, file byte-identical. Which step, and what has already run by then, differs per command: see the installer rows above, and note that `convoke-update` refuses inside `[2/3] Refreshing installation files` — or `[3/5]`, with `✗ Migration failed!`, when your version also has migration deltas to run — then restores from its backup and reports `✓ Installation restored from backup`. A **readable** config there is a different matter: it is still replaced by the package template on every run, damaged or not, so operator values are lost. Verified by re-install — a planted `my_custom_key` was gone from all three, where `_vortex` and `_gyre` kept it, because `configMerger.mergeConfig` carries profiles for those two alone. An update backs that up first; an install does not — see Automatic Backups. With nothing out of step, `convoke-update` prints `✓ Already up to date!` and never reaches them |
