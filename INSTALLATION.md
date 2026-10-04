@@ -163,7 +163,7 @@ Then activate an agent to confirm it works.
 /bmad-agent-bme-review-coach                        # Coach 🏋️  Review
 ```
 
-Agents listed in a team's `excluded_agents` config field get no skill wrapper, so their slash command will not resolve — that is the opt-out working as intended, not a broken install.
+Agents listed in a team's `excluded_agents` config field get no skill wrapper, so their slash command will not resolve — that is the opt-out working as intended, not a broken install. The installer's verification step confirms it, reporting the agent as `— opted out` rather than missing.
 
 **In a terminal, or on Claude.ai**, read the agent file into the conversation. Note that the two teams currently differ in layout — Vortex agents are directories, Gyre agents are flat files:
 

@@ -6,6 +6,7 @@ const { refreshInstallation } = require('./update/lib/refresh-installation');
 const { findProjectRoot } = require('./update/lib/utils');
 const { runCompatPreflight } = require('./update/lib/compat-preflight');
 const { AGENTS } = require('./update/lib/agent-registry');
+const { agentInstallChecks, checkHolds } = require('./lib/agent-install-checks');
 
 const BOLD = '\x1b[1m';
 const RESET = '\x1b[0m';
@@ -107,17 +108,23 @@ function createOutputDirectory(projectRoot) {
 function verifyInstallation(projectRoot) {
   console.log(`${CYAN}[5/5]${RESET} Verifying installation...`);
 
-  const checks = [
-    ...AGENTS.map(a => ({ path: `_bmad/bme/_vortex/agents/${a.id}/SKILL.md`, name: `${a.name} agent file` })),
-    ...AGENTS.map(a => ({ path: `.claude/skills/bmad-agent-bme-${a.id}/SKILL.md`, name: `${a.name} skill` })),
-    { path: '_bmad/bme/_vortex/config.yaml', name: 'Configuration file' },
-  ];
+  // T251: built from the registry alone, this failed the install for every opted-out agent.
+  const checks = agentInstallChecks({
+    projectRoot,
+    agents: AGENTS,
+    configRel: '_bmad/bme/_vortex/config.yaml',
+    agentFileFor: (a) => `_bmad/bme/_vortex/agents/${a.id}/SKILL.md`,
+  });
 
   let allChecksPass = true;
   checks.forEach(check => {
-    const fullPath = path.join(projectRoot, check.path);
-    if (fs.existsSync(fullPath)) {
-      console.log(`${GREEN}  ✓${RESET} ${check.name}`);
+    const exists = fs.existsSync(path.join(projectRoot, check.path));
+    const held = checkHolds(check, exists);
+    if (held) {
+      console.log(`${GREEN}  ✓${RESET} ${check.name}${check.expect === 'absent' ? ' — opted out' : ''}`);
+    } else if (check.expect === 'absent') {
+      console.log(`${RED}  ✗${RESET} ${check.name} - STILL INSTALLED, the opt-out did not take effect`);
+      allChecksPass = false;
     } else {
       console.log(`${RED}  ✗${RESET} ${check.name} - MISSING`);
       allChecksPass = false;
