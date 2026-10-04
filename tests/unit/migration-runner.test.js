@@ -105,17 +105,17 @@ describe('executeMigration', () => {
   });
 });
 
-describe('previewMigrations — the refresh plan tells the truth about the configs (T239)', () => {
-  // The plan an operator reads before re-running to apply said
-  // `  - Update config.yaml (preserving user preferences)`: singular, and true only for the two
-  // modules whose config goes through `mergeConfig`. Nothing asserted on the string, so it stayed
-  // wrong through four rounds of documentation correction.
-  //
-  // R1 note: the kept set is pinned against `mergedModuleNames()`, not `MODULE_PROFILES`. A profile
-  // is necessary but not sufficient — only the Gyre and Vortex write sites call `mergeConfig` — and
-  // asserting against the profile table let a profile added for a wholesale-copied module print a
-  // false claim with every test green.
-  const { guardedModuleNames, mergedModuleNames } = require('../../scripts/update/lib/refresh-installation');
+describe('previewMigrations — the refresh plan warns about the configs and points (T239)', () => {
+  // This plan printed `  - Update config.yaml (preserving user preferences)`: singular, and true
+  // for two of the five configs a refresh writes. The first fix restated the whole split here.
+  // `UPDATE-GUIDE.md`'s canonical section declares itself the one statement of that fact and says
+  // to make every other mention a pointer, and two review rounds found 3 HIGH and 11 MEDIUM
+  // against the restatement and its pins without once finding a defect in the refresh itself. So
+  // the plan now carries the warning and delegates the detail, and these tests assert only what
+  // the plan still claims — the split itself is pinned where it is measured, in
+  // `refresh-installation-config-guard.test.js`, and bound to the guide in
+  // `config-doc-canonical.test.js`.
+  const CANONICAL = 'Which configs are checked, and which are preserved';
 
   async function planText() {
     const out = [];
@@ -134,68 +134,31 @@ describe('previewMigrations — the refresh plan tells the truth about the confi
     return out.join('\n').replace(ansi, '');
   }
 
-  const keptLine = (t) => t.split('\n').find((l) => /your values are kept/.test(l));
-  const replacedLine = (t) => t.split('\n').find((l) => /replaced from the package template/.test(l));
-
-  it('names every module whose config.yaml the refresh writes', async () => {
+  it('warns that the configs are not all treated alike', async () => {
     const text = await planText();
-    for (const m of guardedModuleNames()) {
-      assert.ok(text.includes(m), `the plan does not mention ${m}, whose config the refresh writes`);
-    }
+    assert.match(text, /- Update module config\.yaml files/,
+      'the plan must still say it writes the module configs');
+    assert.match(text, /not all of them keep your values/,
+      'an operator consenting to this run must be told the configs differ');
   });
 
-  it('prints the number of configs it will write, derived', async () => {
+  it('points at the section that owns the detail', async () => {
     const text = await planText();
-    // Hardcoding `999 modules` left every assertion green before this existed.
-    assert.match(text, new RegExp(`config\\.yaml in ${guardedModuleNames().length} modules`),
-      `the plan must state the count a refresh actually writes (${guardedModuleNames().length})`);
+    assert.ok(text.includes(CANONICAL),
+      `the plan must name "${CANONICAL}" rather than restating it — the guide declares that ` +
+        'section canonical and a second copy is what drifted');
+    // The pointer is only worth printing if the target exists.
+    const guide = require('fs').readFileSync(
+      require('path').join(__dirname, '..', '..', 'UPDATE-GUIDE.md'), 'utf8');
+    assert.ok(guide.includes(`### ${CANONICAL}`), 'the section the plan points at is gone from the guide');
   });
 
-  it('claims values are kept for exactly the modules that merge them', async () => {
+  it('makes no unscoped promise of preservation', async () => {
     const text = await planText();
-    const line = keptLine(text);
-    assert.ok(line, 'no line claims any module keeps your values');
-    // Floor: an empty list rendered a sentence that named nothing and implied the opposite.
-    assert.ok(mergedModuleNames().length >= 2, 'precondition: more than one module merges its config');
-    for (const m of mergedModuleNames()) {
-      assert.ok(line.includes(m), `${m} goes through mergeConfig but is not named as keeping values`);
-    }
-    for (const m of guardedModuleNames().filter((x) => !mergedModuleNames().includes(x))) {
-      assert.ok(!line.includes(m),
-        `${m} is copied over wholesale, so the plan must not claim its values are kept`);
-    }
-  });
-
-  it('says the wholesale-copied configs are replaced from the template', async () => {
-    const text = await planText();
-    const line = replacedLine(text);
-    assert.ok(line, 'no line says any config is replaced from the package template');
-    const replaced = guardedModuleNames().filter((m) => !mergedModuleNames().includes(m));
-    assert.ok(replaced.length >= 1, 'precondition: at least one module is replaced wholesale');
-    for (const m of replaced) {
-      assert.ok(line.includes(m), `${m} is replaced from the template and the plan must say so`);
-    }
-    for (const m of mergedModuleNames()) {
-      assert.ok(!line.includes(m), `${m} keeps your values, so it must not be listed as replaced`);
-    }
-  });
-
-  it('tells the operator where the replaced copies are', async () => {
-    const text = await planText();
-    // Deleting this line left all assertions green, and it is the one an operator about to lose
-    // three configs most needs. It must not credit the dry run, which takes no backup.
-    const idx = text.split('\n').findIndex((l) => /replaced from the package template/.test(l));
-    assert.notEqual(idx, -1, 'no replaced-from-template line to anchor on');
-    const after = text.split('\n').slice(idx + 1, idx + 3).join('\n');
-    assert.match(after, /backup/i, 'the replaced-config line must be followed by where the copies are');
-    assert.ok(!/this run's backup/.test(text),
-      'the run printing this plan is the dry run, which takes no backup');
-  });
-
-  it('no longer promises preservation for all of them', async () => {
-    const text = await planText();
-    assert.ok(!/Update config\.yaml \(preserving user preferences\)/.test(text),
-      'the unscoped promise is back');
+    assert.match(text, /- Update module config\.yaml files/, 'anchor: the config line is present');
+    assert.ok(!/preserving user preferences/.test(text), 'the unscoped promise is back');
+    assert.ok(!/your values are kept/.test(text),
+      'the plan must not state the kept half either — that is the canonical section\'s to state');
   });
 });
 

@@ -180,7 +180,9 @@ Every update creates a backup before making changes:
 An install writes one module `config.yaml` per row below. **This section is the canonical
 statement of what happens to them. Correct it here, and make every other mention a pointer rather
 than a second copy.** A test binds the table's module set to `guardedModuleNames()` and its
-kept-versus-replaced split to `MODULE_PROFILES` (`tests/unit/config-doc-canonical.test.js`). The
+kept-versus-replaced split to `MERGED_MODULE_NAMES` (`tests/unit/config-doc-canonical.test.js`).
+That list is itself measured rather than declared: a key is seeded into every config, one refresh
+runs, and the set that still holds it must match. The
 prose under the table is **not** pinned by anything, so treat it as reviewed rather than enforced.
 
 | Module config | If it cannot be read (install) | If it can be read |

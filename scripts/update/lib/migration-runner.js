@@ -8,7 +8,7 @@ const { findProjectRoot, getPackageVersion } = require('./utils');
 const backupManager = require('./backup-manager');
 const configMerger = require('./config-merger');
 const validator = require('./validator');
-const { refreshInstallation, guardedModuleNames, mergedModuleNames } = require('./refresh-installation');
+const { refreshInstallation } = require('./refresh-installation');
 const registry = require('../migrations/registry');
 const { WORKFLOW_NAMES, GYRE_WORKFLOW_NAMES } = require('./agent-registry');
 
@@ -234,12 +234,6 @@ async function runMigrations(fromVersion, options = {}) {
 /**
  * Preview migrations without applying
  */
-/** "a", "a and b", "a, b and c" — `join(' and ')` rendered "a and b and c" at three or more. */
-function andList(items) {
-  if (items.length <= 1) return items.join('');
-  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
-}
-
 async function previewMigrations(migrations) {
   const previews = [];
 
@@ -270,26 +264,16 @@ async function previewMigrations(migrations) {
   // the `MODULE_PROFILES` keys (mergeConfig throws when named any other submodule), and the set
   // whose config a refresh writes is the guarded set. `tests/unit/migration-runner.test.js` reads
   // this output back, so the two cannot drift apart silently.
-  // T239 R1: the authority is `mergedModuleNames()`, NOT `configMerger.MODULE_PROFILES`. A profile
-  // is necessary but not sufficient — preservation is decided by which write site a module reaches,
-  // and only the Gyre and Vortex blocks call `mergeConfig`. Deriving from the profile table printed
-  // "`_artifacts` keeps your values" for a profile added to a module copied over wholesale, with
-  // every test green. Both sets negate the same predicate rather than one deriving from the other.
-  const configModules = guardedModuleNames();
-  const merged = mergedModuleNames();
-  const keepsValues = configModules.filter((m) => merged.includes(m));
-  const fromTemplate = configModules.filter((m) => !merged.includes(m));
-  console.log(chalk.gray(`  - Update config.yaml in ${configModules.length} modules`));
-  if (keepsValues.length > 0) {
-    console.log(chalk.gray(`      ${andList(keepsValues)}: your values are kept`));
-  }
-  if (fromTemplate.length > 0) {
-    console.log(chalk.gray(`      ${andList(fromTemplate)}: replaced from the package template`));
-    // Not "this run's backup": the dry run that prints this takes none — it returns before
-    // `createBackup`. The backup meant is the one the apply run takes before refreshing.
-    console.log(chalk.gray(
-      '      (the backup `convoke-update` takes before refreshing holds your previous copies)'));
-  }
+  // T239 R2: this printed the kept/replaced split in full. `UPDATE-GUIDE.md`'s canonical section
+  // declares itself the single statement of that fact and says to make every other mention a
+  // pointer rather than a second copy — this was the second copy, and the two ended up pinned to
+  // different authorities. Two review rounds produced 3 HIGH and 11 MEDIUM findings against the
+  // restatement and its pins, and not one was a defect in what the refresh does. So it states the
+  // warning an operator needs at this moment and delegates the detail to the one place that carries
+  // it, including the qualifications no single line can hold (`T244`, `T245`).
+  console.log(chalk.gray('  - Update module config.yaml files — not all of them keep your values'));
+  console.log(chalk.gray(
+    '      see UPDATE-GUIDE.md "Which configs are checked, and which are preserved"'));
   console.log(chalk.gray('  - Update user guides (with .bak backup)'));
   console.log('');
   console.log(chalk.green('To apply these changes, run:'));

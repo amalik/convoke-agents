@@ -5,8 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 
-const { guardedModuleNames } = require('../../scripts/update/lib/refresh-installation');
-const { MODULE_PROFILES } = require('../../scripts/update/lib/config-merger');
+const { guardedModuleNames, mergedModuleNames } = require('../../scripts/update/lib/refresh-installation');
 
 const ROOT = path.join(__dirname, '..', '..');
 const HEADING = 'Which configs are checked, and which are preserved';
@@ -24,7 +23,8 @@ const GUIDES = ['UPDATE-GUIDE.md', 'INSTALLATION.md'];
 //      render is parsed — outer pipes are optional in GFM, so a row without them must not slip
 //      past. An unparsable row fails rather than being skipped.
 //   3. The rows whose readable-column verdict is "Your values are kept" are exactly the modules
-//      `mergeConfig` has a profile for. Classification reads the verdict the cell LEADS with, so
+//      a refresh actually MERGES (`mergedModuleNames()`, measured by seeding a key and refreshing —
+//      not `MODULE_PROFILES`, which is necessary but not sufficient; see T239 Round 1). Classification reads the verdict the cell LEADS with, so
 //      "Your values are **not kept**" is not a kept row.
 //   4. Every unreadable-column verdict leads with "Refused".
 //   5. The two verdict columns are located by their header text, not by position.
@@ -184,13 +184,17 @@ describe('T233 — the canonical table is bound to the code it describes', () =>
     }
   });
 
-  it('marks as kept exactly the modules mergeConfig carries a profile for', () => {
+  it('marks as kept exactly the modules a refresh merges', () => {
     const rows = table();
     const kept = rows.filter((r) => isKept(r.readable)).map((r) => r.module).sort();
     const replaced = rows.filter((r) => isReplaced(r.readable)).map((r) => r.module).sort();
 
-    assert.deepEqual(kept, Object.keys(MODULE_PROFILES).sort(),
-      'a module is shown as keeping operator values without a mergeConfig profile, or vice versa');
+    // `mergedModuleNames()`, NOT `Object.keys(MODULE_PROFILES)`. T239 Round 1 established that a
+    // profile is necessary but not sufficient — preservation is decided by which write site a
+    // module reaches. Pinned to the profile table, this test REQUIRED the guide to claim a
+    // wholesale-copied module keeps values the moment a profile was added for it.
+    assert.deepEqual(kept, [...mergedModuleNames()].sort(),
+      'a module is shown as keeping operator values that a refresh does not merge, or vice versa');
     assert.equal(kept.length + replaced.length, rows.length,
       'a row was neither classified as kept nor as Replaced, which is how the ambiguity returns');
     assert.deepEqual([...kept, ...replaced].sort(), [...guardedModuleNames()].sort(),

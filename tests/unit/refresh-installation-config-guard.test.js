@@ -136,8 +136,12 @@ async function probePreservedConfigs(tmpDir) {
     const doc = yaml.load(before) || {};
     doc[SENTINEL] = 'keep-me';
     await fs.outputFile(target, yaml.dump(doc), 'utf8');
-    // The sentinel must land, or "it survived" is indistinguishable from "it was never written".
-    assert.notEqual(await fs.readFile(target, 'utf8'), before, `sentinel did not land in ${entry.name}`);
+    // PRESENCE, not change. `yaml.dump(yaml.load(raw)) !== raw` for every shipped template — it
+    // strips comments and reorders keys — so a change check always passed and the sentinel could be
+    // silently absent from the three modules this probe reports as NOT preserving values, which is
+    // the half the plan depends on.
+    assert.ok((await fs.readFile(target, 'utf8')).includes(SENTINEL),
+      `sentinel did not land in ${entry.name}/config.yaml`);
     seeded.push(entry.name);
   }
 
