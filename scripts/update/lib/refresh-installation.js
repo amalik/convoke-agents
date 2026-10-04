@@ -75,6 +75,30 @@ function guardedModuleNames() {
 }
 
 /**
+ * The modules whose `config.yaml` goes through {@link configMerger.mergeConfig}, so an operator's
+ * own keys survive a refresh. The rest of {@link GUARDED_MODULE_NAMES} is copied over wholesale by
+ * `fs.copy(..., { overwrite: true })` and then version-stamped, which destroys operator values.
+ *
+ * NAMED, not derived from `configMerger.MODULE_PROFILES`. A profile is necessary but not
+ * sufficient: preservation is decided by which write site a module reaches, and only the Gyre and
+ * Vortex blocks call `mergeConfig` — the other three would ignore a profile entirely. Deriving the
+ * set from the profile table let a profile added for `_artifacts` print "`_artifacts` keeps your
+ * values" in the `convoke-update` plan while the refresh still replaced it, with every test green.
+ *
+ * `tests/unit/refresh-installation-config-guard.test.js` pins this behaviourally: a sentinel key is
+ * seeded into all five configs, one refresh runs, and the set that still holds it must equal this
+ * list.
+ */
+const MERGED_MODULE_NAMES = Object.freeze(['_gyre', '_vortex']);
+
+/**
+ * @returns {string[]} a fresh copy of {@link MERGED_MODULE_NAMES}
+ */
+function mergedModuleNames() {
+  return [...MERGED_MODULE_NAMES];
+}
+
+/**
  * Refresh all installation files from the package to the project.
  *
  * @param {string} projectRoot - Absolute path to project root
@@ -1459,6 +1483,8 @@ const STAMPABLE_MODULES = Object.freeze([
 
 module.exports = {
   guardedModuleNames,
+  mergedModuleNames,
+  MERGED_MODULE_NAMES,
   refreshInstallation,
   cleanupOrphanWorkflowWrappers,
   manifestRowSeeds,

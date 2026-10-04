@@ -8,9 +8,9 @@ const { findProjectRoot, getPackageVersion } = require('./utils');
 const backupManager = require('./backup-manager');
 const configMerger = require('./config-merger');
 const validator = require('./validator');
-const { refreshInstallation } = require('./refresh-installation');
+const { refreshInstallation, guardedModuleNames, mergedModuleNames } = require('./refresh-installation');
 const registry = require('../migrations/registry');
-const { WORKFLOW_NAMES } = require('./agent-registry');
+const { WORKFLOW_NAMES, GYRE_WORKFLOW_NAMES } = require('./agent-registry');
 
 /**
  * Migration Runner for Convoke
@@ -234,6 +234,12 @@ async function runMigrations(fromVersion, options = {}) {
 /**
  * Preview migrations without applying
  */
+/** "a", "a and b", "a, b and c" — `join(' and ')` rendered "a and b and c" at three or more. */
+function andList(items) {
+  if (items.length <= 1) return items.join('');
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
 async function previewMigrations(migrations) {
   const previews = [];
 
@@ -255,8 +261,35 @@ async function previewMigrations(migrations) {
   console.log('');
   console.log(chalk.white('After deltas, installation will be refreshed:'));
   console.log(chalk.gray('  - Refresh agent files'));
-  console.log(chalk.gray(`  - Refresh ${WORKFLOW_NAMES.length} workflow directories`));
-  console.log(chalk.gray('  - Update config.yaml (preserving user preferences)'));
+  console.log(chalk.gray(
+    `  - Refresh ${WORKFLOW_NAMES.length} Vortex and ${GYRE_WORKFLOW_NAMES.length} Gyre workflow directories`));
+  // T239: this said `Update config.yaml (preserving user preferences)` — singular, and true only
+  // for the two modules `configMerger.mergeConfig` carries a profile for. The other three are
+  // replaced from the package template, which the operator reading this plan was never told.
+  // Derived from both authorities rather than written out: the modules whose values survive ARE
+  // the `MODULE_PROFILES` keys (mergeConfig throws when named any other submodule), and the set
+  // whose config a refresh writes is the guarded set. `tests/unit/migration-runner.test.js` reads
+  // this output back, so the two cannot drift apart silently.
+  // T239 R1: the authority is `mergedModuleNames()`, NOT `configMerger.MODULE_PROFILES`. A profile
+  // is necessary but not sufficient — preservation is decided by which write site a module reaches,
+  // and only the Gyre and Vortex blocks call `mergeConfig`. Deriving from the profile table printed
+  // "`_artifacts` keeps your values" for a profile added to a module copied over wholesale, with
+  // every test green. Both sets negate the same predicate rather than one deriving from the other.
+  const configModules = guardedModuleNames();
+  const merged = mergedModuleNames();
+  const keepsValues = configModules.filter((m) => merged.includes(m));
+  const fromTemplate = configModules.filter((m) => !merged.includes(m));
+  console.log(chalk.gray(`  - Update config.yaml in ${configModules.length} modules`));
+  if (keepsValues.length > 0) {
+    console.log(chalk.gray(`      ${andList(keepsValues)}: your values are kept`));
+  }
+  if (fromTemplate.length > 0) {
+    console.log(chalk.gray(`      ${andList(fromTemplate)}: replaced from the package template`));
+    // Not "this run's backup": the dry run that prints this takes none — it returns before
+    // `createBackup`. The backup meant is the one the apply run takes before refreshing.
+    console.log(chalk.gray(
+      '      (the backup `convoke-update` takes before refreshing holds your previous copies)'));
+  }
   console.log(chalk.gray('  - Update user guides (with .bak backup)'));
   console.log('');
   console.log(chalk.green('To apply these changes, run:'));

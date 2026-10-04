@@ -34,6 +34,7 @@ const yaml = require('js-yaml');
 const {
   refreshInstallation,
   guardedModuleNames,
+  mergedModuleNames,
   STAMPABLE_MODULES,
 } = require('../../scripts/update/lib/refresh-installation');
 const { readExcludedAgents } = require('../../scripts/update/lib/config-merger');
@@ -109,6 +110,47 @@ function sentinelPaths(tmpDir) {
  *  data-loss shape — a write which leaves the operator's file byte-identical has destroyed nothing —
  *  so the gap is stated rather than closed. */
 const PROBE_VERSION = '0.0.0-probe';
+
+/**
+ * Which module configs keep an operator's OWN key through one real refresh. Nothing here reads a
+ * profile table: a key no package template contains is seeded into every config that exists, one
+ * refresh runs, and the modules that still hold it are returned. This is what makes
+ * `MERGED_MODULE_NAMES` a measured list rather than a restatement of `MODULE_PROFILES` — a profile
+ * is necessary but not sufficient, since only two write sites call `mergeConfig`.
+ */
+async function probePreservedConfigs(tmpDir) {
+  const SENTINEL = 'operator_sentinel_t239';
+  const packageBme = path.join(PACKAGE_ROOT, '_bmad', 'bme');
+  const seeded = [];
+  for (const entry of await fs.readdir(packageBme, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const target = path.join(tmpDir, '_bmad', 'bme', entry.name, 'config.yaml');
+    const template = path.join(packageBme, entry.name, 'config.yaml');
+    // The fixture starts sparse, so seed from the package template where the project has no file
+    // yet — otherwise there is nothing to measure for most modules.
+    if (!(await fs.pathExists(target))) {
+      if (!(await fs.pathExists(template))) continue;
+      await fs.copy(template, target);
+    }
+    const before = await fs.readFile(target, 'utf8');
+    const doc = yaml.load(before) || {};
+    doc[SENTINEL] = 'keep-me';
+    await fs.outputFile(target, yaml.dump(doc), 'utf8');
+    // The sentinel must land, or "it survived" is indistinguishable from "it was never written".
+    assert.notEqual(await fs.readFile(target, 'utf8'), before, `sentinel did not land in ${entry.name}`);
+    seeded.push(entry.name);
+  }
+
+  await refreshInstallation(tmpDir, { verbose: false });
+
+  const preserved = [];
+  for (const name of seeded) {
+    const target = path.join(tmpDir, '_bmad', 'bme', name, 'config.yaml');
+    const after = (await fs.pathExists(target)) ? await fs.readFile(target, 'utf8') : '';
+    if (after.includes(SENTINEL)) preserved.push(name);
+  }
+  return { seeded: seeded.sort(), preserved: preserved.sort() };
+}
 
 async function probeWrittenConfigs(tmpDir) {
   const packageBme = path.join(PACKAGE_ROOT, '_bmad', 'bme');
@@ -229,6 +271,36 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
     // The universe. Guarantees a decoy exists (candidates ⊋ written) without a comparison that
     // cannot fail, and names any directory that appeared or vanished.
     assert.deepEqual(candidates, BME_DIRECTORIES, 'the set of _bmad/bme/* directories changed');
+  });
+
+  it('the merged list is exactly the set of configs that keep an operator key (T239)', async () => {
+    // `convoke-update`'s plan tells the operator which configs keep their values. Deriving that from
+    // `configMerger.MODULE_PROFILES` printed a false claim for a profile added to a module the
+    // refresh copies over wholesale, with every test green. One refresh decides it here instead.
+    const { seeded, preserved } = await probePreservedConfigs(tmpDir);
+
+    assert.ok(seeded.length >= 2, 'precondition: at least two configs were seeded');
+    // The decoy. Without it, a refresh that preserved everything would satisfy any subset check.
+    assert.ok(seeded.length > preserved.length,
+      `every seeded config kept the sentinel (${seeded.join(', ')}), so this probe cannot tell ` +
+        'preservation from replacement');
+
+    // The universe is the configs a refresh WRITES, pinned behaviourally by the sibling test above.
+    // Unscoped, this probe reported `_team-factory` as preserving operator values — true, but only
+    // because nothing writes that config at all. "Survived" is not "merged", and the plan speaks
+    // only about files the refresh writes.
+    const written = new Set(guardedModuleNames());
+    const preservedAndWritten = preserved.filter((m) => written.has(m));
+    assert.ok(preserved.some((m) => !written.has(m)),
+      'no untouched config was seeded, so this cannot show that the scoping is doing any work');
+
+    assert.deepEqual(
+      preservedAndWritten,
+      mergedModuleNames(),
+      'a module that kept the operator key but is absent from MERGED_MODULE_NAMES means the ' +
+        'convoke-update plan under-promises; one present in the list that did NOT keep it means the ' +
+        'plan tells an operator their values survive where a refresh destroys them'
+    );
   });
 
   it('every module declared stampable is actually re-stamped by a refresh (T234)', async () => {
