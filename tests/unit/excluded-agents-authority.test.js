@@ -112,7 +112,7 @@ describe('T244 — the one site that cannot delegate stays in step', () => {
   // `scripts/audit/lib/installed-tree.js` resolves js-yaml against the TARGET project so it can
   // audit an installation from outside the package, and `config-merger` statically requires
   // js-yaml, yaml and fs-extra. It keeps a local copy; this is what stops the two drifting.
-  it('parity with the authority across every shape', () => {
+  it('parity with the authority across the enumerated shapes', () => {
     for (const [label, value, ids] of SHAPES) {
       assert.deepEqual(parseExcludedAgentsLocal(value), ids, `${label}: local copy disagrees`);
       assert.deepEqual(parseExcludedAgentsLocal(value), parseExcludedAgents(value).ids, label);
@@ -122,7 +122,11 @@ describe('T244 — the one site that cannot delegate stays in step', () => {
   it('the table still holds the shapes this row was reported for', () => {
     // A floor on COUNT let the four shapes T244 was actually reported for be deleted while eight
     // rows and both outcomes remained — green. Pinned by literal membership instead.
-    for (const label of ['bare scalar', 'mapping', 'number', 'boolean', 'list with a number']) {
+    // Including the CONTENT rows. Pinning only the five pre-existing labels left the table
+    // cuttable to six rows while every drift they were added for passed — the count floor's hole,
+    // one row over.
+    for (const label of ['bare scalar', 'mapping', 'number', 'boolean', 'list with a number',
+      'padded id', 'duplicate ids', 'empty-string id', 'mixed case', 'three ids']) {
       assert.ok(SHAPES.some(([l]) => l === label), `the "${label}" shape must stay in the table`);
     }
     assert.ok(SHAPES.some(([, , , c]) => c), 'no conforming shape');
@@ -154,6 +158,9 @@ describe('T244 — readExcludedAgents warns too, not just mergeConfig', () => {
     assert.deepEqual(ids, [], 'a bare scalar yields no exclusions');
     assert.equal(warned.length, 1, 'readExcludedAgents must warn on its own, not rely on mergeConfig');
     assert.ok(warned[0].includes(p), 'the warning must name the file the operator has to edit');
+    // Both this warning and the reader's parse-failure `catch` embed the full path, so checking the
+    // path alone could not tell "your opt-out did not apply" from "the reader crashed".
+    assert.match(warned[0], /NOT applied/, 'it must say the opt-out did not take effect');
   });
 });
 
@@ -204,7 +211,7 @@ describe('T244 — a non-conforming value is kept, not rewritten', () => {
   });
 });
 
-describe('T244 — no site decides what excluded_agents means on its own', () => {
+describe('T244 — no unaugmented re-implementation under scripts/ (a floor, not a property)', () => {
   // The first version of this matched a text IDIOM. Measured: across 94 `.js` files under
   // `scripts/` it had exactly ONE hit — a JSDoc sentence in config-merger.js. It matched neither
   // the authority's real code nor the pinned copy's, so the `installed-tree.js` allow-list entry
@@ -212,18 +219,28 @@ describe('T244 — no site decides what excluded_agents means on its own', () =>
   // evaded it, as did a local alias, `?.`/`??`, a four-line split, and the exact idiom in a `.cjs`,
   // an `.mjs`, or anywhere outside `scripts/`.
   //
-  // The question is not "does this text appear" but "does any file other than the authority and
-  // the pinned copy decide this". That is a property of imports, so it is checked as one. It fails
-  // closed: a sixth site has to mention `excluded_agents` in live code to do its job at all.
-  const ALLOWED = new Set([
-    'scripts/update/lib/config-merger.js',   // the authority
-    'scripts/audit/lib/installed-tree.js',   // documented copy, pinned by parity above
-  ]);
-  const IMPORTS_AUTHORITY = /require\(\s*['"][^'"]*(config-merger|installed-tree)/;
+  // WHAT THIS IS AND IS NOT. Three versions of this check have now been written. The first matched
+  // a text idiom and had one hit across 94 files — a comment. The second matched the require PATH,
+  // so any file importing `config-merger` for `mergeConfig` was exempt. This one matches the
+  // authority's function names, and it is still a TEXT SEARCH: it catches a plain copy-paste
+  // re-implementation under `scripts/`, which is the case that actually happens. It does NOT catch
+  // a site that reaches the field without naming it (`cfg['excluded' + '_agents']`), that holds the
+  // field name in a module outside `scripts/`, or that lives in a `.ts`/`.jsx` file or another
+  // directory. Those are stated, not closed — a text search cannot close them, and widening the
+  // pattern a fourth time is how the first two versions were born.
+  // The MODULE is not the predicate: `config-merger` and `installed-tree` are both widely imported,
+  // so matching the require path gave a free pass to any file that pulled in `mergeConfig` or
+  // `declaredUnits` for something unrelated and then re-implemented the coercion anyway. An
+  // exemption that broad launders exactly what it is meant to scope. Match the FUNCTION.
+  const AUTHORITY_FNS = ['parseExcludedAgents', 'readExcludedAgents', 'parseExcludedAgentsLocal'];
+  const usesAuthority = (src) => AUTHORITY_FNS.some((fn) => new RegExp(`\\b${fn}\\b`).test(src));
 
   /** Comments stripped, so a file that merely MENTIONS the field in prose is not an offender. */
   function liveCode(src) {
-    return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    // The block strip is ANCHORED to a line start. Unanchored, `['scripts/*', …]` and
+    // `['*/node_modules']` in ordinary string literals formed a `/* … */` pair and the code between
+    // them — including the field read — was deleted, so the file was skipped entirely.
+    return src.replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, '').replace(/^\s*\/\/.*$/gm, '');
   }
 
   function walk(dir, out = []) {
@@ -239,30 +256,25 @@ describe('T244 — no site decides what excluded_agents means on its own', () =>
 
   it('every file that works with excluded_agents goes through the authority', () => {
     const offenders = [];
-    let considered = 0;
+    const scanned = new Set();
     for (const p of walk(path.join(ROOT, 'scripts'))) {
       const src = fs.readFileSync(p, 'utf8');
-      if (!/excluded_agents|excludedAgents/.test(liveCode(src))) continue;
-      considered += 1;
       const rel = path.relative(ROOT, p);
-      if (ALLOWED.has(rel) || IMPORTS_AUTHORITY.test(src)) continue;
+      scanned.add(rel);
+      if (!/excluded_agents|excludedAgents/.test(liveCode(src))) continue;
+      // `liveCode`, not `src`: naming the authority in a COMMENT above a verbatim
+      // re-implementation exempted the file and left the whole suite byte-identical.
+      if (usesAuthority(liveCode(src))) continue;
       offenders.push(rel);
     }
-    assert.ok(considered >= 3,
-      `only ${considered} file(s) touch excluded_agents in live code — the scan broke, so this is vacuous`);
+    // Membership, not a count. A count floor that included the exempt files had zero slack and
+    // reddened when `convoke-doctor` delegated MORE completely — punishing the improvement.
+    for (const must of ['scripts/update/lib/config-merger.js', 'scripts/audit/lib/installed-tree.js']) {
+      assert.ok(scanned.has(must), `the walk did not reach ${must} — the scan broke, so this is vacuous`);
+    }
     assert.deepEqual(offenders, [],
       'this file decides what excluded_agents means without importing the authority; ' +
         'call configMerger.parseExcludedAgents instead');
-  });
-
-  it('the allow-list has no dead entries', () => {
-    // The previous guard exempted a file it could not even see. An exemption that matches nothing
-    // launders exactly what it is supposed to scope.
-    for (const rel of ALLOWED) {
-      const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
-      assert.match(liveCode(src), /excluded_agents|excludedAgents/,
-        `${rel} is exempted but does not work with excluded_agents in live code — drop the entry`);
-    }
   });
 
   it('the offender test can actually fail', () => {
@@ -270,7 +282,11 @@ describe('T244 — no site decides what excluded_agents means on its own', () =>
     // offenders is the desired state, so the repo cannot demonstrate that this can fire.
     const decidesWithoutAuthority = 'const ex = cfg.excluded_agents;\nif (!Array.isArray(ex)) return [];\n';
     assert.match(liveCode(decidesWithoutAuthority), /excluded_agents/, 'precondition');
-    assert.ok(!IMPORTS_AUTHORITY.test(decidesWithoutAuthority),
+    assert.ok(!usesAuthority(decidesWithoutAuthority),
       'a file like this must be classed as an offender, or the check is inert');
+    // And the exemption must not be launderable by an unrelated import of the same module.
+    const laundered = `const { declaredUnits } = require('../audit/lib/installed-tree');\n${decidesWithoutAuthority}`;
+    assert.ok(!usesAuthority(laundered),
+      'importing the module for an unrelated reason must not exempt a file from the rule');
   });
 });

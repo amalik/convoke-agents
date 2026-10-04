@@ -90,7 +90,7 @@ function parseExcludedAgents(value, options = {}) {
   if (!conforming && source) {
     const shape = isList
       ? 'contains entries that are not agent ids'
-      : `is ${value !== null && typeof value === 'object' ? 'not a list' : `a bare ${typeof value}`}`;
+      : `is ${typeof value === 'object' ? 'not a list' : `a bare ${typeof value}`}`;
     // `ids` can repeat and can be long: a 5000-entry list produced a 34k-character single line.
     const named = [...new Set(ids)];
     const shown = named.length > 8 ? `${named.slice(0, 8).join(', ')} and ${named.length - 8} more` : named.join(', ');
@@ -103,8 +103,8 @@ function parseExcludedAgents(value, options = {}) {
         // and `yaml`'s YAMLMap.add keeps the old node only for a SCALAR. A collection is replaced
         // with the raw JS value, so a flow list becomes a block list and inline comments on it are
         // lost. What is guaranteed is that the value is not replaced with `[]`.
-        'Your value is kept rather than replaced with an empty list, though a list may be ' +
-        're-indented and comments on it are not preserved.'
+        'Your value is kept rather than replaced with an empty list, though a list or mapping may ' +
+        'be reformatted and comments on it are not preserved.'
     );
   }
   return { ids, conforming, absent: false };
@@ -150,10 +150,17 @@ function readExcludedAgents(configPath) {
     return [];
   }
   try {
-    // Parsed with `yaml`, not js-yaml, so this reader and `mergeConfig` (which goes through
-    // `readConfigDocument`) hand the authority the SAME JS value. Under js-yaml's default schema a
-    // YAML timestamp became a `Date` here and a string there, so the two disagreed on conformance.
-    const parsed = YAML.parse(content);
+    // js-yaml, deliberately. This was briefly switched to `YAML.parse` so that this reader and
+    // `mergeConfig` would hand the authority identically-typed values — a YAML timestamp is a
+    // `Date` under js-yaml's schema and a string under `yaml`'s. That swap was a broad instrument
+    // for a narrow defect and it changed ERROR paths: `yaml` reports an unresolved tag as a warning
+    // rather than an error, so `excluded_agents: !mytag [review-coach]` stopped entering the `catch`
+    // below and the opt-out silently took effect; a 101-alias file started refusing where it had
+    // parsed. It also did not close the seam it was for — `convoke-doctor` and
+    // `scripts/audit/lib/installed-tree.js` still read with js-yaml, so two of four callers feed
+    // this authority the other typing regardless. The residual symptom is a value that is not a
+    // real agent id being accepted silently, which is `T250`.
+    const parsed = yaml.load(content);
     if (parsed && typeof parsed === 'object') {
       return parseExcludedAgents(parsed.excluded_agents, { source: configPath }).ids;
     }

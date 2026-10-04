@@ -212,7 +212,8 @@ are easy to trip over:
   upgrade — but **it must be a YAML list**, and the two malformed cases differ. A value that is not
   a list at all (`excluded_agents: review-coach`) excludes **nothing**: the run warns, names the
   file, and installs the agent. A *list* holding something that is not an agent id still applies
-  every id it can read, and warns about the rest. Either way your value is kept rather than replaced
+  every id it can read, and warns that it did not apply the whole list — the entries it rejected
+  are not named. Either way your value is kept rather than replaced
   with an empty list — though a list may be re-indented and comments on it are not preserved.
 - A `description` or `output_folder` you set to the **other** module's exact default value is read
   as the `BUG-22` corruption and reset to this module's own, printing
