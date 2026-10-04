@@ -355,13 +355,17 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
     const bmm = RUNTIME_DATA_FILES.find((e) => e.file.endsWith('bmm-dependencies.csv'));
     assert.equal(citationHolds(bmm.readSite, bmm.token, 'reads'), true, 'the real line-cited citation must hold');
     // The wrong line must ITSELF be admissible, or the admissibility rule rejects it and this control
-    // proves nothing. `:1` is a shebang: not admissible, so it passed with `includes` removed. Line 322
-    // of the same file is a `const … = path.join(…)` — admissible for a read, and it does not contain
-    // `BMM_DEPS_CSV_REL`, so only the content check can reject it.
+    // proves nothing. `:1` is a shebang: not admissible, so it passed with `includes` removed. We need
+    // a `path.join(` line — admissible for a read — that does NOT contain the anchor, so only the
+    // content check can reject it. DERIVED, not hardcoded: this was pinned to line 322 and rotted the
+    // moment an unrelated commit added lines above it (T244), which is the same failure mode as the
+    // citations this test polices.
     const [rel] = bmm.readSite.split(':');
-    const wrongButAdmissible = `${rel}:322`;
-    assert.match(fs.readFileSync(path.join(PACKAGE_ROOT, rel), 'utf8').split('\n')[321], /path\.join\(/,
-      'fixture: line 322 must still be a path construction, or this control stops isolating `includes`');
+    const relLines = fs.readFileSync(path.join(PACKAGE_ROOT, rel), 'utf8').split('\n');
+    const wrongLineNo = relLines.findIndex((l) => /path\.join\(/.test(l) && !l.includes(bmm.token)) + 1;
+    assert.ok(wrongLineNo > 0,
+      `fixture: ${rel} has no \`path.join(\` line without ${bmm.token}, so this control cannot isolate \`includes\``);
+    const wrongButAdmissible = `${rel}:${wrongLineNo}`;
     assert.equal(citationHolds(wrongButAdmissible, bmm.token, 'reads'), false,
       'an admissible line that does not contain the anchor must still be rejected');
 

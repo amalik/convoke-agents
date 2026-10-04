@@ -494,19 +494,33 @@ describe('mergeConfig — excluded_agents (U8)', () => {
     assert.deepEqual(merged.agents, ['contextualization-expert', 'discovery-empathy-expert']);
   });
 
-  it('ignores non-string entries in excluded_agents during filter', async () => {
+  it('applies the usable ids from a non-conforming excluded_agents, and keeps the value as written', async () => {
+    // T244 changed the write-back half. This asserted `merged.excluded_agents === ['noah']` — the
+    // sanitised list — which is how an operator's `excluded_agents: review-coach` was replaced with
+    // `[]`, the agent reinstalled, and nothing printed. A value that is not a list of strings is now
+    // left exactly as written so the operator can see and fix it; the ids that ARE usable still apply.
     await fs.writeFile(configPath, yaml.dump({
       version: '3.1.0',
       agents: ['emma'],
       excluded_agents: ['noah', null, 123],
     }));
 
-    const merged = await configMerger.mergeConfig(configPath, '3.2.0', {
-      agents: ['emma', 'wade', 'noah'],
-    });
+    const warned = [];
+    const real = console.warn;
+    console.warn = (...a) => warned.push(a.join(' '));
+    let merged;
+    try {
+      configMerger.resetExcludedAgentWarnings();
+      merged = await configMerger.mergeConfig(configPath, '3.2.0', { agents: ['emma', 'wade', 'noah'] });
+    } finally {
+      console.warn = real;
+    }
 
-    assert.ok(!merged.agents.includes('noah'));
-    assert.deepEqual(merged.excluded_agents, ['noah']); // sanitized
+    assert.ok(!merged.agents.includes('noah'), 'the usable id must still be excluded');
+    assert.deepEqual(merged.excluded_agents, ['noah', null, 123],
+      'the operator\'s value must survive verbatim — rewriting it is the T244 data loss');
+    assert.equal(warned.length, 1, 'and the run must say the opt-out was not fully applied');
+    assert.match(warned[0], /excluded_agents/);
   });
 
   it('applies exclusions even when updates.agents is not provided (P2 regression)', async () => {

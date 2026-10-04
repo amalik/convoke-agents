@@ -63,6 +63,59 @@ const MODULE_PROFILES = Object.freeze({
 });
 
 /**
+ * THE authority for what `excluded_agents` means. Five sites used to re-implement
+ * `Array.isArray(v) ? v.filter(a => typeof a === 'string') : []` independently — `mergeConfig`,
+ * `readExcludedAgents`, two in `convoke-doctor.js` and one in `scripts/audit/lib/installed-tree.js`.
+ * They happened to agree, which is the drift waiting to happen rather than a reason to keep five.
+ *
+ * A value that is not a list of strings is **non-conforming**: its usable ids are still returned so
+ * a partial opt-out is honoured, but the caller must NOT write a cleaned-up version back. An
+ * operator who wrote `excluded_agents: review-coach` had the value replaced with `[]` and the agent
+ * installed, with nothing on stdout or stderr (`T244`); their text is now left alone for them to
+ * fix, which is the only form in which they can see what went wrong.
+ *
+ * @param {unknown} value - the raw `excluded_agents` field, or undefined when absent
+ * @param {object} [options]
+ * @param {string} [options.source] - path named in the warning; omit to stay silent
+ * @returns {{ids: string[], conforming: boolean, absent: boolean}}
+ */
+function parseExcludedAgents(value, options = {}) {
+  const { source } = options;
+  if (value === undefined || value === null) return { ids: [], conforming: true, absent: true };
+
+  const isList = Array.isArray(value);
+  const ids = isList ? value.filter((a) => typeof a === 'string') : [];
+  const conforming = isList && ids.length === value.length;
+
+  if (!conforming && source) {
+    const shape = isList ? 'contains entries that are not agent ids' : `is ${typeof value === 'object' ? 'not a list' : `a bare ${typeof value}`}`;
+    warnOnce(
+      `${source}: \`excluded_agents\` ${shape}, so the opt-out was NOT applied` +
+        `${ids.length > 0 ? ` beyond ${ids.join(', ')}` : ''}. ` +
+        'It must be a YAML list of agent ids, e.g. `excluded_agents: [review-coach]`. ' +
+        'Your value is left as you wrote it.'
+    );
+  }
+  return { ids, conforming, absent: false };
+}
+
+/**
+ * One warning per distinct message per process. Both `readExcludedAgents` and `mergeConfig` read the
+ * same file on one install, so warning per call printed the same line twice.
+ */
+const _warned = new Set();
+function warnOnce(message) {
+  if (_warned.has(message)) return;
+  _warned.add(message);
+  console.warn(`Warning: ${message}`);
+}
+
+/** Test seam: the dedupe above is process-wide, so a suite must be able to clear it. */
+function resetExcludedAgentWarnings() {
+  _warned.clear();
+}
+
+/**
  * Read `excluded_agents` from a module's config.yaml without going through the
  * full merge path. Used by refresh-installation and validator to skip copying
  * / checking agents the operator has opted out of. U8: permanent agent
@@ -87,8 +140,8 @@ function readExcludedAgents(configPath) {
   }
   try {
     const parsed = yaml.load(content);
-    if (parsed && Array.isArray(parsed.excluded_agents)) {
-      return parsed.excluded_agents.filter(a => typeof a === 'string');
+    if (parsed && typeof parsed === 'object') {
+      return parseExcludedAgents(parsed.excluded_agents, { source: configPath }).ids;
     }
   } catch (err) {
     console.warn(`Warning: could not parse ${configPath} for excluded_agents (${err.message}). Proceeding without exclusions.`);
@@ -251,9 +304,8 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}, options 
   // list are filtered out of the active `agents` array so deliberate removals survive upgrades.
   // Re-inclusion works by removing the agent from `excluded_agents` — the next merge restores
   // it via the canonical spread above.
-  const excludedAgents = Array.isArray(current.excluded_agents)
-    ? current.excluded_agents.filter(a => typeof a === 'string')
-    : [];
+  const exclusions = parseExcludedAgents(current.excluded_agents, { source: currentConfigPath });
+  const excludedAgents = exclusions.ids;
   if (updates.agents) {
     const userAgents = Array.isArray(current.agents)
       ? [...new Set(current.agents.filter(a => !profile.agentIds.includes(a)))]
@@ -267,7 +319,10 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}, options 
     merged.agents = merged.agents.filter(a => !excludedAgents.includes(a));
   }
   // Preserve the exclusion list as a first-class field (empty stays empty — the schema default).
-  merged.excluded_agents = excludedAgents;
+  // T244: a NON-CONFORMING value is left exactly as the operator wrote it. Writing the cleaned-up
+  // list back destroyed their text and left nothing on screen explaining why the opt-out did not
+  // take effect, so the only record of their intent disappeared.
+  merged.excluded_agents = exclusions.conforming ? excludedAgents : current.excluded_agents;
 
   // Smart-merge workflows: canonical workflows in order, then unique user-added appended
   if (updates.workflows) {
@@ -566,6 +621,8 @@ module.exports = {
   assertConfigReadable,
   mergeConfig,
   readExcludedAgents,
+  parseExcludedAgents,
+  resetExcludedAgentWarnings,
   extractUserPreferences,
   validateConfig,
   writeConfig,

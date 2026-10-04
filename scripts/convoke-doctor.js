@@ -6,6 +6,7 @@ const chalk = require('chalk');
 const yaml = require('js-yaml');
 const { findProjectRoot, getPackageVersion } = require('./update/lib/utils');
 const { AGENTS, GYRE_AGENTS } = require('./update/lib/agent-registry');
+const { parseExcludedAgents } = require('./update/lib/config-merger');
 const {
   scanBmmDependencies,
   readExistingCsv,
@@ -216,9 +217,9 @@ function checkModuleAgents(mod) {
   // U8: `agents` in config.yaml already has exclusions filtered out (mergeConfig does this
   // at upgrade time). We read `excluded_agents` purely to surface the opt-out list in the
   // info line — so operators can see what's excluded without cross-referencing files.
-  const excluded = Array.isArray(mod.config.excluded_agents)
-    ? mod.config.excluded_agents.filter(a => typeof a === 'string')
-    : [];
+  // Silent on purpose: doctor reports in its own findings format, and the install path already
+  // warns. The parse itself is `parseExcludedAgents`, so the meaning lives in one place (T244).
+  const excluded = parseExcludedAgents(mod.config.excluded_agents).ids;
 
   if (!fs.existsSync(agentsDir)) {
     return {
@@ -496,10 +497,9 @@ function checkAgentSkillWrappers(projectRoot, modules = []) {
   // don't get flagged as missing (they are intentionally absent).
   const excludedIds = new Set();
   for (const mod of modules) {
-    if (mod.config && Array.isArray(mod.config.excluded_agents)) {
-      for (const id of mod.config.excluded_agents) {
-        if (typeof id === 'string') excludedIds.add(id);
-      }
+    if (mod.config) {
+      // Same authority as the install path (T244), silent here by design.
+      for (const id of parseExcludedAgents(mod.config.excluded_agents).ids) excludedIds.add(id);
     }
   }
 

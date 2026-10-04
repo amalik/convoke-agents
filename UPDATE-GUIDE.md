@@ -209,8 +209,10 @@ survives, and so does any key you add.** Only the fields the installer owns are 
 are easy to trip over:
 
 - `excluded_agents` is the supported way to opt an agent out, and a well-formed list does survive
-  an upgrade — but **it must be a YAML list.** A bare value (`excluded_agents: review-coach`) is
-  discarded with nothing printed, and the agent is installed (`T244`).
+  an upgrade — but **it must be a YAML list.** Given anything else (`excluded_agents: review-coach`,
+  or a list holding something that is not an agent id) the run warns, names the file, leaves your
+  value exactly as you wrote it, and installs the agent: the opt-out does not take effect until you
+  fix the shape. Any ids it can read from a malformed list are still applied.
 - A `description` or `output_folder` you set to the **other** module's exact default value is read
   as the `BUG-22` corruption and reset to this module's own, printing
   `Repaired <field> in <path>: it held the <other module> default` — on stderr, so it is missing

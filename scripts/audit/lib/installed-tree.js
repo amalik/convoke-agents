@@ -73,7 +73,7 @@ const RUNTIME_DATA_FILES = [
   {
     file: '_bmad/_config/skill-manifest.csv',
     readSite: 'scripts/portability/convoke-export.js:360',
-    alsoRead: ['scripts/portability/export-engine.js:98', 'scripts/convoke-doctor.js:322'],
+    alsoRead: ['scripts/portability/export-engine.js:98', 'scripts/convoke-doctor.js:323'],
     // `arrivesVia` must cite the line that OPENS THE PACKAGE COPY seeding the project file, not
     // the earlier line that merely DECLARES the destination path — deleting the copy and leaving
     // the declaration would keep a basename-matching alarm green. That is why the alarm is an AND.
@@ -649,10 +649,22 @@ function readModuleConfig(projectRoot, mod, yaml) {
   }
 }
 
+/**
+ * T244 made `configMerger.parseExcludedAgents` the single authority for this rule and four of the
+ * five sites now call it. This one does NOT, deliberately: this module resolves `js-yaml` against
+ * the TARGET project (`setYamlResolutionRoot`) so it can audit an installation from outside the
+ * package, and `config-merger` statically requires `js-yaml`, `yaml` and `fs-extra`, which need not
+ * be resolvable from here. `tests/unit/excluded-agents-authority.test.js` pins this copy against the
+ * authority across every shape, so the two cannot drift apart silently.
+ */
+function parseExcludedAgentsLocal(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((a) => typeof a === 'string');
+}
+
 function excludedAgents(projectRoot, mod, yaml) {
   const cfg = readModuleConfig(projectRoot, mod, yaml);
-  if (!cfg || !Array.isArray(cfg.excluded_agents)) return [];
-  return cfg.excluded_agents.filter(a => typeof a === 'string');
+  return cfg ? parseExcludedAgentsLocal(cfg.excluded_agents) : [];
 }
 
 /**
@@ -751,6 +763,7 @@ function unparsableConfigs(projectRoot, arrived) {
 }
 
 module.exports = {
+  parseExcludedAgentsLocal,
   setYamlResolutionRoot,
   RUNTIME_DATA_FILES,
   DEFAULT_MAX_FILES,
