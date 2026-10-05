@@ -213,17 +213,21 @@ describe('checkBmmDependencies — AC3/AC4 unregistered-custom-skill', () => {
     // on any build without T112 (including the published v4.0.3) the operator's own registration
     // is refused with `Duplicate triple … registered by auto-scan`. T254. So runnable was never
     // the bar — the bar is that following it resolves the finding.
-    assert.match(unreg.fix, /Register it with:/);
-    assert.match(
+    // ONE assertion over the whole command line, not a `convoke-register-skill` match and a
+    // separate flags match. T254 R2 showed those two are independent: a fix naming the right
+    // command on one line and showing the right flags on a DIFFERENT binary satisfied both.
+    assert.equal(
       unreg.fix,
-      new RegExp(`npx -p convoke-agents@${escapeRegExp(PKG_VERSION)} convoke-register-skill`),
-      'the fix must name the command that registers'
+      'Register it with:\n'
+      + `  npx -p convoke-agents@${PKG_VERSION} convoke-register-skill`
+      + " --skill 'my-custom-tool' --agent 'bmad-agent-pm' --type 'frontmatter'",
+      'the flags must be bound to the command line they belong to, not merely co-present'
     );
-    // The DETECTED type, interpolated: a `--type` differing from the scanned one creates a second
-    // row with no duplicate, no claim and no warning, which nothing ever reconciles.
-    // All three values are quoted — `--agent` comes from the skill's own frontmatter, so it is
-    // operator-controlled text on the same command line as the name.
-    assert.match(unreg.fix, /--skill 'my-custom-tool' --agent 'bmad-agent-pm' --type 'frontmatter'/);
+    // The equality above already pins the DETECTED type: a `--type` differing from the scanned one
+    // creates a second row with no duplicate, no claim and no warning, which nothing reconciles.
+    // On the quoting of `--agent` and `--type`: those two are closed by the scanner
+    // (`AGENT_NAME_EXACT_RE` is `/^bmad-agent-[a-z0-9-]+$/` and the type is a two-value enum), so
+    // quoting them is defence in depth, NOT a reachable threat. R2 corrected the claim that it was.
     assert.doesNotMatch(unreg.fix, /convoke-audit-bmm-deps/,
       'the scanner must not be offered for THIS finding — it creates the row that blocks the fix');
     assert.doesNotMatch(unreg.fix, /your-email@example\.com|<YYYY-MM-DD>/,
@@ -259,18 +263,146 @@ describe('checkBmmDependencies — AC3/AC4 unregistered-custom-skill', () => {
   });
 
   it('refuses to emit a command for a name the registry rewrites on write', async () => {
-    // `_sanitizeFormula` prefixes a field beginning `= + - @`, tab or CR with `'`, and
-    // `verifyRegistration` applies the same rule to its candidate, so the writer cannot see the
-    // divergence. Measured: `--skill -dash-skill` reports success, writes `'-dash-skill`, leaves
-    // this finding standing and adds a `[missing-target]` one — and each re-run appends a row.
+    // `_sanitizeFormula` prefixes a field beginning `= + - @`, tab or CR with `'`. Measured:
+    // `--skill -dash-skill` prints `✓ Registered`, writes `'-dash-skill`, leaves this finding
+    // standing and adds a `[missing-target]` one — and each re-run appends another row.
+    //
+    // An earlier draft of this comment said `verifyRegistration` applies the same rule to its
+    // candidate "so the writer cannot see the divergence". R2 ran it: the writer DOES see it and
+    // prints `⚠ Registration written but … not found in CSV re-read`, because `_tripleKey`
+    // looks up the UNSANITIZED candidate and misses before `_sanitizeForCompare` is reached. The
+    // verdict is unchanged — exit 0, the finding survives — but the mechanism was wrong, and a
+    // wrong mechanism misdirects whoever fixes it.
     tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-dash-'));
     await seedCustomSkill(tmpRoot, '-dash-skill', 'bmad-agent-pm');
     await seedCsv(tmpRoot, []);
     const unreg = checkBmmDependencies(tmpRoot).find(r => r.name.includes('-dash-skill'));
     assert.ok(unreg);
-    assert.doesNotMatch(unreg.fix, /convoke-register-skill/,
+    // NOT `doesNotMatch(/convoke-register-skill/)`: the rename text names the command in order to
+    // say the name cannot be passed to it. What must be absent is a RUNNABLE invocation.
+    assert.doesNotMatch(unreg.fix, /convoke-register-skill --skill/,
       'advising the command here reports success and resolves nothing');
-    assert.match(unreg.fix, /Rename the directory/);
+    assert.match(unreg.fix, /mv -- '\.claude\/skills\/-dash-skill'/,
+      'the rename needs `--`: `mv \'-dash-skill\' x` exits 64 with `illegal option -- d`');
+  });
+
+  // T254 R2 HIGH: the gate that chooses between these two branches used to be a RE-DERIVATION of
+  // the registry's rules, assembled from the sanitizer and the validator and never from the
+  // PARSER — which trims every flag value. This is the property that makes the whole class
+  // un-reintroducible, so it is asserted against `parseArgs` itself rather than against a name
+  // list: IF the advice is a command, the name the parser extracts from it must be the name the
+  // finding is about. Under the old gate `my-skill ` failed this, and the failure was not
+  // cosmetic — see the sibling test below.
+  it('never advises a command whose own parser would read a different skill name', async () => {
+    const { _internal: { parseArgs } } = require('../../scripts/convoke-register-skill');
+    // Nine, deliberately: at `BMM_DRIFT_SUMMARY_THRESHOLD` (10) the per-skill branch collapses
+    // into the summary and there are no per-skill `fix:` strings left to assert on. The first
+    // draft used seventeen names, found zero `[unregistered]` findings, and would have passed
+    // vacuously had it not asserted the fixture's own size.
+    const names = [
+      'plain-ok-skill', 'evil$(touch PWNED)skill', "quote'skill",
+      'trailing ', ' leading', '-dash-skill', '=eq', 'a..b', 'embed\nnewline',
+    ];
+    assert.ok(names.length < BMM_DRIFT_SUMMARY_THRESHOLD,
+      'fixture: more names than the threshold collapses the per-skill branch away');
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-parser-'));
+    for (const n of names) await seedCustomSkill(tmpRoot, n, 'bmad-agent-pm');
+    await seedCsv(tmpRoot, []);
+    const findings = checkBmmDependencies(tmpRoot).filter(r => r.name.includes('[unregistered]'));
+    assert.equal(findings.length, names.length,
+      `fixture: expected one finding per name, got ${findings.length}`);
+    let commands = 0;
+    for (const f of findings) {
+      const m = f.fix.match(/convoke-register-skill --skill (.*?) --agent /);
+      if (!m) continue;                       // the rename branch: covered by the tests around this one
+      commands += 1;
+      // Undo exactly one level of POSIX single-quoting to recover the argv value.
+      const argv = m[1].replace(/^'|'$/g, '').replace(/'\\''/g, "'");
+      const seen = parseArgs(['--skill', argv, '--agent', 'bmad-agent-pm', '--type', 'frontmatter']).skill;
+      const subject = f.name.replace(/^BMM dependencies: \[unregistered] /, '').replace(/ → .*$/, '');
+      assert.equal(seen, subject,
+        `the advice for ${JSON.stringify(subject)} is a command the parser reads as ${JSON.stringify(seen)}`);
+    }
+    assert.ok(commands >= 3, `vacuity: only ${commands} of ${names.length} took the command branch`);
+
+    // The property above is silent about WHICH branch a name takes, so deleting half the gate
+    // survived it. This pins the branch per class. `a..b` is the only member of the
+    // validator-refused class that is reachable at all: `..foo` and `.hidden` never produce a
+    // finding, because the scanner skips dot-directories (`_findSkillDirectories`).
+    // Keyed on a substring that is unique within this fixture, NOT on the raw name: a
+    // control-character name is rendered escaped by `displaySafe`, so looking it up by the raw
+    // string would make this test re-implement `displaySafe` and go stale the moment the escaping
+    // changes. The lookup is asserted unique so a careless addition to `names` cannot silently
+    // retarget it.
+    const branchOf = (key) => {
+      const hits = findings.filter(x => x.name.includes(key));
+      assert.equal(hits.length, 1, `fixture: ${JSON.stringify(key)} matched ${hits.length} findings`);
+      return /convoke-register-skill --skill/.test(hits[0].fix) ? 'COMMAND' : 'RENAME';
+    };
+    for (const k of ['plain-ok-skill', 'evil$(touch PWNED)skill', "quote'skill"]) {
+      assert.equal(branchOf(k), 'COMMAND', `${JSON.stringify(k)} is quotable and must be advised`);
+    }
+    for (const k of ['trailing ', ' leading', '-dash-skill', '=eq', 'a..b', 'embed']) {
+      assert.equal(branchOf(k), 'RENAME', `${JSON.stringify(k)} cannot be carried by the CLI`);
+    }
+  });
+
+  // The measured consequence, kept as its own test because the property above states the rule and
+  // this states the damage: a trailing-space clone beside the operator's own skill. Under the old
+  // gate the clone's advice exited 0, printed `✓ Registered` and the machine-readable `REGISTERED:`
+  // marker, and wrote a governance row asserting `my-skill → bmad-agent-pm` — a dependency the
+  // scan never found, attributed to the operator — while BOTH findings survived.
+  it('does not hand a trailing-space clone a command that registers the real skill', async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-clone-'));
+    await seedCustomSkill(tmpRoot, 'my-skill ', 'bmad-agent-pm');   // the clone
+    await seedCustomSkill(tmpRoot, 'my-skill', 'bmad-agent-dev');   // the operator's own
+    await seedCsv(tmpRoot, []);
+    const all = checkBmmDependencies(tmpRoot).filter(r => r.name.includes('[unregistered]'));
+    const clone = all.find(r => r.name.includes('my-skill  →'));
+    const mine = all.find(r => r.name.includes('my-skill →'));
+    assert.ok(clone && mine, `fixture: expected both findings, got ${all.map(r => r.name).join(' | ')}`);
+    assert.doesNotMatch(clone.fix, /convoke-register-skill --skill/,
+      'the clone must not be advised to run the command at all');
+    assert.match(clone.fix, /mv -- '\.claude\/skills\/my-skill '/);
+    // And the operator's own skill is still advised normally — the fix must not blanket-refuse.
+    assert.match(mine.fix, /convoke-register-skill --skill 'my-skill' --agent 'bmad-agent-dev'/);
+  });
+
+  // T254 R2: a control character in the name reached the terminal unescaped, so a directory could
+  // print a complete, correctly formatted PASSING finding that no check produced, choose its own
+  // colour with an ESC, or overwrite the `⚠` prefix with a CR. Measured against the real CLI.
+  it('lets no control character from a skill name reach the rendered finding', async () => {
+    const hostile = 'legit\n  \u001b[32m✓ BMM dependencies: registry consistent\u001b[0m\r';
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-ctrl-'));
+    await seedCustomSkill(tmpRoot, hostile, 'bmad-agent-pm');
+    await seedCsv(tmpRoot, []);
+    const f = checkBmmDependencies(tmpRoot).find(r => r.name.includes('[unregistered]'));
+    assert.ok(f, 'fixture: expected a finding for the control-character name');
+    const hasControl = (s) => [...String(s)].some((ch) => {
+      const cp = ch.codePointAt(0);
+      return cp < 0x20 || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f);
+    });
+    // `fix` legitimately contains newlines of its own, so the name's own escaping is asserted on
+    // `name` (one line by contract) and the `fix` is checked for the ESC and CR specifically.
+    assert.equal(hasControl(f.name), false, `the finding name still carries a control character: ${JSON.stringify(f.name)}`);
+    // Asserted with `includes`, not a regex: a control-character class inside a regex literal is
+    // `no-control-regex`, and the intent reads more plainly as the character itself.
+    assert.ok(!f.fix.includes('\u001b'), 'an ESC in the advice lets the name choose its own colour');
+    assert.ok(!f.fix.includes('\r'), 'a CR in the advice overwrites what was printed before it');
+    // `fix` is multi-line BY CONTRACT — `printResults` indents each line — so the claim is that
+    // the name contributes no control character, not that the string holds none. Removing the
+    // structural newlines is what separates the two; asserting on the raw string instead was
+    // wrong about the code rather than about the name, and said so on the first run.
+    assert.equal(hasControl(f.fix.split('\n').join('')), false,
+      `the name still contributes a control character to the advice: ${JSON.stringify(f.fix)}`);
+    // The fabrication property, stated directly: the finding's own line count is fixed by the
+    // branch, so a name cannot add one. `name` is single-line (asserted above); `fix` has exactly
+    // the lines this branch writes.
+    assert.equal(f.fix.split('\n').length, 11,
+      `the advice gained or lost a line: ${JSON.stringify(f.fix.split('\n'))}`);
+    // The escape must be visible, not silently dropped — a dropped newline would make two
+    // different directory names render identically.
+    assert.match(f.name, /legit\\n/, 'the control character must be shown as an escape, not deleted');
   });
 
   // T254 R1 MEDIUM-2: the summary branch was rewritten by the same commit and pinned by nothing.
@@ -284,7 +416,13 @@ describe('checkBmmDependencies — AC3/AC4 unregistered-custom-skill', () => {
     for (let i = 0; i < many; i += 1) {
       await seedCustomSkill(tmpRoot, `custom-skill-${i}`, 'bmad-agent-pm');
     }
-    await seedCsv(tmpRoot, []);
+    // A row of a DIFFERENT category, so the category count and the total drift differ. With a
+    // single-category fixture `totalDrift === unregisteredCustom.length`, and a summary counting
+    // the total instead of the category passed — the composite-vs-component failure mode.
+    await seedCsv(tmpRoot, [{
+      skill_name: 'bmad-agent-pm', bmm_agent: 'bmad-agent-architect', dependency_type: 'frontmatter',
+      source_module: 'bmm', registered_by: 'user@example.com', registered_date: '2026-01-01',
+    }]);
     const results = checkBmmDependencies(tmpRoot);
     const summary = results.find(r => r.name.includes('unregistered-custom-skill ('));
     assert.ok(summary, `expected the summary finding; got: ${results.map(r => r.name).join(', ')}`);

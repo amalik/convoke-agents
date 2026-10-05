@@ -49,15 +49,26 @@ const path = require('path');
  * CURATED, NOT INFERRED, and the story says so rather than pretending otherwise.
  * The obvious mechanisation — `grep -rn "path.join(projectRoot" scripts/` — was tried
  * and measured on 2026-08-29: 135 sites, no way to tell a read from a write, many
- * paths built from variables, several of them directories, and decisively it CANNOT
- * SEE the one entry this check is required to fire on: `convoke-doctor.js:761` reads
- * `path.join(projectRoot, BMM_DEPS_CSV_REL)`, so the filename lives in a constant and
- * a static extractor yields no filename. A check built that way could not satisfy its
- * own acceptance criterion.
+ * paths built from variables, several of them directories, and decisively it cannot see the
+ * filename of the one entry this check is required to fire on: `convoke-doctor` reads
+ * `path.join(projectRoot, BMM_DEPS_CSV_REL)`, so on the read line the filename lives in a
+ * constant. (NO LINE NUMBER here, deliberately. This sentence carried `:761` and T254's own
+ * de-lining commit left it behind while removing the number from the structured field sixty
+ * lines below — in the same edit, in the same file. The alarm walks the tables and never this
+ * prose, so it stayed green. The filename IS statically reachable one `require` hop away, where
+ * `OUTPUT_CSV_REL` is a literal; what is unavailable is the filename on the READ line, which is
+ * the weaker claim this paragraph is entitled to make.)
  *
  * Curation rots when someone adds a runtime read and forgets this list. That is a real
  * cost, not a hypothetical one, which is why every entry cites the call site that reads
  * it and `tests/audit/installed-tree.test.js` asserts those citations still resolve.
+ *
+ * WHAT THAT ALARM DOES NOT COVER, stated here because this is the paragraph a curator reads
+ * when adding an entry: it detects a citation that stops RESOLVING. It cannot detect a citation
+ * that resolves to a read of a DIFFERENT file — for an entry whose token spells no filename,
+ * nothing mechanical ties the citation to the entry. Re-pointing the import alias behind
+ * `BMM_DEPS_CSV_REL` would leave this manifest asserting a read of `bmm-dependencies.csv` while
+ * the code reads something else, and every check would stay green.
  * That test is the rot alarm. It is weaker than derivation and saying so is the point.
  *
  * DO NOT "improve" this into an inference engine. If derivation is wanted later, the
@@ -73,7 +84,16 @@ const RUNTIME_DATA_FILES = [
   {
     file: '_bmad/_config/skill-manifest.csv',
     readSite: 'scripts/portability/convoke-export.js:360',
-    alsoRead: ['scripts/portability/export-engine.js:98', 'scripts/convoke-doctor.js:323'],
+    // An `alsoRead` entry is a bare `path:NNN` string, or `{site, token}` when it has been
+    // de-lined. The object form exists because the entry-wide `alsoReadToken` could not
+    // express ONE de-lined site among several — so the only way to repair a rotted number
+    // here was to write a new number. The doctor's site is de-lined; `export-engine.js`
+    // keeps its number until someone has a reason to touch it.
+    alsoRead: [
+      'scripts/portability/export-engine.js:98',
+      { site: 'scripts/convoke-doctor.js',
+        token: "const manifestPath = path.join(projectRoot, '_bmad/_config/skill-manifest.csv');" },
+    ],
     // `arrivesVia` must cite the line that OPENS THE PACKAGE COPY seeding the project file, not
     // the earlier line that merely DECLARES the destination path — deleting the copy and leaving
     // the declaration would keep a basename-matching alarm green. That is why the alarm is an AND.
@@ -115,10 +135,16 @@ const RUNTIME_DATA_FILES = [
   },
   {
     file: '_bmad/_config/bmm-dependencies.csv',
-    // DE-LINED. This number rotted FOUR times in three days — the last time on a commit that
-    // only moved two helper functions earlier in the same file, which is the clearest possible
-    // demonstration that a line number records where code sat, not what it does. Same repair as
-    // `taxonomy.yaml` above: anchor on a token that discriminates.
+    // DE-LINED, and the reason stated as git tells it rather than as the session remembered it.
+    // This number was RENUMBERED four times — 2026-09-03 (twice), 2026-09-29, 2026-10-05, so a
+    // 32-day span, not "three days" as an earlier draft of this comment said. It was never
+    // actually STALE at a commit boundary: every move was repaired in the same commit that
+    // caused it, which is churn rather than rot, and is the real argument for anchoring. The
+    // prose copy of this citation in the header above is the one that DID ship stale.
+    // Re-derive the span and the per-commit cited/actual pairs:
+    //   git log --format='%H %ad' --date=short -- scripts/audit/lib/installed-tree.js
+    // then for each, compare the entry's cited line with the line holding the token below.
+    // Same repair as `taxonomy.yaml` above: anchor on a token that discriminates.
     readSite: 'scripts/convoke-doctor.js',
     // The read site does not spell the filename: it reads `path.join(projectRoot,
     // BMM_DEPS_CSV_REL)`. That indirection is the single most important fact about this

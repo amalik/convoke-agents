@@ -26,6 +26,9 @@ const path = require('path');
 const readline = require('readline');
 const chalk = require('chalk');
 const { findProjectRoot } = require('./update/lib/utils');
+// `_sanitizeFormula` is the CSV writer's own rewrite rule. `registrableByCli` calls it
+// rather than restating its character class — see T254 R2.
+const { _internal: { _sanitizeFormula } } = require('./audit/audit-bmm-dependencies');
 
 // ─── Constants ────────────────────────────────────────────────────
 
@@ -124,6 +127,52 @@ function parseArgs(argv) {
 // ─── Validation ──────────────────────────────────────────────────
 
 /**
+ * The shape rule for a skill name: a single directory name under `.claude/skills/`. Extracted
+ * from `validateInput` so `registrableByCli` can CALL it instead of restating it — T254 R2 found
+ * a third restatement of this class, in convoke-doctor.js, that had drifted from this one.
+ */
+function isSimpleSkillDirName(skill) {
+  const s = String(skill);
+  return !/[\\/]/.test(s) && !s.includes('\0') && !s.includes('..') && !s.startsWith('.');
+}
+
+/**
+ * Would this skill name survive the trip through THIS CLI unchanged, and be accepted?
+ *
+ * `convoke-doctor` asks before it prints `convoke-register-skill --skill <name>` as advice. The
+ * question is "what will the CLI do with this name", which is a property of the CLI, so every
+ * clause below CALLS the authority rather than paraphrasing it. T254 R2 is why: the doctor
+ * carried its own re-derivation, built from `_sanitizeFormula` and `validateInput` but never
+ * from `parseArgs`, which trims. A directory named `my-skill ` (one trailing space) was therefore
+ * advised as a command; `parseArgs` trimmed it to `my-skill`, the operator's OWN skill, and the
+ * run exited 0 printing `✓ Registered` plus the machine-readable `REGISTERED:` marker while
+ * writing a governance row for a dependency the scan never found — attributed to the operator.
+ * Both original findings survived. Measured end to end.
+ */
+function registrableByCli(name) {
+  const s = String(name);
+  // The parser itself. `assign()` trims every flag value, so any name differing from its own
+  // trim arrives as a DIFFERENT name — either rejected as unknown, or, worse, matching another
+  // skill. Asking `parseArgs` keeps this true if the trim ever moves or widens.
+  if (parseArgs(['--skill', s]).skill !== s) return false;
+  // The CSV writer. A field it rewrites is persisted under a name the finding does not carry.
+  if (_sanitizeFormula(s) !== s) return false;
+  // The validator's own shape rule, called, not restated.
+  if (!isSimpleSkillDirName(s)) return false;
+  // Not a rule of any of the three: a control character survives all of them and still defeats
+  // the advice, because the command is rendered into indented terminal output. A newline lands
+  // `printResults`' four-space indent INSIDE the quotes, so the command the operator can read is
+  // not the command this code built.
+  // Tested by code point, not by a regex: a control-character class in a regex is `no-control-regex`,
+  // and the loop says plainly which range is meant.
+  for (const ch of s) {
+    const cp = ch.codePointAt(0);
+    if (cp < 0x20 || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f)) return false;
+  }
+  return true;
+}
+
+/**
  * Pure validator: given a partially-populated input object + projectRoot,
  * return `{ok, errors, warnings}`. Tests call this directly via `_internal`.
  *
@@ -139,7 +188,7 @@ function validateInput(input, projectRoot) {
   // skill_name — existence check under .claude/skills/ with path-traversal guard.
   if (!skill || typeof skill !== 'string' || skill.length === 0) {
     errors.push('--skill is required (non-empty string)');
-  } else if (/[\\/]/.test(skill) || skill.includes('\0') || skill.includes('..') || skill.startsWith('.')) {
+  } else if (!isSimpleSkillDirName(skill)) {
     // R1-H4: reject path-traversal or path-like values. A skill name must be
     // a single directory name under `.claude/skills/` — no slashes, no `..`,
     // no leading-dot hidden names, no embedded null bytes.
@@ -886,6 +935,9 @@ async function main(argv) {
 
 module.exports = {
   main,
+  // The authority convoke-doctor asks before advising this command. Top-level, not `_internal`:
+  // it is a supported cross-module contract, not a test seam.
+  registrableByCli,
   // R2-L5 pattern (from Story 2.3): Object.freeze prevents test-order leaks
   // via mutable require.cache entries. Helpers exposed for unit-level testing
   // without spawning the CLI.
@@ -894,6 +946,7 @@ module.exports = {
     assertClaimable,
     parseArgs,
     validateInput,
+    isSimpleSkillDirName,
     buildRow,
     checkDuplicate,
     writeRow,

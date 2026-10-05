@@ -50,7 +50,7 @@ Method: `cat`, `grep` and `sed` over the repo, plus `git diff --stat` (read-only
 | C8 | The installer's `verifyInstallation()` checks every agent's skill wrapper regardless of `excluded_agents`. | `install-vortex-agents.js:107` |
 | C9 | Refresh writes `_bmad/_config/agents/bme-<name>.customize.yaml` stubs if absent. **Nothing reads them**: the only reference in the codebase is the writer. | `refresh-installation.js` §7 |
 | C10 | The doctor classifies custom skills by name prefix. `bmad-*` maps to `bmm` and is reported as `[drift]`; any unrecognised prefix maps to `unknown` and is reported as `[unregistered]`. | `audit-bmm-dependencies.js:506` `_inferSourceModule` |
-| C11 | `checkBmmDependencies` never checks that `bmm_agent` still exists. | `convoke-doctor.js:759` |
+| C11 | `checkBmmDependencies` never checks that `bmm_agent` still exists. | `convoke-doctor.js, in `checkBmmDependencies`` |
 | C12 | `auto-scan` is a reserved `registered_by` value, and `convoke-register-skill` rejects a duplicate triple. | `convoke-register-skill.js:33`, `checkDuplicate()` |
 | C13 | Three Vortex agents (Emma, Mila, Wade) load config "via bmad-init skill" and search `**/project-context.md`. Isla, Liam, Noah, Max and all four Gyre agents load their module `config.yaml` directly and require `user_name`, `communication_language` and `output_folder`: `grep -c 'VERIFY all 3 required fields'` returns 1 for each of those seven files and 0 for Emma, Mila and Wade. | agent files |
 | C14 | Vortex workflow steps are loaded by absolute `{project-root}/_bmad/bme/_vortex/workflows/...` paths, for example `lean-persona/workflow.md:50`. | workflow files |

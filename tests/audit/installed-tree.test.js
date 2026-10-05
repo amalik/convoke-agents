@@ -103,11 +103,19 @@ const ADMISSIBLE_ANCHOR = Object.freeze({
  * A citation holds when it resolves to exactly one line AND that line is an admissible anchor for
  * the kind of claim the record makes.
  *
- * TWO CITATION KINDS COEXIST and the shape of `site` says which. `path` is ANCHORED — the anchor is a
- * unique snippet and the line is resolved from it; eight of these. `path:NNN` is LINE-CITED — nine of
- * these, seven of which carry no token of their own so their anchor is a bare basename that
- * legitimately recurs, which is why the number is still load-bearing there. Both kinds are now
- * checked for admissibility, so the nine read sites are covered by something for the first time.
+ * TWO CITATION KINDS COEXIST and the shape of `site` says which. `path` is ANCHORED — the anchor is
+ * a unique snippet and the line is resolved from it. `path:NNN` is LINE-CITED, and where such a
+ * citation carries no token of its own its anchor is a bare basename that legitimately recurs,
+ * which is why the number is still load-bearing there. Both kinds are checked for admissibility.
+ *
+ * No tallies of either kind are stated here. The previous version gave three, all of them correct
+ * when written and all three wrong two commits later — de-lining a citation changes every one of
+ * them and nothing checks them. Derive them if you need them:
+ *   node -e 'const {RUNTIME_DATA_FILES:R,WRAPPER_RULES:W}=require("./scripts/audit/lib/installed-tree");
+ *     const s=R.flatMap(e=>[e.readSite,...(e.alsoRead||[]).map(a=>typeof a==="string"?a:a.site),
+ *       ...(e.arrivesVia?[e.arrivesVia]:[])]);
+ *     console.log("lined",s.filter(x=>/:\\d+$/.test(x)).length,"anchored",
+ *       s.filter(x=>!/:\\d+$/.test(x)).length+Object.keys(W).length)'
  *
  * `claim` is required. Omitting it rejects, rather than defaulting to a kind that might pass.
  */
@@ -205,8 +213,10 @@ function checkReadSite(e) {
   // code that reads a listed file MOVES. Discrimination is enforced where the files are actually
   // read — `anchorLine` returns 0 for a token occurring twice, and the alarm below treats an
   // unresolved anchor as a failure (negative control: 'an ambiguous anchor must be rejected').
-  // MIS-CURATION — a token that resolves fine but describes another file's read — is NOT covered,
-  // and the manifest's preamble says so rather than this pretending otherwise.
+  // MIS-CURATION — a token that resolves fine but describes another file's read — is NOT covered.
+  // R2 found this comment pointing at a preamble that said no such thing: it documented OMISSION
+  // ("adds a runtime read and forgets this list"), a different failure. The scope is now written
+  // into that preamble, which is the text a curator actually reads, and this is the restatement.
   //
   // The one floor kept, because it costs nothing and matches the real historical mistake: if the
   // token spells a data-file name at all, it must be THIS entry's. Vacuous for an indirect token,
@@ -233,13 +243,17 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
       checkReadSite(e);
       // T230: `arrivesVia` is ANCHORED — bare path, line resolved from `arrivesViaToken`. A number
       // here means the conversion was reverted.
-      for (const s of e.alsoRead || []) {
+      // Normalised once: an entry is a bare string or `{site, token}` (the de-lined form).
+      for (const raw of e.alsoRead || []) {
+        const s = typeof raw === 'string' ? raw : raw.site;
+        const ownToken = typeof raw === 'string' ? undefined : raw.token;
         // EITHER shape is allowed, because conversion is meant to be possible one site at a time.
         // Round 2: a guard requiring `:NNN` here made the doc's "convertible today" false by
         // forbidding it. An ANCHORED entry needs a token, or there is nothing to resolve it from.
         assert.match(s, /^scripts\/.+?(:\d+)?$/, `${e.file}: alsoRead entry ${s} is not a path`);
         if (!/:\d+$/.test(s)) {
-          assert.ok(e.alsoReadToken, `${e.file}: alsoRead ${s} is anchored but the entry has no alsoReadToken`);
+          assert.ok(ownToken || e.alsoReadToken,
+            `${e.file}: alsoRead ${s} is anchored but carries no token and the entry has no alsoReadToken`);
         }
       }
       if (e.arrivesVia) {
@@ -295,7 +309,7 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
   // THE ROT ALARM. Curation is weaker than derivation and this is the compensating
   // control: if someone moves the code that reads one of these files, the citation
   // stops resolving and this fails, rather than the manifest quietly going stale.
-  it('every cited call site exists and that exact line still mentions the file', () => {
+  it('every cited call site exists and that exact line still carries its anchor', () => {
     // Each site carries the token that applies to IT, not a token pooled across the entry.
     // Round 1 review found three citations pointing at something other than the read or
     // write they claimed — a log line, an output-path constant on the WRITE side, and a
@@ -303,7 +317,11 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
     // merely mentioning the basename anywhere in the entry.
     const sites = RUNTIME_DATA_FILES.flatMap(e => [
       { site: e.readSite, entry: e, token: e.token, claim: 'reads' },
-      ...(e.alsoRead || []).map(s => ({ site: s, entry: e, token: e.alsoReadToken, claim: 'reads' })),
+      ...(e.alsoRead || []).map(raw => (typeof raw === 'string'
+        ? { site: raw, entry: e, token: e.alsoReadToken, claim: 'reads' }
+        // A site's own token wins over the entry-wide one, which is what lets one site de-line
+        // while its siblings keep their numbers.
+        : { site: raw.site, entry: e, token: raw.token || e.alsoReadToken, claim: 'reads' })),
       ...(e.arrivesVia ? [{ site: e.arrivesVia, entry: e, token: e.arrivesViaToken, claim: 'arrives' }] : []),
     ]);
     assert.ok(sites.length >= RUNTIME_DATA_FILES.length);
@@ -443,7 +461,7 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
     // its SHAPE asserted, so de-lining the last lined citation fails here instead of hollowing
     // this test out. (The content check itself is still isolated below, which is why both
     // mutants — dropping `includes` and returning `true` — die on this test either way.)
-    const lined = bmm.alsoRead[0];
+    const lined = typeof bmm.alsoRead[0] === 'string' ? bmm.alsoRead[0] : bmm.alsoRead[0].site;
     assert.match(lined, /:\d+$/, 'fixture: this control needs a LINE-CITED citation to be positive about');
     assert.equal(citationHolds(lined, bmm.alsoReadToken, 'reads'), true, 'the real line-cited citation must hold');
     assert.equal(citationHolds(bmm.readSite, bmm.token, 'reads'), true, 'and the anchored one, for contrast');
@@ -1061,18 +1079,33 @@ describe('assert-installed-tree CLI', () => {
   // the token — reverting that branch to a bare `e.readSite` left it green. An anchored entry's
   // bare path names a 1000-line file and nothing else, which is exactly what T254 traded the
   // rotting line number for, so the token has to reach the operator.
-  it('names the TOKEN too when the read site is anchored, not just the file it sits in', () => {
-    const { root, pkgRoot } = installedFixture();
-    write(path.join(root, '_bmad', 'bme', '_portability', 'config.yaml'), 'version: 4.0.1\n');
-    const victim = RUNTIME_DATA_FILES.find((e) => !/:\d+$/.test(e.readSite));
-    assert.ok(victim, 'fixture: this test needs an ANCHORED readSite to say anything');
-    fs.rmSync(path.join(root, victim.file), { force: true });
-    const r = runCli(['tree', root, pkgRoot]);
-    assert.equal(r.code, 1);
-    assert.ok(
-      r.stdout.includes(`FAILED: ${victim.file} is read at runtime by ${victim.readSite} @ ${victim.token}`),
-      `the anchored site must carry its token — got: ${r.stdout.split('\n').filter((l) => l.includes(victim.file)).join(' / ')}`
-    );
+  // EVERY entry, both kinds, not `find()`. R2: the first version took the first anchored entry,
+  // which is `taxonomy.yaml` — de-lined by the PREVIOUS commit — so the entry this commit de-lined
+  // was never exercised, and a discriminator correct for only one of the two shipped green.
+  // The LINED direction is asserted too: nothing pinned it, so an "always append" regression
+  // printed `@ undefined` to the operator for the three entries that carry no token, suite green.
+  it('names the token for an anchored read site and ONLY for an anchored one', () => {
+    const anchored = RUNTIME_DATA_FILES.filter((e) => !/:\d+$/.test(e.readSite));
+    const lined = RUNTIME_DATA_FILES.filter((e) => /:\d+$/.test(e.readSite));
+    assert.ok(anchored.length > 0 && lined.length > 0,
+      `fixture: this test needs both kinds — anchored ${anchored.length}, lined ${lined.length}`);
+    for (const victim of [...anchored, ...lined]) {
+      const { root, pkgRoot } = installedFixture();
+      write(path.join(root, '_bmad', 'bme', '_portability', 'config.yaml'), 'version: 4.0.1\n');
+      fs.rmSync(path.join(root, victim.file), { force: true });
+      const r = runCli(['tree', root, pkgRoot]);
+      assert.equal(r.code, 1, `${victim.file}: expected exit 1`);
+      const line = r.stdout.split('\n').find((l) => l.includes(`FAILED: ${victim.file} is read at runtime`));
+      assert.ok(line, `${victim.file}: no FAILED line — got: ${r.stdout}`);
+      if (!/:\d+$/.test(victim.readSite)) {
+        assert.ok(line.includes(`by ${victim.readSite} @ ${victim.token}`),
+          `${victim.file}: an anchored site must carry its token — got: ${line.trim()}`);
+      } else {
+        assert.ok(line.includes(`by ${victim.readSite} but did not arrive`),
+          `${victim.file}: a lined site must NOT be given a token — got: ${line.trim()}`);
+        assert.ok(!line.includes('@'), `${victim.file}: '@ undefined' reaches the operator — got: ${line.trim()}`);
+      }
+    }
   });
 
   // The other direction. A check only shown failing might be failing for a reason that

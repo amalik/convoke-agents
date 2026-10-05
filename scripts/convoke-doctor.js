@@ -7,6 +7,11 @@ const yaml = require('js-yaml');
 const { findProjectRoot, getPackageVersion } = require('./update/lib/utils');
 const { AGENTS, GYRE_AGENTS } = require('./update/lib/agent-registry');
 const { parseExcludedAgents } = require('./update/lib/config-merger');
+// The authority on what `convoke-register-skill` can carry, exported by the command itself.
+// T254 R2: the doctor used to re-derive this from the sanitizer and the validator and never
+// from the PARSER, which trims — so `my-skill ` was advised as a command, trimmed to the
+// operator's own `my-skill`, and registered a dependency the scan never found, exit 0.
+const { registrableByCli } = require('./convoke-register-skill');
 const {
   scanBmmDependencies,
   readExistingCsv,
@@ -739,6 +744,55 @@ function _scanWithSuppressedStderr(projectRoot) {
 }
 
 /**
+ * Render an untrusted value for the terminal.
+ *
+ * Every `skill_name` in these findings is either a `.claude/skills/` directory name or a field of
+ * a registry file, and Category 2 fires ONLY for `source_module === 'unknown'` — third-party and
+ * cloned skills. T254 R2 measured what that allows: a directory named
+ * `legit-skill\n  ✓ BMM dependencies: registry consistent\n    3 auto-scan + 0 manual rows, no drift`
+ * made the real CLI print a complete, correctly formatted PASSING finding that no check produced.
+ * An embedded ESC additionally took over the colour, removing the one cue — chalk's yellow — that
+ * distinguishes a fabricated line from a real one, and a CR returned the cursor to column 0 so the
+ * attacker's text overwrote the `⚠ … [unregistered]` prefix.
+ *
+ * So control characters are replaced with a visible escape rather than passed through. The value
+ * stays recognisable (and greppable) while losing the ability to draw.
+ */
+/** True when a value holds a character `displaySafe` would have to escape. */
+function hasControlChar(value) {
+  for (const ch of String(value)) {
+    const cp = ch.codePointAt(0);
+    if (cp < 0x20 || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f)) return true;
+  }
+  return false;
+}
+
+/** The leading run of printable characters, for building a glob the operator can verify. */
+function printablePrefix(value) {
+  let out = '';
+  for (const ch of String(value)) {
+    const cp = ch.codePointAt(0);
+    if (cp < 0x20 || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f)) break;
+    out += ch;
+  }
+  return `.claude/skills/${out}`;
+}
+
+function displaySafe(value) {
+  let out = '';
+  for (const ch of String(value)) {
+    const cp = ch.codePointAt(0);
+    if (cp < 0x20 || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f)) {
+      out += cp === 0x0a ? '\\n' : cp === 0x0d ? '\\r' : cp === 0x09 ? '\\t'
+        : `\\x${cp.toString(16).padStart(2, '0')}`;
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+/**
  * POSIX single-quoting for a value interpolated into a command an operator will paste.
  *
  * T254 R1: the `[unregistered]` advice interpolated a skill name straight into a command line.
@@ -753,23 +807,6 @@ function shellQuote(value) {
   return `'${String(value).replace(/'/g, "'\\''")}'`;
 }
 
-/**
- * Can `convoke-register-skill` actually carry this name? Two classes cannot be advised as a
- * command, so for them the remedy is to rename the directory:
- *   - a first character of `= + - @`, tab or CR: `_sanitizeFormula` prefixes the field with `'`
- *     on write, and `verifyRegistration` applies the same rule to its candidate, so the writer
- *     cannot see the divergence. Measured: `--skill -dash-skill` reports `✓ Registered`, writes
- *     `'-dash-skill`, leaves the `[unregistered]` finding standing and adds a `[missing-target]`
- *     one — drift 1 → 2 — and each re-run appends another row. A hand-edited CSV row is no
- *     escape either, since the next render rewrites it the same way.
- *   - anything `validateInput` refuses outright: a path separator, `..`, a leading `.`, a NUL.
- */
-function isRegistrableSkillName(name) {
-  const s = String(name);
-  if (/^[=+\-@\t\r]/.test(s)) return false;
-  if (/[\\/\0]/.test(s) || s.includes('..') || s.startsWith('.')) return false;
-  return true;
-}
 
 /**
  * Validate the BMM dependency registry as a standing health check (FR14).
@@ -903,19 +940,19 @@ function checkBmmDependencies(projectRoot) {
   } else {
     staleSkillGone.forEach(r => {
       results.push({
-        name: `BMM dependencies: [stale:skill-gone] ${r.skill_name} → ${r.bmm_agent}`,
+        name: `BMM dependencies: [stale:skill-gone] ${displaySafe(r.skill_name)} → ${displaySafe(r.bmm_agent)}`,
         passed: false,
         softWarning: true,
-        warning: `auto-scan row references skill directory '${r.skill_name}' which is not present on disk`,
+        warning: `auto-scan row references skill directory '${displaySafe(r.skill_name)}' which is not present on disk`,
         fix: `Remove the row or restore the skill; regenerate with: npx -p convoke-agents@${pv} convoke-audit-bmm-deps`,
       });
     });
     staleDepRemoved.forEach(r => {
       results.push({
-        name: `BMM dependencies: [stale:dep-removed] ${r.skill_name} → ${r.bmm_agent}`,
+        name: `BMM dependencies: [stale:dep-removed] ${displaySafe(r.skill_name)} → ${displaySafe(r.bmm_agent)}`,
         passed: false,
         softWarning: true,
-        warning: `auto-scan row for (${r.skill_name}, ${r.bmm_agent}, ${r.dependency_type}) no longer matches scan output`,
+        warning: `auto-scan row for (${displaySafe(r.skill_name)}, ${displaySafe(r.bmm_agent)}, ${displaySafe(r.dependency_type)}) no longer matches scan output`,
         fix: `Regenerate with: npx -p convoke-agents@${pv} convoke-audit-bmm-deps`,
       });
     });
@@ -942,7 +979,7 @@ function checkBmmDependencies(projectRoot) {
   } else {
     unregisteredCustom.forEach(r => {
       results.push({
-        name: `BMM dependencies: [unregistered] ${r.skill_name} → ${r.bmm_agent}`,
+        name: `BMM dependencies: [unregistered] ${displaySafe(r.skill_name)} → ${displaySafe(r.bmm_agent)}`,
         passed: false,
         softWarning: true,
         warning: `custom skill not in registry — future upgrades won't validate it`,
@@ -960,15 +997,36 @@ function checkBmmDependencies(projectRoot) {
         // `--type` carries the DETECTED type, so the command cannot produce the
         // mismatch that leaves a second, unreconcilable row (a `--type` differing
         // from the scanned one creates no duplicate, no claim and no warning).
-        fix: isRegistrableSkillName(r.skill_name)
+        fix: registrableByCli(r.skill_name)
           ? 'Register it with:\n'
             + `  npx -p convoke-agents@${pv} convoke-register-skill --skill ${shellQuote(r.skill_name)}`
             + ` --agent ${shellQuote(r.bmm_agent)} --type ${shellQuote(r.dependency_type)}`
-          : `Rename the directory .claude/skills/${r.skill_name} first — a name beginning with `
-            + '`=`, `+`, `-`, `@`, a tab or a carriage return is rewritten when the registry is '
-            + 'written, and one containing a path separator, `..`, a leading `.` or a NUL is '
-            + 'refused outright. Registering it reports success and leaves this finding standing. '
-            + 'Then re-run convoke-doctor.',
+          // The rename branch gives the COMMAND, with `--`. T254 R2: the obvious `mv` fails on the
+          // same hazard this branch exists for — `mv '-dash-skill' x` exits 64 with
+          // `illegal option -- d` — so advice without `--` relocates the dead end rather than
+          // ending it. The target constraint is load-bearing too: `_inferSourceModule` keys
+          // `source_module` off the name prefix, so renaming to `convoke-*` or `bmad-*` leaves
+          // this category for `[drift]`, whose own advice is the scanner's WRITE mode — measured.
+          // The name is quoted on the first line too: the class that lands here includes
+          // leading and trailing whitespace, which is invisible unquoted.
+          : `This name cannot be passed to convoke-register-skill: '${displaySafe(r.skill_name)}'\n`
+            + '  Rename the directory, then re-run convoke-doctor:\n'
+            // `displaySafe` INSIDE the quoting, not outside it: `shellQuote` makes a value inert
+            // to the SHELL, which is a different property from being safe to PRINT. T254 R2's own
+            // new test caught this — the mv line still carried a raw ESC and CR to the terminal.
+            // A name holding a control character cannot be pasted at all, so that case gets an
+            // extra line rather than a command that silently misbehaves.
+            + `    mv -- ${displaySafe(shellQuote(`.claude/skills/${r.skill_name}`))} .claude/skills/<new-name>\n`
+            + (hasControlChar(r.skill_name)
+              ? `  That name contains a control character, shown above as an escape, so the command\n`
+                + `  cannot be pasted as-is. Match the directory with a glob and check it first:\n`
+                + `    ls -d ${shellQuote(printablePrefix(r.skill_name))}*\n`
+              : '')
+            + '  <new-name> must not start with `bmad-`, `convoke-`, `wds-`, `q-` or `q<digit>-`:\n'
+            + '  those are the prefixes `_inferSourceModule` reads as first-party, which moves the\n'
+            + '  skill to a check whose own advice does not apply to a third-party skill. It must\n'
+            + '  also not start with `=`, `+`, `-`, `@` or `.`, and must not contain a path\n'
+            + '  separator, `..`, a control character, or leading/trailing whitespace.',
       });
     });
   }
@@ -985,10 +1043,10 @@ function checkBmmDependencies(projectRoot) {
   } else {
     missingScanTarget.forEach(r => {
       results.push({
-        name: `BMM dependencies: [missing-target] ${r.skill_name}`,
+        name: `BMM dependencies: [missing-target] ${displaySafe(r.skill_name)}`,
         passed: false,
         softWarning: true,
-        warning: `registry row references skill '${r.skill_name}' (${r.source_module}) which is not present on disk`,
+        warning: `registry row references skill '${displaySafe(r.skill_name)}' (${displaySafe(r.source_module)}) which is not present on disk`,
         fix: `Either add the skill back or run: npx -p convoke-agents@${pv} convoke-audit-bmm-deps to reconcile`,
       });
     });
@@ -1006,10 +1064,10 @@ function checkBmmDependencies(projectRoot) {
   } else {
     scanVsCsvMismatch.forEach(r => {
       results.push({
-        name: `BMM dependencies: [drift] ${r.skill_name} → ${r.bmm_agent}`,
+        name: `BMM dependencies: [drift] ${displaySafe(r.skill_name)} → ${displaySafe(r.bmm_agent)}`,
         passed: false,
         softWarning: true,
-        warning: `first-party dependency (${r.skill_name}, ${r.bmm_agent}, ${r.dependency_type}) is in scan output but not the registry`,
+        warning: `first-party dependency (${displaySafe(r.skill_name)}, ${displaySafe(r.bmm_agent)}, ${displaySafe(r.dependency_type)}) is in scan output but not the registry`,
         fix: `Run: npx -p convoke-agents@${pv} convoke-audit-bmm-deps to sync`,
       });
     });

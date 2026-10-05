@@ -688,6 +688,10 @@ module.exports = {
   OUTPUT_CSV_REL,
   FR18_FIRST_SKILL,
   _internal: {
+    // Exported for `registrableByCli` in convoke-register-skill.js, which must ASK this
+    // function what it rewrites rather than restate its character class. T254 R2: a
+    // restatement in convoke-doctor.js had already drifted from all three authorities.
+    _sanitizeFormula,
     _scanOneSkill,
     _parseFrontmatterDependencies,
     _grepStepFilesForAgents,
