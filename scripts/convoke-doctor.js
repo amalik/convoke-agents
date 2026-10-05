@@ -895,7 +895,8 @@ function checkBmmDependencies(projectRoot) {
       passed: false,
       softWarning: true,
       warning: `${unregisteredCustom.length} custom skills detected that are not in the registry — future upgrades won't validate them`,
-      fix: `Register each by adding a row to _bmad/_config/bmm-dependencies.csv, or regenerate auto-scan with: npx -p convoke-agents@${pv} convoke-audit-bmm-deps`,
+      // T254: see the per-skill branch below for why the scanner is no longer offered here.
+      fix: `Register each with: npx -p convoke-agents@${pv} convoke-register-skill --skill <name> --agent <bmm-agent> --type <the type this check reports>`,
     });
   } else {
     unregisteredCustom.forEach(r => {
@@ -904,15 +905,26 @@ function checkBmmDependencies(projectRoot) {
         passed: false,
         softWarning: true,
         warning: `custom skill not in registry — future upgrades won't validate it`,
-        // Literal `<YYYY-MM-DD>` placeholder rather than today's date: (a) matches
-        // the spec's AC4 template wording, (b) keeps AC8 output deterministic
-        // across UTC midnight, (c) correctly prompts the operator to substitute
-        // the date they're actually registering on.
+        // T254: this used to lead with a hand-edit template and offer
+        // `convoke-audit-bmm-deps` as the alternative. Both were traps. The scanner
+        // writes an `auto-scan` row for this very skill, and on any build without
+        // `T112` — which includes the published `v4.0.3` — the operator's own
+        // registration is then REFUSED with `Duplicate triple … registered by
+        // auto-scan`, leaving them to hand-edit the CSV, which is the toil
+        // `convoke-register-skill` exists to remove. The hand-edit template was the
+        // other trap: pasted verbatim it silences this warning with
+        // `your-email@example.com` and a literal `<YYYY-MM-DD>`, because nothing
+        // validates `registered_by` or `registered_date` on that path.
+        //
+        // `--type` carries the DETECTED type, so the command cannot produce the
+        // mismatch that leaves a second, unreconcilable row (a `--type` differing
+        // from the scanned one creates no duplicate, no claim and no warning).
         fix:
-          'Register this skill by adding a row to _bmad/_config/bmm-dependencies.csv:\n'
-          + `  ${r.skill_name},${r.bmm_agent},${r.dependency_type},${r.source_module},your-email@example.com,<YYYY-MM-DD>\n`
-          + '\nOr regenerate the auto-scan baseline with:\n'
-          + `  npx -p convoke-agents@${pv} convoke-audit-bmm-deps`,
+          'Register it with:\n'
+          + `  npx -p convoke-agents@${pv} convoke-register-skill --skill ${r.skill_name}`
+          + ` --agent ${r.bmm_agent} --type ${r.dependency_type}\n`
+          + '\nThat writes the row and validates it. Editing '
+          + '_bmad/_config/bmm-dependencies.csv by hand also works, and is not validated.',
       });
     });
   }

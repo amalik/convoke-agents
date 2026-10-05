@@ -95,7 +95,13 @@ const RUNTIME_DATA_FILES = [
   },
   {
     file: '_bmad/_config/taxonomy.yaml',
-    readSite: 'scripts/convoke-doctor.js:978',
+    // DE-LINED and given a discriminating token. This citation rotted three times in two days —
+    // 978 → 990 on an unrelated edit to a `fix:` string — and each repair moved the number
+    // instead of removing the dependency on it. The bare basename `taxonomy.yaml` appears five
+    // times in that file, so an anchored citation needs a token that discriminates; the path
+    // construction appears exactly once. Same reasoning as `alsoReadToken` below.
+    readSite: 'scripts/convoke-doctor.js',
+    token: "path.join(projectRoot, '_bmad', '_config', 'taxonomy.yaml')",
     alsoRead: ['scripts/lib/artifact-utils.js:164'],
     // `arrivesVia` must cite the `mergeTaxonomy(projectRoot)` CALL that creates the file. An
     // early draft cited the `changes.push('Created …taxonomy.yaml…')` LOG LINE inside

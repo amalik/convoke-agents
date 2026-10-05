@@ -184,7 +184,16 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
   it('gives every entry a file, a read site and a reason', () => {
     for (const e of RUNTIME_DATA_FILES) {
       assert.match(e.file, /^_bmad\//, `${e.file} is not a project-relative _bmad path`);
-      assert.match(e.readSite, /^scripts\/.+:\d+$/, `${e.file} has no <path>:<line> read site`);
+      // `readSite` now accepts EITHER shape, exactly as `alsoRead` below already does and for the
+      // reason stated there: the conversion from line numbers to anchors is meant to proceed one
+      // site at a time (T230), and a guard mandating `:NNN` forbids the next step. An anchored
+      // readSite needs a token to resolve from, and per the `arrivesViaToken` precedent it must be
+      // a snippet rather than a bare symbol — a bare symbol is the shape that was ambiguous.
+      assert.match(e.readSite, /^scripts\/.+?(:\d+)?$/, `${e.file} has no read site`);
+      if (!/:\d+$/.test(e.readSite)) {
+        assert.ok(e.token && e.token.length > 20,
+          `${e.file}: readSite is anchored but has no discriminating token to resolve it from`);
+      }
       // T230: `arrivesVia` is ANCHORED — bare path, line resolved from `arrivesViaToken`. A number
       // here means the conversion was reverted.
       for (const s of e.alsoRead || []) {

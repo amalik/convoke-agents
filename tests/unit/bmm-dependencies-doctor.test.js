@@ -191,13 +191,26 @@ describe('checkBmmDependencies — AC3/AC4 unregistered-custom-skill', () => {
     assert.equal(unreg.softWarning, true);
     assert.match(unreg.name, /my-custom-tool/);
     assert.match(unreg.warning, /custom skill not in registry/);
-    // AC4: multi-line registration instruction.
-    assert.match(unreg.fix, /Register this skill by adding a row/);
-    assert.match(unreg.fix, /my-custom-tool,bmad-agent-pm,frontmatter,unknown/);
-    // I137: previously asserted `node scripts/audit/audit-bmm-dependencies.js` — a path that does
-    // NOT exist in a user's project, so this test was PINNING unrunnable advice. The script is now
-    // exposed as the `convoke-audit-bmm-deps` bin and invoked via npx, like every other remediation.
-    assert.match(unreg.fix, new RegExp(`\\n {2}npx -p convoke-agents@${escapeRegExp(PKG_VERSION)} convoke-audit-bmm-deps`));
+    // This assertion has now been corrected three times, and the lineage is the point.
+    // I137 replaced `node scripts/audit/audit-bmm-dependencies.js` — a path absent from a user's
+    // project — because the test was PINNING UNRUNNABLE advice. It then pinned advice that runs
+    // and dead-ends: `convoke-audit-bmm-deps` writes an `auto-scan` row for this very skill, and
+    // on any build without T112 (including the published v4.0.3) the operator's own registration
+    // is refused with `Duplicate triple … registered by auto-scan`. T254. So runnable was never
+    // the bar — the bar is that following it resolves the finding.
+    assert.match(unreg.fix, /Register it with:/);
+    assert.match(
+      unreg.fix,
+      new RegExp(`npx -p convoke-agents@${escapeRegExp(PKG_VERSION)} convoke-register-skill`),
+      'the fix must name the command that registers'
+    );
+    // The DETECTED type, interpolated: a `--type` differing from the scanned one creates a second
+    // row with no duplicate, no claim and no warning, which nothing ever reconciles.
+    assert.match(unreg.fix, /--skill my-custom-tool --agent bmad-agent-pm --type frontmatter/);
+    assert.doesNotMatch(unreg.fix, /convoke-audit-bmm-deps/,
+      'the scanner must not be offered for THIS finding — it creates the row that blocks the fix');
+    assert.doesNotMatch(unreg.fix, /your-email@example\.com|<YYYY-MM-DD>/,
+      'the hand-edit template silenced this warning with placeholder data, unvalidated');
   });
 });
 
