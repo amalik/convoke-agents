@@ -115,13 +115,18 @@ const RUNTIME_DATA_FILES = [
   },
   {
     file: '_bmad/_config/bmm-dependencies.csv',
-    readSite: 'scripts/convoke-doctor.js:761',
+    // DE-LINED. This number rotted FOUR times in three days — the last time on a commit that
+    // only moved two helper functions earlier in the same file, which is the clearest possible
+    // demonstration that a line number records where code sat, not what it does. Same repair as
+    // `taxonomy.yaml` above: anchor on a token that discriminates.
+    readSite: 'scripts/convoke-doctor.js',
     // The read site does not spell the filename: it reads `path.join(projectRoot,
     // BMM_DEPS_CSV_REL)`. That indirection is the single most important fact about this
     // entry — it is why no static extractor can find this file, and therefore why AC4 is
-    // a declared list rather than a grep. The token is named so the rot alarm can still
-    // check the citation instead of being weakened to accommodate it.
-    token: 'BMM_DEPS_CSV_REL',
+    // a declared list rather than a grep. The bare identifier is NOT usable as the anchor:
+    // it occurs twice in the doctor, once at the read and once in the destructuring rename
+    // that imports it, so `anchorLine` reports it ambiguous. The join is unique.
+    token: 'path.join(projectRoot, BMM_DEPS_CSV_REL)',
     // `:642` is the read (`path.join(projectRoot, OUTPUT_CSV_REL)` feeding
     // `readExistingCsv`). The first draft cited `:34`, which is that script's OUTPUT path
     // constant — the WRITE side. Citing a write as a read is exactly the confusion this
@@ -149,7 +154,8 @@ const RUNTIME_DATA_FILES = [
     // is why the rot alarm checks the `arrivesVia` line rather than trusting the prose.
     arrivesViaToken: 'const depsResult = seedBmmDependencies(projectRoot, { isSameRoot, verbose });',
     why:
-      'convoke-doctor reads it at :763 and treats absence as a soft governance warning (BUG-19). ' +
+      'convoke-doctor reads it through BMM_DEPS_CSV_REL and treats absence as a soft governance '
+      + 'warning (BUG-19). ' +
       'dist-2-5 creates it at install time as an EMPTY registry — the schema, never a row — so a ' +
       'clean install reports `registry consistent` instead of warning about a file nothing ever ' +
       'created, while the doctor keeps detecting genuinely unregistered custom skills.',

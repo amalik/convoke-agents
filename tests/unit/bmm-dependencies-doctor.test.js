@@ -43,6 +43,21 @@ async function buildTmpProject(fixtureNames = []) {
 }
 
 /**
+ * Seed a `source_module: unknown` custom skill whose frontmatter declares a BMM dependency, which
+ * is what Category 2 (`[unregistered]`) fires on. Mirrors the inline setup the FR17 test above
+ * uses; factored out because T254's advice tests need it for several hostile names.
+ */
+async function seedCustomSkill(tmpRoot, skillName, agent) {
+  const skillDir = path.join(tmpRoot, '.claude', 'skills', skillName);
+  await fs.ensureDir(skillDir);
+  await fs.writeFile(
+    path.join(skillDir, 'SKILL.md'),
+    `---\nname: ${JSON.stringify(skillName)}\ndependencies:\n  - ${agent}\n---\nContent.\n`,
+    'utf8',
+  );
+}
+
+/**
  * Seed a `_bmad/_config/bmm-dependencies.csv` with the given row objects
  * (header prepended automatically). `registered_by` is taken verbatim from
  * each row object.
@@ -206,11 +221,80 @@ describe('checkBmmDependencies — AC3/AC4 unregistered-custom-skill', () => {
     );
     // The DETECTED type, interpolated: a `--type` differing from the scanned one creates a second
     // row with no duplicate, no claim and no warning, which nothing ever reconciles.
-    assert.match(unreg.fix, /--skill my-custom-tool --agent bmad-agent-pm --type frontmatter/);
+    // All three values are quoted — `--agent` comes from the skill's own frontmatter, so it is
+    // operator-controlled text on the same command line as the name.
+    assert.match(unreg.fix, /--skill 'my-custom-tool' --agent 'bmad-agent-pm' --type 'frontmatter'/);
     assert.doesNotMatch(unreg.fix, /convoke-audit-bmm-deps/,
       'the scanner must not be offered for THIS finding — it creates the row that blocks the fix');
     assert.doesNotMatch(unreg.fix, /your-email@example\.com|<YYYY-MM-DD>/,
       'the hand-edit template silenced this warning with placeholder data, unvalidated');
+  });
+
+  it('quotes the interpolated skill name, which an operator pastes into a shell', async () => {
+    // The advice is a command line. `skill_name` is an arbitrary `.claude/skills/` directory name,
+    // and this category fires ONLY for `source_module === 'unknown'` — third-party and cloned
+    // skills. Unquoted, `evil$(touch PWNED)skill` emitted a command that ran the substitution when
+    // pasted, measured in bash and zsh. The pre-T254 advice put this name in a CSV row, so the
+    // shell surface was introduced, not inherited.
+    const hostile = 'evil$(touch PWNED)skill';
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-shq-'));
+    await seedCustomSkill(tmpRoot, hostile, 'bmad-agent-pm');
+    await seedCsv(tmpRoot, []);
+    const unreg = checkBmmDependencies(tmpRoot).find(r => r.name.includes(hostile));
+    assert.ok(unreg, 'expected a finding for the hostile name');
+    assert.match(unreg.fix, /--skill 'evil\$\(touch PWNED\)skill'/,
+      'the name must be single-quoted so the substitution is inert when pasted');
+    assert.doesNotMatch(unreg.fix, /--skill evil\$\(/, 'an unquoted interpolation is the defect');
+  });
+
+  it("escapes a single quote in the name rather than breaking the command", async () => {
+    const tricky = "quote'skill";
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-quo-'));
+    await seedCustomSkill(tmpRoot, tricky, 'bmad-agent-pm');
+    await seedCsv(tmpRoot, []);
+    const unreg = checkBmmDependencies(tmpRoot).find(r => r.name.includes(tricky));
+    assert.ok(unreg);
+    // POSIX: close the quote, emit an escaped quote, reopen.
+    assert.match(unreg.fix, /--skill 'quote'\\''skill'/);
+  });
+
+  it('refuses to emit a command for a name the registry rewrites on write', async () => {
+    // `_sanitizeFormula` prefixes a field beginning `= + - @`, tab or CR with `'`, and
+    // `verifyRegistration` applies the same rule to its candidate, so the writer cannot see the
+    // divergence. Measured: `--skill -dash-skill` reports success, writes `'-dash-skill`, leaves
+    // this finding standing and adds a `[missing-target]` one — and each re-run appends a row.
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-dash-'));
+    await seedCustomSkill(tmpRoot, '-dash-skill', 'bmad-agent-pm');
+    await seedCsv(tmpRoot, []);
+    const unreg = checkBmmDependencies(tmpRoot).find(r => r.name.includes('-dash-skill'));
+    assert.ok(unreg);
+    assert.doesNotMatch(unreg.fix, /convoke-register-skill/,
+      'advising the command here reports success and resolves nothing');
+    assert.match(unreg.fix, /Rename the directory/);
+  });
+
+  // T254 R1 MEDIUM-2: the summary branch was rewritten by the same commit and pinned by nothing.
+  // It prints no skill, agent or type, so it cannot carry the per-skill command — what it must
+  // carry is a way to LIST the triples, and the listing must not be the scanner's write mode:
+  // that writes an `auto-scan` row for every one of them, which on any build without T112 refuses
+  // the operator's own registration afterwards.
+  it('points the summary branch at a listing that does not write the registry', async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-sum2-'));
+    const many = BMM_DRIFT_SUMMARY_THRESHOLD;
+    for (let i = 0; i < many; i += 1) {
+      await seedCustomSkill(tmpRoot, `custom-skill-${i}`, 'bmad-agent-pm');
+    }
+    await seedCsv(tmpRoot, []);
+    const results = checkBmmDependencies(tmpRoot);
+    const summary = results.find(r => r.name.includes('unregistered-custom-skill ('));
+    assert.ok(summary, `expected the summary finding; got: ${results.map(r => r.name).join(', ')}`);
+    assert.match(summary.name, new RegExp(`\\(${many} findings\\)`));
+    assert.match(summary.fix, /convoke-audit-bmm-deps --dry-run/, 'the listing must be dry-run');
+    assert.doesNotMatch(summary.fix, /convoke-audit-bmm-deps(?! --dry-run)/,
+      'the scanner\'s WRITE mode must not be offered — it creates the rows that block the fix');
+    assert.match(summary.fix, /it does not write the registry/,
+      'the operator has to be told which of the two scanner modes this is');
+    assert.match(summary.fix, /convoke-register-skill/, 'the summary must still name the remedy');
   });
 });
 

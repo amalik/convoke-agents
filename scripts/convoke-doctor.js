@@ -739,6 +739,39 @@ function _scanWithSuppressedStderr(projectRoot) {
 }
 
 /**
+ * POSIX single-quoting for a value interpolated into a command an operator will paste.
+ *
+ * T254 R1: the `[unregistered]` advice interpolated a skill name straight into a command line.
+ * `r.skill_name` is an arbitrary `.claude/skills/` directory name, and Category 2 fires ONLY when
+ * `source_module === 'unknown'` — third-party and cloned skills, exactly the population an
+ * attacker influences. A directory named `evil$(touch PWNED)skill` produced a command that ran
+ * the substitution when pasted; measured in bash and zsh, along with backtick, `;`, `|` and
+ * newline variants. The pre-commit advice interpolated this name into a CSV ROW, so the shell
+ * surface was introduced by that change, not inherited.
+ */
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
+}
+
+/**
+ * Can `convoke-register-skill` actually carry this name? Two classes cannot be advised as a
+ * command, so for them the remedy is to rename the directory:
+ *   - a first character of `= + - @`, tab or CR: `_sanitizeFormula` prefixes the field with `'`
+ *     on write, and `verifyRegistration` applies the same rule to its candidate, so the writer
+ *     cannot see the divergence. Measured: `--skill -dash-skill` reports `✓ Registered`, writes
+ *     `'-dash-skill`, leaves the `[unregistered]` finding standing and adds a `[missing-target]`
+ *     one — drift 1 → 2 — and each re-run appends another row. A hand-edited CSV row is no
+ *     escape either, since the next render rewrites it the same way.
+ *   - anything `validateInput` refuses outright: a path separator, `..`, a leading `.`, a NUL.
+ */
+function isRegistrableSkillName(name) {
+  const s = String(name);
+  if (/^[=+\-@\t\r]/.test(s)) return false;
+  if (/[\\/\0]/.test(s) || s.includes('..') || s.startsWith('.')) return false;
+  return true;
+}
+
+/**
  * Validate the BMM dependency registry as a standing health check (FR14).
  * Surfaces drift as fail-soft governance warnings (NFR9) — never hard-fails
  * convoke-doctor's exit code. Reuses Story 2.1's scan primitives; doctor is
@@ -895,8 +928,16 @@ function checkBmmDependencies(projectRoot) {
       passed: false,
       softWarning: true,
       warning: `${unregisteredCustom.length} custom skills detected that are not in the registry — future upgrades won't validate them`,
-      // T254: see the per-skill branch below for why the scanner is no longer offered here.
-      fix: `Register each with: npx -p convoke-agents@${pv} convoke-register-skill --skill <name> --agent <bmm-agent> --type <the type this check reports>`,
+      // T254 R1: this branch prints no skill, agent or type, so "register each with --type <the
+      // type this check reports>" named a source that does not exist here and was less actionable
+      // than the single scanner command it replaced. The scanner's WRITE mode is the trap; its
+      // `--dry-run` is not — it lists the triples and leaves the CSV byte-identical. Conflating
+      // the two is what cost this branch its pointer.
+      fix:
+        `List them with: npx -p convoke-agents@${pv} convoke-audit-bmm-deps --dry-run\n`
+        + '  (that only prints; it does not write the registry)\n'
+        + `\nThen register each with: npx -p convoke-agents@${pv} convoke-register-skill`
+        + ' --skill <name> --agent <agent> --type <frontmatter|code-reference>',
     });
   } else {
     unregisteredCustom.forEach(r => {
@@ -919,12 +960,15 @@ function checkBmmDependencies(projectRoot) {
         // `--type` carries the DETECTED type, so the command cannot produce the
         // mismatch that leaves a second, unreconcilable row (a `--type` differing
         // from the scanned one creates no duplicate, no claim and no warning).
-        fix:
-          'Register it with:\n'
-          + `  npx -p convoke-agents@${pv} convoke-register-skill --skill ${r.skill_name}`
-          + ` --agent ${r.bmm_agent} --type ${r.dependency_type}\n`
-          + '\nThat writes the row and validates it. Editing '
-          + '_bmad/_config/bmm-dependencies.csv by hand also works, and is not validated.',
+        fix: isRegistrableSkillName(r.skill_name)
+          ? 'Register it with:\n'
+            + `  npx -p convoke-agents@${pv} convoke-register-skill --skill ${shellQuote(r.skill_name)}`
+            + ` --agent ${shellQuote(r.bmm_agent)} --type ${shellQuote(r.dependency_type)}`
+          : `Rename the directory .claude/skills/${r.skill_name} first — a name beginning with `
+            + '`=`, `+`, `-`, `@`, a tab or a carriage return is rewritten when the registry is '
+            + 'written, and one containing a path separator, `..`, a leading `.` or a NUL is '
+            + 'refused outright. Registering it reports success and leaves this finding standing. '
+            + 'Then re-run convoke-doctor.',
       });
     });
   }

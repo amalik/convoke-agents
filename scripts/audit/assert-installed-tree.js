@@ -235,7 +235,11 @@ function tree(projectRoot, packageRoot) {
     fail(`${u.module} declares ${u.name} but .claude/skills/${u.name}/SKILL.md was not generated or is empty (${u.rule} @ ${u.site})`);
   }
   for (const e of missingRuntimeFiles(projectRoot)) {
-    fail(`${e.file} is read at runtime by ${e.readSite} but did not arrive in the project`);
+    // The same discriminator problem the wrapper-rule message above solves, and for the same
+    // reason: T254 de-lined one `readSite`, so a bare path no longer tells the operator WHERE in
+    // that file. The token restores it and, unlike `:NNN`, cannot rot.
+    const site = /:\d+$/.test(e.readSite) ? e.readSite : `${e.readSite} @ ${e.token}`;
+    fail(`${e.file} is read at runtime by ${site} but did not arrive in the project`);
   }
 
   // NO ZERO-UNIT ALARM HERE, deliberately — it was removed in Round 3 rather than repaired.

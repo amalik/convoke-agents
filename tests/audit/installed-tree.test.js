@@ -172,6 +172,52 @@ function write(file, body) {
 
 // ─── AC4: the manifest is real and its citations still resolve ───
 
+/**
+ * `readSite` may be lined (`path:NNN`) or anchored (`path` + a `token`). Extracted so the anchored
+ * branch is REACHABLE from a test: no shipped entry is anchored-without-a-token, so asserting only
+ * over `RUNTIME_DATA_FILES` left the failing branch unreachable and every mutation of it green.
+ */
+function checkReadSite(e) {
+  // `[^:]+`, not `.+?`: the first version was `/^scripts\/.+?(:\d+)?$/`, which is extensionally
+  // `/^scripts\/.+$/` — it accepted `:abc`, `:`, `:9:5`, `scripts//` and `scripts/..`, all of
+  // which the lined-only regex had rejected, and handed them to downstream assertions that then
+  // misdiagnosed them (or threw EISDIR for a directory).
+  assert.match(e.readSite, /^scripts\/[^:]+(:\d+)?$/, `${e.file} has no <path> or <path>:<line> read site`);
+  // `..` matches `[^:]+`, so the shape alone admits a traversal. Downstream it is caught only by
+  // the alarm throwing EISDIR out of `readFileSync` — an uncaught throw, not a diagnosis.
+  assert.ok(!e.readSite.includes('..'), `${e.file}: read site ${e.readSite} contains a traversal`);
+  if (/:\d+$/.test(e.readSite)) return;
+
+  assert.ok(e.token, `${e.file}: readSite is anchored but has no token to resolve it from`);
+  // WHAT THIS ALARM PROMISES, narrowed. Two rules have stood here and both over-promised.
+  // `token.length > 20` was a proxy for discrimination, and a bad one: it rejected
+  // `BMM_DEPS_CSV_REL`, a 16-character token this manifest uses successfully, while admitting a
+  // unique 50-character token that resolved to a read of a DIFFERENT file. Its replacement —
+  // the token must contain `path.basename(e.file)` — closed that hole and made the manifest's
+  // flagship entry INEXPRESSIBLE: `bmm-dependencies.csv` is read through a constant, which is
+  // the single fact that entry exists to record, so its token can never spell the basename. The
+  // replacement's own comment predicted this and called for an exemption field; one commit later
+  // the entry needed de-lining and the field would have been the fourth hop in a chain the
+  // guard still could not follow (`:34` defines `OUTPUT_CSV_REL`, the doctor renames it on
+  // import, the read uses the alias).
+  //
+  // So the claim is narrowed to what the data can carry. This is a ROT alarm: it fires when the
+  // code that reads a listed file MOVES. Discrimination is enforced where the files are actually
+  // read — `anchorLine` returns 0 for a token occurring twice, and the alarm below treats an
+  // unresolved anchor as a failure (negative control: 'an ambiguous anchor must be rejected').
+  // MIS-CURATION — a token that resolves fine but describes another file's read — is NOT covered,
+  // and the manifest's preamble says so rather than this pretending otherwise.
+  //
+  // The one floor kept, because it costs nothing and matches the real historical mistake: if the
+  // token spells a data-file name at all, it must be THIS entry's. Vacuous for an indirect token,
+  // which is the point — it never blocks the indirection it cannot inspect.
+  const named = e.token.match(/[\w.-]+\.(?:csv|ya?ml|json)\b/);
+  if (named) {
+    assert.equal(named[0], path.basename(e.file),
+      `${e.file}: anchored token names ${JSON.stringify(named[0])}, a different data file`);
+  }
+}
+
 describe('RUNTIME_DATA_FILES — the curated manifest', () => {
   it('is non-empty (an empty list is a check that cannot fail)', () => {
     assert.ok(RUNTIME_DATA_FILES.length > 0);
@@ -184,16 +230,7 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
   it('gives every entry a file, a read site and a reason', () => {
     for (const e of RUNTIME_DATA_FILES) {
       assert.match(e.file, /^_bmad\//, `${e.file} is not a project-relative _bmad path`);
-      // `readSite` now accepts EITHER shape, exactly as `alsoRead` below already does and for the
-      // reason stated there: the conversion from line numbers to anchors is meant to proceed one
-      // site at a time (T230), and a guard mandating `:NNN` forbids the next step. An anchored
-      // readSite needs a token to resolve from, and per the `arrivesViaToken` precedent it must be
-      // a snippet rather than a bare symbol — a bare symbol is the shape that was ambiguous.
-      assert.match(e.readSite, /^scripts\/.+?(:\d+)?$/, `${e.file} has no read site`);
-      if (!/:\d+$/.test(e.readSite)) {
-        assert.ok(e.token && e.token.length > 20,
-          `${e.file}: readSite is anchored but has no discriminating token to resolve it from`);
-      }
+      checkReadSite(e);
       // T230: `arrivesVia` is ANCHORED — bare path, line resolved from `arrivesViaToken`. A number
       // here means the conversion was reverted.
       for (const s of e.alsoRead || []) {
@@ -215,6 +252,44 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
       }
       assert.ok(e.why && e.why.length > 20, `${e.file} has no stated reason`);
     }
+  });
+
+  it('the readSite shape rules and the wrong-file floor can actually fail', () => {
+    // Synthetic entries, because the shipped manifest is all-valid by construction — the reason
+    // every mutation of the previous inline version landed green.
+    const ok = (e) => assert.doesNotThrow(() => checkReadSite(e));
+    // Each case must fail for its STATED reason. `assert.throws(fn, undefined)` accepts any error:
+    // with it, deleting the `e.token` assertion still "passed", because the next line threw a
+    // TypeError off `undefined.includes` and that satisfied the control.
+    const bad = (e, pattern) => assert.throws(
+      () => checkReadSite(e),
+      (err) => err instanceof assert.AssertionError && pattern.test(err.message),
+      `expected an AssertionError matching ${pattern} for ${JSON.stringify(e.readSite)}`
+    );
+
+    ok({ file: '_bmad/x/taxonomy.yaml', readSite: 'scripts/a.js:12' });
+    ok({ file: '_bmad/x/taxonomy.yaml', readSite: 'scripts/a.js', token: "join('taxonomy.yaml')" });
+
+    bad({ file: '_f', readSite: 'scripts/a.js:abc' }, /read site/);
+    bad({ file: '_f', readSite: 'scripts/a.js:' }, /read site/);
+    bad({ file: '_f', readSite: 'scripts/a.js:9:5' }, /read site/);
+    bad({ file: '_f', readSite: 'scripts/..' }, /contains a traversal/);
+    bad({ file: '_f', readSite: 'tests/a.js:1' }, /read site/);
+    bad({ file: '_bmad/x/taxonomy.yaml', readSite: 'scripts/a.js' }, /no token to resolve it from/);
+    // The floor: a token that spells another data file's name. This is the real mistake it
+    // guards — a curator pasting the read of a neighbouring manifest — not the invented
+    // directory-path case the deleted relevance rule was controlled with, which that rule
+    // rejected only because it failed to mention a basename at all.
+    bad({ file: '_bmad/x/taxonomy.yaml', readSite: 'scripts/a.js',
+      token: "path.join(projectRoot, '_bmad/_config/skill-manifest.csv')" },
+    /names "skill-manifest\.csv", a different data file/);
+    // And the indirection the deleted rule made inexpressible: no basename anywhere, admitted.
+    ok({ file: '_bmad/_config/bmm-dependencies.csv', readSite: 'scripts/a.js',
+      token: 'path.join(projectRoot, BMM_DEPS_CSV_REL)' });
+    // A directory path is NOT rejected: the floor only speaks about data-file names, and saying
+    // so here keeps the next reader from mistaking silence for coverage.
+    ok({ file: '_bmad/x/taxonomy.yaml', readSite: 'scripts/a.js',
+      token: "const bmeDir = path.join(projectRoot, '_bmad/bme');" });
   });
 
   // THE ROT ALARM. Curation is weaker than derivation and this is the compensating
@@ -362,7 +437,16 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
     // guard in this file exercised an ANCHORED site. This is that control.
     const REL = 'scripts/update/lib/refresh-installation.js';
     const bmm = RUNTIME_DATA_FILES.find((e) => e.file.endsWith('bmm-dependencies.csv'));
-    assert.equal(citationHolds(bmm.readSite, bmm.token, 'reads'), true, 'the real line-cited citation must hold');
+    // `bmm.readSite` was the lined citation this control was built on and it is now ANCHORED, so
+    // taking it as the positive case would have silently retargeted the control at the other
+    // branch while the title went on claiming this one. The lined positive case is derived and
+    // its SHAPE asserted, so de-lining the last lined citation fails here instead of hollowing
+    // this test out. (The content check itself is still isolated below, which is why both
+    // mutants — dropping `includes` and returning `true` — die on this test either way.)
+    const lined = bmm.alsoRead[0];
+    assert.match(lined, /:\d+$/, 'fixture: this control needs a LINE-CITED citation to be positive about');
+    assert.equal(citationHolds(lined, bmm.alsoReadToken, 'reads'), true, 'the real line-cited citation must hold');
+    assert.equal(citationHolds(bmm.readSite, bmm.token, 'reads'), true, 'and the anchored one, for contrast');
     // The wrong line must ITSELF be admissible, or the rule rejects it on admissibility and this
     // control proves nothing about `includes`. This was pinned to a line NUMBER and rotted when an
     // unrelated commit added lines above it; the first repair derived it with `/path\.join\(/`,
@@ -971,6 +1055,24 @@ describe('assert-installed-tree CLI', () => {
     const r = runCli(['tree', root, pkgRoot]);
     assert.equal(r.code, 1);
     assert.ok(r.stdout.includes(`FAILED: ${victim.file} is read at runtime by ${victim.readSite}`));
+  });
+
+  // `RUNTIME_DATA_FILES[0]` is LINE-CITED, so the test above never reaches the branch that appends
+  // the token — reverting that branch to a bare `e.readSite` left it green. An anchored entry's
+  // bare path names a 1000-line file and nothing else, which is exactly what T254 traded the
+  // rotting line number for, so the token has to reach the operator.
+  it('names the TOKEN too when the read site is anchored, not just the file it sits in', () => {
+    const { root, pkgRoot } = installedFixture();
+    write(path.join(root, '_bmad', 'bme', '_portability', 'config.yaml'), 'version: 4.0.1\n');
+    const victim = RUNTIME_DATA_FILES.find((e) => !/:\d+$/.test(e.readSite));
+    assert.ok(victim, 'fixture: this test needs an ANCHORED readSite to say anything');
+    fs.rmSync(path.join(root, victim.file), { force: true });
+    const r = runCli(['tree', root, pkgRoot]);
+    assert.equal(r.code, 1);
+    assert.ok(
+      r.stdout.includes(`FAILED: ${victim.file} is read at runtime by ${victim.readSite} @ ${victim.token}`),
+      `the anchored site must carry its token — got: ${r.stdout.split('\n').filter((l) => l.includes(victim.file)).join(' / ')}`
+    );
   });
 
   // The other direction. A check only shown failing might be failing for a reason that
