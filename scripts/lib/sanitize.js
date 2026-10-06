@@ -236,8 +236,87 @@ function escapeMarkdownCodeSpanCell(s) {
     .replace(/[\r\n]+/g, ' ');
 }
 
+/**
+ * Code points that can REDRAW a terminal line or REORDER what the reader sees, as opposed to
+ * merely looking odd. Three rounds of review converged on this set the hard way, one class at a
+ * time, so each range records what defeated the previous version:
+ *
+ *   - `< 0x20` (C0) and `0x7f`: a raw `\n` in a `.claude/skills/` directory name made
+ *     `convoke-doctor` print a complete, correctly formatted `✓ … registry consistent` line that
+ *     no check produced; a `\r` returned the cursor to column 0 and overwrote the `⚠` prefix.
+ *   - `0x80-0x9f` (C1): the 8-bit forms. `0x9b` is CSI — the single byte equivalent of `ESC [`,
+ *     so escaping `0x1b` alone does not close the colour-control route — and `0x85` is NEL, a
+ *     line break to any reader that honours it.
+ *   - `0x2028`/`0x2029`: LINE and PARAGRAPH SEPARATOR. These are NOT control characters, so a
+ *     C0/C1 test admits them, and they still split a line for every line-aware consumer that is
+ *     not `String.split('\n')` — Python's `str.splitlines()`, JS `/^/m`, Ruby, Java. Measured:
+ *     a directory named with U+2028 forged a passing finding line that four separate assertions
+ *     over `\n` and the C0/C1 range all reported clean.
+ *   - `0x202a-0x202e`, `0x2066-0x2069`: bidi embeddings, overrides and isolates. These reorder
+ *     the rest of the line in any conformant renderer (UAX #9), so the name an operator READS —
+ *     and the command they believe they are pasting — is not the byte string on the clipboard.
+ *
+ * Deliberately NOT included: zero-width and invisible characters (U+200B, U+FEFF), and confusable
+ * glyphs. Those make two names look alike, which is a real hazard, but they cannot forge a line
+ * or reverse one, and excluding a character merely because it is invisible would reject
+ * legitimate names in scripts that need joiners.
+ */
+function isDangerousCodePoint(cp) {
+  return cp < 0x20
+    || cp === 0x7f
+    || (cp >= 0x80 && cp <= 0x9f)
+    || cp === 0x2028 || cp === 0x2029
+    || (cp >= 0x202a && cp <= 0x202e)
+    || (cp >= 0x2066 && cp <= 0x2069);
+}
+
+/**
+ * True when `value` holds any code point {@link escapeDangerousCodePoints} would rewrite.
+ *
+ * Coerces, like the other render-side helpers: a caller asking "is this safe to print" wants an
+ * answer for `null`, not a throw.
+ *
+ * @param {*} value - Any value.
+ * @returns {boolean}
+ */
+function hasDangerousCodePoint(value) {
+  for (const ch of String(value)) {
+    if (isDangerousCodePoint(ch.codePointAt(0))) return true;
+  }
+  return false;
+}
+
+/**
+ * Render an untrusted value so it cannot draw: every dangerous code point becomes a VISIBLE
+ * escape.
+ *
+ * Escaped rather than deleted, because deletion makes two different names render identically —
+ * and the operator is being asked to act on the name, so they have to be able to tell them apart.
+ *
+ * @param {*} value - Any value; `null`/`undefined` become the string `''`/`'undefined'` via
+ *   `String()`, matching the other render helpers' coercion.
+ * @returns {string} `value` with every dangerous code point replaced by `\n`, `\r`, `\t` or
+ *   `\xNN`/`\uNNNN`.
+ */
+function escapeDangerousCodePoints(value) {
+  let out = '';
+  for (const ch of String(value)) {
+    const cp = ch.codePointAt(0);
+    if (!isDangerousCodePoint(cp)) { out += ch; continue; }
+    if (cp === 0x0a) out += '\\n';
+    else if (cp === 0x0d) out += '\\r';
+    else if (cp === 0x09) out += '\\t';
+    else if (cp <= 0xff) out += `\\x${cp.toString(16).padStart(2, '0')}`;
+    else out += `\\u${cp.toString(16).padStart(4, '0')}`;
+  }
+  return out;
+}
+
 module.exports = {
   stripHtmlComments,
+  isDangerousCodePoint,
+  hasDangerousCodePoint,
+  escapeDangerousCodePoints,
   escapeRegExp,
   escapeReplacement,
   escapeMarkdownTableCell,

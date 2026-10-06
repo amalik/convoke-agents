@@ -87,8 +87,13 @@ const RUNTIME_DATA_FILES = [
     // An `alsoRead` entry is a bare `path:NNN` string, or `{site, token}` when it has been
     // de-lined. The object form exists because the entry-wide `alsoReadToken` could not
     // express ONE de-lined site among several — so the only way to repair a rotted number
-    // here was to write a new number. The doctor's site is de-lined; `export-engine.js`
-    // keeps its number until someone has a reason to touch it.
+    // here was to write a new number. The doctor's site is de-lined. `export-engine.js:98`
+    // keeps its number because it CANNOT be de-lined with the natural token: the line text
+    // `const manifestPath = path.join(projectRoot, '_bmad', '_config', 'skill-manifest.csv');`
+    // occurs three times in that file, so `anchorLine` reports it ambiguous. That is a blocker,
+    // not a preference — an earlier draft of this comment said "until someone has a reason to
+    // touch it", which reads as a choice. Converting it needs a longer, multi-line anchor.
+    // Re-derive: grep -cF "const manifestPath = path.join(projectRoot, '_bmad', '_config', 'skill-manifest.csv');" scripts/portability/export-engine.js
     alsoRead: [
       'scripts/portability/export-engine.js:98',
       { site: 'scripts/convoke-doctor.js',

@@ -1059,3 +1059,89 @@ describe('convoke-register-skill CLI (Story v63-2-4)', () => {
   });
 
 });
+
+// ─── R3: the predicate convoke-doctor asks before advising this command ───
+//
+// Nothing referenced `registrableByCli` or `isSimpleSkillDirName` by name anywhere in the suite,
+// so two of their clauses could be deleted with every test green. The leading-dot clause had no
+// test at all: the only traversal fixture uses `'../../etc'`, which the `..` clause kills first.
+describe('registrableByCli — what this CLI can actually carry', () => {
+  const { registrableByCli, _internal: { isSimpleSkillDirName } } = require('../../scripts/convoke-register-skill');
+
+  it('rejects a name the PARSER would change, which is the clause the doctor was missing', () => {
+    // `parseArgs`' `assign()` trims. A trailing space made `--skill 'my-skill '` register the
+    // operator's own `my-skill` and report success.
+    for (const n of ['trailing ', ' leading', '\ttab', 'nl\n', ' ', '\u000bvtab', '\ff']) {
+      assert.equal(registrableByCli(n), false, `${JSON.stringify(n)} is changed by the parser`);
+    }
+  });
+
+  it('rejects a name the CSV WRITER would rewrite', () => {
+    for (const n of ['=eq', '+plus', '-dash', '@at']) {
+      assert.equal(registrableByCli(n), false, `${JSON.stringify(n)} is formula-sanitized on write`);
+    }
+  });
+
+  it('rejects every shape the VALIDATOR refuses, including the leading dot', () => {
+    // Each clause of `isSimpleSkillDirName`, separately, so deleting one is caught. `..` and a
+    // leading `.` are different clauses and the suite only ever exercised `..`.
+    assert.equal(isSimpleSkillDirName('.hidden'), false, 'a leading dot is refused by validateInput');
+    assert.equal(isSimpleSkillDirName('.'), false);
+    assert.equal(isSimpleSkillDirName('a..b'), false, 'an embedded `..` is refused');
+    assert.equal(isSimpleSkillDirName('a/b'), false, 'a forward slash is refused');
+    assert.equal(isSimpleSkillDirName('a\\b'), false, 'a backslash is refused');
+    assert.equal(isSimpleSkillDirName('a\u0000b'), false, 'a NUL is refused');
+    assert.equal(isSimpleSkillDirName('ordinary-skill'), true);
+    // ...and `registrableByCli` must inherit all of them rather than re-deriving a subset.
+    for (const n of ['.hidden', 'a..b', 'a/b', 'a\\b', 'a\u0000b']) {
+      assert.equal(registrableByCli(n), false, `${JSON.stringify(n)} must not be advised as a command`);
+    }
+  });
+
+  it('rejects a name that can redraw or reorder the printed command', () => {
+    // The shared `sanitize` authority. U+2028 is the one that defeated a local C0/C1 copy.
+    for (const n of ['a\nb', 'a\u001bb', 'a\u009bb', 'a\u2028b', 'a\u2029b', 'a\u202eb']) {
+      assert.equal(registrableByCli(n), false, `${JSON.stringify(n)} can draw in the advice`);
+    }
+  });
+
+  it('accepts the hostile-but-quotable names, so the gate is not a blanket refusal', () => {
+    for (const n of ['plain-ok-skill', 'evil$(touch PWNED)skill', "quote'skill", 'bang!skill',
+      'q"dq-skill', 'semi;skill', 'pipe|skill', 'star*skill', 'my skill', 'café-skill']) {
+      assert.equal(registrableByCli(n), true, `${JSON.stringify(n)} is quotable and must be advised`);
+    }
+  });
+});
+
+describe('--skill must be the directory\'s own name (R3)', () => {
+  // APFS is case- and normalisation-insensitive, so `existsSync` resolved a name that is not the
+  // directory's. `buildRow` then persisted what was PASSED: the run printed `✓ Registered` and the
+  // machine-readable `REGISTERED:` marker while the doctor's finding for the real name stayed
+  // forever, with no `[missing-target]` either, because existence succeeded for both forms.
+  it('refuses a name differing from the directory only in letter case', async () => {
+    const tmpDir = await createTempDir();
+    try {
+      await seedFixture(tmpDir, { skillNames: ['My-Skill'] });
+      const r = await runScript(SCRIPT_PATH, ['--skill', 'my-skill', '--agent', 'bmad-agent-pm',
+        '--type', 'frontmatter', '--email', 'op@example.com'], { cwd: tmpDir });
+      // `exitCode`, not `code`: `runScript` resolves `{exitCode, stdout, stderr, …}`. The first
+      // draft read `r.code`, so `assert.notEqual(undefined, 0)` passed without the CLI having
+      // refused anything — a vacuous control that the sibling test's `equal(r.code, 0)` exposed.
+      assert.equal(r.exitCode, 1, `expected a refusal; got ${r.exitCode}: ${r.stdout}${r.stderr}`);
+      assert.match(`${r.stdout}${r.stderr}`, /is not the directory's name — the directory is 'My-Skill'/);
+      assert.doesNotMatch(`${r.stdout}${r.stderr}`, /REGISTERED:/,
+        'a success marker for a row that can never match the skill is the defect');
+    } finally { await fs.remove(tmpDir); }
+  });
+
+  it('accepts the name exactly as the directory spells it', async () => {
+    const tmpDir = await createTempDir();
+    try {
+      await seedFixture(tmpDir, { skillNames: ['My-Skill'] });
+      const r = await runScript(SCRIPT_PATH, ['--skill', 'My-Skill', '--agent', 'bmad-agent-pm',
+        '--type', 'frontmatter', '--email', 'op@example.com'], { cwd: tmpDir });
+      assert.equal(r.exitCode, 0, `${r.stdout}${r.stderr}`);
+      assert.match(r.stdout, /REGISTERED: My-Skill\|\|bmad-agent-pm\|\|frontmatter/);
+    } finally { await fs.remove(tmpDir); }
+  });
+});

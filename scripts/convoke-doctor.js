@@ -12,6 +12,14 @@ const { parseExcludedAgents } = require('./update/lib/config-merger');
 // from the PARSER, which trims — so `my-skill ` was advised as a command, trimmed to the
 // operator's own `my-skill`, and registered a dependency the scan never found, exit 0.
 const { registrableByCli } = require('./convoke-register-skill');
+// One authority for what can redraw a terminal line, shared with `registrableByCli` so the
+// renderer and the gate cannot disagree. A local copy here covered C0/C1 only, and U+2028
+// walked past it into the command branch and forged a passing line in this very output.
+const {
+  isDangerousCodePoint,
+  hasDangerousCodePoint: hasControlChar,
+  escapeDangerousCodePoints: displaySafe,
+} = require('./lib/sanitize');
 const {
   scanBmmDependencies,
   readExistingCsv,
@@ -308,6 +316,39 @@ function checkModuleWorkflows(mod) {
   }
 
   return { name: label, passed: true, info: `${workflowNames.length} workflows present` };
+}
+
+/**
+ * The rename instruction for one skill name: the pasteable form, the glob form, or neither.
+ *
+ * Three cases, because two of them were wrong when they were one. R3 measured both:
+ *   - A name with no dangerous code point can be quoted and pasted verbatim.
+ *   - A name with one cannot, so the SOURCE becomes a glob built from the printable prefix. The
+ *     previous version printed the ESCAPED name as the source, which is a path that does not
+ *     exist, so the command could not work at all.
+ *   - A name whose FIRST character is dangerous has an empty printable prefix, and the glob then
+ *     degenerates to `.claude/skills/*` — matching every skill in the project, with an `mv` after
+ *     it. That is the one shape where advice is worse than none, so no command is offered.
+ *
+ * Every line is terminated, so the caller concatenates without knowing which case it got.
+ */
+function renameLines(skillName) {
+  if (!hasControlChar(skillName)) {
+    return `    test ! -e .claude/skills/<new-name> && mv -- ${displaySafe(shellQuote(`.claude/skills/${skillName}`))} .claude/skills/<new-name>\n`;
+  }
+  const prefix = printablePrefix(skillName);
+  if (prefix.length === 0) {
+    return '  That name BEGINS with a character that cannot be pasted, so no glob can single it\n'
+      + '  out and no command is given here — a glob would match every skill in the project.\n'
+      + '  List the directory with the escapes visible, then rename it from a file manager:\n'
+      + '    ls .claude/skills/ | cat -v\n';
+  }
+  const glob = shellQuote(`.claude/skills/${prefix}`);
+  return '  That name contains a character that cannot be pasted, shown above as an escape, so\n'
+    + '  match the directory with a glob. Check it resolves to exactly one entry FIRST:\n'
+    + `    ls -d ${glob}*\n`
+    + '  then, only if it does:\n'
+    + `    test ! -e .claude/skills/<new-name> && mv -- ${glob}* .claude/skills/<new-name>\n`;
 }
 
 /**
@@ -758,39 +799,20 @@ function _scanWithSuppressedStderr(projectRoot) {
  * So control characters are replaced with a visible escape rather than passed through. The value
  * stays recognisable (and greppable) while losing the ability to draw.
  */
-/** True when a value holds a character `displaySafe` would have to escape. */
-function hasControlChar(value) {
-  for (const ch of String(value)) {
-    const cp = ch.codePointAt(0);
-    if (cp < 0x20 || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f)) return true;
-  }
-  return false;
-}
-
-/** The leading run of printable characters, for building a glob the operator can verify. */
+/**
+ * The leading run of characters that can safely be printed and pasted, for building a glob the
+ * operator can verify. Stops at the first dangerous code point, since everything from there on
+ * is rendered as an escape and would not match on disk.
+ */
 function printablePrefix(value) {
   let out = '';
   for (const ch of String(value)) {
-    const cp = ch.codePointAt(0);
-    if (cp < 0x20 || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f)) break;
+    if (isDangerousCodePoint(ch.codePointAt(0))) break;
     out += ch;
-  }
-  return `.claude/skills/${out}`;
-}
-
-function displaySafe(value) {
-  let out = '';
-  for (const ch of String(value)) {
-    const cp = ch.codePointAt(0);
-    if (cp < 0x20 || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f)) {
-      out += cp === 0x0a ? '\\n' : cp === 0x0d ? '\\r' : cp === 0x09 ? '\\t'
-        : `\\x${cp.toString(16).padStart(2, '0')}`;
-    } else {
-      out += ch;
-    }
   }
   return out;
 }
+
 
 /**
  * POSIX single-quoting for a value interpolated into a command an operator will paste.
@@ -959,6 +981,7 @@ function checkBmmDependencies(projectRoot) {
   }
 
   // Category 2: unregistered-custom-skill (FR17).
+  const unadvisable = unregisteredCustom.filter(r => !registrableByCli(r.skill_name));
   if (unregisteredCustom.length >= BMM_DRIFT_SUMMARY_THRESHOLD) {
     results.push({
       name: `BMM dependencies: unregistered-custom-skill (${unregisteredCustom.length} findings)`,
@@ -970,11 +993,28 @@ function checkBmmDependencies(projectRoot) {
       // than the single scanner command it replaced. The scanner's WRITE mode is the trap; its
       // `--dry-run` is not — it lists the triples and leaves the CSV byte-identical. Conflating
       // the two is what cost this branch its pointer.
+      // R3 HIGH: this branch had NO `registrableByCli` gate, so it was the live route to the exact
+      // trap the per-skill branch below refuses. Measured with ten unregistered skills, one named
+      // `-dash-skill`: following this advice verbatim printed `✓ Registered`, wrote `'-dash-skill`,
+      // left this finding standing and ADDED a `[missing-target]`. A second run appends a second
+      // identical row, and the `[missing-target]` advice then writes an `auto-scan` duplicate —
+      // after which no shipped command can clear the state. So the count of unadvisable names is
+      // computed here and called out; it is the one fact this branch can give that `--dry-run`
+      // cannot, since `--dry-run` lists names without saying which of them the command can carry.
       fix:
         `List them with: npx -p convoke-agents@${pv} convoke-audit-bmm-deps --dry-run\n`
         + '  (that only prints; it does not write the registry)\n'
         + `\nThen register each with: npx -p convoke-agents@${pv} convoke-register-skill`
-        + ' --skill <name> --agent <agent> --type <frontmatter|code-reference>',
+        + ' --skill <name> --agent <agent> --type <frontmatter|code-reference>'
+        + (unadvisable.length > 0
+          ? `\n\n${unadvisable.length} of these ${unregisteredCustom.length} cannot be passed to`
+            + ' convoke-register-skill at all: a name with leading or trailing whitespace, a\n'
+            + '  leading `=`, `+`, `-`, `@` or `.`, a path separator, `..`, or a character that\n'
+            + '  can redraw a terminal line. For those, registering reports success and leaves\n'
+            + '  this finding standing. Rename the directories first — re-run convoke-doctor\n'
+            + '  once they are below the summary threshold and it will name each one and give\n'
+            + '  the exact rename command.'
+          : ''),
     });
   } else {
     unregisteredCustom.forEach(r => {
@@ -1010,23 +1050,26 @@ function checkBmmDependencies(projectRoot) {
           // The name is quoted on the first line too: the class that lands here includes
           // leading and trailing whitespace, which is invisible unquoted.
           : `This name cannot be passed to convoke-register-skill: '${displaySafe(r.skill_name)}'\n`
-            + '  Rename the directory, then re-run convoke-doctor:\n'
-            // `displaySafe` INSIDE the quoting, not outside it: `shellQuote` makes a value inert
-            // to the SHELL, which is a different property from being safe to PRINT. T254 R2's own
-            // new test caught this — the mv line still carried a raw ESC and CR to the terminal.
-            // A name holding a control character cannot be pasted at all, so that case gets an
-            // extra line rather than a command that silently misbehaves.
-            + `    mv -- ${displaySafe(shellQuote(`.claude/skills/${r.skill_name}`))} .claude/skills/<new-name>\n`
-            + (hasControlChar(r.skill_name)
-              ? `  That name contains a control character, shown above as an escape, so the command\n`
-                + `  cannot be pasted as-is. Match the directory with a glob and check it first:\n`
-                + `    ls -d ${shellQuote(printablePrefix(r.skill_name))}*\n`
-              : '')
-            + '  <new-name> must not start with `bmad-`, `convoke-`, `wds-`, `q-` or `q<digit>-`:\n'
-            + '  those are the prefixes `_inferSourceModule` reads as first-party, which moves the\n'
-            + '  skill to a check whose own advice does not apply to a third-party skill. It must\n'
-            + '  also not start with `=`, `+`, `-`, `@` or `.`, and must not contain a path\n'
-            + '  separator, `..`, a control character, or leading/trailing whitespace.',
+            + '  Rename the directory, then re-run convoke-doctor.\n'
+            // GUARDED, not a bare `mv`. R3 HIGH: `mv -- src existing-dir` NESTS instead of
+            // renaming, exit 0, nothing warns — and `_grepStepFilesForAgents` then reads the
+            // nested SKILL.md, so every dependency claim of the third-party skill, including a
+            // prose-only mention, TRANSFERS to the operator's own skill, which this check then
+            // advises them to register under their own name. Measured. `test ! -e` makes the
+            // whole line a no-op when the target exists; `mv -n` does not help, since moving INTO
+            // a directory is not an overwrite. The `--` is kept because the operator edits this
+            // line, and an edited source argument can begin with `-`.
+            //
+            // `displaySafe` goes INSIDE the quoting: `shellQuote` makes a value inert to the
+            // SHELL, which is a different property from being safe to PRINT.
+            + renameLines(r.skill_name)
+            + '  <new-name> must not already exist: moving into an existing directory nests the\n'
+            + '  skill inside it and transfers its dependency claims to yours. It must not start\n'
+            + '  with `bmad-`, `convoke-`, `wds-`, `q-` or `q<digit>-` — the prefixes\n'
+            + '  `_inferSourceModule` reads as first-party, which moves the skill to a check whose\n'
+            + '  own advice does not apply to a third-party skill. It must not start with `=`,\n'
+            + '  `+`, `-`, `@` or `.`, and must not contain a path separator, `..`, leading or\n'
+            + '  trailing whitespace, or a character that can redraw a terminal line.',
       });
     });
   }

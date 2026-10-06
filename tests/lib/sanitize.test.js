@@ -9,7 +9,10 @@ const {
   escapeReplacement,
   escapeMarkdownTableCell,
   escapeMarkdownCodeSpanCell,
-  MAX_PASSES
+  MAX_PASSES,
+  isDangerousCodePoint,
+  hasDangerousCodePoint,
+  escapeDangerousCodePoints,
 } = require('../../scripts/lib/sanitize');
 
 describe('stripHtmlComments', () => {
@@ -306,5 +309,69 @@ describe('escapeMarkdownCodeSpanCell', () => {
   // deliberate behaviour change.
   it('passes a backtick through unescaped — T34 will change this', () => {
     assert.equal(escapeMarkdownCodeSpanCell('a`b'), 'a`b');
+  });
+});
+
+// ─── R3: the shared dangerous-code-point authority ───
+//
+// Pinned by LITERAL MEMBERSHIP, deliberately. Both consumers — the doctor's renderer and
+// `registrableByCli` — now call these, and a test that derived its expectations from the same
+// function would agree with any bug it grew: that is exactly how U+2028 survived a test whose own
+// predicate was a local C0/C1 copy. The code points below are the specification, written out.
+describe('dangerous code points — the set two consumers share', () => {
+  const MUST_REJECT = [
+    [0x00, 'NUL'], [0x07, 'BEL'], [0x09, 'TAB'], [0x0a, 'LF'], [0x0d, 'CR'], [0x1b, 'ESC'],
+    [0x1f, 'the last C0'], [0x7f, 'DEL'],
+    [0x80, 'the first C1'], [0x85, 'NEL — a line break to readers that honour it'],
+    [0x9b, 'CSI — the 8-bit form of ESC [, so escaping ESC alone is not enough'],
+    [0x9f, 'the last C1'],
+    [0x2028, 'LINE SEPARATOR — not a control character, and it forged a passing finding line'],
+    [0x2029, 'PARAGRAPH SEPARATOR'],
+    [0x202a, 'LRE'], [0x202e, 'RLO — reverses the rest of the line'],
+    [0x2066, 'LRI'], [0x2069, 'PDI'],
+  ];
+  // The boundaries on the safe side, so a range that widens by one is caught.
+  const MUST_ACCEPT = [
+    [0x20, 'space'], [0x21, '!'], [0x7e, '~'], [0xa0, 'NBSP — odd, but it cannot draw'],
+    [0x2027, 'just below LINE SEPARATOR'], [0x202f, 'just above the bidi embeddings'],
+    [0x2065, 'just below the isolates'], [0x206a, 'just above the isolates'],
+    [0x200b, 'ZWSP — invisible, but it cannot forge or reverse a line'],
+    [0xfeff, 'BOM'], [0x2713, '✓ itself — a printable glyph, not a control'],
+  ];
+
+  it('rejects every code point that can redraw or reorder a line', () => {
+    for (const [cp, why] of MUST_REJECT) {
+      assert.equal(isDangerousCodePoint(cp), true, `U+${cp.toString(16).padStart(4, '0')} (${why}) must be rejected`);
+      assert.equal(hasDangerousCodePoint(`a${String.fromCodePoint(cp)}b`), true,
+        `hasDangerousCodePoint missed U+${cp.toString(16).padStart(4, '0')} (${why})`);
+    }
+  });
+
+  it('accepts the boundaries on the safe side, so a widened range is caught', () => {
+    for (const [cp, why] of MUST_ACCEPT) {
+      assert.equal(isDangerousCodePoint(cp), false, `U+${cp.toString(16).padStart(4, '0')} (${why}) must be accepted`);
+      assert.equal(hasDangerousCodePoint(`a${String.fromCodePoint(cp)}b`), false,
+        `hasDangerousCodePoint over-rejected U+${cp.toString(16).padStart(4, '0')} (${why})`);
+    }
+  });
+
+  it('escapes visibly rather than deleting, so two different names never render alike', () => {
+    assert.equal(escapeDangerousCodePoints('a\nb'), 'a\\nb');
+    assert.equal(escapeDangerousCodePoints('a\rb'), 'a\\rb');
+    assert.equal(escapeDangerousCodePoints('a\tb'), 'a\\tb');
+    assert.equal(escapeDangerousCodePoints('a\u001bb'), 'a\\x1bb');
+    assert.equal(escapeDangerousCodePoints('a\u009bb'), 'a\\x9bb');
+    assert.equal(escapeDangerousCodePoints('a\u2028b'), 'a\\u2028b');
+    assert.equal(escapeDangerousCodePoints('a\u202eb'), 'a\\u202eb');
+    // Deletion would make these two render identically, and the operator has to act on the name.
+    assert.notEqual(escapeDangerousCodePoints('a\nb'), escapeDangerousCodePoints('ab'));
+    // The output of the escaper is itself safe — the fixed point matters, since it is printed.
+    assert.equal(hasDangerousCodePoint(escapeDangerousCodePoints('a\n\u2028\u202eb')), false);
+  });
+
+  it('coerces like the other render helpers rather than throwing', () => {
+    assert.equal(escapeDangerousCodePoints(null), 'null');
+    assert.equal(escapeDangerousCodePoints(undefined), 'undefined');
+    assert.equal(hasDangerousCodePoint(null), false);
   });
 });

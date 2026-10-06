@@ -372,16 +372,21 @@ describe('checkBmmDependencies — AC3/AC4 unregistered-custom-skill', () => {
   // print a complete, correctly formatted PASSING finding that no check produced, choose its own
   // colour with an ESC, or overwrite the `⚠` prefix with a CR. Measured against the real CLI.
   it('lets no control character from a skill name reach the rendered finding', async () => {
-    const hostile = 'legit\n  \u001b[32m✓ BMM dependencies: registry consistent\u001b[0m\r';
+    // The hostile set spans every class the shared authority covers, because each one defeated the
+    // version of this test that preceded it: `\n` and `\r` (C0), ESC (colour), U+0085 NEL and
+    // U+009b CSI (C1 — the 8-bit forms, so escaping ESC alone is not enough), U+2028 LINE
+    // SEPARATOR (not a control character at all, and it forged a passing line past four separate
+    // assertions), and U+202E RIGHT-TO-LEFT OVERRIDE (reorders the rest of the line).
+    const hostile = 'legit\n  \u001b[32m✓ BMM dependencies: registry consistent\u001b[0m\r'
+      + '\u0085\u009b\u2028  ✓ registry consistent\u202Edrowssap';
     tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-ctrl-'));
     await seedCustomSkill(tmpRoot, hostile, 'bmad-agent-pm');
     await seedCsv(tmpRoot, []);
     const f = checkBmmDependencies(tmpRoot).find(r => r.name.includes('[unregistered]'));
     assert.ok(f, 'fixture: expected a finding for the control-character name');
-    const hasControl = (s) => [...String(s)].some((ch) => {
-      const cp = ch.codePointAt(0);
-      return cp < 0x20 || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f);
-    });
+    // The SHARED authority, not a local copy. A local C0/C1 predicate here is what let U+2028
+    // through: the test agreed with the bug.
+    const { hasDangerousCodePoint: hasControl } = require('../../scripts/lib/sanitize');
     // `fix` legitimately contains newlines of its own, so the name's own escaping is asserted on
     // `name` (one line by contract) and the `fix` is checked for the ESC and CR specifically.
     assert.equal(hasControl(f.name), false, `the finding name still carries a control character: ${JSON.stringify(f.name)}`);
@@ -395,14 +400,150 @@ describe('checkBmmDependencies — AC3/AC4 unregistered-custom-skill', () => {
     // wrong about the code rather than about the name, and said so on the first run.
     assert.equal(hasControl(f.fix.split('\n').join('')), false,
       `the name still contributes a control character to the advice: ${JSON.stringify(f.fix)}`);
-    // The fabrication property, stated directly: the finding's own line count is fixed by the
-    // branch, so a name cannot add one. `name` is single-line (asserted above); `fix` has exactly
-    // the lines this branch writes.
-    assert.equal(f.fix.split('\n').length, 11,
-      `the advice gained or lost a line: ${JSON.stringify(f.fix.split('\n'))}`);
+    // The fabrication property, stated STRUCTURALLY rather than as a transcribed count. R3: the
+    // previous version pinned `length === 11`, which is one sub-branch's current line count — it
+    // rejected the addition of a correct advisory line (framing a fix as an attack, training the
+    // next author to bump the number) and it did not catch U+2028, where the count stays put
+    // while a line is forged for every reader that is not `split('\n')`. What matters is that no
+    // line of the advice LOOKS like a finding, under any of the splittings a consumer may use.
+    const lines = f.fix.split(/\r\n|\r|\n|\u2028|\u2029|\u0085/);
+    for (const l of lines) {
+      assert.doesNotMatch(l, /^\s*[✓✗⚠]/,
+        `a line of the advice begins like a finding, so a name can forge one: ${JSON.stringify(l)}`);
+    }
     // The escape must be visible, not silently dropped — a dropped newline would make two
     // different directory names render identically.
     assert.match(f.name, /legit\\n/, 'the control character must be shown as an escape, not deleted');
+  });
+
+  // R3: the control-character test above covers Category 2 only, and removing `displaySafe` from
+  // the other four categories survived the whole suite. Those read their fields from the CSV, not
+  // from a directory name, and `readExistingCsv` preserves CRLF inside a quoted field per
+  // RFC 4180 — so a control character is reachable there by a different route entirely.
+  it('escapes a control character that arrives from the REGISTRY, not from a directory name', async () => {
+    const { hasDangerousCodePoint } = require('../../scripts/lib/sanitize');
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-csvctrl-'));
+    await buildTmpProject([]).then(() => {});
+    await fs.ensureDir(path.join(tmpRoot, '.claude', 'skills'));
+    // A quoted field holding a newline: valid RFC 4180, preserved by the reader, and the skill
+    // directory is absent so this lands in `[missing-target]` / `[stale:skill-gone]`.
+    const csvPath = path.join(tmpRoot, '_bmad', '_config', 'bmm-dependencies.csv');
+    await fs.ensureDir(path.dirname(csvPath));
+    await fs.writeFile(csvPath,
+      `${CSV_HEADER}\n"gone\n  ✓ BMM dependencies: registry consistent",bmad-agent-pm,frontmatter,bmm,auto-scan,2026-01-01\n`,
+      'utf8');
+    const findings = checkBmmDependencies(tmpRoot).filter(r => !r.passed);
+    assert.ok(findings.length > 0, `fixture: expected a finding; got ${JSON.stringify(findings)}`);
+    for (const f of findings) {
+      assert.equal(hasDangerousCodePoint(f.name), false,
+        `a registry field put a control character in a finding name: ${JSON.stringify(f.name)}`);
+      assert.equal(hasDangerousCodePoint(String(f.warning ?? '')), false,
+        `...or in its warning: ${JSON.stringify(f.warning)}`);
+    }
+  });
+
+  // ── R3: the two HIGHs, and the clauses nothing bound ──
+
+  // R3 HIGH: the per-skill branch refuses an unadvisable name; the SUMMARY branch did not, so it
+  // was the live route to the same trap. Measured: ten unregistered skills, one `-dash-skill`,
+  // following this branch's advice verbatim printed `✓ Registered`, wrote `'-dash-skill`, left the
+  // finding standing and added a `[missing-target]` — after which no shipped command clears it.
+  it('warns in the SUMMARY branch when some names cannot be passed to the command', async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-sumgate-'));
+    for (let i = 0; i < BMM_DRIFT_SUMMARY_THRESHOLD - 1; i += 1) {
+      await seedCustomSkill(tmpRoot, `plain-skill-${i}`, 'bmad-agent-pm');
+    }
+    await seedCustomSkill(tmpRoot, '-dash-skill', 'bmad-agent-pm');
+    await seedCsv(tmpRoot, []);
+    const summary = checkBmmDependencies(tmpRoot).find(r => r.name.includes('unregistered-custom-skill ('));
+    assert.ok(summary, 'fixture: expected the summary branch to fire');
+    assert.match(summary.fix, /1 of these \d+ cannot be passed to convoke-register-skill/,
+      'the summary must say how many of the batch the command cannot carry');
+    assert.match(summary.fix, /registering reports success and leaves\n?\s*this finding standing/,
+      'and what happens if the operator tries anyway');
+  });
+
+  // ...and it must stay quiet when every name IS advisable, or the warning is noise that trains
+  // the operator to ignore it.
+  it('says nothing about unadvisable names in the SUMMARY branch when every name is advisable', async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-sumclean-'));
+    for (let i = 0; i < BMM_DRIFT_SUMMARY_THRESHOLD; i += 1) {
+      await seedCustomSkill(tmpRoot, `plain-skill-${i}`, 'bmad-agent-pm');
+    }
+    await seedCsv(tmpRoot, []);
+    const summary = checkBmmDependencies(tmpRoot).find(r => r.name.includes('unregistered-custom-skill ('));
+    assert.ok(summary);
+    assert.doesNotMatch(summary.fix, /cannot be passed to convoke-register-skill/);
+  });
+
+  // R3 HIGH: `mv -- src existing-dir` NESTS rather than renames, exit 0, nothing warns — and
+  // `_grepStepFilesForAgents` then reads the nested SKILL.md, so every dependency claim of the
+  // third-party skill, including a prose-only mention, transfers to the operator's own skill,
+  // which this very check then advises them to register under their own name. Measured.
+  it('guards the rename command so it cannot nest the skill inside an existing directory', async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-nest-'));
+    await seedCustomSkill(tmpRoot, '-dash-skill', 'bmad-agent-pm');
+    await seedCsv(tmpRoot, []);
+    const unreg = checkBmmDependencies(tmpRoot).find(r => r.name.includes('[unregistered]'));
+    assert.ok(unreg);
+    assert.match(unreg.fix, /test ! -e \.claude\/skills\/<new-name> && mv -- /,
+      'an unguarded mv nests into an existing target instead of renaming');
+    assert.match(unreg.fix, /must not already exist/,
+      'and the constraint has to be stated, not just encoded in the command');
+  });
+
+  // R3: `hasControlChar` was bound by nothing — forcing it true survived the whole suite, telling
+  // every renamed skill its name "contains a character that cannot be pasted", which is false for
+  // the common members of that class (`-dash-skill`, `my-skill `, `=eq`, `a..b`).
+  it('offers the pasteable rename for a name whose only problem is its shape', async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-pasteable-'));
+    await seedCustomSkill(tmpRoot, '-dash-skill', 'bmad-agent-pm');
+    await seedCsv(tmpRoot, []);
+    const unreg = checkBmmDependencies(tmpRoot).find(r => r.name.includes('[unregistered]'));
+    assert.match(unreg.fix, /mv -- '\.claude\/skills\/-dash-skill'/, 'the real name, quoted, is pasteable');
+    assert.doesNotMatch(unreg.fix, /cannot be pasted/, 'this name CAN be pasted — saying otherwise is false');
+    assert.doesNotMatch(unreg.fix, /ls -d/, 'and it needs no glob');
+  });
+
+  // R3: a name whose FIRST character is dangerous has an empty printable prefix, and the glob then
+  // degenerated to `.claude/skills/*` — with an `mv` after it, which would have moved every skill
+  // in the project. That is the one shape where advice is worse than none.
+  it('offers no command at all when the name begins with an unpasteable character', async () => {
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-noprefix-'));
+    await seedCustomSkill(tmpRoot, '\u0001leading-ctrl', 'bmad-agent-pm');
+    await seedCustomSkill(tmpRoot, 'innocent-bystander', 'bmad-agent-dev');
+    await seedCsv(tmpRoot, []);
+    const unreg = checkBmmDependencies(tmpRoot).find(r => r.name.includes('leading-ctrl'));
+    assert.ok(unreg);
+    assert.doesNotMatch(unreg.fix, /mv /, 'no mv may be offered — its source glob would match every skill');
+    assert.doesNotMatch(unreg.fix, /\.claude\/skills\/'\*|skills\/\*/, 'and no project-wide glob either');
+    assert.match(unreg.fix, /BEGINS with a character that cannot be pasted/);
+    assert.match(unreg.fix, /ls \.claude\/skills\/ \| cat -v/, 'it must still say how to SEE the name');
+  });
+
+  // R3: the prefix list in the advice is a prose restatement of `_inferSourceModule`. Rewriting it
+  // to name only two prefixes survived the suite. Pinned BEHAVIOURALLY — each prefix the advice
+  // names must really move the skill out of this category — so the test cannot drift with the prose.
+  it('names exactly the prefixes that really move a skill out of this category', async () => {
+    const claimed = ['bmad-', 'convoke-', 'wds-', 'q-', 'q0-'];
+    tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-prefix-'));
+    await seedCustomSkill(tmpRoot, '-dash-skill', 'bmad-agent-pm');
+    await seedCsv(tmpRoot, []);
+    const advice = checkBmmDependencies(tmpRoot).find(r => r.name.includes('[unregistered]')).fix;
+    for (const p of claimed) {
+      const probe = await fs.mkdtemp(path.join(os.tmpdir(), 'bmm-doctor-prefix-probe-'));
+      try {
+        await seedCustomSkill(probe, `${p}renamed-skill`, 'bmad-agent-pm');
+        await seedCsv(probe, []);
+        const hit = checkBmmDependencies(probe).find(r => r.name.includes(`${p}renamed-skill`));
+        assert.ok(hit, `fixture: no finding for ${p}renamed-skill`);
+        assert.doesNotMatch(hit.name, /\[unregistered]/,
+          `the advice warns against ${p} but renaming to it stays in this category`);
+        // and the advice must actually mention it, in whichever form (`q0-` is written `q<digit>-`)
+        const mentioned = advice.includes(`\`${p}\``) || (/^q\d-$/.test(p) && advice.includes('q<digit>-'));
+        assert.ok(mentioned, `renaming to ${p} leaves this category but the advice does not warn about it`);
+      } finally { await fs.remove(probe); }
+    }
   });
 
   // T254 R1 MEDIUM-2: the summary branch was rewritten by the same commit and pinned by nothing.

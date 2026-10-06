@@ -96,7 +96,12 @@ const ADMISSIBLE_ANCHOR = Object.freeze({
   // delegating seeder invoked on the project or package root (`mergeTaxonomy(projectRoot)`).
   arrives: /fs\.(writeFile|writeFileSync|copy|outputFile|move|appendFile)\s*\(|^\s*(const\s+\w+\s*=\s*)?(await\s+)?\w+\((projectRoot|packageRoot)\b/,
   // A READ claim names where the reader resolves or opens the path.
-  reads: /^\s*(const|let)\s+\w+\s*=\s*path\.join\(|fs\.(readFile|readFileSync|existsSync)\s*\(/,
+  // BOTH alternatives anchored at line start. R3: the second one was not, so ANY line
+  // containing `fs.existsSync(` qualified — including a JSDoc comment. `config-loader.js` has
+  // exactly one such comment line, unique in the repo, and citing it made the manifest assert
+  // that `skill-manifest.csv` is read in a file that never mentions it, with every check green.
+  // The `arrives` allowlist test rejects a comment by name; `reads` had no such case.
+  reads: /^\s*(const|let)\s+\w+\s*=\s*path\.join\(|^\s*(const|let|return|await|if\s*\()?[^*]*fs\.(readFile|readFileSync|existsSync)\s*\(/,
 });
 
 /**
@@ -110,12 +115,17 @@ const ADMISSIBLE_ANCHOR = Object.freeze({
  *
  * No tallies of either kind are stated here. The previous version gave three, all of them correct
  * when written and all three wrong two commits later — de-lining a citation changes every one of
- * them and nothing checks them. Derive them if you need them:
+ * them and nothing checks them. Derive them, FROM THE REPOSITORY ROOT:
  *   node -e 'const {RUNTIME_DATA_FILES:R,WRAPPER_RULES:W}=require("./scripts/audit/lib/installed-tree");
  *     const s=R.flatMap(e=>[e.readSite,...(e.alsoRead||[]).map(a=>typeof a==="string"?a:a.site),
- *       ...(e.arrivesVia?[e.arrivesVia]:[])]);
- *     console.log("lined",s.filter(x=>/:\\d+$/.test(x)).length,"anchored",
- *       s.filter(x=>!/:\\d+$/.test(x)).length+Object.keys(W).length)'
+ *       ...(e.arrivesVia?[e.arrivesVia]:[])]), L=x=>/:[0-9]+$/.test(x);
+ *     console.log("lined",s.filter(L).length,"anchored",s.filter(x=>!L(x)).length+Object.keys(W).length)'
+ *
+ * `[0-9]`, not `\d`: the first version of this command used `\d` and had to write it as `\\d` to
+ * survive the comment, which inside the shell's single quotes became an escaped backslash. It
+ * matched nothing, printed `lined 0 anchored 17` against a truth of 6 and 11, and exited 0. A
+ * character class with no backslash cannot be corrupted by the quoting layer it passes through.
+ * Checked by extracting these lines from this file and running them, not by retyping them.
  *
  * `claim` is required. Omitting it rejects, rather than defaulting to a kind that might pass.
  */
@@ -181,50 +191,99 @@ function write(file, body) {
 // ─── AC4: the manifest is real and its citations still resolve ───
 
 /**
- * `readSite` may be lined (`path:NNN`) or anchored (`path` + a `token`). Extracted so the anchored
- * branch is REACHABLE from a test: no shipped entry is anchored-without-a-token, so asserting only
- * over `RUNTIME_DATA_FILES` left the failing branch unreachable and every mutation of it green.
+ * Every citation an entry makes, normalised to one shape.
+ *
+ * Three fields carry citations — `readSite`, each `alsoRead`, and `arrivesVia` — and until R3 each
+ * was validated by its own code with its own strictness. The consequences were exactly what that
+ * predicts: `readSite` rejected `scripts/..` and a `:9:5` shape while `alsoRead` accepted both
+ * (its regex was the `/^scripts\/.+?(:\d+)?$/` form whose defect `checkCitationShape`'s own
+ * comment documents); the wrong-file floor was applied to `readSite` only, so the per-site token
+ * added for `alsoRead` was a field the floor could not see; and a misspelled `tokens:` key made
+ * the token `undefined` and fell back silently, so the curator's anchor was never looked at.
+ *
+ * One normaliser and one validator, so a new field or a new shape cannot be checked less.
+ *
+ * @param {object} e - A `RUNTIME_DATA_FILES` entry.
+ * @returns {Array<{field: string, site: string, token: (string|undefined), claim: string}>}
  */
-function checkReadSite(e) {
+function citationsOf(e) {
+  const out = [{ field: 'readSite', site: e.readSite, token: e.token, claim: 'reads' }];
+  for (const raw of e.alsoRead || []) {
+    if (typeof raw === 'string') {
+      out.push({ field: 'alsoRead', site: raw, token: e.alsoReadToken, claim: 'reads' });
+      continue;
+    }
+    // A KEY ALLOWLIST, not a destructure. `{site, tokens: '…'}` previously produced
+    // `token: undefined`, fell through the `||` to the entry-wide token, and passed green — the
+    // guard inspecting less than it reports. An unknown key is now a failure, not a fallback.
+    assert.ok(raw && typeof raw === 'object' && !Array.isArray(raw),
+      `${e.file}: alsoRead entry ${JSON.stringify(raw)} is neither a string nor an object`);
+    const unknown = Object.keys(raw).filter((k) => k !== 'site' && k !== 'token');
+    assert.deepEqual(unknown, [],
+      `${e.file}: alsoRead object has unrecognised key(s) ${JSON.stringify(unknown)} — a misspelled `
+      + '`token` was silently ignored and the check fell back to the entry-wide one');
+    // A site-level token WINS over the entry-wide one; that is what lets one site de-line while
+    // its siblings keep their numbers. Pinned by a test, because no shipped entry has both.
+    out.push({ field: 'alsoRead', site: raw.site, token: raw.token || e.alsoReadToken, claim: 'reads' });
+  }
+  if (e.arrivesVia) out.push({ field: 'arrivesVia', site: e.arrivesVia, token: e.arrivesViaToken, claim: 'arrives' });
+  return out;
+}
+
+/**
+ * The shape rules every citation must satisfy, whichever field it came from.
+ *
+ * A citation is LINED (`path:NNN`) or ANCHORED (`path` + a `token`). `arrivesVia` is anchored only
+ * — a number there means T230's conversion was reverted.
+ */
+function checkCitationShape(c, entryFile) {
   // `[^:]+`, not `.+?`: the first version was `/^scripts\/.+?(:\d+)?$/`, which is extensionally
   // `/^scripts\/.+$/` — it accepted `:abc`, `:`, `:9:5`, `scripts//` and `scripts/..`, all of
   // which the lined-only regex had rejected, and handed them to downstream assertions that then
   // misdiagnosed them (or threw EISDIR for a directory).
-  assert.match(e.readSite, /^scripts\/[^:]+(:\d+)?$/, `${e.file} has no <path> or <path>:<line> read site`);
+  assert.match(c.site, /^scripts\/[^:]+(:\d+)?$/,
+    `${entryFile}: ${c.field} ${JSON.stringify(c.site)} is not <path> or <path>:<line>`);
   // `..` matches `[^:]+`, so the shape alone admits a traversal. Downstream it is caught only by
-  // the alarm throwing EISDIR out of `readFileSync` — an uncaught throw, not a diagnosis.
-  assert.ok(!e.readSite.includes('..'), `${e.file}: read site ${e.readSite} contains a traversal`);
-  if (/:\d+$/.test(e.readSite)) return;
+  // the alarm throwing EISDIR out of `readFileSync` — an uncaught throw, not a diagnosis. R3
+  // reached `scripts/../tests/audit/installed-tree.test.js` through `alsoRead`, which had no such
+  // guard: a citation claiming a runtime read inside the test file that checks the citations.
+  assert.ok(!c.site.includes('..'), `${entryFile}: ${c.field} ${c.site} contains a traversal`);
 
-  assert.ok(e.token, `${e.file}: readSite is anchored but has no token to resolve it from`);
+  if (c.field === 'arrivesVia') {
+    assert.doesNotMatch(c.site, /:\d+$/, `${entryFile}: arrivesVia carries a line number again`);
+    // Length does NOT imply uniqueness and this guard never claimed to supply it — uniqueness is
+    // enforced by the alarm. `seedBmmDependencies(projectRoot` is 31 characters and occurs twice.
+    // What this rejects is a BARE SYMBOL, which is the shape that was ambiguous before T230.
+    assert.ok(c.token && c.token.length > 20,
+      `${entryFile}: arrivesViaToken must be a snippet, not a bare symbol`);
+    return;
+  }
+  if (/:\d+$/.test(c.site)) return;
+
+  assert.ok(c.token, `${entryFile}: ${c.field} ${c.site} is anchored but has no token to resolve it from`);
   // WHAT THIS ALARM PROMISES, narrowed. Two rules have stood here and both over-promised.
   // `token.length > 20` was a proxy for discrimination, and a bad one: it rejected
   // `BMM_DEPS_CSV_REL`, a 16-character token this manifest uses successfully, while admitting a
   // unique 50-character token that resolved to a read of a DIFFERENT file. Its replacement —
-  // the token must contain `path.basename(e.file)` — closed that hole and made the manifest's
+  // the token must contain `path.basename(entryFile)` — closed that hole and made the manifest's
   // flagship entry INEXPRESSIBLE: `bmm-dependencies.csv` is read through a constant, which is
-  // the single fact that entry exists to record, so its token can never spell the basename. The
-  // replacement's own comment predicted this and called for an exemption field; one commit later
-  // the entry needed de-lining and the field would have been the fourth hop in a chain the
-  // guard still could not follow (`:34` defines `OUTPUT_CSV_REL`, the doctor renames it on
-  // import, the read uses the alias).
+  // the single fact that entry exists to record, so its token can never spell the basename.
   //
   // So the claim is narrowed to what the data can carry. This is a ROT alarm: it fires when the
   // code that reads a listed file MOVES. Discrimination is enforced where the files are actually
   // read — `anchorLine` returns 0 for a token occurring twice, and the alarm below treats an
   // unresolved anchor as a failure (negative control: 'an ambiguous anchor must be rejected').
-  // MIS-CURATION — a token that resolves fine but describes another file's read — is NOT covered.
-  // R2 found this comment pointing at a preamble that said no such thing: it documented OMISSION
-  // ("adds a runtime read and forgets this list"), a different failure. The scope is now written
-  // into that preamble, which is the text a curator actually reads, and this is the restatement.
+  // MIS-CURATION — a token that resolves fine but describes another file's read — is NOT covered,
+  // and the manifest preamble states that, which is the text a curator reads.
   //
   // The one floor kept, because it costs nothing and matches the real historical mistake: if the
   // token spells a data-file name at all, it must be THIS entry's. Vacuous for an indirect token,
-  // which is the point — it never blocks the indirection it cannot inspect.
-  const named = e.token.match(/[\w.-]+\.(?:csv|ya?ml|json)\b/);
+  // which is the point — it never blocks the indirection it cannot inspect. R3: this floor used
+  // to run for `readSite` only, so the same mistake was expressible in an `alsoRead` token.
+  const named = c.token.match(/[\w.-]+\.(?:csv|ya?ml|json)\b/);
   if (named) {
-    assert.equal(named[0], path.basename(e.file),
-      `${e.file}: anchored token names ${JSON.stringify(named[0])}, a different data file`);
+    assert.equal(named[0], path.basename(entryFile),
+      `${entryFile}: ${c.field} token names ${JSON.stringify(named[0])}, a different data file`);
   }
 }
 
@@ -240,56 +299,79 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
   it('gives every entry a file, a read site and a reason', () => {
     for (const e of RUNTIME_DATA_FILES) {
       assert.match(e.file, /^_bmad\//, `${e.file} is not a project-relative _bmad path`);
-      checkReadSite(e);
-      // T230: `arrivesVia` is ANCHORED — bare path, line resolved from `arrivesViaToken`. A number
-      // here means the conversion was reverted.
-      // Normalised once: an entry is a bare string or `{site, token}` (the de-lined form).
-      for (const raw of e.alsoRead || []) {
-        const s = typeof raw === 'string' ? raw : raw.site;
-        const ownToken = typeof raw === 'string' ? undefined : raw.token;
-        // EITHER shape is allowed, because conversion is meant to be possible one site at a time.
-        // Round 2: a guard requiring `:NNN` here made the doc's "convertible today" false by
-        // forbidding it. An ANCHORED entry needs a token, or there is nothing to resolve it from.
-        assert.match(s, /^scripts\/.+?(:\d+)?$/, `${e.file}: alsoRead entry ${s} is not a path`);
-        if (!/:\d+$/.test(s)) {
-          assert.ok(ownToken || e.alsoReadToken,
-            `${e.file}: alsoRead ${s} is anchored but carries no token and the entry has no alsoReadToken`);
-        }
-      }
-      if (e.arrivesVia) {
-        assert.doesNotMatch(e.arrivesVia, /:\d+$/, `${e.file}: arrivesVia carries a line number again`);
-        // Length does NOT imply uniqueness and this guard never claimed to supply it — uniqueness is
-        // enforced by the alarm. `seedBmmDependencies(projectRoot` is 31 characters and occurs twice.
-        // What this rejects is a BARE SYMBOL, which is the shape that was ambiguous before T230.
-        assert.ok(e.arrivesViaToken && e.arrivesViaToken.length > 20,
-          `${e.file}: arrivesViaToken must be a snippet, not a bare symbol`);
-      }
+      // EVERY citation through the SAME validator, whichever field it came from. Either shape is
+      // allowed per site, because conversion is meant to be possible one site at a time: a guard
+      // requiring `:NNN` here once made the doc's "convertible today" false by forbidding it.
+      const cites = citationsOf(e);
+      assert.ok(cites.length >= 1, `${e.file}: no citations at all`);
+      for (const c of cites) checkCitationShape(c, e.file);
       assert.ok(e.why && e.why.length > 20, `${e.file} has no stated reason`);
     }
   });
 
-  it('the readSite shape rules and the wrong-file floor can actually fail', () => {
+  it('the citation shape rules and the wrong-file floor can actually fail, for EVERY field', () => {
     // Synthetic entries, because the shipped manifest is all-valid by construction — the reason
     // every mutation of the previous inline version landed green.
-    const ok = (e) => assert.doesNotThrow(() => checkReadSite(e));
+    const shapeOf = (e, field = 'readSite') => citationsOf(e).find((c) => c.field === field);
+    const ok = (e, field) => assert.doesNotThrow(() => checkCitationShape(shapeOf(e, field), e.file));
     // Each case must fail for its STATED reason. `assert.throws(fn, undefined)` accepts any error:
-    // with it, deleting the `e.token` assertion still "passed", because the next line threw a
+    // with it, deleting the token assertion still "passed", because the next line threw a
     // TypeError off `undefined.includes` and that satisfied the control.
-    const bad = (e, pattern) => assert.throws(
-      () => checkReadSite(e),
+    const bad = (e, pattern, field) => assert.throws(
+      () => checkCitationShape(shapeOf(e, field), e.file),
       (err) => err instanceof assert.AssertionError && pattern.test(err.message),
-      `expected an AssertionError matching ${pattern} for ${JSON.stringify(e.readSite)}`
+      `expected an AssertionError matching ${pattern} for ${JSON.stringify(e)}`
+    );
+    // And the normaliser's own rejections, which fire before any shape is produced.
+    const badEntry = (e, pattern) => assert.throws(
+      () => citationsOf(e),
+      (err) => err instanceof assert.AssertionError && pattern.test(err.message),
+      `expected citationsOf to reject ${JSON.stringify(e)}`
     );
 
     ok({ file: '_bmad/x/taxonomy.yaml', readSite: 'scripts/a.js:12' });
     ok({ file: '_bmad/x/taxonomy.yaml', readSite: 'scripts/a.js', token: "join('taxonomy.yaml')" });
 
-    bad({ file: '_f', readSite: 'scripts/a.js:abc' }, /read site/);
-    bad({ file: '_f', readSite: 'scripts/a.js:' }, /read site/);
-    bad({ file: '_f', readSite: 'scripts/a.js:9:5' }, /read site/);
+    bad({ file: '_f', readSite: 'scripts/a.js:abc' }, /is not <path>/);
+    bad({ file: '_f', readSite: 'scripts/a.js:' }, /is not <path>/);
+    bad({ file: '_f', readSite: 'scripts/a.js:9:5' }, /is not <path>/);
     bad({ file: '_f', readSite: 'scripts/..' }, /contains a traversal/);
-    bad({ file: '_f', readSite: 'tests/a.js:1' }, /read site/);
+    bad({ file: '_f', readSite: 'tests/a.js:1' }, /is not <path>/);
     bad({ file: '_bmad/x/taxonomy.yaml', readSite: 'scripts/a.js' }, /no token to resolve it from/);
+
+    // THE SAME RULES ON `alsoRead`, which is the half R3 found unguarded: its own regex was the
+    // `.+?` form, it had no traversal guard, and the floor never ran on it at all.
+    const withAlso = (also) => ({ file: '_bmad/x/taxonomy.yaml', readSite: 'scripts/a.js:1', alsoRead: [also] });
+    ok(withAlso('scripts/b.js:7'), 'alsoRead');
+    ok(withAlso({ site: 'scripts/b.js', token: "join('taxonomy.yaml')" }), 'alsoRead');
+    bad(withAlso('scripts/../tests/audit/installed-tree.test.js'), /contains a traversal/, 'alsoRead');
+    bad(withAlso({ site: 'scripts/../tests/x.js', token: 'whatever-long-enough' }), /contains a traversal/, 'alsoRead');
+    bad(withAlso('scripts/b.js:9:5'), /is not <path>/, 'alsoRead');
+    bad(withAlso({ site: 'scripts/b.js' }), /no token to resolve it from/, 'alsoRead');
+    bad(withAlso({ site: 'scripts/b.js', token: "path.join(projectRoot, '_bmad/_config/skill-manifest.csv')" }),
+      /names "skill-manifest\.csv", a different data file/, 'alsoRead');
+    // A misspelled key is a FAILURE, not a silent fallback to the entry-wide token.
+    badEntry({ file: '_f', readSite: 'scripts/a.js:1', alsoReadToken: 'x'.repeat(30),
+      alsoRead: [{ site: 'scripts/b.js', tokens: 'GARBAGE NOT IN THE FILE' }] }, /unrecognised key/);
+    badEntry({ file: '_f', readSite: 'scripts/a.js:1', alsoRead: [null] }, /neither a string nor an object/);
+    badEntry({ file: '_f', readSite: 'scripts/a.js:1', alsoRead: [['scripts/b.js:1']] }, /neither a string nor an object/);
+    // PRECEDENCE, which no shipped entry exercises because none has both: the site's own token
+    // wins. Asserted on the normaliser's output, so reversing the `||` fails here.
+    assert.equal(
+      citationsOf({ file: '_f', readSite: 'scripts/a.js:1', alsoReadToken: 'ENTRY-WIDE-TOKEN-LONG',
+        alsoRead: [{ site: 'scripts/b.js', token: 'SITE-LEVEL-TOKEN-WINS' }] })
+        .find((c) => c.field === 'alsoRead').token,
+      'SITE-LEVEL-TOKEN-WINS', 'a site-level token must win over the entry-wide one');
+    // ...and the entry-wide one is still the fallback for a string site.
+    assert.equal(
+      citationsOf({ file: '_f', readSite: 'scripts/a.js:1', alsoReadToken: 'ENTRY-WIDE-TOKEN-LONG',
+        alsoRead: ['scripts/b.js'] }).find((c) => c.field === 'alsoRead').token,
+      'ENTRY-WIDE-TOKEN-LONG', 'a string site must still fall back to the entry-wide token');
+    // `arrivesVia` goes through the same validator and keeps its own two rules.
+    bad({ file: '_f', readSite: 'scripts/a.js:1', arrivesVia: 'scripts/c.js:5', arrivesViaToken: 'x'.repeat(30) },
+      /carries a line number again/, 'arrivesVia');
+    bad({ file: '_f', readSite: 'scripts/a.js:1', arrivesVia: 'scripts/c.js', arrivesViaToken: 'short' },
+      /must be a snippet, not a bare symbol/, 'arrivesVia');
     // The floor: a token that spells another data file's name. This is the real mistake it
     // guards — a curator pasting the read of a neighbouring manifest — not the invented
     // directory-path case the deleted relevance rule was controlled with, which that rule
@@ -315,15 +397,9 @@ describe('RUNTIME_DATA_FILES — the curated manifest', () => {
     // write they claimed — a log line, an output-path constant on the WRITE side, and a
     // destination declaration — all of which passed because the old check accepted any line
     // merely mentioning the basename anywhere in the entry.
-    const sites = RUNTIME_DATA_FILES.flatMap(e => [
-      { site: e.readSite, entry: e, token: e.token, claim: 'reads' },
-      ...(e.alsoRead || []).map(raw => (typeof raw === 'string'
-        ? { site: raw, entry: e, token: e.alsoReadToken, claim: 'reads' }
-        // A site's own token wins over the entry-wide one, which is what lets one site de-line
-        // while its siblings keep their numbers.
-        : { site: raw.site, entry: e, token: raw.token || e.alsoReadToken, claim: 'reads' })),
-      ...(e.arrivesVia ? [{ site: e.arrivesVia, entry: e, token: e.arrivesViaToken, claim: 'arrives' }] : []),
-    ]);
+    // From the SAME normaliser the shape check uses, so the alarm cannot inspect a different set
+    // of citations than the one that was validated.
+    const sites = RUNTIME_DATA_FILES.flatMap(e => citationsOf(e).map(c => ({ ...c, entry: e })));
     assert.ok(sites.length >= RUNTIME_DATA_FILES.length);
     for (const { site, entry, token, claim } of sites) {
       const [rel, lineNo] = site.split(':');
@@ -434,6 +510,23 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
     for (const [label, needle] of rejected) {
       assert.equal(admits('arrives', realLine(needle)), false, `${label} must not stand for an arrival`);
     }
+
+    // R3: the `reads` predicate's SECOND alternative was not anchored at line start, so any line
+    // containing `fs.existsSync(` qualified — including a JSDoc comment. This is the real exploit
+    // line, unique in the repo: citing it made the manifest assert that `skill-manifest.csv` is
+    // read at runtime inside a file that mentions it zero times, with every check green. The
+    // `rejected` list above is asserted for `arrives` only, which is how the gap survived.
+    assert.equal(
+      admits('reads', realLineIn('scripts/update/lib/config-loader.js',
+        '`!fs.existsSync(bmadInitPath)` → script missing')),
+      false, 'a JSDoc comment must not stand for a READ');
+    // ...and the anchoring must not have cost the genuine forms. Both alternatives, from the
+    // files that really read these manifests.
+    assert.equal(admits('reads', realLineIn('scripts/lib/artifact-utils.js', 'if (!fs.existsSync(configPath)) {')),
+      true, 'a guard on the resolved path is a read');
+    assert.equal(admits('reads', realLineIn('scripts/convoke-doctor.js',
+      "const manifestPath = path.join(projectRoot, '_bmad/_config/skill-manifest.csv');")),
+      true, 'and so is the path construction the manifest actually cites');
 
     // A block opener cannot stand for an arrival either — Round 2 reached one as a multi-line anchor's
     // first line. It is not unique on its own, so it is checked directly rather than via `realLine`.

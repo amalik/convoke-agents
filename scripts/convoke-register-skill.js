@@ -29,6 +29,7 @@ const { findProjectRoot } = require('./update/lib/utils');
 // `_sanitizeFormula` is the CSV writer's own rewrite rule. `registrableByCli` calls it
 // rather than restating its character class — see T254 R2.
 const { _internal: { _sanitizeFormula } } = require('./audit/audit-bmm-dependencies');
+const { hasDangerousCodePoint } = require('./lib/sanitize');
 
 // ─── Constants ────────────────────────────────────────────────────
 
@@ -151,6 +152,11 @@ function isSimpleSkillDirName(skill) {
  */
 function registrableByCli(name) {
   const s = String(name);
+  // The CLI rejects both outright (`--skill is required (non-empty string)`), so a predicate
+  // claiming to report what the CLI carries must too. Unreachable from the scan, which only ever
+  // passes a real directory name — but `String(undefined)` is the registrable-looking
+  // `"undefined"`, which is the kind of answer that becomes reachable when a caller is added.
+  if (typeof name !== 'string' || s.length === 0) return false;
   // The parser itself. `assign()` trims every flag value, so any name differing from its own
   // trim arrives as a DIFFERENT name — either rejected as unknown, or, worse, matching another
   // skill. Asking `parseArgs` keeps this true if the trim ever moves or widens.
@@ -159,16 +165,13 @@ function registrableByCli(name) {
   if (_sanitizeFormula(s) !== s) return false;
   // The validator's own shape rule, called, not restated.
   if (!isSimpleSkillDirName(s)) return false;
-  // Not a rule of any of the three: a control character survives all of them and still defeats
-  // the advice, because the command is rendered into indented terminal output. A newline lands
-  // `printResults`' four-space indent INSIDE the quotes, so the command the operator can read is
-  // not the command this code built.
-  // Tested by code point, not by a regex: a control-character class in a regex is `no-control-regex`,
-  // and the loop says plainly which range is meant.
-  for (const ch of s) {
-    const cp = ch.codePointAt(0);
-    if (cp < 0x20 || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f)) return false;
-  }
+  // Not a rule of any of the three: a code point that can redraw or reorder a terminal line still
+  // defeats the advice even when all three authorities accept it. A newline lands `printResults`'
+  // indent INSIDE the quotes, so the command the operator can read is not the command this code
+  // built. The set is `sanitize.hasDangerousCodePoint`, shared with the doctor's renderer so the
+  // two cannot drift — an earlier local copy here covered C0/C1 only, and U+2028 walked through it
+  // into the command branch and forged a passing line in the doctor's output.
+  if (hasDangerousCodePoint(s)) return false;
   return true;
 }
 
@@ -212,6 +215,28 @@ function validateInput(input, projectRoot) {
       // `realpathSync` and verify the real target is still contained within
       // `realpath(skillsRoot)`. If resolution escapes the skills root (or the
       // realpath fails outright), reject.
+      // R3: `fs.existsSync`/`lstatSync` resolve through the FILESYSTEM's comparison rules, and
+      // APFS is case- and Unicode-normalisation-insensitive. So `--skill my-skill` resolved
+      // `.claude/skills/My-Skill`, `buildRow` persisted the string that was PASSED, and the run
+      // reported `✓ Registered` plus the machine-readable `REGISTERED:` marker — while the
+      // doctor's `[unregistered] My-Skill` finding stayed, permanently, with no `[missing-target]`
+      // either, because existence succeeded for both forms. Measured on both triggers: a retyped
+      // case difference, and an NFC paste of an NFD on-disk name.
+      //
+      // The entry list is the authority on the name, so compare against it directly. This is the
+      // same exact-name technique `scripts/lib/agent-install-checks.js` uses for the installed
+      // tree, and for the same reason.
+      let dirEntries = null;
+      try { dirEntries = fs.readdirSync(skillsRoot); } catch { /* reported as absent below */ }
+      if (dirEntries && !dirEntries.includes(skill) && dirEntries.some((e) => e.normalize('NFC').toLowerCase() === skill.normalize('NFC').toLowerCase())) {
+        const actual = dirEntries.find((e) => e.normalize('NFC').toLowerCase() === skill.normalize('NFC').toLowerCase());
+        errors.push(
+          `Invalid --skill: '${skill}' is not the directory's name — the directory is '${actual}'. ` +
+          'They differ only in letter case or Unicode composition, which this filesystem ignores ' +
+          'but the registry does not: registering the name you typed would write a row that never ' +
+          'matches the skill. Pass the name exactly as `ls .claude/skills/` prints it.'
+        );
+      }
       let skillExists;
       try {
         const lstat = fs.lstatSync(skillDir);
