@@ -32,6 +32,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const { PACKAGE_ROOT } = require('../helpers');
+const { escapeRegExp } = require('../../scripts/lib/sanitize');
 
 const SKILLS_ROOT = '.claude/skills';
 const pkg = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8'));
@@ -70,14 +71,27 @@ const EXPECTED = [
  * `timeout` goes to execFileSync, not to node:test — a synchronous child starves the event loop,
  * so a `{ timeout }` test option never fires against it.
  */
-function packedSkillFiles() {
+let _packedCache = null;
+
+/**
+ * Memoised: three assertions now need the listing, and `npm pack` is a ~2.5s synchronous child.
+ * Safe because `package.json` cannot change inside one test process — the mutation controls for
+ * this file edit it and then run a FRESH process, which is the only way the cache could be stale.
+ */
+function packedFiles() {
+  if (_packedCache) return _packedCache;
   const out = execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
     cwd: PACKAGE_ROOT, encoding: 'utf8', timeout: 120000,
   });
   const [result] = JSON.parse(out);
   assert.ok(result && Array.isArray(result.files), 'npm pack returned no file listing');
   assert.ok(result.files.length > 100, `sanity: expected a full listing, got ${result.files.length}`);
-  return result.files.map((f) => f.path).filter((p) => p.startsWith(`${SKILLS_ROOT}/`)).sort();
+  _packedCache = result.files.map((f) => f.path).sort();
+  return _packedCache;
+}
+
+function packedSkillFiles() {
+  return packedFiles().filter((p) => p.startsWith(`${SKILLS_ROOT}/`)).sort();
 }
 
 describe('the tracked operator skills ship', () => {
@@ -101,5 +115,70 @@ describe('the tracked operator skills ship', () => {
     );
     assert.deepEqual(skillDirs(pkg.files), tracked, 'files[] and git disagree about which skills exist');
     assert.deepEqual(skillDirs(EXPECTED), tracked, 'EXPECTED and git disagree about which skills exist');
+  });
+});
+
+// ─── T257: the repo's own audit tooling must not ship ───
+//
+// `files[]` carried `scripts/` whole, so all 26 files under `scripts/audit/` reached every
+// install: `backlog-integrity.js` (exits `backlog not found`), `coverage-denominator.js` (`fatal:
+// not a git repository`), `try-fresh-install.sh`, and — the reason this is more than untidiness —
+// `pf1-judge-calibration.js` and `pf1-validation-battery.js`, which `require('@anthropic-ai/sdk')`
+// (a devDependency ABSENT from `dependencies`) and read `ANTHROPIC_API_KEY`.
+//
+// The row this came from concluded the fix needed a file move first. It does not, and the reason
+// is npm's own behaviour: npm force-includes every `bin` target regardless of `files[]`, and the
+// three audit files that shipped operator code needs are exactly the three `bin` targets. So one
+// negation entry leaves precisely them. Measured, not reasoned — `files[]` globs have defeated
+// five hand-written parsers in this repo (see the `T227` record), so this asserts the TARBALL.
+describe('T257 — scripts/audit/ ships only what a bin resolves to', () => {
+  // DERIVED from `bin`, never a literal list. The row that opened this carried three hard-coded
+  // figures and all three were wrong; a list written here would rot the same way the moment a
+  // fourth audit bin is declared or one is retired.
+  const auditBinTargets = Object.values(pkg.bin)
+    .filter((p) => p.startsWith('scripts/audit/'))
+    .sort();
+
+  it('the bin map really does point into scripts/audit/, or this test proves nothing', () => {
+    assert.ok(auditBinTargets.length >= 1,
+      'no bin resolves into scripts/audit/, so the equality below would assert an empty set');
+    for (const t of auditBinTargets) {
+      assert.ok(fs.existsSync(path.join(PACKAGE_ROOT, t)), `${t} is declared as a bin but absent`);
+    }
+  });
+
+  it('the tarball carries exactly the bin targets under scripts/audit/', () => {
+    const packed = packedFiles().filter((p) => p.startsWith('scripts/audit/')).sort();
+    // Equality, not inclusion: under-shipping breaks an advertised command, over-shipping is the
+    // defect being fixed. Both directions have to fail.
+    assert.deepEqual(packed, auditBinTargets,
+      'the tarball\'s scripts/audit/ contents must be exactly the files a declared bin resolves to');
+  });
+
+  it('no shipped file has a literal require of a dev-only dependency', () => {
+    // The NAME states what is checked. An earlier name — "nothing in the tarball requires a
+    // devDependency" — claimed the property; this scans for a literal
+    // `require('<name>…` and so cannot see a computed specifier or an ESM import. Every
+    // shipped file is CJS with literal requires today, which is what makes the floor useful,
+    // but a floor is what it is.
+    // The supply-chain half, stated as the property rather than as the two filenames: a shipped
+    // file requiring a package that is not in `dependencies` fails at require time for an
+    // operator, whatever the package is.
+    const declared = new Set(Object.keys(pkg.dependencies || {}));
+    const devOnly = Object.keys(pkg.devDependencies || {}).filter((d) => !declared.has(d));
+    assert.ok(devOnly.length > 0, 'sanity: this check is vacuous with no dev-only dependency');
+    const offenders = [];
+    for (const rel of packedFiles().filter((p) => p.endsWith('.js'))) {
+      const src = fs.readFileSync(path.join(PACKAGE_ROOT, rel), 'utf8');
+      for (const d of devOnly) {
+        // `escapeRegExp`, not a sixth hand-rolled escape: BUG-12 consolidated five of these for
+        // exactly this reason, and a package name may legitimately contain a `.` or a `+`.
+        if (new RegExp(`require\\(\\s*['"\`]${escapeRegExp(d)}`).test(src)) {
+          offenders.push(`${rel} -> ${d}`);
+        }
+      }
+    }
+    assert.deepEqual(offenders, [],
+      'a shipped file requires a package that is not in dependencies — it will throw for an operator');
   });
 });

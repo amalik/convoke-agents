@@ -1,0 +1,36 @@
+# T257. This directory is Convoke's own REPOSITORY-audit tooling: it scans the source tree and
+# writes frozen inventories that CI and migrations consume. `files[]` carried `scripts/` whole, so
+# all 26 files reached every operator install — `backlog-integrity.js`, which exits
+# `backlog not found`; `coverage-denominator.js`, which exits `fatal: not a git repository`;
+# `try-fresh-install.sh`; and, the reason this is more than untidiness,
+# `pf1-judge-calibration.js` and `pf1-validation-battery.js`, which `require('@anthropic-ai/sdk')`
+# — a devDependency ABSENT from `dependencies`, so it throws for an operator — and read
+# `ANTHROPIC_API_KEY`.
+#
+# WHY HERE AND NOT A `!` NEGATION IN `files[]`. Story dist-2.3a settled this for
+# scripts/migration/format-conversion and the reasoning transfers verbatim: a negation puts a glob
+# metacharacter into `files[]`, which `scripts/audit/lib/installed-tree.js` parses to build the
+# expected set of `_bmad/bme/*` modules, and four hand-written attempts to tell a harmless
+# negation from a coverage-shrinking one were all broken by adversarial review.
+# `tests/lib/format-conversion-exclusion.test.js` asserts `files[]` carries no metacharacter at
+# all, and a `"!scripts/audit/**"` entry fails it — measured, which is how this file came to exist
+# after the negation had already been written and packed.
+#
+# THE THREE UN-IGNORES ARE NOT OPTIONAL and not a style choice. npm force-includes a `bin` target
+# over `files[]` but NOT over a `.npmignore` — measured both ways: with a bare `*` here, all three
+# bins vanish from the tarball and `convoke-audit-bmm-deps`, `convoke-audit-skill-dirs` and
+# `convoke-validate-marketplace` become dead entry points. These three are exactly the files a
+# declared `bin` resolves to, and none of them requires anything else under this directory.
+#
+# This list duplicates `package.json`'s `bin` map, which is the hazard this repo keeps paying for.
+# It is bound rather than trusted: `tests/lib/skills-packaging.test.js` derives the expected set
+# FROM `bin` and asserts tarball equality, so adding a fourth audit bin without a line here, or
+# leaving a line here after retiring a bin, turns that test red.
+#
+# NOT DELETED, and must not be: every tool here is live repository tooling, several are wired into
+# `.github/workflows/ci.yml`, and `scripts/audit/lib/installed-tree.js` backs the installed-tree
+# gate. Removing them from the PACKAGE is not removing them from the repository.
+*
+!audit-bmm-dependencies.js
+!audit-skill-dirs.js
+!validate-marketplace.js
