@@ -1,7 +1,9 @@
 # T257. This directory is Convoke's own REPOSITORY-audit tooling: it scans the source tree and
 # writes frozen inventories that CI and migrations consume. `files[]` carried `scripts/` whole, so
-# all 26 files reached every operator install — `backlog-integrity.js`, which exits
-# `backlog not found`; `coverage-denominator.js`, which exits `fatal: not a git repository`;
+# all 26 files reached every operator install — `backlog-integrity.js`, which prints
+# `FAIL — backlog not found at …`; `coverage-denominator.js`, which shells out to `git ls-files`
+# and dies on git's own `fatal: not a git repository` (that text is git's stderr, not a string in
+# the file);
 # `try-fresh-install.sh`; and, the reason this is more than untidiness,
 # `pf1-judge-calibration.js` and `pf1-validation-battery.js`, which `require('@anthropic-ai/sdk')`
 # — a devDependency ABSENT from `dependencies`, so it throws for an operator — and read
@@ -21,6 +23,17 @@
 # bins vanish from the tarball and `convoke-audit-bmm-deps`, `convoke-audit-skill-dirs` and
 # `convoke-validate-marketplace` become dead entry points. These three are exactly the files a
 # declared `bin` resolves to, and none of them requires anything else under this directory.
+#
+# `!audit-bmm-dependencies.js` CARRIES MORE THAN ITS OWN BIN, and describing the three as merely
+# "the bin targets" understates it. That file is a MODULE-SCOPE require of `convoke-doctor.js`
+# and `convoke-register-skill.js` — two bins that are NOT under this directory — so losing this
+# one line stops them loading at all, not just `convoke-audit-bmm-deps`. Measured: remove the
+# file and both throw out of the CJS loader before printing anything.
+#
+# What would catch that: `scripts/audit/try-fresh-install.sh` installs the real tarball and runs
+# `assert-installed-tree.js requires` over every bin with a TRANSITIVE worklist, failing closed,
+# and ci.yml runs it (`run: bash scripts/audit/try-fresh-install.sh`). That gate is stronger than
+# a static check over a pack listing, which is why no new test was added here for this property.
 #
 # This list duplicates `package.json`'s `bin` map, which is the hazard this repo keeps paying for.
 # It is bound rather than trusted: `tests/lib/skills-packaging.test.js` derives the expected set
