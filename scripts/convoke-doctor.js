@@ -6,7 +6,7 @@ const chalk = require('chalk');
 const yaml = require('js-yaml');
 const { findProjectRoot, getPackageVersion } = require('./update/lib/utils');
 const { AGENTS, GYRE_AGENTS } = require('./update/lib/agent-registry');
-const { parseExcludedAgents } = require('./update/lib/config-merger');
+const { parseExcludedAgents, partitionExclusions, MODULE_PROFILES } = require('./update/lib/config-merger');
 // The authority on what `convoke-register-skill` can carry, exported by the command itself.
 // T254 R2: the doctor used to re-derive this from the sanitizer and the validator and never
 // from the PARSER, which trims — so `my-skill ` was advised as a command, trimmed to the
@@ -232,7 +232,21 @@ function checkModuleAgents(mod) {
   // info line — so operators can see what's excluded without cross-referencing files.
   // Silent on purpose: doctor reports in its own findings format, and the install path already
   // warns. The parse itself is `parseExcludedAgents`, so the meaning lives in one place (T244).
-  const excluded = parseExcludedAgents(mod.config.excluded_agents).ids;
+  //
+  // T250 R2: only the ids this module ACTUALLY HAS are reported as excluded. Before, a typo was
+  // affirmed as an exclusion and the arithmetic contradicted itself — measured on a real install,
+  // `_gyre agents` read `4 agents present (1 excluded: reviewcoach)` against a 4-agent roster,
+  // while `review-coach` was installed with its wrapper. Affirming a phantom opt-out is worse than
+  // the silence T250 set out to fix, because the operator came here to CHECK.
+  //
+  // Reporting the unknown id as a finding is deliberately NOT done here: that is `T249`'s open
+  // row, which owns doctor surfacing a wrong `excluded_agents` value, and its scope now covers an
+  // unknown id as well as a malformed shape.
+  const parsedExclusions = parseExcludedAgents(mod.config.excluded_agents);
+  const moduleProfile = MODULE_PROFILES[mod.name];
+  const excluded = moduleProfile
+    ? partitionExclusions(parsedExclusions.ids, moduleProfile.agentIds).known
+    : parsedExclusions.ids;
 
   if (!fs.existsSync(agentsDir)) {
     return {
@@ -544,8 +558,13 @@ function checkAgentSkillWrappers(projectRoot, modules = []) {
   const excludedIds = new Set();
   for (const mod of modules) {
     if (mod.config) {
-      // Same authority as the install path (T244), silent here by design.
-      for (const id of parseExcludedAgents(mod.config.excluded_agents).ids) excludedIds.add(id);
+      // Same authority as the install path (T244), silent here by design. T250 R2: an id this
+      // module has no agent for is NOT an exclusion, so it must not inflate the excluded count
+      // in the info line below — it previously did, against a roster that could not support it.
+      const parsed = parseExcludedAgents(mod.config.excluded_agents);
+      const prof = MODULE_PROFILES[mod.name];
+      const real = prof ? partitionExclusions(parsed.ids, prof.agentIds).known : parsed.ids;
+      for (const id of real) excludedIds.add(id);
     }
   }
 

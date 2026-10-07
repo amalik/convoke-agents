@@ -176,12 +176,18 @@ function buildAgentRowLegacy(a, submodule) {
  * @returns {{vortex: string[], gyre: string[]}}
  */
 function readExclusions(projectRoot) {
+  // T250 R2: `{ profile }` so an unknown id is reported here too. This path APPLIES exclusions —
+  // it drops the agent's manifest row — and `npm run generate:manifest` never passes through
+  // `mergeConfig`, which carried the only warning. Measured: the row for a genuine exclusion was
+  // dropped while a typo'd id kept its row and printed nothing.
   return {
     vortex: configMerger.readExcludedAgents(
-      path.join(projectRoot, '_bmad', 'bme', '_vortex', 'config.yaml')
+      path.join(projectRoot, '_bmad', 'bme', '_vortex', 'config.yaml'),
+      { profile: configMerger.MODULE_PROFILES._vortex }
     ),
     gyre: configMerger.readExcludedAgents(
-      path.join(projectRoot, '_bmad', 'bme', '_gyre', 'config.yaml')
+      path.join(projectRoot, '_bmad', 'bme', '_gyre', 'config.yaml'),
+      { profile: configMerger.MODULE_PROFILES._gyre }
     ),
   };
 }

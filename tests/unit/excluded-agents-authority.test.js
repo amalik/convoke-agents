@@ -307,14 +307,28 @@ describe('T250 — a conforming but unknown agent id is no longer silent', () =>
   const GYRE = { agentIds: GYRE_AGENT_IDS };
   const SRC = '_bmad/bme/_gyre/config.yaml';
 
-  /** Capture the one warning the check emits, if any. */
-  function warned(ids, conforming = true, profile = GYRE, source = SRC) {
+  /**
+   * Every warning the check emits, in order.
+   *
+   * An earlier version kept only the LAST message (`said = m`), so no assertion in this block
+   * could notice a duplicated or extra line — a mutant that emitted a second bogus `warnOnce`
+   * before the real one survived the whole suite. Collecting them makes "exactly one message" an
+   * assertable property.
+   */
+  function warnings(ids, conforming = true, profile = GYRE, source = SRC) {
     resetExcludedAgentWarnings();
     const real = console.warn;
-    let said = null;
-    console.warn = (m) => { said = m; };
+    const said = [];
+    console.warn = (m) => { said.push(m); };
     try { warnOnUnknownExclusions(ids, conforming, profile, source); } finally { console.warn = real; }
     return said;
+  }
+
+  /** The single warning, asserting that there is exactly one — or null when silent. */
+  function warned(ids, conforming = true, profile = GYRE, source = SRC) {
+    const said = warnings(ids, conforming, profile, source);
+    assert.ok(said.length <= 1, `expected at most one message; got ${said.length}: ${JSON.stringify(said)}`);
+    return said.length === 1 ? said[0] : null;
   }
 
   // The fixture is DERIVED: a literal "valid id" list here would rot the moment an agent is added
@@ -347,6 +361,32 @@ describe('T250 — a conforming but unknown agent id is no longer silent', () =>
     assert.equal(warned(['review-coach']), null);
     assert.equal(warned([...GYRE_AGENT_IDS]), null, 'the whole roster is valid by construction');
     assert.equal(warned(['review-coach', 'review-coach']), null, 'a duplicate is benign — T250 says so');
+  });
+
+  // THE LIKELIEST REAL INPUT, and the block had no assertion for it: a valid id plus a typo. R2
+  // found a mutant that warns only when EVERY id is unknown, and it survived the entire suite —
+  // which is T250's measured defect restored, because every other fixture here passes an
+  // all-unknown list and the one mixed fixture silenced `console.warn`.
+  it('warns on a MIXED list, naming only the id that does not resolve', () => {
+    const m = warned(['review-coach', 'reviewcoach']);
+    assert.ok(m, 'a valid id alongside a typo must still warn about the typo');
+    assert.match(m, /"reviewcoach"/);
+    // The valid id must NOT be reported as unknown. Asserted on the unknown-list clause rather
+    // than the whole message, because the message also lists the module's valid ids — among
+    // which `review-coach` legitimately appears.
+    const clause = m.slice(0, m.indexOf('Nothing was excluded'));
+    assert.ok(!clause.includes('"review-coach"'),
+      `a resolving id must not be named as unknown; clause was: ${clause}`);
+  });
+
+  it('tells the operator what did and did not happen, not just which id is wrong', () => {
+    // The actionable half. Unasserted before, so a mutant deleting it survived.
+    const m = warned(['reviewcoach']);
+    assert.match(m, /Nothing was excluded for it/, 'the consequence has to be stated');
+    assert.match(m, /any other id in the list still applies/, '...and that the rest of the list stands');
+    // Singular vs plural, since the sentence reads wrongly if it does not agree.
+    assert.match(m, /names an id this module/, 'one unknown id reads "an id"');
+    assert.match(warned(['reviewcoach', 'modelcurator']), /names ids this module/, 'two read "ids"');
   });
 
   it('names a repeated unknown id ONCE', () => {
@@ -390,7 +430,13 @@ describe('T250 — a conforming but unknown agent id is no longer silent', () =>
     const many = Array.from({ length: 50 }, (_, i) => `ghost-agent-${i}`);
     const m = warned(many);
     assert.match(m, /and 42 more/, '50 unknown ids must collapse to 8 named plus a count');
-    assert.ok(m.length < 2000, `the message is ${m.length} characters`);
+    // THE PROPERTY, counted. `m.length < 2000` was inert: the uncapped message for this fixture
+    // measures 1152 characters, so the threshold passed with the cap deleted and the regex above
+    // was doing all the work. At 5000 entries the uncapped line is ~99k characters, which is the
+    // hazard being guarded — so the thing to assert is how many ids are NAMED, not a byte count
+    // three orders of magnitude away from it.
+    assert.equal((m.match(/"ghost-agent-\d+"/g) || []).length, 8,
+      `at most 8 ids may be named; the message names ${(m.match(/"ghost-agent-\d+"/g) || []).length}`);
   });
 
   it('is WIRED into mergeConfig, not merely exported', async () => {
@@ -424,7 +470,8 @@ describe('T250 — a conforming but unknown agent id is no longer silent', () =>
     }), 'utf8');
     resetExcludedAgentWarnings();
     const real = console.warn;
-    console.warn = () => {};
+    const said = [];
+    console.warn = (m) => said.push(m);
     let merged;
     try {
       merged = await mergeConfig(p, '9.9.9', {}, { submodule: '_gyre' });
@@ -432,9 +479,78 @@ describe('T250 — a conforming but unknown agent id is no longer silent', () =>
       console.warn = real;
       await fs.remove(dir);
     }
+    // CAPTURED, not silenced. Discarding the output here is what let the mixed-list mutant
+    // survive: this was the block's only mixed fixture and it threw the message away.
+    assert.ok(said.some((m) => /"reviewcoach"/.test(m)),
+      `the unknown half of a mixed list must still be reported; got: ${JSON.stringify(said)}`);
     assert.ok(Array.isArray(merged.agents), 'merge produced no agents array');
     assert.ok(!merged.agents.includes('review-coach'), 'the VALID exclusion must still take effect');
     assert.deepEqual(merged.excluded_agents, ['review-coach', 'reviewcoach'],
       'and the operator\'s list is kept as written, unknown entry included');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// T250 Round 2. The warning was wired into `mergeConfig` ONLY, and three other readers honour or
+// report exclusions without passing through it — measured: `convoke-doctor` affirmed a typo as an
+// exclusion (`4 agents present (1 excluded: reviewcoach)` against a 4-agent roster, with
+// `review-coach` installed and its wrapper present), `refreshInstallation` in a same-root tree
+// applies exclusions with both `mergeConfig` calls skipped, and `generate:manifest` drops rows by
+// a route that never merges. The split now lives in `partitionExclusions`, which every roster-
+// having caller uses, and `readExcludedAgents` reports when given a profile.
+// ─────────────────────────────────────────────────────────────────
+
+describe('T250 R2 — one definition of "unknown", shared by every reader', () => {
+  const {
+    partitionExclusions, MODULE_PROFILES,
+  } = require('../../scripts/update/lib/config-merger');
+  const { GYRE_AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
+
+  it('splits a list into the ids the module has and the ids it does not', () => {
+    const r = partitionExclusions(['review-coach', 'reviewcoach'], GYRE_AGENT_IDS);
+    assert.deepEqual(r.known, ['review-coach']);
+    assert.deepEqual(r.unknown, ['reviewcoach']);
+  });
+
+  it('keeps duplicates in `known` and dedupes `unknown`', () => {
+    // `known` feeds filtering, where a duplicate is harmless and order matters; `unknown` feeds a
+    // message, where a duplicate is noise. The asymmetry is deliberate, so it is pinned.
+    const r = partitionExclusions(['review-coach', 'review-coach', 'xx', 'xx'], GYRE_AGENT_IDS);
+    assert.deepEqual(r.known, ['review-coach', 'review-coach']);
+    assert.deepEqual(r.unknown, ['xx']);
+  });
+
+  it('treats an absent or empty roster as "nothing is known"', () => {
+    assert.deepEqual(partitionExclusions(['review-coach'], []).unknown, ['review-coach']);
+    assert.deepEqual(partitionExclusions(['review-coach'], undefined).unknown, ['review-coach']);
+    assert.deepEqual(partitionExclusions(undefined, GYRE_AGENT_IDS), { known: [], unknown: [] });
+  });
+
+  it('readExcludedAgents REPORTS an unknown id when given a profile, and stays silent without one', async () => {
+    // The registry-free default is load-bearing: `convoke-doctor` and `installed-tree.js` read this
+    // field with no roster in scope and must not be made to warn.
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 't250r2-read-'));
+    const p = path.join(dir, 'config.yaml');
+    await fs.outputFile(p, yaml.dump({ excluded_agents: ['reviewcoach'] }), 'utf8');
+    const capture = (opts) => {
+      resetExcludedAgentWarnings();
+      const real = console.warn;
+      const said = [];
+      console.warn = (m) => said.push(m);
+      try { readExcludedAgents(p, opts); } finally { console.warn = real; }
+      return said;
+    };
+    try {
+      assert.deepEqual(capture(undefined), [], 'no profile: the reader must stay registry-free');
+      const withProfile = capture({ profile: MODULE_PROFILES._gyre });
+      assert.ok(withProfile.some((m) => /"reviewcoach"/.test(m)),
+        `a profile must make the read report; got ${JSON.stringify(withProfile)}`);
+    } finally { await fs.remove(dir); }
+  });
+
+  it('readExcludedAgents still returns the ids it always returned, profile or not', () => {
+    // The reporting must not change what the reader RETURNS — three callers filter on it.
+    assert.deepEqual(partitionExclusions(['review-coach'], MODULE_PROFILES._gyre.agentIds).known,
+      ['review-coach'], 'a valid id is still known');
   });
 });

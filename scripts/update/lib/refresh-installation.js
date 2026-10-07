@@ -154,9 +154,18 @@ async function refreshInstallation(projectRoot, options = {}) {
   // These are opt-out lists the operator maintains; excluded agents don't get
   // their agent file copied, don't get a skill wrapper generated, and don't
   // fail presence checks downstream.
-  const vortexExcluded = configMerger.readExcludedAgents(configMerger.assertConfigReadable(path.join(targetVortex, 'config.yaml')));
+  // T250 R2: `{ profile }` makes these reads REPORT an unknown id. They are deliberately not
+  // gated on `isSameRoot`, but the `mergeConfig` calls that used to carry the only warning
+  // are — so in a same-root (dev) tree the exclusions were read and applied to the filesystem
+  // with nothing printed. Measured: a stale wrapper removed for a genuine exclusion while a
+  // typo'd id did nothing and said nothing.
+  const vortexExcluded = configMerger.readExcludedAgents(
+    configMerger.assertConfigReadable(path.join(targetVortex, 'config.yaml')),
+    { profile: configMerger.MODULE_PROFILES._vortex }
+  );
   const gyreExcluded = configMerger.readExcludedAgents(
-    configMerger.assertConfigReadable(path.join(projectRoot, '_bmad', 'bme', '_gyre', 'config.yaml'))
+    configMerger.assertConfigReadable(path.join(projectRoot, '_bmad', 'bme', '_gyre', 'config.yaml')),
+    { profile: configMerger.MODULE_PROFILES._gyre }
   );
 
   // 1. Copy agent files

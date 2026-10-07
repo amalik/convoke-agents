@@ -63,6 +63,27 @@ const MODULE_PROFILES = Object.freeze({
 });
 
 /**
+ * Split an exclusion list into the ids a module actually has and the ids it does not.
+ *
+ * `parseExcludedAgents` stays registry-free by design — `convoke-doctor` and
+ * `scripts/audit/lib/installed-tree.js` read the field without a roster in scope — so the roster
+ * comparison lives here and every caller that HAS a roster calls it. T250 Round 2 is why there is
+ * a shared helper rather than one call site: the warning was wired into `mergeConfig` only, and
+ * three other readers honour or report exclusions without passing through it.
+ *
+ * @param {string[]} ids - From `parseExcludedAgents(...).ids`.
+ * @param {string[]} knownIds - The module's roster.
+ * @returns {{known: string[], unknown: string[]}} Order and duplicates preserved in `known`, so a
+ *   caller can use it directly; `unknown` is deduplicated, since it exists to be reported.
+ */
+function partitionExclusions(ids, knownIds) {
+  const roster = new Set(knownIds || []);
+  const known = (ids || []).filter((a) => roster.has(a));
+  const unknown = [...new Set((ids || []).filter((a) => !roster.has(a)))];
+  return { known, unknown };
+}
+
+/**
  * Warn when a CONFORMING `excluded_agents` list names an id this module has no agent for.
  *
  * `conforming` is a predicate about TYPES — `Array.isArray(value) && ids.length === value.length` —
@@ -95,9 +116,9 @@ const MODULE_PROFILES = Object.freeze({
  */
 function warnOnUnknownExclusions(ids, conforming, profile, source) {
   if (!conforming || !profile || !source || ids.length === 0) return;
-  const known = new Set(profile.agentIds);
-  // Deduplicated: a repeated id is benign and repeating it in the message is noise.
-  const unknown = [...new Set(ids)].filter((a) => !known.has(a));
+  // One definition of "unknown", shared with the callers that ACT on the split rather than only
+  // reporting it. Deduplicated there: a repeated id is benign and repeating it is noise.
+  const { unknown } = partitionExclusions(ids, profile.agentIds);
   if (unknown.length === 0) return;
 
   // Where an unknown id DOES belong, if anywhere — the likeliest real mistake is a config copied
@@ -200,7 +221,7 @@ function resetExcludedAgentWarnings() {
  * @param {string} configPath - Absolute path to module config.yaml
  * @returns {string[]} Array of excluded agent IDs (empty if missing, malformed, or not an array)
  */
-function readExcludedAgents(configPath) {
+function readExcludedAgents(configPath, options = {}) {
   let content;
   try {
     content = fs.readFileSync(configPath, 'utf8');
@@ -227,7 +248,12 @@ function readExcludedAgents(configPath) {
     // real agent id being accepted silently, which is `T250`.
     const parsed = yaml.load(content);
     if (parsed && typeof parsed === 'object') {
-      return parseExcludedAgents(parsed.excluded_agents, { source: configPath }).ids;
+      const r = parseExcludedAgents(parsed.excluded_agents, { source: configPath });
+      // T250 R2: this reader is how `refreshInstallation`, `validator` and the manifest generator
+      // learn the exclusions, and all three APPLY them. A caller that knows the module's roster
+      // passes it, and then an unknown id is reported here too rather than only on the merge path.
+      if (options.profile) warnOnUnknownExclusions(r.ids, r.conforming, options.profile, configPath);
+      return r.ids;
     }
   } catch (err) {
     console.warn(`Warning: could not parse ${configPath} for excluded_agents (${err.message}). Proceeding without exclusions.`);
@@ -712,6 +738,7 @@ module.exports = {
   readExcludedAgents,
   parseExcludedAgents,
   warnOnUnknownExclusions,
+  partitionExclusions,
   resetExcludedAgentWarnings,
   extractUserPreferences,
   validateConfig,
