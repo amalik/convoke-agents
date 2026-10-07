@@ -543,14 +543,88 @@ describe('T250 R2 — one definition of "unknown", shared by every reader', () =
     try {
       assert.deepEqual(capture(undefined), [], 'no profile: the reader must stay registry-free');
       const withProfile = capture({ profile: MODULE_PROFILES._gyre });
-      assert.ok(withProfile.some((m) => /"reviewcoach"/.test(m)),
-        `a profile must make the read report; got ${JSON.stringify(withProfile)}`);
+      assert.equal(withProfile.length, 1,
+        `exactly one message; got ${JSON.stringify(withProfile)}`);
+      assert.match(withProfile[0], /"reviewcoach"/);
+      // The SOURCE, which was unbound: a wiring passing the wrong path survived.
+      assert.ok(withProfile[0].includes(p), 'the message must name the file that was read');
     } finally { await fs.remove(dir); }
   });
 
-  it('readExcludedAgents still returns the ids it always returned, profile or not', () => {
-    // The reporting must not change what the reader RETURNS — three callers filter on it.
-    assert.deepEqual(partitionExclusions(['review-coach'], MODULE_PROFILES._gyre.agentIds).known,
-      ['review-coach'], 'a valid id is still known');
+  // WHICH PROFILE a caller passes was bound by nothing, because every wiring fixture used
+  // `reviewcoach` — unknown to BOTH modules, so the expected output is identical whether the
+  // caller passes the right profile or the wrong one. Mutants that hardcoded `_vortex` at the
+  // `mergeConfig` site and at the read pass-through both survived. `contextualization-expert`
+  // is the discriminator: a real Vortex agent, unknown to Gyre.
+  it('reports a cross-module id for the module that does NOT own it, and not for the one that does', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 't250r3-which-'));
+    const p = path.join(dir, 'config.yaml');
+    await fs.outputFile(p, yaml.dump({ excluded_agents: ['contextualization-expert'] }), 'utf8');
+    const capture = (profile) => {
+      resetExcludedAgentWarnings();
+      const real = console.warn;
+      const said = [];
+      console.warn = (m) => said.push(m);
+      try { readExcludedAgents(p, { profile }); } finally { console.warn = real; }
+      return said;
+    };
+    try {
+      assert.equal(capture(MODULE_PROFILES._gyre).length, 1,
+        'Gyre does not own this agent, so reading Gyre\'s config must report it');
+      assert.deepEqual(capture(MODULE_PROFILES._vortex), [],
+        'Vortex DOES own it, so the same id in Vortex\'s config is a legitimate opt-out');
+    } finally { await fs.remove(dir); }
+  });
+
+  it('does not double-report a NON-CONFORMING value on the read path', async () => {
+    // `conforming` was passed through but unbound: hardcoding `true` survived, which would give
+    // the operator two messages about one field on the three paths that APPLY exclusions.
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 't250r3-nc-'));
+    const p = path.join(dir, 'config.yaml');
+    await fs.outputFile(p, yaml.dump({ excluded_agents: ['reviewcoach', 42] }), 'utf8');
+    resetExcludedAgentWarnings();
+    const real = console.warn;
+    const said = [];
+    console.warn = (m) => said.push(m);
+    try { readExcludedAgents(p, { profile: MODULE_PROFILES._gyre }); } finally {
+      console.warn = real;
+      await fs.remove(dir);
+    }
+    assert.equal(said.filter((m) => /no agent for/.test(m)).length, 0,
+      `a malformed value must draw the shape message only; got ${JSON.stringify(said)}`);
+    assert.equal(said.length, 1, 'and exactly one message in total');
+  });
+
+  it('readExcludedAgents returns IDENTICAL ids with and without a profile', async () => {
+    // The name used to claim this and the body asserted something else entirely — a
+    // `partitionExclusions` call, duplicating an earlier test — so the invariant it names was
+    // bound by nothing: making the reader return `[]`, or only the `known` half, when a profile
+    // was passed survived the whole suite. That second one is the live hazard, because three
+    // callers FILTER on this return value and a non-conforming list's usable ids would vanish.
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 't250r3-ret-'));
+    const quiet = (fn) => {
+      resetExcludedAgentWarnings();
+      const real = console.warn;
+      console.warn = () => {};
+      try { return fn(); } finally { console.warn = real; }
+    };
+    try {
+      const CASES = [
+        ['a valid id', { excluded_agents: ['review-coach'] }],
+        ['a typo', { excluded_agents: ['reviewcoach'] }],
+        ['mixed', { excluded_agents: ['review-coach', 'reviewcoach'] }],
+        ['a bare scalar', { excluded_agents: 'review-coach' }],
+        ['a list holding a number', { excluded_agents: ['review-coach', 42] }],
+        ['absent', { user_name: 'Pat' }],
+      ];
+      for (const [label, doc] of CASES) {
+        const p = path.join(dir, 'config.yaml');
+        await fs.outputFile(p, yaml.dump(doc), 'utf8');
+        const without = quiet(() => readExcludedAgents(p));
+        const withIt = quiet(() => readExcludedAgents(p, { profile: MODULE_PROFILES._gyre }));
+        assert.deepEqual(withIt, without,
+          `${label}: the profile changed the RETURN value, which three callers filter on`);
+      }
+    } finally { await fs.remove(dir); }
   });
 });

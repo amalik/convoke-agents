@@ -110,7 +110,15 @@ function mergedModuleNames() {
 async function refreshInstallation(projectRoot, options = {}) {
   const { backupGuides = true, verbose = true } = options;
   const changes = [];
-  const packageRoot = path.join(__dirname, '..', '..', '..');
+  // `options.packageRoot` exists so the SAME-ROOT branch is reachable from a test. It defaults to
+  // the derived value, so no caller's behaviour changes. T250 R3: the two `readExcludedAgents`
+  // wirings below are load-bearing only when `isSameRoot` is true — in every other tree
+  // `mergeConfig` runs and reports first — and with no way to reach that branch, deleting either
+  // wiring left the whole suite green. The alternative was asserting on this file's source text,
+  // which pins the spelling rather than the behaviour.
+  const packageRoot = options.packageRoot
+    ? path.resolve(options.packageRoot)
+    : path.join(__dirname, '..', '..', '..');
   const packageVortex = path.join(packageRoot, '_bmad', 'bme', '_vortex');
   const targetVortex = path.join(projectRoot, '_bmad', 'bme', '_vortex');
   const version = getPackageVersion();

@@ -611,3 +611,77 @@ describe('gen-1.1 AC7 — refusal outside a development checkout', () => {
     });
   });
 });
+
+// =========================================================================
+// T250 R3 — `readExclusions`' two `{ profile }` wirings
+//
+// Both were deletable with this file and every other test file green: no test drove
+// `readExclusions` with an id that is not an agent of the module whose config holds it. The
+// fixtures below use a CROSS-MODULE id rather than a typo, so they bind WHICH profile each read
+// is given — a typo is unknown to both modules and so cannot distinguish a wiring that passes
+// the wrong one.
+// =========================================================================
+
+describe('T250 R3 — the manifest generator reports an unknown excluded id, per module', () => {
+  const yamlLib = require('js-yaml');
+  const configMerger = require('../../scripts/update/lib/config-merger');
+
+  /** A root with both module configs, each carrying the given exclusion list. */
+  async function rootWithExclusions(vortex, gyre) {
+    const root = await tmpRoot();
+    for (const [mod, excluded] of [['_vortex', vortex], ['_gyre', gyre]]) {
+      const dir = path.join(root, '_bmad', 'bme', mod);
+      await fs.ensureDir(dir);
+      await fs.writeFile(path.join(dir, 'config.yaml'),
+        yamlLib.dump({ submodule_name: mod, module: 'bme', excluded_agents: excluded }), 'utf8');
+    }
+    return root;
+  }
+
+  function capture(root) {
+    configMerger.resetExcludedAgentWarnings();
+    const real = console.warn;
+    const said = [];
+    console.warn = (m) => said.push(String(m));
+    try { return { result: readExclusionsUnderTest(root), said }; } finally { console.warn = real; }
+  }
+
+  // `readExclusions` is a TOP-LEVEL export. An earlier draft of this helper looked for it under
+  // `_internal`, found nothing and returned null — the fixture guard below caught that loudly
+  // instead of letting the three tests pass on an empty result, which is what the guard is for.
+  // This is the function `generateAgentManifest(root)` calls when given no `excluded` option, and
+  // therefore the path `npm run generate:manifest` takes — where the defect was measured.
+  function readExclusionsUnderTest(root) {
+    return require('../../scripts/lib/agent-manifest-generator').readExclusions(root);
+  }
+
+  it('reports a Vortex agent id listed in GYRE\'s config, naming the Gyre file', async () => {
+    const root = await rootWithExclusions([], ['contextualization-expert']);
+    try {
+      const { result, said } = capture(root);
+      assert.ok(result, 'fixture: readExclusions must be reachable for this test to bind anything');
+      const hits = said.filter((m) => /no agent for/.test(m) && /contextualization-expert/.test(m));
+      assert.equal(hits.length, 1, `expected one report; got ${JSON.stringify(said)}`);
+      assert.match(hits[0], /_gyre\/config\.yaml/, 'the Gyre read must be given the Gyre profile');
+    } finally { await fs.remove(root); }
+  });
+
+  it('reports a Gyre agent id listed in VORTEX\'s config, naming the Vortex file', async () => {
+    const root = await rootWithExclusions(['review-coach'], []);
+    try {
+      const { said } = capture(root);
+      const hits = said.filter((m) => /no agent for/.test(m) && /review-coach/.test(m));
+      assert.equal(hits.length, 1, `expected one report; got ${JSON.stringify(said)}`);
+      assert.match(hits[0], /_vortex\/config\.yaml/);
+    } finally { await fs.remove(root); }
+  });
+
+  it('says nothing when each module excludes its own agent', async () => {
+    const root = await rootWithExclusions(['production-intelligence-specialist'], ['review-coach']);
+    try {
+      const { said } = capture(root);
+      assert.deepEqual(said.filter((m) => /no agent for/.test(m)), [],
+        'a correct opt-out in each module must add no noise');
+    } finally { await fs.remove(root); }
+  });
+});

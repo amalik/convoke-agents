@@ -63,6 +63,33 @@ const MODULE_PROFILES = Object.freeze({
 });
 
 /**
+ * Is `name` a module this file has a profile for?
+ *
+ * `hasOwnProperty`, not a truthiness test on `MODULE_PROFILES[name]`. T250 R3 measured why:
+ * `MODULE_PROFILES['toString']`, `['__proto__']` and `['constructor']` are all TRUTHY with
+ * `agentIds === undefined`, so a module directory named any of those would take the
+ * profile-found branch with an empty roster and have every exclusion — genuine ones included —
+ * silently dropped from the report. This predicate lived as a local arrow inside `mergeConfig`;
+ * it is hoisted because `convoke-doctor` needs the same question answered the same way.
+ *
+ * @param {*} name - A submodule directory name.
+ * @returns {boolean}
+ */
+function hasProfile(name) {
+  return typeof name === 'string' && Object.prototype.hasOwnProperty.call(MODULE_PROFILES, name);
+}
+
+/**
+ * The profile for a module, or `undefined` — never an inherited `Object.prototype` member.
+ *
+ * @param {*} name - A submodule directory name.
+ * @returns {object|undefined}
+ */
+function profileFor(name) {
+  return hasProfile(name) ? MODULE_PROFILES[name] : undefined;
+}
+
+/**
  * Split an exclusion list into the ids a module actually has and the ids it does not.
  *
  * `parseExcludedAgents` stays registry-free by design — `convoke-doctor` and
@@ -353,8 +380,7 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}, options 
   const requested = (options || {}).submodule;
   const submodule = requested === undefined ? '_vortex' : requested;
   // Own-property lookup: `MODULE_PROFILES.constructor` would otherwise resolve through the prototype.
-  const hasProfile = (name) => typeof name === 'string' && Object.prototype.hasOwnProperty.call(MODULE_PROFILES, name);
-  const profile = hasProfile(submodule) ? MODULE_PROFILES[submodule] : undefined;
+  const profile = profileFor(submodule);
   if (!profile) {
     throw new Error(
       `config-merger: unknown submodule "${String(submodule)}" (known: ${Object.keys(MODULE_PROFILES).join(', ')})`
@@ -739,6 +765,8 @@ module.exports = {
   parseExcludedAgents,
   warnOnUnknownExclusions,
   partitionExclusions,
+  hasProfile,
+  profileFor,
   resetExcludedAgentWarnings,
   extractUserPreferences,
   validateConfig,

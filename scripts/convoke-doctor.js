@@ -6,7 +6,7 @@ const chalk = require('chalk');
 const yaml = require('js-yaml');
 const { findProjectRoot, getPackageVersion } = require('./update/lib/utils');
 const { AGENTS, GYRE_AGENTS } = require('./update/lib/agent-registry');
-const { parseExcludedAgents, partitionExclusions, MODULE_PROFILES } = require('./update/lib/config-merger');
+const { parseExcludedAgents, partitionExclusions, profileFor } = require('./update/lib/config-merger');
 // The authority on what `convoke-register-skill` can carry, exported by the command itself.
 // T254 R2: the doctor used to re-derive this from the sanitizer and the validator and never
 // from the PARSER, which trims — so `my-skill ` was advised as a command, trimmed to the
@@ -243,7 +243,10 @@ function checkModuleAgents(mod) {
   // row, which owns doctor surfacing a wrong `excluded_agents` value, and its scope now covers an
   // unknown id as well as a malformed shape.
   const parsedExclusions = parseExcludedAgents(mod.config.excluded_agents);
-  const moduleProfile = MODULE_PROFILES[mod.name];
+  // `profileFor`, not `MODULE_PROFILES[mod.name]`: the bare index returns a truthy
+  // `Object.prototype` member for a module named `toString` or `__proto__`, whose `agentIds`
+  // is undefined — and then EVERY exclusion, genuine ones included, vanishes from the report.
+  const moduleProfile = profileFor(mod.name);
   const excluded = moduleProfile
     ? partitionExclusions(parsedExclusions.ids, moduleProfile.agentIds).known
     : parsedExclusions.ids;
@@ -562,7 +565,7 @@ function checkAgentSkillWrappers(projectRoot, modules = []) {
       // module has no agent for is NOT an exclusion, so it must not inflate the excluded count
       // in the info line below — it previously did, against a roster that could not support it.
       const parsed = parseExcludedAgents(mod.config.excluded_agents);
-      const prof = MODULE_PROFILES[mod.name];
+      const prof = profileFor(mod.name);
       const real = prof ? partitionExclusions(parsed.ids, prof.agentIds).known : parsed.ids;
       for (const id of real) excludedIds.add(id);
     }

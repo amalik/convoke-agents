@@ -192,3 +192,100 @@ describe('refreshInstallation — Gyre excluded_agents (U8)', () => {
     assert.ok(fs.existsSync(keptPath), `non-excluded Gyre agent ${kept.id}.md must still be copied`);
   });
 });
+
+// === T250 R3: the two `{ profile }` wirings on this file's reads ===
+//
+// Both were deletable with every test green — including this file's own — because nothing
+// anywhere drove `refreshInstallation` with an unknown id and read stderr. That is the Round 2
+// HIGH repeating one layer up: the fix was pinned in the abstract and unpinned at the sites.
+//
+// Each test uses a CROSS-MODULE id rather than a typo, so it binds WHICH profile the wiring
+// passes. A typo is unknown to both modules, so a wiring that hands over the wrong profile
+// produces identical output and cannot be caught.
+
+describe('refreshInstallation — T250 reports an unknown excluded id, per module', () => {
+  let tmpDir;
+  beforeEach(async () => {
+    tmpDir = await setupProject();
+    // `createValidInstallation` seeds Vortex only, so the Gyre config is written here — the same
+    // minimal shape the Gyre block above uses. Without it the Gyre read is never reached and two
+    // of these tests fail on ENOENT rather than on the property they assert.
+    const gyreDir = path.join(tmpDir, '_bmad/bme/_gyre');
+    await fs.ensureDir(gyreDir);
+    fs.writeFileSync(path.join(gyreDir, 'config.yaml'), yaml.dump({
+      submodule_name: '_gyre', module: 'bme',
+      agents: GYRE_AGENTS.map((a) => a.id), workflows: [], version: '1.0.0',
+      excluded_agents: [],
+    }), 'utf8');
+  });
+  afterEach(async () => { restoreConsole(); if (tmpDir) await fs.remove(tmpDir); });
+
+  /** Run a refresh, returning every `console.warn` line. */
+  async function refreshCapturingWarnings() {
+    const real = console.warn;
+    const said = [];
+    console.warn = (m) => said.push(String(m));
+    try {
+      await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
+    } finally { console.warn = real; }
+    return said;
+  }
+
+  it('reports a Vortex agent id listed in GYRE\'s config', async () => {
+    // `contextualization-expert` is a real Vortex agent and no Gyre agent, so it can only be
+    // reported if the Gyre read is given GYRE's profile.
+    await setExcludedAgents(path.join(tmpDir, '_bmad/bme/_gyre/config.yaml'), ['contextualization-expert']);
+    const said = await refreshCapturingWarnings();
+    const hits = said.filter((m) => /no agent for/.test(m) && /contextualization-expert/.test(m));
+    assert.equal(hits.length, 1, `expected one report; got ${JSON.stringify(said)}`);
+    assert.match(hits[0], /_gyre\/config\.yaml/, 'and it must name the Gyre config, not the Vortex one');
+  });
+
+  it('reports a Gyre agent id listed in VORTEX\'s config', async () => {
+    await setExcludedAgents(path.join(tmpDir, '_bmad/bme/_vortex/config.yaml'), ['review-coach']);
+    const said = await refreshCapturingWarnings();
+    const hits = said.filter((m) => /no agent for/.test(m) && /review-coach/.test(m));
+    assert.equal(hits.length, 1, `expected one report; got ${JSON.stringify(said)}`);
+    assert.match(hits[0], /_vortex\/config\.yaml/);
+  });
+
+  // THE SAME-ROOT BRANCH, which is the only one where these two wirings do any work: elsewhere
+  // `mergeConfig` runs first and reports, so deleting either wiring was invisible. `packageRoot`
+  // is injected to reach it — in a dev tree both `mergeConfig` calls are skipped while the reads
+  // and the wrapper work still happen.
+  it('reports an unknown id in a SAME-ROOT tree, where mergeConfig is skipped', async () => {
+    await setExcludedAgents(path.join(tmpDir, '_bmad/bme/_gyre/config.yaml'), ['contextualization-expert']);
+    await setExcludedAgents(path.join(tmpDir, '_bmad/bme/_vortex/config.yaml'), ['review-coach']);
+    const real = console.warn;
+    const said = [];
+    console.warn = (m) => said.push(String(m));
+    let changes;
+    try {
+      changes = await refreshInstallation(tmpDir, { backupGuides: false, verbose: false, packageRoot: tmpDir });
+    } finally { console.warn = real; }
+    // THE PREMISE, asserted. Without this the test passes whether or not it is in the same-root
+    // branch: if the `packageRoot` override were ignored, `isSameRoot` would be false, `mergeConfig`
+    // would run and report, and the two assertions below would still hold — so a mutant that
+    // ignores the override survived. `Skipped agent copy (dev environment …)` is only pushed when
+    // `isSameRoot` is true, which makes the branch observable.
+    const flat = Array.isArray(changes) ? changes.join('\n') : String(changes && changes.changes);
+    assert.match(flat, /dev environment/,
+      `this test must run in the SAME-ROOT branch, or it proves nothing about the reads; changes were ${flat}`);
+    const reports = said.filter((m) => /no agent for/.test(m));
+    assert.equal(reports.length, 2,
+      `both reads must report in a same-root tree; got ${JSON.stringify(said)}`);
+    assert.ok(reports.some((m) => /_gyre\/config\.yaml/.test(m) && /contextualization-expert/.test(m)),
+      'the Gyre read must report the Vortex id, with the Gyre profile');
+    assert.ok(reports.some((m) => /_vortex\/config\.yaml/.test(m) && /review-coach/.test(m)),
+      'and the Vortex read must report the Gyre id');
+  });
+
+  it('says nothing when both modules exclude their OWN agents', async () => {
+    // The common path: an operator with a correct opt-out must see no new noise.
+    await setExcludedAgents(path.join(tmpDir, '_bmad/bme/_vortex/config.yaml'), ['production-intelligence-specialist']);
+    await setExcludedAgents(path.join(tmpDir, '_bmad/bme/_gyre/config.yaml'), ['review-coach']);
+    const said = await refreshCapturingWarnings();
+    assert.deepEqual(said.filter((m) => /no agent for/.test(m)), [],
+      'a valid exclusion in each module must be silent');
+  });
+});
