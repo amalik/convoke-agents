@@ -63,6 +63,71 @@ const MODULE_PROFILES = Object.freeze({
 });
 
 /**
+ * Warn when a CONFORMING `excluded_agents` list names an id this module has no agent for.
+ *
+ * `conforming` is a predicate about TYPES — `Array.isArray(value) && ids.length === value.length` —
+ * so a mistyped id satisfies it. Measured on a real install: `excluded_agents: [reviewcoach]`
+ * produced no output at all and `review-coach` was installed with its skill wrapper, which is
+ * `T244`'s complaint in its likelier form — the operator wrote an opt-out, nothing happened, and
+ * nothing said so.
+ *
+ * Operator ruling 2026-10-07, following `T244`'s: WARN and proceed. The opt-out is an optional
+ * field and a typo in it is not a reason to stop an install that is otherwise fine. And an id
+ * belonging to the OTHER module counts as unknown, because a module's list can only ever exclude
+ * its own agents — so the message names the module that does own it, since "unknown" alone reads
+ * as false to someone looking at an id they know exists.
+ *
+ * WHY HERE AND NOT IN `parseExcludedAgents`. That function must stay registry-free: `convoke-doctor`
+ * and `installed-tree.js` call it to read a value without a roster in scope, and deliberately
+ * silently. `mergeConfig` already has `profile.agentIds`, so the check costs nothing here.
+ *
+ * Only for a conforming value. A non-conforming one has already warned, and the two messages
+ * together would describe the same field twice. That also covers the two-parser divergence `T244`
+ * Round 2 found: a timestamp-shaped scalar types as `Date` under js-yaml and as a string under
+ * `yaml`, but BOTH are non-lists, so both take the non-conforming path and warn there — measured.
+ * The roster check never sees them, which makes "roster validation subsumes the divergence" the
+ * wrong account of why it is handled.
+ *
+ * @param {string[]} ids - The conforming id list (may repeat; may contain empty strings).
+ * @param {boolean} conforming - From `parseExcludedAgents`.
+ * @param {object|undefined} profile - The module profile, which carries `agentIds`.
+ * @param {string|undefined} source - The config path, for the message.
+ */
+function warnOnUnknownExclusions(ids, conforming, profile, source) {
+  if (!conforming || !profile || !source || ids.length === 0) return;
+  const known = new Set(profile.agentIds);
+  // Deduplicated: a repeated id is benign and repeating it in the message is noise.
+  const unknown = [...new Set(ids)].filter((a) => !known.has(a));
+  if (unknown.length === 0) return;
+
+  // Where an unknown id DOES belong, if anywhere — the likeliest real mistake is a config copied
+  // between modules, and naming the owner turns "unknown" into something the operator can act on.
+  const ownerOf = (id) => {
+    for (const [name, p] of Object.entries(MODULE_PROFILES)) {
+      if (p !== profile && p.agentIds.includes(id)) return name;
+    }
+    return null;
+  };
+  // `JSON.stringify` so an empty entry renders as `""` instead of vanishing from the message.
+  const shownAll = unknown.map((id) => {
+    const owner = ownerOf(id);
+    return owner ? `${JSON.stringify(id)} (that is ${owner}'s agent, not this module's)` : JSON.stringify(id);
+  });
+  // Capped for the same reason the sibling warning is: a 5000-entry list produced a 34k-character
+  // single line.
+  const shown = shownAll.length > 8
+    ? `${shownAll.slice(0, 8).join(', ')} and ${shownAll.length - 8} more`
+    : shownAll.join(', ');
+
+  warnOnce(
+    `${source}: \`excluded_agents\` names ${unknown.length === 1 ? 'an id' : 'ids'} this module has `
+      + `no agent for — ${shown}. Nothing was excluded for `
+      + `${unknown.length === 1 ? 'it' : 'those'}; any other id in the list still applies. `
+      + `This module's agent ids are: ${profile.agentIds.join(', ')}.`
+  );
+}
+
+/**
  * THE authority for what `excluded_agents` means. Five sites used to re-implement
  * `Array.isArray(v) ? v.filter(a => typeof a === 'string') : []` independently — `mergeConfig`,
  * `readExcludedAgents`, two in `convoke-doctor.js` and one in `scripts/audit/lib/installed-tree.js`.
@@ -327,6 +392,7 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}, options 
   // it via the canonical spread above.
   const exclusions = parseExcludedAgents(current.excluded_agents, { source: currentConfigPath });
   const excludedAgents = exclusions.ids;
+  warnOnUnknownExclusions(excludedAgents, exclusions.conforming, profile, currentConfigPath);
   if (updates.agents) {
     const userAgents = Array.isArray(current.agents)
       ? [...new Set(current.agents.filter(a => !profile.agentIds.includes(a)))]
@@ -645,6 +711,7 @@ module.exports = {
   mergeConfig,
   readExcludedAgents,
   parseExcludedAgents,
+  warnOnUnknownExclusions,
   resetExcludedAgentWarnings,
   extractUserPreferences,
   validateConfig,

@@ -290,3 +290,151 @@ describe('T244 — no unaugmented re-implementation under scripts/ (a floor, not
       'importing the module for an unrelated reason must not exempt a file from the rule');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────
+// T250. `conforming` is a predicate about TYPES, so a MISTYPED id satisfies it. Measured on a real
+// install: `excluded_agents: [reviewcoach]` printed nothing and `review-coach` was installed with
+// its skill wrapper — T244's complaint in its likelier form.
+//
+// Operator ruling 2026-10-07, following T244's: WARN in the installer and PROCEED, and an id
+// belonging to the OTHER module counts as unknown. The roster check lives at `mergeConfig`'s call
+// site, never in `parseExcludedAgents`, which must stay registry-free for doctor and installed-tree.
+// ─────────────────────────────────────────────────────────────────
+
+describe('T250 — a conforming but unknown agent id is no longer silent', () => {
+  const { warnOnUnknownExclusions } = require('../../scripts/update/lib/config-merger');
+  const { AGENT_IDS, GYRE_AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
+  const GYRE = { agentIds: GYRE_AGENT_IDS };
+  const SRC = '_bmad/bme/_gyre/config.yaml';
+
+  /** Capture the one warning the check emits, if any. */
+  function warned(ids, conforming = true, profile = GYRE, source = SRC) {
+    resetExcludedAgentWarnings();
+    const real = console.warn;
+    let said = null;
+    console.warn = (m) => { said = m; };
+    try { warnOnUnknownExclusions(ids, conforming, profile, source); } finally { console.warn = real; }
+    return said;
+  }
+
+  // The fixture is DERIVED: a literal "valid id" list here would rot the moment an agent is added
+  // or renamed, which is the failure this repo keeps paying for.
+  it('fixture: the ids used below really are and are not in the Gyre roster', () => {
+    assert.ok(GYRE_AGENT_IDS.includes('review-coach'), 'review-coach must be a real Gyre id');
+    assert.ok(!GYRE_AGENT_IDS.includes('reviewcoach'), 'reviewcoach must NOT be one');
+    assert.ok(AGENT_IDS.includes('contextualization-expert'), 'the cross-module id must be a real Vortex id');
+    assert.ok(!GYRE_AGENT_IDS.includes('contextualization-expert'), '...and not a Gyre one');
+  });
+
+  it('warns on a mistyped id, naming the file and the id', () => {
+    const m = warned(['reviewcoach']);
+    assert.ok(m, 'a mistyped id must not be silent — that is the whole defect');
+    assert.match(m, /_bmad\/bme\/_gyre\/config\.yaml/, 'the operator has to be told WHICH file');
+    assert.match(m, /"reviewcoach"/, 'and which id');
+    assert.match(m, /no agent for/);
+  });
+
+  it('warns on an id that belongs to the other module, and says whose it is', () => {
+    // The ruling's second half. "Unknown" alone reads as false to someone looking at an id they
+    // know exists, so the message names the owner — the likeliest cause is a copied config.
+    const m = warned(['contextualization-expert']);
+    assert.ok(m);
+    assert.match(m, /"contextualization-expert"/);
+    assert.match(m, /_vortex/, 'naming the owning module is what makes this actionable');
+  });
+
+  it('stays silent when every id resolves, and when ids merely repeat', () => {
+    assert.equal(warned(['review-coach']), null);
+    assert.equal(warned([...GYRE_AGENT_IDS]), null, 'the whole roster is valid by construction');
+    assert.equal(warned(['review-coach', 'review-coach']), null, 'a duplicate is benign — T250 says so');
+  });
+
+  it('names a repeated unknown id ONCE', () => {
+    // Both halves matter. The dedupe is what keeps a hand-edited list of twenty copies of one typo
+    // from producing twenty clauses — and asserting it with VALID duplicates proved nothing,
+    // because `unknown` was empty either way and a mutant dropping the dedupe survived.
+    const m = warned(['reviewcoach', 'reviewcoach', 'reviewcoach']);
+    assert.ok(m);
+    assert.equal((m.match(/"reviewcoach"/g) || []).length, 1,
+      `a repeated unknown id must be named once; got: ${m}`);
+  });
+
+  it('does not warn a SECOND time about a non-conforming value', () => {
+    // `parseExcludedAgents` has already warned about the shape. Two messages describing the same
+    // field is the noise that trains an operator to skip both.
+    //
+    // The id here must be UNKNOWN. An earlier version passed `['review-coach']` — a VALID id — so
+    // `unknown` was empty and the check returned early whatever the conforming guard did: the
+    // fixture could not distinguish the guard from its deletion, and a mutant removing it survived.
+    assert.equal(warned(['reviewcoach'], false), null,
+      'a non-conforming value must not draw a second message about its contents');
+    // ...and the same id DOES warn when the value is conforming, or the line above proves nothing.
+    assert.ok(warned(['reviewcoach'], true), 'control: this id warns when the list conforms');
+  });
+
+  it('shows an empty entry rather than letting it vanish from the message', () => {
+    const m = warned(['']);
+    assert.ok(m);
+    assert.match(m, /""/, 'an unquoted empty id leaves the operator reading a sentence about nothing');
+  });
+
+  it('lists THIS module\'s ids, so the operator can see the correct spelling', () => {
+    const m = warned(['reviewcoach']);
+    for (const id of GYRE_AGENT_IDS) assert.ok(m.includes(id), `the valid id ${id} must be offered`);
+    // ...and not the other module's, which would be advice that does not apply here.
+    assert.ok(!m.includes('contextualization-expert'));
+  });
+
+  it('caps a long list instead of emitting one enormous line', () => {
+    // The sibling warning learned this: a 5000-entry list produced a 34k-character single line.
+    const many = Array.from({ length: 50 }, (_, i) => `ghost-agent-${i}`);
+    const m = warned(many);
+    assert.match(m, /and 42 more/, '50 unknown ids must collapse to 8 named plus a count');
+    assert.ok(m.length < 2000, `the message is ${m.length} characters`);
+  });
+
+  it('is WIRED into mergeConfig, not merely exported', async () => {
+    // Without this, deleting the call site leaves every test above green and the defect restored.
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 't250-wired-'));
+    const p = path.join(dir, 'config.yaml');
+    await fs.outputFile(p, yaml.dump({
+      submodule_name: '_gyre', module: 'bme', user_name: 'Pat', excluded_agents: ['reviewcoach'],
+    }), 'utf8');
+    resetExcludedAgentWarnings();
+    const real = console.warn;
+    const said = [];
+    console.warn = (m) => said.push(m);
+    try {
+      await mergeConfig(p, '9.9.9', {}, { submodule: '_gyre' });
+    } finally {
+      console.warn = real;
+      await fs.remove(dir);
+    }
+    assert.ok(said.some((m) => /"reviewcoach"/.test(m)),
+      `mergeConfig did not surface the unknown id; it said: ${JSON.stringify(said)}`);
+  });
+
+  it('still applies the ids that DO resolve when the list is mixed', async () => {
+    // The ruling is "warn and proceed", so the valid half of a mixed list must keep working.
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 't250-mixed-'));
+    const p = path.join(dir, 'config.yaml');
+    await fs.outputFile(p, yaml.dump({
+      submodule_name: '_gyre', module: 'bme', user_name: 'Pat',
+      excluded_agents: ['review-coach', 'reviewcoach'],
+    }), 'utf8');
+    resetExcludedAgentWarnings();
+    const real = console.warn;
+    console.warn = () => {};
+    let merged;
+    try {
+      merged = await mergeConfig(p, '9.9.9', {}, { submodule: '_gyre' });
+    } finally {
+      console.warn = real;
+      await fs.remove(dir);
+    }
+    assert.ok(Array.isArray(merged.agents), 'merge produced no agents array');
+    assert.ok(!merged.agents.includes('review-coach'), 'the VALID exclusion must still take effect');
+    assert.deepEqual(merged.excluded_agents, ['review-coach', 'reviewcoach'],
+      'and the operator\'s list is kept as written, unknown entry included');
+  });
+});
