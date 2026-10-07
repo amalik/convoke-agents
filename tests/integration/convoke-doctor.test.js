@@ -406,6 +406,27 @@ describe('convoke-doctor: a wrong excluded_agents value reaches the operator (T2
       `${CURRENT_CONFIG_YAML}excluded_agents: contextualization-expert\n`,
       'utf8'
     );
+    // A SECOND module, deliberately CLEAN. With one module the wiring cannot be told from
+    // `checkExcludedAgents(modules[0])` — reporting against the first module regardless of which
+    // one is being checked survived the whole suite. With two, the finding must name the right one
+    // and must NOT name the other.
+    const gyreDir = path.join(tmpDir, '_bmad/bme/_gyre');
+    await fs.ensureDir(path.join(gyreDir, 'agents'));
+    await fs.writeFile(
+      path.join(gyreDir, 'config.yaml'),
+      `version: "${pkg.version}"\nagents:\n  - review-coach\nexcluded_agents: []\n`,
+      'utf8'
+    );
+    // A THIRD module with NO `agents:` key at all, and a malformed exclusion. This is the
+    // commit's central design decision — the check is NOT gated on a non-empty `agents` list —
+    // and every previous fixture had one, so re-gating it survived.
+    const portDir = path.join(tmpDir, '_bmad/bme/_portability');
+    await fs.ensureDir(portDir);
+    await fs.writeFile(
+      path.join(portDir, 'config.yaml'),
+      `version: "${pkg.version}"\nworkflows:\n  - export-skill\nexcluded_agents: oops-a-scalar\n`,
+      'utf8'
+    );
   });
 
   after(async () => { await removeTempDir(tmpDir); });
@@ -419,6 +440,40 @@ describe('convoke-doctor: a wrong excluded_agents value reaches the operator (T2
       'the finding must name the required shape, not merely that something is wrong');
     assert.ok(/_vortex excluded_agents/.test(out),
       'and name the module whose config holds it');
+    // H3: the finding must be attributed to the module being checked, not to whichever module
+    // happens to be first. The clean module must draw no finding of its own.
+    assert.ok(!/_gyre excluded_agents/.test(out),
+      `the clean module must not be reported; output was:\n${out}`);
+    // H4: the no-`agents:` module must still be reported — that is the ungating this commit added.
+    assert.ok(/_portability excluded_agents/.test(out),
+      `a module with no agents list must still be checked; output was:\n${out}`);
+    // Exactly one finding per wrong module, two wrong modules here.
+    assert.equal((out.match(/excluded_agents$/gm) || []).length, 2,
+      `expected one finding line per wrong module; output was:\n${out}`);
+  });
+
+  it('does not change the exit code — a wrong opt-out is a soft warning', async () => {
+    // The property the design turns on, asserted on the PROCESS rather than on a struct field: the
+    // unit tests pin `softWarning: true`, and nothing pinned what an operator or CI actually sees.
+    //
+    // Asserted COMPARATIVELY, not as `exitCode === 0`. This fixture has unrelated hard failures
+    // (no agent files, no taxonomy), so it exits 1 either way — an absolute assertion here was
+    // wrong about the fixture rather than about the code, and said so on the first run. What
+    // matters is that adding the finding neither causes a failure nor masks one.
+    const vortexConfig = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
+    const withBadValue = await runDoctor(tmpDir);
+    const original = await fs.readFile(vortexConfig, 'utf8');
+    try {
+      await fs.writeFile(vortexConfig, `${CURRENT_CONFIG_YAML}excluded_agents: []\n`, 'utf8');
+      const withCleanValue = await runDoctor(tmpDir);
+      assert.equal(withBadValue.exitCode, withCleanValue.exitCode,
+        'the excluded_agents finding must not move the exit code in either direction');
+      // ...and the fixture must actually differ in the finding, or the equality above is trivial.
+      assert.ok(/_vortex excluded_agents/.test(withBadValue.stdout + withBadValue.stderr));
+      assert.ok(!/_vortex excluded_agents/.test(withCleanValue.stdout + withCleanValue.stderr));
+    } finally {
+      await fs.writeFile(vortexConfig, original, 'utf8');
+    }
   });
 });
 

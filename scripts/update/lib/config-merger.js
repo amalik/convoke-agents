@@ -172,8 +172,8 @@ function partitionExclusions(ids, knownIds) {
  * @param {object|undefined} profile - The module profile, which carries `agentIds`.
  * @param {string|undefined} source - The config path, for the message.
  */
-function warnOnUnknownExclusions(ids, conforming, profile, source) {
-  const message = unknownExclusionMessage(ids, conforming, profile, source);
+function warnOnUnknownExclusions(ids, conforming, profile, source, alsoKnown) {
+  const message = unknownExclusionMessage(ids, conforming, profile, source, alsoKnown);
   if (message) warnOnce(message);
 }
 
@@ -192,11 +192,22 @@ function warnOnUnknownExclusions(ids, conforming, profile, source) {
  * @param {string|undefined} source - The config path.
  * @returns {string|null}
  */
-function unknownExclusionMessage(ids, conforming, profile, source) {
+function unknownExclusionMessage(ids, conforming, profile, source, alsoKnown) {
   if (!conforming || !profile || !source || !ids || ids.length === 0) return null;
+  // The roster is the SHIPPED registry plus the module's OWN declared agents. Operator ruling
+  // 2026-10-07, on measurement: `mergeConfig` supports user-added agents ("canonical agents in
+  // order, then unique user-added agents appended"), and excluding one WORKS — it is filtered out
+  // of `merged.agents` — so calling it an id the module has no agent for was simply false. Verified
+  // before and after: with `agents: [contextualization-expert, my-custom-agent]` and
+  // `excluded_agents: [my-custom-agent]`, the agent is absent from the merge result.
+  //
+  // Residual, and truthful rather than silent: a user-added agent excluded in a PREVIOUS run is
+  // absent from `agents:` too (that is how the opt-out persists), so it is still reported — which
+  // is why the sentence below no longer asserts that nothing was excluded.
+  const roster = [...(profile.agentIds || []), ...(Array.isArray(alsoKnown) ? alsoKnown : [])];
   // One definition of "unknown", shared with the callers that ACT on the split rather than only
   // reporting it. Deduplicated there: a repeated id is benign and repeating it is noise.
-  const { unknown } = partitionExclusions(ids, profile.agentIds);
+  const { unknown } = partitionExclusions(ids, roster);
   if (unknown.length === 0) return null;
 
   // Where an unknown id DOES belong, if anywhere — the likeliest real mistake is a config copied
@@ -218,10 +229,16 @@ function unknownExclusionMessage(ids, conforming, profile, source) {
     ? `${shownAll.slice(0, 8).join(', ')} and ${shownAll.length - 8} more`
     : shownAll.join(', ');
 
-  return `${source}: \`excluded_agents\` names ${unknown.length === 1 ? 'an id' : 'ids'} this module has `
-    + `no agent for — ${shown}. Nothing was excluded for `
-    + `${unknown.length === 1 ? 'it' : 'those'}; any other id in the list still applies. `
-    + `This module's agent ids are: ${profile.agentIds.join(', ')}.`;
+  // NOT "Nothing was excluded for it". That asserted a consequence this function cannot check and
+  // which measurement showed to be false for a user-added agent, whose exclusion does take effect.
+  // What is certain is that the id matches nothing this module knows about, which is worth saying
+  // either way — it is a typo, or an agent that is no longer there.
+  return `${source}: \`excluded_agents\` names `
+    + `${unknown.length === 1 ? 'an id that matches' : 'ids that match'} `
+    + `no agent this module knows about — ${shown}. Check the spelling; `
+    + `${unknown.length === 1 ? 'it' : 'they'} will have no effect if the agent does not exist, and `
+    + 'any other id in the list still applies. '
+    + `This module's own agent ids are: ${profile.agentIds.join(', ')}.`;
 }
 
 /**
@@ -309,7 +326,11 @@ function readExcludedAgents(configPath, options = {}) {
       // T250 R2: this reader is how `refreshInstallation`, `validator` and the manifest generator
       // learn the exclusions, and all three APPLY them. A caller that knows the module's roster
       // passes it, and then an unknown id is reported here too rather than only on the merge path.
-      if (options.profile) warnOnUnknownExclusions(r.ids, r.conforming, options.profile, configPath);
+      // `parsed.agents` widens the roster with the operator's own additions — see the ruling in
+      // `unknownExclusionMessage`. This reader has the whole document, so it costs nothing here.
+      if (options.profile) {
+        warnOnUnknownExclusions(r.ids, r.conforming, options.profile, configPath, parsed.agents);
+      }
       return r.ids;
     }
   } catch (err) {
@@ -474,7 +495,7 @@ async function mergeConfig(currentConfigPath, newVersion, updates = {}, options 
   // it via the canonical spread above.
   const exclusions = parseExcludedAgents(current.excluded_agents, { source: currentConfigPath });
   const excludedAgents = exclusions.ids;
-  warnOnUnknownExclusions(excludedAgents, exclusions.conforming, profile, currentConfigPath);
+  warnOnUnknownExclusions(excludedAgents, exclusions.conforming, profile, currentConfigPath, current.agents);
   if (updates.agents) {
     const userAgents = Array.isArray(current.agents)
       ? [...new Set(current.agents.filter(a => !profile.agentIds.includes(a)))]

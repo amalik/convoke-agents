@@ -345,7 +345,7 @@ describe('T250 — a conforming but unknown agent id is no longer silent', () =>
     assert.ok(m, 'a mistyped id must not be silent — that is the whole defect');
     assert.match(m, /_bmad\/bme\/_gyre\/config\.yaml/, 'the operator has to be told WHICH file');
     assert.match(m, /"reviewcoach"/, 'and which id');
-    assert.match(m, /no agent for/);
+    assert.match(m, /no agent this module knows about/);
   });
 
   it('warns on an id that belongs to the other module, and says whose it is', () => {
@@ -382,11 +382,20 @@ describe('T250 — a conforming but unknown agent id is no longer silent', () =>
   it('tells the operator what did and did not happen, not just which id is wrong', () => {
     // The actionable half. Unasserted before, so a mutant deleting it survived.
     const m = warned(['reviewcoach']);
-    assert.match(m, /Nothing was excluded for it/, 'the consequence has to be stated');
+    // The message no longer asserts "Nothing was excluded for it" — measurement showed that is
+    // false for a user-added agent, whose exclusion does take effect. What it must still say is
+    // what to do and that the rest of the list stands.
+    assert.match(m, /Check the spelling/, 'the operator needs an action, not just a diagnosis');
     assert.match(m, /any other id in the list still applies/, '...and that the rest of the list stands');
+    assert.doesNotMatch(m, /Nothing was excluded for/,
+      'that claim was false for a user-added agent and must not come back');
     // Singular vs plural, since the sentence reads wrongly if it does not agree.
-    assert.match(m, /names an id this module/, 'one unknown id reads "an id"');
-    assert.match(warned(['reviewcoach', 'modelcurator']), /names ids this module/, 'two read "ids"');
+    // Subject AND verb must agree. Widening the sentence for the user-added-agent ruling left
+    // `names an id that MATCH no agent`, which the first run showed immediately.
+    assert.match(m, /names an id that matches no agent/, 'one unknown id reads "an id that matches"');
+    assert.match(warned(['reviewcoach', 'modelcurator']), /names ids that match no agent/,
+      'two read "ids that match"');
+    assert.doesNotMatch(m, /an id that match /, 'singular subject with a plural verb');
   });
 
   it('names a repeated unknown id ONCE', () => {
@@ -590,7 +599,7 @@ describe('T250 R2 — one definition of "unknown", shared by every reader', () =
       console.warn = real;
       await fs.remove(dir);
     }
-    assert.equal(said.filter((m) => /no agent for/.test(m)).length, 0,
+    assert.equal(said.filter((m) => /no agent this module knows about/.test(m)).length, 0,
       `a malformed value must draw the shape message only; got ${JSON.stringify(said)}`);
     assert.equal(said.length, 1, 'and exactly one message in total');
   });

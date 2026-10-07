@@ -170,7 +170,7 @@ function checkExcludedAgents(mod) {
     ? malformedExclusionMessage(mod.config.excluded_agents, parsed.ids, configPath)
     : null;
   const unknown = parsed.conforming
-    ? unknownExclusionMessage(parsed.ids, parsed.conforming, profileFor(mod.name), configPath)
+    ? unknownExclusionMessage(parsed.ids, parsed.conforming, profileFor(mod.name), configPath, mod.config.agents)
     : null;
   // `||`, and the two are MUTUALLY EXCLUSIVE by construction: `malformed` requires
   // `!conforming` and `unknown` requires `conforming`. So a mutant that concatenates both survives
@@ -181,8 +181,9 @@ function checkExcludedAgents(mod) {
   if (!message) return [];
 
   // The message already names the file, the field, what was found and what to do, so the finding
-  // carries it as the fix rather than paraphrasing it into a second wording.
-  const [first, ...rest] = message.split('\n');
+  // carries it as the fix rather than paraphrasing it into a second wording. (An earlier version
+  // split it into `[first, ...rest]` and re-joined them, which is a pure identity — `printResults`
+  // does the per-line indenting. Removed rather than documented, since it did nothing at all.)
   return [{
     name: `${mod.name} excluded_agents`,
     passed: false,
@@ -190,7 +191,7 @@ function checkExcludedAgents(mod) {
     warning: malformed
       ? 'the opt-out list is not a list of agent ids, so it did not take effect'
       : 'the opt-out list names an agent this module does not have, so that entry did nothing',
-    fix: [first, ...rest].join('\n'),
+    fix: message,
   }];
 }
 

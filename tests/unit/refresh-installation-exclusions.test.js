@@ -236,7 +236,7 @@ describe('refreshInstallation — T250 reports an unknown excluded id, per modul
     // reported if the Gyre read is given GYRE's profile.
     await setExcludedAgents(path.join(tmpDir, '_bmad/bme/_gyre/config.yaml'), ['contextualization-expert']);
     const said = await refreshCapturingWarnings();
-    const hits = said.filter((m) => /no agent for/.test(m) && /contextualization-expert/.test(m));
+    const hits = said.filter((m) => /no agent this module knows about/.test(m) && /contextualization-expert/.test(m));
     assert.equal(hits.length, 1, `expected one report; got ${JSON.stringify(said)}`);
     assert.match(hits[0], /_gyre\/config\.yaml/, 'and it must name the Gyre config, not the Vortex one');
   });
@@ -244,7 +244,7 @@ describe('refreshInstallation — T250 reports an unknown excluded id, per modul
   it('reports a Gyre agent id listed in VORTEX\'s config', async () => {
     await setExcludedAgents(path.join(tmpDir, '_bmad/bme/_vortex/config.yaml'), ['review-coach']);
     const said = await refreshCapturingWarnings();
-    const hits = said.filter((m) => /no agent for/.test(m) && /review-coach/.test(m));
+    const hits = said.filter((m) => /no agent this module knows about/.test(m) && /review-coach/.test(m));
     assert.equal(hits.length, 1, `expected one report; got ${JSON.stringify(said)}`);
     assert.match(hits[0], /_vortex\/config\.yaml/);
   });
@@ -271,7 +271,7 @@ describe('refreshInstallation — T250 reports an unknown excluded id, per modul
     const flat = Array.isArray(changes) ? changes.join('\n') : String(changes && changes.changes);
     assert.match(flat, /dev environment/,
       `this test must run in the SAME-ROOT branch, or it proves nothing about the reads; changes were ${flat}`);
-    const reports = said.filter((m) => /no agent for/.test(m));
+    const reports = said.filter((m) => /no agent this module knows about/.test(m));
     assert.equal(reports.length, 2,
       `both reads must report in a same-root tree; got ${JSON.stringify(said)}`);
     assert.ok(reports.some((m) => /_gyre\/config\.yaml/.test(m) && /contextualization-expert/.test(m)),
@@ -285,7 +285,7 @@ describe('refreshInstallation — T250 reports an unknown excluded id, per modul
     await setExcludedAgents(path.join(tmpDir, '_bmad/bme/_vortex/config.yaml'), ['production-intelligence-specialist']);
     await setExcludedAgents(path.join(tmpDir, '_bmad/bme/_gyre/config.yaml'), ['review-coach']);
     const said = await refreshCapturingWarnings();
-    assert.deepEqual(said.filter((m) => /no agent for/.test(m)), [],
+    assert.deepEqual(said.filter((m) => /no agent this module knows about/.test(m)), [],
       'a valid exclusion in each module must be silent');
   });
 });

@@ -660,7 +660,7 @@ describe('T250 R3 — the manifest generator reports an unknown excluded id, per
     try {
       const { result, said } = capture(root);
       assert.ok(result, 'fixture: readExclusions must be reachable for this test to bind anything');
-      const hits = said.filter((m) => /no agent for/.test(m) && /contextualization-expert/.test(m));
+      const hits = said.filter((m) => /no agent this module knows about/.test(m) && /contextualization-expert/.test(m));
       assert.equal(hits.length, 1, `expected one report; got ${JSON.stringify(said)}`);
       assert.match(hits[0], /_gyre\/config\.yaml/, 'the Gyre read must be given the Gyre profile');
     } finally { await fs.remove(root); }
@@ -670,7 +670,7 @@ describe('T250 R3 — the manifest generator reports an unknown excluded id, per
     const root = await rootWithExclusions(['review-coach'], []);
     try {
       const { said } = capture(root);
-      const hits = said.filter((m) => /no agent for/.test(m) && /review-coach/.test(m));
+      const hits = said.filter((m) => /no agent this module knows about/.test(m) && /review-coach/.test(m));
       assert.equal(hits.length, 1, `expected one report; got ${JSON.stringify(said)}`);
       assert.match(hits[0], /_vortex\/config\.yaml/);
     } finally { await fs.remove(root); }
@@ -680,7 +680,7 @@ describe('T250 R3 — the manifest generator reports an unknown excluded id, per
     const root = await rootWithExclusions(['production-intelligence-specialist'], ['review-coach']);
     try {
       const { said } = capture(root);
-      assert.deepEqual(said.filter((m) => /no agent for/.test(m)), [],
+      assert.deepEqual(said.filter((m) => /no agent this module knows about/.test(m)), [],
         'a correct opt-out in each module must add no noise');
     } finally { await fs.remove(root); }
   });

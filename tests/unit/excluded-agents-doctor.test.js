@@ -66,6 +66,11 @@ describe('T249 — doctor reports a wrong excluded_agents value', () => {
       assert.equal(finding.softWarning, true, 'a wrong opt-out does not make the install broken');
       assert.match(finding.fix, /must be a YAML list of agent ids/, 'the required shape has to be named');
       assert.match(finding.fix, /_gyre\/config\.yaml/, 'and the file');
+      // The one-liner the operator reads FIRST was asserted by nothing, so swapping the two
+      // sentences — telling someone with a bare scalar that they named a missing agent — survived
+      // the whole suite. It is the line `printResults` shows under the finding's name.
+      assert.match(finding.warning, /not a list of agent ids/,
+        'the summary line must describe the MALFORMED class, not the unknown-id one');
     });
   }
 
@@ -74,6 +79,8 @@ describe('T249 — doctor reports a wrong excluded_agents value', () => {
     assert.ok(finding);
     assert.deepEqual(extra, []);
     assert.equal(finding.softWarning, true);
+    assert.match(finding.warning, /names an agent this module does not have/,
+      'and the unknown-id class must get ITS summary line, not the malformed one');
     assert.match(finding.fix, /"reviewcoach"/);
     for (const id of GYRE_AGENT_IDS) {
       assert.ok(finding.fix.includes(id), `the valid id ${id} must be offered`);
@@ -92,7 +99,11 @@ describe('T249 — doctor reports a wrong excluded_agents value', () => {
     const found = checkExcludedAgents(mod('_gyre', ['reviewcoach', 42]));
     assert.equal(found.length, 1);
     assert.match(found[0].fix, /must be a YAML list of agent ids/);
-    assert.doesNotMatch(found[0].fix, /no agent for/, 'not both descriptions of one field');
+    // A `doesNotMatch` on a phrase that no longer exists passes for free. This one tracks the
+    // CURRENT unknown-id wording deliberately — when that wording changes, this must change
+    // with it or it stops discriminating the two classes at all.
+    assert.doesNotMatch(found[0].fix, /no agent this module knows about/,
+      'not both descriptions of one field');
   });
 
   it('is SILENT about an unknown id for a module with no roster, and still reports a malformed one', () => {
