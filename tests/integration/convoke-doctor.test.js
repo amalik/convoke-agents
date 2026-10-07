@@ -387,3 +387,62 @@ describe('convoke-doctor: governance softWarning exit-code (Story v63-2-2 H1)', 
       `hard-failure summary must not appear for governance-only warnings; stdout:\n${stdout}`);
   });
 });
+
+// T249 — the WIRING, not the check. `checkExcludedAgents` is unit-tested in
+// `tests/unit/excluded-agents-doctor.test.js`, and deleting its `checks.push(...)` call from the
+// module loop left every one of those tests green. That is the same defect class that cost `T250`
+// two review rounds: the thing is tested, the thing being CALLED is not. Only the CLI can bind it,
+// because the assembly lives inside `main()`.
+describe('convoke-doctor: a wrong excluded_agents value reaches the operator (T249)', () => {
+  let tmpDir;
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-doc-excl-'));
+    const vortexDir = path.join(tmpDir, '_bmad/bme/_vortex');
+    await fs.ensureDir(path.join(vortexDir, 'agents'));
+    // A bare scalar: the shape that made T244's operator lose their opt-out silently.
+    await fs.writeFile(
+      path.join(vortexDir, 'config.yaml'),
+      `${CURRENT_CONFIG_YAML}excluded_agents: contextualization-expert\n`,
+      'utf8'
+    );
+  });
+
+  after(async () => { await removeTempDir(tmpDir); });
+
+  it('prints the finding, names the field and the required shape', async () => {
+    const { stdout, stderr } = await runDoctor(tmpDir);
+    const out = `${stdout}${stderr}`;
+    assert.ok(out.includes('excluded_agents'),
+      `doctor said nothing about the field; output was:\n${out}`);
+    assert.ok(out.includes('must be a YAML list of agent ids'),
+      'the finding must name the required shape, not merely that something is wrong');
+    assert.ok(/_vortex excluded_agents/.test(out),
+      'and name the module whose config holds it');
+  });
+});
+
+describe('convoke-doctor: a VALID excluded_agents value stays quiet (T249)', () => {
+  let tmpDir;
+
+  before(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bmad-doc-excl-ok-'));
+    const vortexDir = path.join(tmpDir, '_bmad/bme/_vortex');
+    await fs.ensureDir(path.join(vortexDir, 'agents'));
+    await fs.writeFile(
+      path.join(vortexDir, 'config.yaml'),
+      `${CURRENT_CONFIG_YAML}excluded_agents:\n  - contextualization-expert\n`,
+      'utf8'
+    );
+  });
+
+  after(async () => { await removeTempDir(tmpDir); });
+
+  it('emits no excluded_agents finding for a correct opt-out', async () => {
+    // The control. Without it the test above passes for a doctor that complains unconditionally.
+    const { stdout, stderr } = await runDoctor(tmpDir);
+    const out = `${stdout}${stderr}`;
+    assert.ok(!/excluded_agents` (is|names|contains)/.test(out),
+      `a correct opt-out must draw no finding; output was:\n${out}`);
+  });
+});

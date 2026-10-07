@@ -6,7 +6,10 @@ const chalk = require('chalk');
 const yaml = require('js-yaml');
 const { findProjectRoot, getPackageVersion } = require('./update/lib/utils');
 const { AGENTS, GYRE_AGENTS } = require('./update/lib/agent-registry');
-const { parseExcludedAgents, partitionExclusions, profileFor } = require('./update/lib/config-merger');
+const {
+  parseExcludedAgents, partitionExclusions, profileFor,
+  malformedExclusionMessage, unknownExclusionMessage,
+} = require('./update/lib/config-merger');
 // The authority on what `convoke-register-skill` can carry, exported by the command itself.
 // T254 R2: the doctor used to re-derive this from the sanitizer and the validator and never
 // from the PARSER, which trims — so `my-skill ` was advised as a command, trimmed to the
@@ -87,6 +90,9 @@ async function main() {
     const configCheck = checkModuleConfig(mod);
     checks.push(configCheck);
     if (configCheck.passed) {
+      // NOT gated on `agents`: an operator can write an opt-out into a config whose `agents:` key
+      // is absent or empty, and that is exactly when they most need to be told it did nothing.
+      checks.push(...checkExcludedAgents(mod));
       if (Array.isArray(mod.config.agents) && mod.config.agents.length > 0) {
         checks.push(checkModuleAgents(mod));
       }
@@ -122,6 +128,70 @@ async function main() {
   // softWarning) cause non-zero exit.
   const hardFailed = checks.filter(c => !c.passed && !c.softWarning);
   process.exit(hardFailed.length > 0 ? 1 : 0);
+}
+
+/**
+ * T249. Report an `excluded_agents` value that will not do what the operator wrote it to do.
+ *
+ * Doctor already parsed this field through the authority — `conforming` came back for free — and
+ * said nothing about it. Measured on a tarball install: a bare scalar, a list holding a number and
+ * a mistyped id each produced ZERO lines mentioning the field, exit 0. The install path warns, but
+ * install output scrolls past and doctor is where an operator looks when an agent they opted out is
+ * still there.
+ *
+ * TWO CLASSES, one finding at a time, because they are the same question for the operator ("why is
+ * this agent still here?") and two rows about one field is the noise that trains them to skip both:
+ *   - MALFORMED (`conforming === false`) — roster-free, so it is reported for every module.
+ *   - UNKNOWN id — needs the module's roster, so it is reported only where a profile exists.
+ *     `T266` owns extending that to the four modules `MODULE_PROFILES` has no entry for; until
+ *     then this check is silent for them rather than guessing.
+ *
+ * Both texts come from `config-merger`, so this finding and the install-path warning cannot drift
+ * into two descriptions of one defect.
+ *
+ * `softWarning`, not an error: the opt-out is an optional field and a wrong value does not make the
+ * installation broken. That matches the operator ruling on the install path — warn and proceed.
+ *
+ * @param {object} mod - A discovered module: `{ name, dir, config }`.
+ * @returns {object[]} Zero or one finding.
+ */
+function checkExcludedAgents(mod) {
+  const parsed = parseExcludedAgents(mod.config.excluded_agents);
+  // Absent is the overwhelmingly common case and says nothing about the operator's intent.
+  //
+  // This early return is REDUNDANT, and recorded as such so it is not re-derived as a test gap:
+  // an absent value is conforming with no ids, so both message builders return null and the
+  // `!message` return below catches it anyway. Deleting this line survives mutation. Kept because
+  // it states the intent at the top rather than making a reader infer it from two builders.
+  if (parsed.absent) return [];
+  const configPath = path.join(mod.dir, 'config.yaml');
+
+  const malformed = !parsed.conforming
+    ? malformedExclusionMessage(mod.config.excluded_agents, parsed.ids, configPath)
+    : null;
+  const unknown = parsed.conforming
+    ? unknownExclusionMessage(parsed.ids, parsed.conforming, profileFor(mod.name), configPath)
+    : null;
+  // `||`, and the two are MUTUALLY EXCLUSIVE by construction: `malformed` requires
+  // `!conforming` and `unknown` requires `conforming`. So a mutant that concatenates both survives
+  // mutation — it is an equivalent mutant, not a missing test. Recorded so the next reader does not
+  // spend a round proving it. What the `||` does express is the precedence if that ever changes:
+  // the SHAPE first, because fixing it is what lets the operator see the second problem at all.
+  const message = malformed || unknown;
+  if (!message) return [];
+
+  // The message already names the file, the field, what was found and what to do, so the finding
+  // carries it as the fix rather than paraphrasing it into a second wording.
+  const [first, ...rest] = message.split('\n');
+  return [{
+    name: `${mod.name} excluded_agents`,
+    passed: false,
+    softWarning: true,
+    warning: malformed
+      ? 'the opt-out list is not a list of agent ids, so it did not take effect'
+      : 'the opt-out list names an agent this module does not have, so that entry did nothing',
+    fix: [first, ...rest].join('\n'),
+  }];
 }
 
 /**
@@ -1272,6 +1342,9 @@ if (require.main === module) {
 }
 
 module.exports = {
+  // T249: exported so the two message classes can be asserted directly. The CLI behaviour is
+  // verified separately against a real tarball install; this export is for the per-class detail.
+  checkExcludedAgents,
   checkTaxonomy,
   loadSkillManifest,
   checkModuleSkillWrappers,

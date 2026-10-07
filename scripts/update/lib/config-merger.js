@@ -63,6 +63,37 @@ const MODULE_PROFILES = Object.freeze({
 });
 
 /**
+ * The text describing a NON-CONFORMING `excluded_agents` value.
+ *
+ * Extracted so the install-path warning and `convoke-doctor`'s finding (T249) are ONE wording. Two
+ * independently written sentences about the same defect is how a fix and the report of it drift.
+ *
+ * @param {*} value - The raw value, for its shape.
+ * @param {string[]} ids - The usable ids `parseExcludedAgents` salvaged from it.
+ * @param {string} source - The config path.
+ * @returns {string}
+ */
+function malformedExclusionMessage(value, ids, source) {
+  const isList = Array.isArray(value);
+  const shape = isList
+    ? 'contains entries that are not agent ids'
+    : `is ${typeof value === 'object' ? 'not a list' : `a bare ${typeof value}`}`;
+  // `ids` can repeat and can be long: a 5000-entry list produced a 34k-character single line.
+  const named = [...new Set(ids)];
+  const shown = named.length > 8 ? `${named.slice(0, 8).join(', ')} and ${named.length - 8} more` : named.join(', ');
+  return `${source}: \`excluded_agents\` ${shape}, so the opt-out was NOT applied`
+    + `${named.length > 0 ? ` beyond ${shown}` : ''}. `
+    + 'It must be a YAML list of agent ids, e.g.\n'
+    + '  excluded_agents:\n    - review-coach\n'
+    // NOT "left exactly as you wrote it": `writeConfig` syncs through `doc.set(key, jsValue)`,
+    // and `yaml`'s YAMLMap.add keeps the old node only for a SCALAR. A collection is replaced
+    // with the raw JS value, so a flow list becomes a block list and inline comments on it are
+    // lost. What is guaranteed is that the value is not replaced with `[]`.
+    + 'Your value is kept rather than replaced with an empty list, though a list or mapping may '
+    + 'be reformatted and comments on it are not preserved.';
+}
+
+/**
  * Is `name` a module this file has a profile for?
  *
  * `hasOwnProperty`, not a truthiness test on `MODULE_PROFILES[name]`. T250 R3 measured why:
@@ -142,11 +173,31 @@ function partitionExclusions(ids, knownIds) {
  * @param {string|undefined} source - The config path, for the message.
  */
 function warnOnUnknownExclusions(ids, conforming, profile, source) {
-  if (!conforming || !profile || !source || ids.length === 0) return;
+  const message = unknownExclusionMessage(ids, conforming, profile, source);
+  if (message) warnOnce(message);
+}
+
+/**
+ * The text describing a CONFORMING `excluded_agents` list that names ids the module has no agent
+ * for — or `null` when there is nothing to say.
+ *
+ * Pure, so the install-path warning and `convoke-doctor`'s finding (T249) are ONE wording. Two
+ * independently written sentences about the same defect is how a fix and the report of it drift,
+ * and this repo has paid for that more than once.
+ *
+ * @param {string[]} ids - From `parseExcludedAgents(...).ids`.
+ * @param {boolean} conforming - From the same call. A malformed value is described by
+ *   `malformedExclusionMessage` instead, so this returns `null` for it rather than saying both.
+ * @param {object|undefined} profile - The module profile, carrying `agentIds`.
+ * @param {string|undefined} source - The config path.
+ * @returns {string|null}
+ */
+function unknownExclusionMessage(ids, conforming, profile, source) {
+  if (!conforming || !profile || !source || !ids || ids.length === 0) return null;
   // One definition of "unknown", shared with the callers that ACT on the split rather than only
   // reporting it. Deduplicated there: a repeated id is benign and repeating it is noise.
   const { unknown } = partitionExclusions(ids, profile.agentIds);
-  if (unknown.length === 0) return;
+  if (unknown.length === 0) return null;
 
   // Where an unknown id DOES belong, if anywhere — the likeliest real mistake is a config copied
   // between modules, and naming the owner turns "unknown" into something the operator can act on.
@@ -161,18 +212,16 @@ function warnOnUnknownExclusions(ids, conforming, profile, source) {
     const owner = ownerOf(id);
     return owner ? `${JSON.stringify(id)} (that is ${owner}'s agent, not this module's)` : JSON.stringify(id);
   });
-  // Capped for the same reason the sibling warning is: a 5000-entry list produced a 34k-character
+  // Capped for the same reason the sibling message is: a 5000-entry list produced a 34k-character
   // single line.
   const shown = shownAll.length > 8
     ? `${shownAll.slice(0, 8).join(', ')} and ${shownAll.length - 8} more`
     : shownAll.join(', ');
 
-  warnOnce(
-    `${source}: \`excluded_agents\` names ${unknown.length === 1 ? 'an id' : 'ids'} this module has `
-      + `no agent for — ${shown}. Nothing was excluded for `
-      + `${unknown.length === 1 ? 'it' : 'those'}; any other id in the list still applies. `
-      + `This module's agent ids are: ${profile.agentIds.join(', ')}.`
-  );
+  return `${source}: \`excluded_agents\` names ${unknown.length === 1 ? 'an id' : 'ids'} this module has `
+    + `no agent for — ${shown}. Nothing was excluded for `
+    + `${unknown.length === 1 ? 'it' : 'those'}; any other id in the list still applies. `
+    + `This module's agent ids are: ${profile.agentIds.join(', ')}.`;
 }
 
 /**
@@ -200,26 +249,7 @@ function parseExcludedAgents(value, options = {}) {
   const ids = isList ? value.filter((a) => typeof a === 'string') : [];
   const conforming = isList && ids.length === value.length;
 
-  if (!conforming && source) {
-    const shape = isList
-      ? 'contains entries that are not agent ids'
-      : `is ${typeof value === 'object' ? 'not a list' : `a bare ${typeof value}`}`;
-    // `ids` can repeat and can be long: a 5000-entry list produced a 34k-character single line.
-    const named = [...new Set(ids)];
-    const shown = named.length > 8 ? `${named.slice(0, 8).join(', ')} and ${named.length - 8} more` : named.join(', ');
-    warnOnce(
-      `${source}: \`excluded_agents\` ${shape}, so the opt-out was NOT applied` +
-        `${named.length > 0 ? ` beyond ${shown}` : ''}. ` +
-        'It must be a YAML list of agent ids, e.g.\n' +
-        '  excluded_agents:\n    - review-coach\n' +
-        // NOT "left exactly as you wrote it": `writeConfig` syncs through `doc.set(key, jsValue)`,
-        // and `yaml`'s YAMLMap.add keeps the old node only for a SCALAR. A collection is replaced
-        // with the raw JS value, so a flow list becomes a block list and inline comments on it are
-        // lost. What is guaranteed is that the value is not replaced with `[]`.
-        'Your value is kept rather than replaced with an empty list, though a list or mapping may ' +
-        'be reformatted and comments on it are not preserved.'
-    );
-  }
+  if (!conforming && source) warnOnce(malformedExclusionMessage(value, ids, source));
   return { ids, conforming, absent: false };
 }
 
@@ -765,6 +795,8 @@ module.exports = {
   parseExcludedAgents,
   warnOnUnknownExclusions,
   partitionExclusions,
+  malformedExclusionMessage,
+  unknownExclusionMessage,
   hasProfile,
   profileFor,
   resetExcludedAgentWarnings,
