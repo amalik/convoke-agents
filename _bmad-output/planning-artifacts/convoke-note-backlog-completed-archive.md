@@ -3369,15 +3369,31 @@ node --test tests/unit/refresh-installation-gyre-assets.test.js
 ```
 
 **THE ROW'S STATED REMEDY WAS WRONG, and the pickup pre-flight caught it before any code was written.** It
-asked for *"a generic phase copying every `_gyre` root entry the enumerated phases do not own; the fix is
-that shape applied to `_gyre`"*. That is the draft `T88`'s own review **rejected**, recorded in the comment
-above `VORTEX_REFERENCE_DIRS`, and its two reasons bind harder for Gyre than they did for Vortex:
+asked for *"T88 shipped a generic phase 2b copying every `_vortex` root entry the enumerated phases do not
+own; the fix is that shape applied to `_gyre`"*.
 
-1. **It exceeds the diagnosis.** `config.yaml` is MERGED at the config step, and `agents/` honours the U8
-   `excluded_agents` opt-out. A root sweep would overwrite a merged config and restore agent files an
-   operator deliberately excluded.
-2. **A denylist of phase-owned entries must stay in sync with the phases above it.** A named list of
-   package-owned assets cannot drift that way.
+**⚠️ An earlier version of this note MISQUOTED that, substituting `_gyre` for `_vortex` inside the quotation
+marks, and Round 1 caught it.** The substitution also hid the row's real error. The row did not express a
+design *preference* that review happened to disagree with — it made a **false statement of fact about what
+`T88` shipped**. `T88` shipped a named list, `VORTEX_REFERENCE_DIRS = ['contracts', 'examples']`, precisely
+because its own review rejected the generic draft. That is the sharper pre-flight lesson: the row's premise
+about existing code was wrong, which no amount of agreeing with its reasoning would have caught.
+
+The rejection is recorded in the comment above `VORTEX_REFERENCE_DIRS`. Its **actual two grounds**, which an
+earlier version of this note also replaced with an argument of its own:
+
+1. **It exceeded what was diagnosed** — `README.md`, `module.yaml` and `module-help.csv` have no shipped
+   referent, and overwriting operator-editable files with no backup is a regression the guides phase avoids
+   via `backupGuides`.
+2. **Excluding the phase-owned entries BY NAME makes correctness depend on a denylist staying in sync with
+   the phases above** — and drift there would wholesale-copy an exclusion-aware subtree, restoring agent
+   files an operator opted out of.
+
+The substituted argument (*"a sweep would overwrite the merged `config.yaml` and restore excluded agents"*)
+does not follow from the design it rejects: the proposal was to copy every root entry *the enumerated phases
+do not own*, and `config.yaml` and `agents/` are owned by those phases, so they are excluded by
+construction. That hazard only materialises through denylist drift, which is ground (2) — exactly where
+`T88` placed it.
 
 Shipped as `GYRE_REFERENCE_FILES = ['compass-routing-reference.md']`.
 
@@ -3387,7 +3403,7 @@ tests because their evidence differs:
 | | Evidence | Why it is not the other |
 |---|---|---|
 | **The dangling half** | The installed `README.md` names the routing table in its tree listing, so the pointer resolving is the assertion — not the file merely existing | One file. `T88`'s defect one module over, and an instance of the class `T89` exists to detect |
-| **The asymmetry half** | Vortex has had a guides phase since U8 and Gyre never did, so five shipped guides reached no project | **Nothing dangled** for want of them: the guides cite no `{project-root}` paths and the installed README does not name them. Parity, not a dangling path |
+| **The asymmetry half** | Vortex has had a guides phase since this file was created and Gyre never did, so five shipped guides reached no project | ~~**Nothing dangled** for want of them~~ — **FALSE, corrected by Round 1.** `INSTALLATION.md` **ships** and names `_gyre/guides/` inside a `your-project/` tree, as does `UPDATE-GUIDE.md`. So guides dangled too, and Gyre carried **at least three** instances of the class, not one |
 
 **The guides phase mirrors Vortex in the two respects that make a guides phase different from a copy**, and
 for the same reasons: it is **exclusion-aware** (a guide whose agent is in `excluded_agents` is dead docs, so
@@ -3396,9 +3412,22 @@ wholesale-copy) and **backup-aware** (a guide is operator-readable and may be an
 is copied to `.bak` first, honouring `backupGuides`). `GYRE-TEAM-GUIDE.md` is **not** exclusion-gated:
 excluding one agent does not make the team guide dead.
 
-**Mutant → executioner.** All seven killed. Worth naming two: `ALWAYSBAK` (ignore the `backupGuides` option
-and always back up) proves the OPTION is honoured rather than merely that a backup happens; `GATETEAM`
-(exclusion-gate the team guide) proves that exemption is intentional rather than an oversight.
+**Mutation testing is recorded as a command, not a tally.** An earlier version of this note claimed "all
+seven mutants killed" and named two of them; Round 1 observed that the mutants existed nowhere but in that
+sentence, so a later reader could neither re-derive nor re-run them. Round 1 then found **six real
+survivors** in the same code, which is what a tally with no harness is worth. Re-derive instead:
+
+```bash
+node --test tests/unit/refresh-installation-gyre-assets.test.js   # 12 cases
+```
+
+The survivors Round 1 found and what closed each: the exclusion **report** loop (invertible and deletable
+with the suite green, while `convoke-update` prints that report verbatim to the operator) → a test asserting
+the skip list names exactly the excluded agent's guide; both `!isSameRoot` guards → a dev-environment test
+using the same-root seam the sibling module tests use; the missing-guide skip → the shipped-set derivation;
+and the `.bak` → see below. One survivor remains and is stated rather than hidden: `2d1`'s
+*package-file-missing* branch needs a package-level fixture to reach, and what it protects is an `ENOENT`
+abort of the whole refresh.
 
 **`T230`'s uniqueness guard earned its keep four days after shipping, on unrelated work.** The new guides
 loop made `for (const agent of GYRE_AGENTS) {` match twice, which reddened `gyreAgent`'s own citation — the
@@ -3407,12 +3436,20 @@ procedure for `vortexAgent`, and the ambiguity is now a pinned assertion carryin
 it cannot quietly stop testing ambiguity.
 
 **Two stale status claims annotated, not rewritten.** `convoke-note-maturity-ledger-2026-09-14.md` is a
-dated, client-facing snapshot that asserted `T91` *(Open)* and *"The readiness team's guides never arrive."*
-Both now carry a dated addendum. The quotation of those lines in the `2026-09-26` PRD reconcile-ledger is
+dated, client-facing snapshot. Two claims were annotated and **Round 1 found two more that were not** — one
+of them in §1, the page-1 client ledger the big-bosses pack is built from, and one six lines below an
+annotation. Both are now annotated, and all four carry the release qualifier they lacked: the fix is in
+`[Unreleased]`, so there is no published version in which "both now install" is true. The quotation of those lines in the `2026-09-26` PRD reconcile-ledger is
 left alone: it is explicitly a block quote of a dated source.
 
-**Residue.** `I141` is the same shape a third module over (`_portability`), and `T89` is the class that
-should detect all three without anyone noticing module by module.
+**Residue, corrected by Round 1.** An earlier version named `I141` (`_portability`) as the same shape a
+third module over. It is not: `_portability` is copied **wholesale** by `fs.copy`, it has no `guides/` and no
+root reference file, and `IN-208` already records `I141` as fixed by `dist-2-6` — so a triager following
+that pointer would have found nothing to fix. The real residue is **`T89`**, the class that should detect "a
+shipped document naming a path the installer never creates" without anyone noticing module by module, and
+Round 1 showed Gyre alone carried at least three instances of it. Separately, `_vortex` still ships a
+`compass-routing-reference.md` and a `VORTEX-TEAM-GUIDE.md` that do not install — nothing dangles for them
+today, because their only referrers do not install either, but the symmetry argument this row made applies.
 
 ---
 

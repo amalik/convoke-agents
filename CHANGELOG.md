@@ -43,9 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   not by sweeping the module root: a sweep would overwrite the `config.yaml` that the config step *merges*
   and restore `agents/` files an operator excluded via `excluded_agents`. The guides phase mirrors the
   Vortex one in the two respects that matter — a guide whose agent is excluded is not installed, and an
-  existing guide is copied to `.bak` before being overwritten (suppressible with `backupGuides: false`).
-  `GYRE-TEAM-GUIDE.md` is not exclusion-gated, because excluding one agent does not make the team guide
-  dead docs.
+  existing guide is copied to `.bak` before being overwritten. An existing `.bak` is **never** overwritten,
+  so the first one you keep survives every later update. `GYRE-TEAM-GUIDE.md` is not exclusion-gated,
+  because excluding one agent does not make the team guide dead docs.
+
+  **Where the `.bak` is and is not written.** `convoke-update` and `convoke-migrate` take it. The
+  *first-install* bins (`convoke-install`, `convoke-install-gyre`) deliberately do not — there is nothing of
+  yours to back up on a first install — so if you re-run an install bin over an existing project to repair
+  it, annotate-then-reinstall will not leave you a `.bak`. Use `convoke-update` for that. (`backupGuides` is
+  an internal option, not a flag on any bin; an earlier version of this entry implied otherwise.)
 
   **If you already installed Gyre,** `convoke-update` brings both across; nothing needs removing first.
 

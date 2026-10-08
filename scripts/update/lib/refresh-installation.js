@@ -99,6 +99,37 @@ function mergedModuleNames() {
 }
 
 /**
+ * Split a SHIPPED Gyre guides listing into what installs and what an opt-out excludes.
+ *
+ * EXTRACTED AND EXPORTED so the derivation can be tested against a SYNTHETIC listing. Round 1 of `T91`
+ * found the first version built this list from `GYRE_AGENTS` plus a hardcoded `'GYRE-TEAM-GUIDE.md'`, so a
+ * further non-per-agent document dropped into `guides/` would ship and never install — the very defect
+ * `T91` was filed for. The first attempt at a test for that compared the installed directory against the
+ * package directory, which CANNOT detect the regression: on the real package those two sets coincide,
+ * because the package happens to ship exactly the roster's guides plus the one hardcoded exception. Review
+ * reproduced the roster derivation and that test stayed green.
+ *
+ * A pure function over a listing is what makes the two sides independent: a synthetic list can contain a
+ * guide no roster names, which the real package does not.
+ *
+ * @param {string[]} shipped - filenames in the package's `_gyre/guides/`
+ * @param {string[]} excludedIds - agent ids from the project's `excluded_agents`
+ * @returns {{ install: string[], skip: string[] }} both sorted; `skip` is reported, `install` is copied
+ */
+function gyreGuidePlan(shipped, excludedIds) {
+  const excludedGuides = new Set(
+    GYRE_AGENTS.filter((a) => (excludedIds || []).includes(a.id))
+      .map((a) => `${a.name.toUpperCase()}-USER-GUIDE.md`)
+  );
+  return {
+    install: [...shipped].filter((g) => !excludedGuides.has(g)).sort(),
+    // Only guides the package actually ships are reported as skipped — an `excluded_agents` entry for an
+    // agent whose guide is not shipped has nothing to report.
+    skip: [...excludedGuides].filter((g) => shipped.includes(g)).sort(),
+  };
+}
+
+/**
  * Refresh all installation files from the package to the project.
  *
  * @param {string} projectRoot - Absolute path to project root
@@ -697,53 +728,71 @@ async function refreshInstallation(projectRoot, options = {}) {
       }
     } else {
       changes.push('Skipped Gyre reference assets (dev environment — files already in place)');
+      if (verbose) console.log('    Skipped Gyre reference assets (dev environment — files already in place)');
     }
 
     // 2d2. Gyre user guides (T91) — the asymmetry half.
     //
-    // Vortex has had a guides phase since U8; Gyre never did, so five shipped guides reached no
-    // project. Nothing DANGLED for want of them — the guides cite no `{project-root}` paths and the
-    // installed README does not name them — so this is parity, not the dangling defect above.
+    // Vortex has had a guides phase since `refresh-installation.js` was created; Gyre never did, so five
+    // shipped guides reached no project. `U8` added the EXCLUSION gate to the Vortex phase, not the phase
+    // itself — an earlier version of this comment dated the phase to U8 and Round 1 disproved it.
     //
-    // It mirrors the Vortex phase in both respects that make a guides phase different from a
-    // reference copy, and for the same reasons:
-    //   EXCLUSION-AWARE. A guide whose agent is in `excluded_agents` is dead docs, so the roster is
-    //     iterated rather than the directory. This is precisely the subtree T88's review refused to
-    //     wholesale-copy.
-    //   BACKUP-AWARE. A guide is operator-readable and may be annotated, so an existing one is
-    //     copied to `.bak` before being overwritten, honouring the `backupGuides` option.
+    // It mirrors the Vortex phase in both respects that make a guides phase different from a reference
+    // copy, and for the same reasons:
+    //   EXCLUSION-AWARE. A guide whose agent is in `excluded_agents` is dead docs.
+    //   BACKUP-AWARE. A guide is operator-readable and may be annotated, so an existing one is preserved
+    //     before being overwritten, honouring the `backupGuides` option.
     //
-    // `GYRE-TEAM-GUIDE.md` is NOT per-agent and is therefore not exclusion-gated — it describes the
-    // team, and excluding one agent does not make the team guide dead. It is copied with the same
-    // backup treatment, which is why it is handled beside the roster loop rather than inside it.
+    // DERIVED FROM THE SHIPPED DIRECTORY, NOT THE ROSTER, and that is Round 1's correction. The first
+    // version built the list from `GYRE_AGENTS` plus a hardcoded `'GYRE-TEAM-GUIDE.md'`, so any further
+    // non-per-agent document dropped into `guides/` would ship and never install — T91's own defect class,
+    // one iteration later, in the code written to end it. Review reproduced it: a second team-level guide
+    // was shipped and ignored with the suite green.
+    //
+    // Sweeping this directory is safe where sweeping the module ROOT is not (see `2d1`): the only
+    // operator-owned state here is a guide's own content, which the backup protects, and the one subtree
+    // that must honour an opt-out is handled by subtracting excluded agents' guides by name.
     const gyreGuidesSource = path.join(packageGyre, 'guides');
     const gyreGuidesTarget = path.join(targetGyre, 'guides');
     if (!isSameRoot && fs.existsSync(gyreGuidesSource)) {
       await fs.ensureDir(gyreGuidesTarget);
-      const gyreGuideNames = [
-        ...GYRE_AGENTS.filter((a) => !gyreExcluded.includes(a.id))
-          .map((a) => `${a.name.toUpperCase()}-USER-GUIDE.md`),
-        'GYRE-TEAM-GUIDE.md',
-      ];
-      for (const agent of GYRE_AGENTS) {
-        if (!gyreExcluded.includes(agent.id)) continue;
-        const skipped = `${agent.name.toUpperCase()}-USER-GUIDE.md`;
+
+      const shippedGuides = (await fs.readdir(gyreGuidesSource)).filter((f) => f.endsWith('.md')).sort();
+      const { install, skip } = gyreGuidePlan(shippedGuides, gyreExcluded);
+      for (const skipped of skip) {
         changes.push(`Skipped excluded Gyre guide: ${skipped}`);
         if (verbose) console.log(`    Skipped excluded Gyre guide: ${skipped}`);
       }
-      for (const guide of gyreGuideNames) {
+
+      for (const guide of install) {
         const src = path.join(gyreGuidesSource, guide);
         const dest = path.join(gyreGuidesTarget, guide);
-        if (!fs.existsSync(src)) continue;
+        // A `.bak` is NOT overwritten. Round 1: the backup was unconditional, so a second refresh
+        // replaced the operator's annotation with the package text while still reporting `Backed up` —
+        // the guarantee held for exactly one update. The first backup is the one worth keeping, and a
+        // refresh that cannot preserve the file says so instead of destroying the record silently.
         if (backupGuides && fs.existsSync(dest)) {
-          await fs.copy(dest, `${dest}.bak`, { overwrite: true });
-          changes.push(`Backed up ${guide} → ${guide}.bak`);
-          if (verbose) console.log(`    Backed up ${guide} → ${guide}.bak`);
+          if (fs.existsSync(`${dest}.bak`)) {
+            changes.push(`Kept existing ${guide}.bak — not overwritten`);
+            if (verbose) console.log(`    Kept existing ${guide}.bak — not overwritten`);
+          } else {
+            await fs.copy(dest, `${dest}.bak`);
+            changes.push(`Backed up ${guide} → ${guide}.bak`);
+            if (verbose) console.log(`    Backed up ${guide} → ${guide}.bak`);
+          }
         }
         await fs.copy(src, dest, { overwrite: true });
         changes.push(`Refreshed Gyre guide: ${guide}`);
         if (verbose) console.log(`    Refreshed Gyre guide: ${guide}`);
       }
+    } else if (isSameRoot) {
+      // Reported, like every other phase's dev-environment branch. Round 1: this was the only phase
+      // without one, so a dev reading the report saw Vortex's line and assumed it covered Gyre too.
+      changes.push('Skipped Gyre guides (dev environment — files already in place)');
+      if (verbose) console.log('    Skipped Gyre guides (dev environment — files already in place)');
+    } else {
+      changes.push('Gyre guides/ not found in package — skipping');
+      if (verbose) console.log('    ⚠ Gyre guides/ not found in package — skipping');
     }
   }
 
@@ -1578,6 +1627,7 @@ const STAMPABLE_MODULES = Object.freeze([
 
 module.exports = {
   guardedModuleNames,
+  gyreGuidePlan,
   mergedModuleNames,
   MERGED_MODULE_NAMES,
   refreshInstallation,

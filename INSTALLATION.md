@@ -77,7 +77,7 @@ your-project/
 │   │   ├── agents/           # 4 agent definition files
 │   │   ├── workflows/        # 7 workflows
 │   │   ├── contracts/        # Artifact contract schemas (GC1-GC4)
-│   │   ├── guides/           # User guides (all 4 agents)
+│   │   ├── guides/           # User guides (4 agents + the team guide)
 │   │   └── config.yaml       # Configuration
 │   ├── _enhance/             # Skill: Agent Capability Upgrades
 │   │   ├── workflows/        # Skill workflows (initiatives-backlog)
@@ -103,7 +103,7 @@ your-project/
 | Module | Contents |
 |--------|----------|
 | **Vortex** | 7 agents, 22 workflows, 10 handoff contracts (HC1-HC5 artifact, HC6-HC10 routing), 7 user guides |
-| **Gyre** | 4 agents, 7 workflows, 4 contract schemas (GC1-GC4), 4 user guides |
+| **Gyre** | 4 agents, 7 workflows, 4 contract schemas (GC1-GC4), 5 user guides (4 agents + the team guide) |
 | **Enhance** | Skill workflows, menu patch descriptors, module author guide |
 | **Artifacts** | Artifact governance and portfolio workflows |
 | **Portability** | Skills for exporting Convoke skills to other AI platforms (export, catalog generation, catalog seeding, export validation) |

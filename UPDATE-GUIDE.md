@@ -89,7 +89,7 @@ What happens:
 **Breaking changes:** None
 
 What happens:
-- **Gyre team installed** — 4 new agents (Scout, Atlas, Lens, Coach), 7 workflows, 4 contract schemas (GC1-GC4), 4 user guides
+- **Gyre team installed** — 4 new agents (Scout, Atlas, Lens, Coach), 7 workflows, 4 contract schemas (GC1-GC4), 5 user guides (4 agents + the team guide)
 - **Team Factory** — guided workflow for creating new BMAD-compliant teams (`/bmad-agent-bme-team-factory`)
 - **Skill Validator** — new `validateSkill()` quality gate for factory-generated skills
 - Gyre skill wrappers added to `.claude/skills/`

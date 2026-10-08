@@ -546,13 +546,21 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
     assert.equal(citationHolds(REL, LOOP, 'arrives'), false);
     assert.equal(citationHolds(REL, 'fs.writeFileSync(skillManifestPath,', 'generates'), false);
 
-    // AMBIGUITY, caught in the field rather than contrived. `T91` added a second loop over
-    // GYRE_AGENTS four days after this guard shipped, which made the bare loop header match twice and
-    // reddened `gyreAgent`'s own citation. The record's anchor was lengthened until unique — the
-    // procedure T230 used for `vortexAgent` — and the bare header must stay rejected.
-    assert.ok(occurrencesOf(fs.readFileSync(path.join(PACKAGE_ROOT, REL), 'utf8'), 'for (const agent of GYRE_AGENTS) {') > 1,
-      'this guard is vacuous unless that header really matches more than one line');
-    assert.equal(citationHolds(REL, 'for (const agent of GYRE_AGENTS) {', 'generates'), false,
+    // AMBIGUITY, caught in the field rather than contrived — twice now, in opposite directions.
+    //
+    // `T91` added a second loop over GYRE_AGENTS, which made that bare header match twice and reddened
+    // `gyreAgent`'s own citation; the anchor was lengthened until unique, T230's procedure for
+    // `vortexAgent`. T91's own Round 1 then REMOVED that second loop, so the premise of the assertion
+    // written for it evaporated — and the vacuity guard below is what reported that, rather than the
+    // assertion quietly passing against a header that is no longer ambiguous.
+    //
+    // So it is anchored on a header that IS ambiguous today: `for (const agent of AGENTS) {` matches the
+    // user-guides loop and the wrapper loop. The vacuity guard stays, because that is the part that
+    // notices when the fixture stops testing anything.
+    const ambiguous = 'for (const agent of AGENTS) {';
+    assert.ok(occurrencesOf(fs.readFileSync(path.join(PACKAGE_ROOT, REL), 'utf8'), ambiguous) > 1,
+      `this guard is vacuous unless ${JSON.stringify(ambiguous)} really matches more than one line`);
+    assert.equal(citationHolds(REL, ambiguous, 'generates'), false,
       'an ambiguous loop header must not stand for a generator claim');
   });
 

@@ -542,14 +542,14 @@ This is a discovery defect at exactly the layer the PRD is about ("how Convoke a
 already identified by the ledger and explicitly unbuilt. G2/FR8 cover storefront legibility; nothing
 covers the router an operator inside the ecosystem will actually ask.
 
-**G7 — Gyre's guides ship and never install (T91), which is FR21's class.**
+**G7 — Gyre's guides ship and never install (T91), which is FR21's class.** *(T91 closed 2026-10-08; both now install, though not in any published release. The quotations below are of a dated source and are left as quoted. This finding's own framing is annotated rather than rewritten — the FR21 scope gap it identifies is unaffected by the fix.)*
 > §1 Gyre row: "its team guide is not copied into your project."
 > §2.3 / §2.18: "**T91** (Open): Gyre `guides/` and `compass-routing-reference.md` ship but never install."
 
 FR21 is the right requirement (*"An operator can tell, before installing, which parts of Convoke a given
 channel path will and will not deliver"*) but is scoped to channel *paths*, not to shipped-but-uninstalled
 content. A channel unit that carries an agent and not its guide is the same defect one level out, and T91
-is already open.
+was open when this was written (closed 2026-10-08).
 
 **G8 — The ledger's hardest-won methodological rule is absent, and the PRD's most behavioural
 requirements are exactly the class it governs.**
