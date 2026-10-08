@@ -220,7 +220,7 @@ const RUNTIME_DATA_FILES = [
  */
 const WRAPPER_RULES = {
   vortexAgent:        { site: 'scripts/update/lib/refresh-installation.js', anchor: 'for (const agent of AGENTS) {\n    if (vortexExcluded.includes(agent.id)) continue;',            derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
-  gyreAgent:          { site: 'scripts/update/lib/refresh-installation.js', anchor: 'for (const agent of GYRE_AGENTS) {',       derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
+  gyreAgent:          { site: 'scripts/update/lib/refresh-installation.js', anchor: 'for (const agent of GYRE_AGENTS) {\n    if (gyreExcluded.includes(agent.id)) continue;',       derivedFrom: 'generator', name: id => `bmad-agent-bme-${id}` },
   // extraBmeAgent was REMOVED by tfu-1-1. It mirrored the `// 6b1.` generator loop over
   // EXTRA_BME_AGENTS, which is gone with the Team Factory. A rule whose `anchor` matches nothing is
   // worse than no rule: `WRAPPER_RULES`' own test asserts every rule cites a line that still holds

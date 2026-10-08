@@ -260,7 +260,7 @@ $ node node_modules/convoke-agents/scripts/install-gyre-agents.js   (separate sc
 - **`_bmad/bme/_config/name-registry.csv`** (repo; not shipped) has `team,gyre,…,in-dev,…,"4 agents, 7 workflows; NO module.yaml and NO module-help.csv, so it cannot be packaged…"`. Agents Lens, Scout, Coach and Atlas are all `in-dev`.
 
 **Backlog rows (portfolio `gyre`, HEAD):**
-- **T91** (Open): Gyre `guides/` and `compass-routing-reference.md` ship but never install. `_gyre/README.md:69` names the routing file. The install trial confirms this.
+- **T91** (**Closed 2026-10-08** — both now install; see the CHANGELOG. Left in place because this is a dated snapshot, annotated rather than rewritten): Gyre `guides/` and `compass-routing-reference.md` ship but never install. `_gyre/README.md:69` names the routing file. The install trial confirms this.
 - **I98** (Reinstated): "Gyre cannot be installed or invoked through any supported path…". **The 4.0.2 install trial contradicts this headline for the npm installer + Claude Code path**: wrappers are generated and resolve. The row's structural facts (flat agent files, no `module.yaml`/`module-help.csv`) are still true and still block marketplace packaging. See §3.
 
 **Covenant audit:** `convoke-report-operator-covenant-audit-gyre-2026-04-25.md` is marked PROVISIONAL ("A10 gate FAILED") and flags Right to a default and Right to pause.
@@ -695,7 +695,7 @@ job is answering *what should I do next* — contains **0** occurrences of `bme`
 what is available will not be told about anything Convoke ships. Convoke can address this with a
 customisation override and has not.
 
-**The readiness team's guides never arrive.** Filed as `T91` (2026-08-27, open): `guides/` and
+**The readiness team's guides never arrive.** *(Fixed 2026-10-08 — the installer now copies both; this paragraph describes the state at this document's date.)* Filed as `T91`: `guides/` and
 `compass-routing-reference.md` ship inside the package and no install path copies them into the project.
 
 **Field corroboration.** Operators in different roles at different client organisations independently reported

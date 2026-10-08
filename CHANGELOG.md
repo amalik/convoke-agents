@@ -34,6 +34,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Gyre's routing reference and user guides now install (`T91`).** `_bmad/bme/_gyre/` shipped
+  `compass-routing-reference.md` and five user guides, and no install path copied either. The installed
+  `README.md` names the routing table in its tree listing, so an operator followed a pointer to a file the
+  installer never created — the same defect `T88` fixed for Vortex, one module over.
+
+  Two phases, deliberately separate. The routing reference is copied as a **named** package-owned asset,
+  not by sweeping the module root: a sweep would overwrite the `config.yaml` that the config step *merges*
+  and restore `agents/` files an operator excluded via `excluded_agents`. The guides phase mirrors the
+  Vortex one in the two respects that matter — a guide whose agent is excluded is not installed, and an
+  existing guide is copied to `.bak` before being overwritten (suppressible with `backupGuides: false`).
+  `GYRE-TEAM-GUIDE.md` is not exclusion-gated, because excluding one agent does not make the team guide
+  dead docs.
+
+  **If you already installed Gyre,** `convoke-update` brings both across; nothing needs removing first.
+
 - **A module `config.yaml` that cannot be read is no longer replaced with the package template (`T181`).**
   Before this, `assertConfigReadable` was wired into Vortex and Gyre only. A damaged `_enhance`,
   `_artifacts` or `_portability` config was overwritten with defaults, exit 0, with nothing on screen.

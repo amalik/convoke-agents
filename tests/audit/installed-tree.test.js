@@ -488,7 +488,11 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
     const admits = (claim, line) => ADMISSIBLE_ANCHOR[claim].test(line);
 
     // ACCEPTED: the shapes the records actually use.
-    assert.equal(admits('generates', realLine('for (const agent of GYRE_AGENTS) {')), true, 'a loop generates');
+    // `for (const agent of GYRE_AGENTS) {` stopped being unique when T91 added a second loop over that
+    // roster, and `realLine` demands exactly one match — so the fixture uses a loop that is still
+    // unique. The point is that a LOOP is admissible, and any generator line makes it.
+    assert.equal(admits('generates', realLine('for (const workflow of enhanceConfig.workflows || []) {')), true,
+      'a loop generates');
     assert.equal(admits('arrives', realLine('fs.writeFileSync(skillManifestPath,')), true, 'a write arrives');
     assert.equal(admits('arrives', realLine('const taxonomyResult = await mergeTaxonomy(projectRoot);')), true,
       'a seeder invoked on projectRoot arrives');
@@ -534,12 +538,22 @@ describe('WRAPPER_RULES — the generator call sites this check mirrors', () => 
     assert.equal(admits('generates', '        if (verbose) {'), false, 'nor does it generate');
 
     // A claim kind that does not exist, and a missing one, both reject rather than default.
-    assert.equal(citationHolds(REL, 'for (const agent of GYRE_AGENTS) {', 'nonsense'), false);
-    assert.equal(citationHolds(REL, 'for (const agent of GYRE_AGENTS) {', undefined), false);
-    assert.equal(citationHolds(REL, 'for (const agent of GYRE_AGENTS) {', 'generates'), true);
+    const LOOP = 'for (const workflow of enhanceConfig.workflows || []) {';
+    assert.equal(citationHolds(REL, LOOP, 'nonsense'), false);
+    assert.equal(citationHolds(REL, LOOP, undefined), false);
+    assert.equal(citationHolds(REL, LOOP, 'generates'), true);
     // ...and a generator anchor is not admissible for an arrival, nor a write for a generator.
-    assert.equal(citationHolds(REL, 'for (const agent of GYRE_AGENTS) {', 'arrives'), false);
+    assert.equal(citationHolds(REL, LOOP, 'arrives'), false);
     assert.equal(citationHolds(REL, 'fs.writeFileSync(skillManifestPath,', 'generates'), false);
+
+    // AMBIGUITY, caught in the field rather than contrived. `T91` added a second loop over
+    // GYRE_AGENTS four days after this guard shipped, which made the bare loop header match twice and
+    // reddened `gyreAgent`'s own citation. The record's anchor was lengthened until unique — the
+    // procedure T230 used for `vortexAgent` — and the bare header must stay rejected.
+    assert.ok(occurrencesOf(fs.readFileSync(path.join(PACKAGE_ROOT, REL), 'utf8'), 'for (const agent of GYRE_AGENTS) {') > 1,
+      'this guard is vacuous unless that header really matches more than one line');
+    assert.equal(citationHolds(REL, 'for (const agent of GYRE_AGENTS) {', 'generates'), false,
+      'an ambiguous loop header must not stand for a generator claim');
   });
 
   it('the LINE-CITED branch rejects a wrong line, and the defensive guards are reachable', () => {

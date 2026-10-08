@@ -667,6 +667,84 @@ async function refreshInstallation(projectRoot, options = {}) {
       changes.push('Refreshed Gyre README.md');
       if (verbose) console.log('    Refreshed Gyre README.md');
     }
+
+    // 2d1. Gyre reference assets (T91) — the dangling half.
+    //
+    // `compass-routing-reference.md` ships and the phases above never copied it, while the README
+    // that DOES install names it in its tree listing. So an operator reads a pointer to a file the
+    // installer never created: T88's defect one module over, and an instance of the class T89 exists
+    // to detect.
+    //
+    // NAMED, NOT SWEPT, and this row's own description asked for the opposite. It proposed applying
+    // "a generic phase copying every `_gyre` root entry the enumerated phases do not own" — which is
+    // the draft T88's review REJECTED, for two reasons that hold here unchanged. (1) It exceeds the
+    // diagnosis: `config.yaml` is MERGED at the config step and `agents/` honours the U8 opt-out, so
+    // a root sweep would overwrite a merged config and restore agent files an operator excluded.
+    // (2) It would make correctness depend on a denylist of phase-owned entries staying in sync with
+    // the phases above. A named list of package-owned assets cannot drift that way.
+    const GYRE_REFERENCE_FILES = ['compass-routing-reference.md'];
+    if (!isSameRoot) {
+      for (const file of GYRE_REFERENCE_FILES) {
+        const src = path.join(packageGyre, file);
+        if (!fs.existsSync(src)) {
+          changes.push(`Gyre ${file} not found in package — skipping`);
+          if (verbose) console.log(`    ⚠ Gyre ${file} not found in package — skipping`);
+          continue;
+        }
+        await fs.copy(src, path.join(targetGyre, file), { overwrite: true });
+        changes.push(`Refreshed Gyre ${file}`);
+        if (verbose) console.log(`    Refreshed Gyre ${file}`);
+      }
+    } else {
+      changes.push('Skipped Gyre reference assets (dev environment — files already in place)');
+    }
+
+    // 2d2. Gyre user guides (T91) — the asymmetry half.
+    //
+    // Vortex has had a guides phase since U8; Gyre never did, so five shipped guides reached no
+    // project. Nothing DANGLED for want of them — the guides cite no `{project-root}` paths and the
+    // installed README does not name them — so this is parity, not the dangling defect above.
+    //
+    // It mirrors the Vortex phase in both respects that make a guides phase different from a
+    // reference copy, and for the same reasons:
+    //   EXCLUSION-AWARE. A guide whose agent is in `excluded_agents` is dead docs, so the roster is
+    //     iterated rather than the directory. This is precisely the subtree T88's review refused to
+    //     wholesale-copy.
+    //   BACKUP-AWARE. A guide is operator-readable and may be annotated, so an existing one is
+    //     copied to `.bak` before being overwritten, honouring the `backupGuides` option.
+    //
+    // `GYRE-TEAM-GUIDE.md` is NOT per-agent and is therefore not exclusion-gated — it describes the
+    // team, and excluding one agent does not make the team guide dead. It is copied with the same
+    // backup treatment, which is why it is handled beside the roster loop rather than inside it.
+    const gyreGuidesSource = path.join(packageGyre, 'guides');
+    const gyreGuidesTarget = path.join(targetGyre, 'guides');
+    if (!isSameRoot && fs.existsSync(gyreGuidesSource)) {
+      await fs.ensureDir(gyreGuidesTarget);
+      const gyreGuideNames = [
+        ...GYRE_AGENTS.filter((a) => !gyreExcluded.includes(a.id))
+          .map((a) => `${a.name.toUpperCase()}-USER-GUIDE.md`),
+        'GYRE-TEAM-GUIDE.md',
+      ];
+      for (const agent of GYRE_AGENTS) {
+        if (!gyreExcluded.includes(agent.id)) continue;
+        const skipped = `${agent.name.toUpperCase()}-USER-GUIDE.md`;
+        changes.push(`Skipped excluded Gyre guide: ${skipped}`);
+        if (verbose) console.log(`    Skipped excluded Gyre guide: ${skipped}`);
+      }
+      for (const guide of gyreGuideNames) {
+        const src = path.join(gyreGuidesSource, guide);
+        const dest = path.join(gyreGuidesTarget, guide);
+        if (!fs.existsSync(src)) continue;
+        if (backupGuides && fs.existsSync(dest)) {
+          await fs.copy(dest, `${dest}.bak`, { overwrite: true });
+          changes.push(`Backed up ${guide} → ${guide}.bak`);
+          if (verbose) console.log(`    Backed up ${guide} → ${guide}.bak`);
+        }
+        await fs.copy(src, dest, { overwrite: true });
+        changes.push(`Refreshed Gyre guide: ${guide}`);
+        if (verbose) console.log(`    Refreshed Gyre guide: ${guide}`);
+      }
+    }
   }
 
   // 2e. Seed skill-manifest.csv if the project has none.

@@ -3356,6 +3356,66 @@ bash scripts/audit/try-fresh-install.sh   # 28 checks, all 14 bins resolve
 
 ---
 
+## T91
+
+**Closed 2026-10-08.** `_bmad/bme/_gyre/` shipped `compass-routing-reference.md` and five user guides, and
+no install path copied either:
+
+```bash
+# before: ships, never arrives. after: both arrive.
+node -e "const fs=require('fs');const g='_bmad/bme/_gyre';
+console.log(fs.existsSync(g+'/compass-routing-reference.md'), fs.readdirSync(g+'/guides').length)"
+node --test tests/unit/refresh-installation-gyre-assets.test.js
+```
+
+**THE ROW'S STATED REMEDY WAS WRONG, and the pickup pre-flight caught it before any code was written.** It
+asked for *"a generic phase copying every `_gyre` root entry the enumerated phases do not own; the fix is
+that shape applied to `_gyre`"*. That is the draft `T88`'s own review **rejected**, recorded in the comment
+above `VORTEX_REFERENCE_DIRS`, and its two reasons bind harder for Gyre than they did for Vortex:
+
+1. **It exceeds the diagnosis.** `config.yaml` is MERGED at the config step, and `agents/` honours the U8
+   `excluded_agents` opt-out. A root sweep would overwrite a merged config and restore agent files an
+   operator deliberately excluded.
+2. **A denylist of phase-owned entries must stay in sync with the phases above it.** A named list of
+   package-owned assets cannot drift that way.
+
+Shipped as `GYRE_REFERENCE_FILES = ['compass-routing-reference.md']`.
+
+**TWO DEFECTS WORE ONE ROW, and the operator ruled to fix both** (2026-10-08). They are kept apart in the
+tests because their evidence differs:
+
+| | Evidence | Why it is not the other |
+|---|---|---|
+| **The dangling half** | The installed `README.md` names the routing table in its tree listing, so the pointer resolving is the assertion — not the file merely existing | One file. `T88`'s defect one module over, and an instance of the class `T89` exists to detect |
+| **The asymmetry half** | Vortex has had a guides phase since U8 and Gyre never did, so five shipped guides reached no project | **Nothing dangled** for want of them: the guides cite no `{project-root}` paths and the installed README does not name them. Parity, not a dangling path |
+
+**The guides phase mirrors Vortex in the two respects that make a guides phase different from a copy**, and
+for the same reasons: it is **exclusion-aware** (a guide whose agent is in `excluded_agents` is dead docs, so
+the roster is iterated rather than the directory — precisely the subtree `T88`'s review refused to
+wholesale-copy) and **backup-aware** (a guide is operator-readable and may be annotated, so an existing one
+is copied to `.bak` first, honouring `backupGuides`). `GYRE-TEAM-GUIDE.md` is **not** exclusion-gated:
+excluding one agent does not make the team guide dead.
+
+**Mutant → executioner.** All seven killed. Worth naming two: `ALWAYSBAK` (ignore the `backupGuides` option
+and always back up) proves the OPTION is honoured rather than merely that a backup happens; `GATETEAM`
+(exclusion-gate the team guide) proves that exemption is intentional rather than an oversight.
+
+**`T230`'s uniqueness guard earned its keep four days after shipping, on unrelated work.** The new guides
+loop made `for (const agent of GYRE_AGENTS) {` match twice, which reddened `gyreAgent`'s own citation — the
+guard doing exactly the job it was built for. The anchor was lengthened until unique, which is `T230`'s
+procedure for `vortexAgent`, and the ambiguity is now a pinned assertion carrying its own vacuity check so
+it cannot quietly stop testing ambiguity.
+
+**Two stale status claims annotated, not rewritten.** `convoke-note-maturity-ledger-2026-09-14.md` is a
+dated, client-facing snapshot that asserted `T91` *(Open)* and *"The readiness team's guides never arrive."*
+Both now carry a dated addendum. The quotation of those lines in the `2026-09-26` PRD reconcile-ledger is
+left alone: it is explicitly a block quote of a dated source.
+
+**Residue.** `I141` is the same shape a third module over (`_portability`), and `T89` is the class that
+should detect all three without anyone noticing module by module.
+
+---
+
 ## T150
 
 **Closed 2026-09-29 — shipped as `efb29a50` (story `tfu-1-1`), by deletion rather than correction.**
