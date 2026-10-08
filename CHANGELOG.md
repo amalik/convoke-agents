@@ -10,9 +10,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Action required for some existing projects
+
+**If your project already has `_bmad/bme/_team-factory/`, updating leaves it behind and
+`convoke-doctor` will report a failure that no command can clear.** Nothing in this release removes it:
+the loop that used to retire a submodule was itself driven by the Team Factory's own registry entry, so
+removing the module removed the remover. Retiring the directory automatically is tracked as `T222` and was
+deliberately held back from this release rather than shipped in a hurry — it deletes from your tree, and a
+destructive migration wants more care than a patch release affords.
+
+**Who is affected.** Projects that installed between **3.2.0** (when the module entered the package) and
+**4.0.3**. A project installed before 3.2.0 and never updated never received it, and a fresh install of
+4.0.4 never will.
+
+**Check:**
+
+```bash
+ls _bmad/bme/_team-factory/config.yaml     # exists → you are affected
+```
+
+**What you will see until you clear it.** `convoke-doctor` reports:
+
+```
+✗ Version consistency — Package: 4.0.4, _team-factory: <the version you installed>
+```
+
+The remedy it prints is "run `convoke-update`", which cannot help: a refresh does not remove a module the
+package no longer contains. Every other check still passes, and nothing else about your install is wrong.
+
+**Fix it by hand.** The directory holds no operator data — it was Convoke's own scaffolding for building
+Convoke's teams — so deleting it is safe:
+
+```bash
+rm -rf _bmad/bme/_team-factory
+convoke-doctor                              # version consistency now passes
+```
+
+Run it from your project root, and check the path before you run it: the command above is relative, so
+running it from the wrong directory does nothing rather than something.
+
 ### Removed
 
-- **Team Factory no longer ships.** Operator ruling 2026-09-16: it is internal scaffolding — Convoke's own
+- **Team Factory no longer ships.** *(In a patch release deliberately: it was never a user-facing
+  capability, so removing it is not a breaking change to Convoke's public surface.)* Operator ruling
+  2026-09-16: it is internal scaffolding — Convoke's own
   tool for building Convoke's teams — not a user-facing capability. `_bmad/bme/_team-factory/` is out of
   `package.json` `files[]`, its `skill-manifest.csv` row is gone, and `agent-manifest.csv` no longer carries
   the Loom Master row. There is no `/bmad-agent-bme-team-factory` command in a new install.
@@ -33,6 +74,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   directory by hand is safe in the meantime.
 
 ### Fixed
+
+- **A refresh no longer destroys your edits without a copy (`T184`).** `convoke-update` and
+  `convoke-migrate` now back up the whole of `_bmad/bme/` before writing, and the prompt that tells you what
+  will be backed up derives its text from the actual backup set rather than a hand-maintained list. Filed
+  after markers planted in a Vortex agent, a workflow and a contract were gone after `convoke-install` with
+  no `.bak` anywhere.
+
+- **A non-list `excluded_agents` no longer discards your text (`T244`).** A value that was not a YAML list
+  was silently dropped and the key rewritten as `[]`, so the opt-out did nothing *and* your text was gone.
+  There is now one authority for reading that key, and a malformed value is reported instead of replaced.
+
+- **A mistyped agent id in `excluded_agents` is no longer silent (`T250`).** An id matching no agent used to
+  exclude nothing and say nothing. `convoke-doctor` now reports a value that will not do what you wrote it
+  for, and reports it once per id rather than once per reader.
+
+- **Opting an agent out no longer makes the installer call your install broken (`T251`).** The supported
+  opt-out and the installer's own verification disagreed about what a complete install looks like, so using
+  the documented feature produced a failure report.
+
+- **`_portability` version skew is now repairable (`T234`).** `convoke-doctor` reported a skew for that
+  module and sent you to `convoke-update`, which answered `Already up to date!` — a deadlock with no
+  supported way out. The module was being version-stamped by the installer but omitted from the list of
+  modules the skew detector treats as installer-managed; `STAMPABLE_MODULES` now carries all five.
+
+- **`convoke-update --dry-run` no longer promises preservation it cannot deliver (`T239`).** The plan
+  claimed your values would be preserved for all five module configs; it is true for two. The claims are now
+  derived from the write sites rather than restated.
+
+- **Three Vortex agents open again (`T183`).** Emma, Mila and Wade began by calling `bmad-init`, a skill
+  deleted upstream in June, so they failed to start. Each now reads `_bmad/bme/_vortex/config.yaml` directly.
+
+- **You can register your own custom skill again (`T112`).** A registration now claims the row it writes,
+  so an operator-authored skill survives the installer's manifest seeding instead of being treated as drift.
+
+- **Documentation corrections in the shipped guides (`T223`, `T224`, `T232`).** Four documents still
+  described module configs as unchecked after the check had shipped; the refusal table now describes the
+  rollback on both `convoke-update` paths that can refuse; and both guides now state that they describe
+  `main` rather than a release, and carry no internal row IDs a reader cannot resolve.
 
 - **Gyre's routing reference and user guides now install (`T91`).** `_bmad/bme/_gyre/` shipped
   `compass-routing-reference.md` and five user guides, and no install path copied either. The installed

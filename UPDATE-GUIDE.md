@@ -348,6 +348,41 @@ cp -r _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_vortex/contracts _bmad/
 # (npx -p convoke-agents convoke-version prints it) by editing version: in the module's config.
 ```
 
+### Version consistency fails, naming `_team-factory`
+
+```
+✗ Version consistency — Package: 4.0.4, _team-factory: 4.0.1
+```
+
+**This is the one `convoke-doctor` failure that `convoke-update` cannot clear**, and it is expected if your
+project installed the Team Factory before it was un-shipped. A refresh does not remove a module the package
+no longer contains, so the directory and its frozen `config.yaml` stay, and `convoke-doctor` keeps finding
+it — it reports any `_bmad/bme/*/config.yaml` whose `version` differs from the package's.
+
+**Are you affected?**
+
+```bash
+ls _bmad/bme/_team-factory/config.yaml     # exists -> yes
+```
+
+Only projects that installed between **3.2.0** and **4.0.3** can be. A project installed before 3.2.0 and
+never updated never received the module, and a fresh install of 4.0.4 or later never will.
+
+**Clear it by hand.** The directory held Convoke's own scaffolding for building Convoke's teams — there is
+no operator data in it:
+
+```bash
+rm -rf _bmad/bme/_team-factory
+convoke-doctor                              # version consistency now passes
+```
+
+Run that from your project root. The path is relative on purpose: from the wrong directory it does nothing
+rather than something.
+
+**Nothing else about your install is affected** — every other check passes, and no agent, workflow or
+config depends on the directory. Retiring it automatically is tracked as `T222`; it was held back rather
+than rushed, because it deletes from your tree.
+
 ### "Already up to date" but version is outdated
 
 npx caches package binaries. If you installed at an older version, `convoke-update` may keep running the cached script instead of the latest. Force-fetch the latest:
@@ -387,9 +422,9 @@ Two caveats, both open and both narrower than the old defect:
   the package no longer contains. That can no longer happen. A named list is deliberate: an
   intermediate fix read `package.json` `files[]` and was withdrawn before release, because several
   npm-legal spellings of the same entry left npm shipping a module while the parser dropped it,
-  turning the guard off. **Removing the orphan directory itself is separate work, still open and
-  unscheduled**, and this change did not do it: a `convoke-doctor` version-consistency failure
-  naming `_team-factory` persists until that work lands.
+  turning the guard off. **Removing the orphan directory itself is separate work** (`T222`), and this
+  change did not do it. If you are seeing that failure, the one-line fix and who it affects are under
+  [Version consistency fails, naming `_team-factory`](#version-consistency-fails-naming-_team-factory).
 
 Where you see this message depends on the command and on which file is
 damaged; the table below has every case, because they differ:
