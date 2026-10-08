@@ -3356,6 +3356,62 @@ bash scripts/audit/try-fresh-install.sh   # 28 checks, all 14 bins resolve
 
 ---
 
+## T257
+
+**Closed 2026-10-08.** The published tarball carried Convoke's own repository-audit tooling to every
+operator, because `package.json` `files[]` included `scripts/` whole.
+
+```bash
+npm pack --dry-run --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>\
+  console.log(JSON.parse(s)[0].files.map(x=>x.path).filter(p=>p.startsWith('scripts/audit/'))))"
+# exactly the three bin targets
+```
+
+**The row's own precondition was the hard part, and it holds.** `convoke-audit-skill-dirs`,
+`convoke-audit-bmm-deps` and `convoke-validate-marketplace` are advertised `bin` entries, so narrowing
+`files[]` could not simply exclude `scripts/audit/`. What ships now is exactly those three files and
+nothing else from that directory, and all three bins resolve — checked together, because either alone is
+satisfiable while the pair is not.
+
+---
+
+## T249
+
+**Closed 2026-10-08.** `convoke-doctor` parsed `excluded_agents` through the authority and reported
+nothing when the value would not do what the operator wrote it for.
+
+```bash
+# in a project whose _vortex config has excluded_agents: [reviewcoach]
+convoke-doctor        # ⚠ _vortex excluded_agents — names the config path
+```
+
+Two populations, deliberately split: a MALFORMED value is roster-free and therefore reported for every
+module, while an UNKNOWN id is reported against that module's own roster only — widened later so an id
+another module owns is not reported as unknown.
+
+**Verified by execution, after two broken probes.** The first called `parseExcludedAgents` with a config
+object where it takes the array; the second ran the doctor against the repository instead of the fixture,
+because `findProjectRoot()` walks up from `cwd` and the path is not a positional argument. Both printed a
+confident "reports nothing". The working probe sets `cwd` to the fixture.
+
+---
+
+## T250
+
+**Closed 2026-10-08.** A mistyped id in `excluded_agents` was silent on the install path too: nothing
+excluded, nothing printed, the value written back verbatim.
+
+```bash
+# capture console.warn around refreshInstallation on a project with excluded_agents: [reviewcoach]
+# → Warning: <path>/_bmad/bme/_vortex/config.yaml …
+```
+
+`conforming` is a predicate about TYPES, so a well-formed list of wrong ids passed it. The install path now
+warns, naming the config. `T249` covers the same question at the doctor, which is where an operator looks
+when an agent they opted out is still present.
+
+---
+
 ## T91
 
 **Closed 2026-10-08.** `_bmad/bme/_gyre/` shipped `compass-routing-reference.md` and five user guides, and
