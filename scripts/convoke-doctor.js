@@ -188,9 +188,16 @@ function checkExcludedAgents(mod) {
     name: `${mod.name} excluded_agents`,
     passed: false,
     softWarning: true,
+    // The MALFORMED sentence may assert its consequence: a value that is not a list genuinely
+    // cannot apply. The UNKNOWN one may not, and said both of the things the long message had just
+    // stopped saying — "does not have" is false in the steady state, where the operator's own agent
+    // file sits in the module's `agents/` directory and is merely absent from `agents:`, and "did
+    // nothing" is the claim the ruling retracted. Softening the `fix` body and leaving the headline
+    // is worse than not softening at all: the two lines print one under the other, in opposite
+    // voices.
     warning: malformed
       ? 'the opt-out list is not a list of agent ids, so it did not take effect'
-      : 'the opt-out list names an agent this module does not have, so that entry did nothing',
+      : 'the opt-out list names an agent this module does not know about',
     fix: message,
   }];
 }

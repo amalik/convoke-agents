@@ -204,20 +204,35 @@ function unknownExclusionMessage(ids, conforming, profile, source, alsoKnown) {
   // Residual, and truthful rather than silent: a user-added agent excluded in a PREVIOUS run is
   // absent from `agents:` too (that is how the opt-out persists), so it is still reported — which
   // is why the sentence below no longer asserts that nothing was excluded.
-  const roster = [...(profile.agentIds || []), ...(Array.isArray(alsoKnown) ? alsoKnown : [])];
-  // One definition of "unknown", shared with the callers that ACT on the split rather than only
-  // reporting it. Deduplicated there: a repeated id is benign and repeating it is noise.
-  const { unknown } = partitionExclusions(ids, roster);
-  if (unknown.length === 0) return null;
-
-  // Where an unknown id DOES belong, if anywhere — the likeliest real mistake is a config copied
-  // between modules, and naming the owner turns "unknown" into something the operator can act on.
+  // Where an unknown id DOES belong, if anywhere. Hoisted above the roster because the widening
+  // depends on it: see the ruling below.
   const ownerOf = (id) => {
     for (const [name, p] of Object.entries(MODULE_PROFILES)) {
       if (p !== profile && p.agentIds.includes(id)) return name;
     }
     return null;
   };
+  // THE ROSTER, and the reason it is not simply profile + alsoKnown. Operator ruling 2026-10-08,
+  // resolving a collision between two earlier ones: T250 R2 ruled that an id belonging to the
+  // OTHER module counts as unknown, and the 2026-10-07 widening ruled that the module's own
+  // `agents:` list widens the roster. A config copied between modules carries `agents:` along with
+  // `excluded_agents:`, so the second silently repealed the first — measured: a Gyre config holding
+  // Vortex's `agents:` list and `excluded_agents: [contextualization-expert]` reported nothing, in
+  // the exact case `ownerOf` exists for.
+  //
+  // So `alsoKnown` contributes an id only when NO other module owns it. A user-added agent belongs
+  // to no profile and still widens; a real agent of another module does not, and is still reported
+  // with the owner named. Both rulings hold.
+  const widening = (Array.isArray(alsoKnown) ? alsoKnown : []).filter((id) => ownerOf(id) === null);
+  const roster = [...(profile.agentIds || []), ...widening];
+  // One definition of "unknown", shared with the callers that ACT on the split rather than only
+  // reporting it. Deduplicated there: a repeated id is benign and repeating it is noise.
+  const { unknown } = partitionExclusions(ids, roster);
+  if (unknown.length === 0) return null;
+
+  // `ownerOf` is defined above, with the roster it governs. Naming the owner turns "unknown" into
+  // something the operator can act on — the likeliest real mistake is a config copied between
+  // modules, which is also why that case must not be widened away.
   // `JSON.stringify` so an empty entry renders as `""` instead of vanishing from the message.
   const shownAll = unknown.map((id) => {
     const owner = ownerOf(id);

@@ -28,9 +28,13 @@ const {
 const { GYRE_AGENT_IDS } = require('../../scripts/update/lib/agent-registry');
 
 /** A discovered-module shape, as `discoverModules` produces it. */
-function mod(name, excluded) {
+function mod(name, excluded, agents) {
   const config = { submodule_name: name, module: 'bme' };
   if (excluded !== undefined) config.excluded_agents = excluded;
+  // `agents` is third and optional because almost every case here is about `excluded_agents`
+  // alone — but review found that NO fixture anywhere set it, so doctor's `mod.config.agents`
+  // argument was inert and deleting it survived the whole suite.
+  if (agents !== undefined) config.agents = agents;
   return { name, dir: path.join('/tmp/proj/_bmad/bme', name), config };
 }
 
@@ -79,8 +83,13 @@ describe('T249 — doctor reports a wrong excluded_agents value', () => {
     assert.ok(finding);
     assert.deepEqual(extra, []);
     assert.equal(finding.softWarning, true);
-    assert.match(finding.warning, /names an agent this module does not have/,
+    assert.match(finding.warning, /does not know about/,
       'and the unknown-id class must get ITS summary line, not the malformed one');
+    // The headline must not re-assert what the body stopped asserting. Review found the `fix` body
+    // softened while this line still read "does not have ... so that entry did nothing", printed
+    // directly above it — and the assertion added in the same commit was pinning that in place.
+    assert.doesNotMatch(finding.warning, /did nothing|does not have/,
+      'the headline must not re-assert the claims the ruling retracted');
     assert.match(finding.fix, /"reviewcoach"/);
     for (const id of GYRE_AGENT_IDS) {
       assert.ok(finding.fix.includes(id), `the valid id ${id} must be offered`);
@@ -137,5 +146,19 @@ describe('T249 — doctor reports a wrong excluded_agents value', () => {
       unknownExclusionMessage(uParsed.ids, uParsed.conforming, MODULE_PROFILES._gyre, configPath),
       'and the unknown-id finding likewise'
     );
+  });
+
+  it('passes the module\'s own agents list, so a user-added agent is not reported', () => {
+    // The third call site of the widening, and the one with no coverage at all: dropping
+    // `mod.config.agents` from doctor's call survived every test in this file.
+    const USER_ADDED = 'my-custom-agent';
+    assert.deepEqual(
+      checkExcludedAgents(mod('_gyre', [USER_ADDED], ['review-coach', USER_ADDED])), [],
+      'excluding an agent the operator added works, so doctor must not report it'
+    );
+    // ...and the discriminating half: absent from the list, it is reported again.
+    const [finding] = checkExcludedAgents(mod('_gyre', [USER_ADDED], ['review-coach']));
+    assert.ok(finding, 'an id in neither the profile nor the config must still be reported');
+    assert.match(finding.fix, new RegExp(`"${USER_ADDED}"`));
   });
 });

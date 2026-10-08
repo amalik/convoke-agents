@@ -374,7 +374,14 @@ describe('T250 — a conforming but unknown agent id is no longer silent', () =>
     // The valid id must NOT be reported as unknown. Asserted on the unknown-list clause rather
     // than the whole message, because the message also lists the module's valid ids — among
     // which `review-coach` legitimately appears.
-    const clause = m.slice(0, m.indexOf('Nothing was excluded'));
+    // Sliced at the CURRENT sentence. Review found this still keyed on `Nothing was excluded`,
+    // which the softening deleted — `indexOf` returned -1, so `slice(0, -1)` was the whole message
+    // minus its final full stop and the scoping was silently gone. It kept catching its mutant only
+    // because `JSON.stringify` quotes the unknown ids while the roster list is unquoted; one
+    // formatting change on either side and it would have been vacuous with no signal.
+    const cut = m.indexOf('Check the spelling');
+    assert.ok(cut > 0, `the scoping anchor is gone from the message: ${m}`);
+    const clause = m.slice(0, cut);
     assert.ok(!clause.includes('"review-coach"'),
       `a resolving id must not be named as unknown; clause was: ${clause}`);
   });
@@ -634,6 +641,124 @@ describe('T250 R2 — one definition of "unknown", shared by every reader', () =
         assert.deepEqual(withIt, without,
           `${label}: the profile changed the RETURN value, which three callers filter on`);
       }
+    } finally { await fs.remove(dir); }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// The widening itself, which was the whole commit and was bound by NOTHING — four mutants
+// survived: ignoring `alsoKnown`, and dropping it at each of the three call sites. Cause: no
+// fixture anywhere put a user-added agent in `agents:`, so `alsoKnown` was always absent or a
+// subset of the profile. That is the ninth fixture-cannot-distinguish-the-guard defect in this
+// family, and the discriminator is simply an id that is in `agents:` and in NO profile.
+// ─────────────────────────────────────────────────────────────────
+
+describe('the roster widening — a user-added agent is not "unknown"', () => {
+  const { unknownExclusionMessage, MODULE_PROFILES } = require('../../scripts/update/lib/config-merger');
+  const USER_ADDED = 'my-custom-agent';
+
+  it('fixture: the id really is in no module profile', () => {
+    for (const [name, p] of Object.entries(MODULE_PROFILES)) {
+      assert.ok(!p.agentIds.includes(USER_ADDED), `${USER_ADDED} must not be a ${name} agent`);
+    }
+  });
+
+  it('is SILENT when the id is in the module\'s own agents list', () => {
+    const m = unknownExclusionMessage([USER_ADDED], true, MODULE_PROFILES._gyre,
+      '_gyre/config.yaml', ['review-coach', USER_ADDED]);
+    assert.equal(m, null, 'excluding an agent the operator added does work, so it must not warn');
+  });
+
+  it('REPORTS the same id when it is absent from that list', () => {
+    // The discriminating half. Without this the test above passes for a function that never warns.
+    const m = unknownExclusionMessage([USER_ADDED], true, MODULE_PROFILES._gyre,
+      '_gyre/config.yaml', ['review-coach']);
+    assert.ok(m, 'an id in neither the profile nor the config must still be reported');
+    assert.match(m, new RegExp(`"${USER_ADDED}"`));
+  });
+
+  it('does NOT widen for an agent another module owns — the two rulings must both hold', () => {
+    // The collision review found: a config copied between modules carries `agents:` with it, so
+    // the 2026-10-07 widening silently repealed T250 R2's cross-module ruling. Measured silent in
+    // the exact case `ownerOf` exists for. Ruling 2026-10-08: `alsoKnown` contributes an id only
+    // when no other module owns it.
+    const vortexRoster = MODULE_PROFILES._vortex.agentIds;
+    const m = unknownExclusionMessage(['contextualization-expert'], true, MODULE_PROFILES._gyre,
+      '_gyre/config.yaml', vortexRoster);
+    assert.ok(m, 'a real Vortex agent in Gyre\'s config must still be reported');
+    assert.match(m, /that is _vortex's agent/, '...and the owner must still be named');
+    // The other half of the ruling, in the same breath: an id NO module owns still widens.
+    assert.equal(
+      unknownExclusionMessage(['my-custom-agent'], true, MODULE_PROFILES._gyre,
+        '_gyre/config.yaml', [...vortexRoster, 'my-custom-agent']),
+      null,
+      'a user-added agent must still widen, even alongside another module\'s ids'
+    );
+  });
+
+  it('ignores a non-array `agents` rather than throwing or widening to everything', () => {
+    for (const bad of [undefined, null, 'review-coach', { a: 1 }, 42]) {
+      const m = unknownExclusionMessage([USER_ADDED], true, MODULE_PROFILES._gyre, '_gyre/config.yaml', bad);
+      assert.ok(m, `a non-array agents list (${JSON.stringify(bad)}) must not suppress the report`);
+    }
+  });
+
+  it('still reports a plain typo even when the agents list is long', () => {
+    const many = Array.from({ length: 500 }, (_, i) => `agent-${i}`);
+    const m = unknownExclusionMessage(['reviewcoach'], true, MODULE_PROFILES._gyre, '_gyre/config.yaml', many);
+    assert.ok(m, 'the widening must not become a blanket pass');
+    assert.match(m, /"reviewcoach"/);
+  });
+});
+
+describe('the widening reaches each caller that has the agents list', () => {
+  const { MODULE_PROFILES } = require('../../scripts/update/lib/config-merger');
+  const USER_ADDED = 'my-custom-agent';
+
+  /** Write a Gyre config and capture what a read of it says. */
+  async function readWith(agents) {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'widen-read-'));
+    const p = path.join(dir, 'config.yaml');
+    await fs.outputFile(p, yaml.dump({
+      submodule_name: '_gyre', module: 'bme', agents, excluded_agents: [USER_ADDED],
+    }), 'utf8');
+    resetExcludedAgentWarnings();
+    const real = console.warn;
+    const said = [];
+    console.warn = (m) => said.push(String(m));
+    try { readExcludedAgents(p, { profile: MODULE_PROFILES._gyre }); } finally {
+      console.warn = real;
+      await fs.remove(dir);
+    }
+    return said;
+  }
+
+  it('readExcludedAgents passes the config\'s own agents list', async () => {
+    assert.deepEqual(await readWith(['review-coach', USER_ADDED]), [],
+      'dropping `parsed.agents` at this call site survived every test before this one');
+    const without = await readWith(['review-coach']);
+    assert.equal(without.length, 1, 'and the same id is reported when it is NOT in the list');
+  });
+
+  it('mergeConfig passes the config\'s own agents list', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'widen-merge-'));
+    const p = path.join(dir, 'config.yaml');
+    const run = async (agents) => {
+      await fs.outputFile(p, yaml.dump({
+        submodule_name: '_gyre', module: 'bme', version: '1.0.0', workflows: [],
+        agents, excluded_agents: [USER_ADDED],
+      }), 'utf8');
+      resetExcludedAgentWarnings();
+      const real = console.warn;
+      const said = [];
+      console.warn = (m) => said.push(String(m));
+      try { await mergeConfig(p, '9.9.9', {}, { submodule: '_gyre' }); } finally { console.warn = real; }
+      return said.filter((m) => /no agent this module knows about/.test(m));
+    };
+    try {
+      assert.deepEqual(await run(['review-coach', USER_ADDED]), [],
+        'dropping `current.agents` at the merge call site survived every test before this one');
+      assert.equal((await run(['review-coach'])).length, 1);
     } finally { await fs.remove(dir); }
   });
 });

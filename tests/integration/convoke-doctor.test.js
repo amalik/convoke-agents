@@ -468,6 +468,18 @@ describe('convoke-doctor: a wrong excluded_agents value reaches the operator (T2
       const withCleanValue = await runDoctor(tmpDir);
       assert.equal(withBadValue.exitCode, withCleanValue.exitCode,
         'the excluded_agents finding must not move the exit code in either direction');
+      // THE PROPERTY THE NAME CLAIMS. The equality above is `1 === 1` on this fixture — it has
+      // unrelated hard failures — and stayed `1 === 1` under `softWarning: false`, so the named
+      // property survived the mutation. The observable that discriminates soft from hard is the
+      // summary line doctor prints, and the neighbouring suite already asserts on it.
+      const bad = withBadValue.stdout + withBadValue.stderr;
+      const clean = withCleanValue.stdout + withCleanValue.stderr;
+      const issues = (s) => Number((s.match(/(\d+) issue\(s\) found/) || [0, NaN])[1]);
+      const warnings = (s) => Number((s.match(/(\d+) governance warning/) || [0, 0])[1]);
+      assert.equal(issues(bad), issues(clean),
+        'the finding must not add a hard ISSUE — that is what `softWarning: false` would do');
+      assert.ok(warnings(bad) > warnings(clean),
+        `the finding must appear as a governance WARNING; bad=${warnings(bad)} clean=${warnings(clean)}`);
       // ...and the fixture must actually differ in the finding, or the equality above is trivial.
       assert.ok(/_vortex excluded_agents/.test(withBadValue.stdout + withBadValue.stderr));
       assert.ok(!/_vortex excluded_agents/.test(withCleanValue.stdout + withCleanValue.stderr));
