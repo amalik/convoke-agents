@@ -3442,6 +3442,37 @@ annotation. Both are now annotated, and all four carry the release qualifier the
 `[Unreleased]`, so there is no published version in which "both now install" is true. The quotation of those lines in the `2026-09-26` PRD reconcile-ledger is
 left alone: it is explicitly a block quote of a dated source.
 
+**Round 2 (2026-10-08): the Round 1 `.bak` fix was a NET REGRESSION, measured.** Round 1's defect needed two
+annotations to lose one. Keeping the first `.bak` instead needed only one, in the ordinary order: the first
+clean `convoke-update` after an install already wrote a `.bak` of unmodified package text, that `.bak` then
+pinned, and an annotation written afterwards was lost from both files while the report read `Kept existing
+… — not overwritten`.
+
+Both rules asked the wrong question. The condition is whether the file DIFFERS from the package text about
+to replace it — a backup exists to preserve the operator's work, and neither rule checked whether there was
+any. Content-conditional now, which also means a refresh that changes nothing writes no `.bak` at all, so
+updates stopped churning one file per guide per run.
+
+**The fixture's ORDERING hid it.** The test annotated between the install and the first update-over-existing
+— the single order in which keep-the-first happens to keep the annotation. It now uses the ordinary
+install → update → annotate sequence.
+
+**The `.md` allowlist reopened the defect this phase exists to close**, and the test could not see it
+because it applied production's own filter: Round 1's shared blind spot, moved from the roster to the
+extension. `gyreGuidePlan` takes the guides DIRECTORY now and filters on `isFile`, so the decision is
+reachable from a temp directory shipping what the real package never does — a `.txt`, an upper-case `.MD`, a
+`.bak` and a directory named `*.md`.
+
+```bash
+node --test tests/unit/refresh-installation-gyre-assets.test.js   # 15 cases
+```
+
+**Why the Vortex side was NOT brought into line.** `T184` already backs up the whole of `_bmad/bme/` before
+a refresh, on both update paths (`runMigrations` and `runRefreshOnly`), and `getFilesToBackup()` carries
+`_bmad/bme`. So the per-guide `.bak` protects nothing the tree backup does not, on every path where it runs.
+Making Vortex match Gyre would entrench a mechanism that should be retired, which is filed as **`T269`** —
+and "symmetry" had already argued for the wrong thing once in this row.
+
 **Residue, corrected by Round 1.** An earlier version named `I141` (`_portability`) as the same shape a
 third module over. It is not: `_portability` is copied **wholesale** by `fs.copy`, it has no `guides/` and no
 root reference file, and `IN-208` already records `I141` as fixed by `dist-2-6` — so a triager following

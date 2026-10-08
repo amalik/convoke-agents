@@ -42,10 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Two phases, deliberately separate. The routing reference is copied as a **named** package-owned asset,
   not by sweeping the module root: a sweep would overwrite the `config.yaml` that the config step *merges*
   and restore `agents/` files an operator excluded via `excluded_agents`. The guides phase mirrors the
-  Vortex one in the two respects that matter — a guide whose agent is excluded is not installed, and an
-  existing guide is copied to `.bak` before being overwritten. An existing `.bak` is **never** overwritten,
-  so the first one you keep survives every later update. `GYRE-TEAM-GUIDE.md` is not exclusion-gated,
-  because excluding one agent does not make the team guide dead docs.
+  Vortex one in the respect that matters — a guide whose agent is excluded is not installed — and
+  deliberately differs in one: **a `.bak` is written only for a guide you actually changed.** A guide still
+  identical to the shipped copy is left alone and not reported, so repeated updates add nothing; when you
+  have edited one, your newest version is what lands in the `.bak`. (Vortex still backs up on every update
+  whether you changed anything or not; aligning it is filed separately.) `GYRE-TEAM-GUIDE.md` is not
+  exclusion-gated, because excluding one agent does not make the team guide dead docs.
 
   **Where the `.bak` is and is not written.** `convoke-update` and `convoke-migrate` take it. The
   *first-install* bins (`convoke-install`, `convoke-install-gyre`) deliberately do not — there is nothing of

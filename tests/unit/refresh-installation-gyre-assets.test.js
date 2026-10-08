@@ -118,22 +118,68 @@ describe('refreshInstallation — Gyre reference assets and guides (T91)', () =>
     const perAgent = GYRE_AGENTS.map(guideFor);
     assert.ok(!perAgent.includes(invented), 'fixture: the invented guide must not be a roster guide');
 
-    const shipped = [...perAgent, TEAM_GUIDE, invented].sort();
+    // Entries production CAN produce, which the previous listing did not contain: a non-`.md` guide (the
+    // extension allowlist Round 2 found dropped these silently), an upper-case extension, a duplicate,
+    // and a backup artefact the installer itself wrote.
+    const shipped = [...perAgent, TEAM_GUIDE, invented, 'GYRE-CHEATSHEET.txt', 'GYRE-COMPASS.MD',
+      TEAM_GUIDE, `${guideFor(GYRE_AGENTS[0])}.bak`];
     const plan = gyreGuidePlan(shipped, []);
-    assert.deepEqual(plan.install, shipped,
-      'every shipped guide installs, including one no roster names — a roster derivation drops it');
+    assert.deepEqual(plan.install,
+      [...new Set([...perAgent, TEAM_GUIDE, invented, 'GYRE-CHEATSHEET.txt', 'GYRE-COMPASS.MD'])].sort(),
+      'every shipped file installs whatever its extension — only a .bak is subtracted, and duplicates collapse');
     assert.deepEqual(plan.skip, []);
+    assert.ok(!plan.install.some((g) => g.endsWith('.bak')), 'the installer must not install its own backups');
+    // Unsorted input must come out sorted — the caller no longer pre-sorts.
+    assert.deepEqual(gyreGuidePlan(['B.md', 'A.md'], []).install, ['A.md', 'B.md']);
 
     // And the opt-out still subtracts, by name, from whatever was shipped.
     const excluded = GYRE_AGENTS[0];
     const withOptOut = gyreGuidePlan(shipped, [excluded.id]);
     assert.deepEqual(withOptOut.skip, [guideFor(excluded)]);
-    assert.deepEqual(withOptOut.install, shipped.filter((g) => g !== guideFor(excluded)));
+    // Canonical form, like the assertion above: deduplicated, `.bak` subtracted, sorted. Comparing
+    // against the raw `shipped` array would be comparing against something the function never returns.
+    assert.deepEqual(withOptOut.install,
+      [...new Set(shipped)].filter((g) => !g.endsWith('.bak') && g !== guideFor(excluded)).sort());
 
     // An opt-out for an agent whose guide is not shipped reports nothing — there is nothing to skip.
-    assert.deepEqual(gyreGuidePlan([TEAM_GUIDE], [excluded.id]), { install: [TEAM_GUIDE], skip: [] });
+    assert.deepEqual(gyreGuidePlan([TEAM_GUIDE], [excluded.id]), { missing: false, install: [TEAM_GUIDE], skip: [] });
     // Degenerate inputs reject rather than throw.
-    assert.deepEqual(gyreGuidePlan([], undefined), { install: [], skip: [] });
+    // BOTH parameters, not just the second — Round 2 found `shipped = null` threw while the test only
+    // covered `excludedIds`.
+    assert.deepEqual(gyreGuidePlan([], undefined), { missing: false, install: [], skip: [] });
+    assert.deepEqual(gyreGuidePlan(null, []), { missing: false, install: [], skip: [] });
+    assert.deepEqual(gyreGuidePlan(undefined, undefined), { missing: false, install: [], skip: [] });
+    assert.deepEqual(gyreGuidePlan([42, 'A.md', null], []).install, ['A.md']);
+  });
+
+  it('gyreGuidePlan reads a DIRECTORY, and the extension decision is reachable there', async () => {
+    // WHY A REAL DIRECTORY. The extension decision lives at the listing step, and no test against the
+    // real package can exercise it, because the real package happens to ship only `.md`. Round 2 restored
+    // an `endsWith('.md')` allowlist and the whole suite stayed green. A temp directory can ship what the
+    // real one does not.
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'convoke-t91-guides-'));
+    try {
+      await fs.writeFile(path.join(dir, 'SCOUT-USER-GUIDE.md'), 'a', 'utf8');
+      await fs.writeFile(path.join(dir, 'GYRE-CHEATSHEET.txt'), 'b', 'utf8');       // not .md
+      await fs.writeFile(path.join(dir, 'GYRE-COMPASS.MD'), 'c', 'utf8');           // upper-case
+      await fs.writeFile(path.join(dir, 'SCOUT-USER-GUIDE.md.bak'), 'd', 'utf8');   // our own artefact
+      await fs.ensureDir(path.join(dir, 'EXAMPLES.md'));                            // a DIRECTORY
+
+      const plan = gyreGuidePlan(dir, []);
+      assert.deepEqual(plan.install, ['GYRE-CHEATSHEET.txt', 'GYRE-COMPASS.MD', 'SCOUT-USER-GUIDE.md'],
+        'every shipped FILE installs whatever its extension; a .bak and a directory do not');
+      assert.equal(plan.missing, false);
+    } finally {
+      await fs.remove(dir);
+    }
+  });
+
+  it('gyreGuidePlan reports a MISSING directory rather than installing nothing quietly', async () => {
+    const plan = gyreGuidePlan(path.join(os.tmpdir(), 'convoke-t91-no-such-dir'), []);
+    assert.deepEqual(plan, { missing: true, install: [], skip: [] },
+      'an unreadable guides/ must be distinguishable from one that is present and empty');
+    assert.deepEqual(gyreGuidePlan([], []), { missing: false, install: [], skip: [] },
+      'present-and-empty is NOT missing — collapsing the two lets a broken package report the dev line');
   });
 
   it('honours excluded_agents — an excluded agent\'s guide is dead docs', async () => {
@@ -174,29 +220,48 @@ describe('refreshInstallation — Gyre reference assets and guides (T91)', () =>
       'with every agent excluded, the team guide must be the only guide installed');
   });
 
-  it('backs up an operator-annotated guide, and a SECOND refresh does not destroy that backup', async () => {
+  it('backs up only what the operator changed — in the order that hid a net regression', async () => {
+    // THE FIXTURE ORDERING IS THE POINT. The previous version annotated BETWEEN the install and the first
+    // update-over-existing, which is the one order in which a "keep the first .bak" rule happens to keep
+    // the annotation. Round 2 reordered those two lines and measured the real behaviour: the first
+    // ordinary update already made a .bak of unmodified package text, that .bak was then pinned, and an
+    // annotation written afterwards was lost from BOTH files while the report said it had been kept.
+    // So this test annotates AFTER a clean update, which is the ordinary operator sequence.
+    await refreshInstallation(tmpDir, { verbose: false });
     await refreshInstallation(tmpDir, { verbose: false });
 
     const guide = guideFor(GYRE_AGENTS[0]);
     const target = path.join(guides(), guide);
-    const first = 'OPERATOR ANNOTATION ONE — must survive every later refresh\n';
-    await fs.writeFile(target, first, 'utf8');
-    await refreshInstallation(tmpDir, { verbose: false });
+    assert.ok(!fs.existsSync(`${target}.bak`),
+      'a refresh that changes nothing must write no .bak — otherwise it pins package text as the backup');
 
-    assert.equal(await fs.readFile(`${target}.bak`, 'utf8'), first,
-      'the operator\'s text must be preserved in the .bak, not merely a .bak created');
-    assert.notEqual(await fs.readFile(target, 'utf8'), first, 'the guide itself must be refreshed');
-
-    // N=2. Round 1: the backup was unconditional, so this refresh replaced the annotation in the `.bak`
-    // with the package text while still reporting `Backed up` — the asserted guarantee held for exactly
-    // one update. The FIRST backup is the one worth keeping.
-    await fs.writeFile(target, 'ANNOTATION TWO\n', 'utf8');
+    const notes = '# MY TEAM NOTES\n';
+    await fs.writeFile(target, notes, 'utf8');
     const changes = await refreshInstallation(tmpDir, { verbose: false });
 
-    assert.equal(await fs.readFile(`${target}.bak`, 'utf8'), first,
-      'a later refresh must not overwrite an existing .bak');
-    assert.ok(changes.some((c) => new RegExp(`Kept existing ${guide}\\.bak`).test(c)),
-      'and it must say it kept the existing .bak rather than silently reporting a backup it did not take');
+    assert.equal(await fs.readFile(`${target}.bak`, 'utf8'), notes,
+      'the operator\'s text must be in the .bak, whenever in the sequence they wrote it');
+    assert.ok(changes.includes(`Backed up ${guide} → ${guide}.bak`), 'and the backup must be reported');
+
+    // A second annotation keeps the MOST RECENT operator state — the one they would look for.
+    await fs.writeFile(target, 'LATER NOTES\n', 'utf8');
+    await refreshInstallation(tmpDir, { verbose: false });
+    assert.equal(await fs.readFile(`${target}.bak`, 'utf8'), 'LATER NOTES\n',
+      'the newest operator state is what survives');
+  });
+
+  it('a refresh that changes nothing is idempotent — no .bak churn', async () => {
+    // The previous rule wrote one .bak per guide on every update, so `git status` in an operator project
+    // churned five files per run for no reason.
+    await refreshInstallation(tmpDir, { verbose: false });
+    const before = (await fs.readdir(guides())).sort();
+    const changes = await refreshInstallation(tmpDir, { verbose: false });
+    assert.deepEqual((await fs.readdir(guides())).sort(), before, 'a no-op refresh must not add files');
+    // And it must not CLAIM to have refreshed anything. This is the operator-visible half: without it,
+    // every update reports five guides refreshed when none changed, and the file-list assertion above
+    // cannot tell the difference.
+    assert.deepEqual(changes.filter((c) => c.startsWith('Refreshed Gyre guide:')), [],
+      'a guide already identical to the package copy must not be reported as refreshed');
   });
 
   it('writes no .bak when backupGuides is false', async () => {

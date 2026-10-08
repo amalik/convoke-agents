@@ -117,15 +117,38 @@ function mergedModuleNames() {
  * @returns {{ install: string[], skip: string[] }} both sorted; `skip` is reported, `install` is copied
  */
 function gyreGuidePlan(shipped, excludedIds) {
+  // THE FUNCTION OWNS THE WHOLE DECISION, INCLUDING THE LISTING. Round 2: the caller filtered to `*.md`
+  // before calling, so the contract here ("filenames in guides/") and the caller's ("the .md ones")
+  // disagreed and nothing reconciled them — the allowlist dropped shipped guides silently, and no test
+  // against the real package could see it, because the real package happens to ship only `.md`. Passing a
+  // DIRECTORY makes that decision reachable from a temp directory that ships whatever a test wants.
+  //
+  // A string argument is read as a directory; an array is taken as an already-read listing, which is what
+  // the synthetic unit tests use. A missing or unreadable directory yields empty sets and `missing: true`,
+  // so the caller reports it rather than silently installing nothing.
+  if (typeof shipped === 'string') {
+    let entries;
+    try {
+      entries = fs.readdirSync(shipped, { withFileTypes: true });
+    } catch {
+      return { install: [], skip: [], missing: true };
+    }
+    // `isFile`, not an extension test: a `.txt` or `.markdown` guide ships like any other, and a
+    // DIRECTORY whose name ends `.md` must not be copied as though it were a guide.
+    return gyreGuidePlan(entries.filter((e) => e.isFile()).map((e) => e.name), excludedIds);
+  }
+  const names = (Array.isArray(shipped) ? shipped : []).filter((n) => typeof n === 'string');
+  const candidates = [...new Set(names)].filter((n) => !n.endsWith('.bak'));
   const excludedGuides = new Set(
-    GYRE_AGENTS.filter((a) => (excludedIds || []).includes(a.id))
+    GYRE_AGENTS.filter((a) => (Array.isArray(excludedIds) ? excludedIds : []).includes(a.id))
       .map((a) => `${a.name.toUpperCase()}-USER-GUIDE.md`)
   );
   return {
-    install: [...shipped].filter((g) => !excludedGuides.has(g)).sort(),
+    missing: false,
+    install: candidates.filter((g) => !excludedGuides.has(g)).sort(),
     // Only guides the package actually ships are reported as skipped — an `excluded_agents` entry for an
     // agent whose guide is not shipped has nothing to report.
-    skip: [...excludedGuides].filter((g) => shipped.includes(g)).sort(),
+    skip: [...excludedGuides].filter((g) => candidates.includes(g)).sort(),
   };
 }
 
@@ -740,8 +763,12 @@ async function refreshInstallation(projectRoot, options = {}) {
     // It mirrors the Vortex phase in both respects that make a guides phase different from a reference
     // copy, and for the same reasons:
     //   EXCLUSION-AWARE. A guide whose agent is in `excluded_agents` is dead docs.
-    //   BACKUP-AWARE. A guide is operator-readable and may be annotated, so an existing one is preserved
-    //     before being overwritten, honouring the `backupGuides` option.
+    //   BACKUP-AWARE, AND DELIBERATELY NOT IDENTICAL TO VORTEX'S. A guide is operator-readable and may be
+    //     annotated, so one the operator has CHANGED is preserved before being overwritten, honouring
+    //     `backupGuides`. Vortex backs up whenever the destination exists, which writes a `.bak` of
+    //     unmodified package text on every update; this phase backs up only what the operator changed.
+    //     That divergence is the point rather than an oversight — see the condition below — and bringing
+    //     Vortex into line is filed, not done here.
     //
     // DERIVED FROM THE SHIPPED DIRECTORY, NOT THE ROSTER, and that is Round 1's correction. The first
     // version built the list from `GYRE_AGENTS` plus a hardcoded `'GYRE-TEAM-GUIDE.md'`, so any further
@@ -749,16 +776,18 @@ async function refreshInstallation(projectRoot, options = {}) {
     // one iteration later, in the code written to end it. Review reproduced it: a second team-level guide
     // was shipped and ignored with the suite green.
     //
-    // Sweeping this directory is safe where sweeping the module ROOT is not (see `2d1`): the only
-    // operator-owned state here is a guide's own content, which the backup protects, and the one subtree
-    // that must honour an opt-out is handled by subtracting excluded agents' guides by name.
+    // Sweeping this directory is safe where sweeping the module ROOT is not (see `2d1`): a guide's own
+    // content is preserved when the operator changed it, an operator-authored file that is not a shipped
+    // guide is never touched, and the one subtree that must honour an opt-out is handled by subtracting
+    // excluded agents' guides by name. One thing this does NOT manage, stated rather than implied: the
+    // `.bak` files themselves. Nothing refreshes, prunes or reports on them, so they persist until the
+    // operator removes them.
     const gyreGuidesSource = path.join(packageGyre, 'guides');
     const gyreGuidesTarget = path.join(targetGyre, 'guides');
     if (!isSameRoot && fs.existsSync(gyreGuidesSource)) {
       await fs.ensureDir(gyreGuidesTarget);
 
-      const shippedGuides = (await fs.readdir(gyreGuidesSource)).filter((f) => f.endsWith('.md')).sort();
-      const { install, skip } = gyreGuidePlan(shippedGuides, gyreExcluded);
+      const { install, skip } = gyreGuidePlan(gyreGuidesSource, gyreExcluded);
       for (const skipped of skip) {
         changes.push(`Skipped excluded Gyre guide: ${skipped}`);
         if (verbose) console.log(`    Skipped excluded Gyre guide: ${skipped}`);
@@ -767,20 +796,30 @@ async function refreshInstallation(projectRoot, options = {}) {
       for (const guide of install) {
         const src = path.join(gyreGuidesSource, guide);
         const dest = path.join(gyreGuidesTarget, guide);
-        // A `.bak` is NOT overwritten. Round 1: the backup was unconditional, so a second refresh
-        // replaced the operator's annotation with the package text while still reporting `Backed up` —
-        // the guarantee held for exactly one update. The first backup is the one worth keeping, and a
-        // refresh that cannot preserve the file says so instead of destroying the record silently.
-        if (backupGuides && fs.existsSync(dest)) {
-          if (fs.existsSync(`${dest}.bak`)) {
-            changes.push(`Kept existing ${guide}.bak — not overwritten`);
-            if (verbose) console.log(`    Kept existing ${guide}.bak — not overwritten`);
-          } else {
-            await fs.copy(dest, `${dest}.bak`);
-            changes.push(`Backed up ${guide} → ${guide}.bak`);
-            if (verbose) console.log(`    Backed up ${guide} → ${guide}.bak`);
-          }
+        // BACK UP ONLY WHAT THE OPERATOR CHANGED, and this condition took three attempts to get right.
+        //
+        // The first version backed up whenever `dest` existed and overwrote any previous `.bak`. Round 1
+        // showed that destroyed annotation N-1 when annotation N arrived. The second version kept the
+        // FIRST `.bak` instead — and Round 2 measured that as a NET REGRESSION: the first ordinary
+        // `convoke-update` after an install already makes a `.bak` of unmodified package text, which then
+        // pins forever, so an annotation written after that update was lost from both files while the
+        // report said `Kept existing … — not overwritten`. Worse than the defect it replaced, and it
+        // needed only one annotation in the ordinary install-update-annotate order.
+        //
+        // Both versions asked the wrong question. A backup exists to preserve the OPERATOR's work, so the
+        // condition is whether this file differs from the package text about to replace it — not whether
+        // the file exists, and not whether a `.bak` already exists. Consequences, all intended:
+        //   · nothing to lose, nothing written — a refresh that changes nothing produces no `.bak` at all,
+        //     so repeated updates are idempotent instead of churning one `.bak` per guide per run;
+        //   · the operator's MOST RECENT state is what survives, which is the one they would look for.
+        const operatorText = fs.existsSync(dest) ? await fs.readFile(dest, 'utf8') : null;
+        const packageText = await fs.readFile(src, 'utf8');
+        if (backupGuides && operatorText !== null && operatorText !== packageText) {
+          await fs.copy(dest, `${dest}.bak`, { overwrite: true });
+          changes.push(`Backed up ${guide} → ${guide}.bak`);
+          if (verbose) console.log(`    Backed up ${guide} → ${guide}.bak`);
         }
+        if (operatorText === packageText) continue;   // already current; nothing to write or report
         await fs.copy(src, dest, { overwrite: true });
         changes.push(`Refreshed Gyre guide: ${guide}`);
         if (verbose) console.log(`    Refreshed Gyre guide: ${guide}`);
