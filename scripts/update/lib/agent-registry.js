@@ -227,6 +227,17 @@ const GYRE_WORKFLOW_NAMES = GYRE_WORKFLOWS.map(w => w.name);
 // path, not a revival of this one — and `scripts/audit/lib/installed-tree.js`'s WRAPPER_RULES will need
 // a matching entry.
 
+// Agent ids Convoke once generated a `.claude/skills/bmad-agent-bme-<id>` wrapper for and no longer
+// does. The refresh removes a wrapper at one of these names; any other `bmad-agent-bme-*` name
+// that is not a current agent was never Convoke's, and is left alone (T252). Retiring an agent
+// means adding its id here in the same change that removes it from a roster above, or its wrapper
+// is stranded in every project that already has it.
+//
+// Deliberately NOT named `*_AGENT_IDS`: that suffix means a live roster, and
+// `tests/unit/agent-persona-registry-sync.test.js` derives the set of ids it must validate from
+// every export carrying it.
+const RETIRED_WRAPPER_IDS = ['team-factory'];
+
 // R1-M4: disjoint-IDs assertion. AGENT_IDS (Vortex) and GYRE_AGENT_IDS (Gyre)
 // MUST be mutually disjoint — an
 // overlap would mean refresh-installation, validator, and doctor would
@@ -270,4 +281,5 @@ module.exports = {
   GYRE_AGENT_FILES,
   GYRE_AGENT_IDS,
   GYRE_WORKFLOW_NAMES,
+  RETIRED_WRAPPER_IDS,
 };

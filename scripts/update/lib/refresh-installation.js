@@ -2,6 +2,7 @@
 
 const fs = require('fs-extra');
 const path = require('path');
+const crypto = require('crypto');
 const yaml = require('js-yaml');
 const YAML = require('yaml'); // Comment-preserving YAML library (ag-7-1: I29). Use for WRITE sites that need to preserve comments. js-yaml stays for read-only consumers.
 const { getPackageVersion, assertVersion } = require('./utils');
@@ -9,7 +10,7 @@ const configMerger = require('./config-merger');
 // Story v63-3-1: AGENT_FILES dropped from this file's imports — post-migration
 // the Vortex copy loop iterates AGENT_IDS and handles skill-dir shape inline.
 // AGENT_FILES remains @deprecated in agent-registry for any external consumers.
-const { AGENTS, AGENT_IDS, WORKFLOW_NAMES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES } = require('./agent-registry');
+const { AGENTS, AGENT_IDS, WORKFLOW_NAMES, GYRE_AGENTS, GYRE_AGENT_FILES, GYRE_AGENT_IDS, GYRE_WORKFLOW_NAMES, RETIRED_WRAPPER_IDS } = require('./agent-registry');
 const {
   generateAgentManifest,
   CHANGE_MESSAGE: MANIFEST_CHANGE_MESSAGE,
@@ -1053,29 +1054,41 @@ async function refreshInstallation(projectRoot, options = {}) {
 
   const skillsDir = path.join(projectRoot, '.claude', 'skills');
 
-  // Remove stale skill directories (agents no longer in registry OR excluded by operator).
-  // U8: excluded agents are intentionally omitted from the valid set so the stale-removal
-  // loop below deletes their wrappers on the next refresh. Re-inclusion (removing from
-  // excluded_agents) regenerates the wrapper here.
-  const currentSkillDirs = new Set([
-    ...AGENTS.filter(a => !vortexExcluded.includes(a.id)).map(a => `bmad-agent-bme-${a.id}`),
-    ...GYRE_AGENTS.filter(a => !gyreExcluded.includes(a.id)).map(a => `bmad-agent-bme-${a.id}`),
-  ]);
+  // T252: the wrapper phases from here to 6e copy a wrapper aside before removing or rewriting it,
+  // and skip it when the copy cannot be made. See `preserveOperatorWrapper`.
+  const wrapperCtx = { backupRoot: path.join(projectRoot, WRAPPER_BACKUP_REL), changes, verbose };
+
+  // Every agent-wrapper name Convoke has generated: the two rosters, excluded or not, plus the
+  // retired ids. A `bmad-agent-bme-*` name outside this set was never Convoke's.
+  const ownedSkillDirs = new Set(
+    [...AGENTS.map(a => a.id), ...GYRE_AGENTS.map(a => a.id), ...RETIRED_WRAPPER_IDS].map(id => `bmad-agent-bme-${id}`)
+  );
+
+  // An owned name stored under another CASE. On a case-insensitive filesystem `Bmad-Agent-Bme-X`
+  // IS the directory the loops below write to, while `readdir` and `pathPresent` in
+  // `agent-install-checks.js` see only the spelling on disk. Left alone, the loop rewrites it, the
+  // sweep calls it foreign, and verification reports the wrapper missing on every run. Renaming it
+  // to the owned spelling makes all three agree. Where the two spellings are different
+  // directories (a case-sensitive filesystem) the inode test fails and nothing is renamed.
   if (fs.existsSync(skillsDir)) {
-    const existingSkills = (await fs.readdir(skillsDir)).filter(d => d.startsWith('bmad-agent-bme-'));
-    for (const dir of existingSkills) {
-      if (!currentSkillDirs.has(dir)) {
-        await fs.remove(path.join(skillsDir, dir));
-        changes.push(`Removed stale skill: ${dir}`);
-        if (verbose) console.log(`    Removed stale skill: ${dir}`);
-      }
+    const ownedByLowerCase = new Map([...ownedSkillDirs].map(n => [n.toLowerCase(), n]));
+    for (const entry of await fs.readdir(skillsDir)) {
+      const owned = ownedByLowerCase.get(entry.toLowerCase());
+      if (!owned || owned === entry) continue;
+      if (!isSameDirectoryEntry(path.join(skillsDir, entry), path.join(skillsDir, owned))) continue;
+      await fs.rename(path.join(skillsDir, entry), path.join(skillsDir, owned));
+      changes.push(`Renamed skill directory ${entry} → ${owned}`);
+      if (verbose) console.log(`    Renamed skill directory ${entry} → ${owned}`);
     }
   }
 
+  // What this run WOULD generate for each excluded agent, keyed by wrapper name. The stale sweep
+  // after the two loops compares a wrapper it is about to remove against this text, so excluding
+  // an agent removes Convoke's own wrapper quietly and backs up anything else found at that name.
+  const excludedWrapperText = new Map();
+
   for (const agent of AGENTS) {
-    if (vortexExcluded.includes(agent.id)) continue;
     const skillDir = path.join(skillsDir, `bmad-agent-bme-${agent.id}`);
-    await fs.ensureDir(skillDir);
     // Story v63-3-1 / AC9: LOAD path points at the migrated skill-dir
     // (`<id>/SKILL.md`), NOT the pre-4.0 flat `<id>.md`. This is the
     // critical runtime contract for existing operators upgrading from 3.x.
@@ -1095,6 +1108,12 @@ You must fully embody this agent's persona and follow all activation instruction
 6. WAIT for user input before proceeding
 </agent-activation>
 `;
+    if (vortexExcluded.includes(agent.id)) {
+      excludedWrapperText.set(path.basename(skillDir), content);
+      continue;
+    }
+    if (!preserveOperatorWrapper(skillsDir, path.basename(skillDir), content, { ...wrapperCtx, textOnly: true })) continue;
+    await fs.ensureDir(skillDir);
     await fs.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf8');
     changes.push(`Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
     if (verbose) console.log(`    Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
@@ -1102,9 +1121,7 @@ You must fully embody this agent's persona and follow all activation instruction
 
   // 6b. Generate .claude/skills/ for Gyre agents
   for (const agent of GYRE_AGENTS) {
-    if (gyreExcluded.includes(agent.id)) continue;
     const skillDir = path.join(skillsDir, `bmad-agent-bme-${agent.id}`);
-    await fs.ensureDir(skillDir);
     const content = `---
 name: bmad-agent-bme-${agent.id}
 description: ${agent.id} agent
@@ -1121,9 +1138,45 @@ You must fully embody this agent's persona and follow all activation instruction
 6. WAIT for user input before proceeding
 </agent-activation>
 `;
+    if (gyreExcluded.includes(agent.id)) {
+      excludedWrapperText.set(path.basename(skillDir), content);
+      continue;
+    }
+    if (!preserveOperatorWrapper(skillsDir, path.basename(skillDir), content, { ...wrapperCtx, textOnly: true })) continue;
+    await fs.ensureDir(skillDir);
     await fs.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf8');
     changes.push(`Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
     if (verbose) console.log(`    Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
+  }
+
+  // Remove stale agent wrappers: agents the operator excluded, and agents Convoke has retired.
+  // U8: excluded agents are omitted from the current set so their wrappers are removed here, and
+  // re-inclusion regenerates them above. T251's `absent` check depends on that removal.
+  //
+  // T252 narrowed what "stale" means. This used to remove EVERY `bmad-agent-bme-*` entry not in
+  // the current set, which deleted an operator's own `bmad-agent-bme-acme-reviewer`. The prefix
+  // is not proof of authorship; a name Convoke shipped is. So a name outside `ownedSkillDirs` is
+  // left in place and reported, and an owned one is copied aside first when its content differs
+  // from the wrapper this run would have generated for it.
+  //
+  // It runs AFTER the two loops because that generated text is only known once they have run.
+  const currentSkillDirs = new Set([
+    ...AGENTS.filter(a => !vortexExcluded.includes(a.id)).map(a => `bmad-agent-bme-${a.id}`),
+    ...GYRE_AGENTS.filter(a => !gyreExcluded.includes(a.id)).map(a => `bmad-agent-bme-${a.id}`),
+  ]);
+  if (fs.existsSync(skillsDir)) {
+    const existingSkills = (await fs.readdir(skillsDir)).filter(d => d.startsWith('bmad-agent-bme-'));
+    for (const dir of existingSkills) {
+      if (currentSkillDirs.has(dir)) continue;
+      if (!ownedSkillDirs.has(dir)) {
+        reportForeignWrapper(dir);
+        continue;
+      }
+      if (!preserveOperatorWrapper(skillsDir, dir, excludedWrapperText.get(dir), wrapperCtx)) continue;
+      await fs.remove(path.join(skillsDir, dir));
+      changes.push(`Removed stale skill: ${dir}`);
+      if (verbose) console.log(`    Removed stale skill: ${dir}`);
+    }
   }
 
   // 6b1. REMOVED by story tfu-1-1 (2026-09-29) — skill wrappers for standalone bme agents.
@@ -1144,9 +1197,13 @@ You must fully embody this agent's persona and follow all activation instruction
       // Copy source SKILL.md from package (shipped via npm, not generated)
       const sourceSkillPath = path.join(packageRoot, '_bmad', 'bme', '_enhance', 'workflows', workflow.name, 'SKILL.md');
       const targetSkillPath = path.join(skillDir, 'SKILL.md');
-      await fs.copy(sourceSkillPath, targetSkillPath, { overwrite: true });
-      changes.push(`Refreshed Enhance skill: ${canonicalId}/SKILL.md`);
-      if (verbose) console.log(`    Refreshed Enhance skill: ${canonicalId}/SKILL.md`);
+      // Only the copy is skipped when the wrapper could not be set aside; the menu patch and
+      // manifest rows below do not touch it.
+      if (preserveOperatorWrapper(skillsDir, canonicalId, fs.readFileSync(sourceSkillPath, 'utf8'), { ...wrapperCtx, textOnly: true })) {
+        await fs.copy(sourceSkillPath, targetSkillPath, { overwrite: true });
+        changes.push(`Refreshed Enhance skill: ${canonicalId}/SKILL.md`);
+        if (verbose) console.log(`    Refreshed Enhance skill: ${canonicalId}/SKILL.md`);
+      }
 
       // Append to workflow-manifest.csv if not already present
       const wfManifestPath = path.join(projectRoot, '_bmad', '_config', 'workflow-manifest.csv');
@@ -1196,6 +1253,14 @@ You must fully embody this agent's persona and follow all activation instruction
       }
 
       const destSkillDir = path.join(skillsDir, workflow.name);
+      const sourceSkillPath = path.join(packageRoot, '_bmad', 'bme', '_artifacts', 'workflows', workflow.name, 'SKILL.md');
+      // T252: the removal below takes every file in the directory with it, so a directory that
+      // is not the shipped SKILL.md alone is copied aside first.
+      if (!preserveOperatorWrapper(
+        skillsDir, workflow.name,
+        fs.existsSync(sourceSkillPath) ? fs.readFileSync(sourceSkillPath, 'utf8') : undefined,
+        wrapperCtx
+      )) continue;
 
       // Remove the destination directory first to clear leftover files from prior installs
       if (fs.existsSync(destSkillDir)) {
@@ -1205,7 +1270,6 @@ You must fully embody this agent's persona and follow all activation instruction
 
       // Copy source SKILL.md from the package (the SKILL.md uses an absolute {project-root}
       // path to load workflow.md, so workflow.md does NOT need to be co-located).
-      const sourceSkillPath = path.join(packageRoot, '_bmad', 'bme', '_artifacts', 'workflows', workflow.name, 'SKILL.md');
       const targetSkillPath = path.join(destSkillDir, 'SKILL.md');
       if (fs.existsSync(sourceSkillPath)) {
         await fs.copy(sourceSkillPath, targetSkillPath, { overwrite: true });
@@ -1238,13 +1302,20 @@ You must fully embody this agent's persona and follow all activation instruction
       }
 
       const destSkillDir = path.join(skillsDir, workflow.name);
+      const sourceSkillPath = path.join(packageRoot, '_bmad', 'bme', '_portability', 'workflows', workflow.name, 'SKILL.md');
+      // T252: the removal below takes every file in the directory with it, so a directory that
+      // is not the shipped SKILL.md alone is copied aside first.
+      if (!preserveOperatorWrapper(
+        skillsDir, workflow.name,
+        fs.existsSync(sourceSkillPath) ? fs.readFileSync(sourceSkillPath, 'utf8') : undefined,
+        wrapperCtx
+      )) continue;
 
       if (fs.existsSync(destSkillDir)) {
         await fs.remove(destSkillDir);
       }
       await fs.ensureDir(destSkillDir);
 
-      const sourceSkillPath = path.join(packageRoot, '_bmad', 'bme', '_portability', 'workflows', workflow.name, 'SKILL.md');
       const targetSkillPath = path.join(destSkillDir, 'SKILL.md');
       if (fs.existsSync(sourceSkillPath)) {
         await fs.copy(sourceSkillPath, targetSkillPath, { overwrite: true });
@@ -1262,13 +1333,7 @@ You must fully embody this agent's persona and follow all activation instruction
   }
 
   // 6e. Orphan workflow-wrapper cleanup (Story 7.4, I32)
-  // Removes stale .claude/skills/ directories for workflow wrappers that are no longer
-  // declared in the module configs. Uses a two-strategy matching approach:
-  //   Strategy 1 (Enhance): any bmad-enhance-* dir not in the current union → orphan
-  //   Strategy 2 (verbatim-name modules): any dir whose name exactly matches a known
-  //     Artifacts OR Portability workflow name (dist-2.6 added the second)
-  //     workflow name but is not in the current union → orphan
-  // All other directories (agent wrappers, upstream BMAD skills, third-party) are ignored.
+  // See `cleanupOrphanWorkflowWrappers` for what is removed and what is only reported.
   if (!isSameRoot) {
     const currentWorkflowWrappers = new Set();
     // Enhance wrappers: bmad-enhance-${workflow.name}
@@ -1295,7 +1360,7 @@ You must fully embody this agent's persona and follow all activation instruction
         }
       }
     }
-    const orphanChanges = cleanupOrphanWorkflowWrappers(skillsDir, currentWorkflowWrappers, knownVerbatimNames, { verbose });
+    const orphanChanges = cleanupOrphanWorkflowWrappers(skillsDir, currentWorkflowWrappers, knownVerbatimNames, { verbose, backupRoot: wrapperCtx.backupRoot });
     changes.push(...orphanChanges);
   } else {
     changes.push('Skipped orphan workflow-wrapper cleanup (dev environment)');
@@ -1398,23 +1463,6 @@ prompts: []
 }
 
 /**
- * Remove orphan workflow-wrapper directories from .claude/skills/.
- *
- * Two-strategy matching (Story 7.4, I32):
- *   Strategy 1: Enhance prefix — any dir starting with `bmad-enhance-` that is
- *               not in `currentWrappers` is an orphan.
- *   Strategy 2: verbatim exact-name (Artifacts + Portability) — any dir whose name is in `knownVerbatimNames`
- *               but not in `currentWrappers` is an orphan.
- * Everything else (agent wrappers, upstream BMAD skills, third-party) is ignored.
- *
- * @param {string} skillsDir - Absolute path to .claude/skills/
- * @param {Set<string>} currentWrappers - Union of live workflow wrapper names
- * @param {Set<string>} knownVerbatimNames - ALL Artifacts + Portability workflow names (including non-standalone)
- * @param {object} [options]
- * @param {boolean} [options.verbose] - Log each action
- * @returns {Array<string>} Changes array entries for removed orphans
- */
-/**
  * Does one manifest row's `path` seed into a project rooted at `projectRootResolved`?
  *
  * THE SEEDING PREDICATE, and the single definition of it. The package's `skill-manifest.csv` is a
@@ -1467,6 +1515,164 @@ function manifestRowSeeds(rel, projectRootResolved) {
   }
 }
 
+// Where a wrapper is copied before the refresh removes or rewrites it (T252). Under
+// `_bmad-output/.backups/`, which `backup-manager.js` already writes to, and outside
+// `.claude/skills/` so that the copy of an excluded agent's wrapper is not itself a skill.
+const WRAPPER_BACKUP_REL = path.join('_bmad-output', '.backups', 'skill-wrappers');
+
+/**
+ * sha256 over the tree at `root`, following symlinks: every directory and every file by relative
+ * path, and each file's bytes behind their length, so no two different trees give one stream.
+ */
+function wrapperDigest(root) {
+  const hash = crypto.createHash('sha256');
+  const walk = (abs, rel) => {
+    const stat = fs.statSync(abs);
+    if (stat.isDirectory()) {
+      hash.update(`d${rel}\0`);
+      for (const entry of fs.readdirSync(abs).sort()) walk(path.join(abs, entry), `${rel}/${entry}`);
+    } else if (stat.isFile()) {
+      const bytes = fs.readFileSync(abs);
+      hash.update(`f${rel}\0${bytes.length}\0`).update(bytes);
+    } else {
+      // A FIFO would block the read and a socket cannot be copied; refuse rather than guess.
+      throw new Error(`${rel || path.basename(abs)} is not a regular file or directory`);
+    }
+  };
+  walk(root, '');
+  return hash.digest('hex');
+}
+
+/** Do two paths name the same directory entry? True for two spellings of one name on a case-insensitive filesystem. */
+function isSameDirectoryEntry(a, b) {
+  try {
+    const sa = fs.lstatSync(a);
+    const sb = fs.lstatSync(b);
+    return sa.ino === sb.ino && sa.dev === sb.dev;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Copy `.claude/skills/<name>` aside when it holds something other than the text Convoke would
+ * write there, and tell the caller whether it may now remove or rewrite it.
+ *
+ * "Something other" is decided two ways, because the callers destroy different things:
+ *   - a caller that removes the whole directory passes no `textOnly`, and any entry besides a
+ *     `SKILL.md` equal to `expectedText` counts;
+ *   - a caller that only rewrites `SKILL.md` passes `textOnly: true`, and sibling files, which
+ *     it leaves alone, do not count.
+ * With no `expectedText` there is nothing to compare against, so any content at all is copied.
+ * That includes Convoke's own wrapper from an older release — and a wrapper whose shipped text
+ * changed between releases differs from `expectedText` too — which is why the report line does
+ * not call the content the operator's.
+ *
+ * `SKILL.md` is read through the path the caller will WRITE to rather than looked up in a
+ * directory listing: on a case-insensitive filesystem a file stored as `skill.md` is the file
+ * that write replaces, and a listing compared against `'SKILL.md'` does not see it. Symlinks are
+ * followed for the same reason, for the comparison, the digest and the copy alike — the caller's
+ * write goes through a link, so what must be kept is what the link points at.
+ *
+ * Each copy lands at `<name>-<digest of its content>` and nothing here deletes one, so a copy
+ * of different content does not land on an earlier copy's name. Content is treated as already copied only when the
+ * directory at that name still digests to the same value — its mere existence proves nothing,
+ * since an operator who moves a file back out of it leaves the directory behind. Nothing prunes
+ * the copies. The Gyre guides phase keeps a single `.bak` instead; that loses an operator's edit
+ * when the next release changes the shipped text, which is what this avoids.
+ *
+ * A wrapper holding something that cannot be read as a file or a directory — a broken or
+ * circular link, a FIFO, a socket — cannot be copied whole, so it is refused: see the return.
+ *
+ * @returns {boolean} true when the caller may proceed: there was nothing to keep, or the copy was
+ *   made, or an identical copy was already there. false when the copy failed. The wrapper is then
+ *   untouched and a warning has been printed; the caller must leave it alone.
+ */
+function preserveOperatorWrapper(skillsDir, name, expectedText, { backupRoot, changes, verbose, textOnly = false }) {
+  const target = path.join(skillsDir, name);
+  try {
+    let stat;
+    try {
+      stat = fs.statSync(target);
+    } catch (err) {
+      if (err.code === 'ENOENT') return true; // absent, or a link to nothing
+      throw err;
+    }
+
+    let differs = true; // a file where a wrapper directory belongs is not something Convoke wrote
+    if (stat.isDirectory()) {
+      const skillFile = path.join(target, 'SKILL.md');
+      let textDiffers = false;
+      if (fs.existsSync(skillFile)) {
+        let text = null;
+        // Read it only when it is a regular file: reading a FIFO at this name never returns.
+        if (fs.statSync(skillFile).isFile()) {
+          try {
+            text = fs.readFileSync(skillFile, 'utf8');
+          } catch {
+            // unreadable: not the text Convoke writes
+          }
+        }
+        textDiffers = expectedText === undefined || text !== expectedText;
+      }
+      differs = textDiffers || (!textOnly && fs.readdirSync(target).some(e => e !== 'SKILL.md'));
+    }
+    if (!differs) return true;
+
+    const digest = wrapperDigest(target);
+    const backupName = `${name}-${digest.slice(0, 16)}`;
+    const dest = path.join(backupRoot, backupName);
+    let alreadyKept = false;
+    try {
+      alreadyKept = fs.existsSync(dest) && wrapperDigest(dest) === digest;
+    } catch {
+      // whatever is at `dest` cannot be read as this content, so it is not a copy of it
+    }
+    if (alreadyKept) return true;
+
+    // Copied OVER whatever is at `dest`, without removing the directory first: a copy that
+    // failed part-way last time is completed. A file already at a path this copy writes is
+    // replaced by it; files at other paths are left where they are.
+    fs.copySync(target, dest, { dereference: true });
+
+    const shown = path.join(WRAPPER_BACKUP_REL, backupName);
+    changes.push(`Backed up ${name} → ${shown}`);
+    if (verbose) console.log(`    Backed up ${name} → ${shown}`);
+    return true;
+  } catch (err) {
+    // Not pushed into `changes`, and not gated on `verbose`: see the taxonomy seed's catch in
+    // `refreshInstallation` for why a warning must not be rendered with a green tick.
+    console.warn(`    Warning: could not back up .claude/skills/${name} (${err.message}) — left as it is. Move it out of .claude/skills/ and run again.`);
+    return false;
+  }
+}
+
+/**
+ * Report a `.claude/skills/` entry that carries a Convoke prefix but not a name Convoke shipped.
+ * A warning rather than a `changes` entry, because nothing was changed.
+ */
+function reportForeignWrapper(name) {
+  console.warn(`    Left in place: .claude/skills/${name} uses a Convoke prefix but is not a skill Convoke installs`);
+}
+
+/**
+ * Clean up workflow-wrapper directories in .claude/skills/ that no module config declares.
+ *
+ * Two-strategy matching (Story 7.4, I32; Strategy 1 changed by T252):
+ *   Strategy 1: Enhance prefix — a dir starting with `bmad-enhance-` that is not in
+ *               `currentWrappers` is reported and LEFT IN PLACE.
+ *   Strategy 2: verbatim exact-name (Artifacts + Portability) — a dir whose name is in
+ *               `knownVerbatimNames` but not in `currentWrappers` is copied aside and removed.
+ * Everything else (agent wrappers, upstream BMAD skills, third-party) is ignored.
+ *
+ * @param {string} skillsDir - Absolute path to .claude/skills/
+ * @param {Set<string>} currentWrappers - Union of live workflow wrapper names
+ * @param {Set<string>} knownVerbatimNames - ALL Artifacts + Portability workflow names (including non-standalone)
+ * @param {object} options
+ * @param {string} options.backupRoot - Absolute directory removed wrappers are copied into
+ * @param {boolean} [options.verbose] - Log each action
+ * @returns {Array<string>} Changes array entries: one per copy made and one per directory removed
+ */
 function cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatimNames, options = {}) {
   // Deliberately synchronous (fs.removeSync / fs.readdirSync) — the function returns
   // Array<string>, not a Promise. The sync pattern keeps the contract simple for both
@@ -1474,8 +1680,10 @@ function cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatim
   // imports the function directly without async scaffolding). The existing agent
   // stale-skill sweep at section 6 uses async fs.remove because it runs inline in the
   // async refreshInstallation body; this function is extracted to be testable standalone.
-  const { verbose = false } = options;
+  const { verbose = false, backupRoot } = options;
+  if (!backupRoot) throw new TypeError('cleanupOrphanWorkflowWrappers: options.backupRoot is required');
   const changes = [];
+  const ctx = { backupRoot, changes, verbose };
 
   if (!fs.existsSync(skillsDir)) return changes;
 
@@ -1488,19 +1696,21 @@ function cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatim
     // Skip agent wrappers (handled by existing stale-skill sweep)
     if (name.startsWith('bmad-agent-bme-')) continue;
 
-    // Strategy 1: Enhance prefix (unambiguous — no upstream module uses bmad-enhance-)
+    // Strategy 1: Enhance prefix. T252: this used to REMOVE every `bmad-enhance-*` directory not
+    // in the current set, on the reasoning that no upstream module uses the prefix. That shows
+    // the name is not upstream's; it does not show Convoke wrote it, and an operator's own
+    // `bmad-enhance-acme` was deleted by a plain install. Enhance has never retired a workflow
+    // name, so nothing under this prefix is Convoke's to remove; it is left in place and reported.
+    // When Enhance does retire one, list that exact name and remove it the way Strategy 2 does.
     if (name.startsWith('bmad-enhance-')) {
-      if (!currentWrappers.has(name)) {
-        fs.removeSync(path.join(skillsDir, name));
-        changes.push(`Removed orphan skill wrapper: ${name}`);
-        if (verbose) console.log(`    Removed orphan skill wrapper: ${name}`);
-      }
+      if (!currentWrappers.has(name)) reportForeignWrapper(name);
       continue;
     }
 
     // Strategy 2: verbatim exact-name match (Artifacts + Portability)
     if (knownVerbatimNames.has(name)) {
       if (!currentWrappers.has(name)) {
+        if (!preserveOperatorWrapper(skillsDir, name, undefined, ctx)) continue;
         fs.removeSync(path.join(skillsDir, name));
         changes.push(`Removed orphan skill wrapper: ${name}`);
         if (verbose) console.log(`    Removed orphan skill wrapper: ${name}`);
@@ -1671,6 +1881,8 @@ module.exports = {
   MERGED_MODULE_NAMES,
   refreshInstallation,
   cleanupOrphanWorkflowWrappers,
+  isSameDirectoryEntry,
+  WRAPPER_BACKUP_REL,
   manifestRowSeeds,
   seedBmmDependencies,
   STAMPABLE_MODULES,

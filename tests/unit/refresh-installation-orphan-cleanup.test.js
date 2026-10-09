@@ -6,8 +6,11 @@
  * wrappers, agent wrappers, and third-party/upstream wrappers.
  *
  * Uses a two-strategy matching approach:
- *   Strategy 1: Enhance prefix (bmad-enhance-*) — unambiguous
- *   Strategy 2: Artifacts exact-name match — avoids colliding with upstream
+ *   Strategy 1: Enhance prefix (bmad-enhance-*) — a name outside the current set is LEFT IN PLACE
+ *               and reported by console.warn. It was removed until T252: the prefix does not
+ *               show Convoke wrote the directory, and an operator's own skill was being deleted.
+ *   Strategy 2: Artifacts exact-name match — avoids colliding with upstream. What it removes is
+ *               backed up first; `refresh-installation-operator-wrappers.test.js` asserts the copy.
  *
  * Closes I32 (rank #47 in backlog, RICE 1.0).
  */
@@ -18,7 +21,15 @@ const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
 
-const { cleanupOrphanWorkflowWrappers } = require('../../scripts/update/lib/refresh-installation');
+const { cleanupOrphanWorkflowWrappers, WRAPPER_BACKUP_REL } = require('../../scripts/update/lib/refresh-installation');
+const { silenceConsole, restoreConsole } = require('../helpers');
+
+// Every suite builds skillsDir as <tmpDir>/.claude/skills, so the project root is two levels up.
+const backupRootFor = (skillsDir) => path.resolve(skillsDir, '..', '..', WRAPPER_BACKUP_REL);
+
+// "Left in place" is a console.warn by design; keep it out of the test output.
+beforeEach(() => silenceConsole());
+afterEach(() => restoreConsole());
 
 /**
  * Seed a skills directory with the given wrapper names (each gets a SKILL.md).
@@ -43,22 +54,21 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — orphan removal', () => {
   });
   afterEach(async () => { await fs.remove(tmpDir); });
 
-  it('removes an Enhance orphan (bmad-enhance-removed-workflow)', async () => {
+  it('leaves a bmad-enhance-* directory outside the current set in place and returns no change (T252)', async () => {
     await seedSkillsDir(skillsDir, [
       'bmad-enhance-initiatives-backlog', // live
-      'bmad-enhance-removed-workflow',     // orphan
+      'bmad-enhance-acme',                 // not a name Convoke installs
     ]);
     const currentWrappers = new Set(['bmad-enhance-initiatives-backlog']);
     const knownArtifactsNames = new Set();
 
-    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames);
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, { backupRoot: backupRootFor(skillsDir) });
 
-    assert.ok(!fs.existsSync(path.join(skillsDir, 'bmad-enhance-removed-workflow')),
-      'orphan should be removed');
+    assert.ok(fs.existsSync(path.join(skillsDir, 'bmad-enhance-acme', 'SKILL.md')),
+      'a directory Convoke did not install must survive');
     assert.ok(fs.existsSync(path.join(skillsDir, 'bmad-enhance-initiatives-backlog')),
       'live wrapper should be preserved');
-    assert.ok(changes.some(c => c.includes('bmad-enhance-removed-workflow')),
-      'changes should log the removal');
+    assert.deepEqual(changes, [], 'nothing was changed, so nothing is returned as a change');
   });
 
   it('removes an Artifacts orphan (bmad-portfolio-status removed from config)', async () => {
@@ -69,7 +79,7 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — orphan removal', () => {
     const currentWrappers = new Set(['bmad-migrate-artifacts']);
     const knownArtifactsNames = new Set(['bmad-migrate-artifacts', 'bmad-portfolio-status']);
 
-    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames);
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, { backupRoot: backupRootFor(skillsDir) });
 
     assert.ok(!fs.existsSync(path.join(skillsDir, 'bmad-portfolio-status')),
       'orphan should be removed');
@@ -101,7 +111,7 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — live wrappers preserved', ()
     const currentWrappers = new Set(liveWrappers);
     const knownArtifactsNames = new Set(['bmad-migrate-artifacts', 'bmad-portfolio-status']);
 
-    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames);
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, { backupRoot: backupRootFor(skillsDir) });
 
     for (const name of liveWrappers) {
       assert.ok(fs.existsSync(path.join(skillsDir, name)),
@@ -134,7 +144,7 @@ describe('dist-2.6: cleanupOrphanWorkflowWrappers — Portability names are know
     const currentWrappers = new Set(['bmad-seed-catalog']);
     const knownVerbatimNames = new Set(['bmad-export-skill', 'bmad-seed-catalog']);
 
-    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatimNames);
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatimNames, { backupRoot: backupRootFor(skillsDir) });
 
     assert.ok(!fs.existsSync(path.join(skillsDir, 'bmad-export-skill')),
       'a removed portability workflow should have its wrapper swept, not stranded');
@@ -149,7 +159,7 @@ describe('dist-2.6: cleanupOrphanWorkflowWrappers — Portability names are know
     const currentWrappers = new Set(live);
     const knownVerbatimNames = new Set(live);
 
-    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatimNames);
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownVerbatimNames, { backupRoot: backupRootFor(skillsDir) });
 
     for (const n of live) {
       assert.ok(fs.existsSync(path.join(skillsDir, n)), `${n} must survive the sweep`);
@@ -178,7 +188,7 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — third-party wrappers', () =>
     const currentWrappers = new Set();
     const knownArtifactsNames = new Set();
 
-    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames);
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, { backupRoot: backupRootFor(skillsDir) });
 
     assert.ok(fs.existsSync(path.join(skillsDir, 'my-custom-skill')));
     assert.ok(fs.existsSync(path.join(skillsDir, 'bmad-cis-agent-storyteller')));
@@ -204,20 +214,20 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — agent wrappers', () => {
     await seedSkillsDir(skillsDir, [
       'bmad-agent-bme-contextualization-expert',
       'bmad-agent-bme-team-factory',
-      'bmad-enhance-orphan', // this IS an orphan
+      'bmad-enhance-orphan', // reported, not removed
     ]);
     const currentWrappers = new Set();
     const knownArtifactsNames = new Set();
 
-    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames);
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, { backupRoot: backupRootFor(skillsDir) });
 
     assert.ok(fs.existsSync(path.join(skillsDir, 'bmad-agent-bme-contextualization-expert')),
       'agent wrapper should be preserved');
     assert.ok(fs.existsSync(path.join(skillsDir, 'bmad-agent-bme-team-factory')),
       'agent wrapper should be preserved');
-    assert.ok(!fs.existsSync(path.join(skillsDir, 'bmad-enhance-orphan')),
-      'Enhance orphan should still be removed');
-    assert.equal(changes.length, 1);
+    assert.ok(fs.existsSync(path.join(skillsDir, 'bmad-enhance-orphan')),
+      'a bmad-enhance- name outside the current set is left in place');
+    assert.deepEqual(changes, []);
   });
 });
 
@@ -234,16 +244,17 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — idempotency', () => {
 
   it('running twice produces same result — second run has no changes', async () => {
     await seedSkillsDir(skillsDir, [
-      'bmad-enhance-initiatives-backlog',
-      'bmad-enhance-removed-workflow',
+      'bmad-migrate-artifacts',
+      'bmad-portfolio-status',
     ]);
-    const currentWrappers = new Set(['bmad-enhance-initiatives-backlog']);
-    const knownArtifactsNames = new Set();
+    const currentWrappers = new Set(['bmad-migrate-artifacts']);
+    const knownArtifactsNames = new Set(['bmad-migrate-artifacts', 'bmad-portfolio-status']);
 
-    const changes1 = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames);
-    assert.equal(changes1.length, 1, 'first run should remove the orphan');
+    const changes1 = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, { backupRoot: backupRootFor(skillsDir) });
+    assert.ok(changes1.some(c => c === 'Removed orphan skill wrapper: bmad-portfolio-status'),
+      'first run should remove the orphan');
 
-    const changes2 = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames);
+    const changes2 = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, { backupRoot: backupRootFor(skillsDir) });
     assert.equal(changes2.length, 0, 'second run should have no changes');
   });
 });
@@ -264,7 +275,7 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — empty skills directory', () 
     const currentWrappers = new Set(['bmad-enhance-initiatives-backlog']);
     const knownArtifactsNames = new Set(['bmad-migrate-artifacts']);
 
-    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames);
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, { backupRoot: backupRootFor(skillsDir) });
     assert.equal(changes.length, 0);
   });
 });
@@ -285,7 +296,7 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — missing skills directory', (
     const currentWrappers = new Set(['bmad-enhance-initiatives-backlog']);
     const knownArtifactsNames = new Set(['bmad-migrate-artifacts']);
 
-    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames);
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, { backupRoot: backupRootFor(skillsDir) });
     assert.equal(changes.length, 0);
     assert.ok(!fs.existsSync(skillsDir), 'should not create the directory');
   });
@@ -314,12 +325,12 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — non-standalone Artifacts nam
     const currentWrappers = new Set(); // no standalone workflows
     const knownArtifactsNames = new Set(['bmad-internal-tool']); // non-standalone, but known
 
-    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames);
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, { backupRoot: backupRootFor(skillsDir) });
 
     assert.ok(!fs.existsSync(path.join(skillsDir, 'bmad-internal-tool')),
       'directory matching a known Artifacts name should be removed even if non-standalone');
-    assert.equal(changes.length, 1);
-    assert.ok(changes[0].includes('bmad-internal-tool'));
+    assert.deepEqual(changes.filter(c => c.startsWith('Removed')),
+      ['Removed orphan skill wrapper: bmad-internal-tool']);
   });
 });
 
@@ -340,7 +351,7 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — mixed scenario', () => {
       'bmad-enhance-initiatives-backlog',
       'bmad-migrate-artifacts',
       'bmad-portfolio-status',
-      // Orphan workflow wrappers (should be removed)
+      // Under the Enhance prefix but not a current name (reported and left, T252)
       'bmad-enhance-old-removed-workflow',
       // Agent wrappers (should be ignored)
       'bmad-agent-bme-contextualization-expert',
@@ -361,17 +372,14 @@ describe('ag-7-4: cleanupOrphanWorkflowWrappers — mixed scenario', () => {
       'bmad-portfolio-status',
     ]);
 
-    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames);
+    const changes = cleanupOrphanWorkflowWrappers(skillsDir, currentWrappers, knownArtifactsNames, { backupRoot: backupRootFor(skillsDir) });
 
-    // Exactly 1 orphan removed
-    assert.equal(changes.length, 1);
-    assert.ok(changes[0].includes('bmad-enhance-old-removed-workflow'));
-
-    // Removed
-    assert.ok(!fs.existsSync(path.join(skillsDir, 'bmad-enhance-old-removed-workflow')));
+    // Nothing is removed, so nothing is returned as a change
+    assert.deepEqual(changes, []);
 
     // Preserved
     const preserved = [
+      'bmad-enhance-old-removed-workflow',
       'bmad-enhance-initiatives-backlog', 'bmad-migrate-artifacts', 'bmad-portfolio-status',
       'bmad-agent-bme-contextualization-expert', 'bmad-agent-bme-team-factory',
       'bmad-code-review', 'bmad-brainstorming', 'my-custom-skill', 'bmad-cis-agent-storyteller',

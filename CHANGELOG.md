@@ -75,6 +75,18 @@ running it from the wrong directory does nothing rather than something.
 
 ### Fixed
 
+- **An install or update no longer deletes your own skills, or your changes to Convoke's (`T252`).**
+  A plain `convoke-install` removed any `.claude/skills/bmad-enhance-*` or `bmad-agent-bme-*`
+  directory it did not recognise, reporting it as an "orphan" or "stale" wrapper, and silently
+  overwrote edits and extra files inside the wrappers it owns. A directory under those prefixes that
+  Convoke has never installed is now left where it is and reported as `Left in place`. A wrapper
+  Convoke does own is copied to `_bmad-output/.backups/skill-wrappers/` before it is replaced or
+  removed whenever its content is not what Convoke would write, and if that copy cannot be made the
+  wrapper is left unchanged and a warning names it. Excluding an agent still removes its wrapper
+  once any such copy has been made. Two things to expect: the
+  first update from 4.0.3 copies the retired `bmad-agent-bme-team-factory` wrapper there before
+  removing it, and a release that changes a wrapper's text copies the previous one, so not everything
+  in that directory is yours.
 - **A refresh no longer destroys your edits without a copy (`T184`).** `convoke-update` and
   `convoke-migrate` now back up the whole of `_bmad/bme/` before writing, and the prompt that tells you what
   will be backed up derives its text from the actual backup set rather than a hand-maintained list. Filed

@@ -14,6 +14,7 @@ const { readChangelogEntries } = require('./lib/changelog-reader');
 // registry, which keys off Vortex's history); this is a separate question, asked here only.
 const { detectRepairableSkew } = require('../lib/bme-modules');
 const { getFilesToBackup } = require('./lib/backup-manager');
+const { WRAPPER_BACKUP_REL } = require('./lib/refresh-installation');
 const { runCompatPreflight } = require('./lib/compat-preflight');
 // Story v63-2-3: post-upgrade governance gate. `checkBmmDependencies` is
 // lazy-required inside `_runPostUpgradeGate` (Round 1 R1-M2 fix) so a
@@ -42,8 +43,10 @@ const { runCompatPreflight } = require('./lib/compat-preflight');
  * Nothing tied the text to `getFilesToBackup()`, and the re-derivation recipe used `--yes`, which
  * skips the prompt, so the check could never have printed the sentence it invalidated.
  *
- * `.claude/skills/` is named as uncovered deliberately and is the one hardcoded clause here,
- * because it is an absence rather than an entry — see the reasoning at `getFilesToBackup`.
+ * `.claude/` is named as uncovered deliberately and is the one hardcoded clause here, because it
+ * is an absence rather than an entry — see the reasoning at `getFilesToBackup`. Since T252 the
+ * refresh keeps its own copy of a skill wrapper it is about to replace, so the clause says which
+ * part of `.claude/` is still lost outright.
  */
 function printBackupScope({ migration = false } = {}) {
   // Print only the outermost paths. The set keeps three `_vortex` entries nested inside the
@@ -65,9 +68,10 @@ function printBackupScope({ migration = false } = {}) {
   // Stated as a class and then an example: an earlier version named `.claude/skills/` alone and
   // lost the blanket warning it replaced, which is how `.claude/commands/bmad-agent-bme-*` came
   // to be deleted by a refresh, uncovered, and unmentioned anywhere.
-  console.log(chalk.yellow('NOT copied: anything under .claude/ — a refresh regenerates those'));
-  console.log(chalk.yellow('wrappers and commands from the agent registry and deletes them first,'));
-  console.log(chalk.yellow('so your own files there are lost. (T236 tracks customising what ships.)'));
+  console.log(chalk.yellow('NOT in this backup: anything under .claude/. A skill wrapper you changed is'));
+  console.log(chalk.yellow(`copied to ${WRAPPER_BACKUP_REL.replace(/\\/g, '/')}/ before it is replaced or removed, and is not`));
+  console.log(chalk.yellow('restored by a rollback. .claude/commands/bmad-agent-bme-* files are deleted'));
+  console.log(chalk.yellow('with no copy. (T236 tracks customising what ships.)'));
 }
 
 function assessUpdate(projectRoot) {

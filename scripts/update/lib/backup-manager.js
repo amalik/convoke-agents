@@ -437,8 +437,10 @@ function getFilesToBackup() {
     // from `AGENTS`/`GYRE_AGENTS`, so an entry would be an enumeration, which is the instrument
     // three rounds of T234 showed fails here. And restore must never touch the 95 upstream skills
     // sharing that directory, so a whole-directory entry is unsafe in the one way this entry is
-    // safe for `_bmad/bme`. So a refresh does destroy operator files placed there, and the answer
-    // is that it is generated output and not a place to keep work — which `UPDATE-GUIDE` says.
+    // safe for `_bmad/bme`. Since T252 the refresh itself copies a wrapper it is about to remove
+    // or rewrite into `.backups/skill-wrappers/` — see `preserveOperatorWrapper` in
+    // `refresh-installation.js`. Those copies are not part of this set: `restoreBackup` does not
+    // put them back and `cleanupOldBackups` does not prune them.
     {
       name: 'tree/_bmad/bme',
       path: '_bmad/bme',

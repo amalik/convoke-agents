@@ -146,7 +146,21 @@ const TRACKED = [
   // ⚠ The migration that would remove an ALREADY-INSTALLED `_bmad/bme/_team-factory/` from an
   // operator's project is T222, deliberately not this story. When it lands it writes destructively
   // into `{projectRoot}` from a migration file, which this array does not track at all — add it.
-  { file: 'scripts/update/lib/refresh-installation.js', expected: 13 },
+  //
+  // 13 -> 14 on 2026-10-08 (backlog T252), found by this gate going red. The counted write is
+  // `fs.rename(<skillsDir>/<entry>, <skillsDir>/<owned>)`: an owned agent-wrapper name stored under
+  // another case is renamed to the owned spelling. Source and destination are the same directory
+  // entry inside `<projectRoot>/.claude/skills/`, which this file's wrapper loops already write to.
+  //
+  // THE WRITE THIS GATE CANNOT SEE IS THE ONE THAT MATTERS, and it goes to a NEW DESTINATION for
+  // this file. `preserveOperatorWrapper` copies a wrapper into
+  // `<projectRoot>/_bmad-output/.backups/skill-wrappers/` with fs-extra's `fs.copySync`, which
+  // `WRITE_OP_RE` does not count — the T111 caveat again. Until T252 the refresh wrote nothing
+  // under `_bmad-output/`; `backup-manager.js` did, and only for `convoke-update` and
+  // `convoke-migrate`. An install now writes there too, whenever a wrapper it is about to replace
+  // holds something it would not write. That is inside the operator's project and outside every
+  // upstream BMAD path this gate forbids; the checker reported "no scope violations".
+  { file: 'scripts/update/lib/refresh-installation.js', expected: 14 },
   // Added 2026-08-26 (story gen-1.1). This is the other half of the 11 -> 10 above.
   // It is tracked rather than left alone because this checker inspects ONLY the files
   // in this array and has no assertion for write ops in an untracked file — so

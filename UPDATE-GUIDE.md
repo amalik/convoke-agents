@@ -21,8 +21,9 @@ npx -p convoke-agents convoke-update --dry-run
 npx -p convoke-agents convoke-update
 ```
 
-Your `_bmad/bme/` tree is backed up in full before any changes. `.claude/skills/` is not, and a
-*successful* update is never rolled back — see [Data Safety](#data-safety).
+Your `_bmad/bme/` tree is backed up in full before any changes. `.claude/skills/` is not part of
+that backup — a wrapper you changed is copied aside separately — and a *successful* update is
+never rolled back. See [Data Safety](#data-safety).
 
 ---
 
@@ -158,10 +159,22 @@ Every update creates a backup before making changes:
   scripts/update/lib/refresh-installation.js` returns 14 — and three successive attempts to
   enumerate the ones that matter each missed one. Your Vortex user guides additionally get a sibling `.bak` from
   `convoke-update`.
-- **NOT included:** `.claude/skills/`. A refresh regenerates those wrappers from the agent registry
-  and deletes the directories first, so operator files placed there are destroyed and there is no
-  copy — measured 2026-10-03. That directory is gitignored build output, not a place to keep work;
-  if you have customised a generated wrapper, keep the source of your change elsewhere.
+- **NOT included:** `.claude/skills/`, which is handled separately and by installs as well as
+  updates. A refresh regenerates the skill wrappers it owns. Before it replaces or removes one
+  whose content is not what it would write — an edited `SKILL.md`, an extra file in a wrapper
+  directory it rebuilds, a wrapper you wrote at the name of an agent you excluded — it copies the
+  directory to `_bmad-output/.backups/skill-wrappers/<name>-<content hash>/` and prints
+  `Backed up …`. A directory named `bmad-enhance-*` or `bmad-agent-bme-*` that Convoke has
+  never installed is left where it is and reported as `Left in place`. These copies
+  are not restored by a rollback, are never pruned, and also hold Convoke's own previous wrapper
+  whenever a release changes a wrapper's text. The copy follows symbolic links, so a wrapper that
+  links to a file outside your project brings that file's content into `_bmad-output/`. If a
+  copy cannot be made — the wrapper holds an unreadable or special file, or a broken link beside
+  its `SKILL.md`, or the backup directory is not writable — the wrapper is left unchanged and a
+  warning names it. For an agent you excluded, the install then reports that wrapper as
+  `STILL INSTALLED` and exits non-zero until you move it out of `.claude/skills/`. A `SKILL.md`
+  that is itself a broken link holds nothing to copy and is not warned about. Files under
+  `.claude/commands/bmad-agent-bme-*` are still deleted with no copy.
 - **Also not included, but safe:** `_bmad-output/` apart from the backups themselves, and the shared
   files under `_bmad/_config/` other than `agent-manifest.csv`. A refresh writes `skill-manifest.csv`,
   `taxonomy.yaml`, `bmm-dependencies.csv` and the `agents/` customization directory, but appends or
@@ -169,7 +182,8 @@ Every update creates a backup before making changes:
   2026-10-03. (`workflow-manifest.csv` is listed in some older notes; a Convoke-only install does
   not have one and a refresh does not create it.) One exception — a `skill-manifest.csv` that is present but unusable
   is renamed to `.corrupt-<version>` and reseeded, so it is preserved rather than appended to.
-- **Retention:** Last 5 backups kept automatically
+- **Retention:** Last 5 `backup-{version}-{timestamp}` directories kept automatically. The
+  `skill-wrappers/` copies beside them are not counted and not removed.
 - **Rollback:** Automatic **only if the update fails.** A successful refresh still replaces most of
   `_bmad/bme/` — measured, 82 of its 103 directories lost a planted file, the surviving 21 being
   module roots and a few directories the installer only copies into — and nothing restores them for
@@ -252,7 +266,8 @@ Before any of this an **update** backs up `_bmad/bme` in full (see Automatic Bac
 - Your own files anywhere under `_bmad/bme/` are **not** in this list either — a refresh replaces
   them. An **update** backs them up first, so they are recoverable (see Automatic Backups); an
   **install** does not, so the same files are destroyed with no copy. Neither preserves them in
-  place. Files under `.claude/skills/` are neither preserved nor backed up by either.
+  place. Under `.claude/skills/`, both an install and an update copy a wrapper you changed
+  aside before replacing it — see **NOT included** under Automatic Backups.
 - Coach amendments and feedback in `.gyre/feedback.yaml`
 
 ### What Gets Updated

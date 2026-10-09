@@ -193,7 +193,7 @@ npx -p convoke-agents convoke-install-vortex
 
 ### Config file already exists
 
-What the installer does with a config that already exists depends on which module it belongs to: [Which configs are checked, and which are preserved](UPDATE-GUIDE.md#which-configs-are-checked-and-which-are-preserved). **An install takes no backup** — only `convoke-update` and `convoke-migrate` do — so copy anything of your own out of the module directories before re-installing — including `excluded_agents`, which a `rm -rf` discards, bringing the agents you opted out of back. To force a clean installation:
+What the installer does with a config that already exists depends on which module it belongs to: [Which configs are checked, and which are preserved](UPDATE-GUIDE.md#which-configs-are-checked-and-which-are-preserved). **An install takes no backup of `_bmad/bme/`** — only `convoke-update` and `convoke-migrate` do — so copy anything of your own out of the module directories before re-installing — including `excluded_agents`, which a `rm -rf` discards, bringing the agents you opted out of back. To force a clean installation:
 
 ```bash
 rm -rf _bmad/bme/_vortex/    # or _gyre/ for Gyre
@@ -260,6 +260,7 @@ rm -rf _bmad/bme/_vortex/
 rm -rf _bmad/bme/_gyre/
 rm -rf _bmad/bme/_enhance/
 rm -rf _bmad/bme/_artifacts/
+# These two globs also match any skill of your own that you named with one of these prefixes.
 rm -rf .claude/skills/bmad-agent-bme-*/
 rm -rf .claude/skills/bmad-enhance-*/
 rm -rf .claude/skills/bmad-migrate-artifacts/ .claude/skills/bmad-portfolio-status/
