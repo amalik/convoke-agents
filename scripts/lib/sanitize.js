@@ -231,6 +231,9 @@ function escapeMarkdownTableCell(s) {
  */
 function escapeMarkdownCodeSpanCell(s) {
   if (s == null) return '';
+  // One pass, equivalent to the earlier `.replace(/\|/g, '\\|').replace(/[\r\n]+/g, ' ')`. It was
+  // reshaped (PR #17) because CodeQL's `js/incomplete-sanitization` reads that chain as a
+  // forgotten backslash escape. The backslash is left alone on purpose — see above.
   return String(s).replace(/\||[\r\n]+/g, (m) => (m === '|' ? '\\|' : ' '));
 }
 
