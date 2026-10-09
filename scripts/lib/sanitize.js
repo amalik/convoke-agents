@@ -231,9 +231,7 @@ function escapeMarkdownTableCell(s) {
  */
 function escapeMarkdownCodeSpanCell(s) {
   if (s == null) return '';
-  return String(s)
-    .replace(/\|/g, '\\|')
-    .replace(/[\r\n]+/g, ' ');
+  return String(s).replace(/\||[\r\n]+/g, (m) => (m === '|' ? '\\|' : ' '));
 }
 
 /**
