@@ -257,6 +257,38 @@ records"*.
 about a defect the product no longer has). Filed separately because this queue's rule is one entry per
 sentence. **Basis: verified.**
 
+### K14 — the customise draft says a refresh deletes skill names it does not recognise
+
+**Says:** `_bmad-output/drafts/docs-program/customize-without-forking.md:64` — *"Names Convoke doesn't
+recognise are **deleted**."* — and `:284` — *"Convoke's refresh … **deletes** any
+`.claude/skills/bmad-agent-bme-*` or `.claude/skills/bmad-enhance-*` directory it doesn't recognise."*
+
+**Contradicted by:** `T252`. Such a directory is now left in place and reported as `Left in place`, and
+content inside a wrapper Convoke owns is copied to `_bmad-output/.backups/skill-wrappers/` before it is
+replaced. `node --test tests/unit/refresh-installation-operator-wrappers.test.js` — the two
+*"leaves … in place and reports it"* tests.
+
+**Why it matters:** the draft's advice to choose a prefix other than `bmad-` gives this deletion as its
+reason. The advice may still be right; the reason is no longer true. The companion `.evidence.md` records
+dated measurements against 4.0.2 and should be left as it is. **Basis: verified** for the behaviour;
+the two line numbers were read on 2026-10-09 and the draft is in flight.
+
+### K15 — Epic 7's FR5 requires removing an orphaned Enhance wrapper, which the refresh no longer does
+
+**Says:** `_bmad-output/planning-artifacts/convoke-epic-7-platform-debt.md:40` — *"FR5: When a workflow is
+removed from `_artifacts/config.yaml` or `_enhance/config.yaml`, the next `convoke-update` MUST detect and
+remove its orphaned skill wrapper."*
+
+**Contradicted by:** `T252`, for the Enhance half only. A `bmad-enhance-*` directory outside the current
+config is left in place, because the prefix does not show Convoke wrote it and Enhance has never retired a
+workflow name — `git log --format=%H -- _bmad/bme/_enhance/config.yaml` shows one name in every revision.
+The Artifacts half still holds. See the Strategy 1 comment in `cleanupOrphanWorkflowWrappers`.
+
+**Why it matters:** if this epic is read as a live requirement, the next Enhance workflow to be retired
+will look like a regression against FR5. It needs that workflow's exact name listed for removal, not the
+prefix sweep back. **Basis: verified** for the behaviour; whether the epic is live or a record of a
+finished story (`ag-7-4` is done) is **unchecked**.
+
 ## Resolved
 
 *(strike the row, record the outcome and the commit — never delete)*
