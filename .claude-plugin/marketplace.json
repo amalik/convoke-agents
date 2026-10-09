@@ -9,7 +9,7 @@
       "name": "convoke-vortex",
       "source": "./",
       "description": "Vortex Framework — 7-stream product discovery for IT transformation consultants.",
-      "version": "4.0.3",
+      "version": "4.0.4",
       "author": { "name": "Amalik Amriou" },
       "skills": [
         "./_bmad/bme/_vortex/agents/contextualization-expert",
