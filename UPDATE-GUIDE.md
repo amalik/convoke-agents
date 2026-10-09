@@ -168,12 +168,15 @@ Every update creates a backup before making changes:
   never installed is left where it is and reported as `Left in place`. These copies
   are not restored by a rollback, are never pruned, and also hold Convoke's own previous wrapper
   whenever a release changes a wrapper's text. The copy follows symbolic links, so a wrapper that
-  links to a file outside your project brings that file's content into `_bmad-output/`. If a
+  links to a file outside your project brings that file's content into `_bmad-output/`; for an
+  agent wrapper the regenerated text is then written through the link, over the linked file. If a
   copy cannot be made — the wrapper holds an unreadable or special file, or a broken link beside
   its `SKILL.md`, or the backup directory is not writable — the wrapper is left unchanged and a
   warning names it. For an agent you excluded, the install then reports that wrapper as
   `STILL INSTALLED` and exits non-zero until you move it out of `.claude/skills/`. A `SKILL.md`
-  that is itself a broken link holds nothing to copy and is not warned about. Files under
+  that is itself a broken link holds nothing to copy and is not warned about: in an agent wrapper
+  the regenerated text is written through it, creating the file it points at, and the install
+  fails if that file's directory does not exist. Files under
   `.claude/commands/bmad-agent-bme-*` are still deleted with no copy.
 - **Also not included, but safe:** `_bmad-output/` apart from the backups themselves, and the shared
   files under `_bmad/_config/` other than `agent-manifest.csv`. A refresh writes `skill-manifest.csv`,
