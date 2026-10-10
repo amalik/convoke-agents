@@ -4,7 +4,7 @@ baseline_commit: 813e4e3f
 
 # Story cir-1.3: Make a skill that arrives alone say so
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** [cir — Channel-Integrity Remediation](../planning-artifacts/convoke-epic-channel-integrity-remediation.md)
 **Ruling:** [ADR-001 — the distribution unit](../planning-artifacts/adr/channel-integrity/adr-001-the-distribution-unit.md), **Amendment 1** (2026-09-27) — **A1.1** both channels are non-reference and disclaimed, **A1.3** the disclaimer is a flat notice plus a pointer, **A1.5** four descriptions are too short to match on.
@@ -237,15 +237,15 @@ compliance in the notes — for the one irreversible constraint in the story, th
 
 ## Tasks
 
-1. [ ] Derive the 7 declared paths from `marketplace.json`; record the list (AC1, AC3).
-2. [ ] Decide and record where the pointer goes for the **four v5 agents**, whose files are one XML fence to
+1. [x] Derive the 7 declared paths from `marketplace.json`; record the list (AC1, AC3).
+2. [x] Decide and record where the pointer goes for the **four v5 agents**, whose files are one XML fence to
    EOF with no body prose (AC2). Do this before writing anything.
-3. [ ] Write the notice and the pointer once; apply to all 7 (AC1, AC2, AC3). Keep inside AC5a's budget by
+3. [x] Write the notice and the pointer once; apply to all 7 (AC1, AC2, AC3). Keep inside AC5a's budget by
    tightening the three long descriptions rather than appending to them.
-4. [ ] Write the four short descriptions (AC5), then re-derive all seven raw lengths and paste the output.
-5. [ ] `bash scripts/audit/try-fresh-install.sh` — the gate that exercises AC4. Paste the verdict, and record
+4. [x] Write the four short descriptions (AC5), then re-derive all seven raw lengths and paste the output.
+5. [x] `bash scripts/audit/try-fresh-install.sh` — the gate that exercises AC4. Paste the verdict, and record
    the residual AC4 names (working-tree resolution, date-stamped target).
-6. [ ] Remaining gates (AC6); run AC7's two checks and paste both.
+6. [x] Remaining gates (AC6); run AC7's two checks and paste both.
 
 ---
 
@@ -280,3 +280,105 @@ compliance in the notes — for the one irreversible constraint in the story, th
   product no longer has, and any copy of it would now be wrong in a second place.
 - **Grep the backlog before filing anything found along the way.** `cir-1-2` duplicated `T183` by ten days,
   and that is now a clause in `derive-before-you-write`.
+
+---
+
+## Dev Agent Record
+
+### Debug Log — pre-flight, in the order the story demands it
+
+**Sequencing conflict resolved: this story landed first.** The four v5 agents were unconverted at start —
+120 lines each with one ```xml fence, `i97-2-4`/`2-5`/`2-6`/`2-7` all still `ready-for-dev`. So AC2's
+four-agent branch was live and AC5 was wholly this story's work. **The conversions must now preserve what
+this wrote:** each of the four carries a rewritten `description` and a prose pointer after the closing
+fence.
+
+**Task 2 — pointer placement, decided before writing: prose AFTER the closing fence** for all four v5
+agents. AC2 is a pointer an operator reads; inside the fence it is model-instruction text that
+`shipped-links.js` skips by design, which would have made AC4 validate 3 of 7. Nothing requires the fence to
+be terminal — checked `agent-registry.js` (carries `title`/`stream`/`persona`, not `description`), the
+persona-sync test, and `validate-marketplace.js`. Verified after writing: pointer at line 122, closing
+fence at 120, in all four.
+
+**Wiring re-traced rather than grepped** (per the story's own instruction and `IN-245(a)`). The story's line
+citations had drifted; anchored by content instead: `try-fresh-install.sh:476` invokes
+`assert-shipped-links.js` with the installed package and `$REPO`, `:516` requires `LINKS -eq 0`,
+`ci.yml:478` runs the harness, and `publish.needs` includes `fresh-install`. Wired and blocking, as the
+story says.
+
+**AC5a budget, derived before any edit.** Notice 56 + space + AC3 clause 26 = 84, so the body budget at the
+220 bar is **136**. The budget holds, so no operator decision was needed. `hypothesis-engineer` first came
+out at exactly 220 and was shortened for headroom.
+
+### Completion Notes
+
+**AC1** — the verbatim notice is in all 7 frontmatter `description` fields; the story's falsifier returns
+empty.
+
+**AC2** — the pointer names the invariant and links to the ledger. **No status is transcribed**, per `K10`.
+
+**AC3** — `Not every agent is listed.` states no numbers.
+
+**AC4** — `[shipped-links status 0]`, inside an overall `PASS` from `try-fresh-install.sh`, which reports
+*80 resolvable reference(s); self-referential prefix https://github.com/amalik/convoke-agents/*. **Proven
+falsifiable rather than assumed:** on a packed copy outside the repo, repointing one pointer at a
+non-existent ledger filename produced `FAILED: …/hypothesis-engineer/SKILL.md:122 … (target is not in the
+repository)` and **exit 1**; restoring it returned **exit 0**. The working tree was never mutated.
+
+**AC4 residual, recorded as the story requires.** The gate resolves self-referential URLs against the
+working tree, not against what `main` serves. It catches a typo or a wrong path. It does **not** catch an
+unpushed path, a later rename, or `blob/main` drift — and the ledger's filename is date-stamped, so a
+re-date breaks all seven links with the gate green.
+
+**AC5** — the four titles are now descriptions. All seven raw lengths re-derived, alphabetical as the
+command emits:
+
+```
+contextualization-expert           217
+discovery-empathy-expert           210
+hypothesis-engineer                213
+lean-experiments-specialist        217
+learning-decision-expert           214
+production-intelligence-specialist 213
+research-convergence-specialist    219
+```
+
+The three long descriptions were **tightened**, not appended to — 174/203/204 bodies became 133/135/133.
+
+**AC5a** — none exceeds 220; the falsifier returns empty.
+
+**AC6** — no gate added (C1). All green: `npm test` 3274 tests / 0 fail / 19 skipped · `test:integration`
+139 / 0 fail · `test:p0` 0 fail · `lint` clean · `refs:audit` PASS 972 · `docs:audit` zero findings ·
+`backlog-integrity` exit 0 · `agent-surface-parity` PASS 12 agents · `try-fresh-install.sh` PASS ·
+`validate-marketplace.js` all 6 checks.
+
+**AC7** — `git diff HEAD --stat .claude-plugin/marketplace.json` empty; `validate-marketplace.js` passes its
+`skills[]`↔`AGENT_IDS` set-identity check. No path and no name declared.
+
+### A correction to this story's Dev Notes, found by running the gate
+
+The note says `refs:audit` *"reports 0 references checked over the agent files"*, so its PASS is not
+evidence for AC2/AC4. **Substantively right, literally wrong now, and the literal part matters.** Scoped to
+the agent directory it now reports **7 references checked, 0 broken** — because
+`reference-integrity.js:318` is `if (URL_SCHEME_REGEX.test(ref)) return { valid: true }`: it *counts* a URL
+and rubber-stamps it unvalidated. The repository-wide figure rose 965 → 972, exactly the seven pointers. So
+the gate's output now **looks** like new coverage for precisely the links it does not check. The note should
+say that rather than predicting a zero.
+
+### File List
+
+- `_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md` (modified)
+- `_bmad/bme/_vortex/agents/discovery-empathy-expert/SKILL.md` (modified)
+- `_bmad/bme/_vortex/agents/hypothesis-engineer/SKILL.md` (modified)
+- `_bmad/bme/_vortex/agents/lean-experiments-specialist/SKILL.md` (modified)
+- `_bmad/bme/_vortex/agents/learning-decision-expert/SKILL.md` (modified)
+- `_bmad/bme/_vortex/agents/production-intelligence-specialist/SKILL.md` (modified)
+- `_bmad/bme/_vortex/agents/research-convergence-specialist/SKILL.md` (modified)
+- `_bmad-output/implementation-artifacts/cir-1-3-make-a-skill-that-arrives-alone-say-so.md` (modified — permitted sections only)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — status flip and `last_updated` only; 516 comment lines preserved, file still parses)
+
+### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-10-10 | AC1–AC7 implemented across the 7 declared agent skills. Status → review. Intermediate `in-progress` was not separately persisted: the story completed in a single execution. |
