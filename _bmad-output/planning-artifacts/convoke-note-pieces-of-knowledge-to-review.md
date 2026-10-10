@@ -306,6 +306,28 @@ fix is not available when it is. The ledger marks itself a dated snapshot that i
 rewritten, so the repair is another annotation, not an edit of the capture at `:91`. **Basis: verified**
 for the registry and the changelog; the two line numbers were read on 2026-10-10.
 
+### K17 — the evaluation pack says the interview workflow gives no help with personal data (true today, false at the next release)
+
+**Says:** `_bmad-output/drafts/docs-program/evaluate-executive-brief.md` — *"The discovery workflows produce
+personal data, and we give you no help governing it … It says **nothing** about data minimisation,
+retention, lawful basis or participant withdrawal; the word *consent* does not appear in it, and nothing
+tells you how long to keep a participant table or how to remove someone from it."* The same claim is in
+`evaluate-due-diligence-pack.md` (*"we do not currently help you meet them"*) and `evaluate-page-one.md`
+(*"personal data that we give you no help governing"*). No line numbers: these files were being edited by
+another session on 2026-10-10.
+
+**Contradicted by:** `T185`, in the tree but **not in published 4.0.4**. `grep -rci consent
+_bmad/bme/_vortex/workflows/user-interview` on `main`, and step 3 section 7 of that workflow. Against the
+published package the sentences are still accurate: `npm pack convoke-agents@4.0.4` and the same grep.
+
+**Why it matters:** this is the disclosure the brief calls the one *"we would least like you to find on your
+own"*, so it should be exactly right in both directions. After the next release it understates the product.
+What stays true and should survive the rewrite: the guidance is advice with defaults, nothing enforces it,
+it makes no compliance claim, the default output folder is still inside version control (`T256`), and
+"discovery workflows" plural was already loose — `user-discovery` has carried consent and retention
+guidance in its step 3 since before this pack was written. **Forward-dated, attributed to `T185`. Basis:
+verified** for the tree; the published-package grep was **not run** by me.
+
 ## Resolved
 
 *(strike the row, record the outcome and the commit — never delete)*
