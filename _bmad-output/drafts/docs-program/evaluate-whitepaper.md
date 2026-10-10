@@ -10,6 +10,12 @@ that primary source on the same date by two reviewers working independently of t
 > conclusion. Sections 1 to 6 do not depend on it. The regulatory subsection (5.3) is self-contained by
 > design, so it can be reviewed by counsel, or removed entirely, without disturbing the rest.
 
+
+> **Currency.** Every product claim here was derived against the published `convoke-agents@4.0.3` package on
+> 17 September 2026. `latest` is now **4.0.4** (9 October 2026). Five measured differences — and one defect
+> newer than this pack, which `convoke-doctor` reports and no command can clear — are listed in the
+> *Currency* note at the top of the maturity ledger. **Re-derive before reuse.**
+
 ---
 
 ## Page 2 — What is proven, what works with limits, what is only planned

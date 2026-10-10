@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **The `user-interview` workflow now asks how you will handle what participants tell you (`T185`).** It had
+  you recruit people, read screening answers, optionally record, and write quotes into your project, and
+  said nothing about consent, what to collect, how long to keep it, or how a participant withdraws. Its
+  example script also promised that "everything you share will be kept confidential", which the workflow
+  itself could not honor. Steps 2 to 5 now put each decision where it arises, with a default and the reason
+  it matters; the report template records what you decided; and the validation file checks that the report
+  does not expose participants. This is research practice, not legal advice, and it does not make a study
+  compliant with any law. If you have edited these workflow files, `convoke-update` backs up `_bmad/bme/`
+  before replacing them.
+
+---
+
 ## [4.0.4] - 2026-10-09
 
 ### Action required for some existing projects

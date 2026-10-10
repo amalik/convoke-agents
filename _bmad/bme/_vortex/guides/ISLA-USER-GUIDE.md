@@ -109,6 +109,8 @@ Design interview scripts, plan participant recruitment, and capture findings.
 5. Capture Findings
 6. Synthesize Insights
 
+Steps 2 to 5 also ask you to decide how participant data is handled: what you tell participants and their consent, what you collect and who sees it, how long you keep it, and how someone withdraws. The report records those decisions. This is research practice, not legal advice.
+
 **Output:** `{output_folder}/user-interview-{topic}-{date}.md`
 **Time:** 45-90 minutes (planning), plus interview time
 

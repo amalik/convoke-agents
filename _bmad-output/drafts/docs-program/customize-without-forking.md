@@ -9,6 +9,13 @@ This page is for projects where Convoke is installed from npm (`convoke-agents`)
 > release was confirmed against the installed package on 17 September: both configs carry `user_name` and
 > `communication_language`, the readiness config carries its own output folder, and both refusals land.
 
+
+> **Currency.** The commands on this page were last executed against `convoke-agents@4.0.3`. `latest` is now
+> **4.0.4** (9 October 2026), and it changed operator-visible behaviour this page describes: `excluded_agents`
+> handling (`T244`, `T250`, `T251`), what an install or update preserves (`T184`, `T252`), and
+> `convoke-doctor`'s advice (`T112`, `T254`). The measured package delta is in the *Currency* note at the top
+> of the maturity ledger. **Re-execute every command on this page before reuse.**
+
 ---
 
 ## Why not fork

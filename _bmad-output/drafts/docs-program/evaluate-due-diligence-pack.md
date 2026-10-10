@@ -6,6 +6,12 @@ Every answer here was established on 17 September 2026 by inspecting the publish
 the answers drawn from the maturity ledger's §2.18 and §2.19 were established on 20 September, and those
 sections name their own basis. Where something was not tested, this pack says so rather than inferring.*
 
+
+> **Currency.** Every product claim here was derived against the published `convoke-agents@4.0.3` package on
+> 17 September 2026. `latest` is now **4.0.4** (9 October 2026). Five measured differences — and one defect
+> newer than this pack, which `convoke-doctor` reports and no command can clear — are listed in the
+> *Currency* note at the top of the maturity ledger. **Re-derive before reuse.**
+
 ---
 
 ## 1. Security and data handling

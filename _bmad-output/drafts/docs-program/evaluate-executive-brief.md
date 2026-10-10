@@ -4,6 +4,12 @@
 2026; every external claim is listed with its source in Appendix B of the accompanying whitepaper, and was
 checked against that primary source. Where evidence does not exist, this brief says so rather than filling the gap.*
 
+
+> **Currency.** Every product claim here was derived against the published `convoke-agents@4.0.3` package on
+> 17 September 2026. `latest` is now **4.0.4** (9 October 2026). Five measured differences — and one defect
+> newer than this pack, which `convoke-doctor` reports and no command can clear — are listed in the
+> *Currency* note at the top of the maturity ledger. **Re-derive before reuse.**
+
 ---
 
 ## What it is

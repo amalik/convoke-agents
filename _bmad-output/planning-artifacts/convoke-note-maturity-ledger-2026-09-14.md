@@ -8,6 +8,51 @@ status: draft
 
 # Convoke Maturity Ledger
 
+> ## Currency — read this before the document is reused
+>
+> **This document describes 4.0.3. `latest` is now 4.0.4**, published 2026-10-09.
+>
+> Every row, figure and command below was derived against the published 4.0.3 package on 17 September 2026
+> — except §2.18 and §2.19, which carry their own basis lines — and **nothing has been re-derived since**.
+> What follows is a measured delta, not a re-derivation. Re-derive before this is shown to anyone again.
+>
+> Measured 2026-10-10 by extracting both packages from the registry:
+>
+> ```
+> for v in 4.0.3 4.0.4; do
+>   npm pack convoke-agents@$v && tar xzf convoke-agents-$v.tgz
+>   echo "$v total: $(find package -type f | wc -l)  audit: $(find package/scripts/audit -type f | wc -l)"
+>   ls -d package/_bmad/bme/_team-factory 2>/dev/null
+>   grep -rl 'bmad-init' package/_bmad/bme/_vortex/agents/ | wc -l
+>   ls package/_bmad/bme/_gyre/guides | wc -l
+>   rm -rf package
+> done
+> ```
+>
+> | | 4.0.3 | 4.0.4 |
+> |---|---|---|
+> | Files in the tarball | 469 | **419** |
+> | Files under `scripts/audit/` | 25 | **3** — `audit-bmm-dependencies.js`, `audit-skill-dirs.js`, `validate-marketplace.js`, all operator-facing bins (`T257`) |
+> | `_bmad/bme/_team-factory/` in the package | present | **absent** |
+> | Vortex agent files referencing `bmad-init` | 3 | **0** (`T183`) |
+> | Gyre guides in the package | 5 | 5 — **unchanged**; what changed is that an install now *copies* them (`T91`) |
+>
+> **Four client-facing rows now understate the product.** Team Factory's "removing it from the installed
+> package is planned but not yet done" is done. The Gyre row's "its team guide is not copied into your
+> project" is fixed. The Vortex row's non-deterministic configuration reading is fixed. And §2.19's
+> audit-tooling finding is largely resolved.
+>
+> **One defect is newer than this document and appears nowhere in it.** 4.0.4's changelog leads with it: a
+> project installed between 3.2.0 and 4.0.3 keeps an orphaned `_bmad/bme/_team-factory/` after updating,
+> and `convoke-doctor` then reports a version-consistency failure **no command can clear** — the remedy it
+> prints, `convoke-update`, cannot help. The fix is a manual `rm -rf`; automating it is held back as
+> `T222` because it deletes from the operator's tree.
+>
+> **Changed in 4.0.4 and not re-checked here:** `excluded_agents` handling (`T244`, `T250`, `T251`), what
+> an install or update preserves (`T184`, `T252`), `convoke-doctor`'s advice (`T112`, `T254`), and the
+> refusal on an unreadable module config (`T181`). Read every operator-behaviour statement below as 4.0.3
+> behaviour.
+
 ## 1. Client-facing ledger
 
 > **Corrected 2026-09-26.** Six statements in this ledger were found false or
