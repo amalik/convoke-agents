@@ -289,6 +289,23 @@ will look like a regression against FR5. It needs that workflow's exact name lis
 prefix sweep back. **Basis: verified** for the behaviour; whether the epic is live or a record of a
 finished story (`ag-7-4` is done) is **unchecked**.
 
+### K16 — two planning documents say nothing after 4.0.3 is published
+
+**Says:** `_bmad-output/planning-artifacts/convoke-epic-team-factory-unship.md:256` — *"**Nothing is
+published.** `npm view convoke-agents dist-tags` reads `latest: 4.0.3`"* — and
+`_bmad-output/planning-artifacts/convoke-note-maturity-ledger-2026-09-14.md:263` — *"not in any published
+release: the fix is under `[Unreleased]` and npm `latest` is 4.0.3"* (the `T91` annotation; `:91` quotes
+the same dist-tags as a dated capture).
+
+**Contradicted by:** `npm view convoke-agents dist-tags --json` → `"latest": "4.0.4"`, published
+2026-10-10. `CHANGELOG.md` has no `[Unreleased]` section any more; the Team Factory withdrawal and the
+`T91` Gyre guides fix are both in `## [4.0.4]`.
+
+**Why it matters:** the maturity ledger is read by a leadership audience and its `T91` line tells them a
+fix is not available when it is. The ledger marks itself a dated snapshot that is annotated rather than
+rewritten, so the repair is another annotation, not an edit of the capture at `:91`. **Basis: verified**
+for the registry and the changelog; the two line numbers were read on 2026-10-10.
+
 ## Resolved
 
 *(strike the row, record the outcome and the commit — never delete)*
