@@ -49,11 +49,17 @@ Design your interview script using the structure below:
 Write a brief introduction that:
 - Thanks the participant for their time
 - Explains the purpose (in general terms, without biasing)
-- Sets expectations (duration, recording permission, no right/wrong answers)
-- Asks permission to take notes or record
+- Sets expectations (duration, no right/wrong answers)
+- Says what you will capture and what happens to it: notes or a recording, which people and tools will see them, that the write-up keeps what they said (sometimes word for word) without their name, and when the recording and your raw notes are deleted
+- Says that taking part is voluntary: they can skip a question, stop at any point, or ask up to a date you name for what they said to be removed
+- Asks for their consent before you take notes or record, and waits for the answer
 
 **Example opening:**
-> "Thank you for taking the time to talk with me today. I'm researching how [role/persona] handle [general topic]. There are no right or wrong answers -- I'm genuinely curious about your experience. This will take about 30-45 minutes. Is it okay if I take notes? Everything you share will be kept confidential."
+> "Thank you for taking the time to talk with me today. I'm researching how [role/persona] handle [general topic]. There are no right or wrong answers -- I'm genuinely curious about your experience. This will take about 30-45 minutes.
+>
+> Before we start, here is what happens to what you tell me. I'd like to take notes[, and to record the call if that's okay -- if not, I'll just take notes]. [Who will see them] will see them, and I use an AI assistant to help organize what I capture, with names taken out first. What we write up may quote you word for word, but never with your name. [The recording and my / My] raw notes are deleted by [date]; the write-up is kept. You can skip any question or stop whenever you like. If you change your mind afterwards, tell me by [cut-off date] and I'll take what you said out of my notes and the write-up; after that it is part of the findings. Is that okay with you?"
+
+**Only promise what you will actually do.** "Everything you share will be kept confidential" is easy to say and is rarely true: the write-up is read by other people, and whatever you bring into this workflow is sent to the AI model you are running it with, and to its provider unless you host the model yourself. "Who will see them" includes tools like that one, and any call or transcription service that keeps a copy. Say what will really happen instead. The bracketed parts of the second paragraph are decisions you make in Step 3 -- leave them open for now and come back to fill them in.
 
 ### 2. Warm-up Questions (3-5 minutes)
 
@@ -107,6 +113,7 @@ Before finalizing, verify your script passes these checks:
 - [ ] You have probes ready for shallow answers
 - [ ] The script can be completed in the planned time
 - [ ] You have not revealed your product idea or solution before asking about problems
+- [ ] The opening has a place for what you capture, who sees it, when it is deleted, and the cut-off for removal (you fill these in at Step 3), says quotes may be used without their name, and asks for consent before you start
 
 ---
 

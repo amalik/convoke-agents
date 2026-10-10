@@ -19,7 +19,9 @@ Even with a perfect script and perfect participants, poor interview technique wi
 - [ ] Review the participant's screening survey answers
 - [ ] Have your interview script printed or visible (but not as a rigid checklist)
 - [ ] Test your recording setup (if recording)
-- [ ] Prepare a note-taking template (participant ID, date, key sections)
+- [ ] Have the opening from your script ready, with what you capture, who sees it, when it is deleted, and the cut-off for removal filled in
+- [ ] Do not start recording or taking notes until the participant has given consent at the start of the session
+- [ ] Prepare a note-taking template (participant ID, date, key sections) -- the ID, not the participant's name
 - [ ] Close distracting tabs and notifications
 - [ ] Have water nearby (you'll be talking for 30-45 minutes)
 - [ ] Arrive 2-3 minutes early to the call/meeting
@@ -94,7 +96,7 @@ When answers are vague, ask for concrete details:
 - Emotional moments (mark with [EMOTION: frustration/excitement/surprise])
 - Contradictions between what they say and what they do (mark with [CONTRADICTION])
 - Specific numbers, frequencies, or timeframes they mention
-- Names of tools, processes, or people they reference
+- Names of tools and processes they reference (for people, note the role, not the name)
 
 **What NOT to do while taking notes:**
 - Don't try to write everything down -- you'll stop listening
@@ -102,6 +104,15 @@ When answers are vague, ask for concrete details:
 - Don't type loudly if on a video call -- it signals you're not fully present
 
 **If recording:** Use the recording as backup, not as a replacement for notes. You will not re-listen to 8 hours of recordings. Your in-the-moment notes are more valuable.
+
+### If a Participant Wants to Stop or Withdraw
+
+A participant may decline a question, end the session early, or, up to your cut-off, ask for what they said to be removed. None of these needs a reason.
+
+- **During the session:** stop, thank them, and do not try to talk them into continuing. Ask whether you may keep what they have shared so far; if not, delete the recording and your notes.
+- **Afterwards, before your cut-off:** use your ID-to-person list to find their participant ID, then remove their recording, their notes, and their findings. Step 5 covers removing them from the report, and what removal cannot reach.
+- **After your cut-off:** say plainly what can no longer be removed, and delete what you still hold that is only theirs (recording, contact details).
+- **In every case:** give them the incentive you promised.
 
 ## After Each Interview
 
@@ -138,6 +149,8 @@ After each interview, ask yourself:
 - Was the interview too long or too short? Adjust.
 
 **Important:** It is normal and expected to refine your script between interviews. The first interview is always the roughest. By interview 3-4, your script should be significantly sharper.
+
+If you bring anything from an interview back into this conversation before Step 5, use the participant ID and leave names out.
 
 ---
 

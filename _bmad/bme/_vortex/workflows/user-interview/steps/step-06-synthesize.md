@@ -147,11 +147,13 @@ After synthesis, I'll generate your complete user interview artifact using the t
 Your artifact will include:
 - Research goals and context
 - Final interview script (as refined through the process)
-- Participant summary
+- Participant summary, with the participant-data handling decisions from Step 3
 - Raw findings per interview
 - Synthesized themes and insights with evidence trails
 - Recommendations and next actions
 - Research quality assessment
+
+Delete recordings, raw notes, screening answers, contact details, and the ID-to-person list when every condition you set in Step 3 is met -- by default that is after the withdrawal cut-off and after incentives are paid, so usually not yet -- then note the date in the report's Participant Data Handling table.
 
 ---
 

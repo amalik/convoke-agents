@@ -13,14 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **The `user-interview` workflow now asks how you will handle what participants tell you (`T185`).** It had
-  you recruit people, read screening answers, optionally record, and write quotes into your project, and
-  said nothing about consent, what to collect, how long to keep it, or how a participant withdraws. Its
-  example script also promised that "everything you share will be kept confidential", which the workflow
-  itself could not honor. Steps 2 to 5 now put each decision where it arises, with a default and the reason
-  it matters; the report template records what you decided; and the validation file checks that the report
-  does not expose participants. This is research practice, not legal advice, and it does not make a study
-  compliant with any law. If you have edited these workflow files, `convoke-update` backs up `_bmad/bme/`
-  before replacing them.
+  you recruit people, read screening answers, optionally record, and write quotes into your project. It
+  asked permission to take notes and said nothing about what to collect, who sees it, how long to keep it,
+  or how a participant withdraws. Its example script also promised that "everything you share will be kept
+  confidential", which the workflow itself could not honor. Step 3 now asks four decisions, each with a
+  default and the reason it matters; steps 2, 4, 5, and 6 apply them in the script's opening, during the
+  interviews, in the findings, and at synthesis; the report template records what you decided; and the
+  validation file has a check for whether the report exposes participants. This is research practice, not
+  legal advice, and it does not make a study compliant with any law. If you have edited these workflow
+  files, `convoke-update` backs up `_bmad/bme/` before replacing them; `convoke-install` does not.
 
 ---
 

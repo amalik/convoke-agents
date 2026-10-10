@@ -77,6 +77,20 @@ version: 1.0
 **Recruitment Channels:**
 {recruitment-channels}
 
+### Participant Data Handling
+
+| Decision | What we did |
+|----------|-------------|
+| Consent to take part | {consent-method} |
+| Basis for collecting it | {collection-basis} |
+| Who has access | {access-list} |
+| What we hold, and where | {data-held} |
+| Delete by, and when it was done | {deletion-date} |
+| How to withdraw, and until when | {withdrawal-process} |
+| Withdrawals | {withdrawals} |
+
+Participants appear in this report by ID only. The list that maps IDs to people is kept outside this document.
+
 ---
 
 ## Raw Findings

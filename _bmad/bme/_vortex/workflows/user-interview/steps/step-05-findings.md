@@ -87,6 +87,22 @@ For each interview, create a structured findings capture using the format below:
 
 5. **Verbatim when quoting** -- use exact words, not paraphrases (paraphrasing introduces your bias)
 
+6. **Free of identifying detail** -- write the participant ID, never a name. Describe a participant by what matters to the finding ("marketing manager at a 15-person agency"), not by who employs them. In a small pool, a role plus a company size can be enough to identify someone: coarsen the description until it could describe several people your readers might know. When a quote names a colleague, a customer, their employer, or a client, keep the words and replace the name with a role in brackets: "I end up chasing [my team lead] on Slack"
+
+### Before You Bring Raw Notes Into This Conversation
+
+Whatever you paste here is sent to the AI model you are running this workflow with, and to its provider unless you host the model yourself. What you save lands in `{output_folder}`, where your team reads it and where it may be committed to version control. So:
+
+- Remove names, email addresses, and employer names from notes and transcripts before you paste them
+- Do not paste a full transcript when the passages you need will do
+- Keep recordings and the ID-to-person list where you decided in Step 3 -- not here
+
+### If a Participant Has Withdrawn
+
+Remove their interview block, the context in their row of the Participants table, and their quotes and behaviors wherever else you have used them. Then note it once, in the Withdrawals row of the report's Participant Data Handling table -- "P4 withdrew; removed from this report" -- and keep P4's row in the saturation tracking below with its counts only, so the numbers still add up for the next reader. Do not keep the content "just for context".
+
+Deleting the text from the report does not delete it from version history, from copies already shared, from other artifacts built on it, or from what was already sent to the AI model's provider. Check each, and tell the participant plainly what could not be removed.
+
 ### How to Handle Conflicting Findings
 
 When participants contradict each other, capture both sides without resolving the conflict. Note the contradiction explicitly:

@@ -1,7 +1,7 @@
 ---
 validation: user-interview
 type: single-file
-description: Validate user interview artifacts for evidence quality, question bias, and finding specificity
+description: Validate user interview artifacts for evidence quality, question bias, finding specificity, and participant data handling
 author: Isla (discovery-empathy-expert)
 version: 1.5.0
 ---
@@ -14,7 +14,7 @@ version: 1.5.0
 
 ## Overview
 
-This validation checks that a user interview report meets quality standards for evidence-based research. It ensures insights are grounded in real data, questions avoid bias, and findings are specific enough to act on.
+This validation checks that a user interview report meets quality standards for evidence-based research. It ensures insights are grounded in real data, questions avoid bias, and findings are specific enough to act on. It also checks that the report does not expose the people who took part.
 
 ## Validation Checks
 
@@ -106,6 +106,25 @@ This validation checks that a user interview report meets quality standards for 
 - No prioritization (everything is equally important, which means nothing is)
 - No connection to follow-up research or experimentation
 
+### 6. Participant Data Handling
+
+**What it checks:** Can this report be shared without exposing the people who took part, and does it record what they were promised?
+
+**Pass criteria:**
+- Participants are referred to by ID throughout; no names, email addresses, or employer names appear
+- Quotes and participant context carry no detail that identifies a person to someone who knows the field
+- The Participant Data Handling table is filled in: how consent was obtained, the basis, who has access, what is held and where, the deletion date, how to withdraw and until when, and any withdrawals (or "none")
+- The deletion date has not passed, or the report records that the deletion was done
+- Any participant who withdrew has been removed, and the removal is noted
+
+**Common failures:**
+- A participant's name or company left in a quote or in the context column
+- "Kept confidential" promised to participants while their quotes appear in a widely shared report
+- No deletion date, so recordings and screening answers are kept indefinitely
+- The ID-to-person list stored next to the report
+
+This check does not establish that the research complied with any law. It checks that the report does what the workflow asks.
+
 ## Validation Scoring
 
 | Check | Weight | Score |
@@ -115,13 +134,16 @@ This validation checks that a user interview report meets quality standards for 
 | Finding Specificity | 20% | {pass/partial/fail} |
 | Research Rigor | 15% | {pass/partial/fail} |
 | Actionability | 15% | {pass/partial/fail} |
+| Participant Data Handling | Not scored | {pass/fail} |
 
 **Overall:** {PASS / NEEDS REVISION / FAIL}
+
+Participant Data Handling is outside the weighted score. If it fails, an Overall that would have been PASS becomes NEEDS REVISION. Fix it before the report is shared.
 
 ## Remediation Guidance
 
 **If Evidence Quality fails:**
-Go back to raw notes and recordings. Add specific participant IDs, direct quotes, and behavioral observations. Acknowledge counter-evidence you may have glossed over.
+Go back to raw notes, and to recordings if you still hold them. Add specific participant IDs, direct quotes, and behavioral observations. Acknowledge counter-evidence you may have glossed over.
 
 **If Question Bias fails:**
 Revise the interview script using the bias checklist in Step 2. If interviews are already done, note the bias in your research quality assessment and caveat affected insights.
@@ -134,6 +156,9 @@ If the issue is sample size, conduct additional interviews before synthesizing. 
 
 **If Actionability fails:**
 For each insight, ask: "If a product manager read this, what would they do on Monday morning?" If you can't answer that, the insight needs to be sharpened or connected to a specific decision.
+
+**If Participant Data Handling fails:**
+Replace names with participant IDs and with roles in brackets, strip identifying detail from the context column, and fill in the handling table from the decisions you made in Step 3. If a deletion date was never set, set one now and tell participants if it differs from what you told them.
 
 ---
 

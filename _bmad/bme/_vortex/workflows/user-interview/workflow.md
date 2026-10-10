@@ -36,6 +36,12 @@ A user interview is a qualitative research method where you have a structured co
 5. **Capture Findings** - Document raw findings from each interview session
 6. **Synthesize Insights** - Identify patterns, themes, and actionable insights
 
+## Participant Data
+
+Interviewing people means holding personal data: contact details, screening answers, recordings, and quotes. Step 3 asks you to decide how you will handle it: what you collect and who sees it, on what basis, how long you keep it, and how someone withdraws. Step 2 puts those decisions into what you tell participants before they consent, and Steps 4 and 5 apply them during the interviews and in the findings.
+
+This is research practice, not legal advice. The decisions are yours and your organization's; the report records what you decided.
+
 ## Output
 
 **Artifact:** User interview report in `{output_folder}/user-interview-{topic}-{date}.md`
