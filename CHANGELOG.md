@@ -120,6 +120,13 @@ running it from the wrong directory does nothing rather than something.
 - **You can register your own custom skill again (`T112`).** A registration now claims the row it writes,
   so an operator-authored skill survives the installer's manifest seeding instead of being treated as drift.
 
+- **`convoke-doctor` tells you how to register a custom skill, with a command that works (`T254`).** For an
+  `[unregistered]` skill, 4.0.3 printed a row to paste into `_bmad/_config/bmm-dependencies.csv` by hand,
+  carrying a placeholder email and date. It now prints a `convoke-register-skill` command with the skill,
+  the agent and the detected dependency type filled in; running it registers the skill and clears the
+  finding. *(This entry was added after 4.0.4 was published: the fix is in that package, but the
+  `CHANGELOG.md` inside it does not list it, so `convoke-update` did not show it for 4.0.4.)*
+
 - **Documentation corrections in the shipped guides (`T223`, `T224`, `T232`).** Four documents still
   described module configs as unchecked after the check had shipped; the refusal table now describes the
   rollback on both `convoke-update` paths that can refuse; and both guides now state that they describe
