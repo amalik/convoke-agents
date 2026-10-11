@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The seven Vortex agent skills now say what a channel listing is, and where their limits are recorded
+  (`cir-1-3`).** Each one's frontmatter `description` carries `Non-reference listing; complete product on
+  GitHub + npm. Not every agent is listed.`, and each file ends with a pointer to the maturity ledger under
+  a `## Maturity and limits` heading. The four agents whose description was only their title now have a
+  real one. **Where this does and does not reach you:** the notice is rendered by the two listing channels,
+  which read `.claude-plugin/marketplace.json` and therefore these files directly. It does **not** change
+  the description a host shows for an npm install — `convoke-install` generates its own wrapper whose
+  description stays `<agent-id> agent` — so if you installed from npm, the listing text is not what your
+  assistant matches on. The ledger itself does not ship; the pointer is a link to GitHub.
+
 - **The `user-interview` workflow now asks how you will handle what participants tell you (`T185`).** It had
   you recruit people, read screening answers, optionally record, and write quotes into your project. It
   asked permission to take notes and said nothing about what to collect, who sees it, how long to keep it,

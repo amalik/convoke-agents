@@ -306,8 +306,9 @@ citations had drifted; anchored by content instead: `try-fresh-install.sh:476` i
 `ci.yml:478` runs the harness, and `publish.needs` includes `fresh-install`. Wired and blocking, as the
 story says.
 
-**AC5a budget, derived before any edit.** Notice 56 + space + AC3 clause 26 = 84, so the body budget at the
-220 bar is **136**. The budget holds, so no operator decision was needed. `hypothesis-engineer` first came
+**AC5a budget, derived before any edit.** The appended overhead is 84: space + notice 56 + space + clause
+26. So the body budget at the 220 bar is **136**. (An earlier version of this line wrote "56 + space + 26 =
+84", which is 83 — one separator short. The overhead and every figure derived from it were right.) The budget holds, so no operator decision was needed. `hypothesis-engineer` first came
 out at exactly 220 and was shortened for headroom.
 
 ### Completion Notes
@@ -382,3 +383,58 @@ say that rather than predicting a zero.
 | Date | Change |
 |---|---|
 | 2026-10-10 | AC1–AC7 implemented across the 7 declared agent skills. Status → review. Intermediate `in-progress` was not separately persisted: the story completed in a single execution. |
+
+---
+
+## Round 1 — independent review, applied
+
+Four blind read-only layers on `8f15aa1d`: acceptance, installed/published surface, blast radius, and a
+claim-check on this record. All seven ACs were found substantively satisfied. What changed:
+
+| Defect | Fix | Reproduce |
+|---|---|---|
+| Two descriptions opened on the same two words (`Validated-learning`), the two most-confusable adjacent streams | Rewrote both; no two descriptions now share their leading two words | `for d in _bmad/bme/_vortex/agents/*/; do awk '/^description:/{sub(/^description:[ ]*/,""); print; exit}' $d/SKILL.md; done | cut -d' ' -f1-2 | sort | uniq -d` → empty |
+| Tightening dropped the trigger literals the shipped `skill-manifest.csv` still promises — Emma's *contextualization*, Mila's *three sources or it's an anecdote*, Wade's *smallest experiment that validates* | All three restored inside the 220 bar | `grep -c contextualization _bmad/bme/_vortex/agents/contextualization-expert/SKILL.md` |
+| The pointer was swallowed into the exported **How to proceed** section for the 3 converted agents, because `## On Activation` was their last heading and `extractHowToProceed` captures to EOF | Pointer now sits under its own `## Maturity and limits` heading, which terminates that capture and labels operator-facing metadata in all 7 | `node -e "const{extractHowToProceed}=require('./scripts/portability/export-engine.js');const fs=require('fs');console.log(extractHowToProceed('',[],fs.readFileSync('_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md','utf8')).includes('maturity ledger'))"` → `false` |
+| An operator-visible change to seven shipped files was unannounced | `[Unreleased]` entry added, stating which channels render the notice and which do not | `node scripts/audit/check-changelog-entry.js` |
+| `research-convergence-specialist` sat at 219 of 220 | All seven now 207–213 | the AC5a falsifier |
+| The budget sentence was one separator short | Corrected above, with the superseded text kept | — |
+
+Placement re-verified after the move: pointer still outside the fence in all four v5 agents, and
+`assert-shipped-links.js` on a freshly packed tarball still reports 80 resolvable references, exit 0.
+`name-registry-integrity.js` still reports **8 of 11 v5** — the new heading did not reclassify a v5 file.
+
+### The residual this record owed and did not state
+
+**AC1 and AC2 can regress to zero with every gate green.** Nothing mechanical protects the notice —
+`grep -rn 'Non-reference listing' --include='*.js' --include='*.yml' --include='*.json' --include='*.sh' .`
+returns **0**, and the only gate that parses the field (`validate-marketplace.js`, `auditSkillDirs`) asserts
+a non-empty string and nothing more. AC6/C1 forbids adding a gate, so the protection has to be a reader's
+obligation, and an obligation needs a bearer: `i97-2-4` … `i97-2-7` each rewrite this exact field and none
+of them mentioned this story. Notes added to all four, and `IN-250` filed as an unqualified intake — not a `T` row, because qualifying it is the gate's call and not the dev's.
+
+This record previously stated the equivalent residual for AC4's *link* and not for its own primary
+deliverable. Same discipline, applied to the lesser risk.
+
+### Verdicts, pasted rather than paraphrased — Tasks 5 and 6 asked for this form
+
+```
+$ bash scripts/audit/try-fresh-install.sh
+    scanned 327 markdown file(s), 80 resolvable reference(s); self-referential prefix https://github.com/amalik/convoke-agents/
+    [shipped-links status 0]
+PASS — a new user gets a working, self-consistent install.
+
+$ git diff HEAD --stat .claude-plugin/marketplace.json
+(empty)
+
+$ node scripts/audit/validate-marketplace.js
+  All 6 marketplace checks passed.
+```
+
+**AC7's two checks are weaker than the AC claims, and the next story to copy them inherits the hole.**
+`git diff HEAD` compares the working tree to `HEAD` — and once this story is committed, `HEAD` *is* the
+commit, so it cannot reveal what the commit declared. The non-vacuous form is
+`git show <sha> --stat -- .claude-plugin/marketplace.json`, which is empty here. And
+`validate-marketplace.js` compares a **set of basenames** against `AGENT_IDS` (`:151`), so it is a
+consistency gate between two lists, not an immutability gate on published paths: an addition that reuses a
+registered basename passes. Neither weakness affects this story, which added nothing.

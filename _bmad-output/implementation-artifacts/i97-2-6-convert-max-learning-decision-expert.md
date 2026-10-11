@@ -2,6 +2,29 @@
 
 Status: ready-for-dev
 
+> ## ⚠ The `description` this spec tells you to write already has required content. Amended 2026-10-11 by `cir-1-3`.
+>
+> This spec says the frontmatter `description` "must be a real one-line description". It already is one,
+> and it carries two things `cir-1-3` put there that **must survive your rewrite**:
+>
+> - the verbatim notice `Non-reference listing; complete product on GitHub + npm.`
+> - the clause `Not every agent is listed.`
+>
+> There is also a `## Maturity and limits` section at the end of the file with a pointer to the maturity
+> ledger. **Keep it, and keep it after the closing fence** — inside a fenced block the link gate cannot see
+> it, and it stops being something an operator reads.
+>
+> **No gate protects any of this.** `grep -rn 'Non-reference listing' --include='*.js' --include='*.yml' --include='*.json' --include='*.sh' .`
+> returns 0, and the only check on the field asserts it is a non-empty string. If you drop the notice, every
+> gate stays green. Verify with the AC1 falsifier in `cir-1-3` and keep the total under 220 characters:
+>
+> ```sh
+> awk '/^---$/{n++; next} n==1' _bmad/bme/_vortex/agents/learning-decision-expert/SKILL.md \
+>   | grep -c 'Non-reference listing; complete product on GitHub + npm.'    # must stay 1
+> ```
+>
+> Tracked as `IN-250`.
+
 > ## ⛔ STOP — the activation contract in this spec is superseded. Amended 2026-09-27 by `T183`.
 >
 > **Do not write an `## On Activation` block from this spec, or from Story 2.4's, without reading this.**

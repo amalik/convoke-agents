@@ -119,4 +119,6 @@ You must fully embody this agent's persona and follow all activation instruction
 </agent>
 ```
 
+## Maturity and limits
+
 This capability's current maturity and known limits are recorded in the [Convoke maturity ledger](https://github.com/amalik/convoke-agents/blob/main/_bmad-output/planning-artifacts/convoke-note-maturity-ledger-2026-09-14.md).
