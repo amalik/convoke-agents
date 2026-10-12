@@ -438,3 +438,27 @@ commit, so it cannot reveal what the commit declared. The non-vacuous form is
 `validate-marketplace.js` compares a **set of basenames** against `AGENT_IDS` (`:151`), so it is a
 consistency gate between two lists, not an immutability gate on published paths: an addition that reuses a
 registered basename passes. Neither weakness affects this story, which added nothing.
+
+## Round 2 — scoped to what the remediation touched, and the ruling it produced
+
+Round 1's fix inserted a `## Maturity and limits` heading, which moved a parser boundary. Per `docs-1-7`
+that earns **one** scoped layer and no more: rewritten narration does not, and the rest of the remediation
+was narration. One layer ran, on heading sensitivity only.
+
+| Finding | Status | Reproduce |
+|---|---|---|
+| The heading removed the pointer from the exported artifact entirely — it had been present, mislabelled, inside `## How to proceed` for the 3 markdown agents; it is now in 0 of 7, because `export-engine.js` assembles a closed section set and drops any other `##` | **Ruled, not fixed** — ADR-001 **A2.2**: the export channel is not a disclosure surface | `node -e "const{extractHowToProceed}=require('./scripts/portability/export-engine.js');const fs=require('fs');console.log((extractHowToProceed('',[],fs.readFileSync('_bmad/bme/_vortex/agents/contextualization-expert/SKILL.md','utf8'))||'').includes('maturity ledger'))"` → `false`, and `true` at `c8d7594d^` |
+| 19 other heading-sensitive consumers | unmoved, most verified by running them against both trees | — |
+
+**The reach is now ruled rather than assumed — ADR-001 Amendment 2.** A1.3's notice and pointer are a
+listing-channel surface. They do not reach an npm install's host wrapper (the generated description stays
+`<agent-id> agent`), they do not reach the export, and the notice has **never** been in an export, before
+or after this story, because `## When to use this skill` is built from `skill-manifest.csv` rather than
+from the frontmatter. **A1.5's benefit therefore does not reach npm installs at all** — found independently
+by three reviewers, and a fact about the install model rather than a defect here.
+
+**A trap this story laid for a later edit, recorded because no gate sees it.** The four v5 agents now carry
+their first-ever top-level `##`. The parity harness stays green only because it demands the literal
+`## Capabilities`, and the persona-sync gate only because it keys on `## Identity`/`## Communication
+Style`/`## Principles`. Loosen either to "has any `##`" and those four flip to a silent pass with an empty
+menu-code set.

@@ -225,6 +225,50 @@ agents are listed they are near-undiscoverable, because a browsing operator has 
 Writing four real descriptions is smaller than the hub and smaller than the manifest work, and it is the
 part that actually makes a listing findable.
 
+## Amendment 2 — how far the disclosure reaches (ruled 2026-10-12)
+
+**Ruled by Amalik, in conversation, and recorded here because `cir-1-3` measured the reach and found it
+narrower than A1.3 reads.**
+
+### A2.1 — The disclosure is a listing-channel surface, and nothing more
+
+> A1.3's notice and pointer are **for the two listing channels**, which read
+> `.claude-plugin/marketplace.json` and therefore the seven agent `SKILL.md` files directly. They are not
+> required to reach any other surface, and **they do not**.
+
+Measured on `c8d7594d`, on real artifacts rather than from source:
+
+| Surface | Carries the notice | Carries the ledger pointer |
+|---|---|---|
+| The two listing channels (via `marketplace.json`) | **yes**, all 7 | **yes**, all 7 |
+| An npm install's host-read wrapper (`.claude/skills/bmad-agent-bme-*`) | no | no |
+| The exported / catalogued artifact (`convoke-export`) | no, and never did | no |
+| npmjs.com's package page (`README.md`) | no | no |
+
+**Two of those are by construction, not by omission, and that is the point of this amendment.**
+
+- `refresh-installation.js` generates the host wrapper from a template literal whose description is
+  `${agent.id} agent`. An npm-installed operator's activation trigger is unchanged by anything A1.3 or
+  A1.5 does. **A1.5's benefit therefore does not reach npm installs** — three independent reviewers found
+  this from three different angles, and it is a fact about the install model, not a defect in `cir-1-3`.
+- `export-engine.js` **assembles** a closed set of sections (`## You are`, `## When to use this skill`,
+  `## How to proceed`, `## What you produce`) rather than copying the source's. A new `##` section in a
+  source `SKILL.md` is dropped. And `## When to use this skill` is built from `skill-manifest.csv`'s
+  description, not the frontmatter — so the notice has never appeared in an export, before or after
+  `cir-1-3`.
+
+### A2.2 — The export channel is not a disclosure surface, and will not be made one here
+
+> Exports already carry their own `⚠️ Framework-only skill.` banner, every one of the seven is a
+> `tier=pipeline` row, and adding a maturity section to the export assembler would widen A1.3 past its
+> scope on the strength of one review finding. **Ruled: leave it.** If the export channel ever needs the
+> disclosure, that is a new decision with its own evidence.
+
+Recorded so the next reader does not mistake the absence for a bug. `cir-1-3` briefly put the pointer
+*inside* the exported `## How to proceed` section — procedure, not provenance — and the heading that
+corrected that also removed it from the export entirely. Both states were measured; this ruling makes the
+second one deliberate.
+
 ## Consequences
 
 The four constraint questions the ruling had to answer. **Three are settled by S4
