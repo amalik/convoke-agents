@@ -1,6 +1,37 @@
 # Fast Story: Pin `cir-1-3`'s channel disclosure so a later edit cannot silently drop it (T275)
 
-**Status:** ready-for-dev · **Lane:** Fast (RICE 1.35 — R:3 I:1 C:90% E:2, qualified 2026-10-12 by Winston) · **Source:** `cir-1-3` Round 1 independent review (2026-10-11), intake `IN-250`
+**Status:** blocked — do not start · **Lane:** Fast (RICE 1.35 — R:3 I:1 C:90% E:2, qualified 2026-10-12 by Winston) · **Source:** `cir-1-3` Round 1 independent review (2026-10-11), intake `IN-250`
+
+> ## ⛔ STOP — do not implement. The premise under D1 is unruled, and an on-point ruling points the other way.
+>
+> **`ADR-001` C12, ruled 2026-09-27 and never amended, decides exactly the question D1 pins — against a gate:**
+> *"the ratified sequence is ship, then a tiny baseline, then one measured test — and the hub is the measured
+> test. Gating before the test runs inverts the order… **So the assertions run as story tasks with their
+> output recorded in the story**… and a gate is considered **afterwards** — with evidence about what actually
+> broke rather than a guess about what might."*
+>
+> This story cites C12 nowhere. It argued from one sentence of C1 about **registries** and did not search the
+> same ADR for a constraint that had already answered the question. Three other artifacts say the same thing
+> and all three were available: `cir-1-3` AC6 (*"C12 is the precedent for a recorded task instead"*),
+> `cir-1-3` Dev Notes (*"Do not add a CI check for any of this. C1. If one looks necessary, that is a ruling,
+> not a task"*), and `IN-250` itself (*"the mechanical option is a ruling, not a task"*).
+>
+> **Two facts make C12 bite harder here, not softer.** The "afterwards" it defers to is the measured test,
+> which is `s4-1-1` — itself deferred. And implementing the assertion means the disclosure can never
+> silently drop, so **the evidence C12 conditions on can never be gathered**: the deferred decision is not
+> postponed but destroyed.
+>
+> **The ruling needs C1, C10 and C12 on the table together.** C10 is the stronger support this story
+> under-claimed — an Amalik-ruled instance of an existing check's assertions being extended under the spent
+> baseline (*"`name-registry-integrity.js` must learn the new kind in the same change"*). C1's registry
+> sentence is the weakest.
+>
+> **If the ruling permits a gate, this spec needs revision rather than patches.** Round 1 found AC3
+> unfalsifiable and foolable from three independent directions; AC1/AC2 have no lower bound, so a
+> 83-character description consisting only of the disclosure passes every AC; AC5 admits three vacuous
+> passes; AC4 is an AC the implementer may delete by self-certification; and AC6's `npm test` is flaky at
+> HEAD for reasons no diff here can touch. Details in the review record below.
+
 
 ## Context
 
