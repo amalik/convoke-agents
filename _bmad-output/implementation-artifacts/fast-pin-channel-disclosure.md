@@ -1,6 +1,28 @@
 # Fast Story: Pin `cir-1-3`'s channel disclosure so a later edit cannot silently drop it (T275)
 
-**Status:** blocked — do not start · **Lane:** Fast (RICE 1.35 — R:3 I:1 C:90% E:2, qualified 2026-10-12 by Winston) · **Source:** `cir-1-3` Round 1 independent review (2026-10-11), intake `IN-250`
+**Status:** withdrawn — ruled against, see banner · **Lane:** Fast (RICE 1.35 — R:3 I:1 C:90% E:2, qualified 2026-10-12 by Winston) · **Source:** `cir-1-3` Round 1 independent review (2026-10-11), intake `IN-250`
+
+> ## 🚫 WITHDRAWN 2026-10-13 — ruled against by ADR-001 Amendment 3. Do not implement.
+>
+> **The ruling went the other way on sequence, not on budget.** A3.1 settles that extending an
+> already-wired check is **not** a new check under C1 — C10's precedent, where an existing check was
+> *required* to gain assertions in the same change with the budget explicitly not reopened. So D1's premise
+> was sound and the earlier restrictive reading of C1 was wrong.
+>
+> **A3.2 still rules no gate.** C12 is about order, not cost: a gate is considered *afterwards*, on evidence
+> about what actually broke. Nothing has broken, the four `i97` notes are in, and the measured test C12
+> defers to (`s4-1-1`) is deferred. Decisive: **a gate makes the disclosure unable to drop, so the evidence
+> C12 conditions on could never be gathered** — the fix would destroy its own ruling's decision criterion.
+>
+> **The protection is therefore declared-but-unchecked**, the posture C8 already accepted: the four story
+> notes, plus the verification command run as a task with its output recorded in whichever story touches the
+> field. `T275` stays open holding the future gate consideration, blocked on an observed drop.
+>
+> **This file is kept, not deleted.** If the evidence arrives it is the starting point — and the Round 1
+> findings recorded below are the fix list it must clear first: AC3 is unfalsifiable and was found so from
+> three independent directions, AC1/AC2 have no lower bound (an 83-character description consisting only of
+> the disclosure passes every AC), AC5 admits three vacuous passes, AC4 is an AC the implementer may delete,
+> and AC6's `npm test` is flaky at HEAD for reasons unrelated to this work.
 
 > ## ⛔ STOP — do not implement. The premise under D1 is unruled, and an on-point ruling points the other way.
 >

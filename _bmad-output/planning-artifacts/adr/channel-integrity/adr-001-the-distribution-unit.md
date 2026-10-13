@@ -269,6 +269,59 @@ Recorded so the next reader does not mistake the absence for a bug. `cir-1-3` br
 corrected that also removed it from the export entirely. Both states were measured; this ruling makes the
 second one deliberate.
 
+## Amendment 3 — extension is within budget, and C12 still says not yet (ruled 2026-10-13)
+
+**Ruled by Amalik, in conversation, and recorded here because `T275` was authored on a reading of C1 that
+never cited C12 — the ruling that already answered its question.**
+
+### A3.1 — Extending an already-wired check is not a new check under C1
+
+> A function that already runs, already parses the artifact, and is already in `publish.needs` learning to
+> read **more of the same artifact** is an **extension**, not a new deliverable. It does not reopen the
+> baseline budget.
+
+The precedent is **C10**, ruled 2026-09-26, and it is this exact shape: *"This is a row-type extension, not
+a fourth deliverable, so it does not reopen the baseline budget — but `name-registry-integrity.js` **must
+learn the new kind in the same change**, or the check goes green on a row it cannot read."* An existing
+check was **required** to gain assertions, in the same change, with the budget explicitly not reopened.
+
+**The distinction that was being missed.** C8 and C12 each concern a check that **does not exist yet** —
+C8's a new publication gate, C12's new CI checks standing up `s4-1-1`'s acceptance criteria. C1 forbids
+both, and C8 says so outright: *"the check is a new CI gate that C1's spent baseline budget forbids."*
+Nothing is stood up by an extension. **C1 is not the obstacle here; reading it as categorical was wrong in
+the restrictive direction.**
+
+### A3.2 — And it is still not built, because C12 is about sequence, not cost
+
+> **Ruled: no gate. The disclosure's protection is declared-but-unchecked** — the four `i97` story notes,
+> and the verification command run as a task with its output recorded in whichever story touches the field.
+> That is the posture C12 names and C8 already accepted. **A gate is considered afterwards, on evidence that
+> the disclosure actually dropped.**
+
+C12 is not a budget argument and was never answered by one: *"the ratified sequence is ship, then a tiny
+baseline, then one measured test — and the hub is the measured test. Gating before the test runs inverts
+the order, and the standing counter-metric is 111 gates built for ourselves against none shipped to an
+operator."* The measured test is `s4-1-1`, which is deferred, so C12's *"afterwards"* has not arrived.
+Nothing has broken. The four notes are in. A gate now is the guess C12 refuses.
+
+**And the asymmetry that decides it rather than merely favouring it.** C12 defers the gate pending *evidence
+about what actually broke*. A gate makes the disclosure unable to drop — so **the evidence C12 conditions on
+could never be gathered**. A deferred decision whose criterion the fix destroys is not deferred; it is
+decided quietly by the thing that was supposed to be waiting. **Do not implement against a deferred ruling
+when the implementation removes that ruling's own decision criterion.** That test is general and applies
+beyond this row.
+
+### A3.3 — What this costs, stated rather than discovered later
+
+The notes protect the four stories that carry them. They do not protect the fifth edit, and no gate will
+catch a drop. **That is accepted, deliberately, for the second time** — C8 took the same trade on a larger
+risk. If the disclosure does drop, that drop **is** the evidence C12 asked for, and the gate goes in then
+with a real instance behind it rather than a hypothesis.
+
+`T275` therefore stays open as the holder of that future consideration, blocked on evidence rather than on a
+ruling. The spec written for the gate is withdrawn, not deleted: if the evidence arrives it is the starting
+point, and its Round 1 findings are the list of what to fix before it ships.
+
 ## Consequences
 
 The four constraint questions the ruling had to answer. **Three are settled by S4
