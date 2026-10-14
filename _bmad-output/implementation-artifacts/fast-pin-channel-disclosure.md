@@ -18,13 +18,33 @@
 > notes, plus the verification command run as a task with its output recorded in whichever story touches the
 > field. `T275` stays open holding the future gate consideration, blocked on an observed drop.
 >
-> **This file is kept, not deleted.** If the evidence arrives it is the starting point — and the Round 1
-> findings recorded below are the fix list it must clear first: AC3 is unfalsifiable and was found so from
-> three independent directions, AC1/AC2 have no lower bound (an 83-character description consisting only of
-> the disclosure passes every AC), AC5 admits three vacuous passes, AC4 is an AC the implementer may delete,
-> and AC6's `npm test` is flaky at HEAD for reasons unrelated to this work.
+> **This file is kept, not deleted.** If the evidence arrives it is the starting point — and the eleven
+> Round 1 findings below are the fix list it must clear first. **All eleven are listed, because an earlier
+> version of this sentence promised the findings were recorded and carried only five; the other six were
+> left in the text below, unmarked.**
+>
+> *Shape and falsifiability:*
+> 1. **AC3 is unfalsifiable** — it names no literal, and four defensible choices all "satisfy" it. Found from three independent directions.
+> 2. **AC3 drops the fence case** — the body check passes with the pointer inside the ```xml fence, which is the exact regression the four `i97` notes warn about, for four of the seven files.
+> 3. **AC3's justification is false** — `assert-shipped-links.js` does not assert `blob/main`; `shipped-links.js` returns `{kind:'skip'}` for any non-self-referential absolute URL, and `FORGE_LAYOUTS` accepts any ref. Swapping to a `raw.githubusercontent.com` host passes the new assertion and is skipped by the link gate.
+> 4. **AC1/AC2 have no lower bound** — an 83-character description consisting only of the disclosure passes AC1, AC2 and AC4, which is the A1.5 regression inverted.
+> 5. **AC5 admits three vacuous passes** — a `cp -R` copy exits 1 on a missing module; running from outside any `_bmad` ancestor exits 1 with zero checks run; and `findProjectRoot()` resolves from cwd, so the copy's script validates the real repo and prints green. AC5 must assert the failure *message*.
+> 6. **AC4 is an AC the implementer may delete** by self-certification (Task 3), with no stated default and no holder named.
+> 7. **AC6's `npm test` is flaky at HEAD** for reasons no diff here can touch — see `IN-251`.
+>
+> *Citations and attributions, all still present in the text below:*
+> 8. **`i97-2-4:113` and `:383` are stale** — displaced by `c8d7594d`, the amendment the same sentence cites. At HEAD the quoted sentence is at `:136`; `:113` is now a comparison-table row.
+> 9. **The `IN-245(a)` dev note inverts the provenance** — that row exists because `test:p0` is named nowhere in CI. The grep-the-name error was made by the row's own first draft, not by a story. The instruction the bullet gives is right; its reason is not.
+> 10. **A1.3 is credited with the partial-listing clause and does not contain it** — A1.3 specifies a flat notice plus a pointer. The clause's authority is A1.1 plus the 2026-09-28 operator ruling recorded in `IN-248`. The verbatim wording of both strings is `cir-1-3`'s drafting choice, not the ADR's.
+> 11. **Two measurement slips** — *"the next word breaks three of seven"* is a rhetorical figure, true only for an addition of exactly 11 characters (+9/+10 breaks two, +12 breaks six); and the Context says *"two operator-facing strings"* then enumerates three and writes three ACs.
 
-> ## ⛔ STOP — do not implement. The premise under D1 is unruled, and an on-point ruling points the other way.
+> ## 🗒 SUPERSEDED — this banner's framing is wrong, and is kept as the record of why the ruling was sought
+>
+> **Corrected 2026-10-13 by ADR-001 Amendment 3.** This banner said the premise under D1 was *unruled* and
+> that the on-point ruling *pointed the other way*. **A3.1 ruled the premise SOUND** — extending an
+> already-wired check is not a new check under C1, on C10's precedent. What A3.2 ruled against is the gate,
+> on sequence rather than budget. So the banner was right that a ruling was owed and wrong about which way
+> C1 fell. The rest of it is the argument that produced the ruling and is kept verbatim below.
 >
 > **`ADR-001` C12, ruled 2026-09-27 and never amended, decides exactly the question D1 pins — against a gate:**
 > *"the ratified sequence is ship, then a tiny baseline, then one measured test — and the hub is the measured
