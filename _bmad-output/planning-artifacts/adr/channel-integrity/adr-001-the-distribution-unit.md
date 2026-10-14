@@ -18,6 +18,7 @@ signoff_by: amalik
 # ADR-001: What unit does Convoke distribute?
 
 **Status:** **ACCEPTED** (2026-09-26) — ruled by Amalik: **S4 now**. **⚠ The "S2 as the destination" half of this ruling was overturned by Amendment 1 on 2026-09-27** (§*Amendment 1 — channel tiers, and S2 reopened*): S2 is reopened, is not a destination, and S4 is not a step toward it. Read A1.1–A1.5 before acting on anything below; C1–C14 are not restated by Amendment 1, but **C2 is affected in effect**: it defers an ADR-004 amendment to S2, so with S2 reopened that deferral now points at nothing scheduled.
+**⚠ Amendment 4 (2026-10-14) falsifies a premise shared by A1.3, A1.4 and A2.1** (§*Amendment 4 — what the listing channel actually renders*): the skills.sh catalogue does **not** enumerate `.claude-plugin/marketplace.json`, it lists **1 of the 7** declared skills, and the one it lists serves a snapshot predating `cir-1-3`, so the disclosure's reach on that channel is **0 of 7** today. Amendment 4 **rules nothing** — it records the measurements and leaves the consequent ruling blank.
 **Proposed:** 2026-09-26
 **Decision owner:** Amalik
 **Evidence:** [`convoke-note-channel-integrity-findings-2026-09-26.md`](../../convoke-note-channel-integrity-findings-2026-09-26.md)
@@ -189,7 +190,7 @@ only then does separating them not sell anything. **S4 is therefore not a step t
 Both parts, because each carries a different kind of claim:
 
 - **Pre-install, in the frontmatter `description`** — the only text Convoke controls that a browsing user
-  sees, and the only surface **both** channels render. Terse, because that field is also the activation
+  sees, and the only surface **both** channels render. **⚠ A4.1 confirms the `description` IS rendered; A4.2 refutes "both" as a statement about what the catalogues index.** Terse, because that field is also the activation
   trigger: the three converted agents' descriptions already run **174 / 204 / 203** characters against
   upstream `bmad-prd`'s 104, and doubling a trigger dilutes it.
 - **Post-install, in the body: a pointer, never a transcribed status.** *"This capability's current
@@ -211,6 +212,8 @@ status for that capability, so the channel version cannot overstate the referenc
    `marketplace.json` `skills[]` and `AGENT_IDS` — the 7 Vortex agents — so declaring 11 fails at
    `ci.yml:206`, inside `agent-surface-parity`, which is in `publish.needs`. Proven by execution:
    *"unexpected skill path(s): convoke"*.
+
+**⚠ SUPERSEDED IN PART by A4.2 (2026-10-14): the quote below is from the `npx skills` CLI's README and describes the CLI; the conclusion drawn from it is about the website catalogue, which does not enumerate the manifest. The CLI half remains untested.**
 
 **And the shared-manifest fact that made disclaiming both cheaper than disclaiming either:**
 `.claude-plugin/marketplace.json` is read by **both** channels — `npx skills` README: *"If
@@ -237,6 +240,8 @@ narrower than A1.3 reads.**
 > required to reach any other surface, and **they do not**.
 
 Measured on `c8d7594d`, on real artifacts rather than from source:
+
+**⚠ The first row of this table is WRONG for skills.sh and untested for the Claude Code marketplace — see A4.3. It measured the repository's files, which was correct, and labelled the result a property of the channels, which was not.**
 
 | Surface | Carries the notice | Carries the ledger pointer |
 |---|---|---|
@@ -321,6 +326,133 @@ with a real instance behind it rather than a hypothesis.
 `T275` therefore stays open as the holder of that future consideration, blocked on evidence rather than on a
 ruling. The spec written for the gate is withdrawn, not deleted: if the evidence arrives it is the starting
 point, and its Round 1 findings are the list of what to fix before it ships.
+
+## Amendment 4 — what the listing channel actually renders, measured (facts recorded 2026-10-14; NOT ruled)
+
+**This amendment rules nothing.** It records measurements that falsify a premise A1.3, A1.4 and A2.1 all
+rest on, and it leaves the consequent ruling **blank**, because every option it opens is an operator's call
+and one of them is `s4-1-1`, which is deferred by operator ruling and whose revival condition these same
+measurements satisfy.
+
+Measured 2026-10-14 against the live channel, on **raw HTML fetched and grepped** rather than on a
+model-summarised reading of the page — a distinction that matters, because an earlier summarised read of
+these same two pages produced one conclusion this amendment has to correct. Reproduce:
+
+```sh
+curl -sS -L -o wade.html  "https://skills.sh/amalik/convoke-agents/bmad-bme-agent-wade"
+curl -sS -L -o index.html "https://skills.sh/amalik/convoke-agents"
+grep -c "Non-reference listing"              wade.html   # 0  — the cir-1-3 notice
+grep -c "Maturity and limits"                wade.html   # 0  — the cir-1-3 pointer
+grep -c "Validated learning expert"          wade.html   # 2  — the PRE-cir-1-3 description
+grep -c "smallest experiment that validates" wade.html   # 2  — the PRE-cir-1-3 final paragraph
+for n in bmad-bme-agent-emma discovery-empathy-expert bmad-bme-agent-mila hypothesis-engineer \
+         bmad-bme-agent-wade production-intelligence-specialist learning-decision-expert; do
+  printf '%-38s %s\n' "$n" "$(grep -c -- "$n" index.html)"
+done                                                     # wade 1; the other six 0
+```
+
+### A4.1 — A1.3's choice of surface is CORRECT, and that is what the measurement confirms
+
+The channel **does** render the frontmatter `description`. It renders Wade's *June* description
+(`"Validated learning expert specializing..."`, 2 occurrences) and not the current one
+(`"Lean experiments expert for MVPs"`, 0) — but it renders the field. A1.3's premise that the `description`
+is *"the only text Convoke controls that a browsing user sees"* **holds**, and `cir-1-3` therefore put the
+notice in the right place.
+
+A mid-session reading of the summarised page claimed the channel renders the body *instead of* the
+`description`, and that this questioned A1.3. **That claim was wrong** and is withdrawn here. It is recorded
+rather than quietly dropped because the error has the shape this initiative keeps producing: a conclusion
+about an artifact drawn from a description of it instead of from the artifact.
+
+### A4.2 — The catalogue does not enumerate `marketplace.json`, and A1.4 conflated two different readers
+
+| Fact | Value | Source |
+|---|---|---|
+| `.claude-plugin/marketplace.json` first existed | **2026-04-24** | `179c304e` |
+| All 7 Vortex `SKILL.md` files first existed | **2026-04-24** | seven `--diff-filter=A` commits |
+| skills.sh "first seen" | **Jun 16, 2026** | the page, 2 occurrences |
+| Skills listed in the catalogue | **1 of 7** | `index.html` greps above |
+| `marketplace` / `convoke-vortex` / `plugin` on either page | **0 / 0 / 0** | both files |
+
+The manifest and all seven declared skills existed **two months before** the catalogue first saw the
+repository. It indexed one. A reader enumerating that manifest would have found seven.
+
+**A1.4's quoted evidence is about a different reader than A1.4's conclusion.** The quote — *"If
+`.claude-plugin/marketplace.json` or `.claude-plugin/plugin.json` exists, skills declared in those files
+are also discovered"* — is from the **`npx skills` CLI's README** and describes what **the CLI** discovers
+when it installs from a repository. A1.4 then concluded *"One manifest, one disclaimer surface, two
+channels"*, which is a claim about what **the website's catalogue indexes**. Those are not the same reader,
+and the catalogue's behaviour contradicts it.
+
+**Untested here, deliberately:** whether the CLI does enumerate all seven. Testing it means running an
+installer against the live channel, and the measured failure is at the catalogue, which is the surface a
+browsing operator meets. The CLI half of A1.4 is neither confirmed nor refuted by this amendment.
+
+**Secondary observation, recorded because it was found in the same pass and bears on A1.5's
+discoverability argument:** only 3 of the 7 `SKILL.md` files carry a `bmad-bme-agent-*` frontmatter `name`
+(Emma, Mila, Wade — the three v6.3-converted agents). The other four carry their directory name
+(`discovery-empathy-expert`, `hypothesis-engineer`, `production-intelligence-specialist`,
+`learning-decision-expert`). This is a consequence of the unfinished v6.3 conversion and belongs to `I97` /
+`T87` rather than to this ADR; it is noted here only because the catalogue keys its listing on that field.
+
+### A4.3 — A2.1's reach table is false for skills.sh, and the instrument is the reason
+
+A2.1 states, as its first row:
+
+> | The two listing channels (via `marketplace.json`) | **yes**, all 7 | **yes**, all 7 |
+
+Measured on the channel, that row is **wrong for skills.sh on every count**: six of the seven are not
+listed at all, and the one that is renders a snapshot predating the notice, so the notice and the pointer
+reach **0 of 7**.
+
+**The instrument is why.** A2.1's own preamble says it was *"measured on `c8d7594d`, on real artifacts
+rather than from source"* — and it was: it measured **the repository's files**, correctly, and then labelled
+the result a property of the **channels**, on the strength of A1.4's assumption that the channels render
+those files. The table's column heading is *"Surface"*; what was put in the row was the file. Every other
+row in that table is a surface Convoke itself produces and can therefore be measured from the repository.
+This row is the only one describing a third party, and it is the only one that was not measured where it
+lives.
+
+**Scope of this correction:** skills.sh only. The Claude Code marketplace is the other half of *"the two
+listing channels"* and **was not measured** in this pass. A2.1's row is falsified for one channel and
+remains untested for the other.
+
+### A4.4 — What follows as fact: the disclosure's reach on this channel is currently zero, and its arrival is not ours to schedule
+
+`cir-1-3` shipped the notice in `8f15aa1d` on 2026-10-10 and the bearer in `c8d7594d`. Four days later the
+channel still serves a June snapshot: the rendered body stops at the `DO NOT scope an experiment larger than
+necessary` paragraph — the final line of Wade's file before `8f15aa1d` (76 lines then; that paragraph is
+line 77 today) — and carries nothing after it. It is a coherent earlier version, not a truncation
+and not a collapsed section.
+
+So the disclosure's reach on skills.sh is **0 of 7 today**, and becomes non-zero only when the catalogue
+re-reads. **Convoke does not trigger that re-read, does not observe it, and has no stated expectation of
+when it happens.** That is a dependency the plan did not know it had.
+
+This also means the failure mode is **not the one `T275` is waiting for.** `T275` unblocks *"when the
+disclosure is observed to have actually dropped in a shipped version"*. The disclosure has not dropped — it
+is present and correct in all seven files. It never arrived. A gate on the repository would have been green
+throughout and would not have detected this, which is consistent with A3.2's reasoning and orthogonal to
+it: A3.2 asked whether to protect the field, and this is a question about whether anything reads it.
+
+### A4.5 — The blank: what is deliberately not ruled here
+
+Four questions are opened and none is answered, because the first two are measurements nobody has taken and
+the second two are the operator's:
+
+1. **Can a re-read be triggered or requested?** If yes, `cir-1-3`'s disclosure lands for the cost of a
+   re-index, and no build is needed to make Amendment 1's condition true on this channel.
+2. **Does the Claude Code marketplace behave the same way?** A2.1's row is now untested there, and the
+   answer decides whether this is a skills.sh fact or a listing-channel fact.
+3. **Does A1.1's disclaimer commitment survive a channel that may not render the disclaimer?** A1.1
+   conditions the non-reference framing on a disclosure the channel is not currently showing.
+4. **Does this revive `s4-1-1`?** Its deferral asks for *"evidence about what actually breaks for a real
+   operator who finds a Convoke skill through a channel"*, and the measurements above are exactly that: the
+   operator finds one agent of eleven, described by a four-month-stale description carrying no disclosure,
+   behind an install command that brings that one skill alone. **The condition is met.** The counter-fact is
+   in the same data — a hub is a *new* skill published into a catalogue that indexed one of seven declared
+   skills in four months — so the evidence argues both that the defect is real and that the proposed remedy
+   depends on the mechanism that is failing. Reviving it is a ruling, and it is not made here.
 
 ## Consequences
 
