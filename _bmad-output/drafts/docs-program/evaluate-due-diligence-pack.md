@@ -2,9 +2,11 @@
 
 *Answers to the questions an evaluating organisation's security, legal and architecture reviewers ask.
 Every answer here was established on 17 September 2026 by inspecting the published package
-`convoke-agents@4.0.3` — 469 files, extracted from the npm tarball — or by running it, with one exception:
-the answers drawn from the maturity ledger's §2.18 and §2.19 were established on 20 September, and those
-sections name their own basis. Where something was not tested, this pack says so rather than inferring.*
+`convoke-agents@4.0.3` — 469 files, extracted from the npm tarball — or by running it, with two exceptions,
+each of which names its own basis in place: the answers drawn from the maturity ledger's §2.18 and §2.19
+were established on 20 September, and the **Plugin marketplace** row in section 3 was established on
+14 October against the plugin catalogues themselves, because it is a claim about third parties rather than
+about the package. Where something was not tested, this pack says so rather than inferring.*
 
 
 > **Currency.** Every product claim here was derived against the published `convoke-agents@4.0.3` package on
@@ -105,7 +107,7 @@ available with any MIT-licensed dependency — fork it, vendor it, or contribute
 | AGENTS.md | Not implemented — Convoke emits no `AGENTS.md`. Note that the host does support it: Claude Code reads a repository's `AGENTS.md` as project instructions, on its own or alongside `CLAUDE.md` ([source](https://code.claude.com/docs/en/memory)). The gap is Convoke's, not the platform's |
 | A2A (Agent2Agent) | Not implemented |
 | BMAD Method | Not required. Convoke extends it where it is installed, and installs standalone where it is not |
-| Plugin marketplace | Not listed. A submission was declined on packaging structure and has not been resubmitted |
+| Plugin marketplace | **Not in any catalogue, and the declined submission was not to Anthropic's.** Measured 14 October 2026 against each catalogue's own `marketplace.json`: absent from `anthropics/claude-plugins-official` (0 of 315 entries) and from `anthropics/claude-plugins-community` (0 of 2283). Convoke has **never submitted** to either. The submission that was declined on packaging structure went to **BMAD's** marketplace (`bmad-code-org/bmad-plugins-marketplace`, PR #9, closed 27 April 2026), and that objection is BMAD's packaging requirement, not Anthropic's. **There is still a working Claude Code route:** add the repository directly with `/plugin marketplace add amalik/convoke-agents`, which reads the shipped manifest live. The manifest is valid and declares one plugin carrying the seven discovery agents; **this route has not been tested end to end by us**, and a plugin added this way shows `Components will be discovered at installation` rather than a component list |
 
 **The honest summary:** Convoke is a Claude Code product today. The wider ecosystem is converging on shared
 formats, and Convoke does not yet implement any of them. If multi-assistant portability is a requirement
