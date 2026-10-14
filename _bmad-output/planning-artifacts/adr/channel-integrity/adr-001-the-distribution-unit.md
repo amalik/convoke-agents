@@ -18,7 +18,7 @@ signoff_by: amalik
 # ADR-001: What unit does Convoke distribute?
 
 **Status:** **ACCEPTED** (2026-09-26) — ruled by Amalik: **S4 now**. **⚠ The "S2 as the destination" half of this ruling was overturned by Amendment 1 on 2026-09-27** (§*Amendment 1 — channel tiers, and S2 reopened*): S2 is reopened, is not a destination, and S4 is not a step toward it. Read A1.1–A1.5 before acting on anything below; C1–C14 are not restated by Amendment 1, but **C2 is affected in effect**: it defers an ADR-004 amendment to S2, so with S2 reopened that deferral now points at nothing scheduled.
-**⚠ Amendment 4 (2026-10-14) falsifies a premise shared by A1.3, A1.4 and A2.1** (§*Amendment 4 — what the listing channel actually renders*): the skills.sh catalogue is fed by **CLI install telemetry**, not by reading repositories (A4.6) — it lists **1 of the 7** declared skills, being the only one anyone has installed, and serves a snapshot predating `cir-1-3`, so the disclosure's reach on that channel is **0 of 7** and **no act of publication changes it**. Amendment 4 **rules nothing** — it records the measurements and leaves the consequent ruling blank.
+**⚠ Amendment 4 (2026-10-14) falsifies a premise shared by A1.3, A1.4 and A2.1** (§*Amendment 4 — what the listing channel actually renders*): the skills.sh catalogue is fed by **CLI install telemetry**, not by reading repositories (A4.6) — it lists **1 of the 7** declared skills, being the only one anyone has installed, and serves a snapshot predating `cir-1-3`, so the disclosure's reach on that channel is **0 of 7** and **no act of publication changes it**. **A4.7 then measured the other channel: Convoke is in none of the three plugin catalogues** (official 0/315, community 0/2283, BMAD's PR #9 closed), the only Claude Code path is BYO-URL reading the repo live, and its pre-install surface is the **plugin entry's** `description` — not a skill's — which carries no notice. **Pre-install reach is zero on both channels, for two unrelated reasons**, and only the Claude Code half is fixable by publication. Amendment 4 **rules nothing** — it records the measurements and leaves the consequent ruling blank.
 **Proposed:** 2026-09-26
 **Decision owner:** Amalik
 **Evidence:** [`convoke-note-channel-integrity-findings-2026-09-26.md`](../../convoke-note-channel-integrity-findings-2026-09-26.md)
@@ -351,7 +351,7 @@ for n in bmad-bme-agent-emma discovery-empathy-expert bmad-bme-agent-mila hypoth
 done                                                     # wade 1; the other six 0
 ```
 
-### A4.1 — A1.3's choice of surface is CORRECT, and that is what the measurement confirms
+### A4.1 — A1.3's choice of surface is CORRECT for skills.sh, and that is what the measurement confirms (⚠ narrowed by A4.7: wrong field for the Claude Code path)
 
 The channel **does** render the frontmatter `description`. It renders Wade's *June* description
 (`"Validated learning expert specializing..."`, 2 occurrences) and not the current one
@@ -419,6 +419,8 @@ lives.
 listing channels"* and **was not measured** in this pass. A2.1's row is falsified for one channel and
 remains untested for the other.
 
+**⚠ DISCHARGED by A4.7 (same day): the other half was measured. A2.1's row is wrong on **both** halves — and the Claude Code side is not a listing channel for Convoke at all.**
+
 ### A4.4 — What follows as fact: the disclosure's reach on this channel is currently zero (⚠ "and its arrival is not ours to schedule" — superseded by A4.6: there is nothing to schedule)
 
 `cir-1-3` shipped the notice in `8f15aa1d` on 2026-10-10 and the bearer in `c8d7594d`. Four days later the
@@ -444,8 +446,7 @@ the second two are the operator's:
 
 1. **Can a re-read be triggered or requested?** If yes, `cir-1-3`'s disclosure lands for the cost of a
    re-index, and no build is needed to make Amendment 1's condition true on this channel.
-2. **Does the Claude Code marketplace behave the same way?** A2.1's row is now untested there, and the
-   answer decides whether this is a skills.sh fact or a listing-channel fact.
+2. **Does the Claude Code marketplace behave the same way?** **✓ ANSWERED by A4.7: no, in every respect.** It is not a listing for Convoke (absent from all three catalogues), it reads the repository live rather than from a snapshot, and its pre-install surface is the *plugin entry's* `description` rather than a skill's. So this is a skills.sh fact AND a second, unrelated zero — not one listing-channel fact.
 3. **Does A1.1's disclaimer commitment survive a channel that may not render the disclaimer?** A1.1
    conditions the non-reference framing on a disclosure the channel is not currently showing.
 4. **Does this revive `s4-1-1`?** Its deferral asks for *"evidence about what actually breaks for a real
@@ -515,6 +516,84 @@ channel is a manual measurement rather than a gate.
 **Bearing on `s4-1-1`, strengthening the counter-fact in A4.5(4) rather than settling it:** a hub skill
 published into this channel would appear on it only when somebody installs the hub through the CLI. "Put
 the bootstrap in the channel" is not an act the publisher can perform here. Still not ruled.
+
+### A4.7 — The other channel, measured: it is not a listing for Convoke at all, and its pre-install surface is a different field
+
+A4.5(2) left open whether the Claude Code marketplace behaves like skills.sh. It does not, in any respect,
+and the answer closes `IN-255(b)`.
+
+**First, Convoke is in none of the catalogues.** Measured 2026-10-14 against each catalogue's own
+`marketplace.json`, which is *"the catalog itself"* per Anthropic's docs:
+
+| Catalogue | Entries | `convoke` | Status |
+|---|---|---|---|
+| `anthropics/claude-plugins-official` | **315** | **0** | not listed |
+| `anthropics/claude-plugins-community` | **2283** | **0** | not listed |
+| `bmad-code-org/bmad-plugins-marketplace` | — | — | PR #9 **closed unmerged** 2026-04-27 |
+
+```sh
+for r in anthropics/claude-plugins-community anthropics/claude-plugins-official; do
+  curl -sS -L "https://raw.githubusercontent.com/$r/main/.claude-plugin/marketplace.json" \
+  | tee /tmp/$(basename $r).json | grep -ci convoke
+done
+```
+
+The six `vortex` matches in the community catalogue belong to an unrelated `AppsVortex` org (`arn-code`,
+`arn-infra`, `arn-spark`) and are not Convoke.
+
+**So the "second listing channel" is not a listing.** The only Claude Code path to Convoke is **BYO-URL** —
+`/plugin marketplace add amalik/convoke-agents` — which reads `.claude-plugin/marketplace.json` **live from
+the repository**. That is the opposite failure mode from skills.sh: no staleness is possible, because there
+is no snapshot and no catalogue in between.
+
+**And the pre-install surface there is a different field from the one `cir-1-3` wrote to.** From
+`/docs/en/plugins/install`:
+
+> *"The details pane shows **the plugin's description**."* Skills appear only under *"**Will install**: the
+> commands, agents, skills, hooks, and MCP and LSP servers the plugin adds"* — a component list — and
+> *"**Plugins from a local or custom marketplace can show `Components will be discovered at installation`
+> instead**."*
+
+A BYO-URL marketplace **is** a custom marketplace, so that last sentence is Convoke's case. `Last updated`
+and `Context cost` are documented as official-marketplace-only. Nothing in the documented pane renders a
+**skill's** frontmatter `description` before install.
+
+Convoke's plugin entry description, read from the shipped manifest, is:
+
+> `"Vortex Framework — 7-stream product discovery for IT transformation consultants."`
+
+**It carries no disclosure.**
+
+### The combined result: zero pre-install reach on both channels, for two unrelated reasons
+
+| Channel | Is the skill `description` the pre-install surface? | Reach of the `cir-1-3` notice |
+|---|---|---|
+| skills.sh | **Yes** — A4.1 confirmed it | **0 of 7** — 1 of 7 indexed, and that one is a June snapshot (A4.6) |
+| Claude Code (BYO-URL) | **No** — the surface is the *plugin entry's* `description` | **0** — that field was never written to |
+
+**A2.1's first row is therefore wrong on both halves, not one.** It read *"The two listing channels (via
+`marketplace.json`) | **yes**, all 7 | **yes**, all 7"*. Measured: neither channel renders the notice to a
+browsing operator, and one of them is not a listing channel for Convoke in the first place.
+
+**The asymmetry that matters for whatever is ruled next.** The skills.sh half is not fixable by publication
+(A4.6). The Claude Code half is fixable by **one line** — the notice appended to the plugin entry's
+`description` in `.claude-plugin/marketplace.json`, a file `validate-marketplace.js` already parses and
+which `agent-surface-parity` already runs inside `publish.needs`. That asymmetry was invisible while both
+channels were assumed to render the same field.
+
+**A channel that exists and has never been used.** `anthropics/claude-plugins-community` is an opt-in
+catalogue of **2283** third-party plugins with a documented submission path
+(`/docs/en/plugins/publish`), and on it the plugin entry's `description` is the rendered surface and the
+catalogue is a repository read live rather than a telemetry snapshot. **Convoke has never submitted to it.**
+PR #9 went to `bmad-code-org/bmad-plugins-marketplace`, which is BMAD's marketplace and a different
+destination; the structural objection recorded there (`skills/` at root, `module.yaml`, `module-help.csv`)
+is BMAD's requirement, not Anthropic's. Whether Anthropic's community catalogue would accept the current
+packaging is **untested**. This is recorded because the initiative has been reasoning about "the two
+listing channels" as a closed set, and one of the two turns out to be a path Convoke declined to take
+rather than a channel that declined Convoke.
+
+**Still not ruled.** A4.5's four questions keep their blanks; this subsection answers only (2), and it
+answers it with a fact that makes (3) and (4) sharper rather than settling them.
 
 ## Consequences
 
