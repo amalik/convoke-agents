@@ -18,7 +18,7 @@ signoff_by: amalik
 # ADR-001: What unit does Convoke distribute?
 
 **Status:** **ACCEPTED** (2026-09-26) — ruled by Amalik: **S4 now**. **⚠ The "S2 as the destination" half of this ruling was overturned by Amendment 1 on 2026-09-27** (§*Amendment 1 — channel tiers, and S2 reopened*): S2 is reopened, is not a destination, and S4 is not a step toward it. Read A1.1–A1.5 before acting on anything below; C1–C14 are not restated by Amendment 1, but **C2 is affected in effect**: it defers an ADR-004 amendment to S2, so with S2 reopened that deferral now points at nothing scheduled.
-**⚠ Amendment 4 (2026-10-14) falsifies a premise shared by A1.3, A1.4 and A2.1** (§*Amendment 4 — what the listing channel actually renders*): the skills.sh catalogue is fed by **CLI install telemetry**, not by reading repositories (A4.6) — it lists **1 of the 7** declared skills, being the only one anyone has installed, and serves a snapshot predating `cir-1-3`, so the disclosure's reach on that channel is **0 of 7** and **no act of publication changes it**. **A4.7 then measured the other channel: Convoke is in none of the three plugin catalogues** (official 0/315, community 0/2283, BMAD's PR #9 closed), the only Claude Code path is BYO-URL reading the repo live, and its pre-install surface is the **plugin entry's** `description` — not a skill's — which carries no notice. **Pre-install reach is zero on both channels, for two unrelated reasons**, and only the Claude Code half is fixable by publication. Amendment 4 **rules nothing** — it records the measurements and leaves the consequent ruling blank.
+**⚠ Amendment 4 (2026-10-14) falsifies a premise shared by A1.3, A1.4 and A2.1** (§*Amendment 4 — what the listing channel actually renders*): the skills.sh catalogue is fed by **CLI install telemetry**, not by reading repositories (A4.6) — it lists **1 of the 7** declared skills, being the only one anyone has installed, and serves a snapshot predating `cir-1-3`, so the disclosure's reach on that channel is **0 of 7** and **no act of publication changes it**. **A4.7 then measured the other channel: Convoke is in none of the three plugin catalogues** (official 0/315, community 0/2283, BMAD's PR #9 closed), the only Claude Code path is BYO-URL reading the repo live, and its pre-install surface is the **plugin entry's** `description` — not a skill's — which carries no notice. **Pre-install reach is zero on both channels, for two unrelated reasons**, and only the Claude Code half is fixable by publication. **✓ Amendment 5 (2026-10-14) fills Amendment 4's blank:** the plugin entry `description` was written with the same notice, **A1.1 is narrowed** to a commitment to disclose on every surface Convoke controls rather than to any channel's display, and **`s4-1-1` stays deferred on evidence** — its condition is met and the evidence argues against the remedy. `IN-257` (`anthropics/claude-plugins-community`) is deliberately **not** ruled. Amendment 4 **rules nothing** — it records the measurements and leaves the consequent ruling blank.
 **Proposed:** 2026-09-26
 **Decision owner:** Amalik
 **Evidence:** [`convoke-note-channel-integrity-findings-2026-09-26.md`](../../convoke-note-channel-integrity-findings-2026-09-26.md)
@@ -153,7 +153,9 @@ and not started now: it requires a ratification this initiative does not hold.
 **Ruled by Amalik, in conversation, and recorded here because a signed ADR named a destination he does
 not want.**
 
-### A1.1 — Both channels are non-reference and disclaimed
+### A1.1 — Both channels are non-reference and disclaimed (⚠ AMENDED by A5.1, 2026-10-14)
+
+> **⚠ As written below this claimed more than Convoke can deliver.** Measured 2026-10-14, the disclosure reached **no** browsing operator on either channel (A4.6, A4.7). **A5.1 narrows it:** Convoke discloses on every surface it controls — the seven `SKILL.md` `description`s and the plugin entry `description` — and does **not** commit to a channel rendering them. Read A5.1 before citing the blockquote below.
 
 > Reference distribution is **GitHub + npm**. Both `skills.sh` **and** the Claude Code plugin
 > marketplace are **non-reference** channels: they may carry incomplete features, and users arriving
@@ -447,8 +449,7 @@ the second two are the operator's:
 1. **Can a re-read be triggered or requested?** If yes, `cir-1-3`'s disclosure lands for the cost of a
    re-index, and no build is needed to make Amendment 1's condition true on this channel.
 2. **Does the Claude Code marketplace behave the same way?** **✓ ANSWERED by A4.7: no, in every respect.** It is not a listing for Convoke (absent from all three catalogues), it reads the repository live rather than from a snapshot, and its pre-install surface is the *plugin entry's* `description` rather than a skill's. So this is a skills.sh fact AND a second, unrelated zero — not one listing-channel fact.
-3. **Does A1.1's disclaimer commitment survive a channel that may not render the disclaimer?** A1.1
-   conditions the non-reference framing on a disclosure the channel is not currently showing.
+3. **Does A1.1's disclaimer commitment survive a channel that may not render the disclaimer?** **✓ RULED by A5.1 (2026-10-14): no — it is narrowed.** Convoke commits to writing the disclosure on every surface it controls, not to its display, and the plugin entry `description` was written in the same ruling.
 4. **Does this revive `s4-1-1`?** Its deferral asks for *"evidence about what actually breaks for a real
    operator who finds a Convoke skill through a channel"*, and the measurements above are exactly that: the
    operator finds one agent of eleven, described by a four-month-stale description carrying no disclosure,
@@ -456,6 +457,8 @@ the second two are the operator's:
    in the same data — a hub is a *new* skill published into a catalogue that indexed one of seven declared
    skills in four months — so the evidence argues both that the defect is real and that the proposed remedy
    depends on the mechanism that is failing. Reviving it is a ruling, and it is not made here.
+
+   **✓ RULED by A5.2 (2026-10-14): it stays deferred, now on evidence rather than pending it.** The condition is met and the evidence argues against the remedy; A4.7 then showed the defect is skills.sh-shaped and does not exist on the Claude Code path at all.
 
 ### A4.6 — The mechanism, found one question later: the catalogue is fed by installs, not by reading repositories
 
@@ -594,6 +597,90 @@ rather than a channel that declined Convoke.
 
 **Still not ruled.** A4.5's four questions keep their blanks; this subsection answers only (2), and it
 answers it with a fact that makes (3) and (4) sharper rather than settling them.
+
+## Amendment 5 — the blank filled: write the field Convoke controls, hold the hub on evidence (ruled 2026-10-14)
+
+Amendment 4 measured and deliberately ruled nothing. **Both of its factual blanks closed the same day**
+(A4.6 answered A4.5(1), A4.7 answered A4.5(2)), leaving only the two that were always the operator's. Ruled
+by Amalik on 2026-10-14.
+
+### A5.1 — A1.1 is narrowed to what is true, and the one surface Convoke controls is written
+
+**The ruling: write the field, then narrow the claim.** Both halves, in that order, because narrowing a
+commitment while a one-line remedy sits unapplied would be trimming the claim to fit the omission.
+
+**What was written.** The `cir-1-3` notice, the identical string, appended to the plugin entry's
+`description` in `.claude-plugin/marketplace.json` — the field A4.7 established is the Claude Code
+pre-install surface:
+
+> `"Vortex Framework — 7-stream product discovery for IT transformation consultants. Non-reference
+> listing; complete product on GitHub + npm. Not every agent is listed."`
+
+164 characters. `validate-marketplace.js` requires only a non-empty string there (`plugins[0].description`),
+so there is no budget to spend and none was: unlike the frontmatter `description`, this field is display
+text and not an activation trigger, which is why the same notice costs nothing here and had to be weighed
+against 220 characters there.
+
+**The same string deliberately, not a variant.** One `grep` now finds every bearer, which is what makes the
+`i97-2-4`…`i97-2-7` reader obligations and `T275`'s future gate able to cover eight files instead of seven.
+
+> **⚠ A trap this creates, named here because it would otherwise be found by someone trusting it.**
+> `T275`'s own evidence command — `grep -rn 'Non-reference listing' --include='*.js' --include='*.yml'
+> --include='*.json' --include='*.sh' .` — was written to prove **no gate guards the notice**, and returned
+> **0**. It now returns **1**, and the hit is `.claude-plugin/marketplace.json`: **the subject, not a
+> guard.** Nothing about protection has changed. Any future reading of that command must exclude
+> `.claude-plugin/` or assert on the guarding file rather than on a count.
+
+**How A1.1 is narrowed.** Its claim that both channels are *"non-reference and disclaimed"* was, on
+2026-10-14, true in Convoke's files and false on both channels as an operator meets them. It is amended to
+claim only what Convoke can make true by publishing:
+
+> **A1.1 as amended.** Reference distribution is **GitHub + npm**. Convoke **discloses non-reference status
+> on every surface it controls**: the seven agent `SKILL.md` frontmatter `description`s, and the plugin
+> entry `description` in `.claude-plugin/marketplace.json`. **Whether a channel renders those fields is the
+> channel's behaviour, not Convoke's commitment** — skills.sh indexes from CLI install telemetry and
+> currently renders a pre-disclosure snapshot of the single agent anyone has installed (A4.6), and that is
+> not reachable by publication. The commitment is to write the disclosure, not to guarantee its display.
+
+**What that costs, stated rather than discovered later.** A1.1 previously implied an operator browsing
+either channel would see the disclaimer. As amended it no longer promises that, and on skills.sh it is
+currently not the case. The alternative was to claim less *and* write less; the alternative taken claims
+accurately and writes everything publication can reach.
+
+### A5.2 — `s4-1-1` stays deferred, and the deferral stops being provisional
+
+**The ruling: keep it deferred, now on evidence rather than pending it.** Its revival condition —
+*"evidence about what actually breaks for a real operator who finds a Convoke skill through a channel"* —
+**is met**, and the evidence argues against the remedy rather than for it:
+
+- **The defect is real and confined.** `npx skills add https://github.com/amalik/convoke-agents --skill
+  bmad-bme-agent-wade` does install one skill alone, with no config, contracts or workflows. That is
+  defect-1 exactly.
+- **It exists on one channel and one skill.** On the Claude Code path there is no such failure: the
+  manifest declares **one plugin** at `source: "./"` carrying all seven skills, and *"installing a plugin
+  adds its skills, agents, hooks, and MCP servers"*. A lone arrival is a skills.sh-shaped event, and
+  skills.sh has indexed exactly one Convoke skill.
+- **The remedy depends on the mechanism that fails.** A hub published for that channel appears on it only
+  when somebody installs the hub through the CLI (A4.6). The intervention cannot reach the surface it was
+  designed to repair.
+
+**C10 and C11 still stand and are not retired by this** — the hub remains named `convoke`, the registry's
+`kind: skill` row type remains ruled, and C11's *fronts-not-absorbs* relationship to the three CLIs is
+untouched. What changed is only that the hold is now reasoned from measurement instead of waiting for it.
+
+**What would change this ruling** — stated so the next revival is not a judgement call either: evidence
+that a published skill reaches the skills.sh catalogue **without** a prior install, or Convoke entering a
+catalogue where listings are enumerated from a manifest rather than from telemetry. Either makes "put the
+bootstrap in the channel" an act a publisher can perform.
+
+### A5.3 — What this does not rule
+
+**`IN-257` is untouched.** Whether to submit to `anthropics/claude-plugins-community` — the one measured
+channel that enumerates a manifest, reads it live, and renders the plugin `description` — is **not ruled
+here**, and it was deliberately not bundled into A5.1. It collides with **A1.2**, which ruled against
+selling the differentiator to buy the channel, and that collision deserves its own reading rather than
+arriving as a consequence of a one-line fix. The option of submitting there was offered and declined **for
+now**, not refused.
 
 ## Consequences
 

@@ -12,13 +12,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The plugin listing itself now carries the same notice (ADR-001 A5.1).** If you add Convoke as a
+  Claude Code marketplace (`/plugin marketplace add amalik/convoke-agents`), the description shown before
+  you install now reads `Vortex Framework — 7-stream product discovery for IT transformation
+  consultants. Non-reference listing; complete product on GitHub + npm. Not every agent is listed.` That
+  line is the text Claude Code actually displays pre-install — the individual skills' descriptions are
+  not — so it is where the disclosure had to go. Convoke commits to writing this disclosure on every
+  surface it controls; whether a given channel renders it is the channel's behaviour, not something a
+  publisher can guarantee.
+
 - **The seven Vortex agent skills now say what a channel listing is, and where their limits are recorded
   (`cir-1-3`).** Each one's frontmatter `description` carries `Non-reference listing; complete product on
   GitHub + npm. Not every agent is listed.`, and each file ends with a pointer to the maturity ledger under
   a `## Maturity and limits` heading. The four agents whose description was only their title now have a
-  real one. **Where this does and does not reach you:** the notice is rendered by the two listing channels,
-  which read `.claude-plugin/marketplace.json` and therefore these files directly. It does **not** change
-  the description a host shows for an npm install — `convoke-install` generates its own wrapper whose
+  real one. **Where this does and does not reach you — corrected 2026-10-14 after measuring the channels
+  rather than reasoning about them:** this entry previously said the notice "is rendered by the two listing
+  channels, which read `.claude-plugin/marketplace.json` and therefore these files directly." **That was
+  wrong, and in both directions.** skills.sh does not read the manifest at all — it indexes from CLI
+  install telemetry, so it lists only skills somebody has installed (today: one of the seven, still showing
+  a pre-notice snapshot). Claude Code does read the manifest, live, but the text it shows you before you
+  install is the **plugin entry's** description, not a skill's. So this notice reaches no pre-install
+  listing today; the entry below is the fix for the half that publication can reach. It also does **not**
+  change the description a host shows for an npm install — `convoke-install` generates its own wrapper whose
   description stays `<agent-id> agent` — so if you installed from npm, the listing text is not what your
   assistant matches on. The ledger itself does not ship; the pointer is a link to GitHub.
 

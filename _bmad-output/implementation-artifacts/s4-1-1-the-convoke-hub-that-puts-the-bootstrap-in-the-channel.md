@@ -8,6 +8,18 @@ Status: ready-for-dev
 
 > ## ⏸ DEFERRED 2026-09-28 by operator ruling — do not start. Not cancelled.
 >
+> ### ⏸ DEFERRAL RE-AFFIRMED 2026-10-14 on evidence — ADR-001 **A5.2**. Still do not start.
+>
+> **The revival condition is MET, and the evidence argues against the remedy.** That condition was *"evidence about what actually breaks for a real operator who finds a Convoke skill through a channel"*. Measured 2026-10-14 on raw HTML from the live channel (ADR-001 Amendment 4):
+>
+> - **The defect is real.** `npx skills add https://github.com/amalik/convoke-agents --skill bmad-bme-agent-wade` installs one skill alone — no config, no contracts, no workflows. Defect-1 exactly.
+> - **It is confined to one channel and one skill.** skills.sh lists **1 of the 7** declared agents, because it indexes from CLI install telemetry rather than by reading repositories (**A4.6**), and that one page still serves a June snapshot. On the Claude Code path the failure does not exist at all (**A4.7**): the manifest declares **one plugin** at `source: "./"` carrying all seven skills, and installing a plugin adds its skills, agents, hooks and MCP servers together.
+> - **The remedy depends on the mechanism that is failing.** A hub published for skills.sh appears there only once somebody installs the hub through the CLI. It cannot reach the surface it was designed to repair.
+>
+> **So the hold is now reasoned from measurement rather than waiting for it.** C10 (name `convoke`, registry `kind: skill`) and C11 (fronts the three CLIs) **still stand** and are not retired.
+>
+> **What would change this**, stated so the next revival is not a judgement call: evidence that a published skill reaches the skills.sh catalogue **without** a prior install, or Convoke entering a catalogue that enumerates a manifest rather than telemetry — `IN-257` (`anthropics/claude-plugins-community`) is that possibility, and it is **not** ruled.
+>
 > **The four rulings below are closed and this file is complete. The deferral is about sequencing, not
 > quality.** ADR-001 **Amendment 1** (2026-09-27) made both channels **non-reference and disclaimed** —
 > visibility, not distribution. This story's *Why* is a distribution argument: *"a skill that arrives alone
