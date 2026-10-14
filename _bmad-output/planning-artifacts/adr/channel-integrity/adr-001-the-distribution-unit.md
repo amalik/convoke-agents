@@ -18,7 +18,7 @@ signoff_by: amalik
 # ADR-001: What unit does Convoke distribute?
 
 **Status:** **ACCEPTED** (2026-09-26) — ruled by Amalik: **S4 now**. **⚠ The "S2 as the destination" half of this ruling was overturned by Amendment 1 on 2026-09-27** (§*Amendment 1 — channel tiers, and S2 reopened*): S2 is reopened, is not a destination, and S4 is not a step toward it. Read A1.1–A1.5 before acting on anything below; C1–C14 are not restated by Amendment 1, but **C2 is affected in effect**: it defers an ADR-004 amendment to S2, so with S2 reopened that deferral now points at nothing scheduled.
-**⚠ Amendment 4 (2026-10-14) falsifies a premise shared by A1.3, A1.4 and A2.1** (§*Amendment 4 — what the listing channel actually renders*): the skills.sh catalogue does **not** enumerate `.claude-plugin/marketplace.json`, it lists **1 of the 7** declared skills, and the one it lists serves a snapshot predating `cir-1-3`, so the disclosure's reach on that channel is **0 of 7** today. Amendment 4 **rules nothing** — it records the measurements and leaves the consequent ruling blank.
+**⚠ Amendment 4 (2026-10-14) falsifies a premise shared by A1.3, A1.4 and A2.1** (§*Amendment 4 — what the listing channel actually renders*): the skills.sh catalogue is fed by **CLI install telemetry**, not by reading repositories (A4.6) — it lists **1 of the 7** declared skills, being the only one anyone has installed, and serves a snapshot predating `cir-1-3`, so the disclosure's reach on that channel is **0 of 7** and **no act of publication changes it**. Amendment 4 **rules nothing** — it records the measurements and leaves the consequent ruling blank.
 **Proposed:** 2026-09-26
 **Decision owner:** Amalik
 **Evidence:** [`convoke-note-channel-integrity-findings-2026-09-26.md`](../../convoke-note-channel-integrity-findings-2026-09-26.md)
@@ -364,7 +364,9 @@ A mid-session reading of the summarised page claimed the channel renders the bod
 rather than quietly dropped because the error has the shape this initiative keeps producing: a conclusion
 about an artifact drawn from a description of it instead of from the artifact.
 
-### A4.2 — The catalogue does not enumerate `marketplace.json`, and A1.4 conflated two different readers
+### A4.2 — The catalogue does not enumerate `marketplace.json`, and A1.4 conflated two different readers (⚠ see A4.6)
+
+**⚠ Partly corrected by A4.6 (same day, one question later): the catalogue does not enumerate ANYTHING — it is fed by CLI install telemetry. A1.4's quote may be correct; the error is inferring catalogue reach from manifest declaration. The text below is kept as written.**
 
 | Fact | Value | Source |
 |---|---|---|
@@ -417,7 +419,7 @@ lives.
 listing channels"* and **was not measured** in this pass. A2.1's row is falsified for one channel and
 remains untested for the other.
 
-### A4.4 — What follows as fact: the disclosure's reach on this channel is currently zero, and its arrival is not ours to schedule
+### A4.4 — What follows as fact: the disclosure's reach on this channel is currently zero (⚠ "and its arrival is not ours to schedule" — superseded by A4.6: there is nothing to schedule)
 
 `cir-1-3` shipped the notice in `8f15aa1d` on 2026-10-10 and the bearer in `c8d7594d`. Four days later the
 channel still serves a June snapshot: the rendered body stops at the `DO NOT scope an experiment larger than
@@ -426,7 +428,7 @@ line 77 today) — and carries nothing after it. It is a coherent earlier versio
 and not a collapsed section.
 
 So the disclosure's reach on skills.sh is **0 of 7 today**, and becomes non-zero only when the catalogue
-re-reads. **Convoke does not trigger that re-read, does not observe it, and has no stated expectation of
+re-reads. **⚠ A4.6 corrects this sentence: there is no re-read. Reach on this channel is a function of who installs what, and no act of publication changes it.** **Convoke does not trigger that re-read, does not observe it, and has no stated expectation of
 when it happens.** That is a dependency the plan did not know it had.
 
 This also means the failure mode is **not the one `T275` is waiting for.** `T275` unblocks *"when the
@@ -453,6 +455,66 @@ the second two are the operator's:
    in the same data — a hub is a *new* skill published into a catalogue that indexed one of seven declared
    skills in four months — so the evidence argues both that the defect is real and that the proposed remedy
    depends on the mechanism that is failing. Reviving it is a ruling, and it is not made here.
+
+### A4.6 — The mechanism, found one question later: the catalogue is fed by installs, not by reading repositories
+
+A4.2 said the catalogue does not enumerate `marketplace.json`. That is true, and the reason is deeper than
+A4.2 knew: **it does not enumerate anything.** From skills.sh's own `/about`, quoted:
+
+> *"We index every public skill that **ships through the open skills CLI** and rank them by anonymous
+> install telemetry."*
+
+and from `/docs`:
+
+> *"The skills leaderboard ranks skills based on anonymous telemetry data collected from the skills CLI.
+> When users install skills, aggregated usage data helps surface the most popular and useful skills."*
+
+**This explains all three anomalies at once, which is why it is worth more than the separate findings it
+replaces:**
+
+| Anomaly A4.2 recorded | What the mechanism says |
+|---|---|
+| 1 of 7 listed | Wade has **1 install**. The other six have none, so nothing ever entered them |
+| "first seen Jun 16, 2026" | Not a crawl date — the date of that install |
+| A June snapshot four days after `8f15aa1d` | Content captured around the install event; no later install, no later capture |
+
+**What this corrects in A4.2.** A4.2 charged A1.4 with conflating the CLI and the catalogue. The conflation
+was real but the framing was unfair to the quote: **A1.4's `npx skills` README quote may be entirely
+correct** — the CLI plausibly does read `marketplace.json` when installing from a repository, and nothing
+here tests it. The actual error is one step further on. A1.4 inferred *catalogue reach* from *manifest
+declaration*, and the catalogue is downstream of **installs**, not of the manifest. Declaring a skill does
+not list it. Someone has to install it.
+
+**The consequence that matters, and it is not a scheduling problem.** A4.4 framed the zero reach as waiting
+on a third party's re-read. That framing is wrong. There is no re-read to wait for:
+
+- The six undeclared-in-practice agents carry no disclosure on this channel **because they are not on this
+  channel at all**, and publishing cannot put them there.
+- The one that is there shows a four-month-old description, and the only event known to refresh it is
+  another install.
+- **A1.1's commitment — that both channels are non-reference and disclaimed — is therefore not satisfiable
+  on skills.sh by any act of publication.** Reach is a function of who installs what. That is a property of
+  the channel, not a gap in `cir-1-3`, which did its job correctly in the files.
+
+**Inference boundary, stated because the rest of this amendment is measurement.** The three quotes are
+verbatim site text. That a listing is *caused* by an install event, and that the snapshot is captured at
+that event, is an **inference** from four convergent facts (install count 1, "first seen" date, frozen
+content, six absent siblings) and is not stated policy anywhere on the site. **Untested:** whether a
+subsequent install refreshes the snapshot. That is now the only cheap experiment left, and it is
+self-answering — an install of any one of the six would both test the mechanism and, if the inference
+holds, place a correctly-disclosed listing on the channel.
+
+**And there is no public instrument for re-measuring this.** `GET /api/v1/skills?q=convoke` and
+`GET /api/v1/skills/amalik/convoke-agents` both return **HTTP 401**
+(`{"error":"authentication_required"}`), and authentication is a Vercel OIDC token scoped to a Vercel
+project. No refresh, re-index, claim or submit affordance appears on any of the four pages fetched
+(`/`, `/docs`, `/about`, and both repository pages): all of `refresh`, `reindex`, `resync`, `claim`,
+`submit` grep to **0**. Raw-HTML grep is the only instrument available, so any future assertion about this
+channel is a manual measurement rather than a gate.
+
+**Bearing on `s4-1-1`, strengthening the counter-fact in A4.5(4) rather than settling it:** a hub skill
+published into this channel would appear on it only when somebody installs the hub through the CLI. "Put
+the bootstrap in the channel" is not an act the publisher can perform here. Still not ruled.
 
 ## Consequences
 
