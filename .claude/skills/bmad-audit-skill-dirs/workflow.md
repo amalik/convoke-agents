@@ -6,6 +6,8 @@
 
 ## Steps
 
+**In a Convoke development checkout** (the project root's `package.json` has `"name": "convoke-agents"`), run `scripts/audit/audit-skill-dirs.js` with `node` and the same arguments instead of the `npx` command in step 1: inside the checkout, `npx -p convoke-agents` finds the checkout's own package name, installs nothing, and the command is not found or resolves to an old global copy.
+
 1. Run `npx -p convoke-agents convoke-audit-skill-dirs --verbose` via Bash from the project root. Pipe stdout + stderr together so the operator sees everything.
 2. Inspect the exit code:
    - **0:** All skill dirs passed v6.3 compliance check. Tell the operator how many were scanned and confirm the install looks healthy.

@@ -49,10 +49,12 @@ Greet `{user_name}` and explain what's about to happen in two sentences:
 
 ### 2. Run the portfolio engine
 
+**In a Convoke development checkout** (the project root's `package.json` has `"name": "convoke-agents"`), run `scripts/lib/portfolio/portfolio-engine.js` with `node` and the same arguments instead of the `npx` command below: inside the checkout, `npx -p convoke-agents` finds the checkout's own package name, installs nothing, and the command is not found or resolves to an old global copy.
+
 Shell out to:
 
 ```
-node scripts/lib/portfolio/portfolio-engine.js --markdown
+npx -p convoke-agents convoke-portfolio --markdown
 ```
 
 Capture stdout in full as `{{scanOutput}}`. The engine returns immediately — there's no interactive prompt to handle.

@@ -48,6 +48,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   legal advice, and it does not make a study compliant with any law. If you have edited these workflow
   files, `convoke-update` backs up `_bmad/bme/` before replacing them; `convoke-install` does not.
 
+### Removed
+
+- **`/bmad-generate-catalog`, `/bmad-seed-catalog` and `/bmad-validate-exports` are no longer installed into
+  your project (`T255`).** They build and check Convoke's own published skill catalog, they had no command an
+  installed project could run, and the validator reports a missing catalog README, LICENSE and CONTRIBUTING on
+  any export you make. Their files still run from a Convoke checkout. Your next update removes the three wrappers from
+  `.claude/skills/`, copying each to `_bmad-output/.backups/skill-wrappers/` first whether or not you edited it,
+  so expect three copies there that are Convoke's own text. `/bmad-export-skill` stays, and is fixed below.
+
+### Fixed
+
+- **Three in-chat workflows called a script that does not exist in your project (`T255`).** `/bmad-export-skill`,
+  `/bmad-migrate-artifacts` and `/bmad-portfolio-status` told the agent to run `node scripts/…`, which is
+  present only in a Convoke checkout, so in an installed project each failed with `MODULE_NOT_FOUND`. They now
+  run the published commands (`npx -p convoke-agents convoke-export`, `convoke-migrate-artifacts`,
+  `convoke-portfolio`). The `bmad-register-skill` workflow in the package had the same defect and is fixed
+  the same way.
+
 ---
 
 ## [4.0.4] - 2026-10-09

@@ -4,6 +4,8 @@
 
 **Your Role:** You are a catalog seeding assistant. Guide the user through the seeding process, run the generator, and present results with next steps. Never dump raw output.
 
+**Maintainer tool.** This builds or checks Convoke's own published skill catalog. It runs in a Convoke development checkout, where `node scripts/…` resolves; it is not installed into operator projects (T255).
+
 ---
 
 ## EXECUTION

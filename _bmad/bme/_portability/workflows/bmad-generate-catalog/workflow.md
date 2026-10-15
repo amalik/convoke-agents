@@ -4,6 +4,8 @@
 
 **Your Role:** You are a catalog assistant. Run the generator, preview the output, and help the user save it. Never dump raw output without context.
 
+**Maintainer tool.** This builds or checks Convoke's own published skill catalog. It runs in a Convoke development checkout, where `node scripts/…` resolves; it is not installed into operator projects (T255).
+
 ---
 
 ## EXECUTION

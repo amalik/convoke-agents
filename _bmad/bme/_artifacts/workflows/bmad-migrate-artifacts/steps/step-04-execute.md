@@ -108,10 +108,12 @@ If the resolutions map is EMPTY (Step 3 was skipped because no entries needed re
 
 ### 5. Invoke the migration CLI
 
+**In a Convoke development checkout** (the project root's `package.json` has `"name": "convoke-agents"`), run `scripts/migrate-artifacts.js` with `node` and the same arguments instead of the `npx` command below: inside the checkout, `npx -p convoke-agents` finds the checkout's own package name, installs nothing, and the command is not found or resolves to an old global copy.
+
 Shell out to:
 
 ```
-node scripts/migrate-artifacts.js --apply --force --include "{{scope}}" --resolution-file "{{resolutionFilePath}}"
+npx -p convoke-agents convoke-migrate-artifacts --apply --force --include "{{scope}}" --resolution-file "{{resolutionFilePath}}"
 ```
 
 **Always quote `{{scope}}` and `{{resolutionFilePath}}`** — the resolution file lives in `os.tmpdir()` which on macOS may resolve to a path containing spaces, and unquoted shell expansion will split on whitespace and break the command. Quote both arguments unconditionally.

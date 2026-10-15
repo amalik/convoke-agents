@@ -1,6 +1,6 @@
 name: portability
 version: 1.0.0
-description: "Portability module — operator-facing skills for exporting Convoke skills to other AI platforms (export, catalog generation, catalog seeding, export validation)"
+description: "Portability module — the operator-facing skill for exporting Convoke skills to other AI platforms"
 # Workflows in this module are STANDALONE (operator invokes them directly via slash command),
 # mirroring _bmad/bme/_artifacts/config.yaml, whose block this follows. The `standalone: true`
 # flag is what refresh-installation.js consumes to generate a .claude/skills/ wrapper instead of
@@ -10,16 +10,15 @@ description: "Portability module — operator-facing skills for exporting Convok
 # THIS FILE IS WHY THE MODULE IS REACHABLE. Without it the module declared nothing, no wrapper
 # was ever generated, and all four skills shipped to every operator unreachable — the defect
 # story dist-2-6 exists to close, and the standing finding assert-installed-tree.js reported.
+#
+# THREE WORKFLOWS WERE WITHDRAWN FROM OPERATOR INSTALLS BY T255 (2026-10-15): bmad-generate-catalog,
+# bmad-seed-catalog and bmad-validate-exports. They build and check Convoke's own published catalog
+# repository -- the validator reports a missing catalog README, LICENSE and CONTRIBUTING on any export
+# an operator makes -- and they run `node scripts/...`, which exists only in a Convoke checkout. Their
+# directories still ship under workflows/ and still work there. They are listed in
+# RETIRED_VERBATIM_WRAPPERS in refresh-installation.js so that a refresh removes the wrappers an
+# earlier install generated; leaving them out of this list alone would strand those wrappers.
 workflows:
   - name: bmad-export-skill
     entry: workflows/bmad-export-skill/workflow.md
-    standalone: true
-  - name: bmad-generate-catalog
-    entry: workflows/bmad-generate-catalog/workflow.md
-    standalone: true
-  - name: bmad-seed-catalog
-    entry: workflows/bmad-seed-catalog/workflow.md
-    standalone: true
-  - name: bmad-validate-exports
-    entry: workflows/bmad-validate-exports/workflow.md
     standalone: true

@@ -11,7 +11,7 @@ This directory is Convoke's owned namespace — everything under `_bmad/bme/` is
 | [`_artifacts/`](./_artifacts/) | Artifact governance — migration + portfolio |
 | [`_enhance/`](./_enhance/) | Skill extensions — initiatives backlog, RICE scoring |
 | [`_gyre/`](./_gyre/) | Gyre team — production readiness agents |
-| [`_portability/`](./_portability/) | Skill export + catalog generation |
+| [`_portability/`](./_portability/) | Skill export (catalog tools run only in a Convoke checkout) |
 | [`_vortex/`](./_vortex/) | Vortex team — 7-stream product discovery |
 | `_config/` | Scaffolding (currently empty; reserved) |
 

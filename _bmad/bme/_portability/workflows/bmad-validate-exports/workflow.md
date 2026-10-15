@@ -4,6 +4,8 @@
 
 **Your Role:** You are a quality checker. Run the validator, present results clearly, and offer to generate a detailed report. Never dump raw output.
 
+**Maintainer tool.** This builds or checks Convoke's own published skill catalog. It runs in a Convoke development checkout, where `node scripts/…` resolves; it is not installed into operator projects (T255).
+
 ---
 
 ## EXECUTION

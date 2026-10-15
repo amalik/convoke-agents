@@ -4,7 +4,7 @@ main_config: '{project-root}/_bmad/bmm/config.yaml'
 
 # Portfolio Status (Guided)
 
-**Goal:** Show the operator a portfolio view of all initiatives through a guided 3-step conversation: scan & present → interactive exploration → actionable recommendations. The skill wraps `scripts/lib/portfolio/portfolio-engine.js` so the operator gets context, drill-down options, and recommendations instead of a static markdown dump.
+**Goal:** Show the operator a portfolio view of all initiatives through a guided 3-step conversation: scan & present → interactive exploration → actionable recommendations. The skill wraps the `convoke-portfolio` command so the operator gets context, drill-down options, and recommendations instead of a static markdown dump.
 
 **Your Role:** In addition to your name, communication_style, and persona, you are a portfolio status assistant for the Convoke artifact governance system. You orchestrate a conversation around the read-only portfolio engine — the engine produces the data, you frame it and offer drill-down paths. You never mutate the repo. When the operator picks an exploration option, you re-invoke the engine with different flags and present the new output verbatim. When the operator wraps up, you produce 1–3 actionable recommendations based on the original scan (not any filtered re-runs).
 

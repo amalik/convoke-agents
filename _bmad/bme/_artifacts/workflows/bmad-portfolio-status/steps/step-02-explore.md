@@ -42,6 +42,8 @@ To present a numbered exploration menu and let the operator drill into specific 
 
 ## Sequence of Instructions (Do not deviate, skip, or optimize)
 
+**In a Convoke development checkout** (the project root's `package.json` has `"name": "convoke-agents"`), run `scripts/lib/portfolio/portfolio-engine.js` with `node` and the same arguments instead of each `npx` command below: inside the checkout, `npx -p convoke-agents` finds the checkout's own package name, installs nothing, and the command is not found or resolves to an old global copy.
+
 ### 1. Present the menu
 
 Display:
@@ -66,7 +68,7 @@ HALT for input.
 
 1. Ask: `"Which initiative? (e.g. gyre, forge, helm, convoke)"` and HALT.
 2. On response, validate the initiative is one shown in `{{scanOutput}}`'s table. If not, reply `"Initiative '{name}' not in current portfolio. Try one of: {list}."` and re-ask.
-3. Shell out to: `node scripts/lib/portfolio/portfolio-engine.js --markdown --verbose`
+3. Shell out to: `npx -p convoke-agents convoke-portfolio --markdown --verbose`
 4. The verbose flag adds an `--- Inference Trace ---` block at the bottom showing per-initiative `phase: ... (source, confidence) | status: ...`
 5. Extract just the lines for the chosen initiative from the trace block and present them along with that initiative's row from the table.
 6. Loop back to step 1 (re-display the menu).
@@ -74,19 +76,19 @@ HALT for input.
 **`[2]` — Filter by prefix**
 
 1. Ask: `"Initiative prefix to filter by? (e.g. 'gyre' to show just gyre)"` and HALT.
-2. On response, shell out to: `node scripts/lib/portfolio/portfolio-engine.js --markdown --filter "{prefix}"`
+2. On response, shell out to: `npx -p convoke-agents convoke-portfolio --markdown --filter "{prefix}"`
 3. Present the filtered output verbatim.
 4. Loop back to step 1.
 
 **`[3]` — Sort by last activity**
 
-1. Shell out to: `node scripts/lib/portfolio/portfolio-engine.js --markdown --sort last-activity`
+1. Shell out to: `npx -p convoke-agents convoke-portfolio --markdown --sort last-activity`
 2. Present the re-sorted output verbatim.
 3. Loop back to step 1.
 
 **`[4]` — Show unattributed details**
 
-1. Shell out to: `node scripts/lib/portfolio/portfolio-engine.js --markdown --show-unattributed`
+1. Shell out to: `npx -p convoke-agents convoke-portfolio --markdown --show-unattributed`
 2. The output will include a `--- Unattributed Files (N) ---` block followed by per-file lines with reasons.
 3. Present the output verbatim.
 4. Loop back to step 1.

@@ -1349,7 +1349,7 @@ You must fully embody this agent's persona and follow all activation instruction
     // same footing. Before this the four portability wrappers were safe from Strategy 2 only BY
     // ACCIDENT -- their names matched no known Artifacts workflow -- and a workflow later removed
     // from portability's config.yaml would have been stranded rather than cleaned.
-    const knownVerbatimNames = new Set();
+    const knownVerbatimNames = new Set(RETIRED_VERBATIM_WRAPPERS);
     for (const cfg of [artifactsConfig, portabilityConfig]) {
       if (cfg && Array.isArray(cfg.workflows)) {
         for (const wf of cfg.workflows) {
@@ -1514,6 +1514,14 @@ function manifestRowSeeds(rel, projectRootResolved) {
     return false;
   }
 }
+
+// Workflow wrappers Convoke generated under their verbatim name and no longer does. A module config
+// lists only what it installs now, so a name dropped from it would otherwise be unknown to
+// `cleanupOrphanWorkflowWrappers` and its wrapper stranded in every project that has it. T255 withdrew
+// the three catalog-publishing workflows from `_portability/config.yaml`; they are listed here so the
+// next refresh removes their wrappers. Strategy 2 has no expected text to compare against, so each one is
+// copied aside first whether or not it was edited (T252) -- one copy per project, made once.
+const RETIRED_VERBATIM_WRAPPERS = ['bmad-generate-catalog', 'bmad-seed-catalog', 'bmad-validate-exports'];
 
 // Where a wrapper is copied before the refresh removes or rewrites it (T252). Under
 // `_bmad-output/.backups/`, which `backup-manager.js` already writes to, and outside
@@ -1882,6 +1890,7 @@ module.exports = {
   refreshInstallation,
   cleanupOrphanWorkflowWrappers,
   isSameDirectoryEntry,
+  RETIRED_VERBATIM_WRAPPERS,
   WRAPPER_BACKUP_REL,
   manifestRowSeeds,
   seedBmmDependencies,

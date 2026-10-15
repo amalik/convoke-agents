@@ -43,10 +43,12 @@ To run the migration in dry-run mode, parse the manifest output into 5 categorie
 
 ### 1. Run the migration in dry-run mode
 
+**In a Convoke development checkout** (the project root's `package.json` has `"name": "convoke-agents"`), run `scripts/migrate-artifacts.js` with `node` and the same arguments instead of the `npx` command below: inside the checkout, `npx -p convoke-agents` finds the checkout's own package name, installs nothing, and the command is not found or resolves to an old global copy.
+
 Shell out to:
 
 ```
-node scripts/migrate-artifacts.js --include {{scope}}
+npx -p convoke-agents convoke-migrate-artifacts --include {{scope}}
 ```
 
 Capture stdout in full. **Note:** the CLI returns immediately after printing the manifest in dry-run mode (no `--apply`) — it does NOT enter the interactive ambiguity prompt. That only fires in apply mode. So this shell-out cannot hang on operator input. The CLI will output a manifest in this format (defined in `scripts/lib/artifact-utils.js` `formatManifest()`):

@@ -33,11 +33,13 @@ Extract from the invocation text:
 
 Use the project root to construct the command. Default output: `./exported-skills/` from project root.
 
+**In a Convoke development checkout** (the project root's `package.json` has `"name": "convoke-agents"`), run `scripts/portability/convoke-export.js` with `node` and the same arguments instead of the `npx` commands below: inside the checkout, `npx -p convoke-agents` finds the checkout's own package name, installs nothing, and the command is not found or resolves to an old global copy.
+
 | Mode | Command |
 |---|---|
-| Single skill | `node scripts/portability/convoke-export.js <name> --output <path>` |
-| Tier batch | `node scripts/portability/convoke-export.js --tier <N> --output <path>` |
-| All | `node scripts/portability/convoke-export.js --all --output <path>` |
+| Single skill | `npx -p convoke-agents convoke-export <name> --output <path>` |
+| Tier batch | `npx -p convoke-agents convoke-export --tier <N> --output <path>` |
+| All | `npx -p convoke-agents convoke-export --all --output <path>` |
 
 Add `--dry-run` if the user requested a preview.
 
@@ -51,7 +53,7 @@ Parse the command output and exit code:
 - Count the `✅` lines in stdout for the success count
 - Report: "Exported **N** skill(s) to `<path>/`. Each skill has `instructions.md`, `README.md`, and platform adapters for Claude Code, Copilot, and Cursor."
 - If warnings > 0: "**W** warnings generated (mostly unmapped config variables — safe to ignore)."
-- Suggest next steps: "You can now run `/bmad-generate-catalog` to create the browsable catalog, or `/bmad-validate-exports` to verify the output."
+- Suggest next steps: "Each skill's `README.md` says where to copy its adapter for Claude Code, Copilot, or Cursor."
 
 **Exit 2 — Skill not found:**
 - Report: "Skill `<name>` was not found in the manifest. Check the spelling or run `/bmad-help` to see available skills."
@@ -67,8 +69,9 @@ Parse the command output and exit code:
 **Dry run:**
 - If `[DRY RUN]` appears in output: "Preview complete — would export **N** skills. No files were written."
 
-**Exit 1 — Usage error:**
-- Report: "Invalid arguments. Check the skill name and flags. Run `/bmad-help` for guidance."
+**Exit 1 — Usage error, or the package could not be fetched:**
+- If stderr has `npm error` lines, `npx` could not fetch `convoke-agents` (offline, or a registry problem): report those lines verbatim.
+- Otherwise report: "Invalid arguments. Check the skill name and flags. Run `/bmad-help` for guidance."
 
 **Any other error:**
-- Report the error message from stderr and suggest checking the script directly.
+- Report the error message from stderr verbatim.

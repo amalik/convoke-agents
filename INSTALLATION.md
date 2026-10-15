@@ -88,7 +88,7 @@ your-project/
 │   │   ├── workflows/        # Migrate artifacts, portfolio status
 │   │   └── config.yaml       # Configuration
 │   └── _portability/         # Skill: Export Convoke skills to other AI platforms
-│       ├── workflows/        # Export skill, generate/seed catalog, validate exports
+│       ├── workflows/        # Export skill (plus three catalog tools that run only in a Convoke checkout)
 │       └── config.yaml       # Configuration
 ├── .claude/skills/           # Claude Code skill wrappers (auto-generated)
 ├── _bmad/_config/
@@ -106,10 +106,10 @@ your-project/
 | **Gyre** | 4 agents, 7 workflows, 4 contract schemas (GC1-GC4), 5 user guides (4 agents + the team guide) |
 | **Enhance** | Skill workflows, menu patch descriptors, module author guide |
 | **Artifacts** | Artifact governance and portfolio workflows |
-| **Portability** | Skills for exporting Convoke skills to other AI platforms (export, catalog generation, catalog seeding, export validation) |
+| **Portability** | The skill for exporting Convoke skills to other AI platforms |
 | **Skills** | Claude Code skill wrappers in `.claude/skills/` for every installed agent |
 
-The `convoke-export` **command** runs from the npm package and needs no installation. The Portability **skills** install like every other module's: `_bmad/bme/_portability/` is copied into your project and each of its workflows gets a `.claude/skills/` wrapper, so you can invoke them as slash commands.
+The `convoke-export` **command** runs from the npm package and needs no installation. The Portability **skills** install like every other module's: `_bmad/bme/_portability/` is copied into your project and `bmad-export-skill` gets a `.claude/skills/` wrapper, so you can invoke it as `/bmad-export-skill`. The directory also holds three catalog-publishing workflows that get no wrapper: they run only in a Convoke checkout.
 
 ---
 
