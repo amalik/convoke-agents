@@ -153,6 +153,15 @@ describe('previewMigrations — the refresh plan warns about the configs and poi
     assert.ok(guide.includes(`### ${CANONICAL}`), 'the section the plan points at is gone from the guide');
   });
 
+  it('states the whole scope of a refresh instead of a partial list (T248)', async () => {
+    const text = await planText();
+    // The list it replaced named agent files, workflow directories, configs and guides, and left out
+    // contracts, examples, three whole module trees, the skill wrappers and the operator's own files.
+    assert.match(text, /Most of _bmad\/bme\/ is replaced from the package, including files you added there/);
+    assert.match(text, /Skill wrappers in \.claude\/skills\/ are regenerated, and withdrawn ones removed/);
+    assert.ok(!/Refresh agent files/.test(text), 'the partial list is back');
+  });
+
   it('makes no unscoped promise of preservation', async () => {
     const text = await planText();
     assert.match(text, /- Update module config\.yaml files/, 'anchor: the config line is present');

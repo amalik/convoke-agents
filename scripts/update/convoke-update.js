@@ -62,7 +62,7 @@ function printBackupScope({ migration = false } = {}) {
   if (migration) {
     // The migration path passes its own write-set to `createBackup` on top of this list, so the
     // static set understates it there. Saying so beats listing rows this function cannot see.
-    console.log(chalk.cyan('  plus every file the migrations below declare they will rewrite'));
+    console.log(chalk.cyan('  plus every file the migrations listed above declare they will rewrite'));
   }
   // Hardcoded because these are ABSENCES, not entries — nothing in the backup set names them.
   // Stated as a class and then an example: an earlier version named `.claude/skills/` alone and
@@ -403,6 +403,13 @@ async function main() {
     printChangelog(assessment.currentVersion, assessment.targetVersion);
 
     if (dryRun) {
+      // T248: a dry run exited here, before the backup scope the real run prints at its prompt, so
+      // the command meant to show what will happen showed less than the run itself.
+      console.log(chalk.white('The refresh:'));
+      migrationRunner.printRefreshPlan();
+      console.log('');
+      printBackupScope();
+      console.log('');
       console.log(chalk.yellow.bold('DRY RUN — no changes will be made'));
       console.log('');
       process.exit(0);
@@ -485,6 +492,11 @@ async function main() {
       process.exit(1);
     }
 
+    // T248: same as the refresh-only branch -- show the backup scope the real run prints.
+    printBackupScope({ migration: true });
+    console.log('');
+    console.log(chalk.yellow.bold('DRY RUN — no changes will be made'));
+    console.log('');
     process.exit(0);
   }
 

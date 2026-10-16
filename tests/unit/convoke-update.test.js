@@ -769,3 +769,50 @@ describe('convoke-update CLI (main)', () => {
     }
   });
 });
+
+// ─── T248: a dry run shows what the real run would back up and replace ───────────
+
+describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
+  // Both dry-run branches used to exit before printBackupScope(), so the command whose only job is
+  // to show what will happen showed less than the confirmation prompt of the real run. Each test
+  // reaches one branch, and asserts on text that only the backup printer and the refresh plan emit.
+  const BACKUP_HEADER = 'Backed up first, and restorable from _bmad-output/.backups/:';
+  const NOT_BACKED_UP = 'NOT in this backup';
+  const REFRESH_SCOPE = 'Most of _bmad/bme/ is replaced from the package';
+
+  async function dryRunIn(setup) {
+    const tmpDir = await createTempDir('bmad-t248-');
+    try {
+      await setup(tmpDir);
+      return await runScript(SCRIPT_PATH, ['--dry-run'], { cwd: tmpDir });
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  }
+
+  it('the migration dry run prints what is backed up and what a refresh replaces', async () => {
+    const { exitCode, stdout } = await dryRunIn((dir) => createInstallation(dir, '1.4.1'));
+    assert.equal(exitCode, 0);
+    assert.ok(stdout.includes('Migration Plan'), 'fixture: this is the migration branch');
+    assert.ok(stdout.includes(BACKUP_HEADER), 'the backup scope is missing from the migration dry run');
+    assert.ok(stdout.includes('plus every file the migrations listed above declare'),
+      'the migration branch must print the migration variant of the backup scope');
+    assert.ok(stdout.includes(NOT_BACKED_UP), 'the dry run must also say what is not backed up');
+    assert.ok(stdout.includes(REFRESH_SCOPE), 'the refresh plan must state the whole scope');
+  });
+
+  it('the refresh-only dry run prints what is backed up and what a refresh replaces', async () => {
+    const { exitCode, stdout } = await dryRunIn(async (dir) => {
+      await createValidInstallation(dir);
+      const configPath = path.join(dir, '_bmad/bme/_vortex/config.yaml');
+      const config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+      config.version = '0.9.0'; // no registered migration from here, so this is the refresh-only branch
+      fs.writeFileSync(configPath, yaml.dump(config), 'utf8');
+    });
+    assert.equal(exitCode, 0);
+    assert.ok(stdout.includes('No migration deltas needed'), 'fixture: this is the refresh-only branch');
+    assert.ok(stdout.includes(BACKUP_HEADER), 'the backup scope is missing from the refresh-only dry run');
+    assert.ok(stdout.includes(NOT_BACKED_UP), 'the dry run must also say what is not backed up');
+    assert.ok(stdout.includes(REFRESH_SCOPE), 'the refresh plan must be shown on this branch too');
+  });
+});

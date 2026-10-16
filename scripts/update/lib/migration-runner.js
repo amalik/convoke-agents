@@ -10,7 +10,6 @@ const configMerger = require('./config-merger');
 const validator = require('./validator');
 const { refreshInstallation } = require('./refresh-installation');
 const registry = require('../migrations/registry');
-const { WORKFLOW_NAMES, GYRE_WORKFLOW_NAMES } = require('./agent-registry');
 
 /**
  * Migration Runner for Convoke
@@ -232,6 +231,35 @@ async function runMigrations(fromVersion, options = {}) {
 }
 
 /**
+ * Print what a refresh replaces. Shared by the migration preview and by `convoke-update`'s
+ * refresh-only dry run, so the two plans cannot say different things.
+ *
+ * T248: this used to list agent files, Vortex and Gyre workflow directories, the module configs
+ * and the guides, which left out the contracts, the examples, the other module trees, the
+ * regenerated skill wrappers and any file the operator had added under `_bmad/bme/` -- most of which
+ * a refresh replaces. It now states the scope instead of enumerating it, and points at the guide
+ * for the exceptions; a list is the instrument that kept going stale here.
+ */
+function printRefreshPlan() {
+  console.log(chalk.gray('  - Most of _bmad/bme/ is replaced from the package, including files you added there'));
+  console.log(chalk.gray('      UPDATE-GUIDE.md "Automatic Backups" says what survives, as measured'));
+  console.log(chalk.gray('  - Skill wrappers in .claude/skills/ are regenerated, and withdrawn ones removed'));
+  // T239: this said `Update config.yaml (preserving user preferences)` — singular, and true only
+  // for the two modules `configMerger.mergeConfig` carries a profile for. The other three are
+  // replaced from the package template, which the operator reading this plan was never told.
+  // T239 R2: this printed the kept/replaced split in full. `UPDATE-GUIDE.md`'s canonical section
+  // declares itself the single statement of that fact and says to make every other mention a
+  // pointer rather than a second copy — this was the second copy, and the two ended up pinned to
+  // different authorities. Two review rounds produced 3 HIGH and 11 MEDIUM findings against the
+  // restatement and its pins, and not one was a defect in what the refresh does. So it states the
+  // warning an operator needs at this moment and delegates the detail to the one place that carries
+  // it, including the qualifications no single line can hold (`T244`, `T245`).
+  console.log(chalk.gray('  - Update module config.yaml files — not all of them keep your values'));
+  console.log(chalk.gray(
+    '      see UPDATE-GUIDE.md "Which configs are checked, and which are preserved"'));
+}
+
+/**
  * Preview migrations without applying
  */
 async function previewMigrations(migrations) {
@@ -254,27 +282,7 @@ async function previewMigrations(migrations) {
 
   console.log('');
   console.log(chalk.white('After deltas, installation will be refreshed:'));
-  console.log(chalk.gray('  - Refresh agent files'));
-  console.log(chalk.gray(
-    `  - Refresh ${WORKFLOW_NAMES.length} Vortex and ${GYRE_WORKFLOW_NAMES.length} Gyre workflow directories`));
-  // T239: this said `Update config.yaml (preserving user preferences)` — singular, and true only
-  // for the two modules `configMerger.mergeConfig` carries a profile for. The other three are
-  // replaced from the package template, which the operator reading this plan was never told.
-  // Derived from both authorities rather than written out: the modules whose values survive ARE
-  // the `MODULE_PROFILES` keys (mergeConfig throws when named any other submodule), and the set
-  // whose config a refresh writes is the guarded set. `tests/unit/migration-runner.test.js` reads
-  // this output back, so the two cannot drift apart silently.
-  // T239 R2: this printed the kept/replaced split in full. `UPDATE-GUIDE.md`'s canonical section
-  // declares itself the single statement of that fact and says to make every other mention a
-  // pointer rather than a second copy — this was the second copy, and the two ended up pinned to
-  // different authorities. Two review rounds produced 3 HIGH and 11 MEDIUM findings against the
-  // restatement and its pins, and not one was a defect in what the refresh does. So it states the
-  // warning an operator needs at this moment and delegates the detail to the one place that carries
-  // it, including the qualifications no single line can hold (`T244`, `T245`).
-  console.log(chalk.gray('  - Update module config.yaml files — not all of them keep your values'));
-  console.log(chalk.gray(
-    '      see UPDATE-GUIDE.md "Which configs are checked, and which are preserved"'));
-  console.log(chalk.gray('  - Update user guides (with .bak backup)'));
+  printRefreshPlan();
   console.log('');
   console.log(chalk.green('To apply these changes, run:'));
   console.log(chalk.cyan('  npx -p convoke-agents convoke-update'));
@@ -517,6 +525,7 @@ module.exports = {
   runMigrations,
   runRefreshOnly,
   previewMigrations,
+  printRefreshPlan,
   executeMigration,
   MigrationError
 };

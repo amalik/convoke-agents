@@ -59,6 +59,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`convoke-update --dry-run` now shows what the real run would back up and replace (`T248`).** Both of
+  its branches stopped before printing the backup inventory that the real run shows at its confirmation
+  prompt, and the migration preview listed only part of what a refresh replaces -- agent files, workflow
+  directories, configs and guides, but not the contracts, the examples, the other module trees, the skill
+  wrappers, or files you had added under `_bmad/bme/`. A dry run now prints the backup inventory, and both
+  branches print the same statement of what a refresh replaces.
+
 - **Three in-chat workflows called a script that does not exist in your project (`T255`).** `/bmad-export-skill`,
   `/bmad-migrate-artifacts` and `/bmad-portfolio-status` told the agent to run `node scripts/…`, which is
   present only in a Convoke checkout, so in an installed project each failed with `MODULE_NOT_FOUND`. They now
