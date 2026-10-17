@@ -241,9 +241,12 @@ async function runMigrations(fromVersion, options = {}) {
  * for the exceptions; a list is the instrument that kept going stale here.
  */
 function printRefreshPlan() {
+  // tests/unit/migration-runner.test.js and tests/unit/convoke-update.test.js read this output
+  // back, so a change of wording here is a change those tests must agree to.
   console.log(chalk.gray('  - Most of _bmad/bme/ is replaced from the package, including files you added there'));
   console.log(chalk.gray('      UPDATE-GUIDE.md "Automatic Backups" says what survives, as measured'));
   console.log(chalk.gray('  - Skill wrappers in .claude/skills/ are regenerated, and withdrawn ones removed'));
+  console.log(chalk.gray('  - The agent manifest in _bmad/_config/ is regenerated'));
   // T239: this said `Update config.yaml (preserving user preferences)` — singular, and true only
   // for the two modules `configMerger.mergeConfig` carries a profile for. The other three are
   // replaced from the package template, which the operator reading this plan was never told.

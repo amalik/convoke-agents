@@ -61,16 +61,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`convoke-update --dry-run` now shows what the real run would back up and replace (`T248`).** Both of
   its branches stopped before printing the backup inventory that the real run shows at its confirmation
-  prompt, and the migration preview listed only part of what a refresh replaces -- agent files, workflow
+  prompt, and the migration preview listed only part of what a refresh replaces — agent files, workflow
   directories, configs and guides, but not the contracts, the examples, the other module trees, the skill
   wrappers, or files you had added under `_bmad/bme/`. A dry run now prints the backup inventory, and both
   branches print the same statement of what a refresh replaces.
 
 - **`convoke-update` output piped into another program is no longer cut short (`T248`).** The command ended
-  most paths with `process.exit()`, which discards output still queued for a pipe. A long run -- a dry run
-  from a 1.x install prints about 90 KB of changelog -- piped into a reader that was not keeping up lost
+  most paths with `process.exit()`, which discards output still queued for a pipe. A long run — a dry run
+  from a 1.x install prints about 90 KB of changelog — piped into a reader that was not keeping up lost
   everything after the first 64 KB, which is where the backup scope and the `DRY RUN` banner are. It now sets
-  the exit code and lets the output finish.
+  the exit code and lets the output finish. A reader that stops early, such as `| head`, is not treated as
+  an error.
 
 - **Three in-chat workflows called a script that does not exist in your project (`T255`).** `/bmad-export-skill`,
   `/bmad-migrate-artifacts` and `/bmad-portfolio-status` told the agent to run `node scripts/…`, which is

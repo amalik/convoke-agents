@@ -790,6 +790,23 @@ describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
     }
   }
 
+  // Runs a POSIX shell pipeline in `cwd` and resolves with its output and exit code. A hung
+  // pipeline is killed and reported as a failure rather than hanging the suite.
+  function runPipeline(cwd, script, extraEnv = {}) {
+    return new Promise((resolve, reject) => {
+      const child = spawn('/bin/sh', ['-c', script], {
+        cwd, env: { ...process.env, NODE: process.execPath, SCRIPT: SCRIPT_PATH, ...extraEnv }, stdio: ['ignore', 'pipe', 'ignore'],
+      });
+      const chunks = [];
+      const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('pipeline did not finish within 30 s')); }, 30000);
+      child.stdout.on('data', c => chunks.push(c));
+      child.on('close', code => { clearTimeout(timer); resolve({ code, out: Buffer.concat(chunks).toString('utf8') }); });
+    });
+  }
+
+  // These pipe tests need a POSIX shell. CI runs on Linux only; a Windows contributor skips them.
+  const NO_SH = process.platform === 'win32' ? 'needs /bin/sh, which Windows does not have' : false;
+
   it('the migration dry run prints what is backed up and what a refresh replaces', async () => {
     const { exitCode, stdout } = await dryRunIn((dir) => createInstallation(dir, '1.4.1'));
     assert.equal(exitCode, 0);
@@ -799,9 +816,30 @@ describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
       'the migration branch must print the migration variant of the backup scope');
     assert.ok(stdout.includes(NOT_BACKED_UP), 'the dry run must also say what is not backed up');
     assert.ok(stdout.includes(REFRESH_SCOPE), 'the refresh plan must state the whole scope');
+    assert.ok(stdout.includes('DRY RUN — no changes will be made'), 'the migration dry run must close with the banner');
   });
 
-  it('a long dry run reaches a slow reader whole, instead of being cut at one pipe buffer', async () => {
+  it('a migration dry run whose reader closes early exits 0 without a broken-pipe crash', { skip: NO_SH }, async () => {
+    // `convoke-update --dry-run | head -1` exited 1 with an unhandled EPIPE once main() stopped
+    // calling process.exit(): Node reports the broken pipe after main() returns. Seen 3 of 3 on the
+    // migration branch.
+    const tmpDir = await createTempDir('bmad-t248-epipe-');
+    try {
+      await createInstallation(tmpDir, '1.4.1');
+      const { code, out } = await runPipeline(tmpDir,
+        '{ "$NODE" "$SCRIPT" --dry-run 2>"$ERR"; echo $? > "$CODE"; } | head -1',
+        { ERR: path.join(tmpDir, 'err.txt'), CODE: path.join(tmpDir, 'code.txt') });
+      assert.equal(code, 0, 'fixture: the pipeline itself must succeed');
+      assert.ok(out.length > 0, 'fixture: head received the first line');
+      const stderr = fs.readFileSync(path.join(tmpDir, 'err.txt'), 'utf8');
+      assert.ok(!/EPIPE/.test(stderr), `convoke-update crashed on the closed pipe:\n${stderr.slice(0, 300)}`);
+      assert.equal(fs.readFileSync(path.join(tmpDir, 'code.txt'), 'utf8').trim(), '0', 'convoke-update itself must exit 0');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a long dry run reaches a slow reader whole, instead of being cut at one pipe buffer', { skip: NO_SH }, async () => {
     // The refresh-only fixture prints every changelog entry since 0.9.0, far more than one pipe
     // buffer. main() used to end with process.exit(0), which drops output still queued for a pipe:
     // CI's Linux runner lost the tail under Node 22, and a reader that drains late loses everything
@@ -818,16 +856,12 @@ describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
       // A shell pipeline is the reader: `sleep` holds the pipe undrained while the command finishes.
       // An in-process paused stream does not reproduce it, because Node keeps reading the child's
       // pipe into its own buffer regardless.
-      const child = spawn('/bin/sh', ['-c', '{ "$NODE" "$SCRIPT" --dry-run 2>/dev/null; echo "NODE_EXIT=$?"; } | (sleep 1; cat)'], {
-        cwd: tmpDir, env: { ...process.env, NODE: process.execPath, SCRIPT: SCRIPT_PATH }, stdio: ['ignore', 'pipe', 'ignore'],
-      });
-      const chunks = [];
-      child.stdout.on('data', c => chunks.push(c));
-      const code = await new Promise(resolve => child.on('close', resolve));
-      const out = Buffer.concat(chunks).toString('utf8');
+      const { code, out } = await runPipeline(tmpDir,
+        '{ "$NODE" "$SCRIPT" --dry-run 2>/dev/null; echo "NODE_EXIT=$?"; } | (sleep 1; cat)');
 
       assert.equal(code, 0, 'fixture: the pipeline itself must succeed');
-      // The pipeline's own code is cat\'s; the command reports its exit code into the stream instead.
+      assert.ok(out.includes('No migration deltas needed'), 'fixture: this is the refresh-only branch');
+      // The pipeline's own exit code is cat's; the command reports its own into the stream instead.
       assert.ok(out.includes('NODE_EXIT=0'), 'convoke-update itself must exit 0');
       assert.ok(out.includes('DRY RUN — no changes will be made'), `the tail was lost: received ${out.length} characters`);
       assert.ok(out.length > 70000, `fixture: output must exceed a pipe buffer to test anything, got ${out.length} characters`);

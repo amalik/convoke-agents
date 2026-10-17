@@ -1464,3 +1464,10 @@ Round 2 ran three independent blind layers on `06a452cd` — the Round 1 *remedi
 ## Deferred from: code review of tfr-2-1-delete-the-regression-check-that-cannot-fail (2026-09-15)
 
 - `tests/team-factory/end-to-end-validator.test.js` › *passes REGISTRY-REGRESSION against real project root* still asserts on the live `scripts/update/lib/agent-registry.js` (`test-fixture-isolation`). Pre-existing; `tfr-2-1` moved the extension happy paths to stub roots but left this test, whose name says it targets the real root. Decide whether the real-root read is the point, or give it a stub.
+
+## Deferred from: code review of T248 (2026-10-17)
+
+- The real run's confirmation prompts (refresh-only and migration) print the backup scope but not `printRefreshPlan()`, so they now show less than the dry run. Already filed as backlog `T277`. [scripts/update/convoke-update.js, the `!yes` blocks in `main`]
+- The refresh plan no longer mentions that Vortex user guides get a `.bak`; still true. Recorded in `T277`; `T269` proposes retiring the `.bak`. [scripts/update/lib/migration-runner.js `printRefreshPlan`]
+- In the migration dry run the backup scope prints after `previewMigrations`' "To apply these changes, run:" line, and that line's `npx -p convoke-agents convoke-update` is unpinned while other hints in the file pin the version. Order recorded in `T277`; the unpinned hint predates T248. [scripts/update/lib/migration-runner.js `previewMigrations`]
+- No test covers the error paths that set `process.exitCode = 1` (preview error, refresh failure, migration failure, the top-level catch). Predates T248; the exit-fix review exercised them by hand. [tests/unit/convoke-update.test.js]

@@ -617,6 +617,14 @@ module.exports = {
 
 // Run main when executed directly
 if (require.main === module) {
+  // A reader that stops early (`convoke-update --dry-run | head`) closes the pipe, and every later
+  // write fails with EPIPE. That is the reader's choice, not an error of ours. While main() ended in
+  // process.exit() the error never surfaced; now that it returns, Node reports it after main() has
+  // finished, as an unhandled 'error' event and exit 1. Any other stdout error still throws.
+  process.stdout.on('error', (err) => {
+    if (err && err.code === 'EPIPE') return;
+    throw err;
+  });
   main().catch(error => {
     console.error('');
     console.error(chalk.red.bold('Unexpected error:'));
