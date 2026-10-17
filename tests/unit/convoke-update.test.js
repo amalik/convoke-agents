@@ -801,6 +801,41 @@ describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
     assert.ok(stdout.includes(REFRESH_SCOPE), 'the refresh plan must state the whole scope');
   });
 
+  it('a long dry run reaches a slow reader whole, instead of being cut at one pipe buffer', async () => {
+    // The refresh-only fixture prints every changelog entry since 0.9.0, far more than one pipe
+    // buffer. main() used to end with process.exit(0), which drops output still queued for a pipe:
+    // CI's Linux runner lost the tail under Node 22, and a reader that drains late loses everything
+    // after the first 64 KiB on any platform. The delay below IS the condition under test -- a
+    // reader that is not keeping up -- not a wait standing in for an event.
+    const tmpDir = await createTempDir('bmad-t248-pipe-');
+    try {
+      await createValidInstallation(tmpDir);
+      const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
+      const config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+      config.version = '0.9.0';
+      fs.writeFileSync(configPath, yaml.dump(config), 'utf8');
+
+      // A shell pipeline is the reader: `sleep` holds the pipe undrained while the command finishes.
+      // An in-process paused stream does not reproduce it, because Node keeps reading the child's
+      // pipe into its own buffer regardless.
+      const child = spawn('/bin/sh', ['-c', '{ "$NODE" "$SCRIPT" --dry-run 2>/dev/null; echo "NODE_EXIT=$?"; } | (sleep 1; cat)'], {
+        cwd: tmpDir, env: { ...process.env, NODE: process.execPath, SCRIPT: SCRIPT_PATH }, stdio: ['ignore', 'pipe', 'ignore'],
+      });
+      const chunks = [];
+      child.stdout.on('data', c => chunks.push(c));
+      const code = await new Promise(resolve => child.on('close', resolve));
+      const out = Buffer.concat(chunks).toString('utf8');
+
+      assert.equal(code, 0, 'fixture: the pipeline itself must succeed');
+      // The pipeline's own code is cat\'s; the command reports its exit code into the stream instead.
+      assert.ok(out.includes('NODE_EXIT=0'), 'convoke-update itself must exit 0');
+      assert.ok(out.includes('DRY RUN — no changes will be made'), `the tail was lost: received ${out.length} characters`);
+      assert.ok(out.length > 70000, `fixture: output must exceed a pipe buffer to test anything, got ${out.length} characters`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
   it('the refresh-only dry run prints what is backed up and what a refresh replaces', async () => {
     const { exitCode, stdout } = await dryRunIn(async (dir) => {
       await createValidInstallation(dir);

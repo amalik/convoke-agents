@@ -301,32 +301,32 @@ async function main() {
       console.log('');
       console.log('Run: ' + chalk.cyan(`npx -p convoke-agents@${getPackageVersion()} convoke-install`));
       console.log('');
-      process.exit(1);
-      break;
+      process.exitCode = 1;
+      return;
 
     case 'fresh':
       console.log(chalk.yellow('No previous installation detected.'));
       console.log('');
       console.log('Run: ' + chalk.cyan(`npx -p convoke-agents@${getPackageVersion()} convoke-install`));
       console.log('');
-      process.exit(0);
-      break;
+      process.exitCode = 0;
+      return;
 
     case 'broken':
       console.log(chalk.red('Installation appears incomplete or corrupted.'));
       console.log('');
       console.log('Recommend running: ' + chalk.cyan(`npx -p convoke-agents@${getPackageVersion()} convoke-install`));
       console.log('');
-      process.exit(1);
-      break;
+      process.exitCode = 1;
+      return;
 
     case 'no-version':
       console.log(chalk.yellow('Could not detect current version.'));
       console.log('');
       console.log('Run: ' + chalk.cyan(`npx -p convoke-agents@${getPackageVersion()} convoke-install`));
       console.log('');
-      process.exit(0);
-      break;
+      process.exitCode = 0;
+      return;
 
     case 'up-to-date':
       console.log(chalk.green(`✓ Already up to date! (v${assessment.currentVersion})`));
@@ -342,8 +342,8 @@ async function main() {
       console.log(chalk.gray('  npx serving a cached copy:           ') + chalk.cyan('npm cache clean --force'));
       console.log(chalk.gray('  Checking what is actually published: ') + chalk.cyan('npm view convoke-agents dist-tags'));
       console.log('');
-      process.exit(0);
-      break;
+      process.exitCode = 0;
+      return;
 
     case 'downgrade':
       console.log(chalk.red.bold('⚠ DOWNGRADE DETECTED'));
@@ -368,8 +368,8 @@ async function main() {
       console.log('  2. Uninstall current version');
       console.log('  3. Install desired version');
       console.log('');
-      process.exit(1);
-      break;
+      process.exitCode = 1;
+      return;
 
     case 'refresh-only':
     case 'upgrade':
@@ -412,7 +412,8 @@ async function main() {
       console.log('');
       console.log(chalk.yellow.bold('DRY RUN — no changes will be made'));
       console.log('');
-      process.exit(0);
+      process.exitCode = 0;
+      return;
     }
 
     if (!yes) {
@@ -423,7 +424,8 @@ async function main() {
         console.log('');
         console.log(chalk.yellow('Update cancelled.'));
         console.log('');
-        process.exit(0);
+        process.exitCode = 0;
+        return;
       }
     }
 
@@ -444,14 +446,16 @@ async function main() {
       console.log(chalk.gray(`Backup location: ${result.backupMetadata.backup_dir}`));
       console.log('');
     } catch (_error) {
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     // Story v63-2-3: post-upgrade BMM dependency gate. Runs on refresh-only
     // success path (state changed, governance drift possible).
     _runPostUpgradeGate(projectRoot);
 
-    process.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   // Show migration plan
@@ -489,7 +493,8 @@ async function main() {
       await migrationRunner.runMigrations(assessment.currentVersion, { dryRun: true, verbose });
     } catch (error) {
       console.error(chalk.red('Error during preview:'), error.message);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     // T248: same as the refresh-only branch -- show the backup scope the real run prints.
@@ -497,7 +502,8 @@ async function main() {
     console.log('');
     console.log(chalk.yellow.bold('DRY RUN — no changes will be made'));
     console.log('');
-    process.exit(0);
+    process.exitCode = 0;
+    return;
   }
 
   // Confirm with user (unless --yes)
@@ -511,7 +517,8 @@ async function main() {
       console.log('');
       console.log(chalk.yellow('Migration cancelled.'));
       console.log('');
-      process.exit(0);
+      process.exitCode = 0;
+      return;
     }
   }
 
@@ -540,7 +547,8 @@ async function main() {
 
   } catch (_error) {
     // Error already logged by migration-runner
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   // Story v63-2-3: post-upgrade BMM dependency gate (R1-M3 placement).
@@ -618,6 +626,6 @@ if (require.main === module) {
       console.error(chalk.gray(error.stack));
       console.error('');
     }
-    process.exit(1);
+    process.exitCode = 1;
   });
 }
