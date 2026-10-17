@@ -159,7 +159,7 @@ describe('previewMigrations — the refresh plan warns about the configs and poi
     // contracts, examples, three whole module trees, the skill wrappers and the operator's own files.
     assert.match(text, /Most of _bmad\/bme\/ is replaced from the package, including files you added there/);
     assert.match(text, /Skill wrappers in \.claude\/skills\/ are regenerated, and withdrawn ones removed/);
-    assert.match(text, /The agent manifest in _bmad\/_config\/ is regenerated/);
+    assert.match(text, /Convoke's rows in _bmad\/_config\/agent-manifest\.csv are regenerated/);
     assert.ok(!/Refresh agent files/.test(text), 'the partial list is back');
   });
 

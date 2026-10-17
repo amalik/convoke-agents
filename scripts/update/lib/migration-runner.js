@@ -246,7 +246,7 @@ function printRefreshPlan() {
   console.log(chalk.gray('  - Most of _bmad/bme/ is replaced from the package, including files you added there'));
   console.log(chalk.gray('      UPDATE-GUIDE.md "Automatic Backups" says what survives, as measured'));
   console.log(chalk.gray('  - Skill wrappers in .claude/skills/ are regenerated, and withdrawn ones removed'));
-  console.log(chalk.gray('  - The agent manifest in _bmad/_config/ is regenerated'));
+  console.log(chalk.gray("  - Convoke's rows in _bmad/_config/agent-manifest.csv are regenerated"));
   // T239: this said `Update config.yaml (preserving user preferences)` — singular, and true only
   // for the two modules `configMerger.mergeConfig` carries a profile for. The other three are
   // replaced from the package template, which the operator reading this plan was never told.

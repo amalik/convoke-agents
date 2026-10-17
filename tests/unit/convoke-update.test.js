@@ -792,15 +792,31 @@ describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
 
   // Runs a POSIX shell pipeline in `cwd` and resolves with its output and exit code. A hung
   // pipeline is killed and reported as a failure rather than hanging the suite.
-  function runPipeline(cwd, script, extraEnv = {}) {
+  function runPipeline(cwd, script, extraEnv = {}, deadlineMs = 30000) {
     return new Promise((resolve, reject) => {
+      // `detached` makes the shell lead its own process group, so a timeout can kill every process
+      // in the pipeline. Killing the shell alone leaves node and head holding the pipe open.
       const child = spawn('/bin/sh', ['-c', script], {
-        cwd, env: { ...process.env, NODE: process.execPath, SCRIPT: SCRIPT_PATH, ...extraEnv }, stdio: ['ignore', 'pipe', 'ignore'],
+        cwd, detached: true, stdio: ['ignore', 'pipe', 'ignore'],
+        env: { ...process.env, NODE: process.execPath, SCRIPT: SCRIPT_PATH, ...extraEnv },
       });
       const chunks = [];
-      const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('pipeline did not finish within 30 s')); }, 30000);
+      const started = Date.now();
+      let settled = false;
+      const timer = setTimeout(() => {
+        settled = true;
+        try { process.kill(-child.pid, 'SIGKILL'); } catch { /* group already gone */ }
+        child.stdout.destroy();
+        reject(new Error(`pipeline did not finish within ${deadlineMs} ms`));
+      }, deadlineMs);
+      child.on('error', err => { if (settled) return; settled = true; clearTimeout(timer); reject(err); });
       child.stdout.on('data', c => chunks.push(c));
-      child.on('close', code => { clearTimeout(timer); resolve({ code, out: Buffer.concat(chunks).toString('utf8') }); });
+      child.on('close', code => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve({ code, out: Buffer.concat(chunks).toString('utf8'), ms: Date.now() - started });
+      });
     });
   }
 
@@ -826,14 +842,71 @@ describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
     const tmpDir = await createTempDir('bmad-t248-epipe-');
     try {
       await createInstallation(tmpDir, '1.4.1');
+      // The pipe only breaks if output is still being written when head exits, i.e. if the run
+      // prints more than one pipe buffer. Measure the whole run first, so a smaller fixture fails
+      // loudly instead of letting this test pass without exercising the handler.
+      const full = await runPipeline(tmpDir, '"$NODE" "$SCRIPT" --dry-run 2>/dev/null');
+      assert.ok(full.out.includes('Migration Plan'), 'fixture: this is the migration branch');
+      assert.ok(Buffer.byteLength(full.out) > 65536,
+        `fixture: the run must print more than one pipe buffer to break the pipe, printed ${Buffer.byteLength(full.out)} bytes`);
+
+      const codeFile = path.join(tmpDir, 'code.txt');
       const { code, out } = await runPipeline(tmpDir,
         '{ "$NODE" "$SCRIPT" --dry-run 2>"$ERR"; echo $? > "$CODE"; } | head -1',
-        { ERR: path.join(tmpDir, 'err.txt'), CODE: path.join(tmpDir, 'code.txt') });
+        { ERR: path.join(tmpDir, 'err.txt'), CODE: codeFile });
       assert.equal(code, 0, 'fixture: the pipeline itself must succeed');
       assert.ok(out.length > 0, 'fixture: head received the first line');
+      assert.ok(fs.existsSync(codeFile), 'fixture: convoke-update never reported its exit code');
       const stderr = fs.readFileSync(path.join(tmpDir, 'err.txt'), 'utf8');
       assert.ok(!/EPIPE/.test(stderr), `convoke-update crashed on the closed pipe:\n${stderr.slice(0, 300)}`);
       assert.equal(fs.readFileSync(path.join(tmpDir, 'code.txt'), 'utf8').trim(), '0', 'convoke-update itself must exit 0');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a dry run with both streams piped into a reader that closes early exits 0', { skip: NO_SH }, async () => {
+    // `2>&1 | head` shares one pipe between stdout and stderr, and the command writes a warning to
+    // stderr. With only stdout guarded, stderr's EPIPE still crashed it with exit 1, 3 of 3.
+    const tmpDir = await createTempDir('bmad-t248-epipe2-');
+    try {
+      await createInstallation(tmpDir, '1.4.1');
+      const codeFile = path.join(tmpDir, 'code.txt');
+      const { code } = await runPipeline(tmpDir,
+        '{ "$NODE" "$SCRIPT" --dry-run 2>&1; echo $? > "$CODE"; } | head -1', { CODE: codeFile });
+      assert.equal(code, 0, 'fixture: the pipeline itself must succeed');
+      assert.ok(fs.existsSync(codeFile), 'fixture: convoke-update never reported its exit code');
+      assert.equal(fs.readFileSync(codeFile, 'utf8').trim(), '0', 'convoke-update itself must exit 0');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a real run whose output reader is gone answers its own prompt no, instead of waiting unseen', { skip: NO_SH }, async () => {
+    // Once stdout's EPIPE is ignored, the [y/N] prompt is written to nowhere. stdin here is a pipe
+    // that stays open for 20 s, so a prompt still waiting would hold the run that long; failing
+    // closed must end it at once and change nothing.
+    const tmpDir = await createTempDir('bmad-t248-prompt-');
+    try {
+      await createValidInstallation(tmpDir);
+      const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
+      const config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+      config.version = '0.9.0';
+      fs.writeFileSync(configPath, yaml.dump(config), 'utf8');
+
+      // stdin is held open by a background sleep that the command's side of the pipeline kills as
+      // soon as convoke-update exits -- otherwise the shell would wait out the sleep and every run
+      // would take 20 s whether or not the prompt was cancelled.
+      const codeFile = path.join(tmpDir, 'code.txt');
+      const { code, ms } = await runPipeline(tmpDir,
+        '( sleep 20 & echo $! > "$SLEEP"; wait ) | { "$NODE" "$SCRIPT" 2>/dev/null; echo $? > "$CODE"; kill "$(cat "$SLEEP")" 2>/dev/null; } | head -1',
+        { CODE: codeFile, SLEEP: path.join(tmpDir, 'sleep.pid') }, 60000);
+
+      assert.equal(code, 0, 'fixture: the pipeline itself must succeed');
+      assert.ok(ms < 10000, `the prompt waited for input nobody could see: the run took ${ms} ms`);
+      assert.equal(yaml.load(fs.readFileSync(configPath, 'utf8')).version, '0.9.0', 'nothing may be applied');
+      assert.ok(!fs.existsSync(path.join(tmpDir, '_bmad-output', '.backups')) ||
+        fs.readdirSync(path.join(tmpDir, '_bmad-output', '.backups')).length === 0, 'no backup may be taken');
     } finally {
       await fs.remove(tmpDir);
     }

@@ -16,6 +16,11 @@ const { detectRepairableSkew } = require('../lib/bme-modules');
 const { getFilesToBackup } = require('./lib/backup-manager');
 const { WRAPPER_BACKUP_REL } = require('./lib/refresh-installation');
 const { runCompatPreflight } = require('./lib/compat-preflight');
+
+// Set when the reader of stdout has gone away (EPIPE). A confirmation prompt written to a closed
+// pipe is one nobody can see, so `confirm` answers it "no" rather than waiting for input.
+let stdoutClosed = false;
+let cancelPendingConfirm = null;
 // Story v63-2-3: post-upgrade governance gate. `checkBmmDependencies` is
 // lazy-required inside `_runPostUpgradeGate` (Round 1 R1-M2 fix) so a
 // load-time error in convoke-doctor can't abort convoke-update startup, and
@@ -584,13 +589,18 @@ function printChangelog(fromVersion, toVersion) {
  * @returns {Promise<boolean>} True if user confirms
  */
 async function confirm(message) {
+  if (stdoutClosed) return false;
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
   return new Promise(resolve => {
+    // The broken pipe is usually reported only after the prompt has been written, so the
+    // stdout error handler can also cancel a prompt that is already waiting.
+    cancelPendingConfirm = () => { cancelPendingConfirm = null; rl.close(); resolve(false); };
     rl.question(chalk.yellow(`${message} [y/N]: `), answer => {
+      cancelPendingConfirm = null;
       rl.close();
       resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
     });
@@ -618,13 +628,19 @@ module.exports = {
 // Run main when executed directly
 if (require.main === module) {
   // A reader that stops early (`convoke-update --dry-run | head`) closes the pipe, and every later
-  // write fails with EPIPE. That is the reader's choice, not an error of ours. While main() ended in
-  // process.exit() the error never surfaced; now that it returns, Node reports it after main() has
-  // finished, as an unhandled 'error' event and exit 1. Any other stdout error still throws.
-  process.stdout.on('error', (err) => {
-    if (err && err.code === 'EPIPE') return;
-    throw err;
-  });
+  // write fails with EPIPE. That is the reader's choice, not an error of ours, so it is ignored --
+  // on stderr as well, which `2>&1 | head` routes into the same pipe. Without this Node reports it
+  // as an unhandled 'error' event and exit 1. A closed stdout also means any prompt is unseen, so a
+  // pending one is answered "no" and nothing is applied. Any other stream error still throws.
+  for (const stream of [process.stdout, process.stderr]) {
+    stream.on('error', (err) => {
+      if (!err || err.code !== 'EPIPE') throw err;
+      if (stream === process.stdout) {
+        stdoutClosed = true;
+        if (cancelPendingConfirm) cancelPendingConfirm();
+      }
+    });
+  }
   main().catch(error => {
     console.error('');
     console.error(chalk.red.bold('Unexpected error:'));
