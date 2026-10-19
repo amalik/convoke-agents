@@ -71,8 +71,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from a 1.x install prints about 90 KB of changelog — piped into a reader that was not keeping up lost
   everything after the first 64 KB, which is where the backup scope and the `DRY RUN` banner are. It now sets
   the exit code and lets the output finish. A reader that stops early, such as `| head` or `2>&1 | head`, is
-  not treated as an error, and a confirmation prompt written to a reader that has gone away is answered
-  no, so nothing is applied.
+  not treated as an error. A confirmation prompt is answered no, applying nothing, when the command
+  finds its reader gone while it is still writing; it cannot tell a reader that left after reading the
+  prompt, so in that case the prompt still waits.
 
 - **Three in-chat workflows called a script that does not exist in your project (`T255`).** `/bmad-export-skill`,
   `/bmad-migrate-artifacts` and `/bmad-portfolio-status` told the agent to run `node scripts/…`, which is

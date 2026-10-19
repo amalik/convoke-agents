@@ -846,6 +846,7 @@ describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
       // prints more than one pipe buffer. Measure the whole run first, so a smaller fixture fails
       // loudly instead of letting this test pass without exercising the handler.
       const full = await runPipeline(tmpDir, '"$NODE" "$SCRIPT" --dry-run 2>/dev/null');
+      assert.equal(full.code, 0, 'fixture: the unpiped dry run must succeed');
       assert.ok(full.out.includes('Migration Plan'), 'fixture: this is the migration branch');
       assert.ok(Buffer.byteLength(full.out) > 65536,
         `fixture: the run must print more than one pipe buffer to break the pipe, printed ${Buffer.byteLength(full.out)} bytes`);
@@ -859,7 +860,7 @@ describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
       assert.ok(fs.existsSync(codeFile), 'fixture: convoke-update never reported its exit code');
       const stderr = fs.readFileSync(path.join(tmpDir, 'err.txt'), 'utf8');
       assert.ok(!/EPIPE/.test(stderr), `convoke-update crashed on the closed pipe:\n${stderr.slice(0, 300)}`);
-      assert.equal(fs.readFileSync(path.join(tmpDir, 'code.txt'), 'utf8').trim(), '0', 'convoke-update itself must exit 0');
+      assert.equal(fs.readFileSync(codeFile, 'utf8').trim(), '0', 'convoke-update itself must exit 0');
     } finally {
       await fs.remove(tmpDir);
     }
@@ -899,11 +900,13 @@ describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
       // would take 20 s whether or not the prompt was cancelled.
       const codeFile = path.join(tmpDir, 'code.txt');
       const { code, ms } = await runPipeline(tmpDir,
-        '( sleep 20 & echo $! > "$SLEEP"; wait ) | { "$NODE" "$SCRIPT" 2>/dev/null; echo $? > "$CODE"; kill "$(cat "$SLEEP")" 2>/dev/null; } | head -1',
+        '( sleep 20 & echo $! > "$SLEEP"; wait ) | { "$NODE" "$SCRIPT" 2>/dev/null; echo $? > "$CODE"; until [ -s "$SLEEP" ]; do :; done; kill "$(cat "$SLEEP")" 2>/dev/null; } | head -1',
         { CODE: codeFile, SLEEP: path.join(tmpDir, 'sleep.pid') }, 60000);
 
       assert.equal(code, 0, 'fixture: the pipeline itself must succeed');
       assert.ok(ms < 10000, `the prompt waited for input nobody could see: the run took ${ms} ms`);
+      assert.ok(fs.existsSync(codeFile), 'fixture: convoke-update never reported its exit code');
+      assert.equal(fs.readFileSync(codeFile, 'utf8').trim(), '0', 'a declined prompt exits 0');
       assert.equal(yaml.load(fs.readFileSync(configPath, 'utf8')).version, '0.9.0', 'nothing may be applied');
       assert.ok(!fs.existsSync(path.join(tmpDir, '_bmad-output', '.backups')) ||
         fs.readdirSync(path.join(tmpDir, '_bmad-output', '.backups')).length === 0, 'no backup may be taken');
