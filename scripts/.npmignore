@@ -1,0 +1,27 @@
+# T265. Convoke's own repository tooling that `files[]` would otherwise ship, because it carries
+# `scripts/` whole. Nothing an operator runs reaches these: no `bin`, not `index.js`, not
+# `postinstall`, not a migration. Several do harm in an operator's project rather than nothing --
+# `archive.js --apply` rewrites the tree it is run in, and `convoke-check.js` starts linting it.
+#
+# The list is kept honest by `tests/lib/shipped-scripts-reachable.test.js`, which walks the require
+# graph from every entry point and fails if a shipped script is unreachable (add it here) or a
+# reachable one is missing from the package (take it out of here). Same mechanism and reasoning as
+# `scripts/audit/.npmignore` (T257): not a `!` negation in `files[]`, which must stay free of glob
+# metacharacters (dist-2.3a).
+#
+# Paths start with `/` so each matches only its own location under scripts/, not a file of the same
+# name in another directory.
+
+/archive.js
+/convoke-check.js
+/docs-audit.js
+/generate-manifest.js
+/test-runner.js
+/lib/t66-gate.js
+/lib/types.js
+/portability/catalog-generator.js
+/portability/classify-skills.js
+/portability/seed-catalog-repo.js
+/portability/test-constants.js
+/portability/validate-classification.js
+/portability/validate-exports.js

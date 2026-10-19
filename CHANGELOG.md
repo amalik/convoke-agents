@@ -50,6 +50,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **Thirteen of Convoke's own repository scripts are no longer in the package (`T265`).** Nothing an operator
+  runs can reach them, yet they were installed with every copy — among them `archive.js`, which with `--apply`
+  rewrites the tree it is run in, and `convoke-check.js`, which starts linting it. They stay in the repository.
+  If you ran one directly from `node_modules/convoke-agents/scripts/`, it is no longer there. One unreachable
+  file, `scripts/update/lib/config-loader.js`, still ships on purpose: it is reserved for planned work. A test
+  now walks the code from every published command and fails if a shipped `.js` script under `scripts/` is
+  unreachable or a reachable one is left out; other file types there are not checked.
+
 - **`/bmad-generate-catalog`, `/bmad-seed-catalog` and `/bmad-validate-exports` are no longer installed into
   your project (`T255`).** They build and check Convoke's own published skill catalog, they had no command an
   installed project could run, and the validator reports a missing catalog README, LICENSE and CONTRIBUTING on
