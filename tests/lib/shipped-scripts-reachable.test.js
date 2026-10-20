@@ -75,15 +75,23 @@ function reachableFrom(entries) {
   return new Set([...seen].map(abs => path.relative(PACKAGE_ROOT, abs).split(path.sep).join('/')));
 }
 
-const PKG = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8'));
-const BIN_TARGETS = typeof PKG.bin === 'string' ? [PKG.bin] : Object.values(PKG.bin || {});
+// Read inside the tests' setup, not when the file loads: a malformed package.json must fail a
+// named test rather than abort the file before any test is declared.
+function readPackage() {
+  const pkg = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8'));
+  // npm strips a leading './' from paths in its pack listing, so compare in that form.
+  const bins = (typeof pkg.bin === 'string' ? [pkg.bin] : Object.values(pkg.bin || {})).map(b => path.posix.normalize(b));
+  return { pkg, bins };
+}
 
-function entryPoints() {
-  const entries = [...BIN_TARGETS, PKG.main || 'index.js'];
-  // Lifecycle scripts npm runs on an operator's machine at install time. Each must be a plain
-  // `node <file>` the walker can follow; anything else fails here rather than going unwalked.
+function entryPoints({ pkg, bins }) {
+  const entries = [...bins, path.posix.normalize(pkg.main || 'index.js')];
+  // Lifecycle scripts that run when a package is installed. `prepare` runs only when installing
+  // from a git dependency, not from the registry tarball; it is walked anyway, since walking it can
+  // only add files. Each must be a plain `node <file>` the walker can follow; anything else fails
+  // here rather than going unwalked.
   for (const hook of ['preinstall', 'install', 'postinstall', 'prepare']) {
-    const cmd = PKG.scripts && PKG.scripts[hook];
+    const cmd = pkg.scripts && pkg.scripts[hook];
     if (!cmd) continue;
     const m = /^node\s+(\S+\.js)$/.exec(cmd.trim());
     if (!m) throw new Error(`${hook} is not a plain "node <file>.js" this walker can follow: ${cmd}`);
@@ -95,23 +103,42 @@ function entryPoints() {
 }
 
 function shippedScripts() {
-  const out = execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
-    cwd: PACKAGE_ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'],
-  });
+  let out;
+  try {
+    out = execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+      cwd: PACKAGE_ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  } catch (err) {
+    throw new Error(`npm pack --dry-run failed: ${(err.stderr || err.message || '').toString().trim()}`, { cause: err });
+  }
   return JSON.parse(out)[0].files.map(f => f.path).filter(p => p.startsWith('scripts/') && p.endsWith('.js'));
 }
 
 describe('T265: the package ships exactly the scripts an operator can reach', () => {
   // Computed inside the tests, not at describe time: a setup error thrown while the suite is being
   // declared makes `node --test` report zero tests and exit 0, which would read as a pass.
+  // A failure is remembered, so one broken setup is reported once per test without re-running npm.
   let cache;
-  const state = () => (cache ||= { reachable: reachableFrom(entryPoints()), shipped: shippedScripts() });
+  let failure;
+  const state = () => {
+    if (failure) throw failure;
+    try {
+      if (!cache) {
+        const pkgInfo = readPackage();
+        cache = { bins: pkgInfo.bins, reachable: reachableFrom(entryPoints(pkgInfo)), shipped: shippedScripts() };
+      }
+      return cache;
+    } catch (err) {
+      failure = err;
+      throw err;
+    }
+  };
 
   it('the walk found the entry points and the migrations, so an empty result means nothing', () => {
-    const { reachable, shipped } = state();
+    const { reachable, shipped, bins } = state();
     assert.ok(reachable.has('scripts/update/convoke-update.js'), 'fixture: a bin was not walked');
     assert.ok(reachable.has('scripts/update/migrations/3.3.x-to-4.0.0.js'), 'fixture: registry migrations were not walked');
-    const unshippedBins = BIN_TARGETS.filter(b => !shipped.includes(b));
+    const unshippedBins = bins.filter(b => !shipped.includes(b));
     assert.deepEqual(unshippedBins, [], 'fixture: npm reports a bin target the package does not ship');
   });
 
@@ -119,8 +146,10 @@ describe('T265: the package ships exactly the scripts an operator can reach', ()
     const { reachable, shipped } = state();
     const leaked = shipped.filter(p => !reachable.has(p) && !SHIPPED_BUT_UNREACHED[p]);
     assert.deepEqual(leaked, [],
-      'repository-only scripts reached the package; list each in scripts/.npmignore (or, if an ' +
-      'operator path does load it, teach this walker how):\n  ' + leaked.join('\n  '));
+      'shipped scripts that no entry point reaches. Before excluding one, check that nothing an ' +
+      'operator runs loads it in a way this walker cannot see (spawn/exec of its path, a file read, ' +
+      'an instruction in shipped markdown); if something does, teach the walker. Only then list it in ' +
+      'scripts/.npmignore:\n  ' + leaked.join('\n  '));
   });
 
   it('every reachable script ships', () => {
