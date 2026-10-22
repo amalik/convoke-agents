@@ -906,7 +906,8 @@ describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
       assert.equal(code, 0, 'fixture: the pipeline itself must succeed');
       assert.ok(ms < 10000, `the prompt waited for input nobody could see: the run took ${ms} ms`);
       assert.ok(fs.existsSync(codeFile), 'fixture: convoke-update never reported its exit code');
-      assert.equal(fs.readFileSync(codeFile, 'utf8').trim(), '0', 'a declined prompt exits 0');
+      // T278: nobody could answer, so nothing was applied and the run says so with exit 1 (ruled 2026-10-22).
+      assert.equal(fs.readFileSync(codeFile, 'utf8').trim(), '1', 'an unanswered prompt exits 1');
       assert.equal(yaml.load(fs.readFileSync(configPath, 'utf8')).version, '0.9.0', 'nothing may be applied');
       assert.ok(!fs.existsSync(path.join(tmpDir, '_bmad-output', '.backups')) ||
         fs.readdirSync(path.join(tmpDir, '_bmad-output', '.backups')).length === 0, 'no backup may be taken');
@@ -959,5 +960,174 @@ describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
     assert.ok(stdout.includes(BACKUP_HEADER), 'the backup scope is missing from the refresh-only dry run');
     assert.ok(stdout.includes(NOT_BACKED_UP), 'the dry run must also say what is not backed up');
     assert.ok(stdout.includes(REFRESH_SCOPE), 'the refresh plan must be shown on this branch too');
+  });
+});
+
+// ─── T278: no failure and no unanswered prompt goes unreported ───────────────
+
+describe('T278: convoke-update reports every failure and every unanswered prompt', () => {
+  // The runner prints the errors raised inside its own try/catch. Anything thrown before that —
+  // taking the migration lock, an unwritable _bmad-output — reached main's catch, which assumed it
+  // had been printed, so the run exited 1 with nothing on stderr. Reproduced 2026-10-22 on a real
+  // 4.0.3 project with a live lock: stdout ended at "Starting update...".
+  async function refreshOnlyProject(tmpDir) {
+    await createValidInstallation(tmpDir);
+    const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
+    const config = yaml.load(fs.readFileSync(configPath, 'utf8'));
+    config.version = '0.9.0';
+    fs.writeFileSync(configPath, yaml.dump(config), 'utf8');
+    return configPath;
+  }
+
+  function holdLiveLock(tmpDir) {
+    fs.ensureDirSync(path.join(tmpDir, '_bmad-output'));
+    fs.writeJsonSync(path.join(tmpDir, '_bmad-output', '.migration-lock'), { timestamp: Date.now(), pid: 1 });
+  }
+
+  it('a refresh that cannot take the lock says so on stderr and exits 1', async () => {
+    const tmpDir = await createTempDir('bmad-t278-lock-');
+    try {
+      await refreshOnlyProject(tmpDir);
+      holdLiveLock(tmpDir);
+      const { exitCode, stdout, stderr } = await runScript(SCRIPT_PATH, ['--yes'], { cwd: tmpDir });
+      assert.ok(stdout.includes('No migration deltas needed'), 'fixture: this is the refresh-only branch');
+      assert.equal(exitCode, 1);
+      assert.ok(stderr.includes('Migration already in progress'), `the failure was not reported:\n${stderr}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a migration that cannot take the lock says so on stderr and exits 1', async () => {
+    const tmpDir = await createTempDir('bmad-t278-lockm-');
+    try {
+      await createInstallation(tmpDir, '1.4.1');
+      holdLiveLock(tmpDir);
+      const { exitCode, stdout, stderr } = await runScript(SCRIPT_PATH, ['--yes'], { cwd: tmpDir });
+      assert.ok(stdout.includes('Migration Plan'), 'fixture: this is the migration branch');
+      assert.equal(exitCode, 1);
+      assert.ok(stderr.includes('Migration already in progress'), `the failure was not reported:\n${stderr}`);
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('an error the runner already printed is not printed a second time', async () => {
+    // A failure inside the runner's own try/catch is reported there ("✗ Update failed!"); main
+    // must not add a second copy of the same message.
+    const tmpDir = await createTempDir('bmad-t278-once-');
+    try {
+      await refreshOnlyProject(tmpDir);
+      // A file where the backup directory belongs makes the backup fail inside the runner's try.
+      fs.ensureDirSync(path.join(tmpDir, '_bmad-output'));
+      fs.writeFileSync(path.join(tmpDir, '_bmad-output', '.backups'), 'not a directory', 'utf8');
+      const { exitCode, stderr } = await runScript(SCRIPT_PATH, ['--yes'], { cwd: tmpDir });
+      assert.equal(exitCode, 1);
+      assert.ok(stderr.includes('Update failed!'), `fixture: the runner reports this one:\n${stderr}`);
+      assert.ok(!stderr.includes('✗ Update failed:'), 'main printed a second copy of an error already reported');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a prompt whose stdin closes without an answer applies nothing, says so, and exits 1', async () => {
+    const tmpDir = await createTempDir('bmad-t278-eof-');
+    try {
+      const configPath = await refreshOnlyProject(tmpDir);
+      const { exitCode, stderr } = await runScriptWithInput(SCRIPT_PATH, [], '', { cwd: tmpDir });
+      assert.equal(exitCode, 1, 'an unanswered prompt must not look like success');
+      assert.ok(stderr.includes('No answer could be read'), `the unanswered prompt was not reported:\n${stderr}`);
+      assert.equal(yaml.load(fs.readFileSync(configPath, 'utf8')).version, '0.9.0', 'nothing may be applied');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a migration that cannot write _bmad-output says so on stderr and exits 1', { skip: process.getuid && process.getuid() === 0 ? 'root ignores the read-only mode' : false }, async () => {
+    const tmpDir = await createTempDir('bmad-t278-ro-');
+    const outDir = path.join(tmpDir, '_bmad-output');
+    try {
+      await createInstallation(tmpDir, '1.4.1');
+      fs.ensureDirSync(outDir);
+      fs.chmodSync(outDir, 0o555);
+      const { exitCode, stdout, stderr } = await runScript(SCRIPT_PATH, ['--yes'], { cwd: tmpDir });
+      assert.ok(stdout.includes('Migration Plan'), 'fixture: this is the migration branch');
+      assert.equal(exitCode, 1);
+      assert.ok(/✗ Migration failed: .*(EACCES|permission denied)/i.test(stderr), `the failure was not reported:\n${stderr}`);
+    } finally {
+      fs.chmodSync(outDir, 0o755);
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a migration error the runner already printed is not printed a second time', async () => {
+    const tmpDir = await createTempDir('bmad-t278-oncem-');
+    try {
+      await createInstallation(tmpDir, '1.4.1');
+      fs.ensureDirSync(path.join(tmpDir, '_bmad-output'));
+      fs.writeFileSync(path.join(tmpDir, '_bmad-output', '.backups'), 'not a directory', 'utf8');
+      const { exitCode, stdout, stderr } = await runScript(SCRIPT_PATH, ['--yes'], { cwd: tmpDir });
+      assert.ok(stdout.includes('Migration Plan'), 'fixture: this is the migration branch');
+      assert.equal(exitCode, 1);
+      assert.ok(stderr.includes('Migration failed!'), `fixture: the runner reports this one:\n${stderr}`);
+      assert.ok(!stderr.includes('✗ Migration failed:'), 'main printed a second copy of an error already reported');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a migration prompt whose stdin closes without an answer applies nothing, says so, and exits 1', async () => {
+    const tmpDir = await createTempDir('bmad-t278-eofm-');
+    try {
+      await createInstallation(tmpDir, '1.4.1');
+      const configPath = path.join(tmpDir, '_bmad/bme/_vortex/config.yaml');
+      const before = fs.readFileSync(configPath, 'utf8');
+      const { exitCode, stdout, stderr } = await runScriptWithInput(SCRIPT_PATH, [], '', { cwd: tmpDir });
+      assert.ok(stdout.includes('Proceed with migration?'), 'fixture: this is the migration prompt');
+      assert.equal(exitCode, 1, 'an unanswered prompt must not look like success');
+      assert.ok(stderr.includes('No answer could be read'), `the unanswered prompt was not reported:\n${stderr}`);
+      assert.equal(fs.readFileSync(configPath, 'utf8'), before, 'nothing may be applied');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a last "y" with no newline is an answer, not an unanswered prompt', async () => {
+    const tmpDir = await createTempDir('bmad-t278-y-');
+    try {
+      const configPath = await refreshOnlyProject(tmpDir);
+      const { exitCode, stderr } = await runScriptWithInput(SCRIPT_PATH, [], 'y', { cwd: tmpDir });
+      assert.ok(!stderr.includes('No answer could be read'), `the "y" was lost:\n${stderr}`);
+      assert.equal(exitCode, 0);
+      assert.notEqual(yaml.load(fs.readFileSync(configPath, 'utf8')).version, '0.9.0', 'the update must have been applied');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('an answer with surrounding spaces is read as typed', async () => {
+    const tmpDir = await createTempDir('bmad-t278-sp-');
+    try {
+      const configPath = await refreshOnlyProject(tmpDir);
+      const { exitCode, stdout } = await runScriptWithInput(SCRIPT_PATH, [], ' Yes \n', { cwd: tmpDir });
+      assert.ok(!stdout.includes('cancelled'), 'a padded "yes" was read as a no');
+      assert.equal(exitCode, 0);
+      assert.notEqual(yaml.load(fs.readFileSync(configPath, 'utf8')).version, '0.9.0', 'the update must have been applied');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('an explicit "n" is still a normal exit 0', async () => {
+    const tmpDir = await createTempDir('bmad-t278-no-');
+    try {
+      await refreshOnlyProject(tmpDir);
+      const { exitCode, stdout, stderr } = await runScriptWithInput(SCRIPT_PATH, [], 'n\n', { cwd: tmpDir });
+      assert.equal(exitCode, 0);
+      assert.ok(stdout.includes('cancelled'), 'fixture: the operator declined');
+      assert.ok(!stderr.includes('No answer could be read'), 'a typed answer is an answer');
+    } finally {
+      await fs.remove(tmpDir);
+    }
   });
 });

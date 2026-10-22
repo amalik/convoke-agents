@@ -67,6 +67,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`convoke-update` no longer fails or stops without saying why (`T278`).** When it could not take its lock —
+  another run in progress, or `_bmad-output` not writable — it exited 1 with nothing on screen after
+  "Starting update...". It now prints the reason. And when stdin closes before its confirmation prompt is
+  answered, as in a script, it applies nothing, says so, and exits 1; before, the run ended silently with exit 0.
+  Typing `n`, or Ctrl+C, still cancels with exit 0. A final `y` with no newline, or with surrounding spaces, now
+  counts as yes.
+
 - **`convoke-update --dry-run` now shows what the real run would back up and replace (`T248`).** Both of
   its branches stopped before printing the backup inventory that the real run shows at its confirmation
   prompt, and the migration preview listed only part of what a refresh replaces — agent files, workflow

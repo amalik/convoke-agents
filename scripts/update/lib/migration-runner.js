@@ -199,6 +199,8 @@ async function runMigrations(fromVersion, options = {}) {
 
   } catch (error) {
     console.error('');
+    // T278: tells convoke-update's main() this error has been printed, so it adds no second copy.
+    if (error && typeof error === 'object') error.reported = true;
     console.error(chalk.red.bold('✗ Migration failed!'));
     console.error('');
     console.error(chalk.red(error.message));
@@ -504,6 +506,8 @@ async function runRefreshOnly(fromVersion, options = {}) {
 
   } catch (error) {
     console.error('');
+    // T278: tells convoke-update's main() this error has been printed, so it adds no second copy.
+    if (error && typeof error === 'object') error.reported = true;
     console.error(chalk.red.bold('✗ Update failed!'));
     console.error(chalk.red(error.message));
     console.error('');

@@ -39,6 +39,12 @@ Main update command — applies migrations and refreshes your installation.
 | `--yes` or `-y` | Skip confirmation prompt |
 | `--verbose` or `-v` | Show detailed output |
 
+Without `--yes`, the command asks before it writes anything. `y` or `yes` applies the update; any other answer, or
+Ctrl+C, cancels with exit 0. If stdin closes before an answer arrives, as in a script or CI job, nothing is applied and
+the command exits 1, so a script can tell that apart from a completed update. Use `--yes` there. Do not pipe the
+output into a program that may stop reading, such as `head`: when that is noticed before the prompt is answered the
+run also exits 1 with nothing applied, but it is not always noticed in time.
+
 ```bash
 npx -p convoke-agents convoke-update --dry-run     # Preview
 npx -p convoke-agents convoke-update               # Apply with confirmation

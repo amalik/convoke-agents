@@ -424,8 +424,12 @@ async function main() {
     if (!yes) {
       printBackupScope();
       console.log('');
-      const confirmed = await confirm('Proceed with update?');
-      if (!confirmed) {
+      const answer = await confirm('Proceed with update?');
+      if (answer === 'unanswered') {
+        reportUnanswered();
+        return;
+      }
+      if (answer !== 'yes') {
         console.log('');
         console.log(chalk.yellow('Update cancelled.'));
         console.log('');
@@ -450,7 +454,8 @@ async function main() {
       console.log('');
       console.log(chalk.gray(`Backup location: ${result.backupMetadata.backup_dir}`));
       console.log('');
-    } catch (_error) {
+    } catch (error) {
+      reportFailure(error, 'Update');
       process.exitCode = 1;
       return;
     }
@@ -516,9 +521,13 @@ async function main() {
     printBackupScope({ migration: true });
     console.log('');
 
-    const confirmed = await confirm('Proceed with migration?');
+    const answer = await confirm('Proceed with migration?');
 
-    if (!confirmed) {
+    if (answer === 'unanswered') {
+      reportUnanswered();
+      return;
+    }
+    if (answer !== 'yes') {
       console.log('');
       console.log(chalk.yellow('Migration cancelled.'));
       console.log('');
@@ -550,8 +559,8 @@ async function main() {
     console.log(chalk.gray(`Backup location: ${result.backupMetadata.backup_dir}`));
     console.log('');
 
-  } catch (_error) {
-    // Error already logged by migration-runner
+  } catch (error) {
+    reportFailure(error, 'Migration');
     process.exitCode = 1;
     return;
   }
@@ -584,25 +593,73 @@ function printChangelog(fromVersion, toVersion) {
 }
 
 /**
- * Confirm action with user
- * @param {string} message - Confirmation message
- * @returns {Promise<boolean>} True if user confirms
+ * Print a failure the runner has not already printed. The runner reports everything raised inside
+ * its own try/catch and marks it `reported`; anything thrown before that block (taking the
+ * migration lock, an unwritable _bmad-output) used to reach main's catch unprinted, and the run
+ * exited 1 with nothing on stderr (T278).
+ */
+function reportFailure(error, label) {
+  if (error && error.reported) return;
+  console.error('');
+  console.error(chalk.red(`✗ ${label} failed: ${error && error.message ? error.message : String(error)}`));
+  console.error('');
+}
+
+/**
+ * The prompt got no answer: stdin closed before one arrived, or the output reader had gone so the
+ * prompt was never seen. Nothing has been applied. Operator ruling 2026-10-22: exit 1 with a
+ * message, so a script can tell "not applied" from "applied"; a typed "n" and Ctrl+C stay exit 0.
+ * Recorded on backlog row T278.
+ */
+function reportUnanswered() {
+  console.error('');
+  console.error(chalk.red('✗ No answer could be read at the prompt, so nothing was applied.'));
+  console.error(chalk.gray('  Re-run with --yes to apply without a prompt.'));
+  console.error('');
+  process.exitCode = 1;
+}
+
+/**
+ * Ask a yes/no question. `y` or `yes`, in any case and with surrounding spaces, is yes.
+ * @param {string} message - The question, without the [y/N] suffix
+ * @returns {Promise<'yes'|'no'|'unanswered'>} 'no' for any other answer and for Ctrl+C;
+ *   'unanswered' when stdin closed without an answer or the reader of stdout has gone.
  */
 async function confirm(message) {
-  if (stdoutClosed) return false;
+  if (stdoutClosed) return 'unanswered';
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
   return new Promise(resolve => {
+    let settled = false;
+    const settle = (value) => {
+      if (settled) return;
+      settled = true;
+      cancelPendingConfirm = null;
+      resolve(value);
+    };
     // The broken pipe is usually reported only after the prompt has been written, so the
     // stdout error handler can also cancel a prompt that is already waiting.
-    cancelPendingConfirm = () => { cancelPendingConfirm = null; rl.close(); resolve(false); };
+    cancelPendingConfirm = () => { settle('unanswered'); rl.close(); };
+    // stdin closing before an answer (`< /dev/null`, a pipe that ends) closes the interface
+    // without calling the question callback; before T278 the promise never settled and the run
+    // exited 0 printing nothing.
+    const answerOf = (text) => {
+      const a = text.trim().toLowerCase();
+      return a === 'y' || a === 'yes' ? 'yes' : 'no';
+    };
+    // Ctrl+C in a terminal is the operator declining. Without this listener readline just closes
+    // the interface, which would read as "unanswered" and advise --yes to someone who said no.
+    rl.on('SIGINT', () => { settle('no'); rl.close(); });
+    // A last answer with no newline (`printf y | convoke-update`) reaches readline only when stdin
+    // ends; it emits it as a plain 'line' without calling the question callback.
+    rl.on('line', (text) => settle(answerOf(text)));
+    rl.on('close', () => settle('unanswered'));
     rl.question(chalk.yellow(`${message} [y/N]: `), answer => {
-      cancelPendingConfirm = null;
+      settle(answerOf(answer));
       rl.close();
-      resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
     });
   });
 }
@@ -631,7 +688,7 @@ if (require.main === module) {
   // write fails with EPIPE. That is the reader's choice, not an error of ours, so it is ignored --
   // on stderr as well, which `2>&1 | head` routes into the same pipe. Without this Node reports it
   // as an unhandled 'error' event and exit 1. A closed stdout also means any prompt is unseen, so a
-  // pending one is answered "no" and nothing is applied. Any other stream error still throws.
+  // pending one ends as unanswered: nothing is applied and the run exits 1. Any other stream error still throws.
   for (const stream of [process.stdout, process.stderr]) {
     stream.on('error', (err) => {
       if (!err || err.code !== 'EPIPE') throw err;
