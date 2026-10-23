@@ -883,7 +883,7 @@ describe('T248: --dry-run shows the backup scope and the whole refresh', () => {
     }
   });
 
-  it('a real run whose output reader is gone answers its own prompt no, instead of waiting unseen', { skip: NO_SH }, async () => {
+  it('a real run whose output reader is gone ends its unseen prompt as unanswered, instead of waiting', { skip: NO_SH }, async () => {
     // Once stdout's EPIPE is ignored, the [y/N] prompt is written to nowhere. stdin here is a pipe
     // that stays open for 20 s, so a prompt still waiting would hold the run that long; failing
     // closed must end it at once and change nothing.
@@ -1024,7 +1024,7 @@ describe('T278: convoke-update reports every failure and every unanswered prompt
       const { exitCode, stderr } = await runScript(SCRIPT_PATH, ['--yes'], { cwd: tmpDir });
       assert.equal(exitCode, 1);
       assert.ok(stderr.includes('Update failed!'), `fixture: the runner reports this one:\n${stderr}`);
-      assert.ok(!stderr.includes('✗ Update failed:'), 'main printed a second copy of an error already reported');
+      assert.ok(!/✗ (Update|Migration) failed:/.test(stderr), 'main printed a second copy of an error already reported');
     } finally {
       await fs.remove(tmpDir);
     }
@@ -1034,7 +1034,8 @@ describe('T278: convoke-update reports every failure and every unanswered prompt
     const tmpDir = await createTempDir('bmad-t278-eof-');
     try {
       const configPath = await refreshOnlyProject(tmpDir);
-      const { exitCode, stderr } = await runScriptWithInput(SCRIPT_PATH, [], '', { cwd: tmpDir });
+      const { exitCode, stdout, stderr } = await runScriptWithInput(SCRIPT_PATH, [], '', { cwd: tmpDir });
+      assert.ok(stdout.includes('Proceed with update?'), 'fixture: the prompt was reached');
       assert.equal(exitCode, 1, 'an unanswered prompt must not look like success');
       assert.ok(stderr.includes('No answer could be read'), `the unanswered prompt was not reported:\n${stderr}`);
       assert.equal(yaml.load(fs.readFileSync(configPath, 'utf8')).version, '0.9.0', 'nothing may be applied');
@@ -1043,7 +1044,7 @@ describe('T278: convoke-update reports every failure and every unanswered prompt
     }
   });
 
-  it('a migration that cannot write _bmad-output says so on stderr and exits 1', { skip: process.getuid && process.getuid() === 0 ? 'root ignores the read-only mode' : false }, async () => {
+  it('a migration that cannot write _bmad-output says so on stderr and exits 1', { skip: process.platform === 'win32' ? 'chmod does not make a directory read-only on Windows' : (process.getuid && process.getuid() === 0 ? 'root ignores the read-only mode' : false) }, async () => {
     const tmpDir = await createTempDir('bmad-t278-ro-');
     const outDir = path.join(tmpDir, '_bmad-output');
     try {
@@ -1055,7 +1056,7 @@ describe('T278: convoke-update reports every failure and every unanswered prompt
       assert.equal(exitCode, 1);
       assert.ok(/✗ Migration failed: .*(EACCES|permission denied)/i.test(stderr), `the failure was not reported:\n${stderr}`);
     } finally {
-      fs.chmodSync(outDir, 0o755);
+      if (fs.existsSync(outDir)) fs.chmodSync(outDir, 0o755);
       await fs.remove(tmpDir);
     }
   });
@@ -1070,7 +1071,7 @@ describe('T278: convoke-update reports every failure and every unanswered prompt
       assert.ok(stdout.includes('Migration Plan'), 'fixture: this is the migration branch');
       assert.equal(exitCode, 1);
       assert.ok(stderr.includes('Migration failed!'), `fixture: the runner reports this one:\n${stderr}`);
-      assert.ok(!stderr.includes('✗ Migration failed:'), 'main printed a second copy of an error already reported');
+      assert.ok(!/✗ (Update|Migration) failed:/.test(stderr), 'main printed a second copy of an error already reported');
     } finally {
       await fs.remove(tmpDir);
     }
@@ -1115,6 +1116,68 @@ describe('T278: convoke-update reports every failure and every unanswered prompt
       assert.notEqual(yaml.load(fs.readFileSync(configPath, 'utf8')).version, '0.9.0', 'the update must have been applied');
     } finally {
       await fs.remove(tmpDir);
+    }
+  });
+
+  // Spawn with stdin held open, so the only way the prompt can end is the one under test.
+  function spawnHeld(cwd, onStart) {
+    return new Promise((resolve) => {
+      const child = spawn('node', [SCRIPT_PATH], { cwd });
+      let stdout = '';
+      let stderr = '';
+      const timer = setTimeout(() => { child.kill('SIGKILL'); }, 20000);
+      child.stdout.on('data', (d) => { stdout += d; onStart.onStdout && onStart.onStdout(child, stdout); });
+      child.stderr.on('data', (d) => { stderr += d; });
+      child.on('close', (code, signal) => { clearTimeout(timer); resolve({ exitCode: code, signal, stdout, stderr }); });
+      onStart.now && onStart.now(child);
+    });
+  }
+
+  it('Ctrl+C at the prompt of a piped run cancels with exit 0', { skip: process.platform === 'win32' ? 'no POSIX signals' : false }, async () => {
+    // With stdout not a terminal, readline does not read the keystroke; the process gets a real
+    // SIGINT, which without a listener ends the run with 130 and no "cancelled" line.
+    const tmpDir = await createTempDir('bmad-t278-int-');
+    try {
+      const configPath = await refreshOnlyProject(tmpDir);
+      let sent = false;
+      const { exitCode, signal, stdout } = await spawnHeld(tmpDir, {
+        onStdout: (child, out) => { if (!sent && out.includes('Proceed with update?')) { sent = true; child.kill('SIGINT'); } },
+      });
+      assert.ok(sent, 'fixture: the prompt was reached');
+      assert.equal(signal, null, 'the interrupt must not kill the run');
+      assert.equal(exitCode, 0);
+      assert.ok(stdout.includes('Update cancelled.'), 'Ctrl+C at the prompt is a cancel');
+      assert.equal(yaml.load(fs.readFileSync(configPath, 'utf8')).version, '0.9.0', 'nothing may be applied');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a run whose output reader is gone before the prompt applies nothing, says so, and exits 1', async () => {
+    // The reader closes at once and stdin stays open, so the prompt is reached with stdoutClosed
+    // already set; only confirm's early return can end it. The usual --yes advice would apply the
+    // update with all its output lost, so the message names the cause instead.
+    const tmpDir = await createTempDir('bmad-t278-gone-');
+    try {
+      const configPath = await refreshOnlyProject(tmpDir);
+      const { exitCode, signal, stderr } = await spawnHeld(tmpDir, { now: (child) => child.stdout.destroy() });
+      assert.equal(signal, null, 'the run waited at a prompt nobody could see');
+      assert.equal(exitCode, 1, 'an unseen prompt must not look like success');
+      assert.ok(stderr.includes('The program reading the output stopped'), `the cause was not reported:\n${stderr}`);
+      assert.ok(!stderr.includes('--yes'), 'advising --yes here applies the update blind');
+      assert.equal(yaml.load(fs.readFileSync(configPath, 'utf8')).version, '0.9.0', 'nothing may be applied');
+    } finally {
+      await fs.remove(tmpDir);
+    }
+  });
+
+  it('a prompt asked after the output reader is known to be gone ends as unanswered at once', async () => {
+    const { _internal } = require('../../scripts/update/convoke-update');
+    _internal._setStdoutClosed(true);
+    try {
+      assert.equal(await _internal._confirm('Proceed?'), 'unanswered');
+    } finally {
+      _internal._setStdoutClosed(false);
     }
   });
 

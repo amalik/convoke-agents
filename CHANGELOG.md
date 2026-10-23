@@ -71,8 +71,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   another run in progress, or `_bmad-output` not writable — it exited 1 with nothing on screen after
   "Starting update...". It now prints the reason. And when stdin closes before its confirmation prompt is
   answered, as in a script, it applies nothing, says so, and exits 1; before, the run ended silently with exit 0.
-  Typing `n`, or Ctrl+C, still cancels with exit 0. A final `y` with no newline, or with surrounding spaces, now
-  counts as yes.
+  **This changes an exit code:** a run whose output reader goes away while the prompt waits (`| head`) used to
+  exit 0 and now exits 1, with nothing applied, so a script using `set -o pipefail` will now see it fail.
+  Typing `n`, Ctrl+C, or Ctrl+D at a terminal cancels with exit 0; Ctrl+C now does so when the output is piped
+  too (`| tee log`), where before it ended the run by signal. A final `y` with no newline, or with surrounding
+  spaces, now counts as yes.
 
 - **`convoke-update --dry-run` now shows what the real run would back up and replace (`T248`).** Both of
   its branches stopped before printing the backup inventory that the real run shows at its confirmation
@@ -86,9 +89,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from a 1.x install prints about 90 KB of changelog — piped into a reader that was not keeping up lost
   everything after the first 64 KB, which is where the backup scope and the `DRY RUN` banner are. It now sets
   the exit code and lets the output finish. A reader that stops early, such as `| head` or `2>&1 | head`, is
-  not treated as an error. A confirmation prompt is answered no, applying nothing, when the command
-  finds its reader gone while it is still writing; it cannot tell a reader that left after reading the
-  prompt, so in that case the prompt still waits.
+  not treated as an error. A confirmation prompt applies nothing when the command finds its reader gone
+  while it is still writing (since `T278`, above, that run exits 1); it cannot tell a reader that left after
+  reading the prompt, so in that case the prompt still waits.
 
 - **Three in-chat workflows called a script that does not exist in your project (`T255`).** `/bmad-export-skill`,
   `/bmad-migrate-artifacts` and `/bmad-portfolio-status` told the agent to run `node scripts/…`, which is

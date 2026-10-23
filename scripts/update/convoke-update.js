@@ -18,7 +18,7 @@ const { WRAPPER_BACKUP_REL } = require('./lib/refresh-installation');
 const { runCompatPreflight } = require('./lib/compat-preflight');
 
 // Set when the reader of stdout has gone away (EPIPE). A confirmation prompt written to a closed
-// pipe is one nobody can see, so `confirm` answers it "no" rather than waiting for input.
+// pipe is one nobody can see, so `confirm` ends it as unanswered rather than waiting for input.
 let stdoutClosed = false;
 let cancelPendingConfirm = null;
 // Story v63-2-3: post-upgrade governance gate. `checkBmmDependencies` is
@@ -613,8 +613,14 @@ function reportFailure(error, label) {
  */
 function reportUnanswered() {
   console.error('');
-  console.error(chalk.red('✗ No answer could be read at the prompt, so nothing was applied.'));
-  console.error(chalk.gray('  Re-run with --yes to apply without a prompt.'));
+  if (stdoutClosed) {
+    // --yes is not the advice here: it would apply the update with all of its output lost.
+    console.error(chalk.red('✗ The program reading the output stopped before the prompt was answered, so nothing was applied.'));
+    console.error(chalk.gray('  Re-run without piping the output into a program that stops reading.'));
+  } else {
+    console.error(chalk.red('✗ No answer could be read at the prompt, so nothing was applied.'));
+    console.error(chalk.gray('  Re-run with --yes to apply without a prompt.'));
+  }
   console.error('');
   process.exitCode = 1;
 }
@@ -622,8 +628,9 @@ function reportUnanswered() {
 /**
  * Ask a yes/no question. `y` or `yes`, in any case and with surrounding spaces, is yes.
  * @param {string} message - The question, without the [y/N] suffix
- * @returns {Promise<'yes'|'no'|'unanswered'>} 'no' for any other answer and for Ctrl+C;
- *   'unanswered' when stdin closed without an answer or the reader of stdout has gone.
+ * @returns {Promise<'yes'|'no'|'unanswered'>} 'no' for any other answer, for Ctrl+C, and for Ctrl+D
+ *   at a terminal; 'unanswered' when a non-terminal stdin closed without an answer or the reader
+ *   of stdout has gone.
  */
 async function confirm(message) {
   if (stdoutClosed) return 'unanswered';
@@ -634,10 +641,12 @@ async function confirm(message) {
 
   return new Promise(resolve => {
     let settled = false;
+    const decline = () => { settle('no'); rl.close(); };
     const settle = (value) => {
       if (settled) return;
       settled = true;
       cancelPendingConfirm = null;
+      process.removeListener('SIGINT', decline);
       resolve(value);
     };
     // The broken pipe is usually reported only after the prompt has been written, so the
@@ -650,13 +659,19 @@ async function confirm(message) {
       const a = text.trim().toLowerCase();
       return a === 'y' || a === 'yes' ? 'yes' : 'no';
     };
-    // Ctrl+C in a terminal is the operator declining. Without this listener readline just closes
-    // the interface, which would read as "unanswered" and advise --yes to someone who said no.
-    rl.on('SIGINT', () => { settle('no'); rl.close(); });
+    // Ctrl+C is the operator declining. When stdout is a terminal readline reads the keystroke and
+    // emits 'SIGINT' on the interface; without a listener it just closes, which would read as
+    // "unanswered" and advise --yes to someone who said no. When stdout is not a terminal
+    // (`| tee log`) the process gets a real SIGINT instead, which would otherwise end it with 130.
+    // The process listener is removed once the prompt settles, so Ctrl+C later still interrupts.
+    rl.on('SIGINT', decline);
+    process.on('SIGINT', decline);
     // A last answer with no newline (`printf y | convoke-update`) reaches readline only when stdin
     // ends; it emits it as a plain 'line' without calling the question callback.
     rl.on('line', (text) => settle(answerOf(text)));
-    rl.on('close', () => settle('unanswered'));
+    // Ctrl+D at a terminal is someone at the keyboard declining (operator ruling 2026-10-22, D2);
+    // a closed stdin that is not a terminal is a script that gave no answer.
+    rl.on('close', () => settle(process.stdin.isTTY ? 'no' : 'unanswered'));
     rl.question(chalk.yellow(`${message} [y/N]: `), answer => {
       settle(answerOf(answer));
       rl.close();
@@ -679,6 +694,10 @@ module.exports = {
   _internal: Object.freeze({
     _runPostUpgradeGate,
     _printPostUpgradeGate,
+    // T278: the reader of stdout is usually found gone only after the prompt is written, so the
+    // early return for an already-closed stdout cannot be reached reliably by a spawned run.
+    _confirm: confirm,
+    _setStdoutClosed: (value) => { stdoutClosed = value; },
   }),
 };
 
