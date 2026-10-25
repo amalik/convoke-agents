@@ -40,7 +40,11 @@ const REPO_ROOT = path.join(__dirname, '..', '..');
 // marker repeated at least as many times with nothing after it. A boolean "am I in a
 // fence" toggle is not enough — a ````-fence documenting a ```-fence flips it mid-block,
 // which both hides a real heading and reveals an example one.
-const FENCE_RE = /^(\s{0,3})(`{3,}|~{3,})(.*)$/;
+// Spaces only: CommonMark counts a tab as four columns, which makes the line indented code. A
+// backtick fence's info string may not contain a backtick (CommonMark 0.31.2, 4.5).
+// The rest of the line is matched as [\s\S], not `.`: `.` stops at a stray \r (a CRCRLF file) or
+// U+2028, and then no fence line matches at all.
+const FENCE_RE = /^( {0,3})(`{3,}|~{3,})([\s\S]*)$/;
 const HEADING_RE = /^\s{0,3}##\s/;
 const COMMENT_OPEN_RE = /<!--/;
 // `-->` only. `--!>` is the HTML tokenizer's comment-end-bang state; CommonMark 0.31.2
@@ -54,7 +58,9 @@ const COMMENT_CLOSE_RE = /-->/;
 // A heading that means to be a release entry. `## Version History` and other prose
 // headings are legitimate and must not be flagged — the real CHANGELOG.md has them.
 const VERSIONISH_RE = /^\s{0,3}##\s+\[?v?\d+\.\d+\.\d+/;
-// Kept in step with changelog-reader.js::HEADER_RE.
+// The bracketed form of changelog-reader.js::HEADER_RE. Since T182 the reader also reads a heading
+// without brackets as a release; this gate still refuses that shape, through VERSIONISH_RE above,
+// so a release keeps the one shape every reader of this file understands.
 const HEADER_RE = /^##\s+\[([^\]]+)\](?:\s*[-–—]\s*(.+?))?\s*$/;
 const SEMVER_RE = /^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/;
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})/;
@@ -66,10 +72,21 @@ const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})/;
  * @returns {Array<{line: string, number: number}>}
  */
 function visibleHeadings(raw) {
+  return scan(raw).headings;
+}
+
+/**
+ * The strict scan itself.
+ *
+ * @param {string} raw - CHANGELOG.md contents.
+ * @returns {{headings: Array<{line: string, number: number}>, unclosedFence: number|null}}
+ *   `unclosedFence` is the 1-based line of a fence still open at the end of the file.
+ */
+function scan(raw) {
   const found = [];
   let fence = null;
   let inComment = false;
-  raw.split('\n').forEach((line, i) => {
+  raw.split(/\r?\n/).forEach((line, i) => {
     const fenceMatch = FENCE_RE.exec(line);
     if (fence) {
       if (fenceMatch
@@ -84,8 +101,8 @@ function visibleHeadings(raw) {
       if (COMMENT_CLOSE_RE.test(line)) inComment = false;
       return;
     }
-    if (fenceMatch) {
-      fence = { marker: fenceMatch[2][0], length: fenceMatch[2].length };
+    if (fenceMatch && !(fenceMatch[2][0] === '`' && fenceMatch[3].includes('`'))) {
+      fence = { marker: fenceMatch[2][0], length: fenceMatch[2].length, number: i + 1 };
       return;
     }
     if (COMMENT_OPEN_RE.test(line) && !COMMENT_CLOSE_RE.test(line)) {
@@ -95,7 +112,7 @@ function visibleHeadings(raw) {
     if (COMMENT_OPEN_RE.test(line)) return;
     if (HEADING_RE.test(line)) found.push({ line, number: i + 1 });
   });
-  return found;
+  return { headings: found, unclosedFence: fence ? fence.number : null };
 }
 
 /**
@@ -138,7 +155,20 @@ function checkChangelogEntry(options = {}) {
     return { ok: false, message: `cannot read ${changelogPath}: ${err.message}` };
   }
 
-  const headings = visibleHeadings(raw);
+  const { headings, unclosedFence } = scan(raw);
+
+  // T182: a fence that never closes hides everything below it on GitHub, which renders by
+  // CommonMark, while changelog-reader.js fails safe and reads its opening line as plain text
+  // (operator ruling 2026-10-24). The two surfaces would then show different changelogs.
+  // ADR-001 surface: GitHub. Readings: strict scan only.
+  if (unclosedFence !== null) {
+    return {
+      ok: false,
+      message: `UNCLOSED CODE FENCE at ${path.basename(changelogPath)}:${unclosedFence}\n`
+        + '  It is never closed, so GitHub shows nothing below it as headings. Close it with the same\n'
+        + '  marker, at least as long, alone on its line.',
+    };
+  }
 
   // ADR-001 surface: GitHub. Readings: strict scan only — no reader-side counterpart, so anything
   // that hides a heading from this scan defeats it (T190, open).
@@ -148,8 +178,9 @@ function checkChangelogEntry(options = {}) {
     return {
       ok: false,
       message: `MALFORMED HEADING at ${path.basename(changelogPath)}:${first.number}: ${first.line.trim()}\n`
-        + '  Every "## " heading must read "## [version] - date". One that does not is skipped by\n'
-        + '  changelog-reader.js, and its whole section is then shown under the entry above it.',
+        + '  Every release heading must read "## [version] - date", the Keep a Changelog shape this\n'
+        + '  file keeps to. changelog-reader.js also reads a few other shapes; others it skips, and\n'
+        + '  then shows the whole section under the entry above it.',
     };
   }
 
@@ -178,17 +209,19 @@ function checkChangelogEntry(options = {}) {
         + '  convoke-update shows operators nothing at all for this release.',
     };
   }
-  // The two readings must agree. They diverge when a heading is an example inside a code
-  // fence or an HTML comment (this scan hides it, changelog-reader.js does not), or when
-  // it is indented 1-3 spaces (this scan sees it, changelog-reader.js does not).
+  // The two readings must agree. They diverge when a heading is an example inside an HTML
+  // comment (this scan hides it, changelog-reader.js does not), or when it is indented 1-3
+  // spaces (this scan sees it, changelog-reader.js reads headings at column 0 only). Fences
+  // that close are read by the same CommonMark rules on both sides since T182, so this check
+  // also catches the reader drifting from them; a fence that never closes is refused above.
   // ADR-001 surface: both. Readings: both — this is the invariant itself, stated as a check.
   if (claiming.length !== entries.length) {
     return {
       ok: false,
       message: `DISPUTED CHANGELOG ENTRY for ${version}: a strict read finds ${claiming.length} heading(s), `
         + `changelog-reader.js finds ${entries.length}.\n`
-        + '  One of them is not a real entry — usually a heading inside a code fence or an HTML\n'
-        + '  comment, or a heading indented 1-3 spaces. Operators are shown what the reader finds.',
+        + '  One of them is not a real entry — usually a heading inside an HTML comment, or a\n'
+        + '  heading indented 1-3 spaces. Operators are shown what the reader finds.',
     };
   }
 

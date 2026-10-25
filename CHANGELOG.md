@@ -67,6 +67,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`convoke-update`'s "What's New" could show a release that does not exist, or a release's notes under the
+  wrong version (`T182`).** It read code fences only when they started at the left margin, so a version
+  heading used as an example inside an indented fence was shown as a release. And a release heading without
+  brackets (`## 4.0.2 - 2026-09-14`, `## v4.0.2`) was skipped, so its notes appeared under the release above
+  it. Code fences are now read by the Markdown rules, except that a fence still open at the end of the file
+  no longer hides the releases after it; a heading without brackets is shown as its own release when it
+  carries only the version, or the version and a date, optionally followed by a note. The current changelog
+  displays exactly as before.
+
 - **`convoke-update` no longer fails or stops without saying why (`T278`).** When it could not take its lock —
   another run in progress, or `_bmad-output` not writable — it exited 1 with nothing on screen after
   "Starting update...". It now prints the reason. And when stdin closes before its confirmation prompt is

@@ -93,7 +93,9 @@ Example of the format:
 `;
   const result = check(fenced);
   assert.equal(result.ok, false);
-  assert.match(result.message, /DISPUTED CHANGELOG ENTRY/);
+  // Since T182 the reader also sees the indented fence, so both readings agree there is no 9.9.9
+  // entry, and the gate says so instead of reporting a dispute.
+  assert.match(result.message, /MISSING CHANGELOG ENTRY/);
 });
 
 test('rejects two entries for the same version', () => {
@@ -209,7 +211,7 @@ test('exits 2 on a mistyped flag rather than checking something else', () => {
 
 test('rejects a heading hidden in a fence longer than three markers', () => {
   // A ````-fence documenting a ```-fence. A boolean in-fence toggle flips mid-block and
-  // treats the example as a live entry.
+  // treats the example as a live entry. Since T182 neither reading does, so it is missing, not disputed.
   const nested = `# Changelog
 
 \`\`\`\`md
@@ -226,7 +228,7 @@ test('rejects a heading hidden in a fence longer than three markers', () => {
 `;
   const result = check(nested);
   assert.equal(result.ok, false);
-  assert.match(result.message, /DISPUTED CHANGELOG ENTRY/);
+  assert.match(result.message, /MISSING CHANGELOG ENTRY/);
 });
 
 test('accepts a real entry below a legitimate nested code block', () => {
@@ -253,8 +255,9 @@ Code blocks are written like:
 });
 
 test('rejects a fenced example sitting above the real entry', () => {
-  // The example hides from a strict scan but not from changelog-reader.js, so the gate
-  // would otherwise validate the example and never look at the UNRELEASED entry below.
+  // Before T182 the example hid from a strict scan but not from changelog-reader.js, and the gate
+  // reported duplicates. Both now skip it, so the gate must reach the UNRELEASED entry below and
+  // refuse that, rather than validate the example.
   const masked = `# Changelog
 
    \`\`\`md
@@ -268,7 +271,7 @@ test('rejects a fenced example sitting above the real entry', () => {
 `;
   const result = check(masked);
   assert.equal(result.ok, false);
-  assert.match(result.message, /DUPLICATE CHANGELOG ENTRIES/);
+  assert.match(result.message, /UNDATED CHANGELOG ENTRY/);
 });
 
 test('rejects an entry that exists only inside an HTML comment', () => {
@@ -490,9 +493,10 @@ ${GOOD.replace('# Changelog\n\n', '')}`);
   assert.equal(result.ok, true, result.message);
 });
 
-test('rejects a real heading and a fenced one that disagree about the date', () => {
-  // Counts match — the reader sees only the column-0 heading inside the fence, the strict
-  // scan sees only the indented one — so only comparing the dates catches it.
+test('rejects a fenced heading beside an indented one, which the two readings count differently', () => {
+  // Before T182 the counts matched — the reader saw only the column-0 heading inside the fence,
+  // the strict scan only the indented one — and only comparing the dates caught it. Both now hide
+  // the fenced heading; the reader reads headings at column 0 only, so the counts differ.
   const result = check(`# Changelog
 
    \`\`\`md
@@ -510,6 +514,116 @@ test('rejects a real heading and a fenced one that disagree about the date', () 
 `);
   assert.equal(result.ok, false);
   assert.match(result.message, /DISPUTED CHANGELOG ENTRY/);
+});
+
+test('a backtick line whose info string holds a backtick opens no fence (T182)', () => {
+  // CommonMark: inline code, not a fence. Before T182 this scan opened a fence on it and hid the
+  // real entry below, while changelog-reader.js did not.
+  const result = check(`# Changelog
+
+\`\`\`run \`npm test\` first
+
+${GOOD.replace('# Changelog\n\n', '')}`);
+  assert.equal(result.ok, true, result.message);
+});
+
+test('a tab-indented fence line opens no fence (T182)', () => {
+  // A tab counts as four columns, so the line is indented code, as changelog-reader.js reads it.
+  const result = check(`# Changelog
+
+\t\`\`\`
+
+${GOOD.replace('# Changelog\n\n', '')}`);
+  assert.equal(result.ok, true, result.message);
+});
+
+test('refuses a changelog with a code fence that never closes (T182)', () => {
+  // GitHub hides everything below it; changelog-reader.js fails safe and shows it. Refused even
+  // when the fence sits in an older entry, below the release being checked.
+  for (const where of ['above', 'below']) {
+    const stray = '```md\nnever closed\n';
+    const body = where === 'above'
+      ? `# Changelog\n\n${stray}\n${GOOD.replace('# Changelog\n\n', '')}`
+      : `${GOOD}\n${stray}`;
+    const result = check(body);
+    assert.equal(result.ok, false, where);
+    const line = body.split('\n').indexOf('```md') + 1;
+    assert.match(result.message, new RegExp(`UNCLOSED CODE FENCE at CHANGELOG\\.md:${line}\\n`), where);
+  }
+});
+
+test('keeps fences when a stray carriage return is left on the line (T182)', () => {
+  const withExample = `# Changelog
+
+\`\`\`md
+## [9.9.9] - 2001-01-01
+\`\`\`
+
+${GOOD.replace('# Changelog\n\n', '')}`;
+  const result = check(withExample.replace(/\n/g, '\r\r\n'));
+  assert.equal(result.ok, true, result.message);
+});
+
+test('reads a changelog with CRLF line endings (T182)', () => {
+  // The fenced example must stay hidden: with the \r left on, no fence line matches.
+  const withExample = `# Changelog
+
+\`\`\`md
+## [9.9.9] - 2001-01-01
+\`\`\`
+
+${GOOD.replace('# Changelog\n\n', '')}`;
+  const result = check(withExample.replace(/\n/g, '\r\n'));
+  assert.equal(result.ok, true, result.message);
+});
+
+test('refuses when the two readings see different headings for the version, with different dates', () => {
+  // Equal counts, different headings: the strict scan sees only the indented one, the reader only
+  // the one in the comment. Only comparing the dates catches it.
+  const result = check(`# Changelog
+
+<!--
+## [9.9.9] - 2026-02-02
+- draft
+-->
+  ## [9.9.9] - 2026-01-01
+
+- the entry
+
+## [9.9.8] - 2026-09-14
+
+- older
+`);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /DISPUTED CHANGELOG ENTRY[\s\S]*dates it/);
+});
+
+test('refuses when the reader dates the entry differently from the heading (T182)', () => {
+  // The same branch, for a reader that drifts from the fence or heading rules on a file the
+  // readings otherwise agree on. Drift is simulated: a fresh copy of the gate is loaded against a
+  // reader that misreads dates.
+  const readerPath = require.resolve('../../scripts/update/lib/changelog-reader');
+  const gatePath = require.resolve('../../scripts/audit/check-changelog-entry');
+  const reader = require(readerPath);
+  const original = reader.readChangelogEntries;
+  reader.readChangelogEntries = (...args) => original(...args).map((e) => ({ ...e, date: '2001-01-01' }));
+  delete require.cache[gatePath];
+  try {
+    const drifted = require(gatePath);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'convoke-changelog-'));
+    try {
+      const changelogPath = path.join(dir, 'CHANGELOG.md');
+      fs.writeFileSync(changelogPath, GOOD);
+      const result = drifted.checkChangelogEntry({ changelogPath, version: VERSION });
+      assert.equal(result.ok, false);
+      assert.match(result.message, /DISPUTED CHANGELOG ENTRY[\s\S]*dates it/);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  } finally {
+    reader.readChangelogEntries = original;
+    delete require.cache[gatePath];
+  }
 });
 
 test('finds its own repository files from an unrelated working directory', () => {
