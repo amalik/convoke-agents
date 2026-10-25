@@ -552,6 +552,39 @@ test('refuses a changelog with a code fence that never closes (T182)', () => {
   }
 });
 
+test('does not take a line indented four spaces for a fence (T182)', () => {
+  const result = check(`# Changelog
+
+    \`\`\`
+
+${GOOD.replace('# Changelog\n\n', '')}`);
+  assert.equal(result.ok, true, result.message);
+});
+
+test('closes a fence only on a line with nothing but spaces or tabs after the marker (T182)', () => {
+  // Text, or a non-breaking space, after the marker leaves the fence open on GitHub.
+  for (const tail of [' not a closer', '\u00a0']) {
+    const result = check(`# Changelog
+
+\`\`\`md
+## [9.9.9] - 2001-01-01
+\`\`\`${tail}
+\`\`\`
+
+${GOOD.replace('# Changelog\n\n', '')}`);
+    assert.equal(result.ok, true, `${JSON.stringify(tail)}: ${result.message}`);
+  }
+});
+
+test('ignores a leading byte-order mark (T182)', () => {
+  const result = check(`\uFEFF\`\`\`md
+## [9.9.9] - 2001-01-01
+\`\`\`
+
+${GOOD.replace('# Changelog\n\n', '')}`);
+  assert.equal(result.ok, true, result.message);
+});
+
 test('keeps fences when a stray carriage return is left on the line (T182)', () => {
   const withExample = `# Changelog
 

@@ -45,6 +45,9 @@ const REPO_ROOT = path.join(__dirname, '..', '..');
 // The rest of the line is matched as [\s\S], not `.`: `.` stops at a stray \r (a CRCRLF file) or
 // U+2028, and then no fence line matches at all.
 const FENCE_RE = /^( {0,3})(`{3,}|~{3,})([\s\S]*)$/;
+// After a closing fence CommonMark allows spaces and tabs only; String#trim would also accept NBSP
+// and U+2028, closing a fence GitHub keeps open. \r: a CRCRLF file leaves one on every line.
+const CLOSER_TAIL_RE = /^[ \t]*\r*$/;
 const HEADING_RE = /^\s{0,3}##\s/;
 const COMMENT_OPEN_RE = /<!--/;
 // `-->` only. `--!>` is the HTML tokenizer's comment-end-bang state; CommonMark 0.31.2
@@ -83,6 +86,8 @@ function visibleHeadings(raw) {
  *   `unclosedFence` is the 1-based line of a fence still open at the end of the file.
  */
 function scan(raw) {
+  // A leading byte-order mark would hide a fence on the first line; GitHub ignores it.
+  raw = raw.replace(/^\uFEFF/, '');
   const found = [];
   let fence = null;
   let inComment = false;
@@ -92,7 +97,7 @@ function scan(raw) {
       if (fenceMatch
         && fenceMatch[2][0] === fence.marker
         && fenceMatch[2].length >= fence.length
-        && fenceMatch[3].trim() === '') {
+        && CLOSER_TAIL_RE.test(fenceMatch[3])) {
         fence = null;
       }
       return;
@@ -165,8 +170,10 @@ function checkChangelogEntry(options = {}) {
     return {
       ok: false,
       message: `UNCLOSED CODE FENCE at ${path.basename(changelogPath)}:${unclosedFence}\n`
-        + '  It is never closed, so GitHub shows nothing below it as headings. Close it with the same\n'
-        + '  marker, at least as long, alone on its line.',
+        + '  Pairing the fence lines from the top of the file leaves this one open, so GitHub can\n'
+        + '  render everything below it as code. If a fence higher up was never closed, every pair\n'
+        + '  after it is shifted by one and this line is only where that shows: check from the top.\n'
+        + '  Close each fence with the same marker, at least as long, alone on its line.',
     };
   }
 
@@ -179,8 +186,8 @@ function checkChangelogEntry(options = {}) {
       ok: false,
       message: `MALFORMED HEADING at ${path.basename(changelogPath)}:${first.number}: ${first.line.trim()}\n`
         + '  Every release heading must read "## [version] - date", the Keep a Changelog shape this\n'
-        + '  file keeps to. changelog-reader.js also reads a few other shapes; others it skips, and\n'
-        + '  then shows the whole section under the entry above it.',
+        + '  file keeps to. changelog-reader.js also reads "## x.y.z" and "## vx.y.z", alone or with\n'
+        + '  " - YYYY-MM-DD"; any other shape it skips, showing the section under the entry above.',
     };
   }
 
@@ -211,17 +218,19 @@ function checkChangelogEntry(options = {}) {
   }
   // The two readings must agree. They diverge when a heading is an example inside an HTML
   // comment (this scan hides it, changelog-reader.js does not), or when it is indented 1-3
-  // spaces (this scan sees it, changelog-reader.js reads headings at column 0 only). Fences
-  // that close are read by the same CommonMark rules on both sides since T182, so this check
-  // also catches the reader drifting from them; a fence that never closes is refused above.
+  // spaces (this scan sees it, changelog-reader.js reads headings at column 0 only), or when a
+  // fence line sits inside an HTML comment (this scan skips it, the reader pairs it, T283).
+  // Otherwise fences are read by the same CommonMark rules on both sides since T182, so this
+  // check also catches the reader drifting from them; a fence that never closes is refused above.
   // ADR-001 surface: both. Readings: both — this is the invariant itself, stated as a check.
   if (claiming.length !== entries.length) {
     return {
       ok: false,
       message: `DISPUTED CHANGELOG ENTRY for ${version}: a strict read finds ${claiming.length} heading(s), `
         + `changelog-reader.js finds ${entries.length}.\n`
-        + '  One of them is not a real entry — usually a heading inside an HTML comment, or a\n'
-        + '  heading indented 1-3 spaces. Operators are shown what the reader finds.',
+        + '  One of them is not a real entry — usually a heading inside an HTML comment, a heading\n'
+        + '  indented 1-3 spaces, or a code fence line inside an HTML comment. Operators are shown\n'
+        + '  what the reader finds.',
     };
   }
 

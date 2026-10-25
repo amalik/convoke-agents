@@ -368,6 +368,8 @@ describe('readChangelogEntries', () => {
         '',
         '## [1.0.0] - 2025-12-01',
         'Real one.',
+        // A later fence line: read as an opener, the line above would pair with it and hide 1.0.0.
+        '```',
       ].join('\n'),
       'utf8'
     );
@@ -447,8 +449,9 @@ describe('readChangelogEntries', () => {
     assert.deepEqual(entries.map((e) => e.version), ['2.0.0', '1.0.0'], 'the fenced example became a release');
   });
 
-  it('bounds the fail-safe on a changelog full of stray fence lines (T182)', () => {
-    // Each pass re-reads the file; without a bound, 20,000 such lines took about 38 s.
+  it('reads a changelog full of stray fence lines in linear time, losing no release (T182)', () => {
+    // The first fail-safe re-read the file once per stray opener: 20,000 took about 38 s, and the
+    // pass cap that bounded it then dropped every release below the 51st.
     const lines = ['## [2.0.0] - 2026-01-02', ''];
     for (let i = 0; i < 20000; i++) lines.push('```a');
     lines.push('', '## [1.0.0] - 2025-12-01', 'Real one.');
@@ -457,7 +460,33 @@ describe('readChangelogEntries', () => {
     const entries = readChangelogEntries(null, '2.0.0', changelogPath);
     const ms = Date.now() - started;
     assert.ok(ms < 5000, `the reader took ${ms} ms`);
-    assert.equal(entries[0].version, '2.0.0');
+    assert.deepEqual(entries.map((e) => e.version), ['2.0.0', '1.0.0']);
+  });
+
+  it('shows the release below the 51st stray fence too (T182)', () => {
+    const lines = [];
+    for (let i = 0; i < 60; i++) lines.push(`## [8.${i}.0] - 2026-01-01`, '```a', '');
+    fs.writeFileSync(changelogPath, lines.join('\n'), 'utf8');
+    const entries = readChangelogEntries(null, '9.0.0', changelogPath);
+    assert.equal(entries.length, 60);
+    assert.ok(entries.every((e) => e.body === '```a'), 'a release was folded into another one');
+  });
+
+  it('does not close a fence on a line with a non-breaking space after the marker (T182)', () => {
+    // CommonMark allows only spaces and tabs there; String#trim would also strip NBSP and U+2028.
+    fs.writeFileSync(
+      changelogPath,
+      ['## [2.0.0] - 2026-01-02', '', '```', '## [1.5.0] - 2026-01-01', '```\u00a0', '## [1.4.0] - 2026-01-01', '```', '', '## [1.0.0] - 2025-12-01'].join('\n'),
+      'utf8'
+    );
+    const entries = readChangelogEntries(null, '2.0.0', changelogPath);
+    assert.deepEqual(entries.map((e) => e.version), ['2.0.0', '1.0.0']);
+  });
+
+  it('ignores a leading byte-order mark (T182)', () => {
+    fs.writeFileSync(changelogPath, '\uFEFF```md\n## [0.0.1] - 2020-01-01\n```\n\n## [1.0.0] - 2025-12-01\nReal one.\n', 'utf8');
+    const entries = readChangelogEntries(null, '1.0.0', changelogPath);
+    assert.deepEqual(entries.map((e) => e.version), ['1.0.0'], 'the fenced example became a release');
   });
 
   it('reads a fence that never closes as plain text, so later releases still show (T182)', () => {

@@ -22,12 +22,13 @@ const SEMVER_RE = /^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/;
 // document a ```-fence. Matched at column 0 alone, an indented fence was invisible and a heading
 // inside it was shown as a release. check-changelog-entry.js applies the same rules in its own
 // code, on purpose: that gate compares its reading with this one, which only means something if
-// they are independent. They part only on a fence that never closes (below), which the gate refuses.
+// they are independent. They part on a fence that never closes (below), which the gate refuses,
+// and on a fence line inside an HTML comment, which the gate skips and this reader does not (T283).
 // [\s\S], not `.`: `.` stops at a stray \r (a CRCRLF file) or U+2028, and no fence line matches.
 const FENCE_RE = /^ {0,3}(`{3,}|~{3,})([\s\S]*)$/;
-// Each fail-safe pass re-reads the whole file. Real changelogs have a handful of fences; this
-// bounds a pathological one (thousands of stray fence lines) instead of blocking convoke-update.
-const MAX_FAIL_SAFE_PASSES = 50;
+// After a closing fence CommonMark allows spaces and tabs only — not NBSP or U+2028, which
+// String#trim also strips. \r is tolerated because a CRCRLF file leaves one on every line.
+const CLOSER_TAIL_RE = /^[ \t]*\r*$/;
 
 function openingFence(line) {
   const m = FENCE_RE.exec(line);
@@ -38,7 +39,25 @@ function openingFence(line) {
 
 function closesFence(line, fence) {
   const m = FENCE_RE.exec(line);
-  return Boolean(m) && m[1][0] === fence.marker && m[1].length >= fence.length && m[2].trim() === '';
+  return Boolean(m) && m[1][0] === fence.marker && m[1].length >= fence.length && CLOSER_TAIL_RE.test(m[2]);
+}
+
+/**
+ * For each line index, the longest closing fence of each marker at or below it.
+ *
+ * @param {string[]} lines
+ * @returns {Array<{'`': number, '~': number}>} Entry `lines.length` is all zeros.
+ */
+function longestClosersFrom(lines) {
+  const out = new Array(lines.length + 1);
+  out[lines.length] = { '`': 0, '~': 0 };
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const next = { ...out[i + 1] };
+    const m = FENCE_RE.exec(lines[i]);
+    if (m && CLOSER_TAIL_RE.test(m[2])) next[m[1][0]] = Math.max(next[m[1][0]], m[1].length);
+    out[i] = next;
+  }
+  return out;
 }
 
 function parseHeader(line) {
@@ -48,12 +67,20 @@ function parseHeader(line) {
 }
 
 /**
- * One pass over the file. Lines whose index is in `plain` are never fence openers.
+ * Read the entries in one pass.
  *
- * @returns {{entries: Array<object>, unclosedAt: number|null}} `unclosedAt` is the line that
- *   opened a fence still open at the end of the file.
+ * CommonMark runs a fence that never closes to the end of the file, which here would drop every
+ * later release from "What's New" without a word. Fail safe instead (operator ruling 2026-10-24):
+ * an opening line that no line below it could close is read as plain text. That is what
+ * re-parsing after retiring each still-open opener in turn gives, without the re-parsing, which
+ * took 38 s on 20,000 stray fence lines. check-changelog-entry.js keeps the strict rule and
+ * refuses any changelog with a fence left open.
+ *
+ * @param {string[]} lines - The file, split into lines.
+ * @returns {Array<{version: string, date: string|null, body: string}>} In file order, unfiltered.
  */
-function parseEntries(lines, plain) {
+function parseEntries(lines) {
+  const closers = longestClosersFrom(lines);
   const entries = [];
   let current = null;
   let fence = null;
@@ -72,9 +99,9 @@ function parseEntries(lines, plain) {
       if (current) current.bodyLines.push(line);
       return;
     }
-    const opening = plain.has(i) ? null : openingFence(line);
-    if (opening) {
-      fence = { ...opening, at: i };
+    const opening = openingFence(line);
+    if (opening && closers[i + 1][opening.marker] >= opening.length) {
+      fence = opening;
       if (current) current.bodyLines.push(line);
       return;
     }
@@ -91,7 +118,7 @@ function parseEntries(lines, plain) {
   });
   flush();
 
-  return { entries, unclosedAt: fence ? fence.at : null };
+  return entries;
 }
 
 /**
@@ -117,20 +144,11 @@ function readChangelogEntries(fromVersion, toVersion, changelogPath = DEFAULT_CH
     return [];
   }
 
-  // CRLF too: with the `\r` left on, no line ends where FENCE_RE's `$` needs it to.
-  const lines = raw.split(/\r?\n/);
-  // CommonMark runs a fence that never closes to the end of the file, which here would drop every
-  // later release from "What's New" without a word. Fail safe instead (operator ruling
-  // 2026-10-24): read such an opener as plain text and parse again. check-changelog-entry.js keeps
-  // the strict rule and refuses any changelog with a fence left open. Each pass retires one opener.
-  const plain = new Set();
-  let parsed = parseEntries(lines, plain);
-  while (parsed.unclosedAt !== null && plain.size < MAX_FAIL_SAFE_PASSES) {
-    plain.add(parsed.unclosedAt);
-    parsed = parseEntries(lines, plain);
-  }
+  // CRLF too: with the `\r` left on, no line ends where FENCE_RE's `$` needs it to. A leading
+  // byte-order mark would stop the first line matching anything; GitHub ignores it.
+  const lines = raw.replace(/^\uFEFF/, '').split(/\r?\n/);
 
-  return parsed.entries
+  return parseEntries(lines)
     .filter((e) => {
       if (!SEMVER_RE.test(e.version)) return false;
       const aboveFloor = fromVersion ? compareVersions(e.version, fromVersion) > 0 : true;
