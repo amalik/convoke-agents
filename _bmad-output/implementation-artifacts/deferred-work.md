@@ -1495,3 +1495,7 @@ Round 2 ran three independent blind layers on `06a452cd` — the Round 1 *remedi
 
 - The reader has no HTML-comment rule, so a fence line inside a comment pairs with a real fence further down and hides the releases between, and an unterminated `<!--` hides everything below on GitHub while the reader shows it. The gate catches either only for the release version. Added to backlog `T283`. [scripts/update/lib/changelog-reader.js `parseEntries`]
 - The gate's `UNCLOSED CODE FENCE` refusal fires on a fence inside a list item that the item ends, which GitHub renders fine. Harmless, a closing fence clears it; fixing it needs CommonMark's container rules. Added to backlog `T284` as (4). [scripts/audit/check-changelog-entry.js `scan`]
+
+## Deferred from: code review of T221, rounds 1-3 (2026-10-27)
+
+- A refresh holds the operator's added files in memory while it replaces `_artifacts` and `_portability`; a process killed mid-refresh (Ctrl-C, out of memory, a crash) loses them on an install, which takes no backup. Thrown errors in that window are handled. Filed as backlog `T285`. [scripts/update/lib/refresh-installation.js `refreshCopiedModule`]
