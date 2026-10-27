@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 
-const { guardedModuleNames, mergedModuleNames } = require('../../scripts/update/lib/refresh-installation');
+const { guardedModuleNames, mergedModuleNames, addedKeysKeptModuleNames } = require('../../scripts/update/lib/refresh-installation');
 
 const ROOT = path.join(__dirname, '..', '..');
 const HEADING = 'Which configs are checked, and which are preserved';
@@ -145,6 +145,8 @@ function tableOf(section) {
 const leadsWith = (cell, verdict) => plain(cell).toLowerCase().startsWith(verdict);
 const isKept = (c) => leadsWith(c, 'your values are kept');
 const isReplaced = (c) => leadsWith(c, 'replaced');
+// T221: the three modules copied from the template keep the keys an operator added.
+const isAddedKept = (c) => leadsWith(c, 'keys you added are kept');
 const isRefused = (c) => leadsWith(c, 'refused');
 
 describe('T233 — the verdict classifiers read a statement, not a keyword', () => {
@@ -188,6 +190,7 @@ describe('T233 — the canonical table is bound to the code it describes', () =>
     const rows = table();
     const kept = rows.filter((r) => isKept(r.readable)).map((r) => r.module).sort();
     const replaced = rows.filter((r) => isReplaced(r.readable)).map((r) => r.module).sort();
+    const addedKept = rows.filter((r) => isAddedKept(r.readable)).map((r) => r.module).sort();
 
     // `mergedModuleNames()`, NOT `Object.keys(MODULE_PROFILES)`. T239 Round 1 established that a
     // profile is necessary but not sufficient — preservation is decided by which write site a
@@ -195,10 +198,12 @@ describe('T233 — the canonical table is bound to the code it describes', () =>
     // wholesale-copied module keeps values the moment a profile was added for it.
     assert.deepEqual(kept, [...mergedModuleNames()].sort(),
       'a module is shown as keeping operator values that a refresh does not merge, or vice versa');
-    assert.equal(kept.length + replaced.length, rows.length,
-      'a row was neither classified as kept nor as Replaced, which is how the ambiguity returns');
-    assert.deepEqual([...kept, ...replaced].sort(), [...guardedModuleNames()].sort(),
-      'the two classes together must be exactly the guarded set — no row double-counted, none missing');
+    assert.deepEqual(addedKept, [...addedKeysKeptModuleNames()].sort(),
+      'a module is shown as keeping added keys that a refresh does not, or vice versa (T221)');
+    assert.equal(kept.length + replaced.length + addedKept.length, rows.length,
+      'a row was classified as none of kept, added-keys-kept or Replaced, which is how the ambiguity returns');
+    assert.deepEqual([...kept, ...replaced, ...addedKept].sort(), [...guardedModuleNames()].sort(),
+      'the classes together must be exactly the guarded set — no row double-counted, none missing');
   });
 });
 

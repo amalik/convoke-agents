@@ -12,9 +12,9 @@
  * message, and their values gone. Measured with the guard deleted: `refreshInstallation` resolves
  * and all four configs are overwritten.
  *
- * WHAT THIS FILE DOES NOT COVER. The guard refuses an UNREADABLE config. It does not preserve a
- * readable one: all four are still rewritten from the package template on every run, because
- * `mergeConfig` carries profiles for `_vortex` and `_gyre` only. That half of T181 is `T221`.
+ * WHAT THIS FILE DOES NOT COVER. The guard refuses an UNREADABLE config. Preserving a readable one is
+ * T221's: the three copied configs keep the keys an operator added, measured by the probe below and
+ * detailed in `refresh-installation-operator-additions.test.js`.
  *
  * THE TRAP THIS FILE KEPT FALLING INTO. Two earlier versions pinned the derived module set against
  * the REAL package tree, where the derivation and a hardcoded `['_artifacts', … ]` literal return
@@ -35,6 +35,7 @@ const {
   refreshInstallation,
   guardedModuleNames,
   mergedModuleNames,
+  addedKeysKeptModuleNames,
   STAMPABLE_MODULES,
 } = require('../../scripts/update/lib/refresh-installation');
 const { readExcludedAgents } = require('../../scripts/update/lib/config-merger');
@@ -112,14 +113,18 @@ function sentinelPaths(tmpDir) {
 const PROBE_VERSION = '0.0.0-probe';
 
 /**
- * Which module configs keep an operator's OWN key through one real refresh. Nothing here reads a
- * profile table: a key no package template contains is seeded into every config that exists, one
- * refresh runs, and the modules that still hold it are returned. This is what makes
- * `MERGED_MODULE_NAMES` a measured list rather than a restatement of `MODULE_PROFILES` — a profile
- * is necessary but not sufficient, since only two write sites call `mergeConfig`.
+ * Which module configs keep an operator's OWN key, and which keep an operator's EDIT to a key the
+ * package defines, through one real refresh. Nothing here reads a profile table: a key no package
+ * template contains is added to every config that exists, its `description` is edited, one refresh
+ * runs, and the modules that still hold each are returned. This is what makes
+ * `MERGED_MODULE_NAMES` and `ADDED_KEYS_KEPT_MODULE_NAMES` measured lists rather than restatements
+ * of `MODULE_PROFILES` — a profile is necessary but not sufficient, since only two write sites call
+ * `mergeConfig`. T221: the edit is what tells the two lists apart, now that every written config
+ * keeps an added key.
  */
 async function probePreservedConfigs(tmpDir) {
   const SENTINEL = 'operator_sentinel_t239';
+  const EDITED = 'operator-edited-description-t221';
   const packageBme = path.join(PACKAGE_ROOT, '_bmad', 'bme');
   const seeded = [];
   for (const entry of await fs.readdir(packageBme, { withFileTypes: true })) {
@@ -135,6 +140,9 @@ async function probePreservedConfigs(tmpDir) {
     const before = await fs.readFile(target, 'utf8');
     const doc = yaml.load(before) || {};
     doc[SENTINEL] = 'keep-me';
+    // The decoy only works on a key the template defines; on one it lacks, the edit is an addition.
+    assert.ok('description' in doc, `precondition: ${entry.name}/config.yaml defines description`);
+    doc.description = EDITED;
     await fs.outputFile(target, yaml.dump(doc), 'utf8');
     // PRESENCE, not change. `yaml.dump(yaml.load(raw)) !== raw` for every shipped template — it
     // strips comments and reorders keys — so a change check always passed and the sentinel could be
@@ -148,12 +156,14 @@ async function probePreservedConfigs(tmpDir) {
   await refreshInstallation(tmpDir, { verbose: false });
 
   const preserved = [];
+  const editKept = [];
   for (const name of seeded) {
     const target = path.join(tmpDir, '_bmad', 'bme', name, 'config.yaml');
     const after = (await fs.pathExists(target)) ? await fs.readFile(target, 'utf8') : '';
     if (after.includes(SENTINEL)) preserved.push(name);
+    if (after.includes(EDITED)) editKept.push(name);
   }
-  return { seeded: seeded.sort(), preserved: preserved.sort() };
+  return { seeded: seeded.sort(), preserved: preserved.sort(), editKept: editKept.sort() };
 }
 
 async function probeWrittenConfigs(tmpDir) {
@@ -277,17 +287,18 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
     assert.deepEqual(candidates, BME_DIRECTORIES, 'the set of _bmad/bme/* directories changed');
   });
 
-  it('the merged list is exactly the set of configs that keep an operator key (T239)', async () => {
+  it('the merged list and the added-keys list are exactly what one refresh keeps (T239, T221)', async () => {
     // `convoke-update`'s plan tells the operator which configs keep their values. Deriving that from
     // `configMerger.MODULE_PROFILES` printed a false claim for a profile added to a module the
     // refresh copies over wholesale, with every test green. One refresh decides it here instead.
-    const { seeded, preserved } = await probePreservedConfigs(tmpDir);
+    const { seeded, preserved, editKept } = await probePreservedConfigs(tmpDir);
 
     assert.ok(seeded.length >= 2, 'precondition: at least two configs were seeded');
-    // The decoy. Without it, a refresh that preserved everything would satisfy any subset check.
-    assert.ok(seeded.length > preserved.length,
-      `every seeded config kept the sentinel (${seeded.join(', ')}), so this probe cannot tell ` +
-        'preservation from replacement');
+    // The decoy. Without it, a refresh that kept everything would satisfy any subset check. Since
+    // T221 every written config keeps an added key, so the decoy is the edited package key.
+    assert.ok(seeded.length > editKept.length,
+      `every seeded config kept the edited description (${seeded.join(', ')}), so this probe cannot ` +
+        'tell a merged config from a replaced one');
 
     // The universe is the configs a refresh WRITES, pinned behaviourally by the sibling test above.
     // Unscoped, this probe reported `_team-factory` as preserving operator values — true, but only
@@ -298,12 +309,21 @@ describe('refreshInstallation — module config readability guard (T181)', () =>
     assert.ok(preserved.some((m) => !written.has(m)),
       'no untouched config was seeded, so this cannot show that the scoping is doing any work');
 
+    // T221: no written config may drop a key the operator added.
+    assert.deepEqual(preservedAndWritten, [...written].sort(),
+      'a refresh dropped a key the operator added to a module config');
+    const editKeptAndWritten = editKept.filter((m) => written.has(m));
     assert.deepEqual(
-      preservedAndWritten,
+      editKeptAndWritten,
       mergedModuleNames(),
-      'a module that kept the operator key but is absent from MERGED_MODULE_NAMES means the ' +
+      'a module that kept the operator\'s edit but is absent from MERGED_MODULE_NAMES means the ' +
         'convoke-update plan under-promises; one present in the list that did NOT keep it means the ' +
         'plan tells an operator their values survive where a refresh destroys them'
+    );
+    assert.deepEqual(
+      [...written].filter((m) => !editKept.includes(m)).sort(),
+      addedKeysKeptModuleNames().sort(),
+      'the configs that keep added keys but reset the package\'s own must be ADDED_KEYS_KEPT_MODULE_NAMES'
     );
   });
 

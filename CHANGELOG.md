@@ -67,6 +67,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **An install or update no longer throws away what you added to the Enhance, Artifacts and Portability
+  modules (`T221`).** Their `config.yaml` files were replaced from the package's copy, so any setting you had
+  added was lost, and files you had added under `_bmad/bme/_artifacts/` or `_bmad/bme/_portability/` were
+  deleted. Now the keys you added are kept, with their comments, and so are your files; the run lists what it
+  kept. The package's own keys (`name`, `version`, `description`, `workflows`) are still reset, as is any
+  file the package ships, even one you edited. Symbolic links and empty folders you added under Artifacts and
+  Portability are kept too. Something there the install could not keep — a file it cannot read, a folder it
+  cannot clear, or a file of yours where the package now ships something of its own — stops it before any
+  module is refreshed, naming the entry. A key of yours that the package starts setting is reported. To tell your files
+  and keys from ones an older version installed and has since retired, an install now records what it put
+  in each of the three modules, in `.convoke-installed.json`.
+
 - **`convoke-update`'s "What's New" could show a release that does not exist, or a release's notes under the
   wrong version (`T182`).** It read code fences only when they started at the left margin, so a version
   heading used as an example inside an indented fence was shown as a release. And a release heading without

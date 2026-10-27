@@ -77,8 +77,9 @@ function guardedModuleNames() {
 
 /**
  * The modules whose `config.yaml` goes through {@link configMerger.mergeConfig}, so an operator's
- * own keys survive a refresh. The rest of {@link GUARDED_MODULE_NAMES} is copied over wholesale by
- * `fs.copy(..., { overwrite: true })` and then version-stamped, which destroys operator values.
+ * own keys survive a refresh — values they edited as well as keys they added. The rest of
+ * {@link GUARDED_MODULE_NAMES} is copied from the package template and version-stamped, keeping only
+ * the keys an operator added ({@link ADDED_KEYS_KEPT_MODULE_NAMES}, T221).
  *
  * NAMED, not derived from `configMerger.MODULE_PROFILES`. A profile is necessary but not
  * sufficient: preservation is decided by which write site a module reaches, and only the Gyre and
@@ -97,6 +98,439 @@ const MERGED_MODULE_NAMES = Object.freeze(['_gyre', '_vortex']);
  */
 function mergedModuleNames() {
   return [...MERGED_MODULE_NAMES];
+}
+
+/**
+ * T221: the modules whose `config.yaml` is copied from the package template, so the package's own
+ * keys (`name`, `version`, `description`, `workflows`) are reset, but every top-level key the
+ * operator added is carried over (operator ruling 2026-10-26). Before T221 the copy dropped those
+ * keys too. Named, and measured with {@link MERGED_MODULE_NAMES} by the same probe in
+ * `tests/unit/refresh-installation-config-guard.test.js`: an added key and an edited package key
+ * are seeded into every config, and the modules that keep only the first must be this list.
+ */
+const ADDED_KEYS_KEPT_MODULE_NAMES = Object.freeze(['_artifacts', '_enhance', '_portability']);
+
+/**
+ * @returns {string[]} a fresh copy of {@link ADDED_KEYS_KEPT_MODULE_NAMES}
+ */
+function addedKeysKeptModuleNames() {
+  return [...ADDED_KEYS_KEPT_MODULE_NAMES];
+}
+
+/**
+ * T221: what a refresh installed into a module tree, kept beside it — the files, and the top-level
+ * keys of the package's `config.yaml`. Without it a file or key the package does not ship could be
+ * the operator's or one an EARLIER Convoke version shipped and has since retired, and there is no
+ * telling which (operator rulings 2026-10-26: record it, for files and for keys).
+ */
+const INSTALLED_RECORD_NAME = '.convoke-installed.json';
+
+/**
+ * Everything under `dir` that a refresh can keep, as `/`-separated paths relative to it: regular
+ * files, symbolic links (not followed), and directories, each with its type. Other entries (FIFOs,
+ * sockets) are left out.
+ *
+ * @returns {Array<{rel: string, type: 'file'|'symlink'|'dir'}>}
+ */
+function listEntries(dir) {
+  const out = [];
+  const walk = (rel) => {
+    let entries;
+    try {
+      entries = fs.readdirSync(path.join(dir, rel), { withFileTypes: true });
+    } catch (err) {
+      err.rel = rel;
+      throw err;
+    }
+    for (const entry of entries) {
+      const entryRel = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isSymbolicLink()) {
+        out.push({ rel: entryRel, type: 'symlink' });
+      } else if (entry.isDirectory()) {
+        out.push({ rel: entryRel, type: 'dir' });
+        walk(entryRel);
+      } else if (entry.isFile()) {
+        out.push({ rel: entryRel, type: 'file' });
+      }
+    }
+  };
+  if (isRealDir(dir)) walk('');
+  return out;
+}
+
+/** True for a directory that is not a symbolic link to one. */
+function isRealDir(p) {
+  try {
+    return fs.lstatSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/** What the package ships at `rel`: 'file', 'dir', or null. */
+function shippedType(packageDir, rel) {
+  try {
+    const st = fs.lstatSync(path.join(packageDir, rel));
+    return st.isDirectory() ? 'dir' : 'file';
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The record an earlier refresh wrote, or `null` when there is none or it cannot be read. `null`
+ * means every file and key the package does not ship is treated as the operator's — the direction
+ * that loses nothing.
+ *
+ * @returns {{files: Set<string>, keys: Set<string>|null}|null}
+ */
+function readInstalledRecord(targetDir) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(path.join(targetDir, INSTALLED_RECORD_NAME), 'utf8'));
+    if (!parsed || typeof parsed !== 'object') return null;
+    // Strings only: a hand-edited entry that is not one names no path or key.
+    const strings = (list) => (Array.isArray(list) ? new Set(list.filter((x) => typeof x === 'string')) : null);
+    const files = strings(parsed.files);
+    const keys = strings(parsed.keys);
+    if (!files && !keys) return null;
+    return { files: files || new Set(), keys };
+  } catch {
+    return null;
+  }
+}
+
+const REFUSAL_TAIL = 'Fix it and re-run. No module has been refreshed yet; see UPDATE-GUIDE.md "Refresh: cannot read or remove".';
+
+/**
+ * T221: refuse, before any module is refreshed, a module tree the refresh could not take apart and
+ * put back: a file of the operator's it cannot read, or a directory it cannot read, enter or
+ * remove entries from. Without this, `fs.remove` failed half-way through such a tree — after
+ * `_vortex`, `_gyre` and `_enhance` were written — leaving the module without its config.
+ * Called from the T181 guard. A tree whose root is a symbolic link or not a directory is not
+ * collected through (see {@link refreshCopiedModule}), so there is nothing here to check.
+ */
+function assertTreeKeepable(targetDir, packageDir, moduleRel) {
+  if (!isRealDir(targetDir)) return;
+  const record = readInstalledRecord(targetDir);
+  const refuse = (rel, what, err, note = '') => {
+    throw new Error(`Refresh: cannot ${what} ${moduleRel}${rel}${note} (${err.code || err.message}). ${REFUSAL_TAIL}`, { cause: err });
+  };
+  let entries;
+  try {
+    entries = listEntries(targetDir);
+  } catch (err) {
+    refuse(err.rel ? `${err.rel}/` : '', 'read', err);
+  }
+  // The parent too: removing the module directory itself is an entry removed from `_bmad/bme/`.
+  try {
+    fs.accessSync(path.dirname(targetDir), fs.constants.W_OK | fs.constants.X_OK);
+  } catch (err) {
+    throw new Error(`Refresh: cannot remove entries from ${path.posix.dirname(moduleRel.replace(/\/$/, ''))}/ (${err.code || err.message}). ${REFUSAL_TAIL}`, { cause: err });
+  }
+  const dirs = [''].concat(entries.filter((e) => e.type === 'dir').map((e) => e.rel));
+  for (const rel of dirs) {
+    try {
+      fs.accessSync(path.join(targetDir, rel), fs.constants.W_OK | fs.constants.X_OK);
+    } catch (err) {
+      refuse(rel ? `${rel}/` : '', 'remove entries from', err);
+    }
+  }
+  const clash = (rel, note) => {
+    throw new Error(`Refresh: cannot keep ${moduleRel}${rel}, ${note}. Move it out of _bmad/bme/ and re-run. No module has been refreshed yet; see UPDATE-GUIDE.md "Refresh: cannot read or remove".`);
+  };
+  for (const entry of entries) {
+    if (entry.rel === INSTALLED_RECORD_NAME) continue;
+    const shipped = shippedType(packageDir, entry.rel);
+    // Kinds that clash with what the package now ships at the same path: putting the operator's
+    // entry back would mean removing the package's, so it cannot be kept in place.
+    if (entry.type !== 'dir' && shipped === 'dir') clash(entry.rel, 'a file you added, where the package now ships a folder');
+    if (entry.type === 'dir' && shipped === 'file') clash(`${entry.rel}/`, 'a folder you added, where the package now ships a file');
+    // A path the package ships now but did not install last time holds the operator's file, which
+    // the copy would overwrite. Only a record can tell; without one it is overwritten, as before T221.
+    if (entry.type !== 'dir' && shipped === 'file' && record && record.files.size > 0 && !record.files.has(entry.rel)) {
+      clash(entry.rel, 'a file you added, where the package now ships one of its own');
+    }
+    if (entry.type !== 'file' || shipped === 'file') continue;
+    if (record && record.files.has(entry.rel)) continue;
+    try {
+      fs.accessSync(path.join(targetDir, entry.rel), fs.constants.R_OK);
+    } catch (err) {
+      refuse(entry.rel, 'read', err, ', a file you added');
+    }
+  }
+}
+
+/**
+ * T221: sort what a module tree holds that the package does not ship, before the tree is removed
+ * and re-copied. A file an earlier refresh installed is stale and goes with the tree; anything else
+ * is the operator's and is read so it can be put back — files with their mode, symbolic links as
+ * links, directories they created with their mode. With no record from an earlier refresh (the
+ * first refresh after upgrading, or a damaged record) everything counts as the operator's. That is
+ * also correct for every project today: no file the package retired from these two trees ever
+ * reached one (`_artifacts` has retired none; `_portability` moved `skills/` to `workflows/` in
+ * `dist-2-6`, the change that first installed it). A shipped path counts as shipped only when the
+ * package has the same kind of entry there; an operator file where the package now has a directory
+ * is kept, and reported as not put back.
+ *
+ * @returns {{added: Array<object>, stale: string[]}}
+ */
+function collectAddedEntries(targetDir, packageDir, record) {
+  const added = [];
+  const stale = [];
+  // A directory the record shows the package used (a file under it was installed) is not the
+  // operator's merely because the package dropped it; it is kept only if something under it is.
+  const packageUsed = (rel) => Boolean(record) && [...record.files].some((f) => f.startsWith(`${rel}/`));
+  for (const entry of listEntries(targetDir)) {
+    if (entry.rel === INSTALLED_RECORD_NAME) continue;
+    const shipped = shippedType(packageDir, entry.rel);
+    if (entry.type === 'dir' ? shipped === 'dir' : shipped === 'file') continue;
+    if (entry.type === 'dir' && packageUsed(entry.rel)) continue;
+    if (entry.type === 'file' && record && record.files.has(entry.rel)) {
+      stale.push(entry.rel);
+      continue;
+    }
+    const abs = path.join(targetDir, entry.rel);
+    if (entry.type === 'symlink') added.push({ rel: entry.rel, type: 'symlink', link: fs.readlinkSync(abs) });
+    else if (entry.type === 'dir') added.push({ rel: entry.rel, type: 'dir', mode: fs.statSync(abs).mode & 0o7777 });
+    else {
+      const st = fs.statSync(abs);
+      added.push({ rel: entry.rel, type: 'file', data: fs.readFileSync(abs), mode: st.mode & 0o7777, atime: st.atime, mtime: st.mtime });
+    }
+  }
+  return { added, stale };
+}
+
+/**
+ * Write back what {@link collectAddedEntries} read, after the package tree is copied — or after a
+ * copy that failed, since this runs in a `finally`. A path it cannot write (the package now has
+ * something else there, or a directory is unwritable) is reported, not thrown. `convoke-update`
+ * backs up the whole of `_bmad/bme` before refreshing (T184); `convoke-install` takes no backup,
+ * so there the report is the operator's only notice.
+ *
+ * @returns {{restored: string[], skipped: string[]}}
+ */
+function restoreAddedEntries(targetDir, collected) {
+  const restored = [];
+  const skipped = [];
+  const dirModes = [];
+  for (const entry of collected.added) {
+    const dest = path.join(targetDir, entry.rel);
+    try {
+      if (entry.type === 'dir') {
+        fs.ensureDirSync(dest);
+        dirModes.push(entry);
+        continue;
+      }
+      fs.ensureDirSync(path.dirname(dest));
+      if (entry.type === 'symlink') {
+        // Still there when the tree was not removed (a failure before `fs.remove`): that is restored.
+        let existing = null;
+        try { existing = fs.readlinkSync(dest); } catch { /* absent, or not a link */ }
+        if (existing !== entry.link) fs.symlinkSync(entry.link, dest);
+      } else {
+        fs.writeFileSync(dest, entry.data);
+        fs.chmodSync(dest, entry.mode);
+        fs.utimesSync(dest, entry.atime, entry.mtime);
+      }
+      restored.push(entry.rel);
+    } catch {
+      skipped.push(entry.rel);
+    }
+  }
+  // Last, deepest first: a directory the operator made read-only must still take its files above.
+  for (const entry of dirModes.reverse()) {
+    try {
+      fs.chmodSync(path.join(targetDir, entry.rel), entry.mode);
+    } catch {
+      skipped.push(entry.rel);
+    }
+  }
+  return { restored, skipped };
+}
+
+/**
+ * T221: carry into the package's config every top-level key the operator's copy had and the
+ * package's does not, with its comments, and the document's trailing comment. A key an earlier
+ * refresh recorded as the package's own is not the operator's: it is dropped. Mutates `doc`.
+ *
+ * @param {YAML.Document} doc - The package config, already copied and stamped.
+ * @param {string|null} priorText - The operator's config as it was before the copy.
+ * @param {Set<string>|null} priorPackageKeys - From the record; `null` when there is none.
+ * @returns {{carried: string[], retired: string[]}}
+ */
+function carryOperatorKeys(doc, priorText, priorPackageKeys) {
+  const none = { carried: [], retired: [], replaced: [] };
+  if (priorText === null) return none;
+  const prior = YAML.parseDocument(priorText);
+  // The T181 guard parses the same file with the same parser and refuses a YAML error or a
+  // non-mapping, but it accepts an EMPTY document — a comment-only file is one. Its comment is the
+  // operator's and is carried; there are no keys to carry.
+  if (!(prior.errors && prior.errors.length > 0) && prior.contents === null && prior.commentBefore) {
+    doc.comment = doc.comment ? `${doc.comment}\n${prior.commentBefore}` : prior.commentBefore;
+    return none;
+  }
+  if ((prior.errors && prior.errors.length > 0) || !YAML.isMap(prior.contents) || !YAML.isMap(doc.contents)) {
+    return none;
+  }
+  const keyOf = (pair) => (YAML.isScalar(pair.key) ? pair.key.value : pair.key);
+  const retired = [];
+  const replaced = [];
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const added = prior.contents.items.filter((pair) => {
+    const key = keyOf(pair);
+    if (doc.has(key)) {
+      // A key the package now defines and did not last time was the operator's: package keys win
+      // (ruling 2026-10-26), but the operator is told their value went.
+      if (priorPackageKeys && !priorPackageKeys.has(String(key)) && !same(prior.toJS()[key], doc.toJS()[key])) {
+        replaced.push(String(key));
+      }
+      return false;
+    }
+    if (priorPackageKeys && priorPackageKeys.has(String(key))) {
+      retired.push(String(key));
+      return false;
+    }
+    return true;
+  });
+  for (const pair of added) doc.contents.items.push(pair);
+  // The trailing comment, on its own if need be. If the template ever carries one too, the
+  // operator's copy already holds it, so only what follows it is theirs.
+  const ownTrailer = prior.comment && doc.comment && prior.comment.startsWith(doc.comment)
+    ? prior.comment.slice(doc.comment.length).replace(/^\n+/, '')
+    : prior.comment;
+  if (ownTrailer) doc.comment = doc.comment ? `${doc.comment}\n${ownTrailer}` : ownTrailer;
+  try {
+    doc.toString({ lineWidth: 0 });
+  } catch {
+    // An alias in a carried value whose anchor sits on a package key that was not carried. Carry
+    // the resolved values instead, losing their comments rather than the keys.
+    doc.contents.items.splice(doc.contents.items.length - added.length, added.length);
+    // `mapAsMap` keys the result by the real key value, so a numeric or null key is found too.
+    const values = prior.toJS({ mapAsMap: true });
+    for (const pair of added) doc.set(keyOf(pair), values.get(keyOf(pair)));
+  }
+  return { carried: added.map((pair) => String(keyOf(pair))), retired, replaced };
+}
+
+/**
+ * T221: copy one of {@link ADDED_KEYS_KEPT_MODULE_NAMES} from the package, keeping what the operator
+ * added. The three modules shared this sequence copied three times; the failure path is why it is
+ * one function now — what the operator added is put back in a `finally`, so a copy or stamp that
+ * throws after the tree was removed does not lose it.
+ *
+ * @param {object} o
+ * @param {string} o.packageDir
+ * @param {string} o.targetDir
+ * @param {boolean} o.removeFirst - Remove the tree before copying, to clear stale files.
+ * @param {string} o.moduleRel - e.g. `_bmad/bme/_artifacts/`, for messages.
+ * @param {string} o.label - e.g. `Artifacts`, for messages.
+ * @param {string} o.version
+ * @param {string[]} o.changes
+ * @param {boolean} o.verbose
+ */
+async function refreshCopiedModule({ packageDir, targetDir, removeFirst, moduleRel, label, version, changes, verbose }) {
+  const configPath = path.join(targetDir, 'config.yaml');
+  const priorText = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : null;
+  const record = readInstalledRecord(targetDir);
+  // A root that is a symbolic link (or not a directory at all) is replaced as it always was:
+  // `fs.remove` takes only the link, so whatever it pointed at is untouched. `listEntries` does not
+  // walk such a root, so nothing is collected through it to be written a second time.
+  const collected = removeFirst ? collectAddedEntries(targetDir, packageDir, record) : null;
+  let keys = { carried: [], retired: [], replaced: [] };
+  let files = null;
+  let finished = false;
+  try {
+    if (removeFirst && fs.existsSync(targetDir)) await fs.remove(targetDir);
+    await fs.copy(packageDir, targetDir, { overwrite: true });
+    // Stamp the config's version to the package version (ag-7-1: I30 + I29; I137 for why every
+    // copied module must be stamped). Comment-preserving YAML.parseDocument, not mergeConfig, which
+    // has profiles for `_vortex` and `_gyre` only and would stamp Vortex identity onto this module.
+    if (fs.existsSync(configPath)) {
+      assertVersion(version, label.toLowerCase());
+      const doc = YAML.parseDocument(fs.readFileSync(configPath, 'utf8'));
+      if (doc.errors && doc.errors.length > 0) {
+        throw new Error(`Refresh: cannot parse ${label} config.yaml: ${doc.errors[0].message}`);
+      }
+      doc.set('version', version);
+      keys = carryOperatorKeys(doc, priorText, record && record.keys);
+      fs.writeFileSync(configPath, doc.toString({ lineWidth: 0 }), 'utf8');
+    }
+    finished = true;
+  } finally {
+    if (collected) files = restoreAddedEntries(targetDir, collected);
+    if (!finished) {
+      // The copy or stamp failed after the tree may have been removed: put the operator's config
+      // back as it was, keys and all, rather than leave the package's or none, and name what could
+      // not be put back before the error propagates.
+      // Printed, not only listed: the refresh is about to throw, so the caller never sees `changes`.
+      const lines = [];
+      if (priorText !== null) {
+        try {
+          fs.ensureDirSync(targetDir);
+          fs.writeFileSync(configPath, priorText, 'utf8');
+        } catch {
+          lines.push(`Could not put back ${moduleRel}config.yaml as it was`);
+        }
+      }
+      lines.push(...reportKept([], false, moduleRel, keys, files && { ...files, stale: [] }));
+      for (const line of lines) console.error(`    ${line}`);
+    }
+  }
+  changes.push(`Refreshed ${label} module: ${moduleRel}`);
+  if (verbose) console.log(`    Refreshed ${label} module: ${moduleRel}`);
+  const recordPath = path.join(targetDir, INSTALLED_RECORD_NAME);
+  try {
+    const packageDoc = YAML.parseDocument(fs.readFileSync(path.join(packageDir, 'config.yaml'), 'utf8'));
+    const packageKeys = YAML.isMap(packageDoc.contents)
+      ? packageDoc.contents.items.map((p) => String(YAML.isScalar(p.key) ? p.key.value : p.key))
+      : [];
+    // `files` only where the tree is removed and re-copied: that is the only place a refresh acts
+    // on it. `_enhance` is copied over the top, so its record holds the config keys alone.
+    const next = removeFirst
+      ? {
+        note: 'Written by convoke-install / convoke-update: what the package installed here. Editing it can make a refresh remove the files or config keys it names.',
+        files: listEntries(packageDir).filter((e) => e.type === 'file').map((e) => e.rel).sort(),
+        keys: packageKeys.sort(),
+      }
+      : {
+        note: 'Written by convoke-install / convoke-update: the config keys the package installed here. Editing it can make a refresh remove the keys it names.',
+        keys: packageKeys.sort(),
+      };
+    fs.writeFileSync(recordPath, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+  } catch (err) {
+    // An outdated record is worse than none: none means "keep everything".
+    try { fs.removeSync(recordPath); } catch { /* reported below either way */ }
+    changes.push(`Could not record what was installed in ${moduleRel} (${err.code || err.message}); the next refresh keeps every file and key it does not ship`);
+  }
+  reportKept(changes, verbose, moduleRel, keys, files && { ...files, stale: collected.stale });
+}
+
+/**
+ * Report what T221 kept for one module, in the refresh's change list.
+ */
+function reportKept(changes, verbose, moduleRel, keys, files) {
+  const lines = [];
+  if (keys.replaced && keys.replaced.length > 0) {
+    lines.push(`The package now sets ${keys.replaced.join(', ')} in ${moduleRel}config.yaml; your value was replaced`);
+  }
+  if (keys.carried.length > 0) lines.push(`Kept your keys in ${moduleRel}config.yaml: ${keys.carried.join(', ')}`);
+  if (keys.retired.length > 0) {
+    lines.push(`Removed key(s) an earlier Convoke version set in ${moduleRel}config.yaml and no longer does: ${keys.retired.join(', ')}`);
+  }
+  if (files && files.restored.length > 0) {
+    lines.push(`Kept ${files.restored.length} file(s) you added under ${moduleRel}`);
+  }
+  if (files && files.stale.length > 0) {
+    lines.push(`Removed ${files.stale.length} file(s) an earlier Convoke version installed under ${moduleRel} and no longer ships: ${files.stale.join(', ')}`);
+  }
+  if (files && files.skipped.length > 0) {
+    lines.push(`Could not put back ${files.skipped.length} entr${files.skipped.length === 1 ? 'y' : 'ies'} you added under ${moduleRel}: ${files.skipped.join(', ')} — convoke-update backs up _bmad/bme first; an install does not`);
+  }
+  for (const line of lines) {
+    changes.push(line);
+    if (verbose) console.log(`    ${line}`);
+  }
+  return lines;
 }
 
 /**
@@ -204,13 +638,20 @@ async function refreshInstallation(projectRoot, options = {}) {
   // the module copies are skipped, so this refuses a refresh that would not have written; the
   // message still names the file and the parser error, which is the actionable part.
   //
-  // This refuses an UNREADABLE config. It does not preserve a readable one, and the split is
-  // three to two: `_enhance`, `_artifacts` and `_portability` are replaced wholesale by
-  // `fs.copy(..., { overwrite: true })` and then version-stamped, so operator values are lost;
-  // `_vortex` and `_gyre` go through `configMerger.mergeConfig`, which has profiles for those two
-  // alone and throws when named any other submodule. The overwriting half is T221.
+  // This refuses an UNREADABLE config. A readable one is handled in two ways: `_vortex` and
+  // `_gyre` go through `configMerger.mergeConfig`, which has profiles for those two alone and
+  // keeps the operator's values; `_enhance`, `_artifacts` and `_portability` are copied from the
+  // package template and version-stamped, and since T221 keep the keys the operator added.
   for (const moduleName of guardedModuleNames()) {
     configMerger.assertConfigReadable(path.join(projectRoot, '_bmad', 'bme', moduleName, 'config.yaml'));
+  }
+  // T221: the two trees a refresh removes must be readable too, or what the operator added there
+  // could be neither kept nor put back. Refused here, before any module is written.
+  if (!isSameRoot) {
+    for (const moduleName of ['_artifacts', '_portability']) {
+      assertTreeKeepable(path.join(projectRoot, '_bmad', 'bme', moduleName),
+        path.join(packageRoot, '_bmad', 'bme', moduleName), `_bmad/bme/${moduleName}/`);
+    }
   }
 
   // U8: read per-module `excluded_agents` from target configs BEFORE copy.
@@ -436,21 +877,12 @@ async function refreshInstallation(projectRoot, options = {}) {
     const targetEnhance = path.join(projectRoot, '_bmad', 'bme', '_enhance');
 
     if (!isSameRoot) {
-      await fs.copy(packageEnhance, targetEnhance, { overwrite: true });
-      // Stamp enhance config version to match package version (ag-7-1: I30 + I29).
-      // Uses comment-preserving YAML.parseDocument so the doc comments survive.
-      const targetEnhanceConfig = path.join(targetEnhance, 'config.yaml');
-      if (fs.existsSync(targetEnhanceConfig)) {
-        assertVersion(version, 'enhance');
-        const ecDoc = YAML.parseDocument(fs.readFileSync(targetEnhanceConfig, 'utf8'));
-        if (ecDoc.errors && ecDoc.errors.length > 0) {
-          throw new Error(`Refresh: cannot parse Enhance config.yaml: ${ecDoc.errors[0].message}`);
-        }
-        ecDoc.set('version', version);
-        fs.writeFileSync(targetEnhanceConfig, ecDoc.toString({ lineWidth: 0 }), 'utf8');
-      }
-      changes.push('Refreshed Enhance module: _bmad/bme/_enhance/');
-      if (verbose) console.log('    Refreshed Enhance module: _bmad/bme/_enhance/');
+      // A bare copy over the top: files the operator added were never removed here, so none are set
+      // aside. Their config keys are carried over (T221).
+      await refreshCopiedModule({
+        packageDir: packageEnhance, targetDir: targetEnhance, removeFirst: false,
+        moduleRel: '_bmad/bme/_enhance/', label: 'Enhance', version, changes, verbose,
+      });
     } else {
       changes.push('Skipped Enhance copy (dev environment — files already in place)');
       if (verbose) console.log('    Skipped Enhance copy (dev environment)');
@@ -542,25 +974,11 @@ async function refreshInstallation(projectRoot, options = {}) {
     const targetArtifacts = path.join(projectRoot, '_bmad', 'bme', '_artifacts');
 
     if (!isSameRoot) {
-      // Remove existing destination first to clear stale files
-      if (fs.existsSync(targetArtifacts)) {
-        await fs.remove(targetArtifacts);
-      }
-      await fs.copy(packageArtifacts, targetArtifacts, { overwrite: true });
-      // Stamp artifacts config version to match package version (ag-7-1: I30 + I29).
-      // Uses comment-preserving YAML.parseDocument so the standalone:true doc comments survive.
-      const targetArtifactsConfig = path.join(targetArtifacts, 'config.yaml');
-      if (fs.existsSync(targetArtifactsConfig)) {
-        assertVersion(version, 'artifacts');
-        const acDoc = YAML.parseDocument(fs.readFileSync(targetArtifactsConfig, 'utf8'));
-        if (acDoc.errors && acDoc.errors.length > 0) {
-          throw new Error(`Refresh: cannot parse Artifacts config.yaml: ${acDoc.errors[0].message}`);
-        }
-        acDoc.set('version', version);
-        fs.writeFileSync(targetArtifactsConfig, acDoc.toString({ lineWidth: 0 }), 'utf8');
-      }
-      changes.push('Refreshed Artifacts module: _bmad/bme/_artifacts/');
-      if (verbose) console.log('    Refreshed Artifacts module: _bmad/bme/_artifacts/');
+      // Removed first to clear stale files; what the operator added is kept (T221).
+      await refreshCopiedModule({
+        packageDir: packageArtifacts, targetDir: targetArtifacts, removeFirst: true,
+        moduleRel: '_bmad/bme/_artifacts/', label: 'Artifacts', version, changes, verbose,
+      });
     } else {
       changes.push('Skipped Artifacts copy (dev environment — files already in place)');
       if (verbose) console.log('    Skipped Artifacts copy (dev environment)');
@@ -603,28 +1021,12 @@ async function refreshInstallation(projectRoot, options = {}) {
     const targetPortability = path.join(projectRoot, '_bmad', 'bme', '_portability');
 
     if (!isSameRoot) {
-      if (fs.existsSync(targetPortability)) {
-        await fs.remove(targetPortability);
-      }
-      await fs.copy(packagePortability, targetPortability, { overwrite: true });
-      // Stamp the copied config's version to the package version — I137. _team-factory was the
-      // one module copied WITHOUT stamping, and a fresh successful install then failed Convoke's
-      // own version-consistency check and told a new user to run an update. Uses
-      // YAML.parseDocument (not mergeConfig) per the reasoning recorded at the standalone-submodule
-      // block: mergeConfig has profiles for `_vortex` and `_gyre` only, and would stamp Vortex
-      // identity and defaults onto any other module's config.
-      const targetPortabilityConfig = path.join(targetPortability, 'config.yaml');
-      if (fs.existsSync(targetPortabilityConfig)) {
-        assertVersion(version, 'portability');
-        const pcDoc = YAML.parseDocument(fs.readFileSync(targetPortabilityConfig, 'utf8'));
-        if (pcDoc.errors && pcDoc.errors.length > 0) {
-          throw new Error(`Refresh: cannot parse Portability config.yaml: ${pcDoc.errors[0].message}`);
-        }
-        pcDoc.set('version', version);
-        fs.writeFileSync(targetPortabilityConfig, pcDoc.toString({ lineWidth: 0 }), 'utf8');
-      }
-      changes.push('Refreshed Portability module: _bmad/bme/_portability/');
-      if (verbose) console.log('    Refreshed Portability module: _bmad/bme/_portability/');
+      // As for Artifacts (T221). Portability had no install path before dist-2.6, and an unstamped
+      // copy fails Convoke's own version-consistency check (I137).
+      await refreshCopiedModule({
+        packageDir: packagePortability, targetDir: targetPortability, removeFirst: true,
+        moduleRel: '_bmad/bme/_portability/', label: 'Portability', version, changes, verbose,
+      });
     } else {
       changes.push('Skipped Portability copy (dev environment — files already in place)');
       if (verbose) console.log('    Skipped Portability copy (dev environment)');
@@ -1887,6 +2289,11 @@ module.exports = {
   gyreGuidePlan,
   mergedModuleNames,
   MERGED_MODULE_NAMES,
+  addedKeysKeptModuleNames,
+  ADDED_KEYS_KEPT_MODULE_NAMES,
+  // T221: exported so the trailing-comment rule can be tested against a template that has a
+  // trailing comment of its own, which no shipped template does yet.
+  carryOperatorKeys,
   refreshInstallation,
   cleanupOrphanWorkflowWrappers,
   isSameDirectoryEntry,

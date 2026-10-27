@@ -165,8 +165,10 @@ describe('createBackup — anything a refresh CHANGES has a copy (T234)', () => 
   });
 
   it('restores a destroyed operator file, so the loss is recoverable and not merely recorded', async () => {
-    const target = path.join(dir, '_bmad/bme/_artifacts/RESTORE-ME.md');
-    await fs.writeFile(target, 'operator content', 'utf8');
+    // A tree a refresh still replaces whole. `_artifacts` was used until T221, which made the refresh
+    // keep files an operator adds there.
+    const target = path.join(dir, '_bmad/bme/_vortex/contracts/RESTORE-ME.md');
+    await fs.outputFile(target, 'operator content', 'utf8');
     const metadata = await backupManager.createBackup('4.0.3', dir);
     await refreshInstallation(dir, { verbose: false });
     assert.equal(await fs.pathExists(target), false, 'precondition: the refresh must have removed it');

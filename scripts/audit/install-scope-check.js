@@ -160,7 +160,19 @@ const TRACKED = [
   // `convoke-migrate`. An install now writes there too, whenever a wrapper it is about to replace
   // holds something it would not write. That is inside the operator's project and outside every
   // upstream BMAD path this gate forbids; the checker reported "no scope violations".
-  { file: 'scripts/update/lib/refresh-installation.js', expected: 14 },
+  //
+  // 14 -> 15 after T221 (2026-10-26), and not the same 14. The three per-module config stamps became
+  // one write in `refreshCopiedModule` (-2), which also puts the operator's own config back when the
+  // copy or stamp fails after the tree was removed (+1); `restoreAddedEntries` writes back what an operator added
+  // under `_bmad/bme/_artifacts/` and `_bmad/bme/_portability/` (+1, plus a `symlinkSync` and two
+  // `chmodSync` this regex does not count); and `.convoke-installed.json` records what the package
+  // installed in each of the three copied modules (+1). Every destination is inside the module tree
+  // the refresh already replaces. The restored names are the operator's own — they are what the
+  // operator created there — but each is a `readdirSync` entry of that tree joined back onto it, so
+  // none can point outside; the record is only ever tested for membership, never used as a path.
+  // Also uncounted: `fs.ensureDirSync` (directories) and `fs.utimesSync` on restored files, and the
+  // `fs.removeSync` of a record that could not be rewritten — all inside the same tree. The T111 caveat.
+  { file: 'scripts/update/lib/refresh-installation.js', expected: 15 },
   // Added 2026-08-26 (story gen-1.1). This is the other half of the 11 -> 10 above.
   // It is tracked rather than left alone because this checker inspects ONLY the files
   // in this array and has no assertion for write ops in an untracked file — so

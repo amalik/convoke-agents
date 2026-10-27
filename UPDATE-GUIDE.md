@@ -195,27 +195,30 @@ Every update creates a backup before making changes:
 - **Retention:** Last 5 `backup-{version}-{timestamp}` directories kept automatically. The
   `skill-wrappers/` copies beside them are not counted and not removed.
 - **Rollback:** Automatic **only if the update fails.** A successful refresh still replaces most of
-  `_bmad/bme/` — measured, 82 of its 103 directories lost a planted file, the surviving 21 being
-  module roots and a few directories the installer only copies into — and nothing restores them for
-  you. Use the manual recipe below.
+  `_bmad/bme/` — measured 2026-10-26 on a fresh install updated once, 70 of its 104 directories lost a planted
+  file, all of them under `_vortex` and `_gyre`; under `_enhance`, `_artifacts` and `_portability`
+  your files are kept (see
+  [Which configs are checked, and which are preserved](#which-configs-are-checked-and-which-are-preserved))
+  — and nothing restores the lost ones for you. Use the manual recipe below.
 
 ### Which configs are checked, and which are preserved
 
 An install writes one module `config.yaml` per row below. **This section is the canonical
 statement of what happens to them. Correct it here, and make every other mention a pointer rather
 than a second copy.** A test binds the table's module set to `guardedModuleNames()` and its
-kept-versus-replaced split to `MERGED_MODULE_NAMES` (`tests/unit/config-doc-canonical.test.js`).
-That list is itself measured rather than declared: a key is seeded into every config, one refresh
-runs, and the set that still holds it must match. The
+kept rows to `MERGED_MODULE_NAMES` and its added-keys rows to `ADDED_KEYS_KEPT_MODULE_NAMES`
+(`tests/unit/config-doc-canonical.test.js`). Both lists are measured rather than declared: a key is
+added to every config and a package key edited, one refresh runs, and what each config still holds
+must match. The
 prose under the table is **not** pinned by anything, so treat it as reviewed rather than enforced.
 
 | Module config | If it cannot be read (install) | If it can be read |
 |---|---|---|
 | `_vortex` | **Refused** — the run stops and names the file, and the parser's error where there is one | **Your values are kept** |
 | `_gyre` | **Refused** | **Your values are kept** |
-| `_enhance` | **Refused** | **Replaced** by the package template, so anything you added is lost |
-| `_artifacts` | **Refused** | **Replaced** |
-| `_portability` | **Refused** | **Replaced** |
+| `_enhance` | **Refused** | **Keys you added are kept** — the package's own keys are reset, including any you edited: `name`, `description` and `workflows` to its template, and `version` to the installed release |
+| `_artifacts` | **Refused** | **Keys you added are kept**, and so are files you added under the module |
+| `_portability` | **Refused** | **Keys you added are kept**, and so are files you added under the module |
 
 A refusal leaves *the config file* byte-identical. It does not mean the run was a no-op: see the
 per-command rows under ["refusing to overwrite ... config.yaml"](#refusing-to-overwrite--configyaml)
@@ -223,8 +226,18 @@ for what an install — or an update, which runs your migration deltas first —
 the time it refuses.
 
 The split exists because `configMerger.mergeConfig` carries profiles for `_vortex` and `_gyre`
-alone, and throws when it is named any other submodule; the other three are copied over wholesale
-and then version-stamped.
+alone, and throws when it is named any other submodule; the other three are copied from the package
+template and version-stamped, and then every top-level key your copy had that the template does not
+is put back, with its comments. Files you added under `_artifacts` or `_portability` are set aside
+before the module is replaced and written back after; under `_enhance`, which is copied over the
+top, they were never removed. A file the package ships is always replaced, even if you edited it. To
+tell your files from ones an older Convoke version installed and has since retired, each install
+writes `.convoke-installed.json` in those directories — the list of what it put there. A file
+on that list that the package no longer ships is removed, and the run says so; any other file is
+yours and stays. The same list names the package's own config keys, so a key an older version set
+and has since dropped is removed rather than kept as yours; `_enhance` gets a list for that alone.
+Leave the list alone: without it, every file and key the package does not ship is kept, and an
+edited list can make a refresh remove the files or keys it names.
 
 *Your values are kept* is a rule rather than a list — **every string key already in the file
 survives, and so does any key you add.** Only the fields the installer owns are reset: `version`,
@@ -263,20 +276,26 @@ project has one, is written by neither a Convoke install nor a Convoke update �
 own installer owns that file.
 
 Before any of this an **update** backs up `_bmad/bme` in full (see Automatic Backups above). An
-**install** takes no backup, so on the three replaced configs an install is a one-way door.
+**install** takes no backup, so an edit you made to a package-owned key in one of the three copied
+configs is gone for good after an install.
 
 ### What's Never Touched
 
 - All user-generated files in `_bmad-output/`
 - Gyre analysis artifacts in `.gyre/` (stack-profile, capabilities, findings, feedback)
-- Your values in the **Vortex** and **Gyre** `config.yaml` — but **not** in `_enhance`,
-  `_artifacts` or `_portability`, which are replaced from the package template. Which is which, and
-  what "kept" covers, is in
+- Your values in the **Vortex** and **Gyre** `config.yaml`, and the keys you added to the
+  `_enhance`, `_artifacts` and `_portability` ones — but **not** your edits to those three's own
+  keys. Which is which, and what "kept" covers, is in
   [Which configs are checked, and which are preserved](#which-configs-are-checked-and-which-are-preserved).
-- Your own files anywhere under `_bmad/bme/` are **not** in this list either — a refresh replaces
-  them. An **update** backs them up first, so they are recoverable (see Automatic Backups); an
-  **install** does not, so the same files are destroyed with no copy. Neither preserves them in
-  place. Under `.claude/skills/`, both an install and an update copy a wrapper you changed
+- Files, links and folders you added under `_bmad/bme/_artifacts/` or `_portability/`. One that
+  would clash with what the package now ships there stops the run instead, naming it (see
+  ["Refresh: cannot read or remove"](#refresh-cannot-read-or-remove)); FIFOs and sockets are not
+  kept. Under `_bmad/bme/_enhance/`, which is copied over the top, your files are left where they
+  are, but one at a path the package ships is overwritten, and a clash between a file and a folder
+  fails the run, as before. Your own files
+  anywhere else under `_bmad/bme/` are **not** in this list — a refresh replaces them. An
+  **update** backs them up first, so they are recoverable (see Automatic Backups); an **install**
+  does not, so those files are destroyed with no copy. Under `.claude/skills/`, both an install and an update copy a wrapper you changed
   aside before replacing it — see **NOT included** under Automatic Backups.
 - Coach amendments and feedback in `.gyre/feedback.yaml`
 
@@ -359,19 +378,39 @@ cp -r _bmad-output/.backups/{backup-dir}/agents _bmad/bme/_vortex/
 cp -r _bmad-output/.backups/{backup-dir}/workflows _bmad/bme/_vortex/
 
 # Everything the installer owns is stored under tree/. Restore the part you need, e.g.
-cp -r _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_artifacts _bmad/bme/
 cp -r _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_vortex/contracts _bmad/bme/_vortex/
 
-# WARNING: that copies config.yaml too, setting the module's version back to the release you
-# updated FROM. convoke-doctor then reports a version inconsistency and tells you to run
-# convoke-update, and that refresh replaces the directory again — destroying what you restored.
-# Measured 2026-10-03. Prefer copying only the files you added:
+# WARNING: restoring a WHOLE module directory (e.g. tree/_bmad/bme/_vortex) copies its config.yaml
+# too, setting the module's version back to the release you updated FROM. convoke-doctor then
+# reports a version inconsistency and tells you to run convoke-update, and that refresh replaces
+# the directory again — destroying what you restored. Measured 2026-10-03. Prefer copying only the
+# files you added:
 #
-#   cp _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_artifacts/MY-FILE.md _bmad/bme/_artifacts/
+#   cp _bmad-output/.backups/{backup-dir}/tree/_bmad/bme/_vortex/contracts/MY-FILE.md _bmad/bme/_vortex/contracts/
 #
-# If you do copy the whole directory, reset the version afterwards to the installed release
+# If you do copy a whole module directory, reset the version afterwards to the installed release
 # (npx -p convoke-agents convoke-version prints it) by editing version: in the module's config.
 ```
+
+### "Refresh: cannot read or remove"
+
+`Refresh: cannot read …`, `cannot remove entries from …` or `cannot keep …` means an install or
+update found something under `_bmad/bme/_artifacts/` or `_bmad/bme/_portability/` it could not take
+apart and put back:
+
+- a file of yours it cannot read, or a directory (or `_bmad/bme/` itself) it cannot read, enter, or
+  remove entries from — fix the permission it names (`chmod u+rw <file>`, `chmod u+rwx <dir>`);
+- a file of yours where the package now ships a folder, a folder of yours where it now ships a file,
+  or a file of yours at a path the package has started shipping — move yours out of `_bmad/bme/`.
+
+It stops before refreshing any module rather than half-delete one. Then run the same command again.
+
+What has already happened by then differs. An **install** has run its earlier steps, such as
+removing a legacy module directory. An **update** first backs up `_bmad/bme`; a file it cannot read
+stops it there, with a plain `EACCES … copyfile` error and nothing changed. Past the backup, its
+migration deltas run, and this refusal then rolls them back from the backup. If the rollback cannot
+remove a directory you locked, it says so and leaves a `_bmad/bme.replaced-…` folder: unlock it
+(`chmod -R u+rwx`) before deleting it.
 
 ### Version consistency fails, naming `_team-factory`
 
@@ -526,8 +565,8 @@ check. Repair the file itself:
    your own** — deleting yours instead leaves you on the placeholder, which is the state this
    release exists to fix. Two cases skip to step 2: where the message reported no location
    (`it is not a YAML mapping`), and where the file named is `_enhance`, `_artifacts` or
-   `_portability` — those seed no `user_name`, so this cause cannot apply, and step 3 replaces
-   whatever you write there anyway.
+   `_portability` — those seed no `user_name`, so this cause cannot apply, and step 3 resets those
+   three's own keys anyway (keys you added are kept).
 2. If you would rather start over on that file, delete it. For `_vortex` or `_gyre` that discards
    **everything** in it — not just the fields you recognise, but `output_folder`,
    `party_mode_enabled`, `migration_history`, an edited `description` and any key of your own — so
@@ -544,10 +583,10 @@ check. Repair the file itself:
    module configs, not just their own, so any one of them restores a file you deleted at step 2.
    What it restores each of the five to is not the same — read
    [Which configs are checked, and which are preserved](#which-configs-are-checked-and-which-are-preserved)
-   before you run it. **Whichever file was damaged, this step also replaces your readable
-   `_enhance`, `_artifacts` and `_portability` configs from the package template, with no backup.**
-   And if the damaged file is one of those three, it replaces that one too, so a repair you made at
-   step 1 is discarded with everything else that was in it — for those three, use step 2.
+   before you run it. **Whichever file was damaged, this step also resets the package's own keys in
+   your readable `_enhance`, `_artifacts` and `_portability` configs, with no backup** — keys you
+   added there are kept. If the damaged file is one of those three, a repair you made at step 1 to
+   one of its own keys is reset too; for those three, use step 2.
 
 > **`convoke-update` will not do this, and it will not tell you so.** On an installation that is
 > otherwise current it stops at `✓ Already up to date!` and exits **0** without reaching the code

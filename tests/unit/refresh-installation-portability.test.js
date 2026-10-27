@@ -112,16 +112,30 @@ describe('refreshInstallation — Portability directory copy', () => {
     assert.ok(changes.some(c => c.includes('Skipped Portability copy (dev environment')));
   });
 
-  it('removes stale files in the destination before copying', async () => {
+  it('removes a file an earlier version installed and no longer ships, and keeps the operator\'s (T221)', async () => {
     const name = declaredWorkflows()[0].name;
-    const staleDir = path.join(tmpDir, '_bmad/bme/_portability/workflows', name);
-    await fs.ensureDir(staleDir);
-    await fs.writeFile(path.join(staleDir, 'stale-leftover.md'), '# stale', 'utf8');
-
     await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
+    // T221: a file is stale only if an earlier refresh installed it — recorded in the module's
+    // `.convoke-installed.json`. Simulate a version that shipped stale-leftover.md and has since
+    // retired it; a file the record does not name is the operator's and must survive.
+    const staleDir = path.join(tmpDir, '_bmad/bme/_portability/workflows', name);
+    const moduleDir = path.join(tmpDir, '_bmad/bme/_portability');
+    const recordPath = path.join(moduleDir, '.convoke-installed.json');
+    const record = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
+    const staleRel = path.relative(moduleDir, path.join(staleDir, 'stale-leftover.md')).split(path.sep).join('/');
+    record.files.push(staleRel);
+    fs.writeFileSync(recordPath, JSON.stringify(record));
+    await fs.writeFile(path.join(staleDir, 'stale-leftover.md'), '# stale', 'utf8');
+    await fs.writeFile(path.join(staleDir, 'operator-notes.md'), '# mine', 'utf8');
+
+    const changes = await refreshInstallation(tmpDir, { backupGuides: false, verbose: false });
 
     assert.ok(!fs.existsSync(path.join(staleDir, 'stale-leftover.md')), 'stale file should be removed');
+    assert.ok(fs.existsSync(path.join(staleDir, 'operator-notes.md')), 'a file the operator added must be kept');
     assert.ok(fs.existsSync(path.join(staleDir, 'workflow.md')), 'fresh workflow.md should be present');
+    assert.ok(changes.some((c) => c.startsWith('Removed 1 file(s) an earlier Convoke version installed') && c.endsWith(staleRel)),
+      'the run must say which stale file it removed');
+    assert.ok(!JSON.parse(fs.readFileSync(recordPath, 'utf8')).files.includes(staleRel), 'the record must be rewritten');
   });
 });
 
