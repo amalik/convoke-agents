@@ -1071,7 +1071,20 @@ function buildDependencyNotes(skillRefs, sidecars, manifestSkillNames) {
 // =============================================================================
 
 /**
- * Export a Tier 1 standalone skill into canonical instructions.md format.
+ * T186: the tiers a skill may be exported from, compared without regard to case. Anything else —
+ * `pipeline`, an empty tier, a misspelling — is refused, so an unexpected tier cannot slip a
+ * framework-only skill out. Shared with `convoke-export`'s batch mode and the catalog seeder.
+ *
+ * @param {*} tier - A manifest `tier` value.
+ * @returns {boolean}
+ */
+function isExportableTier(tier) {
+  const t = String(tier == null ? '' : tier).trim().toLowerCase();
+  return t === 'standalone' || t === 'light-deps';
+}
+
+/**
+ * Export a standalone or light-deps skill into canonical instructions.md format.
  *
  * @param {string} skillName - The skill's canonical name (e.g., 'bmad-brainstorming')
  * @param {string} projectRoot - Absolute path to the project root
@@ -1080,14 +1093,28 @@ function buildDependencyNotes(skillRefs, sidecars, manifestSkillNames) {
  *
  * Throws:
  * - if the skill is not in the manifest
- * - if the skill's tier is 'pipeline' (only standalone + light-deps are exportable)
+ * - if the skill's tier is not exportable: only standalone and light-deps are (T186)
  * - if persona resolution fails (all 5 strategies)
  */
 function exportSkill(skillName, projectRoot, _options = {}) {
   const warnings = [];
 
-  // 1. Load skill row (all tiers exportable; pipeline skills get a framework-only notice)
+  // 1. Load skill row. A skill whose tier is not exportable is refused (T186, operator ruling
+  // 2026-10-28): a pipeline skill was exported in full under a "framework-only" banner, handing out
+  // a persona and procedure that read as usable and cannot run outside its framework. The message
+  // must keep the text `tier "`: `convoke-export` recognises the refusal by it and exits 3.
   const skillRow = loadSkillRow(skillName, projectRoot);
+  if (!isExportableTier(skillRow.tier)) {
+    const tier = String(skillRow.tier || '').trim();
+    if (tier.toLowerCase() !== 'pipeline') {
+      throw new Error(`Skill "${skillName}" is tier "${tier}", which is not exported: only standalone and light-deps skills are.`);
+    }
+    // Most pipeline skills are not Convoke's: name the framework they belong to.
+    const where = skillRow.module === 'bme'
+      ? 'a full Convoke installation, so it is not exported. Install Convoke to use it: npx -p convoke-agents convoke-install'
+      : `a full installation of the framework it belongs to (module "${skillRow.module || 'unknown'}"), so it is not exported`;
+    throw new Error(`Skill "${skillName}" is tier "pipeline": a framework-only skill that runs only inside ${where}`);
+  }
 
   // 2. Load source files
   const { skillContent, workflowContent, stepContents, skillDir } = loadSkillSource(skillRow, projectRoot, warnings);
@@ -1157,11 +1184,6 @@ function exportSkill(skillName, projectRoot, _options = {}) {
     transformedSections.title,
     '',
   ];
-  // Framework-only notice for pipeline skills (not fully portable)
-  if (skillRow.tier === 'pipeline') {
-    parts.push('> **⚠️ Framework-only skill.** This skill depends on the full Convoke installation and cannot run standalone. It\'s included in the catalog for discoverability. Install Convoke from [convoke-agents](https://github.com/amalik/convoke-agents) to use it.');
-    parts.push('');
-  }
   parts.push(
     transformedSections.persona,
     '',
@@ -1219,6 +1241,7 @@ function exportSkill(skillName, projectRoot, _options = {}) {
 // =============================================================================
 
 module.exports = {
+  isExportableTier,
   exportSkill,
   // Internal helpers exported for testing
   CONFIG_VAR_MAP,

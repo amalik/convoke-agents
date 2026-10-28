@@ -136,3 +136,26 @@ describe('Validate Exports (sp-4-2)', () => {
     });
   });
 });
+
+describe('T186: an old seed\'s framework-only folder is flagged, not waved through', () => {
+  it('reports a folder carrying the framework-only banner', () => {
+    const os = require('os');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 't186-val-'));
+    try {
+      fs.writeFileSync(path.join(dir, 'README.md'), '# Convoke Skills Catalog\n');
+      fs.writeFileSync(path.join(dir, 'LICENSE'), 'MIT License\n');
+      fs.writeFileSync(path.join(dir, 'CONTRIBUTING.md'), 'auto-generated\n');
+      const skillDir = path.join(dir, 'old-agent');
+      fs.mkdirSync(skillDir);
+      fs.writeFileSync(path.join(skillDir, 'instructions.md'),
+        '# Old Agent\n\n> **⚠️ Framework-only skill.** This skill depends on the full Convoke installation.\n\n## You are Old\n\n## How to proceed\n\nDo stuff.\n');
+      fs.writeFileSync(path.join(skillDir, 'README.md'),
+        '# Old\n\n## How to use it\n\n### Claude Code\nCopy.\n\n### GitHub Copilot\nAppend.\n\n### Cursor\nCopy.\n');
+      const result = spawnSync('node', [VALIDATOR_PATH, '--input', dir], { cwd: projectRoot, encoding: 'utf8', env: process.env });
+      assert.equal(result.status, 1, result.stdout);
+      assert.ok(result.stdout.includes('framework-only export'), result.stdout);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

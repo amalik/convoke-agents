@@ -28,10 +28,12 @@ const manifestPath = path.join(projectRoot, '_bmad', '_config', 'skill-manifest.
 const { header, rows } = readManifest(manifestPath);
 const nameIdx = header.indexOf('name');
 const intentIdx = header.indexOf('intent');
+const tierIdx = header.indexOf('tier');
+// T186: pipeline skills are refused by the exporter, so the seed gives them no folder.
 const expectedCount = [
   ...new Set(
     rows
-      .filter((r) => r[intentIdx] !== 'meta-platform')
+      .filter((r) => r[intentIdx] !== 'meta-platform' && r[tierIdx] !== 'pipeline')
       .map((r) => r[nameIdx])
   ),
 ].length;

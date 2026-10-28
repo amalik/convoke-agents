@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { FIXTURE_ROOT } = require('./portability-fixture');
-const { exportSkill, ALLOWED_WARNING_TYPES } = require('../../scripts/portability/export-engine');
+const { exportSkill, ALLOWED_WARNING_TYPES, isExportableTier } = require('../../scripts/portability/export-engine');
 
 // Story sp-2-2: Export Engine
 //
@@ -132,10 +132,10 @@ describe('Export engine (sp-2-2)', () => {
     assert.ok(result.instructions.includes('## You are'));
   });
 
-  it('Test 4: bmad-dev-story (Tier 3 pipeline) exports with framework-only notice', () => {
-    const result = exportSkill('bmad-dev-story', projectRoot);
-    assert.notStrictEqual(result, undefined);
-    assert.ok(result.instructions.includes('Framework-only skill'));
+  it('Test 4: bmad-dev-story (Tier 3 pipeline) is refused, not exported (T186)', () => {
+    // It used to export the full persona and procedure under a "framework-only" banner, which reads
+    // as usable and is not. Operator ruling 2026-10-28: refuse it, for every caller.
+    assert.throws(() => exportSkill('bmad-dev-story', projectRoot), /tier "pipeline"/);
   });
 
   it('Test 5: nonexistent skill throws a helpful error', () => {
@@ -445,6 +445,52 @@ describe('dist-2-7 — CONFIG_VAR_MAP interpolation is escaped', () => {
     for (const k of keys) {
       assert.match(k, /^[a-z_]+$/,
         `CONFIG_VAR_MAP key "${k}" can reach a RegExp — the safety argument in dist-2-7 no longer holds`);
+    }
+  });
+});
+
+describe('T186: which skills may be exported, and what a refusal says', () => {
+  const os = require('os');
+  const { readManifest } = require('../../scripts/portability/manifest-csv');
+  // A copy of the fixture project with extra manifest rows; a refusal happens before any skill file
+  // is read, so the rows may point anywhere.
+  function projectWith(extraRows) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 't186-'));
+    fs.cpSync(FIXTURE_ROOT, dir, { recursive: true });
+    const manifest = path.join(dir, '_bmad', '_config', 'skill-manifest.csv');
+    fs.appendFileSync(manifest, extraRows.map((r) => r.map((v) => `"${v}"`).join(',')).join('\n') + '\n');
+    return dir;
+  }
+  const row = (name, module, tier) => [name, name, 'synthetic', module, '_bmad/x/SKILL.md', 'true', tier, 'discover-product-fit', ''];
+
+  it('exports only standalone and light-deps, whatever their case or spacing', () => {
+    for (const t of ['standalone', 'light-deps', 'Standalone', ' LIGHT-DEPS ']) assert.equal(isExportableTier(t), true, t);
+    for (const t of ['pipeline', 'Pipeline', '', undefined, null, 'standlone']) assert.equal(isExportableTier(t), false, String(t));
+  });
+
+  it('names the framework a non-Convoke pipeline skill belongs to, not Convoke', () => {
+    const { header, rows } = readManifest(path.join(FIXTURE_ROOT, '_bmad', '_config', 'skill-manifest.csv'));
+    const module = rows.find((r) => r[header.indexOf('name')] === 'bmad-dev-story')[header.indexOf('module')];
+    assert.notEqual(module, 'bme', 'fixture: bmad-dev-story is not a Convoke skill');
+    assert.throws(() => exportSkill('bmad-dev-story', FIXTURE_ROOT), (err) =>
+      err.message.includes(`module "${module}"`) && !/Convoke/.test(err.message));
+  });
+
+  it('tells a Convoke pipeline skill how to install Convoke', () => {
+    const dir = projectWith([row('t186-bme-agent', 'bme', 'pipeline')]);
+    try {
+      assert.throws(() => exportSkill('t186-bme-agent', dir), /tier "pipeline".*npx -p convoke-agents convoke-install/);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a tier that is misspelled, empty, or pipeline in another case', () => {
+    const dir = projectWith([row('t186-upper', 'bmm', 'Pipeline'), row('t186-empty', 'bmm', ''), row('t186-typo', 'bmm', 'standlone')]);
+    try {
+      for (const name of ['t186-upper', 't186-empty', 't186-typo']) assert.throws(() => exportSkill(name, dir), /tier "/, name);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 });

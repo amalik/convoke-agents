@@ -67,6 +67,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`convoke-export` no longer hands out a framework-only skill that looks usable (`T186`).** Exporting a
+  `pipeline` skill — every Convoke agent among them — wrote its full persona, procedure and Cursor, Copilot and
+  Claude Code adapters under a "framework-only" warning, though none of it can run outside its framework. It
+  is now refused: the command exits 3 where it exited 0, says which framework the skill needs, and writes
+  nothing. Only `standalone` and `light-deps` skills export; `--tier 3` was already refused.
+
 - **A skill you edited could be lost from its own backup (`T271`).** Since 4.0.4 an install copies an edited
   wrapper under `.claude/skills/` aside before regenerating it. If the wrapper then linked into that copy — its
   `SKILL.md` pointing at the backed-up one, say — the next install took it as already copied and wrote the new

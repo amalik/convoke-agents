@@ -26,7 +26,7 @@
 const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../update/lib/utils');
-const { exportSkill, humanizeSkillName } = require('./export-engine');
+const { exportSkill, humanizeSkillName, isExportableTier } = require('./export-engine');
 const { readManifest } = require('./manifest-csv');
 const { stripHtmlComments } = require('../lib/sanitize');
 const { generateAdapters } = require('./generate-adapters');
@@ -147,7 +147,7 @@ function printHelp() {
     '  0  Success (or empty batch, --help, --dry-run with no failures)',
     '  1  Usage error (unknown flag, conflicting flags, invalid --tier value)',
     '  2  Skill not found in manifest (single-skill mode)',
-    '  3  Tier not supported (Tier 3 / pipeline requested)',
+    '  3  Tier not supported (a pipeline skill named, or --tier 3 requested)',
     '  4  Partial failure (batch mode with at least one failed skill)',
     '',
     'Examples:',
@@ -444,12 +444,17 @@ function runBatch(tierValue, outputBase, dryRun, projectRoot, reporter) {
   // Manifest may contain the same skill name across multiple modules.
   // Dedupe — each skill name is exported once.
   // 'all' exports standalone + light-deps; specific tier exports that tier only
+  // T186: each name is judged by its FIRST row, the one the engine loads — otherwise a name listed
+  // twice, first as pipeline, was selected by its later row and then refused as a "failure".
   const tierFilter = tier.normalizedTier === 'all'
-    ? (t) => t === 'standalone' || t === 'light-deps'
-    : (t) => t === tier.normalizedTier;
-  const matchingSkills = [
-    ...new Set(rows.filter((r) => tierFilter(r[tierIdx])).map((r) => r[nameIdx])),
-  ].sort();
+    ? (t) => isExportableTier(t)
+    : (t) => String(t || '').trim().toLowerCase() === tier.normalizedTier;
+  const firstRowByName = new Map();
+  for (const r of rows) if (!firstRowByName.has(r[nameIdx])) firstRowByName.set(r[nameIdx], r);
+  const matchingSkills = [...firstRowByName.entries()]
+    .filter(([, r]) => tierFilter(r[tierIdx]))
+    .map(([name]) => name)
+    .sort();
 
   if (matchingSkills.length === 0) {
     // Suppress the friendly message in --quiet mode so the caller only sees
@@ -535,7 +540,9 @@ function main() {
   let exitCode;
   if (hasPositional) {
     const result = runSingle(opts.positional[0], outputBase, opts.dryRun, projectRoot, reporter);
-    reporter.summary(opts.dryRun);
+    // A refusal is not an export that failed: its line has said why, and a summary of "Exported 1
+    // skills (… 1 failed)" would read otherwise. Batch mode already omits it for --tier 3.
+    if (result.exitCode !== EXIT_TIER_NOT_SUPPORTED) reporter.summary(opts.dryRun);
     exitCode = result.exitCode;
   } else {
     // Batch: --tier or --all

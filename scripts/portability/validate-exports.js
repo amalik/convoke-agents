@@ -84,10 +84,12 @@ function validateInstructions(filePath, skillName) {
     issues.push({ skill: skillName, file: 'instructions.md', issue: 'contains frontmatter block' });
   }
 
-  // Framework-only (pipeline) skills skip strict structural checks since they
-  // intentionally reference framework-internal paths and may have unbalanced
-  // fences after transformations strip framework scaffolding
+  // T186: a framework-only (pipeline) skill is no longer exported. A folder still carrying the old
+  // banner came from an earlier seed and must not be published; it used to skip the checks below.
   const isFrameworkOnly = content.includes('⚠️ Framework-only skill.');
+  if (isFrameworkOnly) {
+    issues.push({ skill: skillName, file: 'instructions.md', issue: 'framework-only export: pipeline skills are no longer exported — remove this folder' });
+  }
 
   // Balanced code fences (skipped for framework-only)
   if (!isFrameworkOnly) {

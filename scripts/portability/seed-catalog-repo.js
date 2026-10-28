@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const { findProjectRoot } = require('../update/lib/utils');
 const { readManifest } = require('./manifest-csv');
-const { exportSkill, loadSkillRow } = require('./export-engine');
+const { exportSkill, loadSkillRow, isExportableTier } = require('./export-engine');
 const { generateCatalog } = require('./catalog-generator');
 const { buildReadme } = require('./convoke-export');
 const { generateAdapters } = require('./generate-adapters');
@@ -87,9 +87,11 @@ function generate(outputDir, projectRoot) {
   const { header, rows } = readManifest(manifestPath);
   const nameIdx = header.indexOf('name');
 
-  // Get unique exportable skill names (all tiers — pipeline gets a framework-only notice)
-  // Exclude meta-platform skills (framework internals, not user-facing)
+  // Unique exportable skill names. Excluded: meta-platform skills (framework internals, not
+  // user-facing) and pipeline skills, which the engine refuses (T186) — the catalog still lists
+  // them, without a link, in its framework-only section.
   const intentIdx = header.indexOf('intent');
+  const tierIdx = header.indexOf('tier');
   const seen = new Set();
   const exportableNames = [];
   for (const row of rows) {
@@ -97,11 +99,12 @@ function generate(outputDir, projectRoot) {
     if (seen.has(name)) continue;
     seen.add(name);
     if (row[intentIdx] === 'meta-platform') continue;
+    if (!isExportableTier(row[tierIdx])) continue;
     exportableNames.push(name);
   }
   exportableNames.sort();
 
-  console.log(`Exporting ${exportableNames.length} skills (all tiers)...`);
+  console.log(`Exporting ${exportableNames.length} skills (standalone and light-deps)...`);
 
   // Create output directory
   fs.mkdirSync(outputDir, { recursive: true });

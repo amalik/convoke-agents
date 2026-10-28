@@ -55,8 +55,15 @@ describe('Seed Catalog Repository (sp-4-1)', () => {
     const { header, rows } = readManifest(manifestPath);
     const ni = header.indexOf('name');
     const intentIdx = header.indexOf('intent');
-    const expectedCount = [...new Set(rows.filter((r) => r[intentIdx] !== 'meta-platform').map((r) => r[ni]))].length;
+    const tierIdx = header.indexOf('tier');
+    // T186: pipeline skills are listed in the catalog but not exported, so they get no folder.
+    const expectedCount = [...new Set(rows
+      .filter((r) => r[intentIdx] !== 'meta-platform' && r[tierIdx] !== 'pipeline')
+      .map((r) => r[ni]))].length;
     assert.equal(skillDirs.length, expectedCount);
+    const pipeline = new Set(rows.filter((r) => r[tierIdx] === 'pipeline').map((r) => r[ni]));
+    assert.ok(pipeline.size > 0, 'fixture: the manifest has pipeline skills');
+    assert.deepEqual(skillDirs.filter((d) => pipeline.has(d)), [], 'a pipeline skill was exported into the catalog');
     assert.equal(fs.existsSync(path.join(tmpDir, 'README.md')), true);
   });
 

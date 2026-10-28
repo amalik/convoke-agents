@@ -110,6 +110,43 @@ describe('convoke-export CLI (sp-2-3)', () => {
     assert.ok(result.stdout.includes('✅ bmad-agent-architect'));
   });
 
+  it('a single pipeline skill is refused with exit 3, names why, and writes nothing (T186)', () => {
+    const out = makeTmpDir();
+    try {
+      const result = runCli(['bmad-dev-story', '--output', out]);
+      assert.equal(result.status, 3, result.stdout + result.stderr);
+      assert.match(result.stdout + result.stderr, /framework-only/i);
+      assert.deepEqual(fs.readdirSync(out), [], 'something was written for a refused skill');
+      assert.ok(!/Exported \d+ skills/.test(result.stdout), 'a refusal was summarised as an export that failed');
+    } finally {
+      fs.rmSync(out, { recursive: true, force: true });
+    }
+  });
+
+  it('documents exit 3 for a named pipeline skill as well as --tier 3 (T186)', () => {
+    const result = runCli(['--help']);
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /3 {2}Tier not supported \(a pipeline skill named, or --tier 3 requested\)/);
+  });
+
+  it('judges a name listed twice by its first row, as the engine does (T186)', () => {
+    // First row pipeline, a later one standalone: --all used to select it by the later row, then
+    // count the engine's refusal as a failure and exit 4.
+    const os = require('os');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 't186-dup-'));
+    fs.cpSync(projectRoot, dir, { recursive: true });
+    const manifest = path.join(dir, '_bmad', '_config', 'skill-manifest.csv');
+    const line = (tier) => ['t186-dup', 't186-dup', 'synthetic', 'bmm', '_bmad/x/SKILL.md', 'true', tier, 'discover-product-fit', ''].map((v) => `"${v}"`).join(',');
+    fs.appendFileSync(manifest, `${line('pipeline')}\n${line('standalone')}\n`);
+    try {
+      const result = runCli(['--all', '--dry-run'], { cwd: dir });
+      assert.ok(!(result.stdout + result.stderr).includes('t186-dup'), `the pipeline name was selected:\n${result.stderr}`);
+      assert.notEqual(result.status, 4, 'a skipped name was counted as a failed export');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('Test 4: tier 3 rejection — exits 3', () => {
     const result = runCli(['--tier', '3']);
     assert.equal(result.status, 3);

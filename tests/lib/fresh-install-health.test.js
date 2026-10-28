@@ -158,13 +158,24 @@ describe('fresh-install health (I137)', () => {
     const dupes = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
     assert.deepEqual(dupes, [], `seeded manifest has duplicate rows: ${dupes.join(', ')}`);
 
-    // The point of all of it: the shipped bin can actually export.
+    // The point of all of it: the shipped bin can actually export. A pipeline skill is refused by
+    // design (T186), so the export is tried on the first row that is not one — and a pipeline row,
+    // if the install has one, must be refused rather than exported.
     const { exportSkill } = require('../../scripts/portability/export-engine');
-    const result = exportSkill(ids[0], installDir);
+    const tierIdx = header.indexOf('tier');
+    assert.ok(tierIdx >= 0, 'seeded manifest has no tier column');
+    const exportable = rows.filter((r) => r[tierIdx] !== 'pipeline').map((r) => r[idIdx]).filter(Boolean);
+    assert.ok(exportable.length > 0, 'a fresh install offers no skill that convoke-export may export');
+    const result = exportSkill(exportable[0], installDir);
     assert.ok(
       result && result.instructions && result.instructions.length > 0,
-      `convoke-export produced nothing for "${ids[0]}" on a clean install`
+      `convoke-export produced nothing for "${exportable[0]}" on a clean install`
     );
+    // Every Convoke agent is pipeline, so a fresh install has such a row; were it gone, this check
+    // would pass while testing nothing.
+    const pipeline = rows.find((r) => r[tierIdx] === 'pipeline');
+    assert.ok(pipeline, 'a fresh install has no pipeline row, so the refusal below would check nothing');
+    assert.throws(() => exportSkill(pipeline[idIdx], installDir), /tier "pipeline"/);
   });
 
   it('an UNUSABLE manifest is repaired, and a valid one is left alone', () => {

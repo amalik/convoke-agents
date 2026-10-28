@@ -181,11 +181,14 @@ echo "    [doctor exit $DOCTOR]"
 
 echo
 echo "==> convoke-export   (a shipped bin doing real work, not just --help)"
-# Export the FIRST `MAX_EXPORTS` skills the manifest offers (default 5). The previous version
-# exported `rows[0]` only.
+# Export the FIRST `MAX_EXPORTS` exportable skills the manifest offers (default 5). The previous
+# version exported `rows[0]` only. Since T186 a `pipeline` skill is refused by design, so those are
+# skipped here and one is checked for that refusal instead. The line printed below says how many
+# that leaves; on a fresh install it is very few, because nearly every skill a Convoke install
+# registers is `pipeline` (the five this exported before T186 were pipeline workflows).
 #
-# BE HONEST ABOUT WHAT THIS COVERS: this is 5 of however many the manifest holds, and it is still
-# manifest-ORDER dependent — a reorder changes which 5 are covered. It narrows the hole rather
+# BE HONEST ABOUT WHAT THIS COVERS: this is at most MAX_EXPORTS of however many the manifest holds,
+# and it is still manifest-ORDER dependent — a reorder changes which are covered. It narrows the hole rather
 # than closing it. An earlier draft of this comment claimed it exported "EVERY skill", which was
 # wrong and would have stopped a reader from adding real coverage (R2 review 2026-08-14).
 # Full-coverage export is deliberately not done here: it is O(minutes) on a job that gates
@@ -215,7 +218,11 @@ else
     const { header, rows } = readManifest(process.argv[1]);
     const idx = header.indexOf("canonicalId");
     if (idx < 0) { console.error("manifest has no canonicalId column; header: " + header.join(",")); process.exit(3); }
-    const ids = rows.map((r) => r[idx]).filter(Boolean);
+    // T186: pipeline skills are refused by design (exit 3), so only the others are exported here;
+    // one pipeline skill is checked separately below for that refusal.
+    const tierIdx = header.indexOf("tier");
+    if (tierIdx < 0) { console.error("manifest has no tier column; header: " + header.join(",")); process.exit(3); }
+    const ids = rows.filter((r) => r[tierIdx] !== "pipeline").map((r) => r[idx]).filter(Boolean);
     process.stdout.write(ids.slice(0, Number(process.argv[2])).join(" "));
   ' "$MANIFEST" "$MAX_EXPORTS" "$TMP/proj/node_modules/convoke-agents/scripts/portability/manifest-csv.js")" || {
     echo "    [harness] could not read the skill manifest (see message above)"
@@ -224,7 +231,15 @@ else
   if [ -z "$SKILLS" ]; then
     # A header-only manifest parses fine but offers nothing. Previously this passed an EMPTY
     # argument to convoke-export and then blamed the exporter for the resulting failure.
-    echo "    [skill-manifest.csv has a valid header but zero rows — nothing can be exported]"
+    ROWS="$(node -e '
+      const { readManifest } = require(process.argv[2]);
+      process.stdout.write(String(readManifest(process.argv[1]).rows.length));
+    ' "$MANIFEST" "$TMP/proj/node_modules/convoke-agents/scripts/portability/manifest-csv.js" 2>/dev/null || echo "?")"
+    if [ "$ROWS" = "0" ]; then
+      echo "    [skill-manifest.csv has a valid header but zero rows — nothing can be exported]"
+    else
+      echo "    [skill-manifest.csv has $ROWS row(s) but none that may be exported — all are pipeline]"
+    fi
     EXPORT=1
   else
     # Guarded like its sibling above. Unguarded, a failure here died at exit 1 ("product defect")
@@ -237,7 +252,7 @@ else
       exit "$ENV_FAIL"
     }
     COUNT="$(echo "$SKILLS" | wc -w | tr -d ' ')"
-    echo "    exporting $COUNT of $TOTAL skill(s) (cap MAX_EXPORTS=$MAX_EXPORTS)"
+    echo "    exporting $COUNT of $TOTAL skill(s), pipeline skills excluded (cap MAX_EXPORTS=$MAX_EXPORTS)"
     for SKILL in $SKILLS; do
       STATUS=0
       # Full output on failure — the previous `| tail -2` discarded the reason for a failure that
@@ -250,6 +265,32 @@ else
       fi
     done
     [ "$EXPORT" -eq 0 ] && echo "    all $COUNT export(s) succeeded"
+    # Guarded like its siblings: a lookup that fails is a harness failure, not a skipped check.
+    PIPELINE_SKILL="$(node -e '
+      const { readManifest } = require(process.argv[2]);
+      const { header, rows } = readManifest(process.argv[1]);
+      const row = rows.find((r) => r[header.indexOf("tier")] === "pipeline");
+      process.stdout.write(row ? row[header.indexOf("canonicalId")] : "");
+    ' "$MANIFEST" "$TMP/proj/node_modules/convoke-agents/scripts/portability/manifest-csv.js")" || {
+      echo "    [harness] could not look up a pipeline skill in the manifest"
+      exit "$ENV_FAIL"
+    }
+    if [ -z "$PIPELINE_SKILL" ]; then
+      echo "    [no pipeline skill in the manifest — the framework-only refusal was not checked]"
+    else
+      STATUS=0
+      REFUSED="$TMP/proj/exported-refused"
+      OUT="$(npx --no-install convoke-export "$PIPELINE_SKILL" --output "$REFUSED" 2>&1)" || STATUS=$?
+      # Exit 3 alone could be some other refusal; the message must say framework-only, and nothing
+      # at all may be written, anywhere under the output directory.
+      if [ "$STATUS" -ne 3 ] || ! echo "$OUT" | grep -q "framework-only" || { [ -d "$REFUSED" ] && [ -n "$(ls -A "$REFUSED")" ]; }; then
+        echo "    FAILED: $PIPELINE_SKILL is framework-only and must be refused with exit 3, writing nothing (got exit $STATUS)"
+        echo "$OUT" | sed 's/^/      /'
+        EXPORT=1
+      else
+        echo "    $PIPELINE_SKILL refused as framework-only (exit 3), as it must be"
+      fi
+    fi
   fi
 fi
 echo "    [export status $EXPORT]"

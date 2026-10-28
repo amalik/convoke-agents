@@ -154,3 +154,19 @@ describe('Catalog Generator (sp-3-1)', () => {
     assert.deepEqual(violations, []);
   });
 });
+
+describe('T186: framework-only skills are listed without a link to instructions', () => {
+  it('links no pipeline entry to a folder, since none is exported', () => {
+    const result = runCatalog();
+    assert.equal(result.status, 0, result.stderr);
+    const start = result.stdout.indexOf('<summary><strong>Framework-only skills');
+    assert.ok(start > 0, 'fixture: the catalog has a framework-only section');
+    const end = result.stdout.indexOf('</details>', start);
+    assert.ok(end > start, 'fixture: the framework-only section is closed');
+    const section = result.stdout.slice(start, end);
+    assert.ok(section.includes('🔒 Framework only'), 'fixture: the section lists framework-only skills');
+    assert.ok(!section.includes('→ instructions'), 'a framework-only entry links to instructions that are not exported');
+    const before = result.stdout.slice(0, start);
+    assert.ok(before.includes('→ instructions'), 'exported skills must keep their link');
+  });
+});

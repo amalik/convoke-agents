@@ -42,7 +42,7 @@ const INTENT_TO_HEADING = {
 const TIER_BADGES = {
   standalone: '**✅ Ready to use**',
   'light-deps': '**📦 Needs setup**',
-  pipeline: '**🔒 Framework only** (Requires full Convoke installation)',
+  pipeline: '**🔒 Framework only** (runs only inside its full framework; not exported)',
 };
 
 // Intent display order: standalone-heavy intents first, pipeline-only last
@@ -81,6 +81,8 @@ function renderSkillEntry(skill) {
   const icon = skill.icon || '🔧';
   const badge = TIER_BADGES[skill.tier] || skill.tier;
   const desc = truncateDescription(skill.description);
+  // A pipeline skill is not exported (T186), so there is no folder to link to.
+  if (skill.tier === 'pipeline') return `- ${icon} **${skill.personaName}** — ${desc} ${badge}`;
   const link = `[→ instructions](./${skill.name}/)`;
   return `- ${icon} **${skill.personaName}** — ${desc} ${badge} ${link}`;
 }
@@ -215,7 +217,7 @@ function generateCatalog(projectRoot) {
     lines.push('---');
     lines.push('');
     lines.push('<details>');
-    lines.push('<summary><strong>Framework-only skills (requires Convoke installation)</strong></summary>');
+    lines.push('<summary><strong>Framework-only skills (each runs only inside its full framework — BMAD Method, Convoke or WDS — and is not exported)</strong></summary>');
     lines.push('');
 
     // Group pipeline skills by intent too
