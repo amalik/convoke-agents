@@ -179,7 +179,10 @@ Every update creates a backup before making changes:
   agent wrapper the regenerated text is then written through the link, over the linked file. If a
   copy cannot be made — the wrapper holds an unreadable or special file, or a broken link beside
   its `SKILL.md`, or the backup directory is not writable — the wrapper is left unchanged and a
-  warning names it. For an agent you excluded, the install then reports that wrapper as
+  warning names it. The same happens, and the warning says which link to remove, when the wrapper
+  reaches into those copies: when the wrapper itself is one of them, when something in it links to
+  a folder that holds them (such as `_bmad-output/`), or — for an agent wrapper you changed — when
+  its `SKILL.md` is a link (symbolic or hard) to a file among them. For an agent you excluded, the install then reports that wrapper as
   `STILL INSTALLED` and exits non-zero until you move it out of `.claude/skills/`. A `SKILL.md`
   that is itself a broken link holds nothing to copy and is not warned about: in an agent wrapper
   the regenerated text is written through it, creating the file it points at, and the install

@@ -1514,7 +1514,7 @@ You must fully embody this agent's persona and follow all activation instruction
       excludedWrapperText.set(path.basename(skillDir), content);
       continue;
     }
-    if (!preserveOperatorWrapper(skillsDir, path.basename(skillDir), content, { ...wrapperCtx, textOnly: true })) continue;
+    if (!preserveOperatorWrapper(skillsDir, path.basename(skillDir), content, { ...wrapperCtx, textOnly: true, writesThrough: true })) continue;
     await fs.ensureDir(skillDir);
     await fs.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf8');
     changes.push(`Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
@@ -1544,7 +1544,7 @@ You must fully embody this agent's persona and follow all activation instruction
       excludedWrapperText.set(path.basename(skillDir), content);
       continue;
     }
-    if (!preserveOperatorWrapper(skillsDir, path.basename(skillDir), content, { ...wrapperCtx, textOnly: true })) continue;
+    if (!preserveOperatorWrapper(skillsDir, path.basename(skillDir), content, { ...wrapperCtx, textOnly: true, writesThrough: true })) continue;
     await fs.ensureDir(skillDir);
     await fs.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf8');
     changes.push(`Refreshed skill: bmad-agent-bme-${agent.id}/SKILL.md`);
@@ -1998,7 +1998,7 @@ function isSameDirectoryEntry(a, b) {
  *   made, or an identical copy was already there. false when the copy failed. The wrapper is then
  *   untouched and a warning has been printed; the caller must leave it alone.
  */
-function preserveOperatorWrapper(skillsDir, name, expectedText, { backupRoot, changes, verbose, textOnly = false }) {
+function preserveOperatorWrapper(skillsDir, name, expectedText, { backupRoot, changes, verbose, textOnly = false, writesThrough = false }) {
   const target = path.join(skillsDir, name);
   try {
     let stat;
@@ -2007,6 +2007,17 @@ function preserveOperatorWrapper(skillsDir, name, expectedText, { backupRoot, ch
     } catch (err) {
       if (err.code === 'ENOENT') return true; // absent, or a link to nothing
       throw err;
+    }
+
+    // T271: a wrapper that IS a folder inside the backups is refused before anything else — a
+    // caller writing into it writes into a copy, whether or not its content counts as changed.
+    const realBackupRoot = realPathOfPossiblyMissing(backupRoot);
+    if (isWithin(realPathOrNull(target), realBackupRoot)) throw reachError('.', false);
+    // A `SKILL.md` that is a folder cannot be written as a file; for a caller that writes it, that
+    // threw out of the whole refresh. Refused instead.
+    if (writesThrough && stat.isDirectory()) {
+      const skillStat = statOrNull(path.join(target, 'SKILL.md'));
+      if (skillStat && skillStat.isDirectory()) throw new Error('SKILL.md is a folder, not a file; move it out of .claude/skills/');
     }
 
     let differs = true; // a file where a wrapper directory belongs is not something Convoke wrote
@@ -2028,6 +2039,19 @@ function preserveOperatorWrapper(skillsDir, name, expectedText, { backupRoot, ch
       differs = textDiffers || (!textOnly && fs.readdirSync(target).some(e => e !== 'SKILL.md'));
     }
     if (!differs) return true;
+
+    // T271: only once there is something to keep — an unchanged wrapper is written with the text it
+    // already holds, so where its links lead harms nothing. Two shapes are refused, through the
+    // catch below, like any wrapper that cannot be copied: a `SKILL.md` that IS a backup copy (by
+    // a symbolic or a hard link), which digested equal to that copy, was read as already kept, and
+    // then had the regenerated text written through it onto the copy; and a folder in the wrapper
+    // that holds the backups, which made the copy recurse into its own output until the path was
+    // too long.
+    // Created first, so a link pointing at it — dangling until a first copy made it — resolves and
+    // is seen. One that cannot be created would have failed the copy anyway; it is refused the same.
+    fs.ensureDirSync(backupRoot);
+    const endangered = wrapperEndangersBackup(target, backupRoot, { writesThrough });
+    if (endangered !== null) throw reachError(endangered.rel, endangered.hard);
 
     const digest = wrapperDigest(target);
     const backupName = `${name}-${digest.slice(0, 16)}`;
@@ -2052,8 +2076,157 @@ function preserveOperatorWrapper(skillsDir, name, expectedText, { backupRoot, ch
   } catch (err) {
     // Not pushed into `changes`, and not gated on `verbose`: see the taxonomy seed's catch in
     // `refreshInstallation` for why a warning must not be rendered with a green tick.
-    console.warn(`    Warning: could not back up .claude/skills/${name} (${err.message}) — left as it is. Move it out of .claude/skills/ and run again.`);
+    const advice = (err.remedy || 'Move it out of .claude/skills/ and run again').replace('<name>', name);
+    console.warn(`    Warning: could not back up .claude/skills/${name} (${err.message}) — left as it is. ${advice}.`);
     return false;
+  }
+}
+
+/** The real path of `p`, spelled as on disk; see {@link wrapperEndangersBackup}. */
+function realPathNative(p) {
+  try {
+    return fs.realpathSync.native(p);
+  } catch (err) {
+    if (err.code === 'ENOENT' || err.code === 'ENOTDIR') throw err;
+    // Some Windows volumes fail the native call where the JS one works; better the caller's
+    // spelling than refusing every changed wrapper on that volume.
+    return fs.realpathSync(p);
+  }
+}
+
+function realPathOrNull(p) {
+  try {
+    return realPathNative(p);
+  } catch {
+    return null;
+  }
+}
+
+function statOrNull(p, opts) {
+  try {
+    return fs.statSync(p, opts);
+  } catch {
+    return null;
+  }
+}
+
+/** True when `child` is `parent` or inside it; false for `null`. */
+function isWithin(child, parent) {
+  if (child === null) return false;
+  const rel = path.relative(parent, child);
+  return rel === '' || (rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
+}
+
+/** The T271 refusal, carrying its own advice so the catch does not add a second, different one. */
+function reachError(rel, hard) {
+  const where = rel === '.' ? 'the wrapper itself' : rel;
+  const err = new Error(hard
+    ? `${where} is a hard link to a file in ${WRAPPER_BACKUP_REL}/`
+    : `${where} reaches into ${WRAPPER_BACKUP_REL}/, where its copy would go`);
+  err.remedy = hard
+    ? `Delete .claude/skills/<name>/${rel} (the copy keeps its content) and run again`
+    : rel === '.' ? 'Replace the link with a folder of its own and run again' : `Remove the link at ${rel} and run again`;
+  return err;
+}
+
+/**
+ * T271: what in `target` would put its backup copy at risk, or `null`. `rel` is a path relative to
+ * `target`; `hard` says it is a hard link.
+ *   - For a caller that writes `SKILL.md` (`writesThrough`, the agent loops): that file resolving
+ *     inside `backupRoot`, or being a hard link to any file there — writing it would write the copy.
+ *     The other callers replace or remove the file without writing through it.
+ *   - For every caller: a folder in the wrapper, reached through links, that holds `backupRoot` —
+ *     the copy would copy itself.
+ * A link to some other folder inside the backups is neither: the copy reads it, and nothing writes
+ * through it. Paths are compared by `realpathSync.native`, which returns the spelling on disk:
+ * the JS `realpathSync` keeps the caller's case, so on a case-insensitive filesystem a link to
+ * `_BMAD-OUTPUT` read as somewhere else. Each real folder is walked once, so loops end the walk;
+ * an entry that cannot be resolved or read is skipped — the copy refuses it, if it must.
+ *
+ * @param {string} target - A wrapper under `.claude/skills/`.
+ * @param {string} backupRoot - Where its copy would go; it exists by now.
+ * @param {{writesThrough: boolean}} opts
+ * @returns {{rel: string, hard: boolean}|null}
+ */
+function wrapperEndangersBackup(target, backupRoot, { writesThrough }) {
+  const realBackup = realPathOfPossiblyMissing(backupRoot);
+
+  if (writesThrough) {
+    const realSkill = realPathOrNull(path.join(target, 'SKILL.md'));
+    if (isWithin(realSkill, realBackup)) return { rel: 'SKILL.md', hard: false };
+    const st = realSkill === null ? null : statOrNull(realSkill, { bigint: true });
+    if (st && st.isFile() && st.nlink > 1n && hardLinkedIntoBackups(st, realBackup)) return { rel: 'SKILL.md', hard: true };
+  }
+
+  const seen = new Set();
+  const walk = (abs, rel) => {
+    const resolved = realPathOrNull(abs);
+    if (resolved === null || seen.has(resolved)) return null;
+    const st = statOrNull(resolved);
+    if (!st || !st.isDirectory()) return null;
+    if (isWithin(realBackup, resolved)) return { rel, hard: false };
+    seen.add(resolved);
+    let entries;
+    try {
+      entries = fs.readdirSync(resolved);
+    } catch {
+      return null;
+    }
+    for (const entry of entries) {
+      const found = walk(path.join(abs, entry), rel === '.' ? entry : `${rel}/${entry}`);
+      if (found !== null) return found;
+    }
+    return null;
+  };
+  return walk(target, '.');
+}
+
+/**
+ * True when any regular file under `realBackup` is the same file as `st` — a hard link can be to
+ * any of them, not only a copy's `SKILL.md`. Links are not followed; inode numbers are compared as
+ * BigInts, which a Number cannot hold exactly on every filesystem.
+ */
+function hardLinkedIntoBackups(st, realBackup) {
+  const stack = [realBackup];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const abs = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(abs);
+      } else if (entry.isFile()) {
+        const other = statOrNull(abs, { bigint: true });
+        if (other && other.ino === st.ino && other.dev === st.dev) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * The real path of `p`, resolving through its nearest existing ancestor when `p` does not exist
+ * yet. Only a missing component is climbed past; any other failure is thrown, to the caller's
+ * refusal.
+ */
+function realPathOfPossiblyMissing(p) {
+  const rest = [];
+  let current = path.resolve(p);
+  for (;;) {
+    try {
+      return path.join(realPathNative(current), ...rest);
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+      const parent = path.dirname(current);
+      if (parent === current) return path.resolve(p);
+      rest.unshift(path.basename(current));
+      current = parent;
+    }
   }
 }
 

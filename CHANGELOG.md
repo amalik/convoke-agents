@@ -67,6 +67,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A skill you edited could be lost from its own backup (`T271`).** Since 4.0.4 an install copies an edited
+  wrapper under `.claude/skills/` aside before regenerating it. If the wrapper then linked into that copy — its
+  `SKILL.md` pointing at the backed-up one, say — the next install took it as already copied and wrote the new
+  wrapper through the link, over the copy; a wrapper linking to `_bmad-output` made the copy copy itself until
+  the path was too long. Both are now refused with a warning naming the link to remove, and the wrapper is left
+  as it is. If an earlier install already made such a copy, a very deep folder under
+  `_bmad-output/.backups/skill-wrappers/`, delete it by hand.
+
 - **An install or update no longer throws away what you added to the Enhance, Artifacts and Portability
   modules (`T221`).** Their `config.yaml` files were replaced from the package's copy, so any setting you had
   added was lost, and files you had added under `_bmad/bme/_artifacts/` or `_bmad/bme/_portability/` were

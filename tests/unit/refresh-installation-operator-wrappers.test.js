@@ -14,14 +14,15 @@
  * NOT covered here:
  *   - a copy that fails part-way through. Nothing in this file makes `copySync` fail after it
  *     has started; every failure here is a backup directory that cannot be written at all.
- *   - a wrapper holding a broken link, a circular link, a FIFO or a socket.
+ *   - a wrapper holding a broken link, a FIFO or a socket. (A circular link is covered, by T271.)
  *   - the regular-file check before `SKILL.md` is read. Removing it makes a FIFO at that name
  *     block forever, and no test here plants one.
  *   - `isSameDirectoryEntry` returning true. One directory entry has two names only on a
  *     case-insensitive filesystem, so the unit tests below assert the false cases and the true
  *     case is reached only through the rename test, which skips on Linux CI.
- * Three tests depend on the filesystem and say so when they skip: two run only where names are
- * case-insensitive (macOS, Windows), one only where they are case-sensitive (Linux CI).
+ * Tests that depend on the filesystem say so when they skip: the T252 case tests run only where
+ * names are case-insensitive (macOS, Windows) or case-sensitive (Linux CI), and the T271 tests that
+ * plant links skip on Windows; one of them also needs a case-insensitive filesystem.
  */
 
 const { describe, it, beforeEach, afterEach } = require('node:test');
@@ -429,6 +430,229 @@ describe('T252: refresh preserves operator work under .claude/skills/', () => {
       assert.equal(warnings.filter(w => w.includes('could not back up') && w.includes(`/${name} `)).length, 1,
         `one warning names ${name}; got:\n${warnings.join('\n')}`);
     }
+  });
+
+  // T271. A wrapper that reaches into the backup root through a link cannot be copied there
+  // safely: the copy would land on itself, or inside itself. It is refused like any wrapper that
+  // cannot be copied — left as it is, with a warning — instead of being read as already kept.
+  const SKIP_LINKS = process.platform === 'win32' ? 'symlinks need privileges on Windows' : false;
+
+  it('a skill file linked into its own backup copy is refused, and the copy keeps the edit (T271)', { skip: SKIP_LINKS }, async () => {
+    const wrapper = `bmad-agent-bme-${VORTEX_AGENT.id}`;
+    await plant(`${wrapper}/SKILL.md`);
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+    const [copy] = copiesOf(backupDir, wrapper);
+    assert.ok(copy, 'fixture: the first refresh copied the edit aside');
+    const live = path.join(skillsDir, wrapper, 'SKILL.md');
+    await fs.remove(live);
+    await fs.symlink(path.join(copy, 'SKILL.md'), live);
+    warnings.length = 0;
+
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+
+    assert.equal(fs.readFileSync(path.join(copy, 'SKILL.md'), 'utf8'), OPERATOR_TEXT, 'the refresh wrote through the link onto the backup');
+    assert.ok(fs.lstatSync(live).isSymbolicLink(), 'the wrapper must be left as it is');
+    assert.equal(warnings.filter(w => w.includes('could not back up') && w.includes(`/${wrapper} `)).length, 1,
+      `one warning names ${wrapper}; got:\n${warnings.join('\n')}`);
+    assert.ok(warnings.some(w => w.includes('reaches into')), 'the warning must say why');
+  });
+
+  it('a wrapper linking to the folder that holds the backups is refused, and nothing is copied (T271)', { skip: SKIP_LINKS }, async () => {
+    // Copying it followed the link into _bmad-output, so the copy recursed into itself until the
+    // path was too long, leaving a tree 38 directories deep that nothing removes.
+    const wrapper = `bmad-agent-bme-${VORTEX_AGENT.id}`;
+    await plant(`${wrapper}/SKILL.md`);
+    // A real project has _bmad-output; without it the link dangles and is refused as broken instead.
+    await fs.ensureDir(path.join(tmpDir, '_bmad-output'));
+    await fs.symlink(path.join(tmpDir, '_bmad-output'), path.join(skillsDir, wrapper, 'out-link'));
+
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+
+    assert.deepEqual(copiesOf(backupDir, wrapper), [], 'a copy was started');
+    assert.equal(fs.readFileSync(path.join(skillsDir, wrapper, 'SKILL.md'), 'utf8'), OPERATOR_TEXT, 'the edit was overwritten');
+    assert.ok(warnings.some(w => w.includes(`/${wrapper} `) && w.includes('reaches into')),
+      `no refusal names ${wrapper}; got:\n${warnings.join('\n')}`);
+  });
+
+  it('a wrapper with a link to some other folder inside the backups is copied and rewritten as before (T271)', { skip: SKIP_LINKS }, async () => {
+    // The copy only reads that folder and nothing writes through it, so refusing it would only stop
+    // the wrapper being regenerated — the first version of this fix did that.
+    const wrapper = `bmad-agent-bme-${GYRE_AGENT.id}`;
+    await fs.outputFile(path.join(backupDir, 'somewhere', 'x.md'), 'x\n');
+    await plant(`${wrapper}/SKILL.md`);
+    await fs.symlink(path.join(backupDir, 'somewhere'), path.join(skillsDir, wrapper, 'inside'));
+
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+
+    assert.deepEqual(keptTexts(backupDir, wrapper), [OPERATOR_TEXT]);
+    assert.notEqual(fs.readFileSync(path.join(skillsDir, wrapper, 'SKILL.md'), 'utf8'), OPERATOR_TEXT, 'the wrapper was not regenerated');
+    assert.ok(!warnings.some(w => w.includes('reaches into')), `refused:\n${warnings.join('\n')}`);
+  });
+
+  it('a skill file linked to its backup copy under another spelling is refused (T271)', async (t) => {
+    // Node's realpathSync keeps the spelling it is given, so on a case-insensitive filesystem a link
+    // to _BMAD-OUTPUT/… was read as pointing somewhere else and the copy was overwritten.
+    if (SKIP_LINKS) return t.skip(SKIP_LINKS);
+    const probe = path.join(tmpDir, 'CaseProbe');
+    await fs.writeFile(probe, '');
+    const caseInsensitive = fs.existsSync(path.join(tmpDir, 'caseprobe'));
+    await fs.remove(probe);
+    if (!caseInsensitive) return t.skip('needs a case-insensitive filesystem');
+    const wrapper = `bmad-agent-bme-${VORTEX_AGENT.id}`;
+    await plant(`${wrapper}/SKILL.md`);
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+    const [copy] = copiesOf(backupDir, wrapper);
+    const live = path.join(skillsDir, wrapper, 'SKILL.md');
+    await fs.remove(live);
+    const respelled = path.join(tmpDir, '_BMAD-OUTPUT', path.relative(path.join(tmpDir, '_bmad-output'), copy).toUpperCase().replace(/[0-9A-F]{16}$/, (h) => h.toLowerCase()), 'SKILL.md');
+    await fs.symlink(respelled, live);
+    warnings.length = 0;
+
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+
+    assert.equal(fs.readFileSync(path.join(copy, 'SKILL.md'), 'utf8'), OPERATOR_TEXT, 'the copy was overwritten through a re-spelled link');
+    assert.ok(warnings.some(w => w.includes(`/${wrapper} `) && w.includes('reaches into')), `not refused:\n${warnings.join('\n')}`);
+  });
+
+  it('a skill file hard-linked to its backup copy is refused (T271)', { skip: process.platform === 'win32' ? 'hard links' : false }, async () => {
+    const wrapper = `bmad-agent-bme-${VORTEX_AGENT.id}`;
+    await plant(`${wrapper}/SKILL.md`);
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+    const [copy] = copiesOf(backupDir, wrapper);
+    const live = path.join(skillsDir, wrapper, 'SKILL.md');
+    await fs.remove(live);
+    await fs.link(path.join(copy, 'SKILL.md'), live);
+    warnings.length = 0;
+
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+
+    assert.equal(fs.readFileSync(path.join(copy, 'SKILL.md'), 'utf8'), OPERATOR_TEXT, 'the copy was overwritten through a hard link');
+    const warning = warnings.find(w => w.includes(`/${wrapper} `));
+    assert.ok(warning && warning.includes('is a hard link to a file in'), `no hard-link refusal:\n${warnings.join('\n')}`);
+    assert.ok(!warning.includes('Move it out'), 'two different remedies in one warning');
+  });
+
+  it('a skill file hard-linked to any other file in the backups is refused (T271)', { skip: process.platform === 'win32' ? 'hard links' : false }, async () => {
+    const wrapper = `bmad-agent-bme-${VORTEX_AGENT.id}`;
+    await plant(`${wrapper}/SKILL.md`);
+    await plant(`${wrapper}/notes.md`, 'notes kept with the copy\n');
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+    const [copy] = copiesOf(backupDir, wrapper);
+    const live = path.join(skillsDir, wrapper, 'SKILL.md');
+    await fs.remove(live);
+    await fs.link(path.join(copy, 'notes.md'), live);
+    warnings.length = 0;
+
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+
+    assert.equal(fs.readFileSync(path.join(copy, 'notes.md'), 'utf8'), 'notes kept with the copy\n', 'a backed-up file was overwritten');
+  });
+
+  it('a wrapper folder that is itself a link to a copy is refused, even with nothing changed in it (T271)', { skip: SKIP_LINKS }, async () => {
+    const wrapper = `bmad-agent-bme-${VORTEX_AGENT.id}`;
+    const copy = path.join(backupDir, `${wrapper}-0123456789abcdef`);
+    await fs.outputFile(path.join(copy, 'notes.md'), 'kept\n');
+    await fs.remove(path.join(skillsDir, wrapper));
+    await fs.symlink(copy, path.join(skillsDir, wrapper));
+
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+
+    assert.deepEqual(fs.readdirSync(copy), ['notes.md'], 'a file was written into the copy');
+    assert.ok(warnings.some(w => w.includes(`/${wrapper} `) && w.includes('the wrapper itself reaches into')));
+  });
+
+  it('the Enhance wrapper is not refused for a skill file linked to its copy: it replaces the link (T271)', { skip: SKIP_LINKS }, async () => {
+    const wrapper = 'bmad-enhance-initiatives-backlog';
+    await plant(`${wrapper}/SKILL.md`);
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+    const [copy] = copiesOf(backupDir, wrapper);
+    assert.ok(copy, 'fixture: the edit was copied aside');
+    const live = path.join(skillsDir, wrapper, 'SKILL.md');
+    await fs.remove(live);
+    await fs.symlink(path.join(copy, 'SKILL.md'), live);
+    warnings.length = 0;
+
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+
+    assert.equal(fs.readFileSync(path.join(copy, 'SKILL.md'), 'utf8'), OPERATOR_TEXT, 'the copy was written through');
+    assert.ok(!fs.lstatSync(live).isSymbolicLink(), 'the link should have been replaced with the regenerated file');
+    assert.ok(!warnings.some(w => w.includes(wrapper)), `refused:\n${warnings.join('\n')}`);
+  });
+
+  it('a link to the backup folder before any copy made it is still refused (T271)', { skip: SKIP_LINKS }, async () => {
+    // On a first install the folder does not exist, so the link dangles when checked; the copy
+    // would then create it and recurse.
+    await fs.remove(path.join(tmpDir, '_bmad-output'));
+    const wrapper = `bmad-agent-bme-${VORTEX_AGENT.id}`;
+    await plant(`${wrapper}/SKILL.md`);
+    await fs.symlink(backupDir, path.join(skillsDir, wrapper, 'future'));
+
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+
+    assert.deepEqual(copiesOf(backupDir, wrapper), [], 'a copy was made');
+    assert.ok(warnings.some(w => w.includes(`/${wrapper} `) && w.includes('reaches into')),
+      `not refused:\n${warnings.join('\n')}`);
+  });
+
+  it('a skill file that is a folder is refused rather than failing the whole refresh (T271)', async () => {
+    const wrapper = `bmad-agent-bme-${VORTEX_AGENT.id}`;
+    await fs.remove(path.join(skillsDir, wrapper, 'SKILL.md'));
+    await fs.ensureDir(path.join(skillsDir, wrapper, 'SKILL.md'));
+
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+
+    assert.ok(warnings.some(w => w.includes(`/${wrapper} `) && w.includes('SKILL.md is a folder')),
+      `not refused:\n${warnings.join('\n')}`);
+  });
+
+  it('an unchanged wrapper is not refused, whatever it links to (T271)', { skip: SKIP_LINKS }, async () => {
+    // There is nothing to keep, so the check does not run: no false "could not back up" warning,
+    // no walk of whatever the link leads to.
+    const wrapper = `bmad-agent-bme-${VORTEX_AGENT.id}`;
+    await fs.ensureDir(path.join(tmpDir, '_bmad-output'));
+    await fs.symlink(path.join(tmpDir, '_bmad-output'), path.join(skillsDir, wrapper, 'out-link'));
+    await fs.symlink(path.join(tmpDir, 'nowhere'), path.join(skillsDir, wrapper, 'broken'));
+
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+
+    assert.deepEqual(warnings.filter(w => w.includes(wrapper)), []);
+  });
+
+  it('a wrapper holding a link back to itself is checked without looping (T271)', { skip: SKIP_LINKS, timeout: 60000 }, async () => {
+    // The check walks links; each real folder is visited once, so a loop ends the walk rather than
+    // the stack. What the copy then does with the loop is unchanged.
+    const wrapper = `bmad-agent-bme-${VORTEX_AGENT.id}`;
+    await plant(`${wrapper}/SKILL.md`);
+    // Two loops, not one: a single one ends by itself once the path is too long to resolve, but two
+    // double the paths at every level, so without the guard the walk is exponential.
+    await fs.symlink('.', path.join(skillsDir, wrapper, 'loop'));
+    await fs.symlink('.', path.join(skillsDir, wrapper, 'again'));
+
+    // In a child process with a deadline: without the guard the walk never ends, and a synchronous
+    // loop would never yield to this test's own timer — CI would hang rather than fail.
+    const { spawnSync } = require('child_process');
+    const script = `require(${JSON.stringify(require.resolve('../../scripts/update/lib/refresh-installation'))})` +
+      `.refreshInstallation(${JSON.stringify(tmpDir)}, { backupGuides: false, verbose: false })` +
+      `.then(() => process.exit(0), (e) => { console.error(e.message); process.exit(1); });`;
+    const run = spawnSync(process.execPath, ['-e', script], { encoding: 'utf8', timeout: 30000 });
+    assert.equal(run.signal, null, 'the refresh did not finish: the check walked the loop without end');
+    assert.equal(run.status, 0, run.stderr);
+    assert.ok(!/reaches into/.test(run.stderr), `a loop that stays inside the wrapper is not a reach into the backups:\n${run.stderr}`);
+    // What the copy then does with it: a loop cannot be copied whole, so the wrapper is refused.
+    assert.match(run.stderr, /could not back up \.claude\/skills\/bmad-agent-bme-/, 'the copy should refuse the loop, and say so');
+  });
+
+  it('a wrapper linking somewhere unrelated is still copied as before (T271)', { skip: SKIP_LINKS }, async () => {
+    const wrapper = `bmad-agent-bme-${VORTEX_AGENT.id}`;
+    const elsewhere = path.join(tmpDir, 'elsewhere');
+    await fs.outputFile(path.join(elsewhere, 'notes.md'), 'unrelated\n');
+    await plant(`${wrapper}/SKILL.md`);
+    await fs.symlink(elsewhere, path.join(skillsDir, wrapper, 'linked'));
+
+    await refreshInstallation(tmpDir, REFRESH_OPTIONS);
+
+    assert.deepEqual(keptTexts(backupDir, wrapper), [OPERATOR_TEXT]);
+    assert.ok(!warnings.some(w => w.includes('reaches into')), 'an unrelated link was refused');
   });
 });
 
