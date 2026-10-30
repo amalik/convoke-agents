@@ -44,7 +44,7 @@ This is research practice, not legal advice. The decisions are yours and your or
 
 ## Output
 
-**Artifact:** User interview report in `{output_folder}/user-interview-{topic}-{date}.md`
+**Artifact:** User interview report in `{project-root}/_bmad-output/private/user-interview-{topic}-{date}.md`. Not `{output_folder}`: the report is about real, identifiable people, and git ignores `_bmad-output/private/` (the install puts a `.gitignore` there whose lines include `*`), while `{output_folder}` is committed with the rest of the project. **Before saving, check that git will keep the report out:** in a git project, `git check-ignore -q _bmad-output/private/user-interview-{topic}-{date}.md` must succeed (exit 0); outside git, `_bmad-output/private/.gitignore` must exist and have a line reading `*`. If the check fails, do not save. Tell the operator why. If the `.gitignore` is missing, offer `npx convoke-install-vortex`, which creates it, and run it only if they agree; if it is there but does not protect the folder, show them the file instead, since an install leaves it as it is. If the folder cannot be made safe, keep the report in this conversation and say so; do not write it anywhere tracked.
 
 **Template:** Uses [user-interview.template.md](user-interview.template.md)
 

@@ -172,7 +172,12 @@ const TRACKED = [
   // none can point outside; the record is only ever tested for membership, never used as a path.
   // Also uncounted: `fs.ensureDirSync` (directories) and `fs.utimesSync` on restored files, and the
   // `fs.removeSync` of a record that could not be rewritten — all inside the same tree. The T111 caveat.
-  { file: 'scripts/update/lib/refresh-installation.js', expected: 15 },
+  //
+  // 15 -> 16 (T256, 2026-10-29): `seedPrivateFolder` writes `_bmad-output/private/.gitignore`, an
+  // ignore-everything rule for reports that hold personal data. Inside the operator's project, under
+  // `_bmad-output/`, which the installer already writes; only when the file is absent, so an
+  // operator's own rule there is never replaced.
+  { file: 'scripts/update/lib/refresh-installation.js', expected: 16 },
   // Added 2026-08-26 (story gen-1.1). This is the other half of the 11 -> 10 above.
   // It is tracked rather than left alone because this checker inspects ONLY the files
   // in this array and has no assertion for write ops in an untracked file — so

@@ -91,7 +91,7 @@ For each interview, create a structured findings capture using the format below:
 
 ### Before You Bring Raw Notes Into This Conversation
 
-Whatever you paste here is sent to the AI model you are running this workflow with, and to its provider unless you host the model yourself. What you save lands in `{output_folder}`, where your team reads it and where it may be committed to version control. So:
+Whatever you paste here is sent to the AI model you are running this workflow with, and to its provider unless you host the model yourself. What you save lands in `_bmad-output/private/`, which git ignores but anyone with your files can read. So:
 
 - Remove names, email addresses, and employer names from notes and transcripts before you paste them
 - Do not paste a full transcript when the passages you need will do

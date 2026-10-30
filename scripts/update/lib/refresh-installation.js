@@ -1861,7 +1861,93 @@ prompts: []
     console.warn(`    Warning: could not seed bmm-dependencies.csv: ${err.message}`);
   }
 
+  // T256: a folder for reports that hold personal data. The user-interview report wrote notes
+  // about named people into `vortex-artifacts/`, which git tracks; the installer wrote no ignore
+  // rule anywhere. This folder ignores its own contents, so it works in any git project without
+  // touching the operator's `.gitignore`. Non-fatal and not in `changes` on failure, for the
+  // taxonomy seed's reason.
+  try {
+    if (seedPrivateFolder(projectRoot)) changes.push(`Created ${PRIVATE_OUTPUT_REL}/ (git ignores its contents)`);
+  } catch (err) {
+    console.warn(`    Warning: could not create ${PRIVATE_OUTPUT_REL}/.gitignore: ${err.message} — reports there may be committed`);
+  }
+
   return changes;
+}
+
+/** T256: where workflows write reports that hold personal data. */
+const PRIVATE_OUTPUT_REL = '_bmad-output/private';
+
+// `!.gitignore` keeps this file itself committable (operator ruling D1, 2026-10-29): a rule that
+// ignored itself was never committed, so a teammate who cloned the project had no protection.
+const PRIVATE_GITIGNORE = [
+  '# Written by Convoke (T256). Reports in this folder hold personal data — interview notes about',
+  '# real, identifiable people — so git ignores everything here except this file. Commit this file,',
+  '# so every clone of the project keeps the reports out of git too.',
+  '*',
+  '!.gitignore',
+  '',
+].join('\n');
+
+/**
+ * True when a `.gitignore`'s text ignores everything in its folder: a line `*`, `/*` or `**`, with no
+ * later negation except `!.gitignore`. Used only outside git — inside a repository
+ * {@link privateFolderProtected} asks git itself. Trailing spaces are dropped, as git drops them;
+ * leading ones are not, since git treats them as part of the pattern.
+ */
+function ignoresEverything(text) {
+  const lines = text.split(/\r?\n/).map((l) => l.replace(/\s+$/, '')).filter((l) => l && !l.startsWith('#'));
+  const all = lines.findIndex((l) => l === '*' || l === '/*' || l === '**');
+  if (all < 0) return false;
+  return lines.slice(all + 1).every((l) => !l.startsWith('!') || l === '!.gitignore' || l === '!/.gitignore');
+}
+
+/**
+ * T256: would git keep an interview report in the private folder out of a commit? In a git
+ * repository git is asked (`check-ignore` on a sample report path), so a rule that a later `!` line
+ * undoes, or an ignore written as `/*`, is judged as git judges it. Outside git, the rule's text.
+ *
+ * @returns {{protected: boolean, missing: boolean}}
+ */
+function privateFolderProtected(projectRoot) {
+  const rule = path.join(projectRoot, PRIVATE_OUTPUT_REL, '.gitignore');
+  let text = null;
+  try {
+    text = fs.statSync(rule).isFile() ? fs.readFileSync(rule, 'utf8') : null;
+  } catch {
+    // missing or unreadable
+  }
+  if (text === null) return { protected: false, missing: true };
+  const { spawnSync } = require('child_process');
+  const inside = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], { cwd: projectRoot, encoding: 'utf8' });
+  if (inside.status === 0 && inside.stdout.trim() === 'true') {
+    const probe = spawnSync('git', ['check-ignore', '-q', `${PRIVATE_OUTPUT_REL}/user-interview-probe-0000-00-00.md`], { cwd: projectRoot });
+    if (probe.status === 0 || probe.status === 1) return { protected: probe.status === 0, missing: false };
+  }
+  return { protected: ignoresEverything(text), missing: false };
+}
+
+/**
+ * Create `_bmad-output/private/.gitignore` if it is not there. An existing one — the operator's,
+ * or one they edited — is left as it is, but a warning is printed when it no longer ignores
+ * everything, since reports there would then be offered for commit.
+ *
+ * @returns {boolean} true when it was created.
+ */
+function seedPrivateFolder(projectRoot) {
+  const rule = path.join(projectRoot, PRIVATE_OUTPUT_REL, '.gitignore');
+  if (fs.existsSync(rule)) {
+    if (!privateFolderProtected(projectRoot).protected) {
+      console.warn(`    Warning: ${PRIVATE_OUTPUT_REL}/.gitignore does not keep the reports there out of git (it needs a line reading \`*\`, and no later \`!\` line but \`!.gitignore\`). Left as it is.`);
+    }
+    return false;
+  }
+  fs.ensureDirSync(path.dirname(rule));
+  fs.writeFileSync(rule, PRIVATE_GITIGNORE, 'utf8');
+  // Printed, not only listed: an install does not print its change list, and the rule only
+  // protects a clone once it is committed.
+  console.log(`    Created ${PRIVATE_OUTPUT_REL}/ for interview reports. Commit ${PRIVATE_OUTPUT_REL}/.gitignore so every clone keeps them out of git.`);
+  return true;
 }
 
 /**
@@ -2458,6 +2544,9 @@ const STAMPABLE_MODULES = Object.freeze([
 ]);
 
 module.exports = {
+  PRIVATE_OUTPUT_REL,
+  ignoresEverything,
+  privateFolderProtected,
   guardedModuleNames,
   gyreGuidePlan,
   mergedModuleNames,

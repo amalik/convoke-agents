@@ -386,7 +386,7 @@ writes the manifest for you; this step applies only when the package is its own 
 
 *You're a team lead reviewing your team's Vortex work.*
 
-All generated artifacts are saved to `_bmad-output/vortex-artifacts/`. Each artifact is self-documenting:
+All generated artifacts are saved to `_bmad-output/vortex-artifacts/`, except interview reports, which go to `_bmad-output/private/` so that git keeps them out of the repository. Each artifact is self-documenting:
 
 - **Problem definitions** (Mila) reference their input Isla artifacts
 - **Hypothesis contracts** (Liam) reference their source problem definition

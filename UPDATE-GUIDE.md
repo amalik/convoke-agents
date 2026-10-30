@@ -320,6 +320,7 @@ configs is gone for good after an install.
 All user-generated content works with updated agents **without regeneration**:
 
 - **Vortex artifacts** in `_bmad-output/vortex-artifacts/` — personas, hypotheses, learning cards, etc.
+- **Interview reports** in `_bmad-output/private/`. Git ignores them, so they are not in your repository, not shared with teammates through it, and not in Convoke's backups, which cover `_bmad/bme/` and the skill wrappers it replaces: the copy on your disk is the only one. Commit `_bmad-output/private/.gitignore` itself, so that every clone ignores them too.
 - **Gyre artifacts** in `.gyre/` — stack profiles, capabilities manifests, findings reports, feedback logs
 
 Handoff contracts (HC1-HC5 for Vortex, GC1-GC4 for Gyre) are backward-compatible by design. Artifacts created with older agent versions remain valid inputs after updating.

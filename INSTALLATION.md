@@ -95,7 +95,8 @@ your-project/
 │   └── agent-manifest.csv    # Agent registry
 └── _bmad-output/
     ├── vortex-artifacts/     # Vortex generated artifacts
-    └── gyre-artifacts/       # Gyre generated artifacts
+    ├── gyre-artifacts/       # Gyre generated artifacts
+    └── private/              # Interview reports — git ignores everything here but its .gitignore
 ```
 
 ### Summary
@@ -238,7 +239,7 @@ See [BMAD-METHOD-COMPATIBILITY.md](https://github.com/amalik/convoke-agents/blob
 2. **Pick a starting point:**
    - **Vortex:** Activate Emma → select **Lean Persona** from the menu → follow the guided steps
    - **Gyre:** Activate Scout → select **Full Analysis** from the menu → walk through the pipeline
-3. **Find your artifacts** — outputs are saved in `_bmad-output/vortex-artifacts/` or `.gyre/`
+3. **Find your artifacts** — outputs are saved in `_bmad-output/vortex-artifacts/` or `.gyre/`; interview reports, which are about real, identifiable people, in `_bmad-output/private/`, which git ignores
 4. **Check updates** — run `npx -p convoke-agents convoke-version` periodically
 
 See the [Agent Guide](https://github.com/amalik/convoke-agents/blob/main/docs/agents.md) for detailed workflow descriptions. User guides are available for the 11 team agents in their respective `guides/` directories.
@@ -253,6 +254,7 @@ Convoke doesn't provide an uninstall command. To remove:
 # 1. Back up your generated artifacts first
 cp -r _bmad-output/vortex-artifacts/ ~/my-backup/
 cp -r _bmad-output/gyre-artifacts/ ~/my-backup/
+cp -r _bmad-output/private/ ~/my-backup/   # interview reports: not in git, so this is their only copy
 cp -r .gyre/ ~/my-backup/
 
 # 2. Remove agent files, workflows, and skills
@@ -268,6 +270,7 @@ rm -rf .claude/skills/bmad-migrate-artifacts/ .claude/skills/bmad-portfolio-stat
 # 3. Remove generated artifacts
 rm -rf _bmad-output/vortex-artifacts/
 rm -rf _bmad-output/gyre-artifacts/
+rm -rf _bmad-output/private/
 
 # 4. Uninstall npm package
 npm uninstall convoke-agents

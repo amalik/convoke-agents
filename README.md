@@ -50,7 +50,7 @@ Convoke works standalone or as an extension — no BMAD Method installation is r
 3. **Pick a starting point**
    - **Vortex:** activate Emma → choose **Lean Persona** → follow the guided steps
    - **Gyre:** activate Scout → choose **Full Analysis** → walk the pipeline
-4. **Find your artifact** — outputs land in `_bmad-output/vortex-artifacts/` or `.gyre/`
+4. **Find your artifact** — outputs land in `_bmad-output/vortex-artifacts/` or `.gyre/`; interview reports, which are about real, identifiable people, in `_bmad-output/private/`, which git ignores
 5. **Follow the Compass** — every workflow ends by routing you to whichever agent should pick up next. You never have to guess what comes after.
 
 **How activation works.** Each agent is a markdown file containing a persona, a menu, and its workflow instructions. When Claude reads it, it adopts that expertise and shows you a numbered menu. In Claude Code, agents are slash commands (`/bmad-agent-bme-contextualization-expert` is Emma); in the terminal or on Claude.ai, paste the agent file into the conversation. Full list in the [Agent Guide](https://github.com/amalik/convoke-agents/blob/main/docs/agents.md).

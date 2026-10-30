@@ -120,6 +120,7 @@ async function main() {
   // Governance grouping: BMM dependency registry check follows taxonomy so both
   // drift-style checks appear together in doctor output (Story 2.2 AC wire-up).
   checks.push(...checkBmmDependencies(projectRoot));
+  checks.push(...checkPrivateReports(projectRoot));
 
   printResults(checks);
 
@@ -774,6 +775,68 @@ function checkVersionConsistency(projectRoot, modules) {
   };
 }
 
+/**
+ * T256: personal-data reports — user interviews — belong in `_bmad-output/private/`, whose
+ * `.gitignore` keeps them out of git. Soft warnings: the rule is missing, or does not keep reports out
+ * (git is asked where there is a repository); git already tracks reports in that folder; or git still
+ * tracks interview reports written, before T256, under `vortex-artifacts/`. Only where the
+ * user-interview workflow is installed. Counts and folders are reported, not file names — a
+ * report's name carries its interview topic.
+ */
+function checkPrivateReports(projectRoot) {
+  if (!fs.existsSync(path.join(projectRoot, '_bmad', 'bme', '_vortex', 'workflows', 'user-interview'))) return [];
+  const { PRIVATE_OUTPUT_REL, privateFolderProtected } = require('./update/lib/refresh-installation');
+  const results = [];
+  const rule = `${PRIVATE_OUTPUT_REL}/.gitignore`;
+  const state = privateFolderProtected(projectRoot);
+  if (state.protected) {
+    results.push({ name: 'Private reports folder', passed: true, info: `${PRIVATE_OUTPUT_REL}/ is ignored by git` });
+  } else {
+    results.push({
+      name: 'Private reports folder',
+      passed: false,
+      softWarning: true,
+      error: state.missing
+        ? `${rule} is missing, so interview reports saved there may be committed`
+        : `${rule} does not keep the reports there out of git`,
+      // An install leaves an existing rule as it is, so it only helps when there is none.
+      fix: state.missing
+        ? `Run: npx -p convoke-agents@${getPackageVersion()} convoke-install-vortex`
+        : `Edit ${rule}: it needs a line reading *, and no later ! line except !.gitignore`,
+    });
+  }
+  const tracked = (pathspecs) => {
+    try {
+      const out = require('child_process').execFileSync('git', ['ls-files', '-z', '--', ...pathspecs],
+        { cwd: projectRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      return out.split('\0').filter(Boolean);
+    } catch {
+      return []; // not a git repository, or git is not installed
+    }
+  };
+  const inPrivate = tracked([`:(glob)${PRIVATE_OUTPUT_REL}/**`, `:(exclude)${rule}`]);
+  if (inPrivate.length > 0) {
+    results.push({
+      name: 'Interview reports in git',
+      passed: false,
+      softWarning: true,
+      error: `git tracks ${inPrivate.length} file(s) in ${PRIVATE_OUTPUT_REL}/ — a .gitignore does not untrack files already committed`,
+      fix: `List them with: git ls-files ${PRIVATE_OUTPUT_REL} — then git rm --cached each one; they stay in git history`,
+    });
+  }
+  const legacy = tracked([':(glob)_bmad-output/vortex-artifacts/**/user-interview-*']);
+  if (legacy.length > 0) {
+    results.push({
+      name: 'Interview reports in git',
+      passed: false,
+      softWarning: true,
+      error: `git tracks ${legacy.length} interview report(s) from before T256 under _bmad-output/vortex-artifacts/`,
+      fix: `List them with: git ls-files '_bmad-output/vortex-artifacts/*user-interview-*' — move them to ${PRIVATE_OUTPUT_REL}/, then git rm --cached each one; they stay in git history`,
+    });
+  }
+  return results;
+}
+
 function printResults(checks) {
   const passed = checks.filter(c => c.passed);
   const softWarned = checks.filter(c => !c.passed && c.softWarning);
@@ -1350,6 +1413,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  checkPrivateReports,
   // T249: exported so the two message classes can be asserted directly. The CLI behaviour is
   // verified separately against a real tarball install; this export is for the per-class detail.
   checkExcludedAgents,

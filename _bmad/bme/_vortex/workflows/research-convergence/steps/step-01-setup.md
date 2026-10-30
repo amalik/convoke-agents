@@ -27,7 +27,7 @@ You can also bring **any well-formed research input** — Mila accepts artifacts
 
 Please provide the file paths or describe the artifacts you want to synthesize. For example:
 - `_bmad-output/vortex-artifacts/hc1-empathy-map-busy-parents-2026-02-20.md`
-- `_bmad-output/vortex-artifacts/hc1-interview-synthesis-2026-02-21.md`
+- `_bmad-output/private/user-interview-checkout-2026-02-21.md` (interview reports live here: git ignores the folder)
 - Or: "I have interview notes in a Google Doc and survey results in a spreadsheet"
 
 **If artifacts are non-conforming:** That's okay — we don't reject research. I'll guide you to identify which sections are present and which gaps we need to work around during synthesis. The data shows that even partial research can produce useful convergence when we're explicit about what evidence we have and what we're missing.

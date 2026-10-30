@@ -111,7 +111,7 @@ Design interview scripts, plan participant recruitment, and capture findings.
 
 Step 3 also asks you to decide how participant data is handled: what you collect and who sees it, on what basis, how long you keep it, and how someone withdraws. Steps 2, 4, and 5 apply those decisions, and the report records them. This is research practice, not legal advice.
 
-**Output:** `{output_folder}/user-interview-{topic}-{date}.md`
+**Output:** `_bmad-output/private/user-interview-{topic}-{date}.md` — a folder git ignores, because the report is about real, identifiable people
 **Time:** 45-90 minutes (planning), plus interview time
 
 ---

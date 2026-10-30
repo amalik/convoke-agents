@@ -103,5 +103,9 @@ _bmad-output/party-mode/memories/
 
 # Interview and research data — personal data, never committed
 _bmad-output/user-interview-*
+# T256: the rule above is one level off — the workflow wrote to vortex-artifacts/. It now writes to
+# _bmad-output/private/, whose own .gitignore keeps the reports out; both are listed here for this repository too.
+_bmad-output/vortex-artifacts/user-interview-*
+_bmad-output/private/
 _bmad-output/interviews/
 *.transcript.md

@@ -67,6 +67,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Interview reports about real, identifiable people are no longer committed with your project (`T256`).**
+  Isla's `user-interview` workflow saved its report in `_bmad-output/vortex-artifacts/`, which git tracks, and
+  nothing told git otherwise. It now saves to `_bmad-output/private/`. An install, or an update from an older
+  version, puts a `.gitignore` there that ignores everything but itself (an update that finds you already
+  current changes nothing; run `convoke-install-vortex` then). Commit that file, so every clone of the project is
+  protected too. Your own `.gitignore` is untouched. Reports there are not in git or in Convoke's backups — the
+  copy on your disk is the only one. `convoke-doctor` warns when git would not ignore that folder, or still
+  tracks interview reports. **Reports written before this are not moved:** look for
+  `_bmad-output/vortex-artifacts/user-interview-*.md`, move them to `_bmad-output/private/`, and if they were
+  committed, `git rm --cached` them — they stay in git's history.
+
 - **`convoke-export` no longer hands out a framework-only skill that looks usable (`T186`).** Exporting a
   `pipeline` skill — every Convoke agent among them — wrote its full persona, procedure and Cursor, Copilot and
   Claude Code adapters under a "framework-only" warning, though none of it can run outside its framework. It

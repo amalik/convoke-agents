@@ -144,6 +144,8 @@ After synthesis, I'll generate your complete user interview artifact using the t
 
 {project-root}/_bmad/bme/_vortex/workflows/user-interview/user-interview.template.md
 
+and save it to `{project-root}/_bmad-output/private/user-interview-{topic}-{date}.md` — never to `{output_folder}`, which is committed. The check before saving is in the workflow's Artifact line.
+
 Your artifact will include:
 - Research goals and context
 - Final interview script (as refined through the process)

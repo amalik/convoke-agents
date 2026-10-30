@@ -26,7 +26,9 @@ const { formatTerminal } = require('./formatters/terminal-formatter');
 const { formatMarkdown } = require('./formatters/markdown-formatter');
 
 /** Directories to exclude from portfolio scan */
-const EXCLUDE_DIRS = ['_archive', 'brainstorming', 'design-artifacts', 'journey-examples', 'project-documentation', 'test-artifacts', 'drafts'];
+// `private` (T256): personal-data reports that git ignores — not portfolio artifacts, and their file
+// names (an interview's topic) must not appear in portfolio output.
+const EXCLUDE_DIRS = ['_archive', 'brainstorming', 'design-artifacts', 'journey-examples', 'project-documentation', 'test-artifacts', 'drafts', 'private'];
 
 // --- Story 6.3: Attribution helpers ---
 

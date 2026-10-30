@@ -50,7 +50,7 @@ Mila accepts two categories of input for pattern mapping:
 
 Please provide the file paths or describe the artifacts you want to analyze. For example:
 - `_bmad-output/vortex-artifacts/hc1-empathy-map-busy-parents-2026-02-20.md`
-- `_bmad-output/vortex-artifacts/hc1-interview-synthesis-2026-02-21.md`
+- `_bmad-output/private/user-interview-checkout-2026-02-21.md` (interview reports live here: git ignores the folder)
 - Or: "I have interview notes and survey results from an external tool"
 
 **If artifacts are non-conforming:** That's okay — we don't reject research. I'll note which sections are present and which are missing, then ask clarification questions to fill gaps. The data shows that even partial research reveals patterns when we're explicit about what evidence we have and what we're working without.

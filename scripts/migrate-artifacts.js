@@ -49,6 +49,7 @@ function parseArgs(argv) {
   const verbose = argv.includes('--verbose');
 
   let includeDirs = [...DEFAULT_INCLUDE_DIRS];
+  let includeError = null;
   const includeIdx = argv.indexOf('--include');
   if (includeIdx !== -1) {
     const nextArg = argv[includeIdx + 1];
@@ -56,10 +57,19 @@ function parseArgs(argv) {
     if (nextArg && !nextArg.startsWith('--')) {
       const parsed = nextArg.split(',').map(d => d.trim()).filter(Boolean);
       // Validate: only simple directory names (no path traversal)
-      const valid = parsed.filter(d => VALID_DIR_PATTERN.test(d));
+      // `private` (T256) holds personal-data reports git ignores: `git mv` on an untracked file
+      // fails and resets the tree, and they are not governed artifacts in any case.
+      // Compared without case: on a case-insensitive filesystem `Private` is the same folder.
+      const isPrivate = (d) => d.toLowerCase() === 'private';
+      const valid = parsed.filter(d => VALID_DIR_PATTERN.test(d) && !isPrivate(d));
       const invalid = parsed.filter(d => !VALID_DIR_PATTERN.test(d));
       if (invalid.length > 0) {
         console.warn(`Warning: Invalid directory names ignored: ${invalid.join(', ')}`);
+      }
+      if (parsed.some(isPrivate)) {
+        console.warn('Warning: _bmad-output/private/ is not migrated: it holds personal-data reports that git ignores.');
+        // Asked for nothing else: refuse, rather than quietly scan the default folders instead.
+        if (valid.length === 0) includeError = '--include named only _bmad-output/private/, which is never migrated';
       }
       if (valid.length > 0) {
         includeDirs = valid;
@@ -97,7 +107,7 @@ function parseArgs(argv) {
     }
   }
 
-  return { help, includeDirs, apply, force, verbose, resolutionFile, resolutionFileError };
+  return { help, includeDirs, includeError, apply, force, verbose, resolutionFile, resolutionFileError };
 }
 
 // --- Help ---
@@ -210,6 +220,11 @@ async function main() {
 
   // Story 6.4: fail fast on a malformed --resolution-file flag so a typo can't
   // silently turn into a destructive --apply --force run with no overrides applied.
+  if (args.includeError) {
+    console.error(`Error: ${args.includeError}`);
+    process.exit(1);
+  }
+
   if (args.resolutionFileError) {
     console.error(`Error: ${args.resolutionFileError}`);
     process.exit(1);
