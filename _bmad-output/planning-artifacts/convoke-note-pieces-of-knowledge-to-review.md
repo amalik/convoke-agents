@@ -323,7 +323,7 @@ published package the sentences are still accurate: `npm pack convoke-agents@4.0
 **Why it matters:** this is the disclosure the brief calls the one *"we would least like you to find on your
 own"*, so it should be exactly right in both directions. After the next release it understates the product.
 What stays true and should survive the rewrite: the guidance is advice with defaults, nothing enforces it,
-it makes no compliance claim, the default output folder is still inside version control (`T256`), and
+it makes no compliance claim, the default output folder is still inside version control (`T256`) [2026-10-30: no longer for interview reports once `T256` ships — they go to `_bmad-output/private/`, which git ignores; the other Isla outputs still go to the tracked folder, `T287`], and
 "discovery workflows" plural was already loose — `user-discovery` has carried consent and retention
 guidance in its step 3 since before this pack was written. **Forward-dated, attributed to `T185`. Basis:
 verified** for the tree; the published-package grep was **not run** by me.
